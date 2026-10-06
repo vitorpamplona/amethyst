@@ -21,10 +21,10 @@
 package com.vitorpamplona.quartz.nip90Dvms.eventPublishSchedule
 
 import androidx.compose.runtime.Immutable
-import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
+import com.vitorpamplona.quartz.nip90Dvms.DvmResponseEvent
 import com.vitorpamplona.quartz.utils.TimeUtils
 
 @Immutable
@@ -35,8 +35,11 @@ class DvmEventPublishScheduleResponseEvent(
     tags: Array<Array<String>>,
     content: String,
     sig: HexKey,
-) : Event(id, pubKey, createdAt, KIND, tags, content, sig) {
+) : DvmResponseEvent(id, pubKey, createdAt, KIND, tags, content, sig) {
     fun publishedEventId(): HexKey? = content.ifEmpty { null }
+
+    // The id in `content` is an event pointer too (no relay slot, so linked only).
+    override fun linkedEventIds(): List<HexKey> = super.linkedEventIds() + listOfNotNull(publishedEventId()?.takeIf { it.length == 64 })
 
     companion object {
         const val KIND = 6905

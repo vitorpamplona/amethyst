@@ -25,6 +25,8 @@ import com.vitorpamplona.quartz.nip01Core.core.BaseAddressableEvent
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
 import com.vitorpamplona.quartz.nip01Core.hints.AddressHintProvider
+import com.vitorpamplona.quartz.nip01Core.hints.PubKeyHintProvider
+import com.vitorpamplona.quartz.nip01Core.hints.types.PubKeyHint
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.nip01Core.tags.aTag.ATag
 import com.vitorpamplona.quartz.nip01Core.tags.dTag.dTag
@@ -58,10 +60,17 @@ class CommunityRulesEvent(
     content: String,
     sig: HexKey,
 ) : BaseAddressableEvent(id, pubKey, createdAt, KIND, tags, content, sig),
-    AddressHintProvider {
+    AddressHintProvider,
+    PubKeyHintProvider {
     override fun addressHints() = tags.mapNotNull(ATag::parseAsHint)
 
     override fun linkedAddressIds() = tags.mapNotNull(ATag::parseAddressId)
+
+    // `p` allow/deny rules and `wot` roots name people, but slot 2 is the policy / depth, not a
+    // relay: there is nothing to hint, only keys to link.
+    override fun pubKeyHints(): List<PubKeyHint> = emptyList()
+
+    override fun linkedPubKeys(): List<HexKey> = tags.mapNotNull(PubkeyRuleTag::parseKey) + tags.mapNotNull(WotTag::parseKey)
 
     /** All `k` rules. May contain duplicates; callers usually want [allowedKinds]. */
     fun kindRules(): List<KindRuleTag> = tags.mapNotNull(KindRuleTag::parse)

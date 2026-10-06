@@ -27,11 +27,14 @@ import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.TagArray
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
 import com.vitorpamplona.quartz.nip01Core.hints.AddressHintProvider
+import com.vitorpamplona.quartz.nip01Core.hints.EventHintProvider
 import com.vitorpamplona.quartz.nip01Core.hints.types.AddressHint
+import com.vitorpamplona.quartz.nip01Core.hints.types.EventIdHint
 import com.vitorpamplona.quartz.nip01Core.signers.EventTemplate
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.nip01Core.tags.aTag.ATag
 import com.vitorpamplona.quartz.nip01Core.tags.dTag.dTag
+import com.vitorpamplona.quartz.nip01Core.tags.events.ETag
 import com.vitorpamplona.quartz.nip23LongContent.tags.ImageTag
 import com.vitorpamplona.quartz.nip23LongContent.tags.SummaryTag
 import com.vitorpamplona.quartz.nip23LongContent.tags.TitleTag
@@ -60,6 +63,7 @@ class BookshelfDirectoryEvent(
     sig: HexKey,
 ) : BaseAddressableEvent(id, pubKey, createdAt, KIND, tags, content, sig),
     AddressHintProvider,
+    EventHintProvider,
     SearchableEvent {
     override fun indexableContent() = listOfNotNull(title(), summary(), content).joinToString("\n")
 
@@ -74,6 +78,12 @@ class BookshelfDirectoryEvent(
     override fun addressHints(): List<AddressHint> = tags.mapNotNull(ATag::parseAsHint)
 
     override fun linkedAddressIds(): List<String> = tags.mapNotNull(ATag::parseAddressId)
+
+    // Shelf items listed by id. Slot 2 may be an inline title instead of a relay; ETag only
+    // takes it as a hint when it actually is a relay URL.
+    override fun eventHints(): List<EventIdHint> = tags.mapNotNull(ETag::parseAsHint)
+
+    override fun linkedEventIds(): List<HexKey> = tags.mapNotNull(ETag::parseId)
 
     fun title() = tags.firstNotNullOfOrNull(TitleTag::parse)
 

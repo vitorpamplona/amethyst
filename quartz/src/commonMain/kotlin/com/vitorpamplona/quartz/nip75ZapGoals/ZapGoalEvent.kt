@@ -42,6 +42,8 @@ import com.vitorpamplona.quartz.nip23LongContent.tags.ImageTag
 import com.vitorpamplona.quartz.nip23LongContent.tags.SummaryTag
 import com.vitorpamplona.quartz.nip50Search.IndexableFieldVisitor
 import com.vitorpamplona.quartz.nip50Search.SearchableEvent
+import com.vitorpamplona.quartz.nip57Zaps.splits.zapSplitHints
+import com.vitorpamplona.quartz.nip57Zaps.splits.zapSplitPubKeys
 import com.vitorpamplona.quartz.nip75ZapGoals.tags.AmountTag
 import com.vitorpamplona.quartz.nip75ZapGoals.tags.ClosedAtTag
 import com.vitorpamplona.quartz.nip75ZapGoals.tags.RelayListTag
@@ -69,9 +71,10 @@ class ZapGoalEvent(
         visitor.visit(content)
     }
 
-    override fun pubKeyHints() = tags.mapNotNull(PTag::parseAsHint)
+    // NIP-75 lets a goal carry NIP-57 `zap` splits: their beneficiaries are linked people too.
+    override fun pubKeyHints() = tags.mapNotNull(PTag::parseAsHint) + tags.zapSplitHints()
 
-    override fun linkedPubKeys() = tags.mapNotNull(PTag::parseKey)
+    override fun linkedPubKeys() = tags.mapNotNull(PTag::parseKey) + tags.zapSplitPubKeys()
 
     override fun eventHints() = tags.mapNotNull(ETag::parseAsHint)
 

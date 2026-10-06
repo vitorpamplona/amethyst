@@ -24,9 +24,26 @@ import androidx.compose.runtime.Immutable
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
+import com.vitorpamplona.quartz.nip01Core.core.isValid
+import com.vitorpamplona.quartz.nip01Core.hints.AddressHintProvider
+import com.vitorpamplona.quartz.nip01Core.hints.EventHintProvider
+import com.vitorpamplona.quartz.nip01Core.hints.PubKeyHintProvider
+import com.vitorpamplona.quartz.nip01Core.hints.types.AddressHint
+import com.vitorpamplona.quartz.nip01Core.hints.types.EventIdHint
+import com.vitorpamplona.quartz.nip01Core.hints.types.PubKeyHint
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.nip01Core.tags.geohash.geohashes
 import com.vitorpamplona.quartz.nip01Core.tags.hashtags.hashtags
+import com.vitorpamplona.quartz.nip01Core.tags.people.PTag
+import com.vitorpamplona.quartz.nip10Notes.content.findNostrUris
+import com.vitorpamplona.quartz.nip18Reposts.quotes.QTag
+import com.vitorpamplona.quartz.nip19Bech32.addressHints
+import com.vitorpamplona.quartz.nip19Bech32.addressIds
+import com.vitorpamplona.quartz.nip19Bech32.entities.Entity
+import com.vitorpamplona.quartz.nip19Bech32.eventHints
+import com.vitorpamplona.quartz.nip19Bech32.eventIds
+import com.vitorpamplona.quartz.nip19Bech32.pubKeyHints
+import com.vitorpamplona.quartz.nip19Bech32.pubKeys
 import com.vitorpamplona.quartz.nip22Comments.RootScope
 import com.vitorpamplona.quartz.nip23LongContent.tags.TitleTag
 import com.vitorpamplona.quartz.nip50Search.IndexableFieldVisitor
@@ -47,15 +64,45 @@ class PictureEvent(
     sig: HexKey,
 ) : Event(id, pubKey, createdAt, KIND, tags, content, sig),
     RootScope,
+    PubKeyHintProvider,
+    EventHintProvider,
+    AddressHintProvider,
     SearchableEvent {
-    override fun indexableContent() = listOfNotNull(title(), content).joinToString("\n")
+    // The place name and each image's own `alt` (the poster's accessibility description of
+    // that picture) are human-written too, and are how a photo is often searched for.
+    override fun indexableContent() = (listOfNotNull(title(), content) + location() + imageDescriptions()).joinToString("\n")
 
     // The read path: the same fields indexableContent() joins, handed over without
     // building the joined string a scan would throw away.
     override fun forEachIndexableField(visitor: IndexableFieldVisitor) {
         if (!visitor.visit(title())) return
-        visitor.visit(content)
+        if (!visitor.visit(content)) return
+        location().forEach { if (!visitor.visit(it)) return }
+        imageDescriptions().forEach { if (!visitor.visit(it)) return }
     }
+
+    @kotlinx.serialization.Transient
+    @kotlin.jvm.Transient
+    private var citedNIP19Cache: List<Entity>? = null
+
+    /** NIP-19 entities cited as `nostr:` URIs in the description, parsed once. */
+    fun citedNIP19(): List<Entity> = citedNIP19Cache ?: findNostrUris(content).also { citedNIP19Cache = it }
+
+    /** Pubkeys tagged on the images themselves (imeta `annotate-user`); no relay slot. */
+    fun annotatedUsers(): List<HexKey> = imetaTags().flatMap { meta -> meta.annotations.mapNotNull { it.pubkey.takeIf { key -> key.isValid() } } }
+
+    // NIP-68 `p` tags the people in the picture; imeta annotations place them on an image.
+    override fun pubKeyHints(): List<PubKeyHint> = tags.mapNotNull(PTag::parseAsHint) + citedNIP19().pubKeyHints()
+
+    override fun linkedPubKeys(): List<HexKey> = tags.mapNotNull(PTag::parseKey) + annotatedUsers() + citedNIP19().pubKeys()
+
+    override fun eventHints(): List<EventIdHint> = tags.mapNotNull(QTag::parseEventAsHint) + citedNIP19().eventHints()
+
+    override fun linkedEventIds(): List<HexKey> = tags.mapNotNull(QTag::parseEventId) + citedNIP19().eventIds()
+
+    override fun addressHints(): List<AddressHint> = tags.mapNotNull(QTag::parseAddressAsHint) + citedNIP19().addressHints()
+
+    override fun linkedAddressIds(): List<String> = tags.mapNotNull(QTag::parseValidAddress) + citedNIP19().addressIds()
 
     @kotlinx.serialization.Transient
     @kotlin.jvm.Transient
@@ -74,6 +121,9 @@ class PictureEvent(
     fun location() = tags.mapNotNull(LocationTag::parse)
 
     fun imetaTags() = iMetas ?: imetas().map { PictureMeta.parse(it) }.also { iMetas = it }
+
+    /** Each image's `alt` text, in imeta order. */
+    fun imageDescriptions(): List<String> = imetaTags().mapNotNull { meta -> meta.alt?.takeIf { it.isNotBlank() } }
 
     companion object {
         const val KIND = 20

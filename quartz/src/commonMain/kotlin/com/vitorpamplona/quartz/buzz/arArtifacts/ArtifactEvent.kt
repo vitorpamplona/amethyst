@@ -22,13 +22,19 @@ package com.vitorpamplona.quartz.buzz.arArtifacts
 
 import androidx.compose.runtime.Immutable
 import com.vitorpamplona.quartz.buzz.arArtifacts.tags.ArtifactOp
+import com.vitorpamplona.quartz.buzz.arArtifacts.tags.PrevTag
+import com.vitorpamplona.quartz.buzz.arArtifacts.tags.RootTag
 import com.vitorpamplona.quartz.buzz.arArtifacts.tags.TitleTag
 import com.vitorpamplona.quartz.buzz.arArtifacts.tags.TypeTag
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
+import com.vitorpamplona.quartz.nip01Core.hints.EventHintProvider
+import com.vitorpamplona.quartz.nip01Core.hints.types.EventIdHint
 import com.vitorpamplona.quartz.nip01Core.signers.EventTemplate
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
+import com.vitorpamplona.quartz.nip50Search.IndexableFieldVisitor
+import com.vitorpamplona.quartz.nip50Search.SearchableEvent
 import com.vitorpamplona.quartz.utils.TimeUtils
 
 /**
@@ -63,7 +69,29 @@ class ArtifactEvent(
     tags: Array<Array<String>>,
     content: String,
     sig: HexKey,
-) : Event(id, pubKey, createdAt, KIND, tags, content, sig) {
+) : Event(id, pubKey, createdAt, KIND, tags, content, sig),
+    SearchableEvent,
+    EventHintProvider {
+    override fun indexableContent() = listOfNotNull(title(), textBody()).joinToString("\n")
+
+    // The read path: the same fields indexableContent() joins, in the same order.
+    override fun forEachIndexableField(visitor: IndexableFieldVisitor) {
+        if (!visitor.visit(title())) return
+        visitor.visit(textBody())
+    }
+
+    /**
+     * The body when it reads as text: NIP-AR keeps `content` opaque, so a client may store a
+     * JSON document there. That is not natural language and never goes to the search index;
+     * neither does the empty body of a delete.
+     */
+    fun textBody(): String? = content.takeIf { it.isNotBlank() && it.trimStart().let { s -> !s.startsWith('{') && !s.startsWith('[') } }
+
+    // `root` and `prev` carry bare event ids with no relay slot.
+    override fun eventHints(): List<EventIdHint> = emptyList()
+
+    override fun linkedEventIds(): List<HexKey> = tags.mapNotNull(RootTag::parseId) + tags.mapNotNull(PrevTag::parseId)
+
     /** The artifact's stable UUID — the `d` tag. */
     fun artifactId() = tags.artifactId()
 

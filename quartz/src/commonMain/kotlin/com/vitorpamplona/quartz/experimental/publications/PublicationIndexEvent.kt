@@ -23,19 +23,24 @@ package com.vitorpamplona.quartz.experimental.publications
 import androidx.compose.runtime.Immutable
 import com.vitorpamplona.quartz.experimental.publications.tags.AuthorTag
 import com.vitorpamplona.quartz.experimental.publications.tags.PublicationTypeTag
+import com.vitorpamplona.quartz.experimental.publications.tags.SourceAddressTag
+import com.vitorpamplona.quartz.experimental.publications.tags.SourceEventTag
 import com.vitorpamplona.quartz.experimental.publications.tags.VersionTag
 import com.vitorpamplona.quartz.nip01Core.core.BaseAddressableEvent
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.TagArray
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
 import com.vitorpamplona.quartz.nip01Core.hints.AddressHintProvider
+import com.vitorpamplona.quartz.nip01Core.hints.EventHintProvider
 import com.vitorpamplona.quartz.nip01Core.hints.PubKeyHintProvider
 import com.vitorpamplona.quartz.nip01Core.hints.types.AddressHint
+import com.vitorpamplona.quartz.nip01Core.hints.types.EventIdHint
 import com.vitorpamplona.quartz.nip01Core.hints.types.PubKeyHint
 import com.vitorpamplona.quartz.nip01Core.signers.EventTemplate
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.nip01Core.tags.aTag.ATag
 import com.vitorpamplona.quartz.nip01Core.tags.dTag.dTag
+import com.vitorpamplona.quartz.nip01Core.tags.events.ETag
 import com.vitorpamplona.quartz.nip01Core.tags.hashtags.hashtags
 import com.vitorpamplona.quartz.nip01Core.tags.people.PTag
 import com.vitorpamplona.quartz.nip23LongContent.tags.ImageTag
@@ -70,6 +75,7 @@ class PublicationIndexEvent(
     sig: HexKey,
 ) : BaseAddressableEvent(id, pubKey, createdAt, KIND, tags, content, sig),
     AddressHintProvider,
+    EventHintProvider,
     PubKeyHintProvider,
     SearchableEvent {
     override fun indexableContent() = listOfNotNull(title(), author(), summary()).joinToString("\n")
@@ -82,9 +88,15 @@ class PublicationIndexEvent(
         visitor.visit(summary())
     }
 
-    override fun addressHints(): List<AddressHint> = tags.mapNotNull(ATag::parseAsHint)
+    // Sections listed by coordinate (`a`), plus the original a derivative work names (`A`).
+    override fun addressHints(): List<AddressHint> = tags.mapNotNull { ATag.parseAsHint(it) ?: SourceAddressTag.parseAsHint(it) }
 
-    override fun linkedAddressIds(): List<String> = tags.mapNotNull(ATag::parseAddressId)
+    override fun linkedAddressIds(): List<String> = tags.mapNotNull { ATag.parseAddressId(it) ?: SourceAddressTag.parseAddressId(it) }
+
+    // Sections listed by id (`e`), plus the original a derivative work names (`E`).
+    override fun eventHints(): List<EventIdHint> = tags.mapNotNull { ETag.parseAsHint(it) ?: SourceEventTag.parseAsHint(it) }
+
+    override fun linkedEventIds(): List<HexKey> = tags.mapNotNull { ETag.parseId(it) ?: SourceEventTag.parseId(it) }
 
     override fun pubKeyHints(): List<PubKeyHint> = tags.mapNotNull(PTag::parseAsHint)
 

@@ -139,6 +139,7 @@ import com.vitorpamplona.quartz.experimental.decentralizedLists.header.Addressab
 import com.vitorpamplona.quartz.experimental.decentralizedLists.header.ListHeaderEvent
 import com.vitorpamplona.quartz.experimental.decentralizedLists.item.AddressableListItemEvent
 import com.vitorpamplona.quartz.experimental.decentralizedLists.item.ListItemEvent
+import com.vitorpamplona.quartz.experimental.decoupling.setup.EncryptionKeyListEvent
 import com.vitorpamplona.quartz.experimental.edits.TextNoteModificationEvent
 import com.vitorpamplona.quartz.experimental.ephemChat.chat.EphemeralChatEvent
 import com.vitorpamplona.quartz.experimental.ephemChat.list.EphemeralChatListEvent
@@ -176,6 +177,7 @@ import com.vitorpamplona.quartz.experimental.trustedLists.externalIds.ExternalId
 import com.vitorpamplona.quartz.experimental.trustedLists.users.UserTrustedListEvent
 import com.vitorpamplona.quartz.experimental.videoCollaboration.VideoCollaborationEvent
 import com.vitorpamplona.quartz.experimental.zapPolls.ZapPollEvent
+import com.vitorpamplona.quartz.feedDefinition.FeedDefinitionEvent
 import com.vitorpamplona.quartz.marmot.mip00KeyPackages.KeyPackageEvent
 import com.vitorpamplona.quartz.marmot.mip00KeyPackages.KeyPackageRelayListEvent
 import com.vitorpamplona.quartz.marmot.mip02Welcome.WelcomeEvent
@@ -674,6 +676,7 @@ class EventFactory {
                 EphemeralChatListEvent.KIND -> EphemeralChatListEvent(id, pubKey, createdAt, tags, content, sig)
                 ExternalIdentitiesEvent.KIND -> ExternalIdentitiesEvent(id, pubKey, createdAt, tags, content, sig)
                 FedimintEvent.KIND -> FedimintEvent(id, pubKey, createdAt, tags, content, sig)
+                FeedDefinitionEvent.KIND -> FeedDefinitionEvent(id, pubKey, createdAt, tags, content, sig)
                 FileMetadataEvent.KIND -> FileMetadataEvent(id, pubKey, createdAt, tags, content, sig)
                 ProfileGalleryEntryEvent.KIND -> ProfileGalleryEntryEvent(id, pubKey, createdAt, tags, content, sig)
                 FileServersEvent.KIND -> FileServersEvent(id, pubKey, createdAt, tags, content, sig)
@@ -860,6 +863,7 @@ class EventFactory {
                 Podcasting20TrailerEvent.KIND -> Podcasting20TrailerEvent(id, pubKey, createdAt, tags, content, sig)
                 ProductEvent.KIND -> ProductEvent(id, pubKey, createdAt, tags, content, sig)
                 EncryptedDmEvent.KIND -> EncryptedDmEvent(id, pubKey, createdAt, tags, content, sig)
+                EncryptionKeyListEvent.KIND -> EncryptionKeyListEvent(id, pubKey, createdAt, tags, content, sig)
                 PrivateOutboxRelayListEvent.KIND -> PrivateOutboxRelayListEvent(id, pubKey, createdAt, tags, content, sig)
                 ProxyRelayListEvent.KIND -> ProxyRelayListEvent(id, pubKey, createdAt, tags, content, sig)
                 PublicMessageEvent.KIND -> PublicMessageEvent(id, pubKey, createdAt, tags, content, sig)

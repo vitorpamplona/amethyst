@@ -38,6 +38,7 @@ import com.vitorpamplona.quartz.nip51Lists.bookmarkList.tags.BookmarkIdTag
 import com.vitorpamplona.quartz.nip51Lists.bookmarkList.tags.EventBookmark
 import com.vitorpamplona.quartz.nip51Lists.encryption.PrivateTagsInContent
 import com.vitorpamplona.quartz.nip51Lists.remove
+import com.vitorpamplona.quartz.nip51Lists.tags.NameTag
 import com.vitorpamplona.quartz.nip51Lists.tags.TitleTag
 import com.vitorpamplona.quartz.utils.TimeUtils
 
@@ -53,14 +54,15 @@ class BookmarkListEvent(
     EventHintProvider,
     AddressHintProvider,
     SearchableEvent {
-    // Only the public list title is indexed; bookmarks live in NIP-44
-    // encrypted content and are intentionally never indexed.
-    override fun indexableContent() = listOfNotNull(title()).joinToString("\n")
+    // Only the public list title (or the legacy `name` the deprecated builder still
+    // writes) is indexed; bookmarks live in NIP-44 encrypted content and are
+    // intentionally never indexed.
+    override fun indexableContent() = listOfNotNull(titleOrName()).joinToString("\n")
 
     // The read path: the same fields indexableContent() joins, handed over without
     // building the joined string a scan would throw away.
     override fun forEachIndexableField(visitor: IndexableFieldVisitor) {
-        visitor.visit(title())
+        visitor.visit(titleOrName())
     }
 
     override fun eventHints() = tags.mapNotNull(EventBookmark::parseAsHint)
@@ -72,6 +74,11 @@ class BookmarkListEvent(
     override fun linkedAddressIds() = tags.mapNotNull(AddressBookmark::parseAddressId)
 
     fun title() = tags.firstNotNullOfOrNull(TitleTag::parse)
+
+    /** NIP-51 deprecated `name` in favor of `title`, but older lists still carry it. */
+    fun name() = tags.firstNotNullOfOrNull(NameTag::parse)
+
+    fun titleOrName() = title() ?: name()
 
     fun countBookmarks() = tags.count(BookmarkIdTag::isTagged)
 

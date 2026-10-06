@@ -22,6 +22,7 @@ package com.vitorpamplona.quartz.nip85TrustedAssertions.list.tags
 
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.has
+import com.vitorpamplona.quartz.nip01Core.hints.types.PubKeyHint
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
 import com.vitorpamplona.quartz.utils.ensure
@@ -77,6 +78,31 @@ data class ServiceProviderTag(
             val relay = RelayUrlNormalizer.normalizeOrNull(tag[2]) ?: return null
 
             return ServiceProviderTag(service, tag[1], relay)
+        }
+
+        /**
+         * The provider's pubkey for any public NIP-85 delegation, whether or not its relay
+         * slot normalizes — the key is still the service whose cards a reader follows.
+         */
+        fun parseKey(tag: Array<String>): HexKey? {
+            ensure(tag.has(1)) { return null }
+            ensure(tag[0].isNotEmpty()) { return null }
+            ensure(tag[1].length == 64) { return null }
+            val service = ServiceType.parse(tag[0]) ?: return null
+            ensure(service.kind in ASSERTION_KINDS) { return null }
+            return tag[1]
+        }
+
+        /**
+         * The provider and the relay its assertion cards are published to. Stricter than
+         * [parse] about the relay slot: [parse] lets [RelayUrlNormalizer.normalizeOrNull] turn
+         * any bare word into `wss://<word>/`, which is harmless for reading the delegation but
+         * would plant a fake relay in the hint index, so the hint needs a real `ws(s)://` URL.
+         */
+        fun parseAsHint(tag: Array<String>): PubKeyHint? {
+            val provider = parse(tag) ?: return null
+            val relay = RelayUrlNormalizer.normalizeHintOrNull(tag[2]) ?: return null
+            return PubKeyHint(provider.pubkey, relay)
         }
 
         fun assemble(

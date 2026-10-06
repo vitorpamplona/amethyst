@@ -33,6 +33,7 @@ import com.vitorpamplona.quartz.nip01Core.tags.events.ETag
 import com.vitorpamplona.quartz.nip01Core.tags.people.PTag
 import com.vitorpamplona.quartz.nip50Search.IndexableFieldVisitor
 import com.vitorpamplona.quartz.nip50Search.SearchableEvent
+import com.vitorpamplona.quartz.nip57Zaps.tags.ZapSenderTag
 import com.vitorpamplona.quartz.utils.Log
 
 @Immutable
@@ -62,7 +63,14 @@ class ZapReceiptEvent(
 
     override fun pubKeyHints() = tags.mapNotNull(PTag::parseAsHint)
 
-    override fun linkedPubKeys() = tags.mapNotNull(PTag::parseKey)
+    // The zapped `p` recipients, the uppercase `P` sender, and the embedded request's
+    // author (the same sender, or the throwaway key of an anonymous/private zap).
+    // Only `p` has a relay slot, so [pubKeyHints] stays `p`-only.
+    override fun linkedPubKeys(): List<HexKey> {
+        val keys = tags.mapNotNull { PTag.parseKey(it) ?: ZapSenderTag.parseKey(it) }
+        val requestAuthor = zapRequest?.pubKey
+        return if (requestAuthor != null && requestAuthor.length == 64) (keys + requestAuthor).distinct() else keys.distinct()
+    }
 
     override fun eventHints() = tags.mapNotNull(ETag::parseAsHint)
 

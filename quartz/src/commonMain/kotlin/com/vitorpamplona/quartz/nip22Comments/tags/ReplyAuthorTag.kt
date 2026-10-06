@@ -66,7 +66,7 @@ data class ReplyAuthorTag(
             ensure(tag[1].length == 64) { return null }
             ensure(tag[2].isNotEmpty()) { return null }
 
-            val hint = RelayUrlNormalizer.normalizeOrNull(tag[2])
+            val hint = RelayUrlNormalizer.normalizeHintOrNull(tag[2])
             ensure(hint != null) { return null }
 
             return PubKeyHint(tag[1], hint)

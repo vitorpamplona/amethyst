@@ -24,8 +24,11 @@ import androidx.compose.runtime.Immutable
 import com.vitorpamplona.quartz.nip01Core.core.BaseAddressableEvent
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
+import com.vitorpamplona.quartz.nip01Core.hints.PubKeyHintProvider
+import com.vitorpamplona.quartz.nip01Core.hints.types.PubKeyHint
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.nip01Core.tags.dTag.dTag
+import com.vitorpamplona.quartz.nip01Core.tags.people.PTag
 import com.vitorpamplona.quartz.utils.TimeUtils
 
 /**
@@ -47,7 +50,12 @@ class DmVisibilityEvent(
     tags: Array<Array<String>>,
     content: String,
     sig: HexKey,
-) : BaseAddressableEvent(id, pubKey, createdAt, KIND, tags, content, sig) {
+) : BaseAddressableEvent(id, pubKey, createdAt, KIND, tags, content, sig),
+    PubKeyHintProvider {
+    override fun pubKeyHints(): List<PubKeyHint> = tags.mapNotNull(PTag::parseAsHint)
+
+    override fun linkedPubKeys(): List<HexKey> = tags.mapNotNull(PTag::parseKey)
+
     /** The viewer this snapshot belongs to — the `d` tag (equal to the `p` tag). */
     fun viewer() = dTag()
 

@@ -28,6 +28,7 @@ import com.vitorpamplona.quartz.nip01Core.hints.PubKeyHintProvider
 import com.vitorpamplona.quartz.nip01Core.tags.aTag.ATag
 import com.vitorpamplona.quartz.nip01Core.tags.people.PTag
 import com.vitorpamplona.quartz.nip10Notes.tags.MarkedETag
+import com.vitorpamplona.quartz.nip18Reposts.quotes.QTag
 import com.vitorpamplona.quartz.nip50Search.IndexableFieldVisitor
 import com.vitorpamplona.quartz.nip50Search.SearchableEvent
 
@@ -62,9 +63,10 @@ abstract class GitStatusEvent(
 
     override fun linkedPubKeys() = tags.mapNotNull(PTag::parseKey)
 
-    override fun eventHints() = tags.mapNotNull(MarkedETag::parseAsHint)
+    // `e` targets plus the `q` applied-patch references kind 1631 carries.
+    override fun eventHints() = tags.mapNotNull(MarkedETag::parseAsHint) + tags.mapNotNull(QTag::parseEventAsHint)
 
-    override fun linkedEventIds() = tags.mapNotNull(MarkedETag::parseId)
+    override fun linkedEventIds() = tags.mapNotNull(MarkedETag::parseId) + tags.mapNotNull(QTag::parseEventId)
 
     override fun addressHints() = tags.mapNotNull(ATag::parseAsHint)
 

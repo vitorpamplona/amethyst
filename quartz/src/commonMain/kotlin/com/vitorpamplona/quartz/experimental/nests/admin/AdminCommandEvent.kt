@@ -23,6 +23,10 @@ package com.vitorpamplona.quartz.experimental.nests.admin
 import androidx.compose.runtime.Immutable
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
+import com.vitorpamplona.quartz.nip01Core.hints.AddressHintProvider
+import com.vitorpamplona.quartz.nip01Core.hints.PubKeyHintProvider
+import com.vitorpamplona.quartz.nip01Core.hints.types.AddressHint
+import com.vitorpamplona.quartz.nip01Core.hints.types.PubKeyHint
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.nip01Core.tags.aTag.ATag
 import com.vitorpamplona.quartz.nip01Core.tags.aTag.aTag
@@ -54,7 +58,18 @@ class AdminCommandEvent(
     tags: Array<Array<String>>,
     content: String,
     sig: HexKey,
-) : Event(id, pubKey, createdAt, KIND, tags, content, sig) {
+) : Event(id, pubKey, createdAt, KIND, tags, content, sig),
+    PubKeyHintProvider,
+    AddressHintProvider {
+    // The target (`p`) and the room (`a`), each with whatever relay the host attached.
+    override fun pubKeyHints(): List<PubKeyHint> = tags.mapNotNull(PTag::parseAsHint)
+
+    override fun linkedPubKeys(): List<HexKey> = tags.mapNotNull(PTag::parseKey)
+
+    override fun addressHints(): List<AddressHint> = tags.mapNotNull(ATag::parseAsHint)
+
+    override fun linkedAddressIds(): List<String> = tags.mapNotNull(ATag::parseValidAddress)
+
     /** The room this command applies to, if a single `a`-tag is present. */
     fun room(): String? = tags.firstOrNull { it.firstOrNull() == "a" }?.getOrNull(1)
 

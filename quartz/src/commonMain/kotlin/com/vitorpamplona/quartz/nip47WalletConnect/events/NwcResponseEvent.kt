@@ -24,8 +24,12 @@ import androidx.compose.runtime.Immutable
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.OptimizedJsonMapper
+import com.vitorpamplona.quartz.nip01Core.hints.EventHintProvider
+import com.vitorpamplona.quartz.nip01Core.hints.PubKeyHintProvider
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip01Core.signers.SignerExceptions
+import com.vitorpamplona.quartz.nip01Core.tags.events.ETag
+import com.vitorpamplona.quartz.nip01Core.tags.people.PTag
 import com.vitorpamplona.quartz.nip47WalletConnect.rpc.Response
 import com.vitorpamplona.quartz.utils.TimeUtils
 
@@ -37,7 +41,17 @@ class NwcResponseEvent(
     tags: Array<Array<String>>,
     content: String,
     sig: HexKey,
-) : Event(id, pubKey, createdAt, KIND, tags, content, sig) {
+) : Event(id, pubKey, createdAt, KIND, tags, content, sig),
+    PubKeyHintProvider,
+    EventHintProvider {
+    override fun pubKeyHints() = tags.mapNotNull(PTag::parseAsHint)
+
+    override fun linkedPubKeys() = tags.mapNotNull(PTag::parseKey)
+
+    override fun eventHints() = tags.mapNotNull(ETag::parseAsHint)
+
+    override fun linkedEventIds() = tags.mapNotNull(ETag::parseId)
+
     override fun isContentEncoded() = true
 
     fun requestAuthor() = tags.firstOrNull { it.size > 1 && it[0] == "p" }?.get(1)

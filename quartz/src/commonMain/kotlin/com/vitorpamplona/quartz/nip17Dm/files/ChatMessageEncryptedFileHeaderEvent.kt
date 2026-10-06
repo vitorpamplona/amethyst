@@ -34,11 +34,14 @@ import com.vitorpamplona.quartz.nip17Dm.files.tags.EncryptionKey
 import com.vitorpamplona.quartz.nip17Dm.files.tags.EncryptionNonce
 import com.vitorpamplona.quartz.nip17Dm.files.tags.FileTypeTag
 import com.vitorpamplona.quartz.nip17Dm.messages.ChatMessageEvent
+import com.vitorpamplona.quartz.nip50Search.IndexableFieldVisitor
+import com.vitorpamplona.quartz.nip50Search.SearchableEvent
 import com.vitorpamplona.quartz.nip94FileMetadata.tags.BlurhashTag
 import com.vitorpamplona.quartz.nip94FileMetadata.tags.DimensionTag
 import com.vitorpamplona.quartz.nip94FileMetadata.tags.HashSha256Tag
 import com.vitorpamplona.quartz.nip94FileMetadata.tags.OriginalHashTag
 import com.vitorpamplona.quartz.nip94FileMetadata.tags.SizeTag
+import com.vitorpamplona.quartz.nip94FileMetadata.tags.SummaryTag
 import com.vitorpamplona.quartz.nip94FileMetadata.tags.ThumbhashTag
 import com.vitorpamplona.quartz.utils.TimeUtils
 import com.vitorpamplona.quartz.utils.ciphers.AESGCM
@@ -51,8 +54,19 @@ class ChatMessageEncryptedFileHeaderEvent(
     tags: Array<Array<String>>,
     content: String,
     sig: HexKey,
-) : BaseDMGroupEvent(id, pubKey, createdAt, KIND, tags, content, sig) {
+) : BaseDMGroupEvent(id, pubKey, createdAt, KIND, tags, content, sig),
+    SearchableEvent {
+    // `content` is the encrypted file's URL, not text; the optional `summary`
+    // tag is the only human-written caption the header carries.
+    override fun indexableContent() = summary().orEmpty()
+
+    override fun forEachIndexableField(visitor: IndexableFieldVisitor) {
+        visitor.visit(summary())
+    }
+
     fun replyTo() = tags.mapNotNull(ETag::parseId)
+
+    fun summary() = tags.firstNotNullOfOrNull(SummaryTag::parse)
 
     fun url() = content
 

@@ -52,13 +52,14 @@ class StarterPackEvent(
 ) : BaseAddressableEvent(id, pubKey, createdAt, KIND, tags, content, sig),
     PubKeyHintProvider,
     SearchableEvent {
-    override fun indexableContent() = listOfNotNull(title(), description()).joinToString("\n")
+    override fun indexableContent() = (listOfNotNull(title(), description()) + hashtags()).joinToString("\n")
 
     // The read path: the same fields indexableContent() joins, handed over without
     // building the joined string a scan would throw away.
     override fun forEachIndexableField(visitor: IndexableFieldVisitor) {
         if (!visitor.visit(title())) return
-        visitor.visit(description())
+        if (!visitor.visit(description())) return
+        hashtags().forEach { if (!visitor.visit(it)) return }
     }
 
     override fun pubKeyHints() = tags.mapNotNull(UserTag::parseAsHint)

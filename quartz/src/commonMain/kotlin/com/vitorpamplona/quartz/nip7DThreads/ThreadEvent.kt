@@ -25,7 +25,23 @@ import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
 import com.vitorpamplona.quartz.nip01Core.core.firstTagValue
+import com.vitorpamplona.quartz.nip01Core.hints.AddressHintProvider
+import com.vitorpamplona.quartz.nip01Core.hints.EventHintProvider
+import com.vitorpamplona.quartz.nip01Core.hints.PubKeyHintProvider
+import com.vitorpamplona.quartz.nip01Core.hints.types.AddressHint
+import com.vitorpamplona.quartz.nip01Core.hints.types.EventIdHint
+import com.vitorpamplona.quartz.nip01Core.hints.types.PubKeyHint
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
+import com.vitorpamplona.quartz.nip01Core.tags.people.PTag
+import com.vitorpamplona.quartz.nip10Notes.content.findNostrUris
+import com.vitorpamplona.quartz.nip18Reposts.quotes.QTag
+import com.vitorpamplona.quartz.nip19Bech32.addressHints
+import com.vitorpamplona.quartz.nip19Bech32.addressIds
+import com.vitorpamplona.quartz.nip19Bech32.entities.Entity
+import com.vitorpamplona.quartz.nip19Bech32.eventHints
+import com.vitorpamplona.quartz.nip19Bech32.eventIds
+import com.vitorpamplona.quartz.nip19Bech32.pubKeyHints
+import com.vitorpamplona.quartz.nip19Bech32.pubKeys
 import com.vitorpamplona.quartz.nip22Comments.RootScope
 import com.vitorpamplona.quartz.nip50Search.IndexableFieldVisitor
 import com.vitorpamplona.quartz.nip50Search.SearchableEvent
@@ -41,6 +57,9 @@ class ThreadEvent(
     sig: HexKey,
 ) : Event(id, pubKey, createdAt, KIND, tags, content, sig),
     RootScope,
+    PubKeyHintProvider,
+    EventHintProvider,
+    AddressHintProvider,
     SearchableEvent {
     override fun indexableContent() = listOfNotNull(title(), content).joinToString("\n")
 
@@ -50,6 +69,26 @@ class ThreadEvent(
         if (!visitor.visit(title())) return
         visitor.visit(content)
     }
+
+    @kotlinx.serialization.Transient
+    @kotlin.jvm.Transient
+    private var citedNIP19Cache: List<Entity>? = null
+
+    /** NIP-19 entities cited as `nostr:` URIs in the thread body, parsed once. */
+    fun citedNIP19(): List<Entity> = citedNIP19Cache ?: findNostrUris(content).also { citedNIP19Cache = it }
+
+    // Note-like: NIP-27 mentions in the body, plus the `p` / `q` tags clients add for them.
+    override fun pubKeyHints(): List<PubKeyHint> = tags.mapNotNull(PTag::parseAsHint) + citedNIP19().pubKeyHints()
+
+    override fun linkedPubKeys(): List<HexKey> = tags.mapNotNull(PTag::parseKey) + citedNIP19().pubKeys()
+
+    override fun eventHints(): List<EventIdHint> = tags.mapNotNull(QTag::parseEventAsHint) + citedNIP19().eventHints()
+
+    override fun linkedEventIds(): List<HexKey> = tags.mapNotNull(QTag::parseEventId) + citedNIP19().eventIds()
+
+    override fun addressHints(): List<AddressHint> = tags.mapNotNull(QTag::parseAddressAsHint) + citedNIP19().addressHints()
+
+    override fun linkedAddressIds(): List<String> = tags.mapNotNull(QTag::parseValidAddress) + citedNIP19().addressIds()
 
     /**
      * The thread title. NIP-7D specifies a `title` tag (what we emit), but some

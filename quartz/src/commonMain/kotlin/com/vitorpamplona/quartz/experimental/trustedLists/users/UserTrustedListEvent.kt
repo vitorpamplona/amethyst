@@ -59,7 +59,7 @@ class UserTrustedListEvent(
 
     override fun pubKeyHints() = tags.mapNotNull(PubKeyMemberTag::parseAsHint)
 
-    override fun linkedPubKeys() = tags.fastMapNotNullDense(PubKeyMemberTag::parseKey)
+    override fun linkedPubKeys() = tags.fastMapNotNullDense(PubKeyMemberTag::parseKey) + provenancePubKeys()
 
     override fun addressHints() = tags.mapNotNull(ATag::parseAsHint)
 

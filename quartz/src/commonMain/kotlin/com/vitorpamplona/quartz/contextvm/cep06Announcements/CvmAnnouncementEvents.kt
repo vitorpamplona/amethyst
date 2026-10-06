@@ -22,8 +22,11 @@ package com.vitorpamplona.quartz.contextvm.cep06Announcements
 
 import androidx.compose.runtime.Immutable
 import com.vitorpamplona.quartz.contextvm.core.CvmKinds
+import com.vitorpamplona.quartz.contextvm.core.CvmTags
 import com.vitorpamplona.quartz.nip01Core.core.BaseReplaceableEvent
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
+import com.vitorpamplona.quartz.nip50Search.IndexableFieldVisitor
+import com.vitorpamplona.quartz.nip50Search.SearchableEvent
 
 /**
  * A server's CEP-6 announcement of itself: kind [CvmKinds.SERVER_ANNOUNCEMENT].
@@ -48,7 +51,8 @@ class CvmServerAnnouncementEvent(
     tags: Array<Array<String>>,
     content: String,
     sig: HexKey,
-) : BaseReplaceableEvent(id, pubKey, createdAt, KIND, tags, content, sig) {
+) : BaseReplaceableEvent(id, pubKey, createdAt, KIND, tags, content, sig),
+    SearchableEvent {
     /**
      * What the server says about itself, parsed from the tags.
      *
@@ -59,7 +63,24 @@ class CvmServerAnnouncementEvent(
     fun discovery(): DiscoverySurface = DiscoverySurface.parse(tags)
 
     /** The server's own name for itself, or null when it publishes none. */
-    fun serverName(): String? = discovery().name?.takeIf { it.isNotBlank() }
+    fun serverName(): String? = tagValue(CvmTags.NAME)?.takeIf { it.isNotBlank() }
+
+    /** The server's own blurb about itself (the `about` tag), or null when it publishes none. */
+    fun about(): String? = tagValue(CvmTags.ABOUT)
+
+    // Same first-match rule as DiscoverySurface.parse, without building the whole surface.
+    private fun tagValue(name: String): String? = tags.firstOrNull { it.size >= 2 && it[0] == name }?.get(1)
+
+    /**
+     * The server's name and blurb -- the only human-authored text it publishes. The
+     * content is the MCP `initialize` result (machine JSON) and stays out.
+     */
+    override fun indexableContent() = listOfNotNull(serverName(), about()).joinToString("\n")
+
+    override fun forEachIndexableField(visitor: IndexableFieldVisitor) {
+        if (!visitor.visit(serverName())) return
+        visitor.visit(about())
+    }
 
     companion object {
         const val KIND = CvmKinds.SERVER_ANNOUNCEMENT

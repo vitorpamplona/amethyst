@@ -22,6 +22,8 @@ package com.vitorpamplona.quartz.experimental.interactiveStories.tags
 
 import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.nip01Core.core.has
+import com.vitorpamplona.quartz.nip01Core.hints.types.AddressHint
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
 import com.vitorpamplona.quartz.nip46RemoteSigner.getOrNull
 import com.vitorpamplona.quartz.utils.arrayOfNotNull
 import com.vitorpamplona.quartz.utils.ensure
@@ -42,6 +44,28 @@ class StoryOptionTag(
             ensure(tag[2].isNotEmpty()) { return null }
             val address = Address.parse(tag[2]) ?: return null
             return StoryOptionTag(tag[1], address, tag.getOrNull(3))
+        }
+
+        /** The choice text a reader sees for this option (`tag[1]`), when the option is well formed. */
+        fun parseLabel(tag: Array<String>): String? = parse(tag)?.option?.takeIf { it.isNotBlank() }
+
+        /** The scene coordinate this option leads to, validated, as an address id. */
+        fun parseAddressId(tag: Array<String>): String? {
+            ensure(tag.has(2)) { return null }
+            ensure(tag[0] == TAG_NAME) { return null }
+            ensure(tag[2].isNotEmpty()) { return null }
+            return Address.parse(tag[2])?.toValue()
+        }
+
+        /** The scene coordinate plus its relay (`tag[3]`), only when that relay is a valid URL. */
+        fun parseAsHint(tag: Array<String>): AddressHint? {
+            ensure(tag.has(3)) { return null }
+            ensure(tag[0] == TAG_NAME) { return null }
+            ensure(tag[2].isNotEmpty()) { return null }
+            ensure(tag[3].isNotEmpty()) { return null }
+            val relay = RelayUrlNormalizer.normalizeHintOrNull(tag[3]) ?: return null
+            val address = Address.parse(tag[2]) ?: return null
+            return AddressHint(address.toValue(), relay)
         }
 
         fun assemble(

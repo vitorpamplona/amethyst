@@ -29,7 +29,9 @@ import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
 import com.vitorpamplona.quartz.nip01Core.core.builder
 import com.vitorpamplona.quartz.nip01Core.core.has
+import com.vitorpamplona.quartz.nip01Core.hints.AddressHintProvider
 import com.vitorpamplona.quartz.nip01Core.hints.EventHintBundle
+import com.vitorpamplona.quartz.nip01Core.hints.types.AddressHint
 import com.vitorpamplona.quartz.nip01Core.signers.EventTemplate
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.nip01Core.tags.aTag.ATag
@@ -48,7 +50,14 @@ class InteractiveStoryReadingStateEvent(
     tags: Array<Array<String>>,
     content: String,
     sig: HexKey,
-) : BaseAddressableEvent(id, pubKey, createdAt, KIND, tags, content, sig) {
+) : BaseAddressableEvent(id, pubKey, createdAt, KIND, tags, content, sig),
+    AddressHintProvider {
+    // The root story (`A`) and the scene being read (`a`), each with the relay it was found on.
+    override fun addressHints(): List<AddressHint> = tags.mapNotNull { RootSceneTag.parseAsHint(it) ?: ATag.parseAsHint(it) }
+
+    /** The story ([root], which falls back to the `d` coordinate on old states) and the current scene. */
+    override fun linkedAddressIds(): List<String> = listOfNotNull(root()?.toTag()) + tags.mapNotNull(ATag::parseValidAddress)
+
     fun title() = tags.firstNotNullOfOrNull(TitleTag::parse)
 
     fun summary() = tags.firstNotNullOfOrNull(SummaryTag::parse)

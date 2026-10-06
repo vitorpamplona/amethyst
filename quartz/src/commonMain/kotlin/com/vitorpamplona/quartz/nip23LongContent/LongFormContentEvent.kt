@@ -51,6 +51,8 @@ import com.vitorpamplona.quartz.nip23LongContent.tags.SummaryTag
 import com.vitorpamplona.quartz.nip23LongContent.tags.TitleTag
 import com.vitorpamplona.quartz.nip50Search.IndexableFieldVisitor
 import com.vitorpamplona.quartz.nip50Search.SearchableEvent
+import com.vitorpamplona.quartz.nip57Zaps.splits.zapSplitHints
+import com.vitorpamplona.quartz.nip57Zaps.splits.zapSplitPubKeys
 import com.vitorpamplona.quartz.utils.TimeUtils
 import kotlin.uuid.ExperimentalUuidApi
 import kotlin.uuid.Uuid
@@ -71,14 +73,17 @@ class LongFormContentEvent(
     PublishedAtProvider,
     RootScope,
     SearchableEvent {
-    override fun indexableContent() = listOfNotNull(title(), summary(), content).joinToString("\n")
+    // Topics (`t`) are appended after the body, as CommentEvent does: authors pick
+    // topics that the article text does not necessarily mention.
+    override fun indexableContent() = (listOfNotNull(title(), summary(), content) + topics()).joinToString("\n")
 
     // The read path: hands over the same fields indexableContent() joins, without
     // building the joined string a scan would throw away.
     override fun forEachIndexableField(visitor: IndexableFieldVisitor) {
         if (!visitor.visit(title())) return
         if (!visitor.visit(summary())) return
-        visitor.visit(content)
+        if (!visitor.visit(content)) return
+        topics().forEach { if (!visitor.visit(it)) return }
     }
 
     override fun eventHints(): List<EventIdHint> {
@@ -111,16 +116,18 @@ class LongFormContentEvent(
 
     override fun pubKeyHints(): List<PubKeyHint> {
         val pHints = tags.mapNotNull(PTag::parseAsHint)
+        val zapHints = tags.zapSplitHints()
         val nip19Hints = citedNIP19().pubKeyHints()
 
-        return pHints + nip19Hints
+        return pHints + zapHints + nip19Hints
     }
 
     override fun linkedPubKeys(): List<HexKey> {
         val pHints = tags.mapNotNull(PTag::parseKey)
+        val zapHints = tags.zapSplitPubKeys()
         val nip19Hints = citedNIP19().pubKeys()
 
-        return pHints + nip19Hints
+        return pHints + zapHints + nip19Hints
     }
 
     override fun dTag() = tags.dTag()

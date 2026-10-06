@@ -31,6 +31,7 @@ import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.nip01Core.tags.aTag.ATag.Companion.parseAsHint
 import com.vitorpamplona.quartz.nip10Notes.BaseNoteEvent
 import com.vitorpamplona.quartz.nip10Notes.tags.MarkedETag.Companion.parseAsHint
+import com.vitorpamplona.quartz.nip18Reposts.quotes.QTag
 import com.vitorpamplona.quartz.nip19Bech32.addressHints
 import com.vitorpamplona.quartz.nip19Bech32.addressIds
 import com.vitorpamplona.quartz.nip19Bech32.entities.NProfile
@@ -40,6 +41,8 @@ import com.vitorpamplona.quartz.nip19Bech32.pubKeyHints
 import com.vitorpamplona.quartz.nip19Bech32.pubKeys
 import com.vitorpamplona.quartz.nip50Search.IndexableFieldVisitor
 import com.vitorpamplona.quartz.nip50Search.SearchableEvent
+import com.vitorpamplona.quartz.nip57Zaps.splits.zapSplitHints
+import com.vitorpamplona.quartz.nip57Zaps.splits.zapSplitPubKeys
 import com.vitorpamplona.quartz.nipA4PublicMessages.tags.ReceiverTag
 import com.vitorpamplona.quartz.utils.TimeUtils
 
@@ -64,17 +67,19 @@ class PublicMessageEvent(
         visitor.visit(content)
     }
 
-    override fun pubKeyHints() = tags.mapNotNull(ReceiverTag::parseAsHint) + citedNIP19().pubKeyHints()
+    // NIP-A4 forbids e tags, so event and address references come from q quotes
+    // (written by the app for every nostr: citation) and the citations themselves.
+    override fun pubKeyHints() = tags.mapNotNull(ReceiverTag::parseAsHint) + tags.zapSplitHints() + citedNIP19().pubKeyHints()
 
-    override fun linkedPubKeys() = tags.mapNotNull(ReceiverTag::parseKey) + citedNIP19().pubKeys()
+    override fun linkedPubKeys() = tags.mapNotNull(ReceiverTag::parseKey) + tags.zapSplitPubKeys() + citedNIP19().pubKeys()
 
-    override fun eventHints() = citedNIP19().eventHints()
+    override fun eventHints() = tags.mapNotNull(QTag::parseEventAsHint) + citedNIP19().eventHints()
 
-    override fun linkedEventIds() = citedNIP19().eventIds()
+    override fun linkedEventIds() = tags.mapNotNull(QTag::parseEventId) + citedNIP19().eventIds()
 
-    override fun addressHints() = citedNIP19().addressHints()
+    override fun addressHints() = tags.mapNotNull(QTag::parseAddressAsHint) + citedNIP19().addressHints()
 
-    override fun linkedAddressIds() = citedNIP19().addressIds()
+    override fun linkedAddressIds() = tags.mapNotNull(QTag::parseValidAddress) + citedNIP19().addressIds()
 
     fun isIncluded(pubKey: HexKey) = tags.any(ReceiverTag::match, pubKey) || this.pubKey == pubKey
 

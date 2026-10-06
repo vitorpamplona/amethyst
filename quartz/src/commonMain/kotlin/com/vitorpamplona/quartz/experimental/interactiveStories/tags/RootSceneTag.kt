@@ -24,6 +24,7 @@ import androidx.compose.runtime.Immutable
 import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.has
+import com.vitorpamplona.quartz.nip01Core.hints.types.AddressHint
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
 import com.vitorpamplona.quartz.utils.arrayOfNotNull
@@ -66,6 +67,25 @@ data class RootSceneTag(
             val address = Address.parse(tag[1]) ?: return null
             val hint = tag.getOrNull(2)?.let { RelayUrlNormalizer.normalizeOrNull(it) }
             return RootSceneTag(address.kind, address.pubKeyHex, address.dTag, hint)
+        }
+
+        /** The root story coordinate, validated, as an address id. */
+        fun parseAddressId(tag: Array<String>): String? {
+            ensure(tag.has(1)) { return null }
+            ensure(tag[0] == TAG_NAME) { return null }
+            ensure(tag[1].isNotEmpty()) { return null }
+            return Address.parse(tag[1])?.toValue()
+        }
+
+        /** The root story coordinate plus its relay (`tag[2]`), only when that relay is a valid URL. */
+        fun parseAsHint(tag: Array<String>): AddressHint? {
+            ensure(tag.has(2)) { return null }
+            ensure(tag[0] == TAG_NAME) { return null }
+            ensure(tag[1].isNotEmpty()) { return null }
+            ensure(tag[2].isNotEmpty()) { return null }
+            val relay = RelayUrlNormalizer.normalizeHintOrNull(tag[2]) ?: return null
+            val address = Address.parse(tag[1]) ?: return null
+            return AddressHint(address.toValue(), relay)
         }
 
         fun assemble(

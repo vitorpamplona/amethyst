@@ -25,9 +25,14 @@ import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
+import com.vitorpamplona.quartz.nip01Core.hints.AddressHintProvider
+import com.vitorpamplona.quartz.nip01Core.hints.PubKeyHintProvider
+import com.vitorpamplona.quartz.nip01Core.hints.types.AddressHint
+import com.vitorpamplona.quartz.nip01Core.hints.types.PubKeyHint
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.nip19Bech32.entities.NPub
+import com.vitorpamplona.quartz.nipCCGeocaching.verification.tags.FinderCacheTag
 import com.vitorpamplona.quartz.utils.TimeUtils
 
 /**
@@ -52,7 +57,28 @@ class GeocacheVerificationEvent(
     tags: Array<Array<String>>,
     content: String,
     sig: HexKey,
-) : Event(id, pubKey, createdAt, KIND, tags, content, sig) {
+) : Event(id, pubKey, createdAt, KIND, tags, content, sig),
+    PubKeyHintProvider,
+    AddressHintProvider {
+    // The finder half of the `a` tag has no relay slot; the cache half is an naddr that may carry relays.
+    override fun pubKeyHints(): List<PubKeyHint> = emptyList()
+
+    override fun linkedPubKeys(): List<HexKey> = tags.mapNotNull(FinderCacheTag::parseFinder)
+
+    // Both lists bech32-decode the cache naddr and linked*() runs for every relay copy of every
+    // event, so each is computed once per instance. Events are immutable; a race only decodes twice.
+    @kotlinx.serialization.Transient
+    @kotlin.jvm.Transient
+    private var addressHintsCache: List<AddressHint>? = null
+
+    @kotlinx.serialization.Transient
+    @kotlin.jvm.Transient
+    private var linkedAddressIdsCache: List<String>? = null
+
+    override fun addressHints(): List<AddressHint> = addressHintsCache ?: tags.flatMap(FinderCacheTag::parseCacheAsHints).also { addressHintsCache = it }
+
+    override fun linkedAddressIds(): List<String> = linkedAddressIdsCache ?: tags.mapNotNull(FinderCacheTag::parseCacheAddressId).also { linkedAddressIdsCache = it }
+
     fun finderCache() = tags.finderCache()
 
     /** The pubkey this verification was issued to. */

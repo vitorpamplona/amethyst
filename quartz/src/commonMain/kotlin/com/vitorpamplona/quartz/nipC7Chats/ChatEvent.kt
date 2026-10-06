@@ -23,9 +23,11 @@ package com.vitorpamplona.quartz.nipC7Chats
 import androidx.compose.runtime.Immutable
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
+import com.vitorpamplona.quartz.nip01Core.hints.AddressHintProvider
 import com.vitorpamplona.quartz.nip01Core.hints.EventHintBundle
 import com.vitorpamplona.quartz.nip01Core.hints.EventHintProvider
 import com.vitorpamplona.quartz.nip01Core.hints.PubKeyHintProvider
+import com.vitorpamplona.quartz.nip01Core.hints.types.AddressHint
 import com.vitorpamplona.quartz.nip01Core.hints.types.EventIdHint
 import com.vitorpamplona.quartz.nip01Core.hints.types.PubKeyHint
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
@@ -34,6 +36,8 @@ import com.vitorpamplona.quartz.nip10Notes.BaseNoteEvent
 import com.vitorpamplona.quartz.nip18Reposts.quotes.QEventTag
 import com.vitorpamplona.quartz.nip18Reposts.quotes.QTag
 import com.vitorpamplona.quartz.nip18Reposts.quotes.quote
+import com.vitorpamplona.quartz.nip19Bech32.addressHints
+import com.vitorpamplona.quartz.nip19Bech32.addressIds
 import com.vitorpamplona.quartz.nip19Bech32.eventHints
 import com.vitorpamplona.quartz.nip19Bech32.eventIds
 import com.vitorpamplona.quartz.nip19Bech32.pubKeyHints
@@ -54,6 +58,7 @@ class ChatEvent(
 ) : BaseNoteEvent(id, pubKey, createdAt, KIND, tags, content, sig),
     RootScope,
     EventHintProvider,
+    AddressHintProvider,
     PubKeyHintProvider,
     SearchableEvent {
     override fun indexableContent() = content
@@ -77,6 +82,20 @@ class ChatEvent(
     override fun linkedEventIds(): List<HexKey> {
         val qHints = tags.mapNotNull(QTag::parseEventId)
         val nip19Hints = citedNIP19().eventIds()
+        return qHints + nip19Hints
+    }
+
+    // q tags may quote an addressable event ("kind:pubkey:dtag") instead of an id,
+    // and the content may cite naddrs: both are address references.
+    override fun addressHints(): List<AddressHint> {
+        val qHints = tags.mapNotNull(QTag::parseAddressAsHint)
+        val nip19Hints = citedNIP19().addressHints()
+        return qHints + nip19Hints
+    }
+
+    override fun linkedAddressIds(): List<String> {
+        val qHints = tags.mapNotNull(QTag::parseValidAddress)
+        val nip19Hints = citedNIP19().addressIds()
         return qHints + nip19Hints
     }
 

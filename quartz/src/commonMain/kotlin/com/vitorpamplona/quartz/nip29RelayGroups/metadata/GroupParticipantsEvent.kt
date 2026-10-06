@@ -26,6 +26,8 @@ import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
 import com.vitorpamplona.quartz.nip01Core.core.isValid
 import com.vitorpamplona.quartz.nip01Core.core.mapValueTagged
+import com.vitorpamplona.quartz.nip01Core.hints.PubKeyHintProvider
+import com.vitorpamplona.quartz.nip01Core.hints.types.PubKeyHint
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.nip01Core.tags.dTag.dTag
 import com.vitorpamplona.quartz.utils.TimeUtils
@@ -46,7 +48,13 @@ class GroupParticipantsEvent(
     tags: Array<Array<String>>,
     content: String,
     sig: HexKey,
-) : BaseAddressableEvent(id, pubKey, createdAt, KIND, tags, content, sig) {
+) : BaseAddressableEvent(id, pubKey, createdAt, KIND, tags, content, sig),
+    PubKeyHintProvider {
+    // `participant` tags carry only the pubkey: there is never a relay hint.
+    override fun pubKeyHints(): List<PubKeyHint> = emptyList()
+
+    override fun linkedPubKeys(): List<HexKey> = participants()
+
     fun groupId() = dTag()
 
     fun participants(): List<HexKey> = tags.mapValueTagged(TAG_NAME) { it.takeIf { value -> value.isValid() } }

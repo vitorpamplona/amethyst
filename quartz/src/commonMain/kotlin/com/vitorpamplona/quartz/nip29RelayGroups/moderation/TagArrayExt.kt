@@ -27,6 +27,10 @@ import com.vitorpamplona.quartz.nip01Core.core.fastForEach
 import com.vitorpamplona.quartz.nip01Core.core.firstTagValue
 import com.vitorpamplona.quartz.nip01Core.core.isValid
 import com.vitorpamplona.quartz.nip01Core.core.mapValueTagged
+import com.vitorpamplona.quartz.nip01Core.hints.types.AddressHint
+import com.vitorpamplona.quartz.nip01Core.hints.types.EventIdHint
+import com.vitorpamplona.quartz.nip01Core.tags.aTag.ATag
+import com.vitorpamplona.quartz.nip01Core.tags.events.ETag
 import com.vitorpamplona.quartz.nip01Core.tags.people.PTag
 import com.vitorpamplona.quartz.nip29RelayGroups.tags.AddressPin
 import com.vitorpamplona.quartz.nip29RelayGroups.tags.ChildTag
@@ -67,5 +71,14 @@ fun TagArray.pinnedEventIds(): List<HexKey> = mapNotNull { EventPin.parse(it)?.e
 
 /** Just the `a`-tagged pinned addresses, in order. */
 fun TagArray.pinnedAddresses(): List<Address> = mapNotNull { AddressPin.parse(it)?.address }
+
+/** The `e` pins that carry a relay hint in their extras. */
+fun TagArray.pinnedEventHints(): List<EventIdHint> = mapNotNull(ETag::parseAsHint)
+
+/** The `a` pins as `kind:pubkey:d` address ids, in order. */
+fun TagArray.pinnedAddressIds(): List<String> = mapNotNull { AddressPin.parse(it)?.ref }
+
+/** The `a` pins that carry a relay hint in their extras. */
+fun TagArray.pinnedAddressHints(): List<AddressHint> = mapNotNull(ATag::parseAsHint)
 
 fun TagArray.inviteCode() = firstNotNullOfOrNull(CodeTag::parse)

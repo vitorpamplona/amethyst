@@ -28,6 +28,11 @@ import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.Tag
 import com.vitorpamplona.quartz.nip01Core.core.TagArray
 import com.vitorpamplona.quartz.nip01Core.core.fastMapNotNullDense
+import com.vitorpamplona.quartz.nip01Core.core.isValid
+import com.vitorpamplona.quartz.nip01Core.hints.EventHintProvider
+import com.vitorpamplona.quartz.nip01Core.hints.PubKeyHintProvider
+import com.vitorpamplona.quartz.nip01Core.hints.types.EventIdHint
+import com.vitorpamplona.quartz.nip01Core.hints.types.PubKeyHint
 import com.vitorpamplona.quartz.nip50Search.IndexableFieldVisitor
 import com.vitorpamplona.quartz.nip50Search.SearchableEvent
 
@@ -62,6 +67,8 @@ abstract class TrustedListEvent(
     content: String,
     sig: HexKey,
 ) : BaseAddressableEvent(id, pubKey, createdAt, kind, tags, content, sig),
+    PubKeyHintProvider,
+    EventHintProvider,
     SearchableEvent {
     /**
      * The list's label, and nothing else -- it is the only human-authored text
@@ -78,6 +85,27 @@ abstract class TrustedListEvent(
         // drops nulls, so both sides still produce the same text.
         visitor.visit(title())
     }
+
+    /**
+     * Every list in the family names its provenance: the [observer] it was computed for and
+     * the [sourceTag] definition (an event id plus its author) it was computed from. Neither
+     * slot has a relay, so they link but never hint. Subclasses whose member tags are pubkeys
+     * or events add those on top -- and must keep these, via [provenancePubKeys] /
+     * [provenanceEventIds].
+     */
+    override fun pubKeyHints(): List<PubKeyHint> = emptyList()
+
+    override fun linkedPubKeys(): List<HexKey> = provenancePubKeys()
+
+    override fun eventHints(): List<EventIdHint> = emptyList()
+
+    override fun linkedEventIds(): List<HexKey> = provenanceEventIds()
+
+    /** The [observer] and the [sourceTag] author, when each is a valid pubkey. */
+    protected fun provenancePubKeys(): List<HexKey> = listOfNotNull(observer(), sourceTag()?.author?.takeIf { it.isValid() })
+
+    /** The [sourceTag] definition event, when present. */
+    protected fun provenanceEventIds(): List<HexKey> = listOfNotNull(sourceTag()?.eventId?.takeIf { it.isValid() })
 
     /** The addressable identity of this list. Deterministic per list. */
     fun listId() = dTag()

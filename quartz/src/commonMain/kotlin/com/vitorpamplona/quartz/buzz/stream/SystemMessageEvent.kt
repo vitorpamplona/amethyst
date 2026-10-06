@@ -24,7 +24,14 @@ import androidx.compose.runtime.Immutable
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
+import com.vitorpamplona.quartz.nip01Core.core.isValid
+import com.vitorpamplona.quartz.nip01Core.hints.EventHintProvider
+import com.vitorpamplona.quartz.nip01Core.hints.PubKeyHintProvider
+import com.vitorpamplona.quartz.nip01Core.hints.types.EventIdHint
+import com.vitorpamplona.quartz.nip01Core.hints.types.PubKeyHint
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
+import com.vitorpamplona.quartz.nip50Search.IndexableFieldVisitor
+import com.vitorpamplona.quartz.nip50Search.SearchableEvent
 import com.vitorpamplona.quartz.utils.TimeUtils
 
 /**
@@ -42,10 +49,42 @@ class SystemMessageEvent(
     tags: Array<Array<String>>,
     content: String,
     sig: HexKey,
-) : Event(id, pubKey, createdAt, KIND, tags, content, sig) {
+) : Event(id, pubKey, createdAt, KIND, tags, content, sig),
+    SearchableEvent,
+    PubKeyHintProvider,
+    EventHintProvider {
+    override fun indexableContent() = payload()?.let { listOfNotNull(it.topic, it.purpose, it.publicReason).joinToString("\n") } ?: ""
+
+    // The read path. The parse happens once; fields are handed over in indexableContent() order.
+    override fun forEachIndexableField(visitor: IndexableFieldVisitor) {
+        val data = payload() ?: return
+        if (!visitor.visit(data.topic)) return
+        if (!visitor.visit(data.purpose)) return
+        visitor.visit(data.publicReason)
+    }
+
+    // Every reference lives in the relay-authored JSON body, which carries no relay hints.
+    override fun pubKeyHints(): List<PubKeyHint> = emptyList()
+
+    override fun linkedPubKeys(): List<HexKey> {
+        val data = payload() ?: return emptyList()
+        return (listOfNotNull(data.actor, data.target) + data.participants.orEmpty()).filter { it.isValid() }.distinct()
+    }
+
+    override fun eventHints(): List<EventIdHint> = emptyList()
+
+    override fun linkedEventIds(): List<HexKey> = listOfNotNull(payload()?.targetEventId?.takeIf { it.isValid() })
+
     fun channel() = tags.channel()
 
-    fun payload() = runCatching { SystemMessagePayload.decodeFromJson(content) }.getOrNull()
+    // linked*() runs for every relay copy of every event and forEachIndexableField() on every
+    // keystroke, so the body is decoded once per instance — a failure included. Events are
+    // immutable; a race only decodes twice.
+    @kotlinx.serialization.Transient
+    @kotlin.jvm.Transient
+    private var payloadCache: Result<SystemMessagePayload>? = null
+
+    fun payload() = (payloadCache ?: runCatching { SystemMessagePayload.decodeFromJson(content) }.also { payloadCache = it }).getOrNull()
 
     companion object {
         const val KIND = 40099

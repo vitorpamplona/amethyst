@@ -21,12 +21,14 @@
 package com.vitorpamplona.quartz.nip90Dvms.peopleSearch
 
 import androidx.compose.runtime.Immutable
-import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
-import com.vitorpamplona.quartz.nip01Core.core.OptimizedJsonMapper
+import com.vitorpamplona.quartz.nip01Core.core.TagArray
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
+import com.vitorpamplona.quartz.nip01Core.hints.types.PubKeyHint
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
-import com.vitorpamplona.quartz.utils.Log
+import com.vitorpamplona.quartz.nip01Core.tags.people.PTag
+import com.vitorpamplona.quartz.nip90Dvms.DvmResponseEvent
+import com.vitorpamplona.quartz.nip90Dvms.tags.parseDvmResultTags
 import com.vitorpamplona.quartz.utils.TimeUtils
 
 @Immutable
@@ -37,35 +39,35 @@ class DvmPeopleSearchResponseEvent(
     tags: Array<Array<String>>,
     content: String,
     sig: HexKey,
-) : Event(id, pubKey, createdAt, KIND, tags, content, sig) {
+) : DvmResponseEvent(id, pubKey, createdAt, KIND, tags, content, sig) {
     @kotlinx.serialization.Transient
     @kotlin.jvm.Transient
     var people: List<HexKey>? = null
 
+    @kotlinx.serialization.Transient
+    @kotlin.jvm.Transient
+    private var resultTagsCache: TagArray? = null
+
+    /** The result list: `content` is a JSON tag array of `p` references. Parsed once. */
+    fun resultTags(): TagArray = resultTagsCache ?: parseDvmResultTags(content, "DvmPeopleSearchResponseEvent").also { resultTagsCache = it }
+
     fun innerTags(): List<HexKey> {
-        if (content.isEmpty()) {
-            return listOf()
-        }
+        people?.let { return it }
 
-        people?.let {
-            return it
-        }
-
-        try {
-            people =
-                OptimizedJsonMapper.fromJsonToTagArray(content).mapNotNull {
-                    if (it.size > 1 && it[0] == "p") {
-                        it[1]
-                    } else {
-                        null
-                    }
+        return resultTags()
+            .mapNotNull {
+                if (it.size > 1 && it[0] == "p") {
+                    it[1]
+                } else {
+                    null
                 }
-        } catch (e: Throwable) {
-            Log.w("DvmPeopleSearchResponseEvent") { "Error parsing the JSON ${e.message}" }
-        }
-
-        return people ?: listOf()
+            }.also { people = it }
     }
+
+    // The results are public references, just carried in content instead of tags.
+    override fun pubKeyHints(): List<PubKeyHint> = super.pubKeyHints() + resultTags().mapNotNull(PTag::parseAsHint)
+
+    override fun linkedPubKeys(): List<HexKey> = super.linkedPubKeys() + resultTags().mapNotNull(PTag::parseKey)
 
     companion object {
         const val KIND = 6303

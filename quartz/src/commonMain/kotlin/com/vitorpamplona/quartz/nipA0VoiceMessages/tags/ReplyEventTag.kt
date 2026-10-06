@@ -83,7 +83,7 @@ class ReplyEventTag(
             ensure(tag[1].length == 64) { return null }
             ensure(tag[2].isNotEmpty()) { return null }
 
-            val relayHint = RelayUrlNormalizer.normalizeOrNull(tag[2])
+            val relayHint = RelayUrlNormalizer.normalizeHintOrNull(tag[2])
             ensure(relayHint != null) { return null }
 
             return EventIdHint(tag[1], relayHint)

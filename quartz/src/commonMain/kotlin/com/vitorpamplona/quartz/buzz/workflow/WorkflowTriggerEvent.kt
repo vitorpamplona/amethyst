@@ -21,9 +21,12 @@
 package com.vitorpamplona.quartz.buzz.workflow
 
 import androidx.compose.runtime.Immutable
+import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
+import com.vitorpamplona.quartz.nip01Core.hints.AddressHintProvider
+import com.vitorpamplona.quartz.nip01Core.hints.types.AddressHint
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.utils.TimeUtils
 
@@ -41,7 +44,13 @@ class WorkflowTriggerEvent(
     tags: Array<Array<String>>,
     content: String,
     sig: HexKey,
-) : Event(id, pubKey, createdAt, KIND, tags, content, sig) {
+) : Event(id, pubKey, createdAt, KIND, tags, content, sig),
+    AddressHintProvider {
+    // The trigger is owner-only: its `d` names the author's own `30620` workflow definition.
+    override fun addressHints(): List<AddressHint> = emptyList()
+
+    override fun linkedAddressIds(): List<String> = listOfNotNull(workflowId()?.takeIf { it.isNotEmpty() }?.let { Address.assemble(WorkflowDefEvent.KIND, pubKey, it) })
+
     /** The workflow UUID this trigger targets - the `d` tag. */
     fun workflowId() = tags.workflowDTag()
 

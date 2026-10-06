@@ -26,7 +26,10 @@ import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.TagArray
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
 import com.vitorpamplona.quartz.nip01Core.core.fastAny
+import com.vitorpamplona.quartz.nip01Core.hints.AddressHintProvider
+import com.vitorpamplona.quartz.nip01Core.hints.types.AddressHint
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
+import com.vitorpamplona.quartz.nip01Core.tags.aTag.ATag
 import com.vitorpamplona.quartz.nip50Search.IndexableFieldVisitor
 import com.vitorpamplona.quartz.nip50Search.SearchableEvent
 import com.vitorpamplona.quartz.nip87Ecash.MintUrlTag
@@ -43,7 +46,13 @@ class MintRecommendationEvent(
     content: String,
     sig: HexKey,
 ) : BaseAddressableEvent(id, pubKey, createdAt, KIND, tags, content, sig),
+    AddressHintProvider,
     SearchableEvent {
+    // The recommended mint's announcement (kind 38172/38173), with the relay it lives on.
+    override fun addressHints(): List<AddressHint> = tags.mapNotNull(ATag::parseAsHint)
+
+    override fun linkedAddressIds(): List<String> = tags.mapNotNull(ATag::parseValidAddress)
+
     override fun indexableContent() = content
 
     // The read path: the same fields indexableContent() joins, handed over without

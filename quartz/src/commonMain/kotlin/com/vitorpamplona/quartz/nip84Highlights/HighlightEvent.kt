@@ -73,13 +73,13 @@ class HighlightEvent(
     AddressHintProvider,
     PubKeyHintProvider,
     SearchableEvent {
-    override fun indexableContent() = listOfNotNull(comment(), context(), content).joinToString("\n")
+    override fun indexableContent() = listOfNotNull(comment(), searchableContext(), content).joinToString("\n")
 
     // The read path: hands over the same fields indexableContent() joins, without
     // building the joined string a scan would throw away.
     override fun forEachIndexableField(visitor: IndexableFieldVisitor) {
         if (!visitor.visit(comment())) return
-        if (!visitor.visit(context())) return
+        if (!visitor.visit(searchableContext())) return
         visitor.visit(content)
     }
 
@@ -208,6 +208,22 @@ class HighlightEvent(
         val suffix = selector.suffix?.replace(WHITESPACE_RUN, " ")?.trimEnd() ?: ""
 
         return prefix + content + suffix
+    }
+
+    /**
+     * The surrounding text worth indexing: the `context` tag, or -- when a web highlighter wrote
+     * only a `textquoteselector` -- its prefix and suffix. Unlike [contextOrReconstructed] the
+     * highlight itself is left out, since [content] is indexed on its own.
+     */
+    fun searchableContext(): String? {
+        context()?.let { return it }
+
+        val selector = textQuoteSelector() ?: return null
+        return listOfNotNull(selector.prefix, selector.suffix)
+            .map { it.replace(WHITESPACE_RUN, " ").trim() }
+            .filter { it.isNotEmpty() }
+            .joinToString(" ")
+            .ifEmpty { null }
     }
 
     fun inPost() = firstTaggedATag()

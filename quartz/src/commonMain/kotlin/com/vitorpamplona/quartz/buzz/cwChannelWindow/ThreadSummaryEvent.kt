@@ -24,6 +24,11 @@ import androidx.compose.runtime.Immutable
 import com.vitorpamplona.quartz.nip01Core.core.BaseAddressableEvent
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
+import com.vitorpamplona.quartz.nip01Core.core.isValid
+import com.vitorpamplona.quartz.nip01Core.hints.EventHintProvider
+import com.vitorpamplona.quartz.nip01Core.hints.PubKeyHintProvider
+import com.vitorpamplona.quartz.nip01Core.hints.types.EventIdHint
+import com.vitorpamplona.quartz.nip01Core.hints.types.PubKeyHint
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.nip01Core.tags.dTag.dTag
 import com.vitorpamplona.quartz.nip01Core.tags.events.ETag
@@ -46,7 +51,18 @@ class ThreadSummaryEvent(
     tags: Array<Array<String>>,
     content: String,
     sig: HexKey,
-) : BaseAddressableEvent(id, pubKey, createdAt, KIND, tags, content, sig) {
+) : BaseAddressableEvent(id, pubKey, createdAt, KIND, tags, content, sig),
+    PubKeyHintProvider,
+    EventHintProvider {
+    // Participants live in the relay-synthesized JSON body, with no relay hints.
+    override fun pubKeyHints(): List<PubKeyHint> = emptyList()
+
+    override fun linkedPubKeys(): List<HexKey> = summaryOrNull()?.participants?.filter { it.isValid() } ?: emptyList()
+
+    override fun eventHints(): List<EventIdHint> = tags.mapNotNull(ETag::parseAsHint)
+
+    override fun linkedEventIds(): List<HexKey> = tags.mapNotNull(ETag::parseId)
+
     /** The thread root event id — the `d` tag (equal to the `e` tag). */
     fun rootId() = dTag()
 
@@ -56,15 +72,23 @@ class ThreadSummaryEvent(
     /** The root event id from the `e` tag. */
     fun rootEventTag() = tags.firstNotNullOfOrNull(ETag::parseId)
 
-    /** Parses the JSON summary [content]. Throws on malformed content; use [summaryOrNull]. */
-    fun summary(): ThreadSummaryContent = ThreadSummaryContent.decodeFromJson(content)
+    // linkedPubKeys() runs for every relay copy of every event, so the body is decoded once
+    // per instance — a failure included. Events are immutable; a race only decodes twice.
+    @kotlinx.serialization.Transient
+    @kotlin.jvm.Transient
+    private var summaryCache: Result<ThreadSummaryContent>? = null
 
-    fun summaryOrNull(): ThreadSummaryContent? =
-        try {
-            summary()
-        } catch (_: Exception) {
-            null
-        }
+    private fun parsedSummary(): Result<ThreadSummaryContent> =
+        summaryCache ?: try {
+            Result.success(ThreadSummaryContent.decodeFromJson(content))
+        } catch (e: Exception) {
+            Result.failure(e)
+        }.also { summaryCache = it }
+
+    /** Parses the JSON summary [content] (once). Throws on malformed content; use [summaryOrNull]. */
+    fun summary(): ThreadSummaryContent = parsedSummary().getOrThrow()
+
+    fun summaryOrNull(): ThreadSummaryContent? = parsedSummary().getOrNull()
 
     companion object {
         const val KIND = 39005

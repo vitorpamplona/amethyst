@@ -23,6 +23,9 @@ package com.vitorpamplona.quartz.nip71Video
 import androidx.compose.runtime.Immutable
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
+import com.vitorpamplona.quartz.nip01Core.hints.AddressHintProvider
+import com.vitorpamplona.quartz.nip01Core.hints.EventHintProvider
+import com.vitorpamplona.quartz.nip01Core.hints.PubKeyHintProvider
 import com.vitorpamplona.quartz.nip01Core.tags.hashtags.hashtags
 import com.vitorpamplona.quartz.nip01Core.tags.people.PTag
 import com.vitorpamplona.quartz.nip01Core.tags.publishedAt.PublishedAtProvider
@@ -52,15 +55,33 @@ abstract class RegularVideoEvent(
     PublishedAtProvider,
     VideoEvent,
     RootScope,
+    PubKeyHintProvider,
+    EventHintProvider,
+    AddressHintProvider,
     SearchableEvent {
-    override fun indexableContent() = listOfNotNull(title(), content).joinToString("\n")
+    // Chapter (`segment`) titles are publisher-written headings, searched like a title's words.
+    override fun indexableContent() = (listOfNotNull(title(), content) + segmentTitles()).joinToString("\n")
 
     // The read path: the same fields indexableContent() joins, handed over without
     // building the joined string a scan would throw away.
     override fun forEachIndexableField(visitor: IndexableFieldVisitor) {
         if (!visitor.visit(title())) return
-        visitor.visit(content)
+        if (!visitor.visit(content)) return
+        segmentTitles().forEach { if (!visitor.visit(it)) return }
     }
+
+    // One implementation for every NIP-71 kind: see VideoHints.kt.
+    override fun pubKeyHints() = tags.videoPubKeyHints()
+
+    override fun linkedPubKeys() = tags.videoLinkedPubKeys()
+
+    override fun eventHints() = tags.videoEventHints()
+
+    override fun linkedEventIds() = tags.videoLinkedEventIds()
+
+    override fun addressHints() = tags.videoAddressHints()
+
+    override fun linkedAddressIds() = tags.videoLinkedAddressIds()
 
     @kotlinx.serialization.Transient
     @kotlin.jvm.Transient
@@ -79,6 +100,8 @@ abstract class RegularVideoEvent(
     override fun credits() = VideoCredits.parse(tags)
 
     override fun segments() = tags.mapNotNull(SegmentTag::parse)
+
+    fun segmentTitles() = segments().map { it.title }
 
     override fun participants() = tags.mapNotNull(PTag::parse)
 

@@ -62,13 +62,15 @@ class GitIssueEvent(
     EventHintProvider,
     AddressHintProvider,
     SearchableEvent {
-    override fun indexableContent() = listOfNotNull(subject(), content).joinToString("\n")
+    // The `t` tags are the issue's NIP-34 labels, appended after the body.
+    override fun indexableContent() = (listOfNotNull(subject(), content) + topics()).joinToString("\n")
 
     // The read path: the same fields indexableContent() joins, handed over without
     // building the joined string a scan would throw away.
     override fun forEachIndexableField(visitor: IndexableFieldVisitor) {
         if (!visitor.visit(subject())) return
-        visitor.visit(content)
+        if (!visitor.visit(content)) return
+        topics().forEach { if (!visitor.visit(it)) return }
     }
 
     override fun eventHints(): List<EventIdHint> {

@@ -24,6 +24,8 @@ import androidx.compose.runtime.Immutable
 import com.vitorpamplona.quartz.nip01Core.core.BaseReplaceableEvent
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
+import com.vitorpamplona.quartz.nip01Core.hints.PubKeyHintProvider
+import com.vitorpamplona.quartz.nip01Core.hints.types.PubKeyHint
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.nip01Core.tags.people.PTag
 import com.vitorpamplona.quartz.nip70ProtectedEvts.protect
@@ -45,7 +47,12 @@ class ArchivedIdentitiesListEvent(
     tags: Array<Array<String>>,
     content: String,
     sig: HexKey,
-) : BaseReplaceableEvent(id, pubKey, createdAt, KIND, tags, content, sig) {
+) : BaseReplaceableEvent(id, pubKey, createdAt, KIND, tags, content, sig),
+    PubKeyHintProvider {
+    override fun pubKeyHints(): List<PubKeyHint> = tags.mapNotNull(PTag::parseAsHint)
+
+    override fun linkedPubKeys(): List<HexKey> = tags.mapNotNull(PTag::parseKey)
+
     /** Every archived-identity pubkey listed as a bare `p` tag. */
     fun archivedIdentities() = tags.archivedIdentities()
 

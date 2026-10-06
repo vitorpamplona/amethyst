@@ -47,6 +47,11 @@ class DraftWrapEvent(
 ) : BaseAddressableEvent(id, pubKey, createdAt, KIND, tags, content, sig) {
     override fun isContentEncoded() = true
 
+    // Deliberately NOT a hint provider, although a draft exposes the public `e`/`a` of what it
+    // replies to (ExposeInDraft). Drafts arrive from the author's private-storage relay, and a
+    // provider's linked ids are recorded as reachable on the relay the event came from — which
+    // would advertise that private relay as a hint for the public events the draft references.
+
     fun isDeleted() = content == ""
 
     fun canDecrypt(signer: NostrSigner) = signer.pubKey == pubKey

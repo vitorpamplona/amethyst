@@ -23,8 +23,14 @@ package com.vitorpamplona.quartz.experimental.edits
 import androidx.compose.runtime.Immutable
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
+import com.vitorpamplona.quartz.nip01Core.hints.EventHintProvider
+import com.vitorpamplona.quartz.nip01Core.hints.PubKeyHintProvider
+import com.vitorpamplona.quartz.nip01Core.hints.types.EventIdHint
+import com.vitorpamplona.quartz.nip01Core.hints.types.PubKeyHint
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
+import com.vitorpamplona.quartz.nip01Core.tags.events.ETag
 import com.vitorpamplona.quartz.nip01Core.tags.events.firstTaggedEvent
+import com.vitorpamplona.quartz.nip01Core.tags.people.PTag
 import com.vitorpamplona.quartz.nip50Search.IndexableFieldVisitor
 import com.vitorpamplona.quartz.nip50Search.SearchableEvent
 import com.vitorpamplona.quartz.utils.TimeUtils
@@ -38,8 +44,20 @@ class TextNoteModificationEvent(
     content: String,
     sig: HexKey,
 ) : Event(id, pubKey, createdAt, KIND, tags, content, sig),
+    EventHintProvider,
+    PubKeyHintProvider,
     SearchableEvent {
     fun editedNote() = firstTaggedEvent()
+
+    // The edited note (`e`) and whoever the edit notifies (`p`), so outbox can fetch the
+    // original the modification applies to.
+    override fun eventHints(): List<EventIdHint> = tags.mapNotNull(ETag::parseAsHint)
+
+    override fun linkedEventIds(): List<HexKey> = tags.mapNotNull(ETag::parseId)
+
+    override fun pubKeyHints(): List<PubKeyHint> = tags.mapNotNull(PTag::parseAsHint)
+
+    override fun linkedPubKeys(): List<HexKey> = tags.mapNotNull(PTag::parseKey)
 
     fun summary() = tags.firstOrNull { it.size > 1 && it[0] == "summary" }?.get(1)
 

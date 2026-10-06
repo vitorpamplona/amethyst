@@ -21,10 +21,10 @@
 package com.vitorpamplona.quartz.nip90Dvms.imageToVideo
 
 import androidx.compose.runtime.Immutable
-import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
+import com.vitorpamplona.quartz.nip90Dvms.DvmRequestEvent
 import com.vitorpamplona.quartz.nip90Dvms.tags.InputTag
 import com.vitorpamplona.quartz.nip90Dvms.tags.firstInputByType
 import com.vitorpamplona.quartz.nip90Dvms.tags.inputUrl
@@ -39,7 +39,7 @@ class DvmImageToVideoRequestEvent(
     tags: Array<Array<String>>,
     content: String,
     sig: HexKey,
-) : Event(id, pubKey, createdAt, KIND, tags, content, sig) {
+) : DvmRequestEvent(id, pubKey, createdAt, KIND, tags, content, sig) {
     fun inputs(): List<InputTag> = tags.inputs()
 
     fun imageUrl(): String? = tags.firstInputByType("url")?.value

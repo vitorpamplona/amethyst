@@ -27,6 +27,7 @@ import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
 import com.vitorpamplona.quartz.nip01Core.core.any
 import com.vitorpamplona.quartz.nip01Core.hints.EventHintBundle
+import com.vitorpamplona.quartz.nip01Core.hints.EventHintProvider
 import com.vitorpamplona.quartz.nip01Core.hints.PubKeyHintProvider
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip01Core.signers.SignerExceptions
@@ -51,10 +52,16 @@ class EncryptedDmEvent(
     sig: HexKey,
 ) : Event(id, pubKey, createdAt, KIND, tags, content, sig),
     ChatroomKeyable,
-    PubKeyHintProvider {
+    PubKeyHintProvider,
+    EventHintProvider {
     override fun pubKeyHints() = tags.mapNotNull(PTag::parseAsHint)
 
     override fun linkedPubKeys() = tags.mapNotNull(PTag::parseKey)
+
+    // The reply `e` tag is public (only the content is NIP-04 encrypted).
+    override fun eventHints() = tags.mapNotNull(MarkedETag::parseAsHint)
+
+    override fun linkedEventIds() = tags.mapNotNull(MarkedETag::parseId)
 
     override fun isContentEncoded() = true
 

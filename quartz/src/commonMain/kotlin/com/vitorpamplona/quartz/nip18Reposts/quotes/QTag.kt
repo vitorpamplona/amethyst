@@ -94,6 +94,16 @@ interface QTag {
             return tag[1]
         }
 
+        /**
+         * [parseAddressId] for a well-formed `<kind>:<64-hex pubkey>:<d>` only, in canonical form.
+         * [parseAddressId] passes any non-id value with a colon through, so a `q` quoting garbage
+         * would otherwise be linked as if it named an addressable.
+         */
+        fun parseValidAddress(tag: Array<String>): String? {
+            val id = parseAddressId(tag) ?: return null
+            return Address.parse(id)?.toValue()
+        }
+
         fun parseAddressAsHint(tag: Array<String>): AddressHint? {
             ensure(tag.has(2)) { return null }
             ensure(tag[0] == TAG_NAME) { return null }

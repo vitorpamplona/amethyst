@@ -64,6 +64,13 @@ class AuthorTag(
             return AuthorTag(tag[1], role)
         }
 
+        fun parseKey(tag: Array<String>): HexKey? {
+            ensure(tag.has(1)) { return null }
+            ensure(tag[0] == TAG_NAME) { return null }
+            ensure(tag[1].length == 64) { return null }
+            return tag[1]
+        }
+
         fun assemble(
             pubKey: HexKey,
             role: String? = null,

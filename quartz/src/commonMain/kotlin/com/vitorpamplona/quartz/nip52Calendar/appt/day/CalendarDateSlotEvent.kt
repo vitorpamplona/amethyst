@@ -53,14 +53,18 @@ class CalendarDateSlotEvent(
 ) : BaseAddressableEvent(id, pubKey, createdAt, KIND, tags, content, sig),
     PubKeyHintProvider,
     SearchableEvent {
-    override fun indexableContent() = listOfNotNull(title(), summary(), content).joinToString("\n")
+    // The free-text `location` names and the `t` topics are how people look an event
+    // up ("meetup Lisbon", "#bitcoin"), so they follow the body, as kind 1111 does.
+    override fun indexableContent() = (listOfNotNull(title(), summary(), content) + locations() + hashtags()).joinToString("\n")
 
     // The read path: the same fields indexableContent() joins, handed over without
     // building the joined string a scan would throw away.
     override fun forEachIndexableField(visitor: IndexableFieldVisitor) {
         if (!visitor.visit(title())) return
         if (!visitor.visit(summary())) return
-        visitor.visit(content)
+        if (!visitor.visit(content)) return
+        locations().forEach { if (!visitor.visit(it)) return }
+        hashtags().forEach { if (!visitor.visit(it)) return }
     }
 
     fun title() = tags.firstNotNullOfOrNull(TitleTag.Companion::parse)

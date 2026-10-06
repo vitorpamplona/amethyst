@@ -24,6 +24,8 @@ import androidx.compose.runtime.Immutable
 import com.vitorpamplona.quartz.nip01Core.core.BaseAddressableEvent
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
+import com.vitorpamplona.quartz.nip01Core.hints.PubKeyHintProvider
+import com.vitorpamplona.quartz.nip01Core.hints.types.PubKeyHint
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.nip01Core.tags.dTag.dTag
 import com.vitorpamplona.quartz.nip01Core.tags.hashtags.HashtagTag
@@ -38,6 +40,7 @@ import com.vitorpamplona.quartz.nip34Git.repository.tags.RelaysTag
 import com.vitorpamplona.quartz.nip34Git.repository.tags.WebTag
 import com.vitorpamplona.quartz.nip50Search.IndexableFieldVisitor
 import com.vitorpamplona.quartz.nip50Search.SearchableEvent
+import com.vitorpamplona.quartz.utils.Hex
 import com.vitorpamplona.quartz.utils.TimeUtils
 import kotlin.uuid.ExperimentalUuidApi
 import kotlin.uuid.Uuid
@@ -51,16 +54,24 @@ class GitRepositoryEvent(
     content: String,
     sig: HexKey,
 ) : BaseAddressableEvent(id, pubKey, createdAt, KIND, tags, content, sig),
-    SearchableEvent {
-    override fun indexableContent() = listOfNotNull(name(), description(), content).joinToString("\n")
+    SearchableEvent,
+    PubKeyHintProvider {
+    // The `t` hashtags are appended after the body, as CommentEvent does.
+    override fun indexableContent() = (listOfNotNull(name(), description(), content) + hashtags()).joinToString("\n")
 
     // The read path: the same fields indexableContent() joins, handed over without
     // building the joined string a scan would throw away.
     override fun forEachIndexableField(visitor: IndexableFieldVisitor) {
         if (!visitor.visit(name())) return
         if (!visitor.visit(description())) return
-        visitor.visit(content)
+        if (!visitor.visit(content)) return
+        hashtags().forEach { if (!visitor.visit(it)) return }
     }
+
+    // The `maintainers` tag lists bare pubkeys, without relay hints.
+    override fun pubKeyHints(): List<PubKeyHint> = emptyList()
+
+    override fun linkedPubKeys(): List<HexKey> = maintainers().filter(Hex::isHex64)
 
     fun name() = tags.firstNotNullOfOrNull(NameTag::parse)
 

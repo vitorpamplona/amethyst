@@ -30,12 +30,15 @@ import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
 import com.vitorpamplona.quartz.nip01Core.hints.AddressHintProvider
 import com.vitorpamplona.quartz.nip01Core.hints.EventHintProvider
+import com.vitorpamplona.quartz.nip01Core.hints.PubKeyHintProvider
 import com.vitorpamplona.quartz.nip01Core.hints.types.AddressHint
 import com.vitorpamplona.quartz.nip01Core.hints.types.EventIdHint
+import com.vitorpamplona.quartz.nip01Core.hints.types.PubKeyHint
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.nip01Core.tags.aTag.ATag
 import com.vitorpamplona.quartz.nip01Core.tags.dTag.dTag
 import com.vitorpamplona.quartz.nip01Core.tags.kinds.kinds
+import com.vitorpamplona.quartz.nip01Core.tags.people.PTag
 import com.vitorpamplona.quartz.nip10Notes.BaseNoteEvent
 import com.vitorpamplona.quartz.nip10Notes.tags.MarkedETag
 import com.vitorpamplona.quartz.nip18Reposts.quotes.QTag
@@ -43,6 +46,8 @@ import com.vitorpamplona.quartz.nip19Bech32.addressHints
 import com.vitorpamplona.quartz.nip19Bech32.addressIds
 import com.vitorpamplona.quartz.nip19Bech32.eventHints
 import com.vitorpamplona.quartz.nip19Bech32.eventIds
+import com.vitorpamplona.quartz.nip19Bech32.pubKeyHints
+import com.vitorpamplona.quartz.nip19Bech32.pubKeys
 import com.vitorpamplona.quartz.nip22Comments.RootScope
 import com.vitorpamplona.quartz.nip23LongContent.tags.TitleTag
 import com.vitorpamplona.quartz.nip50Search.IndexableFieldVisitor
@@ -64,6 +69,7 @@ class NipTextEvent(
     RootScope,
     EventHintProvider,
     AddressHintProvider,
+    PubKeyHintProvider,
     IForkableEvent,
     SearchableEvent {
     override fun indexableContent() = listOfNotNull(title(), content).joinToString("\n")
@@ -81,18 +87,36 @@ class NipTextEvent(
 
     override fun addressTag() = Address.assemble(kind, pubKey, dTag())
 
+    // Plain `e` tags (the fork marker's version pin) as well as quotes and content citations,
+    // the TextNoteEvent pattern.
     override fun eventHints(): List<EventIdHint> {
+        val eHints = tags.mapNotNull(MarkedETag::parseAsHint)
         val qHints = tags.mapNotNull(QTag::parseEventAsHint)
         val nip19Hints = citedNIP19().eventHints()
 
-        return qHints + nip19Hints
+        return eHints + qHints + nip19Hints
     }
 
     override fun linkedEventIds(): List<HexKey> {
+        val eHints = tags.mapNotNull(MarkedETag::parseId)
         val qHints = tags.mapNotNull(QTag::parseEventId)
         val nip19Hints = citedNIP19().eventIds()
 
-        return qHints + nip19Hints
+        return eHints + qHints + nip19Hints
+    }
+
+    override fun pubKeyHints(): List<PubKeyHint> {
+        val pHints = tags.mapNotNull(PTag::parseAsHint)
+        val nip19Hints = citedNIP19().pubKeyHints()
+
+        return pHints + nip19Hints
+    }
+
+    override fun linkedPubKeys(): List<HexKey> {
+        val pHints = tags.mapNotNull(PTag::parseKey)
+        val nip19Hints = citedNIP19().pubKeys()
+
+        return pHints + nip19Hints
     }
 
     override fun addressHints(): List<AddressHint> {

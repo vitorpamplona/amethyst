@@ -60,14 +60,18 @@ abstract class CitationEvent(
     sig: HexKey,
 ) : Event(id, pubKey, createdAt, kind, tags, content, sig),
     SearchableEvent {
-    override fun indexableContent() = listOfNotNull(title(), summary(), content).joinToString("\n")
+    // The bibliographic names (who wrote it, who published it) are how people look a source up,
+    // so they ride after the citer's own text. Subclasses with more such fields override both.
+    override fun indexableContent() = listOfNotNull(title(), summary(), content, author(), publishedBy()).joinToString("\n")
 
     // The read path: the same fields indexableContent() joins, handed over without
     // building the joined string a scan would throw away.
     override fun forEachIndexableField(visitor: IndexableFieldVisitor) {
         if (!visitor.visit(title())) return
         if (!visitor.visit(summary())) return
-        visitor.visit(content)
+        if (!visitor.visit(content)) return
+        if (!visitor.visit(author())) return
+        visitor.visit(publishedBy())
     }
 
     fun title() = tags.firstNotNullOfOrNull(TitleTag::parse)

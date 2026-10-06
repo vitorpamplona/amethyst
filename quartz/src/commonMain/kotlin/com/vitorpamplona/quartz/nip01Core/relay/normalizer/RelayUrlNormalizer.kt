@@ -497,6 +497,21 @@ class RelayUrlNormalizer {
             return result ?: throw IllegalArgumentException("Invalid Relay Url: $url")
         }
 
+        /**
+         * The relay in a tag's relay SLOT, or null when that slot holds anything else.
+         *
+         * [normalizeOrNull] is deliberately forgiving: it prefixes `wss://` onto any bare word, so
+         * a 64-char pubkey or a label like `inspired-by` that shifted into the slot (a builder that
+         * dropped a null relay, a role or marker in that position) comes back as a fake
+         * `wss://<word>/`. Hint parsers feed the app's relay-hint index and broadcast set, so they
+         * must reject those: this applies the same `length > 7 && isRelayUrl` guard that
+         * `PTag`/`ETag` already use before normalizing.
+         */
+        fun normalizeHintOrNull(url: String?): NormalizedRelayUrl? {
+            if (url == null || url.length <= 7 || !isRelayUrl(url)) return null
+            return normalizeOrNull(url)
+        }
+
         fun normalizeOrNull(url: String): NormalizedRelayUrl? {
             if (url.isEmpty()) return null
             // happy path when the url has been fixed already

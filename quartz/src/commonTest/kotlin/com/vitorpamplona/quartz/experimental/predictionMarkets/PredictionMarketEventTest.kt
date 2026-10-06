@@ -58,7 +58,9 @@ class PredictionMarketEventTest {
         assertNull(event.cancelReason())
         assertEquals("BAO Markets", event.client())
         assertEquals("2eaf781b3cabef3cbf17313bc43580761748651bc09273d50646651dd06c6349", event.oracle())
-        assertEquals("${event.title()}\n${event.description()}", event.indexableContent())
+        // title, description, each outcome label, then the resolution. The post in `content`
+        // restates title + description, so it stays out.
+        assertEquals("${event.title()}\n${event.description()}\nYES\nNO\nNO", event.indexableContent())
     }
 
     @Test
@@ -99,7 +101,7 @@ class PredictionMarketEventTest {
         assertEquals(1786626000L, event.endsAt())
         assertEquals("bitcoin", event.category())
         assertTrue(event.isDemo())
-        assertEquals(event.title(), event.indexableContent())
+        assertEquals("${event.title()}\nbridge-test junk", event.indexableContent())
     }
 
     @Test

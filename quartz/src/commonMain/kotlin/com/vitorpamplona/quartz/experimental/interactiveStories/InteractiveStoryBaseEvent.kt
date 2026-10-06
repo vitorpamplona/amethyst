@@ -24,6 +24,8 @@ import androidx.compose.runtime.Stable
 import com.vitorpamplona.quartz.experimental.interactiveStories.tags.StoryOptionTag
 import com.vitorpamplona.quartz.nip01Core.core.BaseAddressableEvent
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
+import com.vitorpamplona.quartz.nip01Core.hints.AddressHintProvider
+import com.vitorpamplona.quartz.nip01Core.hints.types.AddressHint
 import com.vitorpamplona.quartz.nip23LongContent.tags.ImageTag
 import com.vitorpamplona.quartz.nip23LongContent.tags.SummaryTag
 import com.vitorpamplona.quartz.nip23LongContent.tags.TitleTag
@@ -40,16 +42,28 @@ open class InteractiveStoryBaseEvent(
     content: String,
     sig: HexKey,
 ) : BaseAddressableEvent(id, pubKey, createdAt, kind, tags, content, sig),
+    AddressHintProvider,
     SearchableEvent {
-    override fun indexableContent() = listOfNotNull(title(), summary(), content).joinToString("\n")
+    // The option labels are the author's own prose (the choices a reader picks between), so
+    // each one follows the body on its own line, the way poll options do.
+    override fun indexableContent() = (listOfNotNull(title(), summary(), content) + optionLabels()).joinToString("\n")
 
     // The read path: the same fields indexableContent() joins, handed over without
     // building the joined string a scan would throw away.
     override fun forEachIndexableField(visitor: IndexableFieldVisitor) {
         if (!visitor.visit(title())) return
         if (!visitor.visit(summary())) return
-        visitor.visit(content)
+        if (!visitor.visit(content)) return
+        for (tag in tags) {
+            val label = StoryOptionTag.parseLabel(tag) ?: continue
+            if (!visitor.visit(label)) return
+        }
     }
+
+    // The story graph: every option points at the next scene's coordinate, usually with a relay.
+    override fun addressHints(): List<AddressHint> = tags.mapNotNull(StoryOptionTag::parseAsHint)
+
+    override fun linkedAddressIds(): List<String> = tags.mapNotNull(StoryOptionTag::parseAddressId)
 
     fun title() = tags.firstNotNullOfOrNull(TitleTag::parse)
 
@@ -58,4 +72,7 @@ open class InteractiveStoryBaseEvent(
     fun image() = tags.firstNotNullOfOrNull(ImageTag::parse)
 
     fun options() = tags.mapNotNull(StoryOptionTag::parse)
+
+    /** The non-blank choice texts of [options], in tag order. */
+    fun optionLabels() = tags.mapNotNull(StoryOptionTag::parseLabel)
 }

@@ -24,6 +24,8 @@ import androidx.compose.runtime.Immutable
 import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.TagArray
+import com.vitorpamplona.quartz.nip01Core.hints.PubKeyHintProvider
+import com.vitorpamplona.quartz.nip01Core.hints.types.PubKeyHint
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip01Core.signers.SignerExceptions
 import com.vitorpamplona.quartz.nip51Lists.PrivateTagArrayEvent
@@ -49,7 +51,13 @@ class FavoritePodcastsListEvent(
     tags: Array<Array<String>>,
     content: String,
     sig: HexKey,
-) : PrivateTagArrayEvent(id, pubKey, createdAt, KIND, tags, content, sig) {
+) : PrivateTagArrayEvent(id, pubKey, createdAt, KIND, tags, content, sig),
+    PubKeyHintProvider {
+    // Public favorites only: the private half is NIP-44 encrypted in `content`.
+    override fun pubKeyHints(): List<PubKeyHint> = tags.mapNotNull(UserTag::parseAsHint)
+
+    override fun linkedPubKeys(): List<HexKey> = tags.mapNotNull(UserTag::parseKey)
+
     fun publicFavorites() = tags.mapNotNull(UserTag::parse)
 
     suspend fun privateFavorites(signer: NostrSigner) = privateTags(signer)?.mapNotNull(UserTag::parse)

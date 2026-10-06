@@ -23,15 +23,22 @@ package com.vitorpamplona.quartz.nip17Dm.messages
 import androidx.compose.runtime.Immutable
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
+import com.vitorpamplona.quartz.nip01Core.hints.AddressHintProvider
 import com.vitorpamplona.quartz.nip01Core.hints.EventHintBundle
 import com.vitorpamplona.quartz.nip01Core.hints.EventHintProvider
+import com.vitorpamplona.quartz.nip01Core.hints.types.PubKeyHint
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
+import com.vitorpamplona.quartz.nip01Core.tags.aTag.ATag
 import com.vitorpamplona.quartz.nip01Core.tags.events.ETag
 import com.vitorpamplona.quartz.nip01Core.tags.people.PTag
 import com.vitorpamplona.quartz.nip01Core.tags.people.toPTag
+import com.vitorpamplona.quartz.nip14Subject.subject
 import com.vitorpamplona.quartz.nip17Dm.base.BaseDMGroupEvent
+import com.vitorpamplona.quartz.nip18Reposts.quotes.QTag
 import com.vitorpamplona.quartz.nip50Search.IndexableFieldVisitor
 import com.vitorpamplona.quartz.nip50Search.SearchableEvent
+import com.vitorpamplona.quartz.nip57Zaps.splits.zapSplitHints
+import com.vitorpamplona.quartz.nip57Zaps.splits.zapSplitPubKeys
 import com.vitorpamplona.quartz.utils.TimeUtils
 
 @Immutable
@@ -44,19 +51,30 @@ class ChatMessageEvent(
     sig: HexKey,
 ) : BaseDMGroupEvent(id, pubKey, createdAt, KIND, tags, content, sig),
     EventHintProvider,
+    AddressHintProvider,
     SearchableEvent {
-    // content is the decrypted (plaintext) direct-message body.
-    override fun indexableContent() = content
+    // content is the decrypted (plaintext) direct-message body; the optional
+    // NIP-14 subject (`changeSubject()`) names the conversation.
+    override fun indexableContent() = listOfNotNull(subject(), content).joinToString("\n")
 
     // The read path: the same fields indexableContent() joins, handed over without
     // building the joined string a scan would throw away.
     override fun forEachIndexableField(visitor: IndexableFieldVisitor) {
+        if (!visitor.visit(subject())) return
         visitor.visit(content)
     }
 
-    override fun eventHints() = tags.mapNotNull(ETag::parseAsHint)
+    override fun pubKeyHints(): List<PubKeyHint> = super.pubKeyHints() + tags.zapSplitHints()
 
-    override fun linkedEventIds() = tags.mapNotNull(ETag::parseId)
+    override fun linkedPubKeys(): List<HexKey> = super.linkedPubKeys() + tags.zapSplitPubKeys()
+
+    override fun eventHints() = tags.mapNotNull(ETag::parseAsHint) + tags.mapNotNull(QTag::parseEventAsHint)
+
+    override fun linkedEventIds() = tags.mapNotNull(ETag::parseId) + tags.mapNotNull(QTag::parseEventId)
+
+    override fun addressHints() = tags.mapNotNull(ATag::parseAsHint) + tags.mapNotNull(QTag::parseAddressAsHint)
+
+    override fun linkedAddressIds() = tags.mapNotNull(ATag::parseValidAddress) + tags.mapNotNull(QTag::parseValidAddress)
 
     fun replyTo() = tags.mapNotNull(ETag::parseId)
 

@@ -21,10 +21,10 @@
 package com.vitorpamplona.quartz.nip90Dvms.videoTranslation
 
 import androidx.compose.runtime.Immutable
-import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
+import com.vitorpamplona.quartz.nip90Dvms.DvmRequestEvent
 import com.vitorpamplona.quartz.nip90Dvms.tags.InputTag
 import com.vitorpamplona.quartz.nip90Dvms.tags.dvmParam
 import com.vitorpamplona.quartz.nip90Dvms.tags.dvmParamValues
@@ -43,7 +43,7 @@ class DvmVideoTranslationRequestEvent(
     tags: Array<Array<String>>,
     content: String,
     sig: HexKey,
-) : Event(id, pubKey, createdAt, KIND, tags, content, sig) {
+) : DvmRequestEvent(id, pubKey, createdAt, KIND, tags, content, sig) {
     fun inputs(): List<InputTag> = tags.inputs()
 
     fun outputMimeType(): String? = tags.outputMimeType()

@@ -21,9 +21,16 @@
 package com.vitorpamplona.quartz.buzz.managedAgents
 
 import androidx.compose.runtime.Immutable
+import com.vitorpamplona.quartz.buzz.apPersonas.PersonaEvent
+import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.nip01Core.core.BaseAddressableEvent
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
+import com.vitorpamplona.quartz.nip01Core.core.isValid
+import com.vitorpamplona.quartz.nip01Core.hints.AddressHintProvider
+import com.vitorpamplona.quartz.nip01Core.hints.PubKeyHintProvider
+import com.vitorpamplona.quartz.nip01Core.hints.types.AddressHint
+import com.vitorpamplona.quartz.nip01Core.hints.types.PubKeyHint
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.nip01Core.tags.dTag.dTag
 import com.vitorpamplona.quartz.nip50Search.IndexableFieldVisitor
@@ -50,7 +57,23 @@ class ManagedAgentEvent(
     content: String,
     sig: HexKey,
 ) : BaseAddressableEvent(id, pubKey, createdAt, KIND, tags, content, sig),
-    SearchableEvent {
+    SearchableEvent,
+    PubKeyHintProvider,
+    AddressHintProvider {
+    // The agent pubkey is the `d` value and the allowlist sits in the JSON body: neither has a relay slot.
+    override fun pubKeyHints(): List<PubKeyHint> = emptyList()
+
+    override fun linkedPubKeys(): List<HexKey> {
+        val agent = agentPubKey().takeIf { it.isValid() }
+        val allowlist = agentOrNull()?.respondToAllowlist?.filter { it.isValid() } ?: emptyList()
+        return listOfNotNull(agent) + allowlist
+    }
+
+    override fun addressHints(): List<AddressHint> = emptyList()
+
+    /** The `persona_id` names one of the author's own `30175` personas by its slug. */
+    override fun linkedAddressIds(): List<String> = listOfNotNull(agentOrNull()?.personaId?.takeIf { it.isNotEmpty() }?.let { Address.assemble(PersonaEvent.KIND, pubKey, it) })
+
     override fun indexableContent() = agentOrNull()?.let { listOfNotNull(it.name, it.systemPrompt).joinToString("\n") } ?: ""
 
     // The read path. The parse happens once and its fields are handed over one by
@@ -64,16 +87,25 @@ class ManagedAgentEvent(
     /** The managed agent's pubkey — the `d` tag. */
     fun agentPubKey() = dTag()
 
-    /** Parses the managed-agent projection, or throws if the JSON is malformed. */
-    fun agent(): ManagedAgentContent = ManagedAgentContent.decodeFromJson(content)
+    // linked*() runs for every relay copy of every event and forEachIndexableField() on every
+    // keystroke, so the body is decoded once per instance — a failure included. Events are
+    // immutable; a race only decodes twice.
+    @kotlinx.serialization.Transient
+    @kotlin.jvm.Transient
+    private var agentCache: Result<ManagedAgentContent>? = null
 
-    fun agentOrNull(): ManagedAgentContent? =
-        try {
-            agent()
+    private fun parsedAgent(): Result<ManagedAgentContent> =
+        agentCache ?: try {
+            Result.success(ManagedAgentContent.decodeFromJson(content))
         } catch (e: Exception) {
             if (e is CancellationException) throw e
-            null
-        }
+            Result.failure(e)
+        }.also { agentCache = it }
+
+    /** Parses the managed-agent projection (once), or throws if the JSON is malformed. */
+    fun agent(): ManagedAgentContent = parsedAgent().getOrThrow()
+
+    fun agentOrNull(): ManagedAgentContent? = parsedAgent().getOrNull()
 
     companion object {
         const val KIND = 30177

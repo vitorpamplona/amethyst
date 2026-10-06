@@ -25,6 +25,8 @@ import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
 import com.vitorpamplona.quartz.nip01Core.core.any
+import com.vitorpamplona.quartz.nip01Core.hints.EventHintProvider
+import com.vitorpamplona.quartz.nip01Core.hints.types.EventIdHint
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.nip01Core.tags.events.ETag
 import com.vitorpamplona.quartz.nip50Search.IndexableFieldVisitor
@@ -54,7 +56,13 @@ class ProfileGalleryEntryEvent(
     content: String,
     sig: HexKey,
 ) : Event(id, pubKey, createdAt, KIND, tags, content, sig),
+    EventHintProvider,
     SearchableEvent {
+    // The [fromEvent] the picture was taken from, with the relay the builder attaches.
+    override fun eventHints(): List<EventIdHint> = tags.mapNotNull(ETag::parseAsHint)
+
+    override fun linkedEventIds(): List<HexKey> = tags.mapNotNull(ETag::parseId)
+
     // Only the optional summary caption is indexed; this event is otherwise a
     // url/hash pointer with no natural-language body (content is empty).
     override fun indexableContent() = listOfNotNull(summary()).joinToString("\n")

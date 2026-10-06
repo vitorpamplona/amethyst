@@ -32,12 +32,15 @@ import com.vitorpamplona.quartz.experimental.decentralizedLists.inheritFrom
 import com.vitorpamplona.quartz.experimental.decentralizedLists.inheritFromTargets
 import com.vitorpamplona.quartz.experimental.decentralizedLists.isDeliberatelyUnaffiliated
 import com.vitorpamplona.quartz.experimental.decentralizedLists.json
+import com.vitorpamplona.quartz.experimental.decentralizedLists.parseGraphCoordinate
 import com.vitorpamplona.quartz.experimental.decentralizedLists.searchableListContent
 import com.vitorpamplona.quartz.experimental.decentralizedLists.tags.InheritType
 import com.vitorpamplona.quartz.experimental.decentralizedLists.wordWrapper
 import com.vitorpamplona.quartz.nip01Core.core.BaseAddressableEvent
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
+import com.vitorpamplona.quartz.nip01Core.hints.AddressHintProvider
+import com.vitorpamplona.quartz.nip01Core.hints.types.AddressHint
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.nip01Core.tags.dTag.dTag
 import com.vitorpamplona.quartz.nip50Search.IndexableFieldVisitor
@@ -63,8 +66,14 @@ class AddressableListHeaderEvent(
     sig: HexKey,
 ) : BaseAddressableEvent(id, pubKey, createdAt, KIND, tags, content, sig),
     AddressableDecentralizedListEvent,
+    AddressHintProvider,
     SearchableEvent {
     override fun listPointer() = addressTag()
+
+    // `b` parents and the `concept-graph` node carry no relay slot: linked, never hinted.
+    override fun addressHints(): List<AddressHint> = emptyList()
+
+    override fun linkedAddressIds(): List<String> = tags.mapNotNull(::parseGraphCoordinate)
 
     override fun indexableContent() = tags.searchableListContent()
 

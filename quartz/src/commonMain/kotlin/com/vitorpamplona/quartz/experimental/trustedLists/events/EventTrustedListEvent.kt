@@ -64,7 +64,7 @@ class EventTrustedListEvent(
 
     override fun eventHints() = tags.mapNotNull(EventMemberTag::parseAsHint)
 
-    override fun linkedEventIds() = tags.fastMapNotNullDense(EventMemberTag::parseId)
+    override fun linkedEventIds() = tags.fastMapNotNullDense(EventMemberTag::parseId) + provenanceEventIds()
 
     override fun addressHints() = tags.mapNotNull(ATag::parseAsHint)
 
@@ -72,7 +72,7 @@ class EventTrustedListEvent(
 
     override fun pubKeyHints() = tags.mapNotNull(PTag::parseAsHint)
 
-    override fun linkedPubKeys() = tags.mapNotNull(PTag::parseKey)
+    override fun linkedPubKeys() = tags.mapNotNull(PTag::parseKey) + provenancePubKeys()
 
     /** What this list is about, for relay-side discovery. Never its members. */
     fun aboutAddresses() = tags.aboutAddresses()

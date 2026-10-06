@@ -27,9 +27,14 @@ import com.vitorpamplona.quartz.buzz.iaIdentityArchival.tags.ReplacedByTag
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
+import com.vitorpamplona.quartz.nip01Core.hints.EventHintProvider
+import com.vitorpamplona.quartz.nip01Core.hints.PubKeyHintProvider
+import com.vitorpamplona.quartz.nip01Core.hints.types.EventIdHint
+import com.vitorpamplona.quartz.nip01Core.hints.types.PubKeyHint
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.nip01Core.tags.events.ETag
 import com.vitorpamplona.quartz.nip01Core.tags.people.PTag
+import com.vitorpamplona.quartz.nip50Search.SearchableEvent
 import com.vitorpamplona.quartz.nip70ProtectedEvts.protect
 import com.vitorpamplona.quartz.utils.TimeUtils
 
@@ -50,7 +55,22 @@ class ArchivedIdentityEvent(
     tags: Array<Array<String>>,
     content: String,
     sig: HexKey,
-) : Event(id, pubKey, createdAt, KIND, tags, content, sig) {
+) : Event(id, pubKey, createdAt, KIND, tags, content, sig),
+    SearchableEvent,
+    PubKeyHintProvider,
+    EventHintProvider {
+    override fun indexableContent() = content
+
+    // Only the `p` target has a relay slot; `replaced-by`, `consent` and NIP-OA `auth` name
+    // pubkeys too, so they join the linked side.
+    override fun pubKeyHints(): List<PubKeyHint> = tags.mapNotNull(PTag::parseAsHint)
+
+    override fun linkedPubKeys(): List<HexKey> = tags.archivalLinkedPubKeys()
+
+    override fun eventHints(): List<EventIdHint> = tags.mapNotNull(ETag::parseAsHint)
+
+    override fun linkedEventIds(): List<HexKey> = tags.mapNotNull(ETag::parseId)
+
     /** The archived target — the single `p` tag. */
     fun target() = tags.archivalTarget()
 

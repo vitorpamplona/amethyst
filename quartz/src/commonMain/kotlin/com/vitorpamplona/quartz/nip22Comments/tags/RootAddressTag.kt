@@ -88,10 +88,12 @@ class RootAddressTag(
         fun parseAsHint(tag: Array<String>): AddressHint? {
             ensure(tag.has(2)) { return null }
             ensure(tag[0] == TAG_NAME) { return null }
-            ensure(tag[1].length == 64) { return null }
+            // An address id (`kind:pubkey:d`), not a 64-char key: the old length check rejected
+            // every real address, so no NIP-22 address ever produced a hint.
+            ensure(tag[1].contains(':')) { return null }
             ensure(tag[2].isNotEmpty()) { return null }
 
-            val relayHint = RelayUrlNormalizer.normalizeOrNull(tag[2])
+            val relayHint = RelayUrlNormalizer.normalizeHintOrNull(tag[2])
             ensure(relayHint != null) { return null }
 
             return AddressHint(tag[1], relayHint)

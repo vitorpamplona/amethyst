@@ -43,6 +43,7 @@ import com.vitorpamplona.quartz.experimental.decentralizedLists.isDeliberatelyUn
 import com.vitorpamplona.quartz.experimental.decentralizedLists.item.tags.ParentList
 import com.vitorpamplona.quartz.experimental.decentralizedLists.item.tags.ParentListTag
 import com.vitorpamplona.quartz.experimental.decentralizedLists.json
+import com.vitorpamplona.quartz.experimental.decentralizedLists.parseGraphCoordinate
 import com.vitorpamplona.quartz.experimental.decentralizedLists.searchableListContent
 import com.vitorpamplona.quartz.experimental.decentralizedLists.tags.InheritType
 import com.vitorpamplona.quartz.experimental.decentralizedLists.wordWrapper
@@ -99,10 +100,15 @@ class AddressableListItemEvent(
 
     override fun addressHints() = tags.mapNotNull(ATag::parseAsHint)
 
-    /** Addressable items plus any parent lists referenced by coordinate, in one pass. */
+    /**
+     * Addressable items, any parent lists referenced by coordinate, and the Tapestry graph
+     * parents (`b` inherit-from, `n` element-of, `s` subset-of), in one pass.
+     */
     override fun linkedAddressIds(): List<String> {
         val out = ArrayList<String>()
-        tags.fastForEach { tag -> (ATag.parseValidAddress(tag) ?: ParentListTag.parseCoordinate(tag))?.let { out.add(it) } }
+        tags.fastForEach { tag ->
+            (ATag.parseValidAddress(tag) ?: ParentListTag.parseCoordinate(tag) ?: parseGraphCoordinate(tag))?.let { out.add(it) }
+        }
         return out
     }
 

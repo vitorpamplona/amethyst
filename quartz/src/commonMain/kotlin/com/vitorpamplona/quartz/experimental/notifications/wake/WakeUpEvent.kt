@@ -27,7 +27,9 @@ import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
 import com.vitorpamplona.quartz.nip01Core.hints.EventHintBundle
 import com.vitorpamplona.quartz.nip01Core.hints.EventHintProvider
+import com.vitorpamplona.quartz.nip01Core.hints.PubKeyHintProvider
 import com.vitorpamplona.quartz.nip01Core.hints.types.EventIdHint
+import com.vitorpamplona.quartz.nip01Core.hints.types.PubKeyHint
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.nip01Core.tags.events.ETag
 import com.vitorpamplona.quartz.nip01Core.tags.kinds.kind
@@ -45,10 +47,16 @@ class WakeUpEvent(
     content: String,
     sig: HexKey,
 ) : Event(id, pubKey, createdAt, KIND, tags, content, sig),
-    EventHintProvider {
+    EventHintProvider,
+    PubKeyHintProvider {
     override fun eventHints(): List<EventIdHint> = tags.mapNotNull(ETag::parseAsHint)
 
     override fun linkedEventIds(): List<HexKey> = tags.mapNotNull(ETag::parseId)
+
+    // The subject events' authors ([authors]), with their home relays from `about.toPTag()`.
+    override fun pubKeyHints(): List<PubKeyHint> = tags.mapNotNull(PTag::parseAsHint)
+
+    override fun linkedPubKeys(): List<HexKey> = authorKeys()
 
     fun events() = tags.mapNotNull(ETag::parse)
 

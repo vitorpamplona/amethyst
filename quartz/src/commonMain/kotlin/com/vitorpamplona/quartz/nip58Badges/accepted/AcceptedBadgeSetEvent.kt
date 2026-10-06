@@ -34,6 +34,8 @@ import com.vitorpamplona.quartz.nip01Core.tags.aTag.ATag
 import com.vitorpamplona.quartz.nip01Core.tags.dTag.dTag
 import com.vitorpamplona.quartz.nip01Core.tags.events.ETag
 import com.vitorpamplona.quartz.nip01Core.tags.people.PTag
+import com.vitorpamplona.quartz.nip50Search.IndexableFieldVisitor
+import com.vitorpamplona.quartz.nip50Search.SearchableEvent
 import com.vitorpamplona.quartz.nip51Lists.tags.DescriptionTag
 import com.vitorpamplona.quartz.nip51Lists.tags.ImageTag
 import com.vitorpamplona.quartz.nip51Lists.tags.TitleTag
@@ -56,7 +58,17 @@ class AcceptedBadgeSetEvent(
 ) : BaseAddressableEvent(id, pubKey, createdAt, KIND, tags, content, sig),
     EventHintProvider,
     AddressHintProvider,
-    PubKeyHintProvider {
+    PubKeyHintProvider,
+    SearchableEvent {
+    // A general badge set's NIP-51 title and description; the badge pairs are ids.
+    override fun indexableContent() = listOfNotNull(title(), description()).joinToString("\n")
+
+    // The read path: the same fields indexableContent() joins, without the join.
+    override fun forEachIndexableField(visitor: IndexableFieldVisitor) {
+        if (!visitor.visit(title())) return
+        visitor.visit(description())
+    }
+
     override fun pubKeyHints() = tags.mapNotNull(PTag::parseAsHint)
 
     override fun linkedPubKeys() = tags.mapNotNull(PTag::parseKey)

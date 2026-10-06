@@ -34,6 +34,8 @@ import com.vitorpamplona.quartz.nip01Core.tags.people.PTag
 import com.vitorpamplona.quartz.nip15Marketplace.auction.AuctionEvent
 import com.vitorpamplona.quartz.nip15Marketplace.bid.BidEvent
 import com.vitorpamplona.quartz.nip21UriScheme.toNostrUri
+import com.vitorpamplona.quartz.nip50Search.IndexableFieldVisitor
+import com.vitorpamplona.quartz.nip50Search.SearchableEvent
 import com.vitorpamplona.quartz.utils.Log
 import com.vitorpamplona.quartz.utils.TimeUtils
 import kotlinx.coroutines.CancellationException
@@ -48,7 +50,16 @@ class BidConfirmationEvent(
     sig: HexKey,
 ) : Event(id, pubKey, createdAt, KIND, tags, content, sig),
     EventHintProvider,
-    PubKeyHintProvider {
+    PubKeyHintProvider,
+    SearchableEvent {
+    // The seller's optional free-text `message`; status is a machine enum and stays out.
+    override fun indexableContent() = confirmationData()?.message.orEmpty()
+
+    // The read path: the one field, handed over as held (null when absent) — no `orEmpty()`.
+    override fun forEachIndexableField(visitor: IndexableFieldVisitor) {
+        visitor.visit(confirmationData()?.message)
+    }
+
     override fun eventHints() = tags.mapNotNull(ETag::parseAsHint)
 
     override fun linkedEventIds() = tags.mapNotNull(ETag::parseId)
@@ -57,14 +68,23 @@ class BidConfirmationEvent(
 
     override fun linkedPubKeys() = tags.mapNotNull(PTag::parseKey)
 
+    // forEachIndexableField() runs on every keystroke, so the body is decoded once per
+    // instance — a failure included, which also keeps the warning to one per event. Events are
+    // immutable; a race only decodes twice.
+    @kotlinx.serialization.Transient
+    @kotlin.jvm.Transient
+    private var confirmationDataCache: Result<BidConfirmationData>? = null
+
     fun confirmationData(): BidConfirmationData? =
-        try {
-            JsonMapper.fromJson<BidConfirmationData>(content)
-        } catch (e: Exception) {
-            if (e is CancellationException) throw e
-            Log.w("BidConfirmationEvent") { "Content Parse Error: ${toNostrUri()} ${e.message}" }
-            null
-        }
+        (
+            confirmationDataCache ?: try {
+                Result.success(JsonMapper.fromJson<BidConfirmationData>(content))
+            } catch (e: Exception) {
+                if (e is CancellationException) throw e
+                Log.w("BidConfirmationEvent") { "Content Parse Error: ${toNostrUri()} ${e.message}" }
+                Result.failure(e)
+            }.also { confirmationDataCache = it }
+        ).getOrNull()
 
     fun status() = confirmationData()?.status
 

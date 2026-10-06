@@ -63,7 +63,7 @@ class AddressableTrustedListEvent(
 
     override fun pubKeyHints() = tags.mapNotNull(PTag::parseAsHint)
 
-    override fun linkedPubKeys() = tags.mapNotNull(PTag::parseKey)
+    override fun linkedPubKeys() = tags.mapNotNull(PTag::parseKey) + provenancePubKeys()
 
     /** What this list is about, for relay-side discovery. Never its members. */
     fun aboutPubKeys() = tags.aboutPubKeys()

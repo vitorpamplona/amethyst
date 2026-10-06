@@ -27,6 +27,7 @@ import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
 import com.vitorpamplona.quartz.nip01Core.hints.AddressHintProvider
 import com.vitorpamplona.quartz.nip01Core.hints.EventHintProvider
+import com.vitorpamplona.quartz.nip01Core.hints.PubKeyHintProvider
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.nip01Core.tags.aTag.ATag
 import com.vitorpamplona.quartz.nip01Core.tags.aTag.aTag
@@ -41,6 +42,7 @@ import com.vitorpamplona.quartz.nip01Core.tags.kinds.kinds
 import com.vitorpamplona.quartz.nip01Core.tags.people.PTag
 import com.vitorpamplona.quartz.nip01Core.tags.people.pTag
 import com.vitorpamplona.quartz.nip01Core.tags.people.pTagIds
+import com.vitorpamplona.quartz.nip50Search.SearchableEvent
 import com.vitorpamplona.quartz.utils.TimeUtils
 
 @Immutable
@@ -53,7 +55,12 @@ class DeletionRequestEvent(
     sig: HexKey,
 ) : Event(id, pubKey, createdAt, KIND, tags, content, sig),
     EventHintProvider,
-    AddressHintProvider {
+    AddressHintProvider,
+    PubKeyHintProvider,
+    SearchableEvent {
+    // NIP-09: the content is an optional, human-written reason for the deletion.
+    override fun indexableContent() = content
+
     override fun eventHints() = tags.mapNotNull(ETag::parseAsHint)
 
     override fun linkedEventIds() = tags.mapNotNull(ETag::parseId)
@@ -61,6 +68,11 @@ class DeletionRequestEvent(
     override fun addressHints() = tags.mapNotNull(ATag::parseAsHint)
 
     override fun linkedAddressIds() = tags.mapNotNull(ATag::parseAddressId)
+
+    // The authors of the deleted events (normally the signer itself).
+    override fun pubKeyHints() = tags.mapNotNull(PTag::parseAsHint)
+
+    override fun linkedPubKeys() = tags.mapNotNull(PTag::parseKey)
 
     fun deleteEvents() = taggedEvents()
 

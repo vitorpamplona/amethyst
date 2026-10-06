@@ -24,6 +24,9 @@ import androidx.compose.runtime.Immutable
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
+import com.vitorpamplona.quartz.nip01Core.core.isValid
+import com.vitorpamplona.quartz.nip01Core.hints.PubKeyHintProvider
+import com.vitorpamplona.quartz.nip01Core.hints.types.PubKeyHint
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.utils.TimeUtils
 
@@ -44,8 +47,20 @@ class PresenceSnapshotEvent(
     tags: Array<Array<String>>,
     content: String,
     sig: HexKey,
-) : Event(id, pubKey, createdAt, KIND, tags, content, sig) {
-    fun snapshot() = runCatching { PresenceSnapshotPayload.decodeFromJson(content) }.getOrNull()
+) : Event(id, pubKey, createdAt, KIND, tags, content, sig),
+    PubKeyHintProvider {
+    // The subjects live in the JSON body, which carries no relay hints.
+    override fun pubKeyHints(): List<PubKeyHint> = emptyList()
+
+    override fun linkedPubKeys(): List<HexKey> = snapshot()?.entries?.mapNotNull { entry -> entry.pubkey.takeIf { it.isValid() } } ?: emptyList()
+
+    // linkedPubKeys() runs for every relay copy of every event, so the body is decoded once
+    // per instance — a failure included. Events are immutable; a race only decodes twice.
+    @kotlinx.serialization.Transient
+    @kotlin.jvm.Transient
+    private var snapshotCache: Result<PresenceSnapshotPayload>? = null
+
+    fun snapshot() = (snapshotCache ?: runCatching { PresenceSnapshotPayload.decodeFromJson(content) }.also { snapshotCache = it }).getOrNull()
 
     companion object {
         const val KIND = 40902

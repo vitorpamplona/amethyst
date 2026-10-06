@@ -26,6 +26,8 @@ import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
 import com.vitorpamplona.quartz.nip01Core.core.firstTagValue
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
+import com.vitorpamplona.quartz.nip50Search.IndexableFieldVisitor
+import com.vitorpamplona.quartz.nip50Search.SearchableEvent
 import com.vitorpamplona.quartz.utils.TimeUtils
 
 @Immutable
@@ -36,10 +38,22 @@ class CreateGroupEvent(
     tags: Array<Array<String>>,
     content: String,
     sig: HexKey,
-) : Event(id, pubKey, createdAt, KIND, tags, content, sig) {
+) : Event(id, pubKey, createdAt, KIND, tags, content, sig),
+    SearchableEvent {
     fun groupId() = tags.groupId()
 
     fun name() = tags.firstTagValue("name")
+
+    fun about() = tags.firstTagValue("about")
+
+    // The same name/about pair the kind-9002 edit carries (Buzz requires them here).
+    override fun indexableContent() = listOfNotNull(name(), about()).joinToString("\n")
+
+    // The read path: the same fields indexableContent() joins, without the join.
+    override fun forEachIndexableField(visitor: IndexableFieldVisitor) {
+        if (!visitor.visit(name())) return
+        visitor.visit(about())
+    }
 
     companion object {
         const val KIND = 9007

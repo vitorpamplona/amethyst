@@ -73,7 +73,7 @@ data class RootAuthorTag(
             ensure(tag[1].length == 64) { return null }
             ensure(tag[2].isNotEmpty()) { return null }
 
-            val relayHint = RelayUrlNormalizer.normalizeOrNull(tag[2])
+            val relayHint = RelayUrlNormalizer.normalizeHintOrNull(tag[2])
             ensure(relayHint != null) { return null }
 
             return PubKeyHint(tag[1], relayHint)

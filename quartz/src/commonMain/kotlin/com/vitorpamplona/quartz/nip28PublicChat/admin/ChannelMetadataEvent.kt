@@ -68,10 +68,14 @@ class ChannelMetadataEvent(
     @kotlin.jvm.Transient
     var cache: ChannelDataNorm? = null
 
-    override fun eventHints() =
-        channelInfo().relays?.mapNotNull { relay ->
-            channelId()?.let { EventIdHint(it, relay) }
-        } ?: emptyList()
+    // The channel's root `e` tag carries its own relay hint; the content JSON may
+    // list more relays where the channel lives.
+    override fun eventHints(): List<EventIdHint> {
+        val channel = channel() ?: return emptyList()
+        val tagHint = channel.relay?.let { EventIdHint(channel.eventId, it) }
+        val contentHints = channelInfo().relays?.map { EventIdHint(channel.eventId, it) } ?: emptyList()
+        return listOfNotNull(tagHint) + contentHints
+    }
 
     override fun linkedEventIds() = channelId()?.let { listOf(it) } ?: emptyList()
 

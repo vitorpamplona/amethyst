@@ -21,12 +21,17 @@
 package com.vitorpamplona.quartz.nip90Dvms.contentSearch
 
 import androidx.compose.runtime.Immutable
-import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
-import com.vitorpamplona.quartz.nip01Core.core.OptimizedJsonMapper
+import com.vitorpamplona.quartz.nip01Core.core.TagArray
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
+import com.vitorpamplona.quartz.nip01Core.hints.AddressHintProvider
+import com.vitorpamplona.quartz.nip01Core.hints.types.AddressHint
+import com.vitorpamplona.quartz.nip01Core.hints.types.EventIdHint
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
-import com.vitorpamplona.quartz.utils.Log
+import com.vitorpamplona.quartz.nip01Core.tags.aTag.ATag
+import com.vitorpamplona.quartz.nip01Core.tags.events.ETag
+import com.vitorpamplona.quartz.nip90Dvms.DvmResponseEvent
+import com.vitorpamplona.quartz.nip90Dvms.tags.parseDvmResultTags
 import com.vitorpamplona.quartz.utils.TimeUtils
 
 @Immutable
@@ -37,35 +42,40 @@ class DvmContentSearchResponseEvent(
     tags: Array<Array<String>>,
     content: String,
     sig: HexKey,
-) : Event(id, pubKey, createdAt, KIND, tags, content, sig) {
+) : DvmResponseEvent(id, pubKey, createdAt, KIND, tags, content, sig),
+    AddressHintProvider {
     @kotlinx.serialization.Transient
     @kotlin.jvm.Transient
     var events: List<HexKey>? = null
 
+    @kotlinx.serialization.Transient
+    @kotlin.jvm.Transient
+    private var resultTagsCache: TagArray? = null
+
+    /** The result list: `content` is a JSON tag array of `e` / `a` references. Parsed once. */
+    fun resultTags(): TagArray = resultTagsCache ?: parseDvmResultTags(content, "DvmContentSearchResponseEvent").also { resultTagsCache = it }
+
     fun innerTags(): List<HexKey> {
-        if (content.isEmpty()) {
-            return listOf()
-        }
+        events?.let { return it }
 
-        events?.let {
-            return it
-        }
-
-        try {
-            events =
-                OptimizedJsonMapper.fromJsonToTagArray(content).mapNotNull {
-                    if (it.size > 1 && (it[0] == "e" || it[0] == "a")) {
-                        it[1]
-                    } else {
-                        null
-                    }
+        return resultTags()
+            .mapNotNull {
+                if (it.size > 1 && (it[0] == "e" || it[0] == "a")) {
+                    it[1]
+                } else {
+                    null
                 }
-        } catch (e: Throwable) {
-            Log.w("DvmContentSearchResponseEvent") { "Error parsing the JSON ${e.message}" }
-        }
-
-        return events ?: listOf()
+            }.also { events = it }
     }
+
+    // The results are public references, just carried in content instead of tags.
+    override fun eventHints(): List<EventIdHint> = super.eventHints() + resultTags().mapNotNull(ETag::parseAsHint)
+
+    override fun linkedEventIds(): List<HexKey> = super.linkedEventIds() + resultTags().mapNotNull(ETag::parseId)
+
+    override fun addressHints(): List<AddressHint> = resultTags().mapNotNull(ATag::parseAsHint)
+
+    override fun linkedAddressIds(): List<String> = resultTags().mapNotNull(ATag::parseValidAddress)
 
     companion object {
         const val KIND = 6302

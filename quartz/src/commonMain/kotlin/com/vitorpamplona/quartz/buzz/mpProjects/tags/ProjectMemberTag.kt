@@ -24,6 +24,8 @@ import androidx.compose.runtime.Immutable
 import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.Tag
+import com.vitorpamplona.quartz.nip01Core.hints.types.AddressHint
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
 import com.vitorpamplona.quartz.nip34Git.repository.GitRepositoryEvent
 import com.vitorpamplona.quartz.utils.arrayOfNotNull
 
@@ -81,6 +83,17 @@ object ProjectMemberTag {
         if (tag.size !in 2..3 || tag[0] != TAG_NAME) return null
         val address = parseCoordinate(tag[1]) ?: return null
         return ProjectMember(address, tag.getOrNull(2))
+    }
+
+    /** The member's canonical `30617:<owner>:<repo>` coordinate, for every well-formed member tag. */
+    fun parseAddressId(tag: Tag): String? = parse(tag)?.coordinate
+
+    /** The member coordinate with its relay hint, only when the tag carries a valid relay URL. */
+    fun parseAsHint(tag: Tag): AddressHint? {
+        if (tag.size != 3) return null
+        val member = parse(tag) ?: return null
+        val relay = RelayUrlNormalizer.normalizeHintOrNull(member.relayHint) ?: return null
+        return AddressHint(member.coordinate, relay)
     }
 
     fun assemble(

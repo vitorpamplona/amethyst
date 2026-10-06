@@ -58,6 +58,8 @@ import com.vitorpamplona.quartz.nip22Comments.tags.RootIdentifierTag
 import com.vitorpamplona.quartz.nip22Comments.tags.RootKindTag
 import com.vitorpamplona.quartz.nip50Search.IndexableFieldVisitor
 import com.vitorpamplona.quartz.nip50Search.SearchableEvent
+import com.vitorpamplona.quartz.nip57Zaps.splits.zapSplitHints
+import com.vitorpamplona.quartz.nip57Zaps.splits.zapSplitPubKeys
 import com.vitorpamplona.quartz.nip72ModCommunities.definition.CommunityDefinitionEvent
 import com.vitorpamplona.quartz.nip73ExternalIds.ExternalId
 import com.vitorpamplona.quartz.nip73ExternalIds.location.GeohashId
@@ -90,18 +92,20 @@ class CommentEvent(
         val pHints =
             tags.mapNotNull(RootAuthorTag::parseAsHint) +
                 tags.mapNotNull(ReplyAuthorTag::parseAsHint)
+        val zapHints = tags.zapSplitHints()
         val nip19Hints = citedNIP19().pubKeyHints()
 
-        return pHints + nip19Hints
+        return pHints + zapHints + nip19Hints
     }
 
     override fun linkedPubKeys(): List<HexKey> {
         val pHints =
             tags.mapNotNull(RootAuthorTag::parseKey) +
                 tags.mapNotNull(ReplyAuthorTag::parseKey)
+        val zapHints = tags.zapSplitPubKeys()
         val nip19Hints = citedNIP19().pubKeys()
 
-        return pHints + nip19Hints
+        return pHints + zapHints + nip19Hints
     }
 
     override fun eventHints(): List<EventIdHint> {

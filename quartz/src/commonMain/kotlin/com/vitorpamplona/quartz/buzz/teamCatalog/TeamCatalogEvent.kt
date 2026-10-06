@@ -31,6 +31,8 @@ import com.vitorpamplona.quartz.nip01Core.signers.EventTemplate
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.nip01Core.tags.dTag.DTag
 import com.vitorpamplona.quartz.nip01Core.tags.dTag.dTag
+import com.vitorpamplona.quartz.nip50Search.IndexableFieldVisitor
+import com.vitorpamplona.quartz.nip50Search.SearchableEvent
 import kotlinx.coroutines.CancellationException
 
 /**
@@ -64,7 +66,33 @@ class TeamCatalogEvent(
     tags: Array<Array<String>>,
     content: String,
     sig: HexKey,
-) : BaseAddressableEvent(id, pubKey, createdAt, KIND, tags, content, sig) {
+) : BaseAddressableEvent(id, pubKey, createdAt, KIND, tags, content, sig),
+    SearchableEvent {
+    override fun indexableContent() =
+        catalogOrNull()?.let { catalog ->
+            buildList {
+                add(catalog.name)
+                catalog.description?.let(::add)
+                catalog.instructions?.let(::add)
+                catalog.members.forEach { member ->
+                    add(member.displayName)
+                    member.systemPrompt?.let(::add)
+                }
+            }.joinToString("\n")
+        } ?: ""
+
+    // The read path. The parse happens once; fields are handed over in indexableContent() order.
+    override fun forEachIndexableField(visitor: IndexableFieldVisitor) {
+        val data = catalogOrNull() ?: return
+        if (!visitor.visit(data.name)) return
+        if (!visitor.visit(data.description)) return
+        if (!visitor.visit(data.instructions)) return
+        for (member in data.members) {
+            if (!visitor.visit(member.displayName)) return
+            if (!visitor.visit(member.systemPrompt)) return
+        }
+    }
+
     /** The team's stable id — the `d` tag (shared with its `kind:30176`). */
     fun teamId() = dTag()
 
@@ -78,19 +106,25 @@ class TeamCatalogEvent(
      * Parses the body, all-or-nothing like upstream: throws when the JSON is malformed, the
      * schema version is not 1, or any field breaks the v1 contract. Use [catalogOrNull].
      */
-    fun catalog(): TeamCatalogContent {
-        val parsed = TeamCatalogContent.decodeFromJson(content)
-        parsed.validate()?.let { throw IllegalArgumentException(it) }
-        return parsed
-    }
+    fun catalog(): TeamCatalogContent = parsedCatalog().getOrThrow()
 
-    fun catalogOrNull(): TeamCatalogContent? =
-        try {
-            catalog()
+    fun catalogOrNull(): TeamCatalogContent? = parsedCatalog().getOrNull()
+
+    // forEachIndexableField() runs on every keystroke, so the body is decoded and validated
+    // once per instance — a failure included. Events are immutable; a race only decodes twice.
+    @kotlinx.serialization.Transient
+    @kotlin.jvm.Transient
+    private var catalogCache: Result<TeamCatalogContent>? = null
+
+    private fun parsedCatalog(): Result<TeamCatalogContent> =
+        catalogCache ?: try {
+            val parsed = TeamCatalogContent.decodeFromJson(content)
+            parsed.validate()?.let { throw IllegalArgumentException(it) }
+            Result.success(parsed)
         } catch (e: Exception) {
             if (e is CancellationException) throw e
-            null
-        }
+            Result.failure(e)
+        }.also { catalogCache = it }
 
     companion object {
         const val KIND = 30178
