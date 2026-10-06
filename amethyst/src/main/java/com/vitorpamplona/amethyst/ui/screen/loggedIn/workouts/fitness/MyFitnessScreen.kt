@@ -96,6 +96,8 @@ import com.vitorpamplona.amethyst.commons.resources.my_fitness_window_note
 import com.vitorpamplona.amethyst.commons.resources.my_fitness_workouts
 import com.vitorpamplona.amethyst.commons.resources.workout_suggestion_connect_details
 import com.vitorpamplona.amethyst.commons.ui.layouts.DisappearingScaffold
+import com.vitorpamplona.amethyst.commons.ui.layouts.LocalDisappearingScaffoldPadding
+import com.vitorpamplona.amethyst.commons.ui.layouts.rememberFeedContentPadding
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.navigation.topbars.TopBarWithBackButton
 import com.vitorpamplona.amethyst.commons.ui.platform.AppBottomBar
@@ -117,6 +119,8 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.workouts.suggestion.toNewWo
  *
  * Reached from the drawer, or from a bottom-bar slot the user pinned.
  */
+private val DashboardPadding = PaddingValues(16.dp)
+
 @Composable
 fun MyFitnessScreen(
     accountViewModel: AccountViewModel,
@@ -156,21 +160,21 @@ fun MyFitnessScreen(
             }
         },
         accountViewModel = accountViewModel,
-    ) { padding ->
+    ) {
         // The Surface fills the whole scaffold, under the bars, and the dashboard pads inside its
         // scroll: padding the Surface instead left the bars' strips empty once they slid away.
         Surface(modifier = Modifier.fillMaxSize()) {
             when (val current = state) {
-                MyFitnessViewModel.State.Loading -> CenteredBox(padding) { CircularProgressIndicator() }
+                MyFitnessViewModel.State.Loading -> CenteredBox { CircularProgressIndicator() }
 
                 is MyFitnessViewModel.State.Ready ->
                     if (current.report.isEmpty) {
                         // Nothing logged yet. Offering Health Connect is the useful thing to do
                         // when it could fill the screen; otherwise just say the log is empty.
                         if (current.healthConnect == MyFitnessViewModel.HealthConnectStatus.AVAILABLE) {
-                            ConnectPrompt(padding, onDetails = openRationale, onConnect = requestPermissions)
+                            ConnectPrompt(onDetails = openRationale, onConnect = requestPermissions)
                         } else {
-                            CenteredBox(padding) {
+                            CenteredBox {
                                 Text(
                                     text = stringRes(Res.string.my_fitness_empty),
                                     style = MaterialTheme.typography.bodyMedium,
@@ -182,7 +186,6 @@ fun MyFitnessScreen(
                     } else {
                         Dashboard(
                             report = current.report,
-                            padding = padding,
                             // Only offered when it would actually add something: a device with no
                             // provider gets no banner to act on.
                             showConnectBanner = current.healthConnect == MyFitnessViewModel.HealthConnectStatus.AVAILABLE,
@@ -199,12 +202,9 @@ fun MyFitnessScreen(
 }
 
 @Composable
-private fun CenteredBox(
-    padding: PaddingValues,
-    content: @Composable () -> Unit,
-) {
+private fun CenteredBox(content: @Composable () -> Unit) {
     Box(
-        modifier = Modifier.fillMaxSize().padding(padding),
+        modifier = Modifier.fillMaxSize().padding(LocalDisappearingScaffoldPadding.current),
         contentAlignment = Alignment.Center,
     ) { content() }
 }
@@ -263,12 +263,11 @@ private fun MetricsPendingNote() {
 
 @Composable
 private fun ConnectPrompt(
-    padding: PaddingValues,
     onDetails: () -> Unit,
     onConnect: () -> Unit,
 ) {
     Column(
-        modifier = Modifier.fillMaxSize().padding(padding).padding(24.dp),
+        modifier = Modifier.fillMaxSize().padding(LocalDisappearingScaffoldPadding.current).padding(24.dp),
         verticalArrangement = Arrangement.spacedBy(14.dp, Alignment.CenterVertically),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
@@ -298,7 +297,6 @@ private fun ConnectPrompt(
 @Composable
 private fun Dashboard(
     report: WorkoutStats.Report,
-    padding: PaddingValues,
     showConnectBanner: Boolean,
     metricsPending: Boolean,
     onDetails: () -> Unit,
@@ -312,8 +310,7 @@ private fun Dashboard(
             Modifier
                 .fillMaxSize()
                 .verticalScroll(rememberScrollState())
-                .padding(padding)
-                .padding(16.dp),
+                .padding(rememberFeedContentPadding(DashboardPadding)),
         verticalArrangement = Arrangement.spacedBy(18.dp),
     ) {
         if (showConnectBanner) ConnectBanner(onDetails = onDetails, onConnect = onConnect)
