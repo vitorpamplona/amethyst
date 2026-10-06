@@ -881,43 +881,37 @@ open class ShortNotePostViewModel :
             zapRaiserAmount.value = zapRaiser
         }
 
-        eTags =
-            draftEvent.tags.filter { it.size > 1 && (it[0] == "e" || it[0] == "a") && it.getOrNull(3) != "fork" }.mapNotNull {
-                val note = LocalCache.checkGetOrCreateNote(it[1])
-                note
-            }
+        eTags = draftEvent.threadReferenceIds().mapNotNull { LocalCache.checkGetOrCreateNote(it) }
 
         pTags =
-            draftEvent.tags
-                .filter { it.size > 1 && it[0] == "p" }
-                .mapNotNull { LocalCache.checkGetOrCreateUser(it[1]) }
+            draftEvent
+                .mentions()
+                .mapNotNull { LocalCache.checkGetOrCreateUser(it.pubKey) }
                 // A built event can legitimately repeat a p tag (the voice-reply
                 // branch notifies the parent author on top of the notify list), so
                 // the audience it round-trips through a draft has to be deduped.
                 .distinct()
 
-        draftEvent.tags.filter { it.size > 3 && (it[0] == "e" || it[0] == "a") && it[3] == "fork" }.forEach {
-            val note = LocalCache.checkGetOrCreateNote(it[1])
-            forkedFromNote = note
+        // Same precedence as ShowForkInformation: a forked address wins over a forked version.
+        val forkedAddress = draftEvent.forkFromAddress()
+        val forkedVersion = draftEvent.forkFromVersion()
+        if (forkedAddress != null) {
+            forkedFromNote = LocalCache.getOrCreateAddressableNote(forkedAddress)
+        } else if (forkedVersion != null) {
+            forkedFromNote = LocalCache.checkGetOrCreateNote(forkedVersion)
         }
 
+        // The reply-marked e/a tag, else the root-marked one (a direct reply to a root carries
+        // only the root marker). Markers only: an unmarked `a` (a community, a mention) must not
+        // turn a top-level draft into a reply, so replyingToAddressOrEvent()'s positional
+        // fallback is not used here.
         originalNote =
-            draftEvent
-                .tags
-                .filter { it.size > 1 && (it[0] == "e" || it[0] == "a") && it.getOrNull(3) == "reply" }
-                .map {
-                    LocalCache.checkGetOrCreateNote(it[1])
-                }.firstOrNull()
-
-        if (originalNote == null) {
-            originalNote =
-                draftEvent
-                    .tags
-                    .filter { it.size > 1 && (it[0] == "e" || it[0] == "a") && it.getOrNull(3) == "root" }
-                    .map {
-                        LocalCache.checkGetOrCreateNote(it[1])
-                    }.firstOrNull()
-        }
+            draftEvent.tags
+                .firstOrNull { it.size > 3 && (it[0] == "e" || it[0] == "a") && it[3] == "reply" }
+                ?.let { LocalCache.checkGetOrCreateNote(it[1]) }
+                ?: draftEvent.tags
+                    .firstOrNull { it.size > 3 && (it[0] == "e" || it[0] == "a") && it[3] == "root" }
+                    ?.let { LocalCache.checkGetOrCreateNote(it[1]) }
 
         canUsePoll = originalNote == null
         canUseZapPoll = originalNote == null
@@ -998,9 +992,9 @@ open class ShortNotePostViewModel :
             }
 
         pTags =
-            draftEvent.tags
-                .filter { it.size > 1 && it[0] == "p" }
-                .mapNotNull { LocalCache.checkGetOrCreateUser(it[1]) }
+            draftEvent
+                .mentionKeys()
+                .mapNotNull { LocalCache.checkGetOrCreateUser(it) }
                 // A built event can legitimately repeat a p tag (the voice-reply
                 // branch notifies the parent author on top of the notify list), so
                 // the audience it round-trips through a draft has to be deduped.
@@ -1070,16 +1064,12 @@ open class ShortNotePostViewModel :
             zapRaiserAmount.value = zapRaiser
         }
 
-        eTags =
-            draftEvent.tags.filter { it.size > 1 && (it[0] == "e" || it[0] == "a") && it.getOrNull(3) != "fork" }.mapNotNull {
-                val note = LocalCache.checkGetOrCreateNote(it[1])
-                note
-            }
+        eTags = draftEvent.threadReferenceIds().mapNotNull { LocalCache.checkGetOrCreateNote(it) }
 
         pTags =
-            draftEvent.tags
-                .filter { it.size > 1 && it[0] == "p" }
-                .mapNotNull { LocalCache.checkGetOrCreateUser(it[1]) }
+            draftEvent
+                .mentions()
+                .mapNotNull { LocalCache.checkGetOrCreateUser(it.pubKey) }
                 // A built event can legitimately repeat a p tag (the voice-reply
                 // branch notifies the parent author on top of the notify list), so
                 // the audience it round-trips through a draft has to be deduped.

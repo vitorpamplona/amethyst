@@ -24,6 +24,10 @@ import androidx.compose.runtime.Immutable
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
+import com.vitorpamplona.quartz.nip01Core.hints.AddressHintProvider
+import com.vitorpamplona.quartz.nip01Core.hints.EventHintProvider
+import com.vitorpamplona.quartz.nip01Core.hints.types.AddressHint
+import com.vitorpamplona.quartz.nip01Core.hints.types.EventIdHint
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.nip29RelayGroups.tags.GroupPin
 import com.vitorpamplona.quartz.utils.TimeUtils
@@ -44,7 +48,17 @@ class GroupUpdatePinListEvent(
     tags: Array<Array<String>>,
     content: String,
     sig: HexKey,
-) : Event(id, pubKey, createdAt, KIND, tags, content, sig) {
+) : Event(id, pubKey, createdAt, KIND, tags, content, sig),
+    EventHintProvider,
+    AddressHintProvider {
+    override fun eventHints(): List<EventIdHint> = tags.pinnedEventHints()
+
+    override fun linkedEventIds(): List<HexKey> = tags.pinnedEventIds()
+
+    override fun addressHints(): List<AddressHint> = tags.pinnedAddressHints()
+
+    override fun linkedAddressIds(): List<String> = tags.pinnedAddressIds()
+
     fun groupId() = tags.groupId()
 
     /** The full ordered pin list — `e` and `a` references. */

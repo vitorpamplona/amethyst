@@ -171,6 +171,43 @@ fun RelayReachSentinels(
 }
 
 /**
+ * Reports whether any not-done [limits] marker is on screen, for a caller that decides **itself** when to
+ * page (e.g. a conversation that pages the account-wide NIP-17 history one round at a time) instead of
+ * letting [RelayReachSentinels] pull a page every time a marker shows up. Uses the same gap predicate as
+ * [RelayReachMarkers], over the visible rows only. A frontier newer than every message (nothing on screen is
+ * newer than it, so it has no gap to sit in) counts as visible while the newest row is.
+ *
+ * Hoisted above the list like [RelayReachSentinels]. [onVisibleChange] fires on each change, starting with
+ * the first layout.
+ */
+@Composable
+fun RelayReachVisibility(
+    limits: List<RelayReachCursor>,
+    listState: LazyListState,
+    createdAtAt: (index: Int) -> Long?,
+    onVisibleChange: (Boolean) -> Unit,
+) {
+    val current = rememberUpdatedState(limits)
+    val getAt = rememberUpdatedState(createdAtAt)
+    val report = rememberUpdatedState(onVisibleChange)
+    LaunchedEffect(listState) {
+        snapshotFlow {
+            val frontiers = current.value.filter { it.state != RelayReachState.DONE }
+            val at = getAt.value
+            frontiers.isNotEmpty() &&
+                listState.layoutInfo.visibleItemsInfo.any { info ->
+                    val newer = at(info.index)
+                    frontiers.any { lim ->
+                        reachedFallsInGap(lim.reachedUntil, newer, at(info.index + 1)) ||
+                            (info.index == 0 && newer != null && newer <= lim.reachedUntil)
+                    }
+                }
+        }.distinctUntilChanged()
+            .collect { report.value(it) }
+    }
+}
+
+/**
  * Renders the window-limit markers for the relays whose limit falls in the gap between a newer message
  * (at [newerCreatedAt]) and its next-older neighbour (at [olderCreatedAt], null at the oldest end). Pure
  * UI: the load driving lives in [RelayReachSentinels], so this can be (re)placed freely per row on

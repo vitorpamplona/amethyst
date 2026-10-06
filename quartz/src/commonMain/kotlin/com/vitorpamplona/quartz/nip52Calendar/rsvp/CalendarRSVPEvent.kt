@@ -70,13 +70,14 @@ class CalendarRSVPEvent(
 
     override fun addressHints() = tags.mapNotNull(ATag::parseAsHint)
 
-    override fun linkedAddressIds() = tags.mapNotNull(ATag::parseAddressId)
+    // NIP-52 gives an RSVP exactly one `a`: the appointment it answers.
+    override fun linkedAddressIds() = listOfNotNull(calendarEventAddress()?.toValue())
 
     // NIP-52's optional `e` tag pins the exact appointment revision this RSVP answered, next to
     // the `a` tag's coordinate. Routing on it as well reaches whoever served that revision.
     override fun eventHints() = tags.mapNotNull(ETag::parseAsHint)
 
-    override fun linkedEventIds() = tags.mapNotNull(ETag::parseId)
+    override fun linkedEventIds() = listOfNotNull(calendarEventId()?.eventId)
 
     fun status() = tags.firstNotNullOfOrNull(RSVPStatusTag.Companion::parse)
 

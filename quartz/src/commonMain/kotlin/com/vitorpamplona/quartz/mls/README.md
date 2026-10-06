@@ -10,7 +10,7 @@ invariant, over the shipped code:
 
 ```bash
 grep -rn 'import com.vitorpamplona.quartz.marmot' \
-  --include='*.kt' quartz/src/{commonMain,jvmAndroid,appleMain,linuxMain}/kotlin/com/vitorpamplona/quartz/mls/
+  --include='*.kt' quartz/src/{commonMain,jvmAndroid,nativeMain,appleMain,linuxMain}/kotlin/com/vitorpamplona/quartz/mls/
 ```
 
 That must print nothing. Tests are deliberately outside it: a couple under

@@ -24,8 +24,10 @@ import androidx.compose.runtime.Immutable
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.Tag
 import com.vitorpamplona.quartz.nip01Core.core.has
+import com.vitorpamplona.quartz.nip01Core.hints.types.EventIdHint
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
+import com.vitorpamplona.quartz.utils.Hex
 import com.vitorpamplona.quartz.utils.arrayOfNotNull
 import com.vitorpamplona.quartz.utils.ensure
 
@@ -47,8 +49,8 @@ class EventTag(
         fun parse(tag: Tag): EventTag? {
             ensure(tag.has(1)) { return null }
             ensure(tag[0] == TAG_NAME) { return null }
-            ensure(tag[1].length == 64) { return null }
-            val hint = tag.getOrNull(2)?.takeIf { it.isNotEmpty() }?.let { RelayUrlNormalizer.normalizeOrNull(it) }
+            ensure(tag[1].length == 64 && Hex.isHex64(tag[1])) { return null }
+            val hint = tag.getOrNull(2)?.takeIf { it.isNotEmpty() }?.let { RelayUrlNormalizer.normalizeHintOrNull(it) }
             val pubKey = tag.getOrNull(3)?.takeIf { it.length == 64 }
             return EventTag(tag[1], hint, pubKey)
         }
@@ -56,8 +58,20 @@ class EventTag(
         fun parseId(tag: Array<String>): HexKey? {
             ensure(tag.has(1)) { return null }
             ensure(tag[0] == TAG_NAME) { return null }
-            ensure(tag[1].length == 64) { return null }
+            ensure(tag[1].length == 64 && Hex.isHex64(tag[1])) { return null }
             return tag[1]
+        }
+
+        fun parseAsHint(tag: Array<String>): EventIdHint? {
+            ensure(tag.has(2)) { return null }
+            ensure(tag[0] == TAG_NAME) { return null }
+            ensure(tag[1].length == 64 && Hex.isHex64(tag[1])) { return null }
+            ensure(tag[2].isNotEmpty()) { return null }
+
+            val hint = RelayUrlNormalizer.normalizeHintOrNull(tag[2])
+            ensure(hint != null) { return null }
+
+            return EventIdHint(tag[1], hint)
         }
 
         fun assemble(

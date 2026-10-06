@@ -46,11 +46,14 @@ class EmojiListEvent(
     AddressHintProvider {
     override fun addressHints() = tags.mapNotNull(ATag::parseAsHint)
 
-    override fun linkedAddressIds() = tags.mapNotNull(ATag::parseAddressId)
+    override fun linkedAddressIds() = emojiPackIds()
 
     fun emojiPacks() = tags.mapNotNull(ATag::parseAddress)
 
     fun emojiPackIds() = tags.mapNotNull(ATag::parseAddressId)
+
+    /** Whether the emoji pack [addressId] (`kind:pubkey:d`) is selected in this list. */
+    fun hasEmojiPack(addressId: String): Boolean = tags.any { ATag.isTagged(it, addressId) }
 
     companion object {
         const val KIND = 10030

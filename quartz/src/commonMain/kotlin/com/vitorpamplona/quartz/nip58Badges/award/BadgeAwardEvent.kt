@@ -47,7 +47,7 @@ class BadgeAwardEvent(
     PubKeyHintProvider {
     override fun pubKeyHints() = tags.mapNotNull(PTag::parseAsHint)
 
-    override fun linkedPubKeys() = tags.mapNotNull(PTag::parseKey)
+    override fun linkedPubKeys() = awardeeIds()
 
     override fun eventHints() = tags.mapNotNull(ETag::parseAsHint)
 

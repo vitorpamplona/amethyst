@@ -47,7 +47,7 @@ class TemplateTag {
             ensure(tag[0] == TAG_NAME) { return null }
             ensure(ExerciseSetTag.isCoordinate(tag[1])) { return null }
             ensure(tag[2].isNotEmpty()) { return null }
-            val relayHint = RelayUrlNormalizer.normalizeOrNull(tag[2]) ?: return null
+            val relayHint = RelayUrlNormalizer.normalizeHintOrNull(tag[2]) ?: return null
             return AddressHint(tag[1], relayHint)
         }
     }

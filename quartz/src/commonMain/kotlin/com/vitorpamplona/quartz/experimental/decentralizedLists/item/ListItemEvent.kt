@@ -84,7 +84,10 @@ class ListItemEvent(
 
     override fun eventHints() = tags.mapNotNull(ETag::parseAsHint)
 
-    /** Event items plus any parent lists referenced by id, in one pass. */
+    /**
+     * [itemEventIds] plus [parentListEventIds], read with the same per-tag parsers in one pass so
+     * the ids keep their tag order.
+     */
     override fun linkedEventIds(): List<HexKey> {
         val out = ArrayList<HexKey>()
         tags.fastForEach { tag -> (ETag.parseId(tag) ?: ParentListTag.parseEventId(tag))?.let { out.add(it) } }
@@ -93,7 +96,10 @@ class ListItemEvent(
 
     override fun addressHints() = tags.mapNotNull(ATag::parseAsHint)
 
-    /** Addressable items plus any parent lists referenced by coordinate, in one pass. */
+    /**
+     * [itemAddressIds] plus [parentListAddressIds], read with the same per-tag parsers in one pass
+     * so the ids keep their tag order.
+     */
     override fun linkedAddressIds(): List<String> {
         val out = ArrayList<String>()
         tags.fastForEach { tag -> (ATag.parseValidAddress(tag) ?: ParentListTag.parseCoordinate(tag))?.let { out.add(it) } }
@@ -102,7 +108,7 @@ class ListItemEvent(
 
     override fun pubKeyHints() = tags.mapNotNull(PTag::parseAsHint)
 
-    override fun linkedPubKeys() = tags.mapNotNull(PTag::parseKey)
+    override fun linkedPubKeys() = itemKeys()
 
     override fun indexableContent() = tags.searchableListContent()
 
@@ -113,6 +119,12 @@ class ListItemEvent(
     fun parentLists() = tags.parentLists()
 
     fun parentListPointers() = tags.parentListPointers()
+
+    /** The parent lists this item names by header event id (`z` tags holding an id), in tag order. */
+    fun parentListEventIds(): List<HexKey> = tags.parentListEventIds()
+
+    /** The parent lists this item names by `kind:pubkey:d` coordinate (`z` tags holding one), in tag order. */
+    fun parentListAddressIds(): List<String> = tags.parentListAddressIds()
 
     fun name() = tags.name()
 
@@ -126,11 +138,20 @@ class ListItemEvent(
 
     fun itemPubKeys() = tags.itemPubKeys()
 
+    /** The pubkeys declared as items (every valid `p`, in tag order), without building [PTag]s. */
+    fun itemKeys(): List<HexKey> = tags.itemKeys()
+
     fun itemEvents() = tags.itemEvents()
+
+    /** The ids of the events declared as items (every valid `e`, in tag order). */
+    fun itemEventIds(): List<HexKey> = tags.itemEventIds()
 
     fun itemStrings() = tags.itemStrings()
 
     fun itemAddresses() = tags.itemAddresses()
+
+    /** The addressable items as validated `kind:pubkey:d` ids (every valid `a`, in tag order). */
+    fun itemAddressIds(): List<String> = tags.itemAddressIds()
 
     /**
      * True when this item uses the spec's nonstandard method to declare a list: it carries a

@@ -68,7 +68,7 @@ class MeetingRoomTag(
             aTagId: String,
             relay: String?,
         ) = Address.parse(aTagId)?.let {
-            MeetingRoomTag(it, relay?.let { RelayUrlNormalizer.normalizeOrNull(it) })
+            MeetingRoomTag(it, relay?.let { RelayUrlNormalizer.normalizeHintOrNull(it) })
         }
 
         fun parse(tag: Array<String>): MeetingRoomTag? {
@@ -106,7 +106,7 @@ class MeetingRoomTag(
             ensure(tag[1].contains(':')) { return null }
             ensure(tag[2].isNotEmpty()) { return null }
 
-            val relayHint = RelayUrlNormalizer.normalizeOrNull(tag[2])
+            val relayHint = RelayUrlNormalizer.normalizeHintOrNull(tag[2])
             ensure(relayHint != null) { return null }
 
             return AddressHint(tag[1], relayHint)

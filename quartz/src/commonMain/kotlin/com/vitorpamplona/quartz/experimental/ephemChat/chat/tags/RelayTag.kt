@@ -37,7 +37,7 @@ class RelayTag {
             ensure(tag[0] == TAG_NAME) { return null }
             ensure(tag[1].isNotEmpty()) { return null }
 
-            return RelayUrlNormalizer.normalizeOrNull(tag[1])
+            return RelayUrlNormalizer.normalizeHintOrNull(tag[1])
         }
 
         fun assemble(relay: NormalizedRelayUrl) = arrayOf(TAG_NAME, relay.url)

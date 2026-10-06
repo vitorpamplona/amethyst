@@ -21,11 +21,14 @@
 package com.vitorpamplona.quartz.buzz.stream.sidecars
 
 import androidx.compose.runtime.Immutable
+import com.vitorpamplona.quartz.buzz.ParseFailed
 import com.vitorpamplona.quartz.buzz.stream.channel
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
+import com.vitorpamplona.quartz.nip50Search.IndexableFieldVisitor
+import com.vitorpamplona.quartz.nip50Search.SearchableEvent
 import com.vitorpamplona.quartz.utils.TimeUtils
 
 /**
@@ -44,10 +47,33 @@ class ChannelSummaryEvent(
     tags: Array<Array<String>>,
     content: String,
     sig: HexKey,
-) : Event(id, pubKey, createdAt, KIND, tags, content, sig) {
+) : Event(id, pubKey, createdAt, KIND, tags, content, sig),
+    SearchableEvent {
+    override fun indexableContent() = summary()?.let { listOfNotNull(it.name, it.about, it.topic, it.purpose).joinToString("\n") } ?: ""
+
+    // The read path. The parse happens once; fields are handed over in indexableContent() order.
+    override fun forEachIndexableField(visitor: IndexableFieldVisitor) {
+        val data = summary() ?: return
+        if (!visitor.visit(data.name)) return
+        if (!visitor.visit(data.about)) return
+        if (!visitor.visit(data.topic)) return
+        visitor.visit(data.purpose)
+    }
+
     fun channel() = tags.channel()
 
-    fun summary() = runCatching { ChannelSummaryPayload.decodeFromJson(content) }.getOrNull()
+    // forEachIndexableField() runs on every keystroke, so the body is decoded once per
+    // instance — a failure included. Events are immutable; a race only decodes twice.
+    @kotlinx.serialization.Transient
+    @kotlin.jvm.Transient
+    private var summaryCache: Any? = null // ChannelSummaryPayload, or ParseFailed
+
+    fun summary(): ChannelSummaryPayload? {
+        summaryCache?.let { return it as? ChannelSummaryPayload }
+        val parsed = runCatching { ChannelSummaryPayload.decodeFromJson(content) }.getOrNull()
+        summaryCache = parsed ?: ParseFailed
+        return parsed
+    }
 
     companion object {
         const val KIND = 40901

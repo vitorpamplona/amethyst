@@ -95,15 +95,16 @@ class MeetingRoomEvent(
         }
     }
 
-    override fun linkedEventIds() = tags.mapNotNull(PinnedEventTag::parse)
+    override fun linkedEventIds() = pinned()
 
     override fun addressHints(): List<AddressHint> = tags.mapNotNull(MeetingSpaceTag::parseAsHint)
 
-    override fun linkedAddressIds(): List<String> = tags.mapNotNull(MeetingSpaceTag::parseAddressId)
+    // NIP-53 gives a meeting room one `a`: the kind 30312 space it belongs to.
+    override fun linkedAddressIds(): List<String> = listOfNotNull(interactiveRoom()?.address?.toValue())
 
     override fun pubKeyHints() = tags.mapNotNull(ParticipantTag::parseAsHint)
 
-    override fun linkedPubKeys() = tags.mapNotNull(ParticipantTag::parseKey)
+    override fun linkedPubKeys() = participantKeys()
 
     fun interactiveRoom() = tags.firstNotNullOfOrNull(MeetingSpaceTag::parse)
 

@@ -89,6 +89,26 @@ object Hex {
     }
 
     /**
+     * True when the chars of [hex] in `[start, end)` are all hex digits (upper or lower case),
+     * without copying the range out. For validating a hex field embedded in a larger string,
+     * like the pubkey of an address id. An empty range is valid; a range outside [hex] is not.
+     * Unlike [isHex], the length of the range is not required to be even.
+     */
+    fun isHex(
+        hex: String,
+        start: Int,
+        end: Int,
+    ): Boolean {
+        if (start < 0 || end > hex.length || start > end) return false
+        for (i in start until end) {
+            val code = hex[i].code
+            // chars above U+00FF (e.g. emoji) are outside the lookup table
+            if (code >= hexToByte.size || hexToByte[code] < 0) return false
+        }
+        return true
+    }
+
+    /**
      * Validates the first 64 chars of [hex] as hex digits — the fast path for
      * checking a 32-byte pubkey or event id. ~30% faster than [isHex] because
      * the length is fixed and the checks are unrolled. Assumes [hex] is at least

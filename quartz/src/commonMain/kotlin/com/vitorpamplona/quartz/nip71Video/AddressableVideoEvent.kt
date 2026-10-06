@@ -23,6 +23,9 @@ package com.vitorpamplona.quartz.nip71Video
 import androidx.compose.runtime.Immutable
 import com.vitorpamplona.quartz.nip01Core.core.BaseAddressableEvent
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
+import com.vitorpamplona.quartz.nip01Core.hints.AddressHintProvider
+import com.vitorpamplona.quartz.nip01Core.hints.EventHintProvider
+import com.vitorpamplona.quartz.nip01Core.hints.PubKeyHintProvider
 import com.vitorpamplona.quartz.nip01Core.tags.hashtags.hashtags
 import com.vitorpamplona.quartz.nip01Core.tags.people.PTag
 import com.vitorpamplona.quartz.nip01Core.tags.publishedAt.PublishedAtProvider
@@ -52,15 +55,37 @@ abstract class AddressableVideoEvent(
     PublishedAtProvider,
     VideoEvent,
     RootScope,
+    PubKeyHintProvider,
+    EventHintProvider,
+    AddressHintProvider,
     SearchableEvent {
-    override fun indexableContent() = listOfNotNull(title(), content).joinToString("\n")
+    // Chapter (`segment`) titles are publisher-written headings, searched like a title's words.
+    override fun indexableContent() = (listOfNotNull(title(), content) + segmentTitles()).joinToString("\n")
 
     // The read path: the same fields indexableContent() joins, handed over without
-    // building the joined string a scan would throw away.
+    // building the joined string a scan would throw away. It runs per event per search
+    // keystroke, so the tag-backed fields are read off the tags in place, not via list getters.
     override fun forEachIndexableField(visitor: IndexableFieldVisitor) {
         if (!visitor.visit(title())) return
-        visitor.visit(content)
+        if (!visitor.visit(content)) return
+        for (tag in tags) {
+            val segmentTitle = SegmentTag.parseTitle(tag) ?: continue
+            if (!visitor.visit(segmentTitle)) return
+        }
     }
+
+    // One implementation for every NIP-71 kind: see VideoHints.kt.
+    override fun pubKeyHints() = tags.videoPubKeyHints()
+
+    override fun linkedPubKeys() = tags.videoLinkedPubKeys()
+
+    override fun eventHints() = tags.videoEventHints()
+
+    override fun linkedEventIds() = creditedEventIds()
+
+    override fun addressHints() = tags.videoAddressHints()
+
+    override fun linkedAddressIds() = tags.videoLinkedAddressIds()
 
     @kotlinx.serialization.Transient
     @kotlin.jvm.Transient
@@ -89,7 +114,11 @@ abstract class AddressableVideoEvent(
 
     override fun credits() = VideoCredits.parse(tags)
 
+    override fun creditedEventIds() = tags.videoCreditedEventIds()
+
     override fun segments() = tags.mapNotNull(SegmentTag::parse)
+
+    fun segmentTitles() = segments().map { it.title }
 
     override fun participants() = tags.mapNotNull(PTag::parse)
 

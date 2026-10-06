@@ -313,21 +313,12 @@ class NotificationFeedFilter(
                     // reply to the user's reaction stays detectable even when the
                     // reaction event is not in the local cache (the replyTo-author
                     // check above needs it loaded).
+                    //
+                    // This also covers replies to the user's zaps: the receipt is
+                    // signed by the recipient's lightning provider, so its `P`/`p` name
+                    // the provider, and the reply's extra lowercase `p` on the zapper
+                    // is what marks it as theirs.
                     if (event.rootAuthorKeys().contains(authorHex) || event.replyAuthorKeys().contains(authorHex)) {
-                        return true
-                    }
-
-                    // Replies to the user's zaps: the receipt — and therefore the
-                    // author tags above — is signed by the recipient's lightning
-                    // provider, not the zapper. The `k` tag (or the cached parent)
-                    // proves the comment targets a zap; the reply's explicit p tag
-                    // on the user marks it as theirs.
-                    val targetsZapReceipt =
-                        event.hasScopeKind(ZapReceiptEvent.KIND.toString()) ||
-                            event.hasScopeKind(Bolt12ZapEvent.KIND.toString()) ||
-                            note.replyTo?.any { it.event is ZapReceiptEvent || it.event is Bolt12ZapEvent } == true
-
-                    if (targetsZapReceipt && event.isTaggedUser(authorHex)) {
                         return true
                     }
                 }
@@ -466,9 +457,14 @@ class NotificationFeedFilter(
         note: Note,
         me: HexKey,
     ): Boolean {
-        val event = note.event
-        if (event !is ReactionEvent && event !is RepostEvent && event !is GenericRepostEvent) return false
-        if (event.tags.any { it.getOrNull(0) == "p" }) return false
+        val namesAuthor =
+            when (val event = note.event) {
+                is ReactionEvent -> event.originalAuthor().isNotEmpty()
+                is RepostEvent -> event.originalAuthorKeys().isNotEmpty()
+                is GenericRepostEvent -> event.originalAuthorKeys().isNotEmpty()
+                else -> return false
+            }
+        if (namesAuthor) return false
         return note.replyTo
             ?.lastOrNull()
             ?.author
@@ -485,9 +481,13 @@ class NotificationFeedFilter(
         note: Note,
         me: HexKey,
     ): Boolean {
-        val event = note.event
-        if (event !is ChatEvent && event !is StreamMessageV2Event) return false
-        if (!event.isTaggedUser(me)) return false
+        val mentionsMe =
+            when (val event = note.event) {
+                is ChatEvent -> me in event.mentionKeys()
+                is StreamMessageV2Event -> me in event.mentions()
+                else -> return false
+            }
+        if (!mentionsMe) return false
         val group = LocalCache.getRelayGroupChannelForContent(note) ?: return false
         return BuzzRelayDialect.isBuzz(group.groupId.relayUrl)
     }
@@ -512,9 +512,14 @@ class NotificationFeedFilter(
         note: Note,
         me: HexKey,
     ): Boolean {
-        val event = note.event
-        if (event !is ChatEvent && event !is StreamMessageV2Event) return false
-        if (event.tags.any { it.getOrNull(0) == "p" }) return false
+        val event = note.event ?: return false
+        val mentionsAnyone =
+            when (event) {
+                is ChatEvent -> event.mentionKeys().isNotEmpty()
+                is StreamMessageV2Event -> event.mentions().isNotEmpty()
+                else -> return false
+            }
+        if (mentionsAnyone) return false
 
         val threadTargets = setOfNotNull(event.tags.buzzThreadReply(), event.tags.buzzThreadRoot())
         if (threadTargets.isEmpty()) return false

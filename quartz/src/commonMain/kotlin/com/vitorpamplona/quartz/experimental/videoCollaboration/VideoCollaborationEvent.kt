@@ -23,6 +23,7 @@ package com.vitorpamplona.quartz.experimental.videoCollaboration
 import androidx.compose.runtime.Immutable
 import com.vitorpamplona.quartz.experimental.videoCollaboration.tags.RoleTag
 import com.vitorpamplona.quartz.experimental.videoCollaboration.tags.StatusTag
+import com.vitorpamplona.quartz.nip01Core.core.AddressSerializer
 import com.vitorpamplona.quartz.nip01Core.core.BaseAddressableEvent
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
@@ -64,14 +65,18 @@ class VideoCollaborationEvent(
     PubKeyHintProvider {
     override fun addressHints() = tags.mapNotNull(ATag::parseAsHint)
 
-    override fun linkedAddressIds() = tags.mapNotNull(ATag::parseAddressId)
+    // One response answers one video: [build] writes a single `a` and at most one `p`.
+    override fun linkedAddressIds() = listOfNotNull(videoAddressId())
 
     override fun pubKeyHints() = tags.mapNotNull(PTag::parseAsHint)
 
-    override fun linkedPubKeys() = tags.mapNotNull(PTag::parseKey)
+    override fun linkedPubKeys() = listOfNotNull(videoAuthor())
 
     /** The video being collaborated on. */
     fun video() = tags.firstNotNullOfOrNull(ATag::parseAddress)
+
+    /** [video] as a shape-checked address id, without parsing it into an Address. */
+    fun videoAddressId(): String? = tags.firstNotNullOfOrNull { ATag.parseAddressId(it)?.takeIf(AddressSerializer::isAddressShape) }
 
     /** The video's author, when the response names them. */
     fun videoAuthor() = tags.firstNotNullOfOrNull(PTag::parseKey)

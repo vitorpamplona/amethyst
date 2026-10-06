@@ -51,7 +51,7 @@ data class OpponentTag(
             ensure(tag[0] == TAG_NAME) { return null }
             ensure(tag[1].length == 64) { return null }
 
-            val hint = tag.getOrNull(2)?.let { RelayUrlNormalizer.Companion.normalizeOrNull(it) }
+            val hint = tag.getOrNull(2)?.let { RelayUrlNormalizer.normalizeHintOrNull(it) }
 
             return OpponentTag(tag[1], hint)
         }
@@ -69,7 +69,7 @@ data class OpponentTag(
             ensure(tag[1].length == 64) { return null }
             ensure(tag[2].isNotEmpty()) { return null }
 
-            val hint = RelayUrlNormalizer.Companion.normalizeOrNull(tag[2])
+            val hint = RelayUrlNormalizer.normalizeHintOrNull(tag[2])
 
             ensure(hint != null) { return null }
 

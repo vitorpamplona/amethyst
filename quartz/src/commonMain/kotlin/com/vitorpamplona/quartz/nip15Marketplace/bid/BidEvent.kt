@@ -46,15 +46,20 @@ class BidEvent(
     PubKeyHintProvider {
     override fun eventHints() = tags.mapNotNull(ETag::parseAsHint)
 
-    override fun linkedEventIds() = tags.mapNotNull(ETag::parseId)
+    // NIP-15: a bid carries a single `e`, the auction.
+    override fun linkedEventIds() = listOfNotNull(auctionId())
 
     override fun pubKeyHints() = tags.mapNotNull(PTag::parseAsHint)
 
-    override fun linkedPubKeys() = tags.mapNotNull(PTag::parseKey)
+    // The builder notifies a single `p`, the auction's author.
+    override fun linkedPubKeys() = listOfNotNull(auctionAuthor())
 
     fun amount() = content.toDoubleOrNull()
 
     fun auctionId() = tags.firstNotNullOfOrNull(ETag::parseId)
+
+    /** The author of the auction being bid on (`p`, written by [notifyAuthor]). */
+    fun auctionAuthor(): HexKey? = tags.firstNotNullOfOrNull(PTag::parseKey)
 
     companion object {
         const val KIND = 1021

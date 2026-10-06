@@ -30,6 +30,7 @@ import com.vitorpamplona.quartz.nip64Chess.GameTermination
 import com.vitorpamplona.quartz.nip64Chess.baseEvent.BaseChessEvent
 import com.vitorpamplona.quartz.nip64Chess.baseEvent.opponent
 import com.vitorpamplona.quartz.nip64Chess.baseEvent.tags.OpponentTag
+import com.vitorpamplona.quartz.nip64Chess.end.tags.WinnerTag
 import com.vitorpamplona.quartz.utils.TimeUtils
 
 /**
@@ -55,6 +56,10 @@ class LiveChessGameEndEvent(
     content: String,
     sig: HexKey,
 ) : BaseChessEvent(id, pubKey, createdAt, KIND, tags, content, sig) {
+    // The `winner` is a pubkey too (no relay slot, so linked only); usually one of the two
+    // players already named, but a reader resolving it should not have to know that.
+    override fun linkedPubKeys(): List<HexKey> = super.linkedPubKeys() + tags.mapNotNull(WinnerTag::parse)
+
     fun result() = tags.result()
 
     fun termination() = tags.termination()

@@ -21,10 +21,19 @@
 package com.vitorpamplona.quartz.buzz.stream
 
 import androidx.compose.runtime.Immutable
+import com.vitorpamplona.quartz.buzz.threading.buzzThreadMarkers
+import com.vitorpamplona.quartz.buzz.threading.buzzThreadReply
+import com.vitorpamplona.quartz.buzz.threading.buzzThreadRoot
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
+import com.vitorpamplona.quartz.nip01Core.hints.EventHintProvider
+import com.vitorpamplona.quartz.nip01Core.hints.PubKeyHintProvider
+import com.vitorpamplona.quartz.nip01Core.hints.types.EventIdHint
+import com.vitorpamplona.quartz.nip01Core.hints.types.PubKeyHint
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
+import com.vitorpamplona.quartz.nip01Core.tags.people.PTag
+import com.vitorpamplona.quartz.nip10Notes.tags.MarkedETag
 import com.vitorpamplona.quartz.nip50Search.IndexableFieldVisitor
 import com.vitorpamplona.quartz.nip50Search.SearchableEvent
 import com.vitorpamplona.quartz.utils.TimeUtils
@@ -50,7 +59,18 @@ class StreamMessageV2Event(
     content: String,
     sig: HexKey,
 ) : Event(id, pubKey, createdAt, KIND, tags, content, sig),
-    SearchableEvent {
+    SearchableEvent,
+    PubKeyHintProvider,
+    EventHintProvider {
+    override fun pubKeyHints(): List<PubKeyHint> = tags.mapNotNull(PTag::parseAsHint)
+
+    override fun linkedPubKeys(): List<HexKey> = mentions()
+
+    override fun eventHints(): List<EventIdHint> = tags.mapNotNull(MarkedETag::parseAsHint)
+
+    // threadRoot() + replyTo(), read in one pass over the tags: both come from the same markers.
+    override fun linkedEventIds(): List<HexKey> = tags.buzzThreadMarkers().let { listOfNotNull(it.root, it.reply) }
+
     override fun indexableContent() = content
 
     // The read path: the same fields indexableContent() joins, handed over without
@@ -62,6 +82,12 @@ class StreamMessageV2Event(
     fun channel() = tags.channel()
 
     fun mentions() = tags.mentions()
+
+    /** The thread root event id (`root`-marked `e` tag, read as Buzz's relay does), or null. */
+    fun threadRoot(): HexKey? = tags.buzzThreadRoot()
+
+    /** The immediate-parent event id (`reply`-marked `e` tag, read as Buzz's relay does), or null. */
+    fun replyTo(): HexKey? = tags.buzzThreadReply()
 
     fun isBroadcast() = tags.isBroadcast()
 

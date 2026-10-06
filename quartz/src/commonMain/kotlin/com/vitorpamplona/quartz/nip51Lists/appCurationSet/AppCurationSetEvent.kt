@@ -65,7 +65,7 @@ class AppCurationSetEvent(
 
     override fun addressHints() = tags.mapNotNull(AddressBookmark::parseAsHint)
 
-    override fun linkedAddressIds() = tags.mapNotNull(AddressBookmark::parseAddressId)
+    override fun linkedAddressIds() = appAddressIds()
 
     fun title() = tags.firstNotNullOfOrNull(TitleTag::parse)
 
@@ -79,6 +79,9 @@ class AppCurationSetEvent(
     fun image() = tags.firstNotNullOfOrNull(ImageTag::parse)
 
     fun apps() = tags.mapNotNull(AddressBookmark::parse)
+
+    /** The address ids of the curated apps, validated, in tag order. */
+    fun appAddressIds(): List<String> = tags.mapNotNull(AddressBookmark::parseValidAddress)
 
     /** NIP-82 `f` tags: the platforms the curated apps were picked for (e.g. `android-arm64-v8a`). */
     fun platforms() = tags.mapNotNull(PlatformTag::parse)

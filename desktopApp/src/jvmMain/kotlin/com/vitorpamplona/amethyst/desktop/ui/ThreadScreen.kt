@@ -234,7 +234,10 @@ fun ThreadScreen(
         )
     }
 
-    // Calculate reply level for a note based on e-tags
+    // Calculate reply level for a note from its reply parent. Only kind 1 notes and NIP-22
+    // comments are linked as replies, and both resolve their parent through replyingTo():
+    // NIP-10 reply marker, then root marker, then the last positional e tag for kind 1; the
+    // lowercase e (else the root E) for a comment.
     fun calculateLevel(note: Note): Int {
         val event = note.event ?: return 1
         levelCache[event.id]?.let { return it }

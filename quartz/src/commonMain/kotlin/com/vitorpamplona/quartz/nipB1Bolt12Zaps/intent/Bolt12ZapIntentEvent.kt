@@ -79,15 +79,16 @@ class Bolt12ZapIntentEvent(
 
     override fun pubKeyHints() = tags.mapNotNull(PTag::parseAsHint)
 
-    override fun linkedPubKeys() = tags.mapNotNull(PTag::parseKey)
+    // One recipient, and at most one zapped event and one zapped address.
+    override fun linkedPubKeys() = listOfNotNull(recipient())
 
     override fun eventHints() = tags.mapNotNull(ETag::parseAsHint)
 
-    override fun linkedEventIds() = tags.mapNotNull(ETag::parseId)
+    override fun linkedEventIds() = listOfNotNull(zappedEvent())
 
     override fun addressHints() = tags.mapNotNull(ATag::parseAsHint)
 
-    override fun linkedAddressIds() = tags.mapNotNull(ATag::parseAddressId)
+    override fun linkedAddressIds() = listOfNotNull(zappedAddress())
 
     /** The recipient pubkey (`p` tag). */
     fun recipient() = tags.firstNotNullOfOrNull(PTag::parseKey)
@@ -105,7 +106,7 @@ class Bolt12ZapIntentEvent(
     fun zappedEvent() = tags.firstNotNullOfOrNull(ETag::parseId)
 
     /** The addressable event being zapped, if any (`a` tag). */
-    fun zappedAddress() = tags.firstNotNullOfOrNull(ATag::parseAddressId)
+    fun zappedAddress() = tags.firstNotNullOfOrNull(ATag::parseValidAddress)
 
     /** The kind of the target event, if declared (`k` tag). */
     fun zappedKind() = tags.firstNotNullOfOrNull(KindTag::parse)

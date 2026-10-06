@@ -20,16 +20,4 @@
  */
 package com.vitorpamplona.quartz.utils
 
-// iosMain
-import platform.Foundation.NSDate
-import platform.Foundation.timeIntervalSince1970
-
 actual fun platform() = "iOS"
-
-actual fun currentTimeSeconds(): Long {
-    // CFAbsoluteTimeGetCurrent() returns seconds since 2001-01-01 00:00:00 UTC
-    // NSDate().timeIntervalSince1970 returns seconds since 1970-01-01 00:00:00 UTC
-    return (NSDate().timeIntervalSince1970).toLong()
-}
-
-actual fun currentTimeMillis(): Long = (NSDate().timeIntervalSince1970 * 1000).toLong()

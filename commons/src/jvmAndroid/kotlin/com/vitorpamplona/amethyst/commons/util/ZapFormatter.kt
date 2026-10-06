@@ -70,16 +70,6 @@ actual fun showAmount(amount: BigDecimal?): String {
 }
 
 /**
- * Formats a BigDecimal amount to human-readable format.
- * Returns "0" for null or very small amounts instead of empty string.
- */
-fun showAmountWithZero(amount: BigDecimal?): String {
-    if (amount == null) return "0"
-    if (amount.abs() < MinDisplayableAmount) return "0"
-    return showAmount(amount)
-}
-
-/**
  * Extension function to format Long as zap amount.
  */
 fun Long.toZapAmount(): String = showAmount(BigDecimal(this))

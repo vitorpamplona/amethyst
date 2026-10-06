@@ -28,6 +28,7 @@ import com.vitorpamplona.quartz.nip01Core.core.TagArray
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
 import com.vitorpamplona.quartz.nip01Core.diff.DiffableEvent
 import com.vitorpamplona.quartz.nip01Core.diff.ListDiff
+import com.vitorpamplona.quartz.nip01Core.hints.AddressHintProvider
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip01Core.signers.SignerExceptions
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
@@ -46,7 +47,12 @@ class FavoriteAlgoFeedsListEvent(
     content: String,
     sig: HexKey,
 ) : PrivateTagArrayEvent(id, pubKey, createdAt, KIND, tags, content, sig),
-    DiffableEvent<FavoriteAlgoFeedsListDiff> {
+    DiffableEvent<FavoriteAlgoFeedsListDiff>,
+    AddressHintProvider {
+    override fun addressHints() = tags.mapNotNull(AddressBookmark::parseAsHint)
+
+    override fun linkedAddressIds() = publicFavoriteAlgoFeeds().map { it.address.toValue() }
+
     override fun diffFrom(older: Event): FavoriteAlgoFeedsListDiff? {
         if (older !is FavoriteAlgoFeedsListEvent || older.pubKey != pubKey || older.dTag() != dTag()) return null
         return FavoriteAlgoFeedsListDiff(

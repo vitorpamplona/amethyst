@@ -22,16 +22,20 @@ package com.vitorpamplona.quartz.experimental.library
 
 import androidx.compose.runtime.Immutable
 import com.vitorpamplona.quartz.experimental.publications.PublicationSectionRef
+import com.vitorpamplona.quartz.nip01Core.core.AddressSerializer
 import com.vitorpamplona.quartz.nip01Core.core.BaseAddressableEvent
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.TagArray
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
 import com.vitorpamplona.quartz.nip01Core.hints.AddressHintProvider
+import com.vitorpamplona.quartz.nip01Core.hints.EventHintProvider
 import com.vitorpamplona.quartz.nip01Core.hints.types.AddressHint
+import com.vitorpamplona.quartz.nip01Core.hints.types.EventIdHint
 import com.vitorpamplona.quartz.nip01Core.signers.EventTemplate
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.nip01Core.tags.aTag.ATag
 import com.vitorpamplona.quartz.nip01Core.tags.dTag.dTag
+import com.vitorpamplona.quartz.nip01Core.tags.events.ETag
 import com.vitorpamplona.quartz.nip23LongContent.tags.ImageTag
 import com.vitorpamplona.quartz.nip23LongContent.tags.SummaryTag
 import com.vitorpamplona.quartz.nip23LongContent.tags.TitleTag
@@ -60,6 +64,7 @@ class BookshelfDirectoryEvent(
     sig: HexKey,
 ) : BaseAddressableEvent(id, pubKey, createdAt, KIND, tags, content, sig),
     AddressHintProvider,
+    EventHintProvider,
     SearchableEvent {
     override fun indexableContent() = listOfNotNull(title(), summary(), content).joinToString("\n")
 
@@ -73,7 +78,13 @@ class BookshelfDirectoryEvent(
 
     override fun addressHints(): List<AddressHint> = tags.mapNotNull(ATag::parseAsHint)
 
-    override fun linkedAddressIds(): List<String> = tags.mapNotNull(ATag::parseAddressId)
+    override fun linkedAddressIds(): List<String> = itemAddressIds()
+
+    // Shelf items listed by id. Slot 2 may be an inline title instead of a relay, and a title
+    // like "Node.js" passes for a schemeless host, so only an explicit ws(s):// url is a hint.
+    override fun eventHints(): List<EventIdHint> = tags.mapNotNull(PublicationSectionRef::parseEventSectionAsHint)
+
+    override fun linkedEventIds(): List<HexKey> = itemEventIds()
 
     fun title() = tags.firstNotNullOfOrNull(TitleTag::parse)
 
@@ -83,6 +94,12 @@ class BookshelfDirectoryEvent(
 
     /** What is on the shelf, in the order the list gives. */
     fun items(): List<PublicationSectionRef> = PublicationSectionRef.fromTags(tags)
+
+    /** The shelf items listed by coordinate (`a`), as address ids, in tag order, without building [items]. */
+    fun itemAddressIds(): List<String> = tags.mapNotNull { ATag.parseAddressId(it)?.takeIf(AddressSerializer::isAddressShape) }
+
+    /** The shelf items listed by id (`e`), in tag order, without building [items]. */
+    fun itemEventIds(): List<HexKey> = tags.mapNotNull(ETag::parseId)
 
     fun itemCount() = items().size
 

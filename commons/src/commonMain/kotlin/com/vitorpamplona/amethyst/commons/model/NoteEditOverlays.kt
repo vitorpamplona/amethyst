@@ -23,12 +23,12 @@ package com.vitorpamplona.amethyst.commons.model
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
 import com.vitorpamplona.amethyst.commons.model.nip29RelayGroups.RelayGroupChannel
 import com.vitorpamplona.quartz.buzz.stream.StreamMessageEditEvent
+import com.vitorpamplona.quartz.buzz.stream.buzzOnBehalfOf
 import com.vitorpamplona.quartz.concord.cord03Channels.ConcordChatEditEvent
 import com.vitorpamplona.quartz.experimental.edits.TextNoteModificationEvent
 import com.vitorpamplona.quartz.marmot.foundation.appEvents.MarmotAppEvent
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip40Expiration.isExpirationBefore
-import com.vitorpamplona.quartz.utils.Hex
 import com.vitorpamplona.quartz.utils.TimeUtils
 
 /*
@@ -70,10 +70,7 @@ fun Note.buzzEffectiveAuthor(): HexKey? {
     val event = event ?: return author?.pubkeyHex
     val relayKey = inGatherers?.firstNotNullOfOrNull { (it as? RelayGroupChannel)?.event?.pubKey }
     if (relayKey != null && event.pubKey == relayKey) {
-        event.tags.firstOrNull { it.size > 1 && it[0] == "actor" && Hex.isHex64(it[1]) }?.let { return it[1] }
-        if (event.tags.any { it.size > 1 && it[0] == "h" }) {
-            event.tags.firstOrNull { it.size > 1 && it[0] == "p" && Hex.isHex64(it[1]) }?.let { return it[1] }
-        }
+        event.tags.buzzOnBehalfOf()?.let { return it }
     }
     return event.pubKey
 }

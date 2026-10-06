@@ -44,10 +44,11 @@ package com.vitorpamplona.quartz.nip50Search
  * These are not the same set, and the difference is a real defect rather than a subtlety: a class
  * can implement [SearchableEvent] and never be registered in the factory, in which case its events
  * parse as a plain [com.vitorpamplona.quartz.nip01Core.core.Event] and nothing ever calls its
- * `indexableContent()`. `FeedDefinitionEvent` (31890) is in exactly that state, along with eleven
- * other unregistered event classes. Since an unregistered kind cannot be searched no matter what
- * it declares, the reachable set is the one worth listing — but the unreachable ones are a bug in
- * the factory, not a decision.
+ * `indexableContent()`. `FeedDefinitionEvent` (31890) was in exactly that state until it was
+ * registered. Since an unregistered kind cannot be searched no matter what it declares, the
+ * reachable set is the one worth listing — but an unreachable one is a bug in the factory, not a
+ * decision (the few classes still left out of it, like Buzz's 9041 unban and 49001 media record,
+ * are left out on purpose and say so in their KDoc).
  */
 object SearchableKinds {
     /** Sorted ascending. */
@@ -55,9 +56,11 @@ object SearchableKinds {
         listOf(
             0, // MetadataEvent
             1, // TextNoteEvent
+            5, // DeletionRequestEvent
             9, // ChatEvent
             11, // ThreadEvent
             14, // ChatMessageEvent
+            15, // ChatMessageEncryptedFileHeaderEvent
             20, // PictureEvent
             21, // VideoNormalEvent
             22, // VideoShortEvent
@@ -68,9 +71,14 @@ object SearchableKinds {
             40, // ChannelCreateEvent
             41, // ChannelMetadataEvent
             42, // ChannelMessageEvent
+            43, // ChannelHideMessageEvent
+            44, // ChannelMuteUserEvent
             54, // PodcastEpisodeEvent
+            62, // RequestToVanishEvent
+            64, // ChessGameEvent
             818, // WikiMergeRequestEvent
             1010, // TextNoteModificationEvent
+            1022, // BidConfirmationEvent
             1063, // FileMetadataEvent
             1065, // FileStorageHeaderEvent
             1068, // PollEvent
@@ -102,10 +110,18 @@ object SearchableKinds {
             5250, // DvmTextToSpeechRequestEvent
             5302, // DvmContentSearchRequestEvent
             5303, // DvmPeopleSearchRequestEvent
+            5901, // DvmOpReturnRequestEvent
             6969, // ZapPollEvent
             7516, // GeocacheFoundLogEvent
+            8002, // ArchivedIdentityEvent
+            8003, // UnarchivedIdentityEvent
             8333, // OnchainZapEvent
             9002, // GroupEditMetadataEvent
+            9007, // CreateGroupEvent
+            9021, // GroupJoinRequestEvent
+            9022, // GroupLeaveRequestEvent
+            9035, // ArchiveRequestEvent
+            9036, // UnarchiveRequestEvent
             9041, // ZapGoalEvent
             9321, // NutzapEvent
             9734, // ZapRequestEvent
@@ -118,6 +134,8 @@ object SearchableKinds {
             10003, // BookmarkListEvent
             10100, // AgentProfileEvent
             10154, // PodcastMetadataEvent
+            11316, // CvmServerAnnouncementEvent
+            11333, // SnoAvatarEvent
             11871, // AttestorProficiencyEvent
             12473, // BirdexEvent
             15128, // RootSiteEvent
@@ -129,6 +147,7 @@ object SearchableKinds {
             30004, // ArticleCurationSetEvent
             30005, // VideoCurationSetEvent
             30006, // PictureCurationSetEvent
+            30008, // AcceptedBadgeSetEvent
             30009, // BadgeDefinitionEvent
             30015, // InterestSetEvent
             30017, // StallEvent
@@ -143,10 +162,13 @@ object SearchableKinds {
             30054, // Podcasting20EpisodeEvent
             30055, // Podcasting20TrailerEvent
             30063, // ReleaseArtifactSetEvent
+            30066, // LiveChessMoveEvent
+            30068, // LiveChessDrawOfferEvent
             30142, // LearningResourceEvent
             30175, // PersonaEvent
             30176, // TeamEvent
             30177, // ManagedAgentEvent
+            30178, // TeamCatalogEvent
             30267, // AppCurationSetEvent
             30296, // InteractiveStoryPrologueEvent
             30297, // InteractiveStorySceneEvent
@@ -162,12 +184,14 @@ object SearchableKinds {
             30402, // ClassifiedsEvent
             30617, // GitRepositoryEvent
             30620, // WorkflowDefEvent
+            30621, // ProjectEvent
             30817, // NipTextEvent
             30818, // WikiArticleEvent
             31337, // AudioTrackEvent
             31871, // AttestationEvent
             31872, // AttestationRequestEvent
             31873, // AttestorRecommendationEvent
+            31890, // FeedDefinitionEvent
             31922, // CalendarDateSlotEvent
             31923, // CalendarTimeSlotEvent
             31924, // CalendarCollectionEvent
@@ -176,7 +200,9 @@ object SearchableKinds {
             31990, // AppDefinitionEvent
             32176, // BlossomPieceIndexEvent
             32267, // SoftwareApplicationEvent
+            33331, // SnoObjectEvent
             33401, // ExerciseTemplateEvent
+            33534, // RelayRoleEvent
             33863, // FundraiserEvent
             34139, // MusicPlaylistEvent
             34235, // AddressableNormalVideoEvent
@@ -192,6 +218,7 @@ object SearchableKinds {
             38192, // Ps1SaveEvent
             38383, // P2POrderEvent
             39000, // GroupMetadataEvent
+            39003, // GroupRolesEvent
             39089, // StarterPackEvent
             39092, // MediaStarterPackEvent
             39307, // TextTrackEvent
@@ -199,9 +226,25 @@ object SearchableKinds {
             39998, // AddressableListHeaderEvent
             39999, // AddressableListItemEvent
             40002, // StreamMessageV2Event
+            40003, // StreamMessageEditEvent
+            40006, // StreamMessageScheduledEvent
+            40007, // StreamReminderEvent
+            40008, // StreamMessageDiffEvent
+            40099, // SystemMessageEvent
             40100, // CanvasEvent
+            40901, // ChannelSummaryEvent
+            42000, // ProductFeedbackEvent
+            43001, // JobRequestEvent
+            43002, // JobAcceptedEvent
+            43003, // JobProgressEvent
+            43004, // JobResultEvent
+            43005, // JobCancelEvent
+            43006, // JobErrorEvent
             45001, // ForumPostEvent
             45003, // ForumCommentEvent
+            45010, // ArtifactEvent
+            46030, // ApprovalGrantEvent
+            46031, // ApprovalDenyEvent
             48106, // HuddleGuidelinesEvent
         )
 }

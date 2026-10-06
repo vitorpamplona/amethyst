@@ -21,6 +21,7 @@
 package com.vitorpamplona.quartz.experimental.trustedLists.addressables
 
 import com.vitorpamplona.quartz.experimental.trustedLists.addressables.tags.AddressMemberTag
+import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.TagArray
 import com.vitorpamplona.quartz.nip01Core.core.fastMapNotNullDense
 import com.vitorpamplona.quartz.nip01Core.tags.people.PTag
@@ -33,3 +34,6 @@ fun TagArray.members() = fastMapNotNullDense(AddressMemberTag::parse)
  * only `p` is free to carry discovery metadata.
  */
 fun TagArray.aboutPubKeys() = mapNotNull(PTag::parse)
+
+/** The keys of [aboutPubKeys], in tag order, in a list the caller may append to. */
+fun TagArray.aboutKeys(): ArrayList<HexKey> = mapNotNullTo(ArrayList(), PTag::parseKey)

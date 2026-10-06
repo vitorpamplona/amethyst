@@ -24,7 +24,7 @@ import platform.Foundation.NSDecimalNumber
 
 // class from https://github.com/apollographql/apollo-kotlin-adapters
 actual class BigDecimal internal constructor(
-    private val raw: NSDecimalNumber,
+    internal val raw: NSDecimalNumber,
 ) : Number() {
     actual constructor(strVal: String) : this(NSDecimalNumber(strVal))
 

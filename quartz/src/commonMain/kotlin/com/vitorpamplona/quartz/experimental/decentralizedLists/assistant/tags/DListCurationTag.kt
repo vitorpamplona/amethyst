@@ -74,7 +74,7 @@ class DListCurationTag {
             ensure(dTag.isNotEmpty()) { return null }
             ensure(dTag != AssistantDesignationTag.RESERVED_D_TAG) { return null }
 
-            return DListCuration(kind, dTag, tag[1], tag.getOrNull(2)?.let { RelayUrlNormalizer.normalizeOrNull(it) })
+            return DListCuration(kind, dTag, tag[1], tag.getOrNull(2)?.let { RelayUrlNormalizer.normalizeHintOrNull(it) })
         }
 
         fun assemble(entry: DListCuration) = arrayOf(key(entry.kind, entry.dTag), entry.assistant, entry.relay?.url ?: "")

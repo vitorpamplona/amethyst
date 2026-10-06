@@ -24,10 +24,14 @@ import androidx.compose.runtime.Immutable
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
+import com.vitorpamplona.quartz.nip01Core.hints.AddressHintProvider
+import com.vitorpamplona.quartz.nip01Core.hints.types.AddressHint
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
+import com.vitorpamplona.quartz.nip19Bech32.toAddressHint
 import com.vitorpamplona.quartz.nip22Comments.RootScope
 import com.vitorpamplona.quartz.nip50Search.IndexableFieldVisitor
 import com.vitorpamplona.quartz.nip50Search.SearchableEvent
+import com.vitorpamplona.quartz.nipC0CodeSnippets.tags.RepoTag
 import com.vitorpamplona.quartz.utils.TimeUtils
 
 /**
@@ -45,7 +49,23 @@ class CodeSnippetEvent(
     sig: HexKey,
 ) : Event(id, pubKey, createdAt, KIND, tags, content, sig),
     RootScope,
+    AddressHintProvider,
     SearchableEvent {
+    // `repo` may name a NIP-34 repository announcement instead of a URL; an naddr carries relays.
+    // Both lists bech32-decode that naddr and linked*() runs for every relay copy of every
+    // event, so each is computed once per instance. Events are immutable; a race only decodes twice.
+    @kotlinx.serialization.Transient
+    @kotlin.jvm.Transient
+    private var addressHintsCache: List<AddressHint>? = null
+
+    @kotlinx.serialization.Transient
+    @kotlin.jvm.Transient
+    private var linkedAddressIdsCache: List<String>? = null
+
+    override fun addressHints(): List<AddressHint> = addressHintsCache ?: tags.mapNotNull(RepoTag::parseNAddress).flatMap { it.toAddressHint() }.also { addressHintsCache = it }
+
+    override fun linkedAddressIds(): List<String> = linkedAddressIdsCache ?: tags.mapNotNull(RepoTag::parseAddressId).also { linkedAddressIdsCache = it }
+
     override fun indexableContent() = listOfNotNull(snippetName(), snippetDescription(), content).joinToString("\n")
 
     // The read path: the same fields indexableContent() joins, handed over without

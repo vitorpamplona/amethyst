@@ -129,3 +129,33 @@ data class NamecoinFallbackPolicy(
         val NONE = NamecoinFallbackPolicy()
     }
 }
+
+/** Outcome of a `Test RPC` probe in Settings. */
+data class RpcProbeResult(
+    val success: Boolean,
+    val elapsedMs: Long,
+    val chain: String? = null,
+    val blocks: Int? = null,
+    val verificationProgress: Double? = null,
+    val initialBlockDownload: Boolean? = null,
+    val error: String? = null,
+    /**
+     * PEM-encoded server leaf certificate captured during the probe.
+     * Only populated when the URL scheme is https and the TLS handshake
+     * succeeded (even if the subsequent HTTP request failed). Used by
+     * the Settings UI to prompt for a TOFU pin.
+     */
+    val serverCertPem: String? = null,
+    /**
+     * SHA-256 fingerprint of the captured leaf certificate, formatted
+     * as colon-separated uppercase hex bytes (matches
+     * [ServerTestResult.certFingerprint] for ElectrumX).
+     */
+    val certFingerprint: String? = null,
+    /**
+     * True when the probe failed specifically because the TLS handshake
+     * was rejected (self-signed cert, untrusted CA, hostname mismatch).
+     * Used by the Settings UI to suggest a TOFU pin as the fix.
+     */
+    val tlsHandshakeFailed: Boolean = false,
+)

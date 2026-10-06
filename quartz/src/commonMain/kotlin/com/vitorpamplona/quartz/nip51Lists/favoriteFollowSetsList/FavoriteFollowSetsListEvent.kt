@@ -28,6 +28,7 @@ import com.vitorpamplona.quartz.nip01Core.core.TagArray
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
 import com.vitorpamplona.quartz.nip01Core.diff.DiffableEvent
 import com.vitorpamplona.quartz.nip01Core.diff.ListDiff
+import com.vitorpamplona.quartz.nip01Core.hints.AddressHintProvider
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip01Core.signers.SignerExceptions
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
@@ -51,7 +52,12 @@ class FavoriteFollowSetsListEvent(
     content: String,
     sig: HexKey,
 ) : PrivateTagArrayEvent(id, pubKey, createdAt, KIND, tags, content, sig),
-    DiffableEvent<FavoriteFollowSetsListDiff> {
+    DiffableEvent<FavoriteFollowSetsListDiff>,
+    AddressHintProvider {
+    override fun addressHints() = tags.mapNotNull(AddressBookmark::parseAsHint)
+
+    override fun linkedAddressIds() = tags.mapNotNull(AddressBookmark::parseValidAddress)
+
     // A plain replaceable (10000..19999): a stray `d` tag must not split its address.
     override fun dTag() = FIXED_D_TAG
 

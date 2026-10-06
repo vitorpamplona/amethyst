@@ -25,6 +25,9 @@ import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
+import com.vitorpamplona.quartz.nip50Search.IndexableFieldVisitor
+import com.vitorpamplona.quartz.nip50Search.SearchableEvent
+import com.vitorpamplona.quartz.nip64Chess.PgnSearchText
 import com.vitorpamplona.quartz.utils.TimeUtils
 
 /**
@@ -48,7 +51,26 @@ class ChessGameEvent(
     tags: Array<Array<String>>,
     content: String, // PGN database format
     sig: HexKey,
-) : Event(id, pubKey, createdAt, KIND, tags, content, sig) {
+) : Event(id, pubKey, createdAt, KIND, tags, content, sig),
+    SearchableEvent {
+    // A game is found by its players, event, site, opening and annotations -- the PGN's
+    // natural-language parts -- never by its move text. See PgnSearchText.
+    override fun indexableContent() = searchText().all().joinToString("\n")
+
+    // The read path: the same fields indexableContent() joins, in the same order.
+    override fun forEachIndexableField(visitor: IndexableFieldVisitor) {
+        val fields = searchText()
+        fields.headers.forEach { if (!visitor.visit(it)) return }
+        fields.comments.forEach { if (!visitor.visit(it)) return }
+    }
+
+    @kotlinx.serialization.Transient
+    @kotlin.jvm.Transient
+    private var searchTextCache: PgnSearchText.Fields? = null
+
+    /** The PGN's searchable tag-pair values and comments, scanned once. */
+    fun searchText(): PgnSearchText.Fields = searchTextCache ?: PgnSearchText.extract(content).also { searchTextCache = it }
+
     /**
      * Get PGN content from event
      */

@@ -88,12 +88,6 @@ object PodcastComposerMedia {
             .distinct()
             .joinToString(".\n")
 
-    /** Audio metadata read off a picked file, used to auto-fill the composer. Any field may be null. */
-    class ProbedAudio(
-        val durationSeconds: Int?,
-        val title: String?,
-    )
-
     /** Current time as an RFC2822 date string (`Tue, 24 Jun 2025 12:00:00 GMT`) — the spec's `pubdate`. */
     fun rfc2822Now(): String = rfc2822Date(TimeUtils.now())
 

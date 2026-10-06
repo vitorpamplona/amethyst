@@ -24,8 +24,26 @@ import androidx.compose.runtime.Immutable
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
+import com.vitorpamplona.quartz.nip01Core.hints.AddressHintProvider
+import com.vitorpamplona.quartz.nip01Core.hints.EventHintProvider
+import com.vitorpamplona.quartz.nip01Core.hints.PubKeyHintProvider
+import com.vitorpamplona.quartz.nip01Core.hints.types.AddressHint
+import com.vitorpamplona.quartz.nip01Core.hints.types.EventIdHint
+import com.vitorpamplona.quartz.nip01Core.hints.types.PubKeyHint
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
+import com.vitorpamplona.quartz.nip01Core.tags.people.PTag
+import com.vitorpamplona.quartz.nip10Notes.content.findNostrUris
+import com.vitorpamplona.quartz.nip18Reposts.quotes.QAddressableTag
+import com.vitorpamplona.quartz.nip18Reposts.quotes.QEventTag
+import com.vitorpamplona.quartz.nip18Reposts.quotes.QTag
+import com.vitorpamplona.quartz.nip19Bech32.addressHints
+import com.vitorpamplona.quartz.nip19Bech32.addressIds
+import com.vitorpamplona.quartz.nip19Bech32.entities.Entity
+import com.vitorpamplona.quartz.nip19Bech32.eventHints
+import com.vitorpamplona.quartz.nip19Bech32.eventIds
+import com.vitorpamplona.quartz.nip19Bech32.pubKeyHints
+import com.vitorpamplona.quartz.nip19Bech32.pubKeys
 import com.vitorpamplona.quartz.nip22Comments.RootScope
 import com.vitorpamplona.quartz.nip50Search.IndexableFieldVisitor
 import com.vitorpamplona.quartz.nip50Search.SearchableEvent
@@ -43,6 +61,9 @@ class PollEvent(
     sig: HexKey,
 ) : Event(id, pubKey, createdAt, KIND, tags, content, sig),
     RootScope,
+    PubKeyHintProvider,
+    EventHintProvider,
+    AddressHintProvider,
     SearchableEvent {
     override fun indexableContent() =
         buildString {
@@ -56,6 +77,38 @@ class PollEvent(
         if (!visitor.visit(content)) return
         options().forEach { if (!visitor.visit(it.label)) return }
     }
+
+    @kotlinx.serialization.Transient
+    @kotlin.jvm.Transient
+    private var citedNIP19Cache: List<Entity>? = null
+
+    /** NIP-19 entities cited as `nostr:` URIs in the poll question, parsed once. */
+    fun citedNIP19(): List<Entity> = citedNIP19Cache ?: findNostrUris(content).also { citedNIP19Cache = it }
+
+    // Note-like: NIP-27 mentions in the body, plus the `p` / `q` tags clients add for them.
+    override fun pubKeyHints(): List<PubKeyHint> = tags.mapNotNull(PTag::parseAsHint) + citedNIP19().pubKeyHints()
+
+    override fun linkedPubKeys(): List<HexKey> = mentionKeys() + citedNIP19().pubKeys()
+
+    override fun eventHints(): List<EventIdHint> = tags.mapNotNull(QTag::parseEventAsHint) + citedNIP19().eventHints()
+
+    override fun linkedEventIds(): List<HexKey> = quotedEvents().map { it.eventId } + citedNIP19().eventIds()
+
+    override fun addressHints(): List<AddressHint> = tags.mapNotNull(QTag::parseAddressAsHint) + citedNIP19().addressHints()
+
+    override fun linkedAddressIds(): List<String> = quotedAddresses().map { it.address.toValue() } + citedNIP19().addressIds()
+
+    /** Users mentioned with `p` tags (NIP-27 / NIP-08), in tag order. */
+    fun mentions(): List<PTag> = tags.mapNotNull(PTag::parse)
+
+    /** The keys of [mentions] (`p`), in tag order. */
+    fun mentionKeys(): List<HexKey> = tags.mapNotNull(PTag::parseKey)
+
+    /** Events quoted with `q` tags (NIP-18), in tag order. */
+    fun quotedEvents(): List<QEventTag> = tags.mapNotNull(QEventTag::parse)
+
+    /** Addressable events quoted with `q` tags (NIP-18), in tag order. */
+    fun quotedAddresses(): List<QAddressableTag> = tags.mapNotNull(QAddressableTag::parse)
 
     fun options() = tags.options()
 

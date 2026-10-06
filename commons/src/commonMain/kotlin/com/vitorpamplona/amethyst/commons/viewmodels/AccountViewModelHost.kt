@@ -26,7 +26,9 @@ import com.vitorpamplona.amethyst.commons.scheduledposts.ScheduledPostStore
 import com.vitorpamplona.amethyst.commons.service.ai.WritingAssistant
 import com.vitorpamplona.amethyst.commons.service.lnurl.LnurlHttpTransport
 import com.vitorpamplona.amethyst.commons.service.pow.PoWJobFailure
+import com.vitorpamplona.amethyst.commons.service.uploads.AudioFileMetadata
 import com.vitorpamplona.amethyst.commons.service.uploads.MediaUploader
+import com.vitorpamplona.amethyst.commons.service.uploads.MediaUri
 import com.vitorpamplona.amethyst.commons.tor.MoneyOpRelayRouting
 import com.vitorpamplona.amethyst.commons.tor.TorRelayEvaluation
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
@@ -90,6 +92,15 @@ interface AccountViewModelHost {
         input: Path,
         presetName: String,
     ): Result<AnonymizedResult> = Result.failure(UnsupportedOperationException("Voice anonymization is not available on this platform"))
+
+    /** Asks the platform's scheduler to publish any scheduled post that is now due, soon. */
+    fun requestScheduledPostCatchUp() {}
+
+    /**
+     * Reads the tags of a picked audio file (duration, title, artist, album) off the main thread,
+     * or null when the platform cannot or the file is not a readable audio container.
+     */
+    suspend fun probeAudioFile(uri: MediaUri): AudioFileMetadata? = null
 
     /** Whether this build can offer an on-device writing assistant at all (it shows the setting). */
     val supportsWritingAssistant: Boolean get() = false

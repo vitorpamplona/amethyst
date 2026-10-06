@@ -31,6 +31,7 @@ import androidx.compose.runtime.compositionLocalOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 
 /** How the app shell presents its top-level navigation for the current window size. */
@@ -87,6 +88,20 @@ private const val EXPANDED_WIDTH_DP = 840
  * gets a roomier center pane rather than a tighter one.
  */
 private const val NOTIFICATION_PANEL_MIN_WINDOW_DP = 1200
+
+/** Material's Compact / Medium / Expanded width buckets, applied to whatever width is measured. */
+enum class WidthClass { Compact, Medium, Expanded }
+
+/**
+ * Buckets [width] with the same 600/840 dp breakpoints the shell uses for the window. Pass a
+ * pane's own width (e.g. `BoxWithConstraints.maxWidth`) to size a screen by the space it gets.
+ */
+fun widthClassOf(width: Dp): WidthClass =
+    when {
+        width.value < MEDIUM_WIDTH_DP -> WidthClass.Compact
+        width.value < EXPANDED_WIDTH_DP -> WidthClass.Medium
+        else -> WidthClass.Expanded
+    }
 
 val PermanentDrawerWidth = 300.dp
 

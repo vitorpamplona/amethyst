@@ -89,19 +89,20 @@ class AccountFilterAssembler(
     // Live tail: the recent week of gift wraps, always open at the top for new messages.
     val giftWraps = AccountGiftWrapsEoseManager(client, ::preferredKeys)
 
-    // History: older gift wraps, loaded on demand in bounded one-shot slices.
-    val giftWrapsHistory = AccountGiftWrapsHistoryEoseManager(client, ::preferredKeys)
+    // History: older gift wraps, loaded on demand in bounded one-shot slices. Foreground account only:
+    // see [foregroundKeys].
+    val giftWrapsHistory = AccountGiftWrapsHistoryEoseManager(client, ::foregroundKeys)
 
     // Live tail: the recent week of notifications from the inbox + group host relays.
     val notifications = AccountNotificationsEoseFromInboxRelaysManager(client, ::preferredKeys)
 
     // History: older notifications, paged backward by until+limit per relay, driven by the feed's markers.
-    val notificationsHistory = AccountNotificationsHistoryEoseManager(client, ::preferredKeys)
+    val notificationsHistory = AccountNotificationsHistoryEoseManager(client, ::foregroundKeys)
 
     // History: older NIP-60 spending rows (kind:7376), paged backward by until+limit per outbox relay,
     // driven by the wallet's transaction list. The live wallet subscription below reads six kinds in one
     // uncapped REQ, so history — the most numerous of them — is exactly what a relay's cap truncates.
-    val cashuWalletHistory = CashuWalletHistoryEoseManager(client, ::preferredKeys)
+    val cashuWalletHistory = CashuWalletHistoryEoseManager(client, ::foregroundKeys)
 
     val group =
         listOf(
@@ -141,6 +142,18 @@ class AccountFilterAssembler(
             .mapTo(mutableSetOf()) { keys ->
                 keys.firstOrNull { it.feedContentStates != null } ?: keys.first()
             }
+
+    /**
+     * Only the accounts a screen is attached to, for the three history pagers.
+     *
+     * Each history manager drives ONE [BackwardRelayPager][com.vitorpamplona.amethyst.commons.relayClient.paging.BackwardRelayPager],
+     * which every subscription re-binds to its own account, and the screens read that pager's status. Fed
+     * every logged-in account, the last background account to subscribe took the pager: the account on
+     * screen then paged only the relays it shared with that one, dropped its own events (they arrive for an
+     * unbound account), and its chat cards reported the other account's relays. History is paged by
+     * on-screen markers anyway, so a background account has nothing to page.
+     */
+    private fun foregroundKeys(): Set<AccountQueryState> = preferredKeys().filterTo(mutableSetOf()) { it is AccountUiQueryState }
 
     override fun invalidateKeys() = invalidateFilters()
 

@@ -73,7 +73,7 @@ data class NOffer(
             val pubKey = tlv.firstAsHex(ClinkTlv.PUBKEY) ?: return null
             if (pubKey.isBlank()) return null
 
-            val relays = tlv.asString(ClinkTlv.RELAY)?.mapNotNull { RelayUrlNormalizer.normalizeOrNull(it) } ?: emptyList()
+            val relays = tlv.asString(ClinkTlv.RELAY)?.mapNotNull { RelayUrlNormalizer.normalizeHintOrNull(it) } ?: emptyList()
             val pointer = tlv.firstAsString(ClinkTlv.POINTER)
             // Per the CLINK Offers spec, an absent (or unrecognized) price-type defaults to
             // spontaneous — the payer chooses the amount.

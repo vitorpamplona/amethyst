@@ -23,8 +23,11 @@ package com.vitorpamplona.quartz.nipXXPushNotifications
 import androidx.compose.runtime.Immutable
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
+import com.vitorpamplona.quartz.nip01Core.hints.PubKeyHintProvider
+import com.vitorpamplona.quartz.nip01Core.hints.types.PubKeyHint
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip01Core.signers.SignerExceptions
+import com.vitorpamplona.quartz.nip01Core.tags.people.PTag
 import kotlinx.serialization.json.Json
 
 /**
@@ -46,8 +49,15 @@ abstract class PushServiceEvent(
     tags: Array<Array<String>>,
     content: String,
     sig: HexKey,
-) : Event(id, pubKey, createdAt, kind, tags, content, sig) {
+) : Event(id, pubKey, createdAt, kind, tags, content, sig),
+    PubKeyHintProvider {
     override fun isContentEncoded() = true
+
+    // The public `p` naming the service; the builder writes it without a relay hint, so
+    // pubKeyHints() is normally empty. The encrypted payload is never read here.
+    override fun pubKeyHints(): List<PubKeyHint> = tags.mapNotNull(PTag::parseAsHint)
+
+    override fun linkedPubKeys(): List<HexKey> = tags.mapNotNull(PTag::parseKey)
 
     fun pushService() = tags.pushService()
 

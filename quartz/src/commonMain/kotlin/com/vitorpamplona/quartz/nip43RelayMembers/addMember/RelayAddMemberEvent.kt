@@ -24,9 +24,11 @@ import androidx.compose.runtime.Immutable
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
+import com.vitorpamplona.quartz.nip01Core.hints.PubKeyHintProvider
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.nip01Core.tags.people.PTag
 import com.vitorpamplona.quartz.nip70ProtectedEvts.protect
+import com.vitorpamplona.quartz.utils.Hex
 import com.vitorpamplona.quartz.utils.TimeUtils
 
 @Immutable
@@ -37,8 +39,15 @@ class RelayAddMemberEvent(
     tags: Array<Array<String>>,
     content: String,
     sig: HexKey,
-) : Event(id, pubKey, createdAt, KIND, tags, content, sig) {
-    fun memberPubKeys() = tags.mapNotNull(PTag::parseKey)
+) : Event(id, pubKey, createdAt, KIND, tags, content, sig),
+    PubKeyHintProvider {
+    // PTag only checks the key's length; a provider must hand over real keys (a hint's id
+    // decodes its hex), so the hints check the digits as memberPubKeys() does.
+    override fun pubKeyHints() = tags.mapNotNull { tag -> PTag.parseAsHint(tag)?.takeIf { Hex.isHex64(it.pubkey) } }
+
+    override fun linkedPubKeys() = memberPubKeys()
+
+    fun memberPubKeys() = tags.mapNotNull { tag -> PTag.parseKey(tag)?.takeIf(Hex::isHex64) }
 
     companion object {
         const val KIND = 8000

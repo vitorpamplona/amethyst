@@ -48,6 +48,14 @@ class PersonTag {
             )
         }
 
+        /** The name of a tag [parse] accepts, without building the [PodcastPerson]: for the search read path. */
+        fun parseName(tag: Array<String>): String? {
+            ensure(tag.has(1)) { return null }
+            ensure(tag[0] == TAG_NAME) { return null }
+            ensure(tag[1].isNotEmpty()) { return null }
+            return tag[1]
+        }
+
         fun assemble(person: PodcastPerson): Array<String> {
             // Trim trailing empties so a person with only a name is a 2-element tag, but keep empty
             // placeholders in the middle so href stays in slot 4 when role/img are missing.

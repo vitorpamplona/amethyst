@@ -90,10 +90,11 @@ object NotificationKinds {
      * `isTargetAuthoredByMe` is asked about, so a caller knows which notes to have loaded.
      */
     fun interactionTargetId(event: Event): HexKey? =
-        if (event is ReactionEvent || event is RepostEvent || event is GenericRepostEvent) {
-            event.tags.lastOrNull { it.size > 1 && it[0] == "e" }?.get(1)
-        } else {
-            null
+        when (event) {
+            is ReactionEvent -> event.originalPost().lastOrNull()
+            is RepostEvent -> event.boostedEventId()
+            is GenericRepostEvent -> event.boostedEventId()
+            else -> null
         }
 
     /**
@@ -144,7 +145,9 @@ object NotificationKinds {
 
         // Reactions and reposts require the target note to be authored by
         // the current user. A stray `p=me` tag on a stranger's reaction to
-        // a stranger's note is NOT a notification.
+        // a stranger's note is NOT a notification. The target is the LAST
+        // `e` (NIP-25/NIP-18): a reaction to a reply may carry the thread
+        // root first, which is not the note that was reacted to.
         if (event is ReactionEvent || event is RepostEvent || event is GenericRepostEvent) {
             val target = interactionTargetId(event)
             return target != null && isTargetAuthoredByMe(target)

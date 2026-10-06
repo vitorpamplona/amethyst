@@ -24,8 +24,11 @@ import androidx.compose.runtime.Immutable
 import com.vitorpamplona.quartz.nip01Core.core.BaseAddressableEvent
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
+import com.vitorpamplona.quartz.nip01Core.hints.EventHintProvider
+import com.vitorpamplona.quartz.nip01Core.hints.types.EventIdHint
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.nip01Core.tags.dTag.dTag
+import com.vitorpamplona.quartz.nip01Core.tags.hashtags.HashtagTag
 import com.vitorpamplona.quartz.nip01Core.tags.hashtags.hashtags
 import com.vitorpamplona.quartz.nip22Comments.RootScope
 import com.vitorpamplona.quartz.nip31Alts.AltTag
@@ -74,16 +77,38 @@ class Podcasting20EpisodeEvent(
 ) : BaseAddressableEvent(id, pubKey, createdAt, KIND, tags, content, sig),
     PodcastEpisode,
     RootScope,
+    EventHintProvider,
     SearchableEvent {
-    override fun indexableContent() = (listOfNotNull(title(), description(), content) + topics()).joinToString("\n")
+    // Hosts and guests are searched by name, and a soundbite's title is a human
+    // headline for the moment it clips; both sit between the body and the topics.
+    override fun indexableContent() = (listOfNotNull(title(), description(), content) + personNames() + soundbiteTitles() + topics()).joinToString("\n")
 
-    // The read path: the same fields indexableContent() joins, without the join.
+    // The read path: the same fields indexableContent() joins, without the join. It runs per
+    // event per search keystroke, so the tag-backed fields are read off the tags in place
+    // rather than through the list getters (and their PodcastPerson/PodcastSoundbite objects).
     override fun forEachIndexableField(visitor: IndexableFieldVisitor) {
         if (!visitor.visit(title())) return
         if (!visitor.visit(description())) return
         if (!visitor.visit(content)) return
-        topics().forEach { if (!visitor.visit(it)) return }
+        for (tag in tags) {
+            val name = PersonTag.parseName(tag) ?: continue
+            if (name.isBlank()) continue
+            if (!visitor.visit(name)) return
+        }
+        for (tag in tags) {
+            val soundbiteTitle = SoundbiteTag.parseTitle(tag) ?: continue
+            if (!visitor.visit(soundbiteTitle)) return
+        }
+        for (tag in tags) {
+            val topic = HashtagTag.parse(tag) ?: continue
+            if (!visitor.visit(topic)) return
+        }
     }
+
+    // The `edit` tag names the original publication by id only: there is no relay slot.
+    override fun eventHints(): List<EventIdHint> = emptyList()
+
+    override fun linkedEventIds(): List<HexKey> = tags.mapNotNull(EditTag::parse)
 
     fun title() = tags.firstNotNullOfOrNull(TitleTag::parse)
 
@@ -108,6 +133,12 @@ class Podcasting20EpisodeEvent(
     fun persons() = tags.mapNotNull(PersonTag::parse)
 
     fun soundbites() = tags.mapNotNull(SoundbiteTag::parse)
+
+    /** Non-blank `person` names (hosts, guests), in tag order. */
+    fun personNames() = persons().mapNotNull { person -> person.name.ifBlank { null } }
+
+    /** Non-blank soundbite titles, in tag order. */
+    fun soundbiteTitles() = soundbites().mapNotNull { soundbite -> soundbite.title?.ifBlank { null } }
 
     fun durationInSeconds() = tags.firstNotNullOfOrNull(DurationTag::parse)
 

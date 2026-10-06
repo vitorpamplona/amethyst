@@ -27,6 +27,12 @@ import com.vitorpamplona.quartz.nip01Core.core.BaseAddressableEvent
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.TagArray
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
+import com.vitorpamplona.quartz.nip01Core.hints.AddressHintProvider
+import com.vitorpamplona.quartz.nip01Core.hints.EventHintProvider
+import com.vitorpamplona.quartz.nip01Core.hints.PubKeyHintProvider
+import com.vitorpamplona.quartz.nip01Core.hints.types.AddressHint
+import com.vitorpamplona.quartz.nip01Core.hints.types.EventIdHint
+import com.vitorpamplona.quartz.nip01Core.hints.types.PubKeyHint
 import com.vitorpamplona.quartz.nip01Core.signers.EventTemplate
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.nip01Core.tags.dTag.dTag
@@ -60,6 +66,9 @@ class PublicationContentEvent(
     content: String,
     sig: HexKey,
 ) : BaseAddressableEvent(id, pubKey, createdAt, KIND, tags, content, sig),
+    PubKeyHintProvider,
+    EventHintProvider,
+    AddressHintProvider,
     SearchableEvent {
     override fun indexableContent() = listOfNotNull(title(), content).joinToString("\n")
 
@@ -69,6 +78,20 @@ class PublicationContentEvent(
         if (!visitor.visit(title())) return
         visitor.visit(content)
     }
+
+    // `wikilink` tags carry an author, a relay and an event id for each `[[reference]]`.
+    override fun pubKeyHints(): List<PubKeyHint> = tags.mapNotNull(WikilinkTag::parseKeyAsHint)
+
+    override fun linkedPubKeys(): List<HexKey> = wikilinkedPubKeys()
+
+    override fun eventHints(): List<EventIdHint> = tags.mapNotNull(WikilinkTag::parseEventAsHint)
+
+    override fun linkedEventIds(): List<HexKey> = wikilinkedEventIds()
+
+    // The `T`/`c` back reference names the index without a relay; see [publicationAddress].
+    override fun addressHints(): List<AddressHint> = emptyList()
+
+    override fun linkedAddressIds(): List<String> = listOfNotNull(publicationAddress()?.toValue())
 
     /** The section's title ("Introduction", "Chapter 1"). Required by the spec. */
     fun title() = tags.firstNotNullOfOrNull(TitleTag::parse)
@@ -98,6 +121,12 @@ class PublicationContentEvent(
 
     /** The `[[wikilink]]` references this section declares, in event order. */
     fun wikilinks(): List<WikilinkTag> = tags.mapNotNull(WikilinkTag::parse)
+
+    /** The authors the `wikilink` tags name (their pubkey slot), in event order, without building [wikilinks]. */
+    fun wikilinkedPubKeys(): List<HexKey> = tags.mapNotNull(WikilinkTag::parseKey)
+
+    /** The events the `wikilink` tags name (their event id slot), in event order, without building [wikilinks]. */
+    fun wikilinkedEventIds(): List<HexKey> = tags.mapNotNull(WikilinkTag::parseEventId)
 
     private fun firstValue(name: String) =
         tags.firstNotNullOfOrNull { tag ->

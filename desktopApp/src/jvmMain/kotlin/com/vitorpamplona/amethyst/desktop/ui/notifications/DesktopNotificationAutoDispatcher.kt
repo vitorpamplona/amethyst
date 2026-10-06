@@ -179,10 +179,7 @@ class DesktopNotificationAutoDispatcher(
             is ReactionEvent -> NotifKind.REACTION
             is RepostEvent, is GenericRepostEvent -> NotifKind.REPOST
             is ZapReceiptEvent, is NutzapEvent, is OnchainZapEvent -> NotifKind.ZAP
-            is TextNoteEvent -> {
-                val isReply = event.tags.any { it.size > 1 && it[0] == "e" }
-                if (isReply) NotifKind.REPLY else NotifKind.MENTION
-            }
+            is TextNoteEvent -> if (event.isNewThread()) NotifKind.MENTION else NotifKind.REPLY
             is CommentEvent -> NotifKind.REPLY
             is ChannelMessageEvent -> NotifKind.MENTION
             is EncryptedDmEvent,

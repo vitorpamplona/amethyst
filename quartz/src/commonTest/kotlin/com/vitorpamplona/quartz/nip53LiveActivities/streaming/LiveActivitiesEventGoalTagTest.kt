@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.quartz.nip53LiveActivities.streaming
 
+import com.vitorpamplona.quartz.nip53LiveActivities.streaming.tags.GoalTag
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNull
@@ -62,6 +63,13 @@ class LiveActivitiesEventGoalTagTest {
             )
 
         assertNull(event.goalEventId())
+    }
+
+    @Test
+    fun goalTagParserRejectsNonHexIds() {
+        assertEquals(goalId, GoalTag.parseId(arrayOf("goal", goalId)))
+        assertNull(GoalTag.parseId(arrayOf("goal", "g".repeat(64))))
+        assertNull(GoalTag.parseId(arrayOf("goal", goalId + "ee")))
     }
 
     @Test

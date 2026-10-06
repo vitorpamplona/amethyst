@@ -64,15 +64,16 @@ class AttestationRequestEvent(
 
     override fun eventHints(): List<EventIdHint> = tags.mapNotNull(ETag::parseAsHint)
 
-    override fun linkedEventIds(): List<HexKey> = tags.mapNotNull(ETag::parseId)
+    // The builders write the event (or address) to attest with addUnique: one at most.
+    override fun linkedEventIds(): List<HexKey> = listOfNotNull(assertionEventId())
 
     override fun addressHints(): List<AddressHint> = tags.mapNotNull(ATag::parseAsHint)
 
-    override fun linkedAddressIds(): List<String> = tags.mapNotNull(ATag::parseAddressId)
+    override fun linkedAddressIds(): List<String> = listOfNotNull(assertionAddrId())
 
     override fun pubKeyHints() = tags.mapNotNull(PTag::parseAsHint)
 
-    override fun linkedPubKeys() = tags.mapNotNull(PTag::parseKey)
+    override fun linkedPubKeys() = attestorPubKeys()
 
     fun cashuToken() = tags.cashuToken()
 

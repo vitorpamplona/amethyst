@@ -48,7 +48,7 @@ class KindMuteSetEvent(
     PubKeyHintProvider {
     override fun pubKeyHints() = tags.mapNotNull(UserTag::parseAsHint)
 
-    override fun linkedPubKeys() = tags.mapNotNull(UserTag::parseKey)
+    override fun linkedPubKeys() = publicMutedUsers().map { it.pubKey }
 
     fun publicMutedUsers() = tags.mapNotNull(UserTag::parse)
 

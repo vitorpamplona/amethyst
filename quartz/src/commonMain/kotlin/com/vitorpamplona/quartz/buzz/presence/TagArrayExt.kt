@@ -21,7 +21,12 @@
 package com.vitorpamplona.quartz.buzz.presence
 
 import com.vitorpamplona.quartz.buzz.presence.tags.StatusTag
+import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.TagArray
+import com.vitorpamplona.quartz.nip01Core.tags.people.PTag
 
 /** The presence status carried by the `status` tag, if present. */
 fun TagArray.presenceStatus() = firstNotNullOfOrNull(StatusTag::parse)
+
+/** The subject of a relay-synthesized presence read form — its `p` tag — or null on a client-published event. */
+fun TagArray.presenceSubject(): HexKey? = firstNotNullOfOrNull(PTag::parseKey)

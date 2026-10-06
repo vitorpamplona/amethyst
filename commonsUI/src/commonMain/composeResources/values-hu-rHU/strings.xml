@@ -974,7 +974,7 @@
     <string name="page_error_not_found_body">A(z) %1$s oldal nem létezik. Ellenőrizze, hogy helyesen írta-e be a címet.</string>
     <string name="page_error_unreachable_title">Ez az oldal nem érhető el</string>
     <string name="page_error_unreachable_body">A(z) %1$s oldal nem válaszol. Lehet, hogy leállították vagy a cím, amit megadott nem létezik.</string>
-    <string name="page_error_unreachable_tor_body">Nem érhető el a(z) %1$s oldalTOR-on keresztül. Lehet, hogy leállították vagy a cím, amit megadott nem létezik.</string>
+    <string name="page_error_unreachable_tor_body">Nem érhető el a(z) %1$s oldal TOR-on keresztül. Lehet, hogy leállították vagy a cím, amit megadott nem létezik.</string>
     <string name="page_error_proxy_down_title">Nem sikerült kapcsolódni a Tor hálózathoz</string>
     <string name="page_error_proxy_down_body">Ez az oldal a TOR-hálózaton keresztül érhető el, de a TOR-hálózat még nem áll készen. Próbálja újra egy pillanat múlva.</string>
     <string name="page_error_timed_out_title">Ez az oldal túl lassan válaszolt</string>

@@ -74,7 +74,7 @@ class RequestTag(
             ensure(Address.isOfKind(tag[1], REQUEST_KIND_STR)) { return null }
 
             val address = Address.parse(tag[1]) ?: return null
-            val relayHint = tag.getOrNull(2)?.let { RelayUrlNormalizer.normalizeOrNull(it) }
+            val relayHint = tag.getOrNull(2)?.let { RelayUrlNormalizer.normalizeHintOrNull(it) }
             return RequestTag(address, relayHint)
         }
 
@@ -107,7 +107,7 @@ class RequestTag(
             ensure(isRequestCoordinate(tag[1])) { return null }
             ensure(tag[2].isNotEmpty()) { return null }
 
-            val relayHint = RelayUrlNormalizer.normalizeOrNull(tag[2])
+            val relayHint = RelayUrlNormalizer.normalizeHintOrNull(tag[2])
             ensure(relayHint != null) { return null }
 
             return AddressHint(tag[1], relayHint)

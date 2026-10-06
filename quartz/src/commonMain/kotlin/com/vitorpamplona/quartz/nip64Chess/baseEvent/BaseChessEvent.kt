@@ -22,6 +22,9 @@ package com.vitorpamplona.quartz.nip64Chess.baseEvent
 
 import com.vitorpamplona.quartz.nip01Core.core.BaseAddressableEvent
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
+import com.vitorpamplona.quartz.nip01Core.hints.PubKeyHintProvider
+import com.vitorpamplona.quartz.nip01Core.hints.types.PubKeyHint
+import com.vitorpamplona.quartz.nip64Chess.baseEvent.tags.OpponentTag
 
 open class BaseChessEvent(
     id: HexKey,
@@ -31,7 +34,13 @@ open class BaseChessEvent(
     tags: Array<Array<String>>,
     content: String,
     sig: HexKey,
-) : BaseAddressableEvent(id, pubKey, createdAt, kind, tags, content, sig) {
+) : BaseAddressableEvent(id, pubKey, createdAt, kind, tags, content, sig),
+    PubKeyHintProvider {
+    // Every live-chess event names the opponent in a `p` tag, often with their home relay.
+    override fun pubKeyHints(): List<PubKeyHint> = tags.mapNotNull(OpponentTag::parseAsHint)
+
+    override fun linkedPubKeys(): List<HexKey> = tags.mapNotNull(OpponentTag::parseKey)
+
     fun opponent() = tags.opponent()
 
     fun opponentPubkey() = tags.opponentKey()

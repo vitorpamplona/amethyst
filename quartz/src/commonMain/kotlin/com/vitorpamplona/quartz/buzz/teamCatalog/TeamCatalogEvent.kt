@@ -21,6 +21,7 @@
 package com.vitorpamplona.quartz.buzz.teamCatalog
 
 import androidx.compose.runtime.Immutable
+import com.vitorpamplona.quartz.buzz.ParseFailed
 import com.vitorpamplona.quartz.buzz.apPersonas.PersonaEvent
 import com.vitorpamplona.quartz.buzz.apPersonas.tags.SharedTag
 import com.vitorpamplona.quartz.nip01Core.core.BaseAddressableEvent
@@ -31,6 +32,8 @@ import com.vitorpamplona.quartz.nip01Core.signers.EventTemplate
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.nip01Core.tags.dTag.DTag
 import com.vitorpamplona.quartz.nip01Core.tags.dTag.dTag
+import com.vitorpamplona.quartz.nip50Search.IndexableFieldVisitor
+import com.vitorpamplona.quartz.nip50Search.SearchableEvent
 import kotlinx.coroutines.CancellationException
 
 /**
@@ -64,7 +67,33 @@ class TeamCatalogEvent(
     tags: Array<Array<String>>,
     content: String,
     sig: HexKey,
-) : BaseAddressableEvent(id, pubKey, createdAt, KIND, tags, content, sig) {
+) : BaseAddressableEvent(id, pubKey, createdAt, KIND, tags, content, sig),
+    SearchableEvent {
+    override fun indexableContent() =
+        catalogOrNull()?.let { catalog ->
+            buildList {
+                add(catalog.name)
+                catalog.description?.let(::add)
+                catalog.instructions?.let(::add)
+                catalog.members.forEach { member ->
+                    add(member.displayName)
+                    member.systemPrompt?.let(::add)
+                }
+            }.joinToString("\n")
+        } ?: ""
+
+    // The read path. The parse happens once; fields are handed over in indexableContent() order.
+    override fun forEachIndexableField(visitor: IndexableFieldVisitor) {
+        val data = catalogOrNull() ?: return
+        if (!visitor.visit(data.name)) return
+        if (!visitor.visit(data.description)) return
+        if (!visitor.visit(data.instructions)) return
+        for (member in data.members) {
+            if (!visitor.visit(member.displayName)) return
+            if (!visitor.visit(member.systemPrompt)) return
+        }
+    }
+
     /** The team's stable id — the `d` tag (shared with its `kind:30176`). */
     fun teamId() = dTag()
 
@@ -78,19 +107,32 @@ class TeamCatalogEvent(
      * Parses the body, all-or-nothing like upstream: throws when the JSON is malformed, the
      * schema version is not 1, or any field breaks the v1 contract. Use [catalogOrNull].
      */
-    fun catalog(): TeamCatalogContent {
+    fun catalog(): TeamCatalogContent = catalogOrNull() ?: decodeCatalog()
+
+    fun catalogOrNull(): TeamCatalogContent? {
+        catalogCache?.let { return it as? TeamCatalogContent }
+        val parsed =
+            try {
+                decodeCatalog()
+            } catch (e: Exception) {
+                if (e is CancellationException) throw e
+                null
+            }
+        catalogCache = parsed ?: ParseFailed
+        return parsed
+    }
+
+    // forEachIndexableField() runs on every keystroke, so the body is decoded and validated
+    // once per instance — a failure included. Events are immutable; a race only decodes twice.
+    @kotlinx.serialization.Transient
+    @kotlin.jvm.Transient
+    private var catalogCache: Any? = null // TeamCatalogContent, or ParseFailed
+
+    private fun decodeCatalog(): TeamCatalogContent {
         val parsed = TeamCatalogContent.decodeFromJson(content)
         parsed.validate()?.let { throw IllegalArgumentException(it) }
         return parsed
     }
-
-    fun catalogOrNull(): TeamCatalogContent? =
-        try {
-            catalog()
-        } catch (e: Exception) {
-            if (e is CancellationException) throw e
-            null
-        }
 
     companion object {
         const val KIND = 30178

@@ -58,7 +58,7 @@ class WikiRedirectEvent(
     AddressHintProvider {
     override fun addressHints(): List<AddressHint> = tags.mapNotNull(ATag::parseAsHint)
 
-    override fun linkedAddressIds(): List<String> = tags.mapNotNull(ATag::parseAddressId)
+    override fun linkedAddressIds(): List<String> = listOfNotNull(target()?.toValue())
 
     /** The slug being redirected from — this event's own `d`. */
     fun fromSlug(): String = dTag()

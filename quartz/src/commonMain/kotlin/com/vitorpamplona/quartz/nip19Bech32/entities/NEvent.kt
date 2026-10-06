@@ -56,7 +56,7 @@ data class NEvent(
 
             return NEvent(
                 hex,
-                relay.mapNotNull { RelayUrlNormalizer.normalizeOrNull(it) },
+                relay.mapNotNull { RelayUrlNormalizer.normalizeHintOrNull(it) },
                 author,
                 kind,
             )

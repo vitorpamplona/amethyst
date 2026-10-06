@@ -126,6 +126,12 @@ import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.navigation.topbars.TopBarWithBackButton
 import com.vitorpamplona.amethyst.commons.ui.platform.rememberManifestIconModel
 import com.vitorpamplona.amethyst.commons.ui.platform.rememberWebAppIconModel
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.settings.nip46.Nip46AppIcon
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.settings.nip46.Nip46LiveStatus
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.settings.nip46.Nip46ReconnectPill
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.settings.nip46.Nip46StatusDot
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.settings.nip46.nip46AppOnline
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.settings.nip46.nip46ClientSubtitle
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.amethyst.napplet.NappletBrokerService
@@ -134,12 +140,6 @@ import com.vitorpamplona.amethyst.napplet.counterpartyLabel
 import com.vitorpamplona.amethyst.napplet.descriptionRes
 import com.vitorpamplona.amethyst.napplet.labelRes
 import com.vitorpamplona.amethyst.napplet.resolveNappletMeta
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.settings.nip46.Nip46AppIcon
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.settings.nip46.Nip46LiveStatus
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.settings.nip46.Nip46ReconnectPill
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.settings.nip46.Nip46StatusDot
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.settings.nip46.nip46AppOnline
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.settings.nip46.nip46ClientSubtitle
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
 import com.vitorpamplona.quartz.nip42RelayAuth.RelayAuthEvent

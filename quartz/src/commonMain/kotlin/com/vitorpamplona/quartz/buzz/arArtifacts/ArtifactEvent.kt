@@ -27,8 +27,12 @@ import com.vitorpamplona.quartz.buzz.arArtifacts.tags.TypeTag
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
+import com.vitorpamplona.quartz.nip01Core.hints.EventHintProvider
+import com.vitorpamplona.quartz.nip01Core.hints.types.EventIdHint
 import com.vitorpamplona.quartz.nip01Core.signers.EventTemplate
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
+import com.vitorpamplona.quartz.nip50Search.IndexableFieldVisitor
+import com.vitorpamplona.quartz.nip50Search.SearchableEvent
 import com.vitorpamplona.quartz.utils.TimeUtils
 
 /**
@@ -54,6 +58,12 @@ import com.vitorpamplona.quartz.utils.TimeUtils
  * `#project`) go through the relay's explicit artifact query (`{"artifact":"current"|"history",
  * …}` on the NIP-98 HTTP `/query`); the relay rejects a REQ that mixes artifact kinds with
  * multi-letter tag filters rather than silently dropping the predicate.
+ *
+ * Search: every revision is its own regular, searchable event — NIP-AR edits and soft-deletes
+ * by publishing a new revision (`op=update`/`op=delete`), never by NIP-09, so superseded
+ * revisions are not removed from a store. A search index that should surface only the current
+ * head has to filter for it (see [ArtifactHeadResolver]); a delete indexes nothing itself, but
+ * does not un-index the revisions before it.
  */
 @Immutable
 class ArtifactEvent(
@@ -63,7 +73,32 @@ class ArtifactEvent(
     tags: Array<Array<String>>,
     content: String,
     sig: HexKey,
-) : Event(id, pubKey, createdAt, KIND, tags, content, sig) {
+) : Event(id, pubKey, createdAt, KIND, tags, content, sig),
+    SearchableEvent,
+    EventHintProvider {
+    override fun indexableContent() = listOfNotNull(title(), textBody()).joinToString("\n")
+
+    // The read path: the same fields indexableContent() joins, in the same order.
+    override fun forEachIndexableField(visitor: IndexableFieldVisitor) {
+        if (!visitor.visit(title())) return
+        visitor.visit(textBody())
+    }
+
+    /**
+     * The body when it reads as text: NIP-AR keeps `content` opaque, so a client may store a
+     * JSON document there. That is not natural language and never goes to the search index;
+     * neither does the empty body of a delete. Only a body that is structurally a JSON object or
+     * array is dropped ([isJsonDocument]) — prose that merely opens with a bracket, such as
+     * `[Draft] Q3 roadmap` or a `[x] ship it` checklist, is still text.
+     */
+    fun textBody(): String? = content.takeIf { it.isNotBlank() && !isJsonDocument(it) }
+
+    // `root` and `prev` carry bare event ids with no relay slot.
+    override fun eventHints(): List<EventIdHint> = emptyList()
+
+    // One pass in tag order (the builder writes `root` before `prev`).
+    override fun linkedEventIds(): List<HexKey> = listOfNotNull(root(), prev())
+
     /** The artifact's stable UUID — the `d` tag. */
     fun artifactId() = tags.artifactId()
 
@@ -79,10 +114,10 @@ class ArtifactEvent(
     /** The lifecycle operation — the `op` tag. */
     fun op() = tags.artifactOp()
 
-    /** The conversation anchor — the `root` tag. */
+    /** The conversation anchor — the `root` tag; null when absent or not a 64-hex event id. */
     fun root() = tags.artifactRoot()
 
-    /** The replaced revision — the `prev` tag; null on a create. */
+    /** The replaced revision — the `prev` tag; null on a create, or when not a 64-hex event id. */
     fun prev() = tags.artifactPrev()
 
     /** True for a soft-delete revision. */
@@ -101,6 +136,61 @@ class ArtifactEvent(
 
     companion object {
         const val KIND = 45010
+
+        /**
+         * Whether [s], ignoring surrounding whitespace, is shaped like a JSON object or array: it
+         * opens with `{` or `[`, the first token after the opener can start a JSON member/value,
+         * and the bracket depth (outside string literals) first returns to zero on the last
+         * non-blank char. A cheap structural test, not a parse: it runs on the search read path
+         * for every revision, so it scans indices and allocates nothing.
+         */
+        fun isJsonDocument(s: String): Boolean {
+            var start = 0
+            var end = s.length - 1
+            while (start <= end && s[start].isWhitespace()) start++
+            while (end > start && s[end].isWhitespace()) end--
+            if (start >= end) return false
+
+            val open = s[start]
+            val close =
+                when (open) {
+                    '{' -> '}'
+                    '[' -> ']'
+                    else -> return false
+                }
+            if (s[end] != close) return false
+
+            var first = start + 1
+            while (first < end && s[first].isWhitespace()) first++
+            val c = s[first]
+            val validFirst =
+                c == close ||
+                    c == '"' ||
+                    (open == '[' && (c == '{' || c == '[' || c == '-' || c in '0'..'9' || c == 't' || c == 'f' || c == 'n'))
+            if (!validFirst) return false
+
+            var depth = 0
+            var inString = false
+            var i = start
+            while (i <= end) {
+                val ch = s[i]
+                if (inString) {
+                    if (ch == '\\') {
+                        i++
+                    } else if (ch == '"') {
+                        inString = false
+                    }
+                } else {
+                    when (ch) {
+                        '"' -> inString = true
+                        '{', '[' -> depth++
+                        '}', ']' -> if (--depth == 0 && i != end) return false
+                    }
+                }
+                i++
+            }
+            return depth == 0 && !inString
+        }
 
         /**
          * Builds a revision and checks it against [ArtifactValidator] — including any client

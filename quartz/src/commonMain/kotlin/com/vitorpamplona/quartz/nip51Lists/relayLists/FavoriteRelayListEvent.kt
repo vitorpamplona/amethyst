@@ -27,6 +27,7 @@ import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
 import com.vitorpamplona.quartz.nip01Core.diff.DiffableEvent
 import com.vitorpamplona.quartz.nip01Core.diff.ListDiff
+import com.vitorpamplona.quartz.nip01Core.hints.AddressHintProvider
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerSync
@@ -54,7 +55,12 @@ class FavoriteRelayListEvent(
     content: String,
     sig: HexKey,
 ) : PrivateTagArrayEvent(id, pubKey, createdAt, KIND, tags, content, sig),
-    DiffableEvent<RelayListDiff> {
+    DiffableEvent<RelayListDiff>,
+    AddressHintProvider {
+    override fun addressHints() = tags.mapNotNull(AddressBookmark::parseAsHint)
+
+    override fun linkedAddressIds() = tags.mapNotNull(AddressBookmark::parseValidAddress)
+
     override fun diffFrom(older: Event): RelayListDiff? {
         if (older !is FavoriteRelayListEvent || older.pubKey != pubKey || older.dTag() != dTag()) return null
         return RelayListDiff(ListDiff.of(older.publicRelays(), publicRelays(), { it }), privateItemsChangeFrom(older))

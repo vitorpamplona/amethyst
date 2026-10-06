@@ -58,9 +58,9 @@ import com.vitorpamplona.amethyst.commons.ui.note.LoadAddressableNote
 import com.vitorpamplona.amethyst.commons.ui.note.getGradient
 import com.vitorpamplona.amethyst.commons.ui.theme.Size35Modifier
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
-import com.vitorpamplona.quartz.nip01Core.tags.aTag.isTaggedAddressableNote
 import com.vitorpamplona.quartz.nip30CustomEmoji.EmojiUrlTag
 import com.vitorpamplona.quartz.nip30CustomEmoji.pack.EmojiPackEvent
+import com.vitorpamplona.quartz.nip30CustomEmoji.selection.EmojiListEvent
 
 @Composable
 fun RenderEmojiPack(
@@ -185,7 +185,7 @@ private fun EmojiListOptions(
     ) {
         it?.let { usersEmojiList ->
             val hasAddedThis by observeNoteAndMap(usersEmojiList, accountViewModel) {
-                usersEmojiList.event?.isTaggedAddressableNote(emojiPackNote.idHex)
+                (usersEmojiList.event as? EmojiListEvent)?.hasEmojiPack(emojiPackNote.idHex)
             }
 
             CrossfadeIfEnabled(targetState = hasAddedThis, label = "EmojiListOptions") {

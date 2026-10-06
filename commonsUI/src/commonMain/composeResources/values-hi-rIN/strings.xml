@@ -196,7 +196,7 @@
     <string name="geocache_coordinates_copied">निर्देशांक अनुकृत</string>
     <string name="geocache_photos_section">चित्र</string>
     <string name="geocache_mission_section">मुख्य खोज अभियान</string>
-    <string name="geocache_logs_section">अभिलेख</string>
+    <string name="geocache_logs_section">घटनाक्रम अभिलेख</string>
     <string name="geocache_no_logs">इस कोष का अभिलेखन अब तक किसी ने नहीं किया। सर्वप्रथम बनें।</string>
     <string name="geocache_i_found_it">मैं ने खोज लिया</string>
     <string name="geocache_didnt_find_it">खोज असफल</string>
@@ -228,7 +228,7 @@
     <string name="geocache_log_type_maintenance">देखरेख आवश्यक</string>
     <string name="geocache_log_title">खोज का अभिलेखन</string>
     <string name="geocache_log_cache_label">कोष</string>
-    <string name="geocache_log_your_log">आपका अभिलेख</string>
+    <string name="geocache_log_your_log">आपका घटनाक्रम अभिलेख</string>
     <string name="geocache_log_placeholder">कैसे चला।</string>
     <string name="geocache_log_add_photo">चित्र जोडें</string>
     <string name="geocache_log_mission_answer">आपका मुख्य खोज उत्तर</string>
@@ -240,9 +240,9 @@
     <string name="geocache_log_proof_bad_code">वह एक सत्यापन अक्षरराशि नहीं।</string>
     <string name="geocache_log_proof_wrong_cache">वह अक्षरराशि एक पृथक कोष का है।</string>
     <string name="geocache_log_proof_optional">यह कोष प्रमाण नहीं पूछता। इसलिए आप सीधे इसका अभिलेखन कर सकते हैं।</string>
-    <string name="geocache_log_no_location_attached">आपका स्थान इस अभिलेख में संलग्न नहीं।</string>
+    <string name="geocache_log_no_location_attached">आपका स्थान इस घटनाक्रम अभिलेख में संलग्न नहीं।</string>
     <string name="geocache_log_post">पत्र प्रकाशन</string>
-    <string name="geocache_log_comment_title">अभिलेख जोडें</string>
+    <string name="geocache_log_comment_title">घटनाक्रम अभिलेख जोडें</string>
     <string name="geocache_tab_nearby">निकट</string>
     <string name="geocache_tab_map">मानचित्र</string>
     <string name="geocache_tab_hunts">खोज</string>
@@ -1715,8 +1715,8 @@
     <string name="marmot_invite_device_banner">मार्मोट आमन्त्रण अन्य यन्त्र तक जा रहे हैं तथा यहाँ नहीं खोले जा सकते।</string>
     <string name="marmot_invite_device_banner_dismiss">हटाएँ</string>
     <string name="marmot_invite_device_publish">इस यन्त्र से प्रकाशन</string>
-    <string name="reset_marmot_confirm_title">क्या मार्मोट॰ स्थिति पुनःस्थापित करें।</string>
-    <string name="reset_marmot_confirm_body">यह स्थायी रूप से सभी मार्मोट॰ समूह चर्चा तथा सन्देश इतिहास तथा एमएलएस॰ कुंचिका मिटा देगा इस यन्त्र पर वर्तमान लेखा के लिए। समकक्षजन को सूचित नहीं किया जाएगा तथा सम्भाव्यतः आपको समूहों मे देखते रहेंगे उनके अगले स्थायी अभिलेखन तक। इसे पूर्ववत नहीं किया जा सकता। एक नयी कुंचिकापोटली प्रकाशित की जाएगी अगली बार जब क्रमक समचरणीकरण किया जाएगा।</string>
+    <string name="reset_marmot_confirm_title">क्या मार्मोट स्थिति पुनःस्थापित करें।</string>
+    <string name="reset_marmot_confirm_body">यह स्थायी रूप से सभी मार्मोट समूह चर्चा तथा सन्देश इतिहास तथा एमएलएस॰ कुंचिका मिटा देगा इस यन्त्र पर वर्तमान लेखा के लिए। समकक्षजन को सूचित नहीं किया जाएगा तथा सम्भाव्यतः आपको समूहों मे देखते रहेंगे उनके अगले स्थायी अभिलेखन तक। इसे पूर्ववत नहीं किया जा सकता। एक नयी कुंचिकापोटली प्रकाशित की जाएगी अगली बार जब क्रमक समचरणीकरण किया जाएगा।</string>
     <string name="reset_marmot_confirm_action">पुनःस्थापन</string>
     <string name="application_preferences">क्रमक आद्यताएँ</string>
     <string name="language">भाषा</string>
@@ -3036,10 +3036,10 @@
     <string name="community_rules_violation_kind_not_allowed">इस समुदाय द्वारा %1$d प्रकार घटनाएँ स्वीकृत नहीं।</string>
     <string name="community_rules_violation_wot_gate_failed">आप इस समुदाय के विश्वासजाल आवश्यकताओं को पार नहीं कर सके।</string>
     <string name="community_rules_violation_stale_rules">समुदाय का नवीनतम नियम अभिलेख पुराना होने के कारण अस्वीकृत।</string>
-    <string name="marmot_groups_title">मार्मोट॰ समूह</string>
+    <string name="marmot_groups_title">मार्मोट समूह</string>
     <string name="cordn_groups_title">कोर्डन समूह</string>
     <string name="marmot_create_group">समूह बनाएँ</string>
-    <string name="marmot_create_group_title">मार्मोट॰ समूह बनाएँ</string>
+    <string name="marmot_create_group_title">मार्मोट समूह बनाएँ</string>
     <string name="marmot_create_group_footer">एक नया एमएलएस॰ समूह बनेगा। आप सदस्य जोड सकते हैं तत्पश्चात।</string>
     <string name="marmot_retention_title">नश्वर सन्देश</string>
     <string name="marmot_retention_off">निष्क्रिय</string>
@@ -3058,7 +3058,7 @@
     <string name="marmot_enable_encrypted_media">रहस्यीकृत संलग्न अभिलेखों का उपयोग करें</string>
     <string name="marmot_enable_encrypted_media_explainer">इस समूह में संलग्न अभिलेख पुराने प्रारूप का उपयोग करते हैं। परिवर्तन से रहस्यीकृत श्रव्यदृश्याभिलेख अवयव जोडा जा सकता है समूह में। तथा सभी सदस्य इस परिवर्तन को देख सकेंगे। इसको पूर्ववत नहीं किया जा सकता।</string>
     <string name="marmot_legacy_group_no_disband">इस समूह का निर्माण किया गया था विघटन का अवलम्बन पूर्व तथा इसका विघटन नहीं किया जा सकता। तो भी आप इसे छोड सकते हैं अथवा अन्य सभी सदस्यों को हटा सकते हैं। विद्यमान समूहों का उन्नतीकरण नहीं हो सकता।</string>
-    <string name="marmot_group_default_name">मार्मोट॰ समूह</string>
+    <string name="marmot_group_default_name">मार्मोट समूह</string>
     <string name="marmot_group_fallback_name">समूह %1$s…</string>
     <string name="marmot_user_fallback_name">%1$s…</string>
     <string name="marmot_tab_known">ज्ञात</string>
@@ -3620,7 +3620,7 @@
     <string name="chat_type_ephemeral_title">अस्थायी चर्चाएँ</string>
     <string name="chat_type_geohash_desc">सार्वजनिक भूभागसूचक सीमित चर्चा एक स्थान के लिए (भूभाग पता)।</string>
     <string name="chat_type_geohash_title">स्थानीय चर्चाएँ</string>
-    <string name="chat_type_marmot_desc">एमएलएस॰ आरम्भ से अन्त तक रहस्यीकृत समूह चर्चाएँ (मार्मोट॰)।</string>
+    <string name="chat_type_marmot_desc">एमएलएस॰ आरम्भ से अन्त तक रहस्यीकृत समूह चर्चाएँ (मार्मोट)।</string>
     <string name="chat_type_marmot_title">रहस्यीकृत समूह</string>
     <string name="chat_type_nip04_desc">पुराने तथा अल्पतर निजी रहस्यीकृत सीधे सन्देश (निप॰०४)।</string>
     <string name="chat_type_nip04_title">पुरानी शैली सीधेसन्देश</string>
@@ -4070,7 +4070,7 @@
     <string name="it_s_not_possible_to_zap_to_a_draft_note">एक टीका पाण्डुलिपि को ज्साप नहीं कर सकते</string>
     <string name="key_is_required">कुंचिका अनिवार्य</string>
     <string name="keypackage_section">कुंचिकापोटली पुनःप्रसारक</string>
-    <string name="keypackage_section_explainer">पुनःप्रसारक जहाँ आपके एमएलएस॰ कुंचिकापोटलियाँ प्रकाशित होंगे (मिप॰००)। अन्य प्रयोक्ता इन कुंचिकापोटलियों को प्राप्त करेंगे आपको आमन्त्रित करने के लिए मार्मोट॰ समूह चर्चाओं में। १ - ३ पुनःप्रसारकों को जोडें जो आप से कुंचिकापोटली घटनाएँ स्वीकारते हों तथा सार्वजनिक पठन की अनुमती देते हों।</string>
+    <string name="keypackage_section_explainer">पुनःप्रसारक जहाँ आपके एमएलएस॰ कुंचिकापोटलियाँ प्रकाशित होंगे (मिप॰शून्य)। अन्य प्रयोक्ता इन कुंचिकापोटलियों को प्राप्त करेंगे आपको आमन्त्रित करने के लिए मार्मोट समूह चर्चाओं में। एक से तीन पुनःप्रसारकों को जोडें जो आप से कुंचिकापोटली घटनाएँ स्वीकारते हों तथा सार्वजनिक पठन की अनुमती देते हों।</string>
     <string name="keypackages">कुंचिकापोटलियाँ</string>
     <string name="kind_accepted_badge_set">स्वीकृत पदक समुच्चय</string>
     <string name="kind_adventure_prologue">साहसिक प्रस्तावना</string>
@@ -4301,7 +4301,7 @@
     <string name="marmot_failed_to_remove_member">सदस्य हटाने में असफल : %1$s</string>
     <string name="marmot_failed_to_revoke_admin">प्रबन्धन अधिकार निराकरण असफल : %1$s</string>
     <string name="marmot_failed_to_update">अद्यतन असफल : %1$s</string>
-    <string name="marmot_group">मार्मोट॰ समूह</string>
+    <string name="marmot_group">मार्मोट समूह</string>
     <string name="marmot_group_composer_disbanding">समूह का अन्त किया जा रहा है। आप इसे अभी भी पढ सकते हैं।</string>
     <string name="marmot_group_composer_leaving">आप इस समूह को छोड रहे हैं।</string>
     <string name="marmot_group_composer_removed">आप इस समूह के सदस्य अब नहीं रहे।</string>
@@ -4560,7 +4560,7 @@
     <string name="new_conversation_marmot_pro_1">लघु सीधेसन्देश मापदण्डस्तर पार करता है</string>
     <string name="new_conversation_marmot_pro_2">रहस्यीकृत समूह चर्चा</string>
     <string name="new_conversation_marmot_tagline">बृहत्तर निजी समूह</string>
-    <string name="new_conversation_marmot_title">मार्मोट॰ समूह</string>
+    <string name="new_conversation_marmot_title">मार्मोट समूह</string>
     <string name="new_conversation_public_chat_best">खुले सार्वजनिक शालाएँ जहाँ कोई भी पत्र प्रकाशित कर सकता है।</string>
     <string name="new_conversation_public_chat_chip">नियमनरहित</string>
     <string name="new_conversation_public_chat_con_1">केवल सार्वजनिक</string>
@@ -5077,9 +5077,9 @@
     <string name="report_dialog_block_hide_user_btn"><![CDATA[उपयोगकर्ता को बाधित करें तथा छिपाएँ]]></string>
     <string name="request_deletion">हटाने की याचना</string>
     <string name="request_to_vanish">अदृश्य होने के लिए अनुरोध</string>
-    <string name="reset_marmot_failure">मार्मोट॰ स्थिति पुनःस्थापन असफल : %1$s</string>
-    <string name="reset_marmot_state">मार्मोट॰ स्थिति पुनःस्थापित करें</string>
-    <string name="reset_marmot_success">मार्मोट॰ स्थिति पुनःस्थापन।</string>
+    <string name="reset_marmot_failure">मार्मोट स्थिति पुनःस्थापन असफल। %1$s</string>
+    <string name="reset_marmot_state">मार्मोट स्थिति पुनःस्थापित करें</string>
+    <string name="reset_marmot_success">मार्मोट स्थिति पुनःस्थापित।</string>
     <string name="resource_usage_activity_section">गतिविधि (सात दिन)</string>
     <string name="resource_usage_alert_message">अमेथिस्ट द्वारा अपेक्षित से अधिक उपभोग हुआ निकटकाल में : %1$s। क्या आप एक उपयोग वृत्तान्त भेजना चाहते क्रमलेखकों को एक रहस्यीकृत सीधासन्देश में। आप सम्पूर्ण वृत्तान्त देखेंगे कुछ भी भेजने के पूर्व।</string>
     <string name="resource_usage_alwayson_battery">विद्युतकोश अपवहन कालान्तर (पूर्ण यन्त्र)</string>

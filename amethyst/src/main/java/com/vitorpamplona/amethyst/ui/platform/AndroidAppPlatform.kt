@@ -29,6 +29,7 @@ import androidx.compose.ui.platform.UriHandler
 import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.BuildConfig
 import com.vitorpamplona.amethyst.commons.favorites.FavoriteApp
+import com.vitorpamplona.amethyst.commons.model.UiSettingsFlow
 import com.vitorpamplona.amethyst.commons.model.navigation.Route
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.platform.AppLauncher
@@ -36,10 +37,16 @@ import com.vitorpamplona.amethyst.commons.ui.platform.AppPlatform
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.qrcode.ScanOutcome
 import com.vitorpamplona.amethyst.commons.ui.settings.SettingsCategory
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
+import com.vitorpamplona.amethyst.debugState
 import com.vitorpamplona.amethyst.favorites.FavoriteAppLauncher
+import com.vitorpamplona.amethyst.ui.components.SelectNotificationProvider
 import com.vitorpamplona.amethyst.ui.navigation.topbars.AndroidAroundMeLocationLabel
+import com.vitorpamplona.amethyst.ui.note.DrawPlayName
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.nests.room.activity.NestActivity
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.settings.AndroidNotificationCategorySettings
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.settings.AndroidNotificationDeliverySettings
 import com.vitorpamplona.quartz.concord.cord02Community.ImagePointer
+import kotlinx.collections.immutable.ImmutableMap
 import com.vitorpamplona.amethyst.commons.ui.navigation.bottombars.AppBottomBar as AppBottomBarImpl
 import com.vitorpamplona.amethyst.favorites.rememberManifestIconModel as AppRememberManifestIconModel
 import com.vitorpamplona.amethyst.favorites.rememberNappletIconModel as AppRememberNappletIconModel
@@ -58,7 +65,31 @@ object AndroidAppPlatform : AppPlatform {
     override fun openNestRoom(addressValue: String) = NestActivity.launch(Amethyst.instance.appContext, addressValue)
 
     // Per flavour: Play links the hosted policies, F-Droid surfaces none.
+    override val appVersionName: String get() = BuildConfig.VERSION_NAME
+
+    override val releaseNotesId: String get() = BuildConfig.RELEASE_NOTES_ID
+
+    override fun logDebugState() = debugState(Amethyst.instance.appContext)
+
     override fun legalSettingsCategory(uriHandler: UriHandler): SettingsCategory? = flavorLegalSettingsCategory(uriHandler)
+
+    @Composable
+    override fun SpeakNameButton(name: String) = DrawPlayName(name)
+
+    @Composable
+    override fun NotificationProviderPrompt(sharedPrefs: UiSettingsFlow) = SelectNotificationProvider(sharedPrefs)
+
+    @Composable
+    override fun NotificationDeliverySettings(accountViewModel: AccountViewModel) = AndroidNotificationDeliverySettings(accountViewModel)
+
+    @Composable
+    override fun NotificationCategorySettings() = AndroidNotificationCategorySettings()
+
+    @Composable
+    override fun rememberAppLanguages(): ImmutableMap<String, String> {
+        val context = LocalContext.current
+        return remember(context) { context.getLangPreferenceDropdownEntries() }
+    }
 
     @Composable
     override fun AppBottomBar(

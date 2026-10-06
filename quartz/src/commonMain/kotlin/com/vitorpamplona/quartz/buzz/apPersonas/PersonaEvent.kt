@@ -21,10 +21,14 @@
 package com.vitorpamplona.quartz.buzz.apPersonas
 
 import androidx.compose.runtime.Immutable
+import com.vitorpamplona.quartz.buzz.ParseFailed
 import com.vitorpamplona.quartz.buzz.apPersonas.tags.SharedTag
 import com.vitorpamplona.quartz.nip01Core.core.BaseAddressableEvent
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
+import com.vitorpamplona.quartz.nip01Core.core.isValid
+import com.vitorpamplona.quartz.nip01Core.hints.PubKeyHintProvider
+import com.vitorpamplona.quartz.nip01Core.hints.types.PubKeyHint
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.nip01Core.tags.dTag.dTag
 import com.vitorpamplona.quartz.nip50Search.IndexableFieldVisitor
@@ -55,14 +59,21 @@ class PersonaEvent(
     content: String,
     sig: HexKey,
 ) : BaseAddressableEvent(id, pubKey, createdAt, KIND, tags, content, sig),
-    SearchableEvent {
-    override fun indexableContent() = personaOrNull()?.let { listOfNotNull(it.displayName, it.systemPrompt).joinToString("\n") } ?: ""
+    SearchableEvent,
+    PubKeyHintProvider {
+    // The allowlisted pubkeys sit in the JSON body, which carries no relay hints.
+    override fun pubKeyHints(): List<PubKeyHint> = emptyList()
+
+    override fun linkedPubKeys(): List<HexKey> = personaOrNull()?.respondToAllowlist?.filter { it.isValid() } ?: emptyList()
+
+    override fun indexableContent() = personaOrNull()?.let { listOfNotNull(it.displayName, it.description, it.systemPrompt).joinToString("\n") } ?: ""
 
     // The read path. The parse happens once and its fields are handed over one by
     // one; a scan that stops on the first hit never pays for the rest of the join.
     override fun forEachIndexableField(visitor: IndexableFieldVisitor) {
         val data = personaOrNull() ?: return
         if (!visitor.visit(data.displayName)) return
+        if (!visitor.visit(data.description)) return
         if (!visitor.visit(data.systemPrompt)) return
     }
 
@@ -72,16 +83,28 @@ class PersonaEvent(
     /** True when the persona is published to the community catalog (`["shared","true"]`). */
     fun isShared() = SharedTag.isShared(tags)
 
-    /** Parses the persona configuration, or throws if the JSON is malformed. */
-    fun persona(): PersonaContent = PersonaContent.decodeFromJson(content)
+    // linked*() runs for every relay copy of every event and forEachIndexableField() on every
+    // keystroke, so the body is decoded once per instance — a failure included. Events are
+    // immutable; a race only decodes twice.
+    @kotlinx.serialization.Transient
+    @kotlin.jvm.Transient
+    private var personaCache: Any? = null // PersonaContent, or ParseFailed
 
-    fun personaOrNull(): PersonaContent? =
-        try {
-            persona()
-        } catch (e: Exception) {
-            if (e is CancellationException) throw e
-            null
-        }
+    /** Parses the persona configuration (once), or throws if the JSON is malformed. */
+    fun persona(): PersonaContent = personaOrNull() ?: PersonaContent.decodeFromJson(content)
+
+    fun personaOrNull(): PersonaContent? {
+        personaCache?.let { return it as? PersonaContent }
+        val parsed =
+            try {
+                PersonaContent.decodeFromJson(content)
+            } catch (e: Exception) {
+                if (e is CancellationException) throw e
+                null
+            }
+        personaCache = parsed ?: ParseFailed
+        return parsed
+    }
 
     companion object {
         const val KIND = 30175

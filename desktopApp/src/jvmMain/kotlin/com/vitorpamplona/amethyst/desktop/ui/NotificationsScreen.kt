@@ -87,6 +87,7 @@ import com.vitorpamplona.amethyst.desktop.ui.notifications.LocalNotificationSett
 import com.vitorpamplona.amethyst.desktop.ui.notifications.NotificationFilter
 import com.vitorpamplona.amethyst.desktop.ui.notifications.NotificationGroup
 import com.vitorpamplona.amethyst.desktop.ui.notifications.groupNotifications
+import com.vitorpamplona.amethyst.desktop.ui.notifications.notificationTargetNoteId
 import com.vitorpamplona.quartz.nip01Core.core.hexToByteArrayOrNull
 import com.vitorpamplona.quartz.nip19Bech32.toNpub
 
@@ -737,14 +738,11 @@ fun NotificationCard(
         derivedStateOf { notification.timestamp > lastReadAt }
     }
 
-    // Target note id for click-through: reactions/reposts/replies reference an
-    // `e` tag; for mentions we fall back to the notification event itself.
+    // Target note id for click-through: reactions/reposts/zaps/replies point at
+    // a note; for mentions we fall back to the notification event itself.
     val clickTarget =
         remember(notification) {
-            notification.event.tags
-                .firstOrNull { it.size > 1 && it[0] == "e" }
-                ?.get(1)
-                ?: notification.event.id
+            notificationTargetNoteId(notification.event) ?: notification.event.id
         }
 
     // DMs open the Messages column; everything else opens the target thread.

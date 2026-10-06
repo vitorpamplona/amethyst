@@ -52,18 +52,24 @@ class StarterPackEvent(
 ) : BaseAddressableEvent(id, pubKey, createdAt, KIND, tags, content, sig),
     PubKeyHintProvider,
     SearchableEvent {
-    override fun indexableContent() = listOfNotNull(title(), description()).joinToString("\n")
+    override fun indexableContent() = (listOfNotNull(title(), description()) + hashtags()).joinToString("\n")
 
     // The read path: the same fields indexableContent() joins, handed over without
     // building the joined string a scan would throw away.
     override fun forEachIndexableField(visitor: IndexableFieldVisitor) {
         if (!visitor.visit(title())) return
-        visitor.visit(description())
+        if (!visitor.visit(description())) return
+        // Walks the tags in place: this runs per event per search keystroke, and hashtags()
+        // would build a list only to discard it.
+        for (tag in tags) {
+            val hashtag = HashtagTag.parse(tag) ?: continue
+            if (!visitor.visit(hashtag)) return
+        }
     }
 
     override fun pubKeyHints() = tags.mapNotNull(UserTag::parseAsHint)
 
-    override fun linkedPubKeys() = tags.mapNotNull(UserTag::parseKey)
+    override fun linkedPubKeys() = followIds()
 
     fun title() = tags.firstNotNullOfOrNull(TitleTag::parse)
 

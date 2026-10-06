@@ -72,7 +72,8 @@ class TextTrackEvent(
 
     override fun addressHints() = tags.mapNotNull(ATag::parseAsHint)
 
-    override fun linkedAddressIds() = tags.mapNotNull(ATag::parseAddressId)
+    // A track belongs to one video.
+    override fun linkedAddressIds() = listOfNotNull(video()?.toValue())
 
     /** The video this track belongs to. */
     fun video() = tags.firstNotNullOfOrNull(ATag::parseAddress)

@@ -22,6 +22,13 @@ package com.vitorpamplona.amethyst.desktop.ui.notifications
 
 import androidx.compose.runtime.Immutable
 import com.vitorpamplona.amethyst.commons.moderation.notifications.NotificationItem
+import com.vitorpamplona.quartz.nip01Core.core.Event
+import com.vitorpamplona.quartz.nip10Notes.TextNoteEvent
+import com.vitorpamplona.quartz.nip18Reposts.GenericRepostEvent
+import com.vitorpamplona.quartz.nip18Reposts.RepostEvent
+import com.vitorpamplona.quartz.nip22Comments.CommentEvent
+import com.vitorpamplona.quartz.nip25Reactions.ReactionEvent
+import com.vitorpamplona.quartz.nip57Zaps.ZapReceiptEvent
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -63,10 +70,24 @@ private val DAY_FORMAT = SimpleDateFormat("yyyy-MM-dd", Locale.US)
 
 private fun dayBucketFor(epochSec: Long): String = DAY_FORMAT.format(Date(epochSec * 1_000L))
 
-private fun targetNoteId(item: NotificationItem): String? =
-    item.event.tags
-        .firstOrNull { it.size > 1 && it[0] == "e" }
-        ?.get(1)
+private fun targetNoteId(item: NotificationItem): String? = notificationTargetNoteId(item.event)
+
+/**
+ * The note a notification event is about, per kind: the reacted-to note is the LAST `e`
+ * (NIP-25), a repost's is [RepostEvent.boostedEventId], a zap's is its zapped post, and a
+ * reply's is its direct parent (not the NIP-10 root, which a marked reply lists first).
+ * Kinds with no named accessor keep the first `e`.
+ */
+internal fun notificationTargetNoteId(event: Event): String? =
+    when (event) {
+        is ReactionEvent -> event.originalPost().lastOrNull()
+        is RepostEvent -> event.boostedEventId()
+        is GenericRepostEvent -> event.boostedEventId()
+        is ZapReceiptEvent -> event.zappedPost().firstOrNull()
+        is TextNoteEvent -> event.replyingTo()
+        is CommentEvent -> event.replyingTo()
+        else -> event.tags.firstOrNull { it.size > 1 && it[0] == "e" }?.get(1)
+    }
 
 /**
  * Bucket reactions and reposts by (target-note, day). Preserve newest-first

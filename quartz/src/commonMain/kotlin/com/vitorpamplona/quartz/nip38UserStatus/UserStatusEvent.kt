@@ -24,6 +24,12 @@ import androidx.compose.runtime.Immutable
 import com.vitorpamplona.quartz.nip01Core.core.BaseAddressableEvent
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.firstTagValue
+import com.vitorpamplona.quartz.nip01Core.hints.AddressHintProvider
+import com.vitorpamplona.quartz.nip01Core.hints.EventHintProvider
+import com.vitorpamplona.quartz.nip01Core.hints.PubKeyHintProvider
+import com.vitorpamplona.quartz.nip01Core.hints.types.AddressHint
+import com.vitorpamplona.quartz.nip01Core.hints.types.EventIdHint
+import com.vitorpamplona.quartz.nip01Core.hints.types.PubKeyHint
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip01Core.tags.aTag.ATag
 import com.vitorpamplona.quartz.nip01Core.tags.events.ETag
@@ -43,7 +49,10 @@ class UserStatusEvent(
     content: String,
     sig: HexKey,
 ) : BaseAddressableEvent(id, pubKey, createdAt, KIND, tags, content, sig),
-    SearchableEvent {
+    SearchableEvent,
+    PubKeyHintProvider,
+    EventHintProvider,
+    AddressHintProvider {
     override fun indexableContent() = content
 
     // The read path: the same fields indexableContent() joins, handed over without
@@ -51,6 +60,28 @@ class UserStatusEvent(
     override fun forEachIndexableField(visitor: IndexableFieldVisitor) {
         visitor.visit(content)
     }
+
+    // The profile / note / address a status points at (NIP-38 `p`, `e`, `a`): one of each at most.
+    override fun pubKeyHints(): List<PubKeyHint> = tags.mapNotNull(PTag::parseAsHint)
+
+    override fun linkedPubKeys(): List<HexKey> = listOfNotNull(referencedProfile())
+
+    override fun eventHints(): List<EventIdHint> = tags.mapNotNull(ETag::parseAsHint)
+
+    override fun linkedEventIds(): List<HexKey> = listOfNotNull(referencedEventId())
+
+    override fun addressHints(): List<AddressHint> = tags.mapNotNull(ATag::parseAsHint)
+
+    override fun linkedAddressIds(): List<String> = listOfNotNull(referencedAddressId())
+
+    /** The profile this status links to (NIP-38 `p`). */
+    fun referencedProfile(): HexKey? = tags.firstNotNullOfOrNull(PTag::parseKey)
+
+    /** The note this status links to (NIP-38 `e`). */
+    fun referencedEventId(): HexKey? = tags.firstNotNullOfOrNull(ETag::parseId)
+
+    /** The addressable this status links to (NIP-38 `a`, e.g. a live activity or a track), as an address id. */
+    fun referencedAddressId(): String? = tags.firstNotNullOfOrNull(ATag::parseValidAddress)
 
     fun firstTaggedUrl() = tags.firstTagValue("r")
 

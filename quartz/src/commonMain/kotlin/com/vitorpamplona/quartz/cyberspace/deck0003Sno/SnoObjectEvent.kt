@@ -27,6 +27,8 @@ import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.nip01Core.tags.dTag.dTag
 import com.vitorpamplona.quartz.nip31Alts.alt
+import com.vitorpamplona.quartz.nip50Search.IndexableFieldVisitor
+import com.vitorpamplona.quartz.nip50Search.SearchableEvent
 import com.vitorpamplona.quartz.utils.TimeUtils
 
 /**
@@ -59,7 +61,8 @@ class SnoObjectEvent(
     tags: Array<Array<String>>,
     content: String,
     sig: HexKey,
-) : BaseAddressableEvent(id, pubKey, createdAt, KIND, tags, content, sig) {
+) : BaseAddressableEvent(id, pubKey, createdAt, KIND, tags, content, sig),
+    SearchableEvent {
     /**
      * The object, or the rule it broke. A client MUST NOT render a payload that
      * fails §1.9 and SHOULD say why rather than failing silently (§3.1), which
@@ -71,6 +74,13 @@ class SnoObjectEvent(
 
     /** The `name` tag, which duplicates the payload's name for relay-side filtering. */
     fun nameTag(): String? = tags.firstOrNull { it.size > 1 && it[0] == "name" }?.get(1)
+
+    /** The `name` tag is the only human text; the content is SNO geometry JSON and stays out. */
+    override fun indexableContent() = nameTag().orEmpty()
+
+    override fun forEachIndexableField(visitor: IndexableFieldVisitor) {
+        visitor.visit(nameTag())
+    }
 
     companion object {
         const val KIND = 33331

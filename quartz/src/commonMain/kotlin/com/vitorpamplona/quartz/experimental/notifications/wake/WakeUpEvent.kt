@@ -27,14 +27,15 @@ import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
 import com.vitorpamplona.quartz.nip01Core.hints.EventHintBundle
 import com.vitorpamplona.quartz.nip01Core.hints.EventHintProvider
+import com.vitorpamplona.quartz.nip01Core.hints.PubKeyHintProvider
 import com.vitorpamplona.quartz.nip01Core.hints.types.EventIdHint
+import com.vitorpamplona.quartz.nip01Core.hints.types.PubKeyHint
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.nip01Core.tags.events.ETag
 import com.vitorpamplona.quartz.nip01Core.tags.kinds.kind
 import com.vitorpamplona.quartz.nip01Core.tags.people.PTag
 import com.vitorpamplona.quartz.nip01Core.tags.people.toPTag
 import com.vitorpamplona.quartz.utils.TimeUtils
-import kotlinx.serialization.json.JsonNull.content
 
 @Immutable
 class WakeUpEvent(
@@ -45,10 +46,16 @@ class WakeUpEvent(
     content: String,
     sig: HexKey,
 ) : Event(id, pubKey, createdAt, KIND, tags, content, sig),
-    EventHintProvider {
+    EventHintProvider,
+    PubKeyHintProvider {
     override fun eventHints(): List<EventIdHint> = tags.mapNotNull(ETag::parseAsHint)
 
-    override fun linkedEventIds(): List<HexKey> = tags.mapNotNull(ETag::parseId)
+    override fun linkedEventIds(): List<HexKey> = eventIds()
+
+    // The subject events' authors ([authors]), with their home relays from `about.toPTag()`.
+    override fun pubKeyHints(): List<PubKeyHint> = tags.mapNotNull(PTag::parseAsHint)
+
+    override fun linkedPubKeys(): List<HexKey> = authorKeys()
 
     fun events() = tags.mapNotNull(ETag::parse)
 
@@ -88,7 +95,7 @@ class WakeUpEvent(
             about: EventHintBundle<Event>,
             createdAt: Long = TimeUtils.now(),
             initializer: TagArrayBuilder<WakeUpEvent>.() -> Unit = {},
-        ) = eventTemplate(KIND, content, createdAt) {
+        ) = eventTemplate(KIND, "", createdAt) {
             about(about)
             notify(about.toPTag())
             kind(about.event.kind)

@@ -30,4 +30,7 @@ interface BaseRepostEvent {
 
     /** The kind of the reposted (boosted) event, as declared in the `k` tag. */
     fun boostedKind(): Int?
+
+    /** The authors of the reposted event (`p`), in tag order. */
+    fun originalAuthorKeys(): List<HexKey>
 }

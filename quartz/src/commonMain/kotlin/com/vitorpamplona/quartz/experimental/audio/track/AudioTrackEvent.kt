@@ -29,8 +29,11 @@ import com.vitorpamplona.quartz.experimental.audio.track.tags.TypeTag
 import com.vitorpamplona.quartz.nip01Core.core.BaseAddressableEvent
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
+import com.vitorpamplona.quartz.nip01Core.hints.PubKeyHintProvider
+import com.vitorpamplona.quartz.nip01Core.hints.types.PubKeyHint
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.nip01Core.tags.dTag.dTag
+import com.vitorpamplona.quartz.nip01Core.tags.people.PTag
 import com.vitorpamplona.quartz.nip14Subject.SubjectTag
 import com.vitorpamplona.quartz.nip50Search.IndexableFieldVisitor
 import com.vitorpamplona.quartz.nip50Search.SearchableEvent
@@ -47,6 +50,7 @@ class AudioTrackEvent(
     content: String,
     sig: HexKey,
 ) : BaseAddressableEvent(id, pubKey, createdAt, KIND, tags, content, sig),
+    PubKeyHintProvider,
     SearchableEvent {
     // content is empty for audio tracks; the only free-text is the subject tag.
     override fun indexableContent() = listOfNotNull(subject()).joinToString("\n")
@@ -60,6 +64,14 @@ class AudioTrackEvent(
     fun subject() = tags.firstNotNullOfOrNull(SubjectTag::parse)
 
     fun participants() = tags.mapNotNull(ParticipantTag::parse)
+
+    /** The participants' pubkeys (every valid `p` tag, in tag order), without building [ParticipantTag]s. */
+    fun participantKeys(): List<HexKey> = tags.mapNotNull(ParticipantTag::parseKey)
+
+    // Participants are plain `p` tags, so the NIP-01 parsers read them (and validate the relay).
+    override fun pubKeyHints(): List<PubKeyHint> = tags.mapNotNull(PTag::parseAsHint)
+
+    override fun linkedPubKeys(): List<HexKey> = participantKeys()
 
     fun type() = tags.firstNotNullOfOrNull(TypeTag::parse)
 

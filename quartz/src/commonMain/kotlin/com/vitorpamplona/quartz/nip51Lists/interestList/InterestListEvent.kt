@@ -28,6 +28,7 @@ import com.vitorpamplona.quartz.nip01Core.core.TagArray
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
 import com.vitorpamplona.quartz.nip01Core.diff.DiffableEvent
 import com.vitorpamplona.quartz.nip01Core.diff.ListDiff
+import com.vitorpamplona.quartz.nip01Core.hints.AddressHintProvider
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerSync
 import com.vitorpamplona.quartz.nip01Core.signers.SignerExceptions
@@ -50,7 +51,12 @@ class InterestListEvent(
     content: String,
     sig: HexKey,
 ) : PrivateTagArrayEvent(id, pubKey, createdAt, KIND, tags, content, sig),
-    DiffableEvent<InterestListDiff> {
+    DiffableEvent<InterestListDiff>,
+    AddressHintProvider {
+    override fun addressHints() = tags.mapNotNull(AddressBookmark::parseAsHint)
+
+    override fun linkedAddressIds() = tags.mapNotNull(AddressBookmark::parseValidAddress)
+
     override fun diffFrom(older: Event): InterestListDiff? {
         if (older !is InterestListEvent || older.pubKey != pubKey || older.dTag() != dTag()) return null
         return InterestListDiff(

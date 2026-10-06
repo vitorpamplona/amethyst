@@ -21,6 +21,7 @@
 package com.vitorpamplona.quartz.nip03Timestamp.okhttp
 
 import com.vitorpamplona.quartz.nip01Core.jackson.JacksonMapper
+import com.vitorpamplona.quartz.nip03Timestamp.BitcoinExplorerUrls
 import com.vitorpamplona.quartz.nip03Timestamp.ots.BitcoinExplorer
 import com.vitorpamplona.quartz.nip03Timestamp.ots.BlockHeader
 import com.vitorpamplona.quartz.nip03Timestamp.ots.OtsBlockHeightCache
@@ -116,9 +117,9 @@ class OkHttpBitcoinExplorer(
 
     companion object {
         // doesn't accept Tor
-        const val BLOCKSTREAM_API_URL = "https://blockstream.info/api"
+        const val BLOCKSTREAM_API_URL = BitcoinExplorerUrls.BLOCKSTREAM
 
         // accepts Tor
-        const val MEMPOOL_API_URL = "https://mempool.space/api/"
+        const val MEMPOOL_API_URL = BitcoinExplorerUrls.MEMPOOL
     }
 }

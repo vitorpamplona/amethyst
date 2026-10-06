@@ -115,15 +115,14 @@ object VideoCredits {
         index: Int,
     ): NormalizedRelayUrl? {
         if (!tag.has(index)) return null
-        if (tag[index].length <= 7 || !RelayUrlNormalizer.isRelayUrl(tag[index])) return null
-        return RelayUrlNormalizer.normalizeOrNull(tag[index])
+        return RelayUrlNormalizer.normalizeHintOrNull(tag[index])
     }
 
     // Slot 2 is either a relay hint or the label itself; the label follows it when it is a relay.
     private fun labelAfterOptionalRelay(tag: Array<String>): String? {
         val slot2 = tag.getOrNull(2)
         val label =
-            if (slot2 != null && slot2.length > 7 && RelayUrlNormalizer.isRelayUrl(slot2)) {
+            if (RelayUrlNormalizer.normalizeHintOrNull(slot2) != null) {
                 tag.getOrNull(3)
             } else {
                 slot2

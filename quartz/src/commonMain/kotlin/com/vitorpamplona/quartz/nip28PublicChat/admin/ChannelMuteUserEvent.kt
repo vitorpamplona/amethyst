@@ -24,13 +24,16 @@ import androidx.compose.runtime.Immutable
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
 import com.vitorpamplona.quartz.nip01Core.hints.EventHintBundle
+import com.vitorpamplona.quartz.nip01Core.hints.EventHintProvider
 import com.vitorpamplona.quartz.nip01Core.hints.PubKeyHintProvider
+import com.vitorpamplona.quartz.nip01Core.hints.types.EventIdHint
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.nip01Core.tags.people.PTag
 import com.vitorpamplona.quartz.nip01Core.tags.people.pTags
 import com.vitorpamplona.quartz.nip01Core.tags.people.taggedUserIds
 import com.vitorpamplona.quartz.nip28PublicChat.base.BasePublicChatEvent
 import com.vitorpamplona.quartz.nip28PublicChat.base.channel
+import com.vitorpamplona.quartz.nip50Search.SearchableEvent
 import com.vitorpamplona.quartz.utils.TimeUtils
 
 @Immutable
@@ -42,10 +45,23 @@ class ChannelMuteUserEvent(
     content: String,
     sig: HexKey,
 ) : BasePublicChatEvent(id, pubKey, createdAt, KIND, tags, content, sig),
-    PubKeyHintProvider {
+    PubKeyHintProvider,
+    EventHintProvider,
+    SearchableEvent {
+    // NIP-28: the content carries the moderator's human-written reason for muting.
+    override fun indexableContent() = reason() ?: ""
+
+    /** The reason for muting: the `reason` of NIP-28's JSON content, or the plain-text content. */
+    fun reason(): String? = moderationReason(content)
+
     override fun pubKeyHints() = tags.mapNotNull(PTag::parseAsHint)
 
-    override fun linkedPubKeys() = tags.mapNotNull(PTag::parseKey)
+    override fun linkedPubKeys() = usersToMute()
+
+    // The channel the mute applies to, from its root `e` tag.
+    override fun eventHints(): List<EventIdHint> = listOfNotNull(channel()?.let { channel -> channel.relay?.let { EventIdHint(channel.eventId, it) } })
+
+    override fun linkedEventIds(): List<HexKey> = listOfNotNull(channelId())
 
     fun usersToMute() = tags.taggedUserIds()
 

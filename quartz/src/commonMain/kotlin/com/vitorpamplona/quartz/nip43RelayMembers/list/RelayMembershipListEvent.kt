@@ -24,6 +24,8 @@ import androidx.compose.runtime.Immutable
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
+import com.vitorpamplona.quartz.nip01Core.hints.PubKeyHintProvider
+import com.vitorpamplona.quartz.nip01Core.hints.types.PubKeyHint
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.nip43RelayMembers.list.tags.RelayMember
 import com.vitorpamplona.quartz.nip70ProtectedEvts.protect
@@ -37,7 +39,18 @@ class RelayMembershipListEvent(
     tags: Array<Array<String>>,
     content: String,
     sig: HexKey,
-) : Event(id, pubKey, createdAt, KIND, tags, content, sig) {
+) : Event(id, pubKey, createdAt, KIND, tags, content, sig),
+    PubKeyHintProvider {
+    /** `member` tags carry no relay slot, so there is nothing to hint. */
+    override fun pubKeyHints() = emptyList<PubKeyHint>()
+
+    // Deliberately links no one, although every member is listed. The list arrives from
+    // the membership relay itself, and a provider's linked keys are recorded as reachable on the
+    // relay the event came from: that would advertise a (often private) relay as a hint for
+    // every member, and broadcasts would fall back to it for anyone without an inbox list. It
+    // would also cost O(members) on every relay copy. Read the list with members().
+    override fun linkedPubKeys() = emptyList<HexKey>()
+
     fun members() = tags.members()
 
     /** Members with the role ids (NIP-43 kind 33534 `d` tags) the relay assigned to each. */

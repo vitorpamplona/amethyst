@@ -20,7 +20,10 @@
  */
 package com.vitorpamplona.quartz.nip71Video.tags
 
+import com.vitorpamplona.quartz.nip01Core.core.AddressSerializer
 import com.vitorpamplona.quartz.nip01Core.core.has
+import com.vitorpamplona.quartz.nip01Core.hints.types.AddressHint
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
 import com.vitorpamplona.quartz.utils.ensure
 
 /**
@@ -62,6 +65,26 @@ data class TextTrackTag(
                 type = tag.getOrNull(3)?.ifBlank { null },
                 language = tag.getOrNull(4)?.ifBlank { null },
             )
+        }
+
+        /**
+         * The track's address when [ref] is an addressable coordinate (divine.video's
+         * `39307:<pubkey>:subtitles:<d>`), normalized; null for a URL ref. The digit check keeps
+         * Blossom URLs away from the address parser, which logs every miss.
+         */
+        fun parseAddressId(tag: Array<String>): String? {
+            ensure(tag.has(1)) { return null }
+            ensure(tag[0] == TAG_NAME) { return null }
+            ensure(tag[1].isNotEmpty() && tag[1][0].isDigit()) { return null }
+            return AddressSerializer.parse(tag[1])?.toValue()
+        }
+
+        /** [parseAddressId] paired with the relay in slot 2, when that slot holds a relay URL. */
+        fun parseAddressAsHint(tag: Array<String>): AddressHint? {
+            ensure(tag.has(2)) { return null }
+            val relay = RelayUrlNormalizer.normalizeHintOrNull(tag[2]) ?: return null
+            val address = parseAddressId(tag) ?: return null
+            return AddressHint(address, relay)
         }
 
         fun assemble(

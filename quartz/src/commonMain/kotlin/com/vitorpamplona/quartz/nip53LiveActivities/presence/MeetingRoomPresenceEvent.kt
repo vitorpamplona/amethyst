@@ -50,7 +50,8 @@ class MeetingRoomPresenceEvent(
     AddressHintProvider {
     override fun addressHints(): List<AddressHint> = tags.mapNotNull(MeetingSpaceTag::parseAsHint)
 
-    override fun linkedAddressIds(): List<String> = tags.mapNotNull(MeetingSpaceTag::parseAddressId)
+    // A presence names one room: its single `a`.
+    override fun linkedAddressIds(): List<String> = listOfNotNull(interactiveRoom()?.address?.toValue())
 
     fun interactiveRoom() = tags.firstNotNullOfOrNull(MeetingSpaceTag::parse)
 

@@ -81,7 +81,18 @@
     "translators": [
       {
         "user": "vitorpamplona",
-        "languages": []
+        "languages": [
+          "Czech",
+          "German",
+          "Portuguese, Brazilian",
+          "Swedish"
+        ]
+      },
+      {
+        "user": "raj2516",
+        "languages": [
+          "Hindi"
+        ]
       },
       {
         "user": "greenart7c3",
@@ -224,10 +235,6 @@
         "languages": []
       },
       {
-        "user": "raj2516",
-        "languages": []
-      },
-      {
         "user": "Maxblake",
         "languages": []
       },
@@ -253,7 +260,9 @@
       },
       {
         "user": "summoner001",
-        "languages": []
+        "languages": [
+          "Hungarian"
+        ]
       },
       {
         "user": "fiddleway",

@@ -33,12 +33,8 @@ import com.vitorpamplona.quartz.nip01Core.signers.EventTemplate
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.nip01Core.tags.aTag.ATag
-import com.vitorpamplona.quartz.nip01Core.tags.aTag.firstTaggedATag
-import com.vitorpamplona.quartz.nip01Core.tags.aTag.firstTaggedAddress
 import com.vitorpamplona.quartz.nip01Core.tags.events.ETag
-import com.vitorpamplona.quartz.nip01Core.tags.events.firstTaggedEvent
 import com.vitorpamplona.quartz.nip01Core.tags.people.PTag
-import com.vitorpamplona.quartz.nip01Core.tags.people.firstTaggedUserId
 import com.vitorpamplona.quartz.nip01Core.tags.references.HttpUrlFormatter
 import com.vitorpamplona.quartz.nip01Core.tags.references.ReferenceTag
 import com.vitorpamplona.quartz.nip10Notes.BaseThreadedEvent
@@ -73,13 +69,13 @@ class HighlightEvent(
     AddressHintProvider,
     PubKeyHintProvider,
     SearchableEvent {
-    override fun indexableContent() = listOfNotNull(comment(), context(), content).joinToString("\n")
+    override fun indexableContent() = listOfNotNull(comment(), searchableContext(), content).joinToString("\n")
 
     // The read path: hands over the same fields indexableContent() joins, without
     // building the joined string a scan would throw away.
     override fun forEachIndexableField(visitor: IndexableFieldVisitor) {
         if (!visitor.visit(comment())) return
-        if (!visitor.visit(context())) return
+        if (!visitor.visit(searchableContext())) return
         visitor.visit(content)
     }
 
@@ -91,12 +87,13 @@ class HighlightEvent(
         return eHints + qHints + nip19Hints
     }
 
+    // NIP-84 names one nostr source (`e` and/or `a`); quotes and NIP-19 citations come on top.
     override fun linkedEventIds(): List<HexKey> {
-        val eHints = tags.mapNotNull(ETag::parseId)
-        val qHints = tags.mapNotNull(QTag::parseEventId)
-        val nip19Hints = citedNIP19().eventIds()
-
-        return eHints + qHints + nip19Hints
+        val ids = ArrayList<HexKey>()
+        inPostVersion()?.let { ids.add(it.eventId) }
+        quotedEvents().mapTo(ids) { it.eventId }
+        ids.addAll(citedNIP19().eventIds())
+        return ids
     }
 
     override fun addressHints(): List<AddressHint> {
@@ -108,11 +105,11 @@ class HighlightEvent(
     }
 
     override fun linkedAddressIds(): List<String> {
-        val aHints = tags.mapNotNull(ATag::parseAddressId)
-        val qHints = tags.mapNotNull(QTag::parseAddressId)
-        val nip19Hints = citedNIP19().addressIds()
-
-        return aHints + qHints + nip19Hints
+        val ids = ArrayList<String>()
+        inPostAddress()?.let { ids.add(it.toValue()) }
+        quotedAddresses().mapTo(ids) { it.address.toValue() }
+        ids.addAll(citedNIP19().addressIds())
+        return ids
     }
 
     override fun pubKeyHints(): List<PubKeyHint> {
@@ -168,14 +165,9 @@ class HighlightEvent(
      * Without this the first `p` tag wins regardless of role, so a highlight that mentions
      * other users before the author is attributed to a mention instead of the real author.
      */
-    fun author() =
-        tags.firstNotNullOfOrNull { tag ->
-            if (tag.size > 3 && tag[0] == PTag.TAG_NAME && tag[3] == AUTHOR_MARKER && tag[1].isNotEmpty()) {
-                tag[1]
-            } else {
-                null
-            }
-        } ?: firstTaggedUserId()
+    fun author(): HexKey? =
+        tags.firstNotNullOfOrNull { tag -> if (tag.getOrNull(3) == AUTHOR_MARKER) PTag.parseKey(tag) else null }
+            ?: tags.firstNotNullOfOrNull(PTag::parseKey)
 
     fun quote() = content
 
@@ -210,11 +202,35 @@ class HighlightEvent(
         return prefix + content + suffix
     }
 
-    fun inPost() = firstTaggedATag()
+    /**
+     * The surrounding text worth indexing: the `context` tag, or -- when a web highlighter wrote
+     * only a `textquoteselector` -- its prefix and suffix. Unlike [contextOrReconstructed] the
+     * highlight itself is left out, since [content] is indexed on its own.
+     *
+     * Computed once per instance: search reads it per event per keystroke, and building it
+     * re-parses the selector and runs a regex over both halves.
+     */
+    fun searchableContext(): String? = searchableContextValue
 
-    fun inPostAddress() = firstTaggedAddress()
+    // Lazy rather than a nullable cache field, because null is itself a valid, cacheable answer.
+    private val searchableContextValue by lazy(LazyThreadSafetyMode.PUBLICATION) { computeSearchableContext() }
 
-    fun inPostVersion() = firstTaggedEvent()
+    private fun computeSearchableContext(): String? {
+        context()?.let { return it }
+
+        val selector = textQuoteSelector() ?: return null
+        return listOfNotNull(selector.prefix, selector.suffix)
+            .map { it.replace(WHITESPACE_RUN, " ").trim() }
+            .filter { it.isNotEmpty() }
+            .joinToString(" ")
+            .ifEmpty { null }
+    }
+
+    fun inPost() = tags.firstNotNullOfOrNull(ATag::parse)
+
+    fun inPostAddress() = tags.firstNotNullOfOrNull(ATag::parseAddress)
+
+    fun inPostVersion() = tags.firstNotNullOfOrNull(ETag::parse)
 
     companion object {
         const val KIND = 9802

@@ -21,10 +21,12 @@
 package com.vitorpamplona.quartz.buzz.stream
 
 import androidx.compose.runtime.Immutable
+import com.vitorpamplona.quartz.buzz.stream.tags.DescriptionTag
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
+import com.vitorpamplona.quartz.nip50Search.SearchableEvent
 import com.vitorpamplona.quartz.utils.TimeUtils
 
 /**
@@ -43,7 +45,14 @@ class StreamMessageDiffEvent(
     tags: Array<Array<String>>,
     content: String,
     sig: HexKey,
-) : Event(id, pubKey, createdAt, KIND, tags, content, sig) {
+) : Event(id, pubKey, createdAt, KIND, tags, content, sig),
+    SearchableEvent {
+    // The body is a unified diff (code, not prose); only the human summary is indexed.
+    override fun indexableContent() = description() ?: ""
+
+    /** The human-readable summary of the change - the `description` tag. */
+    fun description(): String? = tags.firstNotNullOfOrNull(DescriptionTag::parse)
+
     fun channel() = tags.channel()
 
     fun diffMeta() = tags.diffMeta()

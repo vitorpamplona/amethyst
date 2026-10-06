@@ -26,7 +26,6 @@ import com.vitorpamplona.quartz.nip01Core.hints.EventHintBundle
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.signers.EventTemplate
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
-import com.vitorpamplona.quartz.nip01Core.tags.people.taggedUserIds
 import com.vitorpamplona.quartz.nip09Deletions.DeletionRequestEvent
 import com.vitorpamplona.quartz.nip10Notes.TextNoteEvent
 import com.vitorpamplona.quartz.nip17Dm.files.ChatMessageEncryptedFileHeaderEvent
@@ -226,7 +225,7 @@ class NIP17Factory {
         val wraps =
             createWraps(
                 senderNote,
-                senderNote.taggedUserIds().plus(signer.pubKey).toSet(),
+                senderNote.mentionKeys().plus(signer.pubKey).toSet(),
                 signer,
                 wrapTemplateConversion = wrapTemplateConversion,
             )

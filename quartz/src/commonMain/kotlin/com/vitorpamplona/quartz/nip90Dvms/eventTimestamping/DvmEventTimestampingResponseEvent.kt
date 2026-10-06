@@ -21,10 +21,11 @@
 package com.vitorpamplona.quartz.nip90Dvms.eventTimestamping
 
 import androidx.compose.runtime.Immutable
-import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
+import com.vitorpamplona.quartz.nip90Dvms.DvmResponseEvent
+import com.vitorpamplona.quartz.utils.Hex
 import com.vitorpamplona.quartz.utils.TimeUtils
 
 @Immutable
@@ -35,8 +36,11 @@ class DvmEventTimestampingResponseEvent(
     tags: Array<Array<String>>,
     content: String,
     sig: HexKey,
-) : Event(id, pubKey, createdAt, KIND, tags, content, sig) {
+) : DvmResponseEvent(id, pubKey, createdAt, KIND, tags, content, sig) {
     fun otsEventId(): HexKey? = content.ifEmpty { null }
+
+    // The id in `content` is an event pointer too (no relay slot, so linked only).
+    override fun linkedEventIds(): List<HexKey> = super.linkedEventIds() + listOfNotNull(otsEventId()?.takeIf { it.length == 64 && Hex.isHex64(it) })
 
     companion object {
         const val KIND = 6900
