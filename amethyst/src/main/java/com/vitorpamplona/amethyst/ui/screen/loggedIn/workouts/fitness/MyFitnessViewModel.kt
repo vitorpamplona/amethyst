@@ -23,9 +23,9 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn.workouts.fitness
 import android.content.Context
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.Stable
-import androidx.core.content.edit
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.vitorpamplona.amethyst.LocalPreferences
 import com.vitorpamplona.amethyst.commons.fitness.DetectedWorkout
 import com.vitorpamplona.amethyst.commons.fitness.FitnessGoals
 import com.vitorpamplona.amethyst.commons.fitness.FitnessInsights
@@ -33,6 +33,8 @@ import com.vitorpamplona.amethyst.commons.fitness.TrainingLog
 import com.vitorpamplona.amethyst.commons.fitness.WorkoutStats
 import com.vitorpamplona.amethyst.service.workouts.health.HealthConnectManager
 import com.vitorpamplona.amethyst.service.workouts.health.publishedWorkoutsOf
+import com.vitorpamplona.quartz.nip01Core.core.hexToByteArray
+import com.vitorpamplona.quartz.nip19Bech32.toNpub
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.Job
@@ -125,7 +127,8 @@ class MyFitnessViewModel : ViewModel() {
      */
     private val goals = MutableStateFlow<FitnessGoals?>(null)
 
-    private var goalsStore: FitnessGoalsPreferences? = null
+    // The account's goals store, from its own preference DataStore (see FitnessGoalsStore).
+    private fun goalsStore(pubkeyHex: String) = LocalPreferences.fitnessGoalsStore(pubkeyHex.hexToByteArray().toNpub())
 
     /**
      * The user's published workouts, live. Re-subscribes on an account switch; a workout arriving
@@ -178,15 +181,14 @@ class MyFitnessViewModel : ViewModel() {
         this.pubkeyHex.value = pubkeyHex
         // Another account's goals must not stay up while this one's are read.
         goals.value = null
-        viewModelScope.launch { loadGoals(context) }
+        viewModelScope.launch { loadGoals() }
     }
 
     /** Saves new weekly goals for this account; the dashboard re-derives from them at once. */
     fun updateGoals(newGoals: FitnessGoals) {
         val me = pubkeyHex.value ?: return
         goals.value = newGoals
-        val store = goalsStore ?: return
-        viewModelScope.launch(Dispatchers.IO) { store.save(me, newGoals) }
+        viewModelScope.launch(Dispatchers.IO) { goalsStore(me).save(newGoals) }
     }
 
     /**
@@ -200,7 +202,7 @@ class MyFitnessViewModel : ViewModel() {
         refreshJob?.cancel()
         refreshJob =
             viewModelScope.launch {
-                loadGoals(context)
+                loadGoals()
                 val status = healthConnectStatus(context)
                 val hc = manager
 
@@ -226,13 +228,12 @@ class MyFitnessViewModel : ViewModel() {
             }
     }
 
-    private suspend fun loadGoals(context: Context) {
+    private suspend fun loadGoals() {
         val me = pubkeyHex.value ?: return
         if (goals.value != null) return
         val loaded =
             withContext(Dispatchers.IO) {
-                val store = goalsStore ?: FitnessGoalsPreferences(context.applicationContext).also { goalsStore = it }
-                store.load(me)
+                goalsStore(me).load()
             }
         // An account switch while reading: the newer read owns the slot.
         if (pubkeyHex.value == me && goals.value == null) goals.value = loaded
@@ -289,24 +290,4 @@ data class HealthConnectContribution(
                 metricsPending = read.metricsPending,
             )
         }
-}
-
-/**
- * Where the weekly goals live: a private, per-account SharedPreferences entry on this device.
- *
- * Deliberately not a Nostr event yet. Goals are personal, and a public one would broadcast a
- * health target; syncing them across devices belongs in an encrypted NIP-78 app-data event, which
- * is the follow-up in `commons/plans/2026-10-06-my-fitness-redesign.md`.
- */
-class FitnessGoalsPreferences(
-    context: Context,
-) {
-    private val prefs = context.getSharedPreferences("my_fitness_goals", Context.MODE_PRIVATE)
-
-    fun load(pubkeyHex: String): FitnessGoals = FitnessGoals.decode(prefs.getString(pubkeyHex, null))
-
-    fun save(
-        pubkeyHex: String,
-        goals: FitnessGoals,
-    ) = prefs.edit { putString(pubkeyHex, goals.encode()) }
 }

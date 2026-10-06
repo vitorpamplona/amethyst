@@ -24,6 +24,7 @@ import android.content.Context
 import android.content.SharedPreferences
 import androidx.compose.runtime.Immutable
 import androidx.core.content.edit
+import com.vitorpamplona.amethyst.commons.fitness.FitnessGoalsStore
 import com.vitorpamplona.amethyst.commons.model.AccountSettings
 import com.vitorpamplona.amethyst.commons.model.HomeFeedType
 import com.vitorpamplona.amethyst.commons.model.UiSettings
@@ -297,6 +298,9 @@ object LocalPreferences {
     }
 
     private fun followListStore(npub: String) = TopNavFollowListStore(accountStores.getDataStore(npub))
+
+    /** My Fitness weekly goals, in the account's own preference store. */
+    fun fitnessGoalsStore(npub: String) = FitnessGoalsStore(accountStores.getDataStore(npub))
 
     private fun latestEventStore(npub: String) = LatestEventCacheStore(accountStores.getDataStore(npub))
 
