@@ -570,27 +570,25 @@ reads an optional per-release changelog from
 
 ## Bootstrap runbook (one-time)
 
-> **Status as of v1.16.0:** both Homebrew packages are now live upstream — the
-> `amethyst-nostr` cask (`Homebrew/homebrew-cask`, at 1.14.0) and the `amy`
-> formula (`Homebrew/homebrew-core`) both answer 200 on `formulae.brew.sh`, so
-> `bump-homebrew.yml` finally has something to bump. **Winget is still not
-> bootstrapped**: [microsoft/winget-pkgs#422752](https://github.com/microsoft/winget-pkgs/pull/422752)
-> is open pending CLA + review, and
-> `microsoft/winget-pkgs/manifests/v/VitorPamplona/Amethyst` still 404s. Neither
-> is the `geode-relay` formula, which has never been submitted. Those two bump
-> workflows detect the absence and skip with a `::warning::` instead of failing,
-> so a green release run does *not* mean they shipped; treat the desktop app as
-> GitHub-Releases-only on **Windows**.
+> **Status as of v1.17.0:** the cask, the `amy` formula and winget are all live
+> upstream. The `amethyst-nostr` cask (`Homebrew/homebrew-cask`) and the `amy`
+> formula (`Homebrew/homebrew-core`) are both on Homebrew's **autobump** list, so
+> BrewTestBot opens their version PRs itself. Winget's initial submission,
+> [microsoft/winget-pkgs#422752](https://github.com/microsoft/winget-pkgs/pull/422752),
+> merged on 2026-09-23. Only the `geode-relay` formula has never been submitted;
+> its sync workflow detects the absence and skips with a `::warning::`.
 
 ### Package-manager credentials (and why there are none)
 
 The full secret inventory is in [§ Secrets the CI needs](#secrets-the-ci-needs).
 Neither package-manager channel adds anything to it:
 
-**There are deliberately no package-manager PATs in CI.** Both the Homebrew
-cask and the Winget manifest bumps run on a maintainer's machine. The reasoning
-is worth keeping, because it is the reason this repo has no third secret to
-rotate:
+**There are deliberately no package-manager PATs in CI.** The cask is on
+Homebrew's autobump list, so BrewTestBot opens its version PR and nothing of
+ours pushes to `homebrew-cask` at all; the Winget bump runs on a maintainer's
+machine with `gh` auth. The reasoning below still matters, because it is what
+the cask script falls back to if Homebrew ever takes the cask off autobump, and
+it is why this repo has no third secret to rotate:
 
 `brew bump-cask-pr` forks `Homebrew/homebrew-cask` **into the token owner's
 account** (`POST /repos/Homebrew/homebrew-cask/forks`), pushes a branch to that
@@ -616,15 +614,25 @@ So the split is:
   bookkeeping: downloads the DMG, asserts it is notarized + stapled, computes
   the sha256, and opens an in-repo PR syncing
   `desktopApp/packaging/homebrew/amethyst-nostr.rb`.
-- **A maintainer** merges that PR and runs `scripts/bump-homebrew-cask.sh`,
-  which re-verifies the sha256 and the notarization ticket against the live
-  asset before calling `brew bump-cask-pr`.
+- **BrewTestBot** opens the `homebrew-cask` version PR, because the cask is
+  autobumped (`autobump: true` in `formulae.brew.sh/api/cask/amethyst-nostr.json`).
+  `brew bump-cask-pr` refuses to open a competing PR for an autobumped cask.
+- **A maintainer** merges the sync PR and runs `scripts/bump-homebrew-cask.sh`.
+  BrewTestBot computes its own sha256 and never checks notarization, so the
+  script re-verifies the live DMG's sha256 and stapled ticket, finds the bot's
+  PR, and fails if the sha256 in it differs from ours. No token is needed:
 
-The token then lives only in that maintainer's shell:
+```bash
+scripts/bump-homebrew-cask.sh v1.17.0     # verify only; re-run if the PR is not open yet
+```
+
+Only if the cask is ever taken off autobump does the script call
+`brew bump-cask-pr` itself, and then the token lives only in that maintainer's
+shell:
 
 ```bash
 export HOMEBREW_GITHUB_API_TOKEN=ghp_...   # classic PAT, `repo` scope
-scripts/bump-homebrew-cask.sh v1.16.0
+scripts/bump-homebrew-cask.sh v1.17.0
 ```
 
 Create one at

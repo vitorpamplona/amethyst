@@ -22,7 +22,8 @@ A release is one tag push that fans out to four live distribution channels:
 | **Google Play** | **Manual** — download the signed AAB from the GH Release, upload in Play Console | Maintainer |
 | **F-Droid** | **Pull** — F-Droid's build server builds the `fdroid` flavor from source when it sees the new tag | F-Droid (we just maintain the recipe + metadata) |
 | **Zapstore** | `zsp publish` reads `zapstore.yaml`, signs a Nostr release event with Amethyst's nsec | Maintainer |
-| **Homebrew + Winget** | ⚠️ **Not shipping.** The bump workflows run, but skip: neither package exists upstream yet | Nobody (see § 3) |
+| **Homebrew** | **Autobump** — BrewTestBot opens the `amethyst-nostr` cask and `amy` formula PRs itself; `scripts/bump-homebrew-cask.sh` only verifies | Homebrew (we verify) |
+| **Winget** | `scripts/bump-winget.sh` opens the `winget-pkgs` PR with your `gh` auth | Maintainer |
 
 Maven Central (the `quartz` library) also publishes automatically from the same
 workflow — as a *step* at the end of the `deploy-android` job, not a job of its
@@ -195,26 +196,33 @@ RELAY_URLS="wss://relay.zapstore.dev,wss://nos.lol,wss://nostr.mom,wss://vitor.n
 Keep `wss://relay.zapstore.dev` in the list — that is the relay the Zapstore app
 itself reads from.
 
-### Homebrew + Winget — ⚠️ Winget not shipping yet
+### Homebrew + Winget
 
-`bump-homebrew.yml` and `bump-winget.yml` are wired to open PRs against
-`Homebrew/homebrew-cask` (cask `amethyst-nostr`), `Homebrew/homebrew-core`
-(formula `amy`) and `microsoft/winget-pkgs` (`VitorPamplona.Amethyst`). They can
-only *update* a package that already exists upstream, so until the one-time
-bootstrap lands they detect the absence and skip with a `::warning::`.
-
-Bootstrap status:
+The in-repo sync workflows (`bump-homebrew.yml`, `bump-homebrew-formula.yml`,
+`bump-homebrew-geode-formula.yml`, `bump-winget.yml`) keep the reference
+packaging files current. Upstream:
 
 | Channel | Upstream package | State |
 |---|---|---|
-| **Homebrew cask** | `Homebrew/homebrew-cask` → `amethyst-nostr` | **Live** — merged 2026-08-24, upstream at 1.14.0 |
-| **Homebrew formula** | `Homebrew/homebrew-core` → `amy` | **Live** |
+| **Homebrew cask** | `Homebrew/homebrew-cask` → `amethyst-nostr` | **Live, autobumped** — BrewTestBot opens the version PR (v1.17.0: [#292108](https://github.com/Homebrew/homebrew-cask/pull/292108)) |
+| **Homebrew formula** | `Homebrew/homebrew-core` → `amy` | **Live, autobumped** — BrewTestBot opens and merges the version PR (v1.17.0: [#315679](https://github.com/Homebrew/homebrew-core/pull/315679)) |
 | **Homebrew formula** | `Homebrew/homebrew-core` → `geode-relay` | Not submitted — renamed from `geode`, which is permanently reserved for Apache Geode |
-| **Winget** | `microsoft/winget-pkgs` → `VitorPamplona.Amethyst` | **Submitted at v1.14.0** — [PR #422752](https://github.com/microsoft/winget-pkgs/pull/422752), still open pending CLA + review |
+| **Winget** | `microsoft/winget-pkgs` → `VitorPamplona.Amethyst` | **Live** — initial [PR #422752](https://github.com/microsoft/winget-pkgs/pull/422752) merged 2026-09-23; bumped per release by `scripts/bump-winget.sh` |
 
-Until each lands, that channel delivers nothing and its users get the desktop
-app or CLI from GitHub Releases only. Re-check before assuming — the state above
-is a snapshot, and two calls answer it:
+**Homebrew is autobumped.** Both packages are on Homebrew's autobump list
+(`autobump: true` in `https://formulae.brew.sh/api/cask/amethyst-nostr.json` and
+`…/api/formula/amy.json`), so BrewTestBot opens each version-bump PR itself,
+roughly every 3 hours after the release, and `brew bump-cask-pr` **refuses** to
+open a competing one. There is nothing to push. What BrewTestBot does not do is
+check our DMG: it computes its own sha256 and never looks at notarization. So
+`scripts/bump-homebrew-cask.sh` now verifies instead of submitting — it
+re-checks the live DMG's sha256 and stapled notarization ticket, finds
+BrewTestBot's PR, and fails if the sha256 in that PR differs from ours. It
+needs no token. Only if Homebrew ever drops the cask from autobump does it fall
+back to `brew bump-cask-pr`, which needs `HOMEBREW_GITHUB_API_TOKEN` (classic
+PAT, `repo` scope) in your shell.
+
+The state above is a snapshot; re-check before assuming. Two calls answer it:
 `gh api repos/microsoft/winget-pkgs/contents/manifests/v/VitorPamplona` and
 `curl -s -o /dev/null -w '%{http_code}' https://formulae.brew.sh/api/cask/amethyst-nostr.json`
 (404 = still absent).
@@ -232,27 +240,20 @@ Two separate faults kept this invisible until v1.13.1, both now fixed:
    submission is a manual, human-reviewed PR: BUILDING.md § Homebrew cask
    (one-time initial PR) and § Winget (one-time initial submission).
 
-Until someone does that bootstrap, a green release run means the bump workflows
-*skipped cleanly* — not that Homebrew/Winget shipped. Check the run's warnings
-if you want to confirm which case you're in.
-
-**Both bumps are half-manual by design.** CI does the bookkeeping with
-`GITHUB_TOKEN` only — verifying the artifact, computing hashes, and opening an
-in-repo PR syncing the reference packaging files. Pushing upstream needs
-credentials that would be dangerous as CI secrets (a `repo`-scoped PAT is
-readable by anyone with push access here), so a maintainer runs the last step:
+CI does the bookkeeping with `GITHUB_TOKEN` only — verifying the artifact,
+computing hashes, and opening an in-repo PR syncing the reference packaging
+files. After merging those sync PRs, a maintainer runs:
 
 ```bash
-# after merging the sync PRs
-export HOMEBREW_GITHUB_API_TOKEN=ghp_...     # classic PAT, `repo` scope
-scripts/bump-homebrew-cask.sh v1.16.0
-
-scripts/bump-winget.sh v1.16.0               # no token — uses your `gh` auth
+git pull                                     # the scripts read the merged files
+scripts/bump-homebrew-cask.sh v1.17.0        # verify only; BrewTestBot opens the PR
+scripts/bump-winget.sh v1.17.0               # opens the winget-pkgs PR; uses your `gh` auth
 ```
 
-Both scripts re-verify the published artifact's sha256 before submitting, and
-the Homebrew one additionally refuses if the DMG is not notarized + stapled.
-See BUILDING.md § Package-manager credentials.
+Both scripts re-verify the published artifact's sha256 first, and the Homebrew
+one also refuses a DMG without a stapled notarization ticket. Run the Homebrew
+one again later if BrewTestBot has not opened its PR yet. See BUILDING.md
+§ Package-manager credentials.
 
 All four in-repo sync workflows (`amy` formula, `geode` formula,
 `amethyst-nostr` cask, winget manifests) open PRs against *this* repo on every
@@ -298,7 +299,7 @@ ownership:
 | `SIGNING_KEY`, `KEY_ALIAS`, `KEY_STORE_PASSWORD`, `KEY_PASSWORD` | The **Android upload keystore** — losing/leaking it is the worst case; Play app signing identity | Keep the keystore backed up offline; never rotate casually (Play upload key reset is a support process) |
 | `SONATYPE_USERNAME`, `SONATYPE_PASSWORD` | Maven Central namespace `com.vitorpamplona` | On compromise |
 | `SIGNING_PRIVATE_KEY`, `SIGNING_PASSWORD` | The **GPG key** signing Maven artifacts | Per GPG key expiry |
-| *(none for Homebrew/Winget)* | — | Both bumps run on a maintainer's machine — `scripts/bump-homebrew-cask.sh` and `scripts/bump-winget.sh` — so neither channel's PAT ever becomes a CI secret. See BUILDING.md § Package-manager credentials |
+| *(none for Homebrew/Winget)* | — | Homebrew is autobumped by BrewTestBot, and `scripts/bump-winget.sh` runs on a maintainer's machine with `gh` auth, so neither channel needs a CI secret. See BUILDING.md § Package-manager credentials |
 | `CROWDIN_PERSONAL_TOKEN`, `CROWDIN_PROJECT_ID` | Translation sync | On compromise |
 
 Owner assignments and rotation reminders live with the team (issue tracker).
@@ -319,11 +320,11 @@ Owner assignments and rotation reminders live with the team (issue tracker).
 - [ ] F-Droid: new version detected (may lag days).
 - [ ] Four sync PRs opened against this repo (`amy` formula, `geode` formula,
       `amethyst-nostr` cask, winget manifests) — merge them.
-- [ ] Cask pushed upstream: `scripts/bump-homebrew-cask.sh vX.Y.Z` (manual, needs
-      `HOMEBREW_GITHUB_API_TOKEN` in your shell).
+- [ ] Homebrew: `scripts/bump-homebrew-cask.sh vX.Y.Z` passes — DMG verified and
+      BrewTestBot's cask PR carries the same sha256 (no token; re-run later if
+      the bot has not opened it yet). `amy` needs nothing: BrewTestBot bumps it.
 - [ ] Winget pushed upstream: `scripts/bump-winget.sh vX.Y.Z` (manual, no token —
       uses your `gh` auth).
-      Both scripts error clearly until the one-time bootstrap PRs land (§ 3).
 - [ ] In-app "Release Notes" link opens the note matching `RELEASE_NOTES_ID`
       (only bumped on minor releases — patches keep pointing at the x.y.0 note).
 - [ ] Push still works on a `play` build (only if the push contract changed —
