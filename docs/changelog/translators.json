@@ -80,6 +80,12 @@
     "since": "2026-10-05T15:39:33-04:00",
     "translators": [
       {
+        "user": "raj2516",
+        "languages": [
+          "Hindi"
+        ]
+      },
+      {
         "user": "vitorpamplona",
         "languages": []
       },
@@ -224,10 +230,6 @@
         "languages": []
       },
       {
-        "user": "raj2516",
-        "languages": []
-      },
-      {
         "user": "Maxblake",
         "languages": []
       },
@@ -253,7 +255,9 @@
       },
       {
         "user": "summoner001",
-        "languages": []
+        "languages": [
+          "Hungarian"
+        ]
       },
       {
         "user": "fiddleway",
