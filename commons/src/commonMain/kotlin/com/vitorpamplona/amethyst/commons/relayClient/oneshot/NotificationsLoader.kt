@@ -26,6 +26,16 @@ import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
+import com.vitorpamplona.quartz.nip10Notes.TextNoteEvent
+import com.vitorpamplona.quartz.nip18Reposts.GenericRepostEvent
+import com.vitorpamplona.quartz.nip18Reposts.RepostEvent
+import com.vitorpamplona.quartz.nip22Comments.CommentEvent
+import com.vitorpamplona.quartz.nip25Reactions.ReactionEvent
+import com.vitorpamplona.quartz.nip28PublicChat.message.ChannelMessageEvent
+import com.vitorpamplona.quartz.nip57Zaps.ZapReceiptEvent
+import com.vitorpamplona.quartz.nip61Nutzaps.nutzap.NutzapEvent
+import com.vitorpamplona.quartz.nipB1Bolt12Zaps.zap.Bolt12ZapEvent
+import com.vitorpamplona.quartz.nipBCOnchainZaps.zap.OnchainZapEvent
 
 /**
  * One page of public notifications for an account over a [OneShotRelayAccess]: the
@@ -54,11 +64,15 @@ object NotificationsLoader {
         types: Set<String> = TYPES,
         timeoutMs: Long = 8_000,
     ): List<NotificationItem> {
+        val kinds = kindsFor(types)
+        if (kinds.isEmpty()) return emptyList()
         // Over-fetch: classification drops what only p-tags us in passing.
         val base = NotificationKinds.subscriptionFilter(me, limit = (limit * 2).coerceAtMost(500), since = since)
-        val filter = base.copy(kinds = NotificationKinds.PUBLIC_SUBSCRIPTION_KINDS, until = until)
+        val filter = base.copy(kinds = kinds, until = until)
 
-        val events = (access.query(filter) + access.fetch(relays, filter, timeoutMs).map { it.second }).distinctBy { it.id }
+        // Relays still serve what a relay that missed the kind:5 kept; the store's deletions win.
+        val fetched = access.fetch(relays, filter, timeoutMs).map { it.second }
+        val events = access.withoutStoredDeletions((access.query(filter) + fetched).distinctBy { it.id })
         val authoredByMe = targetsAuthoredBy(access, me, events, outboxRelays, timeoutMs)
         return events
             .asSequence()
@@ -69,6 +83,27 @@ object NotificationsLoader {
             .take(limit)
             .toList()
     }
+
+    /**
+     * The public subscription kinds that can classify as one of [types], so a narrowed request
+     * spends its limit on those kinds instead of on what will be dropped.
+     */
+    fun kindsFor(types: Set<String>): List<Int> = NotificationKinds.PUBLIC_SUBSCRIPTION_KINDS.filter { kind -> TYPES_BY_KIND[kind].orEmpty().any { it in types } }
+
+    /** What [NotificationItem.classify] can make of each public kind. */
+    private val TYPES_BY_KIND: Map<Int, Set<String>> =
+        mapOf(
+            TextNoteEvent.KIND to setOf("reply", "mention"),
+            CommentEvent.KIND to setOf("reply"),
+            ChannelMessageEvent.KIND to setOf("mention"),
+            ReactionEvent.KIND to setOf("reaction"),
+            RepostEvent.KIND to setOf("repost"),
+            GenericRepostEvent.KIND to setOf("repost"),
+            ZapReceiptEvent.KIND to setOf("zap"),
+            NutzapEvent.KIND to setOf("zap"),
+            OnchainZapEvent.KIND to setOf("zap"),
+            Bolt12ZapEvent.KIND to setOf("zap"),
+        )
 
     /**
      * The ids, among the targets of the reactions and reposts in [events], that [me]
@@ -85,11 +120,11 @@ object NotificationsLoader {
         val targets = events.mapNotNullTo(mutableSetOf()) { NotificationKinds.interactionTargetId(it) }
         if (targets.isEmpty()) return emptySet()
 
-        val known = access.query(Filter(ids = targets.toList())).associateByTo(mutableMapOf()) { it.id }
+        val known = targets.chunked(MAX_FILTER_VALUES).flatMap { access.query(Filter(ids = it)) }.associateByTo(mutableMapOf()) { it.id }
         val missing = targets - known.keys
-        if (missing.isNotEmpty()) {
-            val filter = Filter(ids = missing.toList(), authors = listOf(me))
-            access.fetch(outboxRelays, filter, timeoutMs).forEach { (_, event) -> known[event.id] = event }
+        if (missing.isNotEmpty() && outboxRelays.isNotEmpty()) {
+            val filters = missing.chunked(MAX_FILTER_VALUES).map { Filter(ids = it, authors = listOf(me)) }
+            access.fetch(outboxRelays.associateWith { filters }, timeoutMs).forEach { (_, event) -> known[event.id] = event }
         }
         return known.values.filter { it.pubKey == me }.mapTo(mutableSetOf()) { it.id }
     }

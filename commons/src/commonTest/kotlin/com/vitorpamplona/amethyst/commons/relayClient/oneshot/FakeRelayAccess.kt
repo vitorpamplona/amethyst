@@ -61,7 +61,13 @@ class FakeRelayAccess(
         requests += filters
         return filters
             .flatMap { (url, list) ->
-                relays[url].orEmpty().filter { event -> list.any { it.match(event) } }.map { url to it }
+                // Like a relay: each filter answers its newest matches, up to its limit.
+                list
+                    .flatMap { filter ->
+                        val matches = relays[url].orEmpty().filter { filter.match(it) }.sortedByDescending { it.createdAt }
+                        filter.limit?.let { matches.take(it) } ?: matches
+                    }.distinctBy { it.id }
+                    .map { url to it }
             }.also { received -> received.forEach { storeAll(it.second) } }
     }
 

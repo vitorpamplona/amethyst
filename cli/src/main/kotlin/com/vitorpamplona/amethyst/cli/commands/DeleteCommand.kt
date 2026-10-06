@@ -28,7 +28,7 @@ import com.vitorpamplona.amethyst.commons.actions.DeletionActions
 import com.vitorpamplona.amethyst.commons.relayClient.oneshot.EventLocator
 import com.vitorpamplona.amethyst.commons.relayClient.oneshot.EventRef
 import com.vitorpamplona.amethyst.commons.relayClient.oneshot.OneShotNoteCache
-import com.vitorpamplona.quartz.nip01Core.tags.people.taggedUserIds
+import com.vitorpamplona.quartz.nip29RelayGroups.isGroupScoped
 
 /**
  * `amy delete EVENT… [--relay URL,…] [--refresh] [--timeout SECS]` — NIP-09
@@ -72,10 +72,26 @@ object DeleteCommand {
             // target was routed when it was published: our own events are cache hits, so "where it
             // was seen" is usually unknown, and a reply also went to the inboxes it notified.
             val notes = OneShotNoteCache(access, timeoutMs)
-            notes.addUsers(located.flatMap { it.event.taggedUserIds() }, fetchMissing = true, alsoAsk = located.flatMap { it.seenOn })
             val targetNotes = located.mapNotNull { notes.add(it.event, it.seenOn) }
-            val planner = NoteSupport.planner(ctx, notes)
-            val relays = planner.computeDeletionRelays(targetNotes) + targetNotes.flatMap { planner.computeRelayListToBroadcast(it) } + extraRelays
+
+            // NIP-29 group content was only ever on its host, and a kind:5 carries no `h` tag for the
+            // planner to see: the deletion goes to the host alone, so it can't be mixed with others.
+            val (grouped, public) = located.partition { it.event.isGroupScoped() }
+            if (grouped.isNotEmpty() && public.isNotEmpty()) {
+                return Output.error("bad_args", "delete NIP-29 group content separately from other events")
+            }
+            grouped.forEach { NoteSupport.requireGroupHost(notes, it.event, extraRelays)?.let { code -> return code } }
+
+            val relays =
+                if (grouped.isNotEmpty()) {
+                    grouped.flatMapTo(mutableSetOf()) { notes.cache.relayGroupHostsFor(it.event) } + extraRelays
+                } else {
+                    // A list (a kind:3 tags every follow) was never routed to the people it names.
+                    notes.addUsers(located.flatMap { NoteSupport.addressedPeople(it.event) }, fetchMissing = true, alsoAsk = located.flatMap { it.seenOn })
+                    val planner = NoteSupport.planner(ctx, notes)
+                    val addressed = targetNotes.filter { note -> note.event?.let { NoteSupport.addressedPeople(it).size > 1 } == true }
+                    planner.computeDeletionRelays(targetNotes) + addressed.flatMap { planner.computeRelayListToBroadcast(it) } + extraRelays
+                }
 
             // Every chunk is published before deciding the outcome: an early return after chunk 1
             // would hide the deletions that did go out.

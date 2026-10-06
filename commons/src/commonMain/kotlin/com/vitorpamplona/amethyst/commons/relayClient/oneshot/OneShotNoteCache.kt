@@ -36,7 +36,6 @@ import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.signers.EventTemplate
 import com.vitorpamplona.quartz.nip01Core.tags.people.PTag
-import com.vitorpamplona.quartz.nip09Deletions.DeletionRequestEvent
 import com.vitorpamplona.quartz.nip10Notes.TextNoteEvent
 import com.vitorpamplona.quartz.nip10Notes.tags.notify
 import com.vitorpamplona.quartz.nip17Dm.settings.DmRelayListEvent
@@ -56,6 +55,9 @@ class OneShotNoteCache(
 ) {
     val cache = EventCache()
 
+    /** Users whose kind:10002 this cache already asked relays for: asking again in the same run cannot help. */
+    private val relayListsAsked = mutableSetOf<HexKey>()
+
     /**
      * Consumes [event] as seen on [relays] and returns its note (the addressable slot for an
      * addressable event), or null when a deletion already loaded into the cache covers it.
@@ -71,23 +73,23 @@ class OneShotNoteCache(
         val first = relays.firstOrNull()
         if (!cache.checkDeletionAndConsume(event, first, true) && cache.deletionIndex.hasBeenDeleted(event)) return null
         val note = noteOf(event)
+        // Consuming hints the first relay for the event and what it links to; every relay that
+        // served it is also where its author publishes.
         relays.forEach { relay ->
             note?.addRelay(relay)
-            if (relay != first) cache.relayHints.addKey(event.pubKey, relay)
+            if (relay != first) cache.addIncomingRelayAsHintToAllRelatedEvents(event, relay)
+            cache.relayHints.addKey(event.pubKey, relay)
         }
         return note
     }
 
     /**
-     * Adds [events] after the deletions the store holds for them, so an event we (or its
-     * author) deleted never comes back from a relay that missed the kind:5.
+     * Adds [events] after the deletions the store holds for them (by id and by address), so
+     * an event we (or its author) deleted never comes back from a relay that missed the kind:5.
      */
     suspend fun addAll(events: Collection<Pair<NormalizedRelayUrl?, Event>>) {
         if (events.isEmpty()) return
-        val ids = events.mapTo(mutableSetOf()) { it.second.id }
-        ids.chunked(DELETION_CHUNK).forEach { chunk ->
-            access.query(Filter(kinds = listOf(DeletionRequestEvent.KIND), tags = mapOf("e" to chunk))).forEach { add(it) }
-        }
+        access.storedDeletionsFor(events.map { it.second }).forEach { add(it) }
         events.forEach { (relay, event) -> add(event, listOfNotNull(relay)) }
     }
 
@@ -111,16 +113,19 @@ class OneShotNoteCache(
         val wanted = pubKeys.filterTo(mutableSetOf()) { it.isValid() }.toList()
         if (wanted.isEmpty()) return
         val kinds = listOf(MetadataEvent.KIND, AdvertisedRelayListEvent.KIND, DmRelayListEvent.KIND)
-        val known = access.query(Filter(authors = wanted, kinds = kinds))
+        val known = wanted.chunked(MAX_FILTER_VALUES).flatMap { access.query(Filter(authors = it, kinds = kinds)) }
         known.forEach { add(it) }
         if (fetchMissing) {
             val withList = known.mapNotNullTo(mutableSetOf()) { if (it is AdvertisedRelayListEvent) it.pubKey else null }
-            val missing = wanted.filter { it !in withList }
+            val missing = wanted.filter { it !in withList && relayListsAsked.add(it) }
             if (missing.isNotEmpty()) {
-                val filter = Filter(authors = missing, kinds = listOf(AdvertisedRelayListEvent.KIND))
-                access.fetch(access.bootstrapRelays() + alsoAsk, filter, timeoutMs)
+                val relays = access.bootstrapRelays() + alsoAsk
+                val listKind = listOf(AdvertisedRelayListEvent.KIND)
+                access.fetch(relays.associateWith { missing.chunked(MAX_FILTER_VALUES).map { Filter(authors = it, kinds = listKind) } }, timeoutMs)
                 // From the store, not the response: it keeps only the newest list per author.
-                access.query(Filter(authors = missing, kinds = listOf(AdvertisedRelayListEvent.KIND))).forEach { add(it) }
+                missing.chunked(MAX_FILTER_VALUES).forEach { chunk ->
+                    access.query(Filter(authors = chunk, kinds = listKind)).forEach { add(it) }
+                }
             }
         }
     }
@@ -162,8 +167,4 @@ class OneShotNoteCache(
     }
 
     private fun noteOf(event: Event): Note? = if (event is AddressableEvent) cache.getAddressableNoteIfExists(event.address()) else cache.getNoteIfExists(event.id)
-
-    private companion object {
-        const val DELETION_CHUNK = 500
-    }
 }

@@ -62,7 +62,7 @@ object ProfileLoader {
             }
         }
 
-        collect(access.query(Filter(authors = wanted.toList(), kinds = listOf(MetadataEvent.KIND))))
+        wanted.chunked(MAX_FILTER_VALUES).forEach { collect(access.query(Filter(authors = it, kinds = listOf(MetadataEvent.KIND)))) }
 
         val missing = (wanted - profiles.keys).take(MAX_PROFILE_FETCH)
         if (fetchMissing && missing.isNotEmpty()) {

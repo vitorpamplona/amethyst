@@ -37,6 +37,7 @@ import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.hints.EventHintBundle
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.tags.people.taggedUserIds
+import com.vitorpamplona.quartz.nip29RelayGroups.isGroupScoped
 
 /**
  * `amy notes reply|quote|react|repost EVENT …` — the interactions on an existing
@@ -85,6 +86,7 @@ object NoteActionCommands {
             // Exactly the app's quote: the composer's pre-filled text, posted as a note.
             build = { ctx, notes, target, _ -> ctx.signer.sign(notes.textNote(notes.tag(quoteMessage(text, target).trim()))) },
             route = { planner, _, _, mine -> planner.computeRelayListToBroadcast(mine) },
+            scopesToGroup = false,
         )
     }
 
@@ -121,6 +123,8 @@ object NoteActionCommands {
             ref,
             build = { ctx, _, _, hint -> RepostAction.repost(hint, ctx.signer) },
             route = { planner, target, signed, _ -> planner.computeMyReactionToNote(target, signed) },
+            // A repost embeds the whole event: of group content, that is the group's message in public.
+            scopesToGroup = false,
         )
     }
 
@@ -130,6 +134,8 @@ object NoteActionCommands {
         refInput: String,
         build: suspend (Context, OneShotNoteCache, target: Note, hint: EventHintBundle<Event>) -> Event,
         route: (BroadcastRelayPlanner, target: Note, signed: Event, mine: Note) -> Set<NormalizedRelayUrl>,
+        /** Whether the event built stays in the target's NIP-29 group (it copies the `h` tag). A repost or quote does not. */
+        scopesToGroup: Boolean = true,
     ): Int {
         val extraRelays = RawEventSupport.relayFlag(args)
         val refresh = args.bool("refresh")
@@ -149,18 +155,21 @@ object NoteActionCommands {
             val targetNote =
                 notes.add(target.event, target.seenOn)
                     ?: return Output.error("not_found", "event not found: $refInput")
+            if (!scopesToGroup && target.event.isGroupScoped()) {
+                return Output.error("bad_args", "event ${target.event.id} is NIP-29 group content; this would publish it outside its group")
+            }
+            NoteSupport.requireGroupHost(notes, target.event, extraRelays)?.let { return it }
+
+            // Everyone the app would notify must be reachable: the target's author and the people
+            // it addresses, also asking where the target was seen (its author's list is likely
+            // there). Before building, so the tags carry the hints the app's would.
+            notes.addUsers(NoteSupport.addressedPeople(target.event), fetchMissing = true, alsoAsk = target.seenOn)
 
             // The same hint the app writes: the relay it saw the note on, and its author's home relay.
             val hint = targetNote.toEventHint<Event>() ?: EventHintBundle(target.event, target.seenOn.firstOrNull())
             val signed = build(ctx, notes, targetNote, hint)
-            // Everyone the app would notify must be reachable: the target's author, the people the
-            // target and our event tag. One drain for every relay list we lack, also asking
-            // where the target was seen (its author's list is likely there).
-            notes.addUsers(
-                listOf(target.event.pubKey) + target.event.taggedUserIds() + signed.taggedUserIds(),
-                fetchMissing = true,
-                alsoAsk = target.seenOn,
-            )
+            // People only our event adds (mentions in the text were loaded while tagging).
+            notes.addUsers(signed.taggedUserIds(), fetchMissing = true, alsoAsk = target.seenOn)
             val planner = NoteSupport.planner(ctx, notes)
             val mine = notes.addMine(signed) ?: return Output.error("runtime", "could not cache ${signed.id}")
             val ack = ctx.publish(signed, route(planner, targetNote, signed, mine) + extraRelays)

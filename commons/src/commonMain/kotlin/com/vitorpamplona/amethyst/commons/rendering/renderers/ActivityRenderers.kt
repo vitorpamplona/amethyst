@@ -42,6 +42,7 @@ import com.vitorpamplona.quartz.nip18Reposts.RepostEvent
 import com.vitorpamplona.quartz.nip25Reactions.ReactionEvent
 import com.vitorpamplona.quartz.nip30CustomEmoji.CustomEmoji
 import com.vitorpamplona.quartz.nip57Zaps.ZapReceiptEvent
+import com.vitorpamplona.quartz.utils.BigDecimal
 import com.vitorpamplona.quartz.utils.lastNotNullOfOrNull
 import com.vitorpamplona.quartz.utils.toLongValue
 
@@ -130,7 +131,7 @@ object ZapReceiptRenderer : EventRenderer {
                     ?: addressRef(receipt.tags),
             details =
                 RenderedDetails.Zap(
-                    amountSats = receipt.amount?.toLongValue(),
+                    amountSats = receipt.amount?.let(::satsOrNull),
                     sender = sender,
                     recipient = receipt.zappedAuthor().firstOrNull(),
                     comment = if (sender != null) receipt.zapRequest?.content?.ifBlank { null } else null,
@@ -158,6 +159,12 @@ object DeletionRenderer : EventRenderer {
         )
     }
 }
+
+/** A receipt's amount in whole sats; null when the invoice names none, or one too large to be real. */
+private fun satsOrNull(amount: BigDecimal): Long? = if (amount.signum() <= 0 || amount.subtract(MAX_SATS).signum() > 0) null else amount.toLongValue()
+
+/** 21 million BTC in sats: no receipt pays more, and a bigger value would wrap in a Long. */
+private val MAX_SATS = BigDecimal("2100000000000000")
 
 /** The last `a` tag as an address ref — the target of a reaction or zap aimed at an addressable only. */
 private fun addressRef(tags: Array<Array<String>>): EventRef? =

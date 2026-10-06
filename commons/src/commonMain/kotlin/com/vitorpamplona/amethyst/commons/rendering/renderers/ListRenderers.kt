@@ -68,13 +68,15 @@ object ContactListRenderer : EventRenderer {
         ctx: RenderContext,
     ): RenderedEvent {
         val contacts = event as? ContactListEvent ?: return RenderSupport.build(event, ctx, text = "")
-        return RenderSupport.build(
-            event,
-            ctx,
-            // Legacy clients stored a relay JSON blob in the content; it is not text.
-            text = "",
-            details = RenderedDetails.ContactList(contacts.verifiedFollowKeySet().toList()),
-        )
+        return RenderSupport
+            .build(
+                event,
+                ctx,
+                // Legacy clients stored a relay JSON blob in the content; it is not text.
+                text = "",
+                details = RenderedDetails.ContactList(contacts.verifiedFollowKeySet().toList()),
+                // The follows are the details; listing every `p` again as a mention doubles the output.
+            ).copy(mentions = emptyList())
     }
 }
 

@@ -50,7 +50,14 @@ class EventRef(
                 is NAddress ->
                     EventRef(
                         input,
-                        Filter(kinds = listOf(entity.kind), authors = listOf(entity.author), tags = mapOf("d" to listOf(entity.dTag)), limit = 1),
+                        Filter(
+                            kinds = listOf(entity.kind),
+                            authors = listOf(entity.author),
+                            // A replaceable kind (0, 3, 10000-19999) has no `d` tag: its naddr carries an
+                            // empty one, and `#d: [""]` would match nothing. Same rule as FilterMissingAddressables.
+                            tags = if (entity.kind < 25000 && entity.dTag.isBlank()) null else mapOf("d" to listOf(entity.dTag)),
+                            limit = 1,
+                        ),
                         entity.relay.toSet(),
                         entity.author,
                     )
@@ -75,7 +82,9 @@ class LocatedEvent(
 object EventLocator {
     /**
      * Store-first lookup of [ref], skipping the store when [refresh] is set. Returns the
-     * newest match — an `naddr` names a replaceable slot — or null when nobody has it.
+     * newest match — an `naddr` names a replaceable slot — or null when nobody has it or a
+     * deletion in the store covers it. [LocatedEvent.seenOn] is where it came from: the
+     * reference's hints on a store hit (the best guess there is), else the relays that served it.
      */
     suspend fun locate(
         access: OneShotRelayAccess,
@@ -90,10 +99,12 @@ object EventLocator {
         }
 
         val relays = ref.hints + (ref.author?.let { authorOutboxRelays(access, it, timeoutMs) } ?: emptySet()) + access.bootstrapRelays()
-        val matches = access.fetch(relays, ref.filter, timeoutMs).filter { (_, event) -> ref.filter.match(event) }
+        val received = access.fetch(relays, ref.filter, timeoutMs).filter { (_, event) -> ref.filter.match(event) }
+        val live = access.withoutStoredDeletions(received.map { it.second }.distinctBy { it.id }).mapTo(HashSet()) { it.id }
+        val matches = received.filter { it.second.id in live }
         val newest = matches.maxByOrNull { it.second.createdAt }?.second ?: return null
         val seenOn = matches.filter { it.second.id == newest.id }.mapTo(mutableSetOf()) { it.first }
-        return LocatedEvent(newest, seenOn + ref.hints, "relays")
+        return LocatedEvent(newest, seenOn, "relays")
     }
 
     /** [author]'s NIP-65 write relays, fetching their kind:10002 from the bootstrap set on a store miss. */

@@ -26,8 +26,10 @@ import com.vitorpamplona.amethyst.commons.rendering.RenderContext
 import com.vitorpamplona.amethyst.commons.rendering.RenderSupport
 import com.vitorpamplona.amethyst.commons.rendering.RenderedDetails
 import com.vitorpamplona.amethyst.commons.rendering.RenderedEvent
+import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.isValid
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
 import com.vitorpamplona.quartz.nip10Notes.TextNoteEvent
 import com.vitorpamplona.quartz.nip10Notes.tags.MarkedETag
 import com.vitorpamplona.quartz.nip14Subject.subject
@@ -41,6 +43,7 @@ import com.vitorpamplona.quartz.nip22Comments.tags.RootEventTag
 import com.vitorpamplona.quartz.nip22Comments.tags.RootIdentifierTag
 import com.vitorpamplona.quartz.nip22Comments.tags.RootKindTag
 import com.vitorpamplona.quartz.nip23LongContent.LongFormContentEvent
+import com.vitorpamplona.quartz.nip72ModCommunities.definition.CommunityDefinitionEvent
 import com.vitorpamplona.quartz.utils.lastNotNullOfOrNull
 
 /**
@@ -76,9 +79,49 @@ object TextNoteRenderer : EventRenderer {
             event,
             ctx,
             title = note.subject(),
-            replyTo = RenderSupport.ref(reply),
-            root = RenderSupport.ref(root),
+            // A kind:1 answering an addressable (an article) may carry only an `a` tag; the app
+            // threads it under that address (tagsWithoutCitations), so the refs fall back to it.
+            replyTo = RenderSupport.ref(reply) ?: threadAddress(note.tags, last = true),
+            root = RenderSupport.ref(root) ?: threadAddress(note.tags, last = false),
         )
+    }
+
+    /**
+     * The `a` tag that roots ([last] false) or answers ([last] true) a thread, with the same
+     * marker precedence as `e` tags. Community tags only scope the note, so they don't count.
+     */
+    private fun threadAddress(
+        tags: Array<Array<String>>,
+        last: Boolean,
+    ): EventRef? {
+        var root: Array<String>? = null
+        var reply: Array<String>? = null
+        var firstPositional: Array<String>? = null
+        var lastPositional: Array<String>? = null
+        tags.forEach { tag ->
+            if (tag.size < 2 || tag[0] != "a") return@forEach
+            val address = Address.parse(tag[1]) ?: return@forEach
+            if (address.kind == CommunityDefinitionEvent.KIND) return@forEach
+            when (tag.getOrNull(3)) {
+                "root" -> root = tag
+                "reply" -> reply = tag
+                null, "" -> {
+                    if (firstPositional == null) firstPositional = tag
+                    lastPositional = tag
+                }
+            }
+        }
+        val chosen = if (last) reply ?: root ?: lastPositional else root ?: firstPositional ?: reply
+        return chosen?.let { tag ->
+            val address = Address.parse(tag[1]) ?: return null
+            EventRef(
+                eventId = null,
+                address = tag[1],
+                relay = tag.getOrNull(2)?.let { RelayUrlNormalizer.normalizeOrNull(it)?.url },
+                author = address.pubKeyHex,
+                kind = address.kind,
+            )
+        }
     }
 }
 

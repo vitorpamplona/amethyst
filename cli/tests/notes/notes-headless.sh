@@ -30,7 +30,10 @@
 #      his outbox (B); a post mentioning Carol reaches her inbox (A).
 #   8. Bob's deletion reaches both relays (where the reply was routed).
 #   9. A NIP-25 reaction to Bob's reply (root `e` first, target `e` last) is
-#      Bob's notification.
+#      Bob's notification; a reply to a note from the store carries the
+#      author's outbox as its `e` hint; NIP-29 group content (an `h`-tagged
+#      kind:9) is reacted to on its host only, can't be reposted, and from the
+#      store needs --relay HOST.
 #  10. A reply deleted while relay A was down — A still serves it — stays out
 #      of `notes thread`.
 #
@@ -65,7 +68,7 @@ while [[ $# -gt 0 ]]; do
     --routing-host) ROUTING_HOST="$2"; shift ;;
     --no-routing) ROUTING=0 ;;
     -h|--help)
-      sed -n '3,46p' "${BASH_SOURCE[0]}" | sed 's/^# \?//'
+      sed -n '3,44p' "${BASH_SOURCE[0]}" | sed 's/^# \?//'
       exit 0 ;;
     *) printf 'unknown flag: %s\n' "$1" >&2; exit 2 ;;
   esac
@@ -292,6 +295,26 @@ else
     --tags "[[\"e\",\"$R_POST\"],[\"e\",\"$R_RID\"],[\"p\",\"$R_ALICE\"],[\"p\",\"$R_BOB\"]]" --relay "$RB" >>"$LOG_FILE"
   check route-reaction-notification "$(ra bob notifications --type reaction)" \
     "[.notifications[].reply_to.event_id] | index(\"$R_RID\")"
+
+  step "a store hit still writes the author's relay hint"
+  check route-hint-cache-hit "$(ra bob notes reply "$R_POST" "from the store")" \
+    "(.tags | any(.[0] == \"e\" and .[1] == \"$R_POST\" and ((.[2] // \"\") | startswith(\"$RA\"))))" \
+    "e tag hints alice's outbox"
+
+  step "NIP-29 group content stays on its host"
+  R_GROUP="$(ra alice event --kind 9 --content "group only" --tags '[["h","amygroup"]]' --relay "$RA" | jq -r .event.id)"
+  R_GROUP_NEVENT="$(ra alice encode nevent "$R_GROUP" --relay "$RA" | jq -r .nevent)"
+  check route-group-react "$(ra bob notes react "$R_GROUP_NEVENT")" \
+    "(.published_to | length) > 0 and (.published_to | all(startswith(\"$RA\")))" "only the host (A)"
+  ra bob notes repost "$R_GROUP_NEVENT" >>"$LOG_FILE"
+  RC=$?
+  [[ $RC -eq 2 ]] && record_result route-group-repost-refused pass || record_result route-group-repost-refused fail "exit=$RC"
+  # Now a store hit: no relay says where the group lives.
+  ra bob notes react "$R_GROUP" --content "🔥" >>"$LOG_FILE"
+  RC=$?
+  [[ $RC -eq 2 ]] && record_result route-group-host-required pass "unknown host refused" || record_result route-group-host-required fail "exit=$RC"
+  check route-group-host-flag "$(ra bob notes react "$R_GROUP" --content "🔥" --relay "$RA")" \
+    "(.published_to | length) > 0 and (.published_to | all(startswith(\"$RA\")))" "--relay names the host"
 
   step "a reply deleted while relay A was down stays out of the thread"
   R_STALE="$(ra bob notes reply "$R_NEVENT" "to be deleted" | jq -r .event_id)"

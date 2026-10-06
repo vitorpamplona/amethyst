@@ -102,12 +102,14 @@ object EventRendererRegistry {
             rendererFor(event.kind).render(event, ctx)
         } catch (e: CancellationException) {
             throw e
-        } catch (e: Exception) {
+        } catch (e: Throwable) {
+            // Throwable, not Exception: hostile content has driven parsers into a StackOverflowError,
+            // and one note must not take down a whole feed.
             try {
                 DefaultRenderer.render(event, ctx)
             } catch (e: CancellationException) {
                 throw e
-            } catch (e: Exception) {
+            } catch (e: Throwable) {
                 RenderSupport.minimal(event, ctx)
             }
         }

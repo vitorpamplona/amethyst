@@ -71,21 +71,23 @@ class ThreadLoader(
 
     /**
      * Loads the thread around [focus] and lays it out for [viewer] (whose follows rank
-     * replies). Returns null when a deletion in the store covers [focus].
+     * replies). Returns null when the cache will not hold [focus]: a deletion in the store
+     * covers it, or it is rejected outright.
      */
     suspend fun load(
         focus: LocatedEvent,
         viewer: HexKey,
     ): LoadedThread? {
         notes.addAll(listOf(focus.seenOn.firstOrNull() to focus.event))
-        val focusNote = notes.add(focus.event, focus.seenOn) ?: return null
+        val focusNote = notes.add(focus.event, focus.seenOn)?.takeIf { it.event != null } ?: return null
         val defaultRelays = access.bootstrapRelays()
         val queried = mutableSetOf<NormalizedRelayUrl>()
         val sent = mutableSetOf<String>()
         val askedAuthors = mutableSetOf<HexKey>()
+        val storeQueried = mutableSetOf<String>()
 
         for (round in 0 until maxRounds) {
-            val filters = settleFromStore(focusNote, defaultRelays, askedAuthors)
+            val filters = settleFromStore(focusNote, defaultRelays, askedAuthors, storeQueried)
             val pending = filters.filter { sent.add(it.relay.url + it.filter.toJson()) }
             if (pending.isEmpty()) break
             queried += pending.map { it.relay }
@@ -107,12 +109,15 @@ class ThreadLoader(
     /**
      * Applies the thread screen's filters to the store until they stop finding anything,
      * loading the relay lists of authors met along the way (that is where the filters look
-     * next), and returns the filters for the relays.
+     * next), and returns the filters for the relays. Each distinct filter reads the store once
+     * per load ([storeQueried]): what relays return later goes into the cache directly, and the
+     * root's `#e` filter alone can match every reaction a popular note ever got.
      */
     private suspend fun settleFromStore(
         focus: Note,
         defaultRelays: Set<NormalizedRelayUrl>,
         askedAuthors: MutableSet<HexKey>,
+        storeQueried: MutableSet<String>,
     ): List<RelayBasedFilter> {
         var filters: List<RelayBasedFilter> = emptyList()
         for (pass in 0 until MAX_STORE_PASSES) {
@@ -128,7 +133,7 @@ class ThreadLoader(
 
             filters = filterEventsInThreadForRoot(root, null, defaultRelays) + filterMissingEventsForThread(notes.cache, info, defaultRelays)
             val before = loaded(focus)
-            val local = filters.distinctBy { it.filter.toJson() }.flatMap { access.query(it.filter) }
+            val local = filters.filter { storeQueried.add(it.filter.toJson()) }.flatMap { access.query(it.filter) }
             notes.addAll(local.map { null to it })
             if (loaded(focus) == before && authors.isEmpty()) return filters
         }
