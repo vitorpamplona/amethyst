@@ -173,7 +173,7 @@ that loop via `collectLatest`.
 - **Per-author rate limiter removed (2026-10-06).** A single app must be able to
   drive ~10k requests/s, so the 40-per-10s fixed window (and its `rate limited`
   error reply) is gone. The remaining flood bounds were resized for that rate:
-  `maxQueue` 256 → 10,000, `seenCap` 4096 → 65,536, `maxConcurrentHandles`
+  `maxQueue` 256 → 10,000, `seenCap` 4096 → 10,000, `maxConcurrentHandles`
   16 → 1024. Covered by `NostrConnectSignerServiceTest.burstFromOneClientIsFullyServiced`.
 - **Low-severity, left as-is:** activity-log records an O(capacity) list copy per
   serviced request (no longer bounded by a rate limit, so revisit if it shows up

@@ -76,9 +76,9 @@ class NostrConnectSignerService(
      * same-event redelivery window). NOTE: this is keyed by the wrapper event id, not the inner NIP-46
      * request id, and it does not survive a service restart — the [maxRequestAgeSeconds] gate is what
      * suppresses relay replays of old requests across re-subscriptions. Sized for a client pushing
-     * ~10k requests/s: at that rate it still covers several seconds of relay fan-in lag.
+     * ~10k requests/s: at that rate it covers about one second of relay fan-in lag.
      */
-    val seenCap: Int = 65_536,
+    val seenCap: Int = 10_000,
     /**
      * Bound on events buffered between the relay threads and the single consumer.
      * Under a flood (a looping client, or a hostile peer p-tagging us) the newest
