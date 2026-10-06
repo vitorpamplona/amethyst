@@ -196,7 +196,7 @@
     <string name="geocache_coordinates_copied">निर्देशांक अनुकृत</string>
     <string name="geocache_photos_section">चित्र</string>
     <string name="geocache_mission_section">मुख्य खोज अभियान</string>
-    <string name="geocache_logs_section">अभिलेख</string>
+    <string name="geocache_logs_section">घटनाक्रम अभिलेख</string>
     <string name="geocache_no_logs">इस कोष का अभिलेखन अब तक किसी ने नहीं किया। सर्वप्रथम बनें।</string>
     <string name="geocache_i_found_it">मैं ने खोज लिया</string>
     <string name="geocache_didnt_find_it">खोज असफल</string>
@@ -228,7 +228,7 @@
     <string name="geocache_log_type_maintenance">देखरेख आवश्यक</string>
     <string name="geocache_log_title">खोज का अभिलेखन</string>
     <string name="geocache_log_cache_label">कोष</string>
-    <string name="geocache_log_your_log">आपका अभिलेख</string>
+    <string name="geocache_log_your_log">आपका घटनाक्रम अभिलेख</string>
     <string name="geocache_log_placeholder">कैसे चला।</string>
     <string name="geocache_log_add_photo">चित्र जोडें</string>
     <string name="geocache_log_mission_answer">आपका मुख्य खोज उत्तर</string>
@@ -240,9 +240,9 @@
     <string name="geocache_log_proof_bad_code">वह एक सत्यापन अक्षरराशि नहीं।</string>
     <string name="geocache_log_proof_wrong_cache">वह अक्षरराशि एक पृथक कोष का है।</string>
     <string name="geocache_log_proof_optional">यह कोष प्रमाण नहीं पूछता। इसलिए आप सीधे इसका अभिलेखन कर सकते हैं।</string>
-    <string name="geocache_log_no_location_attached">आपका स्थान इस अभिलेख में संलग्न नहीं।</string>
+    <string name="geocache_log_no_location_attached">आपका स्थान इस घटनाक्रम अभिलेख में संलग्न नहीं।</string>
     <string name="geocache_log_post">पत्र प्रकाशन</string>
-    <string name="geocache_log_comment_title">अभिलेख जोडें</string>
+    <string name="geocache_log_comment_title">घटनाक्रम अभिलेख जोडें</string>
     <string name="geocache_tab_nearby">निकट</string>
     <string name="geocache_tab_map">मानचित्र</string>
     <string name="geocache_tab_hunts">खोज</string>
