@@ -18,23 +18,28 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.ui.screen.loggedIn.followPacks.feed.dal
+package com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.followPacks.feed.dal
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
+import androidx.lifecycle.viewmodel.CreationExtras
 import com.vitorpamplona.amethyst.commons.model.Account
 import com.vitorpamplona.amethyst.commons.model.AddressableNote
-import com.vitorpamplona.amethyst.commons.ui.screen.AndroidFeedViewModel
+import com.vitorpamplona.amethyst.commons.ui.screen.UserFeedViewModel
+import kotlin.reflect.KClass
 
-class FollowPackFeedConversationsFeedViewModel(
-    val note: AddressableNote,
+class FollowPackMembersUserFeedViewModel(
+    val followPackNote: AddressableNote,
     val account: Account,
-) : AndroidFeedViewModel(FollowPackFeedConversationsFeedFilter(note, account)) {
+) : UserFeedViewModel(FollowPackMembersFeedFilter(followPackNote, account)) {
     class Factory(
-        val note: AddressableNote,
+        val followPackNote: AddressableNote,
         val account: Account,
     ) : ViewModelProvider.Factory {
         @Suppress("UNCHECKED_CAST")
-        override fun <T : ViewModel> create(modelClass: Class<T>): T = FollowPackFeedConversationsFeedViewModel(note, account) as T
+        override fun <T : ViewModel> create(
+            modelClass: KClass<T>,
+            extras: CreationExtras,
+        ): T = FollowPackMembersUserFeedViewModel(followPackNote, account) as T
     }
 }

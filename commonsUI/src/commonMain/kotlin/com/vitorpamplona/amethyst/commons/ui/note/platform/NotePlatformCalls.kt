@@ -22,30 +22,17 @@ package com.vitorpamplona.amethyst.commons.ui.note.platform
 
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.MutableState
-import androidx.compose.runtime.State
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.unit.Dp
-import androidx.compose.ui.unit.TextUnit
 import com.vitorpamplona.amethyst.commons.audio.RecordingResult
 import com.vitorpamplona.amethyst.commons.audio.WaveformData
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.richtext.BaseMediaContent
-import com.vitorpamplona.amethyst.commons.ui.components.GenericLoadable
 import com.vitorpamplona.amethyst.commons.ui.components.UrlPreviewState
-import com.vitorpamplona.amethyst.commons.ui.components.ZapButtonCallbacks
-import com.vitorpamplona.amethyst.commons.ui.components.ZapButtonConfig
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
-import com.vitorpamplona.amethyst.commons.ui.note.types.EditState
-import com.vitorpamplona.amethyst.commons.ui.theme.Font14SP
-import com.vitorpamplona.amethyst.commons.ui.theme.Size14Modifier
-import com.vitorpamplona.amethyst.commons.ui.theme.Size18Modifier
-import com.vitorpamplona.amethyst.commons.ui.theme.Size18dp
-import com.vitorpamplona.amethyst.commons.ui.theme.Size20Modifier
-import com.vitorpamplona.amethyst.commons.ui.theme.Size20dp
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.quartz.nip94FileMetadata.tags.DimensionTag
 import com.vitorpamplona.quartz.nipA0VoiceMessages.AudioMeta
@@ -494,83 +481,6 @@ fun RenderNamedSiteEvent(
     nav = nav,
 )
 
-@Composable
-fun ReactionsRow(
-    baseNote: Note,
-    showReactionDetail: Boolean,
-    addPadding: Boolean,
-    editState: State<GenericLoadable<EditState>>?,
-    accountViewModel: AccountViewModel,
-    nav: INav,
-) = LocalNotePlatform.current.ReactionsRow(
-    baseNote = baseNote,
-    showReactionDetail = showReactionDetail,
-    addPadding = addPadding,
-    editState = editState,
-    accountViewModel = accountViewModel,
-    nav = nav,
-)
-
-@Composable
-fun LikeReaction(
-    baseNote: Note,
-    grayTint: Color,
-    accountViewModel: AccountViewModel,
-    nav: INav,
-    iconSize: Dp = Size18dp,
-    heartSizeModifier: Modifier = Size18Modifier,
-    iconFontSize: TextUnit = Font14SP,
-    showCounter: Boolean = true,
-) = LocalNotePlatform.current.LikeReaction(
-    baseNote = baseNote,
-    grayTint = grayTint,
-    accountViewModel = accountViewModel,
-    nav = nav,
-    iconSize = iconSize,
-    heartSizeModifier = heartSizeModifier,
-    iconFontSize = iconFontSize,
-    showCounter = showCounter,
-)
-
-@Composable
-fun ZapReaction(
-    baseNote: Note,
-    grayTint: Color,
-    accountViewModel: AccountViewModel,
-    iconSize: Dp = Size20dp,
-    iconSizeModifier: Modifier = Size20Modifier,
-    animationModifier: Modifier = Size14Modifier,
-    showCounter: Boolean = true,
-    nav: INav,
-) = LocalNotePlatform.current.ZapReaction(
-    baseNote = baseNote,
-    grayTint = grayTint,
-    accountViewModel = accountViewModel,
-    iconSize = iconSize,
-    iconSizeModifier = iconSizeModifier,
-    animationModifier = animationModifier,
-    showCounter = showCounter,
-    nav = nav,
-)
-
-@Composable
-fun ReusableZapButton(
-    baseNote: Note,
-    accountViewModel: AccountViewModel,
-    nav: INav,
-    config: ZapButtonConfig = ZapButtonConfig(),
-    callbacks: ZapButtonCallbacks = ZapButtonCallbacks(),
-) = LocalNotePlatform.current.ReusableZapButton(baseNote, accountViewModel, nav, config, callbacks)
-
-@Composable
-fun QuickZapAmountRow(
-    note: Note,
-    onDismiss: () -> Unit,
-    onOnchainRequest: (Long?) -> Unit,
-    accountViewModel: AccountViewModel,
-    nav: INav,
-) = LocalNotePlatform.current.QuickZapAmountRow(note, onDismiss, onOnchainRequest, accountViewModel, nav)
-
 /** The longest voice message the recorder allows, in seconds. */
 const val MAX_VOICE_RECORD_SECONDS = 600
 
@@ -579,6 +489,14 @@ fun RecordVoiceButton(
     onVoiceTaken: (RecordingResult) -> Unit,
     maxDurationSeconds: Int? = null,
 ) = LocalNotePlatform.current.RecordVoiceButton(onVoiceTaken, maxDurationSeconds)
+
+@Composable
+fun RecordAudioBox(
+    modifier: Modifier = Modifier,
+    onRecordTaken: (RecordingResult) -> Unit,
+    maxDurationSeconds: Int? = null,
+    content: @Composable (isRecording: Boolean, elapsedSeconds: Int, onStop: () -> Unit) -> Unit,
+) = LocalNotePlatform.current.RecordAudioBox(modifier, onRecordTaken, maxDurationSeconds, content)
 
 @Composable
 fun VoiceMessagePreview(

@@ -18,7 +18,7 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.model.zap
+package com.vitorpamplona.amethyst.commons.model.zap
 
 import androidx.compose.runtime.Immutable
 import com.vitorpamplona.amethyst.commons.model.MIN_ONCHAIN_ZAP_SATS
@@ -27,7 +27,6 @@ import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
 import com.vitorpamplona.amethyst.commons.model.nip60Cashu.CashuWalletState
 import com.vitorpamplona.amethyst.commons.model.payments.PayToRailMatcher
 import com.vitorpamplona.amethyst.commons.model.payments.PaymentTargetTypes
-import com.vitorpamplona.amethyst.service.payments.PayToAppAvailability
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip57Zaps.splits.BaseZapSplitSetup
 import com.vitorpamplona.quartz.nip57Zaps.splits.ZapSplitSetup
@@ -155,6 +154,11 @@ object RailCapabilityResolver {
          * offer makes them payable on the Lightning rail even without an lnAddress.
          */
         bolt12Payable: Boolean = false,
+        /**
+         * Whether an installed app opens a `payto` type (`PayToAppProbe.peek(...)?.resolves`).
+         * Only asked when [payToEnabled]; web targets need no app, any browser opens them.
+         */
+        payToResolves: (rawType: String) -> Boolean = { false },
     ): RailCapability {
         val author = baseNote.author?.pubkeyHex
         val splits = baseNote.event?.zapSplitSetup().orEmpty()
@@ -197,7 +201,7 @@ object RailCapabilityResolver {
             hasOnchain = hasOnchain,
             cashuBestSingleMintSats = cashuFunding?.bestSingleMintSats ?: 0L,
             cashuTotalWalletSats = cashuFunding?.totalWalletSats ?: 0L,
-            payToTargets = payToTargets(baseNote, splits, payToEnabled),
+            payToTargets = payToTargets(baseNote, splits, payToEnabled, payToResolves),
         )
     }
 
@@ -210,6 +214,7 @@ object RailCapabilityResolver {
         baseNote: Note,
         splits: List<BaseZapSplitSetup>,
         enabled: Boolean,
+        payToResolves: (rawType: String) -> Boolean,
     ): List<PaymentTarget> =
         PayToRailMatcher.selectFor(
             enabled = enabled,
@@ -218,7 +223,7 @@ object RailCapabilityResolver {
             // An unresolvable URI would open nothing, so the chip is not offered.
             // Web targets always resolve; there the probe only decides the icon.
             canOpen = {
-                PayToAppAvailability.peek(it.type)?.resolves == true ||
+                payToResolves(it.type) ||
                     PaymentTargetTypes.isWebTarget(it.type)
             },
             // Lazy: the tag walk only happens once the cheap gates have passed.

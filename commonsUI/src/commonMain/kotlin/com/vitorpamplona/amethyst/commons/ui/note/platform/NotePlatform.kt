@@ -23,25 +23,18 @@ package com.vitorpamplona.amethyst.commons.ui.note.platform
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.Stable
-import androidx.compose.runtime.State
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.unit.Dp
-import androidx.compose.ui.unit.TextUnit
 import com.vitorpamplona.amethyst.commons.audio.RecordingResult
 import com.vitorpamplona.amethyst.commons.audio.WaveformData
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.richtext.BaseMediaContent
-import com.vitorpamplona.amethyst.commons.ui.components.GenericLoadable
 import com.vitorpamplona.amethyst.commons.ui.components.UrlPreviewState
-import com.vitorpamplona.amethyst.commons.ui.components.ZapButtonCallbacks
-import com.vitorpamplona.amethyst.commons.ui.components.ZapButtonConfig
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.note.CalendarRsvpCard
-import com.vitorpamplona.amethyst.commons.ui.note.types.EditState
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.quartz.nip52Calendar.rsvp.CalendarRSVPEvent
 import com.vitorpamplona.quartz.nip94FileMetadata.tags.DimensionTag
@@ -395,63 +388,6 @@ interface NotePlatform {
 
     // Reactions, zaps and editing
 
-    @Composable
-    fun ReactionsRow(
-        baseNote: Note,
-        showReactionDetail: Boolean,
-        addPadding: Boolean,
-        editState: State<GenericLoadable<EditState>>?,
-        accountViewModel: AccountViewModel,
-        nav: INav,
-    ) {}
-
-    @Composable
-    fun LikeReaction(
-        baseNote: Note,
-        grayTint: Color,
-        accountViewModel: AccountViewModel,
-        nav: INav,
-        iconSize: Dp,
-        heartSizeModifier: Modifier,
-        iconFontSize: TextUnit,
-        showCounter: Boolean,
-    ) {}
-
-    @Composable
-    fun ZapReaction(
-        baseNote: Note,
-        grayTint: Color,
-        accountViewModel: AccountViewModel,
-        iconSize: Dp,
-        iconSizeModifier: Modifier,
-        animationModifier: Modifier,
-        showCounter: Boolean,
-        nav: INav,
-    ) {}
-
-    /** A labelled zap button for [baseNote]'s author, outside a reactions row (DVMs, donations). */
-    @Composable
-    fun ReusableZapButton(
-        baseNote: Note,
-        accountViewModel: AccountViewModel,
-        nav: INav,
-        config: ZapButtonConfig,
-        callbacks: ZapButtonCallbacks,
-    ) {}
-
-    /**
-     * The user's zap presets as rail-aware amount chips that zap [note] straight away (the chat
-     * long-press sheet). [onOnchainRequest] hands an on-chain amount to the caller's dialog.
-     */
-    @Composable
-    fun QuickZapAmountRow(
-        note: Note,
-        onDismiss: () -> Unit,
-        onOnchainRequest: (Long?) -> Unit,
-        accountViewModel: AccountViewModel,
-        nav: INav,
-    ) {}
-
     /**
      * The microphone button: records a voice message (up to [maxDurationSeconds]) and hands the
      * finished recording to [onVoiceTaken].
@@ -460,6 +396,19 @@ interface NotePlatform {
     fun RecordVoiceButton(
         onVoiceTaken: (RecordingResult) -> Unit,
         maxDurationSeconds: Int?,
+    ) {}
+
+    /**
+     * Records a voice message behind a caller-drawn trigger: [content] gets whether it is
+     * recording, the elapsed seconds and a stop action, and the finished recording goes to
+     * [onRecordTaken]. Platforms without a recorder draw nothing, so no dead button shows.
+     */
+    @Composable
+    fun RecordAudioBox(
+        modifier: Modifier,
+        onRecordTaken: (RecordingResult) -> Unit,
+        maxDurationSeconds: Int?,
+        content: @Composable (isRecording: Boolean, elapsedSeconds: Int, onStop: () -> Unit) -> Unit,
     ) {}
 
     /**

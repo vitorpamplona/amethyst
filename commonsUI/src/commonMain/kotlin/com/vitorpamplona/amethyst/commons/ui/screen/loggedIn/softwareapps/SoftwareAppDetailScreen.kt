@@ -75,7 +75,7 @@ import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.navigation.topbars.TopBarWithBackButton
 import com.vitorpamplona.amethyst.commons.ui.note.LoadAddressableNote
 import com.vitorpamplona.amethyst.commons.ui.note.NoteCompose
-import com.vitorpamplona.amethyst.commons.ui.note.platform.ReactionsRow
+import com.vitorpamplona.amethyst.commons.ui.note.ReactionsRow
 import com.vitorpamplona.amethyst.commons.ui.note.types.AppAuthorLine
 import com.vitorpamplona.amethyst.commons.ui.note.types.AppIcon
 import com.vitorpamplona.amethyst.commons.ui.note.types.AppLinksColumn

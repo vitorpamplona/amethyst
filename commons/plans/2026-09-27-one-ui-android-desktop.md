@@ -511,8 +511,18 @@ assemblers, `EventSync`, …). Packages are renamed on the way:
      (on `ConcurrentSet` instead of `synchronized`). The blob viewer's pinch-zoom (`zoomable`, already
      an app dependency, Apache-2.0, Compose Multiplatform) is now a commonsUI dependency. 224 of
      252 screens shared.
-   - **Next:** 28 screens remain, and what blocks them is the platform itself:
-     - `ReactionsRow` (2.7k lines: pay-to-app, voice replies, wallet intents).
+   - **Wave 14 (2026-10-06):** `ReactionsRow`, the row under every note. Moving it took four
+     seams: `AppPlatform.payToApps`, a `PayToAppProbe` port (Android asks the package manager
+     which installed app opens a `payto` type); the wallet hand-off through the shared
+     `WalletAppLauncher` instead of `payViaIntent` with a `Context`; a `RecordAudioBox` note slot
+     for the voice-reply button; and notices instead of `Toast`. `RailCapabilityResolver.peek`
+     takes the probe's answer as a lambda, so `RailCapability` (and its tests) moved to commons.
+     Moved with it: `ZapCustomDialog`, the nutzap, on-chain, BOLT12 and relay galleries,
+     `ReusableZapButton`, `QuickZapAmountRow` and `PaymentTargetsDialog`. The `ReactionsRow`,
+     `LikeReaction`, `ZapReaction`, `ReusableZapButton` and `QuickZapAmountRow` note slots are
+     gone: shared code calls the composables directly, so Desktop draws the real row. The
+     follow-pack feed, which only waited on it, moved too. 225 of 252 screens shared.
+   - **Next:** 27 screens remain, and what blocks them is the platform itself:
      - The Nests activity and PiP.
      - The call screens.
      - The WebView browser and napplet launcher.

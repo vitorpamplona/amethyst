@@ -29,6 +29,7 @@ import com.vitorpamplona.amethyst.commons.favorites.FavoriteApp
 import com.vitorpamplona.amethyst.commons.model.UiSettingsFlow
 import com.vitorpamplona.amethyst.commons.model.navigation.Route
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
+import com.vitorpamplona.amethyst.commons.ui.payments.PayToAppProbe
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.qrcode.ScanOutcome
 import com.vitorpamplona.amethyst.commons.ui.settings.SettingsCategory
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
@@ -49,6 +50,9 @@ interface AppPlatform {
 
     /** This build's version name ("1.04.2"), shown in the donation card; empty where unknown. */
     val appVersionName: String get() = ""
+
+    /** Which installed apps can take a `payto` hand-off from the zap picker. */
+    val payToApps: PayToAppProbe get() = PayToAppProbe.None
 
     /** The note announcing this release, which the notifications tab's donation card links to; null shows no card. */
     val releaseNotesId: String? get() = null

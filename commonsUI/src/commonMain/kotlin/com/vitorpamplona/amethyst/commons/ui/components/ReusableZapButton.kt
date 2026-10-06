@@ -18,7 +18,7 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.ui.components
+package com.vitorpamplona.amethyst.commons.ui.components
 
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.layout.Row
@@ -39,7 +39,6 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.User
@@ -60,16 +59,17 @@ import com.vitorpamplona.amethyst.commons.ui.components.ZapButtonCallbacks
 import com.vitorpamplona.amethyst.commons.ui.components.ZapButtonConfig
 import com.vitorpamplona.amethyst.commons.ui.components.toasts.multiline.UserBasedErrorMessage
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
+import com.vitorpamplona.amethyst.commons.ui.note.ObserveZapIcon
+import com.vitorpamplona.amethyst.commons.ui.note.ZapAmountChoicePopup
 import com.vitorpamplona.amethyst.commons.ui.note.ZapIcon
 import com.vitorpamplona.amethyst.commons.ui.note.ZappedIcon
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.wallet.OnchainZapSendDialog
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.wallet.navigateToReloadMint
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.ModifierWidth3dp
+import com.vitorpamplona.amethyst.commons.ui.wallet.payInvoice
+import com.vitorpamplona.amethyst.commons.ui.wallet.rememberWalletAppLauncher
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
-import com.vitorpamplona.amethyst.ui.note.ObserveZapIcon
-import com.vitorpamplona.amethyst.ui.note.ZapAmountChoicePopup
-import com.vitorpamplona.amethyst.ui.note.payViaIntent
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.utils.TimeUtils
 import kotlinx.collections.immutable.ImmutableList
@@ -86,8 +86,8 @@ fun ReusableZapButton(
     baseNote: Note,
     accountViewModel: AccountViewModel,
     nav: INav,
-    config: ZapButtonConfig,
-    callbacks: ZapButtonCallbacks,
+    config: ZapButtonConfig = ZapButtonConfig(),
+    callbacks: ZapButtonCallbacks = ZapButtonCallbacks(),
 ) {
     val noWalletFoundStr = stringRes(Res.string.no_wallet_found)
     var wantsToZap by remember { mutableStateOf<ImmutableList<Long>?>(null) }
@@ -101,7 +101,7 @@ fun ReusableZapButton(
         }
     }
 
-    val context = LocalContext.current
+    val walletLauncher = rememberWalletAppLauncher()
     val scope = rememberCoroutineScope()
 
     var zappingProgress by remember { mutableFloatStateOf(0f) }
@@ -130,7 +130,7 @@ fun ReusableZapButton(
                 onPayViaIntent = {
                     if (it.size == 1) {
                         val payable = it.first()
-                        payViaIntent(payable.invoice, context, noWalletFoundStr, { }) {
+                        walletLauncher.payInvoice(payable.invoice, noWalletFoundStr, { }) {
                             zappingProgress = 0f
                             accountViewModel.toastManager.toast(Res.string.error_dialog_zap_error, UserBasedErrorMessage(it, payable.info.user))
                         }
@@ -170,7 +170,7 @@ fun ReusableZapButton(
                 onPayViaIntent = {
                     if (it.size == 1) {
                         val payable = it.first()
-                        payViaIntent(payable.invoice, context, noWalletFoundStr, { }) {
+                        walletLauncher.payInvoice(payable.invoice, noWalletFoundStr, { }) {
                             zappingProgress = 0f
                             accountViewModel.toastManager.toast(Res.string.error_dialog_zap_error, UserBasedErrorMessage(it, payable.info.user))
                         }

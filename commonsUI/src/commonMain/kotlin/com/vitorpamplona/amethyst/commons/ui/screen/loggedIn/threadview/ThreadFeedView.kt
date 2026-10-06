@@ -117,6 +117,7 @@ import com.vitorpamplona.amethyst.commons.ui.note.NoteCompose
 import com.vitorpamplona.amethyst.commons.ui.note.NoteUsernameDisplay
 import com.vitorpamplona.amethyst.commons.ui.note.ObserveDisplayNip05Status
 import com.vitorpamplona.amethyst.commons.ui.note.ObserveDraftEvent
+import com.vitorpamplona.amethyst.commons.ui.note.ReactionsRow
 import com.vitorpamplona.amethyst.commons.ui.note.RenderApproveButton
 import com.vitorpamplona.amethyst.commons.ui.note.RenderCashuMint
 import com.vitorpamplona.amethyst.commons.ui.note.RenderCodeSnippetHeaderForThread
@@ -143,7 +144,6 @@ import com.vitorpamplona.amethyst.commons.ui.note.elements.TimeAgo
 import com.vitorpamplona.amethyst.commons.ui.note.elements.TimeAgoStyle
 import com.vitorpamplona.amethyst.commons.ui.note.nip22Comments.DisplayCommentScope
 import com.vitorpamplona.amethyst.commons.ui.note.observeEdits
-import com.vitorpamplona.amethyst.commons.ui.note.platform.ReactionsRow
 import com.vitorpamplona.amethyst.commons.ui.note.platform.RenderAudioHeader
 import com.vitorpamplona.amethyst.commons.ui.note.platform.RenderAudioTrack
 import com.vitorpamplona.amethyst.commons.ui.note.platform.RenderGitIssueEvent

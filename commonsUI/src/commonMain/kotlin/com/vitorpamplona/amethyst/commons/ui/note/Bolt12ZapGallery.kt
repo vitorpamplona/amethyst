@@ -18,7 +18,7 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.ui.note
+package com.vitorpamplona.amethyst.commons.ui.note
 
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
@@ -50,10 +50,10 @@ import com.vitorpamplona.amethyst.commons.ui.theme.WidthAuthorPictureModifier
 import com.vitorpamplona.amethyst.commons.util.showAmount
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.quartz.nipB1Bolt12Zaps.zap.Bolt12ZapEvent
+import com.vitorpamplona.quartz.utils.BigDecimal
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.persistentListOf
 import kotlinx.collections.immutable.toImmutableList
-import java.math.BigDecimal
 
 private fun onBolt12ZapEntryClick(
     entry: Bolt12ZapEntry,
@@ -139,7 +139,7 @@ private fun Bolt12ZapEntryRow(
     val amountText =
         remember(entry.amountMillisats) {
             val sats = entry.amountMillisats / 1000
-            if (sats > 0L) showAmount(BigDecimal.valueOf(sats)) else ""
+            if (sats > 0L) showAmount(BigDecimal(sats)) else ""
         }
 
     Box(

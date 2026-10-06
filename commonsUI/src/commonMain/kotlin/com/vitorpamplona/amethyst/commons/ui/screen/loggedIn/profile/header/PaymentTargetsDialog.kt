@@ -18,9 +18,8 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.header
+package com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.profile.header
 
-import android.widget.Toast
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -45,7 +44,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalClipboard
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -63,6 +61,7 @@ import com.vitorpamplona.amethyst.commons.resources.show_qr
 import com.vitorpamplona.amethyst.commons.ui.components.M3ActionDialog
 import com.vitorpamplona.amethyst.commons.ui.components.M3ActionRow
 import com.vitorpamplona.amethyst.commons.ui.components.M3ActionSection
+import com.vitorpamplona.amethyst.commons.ui.components.rememberShortNotice
 import com.vitorpamplona.amethyst.commons.ui.components.util.setText
 import com.vitorpamplona.amethyst.commons.ui.loadStringRes
 import com.vitorpamplona.amethyst.commons.ui.note.ErrorMessageDialog
@@ -82,7 +81,7 @@ fun PaymentTargetsDialog(
     payInApp: ((PaymentTarget) -> Boolean)? = null,
 ) {
     val noPaymentAppFoundStr = stringRes(Res.string.no_payment_app_found)
-    val context = LocalContext.current
+    val shortNotice = rememberShortNotice()
     val uriHandler = LocalUriHandler.current
     val clipboardManager = LocalClipboard.current
     val scope = rememberCoroutineScope()
@@ -109,12 +108,7 @@ fun PaymentTargetsDialog(
                         onCopy = {
                             scope.launch {
                                 clipboardManager.setText(target.authority)
-                                Toast
-                                    .makeText(
-                                        context,
-                                        loadStringRes(Res.string.copied_to_clipboard),
-                                        Toast.LENGTH_SHORT,
-                                    ).show()
+                                shortNotice.show(loadStringRes(Res.string.copied_to_clipboard))
                             }
                         },
                         onPay = {
