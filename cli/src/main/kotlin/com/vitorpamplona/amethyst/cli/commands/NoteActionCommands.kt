@@ -24,19 +24,25 @@ import com.vitorpamplona.amethyst.cli.Args
 import com.vitorpamplona.amethyst.cli.Context
 import com.vitorpamplona.amethyst.cli.DataDir
 import com.vitorpamplona.amethyst.cli.Output
-import com.vitorpamplona.amethyst.commons.actions.QuoteActions
 import com.vitorpamplona.amethyst.commons.actions.ReplyActions
+import com.vitorpamplona.amethyst.commons.model.BroadcastRelayPlanner
+import com.vitorpamplona.amethyst.commons.model.Note
+import com.vitorpamplona.amethyst.commons.model.composer.quoteMessage
 import com.vitorpamplona.amethyst.commons.model.nip18Reposts.RepostAction
 import com.vitorpamplona.amethyst.commons.model.nip25Reactions.ReactionAction
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.hints.EventHintBundle
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
+import com.vitorpamplona.quartz.nip01Core.tags.people.taggedUserIds
 
 /**
  * `amy notes reply|quote|react|repost EVENT …` — the interactions on an existing
- * event. Each one locates the target (cache-first, `--refresh` to re-drain), builds
- * the event with the shared commons action Android and Desktop use
- * ([ReplyActions], [QuoteActions], [ReactionAction], [RepostAction]), and publishes
- * it where an interaction belongs ([NoteSupport.interactionRelays]).
+ * event. Each one locates the target (cache-first, `--refresh` to re-drain), loads it
+ * into a [NoteCache] and then runs the app's own code end to end: the text goes
+ * through the composer's `NewMessageTagger`, the event is built by the shared
+ * builder ([ReplyActions], [ReactionAction], [RepostAction]; a quote is the composer's
+ * pre-filled quote text posted as a note), and it
+ * is routed by [BroadcastRelayPlanner] with the same call the app makes for that action.
  */
 object NoteActionCommands {
     /** NIP-10 kind:1 reply to a kind:1, NIP-22 kind:1111 comment on anything else. */
@@ -48,7 +54,17 @@ object NoteActionCommands {
         val ref = args.positionalOrNull(0) ?: return Output.error("bad_args", "notes reply EVENT TEXT")
         val text = args.positionalOrNull(1) ?: return Output.error("bad_args", "notes reply EVENT TEXT")
         if (text.isBlank()) return Output.error("bad_args", "reply text must not be blank")
-        return interact(dataDir, args, ref) { ctx, hint -> ReplyActions.reply(hint, text, ctx.signer) }
+        // The composer publishes with signAndComputeBroadcast: routed as the new note.
+        return interact(
+            dataDir,
+            args,
+            ref,
+            build = { ctx, notes, _, hint ->
+                val tagged = notes.tag(text)
+                ReplyActions.reply(hint, tagged.message, ctx.signer, tagged.mentions)
+            },
+            route = { planner, _, _, mine -> planner.computeRelayListToBroadcast(mine) },
+        )
     }
 
     /** NIP-18 quote: a new kind:1 embedding `nostr:nevent…` with a `q` tag. */
@@ -59,7 +75,14 @@ object NoteActionCommands {
         val args = Args(rest)
         val ref = args.positionalOrNull(0) ?: return Output.error("bad_args", "notes quote EVENT [TEXT]")
         val text = args.positionalOrNull(1).orEmpty()
-        return interact(dataDir, args, ref) { ctx, hint -> QuoteActions.quote(hint, text, ctx.signer) }
+        return interact(
+            dataDir,
+            args,
+            ref,
+            // Exactly the app's quote: the composer's pre-filled text, posted as a note.
+            build = { ctx, notes, target, _ -> ctx.signer.sign(notes.textNote(notes.tag(quoteMessage(text, target).trim()))) },
+            route = { planner, _, _, mine -> planner.computeRelayListToBroadcast(mine) },
+        )
     }
 
     /** NIP-25 reaction. `--content` defaults to `+` (a like); `-` is a dislike; any emoji works. */
@@ -71,7 +94,14 @@ object NoteActionCommands {
         val ref = args.positionalOrNull(0) ?: return Output.error("bad_args", "notes react EVENT [--content +|-|EMOJI]")
         val content = args.flag("content") ?: args.positionalOrNull(1) ?: "+"
         if (content.isEmpty()) return Output.error("bad_args", "--content must not be empty")
-        return interact(dataDir, args, ref) { ctx, hint -> ReactionAction.reactTo(hint, content, ctx.signer) }
+        // Account.reactTo publishes through sendAutomatic: routed as the event itself.
+        return interact(
+            dataDir,
+            args,
+            ref,
+            build = { ctx, _, _, hint -> ReactionAction.reactTo(hint, content, ctx.signer) },
+            route = { planner, _, signed, _ -> planner.computeRelayListToBroadcast(signed) },
+        )
     }
 
     /** NIP-18 repost: kind:6 for a kind:1, kind:16 (generic repost) for any other kind. */
@@ -81,14 +111,22 @@ object NoteActionCommands {
     ): Int {
         val args = Args(rest)
         val ref = args.positionalOrNull(0) ?: return Output.error("bad_args", "notes repost EVENT")
-        return interact(dataDir, args, ref) { ctx, hint -> RepostAction.repost(hint, ctx.signer) }
+        // Account.boost publishes to computeMyReactionToNote.
+        return interact(
+            dataDir,
+            args,
+            ref,
+            build = { ctx, _, _, hint -> RepostAction.repost(hint, ctx.signer) },
+            route = { planner, target, signed, _ -> planner.computeMyReactionToNote(target, signed) },
+        )
     }
 
     private suspend fun interact(
         dataDir: DataDir,
         args: Args,
         refInput: String,
-        build: suspend (Context, EventHintBundle<Event>) -> Event,
+        build: suspend (Context, NoteCache, target: Note, hint: EventHintBundle<Event>) -> Event,
+        route: (BroadcastRelayPlanner, target: Note, signed: Event, mine: Note) -> Set<NormalizedRelayUrl>,
     ): Int {
         val extraRelays = RawEventSupport.relayFlag(args)
         val refresh = args.bool("refresh")
@@ -102,10 +140,21 @@ object NoteActionCommands {
                 NoteSupport.locate(ctx, ref, refresh, timeoutMs)
                     ?: return Output.error("not_found", "event not found: $refInput")
 
-            val hint = EventHintBundle(target.event, target.seenOn.firstOrNull())
-            val signed = build(ctx, hint)
-            val relays = NoteSupport.interactionRelays(ctx, target, signed, extraRelays)
-            val ack = ctx.publish(signed, relays)
+            val notes = NoteCache(ctx)
+            // The target author's inbox is where the app routes a notification; fetch it if unknown.
+            notes.addUsers(listOf(target.event.pubKey), fetchMissing = true)
+            notes.addUsers(target.event.taggedUserIds())
+            val targetNote =
+                notes.add(target.event, target.seenOn)
+                    ?: return Output.error("not_found", "event not found: $refInput")
+
+            // The same hint the app writes: the relay it saw the note on, and its author's home relay.
+            val hint = targetNote.toEventHint<Event>() ?: EventHintBundle(target.event, target.seenOn.firstOrNull())
+            val signed = build(ctx, notes, targetNote, hint)
+            notes.addUsers(signed.taggedUserIds())
+            val planner = notes.planner()
+            val mine = notes.addMine(signed) ?: return Output.error("runtime", "could not cache ${signed.id}")
+            val ack = ctx.publish(signed, route(planner, targetNote, signed, mine) + extraRelays)
             RawEventSupport.publishGuard(ack, signed.id)?.let { return it }
 
             Output.emit(

@@ -26,13 +26,9 @@ import com.vitorpamplona.quartz.nip01Core.crypto.KeyPair
 import com.vitorpamplona.quartz.nip01Core.hints.EventHintBundle
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerInternal
-import com.vitorpamplona.quartz.nip01Core.tags.hashtags.hashtags
 import com.vitorpamplona.quartz.nip01Core.tags.people.PTag
 import com.vitorpamplona.quartz.nip09Deletions.DeletionRequestEvent
 import com.vitorpamplona.quartz.nip10Notes.TextNoteEvent
-import com.vitorpamplona.quartz.nip18Reposts.quotes.QTag
-import com.vitorpamplona.quartz.nip19Bech32.Nip19Parser
-import com.vitorpamplona.quartz.nip19Bech32.entities.NEvent
 import com.vitorpamplona.quartz.nip19Bech32.entities.NPub
 import com.vitorpamplona.quartz.nip22Comments.CommentEvent
 import com.vitorpamplona.quartz.nip23LongContent.LongFormContentEvent
@@ -110,43 +106,6 @@ class InteractionActionsTest {
             val carol = NostrSignerInternal(KeyPair("0000000000000000000000000000000000000000000000000000000000000009".hexToByteArray()))
             val reply = ReplyActions.reply(EventHintBundle(parent), "cc nostr:${NPub.create(carol.pubKey)}", bob)
             assertTrue(reply.tags.mapNotNull(PTag::parseKey).contains(carol.pubKey))
-        }
-
-    @Test
-    fun quoteEmbedsTheEventAndTagsIt() =
-        runTest {
-            val target = alice.sign(TextNoteEvent.build("quotable"))
-            val quote = QuoteActions.quote(EventHintBundle(target, relay), "look at this", bob)
-
-            assertEquals(TextNoteEvent.KIND, quote.kind)
-            assertTrue(quote.content.startsWith("look at this\n\nnostr:nevent1"), quote.content)
-            val nevent = assertIs<NEvent>(Nip19Parser.uriToRoute(quote.content.substringAfter("\n\n"))?.entity)
-            assertEquals(target.id, nevent.hex)
-            assertEquals(listOf(target.id), quote.tags.mapNotNull(QTag::parseEventId))
-            assertTrue(quote.tags.mapNotNull(PTag::parseKey).contains(alice.pubKey))
-        }
-
-    @Test
-    fun quoteOfAnAddressableEventUsesItsCoordinate() =
-        runTest {
-            val target = article()
-            val quote = QuoteActions.quote(EventHintBundle(target, relay), "", bob)
-            assertTrue(quote.content.startsWith("nostr:naddr1"), quote.content)
-            assertEquals(listOf(target.addressTag()), quote.tags.mapNotNull(QTag::parseAddressId))
-        }
-
-    @Test
-    fun contentTagsCoverProfilesEventsHashtagsAndLinks() =
-        runTest {
-            val cited = alice.sign(TextNoteEvent.build("cited"))
-            val npub = NPub.create(alice.pubKey)
-            val text = "hey nostr:$npub and again nostr:$npub, see nostr:${NEvent.create(cited.id, null, null, relay)} #Nostr https://example.com/x"
-            val note = bob.sign(TextNoteEvent.build(text) { contentTags(text) })
-
-            assertEquals(listOf(alice.pubKey), note.tags.mapNotNull(PTag::parseKey))
-            assertEquals(listOf(cited.id), note.tags.mapNotNull(QTag::parseEventId))
-            assertEquals(setOf("nostr"), note.hashtags().mapTo(mutableSetOf()) { it.lowercase() })
-            assertTrue(note.tags.any { it[0] == "r" && it[1] == "https://example.com/x" }, note.tags.joinToString { it.toList().toString() })
         }
 
     @Test

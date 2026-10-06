@@ -54,11 +54,11 @@ Status legend: ✅ shipped · 📦 logic lives in `commons/`, needs a command ·
 | NIP-13 proof of work (`amy notes post --pow N`, `amy pow check/mine/bench`) | ✅ | `PostCommand` + `PowCommands` — mines pre-signature via quartz `PoWMiner`; `pow mine --pubkey` covers delegated PoW; `pow check` applies the commitment cap. |
 | NIP-01 feed read (`amy notes feed [--following \| --author NPUB \| --hashtag TAG]`) | ✅ | `FeedCommand`; rows carry the shared renderer's fields. Community feeds still pending. |
 | Event view (`amy notes show EVENT`) | ✅ | `NoteShowCommand` over the shared `commons/rendering/` `EventRendererRegistry` + `JsonEventFormatter` (any kind; specialised 0/1/3/5/6/7/16/1111/9735/10002/10050/30023). |
-| NIP-10 / NIP-22 replies (`amy notes reply EVENT TEXT`) | ✅ | `NoteActionCommands` → `commons` `ReplyActions.reply` (kind:1 → NIP-10, anything else → NIP-22 kind:1111). Routed to outbox + seen-on relays + the author's inbox. |
+| NIP-10 / NIP-22 replies (`amy notes reply EVENT TEXT`) | ✅ | `NoteActionCommands` → `commons` `ReplyActions.reply` (kind:1 → NIP-10, anything else → NIP-22 kind:1111), text through the composer's `NewMessageTagger` + `messageTags`. Every interaction is routed by `commons` `BroadcastRelayPlanner` — the app's `EventBroadcaster` routing — with the call the app makes for that action. |
 | NIP-02 follow list add / remove / list | ✅ | `FollowCommand` — `amy follow USER` / `amy unfollow USER` (fetches the freshest kind:3 first). |
 | NIP-09 event deletion (`amy delete EVENT…`) | ✅ | `DeleteCommand` → `commons` `DeletionActions` (own events only, 200 targets per kind:5). |
 | NIP-17 DMs send / list / await | ✅ | `DmCommands` — reuses Quartz `NIP17Factory` + `RecipientRelayFetcher`; filter extracted to `commons/relayClient/nip17Dm/`. Plan: [`cli/plans/2026-04-23-nip17-dm.md`](./plans/2026-04-23-nip17-dm.md). |
-| NIP-18 reposts / quotes (`amy notes repost` / `notes quote`) | ✅ | `commons` `RepostAction` (kind:6 / 16) + `QuoteActions` (kind:1 + `q` tag). |
+| NIP-18 reposts / quotes (`amy notes repost` / `notes quote`) | ✅ | `commons` `RepostAction` (kind:6 / 16); a quote is the composer's own pre-filled text (`quoteMessage`) posted through the composer's tagging. |
 | NIP-25 reactions | ✅ | `amy notes react EVENT` via `commons` `ReactionAction`; `marmot message react` covers MLS group reactions. |
 | NIP-29 relay groups (`amy relaygroup`) | ✅ | `RelayGroupCommands` — list/browse/info/create/join/leave/message/edit/invite/put-user/remove-user against a host relay; kind:10009 joined-list kept in sync. |
 | Buzz workspaces (`amy buzz`) | ✅ | `BuzzCommands` — post/read the kind:40002 stream timeline, `attest` (offline NIP-OA), `console` (decrypt+aggregate kind:44200 turn metrics via the shared `AgentFleetAggregator`), `personas` (kind:30175). Join/leave reuse `amy relaygroup` (Buzz workspaces are NIP-29 groups). |
@@ -84,7 +84,7 @@ Status legend: ✅ shipped · 📦 logic lives in `commons/`, needs a command ·
 | NIP-47 Wallet Connect | 🆕 | |
 | NIP-46 bunker signer | ✅ | `BunkerCommand` + `NostrConnect` + `LoginCommand` — host (`amy bunker[ connect]`) and client (`amy login bunker://` / `--nostrconnect`) sides, `--perms`/`--interactive` gating, `auth_url` challenges. |
 | Profile view (`amy profile show NPUB`) + edit | ✅ | `ProfileCommands`. Cache-first; `--refresh` forces a relay drain. |
-| Thread view (`amy notes thread EVENT`) | ✅ | `ThreadCommand` → `commons` `EventThreadTree` (cache-free NIP-10/NIP-22 layout) + the renderer. |
+| Thread view (`amy notes thread EVENT`) | ✅ | `ThreadCommand` runs the app's thread code over a per-run `EventCache` (`NoteCache`): the thread screen's relay filters, `ThreadAssembler`, `ThreadFeedFilter.thread` ordering, `ThreadLevelCalculator` depths. |
 | Notifications feed (`amy notifications`) | ✅ | `NotificationsCommand` → `commons` `NotificationKinds` (filter + "is it for me") + `NotificationItem.classify` (extracted from Desktop). DMs stay in `amy dm list`. |
 | Search (NIP-50) | ✅ | `SearchCommand` — `search user` (kind:0) + `search note` (`--kind`, `--kinds` alias) over the kind:10007 search-relay list; default limit 50. |
 | Namecoin NIP-05 resolve (`amy namecoin resolve .bit\|d/\|id/`) | ✅ | `NamecoinCommand` — reuses Quartz `NamecoinNameResolver` + `ElectrumXClient` + the default ElectrumX server set the Android/Desktop apps ship with. Stateless. On-chain `name_history` + Core RPC backend pending separate PRs. |

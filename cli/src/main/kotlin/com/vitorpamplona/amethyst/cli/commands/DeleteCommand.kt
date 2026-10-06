@@ -30,9 +30,10 @@ import com.vitorpamplona.amethyst.commons.actions.DeletionActions
  * `amy delete EVENT… [--relay URL,…] [--refresh] [--timeout SECS]` — NIP-09
  * deletion requests for your own events, any kind (`notes delete` is the same
  * verb). Each EVENT is located first (a kind:5 needs the target's kind, and its
- * coordinate when addressable), then [DeletionActions] builds the kind:5s and they
- * go to your outbox plus every relay a target was seen on — a relay can only
- * honour a deletion it receives.
+ * coordinate when addressable), then [DeletionActions] builds the kind:5s and the
+ * app's [com.vitorpamplona.amethyst.commons.model.BroadcastRelayPlanner] routes them
+ * (your outbox plus every relay a target was seen on — a relay can only honour a
+ * deletion it receives).
  */
 object DeleteCommand {
     suspend fun run(
@@ -60,7 +61,10 @@ object DeleteCommand {
             }
 
             val deletions = DeletionActions.delete(located.map { it.event }, ctx.signer)
-            val relays = ctx.outboxRelays() + located.flatMap { it.seenOn } + extraRelays
+            // Account.delete's routing: our outbox plus every relay a target was seen on.
+            val notes = NoteCache(ctx)
+            val targetNotes = located.mapNotNull { notes.add(it.event, it.seenOn) }
+            val relays = notes.planner().computeDeletionRelays(targetNotes) + extraRelays
 
             val results =
                 deletions.map { deletion ->

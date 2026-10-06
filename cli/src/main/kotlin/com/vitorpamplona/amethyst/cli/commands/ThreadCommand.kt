@@ -24,25 +24,34 @@ import com.vitorpamplona.amethyst.cli.Args
 import com.vitorpamplona.amethyst.cli.Context
 import com.vitorpamplona.amethyst.cli.DataDir
 import com.vitorpamplona.amethyst.cli.Output
-import com.vitorpamplona.amethyst.commons.model.EventThreadTree
-import com.vitorpamplona.amethyst.commons.rendering.EventRendererRegistry
-import com.vitorpamplona.quartz.nip01Core.core.AddressableEvent
+import com.vitorpamplona.amethyst.commons.model.Note
+import com.vitorpamplona.amethyst.commons.model.ThreadAssembler
+import com.vitorpamplona.amethyst.commons.model.ThreadLevelCalculator
+import com.vitorpamplona.amethyst.commons.relayClient.thread.filterEventsInThreadForRoot
+import com.vitorpamplona.amethyst.commons.relayClient.thread.filterMissingEventsForThread
+import com.vitorpamplona.amethyst.commons.viewmodels.thread.ThreadFeedFilter
 import com.vitorpamplona.quartz.nip01Core.core.Event
-import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
-import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
-import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
-import com.vitorpamplona.quartz.nip10Notes.TextNoteEvent
-import com.vitorpamplona.quartz.nip22Comments.CommentEvent
+import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
 
 /**
- * `amy notes thread EVENT [--limit N] [--refresh] [--timeout SECS]` — the whole
- * conversation EVENT belongs to: its root, then every NIP-10 reply and NIP-22
- * comment, laid out depth-first by the shared [EventThreadTree] and rendered by
- * the shared renderer. Replies are gathered from the local store plus the root
- * author's outbox and inbox (where the outbox model routes replies), the relays the
- * focus/root were seen on and the bootstrap set.
+ * `amy notes thread EVENT [--limit N] [--refresh] [--timeout SECS]` — the conversation
+ * EVENT belongs to, loaded and laid out by the app's own thread code over a
+ * [NoteCache]:
+ *
+ *  - what to fetch is the thread screen's two relay filters
+ *    ([filterEventsInThreadForRoot]: everything citing the root on its author's inbox
+ *    and where it was seen; [filterMissingEventsForThread]: parents and roots not loaded
+ *    yet), repeated until a round brings nothing new;
+ *  - which notes form the thread is [ThreadAssembler];
+ *  - the order and indentation are [ThreadFeedFilter.thread] and
+ *    [ThreadLevelCalculator.replyLevel], exactly what the app shows.
+ *
+ * Each round reads the local store before the relays, so a thread amy has already seen
+ * costs no extra round-trip.
  */
 object ThreadCommand {
+    private const val MAX_ROUNDS = 5
+
     suspend fun run(
         dataDir: DataDir,
         rest: Array<String>,
@@ -62,58 +71,52 @@ object ThreadCommand {
                 NoteSupport.locate(ctx, ref, refresh, timeoutMs)
                     ?: return Output.error("not_found", "event not found: $refInput")
 
-            val rootId = EventThreadTree.rootOf(focus.event) ?: focus.event.id
-            val root =
-                if (rootId == focus.event.id) {
-                    focus
-                } else {
-                    val rootRef = EventRendererRegistry.render(focus.event).root
-                    val hints = setOfNotNull(rootRef?.relay?.let { RelayUrlNormalizer.normalizeOrNull(it) }) + focus.seenOn
-                    NoteSupport.locate(
-                        ctx,
-                        NoteSupport.Ref(rootId, Filter(ids = listOf(rootId), limit = 1), hints, rootRef?.author),
-                        refresh,
-                        timeoutMs,
-                    )
-                }
+            val notes = NoteCache(ctx)
+            val focusNote = notes.add(focus.event, focus.seenOn) ?: return Output.error("not_found", "event not found: $refInput")
+            val defaultRelays = ctx.bootstrapRelays()
+            val queried = mutableSetOf<String>()
 
-            val filters = replyFilters(rootId, root?.event, limit)
-            val relays =
-                buildSet<NormalizedRelayUrl> {
-                    addAll(focus.seenOn)
-                    root?.let {
-                        addAll(it.seenOn)
-                        addAll(NoteSupport.authorOutboxRelays(ctx, it.event.pubKey))
-                        addAll(NoteSupport.authorInboxRelays(ctx, it.event.pubKey))
-                    }
-                    addAll(ctx.bootstrapRelays())
-                }
+            for (round in 0 until MAX_ROUNDS) {
+                val assembler = ThreadAssembler(notes.cache)
+                val info = assembler.findThreadFor(focusNote.idHex) ?: break
+                val root = assembler.findRoot(focusNote.idHex) ?: focusNote
+                // Inbox relays decide where the thread's replies are looked for.
+                notes.addUsers(info.allNotes.mapNotNull { it.author?.pubkeyHex }, fetchMissing = round == 0)
 
-            val fromRelays = ctx.drain(relays.associateWith { filters }, timeoutMs).map { it.second }
-            val fromCache = filters.flatMap { ctx.store.query<Event>(it) }
-            val events =
-                (listOfNotNull(root?.event, focus.event) + fromCache + fromRelays)
-                    .distinctBy { it.id }
-                    .filter { it.id == rootId || it.id == focus.event.id || filters.any { f -> f.match(it) } }
+                val filters = filterEventsInThreadForRoot(root, null) + filterMissingEventsForThread(notes.cache, info, defaultRelays)
+                if (filters.isEmpty()) break
+                queried += filters.map { it.relay.url }
 
-            val entries = EventThreadTree.layout(rootId, events).take(limit)
-            val renderCtx = NoteSupport.renderContext(ctx, entries.map { it.event.pubKey }, fetchMissing = true)
+                val before = loaded(notes, focusNote)
+                fetch(ctx, notes, filters, timeoutMs)
+                if (loaded(notes, focusNote) == before) break
+            }
+
+            val me = notes.user(ctx.identity.pubKeyHex)
+            val following = ctx.contactsOf(ctx.identity.pubKeyHex)?.verifiedFollowKeySet() ?: emptySet()
+            val ordered = ThreadFeedFilter.thread(focusNote.idHex, notes.cache, me, following)
+            val shown = ordered.filter { it.event != null }.take(limit)
+            val levels = mutableMapOf<Note, Int>()
+            val root = ThreadAssembler(notes.cache).findRoot(focusNote.idHex)
+
+            val events = shown.mapNotNull { it.event }
+            val renderCtx = NoteSupport.renderContext(ctx, events.map { it.pubKey }, fetchMissing = true)
 
             Output.emit(
                 mapOf(
-                    "root_id" to rootId,
-                    "root_found" to (root != null),
+                    "root_id" to root?.event?.id,
+                    "root_found" to (root?.event != null),
                     "focus_id" to focus.event.id,
-                    "queried_relays" to relays.map { it.url },
-                    "count" to entries.size,
+                    "queried_relays" to queried.sorted(),
+                    "count" to shown.size,
+                    "missing" to ordered.count { it.event == null },
                     "notes" to
-                        entries.map { entry ->
+                        shown.map { note ->
                             mapOf(
-                                "depth" to entry.depth,
-                                "parent_id" to entry.parentId,
-                                "parent_missing" to entry.parentMissing,
-                                "is_focus" to (entry.event.id == focus.event.id),
-                            ) + NoteSupport.render(entry.event, renderCtx, includeBody = false)
+                                "depth" to ThreadLevelCalculator.replyLevel(note, levels),
+                                "parent_ids" to note.replyTo?.map { it.idHex }.orEmpty(),
+                                "is_focus" to (note == focusNote),
+                            ) + NoteSupport.render(note.event!!, renderCtx, includeBody = false)
                         },
                 ),
             )
@@ -121,27 +124,22 @@ object ThreadCommand {
         }
     }
 
-    /**
-     * Everything that answers [rootId]: NIP-10 replies e-tag the root (marked or
-     * positional), NIP-22 comments carry it as the uppercase `E` scope. An addressable
-     * root is also reached through its `a` / `A` coordinate.
-     */
-    private fun replyFilters(
-        rootId: String,
-        root: Event?,
-        limit: Int,
-    ): List<Filter> {
-        val kinds = listOf(TextNoteEvent.KIND, CommentEvent.KIND)
-        val filters =
-            mutableListOf(
-                Filter(kinds = kinds, tags = mapOf("e" to listOf(rootId)), limit = limit),
-                Filter(kinds = listOf(CommentEvent.KIND), tags = mapOf("E" to listOf(rootId)), limit = limit),
-            )
-        if (root is AddressableEvent) {
-            val address = root.addressTag()
-            filters += Filter(kinds = kinds, tags = mapOf("a" to listOf(address)), limit = limit)
-            filters += Filter(kinds = listOf(CommentEvent.KIND), tags = mapOf("A" to listOf(address)), limit = limit)
+    private fun loaded(
+        notes: NoteCache,
+        focus: Note,
+    ): Int = ThreadAssembler(notes.cache).findThreadFor(focus.idHex)?.allNotes?.count { it.event != null } ?: 0
+
+    /** One round of the thread screen's filters: the store first, then the relays, all into [notes]. */
+    private suspend fun fetch(
+        ctx: Context,
+        notes: NoteCache,
+        filters: List<RelayBasedFilter>,
+        timeoutMs: Long,
+    ) {
+        filters.map { it.filter }.distinct().forEach { filter ->
+            ctx.store.query<Event>(filter).forEach { notes.add(it) }
         }
-        return filters
+        val byRelay = filters.groupBy({ it.relay }, { it.filter })
+        ctx.drain(byRelay, timeoutMs).forEach { (relay, event) -> notes.add(event, listOf(relay)) }
     }
 }

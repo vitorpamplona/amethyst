@@ -48,6 +48,9 @@ import com.vitorpamplona.amethyst.commons.model.composer.IZapRaiser
 import com.vitorpamplona.amethyst.commons.model.composer.NewMessageTagger
 import com.vitorpamplona.amethyst.commons.model.composer.PreviewState
 import com.vitorpamplona.amethyst.commons.model.composer.SplitBuilder
+import com.vitorpamplona.amethyst.commons.model.composer.messageTags
+import com.vitorpamplona.amethyst.commons.model.composer.pTagsWithHints
+import com.vitorpamplona.amethyst.commons.model.composer.quoteMessage
 import com.vitorpamplona.amethyst.commons.model.composer.toZapSplitSetup
 import com.vitorpamplona.amethyst.commons.model.location.DeviceLocation
 import com.vitorpamplona.amethyst.commons.model.location.LocationResult
@@ -118,7 +121,6 @@ import com.vitorpamplona.quartz.nip01Core.tags.geohash.getGeoHash
 import com.vitorpamplona.quartz.nip01Core.tags.hashtags.hashtags
 import com.vitorpamplona.quartz.nip01Core.tags.people.pTags
 import com.vitorpamplona.quartz.nip01Core.tags.people.toPTag
-import com.vitorpamplona.quartz.nip01Core.tags.references.references
 import com.vitorpamplona.quartz.nip10Notes.BaseThreadedEvent
 import com.vitorpamplona.quartz.nip10Notes.TextNoteEvent
 import com.vitorpamplona.quartz.nip10Notes.content.findHashtags
@@ -726,7 +728,7 @@ open class ShortNotePostViewModel :
             multiOrchestrator = null
 
             quote?.let { quotedNote ->
-                message.setTextAndPlaceCursorAtBeginning(message.text.toString() + "\nnostr:${quotedNote.toNEvent()}")
+                message.setTextAndPlaceCursorAtBeginning(quoteMessage(message.text.toString(), quotedNote))
 
                 quotedNote.author?.let { quotedUser ->
                     if (quotedUser.pubkeyHex != user.pubkeyHex) {
@@ -1413,9 +1415,7 @@ open class ShortNotePostViewModel :
                 // `nostr:` reference resolves — matching the Poll/ZapPoll branches below.
                 pTags(tagger.directMentionsUsers.map { it.toPTag() })
 
-                hashtags(findHashtags(tagger.message))
-                references(findURLs(tagger.message))
-                quotes(findNostrUris(tagger.message))
+                messageTags(tagger.message)
 
                 geoHash?.let { geohash(it) }
                 contentWarningReason?.let { contentWarning(it) }
@@ -1477,22 +1477,9 @@ open class ShortNotePostViewModel :
             val eventHint = originalNote?.toEventHint<Event>() ?: return null
 
             CommentEvent.replyBuilder(tagger.message, eventHint) {
-                tagger.pTags?.let { userList ->
-                    val tags =
-                        userList.map {
-                            val tag = it.toPTag()
-                            if (tag.relayHint == null) {
-                                tag.copy(relayHint = LocalCache.relayHints.hintsForKey(it.pubkeyHex).firstOrNull())
-                            } else {
-                                tag
-                            }
-                        }
-                    notify(tags)
-                }
+                tagger.pTagsWithHints(LocalCache.relayHints)?.let { notify(it) }
 
-                hashtags(findHashtags(tagger.message))
-                references(findURLs(tagger.message))
-                quotes(findNostrUris(tagger.message))
+                messageTags(tagger.message)
 
                 geoHash?.let { geohash(it) }
                 localZapRaiserAmount?.let { zapraiser(it) }
@@ -1533,22 +1520,9 @@ open class ShortNotePostViewModel :
                     markedETags(tags)
                 }
 
-                tagger.pTags?.let { userList ->
-                    val tags =
-                        userList.map {
-                            val tag = it.toPTag()
-                            if (tag.relayHint == null) {
-                                tag.copy(relayHint = LocalCache.relayHints.hintsForKey(it.pubkeyHex).firstOrNull())
-                            } else {
-                                tag
-                            }
-                        }
-                    notify(tags)
-                }
+                tagger.pTagsWithHints(LocalCache.relayHints)?.let { notify(it) }
 
-                hashtags(findHashtags(tagger.message))
-                references(findURLs(tagger.message))
-                quotes(findNostrUris(tagger.message))
+                messageTags(tagger.message)
 
                 if (wantsSubject && subjectValue.isNotBlank()) subject(subjectValue)
 

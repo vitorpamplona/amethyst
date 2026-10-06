@@ -183,8 +183,8 @@ cli/
         ├── NotesCommands.kt + PostCommand.kt + FeedCommand.kt
         │   NoteShowCommand.kt + ThreadCommand.kt + NoteActionCommands.kt
         │   (reply/quote/react/repost) + DeleteCommand.kt + NotificationsCommand.kt
-        │   NoteSupport.kt     # EVENT ref parsing, cache-first lookup, interaction
-        │                      #   relay routing, profile hydration for rendering
+        │   NoteSupport.kt     # EVENT ref parsing, cache-first lookup, rendering
+        │   NoteCache.kt       # per-run EventCache: the app's routing, tagger, threads
         ├── DmCommands.kt
         ├── KeyPackageCommands.kt
         ├── GroupCommands.kt + GroupCreateCommand.kt + GroupReadCommands.kt
@@ -208,9 +208,14 @@ Shared logic consumed by Amy lives in `commons/`:
 - `commons/rendering/` — `EventRendererRegistry` + `json/JsonEventFormatter`:
   render any event for output (`notes show/thread/feed`, `notifications`).
   Don't hand-format event fields in a command; render and emit.
-- `commons/actions/` — `ReplyActions` / `QuoteActions` / `DeletionActions` /
-  `contentTags`, plus `model/nip25Reactions/ReactionAction` and
-  `model/nip18Reposts/RepostAction`: the same builders the apps use.
+- `commons/actions/` — `ReplyActions` / `DeletionActions`, plus
+  `model/nip25Reactions/ReactionAction` and `model/nip18Reposts/RepostAction`:
+  the same builders the apps use.
+- App code that needs `Note`/`User` objects (routing via
+  `model/BroadcastRelayPlanner`, the composer's `NewMessageTagger` +
+  `composer/ComposerTags`, `ThreadAssembler` / `ThreadFeedFilter`) runs over a
+  per-run `EventCache` — use `cli/commands/NoteCache.kt`, never a parallel
+  event-only reimplementation.
 - `commons/marmot/` — MLS / group state
 - `commons/cashu/` — `ops/CashuWalletOps` (jvmAndroid) + `CashuWalletReader`
   + `CashuKeysetCounterStore`; the NIP-60/61 wallet, shared with Android.

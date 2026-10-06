@@ -40,9 +40,9 @@ import com.vitorpamplona.quartz.nip65RelayList.AdvertisedRelayListEvent
 /**
  * Shared plumbing for the verbs that act on an existing event (`notes show /
  * reply / quote / react / repost / thread`, `amy delete`): turn a user-typed
- * reference into the event, decide where an interaction goes, and render
- * events through the shared commons renderer. Assembly only — the rendering,
- * thread layout and event builders all live in `commons`.
+ * reference into the event and render events through the shared commons
+ * renderer. Assembly only — routing, tagging, thread layout and the event
+ * builders are the app's own code, reached through [NoteCache].
  */
 object NoteSupport {
     /** A parsed `hex` / `note1` / `nevent1` / `naddr1` (optionally `nostr:`-prefixed) reference. */
@@ -114,15 +114,6 @@ object NoteSupport {
         return ctx.relaysOf(author)?.writeRelaysNorm()?.toSet() ?: emptySet()
     }
 
-    /** [author]'s NIP-65 read (inbox) relays — where replies, reactions and mentions should reach them. */
-    suspend fun authorInboxRelays(
-        ctx: Context,
-        author: HexKey,
-    ): Set<NormalizedRelayUrl> {
-        ensureRelayList(ctx, author)
-        return ctx.relaysOf(author)?.readRelaysNorm()?.toSet() ?: emptySet()
-    }
-
     private suspend fun ensureRelayList(
         ctx: Context,
         author: HexKey,
@@ -130,25 +121,6 @@ object NoteSupport {
         if (ctx.relaysOf(author) != null) return
         val filter = Filter(authors = listOf(author), kinds = listOf(AdvertisedRelayListEvent.KIND), limit = 1)
         ctx.drain(ctx.bootstrapRelays().associateWith { listOf(filter) })
-    }
-
-    /**
-     * Where an interaction with [target] (a reply, reaction, repost or quote) is
-     * published — the CLI rendition of `Account.computeMyReactionToNote`: our outbox
-     * (so our followers see it), every relay [target] was seen on, the target
-     * author's inbox (so they are notified), and the cached inboxes of everyone else
-     * [interaction] tags.
-     */
-    suspend fun interactionRelays(
-        ctx: Context,
-        target: Located,
-        interaction: Event,
-        extra: Set<NormalizedRelayUrl>,
-    ): Set<NormalizedRelayUrl> {
-        val tagged =
-            (interaction.taggedUserIds() - target.event.pubKey - ctx.identity.pubKeyHex)
-                .flatMapTo(mutableSetOf()) { ctx.relaysOf(it)?.readRelaysNorm().orEmpty() }
-        return ctx.outboxRelays() + target.seenOn + authorInboxRelays(ctx, target.event.pubKey) + tagged + extra
     }
 
     /**

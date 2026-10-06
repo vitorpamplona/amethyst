@@ -20,8 +20,10 @@
  */
 package com.vitorpamplona.amethyst.commons.moderation.notifications
 
-import com.vitorpamplona.amethyst.commons.actions.QuoteActions
 import com.vitorpamplona.amethyst.commons.actions.ReplyActions
+import com.vitorpamplona.amethyst.commons.model.cache.EventCache
+import com.vitorpamplona.amethyst.commons.model.composer.messageTags
+import com.vitorpamplona.amethyst.commons.model.composer.quoteMessage
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.hexToByteArray
 import com.vitorpamplona.quartz.nip01Core.crypto.KeyPair
@@ -54,7 +56,8 @@ class NotificationItemTest {
             assertEquals("mention", NotificationItem.classify(mention)?.type)
 
             // A quote cites the note (q tag) without replying to it.
-            val quote = QuoteActions.quote(EventHintBundle<Event>(mine), "look", bob)
+            val quoteText = quoteMessage("look", EventCache().also { it.justConsume(mine, null, true) }.getOrCreateNote(mine.id))
+            val quote = bob.sign(TextNoteEvent.build(quoteText) { messageTags(quoteText) })
             assertEquals("mention", NotificationItem.classify(quote)?.type)
 
             val like = bob.sign(ReactionEvent.build("+", EventHintBundle(mine)))

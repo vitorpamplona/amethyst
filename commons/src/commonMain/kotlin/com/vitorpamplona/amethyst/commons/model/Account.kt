@@ -1864,12 +1864,7 @@ class Account(
             myNotes.chunked(DeletionActions.MAX_TARGETS_PER_EVENT).forEach { chunkedList ->
                 val template = DeletionRequestEvent.build(chunkedList.mapNotNull { it.event })
                 val deletionEvent = signer.sign(template)
-                val myRelayList = outboxRelays.flow.value.toMutableSet()
-                chunkedList.forEach {
-                    myRelayList.addAll(it.relays)
-                }
-
-                client.publish(deletionEvent, myRelayList)
+                client.publish(deletionEvent, broadcaster.planner.computeDeletionRelays(chunkedList))
                 cache.justConsumeMyOwnEvent(deletionEvent)
             }
         }
@@ -2008,67 +2003,7 @@ class Account(
     fun computeMyReactionToNote(
         note: Note,
         reaction: Event,
-    ): Set<NormalizedRelayUrl> {
-        val relaysItCameFrom = note.relays
-
-        val inboxRelaysOfTheAuthorOfTheOriginalNote =
-            note.author?.inboxRelays() ?: note.author?.pubkeyHex?.let {
-                cache.relayHints.hintsForKey(it)
-            } ?: emptyList()
-
-        val reactionOutBoxRelays = outboxRelays.flow.value
-
-        val taggedUsers = reaction.taggedUserIds() + (note.event?.taggedUserIds() ?: emptyList())
-
-        val taggedUserInboxRelays =
-            taggedUsers.flatMapTo(mutableSetOf()) { pubkey ->
-                if (pubkey == userProfile().pubkeyHex) {
-                    notificationRelays.flow.value
-                } else {
-                    cache
-                        .getUserIfExists(pubkey)
-                        ?.inboxRelays()
-                        ?.ifEmpty { null }
-                        ?.toSet()
-                        ?: cache.relayHints.hintsForKey(pubkey).toSet()
-                }
-            }
-
-        val channelRelays = cache.getAnyChannel(note)?.relays() ?: emptySet()
-
-        val replyRelays =
-            note.replyTo?.flatMapTo(mutableSetOf()) {
-                val existingRelays = it.relays.toSet()
-
-                val replyToAuthor = it.author
-
-                val replyAuthorRelays =
-                    if (replyToAuthor != null) {
-                        if (replyToAuthor == userProfile()) {
-                            outboxRelays.flow.value
-                        } else {
-                            replyToAuthor.inboxRelays()?.ifEmpty { null }?.toSet()
-                                ?: replyToAuthor.allUsedRelaysOrNull()
-                                ?: cache.relayHints
-                                    .hintsForKey(replyToAuthor.pubkeyHex)
-                                    .ifEmpty { null }
-                                    ?.toSet()
-                                ?: emptySet()
-                        }
-                    } else {
-                        emptySet()
-                    }
-
-                existingRelays + replyAuthorRelays
-            } ?: emptySet()
-
-        return reactionOutBoxRelays +
-            inboxRelaysOfTheAuthorOfTheOriginalNote +
-            taggedUserInboxRelays +
-            channelRelays +
-            replyRelays +
-            relaysItCameFrom
-    }
+    ): Set<NormalizedRelayUrl> = broadcaster.planner.computeMyReactionToNote(note, reaction)
 
     // ------------------------------------------------------------------
     // Broadcast / relay-routing delegates (logic lives in EventBroadcaster).

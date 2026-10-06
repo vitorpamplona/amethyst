@@ -24,8 +24,7 @@ import com.vitorpamplona.amethyst.cli.Args
 import com.vitorpamplona.amethyst.cli.Context
 import com.vitorpamplona.amethyst.cli.DataDir
 import com.vitorpamplona.amethyst.cli.Output
-import com.vitorpamplona.amethyst.commons.actions.contentTags
-import com.vitorpamplona.quartz.nip10Notes.TextNoteEvent
+import com.vitorpamplona.quartz.nip01Core.tags.people.taggedUserIds
 import com.vitorpamplona.quartz.nip13Pow.miner.PoWMiner
 import com.vitorpamplona.quartz.nip13Pow.pow
 import com.vitorpamplona.quartz.utils.TimeUtils
@@ -40,10 +39,11 @@ import kotlin.coroutines.cancellation.CancellationException
  * invocation (the CLI process IS the job); `--pow-timeout` aborts with exit
  * 124 and publishes nothing.
  *
- * The text is tagged the way the Android composer tags it (`p` for cited
- * profiles, `q` for cited events, `t` for #hashtags, `r` for links — see
- * `contentTags`). Replies and quotes are their own verbs: `notes reply` /
- * `notes quote`.
+ * The text goes through the app composer's own path: `NewMessageTagger` (bare
+ * `npub`/`note` words become `nostr:` references, cited users are `p`-tagged), the
+ * composer's `messageTags` (`t`, `r`, `q`), and `BroadcastRelayPlanner` routing (our
+ * outbox plus the inboxes of everyone it cites). Replies and quotes are their own
+ * verbs: `notes reply` / `notes quote`.
  */
 object PostCommand {
     private const val MAX_DIFFICULTY = 64
@@ -74,13 +74,13 @@ object PostCommand {
 
         Context.open(dataDir).use { ctx ->
             ctx.prepare()
-            val outbox = ctx.outboxRelays()
-            val targets = (outbox + extraRelays).toSet()
-            if (targets.isEmpty()) {
+            if (ctx.outboxRelays().isEmpty() && extraRelays.isEmpty()) {
                 return Output.error("no_relays", "no outbox relays configured; pass --relay or run `amy relay add`")
             }
 
-            val template = TextNoteEvent.build(text) { contentTags(text) }
+            // The composer's path: its tagger over the trimmed text, its tags, its routing.
+            val notes = NoteCache(ctx)
+            val template = notes.textNote(notes.tag(text.trim()))
 
             var powMillis: Long? = null
             val readyToSign =
@@ -113,7 +113,10 @@ object PostCommand {
                 }
 
             val signed = ctx.signer.sign(readyToSign)
-            val ack = ctx.publish(signed, targets)
+            val planner = notes.planner()
+            notes.addUsers(signed.taggedUserIds())
+            val mine = notes.addMine(signed) ?: return Output.error("runtime", "could not cache ${signed.id}")
+            val ack = ctx.publish(signed, planner.computeRelayListToBroadcast(mine) + extraRelays)
             RawEventSupport.publishGuard(ack, signed.id)?.let { return it }
 
             Output.emit(
