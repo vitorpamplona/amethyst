@@ -167,6 +167,10 @@ class NostrConnectSignerService(
         val seen = LinkedHashSet(initialSeen)
         // Bounds how many requests can be in-flight (and how many prompts can be pending) at once.
         val handleGate = Semaphore(maxConcurrentHandles)
+        // A relay replaying a busy client's history can hand us thousands of stale requests a second;
+        // log them as one summary per second instead of a line each on this single consumer.
+        var staleSinceLog = 0
+        var lastStaleLogAt = 0L
         // Only ask relays for recent requests: kind-24133 is ephemeral, but relays that store it would
         // otherwise replay every old request each time we (re)subscribe. See [maxRequestAgeSeconds].
         val filter = Filter(kinds = listOf(NostrConnectEvent.KIND), tags = mapOf("p" to listOf(self)), since = TimeUtils.now() - maxRequestAgeSeconds)
@@ -184,8 +188,15 @@ class NostrConnectSignerService(
                 // Drop stale requests a relay replayed from storage past the rolling age window (the
                 // `since` filter covers compliant relays; this covers the rest; exact-id replays within
                 // the window are already caught by [seen] above). A live NIP-46 request is seconds old.
-                if (TimeUtils.now() - event.createdAt > maxRequestAgeSeconds) {
-                    Log.w("NIP46Signer") { "ignoring stale request ${event.id.take(8)}… (created ${event.createdAt})" }
+                val now = TimeUtils.now()
+                if (now - event.createdAt > maxRequestAgeSeconds) {
+                    staleSinceLog++
+                    if (now - lastStaleLogAt >= 1) {
+                        val count = staleSinceLog
+                        Log.w("NIP46Signer") { "ignored $count stale request(s); latest ${event.id.take(8)}… created ${event.createdAt}" }
+                        staleSinceLog = 0
+                        lastStaleLogAt = now
+                    }
                     continue
                 }
                 // Remember this id (persisted by the host) so a later restart won't re-service the replay.

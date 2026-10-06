@@ -175,9 +175,11 @@ that loop via `collectLatest`.
   error reply) is gone. The remaining flood bounds were resized for that rate:
   `maxQueue` 256 → 10,000, `seenCap` 4096 → 10,000, `maxConcurrentHandles`
   16 → 1024. Covered by `NostrConnectSignerServiceTest.burstFromOneClientIsFullyServiced`.
-- **Low-severity, left as-is:** activity-log records an O(capacity) list copy per
-  serviced request (no longer bounded by a rate limit, so revisit if it shows up
-  under a high-throughput client); first-time transport-key/secret mint
+- **Per-request bookkeeping batched (2026-10-06).** The activity log and the
+  persisted seen-id set each take a drop-oldest channel send per request; one
+  coroutine publishes the log at most every 250 ms and saves the ids every 2 s.
+  Stale-request warnings are summarized once per second.
+- **Low-severity, left as-is:** first-time transport-key/secret mint
   is unsynchronized (practically serialized on the UI thread).
 
 ## Deliberately NOT changed
