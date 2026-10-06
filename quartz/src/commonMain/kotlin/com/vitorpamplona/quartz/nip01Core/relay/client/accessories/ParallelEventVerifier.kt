@@ -25,6 +25,7 @@ import com.vitorpamplona.quartz.nip01Core.crypto.verify
 import com.vitorpamplona.quartz.utils.Log
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.IO
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.channels.Channel
@@ -47,9 +48,13 @@ import kotlinx.coroutines.launch
  *
  *  - [submit] is cheap (a channel send) and returns immediately, freeing the
  *    receiver coroutine for the next frame;
- *  - one drain coroutine pulls a batch greedily (up to [maxBatch]), fans the
- *    batch's verifies across [Dispatchers.Default], then dispatches
- *    [onVerified]/[onInvalid] in submission order (batching the fan-out
+ *  - one drain coroutine (on [Dispatchers.IO]) pulls a batch greedily (up to
+ *    [maxBatch]), fans the batch's verifies across [Dispatchers.Default],
+ *    then dispatches [onVerified]/[onInvalid] in submission order. Only the
+ *    pure Schnorr verify runs on Default: [preVerified] and the callbacks are
+ *    caller code (cache lookups and inserts, which can wait on locks), so they
+ *    stay on the drain's IO thread, where a blocked thread cannot starve the
+ *    core-sized Default pool (batching the fan-out
  *    beats per-event handoff: a per-event channel send measured ~180ns of
  *    overhead each, a 64-batch is ~free — see DispatchStageBenchmark);
  *  - [preVerified] lets the caller short-circuit events it already trusts
@@ -95,7 +100,7 @@ class ParallelEventVerifier<C>(
         private set
 
     private val drainJob =
-        scope.launch(Dispatchers.Default) {
+        scope.launch(Dispatchers.IO) {
             val batch = ArrayList<Pending<C>>(maxBatch)
             try {
                 while (true) {
@@ -127,9 +132,11 @@ class ParallelEventVerifier<C>(
     }
 
     private suspend fun processBatch(batch: List<Pending<C>>) {
-        val results = BooleanArray(batch.size)
+        // The caller's dedup check runs here, on the drain thread, so it never
+        // occupies a Default worker; only the verifies fan out.
+        val results = BooleanArray(batch.size) { preVerified(batch[it].event) }
         if (batch.size == 1) {
-            results[0] = verifyOne(batch[0].event)
+            if (!results[0]) results[0] = batch[0].event.verify()
         } else {
             // One worker per core-sized CHUNK, not per event: a per-event
             // async measured ~40µs/event end-to-end (scheduling overhead
@@ -144,7 +151,7 @@ class ParallelEventVerifier<C>(
                             var i = w * chunkSize
                             val end = minOf(i + chunkSize, batch.size)
                             while (i < end) {
-                                results[i] = verifyOne(batch[i].event)
+                                if (!results[i]) results[i] = batch[i].event.verify()
                                 i++
                             }
                         }
@@ -169,8 +176,6 @@ class ParallelEventVerifier<C>(
             }
         }
     }
-
-    private fun verifyOne(event: Event): Boolean = preVerified(event) || event.verify()
 
     /**
      * Stops accepting submissions; the drain loop finishes the batches already

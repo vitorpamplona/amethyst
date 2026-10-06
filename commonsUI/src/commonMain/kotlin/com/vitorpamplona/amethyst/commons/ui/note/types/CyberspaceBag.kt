@@ -76,6 +76,7 @@ import com.vitorpamplona.quartz.cyberspace.deck0003Sno.SnoResult
 import com.vitorpamplona.quartz.cyberspace.deck0003Sno.SnoShardEvent
 import com.vitorpamplona.quartz.nip10Notes.TextNoteEvent
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.IO
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.launch
@@ -154,7 +155,7 @@ fun RenderCyberspaceBag(
                         scope.launch {
                             BagSweep
                                 .sweep(noteEvent)
-                                .flowOn(Dispatchers.Default)
+                                .flowOn(Dispatchers.IO)
                                 .collect { state = it }
                         }
                 },

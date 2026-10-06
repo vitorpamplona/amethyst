@@ -35,6 +35,7 @@ import com.vitorpamplona.quartz.utils.TimeUtils
 import com.vitorpamplona.quartz.utils.cache.LargeCache
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.IO
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -384,7 +385,7 @@ class ChessLobbyLogic(
         timeControl: String? = null, // Not supported in Jester, kept for API compatibility
     ) {
         Log.d("chessdebug") { "[Lobby] createChallenge: opponent=${opponentPubkey?.take(8)}, color=$playerColor" }
-        scope.launch(Dispatchers.Default) {
+        scope.launch(Dispatchers.IO) {
             state.setBroadcastStatus(
                 ChessBroadcastStatus.Broadcasting(
                     san = "Challenge",
@@ -447,7 +448,7 @@ class ChessLobbyLogic(
         // This prevents race where Compose sees the game but forceRefresh() doesn't include it
         pollingDelegate.addGameId(challenge.gameId)
 
-        scope.launch(Dispatchers.Default) {
+        scope.launch(Dispatchers.IO) {
             val playerColor = challenge.challengerColor.opposite()
             val gameState =
                 ChessGameLoader.createNewGame(
@@ -488,7 +489,7 @@ class ChessLobbyLogic(
         state.selectGame(challenge.gameId)
 
         // Fetch from relays in case opponent has already made moves
-        scope.launch(Dispatchers.Default) {
+        scope.launch(Dispatchers.IO) {
             refreshGame(challenge.gameId)
         }
     }
@@ -507,7 +508,7 @@ class ChessLobbyLogic(
         recentlyLoadedGames.put(startEventId, TimeUtils.now())
 
         Log.d("chessdebug") { "[Lobby] handleGameAccepted: game ${startEventId.take(8)} - fetching from relays" }
-        scope.launch(Dispatchers.Default) {
+        scope.launch(Dispatchers.IO) {
             state.setBroadcastStatus(ChessBroadcastStatus.Syncing(0f))
 
             val events = fetcher.fetchGameEvents(startEventId)
@@ -566,7 +567,7 @@ class ChessLobbyLogic(
 
         Log.d("chessdebug") { "[Lobby] publishMove: move validated: san=${moveResult.san}, fen=${moveResult.fen.take(30)}, history=${moveResult.history.size} moves, headEvent=${moveResult.headEventId.take(8)}" }
 
-        scope.launch(Dispatchers.Default) {
+        scope.launch(Dispatchers.IO) {
             state.setBroadcastStatus(
                 ChessBroadcastStatus.Broadcasting(
                     san = moveResult.san,
@@ -618,7 +619,7 @@ class ChessLobbyLogic(
             return
         }
 
-        scope.launch(Dispatchers.Default) {
+        scope.launch(Dispatchers.IO) {
             val endData = gameState.resign()
             val success = retryWithBackoff { publisher.publishGameEnd(endData) }
 
@@ -636,7 +637,7 @@ class ChessLobbyLogic(
         val gameState = state.getGameState(startEventId) ?: return
         val endData = gameState.claimAbandonmentVictory() ?: return
 
-        scope.launch(Dispatchers.Default) {
+        scope.launch(Dispatchers.IO) {
             val success = retryWithBackoff { publisher.publishGameEnd(endData) }
 
             if (success) {
@@ -660,7 +661,7 @@ class ChessLobbyLogic(
 
     fun loadGameAsSpectator(startEventId: String) {
         Log.d("chessdebug") { "[Lobby] loadGameAsSpectator: game=${startEventId.take(8)}" }
-        scope.launch(Dispatchers.Default) {
+        scope.launch(Dispatchers.IO) {
             state.setBroadcastStatus(ChessBroadcastStatus.Syncing(0f))
 
             val events = fetcher.fetchGameEvents(startEventId)
@@ -687,7 +688,7 @@ class ChessLobbyLogic(
 
     fun loadGame(startEventId: String) {
         Log.d("chessdebug") { "[Lobby] loadGame: game=${startEventId.take(8)}" }
-        scope.launch(Dispatchers.Default) {
+        scope.launch(Dispatchers.IO) {
             // Don't load if game already exists or was accepted (acceptChallenge will handle it)
             if (state.getGameState(startEventId) != null || state.wasAccepted(startEventId)) {
                 Log.d("chessdebug") { "[Lobby] loadGame: skipping - already exists or was accepted for ${startEventId.take(8)}" }

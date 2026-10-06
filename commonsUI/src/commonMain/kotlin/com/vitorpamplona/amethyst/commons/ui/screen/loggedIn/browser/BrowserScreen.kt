@@ -145,6 +145,7 @@ import com.vitorpamplona.quartz.nip5dNapplets.NamedNappletEvent
 import com.vitorpamplona.quartz.nip5dNapplets.RootNappletEvent
 import com.vitorpamplona.quartz.utils.TimeUtils
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.IO
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.jetbrains.compose.resources.StringResource
@@ -266,10 +267,10 @@ private fun BrowserLauncher(
     // Built off the main thread: these walk every cached nsite/napplet note, and the note lists re-emit as
     // relays deliver.
     val followedNsites by produceState(emptyList<DiscoverNostrApp>(), nsiteNotes, nsiteFollows, favoriteCoordinates) {
-        value = withContext(Dispatchers.Default) { nsiteNotes.toDiscoverApps(nsiteFollows::matchAuthor, favoriteCoordinates) }
+        value = withContext(Dispatchers.IO) { nsiteNotes.toDiscoverApps(nsiteFollows::matchAuthor, favoriteCoordinates) }
     }
     val followedNapplets by produceState(emptyList<DiscoverNostrApp>(), nappletNotes, nappletFollows, favoriteCoordinates) {
-        value = withContext(Dispatchers.Default) { nappletNotes.toDiscoverApps(nappletFollows::matchAuthor, favoriteCoordinates) }
+        value = withContext(Dispatchers.IO) { nappletNotes.toDiscoverApps(nappletFollows::matchAuthor, favoriteCoordinates) }
     }
 
     // What the user actually typed, excluding the ghost-completion suffix while one is showing.

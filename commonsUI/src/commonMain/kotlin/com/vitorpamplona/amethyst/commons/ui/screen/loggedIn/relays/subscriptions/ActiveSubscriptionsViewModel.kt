@@ -30,6 +30,7 @@ import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.IO
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -153,7 +154,7 @@ class ActiveSubscriptionsViewModel : ViewModel() {
     }
 
     private suspend fun snapshot(client: INostrClient): ActiveSubscriptionsState =
-        withContext(Dispatchers.Default) {
+        withContext(Dispatchers.IO) {
             aggregateSubscriptions(
                 client.connectedRelaysFlow().value.associateWith { relay ->
                     client.activeRequests(relay).values.flatten()

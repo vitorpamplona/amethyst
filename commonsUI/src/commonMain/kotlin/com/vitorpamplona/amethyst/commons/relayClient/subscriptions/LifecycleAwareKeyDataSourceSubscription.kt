@@ -30,6 +30,7 @@ import com.vitorpamplona.amethyst.commons.relayClient.composeSubscriptionManager
 import com.vitorpamplona.amethyst.commons.relayClient.composeSubscriptionManagers.MutableQueryState
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.IO
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
@@ -55,7 +56,7 @@ private const val UNSUBSCRIBE_GRACE_MILLIS = 30_000L
  * via a background-dispatched flow instead delivered `ON_STOP` up to ~60s late on
  * a backgrounded device (the collector only resumed on the next relay keep-alive
  * tick), leaving feeds connected long after the app was paused. Only the grace
- * *delay* runs on a [Dispatchers.Default] scope, so it isn't gated by the UI
+ * *delay* runs on a [Dispatchers.IO] scope, so it isn't gated by the UI
  * frame clock (which stops ticking while backgrounded); returning to STARTED
  * cancels the pending unsubscribe before it fires.
  *
@@ -114,7 +115,7 @@ private fun LifecycleAwareSubscription(
     DisposableEffect(key, lifecycle) {
         // Only the grace delay runs on a background scope so it isn't gated by the UI
         // frame clock, which stops ticking while the app is backgrounded.
-        val scope = CoroutineScope(Dispatchers.Default + SupervisorJob())
+        val scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
 
         // graceJob is only ever read/written from the main thread (observer callbacks),
         // so no synchronization is needed. subscribe()/unsubscribe() are idempotent

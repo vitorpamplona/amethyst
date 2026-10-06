@@ -38,6 +38,7 @@ import com.vitorpamplona.quartz.utils.Log
 import com.vitorpamplona.quartz.utils.TimeUtils
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.IO
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
@@ -125,7 +126,7 @@ class CallManager(
      * `RINGING_WATCHDOG_MS`, regardless of whether any collector observes
      * the state. Cancelled explicitly via [dispose].
      */
-    private val watchdogScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
+    private val watchdogScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private var ringingWatchdogJob: Job? = null
     private var connectingWatchdogJob: Job? = null
 

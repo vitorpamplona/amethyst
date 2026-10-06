@@ -86,6 +86,7 @@ import com.vitorpamplona.quartz.nip5dNapplets.NamedNappletEvent
 import com.vitorpamplona.quartz.nip5dNapplets.NappletManifest
 import com.vitorpamplona.quartz.nip5dNapplets.RootNappletEvent
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.IO
 import kotlinx.coroutines.withContext
 
 /** Author placeholder used by the browser permission path — not a real pubkey. */
@@ -110,7 +111,7 @@ fun ConnectedAppsScreen(
 
     LaunchedEffect(Unit) {
         val initial =
-            withContext(Dispatchers.Default) {
+            withContext(Dispatchers.IO) {
                 loadConnectedApps(capabilityLedger, signerLedger)
             }
         items = initial

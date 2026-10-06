@@ -90,6 +90,7 @@ import com.vitorpamplona.quartz.nip09Deletions.DeletionRequestEvent
 import com.vitorpamplona.quartz.utils.TimeUtils
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.IO
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.conflate
@@ -146,7 +147,7 @@ fun rememberConcordChannelPins(
                         // leaves the list, and nothing else would trigger that re-read. A new trigger
                         // cancels the wait.
                         while (true) {
-                            val pins = withContext(Dispatchers.Default) { account.concord.concordChannelPins(communityId, channelId) }
+                            val pins = withContext(Dispatchers.IO) { account.concord.concordChannelPins(communityId, channelId) }
                             value = pins
                             val now = TimeUtils.now()
                             val next = pins?.nextExpiry(now) ?: break
