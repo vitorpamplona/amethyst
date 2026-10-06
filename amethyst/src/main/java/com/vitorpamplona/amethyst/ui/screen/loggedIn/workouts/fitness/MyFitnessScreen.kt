@@ -25,6 +25,7 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -156,18 +157,20 @@ fun MyFitnessScreen(
         },
         accountViewModel = accountViewModel,
     ) { padding ->
-        Surface(modifier = Modifier.padding(padding)) {
+        // The Surface fills the whole scaffold, under the bars, and the dashboard pads inside its
+        // scroll: padding the Surface instead left the bars' strips empty once they slid away.
+        Surface(modifier = Modifier.fillMaxSize()) {
             when (val current = state) {
-                MyFitnessViewModel.State.Loading -> CenteredBox { CircularProgressIndicator() }
+                MyFitnessViewModel.State.Loading -> CenteredBox(padding) { CircularProgressIndicator() }
 
                 is MyFitnessViewModel.State.Ready ->
                     if (current.report.isEmpty) {
                         // Nothing logged yet. Offering Health Connect is the useful thing to do
                         // when it could fill the screen; otherwise just say the log is empty.
                         if (current.healthConnect == MyFitnessViewModel.HealthConnectStatus.AVAILABLE) {
-                            ConnectPrompt(onDetails = openRationale, onConnect = requestPermissions)
+                            ConnectPrompt(padding, onDetails = openRationale, onConnect = requestPermissions)
                         } else {
-                            CenteredBox {
+                            CenteredBox(padding) {
                                 Text(
                                     text = stringRes(Res.string.my_fitness_empty),
                                     style = MaterialTheme.typography.bodyMedium,
@@ -179,6 +182,7 @@ fun MyFitnessScreen(
                     } else {
                         Dashboard(
                             report = current.report,
+                            padding = padding,
                             // Only offered when it would actually add something: a device with no
                             // provider gets no banner to act on.
                             showConnectBanner = current.healthConnect == MyFitnessViewModel.HealthConnectStatus.AVAILABLE,
@@ -195,9 +199,12 @@ fun MyFitnessScreen(
 }
 
 @Composable
-private fun CenteredBox(content: @Composable () -> Unit) {
+private fun CenteredBox(
+    padding: PaddingValues,
+    content: @Composable () -> Unit,
+) {
     Box(
-        modifier = Modifier.fillMaxSize(),
+        modifier = Modifier.fillMaxSize().padding(padding),
         contentAlignment = Alignment.Center,
     ) { content() }
 }
@@ -256,11 +263,12 @@ private fun MetricsPendingNote() {
 
 @Composable
 private fun ConnectPrompt(
+    padding: PaddingValues,
     onDetails: () -> Unit,
     onConnect: () -> Unit,
 ) {
     Column(
-        modifier = Modifier.fillMaxSize().padding(24.dp),
+        modifier = Modifier.fillMaxSize().padding(padding).padding(24.dp),
         verticalArrangement = Arrangement.spacedBy(14.dp, Alignment.CenterVertically),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
@@ -290,6 +298,7 @@ private fun ConnectPrompt(
 @Composable
 private fun Dashboard(
     report: WorkoutStats.Report,
+    padding: PaddingValues,
     showConnectBanner: Boolean,
     metricsPending: Boolean,
     onDetails: () -> Unit,
@@ -299,7 +308,12 @@ private fun Dashboard(
     val miles = remember { prefersMiles() }
 
     Column(
-        modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp),
+        modifier =
+            Modifier
+                .fillMaxSize()
+                .verticalScroll(rememberScrollState())
+                .padding(padding)
+                .padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(18.dp),
     ) {
         if (showConnectBanner) ConnectBanner(onDetails = onDetails, onConnect = onConnect)
