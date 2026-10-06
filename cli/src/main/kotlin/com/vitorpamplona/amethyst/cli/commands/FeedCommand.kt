@@ -29,6 +29,7 @@ import com.vitorpamplona.amethyst.commons.rendering.json.JsonEventFormatter
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
+import com.vitorpamplona.quartz.nip01Core.tags.hashtags.hashtagAlts
 import com.vitorpamplona.quartz.nip02FollowList.ContactListEvent
 import com.vitorpamplona.quartz.nip10Notes.TextNoteEvent
 
@@ -62,7 +63,6 @@ object FeedCommand {
                 .flag("hashtag")
                 ?.removePrefix("#")
                 ?.trim()
-                ?.lowercase()
         if (listOf(author != null, following, hashtag != null).count { it } > 1) {
             return Output.error("bad_args", "feed: pass at most one of --author, --following, --hashtag")
         }
@@ -108,7 +108,9 @@ object FeedCommand {
                 Filter(
                     kinds = listOf(TextNoteEvent.KIND),
                     authors = authors.ifEmpty { null },
-                    tags = hashtag?.let { mapOf("t" to listOf(it)) },
+                    // The app's case variants (as typed, lower, upper, Title): `t` values are
+                    // case-sensitive on relays and clients tag as the user typed.
+                    tags = hashtag?.let { mapOf("t" to hashtagAlts(it).sorted()) },
                     since = since,
                     until = until,
                     // Ask for some headroom over the requested limit because
@@ -132,7 +134,7 @@ object FeedCommand {
                     .toList()
 
             // Cache-only profiles: a feed stays one relay round-trip.
-            val renderCtx = NoteSupport.renderContext(ctx, events.map { it.pubKey }, fetchMissing = false)
+            val renderCtx = NoteSupport.renderContext(ctx, events.map { it.pubKey }, fetchMissing = false, timeoutMs = timeoutSecs * 1000)
             val notes =
                 events.map { ev ->
                     val rendered = EventRendererRegistry.render(ev, renderCtx)

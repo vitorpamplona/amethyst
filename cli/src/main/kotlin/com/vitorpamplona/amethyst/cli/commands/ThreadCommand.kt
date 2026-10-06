@@ -31,7 +31,9 @@ import com.vitorpamplona.amethyst.commons.relayClient.thread.filterEventsInThrea
 import com.vitorpamplona.amethyst.commons.relayClient.thread.filterMissingEventsForThread
 import com.vitorpamplona.amethyst.commons.viewmodels.thread.ThreadFeedFilter
 import com.vitorpamplona.quartz.nip01Core.core.Event
+import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 
 /**
  * `amy notes thread EVENT [--limit N] [--refresh] [--timeout SECS]` — the conversation
@@ -41,16 +43,20 @@ import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
  *  - what to fetch is the thread screen's two relay filters
  *    ([filterEventsInThreadForRoot]: everything citing the root on its author's inbox
  *    and where it was seen; [filterMissingEventsForThread]: parents and roots not loaded
- *    yet), repeated until a round brings nothing new;
+ *    yet);
  *  - which notes form the thread is [ThreadAssembler];
  *  - the order and indentation are [ThreadFeedFilter.thread] and
  *    [ThreadLevelCalculator.replyLevel], exactly what the app shows.
  *
- * Each round reads the local store before the relays, so a thread amy has already seen
- * costs no extra round-trip.
+ * Each round first settles the thread from the local store, then sends the relays only
+ * the filters it has not sent yet, and stops when a round brings nothing new. A thread
+ * amy has seen before therefore costs one relay round (for replies newer than the store),
+ * not one per filter. Deletions in the store are applied before anything is added, so a
+ * note we deleted never comes back from a relay that missed the kind:5.
  */
 object ThreadCommand {
     private const val MAX_ROUNDS = 5
+    private const val MAX_STORE_PASSES = 10
 
     suspend fun run(
         dataDir: DataDir,
@@ -71,24 +77,22 @@ object ThreadCommand {
                 NoteSupport.locate(ctx, ref, refresh, timeoutMs)
                     ?: return Output.error("not_found", "event not found: $refInput")
 
-            val notes = NoteCache(ctx)
-            val focusNote = notes.add(focus.event, focus.seenOn) ?: return Output.error("not_found", "event not found: $refInput")
+            val notes = NoteCache(ctx, timeoutMs)
+            notes.addAll(listOf(focus.seenOn.firstOrNull() to focus.event))
+            val focusNote = notes.add(focus.event, focus.seenOn) ?: return Output.error("not_found", "event not found (deleted): $refInput")
             val defaultRelays = ctx.bootstrapRelays()
             val queried = mutableSetOf<String>()
+            val sent = mutableSetOf<String>()
+            val askedAuthors = mutableSetOf<HexKey>()
 
             for (round in 0 until MAX_ROUNDS) {
-                val assembler = ThreadAssembler(notes.cache)
-                val info = assembler.findThreadFor(focusNote.idHex) ?: break
-                val root = assembler.findRoot(focusNote.idHex) ?: focusNote
-                // Inbox relays decide where the thread's replies are looked for.
-                notes.addUsers(info.allNotes.mapNotNull { it.author?.pubkeyHex }, fetchMissing = round == 0)
-
-                val filters = filterEventsInThreadForRoot(root, null) + filterMissingEventsForThread(notes.cache, info, defaultRelays)
-                if (filters.isEmpty()) break
-                queried += filters.map { it.relay.url }
+                val filters = settleFromStore(ctx, notes, focusNote, defaultRelays, askedAuthors)
+                val pending = filters.filter { sent.add(it.relay.url + it.filter.toJson()) }
+                if (pending.isEmpty()) break
+                queried += pending.map { it.relay.url }
 
                 val before = loaded(notes, focusNote)
-                fetch(ctx, notes, filters, timeoutMs)
+                notes.addAll(ctx.drain(pending.groupBy({ it.relay }, { it.filter }), timeoutMs))
                 if (loaded(notes, focusNote) == before) break
             }
 
@@ -100,11 +104,12 @@ object ThreadCommand {
             val root = ThreadAssembler(notes.cache).findRoot(focusNote.idHex)
 
             val events = shown.mapNotNull { it.event }
-            val renderCtx = NoteSupport.renderContext(ctx, events.map { it.pubKey }, fetchMissing = true)
+            val renderCtx = NoteSupport.renderContext(ctx, events.map { it.pubKey }, fetchMissing = true, timeoutMs = timeoutMs)
 
             Output.emit(
                 mapOf(
-                    "root_id" to root?.event?.id,
+                    // Known even when no relay returned the root: it is the id the replies name.
+                    "root_id" to (root?.event?.id ?: root?.idHex),
                     "root_found" to (root?.event != null),
                     "focus_id" to focus.event.id,
                     "queried_relays" to queried.sorted(),
@@ -129,17 +134,36 @@ object ThreadCommand {
         focus: Note,
     ): Int = ThreadAssembler(notes.cache).findThreadFor(focus.idHex)?.allNotes?.count { it.event != null } ?: 0
 
-    /** One round of the thread screen's filters: the store first, then the relays, all into [notes]. */
-    private suspend fun fetch(
+    /**
+     * Applies the thread screen's filters to the local store until they stop finding
+     * anything, loading the relay lists of authors met along the way (that is where the
+     * filters look next), and returns the filters for the relays.
+     */
+    private suspend fun settleFromStore(
         ctx: Context,
         notes: NoteCache,
-        filters: List<RelayBasedFilter>,
-        timeoutMs: Long,
-    ) {
-        filters.map { it.filter }.distinct().forEach { filter ->
-            ctx.store.query<Event>(filter).forEach { notes.add(it) }
+        focus: Note,
+        defaultRelays: Set<NormalizedRelayUrl>,
+        askedAuthors: MutableSet<HexKey>,
+    ): List<RelayBasedFilter> {
+        var filters: List<RelayBasedFilter> = emptyList()
+        repeat(MAX_STORE_PASSES) {
+            val assembler = ThreadAssembler(notes.cache)
+            val info = assembler.findThreadFor(focus.idHex) ?: return filters
+            val root = assembler.findRoot(focus.idHex) ?: focus
+
+            val authors = info.allNotes.mapNotNullTo(mutableSetOf()) { it.author?.pubkeyHex } - askedAuthors
+            if (authors.isNotEmpty()) {
+                askedAuthors += authors
+                notes.addUsers(authors, fetchMissing = true, alsoAsk = root.relays)
+            }
+
+            filters = filterEventsInThreadForRoot(root, null, defaultRelays) + filterMissingEventsForThread(notes.cache, info, defaultRelays)
+            val before = loaded(notes, focus)
+            val local = filters.distinctBy { it.filter.toJson() }.flatMap { ctx.store.query<Event>(it.filter) }
+            notes.addAll(local.map { null to it })
+            if (loaded(notes, focus) == before && authors.isEmpty()) return filters
         }
-        val byRelay = filters.groupBy({ it.relay }, { it.filter })
-        ctx.drain(byRelay, timeoutMs).forEach { (relay, event) -> notes.add(event, listOf(relay)) }
+        return filters
     }
 }

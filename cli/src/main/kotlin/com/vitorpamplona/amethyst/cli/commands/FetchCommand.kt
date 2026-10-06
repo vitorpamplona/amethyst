@@ -210,7 +210,7 @@ object FetchCommand {
             }
 
             // Outbox model: hint relays + the author's advertised write relays.
-            val relays = (hintRelays + (author?.let { NoteSupport.authorOutboxRelays(ctx, it) } ?: emptySet())).ifEmpty { ctx.bootstrapRelays() }
+            val relays = (hintRelays + (author?.let { NoteSupport.authorOutboxRelays(ctx, it, timeoutMs) } ?: emptySet())).ifEmpty { ctx.bootstrapRelays() }
 
             val received = ctx.drain(relays.associateWith { listOf(filter) }, timeoutMs)
             val events =

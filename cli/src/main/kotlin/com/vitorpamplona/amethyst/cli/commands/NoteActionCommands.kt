@@ -135,15 +135,13 @@ object NoteActionCommands {
         val ref = NoteSupport.parseRef(refInput)
 
         Context.open(dataDir).use { ctx ->
+            if (!ctx.signer.isWriteable()) return Output.error("read_only", "this account can't sign (npub-only login)")
             ctx.prepare()
             val target =
                 NoteSupport.locate(ctx, ref, refresh, timeoutMs)
                     ?: return Output.error("not_found", "event not found: $refInput")
 
-            val notes = NoteCache(ctx)
-            // The target author's inbox is where the app routes a notification; fetch it if unknown.
-            notes.addUsers(listOf(target.event.pubKey), fetchMissing = true)
-            notes.addUsers(target.event.taggedUserIds())
+            val notes = NoteCache(ctx, timeoutMs)
             val targetNote =
                 notes.add(target.event, target.seenOn)
                     ?: return Output.error("not_found", "event not found: $refInput")
@@ -151,7 +149,14 @@ object NoteActionCommands {
             // The same hint the app writes: the relay it saw the note on, and its author's home relay.
             val hint = targetNote.toEventHint<Event>() ?: EventHintBundle(target.event, target.seenOn.firstOrNull())
             val signed = build(ctx, notes, targetNote, hint)
-            notes.addUsers(signed.taggedUserIds())
+            // Everyone the app would notify must be reachable: the target's author, the people the
+            // target and our event tag. One drain for every relay list we lack, also asking
+            // where the target was seen (its author's list is likely there).
+            notes.addUsers(
+                listOf(target.event.pubKey) + target.event.taggedUserIds() + signed.taggedUserIds(),
+                fetchMissing = true,
+                alsoAsk = target.seenOn,
+            )
             val planner = notes.planner()
             val mine = notes.addMine(signed) ?: return Output.error("runtime", "could not cache ${signed.id}")
             val ack = ctx.publish(signed, route(planner, targetNote, signed, mine) + extraRelays)

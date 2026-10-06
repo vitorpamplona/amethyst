@@ -26,15 +26,23 @@ import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.ExplainedFil
 import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.SubPurpose
 import com.vitorpamplona.amethyst.commons.relays.SincePerRelayMap
 import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 
+/**
+ * Everything that cites the thread [root] (`e`/`E`, `a`/`A`), asked of the relays where
+ * reactions to it land: its author's inbox, where it was seen, declared log relays. When
+ * none of those is known, [defaultRelays] are asked instead — the same fallback
+ * [filterMissingEventsForThread] applies to events it cannot place.
+ */
 fun filterEventsInThreadForRoot(
     root: Note,
     since: SincePerRelayMap?,
+    defaultRelays: Set<NormalizedRelayUrl> = emptySet(),
 ): List<RelayBasedFilter> {
     val addressRoot = if (root is AddressableNote) root.idHex else null
     val eventRoot = if (root !is AddressableNote) root.idHex else root.event?.id
 
-    return root.relayUrlsForReactions().toSet().flatMap {
+    return root.relayUrlsForReactions().toSet().ifEmpty { defaultRelays }.flatMap {
         val since = since?.get(it)?.time
 
         val addressList =

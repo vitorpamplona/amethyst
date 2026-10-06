@@ -76,6 +76,26 @@ object NotificationKinds {
             ChatMessageEncryptedFileHeaderEvent.KIND,
         )
 
+    /** The direct-message kinds in [SUBSCRIPTION_KINDS]: they need decryption to show anything. */
+    val DM_KINDS: Set<Int> =
+        setOf(EncryptedDmEvent.KIND, ChatMessageEvent.KIND, GiftWrapEvent.KIND, ChatMessageEncryptedFileHeaderEvent.KIND)
+
+    /** [SUBSCRIPTION_KINDS] without the DMs — the public activity a reader can show as-is. */
+    val PUBLIC_SUBSCRIPTION_KINDS: List<Int> = SUBSCRIPTION_KINDS.filter { it !in DM_KINDS }
+
+    /**
+     * The note a reaction or repost targets: the LAST `e` tag. NIP-25 reactions to a reply
+     * carry the thread's root `e` first and the reacted-to note last; NIP-18 reposts have
+     * one `e`. Null for other kinds. This is the id [tagsAnEventForUser]'s
+     * `isTargetAuthoredByMe` is asked about, so a caller knows which notes to have loaded.
+     */
+    fun interactionTargetId(event: Event): HexKey? =
+        if (event is ReactionEvent || event is RepostEvent || event is GenericRepostEvent) {
+            event.tags.lastOrNull { it.size > 1 && it[0] == "e" }?.get(1)
+        } else {
+            null
+        }
+
     /**
      * Builds the standard notifications-for-user filter.
      * @param since Optional Unix seconds to gate `since` on the relay filter.
@@ -126,10 +146,7 @@ object NotificationKinds {
         // the current user. A stray `p=me` tag on a stranger's reaction to
         // a stranger's note is NOT a notification.
         if (event is ReactionEvent || event is RepostEvent || event is GenericRepostEvent) {
-            val target =
-                event.tags
-                    .firstOrNull { it.size > 1 && it[0] == "e" }
-                    ?.get(1)
+            val target = interactionTargetId(event)
             return target != null && isTargetAuthoredByMe(target)
         }
 

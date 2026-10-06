@@ -33,11 +33,13 @@ import com.vitorpamplona.amethyst.commons.model.composer.pTagsWithHints
 import com.vitorpamplona.quartz.nip01Core.core.AddressableEvent
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
+import com.vitorpamplona.quartz.nip01Core.core.isValid
 import com.vitorpamplona.quartz.nip01Core.metadata.MetadataEvent
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.signers.EventTemplate
 import com.vitorpamplona.quartz.nip01Core.tags.people.PTag
+import com.vitorpamplona.quartz.nip09Deletions.DeletionRequestEvent
 import com.vitorpamplona.quartz.nip10Notes.TextNoteEvent
 import com.vitorpamplona.quartz.nip10Notes.tags.notify
 import com.vitorpamplona.quartz.nip17Dm.settings.DmRelayListEvent
@@ -57,18 +59,44 @@ import kotlin.coroutines.cancellation.CancellationException
  */
 class NoteCache(
     private val ctx: Context,
+    /** Idle timeout for the relay drains this cache makes on its own (missing relay lists). */
+    private val timeoutMs: Long = 8_000,
 ) {
     val cache = EventCache()
 
-    /** Consumes [event] as seen on [relays] and returns its note (the addressable slot for an addressable event). */
+    /**
+     * Consumes [event] as seen on [relays] and returns its note (the addressable slot for an
+     * addressable event), or null when a deletion already loaded into the cache covers it.
+     *
+     * The relay goes in the way the app's relay client hands it over: it feeds the hint
+     * index (where to find this author and event again) and creates NIP-29 group channels,
+     * whose host relay the planner then routes group content to.
+     */
     fun add(
         event: Event,
         relays: Collection<NormalizedRelayUrl> = emptyList(),
     ): Note? {
-        cache.justConsume(event, null, true)
+        val first = relays.firstOrNull()
+        if (!cache.checkDeletionAndConsume(event, first, true) && cache.deletionIndex.hasBeenDeleted(event)) return null
         val note = if (event is AddressableEvent) cache.getAddressableNoteIfExists(event.address()) else cache.getNoteIfExists(event.id)
-        relays.forEach { note?.addRelay(it) }
+        relays.forEach { relay ->
+            note?.addRelay(relay)
+            if (relay != first) cache.relayHints.addKey(event.pubKey, relay)
+        }
         return note
+    }
+
+    /**
+     * Adds [events] after the deletions the store holds for them, so an event we (or its
+     * author) deleted never comes back from a relay that missed the kind:5.
+     */
+    suspend fun addAll(events: Collection<Pair<NormalizedRelayUrl?, Event>>) {
+        if (events.isEmpty()) return
+        val ids = events.mapTo(mutableSetOf()) { it.second.id }
+        ids.chunked(500).forEach { chunk ->
+            ctx.store.query<Event>(Filter(kinds = listOf(DeletionRequestEvent.KIND), tags = mapOf("e" to chunk))).forEach { add(it) }
+        }
+        events.forEach { (relay, event) -> add(event, listOfNotNull(relay)) }
     }
 
     /** Our own just-signed event, consumed the way the app consumes what it publishes. */
@@ -85,14 +113,16 @@ class NoteCache(
     suspend fun addUsers(
         pubKeys: Collection<HexKey>,
         fetchMissing: Boolean = false,
+        alsoAsk: Collection<NormalizedRelayUrl> = emptyList(),
     ) {
-        val wanted = pubKeys.toSet()
+        val wanted = pubKeys.filterTo(mutableSetOf()) { it.isValid() }
         if (wanted.isEmpty()) return
         if (fetchMissing) {
+            // One drain for everyone missing, on the bootstrap set plus where their events were seen.
             val missing = wanted.filter { ctx.relaysOf(it) == null }
             if (missing.isNotEmpty()) {
                 val filter = Filter(authors = missing, kinds = listOf(AdvertisedRelayListEvent.KIND))
-                ctx.drain(ctx.bootstrapRelays().associateWith { listOf(filter) })
+                ctx.drain((ctx.bootstrapRelays() + alsoAsk).associateWith { listOf(filter) }, timeoutMs)
             }
         }
         val kinds = listOf(MetadataEvent.KIND, AdvertisedRelayListEvent.KIND, DmRelayListEvent.KIND)
@@ -123,14 +153,12 @@ class NoteCache(
      */
     suspend fun tag(text: String): Tagged {
         val probe = NewMessageTagger(message = text, dao = cache).also { it.run() }
-        addUsers(probe.directMentionsUsers.map { it.pubkeyHex })
-        probe.directMentionsNotes.forEach { note ->
-            val filter =
-                if (note is AddressableNote) {
-                    Filter(kinds = listOf(note.address.kind), authors = listOf(note.address.pubKeyHex), tags = mapOf("d" to listOf(note.address.dTag)))
-                } else {
-                    Filter(ids = listOf(note.idHex))
-                }
+        // Cited users must be reachable: their inboxes are where the app sends the mention.
+        addUsers(probe.directMentionsUsers.map { it.pubkeyHex }, fetchMissing = true)
+        val (addressable, plain) = probe.directMentionsNotes.partition { it is AddressableNote }
+        if (plain.isNotEmpty()) ctx.store.query<Event>(Filter(ids = plain.map { it.idHex })).forEach { add(it) }
+        addressable.filterIsInstance<AddressableNote>().forEach { note ->
+            val filter = Filter(kinds = listOf(note.address.kind), authors = listOf(note.address.pubKeyHex), tags = mapOf("d" to listOf(note.address.dTag)))
             ctx.store.query<Event>(filter).forEach { add(it) }
         }
         val tagger = NewMessageTagger(message = text, dao = cache).also { it.run() }

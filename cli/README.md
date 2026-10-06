@@ -506,7 +506,7 @@ HTTP endpoint. Reuses quartz's `Nip86Client` and the shared `Nip86Retriever`
 | `amy notes quote EVENT [TEXT]` | NIP-18 quote post: kind:1 ending in `nostr:nevent…` (`naddr…` for addressable events) with a `q` tag and the quoted author's `p`. |
 | `amy notes react EVENT [--content +\|-\|EMOJI]` | NIP-25 reaction (default `+`). |
 | `amy notes repost EVENT` | NIP-18 repost: kind:6 for a kind:1, kind:16 for anything else. |
-| `amy delete EVENT…` (also `notes delete`) | NIP-09 deletion requests for your own events, any kind; sent to your outbox plus every relay the targets were seen on. Refuses events signed by someone else (`forbidden`). |
+| `amy delete EVENT…` (also `notes delete`) | NIP-09 deletion requests for your own events, any kind; sent to your outbox, every relay a target was seen on, and everywhere the target was routed when published (e.g. the inboxes a reply notified). Refuses events signed by someone else (`forbidden`). Over 200 targets are split into several kind:5s; all are published, and if only some are refused it exits 1 with `partial` and the per-event results. The interaction verbs and `delete` exit 1 with `read_only` up front on an npub-only account. |
 | `amy notifications [--type reply,mention,reaction,repost,zap] [--limit N] [--since TS] [--until TS]` | What others did that involves you, newest first, each with a `type` and the actor in `from` (the zapper for zaps). Reactions and reposts count only when they target your own note. DMs are `amy dm list`. |
 | `amy profile show [USER]` | Print kind:0 metadata. USER accepts npub/nprofile/hex/NIP-05; defaults to self. |
 | `amy profile edit --name … --about … --picture URL …` | Patch and re-publish your kind:0. |

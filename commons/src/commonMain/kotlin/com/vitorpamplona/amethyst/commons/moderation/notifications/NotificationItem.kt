@@ -35,6 +35,8 @@ import com.vitorpamplona.quartz.nip28PublicChat.message.ChannelMessageEvent
 import com.vitorpamplona.quartz.nip57Zaps.ZapReceiptEvent
 import com.vitorpamplona.quartz.nip59Giftwrap.wraps.GiftWrapEvent
 import com.vitorpamplona.quartz.nip61Nutzaps.nutzap.NutzapEvent
+import com.vitorpamplona.quartz.nipB1Bolt12Zaps.zap.Bolt12ZapEvent
+import com.vitorpamplona.quartz.nipBCOnchainZaps.zap.OnchainZapEvent
 import com.vitorpamplona.quartz.utils.toLongValue
 
 /**
@@ -112,8 +114,8 @@ sealed class NotificationItem(
                 is ReactionEvent -> Reaction(event, event.createdAt, event.content)
                 is RepostEvent, is GenericRepostEvent -> Repost(event, event.createdAt)
                 is ZapReceiptEvent -> Zap(event, event.createdAt, event.amount?.toLongValue())
-                // Nutzaps: treat like a zap; the sats amount needs the Cashu proofs.
-                is NutzapEvent -> Zap(event, event.createdAt, null)
+                // Nutzaps, BOLT12 and on-chain zaps: zaps whose amount needs the payment proof.
+                is NutzapEvent, is Bolt12ZapEvent, is OnchainZapEvent -> Zap(event, event.createdAt, null)
                 // A kind:1 that answers another note is a reply; one that only cites
                 // (mention-marked `e`, `q`, inline nostr: link) is a mention. "Answers" is
                 // what the app links as `Note.replyTo`: tagsWithoutCitations.

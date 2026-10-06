@@ -114,7 +114,7 @@ object PostCommand {
 
             val signed = ctx.signer.sign(readyToSign)
             val planner = notes.planner()
-            notes.addUsers(signed.taggedUserIds())
+            notes.addUsers(signed.taggedUserIds(), fetchMissing = true)
             val mine = notes.addMine(signed) ?: return Output.error("runtime", "could not cache ${signed.id}")
             val ack = ctx.publish(signed, planner.computeRelayListToBroadcast(mine) + extraRelays)
             RawEventSupport.publishGuard(ack, signed.id)?.let { return it }

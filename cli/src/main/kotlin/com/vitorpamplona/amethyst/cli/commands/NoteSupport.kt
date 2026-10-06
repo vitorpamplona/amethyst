@@ -26,6 +26,7 @@ import com.vitorpamplona.amethyst.commons.rendering.RenderContext
 import com.vitorpamplona.amethyst.commons.rendering.json.JsonEventFormatter
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
+import com.vitorpamplona.quartz.nip01Core.core.isValid
 import com.vitorpamplona.quartz.nip01Core.metadata.MetadataEvent
 import com.vitorpamplona.quartz.nip01Core.metadata.UserMetadata
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
@@ -97,7 +98,7 @@ object NoteSupport {
             }
         }
 
-        val relays = ref.hints + (ref.author?.let { authorOutboxRelays(ctx, it) } ?: emptySet()) + ctx.bootstrapRelays()
+        val relays = ref.hints + (ref.author?.let { authorOutboxRelays(ctx, it, timeoutMs) } ?: emptySet()) + ctx.bootstrapRelays()
         val received = ctx.drain(relays.associateWith { listOf(ref.filter) }, timeoutMs)
         val matches = received.filter { (_, event) -> ref.filter.match(event) }
         val newest = matches.maxByOrNull { it.second.createdAt }?.second ?: return null
@@ -109,31 +110,38 @@ object NoteSupport {
     suspend fun authorOutboxRelays(
         ctx: Context,
         author: HexKey,
+        timeoutMs: Long,
     ): Set<NormalizedRelayUrl> {
-        ensureRelayList(ctx, author)
+        ensureRelayList(ctx, author, timeoutMs)
         return ctx.relaysOf(author)?.writeRelaysNorm()?.toSet() ?: emptySet()
     }
 
     private suspend fun ensureRelayList(
         ctx: Context,
         author: HexKey,
+        timeoutMs: Long,
     ) {
         if (ctx.relaysOf(author) != null) return
         val filter = Filter(authors = listOf(author), kinds = listOf(AdvertisedRelayListEvent.KIND), limit = 1)
-        ctx.drain(ctx.bootstrapRelays().associateWith { listOf(filter) })
+        ctx.drain(ctx.bootstrapRelays().associateWith { listOf(filter) }, timeoutMs)
     }
+
+    /** Most profiles one command fetches from relays; the rest render from the store or by npub. */
+    private const val MAX_PROFILE_FETCH = 100
 
     /**
      * Profiles for [pubKeys] as a [RenderContext]: from the local store, and — when
-     * [fetchMissing] — one drain of the missing kind:0s from the index + bootstrap relays.
+     * [fetchMissing] — one drain of the first [MAX_PROFILE_FETCH] missing kind:0s (in
+     * [pubKeys] order, so authors listed first win) from the index + bootstrap relays.
+     * A kind:3 tags thousands of people; their names are not worth thousands of fetches.
      */
     suspend fun renderContext(
         ctx: Context,
         pubKeys: Collection<HexKey>,
         fetchMissing: Boolean,
-        timeoutMs: Long = 5_000,
+        timeoutMs: Long,
     ): RenderContext {
-        val wanted = pubKeys.toSet()
+        val wanted = pubKeys.filterTo(LinkedHashSet()) { it.isValid() }
         if (wanted.isEmpty()) return RenderContext.EMPTY
 
         val profiles = HashMap<HexKey, UserMetadata>()
@@ -147,7 +155,7 @@ object NoteSupport {
 
         collect(ctx.store.query<Event>(Filter(authors = wanted.toList(), kinds = listOf(MetadataEvent.KIND))))
 
-        val missing = wanted - profiles.keys
+        val missing = (wanted - profiles.keys).take(MAX_PROFILE_FETCH)
         if (fetchMissing && missing.isNotEmpty()) {
             val relays = ctx.indexRelays() + ctx.bootstrapRelays()
             val filter = Filter(authors = missing.toList(), kinds = listOf(MetadataEvent.KIND), limit = missing.size)

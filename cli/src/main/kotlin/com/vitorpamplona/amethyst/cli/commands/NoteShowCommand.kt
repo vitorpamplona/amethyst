@@ -51,7 +51,7 @@ object NoteShowCommand {
             val located =
                 NoteSupport.locate(ctx, ref, refresh, timeoutMs)
                     ?: return Output.error("not_found", "event not found: $refInput")
-            val renderCtx = NoteSupport.renderContext(ctx, NoteSupport.peopleIn(listOf(located.event)), fetchMissing = true)
+            val renderCtx = NoteSupport.renderContext(ctx, NoteSupport.peopleIn(listOf(located.event)), fetchMissing = true, timeoutMs = timeoutMs)
 
             Output.emit(
                 mapOf(

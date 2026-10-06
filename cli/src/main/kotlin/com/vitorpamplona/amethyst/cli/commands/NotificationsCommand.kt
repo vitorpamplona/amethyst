@@ -32,14 +32,6 @@ import com.vitorpamplona.amethyst.commons.rendering.json.JsonEventFormatter
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
-import com.vitorpamplona.quartz.nip01Core.tags.events.ETag
-import com.vitorpamplona.quartz.nip04Dm.messages.EncryptedDmEvent
-import com.vitorpamplona.quartz.nip17Dm.files.ChatMessageEncryptedFileHeaderEvent
-import com.vitorpamplona.quartz.nip17Dm.messages.ChatMessageEvent
-import com.vitorpamplona.quartz.nip18Reposts.GenericRepostEvent
-import com.vitorpamplona.quartz.nip18Reposts.RepostEvent
-import com.vitorpamplona.quartz.nip25Reactions.ReactionEvent
-import com.vitorpamplona.quartz.nip59Giftwrap.wraps.GiftWrapEvent
 
 /**
  * `amy notifications [--type reply,mention,reaction,repost,zap] [--limit N]
@@ -52,9 +44,6 @@ import com.vitorpamplona.quartz.nip59Giftwrap.wraps.GiftWrapEvent
  * `amy dm list`, which can decrypt them.
  */
 object NotificationsCommand {
-    private val DM_KINDS =
-        setOf(EncryptedDmEvent.KIND, ChatMessageEvent.KIND, GiftWrapEvent.KIND, ChatMessageEncryptedFileHeaderEvent.KIND)
-
     private val TYPES = setOf("mention", "reply", "reaction", "repost", "zap")
 
     suspend fun run(
@@ -81,7 +70,7 @@ object NotificationsCommand {
             val me = ctx.identity.pubKeyHex
 
             val base = NotificationKinds.subscriptionFilter(me, limit = (limit * 2).coerceAtMost(500), since = since)
-            val filter = base.copy(kinds = base.kinds?.filter { it !in DM_KINDS }, until = until)
+            val filter = base.copy(kinds = NotificationKinds.PUBLIC_SUBSCRIPTION_KINDS, until = until)
             val relays = ctx.nip65ReadRelays() + ctx.outboxRelays()
 
             val events =
@@ -100,7 +89,7 @@ object NotificationsCommand {
                     .toList()
 
             val renderCtx =
-                NoteSupport.renderContext(ctx, items.map { it.effectiveAuthorPubKey } + items.map { it.event.pubKey }, fetchMissing = true)
+                NoteSupport.renderContext(ctx, items.map { it.effectiveAuthorPubKey } + items.map { it.event.pubKey }, fetchMissing = true, timeoutMs = timeoutMs)
 
             Output.emit(
                 mapOf(
@@ -132,12 +121,7 @@ object NotificationsCommand {
         events: List<Event>,
         timeoutMs: Long,
     ): Set<HexKey> {
-        val targets =
-            events
-                .filter { it is ReactionEvent || it is RepostEvent || it is GenericRepostEvent }
-                // Every `e`: NIP-25 names the target last, but NotificationKinds checks the first.
-                .flatMap { it.tags.mapNotNull(ETag::parseId) }
-                .toSet()
+        val targets = events.mapNotNullTo(mutableSetOf()) { NotificationKinds.interactionTargetId(it) }
         if (targets.isEmpty()) return emptySet()
 
         val known =
