@@ -454,6 +454,10 @@ its own sidebar shell, which will be replaced.
 
 - Commits: Conventional commits (`feat:`, `fix:`, etc.)
 - Never use `--no-verify`
+- Never open a PR (GitHub or nostr proposal) on your own. Open one only when
+  the human you work for has reviewed the diff, tested the app by hand on a
+  device, and asks you to. Until then, hand them the branch and a test plan.
+  See `CONTRIBUTING-WITH-AI.md`.
 
 ### Remotes & pull requests
 
