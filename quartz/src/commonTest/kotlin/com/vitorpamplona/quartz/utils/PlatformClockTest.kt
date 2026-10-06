@@ -20,9 +20,23 @@
  */
 package com.vitorpamplona.quartz.utils
 
-import platform.Foundation.NSDate
-import platform.Foundation.timeIntervalSince1970
+import kotlin.test.Test
+import kotlin.test.assertTrue
 
-actual fun currentTimeSeconds(): Long = (NSDate().timeIntervalSince1970).toLong()
+class PlatformClockTest {
+    // 2024-01-01T00:00:00Z: any real wall clock is past it, a garbage read is not.
+    private val floorSeconds = 1_704_067_200L
 
-actual fun currentTimeMillis(): Long = (NSDate().timeIntervalSince1970 * 1000).toLong()
+    @Test
+    fun secondsAreWallClockEpochSeconds() {
+        assertTrue(currentTimeSeconds() > floorSeconds)
+    }
+
+    @Test
+    fun millisAgreeWithSeconds() {
+        val before = currentTimeSeconds()
+        val millis = currentTimeMillis()
+        val after = currentTimeSeconds()
+        assertTrue(millis / 1000 in before..after, "millis=$millis outside [$before, $after] seconds")
+    }
+}
