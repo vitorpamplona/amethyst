@@ -267,7 +267,7 @@ fun ChatroomViewUI(
         }
     val limits = remember(nip17Limits, nip04Limits) { nip17Limits + nip04Limits }
 
-    val gate = remember(room, giftWrapsHistory) { ChatHistoryGate(giftWrapsHistory::advanceAll) }
+    val gate = remember(room, giftWrapsHistory) { ChatHistoryGate(advanceAll = giftWrapsHistory::advanceAll) }
     val gatePhase by gate.phase.collectAsStateWithLifecycle()
     val feedState by feedViewModel.feedState.feedContent.collectAsStateWithLifecycle()
     val feedIsEmpty = feedState is FeedState.Empty

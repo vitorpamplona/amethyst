@@ -26,23 +26,25 @@ import kotlinx.coroutines.flow.asStateFlow
 
 /** Where one open conversation stands on loading its older NIP-17 history. See [ChatHistoryGate]. */
 enum class ChatHistoryPhase {
-    // Nothing to say: the markers aren't in view, or the last page brought this chat something.
+    // Nothing to say: the markers aren't in view, or the last page brought this chat something and the
+    // reader hasn't scrolled up to the markers again yet.
     IDLE,
 
     // One automatic page is in flight from every relay because the reader scrolled up to the markers.
     AUTO,
 
-    // The automatic page brought nothing for this chat. Offers "Keep looking".
+    // The automatic page (or a "Keep looking" search) brought nothing for this chat. Offers "Keep looking".
     BUTTON,
 
     // "Keep looking" was pressed: paging every relay, round after round, until a message for this chat
-    // turns up or nothing more is reachable. Offers "Stop".
+    // turns up, nothing more is reachable, or the search has run its rounds. Offers "Stop".
     SEARCH,
 
     // Nothing more is reachable: every relay is done or stalled.
     END,
 
-    // The chat opened with the markers already in view (a short chat). Nothing is fetched until
+    // The markers are in view but the reader didn't scroll to them: the chat opened with them on screen
+    // (a short chat), or the last page's messages didn't push them off. Nothing is fetched until
     // "Continue" or until the reader scrolls away and back.
     PAUSED,
 }
@@ -57,22 +59,29 @@ enum class ChatHistoryPhase {
  * scrolls up to the relay markers:
  *
  *  1. load ONE page from every relay automatically ([ChatHistoryPhase.AUTO]);
- *  2. if that brought something for this chat, the markers move above it and the next time the reader
- *     reaches them loads another ([ChatHistoryPhase.IDLE]);
+ *  2. if that brought something for this chat, the markers move above it, and only the reader scrolling
+ *     up to them again loads another ([ChatHistoryPhase.IDLE]). If the new messages don't push the
+ *     markers off screen, there is nothing to scroll: the card offers "Continue"
+ *     ([ChatHistoryPhase.PAUSED]) rather than paging on its own;
  *  3. if it brought nothing, stop and offer "Keep looking" ([ChatHistoryPhase.BUTTON]), which pages every
- *     relay, round after round, until a message for this chat appears or nothing more is reachable
- *     ([ChatHistoryPhase.SEARCH] → [ChatHistoryPhase.END]).
+ *     relay, round after round, until a message for this chat appears, nothing more is reachable
+ *     ([ChatHistoryPhase.END]), or [maxSearchRounds] rounds have come back empty — then it offers
+ *     "Keep looking" again, so one tap can't walk the whole inbox.
  *
  * A chat that opens with the markers already in view starts [ChatHistoryPhase.PAUSED] and fetches nothing
  * until [resume], so flipping between short chats doesn't pull a page from every relay each time.
  *
- * Ported from Brainstorm-UI's `useChatHistory` (which in turn runs on a port of [BackwardRelayPager]).
+ * Ported from Brainstorm-UI's `useChatHistory` (which in turn runs on a port of `BackwardRelayPager`),
+ * with two changes: a productive page needs the reader to reach the markers again (Brainstorm re-pages
+ * as soon as anything changes while they're in view), and a search is capped per tap.
  * One instance per open conversation; drive it from one thread (the UI's) by calling [update] whenever
  * any input changes.
  *
+ * @param maxSearchRounds how many rounds one "Keep looking" pages before asking again.
  * @param advanceAll steps every relay that can take one a page; true if any did.
  */
 class ChatHistoryGate(
+    private val maxSearchRounds: Int = DEFAULT_SEARCH_ROUNDS,
     private val advanceAll: () -> Boolean,
 ) {
     private val _phase = MutableStateFlow(ChatHistoryPhase.IDLE)
@@ -84,6 +93,9 @@ class ChatHistoryGate(
     // The markers have been out of view (or Continue was pressed), so seeing them now means the reader
     // went looking for older messages.
     private var armed = false
+
+    // Rounds the current "Keep looking" has started.
+    private var searchRounds = 0
 
     private var last = Inputs(markersVisible = null, busy = false, open = true, count = 0)
 
@@ -104,11 +116,13 @@ class ChatHistoryGate(
         step()
     }
 
-    /** Page every relay, round after round, until a message for this chat turns up. */
+    /** Page every relay, round after round, until a message for this chat turns up or [maxSearchRounds] run out. */
     fun keepLooking() {
         baseline = last.count
+        searchRounds = 0
         _phase.value = ChatHistoryPhase.SEARCH
-        if (!last.busy) advanceAll()
+        // A page already in flight finishes first; the next [update] after it settles starts round one.
+        if (!last.busy && advanceAll()) searchRounds++
     }
 
     /** Stop a [keepLooking] search; it can be picked up again with "Keep looking". */
@@ -154,19 +168,18 @@ class ChatHistoryGate(
 
             ChatHistoryPhase.AUTO -> {
                 if (busy) return
-                _phase.value =
-                    when {
-                        count > baseline -> ChatHistoryPhase.IDLE
-                        open -> ChatHistoryPhase.BUTTON
-                        else -> ChatHistoryPhase.END.also { baseline = count }
-                    }
+                when {
+                    count > baseline -> found()
+                    open -> _phase.value = ChatHistoryPhase.BUTTON
+                    else -> end(count)
+                }
             }
 
             ChatHistoryPhase.BUTTON -> {
                 // Messages from the last page can still be decrypting when it settles: if they turn out to
                 // be for this chat, the offer to keep looking was premature.
                 if (count > baseline) {
-                    _phase.value = ChatHistoryPhase.IDLE
+                    found()
                 } else if (exhausted) {
                     end(count)
                 }
@@ -174,19 +187,34 @@ class ChatHistoryGate(
 
             ChatHistoryPhase.SEARCH -> {
                 if (count > baseline) {
-                    _phase.value = ChatHistoryPhase.IDLE
+                    found()
                 } else if (exhausted) {
                     end(count)
                 } else if (!busy) {
-                    advanceAll()
+                    if (searchRounds >= maxSearchRounds) {
+                        _phase.value = ChatHistoryPhase.BUTTON
+                    } else if (advanceAll()) {
+                        searchRounds++
+                    }
                 }
             }
 
             ChatHistoryPhase.END -> {
                 // A stalled relay came back (or a pruned band reopened a done one).
-                if (open) _phase.value = if (count > baseline) ChatHistoryPhase.IDLE else ChatHistoryPhase.BUTTON
+                if (open) {
+                    if (count > baseline) found() else _phase.value = ChatHistoryPhase.BUTTON
+                }
             }
         }
+    }
+
+    // A page brought this chat a message. The next page waits for the reader to scroll up to the markers
+    // again: if they're off screen now, seeing them is that request; if the new messages left them in view,
+    // there is nothing to scroll, so IDLE falls through to PAUSED and offers Continue.
+    private fun found() {
+        armed = last.markersVisible == false
+        _phase.value = ChatHistoryPhase.IDLE
+        step()
     }
 
     // Nothing more is reachable. Messages counted from here on are what a relay coming back brings.
@@ -201,4 +229,10 @@ class ChatHistoryGate(
         val open: Boolean,
         val count: Int,
     )
+
+    companion object {
+        // Pages are large (up to BackwardRelayPager.DEFAULT_PAGE_LIMIT wraps per relay), so a few rounds
+        // reach well back without letting one tap walk an entire inbox.
+        const val DEFAULT_SEARCH_ROUNDS = 3
+    }
 }

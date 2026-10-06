@@ -111,8 +111,10 @@ class ChatHistoryGateTest {
         gate.at(visible = true, count = 40)
         assertEquals(BUTTON, gate.phase.value)
 
+        // The markers are still in view, so there's nothing to scroll to: it asks instead of paging.
         gate.at(visible = true, count = 42)
-        assertEquals(IDLE, gate.phase.value)
+        assertEquals(PAUSED, gate.phase.value)
+        assertEquals(1, pages)
     }
 
     @Test
@@ -136,6 +138,114 @@ class ChatHistoryGateTest {
 
         gate.at(visible = true, busy = true, count = 41)
         assertEquals(IDLE, gate.phase.value)
+
+        // The rest of the round lands; the found message didn't push the markers off screen.
+        gate.at(visible = true, busy = false, count = 41)
+        assertEquals(PAUSED, gate.phase.value)
+        assertEquals(4, pages)
+    }
+
+    @Test
+    fun keepLookingStopsAfterItsRoundsAndAsksAgain() {
+        gate.at(visible = false, count = 40)
+        gate.at(visible = true, count = 40)
+        gate.at(visible = true, busy = true, count = 40)
+        gate.at(visible = true, count = 40)
+        assertEquals(1, pages)
+
+        gate.keepLooking()
+        repeat(ChatHistoryGate.DEFAULT_SEARCH_ROUNDS) {
+            gate.at(visible = true, busy = true, count = 40)
+            gate.at(visible = true, busy = false, count = 40)
+        }
+        assertEquals(BUTTON, gate.phase.value)
+        assertEquals(1 + ChatHistoryGate.DEFAULT_SEARCH_ROUNDS, pages)
+
+        // Sitting there doesn't continue the search.
+        repeat(5) { gate.at(visible = true, count = 40) }
+        assertEquals(1 + ChatHistoryGate.DEFAULT_SEARCH_ROUNDS, pages)
+
+        // Another tap is another set of rounds.
+        gate.keepLooking()
+        assertEquals(SEARCH, gate.phase.value)
+        assertEquals(2 + ChatHistoryGate.DEFAULT_SEARCH_ROUNDS, pages)
+    }
+
+    @Test
+    fun keepLookingPressedMidPageStartsItsRoundsWhenThatPageSettles() {
+        gate.at(visible = false, count = 40)
+        gate.at(visible = true, count = 40)
+        gate.at(visible = true, busy = true, count = 40)
+        gate.at(visible = true, count = 40)
+        assertEquals(BUTTON, gate.phase.value)
+
+        // A page is in flight (a stalled relay answering late) when the reader taps Keep looking.
+        gate.at(visible = true, busy = true, count = 40)
+        gate.keepLooking()
+        assertEquals(1, pages)
+
+        gate.at(visible = true, busy = false, count = 40)
+        assertEquals(SEARCH, gate.phase.value)
+        assertEquals(2, pages)
+
+        // That started round one of three, not a free extra round.
+        repeat(ChatHistoryGate.DEFAULT_SEARCH_ROUNDS) {
+            gate.at(visible = true, busy = true, count = 40)
+            gate.at(visible = true, busy = false, count = 40)
+        }
+        assertEquals(BUTTON, gate.phase.value)
+        assertEquals(1 + ChatHistoryGate.DEFAULT_SEARCH_ROUNDS, pages)
+    }
+
+    @Test
+    fun aProductivePageThatLeavesTheMarkersInViewWaitsForContinue() {
+        gate.at(visible = false, count = 40)
+        gate.at(visible = true, count = 40)
+        gate.at(visible = true, busy = true, count = 40)
+        gate.at(visible = true, busy = false, count = 41)
+        assertEquals(PAUSED, gate.phase.value)
+
+        // More messages finishing decryption, a status tick: none of it is the reader asking.
+        gate.at(visible = true, count = 43)
+        gate.at(visible = true, count = 43)
+        assertEquals(PAUSED, gate.phase.value)
+        assertEquals(1, pages)
+
+        gate.resume()
+        assertEquals(AUTO, gate.phase.value)
+        assertEquals(2, pages)
+    }
+
+    @Test
+    fun aProductivePageNeedsTheReaderToScrollBackToTheMarkers() {
+        gate.at(visible = false, count = 40)
+        gate.at(visible = true, count = 40)
+        gate.at(visible = true, busy = true, count = 40)
+        // The new messages push the markers off screen.
+        gate.at(visible = false, busy = false, count = 60)
+        assertEquals(IDLE, gate.phase.value)
+        gate.at(visible = false, count = 62)
+        assertEquals(1, pages)
+
+        // Scrolling up through them to the markers is the request.
+        gate.at(visible = true, count = 62)
+        assertEquals(AUTO, gate.phase.value)
+        assertEquals(2, pages)
+    }
+
+    @Test
+    fun markersAlreadyOffScreenWhenThePageLandsStillCountAsArmed() {
+        gate.at(visible = false, count = 40)
+        gate.at(visible = true, count = 40)
+        // The reader scrolls back down while the page is in flight.
+        gate.at(visible = false, busy = true, count = 40)
+        gate.at(visible = false, busy = false, count = 45)
+        assertEquals(IDLE, gate.phase.value)
+
+        // No further "not visible" report comes, yet scrolling back up must still be a request.
+        gate.at(visible = true, count = 45)
+        assertEquals(AUTO, gate.phase.value)
+        assertEquals(2, pages)
     }
 
     @Test
