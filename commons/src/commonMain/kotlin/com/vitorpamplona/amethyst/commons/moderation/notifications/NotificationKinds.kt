@@ -124,12 +124,17 @@ object NotificationKinds {
 
         // Reactions and reposts require the target note to be authored by
         // the current user. A stray `p=me` tag on a stranger's reaction to
-        // a stranger's note is NOT a notification.
+        // a stranger's note is NOT a notification. The target is the LAST
+        // `e` (NIP-25/NIP-18): a reaction to a reply may carry the thread
+        // root first, which is not the note that was reacted to.
+        val target =
+            when (event) {
+                is ReactionEvent -> event.originalPost().lastOrNull()
+                is RepostEvent -> event.boostedEventId()
+                is GenericRepostEvent -> event.boostedEventId()
+                else -> null
+            }
         if (event is ReactionEvent || event is RepostEvent || event is GenericRepostEvent) {
-            val target =
-                event.tags
-                    .firstOrNull { it.size > 1 && it[0] == "e" }
-                    ?.get(1)
             return target != null && isTargetAuthoredByMe(target)
         }
 

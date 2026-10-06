@@ -43,6 +43,18 @@ fun Event.isForCommunity(communityAddressId: String): Boolean =
         tags.any(CommunityTag::isTagged, communityAddressId)
     }
 
+/**
+ * Set form of [isForCommunity]: one pass over the tags, testing each community tag for set
+ * membership. Comments are placed by their NIP-22 root (`A`), which stays the community all the
+ * way down a thread; the lowercase `a` is only the parent, absent on nested replies.
+ */
+fun Event.isForAnyCommunity(communityAddressIds: Set<String>): Boolean =
+    if (this is CommentEvent) {
+        tags.any(RootAddressTag::isIn, communityAddressIds)
+    } else {
+        tags.any(CommunityTag::isIn, communityAddressIds)
+    }
+
 fun Event.communityAddress(): Address? =
     if (this is CommentEvent) {
         // Stops at the first community root address instead of parsing every `A` tag into a list.

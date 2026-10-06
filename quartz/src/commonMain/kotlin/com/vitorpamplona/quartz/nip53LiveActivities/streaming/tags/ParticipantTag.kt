@@ -101,7 +101,7 @@ data class ParticipantTag(
             ensure(tag[0] == TAG_NAME) { return null }
             ensure(tag[1].length == 64) { return null }
 
-            val hint = tag.getOrNull(2)?.let { RelayUrlNormalizer.normalizeOrNull(it) }
+            val hint = tag.getOrNull(2)?.let { RelayUrlNormalizer.normalizeHintOrNull(it) }
 
             return ParticipantTag(tag[1], hint, tag.getOrNull(3), tag.getOrNull(4))
         }
@@ -112,7 +112,7 @@ data class ParticipantTag(
             ensure(tag[1].length == 64) { return null }
             ensure(tag[3].equals(ROLE.HOST.code, ignoreCase = true)) { return null }
 
-            val hint = RelayUrlNormalizer.normalizeOrNull(tag[2])
+            val hint = RelayUrlNormalizer.normalizeHintOrNull(tag[2])
 
             return ParticipantTag(tag[1], hint, tag[3], tag.getOrNull(4))
         }
@@ -130,7 +130,7 @@ data class ParticipantTag(
             ensure(tag[1].length == 64) { return null }
             ensure(tag[2].isNotEmpty()) { return null }
 
-            val hint = RelayUrlNormalizer.normalizeOrNull(tag[2])
+            val hint = RelayUrlNormalizer.normalizeHintOrNull(tag[2])
             ensure(hint != null) { return null }
 
             return PubKeyHint(tag[1], hint)

@@ -21,10 +21,11 @@
 package com.vitorpamplona.quartz.nip90Dvms.userDiscoveryRequest
 
 import androidx.compose.runtime.Immutable
-import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
+import com.vitorpamplona.quartz.nip01Core.core.isValid
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
+import com.vitorpamplona.quartz.nip90Dvms.DvmRequestEvent
 import com.vitorpamplona.quartz.nip90Dvms.tags.InputTag
 import com.vitorpamplona.quartz.nip90Dvms.tags.dvmParam
 import com.vitorpamplona.quartz.nip90Dvms.tags.inputs
@@ -38,12 +39,13 @@ class DvmUserDiscoveryRequestEvent(
     tags: Array<Array<String>>,
     content: String,
     sig: HexKey,
-) : Event(id, pubKey, createdAt, KIND, tags, content, sig) {
+) : DvmRequestEvent(id, pubKey, createdAt, KIND, tags, content, sig) {
     fun inputs(): List<InputTag> = tags.inputs()
 
-    fun dvmPubKey(): HexKey? = tags.firstOrNull { it.size >= 2 && it[0] == "p" }?.get(1)
-
     fun user(): String? = tags.dvmParam("user")
+
+    // `param user <pubkey>` names whose feed / network the job is about: a pubkey with no relay slot.
+    override fun linkedPubKeys(): List<HexKey> = super.linkedPubKeys() + listOfNotNull(user()?.takeIf { it.isValid() })
 
     companion object {
         const val KIND = 5301

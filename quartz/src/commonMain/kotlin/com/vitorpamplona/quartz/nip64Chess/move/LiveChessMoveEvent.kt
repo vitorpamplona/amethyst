@@ -25,6 +25,7 @@ import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.nip01Core.tags.dTag.dTag
+import com.vitorpamplona.quartz.nip50Search.SearchableEvent
 import com.vitorpamplona.quartz.nip64Chess.baseEvent.BaseChessEvent
 import com.vitorpamplona.quartz.nip64Chess.baseEvent.opponent
 import com.vitorpamplona.quartz.nip64Chess.baseEvent.tags.OpponentTag
@@ -52,7 +53,11 @@ class LiveChessMoveEvent(
     tags: Array<Array<String>>,
     content: String,
     sig: HexKey,
-) : BaseChessEvent(id, pubKey, createdAt, KIND, tags, content, sig) {
+) : BaseChessEvent(id, pubKey, createdAt, KIND, tags, content, sig),
+    SearchableEvent {
+    // The optional move comment is the only text a player writes here.
+    override fun indexableContent() = content
+
     fun gameId() = tags.gameId()
 
     fun moveNumber() = tags.moveNumber()

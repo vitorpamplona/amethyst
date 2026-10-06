@@ -27,6 +27,8 @@ import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
 import com.vitorpamplona.quartz.nip01Core.core.any
 import com.vitorpamplona.quartz.nip01Core.hints.EventHintBundle
+import com.vitorpamplona.quartz.nip01Core.hints.EventHintProvider
+import com.vitorpamplona.quartz.nip01Core.hints.types.EventIdHint
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.nip01Core.tags.events.ETag
 import com.vitorpamplona.quartz.nip01Core.tags.events.eTag
@@ -57,16 +59,24 @@ class FileStorageHeaderEvent(
     content: String,
     sig: HexKey,
 ) : Event(id, pubKey, createdAt, KIND, tags, content, sig),
+    EventHintProvider,
     SearchableEvent {
-    // Only the summary tag is indexed; the file payload is base64 binary stored
-    // in a separate FileStorageEvent and is intentionally never indexed.
-    override fun indexableContent() = listOfNotNull(summary()).joinToString("\n")
+    // The summary tag and the caption [build] writes into `content`, as kind 1063 indexes them.
+    // The file payload is base64 binary stored in a separate FileStorageEvent and is
+    // intentionally never indexed.
+    override fun indexableContent() = listOfNotNull(summary(), content).joinToString("\n")
 
     // The read path: the same fields indexableContent() joins, handed over without
     // building the joined string a scan would throw away.
     override fun forEachIndexableField(visitor: IndexableFieldVisitor) {
-        visitor.visit(summary())
+        if (!visitor.visit(summary())) return
+        visitor.visit(content)
     }
+
+    // The `e` tag to the kind-1064 data event (with its relay) is the only way to reach the bytes.
+    override fun eventHints(): List<EventIdHint> = tags.mapNotNull(ETag::parseAsHint)
+
+    override fun linkedEventIds(): List<HexKey> = dataEventIds()
 
     fun dataEvent() = tags.mapNotNull(ETag::parse)
 

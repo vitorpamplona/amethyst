@@ -61,11 +61,12 @@ class VideoViewEvent(
     EventHintProvider {
     override fun addressHints() = tags.mapNotNull(ATag::parseAsHint)
 
-    override fun linkedAddressIds() = tags.mapNotNull(ATag::parseAddressId)
+    // A view reports one video (`a`) and the one version of it that played (`e`).
+    override fun linkedAddressIds() = listOfNotNull(video()?.toValue())
 
     override fun eventHints() = tags.mapNotNull(ETag::parseAsHint)
 
-    override fun linkedEventIds() = tags.mapNotNull(ETag::parseId)
+    override fun linkedEventIds() = listOfNotNull(videoVersion())
 
     /** The video that was watched. */
     fun video() = tags.video()

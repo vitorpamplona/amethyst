@@ -28,6 +28,7 @@ import com.vitorpamplona.quartz.nip01Core.hints.PubKeyHintProvider
 import com.vitorpamplona.quartz.nip01Core.tags.aTag.ATag
 import com.vitorpamplona.quartz.nip01Core.tags.people.PTag
 import com.vitorpamplona.quartz.nip10Notes.tags.MarkedETag
+import com.vitorpamplona.quartz.nip18Reposts.quotes.QTag
 import com.vitorpamplona.quartz.nip50Search.IndexableFieldVisitor
 import com.vitorpamplona.quartz.nip50Search.SearchableEvent
 
@@ -60,15 +61,25 @@ abstract class GitStatusEvent(
 
     override fun pubKeyHints() = tags.mapNotNull(PTag::parseAsHint)
 
-    override fun linkedPubKeys() = tags.mapNotNull(PTag::parseKey)
+    override fun linkedPubKeys() = notifiedUsers()
 
-    override fun eventHints() = tags.mapNotNull(MarkedETag::parseAsHint)
+    // `e` targets plus the `q` applied-patch references kind 1631 carries.
+    override fun eventHints() = tags.mapNotNull(MarkedETag::parseAsHint) + tags.mapNotNull(QTag::parseEventAsHint)
 
-    override fun linkedEventIds() = tags.mapNotNull(MarkedETag::parseId)
+    // NIP-34: the `root` target and the optional `reply` revision root; kind 1631 adds its
+    // applied patches (GitStatusAppliedEvent.appliedPatchIds()).
+    override fun linkedEventIds(): List<HexKey> = listOfNotNull(rootEventId(), replyEventId())
 
     override fun addressHints() = tags.mapNotNull(ATag::parseAsHint)
 
-    override fun linkedAddressIds() = tags.mapNotNull(ATag::parseAddressId)
+    // NIP-34: a status names a single repository (`a`).
+    override fun linkedAddressIds() = listOfNotNull(repositoryAddress()?.toValue())
+
+    /**
+     * The users this status notifies (`p`): the repository owner, the target's author and any
+     * revision author, in tag order.
+     */
+    fun notifiedUsers(): List<HexKey> = tags.mapNotNull(PTag::parseKey)
 
     /** The target event ID (patch / PR / issue) this status refers to. */
     fun rootEventId(): HexKey? = tags.firstNotNullOfOrNull(MarkedETag::parseRootId)

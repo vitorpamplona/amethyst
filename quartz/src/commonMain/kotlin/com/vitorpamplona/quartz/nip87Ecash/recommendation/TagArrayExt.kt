@@ -21,6 +21,7 @@
 package com.vitorpamplona.quartz.nip87Ecash.recommendation
 
 import com.vitorpamplona.quartz.nip01Core.core.TagArray
+import com.vitorpamplona.quartz.nip01Core.tags.aTag.ATag
 import com.vitorpamplona.quartz.nip87Ecash.MintUrlTag
 
 fun TagArray.mintUrls(): List<String> = mapNotNull(MintUrlTag::parse)
@@ -29,4 +30,5 @@ fun TagArray.mintEventKind(): Int? = firstOrNull { it.size >= 2 && it[0] == "k" 
 
 fun TagArray.dTag(): String? = firstOrNull { it.size >= 2 && it[0] == "d" }?.get(1)
 
-fun TagArray.mintEventAddresses(): List<String> = filter { it.size >= 2 && it[0] == "a" }.map { it[1] }
+/** The recommended mints' announcements (`a`), as well-formed `kind:pubkey:d` address ids. */
+fun TagArray.mintEventAddresses(): List<String> = mapNotNull(ATag::parseValidAddress)

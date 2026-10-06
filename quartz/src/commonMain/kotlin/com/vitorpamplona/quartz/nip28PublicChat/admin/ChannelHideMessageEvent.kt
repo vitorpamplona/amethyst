@@ -31,6 +31,7 @@ import com.vitorpamplona.quartz.nip01Core.tags.events.eTags
 import com.vitorpamplona.quartz.nip01Core.tags.events.taggedEventIds
 import com.vitorpamplona.quartz.nip28PublicChat.base.BasePublicChatEvent
 import com.vitorpamplona.quartz.nip28PublicChat.base.channel
+import com.vitorpamplona.quartz.nip50Search.SearchableEvent
 import com.vitorpamplona.quartz.utils.TimeUtils
 
 @Immutable
@@ -42,10 +43,17 @@ class ChannelHideMessageEvent(
     content: String,
     sig: HexKey,
 ) : BasePublicChatEvent(id, pubKey, createdAt, KIND, tags, content, sig),
-    EventHintProvider {
+    EventHintProvider,
+    SearchableEvent {
+    // NIP-28: the content carries the moderator's human-written reason for hiding.
+    override fun indexableContent() = reason() ?: ""
+
+    /** The reason for hiding: the `reason` of NIP-28's JSON content, or the plain-text content. */
+    fun reason(): String? = moderationReason(content)
+
     override fun eventHints() = tags.mapNotNull(ETag::parseAsHint)
 
-    override fun linkedEventIds() = tags.mapNotNull(ETag::parseId)
+    override fun linkedEventIds() = listOfNotNull(channelId()) + eventsToHide()
 
     /**
      * NIP-28 names the channel only through a MARKED root (Quartz writes one; the spec's own 43

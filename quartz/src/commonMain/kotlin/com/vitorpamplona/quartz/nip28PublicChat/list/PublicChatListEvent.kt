@@ -55,14 +55,17 @@ class PublicChatListEvent(
     override fun diffFrom(older: Event): PublicChatListDiff? {
         if (older !is PublicChatListEvent || older.pubKey != pubKey || older.dTag() != dTag()) return null
         return PublicChatListDiff(
-            ListDiff.of(older.tags.channels(), tags.channels(), { it.eventId }, { a, b -> a.relay == b.relay }),
+            ListDiff.of(older.publicChannels(), publicChannels(), { it.eventId }, { a, b -> a.relay == b.relay }),
             privateItemsChangeFrom(older),
         )
     }
 
     override fun eventHints() = tags.mapNotNull(ChannelTag::parseAsHint)
 
-    override fun linkedEventIds() = tags.mapNotNull(ChannelTag::parseId)
+    override fun linkedEventIds() = publicChannels().map { it.eventId }
+
+    /** The public half of the list: the followed public-chat channels (`e`), in tag order. */
+    fun publicChannels(): List<ChannelTag> = tags.channels()
 
     companion object {
         const val KIND = 10005

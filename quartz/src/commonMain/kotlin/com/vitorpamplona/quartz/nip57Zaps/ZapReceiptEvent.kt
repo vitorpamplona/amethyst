@@ -33,6 +33,8 @@ import com.vitorpamplona.quartz.nip01Core.tags.events.ETag
 import com.vitorpamplona.quartz.nip01Core.tags.people.PTag
 import com.vitorpamplona.quartz.nip50Search.IndexableFieldVisitor
 import com.vitorpamplona.quartz.nip50Search.SearchableEvent
+import com.vitorpamplona.quartz.nip57Zaps.tags.ZapSenderTag
+import com.vitorpamplona.quartz.utils.Hex
 import com.vitorpamplona.quartz.utils.Log
 
 @Immutable
@@ -62,15 +64,28 @@ class ZapReceiptEvent(
 
     override fun pubKeyHints() = tags.mapNotNull(PTag::parseAsHint)
 
-    override fun linkedPubKeys() = tags.mapNotNull(PTag::parseKey)
+    // The zapped `p` recipients, plus the sender of a public zap. The sender of an anonymous
+    // or private zap (an `anon` tag in the embedded request) is a throwaway or derived key:
+    // linking it would create a User, fetch metadata that never exists and record a relay hint
+    // for it on every receipt. The sender is read from the embedded request, not from the
+    // receipt's `P` tag, because only the request says whether the zap was anonymous; `P` is a
+    // copy of that request's author anyway (NIP-57). Only `p` has a relay slot, so
+    // [pubKeyHints] stays `p`-only.
+    override fun linkedPubKeys(): List<HexKey> {
+        val recipients = zappedAuthor()
+        val request = zapRequest ?: return recipients
+        if (request.hasAnonTag()) return recipients
+        val sender = zappedRequestAuthor() ?: return recipients
+        return recipients + sender
+    }
 
     override fun eventHints() = tags.mapNotNull(ETag::parseAsHint)
 
-    override fun linkedEventIds() = tags.mapNotNull(ETag::parseId)
+    override fun linkedEventIds() = zappedPost()
 
     override fun addressHints() = tags.mapNotNull(ATag::parseAsHint)
 
-    override fun linkedAddressIds() = tags.mapNotNull(ATag::parseAddressId)
+    override fun linkedAddressIds() = zappedAddresses()
 
     // This event is also kept in LocalCache (same object)
     @kotlinx.serialization.Transient
@@ -103,6 +118,11 @@ class ZapReceiptEvent(
 
     override fun zappedAuthor() = tags.mapNotNull(PTag::parseKey)
 
+    override fun zappedAddresses(): List<String> = tags.mapNotNull(ATag::parseValidAddress)
+
+    /** NIP-57's uppercase `P`: the zap sender, as the zap service copied it from the request. */
+    fun zapSender(): HexKey? = tags.firstNotNullOfOrNull(ZapSenderTag::parseKey)
+
     override fun zappedPollOption(): Int? =
         try {
             zapRequest
@@ -115,7 +135,8 @@ class ZapReceiptEvent(
             null
         }
 
-    override fun zappedRequestAuthor(): String? = zapRequest?.pubKey
+    /** The embedded request's author: the sender, or the throwaway key of an anonymous/private zap. Null when not a valid key. */
+    override fun zappedRequestAuthor(): String? = zapRequest?.pubKey?.takeIf { it.length == 64 && Hex.isHex64(it) }
 
     override fun amount() = amount
 

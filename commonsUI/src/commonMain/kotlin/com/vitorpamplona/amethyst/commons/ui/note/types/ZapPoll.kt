@@ -48,7 +48,6 @@ import com.vitorpamplona.amethyst.commons.ui.theme.placeholderText
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.quartz.experimental.zapPolls.ZapPollEvent
 import com.vitorpamplona.quartz.nip01Core.tags.hashtags.hasHashtags
-import com.vitorpamplona.quartz.nip01Core.tags.people.hasAnyTaggedUser
 
 @Composable
 fun RenderZapPoll(
@@ -68,7 +67,7 @@ fun RenderZapPoll(
     val showReply by
         remember(note) {
             derivedStateOf {
-                !makeItShort && unPackReply == ReplyRenderType.FULL && (note.replyTo != null || noteEvent.hasAnyTaggedUser())
+                !makeItShort && unPackReply == ReplyRenderType.FULL && (note.replyTo != null || noteEvent.mentionKeys().isNotEmpty())
             }
         }
 

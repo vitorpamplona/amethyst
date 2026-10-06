@@ -42,6 +42,13 @@ class FileTag(
             return FileTag(tag[1], tag.getOrNull(2)?.toLongOrNull())
         }
 
+        fun parseName(tag: Array<String>): String? {
+            ensure(tag.has(1)) { return null }
+            ensure(tag[0] == TAG_NAME) { return null }
+            ensure(tag[1].isNotEmpty()) { return null }
+            return tag[1]
+        }
+
         fun parseBytes(tag: Array<String>): Long? {
             ensure(tag.has(2)) { return null }
             ensure(tag[0] == TAG_NAME) { return null }

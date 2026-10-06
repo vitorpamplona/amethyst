@@ -45,7 +45,8 @@ class OtsEvent(
     EventHintProvider {
     override fun eventHints() = tags.mapNotNull(TargetEventTag::parseAsHint)
 
-    override fun linkedEventIds() = tags.mapNotNull(TargetEventTag::parseId)
+    // NIP-03 carries a single `e`: the event being timestamped.
+    override fun linkedEventIds() = listOfNotNull(digestEventId())
 
     override fun isContentEncoded() = true
 

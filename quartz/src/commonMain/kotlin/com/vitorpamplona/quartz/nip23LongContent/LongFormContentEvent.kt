@@ -33,6 +33,7 @@ import com.vitorpamplona.quartz.nip01Core.hints.types.EventIdHint
 import com.vitorpamplona.quartz.nip01Core.hints.types.PubKeyHint
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.nip01Core.tags.dTag.dTag
+import com.vitorpamplona.quartz.nip01Core.tags.hashtags.HashtagTag
 import com.vitorpamplona.quartz.nip01Core.tags.hashtags.hashtags
 import com.vitorpamplona.quartz.nip01Core.tags.people.PTag
 import com.vitorpamplona.quartz.nip01Core.tags.publishedAt.PublishedAtProvider
@@ -51,6 +52,8 @@ import com.vitorpamplona.quartz.nip23LongContent.tags.SummaryTag
 import com.vitorpamplona.quartz.nip23LongContent.tags.TitleTag
 import com.vitorpamplona.quartz.nip50Search.IndexableFieldVisitor
 import com.vitorpamplona.quartz.nip50Search.SearchableEvent
+import com.vitorpamplona.quartz.nip57Zaps.splits.zapSplitHintsTo
+import com.vitorpamplona.quartz.nip57Zaps.splits.zapSplitPubKeysTo
 import com.vitorpamplona.quartz.utils.TimeUtils
 import kotlin.uuid.ExperimentalUuidApi
 import kotlin.uuid.Uuid
@@ -71,14 +74,21 @@ class LongFormContentEvent(
     PublishedAtProvider,
     RootScope,
     SearchableEvent {
-    override fun indexableContent() = listOfNotNull(title(), summary(), content).joinToString("\n")
+    // Topics (`t`) are appended after the body, as CommentEvent does: authors pick
+    // topics that the article text does not necessarily mention.
+    override fun indexableContent() = (listOfNotNull(title(), summary(), content) + topics()).joinToString("\n")
 
     // The read path: hands over the same fields indexableContent() joins, without
     // building the joined string a scan would throw away.
     override fun forEachIndexableField(visitor: IndexableFieldVisitor) {
         if (!visitor.visit(title())) return
         if (!visitor.visit(summary())) return
-        visitor.visit(content)
+        if (!visitor.visit(content)) return
+        // Inline over the tags rather than topics(): this runs per event per search keystroke.
+        for (tag in tags) {
+            val topic = HashtagTag.parse(tag) ?: continue
+            if (!visitor.visit(topic)) return
+        }
     }
 
     override fun eventHints(): List<EventIdHint> {
@@ -89,10 +99,10 @@ class LongFormContentEvent(
     }
 
     override fun linkedEventIds(): List<HexKey> {
-        val qHints = tags.mapNotNull(QTag::parseEventId)
-        val nip19Hints = citedNIP19().eventIds()
-
-        return qHints + nip19Hints
+        val result = ArrayList<HexKey>()
+        quotedEvents().mapTo(result) { it.eventId }
+        result.addAll(citedNIP19().eventIds())
+        return result
     }
 
     override fun addressHints(): List<AddressHint> {
@@ -103,24 +113,27 @@ class LongFormContentEvent(
     }
 
     override fun linkedAddressIds(): List<String> {
-        val qHints = tags.mapNotNull(QTag::parseAddressId)
-        val nip19Hints = citedNIP19().addressIds()
-
-        return qHints + nip19Hints
+        val result = ArrayList<String>()
+        quotedAddresses().mapTo(result) { it.address.toValue() }
+        result.addAll(citedNIP19().addressIds())
+        return result
     }
 
+    // Runs on every relay copy of every article: one list, filled in the order the old
+    // `p + zap + nip19` concatenation produced, instead of three lists and two copies.
     override fun pubKeyHints(): List<PubKeyHint> {
-        val pHints = tags.mapNotNull(PTag::parseAsHint)
-        val nip19Hints = citedNIP19().pubKeyHints()
-
-        return pHints + nip19Hints
+        val result = tags.mapNotNullTo(ArrayList(), PTag::parseAsHint)
+        tags.zapSplitHintsTo(result)
+        result.addAll(citedNIP19().pubKeyHints())
+        return result
     }
 
     override fun linkedPubKeys(): List<HexKey> {
-        val pHints = tags.mapNotNull(PTag::parseKey)
-        val nip19Hints = citedNIP19().pubKeys()
-
-        return pHints + nip19Hints
+        val result = ArrayList<HexKey>()
+        result.addAll(mentionKeys())
+        tags.zapSplitPubKeysTo(result)
+        result.addAll(citedNIP19().pubKeys())
+        return result
     }
 
     override fun dTag() = tags.dTag()

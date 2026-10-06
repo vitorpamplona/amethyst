@@ -21,7 +21,6 @@
 package com.vitorpamplona.quartz.nip34Git.patch
 
 import androidx.compose.runtime.Immutable
-import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
@@ -46,6 +45,7 @@ import com.vitorpamplona.quartz.nip34Git.repository.GitRepositoryEvent
 import com.vitorpamplona.quartz.nip50Search.IndexableFieldVisitor
 import com.vitorpamplona.quartz.nip50Search.SearchableEvent
 import com.vitorpamplona.quartz.utils.TimeUtils
+import com.vitorpamplona.quartz.utils.lastNotNullOfOrNull
 
 @Immutable
 class GitPatchEvent(
@@ -70,7 +70,7 @@ class GitPatchEvent(
 
     override fun pubKeyHints() = tags.mapNotNull(PTag::parseAsHint)
 
-    override fun linkedPubKeys() = tags.mapNotNull(PTag::parseKey)
+    override fun linkedPubKeys() = notifiedUsers()
 
     override fun eventHints() = tags.mapNotNull(MarkedETag::parseAsHint)
 
@@ -78,32 +78,26 @@ class GitPatchEvent(
 
     override fun addressHints() = tags.mapNotNull(ATag::parseAsHint)
 
-    override fun linkedAddressIds() = tags.mapNotNull(ATag::parseAddressId)
+    // NIP-34: a patch names a single repository (`a`).
+    override fun linkedAddressIds() = listOfNotNull(repositoryAddress()?.toValue())
 
+    // The `a` marked `root` when there is one, else the first `a`.
     private fun innerRepository() =
-        tags.firstOrNull { it.size > 3 && it[0] == "a" && it[3] == "root" }
-            ?: tags.firstOrNull { it.size > 1 && it[0] == "a" }
+        tags.firstOrNull { ATag.isTagged(it) && it.getOrNull(3) == "root" }
+            ?: tags.firstOrNull(ATag::isTagged)
 
-    fun repositoryAddress() =
-        innerRepository()?.let {
-            if (it.size > 1) {
-                Address.parse(it[1])
-            } else {
-                null
-            }
-        }
+    fun repositoryAddress() = innerRepository()?.let(ATag::parseAddress)
 
-    fun repository() =
-        innerRepository()?.let {
-            if (it.size > 1) {
-                val aTagValue = it[1]
-                val relay = it.getOrNull(2)
+    fun repository() = innerRepository()?.let(ATag::parse)
 
-                ATag.parse(aTagValue, relay)
-            } else {
-                null
-            }
-        }
+    /**
+     * The previous patch in the series: the `e` marked `reply` that [reply] writes (NIP-34 patch
+     * series thread each patch onto the one before it).
+     */
+    fun previousPatchId(): HexKey? = tags.lastNotNullOfOrNull(MarkedETag::parseReply)?.eventId
+
+    /** The users this patch notifies (`p`): the repository owner first, then the `notify` list, in tag order. */
+    fun notifiedUsers(): List<HexKey> = tags.mapNotNull(PTag::parseKey)
 
     fun commit() = tags.firstNotNullOfOrNull(CommitTag::parse)
 

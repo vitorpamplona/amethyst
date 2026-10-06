@@ -72,7 +72,7 @@ data class GitAuthorTag(
             ensure(tag[0] == TAG_NAME) { return null }
             ensure(tag[1].length == 64) { return null }
 
-            val hint = tag.getOrNull(2)?.let { RelayUrlNormalizer.normalizeOrNull(it) }
+            val hint = tag.getOrNull(2)?.let { RelayUrlNormalizer.normalizeHintOrNull(it) }
             val petname = tag.getOrNull(3)?.takeIf { it.isNotEmpty() }
 
             return GitAuthorTag(tag[1], hint, petname)
@@ -91,7 +91,7 @@ data class GitAuthorTag(
             ensure(tag[1].length == 64) { return null }
             ensure(tag[2].isNotEmpty()) { return null }
 
-            val hint = RelayUrlNormalizer.normalizeOrNull(tag[2])
+            val hint = RelayUrlNormalizer.normalizeHintOrNull(tag[2])
 
             ensure(hint != null) { return null }
 

@@ -37,4 +37,9 @@ class QTagAddressTest {
     fun anEventQuoteIsNotAnAddress() {
         assertNull(QTag.parseAddressId(arrayOf("q", "a".repeat(64))))
     }
+
+    @Test
+    fun aColonAloneIsNotAnAddressHint() {
+        assertNull(QTag.parseAddressAsHint(arrayOf("q", "foo:bar", "wss://relay.example.com")))
+    }
 }

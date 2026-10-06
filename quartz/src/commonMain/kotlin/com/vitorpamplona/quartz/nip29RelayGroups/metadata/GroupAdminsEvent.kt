@@ -24,6 +24,8 @@ import androidx.compose.runtime.Immutable
 import com.vitorpamplona.quartz.nip01Core.core.BaseAddressableEvent
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
+import com.vitorpamplona.quartz.nip01Core.hints.PubKeyHintProvider
+import com.vitorpamplona.quartz.nip01Core.hints.types.PubKeyHint
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.nip01Core.tags.dTag.dTag
 import com.vitorpamplona.quartz.nip29RelayGroups.tags.GroupAdminTag
@@ -37,7 +39,18 @@ class GroupAdminsEvent(
     tags: Array<Array<String>>,
     content: String,
     sig: HexKey,
-) : BaseAddressableEvent(id, pubKey, createdAt, KIND, tags, content, sig) {
+) : BaseAddressableEvent(id, pubKey, createdAt, KIND, tags, content, sig),
+    PubKeyHintProvider {
+    // `p` tags carry roles, not relays, after the pubkey: there is never a hint.
+    override fun pubKeyHints(): List<PubKeyHint> = emptyList()
+
+    // Deliberately links no one, although every admin is listed. The list arrives from
+    // the group relay itself, and a provider's linked keys are recorded as reachable on the
+    // relay the event came from: that would advertise a (often private) relay as a hint for
+    // every admin, and broadcasts would fall back to it for anyone without an inbox list. It
+    // would also cost O(admins) on every relay copy. Read the list with admins().
+    override fun linkedPubKeys(): List<HexKey> = emptyList()
+
     fun groupId() = dTag()
 
     fun admins() = tags.mapNotNull(GroupAdminTag::parse)

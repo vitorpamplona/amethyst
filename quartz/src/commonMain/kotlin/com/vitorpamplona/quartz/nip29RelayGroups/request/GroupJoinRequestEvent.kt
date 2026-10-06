@@ -27,6 +27,7 @@ import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.nip29RelayGroups.moderation.groupId
 import com.vitorpamplona.quartz.nip29RelayGroups.moderation.inviteCode
+import com.vitorpamplona.quartz.nip50Search.SearchableEvent
 import com.vitorpamplona.quartz.utils.TimeUtils
 
 @Immutable
@@ -37,7 +38,11 @@ class GroupJoinRequestEvent(
     tags: Array<Array<String>>,
     content: String,
     sig: HexKey,
-) : Event(id, pubKey, createdAt, KIND, tags, content, sig) {
+) : Event(id, pubKey, createdAt, KIND, tags, content, sig),
+    SearchableEvent {
+    // NIP-29: the content is the user's optional, human-written reason to join.
+    override fun indexableContent() = content
+
     fun groupId() = tags.groupId()
 
     fun inviteCode() = tags.inviteCode()

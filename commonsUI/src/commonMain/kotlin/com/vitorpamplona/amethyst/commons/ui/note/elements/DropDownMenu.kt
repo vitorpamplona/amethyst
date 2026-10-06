@@ -50,8 +50,8 @@ import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.report.ReportNoteDi
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.Size24Modifier
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
-import com.vitorpamplona.quartz.nip01Core.tags.aTag.isTaggedAddressableNote
 import com.vitorpamplona.quartz.nip30CustomEmoji.pack.EmojiPackEvent
+import com.vitorpamplona.quartz.nip30CustomEmoji.selection.EmojiListEvent
 import com.vitorpamplona.quartz.nip36SensitiveContent.isSensitiveOrNSFW
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.IO
@@ -278,7 +278,7 @@ fun observeBookmarksFollowsAndAccount(
     ) { follows, bookmarks, pinnedIds, showSensitiveContent, emojiSelectionState ->
         val isEmojiPackInMyList =
             if (noteIdForEmoji != null) {
-                emojiSelectionState.note.event?.isTaggedAddressableNote(noteIdForEmoji) == true
+                (emojiSelectionState.note.event as? EmojiListEvent)?.hasEmojiPack(noteIdForEmoji) == true
             } else {
                 false
             }
@@ -306,7 +306,7 @@ fun observeBookmarksFollowsAndAccount(
                     noteIdForEmoji?.let {
                         accountViewModel.account.emoji
                             .getEmojiList()
-                            ?.isTaggedAddressableNote(it) == true
+                            ?.hasEmojiPack(it) == true
                     } ?: false,
             ),
         )

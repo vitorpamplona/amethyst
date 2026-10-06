@@ -28,6 +28,11 @@ import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.Tag
 import com.vitorpamplona.quartz.nip01Core.core.TagArray
 import com.vitorpamplona.quartz.nip01Core.core.fastMapNotNullDense
+import com.vitorpamplona.quartz.nip01Core.core.isValid
+import com.vitorpamplona.quartz.nip01Core.hints.EventHintProvider
+import com.vitorpamplona.quartz.nip01Core.hints.PubKeyHintProvider
+import com.vitorpamplona.quartz.nip01Core.hints.types.EventIdHint
+import com.vitorpamplona.quartz.nip01Core.hints.types.PubKeyHint
 import com.vitorpamplona.quartz.nip50Search.IndexableFieldVisitor
 import com.vitorpamplona.quartz.nip50Search.SearchableEvent
 
@@ -62,6 +67,8 @@ abstract class TrustedListEvent(
     content: String,
     sig: HexKey,
 ) : BaseAddressableEvent(id, pubKey, createdAt, kind, tags, content, sig),
+    PubKeyHintProvider,
+    EventHintProvider,
     SearchableEvent {
     /**
      * The list's label, and nothing else -- it is the only human-authored text
@@ -77,6 +84,36 @@ abstract class TrustedListEvent(
         // Null rather than the empty string the joined form yields: the visitor
         // drops nulls, so both sides still produce the same text.
         visitor.visit(title())
+    }
+
+    /**
+     * Every list in the family names its provenance: the [observer] it was computed for and
+     * the [sourceTag] definition (an event id plus its author) it was computed from. Neither
+     * slot has a relay, so they link but never hint. Subclasses whose member tags are pubkeys
+     * or events add those on top -- and must keep these, via [addProvenancePubKeys] /
+     * [addProvenanceEventIds].
+     *
+     * Those append into the subclass's own member list rather than returning one to concatenate:
+     * linked*() runs on every relay copy, and `members + provenance` would copy a list of
+     * thousands of members just to add two entries.
+     */
+    override fun pubKeyHints(): List<PubKeyHint> = emptyList()
+
+    override fun linkedPubKeys(): List<HexKey> = ArrayList<HexKey>(2).also(::addProvenancePubKeys)
+
+    override fun eventHints(): List<EventIdHint> = emptyList()
+
+    override fun linkedEventIds(): List<HexKey> = ArrayList<HexKey>(1).also(::addProvenanceEventIds)
+
+    /** Appends the [observer] and the [sourceTag] author, when each is a valid pubkey. */
+    protected fun addProvenancePubKeys(into: MutableList<HexKey>) {
+        observer()?.let(into::add)
+        sourceTag()?.author?.takeIf { it.isValid() }?.let(into::add)
+    }
+
+    /** Appends the [sourceTag] definition event, when present. */
+    protected fun addProvenanceEventIds(into: MutableList<HexKey>) {
+        sourceTag()?.eventId?.takeIf { it.isValid() }?.let(into::add)
     }
 
     /** The addressable identity of this list. Deterministic per list. */

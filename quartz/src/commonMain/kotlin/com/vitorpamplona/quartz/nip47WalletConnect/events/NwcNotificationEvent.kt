@@ -24,8 +24,10 @@ import androidx.compose.runtime.Immutable
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.OptimizedJsonMapper
+import com.vitorpamplona.quartz.nip01Core.hints.PubKeyHintProvider
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip01Core.signers.SignerExceptions
+import com.vitorpamplona.quartz.nip01Core.tags.people.PTag
 import com.vitorpamplona.quartz.nip47WalletConnect.rpc.Notification
 import com.vitorpamplona.quartz.utils.TimeUtils
 
@@ -37,10 +39,16 @@ class NwcNotificationEvent(
     tags: Array<Array<String>>,
     content: String,
     sig: HexKey,
-) : Event(id, pubKey, createdAt, KIND, tags, content, sig) {
+) : Event(id, pubKey, createdAt, KIND, tags, content, sig),
+    PubKeyHintProvider {
+    override fun pubKeyHints() = tags.mapNotNull(PTag::parseAsHint)
+
+    // NIP-47: a notification is addressed to a single client.
+    override fun linkedPubKeys() = listOfNotNull(clientPubKey())
+
     override fun isContentEncoded() = true
 
-    fun clientPubKey() = tags.firstOrNull { it.size > 1 && it[0] == "p" }?.get(1)
+    fun clientPubKey(): HexKey? = tags.firstNotNullOfOrNull(PTag::parseKey)
 
     fun talkingWith(oneSideHex: String): HexKey = if (pubKey == oneSideHex) clientPubKey() ?: pubKey else pubKey
 

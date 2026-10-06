@@ -25,6 +25,7 @@ import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.TagArray
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
+import com.vitorpamplona.quartz.nip01Core.hints.AddressHintProvider
 import com.vitorpamplona.quartz.nip01Core.hints.EventHintProvider
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip01Core.signers.SignerExceptions
@@ -33,6 +34,7 @@ import com.vitorpamplona.quartz.nip01Core.tags.dTag.dTag
 import com.vitorpamplona.quartz.nip50Search.IndexableFieldVisitor
 import com.vitorpamplona.quartz.nip50Search.SearchableEvent
 import com.vitorpamplona.quartz.nip51Lists.PrivateTagArrayEvent
+import com.vitorpamplona.quartz.nip51Lists.bookmarkList.tags.AddressBookmark
 import com.vitorpamplona.quartz.nip51Lists.bookmarkList.tags.BookmarkIdTag
 import com.vitorpamplona.quartz.nip51Lists.bookmarkList.tags.EventBookmark
 import com.vitorpamplona.quartz.nip51Lists.encryption.PrivateTagsInContent
@@ -54,6 +56,7 @@ class PictureCurationSetEvent(
     sig: HexKey,
 ) : PrivateTagArrayEvent(id, pubKey, createdAt, KIND, tags, content, sig),
     EventHintProvider,
+    AddressHintProvider,
     SearchableEvent {
     override fun indexableContent() = listOfNotNull(title(), description()).joinToString("\n")
 
@@ -66,7 +69,11 @@ class PictureCurationSetEvent(
 
     override fun eventHints() = tags.mapNotNull(EventBookmark::parseAsHint)
 
-    override fun linkedEventIds() = tags.mapNotNull(EventBookmark::parseId)
+    override fun linkedEventIds() = publicItemEventIds()
+
+    override fun addressHints() = tags.mapNotNull(AddressBookmark::parseAsHint)
+
+    override fun linkedAddressIds() = publicItemAddressIds()
 
     fun title() = tags.firstNotNullOfOrNull(TitleTag::parse)
 
@@ -75,6 +82,12 @@ class PictureCurationSetEvent(
     fun image() = tags.firstNotNullOfOrNull(ImageTag::parse)
 
     fun publicItems(): List<BookmarkIdTag> = tags.mapNotNull(BookmarkIdTag::parse)
+
+    /** The ids of the public `e` items, without building a [BookmarkIdTag] per entry. */
+    fun publicItemEventIds(): List<HexKey> = tags.mapNotNull(EventBookmark::parseId)
+
+    /** The address ids of the public `a` items, validated, in tag order. */
+    fun publicItemAddressIds(): List<String> = tags.mapNotNull(AddressBookmark::parseValidAddress)
 
     suspend fun privateItems(signer: NostrSigner): List<BookmarkIdTag>? = privateTags(signer)?.mapNotNull(BookmarkIdTag::parse)
 

@@ -21,6 +21,7 @@
 package com.vitorpamplona.quartz.experimental.trustedLists.users
 
 import com.vitorpamplona.quartz.experimental.trustedLists.users.tags.PubKeyMemberTag
+import com.vitorpamplona.quartz.nip01Core.core.AddressSerializer
 import com.vitorpamplona.quartz.nip01Core.core.TagArray
 import com.vitorpamplona.quartz.nip01Core.core.fastMapNotNullDense
 import com.vitorpamplona.quartz.nip01Core.tags.aTag.ATag
@@ -33,3 +34,6 @@ fun TagArray.members() = fastMapNotNullDense(PubKeyMemberTag::parse)
  * only `a` is free to carry discovery metadata.
  */
 fun TagArray.aboutAddresses() = mapNotNull(ATag::parse)
+
+/** [aboutAddresses] as shape-checked `kind:pubkey:d` ids, in tag order. */
+fun TagArray.aboutAddressIds(): List<String> = mapNotNull { ATag.parseAddressId(it)?.takeIf(AddressSerializer::isAddressShape) }

@@ -99,6 +99,16 @@ class IndexableFieldVisitorTest {
         assertAgrees(37517, arrayOf(arrayOf("title", "T"), arrayOf("description", "D")), "c")
         assertAgrees(37517, arrayOf(arrayOf("title", "T")), "c")
         assertAgrees(37517, emptyArray(), "c")
+
+        // The kinds whose visitors walk the tags inline instead of building the list their
+        // indexableContent() joins: blank and look-alike tags must be skipped the same way.
+        val topics = arrayOf(arrayOf("t", "one"), arrayOf("t", ""), arrayOf("t"), arrayOf("T", "x"), arrayOf("p", "two"), arrayOf("t", "two"))
+        listOf(1111, 30023, 1621, 1618, 30617, 39000).forEach { kind ->
+            assertAgrees(kind, arrayOf(arrayOf("title", "T"), arrayOf("subject", "S"), arrayOf("name", "N"), *topics), "body")
+            assertAgrees(kind, emptyArray(), "body")
+        }
+        assertAgrees(30030, arrayOf(arrayOf("title", "Pack"), arrayOf("emoji", "smile", "https://e/s.png"), arrayOf("emoji", "", "u"), arrayOf("emoji", "nourl"), arrayOf("emoji", "wave", "https://e/w.png")), "")
+        assertAgrees(39003, arrayOf(arrayOf("d", "g"), arrayOf("role", "admin", "Runs it"), arrayOf("role", ""), arrayOf("role", "mod", ""), arrayOf("role", "member")), "")
     }
 
     @Test

@@ -37,6 +37,7 @@ import com.vitorpamplona.quartz.nip01Core.hints.types.EventIdHint
 import com.vitorpamplona.quartz.nip01Core.hints.types.PubKeyHint
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.nip01Core.tags.geohash.GeoHashTag
+import com.vitorpamplona.quartz.nip01Core.tags.hashtags.HashtagTag
 import com.vitorpamplona.quartz.nip01Core.tags.hashtags.hashtags
 import com.vitorpamplona.quartz.nip10Notes.BaseThreadedEvent
 import com.vitorpamplona.quartz.nip18Reposts.quotes.QTag
@@ -58,11 +59,12 @@ import com.vitorpamplona.quartz.nip22Comments.tags.RootIdentifierTag
 import com.vitorpamplona.quartz.nip22Comments.tags.RootKindTag
 import com.vitorpamplona.quartz.nip50Search.IndexableFieldVisitor
 import com.vitorpamplona.quartz.nip50Search.SearchableEvent
+import com.vitorpamplona.quartz.nip57Zaps.splits.zapSplitHintsTo
+import com.vitorpamplona.quartz.nip57Zaps.splits.zapSplitPubKeysTo
 import com.vitorpamplona.quartz.nip72ModCommunities.definition.CommunityDefinitionEvent
 import com.vitorpamplona.quartz.nip73ExternalIds.ExternalId
 import com.vitorpamplona.quartz.nip73ExternalIds.location.GeohashId
 import com.vitorpamplona.quartz.utils.TimeUtils
-import com.vitorpamplona.quartz.utils.lastNotNullOfOrNull
 
 @Immutable
 class CommentEvent(
@@ -83,25 +85,31 @@ class CommentEvent(
     // The read path: the same fields indexableContent() joins, without the join.
     override fun forEachIndexableField(visitor: IndexableFieldVisitor) {
         if (!visitor.visit(content)) return
-        tags.hashtags().forEach { if (!visitor.visit(it)) return }
+        // Inline over the tags rather than tags.hashtags(): this runs per event per search keystroke.
+        for (tag in tags) {
+            val hashtag = HashtagTag.parse(tag) ?: continue
+            if (!visitor.visit(hashtag)) return
+        }
     }
 
+    // Runs on every relay copy of every comment: one list, filled in the order the old
+    // `P + p + zap + nip19` concatenation produced, instead of five lists and three copies.
     override fun pubKeyHints(): List<PubKeyHint> {
-        val pHints =
-            tags.mapNotNull(RootAuthorTag::parseAsHint) +
-                tags.mapNotNull(ReplyAuthorTag::parseAsHint)
-        val nip19Hints = citedNIP19().pubKeyHints()
-
-        return pHints + nip19Hints
+        val result = ArrayList<PubKeyHint>()
+        result.addAll(rootAuthorHints())
+        result.addAll(replyAuthorHints())
+        tags.zapSplitHintsTo(result)
+        result.addAll(citedNIP19().pubKeyHints())
+        return result
     }
 
     override fun linkedPubKeys(): List<HexKey> {
-        val pHints =
-            tags.mapNotNull(RootAuthorTag::parseKey) +
-                tags.mapNotNull(ReplyAuthorTag::parseKey)
-        val nip19Hints = citedNIP19().pubKeys()
-
-        return pHints + nip19Hints
+        val result = ArrayList<HexKey>()
+        result.addAll(rootAuthorKeys())
+        result.addAll(replyAuthorKeys())
+        tags.zapSplitPubKeysTo(result)
+        result.addAll(citedNIP19().pubKeys())
+        return result
     }
 
     override fun eventHints(): List<EventIdHint> {
@@ -113,11 +121,12 @@ class CommentEvent(
     }
 
     override fun linkedEventIds(): List<HexKey> {
-        val eHints = tags.mapNotNull(RootEventTag::parseKey) + tags.mapNotNull(ReplyEventTag::parseKey)
-        val qHints = tags.mapNotNull(QTag::parseEventId)
-        val nip19Hints = citedNIP19().eventIds()
-
-        return eHints + qHints + nip19Hints
+        val result = ArrayList<HexKey>()
+        result.addAll(rootEventIds())
+        result.addAll(replyEventIds())
+        quotedEvents().mapTo(result) { it.eventId }
+        result.addAll(citedNIP19().eventIds())
+        return result
     }
 
     override fun addressHints(): List<AddressHint> {
@@ -129,11 +138,12 @@ class CommentEvent(
     }
 
     override fun linkedAddressIds(): List<String> {
-        val aHints = tags.mapNotNull(RootAddressTag::parseAddressId) + tags.mapNotNull(ReplyAddressTag::parseAddressId)
-        val qHints = tags.mapNotNull(QTag::parseAddressId)
-        val nip19Hints = citedNIP19().addressIds()
-
-        return aHints + qHints + nip19Hints
+        val result = ArrayList<String>()
+        result.addAll(rootAddressIds())
+        result.addAll(replyAddressIds())
+        quotedAddresses().mapTo(result) { it.address.toValue() }
+        result.addAll(citedNIP19().addressIds())
+        return result
     }
 
     fun rootEventIds() = tags.mapNotNull(RootEventTag::parseKey)
@@ -207,9 +217,7 @@ class CommentEvent(
 
     fun firstScopeValue(parser: (String) -> String?) = tags.firstNotNullOfOrNull { RootIdentifierTag.parse(it)?.let { parser(it) } }
 
-    override fun markedReplyTos(): List<HexKey> =
-        tags.mapNotNull(ReplyEventTag::parseKey) +
-            tags.mapNotNull(RootEventTag::parseKey)
+    override fun markedReplyTos(): List<HexKey> = replyEventIds() + rootEventIds()
 
     override fun unmarkedReplyTos() = emptyList<String>()
 
@@ -222,17 +230,13 @@ class CommentEvent(
      */
     override fun notifies(userHex: HexKey): Boolean = super.notifies(userHex) || rootAuthorKeys().contains(userHex)
 
-    override fun replyingTo(): HexKey? =
-        tags.lastNotNullOfOrNull(ReplyEventTag::parseKey)
-            ?: tags.lastNotNullOfOrNull(RootEventTag::parseKey)
+    override fun replyingTo(): HexKey? = replyEventIds().lastOrNull() ?: rootEventIds().lastOrNull()
 
     fun rootAddress() = tags.mapNotNull(RootAddressTag::parseAddress)
 
     fun rootAddressId() = tags.mapNotNull(RootAddressTag::parseAddressId)
 
-    fun replyingToAddressId(): String? =
-        tags.lastNotNullOfOrNull(ReplyAddressTag::parseAddressId)
-            ?: tags.lastNotNullOfOrNull(RootAddressTag::parseAddressId)
+    fun replyingToAddressId(): String? = replyAddressIds().lastOrNull() ?: rootAddressIds().lastOrNull()
 
     override fun replyingToAddressOrEvent(): HexKey? = replyingToAddressId() ?: replyingTo()
 

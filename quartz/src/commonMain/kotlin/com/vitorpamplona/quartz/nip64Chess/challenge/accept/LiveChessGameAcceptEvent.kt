@@ -24,9 +24,12 @@ import androidx.compose.runtime.Immutable
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
 import com.vitorpamplona.quartz.nip01Core.hints.EventHintBundle
+import com.vitorpamplona.quartz.nip01Core.hints.EventHintProvider
+import com.vitorpamplona.quartz.nip01Core.hints.types.EventIdHint
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.nip01Core.tags.dTag.dTag
 import com.vitorpamplona.quartz.nip64Chess.baseEvent.BaseChessEvent
+import com.vitorpamplona.quartz.nip64Chess.challenge.accept.tags.ChallengeEventTag
 import com.vitorpamplona.quartz.nip64Chess.challenge.offer.LiveChessGameChallengeEvent
 import com.vitorpamplona.quartz.utils.TimeUtils
 
@@ -48,7 +51,13 @@ class LiveChessGameAcceptEvent(
     tags: Array<Array<String>>,
     content: String,
     sig: HexKey,
-) : BaseChessEvent(id, pubKey, createdAt, KIND, tags, content, sig) {
+) : BaseChessEvent(id, pubKey, createdAt, KIND, tags, content, sig),
+    EventHintProvider {
+    // The accepted challenge (kind 30064) is pointed at by id, with the relay it was seen on.
+    override fun eventHints(): List<EventIdHint> = tags.mapNotNull(ChallengeEventTag::parseAsHint)
+
+    override fun linkedEventIds(): List<HexKey> = tags.mapNotNull(ChallengeEventTag::parseId)
+
     fun challengeEventId() = tags.challengeEventId()
 
     companion object {

@@ -40,6 +40,12 @@ fun TagArray.parentLists() = mapNotNull(ParentListTag::parse)
 /** The raw `z` values, as they would go into a `#z` filter. */
 fun TagArray.parentListPointers() = mapNotNull(ParentListTag::parseValue)
 
+/** The parent lists named by header event id (`z` values that are 64-hex ids). */
+fun TagArray.parentListEventIds() = mapNotNull(ParentListTag::parseEventId)
+
+/** The parent lists named by coordinate (`z` values shaped `kind:pubkey:d`). */
+fun TagArray.parentListAddressIds() = mapNotNull(ParentListTag::parseCoordinate)
+
 fun TagArray.name() = fastFirstNotNullOfOrNull(NameTag::parse)
 
 fun TagArray.title() = fastFirstNotNullOfOrNull(TitleTag::parse)
@@ -51,8 +57,14 @@ fun TagArray.comments() = fastFirstNotNullOfOrNull(CommentsTag::parse)
 /** Pubkeys declared as items (`p`). */
 fun TagArray.itemPubKeys() = mapNotNull(PTag::parse)
 
+/** Pubkeys declared as items (`p`), as hex keys. */
+fun TagArray.itemKeys() = mapNotNull(PTag::parseKey)
+
 /** Events declared as items (`e`). */
 fun TagArray.itemEvents() = mapNotNull(ETag::parse)
+
+/** Ids of the events declared as items (`e`). */
+fun TagArray.itemEventIds() = mapNotNull(ETag::parseId)
 
 /**
  * Strings declared as items (`t`), with their case preserved. These are list values like
@@ -62,6 +74,9 @@ fun TagArray.itemStrings() = mapNotNull(HashtagTag::parse)
 
 /** Addressable events declared as items (`a`). Accepts both `kind:pubkey:d` and `naddr1…`. */
 fun TagArray.itemAddresses() = mapNotNull(ATag::parse)
+
+/** Addressable items (`a`) as validated `kind:pubkey:d` ids; an `naddr1…` value is normalized to its id. */
+fun TagArray.itemAddressIds() = mapNotNull(ATag::parseValidAddress)
 
 /** The sets/supersets this item claims to be an element of (`n`). */
 fun TagArray.elementOf() = mapNotNull(ElementOfTag::parse)

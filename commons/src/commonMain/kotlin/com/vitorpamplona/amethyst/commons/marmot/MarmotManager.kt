@@ -53,6 +53,7 @@ import com.vitorpamplona.quartz.marmot.foundation.appEvents.MarmotGroupSnapshot
 import com.vitorpamplona.quartz.marmot.foundation.appEvents.MarmotMessageEdit
 import com.vitorpamplona.quartz.marmot.foundation.appEvents.MarmotSystemEvent
 import com.vitorpamplona.quartz.marmot.foundation.appEvents.MarmotSystemRowDiff
+import com.vitorpamplona.quartz.marmot.foundation.appEvents.removedMessageIds
 import com.vitorpamplona.quartz.marmot.groups.MarmotGroupPolicy
 import com.vitorpamplona.quartz.marmot.groups.MarmotMessageStore
 import com.vitorpamplona.quartz.marmot.groups.MlsGroupManager
@@ -1642,12 +1643,11 @@ class MarmotManager(
         val claims = ArrayList<Pair<HexKey, HexKey>>()
         val removed = HashSet<HexKey>()
         for (event in messages) {
-            if (event.kind == DeletionRequestEvent.KIND) {
-                for (tag in event.tags) {
-                    if (tag.size >= 2 && tag[0] == "e") claims.add(tag[1] to event.pubKey)
-                }
+            // Stored messages are parsed through EventFactory, so every kind:5 is typed here.
+            if (event is DeletionRequestEvent) {
+                for (targetId in event.deleteEventIds()) claims.add(targetId to event.pubKey)
             } else if (event.kind == MarmotAppEvent.KIND_REMOVE) {
-                if (event.pubKey in admins) removed.addAll(adminRemovalTargets(event))
+                if (event.pubKey in admins) removed.addAll(event.tags.removedMessageIds())
             } else {
                 authorOf[event.id] = event.pubKey
             }
@@ -1673,10 +1673,8 @@ class MarmotManager(
         if (event.kind != MarmotAppEvent.KIND_REMOVE) return emptyList()
         val admins = groupView(nostrGroupId)?.adminPubkeys ?: return emptyList()
         if (event.pubKey !in admins) return emptyList()
-        return adminRemovalTargets(event)
+        return event.tags.removedMessageIds()
     }
-
-    private fun adminRemovalTargets(event: Event): List<HexKey> = event.tags.mapNotNull { tag -> if (tag.size >= 2 && tag[0] == "e") tag[1] else null }
 
     /**
      * The slice of canonical group state that kind:1210 rows are derived from,

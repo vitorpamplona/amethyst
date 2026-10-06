@@ -55,6 +55,8 @@ data class WotTag(
             return WotTag(tag[1], depth)
         }
 
+        fun parseKey(tag: Array<String>): HexKey? = parse(tag)?.rootPubkey
+
         fun assemble(
             rootPubkey: HexKey,
             depth: Int,

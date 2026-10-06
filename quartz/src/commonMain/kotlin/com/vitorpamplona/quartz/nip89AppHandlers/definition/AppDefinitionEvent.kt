@@ -24,10 +24,11 @@ import androidx.compose.runtime.Immutable
 import com.vitorpamplona.quartz.nip01Core.core.BaseAddressableEvent
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
+import com.vitorpamplona.quartz.nip01Core.hints.AddressHintProvider
+import com.vitorpamplona.quartz.nip01Core.hints.types.AddressHint
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.nip01Core.tags.aTag.ATag
 import com.vitorpamplona.quartz.nip01Core.tags.aTag.aTags
-import com.vitorpamplona.quartz.nip01Core.tags.aTag.taggedATags
 import com.vitorpamplona.quartz.nip01Core.tags.dTag.dTag
 import com.vitorpamplona.quartz.nip01Core.tags.hashtags.hashtags
 import com.vitorpamplona.quartz.nip01Core.tags.kinds.isTaggedKind
@@ -38,6 +39,7 @@ import com.vitorpamplona.quartz.nip23LongContent.tags.PublishedAtTag
 import com.vitorpamplona.quartz.nip50Search.IndexableFieldVisitor
 import com.vitorpamplona.quartz.nip50Search.SearchableEvent
 import com.vitorpamplona.quartz.nip89AppHandlers.PlatformType
+import com.vitorpamplona.quartz.nip89AppHandlers.clientTag.ClientTag
 import com.vitorpamplona.quartz.nip89AppHandlers.clientTag.client
 import com.vitorpamplona.quartz.nip89AppHandlers.definition.tags.PlatformLinkTag
 import com.vitorpamplona.quartz.utils.Log
@@ -57,6 +59,7 @@ class AppDefinitionEvent(
     sig: HexKey,
 ) : BaseAddressableEvent(id, pubKey, createdAt, KIND, tags, content, sig),
     PublishedAtProvider,
+    AddressHintProvider,
     SearchableEvent {
     // App-handler content is JSON; parse it and index the human-meaningful
     // fields plus the addresses/URLs people search by.
@@ -134,10 +137,16 @@ class AppDefinitionEvent(
     fun supportedNips() = tags.supportedNips()
 
     /** Related addressable events referenced via `a` tags (source repo, store listing, ...). */
-    fun relatedAddresses() = tags.taggedATags()
+    fun relatedAddresses(): List<ATag> = tags.mapNotNull(ATag::parse)
 
     /** The client (NIP-89 `client` tag) that published this handler, if any. */
     fun client() = tags.client().firstOrNull()
+
+    // Related addressables (`a`: source repo, store listing, ...) and the publishing client's
+    // own handler (`client` slot 2, relay in slot 3).
+    override fun addressHints(): List<AddressHint> = tags.mapNotNull(ATag::parseAsHint) + tags.mapNotNull(ClientTag::parseAddressAsHint)
+
+    override fun linkedAddressIds(): List<String> = relatedAddresses().map { it.toTag() } + tags.mapNotNull(ClientTag::parseAddressId)
 
     override fun publishedAt(): Long? {
         val publishedAt = tags.firstNotNullOfOrNull(PublishedAtTag::parse)

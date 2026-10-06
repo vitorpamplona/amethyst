@@ -34,7 +34,6 @@ import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerSync
 import com.vitorpamplona.quartz.nip01Core.tags.aTag.ATag
-import com.vitorpamplona.quartz.nip01Core.tags.people.isTaggedUser
 import com.vitorpamplona.quartz.nip02FollowList.tags.ContactTag
 import com.vitorpamplona.quartz.utils.TimeUtils
 
@@ -58,7 +57,7 @@ class ContactListEvent(
 
     override fun pubKeyHints() = tags.mapNotNull(ContactTag::parseAsHint)
 
-    override fun linkedPubKeys() = tags.mapNotNull(ContactTag::parseKey)
+    override fun linkedPubKeys() = unverifiedFollowKeySet()
 
     /**
      * Returns a list of p-tags that are verified as hex keys.
@@ -120,7 +119,7 @@ class ContactListEvent(
             signer: NostrSigner,
             createdAt: Long = TimeUtils.now(),
         ): ContactListEvent {
-            if (earlierVersion.isTaggedUser(pubKeyHex)) return earlierVersion
+            if (earlierVersion.isFollowing(pubKeyHex)) return earlierVersion
 
             return create(
                 content = earlierVersion.content,
@@ -155,11 +154,34 @@ class ContactListEvent(
             signer: NostrSigner,
             createdAt: Long = TimeUtils.now(),
         ): ContactListEvent {
-            if (!earlierVersion.isTaggedUser(pubKeyHex)) return earlierVersion
+            if (!earlierVersion.isFollowing(pubKeyHex)) return earlierVersion
 
             return create(
                 content = earlierVersion.content,
                 tags = earlierVersion.tags.filter { it.size > 1 && it[1] != pubKeyHex }.toTypedArray(),
+                signer = signer,
+                createdAt = createdAt,
+            )
+        }
+
+        /**
+         * Batch [unfollowUser]: drops every follow (`p`) whose key is in [pubKeys] in a single
+         * update. Returns [earlierVersion] itself when none of them is followed.
+         */
+        suspend fun unfollowUsers(
+            earlierVersion: ContactListEvent,
+            pubKeys: Set<HexKey>,
+            signer: NostrSigner,
+            createdAt: Long = TimeUtils.now(),
+        ): ContactListEvent {
+            if (pubKeys.isEmpty()) return earlierVersion
+
+            val newTags = earlierVersion.tags.filterNot { tag -> ContactTag.parseKey(tag)?.let { it in pubKeys } == true }
+            if (newTags.size == earlierVersion.tags.size) return earlierVersion
+
+            return create(
+                content = earlierVersion.content,
+                tags = newTags.toTypedArray(),
                 signer = signer,
                 createdAt = createdAt,
             )

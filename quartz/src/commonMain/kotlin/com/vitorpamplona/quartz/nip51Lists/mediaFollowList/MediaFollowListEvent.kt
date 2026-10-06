@@ -45,7 +45,7 @@ class MediaFollowListEvent(
     PubKeyHintProvider {
     override fun pubKeyHints() = tags.mapNotNull(UserTag::parseAsHint)
 
-    override fun linkedPubKeys() = tags.mapNotNull(UserTag::parseKey)
+    override fun linkedPubKeys() = publicFollows().map { it.pubKey }
 
     fun publicFollows() = tags.mapNotNull(UserTag::parse)
 

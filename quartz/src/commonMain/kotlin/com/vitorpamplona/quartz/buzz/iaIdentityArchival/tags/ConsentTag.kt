@@ -54,6 +54,14 @@ object ConsentTag {
         return Consent(tag[1], tag[2])
     }
 
+    /** Just the actor pubkey of a well-formed `consent` tag. */
+    fun parseKey(tag: Array<String>): HexKey? {
+        ensure(tag.has(2)) { return null }
+        ensure(tag[0] == TAG_NAME) { return null }
+        ensure(tag[2].isValid()) { return null }
+        return tag[2]
+    }
+
     fun assemble(
         path: String,
         actorPubKey: HexKey,

@@ -92,17 +92,23 @@ class ReleaseArtifactSetEvent(
 
     override fun eventHints() = tags.mapNotNull(EventBookmark::parseAsHint)
 
-    override fun linkedEventIds() = tags.mapNotNull(EventBookmark::parseId)
+    override fun linkedEventIds() = itemEventIds()
 
     override fun addressHints() = tags.mapNotNull(AddressBookmark::parseAsHint)
 
-    override fun linkedAddressIds() = tags.mapNotNull(AddressBookmark::parseAddressId)
+    override fun linkedAddressIds() = itemAddressIds()
 
     fun title() = tags.firstNotNullOfOrNull(TitleTag::parse)
 
     fun description() = tags.firstNotNullOfOrNull(DescriptionTag::parse)
 
     fun items(): List<BookmarkIdTag> = tags.mapNotNull(BookmarkIdTag::parse)
+
+    /** The ids of the `e` items: the NIP-51 event items, which in a NIP-82 release are its [assets]. */
+    fun itemEventIds(): List<HexKey> = tags.mapNotNull(EventBookmark::parseId)
+
+    /** The address ids of the `a` items, validated, in tag order. */
+    fun itemAddressIds(): List<String> = tags.mapNotNull(AddressBookmark::parseValidAddress)
 
     /** NIP-82: the application identifier (`i` tag). */
     fun appId() = tags.appId()

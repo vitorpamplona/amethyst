@@ -67,7 +67,8 @@ class LiveActivitiesRaidEvent(
 
     override fun addressHints(): List<AddressHint> = tags.mapNotNull(ATag::parseAsHint)
 
-    override fun linkedAddressIds(): List<String> = tags.mapNotNull(ATag::parseAddressId)
+    // The raid's two marked `a` tags: the stream it comes from and the one it goes to.
+    override fun linkedAddressIds(): List<String> = listOfNotNull(fromAddress()?.toValue(), toAddress()?.toValue())
 
     fun fromActivity(): ATag? = findActivity(MARKER_ROOT)
 

@@ -28,19 +28,34 @@ import com.vitorpamplona.quartz.nip01Core.core.containsAllTagNamesWithValues
 import com.vitorpamplona.quartz.nip01Core.hints.AddressHintProvider
 import com.vitorpamplona.quartz.nip01Core.hints.EventHintProvider
 import com.vitorpamplona.quartz.nip01Core.hints.PubKeyHintProvider
+import com.vitorpamplona.quartz.nip01Core.hints.types.AddressHint
+import com.vitorpamplona.quartz.nip01Core.hints.types.EventIdHint
+import com.vitorpamplona.quartz.nip01Core.hints.types.PubKeyHint
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.nip01Core.tags.aTag.ATag
 import com.vitorpamplona.quartz.nip01Core.tags.dTag.dTag
 import com.vitorpamplona.quartz.nip01Core.tags.events.ETag
+import com.vitorpamplona.quartz.nip01Core.tags.hashtags.HashtagTag
 import com.vitorpamplona.quartz.nip01Core.tags.hashtags.hashtags
 import com.vitorpamplona.quartz.nip01Core.tags.people.PTag
 import com.vitorpamplona.quartz.nip01Core.tags.publishedAt.PublishedAtProvider
+import com.vitorpamplona.quartz.nip10Notes.content.findNostrUris
+import com.vitorpamplona.quartz.nip18Reposts.quotes.QTag
+import com.vitorpamplona.quartz.nip19Bech32.addressHints
+import com.vitorpamplona.quartz.nip19Bech32.addressIds
+import com.vitorpamplona.quartz.nip19Bech32.entities.Entity
+import com.vitorpamplona.quartz.nip19Bech32.eventHints
+import com.vitorpamplona.quartz.nip19Bech32.eventIds
+import com.vitorpamplona.quartz.nip19Bech32.pubKeyHints
+import com.vitorpamplona.quartz.nip19Bech32.pubKeys
 import com.vitorpamplona.quartz.nip23LongContent.tags.ImageTag
 import com.vitorpamplona.quartz.nip23LongContent.tags.PublishedAtTag
 import com.vitorpamplona.quartz.nip23LongContent.tags.SummaryTag
 import com.vitorpamplona.quartz.nip23LongContent.tags.TitleTag
 import com.vitorpamplona.quartz.nip50Search.IndexableFieldVisitor
 import com.vitorpamplona.quartz.nip50Search.SearchableEvent
+import com.vitorpamplona.quartz.nip57Zaps.splits.zapSplitHints
+import com.vitorpamplona.quartz.nip57Zaps.splits.zapSplitPubKeys
 import com.vitorpamplona.quartz.nip92IMeta.imetas
 import com.vitorpamplona.quartz.nip99Classifieds.tags.ConditionTag
 import com.vitorpamplona.quartz.nip99Classifieds.tags.LocationTag
@@ -64,27 +79,65 @@ class ClassifiedsEvent(
     EventHintProvider,
     AddressHintProvider,
     SearchableEvent {
-    override fun indexableContent() = listOfNotNull(title(), summary(), content).joinToString("\n")
+    // A listing is searched by where it is and what category it is in as much as by
+    // its title: the location and the `t` categories follow the body.
+    override fun indexableContent() = (listOfNotNull(title(), summary(), content, location()) + categories()).joinToString("\n")
 
     // The read path: hands over the same fields indexableContent() joins, without
     // building the joined string a scan would throw away.
     override fun forEachIndexableField(visitor: IndexableFieldVisitor) {
         if (!visitor.visit(title())) return
         if (!visitor.visit(summary())) return
-        visitor.visit(content)
+        if (!visitor.visit(content)) return
+        if (!visitor.visit(location())) return
+        // Walks the tags in place: this runs per event per search keystroke, and
+        // categories() would build a list only to discard it.
+        for (tag in tags) {
+            val category = HashtagTag.parse(tag) ?: continue
+            if (!visitor.visit(category)) return
+        }
     }
 
-    override fun pubKeyHints() = tags.mapNotNull(PTag::parseAsHint)
+    @kotlinx.serialization.Transient
+    @kotlin.jvm.Transient
+    private var citedNIP19Cache: List<Entity>? = null
 
-    override fun linkedPubKeys() = tags.mapNotNull(PTag::parseKey)
+    /** NIP-19 entities cited as `nostr:` URIs in the markdown description, parsed once. */
+    fun citedNIP19(): List<Entity> = citedNIP19Cache ?: findNostrUris(content).also { citedNIP19Cache = it }
 
-    override fun eventHints() = tags.mapNotNull(ETag::parseAsHint)
+    override fun pubKeyHints(): List<PubKeyHint> = tags.mapNotNull(PTag::parseAsHint) + tags.zapSplitHints() + citedNIP19().pubKeyHints()
 
-    override fun linkedEventIds() = tags.mapNotNull(ETag::parseId)
+    // linked*() run on every relay copy of the event, and each is three tag scans plus
+    // concatenations; the event is immutable, so they are built once per instance.
+    @kotlinx.serialization.Transient
+    @kotlin.jvm.Transient
+    private var linkedPubKeysCache: List<HexKey>? = null
 
-    override fun addressHints() = tags.mapNotNull(ATag::parseAsHint)
+    @kotlinx.serialization.Transient
+    @kotlin.jvm.Transient
+    private var linkedEventIdsCache: List<HexKey>? = null
 
-    override fun linkedAddressIds() = tags.mapNotNull(ATag::parseAddressId)
+    @kotlinx.serialization.Transient
+    @kotlin.jvm.Transient
+    private var linkedAddressIdsCache: List<String>? = null
+
+    override fun linkedPubKeys(): List<HexKey> = linkedPubKeysCache ?: (mentionKeys() + tags.zapSplitPubKeys() + citedNIP19().pubKeys()).also { linkedPubKeysCache = it }
+
+    /** Users mentioned with `p` tags (NIP-27 / NIP-08), in tag order. */
+    fun mentions(): List<PTag> = tags.mapNotNull(PTag::parse)
+
+    /** The keys of [mentions] (`p`), in tag order. */
+    fun mentionKeys(): List<HexKey> = tags.mapNotNull(PTag::parseKey)
+
+    override fun eventHints(): List<EventIdHint> = tags.mapNotNull(ETag::parseAsHint) + tags.mapNotNull(QTag::parseEventAsHint) + citedNIP19().eventHints()
+
+    override fun linkedEventIds(): List<HexKey> = linkedEventIdsCache ?: (tags.mapNotNull(ETag::parseId) + tags.mapNotNull(QTag::parseEventId) + citedNIP19().eventIds()).also { linkedEventIdsCache = it }
+
+    override fun addressHints(): List<AddressHint> = tags.mapNotNull(ATag::parseAsHint) + tags.mapNotNull(QTag::parseAddressAsHint) + citedNIP19().addressHints()
+
+    override fun linkedAddressIds(): List<String> =
+        linkedAddressIdsCache
+            ?: (tags.mapNotNull(ATag::parseAddressId) + tags.mapNotNull(QTag::parseValidAddress) + citedNIP19().addressIds()).also { linkedAddressIdsCache = it }
 
     fun title() = tags.firstNotNullOfOrNull(TitleTag::parse)
 

@@ -28,7 +28,6 @@ import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.fetchAllPages
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.store.IEventStore
-import com.vitorpamplona.quartz.nip01Core.tags.people.isTaggedUser
 import com.vitorpamplona.quartz.nip02FollowList.ContactListEvent
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.IO
@@ -152,7 +151,7 @@ class FollowerCrawler(
                         onVerified = { event, relay ->
                             // A relay can over-return; keep only genuine followers, and
                             // dedup by id so a list mirrored across relays is stored once.
-                            if (event is ContactListEvent && event.isTaggedUser(observer) && seen.add(event.id)) {
+                            if (event is ContactListEvent && event.isFollowing(observer) && seen.add(event.id)) {
                                 followers.add(event.pubKey)
                                 answered.add(relay)
                                 toPersist.trySend(event)

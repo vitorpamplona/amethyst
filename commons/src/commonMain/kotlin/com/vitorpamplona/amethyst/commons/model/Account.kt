@@ -3226,7 +3226,12 @@ class Account(
         if (powDifficulty != null) {
             // See sendNip17EncryptedFile: sign inline, queue only wrap mining.
             val senderNote = signer.sign(template)
-            val recipients = senderNote.taggedUserIds().plus(signer.pubKey).toSet()
+            val recipients =
+                senderNote
+                    .mentions()
+                    .map { it.pubKey }
+                    .plus(signer.pubKey)
+                    .toSet()
             val seals = NIP17Factory().createSeals(senderNote, recipients, signer)
             if (mineWrapsInBackground(seals.seals, seals.expirationDelta, powDifficulty, displayedNoteId = senderNote.id, onPublished = onSent)) return
         }

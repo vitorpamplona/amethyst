@@ -170,9 +170,8 @@ class CashuWalletReader(
             val destroyedQuoteIds =
                 history
                     .asSequence()
-                    .flatMap { it.tags.asSequence() }
-                    .filter { it.size >= 4 && it[0] == "e" && it[3] == "destroyed" }
-                    .map { it[1] }
+                    .flatMap { it.destroyedReferences() }
+                    .map { it.eventId }
                     .toSet()
 
             return quotes

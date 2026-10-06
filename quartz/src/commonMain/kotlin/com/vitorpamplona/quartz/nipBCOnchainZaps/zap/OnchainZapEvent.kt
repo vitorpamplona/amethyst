@@ -72,15 +72,16 @@ class OnchainZapEvent(
 
     override fun pubKeyHints() = tags.mapNotNull(PTag::parseAsHint)
 
-    override fun linkedPubKeys() = tags.mapNotNull(PTag::parseKey)
+    // One recipient, and at most one zapped event and one zapped address.
+    override fun linkedPubKeys() = listOfNotNull(recipient())
 
     override fun eventHints() = tags.mapNotNull(ETag::parseAsHint)
 
-    override fun linkedEventIds() = tags.mapNotNull(ETag::parseId)
+    override fun linkedEventIds() = listOfNotNull(zappedEvent())
 
     override fun addressHints() = tags.mapNotNull(ATag::parseAsHint)
 
-    override fun linkedAddressIds() = tags.mapNotNull(ATag::parseAddressId)
+    override fun linkedAddressIds() = listOfNotNull(zappedAddress())
 
     /** The Bitcoin transaction id (64-char lowercase hex) parsed from the `i` tag. */
     fun txid() = tags.txid()
@@ -95,7 +96,7 @@ class OnchainZapEvent(
     fun zappedEvent() = tags.firstNotNullOfOrNull(ETag::parseId)
 
     /** The addressable event being zapped, if any. */
-    fun zappedAddress() = tags.firstNotNullOfOrNull(ATag::parseAddressId)
+    fun zappedAddress() = tags.firstNotNullOfOrNull(ATag::parseValidAddress)
 
     /** Optional block tag with hash + height enabling SPV verification. */
     fun block() = tags.block()

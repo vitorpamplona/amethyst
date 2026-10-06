@@ -156,7 +156,6 @@ import com.vitorpamplona.quartz.nip01Core.hints.EventHintBundle
 import com.vitorpamplona.quartz.nip01Core.metadata.MetadataEvent
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.tags.hashtags.HashtagTag
-import com.vitorpamplona.quartz.nip01Core.tags.people.taggedUsers
 import com.vitorpamplona.quartz.nip05DnsIdentifiers.namecoin.NamecoinNameResolver
 import com.vitorpamplona.quartz.nip05DnsIdentifiers.namecoin.NamecoinResolveOutcome
 import com.vitorpamplona.quartz.nip10Notes.BaseThreadedEvent
@@ -864,7 +863,7 @@ fun FeedScreen(
                 notes.mapNotNull { note ->
                     when (val evt = note.event) {
                         is CommentEvent -> evt.replyAuthor()?.pubKey
-                        is BaseThreadedEvent -> evt.taggedUsers().lastOrNull()?.pubKey
+                        is BaseThreadedEvent -> evt.mentions().lastOrNull()?.pubKey
                         else -> null
                     }
                 }

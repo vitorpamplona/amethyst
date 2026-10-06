@@ -59,11 +59,11 @@ class WikiMergeAcceptanceEvent(
     PubKeyHintProvider {
     override fun eventHints() = tags.mapNotNull(ETag::parseAsHint)
 
-    override fun linkedEventIds() = tags.mapNotNull(ETag::parseId)
+    override fun linkedEventIds() = listOfNotNull(result(), request())
 
     override fun pubKeyHints() = tags.mapNotNull(PTag::parseAsHint)
 
-    override fun linkedPubKeys() = tags.mapNotNull(PTag::parseKey)
+    override fun linkedPubKeys() = listOfNotNull(requester())
 
     /** The merged article version this acceptance produced. */
     fun result(): HexKey? = markedEvent(RESULT_MARKER)
@@ -81,7 +81,7 @@ class WikiMergeAcceptanceEvent(
         tags.firstNotNullOfOrNull { tag ->
             if (tag.size > WikiMergeRequestEvent.MARKER_SLOT &&
                 tag[0] == ETag.TAG_NAME &&
-                tag[1].isNotEmpty() &&
+                tag[1].length == 64 &&
                 tag[WikiMergeRequestEvent.MARKER_SLOT] == marker
             ) {
                 tag[1]

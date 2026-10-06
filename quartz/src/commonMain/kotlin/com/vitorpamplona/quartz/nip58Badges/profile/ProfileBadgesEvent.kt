@@ -54,17 +54,21 @@ class ProfileBadgesEvent(
 
     override fun eventHints() = tags.mapNotNull(ETag::parseAsHint)
 
-    override fun linkedEventIds() = tags.mapNotNull(ETag::parseId)
+    override fun linkedEventIds() = badgeAwardEvents().map { it.eventId }
 
     override fun addressHints() = tags.mapNotNull(ATag::parseAsHint)
 
-    override fun linkedAddressIds() = tags.mapNotNull(ATag::parseAddressId)
+    // Both relationships a profile's `a` tags carry: the badge definitions it displays and the
+    // badge sets it points at.
+    override fun linkedAddressIds() = (badgeAwardDefinitions() + badgeSets()).map { it.toValue() }
 
     fun acceptedBadges() = tags.acceptedBadges()
 
     fun badgeAwardEvents() = tags.badgeAwardEvents()
 
     fun badgeAwardDefinitions() = tags.badgeAwardDefinitions()
+
+    fun badgeSets() = tags.badgeSets()
 
     companion object {
         const val KIND = 10008

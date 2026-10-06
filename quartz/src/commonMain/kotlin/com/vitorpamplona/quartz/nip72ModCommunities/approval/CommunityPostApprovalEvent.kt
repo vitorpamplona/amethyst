@@ -66,7 +66,10 @@ class CommunityPostApprovalEvent(
 
     override fun pubKeyHints() = tags.mapNotNull(PTag::parseAsHint)
 
-    override fun linkedPubKeys() = tags.mapNotNull(PTag::parseKey)
+    override fun linkedPubKeys() = approvedPostAuthors()
+
+    /** NIP-72: the authors of the approved posts, notified with a `p` tag. */
+    fun approvedPostAuthors(): List<HexKey> = tags.mapNotNull(PTag::parseKey)
 
     fun containedPost(): Event? =
         try {

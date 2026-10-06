@@ -25,6 +25,8 @@ import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.nip01Core.core.BaseReplaceableEvent
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
+import com.vitorpamplona.quartz.nip01Core.hints.PubKeyHintProvider
+import com.vitorpamplona.quartz.nip01Core.hints.types.PubKeyHint
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.nip01Core.tags.aTag.ATag
 import com.vitorpamplona.quartz.nip50Search.IndexableFieldVisitor
@@ -57,7 +59,13 @@ class PodcastMetadataEvent(
     sig: HexKey,
 ) : BaseReplaceableEvent(id, pubKey, createdAt, KIND, tags, content, sig),
     PodcastShow,
+    PubKeyHintProvider,
     SearchableEvent {
+    // Author `p` tags overload slot 2 with a role, not a relay, so they never carry a hint.
+    override fun pubKeyHints(): List<PubKeyHint> = emptyList()
+
+    override fun linkedPubKeys(): List<HexKey> = tags.mapNotNull(AuthorTag::parseKey)
+
     override fun indexableContent() = listOfNotNull(title(), description()).joinToString("\n")
 
     // The read path: the same fields indexableContent() joins, handed over without

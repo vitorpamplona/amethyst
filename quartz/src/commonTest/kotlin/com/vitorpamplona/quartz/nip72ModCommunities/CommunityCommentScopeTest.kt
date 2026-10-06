@@ -21,6 +21,7 @@
 package com.vitorpamplona.quartz.nip72ModCommunities
 
 import com.vitorpamplona.quartz.nip01Core.core.Event
+import com.vitorpamplona.quartz.nip10Notes.TextNoteEvent
 import com.vitorpamplona.quartz.nip22Comments.CommentEvent
 import com.vitorpamplona.quartz.nip72ModCommunities.definition.CommunityDefinitionEvent
 import kotlin.test.Test
@@ -199,5 +200,57 @@ class CommunityCommentScopeTest {
 
         assertFalse(event.isCommunityScoped())
         assertFalse(event.isTopLevelCommunityPost())
+    }
+
+    /**
+     * A reply two levels down in a community: the root `A` is the community, the parent is another
+     * comment (`e`), and there is no lowercase `a` at all. It belongs to the community.
+     */
+    @Test
+    fun nestedReplyIsForItsRootCommunity() {
+        val event =
+            comment(
+                arrayOf("A", movies),
+                arrayOf("K", "34550"),
+                arrayOf("e", "33".repeat(32)),
+                arrayOf("k", "1111"),
+            )
+        val other = "34550:$communityOwner:books"
+
+        assertTrue(event.isForCommunity(movies))
+        assertFalse(event.isForCommunity(other))
+        assertTrue(event.isForAnyCommunity(setOf(other, movies)))
+        assertFalse(event.isForAnyCommunity(setOf(other)))
+    }
+
+    /** A comment's lowercase `a` is only its parent, so it does not place the comment in a community. */
+    @Test
+    fun commentParentAddressDoesNotPlaceItInACommunity() {
+        val event =
+            comment(
+                arrayOf("A", "30023:$communityOwner:article"),
+                arrayOf("a", movies),
+            )
+
+        assertFalse(event.isForCommunity(movies))
+        assertFalse(event.isForAnyCommunity(setOf(movies)))
+    }
+
+    /** Non-comment posts keep using the lowercase `a`. */
+    @Test
+    fun nonCommentPostsAreInACommunityByTheirATag() {
+        val post =
+            TextNoteEvent(
+                id = "00".repeat(32),
+                pubKey = "11".repeat(32),
+                createdAt = 1_700_000_000L,
+                tags = arrayOf(arrayOf("a", movies)),
+                content = "hello",
+                sig = "22".repeat(64),
+            )
+
+        assertTrue(post.isForCommunity(movies))
+        assertTrue(post.isForAnyCommunity(setOf("34550:$communityOwner:books", movies)))
+        assertFalse(post.isForAnyCommunity(setOf("34550:$communityOwner:books")))
     }
 }

@@ -26,6 +26,8 @@ import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.TagArray
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
 import com.vitorpamplona.quartz.nip01Core.core.isValid
+import com.vitorpamplona.quartz.nip01Core.hints.EventHintProvider
+import com.vitorpamplona.quartz.nip01Core.hints.types.EventIdHint
 import com.vitorpamplona.quartz.nip01Core.signers.EventTemplate
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.nip23LongContent.tags.TitleTag
@@ -40,7 +42,8 @@ class ExternalCitationEvent(
     tags: TagArray,
     content: String,
     sig: HexKey,
-) : CitationEvent(id, pubKey, createdAt, KIND, tags, content, sig) {
+) : CitationEvent(id, pubKey, createdAt, KIND, tags, content, sig),
+    EventHintProvider {
     /**
      * The cited URL.
      *
@@ -52,6 +55,11 @@ class ExternalCitationEvent(
 
     /** The id of a NIP-03 kind-1040 timestamp attesting when the page was seen. */
     fun openTimestamp() = value(CitationTags.OPEN_TIMESTAMP)?.takeIf { it.isValid() }
+
+    // `open_timestamp` carries a bare id (no relay slot), so it links without a hint.
+    override fun eventHints(): List<EventIdHint> = emptyList()
+
+    override fun linkedEventIds(): List<HexKey> = listOfNotNull(openTimestamp())
 
     override fun displayTitle(): String? = title() ?: url()
 

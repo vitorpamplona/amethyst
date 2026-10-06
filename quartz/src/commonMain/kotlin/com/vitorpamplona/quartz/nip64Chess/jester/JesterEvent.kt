@@ -25,8 +25,14 @@ import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.JsonMapper
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
+import com.vitorpamplona.quartz.nip01Core.hints.EventHintProvider
+import com.vitorpamplona.quartz.nip01Core.hints.PubKeyHintProvider
+import com.vitorpamplona.quartz.nip01Core.hints.types.EventIdHint
+import com.vitorpamplona.quartz.nip01Core.hints.types.PubKeyHint
 import com.vitorpamplona.quartz.nip01Core.signers.EventTemplate
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
+import com.vitorpamplona.quartz.nip01Core.tags.events.ETag
+import com.vitorpamplona.quartz.nip01Core.tags.people.PTag
 import com.vitorpamplona.quartz.nip64Chess.Color
 import com.vitorpamplona.quartz.nip64Chess.GameResult
 import com.vitorpamplona.quartz.nip64Chess.GameTermination
@@ -49,7 +55,19 @@ class JesterEvent(
     tags: Array<Array<String>>,
     content: String,
     sig: HexKey,
-) : Event(id, pubKey, createdAt, JesterProtocol.KIND, tags, content, sig) {
+) : Event(id, pubKey, createdAt, JesterProtocol.KIND, tags, content, sig),
+    EventHintProvider,
+    PubKeyHintProvider {
+    // `e` tags are the game's start event and the move it follows; a start event's own `e` is
+    // the START_POSITION_HASH constant, which is a position digest, not an event to fetch.
+    override fun eventHints(): List<EventIdHint> = tags.mapNotNull { tag -> ETag.parseAsHint(tag)?.takeIf { it.eventId != JesterProtocol.START_POSITION_HASH } }
+
+    override fun linkedEventIds(): List<HexKey> = tags.mapNotNull { tag -> ETag.parseId(tag)?.takeIf { it != JesterProtocol.START_POSITION_HASH } }
+
+    override fun pubKeyHints(): List<PubKeyHint> = tags.mapNotNull(PTag::parseAsHint)
+
+    override fun linkedPubKeys(): List<HexKey> = tags.mapNotNull(PTag::parseKey)
+
     private val parsedContent: JesterContent? by lazy {
         try {
             JsonMapper.fromJson<JesterContent>(content)

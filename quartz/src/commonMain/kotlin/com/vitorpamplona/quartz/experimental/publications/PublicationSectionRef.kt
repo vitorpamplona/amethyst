@@ -28,8 +28,11 @@ import com.vitorpamplona.quartz.nip01Core.core.Tag
 import com.vitorpamplona.quartz.nip01Core.core.TagArray
 import com.vitorpamplona.quartz.nip01Core.core.has
 import com.vitorpamplona.quartz.nip01Core.core.isValid
+import com.vitorpamplona.quartz.nip01Core.hints.types.EventIdHint
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
 import com.vitorpamplona.quartz.nip23LongContent.LongFormContentEvent
 import com.vitorpamplona.quartz.nip54Wiki.WikiArticleEvent
+import com.vitorpamplona.quartz.utils.Hex
 
 /**
  * One entry in a kind-30040 publication's table of contents.
@@ -134,6 +137,21 @@ data class PublicationSectionRef(
                 title = tag.getOrNull(2)?.trim()?.takeIf { it.isNotEmpty() && !looksLikeRelayUrl(it) },
                 level = slot3.toIntOrNull()?.coerceIn(1, MAX_LEVEL) ?: 1,
             )
+        }
+
+        /**
+         * The relay hint of an `e` section entry, or null. Slot 2 of an `e` entry may be an
+         * inline title instead of a relay, and titles like `Node.js` or `Vol.2` look exactly like
+         * a schemeless host. The strict hint parser only takes a well-formed `ws://`/`wss://` url
+         * and never completes a bare host, so a title is simply not a hint; slot 3 is a level or
+         * a revision id, never a relay, so it is not consulted either.
+         */
+        fun parseEventSectionAsHint(tag: Tag): EventIdHint? {
+            if (!tag.has(2) || tag[0] != "e") return null
+            val id = tag[1]
+            if (id.length != 64 || !Hex.isHex64(id)) return null
+            val relay = RelayUrlNormalizer.normalizeHintOrNull(tag[2]) ?: return null
+            return EventIdHint(id, relay)
         }
 
         private fun isPlausibleLevel(value: String): Boolean = value.toIntOrNull()?.let { it in 1..MAX_LEVEL } == true

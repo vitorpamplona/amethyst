@@ -21,6 +21,7 @@
 package com.vitorpamplona.quartz.nip25Reactions
 
 import androidx.compose.runtime.Immutable
+import com.vitorpamplona.quartz.nip01Core.core.AddressSerializer
 import com.vitorpamplona.quartz.nip01Core.core.AddressableEvent
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
@@ -56,19 +57,22 @@ class ReactionEvent(
     AddressHintProvider {
     override fun pubKeyHints() = tags.mapNotNull(PTag::parseAsHint)
 
-    override fun linkedPubKeys() = tags.mapNotNull(PTag::parseKey)
+    override fun linkedPubKeys() = originalAuthor()
 
     override fun eventHints() = tags.mapNotNull(ETag::parseAsHint)
 
-    override fun linkedEventIds() = tags.mapNotNull(ETag::parseId)
+    override fun linkedEventIds() = originalPost()
 
     override fun addressHints() = tags.mapNotNull(ATag::parseAsHint)
 
-    override fun linkedAddressIds() = tags.mapNotNull(ATag::parseAddressId)
+    override fun linkedAddressIds() = originalAddresses()
 
     fun originalPost() = tags.mapNotNull(ETag::parseId)
 
     fun originalAuthor() = tags.mapNotNull(PTag::parseKey)
+
+    /** The reacted-to addressables (`a`), as address ids in tag order. */
+    fun originalAddresses(): List<String> = tags.mapNotNull { ATag.parseAddressId(it)?.takeIf(AddressSerializer::isAddressShape) }
 
     companion object {
         const val KIND = 7

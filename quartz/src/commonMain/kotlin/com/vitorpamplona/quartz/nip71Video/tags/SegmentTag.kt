@@ -46,6 +46,16 @@ class SegmentTag(
             return SegmentTag(tag[1], tag[2], tag[3], tag.getOrNull(4))
         }
 
+        /** The title of a tag [parse] accepts, without building the [SegmentTag]: for the search read path. */
+        fun parseTitle(tag: Array<String>): String? {
+            ensure(tag.has(3)) { return null }
+            ensure(tag[0] == TAG_NAME) { return null }
+            ensure(tag[1].isNotEmpty()) { return null }
+            ensure(tag[2].isNotEmpty()) { return null }
+            ensure(tag[3].isNotEmpty()) { return null }
+            return tag[3]
+        }
+
         fun assemble(
             // HH:MM:SS.sss
             start: String,

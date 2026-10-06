@@ -57,15 +57,17 @@ class RepostEvent(
     BaseRepostEvent {
     override fun pubKeyHints() = tags.mapNotNull(PTag::parseAsHint)
 
-    override fun linkedPubKeys() = tags.mapNotNull(PTag::parseKey)
+    override fun linkedPubKeys() = originalAuthorKeys()
 
     override fun eventHints() = tags.mapNotNull(ETag::parseAsHint)
 
-    override fun linkedEventIds() = tags.mapNotNull(ETag::parseId)
+    // NIP-18: a repost carries one `e`, the reposted event.
+    override fun linkedEventIds() = listOfNotNull(boostedEventId())
 
     override fun addressHints() = tags.mapNotNull(ATag::parseAsHint)
 
-    override fun linkedAddressIds() = tags.mapNotNull(ATag::parseAddressId)
+    // NIP-18: and, for an addressable, one `a`.
+    override fun linkedAddressIds() = listOfNotNull(boostedAddressIds())
 
     fun boostedEvent() = tags.lastNotNullOfOrNull(ETag::parse)
 
@@ -81,7 +83,7 @@ class RepostEvent(
 
     fun originalAuthors() = tags.mapNotNull(PTag::parse)
 
-    fun originalAuthorKeys() = tags.mapNotNull(PTag::parseKey)
+    override fun originalAuthorKeys() = tags.mapNotNull(PTag::parseKey)
 
     fun containedPost() =
         try {

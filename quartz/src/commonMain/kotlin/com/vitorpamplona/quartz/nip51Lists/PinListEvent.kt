@@ -42,11 +42,14 @@ class PinListEvent(
     EventHintProvider {
     override fun eventHints() = tags.mapNotNull(EventBookmark::parseAsHint)
 
-    override fun linkedEventIds() = tags.mapNotNull(EventBookmark::parseId)
+    override fun linkedEventIds() = pinnedEventIds()
 
     fun countPins() = tags.count(EventBookmark::isTagged)
 
     fun pinnedEvents(): List<EventBookmark> = tags.mapNotNull(EventBookmark::parse)
+
+    /** The ids of the pinned notes, without building an [EventBookmark] per pin. */
+    fun pinnedEventIds(): List<HexKey> = tags.mapNotNull(EventBookmark::parseId)
 
     fun isPinned(eventId: HexKey): Boolean = tags.any { EventBookmark.isTagged(it, eventId) }
 

@@ -22,6 +22,7 @@ package com.vitorpamplona.quartz.buzz.oaOwnerAttestation.tags
 
 import com.vitorpamplona.quartz.buzz.oaOwnerAttestation.AttestationConditions
 import com.vitorpamplona.quartz.buzz.oaOwnerAttestation.OwnerAttestation
+import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.Tag
 import com.vitorpamplona.quartz.nip01Core.core.has
 import com.vitorpamplona.quartz.utils.ensure
@@ -61,5 +62,16 @@ object AuthTag {
         ensure(AttestationConditions.isValid(conditions)) { return null }
 
         return OwnerAttestation(owner, conditions, sig)
+    }
+
+    /**
+     * Just the owner pubkey of an `auth` tag — a cheap read for the hint providers that skips
+     * the conditions and signature shape checks [parse] performs.
+     */
+    fun parseOwnerKey(tag: Array<String>): HexKey? {
+        ensure(tag.size == 4) { return null }
+        ensure(tag[0] == TAG_NAME) { return null }
+        ensure(OwnerAttestation.isLowercaseHex(tag[1], 64)) { return null }
+        return tag[1]
     }
 }

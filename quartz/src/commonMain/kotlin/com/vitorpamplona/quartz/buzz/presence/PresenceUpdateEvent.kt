@@ -24,7 +24,10 @@ import androidx.compose.runtime.Immutable
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
+import com.vitorpamplona.quartz.nip01Core.hints.PubKeyHintProvider
+import com.vitorpamplona.quartz.nip01Core.hints.types.PubKeyHint
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
+import com.vitorpamplona.quartz.nip01Core.tags.people.PTag
 import com.vitorpamplona.quartz.utils.TimeUtils
 
 /**
@@ -43,7 +46,12 @@ class PresenceUpdateEvent(
     tags: Array<Array<String>>,
     content: String,
     sig: HexKey,
-) : Event(id, pubKey, createdAt, KIND, tags, content, sig) {
+) : Event(id, pubKey, createdAt, KIND, tags, content, sig),
+    PubKeyHintProvider {
+    override fun pubKeyHints(): List<PubKeyHint> = tags.mapNotNull(PTag::parseAsHint)
+
+    override fun linkedPubKeys(): List<HexKey> = listOfNotNull(tags.presenceSubject())
+
     /** The raw presence status string — the `status` tag, or the `content` fallback. */
     fun status(): String = tags.presenceStatus() ?: content
 
@@ -54,7 +62,7 @@ class PresenceUpdateEvent(
      * Whose presence this reports. On a client-published event that is the author; on the
      * relay-synthesized read form (relay-signed, subject in a `p` tag) it is the `p` tag.
      */
-    fun subjectPubKey(): HexKey = tags.firstOrNull { it.size > 1 && it[0] == "p" }?.get(1) ?: pubKey
+    fun subjectPubKey(): HexKey = tags.presenceSubject() ?: pubKey
 
     companion object {
         const val KIND = 20001

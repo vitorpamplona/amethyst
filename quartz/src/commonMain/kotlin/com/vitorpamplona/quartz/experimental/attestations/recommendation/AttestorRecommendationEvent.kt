@@ -25,10 +25,13 @@ import com.vitorpamplona.quartz.nip01Core.core.BaseAddressableEvent
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.Kind
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
+import com.vitorpamplona.quartz.nip01Core.hints.PubKeyHintProvider
+import com.vitorpamplona.quartz.nip01Core.hints.types.PubKeyHint
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.nip01Core.tags.dTag.dTag
 import com.vitorpamplona.quartz.nip50Search.IndexableFieldVisitor
 import com.vitorpamplona.quartz.nip50Search.SearchableEvent
+import com.vitorpamplona.quartz.utils.Hex
 import com.vitorpamplona.quartz.utils.TimeUtils
 
 @Immutable
@@ -40,6 +43,7 @@ class AttestorRecommendationEvent(
     content: String,
     sig: HexKey,
 ) : BaseAddressableEvent(id, pubKey, createdAt, KIND, tags, content, sig),
+    PubKeyHintProvider,
     SearchableEvent {
     override fun indexableContent() = listOfNotNull(description()).joinToString("\n")
 
@@ -50,6 +54,14 @@ class AttestorRecommendationEvent(
     }
 
     fun kinds() = tags.kinds()
+
+    /** The recommended attestor: [build] writes its pubkey as the `d` tag. Null when `d` is not a pubkey. */
+    fun attestorPubKey(): HexKey? = dTag().takeIf { it.length == 64 && Hex.isHex64(it) }
+
+    // The `d` slot has no relay hint, so there is nothing to hint -- only to link.
+    override fun pubKeyHints(): List<PubKeyHint> = emptyList()
+
+    override fun linkedPubKeys(): List<HexKey> = listOfNotNull(attestorPubKey())
 
     fun description() = content.ifBlank { null }
 

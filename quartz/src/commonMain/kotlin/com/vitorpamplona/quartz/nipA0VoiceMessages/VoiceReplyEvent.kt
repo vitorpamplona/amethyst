@@ -23,7 +23,13 @@ package com.vitorpamplona.quartz.nipA0VoiceMessages
 import androidx.compose.runtime.Immutable
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
+import com.vitorpamplona.quartz.nip01Core.hints.AddressHintProvider
 import com.vitorpamplona.quartz.nip01Core.hints.EventHintBundle
+import com.vitorpamplona.quartz.nip01Core.hints.EventHintProvider
+import com.vitorpamplona.quartz.nip01Core.hints.PubKeyHintProvider
+import com.vitorpamplona.quartz.nip01Core.hints.types.AddressHint
+import com.vitorpamplona.quartz.nip01Core.hints.types.EventIdHint
+import com.vitorpamplona.quartz.nip01Core.hints.types.PubKeyHint
 import com.vitorpamplona.quartz.nip22Comments.tags.RootAddressTag
 import com.vitorpamplona.quartz.nip22Comments.tags.RootAuthorTag
 import com.vitorpamplona.quartz.nip22Comments.tags.RootEventTag
@@ -43,7 +49,24 @@ class VoiceReplyEvent(
     tags: Array<Array<String>>,
     content: String,
     sig: HexKey,
-) : BaseVoiceEvent(id, pubKey, createdAt, KIND, tags, content, sig) {
+) : BaseVoiceEvent(id, pubKey, createdAt, KIND, tags, content, sig),
+    EventHintProvider,
+    PubKeyHintProvider,
+    AddressHintProvider {
+    // NIP-22 scope: the root (`E`/`P`, or `A` when the thread hangs off an address)
+    // and the direct parent (`e`/`p`), each with its own relay-hint slot.
+    override fun pubKeyHints(): List<PubKeyHint> = tags.mapNotNull(RootAuthorTag::parseAsHint) + tags.mapNotNull(ReplyAuthorTag::parseAsHint)
+
+    override fun linkedPubKeys(): List<HexKey> = tags.mapNotNull(RootAuthorTag::parseKey) + tags.mapNotNull(ReplyAuthorTag::parseKey)
+
+    override fun eventHints(): List<EventIdHint> = tags.mapNotNull(RootEventTag::parseAsHint) + tags.mapNotNull(ReplyEventTag::parseAsHint)
+
+    override fun linkedEventIds(): List<HexKey> = tags.mapNotNull(RootEventTag::parseKey) + tags.mapNotNull(ReplyEventTag::parseKey)
+
+    override fun addressHints(): List<AddressHint> = tags.mapNotNull(RootAddressTag::parseAsHint)
+
+    override fun linkedAddressIds(): List<String> = listOfNotNull(rootAddressId())
+
     fun replyAuthor() = tags.firstNotNullOfOrNull(ReplyAuthorTag::parse)
 
     fun replyAuthors() = tags.filter(ReplyAuthorTag::match)
@@ -62,6 +85,9 @@ class VoiceReplyEvent(
 
     /** The thread's root scope (NIP-22 `E`): the voice message the conversation started from. */
     fun rootEventId(): HexKey? = tags.firstNotNullOfOrNull(RootEventTag::parseKey)
+
+    /** NIP-22: the addressable event at the root of the thread (`A`), when the root is one. */
+    fun rootAddressId(): String? = tags.firstNotNullOfOrNull(RootAddressTag::parseValidAddress)
 
     /** The root scope's author (NIP-22 `P`). */
     fun rootAuthorKey(): HexKey? = tags.firstNotNullOfOrNull(RootAuthorTag::parseKey)
