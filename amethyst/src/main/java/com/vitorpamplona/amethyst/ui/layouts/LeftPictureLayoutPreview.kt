@@ -38,6 +38,7 @@ import com.vitorpamplona.amethyst.commons.resources.github
 import com.vitorpamplona.amethyst.commons.resources.profile_banner
 import com.vitorpamplona.amethyst.commons.ui.layouts.LeftPictureLayout
 import com.vitorpamplona.amethyst.commons.ui.note.LikeIcon
+import com.vitorpamplona.amethyst.commons.ui.note.TextCount
 import com.vitorpamplona.amethyst.commons.ui.note.ZappedIcon
 import com.vitorpamplona.amethyst.commons.ui.painterRes
 import com.vitorpamplona.amethyst.commons.ui.stringRes
@@ -47,7 +48,6 @@ import com.vitorpamplona.amethyst.commons.ui.theme.Size20Modifier
 import com.vitorpamplona.amethyst.commons.ui.theme.StdHorzSpacer
 import com.vitorpamplona.amethyst.commons.ui.theme.ThemeComparisonColumn
 import com.vitorpamplona.amethyst.commons.ui.theme.placeholderText
-import com.vitorpamplona.amethyst.ui.note.TextCount
 
 @Composable
 @Preview

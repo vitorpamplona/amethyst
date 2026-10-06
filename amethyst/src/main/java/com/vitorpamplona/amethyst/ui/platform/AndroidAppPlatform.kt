@@ -32,6 +32,7 @@ import com.vitorpamplona.amethyst.commons.favorites.FavoriteApp
 import com.vitorpamplona.amethyst.commons.model.UiSettingsFlow
 import com.vitorpamplona.amethyst.commons.model.navigation.Route
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
+import com.vitorpamplona.amethyst.commons.ui.payments.PayToAppProbe
 import com.vitorpamplona.amethyst.commons.ui.platform.AppLauncher
 import com.vitorpamplona.amethyst.commons.ui.platform.AppPlatform
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.qrcode.ScanOutcome
@@ -66,6 +67,8 @@ object AndroidAppPlatform : AppPlatform {
 
     // Per flavour: Play links the hosted policies, F-Droid surfaces none.
     override val appVersionName: String get() = BuildConfig.VERSION_NAME
+
+    override val payToApps: PayToAppProbe get() = Amethyst.instance.payToApps
 
     override val releaseNotesId: String get() = BuildConfig.RELEASE_NOTES_ID
 

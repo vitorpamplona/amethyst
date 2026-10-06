@@ -24,12 +24,13 @@ import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.content.pm.ResolveInfo
-import androidx.compose.runtime.Immutable
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.core.graphics.drawable.toBitmap
 import androidx.core.net.toUri
 import com.vitorpamplona.amethyst.commons.model.payments.PaymentTargetTypes
+import com.vitorpamplona.amethyst.commons.ui.payments.PayToAppInfo
+import com.vitorpamplona.amethyst.commons.ui.payments.PayToAppProbe
 import com.vitorpamplona.quartz.nipA3PaymentTargets.PaymentTarget
 import com.vitorpamplona.quartz.utils.Log
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -38,16 +39,8 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import java.util.concurrent.ConcurrentHashMap
 
-/** What the device can do with one `payto` target type. */
-@Immutable
-data class PayToAppInfo(
-    /** An installed activity accepts the hand-off URI. */
-    val resolves: Boolean,
-    /** The chosen app's own name, null when no single default app applies. */
-    val label: String? = null,
-    /** The chosen app's launcher icon, already masked and sized. */
-    val icon: ImageBitmap? = null,
-)
+/** A host no registrar can delegate (RFC 2606), so only catch-all browsers match it. */
+private const val CONTROL_URL = "https://probe.invalid/"
 
 /**
  * Answers "can anything on this phone open this payment target, and what does it
@@ -67,12 +60,11 @@ data class PayToAppInfo(
  * is invisible to Compose: the chip would stay missing until some unrelated
  * recomposition happened to run.
  */
-object PayToAppAvailability {
-    /** A host no registrar can delegate (RFC 2606), so only catch-all browsers match it. */
-    private const val CONTROL_URL = "https://probe.invalid/"
-
+class PayToAppAvailability(
+    private val context: Context,
+) : PayToAppProbe {
     private val state = MutableStateFlow<Map<String, PayToAppInfo>>(emptyMap())
-    val flow: StateFlow<Map<String, PayToAppInfo>> = state.asStateFlow()
+    override val flow: StateFlow<Map<String, PayToAppInfo>> = state.asStateFlow()
 
     /**
      * Decoded icons, kept across warms and keyed by package and size.
@@ -83,9 +75,6 @@ object PayToAppAvailability {
      * the same thing, so only the cheap half repeats.
      */
     private val icons = ConcurrentHashMap<String, ImageBitmap>()
-
-    /** Synchronous read for `RailCapabilityResolver.peek`, which runs inside `remember {}`. */
-    fun peek(rawType: String): PayToAppInfo? = state.value[PaymentTargetTypes.probeKeyFor(rawType)]
 
     /**
      * Probes every distinct type in [targets] and merges the answers into the cache.
@@ -99,8 +88,7 @@ object PayToAppAvailability {
      * [iconPx] is the size the chip draws at — decoding once here is what keeps
      * the icon out of the composition path.
      */
-    fun warm(
-        context: Context,
+    override fun warm(
         targets: List<PaymentTarget>,
         iconPx: Int,
     ) {

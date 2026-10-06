@@ -18,7 +18,7 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.ui.screen.loggedIn.followPacks.feed
+package com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.followPacks.feed
 
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -47,7 +47,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.lifecycle.viewmodel.compose.viewModel
 import coil3.compose.AsyncImage
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
@@ -60,6 +59,7 @@ import com.vitorpamplona.amethyst.commons.resources.conversations
 import com.vitorpamplona.amethyst.commons.resources.members
 import com.vitorpamplona.amethyst.commons.resources.new_threads
 import com.vitorpamplona.amethyst.commons.resources.preview_card_image_for
+import com.vitorpamplona.amethyst.commons.ui.components.rememberViewModel
 import com.vitorpamplona.amethyst.commons.ui.feeds.WatchLifecycleAndUpdateModel
 import com.vitorpamplona.amethyst.commons.ui.feeds.rememberForeverPagerState
 import com.vitorpamplona.amethyst.commons.ui.layouts.DisappearingScaffold
@@ -67,22 +67,22 @@ import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.navigation.topbars.ShorterTopAppBar
 import com.vitorpamplona.amethyst.commons.ui.navigation.topbars.TitleIconModifier
 import com.vitorpamplona.amethyst.commons.ui.navigation.topbars.TopBarSize
+import com.vitorpamplona.amethyst.commons.ui.note.LikeReaction
 import com.vitorpamplona.amethyst.commons.ui.note.LoadAddressableNote
-import com.vitorpamplona.amethyst.commons.ui.note.platform.LikeReaction
-import com.vitorpamplona.amethyst.commons.ui.note.platform.ZapReaction
+import com.vitorpamplona.amethyst.commons.ui.note.ReplyReaction
+import com.vitorpamplona.amethyst.commons.ui.note.ZapReaction
 import com.vitorpamplona.amethyst.commons.ui.screen.RefresheableFeedView
+import com.vitorpamplona.amethyst.commons.ui.screen.UserFeedView
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.followPacks.feed.dal.FollowPackFeedConversationsFeedViewModel
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.followPacks.feed.dal.FollowPackFeedNewThreadFeedViewModel
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.followPacks.feed.dal.FollowPackMembersUserFeedViewModel
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.followPacks.feed.datasource.FollowPackFeedFilterAssemblerSubscription
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.HalfHorzSpacer
 import com.vitorpamplona.amethyst.commons.ui.theme.Size18Modifier
 import com.vitorpamplona.amethyst.commons.ui.theme.SpacedBy2dp
 import com.vitorpamplona.amethyst.commons.ui.theme.TabRowHeight
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
-import com.vitorpamplona.amethyst.ui.note.ReplyReaction
-import com.vitorpamplona.amethyst.ui.screen.UserFeedView
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.followPacks.feed.dal.FollowPackFeedConversationsFeedViewModel
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.followPacks.feed.dal.FollowPackFeedNewThreadFeedViewModel
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.followPacks.feed.dal.FollowPackMembersUserFeedViewModel
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.followPacks.feed.datasource.FollowPackFeedFilterAssemblerSubscription
 import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.nip51Lists.starterPack.StarterPackEvent
 import kotlinx.coroutines.launch
@@ -113,7 +113,7 @@ fun PrepareViewModelsFollowPackScreen(
     nav: INav,
 ) {
     val conversationsFeedViewModel: FollowPackFeedConversationsFeedViewModel =
-        viewModel(
+        rememberViewModel(
             key = note.idHex + "ConversationsFeedViewModel",
             factory =
                 FollowPackFeedConversationsFeedViewModel.Factory(
@@ -123,7 +123,7 @@ fun PrepareViewModelsFollowPackScreen(
         )
 
     val newThreadFeedViewModel: FollowPackFeedNewThreadFeedViewModel =
-        viewModel(
+        rememberViewModel(
             key = note.idHex + "NewThreadFeedViewModel",
             factory =
                 FollowPackFeedNewThreadFeedViewModel.Factory(
@@ -133,7 +133,7 @@ fun PrepareViewModelsFollowPackScreen(
         )
 
     val membersFeedViewModel: FollowPackMembersUserFeedViewModel =
-        viewModel(
+        rememberViewModel(
             key = note.idHex + "MembersFeedViewModel",
             factory =
                 FollowPackMembersUserFeedViewModel.Factory(

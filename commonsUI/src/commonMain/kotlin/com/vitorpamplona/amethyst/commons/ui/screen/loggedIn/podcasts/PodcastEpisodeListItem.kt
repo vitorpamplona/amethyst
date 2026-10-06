@@ -43,8 +43,8 @@ import com.vitorpamplona.amethyst.commons.resources.podcast_season
 import com.vitorpamplona.amethyst.commons.resources.podcast_season_episode
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.navigation.routes.routeFor
+import com.vitorpamplona.amethyst.commons.ui.note.ReactionsRow
 import com.vitorpamplona.amethyst.commons.ui.note.platform.PodcastEpisodeAudioPlayer
-import com.vitorpamplona.amethyst.commons.ui.note.platform.ReactionsRow
 import com.vitorpamplona.amethyst.commons.ui.note.rememberTimeAgoLabels
 import com.vitorpamplona.amethyst.commons.ui.note.timeAgoWith
 import com.vitorpamplona.amethyst.commons.ui.stringRes

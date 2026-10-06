@@ -18,10 +18,8 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.ui.note
+package com.vitorpamplona.amethyst.commons.ui.note
 
-import android.content.Context
-import android.widget.Toast
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedContentTransitionScope
 import androidx.compose.animation.AnimatedVisibility
@@ -93,7 +91,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalClipboard
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.semantics.Role
@@ -108,7 +105,6 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Popup
 import androidx.compose.ui.window.PopupProperties
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.google.accompanist.permissions.ExperimentalPermissionsApi
 import com.vitorpamplona.amethyst.commons.audio.FloatingRecordingIndicator
 import com.vitorpamplona.amethyst.commons.emojicoder.EmojiCoder
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
@@ -120,6 +116,9 @@ import com.vitorpamplona.amethyst.commons.model.User
 import com.vitorpamplona.amethyst.commons.model.navigation.Route
 import com.vitorpamplona.amethyst.commons.model.nip29RelayGroups.RelayGroupChannel
 import com.vitorpamplona.amethyst.commons.model.payments.PaymentTargetTypes
+import com.vitorpamplona.amethyst.commons.model.zap.CashuRailStatus
+import com.vitorpamplona.amethyst.commons.model.zap.RailCapability
+import com.vitorpamplona.amethyst.commons.model.zap.RailCapabilityResolver
 import com.vitorpamplona.amethyst.commons.relayClient.event.observeNoteEvent
 import com.vitorpamplona.amethyst.commons.relayClient.event.observeNoteReactionCount
 import com.vitorpamplona.amethyst.commons.relayClient.event.observeNoteReactions
@@ -160,6 +159,7 @@ import com.vitorpamplona.amethyst.commons.ui.components.AnimatedBorderTextCorner
 import com.vitorpamplona.amethyst.commons.ui.components.ClickableBox
 import com.vitorpamplona.amethyst.commons.ui.components.CrossfadeIfEnabled
 import com.vitorpamplona.amethyst.commons.ui.components.GenericLoadable
+import com.vitorpamplona.amethyst.commons.ui.components.rememberShortNotice
 import com.vitorpamplona.amethyst.commons.ui.components.toasts.multiline.UserBasedErrorMessage
 import com.vitorpamplona.amethyst.commons.ui.components.util.setText
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
@@ -189,9 +189,13 @@ import com.vitorpamplona.amethyst.commons.ui.note.ZapRail
 import com.vitorpamplona.amethyst.commons.ui.note.ZapRailIcon
 import com.vitorpamplona.amethyst.commons.ui.note.ZappedIcon
 import com.vitorpamplona.amethyst.commons.ui.note.elements.ShareOptionsBottomSheet
+import com.vitorpamplona.amethyst.commons.ui.note.platform.LocalNotePlatform
 import com.vitorpamplona.amethyst.commons.ui.note.platform.MAX_VOICE_RECORD_SECONDS
+import com.vitorpamplona.amethyst.commons.ui.note.platform.RecordAudioBox
 import com.vitorpamplona.amethyst.commons.ui.note.types.EditState
+import com.vitorpamplona.amethyst.commons.ui.platform.LocalAppPlatform
 import com.vitorpamplona.amethyst.commons.ui.richtext.InLineIconRenderer
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.profile.header.PaymentTargetsDialog
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.profile.header.paymentTargetStyleFor
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.wallet.OnchainZapSendDialog
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.wallet.navigateToReloadMint
@@ -224,15 +228,12 @@ import com.vitorpamplona.amethyst.commons.ui.theme.placeholderText
 import com.vitorpamplona.amethyst.commons.ui.theme.reactionBox
 import com.vitorpamplona.amethyst.commons.ui.theme.ripple24dp
 import com.vitorpamplona.amethyst.commons.ui.theme.selectedReactionBoxModifier
+import com.vitorpamplona.amethyst.commons.ui.wallet.WalletAppLauncher
+import com.vitorpamplona.amethyst.commons.ui.wallet.payInvoice
+import com.vitorpamplona.amethyst.commons.ui.wallet.rememberWalletAppLauncher
 import com.vitorpamplona.amethyst.commons.util.showAmount
 import com.vitorpamplona.amethyst.commons.util.showCount
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
-import com.vitorpamplona.amethyst.model.zap.CashuRailStatus
-import com.vitorpamplona.amethyst.model.zap.RailCapability
-import com.vitorpamplona.amethyst.model.zap.RailCapabilityResolver
-import com.vitorpamplona.amethyst.service.payments.PayToAppAvailability
-import com.vitorpamplona.amethyst.ui.actions.uploads.RecordAudioBox
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.header.PaymentTargetsDialog
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip10Notes.BaseThreadedEvent
 import com.vitorpamplona.quartz.nip10Notes.TextNoteEvent
@@ -244,6 +245,7 @@ import com.vitorpamplona.quartz.nipA0VoiceMessages.BaseVoiceEvent
 import com.vitorpamplona.quartz.nipA3PaymentTargets.PaymentTarget
 import com.vitorpamplona.quartz.nipA3PaymentTargets.PaymentTargetsEvent
 import com.vitorpamplona.quartz.nipB1Bolt12Zaps.offer.Bolt12OfferListEvent
+import com.vitorpamplona.quartz.utils.BigDecimal
 import com.vitorpamplona.quartz.utils.TimeUtils
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.ImmutableSet
@@ -252,6 +254,7 @@ import kotlinx.collections.immutable.persistentSetOf
 import kotlinx.collections.immutable.toImmutableList
 import kotlinx.collections.immutable.toImmutableSet
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.IO
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.launch
@@ -294,6 +297,19 @@ private fun InnerReactionRow(
     val voiceRecordingState = remember(baseNote.idHex) { mutableStateOf(false) }
     val reactionRowItems by accountViewModel.reactionRowItemsFlow().collectAsStateWithLifecycle()
 
+    // Unsealed rumors (private replies/posts) must not receive public
+    // reposts or quotes: each would e-tag the private rumor id onto
+    // public relays. Replies, reactions, and zaps stay enabled because
+    // the composer locks private mode for rumor parents, ReactionAction
+    // gift-wraps reactions to empty-sig targets, and zaps are forced to
+    // the PRIVATE type with public rails suppressed. Read once per row,
+    // not once per reaction item.
+    val isPrivateRumor = baseNote.isPrivateRumor()
+    // A NIP-29/Buzz relay-group message (including a Buzz DM) must not be publicly reposted or
+    // shared: the reference points at a membership-gated group event that non-members can't fetch,
+    // and a DM shouldn't be rebroadcast at all. Reply/like/zap stay (reply routes into the group).
+    val isRelayGroupMessage = baseNote.inGatherers?.any { it is RelayGroupChannel } == true
+
     GenericInnerReactionRow(
         showReactionDetail = showReactionDetail,
         addPadding = addPadding,
@@ -305,17 +321,6 @@ private fun InnerReactionRow(
         },
         reactions = reactionRowItems,
         renderReaction = { item ->
-            // Unsealed rumors (private replies/posts) must not receive public
-            // reposts or quotes: each would e-tag the private rumor id onto
-            // public relays. Replies, reactions, and zaps stay enabled because
-            // the composer locks private mode for rumor parents, ReactionAction
-            // gift-wraps reactions to empty-sig targets, and zaps are forced to
-            // the PRIVATE type with public rails suppressed.
-            val isPrivateRumor = baseNote.isPrivateRumor()
-            // A NIP-29/Buzz relay-group message (including a Buzz DM) must not be publicly reposted or
-            // shared: the reference points at a membership-gated group event that non-members can't fetch,
-            // and a DM shouldn't be rebroadcast at all. Reply/like/zap stay (reply routes into the group).
-            val isRelayGroupMessage = baseNote.inGatherers?.any { it is RelayGroupChannel } == true
             when (item.action) {
                 ReactionRowAction.Reply -> {
                     ReplyReactionWithDialog(
@@ -500,7 +505,8 @@ fun LoadAndDisplayZapraiser(
     wantsToSeeReactions: MutableState<Boolean>,
     accountViewModel: AccountViewModel,
 ) {
-    val zapraiserAmount = baseNote.event?.zapraiserAmount() ?: 0
+    val event = baseNote.event
+    val zapraiserAmount = remember(event) { event?.zapraiserAmount() ?: 0 }
     if (zapraiserAmount > 0) {
         Box(
             modifier = if (showReactionDetail) ReactionRowZapraiserWithPadding else ReactionRowZapraiser,
@@ -617,7 +623,8 @@ private fun WatchReactionsAndRenderGallery(
 
     if (reactionEvents.isNotEmpty()) {
         reactionEvents.forEach {
-            val reactions = remember(it.key) { it.value.toImmutableList() }
+            // Keyed on the list too: a new reaction with the same emoji replaces it under the same key.
+            val reactions = remember(it.key, it.value) { it.value.toImmutableList() }
             RenderLikeGallery(
                 it.key,
                 reactions,
@@ -719,7 +726,8 @@ private fun ReplyReactionWithDialog(
     showCounter: Boolean = true,
     voiceRecordingState: MutableState<Boolean>? = null,
 ) {
-    if (baseNote.event is BaseVoiceEvent) {
+    // Without a recorder (no RecordAudioBox on this platform) a voice note gets the text reply.
+    if (baseNote.event is BaseVoiceEvent && LocalNotePlatform.current.canRecordAudio) {
         ReplyViaVoiceReaction(
             baseNote,
             grayTint,
@@ -735,7 +743,6 @@ private fun ReplyReactionWithDialog(
     }
 }
 
-@OptIn(ExperimentalPermissionsApi::class)
 @Composable
 fun ReplyViaVoiceReaction(
     baseNote: Note,
@@ -1204,7 +1211,7 @@ private data class OnchainZapRequest(
 @OptIn(ExperimentalUuidApi::class)
 fun payViaIntentOrManualSplit(
     payables: ImmutableList<ZapPaymentHandler.Payable>,
-    context: Context,
+    walletLauncher: WalletAppLauncher,
     noWalletFound: String,
     accountViewModel: AccountViewModel,
     nav: INav,
@@ -1212,7 +1219,7 @@ fun payViaIntentOrManualSplit(
 ) {
     if (payables.size == 1) {
         val payable = payables.first()
-        payViaIntent(payable.invoice, context, noWalletFound, { }) { error ->
+        walletLauncher.payInvoice(payable.invoice, noWalletFound, { }) { error ->
             onPaymentError()
             accountViewModel.toastManager.toast(Res.string.error_dialog_zap_error, UserBasedErrorMessage(error, payable.info.user))
         }
@@ -1242,7 +1249,7 @@ fun ZapReaction(
     // OnchainZapRequest(amount=N) = open prefilled to N sats.
     var onchainZapRequest by remember { mutableStateOf<OnchainZapRequest?>(null) }
 
-    val context = LocalContext.current
+    val walletLauncher = rememberWalletAppLauncher()
     val scope = rememberCoroutineScope()
 
     var zappingProgress by remember { mutableFloatStateOf(0f) }
@@ -1274,7 +1281,7 @@ fun ZapReaction(
                                 }
                             },
                             onPayViaIntent = {
-                                payViaIntentOrManualSplit(it, context, noWalletFoundStr, accountViewModel, nav, onPaymentError = { zappingProgress = 0f })
+                                payViaIntentOrManualSplit(it, walletLauncher, noWalletFoundStr, accountViewModel, nav, onPaymentError = { zappingProgress = 0f })
                             },
                             onCustomAmount = {
                                 wantsToSetCustomZap = true
@@ -1320,7 +1327,7 @@ fun ZapReaction(
                 },
                 onProgress = { scope.launch(Dispatchers.Main) { zappingProgress = it } },
                 onPayViaIntent = {
-                    payViaIntentOrManualSplit(it, context, noWalletFoundStr, accountViewModel, nav, onPaymentError = { zappingProgress = 0f })
+                    payViaIntentOrManualSplit(it, walletLauncher, noWalletFoundStr, accountViewModel, nav, onPaymentError = { zappingProgress = 0f })
                 },
                 onReloadNutzap = { amount ->
                     wantsToZap = false
@@ -1352,17 +1359,7 @@ fun ZapReaction(
                 },
                 onProgress = { scope.launch(Dispatchers.Main) { zappingProgress = it } },
                 onPayViaIntent = {
-                    if (it.size == 1) {
-                        val payable = it.first()
-                        payViaIntent(payable.invoice, context, noWalletFoundStr, { }) { error ->
-                            zappingProgress = 0f
-                            accountViewModel.toastManager.toast(Res.string.error_dialog_zap_error, UserBasedErrorMessage(error, payable.info.user))
-                        }
-                    } else {
-                        val uid = Uuid.random().toString()
-                        accountViewModel.tempManualPaymentCache.put(uid, it)
-                        nav.nav(Route.ManualZapSplitPayment(uid))
-                    }
+                    payViaIntentOrManualSplit(it, walletLauncher, noWalletFoundStr, accountViewModel, nav, onPaymentError = { zappingProgress = 0f })
                 },
                 accountViewModel = accountViewModel,
                 baseNote = baseNote,
@@ -2043,17 +2040,17 @@ fun observeZapRailCapability(
     val showPayToChip by accountViewModel.settings.uiSettingsFlow.showPayToZapChip
         .collectAsStateWithLifecycle()
     val recipientPayTo = author?.let { observeNoteEvent<PaymentTargetsEvent>(it.paymentTargetsNote, accountViewModel).value }
-    val payToApps by PayToAppAvailability.flow.collectAsStateWithLifecycle()
+    val payToProbe = LocalAppPlatform.current.payToApps
+    val payToApps by payToProbe.flow.collectAsStateWithLifecycle()
 
     // The probe set is this one author's target list — a handful of entries, and
     // only for the author whose picker is open. It runs when the picker opens,
     // never while scrolling.
-    val context = LocalContext.current
     val iconPx = with(LocalDensity.current) { PayToIconSize.roundToPx() }
     LaunchedEffect(recipientPayTo, showPayToChip) {
         val targets = recipientPayTo?.paymentTargets().orEmpty()
         if (showPayToChip && targets.isNotEmpty()) {
-            withContext(Dispatchers.IO) { PayToAppAvailability.warm(context, targets, iconPx) }
+            withContext(Dispatchers.IO) { payToProbe.warm(targets, iconPx) }
         }
     }
 
@@ -2089,6 +2086,7 @@ fun observeZapRailCapability(
                 cashuState,
                 showPayToChip,
                 bolt12Payable = accountViewModel.account.zaps.canZapViaBolt12(),
+                payToResolves = { payToApps[PaymentTargetTypes.probeKeyFor(it)]?.resolves == true },
             )
         if (onchainEnabled) {
             rc.copy(onchainMaxSpendableSats = onchainFunds?.maxSpendableSats)
@@ -2360,11 +2358,12 @@ private fun PayToHandoffChip(
     // (any browser opens https), so a snapshot taken at first composition would pin
     // the fallback glyph and the real app icon would never arrive until the picker
     // was closed and reopened.
-    val apps by PayToAppAvailability.flow.collectAsStateWithLifecycle()
+    val apps by LocalAppPlatform.current.payToApps.flow
+        .collectAsStateWithLifecycle()
     val app = remember(apps, target.type) { apps[PaymentTargetTypes.probeKeyFor(target.type)] }
 
     val uriHandler = LocalUriHandler.current
-    val context = LocalContext.current
+    val shortNotice = rememberShortNotice()
     val clipboard = LocalClipboard.current
     val scope = rememberCoroutineScope()
     val copiedMessage = stringRes(Res.string.copied_to_clipboard)
@@ -2393,14 +2392,14 @@ private fun PayToHandoffChip(
                                 // (the app was uninstalled), so keep the catch.
                                 runCatching { uriHandler.openUri(uri) }
                                     .onSuccess { onHandedOff() }
-                                    .onFailure { Toast.makeText(context, noAppMessage, Toast.LENGTH_SHORT).show() }
+                                    .onFailure { shortNotice.show(noAppMessage) }
                             },
                             // NOT onChangeAmount: a sat-preset editor means nothing
                             // here. Copies the authority, like the profile chip does.
                             onLongClick = {
                                 scope.launch {
                                     clipboard.setText(target.authority)
-                                    Toast.makeText(context, copiedMessage, Toast.LENGTH_SHORT).show()
+                                    shortNotice.show(copiedMessage)
                                 }
                             },
                         ).padding(horizontal = 8.dp, vertical = 5.dp),
@@ -2561,7 +2560,7 @@ private fun UnifiedZapAmountChip(
                         Row(verticalAlignment = CenterVertically) {
                             Spacer(Modifier.width(5.dp))
                             Text(
-                                text = showAmount(amountInSats.toBigDecimal().setScale(1)),
+                                text = showAmount(BigDecimal(amountInSats)),
                                 color = MaterialTheme.colorScheme.onPrimaryContainer,
                                 fontWeight = FontWeight.SemiBold,
                                 textAlign = TextAlign.Center,

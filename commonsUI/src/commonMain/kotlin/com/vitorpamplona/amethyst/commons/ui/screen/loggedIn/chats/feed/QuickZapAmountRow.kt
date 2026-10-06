@@ -18,7 +18,7 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.feed
+package com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.feed
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Row
@@ -28,7 +28,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.commons.model.Note
@@ -39,12 +38,13 @@ import com.vitorpamplona.amethyst.commons.resources.error_dialog_zap_error
 import com.vitorpamplona.amethyst.commons.resources.no_wallet_found
 import com.vitorpamplona.amethyst.commons.service.ZapPaymentHandler
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
+import com.vitorpamplona.amethyst.commons.ui.note.ZapAmountChoiceGrid
+import com.vitorpamplona.amethyst.commons.ui.note.observeZapRailCapability
+import com.vitorpamplona.amethyst.commons.ui.note.payViaIntentOrManualSplit
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.wallet.navigateToReloadMint
 import com.vitorpamplona.amethyst.commons.ui.stringRes
+import com.vitorpamplona.amethyst.commons.ui.wallet.rememberWalletAppLauncher
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
-import com.vitorpamplona.amethyst.ui.note.ZapAmountChoiceGrid
-import com.vitorpamplona.amethyst.ui.note.observeZapRailCapability
-import com.vitorpamplona.amethyst.ui.note.payViaIntentOrManualSplit
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.toImmutableList
 import kotlin.uuid.ExperimentalUuidApi
@@ -80,7 +80,7 @@ fun QuickZapAmountRow(
             onchainSupported = !note.isPrivateRumor(),
         )
 
-    val context = LocalContext.current
+    val walletLauncher = rememberWalletAppLauncher()
 
     val onError = { _: String, message: String, user: User? ->
         // Payment failed — drop the optimistic "zapping" indicator on the bubble.
@@ -92,7 +92,7 @@ fun QuickZapAmountRow(
         // Handoff to an external wallet: we can't observe whether it completes, so clear
         // the optimistic indicator rather than leave it spinning forever.
         accountViewModel.endZapInFlight(note.idHex)
-        payViaIntentOrManualSplit(payables, context, noWalletFoundStr, accountViewModel, nav)
+        payViaIntentOrManualSplit(payables, walletLauncher, noWalletFoundStr, accountViewModel, nav)
     }
 
     Row(

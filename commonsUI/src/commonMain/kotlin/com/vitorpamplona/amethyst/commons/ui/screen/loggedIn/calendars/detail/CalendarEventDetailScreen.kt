@@ -94,8 +94,8 @@ import com.vitorpamplona.amethyst.commons.ui.insets.imePaddingSafe
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.note.ClickableUserPicture
 import com.vitorpamplona.amethyst.commons.ui.note.LoadUser
+import com.vitorpamplona.amethyst.commons.ui.note.ReactionsRow
 import com.vitorpamplona.amethyst.commons.ui.note.UsernameDisplay
-import com.vitorpamplona.amethyst.commons.ui.note.platform.ReactionsRow
 import com.vitorpamplona.amethyst.commons.ui.note.rememberTimeOfDayFormatter
 import com.vitorpamplona.amethyst.commons.ui.note.types.CalendarRsvpRow
 import com.vitorpamplona.amethyst.commons.ui.pluralStringRes

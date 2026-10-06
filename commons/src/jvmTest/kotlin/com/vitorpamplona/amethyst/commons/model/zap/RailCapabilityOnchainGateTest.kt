@@ -18,7 +18,7 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.model.zap
+package com.vitorpamplona.amethyst.commons.model.zap
 
 import com.vitorpamplona.amethyst.commons.model.MIN_ONCHAIN_ZAP_SATS
 import org.junit.Assert.assertFalse

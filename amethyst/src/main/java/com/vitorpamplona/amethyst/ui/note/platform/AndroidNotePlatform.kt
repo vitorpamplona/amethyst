@@ -22,24 +22,17 @@ package com.vitorpamplona.amethyst.ui.note.platform
 
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.MutableState
-import androidx.compose.runtime.State
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.unit.Dp
-import androidx.compose.ui.unit.TextUnit
 import com.vitorpamplona.amethyst.commons.audio.RecordingResult
 import com.vitorpamplona.amethyst.commons.audio.WaveformData
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.richtext.BaseMediaContent
-import com.vitorpamplona.amethyst.commons.ui.components.GenericLoadable
 import com.vitorpamplona.amethyst.commons.ui.components.UrlPreviewState
-import com.vitorpamplona.amethyst.commons.ui.components.ZapButtonCallbacks
-import com.vitorpamplona.amethyst.commons.ui.components.ZapButtonConfig
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.note.platform.NotePlatform
-import com.vitorpamplona.amethyst.commons.ui.note.types.EditState
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.amethyst.model.UrlCachedPreviewer
 import com.vitorpamplona.amethyst.service.playback.composable.VideoViewInner
@@ -55,17 +48,14 @@ import com.vitorpamplona.amethyst.commons.ui.note.types.RenderMeetingRoomPresenc
 import com.vitorpamplona.amethyst.commons.ui.note.types.RenderMeetingSpaceEvent as AppRenderMeetingSpaceEvent
 import com.vitorpamplona.amethyst.service.playback.composable.VideoView as AppVideoView
 import com.vitorpamplona.amethyst.ui.actions.EditPostView as AppEditPostView
+import com.vitorpamplona.amethyst.ui.actions.uploads.RecordAudioBox as AppRecordAudioBox
 import com.vitorpamplona.amethyst.ui.actions.uploads.RecordVoiceButton as AppRecordVoiceButton
 import com.vitorpamplona.amethyst.ui.actions.uploads.VoiceMessagePreview as AppVoiceMessagePreview
 import com.vitorpamplona.amethyst.ui.components.GifVideoView as AppGifVideoView
 import com.vitorpamplona.amethyst.ui.components.LoadUrlPreview as AppLoadUrlPreview
-import com.vitorpamplona.amethyst.ui.components.ReusableZapButton as AppReusableZapButton
 import com.vitorpamplona.amethyst.ui.components.ZoomableContentView as AppZoomableContentView
 import com.vitorpamplona.amethyst.ui.components.ZoomableImageDialog as AppZoomableImageDialog
 import com.vitorpamplona.amethyst.ui.components.rememberUrlPreviewState as AppRememberUrlPreviewState
-import com.vitorpamplona.amethyst.ui.note.LikeReaction as AppLikeReaction
-import com.vitorpamplona.amethyst.ui.note.ReactionsRow as AppReactionsRow
-import com.vitorpamplona.amethyst.ui.note.ZapReaction as AppZapReaction
 import com.vitorpamplona.amethyst.ui.note.creators.location.LoadCityName as AppLoadCityName
 import com.vitorpamplona.amethyst.ui.note.creators.location.LocationPreviewMap as AppLocationPreviewMap
 import com.vitorpamplona.amethyst.ui.note.types.PodcastEpisodeAudioPlayer as AppPodcastEpisodeAudioPlayer
@@ -88,7 +78,6 @@ import com.vitorpamplona.amethyst.ui.note.types.RenderNamedSiteEvent as AppRende
 import com.vitorpamplona.amethyst.ui.note.types.RenderRootNappletEvent as AppRenderRootNappletEvent
 import com.vitorpamplona.amethyst.ui.note.types.RenderRootSiteEvent as AppRenderRootSiteEvent
 import com.vitorpamplona.amethyst.ui.note.types.RenderVoiceTrack as AppRenderVoiceTrack
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.feed.QuickZapAmountRow as AppQuickZapAmountRow
 
 /** Android's [NotePlatform]: the app's own media, map, audio, chess, git, napplet and zap composables. */
 object AndroidNotePlatform : NotePlatform {
@@ -547,74 +536,6 @@ object AndroidNotePlatform : NotePlatform {
     )
 
     @Composable
-    override fun ReactionsRow(
-        baseNote: Note,
-        showReactionDetail: Boolean,
-        addPadding: Boolean,
-        editState: State<GenericLoadable<EditState>>?,
-        accountViewModel: AccountViewModel,
-        nav: INav,
-    ) = AppReactionsRow(
-        baseNote = baseNote,
-        showReactionDetail = showReactionDetail,
-        addPadding = addPadding,
-        editState = editState,
-        accountViewModel = accountViewModel,
-        nav = nav,
-    )
-
-    @Composable
-    override fun LikeReaction(
-        baseNote: Note,
-        grayTint: Color,
-        accountViewModel: AccountViewModel,
-        nav: INav,
-        iconSize: Dp,
-        heartSizeModifier: Modifier,
-        iconFontSize: TextUnit,
-        showCounter: Boolean,
-    ) = AppLikeReaction(
-        baseNote = baseNote,
-        grayTint = grayTint,
-        accountViewModel = accountViewModel,
-        nav = nav,
-        iconSize = iconSize,
-        heartSizeModifier = heartSizeModifier,
-        iconFontSize = iconFontSize,
-        showCounter = showCounter,
-    )
-
-    @Composable
-    override fun ZapReaction(
-        baseNote: Note,
-        grayTint: Color,
-        accountViewModel: AccountViewModel,
-        iconSize: Dp,
-        iconSizeModifier: Modifier,
-        animationModifier: Modifier,
-        showCounter: Boolean,
-        nav: INav,
-    ) = AppZapReaction(
-        baseNote = baseNote,
-        grayTint = grayTint,
-        accountViewModel = accountViewModel,
-        iconSize = iconSize,
-        iconSizeModifier = iconSizeModifier,
-        animationModifier = animationModifier,
-        showCounter = showCounter,
-        nav = nav,
-    )
-
-    @Composable
-    override fun ReusableZapButton(
-        baseNote: Note,
-        accountViewModel: AccountViewModel,
-        nav: INav,
-        config: ZapButtonConfig,
-        callbacks: ZapButtonCallbacks,
-    ) = AppReusableZapButton(baseNote, accountViewModel, nav, config, callbacks)
-
-    @Composable
     override fun FullscreenVideoView(
         videoUri: String,
         mimeType: String?,
@@ -639,6 +560,16 @@ object AndroidNotePlatform : NotePlatform {
         maxDurationSeconds: Int?,
     ) = AppRecordVoiceButton(onVoiceTaken, maxDurationSeconds)
 
+    override val canRecordAudio: Boolean get() = true
+
+    @Composable
+    override fun RecordAudioBox(
+        modifier: Modifier,
+        onRecordTaken: (RecordingResult) -> Unit,
+        maxDurationSeconds: Int?,
+        content: @Composable (isRecording: Boolean, elapsedSeconds: Int, onStop: () -> Unit) -> Unit,
+    ) = AppRecordAudioBox(modifier, onRecordTaken, maxDurationSeconds, content)
+
     @Composable
     override fun VoiceMessagePreview(
         voiceMetadata: AudioMeta,
@@ -648,15 +579,6 @@ object AndroidNotePlatform : NotePlatform {
         isUploading: Boolean,
         modifier: Modifier,
     ) = AppVoiceMessagePreview(voiceMetadata, localFile, onRemove, onReRecord, isUploading, modifier)
-
-    @Composable
-    override fun QuickZapAmountRow(
-        note: Note,
-        onDismiss: () -> Unit,
-        onOnchainRequest: (Long?) -> Unit,
-        accountViewModel: AccountViewModel,
-        nav: INav,
-    ) = AppQuickZapAmountRow(note, onDismiss, onOnchainRequest, accountViewModel, nav)
 
     @Composable
     override fun EditPostView(

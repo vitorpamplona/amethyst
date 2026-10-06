@@ -102,6 +102,7 @@ import com.vitorpamplona.amethyst.commons.ui.note.LoadPublicChatChannel
 import com.vitorpamplona.amethyst.commons.ui.note.NoteAuthorPicture
 import com.vitorpamplona.amethyst.commons.ui.note.NoteUsernameDisplay
 import com.vitorpamplona.amethyst.commons.ui.note.QuietMark
+import com.vitorpamplona.amethyst.commons.ui.note.ReactionsRow
 import com.vitorpamplona.amethyst.commons.ui.note.RenderCashuMint
 import com.vitorpamplona.amethyst.commons.ui.note.RenderFedimint
 import com.vitorpamplona.amethyst.commons.ui.note.RenderMintRecommendation
@@ -122,7 +123,6 @@ import com.vitorpamplona.amethyst.commons.ui.note.elements.StaleRelayHint
 import com.vitorpamplona.amethyst.commons.ui.note.elements.TimeAgo
 import com.vitorpamplona.amethyst.commons.ui.note.elements.TimeAgoStyle
 import com.vitorpamplona.amethyst.commons.ui.note.formatDateTime
-import com.vitorpamplona.amethyst.commons.ui.note.platform.ReactionsRow
 import com.vitorpamplona.amethyst.commons.ui.note.platform.RenderAudioHeader
 import com.vitorpamplona.amethyst.commons.ui.note.platform.RenderAudioTrack
 import com.vitorpamplona.amethyst.commons.ui.note.platform.RenderCalendarRSVPEvent

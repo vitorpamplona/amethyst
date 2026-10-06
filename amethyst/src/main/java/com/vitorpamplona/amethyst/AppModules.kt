@@ -115,6 +115,7 @@ import com.vitorpamplona.amethyst.service.notifications.NotificationDispatcher
 import com.vitorpamplona.amethyst.service.notifications.NwcPaymentNotificationWatcher
 import com.vitorpamplona.amethyst.service.notifications.PokeyReceiver
 import com.vitorpamplona.amethyst.service.nowPlaying.NowPlayingStatusCoordinator
+import com.vitorpamplona.amethyst.service.payments.PayToAppAvailability
 import com.vitorpamplona.amethyst.service.playback.diskCache.VideoCache
 import com.vitorpamplona.amethyst.service.playback.diskCache.VideoCacheFactory
 import com.vitorpamplona.amethyst.service.playback.pip.BackgroundMedia
@@ -1031,6 +1032,9 @@ class AppModules(
 
     /** A Blossom client for [serverBaseUrl], on the upload role's HTTP client (Tor-aware). */
     fun blossomClient(serverBaseUrl: String) = BlossomClient(roleBasedHttpClientBuilder.okHttpClientForUploads(serverBaseUrl))
+
+    /** Which installed apps open a `payto` hand-off; cached across zap pickers for the app's life. */
+    val payToApps by lazy { PayToAppAvailability(appContext) }
 
     /** App-level BUD-04 mirror sweep, so "sync all" keeps running as the user navigates. */
     val blossomMirrorQueue by lazy {

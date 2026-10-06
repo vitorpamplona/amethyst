@@ -46,12 +46,12 @@ import com.vitorpamplona.amethyst.commons.ui.components.MyAsyncImage
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.EmptyNav
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.note.GalleryUnloaded
+import com.vitorpamplona.amethyst.commons.ui.note.LikeReaction
 import com.vitorpamplona.amethyst.commons.ui.note.UserPicture
 import com.vitorpamplona.amethyst.commons.ui.note.UsernameDisplay
+import com.vitorpamplona.amethyst.commons.ui.note.ZapReaction
 import com.vitorpamplona.amethyst.commons.ui.note.elements.DefaultImageBanner
 import com.vitorpamplona.amethyst.commons.ui.note.elements.DefaultImageBannerBackground
-import com.vitorpamplona.amethyst.commons.ui.note.platform.LikeReaction
-import com.vitorpamplona.amethyst.commons.ui.note.platform.ZapReaction
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.DoubleVertSpacer
 import com.vitorpamplona.amethyst.commons.ui.theme.FollowSetImageModifier

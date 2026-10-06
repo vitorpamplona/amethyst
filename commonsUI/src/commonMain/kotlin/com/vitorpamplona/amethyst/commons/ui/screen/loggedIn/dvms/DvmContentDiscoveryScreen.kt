@@ -67,6 +67,7 @@ import com.vitorpamplona.amethyst.commons.service.nwc.nwcFailureDetail
 import com.vitorpamplona.amethyst.commons.service.nwc.nwcTimeoutMessage
 import com.vitorpamplona.amethyst.commons.ui.components.LoadNote
 import com.vitorpamplona.amethyst.commons.ui.components.MyAsyncImage
+import com.vitorpamplona.amethyst.commons.ui.components.ReusableZapButton
 import com.vitorpamplona.amethyst.commons.ui.components.ZapButtonConfig
 import com.vitorpamplona.amethyst.commons.ui.components.rememberViewModel
 import com.vitorpamplona.amethyst.commons.ui.feeds.FeedEmpty
@@ -76,7 +77,6 @@ import com.vitorpamplona.amethyst.commons.ui.loadStringRes
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.note.WatchNoteEvent
 import com.vitorpamplona.amethyst.commons.ui.note.elements.BannerImage
-import com.vitorpamplona.amethyst.commons.ui.note.platform.ReusableZapButton
 import com.vitorpamplona.amethyst.commons.ui.screen.RenderFeedState
 import com.vitorpamplona.amethyst.commons.ui.screen.SaveableFeedState
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.discover.nip90DVMs.DVMCard

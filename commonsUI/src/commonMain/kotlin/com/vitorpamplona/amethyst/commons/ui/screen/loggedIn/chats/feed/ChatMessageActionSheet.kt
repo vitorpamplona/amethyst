@@ -91,7 +91,7 @@ import com.vitorpamplona.amethyst.commons.ui.note.elements.ShareOptionsBottomShe
 import com.vitorpamplona.amethyst.commons.ui.note.elements.noteActionSections
 import com.vitorpamplona.amethyst.commons.ui.note.elements.observeBookmarksFollowsAndAccount
 import com.vitorpamplona.amethyst.commons.ui.note.platform.EditPostView
-import com.vitorpamplona.amethyst.commons.ui.note.platform.QuickZapAmountRow
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.feed.QuickZapAmountRow
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.publicChannels.concord.ConcordExpiringPinDialog
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.report.ReportNoteDialog
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.wallet.OnchainZapSendDialog

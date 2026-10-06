@@ -18,7 +18,7 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.ui.note
+package com.vitorpamplona.amethyst.commons.ui.note
 
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
@@ -55,10 +55,10 @@ import com.vitorpamplona.amethyst.commons.ui.theme.StdStartPadding
 import com.vitorpamplona.amethyst.commons.ui.theme.WidthAuthorPictureModifier
 import com.vitorpamplona.amethyst.commons.util.showAmount
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
+import com.vitorpamplona.quartz.utils.BigDecimal
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.persistentListOf
 import kotlinx.collections.immutable.toImmutableList
-import java.math.BigDecimal
 
 private fun onOnchainZapEntryClick(
     entry: OnchainZapEntry,
@@ -194,7 +194,7 @@ private fun OnchainZapEntryRow(
         }
     val amountText =
         remember(displaySats) {
-            if (displaySats > 0L) showAmount(BigDecimal.valueOf(displaySats)) else ""
+            if (displaySats > 0L) showAmount(BigDecimal(displaySats)) else ""
         }
 
     Box(

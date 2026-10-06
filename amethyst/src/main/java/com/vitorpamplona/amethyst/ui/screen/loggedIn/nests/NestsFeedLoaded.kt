@@ -87,12 +87,12 @@ import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.navigation.routes.routeFor
 import com.vitorpamplona.amethyst.commons.ui.note.DisplayAuthorBanner
 import com.vitorpamplona.amethyst.commons.ui.note.Gallery
+import com.vitorpamplona.amethyst.commons.ui.note.LikeReaction
 import com.vitorpamplona.amethyst.commons.ui.note.LongPressToQuickAction
 import com.vitorpamplona.amethyst.commons.ui.note.UserPicture
 import com.vitorpamplona.amethyst.commons.ui.note.UsernameDisplay
+import com.vitorpamplona.amethyst.commons.ui.note.ZapReaction
 import com.vitorpamplona.amethyst.commons.ui.note.elements.MoreOptionsButton
-import com.vitorpamplona.amethyst.commons.ui.note.platform.LikeReaction
-import com.vitorpamplona.amethyst.commons.ui.note.platform.ZapReaction
 import com.vitorpamplona.amethyst.commons.ui.note.timeAgoNoDot
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.discover.nip53LiveActivities.LoadParticipants
 import com.vitorpamplona.amethyst.commons.ui.stringRes

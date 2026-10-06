@@ -31,11 +31,11 @@ import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.window.Popup
 import androidx.compose.ui.window.PopupProperties
 import com.vitorpamplona.amethyst.commons.model.AddressableNote
+import com.vitorpamplona.amethyst.commons.ui.note.ReactionChoicePopupContent
+import com.vitorpamplona.amethyst.commons.ui.note.popupAnimationEnter
+import com.vitorpamplona.amethyst.commons.ui.note.popupAnimationExit
+import com.vitorpamplona.amethyst.commons.ui.note.rememberVisibilityState
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
-import com.vitorpamplona.amethyst.ui.note.ReactionChoicePopupContent
-import com.vitorpamplona.amethyst.ui.note.popupAnimationEnter
-import com.vitorpamplona.amethyst.ui.note.popupAnimationExit
-import com.vitorpamplona.amethyst.ui.note.rememberVisibilityState
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip25Reactions.ReactionEvent
 import com.vitorpamplona.quartz.nip30CustomEmoji.EmojiUrlTag
@@ -43,7 +43,7 @@ import kotlinx.collections.immutable.persistentSetOf
 
 /**
  * Room-scoped reaction picker. Visually identical to
- * [com.vitorpamplona.amethyst.ui.note.ReactionChoicePopup] — same
+ * [com.vitorpamplona.amethyst.commons.ui.note.ReactionChoicePopup] — same
  * pop-up animation, same user-configured reaction set (including
  * NIP-30 custom emojis), same "change reactions" affordance — but
  * with two semantic deviations specific to live audio rooms:
