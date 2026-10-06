@@ -69,11 +69,11 @@ class VideoCurationSetEvent(
 
     override fun eventHints() = tags.mapNotNull(EventBookmark::parseAsHint)
 
-    override fun linkedEventIds() = tags.mapNotNull(EventBookmark::parseId)
+    override fun linkedEventIds() = publicItemEventIds()
 
     override fun addressHints() = tags.mapNotNull(AddressBookmark::parseAsHint)
 
-    override fun linkedAddressIds() = tags.mapNotNull(AddressBookmark::parseAddressId)
+    override fun linkedAddressIds() = publicItemAddressIds()
 
     fun title() = tags.firstNotNullOfOrNull(TitleTag::parse)
 
@@ -82,6 +82,12 @@ class VideoCurationSetEvent(
     fun image() = tags.firstNotNullOfOrNull(ImageTag::parse)
 
     fun publicItems(): List<BookmarkIdTag> = tags.mapNotNull(BookmarkIdTag::parse)
+
+    /** The ids of the public `e` items, without building a [BookmarkIdTag] per entry. */
+    fun publicItemEventIds(): List<HexKey> = tags.mapNotNull(EventBookmark::parseId)
+
+    /** The address ids of the public `a` items, validated, in tag order. */
+    fun publicItemAddressIds(): List<String> = tags.mapNotNull(AddressBookmark::parseValidAddress)
 
     suspend fun privateItems(signer: NostrSigner): List<BookmarkIdTag>? = privateTags(signer)?.mapNotNull(BookmarkIdTag::parse)
 

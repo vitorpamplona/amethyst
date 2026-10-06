@@ -39,6 +39,7 @@ import com.vitorpamplona.quartz.nip50Search.SearchableEvent
 import com.vitorpamplona.quartz.nip53LiveActivities.LiveStreamLike
 import com.vitorpamplona.quartz.nip53LiveActivities.streaming.tags.CurrentParticipantsTag
 import com.vitorpamplona.quartz.nip53LiveActivities.streaming.tags.EndsTag
+import com.vitorpamplona.quartz.nip53LiveActivities.streaming.tags.GoalTag
 import com.vitorpamplona.quartz.nip53LiveActivities.streaming.tags.ParticipantTag
 import com.vitorpamplona.quartz.nip53LiveActivities.streaming.tags.PinnedEventTag
 import com.vitorpamplona.quartz.nip53LiveActivities.streaming.tags.RecordingTag
@@ -74,14 +75,16 @@ class LiveActivitiesEvent(
         visitor.visit(content)
     }
 
+    // `pinned` and `goal` carry no relay slot of their own; the stream's `relays`
+    // tag is where its chat (and so the events it points at) is published.
     override fun eventHints(): List<EventIdHint> {
-        val pinnedEvents = pinned()
-        if (pinnedEvents.isEmpty()) return emptyList()
+        val linkedIds = linkedEventIds()
+        if (linkedIds.isEmpty()) return emptyList()
 
         val relays = allRelayUrls()
 
         return if (relays.isNotEmpty()) {
-            pinnedEvents
+            linkedIds
                 .map { eventId ->
                     relays.map { relay ->
                         EventIdHint(eventId, relay)
@@ -92,11 +95,15 @@ class LiveActivitiesEvent(
         }
     }
 
-    override fun linkedEventIds() = tags.mapNotNull(PinnedEventTag::parse)
+    override fun linkedEventIds(): List<HexKey> {
+        val pinned = pinned()
+        val goal = goalEventId() ?: return pinned
+        return pinned + goal
+    }
 
     override fun pubKeyHints() = tags.mapNotNull(ParticipantTag::parseAsHint)
 
-    override fun linkedPubKeys() = tags.mapNotNull(ParticipantTag::parseKey)
+    override fun linkedPubKeys() = participantKeys()
 
     override fun title() = tags.firstNotNullOfOrNull(TitleTag::parse)
 
@@ -140,7 +147,7 @@ class LiveActivitiesEvent(
      * zap.stream convention: a NIP-75 zap goal (kind 9041) is attached to a live stream
      * via a flat tag `["goal", "<hex event id>"]` on the 30311 event.
      */
-    fun goalEventId(): HexKey? = tags.firstOrNull { it.size > 1 && it[0] == GOAL_TAG && it[1].isNotEmpty() }?.get(1)
+    fun goalEventId(): HexKey? = tags.firstNotNullOfOrNull(GoalTag::parseId)
 
     fun checkStatus(eventStatus: StatusTag.STATUS?): StatusTag.STATUS? =
         if (eventStatus == StatusTag.STATUS.LIVE && createdAt < TimeUtils.eightHoursAgo()) {

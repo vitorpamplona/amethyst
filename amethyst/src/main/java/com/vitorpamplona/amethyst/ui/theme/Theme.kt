@@ -21,19 +21,15 @@
 package com.vitorpamplona.amethyst.ui.theme
 
 import android.app.Activity
-import androidx.compose.material3.ColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalView
 import androidx.core.view.WindowCompat
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.patrykandpatrick.vico.compose.common.VicoTheme
-import com.patrykandpatrick.vico.compose.common.VicoTheme.CandlestickCartesianLayerColors
 import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.commons.model.AccentColorType
 import com.vitorpamplona.amethyst.commons.model.FontFamilyType
@@ -52,42 +48,12 @@ import com.vitorpamplona.amethyst.commons.ui.theme.AmethystMaterialTheme
 import com.vitorpamplona.amethyst.commons.ui.theme.amethystDarkColors
 import com.vitorpamplona.amethyst.commons.ui.theme.amethystLightColors
 import com.vitorpamplona.amethyst.commons.ui.theme.isDarkTheme
-import com.vitorpamplona.amethyst.commons.ui.theme.isLight
 import com.vitorpamplona.amethyst.commons.ui.theme.transparentBackground
 import com.vitorpamplona.amethyst.ui.components.AndroidRichTextPlatform
 import com.vitorpamplona.amethyst.ui.components.FlavorTranslationPlatform
 import com.vitorpamplona.amethyst.ui.note.platform.AndroidNotePlatform
 import com.vitorpamplona.amethyst.ui.platform.AndroidAppPlatform
 import com.vitorpamplona.amethyst.ui.platform.AndroidAppServices
-
-val chartLightColors =
-    VicoTheme(
-        candlestickCartesianLayerColors =
-            CandlestickCartesianLayerColors(
-                Color(0xff0ac285),
-                Color(0xff000000),
-                Color(0xffe8304f),
-            ),
-        columnCartesianLayerColors = listOf(Color(0xff3287ff), Color(0xff0ac285), Color(0xffffab02)),
-        lineColor = Color(0xffbcbfc2),
-        textColor = Color(0xff000000),
-    )
-
-val chartDarkColors =
-    VicoTheme(
-        candlestickCartesianLayerColors =
-            CandlestickCartesianLayerColors(
-                Color(0xff0ac285),
-                Color(0xffffffff),
-                Color(0xffe8304f),
-            ),
-        columnCartesianLayerColors = listOf(Color(0xff3287ff), Color(0xff0ac285), Color(0xffffab02)),
-        lineColor = Color(0xff494c50),
-        textColor = Color(0xffffffff),
-    )
-
-val ColorScheme.chartStyle: VicoTheme
-    get() = if (isLight) chartLightColors else chartDarkColors
 
 @Composable
 fun AmethystTheme(content: @Composable () -> Unit) {

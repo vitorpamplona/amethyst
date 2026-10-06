@@ -132,9 +132,11 @@ fun rememberConcordChannelPins(
                     account.cache.live.newEventBundles.filter { notes ->
                         val carried = value?.rumorIds ?: return@filter true
                         notes.any { note ->
-                            val event = note.event
-                            (event is DeletionRequestEvent || event is ConcordChatEditEvent) &&
-                                event.tags.any { it.size >= 2 && it[0] == "e" && it[1] in carried }
+                            when (val event = note.event) {
+                                is DeletionRequestEvent -> event.deletesAnyEventIn(carried)
+                                is ConcordChatEditEvent -> event.editedMessageId() in carried
+                                else -> false
+                            }
                         }
                     }
                 merge(session.pinHeads.map { }, session.state.map { }, session.controlDrained.map { }, evidence.map { })

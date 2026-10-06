@@ -24,8 +24,10 @@ import androidx.compose.runtime.Immutable
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.OptimizedJsonMapper
+import com.vitorpamplona.quartz.nip01Core.hints.PubKeyHintProvider
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip01Core.signers.SignerExceptions
+import com.vitorpamplona.quartz.nip01Core.tags.people.PTag
 import com.vitorpamplona.quartz.utils.Hex
 import com.vitorpamplona.quartz.utils.TimeUtils
 
@@ -37,7 +39,13 @@ class NostrConnectEvent(
     tags: Array<Array<String>>,
     content: String,
     sig: HexKey,
-) : Event(id, pubKey, createdAt, KIND, tags, content, sig) {
+) : Event(id, pubKey, createdAt, KIND, tags, content, sig),
+    PubKeyHintProvider {
+    override fun pubKeyHints() = tags.mapNotNull(PTag::parseAsHint)
+
+    // NIP-46 addresses a single recipient.
+    override fun linkedPubKeys() = listOfNotNull(recipientPubKey())
+
     override fun isContentEncoded() = true
 
     fun canDecrypt(signer: NostrSigner) = pubKey == signer.pubKey || recipientPubKey() == signer.pubKey
@@ -49,7 +57,8 @@ class NostrConnectEvent(
         return OptimizedJsonMapper.fromJsonTo<BunkerMessage>(retVal)
     }
 
-    private fun recipientPubKey() = tags.firstOrNull { it.size > 1 && it[0] == "p" }?.get(1)
+    /** The signer or client this message is addressed to (`p`). */
+    fun recipientPubKey(): HexKey? = tags.firstNotNullOfOrNull(PTag::parseKey)
 
     fun verifiedRecipientPubKey(): HexKey? {
         val recipient = recipientPubKey()

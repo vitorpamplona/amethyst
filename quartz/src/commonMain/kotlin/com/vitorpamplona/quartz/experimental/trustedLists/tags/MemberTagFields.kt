@@ -45,15 +45,15 @@ object MemberTagFields {
     /**
      * Index 2 only counts as a relay hint when it actually looks like one.
      * Publishers pad it with an empty string when they carry a score but no
-     * hint, and neighbouring conventions put a petname there -- while the
-     * normalizer turns any bare word into `wss://<word>/`. Without this guard
-     * a petname would be indexed as a relay nobody can connect to, so this
-     * mirrors the check `PTag` applies to the same slot.
+     * hint, and neighbouring conventions put a petname there. The strict hint
+     * parser refuses anything that is not a well-formed ws(s):// url, so a
+     * petname is never indexed as a relay nobody can connect to; the cheap
+     * prefix check in front mirrors the one `PTag` applies to the same slot.
      */
     fun relayHint(tag: Tag): NormalizedRelayUrl? {
         val raw = tag.getOrNull(HINT_INDEX) ?: return null
         if (raw.length < 8 || !RelayUrlNormalizer.isRelayUrl(raw)) return null
-        return RelayUrlNormalizer.normalizeOrNull(raw)
+        return RelayUrlNormalizer.normalizeHintOrNull(raw)
     }
 
     /** The raw hint, for member types whose hint is not a relay url (NIP-73). */

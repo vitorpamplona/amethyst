@@ -36,6 +36,12 @@ expect fun showAmount(amount: BigDecimal?): String
 /** [showAmount] without the decimal place on M and G ("3M"). */
 expect fun showAmountInteger(amount: BigDecimal?): String
 
+/** [showAmount], reading "0" where that would be empty (null or an amount that rounds to nothing). */
+fun showAmountWithZero(amount: BigDecimal?): String = showAmount(amount).ifEmpty { "0" }
+
+/** [showAmountInteger], reading "0" where that would be empty (null or an amount that rounds to nothing). */
+fun showAmountIntegerWithZero(amount: BigDecimal?): String = showAmountInteger(amount).ifEmpty { "0" }
+
 /**
  * [showAmount] and [showAmountInteger] over a Double, for platforms without java.text. Exact for
  * zap amounts: a tie only happens at an exact .5, which a Double holds exactly at this magnitude.

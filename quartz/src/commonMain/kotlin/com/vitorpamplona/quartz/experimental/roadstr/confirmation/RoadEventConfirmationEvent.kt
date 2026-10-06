@@ -65,10 +65,11 @@ class RoadEventConfirmationEvent(
     EventHintProvider {
     override fun eventHints() = tags.mapNotNull(RoadReportTag::parseAsHint)
 
-    override fun linkedEventIds() = tags.mapNotNull(RoadReportTag::parseId)
+    // A confirmation answers one report: [build] writes a single `e`.
+    override fun linkedEventIds() = listOfNotNull(reportId())
 
-    /** The referenced report event id from the first `e` tag. */
-    fun reportId() = tags.roadReport()?.eventId
+    /** The referenced report event id from the first valid `e` tag. */
+    fun reportId(): HexKey? = tags.firstNotNullOfOrNull(RoadReportTag::parseId)
 
     fun status() = tags.roadEventStatus()
 

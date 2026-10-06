@@ -43,6 +43,7 @@ import com.vitorpamplona.quartz.experimental.decentralizedLists.isDeliberatelyUn
 import com.vitorpamplona.quartz.experimental.decentralizedLists.item.tags.ParentList
 import com.vitorpamplona.quartz.experimental.decentralizedLists.item.tags.ParentListTag
 import com.vitorpamplona.quartz.experimental.decentralizedLists.json
+import com.vitorpamplona.quartz.experimental.decentralizedLists.parseGraphCoordinate
 import com.vitorpamplona.quartz.experimental.decentralizedLists.searchableListContent
 import com.vitorpamplona.quartz.experimental.decentralizedLists.tags.InheritType
 import com.vitorpamplona.quartz.experimental.decentralizedLists.wordWrapper
@@ -90,7 +91,10 @@ class AddressableListItemEvent(
 
     override fun eventHints() = tags.mapNotNull(ETag::parseAsHint)
 
-    /** Event items plus any parent lists referenced by id, in one pass. */
+    /**
+     * [itemEventIds] plus [parentListEventIds], read with the same per-tag parsers in one pass so
+     * the ids keep their tag order.
+     */
     override fun linkedEventIds(): List<HexKey> {
         val out = ArrayList<HexKey>()
         tags.fastForEach { tag -> (ETag.parseId(tag) ?: ParentListTag.parseEventId(tag))?.let { out.add(it) } }
@@ -99,16 +103,22 @@ class AddressableListItemEvent(
 
     override fun addressHints() = tags.mapNotNull(ATag::parseAsHint)
 
-    /** Addressable items plus any parent lists referenced by coordinate, in one pass. */
+    /**
+     * [itemAddressIds], [parentListAddressIds] and [graphAddressIds] (the Tapestry graph parents:
+     * `b` inherit-from, `n` element-of, `s` subset-of), read with the same per-tag parsers in one
+     * pass so the ids keep their tag order.
+     */
     override fun linkedAddressIds(): List<String> {
         val out = ArrayList<String>()
-        tags.fastForEach { tag -> (ATag.parseValidAddress(tag) ?: ParentListTag.parseCoordinate(tag))?.let { out.add(it) } }
+        tags.fastForEach { tag ->
+            (ATag.parseValidAddress(tag) ?: ParentListTag.parseCoordinate(tag) ?: parseGraphCoordinate(tag))?.let { out.add(it) }
+        }
         return out
     }
 
     override fun pubKeyHints() = tags.mapNotNull(PTag::parseAsHint)
 
-    override fun linkedPubKeys() = tags.mapNotNull(PTag::parseKey)
+    override fun linkedPubKeys() = itemKeys()
 
     override fun indexableContent() = tags.searchableListContent()
 
@@ -119,6 +129,12 @@ class AddressableListItemEvent(
     fun parentLists() = tags.parentLists()
 
     fun parentListPointers() = tags.parentListPointers()
+
+    /** The parent lists this item names by header event id (`z` tags holding an id), in tag order. */
+    fun parentListEventIds(): List<HexKey> = tags.parentListEventIds()
+
+    /** The parent lists this item names by `kind:pubkey:d` coordinate (`z` tags holding one), in tag order. */
+    fun parentListAddressIds(): List<String> = tags.parentListAddressIds()
 
     fun name() = tags.name()
 
@@ -132,11 +148,20 @@ class AddressableListItemEvent(
 
     fun itemPubKeys() = tags.itemPubKeys()
 
+    /** The pubkeys declared as items (every valid `p`, in tag order), without building [PTag]s. */
+    fun itemKeys(): List<HexKey> = tags.itemKeys()
+
     fun itemEvents() = tags.itemEvents()
+
+    /** The ids of the events declared as items (every valid `e`, in tag order). */
+    fun itemEventIds(): List<HexKey> = tags.itemEventIds()
 
     fun itemStrings() = tags.itemStrings()
 
     fun itemAddresses() = tags.itemAddresses()
+
+    /** The addressable items as validated `kind:pubkey:d` ids (every valid `a`, in tag order). */
+    fun itemAddressIds(): List<String> = tags.itemAddressIds()
 
     /**
      * True when this item uses the spec's nonstandard method to declare a list: it carries a
@@ -178,6 +203,9 @@ class AddressableListItemEvent(
     fun elementOf() = tags.elementOf()
 
     fun subsetOf() = tags.subsetOf()
+
+    /** The Tapestry graph parents (`b` inherit-from, `n` element-of, `s` subset-of) as coordinates, in tag order. */
+    fun graphAddressIds(): List<String> = tags.mapNotNull(::parseGraphCoordinate)
 
     companion object {
         const val KIND = 39999

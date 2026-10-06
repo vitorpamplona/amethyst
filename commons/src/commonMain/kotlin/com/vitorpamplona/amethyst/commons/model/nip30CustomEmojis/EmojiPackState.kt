@@ -24,7 +24,6 @@ import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.NoteState
 import com.vitorpamplona.amethyst.commons.model.cache.ICacheProvider
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
-import com.vitorpamplona.quartz.nip01Core.tags.aTag.taggedAddresses
 import com.vitorpamplona.quartz.nip30CustomEmoji.CustomEmoji
 import com.vitorpamplona.quartz.nip30CustomEmoji.EmojiUrlTag
 import com.vitorpamplona.quartz.nip30CustomEmoji.pack.EmojiPackEvent
@@ -62,7 +61,7 @@ class EmojiPackState(
     fun getEmojiListFlow(): StateFlow<NoteState> = emojiPackListNote.flow().metadata.stateFlow
 
     fun convertEmojiSelectionPack(selection: EmojiListEvent?): List<StateFlow<NoteState>>? =
-        selection?.taggedAddresses()?.map {
+        selection?.emojiPacks()?.map {
             cache
                 .getOrCreateAddressableNote(it)
                 .flow()

@@ -77,11 +77,12 @@ class LiveActivitiesClipEvent(
 
     override fun addressHints(): List<AddressHint> = tags.mapNotNull(ATag::parseAsHint)
 
-    override fun linkedAddressIds(): List<String> = tags.mapNotNull(ATag::parseAddressId)
+    // A clip has one `a`, the kind 30311 stream it was cut from, and one `p`, that stream's host.
+    override fun linkedAddressIds(): List<String> = listOfNotNull(activityAddress()?.toValue())
 
     override fun pubKeyHints(): List<PubKeyHint> = tags.mapNotNull(PTag::parseAsHint)
 
-    override fun linkedPubKeys(): List<HexKey> = tags.mapNotNull(PTag::parseKey)
+    override fun linkedPubKeys(): List<HexKey> = listOfNotNull(host())
 
     fun activity(): ATag? =
         tags

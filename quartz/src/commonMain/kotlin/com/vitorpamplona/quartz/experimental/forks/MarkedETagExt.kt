@@ -31,7 +31,7 @@ fun MarkedETag.Companion.parseFork(tag: Array<String>): MarkedETag? {
     // ["e", id hex, relay hint, marker, pubkey]
     return MarkedETag(
         tag[ORDER_EVT_ID],
-        tag[ORDER_RELAY].ifBlank { null }?.let { RelayUrlNormalizer.normalizeOrNull(it) },
+        tag[ORDER_RELAY].ifBlank { null }?.let { RelayUrlNormalizer.normalizeHintOrNull(it) },
         MARKER.FORK,
         tag.getOrNull(
             ORDER_PUBKEY,

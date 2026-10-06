@@ -24,8 +24,10 @@ import androidx.compose.runtime.Immutable
 import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.has
+import com.vitorpamplona.quartz.nip01Core.hints.types.AddressHint
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip19Bech32.entities.NAddress
+import com.vitorpamplona.quartz.nip19Bech32.toAddressHint
 import com.vitorpamplona.quartz.utils.Hex
 import com.vitorpamplona.quartz.utils.ensure
 
@@ -76,6 +78,20 @@ data class FinderCacheTag(
         fun parseFinder(tag: Array<String>) = parse(tag)?.finderPubKey
 
         fun parseCache(tag: Array<String>) = parse(tag)?.cache
+
+        /** The cache's address id (`kind:pubkey:d`), whichever form the tag wrote it in. */
+        fun parseCacheAddressId(tag: Array<String>) = parseCache(tag)?.toValue()
+
+        /**
+         * The cache address with each relay hint its `naddr` carries; empty for a plain
+         * `kind:pubkey:d` (which has no relay slot) or a tag that does not parse.
+         */
+        fun parseCacheAsHints(tag: Array<String>): List<AddressHint> {
+            ensure(parse(tag) != null) { return emptyList() }
+            val naddr = tag[1].substring(tag[1].indexOf(':') + 1)
+            ensure(naddr.startsWith("naddr1")) { return emptyList() }
+            return NAddress.parse(naddr)?.toAddressHint() ?: emptyList()
+        }
 
         fun assemble(
             finderPubKey: HexKey,

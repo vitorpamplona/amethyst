@@ -66,11 +66,19 @@ class CashuSpendingHistoryEvent(
     PubKeyHintProvider {
     override fun eventHints() = tags.mapNotNull(ETag::parseAsHint)
 
-    override fun linkedEventIds() = tags.mapNotNull(ETag::parseId)
+    // Every public `e` is a token reference (NIP-60 keeps only the `redeemed` ones public, but the
+    // marker is what makes it one): an `e` with no NIP-60 marker is not linked.
+    override fun linkedEventIds() = publicTokenReferences().map { it.eventId }
 
     override fun pubKeyHints() = tags.mapNotNull(PTag::parseAsHint)
 
-    override fun linkedPubKeys() = tags.mapNotNull(PTag::parseKey)
+    override fun linkedPubKeys() = nutzapSenders()
+
+    /**
+     * NIP-61: the senders of the nutzaps this entry redeemed, from its public `p` tags
+     * (written by `notifySender()` in `nip61Nutzaps.redemption`).
+     */
+    fun nutzapSenders(): List<HexKey> = tags.mapNotNull(PTag::parseKey)
 
     /**
      * NIP-61: the nutzaps this entry redeemed, from the public `e` tags marked `redeemed`.
@@ -119,17 +127,25 @@ class CashuSpendingHistoryEvent(
     suspend fun tokenReferences(signer: NostrSigner): List<TokenReference> {
         val privateTags = cachedPrivateTags(signer)
         val privateRefs = privateTags.mapNotNull(TokenReference::parseFromTag)
-        val publicRefs = tags.mapNotNull(TokenReference::parseFromTag)
-        return privateRefs + publicRefs
+        return privateRefs + publicTokenReferences()
     }
+
+    /**
+     * The token references left unencrypted in the public tags, in tag order. NIP-60 only asks
+     * for the `redeemed` ones to be public, but wallets also publish `created` / `destroyed` ones.
+     */
+    fun publicTokenReferences(): List<TokenReference> = tags.mapNotNull(TokenReference::parseFromTag)
 
     /**
      * Gets unencrypted "redeemed" token references from public tags.
      */
-    fun redeemedReferences(): List<TokenReference> =
-        tags
-            .mapNotNull(TokenReference::parseFromTag)
-            .filter { it.marker == TokenReference.MARKER_REDEEMED }
+    fun redeemedReferences(): List<TokenReference> = publicTokenReferences().filter { it.marker == TokenReference.MARKER_REDEEMED }
+
+    /**
+     * Gets unencrypted "destroyed" token references from public tags. The encrypted ones are
+     * only reachable through [tokenReferences].
+     */
+    fun destroyedReferences(): List<TokenReference> = publicTokenReferences().filter { it.marker == TokenReference.MARKER_DESTROYED }
 
     companion object {
         const val KIND = 7376

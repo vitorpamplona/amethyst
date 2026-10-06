@@ -24,7 +24,7 @@ import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.nip52Calendar.calendarLocalDayKeyRange
 import com.vitorpamplona.amethyst.commons.model.nip52Calendar.groupByDayKey
 import com.vitorpamplona.amethyst.commons.model.nip52Calendar.groupByDayKeyExpanded
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.calendars.partitionUpcomingPast
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.calendars.partitionUpcomingPast
 import com.vitorpamplona.quartz.nip52Calendar.appt.day.CalendarDateSlotEvent
 import com.vitorpamplona.quartz.nip52Calendar.appt.time.CalendarTimeSlotEvent
 import org.junit.Assert.assertEquals

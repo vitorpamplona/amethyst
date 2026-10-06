@@ -64,12 +64,13 @@ class AttestationEvent(
 
     override fun eventHints(): List<EventIdHint> = tags.mapNotNull(ETag::parseAsHint)
 
-    override fun linkedEventIds(): List<HexKey> = tags.mapNotNull(ETag::parseId)
+    // The builders write the attested event and the request with addUnique: one of each at most.
+    override fun linkedEventIds(): List<HexKey> = listOfNotNull(assertionEventId())
 
     // The attested assertion is an `a`; the request it answers (kind 31872) is a `request` tag.
     override fun addressHints(): List<AddressHint> = tags.mapNotNull(ATag::parseAsHint) + tags.mapNotNull(RequestTag::parseAsHint)
 
-    override fun linkedAddressIds(): List<String> = tags.mapNotNull(ATag::parseAddressId) + tags.mapNotNull(RequestTag::parseAddressId)
+    override fun linkedAddressIds(): List<String> = listOfNotNull(assertionAddrId(), requestId())
 
     fun status() = tags.status()
 

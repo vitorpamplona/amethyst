@@ -21,9 +21,14 @@
 package com.vitorpamplona.quartz.buzz.teams
 
 import androidx.compose.runtime.Immutable
+import com.vitorpamplona.quartz.buzz.ParseFailed
+import com.vitorpamplona.quartz.buzz.apPersonas.PersonaEvent
+import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.nip01Core.core.BaseAddressableEvent
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
+import com.vitorpamplona.quartz.nip01Core.hints.AddressHintProvider
+import com.vitorpamplona.quartz.nip01Core.hints.types.AddressHint
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.nip01Core.tags.dTag.dTag
 import com.vitorpamplona.quartz.nip50Search.IndexableFieldVisitor
@@ -48,7 +53,13 @@ class TeamEvent(
     content: String,
     sig: HexKey,
 ) : BaseAddressableEvent(id, pubKey, createdAt, KIND, tags, content, sig),
-    SearchableEvent {
+    SearchableEvent,
+    AddressHintProvider {
+    override fun addressHints(): List<AddressHint> = emptyList()
+
+    /** Each `persona_ids` entry names one of the author's own `30175` personas by its slug. */
+    override fun linkedAddressIds(): List<String> = teamOrNull()?.personaIds?.mapNotNull { slug -> slug.takeIf { it.isNotEmpty() }?.let { Address.assemble(PersonaEvent.KIND, pubKey, it) } } ?: emptyList()
+
     override fun indexableContent() = teamOrNull()?.let { listOfNotNull(it.name, it.description, it.instructions).joinToString("\n") } ?: ""
 
     // The read path. The parse happens once and its fields are handed over one by
@@ -63,16 +74,28 @@ class TeamEvent(
     /** The team's stable id — the `d` tag. */
     fun teamId() = dTag()
 
-    /** Parses the team configuration, or throws if the JSON is malformed. */
-    fun team(): TeamContent = TeamContent.decodeFromJson(content)
+    // linked*() runs for every relay copy of every event and forEachIndexableField() on every
+    // keystroke, so the body is decoded once per instance — a failure included. Events are
+    // immutable; a race only decodes twice.
+    @kotlinx.serialization.Transient
+    @kotlin.jvm.Transient
+    private var teamCache: Any? = null // TeamContent, or ParseFailed
 
-    fun teamOrNull(): TeamContent? =
-        try {
-            team()
-        } catch (e: Exception) {
-            if (e is CancellationException) throw e
-            null
-        }
+    /** Parses the team configuration (once), or throws if the JSON is malformed. */
+    fun team(): TeamContent = teamOrNull() ?: TeamContent.decodeFromJson(content)
+
+    fun teamOrNull(): TeamContent? {
+        teamCache?.let { return it as? TeamContent }
+        val parsed =
+            try {
+                TeamContent.decodeFromJson(content)
+            } catch (e: Exception) {
+                if (e is CancellationException) throw e
+                null
+            }
+        teamCache = parsed ?: ParseFailed
+        return parsed
+    }
 
     companion object {
         const val KIND = 30176

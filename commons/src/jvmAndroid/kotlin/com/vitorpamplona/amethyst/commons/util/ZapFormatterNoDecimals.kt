@@ -64,10 +64,3 @@ fun showAmountInteger(amount: Int?): String {
 
     return showAmountIntegerWithZero(BigDecimal.valueOf(amount.toLong()))
 }
-
-fun showAmountIntegerWithZero(amount: BigDecimal?): String {
-    if (amount == null) return "0"
-    if (amount.abs() < MinDisplayableAmount) return "0"
-
-    return showAmountInteger(amount)
-}

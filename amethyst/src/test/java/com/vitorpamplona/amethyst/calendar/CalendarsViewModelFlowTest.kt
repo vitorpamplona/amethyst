@@ -27,7 +27,7 @@ import com.vitorpamplona.amethyst.commons.calendars.dal.CalendarAppointmentsFeed
 import com.vitorpamplona.amethyst.commons.feeds.FeedContentState
 import com.vitorpamplona.amethyst.commons.model.AddressableNote
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.calendars.CalendarsViewModel
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.calendars.CalendarsViewModel
 import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.nip52Calendar.appt.time.CalendarTimeSlotEvent
 import com.vitorpamplona.quartz.nip52Calendar.calendar.CalendarCollectionEvent

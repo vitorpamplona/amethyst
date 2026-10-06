@@ -74,7 +74,7 @@ class GeocacheCurationListEvent(
 
     override fun addressHints() = tags.mapNotNull(ATag::parseAsHint)
 
-    override fun linkedAddressIds() = tags.mapNotNull(ATag::parseAddressId)
+    override fun linkedAddressIds() = addresses().map { it.toValue() }
 
     fun title() = tags.listTitle()
 

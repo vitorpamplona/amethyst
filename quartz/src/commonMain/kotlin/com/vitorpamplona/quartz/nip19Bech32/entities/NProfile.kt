@@ -51,7 +51,7 @@ data class NProfile(
             // key or any other malformed length — see NPub.parse for why it matters.
             if (hex.length != 64) return null
 
-            return NProfile(hex, relay.mapNotNull { RelayUrlNormalizer.normalizeOrNull(it) })
+            return NProfile(hex, relay.mapNotNull { RelayUrlNormalizer.normalizeHintOrNull(it) })
         }
 
         fun create(

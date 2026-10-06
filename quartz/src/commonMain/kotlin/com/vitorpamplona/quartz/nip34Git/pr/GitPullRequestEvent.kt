@@ -31,6 +31,7 @@ import com.vitorpamplona.quartz.nip01Core.hints.PubKeyHintProvider
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.nip01Core.tags.aTag.ATag
 import com.vitorpamplona.quartz.nip01Core.tags.events.ETag
+import com.vitorpamplona.quartz.nip01Core.tags.hashtags.HashtagTag
 import com.vitorpamplona.quartz.nip01Core.tags.hashtags.hashtags
 import com.vitorpamplona.quartz.nip01Core.tags.people.PTag
 import com.vitorpamplona.quartz.nip01Core.tags.people.pTag
@@ -66,26 +67,34 @@ class GitPullRequestEvent(
     EventHintProvider,
     AddressHintProvider,
     SearchableEvent {
-    override fun indexableContent() = listOfNotNull(subject(), content).joinToString("\n")
+    // The `t` tags are the PR's NIP-34 labels, appended after the body.
+    override fun indexableContent() = (listOfNotNull(subject(), content) + labels()).joinToString("\n")
 
     // The read path: the same fields indexableContent() joins, handed over without
     // building the joined string a scan would throw away.
     override fun forEachIndexableField(visitor: IndexableFieldVisitor) {
         if (!visitor.visit(subject())) return
-        visitor.visit(content)
+        if (!visitor.visit(content)) return
+        // Inline over the tags rather than labels(): this runs per event per search keystroke.
+        for (tag in tags) {
+            val label = HashtagTag.parse(tag) ?: continue
+            if (!visitor.visit(label)) return
+        }
     }
 
     override fun pubKeyHints() = tags.mapNotNull(PTag::parseAsHint)
 
-    override fun linkedPubKeys() = tags.mapNotNull(PTag::parseKey)
+    override fun linkedPubKeys() = notifiedUsers()
 
     override fun eventHints() = tags.mapNotNull(ETag::parseAsHint)
 
-    override fun linkedEventIds() = tags.mapNotNull(ETag::parseId)
+    // NIP-34: at most one `e`, the root patch this PR revises.
+    override fun linkedEventIds() = listOfNotNull(rootPatchId())
 
     override fun addressHints() = tags.mapNotNull(ATag::parseAsHint)
 
-    override fun linkedAddressIds() = tags.mapNotNull(ATag::parseAddressId)
+    // NIP-34: a PR names a single repository (`a`).
+    override fun linkedAddressIds() = listOfNotNull(repositoryAddress()?.toValue())
 
     fun repository() = tags.firstNotNullOfOrNull(ATag::parse)
 
@@ -109,6 +118,9 @@ class GitPullRequestEvent(
 
     /** Root patch event ID if this PR is a revision of a prior patch. */
     fun rootPatchId(): HexKey? = tags.firstNotNullOfOrNull(ETag::parseId)
+
+    /** The users this PR notifies (`p`): the repository owner first, then the `notify` list, in tag order. */
+    fun notifiedUsers(): List<HexKey> = tags.mapNotNull(PTag::parseKey)
 
     companion object {
         const val KIND = 1618

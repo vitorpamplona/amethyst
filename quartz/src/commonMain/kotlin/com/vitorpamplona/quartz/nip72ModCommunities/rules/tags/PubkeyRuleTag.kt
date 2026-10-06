@@ -63,6 +63,8 @@ data class PubkeyRuleTag(
             return PubkeyRuleTag(tag[1], policy, tag.getOrNull(3)?.takeIf { it.isNotEmpty() })
         }
 
+        fun parseKey(tag: Array<String>): HexKey? = parse(tag)?.pubkey
+
         fun assemble(
             pubkey: HexKey,
             policy: Policy,

@@ -68,7 +68,7 @@ data class NDebit(
             val pubKey = tlv.firstAsHex(ClinkTlv.PUBKEY) ?: return null
             if (pubKey.isBlank()) return null
 
-            val relays = tlv.asString(ClinkTlv.RELAY)?.mapNotNull { RelayUrlNormalizer.normalizeOrNull(it) } ?: emptyList()
+            val relays = tlv.asString(ClinkTlv.RELAY)?.mapNotNull { RelayUrlNormalizer.normalizeHintOrNull(it) } ?: emptyList()
             val pointer = tlv.firstAsString(ClinkTlv.POINTER)
             val k1 = tlv.firstAsHex(ClinkTlv.K1)
             // A session id (TLV 3) MUST be exactly 32 bytes (64 hex chars) per the spec; a

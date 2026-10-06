@@ -66,7 +66,7 @@ class MeetingSpaceEvent(
 
     override fun pubKeyHints() = tags.mapNotNull(ParticipantTag::parseAsHint)
 
-    override fun linkedPubKeys() = tags.mapNotNull(ParticipantTag::parseKey)
+    override fun linkedPubKeys() = participantKeys()
 
     fun room() = tags.firstNotNullOfOrNull(RoomNameTag::parse)
 

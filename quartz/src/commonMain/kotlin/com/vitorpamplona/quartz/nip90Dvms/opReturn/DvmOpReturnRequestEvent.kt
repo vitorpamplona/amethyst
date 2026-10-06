@@ -21,10 +21,12 @@
 package com.vitorpamplona.quartz.nip90Dvms.opReturn
 
 import androidx.compose.runtime.Immutable
-import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
+import com.vitorpamplona.quartz.nip50Search.IndexableFieldVisitor
+import com.vitorpamplona.quartz.nip50Search.SearchableEvent
+import com.vitorpamplona.quartz.nip90Dvms.DvmRequestEvent
 import com.vitorpamplona.quartz.nip90Dvms.tags.InputTag
 import com.vitorpamplona.quartz.nip90Dvms.tags.firstInputByType
 import com.vitorpamplona.quartz.nip90Dvms.tags.inputText
@@ -39,7 +41,18 @@ class DvmOpReturnRequestEvent(
     tags: Array<Array<String>>,
     content: String,
     sig: HexKey,
-) : Event(id, pubKey, createdAt, KIND, tags, content, sig) {
+) : DvmRequestEvent(id, pubKey, createdAt, KIND, tags, content, sig),
+    SearchableEvent {
+    // The message the user wants inscribed on-chain: short, but written by a person.
+    override fun indexableContent() = text() ?: ""
+
+    // The read path: the same fields indexableContent() joins, without the join.
+    override fun forEachIndexableField(visitor: IndexableFieldVisitor) {
+        // Null rather than the empty string the joined form yields: the visitor
+        // drops nulls, so both sides still produce the same text.
+        visitor.visit(text())
+    }
+
     fun inputs(): List<InputTag> = tags.inputs()
 
     fun text(): String? = tags.firstInputByType("text")?.value

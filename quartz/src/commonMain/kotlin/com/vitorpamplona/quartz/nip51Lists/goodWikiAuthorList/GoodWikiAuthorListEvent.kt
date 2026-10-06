@@ -45,7 +45,7 @@ class GoodWikiAuthorListEvent(
     PubKeyHintProvider {
     override fun pubKeyHints() = tags.mapNotNull(UserTag::parseAsHint)
 
-    override fun linkedPubKeys() = tags.mapNotNull(UserTag::parseKey)
+    override fun linkedPubKeys() = publicAuthors().map { it.pubKey }
 
     fun publicAuthors() = tags.mapNotNull(UserTag::parse)
 

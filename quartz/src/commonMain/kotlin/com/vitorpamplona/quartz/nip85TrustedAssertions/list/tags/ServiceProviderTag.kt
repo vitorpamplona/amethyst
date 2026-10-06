@@ -22,8 +22,10 @@ package com.vitorpamplona.quartz.nip85TrustedAssertions.list.tags
 
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.has
+import com.vitorpamplona.quartz.nip01Core.hints.types.PubKeyHint
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
+import com.vitorpamplona.quartz.utils.Hex
 import com.vitorpamplona.quartz.utils.ensure
 
 /**
@@ -77,6 +79,34 @@ data class ServiceProviderTag(
             val relay = RelayUrlNormalizer.normalizeOrNull(tag[2]) ?: return null
 
             return ServiceProviderTag(service, tag[1], relay)
+        }
+
+        /**
+         * The provider's pubkey for any public NIP-85 delegation, whether or not its relay
+         * slot normalizes — the key is still the service whose cards a reader follows.
+         */
+        fun parseKey(tag: Array<String>): HexKey? {
+            ensure(tag.has(1)) { return null }
+            ensure(tag[0].isNotEmpty()) { return null }
+            // Hex-checked, not just measured: this key is linked and followed to the service's
+            // cards, and 64 chars of anything would otherwise be looked up as a pubkey.
+            ensure(tag[1].length == 64 && Hex.isHex64(tag[1])) { return null }
+            val service = ServiceType.parse(tag[0]) ?: return null
+            ensure(service.kind in ASSERTION_KINDS) { return null }
+            return tag[1]
+        }
+
+        /**
+         * The provider and the relay its assertion cards are published to, as a relay hint.
+         * The slot counts only when it holds a real, well-formed `ws://`/`wss://` url
+         * ([RelayUrlNormalizer.normalizeHintOrNull]): a bare host, an `https://` url or any
+         * other word there is not a hint and is never completed into one, so no fake relay is
+         * planted in the hint index.
+         */
+        fun parseAsHint(tag: Array<String>): PubKeyHint? {
+            val provider = parse(tag) ?: return null
+            val relay = RelayUrlNormalizer.normalizeHintOrNull(tag[2]) ?: return null
+            return PubKeyHint(provider.pubkey, relay)
         }
 
         fun assemble(

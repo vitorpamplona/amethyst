@@ -101,7 +101,7 @@ data class ATag(
                 it.kind,
                 it.pubKeyHex,
                 it.dTag,
-                relay?.let { RelayUrlNormalizer.normalizeOrNull(it) },
+                relay?.let { RelayUrlNormalizer.normalizeHintOrNull(it) },
             )
         }
 
@@ -136,11 +136,11 @@ data class ATag(
         fun parseAsHint(tag: Array<String>): AddressHint? {
             ensure(tag.has(2)) { return null }
             ensure(tag[0] == TAG_NAME) { return null }
-            ensure(tag[1].isNotEmpty()) { return null }
-            ensure(tag[1].contains(':')) { return null }
+            // Shape-checked, not just `contains(':')`, so `foo:bar` is not indexed as an address.
+            ensure(AddressSerializer.isAddressShape(tag[1])) { return null }
             ensure(tag[2].isNotEmpty()) { return null }
 
-            val relayHint = RelayUrlNormalizer.normalizeOrNull(tag[2])
+            val relayHint = RelayUrlNormalizer.normalizeHintOrNull(tag[2])
             ensure(relayHint != null) { return null }
 
             return AddressHint(tag[1], relayHint)

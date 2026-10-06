@@ -71,7 +71,7 @@ class WorkoutRecordEvent(
             tags.templateHint()?.let { add(it) }
         }
 
-    override fun linkedAddressIds() = (tags.exerciseSetAddressIds() + listOfNotNull(tags.templateAddressId())).distinct()
+    override fun linkedAddressIds() = (exerciseSetAddressIds() + listOfNotNull(templateAddressId())).distinct()
 
     fun title() = tags.title()
 
@@ -120,6 +120,12 @@ class WorkoutRecordEvent(
     fun workoutCompleted() = tags.workoutCompleted()
 
     fun exerciseSets() = tags.exerciseSets()
+
+    /** The kind-33401 exercise templates the `exercise` sets reference, as coordinates, in tag order (repeats kept). */
+    fun exerciseSetAddressIds(): List<String> = tags.exerciseSetAddressIds()
+
+    /** The kind-33402 workout template this record follows (its `template` tag), as a coordinate. */
+    fun templateAddressId(): String? = tags.templateAddressId()
 
     fun exerciseGroups() = groupExerciseSets(exerciseSets())
 

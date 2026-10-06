@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst.commons.ui.wallet
 
+import android.content.Context
 import android.content.Intent
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
@@ -32,16 +33,30 @@ actual fun rememberWalletAppLauncher(): WalletAppLauncher {
     val context = LocalContext.current
     return remember(context) {
         WalletAppLauncher { uri, noWalletFound, onPaid, onError ->
-            try {
-                val intent = Intent(Intent.ACTION_VIEW, uri.toUri())
-                intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
-
-                context.startActivity(intent)
-                onPaid()
-            } catch (e: Exception) {
-                if (e is CancellationException) throw e
-                onError(noWalletFound)
-            }
+            openWalletUri(context, uri, noWalletFound, onPaid, onError)
         }
+    }
+}
+
+/**
+ * Hands a payment URI (`lightning:…`, `bitcoin:?lno=…`) to whichever wallet is installed. Also used
+ * by the app's non-composable callers, so the intent and its flags live in one place.
+ */
+fun openWalletUri(
+    context: Context,
+    uri: String,
+    noWalletFound: String,
+    onPaid: () -> Unit,
+    onError: (String) -> Unit,
+) {
+    try {
+        val intent = Intent(Intent.ACTION_VIEW, uri.toUri())
+        intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+
+        context.startActivity(intent)
+        onPaid()
+    } catch (e: Exception) {
+        if (e is CancellationException) throw e
+        onError(noWalletFound)
     }
 }

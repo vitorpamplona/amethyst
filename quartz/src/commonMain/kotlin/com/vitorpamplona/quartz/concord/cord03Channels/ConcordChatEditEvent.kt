@@ -24,7 +24,9 @@ import androidx.compose.runtime.Immutable
 import com.vitorpamplona.quartz.concord.cord03Channels.tags.MsTag
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
-import com.vitorpamplona.quartz.nip01Core.tags.events.firstTaggedEvent
+import com.vitorpamplona.quartz.nip01Core.hints.EventHintProvider
+import com.vitorpamplona.quartz.nip01Core.hints.types.EventIdHint
+import com.vitorpamplona.quartz.nip01Core.tags.events.ETag
 import com.vitorpamplona.quartz.nip50Search.IndexableFieldVisitor
 import com.vitorpamplona.quartz.nip50Search.SearchableEvent
 
@@ -49,6 +51,7 @@ class ConcordChatEditEvent(
     content: String,
     sig: HexKey,
 ) : Event(id, pubKey, createdAt, KIND, tags, content, sig),
+    EventHintProvider,
     SearchableEvent {
     override fun indexableContent() = content
 
@@ -58,8 +61,13 @@ class ConcordChatEditEvent(
         visitor.visit(content)
     }
 
-    /** The id of the message this edit replaces (its `e` tag), or null if malformed. */
-    fun editedMessageId(): HexKey? = firstTaggedEvent()?.eventId
+    override fun eventHints(): List<EventIdHint> = tags.mapNotNull(ETag::parseAsHint)
+
+    // CORD-02 Appendix B names the target with a single `e` tag, so the edited message is the only link.
+    override fun linkedEventIds(): List<HexKey> = listOfNotNull(editedMessageId())
+
+    /** The id of the message this edit replaces (its first valid `e` tag), or null if malformed. */
+    fun editedMessageId(): HexKey? = tags.firstNotNullOfOrNull(ETag::parseId)
 
     /**
      * The full-precision send time in epoch-milliseconds: `createdAt * 1000` plus the `["ms", <0..999>]`

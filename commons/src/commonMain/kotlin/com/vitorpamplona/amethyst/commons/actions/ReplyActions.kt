@@ -68,8 +68,10 @@ object ReplyActions {
         // Per NIP-10, replies MUST carry the p-tags of the event being replied
         // to plus the author's pubkey. TextNoteEvent.build(replyingTo=) only
         // emits the e-tag chain — p-tag carry is the caller's responsibility.
+        // Only the parent's own `p` tags: linkedPubKeys() is a relay-hint set and also
+        // holds zap-split beneficiaries, who are not participants in the thread.
         val carriedPubKeys =
-            (parent.event.linkedPubKeys() + parent.event.pubKey)
+            (parent.event.mentionKeys() + parent.event.pubKey)
                 .distinct()
                 .map { PTag(it, relayHint = null) }
 

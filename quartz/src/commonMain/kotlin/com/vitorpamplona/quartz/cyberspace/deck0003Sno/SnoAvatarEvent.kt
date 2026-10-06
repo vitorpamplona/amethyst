@@ -26,6 +26,8 @@ import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip13Pow.hasPoWTag
 import com.vitorpamplona.quartz.nip13Pow.miner.PoWRankEvaluator
 import com.vitorpamplona.quartz.nip13Pow.tags.PoWTag
+import com.vitorpamplona.quartz.nip50Search.IndexableFieldVisitor
+import com.vitorpamplona.quartz.nip50Search.SearchableEvent
 
 /**
  * `CYBERSPACE_V2.md` §8.10 — an avatar, kind 11333: the shape an identity is
@@ -54,7 +56,8 @@ class SnoAvatarEvent(
     tags: Array<Array<String>>,
     content: String,
     sig: HexKey,
-) : BaseReplaceableEvent(id, pubKey, createdAt, KIND, tags, content, sig) {
+) : BaseReplaceableEvent(id, pubKey, createdAt, KIND, tags, content, sig),
+    SearchableEvent {
     /** True when this identity asked for the default avatar, which owes no work. */
     fun isDefaultAvatar(): Boolean = content.isBlank()
 
@@ -62,6 +65,13 @@ class SnoAvatarEvent(
 
     /** The `name` tag: the shape's name for humans. */
     fun nameTag(): String? = tags.firstOrNull { it.size > 1 && it[0] == "name" }?.get(1)
+
+    /** The `name` tag is the only human text; the content is SNO geometry JSON and stays out. */
+    override fun indexableContent() = nameTag().orEmpty()
+
+    override fun forEachIndexableField(visitor: IndexableFieldVisitor) {
+        visitor.visit(nameTag())
+    }
 
     /**
      * Whether this avatar has paid for the room it takes up, and why not when

@@ -71,7 +71,7 @@ data class NAddress(
             val author = tlv.firstAsHex(TlvTypes.AUTHOR.id) ?: return null
             val kind = tlv.firstAsInt(TlvTypes.KIND.id) ?: return null
 
-            return NAddress(kind, author, d, relay.mapNotNull { RelayUrlNormalizer.normalizeOrNull(it) })
+            return NAddress(kind, author, d, relay.mapNotNull { RelayUrlNormalizer.normalizeHintOrNull(it) })
         }
 
         fun create(

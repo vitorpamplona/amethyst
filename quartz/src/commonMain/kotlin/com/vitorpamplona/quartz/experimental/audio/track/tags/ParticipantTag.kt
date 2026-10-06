@@ -44,7 +44,7 @@ data class ParticipantTag(
             ensure(tag.has(1)) { return null }
             ensure(tag[0] == TAG_NAME) { return null }
             ensure(tag[1].length == 64) { return null }
-            return ParticipantTag(tag[1], tag.getOrNull(2)?.let { RelayUrlNormalizer.normalizeOrNull(it) })
+            return ParticipantTag(tag[1], tag.getOrNull(2)?.let { RelayUrlNormalizer.normalizeHintOrNull(it) })
         }
 
         fun parseKey(tag: Tag): String? {

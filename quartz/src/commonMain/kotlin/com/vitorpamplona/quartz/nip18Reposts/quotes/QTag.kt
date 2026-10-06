@@ -21,6 +21,7 @@
 package com.vitorpamplona.quartz.nip18Reposts.quotes
 
 import com.vitorpamplona.quartz.nip01Core.core.Address
+import com.vitorpamplona.quartz.nip01Core.core.AddressSerializer
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.has
 import com.vitorpamplona.quartz.nip01Core.hints.types.AddressHint
@@ -50,8 +51,8 @@ interface QTag {
         }
 
         private fun pickRelayHint(tag: Array<String>): NormalizedRelayUrl? {
-            if (tag.has(2) && tag[2].length > 7 && RelayUrlNormalizer.isRelayUrl(tag[2])) return RelayUrlNormalizer.normalizeOrNull(tag[2])
-            if (tag.has(3) && tag[3].length > 7 && RelayUrlNormalizer.isRelayUrl(tag[3])) return RelayUrlNormalizer.normalizeOrNull(tag[3])
+            if (tag.has(2)) RelayUrlNormalizer.normalizeHintOrNull(tag[2])?.let { return it }
+            if (tag.has(3)) RelayUrlNormalizer.normalizeHintOrNull(tag[3])?.let { return it }
             return null
         }
 
@@ -94,12 +95,22 @@ interface QTag {
             return tag[1]
         }
 
+        /**
+         * [parseAddressId] for a well-formed `<kind>:<64-hex pubkey>:<d>` only, in canonical form.
+         * [parseAddressId] passes any non-id value with a colon through, so a `q` quoting garbage
+         * would otherwise be linked as if it named an addressable.
+         */
+        fun parseValidAddress(tag: Array<String>): String? {
+            val id = parseAddressId(tag) ?: return null
+            return Address.parse(id)?.toValue()
+        }
+
         fun parseAddressAsHint(tag: Array<String>): AddressHint? {
             ensure(tag.has(2)) { return null }
             ensure(tag[0] == TAG_NAME) { return null }
-            ensure(tag[1].length != 64) { return null }
             ensure(tag[2].isNotEmpty()) { return null }
-            ensure(tag[1].contains(':')) { return null }
+            // Shape-checked like ATag.parseAsHint, so `foo:bar` is not indexed as an address.
+            ensure(AddressSerializer.isAddressShape(tag[1])) { return null }
 
             val relayHint = pickRelayHint(tag)
             ensure(relayHint != null) { return null }

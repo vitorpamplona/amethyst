@@ -497,6 +497,53 @@ class RelayUrlNormalizer {
             return result ?: throw IllegalArgumentException("Invalid Relay Url: $url")
         }
 
+        /**
+         * STRICT parser, for relay hints: the relay slot of an event's tags, NIP-19 relay TLVs,
+         * anything another client wrote. Accepts only a well-formed `ws://` / `wss://` url and
+         * repairs nothing: no scheme is added, no `https://` is converted, no whitespace,
+         * `%20` or invisible character is trimmed away. A hint is either a relay url or it is
+         * not one — a pubkey, a marker, a title or a file name in that slot is just not a hint,
+         * and guessing turns it into a fake relay the app would try to connect to and broadcast
+         * to. The url is still canonicalized (case, default port, trailing slash, IPv6 form) so
+         * the same relay always maps to the same [NormalizedRelayUrl].
+         *
+         * Repair is for what a PERSON typed or curated — relay lists, settings, pasted input —
+         * and that is [normalizeOrNull], the lenient parser.
+         */
+        fun normalizeHintOrNull(url: String?): NormalizedRelayUrl? {
+            if (url == null || !isStrictRelayUrl(url)) return null
+            // A url that passes the strict check is exactly what the lenient parser's fix()
+            // returns unchanged, so both parsers agree on it and can share the cache.
+            return normalizeOrNull(url)
+        }
+
+        /**
+         * A `ws://`/`wss://` url as written: lowercase scheme, a sane authority, no `//` path
+         * (a second url glued on), and no whitespace, backslash, `%20` or invisible character
+         * anywhere. Single pass, no allocation.
+         */
+        private fun isStrictRelayUrl(url: String): Boolean {
+            if (!isRelaySchemePrefix(url)) return false
+            val hostStart =
+                when {
+                    isRelaySchemePrefixSecure(url) -> 6
+                    isRelaySchemePrefixInsecure(url) -> 5
+                    else -> return false
+                }
+            for (i in url.indices) {
+                val c = url[i]
+                if (c.isWhitespace() || c == '\\' || isInvisible(c)) return false
+                if (c == '%' && i + 2 < url.length && url[i + 1] == '2' && url[i + 2] == '0') return false
+            }
+            return fixWs(url, hostStart) != null
+        }
+
+        /**
+         * LENIENT parser, for user input and relay lists: repairs what a person typed or
+         * curated — adds a missing `wss://` (or `ws://` for onion, overlay and local hosts),
+         * converts a bare `http(s)://` host, fixes common scheme typos, trims whitespace and
+         * stray `%20`. Never use it on a relay hint; see [normalizeHintOrNull].
+         */
         fun normalizeOrNull(url: String): NormalizedRelayUrl? {
             if (url.isEmpty()) return null
             // happy path when the url has been fixed already

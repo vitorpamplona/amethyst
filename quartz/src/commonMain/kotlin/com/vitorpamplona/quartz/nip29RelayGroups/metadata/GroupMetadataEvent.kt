@@ -48,13 +48,19 @@ class GroupMetadataEvent(
     sig: HexKey,
 ) : BaseAddressableEvent(id, pubKey, createdAt, KIND, tags, content, sig),
     SearchableEvent {
-    override fun indexableContent() = listOfNotNull(name(), about()).joinToString("\n")
+    // Same fields as the kind-9002 edit that publishes them: name, about, then the `t` topics.
+    override fun indexableContent() = (listOfNotNull(name(), about()) + hashtags()).joinToString("\n")
 
     // The read path: the same fields indexableContent() joins, handed over without
     // building the joined string a scan would throw away.
     override fun forEachIndexableField(visitor: IndexableFieldVisitor) {
         if (!visitor.visit(name())) return
-        visitor.visit(about())
+        if (!visitor.visit(about())) return
+        // Inline over the tags rather than hashtags(): this runs per event per search keystroke.
+        for (tag in tags) {
+            val hashtag = HashtagTag.parse(tag) ?: continue
+            if (!visitor.visit(hashtag)) return
+        }
     }
 
     fun groupId() = dTag()

@@ -26,12 +26,15 @@ import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.UriHandler
 import com.vitorpamplona.amethyst.commons.favorites.FavoriteApp
+import com.vitorpamplona.amethyst.commons.model.UiSettingsFlow
 import com.vitorpamplona.amethyst.commons.model.navigation.Route
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.qrcode.ScanOutcome
 import com.vitorpamplona.amethyst.commons.ui.settings.SettingsCategory
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.quartz.concord.cord02Community.ImagePointer
+import kotlinx.collections.immutable.ImmutableMap
+import kotlinx.collections.immutable.persistentMapOf
 
 /**
  * The app shell's pieces that shared screens embed but only the front end can draw yet: the
@@ -44,8 +47,24 @@ interface AppPlatform {
     /** Whether this build can cast media to a TV (the Play flavour's Cast SDK). */
     val isCastingAvailable: Boolean get() = false
 
+    /** This build's version name ("1.04.2"), shown in the donation card; empty where unknown. */
+    val appVersionName: String get() = ""
+
+    /** The note announcing this release, which the notifications tab's donation card links to; null shows no card. */
+    val releaseNotesId: String? get() = null
+
+    /** Dumps the app's runtime state (memory, caches, subscriptions) to the log, for the logo's debug tap. */
+    fun logDebugState() {}
+
     /** The settings screen's legal links, when the build's distribution calls for them. */
     fun legalSettingsCategory(uriHandler: UriHandler): SettingsCategory? = null
+
+    /**
+     * The languages the app is translated into, as display name ("Deutsch") to language tag
+     * ("de"), for the language picker. Empty where the platform follows the system language only.
+     */
+    @Composable
+    fun rememberAppLanguages(): ImmutableMap<String, String> = persistentMapOf()
 
     @Composable
     fun AppBottomBar(
@@ -57,6 +76,28 @@ interface AppPlatform {
 
     @Composable
     fun AroundMeLocationLabel() {}
+
+    /**
+     * Asks for the OS permission to post notifications and, where the build has a choice of push
+     * servers (F-Droid's UnifiedPush), lets the user pick one. Shown when the notifications tab opens.
+     */
+    @Composable
+    fun NotificationProviderPrompt(sharedPrefs: UiSettingsFlow) {}
+
+    /**
+     * How notifications reach this device: the push provider, the background service and its
+     * per-account participation, battery optimization. Empty where the platform has none.
+     */
+    @Composable
+    fun NotificationDeliverySettings(accountViewModel: AccountViewModel) {}
+
+    /** The per-category notification settings the system owns (Android's channels). */
+    @Composable
+    fun NotificationCategorySettings() {}
+
+    /** A button that reads [name] aloud with the platform's text-to-speech; nothing where there is none. */
+    @Composable
+    fun SpeakNameButton(name: String) {}
 
     /** A full-screen dialog to pick a place (map, search, "use my location"), as a geohash. */
     @Composable
@@ -134,6 +175,18 @@ fun AppBottomBar(
 
 @Composable
 fun AroundMeLocationLabel() = LocalAppPlatform.current.AroundMeLocationLabel()
+
+@Composable
+fun SpeakNameButton(name: String) = LocalAppPlatform.current.SpeakNameButton(name)
+
+@Composable
+fun NotificationProviderPrompt(sharedPrefs: UiSettingsFlow) = LocalAppPlatform.current.NotificationProviderPrompt(sharedPrefs)
+
+@Composable
+fun NotificationDeliverySettings(accountViewModel: AccountViewModel) = LocalAppPlatform.current.NotificationDeliverySettings(accountViewModel)
+
+@Composable
+fun NotificationCategorySettings() = LocalAppPlatform.current.NotificationCategorySettings()
 
 @Composable
 fun GeohashLocationPickerDialog(

@@ -55,3 +55,13 @@ fun TagArray.isProtected(): Boolean = firstNotNullOfOrNull(ProtectedTag::parse) 
 
 /** Every archived-identity pubkey listed as a bare `p` tag (used by the 13535 snapshot). */
 fun TagArray.archivedIdentities(): List<HexKey> = mapNotNull(PTag::parseKey)
+
+/**
+ * Every pubkey a NIP-IA event names, in tag order: the `p` target, the `replaced-by` successor,
+ * the `consent` actor (8002/8003) and the NIP-OA `auth` owner (9035/9036). Only the `p` tag has a
+ * relay slot, so this is the `linkedPubKeys()` side; hints come from `p` alone.
+ */
+fun TagArray.archivalLinkedPubKeys(): List<HexKey> =
+    mapNotNull { tag ->
+        PTag.parseKey(tag) ?: ReplacedByTag.parse(tag) ?: ConsentTag.parseKey(tag) ?: AuthTag.parseOwnerKey(tag)
+    }

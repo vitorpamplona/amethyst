@@ -20,8 +20,27 @@
  */
 package com.vitorpamplona.quartz.nip57Zaps.splits
 
+import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.TagArray
+import com.vitorpamplona.quartz.nip01Core.hints.types.PubKeyHint
 
 fun TagArray.hasZapSplitSetup() = this.any(ZapSplitSetupParser::isTagged)
 
 fun TagArray.zapSplitSetup(): List<BaseZapSplitSetup> = this.mapNotNull(ZapSplitSetupParser::parse)
+
+/** Pubkeys of every positive-weight NIP-57 `zap` split; the beneficiaries a hint provider should link. */
+fun TagArray.zapSplitPubKeys(): List<HexKey> = this.mapNotNull(ZapSplitSetupParser::parseKey)
+
+/** [zapSplitPubKeys] that carry a relay hint, as [PubKeyHint]s. */
+fun TagArray.zapSplitHints(): List<PubKeyHint> = this.mapNotNull(ZapSplitSetupParser::parseAsHint)
+
+/**
+ * [zapSplitPubKeys], appended to [dest] in tag order. The hint providers of the hottest kinds
+ * (notes, comments, articles, chat messages) run on every relay copy of every event and almost
+ * never carry a `zap` tag, so they collect into one list instead of paying for an empty list
+ * plus a concatenation per call.
+ */
+fun <C : MutableCollection<in HexKey>> TagArray.zapSplitPubKeysTo(dest: C): C = this.mapNotNullTo(dest, ZapSplitSetupParser::parseKey)
+
+/** [zapSplitHints], appended to [dest] in tag order; see [zapSplitPubKeysTo]. */
+fun <C : MutableCollection<in PubKeyHint>> TagArray.zapSplitHintsTo(dest: C): C = this.mapNotNullTo(dest, ZapSplitSetupParser::parseAsHint)

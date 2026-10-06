@@ -28,7 +28,6 @@ import com.vitorpamplona.amethyst.commons.actions.FollowActions
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
-import com.vitorpamplona.quartz.nip01Core.tags.people.isTaggedUser
 import com.vitorpamplona.quartz.nip02FollowList.ContactListEvent
 
 /**
@@ -96,7 +95,7 @@ object FollowCommand {
             }
 
             val latest = fetchLatestContactList(ctx, self, outbox, timeoutSecs * 1000)
-            val previouslyFollowed = latest?.isTaggedUser(target) ?: false
+            val previouslyFollowed = latest?.isFollowing(target) ?: false
 
             // Relay hint embedded in the `p` tag for new follows — points
             // readers at a relay where they'll find the target's events.

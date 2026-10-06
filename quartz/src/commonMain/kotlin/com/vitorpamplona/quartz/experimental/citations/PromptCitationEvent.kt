@@ -28,6 +28,7 @@ import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
 import com.vitorpamplona.quartz.nip01Core.signers.EventTemplate
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.nip23LongContent.tags.TitleTag
+import com.vitorpamplona.quartz.nip50Search.IndexableFieldVisitor
 import com.vitorpamplona.quartz.utils.TimeUtils
 
 /**
@@ -47,6 +48,18 @@ class PromptCitationEvent(
 ) : CitationEvent(id, pubKey, createdAt, KIND, tags, content, sig) {
     /** The model that was prompted, as named by the citer. */
     fun llm() = value(CitationTags.LLM)
+
+    // The model's name is how a prompt citation is looked up ("which ones asked Claude?").
+    override fun indexableContent() = listOfNotNull(title(), summary(), content, author(), publishedBy(), llm()).joinToString("\n")
+
+    override fun forEachIndexableField(visitor: IndexableFieldVisitor) {
+        if (!visitor.visit(title())) return
+        if (!visitor.visit(summary())) return
+        if (!visitor.visit(content)) return
+        if (!visitor.visit(author())) return
+        if (!visitor.visit(publishedBy())) return
+        visitor.visit(llm())
+    }
 
     /** A link to the conversation, when the citer published one. */
     fun url() = value(CitationTags.URL)

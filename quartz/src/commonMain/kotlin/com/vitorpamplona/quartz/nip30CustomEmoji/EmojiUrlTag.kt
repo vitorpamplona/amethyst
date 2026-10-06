@@ -59,6 +59,14 @@ data class EmojiUrlTag(
             }
         }
 
+        /** Just the shortcode of an `emoji` tag, without parsing its url or emoji-set address. */
+        fun parseCode(tag: Array<String>): String? =
+            if (tag.size > 2 && tag[0] == TAG_NAME && tag[1].isNotEmpty()) {
+                tag[1]
+            } else {
+                null
+            }
+
         fun parse(tag: Array<String>): EmojiUrlTag? =
             if (tag.size > 2 && tag[0] == TAG_NAME) {
                 EmojiUrlTag(tag[1], tag[2], tag.getOrNull(3)?.let(Address::parse))

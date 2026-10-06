@@ -25,6 +25,7 @@ import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
+import com.vitorpamplona.quartz.nip50Search.SearchableEvent
 import com.vitorpamplona.quartz.nip62RequestToVanish.tags.shouldVanishFrom
 import com.vitorpamplona.quartz.nip62RequestToVanish.tags.vanishFrom
 import com.vitorpamplona.quartz.nip62RequestToVanish.tags.vanishFromAllRelays
@@ -39,7 +40,13 @@ class RequestToVanishEvent(
     tags: Array<Array<String>>,
     content: String,
     sig: HexKey,
-) : Event(id, pubKey, createdAt, KIND, tags, content, sig) {
+) : Event(id, pubKey, createdAt, KIND, tags, content, sig),
+    SearchableEvent {
+    // The optional free-text reason the user gave for leaving (NIP-62 `content`).
+    override fun indexableContent() = content
+
+    fun reason(): String = content
+
     fun vanishFromRelays() = tags.vanishFromRelays()
 
     fun vanishFromAllRelays() = tags.vanishFromAllRelays()

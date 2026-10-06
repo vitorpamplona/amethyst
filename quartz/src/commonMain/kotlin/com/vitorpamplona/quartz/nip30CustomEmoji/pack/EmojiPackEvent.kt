@@ -49,14 +49,21 @@ class EmojiPackEvent(
     sig: HexKey,
 ) : PrivateTagArrayEvent(id, pubKey, createdAt, KIND, tags, content, sig),
     SearchableEvent {
-    override fun indexableContent() = listOfNotNull(titleOrName(), description(), content).joinToString("\n")
+    // `content` is NOT indexed: as a PrivateTagArrayEvent it holds the NIP-44
+    // ciphertext of the private emoji tags. The public `emoji` shortcodes are
+    // what a pack is searched by instead.
+    override fun indexableContent() = (listOfNotNull(titleOrName(), description()) + publicEmojiCodes()).joinToString("\n")
 
     // The read path: the same fields indexableContent() joins, handed over without
     // building the joined string a scan would throw away.
     override fun forEachIndexableField(visitor: IndexableFieldVisitor) {
         if (!visitor.visit(titleOrName())) return
         if (!visitor.visit(description())) return
-        visitor.visit(content)
+        // Inline over the tags rather than publicEmojiCodes(): this runs per event per search keystroke.
+        for (tag in tags) {
+            val code = EmojiUrlTag.parseCode(tag) ?: continue
+            if (!visitor.visit(code)) return
+        }
     }
 
     @Deprecated("NIP-51 has deprecated name. Use title instead", ReplaceWith("title()"))
@@ -72,6 +79,9 @@ class EmojiPackEvent(
     fun image() = tags.firstNotNullOfOrNull(ImageTag::parse)
 
     fun publicEmojis(): List<EmojiUrlTag> = tags.emojis()
+
+    /** The shortcodes of the public `emoji` tags, in tag order. */
+    fun publicEmojiCodes(): List<String> = tags.mapNotNull(EmojiUrlTag::parseCode)
 
     suspend fun privateEmojis(signer: NostrSigner): List<EmojiUrlTag>? = privateTags(signer)?.emojis()
 

@@ -27,9 +27,8 @@ import com.vitorpamplona.amethyst.commons.model.topNavFeeds.OutboxRelayLoader
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
-import com.vitorpamplona.quartz.nip01Core.tags.aTag.isTaggedAddressableNote
-import com.vitorpamplona.quartz.nip22Comments.CommentEvent
 import com.vitorpamplona.quartz.nip53LiveActivities.streaming.LiveActivitiesEvent
+import com.vitorpamplona.quartz.nip72ModCommunities.isForCommunity
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
@@ -46,11 +45,10 @@ class SingleCommunityTopNavFilter(
 
     override fun match(noteEvent: Event): Boolean =
         if (noteEvent is LiveActivitiesEvent) {
-            (authors != null && noteEvent.participantsIntersect(authors)) || noteEvent.isTaggedAddressableNote(community)
-        } else if (noteEvent is CommentEvent) {
-            (authors != null && noteEvent.pubKey in authors) || noteEvent.isTaggedAddressableNote(community)
+            (authors != null && noteEvent.participantsIntersect(authors)) || noteEvent.isForCommunity(community)
         } else {
-            (authors != null && noteEvent.pubKey in authors) || noteEvent.isTaggedAddressableNote(community)
+            // a comment is in the community by its NIP-22 root `A`, which nested replies keep.
+            (authors != null && noteEvent.pubKey in authors) || noteEvent.isForCommunity(community)
         }
 
     override fun toPerRelayFlow(cache: ICacheProvider): Flow<SingleCommunityTopNavPerRelayFilterSet> {

@@ -53,11 +53,11 @@ fun TagArray.artifactTitle(): String? = fastFirstNotNullOfOrNull(TitleTag::parse
 /** The lifecycle operation — the `op` tag. */
 fun TagArray.artifactOp(): ArtifactOp? = fastFirstNotNullOfOrNull(OpTag::parse)
 
-/** The conversation anchor — the `root` tag. */
-fun TagArray.artifactRoot(): HexKey? = fastFirstNotNullOfOrNull(RootTag::parse)
+/** The conversation anchor — the `root` tag, only when it holds a well-formed 64-hex event id. */
+fun TagArray.artifactRoot(): HexKey? = fastFirstNotNullOfOrNull(RootTag::parseId)
 
-/** The replaced revision — the `prev` tag. */
-fun TagArray.artifactPrev(): HexKey? = fastFirstNotNullOfOrNull(PrevTag::parse)
+/** The replaced revision — the `prev` tag, only when it holds a well-formed 64-hex event id. */
+fun TagArray.artifactPrev(): HexKey? = fastFirstNotNullOfOrNull(PrevTag::parseId)
 
 /** Why a removal (`kind:45011`) was issued — the `reason` tag. */
 fun TagArray.artifactRemovalReason(): String? = fastFirstNotNullOfOrNull(ReasonTag::parse)

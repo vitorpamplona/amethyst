@@ -33,6 +33,7 @@ import com.vitorpamplona.quartz.nip19Bech32.entities.NPub
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
+import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 class NIP19ParserTest {
@@ -192,10 +193,19 @@ class NIP19ParserTest {
 
     @Test
     fun nAddrATagParse3() {
-        val address =
+        // A relay hint is strict: a bare host is not completed into a relay.
+        val bareHost =
             ATag.parse(
                 "30023:d1e60465c2b777325e9133f2100d2bb31416dca810f54a1d95665621c5dee193:89de7920",
                 "relay.damus.io",
+            )
+        assertNotNull(bareHost)
+        assertNull(bareHost.relay)
+
+        val address =
+            ATag.parse(
+                "30023:d1e60465c2b777325e9133f2100d2bb31416dca810f54a1d95665621c5dee193:89de7920",
+                "wss://relay.damus.io",
             )
         assertEquals(30023, address?.kind)
         assertEquals(

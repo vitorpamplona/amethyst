@@ -27,6 +27,10 @@ import com.vitorpamplona.quartz.nip01Core.core.fastForEach
 import com.vitorpamplona.quartz.nip01Core.core.firstTagValue
 import com.vitorpamplona.quartz.nip01Core.core.isValid
 import com.vitorpamplona.quartz.nip01Core.core.mapValueTagged
+import com.vitorpamplona.quartz.nip01Core.hints.types.AddressHint
+import com.vitorpamplona.quartz.nip01Core.hints.types.EventIdHint
+import com.vitorpamplona.quartz.nip01Core.tags.aTag.ATag
+import com.vitorpamplona.quartz.nip01Core.tags.events.ETag
 import com.vitorpamplona.quartz.nip01Core.tags.people.PTag
 import com.vitorpamplona.quartz.nip29RelayGroups.tags.AddressPin
 import com.vitorpamplona.quartz.nip29RelayGroups.tags.ChildTag
@@ -36,6 +40,7 @@ import com.vitorpamplona.quartz.nip29RelayGroups.tags.GroupIdTag
 import com.vitorpamplona.quartz.nip29RelayGroups.tags.GroupPin
 import com.vitorpamplona.quartz.nip29RelayGroups.tags.ParentTag
 import com.vitorpamplona.quartz.nip29RelayGroups.tags.PreviousTag
+import com.vitorpamplona.quartz.utils.Hex
 
 fun TagArray.groupId() = firstTagValue(GroupIdTag.TAG_NAME)
 
@@ -55,7 +60,8 @@ fun TagArray.parentGroupId() = firstNotNullOfOrNull(ParentTag::parse)
 /** The ordered list of direct `child` subgroup ids advertised on a parent's metadata. */
 fun TagArray.childGroupIds(): List<String> = mapNotNull(ChildTag::parse)
 
-fun TagArray.userPubKeys(): List<HexKey> = mapNotNull(PTag::parseKey)
+// PTag only checks the key's length; the users a moderation event names must be real keys.
+fun TagArray.userPubKeys(): List<HexKey> = mapNotNull { tag -> PTag.parseKey(tag)?.takeIf(Hex::isHex64) }
 
 fun TagArray.deletedEventIds(): List<HexKey> = mapValueTagged("e") { it.takeIf { value -> value.isValid() } }
 
@@ -67,5 +73,14 @@ fun TagArray.pinnedEventIds(): List<HexKey> = mapNotNull { EventPin.parse(it)?.e
 
 /** Just the `a`-tagged pinned addresses, in order. */
 fun TagArray.pinnedAddresses(): List<Address> = mapNotNull { AddressPin.parse(it)?.address }
+
+/** The `e` pins that carry a relay hint in their extras. */
+fun TagArray.pinnedEventHints(): List<EventIdHint> = mapNotNull(ETag::parseAsHint)
+
+/** The `a` pins as `kind:pubkey:d` address ids, in order. */
+fun TagArray.pinnedAddressIds(): List<String> = mapNotNull { AddressPin.parse(it)?.ref }
+
+/** The `a` pins that carry a relay hint in their extras. */
+fun TagArray.pinnedAddressHints(): List<AddressHint> = mapNotNull(ATag::parseAsHint)
 
 fun TagArray.inviteCode() = firstNotNullOfOrNull(CodeTag::parse)

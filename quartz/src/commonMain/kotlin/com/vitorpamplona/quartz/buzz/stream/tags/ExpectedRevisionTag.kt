@@ -55,6 +55,9 @@ class ExpectedRevisionTag {
             return tag[1]
         }
 
+        /** The head event id the precondition names, or null for [NONE] and malformed tags. */
+        fun parseEventId(tag: Array<String>): String? = parse(tag)?.takeIf { it != NONE }
+
         fun assemble(expectedRevision: String): Array<String> {
             require(isValidValue(expectedRevision)) {
                 "expected-revision must be the literal \"none\" or a 64-character hex event id (got \"$expectedRevision\")"

@@ -22,6 +22,7 @@ package com.vitorpamplona.quartz.nip89AppHandlers.clientTag
 
 import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.nip01Core.core.has
+import com.vitorpamplona.quartz.nip01Core.hints.types.AddressHint
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
 import com.vitorpamplona.quartz.nip46RemoteSigner.getOrNull
@@ -46,13 +47,30 @@ class ClientTag(
             ensure(tag[1].isNotEmpty()) { return null }
 
             val address = tag.getOrNull(2)?.let { Address.parse(it) }
-            val relayHint = tag.getOrNull(3)?.let { RelayUrlNormalizer.normalizeOrNull(it) }
+            val relayHint = tag.getOrNull(3)?.let { RelayUrlNormalizer.normalizeHintOrNull(it) }
 
             return ClientTag(
                 tag[1],
                 address,
                 relayHint,
             )
+        }
+
+        /** The publishing client's own handler address (slot 2), normalized; null when absent. */
+        fun parseAddressId(tag: Array<String>): String? {
+            ensure(tag.has(2)) { return null }
+            ensure(tag[0] == TAG_NAME) { return null }
+            ensure(tag[2].isNotEmpty()) { return null }
+            return Address.parse(tag[2])?.toValue()
+        }
+
+        /** [parseAddressId] with the relay hint in slot 3. */
+        fun parseAddressAsHint(tag: Array<String>): AddressHint? {
+            ensure(tag.has(3)) { return null }
+            ensure(tag[3].isNotEmpty()) { return null }
+            val address = parseAddressId(tag) ?: return null
+            val relay = RelayUrlNormalizer.normalizeHintOrNull(tag[3]) ?: return null
+            return AddressHint(address, relay)
         }
 
         fun assemble(name: String) = arrayOfNotNull(TAG_NAME, name)

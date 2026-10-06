@@ -24,8 +24,12 @@ import androidx.compose.runtime.Immutable
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.OptimizedJsonMapper
+import com.vitorpamplona.quartz.nip01Core.hints.EventHintProvider
+import com.vitorpamplona.quartz.nip01Core.hints.PubKeyHintProvider
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip01Core.signers.SignerExceptions
+import com.vitorpamplona.quartz.nip01Core.tags.events.ETag
+import com.vitorpamplona.quartz.nip01Core.tags.people.PTag
 import com.vitorpamplona.quartz.nip47WalletConnect.rpc.Response
 import com.vitorpamplona.quartz.utils.TimeUtils
 
@@ -37,12 +41,23 @@ class NwcResponseEvent(
     tags: Array<Array<String>>,
     content: String,
     sig: HexKey,
-) : Event(id, pubKey, createdAt, KIND, tags, content, sig) {
+) : Event(id, pubKey, createdAt, KIND, tags, content, sig),
+    PubKeyHintProvider,
+    EventHintProvider {
+    override fun pubKeyHints() = tags.mapNotNull(PTag::parseAsHint)
+
+    // NIP-47: a response carries a single `p` (the requesting client) and a single `e` (the request).
+    override fun linkedPubKeys() = listOfNotNull(requestAuthor())
+
+    override fun eventHints() = tags.mapNotNull(ETag::parseAsHint)
+
+    override fun linkedEventIds() = listOfNotNull(requestId())
+
     override fun isContentEncoded() = true
 
-    fun requestAuthor() = tags.firstOrNull { it.size > 1 && it[0] == "p" }?.get(1)
+    fun requestAuthor(): HexKey? = tags.firstNotNullOfOrNull(PTag::parseKey)
 
-    fun requestId() = tags.firstOrNull { it.size > 1 && it[0] == "e" }?.get(1)
+    fun requestId(): HexKey? = tags.firstNotNullOfOrNull(ETag::parseId)
 
     fun talkingWith(oneSideHex: String): HexKey = if (pubKey == oneSideHex) requestAuthor() ?: pubKey else pubKey
 

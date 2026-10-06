@@ -28,12 +28,14 @@ import com.vitorpamplona.quartz.nip01Core.core.TagArray
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
 import com.vitorpamplona.quartz.nip01Core.diff.DiffableEvent
 import com.vitorpamplona.quartz.nip01Core.diff.ListDiff
+import com.vitorpamplona.quartz.nip01Core.hints.EventHintProvider
 import com.vitorpamplona.quartz.nip01Core.hints.PubKeyHintProvider
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip01Core.signers.SignerExceptions
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.nip51Lists.PrivateTagArrayEvent
 import com.vitorpamplona.quartz.nip51Lists.encryption.PrivateTagsInContent
+import com.vitorpamplona.quartz.nip51Lists.muteList.tags.EventTag
 import com.vitorpamplona.quartz.nip51Lists.muteList.tags.MuteTag
 import com.vitorpamplona.quartz.nip51Lists.muteList.tags.UserTag
 import com.vitorpamplona.quartz.nip51Lists.remove
@@ -50,7 +52,8 @@ class MuteListEvent(
     sig: HexKey,
 ) : PrivateTagArrayEvent(id, pubKey, createdAt, KIND, tags, content, sig),
     DiffableEvent<MuteListDiff>,
-    PubKeyHintProvider {
+    PubKeyHintProvider,
+    EventHintProvider {
     override fun diffFrom(older: Event): MuteListDiff? {
         if (older !is MuteListEvent || older.pubKey != pubKey || older.dTag() != dTag()) return null
         return MuteListDiff(
@@ -61,11 +64,22 @@ class MuteListEvent(
 
     override fun pubKeyHints() = tags.mapNotNull(UserTag::parseAsHint)
 
-    override fun linkedPubKeys() = tags.mapNotNull(UserTag::parseKey)
+    override fun linkedPubKeys() = publicMutedUserIds()
+
+    // Public muted threads only; the private ones live in the encrypted content.
+    override fun eventHints() = tags.mapNotNull(EventTag::parseAsHint)
+
+    override fun linkedEventIds() = publicMutedThreadIds()
 
     fun countMutes() = tags.count(MuteTag::isTagged)
 
     fun publicMutes(): List<MuteTag> = tags.mapNotNull(MuteTag::parse)
+
+    /** The public muted users (`p`), without building a [MuteTag] per entry. */
+    fun publicMutedUserIds(): List<HexKey> = tags.mapNotNull(UserTag::parseKey)
+
+    /** The public muted threads (`e`, as NIP-51 calls them in kind 10000), without building a [MuteTag] per entry. */
+    fun publicMutedThreadIds(): List<HexKey> = tags.mapNotNull(EventTag::parseId)
 
     suspend fun privateMutes(signer: NostrSigner): List<MuteTag>? = privateTags(signer)?.mapNotNull(MuteTag::parse)
 

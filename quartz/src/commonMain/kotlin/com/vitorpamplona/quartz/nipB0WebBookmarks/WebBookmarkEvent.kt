@@ -27,6 +27,7 @@ import com.vitorpamplona.quartz.nip01Core.core.TagArray
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.nip01Core.tags.dTag.dTag
+import com.vitorpamplona.quartz.nip01Core.tags.hashtags.HashtagTag
 import com.vitorpamplona.quartz.nip01Core.tags.hashtags.hashtags
 import com.vitorpamplona.quartz.nip22Comments.RootScope
 import com.vitorpamplona.quartz.nip23LongContent.tags.PublishedAtTag
@@ -46,13 +47,20 @@ class WebBookmarkEvent(
 ) : BaseAddressableEvent(id, pubKey, createdAt, KIND, tags, content, sig),
     RootScope,
     SearchableEvent {
-    override fun indexableContent() = listOfNotNull(title(), description()).joinToString("\n")
+    // The `t` tags are the labels the user filed the bookmark under.
+    override fun indexableContent() = (listOfNotNull(title(), description()) + hashtags()).joinToString("\n")
 
     // The read path: the same fields indexableContent() joins, handed over without
     // building the joined string a scan would throw away.
     override fun forEachIndexableField(visitor: IndexableFieldVisitor) {
         if (!visitor.visit(title())) return
-        visitor.visit(description())
+        if (!visitor.visit(description())) return
+        // Walks the tags in place: this runs per event per search keystroke, and hashtags()
+        // would build a list only to discard it.
+        for (tag in tags) {
+            val hashtag = HashtagTag.parse(tag) ?: continue
+            if (!visitor.visit(hashtag)) return
+        }
     }
 
     /**

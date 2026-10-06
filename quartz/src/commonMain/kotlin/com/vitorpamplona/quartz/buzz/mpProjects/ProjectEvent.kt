@@ -22,14 +22,19 @@ package com.vitorpamplona.quartz.buzz.mpProjects
 
 import androidx.compose.runtime.Immutable
 import com.vitorpamplona.quartz.buzz.mpProjects.tags.ProjectMember
+import com.vitorpamplona.quartz.buzz.mpProjects.tags.ProjectMemberTag
 import com.vitorpamplona.quartz.buzz.mpProjects.tags.ProjectVisibility
 import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.nip01Core.core.BaseAddressableEvent
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
+import com.vitorpamplona.quartz.nip01Core.hints.AddressHintProvider
+import com.vitorpamplona.quartz.nip01Core.hints.types.AddressHint
 import com.vitorpamplona.quartz.nip01Core.signers.EventTemplate
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.nip01Core.tags.dTag.dTag
+import com.vitorpamplona.quartz.nip50Search.IndexableFieldVisitor
+import com.vitorpamplona.quartz.nip50Search.SearchableEvent
 import com.vitorpamplona.quartz.utils.TimeUtils
 import kotlin.uuid.ExperimentalUuidApi
 import kotlin.uuid.Uuid
@@ -60,7 +65,21 @@ class ProjectEvent(
     tags: Array<Array<String>>,
     content: String,
     sig: HexKey,
-) : BaseAddressableEvent(id, pubKey, createdAt, KIND, tags, content, sig) {
+) : BaseAddressableEvent(id, pubKey, createdAt, KIND, tags, content, sig),
+    SearchableEvent,
+    AddressHintProvider {
+    override fun indexableContent() = listOfNotNull(displayName(), description()).joinToString("\n")
+
+    // The read path: the same fields indexableContent() joins, in the same order.
+    override fun forEachIndexableField(visitor: IndexableFieldVisitor) {
+        if (!visitor.visit(displayName())) return
+        visitor.visit(description())
+    }
+
+    override fun addressHints(): List<AddressHint> = tags.mapNotNull(ProjectMemberTag::parseAsHint)
+
+    override fun linkedAddressIds(): List<String> = memberAddressIds()
+
     /** The project slug — the `d` tag. */
     fun slug() = dTag()
 
@@ -77,6 +96,9 @@ class ProjectEvent(
 
     /** The member repositories' `30617` addresses. */
     fun memberAddresses(): List<Address> = members().map { it.address }
+
+    /** The member repositories' `30617:<owner>:<repo>` address ids, without parsing an [Address] per member. */
+    fun memberAddressIds(): List<String> = tags.projectMemberAddressIds()
 
     /** The discussion channel reference — metadata, not routing. */
     fun channelId() = tags.projectChannel()

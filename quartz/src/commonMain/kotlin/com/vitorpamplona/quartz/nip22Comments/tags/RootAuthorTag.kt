@@ -47,7 +47,7 @@ data class RootAuthorTag(
         fun parse(tag: Tag): ReplyAuthorTag? {
             if (tag.size < 2 || tag[0] != TAG_NAME || tag[1].length != PUBKEY_LENGTH) return null
 
-            val relayHint = tag.getOrNull(2)?.let { RelayUrlNormalizer.normalizeOrNull(it) }
+            val relayHint = tag.getOrNull(2)?.let { RelayUrlNormalizer.normalizeHintOrNull(it) }
 
             return ReplyAuthorTag(tag[1], relayHint)
         }
@@ -57,7 +57,7 @@ data class RootAuthorTag(
             ensure(tag[0] == TAG_NAME) { return null }
             ensure(tag[1].length == PUBKEY_LENGTH) { return null }
 
-            val relayHint = tag.getOrNull(2)?.let { RelayUrlNormalizer.normalizeOrNull(it) }
+            val relayHint = tag.getOrNull(2)?.let { RelayUrlNormalizer.normalizeHintOrNull(it) }
 
             return ReplyAuthorTag(tag[1], relayHint)
         }
@@ -73,7 +73,7 @@ data class RootAuthorTag(
             ensure(tag[1].length == 64) { return null }
             ensure(tag[2].isNotEmpty()) { return null }
 
-            val relayHint = RelayUrlNormalizer.normalizeOrNull(tag[2])
+            val relayHint = RelayUrlNormalizer.normalizeHintOrNull(tag[2])
             ensure(relayHint != null) { return null }
 
             return PubKeyHint(tag[1], relayHint)

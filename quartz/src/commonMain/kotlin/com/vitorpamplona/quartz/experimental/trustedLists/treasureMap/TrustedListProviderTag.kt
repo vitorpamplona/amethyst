@@ -146,7 +146,7 @@ data class TrustedListProviderTag(
 
         private fun relayHint(tag: Tag): NormalizedRelayUrl? {
             val raw = tag.getOrNull(2)?.takeIf { it.isNotEmpty() } ?: return null
-            return RelayUrlNormalizer.normalizeOrNull(raw)
+            return RelayUrlNormalizer.normalizeHintOrNull(raw)
         }
 
         fun assembleServiceType(

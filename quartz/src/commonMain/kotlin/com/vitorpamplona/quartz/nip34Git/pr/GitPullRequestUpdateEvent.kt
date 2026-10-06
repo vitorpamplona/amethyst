@@ -61,15 +61,20 @@ class GitPullRequestUpdateEvent(
     AddressHintProvider {
     override fun pubKeyHints() = tags.mapNotNull(PTag::parseAsHint) + tags.mapNotNull(RootAuthorTag::parseAsHint)
 
-    override fun linkedPubKeys() = tags.mapNotNull(PTag::parseKey) + tags.mapNotNull { RootAuthorTag.parseKey(it) }
+    // NIP-22 roots: a single `E` (the pull request) and a single `P` (its author).
+    override fun linkedPubKeys() = notifiedUsers() + listOfNotNull(parentPullRequestAuthor())
 
     override fun eventHints() = tags.mapNotNull(RootEventTag::parseAsHint)
 
-    override fun linkedEventIds() = tags.mapNotNull(RootEventTag::parseKey)
+    override fun linkedEventIds() = listOfNotNull(parentPullRequestId())
 
     override fun addressHints() = tags.mapNotNull(ATag::parseAsHint)
 
-    override fun linkedAddressIds() = tags.mapNotNull(ATag::parseAddressId)
+    // NIP-34: the update names a single repository (`a`).
+    override fun linkedAddressIds() = listOfNotNull(repositoryAddress()?.toValue())
+
+    /** The users this update notifies (`p`): the repository owner first, then the `notify` list, in tag order. */
+    fun notifiedUsers(): List<HexKey> = tags.mapNotNull(PTag::parseKey)
 
     fun repository() = tags.firstNotNullOfOrNull(ATag::parse)
 

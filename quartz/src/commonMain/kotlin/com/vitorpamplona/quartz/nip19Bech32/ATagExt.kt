@@ -47,7 +47,7 @@ fun ATag.Companion.parseAtag(
         val parts = atag.split(":", limit = 3)
         Hex.decode(parts[1])
 
-        val relayHint = relay?.let { RelayUrlNormalizer.normalizeOrNull(it) }
+        val relayHint = relay?.let { RelayUrlNormalizer.normalizeHintOrNull(it) }
 
         ATag(parts[0].toInt(), parts[1], parts[2], relayHint)
     } catch (t: Throwable) {

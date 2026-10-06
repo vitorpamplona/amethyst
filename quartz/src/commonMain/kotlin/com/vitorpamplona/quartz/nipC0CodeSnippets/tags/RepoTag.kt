@@ -20,7 +20,9 @@
  */
 package com.vitorpamplona.quartz.nipC0CodeSnippets.tags
 
+import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.nip01Core.core.has
+import com.vitorpamplona.quartz.nip19Bech32.entities.NAddress
 import com.vitorpamplona.quartz.utils.ensure
 
 /**
@@ -36,6 +38,32 @@ class RepoTag {
             ensure(tag[0] == TAG_NAME) { return null }
             ensure(tag[1].isNotEmpty()) { return null }
             return tag[1]
+        }
+
+        /**
+         * The NIP-34 repository announcement when the tag names one as an `naddr`
+         * (bare or as a `nostr:` URI), carrying its relay hints; null for a URL.
+         */
+        fun parseNAddress(tag: Array<String>): NAddress? {
+            val repo = parse(tag) ?: return null
+            val bech = repo.removePrefix("nostr:")
+            ensure(bech.startsWith("naddr1")) { return null }
+            // The TLV author is hex-encoded from raw bytes, so its digits are always hex:
+            // the length check alone is what rejects a key that is not 32 bytes.
+            return NAddress.parse(bech)?.takeIf { it.author.length == 64 }
+        }
+
+        /**
+         * The repository's address id (`kind:pubkey:dtag`) when the tag names a NIP-34
+         * announcement, as an `naddr` or as a raw address id; null for a URL.
+         */
+        fun parseAddressId(tag: Array<String>): String? {
+            val repo = parse(tag) ?: return null
+            parseNAddress(tag)?.let { return it.aTag() }
+            // Only a value that starts with a kind number can be a raw address id: checking
+            // first keeps the address parser from logging a warning for every repository URL.
+            ensure(repo[0].isDigit() && repo.contains(':')) { return null }
+            return Address.parse(repo)?.toValue()
         }
 
         fun assemble(repo: String) = arrayOf(TAG_NAME, repo)

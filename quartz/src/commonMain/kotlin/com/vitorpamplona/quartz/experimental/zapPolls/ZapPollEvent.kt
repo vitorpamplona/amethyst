@@ -26,6 +26,7 @@ import com.vitorpamplona.quartz.experimental.zapPolls.tags.ConsensusThresholdTag
 import com.vitorpamplona.quartz.experimental.zapPolls.tags.MaximumTag
 import com.vitorpamplona.quartz.experimental.zapPolls.tags.MinimumTag
 import com.vitorpamplona.quartz.experimental.zapPolls.tags.PollOptionTag
+import com.vitorpamplona.quartz.nip01Core.core.AddressSerializer
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
 import com.vitorpamplona.quartz.nip01Core.hints.AddressHintProvider
@@ -85,11 +86,11 @@ class ZapPollEvent(
     }
 
     override fun linkedEventIds(): List<HexKey> {
-        val eHints = tags.mapNotNull(MarkedETag::parseId)
-        val qHints = tags.mapNotNull(QTag::parseEventId)
-        val nip19Hints = citedNIP19().eventIds()
-
-        return eHints + qHints + nip19Hints
+        val result = ArrayList<HexKey>()
+        result.addAll(threadEventIds())
+        quotedEvents().mapTo(result) { it.eventId }
+        result.addAll(citedNIP19().eventIds())
+        return result
     }
 
     override fun addressHints(): List<AddressHint> {
@@ -101,11 +102,11 @@ class ZapPollEvent(
     }
 
     override fun linkedAddressIds(): List<String> {
-        val aHints = tags.mapNotNull(ATag::parseAddressId)
-        val qHints = tags.mapNotNull(QTag::parseAddressId)
-        val nip19Hints = citedNIP19().addressIds()
-
-        return aHints + qHints + nip19Hints
+        val result = ArrayList<String>()
+        result.addAll(referencedAddresses())
+        quotedAddresses().mapTo(result) { it.address.toValue() }
+        result.addAll(citedNIP19().addressIds())
+        return result
     }
 
     override fun pubKeyHints(): List<PubKeyHint> {
@@ -116,11 +117,14 @@ class ZapPollEvent(
     }
 
     override fun linkedPubKeys(): List<HexKey> {
-        val pHints = tags.mapNotNull(PTag::parseKey)
-        val nip19Hints = citedNIP19().pubKeys()
-
-        return pHints + nip19Hints
+        val result = ArrayList<HexKey>()
+        result.addAll(mentionKeys())
+        result.addAll(citedNIP19().pubKeys())
+        return result
     }
+
+    /** Every `a` this poll carries (an addressable it replies to or cites), as shape-checked address ids in tag order. */
+    fun referencedAddresses(): List<String> = tags.mapNotNull { ATag.parseAddressId(it)?.takeIf(AddressSerializer::isAddressShape) }
 
     fun pollOptionsArray() = tags.mapNotNull(PollOptionTag::parse)
 

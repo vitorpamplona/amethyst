@@ -30,6 +30,7 @@ import com.vitorpamplona.quartz.nip01Core.hints.PubKeyHintProvider
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.nip01Core.tags.dTag.dTag
 import com.vitorpamplona.quartz.nip01Core.tags.geohash.GeoHashTag
+import com.vitorpamplona.quartz.nip01Core.tags.hashtags.HashtagTag
 import com.vitorpamplona.quartz.nip01Core.tags.hashtags.hashtags
 import com.vitorpamplona.quartz.nip01Core.tags.people.PTag
 import com.vitorpamplona.quartz.nip01Core.tags.references.references
@@ -55,14 +56,25 @@ class CalendarTimeSlotEvent(
 ) : BaseAddressableEvent(id, pubKey, createdAt, KIND, tags, content, sig),
     PubKeyHintProvider,
     SearchableEvent {
-    override fun indexableContent() = listOfNotNull(title(), summary(), content).joinToString("\n")
+    // The free-text `location` names and the `t` topics are how people look an event
+    // up ("meetup Lisbon", "#bitcoin"), so they follow the body, as kind 1111 does.
+    override fun indexableContent() = (listOfNotNull(title(), summary(), content) + locations() + hashtags()).joinToString("\n")
 
     // The read path: the same fields indexableContent() joins, handed over without
-    // building the joined string a scan would throw away.
+    // building the joined string a scan would throw away. It runs per event per search
+    // keystroke, so the tag-backed fields are read off the tags in place, not via list getters.
     override fun forEachIndexableField(visitor: IndexableFieldVisitor) {
         if (!visitor.visit(title())) return
         if (!visitor.visit(summary())) return
-        visitor.visit(content)
+        if (!visitor.visit(content)) return
+        for (tag in tags) {
+            val location = LocationTag.parse(tag) ?: continue
+            if (!visitor.visit(location)) return
+        }
+        for (tag in tags) {
+            val hashtag = HashtagTag.parse(tag) ?: continue
+            if (!visitor.visit(hashtag)) return
+        }
     }
 
     fun title() = tags.firstNotNullOfOrNull(TitleTag.Companion::parse)
@@ -92,12 +104,15 @@ class CalendarTimeSlotEvent(
 
     fun participants() = tags.mapNotNull(PTag.Companion::parse)
 
+    /** The pubkeys of the [participants], without building a [PTag] per participant. */
+    fun participantKeys(): List<HexKey> = tags.mapNotNull(PTag::parseKey)
+
     // NIP-52 `p` tags are the invitees/hosts of this appointment. Exposing them as pubkey
     // hints lets the broadcaster route the appointment - and anything that a-tags it, like an
     // RSVP - into every participant's inbox relays instead of just the author's outbox.
     override fun pubKeyHints() = tags.mapNotNull(PTag::parseAsHint)
 
-    override fun linkedPubKeys() = tags.mapNotNull(PTag::parseKey)
+    override fun linkedPubKeys() = participantKeys()
 
     fun references() = tags.references()
 

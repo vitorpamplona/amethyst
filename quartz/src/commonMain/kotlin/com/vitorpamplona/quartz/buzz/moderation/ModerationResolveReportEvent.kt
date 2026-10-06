@@ -28,6 +28,8 @@ import com.vitorpamplona.quartz.buzz.moderation.tags.StatusTag
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
+import com.vitorpamplona.quartz.nip01Core.hints.EventHintProvider
+import com.vitorpamplona.quartz.nip01Core.hints.types.EventIdHint
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.utils.TimeUtils
 
@@ -48,7 +50,13 @@ class ModerationResolveReportEvent(
     tags: Array<Array<String>>,
     content: String,
     sig: HexKey,
-) : Event(id, pubKey, createdAt, KIND, tags, content, sig) {
+) : Event(id, pubKey, createdAt, KIND, tags, content, sig),
+    EventHintProvider {
+    // The `report` tag carries a bare kind:1984 event id with no relay slot.
+    override fun eventHints(): List<EventIdHint> = emptyList()
+
+    override fun linkedEventIds(): List<HexKey> = listOfNotNull(report())
+
     /** The kind:1984 report event id being resolved — the `report` tag. */
     fun report() = tags.moderationReport()
 

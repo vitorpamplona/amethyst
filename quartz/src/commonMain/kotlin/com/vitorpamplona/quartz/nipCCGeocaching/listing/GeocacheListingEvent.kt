@@ -25,6 +25,8 @@ import com.vitorpamplona.quartz.nip01Core.core.BaseAddressableEvent
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
 import com.vitorpamplona.quartz.nip01Core.core.containsAllTagNamesWithValues
+import com.vitorpamplona.quartz.nip01Core.hints.PubKeyHintProvider
+import com.vitorpamplona.quartz.nip01Core.hints.types.PubKeyHint
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.nip01Core.tags.dTag.DTag
@@ -70,7 +72,14 @@ class GeocacheListingEvent(
     sig: HexKey,
 ) : BaseAddressableEvent(id, pubKey, createdAt, KIND, tags, content, sig),
     RootScope,
+    PubKeyHintProvider,
     SearchableEvent {
+    // The `F` winner is the only user the listing names (the verification key is the cache's
+    // throwaway key, not a person). The tag has no relay slot, so there are no hints.
+    override fun pubKeyHints(): List<PubKeyHint> = emptyList()
+
+    override fun linkedPubKeys(): List<HexKey> = listOfNotNull(firstToFindWinner())
+
     // The hint and the mission are deliberately absent: a cache is found by walking to it, and a
     // search that matches on "in the branches" hands out the answer to anyone who types it.
     override fun indexableContent() = listOfNotNull(cacheName(), content).joinToString("\n")

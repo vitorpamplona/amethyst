@@ -21,6 +21,8 @@
 package com.vitorpamplona.quartz.experimental.trustedLists.externalIds
 
 import com.vitorpamplona.quartz.experimental.trustedLists.externalIds.tags.ExternalIdMemberTag
+import com.vitorpamplona.quartz.nip01Core.core.AddressSerializer
+import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.TagArray
 import com.vitorpamplona.quartz.nip01Core.core.fastMapNotNullDense
 import com.vitorpamplona.quartz.nip01Core.tags.aTag.ATag
@@ -35,4 +37,10 @@ fun TagArray.members() = fastMapNotNullDense(ExternalIdMemberTag::parse)
  */
 fun TagArray.aboutAddresses() = mapNotNull(ATag::parse)
 
+/** [aboutAddresses] as shape-checked `kind:pubkey:d` ids, in tag order. */
+fun TagArray.aboutAddressIds(): List<String> = mapNotNull { ATag.parseAddressId(it)?.takeIf(AddressSerializer::isAddressShape) }
+
 fun TagArray.aboutPubKeys() = mapNotNull(PTag::parse)
+
+/** The keys of [aboutPubKeys], in tag order, in a list the caller may append to. */
+fun TagArray.aboutKeys(): ArrayList<HexKey> = mapNotNullTo(ArrayList(), PTag::parseKey)

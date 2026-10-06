@@ -23,20 +23,20 @@ package com.vitorpamplona.quartz.utils.sha256
 import dev.whyoleg.cryptography.CryptographyProvider
 import dev.whyoleg.cryptography.algorithms.SHA256
 
-actual fun sha256(data: ByteArray): ByteArray {
-    val provider = CryptographyProvider.Default
-    val hasher = provider.get(SHA256).hasher()
-    return hasher.hashBlocking(data)
-}
+// Resolved once: the provider lookup is not free and sha256 is on the event-id path.
+private val hasher = CryptographyProvider.Default.get(SHA256).hasher()
+
+actual fun sha256(data: ByteArray): ByteArray = hasher.hashBlocking(data)
 
 actual fun sha256Into(
     out: ByteArray,
     data: ByteArray,
     len: Int,
 ): ByteArray {
-    // Linux cryptography provider doesn't support writing into existing buffer.
-    // Fall back to allocating and copying.
-    val hash = sha256(if (len == data.size) data else data.copyOfRange(0, len))
-    hash.copyInto(out)
+    // Hashes data[0, len) straight into out: no slice copy, no temporary digest.
+    hasher.createHashFunction().use { function ->
+        function.update(data, 0, len)
+        function.hashIntoByteArray(out, 0)
+    }
     return out
 }

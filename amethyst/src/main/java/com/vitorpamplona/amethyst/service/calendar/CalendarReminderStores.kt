@@ -26,6 +26,8 @@ import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.intPreferencesKey
 import com.vitorpamplona.amethyst.Amethyst
+import com.vitorpamplona.amethyst.commons.model.preferences.CALENDAR_REMINDER_LOG_STORE
+import com.vitorpamplona.amethyst.commons.model.preferences.CALENDAR_REMINDER_SETTINGS_STORE
 import com.vitorpamplona.amethyst.commons.model.preferences.CalendarReminderLogStore
 import com.vitorpamplona.amethyst.commons.model.preferences.CalendarReminderSettings
 import com.vitorpamplona.amethyst.commons.model.preferences.CalendarReminderSettingsStore
@@ -45,10 +47,6 @@ import com.vitorpamplona.amethyst.commons.model.preferences.CopyOnceMigration
  */
 private const val LEGACY_SETTINGS_FILE = "amethyst_calendar_reminder_prefs"
 private const val LEGACY_LOG_FILE = "amethyst_calendar_reminders"
-
-/** Store (and file) names, as [Amethyst.appStores] keys them. */
-const val CALENDAR_REMINDER_SETTINGS_STORE = "calendar_reminder_settings"
-const val CALENDAR_REMINDER_LOG_STORE = "calendar_reminder_log"
 
 /** The one-off copy of the reminder settings out of the legacy prefs file. */
 fun calendarReminderSettingsMigrations(context: Context): List<DataMigration<Preferences>> =

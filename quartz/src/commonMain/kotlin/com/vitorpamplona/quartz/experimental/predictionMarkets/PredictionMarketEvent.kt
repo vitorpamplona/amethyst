@@ -65,13 +65,35 @@ class PredictionMarketEvent(
 
     private val contentDetails by lazy { PredictionMarketDetails.parse(content) }
 
-    override fun indexableContent() = listOfNotNull(title(), description()).joinToString("\n")
+    // The question and its description, then each outcome label (poll-option style), the
+    // resolution and the cancel reason. The social post in `content` is the fallback body only:
+    // in the current shape it restates title + description word for word.
+    override fun indexableContent() = (listOfNotNull(title(), description()) + outcomes() + listOfNotNull(resolution(), cancelReason(), socialPost())).joinToString("\n")
 
     // The read path: the same fields indexableContent() joins, handed over without
     // building the joined string a scan would throw away.
     override fun forEachIndexableField(visitor: IndexableFieldVisitor) {
         if (!visitor.visit(title())) return
-        visitor.visit(description())
+        if (!visitor.visit(description())) return
+        // outcomeOptions() is memoized, so the per-keystroke walk re-parses no tags or JSON.
+        val outcomes = outcomeOptions()
+        for (i in outcomes.indices) {
+            if (!visitor.visit(outcomes[i].label)) return
+        }
+        if (!visitor.visit(resolution())) return
+        if (!visitor.visit(cancelReason())) return
+        visitor.visit(socialPost())
+    }
+
+    /**
+     * The human-readable post in `content`, when that is what `content` holds (not one of the
+     * JSON shapes) and the event has no [description] it would merely repeat.
+     */
+    fun socialPost(): String? {
+        if (description() != null || contentDetails != null) return null
+        val trimmed = content.trim()
+        if (trimmed.isEmpty() || trimmed == "null" || trimmed.startsWith("{") || trimmed.startsWith("[")) return null
+        return content
     }
 
     fun marketId() = tags.marketId()
@@ -82,10 +104,15 @@ class PredictionMarketEvent(
     fun description() = dataDetails?.description ?: contentDetails?.description
 
     /** The outcomes one can bet on, id and label: the `outcome` tags, else the JSON `outcomes`. */
-    fun outcomeOptions(): List<PredictionMarketOutcome> =
+    fun outcomeOptions(): List<PredictionMarketOutcome> = outcomeOptionsValue
+
+    // Memoized like the details above: search reads the outcomes per event per keystroke, and
+    // each read would otherwise re-scan the tags and allocate a fresh list.
+    private val outcomeOptionsValue by lazy {
         tags.marketOutcomes().ifEmpty {
             dataDetails?.outcomes?.ifEmpty { null } ?: contentDetails?.outcomes ?: emptyList()
         }
+    }
 
     /** The outcomes as a reader sees them, by label. */
     fun outcomes(): List<String> = outcomeOptions().map { it.label }

@@ -22,13 +22,24 @@ package com.vitorpamplona.quartz.nip50Search
 
 import com.vitorpamplona.quartz.buzz.agentProfiles.AgentProfileEvent
 import com.vitorpamplona.quartz.buzz.apPersonas.PersonaEvent
+import com.vitorpamplona.quartz.buzz.arArtifacts.ArtifactEvent
 import com.vitorpamplona.quartz.buzz.managedAgents.ManagedAgentEvent
+import com.vitorpamplona.quartz.buzz.mpProjects.ProjectEvent
+import com.vitorpamplona.quartz.buzz.stream.StreamMessageDiffEvent
+import com.vitorpamplona.quartz.buzz.stream.sidecars.ChannelSummaryEvent
+import com.vitorpamplona.quartz.buzz.teamCatalog.TeamCatalogEvent
 import com.vitorpamplona.quartz.buzz.teams.TeamEvent
 import com.vitorpamplona.quartz.buzz.workflow.WorkflowDefEvent
+import com.vitorpamplona.quartz.contextvm.cep06Announcements.CvmServerAnnouncementEvent
+import com.vitorpamplona.quartz.cyberspace.deck0003Sno.SnoAvatarEvent
+import com.vitorpamplona.quartz.cyberspace.deck0003Sno.SnoObjectEvent
 import com.vitorpamplona.quartz.experimental.agora.FundraiserEvent
 import com.vitorpamplona.quartz.experimental.audio.track.AudioTrackEvent
 import com.vitorpamplona.quartz.experimental.birdstar.BirdDetectionEvent
 import com.vitorpamplona.quartz.experimental.birdstar.BirdexEvent
+import com.vitorpamplona.quartz.experimental.citations.CitationEvent
+import com.vitorpamplona.quartz.experimental.citations.HardcopyCitationEvent
+import com.vitorpamplona.quartz.experimental.citations.PromptCitationEvent
 import com.vitorpamplona.quartz.experimental.decentralizedLists.DecentralizedListEvent
 import com.vitorpamplona.quartz.experimental.decentralizedLists.searchableListDescriptions
 import com.vitorpamplona.quartz.experimental.decentralizedLists.searchableListExtraText
@@ -37,11 +48,13 @@ import com.vitorpamplona.quartz.experimental.edits.TextNoteModificationEvent
 import com.vitorpamplona.quartz.experimental.fitness.workout.ExerciseTemplateEvent
 import com.vitorpamplona.quartz.experimental.fitness.workout.WorkoutRecordEvent
 import com.vitorpamplona.quartz.experimental.interactiveStories.InteractiveStoryBaseEvent
+import com.vitorpamplona.quartz.experimental.library.LearningResourceEvent
 import com.vitorpamplona.quartz.experimental.music.playlist.MusicPlaylistEvent
 import com.vitorpamplona.quartz.experimental.music.track.MusicTrackEvent
 import com.vitorpamplona.quartz.experimental.nip82SoftwareApps.application.SoftwareApplicationEvent
 import com.vitorpamplona.quartz.experimental.nip95.header.FileStorageHeaderEvent
 import com.vitorpamplona.quartz.experimental.nipsOnNostr.NipTextEvent
+import com.vitorpamplona.quartz.experimental.predictionMarkets.PredictionMarketEvent
 import com.vitorpamplona.quartz.experimental.profileGallery.ProfileGalleryEntryEvent
 import com.vitorpamplona.quartz.experimental.ps1saves.Ps1SaveEvent
 import com.vitorpamplona.quartz.experimental.trustedLists.TrustedListEvent
@@ -59,11 +72,15 @@ import com.vitorpamplona.quartz.nip15Marketplace.auction.AuctionEvent
 import com.vitorpamplona.quartz.nip15Marketplace.marketplace.MarketplaceEvent
 import com.vitorpamplona.quartz.nip15Marketplace.product.ProductEvent
 import com.vitorpamplona.quartz.nip15Marketplace.stall.StallEvent
+import com.vitorpamplona.quartz.nip17Dm.files.ChatMessageEncryptedFileHeaderEvent
+import com.vitorpamplona.quartz.nip17Dm.messages.ChatMessageEvent
 import com.vitorpamplona.quartz.nip22Comments.CommentEvent
 import com.vitorpamplona.quartz.nip23LongContent.LongFormContentEvent
 import com.vitorpamplona.quartz.nip28PublicChat.admin.ChannelCreateEvent
 import com.vitorpamplona.quartz.nip28PublicChat.admin.ChannelMetadataEvent
 import com.vitorpamplona.quartz.nip29RelayGroups.metadata.GroupMetadataEvent
+import com.vitorpamplona.quartz.nip29RelayGroups.metadata.GroupRolesEvent
+import com.vitorpamplona.quartz.nip29RelayGroups.moderation.CreateGroupEvent
 import com.vitorpamplona.quartz.nip29RelayGroups.moderation.GroupEditMetadataEvent
 import com.vitorpamplona.quartz.nip30CustomEmoji.pack.EmojiPackEvent
 import com.vitorpamplona.quartz.nip32Labeling.LabelEvent
@@ -71,6 +88,7 @@ import com.vitorpamplona.quartz.nip34Git.issue.GitIssueEvent
 import com.vitorpamplona.quartz.nip34Git.pr.GitPullRequestEvent
 import com.vitorpamplona.quartz.nip34Git.repository.GitRepositoryEvent
 import com.vitorpamplona.quartz.nip35Torrents.TorrentEvent
+import com.vitorpamplona.quartz.nip43RelayMembers.roles.RelayRoleEvent
 import com.vitorpamplona.quartz.nip51Lists.appCurationSet.AppCurationSetEvent
 import com.vitorpamplona.quartz.nip51Lists.articleCurationSet.ArticleCurationSetEvent
 import com.vitorpamplona.quartz.nip51Lists.bookmarkList.BookmarkListEvent
@@ -93,12 +111,14 @@ import com.vitorpamplona.quartz.nip53LiveActivities.meetingSpaces.MeetingRoomEve
 import com.vitorpamplona.quartz.nip53LiveActivities.meetingSpaces.MeetingSpaceEvent
 import com.vitorpamplona.quartz.nip53LiveActivities.streaming.LiveActivitiesEvent
 import com.vitorpamplona.quartz.nip54Wiki.WikiArticleEvent
+import com.vitorpamplona.quartz.nip58Badges.accepted.AcceptedBadgeSetEvent
 import com.vitorpamplona.quartz.nip58Badges.definition.BadgeDefinitionEvent
 import com.vitorpamplona.quartz.nip5aStaticWebsites.NamedSiteEvent
 import com.vitorpamplona.quartz.nip5aStaticWebsites.RootSiteEvent
 import com.vitorpamplona.quartz.nip5dNapplets.NamedNappletEvent
 import com.vitorpamplona.quartz.nip5dNapplets.NappletSnapshotEvent
 import com.vitorpamplona.quartz.nip5dNapplets.RootNappletEvent
+import com.vitorpamplona.quartz.nip64Chess.game.ChessGameEvent
 import com.vitorpamplona.quartz.nip68Picture.PictureEvent
 import com.vitorpamplona.quartz.nip69P2pOrderEvents.P2POrderEvent
 import com.vitorpamplona.quartz.nip71Video.AddressableVideoEvent
@@ -170,6 +190,8 @@ object SearchFieldExtractor {
                 tiers(event, event.title(), event.summary(), event.content)
             }
 
+            // location() and categories() (`t`) close its indexableContent(),
+            // and the funnel already carries both roles, so they are not passed.
             is ClassifiedsEvent -> {
                 tiers(event, event.title(), event.summary(), event.content)
             }
@@ -217,8 +239,10 @@ object SearchFieldExtractor {
                 tiers(event, listOf(event.name()), listOf(event.description(), event.rules()), event.content)
             }
 
+            // kind 30030 -- `content` is NIP-44 ciphertext (private emoji tags),
+            // never indexed; the public shortcodes are keywords beside the description.
             is EmojiPackEvent -> {
-                tiers(event, event.titleOrName(), event.description(), event.content)
+                tiers(event, listOf(event.titleOrName()), listOf(event.description()) + event.publicEmojiCodes(), null)
             }
 
             is ChannelCreateEvent -> {
@@ -229,16 +253,28 @@ object SearchFieldExtractor {
                 event.channelInfo().let { tiers(event, it.name, it.about, null) }
             }
 
+            // Each image's imeta `alt` describes that picture, so it is the
+            // summary tier; location() closes indexableContent() but is the
+            // funnel's role already, so it is not passed.
             is PictureEvent -> {
-                tiers(event, event.title(), null, event.content)
+                tiers(event, listOf(event.title()), event.imageDescriptions(), event.content)
             }
 
+            // NIP-71 chapter (`segment`) titles are headings inside the video:
+            // keywords beside the title, like a torrent's file names.
             is RegularVideoEvent -> {
-                tiers(event, event.title(), null, event.content)
+                tiers(event, listOf(event.title()), event.segmentTitles(), event.content)
             }
 
             is AddressableVideoEvent -> {
-                tiers(event, event.title(), null, event.content)
+                tiers(event, listOf(event.title()), event.segmentTitles(), event.content)
+            }
+
+            // kind 64 -- a PGN's player/event/site/opening tag pairs are the
+            // names a game is found by; its {comments} are the prose. The move
+            // text is never indexed (see PgnSearchText).
+            is ChessGameEvent -> {
+                event.searchText().let { tiers(event, it.headers, emptyList(), it.comments.joinToString("\n").ifEmpty { null }) }
             }
 
             // Torrents are searched by FILE NAME above all — index the file
@@ -253,6 +289,68 @@ object SearchFieldExtractor {
 
             is FundraiserEvent -> {
                 tiers(event, event.title(), null, event.content)
+            }
+
+            // kind 11316 -- a ContextVM server's name and blurb; the content
+            // is the MCP initialize result (machine JSON) and stays out.
+            is CvmServerAnnouncementEvent -> {
+                tiers(event, event.serverName(), event.about(), null)
+            }
+
+            // kinds 11333/33331 -- the `name` tag is the shape's only human
+            // text; the content is SNO geometry JSON.
+            is SnoAvatarEvent -> {
+                tiers(event, event.nameTag(), null, null)
+            }
+
+            is SnoObjectEvent -> {
+                tiers(event, event.nameTag(), null, null)
+            }
+
+            // kinds 31/32/33 -- what the source is called is the title band;
+            // the bibliographic names (author, editor, publisher, container,
+            // model) are the keywords beside the citer's summary; the
+            // citer's note is the body. Subclasses before the base.
+            is HardcopyCitationEvent -> {
+                tiers(
+                    event,
+                    listOf(event.title(), event.chapterTitle()),
+                    listOf(event.summary(), event.author(), event.editor(), event.publishedIn(), event.publishedBy()),
+                    event.content,
+                )
+            }
+
+            is PromptCitationEvent -> {
+                tiers(event, listOf(event.title()), listOf(event.summary(), event.author(), event.publishedBy(), event.llm()), event.content)
+            }
+
+            is CitationEvent -> {
+                tiers(event, listOf(event.title()), listOf(event.summary(), event.author(), event.publishedBy()), event.content)
+            }
+
+            // kind 30142 -- both vocabularies' names are titles; descriptions,
+            // the author and the facet labels (subjects, types, levels) are
+            // the keywords that qualify it.
+            is LearningResourceEvent -> {
+                tiers(
+                    event,
+                    listOf(event.title(), event.alternateTitle()),
+                    listOf(event.summary(), event.alternateSummary(), event.author()) + event.facetLabels(),
+                    event.content,
+                )
+            }
+
+            // kind 38000 (BAO Markets) -- the question is the title, the
+            // outcome labels / resolution / cancel reason are short values
+            // matched whole, and the social post is the body only when no
+            // description supersedes it (see socialPost()).
+            is PredictionMarketEvent -> {
+                tiers(
+                    event,
+                    listOf(event.title()),
+                    listOf(event.description()) + event.outcomes() + listOf(event.resolution(), event.cancelReason()),
+                    event.socialPost(),
+                )
             }
 
             is NipTextEvent -> {
@@ -287,8 +385,11 @@ object SearchFieldExtractor {
                 tiers(event, event.title(), event.summary(), event.content, website = event.streaming())
             }
 
+            // kinds 30296/30297 -- the option labels are the choices a reader
+            // picks between: short answer-like values, so they sit in the
+            // secondary tier unjoined, as poll options do.
             is InteractiveStoryBaseEvent -> {
-                tiers(event, event.title(), event.summary(), event.content)
+                tiers(event, listOf(event.title()), listOf(event.summary()) + event.optionLabels(), event.content)
             }
 
             // endpoint() is the `streaming` tag -- the same role
@@ -340,9 +441,11 @@ object SearchFieldExtractor {
             // kinds 30054/30055 -- the Podcasting 2.0 pair carries the same
             // title/description shape kind 54 does and was falling through:
             // an episode title indexed as body text. topics() is hashtags()
-            // under another name, so the funnel carries it once.
+            // under another name, so the funnel carries it once. Host/guest
+            // names and soundbite titles are short keywords beside the
+            // description, like a music track's artist and album.
             is Podcasting20EpisodeEvent -> {
-                tiers(event, event.title(), event.description(), event.content)
+                tiers(event, listOf(event.title()), listOf(event.description()) + event.personNames() + event.soundbiteTitles(), event.content)
             }
 
             is Podcasting20TrailerEvent -> {
@@ -358,6 +461,16 @@ object SearchFieldExtractor {
             // through. Its hashtags() is `t`, carried once by the funnel.
             is GroupEditMetadataEvent -> {
                 tiers(event, event.name(), event.about(), null)
+            }
+
+            // kind 9007 -- the create carries the same name/about pair (Buzz requires it).
+            is CreateGroupEvent -> {
+                tiers(event, event.name(), event.about(), null)
+            }
+
+            // kind 39003 -- role names and their descriptions are short keyword-like values.
+            is GroupRolesEvent -> {
+                tiers(event, emptyList(), event.roles().flatMap { listOf(it.name, it.description) }, null)
             }
 
             is InterestSetEvent -> {
@@ -472,7 +585,17 @@ object SearchFieldExtractor {
             }
 
             is BookmarkListEvent -> {
-                tiers(event, event.title(), null, null)
+                tiers(event, event.titleOrName(), null, null)
+            }
+
+            // kind 30008 -- a general badge set's NIP-51 title and description.
+            is AcceptedBadgeSetEvent -> {
+                tiers(event, event.title(), event.description(), null)
+            }
+
+            // kind 33534 -- a relay role's label is its name; the description explains it.
+            is RelayRoleEvent -> {
+                tiers(event, event.label(), event.description(), null)
             }
 
             is OldBookmarkListEvent -> {
@@ -484,7 +607,7 @@ object SearchFieldExtractor {
             }
 
             is HighlightEvent -> {
-                tiers(event, emptyList(), listOf(event.comment(), event.context()), event.content)
+                tiers(event, emptyList(), listOf(event.comment(), event.searchableContext()), event.content)
             }
 
             is FileMetadataEvent -> {
@@ -494,8 +617,14 @@ object SearchFieldExtractor {
             // kinds 1065/1163 -- summary-only kinds. Their whole searchable
             // text IS a summary, so it belongs in the summary tier, next to
             // kind 1063's, rather than in the body tier the fallback gave it.
-            is FileStorageHeaderEvent -> {
+            is ChatMessageEncryptedFileHeaderEvent -> {
                 tiers(event, null, event.summary(), null)
+            }
+
+            // kind 1065 now indexes its caption (`content`) too, exactly as
+            // kind 1063 does, so it splits the same way.
+            is FileStorageHeaderEvent -> {
+                tiers(event, null, event.summary(), event.content)
             }
 
             is ProfileGalleryEntryEvent -> {
@@ -549,7 +678,7 @@ object SearchFieldExtractor {
             }
 
             is PersonaEvent -> {
-                event.personaOrNull()?.let { tiers(event, it.displayName, null, it.systemPrompt) } ?: tiers(event, null, null, null)
+                event.personaOrNull()?.let { tiers(event, it.displayName, it.description, it.systemPrompt) } ?: tiers(event, null, null, null)
             }
 
             is ManagedAgentEvent -> {
@@ -562,6 +691,38 @@ object SearchFieldExtractor {
 
             is WorkflowDefEvent -> {
                 tiers(event, event.name(), null, event.content)
+            }
+
+            // kind 30178 -- the team and its members are what it is called; the
+            // instructions and member prompts are the body indexableContent() joins.
+            is TeamCatalogEvent -> {
+                event.catalogOrNull()?.let { catalog ->
+                    tiers(
+                        event,
+                        listOf(catalog.name) + catalog.members.map { it.displayName },
+                        listOf(catalog.description),
+                        (listOf(catalog.instructions) + catalog.members.map { it.systemPrompt }).filterNotNull().joinToString("\n"),
+                    )
+                } ?: tiers(event, null, null, null)
+            }
+
+            // kind 45010 -- textBody() already drops a JSON (non-prose) payload.
+            is ArtifactEvent -> {
+                tiers(event, event.title(), null, event.textBody())
+            }
+
+            // kind 30621 -- the name (or slug) titles the project; its description is secondary.
+            is ProjectEvent -> {
+                tiers(event, event.displayName(), event.description(), null)
+            }
+
+            is ChannelSummaryEvent -> {
+                event.summary()?.let { tiers(event, listOf(it.name), listOf(it.about, it.topic, it.purpose), null) } ?: tiers(event, null, null, null)
+            }
+
+            // kind 40008 -- the body is a unified diff; only the summary is indexed.
+            is StreamMessageDiffEvent -> {
+                tiers(event, null, event.description(), null)
             }
 
             // kind 31990 — the app handler's metadata IS a UserMetadata clone,
@@ -638,6 +799,11 @@ object SearchFieldExtractor {
 
             // kind 1 LAST among the explicit branches, defensively: a future
             // kind extending the text-note base must hit its own branch first.
+            // kind 14 -- a NIP-14 subject names the conversation, the body is the message.
+            is ChatMessageEvent -> {
+                tiers(event, event.subject(), null, event.content)
+            }
+
             is TextNoteEvent -> {
                 tiers(event, event.subject(), null, event.content)
             }

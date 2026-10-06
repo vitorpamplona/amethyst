@@ -24,6 +24,7 @@ import android.content.Context
 import android.content.pm.ServiceInfo
 import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.service.upload.blossom.BlossomSyncState
 import com.vitorpamplona.amethyst.service.foreground.FlowProgressForegroundService
 import com.vitorpamplona.amethyst.ui.stringRes
 

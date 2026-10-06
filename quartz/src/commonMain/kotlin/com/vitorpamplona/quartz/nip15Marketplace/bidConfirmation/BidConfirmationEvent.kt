@@ -34,6 +34,8 @@ import com.vitorpamplona.quartz.nip01Core.tags.people.PTag
 import com.vitorpamplona.quartz.nip15Marketplace.auction.AuctionEvent
 import com.vitorpamplona.quartz.nip15Marketplace.bid.BidEvent
 import com.vitorpamplona.quartz.nip21UriScheme.toNostrUri
+import com.vitorpamplona.quartz.nip50Search.IndexableFieldVisitor
+import com.vitorpamplona.quartz.nip50Search.SearchableEvent
 import com.vitorpamplona.quartz.utils.Log
 import com.vitorpamplona.quartz.utils.TimeUtils
 import kotlinx.coroutines.CancellationException
@@ -48,23 +50,68 @@ class BidConfirmationEvent(
     sig: HexKey,
 ) : Event(id, pubKey, createdAt, KIND, tags, content, sig),
     EventHintProvider,
-    PubKeyHintProvider {
+    PubKeyHintProvider,
+    SearchableEvent {
+    // The seller's optional free-text `message`; status is a machine enum and stays out.
+    override fun indexableContent() = confirmationData()?.message.orEmpty()
+
+    // The read path: the one field, handed over as held (null when absent) — no `orEmpty()`.
+    override fun forEachIndexableField(visitor: IndexableFieldVisitor) {
+        visitor.visit(confirmationData()?.message)
+    }
+
     override fun eventHints() = tags.mapNotNull(ETag::parseAsHint)
 
-    override fun linkedEventIds() = tags.mapNotNull(ETag::parseId)
+    // NIP-15: exactly two `e` tags, the bid and then its auction.
+    override fun linkedEventIds() = listOfNotNull(bidId(), auctionId())
 
     override fun pubKeyHints() = tags.mapNotNull(PTag::parseAsHint)
 
-    override fun linkedPubKeys() = tags.mapNotNull(PTag::parseKey)
+    // The builder notifies a single `p`, the bidder.
+    override fun linkedPubKeys() = listOfNotNull(bidder())
 
-    fun confirmationData(): BidConfirmationData? =
-        try {
-            JsonMapper.fromJson<BidConfirmationData>(content)
-        } catch (e: Exception) {
-            if (e is CancellationException) throw e
-            Log.w("BidConfirmationEvent") { "Content Parse Error: ${toNostrUri()} ${e.message}" }
-            null
+    /** The bid being confirmed: the first `e` (NIP-15). */
+    fun bidId(): HexKey? = tags.firstNotNullOfOrNull(ETag::parseId)
+
+    /** The auction the confirmed bid was placed on: the second `e` (NIP-15). */
+    fun auctionId(): HexKey? {
+        var seenBid = false
+        for (tag in tags) {
+            val id = ETag.parseId(tag) ?: continue
+            if (seenBid) return id
+            seenBid = true
         }
+        return null
+    }
+
+    /** The author of the confirmed bid (`p`, written by [notifyBidder]). */
+    fun bidder(): HexKey? = tags.firstNotNullOfOrNull(PTag::parseKey)
+
+    // forEachIndexableField() runs on every keystroke, so the body is decoded once per
+    // instance — a failure included, which also keeps the warning to one per event. A failure
+    // is cached as the [ParseFailed] marker, not a `Result.failure`: that would pin the
+    // exception and its stack trace to every malformed event the cache holds. Events are
+    // immutable; a race only decodes twice.
+    @kotlinx.serialization.Transient
+    @kotlin.jvm.Transient
+    private var confirmationDataCache: Any? = null // BidConfirmationData, or ParseFailed
+
+    fun confirmationData(): BidConfirmationData? {
+        confirmationDataCache?.let { return it as? BidConfirmationData }
+        val parsed =
+            try {
+                JsonMapper.fromJson<BidConfirmationData>(content)
+            } catch (e: Exception) {
+                if (e is CancellationException) throw e
+                Log.w("BidConfirmationEvent") { "Content Parse Error: ${toNostrUri()} ${e.message}" }
+                null
+            }
+        confirmationDataCache = parsed ?: ParseFailed
+        return parsed
+    }
+
+    /** What [confirmationDataCache] holds once the body failed to decode. */
+    private object ParseFailed
 
     fun status() = confirmationData()?.status
 

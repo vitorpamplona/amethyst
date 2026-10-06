@@ -20,14 +20,14 @@
  */
 package com.vitorpamplona.quartz.nip57Zaps.splits
 
-import com.vitorpamplona.quartz.utils.arrayOfNotNull
-
 class ZapSplitSetupSerializer {
     companion object {
         fun toTagArray(zapSplit: BaseZapSplitSetup): Array<String> =
             when (zapSplit) {
                 is ZapSplitSetupLnAddress -> arrayOf(BaseZapSplitSetup.TAG_NAME, zapSplit.lnAddress)
-                is ZapSplitSetup -> arrayOfNotNull(BaseZapSplitSetup.TAG_NAME, zapSplit.pubKeyHex, zapSplit.relay?.url, zapSplit.weight.toString())
+                // The relay slot stays even when empty: dropping it shifted the weight into slot 2,
+                // where the parser (and other clients, per NIP-57 Appendix G) read a relay.
+                is ZapSplitSetup -> arrayOf(BaseZapSplitSetup.TAG_NAME, zapSplit.pubKeyHex, zapSplit.relay?.url ?: "", zapSplit.weight.toString())
             }
     }
 }

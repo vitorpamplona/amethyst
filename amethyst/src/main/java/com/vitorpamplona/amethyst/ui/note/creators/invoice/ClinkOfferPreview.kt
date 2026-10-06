@@ -57,6 +57,7 @@ import com.vitorpamplona.amethyst.commons.resources.clink_requesting_invoice
 import com.vitorpamplona.amethyst.commons.resources.error_dialog_pay_invoice_error
 import com.vitorpamplona.amethyst.commons.resources.pay
 import com.vitorpamplona.amethyst.commons.resources.sats
+import com.vitorpamplona.amethyst.commons.service.ClinkOfferPayer
 import com.vitorpamplona.amethyst.commons.ui.loadStringRes
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.navigation.routes.routeFor
@@ -71,7 +72,6 @@ import com.vitorpamplona.amethyst.commons.ui.theme.Size25dp
 import com.vitorpamplona.amethyst.commons.ui.theme.SmallBorder
 import com.vitorpamplona.amethyst.commons.ui.theme.StdHorzSpacer
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
-import com.vitorpamplona.amethyst.service.ClinkOfferPayer
 import com.vitorpamplona.amethyst.ui.components.PaymentCard
 import com.vitorpamplona.amethyst.ui.components.PaymentCardAmount
 import com.vitorpamplona.quartz.experimental.clink.common.SatRange

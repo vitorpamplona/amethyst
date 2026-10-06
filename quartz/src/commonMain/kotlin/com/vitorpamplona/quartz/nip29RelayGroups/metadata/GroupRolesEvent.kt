@@ -27,6 +27,8 @@ import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.nip01Core.tags.dTag.dTag
 import com.vitorpamplona.quartz.nip29RelayGroups.tags.RoleTag
+import com.vitorpamplona.quartz.nip50Search.IndexableFieldVisitor
+import com.vitorpamplona.quartz.nip50Search.SearchableEvent
 import com.vitorpamplona.quartz.utils.TimeUtils
 
 @Immutable
@@ -37,10 +39,26 @@ class GroupRolesEvent(
     tags: Array<Array<String>>,
     content: String,
     sig: HexKey,
-) : BaseAddressableEvent(id, pubKey, createdAt, KIND, tags, content, sig) {
+) : BaseAddressableEvent(id, pubKey, createdAt, KIND, tags, content, sig),
+    SearchableEvent {
     fun groupId() = dTag()
 
     fun roles() = tags.mapNotNull(RoleTag::parse)
+
+    // Each role's name, then its human-written description, one per line.
+    override fun indexableContent() = roles().flatMap { listOfNotNull(it.name, it.description) }.joinToString("\n")
+
+    // The read path: the same fields indexableContent() joins, without the join.
+    override fun forEachIndexableField(visitor: IndexableFieldVisitor) {
+        // Inline over the tags rather than roles(): this runs per event per search keystroke,
+        // and needs neither the list nor a RoleTag per role.
+        for (tag in tags) {
+            val name = RoleTag.parseName(tag) ?: continue
+            if (!visitor.visit(name)) return
+            val description = RoleTag.parseDescription(tag) ?: continue
+            if (!visitor.visit(description)) return
+        }
+    }
 
     companion object {
         const val KIND = 39003

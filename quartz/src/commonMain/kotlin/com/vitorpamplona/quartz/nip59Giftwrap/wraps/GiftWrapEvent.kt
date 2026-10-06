@@ -25,6 +25,7 @@ import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.firstTagValue
 import com.vitorpamplona.quartz.nip01Core.crypto.KeyPair
+import com.vitorpamplona.quartz.nip01Core.hints.PubKeyHintProvider
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.signers.EventTemplate
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
@@ -56,7 +57,14 @@ open class GiftWrapEvent(
     sig: HexKey,
     kind: Int = KIND,
 ) : Event(id, pubKey, createdAt, kind, tags, content, sig),
-    HasInnerEvent {
+    HasInnerEvent,
+    PubKeyHintProvider {
+    // The recipient `p` (NIP-17 lets it carry the recipient's DM inbox relay, see
+    // [create]'s `recipientRelayHint`). Tags only: the content is never opened here.
+    override fun pubKeyHints() = tags.mapNotNull(PTag::parseAsHint)
+
+    override fun linkedPubKeys() = tags.mapNotNull(PTag::parseKey)
+
     // `@Volatile`: set by the decrypting coroutine in [unwrapThrowing], read
     // by relay socket threads walking the wrap → seal → rumor chain.
     @kotlinx.serialization.Transient

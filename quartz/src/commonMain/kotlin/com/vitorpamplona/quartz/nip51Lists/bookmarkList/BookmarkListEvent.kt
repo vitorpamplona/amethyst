@@ -38,6 +38,7 @@ import com.vitorpamplona.quartz.nip51Lists.bookmarkList.tags.BookmarkIdTag
 import com.vitorpamplona.quartz.nip51Lists.bookmarkList.tags.EventBookmark
 import com.vitorpamplona.quartz.nip51Lists.encryption.PrivateTagsInContent
 import com.vitorpamplona.quartz.nip51Lists.remove
+import com.vitorpamplona.quartz.nip51Lists.tags.NameTag
 import com.vitorpamplona.quartz.nip51Lists.tags.TitleTag
 import com.vitorpamplona.quartz.utils.TimeUtils
 
@@ -53,29 +54,41 @@ class BookmarkListEvent(
     EventHintProvider,
     AddressHintProvider,
     SearchableEvent {
-    // Only the public list title is indexed; bookmarks live in NIP-44
-    // encrypted content and are intentionally never indexed.
-    override fun indexableContent() = listOfNotNull(title()).joinToString("\n")
+    // Only the public list title (or the legacy `name` the deprecated builder still
+    // writes) is indexed; bookmarks live in NIP-44 encrypted content and are
+    // intentionally never indexed.
+    override fun indexableContent() = listOfNotNull(titleOrName()).joinToString("\n")
 
     // The read path: the same fields indexableContent() joins, handed over without
     // building the joined string a scan would throw away.
     override fun forEachIndexableField(visitor: IndexableFieldVisitor) {
-        visitor.visit(title())
+        visitor.visit(titleOrName())
     }
 
     override fun eventHints() = tags.mapNotNull(EventBookmark::parseAsHint)
 
-    override fun linkedEventIds() = tags.mapNotNull(EventBookmark::parseId)
+    override fun linkedEventIds() = publicBookmarkedEventIds()
 
     override fun addressHints() = tags.mapNotNull(AddressBookmark::parseAsHint)
 
-    override fun linkedAddressIds() = tags.mapNotNull(AddressBookmark::parseAddressId)
+    override fun linkedAddressIds() = publicBookmarkedAddressIds()
 
     fun title() = tags.firstNotNullOfOrNull(TitleTag::parse)
+
+    /** NIP-51 deprecated `name` in favor of `title`, but older lists still carry it. */
+    fun name() = tags.firstNotNullOfOrNull(NameTag::parse)
+
+    fun titleOrName() = title() ?: name()
 
     fun countBookmarks() = tags.count(BookmarkIdTag::isTagged)
 
     fun publicBookmarks(): List<BookmarkIdTag> = tags.mapNotNull(BookmarkIdTag::parse)
+
+    /** The ids of the public `e` bookmarks, without building a [BookmarkIdTag] per entry. */
+    fun publicBookmarkedEventIds(): List<HexKey> = tags.mapNotNull(EventBookmark::parseId)
+
+    /** The address ids of the public `a` bookmarks, validated, in tag order. */
+    fun publicBookmarkedAddressIds(): List<String> = tags.mapNotNull(AddressBookmark::parseValidAddress)
 
     suspend fun privateBookmarks(signer: NostrSigner): List<BookmarkIdTag>? = privateTags(signer)?.mapNotNull(BookmarkIdTag::parse)
 

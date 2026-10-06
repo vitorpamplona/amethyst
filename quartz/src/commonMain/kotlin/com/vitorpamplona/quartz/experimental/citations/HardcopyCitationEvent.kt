@@ -28,6 +28,7 @@ import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
 import com.vitorpamplona.quartz.nip01Core.signers.EventTemplate
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.nip23LongContent.tags.TitleTag
+import com.vitorpamplona.quartz.nip50Search.IndexableFieldVisitor
 import com.vitorpamplona.quartz.utils.TimeUtils
 
 /** A citation of something printed (kind 32): a book, a chapter, a journal paper. */
@@ -40,6 +41,20 @@ class HardcopyCitationEvent(
     content: String,
     sig: HexKey,
 ) : CitationEvent(id, pubKey, createdAt, KIND, tags, content, sig) {
+    // A printed source is also found by its chapter, its editor and the work that contains it.
+    override fun indexableContent() = listOfNotNull(title(), chapterTitle(), summary(), content, author(), editor(), publishedIn(), publishedBy()).joinToString("\n")
+
+    override fun forEachIndexableField(visitor: IndexableFieldVisitor) {
+        if (!visitor.visit(title())) return
+        if (!visitor.visit(chapterTitle())) return
+        if (!visitor.visit(summary())) return
+        if (!visitor.visit(content)) return
+        if (!visitor.visit(author())) return
+        if (!visitor.visit(editor())) return
+        if (!visitor.visit(publishedIn())) return
+        visitor.visit(publishedBy())
+    }
+
     fun pageRange() = value(CitationTags.PAGE_RANGE)
 
     fun chapterTitle() = value(CitationTags.CHAPTER_TITLE)

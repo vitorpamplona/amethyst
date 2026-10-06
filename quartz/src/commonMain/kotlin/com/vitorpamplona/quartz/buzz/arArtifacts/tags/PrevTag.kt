@@ -23,6 +23,7 @@ package com.vitorpamplona.quartz.buzz.arArtifacts.tags
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.Tag
 import com.vitorpamplona.quartz.nip01Core.core.has
+import com.vitorpamplona.quartz.nip01Core.core.isValid
 import com.vitorpamplona.quartz.utils.ensure
 
 /**
@@ -41,6 +42,14 @@ object PrevTag {
         ensure(tag.has(1)) { return null }
         ensure(tag[0] == TAG_NAME) { return null }
         ensure(tag[1].isNotEmpty()) { return null }
+        return tag[1]
+    }
+
+    /** The replaced revision's event id, only when it is a well-formed 64-char hex id (for the hint providers). */
+    fun parseId(tag: Tag): HexKey? {
+        ensure(tag.has(1)) { return null }
+        ensure(tag[0] == TAG_NAME) { return null }
+        ensure(tag[1].isValid()) { return null }
         return tag[1]
     }
 

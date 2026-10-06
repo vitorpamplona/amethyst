@@ -23,6 +23,10 @@ package com.vitorpamplona.quartz.experimental.nests.admin
 import androidx.compose.runtime.Immutable
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
+import com.vitorpamplona.quartz.nip01Core.hints.AddressHintProvider
+import com.vitorpamplona.quartz.nip01Core.hints.PubKeyHintProvider
+import com.vitorpamplona.quartz.nip01Core.hints.types.AddressHint
+import com.vitorpamplona.quartz.nip01Core.hints.types.PubKeyHint
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.nip01Core.tags.aTag.ATag
 import com.vitorpamplona.quartz.nip01Core.tags.aTag.aTag
@@ -54,12 +58,24 @@ class AdminCommandEvent(
     tags: Array<Array<String>>,
     content: String,
     sig: HexKey,
-) : Event(id, pubKey, createdAt, KIND, tags, content, sig) {
-    /** The room this command applies to, if a single `a`-tag is present. */
-    fun room(): String? = tags.firstOrNull { it.firstOrNull() == "a" }?.getOrNull(1)
+) : Event(id, pubKey, createdAt, KIND, tags, content, sig),
+    PubKeyHintProvider,
+    AddressHintProvider {
+    // The target (`p`) and the room (`a`), each with whatever relay the host attached.
+    override fun pubKeyHints(): List<PubKeyHint> = tags.mapNotNull(PTag::parseAsHint)
 
-    /** The pubkey the host is acting on. */
-    fun targetPubkey(): HexKey? = tags.firstOrNull { it.firstOrNull() == "p" }?.getOrNull(1)
+    // One room (`a`) and one target (`p`) per command, as [build] writes them.
+    override fun linkedPubKeys(): List<HexKey> = listOfNotNull(targetPubkey())
+
+    override fun addressHints(): List<AddressHint> = tags.mapNotNull(ATag::parseAsHint)
+
+    override fun linkedAddressIds(): List<String> = listOfNotNull(room())
+
+    /** The room this command applies to: the address id of its first valid `a` tag. */
+    fun room(): String? = tags.firstNotNullOfOrNull(ATag::parseValidAddress)
+
+    /** The pubkey the host is acting on: its first valid `p` tag. */
+    fun targetPubkey(): HexKey? = tags.firstNotNullOfOrNull(PTag::parseKey)
 
     /**
      * The verb (e.g. "kick"). Reads the spec-correct

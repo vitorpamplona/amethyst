@@ -26,6 +26,10 @@ import com.vitorpamplona.quartz.experimental.clink.tags.clinkVersion
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.OptimizedJsonMapper
+import com.vitorpamplona.quartz.nip01Core.hints.EventHintProvider
+import com.vitorpamplona.quartz.nip01Core.hints.PubKeyHintProvider
+import com.vitorpamplona.quartz.nip01Core.hints.types.EventIdHint
+import com.vitorpamplona.quartz.nip01Core.hints.types.PubKeyHint
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip01Core.signers.SignerExceptions
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
@@ -49,8 +53,20 @@ class OfferEvent(
     tags: Array<Array<String>>,
     content: String,
     sig: HexKey,
-) : Event(id, pubKey, createdAt, KIND, tags, content, sig) {
+) : Event(id, pubKey, createdAt, KIND, tags, content, sig),
+    PubKeyHintProvider,
+    EventHintProvider {
     override fun isContentEncoded() = true
+
+    // Only the public routing tags: the counterparty `p` and the request `e`. The payload is NIP-44.
+    override fun pubKeyHints(): List<PubKeyHint> = tags.mapNotNull(PTag::parseAsHint)
+
+    // CLINK writes one `p` (the counterparty) and, on a response, one `e` (the request).
+    override fun linkedPubKeys(): List<HexKey> = listOfNotNull(recipientPubKey())
+
+    override fun eventHints(): List<EventIdHint> = tags.mapNotNull(ETag::parseAsHint)
+
+    override fun linkedEventIds(): List<HexKey> = listOfNotNull(requestId())
 
     /** The `p` tag â the counterparty this message is addressed to. */
     fun recipientPubKey() = tags.firstNotNullOfOrNull(PTag::parseKey)

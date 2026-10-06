@@ -61,7 +61,6 @@ import com.vitorpamplona.amethyst.commons.ui.theme.placeholderText
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.quartz.buzz.stream.StreamMessageV2Event
 import com.vitorpamplona.quartz.nip01Core.tags.hashtags.hasHashtags
-import com.vitorpamplona.quartz.nip01Core.tags.people.hasAnyTaggedUser
 import com.vitorpamplona.quartz.nip10Notes.BaseThreadedEvent
 import com.vitorpamplona.quartz.nip10Notes.TextNoteEvent
 import com.vitorpamplona.quartz.nip14Subject.subject
@@ -119,7 +118,7 @@ fun RenderTextEvent(
         val canShowReply by
             remember(note) {
                 derivedStateOf {
-                    noteEvent is BaseThreadedEvent && !makeItShort && (note.replyTo != null || noteEvent.hasAnyTaggedUser())
+                    noteEvent is BaseThreadedEvent && !makeItShort && (note.replyTo != null || noteEvent.mentionKeys().isNotEmpty())
                 }
             }
 

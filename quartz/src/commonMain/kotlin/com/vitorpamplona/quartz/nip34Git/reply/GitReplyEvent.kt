@@ -83,11 +83,11 @@ class GitReplyEvent(
     }
 
     override fun linkedEventIds(): List<HexKey> {
-        val eHints = tags.mapNotNull(ETag::parseId)
-        val qHints = tags.mapNotNull(QTag::parseEventId)
-        val nip19Hints = citedNIP19().eventIds()
-
-        return eHints + qHints + nip19Hints
+        val result = ArrayList<HexKey>()
+        result.addAll(threadEventIds())
+        quotedEvents().mapTo(result) { it.eventId }
+        result.addAll(citedNIP19().eventIds())
+        return result
     }
 
     override fun addressHints(): List<AddressHint> {
@@ -99,11 +99,10 @@ class GitReplyEvent(
     }
 
     override fun linkedAddressIds(): List<String> {
-        val aHints = tags.mapNotNull(ATag::parseAddressId)
-        val qHints = tags.mapNotNull(QTag::parseAddressId)
-        val nip19Hints = citedNIP19().addressIds()
-
-        return aHints + qHints + nip19Hints
+        val result = tags.mapNotNullTo(ArrayList(), ATag::parseAddressId)
+        quotedAddresses().mapTo(result) { it.address.toValue() }
+        result.addAll(citedNIP19().addressIds())
+        return result
     }
 
     override fun pubKeyHints(): List<PubKeyHint> {
@@ -114,11 +113,14 @@ class GitReplyEvent(
     }
 
     override fun linkedPubKeys(): List<HexKey> {
-        val pHints = tags.mapNotNull(PTag::parseKey)
-        val nip19Hints = citedNIP19().pubKeys()
-
-        return pHints + nip19Hints
+        val result = ArrayList<HexKey>()
+        result.addAll(notifiedUsers())
+        result.addAll(citedNIP19().pubKeys())
+        return result
     }
+
+    /** The users this reply notifies (`p`), in tag order. */
+    fun notifiedUsers(): List<HexKey> = tags.mapNotNull(PTag::parseKey)
 
     fun repositoryHex() = tags.firstNotNullOfOrNull(ATag::parseAddressId)
 

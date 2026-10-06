@@ -47,7 +47,6 @@ import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.publishAndCon
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
-import com.vitorpamplona.quartz.nip01Core.tags.people.isTaggedUser
 import com.vitorpamplona.quartz.nip05DnsIdentifiers.Nip05Id
 import com.vitorpamplona.quartz.nip10Notes.TextNoteEvent
 import com.vitorpamplona.quartz.nip17Dm.base.BaseDMGroupEvent
@@ -1106,7 +1105,7 @@ class AmethystAppFunctions {
         if (relays.isEmpty()) throw AppFunctionInvalidArgumentException("account has no outbox relays configured")
 
         val currentList = account.kind3FollowList.getFollowListEvent()
-        if (currentList != null && currentList.isTaggedUser(target)) {
+        if (currentList != null && currentList.isFollowing(target)) {
             return WriteResult.unchanged()
         }
 
@@ -1154,7 +1153,7 @@ class AmethystAppFunctions {
         if (relays.isEmpty()) throw AppFunctionInvalidArgumentException("account has no outbox relays configured")
 
         val currentList = account.kind3FollowList.getFollowListEvent()
-        if (currentList == null || !currentList.isTaggedUser(target)) {
+        if (currentList == null || !currentList.isFollowing(target)) {
             return WriteResult.unchanged()
         }
 

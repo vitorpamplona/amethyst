@@ -80,6 +80,7 @@ import com.vitorpamplona.amethyst.desktop.viewmodels.DesktopFeedViewModel
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.hints.EventHintBundle
 import com.vitorpamplona.quartz.nip01Core.tags.hashtags.hashtags
+import com.vitorpamplona.quartz.nip10Notes.BaseThreadedEvent
 import com.vitorpamplona.quartz.nip10Notes.TextNoteEvent
 import com.vitorpamplona.quartz.nip19Bech32.Nip19Parser
 import com.vitorpamplona.quartz.nip19Bech32.entities.NEvent
@@ -232,12 +233,15 @@ fun ThreadScreen(
         )
     }
 
-    // Calculate reply level for a note based on e-tags
+    // Calculate reply level for a note from its reply parent. Only kind 1 notes and NIP-22
+    // comments are linked as replies, and both resolve their parent through replyingTo():
+    // NIP-10 reply marker, then root marker, then the last positional e tag for kind 1; the
+    // lowercase e (else the root E) for a comment.
     fun calculateLevel(note: Note): Int {
         val event = note.event ?: return 1
         levelCache[event.id]?.let { return it }
 
-        val replyToId = findReplyToId(event)
+        val replyToId = (event as? BaseThreadedEvent)?.replyingTo()
         val level =
             if (replyToId == null || replyToId == noteId) {
                 1
@@ -509,21 +513,4 @@ fun ThreadScreen(
             )
         }
     }
-}
-
-/**
- * Finds the event ID this event is replying to.
- * Uses NIP-10 markers (reply/root) or falls back to last e-tag.
- */
-private fun findReplyToId(event: Event): String? {
-    val eTags = event.tags.filter { it.size >= 2 && it[0] == "e" }
-    if (eTags.isEmpty()) return null
-
-    val replyTag = eTags.find { it.size >= 4 && it[3] == "reply" }
-    if (replyTag != null) return replyTag[1]
-
-    val rootTag = eTags.find { it.size >= 4 && it[3] == "root" }
-    if (rootTag != null && eTags.size == 1) return rootTag[1]
-
-    return eTags.lastOrNull()?.get(1)
 }

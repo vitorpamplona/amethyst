@@ -51,15 +51,15 @@ class ReportEvent(
     AddressHintProvider {
     override fun pubKeyHints() = tags.mapNotNull(ReportedAuthorTag::parseAsHint)
 
-    override fun linkedPubKeys() = tags.mapNotNull(ReportedAuthorTag::parseKey)
+    override fun linkedPubKeys() = reportedAuthor().map { it.pubKey }
 
     override fun eventHints() = tags.mapNotNull(ReportedEventTag::parseAsHint)
 
-    override fun linkedEventIds() = tags.mapNotNull(ReportedEventTag::parseId)
+    override fun linkedEventIds() = reportedPost().map { it.eventId }
 
     override fun addressHints() = tags.mapNotNull(ReportedAddressTag::parseAsHint)
 
-    override fun linkedAddressIds() = tags.mapNotNull(ReportedAddressTag::parseAddressId)
+    override fun linkedAddressIds() = reportedAddresses().map { it.address.toValue() }
 
     @kotlinx.serialization.Transient
     @kotlin.jvm.Transient

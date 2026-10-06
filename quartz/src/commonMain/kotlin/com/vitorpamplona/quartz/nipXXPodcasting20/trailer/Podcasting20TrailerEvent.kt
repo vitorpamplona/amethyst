@@ -24,6 +24,8 @@ import androidx.compose.runtime.Immutable
 import com.vitorpamplona.quartz.nip01Core.core.BaseAddressableEvent
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
+import com.vitorpamplona.quartz.nip01Core.hints.EventHintProvider
+import com.vitorpamplona.quartz.nip01Core.hints.types.EventIdHint
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.nip01Core.tags.dTag.dTag
 import com.vitorpamplona.quartz.nip22Comments.RootScope
@@ -31,6 +33,7 @@ import com.vitorpamplona.quartz.nip31Alts.AltTag
 import com.vitorpamplona.quartz.nip31Alts.alt
 import com.vitorpamplona.quartz.nip50Search.IndexableFieldVisitor
 import com.vitorpamplona.quartz.nip50Search.SearchableEvent
+import com.vitorpamplona.quartz.nipXXPodcasting20.episode.tags.EditTag
 import com.vitorpamplona.quartz.nipXXPodcasting20.episode.tags.PubDateTag
 import com.vitorpamplona.quartz.nipXXPodcasting20.episode.tags.TitleTag
 import com.vitorpamplona.quartz.nipXXPodcasting20.trailer.tags.LengthTag
@@ -54,6 +57,7 @@ class Podcasting20TrailerEvent(
     sig: HexKey,
 ) : BaseAddressableEvent(id, pubKey, createdAt, KIND, tags, content, sig),
     RootScope,
+    EventHintProvider,
     SearchableEvent {
     override fun indexableContent() = listOfNotNull(title(), content).joinToString("\n")
 
@@ -64,7 +68,15 @@ class Podcasting20TrailerEvent(
         visitor.visit(content)
     }
 
+    // The `edit` tag names the original publication by id only: there is no relay slot.
+    override fun eventHints(): List<EventIdHint> = emptyList()
+
+    override fun linkedEventIds(): List<HexKey> = tags.mapNotNull(EditTag::parse)
+
     fun title() = tags.firstNotNullOfOrNull(TitleTag::parse)
+
+    /** Event id of the original publication when this is an edit, if present. */
+    fun editsEventId() = tags.firstNotNullOfOrNull(EditTag::parse)
 
     fun url() = tags.firstNotNullOfOrNull(UrlTag::parse)
 

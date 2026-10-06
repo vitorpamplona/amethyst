@@ -23,6 +23,7 @@ package com.vitorpamplona.quartz.nip58Badges.profile
 import com.vitorpamplona.quartz.nip01Core.core.TagArray
 import com.vitorpamplona.quartz.nip01Core.tags.aTag.taggedAddresses
 import com.vitorpamplona.quartz.nip01Core.tags.events.taggedEvents
+import com.vitorpamplona.quartz.nip58Badges.accepted.AcceptedBadgeSetEvent
 import com.vitorpamplona.quartz.nip58Badges.accepted.tags.AcceptedBadge
 import com.vitorpamplona.quartz.nip58Badges.definition.BadgeDefinitionEvent
 
@@ -35,3 +36,6 @@ fun TagArray.badgeAwardEvents() = taggedEvents()
  * pointing at badge SETS (kind 30008), which are not definitions.
  */
 fun TagArray.badgeAwardDefinitions() = taggedAddresses().filter { it.kind == BadgeDefinitionEvent.KIND }
+
+/** The badge SETS (kind 30008) a profile points at, beside its [badgeAwardDefinitions]. */
+fun TagArray.badgeSets() = taggedAddresses().filter { it.kind == AcceptedBadgeSetEvent.KIND }

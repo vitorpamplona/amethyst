@@ -24,9 +24,28 @@ import androidx.compose.runtime.Immutable
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
+import com.vitorpamplona.quartz.nip01Core.core.isValid
+import com.vitorpamplona.quartz.nip01Core.hints.AddressHintProvider
+import com.vitorpamplona.quartz.nip01Core.hints.EventHintProvider
+import com.vitorpamplona.quartz.nip01Core.hints.PubKeyHintProvider
+import com.vitorpamplona.quartz.nip01Core.hints.types.AddressHint
+import com.vitorpamplona.quartz.nip01Core.hints.types.EventIdHint
+import com.vitorpamplona.quartz.nip01Core.hints.types.PubKeyHint
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.nip01Core.tags.geohash.geohashes
 import com.vitorpamplona.quartz.nip01Core.tags.hashtags.hashtags
+import com.vitorpamplona.quartz.nip01Core.tags.people.PTag
+import com.vitorpamplona.quartz.nip10Notes.content.findNostrUris
+import com.vitorpamplona.quartz.nip18Reposts.quotes.QAddressableTag
+import com.vitorpamplona.quartz.nip18Reposts.quotes.QEventTag
+import com.vitorpamplona.quartz.nip18Reposts.quotes.QTag
+import com.vitorpamplona.quartz.nip19Bech32.addressHints
+import com.vitorpamplona.quartz.nip19Bech32.addressIds
+import com.vitorpamplona.quartz.nip19Bech32.entities.Entity
+import com.vitorpamplona.quartz.nip19Bech32.eventHints
+import com.vitorpamplona.quartz.nip19Bech32.eventIds
+import com.vitorpamplona.quartz.nip19Bech32.pubKeyHints
+import com.vitorpamplona.quartz.nip19Bech32.pubKeys
 import com.vitorpamplona.quartz.nip22Comments.RootScope
 import com.vitorpamplona.quartz.nip23LongContent.tags.TitleTag
 import com.vitorpamplona.quartz.nip50Search.IndexableFieldVisitor
@@ -47,15 +66,93 @@ class PictureEvent(
     sig: HexKey,
 ) : Event(id, pubKey, createdAt, KIND, tags, content, sig),
     RootScope,
+    PubKeyHintProvider,
+    EventHintProvider,
+    AddressHintProvider,
     SearchableEvent {
-    override fun indexableContent() = listOfNotNull(title(), content).joinToString("\n")
+    // The place name and each image's own `alt` (the poster's accessibility description of
+    // that picture) are human-written too, and are how a photo is often searched for.
+    override fun indexableContent() = (listOfNotNull(title(), content) + location() + imageDescriptions()).joinToString("\n")
 
     // The read path: the same fields indexableContent() joins, handed over without
     // building the joined string a scan would throw away.
     override fun forEachIndexableField(visitor: IndexableFieldVisitor) {
         if (!visitor.visit(title())) return
-        visitor.visit(content)
+        if (!visitor.visit(content)) return
+        // Walks the tags and the (cached) imetas in place: this runs per event per search
+        // keystroke, and location()/imageDescriptions() would build lists only to discard them.
+        for (tag in tags) {
+            val location = LocationTag.parse(tag) ?: continue
+            if (!visitor.visit(location)) return
+        }
+        val metas = imetaTags()
+        for (i in metas.indices) {
+            val alt = metas[i].alt?.takeIf { it.isNotBlank() } ?: continue
+            if (!visitor.visit(alt)) return
+        }
     }
+
+    @kotlinx.serialization.Transient
+    @kotlin.jvm.Transient
+    private var citedNIP19Cache: List<Entity>? = null
+
+    /** NIP-19 entities cited as `nostr:` URIs in the description, parsed once. */
+    fun citedNIP19(): List<Entity> = citedNIP19Cache ?: findNostrUris(content).also { citedNIP19Cache = it }
+
+    /** Pubkeys tagged on the images themselves (imeta `annotate-user`); no relay slot. */
+    fun annotatedUsers(): List<HexKey> = imetaTags().flatMap { meta -> meta.annotations.mapNotNull { it.pubkey.takeIf { key -> key.isValid() } } }
+
+    // NIP-68 `p` tags the people in the picture; imeta annotations place them on an image.
+    override fun pubKeyHints(): List<PubKeyHint> = tags.mapNotNull(PTag::parseAsHint) + citedNIP19().pubKeyHints()
+
+    // linked*() run on every relay copy of the event, and each is two or three tag scans plus
+    // concatenations; the event is immutable, so they are built once per instance.
+    @kotlinx.serialization.Transient
+    @kotlin.jvm.Transient
+    private var linkedPubKeysCache: List<HexKey>? = null
+
+    @kotlinx.serialization.Transient
+    @kotlin.jvm.Transient
+    private var linkedEventIdsCache: List<HexKey>? = null
+
+    @kotlinx.serialization.Transient
+    @kotlin.jvm.Transient
+    private var linkedAddressIdsCache: List<String>? = null
+
+    override fun linkedPubKeys(): List<HexKey> =
+        linkedPubKeysCache ?: ArrayList<HexKey>().also { keys ->
+            keys.addAll(depictedUsers())
+            keys.addAll(annotatedUsers())
+            keys.addAll(citedNIP19().pubKeys())
+            linkedPubKeysCache = keys
+        }
+
+    override fun eventHints(): List<EventIdHint> = tags.mapNotNull(QTag::parseEventAsHint) + citedNIP19().eventHints()
+
+    override fun linkedEventIds(): List<HexKey> =
+        linkedEventIdsCache ?: ArrayList<HexKey>().also { ids ->
+            quotedEvents().mapTo(ids) { it.eventId }
+            ids.addAll(citedNIP19().eventIds())
+            linkedEventIdsCache = ids
+        }
+
+    override fun addressHints(): List<AddressHint> = tags.mapNotNull(QTag::parseAddressAsHint) + citedNIP19().addressHints()
+
+    override fun linkedAddressIds(): List<String> =
+        linkedAddressIdsCache ?: ArrayList<String>().also { ids ->
+            quotedAddresses().mapTo(ids) { it.address.toValue() }
+            ids.addAll(citedNIP19().addressIds())
+            linkedAddressIdsCache = ids
+        }
+
+    /** NIP-68: the people in the picture, from its `p` tags. [annotatedUsers] places them on an image. */
+    fun depictedUsers(): List<HexKey> = tags.mapNotNull(PTag::parseKey)
+
+    /** Events quoted with `q` tags (NIP-18), in tag order. */
+    fun quotedEvents(): List<QEventTag> = tags.mapNotNull(QEventTag::parse)
+
+    /** Addressable events quoted with `q` tags (NIP-18), in tag order. */
+    fun quotedAddresses(): List<QAddressableTag> = tags.mapNotNull(QAddressableTag::parse)
 
     @kotlinx.serialization.Transient
     @kotlin.jvm.Transient
@@ -74,6 +171,9 @@ class PictureEvent(
     fun location() = tags.mapNotNull(LocationTag::parse)
 
     fun imetaTags() = iMetas ?: imetas().map { PictureMeta.parse(it) }.also { iMetas = it }
+
+    /** Each image's `alt` text, in imeta order. */
+    fun imageDescriptions(): List<String> = imetaTags().mapNotNull { meta -> meta.alt?.takeIf { it.isNotBlank() } }
 
     companion object {
         const val KIND = 20

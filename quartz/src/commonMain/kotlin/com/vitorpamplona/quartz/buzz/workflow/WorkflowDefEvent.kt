@@ -24,6 +24,8 @@ import androidx.compose.runtime.Immutable
 import com.vitorpamplona.quartz.nip01Core.core.BaseAddressableEvent
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
+import com.vitorpamplona.quartz.nip01Core.hints.EventHintProvider
+import com.vitorpamplona.quartz.nip01Core.hints.types.EventIdHint
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.nip01Core.tags.dTag.dTag
 import com.vitorpamplona.quartz.nip50Search.IndexableFieldVisitor
@@ -51,7 +53,16 @@ class WorkflowDefEvent(
     content: String,
     sig: HexKey,
 ) : BaseAddressableEvent(id, pubKey, createdAt, KIND, tags, content, sig),
-    SearchableEvent {
+    SearchableEvent,
+    EventHintProvider {
+    // The `expected-revision` head id has no relay slot; the `none` sentinel is not a reference.
+    override fun eventHints(): List<EventIdHint> = emptyList()
+
+    // Not linked either: `expected-revision` is always this author's own superseded head of the
+    // same `(owner, d)` address — a CAS precondition, not a reference anyone navigates to. Linking
+    // it routes nothing new and makes a client materialize a stub note for every update.
+    override fun linkedEventIds(): List<HexKey> = emptyList()
+
     override fun indexableContent() = listOfNotNull(name(), content).joinToString("\n")
 
     // The read path: the same fields indexableContent() joins, handed over without

@@ -41,7 +41,6 @@ import com.vitorpamplona.quartz.nip01Core.crypto.verify
 import com.vitorpamplona.quartz.nip01Core.hints.HintIndexer
 import com.vitorpamplona.quartz.nip01Core.metadata.MetadataEvent
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
-import com.vitorpamplona.quartz.nip01Core.tags.aTag.taggedAddresses
 import com.vitorpamplona.quartz.nip02FollowList.ContactListEvent
 import com.vitorpamplona.quartz.nip10Notes.TextNoteEvent
 import com.vitorpamplona.quartz.nip17Dm.settings.DmRelayListEvent
@@ -577,7 +576,7 @@ class DesktopLocalCache : ICacheProvider {
         val author = getOrCreateUser(event.pubKey)
         val reactedTo =
             event.originalPost().mapNotNull { getNoteIfExists(it) } +
-                event.taggedAddresses().mapNotNull { addressableNotes.get(it.toValue()) }
+                event.originalAddresses().mapNotNull { addressableNotes.get(it) }
         note.loadEvent(event, author, reactedTo)
         relay?.let { note.addRelay(it) }
         reactedTo.forEach { it.addReaction(note) }
@@ -624,7 +623,7 @@ class DesktopLocalCache : ICacheProvider {
 
         val zappedNotes =
             event.zappedPost().mapNotNull { getNoteIfExists(it) } +
-                event.taggedAddresses().mapNotNull { addressableNotes.get(it.toValue()) }
+                event.zappedAddresses().mapNotNull { addressableNotes.get(it) }
 
         note.loadEvent(event, author, zappedNotes)
         relay?.let { note.addRelay(it) }

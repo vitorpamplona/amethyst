@@ -71,6 +71,13 @@ class EventTagTest {
         assertNull(EventTag.parse(arrayOf("e", "tooShort")))
     }
 
+    @Test fun parseId_rejectsNonHexIdOfTheRightLength() {
+        val bogus = "zz".repeat(32)
+        assertNull(EventTag.parseId(arrayOf("e", bogus)))
+        assertNull(EventTag.parse(arrayOf("e", bogus)))
+        assertNull(EventTag.parseAsHint(arrayOf("e", bogus, relayHint)))
+    }
+
     @Test fun parseId_extractsIdOnly() {
         assertEquals(rootHex, EventTag.parseId(arrayOf("e", rootHex, relayHint)))
     }

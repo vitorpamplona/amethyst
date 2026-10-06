@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst.commons.relayClient.reqCommand.account.nip59GiftWraps
 
+import com.vitorpamplona.amethyst.commons.model.Account
 import com.vitorpamplona.amethyst.commons.model.chats.ChatFeedType
 import com.vitorpamplona.amethyst.commons.relayClient.eoseManagers.DmRelayLog
 import com.vitorpamplona.amethyst.commons.relayClient.eoseManagers.PerUserEoseManager
@@ -62,12 +63,28 @@ class AccountGiftWrapsHistoryEoseManager(
 ) : PerUserEoseManager<AccountQueryState>(client, allKeys) {
     override fun user(key: AccountQueryState) = key.account.userProfile()
 
-    private val pager = BackwardRelayPager("giftwrap.history")
+    // A screen's worth per relay, like notifications: the Messages divider pages while it is on screen
+    // and only leaves once enough rooms render, so the old 10,000 default pulled ~5,800 wraps (two
+    // NIP-44 decrypts each) in the first minute of a cold start just to fill one list.
+    private val pager = BackwardRelayPager("giftwrap.history", pageLimit = 500)
 
     val loadingMore: StateFlow<Boolean> = pager.loadingMore
     val status: StateFlow<PagingStatus> = pager.status
 
     private fun daysAgo(epochSeconds: Long) = (TimeUtils.now() - epochSeconds) / TimeUtils.ONE_DAY
+
+    /**
+     * Where the account's NIP-17 history lives: its DM relay list (kind 10050), which is where NIP-17
+     * senders deliver, plus any local relay mirroring it. The live tail ([AccountGiftWrapsEoseManager])
+     * keeps watching the wider [dmRelays][com.vitorpamplona.amethyst.commons.model.Account.dmRelays] set
+     * (NIP-65 inbox, private storage) for the senders that miss the list; paging years of history from
+     * those too only walks relays the history is not on. Without a DM list, that wider set is all there is.
+     */
+    private fun historyRelays(account: Account): Set<NormalizedRelayUrl> {
+        val dmList = account.dmRelayList.flow.value
+        if (dmList.isEmpty()) return account.dmRelays.flow.value
+        return dmList + account.localRelayList.flow.value
+    }
 
     override fun updateFilter(
         key: AccountQueryState,
@@ -78,7 +95,7 @@ class AccountGiftWrapsHistoryEoseManager(
         // Only relays that have been advanced (armed) and aren't done carry a REQ. A relay that finished a
         // page keeps the same `until` here, so re-assembly (triggered when ANOTHER relay advances) doesn't
         // re-REQ it — it stays parked until the UI advances it again.
-        val relays = key.account.dmRelays.flow.value
+        val relays = historyRelays(key.account)
         val armed = pager.armedRelays(relays)
         if (armed.isEmpty()) return emptyList()
         DmRelayLog.log("giftwrap.history", key.account)
@@ -94,18 +111,22 @@ class AccountGiftWrapsHistoryEoseManager(
         if (pager.advance(relay)) invalidateFilters()
     }
 
-    /** Steps every not-done, not-in-flight relay one page. For the empty/initial boundary (nothing to scroll). */
-    fun advanceAll() {
-        if (pager.advanceAll()) {
-            Log.d(TAG) { "[giftwrap.history] advanceAll (empty-feed bootstrap)" }
-            invalidateFilters()
-        }
+    /**
+     * Steps every not-done, not-in-flight relay one page: for the empty/initial boundary (nothing to
+     * scroll), and for a conversation's [ChatHistoryGate][com.vitorpamplona.amethyst.commons.chats.privateDM.history.ChatHistoryGate].
+     * @return true if any relay advanced.
+     */
+    fun advanceAll(): Boolean {
+        if (!pager.advanceAll()) return false
+        Log.d(TAG) { "[giftwrap.history] advanceAll" }
+        invalidateFilters()
+        return true
     }
 
     override fun newSub(key: AccountQueryState): Subscription {
         // Repoint the single-active orchestrator at this account's gift-wrap cursors (on its ChatroomList)
         // and the relays it fans out to, refreshing the display flows from the restored progress.
-        pager.bind(key.account.chatroomList.giftWrapHistory, key.account.scope) { key.account.dmRelays.flow.value }
+        pager.bind(key.account.chatroomList.giftWrapHistory, key.account.scope) { historyRelays(key.account) }
         return requestNewSubscription(historyListener(key))
     }
 

@@ -21,10 +21,14 @@
 package com.vitorpamplona.quartz.buzz.notifications
 
 import androidx.compose.runtime.Immutable
+import com.vitorpamplona.quartz.buzz.ParseFailed
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
+import com.vitorpamplona.quartz.nip01Core.hints.PubKeyHintProvider
+import com.vitorpamplona.quartz.nip01Core.hints.types.PubKeyHint
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
+import com.vitorpamplona.quartz.nip01Core.tags.people.PTag
 import com.vitorpamplona.quartz.utils.TimeUtils
 
 /**
@@ -42,7 +46,14 @@ class MemberRemovedNotificationEvent(
     tags: Array<Array<String>>,
     content: String,
     sig: HexKey,
-) : Event(id, pubKey, createdAt, KIND, tags, content, sig) {
+) : Event(id, pubKey, createdAt, KIND, tags, content, sig),
+    PubKeyHintProvider {
+    // The actor sits in the relay-authored JSON body, which carries no relay hint.
+    override fun pubKeyHints(): List<PubKeyHint> = tags.mapNotNull(PTag::parseAsHint)
+
+    // The `p` target (the kind carries one), then the body's actor.
+    override fun linkedPubKeys(): List<HexKey> = listOfNotNull(target(), actor())
+
     /** The pubkey that was removed - the `p` tag. */
     fun target() = tags.notificationTarget()
 
@@ -54,7 +65,19 @@ class MemberRemovedNotificationEvent(
      * channel it applies to. The relay emits this kind for a self-join too, so the actor is what
      * separates "I joined" from "somebody added me" — see [MembershipNotificationContent].
      */
-    fun notification() = MembershipNotificationContent.parse(content)
+    fun notification(): MembershipNotificationContent? {
+        notificationCache?.let { return it as? MembershipNotificationContent }
+        val parsed = MembershipNotificationContent.parse(content)
+        notificationCache = parsed ?: ParseFailed
+        return parsed
+    }
+
+    // linkedPubKeys() runs for every relay copy of every event and the parse is three regex
+    // scans, so the body is read once per instance — an absent or malformed one included
+    // (ParseFailed). Events are immutable; a race only parses twice.
+    @kotlinx.serialization.Transient
+    @kotlin.jvm.Transient
+    private var notificationCache: Any? = null // MembershipNotificationContent, or ParseFailed
 
     /** The pubkey that performed the add/remove, or null when the body is missing or malformed. */
     fun actor() = notification()?.actor

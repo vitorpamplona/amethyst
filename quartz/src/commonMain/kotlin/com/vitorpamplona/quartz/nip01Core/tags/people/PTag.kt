@@ -84,7 +84,7 @@ data class PTag(
         }
 
         private fun pickRelayHint(tag: Array<String>): NormalizedRelayUrl? {
-            if (tag.has(2) && tag[2].length > 7 && RelayUrlNormalizer.isRelayUrl(tag[2])) return RelayUrlNormalizer.normalizeOrNull(tag[2])
+            if (tag.has(2)) RelayUrlNormalizer.normalizeHintOrNull(tag[2])?.let { return it }
             return null
         }
 

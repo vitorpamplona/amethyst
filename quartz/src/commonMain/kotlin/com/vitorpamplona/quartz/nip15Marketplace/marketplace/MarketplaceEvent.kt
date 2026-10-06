@@ -25,11 +25,14 @@ import com.vitorpamplona.quartz.nip01Core.core.BaseAddressableEvent
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.JsonMapper
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
+import com.vitorpamplona.quartz.nip01Core.hints.PubKeyHintProvider
+import com.vitorpamplona.quartz.nip01Core.hints.types.PubKeyHint
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.nip01Core.tags.dTag.dTag
 import com.vitorpamplona.quartz.nip21UriScheme.toNostrUri
 import com.vitorpamplona.quartz.nip50Search.IndexableFieldVisitor
 import com.vitorpamplona.quartz.nip50Search.SearchableEvent
+import com.vitorpamplona.quartz.utils.Hex
 import com.vitorpamplona.quartz.utils.Log
 import com.vitorpamplona.quartz.utils.TimeUtils
 import kotlinx.coroutines.CancellationException
@@ -43,17 +46,35 @@ class MarketplaceEvent(
     content: String,
     sig: HexKey,
 ) : BaseAddressableEvent(id, pubKey, createdAt, KIND, tags, content, sig),
-    SearchableEvent {
+    SearchableEvent,
+    PubKeyHintProvider {
     override fun isContentEncoded() = true
 
-    fun marketplaceData(): MarketplaceData? =
-        try {
-            JsonMapper.fromJson<MarketplaceData>(content)
-        } catch (e: Exception) {
-            if (e is CancellationException) throw e
-            Log.w("MarketplaceEvent") { "Content Parse Error: ${toNostrUri()} ${e.message}" }
-            null
-        }
+    // linkedPubKeys() runs for every relay copy of every event and forEachIndexableField() on
+    // every keystroke, so the body is decoded once per instance — a failure included, which
+    // also keeps the warning to one per event. A failure is cached as the [ParseFailed] marker,
+    // not a `Result.failure`: that would pin the exception and its stack trace to every
+    // malformed event the cache holds. Events are immutable; a race only decodes twice.
+    @kotlinx.serialization.Transient
+    @kotlin.jvm.Transient
+    private var marketplaceDataCache: Any? = null // MarketplaceData, or ParseFailed
+
+    fun marketplaceData(): MarketplaceData? {
+        marketplaceDataCache?.let { return it as? MarketplaceData }
+        val parsed =
+            try {
+                JsonMapper.fromJson<MarketplaceData>(content)
+            } catch (e: Exception) {
+                if (e is CancellationException) throw e
+                Log.w("MarketplaceEvent") { "Content Parse Error: ${toNostrUri()} ${e.message}" }
+                null
+            }
+        marketplaceDataCache = parsed ?: ParseFailed
+        return parsed
+    }
+
+    /** What [marketplaceDataCache] holds once the body failed to decode. */
+    private object ParseFailed
 
     override fun indexableContent() = marketplaceData()?.let { listOfNotNull(it.name, it.about).joinToString("\n") } ?: ""
 
@@ -64,6 +85,14 @@ class MarketplaceEvent(
         if (!visitor.visit(data.name)) return
         if (!visitor.visit(data.about)) return
     }
+
+    // The merchants are listed in the public content JSON without relay hints.
+    override fun pubKeyHints(): List<PubKeyHint> = emptyList()
+
+    override fun linkedPubKeys(): List<HexKey> = merchants()
+
+    /** The marketplace's merchant pubkeys, keeping only well-formed 64-char hex keys. */
+    fun merchants(): List<HexKey> = marketplaceData()?.merchants?.filter { it.length == 64 && Hex.isHex64(it) } ?: emptyList()
 
     companion object {
         const val KIND = 30019

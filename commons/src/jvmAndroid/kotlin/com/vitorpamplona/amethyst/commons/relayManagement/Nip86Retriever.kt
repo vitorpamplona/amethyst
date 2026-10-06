@@ -39,8 +39,8 @@ private val CONTENT_TYPE = CONTENT_TYPE_STRING.toMediaType()
 
 class Nip86Retriever(
     val okHttpClient: (NormalizedRelayUrl) -> OkHttpClient,
-) {
-    suspend fun execute(
+) : Nip86Executor {
+    override suspend fun execute(
         client: Nip86Client,
         request: Nip86Request,
     ): Nip86Response {

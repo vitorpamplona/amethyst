@@ -1117,6 +1117,11 @@
     <string name="relay_auth_session_section">Nur für jetzt</string>
     <string name="relay_auth_session_row_desc">Angemeldet, bis du Amethyst neu startest</string>
     <string name="relay_auth_forget_session">Diese Anmeldung vergessen</string>
+    <string name="relay_auth_event_title">Relay-Anmeldung</string>
+    <string name="relay_auth_event_explainer">Kein Beitrag. Damit meldest du dich bei diesem Relay an: Wer es besitzt, kann lesen, was das Relay nur dir zeigt, etwa deine privaten Nachrichten.</string>
+    <string name="relay_auth_event_unusual_relay">Das ist keine gewöhnliche Relay-Adresse. Prüfe sie vor dem Signieren.</string>
+    <string name="relay_auth_event_no_relay">In dieser Anmeldung ist kein Relay angegeben</string>
+    <string name="relay_auth_event_challenge">Challenge: %1$s</string>
     <string name="relay_auth_session_forgotten_undo">%1$s fragt beim nächsten Mal wieder, wenn es dich braucht.</string>
     <string name="relay_auth_session_undo_blocked">Nicht wiederhergestellt. “Nie authentifizieren” ist aktiv, daher meldet sich Amethyst nicht bei %1$s an.</string>
     <string name="relay_auth_blocked_section">Von deiner Blockliste blockiert</string>
@@ -1930,6 +1935,7 @@
     <string name="tor_continue_without_for_session">Verbindung ohne Tor verwenden</string>
     <string name="tor_keep_waiting">Weiter warten</string>
     <string name="tor_splash_connecting">Verbindung zu Tor wird hergestellt…</string>
+    <string name="tor_status_connected">Mit Tor verbunden</string>
     <string name="tor_splash_error">Tor-Fehler: %1$s</string>
     <string name="tor_splash_explainer">Amethyst nutzt Tor, um deine IP-Adresse vor Relays zu verbergen. Der Start von Tor kann eine Minute dauern und benötigt Internetzugang.</string>
     <string name="notification_settings_categories_explainer">Tippe auf eine Kategorie, um die Android-Benachrichtigungseinstellungen dafür zu öffnen — Ton, Wichtigkeit, Badges und „Nicht stören" findest du dort.</string>
@@ -4455,6 +4461,7 @@
     <string name="napplet_op_decrypt">deine privaten Nachrichten lesen</string>
     <string name="napplet_op_decrypt_from">deine privaten Nachrichten mit %1$s lesen</string>
     <string name="napplet_op_encrypt">eine Nachricht verschlüsseln</string>
+    <string name="napplet_op_relay_login">dich in deinem Namen bei Relays anmelden</string>
     <string name="napplet_op_sign_kind_named">für %1$s signieren (Typ: %2$d)</string>
     <string name="napplet_permissions_title">Verbundene Apps</string>
     <string name="napplets">nApplets</string>

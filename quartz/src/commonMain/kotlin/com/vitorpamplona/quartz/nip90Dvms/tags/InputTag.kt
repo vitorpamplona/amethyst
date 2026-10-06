@@ -21,7 +21,11 @@
 package com.vitorpamplona.quartz.nip90Dvms.tags
 
 import androidx.compose.runtime.Stable
+import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.has
+import com.vitorpamplona.quartz.nip01Core.hints.types.EventIdHint
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
+import com.vitorpamplona.quartz.utils.Hex
 import com.vitorpamplona.quartz.utils.ensure
 
 @Stable
@@ -33,6 +37,8 @@ class InputTag(
 ) {
     companion object {
         const val TAG_NAME = "i"
+        const val TYPE_EVENT = "event"
+        const val TYPE_JOB = "job"
 
         fun parse(tag: Array<String>): InputTag? {
             ensure(tag.has(2)) { return null }
@@ -41,6 +47,27 @@ class InputTag(
             val relay = if (tag.has(3) && tag[3].isNotBlank()) tag[3] else null
             val marker = if (tag.has(4) && tag[4].isNotBlank()) tag[4] else null
             return InputTag(tag[1], tag[2], relay, marker)
+        }
+
+        /**
+         * The event id of an `event` input (`["i", <id>, "event", <relay>]`) or a `job` input
+         * (the request whose output this job chains on): both are event pointers.
+         */
+        fun parseEventId(tag: Array<String>): HexKey? {
+            ensure(tag.has(2)) { return null }
+            ensure(tag[0] == TAG_NAME) { return null }
+            ensure(tag[1].length == 64 && Hex.isHex64(tag[1])) { return null }
+            ensure(tag[2] == TYPE_EVENT || tag[2] == TYPE_JOB) { return null }
+            return tag[1]
+        }
+
+        /** [parseEventId] with the relay hint NIP-90 puts in slot 3. */
+        fun parseEventAsHint(tag: Array<String>): EventIdHint? {
+            ensure(tag.has(3)) { return null }
+            ensure(tag[3].isNotEmpty()) { return null }
+            val id = parseEventId(tag) ?: return null
+            val relay = RelayUrlNormalizer.normalizeHintOrNull(tag[3]) ?: return null
+            return EventIdHint(id, relay)
         }
 
         fun assembleUrl(url: String) = arrayOf(TAG_NAME, url, "url")

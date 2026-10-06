@@ -91,7 +91,6 @@ import com.vitorpamplona.quartz.nip01Core.tags.geohash.geohash
 import com.vitorpamplona.quartz.nip01Core.tags.geohash.getGeoHash
 import com.vitorpamplona.quartz.nip01Core.tags.geohash.hasGeohashes
 import com.vitorpamplona.quartz.nip01Core.tags.hashtags.hashtags
-import com.vitorpamplona.quartz.nip01Core.tags.people.PTag
 import com.vitorpamplona.quartz.nip01Core.tags.references.references
 import com.vitorpamplona.quartz.nip10Notes.content.findHashtags
 import com.vitorpamplona.quartz.nip10Notes.content.findNostrUris
@@ -559,7 +558,7 @@ open class CommentPostViewModel :
         (replyingTo?.event as? ZapReceiptEvent)?.let { zap ->
             zapSenderToNotify(zap)?.let { sender ->
                 notifying = ((notifying ?: emptyList()) + sender).distinct()
-                if (!draftEvent.tags.mapNotNull(PTag::parseKey).contains(sender.pubkeyHex)) {
+                if (!draftEvent.replyAuthorKeys().contains(sender.pubkeyHex)) {
                     mutedNotifies = mutedNotifies + sender.pubkeyHex
                 }
             }

@@ -52,7 +52,11 @@ class PollResponseEvent(
 
     override fun pubKeyHints() = tags.mapNotNull(PTag::parseAsHint)
 
-    override fun linkedPubKeys() = tags.mapNotNull(PTag::parseKey)
+    // The builder notifies the one poll author (`notifyAuthor`).
+    override fun linkedPubKeys() = listOfNotNull(pollAuthor())
+
+    /** The author of the poll this answers, notified with a `p` tag. */
+    fun pollAuthor(): HexKey? = tags.firstNotNullOfOrNull(PTag::parseKey)
 
     fun responses() = tags.responses()
 
