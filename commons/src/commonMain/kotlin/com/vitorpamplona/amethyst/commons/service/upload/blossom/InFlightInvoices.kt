@@ -56,7 +56,7 @@ object InFlightInvoices {
     fun isAwaiting(invoice: String): Boolean = invoice in claimed
 
     /** Test-only reset. */
-    fun clear() {
+    internal fun clear() {
         claimed.clear()
     }
 }

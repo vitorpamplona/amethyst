@@ -39,6 +39,13 @@ expect fun BigDecimal.toLongValue(): Long
 /** The nearest Double, as Number.toDouble() gives on every platform. An expect for [toLongValue]'s reason. */
 expect fun BigDecimal.toDoubleValue(): Double
 
+/**
+ * Orders two values numerically (negative, zero or positive), the way `Comparable.compareTo` does.
+ * The shared [BigDecimal] cannot be `Comparable` for [toLongValue]'s reason; this avoids sorting by
+ * `subtract(...).signum()`, which allocates a value per comparison.
+ */
+expect fun BigDecimal.compareToValue(other: BigDecimal): Int
+
 private val PLAIN_DECIMAL = Regex("[+-]?(\\d+\\.?\\d*|\\.\\d+)")
 
 /**

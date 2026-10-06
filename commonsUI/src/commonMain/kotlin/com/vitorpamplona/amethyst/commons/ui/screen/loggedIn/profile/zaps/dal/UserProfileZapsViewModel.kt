@@ -35,6 +35,7 @@ import com.vitorpamplona.quartz.nip57Zaps.ZapReceiptEvent
 import com.vitorpamplona.quartz.nipB1Bolt12Zaps.zap.Bolt12ZapEvent
 import com.vitorpamplona.quartz.nipBCOnchainZaps.zap.OnchainZapEvent
 import com.vitorpamplona.quartz.utils.BigDecimal
+import com.vitorpamplona.quartz.utils.compareToValue
 import com.vitorpamplona.quartz.utils.plus
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.IO
@@ -63,9 +64,9 @@ class UserProfileZapsViewModel(
             tags = mapOf("p" to listOf(user.pubkeyHex)),
         )
 
-    // Largest amount first. The shared BigDecimal is not Comparable, so the order comes from the sign of the difference.
+    // Largest amount first, then by pubkey so equal amounts keep a stable order.
     val sortingModel: Comparator<ZapAmount> =
-        Comparator<ZapAmount> { a, b -> b.amount.subtract(a.amount).signum() }.thenBy { it.user.pubkeyHex }
+        Comparator<ZapAmount> { a, b -> b.amount.compareToValue(a.amount) }.thenBy { it.user.pubkeyHex }
 
     suspend fun mapRequest(zapEvent: ZapReceiptEvent): ZapAmount? {
         val zapRequest =

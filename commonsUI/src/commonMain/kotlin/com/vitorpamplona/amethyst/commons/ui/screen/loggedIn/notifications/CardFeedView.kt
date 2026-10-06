@@ -316,7 +316,7 @@ private fun FeedLoaded(
         itemsIndexed(
             items = items.list,
             key = { _, item -> item.id() },
-            contentType = { _, item -> item::class.simpleName },
+            contentType = { _, item -> item::class },
         ) { index, item ->
             val isHighlighted = highlightedCardId == item.id()
             val highlightColor by animateColorAsState(

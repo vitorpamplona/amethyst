@@ -24,17 +24,17 @@ import androidx.compose.runtime.Stable
 import com.patrykandpatrick.vico.compose.cartesian.CartesianMeasuringContext
 import com.patrykandpatrick.vico.compose.cartesian.axis.Axis
 import com.patrykandpatrick.vico.compose.cartesian.data.CartesianValueFormatter
+import com.vitorpamplona.amethyst.commons.search.calendar.LocalClock
 import com.vitorpamplona.amethyst.commons.ui.note.DateSkeletonFormatter
 import com.vitorpamplona.quartz.utils.TimeUtils
 import com.vitorpamplona.quartz.utils.cache.ConcurrentLruCache
-import com.vitorpamplona.quartz.utils.currentTimeMillis
 import kotlin.math.roundToInt
 
 /** Labels the last week's x axis with short weekday names ("Mon"), [value] days from today. */
 @Stable
 class LastWeekLabelFormatter : CartesianValueFormatter {
     private val displayAxisFormatter = DateSkeletonFormatter("EEE")
-    private val nowMillis = currentTimeMillis()
+    private val today = LocalClock.today()
 
     private val cache = ConcurrentLruCache<Int, String>(10)
 
@@ -46,7 +46,10 @@ class LastWeekLabelFormatter : CartesianValueFormatter {
         val key = value.roundToInt()
         cache.get(key)?.let { return it }
 
-        val text = displayAxisFormatter.format(nowMillis + key * TimeUtils.ONE_DAY * 1000L)
+        // Step calendar days, not 24-hour blocks: a day next to a clock change is 23 or 25 hours
+        // long. Local noon keeps the label clear of midnight on either side.
+        val noon = LocalClock.startOfDay(today.plusDays(key)) + TimeUtils.ONE_HOUR * 12
+        val text = displayAxisFormatter.format(noon * 1000L)
         cache.put(key, text)
         return text
     }

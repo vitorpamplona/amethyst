@@ -130,6 +130,7 @@ data class NamecoinFallbackPolicy(
     }
 }
 
+/** Outcome of a `Test RPC` probe in Settings. */
 data class RpcProbeResult(
     val success: Boolean,
     val elapsedMs: Long,

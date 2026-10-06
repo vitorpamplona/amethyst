@@ -20,8 +20,29 @@
  */
 package com.vitorpamplona.quartz.utils
 
-actual fun BigDecimal.toLongValue(): Long = toLong()
+import kotlin.test.Test
+import kotlin.test.assertEquals
+import kotlin.test.assertTrue
 
-actual fun BigDecimal.toDoubleValue(): Double = toDouble()
+class BigDecimalCompareTest {
+    @Test
+    fun ordersByValueNotByScale() {
+        assertEquals(0, BigDecimal("1.0").compareToValue(BigDecimal("1.00")))
+        assertEquals(0, BigDecimal(0).compareToValue(BigDecimal("0.000")))
+    }
 
-actual fun BigDecimal.compareToValue(other: BigDecimal): Int = toDouble().compareTo(other.toDouble())
+    @Test
+    fun ordersLargerAfterSmaller() {
+        assertTrue(BigDecimal(21).compareToValue(BigDecimal(1000)) < 0)
+        assertTrue(BigDecimal(1000).compareToValue(BigDecimal(21)) > 0)
+        assertTrue(BigDecimal("-0.5").compareToValue(BigDecimal("0.25")) < 0)
+    }
+
+    @Test
+    fun sortsDescendingLikeTheZapList() {
+        val sorted =
+            listOf(BigDecimal(5), BigDecimal(1000), BigDecimal("21.5"), BigDecimal(0))
+                .sortedWith { a, b -> b.compareToValue(a) }
+        assertEquals(listOf(1000.0, 21.5, 5.0, 0.0), sorted.map { it.toDoubleValue() })
+    }
+}

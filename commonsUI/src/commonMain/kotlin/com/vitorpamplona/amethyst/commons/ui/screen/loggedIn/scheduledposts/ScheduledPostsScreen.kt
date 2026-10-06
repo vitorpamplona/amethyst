@@ -130,9 +130,9 @@ import com.vitorpamplona.amethyst.commons.ui.components.util.setText
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.navigation.topbars.ShorterTopAppBar
 import com.vitorpamplona.amethyst.commons.ui.navigation.topbars.TopBarSize
+import com.vitorpamplona.amethyst.commons.ui.navigation.topbars.TopBarWithBackButton
 import com.vitorpamplona.amethyst.commons.ui.note.ArrowBackIcon
 import com.vitorpamplona.amethyst.commons.ui.note.DateSkeletonFormatter
-import com.vitorpamplona.amethyst.commons.ui.note.rememberTimeOfDayFormatter
 import com.vitorpamplona.amethyst.commons.ui.note.timeAgoNoDot
 import com.vitorpamplona.amethyst.commons.ui.note.timeAheadNoDot
 import com.vitorpamplona.amethyst.commons.ui.platform.AppBottomBar
@@ -150,8 +150,13 @@ fun ScheduledPostsScreen(
     nav: INav,
 ) {
     val accountPubkey = accountViewModel.account.signer.pubKey
-    // No store means the platform cannot schedule posts at all; there is nothing to list.
-    val store = accountViewModel.host.scheduledPostStore ?: return
+    // No store means the platform cannot schedule posts at all: keep the bar so the user can
+    // leave, with nothing to list under it.
+    val store = accountViewModel.host.scheduledPostStore
+    if (store == null) {
+        Scaffold(topBar = { TopBarWithBackButton(stringRes(Res.string.scheduled_posts), nav) }) { }
+        return
+    }
     val viewModel: ScheduledPostsViewModel =
         rememberViewModel(key = "scheduled-posts-$accountPubkey") {
             ScheduledPostsViewModel.create(store, accountPubkey)
@@ -646,12 +651,15 @@ private fun EmptyState(
 
 private val fullDateFormatter = DateSkeletonFormatter("yMMMMEEEEd")
 
+// The locale's own hour cycle, like the FormatStyle.SHORT formatter this replaced; cached per locale.
+private val shortTimeFormatter = DateSkeletonFormatter("jm")
+
 @Composable
 private fun formatAtTime(
     publishAtSec: Long,
     nowSec: Long,
 ): String {
-    val absolute = rememberTimeOfDayFormatter()(publishAtSec * 1000)
+    val absolute = shortTimeFormatter.format(publishAtSec * 1000)
     return if (publishAtSec > nowSec) {
         stringRes(Res.string.scheduled_posts_at_time, absolute, timeAheadNoDot(publishAtSec))
     } else {

@@ -565,5 +565,3 @@ class NamecoinCoreRpcClient(
         return tmf.trustManagers.filterIsInstance<X509TrustManager>().first()
     }
 }
-
-/** Outcome of a `Test RPC` probe in Settings. */

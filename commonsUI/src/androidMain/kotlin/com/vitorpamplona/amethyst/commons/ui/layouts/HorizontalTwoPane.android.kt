@@ -23,6 +23,9 @@ package com.vitorpamplona.amethyst.commons.ui.layouts
 import android.app.Activity
 import android.content.Context
 import android.content.ContextWrapper
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
@@ -39,8 +42,19 @@ actual fun HorizontalTwoPane(
     splitFraction: Float,
     modifier: Modifier,
 ) {
+    // Fold detection needs an Activity window. Without one (a preview, a ComposeView hosted
+    // elsewhere) there is no fold to avoid, so split the width plainly.
+    val activity = LocalContext.current.findActivity()
+    if (activity == null) {
+        Row(modifier) {
+            Box(Modifier.weight(splitFraction).fillMaxHeight()) { first() }
+            Box(Modifier.weight(1f - splitFraction).fillMaxHeight()) { second() }
+        }
+        return
+    }
+
     val strategy = remember(splitFraction) { HorizontalTwoPaneStrategy(splitFraction = splitFraction) }
-    val displayFeatures = calculateDisplayFeatures(LocalContext.current.findActivity())
+    val displayFeatures = calculateDisplayFeatures(activity)
 
     TwoPane(
         first = first,
@@ -52,9 +66,9 @@ actual fun HorizontalTwoPane(
     )
 }
 
-private tailrec fun Context.findActivity(): Activity =
+private tailrec fun Context.findActivity(): Activity? =
     when (this) {
         is Activity -> this
         is ContextWrapper -> baseContext.findActivity()
-        else -> error("HorizontalTwoPane needs to be hosted in an Activity")
+        else -> null
     }
