@@ -94,12 +94,16 @@ class AccountGiftWrapsHistoryEoseManager(
         if (pager.advance(relay)) invalidateFilters()
     }
 
-    /** Steps every not-done, not-in-flight relay one page. For the empty/initial boundary (nothing to scroll). */
-    fun advanceAll() {
-        if (pager.advanceAll()) {
-            Log.d(TAG) { "[giftwrap.history] advanceAll (empty-feed bootstrap)" }
-            invalidateFilters()
-        }
+    /**
+     * Steps every not-done, not-in-flight relay one page: for the empty/initial boundary (nothing to
+     * scroll), and for a conversation's [ChatHistoryGate][com.vitorpamplona.amethyst.commons.chats.privateDM.history.ChatHistoryGate].
+     * @return true if any relay advanced.
+     */
+    fun advanceAll(): Boolean {
+        if (!pager.advanceAll()) return false
+        Log.d(TAG) { "[giftwrap.history] advanceAll" }
+        invalidateFilters()
+        return true
     }
 
     override fun newSub(key: AccountQueryState): Subscription {
