@@ -20,22 +20,14 @@
  */
 package com.vitorpamplona.amethyst.ui.navigation
 
-import androidx.navigation.NavBackStackEntry
-import androidx.navigation.NavHostController
-import androidx.navigation.NavOptions
-import androidx.navigation.NavOptionsBuilder
-import androidx.navigation.navOptions
 import com.vitorpamplona.amethyst.commons.model.navigation.Route
 import com.vitorpamplona.amethyst.ui.navigation.navs.Nav
-import io.mockk.every
-import io.mockk.mockk
-import io.mockk.slot
-import io.mockk.verify
+import com.vitorpamplona.amethyst.ui.navigation.navs.NavBackStacks
 import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runTest
-import org.junit.Assert.assertFalse
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertSame
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
@@ -43,74 +35,107 @@ import org.junit.Test
  * A nav-bar tap must land on the tab itself, never on whatever the user had pushed on top of one.
  *
  * The phone bottom bar shows only on tab roots and drawer destinations, so it is tapped from at most
- * one screen above a tab. The large-screen navigation rail stays on screen the whole time, which is where
- * the gap showed: tapping Home from a thread three screens deep came back to that thread instead of
- * the feed.
+ * one screen above a tab. The large-screen navigation rail stays on screen the whole time, which is
+ * where the gap showed: tapping Home from a thread three screens deep came back to that thread
+ * instead of the feed.
  *
- * Two rules keep that from happening, one per test below:
- *
- * 1. Pushes above a tab root are dropped, unsaved, on the way out — anything saved is eligible to be
- *    replayed by a later `restoreState`.
- * 2. Home is never restored onto. `popUpTo(Home) { inclusive = false; saveState = true }` files the
- *    popped entries under the popUpTo target's own destination id as well as the popped tab's — see
- *    the `if (!inclusive)` branch of `NavControllerImpl.executePopOperations` — so
- *    `navigate(Home) { restoreState = true }` handed Home back the stack the user had left behind in
- *    some *other* tab. Every other tab restores as before; that is what keeps its ViewModelStore.
+ * So pushes above a tab root are dropped, unsaved, on the way out, and only the tab root itself is
+ * kept for the next visit — that is what keeps its ViewModels and scroll position.
  */
 @OptIn(ExperimentalCoroutinesApi::class)
 class NavBottomBarStackTest {
-    /** A back-stack entry that is, or isn't, a tab root as far as [isBottomNavRoot] can tell. */
-    private fun entry(isTabRoot: Boolean): NavBackStackEntry =
-        mockk<NavBackStackEntry>(relaxed = true) {
-            every { savedStateHandle.get<Boolean>(BOTTOM_NAV_ROOT_KEY) } returns isTabRoot
-        }
-
-    /**
-     * Taps [route] on a controller whose back stack holds none of the nav-bar destinations, and
-     * returns the options the resulting navigate was built with.
-     */
-    private fun TestScope.optionsForTapping(route: Route): NavOptions {
-        val options = slot<NavOptionsBuilder.() -> Unit>()
-        val controller =
-            mockk<NavHostController>(relaxed = true) {
-                every { currentBackStackEntry } returns entry(isTabRoot = true)
-                every { navigate(route, capture(options)) } returns Unit
-            }
-
-        Nav(controller, this).navBottomBar(route)
-        advanceUntilIdle()
-
-        return navOptions(options.captured)
-    }
+    private fun routes(stacks: NavBackStacks) = stacks.stack.map { it.route }
 
     @Test
     fun dropsWhatTheUserPushedOnTopOfTheTabBeforeSwitchingTabs() =
         runTest {
-            // Home > Note > Profile: two pushes sitting on a tab root.
-            val controller =
-                mockk<NavHostController>(relaxed = true) {
-                    every { currentBackStackEntry } returnsMany
-                        listOf(entry(isTabRoot = false), entry(isTabRoot = false), entry(isTabRoot = true))
-                    every { popBackStack() } returns true
-                }
+            val stacks = NavBackStacks()
+            val nav = Nav(stacks, this)
 
-            Nav(controller, this).navBottomBar(Route.Message)
+            // Home > Note > Profile: two pushes sitting on a tab root.
+            nav.nav(Route.Note("n"))
+            nav.nav(Route.Profile("p"))
+            nav.navBottomBar(Route.Message)
             advanceUntilIdle()
 
-            // Exactly the two pushes and no more: the tab root itself stays, so the navigate below
-            // saves a tab root rather than a branch that could be replayed later.
-            verify(exactly = 2) { controller.popBackStack() }
+            assertEquals(listOf(Route.Home, Route.Message), routes(stacks))
+            assertTrue(stacks.top.tabRoot)
+            assertTrue("nothing above a tab root is ever saved", stacks.savedTabs.isEmpty())
         }
 
     @Test
-    fun neverRestoresASavedStackOntoHome() =
+    fun homeNeverComesBackAsAnotherTabsStack() =
         runTest {
-            assertFalse(optionsForTapping(Route.Home).shouldRestoreState())
+            val stacks = NavBackStacks()
+            val nav = Nav(stacks, this)
+
+            nav.navBottomBar(Route.Message)
+            nav.nav(Route.Note("thread"))
+            nav.navBottomBar(Route.Home)
+            advanceUntilIdle()
+
+            assertEquals(listOf(Route.Home), routes(stacks))
         }
 
     @Test
-    fun restoresTheSavedStackOfEveryOtherTab() =
+    fun returningToATabRestoresItsOwnEntry() =
         runTest {
-            assertTrue(optionsForTapping(Route.Message).shouldRestoreState())
+            val stacks = NavBackStacks()
+            val nav = Nav(stacks, this)
+
+            nav.navBottomBar(Route.Message)
+            advanceUntilIdle()
+            val messages = stacks.top
+
+            nav.nav(Route.Note("n"))
+            nav.navBottomBar(Route.Home)
+            advanceUntilIdle()
+            assertSame("the left tab keeps its entry, and with it its state", messages, stacks.savedTabs[Route.Message])
+
+            nav.navBottomBar(Route.Message)
+            advanceUntilIdle()
+
+            assertEquals(listOf(Route.Home, Route.Message), routes(stacks))
+            assertSame(messages, stacks.top)
+            assertTrue(stacks.savedTabs.isEmpty())
+        }
+
+    @Test
+    fun pinnedTabsOfOneKindEachKeepTheirOwnEntry() =
+        runTest {
+            // Every pinned web app is a WebApp route. Navigation 2 saved state per destination, so the
+            // second app's tap restored the first one's URL; entries here are keyed by the full route.
+            val stacks = NavBackStacks()
+            val nav = Nav(stacks, this)
+            val first = Route.WebApp("https://a.example")
+            val second = Route.WebApp("https://b.example")
+
+            nav.navBottomBar(first)
+            nav.navBottomBar(second)
+            advanceUntilIdle()
+            assertEquals(listOf(Route.Home, second), routes(stacks))
+
+            nav.navBottomBar(first)
+            advanceUntilIdle()
+            assertEquals(listOf(Route.Home, first), routes(stacks))
+            assertEquals(setOf<Route>(second), stacks.savedTabs.keys)
+        }
+
+    @Test
+    fun retappingTheCurrentTabDropsPushesAndStaysOnIt() =
+        runTest {
+            val stacks = NavBackStacks()
+            val nav = Nav(stacks, this)
+
+            nav.navBottomBar(Route.Message)
+            advanceUntilIdle()
+            val messages = stacks.top
+
+            nav.nav(Route.Note("n"))
+            nav.navBottomBar(Route.Message)
+            advanceUntilIdle()
+
+            assertEquals(listOf(Route.Home, Route.Message), routes(stacks))
+            assertSame(messages, stacks.top)
         }
 }

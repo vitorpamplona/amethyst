@@ -20,8 +20,8 @@
  */
 package com.vitorpamplona.amethyst.ui.navigation
 
-import androidx.compose.animation.AnimatedContentScope
 import androidx.compose.animation.AnimatedContentTransitionScope
+import androidx.compose.animation.ContentTransform
 import androidx.compose.animation.EnterTransition
 import androidx.compose.animation.ExitTransition
 import androidx.compose.animation.core.tween
@@ -33,34 +33,17 @@ import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.animation.slideOutVertically
+import androidx.compose.animation.togetherWith
 import androidx.compose.runtime.Composable
-import androidx.navigation.NavBackStackEntry
-import androidx.navigation.NavDestination
-import androidx.navigation.NavDestination.Companion.hasRoute
-import androidx.navigation.NavGraphBuilder
-import androidx.navigation.compose.composable
-import androidx.navigation.toRoute
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.navigation3.runtime.NavEntry
+import androidx.navigation3.scene.Scene
+import com.vitorpamplona.amethyst.commons.model.navigation.Route
 import com.vitorpamplona.amethyst.commons.ui.layouts.CappedScreenContent
-import java.util.concurrent.ConcurrentHashMap
+import com.vitorpamplona.amethyst.ui.navigation.navs.LocalNavStackEntry
+import com.vitorpamplona.amethyst.ui.navigation.navs.NavStackEntry
+import kotlinx.serialization.serializer
 import kotlin.reflect.KClass
-
-// Per-entry hint stamped by Nav.navBottomBar marking that the entry was
-// reached via a bottom-nav tab. Used in two places:
-//   - composableFromEnd skips the horizontal slide on tab entries so
-//     bottom-bar taps fall back to the NavHost-level fade.
-//   - Nav.canPop hides the back arrow on tab roots even though Home
-//     sits below them in the stack.
-const val BOTTOM_NAV_ROOT_KEY = "bottomNavRoot"
-
-fun NavBackStackEntry.isBottomNavRoot(): Boolean = savedStateHandle.get<Boolean>(BOTTOM_NAV_ROOT_KEY) == true
-
-// Per-entry hint stamped by Nav.navDrawer marking that the entry was opened
-// from the navigation drawer. It sits on top of the stack like any push (back
-// arrow, slide animation), but Nav.showsBottomBar keeps the bottom bar on it:
-// a drawer destination is a top-level section, not a detail screen.
-const val DRAWER_ROOT_KEY = "drawerRoot"
-
-fun NavBackStackEntry.isDrawerRoot(): Boolean = savedStateHandle.get<Boolean>(DRAWER_ROOT_KEY) == true
 
 /**
  * The shell's current layout tier, mirrored for the transition specs below. Transition
@@ -94,77 +77,126 @@ fun MaybeCappedScreen(
     }
 }
 
-/** Stock fade-transition destination, capped to the reading-column width on wide panes. */
-inline fun <reified T : Any> NavGraphBuilder.composableCapped(noinline content: @Composable AnimatedContentScope.(NavBackStackEntry) -> Unit) {
-    composable<T> { entry ->
-        CappedScreenContent { content(entry) }
+/** How a destination moves in and out, picked by the builder it was declared with. */
+enum class NavFamily {
+    /** A drill-in: slides in from the end, and back out to it. */
+    END,
+
+    /** A modal: rises from the bottom, and drops back down. */
+    BOTTOM,
+
+    /** Fades, like a tab switch. */
+    NONE,
+}
+
+/**
+ * One destination: how it animates, whether it takes the reading-column cap, and what it draws.
+ * [serialName] is the route's serial name, which R8 leaves alone (unlike its class name).
+ */
+class NavDestination(
+    val serialName: String,
+    val family: NavFamily,
+    val capWidth: Boolean,
+    val content: @Composable (Route) -> Unit,
+)
+
+/**
+ * Every screen the app can show, keyed by route class. Built once by [BuildNavigation] with the
+ * builders below, then read by the entry provider (what to draw) and the transition specs (how to
+ * move). Navigation 3 hands both the route itself, so there is no graph to declare up front: a
+ * route the registry does not know is a programming error, surfaced the first time it is opened.
+ */
+class NavDestinations {
+    private val destinations = HashMap<KClass<out Route>, NavDestination>()
+
+    fun register(
+        klass: KClass<out Route>,
+        serialName: String,
+        family: NavFamily,
+        capWidth: Boolean,
+        content: @Composable (Route) -> Unit,
+    ) {
+        destinations[klass] = NavDestination(serialName, family, capWidth, content)
     }
+
+    fun of(route: Route): NavDestination = destinations[route::class] ?: error("No destination registered for ${route::class.simpleName}")
+
+    /** The [NavDestination.serialName] of [route], or null for a route nothing registered. */
+    fun serialNameOf(route: Route): String? = destinations[route::class]?.serialName
+
+    fun familyOf(entry: NavStackEntry?): NavFamily = entry?.let { destinations[it.route::class]?.family } ?: NavFamily.NONE
+
+    /**
+     * The Navigation 3 entry for [entry]: its screen, capped as declared, with [LocalNavStackEntry]
+     * provided so `INav.canPop()` and friends answer for this screen rather than for the top.
+     */
+    fun entryFor(entry: NavStackEntry): NavEntry<NavStackEntry> {
+        val destination = of(entry.route)
+        return NavEntry(
+            key = entry,
+            contentKey = entry.contentKey,
+            metadata = mapOf(NAV_STACK_ENTRY to entry),
+        ) {
+            CompositionLocalProvider(LocalNavStackEntry provides entry) {
+                MaybeCappedScreen(destination.capWidth) { destination.content(entry.route) }
+            }
+        }
+    }
+
+    companion object {
+        /** [NavEntry.metadata] key carrying the [NavStackEntry], which the transition specs read. */
+        const val NAV_STACK_ENTRY = "amethyst.navStackEntry"
+    }
+}
+
+/** Stock fade-transition destination, capped to the reading-column width on wide panes. */
+inline fun <reified T : Route> NavDestinations.composableCapped(noinline content: @Composable () -> Unit) {
+    register(T::class, serializer<T>().descriptor.serialName, NavFamily.NONE, capWidth = true) { content() }
 }
 
 /** [composableCapped], for a route that carries arguments. */
-inline fun <reified T : Any> NavGraphBuilder.composableCappedArgs(noinline content: @Composable AnimatedContentScope.(T) -> Unit) {
-    composable<T> { entry ->
-        CappedScreenContent { content(entry.toRoute()) }
-    }
+inline fun <reified T : Route> NavDestinations.composableCappedArgs(noinline content: @Composable (T) -> Unit) {
+    register(T::class, serializer<T>().descriptor.serialName, NavFamily.NONE, capWidth = true) { content(it as T) }
 }
 
-inline fun <reified T : Any> NavGraphBuilder.composableFromEnd(
-    capWidth: Boolean = true,
-    noinline content: @Composable AnimatedContentScope.(NavBackStackEntry) -> Unit,
-) {
-    PopFamilies.register(T::class, PopFamily.END)
-    composable<T>(
-        enterTransition = { if (targetState.isBottomNavRoot()) null else enterFromEnd() },
-        exitTransition = { if (targetState.isBottomNavRoot()) null else exitBehind() },
-        popEnterTransition = { if (initialState.isBottomNavRoot()) null else popEnterFromBehind() },
-        popExitTransition = { if (initialState.isBottomNavRoot()) null else popExitToEnd() },
-        content = { entry ->
-            MaybeCappedScreen(capWidth) { content(entry) }
-        },
-    )
+/** Stock fade-transition destination at full width. */
+inline fun <reified T : Route> NavDestinations.composable(noinline content: @Composable () -> Unit) {
+    register(T::class, serializer<T>().descriptor.serialName, NavFamily.NONE, capWidth = false) { content() }
 }
 
-inline fun <reified T : Any> NavGraphBuilder.composableFromEndArgs(
+inline fun <reified T : Route> NavDestinations.composableArgs(
     capWidth: Boolean = true,
-    noinline content: @Composable AnimatedContentScope.(T) -> Unit,
+    noinline content: @Composable (T) -> Unit,
 ) {
-    composableFromEnd<T>(capWidth) {
-        content(it.toRoute<T>())
-    }
+    register(T::class, serializer<T>().descriptor.serialName, NavFamily.NONE, capWidth) { content(it as T) }
 }
 
-inline fun <reified T : Any> NavGraphBuilder.composableFromBottom(
+inline fun <reified T : Route> NavDestinations.composableFromEnd(
     capWidth: Boolean = true,
-    noinline content: @Composable AnimatedContentScope.(NavBackStackEntry) -> Unit,
+    noinline content: @Composable () -> Unit,
 ) {
-    PopFamilies.register(T::class, PopFamily.BOTTOM)
-    composable<T>(
-        enterTransition = { enterFromBottom() },
-        exitTransition = { exitBehind() },
-        popEnterTransition = { popEnterFromBehind() },
-        popExitTransition = { popExitToBottom() },
-        content = { entry ->
-            MaybeCappedScreen(capWidth) { content(entry) }
-        },
-    )
+    register(T::class, serializer<T>().descriptor.serialName, NavFamily.END, capWidth) { content() }
 }
 
-inline fun <reified T : Any> NavGraphBuilder.composableFromBottomArgs(
+inline fun <reified T : Route> NavDestinations.composableFromEndArgs(
     capWidth: Boolean = true,
-    noinline content: @Composable AnimatedContentScope.(T) -> Unit,
+    noinline content: @Composable (T) -> Unit,
 ) {
-    composableFromBottom<T>(capWidth) {
-        content(it.toRoute())
-    }
+    register(T::class, serializer<T>().descriptor.serialName, NavFamily.END, capWidth) { content(it as T) }
 }
 
-inline fun <reified T : Any> NavGraphBuilder.composableArgs(
+inline fun <reified T : Route> NavDestinations.composableFromBottom(
     capWidth: Boolean = true,
-    noinline content: @Composable AnimatedContentScope.(T) -> Unit,
+    noinline content: @Composable () -> Unit,
 ) {
-    composable<T> { entry ->
-        MaybeCappedScreen(capWidth) { content(entry.toRoute()) }
-    }
+    register(T::class, serializer<T>().descriptor.serialName, NavFamily.BOTTOM, capWidth) { content() }
+}
+
+inline fun <reified T : Route> NavDestinations.composableFromBottomArgs(
+    capWidth: Boolean = true,
+    noinline content: @Composable (T) -> Unit,
+) {
+    register(T::class, serializer<T>().descriptor.serialName, NavFamily.BOTTOM, capWidth) { content(it as T) }
 }
 
 val slideInVerticallyFromBottom = slideInVertically(animationSpec = tween(), initialOffsetY = { it })
@@ -202,62 +234,59 @@ fun exitBehind() = if (NavTransitionTier.isLargeScreen) fadeScaleOut else scaleO
 
 fun popEnterFromBehind() = if (NavTransitionTier.isLargeScreen) fadeScaleIn else scaleIn
 
-/**
- * The NavHost-level fade both directions of a tab switch fall back to. Shared with
- * [BuildNavigation]'s own enter/exit so the gesture path and the button path cannot drift.
- */
+/** The fade every tab switch, and every destination declared without a family, falls back to. */
 val navShellFadeIn = fadeIn(animationSpec = tween(200))
 val navShellFadeOut = fadeOut(animationSpec = tween(200))
 
-/** Which builder a destination was declared with, for [predictivePopEnter] / [predictivePopExit]. */
-enum class PopFamily { END, BOTTOM, NONE }
+/** The screen a single-pane scene shows. */
+private fun Scene<NavStackEntry>.navStackEntry(): NavStackEntry? = entries.lastOrNull()?.metadata?.get(NavDestinations.NAV_STACK_ENTRY) as? NavStackEntry
 
 /**
- * Records the family of every destination the builders below declare.
- *
- * navigation-compose 2.10.0 gave a predictive back *gesture* its own transition pair —
- * `predictivePopEnterTransition` / `predictivePopExitTransition` — separate from popEnter/popExit,
- * and its defaults are `fadeIn` opposite `scaleOut(targetScale = 0.7f)`. So a swipe-from-edge back
- * stopped running the slides declared per route and started shrinking the outgoing screen toward
- * its centre, while a back *button* press still slid, because only the gesture takes that branch
- * (NavHost.kt: `if (inPredictiveBack) … else if (composeNavigator.isPop.value) …`).
- *
- * The per-destination overrides are `internal` in that release, so the only public lever is the
- * NavHost-level pair — which is handed the entries but not the builder that declared them. This is
- * how they find out. Registration happens as the graph is built and is idempotent, so recomposing
- * the host re-registers the same values.
+ * A push: the new screen comes in the way its family enters, and the one it covers steps behind.
+ * A tab root (a bottom-bar or rail tap) fades instead of sliding, whatever its family: the user
+ * switched sections, they did not drill into one.
  */
-object PopFamilies {
-    private val families = ConcurrentHashMap<KClass<*>, PopFamily>()
+fun NavDestinations.pushTransition(scope: AnimatedContentTransitionScope<Scene<NavStackEntry>>): ContentTransform {
+    val leaving = scope.initialState.navStackEntry()
+    val arriving = scope.targetState.navStackEntry()
+    val switchesTab = arriving?.tabRoot == true
 
-    fun register(
-        route: KClass<*>,
-        family: PopFamily,
-    ) {
-        families[route] = family
-    }
-
-    fun of(destination: NavDestination): PopFamily = families.entries.firstOrNull { destination.hasRoute(it.key) }?.value ?: PopFamily.NONE
+    val enter: EnterTransition =
+        when (familyOf(arriving)) {
+            NavFamily.END -> if (switchesTab) navShellFadeIn else enterFromEnd()
+            NavFamily.BOTTOM -> enterFromBottom()
+            NavFamily.NONE -> navShellFadeIn
+        }
+    val exit: ExitTransition =
+        when (familyOf(leaving)) {
+            NavFamily.END -> if (switchesTab) navShellFadeOut else exitBehind()
+            NavFamily.BOTTOM -> exitBehind()
+            NavFamily.NONE -> navShellFadeOut
+        }
+    return enter togetherWith exit
 }
 
 /**
- * The gesture twin of the route-level `popEnterTransition`s, reproducing their rules: a tab root
- * revealed behind a pop falls back to the shell fade, anything else grows in from behind.
+ * A pop — a back press, or a predictive back gesture, which runs the same motion under the
+ * finger: a modal drops down, a drill-in leaves toward the end, a tab root fades; whatever is
+ * revealed grows back in from behind.
  */
-fun AnimatedContentTransitionScope<NavBackStackEntry>.predictivePopEnter(): EnterTransition =
-    when (PopFamilies.of(targetState.destination)) {
-        PopFamily.BOTTOM -> popEnterFromBehind()
-        PopFamily.END -> if (initialState.isBottomNavRoot()) navShellFadeIn else popEnterFromBehind()
-        PopFamily.NONE -> navShellFadeIn
-    }
+fun NavDestinations.popTransition(scope: AnimatedContentTransitionScope<Scene<NavStackEntry>>): ContentTransform {
+    val leaving = scope.initialState.navStackEntry()
+    val revealed = scope.targetState.navStackEntry()
+    val leavesTab = leaving?.tabRoot == true
 
-/**
- * The gesture twin of the route-level `popExitTransition`s: a modal leaves downward, a drill-in
- * leaves toward the end, and a tab entry fades — the same three answers a button back gives.
- */
-fun AnimatedContentTransitionScope<NavBackStackEntry>.predictivePopExit(): ExitTransition =
-    when (PopFamilies.of(initialState.destination)) {
-        PopFamily.BOTTOM -> popExitToBottom()
-        PopFamily.END -> if (initialState.isBottomNavRoot()) navShellFadeOut else popExitToEnd()
-        PopFamily.NONE -> navShellFadeOut
-    }
+    val enter: EnterTransition =
+        when (familyOf(revealed)) {
+            NavFamily.END -> if (leavesTab) navShellFadeIn else popEnterFromBehind()
+            NavFamily.BOTTOM -> popEnterFromBehind()
+            NavFamily.NONE -> navShellFadeIn
+        }
+    val exit: ExitTransition =
+        when (familyOf(leaving)) {
+            NavFamily.END -> if (leavesTab) navShellFadeOut else popExitToEnd()
+            NavFamily.BOTTOM -> popExitToBottom()
+            NavFamily.NONE -> navShellFadeOut
+        }
+    return enter togetherWith exit
+}

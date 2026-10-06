@@ -32,10 +32,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import androidx.navigation.NavDestination
-import androidx.navigation.NavDestination.Companion.hasRoute
-import androidx.navigation.NavHostController
-import androidx.navigation.compose.currentBackStackEntryAsState
 import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.commons.model.navigation.BottomBarEntry
 import com.vitorpamplona.amethyst.commons.model.navigation.Route
@@ -44,7 +40,6 @@ import com.vitorpamplona.amethyst.commons.ui.navigation.bottombars.rememberBotto
 import com.vitorpamplona.amethyst.commons.ui.navigation.topbars.LoggedInUserPictureDrawer
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.amethyst.ui.navigation.navs.Nav
-import com.vitorpamplona.amethyst.ui.navigation.routes.getRouteWithArguments
 
 /**
  * Medium-width windows: a left rail that carries the same user-configured destinations as the
@@ -66,8 +61,7 @@ fun AppNavigationRail(
 
     val reselectCoordinator = LocalTabReselectCoordinator.current
 
-    val navBackStackEntry by nav.controller.currentBackStackEntryAsState()
-    val currentDestination = navBackStackEntry?.destination
+    val currentRoute = nav.currentRoute
 
     NavigationRail(
         containerColor = MaterialTheme.colorScheme.background,
@@ -84,7 +78,7 @@ fun AppNavigationRail(
             // selection source (live back stack vs the bar's passed-in route) differ per surface.
             items.forEach { entry ->
                 val slot = rememberBottomBarSlot(entry, favoritesById, accountViewModel) ?: return@forEach
-                val selected = remember(navBackStackEntry, slot.route) { railSelected(slot.route, nav.controller, currentDestination) }
+                val selected = remember(currentRoute, slot.route) { railSelected(slot.route, currentRoute) }
                 NavigationRailItem(
                     selected = selected,
                     onClick = {
@@ -108,14 +102,9 @@ fun AppNavigationRail(
  */
 private fun railSelected(
     route: Route,
-    controller: NavHostController,
-    currentDestination: NavDestination?,
+    currentRoute: Route,
 ): Boolean =
     when (route) {
-        is Route.WebApp -> getRouteWithArguments(Route.WebApp::class, controller) == route
-        is Route.NostrApp -> getRouteWithArguments(Route.NostrApp::class, controller) == route
-        is Route.PublicChatChannel -> getRouteWithArguments(Route.PublicChatChannel::class, controller) == route
-        is Route.RelayGroup -> getRouteWithArguments(Route.RelayGroup::class, controller) == route
-        is Route.ConcordServer -> getRouteWithArguments(Route.ConcordServer::class, controller) == route
-        else -> currentDestination?.hasRoute(route::class) == true
+        is Route.WebApp, is Route.NostrApp, is Route.PublicChatChannel, is Route.RelayGroup, is Route.ConcordServer -> currentRoute == route
+        else -> currentRoute::class == route::class
     }

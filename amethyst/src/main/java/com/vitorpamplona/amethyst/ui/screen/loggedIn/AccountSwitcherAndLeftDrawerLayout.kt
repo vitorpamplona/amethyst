@@ -34,6 +34,7 @@ import androidx.compose.material3.VerticalDivider
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.movableContentOf
 import androidx.compose.runtime.mutableStateOf
@@ -44,8 +45,6 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalConfiguration
-import androidx.navigation.NavDestination.Companion.hasRoute
-import androidx.navigation.compose.currentBackStackEntryAsState
 import com.vitorpamplona.amethyst.commons.model.navigation.Route
 import com.vitorpamplona.amethyst.commons.ui.components.PlatformBackHandler
 import com.vitorpamplona.amethyst.commons.ui.layouts.LocalScreenLayout
@@ -160,11 +159,9 @@ private fun ModalDrawerShell(
         }
     }
 
-    val navBackStackEntry by nav.controller.currentBackStackEntryAsState()
-    val isTabPagerRoute =
-        navBackStackEntry?.destination?.let { dest ->
-            dest.hasRoute<Route.Home>() || dest.hasRoute<Route.Message>()
-        } ?: false
+    val isTabPagerRoute by remember(nav) {
+        derivedStateOf { nav.currentRoute.let { it is Route.Home || it is Route.Message } }
+    }
     val drawerGesturesEnabled =
         (
             !isTabPagerRoute ||
@@ -243,9 +240,7 @@ private fun NotificationSidePanelSlot(
 ) {
     if (!LocalScreenLayout.current.hasRoomForNotificationPanel) return
 
-    val navBackStackEntry by nav.controller.currentBackStackEntryAsState()
-    val destination = navBackStackEntry?.destination
-    val onNotifications = remember(destination) { destination?.hasRoute<Route.Notification>() == true }
+    val onNotifications by remember(nav) { derivedStateOf { nav.currentRoute is Route.Notification } }
 
     if (!onNotifications) {
         VerticalDivider(thickness = DividerThickness)

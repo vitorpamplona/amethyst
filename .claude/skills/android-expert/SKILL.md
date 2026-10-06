@@ -1,16 +1,16 @@
 ---
 name: android-expert
-description: Android platform patterns for the `amethyst/` module. Use when working with (1) Android navigation (Navigation Compose, type-safe routes, bottom nav), (2) runtime permissions (camera, notifications, biometrics), (3) platform APIs (Intent, Context, Activity, ContentResolver), (4) Material3 theming and edge-to-edge UI, (5) AndroidManifest.xml and intent filters, (6) Proguard/R8 and APK optimization, (7) Android lifecycle (ViewModel, collectAsStateWithLifecycle), (8) Coil image loading. Delegates shared composables to compose-expert, build files to gradle-expert, and KMP structure to kotlin-multiplatform.
+description: Android platform patterns for the `amethyst/` module. Use when working with (1) Android navigation (Navigation 3, the app-owned back stack, type-safe routes, bottom nav), (2) runtime permissions (camera, notifications, biometrics), (3) platform APIs (Intent, Context, Activity, ContentResolver), (4) Material3 theming and edge-to-edge UI, (5) AndroidManifest.xml and intent filters, (6) Proguard/R8 and APK optimization, (7) Android lifecycle (ViewModel, collectAsStateWithLifecycle), (8) Coil image loading. Delegates shared composables to compose-expert, build files to gradle-expert, and KMP structure to kotlin-multiplatform.
 ---
 
 # android-expert
 
-Android platform expertise for Amethyst Multiplatform project. Covers Compose Navigation, Material3, permissions, lifecycle, and Android-specific patterns in KMP architecture.
+Android platform expertise for Amethyst Multiplatform project. Covers Navigation 3, Material3, permissions, lifecycle, and Android-specific patterns in KMP architecture.
 
 ## When to Use
 
 Auto-invoke when working with:
-- Android navigation (Navigation Compose, routes, bottom nav)
+- Android navigation (Navigation 3, routes, bottom nav)
 - Runtime permissions (camera, notifications, biometric)
 - Platform APIs (Intent, Context, Activity)
 - Material3 theming and edge-to-edge UI
@@ -20,13 +20,13 @@ Auto-invoke when working with:
 
 ## Core Mental Model
 
-**Single Activity Architecture + Compose Navigation**
+**Single Activity Architecture + Navigation 3**
 
 ```
 MainActivity (Single Entry Point)
     ├── enableEdgeToEdge()
     ├── AmethystTheme { }
-    └── NavHost
+    └── NavDisplay (renders Nav.stacks, an app-owned back stack)
         ├── Route.Home → HomeScreen
         ├── Route.Profile(id) → ProfileScreen
         └── Route.Settings → SettingsScreen
@@ -57,8 +57,10 @@ amethyst/                    # Android app module
 │   │   │   ├── ui/
 │   │   │   │   ├── MainActivity.kt          # Entry point
 │   │   │   │   ├── navigation/
-│   │   │   │   │   ├── AppNavigation.kt     # NavHost
-│   │   │   │   │   ├── routes/RouteNavController.kt  # NavHost-bound route helpers
+│   │   │   │   │   ├── AppNavigation.kt     # NavDisplay + every destination
+│   │   │   │   │   ├── NavigationEffects.kt # destination registry, builders, transitions
+│   │   │   │   │   ├── navs/Nav.kt, NavBackStacks.kt  # INav over the back stack
+│   │   │   │   │   ├── routes/RouteNavController.kt  # current-route helpers
 │   │   │   │   │   └── bottombars/AppBottomBar.kt
 │   │   │   │   ├── screen/                  # 80+ screens
 │   │   │   │   └── theme/Theme.kt           # AmethystTheme (accent, prefs, window insets)
@@ -75,121 +77,41 @@ in `commonsUI/.../commons/ui/navigation/`. The palettes, `ColorScheme.*` tokens,
 typography are in `commonsUI/.../commons/ui/theme/` (markdown styles in its `jvmAndroid`).
 Add a route to the commons `Routes.kt`; wire its destination in the app's `AppNavigation.kt`.
 
-## 1. Type-Safe Navigation
+## 1. Navigation (Navigation 3)
 
-### Pattern: @Serializable Routes
+The app owns its back stack; Navigation 3's `NavDisplay` only renders it. There is no
+`NavController` and no graph.
 
-**Best Practice (Navigation 2.8.0+):**
+- **Routes** are the `@Serializable sealed class Route` in commons `Routes.kt`. The back stack is
+  saved through kotlinx-serialization, so every route and every argument must be serializable.
+- **`NavBackStacks`** (`navs/NavBackStacks.kt`) holds `stack` (what is on screen, never empty,
+  starts at `Route.Home`) and `savedTabs` (the root entry of every bottom-bar tab the user left,
+  which keeps that tab's ViewModels and scroll state alive). Each `NavStackEntry` has an `id`;
+  its `contentKey` (`"nav-$id"`) is what saved state and ViewModels are keyed by, so the same
+  route opened twice is two screens. `tabRoot` / `drawerRoot` mark tab roots and drawer screens.
+- **`Nav`** (`navs/Nav.kt`) implements the shared `INav` over it: `nav`, `navDrawer`, `newStack`,
+  `navBottomBar` (= `switchTab`), `popBack`, `popUpTo`, each after the keyboard settles.
+  `nav.currentRoute` is snapshot state; read it (or `derivedStateOf` over it) instead of
+  observing a controller. `LocalNavStackEntry` is the entry of the screen being composed.
+- **Destinations** are registered in `AppNavigation.kt`'s `appDestinations` with the builders in
+  `NavigationEffects.kt`. The builder picks the motion and the reading-column cap:
+
 ```kotlin
-// Routes.kt - Define all routes with type safety
-@Serializable
-sealed class Route {
-    @Serializable object Home : Route()
-    @Serializable object Search : Route()
-    @Serializable data class Profile(val pubkey: String) : Route()
-    @Serializable data class Note(val noteId: String) : Route()
-    @Serializable data class Thread(val noteId: String) : Route()
-}
-
-// AppNavigation.kt - NavHost setup
-@Composable
-fun AppNavigation(
-    navController: NavHostController,
-    accountViewModel: AccountViewModel
-) {
-    NavHost(
-        navController = navController,
-        startDestination = Route.Home,
-        enterTransition = { fadeIn(animationSpec = tween(200)) },
-        exitTransition = { fadeOut(animationSpec = tween(200)) }
-    ) {
-        composable<Route.Home> {
-            HomeScreen(accountViewModel, navController)
-        }
-
-        composable<Route.Profile> { backStackEntry ->
-            val profile = backStackEntry.toRoute<Route.Profile>()
-            ProfileScreen(profile.pubkey, accountViewModel, navController)
-        }
-
-        composable<Route.Note> { backStackEntry ->
-            val note = backStackEntry.toRoute<Route.Note>()
-            NoteScreen(note.noteId, accountViewModel, navController)
-        }
-    }
-}
+composableCapped<Route.Home> { HomeScreen(accountViewModel, nav) }          // fade, capped
+composable<Route.Message> { MessagesScreen(accountViewModel, nav) }          // fade, full width
+composableFromEnd<Route.Polls> { PollsScreen(accountViewModel, nav) }        // drill-in slide
+composableFromEndArgs<Route.Note> { NoteScreen(it.id, accountViewModel, nav) }
+composableFromBottomArgs<Route.NewPost> { NewPostScreen(it.message, accountViewModel, nav) } // modal
 ```
 
-### Navigation Manager Pattern
+`BuildNavigation` decorates `stack + savedTabs` with the saveable-state and ViewModel-store
+decorators, shows only `stack` in `NavDisplay`, and drives the push / pop / predictive-back
+transitions from each entry's family and `tabRoot` flag.
 
-**Amethyst Pattern (`Nav.kt`):**
-```kotlin
-class Nav(
-    val controller: NavHostController,
-    val drawerState: DrawerState,
-    val scope: CoroutineScope
-) {
-    fun nav(route: Route) {
-        scope.launch {
-            controller.navigate(route)
-            drawerState.close()
-        }
-    }
+**Adding a screen:** add the route to commons `Routes.kt` (`@Serializable`), then one builder line
+in `appDestinations`. A route nothing registered fails the first time it is opened.
 
-    fun newStack(route: Route) {
-        scope.launch {
-            controller.navigate(route) {
-                popUpTo(Route.Home) { inclusive = false }
-            }
-            drawerState.close()
-        }
-    }
-
-    fun popBack() {
-        controller.popBackStack()
-    }
-}
-
-// Usage in composables
-@Composable
-fun HomeScreen(nav: Nav) {
-    Button(onClick = { nav.nav(Route.Profile("npub1...")) }) {
-        Text("View Profile")
-    }
-}
-```
-
-### Bottom Navigation
-
-**Material3 Pattern:**
-```kotlin
-@Composable
-fun AppBottomBar(
-    selectedRoute: Route,
-    nav: Nav
-) {
-    NavigationBar {
-        BottomBarItem.entries.forEach { item ->
-            NavigationBarItem(
-                selected = selectedRoute::class == item.route::class,
-                onClick = { nav.nav(item.route) },
-                icon = { Icon(item.icon, contentDescription = item.label) },
-                label = { Text(item.label) }
-            )
-        }
-    }
-}
-
-enum class BottomBarItem(val route: Route, val icon: ImageVector, val label: String) {
-    HOME(Route.Home, Icons.Default.Home, "Home"),
-    MESSAGES(Route.Messages, Icons.Default.Message, "Messages"),
-    NOTIFICATIONS(Route.Notifications, Icons.Default.Notifications, "Notifications"),
-    SEARCH(Route.Search, Icons.Default.Search, "Search"),
-    PROFILE(Route.Profile, Icons.Default.Person, "Profile")
-}
-```
-
-**Reference:** See `references/android-navigation.md` for complete navigation patterns.
+**Reference:** See `references/android-navigation.md` for the back-stack rules in detail.
 
 ## 2. Runtime Permissions
 
@@ -411,20 +333,15 @@ fun AmethystTheme(
 **Handling System Bars:**
 ```kotlin
 @Composable
-fun MainScreen(navController: NavHostController) {
-    val currentRoute by navController.currentBackStackEntryAsState()
-
+fun MainScreen(nav: Nav) {
     Scaffold(
-        topBar = { AppTopBar(currentRoute) },
-        bottomBar = { AppBottomBar(currentRoute, navController) },
+        topBar = { AppTopBar(nav.currentRoute) },
+        bottomBar = { AppBottomBar(nav.currentRoute, nav) },
         floatingActionButton = { NewPostFab() }
     ) { innerPadding ->
         // Scaffold automatically handles system bar insets
-        NavHost(
-            navController = navController,
-            modifier = Modifier.padding(innerPadding)
-        ) {
-            // Routes...
+        Box(Modifier.padding(innerPadding)) {
+            BuildNavigation(accountViewModel, nav)
         }
     }
 }
@@ -624,7 +541,7 @@ fun FullscreenToggle() {
 ```kotlin
 @Composable
 fun AppNavigation(
-    navController: NavHostController,
+    nav: Nav,
     accountViewModel: AccountViewModel
 ) {
     val activity = LocalContext.current as? Activity
@@ -635,7 +552,7 @@ fun AppNavigation(
                 Intent.ACTION_SEND -> {
                     val sharedText = intent.getStringExtra(Intent.EXTRA_TEXT)
                     val sharedImage = intent.getParcelableExtra<Uri>(Intent.EXTRA_STREAM)
-                    navController.navigate(
+                    nav.newStack(
                         Route.NewPost(message = sharedText, attachment = sharedImage.toString())
                     )
                 }
@@ -643,29 +560,27 @@ fun AppNavigation(
                 Intent.ACTION_VIEW -> {
                     val uri = intent.data
                     when (uri?.scheme) {
-                        "nostr" -> handleNostrUri(uri, navController)
-                        "https", "http" -> handleWebUri(uri, navController)
+                        "nostr" -> handleNostrUri(uri, nav)
+                        "https", "http" -> handleWebUri(uri, nav)
                     }
                 }
             }
         }
     }
 
-    NavHost(navController = navController) {
-        // Routes...
-    }
+    BuildNavigation(accountViewModel, nav)
 }
 
-fun handleNostrUri(uri: Uri, navController: NavHostController) {
+fun handleNostrUri(uri: Uri, nav: Nav) {
     // nostr:npub1... -> Profile
     // nostr:note1... -> Note
     // nostr:nevent1... -> Event
     when {
         uri.path?.startsWith("npub") == true -> {
-            navController.navigate(Route.Profile(uri.path!!))
+            nav.newStack(Route.Profile(uri.path!!))
         }
         uri.path?.startsWith("note") == true -> {
-            navController.navigate(Route.Note(uri.path!!))
+            nav.newStack(Route.Note(uri.path!!))
         }
     }
 }
@@ -910,23 +825,22 @@ fun LocalizedButton() {
 
 ### Navigation Testing
 
+The back stack is plain state, so navigation rules are unit-tested without Compose or mocks
+(see `amethyst/src/test/.../ui/navigation/NavBackStacksTest.kt` and `NavBottomBarStackTest.kt`):
+
 ```kotlin
 @Test
-fun testNavigationToProfile() {
-    val navController = TestNavHostController(ApplicationProvider.getApplicationContext())
+fun aTabTapDropsWhatWasPushedOnTopOfTheTab() =
+    runTest {
+        val stacks = NavBackStacks()
+        val nav = Nav(stacks, this)
 
-    composeTestRule.setContent {
-        navController.navigatorProvider.addNavigator(ComposeNavigator())
-        AppNavigation(navController, accountViewModel)
+        nav.nav(Route.Note("n"))
+        nav.navBottomBar(Route.Message)
+        advanceUntilIdle()
+
+        assertEquals(listOf(Route.Home, Route.Message), stacks.stack.map { it.route })
     }
-
-    composeTestRule.onNodeWithText("Profile").performClick()
-
-    assertEquals(
-        Route.Profile::class,
-        navController.currentBackStackEntry?.destination?.route::class
-    )
-}
 ```
 
 ### Permission Testing
@@ -959,7 +873,7 @@ fun testPermissionRequest() {
 
 | Task | Pattern |
 |------|---------|
-| **Navigate** | `navController.navigate(Route.Profile(id))` |
+| **Navigate** | `nav.nav(Route.Profile(id))` |
 | **Request Permission** | `rememberPermissionState().launchPermissionRequest()` |
 | **Access Context** | `val context = LocalContext.current` |
 | **Get Activity** | `val activity = context.getActivity()` |

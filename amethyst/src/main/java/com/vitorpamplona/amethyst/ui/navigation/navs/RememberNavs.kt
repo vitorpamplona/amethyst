@@ -23,15 +23,23 @@ package com.vitorpamplona.amethyst.ui.navigation.navs
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
-import androidx.navigation.compose.rememberNavController
+import androidx.compose.runtime.saveable.Saver
+import androidx.compose.runtime.saveable.rememberSaveable
+
+/** Keeps the back stack across configuration changes and process death, as the old NavController did. */
+private val NavBackStacksSaver =
+    Saver<NavBackStacks, String>(
+        save = { it.encode() },
+        restore = { NavBackStacks.decode(it) },
+    )
 
 @Composable
 fun rememberNav(): Nav {
-    val navController = rememberNavController()
+    val stacks = rememberSaveable(saver = NavBackStacksSaver) { NavBackStacks() }
     val scope = rememberCoroutineScope()
     val ime = rememberImeSettler()
 
-    return remember(navController, scope, ime) {
-        Nav(navController, scope, ime)
+    return remember(stacks, scope, ime) {
+        Nav(stacks, scope, ime)
     }
 }

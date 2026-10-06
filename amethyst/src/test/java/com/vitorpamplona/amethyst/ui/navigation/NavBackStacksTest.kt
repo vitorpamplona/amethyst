@@ -1,0 +1,116 @@
+/*
+ * Copyright (c) 2025 Vitor Pamplona
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy of
+ * this software and associated documentation files (the "Software"), to deal in
+ * the Software without restriction, including without limitation the rights to use,
+ * copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the
+ * Software, and to permit persons to whom the Software is furnished to do so,
+ * subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in all
+ * copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS
+ * FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR
+ * COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN
+ * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
+ * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+ */
+package com.vitorpamplona.amethyst.ui.navigation
+
+import com.vitorpamplona.amethyst.commons.model.navigation.Route
+import com.vitorpamplona.amethyst.ui.navigation.navs.NavBackStacks
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNotEquals
+import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
+import org.junit.Test
+
+class NavBackStacksTest {
+    private fun NavBackStacks.routes() = stack.map { it.route }
+
+    @Test
+    fun pushingTheScreenAlreadyOnTopIsANoOp() {
+        val stacks = NavBackStacks()
+        assertTrue(stacks.push(Route.Note("n")))
+        assertFalse(stacks.push(Route.Note("n")))
+        assertTrue(stacks.push(Route.Note("other")))
+
+        assertEquals(listOf(Route.Home, Route.Note("n"), Route.Note("other")), stacks.routes())
+    }
+
+    @Test
+    fun theLastScreenIsNeverPopped() {
+        val stacks = NavBackStacks()
+        assertFalse(stacks.pop())
+        assertEquals(listOf<Route>(Route.Home), stacks.routes())
+    }
+
+    @Test
+    fun aRouteOpenedTwiceIsTwoScreens() {
+        val stacks = NavBackStacks()
+        stacks.push(Route.Profile("a"))
+        stacks.push(Route.Note("n"))
+        stacks.push(Route.Profile("a"))
+
+        assertNotEquals(stacks.stack[1].contentKey, stacks.stack[3].contentKey)
+    }
+
+    @Test
+    fun newStackDropsTheEarlierCopyAndEverythingAboveIt() {
+        val stacks = NavBackStacks()
+        stacks.push(Route.Profile("a"))
+        stacks.push(Route.Note("n"))
+        stacks.newStack(Route.Profile("a"))
+
+        assertEquals(listOf(Route.Home, Route.Profile("a")), stacks.routes())
+    }
+
+    @Test
+    fun newStackReplacesTheSameDestinationOnTop() {
+        val stacks = NavBackStacks()
+        stacks.switchTab(Route.Pictures())
+        stacks.newStack(Route.Pictures(attachments = listOf("content://shared")))
+
+        assertEquals(listOf(Route.Home, Route.Pictures(attachments = listOf("content://shared"))), stacks.routes())
+        assertTrue("a replaced tab root stays a tab root", stacks.top.tabRoot)
+    }
+
+    @Test
+    fun popUpToDropsTheLatestOfAKindAndPushes() {
+        val stacks = NavBackStacks()
+        stacks.push(Route.Pictures(attachments = listOf("1")))
+        stacks.push(Route.Note("n"))
+        stacks.popUpTo(Route.Pictures(attachments = listOf("2")), Route.Pictures::class)
+
+        assertEquals(listOf(Route.Home, Route.Pictures(attachments = listOf("2"))), stacks.routes())
+    }
+
+    @Test
+    fun roundTripsThroughItsSavedForm() {
+        val stacks = NavBackStacks()
+        stacks.switchTab(Route.Message)
+        stacks.switchTab(Route.Search("nostr"))
+        stacks.push(Route.Note("n"), drawerRoot = true)
+
+        val restored = NavBackStacks.decode(stacks.encode())!!
+
+        assertEquals(stacks.routes(), restored.routes())
+        assertEquals(stacks.stack.map { it.contentKey }, restored.stack.map { it.contentKey })
+        assertEquals(stacks.stack.map { it.tabRoot to it.drawerRoot }, restored.stack.map { it.tabRoot to it.drawerRoot })
+        assertEquals(stacks.savedTabs.keys.toSet(), restored.savedTabs.keys.toSet())
+
+        // Ids keep counting from where they left off, so a new screen never reuses a saved key.
+        restored.push(Route.Profile("p"))
+        assertEquals(1, restored.retained().count { it.contentKey == restored.top.contentKey })
+    }
+
+    @Test
+    fun anUnreadableSavedFormIsDropped() {
+        assertNull(NavBackStacks.decode("not json"))
+        assertNull(NavBackStacks.decode("""{"stack":[],"savedTabs":[],"nextId":3}"""))
+    }
+}

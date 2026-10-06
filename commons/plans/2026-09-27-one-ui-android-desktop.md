@@ -56,12 +56,15 @@ plumbing).
 
 ## Prerequisites the move surfaced
 
-- **Navigation library.** The app uses `androidx.navigation:navigation-compose` 2.10.1. Its
+- **Navigation library.** The app used `androidx.navigation:navigation-compose` 2.10.1. Its
   Gradle module metadata publishes an `androidJvm` variant and only **`jvmStubs`** for `jvm`
-  (checked 2026-09-27), so it cannot run the nav host on Desktop. The multiplatform path is
-  JetBrains' `org.jetbrains.androidx.navigation:navigation-compose`, which resolves to the
-  androidx artifact on Android. That swap (and its licence check, per CLAUDE.md) comes before
-  `AppNavigation` can move.
+  (checked 2026-09-27), so it cannot run the nav host on Desktop. Rather than swap to JetBrains'
+  multiplatform build of that same Navigation 2, step 7a moved to **Navigation 3**:
+  `org.jetbrains.androidx.navigation3:navigation3-ui` 1.1.2 and
+  `org.jetbrains.androidx.lifecycle:lifecycle-viewmodel-navigation3` 2.11.0, both Apache-2.0,
+  each publishing Android, desktop JVM and iOS variants. Navigation 3 is the current direction
+  for Compose: the app owns the back stack as state, and the library only renders it. See
+  step 7.
 - **The app root.** `Amethyst.instance` (the `AppModules` graph) is read by 178 files, 115 of
   them under `ui/`. Shared screens cannot reach an Android `Application`. The root needs a
   commons-side interface for what screens read from it, provided once at the composition root
@@ -541,8 +544,29 @@ assemblers, `EventSync`, …). Packages are renamed on the way:
      - Share-as-image (bitmaps).
      - `AccountSessionManager` (login and sign-up).
      - The HLS video uploader (LightCompressor).
-     Each needs a slot or a port of its own, so step 7 can start alongside them.
-7. **Navigation**: the library swap, then `AppNavigation` + rail + drawer + bottom bar.
+     Each needs a slot or a port of its own, so step 7 started alongside them.
+7. **Navigation**:
+   - **7a, Navigation 3 on Android (2026-10-06).** `NavHostController` is gone.
+     - `NavBackStacks` (`navs/NavBackStacks.kt`) is the back stack, as snapshot state.
+       - `stack` is what is on screen.
+       - `savedTabs` holds the root of every tab the user left.
+       - Entries carry ids and `tabRoot` / `drawerRoot` flags.
+       - It is saved through kotlinx-serialization, so `Route` is now `@Serializable` itself.
+     - `Nav` implements `INav` over it with unchanged semantics: the push guard, drawer
+       screens keeping the bar, tab switches that drop pushes above the tab root and never
+       restore onto Home, and the keyboard settle.
+     - `NavDisplay` renders `stack`. Every entry in `stack + savedTabs` keeps its saveable state
+       and ViewModelStore, which replaces Navigation 2's `saveState` / `restoreState`.
+       - Saved tabs are keyed by their full route, so two pinned web apps no longer share one
+         saved entry (the sibling-tab bug Navigation 2's per-destination saving caused).
+     - The 261 builder lines in `AppNavigation` keep their names and register into a
+       `NavDestinations` table. Push, pop and predictive-back transitions come from one place,
+       which retires the `PopFamilies` workaround.
+     - The rail, the drawer layout, screen time and the intent router read `nav.currentRoute`.
+     - The R8 keep rules for enum route arguments are gone with Navigation 2.
+   - **7b, next:** move `NavBackStacks`, `Nav`, the destination table and `NavDisplay` host to
+     `commonsUI`. The remaining Android-only destinations register through a slot, and the
+     intent router stays in the shim. Then the rail, the drawer and the bottom bar.
 8. **The app root port** and the new JVM shim. Then the Desktop feature inventory, and
    retiring the old `desktopApp`.
 

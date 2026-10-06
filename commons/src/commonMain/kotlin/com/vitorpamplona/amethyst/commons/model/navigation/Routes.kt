@@ -39,6 +39,7 @@ sealed interface MediaFeedRoute {
     val message: String?
 }
 
+@Serializable
 sealed class Route {
     @Serializable object Home : Route()
 
