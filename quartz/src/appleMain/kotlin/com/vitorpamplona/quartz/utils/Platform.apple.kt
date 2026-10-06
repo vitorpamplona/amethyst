@@ -18,22 +18,11 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.quartz.nip01Core.cache.interning
+package com.vitorpamplona.quartz.utils
 
-import com.vitorpamplona.quartz.nip01Core.core.Event
-import com.vitorpamplona.quartz.nip01Core.core.HexKey
+import platform.Foundation.NSDate
+import platform.Foundation.timeIntervalSince1970
 
-/** Linux native actual: passthrough. See `EventInterner.apple.kt`. */
-actual class EventInterner {
-    actual fun intern(event: Event): Event = event
+actual fun currentTimeSeconds(): Long = (NSDate().timeIntervalSince1970).toLong()
 
-    actual fun get(id: HexKey): Event? = null
-
-    actual fun size(): Int = 0
-
-    actual fun clear() {}
-
-    actual companion object {
-        actual val Default: EventInterner = EventInterner()
-    }
-}
+actual fun currentTimeMillis(): Long = (NSDate().timeIntervalSince1970 * 1000).toLong()

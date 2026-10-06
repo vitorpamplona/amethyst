@@ -21,7 +21,3 @@
 package com.vitorpamplona.quartz.utils
 
 actual fun platform() = "JVM"
-
-actual fun currentTimeSeconds() = System.currentTimeMillis() / 1000
-
-actual fun currentTimeMillis() = System.currentTimeMillis()

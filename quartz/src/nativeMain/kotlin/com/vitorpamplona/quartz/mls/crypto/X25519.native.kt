@@ -23,7 +23,7 @@ package com.vitorpamplona.quartz.mls.crypto
 import com.vitorpamplona.quartz.utils.RandomInstance
 
 /**
- * Linux/Native X25519 implementation using pure Kotlin field arithmetic.
+ * Native X25519 implementation using pure Kotlin field arithmetic.
  *
  * Implements RFC 7748 X25519 Diffie-Hellman key agreement via Montgomery ladder.
  * Key format: raw 32-byte Curve25519 keys (little-endian per RFC 7748).
@@ -62,6 +62,9 @@ actual object X25519 {
 
     /**
      * X25519 scalar multiplication via Montgomery ladder (RFC 7748).
+     *
+     * Computes [n]P on Curve25519 in Montgomery form.
+     * Based on the TweetNaCl algorithm by Bernstein et al.
      */
     private fun scalarmult(
         n: ByteArray,
