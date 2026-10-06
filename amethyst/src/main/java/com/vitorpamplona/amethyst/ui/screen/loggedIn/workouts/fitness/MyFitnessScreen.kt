@@ -73,6 +73,7 @@ import com.vitorpamplona.amethyst.commons.ui.layouts.rememberFeedContentPadding
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.navigation.topbars.TopBarWithBackButton
 import com.vitorpamplona.amethyst.commons.ui.platform.AppBottomBar
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.workouts.datasource.MyWorkoutsFilterAssemblerSubscription
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.workouts.fitness.FitnessDashboard
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.workouts.fitness.FitnessGoalsDialog
 import com.vitorpamplona.amethyst.commons.ui.stringRes
@@ -105,6 +106,9 @@ fun MyFitnessScreen(
     // Which account's workouts to summarise. Re-runs on an account switch, which resets the
     // dashboard to Loading rather than showing the previous user's numbers.
     viewModel.init(accountViewModel.userProfile().pubkeyHex, context)
+
+    // The published side reads the cache; this fetches the user's own workouts into it.
+    MyWorkoutsFilterAssemblerSubscription(accountViewModel)
 
     val permissionLauncher =
         rememberLauncherForActivityResult(PermissionController.createRequestPermissionResultContract()) {
