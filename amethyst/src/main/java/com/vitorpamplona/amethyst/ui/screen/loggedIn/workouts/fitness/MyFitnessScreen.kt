@@ -25,6 +25,7 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -95,6 +96,8 @@ import com.vitorpamplona.amethyst.commons.resources.my_fitness_window_note
 import com.vitorpamplona.amethyst.commons.resources.my_fitness_workouts
 import com.vitorpamplona.amethyst.commons.resources.workout_suggestion_connect_details
 import com.vitorpamplona.amethyst.commons.ui.layouts.DisappearingScaffold
+import com.vitorpamplona.amethyst.commons.ui.layouts.LocalDisappearingScaffoldPadding
+import com.vitorpamplona.amethyst.commons.ui.layouts.rememberFeedContentPadding
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.navigation.topbars.TopBarWithBackButton
 import com.vitorpamplona.amethyst.commons.ui.platform.AppBottomBar
@@ -116,6 +119,8 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.workouts.suggestion.toNewWo
  *
  * Reached from the drawer, or from a bottom-bar slot the user pinned.
  */
+private val DashboardPadding = PaddingValues(16.dp)
+
 @Composable
 fun MyFitnessScreen(
     accountViewModel: AccountViewModel,
@@ -155,8 +160,10 @@ fun MyFitnessScreen(
             }
         },
         accountViewModel = accountViewModel,
-    ) { padding ->
-        Surface(modifier = Modifier.padding(padding)) {
+    ) {
+        // The Surface fills the whole scaffold, under the bars, and the dashboard pads inside its
+        // scroll: padding the Surface instead left the bars' strips empty once they slid away.
+        Surface(modifier = Modifier.fillMaxSize()) {
             when (val current = state) {
                 MyFitnessViewModel.State.Loading -> CenteredBox { CircularProgressIndicator() }
 
@@ -197,7 +204,7 @@ fun MyFitnessScreen(
 @Composable
 private fun CenteredBox(content: @Composable () -> Unit) {
     Box(
-        modifier = Modifier.fillMaxSize(),
+        modifier = Modifier.fillMaxSize().padding(LocalDisappearingScaffoldPadding.current),
         contentAlignment = Alignment.Center,
     ) { content() }
 }
@@ -260,7 +267,7 @@ private fun ConnectPrompt(
     onConnect: () -> Unit,
 ) {
     Column(
-        modifier = Modifier.fillMaxSize().padding(24.dp),
+        modifier = Modifier.fillMaxSize().padding(LocalDisappearingScaffoldPadding.current).padding(24.dp),
         verticalArrangement = Arrangement.spacedBy(14.dp, Alignment.CenterVertically),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
@@ -299,7 +306,11 @@ private fun Dashboard(
     val miles = remember { prefersMiles() }
 
     Column(
-        modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp),
+        modifier =
+            Modifier
+                .fillMaxSize()
+                .verticalScroll(rememberScrollState())
+                .padding(rememberFeedContentPadding(DashboardPadding)),
         verticalArrangement = Arrangement.spacedBy(18.dp),
     ) {
         if (showConnectBanner) ConnectBanner(onDetails = onDetails, onConnect = onConnect)
