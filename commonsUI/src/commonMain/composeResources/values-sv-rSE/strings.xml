@@ -6370,4 +6370,11 @@
         <item quantity="one">+%1$d svar till</item>
         <item quantity="other">+%1$d svar till</item>
     </plurals>
+    <string name="napplet_op_relay_login">logga in på reläer som du</string>
+    <string name="relay_auth_event_challenge">Utmaning: %1$s</string>
+    <string name="relay_auth_event_explainer">Inte ett inlägg. Det loggar in dig på det här reläet: den som har det kan läsa det som reläet bara visar för dig, som dina privata meddelanden.</string>
+    <string name="relay_auth_event_no_relay">Inget relä anges i den här inloggningen</string>
+    <string name="relay_auth_event_title">Reläinloggning</string>
+    <string name="relay_auth_event_unusual_relay">Det här är inte en vanlig reläadress. Kontrollera den innan du signerar.</string>
+    <string name="tor_status_connected">Ansluten till Tor</string>
 </resources>

@@ -6716,4 +6716,11 @@
         <item quantity="many">+%1$d další odpovědi</item>
         <item quantity="other">+%1$d dalších odpovědí</item>
     </plurals>
+    <string name="napplet_op_relay_login">přihlásit se k relé vaším jménem</string>
+    <string name="relay_auth_event_challenge">Výzva: %1$s</string>
+    <string name="relay_auth_event_explainer">Toto není příspěvek. Přihlašuje vás k tomuto relé: kdo ho má, může číst to, co relé ukazuje jen vám, například vaše soukromé zprávy.</string>
+    <string name="relay_auth_event_no_relay">V tomto přihlášení není uvedeno žádné relé</string>
+    <string name="relay_auth_event_title">Přihlášení k relé</string>
+    <string name="relay_auth_event_unusual_relay">Toto není běžná adresa relé. Před podepsáním ji zkontrolujte.</string>
+    <string name="tor_status_connected">Připojeno k Toru</string>
 </resources>

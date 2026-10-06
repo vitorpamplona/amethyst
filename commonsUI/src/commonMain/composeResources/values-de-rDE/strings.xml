@@ -6372,4 +6372,11 @@
         <item quantity="one">+%1$d weitere Antwort</item>
         <item quantity="other">+%1$d weitere Antworten</item>
     </plurals>
+    <string name="napplet_op_relay_login">dich in deinem Namen bei Relays anmelden</string>
+    <string name="relay_auth_event_challenge">Challenge: %1$s</string>
+    <string name="relay_auth_event_explainer">Kein Beitrag. Damit meldest du dich bei diesem Relay an: Wer es besitzt, kann lesen, was das Relay nur dir zeigt, etwa deine privaten Nachrichten.</string>
+    <string name="relay_auth_event_no_relay">In dieser Anmeldung ist kein Relay angegeben</string>
+    <string name="relay_auth_event_title">Relay-Anmeldung</string>
+    <string name="relay_auth_event_unusual_relay">Das ist keine gewöhnliche Relay-Adresse. Prüfe sie vor dem Signieren.</string>
+    <string name="tor_status_connected">Mit Tor verbunden</string>
 </resources>

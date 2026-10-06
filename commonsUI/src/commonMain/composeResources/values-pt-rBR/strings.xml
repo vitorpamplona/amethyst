@@ -6370,4 +6370,11 @@
         <item quantity="one">+%1$d resposta a mais</item>
         <item quantity="other">+%1$d respostas a mais</item>
     </plurals>
+    <string name="napplet_op_relay_login">entrar nos relays como você</string>
+    <string name="relay_auth_event_challenge">Desafio: %1$s</string>
+    <string name="relay_auth_event_explainer">Não é uma publicação. Ela faz seu login neste relay: quem a tiver pode ler o que o relay mostra só para você, como suas mensagens privadas.</string>
+    <string name="relay_auth_event_no_relay">Nenhum relay indicado neste login</string>
+    <string name="relay_auth_event_title">Login no relay</string>
+    <string name="relay_auth_event_unusual_relay">Este não é um endereço de relay comum. Verifique-o antes de assinar.</string>
+    <string name="tor_status_connected">Conectado ao Tor</string>
 </resources>
