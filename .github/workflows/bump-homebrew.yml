@@ -8,15 +8,14 @@ name: Sync Homebrew Cask Reference
 # it is notarized + stapled, compute its sha256, and open a PR syncing
 # `desktopApp/packaging/homebrew/amethyst-nostr.rb` to that release.
 #
-# What it does NOT do: open a PR against Homebrew/homebrew-cask. That step is
-# deliberately MANUAL and runs on a maintainer's machine —
-# `scripts/bump-homebrew-cask.sh`. Reason: `brew bump-cask-pr` forks
-# homebrew-cask into the token owner's account, which requires a CLASSIC PAT
-# with the `repo` scope; that scope grants write to every repository the account
-# can reach, and stored as a CI secret it would be usable by anyone with push
-# access to this repo. Keeping it in a maintainer's shell instead of a CI secret
-# removes that blast radius entirely, at the cost of one command per release.
-# See BUILDING.md § Homebrew cask.
+# What it does NOT do: open a PR against Homebrew/homebrew-cask. The cask is on
+# Homebrew's autobump list, so BrewTestBot opens that PR itself (and
+# `brew bump-cask-pr` refuses to open a competing one). A maintainer runs
+# `scripts/bump-homebrew-cask.sh`, which verifies the live DMG and checks that
+# BrewTestBot's PR carries the same sha256. If the cask ever leaves autobump,
+# that script opens the PR itself with a CLASSIC `repo`-scoped PAT from the
+# maintainer's shell — never a CI secret, since that scope reaches every repo the
+# account can write to. See BUILDING.md § Package-manager credentials.
 #
 # Consequence: this workflow needs NO external token. GITHUB_TOKEN is enough,
 # exactly like the two formula workflows.
@@ -145,15 +144,16 @@ jobs:
 
             The DMG was verified notarized + stapled before this PR was opened.
 
-            **Merge this, then push it upstream from a maintainer machine:**
+            **Merge this, pull, then verify upstream from a maintainer machine:**
 
             ```bash
             scripts/bump-homebrew-cask.sh ${{ steps.rel.outputs.tag }}
             ```
 
-            That step is manual on purpose — it needs a classic PAT with the
-            `repo` scope, which is deliberately NOT stored as a CI secret. See
-            BUILDING.md § Homebrew cask.
+            The cask is autobumped, so BrewTestBot opens the homebrew-cask PR
+            itself; the script re-checks the DMG and that the bot's PR carries
+            the same sha256. No token needed. See BUILDING.md § Package-manager
+            credentials.
 
       - name: Report failure
         if: failure()

@@ -9,7 +9,7 @@
 # can reach, and any Actions secret is usable by anyone with push access to this
 # repo. See BUILDING.md § Winget.
 #
-# Unlike the Homebrew script this needs NO new token: it drives `gh`, which you
+# It needs NO new token: it drives `gh`, which you
 # are already authenticated with. It also does not need `wingetcreate` (which is
 # Windows-only) — winget manifests are plain YAML, so this works from macOS or
 # Linux.
