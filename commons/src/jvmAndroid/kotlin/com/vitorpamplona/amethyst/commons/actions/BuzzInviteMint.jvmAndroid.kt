@@ -24,6 +24,8 @@ import com.vitorpamplona.amethyst.commons.service.http.IRoleBasedHttpClientBuild
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip98HttpAuth.HTTPAuthorizationEvent
 
+actual val buzzInviteMintingSupported: Boolean = true
+
 actual suspend fun IRoleBasedHttpClientBuilder.mintBuzzInviteUrl(
     relay: NormalizedRelayUrl,
     httpAuth: suspend (url: String, method: String, body: ByteArray?) -> HTTPAuthorizationEvent,

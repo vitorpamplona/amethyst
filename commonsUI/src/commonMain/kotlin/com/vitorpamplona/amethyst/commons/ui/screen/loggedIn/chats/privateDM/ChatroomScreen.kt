@@ -25,7 +25,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import com.vitorpamplona.amethyst.commons.ui.layouts.DisappearingScaffold
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
@@ -50,7 +49,7 @@ fun ChatroomScreen(
 ) {
     val callsEnabled by accountViewModel.account.settings.callsEnabled
         .collectAsState()
-    val peers = remember(roomId) { roomId.users.toSet() }
+    val peers = roomId.users
     // Null where the platform cannot place calls; the buttons are hidden then.
     val startVoiceCall = rememberCallStarter(peers, CallType.VOICE)
     val startVideoCall = rememberCallStarter(peers, CallType.VIDEO)

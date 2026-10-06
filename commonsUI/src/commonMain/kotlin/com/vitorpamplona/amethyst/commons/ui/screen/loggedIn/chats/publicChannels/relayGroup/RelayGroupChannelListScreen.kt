@@ -68,6 +68,7 @@ import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.buzz.BuzzCommunityMembership
 import com.vitorpamplona.amethyst.commons.model.buzz.BuzzRelayDialect
+import com.vitorpamplona.amethyst.commons.model.buzz.BuzzRelayImportViewModel
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
 import com.vitorpamplona.amethyst.commons.model.navigation.Route
 import com.vitorpamplona.amethyst.commons.model.navigation.routeFor
@@ -112,7 +113,6 @@ import com.vitorpamplona.amethyst.commons.ui.screen.LocalDisplaySettings
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.buzz.BuzzAddPeopleDialog
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.buzz.BuzzDmListViewModel
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.buzz.BuzzImportRow
-import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.buzz.BuzzRelayImportViewModel
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.buzz.BuzzWorkspaceOverflowMenu
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.buzz.HiddenDmHeader
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.feed.observeChatPreviewText
@@ -131,8 +131,11 @@ import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.displayUrl
 import com.vitorpamplona.quartz.nip29RelayGroups.GroupId
 import com.vitorpamplona.quartz.nip29RelayGroups.metadata.GroupMetadataEvent
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 /** A first screen's worth of recent messages to prefetch per visible group card, ahead of a tap. */
 private const val CHANNEL_LIST_WARMUP_LIMIT = 10
@@ -218,8 +221,13 @@ fun RelayGroupChannelListScreen(
     val allChannels by produceState(initialValue = initialChannels, relay) {
         LocalCache
             .observeEvents<GroupMetadataEvent>(Filter(kinds = listOf(GroupMetadataEvent.KIND)))
-            .collect {
-                value = LocalCache.getRelayGroupChannelsOnRelay(relay).sortedBySnapshot { it.toBestDisplayName().lowercase() }
+            .collectLatest {
+                // Off the main thread, and only the newest: a relay streaming its directory emits
+                // in bursts, and each rescan walks every cached channel and sorts by display name.
+                value =
+                    withContext(Dispatchers.Default) {
+                        LocalCache.getRelayGroupChannelsOnRelay(relay).sortedBySnapshot { it.toBestDisplayName().lowercase() }
+                    }
             }
     }
 

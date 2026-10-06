@@ -24,10 +24,13 @@ import com.vitorpamplona.amethyst.commons.service.http.IRoleBasedHttpClientBuild
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip98HttpAuth.HTTPAuthorizationEvent
 
+/** Whether this platform can mint Buzz invites; the menu hides the action where it cannot. */
+expect val buzzInviteMintingSupported: Boolean
+
 /**
- * Mints a never-expiring invite link to a Buzz workspace on [relay] and returns its URL, signing
- * the request with [httpAuth] (NIP-98). Throws when the relay refuses or the platform has no
- * HTTP client for it.
+ * Mints an invite link to a Buzz workspace on [relay] and returns its URL, signing the request
+ * with [httpAuth] (NIP-98). The invite takes the relay's default lifetime (72 h) and has no use
+ * cap. Throws when the relay refuses. Only call it where [buzzInviteMintingSupported].
  */
 expect suspend fun IRoleBasedHttpClientBuilder.mintBuzzInviteUrl(
     relay: NormalizedRelayUrl,

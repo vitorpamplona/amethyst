@@ -39,6 +39,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalClipboard
 import androidx.compose.ui.unit.dp
+import com.vitorpamplona.amethyst.commons.actions.buzzInviteMintingSupported
 import com.vitorpamplona.amethyst.commons.actions.mintBuzzInviteUrl
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
@@ -131,37 +132,39 @@ fun BuzzWorkspaceOverflowMenu(
                 onAddPeople()
             },
         )
-        DropdownMenuItem(
-            leadingIcon = {
-                if (minting) {
-                    CircularProgressIndicator(modifier = Modifier.size(18.dp), strokeWidth = 2.dp)
-                } else {
-                    Icon(symbol = MaterialSymbols.Link, contentDescription = null, modifier = Modifier.size(20.dp))
-                }
-            },
-            text = { Text(stringRes(Res.string.buzz_invite_create)) },
-            enabled = !minting,
-            onClick = {
-                menuOpen = false
-                if (minting) return@DropdownMenuItem
-                minting = true
-                error = null
-                scope.launch {
-                    try {
-                        result =
-                            accountViewModel.httpClientBuilder.mintBuzzInviteUrl(
-                                relay = relay,
-                                httpAuth = accountViewModel.account::createHTTPAuthorization,
-                            )
-                    } catch (e: Exception) {
-                        if (e is CancellationException) throw e
-                        error = e.message ?: e::class.simpleName
-                    } finally {
-                        minting = false
+        if (buzzInviteMintingSupported) {
+            DropdownMenuItem(
+                leadingIcon = {
+                    if (minting) {
+                        CircularProgressIndicator(modifier = Modifier.size(18.dp), strokeWidth = 2.dp)
+                    } else {
+                        Icon(symbol = MaterialSymbols.Link, contentDescription = null, modifier = Modifier.size(20.dp))
                     }
-                }
-            },
-        )
+                },
+                text = { Text(stringRes(Res.string.buzz_invite_create)) },
+                enabled = !minting,
+                onClick = {
+                    menuOpen = false
+                    if (minting) return@DropdownMenuItem
+                    minting = true
+                    error = null
+                    scope.launch {
+                        try {
+                            result =
+                                accountViewModel.httpClientBuilder.mintBuzzInviteUrl(
+                                    relay = relay,
+                                    httpAuth = accountViewModel.account::createHTTPAuthorization,
+                                )
+                        } catch (e: Exception) {
+                            if (e is CancellationException) throw e
+                            error = e.message ?: e.toString()
+                        } finally {
+                            minting = false
+                        }
+                    }
+                },
+            )
+        }
     }
 
     result?.let { minted ->

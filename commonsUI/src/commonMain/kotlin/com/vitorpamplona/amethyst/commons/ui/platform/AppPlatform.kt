@@ -144,6 +144,9 @@ interface AppPlatform {
         callType: CallType,
     ): (() -> Unit)? = null
 
+    /** Whether [GeocacheMapTab] draws a map here; the geocaches screen hides its Map tab when not. */
+    val hasGeocacheMap: Boolean get() = false
+
     /** The map view of the nearby geocaches. Empty where the platform has no map. */
     @Composable
     fun GeocacheMapTab(

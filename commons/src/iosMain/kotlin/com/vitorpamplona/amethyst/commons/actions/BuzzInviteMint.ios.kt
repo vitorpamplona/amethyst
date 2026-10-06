@@ -24,7 +24,9 @@ import com.vitorpamplona.amethyst.commons.service.http.IRoleBasedHttpClientBuild
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip98HttpAuth.HTTPAuthorizationEvent
 
+actual val buzzInviteMintingSupported: Boolean = false
+
 actual suspend fun IRoleBasedHttpClientBuilder.mintBuzzInviteUrl(
     relay: NormalizedRelayUrl,
     httpAuth: suspend (url: String, method: String, body: ByteArray?) -> HTTPAuthorizationEvent,
-): String = throw UnsupportedOperationException("Buzz invites need an HTTP client this platform does not have yet")
+): String = throw UnsupportedOperationException("mintBuzzInviteUrl: no HTTP client on iOS yet; check buzzInviteMintingSupported")

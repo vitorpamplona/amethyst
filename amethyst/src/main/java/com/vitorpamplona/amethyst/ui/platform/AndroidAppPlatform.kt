@@ -144,6 +144,8 @@ object AndroidAppPlatform : AppPlatform {
         }
     }
 
+    override val hasGeocacheMap: Boolean get() = true
+
     @Composable
     override fun GeocacheMapTab(
         feedContentState: FeedContentState,
