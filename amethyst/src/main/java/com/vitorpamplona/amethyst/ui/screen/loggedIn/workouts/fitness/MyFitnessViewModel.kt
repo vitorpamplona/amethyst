@@ -144,7 +144,7 @@ class MyFitnessViewModel : ViewModel() {
             if (status == null || goals == null) return@combine State.Loading
 
             val now = Instant.now()
-            // Health Connect only reaches back 30 days; the user's own kind 1301s reach as far as
+            // Health Connect is read for WINDOW_DAYS only (see WorkoutStats); the user's own kind 1301s reach as far as
             // the history goes, which is what gives the trend, heatmap and patterns their depth.
             val since = now.minus(Duration.ofDays(FitnessInsights.HISTORY_WEEKS * 7L + 7)).epochSecond
 

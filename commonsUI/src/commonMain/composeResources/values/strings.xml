@@ -1017,8 +1017,8 @@
     <string name="my_fitness_mix_change">%1$s a week vs before</string>
     <string name="my_fitness_records">Personal records</string>
     <string name="my_fitness_record_new">New</string>
-    <string name="my_fitness_history_note">Before %1$s only the workouts you published are counted: Health Connect keeps the last 30 days.</string>
-    <string name="my_fitness_history_footer">Up to six months of your training: the workouts you have published, plus what Health Connect records on this phone. Your goals and these numbers are worked out on the device and none of it is published.</string>
+    <string name="my_fitness_history_note">Before %1$s only the workouts you published are counted: Amethyst reads the last 4 weeks from Health Connect.</string>
+    <string name="my_fitness_history_footer">Up to six months of your training: the workouts you have published, plus the last 4 weeks Health Connect recorded on this phone. Your goals and these numbers are worked out on the device and none of it is published.</string>
     <string name="my_fitness_empty_history">Nothing logged yet. Workouts you post, and any your watch records, show up here.</string>
     <string name="my_fitness_goal_editor_hint">150 active minutes a week is the WHO guideline for adults.</string>
     <string name="my_fitness_goal_distance_off">No distance goal</string>

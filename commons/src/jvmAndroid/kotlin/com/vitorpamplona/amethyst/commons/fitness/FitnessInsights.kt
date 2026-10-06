@@ -39,7 +39,8 @@ import java.time.temporal.TemporalAdjusters
  * [HISTORY_WEEKS]. Calendar weeks because a goal is "this week", and a rolling seven days moves
  * the goalposts every morning. Longer because patterns need history: a weekday profile from four
  * weeks is four samples per bar. The older weeks come from the user's published kind 1301s only —
- * Health Connect serves 30 days — which [Insights.deviceHorizon] marks so the chart can say so.
+ * Amethyst reads only [WorkoutStats.WINDOW_DAYS] from Health Connect — which [Insights.deviceHorizon]
+ * marks so the chart can say so.
  *
  * Pure and platform-free like [WorkoutStats], so every number on the screen is testable.
  */
