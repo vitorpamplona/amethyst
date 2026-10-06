@@ -101,9 +101,6 @@ open class EditPostViewModel : ViewModel() {
     // Stripping failure dialog
     val strippingFailureConfirmation = SuspendableConfirmation()
 
-    // Codec selection: false = H264, true = H265
-    var useH265Codec by mutableStateOf(false)
-
     // Invoices
     var canAddInvoice by mutableStateOf(false)
     var wantsInvoice by mutableStateOf(false)
@@ -172,10 +169,12 @@ open class EditPostViewModel : ViewModel() {
         server: ServerName,
         onError: (String, String) -> Unit,
         uploader: MediaUploader,
-        stripMetadata: Boolean = true,
+        useH265: Boolean,
+        stripMetadata: Boolean,
+        convertGifToMp4: Boolean,
     ) {
         try {
-            uploadUnsafe(alt, sensitiveContent, mediaQuality, isPrivate, server, onError, uploader, stripMetadata)
+            uploadUnsafe(alt, sensitiveContent, mediaQuality, isPrivate, server, onError, uploader, useH265, stripMetadata, convertGifToMp4)
         } catch (e: SignerExceptions.ReadOnlyException) {
             viewModelScope.launch {
                 onError(
@@ -194,7 +193,9 @@ open class EditPostViewModel : ViewModel() {
         server: ServerName,
         onError: (String, String) -> Unit,
         uploader: MediaUploader,
-        stripMetadata: Boolean = true,
+        useH265: Boolean,
+        stripMetadata: Boolean,
+        convertGifToMp4: Boolean,
     ) {
         accountViewModel.launchSigner {
             val myAccount = account
@@ -211,9 +212,10 @@ open class EditPostViewModel : ViewModel() {
                         server,
                         myAccount,
                         uploader,
-                        useH265Codec,
+                        useH265,
                         stripMetadata,
                         onStrippingFailed = strippingFailureConfirmation::awaitConfirmation,
+                        convertGifToMp4 = convertGifToMp4,
                     )
 
                 if (results.allGood) {

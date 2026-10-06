@@ -432,10 +432,12 @@ class NewPublicMessageViewModel :
         server: ServerName,
         onError: (title: String, message: String) -> Unit,
         uploader: MediaUploader,
-        stripMetadata: Boolean = true,
+        useH265: Boolean,
+        stripMetadata: Boolean,
+        convertGifToMp4: Boolean,
     ) {
         try {
-            uploadUnsafe(alt, contentWarningReason, mediaQuality, server, onError, uploader, stripMetadata)
+            uploadUnsafe(alt, contentWarningReason, mediaQuality, server, onError, uploader, useH265, stripMetadata, convertGifToMp4)
         } catch (e: SignerExceptions.ReadOnlyException) {
             viewModelScope.launch {
                 onError(
@@ -453,7 +455,9 @@ class NewPublicMessageViewModel :
         server: ServerName,
         onError: (title: String, message: String) -> Unit,
         uploader: MediaUploader,
-        stripMetadata: Boolean = true,
+        useH265: Boolean,
+        stripMetadata: Boolean,
+        convertGifToMp4: Boolean,
     ) {
         viewModelScope.launch(Dispatchers.IO) {
             val myMultiOrchestrator = multiOrchestrator ?: return@launch
@@ -468,8 +472,10 @@ class NewPublicMessageViewModel :
                     server,
                     account,
                     uploader,
+                    useH265 = useH265,
                     stripMetadata = stripMetadata,
                     onStrippingFailed = strippingFailureConfirmation::awaitConfirmation,
+                    convertGifToMp4 = convertGifToMp4,
                 )
 
             if (results.allGood) {
