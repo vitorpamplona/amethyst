@@ -18,22 +18,31 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.quartz.nip01Core.cache.interning
+package com.vitorpamplona.quartz.utils
 
-import com.vitorpamplona.quartz.nip01Core.core.Event
-import com.vitorpamplona.quartz.nip01Core.core.HexKey
+import kotlinx.cinterop.ExperimentalForeignApi
+import kotlinx.cinterop.alloc
+import kotlinx.cinterop.convert
+import kotlinx.cinterop.memScoped
+import kotlinx.cinterop.ptr
+import platform.posix.CLOCK_REALTIME
+import platform.posix.clock_gettime
+import platform.posix.timespec
 
-/** Linux native actual: passthrough. See `EventInterner.apple.kt`. */
-actual class EventInterner {
-    actual fun intern(event: Event): Event = event
+@OptIn(ExperimentalForeignApi::class)
+actual fun currentTimeSeconds(): Long {
+    memScoped {
+        val ts = alloc<timespec>()
+        clock_gettime(CLOCK_REALTIME.convert(), ts.ptr)
+        return ts.tv_sec
+    }
+}
 
-    actual fun get(id: HexKey): Event? = null
-
-    actual fun size(): Int = 0
-
-    actual fun clear() {}
-
-    actual companion object {
-        actual val Default: EventInterner = EventInterner()
+@OptIn(ExperimentalForeignApi::class)
+actual fun currentTimeMillis(): Long {
+    memScoped {
+        val ts = alloc<timespec>()
+        clock_gettime(CLOCK_REALTIME.convert(), ts.ptr)
+        return ts.tv_sec * 1000 + ts.tv_nsec / 1_000_000
     }
 }

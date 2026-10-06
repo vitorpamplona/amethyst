@@ -20,44 +20,55 @@
  */
 package com.vitorpamplona.quartz.utils
 
-expect object Secp256k1Instance {
-    fun compressedPubKeyFor(privKey: ByteArray): ByteArray
+import fr.acinq.secp256k1.Secp256k1
 
-    fun isPrivateKeyValid(il: ByteArray): Boolean
+/**
+ * Thin wrapper over secp256k1-kmp. The library exposes the same [Secp256k1] API on
+ * every target (JNI on Android/JVM, cinterop on Native), so a single common
+ * implementation serves them all.
+ */
+object Secp256k1Instance {
+    private val h02 = Hex.decode("02")
+    private val secp256k1 = Secp256k1.get()
+
+    fun compressedPubKeyFor(privKey: ByteArray): ByteArray = secp256k1.pubKeyCompress(secp256k1.pubkeyCreate(privKey))
+
+    fun isPrivateKeyValid(il: ByteArray): Boolean = secp256k1.secKeyVerify(il)
 
     fun signSchnorr(
         data: ByteArray,
         privKey: ByteArray,
         nonce: ByteArray? = RandomInstance.bytes(32),
-    ): ByteArray
+    ): ByteArray = secp256k1.signSchnorr(data, privKey, nonce)
 
     fun signSchnorr(
         data: ByteArray,
         privKey: ByteArray,
-    ): ByteArray
+    ): ByteArray = secp256k1.signSchnorr(data, privKey, null)
 
+    // Native C lib always derives pubkey internally — ignore the cached pubkey.
     fun signSchnorrWithXOnlyPubKey(
         data: ByteArray,
         privKey: ByteArray,
         xOnlyPubKey: ByteArray,
         nonce: ByteArray? = RandomInstance.bytes(32),
-    ): ByteArray
+    ): ByteArray = secp256k1.signSchnorr(data, privKey, nonce)
 
     fun verifySchnorr(
         signature: ByteArray,
         hash: ByteArray,
         pubKey: ByteArray,
-    ): Boolean
+    ): Boolean = secp256k1.verifySchnorr(signature, hash, pubKey)
 
     fun privateKeyAdd(
         first: ByteArray,
         second: ByteArray,
-    ): ByteArray
+    ): ByteArray = secp256k1.privKeyTweakAdd(first, second)
 
     fun pubKeyTweakMulCompact(
         pubKey: ByteArray,
         privateKey: ByteArray,
-    ): ByteArray
+    ): ByteArray = secp256k1.pubKeyTweakMul(h02 + pubKey, privateKey).copyOfRange(1, 33)
 
     /**
      * BIP-341 / BIP-32 style additive tweak.
@@ -72,7 +83,10 @@ expect object Secp256k1Instance {
     fun pubKeyTweakAdd(
         pubKey: ByteArray,
         tweak: ByteArray,
-    ): ByteArray
+    ): ByteArray {
+        val full = if (pubKey.size == 32) h02 + pubKey else pubKey
+        return secp256k1.pubKeyCompress(secp256k1.pubKeyTweakAdd(full, tweak))
+    }
 
     /**
      * Negate a private key: returns `(n - d) mod n` as 32 bytes.
@@ -80,5 +94,5 @@ expect object Secp256k1Instance {
      * Used by the BIP-341 `taproot_tweak_seckey` algorithm when the internal
      * key's public point has odd y.
      */
-    fun privKeyNegate(privKey: ByteArray): ByteArray
+    fun privKeyNegate(privKey: ByteArray): ByteArray = secp256k1.privKeyNegate(privKey)
 }

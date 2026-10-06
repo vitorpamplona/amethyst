@@ -18,48 +18,25 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.quartz.utils.mac
+package com.vitorpamplona.quartz.utils
 
-import io.github.andreypfau.kotlinx.crypto.HMac
-import io.github.andreypfau.kotlinx.crypto.Sha256
-import io.github.andreypfau.kotlinx.crypto.Sha512
+import kotlin.test.Test
+import kotlin.test.assertTrue
 
-actual class MacInstance actual constructor(
-    algorithm: String,
-    key: ByteArray,
-) {
-    private var nativeHmac = HMac(digestForAlgorithm(algorithm), key)
+class PlatformClockTest {
+    // 2024-01-01T00:00:00Z: any real wall clock is past it, a garbage read is not.
+    private val floorSeconds = 1_704_067_200L
 
-    actual fun init(
-        key: ByteArray,
-        algorithm: String,
-    ) {
-        nativeHmac = HMac(digestForAlgorithm(algorithm), key)
+    @Test
+    fun secondsAreWallClockEpochSeconds() {
+        assertTrue(currentTimeSeconds() > floorSeconds)
     }
 
-    actual fun getMacLength(): Int = nativeHmac.macSize
-
-    actual fun update(array: ByteArray) {
-        nativeHmac.update(array)
+    @Test
+    fun millisAgreeWithSeconds() {
+        val before = currentTimeSeconds()
+        val millis = currentTimeMillis()
+        val after = currentTimeSeconds()
+        assertTrue(millis / 1000 in before..after, "millis=$millis outside [$before, $after] seconds")
     }
-
-    actual fun update(byte: Byte) {
-        nativeHmac.update(byte)
-    }
-
-    actual fun doFinal(): ByteArray = nativeHmac.digest()
-
-    actual fun doFinal(
-        output: ByteArray,
-        offset: Int,
-    ) {
-        nativeHmac.digest(output, offset)
-    }
-
-    private fun digestForAlgorithm(algorithm: String) =
-        when (algorithm) {
-            "HmacSHA256" -> Sha256()
-            "HmacSHA512" -> Sha512()
-            else -> error("Algorithm is not yet supported.")
-        }
 }

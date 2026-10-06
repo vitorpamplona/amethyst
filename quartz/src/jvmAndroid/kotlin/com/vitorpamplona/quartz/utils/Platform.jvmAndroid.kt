@@ -18,13 +18,8 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.quartz.utils.secp256k1
+package com.vitorpamplona.quartz.utils
 
-/** JVM: delegates to java.lang.ThreadLocal for per-thread scratch buffers. */
-internal actual class ScratchLocal<T> actual constructor(
-    initializer: () -> T,
-) {
-    private val tl = ThreadLocal.withInitial(initializer)
+actual fun currentTimeSeconds() = System.currentTimeMillis() / 1000
 
-    actual fun get(): T = tl.get()
-}
+actual fun currentTimeMillis() = System.currentTimeMillis()

@@ -15,7 +15,7 @@ All 24 expect declarations in Amethyst quartz module with rationale.
 | 9 | Urls | object | URL utilities | Platform URL handling | quartz/.../Urls.kt |
 | 10 | Platform | functions | platform(), currentTimeSeconds() | Platform name & time APIs | quartz/.../Platform.kt |
 | 11 | Rfc3986 | object | RFC 3986 URL normalization | Used in jvmAndroid | quartz/.../Rfc3986.kt |
-| 12 | Secp256k1Instance | object | Bitcoin crypto (secp256k1) | Different libs per platform | quartz/.../Secp256k1Instance.kt |
+| 12 | ~~Secp256k1Instance~~ | object | Bitcoin crypto (secp256k1) | No longer expect/actual: secp256k1-kmp is multiplatform, so it is a plain commonMain object | quartz/.../Secp256k1Instance.kt |
 | 13 | SecureRandom | object | Cryptographically secure random | Platform random APIs differ | quartz/.../SecureRandom.kt |
 | 14 | StringExt | functions | String utilities | Platform string handling | quartz/.../StringExt.kt |
 | 15 | UnicodeNormalizer | object | Unicode normalization | Platform text APIs | quartz/.../UnicodeNormalizer.kt |
@@ -33,7 +33,7 @@ All 24 expect declarations in Amethyst quartz module with rationale.
 
 ### Objects (Singletons) - 19 total
 Most common pattern for platform-specific singletons:
-- Crypto: Secp256k1Instance, LibSodiumInstance, Sha256
+- Crypto: LibSodiumInstance, Sha256
 - I/O: UriParser, UrlEncoder, GZip
 - Utils: Log, Platform, SecureRandom
 
@@ -101,35 +101,15 @@ actual object Log {
 }
 ```
 
-### Complex Object with Dependencies
+### When NOT to use expect/actual
 
-```kotlin
-// commonMain
-expect object Secp256k1Instance {
-    fun signSchnorr(data: ByteArray, privKey: ByteArray): ByteArray
-}
-
-// androidMain - uses JNI bindings
-actual object Secp256k1Instance {
-    actual fun signSchnorr(data: ByteArray, privKey: ByteArray): ByteArray {
-        return fr.acinq.secp256k1.Secp256k1.signSchnorr(data, privKey, null)
-    }
-}
-
-// jvmMain - different JNI library
-actual object Secp256k1Instance {
-    actual fun signSchnorr(data: ByteArray, privKey: ByteArray): ByteArray {
-        return fr.acinq.secp256k1.Secp256k1.signSchnorr(data, privKey, null)
-    }
-}
-
-// iosMain - native iOS implementation
-actual object Secp256k1Instance {
-    actual fun signSchnorr(data: ByteArray, privKey: ByteArray): ByteArray {
-        // Uses iOS Security framework or native lib
-    }
-}
-```
+Before declaring an `expect`, check whether the dependency is already
+multiplatform. `Secp256k1Instance` used to be an `expect object` with three
+actuals (Android, JVM, Native) whose bodies were identical, because
+`fr.acinq.secp256k1.Secp256k1` exposes the same API on every target. It is now a
+plain `object` in `commonMain`. Likewise, when two actuals come out identical,
+move the single copy to the shared source set both targets depend on
+(`jvmAndroid`, `nativeMain`, `appleMain`) instead of keeping one per target.
 
 ### Class Pattern
 

@@ -18,13 +18,28 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.quartz.utils.secp256k1
+package com.vitorpamplona.quartz.nip01Core.cache.interning
 
-/** Android: delegates to java.lang.ThreadLocal for per-thread scratch buffers. */
-internal actual class ScratchLocal<T> actual constructor(
-    initializer: () -> T,
-) {
-    private val tl: ThreadLocal<T> = ThreadLocal.withInitial(initializer)
+import com.vitorpamplona.quartz.nip01Core.core.Event
+import com.vitorpamplona.quartz.nip01Core.core.HexKey
 
-    actual fun get(): T = tl.get()!!
+/**
+ * Native actual: passthrough. Kotlin/Native has weak refs but no
+ * built-in concurrent map; rather than ship a half-baked impl, we
+ * skip canonicalisation entirely on native targets and let
+ * [Event.fromJson] return whatever the deserializer produced. Can
+ * be revisited if Amethyst's iOS port wants the memory savings.
+ */
+actual class EventInterner {
+    actual fun intern(event: Event): Event = event
+
+    actual fun get(id: HexKey): Event? = null
+
+    actual fun size(): Int = 0
+
+    actual fun clear() {}
+
+    actual companion object {
+        actual val Default: EventInterner = EventInterner()
+    }
 }

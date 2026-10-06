@@ -24,7 +24,7 @@ import com.vitorpamplona.quartz.utils.RandomInstance
 import io.github.andreypfau.kotlinx.crypto.Sha512
 
 /**
- * Apple/Native Ed25519 implementation using pure Kotlin field arithmetic.
+ * Native Ed25519 implementation using pure Kotlin field arithmetic.
  *
  * Implements RFC 8032 Ed25519 digital signatures.
  * Private key format: 32-byte seed + 32-byte public key (64 bytes total).
@@ -246,9 +246,6 @@ actual object Ed25519 {
         Curve25519Field.mulInto(p[2], s.g, s.f)
         Curve25519Field.mulInto(p[3], s.e, s.h)
     }
-
-    /** Point doubling (self-addition). */
-    private fun doublePoint(p: Array<LongArray>): Array<LongArray> = addPoints(p, p)
 
     /** Negate a point: (X, Y, Z, T) -> (-X, Y, Z, -T). */
     private fun negatePoint(p: Array<LongArray>): Array<LongArray> {
