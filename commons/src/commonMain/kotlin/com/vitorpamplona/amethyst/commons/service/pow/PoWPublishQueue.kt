@@ -35,7 +35,6 @@ import kotlinx.collections.immutable.persistentMapOf
 import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.channels.Channel.Factory.UNLIMITED
 import kotlinx.coroutines.currentCoroutineContext
@@ -126,7 +125,7 @@ class PoWPublishQueue(
     private val scope: CoroutineScope,
     maxConcurrent: Int = 1,
     val minerThreads: Int = 1,
-    miningDispatcher: CoroutineDispatcher = Dispatchers.Default,
+    miningDispatcher: CoroutineDispatcher = PoWMiner.MiningDispatcher,
     private val persistence: PoWJobPersistence? = null,
     private val onQueueActive: () -> Unit = {},
 ) {

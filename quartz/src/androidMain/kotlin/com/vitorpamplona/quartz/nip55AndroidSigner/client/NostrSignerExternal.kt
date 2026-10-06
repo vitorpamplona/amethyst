@@ -38,6 +38,8 @@ import com.vitorpamplona.quartz.nip55AndroidSigner.client.handlers.BackgroundReq
 import com.vitorpamplona.quartz.nip55AndroidSigner.client.handlers.ForegroundRequestHandler
 import com.vitorpamplona.quartz.nip57Zaps.PrivateZapEvent
 import com.vitorpamplona.quartz.nip57Zaps.ZapRequestEvent
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 
 class NostrSignerExternal(
     pubKey: HexKey,
@@ -49,6 +51,15 @@ class NostrSignerExternal(
 
     val backgroundQuery = BackgroundRequestHandler(pubKey, packageName, contentResolver)
     val foregroundQuery = ForegroundRequestHandler(pubKey, packageName)
+
+    /**
+     * The background path is a synchronous ContentResolver query: a binder IPC into the
+     * signer app, which can take hundreds of ms (or seconds on a cold start). Callers reach
+     * these suspend functions from Dispatchers.Default (decrypt/sign in flows and state
+     * classes) and from Main, so the IPC must hop to IO itself — otherwise a burst of
+     * decrypts parks every core-sized Default worker, or the UI thread, on the binder.
+     */
+    private suspend inline fun <T> queryInBackground(crossinline query: BackgroundRequestHandler.() -> T): T = withContext(Dispatchers.IO) { backgroundQuery.query() }
 
     override fun registerForegroundLauncher(launcher: ((Intent) -> Unit)) {
         this.foregroundQuery.launcher.registerForegroundLauncher(launcher)
@@ -81,7 +92,7 @@ class NostrSignerExternal(
                 sig = "",
             )
 
-        val result = backgroundQuery.sign(unsignedEvent) ?: foregroundQuery.sign(unsignedEvent)
+        val result = queryInBackground { sign(unsignedEvent) } ?: foregroundQuery.sign(unsignedEvent)
 
         if (result is SignerResult.RequestAddressed.Successful<SignResult>) {
             @Suppress("UNCHECKED_CAST")
@@ -99,7 +110,7 @@ class NostrSignerExternal(
     ): String {
         if (plaintext.isBlank()) return ""
 
-        val result = backgroundQuery.nip04Encrypt(plaintext, toPublicKey) ?: foregroundQuery.nip04Encrypt(plaintext, toPublicKey)
+        val result = queryInBackground { nip04Encrypt(plaintext, toPublicKey) } ?: foregroundQuery.nip04Encrypt(plaintext, toPublicKey)
 
         if (result is SignerResult.RequestAddressed.Successful<EncryptionResult>) {
             return result.result.ciphertext
@@ -114,7 +125,7 @@ class NostrSignerExternal(
     ): String {
         if (ciphertext.isBlank()) throw SignerExceptions.NothingToDecrypt()
 
-        val result = backgroundQuery.nip04Decrypt(ciphertext, fromPublicKey) ?: foregroundQuery.nip04Decrypt(ciphertext, fromPublicKey)
+        val result = queryInBackground { nip04Decrypt(ciphertext, fromPublicKey) } ?: foregroundQuery.nip04Decrypt(ciphertext, fromPublicKey)
 
         if (result is SignerResult.RequestAddressed.Successful<DecryptionResult>) {
             return result.result.plaintext
@@ -129,7 +140,7 @@ class NostrSignerExternal(
     ): String {
         if (plaintext.isBlank()) return ""
 
-        val result = backgroundQuery.nip44Encrypt(plaintext, toPublicKey) ?: foregroundQuery.nip44Encrypt(plaintext, toPublicKey)
+        val result = queryInBackground { nip44Encrypt(plaintext, toPublicKey) } ?: foregroundQuery.nip44Encrypt(plaintext, toPublicKey)
 
         if (result is SignerResult.RequestAddressed.Successful<EncryptionResult>) {
             return result.result.ciphertext
@@ -144,7 +155,7 @@ class NostrSignerExternal(
     ): String {
         if (ciphertext.isBlank()) throw SignerExceptions.NothingToDecrypt()
 
-        val result = backgroundQuery.nip44Decrypt(ciphertext, fromPublicKey) ?: foregroundQuery.nip44Decrypt(ciphertext, fromPublicKey)
+        val result = queryInBackground { nip44Decrypt(ciphertext, fromPublicKey) } ?: foregroundQuery.nip44Decrypt(ciphertext, fromPublicKey)
 
         if (result is SignerResult.RequestAddressed.Successful<DecryptionResult>) {
             return result.result.plaintext
@@ -154,7 +165,7 @@ class NostrSignerExternal(
     }
 
     override suspend fun deriveKey(nonce: HexKey): HexKey {
-        val result = backgroundQuery.deriveKey(nonce) ?: foregroundQuery.deriveKey(nonce)
+        val result = queryInBackground { deriveKey(nonce) } ?: foregroundQuery.deriveKey(nonce)
 
         if (result is SignerResult.RequestAddressed.Successful<DerivationResult>) {
             return result.result.newPrivKey
@@ -166,7 +177,7 @@ class NostrSignerExternal(
     override suspend fun decryptZapEvent(event: ZapRequestEvent): PrivateZapEvent {
         if (!event.isPrivateZap()) throw SignerExceptions.NothingToDecrypt()
 
-        val result = backgroundQuery.decryptZapEvent(event) ?: foregroundQuery.decryptZapEvent(event)
+        val result = queryInBackground { decryptZapEvent(event) } ?: foregroundQuery.decryptZapEvent(event)
 
         if (result is SignerResult.RequestAddressed.Successful<ZapEventDecryptionResult>) {
             return result.result.privateEvent
@@ -185,7 +196,7 @@ class NostrSignerExternal(
      * callers should treat that as "update your signer".
      */
     override suspend fun signPsbt(psbtHex: String): String {
-        val result = backgroundQuery.signPsbt(psbtHex) ?: foregroundQuery.signPsbt(psbtHex)
+        val result = queryInBackground { signPsbt(psbtHex) } ?: foregroundQuery.signPsbt(psbtHex)
 
         if (result is SignerResult.RequestAddressed.Successful<SignPsbtResult>) {
             return result.result.signedPsbtHex
