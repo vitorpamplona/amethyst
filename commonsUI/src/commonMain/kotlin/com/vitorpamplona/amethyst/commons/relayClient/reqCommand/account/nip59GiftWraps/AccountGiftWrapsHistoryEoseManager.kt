@@ -63,7 +63,10 @@ class AccountGiftWrapsHistoryEoseManager(
 ) : PerUserEoseManager<AccountQueryState>(client, allKeys) {
     override fun user(key: AccountQueryState) = key.account.userProfile()
 
-    private val pager = BackwardRelayPager("giftwrap.history")
+    // A screen's worth per relay, like notifications: the Messages divider pages while it is on screen
+    // and only leaves once enough rooms render, so the old 10,000 default pulled ~5,800 wraps (two
+    // NIP-44 decrypts each) in the first minute of a cold start just to fill one list.
+    private val pager = BackwardRelayPager("giftwrap.history", pageLimit = 500)
 
     val loadingMore: StateFlow<Boolean> = pager.loadingMore
     val status: StateFlow<PagingStatus> = pager.status
