@@ -403,6 +403,8 @@ open class NewProductViewModel :
         onError: (title: String, message: String) -> Unit,
         uploader: MediaUploader,
         stripMetadata: Boolean = true,
+        useH265: Boolean = false,
+        convertGifToMp4: Boolean = false,
     ) {
         viewModelScope.launch(Dispatchers.IO) {
             val myAccount = account
@@ -418,8 +420,10 @@ open class NewProductViewModel :
                     server,
                     myAccount,
                     uploader,
+                    useH265 = useH265,
                     stripMetadata = stripMetadata,
                     onStrippingFailed = strippingFailureConfirmation::awaitConfirmation,
+                    convertGifToMp4 = convertGifToMp4,
                 )
 
             if (results.allGood) {

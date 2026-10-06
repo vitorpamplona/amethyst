@@ -436,8 +436,8 @@ private fun GenericCommentPostBody(
                             it,
                             accountViewModel.account.settings.defaultFileServer,
                             isUploading = postViewModel.mediaUploadTracker.isUploading,
-                            onAdd = { alt, server, sensitiveContent, mediaQuality, _, stripMetadata, _ ->
-                                postViewModel.upload(alt, if (sensitiveContent) "" else null, mediaQuality, server, accountViewModel.toastManager::toast, accountViewModel.host.mediaUploader, stripMetadata)
+                            onAdd = { alt, server, sensitiveContent, mediaQuality, useH265, stripMetadata, convertGifToMp4 ->
+                                postViewModel.upload(alt, if (sensitiveContent) "" else null, mediaQuality, server, accountViewModel.toastManager::toast, accountViewModel.host.mediaUploader, stripMetadata, useH265, convertGifToMp4)
                                 accountViewModel.account.settings.changeDefaultFileServer(server)
                             },
                             onDelete = postViewModel::deleteMediaToUpload,
