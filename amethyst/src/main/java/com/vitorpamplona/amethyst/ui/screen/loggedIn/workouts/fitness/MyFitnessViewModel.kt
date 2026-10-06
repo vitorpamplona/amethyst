@@ -23,9 +23,12 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn.workouts.fitness
 import android.content.Context
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.Stable
+import androidx.core.content.edit
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.vitorpamplona.amethyst.commons.fitness.DetectedWorkout
+import com.vitorpamplona.amethyst.commons.fitness.FitnessGoals
+import com.vitorpamplona.amethyst.commons.fitness.FitnessInsights
 import com.vitorpamplona.amethyst.commons.fitness.TrainingLog
 import com.vitorpamplona.amethyst.commons.fitness.WorkoutStats
 import com.vitorpamplona.amethyst.service.workouts.health.HealthConnectManager
@@ -46,10 +49,13 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.time.Duration
 import java.time.Instant
+import java.time.temporal.WeekFields
+import java.util.Locale
 
 /**
- * State holder for the My Fitness dashboard: the user's own training over the last
- * [WorkoutStats.WINDOW_DAYS], summarised by [WorkoutStats].
+ * State holder for the My Fitness dashboard: the user's own training against their weekly
+ * [FitnessGoals], over up to [FitnessInsights.HISTORY_WEEKS] of history, summarised by
+ * [FitnessInsights].
  *
  * The log is built from both sources Amethyst has — Health Connect, and the user's own published
  * kind 1301 events (see [TrainingLog]) — so the dashboard is useful before any health permission
@@ -79,12 +85,12 @@ class MyFitnessViewModel : ViewModel() {
         data object Loading : State
 
         /**
-         * Summarised. [WorkoutStats.Report.isEmpty] covers "nothing logged yet", which is a
+         * Summarised. [FitnessInsights.Insights.isEmpty] covers "nothing logged yet", which is a
          * normal state rather than an error — a new user has published nothing and may not have
          * connected Health Connect.
          */
         data class Ready(
-            val report: WorkoutStats.Report,
+            val insights: FitnessInsights.Insights,
             val healthConnect: HealthConnectStatus,
             /**
              * True while Health Connect's per-session metrics are still arriving. The report is
@@ -113,6 +119,15 @@ class MyFitnessViewModel : ViewModel() {
     private var manager: HealthConnectManager? = null
 
     /**
+     * The user's weekly goals, private to this device. Null until read, which — like
+     * [healthConnectStatus] — keeps the screen on [State.Loading] so a saved goal never flashes
+     * the default first.
+     */
+    private val goals = MutableStateFlow<FitnessGoals?>(null)
+
+    private var goalsStore: FitnessGoalsPreferences? = null
+
+    /**
      * The user's published workouts, live. Re-subscribes on an account switch; a workout arriving
      * from a relay — or the one the user just posted — lands here without a refresh.
      */
@@ -123,27 +138,31 @@ class MyFitnessViewModel : ViewModel() {
         }
 
     val state: StateFlow<State> =
-        combine(fromHealthConnect, fromRelays, healthConnectStatus) { healthConnect, published, status ->
+        combine(fromHealthConnect, fromRelays, healthConnectStatus, goals) { healthConnect, published, status, goals ->
             // The status check is cheap; reading the workouts is not. Waiting only on the former
             // is what lets a user's published log render while their watch data is still coming.
-            if (status == null) return@combine State.Loading
+            if (status == null || goals == null) return@combine State.Loading
 
             val now = Instant.now()
-            val since = now.minus(Duration.ofDays(WorkoutStats.WINDOW_DAYS)).epochSecond
+            // Health Connect only reaches back 30 days; the user's own kind 1301s reach as far as
+            // the history goes, which is what gives the trend, heatmap and patterns their depth.
+            val since = now.minus(Duration.ofDays(FitnessInsights.HISTORY_WEEKS * 7L + 7)).epochSecond
 
-            val report =
-                WorkoutStats.report(
-                    TrainingLog.merge(healthConnect.workouts, published.filter { it.startTimeEpochSeconds >= since }),
-                    now,
+            val insights =
+                FitnessInsights.build(
+                    workouts = TrainingLog.merge(healthConnect.workouts, published.filter { it.startTimeEpochSeconds >= since }),
+                    goals = goals,
+                    now = now,
+                    firstDayOfWeek = WeekFields.of(Locale.getDefault()).firstDayOfWeek,
                 )
 
             // Nothing to show *yet* is not the same as nothing logged. Going Ready here would
             // flash the empty state — or the connect prompt — at a user whose sessions are one
             // IPC away, so an empty report keeps waiting while the session list is in flight.
-            if (report.isEmpty && healthConnect.sessionsPending) return@combine State.Loading
+            if (insights.isEmpty && healthConnect.sessionsPending) return@combine State.Loading
 
             State.Ready(
-                report = report,
+                insights = insights,
                 healthConnect = status,
                 metricsPending = healthConnect.metricsPending,
             )
@@ -151,8 +170,23 @@ class MyFitnessViewModel : ViewModel() {
             .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), State.Loading)
 
     /** The account whose workouts this dashboard summarises. */
-    fun init(pubkeyHex: String) {
+    fun init(
+        pubkeyHex: String,
+        context: Context,
+    ) {
+        if (this.pubkeyHex.value == pubkeyHex) return
         this.pubkeyHex.value = pubkeyHex
+        // Another account's goals must not stay up while this one's are read.
+        goals.value = null
+        viewModelScope.launch { loadGoals(context) }
+    }
+
+    /** Saves new weekly goals for this account; the dashboard re-derives from them at once. */
+    fun updateGoals(newGoals: FitnessGoals) {
+        val me = pubkeyHex.value ?: return
+        goals.value = newGoals
+        val store = goalsStore ?: return
+        viewModelScope.launch(Dispatchers.IO) { store.save(me, newGoals) }
     }
 
     /**
@@ -166,6 +200,7 @@ class MyFitnessViewModel : ViewModel() {
         refreshJob?.cancel()
         refreshJob =
             viewModelScope.launch {
+                loadGoals(context)
                 val status = healthConnectStatus(context)
                 val hc = manager
 
@@ -189,6 +224,18 @@ class MyFitnessViewModel : ViewModel() {
                     .readWorkoutsProgressively(now.minus(Duration.ofDays(WorkoutStats.WINDOW_DAYS)), now)
                     .collect { read -> fromHealthConnect.value = fromHealthConnect.value.after(read) }
             }
+    }
+
+    private suspend fun loadGoals(context: Context) {
+        val me = pubkeyHex.value ?: return
+        if (goals.value != null) return
+        val loaded =
+            withContext(Dispatchers.IO) {
+                val store = goalsStore ?: FitnessGoalsPreferences(context.applicationContext).also { goalsStore = it }
+                store.load(me)
+            }
+        // An account switch while reading: the newer read owns the slot.
+        if (pubkeyHex.value == me && goals.value == null) goals.value = loaded
     }
 
     /**
@@ -242,4 +289,24 @@ data class HealthConnectContribution(
                 metricsPending = read.metricsPending,
             )
         }
+}
+
+/**
+ * Where the weekly goals live: a private, per-account SharedPreferences entry on this device.
+ *
+ * Deliberately not a Nostr event yet. Goals are personal, and a public one would broadcast a
+ * health target; syncing them across devices belongs in an encrypted NIP-78 app-data event, which
+ * is the follow-up in `commons/plans/2026-10-06-my-fitness-redesign.md`.
+ */
+class FitnessGoalsPreferences(
+    context: Context,
+) {
+    private val prefs = context.getSharedPreferences("my_fitness_goals", Context.MODE_PRIVATE)
+
+    fun load(pubkeyHex: String): FitnessGoals = FitnessGoals.decode(prefs.getString(pubkeyHex, null))
+
+    fun save(
+        pubkeyHex: String,
+        goals: FitnessGoals,
+    ) = prefs.edit { putString(pubkeyHex, goals.encode()) }
 }

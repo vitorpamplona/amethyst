@@ -195,7 +195,7 @@ object WorkoutStats {
      * and positive, so a user whose watch records no elevation never sees an empty "biggest
      * climb" card.
      */
-    private fun bests(workouts: List<DetectedWorkout>): List<Best> =
+    internal fun bests(workouts: List<DetectedWorkout>): List<Best> =
         listOfNotNull(
             workouts
                 .filter { (it.distanceMeters ?: 0.0) > 0 }
