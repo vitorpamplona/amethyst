@@ -30,6 +30,7 @@ import com.vitorpamplona.amethyst.commons.model.preferences.AppPreferenceStores
 import com.vitorpamplona.amethyst.commons.model.preferences.NamecoinSettingsStore
 import com.vitorpamplona.amethyst.commons.model.preferences.OtsSettingsStore
 import com.vitorpamplona.amethyst.commons.napplet.permissions.NappletPermissionLedger
+import com.vitorpamplona.amethyst.commons.relayManagement.Nip86Executor
 import com.vitorpamplona.amethyst.commons.service.ai.AltTextSuggester
 import com.vitorpamplona.amethyst.commons.service.namecoin.NamecoinClients
 import com.vitorpamplona.amethyst.commons.tor.TorSettingsFlow
@@ -76,6 +77,9 @@ interface AppServices {
 
     /** The OpenTimestamps blockchain explorer setting. */
     val otsSettings: OtsSettingsStore
+
+    /** Sends NIP-86 relay-management calls (over Tor when the settings say so). */
+    val nip86Executor: Nip86Executor get() = Nip86Executor.None
 
     /** The NIP-46 remote-signer clients this device has connected to. */
     val nip46ClientStore: Nip46ClientStore

@@ -486,7 +486,21 @@ assemblers, `EventSync`, …). Packages are renamed on the way:
      `Clipboard.setText`; the brand icons for identity claims are Compose resources. Moved: the
      profile (60 files: header, tabs, payment sheet), the app, NIP-46, Namecoin and OTS settings.
      210 of 252 screens shared.
-   - **Next:** 42 screens remain, and what blocks them is the platform itself:
+   - **Wave 12 (2026-10-06):** Messages, Notifications, Calendars and the mechanical screens.
+     `HorizontalTwoPane` is an expect (Android keeps Accompanist's fold-aware `TwoPane`; JVM and
+     iOS split a `Row`), and the Messages pane picks single or two panes with the shell's own
+     600/840 dp breakpoints (`widthClassOf`). `AppPlatform` gained `logDebugState`,
+     `appVersionName`, `releaseNotesId` and `NotificationProviderPrompt`; the chart theme left the
+     app's `Theme.kt`. The calendar views run on `SearchDate` instead of `java.time`, with
+     `DateSkeletonFormatter` for month and weekday names. `AccountViewModelHost` gained
+     `probeAudioFile` (Android's `MediaMetadataRetriever`) for the music and podcast uploaders,
+     and `requestScheduledPostCatchUp`. The Blossom health probe is an expect over the HTTP
+     client; NIP-86 calls go through a `Nip86Executor` port. Web bookmark previews use the note
+     slot's `loadUrlPreview`. Moved: the Messages list, Notifications (cards, summary chart,
+     donation cards), Calendars (day, week, month), the music and podcast uploaders, the media
+     server lists, relay management, web bookmarks and scheduled posts. 220 of 252 screens
+     shared.
+   - **Next:** 32 screens remain, and what blocks them is the platform itself:
      - `ReactionsRow` (2.7k lines: pay-to-app, voice replies, wallet intents).
      - The Nests activity and PiP.
      - The call screens.
@@ -496,8 +510,10 @@ assemblers, `EventSync`, …). Packages are renamed on the way:
      - The Cordn backup/migrate file flows.
      - Share-as-image (bitmaps).
      - `AccountSessionManager` (login and sign-up).
-     - The Blossom health probe.
-     - `AppSettingsScreen` (`BuildConfig`).
+     - The Blossom import and blob manager (the OkHttp `BlossomClient`).
+     - Notification settings (`LocalPreferences`, battery optimization, notification channels)
+       and calendar reminder settings.
+     - The HLS video uploader (LightCompressor).
      Each needs a slot or a port of its own, so step 7 can start alongside them.
 7. **Navigation**: the library swap, then `AppNavigation` + rail + drawer + bottom bar.
 8. **The app root port** and the new JVM shim. Then the Desktop feature inventory, and

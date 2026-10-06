@@ -99,6 +99,12 @@ object AndroidNotePlatform : NotePlatform {
         if (UrlCachedPreviewer.cache.get(url) == null) accountViewModel.urlPreview(url) {}
     }
 
+    override fun loadUrlPreview(
+        url: String,
+        accountViewModel: AccountViewModel,
+        onResult: suspend (UrlPreviewState) -> Unit,
+    ) = accountViewModel.urlPreview(url, onResult)
+
     @Composable
     override fun rememberUrlPreviewState(
         url: String,

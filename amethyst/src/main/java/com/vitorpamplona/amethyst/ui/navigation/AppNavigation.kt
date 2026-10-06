@@ -61,6 +61,8 @@ import com.vitorpamplona.amethyst.commons.resources.invalid_nip19_uri
 import com.vitorpamplona.amethyst.commons.resources.invalid_nip19_uri_description
 import com.vitorpamplona.amethyst.commons.ui.actions.NewUserMetadataScreen
 import com.vitorpamplona.amethyst.commons.ui.actions.bolt12Offers.Bolt12OffersScreen
+import com.vitorpamplona.amethyst.commons.ui.actions.mediaServers.AllMediaServersScreen
+import com.vitorpamplona.amethyst.commons.ui.actions.nestsServers.NestsServersScreen
 import com.vitorpamplona.amethyst.commons.ui.actions.paymentTargets.PaymentTargetsScreen
 import com.vitorpamplona.amethyst.commons.ui.layouts.LocalScreenLayout
 import com.vitorpamplona.amethyst.commons.ui.navigation.bottombars.LocalTabReselectCoordinator
@@ -97,6 +99,7 @@ import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.buzz.BuzzNewDmScree
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.buzz.JobBoardScreen
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.buzz.WorkflowRunBoardScreen
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.calendars.CalendarCollectionsScreen
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.calendars.CalendarsScreen
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.calendars.create.NewCalendarCollectionScreen
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.calendars.detail.CalendarEventDetailScreen
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.cordnGroup.CordnCreateGroupScreen
@@ -136,6 +139,7 @@ import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.publicChannel
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.publicChannels.relayGroup.RelayGroupEditScreen
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.publicChannels.relayGroup.RelayGroupMembersScreen
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.publicChannels.relayGroup.RelayGroupThreadsScreen
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.rooms.MessagesScreen
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.share.ShareToDMScreen
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chess.ChessGameScreen
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chess.ChessLobbyScreen
@@ -188,10 +192,12 @@ import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.longs.LongsScreen
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.music.MusicPlaylistsScreen
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.music.MusicTracksScreen
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.music.NewMusicPlaylistScreen
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.music.NewMusicTrackScreen
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.napplets.ConnectedAppsScreen
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.nests.room.lobby.NestLobbyScreen
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.newUser.ImportFollowListPickFollowsScreen
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.newUser.ImportFollowListSelectUserScreen
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.notifications.NotificationScreen
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.notifications.publicMessages.NewPublicMessageScreen
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.nsites.NsitesScreen
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.pictures.PicturesScreen
@@ -200,6 +206,7 @@ import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.podcasts.PodcastEpi
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.podcasts.PodcastScreen
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.podcasts.PodcastsScreen
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.podcasts.authoring.EditPodcastShowScreen
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.podcasts.authoring.NewPodcastEpisodeScreen
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.podcasts.authoring.NewPodcastTrailerScreen
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.podcasts.authoring.PodcastAuthoringScreen
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.polls.PollPostScreen
@@ -218,9 +225,11 @@ import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.relays.AllRelayList
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.relays.RelayInformationScreen
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.relays.eventsync.EventSyncScreen
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.relays.nip43.RelayMembersScreen
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.relays.nip86.RelayManagementScreen
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.relays.subscriptions.ActiveSubscriptionsScreen
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.relays.vanish.RequestToVanishScreen
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.relays.vanish.VanishEventsScreen
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.scheduledposts.ScheduledPostsScreen
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.search.SearchScreen
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.settings.AllSettingsScreen
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.settings.AudioVisualizerSettingsScreen
@@ -275,6 +284,7 @@ import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.wallet.WalletScreen
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.wallet.WalletSendScreen
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.wallet.WalletTransactionsScreen
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.wallet.wizard.CashuWalletWizardScreen
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.webBookmarks.WebBookmarksScreen
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.workouts.WorkoutsScreen
 import com.vitorpamplona.amethyst.commons.ui.uriToRoute
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
@@ -285,7 +295,6 @@ import com.vitorpamplona.amethyst.service.relayClient.authCommand.compose.RelayA
 import com.vitorpamplona.amethyst.service.relayClient.notifyCommand.compose.DisplayNotifyMessages
 import com.vitorpamplona.amethyst.service.resourceusage.DisplayResourceUsageAlert
 import com.vitorpamplona.amethyst.service.resourceusage.ScreenTimeIntegrator
-import com.vitorpamplona.amethyst.ui.actions.mediaServers.AllMediaServersScreen
 import com.vitorpamplona.amethyst.ui.actions.mediaServers.BlossomBlobManagerScreen
 import com.vitorpamplona.amethyst.ui.actions.mediaServers.BlossomImportScreen
 import com.vitorpamplona.amethyst.ui.actions.mediaServers.DisplayBlossomSyncProgress
@@ -307,12 +316,10 @@ import com.vitorpamplona.amethyst.ui.screen.AccountSessionManager
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountSwitcherAndLeftDrawerLayout
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.browser.WebAppScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.calendars.CalendarReminderSettingsScreen
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.calendars.CalendarsScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.calendars.create.NewCalendarEventScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.cordnGroup.CordnGroupChatScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.privateDM.ChatroomScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.relayGroup.RelayGroupChannelListScreen
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.rooms.MessagesScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.embed.EmbeddedTabAccountWatcher
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.embed.EmbeddedTabLayer
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.embed.EmbeddedTabPreloader
@@ -328,21 +335,15 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.gitRepo.GitRepositoryPullsS
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.gitRepo.GitRepositoryScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.keyBackup.AccountBackupScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.music.AddToMusicPlaylistSheet
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.music.NewMusicTrackScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.napplets.ConnectedAppDetailScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.napplets.NappletsScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.nests.NestsScreen
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.notifications.NotificationScreen
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.podcasts.authoring.NewPodcastEpisodeScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.qrcode.ScanQrImageScreen
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.nip86.RelayManagementScreen
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.scheduledposts.ScheduledPostsScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.settings.NotificationSettingsScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.settings.ResourceUsageScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.settings.cordn.CordnBackupScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.settings.cordn.CordnMigrateScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.video.hls.NewHlsVideoScreen
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.webBookmarks.WebBookmarksScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.workouts.NewWorkoutScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.workouts.fitness.MyFitnessScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedOff.AddAccountDialog
@@ -681,10 +682,7 @@ fun BuildNavigation(
         composableFromEndArgs<Route.EditMediaServers> { AllMediaServersScreen(accountViewModel, nav) }
         composableFromEndArgs<Route.ManageBlossomBlobs> { BlossomBlobManagerScreen(accountViewModel, nav) }
         composableFromEndArgs<Route.ImportBlossomBlobs> { BlossomImportScreen(accountViewModel, nav) }
-        composableFromEndArgs<Route.EditNestsServers> {
-            com.vitorpamplona.amethyst.ui.actions.nestsServers
-                .NestsServersScreen(accountViewModel, nav)
-        }
+        composableFromEndArgs<Route.EditNestsServers> { NestsServersScreen(accountViewModel, nav) }
         composableFromEnd<Route.CordnLink> { CordnLinkScreen(accountViewModel, nav) }
         composableFromEnd<Route.CordnCoordinators> { CordnCoordinatorsScreen(accountViewModel, nav) }
         composableFromEnd<Route.CordnKeyPackages> { CordnKeyPackagesScreen(accountViewModel, nav) }

@@ -28,6 +28,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.commons.feeds.FeedContentState
+import com.vitorpamplona.amethyst.commons.notifications.CardFeedContentState
 
 @Composable
 fun WatchScrollToTop(
@@ -70,6 +71,21 @@ fun WatchScrollToTop(
         if (scrollToTop > 0 && videoFeedContentState.scrollToTopPending) {
             pagerState.scrollToPage(page = 0)
             videoFeedContentState.sentToTop()
+        }
+    }
+}
+
+@Composable
+fun WatchScrollToTop(
+    feedContent: CardFeedContentState,
+    listState: LazyListState,
+) {
+    val scrollToTop by feedContent.scrollToTop.collectAsStateWithLifecycle()
+
+    LaunchedEffect(scrollToTop) {
+        if (scrollToTop > 0 && feedContent.scrolltoTopPending) {
+            listState.scrollToItem(index = 0)
+            feedContent.sentToTop()
         }
     }
 }

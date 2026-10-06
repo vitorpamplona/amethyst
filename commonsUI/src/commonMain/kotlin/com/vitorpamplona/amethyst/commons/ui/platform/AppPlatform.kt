@@ -26,6 +26,7 @@ import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.UriHandler
 import com.vitorpamplona.amethyst.commons.favorites.FavoriteApp
+import com.vitorpamplona.amethyst.commons.model.UiSettingsFlow
 import com.vitorpamplona.amethyst.commons.model.navigation.Route
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.qrcode.ScanOutcome
@@ -45,6 +46,15 @@ import kotlinx.collections.immutable.persistentMapOf
 interface AppPlatform {
     /** Whether this build can cast media to a TV (the Play flavour's Cast SDK). */
     val isCastingAvailable: Boolean get() = false
+
+    /** This build's version name ("1.04.2"), shown in the donation card; empty where unknown. */
+    val appVersionName: String get() = ""
+
+    /** The note announcing this release, which the notifications tab's donation card links to; null shows no card. */
+    val releaseNotesId: String? get() = null
+
+    /** Dumps the app's runtime state (memory, caches, subscriptions) to the log, for the logo's debug tap. */
+    fun logDebugState() {}
 
     /** The settings screen's legal links, when the build's distribution calls for them. */
     fun legalSettingsCategory(uriHandler: UriHandler): SettingsCategory? = null
@@ -66,6 +76,13 @@ interface AppPlatform {
 
     @Composable
     fun AroundMeLocationLabel() {}
+
+    /**
+     * Asks for the OS permission to post notifications and, where the build has a choice of push
+     * servers (F-Droid's UnifiedPush), lets the user pick one. Shown when the notifications tab opens.
+     */
+    @Composable
+    fun NotificationProviderPrompt(sharedPrefs: UiSettingsFlow) {}
 
     /** A button that reads [name] aloud with the platform's text-to-speech; nothing where there is none. */
     @Composable
@@ -150,6 +167,9 @@ fun AroundMeLocationLabel() = LocalAppPlatform.current.AroundMeLocationLabel()
 
 @Composable
 fun SpeakNameButton(name: String) = LocalAppPlatform.current.SpeakNameButton(name)
+
+@Composable
+fun NotificationProviderPrompt(sharedPrefs: UiSettingsFlow) = LocalAppPlatform.current.NotificationProviderPrompt(sharedPrefs)
 
 @Composable
 fun GeohashLocationPickerDialog(

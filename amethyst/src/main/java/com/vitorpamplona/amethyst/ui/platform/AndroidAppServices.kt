@@ -31,6 +31,8 @@ import com.vitorpamplona.amethyst.commons.model.preferences.AppPreferenceStores
 import com.vitorpamplona.amethyst.commons.model.preferences.NamecoinSettingsStore
 import com.vitorpamplona.amethyst.commons.model.preferences.OtsSettingsStore
 import com.vitorpamplona.amethyst.commons.napplet.permissions.NappletPermissionLedger
+import com.vitorpamplona.amethyst.commons.relayManagement.Nip86Executor
+import com.vitorpamplona.amethyst.commons.relayManagement.Nip86Retriever
 import com.vitorpamplona.amethyst.commons.service.AppServices
 import com.vitorpamplona.amethyst.commons.service.BlossomServerFinder
 import com.vitorpamplona.amethyst.commons.service.ai.AltTextSuggester
@@ -79,6 +81,8 @@ object AndroidAppServices : AppServices {
     override val otsSettings: OtsSettingsStore get() = Amethyst.instance.otsPrefs
 
     override val nip46ClientStore: Nip46ClientStore get() = Amethyst.instance.nip46ClientStore
+
+    override val nip86Executor: Nip86Executor by lazy { Nip86Retriever(Amethyst.instance.torEvaluatorFlow::okHttpClientForRelay) }
 
     override val blossomServerFinder: BlossomServerFinder = AndroidBlossomServerFinder
 

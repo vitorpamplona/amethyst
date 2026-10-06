@@ -24,8 +24,9 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.ViewModelStore
 import androidx.lifecycle.viewModelScope
 import com.vitorpamplona.amethyst.commons.nip52Calendar.ui.CalendarsViewMode
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.calendars.CalendarsViewModel
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.calendars.startOfWeek
+import com.vitorpamplona.amethyst.commons.search.calendar.SearchDate
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.calendars.CalendarsViewModel
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.calendars.startOfWeek
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.Job
@@ -42,7 +43,6 @@ import org.junit.Before
 import org.junit.Test
 import java.time.DayOfWeek
 import java.time.LocalDate
-import java.time.YearMonth
 
 /**
  * The paging arithmetic the calendar lenses share, now that it lives on the screen's ViewModel
@@ -85,12 +85,13 @@ class CalendarsViewModelTest {
 
     @Test
     fun aFreshScreenOpensOnToday() {
-        val today = LocalDate.now()
+        val now = LocalDate.now()
+        val today = SearchDate(now.year, now.monthValue, now.dayOfMonth)
         val model = newModel()
 
         assertEquals(CalendarsViewMode.FEED, model.viewMode)
         assertNull(model.filterDTag.value)
-        assertEquals(YearMonth.from(today), model.visibleMonth)
+        assertEquals(today.firstOfMonth(), model.visibleMonth)
         assertEquals(today, model.visibleDate)
         assertEquals(startOfWeek(today), model.weekStart)
         assertEquals(0, model.selectedDayIndex)
@@ -102,7 +103,7 @@ class CalendarsViewModelTest {
         val model = newModel()
         model.selectedDayKey = LocalDate.of(2025, 1, 15).toEpochDay()
 
-        model.showMonth(model.visibleMonth.plusMonths(1))
+        model.showMonth(model.visibleMonth.firstOfMonth(1))
 
         assertNull("a day picked in January cannot stay selected in February", model.selectedDayKey)
     }
@@ -110,7 +111,7 @@ class CalendarsViewModelTest {
     @Test
     fun pagingTheWeekMovesSevenDaysAndReturnsTheStripToTheFirstDay() {
         val model = newModel()
-        model.showWeekOf(LocalDate.of(2025, 1, 15)) // a Wednesday
+        model.showWeekOf(SearchDate(2025, 1, 15)) // a Wednesday
         model.selectedDayIndex = 4
 
         val before = model.weekStart
@@ -124,38 +125,39 @@ class CalendarsViewModelTest {
     fun showWeekOfSnapsToTheSundayOnOrBeforeTheDate() {
         val model = newModel()
 
-        model.showWeekOf(LocalDate.of(2025, 1, 15)) // Wednesday
-        assertEquals(LocalDate.of(2025, 1, 12), model.weekStart)
-        assertEquals(DayOfWeek.SUNDAY, model.weekStart.dayOfWeek)
+        model.showWeekOf(SearchDate(2025, 1, 15)) // Wednesday
+        assertEquals(SearchDate(2025, 1, 12), model.weekStart)
+        assertEquals(0, model.weekStart.dayOfWeek())
+        model.weekStart.let { assertEquals(DayOfWeek.SUNDAY, LocalDate.of(it.year, it.month, it.day).dayOfWeek) }
 
-        model.showWeekOf(LocalDate.of(2025, 1, 12)) // already a Sunday: stays put
-        assertEquals(LocalDate.of(2025, 1, 12), model.weekStart)
+        model.showWeekOf(SearchDate(2025, 1, 12)) // already a Sunday: stays put
+        assertEquals(SearchDate(2025, 1, 12), model.weekStart)
     }
 
     @Test
     fun theStripsSelectedDateIsTheWeekStartPlusItsIndex() {
         val model = newModel()
-        model.showWeekOf(LocalDate.of(2025, 1, 15))
+        model.showWeekOf(SearchDate(2025, 1, 15))
         model.selectedDayIndex = 3
 
-        assertEquals(LocalDate.of(2025, 1, 15), model.selectedWeekDate)
+        assertEquals(SearchDate(2025, 1, 15), model.selectedWeekDate)
     }
 
     @Test
     fun pagingTheDayCrossesDaylightSavingWithoutSlipping() {
         // US spring-forward lands on 2025-03-09; stepping by milliseconds used to land an hour
-        // short and repeat a day. LocalDate arithmetic ignores zones, so a step is always a day.
+        // short and repeat a day. Calendar-day arithmetic ignores zones, so a step is always a day.
         val model = newModel()
         model.visibleEpochDay = LocalDate.of(2025, 3, 8).toEpochDay()
 
         model.shiftDays(1)
-        assertEquals(LocalDate.of(2025, 3, 9), model.visibleDate)
+        assertEquals(SearchDate(2025, 3, 9), model.visibleDate)
 
         model.shiftDays(1)
-        assertEquals(LocalDate.of(2025, 3, 10), model.visibleDate)
+        assertEquals(SearchDate(2025, 3, 10), model.visibleDate)
 
         model.shiftDays(-2)
-        assertEquals(LocalDate.of(2025, 3, 8), model.visibleDate)
+        assertEquals(SearchDate(2025, 3, 8), model.visibleDate)
     }
 
     @Test
