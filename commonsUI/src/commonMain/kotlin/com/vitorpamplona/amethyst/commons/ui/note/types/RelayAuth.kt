@@ -45,9 +45,10 @@ import com.vitorpamplona.amethyst.commons.relayClient.auth.RelayAuthTarget
 import com.vitorpamplona.amethyst.commons.relayClient.auth.relayAuthTarget
 import com.vitorpamplona.amethyst.commons.relayClient.auth.relayAuthTargets
 import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.relay_auth_event_app_explainer
+import com.vitorpamplona.amethyst.commons.resources.relay_auth_event_app_title
 import com.vitorpamplona.amethyst.commons.resources.relay_auth_event_challenge
 import com.vitorpamplona.amethyst.commons.resources.relay_auth_event_explainer
-import com.vitorpamplona.amethyst.commons.resources.relay_auth_event_no_relay
 import com.vitorpamplona.amethyst.commons.resources.relay_auth_event_title
 import com.vitorpamplona.amethyst.commons.resources.relay_auth_event_unusual_relay
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
@@ -64,6 +65,11 @@ import com.vitorpamplona.quartz.nip42RelayAuth.RelayAuthEvent
  * the relay ever sees it — so it renders as "log in to <relay>" instead of falling through to the
  * text-note layout. Mostly met in signer consent prompts, where an app asks to sign one, so the
  * relay is shown exactly as the event names it (see [RelayAuthTarget]).
+ *
+ * A 22242 that names no relay is not a relay login at all: web apps (Brainstorm's
+ * `t=brainstorm_login`, for one) sign it to prove to their own server who you are. It then reads as
+ * a plain sign-in, without the relay warnings that would only alarm the user about a relay that is
+ * not involved.
  */
 @Composable
 fun RenderRelayAuth(
@@ -104,26 +110,18 @@ fun RelayAuthCard(
                 tint = MaterialTheme.colorScheme.primary,
             )
             Column {
+                val appLogin = relays.isEmpty()
                 Text(
-                    text = stringRes(Res.string.relay_auth_event_title),
+                    text = stringRes(if (appLogin) Res.string.relay_auth_event_app_title else Res.string.relay_auth_event_title),
                     fontWeight = FontWeight.Bold,
                     style = MaterialTheme.typography.bodyLarge,
                 )
                 Text(
-                    text = stringRes(Res.string.relay_auth_event_explainer),
+                    text = stringRes(if (appLogin) Res.string.relay_auth_event_app_explainer else Res.string.relay_auth_event_explainer),
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
-        }
-
-        if (relays.isEmpty()) {
-            Text(
-                text = stringRes(Res.string.relay_auth_event_no_relay),
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.error,
-                modifier = Modifier.padding(start = 32.dp),
-            )
         }
 
         relays.forEach { relay ->

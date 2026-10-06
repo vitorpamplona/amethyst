@@ -1120,7 +1120,6 @@
     <string name="relay_auth_event_title">Bejelentkezés az átjátszóba</string>
     <string name="relay_auth_event_explainer">Ez nem egy bejegyzés. Ez bejelentkezteti Önt erre az átjátszóra: aki az átjátszót üzemelteti, olvashatja mindazt, amit az átjátszó csak Önnek jelenít meg – például a privát üzeneteit.</string>
     <string name="relay_auth_event_unusual_relay">Ez nem egy egyszerű átjátszócím. Ellenőrizze az aláírás előtt.</string>
-    <string name="relay_auth_event_no_relay">Nincs átjátszó megnevezve ebben a bejelentkezésben</string>
     <string name="relay_auth_event_challenge">Kihívás: %1$s</string>
     <string name="relay_auth_session_forgotten_undo">Ha szükség lesz rá, a(z) %1$s ismét rákérdez.</string>
     <string name="relay_auth_session_undo_blocked">Nincs helyreállítva. A „Soha ne jelentkezzen be” be van kapcsolva, ezért az Amethyst nem fog bejelentkezni ide: %1$s.</string>

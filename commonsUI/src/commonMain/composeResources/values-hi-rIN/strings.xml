@@ -1120,7 +1120,6 @@
     <string name="relay_auth_event_title">पुनःप्रसारक प्रवेशांकन</string>
     <string name="relay_auth_event_explainer">यह एक पत्र प्रकाशन नहीं। यह आपको इस पुनःप्रसारक में प्रवेशांकन करता है। जो भी इसे रखता है वह सब पढ सकेगा जो यह पुनःप्रसारक केवल आपको दिखाता है। जैसे कि आपके निजी सन्देश।</string>
     <string name="relay_auth_event_unusual_relay">यह एक साधारण पुनःप्रसारक पता नहीं। इसकी जाँच करें हस्ताक्षरण पूर्व।</string>
-    <string name="relay_auth_event_no_relay">कोई पुनःप्रसारक नामित नहीं इस प्रवेशांकन में</string>
     <string name="relay_auth_event_challenge">चुनौती। %1$s</string>
     <string name="relay_auth_session_forgotten_undo">%1$s पुनःपूछेगा अगली बार जब उसे आपकी आवश्यकता हो।</string>
     <string name="relay_auth_session_undo_blocked">पुनःस्थापित नहीं। कभी प्रवेशांकन ना करें यह आज्ञा सक्रिय है। इसीलिए अमेथिस्ट %1$s में प्रवेशांकन नहीं करेगा।</string>

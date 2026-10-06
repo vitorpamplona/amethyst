@@ -30,6 +30,7 @@ import androidx.compose.runtime.CompositionLocalProvider
 import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.commons.ui.components.LocalWindowViewModelStoreOwner
 import com.vitorpamplona.amethyst.commons.ui.note.elements.NowProvider
+import com.vitorpamplona.amethyst.connectedApps.consent.SignerConsentCoordinator
 import com.vitorpamplona.amethyst.debugState
 import com.vitorpamplona.amethyst.service.lang.LanguageTranslatorService
 import com.vitorpamplona.amethyst.service.notifications.NotificationRelayService
@@ -82,6 +83,11 @@ class MainActivity : AppCompatActivity() {
 
         // starts muted every time
         DEFAULT_MUTED_SETTING.value = true
+
+        // A signer prompt left open when the user went to the launcher sits in its own task, which is
+        // excluded from Recents: coming back through the launcher would otherwise leave it out of reach
+        // while the app that asked waits on it.
+        SignerConsentCoordinator.resurfacePending(this)
 
         // If always-on notifications are enabled but the foreground service couldn't be
         // started from the background during cold-start (Android 12+ restriction), retry

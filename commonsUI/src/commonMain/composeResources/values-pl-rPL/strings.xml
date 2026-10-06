@@ -1140,7 +1140,6 @@
     <string name="relay_auth_event_title">Logowanie do transmitera</string>
     <string name="relay_auth_event_explainer">To nie jest wpis. Loguje Cię do tego transmitera: każdy, kto go posiada, może przeczytać to, co transmiter pokazuje wyłącznie Tobie, na przykład Twoje prywatne wiadomości.</string>
     <string name="relay_auth_event_unusual_relay">To nie jest zwykły adres transmitera. Sprawdź go przed przystąpieniem.</string>
-    <string name="relay_auth_event_no_relay">W tym logowaniu nie określono transmitera</string>
     <string name="relay_auth_event_challenge">Wyzwanie: %1$s</string>
     <string name="relay_auth_session_forgotten_undo">%1$s zapyta ponownie, gdy następnym razem będzie cię potrzebował.</string>
     <string name="relay_auth_session_undo_blocked">Nie zostało przywrócone. Opcja „Nigdy nie loguj się” jest włączona, więc Amethyst nie zaloguje się do %1$s.</string>

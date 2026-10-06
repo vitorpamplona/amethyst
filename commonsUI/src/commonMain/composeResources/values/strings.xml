@@ -1210,7 +1210,8 @@
     <string name="relay_auth_event_title">Relay login</string>
     <string name="relay_auth_event_explainer">Not a post. It logs you in to this relay: whoever holds it can read what the relay only shows to you, like your private messages.</string>
     <string name="relay_auth_event_unusual_relay">This is not a plain relay address. Check it before signing.</string>
-    <string name="relay_auth_event_no_relay">No relay named in this login</string>
+    <string name="relay_auth_event_app_title">Sign-in</string>
+    <string name="relay_auth_event_app_explainer">Not a post. It proves to the app asking that you are this account, so it can sign you in. It names no relay.</string>
     <string name="relay_auth_event_challenge">Challenge: %1$s</string>
     <string name="relay_auth_session_forgotten_undo">%1$s will ask again the next time it needs you.</string>
     <string name="relay_auth_session_undo_blocked">Not restored. “Never log in” is on, so Amethyst won't log in to %1$s.</string>
@@ -4585,6 +4586,30 @@
     <string name="napplet_op_decrypt_from">read your private messages with %1$s</string>
     <string name="napplet_op_encrypt">encrypt a message</string>
     <string name="napplet_op_relay_login">log in to relays as you</string>
+    <string name="napplet_op_app_login">sign you in</string>
+    <plurals name="napplet_consent_waiting_long">
+        <item quantity="one">Asked %1$d minute ago. The app may have stopped waiting.</item>
+        <item quantity="other">Asked %1$d minutes ago. The app may have stopped waiting.</item>
+    </plurals>
+    <string name="napplet_op_seal_message_to">send a private message to %1$s</string>
+    <string name="napplet_op_seal_message">send a private message</string>
+    <string name="napplet_consent_seal_unknown">An encrypted private message. Amethyst didn't encrypt it, so it can't show what's inside.</string>
+    <string name="consent_list_adds">Adds %1$s</string>
+    <string name="consent_list_removes">Removes %1$s</string>
+    <string name="consent_list_no_change">No change to who is on this list</string>
+    <string name="consent_list_unknown">Your current list hasn't loaded, so Amethyst can't show what this changes. Signing replaces it.</string>
+    <plurals name="consent_list_keeps">
+        <item quantity="one">keeps the other %1$d</item>
+        <item quantity="other">keeps the other %1$d</item>
+    </plurals>
+    <plurals name="consent_list_wipe">
+        <item quantity="one">Removes everyone (%1$d) from this list</item>
+        <item quantity="other">Removes everyone (%1$d) from this list</item>
+    </plurals>
+    <plurals name="consent_list_names_more">
+        <item quantity="one">%1$s and %2$d more</item>
+        <item quantity="other">%1$s and %2$d more</item>
+    </plurals>
     <string name="napplet_op_sign_kind_named">sign for %1$s (kind: %2$d)</string>
     <string name="napplet_permissions_title">Connected Apps</string>
     <string name="napplets">nApplets</string>

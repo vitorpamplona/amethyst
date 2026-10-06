@@ -1157,7 +1157,6 @@
     <string name="relay_auth_event_title">Přihlášení k relé</string>
     <string name="relay_auth_event_explainer">Toto není příspěvek. Přihlašuje vás k tomuto relé: kdo ho má, může číst to, co relé ukazuje jen vám, například vaše soukromé zprávy.</string>
     <string name="relay_auth_event_unusual_relay">Toto není běžná adresa relé. Před podepsáním ji zkontrolujte.</string>
-    <string name="relay_auth_event_no_relay">V tomto přihlášení není uvedeno žádné relé</string>
     <string name="relay_auth_event_challenge">Výzva: %1$s</string>
     <string name="relay_auth_session_forgotten_undo">%1$s se zeptá znovu, až vás bude příště potřebovat.</string>
     <string name="relay_auth_session_undo_blocked">Neobnoveno. Je zapnuto “Nikdy se neověřovat”, takže se Amethyst k %1$s nepřihlásí.</string>

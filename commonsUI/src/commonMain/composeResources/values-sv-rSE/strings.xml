@@ -1137,7 +1137,6 @@
     <string name="relay_auth_event_title">Reläinloggning</string>
     <string name="relay_auth_event_explainer">Inte ett inlägg. Det loggar in dig på det här reläet: den som har det kan läsa det som reläet bara visar för dig, som dina privata meddelanden.</string>
     <string name="relay_auth_event_unusual_relay">Det här är inte en vanlig reläadress. Kontrollera den innan du signerar.</string>
-    <string name="relay_auth_event_no_relay">Inget relä anges i den här inloggningen</string>
     <string name="relay_auth_event_challenge">Utmaning: %1$s</string>
     <string name="relay_auth_session_forgotten_undo">%1$s frågar igen nästa gång det behöver dig.</string>
     <string name="relay_auth_session_undo_blocked">Inte återställd. “Autentisera aldrig” är på, så Amethyst loggar inte in på %1$s.</string>

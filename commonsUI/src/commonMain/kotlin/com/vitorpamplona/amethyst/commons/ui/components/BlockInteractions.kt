@@ -22,6 +22,7 @@ package com.vitorpamplona.amethyst.commons.ui.components
 
 import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
+import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.input.key.key
@@ -34,6 +35,13 @@ import androidx.compose.ui.util.fastAny
 import androidx.compose.ui.util.fastForEach
 
 private val ACTIVATION_KEYS = setOf(Key.Enter, Key.NumPadEnter, Key.Spacebar, Key.DirectionCenter)
+
+/**
+ * True inside content shown for inspection only (see [blockInteractions]). [blockInteractions] makes
+ * taps inert; rows that carry their own action buttons (follow, add to list) read this to leave the
+ * buttons out, since a button that looks live and does nothing reads as broken.
+ */
+val LocalReadOnlyPreview = staticCompositionLocalOf { false }
 
 /**
  * Makes everything inside read-only: taps, long-presses and keyboard activation never reach a

@@ -81,6 +81,9 @@ class NappletBroker(
     private val signerLedger: NostrSignerPermissionLedger? = null,
     private val nostrConnectPrompt: NostrConnectPrompt? = null,
     private val signerConsentPrompt: NostrSignerConsentPrompt? = null,
+    // Plaintext of recent nip44.encrypt calls, read back by the consent prompt for the seal that
+    // carries the ciphertext (see [NappletRecentEncryptions]).
+    private val recentEncryptions: NappletRecentEncryptions? = null,
     // Wall-clock source (ms) for the post-cancel re-prompt cooldown; injectable for tests.
     private val nowMillis: () -> Long = { TimeUtils.nowMillis() },
 ) {
@@ -248,7 +251,11 @@ class NappletBroker(
 
             // NIP-07 nip44.encrypt/decrypt: the shell runs the crypto with the real key and hands back
             // only the result, so the page can build its own NIP-59 seals without ever seeing the key.
-            is NappletRequest.Nip44Encrypt -> NappletResponse.Text(signer.nip44Encrypt(request.plaintext, request.peer))
+            is NappletRequest.Nip44Encrypt -> {
+                val ciphertext = signer.nip44Encrypt(request.plaintext, request.peer)
+                recentEncryptions?.record(ciphertext, request.peer, request.plaintext)
+                NappletResponse.Text(ciphertext)
+            }
 
             is NappletRequest.Nip44Decrypt -> NappletResponse.Text(signer.nip44Decrypt(request.ciphertext, request.peer))
 

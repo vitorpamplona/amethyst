@@ -1137,7 +1137,6 @@
     <string name="relay_auth_event_title">Relay-Anmeldung</string>
     <string name="relay_auth_event_explainer">Kein Beitrag. Damit meldest du dich bei diesem Relay an: Wer es besitzt, kann lesen, was das Relay nur dir zeigt, etwa deine privaten Nachrichten.</string>
     <string name="relay_auth_event_unusual_relay">Das ist keine gewöhnliche Relay-Adresse. Prüfe sie vor dem Signieren.</string>
-    <string name="relay_auth_event_no_relay">In dieser Anmeldung ist kein Relay angegeben</string>
     <string name="relay_auth_event_challenge">Challenge: %1$s</string>
     <string name="relay_auth_session_forgotten_undo">%1$s fragt beim nächsten Mal wieder, wenn es dich braucht.</string>
     <string name="relay_auth_session_undo_blocked">Nicht wiederhergestellt. “Nie authentifizieren” ist aktiv, daher meldet sich Amethyst nicht bei %1$s an.</string>
