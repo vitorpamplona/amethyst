@@ -242,8 +242,5 @@ class BunkerRequestProcessor(
 
         /** Error prefix for a method this signer does not implement. */
         const val ERROR_UNSUPPORTED_METHOD: String = "unsupported method"
-
-        /** Error returned to a client whose requests exceed the service's rate limit. */
-        const val ERROR_RATE_LIMITED: String = "rate limited"
     }
 }

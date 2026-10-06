@@ -143,7 +143,7 @@ that loop via `collectLatest`.
   first-connect dialog can no longer wedge the loop forever.
 - **FIXED — consent no longer blocks other clients (needs on-device
   validation).** The service now fans each request out into a child coroutine
-  under a `Semaphore(maxConcurrentHandles=16)`; dedup/staleness/rate-limit stay on
+  under a `Semaphore(maxConcurrentHandles)` (now 1024); dedup/staleness stay on
   the single consumer, only `handle()` runs concurrently. So a request awaiting a
   prompt no longer stalls auto-allowed traffic, and several prompts can be pending
   at once. Two guards keep this safe: (1) the identity signer's crypto is
@@ -170,10 +170,14 @@ that loop via `collectLatest`.
   but the client is leaving; a pairing-time cancel makes other clients retry).
   Proper fix: manage subscriptions incrementally (diff add/remove) instead of a
   full restart. Deferred (same reason).
+- **Per-author rate limiter removed (2026-10-06).** A single app must be able to
+  drive ~10k requests/s, so the 40-per-10s fixed window (and its `rate limited`
+  error reply) is gone. The remaining flood bounds were resized for that rate:
+  `maxQueue` 256 → 10,000, `seenCap` 4096 → 65,536, `maxConcurrentHandles`
+  16 → 1024. Covered by `NostrConnectSignerServiceTest.burstFromOneClientIsFullyServiced`.
 - **Low-severity, left as-is:** activity-log records an O(capacity) list copy per
-  serviced request (negligible under rate-limiting); the per-author rate limiter
-  evicts by insertion order rather than LRU (the 3-arg `accessOrder`
-  `LinkedHashMap` isn't in KMP commonMain); first-time transport-key/secret mint
+  serviced request (no longer bounded by a rate limit, so revisit if it shows up
+  under a high-throughput client); first-time transport-key/secret mint
   is unsynchronized (practically serialized on the UI thread).
 
 ## Deliberately NOT changed

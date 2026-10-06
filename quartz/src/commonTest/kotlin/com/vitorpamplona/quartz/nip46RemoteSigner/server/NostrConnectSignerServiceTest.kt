@@ -33,6 +33,7 @@ import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip46RemoteSigner.BunkerRequest
 import com.vitorpamplona.quartz.nip46RemoteSigner.BunkerRequestConnect
 import com.vitorpamplona.quartz.nip46RemoteSigner.BunkerRequestGetPublicKey
+import com.vitorpamplona.quartz.nip46RemoteSigner.BunkerRequestPing
 import com.vitorpamplona.quartz.nip46RemoteSigner.BunkerRequestSign
 import com.vitorpamplona.quartz.nip46RemoteSigner.BunkerResponse
 import com.vitorpamplona.quartz.nip46RemoteSigner.BunkerResponseError
@@ -314,63 +315,25 @@ class NostrConnectSignerServiceTest {
         }
 
     @Test
-    fun floodingClientIsRateLimited() =
+    fun burstFromOneClientIsFullyServiced() =
         runTest {
             val client = LoopbackClient()
             val signer = serverSigner()
             val processor = BunkerRequestProcessor(signer, { setOf(relay) }, AllowAuthorizer())
-            val service =
-                NostrConnectSignerService(
-                    client,
-                    signer,
-                    processor,
-                    setOf(relay),
-                    maxRequestsPerWindow = 2,
-                    rateWindowSeconds = 3600,
-                )
+            val service = NostrConnectSignerService(client, signer, processor, setOf(relay))
 
             backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) { service.run() }
 
-            // Five distinct requests from the same author within one window → only 2 are serviced,
-            // the first over-limit one is answered with a `rate limited` error, the rest are dropped.
-            repeat(5) { i ->
-                client.deliver(request(BunkerRequestConnect(id = "req$i", remoteKey = serverKey, secret = "s")))
+            // There is no per-client rate limit: a single app driving a large burst gets every
+            // request answered (this used to cap at 40 per 10 s and then drop the rest).
+            val count = 500
+            repeat(count) { i ->
+                client.deliver(request(BunkerRequest(id = "req$i", method = BunkerRequestPing.METHOD_NAME)))
             }
 
-            assertEquals(3, client.published.size)
             val replies = client.published.map { (it as NostrConnectEvent).decryptMessage(clientSigner()) as BunkerResponse }
-            assertEquals(listOf("req0", "req1", "req2"), replies.map { it.id })
-            assertEquals(BunkerRequestProcessor.ERROR_RATE_LIMITED, replies[2].error)
-        }
-
-    @Test
-    fun aRateLimitedRequestThatWasAnsweredIsRecordedAsHandled() =
-        runTest {
-            val client = LoopbackClient()
-            val signer = serverSigner()
-            val processor = BunkerRequestProcessor(signer, { setOf(relay) }, AllowAuthorizer())
-            val handled = mutableListOf<String>()
-            val service =
-                NostrConnectSignerService(
-                    client,
-                    signer,
-                    processor,
-                    setOf(relay),
-                    maxRequestsPerWindow = 1,
-                    rateWindowSeconds = 3600,
-                    onHandledId = { handled.add(it) },
-                )
-
-            backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) { service.run() }
-
-            val serviced = request(BunkerRequestConnect(id = "ok", remoteKey = serverKey, secret = "s"))
-            val limited = request(BunkerRequestConnect(id = "limited", remoteKey = serverKey, secret = "s"))
-            client.deliver(serviced)
-            client.deliver(limited)
-
-            // The client was told `limited` failed; a relay replaying it after a restart must not get it
-            // serviced, so its id is persisted just like a serviced one.
-            assertEquals(listOf(serviced.id, limited.id), handled)
+            assertEquals((0 until count).map { "req$it" }.toSet(), replies.map { it.id }.toSet())
+            assertTrue(replies.all { it.error == null })
         }
 
     @Test
