@@ -30,6 +30,7 @@ import kotlinx.collections.immutable.persistentMapOf
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.IO
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
@@ -62,11 +63,10 @@ class RelayHealthStore(
     private val persistence: RelayHealthPersistence,
     private val torEnabledProvider: () -> Boolean = { false },
     parentScope: CoroutineScope? = null,
-    // Caller-supplied dispatcher used for both classification and persistence I/O.
-    // Default is `Dispatchers.Default` so commonMain stays iOS-compatible — JVM hosts
-    // (Android/Desktop) should pass `Dispatchers.IO` so `prefs.flush()` doesn't sit on
-    // a CPU-bound worker.
-    private val ioDispatcher: CoroutineDispatcher = Dispatchers.Default,
+    // Dispatcher used for both classification and persistence I/O. `prefs.flush()` is
+    // blocking, so this must not be `Dispatchers.Default`: a blocked worker there takes
+    // one of only nCPU threads away from every other CPU-bound coroutine in the app.
+    private val ioDispatcher: CoroutineDispatcher = Dispatchers.IO,
     // Optional latency tracker (jvmAndroidMain in the current build — Desktop wires it,
     // Android picks up later). When null, [latencySnapshots] stays empty and [slowRelays]
     // never flags anything.

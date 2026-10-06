@@ -27,9 +27,12 @@ import com.vitorpamplona.quartz.nip01Core.signers.EventTemplate
 import com.vitorpamplona.quartz.nip13Pow.tags.PoWTag
 import com.vitorpamplona.quartz.utils.sha256.sha256Into
 import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.IO
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import kotlin.coroutines.cancellation.CancellationException
 import kotlin.random.Random
 import kotlin.time.Duration.Companion.seconds
@@ -136,6 +139,22 @@ class PoWMiner(
          * actually runs. A ByteArray needs no escape analysis to be free.
          */
         private val VALID_BYTES: ByteArray = ByteArray(VALID_CHARS.size) { VALID_CHARS[it].code.toByte() }
+
+        /**
+         * Where mining runs. The search is a non-suspending hot loop that holds its
+         * thread for the whole job — seconds to minutes. On Dispatchers.Default each
+         * worker would take one of the pool's nCPU threads for that long, queueing
+         * every other CPU-bound coroutine in the process (relay event verification,
+         * feed filters, flowOn(Default) state) behind the miner. A view of IO gives
+         * miners threads of their own, so the OS time-slices them against Default
+         * instead of the coroutine scheduler starving Default's queue. Being a
+         * limitedParallelism view, it does not eat into IO's 64-thread budget for
+         * blocking calls either. The cap is a ceiling only: callers pick the actual
+         * parallelism through `workers`.
+         */
+        val MiningDispatcher: CoroutineDispatcher = Dispatchers.IO.limitedParallelism(MAX_MINING_THREADS)
+
+        private const val MAX_MINING_THREADS = 64
 
         private fun randomBase(size: Int): String = CharArray(size) { VALID_CHARS[Random.nextInt(VALID_CHARS.size)] }.concatToString()
 
@@ -298,14 +317,14 @@ class PoWMiner(
             refreshCreatedAt: (() -> Long)? = null,
         ): EventTemplate<T> {
             require(workers >= 1) { "workers must be >= 1, was $workers" }
-            if (workers == 1) return run(template, pubKey, desiredPoW, isActive, refreshCreatedAt)
+            if (workers == 1) return withContext(MiningDispatcher) { run(template, pubKey, desiredPoW, isActive, refreshCreatedAt) }
 
             return coroutineScope {
                 val winner = CompletableDeferred<EventTemplate<T>>()
                 val race =
                     launch {
                         repeat(workers) { worker ->
-                            launch(Dispatchers.Default) {
+                            launch(MiningDispatcher) {
                                 winner.complete(
                                     search(template, pubKey, desiredPoW, {
                                         isActive() && !winner.isCompleted
