@@ -52,6 +52,7 @@ import com.vitorpamplona.amethyst.commons.actions.ReplyActions
 import com.vitorpamplona.amethyst.commons.feeds.FeedState
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
+import com.vitorpamplona.amethyst.commons.model.EventThreadTree
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.nip25Reactions.ReactionAction
 import com.vitorpamplona.amethyst.commons.relayClient.user.UserFinderFilterAssemblerSubscription
@@ -237,7 +238,7 @@ fun ThreadScreen(
         val event = note.event ?: return 1
         levelCache[event.id]?.let { return it }
 
-        val replyToId = findReplyToId(event)
+        val replyToId = EventThreadTree.parentOf(event)
         val level =
             if (replyToId == null || replyToId == noteId) {
                 1
@@ -509,21 +510,4 @@ fun ThreadScreen(
             )
         }
     }
-}
-
-/**
- * Finds the event ID this event is replying to.
- * Uses NIP-10 markers (reply/root) or falls back to last e-tag.
- */
-private fun findReplyToId(event: Event): String? {
-    val eTags = event.tags.filter { it.size >= 2 && it[0] == "e" }
-    if (eTags.isEmpty()) return null
-
-    val replyTag = eTags.find { it.size >= 4 && it[3] == "reply" }
-    if (replyTag != null) return replyTag[1]
-
-    val rootTag = eTags.find { it.size >= 4 && it[3] == "root" }
-    if (rootTag != null && eTags.size == 1) return rootTag[1]
-
-    return eTags.lastOrNull()?.get(1)
 }

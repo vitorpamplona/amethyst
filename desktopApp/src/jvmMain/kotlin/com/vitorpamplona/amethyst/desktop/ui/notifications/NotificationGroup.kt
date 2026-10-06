@@ -21,7 +21,7 @@
 package com.vitorpamplona.amethyst.desktop.ui.notifications
 
 import androidx.compose.runtime.Immutable
-import com.vitorpamplona.amethyst.desktop.ui.NotificationItem
+import com.vitorpamplona.amethyst.commons.moderation.notifications.NotificationItem
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale

@@ -22,6 +22,7 @@ package com.vitorpamplona.amethyst.commons.model
 
 import androidx.compose.runtime.Stable
 import com.vitorpamplona.amethyst.commons.actions.ConcordActions
+import com.vitorpamplona.amethyst.commons.actions.DeletionActions
 import com.vitorpamplona.amethyst.commons.audio.VisualizerStyle
 import com.vitorpamplona.amethyst.commons.connectedApps.nip46.InMemoryNip46ClientStore
 import com.vitorpamplona.amethyst.commons.connectedApps.nip46.Nip46ClientStore
@@ -1860,7 +1861,7 @@ class Account(
 
         if (myNotes.isNotEmpty()) {
             // chunks in 200 elements to avoid going over the 65KB limit for events.
-            myNotes.chunked(200).forEach { chunkedList ->
+            myNotes.chunked(DeletionActions.MAX_TARGETS_PER_EVENT).forEach { chunkedList ->
                 val template = DeletionRequestEvent.build(chunkedList.mapNotNull { it.event })
                 val deletionEvent = signer.sign(template)
                 val myRelayList = outboxRelays.flow.value.toMutableSet()

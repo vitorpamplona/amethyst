@@ -63,9 +63,11 @@ import com.vitorpamplona.amethyst.commons.icons.Repost
 import com.vitorpamplona.amethyst.commons.icons.Zap
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.icons.symbols.rememberMaterialSymbolPainter
+import com.vitorpamplona.amethyst.commons.moderation.notifications.NotificationItem
 import com.vitorpamplona.amethyst.commons.moderation.notifications.NotificationKinds
 import com.vitorpamplona.amethyst.commons.moderation.notifications.PreferencesNotificationReadState
 import com.vitorpamplona.amethyst.commons.moderation.notifications.PreferencesNotificationSettings
+import com.vitorpamplona.amethyst.commons.moderation.notifications.effectiveAuthorPubKey
 import com.vitorpamplona.amethyst.commons.moderation.notifications.nowEpochSeconds
 import com.vitorpamplona.amethyst.commons.relayClient.user.observeUserName
 import com.vitorpamplona.amethyst.commons.relayClient.user.observeUserPicture
@@ -85,115 +87,8 @@ import com.vitorpamplona.amethyst.desktop.ui.notifications.LocalNotificationSett
 import com.vitorpamplona.amethyst.desktop.ui.notifications.NotificationFilter
 import com.vitorpamplona.amethyst.desktop.ui.notifications.NotificationGroup
 import com.vitorpamplona.amethyst.desktop.ui.notifications.groupNotifications
-import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.hexToByteArrayOrNull
-import com.vitorpamplona.quartz.nip04Dm.messages.EncryptedDmEvent
-import com.vitorpamplona.quartz.nip10Notes.TextNoteEvent
-import com.vitorpamplona.quartz.nip17Dm.files.ChatMessageEncryptedFileHeaderEvent
-import com.vitorpamplona.quartz.nip17Dm.messages.ChatMessageEvent
-import com.vitorpamplona.quartz.nip18Reposts.GenericRepostEvent
-import com.vitorpamplona.quartz.nip18Reposts.RepostEvent
 import com.vitorpamplona.quartz.nip19Bech32.toNpub
-import com.vitorpamplona.quartz.nip22Comments.CommentEvent
-import com.vitorpamplona.quartz.nip25Reactions.ReactionEvent
-import com.vitorpamplona.quartz.nip28PublicChat.message.ChannelMessageEvent
-import com.vitorpamplona.quartz.nip57Zaps.ZapReceiptEvent
-import com.vitorpamplona.quartz.nip59Giftwrap.wraps.GiftWrapEvent
-import com.vitorpamplona.quartz.nip61Nutzaps.nutzap.NutzapEvent
-
-/**
- * Notification types for display.
- */
-sealed class NotificationItem(
-    open val event: Event,
-    open val timestamp: Long,
-) {
-    data class Mention(
-        override val event: Event,
-        override val timestamp: Long,
-    ) : NotificationItem(event, timestamp)
-
-    data class Reply(
-        override val event: Event,
-        override val timestamp: Long,
-    ) : NotificationItem(event, timestamp)
-
-    data class Reaction(
-        override val event: Event,
-        override val timestamp: Long,
-        val content: String,
-    ) : NotificationItem(event, timestamp)
-
-    data class Repost(
-        override val event: Event,
-        override val timestamp: Long,
-    ) : NotificationItem(event, timestamp)
-
-    data class Zap(
-        override val event: Event,
-        override val timestamp: Long,
-        val amount: Long?,
-    ) : NotificationItem(event, timestamp)
-
-    /**
-     * Encrypted direct message notification. `body` remains empty until the
-     * decryption pipeline (NIP-04 signer / NIP-17 gift-wrap unwrap) is wired
-     * — never populate with raw ciphertext.
-     */
-    data class Dm(
-        override val event: Event,
-        override val timestamp: Long,
-    ) : NotificationItem(event, timestamp)
-}
-
-/**
- * The pubkey we should display + fetch metadata for. For NIP-57 zap
- * receipts the outer `event.pubKey` is the LNURL provider — the actual
- * zap sender lives in the nested zap request. For gift-wrapped DMs
- * the outer pubkey is an ephemeral key (not the real sender); until
- * decryption lands we fall back to `event.pubKey` which at least gives
- * a stable fallback avatar.
- */
-val NotificationItem.effectiveAuthorPubKey: String
-    get() =
-        when (val e = event) {
-            is ZapReceiptEvent -> e.zapRequest?.pubKey ?: e.pubKey
-            else -> event.pubKey
-        }
-
-/**
- * Route a raw Nostr event to the correct [NotificationItem] variant based
- * on kind. Returns null for kinds we don't render — the caller drops those.
- */
-private fun classifyNotification(event: Event): NotificationItem? =
-    when (event) {
-        is ReactionEvent -> NotificationItem.Reaction(event, event.createdAt, event.content)
-        is RepostEvent, is GenericRepostEvent -> NotificationItem.Repost(event, event.createdAt)
-        is ZapReceiptEvent -> NotificationItem.Zap(event, event.createdAt, event.amount?.toLong())
-        // Nutzaps: treat like a zap; sats amount extraction requires the Cashu
-        // token proof and is deferred to when Desktop renders zap detail.
-        is NutzapEvent -> NotificationItem.Zap(event, event.createdAt, null)
-        is TextNoteEvent -> {
-            val isReply = event.tags.any { it.size > 1 && it[0] == "e" }
-            if (isReply) {
-                NotificationItem.Reply(event, event.createdAt)
-            } else {
-                NotificationItem.Mention(event, event.createdAt)
-            }
-        }
-        // NIP-22 threaded comments are reply-shaped.
-        is CommentEvent -> NotificationItem.Reply(event, event.createdAt)
-        // NIP-28 channel messages read like public mentions.
-        is ChannelMessageEvent -> NotificationItem.Mention(event, event.createdAt)
-        // DMs (NIP-04 legacy + NIP-17 gift-wrap + rumor + file-header).
-        is EncryptedDmEvent,
-        is ChatMessageEvent,
-        is GiftWrapEvent,
-        is ChatMessageEncryptedFileHeaderEvent,
-        -> NotificationItem.Dm(event, event.createdAt)
-        // Unknown kind — drop.
-        else -> null
-    }
 
 @Composable
 fun NotificationsScreen(
@@ -262,7 +157,7 @@ fun NotificationsScreen(
             }
         cached.forEach { note ->
             val event = note.event ?: return@forEach
-            classifyNotification(event)?.let { notificationState.addItem(it) }
+            NotificationItem.classify(event)?.let { notificationState.addItem(it) }
         }
     }
 
@@ -307,7 +202,7 @@ fun NotificationsScreen(
                     if (!accepts) return@createNotificationsSubscription
 
                     val notification =
-                        classifyNotification(event)
+                        NotificationItem.classify(event)
                             ?: return@createNotificationsSubscription
                     notificationState.addItem(notification)
                 },

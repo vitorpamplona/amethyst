@@ -18,32 +18,23 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.desktop.ui.notifications
+package com.vitorpamplona.amethyst.commons.rendering
 
-import androidx.compose.runtime.Immutable
-import com.vitorpamplona.amethyst.commons.moderation.notifications.NotificationItem
+import com.vitorpamplona.quartz.nip01Core.core.HexKey
+import com.vitorpamplona.quartz.nip01Core.metadata.UserMetadata
 
-@Immutable
-enum class NotificationFilter(
-    val label: String,
+/**
+ * Everything a renderer may need that is not on the event itself. Lookups are
+ * **pre-resolved by the caller** so renderers stay pure and synchronous: amy fills
+ * [profiles] from its local store, a UI fills it from its cache, a test passes
+ * nothing. A missing entry is never an error — the [AuthorRef] just carries no name.
+ */
+class RenderContext(
+    val profiles: Map<HexKey, UserMetadata> = emptyMap(),
 ) {
-    All("All"),
-    Mentions("Mentions"),
-    Replies("Replies"),
-    Reactions("Reactions"),
-    Zaps("Zaps"),
-    Reposts("Reposts"),
-    DMs("DMs"),
-    ;
+    fun profileOf(pubKey: HexKey): UserMetadata? = profiles[pubKey]
 
-    fun accepts(item: NotificationItem): Boolean =
-        when (this) {
-            All -> true
-            Mentions -> item is NotificationItem.Mention
-            Replies -> item is NotificationItem.Reply
-            Reactions -> item is NotificationItem.Reaction
-            Zaps -> item is NotificationItem.Zap
-            Reposts -> item is NotificationItem.Repost
-            DMs -> item is NotificationItem.Dm
-        }
+    companion object {
+        val EMPTY = RenderContext()
+    }
 }

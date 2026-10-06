@@ -97,6 +97,7 @@ in `commonsUI`, under the same package.
 | `sno`          | mixed | DECK-0003 object rendering math — rasterizer, lighting, face winding, default avatar — here; the Compose viewer/thumbnail and the Coil fetcher in `commonsUI` under `sno` and `sno/ui`. |
 | `nip53LiveActivities` | mixed | Live-activity zapper aggregation (logic) + the stream card in `nip53LiveActivities/ui`. |
 | `search`       | no  | Event search filtering/ranking, kind registry. |
+| `rendering`    | no  | UI-agnostic event rendering: `RenderedEvent`, the kind-keyed `EventRendererRegistry` (renderers under `rendering/renderers`), the `BodySpans` rich-text post-processor over `richtext`, and `rendering/json/JsonEventFormatter` (amy's `--json` shape). A Compose formatter would live in `commonsUI` under the same package. See `plans/2026-04-21-event-renderer.md`. |
 | `preview`      | no  | OpenGraph / meta-tag link-preview parsing. |
 | `emojicoder`   | no  | Variation-selector emoji encode/decode. |
 | `richtext`     | no  | URL/media/pattern parsing for rich text. |

@@ -1,0 +1,143 @@
+/*
+ * Copyright (c) 2025 Vitor Pamplona
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy of
+ * this software and associated documentation files (the "Software"), to deal in
+ * the Software without restriction, including without limitation the rights to use,
+ * copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the
+ * Software, and to permit persons to whom the Software is furnished to do so,
+ * subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in all
+ * copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS
+ * FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR
+ * COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN
+ * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
+ * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+ */
+package com.vitorpamplona.amethyst.commons.rendering.renderers
+
+import com.vitorpamplona.amethyst.commons.rendering.EventRef
+import com.vitorpamplona.amethyst.commons.rendering.EventRenderer
+import com.vitorpamplona.amethyst.commons.rendering.EventRendererRegistry
+import com.vitorpamplona.amethyst.commons.rendering.RenderContext
+import com.vitorpamplona.amethyst.commons.rendering.RenderSupport
+import com.vitorpamplona.amethyst.commons.rendering.RenderedDetails
+import com.vitorpamplona.amethyst.commons.rendering.RenderedEvent
+import com.vitorpamplona.quartz.nip01Core.core.Event
+import com.vitorpamplona.quartz.nip01Core.crypto.verify
+import com.vitorpamplona.quartz.nip01Core.tags.events.ETag
+import com.vitorpamplona.quartz.nip09Deletions.DeletionRequestEvent
+import com.vitorpamplona.quartz.nip18Reposts.BaseRepostEvent
+import com.vitorpamplona.quartz.nip18Reposts.GenericRepostEvent
+import com.vitorpamplona.quartz.nip18Reposts.RepostEvent
+import com.vitorpamplona.quartz.nip25Reactions.ReactionEvent
+import com.vitorpamplona.quartz.nip30CustomEmoji.CustomEmoji
+import com.vitorpamplona.quartz.nip57Zaps.ZapReceiptEvent
+import com.vitorpamplona.quartz.utils.lastNotNullOfOrNull
+import com.vitorpamplona.quartz.utils.toLongValue
+
+/** kind:7 — NIP-25: the target is the LAST `e` tag. */
+object ReactionRenderer : EventRenderer {
+    override fun render(
+        event: Event,
+        ctx: RenderContext,
+    ): RenderedEvent {
+        val reaction = event as? ReactionEvent ?: return RenderSupport.build(event, ctx)
+        val content = reaction.content
+        val emojiUrl = CustomEmoji.createEmojiMap(reaction.tags)[content]
+        val type =
+            when {
+                content == "+" || content.isEmpty() -> "like"
+                content == "-" -> "dislike"
+                emojiUrl != null -> "custom_emoji"
+                else -> "emoji"
+            }
+        return RenderSupport.build(
+            event,
+            ctx,
+            // The content is the reaction itself, not prose: no body to parse.
+            text = "",
+            replyTo = RenderSupport.ref(reaction.tags.lastNotNullOfOrNull(ETag::parse)),
+            details = RenderedDetails.Reaction(content, type, emojiUrl),
+        )
+    }
+}
+
+/** kind:6 / kind:16 — NIP-18 reposts. The content, when present, is the reposted event's JSON. */
+object RepostRenderer : EventRenderer {
+    override fun render(
+        event: Event,
+        ctx: RenderContext,
+    ): RenderedEvent {
+        val repost = event as? BaseRepostEvent ?: return RenderSupport.build(event, ctx)
+        val targetTag = event.tags.lastNotNullOfOrNull(ETag::parse)
+        val target =
+            targetTag?.let { EventRef(eventId = it.eventId, relay = it.relay?.url, author = it.author, kind = repost.boostedKind()) }
+                ?: repost.boostedAddress()?.let { EventRef(eventId = null, address = it.toValue(), author = it.pubKeyHex, kind = it.kind) }
+
+        // An embedded copy is only shown when it is the event the tags name and its
+        // signature holds — the content of a repost is attacker-controlled JSON.
+        val embedded =
+            when (event) {
+                is RepostEvent -> event.containedPost()
+                is GenericRepostEvent -> event.containedPost()
+                else -> null
+            }?.takeIf { (target?.eventId == null || it.id == target.eventId) && it.verify() }
+
+        return RenderSupport.build(
+            event,
+            ctx,
+            text = "",
+            replyTo = target,
+            details = RenderedDetails.Repost(target, embedded?.let { EventRendererRegistry.render(it, ctx) }),
+        )
+    }
+}
+
+/** kind:9735 — NIP-57 zap receipt. The sender is the zap request's signer, not the receipt's. */
+object ZapReceiptRenderer : EventRenderer {
+    override fun render(
+        event: Event,
+        ctx: RenderContext,
+    ): RenderedEvent {
+        val receipt = event as? ZapReceiptEvent ?: return RenderSupport.build(event, ctx)
+        val request = receipt.zapRequest
+        return RenderSupport.build(
+            event,
+            ctx,
+            text = "",
+            replyTo = receipt.zappedPost().lastOrNull()?.let { EventRef(eventId = it, kind = null) },
+            details =
+                RenderedDetails.Zap(
+                    amountSats = receipt.amount?.toLongValue(),
+                    sender = request?.pubKey,
+                    recipient = receipt.zappedAuthor().firstOrNull(),
+                    comment = request?.content?.ifBlank { null },
+                ),
+        )
+    }
+}
+
+/** kind:5 — NIP-09 deletion request. The content is the optional reason. */
+object DeletionRenderer : EventRenderer {
+    override fun render(
+        event: Event,
+        ctx: RenderContext,
+    ): RenderedEvent {
+        val deletion = event as? DeletionRequestEvent ?: return RenderSupport.build(event, ctx)
+        return RenderSupport.build(
+            event,
+            ctx,
+            details =
+                RenderedDetails.Deletion(
+                    eventIds = deletion.deleteEventIds(),
+                    addresses = deletion.deleteAddressIds(),
+                    reason = deletion.content,
+                ),
+        )
+    }
+}
