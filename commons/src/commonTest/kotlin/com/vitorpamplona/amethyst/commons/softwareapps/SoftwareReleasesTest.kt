@@ -114,6 +114,23 @@ class SoftwareReleasesTest {
     }
 
     @Test
+    fun arrangeSplitsNewerPreReleasesFromOlderReleases() {
+        val v1 = release(publisher, "1.0.0")
+        val v11 = release(publisher, "1.1.0")
+        val beta = release(publisher, "1.2.0-beta", channel = "beta")
+        val oldBeta = release(publisher, "1.1.0-beta", channel = "beta")
+
+        val arranged = SoftwareReleases.arrange(SoftwareReleases.sorted(listOf(v1, v11, beta, oldBeta)))
+        assertEquals(v11, arranged.latest)
+        assertEquals(listOf(beta), arranged.preReleases)
+        assertEquals(listOf(oldBeta, v1), arranged.older)
+
+        val empty = SoftwareReleases.arrange(emptyList())
+        assertEquals(null, empty.latest)
+        assertTrue(empty.preReleases.isEmpty() && empty.older.isEmpty())
+    }
+
+    @Test
     fun latestFallsBackToOtherChannelsWithoutAMainRelease() {
         val beta = release(publisher, "1.0-beta", channel = "beta")
         val nightly = release(publisher, "1.1-dev", channel = "nightly")

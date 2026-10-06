@@ -28,17 +28,23 @@ class SoftwarePlatformsTest {
     @Test
     fun readsAppendixAIdentifiers() {
         assertEquals(SoftwareOs.MACOS, SoftwarePlatforms.os("darwin-arm64"))
-        assertEquals("Apple silicon", SoftwarePlatforms.arch("darwin-arm64"))
-        assertEquals("Intel", SoftwarePlatforms.arch("darwin-x86_64"))
+        assertEquals(SoftwareCpu.APPLE_SILICON, SoftwarePlatforms.cpu("darwin-arm64"))
+        assertEquals(SoftwareCpu.INTEL_MAC, SoftwarePlatforms.cpu("darwin-x86_64"))
         assertEquals(SoftwareOs.ANDROID, SoftwarePlatforms.os("android-arm64-v8a"))
-        assertEquals("ARM64", SoftwarePlatforms.arch("android-arm64-v8a"))
-        assertEquals("ARMv7", SoftwarePlatforms.arch("android-armeabi-v7a"))
-        assertEquals("x86-64", SoftwarePlatforms.arch("windows-x86_64"))
-        assertEquals("ARM64", SoftwarePlatforms.arch("linux-aarch64"))
-        assertEquals("RISC-V 64", SoftwarePlatforms.arch("linux-riscv64"))
+        assertEquals(SoftwareCpu.ARM64, SoftwarePlatforms.cpu("android-arm64-v8a"))
+        assertEquals(SoftwareCpu.ARMV7, SoftwarePlatforms.cpu("android-armeabi-v7a"))
+        assertEquals(SoftwareCpu.X86_64, SoftwarePlatforms.cpu("windows-x86_64"))
+        assertEquals(SoftwareCpu.ARM64, SoftwarePlatforms.cpu("linux-aarch64"))
+        assertEquals(SoftwareCpu.RISCV64, SoftwarePlatforms.cpu("linux-riscv64"))
         assertEquals(SoftwareOs.WASM, SoftwarePlatforms.os("wasi-wasm32"))
+        assertEquals(SoftwareCpu.WASM32, SoftwarePlatforms.cpu("wasi-wasm32"))
+        assertEquals(SoftwareCpu.WASM64, SoftwarePlatforms.cpu("wasm64"))
+        // An unknown architecture has no CPU but keeps its raw name for display.
+        assertNull(SoftwarePlatforms.cpu("linux-loongarch64"))
+        assertEquals("loongarch64", SoftwarePlatforms.rawArch("linux-loongarch64"))
         assertEquals(SoftwareOs.OTHER, SoftwarePlatforms.os("haiku"))
-        assertNull(SoftwarePlatforms.arch("haiku"))
+        assertNull(SoftwarePlatforms.cpu("haiku"))
+        assertNull(SoftwarePlatforms.rawArch("haiku"))
     }
 
     @Test

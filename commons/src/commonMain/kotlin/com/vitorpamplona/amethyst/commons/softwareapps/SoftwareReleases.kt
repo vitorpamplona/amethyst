@@ -47,10 +47,31 @@ object SoftwareReleases {
     fun isReleaseOf(
         release: ReleaseArtifactSetEvent,
         app: SoftwareApplicationEvent,
-    ): Boolean {
-        if (!release.isNip82SoftwareRelease()) return false
-        if (release.appAddress()?.toValue() != app.addressTag()) return false
-        return release.pubKey == app.pubKey || release.pubKey in trustedSigners(app)
+    ): Boolean = ReleaseMatcher(app).matches(release)
+
+    /**
+     * [isReleaseOf] for many releases of one app: the trusted signers and the app's
+     * coordinates are read once, not once per release.
+     */
+    class ReleaseMatcher(
+        app: SoftwareApplicationEvent,
+    ) {
+        private val publisher = app.pubKey
+        private val appId = app.appId()
+        private val signers = trustedSigners(app).toHashSet()
+
+        fun matches(release: ReleaseArtifactSetEvent): Boolean {
+            if (release.pubKey !in signers) return false
+            if (!release.isNip82SoftwareRelease()) return false
+
+            val pointer = release.app()
+            return if (pointer != null) {
+                pointer.pubKeyHex == publisher && pointer.dTag == appId
+            } else {
+                // Releases without the required `a` can only name the signer's own app.
+                release.pubKey == publisher && release.appId() == appId
+            }
+        }
     }
 
     /**
@@ -82,6 +103,23 @@ object SoftwareReleases {
     fun latest(releases: Collection<ReleaseArtifactSetEvent>): ReleaseArtifactSetEvent? =
         releases.filter { isMainChannel(it.channel()) }.minWithOrNull(NewestFirst)
             ?: releases.minWithOrNull(NewestFirst)
+
+    /** An app's releases arranged for its page; see [arrange]. */
+    class Arranged(
+        val latest: ReleaseArtifactSetEvent?,
+        val preReleases: List<ReleaseArtifactSetEvent>,
+        val older: List<ReleaseArtifactSetEvent>,
+    )
+
+    /**
+     * Splits newest-first [sortedReleases] around [latest]: the beta/nightly builds ahead of it
+     * are [Arranged.preReleases], and everything below it is [Arranged.older].
+     */
+    fun arrange(sortedReleases: List<ReleaseArtifactSetEvent>): Arranged {
+        val latest = latest(sortedReleases) ?: return Arranged(null, emptyList(), emptyList())
+        val index = sortedReleases.indexOf(latest)
+        return Arranged(latest, sortedReleases.subList(0, index), sortedReleases.subList(index + 1, sortedReleases.size))
+    }
 
     /** A missing channel is treated as `main`, the spec's default. */
     fun isMainChannel(channel: String?) = channel == null || channel.equals(ReleaseChannel.MAIN, ignoreCase = true)

@@ -57,11 +57,21 @@ import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
+import com.vitorpamplona.amethyst.commons.model.mediaServers.ServerType
 import com.vitorpamplona.amethyst.commons.model.navigation.Route
 import com.vitorpamplona.amethyst.commons.model.toImmutableListOfLists
 import com.vitorpamplona.amethyst.commons.relayClient.event.observeNoteEvent
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.nip82_commit_label
+import com.vitorpamplona.amethyst.commons.resources.nip82_cpu_apple_silicon
+import com.vitorpamplona.amethyst.commons.resources.nip82_cpu_arm64
+import com.vitorpamplona.amethyst.commons.resources.nip82_cpu_armv7
+import com.vitorpamplona.amethyst.commons.resources.nip82_cpu_intel_mac
+import com.vitorpamplona.amethyst.commons.resources.nip82_cpu_riscv64
+import com.vitorpamplona.amethyst.commons.resources.nip82_cpu_wasm32
+import com.vitorpamplona.amethyst.commons.resources.nip82_cpu_wasm64
+import com.vitorpamplona.amethyst.commons.resources.nip82_cpu_x86
+import com.vitorpamplona.amethyst.commons.resources.nip82_cpu_x86_64
 import com.vitorpamplona.amethyst.commons.resources.nip82_download
 import com.vitorpamplona.amethyst.commons.resources.nip82_downloads_count
 import com.vitorpamplona.amethyst.commons.resources.nip82_for_this_device
@@ -80,6 +90,7 @@ import com.vitorpamplona.amethyst.commons.resources.nip82_os_windows
 import com.vitorpamplona.amethyst.commons.resources.nip82_section_downloads
 import com.vitorpamplona.amethyst.commons.resources.nip82_version_label
 import com.vitorpamplona.amethyst.commons.softwareapps.SoftwareAssetDownloads
+import com.vitorpamplona.amethyst.commons.softwareapps.SoftwareCpu
 import com.vitorpamplona.amethyst.commons.softwareapps.SoftwareOs
 import com.vitorpamplona.amethyst.commons.softwareapps.SoftwarePlatforms
 import com.vitorpamplona.amethyst.commons.softwareapps.SoftwareReleases
@@ -104,7 +115,6 @@ import com.vitorpamplona.quartz.experimental.nip82SoftwareApps.asset.SoftwareAss
 import com.vitorpamplona.quartz.experimental.nip82SoftwareApps.release.isNip82SoftwareRelease
 import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
-import com.vitorpamplona.quartz.nip34Git.repository.GitRepositoryEvent
 import com.vitorpamplona.quartz.nip51Lists.releaseArtifactSet.ReleaseArtifactSetEvent
 import com.vitorpamplona.quartz.nipB7Blossom.BlossomServerUrl
 import com.vitorpamplona.quartz.nipB7Blossom.BlossomUri
@@ -126,12 +136,13 @@ import kotlinx.coroutines.launch
 fun produceNip82Releases(app: SoftwareApplicationEvent): State<List<ReleaseArtifactSetEvent>> {
     val flow =
         remember(app.id) {
+            val matcher = SoftwareReleases.ReleaseMatcher(app)
             LocalCache
                 .observeNotes(SoftwareReleases.filter(app))
                 .map { notes ->
                     SoftwareReleases.sorted(
                         notes.mapNotNull { note ->
-                            (note.event as? ReleaseArtifactSetEvent)?.takeIf { SoftwareReleases.isReleaseOf(it, app) }
+                            (note.event as? ReleaseArtifactSetEvent)?.takeIf(matcher::matches)
                         },
                     )
                 }.distinctUntilChanged()
@@ -146,8 +157,12 @@ fun produceNip82Releases(app: SoftwareApplicationEvent): State<List<ReleaseArtif
  * the platforms it ships for.
  *
  * In a feed ([expanded] false) the platforms come from the release's aggregate `f` tags, so
- * the card fetches none of its assets; the app's page lists the downloads. Expanded (the
- * release's own thread) it lists the downloads itself.
+ * the card fetches none of its assets. Expanded (the release's own thread) it lists the
+ * downloads itself.
+ *
+ * The app's icon, name and the downloads are shown only once the app has loaded and
+ * [SoftwareReleases] accepts the release as the app's own: anyone can sign a release that
+ * points at someone else's app, and its downloads must not appear under that app's branding.
  */
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
@@ -166,6 +181,7 @@ fun RenderSoftwareRelease(
     val appAddress = remember(event) { event.appAddress() }
     val appNote = remember(appAddress) { appAddress?.let { LocalCache.getOrCreateAddressableNote(it) } }
     val app = appNote?.let { observeNoteEvent<SoftwareApplicationEvent>(it, accountViewModel).value }
+    val trusted = remember(event, app) { app != null && SoftwareReleases.isReleaseOf(event, app) }
 
     Column(
         modifier =
@@ -176,9 +192,9 @@ fun RenderSoftwareRelease(
                 .border(1.dp, MaterialTheme.colorScheme.subtleBorder, QuoteBorder)
                 .padding(12.dp),
     ) {
-        ReleaseAppHeader(event, app, appAddress, nav)
+        ReleaseAppHeader(event, app.takeIf { trusted }, appAddress.takeIf { trusted }, nav)
 
-        if (app != null && !SoftwareReleases.isReleaseOf(event, app)) {
+        if (app != null && !trusted) {
             Spacer(Modifier.height(6.dp))
             Text(
                 text = stringRes(Res.string.nip82_not_from_developer),
@@ -187,11 +203,11 @@ fun RenderSoftwareRelease(
             )
         }
 
-        if (expanded) {
+        if (expanded && trusted) {
             ReleaseDetails(event, app, backgroundColor, accountViewModel, nav)
         } else {
-            ReleaseNotes(event, backgroundColor, expandable = true, accountViewModel, nav)
-            ReleaseSummaryFooter(event, appAddress, nav)
+            ReleaseNotes(event, backgroundColor, expandable = !expanded, accountViewModel, nav)
+            ReleaseSummaryFooter(event)
         }
     }
 }
@@ -329,14 +345,10 @@ private fun ReleaseNotes(
     }
 }
 
-/** The OSes behind the release's aggregate `f` tags, and how many downloads its app page lists. */
+/** The OSes behind the release's aggregate `f` tags, and how many downloads it bundles. */
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
-private fun ReleaseSummaryFooter(
-    event: ReleaseArtifactSetEvent,
-    appAddress: Address?,
-    nav: INav,
-) {
+private fun ReleaseSummaryFooter(event: ReleaseArtifactSetEvent) {
     val oses = remember(event) { SoftwarePlatforms.osesOfPlatforms(event.platforms()) }
     val assetCount = remember(event) { event.assets().size }
     if (oses.isEmpty() && assetCount == 0) return
@@ -355,13 +367,7 @@ private fun ReleaseSummaryFooter(
             Text(
                 text = pluralStringRes(Res.plurals.nip82_downloads_count, assetCount, assetCount),
                 style = MaterialTheme.typography.labelLarge,
-                color = MaterialTheme.colorScheme.primary,
-                modifier =
-                    if (appAddress != null) {
-                        Modifier.clickable { nav.nav(Route.SoftwareAppDetail(appAddress)) }
-                    } else {
-                        Modifier
-                    },
+                color = MaterialTheme.colorScheme.grayText,
             )
         }
     }
@@ -388,7 +394,7 @@ private fun ReleaseDetails(
 
     if (assetIds.isNotEmpty()) {
         Spacer(StdVertSpacer)
-        DownloadsList(assets, assetIds.size, event.version(), accountViewModel)
+        DownloadsList(assets, event.version(), accountViewModel)
     }
 }
 
@@ -411,7 +417,7 @@ private fun CommitLine(
     app: SoftwareApplicationEvent?,
     nav: INav,
 ) {
-    val repo = remember(app) { app?.appLinks()?.firstOrNull { it.kind == GitRepositoryEvent.KIND } }
+    val repo = remember(app) { app?.gitRepository() }
     Spacer(Modifier.height(4.dp))
     Text(
         text = stringRes(Res.string.nip82_commit_label, commit.take(7)),
@@ -433,11 +439,11 @@ private fun CommitLine(
 @Composable
 private fun DownloadsList(
     assets: List<SoftwareAssetEvent>,
-    expectedCount: Int,
     releaseVersion: String?,
     accountViewModel: AccountViewModel,
 ) {
     val devicePlatforms = remember { devicePlatformIds() }
+    val deviceOs = remember(devicePlatforms) { devicePlatforms.firstOrNull()?.let(SoftwarePlatforms::os) }
     val forThisDevice =
         remember(assets) {
             assets
@@ -453,7 +459,7 @@ private fun DownloadsList(
         }
 
     Text(
-        text = stringRes(Res.string.nip82_section_downloads) + " · " + pluralStringRes(Res.plurals.nip82_downloads_count, expectedCount, expectedCount),
+        text = stringRes(Res.string.nip82_section_downloads),
         style = MaterialTheme.typography.labelLarge,
         color = MaterialTheme.colorScheme.grayText,
         fontWeight = FontWeight.SemiBold,
@@ -467,7 +473,7 @@ private fun DownloadsList(
             color = MaterialTheme.colorScheme.primary,
         )
         Spacer(Modifier.height(4.dp))
-        DownloadRow(asset, SoftwarePlatforms.osesOf(asset).first(), releaseVersion, highlighted = true, accountViewModel)
+        DownloadRow(asset, deviceOs ?: SoftwarePlatforms.osesOf(asset).first(), releaseVersion, highlighted = true, accountViewModel)
     }
 
     groups.forEach { (os, list) ->
@@ -502,15 +508,8 @@ private fun DownloadRow(
 ) {
     val format = remember(asset) { asset.mimeType()?.let(::prettyMime) }
     val variant = remember(asset) { asset.variant()?.replaceFirstChar { it.uppercaseChar() } }
-    val archs =
-        remember(asset, os) {
-            asset
-                .platforms()
-                .filter { SoftwarePlatforms.os(it) == os }
-                .mapNotNull(SoftwarePlatforms::arch)
-                .distinct()
-                .joinToString(", ")
-        }
+    val platformsOfOs = remember(asset, os) { asset.platforms().filter { SoftwarePlatforms.os(it) == os } }
+    val archs = platformsOfOs.mapNotNull { archLabel(it) }.distinct().joinToString(", ")
     val size = remember(asset) { asset.sizeInBytes()?.let { formatBytes(it.toLong()) } }
     val assetVersion = remember(asset, releaseVersion) { asset.version()?.takeIf { it != releaseVersion } }
     val minVersion = asset.minPlatformVersion()?.let { minPlatformLabel(os, it) }
@@ -562,7 +561,8 @@ private fun DownloadRow(
 
 /**
  * Opens the asset's url. Without one, NIP-82 has clients find the file by its `x` hash on
- * Blossom: the publisher's servers first, then the viewer's default server.
+ * Blossom: the resolver probes the publisher's Blossom servers, with the viewer's default
+ * Blossom server (when it is one) as a first-try hint and the last resort.
  */
 @Composable
 private fun DownloadButton(
@@ -587,18 +587,23 @@ private fun DownloadButton(
                         runCatching { uri.openUri(directUrl) }
                     } else if (hash != null) {
                         scope.launch {
-                            val server = accountViewModel.account.settings.defaultFileServer.baseUrl
+                            val server =
+                                accountViewModel.account.settings.defaultFileServer
+                                    .takeIf { it.type == ServerType.Blossom }
+                                    ?.baseUrl
                             val extension = SoftwareAssetDownloads.extension(asset)
                             val blossomUri =
                                 BlossomUri(
                                     sha256 = hash,
                                     extension = extension ?: "bin",
-                                    servers = listOf(server),
+                                    servers = listOfNotNull(server),
                                     authors = listOf(asset.pubKey),
                                     size = asset.sizeInBytes()?.toLong(),
                                 ).toUriString()
-                            val url = finder.findServerUrl(blossomUri) ?: BlossomServerUrl.blob(server, hash, extension.orEmpty())
-                            runCatching { uri.openUri(url) }
+                            val url =
+                                finder.findServerUrl(blossomUri)
+                                    ?: server?.let { BlossomServerUrl.blob(it, hash, extension.orEmpty()) }
+                            if (url != null) runCatching { uri.openUri(url) }
                         }
                     }
                 }.padding(horizontal = 6.dp, vertical = 4.dp),
@@ -639,3 +644,22 @@ fun osLabel(os: SoftwareOs): String =
             SoftwareOs.OTHER -> Res.string.nip82_os_other
         },
     )
+
+/** A platform identifier's CPU as people name it, or its raw architecture when unknown. */
+@Composable
+private fun archLabel(platformId: String): String? {
+    val cpu = SoftwarePlatforms.cpu(platformId) ?: return SoftwarePlatforms.rawArch(platformId)
+    return stringRes(
+        when (cpu) {
+            SoftwareCpu.APPLE_SILICON -> Res.string.nip82_cpu_apple_silicon
+            SoftwareCpu.INTEL_MAC -> Res.string.nip82_cpu_intel_mac
+            SoftwareCpu.ARM64 -> Res.string.nip82_cpu_arm64
+            SoftwareCpu.ARMV7 -> Res.string.nip82_cpu_armv7
+            SoftwareCpu.X86_64 -> Res.string.nip82_cpu_x86_64
+            SoftwareCpu.X86 -> Res.string.nip82_cpu_x86
+            SoftwareCpu.RISCV64 -> Res.string.nip82_cpu_riscv64
+            SoftwareCpu.WASM32 -> Res.string.nip82_cpu_wasm32
+            SoftwareCpu.WASM64 -> Res.string.nip82_cpu_wasm64
+        },
+    )
+}

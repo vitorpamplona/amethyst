@@ -34,6 +34,19 @@ enum class SoftwareOs {
     OTHER,
 }
 
+/** The CPUs NIP-82 Appendix A names, as a person would; the UI holds their labels. */
+enum class SoftwareCpu {
+    APPLE_SILICON,
+    INTEL_MAC,
+    ARM64,
+    ARMV7,
+    X86_64,
+    X86,
+    RISCV64,
+    WASM32,
+    WASM64,
+}
+
 /**
  * Reads NIP-82 platform identifiers (Appendix A, `<os>-<arch>` loosely after `uname -sm`) and
  * MIME types (Appendix C) into the OS and CPU a person recognises.
@@ -54,38 +67,38 @@ object SoftwarePlatforms {
         }
     }
 
-    /**
-     * The CPU of an Appendix A identifier as people name it: "Apple silicon"/"Intel" on macOS,
-     * "ARM64", "x86-64" and so on elsewhere. Null when the identifier names no architecture.
-     */
-    fun arch(platformId: String): String? {
+    /** The architecture part of an identifier as written (`arm64-v8a`, `x86_64`), or null. */
+    fun rawArch(platformId: String): String? {
         val id = platformId.lowercase()
-        val os = os(id)
-        val cpu =
-            when (os) {
-                SoftwareOs.WASM ->
-                    id
-                        .removePrefix("wasi-")
-                        .removePrefix("wasm")
-                        .takeIf { it.isNotEmpty() }
-                        ?.let { "$it-bit" }
-                SoftwareOs.OTHER -> null
-                else -> id.substringAfter('-', "").takeIf { it.isNotEmpty() }
-            } ?: return null
+        return when (os(id)) {
+            SoftwareOs.WASM -> id.removePrefix("wasi-").takeIf { it.startsWith("wasm") }
+            SoftwareOs.OTHER -> null
+            else -> id.substringAfter('-', "").takeIf { it.isNotEmpty() }
+        }
+    }
 
+    /**
+     * The CPU of an Appendix A identifier: Apple silicon/Intel on macOS, ARM64, x86-64 and so
+     * on elsewhere. Null for an architecture this does not know; show [rawArch] then.
+     */
+    fun cpu(platformId: String): SoftwareCpu? {
+        val os = os(platformId)
+        val arch = rawArch(platformId) ?: return null
         if (os == SoftwareOs.MACOS) {
-            when (cpu) {
-                "arm64", "aarch64" -> return "Apple silicon"
-                "x86_64" -> return "Intel"
+            when (arch) {
+                "arm64", "aarch64" -> return SoftwareCpu.APPLE_SILICON
+                "x86_64" -> return SoftwareCpu.INTEL_MAC
             }
         }
-        return when (cpu) {
-            "arm64", "aarch64", "arm64-v8a" -> "ARM64"
-            "armeabi-v7a", "armv7l" -> "ARMv7"
-            "x86_64" -> "x86-64"
-            "x86" -> "x86"
-            "riscv64" -> "RISC-V 64"
-            else -> cpu
+        return when (arch) {
+            "arm64", "aarch64", "arm64-v8a" -> SoftwareCpu.ARM64
+            "armeabi-v7a", "armv7l" -> SoftwareCpu.ARMV7
+            "x86_64" -> SoftwareCpu.X86_64
+            "x86" -> SoftwareCpu.X86
+            "riscv64" -> SoftwareCpu.RISCV64
+            "wasm32" -> SoftwareCpu.WASM32
+            "wasm64" -> SoftwareCpu.WASM64
+            else -> null
         }
     }
 

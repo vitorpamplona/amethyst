@@ -49,11 +49,7 @@ fun ReleaseArtifactSetEvent.Companion.buildDTag(
 
 /** The old `SoftwareReleaseEvent.build`: a NIP-82 release, not the NIP-51 set builder. */
 @Deprecated(
-    "Use ReleaseArtifactSetEvent.buildSoftwareRelease.",
-    ReplaceWith(
-        "ReleaseArtifactSetEvent.buildSoftwareRelease(appId, version, channel, assets, releaseNotes, createdAt, initializer)",
-        "com.vitorpamplona.quartz.nip51Lists.releaseArtifactSet.ReleaseArtifactSetEvent",
-    ),
+    "Use ReleaseArtifactSetEvent.buildSoftwareRelease with the app's ATag or event: NIP-82 requires the `a` pointer to the application, which an app id alone cannot build.",
 )
 fun ReleaseArtifactSetEvent.Companion.build(
     appId: String,

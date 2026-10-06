@@ -24,15 +24,39 @@ import com.vitorpamplona.quartz.experimental.nip82SoftwareApps.asset.SoftwareAss
 
 /** Where to download a NIP-82 asset from, and what to call the file. */
 object SoftwareAssetDownloads {
-    /** The extension of the asset's `filename` tag ("zip", "AppImage"), or null when it has none. */
+    /**
+     * The file extension to save the asset under: its `filename`'s ("zip", "AppImage"), else
+     * the usual one for its MIME type (NIP-82 Appendix C). Null when neither says.
+     */
     fun extension(asset: SoftwareAssetEvent): String? =
         asset
             .filename()
             ?.substringAfterLast('.', "")
             ?.takeIf { it.isNotEmpty() && it.length <= 16 && it.all { c -> c.isLetterOrDigit() } }
+            ?: extensionForMime(asset.mimeType())
+
+    fun extensionForMime(mime: String?): String? =
+        when (mime?.lowercase()) {
+            "application/vnd.android.package-archive" -> "apk"
+            "application/vnd.apple.ipa" -> "ipa"
+            "application/x-apple-diskimage" -> "dmg"
+            "application/vnd.apple.installer+xml" -> "pkg"
+            "application/x-msi" -> "msi"
+            "application/vnd.appimage" -> "AppImage"
+            "application/vnd.flatpak" -> "flatpak"
+            "application/vnd.microsoft.portable-executable", "application/x-msdownload" -> "exe"
+            "application/vnd.debian.binary-package" -> "deb"
+            "application/x-rpm", "application/x-redhat-package-manager" -> "rpm"
+            "application/zip" -> "zip"
+            "application/wasm" -> "wasm"
+            "application/vsix" -> "vsix"
+            "application/x-chrome-extension" -> "crx"
+            "application/x-xpinstall" -> "xpi"
+            else -> null
+        }
 
     /**
-     * The asset's `url`, with the `filename` extension added when the url is a bare Blossom
+     * The asset's `url`, with the [extension] added when the url is a bare Blossom
      * hash link (`…/<sha256>`, the asset's own `x`). Blossom serves `/<sha256>.<ext>` too
      * (BUD-01), and without it a browser saves a file named after the hash with no extension.
      * Null when the asset has no `url`: NIP-82 then has clients find it by hash on Blossom.

@@ -64,7 +64,15 @@ class SoftwareAssetDownloadsTest {
     fun leavesOtherUrlsAlone() {
         assertEquals("https://example.com/Armada.zip", SoftwareAssetDownloads.url(asset("https://example.com/Armada.zip", "Armada.zip")))
         assertEquals("https://blossom.ditto.pub/$hash.zip", SoftwareAssetDownloads.url(asset("https://blossom.ditto.pub/$hash.zip", "Armada.zip")))
-        assertEquals("https://blossom.ditto.pub/$hash", SoftwareAssetDownloads.url(asset("https://blossom.ditto.pub/$hash", null)))
+    }
+
+    @Test
+    fun fallsBackToTheMimeTypeExtensionWithoutAFilename() {
+        // The fixture's MIME type is application/zip.
+        assertEquals("zip", SoftwareAssetDownloads.extension(asset(null, null)))
+        assertEquals("https://blossom.ditto.pub/$hash.zip", SoftwareAssetDownloads.url(asset("https://blossom.ditto.pub/$hash", null)))
+        assertEquals("apk", SoftwareAssetDownloads.extensionForMime("application/vnd.android.package-archive"))
+        assertNull(SoftwareAssetDownloads.extensionForMime("application/octet-stream"))
     }
 
     @Test

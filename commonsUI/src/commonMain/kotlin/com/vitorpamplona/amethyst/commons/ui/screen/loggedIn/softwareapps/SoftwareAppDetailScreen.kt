@@ -66,6 +66,7 @@ import com.vitorpamplona.amethyst.commons.resources.nip82_section_about
 import com.vitorpamplona.amethyst.commons.resources.nip82_section_latest_release
 import com.vitorpamplona.amethyst.commons.resources.nip82_section_links
 import com.vitorpamplona.amethyst.commons.resources.nip82_section_platforms
+import com.vitorpamplona.amethyst.commons.resources.nip82_section_prereleases
 import com.vitorpamplona.amethyst.commons.resources.nip82_section_topics
 import com.vitorpamplona.amethyst.commons.softwareapps.SoftwareReleases
 import com.vitorpamplona.amethyst.commons.ui.components.rememberViewModel
@@ -103,7 +104,6 @@ import com.vitorpamplona.amethyst.commons.ui.thread.drawReplyLevel
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.quartz.experimental.nip82SoftwareApps.application.SoftwareApplicationEvent
 import com.vitorpamplona.quartz.nip01Core.core.Address
-import com.vitorpamplona.quartz.nip34Git.repository.GitRepositoryEvent
 
 @Composable
 fun SoftwareAppDetailScreen(
@@ -190,14 +190,13 @@ private fun SoftwareAppDetailBody(
     val license = remember(event) { event.license() }
     val website = remember(event) { event.url() }
     val repo = remember(event) { event.repository() }
-    val gitRepo =
-        remember(event) {
-            event.appLinks().firstOrNull { it.kind == GitRepositoryEvent.KIND }?.let { Address(it.kind, it.pubKeyHex, it.dTag) }
-        }
+    val gitRepo = remember(event) { event.gitRepository()?.let { Address(it.kind, it.pubKeyHex, it.dTag) } }
 
     val releases by produceNip82Releases(event)
-    val latestRelease = remember(releases) { SoftwareReleases.latest(releases) }
-    val olderReleases = remember(releases, latestRelease) { releases.filter { it !== latestRelease } }
+    val arranged = remember(releases) { SoftwareReleases.arrange(releases) }
+    val latestRelease = arranged.latest
+    val preReleases = arranged.preReleases
+    val olderReleases = arranged.older
 
     val background = MaterialTheme.colorScheme.background
     val backgroundColor = remember(background) { mutableStateOf(background) }
@@ -284,6 +283,29 @@ private fun SoftwareAppDetailBody(
                     SectionLabel(stringRes(Res.string.nip82_section_latest_release))
                     RenderSoftwareReleaseBody(
                         event = latestRelease,
+                        app = event,
+                        backgroundColor = backgroundColor,
+                        accountViewModel = accountViewModel,
+                        nav = nav,
+                    )
+                }
+            }
+        }
+
+        if (preReleases.isNotEmpty()) {
+            item(key = "pre-releases-label") {
+                Spacer(Modifier.height(12.dp))
+                Column(PaddingHorizontal12Modifier) {
+                    SectionLabel(stringRes(Res.string.nip82_section_prereleases))
+                }
+            }
+            items(
+                preReleases,
+                key = { "pre-${it.id}" },
+            ) { release ->
+                Column(PaddingHorizontal12Modifier) {
+                    RenderSoftwareReleaseBody(
+                        event = release,
                         app = event,
                         backgroundColor = backgroundColor,
                         accountViewModel = accountViewModel,

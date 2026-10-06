@@ -198,6 +198,19 @@ class Nip82ReleaseTest {
         assertTrue(cmp.compare("12345678901234567890", "12345678901234567891") < 0)
     }
 
+    @Test
+    fun versionOrderSplitsDigitsFromALetterSuffix() {
+        val cmp = Nip82VersionComparator
+        // A pre-release glued to its last number keeps that number in the release core.
+        assertTrue(cmp.compare("1.2.10rc1", "1.2.9") > 0)
+        assertTrue(cmp.compare("1.2.10rc1", "1.2.10") < 0)
+        assertTrue(cmp.compare("1.0.0rc1", "1.0.0") < 0)
+        assertTrue(cmp.compare("1.0.0b2", "1.0.0rc1") < 0)
+        assertTrue(cmp.compare("2.0.0rc1", "2.0.0-alpha") > 0)
+        assertTrue(cmp.compare("1.2.3a", "1.2.0") > 0)
+        assertEquals(0, cmp.compare("1.0.0rc1", "1.0.0-rc1"))
+    }
+
     private fun asset(
         idChar: String,
         platform: String,

@@ -24,8 +24,8 @@ package com.vitorpamplona.quartz.experimental.nip82SoftwareApps.shared
  * NIP-82 Appendix D version ordering, for `version`, `min_platform_version`,
  * `min_allowed_version` and the like.
  *
- * A version is split on `.`, `-` and `_` (a leading `v` and any `+build` suffix are
- * ignored). The leading numeric segments are its release core, compared as integers with
+ * A version is split on `.`, `-` and `_`, and a number glued to a word (`10rc1`) is split
+ * into the two (a leading `v` and any `+build` suffix are ignored). The leading numeric segments are its release core, compared as integers with
  * a missing segment lower than a present one (`1.0 < 1.0.0 < 1.0.0.1`). Anything after
  * the core makes it a pre-release of that core, so it sorts below the bare core. The first
  * pre-release segment is ranked by its identifier (`dev` < `alpha` < `beta` < `rc`, then
@@ -47,9 +47,19 @@ object Nip82VersionComparator : Comparator<String> {
         var v = version.trim().substringBefore('+')
         if (v.length > 1 && (v[0] == 'v' || v[0] == 'V') && v[1].isDigit()) v = v.substring(1)
 
-        val segments = v.split(*SEPARATORS).filter { it.isNotEmpty() }
+        val segments = v.split(*SEPARATORS).flatMap(::splitNumericPrefix)
         val coreSize = segments.indexOfFirst { !it.isNumeric() }.let { if (it < 0) segments.size else it }
         return Parsed(segments.subList(0, coreSize), segments.subList(coreSize, segments.size))
+    }
+
+    /**
+     * `10rc1` is release number 10 followed by the pre-release `rc1`, as in `1.2.10rc1` or
+     * Python's `1.0.0b2`; keeping it whole would drop the 10 from the release core.
+     */
+    private fun splitNumericPrefix(segment: String): List<String> {
+        if (segment.isEmpty()) return emptyList()
+        val digits = segment.indexOfFirst { it !in '0'..'9' }
+        return if (digits <= 0) listOf(segment) else listOf(segment.substring(0, digits), segment.substring(digits))
     }
 
     override fun compare(
