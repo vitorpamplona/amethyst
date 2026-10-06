@@ -37,8 +37,9 @@ import com.vitorpamplona.quartz.nip17Dm.base.BaseDMGroupEvent
 import com.vitorpamplona.quartz.nip18Reposts.quotes.QTag
 import com.vitorpamplona.quartz.nip50Search.IndexableFieldVisitor
 import com.vitorpamplona.quartz.nip50Search.SearchableEvent
-import com.vitorpamplona.quartz.nip57Zaps.splits.zapSplitHints
-import com.vitorpamplona.quartz.nip57Zaps.splits.zapSplitPubKeys
+import com.vitorpamplona.quartz.nip57Zaps.splits.hasZapSplitSetup
+import com.vitorpamplona.quartz.nip57Zaps.splits.zapSplitHintsTo
+import com.vitorpamplona.quartz.nip57Zaps.splits.zapSplitPubKeysTo
 import com.vitorpamplona.quartz.utils.TimeUtils
 
 @Immutable
@@ -64,9 +65,17 @@ class ChatMessageEvent(
         visitor.visit(content)
     }
 
-    override fun pubKeyHints(): List<PubKeyHint> = super.pubKeyHints() + tags.zapSplitHints()
+    // Runs on every relay copy and a `zap` tag is almost never present: hand back super's list
+    // as is unless there is one, instead of an empty zap list plus a concatenation per call.
+    override fun pubKeyHints(): List<PubKeyHint> {
+        val base = super.pubKeyHints()
+        return if (tags.hasZapSplitSetup()) tags.zapSplitHintsTo(base.toMutableList()) else base
+    }
 
-    override fun linkedPubKeys(): List<HexKey> = super.linkedPubKeys() + tags.zapSplitPubKeys()
+    override fun linkedPubKeys(): List<HexKey> {
+        val base = super.linkedPubKeys()
+        return if (tags.hasZapSplitSetup()) tags.zapSplitPubKeysTo(base.toMutableList()) else base
+    }
 
     override fun eventHints() = tags.mapNotNull(ETag::parseAsHint) + tags.mapNotNull(QTag::parseEventAsHint)
 

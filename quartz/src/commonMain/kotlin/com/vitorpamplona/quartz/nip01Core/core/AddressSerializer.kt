@@ -76,5 +76,27 @@ class AddressSerializer {
             addressId: String,
             kind: String,
         ) = addressId.length > kind.length && addressId.startsWith(kind) && addressId[kind.length] == ':'
+
+        /**
+         * True when [value] has the shape of an address id — `<kind>:<64-hex pubkey>:<d-tag>`, the
+         * kind 1 to 5 digits and the d-tag possibly empty — without parsing it.
+         *
+         * Hint parsers run on every relay copy of every received event and only need to know the
+         * value is worth indexing; [parse] splits, allocates and falls back to bech32. A bare
+         * `contains(':')` is too weak the other way: `foo:bar` would be indexed as an address.
+         * Accepts upper-case hex like [parse] does.
+         */
+        fun isAddressShape(value: String): Boolean {
+            var kindEnd = 0
+            while (kindEnd < value.length && kindEnd <= 5 && value[kindEnd] in '0'..'9') kindEnd++
+            if (kindEnd == 0 || kindEnd > 5) return false
+            val keyEnd = kindEnd + 65
+            if (value.length <= keyEnd || value[kindEnd] != ':' || value[keyEnd] != ':') return false
+            for (i in kindEnd + 1 until keyEnd) {
+                val c = value[i]
+                if (c !in '0'..'9' && c !in 'a'..'f' && c !in 'A'..'F') return false
+            }
+            return true
+        }
     }
 }

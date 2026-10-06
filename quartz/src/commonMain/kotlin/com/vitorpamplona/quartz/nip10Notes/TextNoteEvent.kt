@@ -50,8 +50,8 @@ import com.vitorpamplona.quartz.nip19Bech32.pubKeyHints
 import com.vitorpamplona.quartz.nip19Bech32.pubKeys
 import com.vitorpamplona.quartz.nip50Search.IndexableFieldVisitor
 import com.vitorpamplona.quartz.nip50Search.SearchableEvent
-import com.vitorpamplona.quartz.nip57Zaps.splits.zapSplitHints
-import com.vitorpamplona.quartz.nip57Zaps.splits.zapSplitPubKeys
+import com.vitorpamplona.quartz.nip57Zaps.splits.zapSplitHintsTo
+import com.vitorpamplona.quartz.nip57Zaps.splits.zapSplitPubKeysTo
 import com.vitorpamplona.quartz.utils.TimeUtils
 
 @Immutable
@@ -109,20 +109,20 @@ class TextNoteEvent(
         return aHints + qHints + nip19Hints
     }
 
+    // Runs on every relay copy of every note: one list, filled in the order the old
+    // `p + zap + nip19` concatenation produced, instead of three lists and two copies.
     override fun pubKeyHints(): List<PubKeyHint> {
-        val pHints = tags.mapNotNull(PTag::parseAsHint)
-        val zapHints = tags.zapSplitHints()
-        val nip19Hints = citedNIP19().pubKeyHints()
-
-        return pHints + zapHints + nip19Hints
+        val result = tags.mapNotNullTo(ArrayList(), PTag::parseAsHint)
+        tags.zapSplitHintsTo(result)
+        result.addAll(citedNIP19().pubKeyHints())
+        return result
     }
 
     override fun linkedPubKeys(): List<HexKey> {
-        val pHints = tags.mapNotNull(PTag::parseKey)
-        val zapHints = tags.zapSplitPubKeys()
-        val nip19Hints = citedNIP19().pubKeys()
-
-        return pHints + zapHints + nip19Hints
+        val result = tags.mapNotNullTo(ArrayList(), PTag::parseKey)
+        tags.zapSplitPubKeysTo(result)
+        result.addAll(citedNIP19().pubKeys())
+        return result
     }
 
     fun isNewThread() = tags.none(ETag::isTagged)

@@ -55,8 +55,17 @@ class InteractiveStoryReadingStateEvent(
     // The root story (`A`) and the scene being read (`a`), each with the relay it was found on.
     override fun addressHints(): List<AddressHint> = tags.mapNotNull { RootSceneTag.parseAsHint(it) ?: ATag.parseAsHint(it) }
 
-    /** The story ([root], which falls back to the `d` coordinate on old states) and the current scene. */
-    override fun linkedAddressIds(): List<String> = listOfNotNull(root()?.toTag()) + tags.mapNotNull(ATag::parseValidAddress)
+    /**
+     * The story ([root], which falls back to the `d` coordinate on old states) and the current scene.
+     *
+     * Reads the root's id straight off the `A` tag rather than through [root]: this runs on every
+     * relay copy, and [root] builds a [RootSceneTag] and normalizes its relay just to be discarded.
+     */
+    override fun linkedAddressIds(): List<String> {
+        val rootId = tags.firstNotNullOfOrNull(RootSceneTag::parseAddressId) ?: Address.parse(dTag())?.toValue()
+        val scenes = tags.mapNotNull(ATag::parseValidAddress)
+        return if (rootId != null) listOf(rootId) + scenes else scenes
+    }
 
     fun title() = tags.firstNotNullOfOrNull(TitleTag::parse)
 

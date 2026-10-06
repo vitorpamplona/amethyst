@@ -64,10 +64,11 @@ class DvmUserDiscoveryResponseEvent(
             }.also { people = it }
     }
 
-    // The results are public references, just carried in content instead of tags.
+    // The results are public references, just carried in content instead of tags, each with its
+    // own relay slot: they feed the hint index here, but stay out of linkedPubKeys(). That runs on
+    // every relay copy, and would record the response's arrival relay (the customer's) as a hint
+    // for each of the 50-200 results. The linked set stays the base's tag references (customer `p`).
     override fun pubKeyHints(): List<PubKeyHint> = super.pubKeyHints() + resultTags().mapNotNull(PTag::parseAsHint)
-
-    override fun linkedPubKeys(): List<HexKey> = super.linkedPubKeys() + resultTags().mapNotNull(PTag::parseKey)
 
     companion object {
         const val KIND = 6301

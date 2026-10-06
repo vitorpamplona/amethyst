@@ -75,10 +75,34 @@ class HintRelaySlotGuardTest {
             "1.0",
             "30023:$pk:my.article",
             "relay damus.io",
+            // other schemes are web links, not relays, even when the normalizer could convert them
+            "https://x.com",
+            "http://x.com",
+            "https://cdn.x.com/a.vtt",
+            // typo'd schemes and two urls glued together
+            "wss//relay.com",
+            "https//relay.com",
+            "relay.com//x",
+            // an email / NIP-05 address
+            "a@b.com",
+            // the only dot is in a path, so there is no host
+            "foo/bar.baz",
+            // dotless hosts are indistinguishable from markers; a local relay must write its scheme
+            "localhost:7777",
         )
 
     /** Schemeless hosts a publisher forgot the scheme on: these ARE relays. */
-    private val bareHosts = listOf("relay.damus.io", "nos.lol", "relay.example.com:7777", "relay.damus.io/")
+    private val bareHosts =
+        listOf(
+            "relay.damus.io",
+            "nos.lol",
+            "relay.example.com:7777",
+            "relay.damus.io/",
+            // surrounding whitespace is sloppiness, not a reason to lose a real relay
+            " relay.damus.io ",
+            // judged by its host: a host with a path is still a host
+            "github.com/x",
+        )
 
     @Test
     fun normalizeHintOrNullCompletesOnlyHostLookingValues() {
@@ -94,6 +118,20 @@ class HintRelaySlotGuardTest {
 
         bareHosts.forEach { assertNotNull(RelayUrlNormalizer.normalizeHintOrNull(it), it) }
         assertEquals(relay, RelayUrlNormalizer.normalizeHintOrNull("relay.damus.io")?.url)
+        assertEquals(relay, RelayUrlNormalizer.normalizeHintOrNull(" relay.damus.io ")?.url)
+        assertEquals(relay, RelayUrlNormalizer.normalizeHintOrNull(" wss://relay.damus.io ")?.url)
+        // A schemed relay may be dotless: the dot rule is only for completing a schemeless value.
+        assertNotNull(RelayUrlNormalizer.normalizeHintOrNull("ws://localhost:7777"))
+    }
+
+    @Test
+    fun looksLikeBareHostJudgesTheAuthority() {
+        assertEquals(true, RelayUrlNormalizer.looksLikeBareHost("github.com/user/repo"))
+        assertEquals(true, RelayUrlNormalizer.looksLikeBareHost("relay.com/a:b:c"))
+        assertEquals(true, RelayUrlNormalizer.looksLikeBareHost("1.2.3.4"))
+        assertEquals(false, RelayUrlNormalizer.looksLikeBareHost("foo/bar.baz"))
+        assertEquals(false, RelayUrlNormalizer.looksLikeBareHost("30023:$pk:my.article/x"))
+        assertEquals(false, RelayUrlNormalizer.looksLikeBareHost(".5"))
     }
 
     /** Each case builds a tag around the given relay slot value and runs one hint parser on it. */

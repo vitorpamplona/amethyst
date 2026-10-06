@@ -37,6 +37,7 @@ import com.vitorpamplona.quartz.nip01Core.hints.types.EventIdHint
 import com.vitorpamplona.quartz.nip01Core.hints.types.PubKeyHint
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.nip01Core.tags.geohash.GeoHashTag
+import com.vitorpamplona.quartz.nip01Core.tags.hashtags.HashtagTag
 import com.vitorpamplona.quartz.nip01Core.tags.hashtags.hashtags
 import com.vitorpamplona.quartz.nip10Notes.BaseThreadedEvent
 import com.vitorpamplona.quartz.nip18Reposts.quotes.QTag
@@ -58,8 +59,8 @@ import com.vitorpamplona.quartz.nip22Comments.tags.RootIdentifierTag
 import com.vitorpamplona.quartz.nip22Comments.tags.RootKindTag
 import com.vitorpamplona.quartz.nip50Search.IndexableFieldVisitor
 import com.vitorpamplona.quartz.nip50Search.SearchableEvent
-import com.vitorpamplona.quartz.nip57Zaps.splits.zapSplitHints
-import com.vitorpamplona.quartz.nip57Zaps.splits.zapSplitPubKeys
+import com.vitorpamplona.quartz.nip57Zaps.splits.zapSplitHintsTo
+import com.vitorpamplona.quartz.nip57Zaps.splits.zapSplitPubKeysTo
 import com.vitorpamplona.quartz.nip72ModCommunities.definition.CommunityDefinitionEvent
 import com.vitorpamplona.quartz.nip73ExternalIds.ExternalId
 import com.vitorpamplona.quartz.nip73ExternalIds.location.GeohashId
@@ -85,27 +86,29 @@ class CommentEvent(
     // The read path: the same fields indexableContent() joins, without the join.
     override fun forEachIndexableField(visitor: IndexableFieldVisitor) {
         if (!visitor.visit(content)) return
-        tags.hashtags().forEach { if (!visitor.visit(it)) return }
+        // Inline over the tags rather than tags.hashtags(): this runs per event per search keystroke.
+        for (tag in tags) {
+            val hashtag = HashtagTag.parse(tag) ?: continue
+            if (!visitor.visit(hashtag)) return
+        }
     }
 
+    // Runs on every relay copy of every comment: one list, filled in the order the old
+    // `P + p + zap + nip19` concatenation produced, instead of five lists and three copies.
     override fun pubKeyHints(): List<PubKeyHint> {
-        val pHints =
-            tags.mapNotNull(RootAuthorTag::parseAsHint) +
-                tags.mapNotNull(ReplyAuthorTag::parseAsHint)
-        val zapHints = tags.zapSplitHints()
-        val nip19Hints = citedNIP19().pubKeyHints()
-
-        return pHints + zapHints + nip19Hints
+        val result = tags.mapNotNullTo(ArrayList(), RootAuthorTag::parseAsHint)
+        tags.mapNotNullTo(result, ReplyAuthorTag::parseAsHint)
+        tags.zapSplitHintsTo(result)
+        result.addAll(citedNIP19().pubKeyHints())
+        return result
     }
 
     override fun linkedPubKeys(): List<HexKey> {
-        val pHints =
-            tags.mapNotNull(RootAuthorTag::parseKey) +
-                tags.mapNotNull(ReplyAuthorTag::parseKey)
-        val zapHints = tags.zapSplitPubKeys()
-        val nip19Hints = citedNIP19().pubKeys()
-
-        return pHints + zapHints + nip19Hints
+        val result = tags.mapNotNullTo(ArrayList(), RootAuthorTag::parseKey)
+        tags.mapNotNullTo(result, ReplyAuthorTag::parseKey)
+        tags.zapSplitPubKeysTo(result)
+        result.addAll(citedNIP19().pubKeys())
+        return result
     }
 
     override fun eventHints(): List<EventIdHint> {

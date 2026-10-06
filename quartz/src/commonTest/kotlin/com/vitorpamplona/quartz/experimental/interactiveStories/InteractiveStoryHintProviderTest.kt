@@ -20,8 +20,11 @@
  */
 package com.vitorpamplona.quartz.experimental.interactiveStories
 
+import com.vitorpamplona.quartz.experimental.interactiveStories.tags.StoryOptionTag
+import com.vitorpamplona.quartz.nip19Bech32.entities.NAddress
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 class InteractiveStoryHintProviderTest {
@@ -76,6 +79,24 @@ class InteractiveStoryHintProviderTest {
         val event = scene()
         assertEquals("The Fork\nTwo roads\nYou stand at a fork.\nGo left\nGo right", event.indexableContent())
         assertEquals(event.indexableContent(), visited(event))
+    }
+
+    @Test
+    fun optionLabelNeedsAWellFormedScene() {
+        assertEquals("Go", StoryOptionTag.parseLabel(arrayOf("option", "Go", scene1)))
+        // the bech32 form parse() accepts is kept
+        assertEquals("Go", StoryOptionTag.parseLabel(arrayOf("option", "Go", NAddress.create(30297, pk1, "scene-1", null))))
+        assertNull(StoryOptionTag.parseLabel(arrayOf("option", "  ", scene1)))
+        assertNull(StoryOptionTag.parseLabel(arrayOf("option", "Go", "30297:${"zz".repeat(32)}:scene-1")))
+        assertNull(StoryOptionTag.parseLabel(arrayOf("option", "Go", "not-an-address")))
+        assertNull(StoryOptionTag.parseLabel(arrayOf("option", "Go")))
+    }
+
+    @Test
+    fun readingStateLinksRootEvenWithABadRelay() {
+        val event =
+            InteractiveStoryReadingStateEvent(zero, pk2, 1, arrayOf(arrayOf("d", "x"), arrayOf("A", prologue, "not a relay")), "", sig)
+        assertEquals(listOf(prologue), event.linkedAddressIds())
     }
 
     @Test

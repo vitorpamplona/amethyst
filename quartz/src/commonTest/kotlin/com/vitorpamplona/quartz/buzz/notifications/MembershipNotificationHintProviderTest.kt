@@ -22,6 +22,8 @@ package com.vitorpamplona.quartz.buzz.notifications
 
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertNull
+import kotlin.test.assertSame
 
 class MembershipNotificationHintProviderTest {
     private val relaySigner = "460c25e682fda7832b52d1f22d3d22b3176d972f60dcdc3212ed8c92ef85065c"
@@ -41,5 +43,25 @@ class MembershipNotificationHintProviderTest {
 
         val removed = MemberRemovedNotificationEvent(id, relaySigner, 1, arrayOf(arrayOf("p", member), arrayOf("h", channel)), "", sig)
         assertEquals(listOf(member), removed.linkedPubKeys())
+    }
+
+    @Test
+    fun theBodyIsParsedOncePerInstance() {
+        val body = """{"type":"member_removed","channel_id":"$channel","actor":"$actor"}"""
+        val removed = MemberRemovedNotificationEvent(id, relaySigner, 1, arrayOf(arrayOf("p", member), arrayOf("h", channel)), body, sig)
+        assertSame(removed.notification(), removed.notification())
+        assertEquals(listOf(member, actor), removed.linkedPubKeys())
+        assertEquals(listOf(member, actor), removed.linkedPubKeys())
+
+        // An absent body is remembered too (as "no body"), and degrades to "no actor".
+        val empty = MemberAddedNotificationEvent(id, relaySigner, 1, arrayOf(arrayOf("p", member)), "", sig)
+        assertNull(empty.notification())
+        assertNull(empty.notification())
+        assertEquals(listOf(member), empty.linkedPubKeys())
+
+        val malformed = MemberAddedNotificationEvent(id, relaySigner, 1, arrayOf(arrayOf("p", member)), "not json", sig)
+        assertNull(malformed.actor())
+        assertSame(malformed.notification(), malformed.notification())
+        assertEquals(listOf(member), malformed.linkedPubKeys())
     }
 }

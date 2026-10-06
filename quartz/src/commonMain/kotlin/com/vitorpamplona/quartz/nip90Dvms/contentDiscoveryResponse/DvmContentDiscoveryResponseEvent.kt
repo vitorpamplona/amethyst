@@ -68,14 +68,16 @@ class DvmContentDiscoveryResponseEvent(
             }.also { events = it }
     }
 
-    // The results are public references, just carried in content instead of tags.
+    // The results are public references, just carried in content instead of tags, each with its
+    // own relay slot: they feed the hint index here, but stay out of linked*(). Those run on every
+    // relay copy, and would record the response's arrival relay (the customer's) as a hint for each
+    // of the 50-200 results, and create a Note per result, for references nobody here wrote. The
+    // linked set is the tag references the base declares (request `e`, customer `p`, echoed `i`).
     override fun eventHints(): List<EventIdHint> = super.eventHints() + resultTags().mapNotNull(ETag::parseAsHint)
-
-    override fun linkedEventIds(): List<HexKey> = super.linkedEventIds() + resultTags().mapNotNull(ETag::parseId)
 
     override fun addressHints(): List<AddressHint> = resultTags().mapNotNull(ATag::parseAsHint)
 
-    override fun linkedAddressIds(): List<String> = resultTags().mapNotNull(ATag::parseValidAddress)
+    override fun linkedAddressIds(): List<String> = emptyList()
 
     companion object {
         const val KIND = 6300

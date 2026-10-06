@@ -59,7 +59,11 @@ class EmojiPackEvent(
     override fun forEachIndexableField(visitor: IndexableFieldVisitor) {
         if (!visitor.visit(titleOrName())) return
         if (!visitor.visit(description())) return
-        publicEmojiCodes().forEach { if (!visitor.visit(it)) return }
+        // Inline over the tags rather than publicEmojiCodes(): this runs per event per search keystroke.
+        for (tag in tags) {
+            val code = EmojiUrlTag.parseCode(tag) ?: continue
+            if (!visitor.visit(code)) return
+        }
     }
 
     @Deprecated("NIP-51 has deprecated name. Use title instead", ReplaceWith("title()"))

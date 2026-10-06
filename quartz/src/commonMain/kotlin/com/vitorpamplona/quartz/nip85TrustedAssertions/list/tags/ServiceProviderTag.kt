@@ -25,6 +25,7 @@ import com.vitorpamplona.quartz.nip01Core.core.has
 import com.vitorpamplona.quartz.nip01Core.hints.types.PubKeyHint
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
+import com.vitorpamplona.quartz.utils.Hex
 import com.vitorpamplona.quartz.utils.ensure
 
 /**
@@ -87,7 +88,9 @@ data class ServiceProviderTag(
         fun parseKey(tag: Array<String>): HexKey? {
             ensure(tag.has(1)) { return null }
             ensure(tag[0].isNotEmpty()) { return null }
-            ensure(tag[1].length == 64) { return null }
+            // Hex-checked, not just measured: this key is linked and followed to the service's
+            // cards, and 64 chars of anything would otherwise be looked up as a pubkey.
+            ensure(tag[1].length == 64 && Hex.isHex64(tag[1])) { return null }
             val service = ServiceType.parse(tag[0]) ?: return null
             ensure(service.kind in ASSERTION_KINDS) { return null }
             return tag[1]
@@ -97,7 +100,9 @@ data class ServiceProviderTag(
          * The provider and the relay its assertion cards are published to. Stricter than
          * [parse] about the relay slot: [parse] lets [RelayUrlNormalizer.normalizeOrNull] turn
          * any bare word into `wss://<word>/`, which is harmless for reading the delegation but
-         * would plant a fake relay in the hint index, so the hint needs a real `ws(s)://` URL.
+         * would plant a fake relay in the hint index, so the hint takes the slot only when it
+         * looks like a relay: a `ws(s)://` URL, or a schemeless host with a dot
+         * ([RelayUrlNormalizer.looksLikeBareHost]).
          */
         fun parseAsHint(tag: Array<String>): PubKeyHint? {
             val provider = parse(tag) ?: return null

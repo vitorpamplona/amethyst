@@ -22,6 +22,7 @@ package com.vitorpamplona.quartz.nip22Comments.tags
 
 import androidx.compose.runtime.Immutable
 import com.vitorpamplona.quartz.nip01Core.core.Address
+import com.vitorpamplona.quartz.nip01Core.core.AddressSerializer
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.Tag
 import com.vitorpamplona.quartz.nip01Core.core.has
@@ -77,8 +78,9 @@ class ReplyAddressTag(
             ensure(tag.has(2)) { return null }
             ensure(tag[0] == TAG_NAME) { return null }
             // An address id (`kind:pubkey:d`), not a 64-char key: the old length check rejected
-            // every real address, so no NIP-22 address ever produced a hint.
-            ensure(tag[1].contains(':')) { return null }
+            // every real address, so no NIP-22 address ever produced a hint. Shape-checked, not
+            // just `contains(':')`, so `foo:bar` is not indexed as an address.
+            ensure(AddressSerializer.isAddressShape(tag[1])) { return null }
             ensure(tag[2].isNotEmpty()) { return null }
 
             val relayHint = RelayUrlNormalizer.normalizeHintOrNull(tag[2])

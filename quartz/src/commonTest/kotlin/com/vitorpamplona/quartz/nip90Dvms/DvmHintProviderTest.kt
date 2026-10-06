@@ -22,11 +22,14 @@ package com.vitorpamplona.quartz.nip90Dvms
 
 import com.vitorpamplona.quartz.nip90Dvms.contentDiscoveryRequest.DvmContentDiscoveryRequestEvent
 import com.vitorpamplona.quartz.nip90Dvms.contentDiscoveryResponse.DvmContentDiscoveryResponseEvent
+import com.vitorpamplona.quartz.nip90Dvms.contentSearch.DvmContentSearchResponseEvent
 import com.vitorpamplona.quartz.nip90Dvms.eventPublishSchedule.DvmEventPublishScheduleResponseEvent
+import com.vitorpamplona.quartz.nip90Dvms.eventTimestamping.DvmEventTimestampingResponseEvent
 import com.vitorpamplona.quartz.nip90Dvms.peopleSearch.DvmPeopleSearchResponseEvent
 import com.vitorpamplona.quartz.nip90Dvms.status.DvmStatusEvent
 import com.vitorpamplona.quartz.nip90Dvms.summarization.DvmSummarizationRequestEvent
 import com.vitorpamplona.quartz.nip90Dvms.textGeneration.DvmTextGenerationResponseEvent
+import com.vitorpamplona.quartz.nip90Dvms.userDiscoveryResponse.DvmUserDiscoveryResponseEvent
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
@@ -114,7 +117,7 @@ class DvmHintProviderTest {
     }
 
     @Test
-    fun contentResultsAreLinkedToo() {
+    fun contentResultsAreHintsButNotLinked() {
         val address = "30023:$someone:article"
         val event =
             DvmContentDiscoveryResponseEvent(
@@ -126,16 +129,19 @@ class DvmHintProviderTest {
                 sig,
             )
 
-        assertEquals(listOf(request, note), event.linkedEventIds())
+        // results carry their own relay slots, so they are hints; linked*() keeps only the tag
+        // references, or the arrival relay would be recorded as a hint for every result
+        assertEquals(listOf(request), event.linkedEventIds())
+        assertEquals(listOf(customer), event.linkedPubKeys())
         assertEquals(listOf(request to relay, note to relay2), event.eventHints().map { it.eventId to it.relay.url })
-        assertEquals(listOf(address), event.linkedAddressIds())
+        assertTrue(event.linkedAddressIds().isEmpty())
         assertEquals(listOf(address to relay), event.addressHints().map { it.addressId to it.relay.url })
         // the legacy accessor still reads the same payload
         assertEquals(listOf(note, address, "bad"), event.innerTags())
     }
 
     @Test
-    fun peopleResultsAreLinkedPubKeys() {
+    fun peopleResultsAreHintsButNotLinked() {
         val event =
             DvmPeopleSearchResponseEvent(
                 id,
@@ -146,9 +152,39 @@ class DvmHintProviderTest {
                 sig,
             )
 
-        assertEquals(listOf(customer, someone, dvm), event.linkedPubKeys())
+        assertEquals(listOf(customer), event.linkedPubKeys())
         assertEquals(listOf(someone to relay), event.pubKeyHints().map { it.pubkey to it.relay.url })
         assertEquals(listOf(someone, dvm), event.innerTags())
+    }
+
+    @Test
+    fun searchAndUserDiscoveryResultsAreHintsButNotLinked() {
+        val search =
+            DvmContentSearchResponseEvent(
+                id,
+                dvm,
+                1700000000,
+                arrayOf(arrayOf("e", request, relay), arrayOf("p", customer)),
+                """[["e","$note","$relay2"],["a","30023:$someone:article","$relay"]]""",
+                sig,
+            )
+        assertEquals(listOf(request), search.linkedEventIds())
+        assertTrue(search.linkedAddressIds().isEmpty())
+        assertEquals(listOf(request to relay, note to relay2), search.eventHints().map { it.eventId to it.relay.url })
+        assertEquals(1, search.addressHints().size)
+
+        val users =
+            DvmUserDiscoveryResponseEvent(
+                id,
+                dvm,
+                1700000000,
+                arrayOf(arrayOf("e", request), arrayOf("p", customer)),
+                """[["p","$someone","$relay"],["p","$dvm"]]""",
+                sig,
+            )
+        assertEquals(listOf(customer), users.linkedPubKeys())
+        assertEquals(listOf(someone to relay), users.pubKeyHints().map { it.pubkey to it.relay.url })
+        assertEquals(listOf(someone, dvm), users.innerTags())
     }
 
     @Test
@@ -157,6 +193,20 @@ class DvmHintProviderTest {
         assertEquals(listOf(request), event.linkedEventIds())
         assertTrue(event.linkedAddressIds().isEmpty())
         assertTrue(event.innerTags().isEmpty())
+    }
+
+    @Test
+    fun nonHexInputsAndContentIdsAreNotLinked() {
+        val bogus = "zz".repeat(32)
+        val job = DvmSummarizationRequestEvent(id, customer, 1700000000, arrayOf(arrayOf("i", bogus, "event", relay), arrayOf("i", note, "event")), "", sig)
+        assertEquals(listOf(note), job.linkedEventIds())
+        assertTrue(job.eventHints().isEmpty())
+
+        val published = DvmEventPublishScheduleResponseEvent(id, dvm, 1700000000, arrayOf(arrayOf("e", request)), bogus, sig)
+        assertEquals(listOf(request), published.linkedEventIds())
+
+        val stamped = DvmEventTimestampingResponseEvent(id, dvm, 1700000000, arrayOf(arrayOf("e", request)), bogus, sig)
+        assertEquals(listOf(request), stamped.linkedEventIds())
     }
 
     @Test

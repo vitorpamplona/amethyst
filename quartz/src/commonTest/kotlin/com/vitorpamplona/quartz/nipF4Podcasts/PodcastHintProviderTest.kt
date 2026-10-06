@@ -65,4 +65,19 @@ class PodcastHintProviderTest {
         assertEquals(listOf(author, podcastB), event.linkedPubKeys())
         assertEquals(emptyList(), event.pubKeyHints())
     }
+
+    @Test
+    fun nonHexAuthorsAreNotLinked() {
+        val event =
+            PodcastMetadataEvent(
+                "00".repeat(32),
+                podcastA,
+                1700000000,
+                arrayOf(arrayOf("p", "zz".repeat(32), "host"), arrayOf("p", author)),
+                "",
+                "00".repeat(64),
+            )
+
+        assertEquals(listOf(author), event.linkedPubKeys())
+    }
 }

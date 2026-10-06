@@ -59,6 +59,27 @@ class PublicationHintProviderTest {
     }
 
     @Test
+    fun aDottedSectionTitleIsNotCompletedIntoARelay() {
+        val event =
+            PublicationIndexEvent(
+                zero,
+                pk1,
+                1,
+                arrayOf(
+                    arrayOf("d", "my-book"),
+                    arrayOf("e", eid, "Node.js"),
+                    arrayOf("e", eid2, "Vol.2", "2"),
+                    arrayOf("e", eid2, relay, "2"),
+                ),
+                "",
+                sig,
+            )
+        assertEquals(listOf(eid, eid2, eid2), event.linkedEventIds())
+        // the titles look like schemeless hosts; only the schemed relay is a hint
+        assertEquals(listOf(relay), event.eventHints().map { it.relay.url })
+    }
+
+    @Test
     fun sectionExposesWikilinksAndItsIndex() {
         val event =
             PublicationContentEvent(

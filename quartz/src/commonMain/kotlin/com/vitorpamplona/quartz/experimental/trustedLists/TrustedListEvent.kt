@@ -90,22 +90,31 @@ abstract class TrustedListEvent(
      * Every list in the family names its provenance: the [observer] it was computed for and
      * the [sourceTag] definition (an event id plus its author) it was computed from. Neither
      * slot has a relay, so they link but never hint. Subclasses whose member tags are pubkeys
-     * or events add those on top -- and must keep these, via [provenancePubKeys] /
-     * [provenanceEventIds].
+     * or events add those on top -- and must keep these, via [addProvenancePubKeys] /
+     * [addProvenanceEventIds].
+     *
+     * Those append into the subclass's own member list rather than returning one to concatenate:
+     * linked*() runs on every relay copy, and `members + provenance` would copy a list of
+     * thousands of members just to add two entries.
      */
     override fun pubKeyHints(): List<PubKeyHint> = emptyList()
 
-    override fun linkedPubKeys(): List<HexKey> = provenancePubKeys()
+    override fun linkedPubKeys(): List<HexKey> = ArrayList<HexKey>(2).also(::addProvenancePubKeys)
 
     override fun eventHints(): List<EventIdHint> = emptyList()
 
-    override fun linkedEventIds(): List<HexKey> = provenanceEventIds()
+    override fun linkedEventIds(): List<HexKey> = ArrayList<HexKey>(1).also(::addProvenanceEventIds)
 
-    /** The [observer] and the [sourceTag] author, when each is a valid pubkey. */
-    protected fun provenancePubKeys(): List<HexKey> = listOfNotNull(observer(), sourceTag()?.author?.takeIf { it.isValid() })
+    /** Appends the [observer] and the [sourceTag] author, when each is a valid pubkey. */
+    protected fun addProvenancePubKeys(into: MutableList<HexKey>) {
+        observer()?.let(into::add)
+        sourceTag()?.author?.takeIf { it.isValid() }?.let(into::add)
+    }
 
-    /** The [sourceTag] definition event, when present. */
-    protected fun provenanceEventIds(): List<HexKey> = listOfNotNull(sourceTag()?.eventId?.takeIf { it.isValid() })
+    /** Appends the [sourceTag] definition event, when present. */
+    protected fun addProvenanceEventIds(into: MutableList<HexKey>) {
+        sourceTag()?.eventId?.takeIf { it.isValid() }?.let(into::add)
+    }
 
     /** The addressable identity of this list. Deterministic per list. */
     fun listId() = dTag()

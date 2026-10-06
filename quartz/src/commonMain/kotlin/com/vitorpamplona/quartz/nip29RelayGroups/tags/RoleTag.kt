@@ -33,12 +33,20 @@ class RoleTag(
         const val TAG_NAME = "role"
 
         fun parse(tag: Array<String>): RoleTag? {
+            val name = parseName(tag) ?: return null
+            return RoleTag(name, parseDescription(tag))
+        }
+
+        /** Just the role name [parse] would return, without allocating a [RoleTag]. */
+        fun parseName(tag: Array<String>): String? {
             ensure(tag.has(1)) { return null }
             ensure(tag[0] == TAG_NAME) { return null }
             ensure(tag[1].isNotEmpty()) { return null }
-            val description = if (tag.has(2) && tag[2].isNotEmpty()) tag[2] else null
-            return RoleTag(tag[1], description)
+            return tag[1]
         }
+
+        /** The description slot of a tag [parseName] accepted, or null when absent or blank. */
+        fun parseDescription(tag: Array<String>): String? = if (tag.has(2) && tag[2].isNotEmpty()) tag[2] else null
 
         fun assemble(
             name: String,

@@ -71,4 +71,23 @@ class TrustProviderListHintProviderTest {
         assertEquals(listOf(other), event.linkedPubKeys())
         assertEquals(emptyList(), event.pubKeyHints())
     }
+
+    @Test
+    fun aKeyThatIsNotHexIsNotAProvider() {
+        val event =
+            list(
+                // 64 chars, but not a pubkey
+                arrayOf("30382:rank", "z".repeat(64), relay),
+                arrayOf("30382:rank", brainstorm.dropLast(1) + "\u4E2D", relay),
+            )
+
+        assertEquals(emptyList(), event.linkedPubKeys())
+    }
+
+    @Test
+    fun aBareHostRelaySlotIsCompleted() {
+        val event = list(arrayOf("30382:rank", brainstorm, "scores.brainstorm.world"))
+
+        assertEquals(listOf(brainstorm to relay), event.pubKeyHints().map { it.pubkey to it.relay.url })
+    }
 }

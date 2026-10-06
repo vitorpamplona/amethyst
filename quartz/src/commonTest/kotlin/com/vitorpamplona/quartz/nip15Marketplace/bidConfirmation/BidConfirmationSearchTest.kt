@@ -22,6 +22,8 @@ package com.vitorpamplona.quartz.nip15Marketplace.bidConfirmation
 
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertNull
+import kotlin.test.assertSame
 
 class BidConfirmationSearchTest {
     private val pk = "460c25e682fda7832b52d1f22d3d22b3176d972f60dcdc3212ed8c92ef85065c"
@@ -45,5 +47,18 @@ class BidConfirmationSearchTest {
     fun statusAloneIsNotIndexed() {
         assertEquals("", confirmation("""{"status":"accepted"}""").indexableContent())
         assertEquals("", confirmation("not json").indexableContent())
+    }
+
+    @Test
+    fun aMalformedBodyStaysNullOnEveryRead() {
+        // The failure is cached as a marker (not the exception), and keeps answering null.
+        val broken = confirmation("not json")
+        assertNull(broken.confirmationData())
+        assertNull(broken.confirmationData())
+        assertNull(broken.status())
+
+        val ok = confirmation("""{"status":"accepted"}""")
+        assertSame(ok.confirmationData(), ok.confirmationData())
+        assertEquals("accepted", ok.status())
     }
 }

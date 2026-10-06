@@ -21,6 +21,7 @@
 package com.vitorpamplona.quartz.buzz.cwChannelWindow
 
 import androidx.compose.runtime.Immutable
+import com.vitorpamplona.quartz.buzz.ParseFailed
 import com.vitorpamplona.quartz.nip01Core.core.BaseAddressableEvent
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
@@ -76,19 +77,22 @@ class ThreadSummaryEvent(
     // per instance — a failure included. Events are immutable; a race only decodes twice.
     @kotlinx.serialization.Transient
     @kotlin.jvm.Transient
-    private var summaryCache: Result<ThreadSummaryContent>? = null
-
-    private fun parsedSummary(): Result<ThreadSummaryContent> =
-        summaryCache ?: try {
-            Result.success(ThreadSummaryContent.decodeFromJson(content))
-        } catch (e: Exception) {
-            Result.failure(e)
-        }.also { summaryCache = it }
+    private var summaryCache: Any? = null // ThreadSummaryContent, or ParseFailed
 
     /** Parses the JSON summary [content] (once). Throws on malformed content; use [summaryOrNull]. */
-    fun summary(): ThreadSummaryContent = parsedSummary().getOrThrow()
+    fun summary(): ThreadSummaryContent = summaryOrNull() ?: ThreadSummaryContent.decodeFromJson(content)
 
-    fun summaryOrNull(): ThreadSummaryContent? = parsedSummary().getOrNull()
+    fun summaryOrNull(): ThreadSummaryContent? {
+        summaryCache?.let { return it as? ThreadSummaryContent }
+        val parsed =
+            try {
+                ThreadSummaryContent.decodeFromJson(content)
+            } catch (e: Exception) {
+                null
+            }
+        summaryCache = parsed ?: ParseFailed
+        return parsed
+    }
 
     companion object {
         const val KIND = 39005

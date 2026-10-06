@@ -43,10 +43,13 @@ class WorkflowHintProviderTest {
     }
 
     @Test
-    fun definitionLinksItsExpectedHead() {
+    fun definitionDoesNotLinkItsOwnSupersededHead() {
+        // `expected-revision` is the author's own previous head of this address: a CAS
+        // precondition, not a reference worth routing or materializing.
         val template = WorkflowDefEvent.build(workflowId, channel, "steps: []", "Deploy", head)
         val event = WorkflowDefEvent(id, author, template.createdAt, template.tags, template.content, sig)
-        assertEquals(listOf(head), event.linkedEventIds())
+        assertEquals(head, event.expectedRevision())
+        assertTrue(event.linkedEventIds().isEmpty())
         assertTrue(event.eventHints().isEmpty())
     }
 

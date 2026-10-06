@@ -63,10 +63,15 @@ class GeocacheVerificationEvent(
     // The finder half of the `a` tag has no relay slot; the cache half is an naddr that may carry relays.
     override fun pubKeyHints(): List<PubKeyHint> = emptyList()
 
-    override fun linkedPubKeys(): List<HexKey> = tags.mapNotNull(FinderCacheTag::parseFinder)
+    // All three lists bech32-decode the cache naddr (the finder only counts when the cache half
+    // parses too) and linked*() runs for every relay copy of every event, so each is computed
+    // once per instance. Events are immutable; a race only decodes twice.
+    @kotlinx.serialization.Transient
+    @kotlin.jvm.Transient
+    private var linkedPubKeysCache: List<HexKey>? = null
 
-    // Both lists bech32-decode the cache naddr and linked*() runs for every relay copy of every
-    // event, so each is computed once per instance. Events are immutable; a race only decodes twice.
+    override fun linkedPubKeys(): List<HexKey> = linkedPubKeysCache ?: tags.mapNotNull(FinderCacheTag::parseFinder).also { linkedPubKeysCache = it }
+
     @kotlinx.serialization.Transient
     @kotlin.jvm.Transient
     private var addressHintsCache: List<AddressHint>? = null

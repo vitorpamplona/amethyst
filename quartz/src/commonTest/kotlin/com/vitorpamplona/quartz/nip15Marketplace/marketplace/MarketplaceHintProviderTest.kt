@@ -22,6 +22,8 @@ package com.vitorpamplona.quartz.nip15Marketplace.marketplace
 
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertNull
+import kotlin.test.assertSame
 import kotlin.test.assertTrue
 
 class MarketplaceHintProviderTest {
@@ -55,5 +57,17 @@ class MarketplaceHintProviderTest {
     fun unparseableContentLinksNothing() {
         val market = MarketplaceEvent(id, pk, 1L, arrayOf(arrayOf("d", "m")), "not json", sig)
         assertTrue(market.linkedPubKeys().isEmpty())
+        // The cached failure (a marker, not the exception) keeps answering null.
+        assertNull(market.marketplaceData())
+        assertNull(market.marketplaceData())
+        assertEquals("", market.indexableContent())
+    }
+
+    @Test
+    fun aParsedBodyIsCachedAndReused() {
+        val market = MarketplaceEvent(id, pk, 1L, arrayOf(arrayOf("d", "m")), """{"name":"Market","merchants":["$other"]}""", sig)
+        val first = market.marketplaceData()
+        assertEquals("Market", first?.name)
+        assertSame(first, market.marketplaceData())
     }
 }

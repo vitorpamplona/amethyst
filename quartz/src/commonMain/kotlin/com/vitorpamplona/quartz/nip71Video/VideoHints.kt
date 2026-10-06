@@ -43,9 +43,11 @@ import com.vitorpamplona.quartz.nip71Video.tags.TextTrackTag
  *   so every `e` is linked, not only the labelled ones [credits][VideoEvent.credits] keeps.
  * - `a`: credited videos, plus `text-track` refs that are `39307:` coordinates rather than URLs.
  *
- * Unlike [ATag.parseAsHint], the `a` hint requires slot 2 to be a relay URL: the credit
- * convention puts a role label there when no relay is given, and the relay normalizer would
- * otherwise turn `inspired-by` into `wss://inspired-by/`.
+ * The `a` hint only takes slot 2 when it looks like a relay ([RelayUrlNormalizer.normalizeHintOrNull],
+ * the same guard [ATag.parseAsHint] uses): the credit convention puts a role label there when no
+ * relay is given, and the forgiving normalizer would otherwise turn `inspired-by` into
+ * `wss://inspired-by/`. Unlike [ATag.parseAsHint] it also fully parses the coordinate, so a credit
+ * hint always names an address [videoLinkedAddressIds] links too.
  */
 
 fun TagArray.videoPubKeyHints(): List<PubKeyHint> = mapNotNull(PTag::parseAsHint)

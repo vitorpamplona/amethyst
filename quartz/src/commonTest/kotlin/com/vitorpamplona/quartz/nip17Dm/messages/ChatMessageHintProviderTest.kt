@@ -61,6 +61,13 @@ class ChatMessageHintProviderTest {
     }
 
     @Test
+    fun withoutZapSplitsOnlyTheRecipientsAreLinked() {
+        val plain = ChatMessageEvent(id, pk, 1L, arrayOf(arrayOf("p", other, relay), arrayOf("p", third)), "hi", sig)
+        assertEquals(listOf(other, third), plain.linkedPubKeys())
+        assertEquals(listOf(other), plain.pubKeyHints().map { it.pubkey })
+    }
+
+    @Test
     fun quotesAreLinked() {
         assertEquals(listOf(eventId2, eventId), message.linkedEventIds())
         assertEquals(listOf(eventId2, eventId), message.eventHints().map { it.eventId })

@@ -25,6 +25,7 @@ import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.nip90Dvms.DvmResponseEvent
+import com.vitorpamplona.quartz.utils.Hex
 import com.vitorpamplona.quartz.utils.TimeUtils
 
 @Immutable
@@ -39,7 +40,7 @@ class DvmEventPublishScheduleResponseEvent(
     fun publishedEventId(): HexKey? = content.ifEmpty { null }
 
     // The id in `content` is an event pointer too (no relay slot, so linked only).
-    override fun linkedEventIds(): List<HexKey> = super.linkedEventIds() + listOfNotNull(publishedEventId()?.takeIf { it.length == 64 })
+    override fun linkedEventIds(): List<HexKey> = super.linkedEventIds() + listOfNotNull(publishedEventId()?.takeIf { it.length == 64 && Hex.isHex64(it) })
 
     companion object {
         const val KIND = 6905

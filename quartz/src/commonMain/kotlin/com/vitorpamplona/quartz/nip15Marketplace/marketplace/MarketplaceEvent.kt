@@ -52,21 +52,29 @@ class MarketplaceEvent(
 
     // linkedPubKeys() runs for every relay copy of every event and forEachIndexableField() on
     // every keystroke, so the body is decoded once per instance — a failure included, which
-    // also keeps the warning to one per event. Events are immutable; a race only decodes twice.
+    // also keeps the warning to one per event. A failure is cached as the [ParseFailed] marker,
+    // not a `Result.failure`: that would pin the exception and its stack trace to every
+    // malformed event the cache holds. Events are immutable; a race only decodes twice.
     @kotlinx.serialization.Transient
     @kotlin.jvm.Transient
-    private var marketplaceDataCache: Result<MarketplaceData>? = null
+    private var marketplaceDataCache: Any? = null // MarketplaceData, or ParseFailed
 
-    fun marketplaceData(): MarketplaceData? =
-        (
-            marketplaceDataCache ?: try {
-                Result.success(JsonMapper.fromJson<MarketplaceData>(content))
+    fun marketplaceData(): MarketplaceData? {
+        marketplaceDataCache?.let { return it as? MarketplaceData }
+        val parsed =
+            try {
+                JsonMapper.fromJson<MarketplaceData>(content)
             } catch (e: Exception) {
                 if (e is CancellationException) throw e
                 Log.w("MarketplaceEvent") { "Content Parse Error: ${toNostrUri()} ${e.message}" }
-                Result.failure(e)
-            }.also { marketplaceDataCache = it }
-        ).getOrNull()
+                null
+            }
+        marketplaceDataCache = parsed ?: ParseFailed
+        return parsed
+    }
+
+    /** What [marketplaceDataCache] holds once the body failed to decode. */
+    private object ParseFailed
 
     override fun indexableContent() = marketplaceData()?.let { listOfNotNull(it.name, it.about).joinToString("\n") } ?: ""
 

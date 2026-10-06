@@ -59,7 +59,12 @@ class StarterPackEvent(
     override fun forEachIndexableField(visitor: IndexableFieldVisitor) {
         if (!visitor.visit(title())) return
         if (!visitor.visit(description())) return
-        hashtags().forEach { if (!visitor.visit(it)) return }
+        // Walks the tags in place: this runs per event per search keystroke, and hashtags()
+        // would build a list only to discard it.
+        for (tag in tags) {
+            val hashtag = HashtagTag.parse(tag) ?: continue
+            if (!visitor.visit(hashtag)) return
+        }
     }
 
     override fun pubKeyHints() = tags.mapNotNull(UserTag::parseAsHint)

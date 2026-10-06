@@ -44,6 +44,22 @@ class SoundbiteTag {
             return PodcastSoundbite(start, duration, tag.getOrNull(3)?.takeIf { it.isNotEmpty() })
         }
 
+        /**
+         * The non-blank title of a tag [parse] accepts, without building the [PodcastSoundbite]:
+         * for the search read path. The title is checked first, so untitled soundbites never pay
+         * for parsing the two numbers.
+         */
+        fun parseTitle(tag: Array<String>): String? {
+            ensure(tag.has(3)) { return null }
+            ensure(tag[0] == TAG_NAME) { return null }
+            ensure(tag[3].isNotBlank()) { return null }
+            val start = tag[1].toDoubleOrNull() ?: return null
+            val duration = tag[2].toDoubleOrNull() ?: return null
+            ensure(start >= 0.0) { return null }
+            ensure(duration > 0.0) { return null }
+            return tag[3]
+        }
+
         fun assemble(soundbite: PodcastSoundbite): Array<String> {
             val head = arrayOf(TAG_NAME, soundbite.startTimeSeconds.toString(), soundbite.durationSeconds.toString())
             val title = soundbite.title

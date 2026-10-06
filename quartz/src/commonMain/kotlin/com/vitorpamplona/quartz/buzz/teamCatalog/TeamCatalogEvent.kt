@@ -21,6 +21,7 @@
 package com.vitorpamplona.quartz.buzz.teamCatalog
 
 import androidx.compose.runtime.Immutable
+import com.vitorpamplona.quartz.buzz.ParseFailed
 import com.vitorpamplona.quartz.buzz.apPersonas.PersonaEvent
 import com.vitorpamplona.quartz.buzz.apPersonas.tags.SharedTag
 import com.vitorpamplona.quartz.nip01Core.core.BaseAddressableEvent
@@ -106,25 +107,32 @@ class TeamCatalogEvent(
      * Parses the body, all-or-nothing like upstream: throws when the JSON is malformed, the
      * schema version is not 1, or any field breaks the v1 contract. Use [catalogOrNull].
      */
-    fun catalog(): TeamCatalogContent = parsedCatalog().getOrThrow()
+    fun catalog(): TeamCatalogContent = catalogOrNull() ?: decodeCatalog()
 
-    fun catalogOrNull(): TeamCatalogContent? = parsedCatalog().getOrNull()
+    fun catalogOrNull(): TeamCatalogContent? {
+        catalogCache?.let { return it as? TeamCatalogContent }
+        val parsed =
+            try {
+                decodeCatalog()
+            } catch (e: Exception) {
+                if (e is CancellationException) throw e
+                null
+            }
+        catalogCache = parsed ?: ParseFailed
+        return parsed
+    }
 
     // forEachIndexableField() runs on every keystroke, so the body is decoded and validated
     // once per instance — a failure included. Events are immutable; a race only decodes twice.
     @kotlinx.serialization.Transient
     @kotlin.jvm.Transient
-    private var catalogCache: Result<TeamCatalogContent>? = null
+    private var catalogCache: Any? = null // TeamCatalogContent, or ParseFailed
 
-    private fun parsedCatalog(): Result<TeamCatalogContent> =
-        catalogCache ?: try {
-            val parsed = TeamCatalogContent.decodeFromJson(content)
-            parsed.validate()?.let { throw IllegalArgumentException(it) }
-            Result.success(parsed)
-        } catch (e: Exception) {
-            if (e is CancellationException) throw e
-            Result.failure(e)
-        }.also { catalogCache = it }
+    private fun decodeCatalog(): TeamCatalogContent {
+        val parsed = TeamCatalogContent.decodeFromJson(content)
+        parsed.validate()?.let { throw IllegalArgumentException(it) }
+        return parsed
+    }
 
     companion object {
         const val KIND = 30178

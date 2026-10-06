@@ -32,6 +32,7 @@ import com.vitorpamplona.quartz.nip01Core.hints.types.EventIdHint
 import com.vitorpamplona.quartz.nip01Core.hints.types.PubKeyHint
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.nip01Core.tags.aTag.ATag
+import com.vitorpamplona.quartz.nip01Core.tags.hashtags.HashtagTag
 import com.vitorpamplona.quartz.nip01Core.tags.hashtags.hashtags
 import com.vitorpamplona.quartz.nip01Core.tags.people.PTag
 import com.vitorpamplona.quartz.nip01Core.tags.people.pTag
@@ -70,7 +71,11 @@ class GitIssueEvent(
     override fun forEachIndexableField(visitor: IndexableFieldVisitor) {
         if (!visitor.visit(subject())) return
         if (!visitor.visit(content)) return
-        topics().forEach { if (!visitor.visit(it)) return }
+        // Inline over the tags rather than topics(): this runs per event per search keystroke.
+        for (tag in tags) {
+            val topic = HashtagTag.parse(tag) ?: continue
+            if (!visitor.visit(topic)) return
+        }
     }
 
     override fun eventHints(): List<EventIdHint> {

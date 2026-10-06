@@ -73,8 +73,11 @@ class LearningResourceEvent(
         if (!visitor.visit(alternateSummary())) return
         if (!visitor.visit(content)) return
         if (!visitor.visit(author())) return
-        for (label in facetLabels()) {
-            if (!visitor.visit(label)) return
+        // facetLabels() is cached for the default language, so the per-keystroke search walk
+        // reuses one list instead of re-running three prefix scans and two hash sets.
+        val labels = facetLabels()
+        for (i in labels.indices) {
+            if (!visitor.visit(labels[i])) return
         }
     }
 
@@ -151,7 +154,18 @@ class LearningResourceEvent(
      * routinely carries that label under two ids and again under a second facet — and a chip row
      * that repeats itself reads as a bug.
      */
-    fun facetLabels(preferredLanguage: String? = null): List<String> =
+    fun facetLabels(preferredLanguage: String? = null): List<String> {
+        if (preferredLanguage != null) return buildFacetLabels(preferredLanguage)
+        return defaultFacetLabelsCache ?: buildFacetLabels(null).also { defaultFacetLabelsCache = it }
+    }
+
+    // The no-preference answer, which both search paths (indexableContent and
+    // forEachIndexableField) read: built once per instance, as the event is immutable.
+    @kotlinx.serialization.Transient
+    @kotlin.jvm.Transient
+    private var defaultFacetLabelsCache: List<String>? = null
+
+    private fun buildFacetLabels(preferredLanguage: String?): List<String> =
         LinkedHashSet<String>()
             .apply {
                 addAll(resourceTypes(preferredLanguage))

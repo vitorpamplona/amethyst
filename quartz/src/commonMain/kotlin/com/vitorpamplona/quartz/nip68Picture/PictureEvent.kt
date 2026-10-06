@@ -77,8 +77,17 @@ class PictureEvent(
     override fun forEachIndexableField(visitor: IndexableFieldVisitor) {
         if (!visitor.visit(title())) return
         if (!visitor.visit(content)) return
-        location().forEach { if (!visitor.visit(it)) return }
-        imageDescriptions().forEach { if (!visitor.visit(it)) return }
+        // Walks the tags and the (cached) imetas in place: this runs per event per search
+        // keystroke, and location()/imageDescriptions() would build lists only to discard them.
+        for (tag in tags) {
+            val location = LocationTag.parse(tag) ?: continue
+            if (!visitor.visit(location)) return
+        }
+        val metas = imetaTags()
+        for (i in metas.indices) {
+            val alt = metas[i].alt?.takeIf { it.isNotBlank() } ?: continue
+            if (!visitor.visit(alt)) return
+        }
     }
 
     @kotlinx.serialization.Transient
@@ -94,15 +103,29 @@ class PictureEvent(
     // NIP-68 `p` tags the people in the picture; imeta annotations place them on an image.
     override fun pubKeyHints(): List<PubKeyHint> = tags.mapNotNull(PTag::parseAsHint) + citedNIP19().pubKeyHints()
 
-    override fun linkedPubKeys(): List<HexKey> = tags.mapNotNull(PTag::parseKey) + annotatedUsers() + citedNIP19().pubKeys()
+    // linked*() run on every relay copy of the event, and each is two or three tag scans plus
+    // concatenations; the event is immutable, so they are built once per instance.
+    @kotlinx.serialization.Transient
+    @kotlin.jvm.Transient
+    private var linkedPubKeysCache: List<HexKey>? = null
+
+    @kotlinx.serialization.Transient
+    @kotlin.jvm.Transient
+    private var linkedEventIdsCache: List<HexKey>? = null
+
+    @kotlinx.serialization.Transient
+    @kotlin.jvm.Transient
+    private var linkedAddressIdsCache: List<String>? = null
+
+    override fun linkedPubKeys(): List<HexKey> = linkedPubKeysCache ?: (tags.mapNotNull(PTag::parseKey) + annotatedUsers() + citedNIP19().pubKeys()).also { linkedPubKeysCache = it }
 
     override fun eventHints(): List<EventIdHint> = tags.mapNotNull(QTag::parseEventAsHint) + citedNIP19().eventHints()
 
-    override fun linkedEventIds(): List<HexKey> = tags.mapNotNull(QTag::parseEventId) + citedNIP19().eventIds()
+    override fun linkedEventIds(): List<HexKey> = linkedEventIdsCache ?: (tags.mapNotNull(QTag::parseEventId) + citedNIP19().eventIds()).also { linkedEventIdsCache = it }
 
     override fun addressHints(): List<AddressHint> = tags.mapNotNull(QTag::parseAddressAsHint) + citedNIP19().addressHints()
 
-    override fun linkedAddressIds(): List<String> = tags.mapNotNull(QTag::parseValidAddress) + citedNIP19().addressIds()
+    override fun linkedAddressIds(): List<String> = linkedAddressIdsCache ?: (tags.mapNotNull(QTag::parseValidAddress) + citedNIP19().addressIds()).also { linkedAddressIdsCache = it }
 
     @kotlinx.serialization.Transient
     @kotlin.jvm.Transient

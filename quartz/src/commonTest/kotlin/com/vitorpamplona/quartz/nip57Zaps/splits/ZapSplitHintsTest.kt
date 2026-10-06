@@ -24,6 +24,7 @@ import com.vitorpamplona.quartz.nip01Core.hints.types.PubKeyHint
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 class ZapSplitHintsTest {
@@ -73,6 +74,55 @@ class ZapSplitHintsTest {
         assertEquals(ZapSplitSetup(bob, null, 2.0), ZapSplitSetupParser.parse(arrayOf("zap", bob, "2.0")))
         assertEquals(listOf(bob), arrayOf(arrayOf("zap", bob, "2.0")).zapSplitPubKeys())
         assertTrue(arrayOf(arrayOf("zap", bob, "2.0")).zapSplitHints().isEmpty())
+    }
+
+    @Test
+    fun a64CharKeyMustAlsoBeHex() {
+        val notHex = "g".repeat(64)
+        val tags = arrayOf(arrayOf("zap", notHex, relay, "1"), arrayOf("zap", notHex, "1"), arrayOf("zap", alice, relay, "1"))
+        assertNull(ZapSplitSetupParser.parseKey(tags[0]))
+        assertNull(ZapSplitSetupParser.parseKey(tags[1]))
+        assertNull(ZapSplitSetupParser.parseAsHint(tags[0]))
+        assertEquals(listOf(alice), tags.zapSplitPubKeys())
+        assertEquals(listOf(alice), tags.zapSplitHints().map { it.pubkey })
+    }
+
+    @Test
+    fun parseKeyAgreesWithParseOnEveryShape() {
+        // parseKey reads the tag directly instead of going through parse(); it must accept
+        // exactly the pubkey splits parse() accepts.
+        val shapes =
+            listOf(
+                arrayOf("zap", alice, relay, "1"),
+                arrayOf("zap", alice, "", "2"),
+                arrayOf("zap", alice, "1.5"),
+                arrayOf("zap", alice, relay),
+                arrayOf("zap", alice),
+                arrayOf("zap", alice, relay, "0"),
+                arrayOf("zap", alice, relay, "-1"),
+                arrayOf("zap", alice, relay, "NaN"),
+                arrayOf("zap", alice, relay, "abc"),
+                arrayOf("zap", alice, "0"),
+                arrayOf("zap", alice, relay, "1", "extra"),
+                arrayOf("zap", "someone@getalby.com", relay, "1"),
+                arrayOf("zap", "LNURL1DP68GURN8GHJ7", relay, "1"),
+                arrayOf("zap", alice.uppercase(), relay, "1"),
+                arrayOf("p", alice, relay, "1"),
+                arrayOf("zap"),
+            )
+        for (tag in shapes) {
+            val expected = (ZapSplitSetupParser.parse(tag) as? ZapSplitSetup)?.pubKeyHex
+            assertEquals(expected, ZapSplitSetupParser.parseKey(tag), tag.toList().toString())
+            val expectedHint = (ZapSplitSetupParser.parse(tag) as? ZapSplitSetup)?.let { s -> s.relay?.let { PubKeyHint(s.pubKeyHex, it) } }
+            assertEquals(expectedHint, ZapSplitSetupParser.parseAsHint(tag), tag.toList().toString())
+        }
+    }
+
+    @Test
+    fun theCollectorsAppendInTagOrder() {
+        val existing = mutableListOf("first")
+        assertEquals(listOf("first", alice, bob), tags.zapSplitPubKeysTo(existing))
+        assertEquals(1, tags.zapSplitHintsTo(ArrayList()).size)
     }
 
     @Test

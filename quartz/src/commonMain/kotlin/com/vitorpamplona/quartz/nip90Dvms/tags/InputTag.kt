@@ -25,6 +25,7 @@ import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.has
 import com.vitorpamplona.quartz.nip01Core.hints.types.EventIdHint
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
+import com.vitorpamplona.quartz.utils.Hex
 import com.vitorpamplona.quartz.utils.ensure
 
 @Stable
@@ -55,7 +56,7 @@ class InputTag(
         fun parseEventId(tag: Array<String>): HexKey? {
             ensure(tag.has(2)) { return null }
             ensure(tag[0] == TAG_NAME) { return null }
-            ensure(tag[1].length == 64) { return null }
+            ensure(tag[1].length == 64 && Hex.isHex64(tag[1])) { return null }
             ensure(tag[2] == TYPE_EVENT || tag[2] == TYPE_JOB) { return null }
             return tag[1]
         }

@@ -18,30 +18,12 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.quartz.nip53LiveActivities.streaming.tags
-
-import com.vitorpamplona.quartz.nip01Core.core.HexKey
-import com.vitorpamplona.quartz.nip01Core.core.Tag
-import com.vitorpamplona.quartz.nip01Core.core.has
-import com.vitorpamplona.quartz.utils.Hex
-import com.vitorpamplona.quartz.utils.ensure
+package com.vitorpamplona.quartz.buzz
 
 /**
- * zap.stream convention: `["goal", "<hex event id>"]` attaches a NIP-75 zap goal
- * (kind 9041) to a live stream. The tag has no relay slot.
+ * What a per-instance parsed-body cache holds once the body failed to decode. Caching the
+ * exception itself (e.g. a `Result.failure`) would pin it and its stack trace to every
+ * malformed event for as long as the event lives in the cache; a malformed body is rare, so
+ * a throwing accessor simply decodes again to throw a fresh exception of the same type.
  */
-class GoalTag {
-    companion object {
-        const val TAG_NAME = "goal"
-
-        /** The goal's event id, only when it is a well-formed 64-char id. */
-        fun parseId(tag: Tag): HexKey? {
-            ensure(tag.has(1)) { return null }
-            ensure(tag[0] == TAG_NAME) { return null }
-            ensure(tag[1].length == 64 && Hex.isHex64(tag[1])) { return null }
-            return tag[1]
-        }
-
-        fun assemble(eventId: HexKey) = arrayOf(TAG_NAME, eventId)
-    }
-}
+internal object ParseFailed

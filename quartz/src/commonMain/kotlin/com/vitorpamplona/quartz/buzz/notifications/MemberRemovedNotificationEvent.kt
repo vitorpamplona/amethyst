@@ -21,6 +21,7 @@
 package com.vitorpamplona.quartz.buzz.notifications
 
 import androidx.compose.runtime.Immutable
+import com.vitorpamplona.quartz.buzz.ParseFailed
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
@@ -50,7 +51,17 @@ class MemberRemovedNotificationEvent(
     // The actor sits in the relay-authored JSON body, which carries no relay hint.
     override fun pubKeyHints(): List<PubKeyHint> = tags.mapNotNull(PTag::parseAsHint)
 
-    override fun linkedPubKeys(): List<HexKey> = tags.mapNotNull(PTag::parseKey) + listOfNotNull(actor())
+    // One list, built in place: the `p` targets in tag order, then the body's actor.
+    override fun linkedPubKeys(): List<HexKey> {
+        val actor = actor()
+        val out = ArrayList<HexKey>(2)
+        for (tag in tags) {
+            val key = PTag.parseKey(tag) ?: continue
+            out.add(key)
+        }
+        if (actor != null) out.add(actor)
+        return out
+    }
 
     /** The pubkey that was removed - the `p` tag. */
     fun target() = tags.notificationTarget()
@@ -63,7 +74,19 @@ class MemberRemovedNotificationEvent(
      * channel it applies to. The relay emits this kind for a self-join too, so the actor is what
      * separates "I joined" from "somebody added me" — see [MembershipNotificationContent].
      */
-    fun notification() = MembershipNotificationContent.parse(content)
+    fun notification(): MembershipNotificationContent? {
+        notificationCache?.let { return it as? MembershipNotificationContent }
+        val parsed = MembershipNotificationContent.parse(content)
+        notificationCache = parsed ?: ParseFailed
+        return parsed
+    }
+
+    // linkedPubKeys() runs for every relay copy of every event and the parse is three regex
+    // scans, so the body is read once per instance — an absent or malformed one included
+    // (ParseFailed). Events are immutable; a race only parses twice.
+    @kotlinx.serialization.Transient
+    @kotlin.jvm.Transient
+    private var notificationCache: Any? = null // MembershipNotificationContent, or ParseFailed
 
     /** The pubkey that performed the add/remove, or null when the body is missing or malformed. */
     fun actor() = notification()?.actor

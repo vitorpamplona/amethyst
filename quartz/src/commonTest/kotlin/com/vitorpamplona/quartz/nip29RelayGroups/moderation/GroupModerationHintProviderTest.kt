@@ -40,14 +40,24 @@ class GroupModerationHintProviderTest {
 
     @Test
     fun putUserLinksTheUserWithoutTakingRolesForRelays() {
-        val put = GroupPutUserEvent(id, pk, 1L, arrayOf(arrayOf("h", "g"), arrayOf("p", other, "admin")), "", sig)
+        val put = GroupPutUserEvent(id, pk, 1L, arrayOf(arrayOf("h", "g"), arrayOf("p", other, "admin"), arrayOf("p", "g".repeat(64))), "", sig)
         assertEquals(listOf(other), put.linkedPubKeys())
         assertTrue(put.pubKeyHints().isEmpty())
     }
 
     @Test
     fun removeUserLinksTheUsers() {
-        val remove = GroupRemoveUserEvent(id, pk, 1L, arrayOf(arrayOf("h", "g"), arrayOf("p", other), arrayOf("p", third, relay)), "", sig)
+        val notHex = "g".repeat(64)
+        val remove =
+            GroupRemoveUserEvent(
+                id,
+                pk,
+                1L,
+                arrayOf(arrayOf("h", "g"), arrayOf("p", other), arrayOf("p", third, relay), arrayOf("p", notHex, relay)),
+                "",
+                sig,
+            )
+        // 64 chars is not enough: a key the provider hands over must be hex.
         assertEquals(listOf(other, third), remove.linkedPubKeys())
         assertEquals(listOf(third), remove.pubKeyHints().map { it.pubkey })
     }

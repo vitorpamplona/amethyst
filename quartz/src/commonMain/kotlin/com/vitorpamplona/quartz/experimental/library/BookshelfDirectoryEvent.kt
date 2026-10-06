@@ -79,9 +79,9 @@ class BookshelfDirectoryEvent(
 
     override fun linkedAddressIds(): List<String> = tags.mapNotNull(ATag::parseAddressId)
 
-    // Shelf items listed by id. Slot 2 may be an inline title instead of a relay; ETag only
-    // takes it as a hint when it actually is a relay URL.
-    override fun eventHints(): List<EventIdHint> = tags.mapNotNull(ETag::parseAsHint)
+    // Shelf items listed by id. Slot 2 may be an inline title instead of a relay, and a title
+    // like "Node.js" passes for a schemeless host, so only an explicit ws(s):// url is a hint.
+    override fun eventHints(): List<EventIdHint> = tags.mapNotNull(PublicationSectionRef::parseEventSectionAsHint)
 
     override fun linkedEventIds(): List<HexKey> = tags.mapNotNull(ETag::parseId)
 

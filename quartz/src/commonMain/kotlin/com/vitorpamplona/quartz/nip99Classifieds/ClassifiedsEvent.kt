@@ -35,6 +35,7 @@ import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.nip01Core.tags.aTag.ATag
 import com.vitorpamplona.quartz.nip01Core.tags.dTag.dTag
 import com.vitorpamplona.quartz.nip01Core.tags.events.ETag
+import com.vitorpamplona.quartz.nip01Core.tags.hashtags.HashtagTag
 import com.vitorpamplona.quartz.nip01Core.tags.hashtags.hashtags
 import com.vitorpamplona.quartz.nip01Core.tags.people.PTag
 import com.vitorpamplona.quartz.nip01Core.tags.publishedAt.PublishedAtProvider
@@ -89,7 +90,12 @@ class ClassifiedsEvent(
         if (!visitor.visit(summary())) return
         if (!visitor.visit(content)) return
         if (!visitor.visit(location())) return
-        categories().forEach { if (!visitor.visit(it)) return }
+        // Walks the tags in place: this runs per event per search keystroke, and
+        // categories() would build a list only to discard it.
+        for (tag in tags) {
+            val category = HashtagTag.parse(tag) ?: continue
+            if (!visitor.visit(category)) return
+        }
     }
 
     @kotlinx.serialization.Transient
@@ -101,15 +107,31 @@ class ClassifiedsEvent(
 
     override fun pubKeyHints(): List<PubKeyHint> = tags.mapNotNull(PTag::parseAsHint) + tags.zapSplitHints() + citedNIP19().pubKeyHints()
 
-    override fun linkedPubKeys(): List<HexKey> = tags.mapNotNull(PTag::parseKey) + tags.zapSplitPubKeys() + citedNIP19().pubKeys()
+    // linked*() run on every relay copy of the event, and each is three tag scans plus
+    // concatenations; the event is immutable, so they are built once per instance.
+    @kotlinx.serialization.Transient
+    @kotlin.jvm.Transient
+    private var linkedPubKeysCache: List<HexKey>? = null
+
+    @kotlinx.serialization.Transient
+    @kotlin.jvm.Transient
+    private var linkedEventIdsCache: List<HexKey>? = null
+
+    @kotlinx.serialization.Transient
+    @kotlin.jvm.Transient
+    private var linkedAddressIdsCache: List<String>? = null
+
+    override fun linkedPubKeys(): List<HexKey> = linkedPubKeysCache ?: (tags.mapNotNull(PTag::parseKey) + tags.zapSplitPubKeys() + citedNIP19().pubKeys()).also { linkedPubKeysCache = it }
 
     override fun eventHints(): List<EventIdHint> = tags.mapNotNull(ETag::parseAsHint) + tags.mapNotNull(QTag::parseEventAsHint) + citedNIP19().eventHints()
 
-    override fun linkedEventIds(): List<HexKey> = tags.mapNotNull(ETag::parseId) + tags.mapNotNull(QTag::parseEventId) + citedNIP19().eventIds()
+    override fun linkedEventIds(): List<HexKey> = linkedEventIdsCache ?: (tags.mapNotNull(ETag::parseId) + tags.mapNotNull(QTag::parseEventId) + citedNIP19().eventIds()).also { linkedEventIdsCache = it }
 
     override fun addressHints(): List<AddressHint> = tags.mapNotNull(ATag::parseAsHint) + tags.mapNotNull(QTag::parseAddressAsHint) + citedNIP19().addressHints()
 
-    override fun linkedAddressIds(): List<String> = tags.mapNotNull(ATag::parseAddressId) + tags.mapNotNull(QTag::parseValidAddress) + citedNIP19().addressIds()
+    override fun linkedAddressIds(): List<String> =
+        linkedAddressIdsCache
+            ?: (tags.mapNotNull(ATag::parseAddressId) + tags.mapNotNull(QTag::parseValidAddress) + citedNIP19().addressIds()).also { linkedAddressIdsCache = it }
 
     fun title() = tags.firstNotNullOfOrNull(TitleTag::parse)
 

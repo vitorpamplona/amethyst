@@ -31,6 +31,7 @@ import com.vitorpamplona.quartz.nip01Core.hints.PubKeyHintProvider
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.nip01Core.tags.aTag.ATag
 import com.vitorpamplona.quartz.nip01Core.tags.events.ETag
+import com.vitorpamplona.quartz.nip01Core.tags.hashtags.HashtagTag
 import com.vitorpamplona.quartz.nip01Core.tags.hashtags.hashtags
 import com.vitorpamplona.quartz.nip01Core.tags.people.PTag
 import com.vitorpamplona.quartz.nip01Core.tags.people.pTag
@@ -74,7 +75,11 @@ class GitPullRequestEvent(
     override fun forEachIndexableField(visitor: IndexableFieldVisitor) {
         if (!visitor.visit(subject())) return
         if (!visitor.visit(content)) return
-        labels().forEach { if (!visitor.visit(it)) return }
+        // Inline over the tags rather than labels(): this runs per event per search keystroke.
+        for (tag in tags) {
+            val label = HashtagTag.parse(tag) ?: continue
+            if (!visitor.visit(label)) return
+        }
     }
 
     override fun pubKeyHints() = tags.mapNotNull(PTag::parseAsHint)

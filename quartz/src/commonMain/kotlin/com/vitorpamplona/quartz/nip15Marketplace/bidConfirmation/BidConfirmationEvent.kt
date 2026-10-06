@@ -69,22 +69,30 @@ class BidConfirmationEvent(
     override fun linkedPubKeys() = tags.mapNotNull(PTag::parseKey)
 
     // forEachIndexableField() runs on every keystroke, so the body is decoded once per
-    // instance — a failure included, which also keeps the warning to one per event. Events are
+    // instance — a failure included, which also keeps the warning to one per event. A failure
+    // is cached as the [ParseFailed] marker, not a `Result.failure`: that would pin the
+    // exception and its stack trace to every malformed event the cache holds. Events are
     // immutable; a race only decodes twice.
     @kotlinx.serialization.Transient
     @kotlin.jvm.Transient
-    private var confirmationDataCache: Result<BidConfirmationData>? = null
+    private var confirmationDataCache: Any? = null // BidConfirmationData, or ParseFailed
 
-    fun confirmationData(): BidConfirmationData? =
-        (
-            confirmationDataCache ?: try {
-                Result.success(JsonMapper.fromJson<BidConfirmationData>(content))
+    fun confirmationData(): BidConfirmationData? {
+        confirmationDataCache?.let { return it as? BidConfirmationData }
+        val parsed =
+            try {
+                JsonMapper.fromJson<BidConfirmationData>(content)
             } catch (e: Exception) {
                 if (e is CancellationException) throw e
                 Log.w("BidConfirmationEvent") { "Content Parse Error: ${toNostrUri()} ${e.message}" }
-                Result.failure(e)
-            }.also { confirmationDataCache = it }
-        ).getOrNull()
+                null
+            }
+        confirmationDataCache = parsed ?: ParseFailed
+        return parsed
+    }
+
+    /** What [confirmationDataCache] holds once the body failed to decode. */
+    private object ParseFailed
 
     fun status() = confirmationData()?.status
 

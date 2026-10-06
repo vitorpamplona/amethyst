@@ -21,10 +21,10 @@
 package com.vitorpamplona.quartz.nip01Core.hints
 
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
-import com.vitorpamplona.quartz.nip01Core.core.hexToByteArray
 import com.vitorpamplona.quartz.nip01Core.hints.bloom.BloomFilterMurMur3
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.isLocalHost
+import com.vitorpamplona.quartz.utils.Hex
 import com.vitorpamplona.quartz.utils.cache.LargeCache
 
 /**
@@ -71,14 +71,19 @@ class HintIndexer {
         relay: NormalizedRelayUrl,
     ) = add(eventId, relay, eventHints)
 
+    // The HexKey overloads take ids and keys straight from tags of received events, so they are
+    // untrusted: the unchecked decoder throws on a char above U+00FF and silently decodes other
+    // non-hex chars into a garbage id. A malformed value is skipped (or has no hints) instead.
     fun addEvent(
         eventId: HexKey,
         relay: NormalizedRelayUrl,
-    ) = addEvent(eventId.hexToByteArray(), relay)
+    ) {
+        addEvent(Hex.decode64OrNull(eventId) ?: return, relay)
+    }
 
     fun hintsForEvent(eventId: ByteArray) = getHintsFor(eventId, eventHints)
 
-    fun hintsForEvent(eventId: HexKey) = hintsForEvent(eventId.hexToByteArray())
+    fun hintsForEvent(eventId: HexKey): List<NormalizedRelayUrl> = hintsForEvent(Hex.decode64OrNull(eventId) ?: return emptyList())
 
     // --------------------
     // PubKeys Outbox hints
@@ -108,9 +113,11 @@ class HintIndexer {
     fun addKey(
         key: HexKey,
         relay: NormalizedRelayUrl,
-    ) = addKey(key.hexToByteArray(), relay)
+    ) {
+        addKey(Hex.decode64OrNull(key) ?: return, relay)
+    }
 
     fun hintsForKey(key: ByteArray) = getHintsFor(key, pubKeyHints)
 
-    fun hintsForKey(key: HexKey) = hintsForKey(key.hexToByteArray())
+    fun hintsForKey(key: HexKey): List<NormalizedRelayUrl> = hintsForKey(Hex.decode64OrNull(key) ?: return emptyList())
 }

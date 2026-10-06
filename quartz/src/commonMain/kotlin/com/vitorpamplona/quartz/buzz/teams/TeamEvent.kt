@@ -21,6 +21,7 @@
 package com.vitorpamplona.quartz.buzz.teams
 
 import androidx.compose.runtime.Immutable
+import com.vitorpamplona.quartz.buzz.ParseFailed
 import com.vitorpamplona.quartz.buzz.apPersonas.PersonaEvent
 import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.nip01Core.core.BaseAddressableEvent
@@ -78,20 +79,23 @@ class TeamEvent(
     // immutable; a race only decodes twice.
     @kotlinx.serialization.Transient
     @kotlin.jvm.Transient
-    private var teamCache: Result<TeamContent>? = null
-
-    private fun parsedTeam(): Result<TeamContent> =
-        teamCache ?: try {
-            Result.success(TeamContent.decodeFromJson(content))
-        } catch (e: Exception) {
-            if (e is CancellationException) throw e
-            Result.failure(e)
-        }.also { teamCache = it }
+    private var teamCache: Any? = null // TeamContent, or ParseFailed
 
     /** Parses the team configuration (once), or throws if the JSON is malformed. */
-    fun team(): TeamContent = parsedTeam().getOrThrow()
+    fun team(): TeamContent = teamOrNull() ?: TeamContent.decodeFromJson(content)
 
-    fun teamOrNull(): TeamContent? = parsedTeam().getOrNull()
+    fun teamOrNull(): TeamContent? {
+        teamCache?.let { return it as? TeamContent }
+        val parsed =
+            try {
+                TeamContent.decodeFromJson(content)
+            } catch (e: Exception) {
+                if (e is CancellationException) throw e
+                null
+            }
+        teamCache = parsed ?: ParseFailed
+        return parsed
+    }
 
     companion object {
         const val KIND = 30176

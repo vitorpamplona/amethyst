@@ -21,6 +21,7 @@
 package com.vitorpamplona.quartz.buzz.stream
 
 import androidx.compose.runtime.Immutable
+import com.vitorpamplona.quartz.buzz.ParseFailed
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
@@ -66,9 +67,23 @@ class SystemMessageEvent(
     // Every reference lives in the relay-authored JSON body, which carries no relay hints.
     override fun pubKeyHints(): List<PubKeyHint> = emptyList()
 
+    // One list, built in place: actor, target, then participants, valid and first-seen only.
+    // A linear `contains` beats a hash set here: these lists are a handful of keys long.
     override fun linkedPubKeys(): List<HexKey> {
         val data = payload() ?: return emptyList()
-        return (listOfNotNull(data.actor, data.target) + data.participants.orEmpty()).filter { it.isValid() }.distinct()
+        val participants = data.participants
+        val out = ArrayList<HexKey>(2 + (participants?.size ?: 0))
+        addLinkedKey(out, data.actor)
+        addLinkedKey(out, data.target)
+        participants?.forEach { addLinkedKey(out, it) }
+        return out
+    }
+
+    private fun addLinkedKey(
+        out: ArrayList<HexKey>,
+        key: HexKey?,
+    ) {
+        if (key != null && key.isValid() && key !in out) out.add(key)
     }
 
     override fun eventHints(): List<EventIdHint> = emptyList()
@@ -82,9 +97,14 @@ class SystemMessageEvent(
     // immutable; a race only decodes twice.
     @kotlinx.serialization.Transient
     @kotlin.jvm.Transient
-    private var payloadCache: Result<SystemMessagePayload>? = null
+    private var payloadCache: Any? = null // SystemMessagePayload, or ParseFailed
 
-    fun payload() = (payloadCache ?: runCatching { SystemMessagePayload.decodeFromJson(content) }.also { payloadCache = it }).getOrNull()
+    fun payload(): SystemMessagePayload? {
+        payloadCache?.let { return it as? SystemMessagePayload }
+        val parsed = runCatching { SystemMessagePayload.decodeFromJson(content) }.getOrNull()
+        payloadCache = parsed ?: ParseFailed
+        return parsed
+    }
 
     companion object {
         const val KIND = 40099

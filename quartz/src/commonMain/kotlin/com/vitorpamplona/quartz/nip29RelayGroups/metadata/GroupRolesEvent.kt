@@ -50,9 +50,13 @@ class GroupRolesEvent(
 
     // The read path: the same fields indexableContent() joins, without the join.
     override fun forEachIndexableField(visitor: IndexableFieldVisitor) {
-        roles().forEach { role ->
-            if (!visitor.visit(role.name)) return
-            if (role.description != null && !visitor.visit(role.description)) return
+        // Inline over the tags rather than roles(): this runs per event per search keystroke,
+        // and needs neither the list nor a RoleTag per role.
+        for (tag in tags) {
+            val name = RoleTag.parseName(tag) ?: continue
+            if (!visitor.visit(name)) return
+            val description = RoleTag.parseDescription(tag) ?: continue
+            if (!visitor.visit(description)) return
         }
     }
 

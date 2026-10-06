@@ -21,11 +21,13 @@
 package com.vitorpamplona.quartz.buzz.mpProjects
 
 import com.vitorpamplona.quartz.buzz.mpProjects.tags.ProjectMember
+import com.vitorpamplona.quartz.buzz.mpProjects.tags.ProjectMemberTag
 import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.nip50Search.IndexableFields
 import com.vitorpamplona.quartz.nip50Search.SearchFieldExtractor
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertNull
 
 class ProjectHintProviderTest {
     private val author = "460c25e682fda7832b52d1f22d3d22b3176d972f60dcdc3212ed8c92ef85065c"
@@ -55,6 +57,33 @@ class ProjectHintProviderTest {
         assertEquals(listOf("30617:$owner:amethyst", "30617:$owner:quartz"), event.linkedAddressIds())
         assertEquals(listOf("30617:$owner:amethyst"), event.addressHints().map { it.addressId })
         assertEquals(listOf(relay), event.addressHints().map { it.relay.url })
+    }
+
+    @Test
+    fun memberTagValidationMatchesTheParsedCoordinate() {
+        val coordinates =
+            listOf(
+                "30617:$owner:amethyst",
+                "30617:$owner:a:b",
+                "30617:$owner:",
+                "30617:$owner",
+                "30618:$owner:amethyst",
+                "30617:${owner.uppercase()}:amethyst",
+                "30617:${owner.dropLast(1)}:amethyst",
+                "30617:${owner}0:amethyst",
+                "30617$owner:amethyst",
+                "",
+            )
+        for (coordinate in coordinates) {
+            val parsed = ProjectMemberTag.parse(arrayOf("a", coordinate, relay))?.coordinate
+            assertEquals(parsed != null, ProjectMemberTag.isValidCoordinate(coordinate), coordinate)
+            // The id is the tag value itself, never a rebuilt string that could differ from it.
+            assertEquals(parsed, ProjectMemberTag.parseAddressId(arrayOf("a", coordinate)), coordinate)
+            assertEquals(parsed, ProjectMemberTag.parseAsHint(arrayOf("a", coordinate, relay))?.addressId, coordinate)
+        }
+        assertNull(ProjectMemberTag.parseAsHint(arrayOf("a", "30617:$owner:amethyst")))
+        assertNull(ProjectMemberTag.parseAsHint(arrayOf("a", "30617:$owner:amethyst", "")))
+        assertNull(ProjectMemberTag.parseAddressId(arrayOf("a", "30617:$owner:amethyst", relay, "extra")))
     }
 
     @Test

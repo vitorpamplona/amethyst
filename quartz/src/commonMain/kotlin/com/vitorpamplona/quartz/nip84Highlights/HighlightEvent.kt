@@ -214,8 +214,16 @@ class HighlightEvent(
      * The surrounding text worth indexing: the `context` tag, or -- when a web highlighter wrote
      * only a `textquoteselector` -- its prefix and suffix. Unlike [contextOrReconstructed] the
      * highlight itself is left out, since [content] is indexed on its own.
+     *
+     * Computed once per instance: search reads it per event per keystroke, and building it
+     * re-parses the selector and runs a regex over both halves.
      */
-    fun searchableContext(): String? {
+    fun searchableContext(): String? = searchableContextValue
+
+    // Lazy rather than a nullable cache field, because null is itself a valid, cacheable answer.
+    private val searchableContextValue by lazy(LazyThreadSafetyMode.PUBLICATION) { computeSearchableContext() }
+
+    private fun computeSearchableContext(): String? {
         context()?.let { return it }
 
         val selector = textQuoteSelector() ?: return null

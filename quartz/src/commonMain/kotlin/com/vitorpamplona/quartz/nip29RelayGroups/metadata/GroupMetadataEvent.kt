@@ -56,7 +56,11 @@ class GroupMetadataEvent(
     override fun forEachIndexableField(visitor: IndexableFieldVisitor) {
         if (!visitor.visit(name())) return
         if (!visitor.visit(about())) return
-        hashtags().forEach { if (!visitor.visit(it)) return }
+        // Inline over the tags rather than hashtags(): this runs per event per search keystroke.
+        for (tag in tags) {
+            val hashtag = HashtagTag.parse(tag) ?: continue
+            if (!visitor.visit(hashtag)) return
+        }
     }
 
     fun groupId() = dTag()

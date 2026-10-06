@@ -54,4 +54,24 @@ class CommentHintProviderTest {
         assertTrue(other in comment.linkedPubKeys())
         assertEquals(listOf(third), comment.pubKeyHints().map { it.pubkey })
     }
+
+    @Test
+    fun pubKeysKeepTheirOrderRootThenReplyThenZapSplits() {
+        val comment =
+            CommentEvent(
+                id,
+                pk,
+                1L,
+                arrayOf(
+                    arrayOf("zap", pk, relay, "1"),
+                    arrayOf("p", third, relay),
+                    arrayOf("P", other, relay),
+                ),
+                "nice",
+                sig,
+            )
+
+        assertEquals(listOf(other, third, pk), comment.linkedPubKeys())
+        assertEquals(listOf(other, third, pk), comment.pubKeyHints().map { it.pubkey })
+    }
 }

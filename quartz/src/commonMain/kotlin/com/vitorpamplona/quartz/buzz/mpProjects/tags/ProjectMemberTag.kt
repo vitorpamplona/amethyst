@@ -73,7 +73,23 @@ object ProjectMemberTag {
         return Address(MEMBER_KIND, owner, repoD)
     }
 
-    fun isValidCoordinate(coordinate: String) = parseCoordinate(coordinate) != null
+    /**
+     * The same rules as [parseCoordinate], checked in place: `30617:`, 64 lowercase hex, `:`,
+     * then a non-empty repo `d`. Hex holds no `:`, so a fixed-offset scan is exactly the
+     * first-two-colons split. Allocates nothing — it backs the linked-id and hint paths, which
+     * run on every relay copy of every project event.
+     */
+    fun isValidCoordinate(coordinate: String): Boolean {
+        val ownerStart = MEMBER_KIND_SEGMENT.length + 1
+        val ownerEnd = ownerStart + 64
+        if (coordinate.length <= ownerEnd + 1) return false
+        if (!coordinate.startsWith(MEMBER_KIND_SEGMENT) || coordinate[ownerStart - 1] != ':') return false
+        for (i in ownerStart until ownerEnd) {
+            val c = coordinate[i]
+            if (c !in '0'..'9' && c !in 'a'..'f') return false
+        }
+        return coordinate[ownerEnd] == ':'
+    }
 
     /**
      * Parses a member tag with the arity (two or three elements) and coordinate rules the
@@ -85,16 +101,23 @@ object ProjectMemberTag {
         return ProjectMember(address, tag.getOrNull(2))
     }
 
-    /** The member's canonical `30617:<owner>:<repo>` coordinate, for every well-formed member tag. */
-    fun parseAddressId(tag: Tag): String? = parse(tag)?.coordinate
+    /**
+     * The member's canonical `30617:<owner>:<repo>` coordinate, for every well-formed member tag.
+     * A valid coordinate is already canonical (the kind is a literal, the owner must be
+     * lowercase, the `d` is verbatim), so it is `tag[1]` itself, validated, not rebuilt.
+     */
+    fun parseAddressId(tag: Tag): String? = if (isMemberTag(tag)) tag[1] else null
 
     /** The member coordinate with its relay hint, only when the tag carries a valid relay URL. */
     fun parseAsHint(tag: Tag): AddressHint? {
-        if (tag.size != 3) return null
-        val member = parse(tag) ?: return null
-        val relay = RelayUrlNormalizer.normalizeHintOrNull(member.relayHint) ?: return null
-        return AddressHint(member.coordinate, relay)
+        // Arity 3: the hint slot must exist; normalizeHintOrNull rejects an empty one.
+        if (tag.size != 3 || !isMemberTag(tag)) return null
+        val relay = RelayUrlNormalizer.normalizeHintOrNull(tag[2]) ?: return null
+        return AddressHint(tag[1], relay)
     }
+
+    // The arity, name and coordinate checks of [parse], without building the member.
+    private fun isMemberTag(tag: Tag) = tag.size in 2..3 && tag[0] == TAG_NAME && isValidCoordinate(tag[1])
 
     fun assemble(
         coordinate: String,

@@ -506,32 +506,89 @@ class RelayUrlNormalizer {
          * `wss://<word>/`. Hint parsers feed the app's relay-hint index and broadcast set, so they
          * must reject those. A value with a `ws://`/`wss://` scheme is taken as is; a schemeless
          * one is only completed when it [looksLikeBareHost] — `relay.damus.io` is a relay a
-         * publisher forgot the scheme on, `inspired-by`, `root` or a hex key never are.
+         * publisher forgot the scheme on, `inspired-by`, `root` or a hex key never are. Any other
+         * scheme (`https://x.com`, a media url) is never a hint: [normalizeOrNull] would happily
+         * convert a bare https host to `wss://`, but in a relay slot that is a web link.
+         *
+         * Surrounding whitespace is trimmed first — a trailing space is a sloppy publisher, not a
+         * reason to lose a real relay — and the trimmed value is what reaches the normalizer's
+         * cache.
          */
         fun normalizeHintOrNull(url: String?): NormalizedRelayUrl? {
             if (url.isNullOrEmpty()) return null
-            if (url.length > 7 && isRelayUrl(url)) return normalizeOrNull(url)
+            // A schemed relay may be dotless (`ws://localhost:7777`, a bracketed Yggdrasil IPv6
+            // literal), so the scheme path comes first; only `isRelayUrl` values take it.
+            // Everything else must pass [looksLikeBareHost], whose first test is the dot — so a
+            // pubkey or marker in the slot costs one `indexOf` and never reaches the LRU.
+            if (url.length > 7 && isRelayUrl(url)) return normalizeOrNull(trimmed(url))
             if (!looksLikeBareHost(url)) return null
-            return normalizeOrNull(url)
+            return normalizeOrNull(trimmed(url))
         }
 
         /**
-         * A schemeless value worth completing with `wss://`: it has a dot (every public host does;
-         * keys, ids, markers and role labels do not), no whitespace, is not a number (a zap weight
-         * like `1.0`), and has at most one `:` (a `host:port`, but not a `kind:pubkey:d` address
-         * whose d-tag happens to hold a dot).
+         * Like [normalizeHintOrNull], but never completes a schemeless value: only an explicit
+         * `ws://`/`wss://` url is a hint. For slots whose grammar also allows free text — a
+         * publication's `e` entry may carry an inline title there, and a title like `Node.js` or
+         * `Vol.2` passes [looksLikeBareHost] and would become `wss://node.js/`.
+         */
+        fun normalizeSchemedHintOrNull(url: String?): NormalizedRelayUrl? {
+            if (url.isNullOrEmpty() || url.length <= 7 || !isRelayUrl(url)) return null
+            return normalizeOrNull(trimmed(url))
+        }
+
+        /** [value] without surrounding whitespace; allocates only when there is some. */
+        private fun trimmed(value: String) = if (value[0].isWhitespace() || value[value.length - 1].isWhitespace()) value.trim() else value
+
+        /**
+         * A schemeless value worth completing with `wss://`. Judged on its AUTHORITY (the part
+         * before the first `/`), so `github.com/user/repo` is weighed by its host while
+         * `foo/bar.baz` (a dot only in a path) is not a host at all. The authority must have a dot
+         * (every public host does; keys, ids, markers and role labels do not) and at most one `:`
+         * (a `host:port`, but not a `kind:pubkey:d` address whose d-tag happens to hold a dot).
+         * The whole value must have no inner whitespace (free text), no `@` (an email or NIP-05
+         * address) and no `//` anywhere — that rejects every other scheme (`https://x.com`) and
+         * the typo'd ones (`wss//relay.com`, `https//relay.com`) as well as `relay.com//x`, the
+         * signature of two urls glued together. It must not be a number either (a zap weight like
+         * `1.0`).
+         *
+         * Dotless hosts (`localhost`, `umbrel`) are deliberately NOT completed: in a hint slot
+         * they are indistinguishable from a marker word, and a publisher that really means a
+         * local relay can write its scheme. Surrounding whitespace is ignored.
          */
         fun looksLikeBareHost(value: String): Boolean {
+            // Cheapest test first: most slot values that are not relays (keys, ids, markers) have
+            // no dot at all, so they leave here before any scan.
+            if (value.indexOf('.') < 0) return false
+            var start = 0
+            var end = value.length
+            while (start < end && value[start].isWhitespace()) start++
+            while (end > start && value[end - 1].isWhitespace()) end--
+            if (start == end) return false
+
             var dots = 0
             var colons = 0
-            for (c in value) {
+            var inAuthority = true
+            var i = start
+            while (i < end) {
+                val c = value[i]
                 when {
-                    c.isWhitespace() -> return false
-                    c == '.' -> dots++
-                    c == ':' -> colons++
+                    c.isWhitespace() || c == '@' -> return false
+                    c == '/' -> {
+                        if (i + 1 < end && value[i + 1] == '/') return false
+                        inAuthority = false
+                    }
+                    c == '.' -> if (inAuthority) dots++
+                    c == ':' -> if (inAuthority) colons++
                 }
+                i++
             }
-            return dots > 0 && colons <= 1 && value.toDoubleOrNull() == null
+            if (dots == 0 || colons > 1) return false
+            // Only a value that could be a number pays for the parse (an IPv4 literal is not one).
+            val first = value[start]
+            if (first.isDigit() || first == '.' || first == '-' || first == '+') {
+                if (value.substring(start, end).toDoubleOrNull() != null) return false
+            }
+            return true
         }
 
         fun normalizeOrNull(url: String): NormalizedRelayUrl? {

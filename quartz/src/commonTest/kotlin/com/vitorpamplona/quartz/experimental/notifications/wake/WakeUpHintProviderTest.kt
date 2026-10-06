@@ -20,6 +20,9 @@
  */
 package com.vitorpamplona.quartz.experimental.notifications.wake
 
+import com.vitorpamplona.quartz.nip01Core.core.Event
+import com.vitorpamplona.quartz.nip01Core.hints.EventHintBundle
+import com.vitorpamplona.quartz.nip10Notes.TextNoteEvent
 import kotlin.test.Test
 import kotlin.test.assertEquals
 
@@ -37,5 +40,14 @@ class WakeUpHintProviderTest {
         val event = WakeUpEvent(zero, pk1, 1, arrayOf(arrayOf("e", eid, relay), arrayOf("p", pk2, relay), arrayOf("k", "7")), "", sig)
         assertEquals(listOf(pk2), event.linkedPubKeys())
         assertEquals(listOf(pk2), event.pubKeyHints().map { it.pubkey })
+    }
+
+    @Test
+    fun buildPublishesEmptyContent() {
+        val note: Event = TextNoteEvent(eid, pk2, 1, emptyArray(), "hello", sig)
+        val template = WakeUpEvent.build(EventHintBundle(note))
+        // not the "null" a stray kotlinx JsonNull.content import once put here
+        assertEquals("", template.content)
+        assertEquals(listOf(pk2), template.tags.filter { it[0] == "p" }.map { it[1] })
     }
 }

@@ -20,6 +20,8 @@
  */
 package com.vitorpamplona.quartz.nip10Notes
 
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
+import com.vitorpamplona.quartz.nip19Bech32.entities.NProfile
 import kotlin.test.Test
 import kotlin.test.assertEquals
 
@@ -55,5 +57,33 @@ class TextNoteHintProviderTest {
         assertEquals(listOf(other, third, pk), note.linkedPubKeys())
         assertEquals(listOf(third), note.pubKeyHints().map { it.pubkey })
         assertEquals(listOf(relay), note.pubKeyHints().map { it.relay.url })
+    }
+
+    @Test
+    fun pubKeysKeepTheirOrderPTagsThenZapSplitsThenCitations() {
+        val cited = NProfile.create(eventId, RelayUrlNormalizer.normalizeOrNull(relay))
+        val note =
+            TextNoteEvent(
+                id,
+                pk,
+                1L,
+                arrayOf(
+                    arrayOf("zap", third, relay, "1"),
+                    arrayOf("p", other, relay),
+                ),
+                "hello nostr:$cited",
+                sig,
+            )
+
+        assertEquals(listOf(other, third, eventId), note.linkedPubKeys())
+        assertEquals(listOf(other, third, eventId), note.pubKeyHints().map { it.pubkey })
+    }
+
+    @Test
+    fun aNoteWithoutZapSplitsLinksOnlyItsPTags() {
+        val note = TextNoteEvent(id, pk, 1L, arrayOf(arrayOf("p", other), arrayOf("e", eventId)), "hello", sig)
+
+        assertEquals(listOf(other), note.linkedPubKeys())
+        assertEquals(0, note.pubKeyHints().size)
     }
 }

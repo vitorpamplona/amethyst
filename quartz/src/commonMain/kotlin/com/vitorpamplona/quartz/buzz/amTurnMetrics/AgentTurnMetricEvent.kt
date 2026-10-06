@@ -55,7 +55,8 @@ class AgentTurnMetricEvent(
     // The `agent` tag has no relay slot, so it only joins the linked side.
     override fun pubKeyHints(): List<PubKeyHint> = tags.mapNotNull(PTag::parseAsHint)
 
-    override fun linkedPubKeys(): List<HexKey> = tags.mapNotNull(PTag::parseKey) + tags.mapNotNull(AgentTag::parse)
+    // One pass in tag order (the builder writes `p` before `agent`).
+    override fun linkedPubKeys(): List<HexKey> = tags.mapNotNull { PTag.parseKey(it) ?: AgentTag.parse(it) }
 
     override fun isContentEncoded() = true
 

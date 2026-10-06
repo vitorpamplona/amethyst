@@ -61,7 +61,7 @@ class ExternalIdTrustedListEvent(
 
     override fun pubKeyHints() = tags.mapNotNull(PTag::parseAsHint)
 
-    override fun linkedPubKeys() = tags.mapNotNull(PTag::parseKey) + provenancePubKeys()
+    override fun linkedPubKeys(): List<HexKey> = tags.mapNotNullTo(ArrayList(), PTag::parseKey).also(::addProvenancePubKeys)
 
     /** What this list is about, for relay-side discovery. Never its members. */
     fun aboutAddresses() = tags.aboutAddresses()

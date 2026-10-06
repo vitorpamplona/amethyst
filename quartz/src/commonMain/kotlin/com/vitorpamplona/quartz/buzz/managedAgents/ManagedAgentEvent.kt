@@ -21,6 +21,7 @@
 package com.vitorpamplona.quartz.buzz.managedAgents
 
 import androidx.compose.runtime.Immutable
+import com.vitorpamplona.quartz.buzz.ParseFailed
 import com.vitorpamplona.quartz.buzz.apPersonas.PersonaEvent
 import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.nip01Core.core.BaseAddressableEvent
@@ -63,10 +64,14 @@ class ManagedAgentEvent(
     // The agent pubkey is the `d` value and the allowlist sits in the JSON body: neither has a relay slot.
     override fun pubKeyHints(): List<PubKeyHint> = emptyList()
 
+    // One list, built in place: the agent, then its valid allowlist entries.
     override fun linkedPubKeys(): List<HexKey> {
-        val agent = agentPubKey().takeIf { it.isValid() }
-        val allowlist = agentOrNull()?.respondToAllowlist?.filter { it.isValid() } ?: emptyList()
-        return listOfNotNull(agent) + allowlist
+        val agent = agentPubKey()
+        val allowlist = agentOrNull()?.respondToAllowlist
+        val out = ArrayList<HexKey>(1 + (allowlist?.size ?: 0))
+        if (agent.isValid()) out.add(agent)
+        allowlist?.forEach { if (it.isValid()) out.add(it) }
+        return out
     }
 
     override fun addressHints(): List<AddressHint> = emptyList()
@@ -92,20 +97,23 @@ class ManagedAgentEvent(
     // immutable; a race only decodes twice.
     @kotlinx.serialization.Transient
     @kotlin.jvm.Transient
-    private var agentCache: Result<ManagedAgentContent>? = null
-
-    private fun parsedAgent(): Result<ManagedAgentContent> =
-        agentCache ?: try {
-            Result.success(ManagedAgentContent.decodeFromJson(content))
-        } catch (e: Exception) {
-            if (e is CancellationException) throw e
-            Result.failure(e)
-        }.also { agentCache = it }
+    private var agentCache: Any? = null // ManagedAgentContent, or ParseFailed
 
     /** Parses the managed-agent projection (once), or throws if the JSON is malformed. */
-    fun agent(): ManagedAgentContent = parsedAgent().getOrThrow()
+    fun agent(): ManagedAgentContent = agentOrNull() ?: ManagedAgentContent.decodeFromJson(content)
 
-    fun agentOrNull(): ManagedAgentContent? = parsedAgent().getOrNull()
+    fun agentOrNull(): ManagedAgentContent? {
+        agentCache?.let { return it as? ManagedAgentContent }
+        val parsed =
+            try {
+                ManagedAgentContent.decodeFromJson(content)
+            } catch (e: Exception) {
+                if (e is CancellationException) throw e
+                null
+            }
+        agentCache = parsed ?: ParseFailed
+        return parsed
+    }
 
     companion object {
         const val KIND = 30177

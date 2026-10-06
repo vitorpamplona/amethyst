@@ -21,6 +21,7 @@
 package com.vitorpamplona.quartz.buzz.stream.sidecars
 
 import androidx.compose.runtime.Immutable
+import com.vitorpamplona.quartz.buzz.ParseFailed
 import com.vitorpamplona.quartz.buzz.stream.channel
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
@@ -65,9 +66,14 @@ class ChannelSummaryEvent(
     // instance — a failure included. Events are immutable; a race only decodes twice.
     @kotlinx.serialization.Transient
     @kotlin.jvm.Transient
-    private var summaryCache: Result<ChannelSummaryPayload>? = null
+    private var summaryCache: Any? = null // ChannelSummaryPayload, or ParseFailed
 
-    fun summary() = (summaryCache ?: runCatching { ChannelSummaryPayload.decodeFromJson(content) }.also { summaryCache = it }).getOrNull()
+    fun summary(): ChannelSummaryPayload? {
+        summaryCache?.let { return it as? ChannelSummaryPayload }
+        val parsed = runCatching { ChannelSummaryPayload.decodeFromJson(content) }.getOrNull()
+        summaryCache = parsed ?: ParseFailed
+        return parsed
+    }
 
     companion object {
         const val KIND = 40901

@@ -47,4 +47,24 @@ class BookshelfDirectoryHintProviderTest {
         // the inline title is not mistaken for a relay
         assertEquals(listOf(eid), event.eventHints().map { it.eventId })
     }
+
+    @Test
+    fun aDottedTitleInSlotTwoIsNotCompletedIntoARelay() {
+        val event =
+            BookshelfDirectoryEvent(
+                zero,
+                pk1,
+                1,
+                arrayOf(
+                    arrayOf("d", "shelf"),
+                    arrayOf("e", eid, "Node.js"),
+                    arrayOf("e", eid2, "Vol.2"),
+                    arrayOf("e", eid, "ws://relay.example.com"),
+                ),
+                "",
+                sig,
+            )
+        // "Node.js" and "Vol.2" look like schemeless hosts; only the schemed relay is a hint.
+        assertEquals(listOf("ws://relay.example.com/"), event.eventHints().map { it.relay.url })
+    }
 }

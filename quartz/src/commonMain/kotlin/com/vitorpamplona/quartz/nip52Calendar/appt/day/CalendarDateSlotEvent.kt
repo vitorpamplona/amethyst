@@ -29,6 +29,7 @@ import com.vitorpamplona.quartz.nip01Core.hints.PubKeyHintProvider
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.nip01Core.tags.dTag.dTag
 import com.vitorpamplona.quartz.nip01Core.tags.geohash.GeoHashTag
+import com.vitorpamplona.quartz.nip01Core.tags.hashtags.HashtagTag
 import com.vitorpamplona.quartz.nip01Core.tags.hashtags.hashtags
 import com.vitorpamplona.quartz.nip01Core.tags.people.PTag
 import com.vitorpamplona.quartz.nip01Core.tags.references.references
@@ -58,13 +59,20 @@ class CalendarDateSlotEvent(
     override fun indexableContent() = (listOfNotNull(title(), summary(), content) + locations() + hashtags()).joinToString("\n")
 
     // The read path: the same fields indexableContent() joins, handed over without
-    // building the joined string a scan would throw away.
+    // building the joined string a scan would throw away. It runs per event per search
+    // keystroke, so the tag-backed fields are read off the tags in place, not via list getters.
     override fun forEachIndexableField(visitor: IndexableFieldVisitor) {
         if (!visitor.visit(title())) return
         if (!visitor.visit(summary())) return
         if (!visitor.visit(content)) return
-        locations().forEach { if (!visitor.visit(it)) return }
-        hashtags().forEach { if (!visitor.visit(it)) return }
+        for (tag in tags) {
+            val location = LocationTag.parse(tag) ?: continue
+            if (!visitor.visit(location)) return
+        }
+        for (tag in tags) {
+            val hashtag = HashtagTag.parse(tag) ?: continue
+            if (!visitor.visit(hashtag)) return
+        }
     }
 
     fun title() = tags.firstNotNullOfOrNull(TitleTag.Companion::parse)

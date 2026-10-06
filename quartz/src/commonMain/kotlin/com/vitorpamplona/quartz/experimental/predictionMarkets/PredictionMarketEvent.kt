@@ -75,8 +75,10 @@ class PredictionMarketEvent(
     override fun forEachIndexableField(visitor: IndexableFieldVisitor) {
         if (!visitor.visit(title())) return
         if (!visitor.visit(description())) return
-        for (outcome in outcomeOptions()) {
-            if (!visitor.visit(outcome.label)) return
+        // outcomeOptions() is memoized, so the per-keystroke walk re-parses no tags or JSON.
+        val outcomes = outcomeOptions()
+        for (i in outcomes.indices) {
+            if (!visitor.visit(outcomes[i].label)) return
         }
         if (!visitor.visit(resolution())) return
         if (!visitor.visit(cancelReason())) return
@@ -102,10 +104,15 @@ class PredictionMarketEvent(
     fun description() = dataDetails?.description ?: contentDetails?.description
 
     /** The outcomes one can bet on, id and label: the `outcome` tags, else the JSON `outcomes`. */
-    fun outcomeOptions(): List<PredictionMarketOutcome> =
+    fun outcomeOptions(): List<PredictionMarketOutcome> = outcomeOptionsValue
+
+    // Memoized like the details above: search reads the outcomes per event per keystroke, and
+    // each read would otherwise re-scan the tags and allocate a fresh list.
+    private val outcomeOptionsValue by lazy {
         tags.marketOutcomes().ifEmpty {
             dataDetails?.outcomes?.ifEmpty { null } ?: contentDetails?.outcomes ?: emptyList()
         }
+    }
 
     /** The outcomes as a reader sees them, by label. */
     fun outcomes(): List<String> = outcomeOptions().map { it.label }

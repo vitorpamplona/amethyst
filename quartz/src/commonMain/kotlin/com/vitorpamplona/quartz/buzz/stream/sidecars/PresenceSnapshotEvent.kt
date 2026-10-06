@@ -21,6 +21,7 @@
 package com.vitorpamplona.quartz.buzz.stream.sidecars
 
 import androidx.compose.runtime.Immutable
+import com.vitorpamplona.quartz.buzz.ParseFailed
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
@@ -58,9 +59,14 @@ class PresenceSnapshotEvent(
     // per instance — a failure included. Events are immutable; a race only decodes twice.
     @kotlinx.serialization.Transient
     @kotlin.jvm.Transient
-    private var snapshotCache: Result<PresenceSnapshotPayload>? = null
+    private var snapshotCache: Any? = null // PresenceSnapshotPayload, or ParseFailed
 
-    fun snapshot() = (snapshotCache ?: runCatching { PresenceSnapshotPayload.decodeFromJson(content) }.also { snapshotCache = it }).getOrNull()
+    fun snapshot(): PresenceSnapshotPayload? {
+        snapshotCache?.let { return it as? PresenceSnapshotPayload }
+        val parsed = runCatching { PresenceSnapshotPayload.decodeFromJson(content) }.getOrNull()
+        snapshotCache = parsed ?: ParseFailed
+        return parsed
+    }
 
     companion object {
         const val KIND = 40902

@@ -60,6 +60,12 @@ import com.vitorpamplona.quartz.utils.TimeUtils
  * `#project`) go through the relay's explicit artifact query (`{"artifact":"current"|"history",
  * …}` on the NIP-98 HTTP `/query`); the relay rejects a REQ that mixes artifact kinds with
  * multi-letter tag filters rather than silently dropping the predicate.
+ *
+ * Search: every revision is its own regular, searchable event — NIP-AR edits and soft-deletes
+ * by publishing a new revision (`op=update`/`op=delete`), never by NIP-09, so superseded
+ * revisions are not removed from a store. A search index that should surface only the current
+ * head has to filter for it (see [ArtifactHeadResolver]); a delete indexes nothing itself, but
+ * does not un-index the revisions before it.
  */
 @Immutable
 class ArtifactEvent(
@@ -83,14 +89,17 @@ class ArtifactEvent(
     /**
      * The body when it reads as text: NIP-AR keeps `content` opaque, so a client may store a
      * JSON document there. That is not natural language and never goes to the search index;
-     * neither does the empty body of a delete.
+     * neither does the empty body of a delete. Only a body that is structurally a JSON object or
+     * array is dropped ([isJsonDocument]) — prose that merely opens with a bracket, such as
+     * `[Draft] Q3 roadmap` or a `[x] ship it` checklist, is still text.
      */
-    fun textBody(): String? = content.takeIf { it.isNotBlank() && it.trimStart().let { s -> !s.startsWith('{') && !s.startsWith('[') } }
+    fun textBody(): String? = content.takeIf { it.isNotBlank() && !isJsonDocument(it) }
 
     // `root` and `prev` carry bare event ids with no relay slot.
     override fun eventHints(): List<EventIdHint> = emptyList()
 
-    override fun linkedEventIds(): List<HexKey> = tags.mapNotNull(RootTag::parseId) + tags.mapNotNull(PrevTag::parseId)
+    // One pass in tag order (the builder writes `root` before `prev`).
+    override fun linkedEventIds(): List<HexKey> = tags.mapNotNull { RootTag.parseId(it) ?: PrevTag.parseId(it) }
 
     /** The artifact's stable UUID — the `d` tag. */
     fun artifactId() = tags.artifactId()
@@ -129,6 +138,61 @@ class ArtifactEvent(
 
     companion object {
         const val KIND = 45010
+
+        /**
+         * Whether [s], ignoring surrounding whitespace, is shaped like a JSON object or array: it
+         * opens with `{` or `[`, the first token after the opener can start a JSON member/value,
+         * and the bracket depth (outside string literals) first returns to zero on the last
+         * non-blank char. A cheap structural test, not a parse: it runs on the search read path
+         * for every revision, so it scans indices and allocates nothing.
+         */
+        fun isJsonDocument(s: String): Boolean {
+            var start = 0
+            var end = s.length - 1
+            while (start <= end && s[start].isWhitespace()) start++
+            while (end > start && s[end].isWhitespace()) end--
+            if (start >= end) return false
+
+            val open = s[start]
+            val close =
+                when (open) {
+                    '{' -> '}'
+                    '[' -> ']'
+                    else -> return false
+                }
+            if (s[end] != close) return false
+
+            var first = start + 1
+            while (first < end && s[first].isWhitespace()) first++
+            val c = s[first]
+            val validFirst =
+                c == close ||
+                    c == '"' ||
+                    (open == '[' && (c == '{' || c == '[' || c == '-' || c in '0'..'9' || c == 't' || c == 'f' || c == 'n'))
+            if (!validFirst) return false
+
+            var depth = 0
+            var inString = false
+            var i = start
+            while (i <= end) {
+                val ch = s[i]
+                if (inString) {
+                    if (ch == '\\') {
+                        i++
+                    } else if (ch == '"') {
+                        inString = false
+                    }
+                } else {
+                    when (ch) {
+                        '"' -> inString = true
+                        '{', '[' -> depth++
+                        '}', ']' -> if (--depth == 0 && i != end) return false
+                    }
+                }
+                i++
+            }
+            return depth == 0 && !inString
+        }
 
         /**
          * Builds a revision and checks it against [ArtifactValidator] — including any client

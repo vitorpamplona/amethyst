@@ -33,6 +33,7 @@ import com.vitorpamplona.quartz.nip01Core.hints.types.EventIdHint
 import com.vitorpamplona.quartz.nip01Core.hints.types.PubKeyHint
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.nip01Core.tags.dTag.dTag
+import com.vitorpamplona.quartz.nip01Core.tags.hashtags.HashtagTag
 import com.vitorpamplona.quartz.nip01Core.tags.hashtags.hashtags
 import com.vitorpamplona.quartz.nip01Core.tags.people.PTag
 import com.vitorpamplona.quartz.nip01Core.tags.publishedAt.PublishedAtProvider
@@ -51,8 +52,8 @@ import com.vitorpamplona.quartz.nip23LongContent.tags.SummaryTag
 import com.vitorpamplona.quartz.nip23LongContent.tags.TitleTag
 import com.vitorpamplona.quartz.nip50Search.IndexableFieldVisitor
 import com.vitorpamplona.quartz.nip50Search.SearchableEvent
-import com.vitorpamplona.quartz.nip57Zaps.splits.zapSplitHints
-import com.vitorpamplona.quartz.nip57Zaps.splits.zapSplitPubKeys
+import com.vitorpamplona.quartz.nip57Zaps.splits.zapSplitHintsTo
+import com.vitorpamplona.quartz.nip57Zaps.splits.zapSplitPubKeysTo
 import com.vitorpamplona.quartz.utils.TimeUtils
 import kotlin.uuid.ExperimentalUuidApi
 import kotlin.uuid.Uuid
@@ -83,7 +84,11 @@ class LongFormContentEvent(
         if (!visitor.visit(title())) return
         if (!visitor.visit(summary())) return
         if (!visitor.visit(content)) return
-        topics().forEach { if (!visitor.visit(it)) return }
+        // Inline over the tags rather than topics(): this runs per event per search keystroke.
+        for (tag in tags) {
+            val topic = HashtagTag.parse(tag) ?: continue
+            if (!visitor.visit(topic)) return
+        }
     }
 
     override fun eventHints(): List<EventIdHint> {
@@ -114,20 +119,20 @@ class LongFormContentEvent(
         return qHints + nip19Hints
     }
 
+    // Runs on every relay copy of every article: one list, filled in the order the old
+    // `p + zap + nip19` concatenation produced, instead of three lists and two copies.
     override fun pubKeyHints(): List<PubKeyHint> {
-        val pHints = tags.mapNotNull(PTag::parseAsHint)
-        val zapHints = tags.zapSplitHints()
-        val nip19Hints = citedNIP19().pubKeyHints()
-
-        return pHints + zapHints + nip19Hints
+        val result = tags.mapNotNullTo(ArrayList(), PTag::parseAsHint)
+        tags.zapSplitHintsTo(result)
+        result.addAll(citedNIP19().pubKeyHints())
+        return result
     }
 
     override fun linkedPubKeys(): List<HexKey> {
-        val pHints = tags.mapNotNull(PTag::parseKey)
-        val zapHints = tags.zapSplitPubKeys()
-        val nip19Hints = citedNIP19().pubKeys()
-
-        return pHints + zapHints + nip19Hints
+        val result = tags.mapNotNullTo(ArrayList(), PTag::parseKey)
+        tags.zapSplitPubKeysTo(result)
+        result.addAll(citedNIP19().pubKeys())
+        return result
     }
 
     override fun dTag() = tags.dTag()

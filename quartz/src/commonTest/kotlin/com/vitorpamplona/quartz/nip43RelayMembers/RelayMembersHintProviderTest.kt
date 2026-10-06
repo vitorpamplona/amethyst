@@ -95,7 +95,9 @@ class RelayMembersHintProviderTest {
 
     @Test
     fun addAndRemoveExposeMemberKeys() {
-        val added = add(arrayOf("-"), arrayOf("p", b), arrayOf("p", c, relay), arrayOf("p", "short"))
+        val notHex = "g".repeat(64)
+        val added = add(arrayOf("-"), arrayOf("p", b), arrayOf("p", c, relay), arrayOf("p", "short"), arrayOf("p", notHex, relay))
+        // 64 chars is not enough: a key the provider hands over must be hex.
         assertEquals(listOf(b, c), added.linkedPubKeys())
         assertEquals(listOf(c), added.pubKeyHints().map { it.pubkey })
         assertEquals(listOf(relay), added.pubKeyHints().map { it.relay.url })
@@ -106,10 +108,14 @@ class RelayMembersHintProviderTest {
     }
 
     @Test
-    fun membershipListLinksMembersWithoutHints() {
-        val event = list(arrayOf("-"), arrayOf("member", b, "admin"), arrayOf("member", c), arrayOf("member", "bad"))
-        assertEquals(listOf(b, c), event.linkedPubKeys())
+    fun membershipListLinksNoOne() {
+        // The list arrives from the membership relay itself: linking every member would record
+        // that (often private) relay as a hint for each of them.
+        val event = list(arrayOf("-"), arrayOf("member", b, "admin"), arrayOf("member", c), arrayOf("member", "bad"), arrayOf("member", "g".repeat(64)))
+        assertTrue(event.linkedPubKeys().isEmpty())
         assertTrue(event.pubKeyHints().isEmpty())
+        // The list itself still reads, keeping only real 64-hex keys.
+        assertEquals(listOf(b, c), event.members())
     }
 
     @Test

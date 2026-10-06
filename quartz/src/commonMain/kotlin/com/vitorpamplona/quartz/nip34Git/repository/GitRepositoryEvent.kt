@@ -65,7 +65,11 @@ class GitRepositoryEvent(
         if (!visitor.visit(name())) return
         if (!visitor.visit(description())) return
         if (!visitor.visit(content)) return
-        hashtags().forEach { if (!visitor.visit(it)) return }
+        // Inline over the tags rather than hashtags(): this runs per event per search keystroke.
+        for (tag in tags) {
+            val hashtag = HashtagTag.parse(tag) ?: continue
+            if (!visitor.visit(hashtag)) return
+        }
     }
 
     // The `maintainers` tag lists bare pubkeys, without relay hints.

@@ -36,7 +36,6 @@ import com.vitorpamplona.quartz.nip01Core.tags.kinds.kind
 import com.vitorpamplona.quartz.nip01Core.tags.people.PTag
 import com.vitorpamplona.quartz.nip01Core.tags.people.toPTag
 import com.vitorpamplona.quartz.utils.TimeUtils
-import kotlinx.serialization.json.JsonNull.content
 
 @Immutable
 class WakeUpEvent(
@@ -96,7 +95,7 @@ class WakeUpEvent(
             about: EventHintBundle<Event>,
             createdAt: Long = TimeUtils.now(),
             initializer: TagArrayBuilder<WakeUpEvent>.() -> Unit = {},
-        ) = eventTemplate(KIND, content, createdAt) {
+        ) = eventTemplate(KIND, "", createdAt) {
             about(about)
             notify(about.toPTag())
             kind(about.event.kind)

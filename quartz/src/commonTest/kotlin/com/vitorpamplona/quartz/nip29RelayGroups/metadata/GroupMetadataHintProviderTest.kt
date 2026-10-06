@@ -38,32 +38,39 @@ class GroupMetadataHintProviderTest {
     private val id = "00".repeat(32)
     private val sig = "00".repeat(64)
 
+    // The member lists come from the group relay itself: linking every member would record that
+    // (often private) relay as a hint for each of them, so the lists link no one.
+
     @Test
-    fun adminsAreLinkedButTheirRolesAreNotRelays() {
+    fun adminsAreNotLinkedAndTheirRolesAreNotRelays() {
         val admins =
             GroupAdminsEvent(
                 id,
                 pk,
                 1L,
-                arrayOf(arrayOf("d", "g"), arrayOf("p", other, "admin", "moderator"), arrayOf("p", "short")),
+                arrayOf(arrayOf("d", "g"), arrayOf("p", other, "admin", "moderator"), arrayOf("p", "short"), arrayOf("p", "g".repeat(64))),
                 "",
                 sig,
             )
 
-        assertEquals(listOf(other), admins.linkedPubKeys())
+        assertTrue(admins.linkedPubKeys().isEmpty())
         assertTrue(admins.pubKeyHints().isEmpty())
+        // The list itself still reads, keeping only real 64-hex keys.
+        assertEquals(listOf(other), admins.admins().map { it.pubKey })
+        assertEquals(listOf("admin", "moderator"), admins.admins().single().roles)
     }
 
     @Test
-    fun membersAreLinked() {
+    fun membersAreNotLinked() {
         val members = GroupMembersEvent(id, pk, 1L, arrayOf(arrayOf("d", "g"), arrayOf("p", other), arrayOf("p", third, relay)), "", sig)
 
-        assertEquals(listOf(other, third), members.linkedPubKeys())
+        assertTrue(members.linkedPubKeys().isEmpty())
         assertEquals(listOf(third), members.pubKeyHints().map { it.pubkey })
+        assertEquals(listOf(other, third), members.members())
     }
 
     @Test
-    fun participantsAreLinked() {
+    fun participantsAreNotLinked() {
         val participants =
             GroupParticipantsEvent(
                 id,
@@ -74,8 +81,9 @@ class GroupMetadataHintProviderTest {
                 sig,
             )
 
-        assertEquals(listOf(other), participants.linkedPubKeys())
+        assertTrue(participants.linkedPubKeys().isEmpty())
         assertTrue(participants.pubKeyHints().isEmpty())
+        assertEquals(listOf(other), participants.participants())
     }
 
     @Test
@@ -113,6 +121,30 @@ class GroupMetadataHintProviderTest {
 
         val fields = SearchFieldExtractor.extract(roles) as IndexableFields.Tiered
         assertEquals(listOf("admin", "Runs the group", "member"), fields.secondary)
+    }
+
+    @Test
+    fun roleVisitorSkipsBlankSlotsLikeTheJoinDoes() {
+        val roles =
+            GroupRolesEvent(
+                id,
+                pk,
+                1L,
+                arrayOf(arrayOf("d", "g"), arrayOf("role", ""), arrayOf("role", "mod", ""), arrayOf("t", "x"), arrayOf("role", "admin", "Runs it")),
+                "",
+                sig,
+            )
+
+        assertEquals("mod\nadmin\nRuns it", roles.indexableContent())
+        assertEquals(roles.indexableContent(), roles.rejoined())
+
+        // A visitor that stops after the first field is not handed the rest.
+        val seen = mutableListOf<String?>()
+        roles.forEachIndexableField {
+            seen.add(it)
+            false
+        }
+        assertEquals(listOf<String?>("mod"), seen)
     }
 
     @Test

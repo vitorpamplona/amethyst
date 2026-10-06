@@ -24,6 +24,8 @@ import com.vitorpamplona.quartz.nip50Search.IndexableFields
 import com.vitorpamplona.quartz.nip50Search.SearchFieldExtractor
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
+import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 class ArtifactHintProviderTest {
@@ -73,5 +75,25 @@ class ArtifactHintProviderTest {
 
         val json = artifact("""{"status":"open","assignee":"x"}""", prev = false)
         assertEquals("Ship the beta", json.indexableContent())
+    }
+
+    @Test
+    fun proseThatOpensWithABracketIsStillText() {
+        for (body in listOf("[Draft] Q3 roadmap", "[x] ship it", "  {wip} notes", "[1] see the spec [2]", "[todo] fix [this]", "{a} and {b}")) {
+            assertEquals(body, artifact(body, prev = false).textBody(), body)
+            assertEquals("Ship the beta\n$body", artifact(body, prev = false).indexableContent())
+        }
+    }
+
+    @Test
+    fun jsonObjectsAndArraysAreNotText() {
+        for (body in listOf("""  {"a":1}  """, "{}", "[]", "[1, 2]", """["x", {"y": "]"}]""", "[true]", "\n[\n  null\n]\n", """{"s":"a \" } b"}""")) {
+            assertNull(artifact(body, prev = false).textBody(), body)
+            assertTrue(ArtifactEvent.isJsonDocument(body), body)
+        }
+        assertFalse(ArtifactEvent.isJsonDocument("{"))
+        assertFalse(ArtifactEvent.isJsonDocument("[a]"))
+        assertFalse(ArtifactEvent.isJsonDocument("""{"open": 1"""))
+        assertFalse(ArtifactEvent.isJsonDocument("""["unterminated]"""))
     }
 }

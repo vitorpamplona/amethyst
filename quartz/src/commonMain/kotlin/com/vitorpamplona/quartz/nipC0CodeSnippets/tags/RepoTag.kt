@@ -48,6 +48,8 @@ class RepoTag {
             val repo = parse(tag) ?: return null
             val bech = repo.removePrefix("nostr:")
             ensure(bech.startsWith("naddr1")) { return null }
+            // The TLV author is hex-encoded from raw bytes, so its digits are always hex:
+            // the length check alone is what rejects a key that is not 32 bytes.
             return NAddress.parse(bech)?.takeIf { it.author.length == 64 }
         }
 

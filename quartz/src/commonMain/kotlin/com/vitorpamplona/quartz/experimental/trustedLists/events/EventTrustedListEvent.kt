@@ -26,7 +26,6 @@ import com.vitorpamplona.quartz.experimental.trustedLists.events.tags.EventMembe
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.Tag
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
-import com.vitorpamplona.quartz.nip01Core.core.fastMapNotNullDense
 import com.vitorpamplona.quartz.nip01Core.hints.AddressHintProvider
 import com.vitorpamplona.quartz.nip01Core.hints.EventHintProvider
 import com.vitorpamplona.quartz.nip01Core.hints.PubKeyHintProvider
@@ -64,7 +63,13 @@ class EventTrustedListEvent(
 
     override fun eventHints() = tags.mapNotNull(EventMemberTag::parseAsHint)
 
-    override fun linkedEventIds() = tags.fastMapNotNullDense(EventMemberTag::parseId) + provenanceEventIds()
+    // Dense: nearly every tag is a member, so presize, with room for the provenance id.
+    override fun linkedEventIds(): List<HexKey> {
+        val ids = ArrayList<HexKey>(tags.size + 1)
+        for (tag in tags) EventMemberTag.parseId(tag)?.let(ids::add)
+        addProvenanceEventIds(ids)
+        return ids
+    }
 
     override fun addressHints() = tags.mapNotNull(ATag::parseAsHint)
 
@@ -72,7 +77,7 @@ class EventTrustedListEvent(
 
     override fun pubKeyHints() = tags.mapNotNull(PTag::parseAsHint)
 
-    override fun linkedPubKeys() = tags.mapNotNull(PTag::parseKey) + provenancePubKeys()
+    override fun linkedPubKeys(): List<HexKey> = tags.mapNotNullTo(ArrayList(), PTag::parseKey).also(::addProvenancePubKeys)
 
     /** What this list is about, for relay-side discovery. Never its members. */
     fun aboutAddresses() = tags.aboutAddresses()

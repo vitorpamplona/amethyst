@@ -21,6 +21,7 @@
 package com.vitorpamplona.quartz.experimental.interactiveStories.tags
 
 import com.vitorpamplona.quartz.nip01Core.core.Address
+import com.vitorpamplona.quartz.nip01Core.core.AddressSerializer
 import com.vitorpamplona.quartz.nip01Core.core.has
 import com.vitorpamplona.quartz.nip01Core.hints.types.AddressHint
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
@@ -46,8 +47,23 @@ class StoryOptionTag(
             return StoryOptionTag(tag[1], address, tag.getOrNull(3))
         }
 
-        /** The choice text a reader sees for this option (`tag[1]`), when the option is well formed. */
-        fun parseLabel(tag: Array<String>): String? = parse(tag)?.option?.takeIf { it.isNotBlank() }
+        /**
+         * The choice text a reader sees for this option (`tag[1]`), when the option is well formed.
+         *
+         * The search read path calls this per option per event per keystroke, so the scene
+         * coordinate gets a shape check rather than a full [Address.parse] (split, allocation,
+         * and a logged warning on failure). Only an `naddr1` value, which [parse] also takes,
+         * still goes through the full parse.
+         */
+        fun parseLabel(tag: Array<String>): String? {
+            ensure(tag.has(2)) { return null }
+            ensure(tag[0] == TAG_NAME) { return null }
+            ensure(tag[1].isNotBlank()) { return null }
+            val scene = tag[2]
+            ensure(scene.isNotEmpty()) { return null }
+            ensure(AddressSerializer.isAddressShape(scene) || (scene.startsWith("naddr1") && Address.parse(scene) != null)) { return null }
+            return tag[1]
+        }
 
         /** The scene coordinate this option leads to, validated, as an address id. */
         fun parseAddressId(tag: Array<String>): String? {

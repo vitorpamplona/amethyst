@@ -26,7 +26,6 @@ import com.vitorpamplona.quartz.experimental.trustedLists.users.tags.PubKeyMembe
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.Tag
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
-import com.vitorpamplona.quartz.nip01Core.core.fastMapNotNullDense
 import com.vitorpamplona.quartz.nip01Core.hints.AddressHintProvider
 import com.vitorpamplona.quartz.nip01Core.hints.PubKeyHintProvider
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
@@ -59,7 +58,13 @@ class UserTrustedListEvent(
 
     override fun pubKeyHints() = tags.mapNotNull(PubKeyMemberTag::parseAsHint)
 
-    override fun linkedPubKeys() = tags.fastMapNotNullDense(PubKeyMemberTag::parseKey) + provenancePubKeys()
+    // Dense: nearly every tag is a member, so presize, with room for the two provenance keys.
+    override fun linkedPubKeys(): List<HexKey> {
+        val keys = ArrayList<HexKey>(tags.size + 2)
+        for (tag in tags) PubKeyMemberTag.parseKey(tag)?.let(keys::add)
+        addProvenancePubKeys(keys)
+        return keys
+    }
 
     override fun addressHints() = tags.mapNotNull(ATag::parseAsHint)
 

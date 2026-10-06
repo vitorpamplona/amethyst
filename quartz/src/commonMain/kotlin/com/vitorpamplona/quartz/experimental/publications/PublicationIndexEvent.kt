@@ -93,8 +93,10 @@ class PublicationIndexEvent(
 
     override fun linkedAddressIds(): List<String> = tags.mapNotNull { ATag.parseAddressId(it) ?: SourceAddressTag.parseAddressId(it) }
 
-    // Sections listed by id (`e`), plus the original a derivative work names (`E`).
-    override fun eventHints(): List<EventIdHint> = tags.mapNotNull { ETag.parseAsHint(it) ?: SourceEventTag.parseAsHint(it) }
+    // Sections listed by id (`e`), plus the original a derivative work names (`E`). An `e`
+    // entry's slot 2 may be an inline title ("Node.js") that passes for a schemeless host, so it
+    // only hints with an explicit ws(s):// url.
+    override fun eventHints(): List<EventIdHint> = tags.mapNotNull { PublicationSectionRef.parseEventSectionAsHint(it) ?: SourceEventTag.parseAsHint(it) }
 
     override fun linkedEventIds(): List<HexKey> = tags.mapNotNull { ETag.parseId(it) ?: SourceEventTag.parseId(it) }
 

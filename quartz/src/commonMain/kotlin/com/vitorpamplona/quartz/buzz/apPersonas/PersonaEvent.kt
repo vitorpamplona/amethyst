@@ -21,6 +21,7 @@
 package com.vitorpamplona.quartz.buzz.apPersonas
 
 import androidx.compose.runtime.Immutable
+import com.vitorpamplona.quartz.buzz.ParseFailed
 import com.vitorpamplona.quartz.buzz.apPersonas.tags.SharedTag
 import com.vitorpamplona.quartz.nip01Core.core.BaseAddressableEvent
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
@@ -87,20 +88,23 @@ class PersonaEvent(
     // immutable; a race only decodes twice.
     @kotlinx.serialization.Transient
     @kotlin.jvm.Transient
-    private var personaCache: Result<PersonaContent>? = null
-
-    private fun parsedPersona(): Result<PersonaContent> =
-        personaCache ?: try {
-            Result.success(PersonaContent.decodeFromJson(content))
-        } catch (e: Exception) {
-            if (e is CancellationException) throw e
-            Result.failure(e)
-        }.also { personaCache = it }
+    private var personaCache: Any? = null // PersonaContent, or ParseFailed
 
     /** Parses the persona configuration (once), or throws if the JSON is malformed. */
-    fun persona(): PersonaContent = parsedPersona().getOrThrow()
+    fun persona(): PersonaContent = personaOrNull() ?: PersonaContent.decodeFromJson(content)
 
-    fun personaOrNull(): PersonaContent? = parsedPersona().getOrNull()
+    fun personaOrNull(): PersonaContent? {
+        personaCache?.let { return it as? PersonaContent }
+        val parsed =
+            try {
+                PersonaContent.decodeFromJson(content)
+            } catch (e: Exception) {
+                if (e is CancellationException) throw e
+                null
+            }
+        personaCache = parsed ?: ParseFailed
+        return parsed
+    }
 
     companion object {
         const val KIND = 30175

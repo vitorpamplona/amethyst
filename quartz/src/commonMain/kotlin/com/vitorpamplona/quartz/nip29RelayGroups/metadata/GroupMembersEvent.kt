@@ -43,7 +43,12 @@ class GroupMembersEvent(
     PubKeyHintProvider {
     override fun pubKeyHints(): List<PubKeyHint> = tags.mapNotNull(PTag::parseAsHint)
 
-    override fun linkedPubKeys(): List<HexKey> = members()
+    // Deliberately links no one, although every member is listed. The list arrives from
+    // the group relay itself, and a provider's linked keys are recorded as reachable on the
+    // relay the event came from: that would advertise a (often private) relay as a hint for
+    // every member, and broadcasts would fall back to it for anyone without an inbox list. It
+    // would also cost O(members) on every relay copy. Read the list with members().
+    override fun linkedPubKeys(): List<HexKey> = emptyList()
 
     fun groupId() = dTag()
 

@@ -63,11 +63,15 @@ abstract class AddressableVideoEvent(
     override fun indexableContent() = (listOfNotNull(title(), content) + segmentTitles()).joinToString("\n")
 
     // The read path: the same fields indexableContent() joins, handed over without
-    // building the joined string a scan would throw away.
+    // building the joined string a scan would throw away. It runs per event per search
+    // keystroke, so the tag-backed fields are read off the tags in place, not via list getters.
     override fun forEachIndexableField(visitor: IndexableFieldVisitor) {
         if (!visitor.visit(title())) return
         if (!visitor.visit(content)) return
-        segmentTitles().forEach { if (!visitor.visit(it)) return }
+        for (tag in tags) {
+            val segmentTitle = SegmentTag.parseTitle(tag) ?: continue
+            if (!visitor.visit(segmentTitle)) return
+        }
     }
 
     // One implementation for every NIP-71 kind: see VideoHints.kt.

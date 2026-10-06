@@ -43,7 +43,8 @@ class ZapReceiptHintProviderTest {
     @Test
     fun receiptLinksRecipientSenderAndRequestAuthor() {
         val event = receipt(zapper, arrayOf("p", b, relay), arrayOf("P", zapper), arrayOf("e", eventId))
-        assertEquals(listOf(b, zapper), event.linkedPubKeys())
+        // the sender appears as `P` and as the request author; consumers dedupe
+        assertEquals(listOf(b, zapper, zapper), event.linkedPubKeys())
         // only lowercase `p` has a relay slot
         assertEquals(listOf(b), event.pubKeyHints().map { it.pubkey })
         assertEquals(listOf(eventId), event.linkedEventIds())
@@ -55,5 +56,12 @@ class ZapReceiptHintProviderTest {
         val anon = "55".repeat(32)
         val event = receipt(anon, arrayOf("p", b))
         assertEquals(listOf(b, anon), event.linkedPubKeys())
+    }
+
+    @Test
+    fun nonHexSenderAndRequestAuthorAreNotLinked() {
+        val bogus = "zz".repeat(32)
+        val event = receipt(bogus, arrayOf("p", b), arrayOf("P", bogus))
+        assertEquals(listOf(b), event.linkedPubKeys())
     }
 }
