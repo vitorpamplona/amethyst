@@ -80,6 +80,7 @@ import org.osmdroid.views.CustomZoomButtonsController
 import org.osmdroid.views.MapView
 import org.osmdroid.views.overlay.MapEventsOverlay
 import org.osmdroid.views.overlay.Marker
+import kotlin.math.abs
 import kotlin.math.pow
 import kotlin.math.roundToLong
 
@@ -131,6 +132,11 @@ fun GeocacheMapTab(
                 setTileSource(TileSourceFactory.MAPNIK)
                 setMultiTouchControls(true)
                 zoomController.setVisibility(CustomZoomButtonsController.Visibility.NEVER)
+                // osmdroid opens at zoom 0, one 256px world tile repeated down the screen. Zoom 3 fills
+                // a phone, and the world stops at the poles instead of stacking copies of itself.
+                isVerticalMapRepetitionEnabled = false
+                setScrollableAreaLimitLatitude(MapView.getTileSystem().maxLatitude, MapView.getTileSystem().minLatitude, 0)
+                controller.setZoom(INITIAL_ZOOM)
                 setOnTouchListener { view, event ->
                     when (event.action) {
                         MotionEvent.ACTION_DOWN -> view.parent?.requestDisallowInterceptTouchEvent(true)
@@ -232,7 +238,7 @@ fun GeocacheMapTab(
                         }
 
                     first?.let {
-                        if (map.mapCenter.latitude == 0.0 && map.mapCenter.longitude == 0.0) {
+                        if (map.isUnpositioned()) {
                             map.controller.setZoom(11.0)
                             map.controller.setCenter(it)
                         }
@@ -250,7 +256,7 @@ fun GeocacheMapTab(
                 first?.let {
                     // Only recentre while the map has not been positioned yet, so a pan is not
                     // yanked back every time a new cache arrives from a relay.
-                    if (map.mapCenter.latitude == 0.0 && map.mapCenter.longitude == 0.0) {
+                    if (map.isUnpositioned()) {
                         map.controller.setZoom(13.0)
                         map.controller.setCenter(it)
                     }
@@ -315,6 +321,11 @@ private fun GeocachePeekSheet(
  * measured one — it wants checking on a mid-range device with a busy city on screen.
  */
 private const val CLUSTER_THRESHOLD = 50
+
+private const val INITIAL_ZOOM = 3.0
+
+/** Still on the untouched initial view: centred on 0,0, which a zoom can leave a hair off exact zero. */
+private fun MapView.isUnpositioned() = abs(mapCenter.latitude) < 1e-6 && abs(mapCenter.longitude) < 1e-6
 
 /**
  * Degrees per cluster cell at [zoom]. Roughly a fixed number of screen pixels: each zoom level

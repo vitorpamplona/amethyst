@@ -1135,7 +1135,7 @@ class Account(
                 // `publishAndConfirm` is exactly that "at least one
                 // acknowledged accept" rule; a plain `publish` would report
                 // success for bytes nobody took.
-                MarmotPublisher { event, relays -> client.publishAndConfirm(event, relays) },
+                MarmotPublisher { event, relays -> client.publishAndConfirm(event, relays, untilFirstAccept = true) },
                 marmotPublishObligationStore,
                 marmotIngestDedupStore,
                 scope = scope,

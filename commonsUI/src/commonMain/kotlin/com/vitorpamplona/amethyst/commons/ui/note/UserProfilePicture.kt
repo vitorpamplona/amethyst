@@ -409,15 +409,7 @@ fun BaseUserPicture(
     outerModifier: Modifier = Modifier.size(size),
 ) {
     Box(outerModifier, contentAlignment = Alignment.TopEnd) {
-        WatchProfilePicture(baseUser, accountViewModel) { userProfilePicture, userName ->
-            InnerUserPicture(
-                userHex = baseUser.pubkeyHex,
-                userPicture = userProfilePicture,
-                userName = userName,
-                size = size,
-                modifier = innerModifier,
-            )
-        }
+        ObserveAndDrawInnerUserPicture(baseUser, size, accountViewModel, innerModifier)
 
         WatchUserFollows(baseUser.pubkeyHex, accountViewModel) { newFollowingState ->
             if (newFollowingState) {
@@ -477,6 +469,7 @@ fun ObserveAndDrawInnerUserPicture(
         userName = userProfile?.info?.bestName(),
         size = size,
         modifier = innerModifier,
+        pictureFallbacks = userProfile?.pictureFallbacks() ?: emptyList(),
     )
 }
 
@@ -554,27 +547,18 @@ fun ScoreTag55Preview() {
 }
 
 @Composable
-fun WatchProfilePicture(
-    baseUser: User,
-    accountViewModel: AccountViewModel,
-    innerContent: @Composable (String?, String?) -> Unit,
-) {
-    val userProfile by observeUserInfo(baseUser, accountViewModel)
-
-    innerContent(userProfile?.info?.profilePicture(), userProfile?.info?.bestName())
-}
-
-@Composable
 fun InnerUserPicture(
     userHex: String,
     userPicture: String?,
     userName: String?,
     size: Dp,
     modifier: Modifier,
+    pictureFallbacks: List<String> = emptyList(),
 ) {
     UserAvatar(
         userHex = userHex,
         pictureUrl = userPicture,
+        pictureFallbacks = pictureFallbacks,
         size = size,
         modifier = modifier,
         contentDescription =

@@ -52,6 +52,7 @@
     "munich4182": "npub1vm0kq43djwdd4psjgdjgn9z6fm836c35dv7eg7x74z3n3ueq83jqhkxp8e",
     "rodrigohenrik": "",
     "flobstr": "",
+    "raj2516": "npub1ww6huwu3xye6r05n3qkjeq62wds5pq0jswhl7uc59lchc0n0ns4sdtw5e6",
     "rajs19420616": "npub1ww6huwu3xye6r05n3qkjeq62wds5pq0jswhl7uc59lchc0n0ns4sdtw5e6",
     "Maxblake": "npub16gjyljum0ksrrm28zzvejydgxwfm7xse98zwc4hlgq8epxeuggushqwyrm",
     "cxplay": "npub1gd8e0xfkylc7v8c5a6hkpj4gelwwcy99jt90lqjseqjj2t253s2s6ch58h",
@@ -68,95 +69,19 @@
     "maxblake2015": "npub16gjyljum0ksrrm28zzvejydgxwfm7xse98zwc4hlgq8epxeuggushqwyrm",
     "eiie7": "",
     "SeriousREC": "",
-    "markkks": "",
+    "markkks": "Anton Zhao",
     "helokuntzer": "",
     "Kevin_1": "",
     "crowdin.pretended462": "",
-    "rchk": "",
-    "raj2516": ""
+    "rchk": ""
   },
   "sinceLastTag": {
-    "tag": "v1.16.0",
-    "since": "2026-09-17T13:39:51-04:00",
+    "tag": "v1.17.0",
+    "since": "2026-10-05T15:39:33-04:00",
     "translators": [
       {
         "user": "vitorpamplona",
-        "languages": [
-          "Arabic",
-          "Arabic, Saudi Arabia",
-          "Bengali",
-          "Chinese Simplified",
-          "Chinese Simplified, Singapore",
-          "Chinese Traditional",
-          "Chinese Traditional, Hong Kong",
-          "Czech",
-          "Dutch",
-          "Esperanto",
-          "Finnish",
-          "French",
-          "French, Canada",
-          "German",
-          "Greek",
-          "Hindi",
-          "Hungarian",
-          "Indonesian",
-          "Italian",
-          "Japanese",
-          "Korean",
-          "Latvian",
-          "Persian",
-          "Polish",
-          "Portuguese",
-          "Portuguese, Brazilian",
-          "Russian",
-          "Rսssian, Սkraine",
-          "Serbian (Cyrillic)",
-          "Slovenian",
-          "Spanish",
-          "Spanish, Mexico",
-          "Spanish, United States",
-          "Swahili, Kenya",
-          "Swedish",
-          "Tamil",
-          "Thai",
-          "Turkish",
-          "Ukrainian",
-          "Uzbek",
-          "Vietnamese"
-        ]
-      },
-      {
-        "user": "maxblake2015",
-        "languages": [
-          "Polish"
-        ]
-      },
-      {
-        "user": "raj2516",
-        "languages": [
-          "Hindi"
-        ]
-      },
-      {
-        "user": "summoner001",
-        "languages": [
-          "Hungarian"
-        ]
-      },
-      {
-        "user": "markkks",
-        "languages": [
-          "Russian"
-        ]
-      },
-      {
-        "user": "davotoula",
-        "languages": [
-          "Czech",
-          "German",
-          "Portuguese, Brazilian",
-          "Swedish"
-        ]
+        "languages": []
       },
       {
         "user": "greenart7c3",
@@ -231,6 +156,10 @@
         "languages": []
       },
       {
+        "user": "davotoula",
+        "languages": []
+      },
+      {
         "user": "crackadoo",
         "languages": []
       },
@@ -295,6 +224,10 @@
         "languages": []
       },
       {
+        "user": "raj2516",
+        "languages": []
+      },
+      {
         "user": "Maxblake",
         "languages": []
       },
@@ -319,6 +252,10 @@
         "languages": []
       },
       {
+        "user": "summoner001",
+        "languages": []
+      },
+      {
         "user": "fiddleway",
         "languages": []
       },
@@ -339,11 +276,19 @@
         "languages": []
       },
       {
+        "user": "maxblake2015",
+        "languages": []
+      },
+      {
         "user": "eiie7",
         "languages": []
       },
       {
         "user": "SeriousREC",
+        "languages": []
+      },
+      {
+        "user": "markkks",
         "languages": []
       },
       {

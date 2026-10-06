@@ -18,32 +18,22 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.commons.ui.components
+package com.vitorpamplona.amethyst.commons.service.uploads
 
-import androidx.compose.runtime.Composable
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.layout.ContentScale
+import com.vitorpamplona.quartz.nip68Picture.PictureMeta
 
-@Composable
-internal actual fun AvatarImage(
-    userHex: String,
-    pictureUrl: String?,
-    contentDescription: String?,
-    modifier: Modifier,
-    loadProfilePicture: Boolean,
-    loadRobohash: Boolean,
-    autoPlayGif: Boolean,
-    onError: (() -> Unit)?,
-) {
-    RobohashFallbackAsyncImage(
-        robot = userHex,
-        model = pictureUrl,
-        contentDescription = contentDescription,
-        modifier = modifier,
-        contentScale = ContentScale.Crop,
-        loadProfilePicture = loadProfilePicture,
-        loadRobohash = loadRobohash,
-        autoPlayGif = autoPlayGif,
-        onError = onError,
+/**
+ * The NIP-92 `imeta` description of an uploaded image, for a kind 0 `picture` or `banner`
+ * (https://github.com/nostr-protocol/nips/pull/2494).
+ */
+fun UploadOrchestrator.OrchestratorResult.ServerResult.toPictureMeta(): PictureMeta =
+    PictureMeta(
+        url = url,
+        mimeType = fileHeader.mimeType,
+        hash = fileHeader.hash,
+        // A server that reports no size leaves it at 0, which is not a size.
+        size = fileHeader.size.takeIf { it > 0 },
+        dimension = fileHeader.dim?.takeIf { it.hasSize() },
+        blurhash = fileHeader.blurHash?.blurhash,
+        thumbhash = fileHeader.thumbHash?.thumbhash,
     )
-}
