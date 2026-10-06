@@ -97,12 +97,11 @@ data class ServiceProviderTag(
         }
 
         /**
-         * The provider and the relay its assertion cards are published to. Stricter than
-         * [parse] about the relay slot: [parse] lets [RelayUrlNormalizer.normalizeOrNull] turn
-         * any bare word into `wss://<word>/`, which is harmless for reading the delegation but
-         * would plant a fake relay in the hint index, so the hint takes the slot only when it
-         * looks like a relay: a `ws(s)://` URL, or a schemeless host with a dot
-         * ([RelayUrlNormalizer.looksLikeBareHost]).
+         * The provider and the relay its assertion cards are published to, as a relay hint.
+         * The slot counts only when it holds a real, well-formed `ws://`/`wss://` url
+         * ([RelayUrlNormalizer.normalizeHintOrNull]): a bare host, an `https://` url or any
+         * other word there is not a hint and is never completed into one, so no fake relay is
+         * planted in the hint index.
          */
         fun parseAsHint(tag: Array<String>): PubKeyHint? {
             val provider = parse(tag) ?: return null

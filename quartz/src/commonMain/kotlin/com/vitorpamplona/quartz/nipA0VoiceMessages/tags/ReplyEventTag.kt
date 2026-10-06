@@ -59,7 +59,7 @@ class ReplyEventTag(
             ensure(tag.has(1)) { return null }
             ensure(tag[0] == TAG_NAME) { return null }
             ensure(tag[1].length == 64) { return null }
-            return ReplyEventTag(tag[1], tag.getOrNull(2)?.let { RelayUrlNormalizer.normalizeOrNull(it) }, tag.getOrNull(3))
+            return ReplyEventTag(tag[1], tag.getOrNull(2)?.let { RelayUrlNormalizer.normalizeHintOrNull(it) }, tag.getOrNull(3))
         }
 
         fun parseKey(tag: Array<String>): String? {

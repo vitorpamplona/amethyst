@@ -85,9 +85,12 @@ class TrustProviderListHintProviderTest {
     }
 
     @Test
-    fun aBareHostRelaySlotIsCompleted() {
+    fun aBareHostRelaySlotIsNotAHint() {
+        // A relay hint must be a real ws(s):// url; a bare host is never completed into one.
+        // The key is still a provider: only the hint is dropped.
         val event = list(arrayOf("30382:rank", brainstorm, "scores.brainstorm.world"))
 
-        assertEquals(listOf(brainstorm to relay), event.pubKeyHints().map { it.pubkey to it.relay.url })
+        assertEquals(listOf(brainstorm), event.linkedPubKeys())
+        assertEquals(emptyList(), event.pubKeyHints())
     }
 }

@@ -47,7 +47,7 @@ class ClientTag(
             ensure(tag[1].isNotEmpty()) { return null }
 
             val address = tag.getOrNull(2)?.let { Address.parse(it) }
-            val relayHint = tag.getOrNull(3)?.let { RelayUrlNormalizer.normalizeOrNull(it) }
+            val relayHint = tag.getOrNull(3)?.let { RelayUrlNormalizer.normalizeHintOrNull(it) }
 
             return ClientTag(
                 tag[1],

@@ -101,7 +101,7 @@ data class ATag(
                 it.kind,
                 it.pubKeyHex,
                 it.dTag,
-                relay?.let { RelayUrlNormalizer.normalizeOrNull(it) },
+                relay?.let { RelayUrlNormalizer.normalizeHintOrNull(it) },
             )
         }
 

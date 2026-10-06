@@ -54,7 +54,7 @@ class ReplyAddressTag(
             ensure(tag[0] == TAG_NAME) { return null }
             ensure(tag[1].length == 64) { return null }
 
-            val relayHint = tag.getOrNull(2)?.let { RelayUrlNormalizer.normalizeOrNull(it) }
+            val relayHint = tag.getOrNull(2)?.let { RelayUrlNormalizer.normalizeHintOrNull(it) }
 
             return ReplyAddressTag(tag[1], relayHint)
         }

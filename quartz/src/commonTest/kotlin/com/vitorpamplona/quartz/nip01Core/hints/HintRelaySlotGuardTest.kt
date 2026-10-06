@@ -54,8 +54,11 @@ import com.vitorpamplona.quartz.nipA0VoiceMessages.tags.ReplyEventTag as VoiceRe
  * A tag's relay SLOT often holds something else — a pubkey a builder shifted left when it
  * dropped a null relay, or a role/label (`inspired-by`, `github`, `root`). The forgiving
  * [RelayUrlNormalizer.normalizeOrNull] would turn each of those into `wss://<word>/`, a fake
- * relay in the hint index and the broadcast set. Every hint parser must decline them, while still
- * completing a schemeless host (`relay.damus.io`) a publisher forgot the scheme on.
+ * relay in the hint index and the broadcast set. Every hint parser goes through the STRICT
+ * [RelayUrlNormalizer.normalizeHintOrNull] instead: a hint is a well-formed `ws://`/`wss://` url
+ * or it is not a hint. Nothing is repaired — not even a schemeless host (`relay.damus.io`) a
+ * publisher forgot the scheme on, since that is indistinguishable from a title or a file name.
+ * Repair is only for what a person typed or curated (relay lists, settings), the lenient parser.
  */
 class HintRelaySlotGuardTest {
     private val pk = "460c25e682fda7832b52d1f22d3d22b3176d972f60dcdc3212ed8c92ef85065c"
@@ -63,7 +66,7 @@ class HintRelaySlotGuardTest {
     private val addr = "30023:$pk:article"
     private val relay = "wss://relay.damus.io/"
 
-    /** Values that sit in relay slots in the wild and are not relays. */
+    /** Values that sit in relay slots in the wild and are not relay hints. */
     private val notRelays =
         listOf(
             pk,
@@ -75,10 +78,11 @@ class HintRelaySlotGuardTest {
             "1.0",
             "30023:$pk:my.article",
             "relay damus.io",
-            // other schemes are web links, not relays, even when the normalizer could convert them
+            // other schemes are web links, not relays, even when the lenient parser could convert them
             "https://x.com",
             "http://x.com",
             "https://cdn.x.com/a.vtt",
+            "https://relay.com",
             // typo'd schemes and two urls glued together
             "wss//relay.com",
             "https//relay.com",
@@ -87,25 +91,29 @@ class HintRelaySlotGuardTest {
             "a@b.com",
             // the only dot is in a path, so there is no host
             "foo/bar.baz",
-            // dotless hosts are indistinguishable from markers; a local relay must write its scheme
             "localhost:7777",
-        )
+            // sloppy spellings of a real relay are not repaired either
+            "wss://relay.com ",
+            " wss://relay.damus.io ",
+            "wss://relay.com%20",
+            // an upper-case scheme is fine to reject: no client writes one
+            "WSS://relay.com",
+        ) + bareHosts
 
-    /** Schemeless hosts a publisher forgot the scheme on: these ARE relays. */
-    private val bareHosts =
-        listOf(
-            "relay.damus.io",
-            "nos.lol",
-            "relay.example.com:7777",
-            "relay.damus.io/",
-            // surrounding whitespace is sloppiness, not a reason to lose a real relay
-            " relay.damus.io ",
-            // judged by its host: a host with a path is still a host
-            "github.com/x",
-        )
+    /** Schemeless hosts: a hint must carry its own ws(s):// scheme, so none of these is completed. */
+    private val bareHosts
+        get() =
+            listOf(
+                "relay.damus.io",
+                "nos.lol",
+                "relay.example.com:7777",
+                "relay.damus.io/",
+                " relay.damus.io ",
+                "github.com/x",
+            )
 
     @Test
-    fun normalizeHintOrNullCompletesOnlyHostLookingValues() {
+    fun normalizeHintOrNullAcceptsOnlyWellFormedRelayUrls() {
         notRelays.forEach { assertNull(RelayUrlNormalizer.normalizeHintOrNull(it), it) }
         assertNull(RelayUrlNormalizer.normalizeHintOrNull(null))
         assertNull(RelayUrlNormalizer.normalizeHintOrNull(""))
@@ -114,24 +122,17 @@ class HintRelaySlotGuardTest {
         assertEquals("wss://inspired-by/", RelayUrlNormalizer.normalizeOrNull("inspired-by")?.url)
 
         assertEquals(relay, RelayUrlNormalizer.normalizeHintOrNull("wss://relay.damus.io")?.url)
+        assertEquals(relay, RelayUrlNormalizer.normalizeHintOrNull("wss://relay.damus.io/")?.url)
         assertNotNull(RelayUrlNormalizer.normalizeHintOrNull("ws://relay.example.com"))
-
-        bareHosts.forEach { assertNotNull(RelayUrlNormalizer.normalizeHintOrNull(it), it) }
-        assertEquals(relay, RelayUrlNormalizer.normalizeHintOrNull("relay.damus.io")?.url)
-        assertEquals(relay, RelayUrlNormalizer.normalizeHintOrNull(" relay.damus.io ")?.url)
-        assertEquals(relay, RelayUrlNormalizer.normalizeHintOrNull(" wss://relay.damus.io ")?.url)
-        // A schemed relay may be dotless: the dot rule is only for completing a schemeless value.
+        // A schemed relay may be dotless: it is the scheme that makes it a relay.
         assertNotNull(RelayUrlNormalizer.normalizeHintOrNull("ws://localhost:7777"))
     }
 
     @Test
-    fun looksLikeBareHostJudgesTheAuthority() {
-        assertEquals(true, RelayUrlNormalizer.looksLikeBareHost("github.com/user/repo"))
-        assertEquals(true, RelayUrlNormalizer.looksLikeBareHost("relay.com/a:b:c"))
-        assertEquals(true, RelayUrlNormalizer.looksLikeBareHost("1.2.3.4"))
-        assertEquals(false, RelayUrlNormalizer.looksLikeBareHost("foo/bar.baz"))
-        assertEquals(false, RelayUrlNormalizer.looksLikeBareHost("30023:$pk:my.article/x"))
-        assertEquals(false, RelayUrlNormalizer.looksLikeBareHost(".5"))
+    fun lenientNormalizerStillRepairsUserInput() {
+        // Relay lists and typed input keep the repairs the strict hint parser refuses.
+        assertEquals(relay, RelayUrlNormalizer.normalizeOrNull("relay.damus.io")?.url)
+        assertEquals("wss://nos.lol/", RelayUrlNormalizer.normalizeOrNull("https://nos.lol")?.url)
     }
 
     /** Each case builds a tag around the given relay slot value and runs one hint parser on it. */
@@ -171,14 +172,16 @@ class HintRelaySlotGuardTest {
     }
 
     @Test
-    fun everyHintParserStillHintsARealRelay() {
-        cases.forEach { (name, parse) -> assertNotNull(parse(relay), name) }
+    fun everyHintParserRejectsABareHost() {
+        cases.forEach { (name, parse) ->
+            bareHosts.forEach { slot -> assertNull(parse(slot), "$name must not complete '$slot'") }
+        }
     }
 
     @Test
-    fun everyHintParserCompletesABareHost() {
-        cases.forEach { (name, parse) ->
-            bareHosts.forEach { slot -> assertNotNull(parse(slot), "$name must hint '$slot'") }
+    fun everyHintParserStillHintsARealRelay() {
+        listOf(relay, "wss://relay.damus.io", "ws://localhost:7777", "ws://relay.example.com").forEach { slot ->
+            cases.forEach { (name, parse) -> assertNotNull(parse(slot), "$name must hint '$slot'") }
         }
     }
 }

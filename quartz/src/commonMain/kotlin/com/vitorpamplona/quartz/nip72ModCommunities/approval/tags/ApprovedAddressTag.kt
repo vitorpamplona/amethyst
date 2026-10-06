@@ -66,7 +66,7 @@ class ApprovedAddressTag(
             ensure(!Address.isOfKind(tag[1], CommunityDefinitionEvent.KIND_STR)) { return null }
 
             val address = Address.parse(tag[1]) ?: return null
-            val relayHint = tag.getOrNull(2)?.let { RelayUrlNormalizer.normalizeOrNull(it) }
+            val relayHint = tag.getOrNull(2)?.let { RelayUrlNormalizer.normalizeHintOrNull(it) }
             return ApprovedAddressTag(address, relayHint)
         }
 
@@ -100,7 +100,7 @@ class ApprovedAddressTag(
             ensure(tag[1].contains(':')) { return null }
             ensure(tag[2].isNotEmpty()) { return null }
 
-            val relayHint = RelayUrlNormalizer.normalizeOrNull(tag[2])
+            val relayHint = RelayUrlNormalizer.normalizeHintOrNull(tag[2])
             ensure(relayHint != null) { return null }
 
             return AddressHint(tag[1], relayHint)

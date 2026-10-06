@@ -49,7 +49,7 @@ class RecommendationTag(
             ensure(tag[0] == TAG_NAME) { return null }
             ensure(tag[1].isNotEmpty()) { return null }
             val address = Address.parse(tag[1]) ?: return null
-            val relayHint = tag.getOrNull(2)?.let { RelayUrlNormalizer.normalizeOrNull(it) }
+            val relayHint = tag.getOrNull(2)?.let { RelayUrlNormalizer.normalizeHintOrNull(it) }
             return RecommendationTag(address, relayHint, tag.getOrNull(3))
         }
 
@@ -67,7 +67,7 @@ class RecommendationTag(
             ensure(tag[1].contains(':')) { return null }
             ensure(tag[2].isNotEmpty()) { return null }
 
-            val relayHint = RelayUrlNormalizer.normalizeOrNull(tag[2]) ?: return null
+            val relayHint = RelayUrlNormalizer.normalizeHintOrNull(tag[2]) ?: return null
 
             return AddressHint(tag[1], relayHint)
         }

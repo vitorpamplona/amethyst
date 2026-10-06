@@ -142,15 +142,15 @@ data class PublicationSectionRef(
         /**
          * The relay hint of an `e` section entry, or null. Slot 2 of an `e` entry may be an
          * inline title instead of a relay, and titles like `Node.js` or `Vol.2` look exactly like
-         * a schemeless host — `ETag.parseAsHint` would complete them into `wss://node.js/`. So
-         * here only an explicit `ws://`/`wss://` url counts; slot 3 is a level or a revision id,
-         * never a relay, so it is not consulted either.
+         * a schemeless host. The strict hint parser only takes a well-formed `ws://`/`wss://` url
+         * and never completes a bare host, so a title is simply not a hint; slot 3 is a level or
+         * a revision id, never a relay, so it is not consulted either.
          */
         fun parseEventSectionAsHint(tag: Tag): EventIdHint? {
             if (!tag.has(2) || tag[0] != "e") return null
             val id = tag[1]
             if (id.length != 64 || !Hex.isHex64(id)) return null
-            val relay = RelayUrlNormalizer.normalizeSchemedHintOrNull(tag[2]) ?: return null
+            val relay = RelayUrlNormalizer.normalizeHintOrNull(tag[2]) ?: return null
             return EventIdHint(id, relay)
         }
 

@@ -68,7 +68,7 @@ class AddressBookmark(
             aTagId: String,
             relay: String?,
         ) = Address.parse(aTagId)?.let {
-            AddressBookmark(it, relay?.let { RelayUrlNormalizer.normalizeOrNull(it) })
+            AddressBookmark(it, relay?.let { RelayUrlNormalizer.normalizeHintOrNull(it) })
         }
 
         fun parse(tag: Array<String>): AddressBookmark? {

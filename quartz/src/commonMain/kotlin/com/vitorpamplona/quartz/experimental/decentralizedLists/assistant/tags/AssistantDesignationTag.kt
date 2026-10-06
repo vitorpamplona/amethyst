@@ -56,7 +56,7 @@ class AssistantDesignationTag {
             ensure(tag.has(1)) { return null }
             ensure(tag[0] == KEY) { return null }
             ensure(isPubKey(tag[1])) { return null }
-            return AssistantDesignation(tag[1], tag.getOrNull(2)?.let { RelayUrlNormalizer.normalizeOrNull(it) })
+            return AssistantDesignation(tag[1], tag.getOrNull(2)?.let { RelayUrlNormalizer.normalizeHintOrNull(it) })
         }
 
         // Always three elements: an empty relay keeps the shape the spec fixes.

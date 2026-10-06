@@ -36,7 +36,7 @@ class RoomIdTag {
             ensure(tag[1].isNotEmpty()) { return null }
             ensure(tag[2].isNotEmpty()) { return null }
 
-            val relay = RelayUrlNormalizer.normalizeOrNull(tag[2]) ?: return null
+            val relay = RelayUrlNormalizer.normalizeHintOrNull(tag[2]) ?: return null
             return RoomId(tag[1], relay)
         }
 

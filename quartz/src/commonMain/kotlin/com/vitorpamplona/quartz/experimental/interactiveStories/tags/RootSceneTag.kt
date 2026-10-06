@@ -65,7 +65,7 @@ data class RootSceneTag(
             ensure(tag[0] == TAG_NAME) { return null }
             ensure(tag[1].isNotEmpty()) { return null }
             val address = Address.parse(tag[1]) ?: return null
-            val hint = tag.getOrNull(2)?.let { RelayUrlNormalizer.normalizeOrNull(it) }
+            val hint = tag.getOrNull(2)?.let { RelayUrlNormalizer.normalizeHintOrNull(it) }
             return RootSceneTag(address.kind, address.pubKeyHex, address.dTag, hint)
         }
 

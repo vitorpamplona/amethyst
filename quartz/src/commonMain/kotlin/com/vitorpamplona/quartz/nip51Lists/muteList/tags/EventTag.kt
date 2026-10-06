@@ -50,7 +50,7 @@ class EventTag(
             ensure(tag.has(1)) { return null }
             ensure(tag[0] == TAG_NAME) { return null }
             ensure(tag[1].length == 64 && Hex.isHex64(tag[1])) { return null }
-            val hint = tag.getOrNull(2)?.takeIf { it.isNotEmpty() }?.let { RelayUrlNormalizer.normalizeOrNull(it) }
+            val hint = tag.getOrNull(2)?.takeIf { it.isNotEmpty() }?.let { RelayUrlNormalizer.normalizeHintOrNull(it) }
             val pubKey = tag.getOrNull(3)?.takeIf { it.length == 64 }
             return EventTag(tag[1], hint, pubKey)
         }
