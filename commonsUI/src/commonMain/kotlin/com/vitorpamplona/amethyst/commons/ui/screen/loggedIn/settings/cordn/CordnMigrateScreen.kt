@@ -18,7 +18,7 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.ui.screen.loggedIn.settings.cordn
+package com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.settings.cordn
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -44,7 +44,6 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.commons.cordn.CordnMigration
@@ -81,13 +80,13 @@ import com.vitorpamplona.amethyst.commons.resources.cordn_migrate_title
 import com.vitorpamplona.amethyst.commons.ui.components.EmptyState
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.navigation.topbars.TopBarWithBackButton
+import com.vitorpamplona.amethyst.commons.ui.platform.LocalAppServices
 import com.vitorpamplona.amethyst.commons.ui.pluralStringRes
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.qrcode.QrCodeDrawer
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.qrcode.SimpleQrCodeScanner
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.settings.SettingsSection
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
-import com.vitorpamplona.amethyst.model.cordn.AndroidCordnBlobStore
 import com.vitorpamplona.quartz.cordn.appMultiDevice.CordnHandoffCode
 import kotlinx.coroutines.launch
 
@@ -224,7 +223,7 @@ private fun SendSide(
     accountViewModel: AccountViewModel,
 ) {
     val scope = rememberCoroutineScope()
-    val context = LocalContext.current
+    val services = LocalAppServices.current
     var code by remember { mutableStateOf<String?>(null) }
     var error by remember { mutableStateOf<String?>(null) }
     var busy by remember { mutableStateOf(false) }
@@ -289,7 +288,7 @@ private fun SendSide(
                         CordnMigration(
                             accountViewModel.account.client,
                             accountViewModel.account.signer,
-                            AndroidCordnBlobStore(servers, context),
+                            services.cordnBlobStore(servers),
                         )
                     code = runtime.handOff(migration, accountViewModel.account.outboxRelays.flow.value).encode()
                 } catch (e: Exception) {
@@ -314,7 +313,7 @@ private fun ReceiveSide(
     accountViewModel: AccountViewModel,
 ) {
     val scope = rememberCoroutineScope()
-    val context = LocalContext.current
+    val services = LocalAppServices.current
     var typed by remember { mutableStateOf("") }
     var scanning by remember { mutableStateOf(false) }
     var busy by remember { mutableStateOf(false) }
@@ -372,7 +371,7 @@ private fun ReceiveSide(
                         CordnMigration(
                             accountViewModel.account.client,
                             accountViewModel.account.signer,
-                            AndroidCordnBlobStore(emptyList(), context),
+                            services.cordnBlobStore(emptyList()),
                         )
                     val snapshot = migration.fetch(parsed)
                     runtime.adoptMigration(snapshot)

@@ -18,22 +18,21 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.privateDM
+package com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.privateDM
 
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalContext
 import com.vitorpamplona.amethyst.commons.ui.layouts.DisappearingScaffold
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
+import com.vitorpamplona.amethyst.commons.ui.platform.rememberCallStarter
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.privateDM.ChatroomView
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.privateDM.header.RenderRoomTopBar
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
-import com.vitorpamplona.amethyst.ui.call.CallActivity
-import com.vitorpamplona.amethyst.ui.call.rememberCallWithPermission
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip17Dm.base.ChatroomKey
 import com.vitorpamplona.quartz.nipACWebRtcCalls.tags.CallType
@@ -49,26 +48,13 @@ fun ChatroomScreen(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    val context = LocalContext.current
     val callsEnabled by accountViewModel.account.settings.callsEnabled
         .collectAsState()
+    val peers = remember(roomId) { roomId.users.toSet() }
+    // Null where the platform cannot place calls; the buttons are hidden then.
+    val startVoiceCall = rememberCallStarter(peers, CallType.VOICE)
+    val startVideoCall = rememberCallStarter(peers, CallType.VIDEO)
     val isCallSupported = roomId.users.size <= 5 && callsEnabled
-    val startVoiceCall =
-        rememberCallWithPermission(context) {
-            CallActivity.launchForOutgoingCall(
-                context,
-                roomId.users.toSet(),
-                CallType.VOICE,
-            )
-        }
-    val startVideoCall =
-        rememberCallWithPermission(context, isVideo = true) {
-            CallActivity.launchForOutgoingCall(
-                context,
-                roomId.users.toSet(),
-                CallType.VIDEO,
-            )
-        }
 
     DisappearingScaffold(
         isInvertedLayout = true,
@@ -77,8 +63,8 @@ fun ChatroomScreen(
                 room = roomId,
                 accountViewModel = accountViewModel,
                 nav = nav,
-                onCallClick = if (isCallSupported) ({ _ -> startVoiceCall() }) else null,
-                onVideoCallClick = if (isCallSupported) ({ _ -> startVideoCall() }) else null,
+                onCallClick = if (isCallSupported && startVoiceCall != null) ({ _ -> startVoiceCall() }) else null,
+                onVideoCallClick = if (isCallSupported && startVideoCall != null) ({ _ -> startVideoCall() }) else null,
             )
         },
         accountViewModel = accountViewModel,

@@ -18,7 +18,7 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.ui.screen.loggedIn.buzz
+package com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.buzz
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -28,6 +28,7 @@ import com.vitorpamplona.amethyst.commons.model.nip29RelayGroups.RelayGroupDelet
 import com.vitorpamplona.amethyst.commons.relayClient.channel.relayGroup.RELAY_GROUP_METADATA_KINDS
 import com.vitorpamplona.amethyst.commons.relayauth.RelayAuthDecision
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.buzz.reconnectPoolAfterJoin
+import com.vitorpamplona.amethyst.commons.util.ConcurrentSet
 import com.vitorpamplona.quartz.buzz.notifications.MemberAddedNotificationEvent
 import com.vitorpamplona.quartz.buzz.stream.SystemMessageEvent
 import com.vitorpamplona.quartz.buzz.workspace.isBuzzDm
@@ -38,11 +39,12 @@ import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
 import com.vitorpamplona.quartz.nip29RelayGroups.GroupId
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.IO
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
-import java.util.Collections
+import kotlin.concurrent.Volatile
 
 /**
  * Discovers the Buzz workspace channels the user already belongs to on a relay (joined via the
@@ -129,7 +131,8 @@ class BuzzRelayImportViewModel : ViewModel() {
             _status.value = Status.Loading
             try {
                 val myPubkey = account.userProfile().pubkeyHex
-                val channelIds = Collections.synchronizedSet(HashSet<String>())
+                // Written from the fetch callback's thread, read once it returns.
+                val seenChannelIds = ConcurrentSet<String>()
 
                 // 1. Warm-auth then read the relay's kind-44100 member-added notifications for me.
                 account.client.fetchAllWithHooks(
@@ -146,9 +149,10 @@ class BuzzRelayImportViewModel : ViewModel() {
                     idleTimeoutMs = 8_000,
                     pendingOnAuthRequired = true,
                 ) { _, event ->
-                    (event as? MemberAddedNotificationEvent)?.channel()?.let { channelIds.add(it) }
+                    (event as? MemberAddedNotificationEvent)?.channel()?.let { seenChannelIds.add(it) }
                     false
                 }
+                val channelIds: Set<String> = seenChannelIds.snapshot()
 
                 // 2. Fetch each channel's NIP-29 metadata (39000-39003, `#d`-scoped) so its name + Buzz
                 //    `t` type load, AND the relay's kind-40099 system messages (`#h`-scoped) so a

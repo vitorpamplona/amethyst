@@ -29,6 +29,7 @@ import androidx.compose.ui.platform.UriHandler
 import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.BuildConfig
 import com.vitorpamplona.amethyst.commons.favorites.FavoriteApp
+import com.vitorpamplona.amethyst.commons.feeds.FeedContentState
 import com.vitorpamplona.amethyst.commons.model.UiSettingsFlow
 import com.vitorpamplona.amethyst.commons.model.navigation.Route
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
@@ -40,6 +41,8 @@ import com.vitorpamplona.amethyst.commons.ui.settings.SettingsCategory
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.amethyst.debugState
 import com.vitorpamplona.amethyst.favorites.FavoriteAppLauncher
+import com.vitorpamplona.amethyst.ui.call.CallActivity
+import com.vitorpamplona.amethyst.ui.call.rememberCallWithPermission
 import com.vitorpamplona.amethyst.ui.components.SelectNotificationProvider
 import com.vitorpamplona.amethyst.ui.navigation.topbars.AndroidAroundMeLocationLabel
 import com.vitorpamplona.amethyst.ui.note.DrawPlayName
@@ -47,6 +50,8 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.nests.room.activity.NestAct
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.settings.AndroidNotificationCategorySettings
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.settings.AndroidNotificationDeliverySettings
 import com.vitorpamplona.quartz.concord.cord02Community.ImagePointer
+import com.vitorpamplona.quartz.nip01Core.core.HexKey
+import com.vitorpamplona.quartz.nipACWebRtcCalls.tags.CallType
 import kotlinx.collections.immutable.ImmutableMap
 import com.vitorpamplona.amethyst.commons.ui.navigation.bottombars.AppBottomBar as AppBottomBarImpl
 import com.vitorpamplona.amethyst.favorites.rememberManifestIconModel as AppRememberManifestIconModel
@@ -55,8 +60,10 @@ import com.vitorpamplona.amethyst.favorites.rememberWebAppIconModel as AppRememb
 import com.vitorpamplona.amethyst.ui.note.creators.location.GeohashLocationPickerContent as AppGeohashLocationPickerContent
 import com.vitorpamplona.amethyst.ui.note.creators.location.GeohashLocationPickerDialog as AppGeohashLocationPickerDialog
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.concord.rememberConcordImageModel as AppRememberConcordImageModel
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.geocaches.map.GeocacheMapTab as AndroidGeocacheMapTab
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.qrcode.scanner.QrCodeScannerDialog as AppQrCodeScannerDialog
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.settings.legalSettingsCategory as flavorLegalSettingsCategory
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.workouts.suggestion.DetectedWorkoutCarousel as AndroidDetectedWorkoutCarousel
 
 /** Android's [AppPlatform]: the app's own shell pieces, camera scanner, app launcher and icon caches. */
 object AndroidAppPlatform : AppPlatform {
@@ -125,6 +132,30 @@ object AndroidAppPlatform : AppPlatform {
         onDismiss: () -> Unit,
         onScan: (String) -> ScanOutcome,
     ) = AppQrCodeScannerDialog(onDismiss, onScan)
+
+    @Composable
+    override fun rememberCallStarter(
+        peers: Set<HexKey>,
+        callType: CallType,
+    ): (() -> Unit)? {
+        val context = LocalContext.current
+        return rememberCallWithPermission(context, isVideo = callType == CallType.VIDEO) {
+            CallActivity.launchForOutgoingCall(context, peers, callType)
+        }
+    }
+
+    @Composable
+    override fun GeocacheMapTab(
+        feedContentState: FeedContentState,
+        accountViewModel: AccountViewModel,
+        nav: INav,
+    ) = AndroidGeocacheMapTab(feedContentState, accountViewModel, nav)
+
+    @Composable
+    override fun DetectedWorkoutCarousel(
+        accountViewModel: AccountViewModel,
+        onPick: (Route.NewWorkout) -> Unit,
+    ) = AndroidDetectedWorkoutCarousel(accountViewModel = accountViewModel, onPick = onPick)
 
     @Composable
     override fun rememberAppLauncher(): AppLauncher {
