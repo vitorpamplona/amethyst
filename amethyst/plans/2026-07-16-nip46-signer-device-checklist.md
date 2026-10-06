@@ -175,6 +175,14 @@ that loop via `collectLatest`.
   error reply) is gone. The remaining flood bounds were resized for that rate:
   `maxQueue` 256 → 10,000, `seenCap` 4096 → 10,000, `maxConcurrentHandles`
   16 → 1024. Covered by `NostrConnectSignerServiceTest.burstFromOneClientIsFullyServiced`.
+- **Unpaired clients are still limited.** Paired clients are exempt, but a key
+  that isn't paired gets 10 requests per 60 s, and all unpaired keys together
+  get 100 per 60 s, checked before decrypting; over-limit requests are dropped
+  with no reply. The per-key check runs before the pairing lookup (a DataStore
+  read), and only keys found unpaired spend the shared budget, so a flood can't
+  lock out a paired app. Known paired keys are cached in memory for the run.
+  Follow-up: `isPaired` on an unknown key creates (and caches forever) a
+  DataStore instance per key, so rotating keys still grow that cache.
 - **Per-request bookkeeping batched (2026-10-06).** The activity log and the
   persisted seen-id set each take a drop-oldest channel send per request; one
   coroutine publishes the log at most every 250 ms and saves the ids every 2 s.

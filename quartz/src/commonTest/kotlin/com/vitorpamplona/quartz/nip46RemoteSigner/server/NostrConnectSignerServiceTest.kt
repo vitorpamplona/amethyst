@@ -150,10 +150,16 @@ class NostrConnectSignerServiceTest {
         }
     }
 
-    private class AllowAuthorizer : Nip46RequestAuthorizer {
+    private class AllowAuthorizer(
+        val paired: (HexKey) -> Boolean = { true },
+    ) : Nip46RequestAuthorizer {
         var logoutCalls = 0
+        var pairingLookups = 0
 
-        override suspend fun isPaired(clientPubKey: HexKey) = true
+        override suspend fun isPaired(clientPubKey: HexKey): Boolean {
+            pairingLookups++
+            return paired(clientPubKey)
+        }
 
         override suspend fun onConnect(
             clientPubKey: HexKey,
@@ -176,6 +182,13 @@ class NostrConnectSignerServiceTest {
 
     /** Builds the encrypted kind-24133 request the client would publish to the bunker. */
     private suspend fun request(message: BunkerRequest): NostrConnectEvent = NostrConnectEvent.create(message, remoteKey = serverKey, signer = clientSigner())
+
+    private suspend fun requestFrom(
+        author: HexKey,
+        message: BunkerRequest,
+    ): NostrConnectEvent = NostrConnectEvent.create(message, remoteKey = serverKey, signer = PassthroughSigner(author))
+
+    private fun ping(id: String) = BunkerRequest(id = id, method = BunkerRequestPing.METHOD_NAME)
 
     @Test
     fun connectRequestGetsAckReply() =
@@ -324,16 +337,69 @@ class NostrConnectSignerServiceTest {
 
             backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) { service.run() }
 
-            // There is no per-client rate limit: a single app driving a large burst gets every
-            // request answered (this used to cap at 40 per 10 s and then drop the rest).
+            // A paired client is not rate limited: a single app driving a large burst gets every
+            // request answered exactly once (this used to cap at 40 per 10 s and drop the rest).
             val count = 500
-            repeat(count) { i ->
-                client.deliver(request(BunkerRequest(id = "req$i", method = BunkerRequestPing.METHOD_NAME)))
-            }
+            repeat(count) { i -> client.deliver(request(ping("req$i"))) }
 
+            assertEquals(count, client.published.size)
             val replies = client.published.map { (it as NostrConnectEvent).decryptMessage(clientSigner()) as BunkerResponse }
             assertEquals((0 until count).map { "req$it" }.toSet(), replies.map { it.id }.toSet())
             assertTrue(replies.all { it.error == null })
+        }
+
+    @Test
+    fun pairedClientIsLookedUpOnce() =
+        runTest {
+            val client = LoopbackClient()
+            val signer = serverSigner()
+            val authorizer = AllowAuthorizer()
+            val processor = BunkerRequestProcessor(signer, { setOf(relay) }, authorizer)
+            val service = NostrConnectSignerService(client, signer, processor, setOf(relay))
+
+            backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) { service.run() }
+
+            repeat(50) { i -> client.deliver(request(ping("req$i"))) }
+
+            assertEquals(50, client.published.size)
+            assertEquals(1, authorizer.pairingLookups)
+        }
+
+    @Test
+    fun unpairedClientIsLimitedWithoutReplies() =
+        runTest {
+            val client = LoopbackClient()
+            val signer = serverSigner()
+            val processor = BunkerRequestProcessor(signer, { setOf(relay) }, AllowAuthorizer(paired = { false }))
+            val service = NostrConnectSignerService(client, signer, processor, setOf(relay), maxUnpairedRequestsPerAuthor = 3)
+
+            backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) { service.run() }
+
+            repeat(10) { i -> client.deliver(request(ping("req$i"))) }
+
+            // Only the first 3 are serviced; the rest are dropped before decrypting, with no reply.
+            val replies = client.published.map { (it as NostrConnectEvent).decryptMessage(clientSigner()) as BunkerResponse }
+            assertEquals(listOf("req0", "req1", "req2"), replies.map { it.id })
+        }
+
+    @Test
+    fun rotatingUnpairedKeysShareOneBudget() =
+        runTest {
+            val client = LoopbackClient()
+            val signer = serverSigner()
+            val processor = BunkerRequestProcessor(signer, { setOf(relay) }, AllowAuthorizer(paired = { it == clientKey }))
+            val service =
+                NostrConnectSignerService(client, signer, processor, setOf(relay), maxUnpairedRequestsPerAuthor = 3, maxUnpairedRequestsTotal = 5)
+
+            backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) { service.run() }
+
+            // Twenty fresh keys, one request each: the shared budget stops them after 5.
+            repeat(20) { i -> client.deliver(requestFrom(i.toString(16).padStart(64, 'e'), ping("stranger$i"))) }
+            assertEquals(5, client.published.size)
+
+            // The paired client is unaffected by the exhausted unpaired budget.
+            repeat(20) { i -> client.deliver(request(ping("paired$i"))) }
+            assertEquals(25, client.published.size)
         }
 
     @Test
