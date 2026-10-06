@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst.commons.relayClient.reqCommand.account.nip59GiftWraps
 
+import com.vitorpamplona.amethyst.commons.model.Account
 import com.vitorpamplona.amethyst.commons.model.chats.ChatFeedType
 import com.vitorpamplona.amethyst.commons.relayClient.eoseManagers.DmRelayLog
 import com.vitorpamplona.amethyst.commons.relayClient.eoseManagers.PerUserEoseManager
@@ -69,6 +70,19 @@ class AccountGiftWrapsHistoryEoseManager(
 
     private fun daysAgo(epochSeconds: Long) = (TimeUtils.now() - epochSeconds) / TimeUtils.ONE_DAY
 
+    /**
+     * Where the account's NIP-17 history lives: its DM relay list (kind 10050), which is where NIP-17
+     * senders deliver, plus any local relay mirroring it. The live tail ([AccountGiftWrapsEoseManager])
+     * keeps watching the wider [dmRelays][com.vitorpamplona.amethyst.commons.model.Account.dmRelays] set
+     * (NIP-65 inbox, private storage) for the senders that miss the list; paging years of history from
+     * those too only walks relays the history is not on. Without a DM list, that wider set is all there is.
+     */
+    private fun historyRelays(account: Account): Set<NormalizedRelayUrl> {
+        val dmList = account.dmRelayList.flow.value
+        if (dmList.isEmpty()) return account.dmRelays.flow.value
+        return dmList + account.localRelayList.flow.value
+    }
+
     override fun updateFilter(
         key: AccountQueryState,
         since: SincePerRelayMap?,
@@ -78,7 +92,7 @@ class AccountGiftWrapsHistoryEoseManager(
         // Only relays that have been advanced (armed) and aren't done carry a REQ. A relay that finished a
         // page keeps the same `until` here, so re-assembly (triggered when ANOTHER relay advances) doesn't
         // re-REQ it — it stays parked until the UI advances it again.
-        val relays = key.account.dmRelays.flow.value
+        val relays = historyRelays(key.account)
         val armed = pager.armedRelays(relays)
         if (armed.isEmpty()) return emptyList()
         DmRelayLog.log("giftwrap.history", key.account)
@@ -109,7 +123,7 @@ class AccountGiftWrapsHistoryEoseManager(
     override fun newSub(key: AccountQueryState): Subscription {
         // Repoint the single-active orchestrator at this account's gift-wrap cursors (on its ChatroomList)
         // and the relays it fans out to, refreshing the display flows from the restored progress.
-        pager.bind(key.account.chatroomList.giftWrapHistory, key.account.scope) { key.account.dmRelays.flow.value }
+        pager.bind(key.account.chatroomList.giftWrapHistory, key.account.scope) { historyRelays(key.account) }
         return requestNewSubscription(historyListener(key))
     }
 
