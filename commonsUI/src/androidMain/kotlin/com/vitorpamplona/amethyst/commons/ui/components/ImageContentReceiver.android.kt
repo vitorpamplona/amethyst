@@ -30,89 +30,83 @@ import androidx.compose.foundation.content.TransferableContent
 import androidx.compose.foundation.content.consume
 import androidx.compose.foundation.content.contentReceiver
 import androidx.compose.foundation.content.hasMediaType
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.composed
 import androidx.compose.ui.platform.LocalContext
 import androidx.core.net.toUri
 import com.vitorpamplona.amethyst.commons.service.uploads.MediaUri
+import com.vitorpamplona.amethyst.commons.service.uploads.extensionFromMimeType
 import com.vitorpamplona.quartz.utils.Log
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.io.File
 import java.util.concurrent.TimeUnit
-import kotlin.coroutines.cancellation.CancellationException
 
 @OptIn(ExperimentalFoundationApi::class)
 actual fun Modifier.imageContentReceiver(onImage: (MediaUri, String?) -> Unit): Modifier =
     composed {
         val appContext = LocalContext.current.applicationContext
         val scope = rememberCoroutineScope()
-        contentReceiver(
-            object : ReceiveContentListener {
-                override fun onReceive(transferableContent: TransferableContent): TransferableContent? {
-                    if (!transferableContent.hasMediaType(MediaType.Image)) {
-                        return transferableContent
-                    }
-                    val mimeType =
-                        transferableContent.clipEntry.clipData.description
-                            .getMimeType(0)
-                    val received = mutableListOf<Uri>()
-                    val remaining =
-                        transferableContent.consume { item ->
-                            item.uri?.let { received.add(it) } != null
+        val currentOnImage by rememberUpdatedState(onImage)
+        val listener =
+            remember(appContext, scope) {
+                object : ReceiveContentListener {
+                    override fun onReceive(transferableContent: TransferableContent): TransferableContent? {
+                        if (!transferableContent.hasMediaType(MediaType.Image)) {
+                            return transferableContent
                         }
-                    // A keyboard's read grant is revoked once the InputContentInfo that Compose
-                    // keeps in transferableContent's extras is garbage collected, which can be long
-                    // before the user presses upload. Copy the files while this coroutine still
-                    // references transferableContent, so the upload reads our own copy.
-                    scope.launch {
-                        received.forEach { uri ->
-                            val local = withContext(Dispatchers.IO) { copyToCache(appContext, uri, mimeType, transferableContent) }
-                            onImage(local ?: uri, mimeType)
+                        val remaining = transferableContent.consume { it.uri != null }
+                        // A keyboard's read grant is revoked once the InputContentInfo that Compose
+                        // keeps in transferableContent's extras is garbage collected, which can be
+                        // long before the user presses upload. Reading the items from
+                        // transferableContent inside the coroutine keeps it reachable until the
+                        // copies are done, so the upload reads our own copy.
+                        scope.launch {
+                            val clip = transferableContent.clipEntry.clipData
+                            val mimeType = clip.description.getMimeType(0)
+                            val uris = (0 until clip.itemCount).mapNotNull { clip.getItemAt(it).uri }
+                            val copies = withContext(Dispatchers.IO) { copyToCache(appContext, uris, mimeType) }
+                            uris.zip(copies).forEach { (uri, copy) -> currentOnImage(copy ?: uri, mimeType) }
                         }
+                        return remaining
                     }
-                    return remaining
                 }
-            },
-        )
+            }
+        contentReceiver(listener)
     }
 
 private const val RECEIVED_DIR = "received_content"
 
-/**
- * Copies [uri] into the app cache, or returns null to fall back to the original address.
- * [keepGrantAlive] is unused: taking it makes the calling coroutine capture it, which keeps the
- * keyboard's grant alive until the copy is done.
- */
-@OptIn(ExperimentalFoundationApi::class)
+/** Copies each of [uris] into the app cache; a null entry falls back to the original address. */
 private fun copyToCache(
     context: Context,
-    uri: Uri,
+    uris: List<Uri>,
     mimeType: String?,
-    @Suppress("UNUSED_PARAMETER") keepGrantAlive: TransferableContent,
-): Uri? =
-    try {
-        val dir = File(context.cacheDir, RECEIVED_DIR).apply { mkdirs() }
-        deleteStaleFiles(dir)
-        val extension = mimeType?.let { MimeTypeMap.getSingleton().getExtensionFromMimeType(it) } ?: "bin"
-        val file = File.createTempFile("received-", ".$extension", dir)
-        val copied =
+): List<Uri?> {
+    val dir = File(context.cacheDir, RECEIVED_DIR).apply { mkdirs() }
+    deleteStaleFiles(dir)
+    val extension = mimeType?.let { MimeTypeMap.getSingleton().getExtensionFromMimeType(it) ?: extensionFromMimeType(it) } ?: "bin"
+    return uris.map { uri ->
+        try {
+            val file = File.createTempFile("received-", ".$extension", dir)
             context.contentResolver.openInputStream(uri)?.use { input ->
                 file.outputStream().use { input.copyTo(it) }
+                file.toUri()
+            } ?: run {
+                file.delete()
+                null
             }
-        if (copied == null) {
-            file.delete()
+        } catch (e: Exception) {
+            Log.w("ImageContentReceiver", "Could not copy received content $uri", e)
             null
-        } else {
-            file.toUri()
         }
-    } catch (e: Exception) {
-        if (e is CancellationException) throw e
-        Log.w("ImageContentReceiver", "Could not copy received content $uri", e)
-        null
     }
+}
 
 /** Received files are only needed until the upload finishes; drop those left from earlier days. */
 private fun deleteStaleFiles(dir: File) {

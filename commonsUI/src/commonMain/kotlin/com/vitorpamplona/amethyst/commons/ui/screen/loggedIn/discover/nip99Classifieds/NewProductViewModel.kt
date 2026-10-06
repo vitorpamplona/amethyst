@@ -402,9 +402,9 @@ open class NewProductViewModel :
         server: ServerName,
         onError: (title: String, message: String) -> Unit,
         uploader: MediaUploader,
-        stripMetadata: Boolean = true,
-        useH265: Boolean = false,
-        convertGifToMp4: Boolean = false,
+        useH265: Boolean,
+        stripMetadata: Boolean,
+        convertGifToMp4: Boolean,
     ) {
         viewModelScope.launch(Dispatchers.IO) {
             val myAccount = account

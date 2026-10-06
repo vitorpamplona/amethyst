@@ -169,12 +169,12 @@ open class EditPostViewModel : ViewModel() {
         server: ServerName,
         onError: (String, String) -> Unit,
         uploader: MediaUploader,
-        stripMetadata: Boolean = true,
-        useH265: Boolean = false,
-        convertGifToMp4: Boolean = false,
+        useH265: Boolean,
+        stripMetadata: Boolean,
+        convertGifToMp4: Boolean,
     ) {
         try {
-            uploadUnsafe(alt, sensitiveContent, mediaQuality, isPrivate, server, onError, uploader, stripMetadata, useH265, convertGifToMp4)
+            uploadUnsafe(alt, sensitiveContent, mediaQuality, isPrivate, server, onError, uploader, useH265, stripMetadata, convertGifToMp4)
         } catch (e: SignerExceptions.ReadOnlyException) {
             viewModelScope.launch {
                 onError(
@@ -193,9 +193,9 @@ open class EditPostViewModel : ViewModel() {
         server: ServerName,
         onError: (String, String) -> Unit,
         uploader: MediaUploader,
-        stripMetadata: Boolean = true,
-        useH265: Boolean = false,
-        convertGifToMp4: Boolean = false,
+        useH265: Boolean,
+        stripMetadata: Boolean,
+        convertGifToMp4: Boolean,
     ) {
         accountViewModel.launchSigner {
             val myAccount = account

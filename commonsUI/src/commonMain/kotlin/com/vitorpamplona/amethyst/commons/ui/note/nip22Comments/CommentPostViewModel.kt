@@ -789,12 +789,12 @@ open class CommentPostViewModel :
         server: ServerName,
         onError: (title: String, message: String) -> Unit,
         uploader: MediaUploader,
-        stripMetadata: Boolean = true,
-        useH265: Boolean = false,
-        convertGifToMp4: Boolean = false,
+        useH265: Boolean,
+        stripMetadata: Boolean,
+        convertGifToMp4: Boolean,
     ) {
         try {
-            uploadUnsafe(alt, contentWarningReason, mediaQuality, server, onError, uploader, stripMetadata, useH265, convertGifToMp4)
+            uploadUnsafe(alt, contentWarningReason, mediaQuality, server, onError, uploader, useH265, stripMetadata, convertGifToMp4)
         } catch (_: SignerExceptions.ReadOnlyException) {
             viewModelScope.launch {
                 onError(
@@ -812,9 +812,9 @@ open class CommentPostViewModel :
         server: ServerName,
         onError: (title: String, message: String) -> Unit,
         uploader: MediaUploader,
-        stripMetadata: Boolean = true,
-        useH265: Boolean = false,
-        convertGifToMp4: Boolean = false,
+        useH265: Boolean,
+        stripMetadata: Boolean,
+        convertGifToMp4: Boolean,
     ) {
         viewModelScope.launch(Dispatchers.IO) {
             val myMultiOrchestrator = multiOrchestrator ?: return@launch
