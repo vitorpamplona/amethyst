@@ -24,6 +24,7 @@ import com.vitorpamplona.amethyst.cli.Args
 import com.vitorpamplona.amethyst.cli.Context
 import com.vitorpamplona.amethyst.cli.DataDir
 import com.vitorpamplona.amethyst.cli.Output
+import com.vitorpamplona.amethyst.commons.relayClient.oneshot.EventLocator
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip19Bech32.Nip19Parser
@@ -210,7 +211,7 @@ object FetchCommand {
             }
 
             // Outbox model: hint relays + the author's advertised write relays.
-            val relays = (hintRelays + (author?.let { NoteSupport.authorOutboxRelays(ctx, it, timeoutMs) } ?: emptySet())).ifEmpty { ctx.bootstrapRelays() }
+            val relays = (hintRelays + (author?.let { EventLocator.authorOutboxRelays(NoteSupport.access(ctx), it, timeoutMs) } ?: emptySet())).ifEmpty { ctx.bootstrapRelays() }
 
             val received = ctx.drain(relays.associateWith { listOf(filter) }, timeoutMs)
             val events =

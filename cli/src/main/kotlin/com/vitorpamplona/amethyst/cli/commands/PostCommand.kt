@@ -24,6 +24,7 @@ import com.vitorpamplona.amethyst.cli.Args
 import com.vitorpamplona.amethyst.cli.Context
 import com.vitorpamplona.amethyst.cli.DataDir
 import com.vitorpamplona.amethyst.cli.Output
+import com.vitorpamplona.amethyst.commons.relayClient.oneshot.OneShotNoteCache
 import com.vitorpamplona.quartz.nip01Core.tags.people.taggedUserIds
 import com.vitorpamplona.quartz.nip13Pow.miner.PoWMiner
 import com.vitorpamplona.quartz.nip13Pow.pow
@@ -79,7 +80,7 @@ object PostCommand {
             }
 
             // The composer's path: its tagger over the trimmed text, its tags, its routing.
-            val notes = NoteCache(ctx)
+            val notes = OneShotNoteCache(NoteSupport.access(ctx))
             val template = notes.textNote(notes.tag(text.trim()))
 
             var powMillis: Long? = null
@@ -113,7 +114,7 @@ object PostCommand {
                 }
 
             val signed = ctx.signer.sign(readyToSign)
-            val planner = notes.planner()
+            val planner = NoteSupport.planner(ctx, notes)
             notes.addUsers(signed.taggedUserIds(), fetchMissing = true)
             val mine = notes.addMine(signed) ?: return Output.error("runtime", "could not cache ${signed.id}")
             val ack = ctx.publish(signed, planner.computeRelayListToBroadcast(mine) + extraRelays)

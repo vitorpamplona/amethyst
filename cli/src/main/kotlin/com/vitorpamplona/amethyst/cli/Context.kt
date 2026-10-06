@@ -537,11 +537,14 @@ class Context(
      * defaults (DefaultNIP65RelaySet + DefaultDMRelayList). The defaults are
      * what every fresh Amethyst account publishes to first, so they're the
      * most reliable place to find a stranger's replaceable events even when
-     * we and they have completely disjoint relay configurations.
+     * we and they have completely disjoint relay configurations. Our own
+     * relays include the NIP-65 read set: replies and mentions of us land
+     * there, so a bare event id someone hands us is often only there.
      */
     suspend fun bootstrapRelays(): Set<NormalizedRelayUrl> =
         buildSet {
             addAll(anyRelays())
+            addAll(nip65ReadRelays())
             addAll(DefaultNIP65RelaySet)
             addAll(DefaultDMRelayList)
         }

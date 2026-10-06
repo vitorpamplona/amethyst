@@ -83,7 +83,14 @@ Suite notes:
   `reply` / `react` / `repost` / `quote` → `notes thread` laid out from the
   leaf → the author's `notifications` (reply, reaction, repost, quote-as-mention,
   `--type` narrowing) → `delete` refused for someone else's note, honoured by
-  the relay for your own.
+  the relay for your own. A second section runs two more relays on a
+  non-private IPv4 (amy drops loopback/RFC 1918 relays from other people's
+  lists, so routing needs one; auto-detected, or `--routing-host IP`) and
+  checks the outbox model: replies, reactions, reposts and mentions reach the
+  other account's inbox relay, deletions reach both relays, a NIP-25 reaction
+  to a reply is a notification, and a reply deleted while one relay was down
+  stays out of the thread when that relay comes back. Without such an address
+  the section is skipped; `sudo ip addr add 192.0.2.2/32 dev lo` provides one.
 - **`relaygroup/relaygroup-headless.sh`** runs NIP-29 create/message/join/
   list/browse against an embedded relay (`amy serve`, which boots geode) —
   no external relay binary. geode doesn't sign 39000-39003, so browse/info

@@ -30,6 +30,9 @@ import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.composer.quoteMessage
 import com.vitorpamplona.amethyst.commons.model.nip18Reposts.RepostAction
 import com.vitorpamplona.amethyst.commons.model.nip25Reactions.ReactionAction
+import com.vitorpamplona.amethyst.commons.relayClient.oneshot.EventLocator
+import com.vitorpamplona.amethyst.commons.relayClient.oneshot.EventRef
+import com.vitorpamplona.amethyst.commons.relayClient.oneshot.OneShotNoteCache
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.hints.EventHintBundle
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
@@ -38,7 +41,7 @@ import com.vitorpamplona.quartz.nip01Core.tags.people.taggedUserIds
 /**
  * `amy notes reply|quote|react|repost EVENT …` — the interactions on an existing
  * event. Each one locates the target (cache-first, `--refresh` to re-drain), loads it
- * into a [NoteCache] and then runs the app's own code end to end: the text goes
+ * into a [OneShotNoteCache] and then runs the app's own code end to end: the text goes
  * through the composer's `NewMessageTagger`, the event is built by the shared
  * builder ([ReplyActions], [ReactionAction], [RepostAction]; a quote is the composer's
  * pre-filled quote text posted as a note), and it
@@ -125,23 +128,24 @@ object NoteActionCommands {
         dataDir: DataDir,
         args: Args,
         refInput: String,
-        build: suspend (Context, NoteCache, target: Note, hint: EventHintBundle<Event>) -> Event,
+        build: suspend (Context, OneShotNoteCache, target: Note, hint: EventHintBundle<Event>) -> Event,
         route: (BroadcastRelayPlanner, target: Note, signed: Event, mine: Note) -> Set<NormalizedRelayUrl>,
     ): Int {
         val extraRelays = RawEventSupport.relayFlag(args)
         val refresh = args.bool("refresh")
         val timeoutMs = args.timeoutMs(8)
         args.rejectUnknown()
-        val ref = NoteSupport.parseRef(refInput)
+        val ref = EventRef.parse(refInput)
 
         Context.open(dataDir).use { ctx ->
             if (!ctx.signer.isWriteable()) return Output.error("read_only", "this account can't sign (npub-only login)")
             ctx.prepare()
+            val access = NoteSupport.access(ctx)
             val target =
-                NoteSupport.locate(ctx, ref, refresh, timeoutMs)
+                EventLocator.locate(access, ref, refresh, timeoutMs)
                     ?: return Output.error("not_found", "event not found: $refInput")
 
-            val notes = NoteCache(ctx, timeoutMs)
+            val notes = OneShotNoteCache(access, timeoutMs)
             val targetNote =
                 notes.add(target.event, target.seenOn)
                     ?: return Output.error("not_found", "event not found: $refInput")
@@ -157,7 +161,7 @@ object NoteActionCommands {
                 fetchMissing = true,
                 alsoAsk = target.seenOn,
             )
-            val planner = notes.planner()
+            val planner = NoteSupport.planner(ctx, notes)
             val mine = notes.addMine(signed) ?: return Output.error("runtime", "could not cache ${signed.id}")
             val ack = ctx.publish(signed, route(planner, targetNote, signed, mine) + extraRelays)
             RawEventSupport.publishGuard(ack, signed.id)?.let { return it }

@@ -21,156 +21,92 @@
 package com.vitorpamplona.amethyst.cli.commands
 
 import com.vitorpamplona.amethyst.cli.Context
+import com.vitorpamplona.amethyst.commons.model.BroadcastRelayPlanner
+import com.vitorpamplona.amethyst.commons.model.BroadcastRelaySource
+import com.vitorpamplona.amethyst.commons.relayClient.oneshot.LocatedEvent
+import com.vitorpamplona.amethyst.commons.relayClient.oneshot.OneShotNoteCache
+import com.vitorpamplona.amethyst.commons.relayClient.oneshot.OneShotRelayAccess
 import com.vitorpamplona.amethyst.commons.rendering.EventRendererRegistry
 import com.vitorpamplona.amethyst.commons.rendering.RenderContext
 import com.vitorpamplona.amethyst.commons.rendering.json.JsonEventFormatter
 import com.vitorpamplona.quartz.nip01Core.core.Event
-import com.vitorpamplona.quartz.nip01Core.core.HexKey
-import com.vitorpamplona.quartz.nip01Core.core.isValid
-import com.vitorpamplona.quartz.nip01Core.metadata.MetadataEvent
-import com.vitorpamplona.quartz.nip01Core.metadata.UserMetadata
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
-import com.vitorpamplona.quartz.nip01Core.tags.people.taggedUserIds
-import com.vitorpamplona.quartz.nip19Bech32.Nip19Parser
-import com.vitorpamplona.quartz.nip19Bech32.entities.NAddress
-import com.vitorpamplona.quartz.nip19Bech32.entities.NEvent
-import com.vitorpamplona.quartz.nip19Bech32.entities.NNote
-import com.vitorpamplona.quartz.nip65RelayList.AdvertisedRelayListEvent
+import com.vitorpamplona.quartz.nip37Drafts.privateOutbox.PrivateOutboxRelayListEvent
+import com.vitorpamplona.quartz.nip51Lists.relayLists.BroadcastRelayListEvent
+import kotlin.coroutines.cancellation.CancellationException
 
 /**
- * Shared plumbing for the verbs that act on an existing event (`notes show /
- * reply / quote / react / repost / thread`, `amy delete`): turn a user-typed
- * reference into the event and render events through the shared commons
- * renderer. Assembly only — routing, tagging, thread layout and the event
- * builders are the app's own code, reached through [NoteCache].
+ * amy's adapters for the verbs that act on notes (`notes show / reply / quote / react /
+ * repost / thread`, `notifications`, `delete`). The logic — lookup, profile loading,
+ * the store-backed note cache, thread and notification loading — is commons'
+ * `relayClient/oneshot` package; routing, tagging and the event builders are the app's
+ * own code. What stays here is the [Context] port, the account's routing inputs and the
+ * JSON shape.
  */
 object NoteSupport {
-    /** A parsed `hex` / `note1` / `nevent1` / `naddr1` (optionally `nostr:`-prefixed) reference. */
-    class Ref(
-        val input: String,
-        val filter: Filter,
-        val hints: Set<NormalizedRelayUrl>,
-        val author: HexKey?,
-    )
+    /** [Context]'s store and relay pool as the port the commons one-shot loaders run over. */
+    fun access(ctx: Context): OneShotRelayAccess =
+        object : OneShotRelayAccess {
+            override suspend fun query(filter: Filter): List<Event> = ctx.store.query(filter)
 
-    /** An event located through the cache or relays, with the relays that served it. */
-    class Located(
-        val event: Event,
-        val seenOn: Set<NormalizedRelayUrl>,
-        val source: String,
-    )
+            override suspend fun fetch(
+                filters: Map<NormalizedRelayUrl, List<Filter>>,
+                timeoutMs: Long,
+            ) = ctx.drain(filters, timeoutMs)
 
-    fun parseRef(input: String): Ref {
-        val code = input.trim().removePrefix("nostr:")
-        if (code.length == 64 && code.all { it.isDigit() || it in 'a'..'f' || it in 'A'..'F' }) {
-            return Ref(input, Filter(ids = listOf(code.lowercase()), limit = 1), emptySet(), null)
+            override suspend fun bootstrapRelays() = ctx.bootstrapRelays()
+
+            override suspend fun indexRelays() = ctx.indexRelays()
         }
-        return when (val entity = Nip19Parser.uriToRoute(code)?.entity) {
-            is NNote -> Ref(input, Filter(ids = listOf(entity.hex), limit = 1), emptySet(), null)
-            is NEvent -> Ref(input, Filter(ids = listOf(entity.hex), limit = 1), entity.relay.toSet(), entity.author)
-            is NAddress ->
-                Ref(
-                    input,
-                    Filter(kinds = listOf(entity.kind), authors = listOf(entity.author), tags = mapOf("d" to listOf(entity.dTag)), limit = 1),
-                    entity.relay.toSet(),
-                    entity.author,
-                )
-            else -> throw IllegalArgumentException("not an event reference: '$input' (expects a 64-hex id, note1…, nevent1… or naddr1…)")
-        }
-    }
 
     /**
-     * Cache-first lookup of [ref]: the local store answers unless [refresh] is set;
-     * otherwise the hint relays, the author's NIP-65 outbox and the bootstrap set are
-     * drained (the same outbox-model resolution `amy fetch CODE` uses). Returns the
-     * newest match — an `naddr` names a replaceable slot — or null when nobody has it.
+     * The app's routing over [notes] and the account's relay lists. Reads (and decrypts)
+     * our own lists once up front: the planner's inputs are plain sets.
      */
-    suspend fun locate(
+    suspend fun planner(
         ctx: Context,
-        ref: Ref,
-        refresh: Boolean,
-        timeoutMs: Long,
-    ): Located? {
-        if (!refresh) {
-            ctx.store.query<Event>(ref.filter).maxByOrNull { it.createdAt }?.let {
-                return Located(it, ref.hints, "cache")
-            }
-        }
+        notes: OneShotNoteCache,
+    ): BroadcastRelayPlanner {
+        val me = ctx.identity.pubKeyHex
+        notes.addUsers(listOf(me))
+        // The planner recognises our own events by finding our User in the cache (as the app
+        // always does); create it even when the store holds nothing of ours yet.
+        notes.user(me)
+        val nip65Outbox = ctx.outboxRelays()
+        val nip65Inbox = ctx.nip65ReadRelays()
+        // Both lists are NIP-44 encrypted to ourselves; a list we cannot decrypt routes nowhere.
+        val privateOutbox =
+            orNull { (ctx.latestReplaceable(me, PrivateOutboxRelayListEvent.KIND) as? PrivateOutboxRelayListEvent)?.relays(ctx.signer) }.orEmpty().toSet()
+        val broadcast =
+            orNull { (ctx.latestReplaceable(me, BroadcastRelayListEvent.KIND) as? BroadcastRelayListEvent)?.decryptRelays(ctx.signer) }.orEmpty().toSet()
+        val everywhere = ctx.bootstrapRelays() + ctx.indexRelays()
 
-        val relays = ref.hints + (ref.author?.let { authorOutboxRelays(ctx, it, timeoutMs) } ?: emptySet()) + ctx.bootstrapRelays()
-        val received = ctx.drain(relays.associateWith { listOf(ref.filter) }, timeoutMs)
-        val matches = received.filter { (_, event) -> ref.filter.match(event) }
-        val newest = matches.maxByOrNull { it.second.createdAt }?.second ?: return null
-        val seenOn = matches.filter { it.second.id == newest.id }.mapTo(mutableSetOf()) { it.first }
-        return Located(newest, seenOn + ref.hints, "relays")
+        return BroadcastRelayPlanner(
+            notes.cache,
+            object : BroadcastRelaySource {
+                override fun userProfile() = notes.user(me)
+
+                override fun notificationRelays() = nip65Inbox
+
+                override fun broadcastRelays() = broadcast
+
+                override fun outboxRelays() = nip65Outbox + privateOutbox + broadcast
+
+                override fun personalOutboxRelays() = nip65Outbox + privateOutbox
+
+                override fun everywhereRelays() = everywhere
+            },
+        )
     }
 
-    /** [author]'s NIP-65 write relays, draining their kind:10002 from the bootstrap set on a cache miss. */
-    suspend fun authorOutboxRelays(
-        ctx: Context,
-        author: HexKey,
-        timeoutMs: Long,
-    ): Set<NormalizedRelayUrl> {
-        ensureRelayList(ctx, author, timeoutMs)
-        return ctx.relaysOf(author)?.writeRelaysNorm()?.toSet() ?: emptySet()
-    }
-
-    private suspend fun ensureRelayList(
-        ctx: Context,
-        author: HexKey,
-        timeoutMs: Long,
-    ) {
-        if (ctx.relaysOf(author) != null) return
-        val filter = Filter(authors = listOf(author), kinds = listOf(AdvertisedRelayListEvent.KIND), limit = 1)
-        ctx.drain(ctx.bootstrapRelays().associateWith { listOf(filter) }, timeoutMs)
-    }
-
-    /** Most profiles one command fetches from relays; the rest render from the store or by npub. */
-    private const val MAX_PROFILE_FETCH = 100
-
-    /**
-     * Profiles for [pubKeys] as a [RenderContext]: from the local store, and — when
-     * [fetchMissing] — one drain of the first [MAX_PROFILE_FETCH] missing kind:0s (in
-     * [pubKeys] order, so authors listed first win) from the index + bootstrap relays.
-     * A kind:3 tags thousands of people; their names are not worth thousands of fetches.
-     */
-    suspend fun renderContext(
-        ctx: Context,
-        pubKeys: Collection<HexKey>,
-        fetchMissing: Boolean,
-        timeoutMs: Long,
-    ): RenderContext {
-        val wanted = pubKeys.filterTo(LinkedHashSet()) { it.isValid() }
-        if (wanted.isEmpty()) return RenderContext.EMPTY
-
-        val profiles = HashMap<HexKey, UserMetadata>()
-
-        fun collect(events: Collection<Event>) {
-            events
-                .filterIsInstance<MetadataEvent>()
-                .groupBy { it.pubKey }
-                .forEach { (pubKey, list) -> list.maxBy { it.createdAt }.contactMetaData()?.let { profiles[pubKey] = it } }
-        }
-
-        collect(ctx.store.query<Event>(Filter(authors = wanted.toList(), kinds = listOf(MetadataEvent.KIND))))
-
-        val missing = (wanted - profiles.keys).take(MAX_PROFILE_FETCH)
-        if (fetchMissing && missing.isNotEmpty()) {
-            val relays = ctx.indexRelays() + ctx.bootstrapRelays()
-            val filter = Filter(authors = missing.toList(), kinds = listOf(MetadataEvent.KIND), limit = missing.size)
-            collect(ctx.drain(relays.associateWith { listOf(filter) }, timeoutMs).map { it.second })
-        }
-        return RenderContext(profiles)
-    }
-
-    /** Every pubkey a rendered view of [events] can name: authors, tagged users and zap senders. */
-    fun peopleIn(events: Collection<Event>): Set<HexKey> =
-        buildSet {
-            events.forEach {
-                add(it.pubKey)
-                addAll(it.taggedUserIds())
-            }
+    private suspend fun <T> orNull(block: suspend () -> T?): T? =
+        try {
+            block()
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            null
         }
 
     fun render(
@@ -180,7 +116,7 @@ object NoteSupport {
     ): Map<String, Any?> = JsonEventFormatter.toMap(EventRendererRegistry.render(event, renderCtx), includeBody)
 
     /** The `target` block every interaction verb echoes back. */
-    fun targetFields(target: Located): Map<String, Any?> =
+    fun targetFields(target: LocatedEvent): Map<String, Any?> =
         mapOf(
             "event_id" to target.event.id,
             "kind" to target.event.kind,

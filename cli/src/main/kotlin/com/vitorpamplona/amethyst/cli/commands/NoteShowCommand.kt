@@ -24,6 +24,9 @@ import com.vitorpamplona.amethyst.cli.Args
 import com.vitorpamplona.amethyst.cli.Context
 import com.vitorpamplona.amethyst.cli.DataDir
 import com.vitorpamplona.amethyst.cli.Output
+import com.vitorpamplona.amethyst.commons.relayClient.oneshot.EventLocator
+import com.vitorpamplona.amethyst.commons.relayClient.oneshot.EventRef
+import com.vitorpamplona.amethyst.commons.relayClient.oneshot.ProfileLoader
 
 /**
  * `amy notes show EVENT [--refresh] [--raw] [--timeout SECS]` — one event, rendered
@@ -44,14 +47,15 @@ object NoteShowCommand {
         val raw = args.bool("raw")
         val timeoutMs = args.timeoutMs(8)
         args.rejectUnknown()
-        val ref = NoteSupport.parseRef(refInput)
+        val ref = EventRef.parse(refInput)
 
         Context.openOrAnonymous(dataDir).use { ctx ->
             ctx.prepare()
+            val access = NoteSupport.access(ctx)
             val located =
-                NoteSupport.locate(ctx, ref, refresh, timeoutMs)
+                EventLocator.locate(access, ref, refresh, timeoutMs)
                     ?: return Output.error("not_found", "event not found: $refInput")
-            val renderCtx = NoteSupport.renderContext(ctx, NoteSupport.peopleIn(listOf(located.event)), fetchMissing = true, timeoutMs = timeoutMs)
+            val renderCtx = ProfileLoader.renderContext(access, ProfileLoader.peopleIn(listOf(located.event)), fetchMissing = true, timeoutMs = timeoutMs)
 
             Output.emit(
                 mapOf(

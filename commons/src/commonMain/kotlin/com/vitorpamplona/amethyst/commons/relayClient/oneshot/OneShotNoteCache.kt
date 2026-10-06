@@ -18,12 +18,9 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.cli.commands
+package com.vitorpamplona.amethyst.commons.relayClient.oneshot
 
-import com.vitorpamplona.amethyst.cli.Context
 import com.vitorpamplona.amethyst.commons.model.AddressableNote
-import com.vitorpamplona.amethyst.commons.model.BroadcastRelayPlanner
-import com.vitorpamplona.amethyst.commons.model.BroadcastRelaySource
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.User
 import com.vitorpamplona.amethyst.commons.model.cache.EventCache
@@ -43,23 +40,18 @@ import com.vitorpamplona.quartz.nip09Deletions.DeletionRequestEvent
 import com.vitorpamplona.quartz.nip10Notes.TextNoteEvent
 import com.vitorpamplona.quartz.nip10Notes.tags.notify
 import com.vitorpamplona.quartz.nip17Dm.settings.DmRelayListEvent
-import com.vitorpamplona.quartz.nip37Drafts.privateOutbox.PrivateOutboxRelayListEvent
-import com.vitorpamplona.quartz.nip51Lists.relayLists.BroadcastRelayListEvent
 import com.vitorpamplona.quartz.nip65RelayList.AdvertisedRelayListEvent
-import kotlin.coroutines.cancellation.CancellationException
 
 /**
- * A per-invocation [EventCache] — the class behind the app's `LocalCache` — filled from
- * amy's event store, so amy runs the app's own `Note`/`User`-based code instead of a
- * second implementation of it: [BroadcastRelayPlanner] for routing, `NewMessageTagger`
- * for message tagging, `ThreadAssembler` / `ThreadFeedFilter` for threads.
- *
- * It lives for one command (Rule 4: nothing survives the process); the store stays the
- * source of truth.
+ * A short-lived [EventCache] — the class behind the app's `LocalCache` — filled on demand
+ * from a [OneShotRelayAccess], so a front end without the app's live subscriptions still
+ * runs the app's own `Note`/`User`-based code: `BroadcastRelayPlanner` for routing,
+ * [NewMessageTagger] for message tagging, `ThreadAssembler` / `ThreadFeedFilter` for
+ * threads. The store stays the source of truth; this cache lives for one operation.
  */
-class NoteCache(
-    private val ctx: Context,
-    /** Idle timeout for the relay drains this cache makes on its own (missing relay lists). */
+class OneShotNoteCache(
+    private val access: OneShotRelayAccess,
+    /** Idle timeout for the fetches this cache makes on its own (missing relay lists). */
     private val timeoutMs: Long = 8_000,
 ) {
     val cache = EventCache()
@@ -78,7 +70,7 @@ class NoteCache(
     ): Note? {
         val first = relays.firstOrNull()
         if (!cache.checkDeletionAndConsume(event, first, true) && cache.deletionIndex.hasBeenDeleted(event)) return null
-        val note = if (event is AddressableEvent) cache.getAddressableNoteIfExists(event.address()) else cache.getNoteIfExists(event.id)
+        val note = noteOf(event)
         relays.forEach { relay ->
             note?.addRelay(relay)
             if (relay != first) cache.relayHints.addKey(event.pubKey, relay)
@@ -93,8 +85,8 @@ class NoteCache(
     suspend fun addAll(events: Collection<Pair<NormalizedRelayUrl?, Event>>) {
         if (events.isEmpty()) return
         val ids = events.mapTo(mutableSetOf()) { it.second.id }
-        ids.chunked(500).forEach { chunk ->
-            ctx.store.query<Event>(Filter(kinds = listOf(DeletionRequestEvent.KIND), tags = mapOf("e" to chunk))).forEach { add(it) }
+        ids.chunked(DELETION_CHUNK).forEach { chunk ->
+            access.query(Filter(kinds = listOf(DeletionRequestEvent.KIND), tags = mapOf("e" to chunk))).forEach { add(it) }
         }
         events.forEach { (relay, event) -> add(event, listOfNotNull(relay)) }
     }
@@ -102,31 +94,35 @@ class NoteCache(
     /** Our own just-signed event, consumed the way the app consumes what it publishes. */
     fun addMine(event: Event): Note? {
         cache.justConsumeMyOwnEvent(event)
-        return if (event is AddressableEvent) cache.getAddressableNoteIfExists(event.address()) else cache.getNoteIfExists(event.id)
+        return noteOf(event)
     }
 
     /**
      * Loads what routing and mentions need to know about [pubKeys] — profile, NIP-65 and
-     * DM relay lists — from the store. With [fetchMissing], first drains the kind:10002 of
-     * anyone the store has none for (the routing input that matters most).
+     * DM relay lists — from the store. With [fetchMissing], first fetches the kind:10002
+     * of anyone the store has none for (the routing input that matters most), in one
+     * request to the bootstrap set plus [alsoAsk] (typically where their events were seen).
      */
     suspend fun addUsers(
         pubKeys: Collection<HexKey>,
         fetchMissing: Boolean = false,
         alsoAsk: Collection<NormalizedRelayUrl> = emptyList(),
     ) {
-        val wanted = pubKeys.filterTo(mutableSetOf()) { it.isValid() }
+        val wanted = pubKeys.filterTo(mutableSetOf()) { it.isValid() }.toList()
         if (wanted.isEmpty()) return
+        val kinds = listOf(MetadataEvent.KIND, AdvertisedRelayListEvent.KIND, DmRelayListEvent.KIND)
+        val known = access.query(Filter(authors = wanted, kinds = kinds))
+        known.forEach { add(it) }
         if (fetchMissing) {
-            // One drain for everyone missing, on the bootstrap set plus where their events were seen.
-            val missing = wanted.filter { ctx.relaysOf(it) == null }
+            val withList = known.mapNotNullTo(mutableSetOf()) { if (it is AdvertisedRelayListEvent) it.pubKey else null }
+            val missing = wanted.filter { it !in withList }
             if (missing.isNotEmpty()) {
                 val filter = Filter(authors = missing, kinds = listOf(AdvertisedRelayListEvent.KIND))
-                ctx.drain((ctx.bootstrapRelays() + alsoAsk).associateWith { listOf(filter) }, timeoutMs)
+                access.fetch(access.bootstrapRelays() + alsoAsk, filter, timeoutMs)
+                // From the store, not the response: it keeps only the newest list per author.
+                access.query(Filter(authors = missing, kinds = listOf(AdvertisedRelayListEvent.KIND))).forEach { add(it) }
             }
         }
-        val kinds = listOf(MetadataEvent.KIND, AdvertisedRelayListEvent.KIND, DmRelayListEvent.KIND)
-        ctx.store.query<Event>(Filter(authors = wanted.toList(), kinds = kinds)).forEach { add(it) }
     }
 
     fun user(pubKey: HexKey): User = cache.getOrCreateUser(pubKey)
@@ -145,7 +141,7 @@ class NoteCache(
     )
 
     /**
-     * Runs the app's `NewMessageTagger` over [text]: bare `npub`/`note`/`nevent`/`naddr`
+     * Runs the app's [NewMessageTagger] over [text]: bare `npub`/`note`/`nevent`/`naddr`
      * words (and `@npub`) become `nostr:` references with relay hints, and every cited
      * user — plus the author of every cited note — is collected for `p` tags. A first
      * pass finds who and what is cited so their relay lists and events can be loaded
@@ -156,58 +152,18 @@ class NoteCache(
         // Cited users must be reachable: their inboxes are where the app sends the mention.
         addUsers(probe.directMentionsUsers.map { it.pubkeyHex }, fetchMissing = true)
         val (addressable, plain) = probe.directMentionsNotes.partition { it is AddressableNote }
-        if (plain.isNotEmpty()) ctx.store.query<Event>(Filter(ids = plain.map { it.idHex })).forEach { add(it) }
+        if (plain.isNotEmpty()) access.query(Filter(ids = plain.map { it.idHex })).forEach { add(it) }
         addressable.filterIsInstance<AddressableNote>().forEach { note ->
             val filter = Filter(kinds = listOf(note.address.kind), authors = listOf(note.address.pubKeyHex), tags = mapOf("d" to listOf(note.address.dTag)))
-            ctx.store.query<Event>(filter).forEach { add(it) }
+            access.query(filter).forEach { add(it) }
         }
         val tagger = NewMessageTagger(message = text, dao = cache).also { it.run() }
         return Tagged(tagger.message, tagger.pTagsWithHints(cache.relayHints).orEmpty())
     }
 
-    /**
-     * The app's routing over this cache and the account's relay lists. Reads (and decrypts)
-     * our own lists once up front: the planner's inputs are plain sets.
-     */
-    suspend fun planner(): BroadcastRelayPlanner {
-        val me = ctx.identity.pubKeyHex
-        addUsers(listOf(me))
-        // The planner recognises our own events by finding our User in the cache (as the app
-        // always does); create it even when the store holds nothing of ours yet.
-        user(me)
-        val nip65Outbox = ctx.outboxRelays()
-        val nip65Inbox = ctx.nip65ReadRelays()
-        // Both lists are NIP-44 encrypted to ourselves; a list we cannot decrypt routes nowhere.
-        val privateOutbox =
-            orNull { (ctx.latestReplaceable(me, PrivateOutboxRelayListEvent.KIND) as? PrivateOutboxRelayListEvent)?.relays(ctx.signer) }.orEmpty().toSet()
-        val broadcast =
-            orNull { (ctx.latestReplaceable(me, BroadcastRelayListEvent.KIND) as? BroadcastRelayListEvent)?.decryptRelays(ctx.signer) }.orEmpty().toSet()
-        val everywhere = ctx.bootstrapRelays() + ctx.indexRelays()
+    private fun noteOf(event: Event): Note? = if (event is AddressableEvent) cache.getAddressableNoteIfExists(event.address()) else cache.getNoteIfExists(event.id)
 
-        return BroadcastRelayPlanner(
-            cache,
-            object : BroadcastRelaySource {
-                override fun userProfile() = user(me)
-
-                override fun notificationRelays() = nip65Inbox
-
-                override fun broadcastRelays() = broadcast
-
-                override fun outboxRelays() = nip65Outbox + privateOutbox + broadcast
-
-                override fun personalOutboxRelays() = nip65Outbox + privateOutbox
-
-                override fun everywhereRelays() = everywhere
-            },
-        )
+    private companion object {
+        const val DELETION_CHUNK = 500
     }
-
-    private suspend fun <T> orNull(block: suspend () -> T?): T? =
-        try {
-            block()
-        } catch (e: CancellationException) {
-            throw e
-        } catch (e: Exception) {
-            null
-        }
 }

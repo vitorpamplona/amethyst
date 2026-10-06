@@ -24,6 +24,7 @@ import com.vitorpamplona.amethyst.cli.Args
 import com.vitorpamplona.amethyst.cli.Context
 import com.vitorpamplona.amethyst.cli.DataDir
 import com.vitorpamplona.amethyst.cli.Output
+import com.vitorpamplona.amethyst.commons.relayClient.oneshot.ProfileLoader
 import com.vitorpamplona.amethyst.commons.rendering.EventRendererRegistry
 import com.vitorpamplona.amethyst.commons.rendering.json.JsonEventFormatter
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
@@ -134,7 +135,7 @@ object FeedCommand {
                     .toList()
 
             // Cache-only profiles: a feed stays one relay round-trip.
-            val renderCtx = NoteSupport.renderContext(ctx, events.map { it.pubKey }, fetchMissing = false, timeoutMs = timeoutSecs * 1000)
+            val renderCtx = ProfileLoader.renderContext(NoteSupport.access(ctx), events.map { it.pubKey }, fetchMissing = false, timeoutMs = timeoutSecs * 1000)
             val notes =
                 events.map { ev ->
                     val rendered = EventRendererRegistry.render(ev, renderCtx)

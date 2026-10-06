@@ -25,6 +25,9 @@ import com.vitorpamplona.amethyst.cli.Context
 import com.vitorpamplona.amethyst.cli.DataDir
 import com.vitorpamplona.amethyst.cli.Output
 import com.vitorpamplona.amethyst.commons.actions.DeletionActions
+import com.vitorpamplona.amethyst.commons.relayClient.oneshot.EventLocator
+import com.vitorpamplona.amethyst.commons.relayClient.oneshot.EventRef
+import com.vitorpamplona.amethyst.commons.relayClient.oneshot.OneShotNoteCache
 import com.vitorpamplona.quartz.nip01Core.tags.people.taggedUserIds
 
 /**
@@ -48,14 +51,15 @@ object DeleteCommand {
         val refresh = args.bool("refresh")
         val timeoutMs = args.timeoutMs(8)
         args.rejectUnknown()
-        val parsed = refs.map(NoteSupport::parseRef)
+        val parsed = refs.map(EventRef::parse)
 
         Context.open(dataDir).use { ctx ->
             if (!ctx.signer.isWriteable()) return Output.error("read_only", "this account can't sign (npub-only login)")
             ctx.prepare()
+            val access = NoteSupport.access(ctx)
             val located =
                 parsed.map { ref ->
-                    NoteSupport.locate(ctx, ref, refresh, timeoutMs)
+                    EventLocator.locate(access, ref, refresh, timeoutMs)
                         ?: return Output.error("not_found", "event not found: ${ref.input}")
                 }
             located.firstOrNull { it.event.pubKey != ctx.identity.pubKeyHex }?.let {
@@ -67,10 +71,10 @@ object DeleteCommand {
             // Account.delete's routing (our outbox + where each target was seen) plus where each
             // target was routed when it was published: our own events are cache hits, so "where it
             // was seen" is usually unknown, and a reply also went to the inboxes it notified.
-            val notes = NoteCache(ctx, timeoutMs)
+            val notes = OneShotNoteCache(access, timeoutMs)
             notes.addUsers(located.flatMap { it.event.taggedUserIds() }, fetchMissing = true, alsoAsk = located.flatMap { it.seenOn })
             val targetNotes = located.mapNotNull { notes.add(it.event, it.seenOn) }
-            val planner = notes.planner()
+            val planner = NoteSupport.planner(ctx, notes)
             val relays = planner.computeDeletionRelays(targetNotes) + targetNotes.flatMap { planner.computeRelayListToBroadcast(it) } + extraRelays
 
             // Every chunk is published before deciding the outcome: an early return after chunk 1

@@ -84,8 +84,8 @@ Status legend: ✅ shipped · 📦 logic lives in `commons/`, needs a command ·
 | NIP-47 Wallet Connect | 🆕 | |
 | NIP-46 bunker signer | ✅ | `BunkerCommand` + `NostrConnect` + `LoginCommand` — host (`amy bunker[ connect]`) and client (`amy login bunker://` / `--nostrconnect`) sides, `--perms`/`--interactive` gating, `auth_url` challenges. |
 | Profile view (`amy profile show NPUB`) + edit | ✅ | `ProfileCommands`. Cache-first; `--refresh` forces a relay drain. |
-| Thread view (`amy notes thread EVENT`) | ✅ | `ThreadCommand` runs the app's thread code over a per-run `EventCache` (`NoteCache`): the thread screen's relay filters, `ThreadAssembler`, `ThreadFeedFilter.thread` ordering, `ThreadLevelCalculator` depths. |
-| Notifications feed (`amy notifications`) | ✅ | `NotificationsCommand` → `commons` `NotificationKinds` (filter + "is it for me") + `NotificationItem.classify` (extracted from Desktop). DMs stay in `amy dm list`. |
+| Thread view (`amy notes thread EVENT`) | ✅ | `ThreadCommand` → commons `relayClient/oneshot/ThreadLoader`, which runs the app's thread code over a per-run `EventCache` (`OneShotNoteCache`): the thread screen's relay filters, `ThreadAssembler`, `ThreadFeedFilter.thread` ordering, `ThreadLevelCalculator` depths. |
+| Notifications feed (`amy notifications`) | ✅ | `NotificationsCommand` → commons `relayClient/oneshot/NotificationsLoader` over `NotificationKinds` (filter + "is it for me") + `NotificationItem.classify` (extracted from Desktop). DMs stay in `amy dm list`. |
 | Search (NIP-50) | ✅ | `SearchCommand` — `search user` (kind:0) + `search note` (`--kind`, `--kinds` alias) over the kind:10007 search-relay list; default limit 50. |
 | Namecoin NIP-05 resolve (`amy namecoin resolve .bit\|d/\|id/`) | ✅ | `NamecoinCommand` — reuses Quartz `NamecoinNameResolver` + `ElectrumXClient` + the default ElectrumX server set the Android/Desktop apps ship with. Stateless. On-chain `name_history` + Core RPC backend pending separate PRs. |
 

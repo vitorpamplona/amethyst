@@ -24,27 +24,23 @@ import com.vitorpamplona.amethyst.cli.Args
 import com.vitorpamplona.amethyst.cli.Context
 import com.vitorpamplona.amethyst.cli.DataDir
 import com.vitorpamplona.amethyst.cli.Output
-import com.vitorpamplona.amethyst.commons.moderation.notifications.NotificationItem
-import com.vitorpamplona.amethyst.commons.moderation.notifications.NotificationKinds
 import com.vitorpamplona.amethyst.commons.moderation.notifications.effectiveAuthorPubKey
+import com.vitorpamplona.amethyst.commons.relayClient.oneshot.NotificationsLoader
+import com.vitorpamplona.amethyst.commons.relayClient.oneshot.ProfileLoader
 import com.vitorpamplona.amethyst.commons.rendering.RenderSupport
 import com.vitorpamplona.amethyst.commons.rendering.json.JsonEventFormatter
-import com.vitorpamplona.quartz.nip01Core.core.Event
-import com.vitorpamplona.quartz.nip01Core.core.HexKey
-import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 
 /**
  * `amy notifications [--type reply,mention,reaction,repost,zap] [--limit N]
  * [--since TS] [--until TS] [--timeout SECS]` — what other people did that
  * involves you: replies, mentions, reactions and reposts of your notes, zaps.
  *
- * The subscription filter and the "is this really for me" rule are the shared
- * [NotificationKinds] the Desktop inbox uses; each row is typed by the shared
- * [NotificationItem.classify] and rendered by the shared renderer. DMs are left to
- * `amy dm list`, which can decrypt them.
+ * Loaded by commons' [NotificationsLoader] (the Desktop inbox's subscription filter,
+ * its "is this really for me" rule and the shared classifier) and rendered by the
+ * shared renderer. DMs are left to `amy dm list`, which can decrypt them.
  */
 object NotificationsCommand {
-    private val TYPES = setOf("mention", "reply", "reaction", "repost", "zap")
+    private val TYPES = NotificationsLoader.TYPES
 
     suspend fun run(
         dataDir: DataDir,
@@ -68,28 +64,12 @@ object NotificationsCommand {
         Context.open(dataDir).use { ctx ->
             ctx.prepare()
             val me = ctx.identity.pubKeyHex
-
-            val base = NotificationKinds.subscriptionFilter(me, limit = (limit * 2).coerceAtMost(500), since = since)
-            val filter = base.copy(kinds = NotificationKinds.PUBLIC_SUBSCRIPTION_KINDS, until = until)
+            val access = NoteSupport.access(ctx)
             val relays = ctx.nip65ReadRelays() + ctx.outboxRelays()
 
-            val events =
-                (ctx.store.query<Event>(filter) + ctx.drain(relays.associateWith { listOf(filter) }, timeoutMs).map { it.second })
-                    .distinctBy { it.id }
-
-            val authoredByMe = targetsAuthoredBy(ctx, me, events, timeoutMs)
-            val items =
-                events
-                    .asSequence()
-                    .filter { NotificationKinds.tagsAnEventForUser(it, me) { id -> id in authoredByMe } }
-                    .mapNotNull(NotificationItem::classify)
-                    .filter { it.type in types }
-                    .sortedByDescending { it.timestamp }
-                    .take(limit)
-                    .toList()
-
+            val items = NotificationsLoader.load(access, me, relays, ctx.outboxRelays(), limit, since, until, types, timeoutMs)
             val renderCtx =
-                NoteSupport.renderContext(ctx, items.map { it.effectiveAuthorPubKey } + items.map { it.event.pubKey }, fetchMissing = true, timeoutMs = timeoutMs)
+                ProfileLoader.renderContext(access, items.map { it.effectiveAuthorPubKey } + items.map { it.event.pubKey }, fetchMissing = true, timeoutMs = timeoutMs)
 
             Output.emit(
                 mapOf(
@@ -107,33 +87,5 @@ object NotificationsCommand {
             )
             return 0
         }
-    }
-
-    /**
-     * The ids, among the targets of the reactions and reposts in [events], that
-     * [me] authored. A reaction to someone else's note that merely p-tags us is not a
-     * notification. Targets missing from the store are fetched by id from our own
-     * outbox (where our notes live) in a single drain.
-     */
-    private suspend fun targetsAuthoredBy(
-        ctx: Context,
-        me: HexKey,
-        events: List<Event>,
-        timeoutMs: Long,
-    ): Set<HexKey> {
-        val targets = events.mapNotNullTo(mutableSetOf()) { NotificationKinds.interactionTargetId(it) }
-        if (targets.isEmpty()) return emptySet()
-
-        val known =
-            ctx.store
-                .query<Event>(Filter(ids = targets.toList()))
-                .associateBy { it.id }
-                .toMutableMap()
-        val missing = targets - known.keys
-        if (missing.isNotEmpty()) {
-            val filter = Filter(ids = missing.toList(), authors = listOf(me))
-            ctx.drain(ctx.outboxRelays().associateWith { listOf(filter) }, timeoutMs).forEach { (_, ev) -> known[ev.id] = ev }
-        }
-        return known.values.filter { it.pubKey == me }.mapTo(mutableSetOf()) { it.id }
     }
 }
