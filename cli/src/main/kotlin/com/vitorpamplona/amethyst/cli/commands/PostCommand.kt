@@ -24,6 +24,7 @@ import com.vitorpamplona.amethyst.cli.Args
 import com.vitorpamplona.amethyst.cli.Context
 import com.vitorpamplona.amethyst.cli.DataDir
 import com.vitorpamplona.amethyst.cli.Output
+import com.vitorpamplona.amethyst.commons.actions.contentTags
 import com.vitorpamplona.quartz.nip10Notes.TextNoteEvent
 import com.vitorpamplona.quartz.nip13Pow.miner.PoWMiner
 import com.vitorpamplona.quartz.nip13Pow.pow
@@ -39,9 +40,10 @@ import kotlin.coroutines.cancellation.CancellationException
  * invocation (the CLI process IS the job); `--pow-timeout` aborts with exit
  * 124 and publishes nothing.
  *
- * Threading is intentionally out of scope here — `amy post` only handles new
- * top-level notes. Replies/quotes need richer event-hint plumbing and will get
- * their own verb when needed.
+ * The text is tagged the way the Android composer tags it (`p` for cited
+ * profiles, `q` for cited events, `t` for #hashtags, `r` for links — see
+ * `contentTags`). Replies and quotes are their own verbs: `notes reply` /
+ * `notes quote`.
  */
 object PostCommand {
     private const val MAX_DIFFICULTY = 64
@@ -78,7 +80,7 @@ object PostCommand {
                 return Output.error("no_relays", "no outbox relays configured; pass --relay or run `amy relay add`")
             }
 
-            val template = TextNoteEvent.build(text)
+            val template = TextNoteEvent.build(text) { contentTags(text) }
 
             var powMillis: Long? = null
             val readyToSign =

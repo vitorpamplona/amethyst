@@ -34,6 +34,7 @@ import com.vitorpamplona.amethyst.cli.commands.CyberspaceCommands
 import com.vitorpamplona.amethyst.cli.commands.DebitCommands
 import com.vitorpamplona.amethyst.cli.commands.DecodeCommand
 import com.vitorpamplona.amethyst.cli.commands.DecryptCommand
+import com.vitorpamplona.amethyst.cli.commands.DeleteCommand
 import com.vitorpamplona.amethyst.cli.commands.DmCommands
 import com.vitorpamplona.amethyst.cli.commands.EncodeCommand
 import com.vitorpamplona.amethyst.cli.commands.EncryptCommand
@@ -60,6 +61,7 @@ import com.vitorpamplona.amethyst.cli.commands.NamecoinCommand
 import com.vitorpamplona.amethyst.cli.commands.NappletCommands
 import com.vitorpamplona.amethyst.cli.commands.NipCommand
 import com.vitorpamplona.amethyst.cli.commands.NotesCommands
+import com.vitorpamplona.amethyst.cli.commands.NotificationsCommand
 import com.vitorpamplona.amethyst.cli.commands.NsiteCommands
 import com.vitorpamplona.amethyst.cli.commands.OfferCommands
 import com.vitorpamplona.amethyst.cli.commands.OutboxCommand
@@ -299,6 +301,8 @@ private suspend fun dispatch(argv: Array<String>): Int {
         "geochat" -> GeochatCommands.dispatch(dataDir, tail)
         "profile" -> ProfileCommands.dispatch(dataDir, tail)
         "notes" -> NotesCommands.dispatch(dataDir, tail)
+        "delete" -> DeleteCommand.run(dataDir, tail)
+        "notifications" -> NotificationsCommand.run(dataDir, tail)
         "pow" -> PowCommands.dispatch(dataDir, tail)
         "nsite" -> NsiteCommands.dispatch(dataDir, tail)
         "napplet" -> NappletCommands.dispatch(dataDir, tail)
@@ -360,7 +364,7 @@ private fun printVerbList() {
         |  identity:    init create login logoff whoami use status
         |  primitives:  decode encode verify key filter nip kind pow namecoin
         |  events:      event publish fetch subscribe count sync encrypt decrypt gift
-        |  social:      notes profile follow unfollow search zap dm outbox
+        |  social:      notes delete notifications profile follow unfollow search zap dm outbox
         |  groups:      marmot relaygroup concord cordn geochat
         |  relays:      relay admin serve store
         |  trust:       graperank fof
@@ -588,16 +592,27 @@ private fun printUsage() {
         |               [--clink-offer NOFFER]
         |               [--timeout SECS]
         |
-        |Notes (NIP-10 kind:1):
+        |Notes (NIP-10 kind:1) and interactions (EVENT = hex | note1 | nevent1 | naddr1):
         |  notes post TEXT [--relay URL]               publish a kind:1 short text note
         |             [--pow BITS [--pow-timeout SECS]] mine a NIP-13 proof of work first
         |                                              (exit 124 on timeout, nothing published)
         |                                              (--relay accepts comma-separated extras)
         |  notes feed [--author USER]                  fetch kind:1 notes
-        |             [--following]                    (default: own; --author: one user;
-        |             [--limit N]                       --following: every contact-list pubkey)
-        |             [--since TS] [--until TS]
+        |             [--following | --hashtag TAG]    (default: own; --author: one user;
+        |             [--limit N]                       --following: every contact-list pubkey;
+        |             [--since TS] [--until TS]         --hashtag: anyone's notes tagged TAG)
         |             [--timeout SECS]
+        |  notes show EVENT [--raw] [--refresh]        render one event of any kind
+        |  notes thread EVENT [--limit N]              the conversation EVENT is in, depth-first
+        |  notes reply EVENT TEXT                      NIP-10 reply (kind:1) / NIP-22 comment (others)
+        |  notes quote EVENT [TEXT]                    NIP-18 quote post
+        |  notes react EVENT [--content +|-|EMOJI]     NIP-25 reaction (default +)
+        |  notes repost EVENT                          NIP-18 repost (kind:6 / kind:16)
+        |  delete EVENT… [--relay URL]                 NIP-09 deletion of your own events
+        |                                              (also `notes delete`)
+        |  notifications [--type reply,mention,…]     replies, mentions, reactions, reposts and zaps
+        |                [--limit N] [--since TS]       aimed at you (types: mention reply reaction
+        |                [--until TS]                   repost zap; DMs are `dm list`)
         |
         |Raw events (build / sign / broadcast):
         |  event --kind N [--content TEXT]             build + sign an arbitrary event with the active

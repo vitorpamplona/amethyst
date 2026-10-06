@@ -52,12 +52,14 @@ Status legend: ✅ shipped · 📦 logic lives in `commons/`, needs a command ·
 | `await` polling (KP / group / member / admin / message / rename / epoch) | ✅ | `AwaitCommands` |
 | NIP-01 note publish (`amy notes post TEXT`) | ✅ | `PostCommand` — outbox via `RelayCommands` configured set. |
 | NIP-13 proof of work (`amy notes post --pow N`, `amy pow check/mine/bench`) | ✅ | `PostCommand` + `PowCommands` — mines pre-signature via quartz `PoWMiner`; `pow mine --pubkey` covers delegated PoW; `pow check` applies the commitment cap. |
-| NIP-01 feed read (`amy notes feed [--following \| --author NPUB]`) | ✅ | `FeedCommand`. Hashtag / community feeds still pending. |
+| NIP-01 feed read (`amy notes feed [--following \| --author NPUB \| --hashtag TAG]`) | ✅ | `FeedCommand`; rows carry the shared renderer's fields. Community feeds still pending. |
+| Event view (`amy notes show EVENT`) | ✅ | `NoteShowCommand` over the shared `commons/rendering/` `EventRendererRegistry` + `JsonEventFormatter` (any kind; specialised 0/1/3/5/6/7/16/1111/9735/10002/10050/30023). |
+| NIP-10 / NIP-22 replies (`amy notes reply EVENT TEXT`) | ✅ | `NoteActionCommands` → `commons` `ReplyActions.reply` (kind:1 → NIP-10, anything else → NIP-22 kind:1111). Routed to outbox + seen-on relays + the author's inbox. |
 | NIP-02 follow list add / remove / list | ✅ | `FollowCommand` — `amy follow USER` / `amy unfollow USER` (fetches the freshest kind:3 first). |
-| NIP-09 event deletion | 🆕 | Builder exists in quartz. |
+| NIP-09 event deletion (`amy delete EVENT…`) | ✅ | `DeleteCommand` → `commons` `DeletionActions` (own events only, 200 targets per kind:5). |
 | NIP-17 DMs send / list / await | ✅ | `DmCommands` — reuses Quartz `NIP17Factory` + `RecipientRelayFetcher`; filter extracted to `commons/relayClient/nip17Dm/`. Plan: [`cli/plans/2026-04-23-nip17-dm.md`](./plans/2026-04-23-nip17-dm.md). |
-| NIP-18 reposts / quotes | 🆕 | |
-| NIP-25 reactions | ✅ in groups · 🆕 elsewhere | `marmot message react` covers MLS group reactions; outer-event reactions still pending. |
+| NIP-18 reposts / quotes (`amy notes repost` / `notes quote`) | ✅ | `commons` `RepostAction` (kind:6 / 16) + `QuoteActions` (kind:1 + `q` tag). |
+| NIP-25 reactions | ✅ | `amy notes react EVENT` via `commons` `ReactionAction`; `marmot message react` covers MLS group reactions. |
 | NIP-29 relay groups (`amy relaygroup`) | ✅ | `RelayGroupCommands` — list/browse/info/create/join/leave/message/edit/invite/put-user/remove-user against a host relay; kind:10009 joined-list kept in sync. |
 | Buzz workspaces (`amy buzz`) | ✅ | `BuzzCommands` — post/read the kind:40002 stream timeline, `attest` (offline NIP-OA), `console` (decrypt+aggregate kind:44200 turn metrics via the shared `AgentFleetAggregator`), `personas` (kind:30175). Join/leave reuse `amy relaygroup` (Buzz workspaces are NIP-29 groups). |
 | Buzz agent jobs (`amy buzz job` / `agent serve`) | ✅ | `BuzzJobCommands` (request/list/show/cancel, kinds 43001-43006) + `BuzzAgentCommands` (`agent serve` responder loop: gate on `--accept-from`, run `--exec`, report accept/progress/result/error). Correlation + state via the shared `BuzzJobAggregator` in `commons`. Schema provisional (43001-43006 reserved upstream). See `cli/plans/2026-07-25-buzz-agent-support-channel.md`. |
@@ -82,8 +84,8 @@ Status legend: ✅ shipped · 📦 logic lives in `commons/`, needs a command ·
 | NIP-47 Wallet Connect | 🆕 | |
 | NIP-46 bunker signer | ✅ | `BunkerCommand` + `NostrConnect` + `LoginCommand` — host (`amy bunker[ connect]`) and client (`amy login bunker://` / `--nostrconnect`) sides, `--perms`/`--interactive` gating, `auth_url` challenges. |
 | Profile view (`amy profile show NPUB`) + edit | ✅ | `ProfileCommands`. Cache-first; `--refresh` forces a relay drain. |
-| Thread view (`amy thread show EVENT_ID`) | 🆕 | No `thread` verb yet — needs the event-renderer read path (Order of operations §1/§3). |
-| Notifications feed | 🆕 | |
+| Thread view (`amy notes thread EVENT`) | ✅ | `ThreadCommand` → `commons` `EventThreadTree` (cache-free NIP-10/NIP-22 layout) + the renderer. |
+| Notifications feed (`amy notifications`) | ✅ | `NotificationsCommand` → `commons` `NotificationKinds` (filter + "is it for me") + `NotificationItem.classify` (extracted from Desktop). DMs stay in `amy dm list`. |
 | Search (NIP-50) | ✅ | `SearchCommand` — `search user` (kind:0) + `search note` (`--kind`, `--kinds` alias) over the kind:10007 search-relay list; default limit 50. |
 | Namecoin NIP-05 resolve (`amy namecoin resolve .bit\|d/\|id/`) | ✅ | `NamecoinCommand` — reuses Quartz `NamecoinNameResolver` + `ElectrumXClient` + the default ElectrumX server set the Android/Desktop apps ship with. Stateless. On-chain `name_history` + Core RPC backend pending separate PRs. |
 
@@ -159,16 +161,15 @@ Proposed sequencing. Each step is one PR. Each step should extract
 at least one file from `amethyst/` into `commons/`; if it doesn't
 move anything, re-audit — you're probably duplicating logic.
 
-1. **Event rendering core** in `commons/commonMain/.../rendering/`
-   with renderers for kinds 0 / 1 / 3 / 6 / 7 / 10002 / 10050.
-   Unblocks the remaining 🆕 read-path rows (thread view, notifications).
-   Design: `commons/plans/2026-04-21-event-renderer.md`.
-2. **`amy notes post` / `amy notes show` / `amy notes react`** —
-   smallest end-to-end write+read loop outside Marmot. Post + feed
-   ✅ shipped; `notes show` and outer-event `react` still pending.
-3. **`amy notes feed home|profile|hashtag|thread`** reading through the
-   renderer. `--following` and `--author NPUB` ✅; hashtag/thread
-   variants still pending.
+1. **Event rendering core** in `commons/commonMain/.../rendering/` — ✅
+   shipped with renderers for kinds 0 / 1 / 3 / 5 / 6 / 7 / 16 / 1111 /
+   9735 / 10002 / 10050 / 30023 and the JSON formatter amy emits. The
+   Compose formatter and the Android/Desktop switch-over are the plan's
+   remaining steps. Design: `commons/plans/2026-04-21-event-renderer.md`.
+2. **`amy notes post|show|reply|quote|react|repost|thread`, `amy delete`,
+   `amy notifications`** — ✅ shipped: the core social loop outside Marmot.
+3. **`amy notes feed`** — `--following`, `--author NPUB`, `--hashtag TAG` ✅;
+   community feeds still pending.
 4. **`amy follow|unfollow`** (NIP-02) — ✅ shipped. A standalone
    `follow list` view is still pending.
 5. **`amy dm send|list`** (NIP-17) — ✅ shipped. Reuses the gift-wrap
@@ -179,10 +180,10 @@ move anything, re-audit — you're probably duplicating logic.
 8. **Distribution** — Homebrew + Scoop + `.deb` in the same release
    pipeline as desktop. Plan: `cli/plans/2026-04-21-cli-distribution.md`.
 9. **Test suite** — largely in place, two layers:
-   - **Shell harnesses** under `cli/tests/` — ten suites: `blossom`
+   - **Shell harnesses** under `cli/tests/` — among them: `blossom`
      (live servers), `cache`, `clink`, `dm`, `git` (NIP-34 vs `amy serve`),
-     `marmot` (vs MDK), `nests` (manual audio-rooms matrix), `pow`,
-     `relaygroup`, `sync`, plus the shared `headless/` helpers. See
+     `marmot` (vs MDK), `nests` (manual audio-rooms matrix), `notes` (the
+     social loop vs `amy serve`), `pow`, `relaygroup`, `sync`, plus the shared `headless/` helpers. See
      `cli/tests/README.md`. Every relay-backed suite runs against the
      embedded `amy serve` relay (geode) — no external relay binary.
      None run in CI yet (the Marmot ones need Rust for MDK's `wn`).

@@ -181,6 +181,10 @@ cli/
         ├── RelayCommands.kt
         ├── ProfileCommands.kt
         ├── NotesCommands.kt + PostCommand.kt + FeedCommand.kt
+        │   NoteShowCommand.kt + ThreadCommand.kt + NoteActionCommands.kt
+        │   (reply/quote/react/repost) + DeleteCommand.kt + NotificationsCommand.kt
+        │   NoteSupport.kt     # EVENT ref parsing, cache-first lookup, interaction
+        │                      #   relay routing, profile hydration for rendering
         ├── DmCommands.kt
         ├── KeyPackageCommands.kt
         ├── GroupCommands.kt + GroupCreateCommand.kt + GroupReadCommands.kt
@@ -201,6 +205,12 @@ cli/
 
 Shared logic consumed by Amy lives in `commons/`:
 - `commons/account/` — account bootstrap
+- `commons/rendering/` — `EventRendererRegistry` + `json/JsonEventFormatter`:
+  render any event for output (`notes show/thread/feed`, `notifications`).
+  Don't hand-format event fields in a command; render and emit.
+- `commons/actions/` — `ReplyActions` / `QuoteActions` / `DeletionActions` /
+  `contentTags`, plus `model/nip25Reactions/ReactionAction` and
+  `model/nip18Reposts/RepostAction`: the same builders the apps use.
 - `commons/marmot/` — MLS / group state
 - `commons/cashu/` — `ops/CashuWalletOps` (jvmAndroid) + `CashuWalletReader`
   + `CashuKeysetCounterStore`; the NIP-60/61 wallet, shared with Android.

@@ -32,7 +32,6 @@ import com.vitorpamplona.quartz.nip19Bech32.entities.NEvent
 import com.vitorpamplona.quartz.nip19Bech32.entities.NNote
 import com.vitorpamplona.quartz.nip19Bech32.entities.NProfile
 import com.vitorpamplona.quartz.nip19Bech32.entities.NPub
-import com.vitorpamplona.quartz.nip65RelayList.AdvertisedRelayListEvent
 
 /**
  * `amy fetch [--kind …] [--author …] [--id …] [--tag …] [--since/--until TS]
@@ -211,7 +210,7 @@ object FetchCommand {
             }
 
             // Outbox model: hint relays + the author's advertised write relays.
-            val relays = (hintRelays + (author?.let { authorWriteRelays(ctx, it) } ?: emptySet())).ifEmpty { ctx.bootstrapRelays() }
+            val relays = (hintRelays + (author?.let { NoteSupport.authorOutboxRelays(ctx, it) } ?: emptySet())).ifEmpty { ctx.bootstrapRelays() }
 
             val received = ctx.drain(relays.associateWith { listOf(filter) }, timeoutMs)
             val events =
@@ -235,17 +234,5 @@ object FetchCommand {
             )
             return 0
         }
-    }
-
-    /** The author's NIP-65 write (outbox) relays, draining their kind:10002 on a cache miss. */
-    private suspend fun authorWriteRelays(
-        ctx: Context,
-        author: String,
-    ): Set<NormalizedRelayUrl> {
-        if (ctx.relaysOf(author) == null) {
-            val f = Filter(authors = listOf(author), kinds = listOf(AdvertisedRelayListEvent.KIND), limit = 1)
-            ctx.drain(ctx.bootstrapRelays().associateWith { listOf(f) })
-        }
-        return ctx.relaysOf(author)?.writeRelaysNorm()?.toSet() ?: emptySet()
     }
 }

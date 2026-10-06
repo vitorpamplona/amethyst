@@ -33,6 +33,8 @@ cli/tests/
 │   ├── tests-extras.sh             # tests 09, 10, 12, 13
 │   ├── tests-media.sh              # tests 20-29 (avatar, edits, deletions,
 │   │                               #   media v2, retention, disband)
+├── notes/                 # social loop (post/show/feed/reply/react/repost/quote/
+│   └── notes-headless.sh  #   thread/notifications/delete) vs embedded `amy serve`
 ├── nests/                 # Audio-rooms interop (Amethyst ↔ nostrnests.com)
 │   ├── nests-interop.sh            # 47-test manual harness
 │   └── README.md                   # operator brief + per-test matrix
@@ -75,6 +77,13 @@ Suite notes:
 - **`cache/cache-headless.sh`** proves the local store is the source of
   truth for reads: `profile show` served from cache vs `--refresh`, and
   `store stat` reporting the right histogram, vs the embedded `amy serve` relay.
+- **`notes/notes-headless.sh`** runs the core social loop between two
+  accounts in separate `$HOME`s against `amy serve`: `notes post` (with `t`
+  tagging) → `notes show` / `notes feed --hashtag` from the other account →
+  `reply` / `react` / `repost` / `quote` → `notes thread` laid out from the
+  leaf → the author's `notifications` (reply, reaction, repost, quote-as-mention,
+  `--type` narrowing) → `delete` refused for someone else's note, honoured by
+  the relay for your own.
 - **`relaygroup/relaygroup-headless.sh`** runs NIP-29 create/message/join/
   list/browse against an embedded relay (`amy serve`, which boots geode) —
   no external relay binary. geode doesn't sign 39000-39003, so browse/info
