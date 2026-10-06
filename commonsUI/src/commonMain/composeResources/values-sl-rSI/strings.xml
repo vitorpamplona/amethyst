@@ -3951,12 +3951,6 @@
         <item quantity="few">⚠ To zahteva izbris %1$d vaših dogodkov.</item>
         <item quantity="other">⚠ To zahteva izbris %1$d vaših dogodkov.</item>
     </plurals>
-    <plurals name="napplet_consent_effect_tags">
-        <item quantity="one">Vsebuje %1$d oznako. Tapnite »Pokaži dogodek«, da vidite, kaj bo podpisano.</item>
-        <item quantity="two">Vsebuje %1$d oznaki. Tapnite »Pokaži dogodek«, da vidite, kaj bo podpisano.</item>
-        <item quantity="few">Vsebuje %1$d oznake. Tapnite »Pokaži dogodek«, da vidite, kaj bo podpisano.</item>
-        <item quantity="other">Vsebuje %1$d oznak. Tapnite »Pokaži dogodek«, da vidite, kaj bo podpisano.</item>
-    </plurals>
     <string name="napplet_consent_get_pubkey">Ta nApplet želi prebrati vaš javni ključ.</string>
     <string name="napplet_consent_identity_read">Ta nApplet želi prebrati vaše podatke o profilu in računu.</string>
     <string name="napplet_consent_notify">Ta nApplet vam želi prikazati obvestila.</string>

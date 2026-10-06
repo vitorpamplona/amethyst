@@ -45,7 +45,6 @@ import com.vitorpamplona.amethyst.commons.relayClient.auth.RelayAuthTarget
 import com.vitorpamplona.amethyst.commons.relayClient.auth.relayAuthTarget
 import com.vitorpamplona.amethyst.commons.relayClient.auth.relayAuthTargets
 import com.vitorpamplona.amethyst.commons.resources.Res
-import com.vitorpamplona.amethyst.commons.resources.relay_auth_event_app_explainer
 import com.vitorpamplona.amethyst.commons.resources.relay_auth_event_app_title
 import com.vitorpamplona.amethyst.commons.resources.relay_auth_event_challenge
 import com.vitorpamplona.amethyst.commons.resources.relay_auth_event_explainer
@@ -92,40 +91,17 @@ fun RelayAuthCard(
     challenge: String?,
     relayIcon: @Composable (NormalizedRelayUrl) -> Unit,
 ) {
-    Column(
-        modifier =
-            Modifier
-                .fillMaxWidth()
-                .padding(8.dp),
-        verticalArrangement = Arrangement.spacedBy(6.dp),
+    // No relay named: a web app signing you in to itself. The prompt's headline already says so;
+    // the card only needs to say what kind of event this is, not explain it.
+    val appLogin = relays.isEmpty()
+    KeyEventCard(
+        title = stringRes(if (appLogin) Res.string.relay_auth_event_app_title else Res.string.relay_auth_event_title),
+        // A relay login hands that relay read access to what it only shows you; that consequence is
+        // worth one line. An app sign-in has none to warn about.
+        explainer = if (appLogin) null else stringRes(Res.string.relay_auth_event_explainer),
     ) {
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-        ) {
-            Icon(
-                symbol = MaterialSymbols.Key,
-                contentDescription = null,
-                modifier = Modifier.size(24.dp),
-                tint = MaterialTheme.colorScheme.primary,
-            )
-            Column {
-                val appLogin = relays.isEmpty()
-                Text(
-                    text = stringRes(if (appLogin) Res.string.relay_auth_event_app_title else Res.string.relay_auth_event_title),
-                    fontWeight = FontWeight.Bold,
-                    style = MaterialTheme.typography.bodyLarge,
-                )
-                Text(
-                    text = stringRes(if (appLogin) Res.string.relay_auth_event_app_explainer else Res.string.relay_auth_event_explainer),
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-            }
-        }
-
         relays.forEach { relay ->
-            Column(modifier = Modifier.padding(start = 32.dp)) {
+            Column {
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -152,7 +128,7 @@ fun RelayAuthCard(
                 if (relay.unusual) {
                     Text(
                         text = stringRes(Res.string.relay_auth_event_unusual_relay),
-                        style = MaterialTheme.typography.bodySmall,
+                        style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.error,
                     )
                 }
@@ -162,16 +138,65 @@ fun RelayAuthCard(
         challenge?.let {
             Text(
                 text = stringRes(Res.string.relay_auth_event_challenge, it),
-                style = MaterialTheme.typography.labelSmall,
+                style = MaterialTheme.typography.bodySmall,
                 fontFamily = FontFamily.Monospace,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
-                modifier = Modifier.padding(start = 32.dp),
             )
         }
     }
 }
+
+/**
+ * The shared shape of the "proof you are this account" events (relay login, app sign-in, NIP-98):
+ * a key icon on the first line, its title beside it, and everything else indented to the title so
+ * the column reads as one block instead of an icon floating beside a paragraph.
+ */
+@Composable
+fun KeyEventCard(
+    title: String,
+    explainer: String?,
+    content: @Composable () -> Unit,
+) {
+    Column(
+        modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
+        verticalArrangement = Arrangement.spacedBy(4.dp),
+    ) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(KeyIconGap),
+        ) {
+            Icon(
+                symbol = MaterialSymbols.Key,
+                contentDescription = null,
+                modifier = Modifier.size(KeyIconSize),
+                tint = MaterialTheme.colorScheme.primary,
+            )
+            Text(
+                text = title,
+                fontWeight = FontWeight.Bold,
+                style = MaterialTheme.typography.bodyLarge,
+            )
+        }
+        Column(
+            modifier = Modifier.padding(start = KeyIconSize + KeyIconGap),
+            verticalArrangement = Arrangement.spacedBy(6.dp),
+        ) {
+            explainer?.let {
+                Text(
+                    text = it,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+            content()
+        }
+    }
+}
+
+private val KeyIconSize = 20.dp
+private val KeyIconGap = 10.dp
 
 @Preview
 @Composable

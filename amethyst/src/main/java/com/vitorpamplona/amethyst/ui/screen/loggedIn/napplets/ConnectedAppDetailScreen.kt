@@ -78,6 +78,7 @@ import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.napplet.NappletCapability
 import com.vitorpamplona.amethyst.commons.napplet.NappletIdentity
+import com.vitorpamplona.amethyst.commons.napplet.NappletSignerKey
 import com.vitorpamplona.amethyst.commons.napplet.permissions.GrantState
 import com.vitorpamplona.amethyst.commons.napplet.permissions.NappletPermissionLedger
 import com.vitorpamplona.amethyst.commons.napplet.ui.PolicyCard
@@ -166,6 +167,16 @@ fun ConnectedAppDetailScreen(
     val capabilityLedger = Amethyst.instance.nappletPermissionLedger
     val signerLedger = remember { NostrSignerPermissionLedger(Amethyst.instance.signerPermissionStore) }
     val untitled = stringRes(Res.string.napplet_untitled)
+    // Where this app's signer decisions live: NIP-46 clients under their own coordinate, everything
+    // else under the per-account key the broker writes (NappletSignerKey).
+    val signerKey =
+        remember(coordinate, accountViewModel.account) {
+            if (Nip46PermissionAuthorizer.clientPubKeyOf(coordinate) != null) {
+                coordinate
+            } else {
+                NappletSignerKey.of(accountViewModel.account.signer.pubKey, coordinate)
+            }
+        }
 
     var state by remember { mutableStateOf<ConnectedAppDetailState?>(null) }
     var reload by remember { mutableIntStateOf(0) }
@@ -174,7 +185,7 @@ fun ConnectedAppDetailScreen(
     LaunchedEffect(coordinate, reload) {
         state =
             withContext(Dispatchers.Default) {
-                loadDetailState(coordinate, capabilityLedger, signerLedger, untitled)
+                loadDetailState(coordinate, signerKey, capabilityLedger, signerLedger, untitled)
             }
     }
 
@@ -266,7 +277,7 @@ fun ConnectedAppDetailScreen(
                     selected = current.signerPolicy,
                     onSelect = { newPolicy ->
                         mutate {
-                            signerLedger.setPolicy(coordinate, newPolicy)
+                            signerLedger.setPolicy(signerKey, newPolicy)
                             // Live session grants are consulted BEFORE the policy, so tightening an app
                             // to PARANOID would not have stopped it signing — the grant it already holds
                             // short-circuits the check the new policy would fail. Changing the trust
@@ -294,7 +305,7 @@ fun ConnectedAppDetailScreen(
                                 decision = decision,
                                 onRevoke = {
                                     mutate {
-                                        signerLedger.revokeOpDecision(coordinate, NostrSignerOp.fromKey(opKey) ?: return@mutate)
+                                        signerLedger.revokeOpDecision(signerKey, NostrSignerOp.fromKey(opKey) ?: return@mutate)
                                         // The persisted override is gone, but a live "allow for this session"
                                         // grant would keep authorizing this app until the broker dies.
                                         NappletBrokerService.revokeSessionGrants(coordinate)
@@ -357,7 +368,7 @@ fun ConnectedAppDetailScreen(
                             // listen set are cleared too, not just the permission ledger.
                             accountViewModel.account.nip46Signer.forgetClient(nip46Client)
                         } else {
-                            signerLedger.revokeAll(coordinate)
+                            signerLedger.revokeAll(signerKey)
                         }
                         capabilityLedger.revokeAll(identity)
                         // A forgotten website also loses its camera / microphone / location answers.
@@ -861,6 +872,7 @@ private fun NostrOpDecision.decisionLabel(): String =
 
 private suspend fun loadDetailState(
     coordinate: String,
+    signerKey: String,
     capabilityLedger: NappletPermissionLedger,
     signerLedger: NostrSignerPermissionLedger,
     untitled: String,
@@ -876,8 +888,8 @@ private suspend fun loadDetailState(
             ?.sortedBy { it.key.ordinal }
             ?.map { it.key to it.value }
             ?: emptyList()
-    val signerPolicy = signerLedger.store.loadPolicy(coordinate)
-    val opOverrides = signerLedger.store.allOpDecisions(coordinate)
+    val signerPolicy = signerLedger.store.loadPolicy(signerKey)
+    val opOverrides = signerLedger.store.allOpDecisions(signerKey)
 
     val (title, iconUrl) =
         if (author == "browser") {

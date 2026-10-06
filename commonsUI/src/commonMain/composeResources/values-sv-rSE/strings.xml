@@ -4451,10 +4451,6 @@
         <item quantity="one">⚠ Detta begär radering av %1$d av dina händelser.</item>
         <item quantity="other">⚠ Detta begär radering av %1$d av dina händelser.</item>
     </plurals>
-    <plurals name="napplet_consent_effect_tags">
-        <item quantity="one">Bär %1$d tagg. Tryck på “Visa händelse” för att se exakt vad som skulle signeras.</item>
-        <item quantity="other">Bär %1$d taggar. Tryck på “Visa händelse” för att se exakt vad som skulle signeras.</item>
-    </plurals>
     <string name="napplet_consent_get_pubkey">Det här nApplet vill läsa din offentliga nyckel.</string>
     <string name="napplet_consent_identity_read">Det här nApplet vill läsa din profil och kontodata.</string>
     <string name="napplet_consent_nip44_decrypt">Den här webbplatsen vill dekryptera ett meddelande från %1$s med din Nostr-nyckel.</string>

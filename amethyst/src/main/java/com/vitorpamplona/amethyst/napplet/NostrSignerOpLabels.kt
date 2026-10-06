@@ -35,7 +35,6 @@ import com.vitorpamplona.amethyst.commons.napplet.protocol.toNarrowSignerOp
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.napplet_consent_seal_unknown
 import com.vitorpamplona.amethyst.commons.resources.napplet_fallback_title
-import com.vitorpamplona.amethyst.commons.resources.napplet_op_app_login
 import com.vitorpamplona.amethyst.commons.resources.napplet_op_decrypt
 import com.vitorpamplona.amethyst.commons.resources.napplet_op_decrypt_from
 import com.vitorpamplona.amethyst.commons.resources.napplet_op_encrypt
@@ -129,8 +128,7 @@ suspend fun buildSignerConsentInfo(
         when {
             seal != null -> loadStringRes(Res.string.napplet_op_seal_message_to, counterpartyLabel(seal.recipient))
             isUnreadableSeal -> loadStringRes(Res.string.napplet_op_seal_message)
-            signKind != null && signTags != null && isAppLogin(signKind, signTags) -> loadStringRes(Res.string.napplet_op_app_login)
-            else -> (narrowOp ?: op).label(context)
+            else -> (signKind?.let { k -> signTags?.let { signRequestSummary(k, it) } }) ?: (narrowOp ?: op).label(context)
         }
     val preview =
         when {

@@ -4434,10 +4434,6 @@
         <item quantity="one">सावधान। यह आपके घटनाओं में से %1$d को मिटाने का अनुरोध करता है।</item>
         <item quantity="other">सावधान। यह आपके घटनाओं में से %1$d को मिटाने का अनुरोध करता है।</item>
     </plurals>
-    <plurals name="napplet_consent_effect_tags">
-        <item quantity="one">%1$d विषयसूचक धारी। घटना दिखाओ दबाएँ यह देखने के लिए कि वस्तुतः क्या हस्ताक्षरित होगा।</item>
-        <item quantity="other">%1$d विषयसूचक धारी। घटना दिखाओ दबाएँ यह देखने के लिए कि वस्तुतः क्या हस्ताक्षरित होगा।</item>
-    </plurals>
     <string name="napplet_consent_get_pubkey">यह नोस्टर संलग्नक्रमक आपकी ख्याप्यकुंचिका पढना चाहता है।</string>
     <string name="napplet_consent_identity_read">यह नोस्टर संलग्नक्रमक आपका परिचय तथा लेखा जानकारी पढना चाहता है।</string>
     <string name="napplet_consent_nip44_decrypt">यह स्थान आपके नोस्टर कुंचिका से %1$s को एक सन्देश का अरहस्यीकरण करना चाहता है।</string>

@@ -45,7 +45,6 @@ import com.vitorpamplona.amethyst.commons.resources.napplet_consent_diff_relays
 import com.vitorpamplona.amethyst.commons.resources.napplet_consent_diff_unfollow_one
 import com.vitorpamplona.amethyst.commons.resources.napplet_consent_diff_unmute_one
 import com.vitorpamplona.amethyst.commons.resources.napplet_consent_effect_deletes
-import com.vitorpamplona.amethyst.commons.resources.napplet_consent_effect_tags
 import com.vitorpamplona.amethyst.commons.resources.napplet_consent_get_pubkey
 import com.vitorpamplona.amethyst.commons.resources.napplet_consent_identity_read
 import com.vitorpamplona.amethyst.commons.resources.napplet_consent_nip44_decrypt
@@ -61,6 +60,7 @@ import com.vitorpamplona.amethyst.commons.resources.napplet_consent_resource
 import com.vitorpamplona.amethyst.commons.resources.napplet_consent_sign
 import com.vitorpamplona.amethyst.commons.resources.napplet_consent_storage
 import com.vitorpamplona.amethyst.commons.resources.napplet_consent_upload
+import com.vitorpamplona.amethyst.commons.resources.napplet_consent_wants_described
 import com.vitorpamplona.amethyst.commons.resources.napplet_fallback_title
 import com.vitorpamplona.amethyst.commons.ui.loadPluralStringRes
 import com.vitorpamplona.amethyst.commons.ui.loadStringRes
@@ -103,7 +103,9 @@ class NappletConsentSummary(
         return NappletConsentInfo(
             appletTitle = title,
             coordinate = identity.coordinate,
-            capabilityLabel = loadStringRes(capability.labelRes()),
+            // A signing request is described by what it does ("sign you in", "sign a POST request
+            // to …"); the capability behind it ("Relays") is plumbing and reads as wrong there.
+            capabilityLabel = if (request is NappletRequest.SignEvent || request is NappletRequest.Publish) "" else loadStringRes(capability.labelRes()),
             operationSummary = listOfNotNull(summaryFor(request).ifBlank { null }, consequence?.text).joinToString("\n\n"),
             allowAlways = capability.canGrantAlways,
             iconUrl = iconUrl,
@@ -202,14 +204,9 @@ class NappletConsentSummary(
             DeletionRequestEvent.KIND ->
                 pluralFor(Res.plurals.napplet_consent_effect_deletes, countTag(tags, "e") + countTag(tags, "a"))
                     ?.let { Consequence(it) }
-            // Any other kind: at least tell the user tags exist and can be inspected, so an empty
-            // content preview never reads as "there is nothing else here".
-            else ->
-                if (tags.isNotEmpty()) {
-                    pluralFor(Res.plurals.napplet_consent_effect_tags, tags.size)?.let { Consequence(it) }
-                } else {
-                    null
-                }
+            // Any other kind: nothing to add. "Carries N tags, check the JSON" asked users to read
+            // JSON; Show Event is still there for those who want it.
+            else -> null
         }
 
     /**
@@ -303,7 +300,10 @@ class NappletConsentSummary(
             }
             is NappletRequest.SignEvent -> {
                 val preview = request.content.take(160).trim()
-                if (preview.isEmpty()) {
+                val described = signRequestSummary(request.kind, request.tags)
+                if (described != null) {
+                    loadStringRes(Res.string.napplet_consent_wants_described, described)
+                } else if (preview.isEmpty()) {
                     loadStringRes(Res.string.napplet_consent_sign, request.kind)
                 } else {
                     loadStringRes(Res.string.napplet_consent_sign, request.kind) + "\n“$preview”"

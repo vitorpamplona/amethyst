@@ -525,7 +525,7 @@ class NappletBroker(
     private fun signerCoordinateFor(identity: NappletIdentity): String = signerCoordinateFor(identity.coordinate)
 
     /** [signerCoordinateFor] for a bare app coordinate — what the Connected Apps UI holds. */
-    private fun signerCoordinateFor(coordinate: String): String = "napplet:${signer.pubKey}:$coordinate"
+    private fun signerCoordinateFor(coordinate: String): String = NappletSignerKey.of(signer.pubKey, coordinate)
 
     /**
      * Namespaces an in-memory session grant to the applet that was actually prompted for. Mirrors

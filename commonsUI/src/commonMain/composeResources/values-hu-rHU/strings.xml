@@ -4434,10 +4434,6 @@
         <item quantity="one">⚠ Ez az Ön %1$d eseményének törlését kéri.</item>
         <item quantity="other">⚠ Ez az Ön %1$d eseményének törlését kéri.</item>
     </plurals>
-    <plurals name="napplet_consent_effect_tags">
-        <item quantity="one">%1$d címkét tartalmaz. Koppintson az „Esemény megjelenítése” elemre, hogy pontosan lássa, mi kerülne aláírásra.</item>
-        <item quantity="other">%1$d címkét tartalmaz. Koppintson az „Esemény megjelenítése” elemre, hogy pontosan lássa, mi kerülne aláírásra.</item>
-    </plurals>
     <string name="napplet_consent_get_pubkey">Ez a nKisalkalmazás olvasni szeretné az Ön nyilvános kulcsát.</string>
     <string name="napplet_consent_identity_read">Ez a nKisalkalmazás olvasni szeretné az Ön profil- és fiókadatait.</string>
     <string name="napplet_consent_nip44_decrypt">Ez az oldal az Ön Nostr-kulcsával vissza szeretne fejteni egy üzenetet, amit %1$s felhasználótol kapott.</string>

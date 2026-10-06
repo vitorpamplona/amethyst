@@ -1212,7 +1212,8 @@
     <string name="relay_auth_event_explainer">Not a post. It logs you in to this relay: whoever holds it can read what the relay only shows to you, like your private messages.</string>
     <string name="relay_auth_event_unusual_relay">This is not a plain relay address. Check it before signing.</string>
     <string name="relay_auth_event_app_title">Sign-in</string>
-    <string name="relay_auth_event_app_explainer">Not a post. It proves to the app asking that you are this account, so it can sign you in. It names no relay.</string>
+    <string name="http_auth_event_title">Web request sign-in</string>
+    <string name="http_auth_event_with_file">Bound to the file it sends.</string>
     <string name="relay_auth_event_challenge">Challenge: %1$s</string>
     <string name="relay_auth_session_forgotten_undo">%1$s will ask again the next time it needs you.</string>
     <string name="relay_auth_session_undo_blocked">Not restored. “Never log in” is on, so Amethyst won't log in to %1$s.</string>
@@ -4560,10 +4561,6 @@
         <item quantity="one">⚠ This requests deletion of %1$d of your events.</item>
         <item quantity="other">⚠ This requests deletion of %1$d of your events.</item>
     </plurals>
-    <plurals name="napplet_consent_effect_tags">
-        <item quantity="one">Carries %1$d tag. Tap “Show Event” to see exactly what would be signed.</item>
-        <item quantity="other">Carries %1$d tags. Tap “Show Event” to see exactly what would be signed.</item>
-    </plurals>
     <string name="napplet_consent_get_pubkey">This nApplet wants to read your public key.</string>
     <string name="napplet_consent_identity_read">This nApplet wants to read your profile and account data.</string>
     <string name="napplet_consent_nip44_decrypt">This site wants to decrypt a message from %1$s with your Nostr key.</string>
@@ -4588,6 +4585,10 @@
     <string name="napplet_op_encrypt">encrypt a message</string>
     <string name="napplet_op_relay_login">log in to relays as you</string>
     <string name="napplet_op_app_login">sign you in</string>
+    <string name="napplet_op_relay_login_to">log in to %1$s as you</string>
+    <string name="napplet_op_http_auth">sign a %1$s request to %2$s</string>
+    <string name="napplet_op_http_auth_unknown">sign a web request that names no address</string>
+    <string name="napplet_consent_wants_described">This site wants to %1$s.</string>
     <plurals name="napplet_consent_waiting_long">
         <item quantity="one">Asked %1$d minute ago. The app may have stopped waiting.</item>
         <item quantity="other">Asked %1$d minutes ago. The app may have stopped waiting.</item>

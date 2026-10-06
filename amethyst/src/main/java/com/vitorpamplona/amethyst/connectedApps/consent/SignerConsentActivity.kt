@@ -234,7 +234,7 @@ private fun SignerConsentDialog(
                     if (info.counterpartyName != null) {
                         Text(
                             stringRes(Res.string.nip46_signer_messages_with),
-                            style = MaterialTheme.typography.labelSmall,
+                            style = MaterialTheme.typography.labelLarge,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
                         ConnectedAccountRow(info.counterpartyName, info.counterpartyPicture, info.counterpartyPubKey)
@@ -408,7 +408,7 @@ private fun SignerConsentPreview(info: SignerConsentInfo) {
             if (previewNote != null && accountViewModel != null) {
                 UnsignedNotePreview(previewNote, accountViewModel, previewNav)
             } else if (info.contentPreview.isNotBlank()) {
-                Text("“${info.contentPreview}”", style = MaterialTheme.typography.bodySmall)
+                Text("“${info.contentPreview}”", style = MaterialTheme.typography.bodyMedium)
             }
             if (info.rawData.isNotBlank()) {
                 if (showRawData) {
@@ -417,7 +417,7 @@ private fun SignerConsentPreview(info: SignerConsentInfo) {
                         SelectionContainer {
                             Text(
                                 info.rawData,
-                                style = MaterialTheme.typography.labelSmall.copy(fontFamily = FontFamily.Monospace),
+                                style = MaterialTheme.typography.bodySmall.copy(fontFamily = FontFamily.Monospace),
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 softWrap = false,
                             )
@@ -434,7 +434,7 @@ private fun SignerConsentPreview(info: SignerConsentInfo) {
                         } else {
                             stringRes(Res.string.napplet_consent_show_event)
                         },
-                        style = MaterialTheme.typography.labelSmall,
+                        style = MaterialTheme.typography.labelLarge,
                     )
                 }
             }
@@ -501,7 +501,7 @@ private fun WaitingTooLongNote(requestedAtMillis: Long) {
     if (minutes >= 1) {
         Text(
             pluralStringRes(Res.plurals.napplet_consent_waiting_long, minutes, minutes),
-            style = MaterialTheme.typography.bodySmall,
+            style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.error,
             textAlign = TextAlign.Center,
         )
@@ -631,7 +631,7 @@ private fun BatchedConsentDialog(
                                     if (p.info.contentPreview.isNotBlank()) {
                                         Text(
                                             p.info.contentPreview,
-                                            style = MaterialTheme.typography.bodySmall,
+                                            style = MaterialTheme.typography.bodyMedium,
                                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                                             maxLines = 1,
                                         )

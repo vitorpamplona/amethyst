@@ -4451,10 +4451,6 @@
         <item quantity="one">⚠ Dies fordert die Löschung von %1$d deiner Ereignisse an.</item>
         <item quantity="other">⚠ Dies fordert die Löschung von %1$d deiner Ereignisse an.</item>
     </plurals>
-    <plurals name="napplet_consent_effect_tags">
-        <item quantity="one">Enthält %1$d Tag. Tippe auf “Ereignis anzeigen”, um genau zu sehen, was signiert würde.</item>
-        <item quantity="other">Enthält %1$d Tags. Tippe auf “Ereignis anzeigen”, um genau zu sehen, was signiert würde.</item>
-    </plurals>
     <string name="napplet_consent_get_pubkey">Dieses nApplet möchte Ihren öffentlichen Schlüssel lesen.</string>
     <string name="napplet_consent_identity_read">Dieses nApplet möchte Ihr Profil und Ihre Kontodaten lesen.</string>
     <string name="napplet_consent_nip44_decrypt">Diese Website möchte eine Nachricht von %1$s mit Ihrem Nostr-Schlüssel entschlüsseln.</string>

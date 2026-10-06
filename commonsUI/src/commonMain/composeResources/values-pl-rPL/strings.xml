@@ -4566,12 +4566,6 @@
         <item quantity="many">To żądanie dotyczy usunięcia %1$d wydarzeń.</item>
         <item quantity="other">To żądanie dotyczy usunięcia %1$d wydarzeń.</item>
     </plurals>
-    <plurals name="napplet_consent_effect_tags">
-        <item quantity="one">Zawiera %1$d tag. Naciśnij „Pokaż wydarzenie”, aby sprawdzić, co dokładnie zostanie podpisane.</item>
-        <item quantity="few">Zawiera %1$d tagów. Naciśnij „Pokaż wydarzenie”, aby sprawdzić, co dokładnie zostanie podpisane.</item>
-        <item quantity="many">Zawiera %1$d tagów. Naciśnij „Pokaż wydarzenie”, aby sprawdzić, co dokładnie zostanie podpisane.</item>
-        <item quantity="other">Zawiera %1$d tagi. Naciśnij „Pokaż wydarzenie”, aby sprawdzić, co dokładnie zostanie podpisane.</item>
-    </plurals>
     <string name="napplet_consent_get_pubkey">Ten nApplet chce odczytać Twój klucz publiczny.</string>
     <string name="napplet_consent_identity_read">Ten nApplet chce odczytać dane Twojego profilu i konta.</string>
     <string name="napplet_consent_nip44_decrypt">Ta strona chce odszyfrować wiadomość od %1$s za pomocą klucza Nostr.</string>

@@ -4583,12 +4583,6 @@
         <item quantity="many">⚠ Tímto se požaduje smazání %1$d vaší události.</item>
         <item quantity="other">⚠ Tímto se požaduje smazání %1$d vašich událostí.</item>
     </plurals>
-    <plurals name="napplet_consent_effect_tags">
-        <item quantity="one">Nese %1$d značku. Klepnutím na “Zobrazit událost” uvidíte přesně, co by bylo podepsáno.</item>
-        <item quantity="few">Nese %1$d značky. Klepnutím na “Zobrazit událost” uvidíte přesně, co by bylo podepsáno.</item>
-        <item quantity="many">Nese %1$d značky. Klepnutím na “Zobrazit událost” uvidíte přesně, co by bylo podepsáno.</item>
-        <item quantity="other">Nese %1$d značek. Klepnutím na “Zobrazit událost” uvidíte přesně, co by bylo podepsáno.</item>
-    </plurals>
     <string name="napplet_consent_get_pubkey">Tento nApplet chce číst váš veřejný klíč.</string>
     <string name="napplet_consent_identity_read">Tento nApplet chce číst váš profil a data účtu.</string>
     <string name="napplet_consent_nip44_decrypt">Tento web chce dešifrovat zprávu od %1$s vaším Nostr klíčem.</string>

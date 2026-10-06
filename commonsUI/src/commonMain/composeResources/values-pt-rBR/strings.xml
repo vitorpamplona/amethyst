@@ -4451,10 +4451,6 @@
         <item quantity="one">⚠ Isto solicita a exclusão de %1$d dos seus eventos.</item>
         <item quantity="other">⚠ Isto solicita a exclusão de %1$d dos seus eventos.</item>
     </plurals>
-    <plurals name="napplet_consent_effect_tags">
-        <item quantity="one">Carrega %1$d tag. Toque em “Mostrar evento” para ver exatamente o que seria assinado.</item>
-        <item quantity="other">Carrega %1$d tags. Toque em “Mostrar evento” para ver exatamente o que seria assinado.</item>
-    </plurals>
     <string name="napplet_consent_get_pubkey">Este nApplet quer ler sua chave pública.</string>
     <string name="napplet_consent_identity_read">Este nApplet quer ler seu perfil e dados da conta.</string>
     <string name="napplet_consent_nip44_decrypt">Este site quer descriptografar uma mensagem de %1$s com sua chave Nostr.</string>

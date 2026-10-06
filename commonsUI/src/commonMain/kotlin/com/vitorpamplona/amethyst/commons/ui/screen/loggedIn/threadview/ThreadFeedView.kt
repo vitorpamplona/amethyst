@@ -202,6 +202,7 @@ import com.vitorpamplona.amethyst.commons.ui.note.types.RenderGeocacheFoundLog
 import com.vitorpamplona.amethyst.commons.ui.note.types.RenderGitStatusEvent
 import com.vitorpamplona.amethyst.commons.ui.note.types.RenderGoal
 import com.vitorpamplona.amethyst.commons.ui.note.types.RenderHighlight
+import com.vitorpamplona.amethyst.commons.ui.note.types.RenderHttpAuth
 import com.vitorpamplona.amethyst.commons.ui.note.types.RenderInteractiveStory
 import com.vitorpamplona.amethyst.commons.ui.note.types.RenderLearningResource
 import com.vitorpamplona.amethyst.commons.ui.note.types.RenderLiveActivityChatMessage
@@ -390,6 +391,7 @@ import com.vitorpamplona.quartz.nip88Polls.poll.PollEvent
 import com.vitorpamplona.quartz.nip89AppHandlers.definition.AppDefinitionEvent
 import com.vitorpamplona.quartz.nip89AppHandlers.recommendation.AppRecommendationEvent
 import com.vitorpamplona.quartz.nip94FileMetadata.FileMetadataEvent
+import com.vitorpamplona.quartz.nip98HttpAuth.HTTPAuthorizationEvent
 import com.vitorpamplona.quartz.nip99Classifieds.ClassifiedsEvent
 import com.vitorpamplona.quartz.nipA0VoiceMessages.BaseVoiceEvent
 import com.vitorpamplona.quartz.nipA4PublicMessages.PublicMessageEvent
@@ -1123,6 +1125,8 @@ private fun FullBleedNoteCompose(
                     RenderRelayLeaveRequest(baseNote, accountViewModel, nav)
                 } else if (noteEvent is RelayAuthEvent) {
                     RenderRelayAuth(baseNote, accountViewModel, nav)
+                } else if (noteEvent is HTTPAuthorizationEvent) {
+                    RenderHttpAuth(baseNote)
                 } else if (noteEvent is TextNoteModificationEvent) {
                     RenderTextModificationEvent(
                         note = baseNote,

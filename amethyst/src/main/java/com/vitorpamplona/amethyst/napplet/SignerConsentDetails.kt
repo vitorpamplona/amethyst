@@ -38,6 +38,10 @@ import com.vitorpamplona.amethyst.commons.resources.consent_list_wipe
 import com.vitorpamplona.amethyst.commons.resources.consent_report_content
 import com.vitorpamplona.amethyst.commons.resources.consent_report_person
 import com.vitorpamplona.amethyst.commons.resources.consent_report_person_reason
+import com.vitorpamplona.amethyst.commons.resources.napplet_op_app_login
+import com.vitorpamplona.amethyst.commons.resources.napplet_op_http_auth
+import com.vitorpamplona.amethyst.commons.resources.napplet_op_http_auth_unknown
+import com.vitorpamplona.amethyst.commons.resources.napplet_op_relay_login_to
 import com.vitorpamplona.amethyst.commons.ui.loadPluralStringRes
 import com.vitorpamplona.amethyst.commons.ui.loadStringRes
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.relays.kindNameFor
@@ -52,6 +56,7 @@ import com.vitorpamplona.quartz.nip42RelayAuth.RelayAuthEvent
 import com.vitorpamplona.quartz.nip51Lists.muteList.MuteListEvent
 import com.vitorpamplona.quartz.nip56Reports.ReportEvent
 import com.vitorpamplona.quartz.nip59Giftwrap.seals.SealEvent
+import com.vitorpamplona.quartz.nip98HttpAuth.HTTPAuthorizationEvent
 
 /**
  * A kind-22242 that names no relay is a web app proving to its own server who you are (Brainstorm
@@ -220,3 +225,34 @@ suspend fun reportChange(
         }
     return ListChange(text, warning = true)
 }
+
+/**
+ * What signing this event does, as the rest of "<app> wants to …", for the kinds whose purpose is
+ * the decision and that otherwise read as a kind number: logins and NIP-98 web requests. Used by
+ * both the signer prompt and the capability prompt so the two never describe one request
+ * differently. Null for every other kind.
+ */
+suspend fun signRequestSummary(
+    kind: Int,
+    tags: Array<Array<String>>,
+): String? =
+    when (kind) {
+        RelayAuthEvent.KIND -> {
+            val relay = tags.firstOrNull { it.size > 1 && it[0] == "relay" && it[1].isNotBlank() }?.get(1)
+            if (relay == null) {
+                loadStringRes(Res.string.napplet_op_app_login)
+            } else {
+                loadStringRes(Res.string.napplet_op_relay_login_to, relay.removePrefix("wss://").removePrefix("ws://").trimEnd('/'))
+            }
+        }
+        HTTPAuthorizationEvent.KIND -> {
+            val url = tags.firstOrNull { it.size > 1 && it[0] == "u" }?.get(1)
+            val method = tags.firstOrNull { it.size > 1 && it[0] == "method" }?.get(1)?.uppercase()
+            if (url == null) {
+                loadStringRes(Res.string.napplet_op_http_auth_unknown)
+            } else {
+                loadStringRes(Res.string.napplet_op_http_auth, method ?: "?", url.removePrefix("https://").removePrefix("http://"))
+            }
+        }
+        else -> null
+    }
