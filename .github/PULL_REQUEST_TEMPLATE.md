@@ -57,9 +57,9 @@ appreciated when an assistant did the bulk of the diff. -->
 - [ ] Drafted with AI assistance, manually reviewed and tested
 - [ ] Written by hand
 
-If "Drafted with AI assistance" is ticked, also read
-[`CONTRIBUTING-WITH-AI.md`](CONTRIBUTING-WITH-AI.md) for the additional
-gates that apply to AI-authored PRs.
+If "Drafted with AI assistance" is ticked, a human must have reviewed the
+whole diff and tested the app by hand on a device before this PR was
+opened. See [`CONTRIBUTING-WITH-AI.md`](CONTRIBUTING-WITH-AI.md).
 
 ## License
 

@@ -83,10 +83,9 @@ affects the DMG build), say so explicitly. Honest "I couldn't test this on
 Windows" beats a silent guess.
 
 If you used an AI coding assistant for a substantial portion of the diff,
-also read [`CONTRIBUTING-WITH-AI.md`](CONTRIBUTING-WITH-AI.md) — it adds
-gates specific to AI-authored PRs (research before code, both-flavour
-build, performance footguns, automated tests, regression test plan,
-second-agent code review).
+also read [`CONTRIBUTING-WITH-AI.md`](CONTRIBUTING-WITH-AI.md). Its main
+rule: no PR may be opened until a human has reviewed the whole diff and
+tested the app by hand on a device. An agent must never open the PR itself.
 
 ## Reporting bugs and requesting features
 
