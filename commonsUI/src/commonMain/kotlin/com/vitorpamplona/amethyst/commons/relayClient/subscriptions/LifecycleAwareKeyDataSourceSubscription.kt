@@ -36,6 +36,7 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 private const val UNSUBSCRIBE_GRACE_MILLIS = 30_000L
 
@@ -136,7 +137,13 @@ private fun LifecycleAwareSubscription(
                         graceJob =
                             scope.launch {
                                 if (UNSUBSCRIBE_GRACE_MILLIS > 0) delay(UNSUBSCRIBE_GRACE_MILLIS)
-                                unsubscribe()
+                                // Back on Main, where ON_START runs: the two can no longer
+                                // interleave. If ON_START cancelled this job first, the hop
+                                // is skipped; if this runs first, ON_START's subscribe()
+                                // follows it and wins. Unsubscribing here off-thread let a
+                                // late unsubscribe land after a fresh subscribe and leave a
+                                // visible feed without its REQ.
+                                withContext(Dispatchers.Main) { unsubscribe() }
                             }
                     }
 

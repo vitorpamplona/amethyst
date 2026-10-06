@@ -50,11 +50,14 @@ import kotlinx.coroutines.launch
  *    receiver coroutine for the next frame;
  *  - one drain coroutine (on [Dispatchers.IO]) pulls a batch greedily (up to
  *    [maxBatch]), fans the batch's verifies across [Dispatchers.Default],
- *    then dispatches [onVerified]/[onInvalid] in submission order. Only the
- *    pure Schnorr verify runs on Default: [preVerified] and the callbacks are
- *    caller code (cache lookups and inserts, which can wait on locks), so they
- *    stay on the drain's IO thread, where a blocked thread cannot starve the
- *    core-sized Default pool (batching the fan-out
+ *    then dispatches [onVerified]/[onInvalid] in submission order. Nothing
+ *    but the pure Schnorr verify ever runs on Default: [preVerified] and the
+ *    callbacks are caller code (cache lookups and inserts, which can wait on
+ *    locks), so they stay on the drain's IO thread, where a blocked thread
+ *    cannot starve the core-sized Default pool. [preVerified] is meant to be
+ *    a cheap lookup, so it is evaluated serially before the fan-out; a
+ *    single-event batch skips the fan-out and verifies on the drain thread
+ *    (batching the fan-out
  *    beats per-event handoff: a per-event channel send measured ~180ns of
  *    overhead each, a 64-batch is ~free — see DispatchStageBenchmark);
  *  - [preVerified] lets the caller short-circuit events it already trusts
