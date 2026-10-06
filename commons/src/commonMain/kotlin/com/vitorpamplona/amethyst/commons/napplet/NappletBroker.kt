@@ -143,6 +143,11 @@ class NappletBroker(
             }
         }
 
+        // The per-operation signer gate below shows the event itself; for requests it covers, a second,
+        // generic "this site wants to use Relays" prompt first only made the user answer twice.
+        val signerOp = if (signerLedger != null) request.toSignerOp() else null
+        val signerPromptDecides = signerOp != null && signerConsentPrompt != null
+
         val authorized =
             when {
                 // Keyboard/command action registration is a shell-mediated UI affordance, not key
@@ -152,6 +157,9 @@ class NappletBroker(
                 !capability.requiresConsent -> true
                 // A standing allow short-circuits, except for per-use capabilities (e.g. payments).
                 ledger.decide(identity, capability) == PermissionDecision.ALLOW && !capability.requiresPerUseConsent -> true
+                // Signing / encryption: one prompt, the signer's. A standing capability DENY was already
+                // honored above; per-use capabilities keep their own prompt.
+                signerPromptDecides && !capability.requiresPerUseConsent -> true
                 else -> authorizeWithConsent(identity, capability, request)
             }
 
@@ -159,7 +167,7 @@ class NappletBroker(
 
         // Additional per-operation gate for signing/encryption.
         if (signerLedger != null) {
-            val op = request.toSignerOp()
+            val op = signerOp
             if (op != null && !authorizeSignerOp(identity, op, request)) {
                 return NappletResponse.Denied(capability, "Signing operation declined.")
             }

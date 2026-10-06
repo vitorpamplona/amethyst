@@ -338,6 +338,45 @@ class NappletBrokerTest {
     }
 
     @Test
+    fun aParanoidSignatureAsksOnceNotTwice() =
+        runTest {
+            // Under PARANOID the capability ledger is empty, so a signature used to ask twice: a
+            // generic "this site wants to use Relays" prompt, then the signer prompt with the event.
+            // The signer prompt alone decides now.
+            val signerLedger = NostrSignerPermissionLedger(InMemoryNostrSignerPermissionStore())
+            signerLedger.setPolicy("napplet:${signer.pubKey}:${applet.coordinate}", AppSignerPolicy.PARANOID)
+            val capabilityPrompt = ScriptedPrompt(GrantState.ALLOW_ONCE)
+            val opPrompt = ScriptedSignerPrompt(SignerOpGrant.AllowOnce)
+            val broker =
+                NappletBroker(
+                    signer = signer,
+                    ledger = NappletPermissionLedger(InMemoryNappletPermissionStore()),
+                    consentPrompt = capabilityPrompt,
+                    relay = RecordingRelay(),
+                    signerLedger = signerLedger,
+                    signerConsentPrompt = opPrompt,
+                )
+
+            val sign = NappletRequest.SignEvent(kind = 22242, tags = arrayOf(arrayOf("challenge", "x")), content = "", createdAt = 1)
+            assertIs<NappletResponse.Published>(broker.handle(applet, sign, allDeclared))
+            assertEquals(0, capabilityPrompt.calls)
+            assertEquals(1, opPrompt.calls)
+
+            // Declining in that one prompt still refuses.
+            val denying =
+                NappletBroker(
+                    signer = signer,
+                    ledger = NappletPermissionLedger(InMemoryNappletPermissionStore()),
+                    consentPrompt = capabilityPrompt,
+                    relay = RecordingRelay(),
+                    signerLedger = signerLedger,
+                    signerConsentPrompt = ScriptedSignerPrompt(SignerOpGrant.DenyOnce),
+                )
+            assertIs<NappletResponse.Denied>(denying.handle(applet, sign, allDeclared))
+            assertEquals(0, capabilityPrompt.calls)
+        }
+
+    @Test
     fun revokingAnAppDropsItsLiveSessionSignerGrants() =
         runTest {
             // Regression: "allow for this session" grants live in the broker, keyed by the
