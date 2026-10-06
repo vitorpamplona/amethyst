@@ -80,7 +80,21 @@ If **every** targeted relay refuses the event, amy reports
 `error: rejected` and exits 1 — a total rejection never exits 0.
 
 `amy notes feed` reads recent kind:1 notes from your follows; `--limit N`
-caps the count, `--author npub1…` narrows to one user.
+caps the count, `--author npub1…` narrows to one user, `--hashtag nostr`
+reads a topic.
+
+Interacting with an existing note takes its id, `note1…`, `nevent1…` or
+`naddr1…`:
+
+```text
+$ amy notes reply nevent1qq… "agreed"
+$ amy notes react nevent1qq…              # a like; --content 🤙 for an emoji
+$ amy notes repost note1…
+$ amy notes quote nevent1qq… "worth reading"
+$ amy notes thread nevent1qq…             # the whole conversation, depth-first
+$ amy delete note1…                       # NIP-09, your own events only
+$ amy notifications --type reply,mention
+```
 
 ### 2. Send a direct message
 
@@ -485,7 +499,15 @@ HTTP endpoint. Reuses quartz's `Nip86Client` and the shared `Nip86Retriever`
 | Command | What it does |
 |---|---|
 | `amy notes post TEXT [--relay URL] [--pow BITS [--pow-timeout SECS]]` | Publish a kind:1 short text note; `--pow` mines a NIP-13 proof of work into it first, using all cores (blocks while mining, exit 124 on timeout with nothing published; `--json` adds `pow`, `pow_target`, `pow_millis`). |
-| `amy notes feed [--author USER \| --following] [--limit N]` | Read recent kind:1 notes (yours, one user's, or your follow set). |
+| `amy notes feed [--author USER \| --following \| --hashtag TAG] [--limit N]` | Read recent kind:1 notes (yours, one user's, your follow set, or anyone's under a hashtag). Each note carries the shared renderer's `author_name`, `reply_to`, `root`, `mentions`, `quotes`, `hashtags`, `media`. |
+| `amy notes show EVENT [--raw] [--refresh]` | Render one event of any kind through the shared commons renderer: author (with cached/fetched profile), body split into spans (text, link, image, hashtag, user/event mention, payment tokens), reply/root refs, mentions, quotes, media, content warning, and kind-specific `details` (profile, follows, reaction, repost + verified embedded copy, zap, relay list, deletion, long-form). EVENT is a 64-hex id, `note1`, `nevent1` or `naddr1`; cache-first. `--raw` adds the signed event JSON. |
+| `amy notes thread EVENT [--limit N]` | The whole conversation EVENT belongs to: the root plus every NIP-10 reply and NIP-22 comment, loaded, ordered and indented by the app's own thread code (`depth`, `parent_ids`, `is_focus`; `missing` counts referenced notes no relay returned) and rendered. |
+| `amy notes reply EVENT TEXT` | Reply: a NIP-10 kind:1 (marked `root`/`reply` + the parent's `p` chain) to a kind:1, a NIP-22 kind:1111 comment to any other kind — and to a top-level kind:1 posted from Amethyst, exactly as the app does. Text is tagged like the app's composer (`p`/`q`/`t`/`r`). |
+| `amy notes quote EVENT [TEXT]` | NIP-18 quote post: kind:1 ending in `nostr:nevent…` (`naddr…` for addressable events) with a `q` tag and the quoted author's `p`. |
+| `amy notes react EVENT [--content +\|-\|EMOJI]` | NIP-25 reaction (default `+`). |
+| `amy notes repost EVENT` | NIP-18 repost: kind:6 for a kind:1, kind:16 for anything else. |
+| `amy delete EVENT…` (also `notes delete`) | NIP-09 deletion requests for your own events, any kind; sent to your outbox, every relay a target was seen on, and everywhere the target was routed when published (e.g. the inboxes a reply notified). Refuses events signed by someone else (`forbidden`). Over 200 targets are split into several kind:5s; all are published, and if only some are refused it exits 1 with `partial` and the per-event results. The interaction verbs and `delete` exit 1 with `read_only` up front on an npub-only account. |
+| `amy notifications [--type reply,mention,reaction,repost,zap] [--limit N] [--since TS] [--until TS]` | What others did that involves you, newest first, each with a `type` and the actor in `from` (the zapper for zaps). Reactions and reposts count only when they target your own note. DMs are `amy dm list`. |
 | `amy profile show [USER]` | Print kind:0 metadata. USER accepts npub/nprofile/hex/NIP-05; defaults to self. |
 | `amy profile edit --name … --about … --picture URL …` | Patch and re-publish your kind:0. |
 | `amy follow USER` / `amy unfollow USER` | Add/remove USER from your kind:3 contact list (fetches the freshest list first). |

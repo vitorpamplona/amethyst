@@ -10,11 +10,11 @@ _Audited 2026-06-30 (+ 2026-09-12 split entry, 2026-09-27 migration and one-UI e
 | [2026-09-27-one-ui-android-desktop.md](2026-09-27-one-ui-android-desktop.md) | **The target.** Android ships on laptops, so the whole UI (screens + navigation shell) moves to `commonsUI`, `amethyst` becomes an Android shim, and a new JVM `desktopApp` renders the same UI. Measures Wave 4: `Account`'s 77-file move-group, its 5 blocked files and 14 seams, and `AccountViewModel`'s dependencies; sequences the rest. |
 | [2026-08-30-commons-migration-sweep.md](2026-08-30-commons-migration-sweep.md) | The running log of moving `amethyst/` code into `commons`/`commonsUI`: waves, what moved each round. `LocalCache` has moved. Its STAY list and Wave 2 part B are superseded by the one-UI plan above. |
 | [2026-05-30-amethyst-to-commons-migration.md](2026-05-30-amethyst-to-commons-migration.md) | The original roadmap for the same move; superseded in practice by the sweep tracker above. |
+| [2026-04-21-event-renderer.md](2026-04-21-event-renderer.md) | Cross-platform UI-agnostic `RenderedEvent` subsystem shared by Amy, Desktop, and Android. Core, 12 kind renderers and the JSON formatter shipped (amy `notes show/thread/feed`, `notifications`); the Compose formatter and the Android/Desktop switch-over remain. |
 
 ## Queued
 | Plan | Summary |
 | ---- | ------- |
-| [2026-04-21-event-renderer.md](2026-04-21-event-renderer.md) | Cross-platform UI-agnostic `RenderedEvent` subsystem shared by Amy, Desktop, and Android; not started. |
 | [2026-08-03-poll-results-page.md](2026-08-03-poll-results-page.md) | Extended NIP-88 poll results page (per-option counts + who voted for what) for Android and Desktop; also specifies four tally-correctness fixes and the missing poll-relay subscription. Proposed, not started. |
 
 ## Shipped

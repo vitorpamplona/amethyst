@@ -35,7 +35,7 @@ class ContentWarningTag(
         fun isTag(tag: Array<String>) = tag.has(0) && tag[0] == TAG_NAME
 
         fun parse(tags: Array<String>): ContentWarningTag? {
-            ensure(tags[0] == TAG_NAME) { return null }
+            ensure(tags.has(0) && tags[0] == TAG_NAME) { return null }
             return ContentWarningTag(tags.getOrNull(1)?.ifBlank { null })
         }
 

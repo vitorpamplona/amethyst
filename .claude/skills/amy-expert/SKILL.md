@@ -181,6 +181,9 @@ cli/
         ├── RelayCommands.kt
         ├── ProfileCommands.kt
         ├── NotesCommands.kt + PostCommand.kt + FeedCommand.kt
+        │   NoteShowCommand.kt + ThreadCommand.kt + NoteActionCommands.kt
+        │   (reply/quote/react/repost) + DeleteCommand.kt + NotificationsCommand.kt
+        │   NoteSupport.kt     # Context → OneShotRelayAccess port, planner inputs, JSON
         ├── DmCommands.kt
         ├── KeyPackageCommands.kt
         ├── GroupCommands.kt + GroupCreateCommand.kt + GroupReadCommands.kt
@@ -201,6 +204,22 @@ cli/
 
 Shared logic consumed by Amy lives in `commons/`:
 - `commons/account/` — account bootstrap
+- `commons/rendering/` — `EventRendererRegistry` + `json/JsonEventFormatter`:
+  render any event for output (`notes show/thread/feed`, `notifications`).
+  Don't hand-format event fields in a command; render and emit.
+- `commons/actions/` — `ReplyActions` / `DeletionActions`, plus
+  `model/nip25Reactions/ReactionAction` and `model/nip18Reposts/RepostAction`:
+  the same builders the apps use.
+- App code that needs `Note`/`User` objects (routing via
+  `model/BroadcastRelayPlanner`, the composer's `NewMessageTagger` +
+  `composer/ComposerTags`, `ThreadAssembler` / `ThreadFeedFilter`) runs over a
+  per-run `EventCache` — use commons `relayClient/oneshot/OneShotNoteCache`,
+  never a parallel event-only reimplementation.
+- `commons/relayClient/oneshot/` — store-first, one-shot loaders over the
+  `OneShotRelayAccess` port (amy's adapter is `NoteSupport.access(ctx)`):
+  `EventRef` + `EventLocator` (EVENT references, outbox-model lookup),
+  `ProfileLoader` (kind:0 for rendering), `OneShotNoteCache`, `ThreadLoader`,
+  `NotificationsLoader`. Put new lookup/loading logic there, not in a command.
 - `commons/marmot/` — MLS / group state
 - `commons/cashu/` — `ops/CashuWalletOps` (jvmAndroid) + `CashuWalletReader`
   + `CashuKeysetCounterStore`; the NIP-60/61 wallet, shared with Android.

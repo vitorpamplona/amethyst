@@ -21,7 +21,7 @@
 package com.vitorpamplona.amethyst.desktop.ui.notifications
 
 import androidx.compose.runtime.Immutable
-import com.vitorpamplona.amethyst.desktop.ui.NotificationItem
+import com.vitorpamplona.amethyst.commons.moderation.notifications.NotificationItem
 
 @Immutable
 enum class NotificationFilter(

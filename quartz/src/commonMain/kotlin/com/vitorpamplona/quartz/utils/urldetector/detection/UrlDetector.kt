@@ -50,6 +50,13 @@ class UrlDetector(
     private var isSingleLevelLabel = false
 
     /**
+     * How many `user@` hops the current token has taken. [readUserPass] and [readDomainName]
+     * call each other once per `@`, so content like `a@a@a@…` would otherwise recurse once per
+     * character and overflow the stack.
+     */
+    private var userPassDepth = 0
+
+    /**
      * Stores the found urls.
      */
     private val urlList = mutableListOf<Url>()
@@ -412,7 +419,10 @@ class UrlDetector(
 
         // if we had a dot in the input, then it might be a domain name and not a username and password.
         var rollback = false
-        while (!done && !reader.eof()) {
+        // A username:password is short. Without a bound every ':' in a long token (`a:a:a:…`,
+        // dense `:emoji:` codes) rescans it to its end looking for '@', which is quadratic.
+        var scanned = 0
+        while (!done && !reader.eof() && scanned++ < MAX_USER_PASS_LENGTH) {
             val curr = reader.read()
 
             // if we hit this, then everything is ok and we are matching a domain name.
@@ -490,9 +500,16 @@ class UrlDetector(
             }
 
             DomainNameReader.ReaderNextState.ReadUserPass -> {
+                // A real url has one `user@`, rarely two; a chain of them is not a url.
+                if (userPassDepth >= MAX_USER_PASS_HOPS) return false
                 val host: Int = currentUrlMarker.indexOf(UrlPart.HOST)
                 currentUrlMarker.unsetIndex(UrlPart.HOST)
-                readUserPass(host)
+                userPassDepth++
+                try {
+                    readUserPass(host)
+                } finally {
+                    userPassDepth--
+                }
             }
 
             else -> {
@@ -718,6 +735,12 @@ class UrlDetector(
     }
 
     companion object {
+        /** Longest `user:password` part [readUserPass] scans for before giving up on finding the '@'. */
+        private const val MAX_USER_PASS_LENGTH = 256
+
+        /** Most `user@` hops one token may chain (see [userPassDepth]). */
+        private const val MAX_USER_PASS_HOPS = 8
+
         val VALID_SCHEMES_NO_SLASHES: List<String> =
             listOf(
                 "http:",

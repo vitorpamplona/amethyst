@@ -20,11 +20,19 @@
  */
 package com.vitorpamplona.amethyst.commons.actions
 
+import com.vitorpamplona.amethyst.commons.model.AMETHYST_CLIENT_TAG_NAME
+import com.vitorpamplona.amethyst.commons.model.composer.messageTags
+import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.hints.EventHintBundle
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip01Core.tags.people.PTag
 import com.vitorpamplona.quartz.nip10Notes.TextNoteEvent
 import com.vitorpamplona.quartz.nip10Notes.tags.notify
+import com.vitorpamplona.quartz.nip22Comments.CommentEvent
+import com.vitorpamplona.quartz.nip22Comments.notify
+import com.vitorpamplona.quartz.nip29RelayGroups.groupId
+import com.vitorpamplona.quartz.nip29RelayGroups.hTag
+import com.vitorpamplona.quartz.nip89AppHandlers.clientTag.isClient
 
 /**
  * Pure event-building "verbs" for kind:1 short-note replies (NIP-10).
@@ -59,11 +67,16 @@ object ReplyActions {
      *
      * Returns the signed event ready to be published. The reply preserves the
      * parent's root reference so conformant clients can reconstruct the thread.
+     *
+     * [mentions] are the users the text cites, as a `NewMessageTagger` collects them
+     * (see `pTagsWithHints`); the rest of the text-derived tags come from [messageTags],
+     * the composer's own.
      */
     suspend fun replyTo(
         parent: EventHintBundle<TextNoteEvent>,
         content: String,
         signer: NostrSigner,
+        mentions: List<PTag> = emptyList(),
     ): TextNoteEvent {
         // Per NIP-10, replies MUST carry the p-tags of the event being replied
         // to plus the author's pubkey. TextNoteEvent.build(replyingTo=) only
@@ -74,11 +87,76 @@ object ReplyActions {
             (parent.event.mentionKeys() + parent.event.pubKey)
                 .distinct()
                 .map { PTag(it, relayHint = null) }
+        val chain = carriedPubKeys.mapTo(HashSet()) { it.pubKey }
 
         val template =
             TextNoteEvent.build(content, replyingTo = parent) {
-                notify(carriedPubKeys)
+                notify(carriedPubKeys + mentions.filter { it.pubKey !in chain }.distinctBy { it.pubKey })
+                // A reply in a NIP-29 group stays in the group (and on its host relay).
+                parent.event.groupId()?.let { hTag(it) }
+                messageTags(content)
             }
         return signer.sign(template)
+    }
+
+    /**
+     * Amethyst answers a top-level kind:1 that was itself posted from Amethyst (it
+     * carries Amethyst's NIP-89 client tag) with a NIP-22 comment instead of a NIP-10
+     * reply. Every other kind:1 gets a NIP-10 reply. The composer
+     * (`ShortNotePostViewModel`) and amy share this rule so both put the same kind on
+     * the wire.
+     */
+    fun repliesAsComment(parent: Event): Boolean =
+        parent is TextNoteEvent &&
+            parent.isNewThread() &&
+            parent.isClient(AMETHYST_CLIENT_TAG_NAME)
+
+    /**
+     * Build a NIP-22 kind:1111 comment on [parent] — the reply form for every kind
+     * other than kind:1, and for the kind:1s [repliesAsComment] selects. A comment on
+     * a comment keeps the original root scope; a comment on a NIP-29 group event
+     * carries the group's `h` tag so it stays in the group, as reactions do (see
+     * `ReactionAction`).
+     */
+    suspend fun commentOn(
+        parent: EventHintBundle<Event>,
+        content: String,
+        signer: NostrSigner,
+        mentions: List<PTag> = emptyList(),
+    ): CommentEvent {
+        require(parent.event !is TextNoteEvent || repliesAsComment(parent.event)) {
+            "this kind:1 takes a NIP-10 reply, not a NIP-22 comment"
+        }
+        val template =
+            CommentEvent.replyBuilder(content, parent) {
+                parent.event.groupId()?.let { hTag(it) }
+                // replyBuilder already tags the parent's author.
+                notify(mentions.filter { it.pubKey != parent.event.pubKey }.distinctBy { it.pubKey })
+                messageTags(content)
+            }
+        return signer.sign(template)
+    }
+
+    /**
+     * The reply a client should send to [parent], whatever its kind: a NIP-10
+     * kind:1 reply for kind:1 notes (except those [repliesAsComment] selects), a
+     * NIP-22 kind:1111 comment for everything else.
+     * Refuses private rumors (empty signature): a public reply would e-tag a
+     * private id onto public relays.
+     */
+    @Suppress("UNCHECKED_CAST")
+    suspend fun reply(
+        parent: EventHintBundle<Event>,
+        content: String,
+        signer: NostrSigner,
+        mentions: List<PTag> = emptyList(),
+    ): Event {
+        check(signer.isWriteable()) { "Cannot reply: signer is not writeable" }
+        check(parent.event.sig.isNotEmpty()) { "Cannot publicly reply to a private rumor" }
+        return if (parent.event is TextNoteEvent && !repliesAsComment(parent.event)) {
+            replyTo(parent as EventHintBundle<TextNoteEvent>, content, signer, mentions)
+        } else {
+            commentOn(parent, content, signer, mentions)
+        }
     }
 }

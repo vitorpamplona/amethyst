@@ -12,3 +12,4 @@ buzz/state-job-loop/
 buzz/state-workflow-loop/
 buzz/state-agent-exec/
 marmot/state-repro/
+notes/state-notes-headless/

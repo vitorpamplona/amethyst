@@ -197,6 +197,40 @@ class NotificationKindsTest {
     }
 
     @Test
+    fun reactionToMyReplyIsJudgedByItsLastETag() {
+        // NIP-25: a reaction to a reply carries the thread root first and the reacted-to note last.
+        val toMyReply =
+            ReactionEvent(
+                id = "rid".padEnd(64, '0'),
+                pubKey = alice,
+                createdAt = 1_000,
+                tags = arrayOf(arrayOf("e", strangerNoteId), arrayOf("e", myNoteId), arrayOf("p", bob), arrayOf("p", me)),
+                content = "+",
+                sig = someSig,
+            )
+        assertTrue(acceptsFor(toMyReply))
+        assertEquals(myNoteId, NotificationKinds.interactionTargetId(toMyReply))
+
+        // And a reaction to the stranger's reply in my thread is not mine.
+        val toTheirReply =
+            ReactionEvent(
+                id = "rid".padEnd(64, '0'),
+                pubKey = alice,
+                createdAt = 1_000,
+                tags = arrayOf(arrayOf("e", myNoteId), arrayOf("e", strangerNoteId), arrayOf("p", me), arrayOf("p", bob)),
+                content = "+",
+                sig = someSig,
+            )
+        assertFalse(acceptsFor(toTheirReply))
+    }
+
+    @Test
+    fun dmKindsAreNotPublicSubscriptionKinds() {
+        assertTrue(NotificationKinds.PUBLIC_SUBSCRIPTION_KINDS.none { it in NotificationKinds.DM_KINDS })
+        assertTrue(NotificationKinds.SUBSCRIPTION_KINDS.containsAll(NotificationKinds.DM_KINDS))
+    }
+
+    @Test
     fun reactionWithNoETagRejected() {
         val e = reaction(author = alice, pTag = me, eTag = null)
         assertFalse(acceptsFor(e))

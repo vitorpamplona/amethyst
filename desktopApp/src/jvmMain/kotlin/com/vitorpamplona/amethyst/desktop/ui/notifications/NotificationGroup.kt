@@ -21,7 +21,7 @@
 package com.vitorpamplona.amethyst.desktop.ui.notifications
 
 import androidx.compose.runtime.Immutable
-import com.vitorpamplona.amethyst.desktop.ui.NotificationItem
+import com.vitorpamplona.amethyst.commons.moderation.notifications.NotificationItem
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip10Notes.TextNoteEvent
 import com.vitorpamplona.quartz.nip18Reposts.GenericRepostEvent

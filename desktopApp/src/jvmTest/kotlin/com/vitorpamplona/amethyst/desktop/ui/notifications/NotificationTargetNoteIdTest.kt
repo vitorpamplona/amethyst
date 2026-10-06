@@ -20,7 +20,7 @@
  */
 package com.vitorpamplona.amethyst.desktop.ui.notifications
 
-import com.vitorpamplona.amethyst.desktop.ui.NotificationItem
+import com.vitorpamplona.amethyst.commons.moderation.notifications.NotificationItem
 import com.vitorpamplona.quartz.nip10Notes.TextNoteEvent
 import com.vitorpamplona.quartz.nip25Reactions.ReactionEvent
 import kotlin.test.Test

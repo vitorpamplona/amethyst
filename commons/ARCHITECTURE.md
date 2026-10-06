@@ -79,7 +79,7 @@ in `commonsUI`, under the same package.
 ### Domain models & data
 | Package        | UI? | Purpose |
 |----------------|-----|---------|
-| `model`        | no¹ | Core domain types (`Note`, `User`, `Channel`), thread assembly (`ThreadAssembler`, `ThreadLevelCalculator`, `ReplyContext`, `replyingDirectlyTo`), and per-NIP event model extensions in `model/nipNN…` subpackages. `model/cache` holds the in-memory event store: the `ICacheProvider` / `ILocalCache` ports and `UserMetadataCache` in commonMain, and the concrete `LocalCache` (plus `AntiSpamFilter`, `CachePruner`, `CacheSearch` and the `LocalCacheHost` app-shell port) in jvmAndroid. `model/account`, `model/observables`. The largest package; keep it organized by NIP. |
+| `model`        | no¹ | Core domain types (`Note`, `User`, `Channel`), thread assembly (`ThreadAssembler`, `ThreadLevelCalculator`, `ReplyContext`, `replyingDirectlyTo`), publish routing (`BroadcastRelayPlanner`, behind `EventBroadcaster`; runs over any `EventCache`, which is how amy shares it), and per-NIP event model extensions in `model/nipNN…` subpackages. `model/cache` holds the in-memory event store: the `ICacheProvider` / `ILocalCache` ports and `UserMetadataCache` in commonMain, and the concrete `LocalCache` (plus `AntiSpamFilter`, `CachePruner`, `CacheSearch` and the `LocalCacheHost` app-shell port) in jvmAndroid. `model/account`, `model/observables`. The largest package; keep it organized by NIP. |
 | `defaults`     | no  | Static bootstrap data (default relays, channels). |
 
 `model/navigation` also holds the headless navigation identifiers: `NavBarItem`, `BottomBarEntry` and the app's `@Serializable` `Route` catalog (`Routes.kt`). `model/composer` holds post-composer state that is not UI (`AudienceSelection`, `SplitBuilder`, `IZapRaiser`).
@@ -97,6 +97,7 @@ in `commonsUI`, under the same package.
 | `sno`          | mixed | DECK-0003 object rendering math — rasterizer, lighting, face winding, default avatar — here; the Compose viewer/thumbnail and the Coil fetcher in `commonsUI` under `sno` and `sno/ui`. |
 | `nip53LiveActivities` | mixed | Live-activity zapper aggregation (logic) + the stream card in `nip53LiveActivities/ui`. |
 | `search`       | no  | Event search filtering/ranking, kind registry. |
+| `rendering`    | no  | UI-agnostic event rendering: `RenderedEvent`, the kind-keyed `EventRendererRegistry` (renderers under `rendering/renderers`), the `BodySpans` rich-text post-processor over `richtext`, and `rendering/json/JsonEventFormatter` (amy's `--json` shape). A Compose formatter would live in `commonsUI` under the same package. See `plans/2026-04-21-event-renderer.md`. |
 | `preview`      | no  | OpenGraph / meta-tag link-preview parsing. |
 | `emojicoder`   | no  | Variation-selector emoji encode/decode. |
 | `richtext`     | no  | URL/media/pattern parsing for rich text. |
@@ -122,7 +123,7 @@ type (`LazyListState`, `TextFieldValue`, `TextFieldState`) goes to `commonsUI`.
 ### Relay client
 | Package        | UI? | Purpose |
 |----------------|-----|---------|
-| `relayClient`  | mixed | Compose-scoped subscription managers, filter assemblers, EOSE managers, preloaders. (Despite a `composeSubscriptionManagers` subpackage name, this is subscription-lifecycle logic, not UI.) The `@Composable` entry points — `relayClient/user/` (`observeUser*` — kind-0 metadata), `relayClient/event/` (`EventFinderFilterAssemblerSubscription`/`observeNote*`), the other `*FilterAssemblerSubscription`s, `KeyDataSourceSubscription`, `auth/AuthApprovalBanner` — are in `commonsUI` under the same packages. See the `relay-client` skill. |
+| `relayClient`  | mixed | Compose-scoped subscription managers, filter assemblers, EOSE managers, preloaders. (Despite a `composeSubscriptionManagers` subpackage name, this is subscription-lifecycle logic, not UI.) The `@Composable` entry points — `relayClient/user/` (`observeUser*` — kind-0 metadata), `relayClient/event/` (`EventFinderFilterAssemblerSubscription`/`observeNote*`), the other `*FilterAssemblerSubscription`s, `KeyDataSourceSubscription`, `auth/AuthApprovalBanner` — are in `commonsUI` under the same packages. `relayClient/oneshot` holds store-first, one-shot loaders (event lookup by reference, profiles, threads, notifications, an `EventCache` filled on demand) over the `OneShotRelayAccess` port, for front ends without live subscriptions (amy). See the `relay-client` skill. |
 | `relays`       | mixed | Low-level EOSE/relay-timing bookkeeping (`EOSECache`, `EOSERelayList`); relay-list settings composables (`DraggableRelayList`, `RelayEventCountRow`, the NIP-45 count result types) in `commonsUI` `relays/ui`. |
 
 ### Platform abstractions (`expect`/`actual`)

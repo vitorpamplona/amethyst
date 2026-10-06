@@ -76,6 +76,27 @@ object NotificationKinds {
             ChatMessageEncryptedFileHeaderEvent.KIND,
         )
 
+    /** The direct-message kinds in [SUBSCRIPTION_KINDS]: they need decryption to show anything. */
+    val DM_KINDS: Set<Int> =
+        setOf(EncryptedDmEvent.KIND, ChatMessageEvent.KIND, GiftWrapEvent.KIND, ChatMessageEncryptedFileHeaderEvent.KIND)
+
+    /** [SUBSCRIPTION_KINDS] without the DMs — the public activity a reader can show as-is. */
+    val PUBLIC_SUBSCRIPTION_KINDS: List<Int> = SUBSCRIPTION_KINDS.filter { it !in DM_KINDS }
+
+    /**
+     * The note a reaction or repost targets: the LAST `e` tag. NIP-25 reactions to a reply
+     * carry the thread's root `e` first and the reacted-to note last; NIP-18 reposts have
+     * one `e`. Null for other kinds. This is the id [tagsAnEventForUser]'s
+     * `isTargetAuthoredByMe` is asked about, so a caller knows which notes to have loaded.
+     */
+    fun interactionTargetId(event: Event): HexKey? =
+        when (event) {
+            is ReactionEvent -> event.originalPost().lastOrNull()
+            is RepostEvent -> event.boostedEventId()
+            is GenericRepostEvent -> event.boostedEventId()
+            else -> null
+        }
+
     /**
      * Builds the standard notifications-for-user filter.
      * @param since Optional Unix seconds to gate `since` on the relay filter.
@@ -127,14 +148,8 @@ object NotificationKinds {
         // a stranger's note is NOT a notification. The target is the LAST
         // `e` (NIP-25/NIP-18): a reaction to a reply may carry the thread
         // root first, which is not the note that was reacted to.
-        val target =
-            when (event) {
-                is ReactionEvent -> event.originalPost().lastOrNull()
-                is RepostEvent -> event.boostedEventId()
-                is GenericRepostEvent -> event.boostedEventId()
-                else -> null
-            }
         if (event is ReactionEvent || event is RepostEvent || event is GenericRepostEvent) {
+            val target = interactionTargetId(event)
             return target != null && isTargetAuthoredByMe(target)
         }
 
