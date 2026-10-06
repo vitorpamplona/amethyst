@@ -18,7 +18,9 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.service.uploads.blossom
+package com.vitorpamplona.amethyst.commons.service.upload.blossom
+
+import com.vitorpamplona.amethyst.commons.util.ConcurrentSet
 
 /**
  * Bounds how often one user action may raise a BUD-07 payment prompt.
@@ -34,11 +36,11 @@ package com.vitorpamplona.amethyst.service.uploads.blossom
  * — including the post-payment retry — goes through [shouldPrompt].
  */
 class PaymentPromptLedger {
-    private val prompted = mutableSetOf<String>()
+    private val prompted = ConcurrentSet<String>()
 
     /** The user tapped mirror/sync: a fresh budget of one prompt per target. */
     fun beginUserAction() {
-        synchronized(prompted) { prompted.clear() }
+        prompted.clear()
     }
 
     /**
@@ -48,5 +50,5 @@ class PaymentPromptLedger {
     fun shouldPrompt(
         hash: String,
         server: String,
-    ): Boolean = synchronized(prompted) { prompted.add("$hash|$server") }
+    ): Boolean = prompted.add("$hash|$server")
 }

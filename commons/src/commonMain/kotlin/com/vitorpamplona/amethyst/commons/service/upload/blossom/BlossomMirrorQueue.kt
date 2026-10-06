@@ -18,12 +18,11 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.service.uploads.blossom
+package com.vitorpamplona.amethyst.commons.service.upload.blossom
 
 import androidx.compose.runtime.Immutable
-import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.commons.model.Account
-import com.vitorpamplona.amethyst.commons.service.upload.BlossomClient
+import com.vitorpamplona.amethyst.commons.service.upload.BlossomBlobClient
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.utils.Log
 import kotlinx.coroutines.CoroutineScope
@@ -62,13 +61,15 @@ data class BlossomMirrorResult(
 
 /**
  * App-level BUD-04 mirror queue, modeled on the PoW publish queue: it runs on the
- * application IO scope (via [Amethyst.instance]) so a sweep keeps going while the
+ * application IO scope so a sweep keeps going while the
  * user navigates the app, and exposes [state] for a floating progress banner mounted
  * at the navigation root. Servers that require payment are skipped (counted as
  * failed) — those are paid for individually from the manager screen.
  */
 class BlossomMirrorQueue(
     private val scope: CoroutineScope,
+    /** Builds the client that talks to one target server (proxying, Tor and pooling are the platform's). */
+    private val clientFor: (serverBaseUrl: String) -> BlossomBlobClient,
     /** Invoked (on the foreground thread that called [start]) when a sweep begins, to start the FGS. */
     private val onActive: () -> Unit = {},
 ) {
@@ -138,7 +139,7 @@ class BlossomMirrorQueue(
     ): Boolean =
         try {
             val auth = account.createBlossomUploadAuth(task.hash, task.size ?: 0L, "Mirror ${task.hash}").toAuthorizationHeader()
-            BlossomClient(Amethyst.instance.roleBasedHttpClientBuilder.okHttpClientForUploads(target))
+            clientFor(target)
                 .mirrorOrUpload(task.sourceUrl, task.hash, task.contentType ?: DEFAULT_MIME_TYPE, target, auth)
             true
         } catch (e: CancellationException) {

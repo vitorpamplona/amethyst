@@ -32,6 +32,10 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import okio.IOException
 
+/** Store (and file) names, as [AppPreferenceStores] keys them. */
+const val CALENDAR_REMINDER_SETTINGS_STORE = "calendar_reminder_settings"
+const val CALENDAR_REMINDER_LOG_STORE = "calendar_reminder_log"
+
 /**
  * Device-wide settings for the calendar reminder worker.
  *

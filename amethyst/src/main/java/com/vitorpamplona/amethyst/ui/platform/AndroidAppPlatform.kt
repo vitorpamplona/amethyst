@@ -43,6 +43,8 @@ import com.vitorpamplona.amethyst.ui.components.SelectNotificationProvider
 import com.vitorpamplona.amethyst.ui.navigation.topbars.AndroidAroundMeLocationLabel
 import com.vitorpamplona.amethyst.ui.note.DrawPlayName
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.nests.room.activity.NestActivity
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.settings.AndroidNotificationCategorySettings
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.settings.AndroidNotificationDeliverySettings
 import com.vitorpamplona.quartz.concord.cord02Community.ImagePointer
 import kotlinx.collections.immutable.ImmutableMap
 import com.vitorpamplona.amethyst.commons.ui.navigation.bottombars.AppBottomBar as AppBottomBarImpl
@@ -76,6 +78,12 @@ object AndroidAppPlatform : AppPlatform {
 
     @Composable
     override fun NotificationProviderPrompt(sharedPrefs: UiSettingsFlow) = SelectNotificationProvider(sharedPrefs)
+
+    @Composable
+    override fun NotificationDeliverySettings(accountViewModel: AccountViewModel) = AndroidNotificationDeliverySettings(accountViewModel)
+
+    @Composable
+    override fun NotificationCategorySettings() = AndroidNotificationCategorySettings()
 
     @Composable
     override fun rememberAppLanguages(): ImmutableMap<String, String> {

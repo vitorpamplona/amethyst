@@ -500,7 +500,18 @@ assemblers, `EventSync`, …). Packages are renamed on the way:
      donation cards), Calendars (day, week, month), the music and podcast uploaders, the media
      server lists, relay management, web bookmarks and scheduled posts. 220 of 252 screens
      shared.
-   - **Next:** 32 screens remain, and what blocks them is the platform itself:
+   - **Wave 13 (2026-10-06):** Notification and calendar-reminder settings, Blossom import and
+     the blob manager. `AppPlatform` gained `NotificationDeliverySettings` (push provider,
+     background service, per-account participation, battery optimization) and
+     `NotificationCategorySettings` (Android's channels); the shared screen keeps the display
+     toggles. `AppServices` gained `calendarReminderSettings`, `setCalendarRemindersScheduled`,
+     `blossomClient(server)` and `blossomMirrorQueue`. `BlossomBlobClient` is a commonMain
+     interface that the OkHttp `BlossomClient` implements, and its two exceptions moved with it;
+     the mirror queue, payment handler, prompt ledger and in-flight invoice set are in commons
+     (on `ConcurrentSet` instead of `synchronized`). The blob viewer's pinch-zoom (`zoomable`, already
+     an app dependency, Apache-2.0, Compose Multiplatform) is now a commonsUI dependency. 224 of
+     252 screens shared.
+   - **Next:** 28 screens remain, and what blocks them is the platform itself:
      - `ReactionsRow` (2.7k lines: pay-to-app, voice replies, wallet intents).
      - The Nests activity and PiP.
      - The call screens.
@@ -510,9 +521,6 @@ assemblers, `EventSync`, …). Packages are renamed on the way:
      - The Cordn backup/migrate file flows.
      - Share-as-image (bitmaps).
      - `AccountSessionManager` (login and sign-up).
-     - The Blossom import and blob manager (the OkHttp `BlossomClient`).
-     - Notification settings (`LocalPreferences`, battery optimization, notification channels)
-       and calendar reminder settings.
      - The HLS video uploader (LightCompressor).
      Each needs a slot or a port of its own, so step 7 can start alongside them.
 7. **Navigation**: the library swap, then `AppNavigation` + rail + drawer + bottom bar.

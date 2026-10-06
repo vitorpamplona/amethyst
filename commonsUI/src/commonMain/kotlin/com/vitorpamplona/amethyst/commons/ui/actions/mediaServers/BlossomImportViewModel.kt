@@ -18,25 +18,25 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.ui.actions.mediaServers
+package com.vitorpamplona.amethyst.commons.ui.actions.mediaServers
 
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.Stable
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.commons.model.Account
 import com.vitorpamplona.amethyst.commons.model.mediaServers.DEFAULT_MEDIA_SERVERS
 import com.vitorpamplona.amethyst.commons.model.mediaServers.ServerType
-import com.vitorpamplona.amethyst.commons.service.upload.BlossomClient
+import com.vitorpamplona.amethyst.commons.service.AppServices
+import com.vitorpamplona.amethyst.commons.service.upload.blossom.BlossomMirrorQueue
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
-import com.vitorpamplona.amethyst.service.uploads.blossom.BlossomMirrorQueue
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nipB7Blossom.BlossomServerUrl
 import com.vitorpamplona.quartz.nipB7Blossom.BlossomUploadResult
 import com.vitorpamplona.quartz.utils.Log
 import com.vitorpamplona.quartz.utils.Rfc3986
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.IO
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
@@ -122,6 +122,7 @@ data class ImportCandidate(
 @Stable
 class BlossomImportViewModel : ViewModel() {
     private lateinit var account: Account
+    private lateinit var services: AppServices
     private var seeded = false
 
     private val _sources = MutableStateFlow<List<ImportSource>>(emptyList())
@@ -140,7 +141,11 @@ class BlossomImportViewModel : ViewModel() {
     private val _error = MutableStateFlow<String?>(null)
     val error = _error.asStateFlow()
 
-    fun init(accountViewModel: AccountViewModel) {
+    fun init(
+        accountViewModel: AccountViewModel,
+        services: AppServices,
+    ) {
+        this.services = services
         // Re-point at the current account every call (matches the sibling BlobManager VM), but
         // seed the source list only once so we don't clobber the user's toggles on recomposition.
         this.account = accountViewModel.account
@@ -227,7 +232,7 @@ class BlossomImportViewModel : ViewModel() {
         _sources.update { list -> list.map { if (it.scan == SourceScanState.Idle) it else it.copy(scan = SourceScanState.Idle) } }
     }
 
-    private fun clientFor(server: String) = BlossomClient(Amethyst.instance.roleBasedHttpClientBuilder.okHttpClientForUploads(server))
+    private fun clientFor(server: String) = services.blossomClient(server)
 
     private var scanJob: Job? = null
 
@@ -254,7 +259,7 @@ class BlossomImportViewModel : ViewModel() {
                     throw e
                 } catch (e: Exception) {
                     Log.w("BlossomImport", "scan failed", e)
-                    _error.value = e.message?.ifBlank { null } ?: e.javaClass.simpleName
+                    _error.value = e.message?.ifBlank { null } ?: e::class.simpleName
                 } finally {
                     _isScanning.value = false
                 }
@@ -273,30 +278,37 @@ class BlossomImportViewModel : ViewModel() {
 
         // Phase 1 — /list each enabled source. Collect the user's blobs and remember the
         // first source that can serve each hash (its descriptor URL is the mirror source).
-        val meta = HashMap<HexKey, CandidateMeta>()
-        coroutineScope {
-            sources
-                .map { source ->
-                    async {
-                        val listed =
-                            try {
-                                clientFor(source).list(source, pubkey, listAuth)
-                            } catch (e: CancellationException) {
-                                throw e
-                            } catch (e: Exception) {
-                                Log.w("BlossomImport", "list failed on $source", e)
-                                setScanState(source, SourceScanState.Failed(e.shortReason()))
-                                return@async
-                            }
-                        setScanState(source, SourceScanState.Found(listed.count { it.sha256 != null }))
-                        synchronized(meta) {
-                            listed.forEach { d ->
-                                val hash = d.sha256 ?: return@forEach
-                                meta.putIfAbsent(hash, CandidateMeta(sourceUrlFor(source, d, hash), BlossomServerUrl.domain(source), d.url, d.size, d.type))
-                            }
+        val listings =
+            coroutineScope {
+                sources
+                    .map { source ->
+                        async {
+                            val listed =
+                                try {
+                                    clientFor(source).list(source, pubkey, listAuth)
+                                } catch (e: CancellationException) {
+                                    throw e
+                                } catch (e: Exception) {
+                                    Log.w("BlossomImport", "list failed on $source", e)
+                                    setScanState(source, SourceScanState.Failed(e.shortReason()))
+                                    return@async null
+                                }
+                            setScanState(source, SourceScanState.Found(listed.count { it.sha256 != null }))
+                            source to listed
                         }
-                    }
-                }.awaitAll()
+                    }.awaitAll()
+            }
+
+        // Merged after every list returns, in source order, so the first enabled source that
+        // holds a hash is the one it is mirrored from.
+        val meta = HashMap<HexKey, CandidateMeta>()
+        listings.filterNotNull().forEach { (source, listed) ->
+            listed.forEach { d ->
+                val hash = d.sha256 ?: return@forEach
+                if (hash !in meta) {
+                    meta[hash] = CandidateMeta(sourceUrlFor(source, d, hash), BlossomServerUrl.domain(source), d.url, d.size, d.type)
+                }
+            }
         }
 
         val allHashes = meta.keys.toList()
@@ -383,7 +395,7 @@ class BlossomImportViewModel : ViewModel() {
         if (tasks.isEmpty()) return ImportStart.Empty
         // start() itself atomically no-ops if a sweep is already running, so key off its return
         // rather than a separate isRunning check that could race with a sweep starting.
-        return if (Amethyst.instance.blossomMirrorQueue.start(account, tasks)) {
+        return if (services.blossomMirrorQueue.start(account, tasks)) {
             ImportStart.Started(candidates.size)
         } else {
             ImportStart.Busy
@@ -413,7 +425,7 @@ class BlossomImportViewModel : ViewModel() {
         hash: HexKey,
     ): String = descriptor.url?.takeIf { it.isNotBlank() } ?: BlossomServerUrl.blob(server, hash)
 
-    private fun Exception.shortReason(): String = message?.ifBlank { null } ?: javaClass.simpleName
+    private fun Exception.shortReason(): String = message?.ifBlank { null } ?: this::class.simpleName ?: "Exception"
 
     private data class CandidateMeta(
         val sourceUrl: String,

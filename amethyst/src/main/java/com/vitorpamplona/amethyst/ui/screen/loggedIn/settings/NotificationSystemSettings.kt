@@ -28,14 +28,11 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -53,7 +50,6 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LifecycleResumeEffect
@@ -74,18 +70,9 @@ import com.vitorpamplona.amethyst.commons.resources.notification_channel_status_
 import com.vitorpamplona.amethyst.commons.resources.notification_service_accounts_title
 import com.vitorpamplona.amethyst.commons.resources.notification_service_master_description
 import com.vitorpamplona.amethyst.commons.resources.notification_service_master_title
-import com.vitorpamplona.amethyst.commons.resources.notification_settings
 import com.vitorpamplona.amethyst.commons.resources.notification_settings_categories_explainer
 import com.vitorpamplona.amethyst.commons.resources.notification_settings_section_categories
 import com.vitorpamplona.amethyst.commons.resources.notification_settings_section_delivery
-import com.vitorpamplona.amethyst.commons.resources.notification_settings_section_display
-import com.vitorpamplona.amethyst.commons.resources.show_messages_in_notifications_setting_description
-import com.vitorpamplona.amethyst.commons.resources.show_messages_in_notifications_setting_title
-import com.vitorpamplona.amethyst.commons.resources.split_notifications_setting_description
-import com.vitorpamplona.amethyst.commons.resources.split_notifications_setting_title
-import com.vitorpamplona.amethyst.commons.ui.navigation.navs.EmptyNav
-import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
-import com.vitorpamplona.amethyst.commons.ui.navigation.topbars.TopBarWithBackButton
 import com.vitorpamplona.amethyst.commons.ui.note.ClickableUserPicture
 import com.vitorpamplona.amethyst.commons.ui.note.LoadUser
 import com.vitorpamplona.amethyst.commons.ui.note.UsernameDisplay
@@ -95,10 +82,8 @@ import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.settings.SettingsSe
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.settings.SettingsSwitchTile
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.Size35dp
-import com.vitorpamplona.amethyst.commons.ui.theme.ThemeComparisonColumn
 import com.vitorpamplona.amethyst.commons.util.toShortDisplay
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
-import com.vitorpamplona.amethyst.commons.viewmodels.mockAccountViewModel
 import com.vitorpamplona.amethyst.service.notifications.BatteryOptimizationHelper
 import com.vitorpamplona.amethyst.service.notifications.NotificationChannels
 import com.vitorpamplona.amethyst.ui.components.PushNotificationProviderTile
@@ -107,30 +92,7 @@ import com.vitorpamplona.quartz.nip19Bech32.decodePublicKeyAsHexOrNull
 import kotlinx.coroutines.launch
 
 @Composable
-fun NotificationSettingsScreen(
-    accountViewModel: AccountViewModel,
-    nav: INav,
-) {
-    Scaffold(
-        topBar = { TopBarWithBackButton(stringRes(id = Res.string.notification_settings), nav) },
-    ) { padding ->
-        Column(
-            modifier =
-                Modifier
-                    .padding(padding)
-                    .verticalScroll(rememberScrollState())
-                    .padding(horizontal = 16.dp, vertical = 12.dp),
-            verticalArrangement = Arrangement.spacedBy(20.dp),
-        ) {
-            DeliverySection(accountViewModel)
-            DisplaySection(accountViewModel)
-            CategoriesSection()
-        }
-    }
-}
-
-@Composable
-private fun DeliverySection(accountViewModel: AccountViewModel) {
+fun AndroidNotificationDeliverySettings(accountViewModel: AccountViewModel) {
     // Global master switch (persisted, all accounts). produceState + runCatching keeps
     // the @Preview safe when Amethyst.instance / LocalPreferences aren't available.
     val master by produceState(initialValue = true) {
@@ -259,33 +221,7 @@ private fun AccountParticipationRow(
 }
 
 @Composable
-private fun DisplaySection(accountViewModel: AccountViewModel) {
-    val splitByFollows by accountViewModel.account.settings.splitNotificationsEnabled
-        .collectAsStateWithLifecycle()
-    val showMessages by accountViewModel.account.settings.showMessagesInNotifications
-        .collectAsStateWithLifecycle()
-
-    SettingsSection(Res.string.notification_settings_section_display) {
-        SettingsSwitchTile(
-            icon = MaterialSymbols.Forum,
-            title = Res.string.split_notifications_setting_title,
-            description = Res.string.split_notifications_setting_description,
-            checked = splitByFollows,
-            onCheckedChange = { accountViewModel.account.settings.toggleSplitNotificationsEnabled() },
-        )
-        SettingsDivider()
-        SettingsSwitchTile(
-            icon = MaterialSymbols.Mail,
-            title = Res.string.show_messages_in_notifications_setting_title,
-            description = Res.string.show_messages_in_notifications_setting_description,
-            checked = showMessages,
-            onCheckedChange = { accountViewModel.account.settings.toggleShowMessagesInNotifications() },
-        )
-    }
-}
-
-@Composable
-private fun CategoriesSection() {
+fun AndroidNotificationCategorySettings() {
     val context = LocalContext.current
     val entries = NotificationChannels.contentChannels
     val scope = rememberCoroutineScope()
@@ -431,13 +367,5 @@ private fun BatteryOptimizationBanner() {
                 Text(stringRes(Res.string.battery_optimization_fix_now))
             }
         }
-    }
-}
-
-@Preview
-@Composable
-fun NotificationSettingsScreenPreview() {
-    ThemeComparisonColumn {
-        NotificationSettingsScreen(mockAccountViewModel(), EmptyNav())
     }
 }

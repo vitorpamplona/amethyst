@@ -42,30 +42,6 @@ import okio.source
 import java.io.File
 import kotlin.coroutines.cancellation.CancellationException
 
-/**
- * Thrown when a Blossom server answers with `402 Payment Required` (BUD-07). The
- * caller pays [payment] (Cashu or Lightning) and retries the request with the
- * proof attached.
- */
-class BlossomPaymentException(
-    val server: String,
-    val payment: BlossomPaymentRequired,
-) : RuntimeException("Payment required by $server: ${payment.reason ?: "402 Payment Required"}")
-
-/**
- * Thrown by [BlossomClient.mirror] when a server does not implement the BUD-04
- * `/mirror` endpoint. Blossom has no capability-discovery mechanism (BUD-04 defines
- * none), so the only reliable signal is the status of the `PUT /mirror` itself:
- * `404 Not Found`, `405 Method Not Allowed`, or `501 Not Implemented` mean the
- * endpoint is absent — as opposed to a mirror the server understood but refused
- * (`400`/`403`/`413`/…, which stay a plain [RuntimeException]). Callers can catch
- * this to fall back to a direct download-and-upload (see [BlossomClient.mirrorOrUpload]).
- */
-class BlossomMirrorUnsupportedException(
-    val server: String,
-    val status: Int,
-) : RuntimeException("$server does not support the /mirror endpoint (HTTP $status)")
-
 /** Result of a BUD-06 `HEAD /upload` or `HEAD /media` preflight. */
 data class BlossomPreflightResult(
     val accepted: Boolean,
@@ -87,7 +63,7 @@ data class BlossomPreflightResult(
  */
 open class BlossomClient(
     private val okHttpClient: OkHttpClient = OkHttpClient(),
-) {
+) : BlossomBlobClient {
     open suspend fun upload(
         file: File,
         contentType: String,
@@ -170,13 +146,13 @@ open class BlossomClient(
      * untrusted and could return substituted content, and the same `t=upload` auth
      * (whose `x` tag is the expected hash) is reused for the fallback `PUT /upload`.
      */
-    open suspend fun mirrorOrUpload(
+    override suspend fun mirrorOrUpload(
         sourceUrl: String,
         expectedHash: HexKey,
         contentType: String,
         serverBaseUrl: String,
         authHeader: String?,
-        paymentProof: BlossomPaymentProof? = null,
+        paymentProof: BlossomPaymentProof?,
     ): BlossomUploadResult =
         try {
             mirror(sourceUrl, serverBaseUrl, authHeader, paymentProof)
@@ -196,7 +172,7 @@ open class BlossomClient(
      * this server (may be empty; servers MAY not implement it). [authHeader] is a
      * `t=list` token — some servers require it, others allow anonymous listing.
      */
-    open suspend fun list(
+    override suspend fun list(
         serverBaseUrl: String,
         pubkey: HexKey,
         authHeader: String?,
@@ -224,11 +200,11 @@ open class BlossomClient(
      * BUD-02 delete: `DELETE /<sha256>[.ext]`. [authHeader] is a `t=delete` token
      * scoped to the hash (and ideally to this server). Returns true on 2xx.
      */
-    open suspend fun delete(
+    override suspend fun delete(
         hash: HexKey,
         serverBaseUrl: String,
         authHeader: String?,
-        extension: String = "",
+        extension: String,
     ): Boolean =
         withContext(Dispatchers.IO) {
             val request =
@@ -245,7 +221,7 @@ open class BlossomClient(
      * BUD-01 HEAD probe: does [serverBaseUrl] hold [hash]? A cheap "which server
      * has which blob" check that needs no auth on most servers.
      */
-    open suspend fun has(
+    override suspend fun has(
         hash: HexKey,
         serverBaseUrl: String,
     ): Boolean =
@@ -303,7 +279,7 @@ open class BlossomClient(
      * BUD-09 report: `PUT /report` with a signed NIP-56 (kind 1984) report event as
      * the JSON body. Returns true on 2xx.
      */
-    open suspend fun report(
+    override suspend fun report(
         serverBaseUrl: String,
         reportEventJson: String,
     ): Boolean =

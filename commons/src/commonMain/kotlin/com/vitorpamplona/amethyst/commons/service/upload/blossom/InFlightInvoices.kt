@@ -18,7 +18,9 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.service.uploads.blossom
+package com.vitorpamplona.amethyst.commons.service.upload.blossom
+
+import com.vitorpamplona.amethyst.commons.util.ConcurrentSet
 
 /**
  * BOLT-11 invoices handed to the NIP-47 wallet whose fate we never learned.
@@ -37,24 +39,24 @@ package com.vitorpamplona.amethyst.service.uploads.blossom
  * NIP-47 client offers none, so we settle for "never silently pay it twice".
  */
 object InFlightInvoices {
-    private val claimed = mutableSetOf<String>()
+    private val claimed = ConcurrentSet<String>()
 
     /**
      * Claims [invoice] for one payment attempt. Returns false when it was already
      * claimed and never resolved — the caller must not send it again.
      */
-    fun tryClaim(invoice: String): Boolean = synchronized(claimed) { claimed.add(invoice) }
+    fun tryClaim(invoice: String): Boolean = claimed.add(invoice)
 
     /** The wallet gave a definitive answer (paid or explicitly failed): the claim can go. */
     fun release(invoice: String) {
-        synchronized(claimed) { claimed.remove(invoice) }
+        claimed.remove(invoice)
     }
 
     /** True when [invoice] was sent to the wallet and never resolved. */
-    fun isAwaiting(invoice: String): Boolean = synchronized(claimed) { invoice in claimed }
+    fun isAwaiting(invoice: String): Boolean = invoice in claimed
 
     /** Test-only reset. */
-    internal fun clear() {
-        synchronized(claimed) { claimed.clear() }
+    fun clear() {
+        claimed.clear()
     }
 }

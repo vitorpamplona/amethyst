@@ -18,7 +18,7 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.service.uploads.blossom
+package com.vitorpamplona.amethyst.commons.service.upload.blossom
 
 import com.vitorpamplona.amethyst.commons.model.Account
 import com.vitorpamplona.quartz.lightning.LnInvoiceUtil
@@ -26,6 +26,7 @@ import com.vitorpamplona.quartz.nip47WalletConnect.rpc.PayInvoiceSuccessResponse
 import com.vitorpamplona.quartz.nipB7Blossom.BlossomPaymentProof
 import com.vitorpamplona.quartz.nipB7Blossom.BlossomPaymentRequired
 import com.vitorpamplona.quartz.utils.Log
+import com.vitorpamplona.quartz.utils.toLongValue
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.withTimeoutOrNull
 
@@ -133,7 +134,7 @@ object BlossomPaymentHandler {
      */
     fun amountSats(payment: BlossomPaymentRequired): Long? =
         payment.lightning?.let {
-            runCatching { LnInvoiceUtil.getAmountInSats(it).toLong() }.getOrNull()?.takeIf { sats -> sats > 0 }
+            runCatching { LnInvoiceUtil.getAmountInSats(it).toLongValue() }.getOrNull()?.takeIf { sats -> sats > 0 }
         }
 
     /**

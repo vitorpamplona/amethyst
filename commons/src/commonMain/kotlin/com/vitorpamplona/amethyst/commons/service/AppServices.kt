@@ -27,12 +27,16 @@ import com.vitorpamplona.amethyst.commons.connectedApps.signers.NostrSignerPermi
 import com.vitorpamplona.amethyst.commons.favorites.FavoriteAppsRegistry
 import com.vitorpamplona.amethyst.commons.model.location.DeviceLocation
 import com.vitorpamplona.amethyst.commons.model.preferences.AppPreferenceStores
+import com.vitorpamplona.amethyst.commons.model.preferences.CALENDAR_REMINDER_SETTINGS_STORE
+import com.vitorpamplona.amethyst.commons.model.preferences.CalendarReminderSettingsStore
 import com.vitorpamplona.amethyst.commons.model.preferences.NamecoinSettingsStore
 import com.vitorpamplona.amethyst.commons.model.preferences.OtsSettingsStore
 import com.vitorpamplona.amethyst.commons.napplet.permissions.NappletPermissionLedger
 import com.vitorpamplona.amethyst.commons.relayManagement.Nip86Executor
 import com.vitorpamplona.amethyst.commons.service.ai.AltTextSuggester
 import com.vitorpamplona.amethyst.commons.service.namecoin.NamecoinClients
+import com.vitorpamplona.amethyst.commons.service.upload.BlossomBlobClient
+import com.vitorpamplona.amethyst.commons.service.upload.blossom.BlossomMirrorQueue
 import com.vitorpamplona.amethyst.commons.tor.TorSettingsFlow
 import com.vitorpamplona.quartz.nip05DnsIdentifiers.namecoin.NamecoinNameResolver
 import kotlinx.coroutines.flow.Flow
@@ -89,6 +93,22 @@ interface AppServices {
 
     /** The device's position as geohashes. */
     val deviceLocation: DeviceLocation get() = DeviceLocation.None
+
+    /** Device-wide calendar reminder settings; the file is cached by [appStores]. */
+    val calendarReminderSettings: CalendarReminderSettingsStore
+        get() = CalendarReminderSettingsStore(appStores.getDataStore(CALENDAR_REMINDER_SETTINGS_STORE))
+
+    /**
+     * Starts or stops the background job that fires calendar reminders. Platforms without one
+     * ignore it.
+     */
+    fun setCalendarRemindersScheduled(enabled: Boolean) {}
+
+    /** A Blossom client for one server, built on that server's HTTP client (Tor, pooling). */
+    fun blossomClient(serverBaseUrl: String): BlossomBlobClient
+
+    /** The app-wide BUD-04 mirror sweep, which keeps running while the user navigates. */
+    val blossomMirrorQueue: BlossomMirrorQueue
 
     /** The place name already reverse-geocoded for [geohash], or null when none is cached yet. */
     fun cachedPlaceName(geohash: String): String? = null

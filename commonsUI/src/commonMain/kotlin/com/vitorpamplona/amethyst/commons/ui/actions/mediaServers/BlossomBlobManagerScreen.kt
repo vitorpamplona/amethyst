@@ -18,10 +18,8 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.ui.actions.mediaServers
+package com.vitorpamplona.amethyst.commons.ui.actions.mediaServers
 
-import android.content.Context
-import android.content.Intent
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -80,17 +78,14 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalClipboard
-import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
-import androidx.compose.ui.window.DialogProperties
-import androidx.core.net.toUri
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import androidx.lifecycle.viewmodel.compose.viewModel
 import coil3.compose.AsyncImage
 import coil3.compose.AsyncImagePainter
 import coil3.compose.SubcomposeAsyncImage
@@ -128,11 +123,15 @@ import com.vitorpamplona.amethyst.commons.resources.manage_stored_files_empty
 import com.vitorpamplona.amethyst.commons.resources.my_blossom_data
 import com.vitorpamplona.amethyst.commons.resources.quick_action_share
 import com.vitorpamplona.amethyst.commons.resources.retry
+import com.vitorpamplona.amethyst.commons.ui.components.edgeToEdgeDialogProperties
+import com.vitorpamplona.amethyst.commons.ui.components.rememberTextSharer
+import com.vitorpamplona.amethyst.commons.ui.components.rememberViewModel
 import com.vitorpamplona.amethyst.commons.ui.components.util.setText
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.navigation.topbars.TopBarExtensibleWithBackButton
 import com.vitorpamplona.amethyst.commons.ui.note.platform.FullscreenVideoView
 import com.vitorpamplona.amethyst.commons.ui.platform.AppBottomBar
+import com.vitorpamplona.amethyst.commons.ui.platform.LocalAppServices
 import com.vitorpamplona.amethyst.commons.ui.pluralStringRes
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.allGoodColor
@@ -152,8 +151,8 @@ fun BlossomBlobManagerScreen(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    val vm: BlossomBlobManagerViewModel = viewModel()
-    vm.init(accountViewModel)
+    val vm: BlossomBlobManagerViewModel = rememberViewModel { BlossomBlobManagerViewModel() }
+    vm.init(accountViewModel, LocalAppServices.current)
 
     LaunchedEffect(accountViewModel) { vm.refresh() }
 
@@ -518,17 +517,14 @@ private fun BlossomBlobViewer(
     accountViewModel: AccountViewModel,
     onDismiss: () -> Unit,
 ) {
-    val context = LocalContext.current
+    val sharer = rememberTextSharer()
+    val shareTitle = stringRes(Res.string.quick_action_share)
     var drawerOpen by remember { mutableStateOf(false) }
     val isVideo = row.type?.startsWith(MIME_VIDEO_PREFIX) == true
 
     Dialog(
         onDismissRequest = onDismiss,
-        properties =
-            DialogProperties(
-                usePlatformDefaultWidth = false,
-                decorFitsSystemWindows = false,
-            ),
+        properties = edgeToEdgeDialogProperties(),
     ) {
         Box(modifier = Modifier.fillMaxSize().background(Color.Black)) {
             val url = row.url
@@ -569,7 +565,7 @@ private fun BlossomBlobViewer(
                 Spacer(Modifier.weight(1f))
                 if (url != null) {
                     ViewerIconButton(MaterialSymbols.Share, stringRes(Res.string.quick_action_share)) {
-                        shareUrl(context, url)
+                        sharer.share(url, null, shareTitle)
                     }
                 }
                 ViewerIconButton(MaterialSymbols.Info, stringRes(Res.string.blossom_file_details)) {
@@ -650,7 +646,9 @@ private fun BlobActionsContent(
     var reportOpen by remember { mutableStateOf(false) }
     val clipboard = LocalClipboard.current
     val scope = rememberCoroutineScope()
-    val context = LocalContext.current
+    val sharer = rememberTextSharer()
+    val uriHandler = LocalUriHandler.current
+    val shareTitle = stringRes(Res.string.quick_action_share)
 
     Column(
         modifier =
@@ -723,10 +721,10 @@ private fun BlobActionsContent(
                 scope.launch { clipboard.setText(url) }
             }
             DetailAction(MaterialSymbols.Share, stringRes(Res.string.quick_action_share)) {
-                shareUrl(context, url)
+                sharer.share(url, null, shareTitle)
             }
             DetailAction(MaterialSymbols.AutoMirrored.OpenInNew, stringRes(Res.string.blossom_open)) {
-                runCatching { context.startActivity(Intent(Intent.ACTION_VIEW, url.toUri())) }
+                runCatching { uriHandler.openUri(url) }
             }
         }
 
@@ -778,18 +776,6 @@ private fun glyphFor(type: String?): MaterialSymbol =
         type?.startsWith(MIME_VIDEO_PREFIX) == true -> MaterialSymbols.PlayCircle
         else -> MaterialSymbols.Storage
     }
-
-private fun shareUrl(
-    context: Context,
-    url: String,
-) {
-    val send =
-        Intent(Intent.ACTION_SEND).apply {
-            type = "text/plain"
-            putExtra(Intent.EXTRA_TEXT, url)
-        }
-    runCatching { context.startActivity(Intent.createChooser(send, null)) }
-}
 
 @Composable
 private fun ServerPill(presence: ServerPresence) {

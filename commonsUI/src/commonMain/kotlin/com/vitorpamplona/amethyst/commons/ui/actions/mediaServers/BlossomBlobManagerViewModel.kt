@@ -18,20 +18,19 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.ui.actions.mediaServers
+package com.vitorpamplona.amethyst.commons.ui.actions.mediaServers
 
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.Stable
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.commons.model.Account
-import com.vitorpamplona.amethyst.commons.service.upload.BlossomClient
+import com.vitorpamplona.amethyst.commons.service.AppServices
 import com.vitorpamplona.amethyst.commons.service.upload.BlossomPaymentException
+import com.vitorpamplona.amethyst.commons.service.upload.blossom.BlossomMirrorQueue
+import com.vitorpamplona.amethyst.commons.service.upload.blossom.BlossomPaymentHandler
+import com.vitorpamplona.amethyst.commons.service.upload.blossom.PaymentPromptLedger
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
-import com.vitorpamplona.amethyst.service.uploads.blossom.BlossomMirrorQueue
-import com.vitorpamplona.amethyst.service.uploads.blossom.BlossomPaymentHandler
-import com.vitorpamplona.amethyst.service.uploads.blossom.PaymentPromptLedger
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip56Reports.ReportType
 import com.vitorpamplona.quartz.nipB7Blossom.BlossomPaymentProof
@@ -41,6 +40,7 @@ import com.vitorpamplona.quartz.nipB7Blossom.BlossomServerUrl
 import com.vitorpamplona.quartz.nipB7Blossom.BlossomUploadResult
 import com.vitorpamplona.quartz.utils.Log
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.IO
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
@@ -115,6 +115,7 @@ data class PendingMirrorPayment(
 @Stable
 class BlossomBlobManagerViewModel : ViewModel() {
     private lateinit var account: Account
+    private lateinit var services: AppServices
 
     private val _blobs = MutableStateFlow<List<BlobRow>>(emptyList())
     val blobs = _blobs.asStateFlow()
@@ -137,21 +138,25 @@ class BlossomBlobManagerViewModel : ViewModel() {
      */
     private val promptLedger = PaymentPromptLedger()
 
-    fun init(accountViewModel: AccountViewModel) {
+    fun init(
+        accountViewModel: AccountViewModel,
+        services: AppServices,
+    ) {
+        this.services = services
         this.account = accountViewModel.account
         // Reflect the app-level sync sweep's per-server results onto the pills, so an
         // open manager turns dots green live even though the work runs in the background.
         if (!resultCollectorStarted) {
             resultCollectorStarted = true
             viewModelScope.launch {
-                Amethyst.instance.blossomMirrorQueue.results.collect { r ->
+                services.blossomMirrorQueue.results.collect { r ->
                     setServerState(r.hash, r.server, if (r.ok) PresenceState.PRESENT else PresenceState.MISSING)
                 }
             }
         }
     }
 
-    private fun clientFor(server: String) = BlossomClient(Amethyst.instance.roleBasedHttpClientBuilder.okHttpClientForUploads(server))
+    private fun clientFor(server: String) = services.blossomClient(server)
 
     // The user's explicitly configured kind-10063 servers (empty if they never set
     // a list) — not the DEFAULT_MEDIA_SERVERS fallback, so the matrix reflects the
@@ -176,7 +181,7 @@ class BlossomBlobManagerViewModel : ViewModel() {
                     throw e
                 } catch (e: Exception) {
                     Log.w("BlossomBlobManager", "Failed to load blob list", e)
-                    _error.value = e.message?.ifBlank { null } ?: e.javaClass.simpleName
+                    _error.value = e.message?.ifBlank { null } ?: e::class.simpleName
                 } finally {
                     _isLoading.value = false
                 }
@@ -217,7 +222,7 @@ class BlossomBlobManagerViewModel : ViewModel() {
             if (blobs != null) {
                 listCapable.add(server)
                 hashesByServer[server] = blobs.mapNotNull { it.sha256 }.toSet()
-                blobs.forEach { d -> d.sha256?.let { meta.putIfAbsent(it, BlobMeta(d.url, d.size, d.type)) } }
+                blobs.forEach { d -> d.sha256?.let { meta.getOrPut(it) { BlobMeta(d.url, d.size, d.type) } } }
             }
         }
         val allHashes = meta.keys.toList()
@@ -374,7 +379,7 @@ class BlossomBlobManagerViewModel : ViewModel() {
                 }
             }
         }
-        Amethyst.instance.blossomMirrorQueue.start(account, tasks)
+        services.blossomMirrorQueue.start(account, tasks)
     }
 
     private suspend fun mirrorOne(

@@ -37,8 +37,11 @@ import com.vitorpamplona.amethyst.commons.service.AppServices
 import com.vitorpamplona.amethyst.commons.service.BlossomServerFinder
 import com.vitorpamplona.amethyst.commons.service.ai.AltTextSuggester
 import com.vitorpamplona.amethyst.commons.service.namecoin.NamecoinClients
+import com.vitorpamplona.amethyst.commons.service.upload.BlossomBlobClient
+import com.vitorpamplona.amethyst.commons.service.upload.blossom.BlossomMirrorQueue
 import com.vitorpamplona.amethyst.commons.tor.TorSettingsFlow
 import com.vitorpamplona.amethyst.service.ai.MLKitImageLabelService
+import com.vitorpamplona.amethyst.service.calendar.CalendarReminderWorker
 import com.vitorpamplona.amethyst.service.location.CachedReversedGeoLocations
 import com.vitorpamplona.quartz.nip05DnsIdentifiers.namecoin.ElectrumxServer
 import com.vitorpamplona.quartz.nip05DnsIdentifiers.namecoin.NamecoinCoreRpcConfig
@@ -71,6 +74,15 @@ object AndroidAppServices : AppServices {
             .map { it.isFullyBootstrapped }
 
     override val appStores: AppPreferenceStores get() = Amethyst.instance.appStores
+
+    override fun blossomClient(serverBaseUrl: String): BlossomBlobClient = Amethyst.instance.blossomClient(serverBaseUrl)
+
+    override val blossomMirrorQueue: BlossomMirrorQueue get() = Amethyst.instance.blossomMirrorQueue
+
+    override fun setCalendarRemindersScheduled(enabled: Boolean) {
+        val context = Amethyst.instance.appContext
+        if (enabled) CalendarReminderWorker.schedule(context) else CalendarReminderWorker.cancel(context)
+    }
 
     override val namecoinResolver: NamecoinNameResolver get() = Amethyst.instance.namecoinResolver
 

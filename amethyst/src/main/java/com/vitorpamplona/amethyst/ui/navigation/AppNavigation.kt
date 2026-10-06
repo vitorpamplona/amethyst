@@ -62,6 +62,8 @@ import com.vitorpamplona.amethyst.commons.resources.invalid_nip19_uri_descriptio
 import com.vitorpamplona.amethyst.commons.ui.actions.NewUserMetadataScreen
 import com.vitorpamplona.amethyst.commons.ui.actions.bolt12Offers.Bolt12OffersScreen
 import com.vitorpamplona.amethyst.commons.ui.actions.mediaServers.AllMediaServersScreen
+import com.vitorpamplona.amethyst.commons.ui.actions.mediaServers.BlossomBlobManagerScreen
+import com.vitorpamplona.amethyst.commons.ui.actions.mediaServers.BlossomImportScreen
 import com.vitorpamplona.amethyst.commons.ui.actions.nestsServers.NestsServersScreen
 import com.vitorpamplona.amethyst.commons.ui.actions.paymentTargets.PaymentTargetsScreen
 import com.vitorpamplona.amethyst.commons.ui.layouts.LocalScreenLayout
@@ -99,6 +101,7 @@ import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.buzz.BuzzNewDmScree
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.buzz.JobBoardScreen
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.buzz.WorkflowRunBoardScreen
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.calendars.CalendarCollectionsScreen
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.calendars.CalendarReminderSettingsScreen
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.calendars.CalendarsScreen
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.calendars.create.NewCalendarCollectionScreen
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.calendars.detail.CalendarEventDetailScreen
@@ -244,6 +247,7 @@ import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.settings.MessagesSe
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.settings.MutedThreadsScreen
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.settings.NIP47SetupScreen
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.settings.NamecoinSettingsScreen
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.settings.NotificationSettingsScreen
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.settings.NowPlayingSettingsScreen
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.settings.OtsSettingsScreen
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.settings.ProfileUiSettingsScreen
@@ -295,8 +299,6 @@ import com.vitorpamplona.amethyst.service.relayClient.authCommand.compose.RelayA
 import com.vitorpamplona.amethyst.service.relayClient.notifyCommand.compose.DisplayNotifyMessages
 import com.vitorpamplona.amethyst.service.resourceusage.DisplayResourceUsageAlert
 import com.vitorpamplona.amethyst.service.resourceusage.ScreenTimeIntegrator
-import com.vitorpamplona.amethyst.ui.actions.mediaServers.BlossomBlobManagerScreen
-import com.vitorpamplona.amethyst.ui.actions.mediaServers.BlossomImportScreen
 import com.vitorpamplona.amethyst.ui.actions.mediaServers.DisplayBlossomSyncProgress
 import com.vitorpamplona.amethyst.ui.broadcast.DisplayBroadcastProgress
 import com.vitorpamplona.amethyst.ui.call.CallActivity
@@ -315,7 +317,6 @@ import com.vitorpamplona.amethyst.ui.note.share.ShareNoteAsImageScreen
 import com.vitorpamplona.amethyst.ui.screen.AccountSessionManager
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountSwitcherAndLeftDrawerLayout
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.browser.WebAppScreen
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.calendars.CalendarReminderSettingsScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.calendars.create.NewCalendarEventScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.cordnGroup.CordnGroupChatScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.privateDM.ChatroomScreen
@@ -339,7 +340,6 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.napplets.ConnectedAppDetail
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.napplets.NappletsScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.nests.NestsScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.qrcode.ScanQrImageScreen
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.settings.NotificationSettingsScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.settings.ResourceUsageScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.settings.cordn.CordnBackupScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.settings.cordn.CordnMigrateScreen

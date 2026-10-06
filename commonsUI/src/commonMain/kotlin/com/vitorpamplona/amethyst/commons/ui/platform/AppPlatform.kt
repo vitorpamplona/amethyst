@@ -84,6 +84,17 @@ interface AppPlatform {
     @Composable
     fun NotificationProviderPrompt(sharedPrefs: UiSettingsFlow) {}
 
+    /**
+     * How notifications reach this device: the push provider, the background service and its
+     * per-account participation, battery optimization. Empty where the platform has none.
+     */
+    @Composable
+    fun NotificationDeliverySettings(accountViewModel: AccountViewModel) {}
+
+    /** The per-category notification settings the system owns (Android's channels). */
+    @Composable
+    fun NotificationCategorySettings() {}
+
     /** A button that reads [name] aloud with the platform's text-to-speech; nothing where there is none. */
     @Composable
     fun SpeakNameButton(name: String) {}
@@ -170,6 +181,12 @@ fun SpeakNameButton(name: String) = LocalAppPlatform.current.SpeakNameButton(nam
 
 @Composable
 fun NotificationProviderPrompt(sharedPrefs: UiSettingsFlow) = LocalAppPlatform.current.NotificationProviderPrompt(sharedPrefs)
+
+@Composable
+fun NotificationDeliverySettings(accountViewModel: AccountViewModel) = LocalAppPlatform.current.NotificationDeliverySettings(accountViewModel)
+
+@Composable
+fun NotificationCategorySettings() = LocalAppPlatform.current.NotificationCategorySettings()
 
 @Composable
 fun GeohashLocationPickerDialog(

@@ -18,7 +18,7 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.service.uploads.blossom
+package com.vitorpamplona.amethyst.commons.service.upload.blossom
 
 import com.vitorpamplona.quartz.nipB7Blossom.BlossomPaymentRequired
 import org.junit.Assert.assertEquals
