@@ -60,7 +60,26 @@ internal class SortedConcurrentMap<K : Any, V : Any> {
         @Volatile var value: V?,
         height: Int,
     ) {
-        val next = AtomicArray<Node<K, V>?>(height) { null }
+        /**
+         * Level 0 gets its own field rather than a slot in [upper]: every scan walks it,
+         * and three nodes in four (p = 1/4) have no other level, so those allocate no
+         * array at all.
+         */
+        @Volatile var next0: Node<K, V>? = null
+
+        /** Levels `1 until height`; null on nodes of height 1. */
+        val upper: AtomicArray<Node<K, V>?>? = if (height > 1) AtomicArray(height - 1) { null } else null
+
+        val height: Int get() = (upper?.size ?: 0) + 1
+
+        fun next(level: Int): Node<K, V>? = if (level == 0) next0 else upper!!.loadAt(level - 1)
+
+        fun setNext(
+            level: Int,
+            node: Node<K, V>?,
+        ) {
+            if (level == 0) next0 = node else upper!!.storeAt(level - 1, node)
+        }
     }
 
     private val head = Node<K, V>(null, null, MAX_HEIGHT)
@@ -84,14 +103,14 @@ internal class SortedConcurrentMap<K : Any, V : Any> {
         var x = head
         var level = height - 1
         while (level >= 0) {
-            var n = x.next.loadAt(level)
+            var n = x.next(level)
             while (n != null && compare(n.key!!, key) < 0) {
                 x = n
-                n = x.next.loadAt(level)
+                n = x.next(level)
             }
             level--
         }
-        return x.next.loadAt(0)
+        return x.next0
     }
 
     private fun nodeFor(key: K): Node<K, V>? {
@@ -99,18 +118,23 @@ internal class SortedConcurrentMap<K : Any, V : Any> {
         return if (compare(n.key!!, key) == 0) n else null
     }
 
-    /** Fills [preds] with the last node before [key] at every level. Call under [writeLock]. */
+    /**
+     * Fills [preds] with the last node before [key] at every level. Levels at or above
+     * [height] are empty, so their predecessor is [head]. Call under [writeLock].
+     */
     private fun findPredecessors(key: K): Node<K, V>? {
+        val top = height
+        for (level in top until MAX_HEIGHT) preds[level] = head
         var x = head
-        for (level in MAX_HEIGHT - 1 downTo 0) {
-            var n = x.next.loadAt(level)
+        for (level in top - 1 downTo 0) {
+            var n = x.next(level)
             while (n != null && compare(n.key!!, key) < 0) {
                 x = n
-                n = x.next.loadAt(level)
+                n = x.next(level)
             }
             preds[level] = x
         }
-        val candidate = x.next.loadAt(0)
+        val candidate = x.next0
         return if (candidate != null && compare(candidate.key!!, key) == 0) candidate else null
     }
 
@@ -138,10 +162,10 @@ internal class SortedConcurrentMap<K : Any, V : Any> {
         val h = randomHeight()
         val node = Node(key, value, h)
         for (level in 0 until h) {
-            node.next.storeAt(level, preds[level]!!.next.loadAt(level))
+            node.setNext(level, preds[level]!!.next(level))
         }
         for (level in 0 until h) {
-            preds[level]!!.next.storeAt(level, node)
+            preds[level]!!.setNext(level, node)
         }
         if (h > height) height = h
         count++
@@ -150,10 +174,10 @@ internal class SortedConcurrentMap<K : Any, V : Any> {
     /** Unlinks [node], found by [findPredecessors]. Call under [writeLock]. */
     private fun unlink(node: Node<K, V>) {
         node.value = null
-        for (level in node.next.size - 1 downTo 0) {
+        for (level in node.height - 1 downTo 0) {
             val pred = preds[level]!!
-            if (pred.next.loadAt(level) === node) {
-                pred.next.storeAt(level, node.next.loadAt(level))
+            if (pred.next(level) === node) {
+                pred.setNext(level, node.next(level))
             }
         }
         count--
@@ -221,19 +245,19 @@ internal class SortedConcurrentMap<K : Any, V : Any> {
         writeLock.withLock {
             val existing = findPredecessors(key)
             val matches = existing != null && existing.value === expected
-            if (matches) unlink(existing!!)
+            if (matches) unlink(existing)
             clearPredecessors()
             matches
         }
 
     fun clear() {
         writeLock.withLock {
-            var n = head.next.loadAt(0)
+            var n = head.next0
             while (n != null) {
                 n.value = null
-                n = n.next.loadAt(0)
+                n = n.next0
             }
-            for (level in 0 until MAX_HEIGHT) head.next.storeAt(level, null)
+            for (level in 0 until MAX_HEIGHT) head.setNext(level, null)
             height = 1
             count = 0
         }
@@ -249,13 +273,13 @@ internal class SortedConcurrentMap<K : Any, V : Any> {
         to: K?,
         action: (K, V) -> Unit,
     ) {
-        var n = if (from == null) head.next.loadAt(0) else ceilingNode(from)
+        var n = if (from == null) head.next0 else ceilingNode(from)
         while (n != null) {
             val key = n.key!!
             if (to != null && compare(key, to) > 0) return
             val value = n.value
             if (value != null) action(key, value)
-            n = n.next.loadAt(0)
+            n = n.next0
         }
     }
 

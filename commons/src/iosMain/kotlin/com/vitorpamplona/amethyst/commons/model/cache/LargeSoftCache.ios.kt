@@ -92,7 +92,11 @@ actual class LargeSoftCache<K : Any, V : Any> : ICacheOperations<K, V> {
         cache.put(key, WeakReference(value))
     }
 
-    /** The JVM actual's body over the same putIfAbsent contract: [builder] runs outside the lock. */
+    /**
+     * [builder] runs outside the lock, at most once. The insert loops because the entry
+     * that beat us to [key] may itself already be collected: returning [newObject]
+     * without storing it would let the next caller build a second live instance.
+     */
     actual fun getOrCreate(
         key: K,
         builder: (key: K) -> V,
@@ -101,11 +105,15 @@ actual class LargeSoftCache<K : Any, V : Any> : ICacheOperations<K, V> {
         if (ref != null) {
             val value = ref.get()
             if (value != null) return value
-            // removes first so the putIfAbsent below can win; another thread may put in between.
             cache.remove(key, ref)
         }
         val newObject = builder(key)
-        return cache.putIfAbsent(key, WeakReference(newObject))?.get() ?: newObject
+        val newRef = WeakReference(newObject)
+        while (true) {
+            val existing = cache.putIfAbsent(key, newRef) ?: return newObject
+            existing.get()?.let { return it }
+            cache.remove(key, existing)
+        }
     }
 
     actual fun cleanUp() {
