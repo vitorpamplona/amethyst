@@ -21,7 +21,6 @@
 package com.vitorpamplona.amethyst.commons.model.zap
 
 import com.vitorpamplona.amethyst.commons.model.MIN_ONCHAIN_ZAP_SATS
-import com.vitorpamplona.amethyst.commons.model.zap.RailCapability
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test

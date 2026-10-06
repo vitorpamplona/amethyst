@@ -398,6 +398,9 @@ interface NotePlatform {
         maxDurationSeconds: Int?,
     ) {}
 
+    /** Whether [RecordAudioBox] can record here; callers offer a text alternative when it cannot. */
+    val canRecordAudio: Boolean get() = false
+
     /**
      * Records a voice message behind a caller-drawn trigger: [content] gets whether it is
      * recording, the elapsed seconds and a stop action, and the finished recording goes to

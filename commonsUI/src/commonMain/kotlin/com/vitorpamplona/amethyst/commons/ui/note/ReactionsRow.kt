@@ -189,6 +189,7 @@ import com.vitorpamplona.amethyst.commons.ui.note.ZapRail
 import com.vitorpamplona.amethyst.commons.ui.note.ZapRailIcon
 import com.vitorpamplona.amethyst.commons.ui.note.ZappedIcon
 import com.vitorpamplona.amethyst.commons.ui.note.elements.ShareOptionsBottomSheet
+import com.vitorpamplona.amethyst.commons.ui.note.platform.LocalNotePlatform
 import com.vitorpamplona.amethyst.commons.ui.note.platform.MAX_VOICE_RECORD_SECONDS
 import com.vitorpamplona.amethyst.commons.ui.note.platform.RecordAudioBox
 import com.vitorpamplona.amethyst.commons.ui.note.types.EditState
@@ -296,6 +297,19 @@ private fun InnerReactionRow(
     val voiceRecordingState = remember(baseNote.idHex) { mutableStateOf(false) }
     val reactionRowItems by accountViewModel.reactionRowItemsFlow().collectAsStateWithLifecycle()
 
+    // Unsealed rumors (private replies/posts) must not receive public
+    // reposts or quotes: each would e-tag the private rumor id onto
+    // public relays. Replies, reactions, and zaps stay enabled because
+    // the composer locks private mode for rumor parents, ReactionAction
+    // gift-wraps reactions to empty-sig targets, and zaps are forced to
+    // the PRIVATE type with public rails suppressed. Read once per row,
+    // not once per reaction item.
+    val isPrivateRumor = baseNote.isPrivateRumor()
+    // A NIP-29/Buzz relay-group message (including a Buzz DM) must not be publicly reposted or
+    // shared: the reference points at a membership-gated group event that non-members can't fetch,
+    // and a DM shouldn't be rebroadcast at all. Reply/like/zap stay (reply routes into the group).
+    val isRelayGroupMessage = baseNote.inGatherers?.any { it is RelayGroupChannel } == true
+
     GenericInnerReactionRow(
         showReactionDetail = showReactionDetail,
         addPadding = addPadding,
@@ -307,17 +321,6 @@ private fun InnerReactionRow(
         },
         reactions = reactionRowItems,
         renderReaction = { item ->
-            // Unsealed rumors (private replies/posts) must not receive public
-            // reposts or quotes: each would e-tag the private rumor id onto
-            // public relays. Replies, reactions, and zaps stay enabled because
-            // the composer locks private mode for rumor parents, ReactionAction
-            // gift-wraps reactions to empty-sig targets, and zaps are forced to
-            // the PRIVATE type with public rails suppressed.
-            val isPrivateRumor = baseNote.isPrivateRumor()
-            // A NIP-29/Buzz relay-group message (including a Buzz DM) must not be publicly reposted or
-            // shared: the reference points at a membership-gated group event that non-members can't fetch,
-            // and a DM shouldn't be rebroadcast at all. Reply/like/zap stay (reply routes into the group).
-            val isRelayGroupMessage = baseNote.inGatherers?.any { it is RelayGroupChannel } == true
             when (item.action) {
                 ReactionRowAction.Reply -> {
                     ReplyReactionWithDialog(
@@ -502,7 +505,8 @@ fun LoadAndDisplayZapraiser(
     wantsToSeeReactions: MutableState<Boolean>,
     accountViewModel: AccountViewModel,
 ) {
-    val zapraiserAmount = baseNote.event?.zapraiserAmount() ?: 0
+    val event = baseNote.event
+    val zapraiserAmount = remember(event) { event?.zapraiserAmount() ?: 0 }
     if (zapraiserAmount > 0) {
         Box(
             modifier = if (showReactionDetail) ReactionRowZapraiserWithPadding else ReactionRowZapraiser,
@@ -619,7 +623,8 @@ private fun WatchReactionsAndRenderGallery(
 
     if (reactionEvents.isNotEmpty()) {
         reactionEvents.forEach {
-            val reactions = remember(it.key) { it.value.toImmutableList() }
+            // Keyed on the list too: a new reaction with the same emoji replaces it under the same key.
+            val reactions = remember(it.key, it.value) { it.value.toImmutableList() }
             RenderLikeGallery(
                 it.key,
                 reactions,
@@ -721,7 +726,8 @@ private fun ReplyReactionWithDialog(
     showCounter: Boolean = true,
     voiceRecordingState: MutableState<Boolean>? = null,
 ) {
-    if (baseNote.event is BaseVoiceEvent) {
+    // Without a recorder (no RecordAudioBox on this platform) a voice note gets the text reply.
+    if (baseNote.event is BaseVoiceEvent && LocalNotePlatform.current.canRecordAudio) {
         ReplyViaVoiceReaction(
             baseNote,
             grayTint,
@@ -1353,17 +1359,7 @@ fun ZapReaction(
                 },
                 onProgress = { scope.launch(Dispatchers.Main) { zappingProgress = it } },
                 onPayViaIntent = {
-                    if (it.size == 1) {
-                        val payable = it.first()
-                        walletLauncher.payInvoice(payable.invoice, noWalletFoundStr, { }) { error ->
-                            zappingProgress = 0f
-                            accountViewModel.toastManager.toast(Res.string.error_dialog_zap_error, UserBasedErrorMessage(error, payable.info.user))
-                        }
-                    } else {
-                        val uid = Uuid.random().toString()
-                        accountViewModel.tempManualPaymentCache.put(uid, it)
-                        nav.nav(Route.ManualZapSplitPayment(uid))
-                    }
+                    payViaIntentOrManualSplit(it, walletLauncher, noWalletFoundStr, accountViewModel, nav, onPaymentError = { zappingProgress = 0f })
                 },
                 accountViewModel = accountViewModel,
                 baseNote = baseNote,
@@ -2090,7 +2086,7 @@ fun observeZapRailCapability(
                 cashuState,
                 showPayToChip,
                 bolt12Payable = accountViewModel.account.zaps.canZapViaBolt12(),
-                payToResolves = { payToProbe.peek(it)?.resolves == true },
+                payToResolves = { payToApps[PaymentTargetTypes.probeKeyFor(it)]?.resolves == true },
             )
         if (onchainEnabled) {
             rc.copy(onchainMaxSpendableSats = onchainFunds?.maxSpendableSats)

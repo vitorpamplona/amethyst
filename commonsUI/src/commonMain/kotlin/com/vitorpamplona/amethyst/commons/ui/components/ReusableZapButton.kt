@@ -42,7 +42,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.User
-import com.vitorpamplona.amethyst.commons.model.navigation.Route
 import com.vitorpamplona.amethyst.commons.relayClient.user.UserFinderFilterAssemblerSubscription
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.donate_now
@@ -57,17 +56,16 @@ import com.vitorpamplona.amethyst.commons.service.ZapPaymentHandler
 import com.vitorpamplona.amethyst.commons.ui.components.CrossfadeIfEnabled
 import com.vitorpamplona.amethyst.commons.ui.components.ZapButtonCallbacks
 import com.vitorpamplona.amethyst.commons.ui.components.ZapButtonConfig
-import com.vitorpamplona.amethyst.commons.ui.components.toasts.multiline.UserBasedErrorMessage
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.note.ObserveZapIcon
 import com.vitorpamplona.amethyst.commons.ui.note.ZapAmountChoicePopup
 import com.vitorpamplona.amethyst.commons.ui.note.ZapIcon
 import com.vitorpamplona.amethyst.commons.ui.note.ZappedIcon
+import com.vitorpamplona.amethyst.commons.ui.note.payViaIntentOrManualSplit
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.wallet.OnchainZapSendDialog
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.wallet.navigateToReloadMint
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.ModifierWidth3dp
-import com.vitorpamplona.amethyst.commons.ui.wallet.payInvoice
 import com.vitorpamplona.amethyst.commons.ui.wallet.rememberWalletAppLauncher
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.quartz.nip01Core.core.Event
@@ -78,7 +76,6 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlin.uuid.ExperimentalUuidApi
-import kotlin.uuid.Uuid
 
 @OptIn(ExperimentalUuidApi::class)
 @Composable
@@ -128,17 +125,7 @@ fun ReusableZapButton(
                     }
                 },
                 onPayViaIntent = {
-                    if (it.size == 1) {
-                        val payable = it.first()
-                        walletLauncher.payInvoice(payable.invoice, noWalletFoundStr, { }) {
-                            zappingProgress = 0f
-                            accountViewModel.toastManager.toast(Res.string.error_dialog_zap_error, UserBasedErrorMessage(it, payable.info.user))
-                        }
-                    } else {
-                        val uid = Uuid.random().toString()
-                        accountViewModel.tempManualPaymentCache.put(uid, it)
-                        nav.nav(Route.ManualZapSplitPayment(uid))
-                    }
+                    payViaIntentOrManualSplit(it, walletLauncher, noWalletFoundStr, accountViewModel, nav, onPaymentError = { zappingProgress = 0f })
                 },
             )
         },
@@ -168,17 +155,7 @@ fun ReusableZapButton(
                     scope.launch(Dispatchers.Main) { zappingProgress = it }
                 },
                 onPayViaIntent = {
-                    if (it.size == 1) {
-                        val payable = it.first()
-                        walletLauncher.payInvoice(payable.invoice, noWalletFoundStr, { }) {
-                            zappingProgress = 0f
-                            accountViewModel.toastManager.toast(Res.string.error_dialog_zap_error, UserBasedErrorMessage(it, payable.info.user))
-                        }
-                    } else {
-                        val uid = Uuid.random().toString()
-                        accountViewModel.tempManualPaymentCache.put(uid, it)
-                        nav.nav(Route.ManualZapSplitPayment(uid))
-                    }
+                    payViaIntentOrManualSplit(it, walletLauncher, noWalletFoundStr, accountViewModel, nav, onPaymentError = { zappingProgress = 0f })
                 },
                 onOnchainAmount = { amount ->
                     wantsToZap = null

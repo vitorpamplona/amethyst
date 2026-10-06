@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst.service.payments
 
+import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.content.pm.ResolveInfo
@@ -27,7 +28,6 @@ import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.core.graphics.drawable.toBitmap
 import androidx.core.net.toUri
-import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.commons.model.payments.PaymentTargetTypes
 import com.vitorpamplona.amethyst.commons.ui.payments.PayToAppInfo
 import com.vitorpamplona.amethyst.commons.ui.payments.PayToAppProbe
@@ -38,6 +38,9 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import java.util.concurrent.ConcurrentHashMap
+
+/** A host no registrar can delegate (RFC 2606), so only catch-all browsers match it. */
+private const val CONTROL_URL = "https://probe.invalid/"
 
 /**
  * Answers "can anything on this phone open this payment target, and what does it
@@ -57,10 +60,9 @@ import java.util.concurrent.ConcurrentHashMap
  * is invisible to Compose: the chip would stay missing until some unrelated
  * recomposition happened to run.
  */
-object PayToAppAvailability : PayToAppProbe {
-    /** A host no registrar can delegate (RFC 2606), so only catch-all browsers match it. */
-    private const val CONTROL_URL = "https://probe.invalid/"
-
+class PayToAppAvailability(
+    private val context: Context,
+) : PayToAppProbe {
     private val state = MutableStateFlow<Map<String, PayToAppInfo>>(emptyMap())
     override val flow: StateFlow<Map<String, PayToAppInfo>> = state.asStateFlow()
 
@@ -90,7 +92,7 @@ object PayToAppAvailability : PayToAppProbe {
         targets: List<PaymentTarget>,
         iconPx: Int,
     ) {
-        val pm = Amethyst.instance.appContext.packageManager
+        val pm = context.packageManager
         val keys =
             targets
                 .asSequence()

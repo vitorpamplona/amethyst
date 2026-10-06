@@ -20,8 +20,6 @@
  */
 package com.vitorpamplona.amethyst.commons.model.zap
 
-import com.vitorpamplona.amethyst.commons.model.zap.CashuRailStatus
-import com.vitorpamplona.amethyst.commons.model.zap.RailCapability
 import org.junit.Assert.assertEquals
 import org.junit.Test
 

@@ -560,6 +560,8 @@ object AndroidNotePlatform : NotePlatform {
         maxDurationSeconds: Int?,
     ) = AppRecordVoiceButton(onVoiceTaken, maxDurationSeconds)
 
+    override val canRecordAudio: Boolean get() = true
+
     @Composable
     override fun RecordAudioBox(
         modifier: Modifier,
