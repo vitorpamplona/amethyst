@@ -85,6 +85,7 @@ import com.vitorpamplona.quartz.nip10Notes.TextNoteEvent
 import com.vitorpamplona.quartz.nip19Bech32.Nip19Parser
 import com.vitorpamplona.quartz.nip19Bech32.entities.NEvent
 import com.vitorpamplona.quartz.nip19Bech32.entities.NNote
+import com.vitorpamplona.quartz.nipA0VoiceMessages.VoiceReplyEvent
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -238,7 +239,12 @@ fun ThreadScreen(
         val event = note.event ?: return 1
         levelCache[event.id]?.let { return it }
 
-        val replyToId = (event as? BaseThreadedEvent)?.replyingTo()
+        // NIP-10 precedence (reply marker, root marker), then the positional forms quartz
+        // reads for Note.replyTo (including 4-5 element tags with an empty or pubkey slot 3);
+        // a NIP-A0 voice reply names its parent with a NIP-22 `e`.
+        val replyToId =
+            (event as? BaseThreadedEvent)?.let { it.replyingTo() ?: it.unmarkedReplyTos().lastOrNull() }
+                ?: (event as? VoiceReplyEvent)?.replyingTo()
         val level =
             if (replyToId == null || replyToId == noteId) {
                 1

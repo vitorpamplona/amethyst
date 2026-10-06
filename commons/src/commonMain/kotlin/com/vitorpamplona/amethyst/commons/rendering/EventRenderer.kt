@@ -44,6 +44,8 @@ import com.vitorpamplona.quartz.nip23LongContent.LongFormContentEvent
 import com.vitorpamplona.quartz.nip25Reactions.ReactionEvent
 import com.vitorpamplona.quartz.nip57Zaps.ZapReceiptEvent
 import com.vitorpamplona.quartz.nip65RelayList.AdvertisedRelayListEvent
+import kotlin.concurrent.Volatile
+import kotlin.coroutines.cancellation.CancellationException
 
 /** Turns one event into its [RenderedEvent]. Implementations are pure: no I/O, no clock, no cache. */
 fun interface EventRenderer {
@@ -61,8 +63,10 @@ fun interface EventRenderer {
  * Front ends call [render]; they never pick a renderer themselves.
  */
 object EventRendererRegistry {
-    private val renderers: MutableMap<Int, EventRenderer> =
-        mutableMapOf(
+    // Copy-on-write: render() reads a stable snapshot from any thread; register() swaps it.
+    @Volatile
+    private var renderers: Map<Int, EventRenderer> =
+        mapOf(
             MetadataEvent.KIND to MetadataRenderer,
             TextNoteEvent.KIND to TextNoteRenderer,
             ContactListEvent.KIND to ContactListRenderer,
@@ -81,15 +85,32 @@ object EventRendererRegistry {
         kind: Int,
         renderer: EventRenderer,
     ) {
-        renderers[kind] = renderer
+        renderers = renderers + (kind to renderer)
     }
 
     fun rendererFor(kind: Int): EventRenderer = renderers[kind] ?: DefaultRenderer
 
+    /**
+     * Renders [event]. Never throws: events come from relays, so a renderer that trips on
+     * a malformed one falls back to [DefaultRenderer], and that to [RenderSupport.minimal].
+     */
     fun render(
         event: Event,
         ctx: RenderContext = RenderContext.EMPTY,
-    ): RenderedEvent = rendererFor(event.kind).render(event, ctx)
+    ): RenderedEvent =
+        try {
+            rendererFor(event.kind).render(event, ctx)
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            try {
+                DefaultRenderer.render(event, ctx)
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                RenderSupport.minimal(event, ctx)
+            }
+        }
 }
 
 /** The fallback: rich-text content + generic tag refs, no kind-specific details. */

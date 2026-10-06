@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst.commons.rendering.renderers
 
+import com.vitorpamplona.amethyst.commons.model.provenZapper
 import com.vitorpamplona.amethyst.commons.rendering.EventRef
 import com.vitorpamplona.amethyst.commons.rendering.EventRenderer
 import com.vitorpamplona.amethyst.commons.rendering.EventRendererRegistry
@@ -27,8 +28,12 @@ import com.vitorpamplona.amethyst.commons.rendering.RenderContext
 import com.vitorpamplona.amethyst.commons.rendering.RenderSupport
 import com.vitorpamplona.amethyst.commons.rendering.RenderedDetails
 import com.vitorpamplona.amethyst.commons.rendering.RenderedEvent
+import com.vitorpamplona.quartz.nip01Core.core.Address
+import com.vitorpamplona.quartz.nip01Core.core.AddressableEvent
 import com.vitorpamplona.quartz.nip01Core.core.Event
+import com.vitorpamplona.quartz.nip01Core.core.isValid
 import com.vitorpamplona.quartz.nip01Core.crypto.verify
+import com.vitorpamplona.quartz.nip01Core.tags.aTag.ATag
 import com.vitorpamplona.quartz.nip01Core.tags.events.ETag
 import com.vitorpamplona.quartz.nip09Deletions.DeletionRequestEvent
 import com.vitorpamplona.quartz.nip18Reposts.BaseRepostEvent
@@ -40,7 +45,7 @@ import com.vitorpamplona.quartz.nip57Zaps.ZapReceiptEvent
 import com.vitorpamplona.quartz.utils.lastNotNullOfOrNull
 import com.vitorpamplona.quartz.utils.toLongValue
 
-/** kind:7 — NIP-25: the target is the LAST `e` tag. */
+/** kind:7 — NIP-25: the target is the LAST `e` tag, or the `a` tag for an addressable-only reaction. */
 object ReactionRenderer : EventRenderer {
     override fun render(
         event: Event,
@@ -61,7 +66,7 @@ object ReactionRenderer : EventRenderer {
             ctx,
             // The content is the reaction itself, not prose: no body to parse.
             text = "",
-            replyTo = RenderSupport.ref(reaction.tags.lastNotNullOfOrNull(ETag::parse)),
+            replyTo = RenderSupport.ref(reaction.tags.lastNotNullOfOrNull(ETag::parse)) ?: addressRef(reaction.tags),
             details = RenderedDetails.Reaction(content, type, emojiUrl),
         )
     }
@@ -76,17 +81,26 @@ object RepostRenderer : EventRenderer {
         val repost = event as? BaseRepostEvent ?: return RenderSupport.build(event, ctx)
         val targetTag = event.tags.lastNotNullOfOrNull(ETag::parse)
         val target =
-            targetTag?.let { EventRef(eventId = it.eventId, relay = it.relay?.url, author = it.author, kind = repost.boostedKind()) }
+            RenderSupport.ref(targetTag, repost.boostedKind())
                 ?: repost.boostedAddress()?.let { EventRef(eventId = null, address = it.toValue(), author = it.pubKeyHex, kind = it.kind) }
 
-        // An embedded copy is only shown when it is the event the tags name and its
-        // signature holds — the content of a repost is attacker-controlled JSON.
+        // An embedded copy is only shown when it is the very event the tags name and its
+        // signature holds — the content of a repost is attacker-controlled JSON. With no
+        // target there is nothing to check it against, so nothing is embedded.
         val embedded =
             when (event) {
                 is RepostEvent -> event.containedPost()
                 is GenericRepostEvent -> event.containedPost()
                 else -> null
-            }?.takeIf { (target?.eventId == null || it.id == target.eventId) && it.verify() }
+            }?.takeIf { embedded ->
+                val matches =
+                    when {
+                        target == null -> false
+                        target.eventId != null -> embedded.id == target.eventId
+                        else -> embedded is AddressableEvent && embedded.addressTag() == target.address
+                    }
+                matches && embedded.verify()
+            }
 
         return RenderSupport.build(
             event,
@@ -105,18 +119,21 @@ object ZapReceiptRenderer : EventRenderer {
         ctx: RenderContext,
     ): RenderedEvent {
         val receipt = event as? ZapReceiptEvent ?: return RenderSupport.build(event, ctx)
-        val request = receipt.zapRequest
+        // The request's signer and comment only count when the request is proven (see provenZapper).
+        val sender = receipt.provenZapper()
         return RenderSupport.build(
             event,
             ctx,
             text = "",
-            replyTo = receipt.zappedPost().lastOrNull()?.let { EventRef(eventId = it, kind = null) },
+            replyTo =
+                receipt.zappedPost().lastOrNull { it.isValid() }?.let { EventRef(eventId = it) }
+                    ?: addressRef(receipt.tags),
             details =
                 RenderedDetails.Zap(
                     amountSats = receipt.amount?.toLongValue(),
-                    sender = request?.pubKey,
+                    sender = sender,
                     recipient = receipt.zappedAuthor().firstOrNull(),
-                    comment = request?.content?.ifBlank { null },
+                    comment = if (sender != null) receipt.zapRequest?.content?.ifBlank { null } else null,
                 ),
         )
     }
@@ -141,3 +158,10 @@ object DeletionRenderer : EventRenderer {
         )
     }
 }
+
+/** The last `a` tag as an address ref — the target of a reaction or zap aimed at an addressable only. */
+private fun addressRef(tags: Array<Array<String>>): EventRef? =
+    tags.lastNotNullOfOrNull(ATag::parseAddressId)?.let { address ->
+        val parsed = Address.parse(address)
+        EventRef(eventId = null, address = address, author = parsed?.pubKeyHex, kind = parsed?.kind)
+    }

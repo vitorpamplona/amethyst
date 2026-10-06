@@ -113,4 +113,14 @@ class ComposerTagsTest {
             val quote = bob.sign(TextNoteEvent.build(message) { messageTags(message) })
             assertEquals(listOf(article.addressTag()), quote.tags.mapNotNull(QTag::parseAddressId))
         }
+
+    @Test
+    fun pTagsWithHintsFillsAMissingHintFromTheCache() =
+        runTest {
+            val cache = EventCache()
+            cache.relayHints.addKey(bob.pubKey, relay)
+            val tagger = NewMessageTagger(message = "hi nostr:${NPub.create(bob.pubKey)}", dao = cache)
+            tagger.run()
+            assertEquals(listOf(PTag(bob.pubKey, relay)), tagger.pTagsWithHints(cache.relayHints))
+        }
 }

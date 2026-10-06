@@ -27,32 +27,57 @@ import com.vitorpamplona.amethyst.commons.rendering.RenderSupport
 import com.vitorpamplona.amethyst.commons.rendering.RenderedDetails
 import com.vitorpamplona.amethyst.commons.rendering.RenderedEvent
 import com.vitorpamplona.quartz.nip01Core.core.Event
+import com.vitorpamplona.quartz.nip01Core.core.isValid
 import com.vitorpamplona.quartz.nip10Notes.TextNoteEvent
+import com.vitorpamplona.quartz.nip10Notes.tags.MarkedETag
 import com.vitorpamplona.quartz.nip14Subject.subject
 import com.vitorpamplona.quartz.nip22Comments.CommentEvent
+import com.vitorpamplona.quartz.nip22Comments.tags.ReplyAddressTag
 import com.vitorpamplona.quartz.nip22Comments.tags.ReplyEventTag
+import com.vitorpamplona.quartz.nip22Comments.tags.ReplyIdentifierTag
 import com.vitorpamplona.quartz.nip22Comments.tags.ReplyKindTag
+import com.vitorpamplona.quartz.nip22Comments.tags.RootAddressTag
 import com.vitorpamplona.quartz.nip22Comments.tags.RootEventTag
+import com.vitorpamplona.quartz.nip22Comments.tags.RootIdentifierTag
 import com.vitorpamplona.quartz.nip22Comments.tags.RootKindTag
 import com.vitorpamplona.quartz.nip23LongContent.LongFormContentEvent
 import com.vitorpamplona.quartz.utils.lastNotNullOfOrNull
 
-/** kind:1 — NIP-10 threading: `reply` marker first, then `root`, then the legacy positional form. */
+/**
+ * kind:1 — NIP-10 threading, in quartz's `replyingTo()` precedence (`reply` marker, then
+ * `root` marker, then the legacy positional form). Positional `e` tags are read the way
+ * the app reads them for `Note.replyTo` (`tagsWithoutCitations`): marker-less tags, with
+ * or without a pubkey in the marker slot, minus the events the text merely cites inline.
+ */
 object TextNoteRenderer : EventRenderer {
     override fun render(
         event: Event,
         ctx: RenderContext,
     ): RenderedEvent {
         val note = event as? TextNoteEvent ?: return RenderSupport.build(event, ctx)
-        val root = note.root()
-        val reply = note.markedReply() ?: note.unmarkedReply() ?: root
+        val markedRoot = note.markedRoot()
+        val marked = note.markedReply() ?: markedRoot
+
+        val positional =
+            if (marked != null) {
+                emptyList()
+            } else {
+                val cited = note.findCitations()
+                note.tags.mapNotNull { tag ->
+                    val id = MarkedETag.parseOnlyPositionalThreadTagsIds(tag)
+                    if (id != null && id.isValid() && id !in cited) MarkedETag.parseAllThreadTags(tag) else null
+                }
+            }
+
+        val reply = marked ?: positional.lastOrNull()
+        // A lone `reply` marker (legacy single-level form) names the root too.
+        val root = markedRoot ?: positional.firstOrNull() ?: marked
         return RenderSupport.build(
             event,
             ctx,
             title = note.subject(),
             replyTo = RenderSupport.ref(reply),
-            // Legacy single-level form: a lone `reply` marker names the root too.
-            root = RenderSupport.ref(root ?: reply),
+            root = RenderSupport.ref(root),
         )
     }
 }
@@ -68,15 +93,35 @@ object CommentRenderer : EventRenderer {
         val replyKind = comment.tags.firstNotNullOfOrNull(ReplyKindTag::parse)?.toIntOrNull()
         val rootKind = comment.tags.firstNotNullOfOrNull(RootKindTag::parse)?.toIntOrNull()
 
+        // A scope can name an event (`e`/`E`), an addressable (`a`/`A`, usually beside its `e`)
+        // and/or an external id (`i`/`I`); the ref carries every one that is present.
+        val replyEvent =
+            comment.tags
+                .lastNotNullOfOrNull(ReplyEventTag::parse)
+                ?.ref
+                ?.takeIf { it.eventId.isValid() }
+        val replyAddress = comment.tags.lastNotNullOfOrNull(ReplyAddressTag::parseAddressId)
+        val replyExternal = comment.tags.lastNotNullOfOrNull { ReplyIdentifierTag.parse(it) }
         val reply =
-            comment.tags.lastNotNullOfOrNull(ReplyEventTag::parse)?.ref?.let {
-                EventRef(eventId = it.eventId, relay = it.relayHint?.url, author = it.author, kind = replyKind)
-            } ?: comment.replyingToAddressId()?.let { EventRef(eventId = null, address = it, kind = replyKind) }
+            if (replyEvent != null || replyAddress != null || replyExternal != null) {
+                EventRef(replyEvent?.eventId, replyAddress, replyEvent?.relayHint?.url, replyEvent?.author, replyKind, replyExternal)
+            } else {
+                null
+            }
 
+        val rootEvent =
+            comment.tags
+                .firstNotNullOfOrNull(RootEventTag::parse)
+                ?.ref
+                ?.takeIf { it.eventId.isValid() }
+        val rootAddress = comment.tags.firstNotNullOfOrNull(RootAddressTag::parseAddressId)
+        val rootExternal = comment.tags.firstNotNullOfOrNull { RootIdentifierTag.parse(it) }
         val root =
-            comment.tags.firstNotNullOfOrNull(RootEventTag::parse)?.ref?.let {
-                EventRef(eventId = it.eventId, relay = it.relayHint?.url, author = it.author, kind = rootKind)
-            } ?: comment.rootAddressIds().firstOrNull()?.let { EventRef(eventId = null, address = it, kind = rootKind) }
+            if (rootEvent != null || rootAddress != null || rootExternal != null) {
+                EventRef(rootEvent?.eventId, rootAddress, rootEvent?.relayHint?.url, rootEvent?.author, rootKind, rootExternal)
+            } else {
+                null
+            }
 
         return RenderSupport.build(event, ctx, replyTo = reply, root = root)
     }

@@ -89,7 +89,9 @@ object ReplyActions {
 
         val template =
             TextNoteEvent.build(content, replyingTo = parent) {
-                notify(carriedPubKeys + mentions.filter { it.pubKey !in chain })
+                notify(carriedPubKeys + mentions.filter { it.pubKey !in chain }.distinctBy { it.pubKey })
+                // A reply in a NIP-29 group stays in the group (and on its host relay).
+                parent.event.groupId()?.let { hTag(it) }
                 messageTags(content)
             }
         return signer.sign(template)
@@ -127,7 +129,7 @@ object ReplyActions {
             CommentEvent.replyBuilder(content, parent) {
                 parent.event.groupId()?.let { hTag(it) }
                 // replyBuilder already tags the parent's author.
-                notify(mentions.filter { it.pubKey != parent.event.pubKey })
+                notify(mentions.filter { it.pubKey != parent.event.pubKey }.distinctBy { it.pubKey })
                 messageTags(content)
             }
         return signer.sign(template)

@@ -78,6 +78,7 @@ object JsonEventFormatter {
             "relay" to ref.relay,
             "author" to ref.author,
             "kind" to ref.kind,
+            "external" to ref.external,
         )
 
     fun media(media: MediaRef): Map<String, Any?> =

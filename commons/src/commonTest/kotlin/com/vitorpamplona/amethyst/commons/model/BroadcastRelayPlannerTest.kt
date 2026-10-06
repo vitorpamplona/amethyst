@@ -152,4 +152,26 @@ class BroadcastRelayPlannerTest {
             val relays = planner(cache).computeRelayListToBroadcast(list)
             assertTrue(relays.containsAll(everywhere + myBroadcast), "$relays")
         }
+
+    @Test
+    fun personalEventsSkipTheBroadcastList() =
+        runTest {
+            val cache = EventCache()
+            val planner = planner(cache)
+            cache.getOrCreateUser(me.pubKey)
+            val settings = me.sign<Event>(1_700_000_000, 30078, arrayOf(arrayOf("d", "app-settings")), "{}")
+            cache.justConsumeMyOwnEvent(settings)
+
+            assertEquals(myOutbox, planner.computeRelayListToBroadcast(settings))
+        }
+
+    @Test
+    fun aNoteThatTagsUsReachesOurOwnInbox() =
+        runTest {
+            val (cache, bobNote) = cacheWithBob()
+            val planner = planner(cache)
+            val reply = bob.sign(TextNoteEvent.build("hey") { add(arrayOf("p", me.pubKey)) })
+            cache.justConsume(reply, null, true)
+            assertTrue(planner.computeRelayListToBroadcast(reply).containsAll(myInbox))
+        }
 }

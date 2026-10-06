@@ -33,6 +33,7 @@ import com.vitorpamplona.quartz.nip01Core.tags.people.PTag
 import com.vitorpamplona.quartz.nip01Core.tags.people.pTag
 import com.vitorpamplona.quartz.nip10Notes.TextNoteEvent
 import com.vitorpamplona.quartz.nip18Reposts.RepostEvent
+import com.vitorpamplona.quartz.nip19Bech32.entities.NEvent
 import com.vitorpamplona.quartz.nip25Reactions.ReactionEvent
 import kotlinx.coroutines.test.runTest
 import kotlin.test.Test
@@ -75,5 +76,27 @@ class NotificationItemTest {
         runTest {
             val like = bob.sign(ReactionEvent.build("+", EventHintBundle(alice.sign(TextNoteEvent.build("x")))))
             assertEquals(bob.pubKey, NotificationItem.classify(like)!!.effectiveAuthorPubKey)
+        }
+
+    @Test
+    fun positionalRepliesAreRepliesAndCitationsAreMentions() =
+        runTest {
+            val r = "1".repeat(64)
+            val emptyMarker = bob.sign<Event>(1_700_000_000, 1, arrayOf(arrayOf("e", r, "wss://r.example.com", "", alice.pubKey), arrayOf("p", alice.pubKey)), "re")
+            assertEquals("reply", NotificationItem.classify(emptyMarker)?.type)
+
+            val cited = bob.sign<Event>(1_700_000_000, 1, arrayOf(arrayOf("e", r), arrayOf("p", alice.pubKey)), "see nostr:" + NEvent.create(r, null, null, null))
+            assertEquals("mention", NotificationItem.classify(cited)?.type)
+        }
+
+    @Test
+    fun anUnprovenZapShowsTheProviderNotTheClaimedZapper() =
+        runTest {
+            val provider = NostrSignerInternal(KeyPair("000000000000000000000000000000000000000000000000000000000000000a".hexToByteArray()))
+            val forgedRequest = """{"id":"x","pubkey":"abc","created_at":1,"kind":9734,"tags":[],"content":"","sig":"y"}"""
+            val receipt = provider.sign<Event>(1_700_000_001, 9735, arrayOf(arrayOf("p", alice.pubKey), arrayOf("description", forgedRequest)), "")
+            val item = assertIs<NotificationItem.Zap>(NotificationItem.classify(receipt))
+            assertNull(item.sender)
+            assertEquals(provider.pubKey, item.effectiveAuthorPubKey)
         }
 }

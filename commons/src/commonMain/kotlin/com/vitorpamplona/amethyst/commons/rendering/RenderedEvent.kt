@@ -53,7 +53,7 @@ data class RenderedEvent(
     val media: List<MediaRef>,
     /** The event this one answers (NIP-10 reply marker, NIP-22 parent, or the reacted/reposted/zapped target). */
     val replyTo: EventRef?,
-    /** The thread root, when it differs from [replyTo]. */
+    /** The thread root. Always set when known — for a direct reply it equals [replyTo]. */
     val root: EventRef?,
     val contentWarning: String?,
     val details: RenderedDetails?,
@@ -63,14 +63,15 @@ data class RenderedEvent(
 /** Who signed the event, enriched with whatever profile the caller pre-resolved into [RenderContext]. */
 data class AuthorRef(
     val pubKey: HexKey,
+    /** Empty when [pubKey] is not a valid 32-byte key (it can come from an embedded, unsigned event). */
     val npub: String,
     val name: String?,
     val displayName: String?,
     val nip05: String?,
     val picture: String?,
 ) {
-    /** Display name, then name, then a shortened npub — never blank. */
-    fun bestName(): String = displayName?.ifBlank { null } ?: name?.ifBlank { null } ?: npub.take(12) + "…"
+    /** Display name, then name, then a shortened npub (or pubkey) — never blank. */
+    fun bestName(): String = displayName?.ifBlank { null } ?: name?.ifBlank { null } ?: npub.ifEmpty { pubKey }.take(12) + "…"
 }
 
 /** A pointer to another event (by id and/or addressable coordinate), with whatever hints the tags carried. */
@@ -80,9 +81,16 @@ data class EventRef(
     val relay: String? = null,
     val author: HexKey? = null,
     val kind: Int? = null,
+    /** A NIP-73 external id (URL, ISBN, podcast GUID, geohash…) when the target is not a Nostr event. */
+    val external: String? = null,
 )
 
-/** One piece of the event text, in order. Concatenating [text] of every span gives back the displayed body. */
+/**
+ * One piece of the event text, in display order. Concatenating [text] of every span gives
+ * the body as the app's rich-text viewer lays it out, which can differ from the raw content
+ * in whitespace (trailing spaces, `\r`, gallery line breaks) and in schemeless media URLs.
+ * Use [RenderedEvent.text] for the raw content; don't derive offsets into it from spans.
+ */
 sealed interface BodySpan {
     val text: String
 
@@ -182,7 +190,10 @@ sealed interface RenderedDetails {
 
     data class Zap(
         val amountSats: Long?,
-        /** The zapper (the zap request signer), not the LNURL provider that signed the receipt. */
+        /**
+         * The zapper (the zap request's signer, not the LNURL provider that signed the receipt) —
+         * null unless the request proves it (see `provenZapper`); so is [comment].
+         */
         val sender: HexKey?,
         val recipient: HexKey?,
         val comment: String?,

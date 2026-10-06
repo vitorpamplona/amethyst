@@ -144,6 +144,9 @@ class NoteCache(
     suspend fun planner(): BroadcastRelayPlanner {
         val me = ctx.identity.pubKeyHex
         addUsers(listOf(me))
+        // The planner recognises our own events by finding our User in the cache (as the app
+        // always does); create it even when the store holds nothing of ours yet.
+        user(me)
         val nip65Outbox = ctx.outboxRelays()
         val nip65Inbox = ctx.nip65ReadRelays()
         // Both lists are NIP-44 encrypted to ourselves; a list we cannot decrypt routes nowhere.

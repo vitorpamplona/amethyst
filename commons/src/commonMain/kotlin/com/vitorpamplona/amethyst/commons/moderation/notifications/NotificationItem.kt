@@ -20,7 +20,9 @@
  */
 package com.vitorpamplona.amethyst.commons.moderation.notifications
 
+import com.vitorpamplona.amethyst.commons.model.provenZapper
 import com.vitorpamplona.quartz.nip01Core.core.Event
+import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip04Dm.messages.EncryptedDmEvent
 import com.vitorpamplona.quartz.nip10Notes.TextNoteEvent
 import com.vitorpamplona.quartz.nip17Dm.files.ChatMessageEncryptedFileHeaderEvent
@@ -83,6 +85,9 @@ sealed class NotificationItem(
         val amount: Long?,
     ) : NotificationItem(event, timestamp) {
         override val type = "zap"
+
+        /** The proven zapper of a NIP-57 receipt (see [provenZapper]), verified once. */
+        val sender: HexKey? by lazy { (event as? ZapReceiptEvent)?.provenZapper() }
     }
 
     /**
@@ -110,9 +115,10 @@ sealed class NotificationItem(
                 // Nutzaps: treat like a zap; the sats amount needs the Cashu proofs.
                 is NutzapEvent -> Zap(event, event.createdAt, null)
                 // A kind:1 that answers another note is a reply; one that only cites
-                // (mention-marked `e`, `q`, inline nostr: link) is a mention.
+                // (mention-marked `e`, `q`, inline nostr: link) is a mention. "Answers" is
+                // what the app links as `Note.replyTo`: tagsWithoutCitations.
                 is TextNoteEvent ->
-                    if (event.replyingTo() != null) {
+                    if (event.tagsWithoutCitations().isNotEmpty()) {
                         Reply(event, event.createdAt)
                     } else {
                         Mention(event, event.createdAt)
@@ -135,12 +141,14 @@ sealed class NotificationItem(
 /**
  * The pubkey to display and fetch metadata for. For NIP-57 zap receipts the outer
  * `event.pubKey` is the LNURL provider — the actual zapper signed the nested zap
- * request. For gift-wrapped DMs the outer pubkey is an ephemeral key; until
- * decryption lands it falls back to `event.pubKey` for a stable avatar.
+ * request, which only counts when it is proven ([NotificationItem.Zap.sender]); an
+ * unproven or anonymous zap shows the provider. For gift-wrapped DMs the outer pubkey is
+ * an ephemeral key; until decryption lands it falls back to `event.pubKey` for a stable
+ * avatar.
  */
 val NotificationItem.effectiveAuthorPubKey: String
     get() =
-        when (val e = event) {
-            is ZapReceiptEvent -> e.zapRequest?.pubKey ?: e.pubKey
+        when (this) {
+            is NotificationItem.Zap -> sender ?: event.pubKey
             else -> event.pubKey
         }

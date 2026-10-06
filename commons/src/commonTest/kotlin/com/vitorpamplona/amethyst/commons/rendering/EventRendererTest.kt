@@ -202,4 +202,116 @@ class EventRendererTest {
             assertTrue((map["body"] as List<*>).isNotEmpty())
             assertNull(JsonEventFormatter.toMap(EventRendererRegistry.render(note), includeBody = false)["body"])
         }
+
+    @Test
+    fun malformedPubkeysNeverThrow() =
+        runTest {
+            val bad = TextNoteEvent("a".repeat(64), "abc", 1_700_000_000, emptyArray(), "hi", "0".repeat(128))
+            val rendered = EventRendererRegistry.render(bad)
+            assertEquals("", rendered.author.npub)
+            assertEquals("abc…", rendered.author.bestName())
+        }
+
+    @Test
+    fun indexMentionOfAnATagIsAnAddressRef() =
+        runTest {
+            val address = "30023:${alice.pubKey}:slug"
+            val note = raw(1, "see #[0]", arrayOf("a", address))
+            val mention =
+                EventRendererRegistry
+                    .render(note)
+                    .body
+                    .filterIsInstance<BodySpan.EventMention>()
+                    .single()
+            assertNull(mention.ref.eventId)
+            assertEquals(address, mention.ref.address)
+        }
+
+    @Test
+    fun nip10PrecedenceMatchesQuartz() =
+        runTest {
+            val r = "1".repeat(64)
+            val q = "2".repeat(64)
+            val p = bob.pubKey
+            // A root marker beats an unmarked e tag, as quartz's replyingTo() has it.
+            val rootAndUnmarked = raw(1, "x", arrayOf("e", r, "", "root"), arrayOf("e", q))
+            assertEquals(r, EventRendererRegistry.render(rootAndUnmarked).replyTo?.eventId)
+
+            // Positional tags with an empty marker or a pubkey in slot 3 are still replies.
+            val emptyMarker = raw(1, "x", arrayOf("e", r, "wss://r.example.com", "", p))
+            assertEquals(r, EventRendererRegistry.render(emptyMarker).replyTo?.eventId)
+            val pubkeyInSlot3 = raw(1, "x", arrayOf("e", r, "wss://r.example.com", p))
+            assertEquals(r, EventRendererRegistry.render(pubkeyInSlot3).replyTo?.eventId)
+
+            // Not an id: no reply ref.
+            assertNull(EventRendererRegistry.render(raw(1, "x", arrayOf("e", "not-an-id"))).replyTo)
+        }
+
+    @Test
+    fun addressOnlyRepostDoesNotEmbedAnUnrelatedEvent() =
+        runTest {
+            val unrelated = bob.sign(TextNoteEvent.build("unrelated"))
+            val repost = raw(16, unrelated.toJson(), arrayOf("a", "30023:${bob.pubKey}:slug"), arrayOf("k", "30023"))
+            val details = assertIs<RenderedDetails.Repost>(EventRendererRegistry.render(repost).details)
+            assertEquals("30023:${bob.pubKey}:slug", details.target?.address)
+            assertNull(details.embedded)
+
+            val untargeted = raw(6, unrelated.toJson())
+            assertNull(assertIs<RenderedDetails.Repost>(EventRendererRegistry.render(untargeted).details).embedded)
+        }
+
+    @Test
+    fun commentRefsCarryAddressAndExternalIds() =
+        runTest {
+            val article = raw(30023, "body", arrayOf("d", "slug"))
+            val comment = ReplyActions.reply(EventHintBundle(article), "nice", bob)
+            val reply = EventRendererRegistry.render(comment).replyTo
+            assertEquals(article.id, reply?.eventId)
+            assertEquals("30023:${alice.pubKey}:slug", reply?.address)
+
+            val onUrl = raw(1111, "hi", arrayOf("I", "https://example.com/"), arrayOf("K", "web"), arrayOf("i", "https://example.com/"), arrayOf("k", "web"))
+            val rendered = EventRendererRegistry.render(onUrl)
+            assertEquals("https://example.com/", rendered.root?.external)
+            assertEquals("https://example.com/", rendered.replyTo?.external)
+        }
+
+    @Test
+    fun reactionToAnAddressOnlyHasATarget() =
+        runTest {
+            val like = raw(7, "+", arrayOf("a", "30023:${bob.pubKey}:slug"))
+            assertEquals("30023:${bob.pubKey}:slug", EventRendererRegistry.render(like).replyTo?.address)
+        }
+
+    @Test
+    fun emojiWithPunctuationAndPdfLinksAreKept() =
+        runTest {
+            val note = raw(1, "hi :wave:, read https://example.com/doc.pdf", arrayOf("emoji", "wave", "https://example.com/wave.png"))
+            val rendered = EventRendererRegistry.render(note)
+            assertEquals(
+                "https://example.com/wave.png",
+                rendered.body
+                    .filterIsInstance<BodySpan.CustomEmoji>()
+                    .single()
+                    .url,
+            )
+            assertTrue(rendered.body.any { it is BodySpan.Link && it.url == "https://example.com/doc.pdf" }, rendered.body.toString())
+            assertEquals("file", rendered.media.single { it.url.endsWith(".pdf") }.type)
+        }
+
+    @Test
+    fun aSpoofedZapRequestDoesNotNameTheZapper() =
+        runTest {
+            val provider = NostrSignerInternal(KeyPair("000000000000000000000000000000000000000000000000000000000000000a".hexToByteArray()))
+            val request = alice.sign<Event>(1_700_000_000, 9734, arrayOf(arrayOf("p", bob.pubKey)), "great post")
+            val receipt = provider.sign<Event>(1_700_000_001, 9735, arrayOf(arrayOf("p", bob.pubKey), arrayOf("description", request.toJson())), "")
+            val proven = assertIs<RenderedDetails.Zap>(EventRendererRegistry.render(receipt).details)
+            assertEquals(alice.pubKey, proven.sender)
+            assertEquals("great post", proven.comment)
+
+            val forged = request.toJson().replace("great post", "from jack")
+            val spoofed = provider.sign<Event>(1_700_000_002, 9735, arrayOf(arrayOf("p", bob.pubKey), arrayOf("description", forged)), "")
+            val details = assertIs<RenderedDetails.Zap>(EventRendererRegistry.render(spoofed).details)
+            assertNull(details.sender)
+            assertNull(details.comment)
+        }
 }

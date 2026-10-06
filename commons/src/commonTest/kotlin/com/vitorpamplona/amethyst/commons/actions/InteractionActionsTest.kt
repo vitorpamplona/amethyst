@@ -85,8 +85,14 @@ class InteractionActionsTest {
             assertTrue(ReplyActions.repliesAsComment(amethystRoot))
             assertIs<CommentEvent>(ReplyActions.reply(EventHintBundle(amethystRoot, relay), "hi", bob))
 
-            // A reply further down an Amethyst thread is still NIP-10.
-            val reply = ReplyActions.replyTo(EventHintBundle(alice.sign(TextNoteEvent.build("plain"))), "x", alice)
+            // A reply further down an Amethyst thread is still NIP-10, client tag or not.
+            val reply =
+                alice.sign(
+                    TextNoteEvent.build("x", replyingTo = EventHintBundle(alice.sign(TextNoteEvent.build("plain")))) {
+                        add(arrayOf("client", "Amethyst"))
+                    },
+                )
+            assertTrue(!ReplyActions.repliesAsComment(reply))
             assertIs<TextNoteEvent>(ReplyActions.reply(EventHintBundle(reply, relay), "y", bob))
         }
 
@@ -97,6 +103,18 @@ class InteractionActionsTest {
             assertFailsWith<IllegalArgumentException> {
                 ReplyActions.commentOn(EventHintBundle<Event>(parent), "x", bob)
             }
+        }
+
+    @Test
+    fun replyCarriesMentionsOnceAndKeepsTheGroup() =
+        runTest {
+            val parent = alice.sign(TextNoteEvent.build("in the group") { add(arrayOf("h", "group1")) })
+            val carol = PTag("0".repeat(63) + "9", relay)
+            val reply = ReplyActions.replyTo(EventHintBundle(parent), "hi", bob, listOf(carol, carol, PTag(alice.pubKey)))
+            val pTags = reply.tags.mapNotNull(PTag::parseKey)
+            assertEquals(1, pTags.count { it == carol.pubKey }, "a mention is tagged once")
+            assertEquals(1, pTags.count { it == alice.pubKey }, "a mention already in the chain is not repeated")
+            assertTrue(reply.tags.any { it[0] == "h" && it[1] == "group1" }, "the reply stays in the NIP-29 group")
         }
 
     @Test

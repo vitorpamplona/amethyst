@@ -24,6 +24,7 @@ import com.vitorpamplona.quartz.kinds.KindNames
 import com.vitorpamplona.quartz.nip01Core.core.AddressableEvent
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
+import com.vitorpamplona.quartz.nip01Core.core.isValid
 import com.vitorpamplona.quartz.nip01Core.tags.events.GenericETag
 import com.vitorpamplona.quartz.nip01Core.tags.hashtags.hashtags
 import com.vitorpamplona.quartz.nip01Core.tags.people.taggedUserIds
@@ -49,20 +50,22 @@ object RenderSupport {
         root: EventRef? = null,
         details: RenderedDetails? = null,
     ): RenderedEvent {
-        val parsed = BodySpans.parse(text, event.tags)
+        val parsed = BodySpans.parse(text, event.tags, event.pubKey)
 
         val inlineUsers = parsed.spans.mapNotNull { (it as? BodySpan.UserMention)?.pubKey }
         val inlineEvents = parsed.spans.mapNotNull { (it as? BodySpan.EventMention)?.ref }
         val inlineHashtags = parsed.spans.mapNotNull { (it as? BodySpan.Hashtag)?.hashtag }
 
         val quoteTags =
-            event.tags.taggedQuotes().map {
-                when (it) {
-                    is QEventTag -> EventRef(eventId = it.eventId, relay = it.relay?.url, author = it.author)
-                    is QAddressableTag -> EventRef(eventId = null, address = it.address.toValue(), relay = it.relay?.url, author = it.address.pubKeyHex, kind = it.address.kind)
-                    else -> EventRef(eventId = null)
-                }
-            }
+            event.tags
+                .taggedQuotes()
+                .map {
+                    when (it) {
+                        is QEventTag -> it.eventId.takeIf { id -> id.isValid() }?.let { id -> EventRef(eventId = id, relay = it.relay?.url, author = it.author) }
+                        is QAddressableTag -> EventRef(eventId = null, address = it.address.toValue(), relay = it.relay?.url, author = it.address.pubKeyHex, kind = it.address.kind)
+                        else -> null
+                    }
+                }.filterNotNull()
 
         return RenderedEvent(
             kind = event.kind,
@@ -75,7 +78,7 @@ object RenderSupport {
             summary = summary,
             text = text,
             body = parsed.spans,
-            mentions = (event.taggedUserIds() + inlineUsers).distinct(),
+            mentions = (event.taggedUserIds() + inlineUsers).filter { it.isValid() }.distinct(),
             quotes = (quoteTags + inlineEvents).distinctBy { it.eventId ?: it.address },
             // Lowercase: hashtags are case-insensitive and `#t` filters match the lowercase form.
             hashtags = (event.hashtags() + inlineHashtags).map { it.lowercase() }.distinct(),
@@ -95,7 +98,8 @@ object RenderSupport {
         val metadata = ctx.profileOf(pubKey)
         return AuthorRef(
             pubKey = pubKey,
-            npub = NPub.create(pubKey),
+            // The pubkey of an embedded event (a zap request, a repost) is attacker-controlled.
+            npub = if (pubKey.isValid()) NPub.create(pubKey) else "",
             name = metadata?.name,
             displayName = metadata?.displayName,
             nip05 = metadata?.nip05,
@@ -103,8 +107,39 @@ object RenderSupport {
         )
     }
 
+    /** An `e`-tag ref, or null when the tag does not hold a 32-byte event id. */
     fun ref(
         tag: GenericETag?,
         kind: Int? = null,
-    ): EventRef? = tag?.let { EventRef(eventId = it.eventId, relay = it.relay?.url, author = it.author, kind = kind) }
+    ): EventRef? = tag?.takeIf { it.eventId.isValid() }?.let { EventRef(eventId = it.eventId, relay = it.relay?.url, author = it.author, kind = kind) }
+
+    /**
+     * The last-resort rendering when a renderer failed on a malformed event: the raw text,
+     * no spans or refs. Nothing on a relay can make [EventRendererRegistry.render] throw.
+     */
+    fun minimal(
+        event: Event,
+        ctx: RenderContext,
+    ): RenderedEvent =
+        RenderedEvent(
+            kind = event.kind,
+            kindName = KindNames.nameFor(event.kind),
+            eventId = event.id,
+            author = authorRef(event.pubKey, ctx),
+            createdAt = event.createdAt,
+            address = null,
+            title = null,
+            summary = null,
+            text = event.content,
+            body = listOf(BodySpan.Text(event.content)),
+            mentions = emptyList(),
+            quotes = emptyList(),
+            hashtags = emptyList(),
+            media = emptyList(),
+            replyTo = null,
+            root = null,
+            contentWarning = null,
+            details = null,
+            raw = event,
+        )
 }
