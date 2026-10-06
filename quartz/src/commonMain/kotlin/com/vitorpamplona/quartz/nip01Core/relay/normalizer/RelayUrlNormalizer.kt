@@ -504,12 +504,34 @@ class RelayUrlNormalizer {
          * a 64-char pubkey or a label like `inspired-by` that shifted into the slot (a builder that
          * dropped a null relay, a role or marker in that position) comes back as a fake
          * `wss://<word>/`. Hint parsers feed the app's relay-hint index and broadcast set, so they
-         * must reject those: this applies the same `length > 7 && isRelayUrl` guard that
-         * `PTag`/`ETag` already use before normalizing.
+         * must reject those. A value with a `ws://`/`wss://` scheme is taken as is; a schemeless
+         * one is only completed when it [looksLikeBareHost] — `relay.damus.io` is a relay a
+         * publisher forgot the scheme on, `inspired-by`, `root` or a hex key never are.
          */
         fun normalizeHintOrNull(url: String?): NormalizedRelayUrl? {
-            if (url == null || url.length <= 7 || !isRelayUrl(url)) return null
+            if (url.isNullOrEmpty()) return null
+            if (url.length > 7 && isRelayUrl(url)) return normalizeOrNull(url)
+            if (!looksLikeBareHost(url)) return null
             return normalizeOrNull(url)
+        }
+
+        /**
+         * A schemeless value worth completing with `wss://`: it has a dot (every public host does;
+         * keys, ids, markers and role labels do not), no whitespace, is not a number (a zap weight
+         * like `1.0`), and has at most one `:` (a `host:port`, but not a `kind:pubkey:d` address
+         * whose d-tag happens to hold a dot).
+         */
+        fun looksLikeBareHost(value: String): Boolean {
+            var dots = 0
+            var colons = 0
+            for (c in value) {
+                when {
+                    c.isWhitespace() -> return false
+                    c == '.' -> dots++
+                    c == ':' -> colons++
+                }
+            }
+            return dots > 0 && colons <= 1 && value.toDoubleOrNull() == null
         }
 
         fun normalizeOrNull(url: String): NormalizedRelayUrl? {

@@ -46,10 +46,8 @@ import com.vitorpamplona.quartz.nip56Reports.ReportType
 internal object ReportTagLayout {
     /** The relay hint at slot 2, or null under the legacy layout. */
     fun relayHint(tag: Array<String>): NormalizedRelayUrl? {
-        if (tag.has(2) && tag[2].length > 7 && RelayUrlNormalizer.isRelayUrl(tag[2])) {
-            return RelayUrlNormalizer.normalizeOrNull(tag[2])
-        }
-        return null
+        if (!tag.has(2)) return null
+        return RelayUrlNormalizer.normalizeHintOrNull(tag[2])
     }
 
     /**

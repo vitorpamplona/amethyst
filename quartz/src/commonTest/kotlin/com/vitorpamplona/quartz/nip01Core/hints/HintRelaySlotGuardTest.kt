@@ -54,7 +54,8 @@ import com.vitorpamplona.quartz.nipA0VoiceMessages.tags.ReplyEventTag as VoiceRe
  * A tag's relay SLOT often holds something else — a pubkey a builder shifted left when it
  * dropped a null relay, or a role/label (`inspired-by`, `github`, `root`). The forgiving
  * [RelayUrlNormalizer.normalizeOrNull] would turn each of those into `wss://<word>/`, a fake
- * relay in the hint index and the broadcast set. Every hint parser must decline them.
+ * relay in the hint index and the broadcast set. Every hint parser must decline them, while still
+ * completing a schemeless host (`relay.damus.io`) a publisher forgot the scheme on.
  */
 class HintRelaySlotGuardTest {
     private val pk = "460c25e682fda7832b52d1f22d3d22b3176d972f60dcdc3212ed8c92ef85065c"
@@ -63,10 +64,24 @@ class HintRelaySlotGuardTest {
     private val relay = "wss://relay.damus.io/"
 
     /** Values that sit in relay slots in the wild and are not relays. */
-    private val notRelays = listOf(pk, "inspired-by", "github", "root", "reply", "relay.damus.io")
+    private val notRelays =
+        listOf(
+            pk,
+            "inspired-by",
+            "github",
+            "root",
+            "reply",
+            // a zap weight, a d-tag with a dot inside an address, and free text
+            "1.0",
+            "30023:$pk:my.article",
+            "relay damus.io",
+        )
+
+    /** Schemeless hosts a publisher forgot the scheme on: these ARE relays. */
+    private val bareHosts = listOf("relay.damus.io", "nos.lol", "relay.example.com:7777", "relay.damus.io/")
 
     @Test
-    fun normalizeHintOrNullOnlyAcceptsWebsocketUrls() {
+    fun normalizeHintOrNullCompletesOnlyHostLookingValues() {
         notRelays.forEach { assertNull(RelayUrlNormalizer.normalizeHintOrNull(it), it) }
         assertNull(RelayUrlNormalizer.normalizeHintOrNull(null))
         assertNull(RelayUrlNormalizer.normalizeHintOrNull(""))
@@ -76,6 +91,9 @@ class HintRelaySlotGuardTest {
 
         assertEquals(relay, RelayUrlNormalizer.normalizeHintOrNull("wss://relay.damus.io")?.url)
         assertNotNull(RelayUrlNormalizer.normalizeHintOrNull("ws://relay.example.com"))
+
+        bareHosts.forEach { assertNotNull(RelayUrlNormalizer.normalizeHintOrNull(it), it) }
+        assertEquals(relay, RelayUrlNormalizer.normalizeHintOrNull("relay.damus.io")?.url)
     }
 
     /** Each case builds a tag around the given relay slot value and runs one hint parser on it. */
@@ -117,5 +135,12 @@ class HintRelaySlotGuardTest {
     @Test
     fun everyHintParserStillHintsARealRelay() {
         cases.forEach { (name, parse) -> assertNotNull(parse(relay), name) }
+    }
+
+    @Test
+    fun everyHintParserCompletesABareHost() {
+        cases.forEach { (name, parse) ->
+            bareHosts.forEach { slot -> assertNotNull(parse(slot), "$name must hint '$slot'") }
+        }
     }
 }
