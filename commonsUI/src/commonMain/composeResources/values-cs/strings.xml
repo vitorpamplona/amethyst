@@ -1137,6 +1137,11 @@
     <string name="relay_auth_session_section">Jen pro tuto chvíli</string>
     <string name="relay_auth_session_row_desc">Přihlášeno, dokud nerestartujete Amethyst</string>
     <string name="relay_auth_forget_session">Zapomenout toto přihlášení</string>
+    <string name="relay_auth_event_title">Přihlášení k relé</string>
+    <string name="relay_auth_event_explainer">Toto není příspěvek. Přihlašuje vás k tomuto relé: kdo ho má, může číst to, co relé ukazuje jen vám, například vaše soukromé zprávy.</string>
+    <string name="relay_auth_event_unusual_relay">Toto není běžná adresa relé. Před podepsáním ji zkontrolujte.</string>
+    <string name="relay_auth_event_no_relay">V tomto přihlášení není uvedeno žádné relé</string>
+    <string name="relay_auth_event_challenge">Výzva: %1$s</string>
     <string name="relay_auth_session_forgotten_undo">%1$s se zeptá znovu, až vás bude příště potřebovat.</string>
     <string name="relay_auth_session_undo_blocked">Neobnoveno. Je zapnuto “Nikdy se neověřovat”, takže se Amethyst k %1$s nepřihlásí.</string>
     <string name="relay_auth_blocked_section">Blokováno vaším seznamem blokovaných</string>
@@ -1954,6 +1959,7 @@
     <string name="tor_continue_without_for_session">Použít běžné připojení</string>
     <string name="tor_keep_waiting">Pokračovat v čekání</string>
     <string name="tor_splash_connecting">Připojování k Toru…</string>
+    <string name="tor_status_connected">Připojeno k Toru</string>
     <string name="tor_splash_error">Chyba Toru: %1$s</string>
     <string name="tor_splash_explainer">Amethyst používá Tor, aby skryl vaši IP adresu před relayi. Spuštění Toru může trvat až minutu a vyžaduje přístup k internetu.</string>
     <string name="notification_settings_categories_explainer">Klepněte na kategorii a otevřete pro ni nastavení oznámení Androidu — zvuk, důležitost, odznaky a režim Nerušit najdete tam.</string>
@@ -4591,6 +4597,7 @@
     <string name="napplet_op_decrypt">číst vaše soukromé zprávy</string>
     <string name="napplet_op_decrypt_from">číst vaše soukromé zprávy s %1$s</string>
     <string name="napplet_op_encrypt">zašifrovat zprávu</string>
+    <string name="napplet_op_relay_login">přihlásit se k relé vaším jménem</string>
     <string name="napplet_op_sign_kind_named">podepsat pro %1$s (druh: %2$d)</string>
     <string name="napplet_permissions_title">Připojené aplikace</string>
     <string name="napplets">nApplety</string>
@@ -6716,11 +6723,4 @@
         <item quantity="many">+%1$d další odpovědi</item>
         <item quantity="other">+%1$d dalších odpovědí</item>
     </plurals>
-    <string name="napplet_op_relay_login">přihlásit se k relé vaším jménem</string>
-    <string name="relay_auth_event_challenge">Výzva: %1$s</string>
-    <string name="relay_auth_event_explainer">Toto není příspěvek. Přihlašuje vás k tomuto relé: kdo ho má, může číst to, co relé ukazuje jen vám, například vaše soukromé zprávy.</string>
-    <string name="relay_auth_event_no_relay">V tomto přihlášení není uvedeno žádné relé</string>
-    <string name="relay_auth_event_title">Přihlášení k relé</string>
-    <string name="relay_auth_event_unusual_relay">Toto není běžná adresa relé. Před podepsáním ji zkontrolujte.</string>
-    <string name="tor_status_connected">Připojeno k Toru</string>
 </resources>
