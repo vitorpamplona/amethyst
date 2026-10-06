@@ -6723,21 +6723,4 @@
         <item quantity="many">+%1$d další odpovědi</item>
         <item quantity="other">+%1$d dalších odpovědí</item>
     </plurals>
-    <string name="chats_history_gate_auto_title">Hledání starších šifrovaných zpráv</string>
-    <string name="chats_history_gate_auto_body">Načítá se další stránka z každého vašeho DM relé.</string>
-    <string name="chats_history_gate_paused_title">Starší šifrované zprávy zatím nejsou načtené</string>
-    <string name="chats_history_gate_loaded_to">Načteno zpět do %1$s.</string>
-    <string name="chats_history_gate_has_more">Vaše DM relé mají další historii.</string>
-    <string name="chats_history_gate_continue">Pokračovat</string>
-    <string name="chats_history_gate_none_title">Zatím žádné starší šifrované zprávy s %1$s</string>
-    <string name="chats_history_gate_none_body">Vaše relé jsou kompletní do %1$s. Starší zprávy mohou být ještě dál v minulosti.</string>
-    <string name="chats_history_gate_keep_looking">Hledat dál</string>
-    <string name="chats_history_gate_search_title">Hledání dál v minulosti…</string>
-    <string name="chats_history_gate_search_body">Prohledáno zpět do %1$s. Skončí, jakmile se objeví šifrovaná zpráva s %2$s.</string>
-    <string name="chats_history_gate_stop">Zastavit</string>
-    <string name="chats_history_gate_incomplete_title">Nepodařilo se prohledat všude</string>
-    <string name="chats_history_gate_incomplete_body">Bez odpovědi: %1$s. Vaše ostatní relé nemají nic staršího.</string>
-    <string name="chats_history_gate_start_title">Toto je začátek vašeho šifrovaného chatu s %1$s</string>
-    <string name="chats_history_gate_start_body">Všechna DM relé byla prohledána až do konce.</string>
-    <string name="chats_history_gate_this_group">touto skupinou</string>
 </resources>

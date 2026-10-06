@@ -6377,21 +6377,4 @@
         <item quantity="one">+%1$d svar till</item>
         <item quantity="other">+%1$d svar till</item>
     </plurals>
-    <string name="chats_history_gate_auto_title">Letar efter äldre krypterade meddelanden</string>
-    <string name="chats_history_gate_auto_body">Laddar ytterligare en sida från vart och ett av dina DM-reläer.</string>
-    <string name="chats_history_gate_paused_title">Äldre krypterade meddelanden har inte laddats än</string>
-    <string name="chats_history_gate_loaded_to">Laddat tillbaka till %1$s.</string>
-    <string name="chats_history_gate_has_more">Dina DM-reläer har mer historik.</string>
-    <string name="chats_history_gate_continue">Fortsätt</string>
-    <string name="chats_history_gate_none_title">Inga äldre krypterade meddelanden med %1$s än</string>
-    <string name="chats_history_gate_none_body">Dina reläer är kompletta till %1$s. Äldre meddelanden kan finnas längre bak.</string>
-    <string name="chats_history_gate_keep_looking">Fortsätt leta</string>
-    <string name="chats_history_gate_search_title">Söker längre bakåt…</string>
-    <string name="chats_history_gate_search_body">Kontrollerat tillbaka till %1$s. Stoppar när ett krypterat meddelande med %2$s dyker upp.</string>
-    <string name="chats_history_gate_stop">Stoppa</string>
-    <string name="chats_history_gate_incomplete_title">Kunde inte söka överallt</string>
-    <string name="chats_history_gate_incomplete_body">Inget svar från %1$s. Dina andra reläer har inget äldre.</string>
-    <string name="chats_history_gate_start_title">Det här är början på din krypterade chatt med %1$s</string>
-    <string name="chats_history_gate_start_body">Alla DM-reläer har genomsökts till slutet.</string>
-    <string name="chats_history_gate_this_group">den här gruppen</string>
 </resources>
