@@ -175,4 +175,35 @@ class HighlightEventTest {
 
         assertEquals("eaa06714ac905aa5583860391e161edc7a815359b7c3e9b9b202c0558aefbeac", highlight.author())
     }
+
+    @Test
+    fun sourceAccessorsTakeTheFirstValidTagOfEachKind() {
+        val owner = "eaa06714ac905aa5583860391e161edc7a815359b7c3e9b9b202c0558aefbeac"
+        val first = "30023:$owner:first"
+        val version = "ab".repeat(32)
+        val highlight =
+            HighlightEvent(
+                id = "00",
+                pubKey = "00",
+                createdAt = 0,
+                tags =
+                    arrayOf(
+                        arrayOf("e", "not-an-id"),
+                        arrayOf("a", ""),
+                        arrayOf("a", first, "wss://relay.example.com"),
+                        arrayOf("a", "30023:$owner:second"),
+                        arrayOf("e", version),
+                        arrayOf("e", "cd".repeat(32)),
+                        arrayOf("p", "short"),
+                    ),
+                content = "quote",
+                sig = "00",
+            )
+
+        assertEquals(first, highlight.inPost()?.toTag())
+        assertEquals(first, highlight.inPostAddress()?.toValue())
+        assertEquals(version, highlight.inPostVersion()?.eventId)
+        // `p` tags whose value is not a 64-char key are never the author.
+        assertNull(highlight.author())
+    }
 }

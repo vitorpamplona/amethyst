@@ -1478,8 +1478,15 @@ open class EventCache :
                     event.taggedAddresses().map { getOrCreateAddressableNote(it) }
             }
 
-            is AcceptedBadgeSetEvent, is ProfileBadgesEvent -> {
-                event.taggedEvents().mapNotNull { checkGetOrCreateNote(it) } +
+            is AcceptedBadgeSetEvent -> {
+                event.badgeAwardEvents().mapNotNull { checkGetOrCreateNote(it) } +
+                    event.badgeAwardDefinitions().map { getOrCreateAddressableNote(it) }
+            }
+
+            is ProfileBadgesEvent -> {
+                // Every `a`, not just badgeAwardDefinitions(), which drops the badge-set (30008)
+                // pointers these profiles also carry; those have always been linked here.
+                event.badgeAwardEvents().mapNotNull { checkGetOrCreateNote(it) } +
                     event.taggedAddresses().map { getOrCreateAddressableNote(it) }
             }
 
@@ -2981,16 +2988,14 @@ open class EventCache :
         note: Note,
         relay: NormalizedRelayUrl?,
     ) {
-        // Only surface zaps whose recipient is the live activity host.
+        // Only surface zaps whose recipient is the live activity host. Route by the zapped address
+        // alone: it is the only `a` Bolt12ZapValidator checks against the intent, so any other
+        // `a` would place the zap in a stream its validation never covered.
         val host = event.recipient() ?: return
-        event.tags
-            .asSequence()
-            .mapNotNull(ATag::parseAddress)
-            .filter { it.kind == LiveActivitiesEvent.KIND && it.pubKeyHex == host }
-            .distinct()
-            .forEach { address ->
-                getOrCreateLiveChannel(address).addNote(note, relay)
-            }
+        val address = event.zappedAddress()?.let { Address.parse(it) } ?: return
+        if (address.kind == LiveActivitiesEvent.KIND && address.pubKeyHex == host) {
+            getOrCreateLiveChannel(address).addNote(note, relay)
+        }
     }
 
     fun consume(

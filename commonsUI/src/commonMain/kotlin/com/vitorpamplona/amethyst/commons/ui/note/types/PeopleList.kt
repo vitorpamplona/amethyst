@@ -56,7 +56,6 @@ import com.vitorpamplona.amethyst.commons.ui.note.UserCompose
 import com.vitorpamplona.amethyst.commons.ui.note.getGradient
 import com.vitorpamplona.amethyst.commons.ui.theme.DividerThickness
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
-import com.vitorpamplona.quartz.nip01Core.tags.people.taggedUserIds
 import com.vitorpamplona.quartz.nip51Lists.followSet.FollowSetEvent
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.persistentListOf
@@ -103,7 +102,9 @@ fun DisplayPeopleList(
     }
 
     LaunchedEffect(noteEvent) {
-        accountViewModel.loadUsers(noteEvent.taggedUserIds()) {
+        // publicUsersIdSet() is insertion-ordered, so the list keeps the event's tag order
+        // (minus duplicate members).
+        accountViewModel.loadUsers(noteEvent.publicUsersIdSet().toList()) {
             members = it
         }
     }

@@ -23,6 +23,7 @@ package com.vitorpamplona.amethyst.commons.actions
 import com.vitorpamplona.amethyst.commons.util.KmpLock
 import com.vitorpamplona.amethyst.commons.util.withLock
 import com.vitorpamplona.quartz.concord.cord03Channels.ChannelChat
+import com.vitorpamplona.quartz.concord.cord03Channels.ConcordChatEditEvent
 import com.vitorpamplona.quartz.concord.cord04Roles.AuthorityResolver
 import com.vitorpamplona.quartz.concord.cord04Roles.ControlEdition
 import com.vitorpamplona.quartz.concord.cord04Roles.EntityFloor
@@ -37,6 +38,7 @@ import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.hexToByteArray
 import com.vitorpamplona.quartz.nip01Core.core.toHexKey
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
+import com.vitorpamplona.quartz.nip09Deletions.DeletionRequestEvent
 import com.vitorpamplona.quartz.nip40Expiration.ExpirationTag
 import com.vitorpamplona.quartz.utils.sha256.sha256
 import kotlinx.serialization.json.JsonObject
@@ -212,9 +214,10 @@ class ConcordPinEvidence(
 
     init {
         for (rumor in rumors) {
-            when (rumor.kind) {
-                5 -> rumor.tags.forEach { if (it.size >= 2 && it[0] == "e") deletesByTarget.getOrPut(it[1]) { ArrayList() }.add(rumor) }
-                ConcordPins.KIND_EDIT -> rumor.tags.firstOrNull { it.size >= 2 && it[0] == "e" }?.let { editsByTarget.getOrPut(it[1]) { ArrayList() }.add(rumor) }
+            // Opened rumors come out of EventFactory typed, so the kind check is the type check.
+            when (rumor) {
+                is DeletionRequestEvent -> rumor.deleteEventIds().forEach { deletesByTarget.getOrPut(it) { ArrayList() }.add(rumor) }
+                is ConcordChatEditEvent -> rumor.editedMessageId()?.let { editsByTarget.getOrPut(it) { ArrayList() }.add(rumor) }
             }
         }
     }

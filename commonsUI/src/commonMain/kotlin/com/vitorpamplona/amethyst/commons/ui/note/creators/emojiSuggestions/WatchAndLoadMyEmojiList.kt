@@ -26,7 +26,6 @@ import com.vitorpamplona.amethyst.commons.relayClient.event.observeNoteEventAndM
 import com.vitorpamplona.amethyst.commons.relayClient.reqCommand.event.EventFinderFilterAssemblerSubscription
 import com.vitorpamplona.amethyst.commons.ui.note.LoadAddressableNote
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
-import com.vitorpamplona.quartz.nip01Core.tags.aTag.taggedAddresses
 import com.vitorpamplona.quartz.nip30CustomEmoji.selection.EmojiListEvent
 import kotlinx.collections.immutable.toImmutableList
 
@@ -37,7 +36,7 @@ fun WatchAndLoadMyEmojiList(accountViewModel: AccountViewModel) {
     ) { emptyNote ->
         emptyNote?.let { usersEmojiList ->
             val collections by observeNoteEventAndMapNotNull(usersEmojiList, accountViewModel) { event: EmojiListEvent ->
-                event.taggedAddresses().toImmutableList()
+                event.emojiPacks().toImmutableList()
             }
 
             collections?.forEach { address ->

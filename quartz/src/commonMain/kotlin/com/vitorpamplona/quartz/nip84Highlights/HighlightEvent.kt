@@ -33,12 +33,8 @@ import com.vitorpamplona.quartz.nip01Core.signers.EventTemplate
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.nip01Core.tags.aTag.ATag
-import com.vitorpamplona.quartz.nip01Core.tags.aTag.firstTaggedATag
-import com.vitorpamplona.quartz.nip01Core.tags.aTag.firstTaggedAddress
 import com.vitorpamplona.quartz.nip01Core.tags.events.ETag
-import com.vitorpamplona.quartz.nip01Core.tags.events.firstTaggedEvent
 import com.vitorpamplona.quartz.nip01Core.tags.people.PTag
-import com.vitorpamplona.quartz.nip01Core.tags.people.firstTaggedUserId
 import com.vitorpamplona.quartz.nip01Core.tags.references.HttpUrlFormatter
 import com.vitorpamplona.quartz.nip01Core.tags.references.ReferenceTag
 import com.vitorpamplona.quartz.nip10Notes.BaseThreadedEvent
@@ -175,7 +171,7 @@ class HighlightEvent(
             } else {
                 null
             }
-        } ?: firstTaggedUserId()
+        } ?: tags.firstNotNullOfOrNull(PTag::parseKey)
 
     fun quote() = content
 
@@ -234,11 +230,11 @@ class HighlightEvent(
             .ifEmpty { null }
     }
 
-    fun inPost() = firstTaggedATag()
+    fun inPost() = tags.firstNotNullOfOrNull(ATag::parse)
 
-    fun inPostAddress() = firstTaggedAddress()
+    fun inPostAddress() = tags.firstNotNullOfOrNull(ATag::parseAddress)
 
-    fun inPostVersion() = firstTaggedEvent()
+    fun inPostVersion() = tags.firstNotNullOfOrNull(ETag::parse)
 
     companion object {
         const val KIND = 9802

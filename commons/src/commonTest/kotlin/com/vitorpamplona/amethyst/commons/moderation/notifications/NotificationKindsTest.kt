@@ -202,6 +202,34 @@ class NotificationKindsTest {
         assertFalse(acceptsFor(e))
     }
 
+    @Test
+    fun reactionTargetsTheLastETag() {
+        // NIP-25: a reaction to a reply may carry the thread root first; the
+        // reacted-to note is the LAST `e`.
+        val toMyReply =
+            ReactionEvent(
+                id = "rid".padEnd(64, '0'),
+                pubKey = alice,
+                createdAt = 1_000,
+                tags = arrayOf(arrayOf("e", strangerNoteId), arrayOf("e", myNoteId), arrayOf("p", me)),
+                content = "+",
+                sig = someSig,
+            )
+        assertTrue(acceptsFor(toMyReply))
+
+        // ... and a reaction to a stranger's reply under MY root is not mine.
+        val toStrangerReply =
+            ReactionEvent(
+                id = "rid".padEnd(64, '0'),
+                pubKey = alice,
+                createdAt = 1_000,
+                tags = arrayOf(arrayOf("e", myNoteId), arrayOf("e", strangerNoteId), arrayOf("p", me)),
+                content = "+",
+                sig = someSig,
+            )
+        assertFalse(acceptsFor(toStrangerReply))
+    }
+
     // Reposts ----------------------------------------------------------------
 
     @Test

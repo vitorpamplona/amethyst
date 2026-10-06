@@ -1642,10 +1642,9 @@ class MarmotManager(
         val claims = ArrayList<Pair<HexKey, HexKey>>()
         val removed = HashSet<HexKey>()
         for (event in messages) {
-            if (event.kind == DeletionRequestEvent.KIND) {
-                for (tag in event.tags) {
-                    if (tag.size >= 2 && tag[0] == "e") claims.add(tag[1] to event.pubKey)
-                }
+            // Stored messages are parsed through EventFactory, so every kind:5 is typed here.
+            if (event is DeletionRequestEvent) {
+                for (targetId in event.deleteEventIds()) claims.add(targetId to event.pubKey)
             } else if (event.kind == MarmotAppEvent.KIND_REMOVE) {
                 if (event.pubKey in admins) removed.addAll(adminRemovalTargets(event))
             } else {

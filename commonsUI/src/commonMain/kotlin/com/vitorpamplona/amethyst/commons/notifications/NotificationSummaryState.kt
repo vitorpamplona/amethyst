@@ -104,15 +104,23 @@ class NotificationSummaryState(
             if (noteEvent != null && !takenIntoAccount.contains(noteEvent.id)) {
                 when {
                     noteEvent is ReactionEvent -> {
-                        if (noteEvent.isTaggedUser(currentUser) && noteEvent.pubKey != currentUser) {
+                        if (noteEvent.originalAuthor().contains(currentUser) && noteEvent.pubKey != currentUser) {
                             val netDate = formatDate(noteEvent.createdAt, days)
                             reactions[netDate] = (reactions[netDate] ?: 0) + 1
                             takenIntoAccount.add(noteEvent.id)
                         }
                     }
 
-                    noteEvent is RepostEvent || noteEvent is GenericRepostEvent -> {
-                        if (noteEvent.isTaggedUser(currentUser) && noteEvent.pubKey != currentUser) {
+                    noteEvent is RepostEvent -> {
+                        if (noteEvent.originalAuthorKeys().contains(currentUser) && noteEvent.pubKey != currentUser) {
+                            val netDate = formatDate(noteEvent.createdAt, days)
+                            boosts[netDate] = (boosts[netDate] ?: 0) + 1
+                            takenIntoAccount.add(noteEvent.id)
+                        }
+                    }
+
+                    noteEvent is GenericRepostEvent -> {
+                        if (noteEvent.originalAuthorKeys().contains(currentUser) && noteEvent.pubKey != currentUser) {
                             val netDate = formatDate(noteEvent.createdAt, days)
                             boosts[netDate] = (boosts[netDate] ?: 0) + 1
                             takenIntoAccount.add(noteEvent.id)
@@ -121,7 +129,7 @@ class NotificationSummaryState(
 
                     noteEvent is ZapReceiptEvent -> {
                         // the user might be sending his own receipts noteEvent.pubKey != currentUser
-                        if (noteEvent.isTaggedUser(currentUser)) {
+                        if (noteEvent.zappedAuthor().contains(currentUser)) {
                             val netDate = formatDate(noteEvent.createdAt, days)
                             zaps[netDate] = (zaps[netDate] ?: BigDecimal(0)) + (noteEvent.amount ?: BigDecimal(0))
                             takenIntoAccount.add(noteEvent.id)
@@ -129,7 +137,7 @@ class NotificationSummaryState(
                     }
 
                     noteEvent is OnchainZapEvent -> {
-                        if (noteEvent.isTaggedUser(currentUser)) {
+                        if (noteEvent.recipient() == currentUser) {
                             val amount = noteEvent.claimedAmountInSats()
                             if (amount != null) {
                                 val netDate = formatDate(noteEvent.createdAt, days)
@@ -140,7 +148,7 @@ class NotificationSummaryState(
                     }
 
                     noteEvent is Bolt12ZapEvent -> {
-                        if (noteEvent.isTaggedUser(currentUser)) {
+                        if (noteEvent.recipient() == currentUser) {
                             val amount = noteEvent.amount()
                             if (amount != null) {
                                 val netDate = formatDate(noteEvent.createdAt, days)
@@ -197,7 +205,7 @@ class NotificationSummaryState(
                 if (noteEvent != null && !takenIntoAccount.contains(noteEvent.id)) {
                     when {
                         noteEvent is ReactionEvent -> {
-                            if (noteEvent.isTaggedUser(currentUser) && noteEvent.pubKey != currentUser) {
+                            if (noteEvent.originalAuthor().contains(currentUser) && noteEvent.pubKey != currentUser) {
                                 val netDate = formatDate(noteEvent.createdAt, days)
                                 reactions[netDate] = (reactions[netDate] ?: 0) + 1
                                 takenIntoAccount.add(noteEvent.id)
@@ -205,8 +213,17 @@ class NotificationSummaryState(
                             }
                         }
 
-                        noteEvent is RepostEvent || noteEvent is GenericRepostEvent -> {
-                            if (noteEvent.isTaggedUser(currentUser) && noteEvent.pubKey != currentUser) {
+                        noteEvent is RepostEvent -> {
+                            if (noteEvent.originalAuthorKeys().contains(currentUser) && noteEvent.pubKey != currentUser) {
+                                val netDate = formatDate(noteEvent.createdAt, days)
+                                boosts[netDate] = (boosts[netDate] ?: 0) + 1
+                                takenIntoAccount.add(noteEvent.id)
+                                hasNewElements = true
+                            }
+                        }
+
+                        noteEvent is GenericRepostEvent -> {
+                            if (noteEvent.originalAuthorKeys().contains(currentUser) && noteEvent.pubKey != currentUser) {
                                 val netDate = formatDate(noteEvent.createdAt, days)
                                 boosts[netDate] = (boosts[netDate] ?: 0) + 1
                                 takenIntoAccount.add(noteEvent.id)
@@ -215,7 +232,7 @@ class NotificationSummaryState(
                         }
 
                         noteEvent is ZapReceiptEvent -> {
-                            if (noteEvent.isTaggedUser(currentUser)) {
+                            if (noteEvent.zappedAuthor().contains(currentUser)) {
                                 //  && noteEvent.pubKey != currentUser User might be sending his own receipts
                                 val netDate = formatDate(noteEvent.createdAt, days)
                                 zaps[netDate] = (zaps[netDate] ?: BigDecimal(0)) + (noteEvent.amount ?: BigDecimal(0))
@@ -225,7 +242,7 @@ class NotificationSummaryState(
                         }
 
                         noteEvent is OnchainZapEvent -> {
-                            if (noteEvent.isTaggedUser(currentUser)) {
+                            if (noteEvent.recipient() == currentUser) {
                                 val amount = noteEvent.claimedAmountInSats()
                                 if (amount != null) {
                                     val netDate = formatDate(noteEvent.createdAt, days)
@@ -237,7 +254,7 @@ class NotificationSummaryState(
                         }
 
                         noteEvent is Bolt12ZapEvent -> {
-                            if (noteEvent.isTaggedUser(currentUser)) {
+                            if (noteEvent.recipient() == currentUser) {
                                 val amount = noteEvent.amount()
                                 if (amount != null) {
                                     val netDate = formatDate(noteEvent.createdAt, days)

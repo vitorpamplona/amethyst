@@ -313,21 +313,12 @@ class NotificationFeedFilter(
                     // reply to the user's reaction stays detectable even when the
                     // reaction event is not in the local cache (the replyTo-author
                     // check above needs it loaded).
+                    //
+                    // This also covers replies to the user's zaps: the receipt is
+                    // signed by the recipient's lightning provider, so its `P`/`p` name
+                    // the provider, and the reply's extra lowercase `p` on the zapper
+                    // is what marks it as theirs.
                     if (event.rootAuthorKeys().contains(authorHex) || event.replyAuthorKeys().contains(authorHex)) {
-                        return true
-                    }
-
-                    // Replies to the user's zaps: the receipt — and therefore the
-                    // author tags above — is signed by the recipient's lightning
-                    // provider, not the zapper. The `k` tag (or the cached parent)
-                    // proves the comment targets a zap; the reply's explicit p tag
-                    // on the user marks it as theirs.
-                    val targetsZapReceipt =
-                        event.hasScopeKind(ZapReceiptEvent.KIND.toString()) ||
-                            event.hasScopeKind(Bolt12ZapEvent.KIND.toString()) ||
-                            note.replyTo?.any { it.event is ZapReceiptEvent || it.event is Bolt12ZapEvent } == true
-
-                    if (targetsZapReceipt && event.isTaggedUser(authorHex)) {
                         return true
                     }
                 }

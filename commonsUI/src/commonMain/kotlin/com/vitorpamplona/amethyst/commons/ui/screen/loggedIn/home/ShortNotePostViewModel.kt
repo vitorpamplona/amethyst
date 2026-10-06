@@ -887,36 +887,27 @@ open class ShortNotePostViewModel :
             }
 
         pTags =
-            draftEvent.tags
-                .filter { it.size > 1 && it[0] == "p" }
-                .mapNotNull { LocalCache.checkGetOrCreateUser(it[1]) }
+            draftEvent
+                .mentions()
+                .mapNotNull { LocalCache.checkGetOrCreateUser(it.pubKey) }
                 // A built event can legitimately repeat a p tag (the voice-reply
                 // branch notifies the parent author on top of the notify list), so
                 // the audience it round-trips through a draft has to be deduped.
                 .distinct()
 
-        draftEvent.tags.filter { it.size > 3 && (it[0] == "e" || it[0] == "a") && it[3] == "fork" }.forEach {
-            val note = LocalCache.checkGetOrCreateNote(it[1])
-            forkedFromNote = note
+        // Same precedence as ShowForkInformation: a forked address wins over a forked version.
+        val forkedAddress = draftEvent.forkFromAddress()
+        val forkedVersion = draftEvent.forkFromVersion()
+        if (forkedAddress != null) {
+            forkedFromNote = LocalCache.getOrCreateAddressableNote(forkedAddress)
+        } else if (forkedVersion != null) {
+            forkedFromNote = LocalCache.checkGetOrCreateNote(forkedVersion)
         }
 
-        originalNote =
-            draftEvent
-                .tags
-                .filter { it.size > 1 && (it[0] == "e" || it[0] == "a") && it.getOrNull(3) == "reply" }
-                .map {
-                    LocalCache.checkGetOrCreateNote(it[1])
-                }.firstOrNull()
-
-        if (originalNote == null) {
-            originalNote =
-                draftEvent
-                    .tags
-                    .filter { it.size > 1 && (it[0] == "e" || it[0] == "a") && it.getOrNull(3) == "root" }
-                    .map {
-                        LocalCache.checkGetOrCreateNote(it[1])
-                    }.firstOrNull()
-        }
+        // The reply-marked e/a tag, else the root-marked one (a direct reply to a root carries
+        // only the root marker), else - for a draft from a client that writes no markers - the
+        // last positional one. A fork-only draft has none of these, so it does not read as a reply.
+        originalNote = draftEvent.replyingToAddressOrEvent()?.let { LocalCache.checkGetOrCreateNote(it) }
 
         canUsePoll = originalNote == null
         canUseZapPoll = originalNote == null
@@ -1076,9 +1067,9 @@ open class ShortNotePostViewModel :
             }
 
         pTags =
-            draftEvent.tags
-                .filter { it.size > 1 && it[0] == "p" }
-                .mapNotNull { LocalCache.checkGetOrCreateUser(it[1]) }
+            draftEvent
+                .mentions()
+                .mapNotNull { LocalCache.checkGetOrCreateUser(it.pubKey) }
                 // A built event can legitimately repeat a p tag (the voice-reply
                 // branch notifies the parent author on top of the notify list), so
                 // the audience it round-trips through a draft has to be deduped.

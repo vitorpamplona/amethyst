@@ -26,11 +26,11 @@ import com.vitorpamplona.amethyst.commons.model.topNavFeeds.IFeedTopNavFilter
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
-import com.vitorpamplona.quartz.nip01Core.tags.aTag.isTaggedAddressableNotes
 import com.vitorpamplona.quartz.nip01Core.tags.geohash.isTaggedGeoHashes
 import com.vitorpamplona.quartz.nip01Core.tags.hashtags.isTaggedHashes
 import com.vitorpamplona.quartz.nip22Comments.CommentEvent
 import com.vitorpamplona.quartz.nip53LiveActivities.streaming.LiveActivitiesEvent
+import com.vitorpamplona.quartz.nip72ModCommunities.isForAnyCommunity
 import com.vitorpamplona.quartz.nip73ExternalIds.location.GeohashId
 import com.vitorpamplona.quartz.nip73ExternalIds.topics.HashtagId
 import kotlinx.coroutines.flow.Flow
@@ -57,7 +57,7 @@ class AllFollowsByProxyTopNavFilter(
             (authors != null && noteEvent.participantsIntersect(authors)) ||
                 (hashtags != null && noteEvent.isTaggedHashes(hashtags)) ||
                 (geotags != null && noteEvent.isTaggedGeoHashes(geotags)) ||
-                (communities != null && noteEvent.isTaggedAddressableNotes(communities))
+                (communities != null && noteEvent.isForAnyCommunity(communities))
         } else if (noteEvent is CommentEvent) {
             // ignore follows and checks only the root scope
             // (authors != null && noteEvent.pubKey in authors) ||
@@ -65,12 +65,12 @@ class AllFollowsByProxyTopNavFilter(
                 (hashtagScopes != null && noteEvent.isTaggedScopes(hashtagScopes)) ||
                 (geotags != null && noteEvent.isTaggedGeoHashes(geotags)) ||
                 (geotagScopes != null && noteEvent.isTaggedScopes(geotagScopes)) ||
-                (communities != null && noteEvent.isTaggedAddressableNotes(communities))
+                (communities != null && noteEvent.isForAnyCommunity(communities))
         } else {
             (authors != null && noteEvent.pubKey in authors) ||
                 (hashtags != null && noteEvent.isTaggedHashes(hashtags)) ||
                 (geotags != null && noteEvent.isTaggedGeoHashes(geotags)) ||
-                (communities != null && noteEvent.isTaggedAddressableNotes(communities))
+                (communities != null && noteEvent.isForAnyCommunity(communities))
         }
 
     // forces the use of the Proxy on all connections, replacing the outbox model.
