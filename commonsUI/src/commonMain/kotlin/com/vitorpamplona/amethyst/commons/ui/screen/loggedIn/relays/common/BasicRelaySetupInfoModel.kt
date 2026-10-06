@@ -51,12 +51,32 @@ abstract class BasicRelaySetupInfoModel : ViewModel() {
 
     var hasModified = false
 
-    fun init(accountViewModel: AccountViewModel) {
+    /**
+     * When on, every edit is signed and published (debounced by [RelayListAutoSaver]) instead of
+     * waiting for [create]. The all-relays settings screen turns it on; the add-relay dialogs keep
+     * their Save button.
+     */
+    var autoSave = false
+        private set
+
+    private val autoSaver = RelayListAutoSaver(viewModelScope)
+    private var loaded = false
+
+    fun init(
+        accountViewModel: AccountViewModel,
+        autoSave: Boolean = false,
+    ) {
         this.accountViewModel = accountViewModel
         this.account = accountViewModel.account
+        this.autoSave = autoSave
     }
 
     fun load() {
+        // An auto-saving editor owns its list for its whole life: rebuilding it from the account
+        // when the screen re-enters composition could put back the list an in-flight save replaces.
+        if (autoSave && loaded) return
+        loaded = true
+
         clear()
         loadRelayDocuments()
         loadCounts()
@@ -75,6 +95,23 @@ abstract class BasicRelaySetupInfoModel : ViewModel() {
                 clear()
             }
         }
+    }
+
+    /** Publishes the pending auto-save edit now instead of after the debounce, e.g. on leaving. */
+    fun flushAutoSave() {
+        autoSaver.cancelPending()
+        if (!autoSave || !hasModified) return
+        hasModified = false
+
+        val urls = _relays.value.map { it.relay }
+        accountViewModel.launchSigner {
+            autoSaver.serialized { saveRelayList(urls) }
+        }
+    }
+
+    private fun markModified() {
+        hasModified = true
+        if (autoSave) autoSaver.schedule(::flushAutoSave)
     }
 
     fun loadRelayDocuments() {
@@ -147,12 +184,12 @@ abstract class BasicRelaySetupInfoModel : ViewModel() {
         if (relays.value.any { it.relay == relay.relay }) return
 
         _relays.update { it.plus(relay) }
-        hasModified = true
+        markModified()
     }
 
     fun deleteRelay(relay: BasicRelaySetupInfo) {
         _relays.update { it.minus(relay) }
-        hasModified = true
+        markModified()
     }
 
     fun moveRelay(
@@ -164,12 +201,12 @@ abstract class BasicRelaySetupInfoModel : ViewModel() {
                 add(to, removeAt(from))
             }
         }
-        hasModified = true
+        markModified()
     }
 
     fun deleteAll() {
         _relays.update { _ -> emptyList() }
-        hasModified = true
+        markModified()
     }
 
     fun togglePaidRelay(

@@ -30,6 +30,7 @@ import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.events_from_you
 import com.vitorpamplona.amethyst.commons.resources.events_to_you
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.relays.common.BasicRelaySetupInfo
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.relays.common.RelayListAutoSaver
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.relays.common.relaySetupInfoBuilder
 import com.vitorpamplona.amethyst.commons.util.replace
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
@@ -64,12 +65,27 @@ class Nip65RelayListViewModel : ViewModel() {
 
     var hasModified = false
 
-    fun init(accountViewModel: AccountViewModel) {
+    /** Signs and publishes every edit instead of waiting for [create]; see BasicRelaySetupInfoModel.autoSave. */
+    var autoSave = false
+        private set
+
+    private val autoSaver = RelayListAutoSaver(viewModelScope)
+    private var loaded = false
+
+    fun init(
+        accountViewModel: AccountViewModel,
+        autoSave: Boolean = false,
+    ) {
         this.accountViewModel = accountViewModel
         this.account = accountViewModel.account
+        this.autoSave = autoSave
     }
 
     fun load() {
+        // See BasicRelaySetupInfoModel.load: an auto-saving editor keeps its own list.
+        if (autoSave && loaded) return
+        loaded = true
+
         clear()
         loadRelayDocuments()
         loadCounts()
@@ -77,28 +93,46 @@ class Nip65RelayListViewModel : ViewModel() {
 
     fun create() {
         if (hasModified) {
+            val relays = advertisedRelays()
             accountViewModel.launchSigner {
-                val writes = _homeRelays.value.map { it.relay }.toSet()
-                val reads = _notificationRelays.value.map { it.relay }.toSet()
-
-                val urls = writes.union(reads)
-
-                account.sendNip65RelayList(
-                    urls.map {
-                        val type =
-                            if (writes.contains(it) && reads.contains(it)) {
-                                AdvertisedRelayType.BOTH
-                            } else if (writes.contains(it)) {
-                                AdvertisedRelayType.WRITE
-                            } else {
-                                AdvertisedRelayType.READ
-                            }
-
-                        AdvertisedRelayInfo(it, type)
-                    },
-                )
+                account.sendNip65RelayList(relays)
                 clear()
             }
+        }
+    }
+
+    /** Publishes the pending auto-save edit now instead of after the debounce, e.g. on leaving. */
+    fun flushAutoSave() {
+        autoSaver.cancelPending()
+        if (!autoSave || !hasModified) return
+        hasModified = false
+
+        val relays = advertisedRelays()
+        accountViewModel.launchSigner {
+            autoSaver.serialized { account.sendNip65RelayList(relays) }
+        }
+    }
+
+    private fun markModified() {
+        hasModified = true
+        if (autoSave) autoSaver.schedule(::flushAutoSave)
+    }
+
+    private fun advertisedRelays(): List<AdvertisedRelayInfo> {
+        val writes = _homeRelays.value.map { it.relay }.toSet()
+        val reads = _notificationRelays.value.map { it.relay }.toSet()
+
+        return writes.union(reads).map {
+            val type =
+                if (writes.contains(it) && reads.contains(it)) {
+                    AdvertisedRelayType.BOTH
+                } else if (writes.contains(it)) {
+                    AdvertisedRelayType.WRITE
+                } else {
+                    AdvertisedRelayType.READ
+                }
+
+            AdvertisedRelayInfo(it, type)
         }
     }
 
@@ -194,17 +228,17 @@ class Nip65RelayListViewModel : ViewModel() {
         if (_homeRelays.value.any { it.relay == relay.relay }) return
 
         _homeRelays.update { it.plus(relay) }
-        hasModified = true
+        markModified()
     }
 
     fun deleteHomeRelay(relay: BasicRelaySetupInfo) {
         _homeRelays.update { it.minus(relay) }
-        hasModified = true
+        markModified()
     }
 
     fun deleteHomeAll() {
         _homeRelays.update { _ -> emptyList() }
-        hasModified = true
+        markModified()
     }
 
     fun toggleHomePaidRelay(
@@ -223,24 +257,24 @@ class Nip65RelayListViewModel : ViewModel() {
                 add(to, removeAt(from))
             }
         }
-        hasModified = true
+        markModified()
     }
 
     fun addNotifRelay(relay: BasicRelaySetupInfo) {
         if (_notificationRelays.value.any { it.relay == relay.relay }) return
 
         _notificationRelays.update { it.plus(relay) }
-        hasModified = true
+        markModified()
     }
 
     fun deleteNotifRelay(relay: BasicRelaySetupInfo) {
         _notificationRelays.update { it.minus(relay) }
-        hasModified = true
+        markModified()
     }
 
     fun deleteNotifAll() {
         _notificationRelays.update { _ -> emptyList() }
-        hasModified = true
+        markModified()
     }
 
     fun moveNotifRelay(
@@ -252,7 +286,7 @@ class Nip65RelayListViewModel : ViewModel() {
                 add(to, removeAt(from))
             }
         }
-        hasModified = true
+        markModified()
     }
 
     fun toggleNotifPaidRelay(
