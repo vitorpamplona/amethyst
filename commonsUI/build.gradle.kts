@@ -143,6 +143,12 @@ kotlin {
 
                 // KMP syntax highlighter (Apache-2.0) for the git code browser.
                 implementation(libs.highlights)
+
+                // Navigation 3 (JetBrains' multiplatform build, Apache-2.0: Android, desktop, iOS).
+                // The app owns its back stack (navs/NavBackStacks); NavDisplay renders it, and the
+                // ViewModel decorator scopes each screen's ViewModels to its entry.
+                implementation(libs.jetbrains.navigation3.ui)
+                implementation(libs.jetbrains.lifecycle.viewmodel.navigation3)
             }
         }
 

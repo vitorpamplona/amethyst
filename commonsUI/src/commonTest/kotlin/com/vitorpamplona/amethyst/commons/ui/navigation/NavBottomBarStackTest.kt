@@ -18,18 +18,18 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.ui.navigation
+package com.vitorpamplona.amethyst.commons.ui.navigation
 
+import com.vitorpamplona.amethyst.commons.model.navigation.NavBackStacks
 import com.vitorpamplona.amethyst.commons.model.navigation.Route
-import com.vitorpamplona.amethyst.ui.navigation.navs.Nav
-import com.vitorpamplona.amethyst.ui.navigation.navs.NavBackStacks
+import com.vitorpamplona.amethyst.commons.ui.navigation.navs.Nav
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runTest
-import org.junit.Assert.assertEquals
-import org.junit.Assert.assertSame
-import org.junit.Assert.assertTrue
-import org.junit.Test
+import kotlin.test.Test
+import kotlin.test.assertEquals
+import kotlin.test.assertSame
+import kotlin.test.assertTrue
 
 /**
  * A nav-bar tap must land on the tab itself, never on whatever the user had pushed on top of one.
@@ -60,7 +60,7 @@ class NavBottomBarStackTest {
 
             assertEquals(listOf(Route.Home, Route.Message), routes(stacks))
             assertTrue(stacks.top.tabRoot)
-            assertTrue("nothing above a tab root is ever saved", stacks.savedTabs.isEmpty())
+            assertTrue(stacks.savedTabs.isEmpty(), "nothing above a tab root is ever saved")
         }
 
     @Test
@@ -90,7 +90,7 @@ class NavBottomBarStackTest {
             nav.nav(Route.Note("n"))
             nav.navBottomBar(Route.Home)
             advanceUntilIdle()
-            assertSame("the left tab keeps its entry, and with it its state", messages, stacks.savedTabs[Route.Message])
+            assertSame(messages, stacks.savedTabs[Route.Message], "the left tab keeps its entry, and with it its state")
 
             nav.navBottomBar(Route.Message)
             advanceUntilIdle()

@@ -18,7 +18,7 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.ui.navigation
+package com.vitorpamplona.amethyst.commons.ui.navigation.host
 
 import androidx.compose.animation.AnimatedContentTransitionScope
 import androidx.compose.animation.ContentTransform
@@ -38,11 +38,12 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.navigation3.runtime.NavEntry
 import androidx.navigation3.scene.Scene
+import com.vitorpamplona.amethyst.commons.model.navigation.NavStackEntry
 import com.vitorpamplona.amethyst.commons.model.navigation.Route
 import com.vitorpamplona.amethyst.commons.ui.layouts.CappedScreenContent
-import com.vitorpamplona.amethyst.ui.navigation.navs.LocalNavStackEntry
-import com.vitorpamplona.amethyst.ui.navigation.navs.NavStackEntry
+import com.vitorpamplona.amethyst.commons.ui.navigation.navs.LocalNavStackEntry
 import kotlinx.serialization.serializer
+import kotlin.concurrent.Volatile
 import kotlin.reflect.KClass
 
 /**
@@ -101,7 +102,7 @@ class NavDestination(
 )
 
 /**
- * Every screen the app can show, keyed by route class. Built once by [BuildNavigation] with the
+ * Every screen the app can show, keyed by route class. Built once by the front end with the
  * builders below, then read by the entry provider (what to draw) and the transition specs (how to
  * move). Navigation 3 hands both the route itself, so there is no graph to declare up front: a
  * route the registry does not know is a programming error, surfaced the first time it is opened.
@@ -130,7 +131,7 @@ class NavDestinations {
      * The Navigation 3 entry for [entry]: its screen, capped as declared, with [LocalNavStackEntry]
      * provided so `INav.canPop()` and friends answer for this screen rather than for the top.
      */
-    fun entryFor(entry: NavStackEntry): NavEntry<NavStackEntry> {
+    internal fun entryFor(entry: NavStackEntry): NavEntry<NavStackEntry> {
         val destination = of(entry.route)
         return NavEntry(
             key = entry,
@@ -246,7 +247,7 @@ private fun Scene<NavStackEntry>.navStackEntry(): NavStackEntry? = entries.lastO
  * A tab root (a bottom-bar or rail tap) fades instead of sliding, whatever its family: the user
  * switched sections, they did not drill into one.
  */
-fun NavDestinations.pushTransition(scope: AnimatedContentTransitionScope<Scene<NavStackEntry>>): ContentTransform {
+internal fun NavDestinations.pushTransition(scope: AnimatedContentTransitionScope<Scene<NavStackEntry>>): ContentTransform {
     val leaving = scope.initialState.navStackEntry()
     val arriving = scope.targetState.navStackEntry()
     val switchesTab = arriving?.tabRoot == true
@@ -271,7 +272,7 @@ fun NavDestinations.pushTransition(scope: AnimatedContentTransitionScope<Scene<N
  * finger: a modal drops down, a drill-in leaves toward the end, a tab root fades; whatever is
  * revealed grows back in from behind.
  */
-fun NavDestinations.popTransition(scope: AnimatedContentTransitionScope<Scene<NavStackEntry>>): ContentTransform {
+internal fun NavDestinations.popTransition(scope: AnimatedContentTransitionScope<Scene<NavStackEntry>>): ContentTransform {
     val leaving = scope.initialState.navStackEntry()
     val revealed = scope.targetState.navStackEntry()
     val leavesTab = leaving?.tabRoot == true

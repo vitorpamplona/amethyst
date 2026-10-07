@@ -11,12 +11,14 @@ stack as plain snapshot state, and `NavDisplay` renders it. There is no `NavCont
 | File | Role |
 |------|------|
 | `commons/.../model/navigation/Routes.kt` | `@Serializable sealed class Route`: every destination and its arguments |
-| `amethyst/.../ui/navigation/navs/NavBackStacks.kt` | `NavStackEntry` and `NavBackStacks`: the back stack and its rules |
-| `amethyst/.../ui/navigation/navs/Nav.kt` | `Nav`: the shared `INav` over `NavBackStacks`, plus `LocalNavStackEntry` |
-| `amethyst/.../ui/navigation/navs/RememberNavs.kt` | `rememberNav()`: saves the back stack across config changes and process death |
-| `amethyst/.../ui/navigation/NavigationEffects.kt` | `NavDestinations` registry, the builders, and the transitions |
-| `amethyst/.../ui/navigation/AppNavigation.kt` | `BuildNavigation` (the `NavDisplay`) and `appDestinations` (every screen) |
-| `amethyst/.../ui/navigation/routes/RouteNavController.kt` | `isBaseRoute<T>(nav)`, `getRouteWithArguments`, `consumesSharesInPlace` |
+| `commons/.../model/navigation/NavBackStacks.kt` | `NavStackEntry` and `NavBackStacks`: the back stack and its rules (headless) |
+| `commonsUI/.../ui/navigation/navs/Nav.kt` | `Nav`: the shared `INav` over `NavBackStacks`, plus `LocalNavStackEntry` |
+| `commonsUI/.../ui/navigation/navs/RememberNavs.kt` | `rememberNav()`: saves the back stack across config changes and process death |
+| `commonsUI/.../ui/navigation/navs/ImeSettler.kt` | Waits for the keyboard to close before every navigation |
+| `commonsUI/.../ui/navigation/host/NavDestinations.kt` | `NavDestinations` registry, the builders, and the transitions |
+| `commonsUI/.../ui/navigation/host/NavigationHost.kt` | `NavigationHost`: the `NavDisplay` every front end shows |
+| `commonsUI/.../ui/navigation/routes/RouteNavController.kt` | `isBaseRoute<T>(nav)`, `getRouteWithArguments`, `consumesSharesInPlace` |
+| `amethyst/.../ui/navigation/AppNavigation.kt` | Android: `BuildNavigation`, `appDestinations` (every screen), screen time, intents |
 
 ## The back stack
 
@@ -49,7 +51,7 @@ itself.
 
 ## Rendering
 
-`BuildNavigation` passes `stack + savedTabs` to `rememberDecoratedNavEntries` with the
+`NavigationHost` passes `stack + savedTabs` to `rememberDecoratedNavEntries` with the
 saveable-state and ViewModel-store decorators. Saved tabs therefore keep their state while they
 are out of sight. Only `stack` goes to `NavDisplay`. When an entry leaves both lists, its saved
 state and ViewModels are cleared.
@@ -70,7 +72,7 @@ screen is capped to the reading column on wide panes:
 | `composableFromEnd<T>(capWidth) { }` / `…Args` | drill-in: slides from the end | capped by default |
 | `composableFromBottom<T>(capWidth) { }` / `…Args` | modal: rises from the bottom | capped by default |
 
-`pushTransition` and `popTransition` in `NavigationEffects.kt` read each entry's family and
+`pushTransition` and `popTransition` in `NavDestinations.kt` read each entry's family and
 `tabRoot` flag:
 
 - A tab root fades instead of sliding.
@@ -105,4 +107,4 @@ alone.
 
 The back stack is plain state, so tests drive `NavBackStacks` and `Nav` directly with
 `runTest`. They need no Compose and no mocks. See `NavBackStacksTest`, `NavBottomBarStackTest`,
-`NavDrawerTest` and `NavImeSettleTest` under `amethyst/src/test/.../ui/navigation/`.
+`NavDrawerTest` and `NavImeSettleTest` (commons and commonsUI `commonTest`).

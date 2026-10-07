@@ -18,16 +18,14 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.ui.navigation
+package com.vitorpamplona.amethyst.commons.model.navigation
 
-import com.vitorpamplona.amethyst.commons.model.navigation.Route
-import com.vitorpamplona.amethyst.ui.navigation.navs.NavBackStacks
-import org.junit.Assert.assertEquals
-import org.junit.Assert.assertFalse
-import org.junit.Assert.assertNotEquals
-import org.junit.Assert.assertNull
-import org.junit.Assert.assertTrue
-import org.junit.Test
+import kotlin.test.Test
+import kotlin.test.assertEquals
+import kotlin.test.assertFalse
+import kotlin.test.assertNotEquals
+import kotlin.test.assertNull
+import kotlin.test.assertTrue
 
 class NavBackStacksTest {
     private fun NavBackStacks.routes() = stack.map { it.route }
@@ -76,7 +74,7 @@ class NavBackStacksTest {
         stacks.newStack(Route.Pictures(attachments = listOf("content://shared")))
 
         assertEquals(listOf(Route.Home, Route.Pictures(attachments = listOf("content://shared"))), stacks.routes())
-        assertTrue("a replaced tab root stays a tab root", stacks.top.tabRoot)
+        assertTrue(stacks.top.tabRoot, "a replaced tab root stays a tab root")
     }
 
     @Test

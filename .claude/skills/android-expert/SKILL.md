@@ -57,10 +57,7 @@ amethyst/                    # Android app module
 │   │   │   ├── ui/
 │   │   │   │   ├── MainActivity.kt          # Entry point
 │   │   │   │   ├── navigation/
-│   │   │   │   │   ├── AppNavigation.kt     # NavDisplay + every destination
-│   │   │   │   │   ├── NavigationEffects.kt # destination registry, builders, transitions
-│   │   │   │   │   ├── navs/Nav.kt, NavBackStacks.kt  # INav over the back stack
-│   │   │   │   │   ├── routes/RouteNavController.kt  # current-route helpers
+│   │   │   │   │   ├── AppNavigation.kt     # every destination, screen time, intents
 │   │   │   │   │   └── bottombars/AppBottomBar.kt
 │   │   │   │   ├── screen/                  # 80+ screens
 │   │   │   │   └── theme/Theme.kt           # AmethystTheme (accent, prefs, window insets)
@@ -84,17 +81,17 @@ The app owns its back stack; Navigation 3's `NavDisplay` only renders it. There 
 
 - **Routes** are the `@Serializable sealed class Route` in commons `Routes.kt`. The back stack is
   saved through kotlinx-serialization, so every route and every argument must be serializable.
-- **`NavBackStacks`** (`navs/NavBackStacks.kt`) holds `stack` (what is on screen, never empty,
+- **`NavBackStacks`** (commons `model/navigation/NavBackStacks.kt`) holds `stack` (what is on screen, never empty,
   starts at `Route.Home`) and `savedTabs` (the root entry of every bottom-bar tab the user left,
   which keeps that tab's ViewModels and scroll state alive). Each `NavStackEntry` has an `id`;
   its `contentKey` (`"nav-$id"`) is what saved state and ViewModels are keyed by, so the same
   route opened twice is two screens. `tabRoot` / `drawerRoot` mark tab roots and drawer screens.
-- **`Nav`** (`navs/Nav.kt`) implements the shared `INav` over it: `nav`, `navDrawer`, `newStack`,
+- **`Nav`** (commonsUI `ui/navigation/navs/Nav.kt`) implements the shared `INav` over it: `nav`, `navDrawer`, `newStack`,
   `navBottomBar` (= `switchTab`), `popBack`, `popUpTo`, each after the keyboard settles.
   `nav.currentRoute` is snapshot state; read it (or `derivedStateOf` over it) instead of
   observing a controller. `LocalNavStackEntry` is the entry of the screen being composed.
 - **Destinations** are registered in `AppNavigation.kt`'s `appDestinations` with the builders in
-  `NavigationEffects.kt`. The builder picks the motion and the reading-column cap:
+  commonsUI `ui/navigation/host/NavDestinations.kt`. The builder picks the motion and the reading-column cap:
 
 ```kotlin
 composableCapped<Route.Home> { HomeScreen(accountViewModel, nav) }          // fade, capped
@@ -104,7 +101,7 @@ composableFromEndArgs<Route.Note> { NoteScreen(it.id, accountViewModel, nav) }
 composableFromBottomArgs<Route.NewPost> { NewPostScreen(it.message, accountViewModel, nav) } // modal
 ```
 
-`BuildNavigation` decorates `stack + savedTabs` with the saveable-state and ViewModel-store
+`NavigationHost` (commonsUI `ui/navigation/host/`) decorates `stack + savedTabs` with the saveable-state and ViewModel-store
 decorators, shows only `stack` in `NavDisplay`, and drives the push / pop / predictive-back
 transitions from each entry's family and `tabRoot` flag.
 
@@ -826,7 +823,7 @@ fun LocalizedButton() {
 ### Navigation Testing
 
 The back stack is plain state, so navigation rules are unit-tested without Compose or mocks
-(see `amethyst/src/test/.../ui/navigation/NavBackStacksTest.kt` and `NavBottomBarStackTest.kt`):
+(see commons `NavBackStacksTest` and commonsUI `NavBottomBarStackTest`):
 
 ```kotlin
 @Test

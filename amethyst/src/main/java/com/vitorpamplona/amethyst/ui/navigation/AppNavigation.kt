@@ -42,10 +42,6 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.core.content.IntentCompat
 import androidx.core.util.Consumer
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import androidx.lifecycle.viewmodel.navigation3.rememberViewModelStoreNavEntryDecorator
-import androidx.navigation3.runtime.rememberDecoratedNavEntries
-import androidx.navigation3.runtime.rememberSaveableStateHolderNavEntryDecorator
-import androidx.navigation3.ui.NavDisplay
 import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.commons.cashu.ui.CashuWalletCreatedScreen
 import com.vitorpamplona.amethyst.commons.chats.ui.NewConversationScreen
@@ -72,6 +68,22 @@ import com.vitorpamplona.amethyst.commons.ui.layouts.LocalScreenLayout
 import com.vitorpamplona.amethyst.commons.ui.navigation.bottombars.LocalTabReselectCoordinator
 import com.vitorpamplona.amethyst.commons.ui.navigation.bottombars.TabReselectCoordinator
 import com.vitorpamplona.amethyst.commons.ui.navigation.findQueryParameterValue
+import com.vitorpamplona.amethyst.commons.ui.navigation.host.NavDestinations
+import com.vitorpamplona.amethyst.commons.ui.navigation.host.NavTransitionTier
+import com.vitorpamplona.amethyst.commons.ui.navigation.host.NavigationHost
+import com.vitorpamplona.amethyst.commons.ui.navigation.host.composable
+import com.vitorpamplona.amethyst.commons.ui.navigation.host.composableArgs
+import com.vitorpamplona.amethyst.commons.ui.navigation.host.composableCapped
+import com.vitorpamplona.amethyst.commons.ui.navigation.host.composableCappedArgs
+import com.vitorpamplona.amethyst.commons.ui.navigation.host.composableFromBottom
+import com.vitorpamplona.amethyst.commons.ui.navigation.host.composableFromBottomArgs
+import com.vitorpamplona.amethyst.commons.ui.navigation.host.composableFromEnd
+import com.vitorpamplona.amethyst.commons.ui.navigation.host.composableFromEndArgs
+import com.vitorpamplona.amethyst.commons.ui.navigation.navs.Nav
+import com.vitorpamplona.amethyst.commons.ui.navigation.navs.rememberNav
+import com.vitorpamplona.amethyst.commons.ui.navigation.routes.consumesSharesInPlace
+import com.vitorpamplona.amethyst.commons.ui.navigation.routes.getRouteWithArguments
+import com.vitorpamplona.amethyst.commons.ui.navigation.routes.isBaseRoute
 import com.vitorpamplona.amethyst.commons.ui.note.PayViaIntentScreen
 import com.vitorpamplona.amethyst.commons.ui.note.nip22Comments.ReplyCommentPostScreen
 import com.vitorpamplona.amethyst.commons.ui.note.share.ShareNoteAsQrScreen
@@ -315,11 +327,6 @@ import com.vitorpamplona.amethyst.ui.call.CallActivity
 import com.vitorpamplona.amethyst.ui.components.getActivity
 import com.vitorpamplona.amethyst.ui.components.toasts.DisplayErrorMessages
 import com.vitorpamplona.amethyst.ui.layouts.rememberScreenLayoutSpec
-import com.vitorpamplona.amethyst.ui.navigation.navs.Nav
-import com.vitorpamplona.amethyst.ui.navigation.navs.rememberNav
-import com.vitorpamplona.amethyst.ui.navigation.routes.consumesSharesInPlace
-import com.vitorpamplona.amethyst.ui.navigation.routes.getRouteWithArguments
-import com.vitorpamplona.amethyst.ui.navigation.routes.isBaseRoute
 import com.vitorpamplona.amethyst.ui.note.UpdateReactionTypeScreen
 import com.vitorpamplona.amethyst.ui.note.share.ShareNoteAsImageFileScreen
 import com.vitorpamplona.amethyst.ui.note.share.ShareNoteAsImageScreen
@@ -473,29 +480,7 @@ fun BuildNavigation(
 ) {
     val destinations = remember(accountViewModel, nav) { NavDestinations().apply { appDestinations(accountViewModel, nav) } }
 
-    // Decorate every entry whose state must survive — the visible stack AND the tab roots the user
-    // left — so a tab keeps its ViewModels and scroll position while it is out of sight. Only the
-    // visible stack is displayed; an entry's state is dropped once it leaves both.
-    val visible = nav.stacks.stack.toList()
-    val decorated =
-        rememberDecoratedNavEntries(
-            backStack = visible + nav.stacks.savedTabs.values,
-            entryDecorators =
-                listOf(
-                    rememberSaveableStateHolderNavEntryDecorator(),
-                    rememberViewModelStoreNavEntryDecorator(),
-                ),
-            entryProvider = destinations::entryFor,
-        )
-
-    NavDisplay(
-        entries = decorated.subList(0, visible.size),
-        transitionSpec = { destinations.pushTransition(this) },
-        popTransitionSpec = { destinations.popTransition(this) },
-        // A back gesture runs the same motion as a back press, scrubbed by the finger.
-        predictivePopTransitionSpec = { destinations.popTransition(this) },
-        onBack = { nav.stacks.pop() },
-    )
+    NavigationHost(nav, destinations)
 
     TrackScreenTime(nav, destinations)
 }

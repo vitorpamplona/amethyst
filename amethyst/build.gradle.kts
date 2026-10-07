@@ -619,10 +619,6 @@ dependencies {
     // Needs this to open gallery / image upload
     implementation(libs.androidx.fragment.ktx)
 
-    // Navigation
-    implementation(libs.jetbrains.navigation3.ui)
-    implementation(libs.jetbrains.lifecycle.viewmodel.navigation3)
-
     // Material 3 Design
     implementation(libs.androidx.material3)
 
