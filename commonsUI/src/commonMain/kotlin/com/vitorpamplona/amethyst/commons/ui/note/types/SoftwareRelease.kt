@@ -645,7 +645,7 @@ fun osLabel(os: SoftwareOs): String =
 
 /** A platform identifier's CPU as people name it, or its raw architecture when unknown. */
 @Composable
-private fun archLabel(platformId: String): String? {
+internal fun archLabel(platformId: String): String? {
     val cpu = SoftwarePlatforms.cpu(platformId) ?: return SoftwarePlatforms.rawArch(platformId)
     return stringRes(
         when (cpu) {

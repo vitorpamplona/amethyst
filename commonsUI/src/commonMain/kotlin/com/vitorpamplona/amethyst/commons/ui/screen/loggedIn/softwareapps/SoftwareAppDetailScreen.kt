@@ -65,6 +65,7 @@ import com.vitorpamplona.amethyst.commons.resources.nip82_older_releases_hide
 import com.vitorpamplona.amethyst.commons.resources.nip82_older_releases_show
 import com.vitorpamplona.amethyst.commons.resources.nip82_section_about
 import com.vitorpamplona.amethyst.commons.resources.nip82_section_latest_release
+import com.vitorpamplona.amethyst.commons.resources.nip82_section_license
 import com.vitorpamplona.amethyst.commons.resources.nip82_section_links
 import com.vitorpamplona.amethyst.commons.resources.nip82_section_platforms
 import com.vitorpamplona.amethyst.commons.resources.nip82_section_prereleases
@@ -84,7 +85,8 @@ import com.vitorpamplona.amethyst.commons.ui.note.types.AppAuthorLine
 import com.vitorpamplona.amethyst.commons.ui.note.types.AppIcon
 import com.vitorpamplona.amethyst.commons.ui.note.types.AppLinksColumn
 import com.vitorpamplona.amethyst.commons.ui.note.types.Chip
-import com.vitorpamplona.amethyst.commons.ui.note.types.PlatformLicenseRow
+import com.vitorpamplona.amethyst.commons.ui.note.types.LicenseChip
+import com.vitorpamplona.amethyst.commons.ui.note.types.PlatformChips
 import com.vitorpamplona.amethyst.commons.ui.note.types.RenderSoftwareReleaseBody
 import com.vitorpamplona.amethyst.commons.ui.note.types.ReplyRenderType
 import com.vitorpamplona.amethyst.commons.ui.note.types.ScreenshotsStrip
@@ -261,11 +263,20 @@ private fun SoftwareAppDetailBody(
             }
         }
 
-        if (platforms.isNotEmpty() || license != null) {
+        if (platforms.isNotEmpty()) {
             item(key = "platforms") {
                 Spacer(Modifier.height(12.dp))
                 Section(title = stringRes(Res.string.nip82_section_platforms)) {
-                    PlatformLicenseRow(platforms = platforms, license = license)
+                    PlatformChips(platforms)
+                }
+            }
+        }
+
+        if (license != null) {
+            item(key = "license") {
+                Spacer(Modifier.height(12.dp))
+                Section(title = stringRes(Res.string.nip82_section_license)) {
+                    LicenseChip(license)
                 }
             }
         }

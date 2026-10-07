@@ -68,10 +68,12 @@ import com.vitorpamplona.amethyst.commons.model.toImmutableListOfLists
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.nip82_by_author
 import com.vitorpamplona.amethyst.commons.resources.nip82_download
+import com.vitorpamplona.amethyst.commons.resources.nip82_platform_with_cpus
 import com.vitorpamplona.amethyst.commons.resources.nip82_repository_label
 import com.vitorpamplona.amethyst.commons.resources.nip82_version_label
 import com.vitorpamplona.amethyst.commons.richtext.MediaUrlImage
 import com.vitorpamplona.amethyst.commons.softwareapps.SoftwareAssetDownloads
+import com.vitorpamplona.amethyst.commons.softwareapps.SoftwareOs
 import com.vitorpamplona.amethyst.commons.softwareapps.SoftwarePlatforms
 import com.vitorpamplona.amethyst.commons.softwareapps.SoftwareReleases
 import com.vitorpamplona.amethyst.commons.ui.components.ClickableTextPrimary
@@ -283,19 +285,39 @@ fun AppAuthorLine(
     }
 }
 
+/**
+ * An app's NIP-82 platform identifiers (`android-arm64-v8a`, `darwin-x86_64`) as a person reads them: one
+ * chip per OS listing its CPUs ("Android · ARM64, ARMv7, x86-64"), in OS order. An identifier this does
+ * not recognise keeps its own chip, as written.
+ */
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
-fun PlatformLicenseRow(
-    platforms: List<String>,
-    license: String?,
-) {
+fun PlatformChips(platforms: List<String>) {
+    if (platforms.isEmpty()) return
+    val known = platforms.filter { SoftwarePlatforms.os(it) != SoftwareOs.OTHER }
+    val custom = platforms.filter { SoftwarePlatforms.os(it) == SoftwareOs.OTHER }.distinct()
+    val byOs = remember(known) { known.groupBy { SoftwarePlatforms.os(it) }.toSortedMap() }
     FlowRow(
         horizontalArrangement = Arrangement.spacedBy(6.dp),
         verticalArrangement = Arrangement.spacedBy(6.dp),
     ) {
-        platforms.forEach { Chip(it) }
-        license?.let { Chip(it, tint = MaterialTheme.colorScheme.secondaryContainer) }
+        byOs.forEach { (os, ids) ->
+            // CPUs in a stable order (by kind, then as written for ones without a name), without repeats.
+            val cpus =
+                ids
+                    .sortedWith(compareBy({ SoftwarePlatforms.cpu(it)?.ordinal ?: Int.MAX_VALUE }, { it }))
+                    .mapNotNull { archLabel(it) }
+                    .distinct()
+            Chip(if (cpus.isEmpty()) osLabel(os) else stringRes(Res.string.nip82_platform_with_cpus, osLabel(os), cpus.joinToString(", ")))
+        }
+        custom.forEach { Chip(it) }
     }
+}
+
+/** An app's license, shown on its own rather than as one more platform. */
+@Composable
+fun LicenseChip(license: String) {
+    Chip(license, tint = MaterialTheme.colorScheme.secondaryContainer)
 }
 
 @OptIn(ExperimentalLayoutApi::class)
@@ -505,15 +527,13 @@ fun RenderSoftwareAsset(
             }
         }
 
-        if (mimeType != null || platforms.isNotEmpty()) {
+        if (mimeType != null) {
             Spacer(StdVertSpacer)
-            FlowRow(
-                horizontalArrangement = Arrangement.spacedBy(6.dp),
-                verticalArrangement = Arrangement.spacedBy(6.dp),
-            ) {
-                mimeType?.let { Chip(prettyMime(it)) }
-                platforms.forEach { Chip(it) }
-            }
+            Chip(prettyMime(mimeType))
+        }
+        if (platforms.isNotEmpty()) {
+            Spacer(if (mimeType != null) Modifier.height(6.dp) else StdVertSpacer)
+            PlatformChips(platforms)
         }
     }
 }
