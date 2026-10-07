@@ -49,7 +49,8 @@ class QrScannerStateTest {
     private fun scan(
         vararg results: ScanResult,
         brightness: Float = 1f,
-    ) = FrameScan(results.toList(), frame, brightness)
+        thorough: Boolean = true,
+    ) = FrameScan(results.toList(), frame, brightness, thorough)
 
     // ---- the tap path ----
 
@@ -179,6 +180,38 @@ class QrScannerStateTest {
         assertTrue(state.isAwaitingUser)
     }
 
+    @Test
+    fun `a code read alone on a fast frame waits for a thorough pass to agree`() {
+        val state = QrScannerState()
+
+        // The scanner has only just opened: no frame has ever shown both codes, and the fast pass
+        // reads only the easy one.
+        assertNull(state.onFrame(scan(result("npub1easy"), thorough = false), 1_000L))
+
+        // The thorough pass finds the neighbour, so the choice goes to the user.
+        assertNull(state.onFrame(scan(result("npub1easy"), result("npub1hard")), 1_033L))
+        assertEquals(2, state.candidates.size)
+    }
+
+    @Test
+    fun `a fast-frame lone code is taken once a thorough pass confirms it`() {
+        val state = QrScannerState()
+
+        assertNull(state.onFrame(scan(result("npub1aaa"), thorough = false), 1_000L))
+        assertEquals("npub1aaa", state.onFrame(scan(result("npub1aaa")), 1_166L))
+    }
+
+    @Test
+    fun `a thorough confirmation carries over to the fast frames after the hold`() {
+        val state = QrScannerState()
+
+        assertNull(state.onFrame(scan(result("npub1aaa"), result("npub1bbb")), 1_000L))
+        // Thorough, alone, but still inside the hold.
+        assertNull(state.onFrame(scan(result("npub1aaa")), 1_700L))
+        // Hold over; this fast frame leans on the thorough pass 60 ms ago.
+        assertEquals("npub1aaa", state.onFrame(scan(result("npub1aaa"), thorough = false), 1_760L))
+    }
+
     // ---- multi-part sequences in one frame ----
 
     @Test
@@ -187,6 +220,15 @@ class QrScannerStateTest {
         val frameOfParts = scan(result("ab", "seq", 0, 3), result("cd", "seq", 1, 3), result("ef", "seq", 2, 3))
 
         assertEquals("abcdef", state.onFrame(frameOfParts, 1_000L))
+    }
+
+    @Test
+    fun `two sequences in view do not keep restarting each other`() {
+        val state = QrScannerState()
+        // Two 2-part posters, reported interleaved.
+        val bothPosters = scan(result("a1", "A", 0, 2), result("b1", "B", 0, 2), result("a2", "A", 1, 2), result("b2", "B", 1, 2))
+
+        assertEquals("a1a2", state.onFrame(bothPosters, 1_000L))
     }
 
     @Test

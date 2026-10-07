@@ -89,8 +89,9 @@ if [ -n "$STRINGS_TOOL" ]; then
         for run in "$RUN_A/out" "$RUN_B/out"; do
             found="$("$STRINGS_TOOL" "$run/$abi/$LIB_NAME" | grep -F -e "$NDK" -e "$RELOCATED_NDK" -e "$BUILD_ROOT" -e "$PROJECT_ROOT" || true)"
             # Plus any other host path. Anchored on real top-level directories rather than "any
-            # /x/y", which random bytes in .rodata match.
-            found="$found$("$STRINGS_TOOL" "$run/$abi/$LIB_NAME" | grep -E '^/(home|Users|root|tmp|private|var|opt|usr|mnt|builds?)/' || true)"
+            # /x/y", which random bytes in .rodata match -- and never /build/ or /zxing-cpp/, the
+            # stable prefixes repro-env.sh rewrites paths to on purpose.
+            found="$found$("$STRINGS_TOOL" "$run/$abi/$LIB_NAME" | grep -E '^/(home|Users|root|tmp|private|var|opt|usr|mnt)/' || true)"
             [ -n "$found" ] && LEAKS="$LEAKS\n  $abi: $(printf '%s' "$found" | head -3 | tr '\n' ' ')"
         done
     done

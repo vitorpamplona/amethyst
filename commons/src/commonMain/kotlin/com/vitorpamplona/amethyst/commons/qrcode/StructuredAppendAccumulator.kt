@@ -57,8 +57,10 @@ class StructuredAppendAccumulator(
      *
      * The id alone cannot tell two sequences apart: for QR it is the one-byte parity of the whole
      * message, so two different 3-part codes share an id one time in 256. A conflicting part at
-     * an index catches the common case (both posters in view), and [parityMatches] checks the
-     * joined result against the id before it is handed out.
+     * an index catches that (both posters in view). The parity itself is deliberately not
+     * enforced on the joined text: it is taken over encoded bytes the decoded text no longer
+     * shows, generators disagree on it, and rejecting a fully captured code on a disagreement
+     * would make it unreadable with nothing to tell the user why.
      */
     fun add(
         result: ScanResult,
@@ -96,9 +98,16 @@ class StructuredAppendAccumulator(
         }
 
         reset()
-        val text = joined.toString()
-        return if (parityMatches(text, id)) text else null
+        return joined.toString()
     }
+
+    /**
+     * Whether [part] belongs to the sequence being collected. False while idle.
+     *
+     * Lets a caller with several sequences in view feed only one of them: feeding parts of two
+     * sequences in turn makes each restart the other, and neither ever completes.
+     */
+    fun isCurrentSequence(part: ScanResult): Boolean = expected != 0 && part.sequenceId == sequenceId && part.sequenceSize == expected
 
     /**
      * Drops a half-captured sequence whose parts stopped arriving, and says whether it did.
@@ -124,28 +133,6 @@ class StructuredAppendAccumulator(
     }
 
     companion object {
-        /**
-         * Whether [text] agrees with a QR Structured Append parity byte, as zxing-cpp reports it:
-         * the XOR of every byte of the original message, in decimal.
-         *
-         * Only checked when the answer is unambiguous. The parity is taken over the encoded
-         * bytes, and once the text has been decoded the encoding is gone — so a message with
-         * any non-ASCII character, or an id that is not a parity byte (another symbology, or a
-         * decoder that reports something else), is let through rather than rejected on a guess.
-         */
-        fun parityMatches(
-            text: String,
-            sequenceId: String?,
-        ): Boolean {
-            val parity = sequenceId?.toIntOrNull()?.takeIf { it in 0..255 } ?: return true
-            var xor = 0
-            for (char in text) {
-                if (char.code > 0x7F) return true
-                xor = xor xor char.code
-            }
-            return xor == parity
-        }
-
         /**
          * Long enough to walk around a poster and catch the parts, short enough that an abandoned
          * half-sequence does not linger into the next scan.

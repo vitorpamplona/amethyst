@@ -25,6 +25,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import com.vitorpamplona.amethyst.commons.model.Account
 import com.vitorpamplona.amethyst.commons.model.navigation.Route
 import com.vitorpamplona.amethyst.commons.qrcode.ScannedPayload
 import com.vitorpamplona.amethyst.commons.qrcode.classifyScannedPayload
@@ -69,23 +70,30 @@ fun NIP19QrCodeScanner(
 }
 
 /**
- * The route a scanned string leads to, or null when nothing here can open it.
+ * The route a classified scan opens, or null when nothing here can open it. The one place every
+ * scan entry point (camera, picked image, shared image) decides this, so none can skip the rule
+ * below.
  *
- * A bare 64-character hex key is deliberately NOT routed here. It could as easily be a private
- * key as a public one, and opening a private key as a profile sends it to relays as an author
- * filter. It returns null, so the scanner's outcome sheet asks, and the npub comes back through
- * here only once the user says it is a public key (issue #417 is still served, one tap later).
+ * A bare 64-character hex key is deliberately NOT routed. It could as easily be a private key as
+ * a public one, and opening a private key as a profile sends it to relays as an author filter. It
+ * returns null, so the outcome sheet asks, and the npub comes back through here only once the
+ * user says it is a public key (issue #417 is still served, one tap later).
  *
  * Routes the trimmed payload: a code ending in a newline classified fine but then failed to
  * parse, which read as "can't open this" for a perfectly good wallet-connect URI.
  */
+fun routeForScannedPayload(
+    payload: ScannedPayload,
+    account: Account,
+): Route? = if (payload is ScannedPayload.HexKey) null else uriToRoute(payload.raw, account)
+
+/** [routeForScannedPayload] for a raw scan, never throwing and never logging the payload. */
 private fun routeFor(
     contents: String,
     accountViewModel: AccountViewModel,
 ): Route? =
     try {
-        val payload = classifyScannedPayload(contents)
-        if (payload is ScannedPayload.HexKey) null else uriToRoute(payload.raw, accountViewModel.account)
+        routeForScannedPayload(classifyScannedPayload(contents), accountViewModel.account)
     } catch (e: Throwable) {
         if (e is CancellationException) throw e
         // The payload itself never reaches the log. A QR code is as likely to hold an nsec, a

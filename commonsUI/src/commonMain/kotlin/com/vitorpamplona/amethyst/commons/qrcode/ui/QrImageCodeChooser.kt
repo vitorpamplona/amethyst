@@ -76,6 +76,9 @@ import com.vitorpamplona.quartz.nip19Bech32.entities.NSec
  * There is no image on screen to tap, so the codes are listed by what they are rather than by
  * where they sit. A row that carries a secret shows its kind and nothing else — the same rule
  * the outcome sheet follows, for the same reason: a QR code is scanned in public.
+ *
+ * [note] is a line under the title for anything else the picture held that cannot be offered as
+ * a row, such as part of a multi-part code.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -83,6 +86,7 @@ fun QrImageCodeChooser(
     codes: List<ScannedPayload>,
     onPick: (ScannedPayload) -> Unit,
     onDismiss: () -> Unit,
+    note: String? = null,
 ) {
     val sheetState =
         rememberBottomSheetState(
@@ -105,6 +109,14 @@ fun QrImageCodeChooser(
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.Bold,
             )
+
+            if (note != null) {
+                Text(
+                    text = note,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
 
             codes.forEachIndexed { index, payload ->
                 if (index > 0) HorizontalDivider()

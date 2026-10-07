@@ -81,6 +81,9 @@ class QrScannerState {
      */
     var imageCodes by mutableStateOf<List<ScannedPayload>>(emptyList())
 
+    /** A line shown with [imageCodes] about anything else the picture held, such as a partial sequence. */
+    var imageCodesNote by mutableStateOf<String?>(null)
+
     private var lastSubmittedText: String? = null
     private var lastSubmittedAt = 0L
     private var darkSinceMs = 0L
@@ -88,6 +91,10 @@ class QrScannerState {
     /** The last frame that held more than one code, and when; see [MULTI_HOLD_MS]. */
     private var lastMulti: List<ScanResult> = emptyList()
     private var lastMultiAtMs = 0L
+
+    /** The code the last thorough frame found alone in view, and when; see [onFrame]. */
+    private var thoroughLoneText: String? = null
+    private var thoroughLoneAtMs = 0L
 
     /**
      * True while a sheet over the camera is waiting on the user. The analyzer reads it from its
@@ -135,16 +142,27 @@ class QrScannerState {
             lastMulti = found
             lastMultiAtMs = nowMs
         }
+        if (scan.thorough) {
+            thoroughLoneText = found.singleOrNull()?.text
+            thoroughLoneAtMs = nowMs
+        }
 
         // A multi-part code is never complete on its first part, so it can't be a single answer.
         // Every part in view is fed, not just the first: a poster prints its parts side by side,
         // and the decoder reports them in the same order every frame, so feeding one per frame
-        // fed the same one forever and the sequence never got past "1 of N".
+        // fed the same one forever and the sequence never got past "1 of N". Only one sequence's
+        // parts, though -- the one being collected, else the first in view's: two posters' parts
+        // fed in turn restart each other and neither completes.
         val parts = found.filter { it.isPartOfSequence }
         if (parts.isNotEmpty()) {
             candidates = found
+            val batch =
+                parts.filter { sequence.isCurrentSequence(it) }.ifEmpty {
+                    val first = parts.first()
+                    parts.filter { it.sequenceId == first.sequenceId && it.sequenceSize == first.sequenceSize }
+                }
             var joined: String? = null
-            for (part in parts) {
+            for (part in batch) {
                 joined = sequence.add(part, nowMs)
                 if (joined != null) break
             }
@@ -174,6 +192,13 @@ class QrScannerState {
         }
 
         candidates = found
+
+        // Alone on a fast frame is not proof of alone: the neighbour may simply be too hard for the
+        // fast pass, and no frame has yet shown both. Wait for a thorough pass (every
+        // QrFrameAnalyzer.THOROUGH_EVERY frames, so a few hundred milliseconds at most) to agree.
+        val confirmedAlone = thoroughLoneText == only.text && nowMs - thoroughLoneAtMs < MULTI_HOLD_MS
+        if (!confirmedAlone) return null
+
         return accept(only.text, nowMs)
     }
 

@@ -382,6 +382,10 @@
         <item quantity="one">Captured %1$s of %2$s part — keep going</item>
         <item quantity="other">Captured %1$s of %2$s parts — keep going</item>
     </plurals>
+    <plurals name="qr_scanner_partial_sequence_note">
+        <item quantity="one">This picture also holds %1$s of %2$s part of a multi-part code. It can only be read once every part is scanned.</item>
+        <item quantity="other">This picture also holds %1$s of %2$s parts of a multi-part code. It can only be read once every part is scanned.</item>
+    </plurals>
     <string name="qr_scanner_zoom_reset">Reset zoom</string>
     <string name="qr_scanner_unsupported_title">Amethyst can't open this code</string>
     <string name="qr_scanner_unsupported_secret">This code carries a private key or a pairing secret, so its contents are not shown here. Use the screen that expects it.</string>

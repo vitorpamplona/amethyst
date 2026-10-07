@@ -148,10 +148,6 @@ fun ScanOutcomeSheet(
 
 @Composable
 private fun explain(payload: ScannedPayload): String {
-    // Explains its own hiding: the generic "carries a private key or a pairing secret" line would
-    // claim to know which kind of key it is.
-    if (payload is ScannedPayload.HexKey) return stringRes(Res.string.qr_scanner_kind_hex_key)
-
     val kind =
         when (payload) {
             is ScannedPayload.Nostr ->
@@ -171,8 +167,12 @@ private fun explain(payload: ScannedPayload): String {
             is ScannedPayload.Lightning -> stringRes(Res.string.qr_scanner_kind_lightning)
             is ScannedPayload.Cashu -> stringRes(Res.string.qr_scanner_kind_cashu)
             is ScannedPayload.Web -> stringRes(Res.string.qr_scanner_kind_web)
-            is ScannedPayload.HexKey, is ScannedPayload.Unknown -> stringRes(Res.string.qr_scanner_kind_text)
+            is ScannedPayload.HexKey -> stringRes(Res.string.qr_scanner_kind_hex_key)
+            is ScannedPayload.Unknown -> stringRes(Res.string.qr_scanner_kind_text)
         }
 
-    return if (payload.containsSecret) kind + "\n\n" + stringRes(Res.string.qr_scanner_unsupported_secret) else kind
+    // A hex key explains its own hiding: the generic "carries a private key or a pairing secret"
+    // line would claim to know which kind of key it is.
+    val explainSecret = payload.containsSecret && payload !is ScannedPayload.HexKey
+    return if (explainSecret) kind + "\n\n" + stringRes(Res.string.qr_scanner_unsupported_secret) else kind
 }

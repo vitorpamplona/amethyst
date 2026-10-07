@@ -44,22 +44,20 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.core.net.toUri
 import com.vitorpamplona.amethyst.commons.model.navigation.Route
+import com.vitorpamplona.amethyst.commons.qrcode.ImageCodesOutcome
 import com.vitorpamplona.amethyst.commons.qrcode.ScannedPayload
-import com.vitorpamplona.amethyst.commons.qrcode.assembleStructuredAppend
 import com.vitorpamplona.amethyst.commons.qrcode.classifyScannedPayload
 import com.vitorpamplona.amethyst.commons.qrcode.ui.QrImageCodeChooser
 import com.vitorpamplona.amethyst.commons.qrcode.ui.ScanOutcomeSheet
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.qr_scanner_no_code_in_image
-import com.vitorpamplona.amethyst.commons.resources.qr_scanner_sequence_progress
 import com.vitorpamplona.amethyst.commons.resources.qr_scanner_try_again
 import com.vitorpamplona.amethyst.commons.resources.qr_scanner_unavailable
 import com.vitorpamplona.amethyst.commons.resources.scan_qr
-import com.vitorpamplona.amethyst.commons.ui.loadPluralStringRes
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.navigation.topbars.TopBarWithBackButton
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.qrcode.routeForScannedPayload
 import com.vitorpamplona.amethyst.commons.ui.stringRes
-import com.vitorpamplona.amethyst.commons.ui.uriToRoute
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.qrcode.scanner.QrImageImport
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.qrcode.scanner.ZxingCppBarcodeDecoder
@@ -81,9 +79,13 @@ private sealed interface ImageScanState {
         val message: String,
     ) : ImageScanState
 
-    /** The picture held more than one code, so the reader says which one they meant. */
+    /**
+     * The picture held more than one code, or one next to part of a multi-part code, so the
+     * reader says which one they meant. [note] mentions the partial code.
+     */
     data class Choosing(
         val codes: List<ScannedPayload>,
+        val note: String?,
     ) : ImageScanState
 }
 
@@ -113,14 +115,9 @@ fun ScanQrImageScreen(
     // Navigating or explaining, for one chosen code. Shared by the single-code path and the
     // chooser, so both treat a hex key and an unsupported payload the same way.
     val resolve: (ScannedPayload) -> Unit = { payload ->
-        // A bare hex key is never routed directly: it may be a private key, and a profile sends
-        // its key to relays. The outcome sheet asks, and comes back here with the npub.
-        val route =
-            if (payload is ScannedPayload.HexKey) {
-                null
-            } else {
-                runCatching { uriToRoute(payload.raw, accountViewModel.account) }.getOrNull()
-            }
+        // Never opens a bare hex key directly (it may be a private key): the outcome sheet asks,
+        // and comes back here with the npub.
+        val route = runCatching { routeForScannedPayload(payload, accountViewModel.account) }.getOrNull()
 
         if (route != null) {
             nav.newStack(route)
@@ -135,27 +132,19 @@ fun ScanQrImageScreen(
             return@LaunchedEffect
         }
 
-        // Multi-part codes are joined before anything is classified, so a fragment is never offered
-        // on its own; distinct, because a picture of a screen often repeats the same code across
-        // a reflection or a duplicated crop, and the identical string twice is a choice with no
-        // answer.
-        val assembled =
-            withContext(Dispatchers.IO) {
-                assembleStructuredAppend(QrImageImport.decode(context, uri.toUri(), decoder))
-            }
-        val found = assembled.texts.map(::classifyScannedPayload)
-        val incomplete = assembled.incomplete
+        val outcome = withContext(Dispatchers.IO) { QrImageImport.outcome(context, uri.toUri(), decoder) }
 
-        when {
-            found.isEmpty() && incomplete != null -> {
-                val (captured, total) = incomplete
-                state = ImageScanState.Failed(loadPluralStringRes(Res.plurals.qr_scanner_sequence_progress, captured, captured, total))
-            }
-
-            found.isEmpty() -> state = ImageScanState.Failed(noCodeFound)
-            // One code is unambiguous, so asking would only add a tap.
-            found.size == 1 -> resolve(found.first())
-            else -> state = ImageScanState.Choosing(found)
+        when (outcome) {
+            ImageCodesOutcome.NothingFound -> state = ImageScanState.Failed(noCodeFound)
+            is ImageCodesOutcome.OnlyPartial -> state = ImageScanState.Failed(QrImageImport.partialProgressText(outcome.captured, outcome.total))
+            // One code alone is unambiguous, so asking would only add a tap.
+            is ImageCodesOutcome.Open -> resolve(classifyScannedPayload(outcome.text))
+            is ImageCodesOutcome.Choose ->
+                state =
+                    ImageScanState.Choosing(
+                        codes = outcome.texts.map(::classifyScannedPayload),
+                        note = QrImageImport.partialNote(outcome.partial),
+                    )
         }
     }
 
@@ -192,6 +181,7 @@ fun ScanQrImageScreen(
     (state as? ImageScanState.Choosing)?.let { choosing ->
         QrImageCodeChooser(
             codes = choosing.codes,
+            note = choosing.note,
             onPick = { picked ->
                 state = ImageScanState.Working
                 resolve(picked)

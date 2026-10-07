@@ -33,6 +33,11 @@ data class FrameScan(
     val frame: ScanFrame,
     /** Mean luminance over a sparse sample of the Y plane, 0f (black) to 1f (white). */
     val brightness: Float,
+    /**
+     * Whether this frame got the expensive pass. Only those find a marginal code, so only they
+     * can say a code is truly alone in view.
+     */
+    val thorough: Boolean = true,
 )
 
 /**
@@ -75,7 +80,7 @@ class QrFrameAnalyzer(
                     emptyList()
                 }
 
-            onFrame(FrameScan(results, rotatedFrameSize(image), brightness))
+            onFrame(FrameScan(results, rotatedFrameSize(image), brightness, thorough = effort == DecodeEffort.Thorough))
         }
     }
 

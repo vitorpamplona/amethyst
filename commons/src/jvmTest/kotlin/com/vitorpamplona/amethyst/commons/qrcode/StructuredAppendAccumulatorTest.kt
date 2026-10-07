@@ -126,37 +126,29 @@ class StructuredAppendAccumulatorTest {
     }
 
     @Test
-    fun `a joined payload whose parity disagrees with the id is dropped`() {
+    fun `a joined payload is returned whatever the id says`() {
+        // The id is a parity byte some generators compute differently. A fully captured code is
+        // never thrown away over it.
         val acc = StructuredAppendAccumulator()
-        val wrongParity = (parityOf("abcdef") xor 1).toString()
 
-        acc.add(part("abc", 0, 2, id = wrongParity), 0)
-        assertNull(acc.add(part("def", 1, 2, id = wrongParity), 10))
-        assertEquals(0, acc.captured)
+        acc.add(part("abc", 0, 2, id = "0"), 0)
+        assertEquals("abcdef", acc.add(part("def", 1, 2, id = "0"), 10))
     }
 
     @Test
-    fun `a joined payload whose parity matches the id is returned`() {
+    fun `only parts of the sequence being collected count as current`() {
         val acc = StructuredAppendAccumulator()
-        val parity = parityOf("abcdef").toString()
+        assertFalse("nothing is current while idle", acc.isCurrentSequence(part("x", 0, 2, id = "a")))
 
-        acc.add(part("abc", 0, 2, id = parity), 0)
-        assertEquals("abcdef", acc.add(part("def", 1, 2, id = parity), 10))
-    }
-
-    @Test
-    fun `parity is only enforced when it can be computed unambiguously`() {
-        // Non-ASCII: the parity was taken over encoded bytes we can no longer see.
-        assertTrue(StructuredAppendAccumulator.parityMatches("caf\u00e9", "0"))
-        // Not a parity byte at all.
-        assertTrue(StructuredAppendAccumulator.parityMatches("abc", "seq"))
-        assertTrue(StructuredAppendAccumulator.parityMatches("abc", null))
-        assertFalse(StructuredAppendAccumulator.parityMatches("abc", (parityOf("abc") xor 2).toString()))
+        acc.add(part("x", 0, 2, id = "a"), 0)
+        assertTrue(acc.isCurrentSequence(part("y", 1, 2, id = "a")))
+        assertFalse(acc.isCurrentSequence(part("y", 1, 2, id = "b")))
+        assertFalse(acc.isCurrentSequence(part("y", 1, 3, id = "a")))
     }
 
     @Test
     fun `an image with every part joins them and never returns a fragment`() {
-        val parity = parityOf("nsec1aaabbbccc").toString()
+        val parity = "7"
         val assembled =
             assembleStructuredAppend(
                 listOf(
@@ -185,5 +177,16 @@ class StructuredAppendAccumulatorTest {
         assertEquals(2 to 3, assembled.incomplete)
     }
 
-    private fun parityOf(text: String) = text.fold(0) { acc, c -> acc xor c.code }
+    @Test
+    fun `one image code alone is opened, anything more is a choice`() {
+        assertEquals(ImageCodesOutcome.NothingFound, AssembledCodes(emptyList(), null).outcome())
+        assertEquals(ImageCodesOutcome.OnlyPartial(2, 3), AssembledCodes(emptyList(), 2 to 3).outcome())
+        assertEquals(ImageCodesOutcome.Open("npub1a"), AssembledCodes(listOf("npub1a"), null).outcome())
+        assertEquals(ImageCodesOutcome.Choose(listOf("npub1a", "npub1b"), null), AssembledCodes(listOf("npub1a", "npub1b"), null).outcome())
+    }
+
+    @Test
+    fun `one image code next to a partial sequence is a choice, not a silent open`() {
+        assertEquals(ImageCodesOutcome.Choose(listOf("npub1a"), 2 to 3), AssembledCodes(listOf("npub1a"), 2 to 3).outcome())
+    }
 }

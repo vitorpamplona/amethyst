@@ -95,8 +95,8 @@ import com.google.accompanist.permissions.PermissionState
 import com.google.accompanist.permissions.isGranted
 import com.google.accompanist.permissions.rememberPermissionState
 import com.google.accompanist.permissions.shouldShowRationale
+import com.vitorpamplona.amethyst.commons.qrcode.ImageCodesOutcome
 import com.vitorpamplona.amethyst.commons.qrcode.ScanResult
-import com.vitorpamplona.amethyst.commons.qrcode.assembleStructuredAppend
 import com.vitorpamplona.amethyst.commons.qrcode.classifyScannedPayload
 import com.vitorpamplona.amethyst.commons.qrcode.ui.QrImageCodeChooser
 import com.vitorpamplona.amethyst.commons.qrcode.ui.ScanOutcomeSheet
@@ -109,10 +109,8 @@ import com.vitorpamplona.amethyst.commons.resources.qr_scanner_clipboard_empty
 import com.vitorpamplona.amethyst.commons.resources.qr_scanner_grant_camera
 import com.vitorpamplona.amethyst.commons.resources.qr_scanner_no_code_in_image
 import com.vitorpamplona.amethyst.commons.resources.qr_scanner_open_settings
-import com.vitorpamplona.amethyst.commons.resources.qr_scanner_sequence_progress
 import com.vitorpamplona.amethyst.commons.resources.qr_scanner_unavailable
 import com.vitorpamplona.amethyst.commons.ui.components.SetDialogToEdgeToEdge
-import com.vitorpamplona.amethyst.commons.ui.loadPluralStringRes
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.qrcode.ScanOutcome
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.ui.call.openAppSettings
@@ -435,18 +433,14 @@ private fun QrCameraScanner(
     val readImage: (Uri) -> Unit = { uri ->
         if (decoder != null) {
             scope.launch {
-                val assembled = assembleStructuredAppend(QrImageImport.decode(context, uri, decoder))
-                val found = assembled.texts
-                val incomplete = assembled.incomplete
-                when {
-                    found.isEmpty() && incomplete != null -> {
-                        val (captured, total) = incomplete
-                        state.notice = loadPluralStringRes(Res.plurals.qr_scanner_sequence_progress, captured, captured, total)
+                when (val outcome = QrImageImport.outcome(context, uri, decoder)) {
+                    ImageCodesOutcome.NothingFound -> state.notice = noCodeInImage
+                    is ImageCodesOutcome.OnlyPartial -> state.notice = QrImageImport.partialProgressText(outcome.captured, outcome.total)
+                    is ImageCodesOutcome.Open -> submit(outcome.text)
+                    is ImageCodesOutcome.Choose -> {
+                        state.imageCodesNote = QrImageImport.partialNote(outcome.partial)
+                        state.imageCodes = outcome.texts.map(::classifyScannedPayload)
                     }
-
-                    found.isEmpty() -> state.notice = noCodeInImage
-                    found.size == 1 -> submit(found.first())
-                    else -> state.imageCodes = found.map(::classifyScannedPayload)
                 }
             }
         }
@@ -513,6 +507,7 @@ private fun QrCameraScanner(
     if (state.imageCodes.isNotEmpty()) {
         QrImageCodeChooser(
             codes = state.imageCodes,
+            note = state.imageCodesNote,
             onPick = { picked ->
                 state.imageCodes = emptyList()
                 submit(picked.raw)

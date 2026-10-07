@@ -71,3 +71,40 @@ fun assembleStructuredAppend(results: List<ScanResult>): AssembledCodes {
 
     return AssembledCodes(texts.distinct(), incomplete)
 }
+
+/** What one imported picture should lead to, decided once for every image entry point. */
+sealed interface ImageCodesOutcome {
+    /** No QR code in the picture at all. */
+    data object NothingFound : ImageCodesOutcome
+
+    /** Only part of a multi-part code: nothing can be opened until the rest is scanned. */
+    data class OnlyPartial(
+        val captured: Int,
+        val total: Int,
+    ) : ImageCodesOutcome
+
+    /** Exactly one code and nothing else in the picture, so asking would only add a tap. */
+    data class Open(
+        val text: String,
+    ) : ImageCodesOutcome
+
+    /**
+     * The user picks. Several codes, or one code next to part of a multi-part code: opening the
+     * one silently would hide that the picture also held a half-captured sequence (often a split
+     * key backup), so [partial] is shown alongside the choice.
+     */
+    data class Choose(
+        val texts: List<String>,
+        val partial: Pair<Int, Int>?,
+    ) : ImageCodesOutcome
+}
+
+fun AssembledCodes.outcome(): ImageCodesOutcome {
+    val partial = incomplete
+    return when {
+        texts.isEmpty() && partial != null -> ImageCodesOutcome.OnlyPartial(partial.first, partial.second)
+        texts.isEmpty() -> ImageCodesOutcome.NothingFound
+        texts.size == 1 && partial == null -> ImageCodesOutcome.Open(texts.first())
+        else -> ImageCodesOutcome.Choose(texts, partial)
+    }
+}
