@@ -45,6 +45,8 @@ class AccountSessionManagerTest {
         object : AccountSessionStore {
             override suspend fun loadAccountConfigFromEncryptedStorage(): AccountSettings? = null
 
+            override suspend fun loadAccountConfigFromEncryptedStorage(npub: String): AccountSettings? = null
+
             override suspend fun setDefaultAccount(accountSettings: AccountSettings) = accountSettings
 
             override suspend fun setHasBackedUpKeys(

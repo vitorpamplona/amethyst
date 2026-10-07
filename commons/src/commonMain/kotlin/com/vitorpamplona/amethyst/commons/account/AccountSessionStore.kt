@@ -35,6 +35,9 @@ interface AccountSessionStore {
     /** The current login's settings, or null when nobody is logged in. */
     suspend fun loadAccountConfigFromEncryptedStorage(): AccountSettings?
 
+    /** The settings of the saved login [npub], or null when there is none. */
+    suspend fun loadAccountConfigFromEncryptedStorage(npub: String): AccountSettings?
+
     /**
      * Saves [accountSettings] and makes it the current login. Returns the settings that became
      * current, which can be an existing signing account when a read-only npub is added for a

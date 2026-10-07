@@ -18,16 +18,13 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.model.accountsCache
+package com.vitorpamplona.amethyst.commons.account
 
-import android.content.ContentResolver
-import com.vitorpamplona.amethyst.LocalPreferences
-import com.vitorpamplona.amethyst.commons.account.AccountCache
 import com.vitorpamplona.amethyst.commons.connectedApps.nip46.InMemoryNip46ClientStore
 import com.vitorpamplona.amethyst.commons.connectedApps.nip46.Nip46ClientStore
 import com.vitorpamplona.amethyst.commons.connectedApps.signers.InMemoryNostrSignerPermissionStore
 import com.vitorpamplona.amethyst.commons.connectedApps.signers.NostrSignerPermissionStore
-import com.vitorpamplona.amethyst.commons.cordn.KeyStoreCordnBlobCipher
+import com.vitorpamplona.amethyst.commons.cordn.CordnBlobCipher
 import com.vitorpamplona.amethyst.commons.marmot.EncryptedKeyPackageBundleStore
 import com.vitorpamplona.amethyst.commons.marmot.EncryptedMarmotMessageStore
 import com.vitorpamplona.amethyst.commons.marmot.EncryptedMlsGroupStateStore
@@ -48,7 +45,6 @@ import com.vitorpamplona.amethyst.commons.relayClient.nip47WalletConnect.NWCPaym
 import com.vitorpamplona.amethyst.commons.relayauth.DataStoreRelayAuthPermissionStore
 import com.vitorpamplona.amethyst.commons.service.http.EncryptionKeyCache
 import com.vitorpamplona.amethyst.commons.service.pow.PoWPublishQueue
-import com.vitorpamplona.marmotquic.QuicAgentTextStreamTransport
 import com.vitorpamplona.quartz.marmot.appComponents.agentTextStream.transport.MarmotQuicTransport
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.toHexKey
@@ -56,12 +52,11 @@ import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerInternal
 import com.vitorpamplona.quartz.nip03Timestamp.OtsResolver
-import com.vitorpamplona.quartz.nip55AndroidSigner.client.NostrSignerExternal
 import com.vitorpamplona.quartz.nip60Cashu.mintApi.OkHttpMintTransport
 import com.vitorpamplona.quartz.nip89AppHandlers.clientTag.NostrSignerWithClientTag
 import com.vitorpamplona.quartz.utils.Log
 import com.vitorpamplona.quartz.utils.cache.LargeCache
-import com.vitorpamplona.quic.tls.JdkCertificateValidator
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineExceptionHandler
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -79,7 +74,18 @@ class AccountCacheState(
     val nwcFilterAssembler: () -> NWCPaymentFilterAssembler,
     val cashuMintDirectoryFilterAssembler: () -> com.vitorpamplona.amethyst.commons.relayClient.assemblers.CashuMintDirectoryFilterAssembler,
     val okHttpClientForMoney: (String) -> OkHttpClient,
-    val contentResolverFn: () -> ContentResolver,
+    /**
+     * The signer for an account whose key lives in a signer app ([AccountSettings.externalSignerPackageName]):
+     * Android's NIP-55 apps. Null where the platform has none, which leaves such an account read-only.
+     */
+    val externalSignerFactory: (pubKey: HexKey, packageName: String) -> NostrSigner? = { _, _ -> null },
+    /** Builds the raw-QUIC transport for Marmot agent text stream previews. */
+    val marmotStreamTransportFactory: (CoroutineScope) -> MarmotQuicTransport,
+    /**
+     * Encrypts the Cordn group files kept in each account's directory. Null where the platform has no
+     * key store for it yet, which keeps Cordn's state in memory only.
+     */
+    val cordnBlobCipher: (() -> CordnBlobCipher)? = null,
     val otsResolverBuilder: () -> OtsResolver,
     val cache: LocalCache,
     val client: INostrClient,
@@ -153,14 +159,14 @@ class AccountCacheState(
      * loaded accounts are returned as-is. Used by the always-on notification service so
      * GiftWraps addressed to non-active accounts still get unwrapped and notified.
      */
-    suspend fun loadAllWritableAccounts(localPreferences: LocalPreferences) {
+    suspend fun loadAllWritableAccounts(localPreferences: AccountSessionStore) {
         localPreferences.allSavedAccounts().forEach { savedAccount ->
             if (!savedAccount.hasPrivKey && !savedAccount.loggedInWithExternalSigner) return@forEach
             try {
                 val accountSettings = localPreferences.loadAccountConfigFromEncryptedStorage(savedAccount.npub) ?: return@forEach
                 loadAccount(accountSettings)
             } catch (e: Exception) {
-                if (e is kotlinx.coroutines.CancellationException) throw e
+                if (e is CancellationException) throw e
                 Log.w("AccountCacheState", "Failed to preload account ${savedAccount.npub}", e)
             }
         }
@@ -228,11 +234,8 @@ class AccountCacheState(
                         }
 
                         else -> {
-                            NostrSignerExternal(
-                                pubKey = accountSettings.keyPair.pubKey.toHexKey(),
-                                packageName = packageName,
-                                contentResolver = contentResolverFn(),
-                            )
+                            externalSignerFactory(accountSettings.keyPair.pubKey.toHexKey(), packageName)
+                                ?: NostrSignerInternal(accountSettings.keyPair)
                         }
                     }
                 },
@@ -375,8 +378,8 @@ class AccountCacheState(
             marmotNotifier = marmotNotifier,
             nip46Consent = nip46Consent,
             geohashIdentityStore = geohashIdentityStore(signer.pubKey),
-            marmotStreamTransportFactory = ::defaultMarmotStreamTransport,
-            cordnBlobCipher = { KeyStoreCordnBlobCipher() },
+            marmotStreamTransportFactory = marmotStreamTransportFactory,
+            cordnBlobCipher = cordnBlobCipher,
             scope =
                 CoroutineScope(
                     Dispatchers.IO +
@@ -388,7 +391,7 @@ class AccountCacheState(
             // The same per-account directory the Marmot stores use. cordn
             // scopes itself further by coordinator underneath it, because a
             // gid is unique only within one (spec/00.md §4).
-            cordnFilesDir = accountDir.toOkioPath(),
+            cordnFilesDir = accountDir.toOkioPath().takeIf { cordnBlobCipher != null },
             mlsGroupStateStore = mlsStore,
             marmotMessageStore = marmotMessageStore,
             marmotKeyPackageStore = marmotKeyPackageStore,
@@ -424,14 +427,3 @@ class AccountCacheState(
         const val CLIENT_TAG_NAME = AMETHYST_CLIENT_TAG_NAME
     }
 }
-
-/**
- * The app's raw-QUIC transport for Marmot agent text stream previews (`transports/quic.md`).
- * Preview brokers are commonly self-signed and the binding expects that; the platform trust
- * store is still the default answer, and a deployment that pins does it here.
- */
-fun defaultMarmotStreamTransport(scope: CoroutineScope): MarmotQuicTransport =
-    QuicAgentTextStreamTransport(
-        parentScope = scope,
-        certificateValidator = JdkCertificateValidator(),
-    )
