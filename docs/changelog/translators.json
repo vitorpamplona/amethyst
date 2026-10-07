@@ -80,6 +80,12 @@
     "since": "2026-10-05T15:39:33-04:00",
     "translators": [
       {
+        "user": "raj2516",
+        "languages": [
+          "Hindi"
+        ]
+      },
+      {
         "user": "vitorpamplona",
         "languages": [
           "Czech",
@@ -89,21 +95,15 @@
         ]
       },
       {
-        "user": "summoner001",
-        "languages": [
-          "Hungarian"
-        ]
-      },
-      {
-        "user": "raj2516",
-        "languages": [
-          "Hindi"
-        ]
-      },
-      {
         "user": "maxblake2015",
         "languages": [
           "Polish"
+        ]
+      },
+      {
+        "user": "summoner001",
+        "languages": [
+          "Hungarian"
         ]
       },
       {

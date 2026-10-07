@@ -369,6 +369,10 @@
         <item quantity="one">%2$s में से %1$s भाग प्राप्त। आगे बढें</item>
         <item quantity="other">%2$s में से %1$s भाग प्राप्त। आगे बढें</item>
     </plurals>
+    <plurals name="qr_scanner_partial_sequence_note">
+        <item quantity="one">यह चित्र एक बहुभाग अक्षरराशि का %2$s में से %1$s अम्श रखता है। सभी भागों को परखने के पश्चात ही यह पठनशक्य।</item>
+        <item quantity="other">यह चित्र एक बहुभाग अक्षरराशि का %2$s में से %1$s अम्शों को रखता है। सभी भागों को परखने के पश्चात ही यह पठनशक्य।</item>
+    </plurals>
     <string name="qr_scanner_zoom_reset">विस्तारण पुनःस्थापना</string>
     <string name="qr_scanner_unsupported_title">अमेथिस्ट इस अक्षरराशि को नहीं खोल सकता</string>
     <string name="qr_scanner_unsupported_secret">इस अक्षरराशि में एक निजी कुंचिका अथवा जोडनेवाला रहस्य है। इसलिए इसकी विषयवस्तु यहाँ दिखाया नहीं जाता। अनुकूल पटल का उपयोग करें।</string>
@@ -380,6 +384,8 @@
     <string name="qr_scanner_kind_cashu">यह एक काशयू अक्षरराशि है।</string>
     <string name="qr_scanner_kind_web">यह एक जाल योजक है।</string>
     <string name="qr_scanner_kind_text">यह साधारण लेख है। नोस्टर सम्बन्धित अक्षरराशि नहीं।</string>
+    <string name="qr_scanner_kind_hex_key">यह एक कच्ची चौंसठ अक्षर कुंचिका है। यह ख्याप्य अथवा निजी कुंचिका हो सकती है। निजी कुंचिका को परिचय के रूप में खोलने से इसे आपके पुनःप्रसारकों को भेजा जाएगा। केवल तब ही इसे खोलें यदि आप जानते हैं कि यह एक ख्याप्य कुंचिका है।</string>
+    <string name="qr_scanner_open_as_profile">यह एक ख्याप्य कुंचिका है। परिचय खोलें</string>
     <string name="qr_scanner_kind_nostr_unsupported">यह नोस्टर सम्बन्धित अक्षरराशि है। पर इस पटल द्वारा नहीं खोला जा सकता।</string>
     <string name="qr_scanner_label_profile">परिचय</string>
     <string name="qr_scanner_label_note">टीका</string>
@@ -393,6 +399,7 @@
     <string name="qr_scanner_label_cashu">काशयू अक्षरराशि</string>
     <string name="qr_scanner_label_web">जाल योजक</string>
     <string name="qr_scanner_label_text">साधारण लेख</string>
+    <string name="qr_scanner_label_hex_key">कच्ची कुंचिका (ख्याप्य अथवा निजी)</string>
     <string name="qr_scanner_open_link">योजक खोलें</string>
     <string name="qr_scanner_copy">अनुकृति</string>
     <string name="qr_scanner_copied">अनुकृत</string>
@@ -1231,6 +1238,33 @@
     <string name="nip82_by_author">इनके द्वारा</string>
     <string name="nip82_older_releases_show">पुराने संस्करण दिखाएँ</string>
     <string name="nip82_older_releases_hide">पुराने संस्करण छिपाएँ</string>
+    <string name="nip82_prereleases_show">पूर्वकाल के प्रकाशनपूर्व संस्करण दिखाएँ</string>
+    <string name="nip82_prereleases_hide">पूर्वकाल के प्रकाशनपूर्व संस्करण छिपाएँ</string>
+    <string name="nip82_new_release">नया संस्करण</string>
+    <string name="nip82_commit_label">स्थायी अभिलेखन %1$s</string>
+    <string name="nip82_section_downloads">अवरोहण</string>
+    <string name="nip82_for_this_device">इस यन्त्र के लिए</string>
+    <string name="nip82_not_from_developer">इस क्रमक के विकासक द्वारा प्रकाशित नहीं</string>
+    <string name="nip82_min_android_api">क्रमलेखनमाध्यम %1$s अथवा ऊपर</string>
+    <string name="nip82_min_platform_version">%1$s %2$s अथवा ऊपर</string>
+    <string name="nip82_os_android">आण्ड्रोइड</string>
+    <string name="nip82_os_ios">आईओएस</string>
+    <string name="nip82_os_macos">माकओएस</string>
+    <string name="nip82_os_windows">विण्डोव्स</string>
+    <string name="nip82_os_linux">लिनक्स</string>
+    <string name="nip82_os_freebsd">मुक्तबीएसडी</string>
+    <string name="nip82_os_wasm">जालयन्त्रादेशलेख</string>
+    <string name="nip82_os_other">अन्य</string>
+    <string name="nip82_cpu_apple_silicon">आप्पिल क्रमवर्तक</string>
+    <string name="nip82_cpu_intel_mac">इण्टेल</string>
+    <string name="nip82_cpu_arm64">आर्मचौंसठ</string>
+    <string name="nip82_cpu_armv7">आर्मसंस्करणसात</string>
+    <string name="nip82_cpu_x86_64">एक्सछियासी चौंसठ</string>
+    <string name="nip82_cpu_x86">एक्सछियासी</string>
+    <string name="nip82_cpu_riscv64">रिस्कपाँच चौंसठ</string>
+    <string name="nip82_cpu_wasm32">बत्तीस द्व्यंक</string>
+    <string name="nip82_cpu_wasm64">चौंसठ द्व्यंक</string>
+    <string name="nip82_section_prereleases">प्रकाशनपूर्व संस्करण</string>
     <string name="meeting_room_in_space">%1$s में</string>
     <string name="meeting_room_in_space_unknown">एक निलय</string>
     <string name="nest_stage">मंच</string>
@@ -4546,6 +4580,14 @@
     <string name="napplet_op_decrypt">आपके निजी सन्देशों का पठन</string>
     <string name="napplet_op_decrypt_from">आपके निजी सन्देशों का पठन %1$s के द्वारा</string>
     <string name="napplet_op_encrypt">सन्देश रहस्यीकरण</string>
+    <string name="consent_profile_field_name">नाम</string>
+    <string name="consent_profile_field_display_name">प्रदर्शन नाम</string>
+    <string name="consent_profile_field_picture">चित्र</string>
+    <string name="consent_profile_field_banner">ध्वज</string>
+    <string name="consent_profile_field_about">जीवनवृत्तान्त</string>
+    <string name="consent_profile_field_website">जालस्थान</string>
+    <string name="consent_profile_field_nip05">सत्यापित पता</string>
+    <string name="consent_profile_field_lightning">लैटनिंग पता</string>
     <string name="napplet_op_sign_kind_named">%1$s के लिए हस्ताक्षरण (प्रकार : %2$d)</string>
     <string name="napplet_permissions_title">संयोजित क्रमक</string>
     <string name="napplets">नोस्टर संलग्नक्रमक</string>
