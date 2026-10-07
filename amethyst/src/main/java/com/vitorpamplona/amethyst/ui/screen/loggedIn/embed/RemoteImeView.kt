@@ -25,6 +25,7 @@ import android.os.SystemClock
 import android.text.Editable
 import android.text.InputType
 import android.text.TextWatcher
+import android.view.KeyEvent
 import android.view.inputmethod.BaseInputConnection
 import android.view.inputmethod.EditorInfo
 import android.view.inputmethod.InputConnection
@@ -80,6 +81,10 @@ class RemoteImeView(
     // Set when we raise the keyboard, cleared when the user dismisses it or the page field blurs.
     private var keyboardWanted = false
 
+    // The mirrored field takes line breaks, so the keyboard shows Enter rather than an action, and its Enter
+    // must still reach the page as a key (see [sendEnter]).
+    private var fieldMultiline = false
+
     // The mirrored field is `readonly`. Kept here rather than checked at each call site so every raise path —
     // a fresh focus, the tap doorbell, and a tab restore — is covered by the one guard in [raiseKeyboard].
     private var fieldReadOnly = false
@@ -125,10 +130,7 @@ class RemoteImeView(
             },
         )
         // The IME's "Go/Search/Send/Done" — the page submits/handles it (single-line has no newline).
-        setOnEditorActionListener { _, _, _ ->
-            bridge?.sendImeOp(buildJsonObject { put("type", "ime.action") }.toString())
-            true
-        }
+        setOnEditorActionListener { _, _, _ -> sendEnter() }
     }
 
     /** Binds the controller of whatever embedded tab is active; null unbinds (no relay target). */
@@ -336,6 +338,36 @@ class RemoteImeView(
         isFocusableInTouchMode = enabled
     }
 
+    /**
+     * Hands the keyboard's Enter to the page instead of editing the mirror. A page decides what Enter means —
+     * a chat composer sends on it and cancels the key, a plain textarea takes a line break — and it can only
+     * decide if it sees the key, so the shim replays it as keydown/keypress and inserts the line break itself
+     * when nothing cancelled it (reporting the new text back). Typing a "\n" into this mirror instead shipped
+     * the text with the newline already in it: Enter could never send.
+     *
+     * Flushes first, synchronously, so the word just typed (often still composing, or in a posted flush)
+     * reaches the page before the Enter that submits it.
+     */
+    private fun sendEnter(): Boolean {
+        if (!mirroring || fieldReadOnly) return false
+        removeCallbacks(flush)
+        flushState()
+        bridge?.sendImeOp(buildJsonObject { put("type", "ime.action") }.toString())
+        return true
+    }
+
+    // A hardware (or IME-synthesized) Enter key on a multi-line field. Shift+Enter keeps the native line
+    // break; single-line fields already route Enter through the editor action above.
+    override fun onKeyDown(
+        keyCode: Int,
+        event: KeyEvent,
+    ): Boolean {
+        if (fieldMultiline && !event.isShiftPressed && (keyCode == KeyEvent.KEYCODE_ENTER || keyCode == KeyEvent.KEYCODE_NUMPAD_ENTER)) {
+            if (sendEnter()) return true
+        }
+        return super.onKeyDown(keyCode, event)
+    }
+
     private fun applyRemote(
         newText: String,
         selStart: Int,
@@ -418,6 +450,7 @@ class RemoteImeView(
     }
 
     private fun configureFor(focus: ImeEvent.Focus) {
+        fieldMultiline = focus.multiline && !focus.readOnly
         inputType =
             // A readonly field's mirror must not be typeable AT ALL, not merely keyboard-less. `readonly`
             // stops the *user* editing the field, not scripts — the shim writes through the native value
@@ -468,6 +501,20 @@ class RemoteImeView(
         override fun beginBatchEdit(): Boolean {
             batchDepth++
             return super.beginBatchEdit()
+        }
+
+        // Soft keyboards deliver Enter on a multi-line field as a committed "\n" (sometimes with the word
+        // before it), not as a key: commit the word, then hand the Enter to the page.
+        override fun commitText(
+            text: CharSequence?,
+            newCursorPosition: Int,
+        ): Boolean {
+            if (fieldMultiline && text != null && text.endsWith("\n") && text.count { it == '\n' } == 1) {
+                val before = text.dropLast(1)
+                if (before.isNotEmpty()) super.commitText(before, newCursorPosition)
+                return sendEnter() || super.commitText("\n", newCursorPosition)
+            }
+            return super.commitText(text, newCursorPosition)
         }
 
         override fun endBatchEdit(): Boolean {

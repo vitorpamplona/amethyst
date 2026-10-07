@@ -479,6 +479,27 @@
     }, true);
     // The page (its own JS, autofill) changed the field: resync the host keyboard's view of it.
     document.addEventListener('input', function(e){ if (e.target === el && !el.__nappletIme) reportState(); }, true);
+    // ...and the page's JS writing the value directly, which fires no `input`: a chat composer clearing itself
+    // after sending (`textarea.value = ''`, what React/Preact do on a state reset). Without this the host kept the
+    // sent text, and the next keystroke wrote it all back. Wraps the prototype setters, which frameworks capture
+    // when they mount (after this document-start script), so their writes come through here too; our own writes
+    // use the native setters captured above, so they never do. Coalesced to one report per task.
+    var writeReportQueued = false;
+    function onPageWrite(n){
+      if (n !== el || n.__nappletIme || writeReportQueued) return;
+      writeReportQueued = true;
+      Promise.resolve().then(function(){ writeReportQueued = false; reportState(); });
+    }
+    [window.HTMLInputElement, window.HTMLTextAreaElement].forEach(function(C){
+      try {
+        var d = Object.getOwnPropertyDescriptor(C.prototype, 'value');
+        if (!d || !d.set || !d.configurable) return;
+        Object.defineProperty(C.prototype, 'value', {
+          configurable: true, enumerable: d.enumerable, get: d.get,
+          set: function(v){ d.set.call(this, v); onPageWrite(this); }
+        });
+      } catch (_) {}
+    });
     // Mirror selection changes inside the focused editable to the host. Off-window Chrome abandons a field
     // selection by collapsing the caret to one of its endpoints; we re-assert it RIGHT HERE, synchronously,
     // the same way the page-text path does — reverting before the collapse paints, so it doesn't blink (the
@@ -556,17 +577,32 @@
       }
     }, true);
 
+    // Returns false when the page cancelled the key (preventDefault), the way a native keystroke reports it.
+    function key(n, type){
+      try { return n.dispatchEvent(new KeyboardEvent(type, { bubbles: true, cancelable: true, key: 'Enter', code: 'Enter', keyCode: 13, which: 13, charCode: type === 'keypress' ? 13 : 0 })); }
+      catch (_) { return true; }
+    }
+    // The keyboard's Enter, in Chrome's order: keydown, keypress, then the default action — only if the page
+    // cancelled neither. Chat composers are multi-line textareas that send on a keydown Enter and cancel it, so
+    // inserting the line break straight away (as this used to for textareas) never let them see the key: Enter
+    // made a new line instead of sending.
     function enter(n){
       if (!n) return;
       var t = (n.tagName || '').toUpperCase();
-      if (isCE(n) || t === 'TEXTAREA') {
-        var s = selOf(n);
-        if (isCE(n)) ceReplace(n, s[0], s[1], '\n');
-        else { var v = valOf(n); setVal(n, v.slice(0, s[0]) + '\n' + v.slice(s[1])); }
-        setSel(n, s[0] + 1, s[0] + 1); fireInput(n, 'insertLineBreak', '\n', false); return;
+      var proceed = key(n, 'keydown') && key(n, 'keypress');
+      if (proceed) {
+        if (isCE(n) || t === 'TEXTAREA') {
+          var s = selOf(n);
+          if (isCE(n)) ceReplace(n, s[0], s[1], '\n');
+          else { var v = valOf(n); setVal(n, v.slice(0, s[0]) + '\n' + v.slice(s[1])); }
+          // Not flagged as ours, so the input listener reports the new line back to the host's mirror,
+          // which never inserted it.
+          setSel(n, s[0] + 1, s[0] + 1); fireInput(n, 'insertLineBreak', '\n', false);
+        } else if (n.form) {
+          try { (n.form.requestSubmit ? n.form.requestSubmit() : n.form.submit()); } catch (_) {}
+        }
       }
-      ['keydown','keyup'].forEach(function(type){ try { n.dispatchEvent(new KeyboardEvent(type, { bubbles: true, cancelable: true, key: 'Enter', keyCode: 13, which: 13 })); } catch (_) {} });
-      if (n.form) { try { (n.form.requestSubmit ? n.form.requestSubmit() : n.form.submit()); } catch (_) {} }
+      key(n, 'keyup');
     }
     function fireInput(n, inputType, data, isComposing){
       try { n.dispatchEvent(new InputEvent('input', { bubbles: true, inputType: inputType, data: data == null ? null : data, isComposing: !!isComposing })); }
