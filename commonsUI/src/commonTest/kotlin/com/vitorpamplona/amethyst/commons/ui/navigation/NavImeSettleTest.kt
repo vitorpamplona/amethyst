@@ -18,21 +18,19 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.ui.navigation
+package com.vitorpamplona.amethyst.commons.ui.navigation
 
-import androidx.navigation.NavHostController
-import androidx.navigation.NavOptionsBuilder
+import com.vitorpamplona.amethyst.commons.model.navigation.NavBackStacks
 import com.vitorpamplona.amethyst.commons.model.navigation.Route
-import com.vitorpamplona.amethyst.ui.navigation.navs.ImeSettler
-import com.vitorpamplona.amethyst.ui.navigation.navs.Nav
-import io.mockk.every
-import io.mockk.mockk
+import com.vitorpamplona.amethyst.commons.ui.navigation.navs.ImeSettler
+import com.vitorpamplona.amethyst.commons.ui.navigation.navs.Nav
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runTest
-import org.junit.Assert.assertEquals
-import org.junit.Test
+import kotlin.test.Test
+import kotlin.test.assertEquals
 
 /**
  * Leaving a screen while the soft keyboard is still animating strands `imePadding()` at keyboard
@@ -40,7 +38,7 @@ import org.junit.Test
  * [Nav] waits for the IME to be gone before it moves, so these assert the ordering rather than any
  * visual result: every transition must settle the keyboard *first*.
  *
- * Without the settle calls in [Nav] each of these records only "navigate" and fails.
+ * Each settle records the screen on top when it runs; the navigation must not have happened yet.
  *
  * This is the prevention half. The system's own back gesture never reaches [Nav] — the first back
  * press with a keyboard up is consumed by the IME — so it can still cancel an animation and freeze
@@ -48,27 +46,34 @@ import org.junit.Test
  */
 @OptIn(ExperimentalCoroutinesApi::class)
 class NavImeSettleTest {
-    private fun controllerRecording(order: MutableList<String>): NavHostController =
-        mockk<NavHostController>(relaxed = true) {
-            every { navigate(any<Route>(), any<NavOptionsBuilder.() -> Unit>()) } answers
-                { order.add("navigate") }
-            every { navigate(any<Route>()) } answers { order.add("navigate") }
-            every { navigateUp() } answers {
-                order.add("navigate")
-                true
-            }
-        }
+    /** A stack sitting on a pushed note, and a log of the screen on top at each settle. */
+    private fun TestScope.navOnANote(
+        settled: MutableList<Route>,
+        slowBy: Long = 0,
+    ): Nav {
+        val stacks = NavBackStacks()
+        stacks.push(Route.Note("n"))
+        return Nav(
+            stacks,
+            this,
+            ImeSettler {
+                if (slowBy > 0) delay(slowBy)
+                settled.add(stacks.topRoute)
+            },
+        )
+    }
 
     @Test
     fun popBackSettlesTheKeyboardBeforeNavigating() =
         runTest {
-            val order = mutableListOf<String>()
-            val nav = Nav(controllerRecording(order), this, ImeSettler { order.add("settle") })
+            val settled = mutableListOf<Route>()
+            val nav = navOnANote(settled)
 
             nav.popBack()
             advanceUntilIdle()
 
-            assertEquals(listOf("settle", "navigate"), order)
+            assertEquals(listOf<Route>(Route.Note("n")), settled)
+            assertEquals(Route.Home, nav.currentRoute)
         }
 
     @Test
@@ -76,25 +81,27 @@ class NavImeSettleTest {
         runTest {
             // The search tab focuses its field on arrival, so the keyboard is already up when the
             // user taps another tab — the exit that has no BackHandler and no top bar to guard it.
-            val order = mutableListOf<String>()
-            val nav = Nav(controllerRecording(order), this, ImeSettler { order.add("settle") })
+            val settled = mutableListOf<Route>()
+            val nav = navOnANote(settled)
 
-            nav.navBottomBar(Route.Home)
+            nav.navBottomBar(Route.Message)
             advanceUntilIdle()
 
-            assertEquals(listOf("settle", "navigate"), order)
+            assertEquals(listOf<Route>(Route.Note("n")), settled)
+            assertEquals(Route.Message, nav.currentRoute)
         }
 
     @Test
     fun newStackSettlesTheKeyboardBeforeNavigating() =
         runTest {
-            val order = mutableListOf<String>()
-            val nav = Nav(controllerRecording(order), this, ImeSettler { order.add("settle") })
+            val settled = mutableListOf<Route>()
+            val nav = navOnANote(settled)
 
-            nav.newStack(Route.Home)
+            nav.newStack(Route.Profile("p"))
             advanceUntilIdle()
 
-            assertEquals(listOf("settle", "navigate"), order)
+            assertEquals(listOf<Route>(Route.Note("n")), settled)
+            assertEquals(Route.Profile("p"), nav.currentRoute)
         }
 
     @Test
@@ -102,21 +109,14 @@ class NavImeSettleTest {
         runTest {
             // The real settler suspends for the length of the IME close animation. Navigation must
             // wait for it, not fire alongside it — that overlap is the bug.
-            val order = mutableListOf<String>()
-            val nav =
-                Nav(
-                    controllerRecording(order),
-                    this,
-                    ImeSettler {
-                        delay(250)
-                        order.add("settle")
-                    },
-                )
+            val settled = mutableListOf<Route>()
+            val nav = navOnANote(settled, slowBy = 250)
 
             nav.popBack()
-            assertEquals(emptyList<String>(), order)
+            assertEquals(Route.Note("n"), nav.currentRoute)
 
             advanceUntilIdle()
-            assertEquals(listOf("settle", "navigate"), order)
+            assertEquals(listOf<Route>(Route.Note("n")), settled)
+            assertEquals(Route.Home, nav.currentRoute)
         }
 }

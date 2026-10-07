@@ -1,617 +1,114 @@
-# Android Navigation Patterns
+# Android Navigation (Navigation 3)
 
-Complete navigation implementation patterns for Amethyst Android app using Navigation Compose with type safety.
+Amethyst runs on JetBrains' multiplatform build of Navigation 3
+(`org.jetbrains.androidx.navigation3:navigation3-ui` plus
+`org.jetbrains.androidx.lifecycle:lifecycle-viewmodel-navigation3`). The app owns the back
+stack as plain snapshot state, and `NavDisplay` renders it. There is no `NavController`, no
+`NavHost` and no navigation graph.
 
-## Type-Safe Routes (Navigation 2.8.0+)
+## Files
 
-### Route Definitions
+| File | Role |
+|------|------|
+| `commons/.../model/navigation/Routes.kt` | `@Serializable sealed class Route`: every destination and its arguments |
+| `commons/.../model/navigation/NavBackStacks.kt` | `NavStackEntry` and `NavBackStacks`: the back stack and its rules (headless) |
+| `commonsUI/.../ui/navigation/navs/Nav.kt` | `Nav`: the shared `INav` over `NavBackStacks`, plus `LocalNavStackEntry` |
+| `commonsUI/.../ui/navigation/navs/RememberNavs.kt` | `rememberNav()`: saves the back stack across config changes and process death |
+| `commonsUI/.../ui/navigation/navs/ImeSettler.kt` | Waits for the keyboard to close before every navigation |
+| `commonsUI/.../ui/navigation/host/NavDestinations.kt` | `NavDestinations` registry, the builders, and the transitions |
+| `commonsUI/.../ui/navigation/host/NavigationHost.kt` | `NavigationHost`: the `NavDisplay` every front end shows |
+| `commonsUI/.../ui/navigation/routes/RouteNavController.kt` | `isBaseRoute<T>(nav)`, `getRouteWithArguments`, `consumesSharesInPlace` |
+| `amethyst/.../ui/navigation/AppNavigation.kt` | Android: `BuildNavigation`, `appDestinations` (every screen), screen time, intents |
 
-```kotlin
-// Routes.kt - All 40+ routes in Amethyst
-@Serializable
-sealed class Route {
-    // Bottom nav routes
-    @Serializable object Home : Route()
-    @Serializable object Messages : Route()
-    @Serializable object Video : Route()
-    @Serializable object Discover : Route()
-    @Serializable object Notification : Route()
+## The back stack
 
-    // Content routes with parameters
-    @Serializable data class Profile(val pubkey: String) : Route()
-    @Serializable data class Note(val id: String) : Route()
-    @Serializable data class Channel(val id: String) : Route()
-    @Serializable data class Thread(
-        val id: String,
-        val replyTo: String? = null
-    ) : Route()
+`NavBackStacks` holds two pieces of state:
 
-    // New content routes
-    @Serializable data class NewPost(
-        val message: String? = null,
-        val attachment: String? = null,
-        val replyTo: String? = null
-    ) : Route()
+- `stack`: what is on screen, bottom to top. It is never empty and starts at `Route.Home`.
+- `savedTabs`: the root entry of every bottom-bar tab the user left, keyed by its full route.
 
-    // Settings
-    @Serializable object Settings : Route()
-    @Serializable object Security : Route()
-    @Serializable object Relays : Route()
+Each `NavStackEntry` has a unique `id`. Its `contentKey` (`"nav-$id"`) keys the screen's
+`rememberSaveable` state and its ViewModelStore, so the same route opened twice is two
+independent screens. The rest is snapshot state, because it can change on an entry already on
+screen:
 
-    // Search
-    @Serializable data class Search(val query: String = "") : Route()
+- `route`: `newStack` onto the same destination hands the entry new arguments in place.
+- `tabRoute`: the bar route it is the root of, if any (`tabRoot` is `tabRoute != null`). A tab
+  root has no back arrow, and tab switches fade. Saved tabs are filed under this, so a tab
+  re-argued by a deep link is still found by the bar.
+- `drawerRoot`: opened from the navigation drawer. It can pop, but it keeps the bottom bar.
 
-    // Media
-    @Serializable data class Image(val url: String) : Route()
-    @Serializable data class Video(val url: String) : Route()
-}
-```
+Operations (each one in `Nav` runs after `ImeSettler.settle()`):
 
-## NavHost Configuration
+| `INav` call | `NavBackStacks` | Effect |
+|-------------|-----------------|--------|
+| `nav(route)` | `push` | Pushes `route`, unless it is already on top |
+| `navDrawer(route)` | `push(drawerRoot = true)` | Same push, marked as a drawer screen |
+| `newStack(route)` | `newStack` | Drops the latest copy of `route` and everything above it, then shows it once. A same-class top takes the new arguments in place (same entry, as Navigation 2's single-top did) |
+| `popUpTo(route, klass)` | `popUpTo` | Drops the latest `klass` entry and everything above it, then pushes `route` |
+| `navBottomBar(route)` | `switchTab` | Drops pushes above the current tab root. Keeps the left tab root in `savedTabs`, then restores `route`'s saved entry or opens it fresh |
+| `popBack()` | `pop` | Pops the top. The last entry is never popped |
 
-### Basic Setup
+`Route.Home` stays at the bottom, so back from any tab returns to Home and back from Home leaves
+the app. Nothing above a tab root is ever saved, so returning to a tab always lands on the tab
+itself.
 
-```kotlin
-@Composable
-fun AppNavigation(
-    navController: NavHostController,
-    accountViewModel: AccountViewModel,
-    drawerState: DrawerState
-) {
-    val scope = rememberCoroutineScope()
-    val nav = remember {
-        Nav(navController, drawerState, scope)
-    }
+## Rendering
 
-    NavHost(
-        navController = navController,
-        startDestination = Route.Home,
-        enterTransition = { fadeIn(animationSpec = tween(200)) },
-        exitTransition = { fadeOut(animationSpec = tween(200)) },
-        popEnterTransition = { fadeIn(animationSpec = tween(200)) },
-        popExitTransition = { fadeOut(animationSpec = tween(200)) }
-    ) {
-        // Define routes
-        composable<Route.Home> {
-            HomeScreen(accountViewModel, nav)
-        }
+`NavigationHost` passes `stack + savedTabs` to `rememberDecoratedNavEntries` with the
+saveable-state and ViewModel-store decorators. Saved tabs therefore keep their state while they
+are out of sight. Only `stack` goes to `NavDisplay`. When an entry leaves both lists, its saved
+state and ViewModels are cleared.
 
-        composable<Route.Profile> { backStackEntry ->
-            val profile = backStackEntry.toRoute<Route.Profile>()
-            ProfileScreen(
-                pubkey = profile.pubkey,
-                accountViewModel = accountViewModel,
-                nav = nav
-            )
-        }
+Each entry provides `LocalNavStackEntry`. `INav.canPop()` and `showsBottomBar()` read it, so
+during a predictive-back swipe a screen that is leaving keeps its own back arrow.
 
-        composable<Route.Note> { backStackEntry ->
-            val note = backStackEntry.toRoute<Route.Note>()
-            NoteScreen(
-                noteId = note.id,
-                accountViewModel = accountViewModel,
-                nav = nav
-            )
-        }
+## Destinations
 
-        composable<Route.NewPost> { backStackEntry ->
-            val newPost = backStackEntry.toRoute<Route.NewPost>()
-            NewPostScreen(
-                initialMessage = newPost.message,
-                initialAttachment = newPost.attachment,
-                replyTo = newPost.replyTo,
-                accountViewModel = accountViewModel,
-                onPost = { nav.popBack() }
-            )
-        }
-    }
-}
-```
+Register each screen once in `appDestinations`. The builder decides the motion and whether the
+screen is capped to the reading column on wide panes:
 
-### Custom Transitions
+| Builder | Motion | Cap |
+|---------|--------|-----|
+| `composableCapped<T> { }` / `composableCappedArgs<T> { route -> }` | fade | capped |
+| `composable<T> { }` | fade | full width |
+| `composableArgs<T>(capWidth) { route -> }` | fade | capped by default |
+| `composableFromEnd<T>(capWidth) { }` / `…Args` | drill-in: slides from the end | capped by default |
+| `composableFromBottom<T>(capWidth) { }` / `…Args` | modal: rises from the bottom | capped by default |
+
+`pushTransition` and `popTransition` in `NavDestinations.kt` read each entry's family and
+`tabRoot` flag:
+
+- A tab root fades instead of sliding.
+- A drill-in slides in from the end and back out to it.
+- A modal rises and drops.
+- The screen behind steps back with a slight scale.
+
+The predictive back gesture runs the pop motion, scrubbed by the finger. On large screens
+(`NavTransitionTier.isLargeScreen`) the slides become short shared-axis nudges.
+
+## Reading the current route
+
+`nav.currentRoute` is snapshot state. Read it directly, as the rail does to pick the selected
+item. Where only a yes/no is needed, wrap it in `derivedStateOf` so the caller recomposes only
+when the answer changes:
 
 ```kotlin
-composable<Route.Profile>(
-    enterTransition = {
-        slideIntoContainer(
-            AnimatedContentTransitionScope.SlideDirection.Start,
-            animationSpec = tween(300)
-        )
-    },
-    exitTransition = {
-        slideOutOfContainer(
-            AnimatedContentTransitionScope.SlideDirection.Start,
-            animationSpec = tween(300)
-        )
-    },
-    popEnterTransition = {
-        slideIntoContainer(
-            AnimatedContentTransitionScope.SlideDirection.End,
-            animationSpec = tween(300)
-        )
-    },
-    popExitTransition = {
-        slideOutOfContainer(
-            AnimatedContentTransitionScope.SlideDirection.End,
-            animationSpec = tween(300)
-        )
-    }
-) { backStackEntry ->
-    val profile = backStackEntry.toRoute<Route.Profile>()
-    ProfileScreen(profile.pubkey, accountViewModel, nav)
-}
+val onNotifications by remember(nav) { derivedStateOf { nav.currentRoute is Route.Notification } }
 ```
 
-## Navigation Manager
+Outside composition (intent handlers), use `isBaseRoute<Route.X>(nav)` or
+`getRouteWithArguments(Route.X::class, nav)`.
 
-### Nav Wrapper Class
+## Intents
 
-```kotlin
-class Nav(
-    val controller: NavHostController,
-    val drawerState: DrawerState,
-    val scope: CoroutineScope
-) {
-    /**
-     * Navigate to a route, closing drawer if open
-     */
-    fun nav(route: Route) {
-        scope.launch {
-            if (!controller.popBackStack(route, inclusive = false)) {
-                controller.navigate(route) {
-                    launchSingleTop = true
-                }
-            }
-            drawerState.close()
-        }
-    }
+`NavigateIfIntentRequested` in `AppNavigation.kt` turns `ACTION_VIEW`, `ACTION_SEND` and NFC
+intents into `newStack(...)` calls. It skips the navigation when the screen on top is already
+that route. Composers that take re-delivered shares in place (`consumesSharesInPlace`) are left
+alone.
 
-    /**
-     * Navigate with new stack (clear back stack to Home)
-     */
-    fun newStack(route: Route) {
-        scope.launch {
-            controller.navigate(route) {
-                popUpTo(Route.Home) {
-                    inclusive = false
-                }
-                launchSingleTop = true
-            }
-            drawerState.close()
-        }
-    }
+## Testing
 
-    /**
-     * Pop back stack
-     */
-    fun popBack() {
-        controller.popBackStack()
-    }
-
-    /**
-     * Pop up to specific route
-     */
-    inline fun <reified T : Route> popUpTo(inclusive: Boolean = false) {
-        controller.popBackStack<T>(inclusive = inclusive)
-    }
-
-    /**
-     * Get current route
-     */
-    fun currentRoute(): Route? {
-        return controller.currentBackStackEntry?.toRoute<Route>()
-    }
-}
-```
-
-## Bottom Navigation
-
-### Material3 NavigationBar
-
-```kotlin
-@Composable
-fun AppBottomBar(
-    currentRoute: Route?,
-    nav: Nav
-) {
-    NavigationBar(
-        containerColor = MaterialTheme.colorScheme.surface,
-        contentColor = MaterialTheme.colorScheme.onSurface
-    ) {
-        BottomBarRoute.entries.forEach { item ->
-            NavigationBarItem(
-                selected = currentRoute?.let { it::class == item.route::class } ?: false,
-                onClick = { nav.nav(item.route) },
-                icon = {
-                    Icon(
-                        imageVector = if (currentRoute?.let { it::class == item.route::class } == true) {
-                            item.selectedIcon
-                        } else {
-                            item.unselectedIcon
-                        },
-                        contentDescription = item.label
-                    )
-                },
-                label = { Text(item.label) },
-                alwaysShowLabel = false
-            )
-        }
-    }
-}
-
-enum class BottomBarRoute(
-    val route: Route,
-    val selectedIcon: ImageVector,
-    val unselectedIcon: ImageVector,
-    val label: String
-) {
-    HOME(
-        route = Route.Home,
-        selectedIcon = Icons.Filled.Home,
-        unselectedIcon = Icons.Outlined.Home,
-        label = "Home"
-    ),
-    MESSAGES(
-        route = Route.Messages,
-        selectedIcon = Icons.Filled.Message,
-        unselectedIcon = Icons.Outlined.Message,
-        label = "Messages"
-    ),
-    VIDEOS(
-        route = Route.Video,
-        selectedIcon = Icons.Filled.VideoLibrary,
-        unselectedIcon = Icons.Outlined.VideoLibrary,
-        label = "Videos"
-    ),
-    DISCOVER(
-        route = Route.Discover,
-        selectedIcon = Icons.Filled.Explore,
-        unselectedIcon = Icons.Outlined.Explore,
-        label = "Discover"
-    ),
-    NOTIFICATIONS(
-        route = Route.Notification,
-        selectedIcon = Icons.Filled.Notifications,
-        unselectedIcon = Icons.Outlined.Notifications,
-        label = "Notifications"
-    )
-}
-```
-
-### Observing Current Route
-
-```kotlin
-@Composable
-fun MainScreen() {
-    val navController = rememberNavController()
-    val currentBackStackEntry by navController.currentBackStackEntryAsState()
-    val currentRoute = currentBackStackEntry?.toRoute<Route>()
-
-    Scaffold(
-        topBar = {
-            if (shouldShowTopBar(currentRoute)) {
-                AppTopBar(currentRoute)
-            }
-        },
-        bottomBar = {
-            if (shouldShowBottomBar(currentRoute)) {
-                AppBottomBar(currentRoute, nav)
-            }
-        }
-    ) { paddingValues ->
-        AppNavigation(
-            navController = navController,
-            modifier = Modifier.padding(paddingValues)
-        )
-    }
-}
-
-fun shouldShowBottomBar(route: Route?): Boolean {
-    return when (route) {
-        is Route.Home,
-        is Route.Messages,
-        is Route.Video,
-        is Route.Discover,
-        is Route.Notification -> true
-        else -> false
-    }
-}
-```
-
-## Navigation Drawer
-
-### Material3 ModalDrawerSheet
-
-```kotlin
-@Composable
-fun AppDrawer(
-    drawerState: DrawerState,
-    nav: Nav,
-    accountViewModel: AccountViewModel
-) {
-    val scope = rememberCoroutineScope()
-
-    ModalDrawerSheet {
-        // User profile header
-        DrawerHeader(accountViewModel.account)
-
-        HorizontalDivider()
-
-        // Menu items
-        NavigationDrawerItem(
-            label = { Text("Home") },
-            selected = false,
-            onClick = { nav.nav(Route.Home) },
-            icon = { Icon(Icons.Default.Home, "Home") }
-        )
-
-        NavigationDrawerItem(
-            label = { Text("Profile") },
-            selected = false,
-            onClick = { nav.nav(Route.Profile(accountViewModel.account.pubkey)) },
-            icon = { Icon(Icons.Default.Person, "Profile") }
-        )
-
-        NavigationDrawerItem(
-            label = { Text("Settings") },
-            selected = false,
-            onClick = { nav.nav(Route.Settings) },
-            icon = { Icon(Icons.Default.Settings, "Settings") }
-        )
-
-        HorizontalDivider()
-
-        NavigationDrawerItem(
-            label = { Text("Logout") },
-            selected = false,
-            onClick = {
-                scope.launch {
-                    accountViewModel.logout()
-                    drawerState.close()
-                }
-            },
-            icon = { Icon(Icons.Default.Logout, "Logout") }
-        )
-    }
-}
-```
-
-### Main Scaffold with Drawer
-
-```kotlin
-@Composable
-fun MainScreen() {
-    val navController = rememberNavController()
-    val drawerState = rememberDrawerState(DrawerValue.Closed)
-    val scope = rememberCoroutineScope()
-    val nav = remember { Nav(navController, drawerState, scope) }
-
-    ModalNavigationDrawer(
-        drawerState = drawerState,
-        drawerContent = {
-            AppDrawer(drawerState, nav, accountViewModel)
-        }
-    ) {
-        Scaffold(
-            topBar = {
-                TopAppBar(
-                    title = { Text("Amethyst") },
-                    navigationIcon = {
-                        IconButton(
-                            onClick = { scope.launch { drawerState.open() } }
-                        ) {
-                            Icon(Icons.Default.Menu, "Menu")
-                        }
-                    }
-                )
-            },
-            bottomBar = { AppBottomBar(currentRoute, nav) }
-        ) { paddingValues ->
-            AppNavigation(
-                navController = navController,
-                modifier = Modifier.padding(paddingValues)
-            )
-        }
-    }
-}
-```
-
-## Deep Link Handling
-
-### Intent Processing
-
-```kotlin
-@Composable
-fun AppNavigation(
-    navController: NavHostController,
-    accountViewModel: AccountViewModel
-) {
-    val activity = LocalContext.current as? Activity
-
-    // Handle incoming intents
-    LaunchedEffect(activity?.intent) {
-        activity?.intent?.let { intent ->
-            handleIntent(intent, navController)
-        }
-    }
-
-    NavHost(navController = navController) {
-        // Routes...
-    }
-}
-
-fun handleIntent(intent: Intent, navController: NavHostController) {
-    when (intent.action) {
-        Intent.ACTION_SEND -> {
-            // Share text/image
-            val sharedText = intent.getStringExtra(Intent.EXTRA_TEXT)
-            val sharedUri = intent.getParcelableExtra<Uri>(Intent.EXTRA_STREAM)
-
-            navController.navigate(
-                Route.NewPost(
-                    message = sharedText,
-                    attachment = sharedUri?.toString()
-                )
-            )
-        }
-
-        Intent.ACTION_VIEW -> {
-            // Deep link
-            intent.data?.let { uri ->
-                when (uri.scheme) {
-                    "nostr" -> handleNostrUri(uri, navController)
-                    "https", "http" -> handleWebUri(uri, navController)
-                }
-            }
-        }
-    }
-}
-
-fun handleNostrUri(uri: Uri, navController: NavHostController) {
-    val path = uri.pathSegments.firstOrNull() ?: return
-
-    when {
-        path.startsWith("npub") -> {
-            navController.navigate(Route.Profile(path))
-        }
-        path.startsWith("note") -> {
-            navController.navigate(Route.Note(path))
-        }
-        path.startsWith("nevent") -> {
-            // Decode and navigate to event
-            val eventId = decodeNevent(path)
-            navController.navigate(Route.Note(eventId))
-        }
-    }
-}
-
-fun handleWebUri(uri: Uri, navController: NavHostController) {
-    // Handle web-based deep links
-    // https://njump.me/npub1...
-    // https://primal.net/profile/npub1...
-    when (uri.host) {
-        "njump.me" -> {
-            val id = uri.pathSegments.lastOrNull()
-            if (id?.startsWith("npub") == true) {
-                navController.navigate(Route.Profile(id))
-            }
-        }
-        "primal.net" -> {
-            // Parse primal.net URLs
-        }
-    }
-}
-```
-
-### AndroidManifest Intent Filters
-
-```xml
-<!-- MainActivity -->
-<intent-filter>
-    <action android:name="android.intent.action.VIEW" />
-    <category android:name="android.intent.category.DEFAULT" />
-    <category android:name="android.intent.category.BROWSABLE" />
-    <data android:scheme="nostr" />
-</intent-filter>
-
-<intent-filter>
-    <action android:name="android.intent.action.VIEW" />
-    <category android:name="android.intent.category.DEFAULT" />
-    <category android:name="android.intent.category.BROWSABLE" />
-    <data android:scheme="https" android:host="njump.me" />
-    <data android:scheme="https" android:host="primal.net" />
-    <data android:scheme="https" android:host="iris.to" />
-</intent-filter>
-
-<intent-filter>
-    <action android:name="android.intent.action.SEND" />
-    <category android:name="android.intent.category.DEFAULT" />
-    <data android:mimeType="text/plain" />
-    <data android:mimeType="image/*" />
-</intent-filter>
-```
-
-## Nested Navigation
-
-### Tab Navigation Inside Screen
-
-```kotlin
-@Composable
-fun ProfileScreen(
-    pubkey: String,
-    nav: Nav
-) {
-    val nestedNavController = rememberNavController()
-
-    Column {
-        ProfileHeader(pubkey)
-
-        // Tab row
-        TabRow(selectedTabIndex = currentTab) {
-            Tab(selected = currentTab == 0, onClick = { /* Notes */ })
-            Tab(selected = currentTab == 1, onClick = { /* Replies */ })
-            Tab(selected = currentTab == 2, onClick = { /* Likes */ })
-        }
-
-        // Nested NavHost for tabs
-        NavHost(
-            navController = nestedNavController,
-            startDestination = ProfileTab.Notes
-        ) {
-            composable<ProfileTab.Notes> {
-                NotesTabContent(pubkey)
-            }
-            composable<ProfileTab.Replies> {
-                RepliesTabContent(pubkey)
-            }
-            composable<ProfileTab.Likes> {
-                LikesTabContent(pubkey)
-            }
-        }
-    }
-}
-
-@Serializable
-sealed class ProfileTab {
-    @Serializable object Notes : ProfileTab()
-    @Serializable object Replies : ProfileTab()
-    @Serializable object Likes : ProfileTab()
-}
-```
-
-## Testing Navigation
-
-### Navigation Test Example
-
-```kotlin
-@Test
-fun testNavigationToProfile() {
-    val navController = TestNavHostController(
-        ApplicationProvider.getApplicationContext()
-    )
-
-    composeTestRule.setContent {
-        navController.navigatorProvider.addNavigator(
-            ComposeNavigator()
-        )
-        AppNavigation(navController, accountViewModel)
-    }
-
-    // Navigate to profile
-    composeTestRule.onNodeWithText("Profile").performClick()
-
-    // Verify navigation
-    val currentRoute = navController.currentBackStackEntry?.toRoute<Route>()
-    assertTrue(currentRoute is Route.Profile)
-}
-```
-
-## File Locations
-
-- `commons/src/commonMain/kotlin/com/vitorpamplona/amethyst/commons/model/navigation/Routes.kt` (route catalog)
-- `commonsUI/src/commonMain/kotlin/com/vitorpamplona/amethyst/commons/ui/navigation/navs/INav.kt`
-- `amethyst/src/main/java/com/vitorpamplona/amethyst/ui/navigation/routes/RouteNavController.kt` (NavHost helpers)
-- `amethyst/src/main/java/com/vitorpamplona/amethyst/ui/navigation/AppNavigation.kt`
-- `amethyst/src/main/java/com/vitorpamplona/amethyst/ui/navigation/Nav.kt`
-- `amethyst/src/main/java/com/vitorpamplona/amethyst/ui/navigation/bottombars/AppBottomBar.kt`
-- `amethyst/src/main/java/com/vitorpamplona/amethyst/ui/navigation/drawer/DrawerContent.kt`
+The back stack is plain state, so tests drive `NavBackStacks` and `Nav` directly with
+`runTest`. They need no Compose and no mocks. See `NavBackStacksTest`, `NavBottomBarStackTest`,
+`NavDrawerTest` and `NavImeSettleTest` (commons and commonsUI `commonTest`).

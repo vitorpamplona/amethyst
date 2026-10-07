@@ -18,7 +18,7 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.ui.navigation.bottombars
+package com.vitorpamplona.amethyst.commons.ui.navigation.bottombars
 
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.rememberScrollState
@@ -27,24 +27,18 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationRail
 import androidx.compose.material3.NavigationRailItem
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import androidx.navigation.NavDestination
-import androidx.navigation.NavDestination.Companion.hasRoute
-import androidx.navigation.NavHostController
-import androidx.navigation.compose.currentBackStackEntryAsState
-import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.commons.model.navigation.BottomBarEntry
 import com.vitorpamplona.amethyst.commons.model.navigation.Route
-import com.vitorpamplona.amethyst.commons.ui.navigation.bottombars.LocalTabReselectCoordinator
-import com.vitorpamplona.amethyst.commons.ui.navigation.bottombars.rememberBottomBarSlot
+import com.vitorpamplona.amethyst.commons.ui.navigation.navs.Nav
 import com.vitorpamplona.amethyst.commons.ui.navigation.topbars.LoggedInUserPictureDrawer
+import com.vitorpamplona.amethyst.commons.ui.platform.LocalAppServices
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
-import com.vitorpamplona.amethyst.ui.navigation.navs.Nav
-import com.vitorpamplona.amethyst.ui.navigation.routes.getRouteWithArguments
 
 /**
  * Medium-width windows: a left rail that carries the same user-configured destinations as the
@@ -60,14 +54,11 @@ fun AppNavigationRail(
 ) {
     val items by accountViewModel.account.settings.syncedSettings.navigation.bottomBarItems
         .collectAsStateWithLifecycle()
-    val favorites by Amethyst.instance.favoriteApps.favorites
+    val favorites by LocalAppServices.current.favoriteApps.favorites
         .collectAsStateWithLifecycle()
     val favoritesById = remember(favorites) { favorites.associateBy { it.id } }
 
     val reselectCoordinator = LocalTabReselectCoordinator.current
-
-    val navBackStackEntry by nav.controller.currentBackStackEntryAsState()
-    val currentDestination = navBackStackEntry?.destination
 
     NavigationRail(
         containerColor = MaterialTheme.colorScheme.background,
@@ -84,7 +75,9 @@ fun AppNavigationRail(
             // selection source (live back stack vs the bar's passed-in route) differ per surface.
             items.forEach { entry ->
                 val slot = rememberBottomBarSlot(entry, favoritesById, accountViewModel) ?: return@forEach
-                val selected = remember(navBackStackEntry, slot.route) { railSelected(slot.route, nav.controller, currentDestination) }
+                // Derived, so navigating between screens that leave every item's selection unchanged
+                // (most pushes) does not recompose the rail.
+                val selected by remember(nav, slot.route) { derivedStateOf { railSelected(slot.route, nav.currentRoute) } }
                 NavigationRailItem(
                     selected = selected,
                     onClick = {
@@ -108,14 +101,9 @@ fun AppNavigationRail(
  */
 private fun railSelected(
     route: Route,
-    controller: NavHostController,
-    currentDestination: NavDestination?,
+    currentRoute: Route,
 ): Boolean =
     when (route) {
-        is Route.WebApp -> getRouteWithArguments(Route.WebApp::class, controller) == route
-        is Route.NostrApp -> getRouteWithArguments(Route.NostrApp::class, controller) == route
-        is Route.PublicChatChannel -> getRouteWithArguments(Route.PublicChatChannel::class, controller) == route
-        is Route.RelayGroup -> getRouteWithArguments(Route.RelayGroup::class, controller) == route
-        is Route.ConcordServer -> getRouteWithArguments(Route.ConcordServer::class, controller) == route
-        else -> currentDestination?.hasRoute(route::class) == true
+        is Route.WebApp, is Route.NostrApp, is Route.PublicChatChannel, is Route.RelayGroup, is Route.ConcordServer -> currentRoute == route
+        else -> currentRoute::class == route::class
     }

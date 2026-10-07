@@ -24,25 +24,16 @@ import com.vitorpamplona.amethyst.commons.util.codePointAtKmp
 import com.vitorpamplona.amethyst.commons.util.codePointCharCount
 
 /**
- * Navigation routes travel as a URI string: `…Route.Room/{id}?message={message}&…`, with every
- * argument percent-encoded into it. Anything the app hands to a route argument therefore has to fit
- * in that string, and there is a hard ceiling on how long the string may get.
+ * Every route on the back stack is written into the activity's saved instance state (see
+ * `NavBackStacks.encode`), so anything the app hands to a route argument rides along in that
+ * Bundle on every configuration change and every trip to the background. The whole Bundle has to
+ * cross a Binder transaction, whose buffer is about 1 MB and shared with everything else the app
+ * saves; going over it throws `TransactionTooLargeException` from `onSaveInstanceState`.
  *
- * The ceiling comes from androidx.navigation: it finds a destination by regex-matching the
- * generated route against every destination's pattern, and the path part of that pattern ends in
- * `($|(\?(.)*)|(#(.)*))` — a *capturing* group inside a `*` loop, so the engine pushes one
- * backtracking frame per character of the query. On Android `java.util.regex` is ICU-backed, and
- * ICU caps that stack at 8 MB and then reports **no match** instead of an error, so an oversized
- * route silently matches nothing and NavController throws
- * `IllegalArgumentException: Navigation destination that matches route … cannot be found in the
- * navigation graph`. Measured against ICU with the `Route.Room` pattern, matching starts failing at
- * roughly 100,000 encoded characters.
- *
- * Truncating here keeps navigation working, and it keeps the route out of the range where matching
- * it against every destination in the graph costs real frame time. The budget below is a fifth of
- * the measured ceiling, which leaves room for the rest of the route (the ceiling shifts a little
- * with each destination's own capture-group count) and still carries a diagnostic report of several
- * kilobytes.
+ * Navigation 2 imposed a lower ceiling of its own — it regex-matched a percent-encoded route string
+ * against every destination, and ICU gave up silently at roughly 100,000 encoded characters — which
+ * is where this budget came from. It is kept, measured the same way, because it still leaves the
+ * saved state far from the Binder limit while carrying a diagnostic report of several kilobytes.
  */
 const val MAX_ROUTE_TEXT_ARG_ENCODED_LENGTH = 20_000
 

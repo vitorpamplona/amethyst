@@ -41,6 +41,7 @@ import com.vitorpamplona.amethyst.commons.ui.settings.SettingsCategory
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.amethyst.debugState
 import com.vitorpamplona.amethyst.favorites.FavoriteAppLauncher
+import com.vitorpamplona.amethyst.isDebug
 import com.vitorpamplona.amethyst.ui.call.CallActivity
 import com.vitorpamplona.amethyst.ui.call.rememberCallWithPermission
 import com.vitorpamplona.amethyst.ui.components.SelectNotificationProvider
@@ -74,6 +75,10 @@ object AndroidAppPlatform : AppPlatform {
 
     // Per flavour: Play links the hosted policies, F-Droid surfaces none.
     override val appVersionName: String get() = BuildConfig.VERSION_NAME
+
+    override val appFlavor: String get() = BuildConfig.FLAVOR
+
+    override val isDebugBuild: Boolean get() = isDebug
 
     override val payToApps: PayToAppProbe get() = Amethyst.instance.payToApps
 

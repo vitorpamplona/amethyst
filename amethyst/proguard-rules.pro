@@ -225,21 +225,3 @@
 # against a pre-stable (alpha) library.
 -keep class com.vitorpamplona.amethyst.appfunctions.** { *; }
 
-# -----------------------------------------------------------------------------
-# Enums used as navigation-route ARGUMENTS
-# -----------------------------------------------------------------------------
-# androidx.navigation's type-safe routes resolve an enum argument by its
-# fully-qualified class name (NavTypeConverter.parseEnum/parseNullableEnum call
-# Class.forName on the serial name). R8 renames the class, so building the nav
-# graph throws and the app cannot get past login:
-#
-#   IllegalArgumentException: Cannot find class with name
-#   "...routes.DiscoverTab?". Ensure that the serialName for this argument is
-#   the default fully qualified name.
-#
-# The enum FIELDS are already pinned by the blanket `-keepclassmembers enum *`
-# above; that rule deliberately lets the CLASS be renamed, which is exactly what
-# breaks here. Every enum used as a route argument needs its name too.
--keep class com.vitorpamplona.amethyst.commons.model.navigation.DiscoverTab { *; }
--keep class com.vitorpamplona.amethyst.commons.model.nip51Lists.BookmarkType { *; }
--keep class com.vitorpamplona.amethyst.commons.model.navigation.GeocacheTab { *; }

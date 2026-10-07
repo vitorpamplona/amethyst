@@ -29,11 +29,13 @@ import com.vitorpamplona.amethyst.commons.cordn.CordnBlobStore
 import com.vitorpamplona.amethyst.commons.favorites.FavoriteAppsRegistry
 import com.vitorpamplona.amethyst.commons.model.location.DeviceLocation
 import com.vitorpamplona.amethyst.commons.model.preferences.AppPreferenceStores
+import com.vitorpamplona.amethyst.commons.model.preferences.DrawerSectionCollapsePreferences
 import com.vitorpamplona.amethyst.commons.model.preferences.NamecoinSettingsStore
 import com.vitorpamplona.amethyst.commons.model.preferences.OtsSettingsStore
 import com.vitorpamplona.amethyst.commons.napplet.permissions.NappletPermissionLedger
 import com.vitorpamplona.amethyst.commons.relayManagement.Nip86Executor
 import com.vitorpamplona.amethyst.commons.relayManagement.Nip86Retriever
+import com.vitorpamplona.amethyst.commons.scheduledposts.ScheduledPostStore
 import com.vitorpamplona.amethyst.commons.service.AppServices
 import com.vitorpamplona.amethyst.commons.service.BlossomServerFinder
 import com.vitorpamplona.amethyst.commons.service.ai.AltTextSuggester
@@ -45,6 +47,7 @@ import com.vitorpamplona.amethyst.model.cordn.AndroidCordnBlobStore
 import com.vitorpamplona.amethyst.service.ai.MLKitImageLabelService
 import com.vitorpamplona.amethyst.service.calendar.CalendarReminderWorker
 import com.vitorpamplona.amethyst.service.location.CachedReversedGeoLocations
+import com.vitorpamplona.amethyst.ui.tor.TorServiceStatus
 import com.vitorpamplona.quartz.nip05DnsIdentifiers.namecoin.ElectrumxServer
 import com.vitorpamplona.quartz.nip05DnsIdentifiers.namecoin.NamecoinCoreRpcConfig
 import com.vitorpamplona.quartz.nip05DnsIdentifiers.namecoin.NamecoinNameResolver
@@ -52,6 +55,7 @@ import com.vitorpamplona.quartz.nip05DnsIdentifiers.namecoin.RpcProbeResult
 import com.vitorpamplona.quartz.nip05DnsIdentifiers.namecoin.ServerTestResult
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
+import com.vitorpamplona.amethyst.commons.tor.TorServiceStatus as SharedTorServiceStatus
 
 /**
  * [AppServices] over the main process's app modules. Every member is a getter, so installing
@@ -74,6 +78,20 @@ object AndroidAppServices : AppServices {
     override val torBootstrapped: Flow<Boolean> get() =
         Amethyst.instance.torManager.status
             .map { it.isFullyBootstrapped }
+
+    override val torStatus: Flow<SharedTorServiceStatus> get() =
+        Amethyst.instance.torManager.status
+            .map {
+                when (it) {
+                    is TorServiceStatus.Active -> SharedTorServiceStatus.Active(it.port)
+                    is TorServiceStatus.Bootstrapping, TorServiceStatus.Connecting -> SharedTorServiceStatus.Connecting
+                    TorServiceStatus.Off -> SharedTorServiceStatus.Off
+                }
+            }
+
+    override val drawerSectionCollapsePrefs: DrawerSectionCollapsePreferences get() = Amethyst.instance.drawerSectionCollapsePrefs
+
+    override val scheduledPostStore: ScheduledPostStore get() = Amethyst.instance.scheduledPostStore
 
     override val appStores: AppPreferenceStores get() = Amethyst.instance.appStores
 

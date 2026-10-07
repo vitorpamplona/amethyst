@@ -56,12 +56,15 @@ plumbing).
 
 ## Prerequisites the move surfaced
 
-- **Navigation library.** The app uses `androidx.navigation:navigation-compose` 2.10.1. Its
+- **Navigation library.** The app used `androidx.navigation:navigation-compose` 2.10.1. Its
   Gradle module metadata publishes an `androidJvm` variant and only **`jvmStubs`** for `jvm`
-  (checked 2026-09-27), so it cannot run the nav host on Desktop. The multiplatform path is
-  JetBrains' `org.jetbrains.androidx.navigation:navigation-compose`, which resolves to the
-  androidx artifact on Android. That swap (and its licence check, per CLAUDE.md) comes before
-  `AppNavigation` can move.
+  (checked 2026-09-27), so it cannot run the nav host on Desktop. Rather than swap to JetBrains'
+  multiplatform build of that same Navigation 2, step 7a moved to **Navigation 3**:
+  `org.jetbrains.androidx.navigation3:navigation3-ui` 1.1.2 and
+  `org.jetbrains.androidx.lifecycle:lifecycle-viewmodel-navigation3` 2.11.0, both Apache-2.0,
+  each publishing Android, desktop JVM and iOS variants. Navigation 3 is the current direction
+  for Compose: the app owns the back stack as state, and the library only renders it. See
+  step 7.
 - **The app root.** `Amethyst.instance` (the `AppModules` graph) is read by 178 files, 115 of
   them under `ui/`. Shared screens cannot reach an Android `Application`. The root needs a
   commons-side interface for what screens read from it, provided once at the composition root
@@ -541,8 +544,46 @@ assemblers, `EventSync`, …). Packages are renamed on the way:
      - Share-as-image (bitmaps).
      - `AccountSessionManager` (login and sign-up).
      - The HLS video uploader (LightCompressor).
-     Each needs a slot or a port of its own, so step 7 can start alongside them.
-7. **Navigation**: the library swap, then `AppNavigation` + rail + drawer + bottom bar.
+     Each needs a slot or a port of its own, so step 7 started alongside them.
+7. **Navigation**:
+   - **7a, Navigation 3 on Android (2026-10-06).** `NavHostController` is gone.
+     - `NavBackStacks` (`navs/NavBackStacks.kt`) is the back stack, as snapshot state.
+       - `stack` is what is on screen.
+       - `savedTabs` holds the root of every tab the user left.
+       - Entries carry ids, a `tabRoute` (the bar route a tab root was opened as) and a `drawerRoot` flag.
+       - It is saved through kotlinx-serialization, so `Route` is now `@Serializable` itself.
+     - `Nav` implements `INav` over it with unchanged semantics: the push guard, drawer
+       screens keeping the bar, tab switches that drop pushes above the tab root and never
+       restore onto Home, and the keyboard settle.
+     - `NavDisplay` renders `stack`. Every entry in `stack + savedTabs` keeps its saveable state
+       and ViewModelStore, which replaces Navigation 2's `saveState` / `restoreState`.
+       - Saved tabs are keyed by their full route, so two pinned web apps no longer share one
+         saved entry (the sibling-tab bug Navigation 2's per-destination saving caused).
+     - The 261 builder lines in `AppNavigation` keep their names and register into a
+       `NavDestinations` table. Push, pop and predictive-back transitions come from one place,
+       which retires the `PopFamilies` workaround.
+     - The rail, the drawer layout, screen time and the intent router read `nav.currentRoute`.
+     - The R8 keep rules for enum route arguments are gone with Navigation 2.
+   - **7b, in progress (2026-10-07).** The navigation core is shared:
+     - `NavBackStacks` is in commons `model/navigation`.
+     - `Nav`, `rememberNav` and `ImeSettler` are in commonsUI `ui/navigation/navs`.
+     - The destination table, builders, transitions and the `NavDisplay` host
+       (`NavigationHost`) are in commonsUI `ui/navigation/host`.
+     - 238 of the 261 destinations register from commonsUI (`sharedDestinations`). The app
+       registers only the 23 whose screens are still app-only.
+     - The shell is shared too:
+       - `AppShellLayout` (commonsUI `ui/navigation/shell`) handles the modal drawer, rail and
+         docked-drawer tiers, the docked notification panel and the account-switcher sheet.
+       - `AppNavigationRail` and `NotificationSidePanel` live in commonsUI.
+       - `DrawerContent` is in commonsUI `ui/navigation/drawer`. Its app hooks come through
+         `AppServices`: section-collapse prefs, scheduled posts and a display-only Tor status.
+         The debug flag and the flavour come through `AppPlatform`.
+     - Still in the app, waiting on other work:
+       - The account-switcher sheet's contents wait on the `AccountSessionManager` port
+         (login and sign-up), already listed under step 6.
+       - The 23 destinations whose screens are app-only move with their screens.
+       - The `AppNavigation` root (intents, screen time, the overlay hosts and the embedded-tab
+         layer) is step 8's Android shim.
 8. **The app root port** and the new JVM shim. Then the Desktop feature inventory, and
    retiring the old `desktopApp`.
 

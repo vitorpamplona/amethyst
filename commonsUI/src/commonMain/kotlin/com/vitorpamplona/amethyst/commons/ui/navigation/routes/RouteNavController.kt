@@ -18,15 +18,13 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.ui.navigation.routes
+package com.vitorpamplona.amethyst.commons.ui.navigation.routes
 
-import androidx.navigation.NavDestination.Companion.hasRoute
-import androidx.navigation.NavHostController
-import androidx.navigation.toRoute
 import com.vitorpamplona.amethyst.commons.model.navigation.Route
+import com.vitorpamplona.amethyst.commons.ui.navigation.navs.Nav
 import kotlin.reflect.KClass
 
-inline fun <reified T : Route> isBaseRoute(navController: NavHostController): Boolean = navController.currentBackStackEntry?.destination?.hasRoute<T>() == true
+inline fun <reified T : Route> isBaseRoute(nav: Nav): Boolean = nav.currentRoute is T
 
 /**
  * The composers that swallow a *redelivered* ACTION_SEND themselves: each registers its own
@@ -39,23 +37,15 @@ inline fun <reified T : Route> isBaseRoute(navController: NavHostController): Bo
  * Only guards the onNewIntent path. A share that *launches* the activity has no composer
  * listening yet, so it must still navigate.
  */
-fun consumesSharesInPlace(navController: NavHostController): Boolean =
-    isBaseRoute<Route.NewShortNote>(navController) ||
-        isBaseRoute<Route.GenericCommentPost>(navController) ||
-        isBaseRoute<Route.HashtagPost>(navController) ||
-        isBaseRoute<Route.GeoPost>(navController) ||
-        isBaseRoute<Route.UrlPost>(navController)
+fun consumesSharesInPlace(nav: Nav): Boolean =
+    isBaseRoute<Route.NewShortNote>(nav) ||
+        isBaseRoute<Route.GenericCommentPost>(nav) ||
+        isBaseRoute<Route.HashtagPost>(nav) ||
+        isBaseRoute<Route.GeoPost>(nav) ||
+        isBaseRoute<Route.UrlPost>(nav)
 
+/** The route on top, with its arguments, when it is a [klazz]; null when another screen is on top. */
 fun <T : Route> getRouteWithArguments(
     klazz: KClass<T>,
-    navController: NavHostController,
-): Route? {
-    val entry = navController.currentBackStackEntry ?: return null
-    val dest = entry.destination
-
-    return if (dest.hasRoute(klazz)) {
-        entry.toRoute(klazz)
-    } else {
-        null
-    }
-}
+    nav: Nav,
+): Route? = nav.currentRoute.takeIf { klazz.isInstance(it) }

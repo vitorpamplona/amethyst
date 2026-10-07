@@ -18,7 +18,7 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.ui.navigation.navs
+package com.vitorpamplona.amethyst.commons.ui.navigation.navs
 
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
@@ -27,7 +27,6 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import com.vitorpamplona.amethyst.commons.ui.insets.rememberSafeImeInsets
-import com.vitorpamplona.amethyst.commons.ui.navigation.navs.EmptyNav
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.withTimeoutOrNull
 
@@ -40,7 +39,7 @@ const val IME_SETTLE_TIMEOUT_MS = 700L
  *
  * Navigating while the keyboard is up races the window animation against the IME's close animation.
  * On release builds — fast enough that the window animation wins — the IME
- * [WindowInsetsAnimationCompat][androidx.core.view.WindowInsetsAnimationCompat] is cancelled before
+ * `WindowInsetsAnimationCompat` is cancelled before
  * its terminal (zero) frame reaches Compose. `WindowInsets.ime` is a single app-wide holder, so it
  * stays "animating" and every IME padding in the app — not just the screen being left — freezes at
  * the keyboard height. [SafeImeInsets][com.vitorpamplona.amethyst.commons.ui.insets.SafeImeInsets] is the backstop for when that freeze turns out to be

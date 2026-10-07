@@ -54,6 +54,12 @@ interface AppPlatform {
     /** This build's version name ("1.04.2"), shown in the donation card; empty where unknown. */
     val appVersionName: String get() = ""
 
+    /** This build's distribution flavour ("play", "fdroid"), shown next to the version; empty where none. */
+    val appFlavor: String get() = ""
+
+    /** Whether this is a debug build, which unlocks the drawer's in-progress destinations. */
+    val isDebugBuild: Boolean get() = false
+
     /** Which installed apps can take a `payto` hand-off from the zap picker. */
     val payToApps: PayToAppProbe get() = PayToAppProbe.None
 
