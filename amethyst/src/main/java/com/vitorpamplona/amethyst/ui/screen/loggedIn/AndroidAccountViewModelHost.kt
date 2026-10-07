@@ -23,9 +23,9 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn
 import android.app.NotificationManager
 import android.media.MediaMetadataRetriever
 import androidx.core.content.ContextCompat
-import com.vitorpamplona.amethyst.AccountInfo
 import com.vitorpamplona.amethyst.AppModules
 import com.vitorpamplona.amethyst.LocalPreferences
+import com.vitorpamplona.amethyst.commons.account.AccountInfo
 import com.vitorpamplona.amethyst.commons.audio.AnonymizedResult
 import com.vitorpamplona.amethyst.commons.audio.VoicePreset
 import com.vitorpamplona.amethyst.commons.model.location.DeviceLocation

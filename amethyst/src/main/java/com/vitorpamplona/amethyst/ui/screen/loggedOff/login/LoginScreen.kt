@@ -66,6 +66,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.Amethyst
+import com.vitorpamplona.amethyst.commons.account.AccountSessionManager
 import com.vitorpamplona.amethyst.commons.account.ui.login.LoginButton
 import com.vitorpamplona.amethyst.commons.account.ui.login.LoginErrorManager
 import com.vitorpamplona.amethyst.commons.account.ui.login.SignUpButton
@@ -88,7 +89,6 @@ import com.vitorpamplona.amethyst.commons.ui.theme.Size20dp
 import com.vitorpamplona.amethyst.commons.ui.theme.Size40dp
 import com.vitorpamplona.amethyst.commons.ui.theme.ThemeComparisonRow
 import com.vitorpamplona.amethyst.commons.ui.theme.placeholderText
-import com.vitorpamplona.amethyst.ui.screen.AccountSessionManager
 import com.vitorpamplona.amethyst.ui.screen.loggedOff.TorSettingsSetup
 import com.vitorpamplona.amethyst.ui.screen.loggedOff.legal.TermsGate
 import com.vitorpamplona.quartz.nip55AndroidSigner.client.isExternalSignerInstalled

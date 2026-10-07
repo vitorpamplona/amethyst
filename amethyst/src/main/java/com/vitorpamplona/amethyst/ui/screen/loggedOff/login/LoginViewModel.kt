@@ -28,6 +28,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.lifecycle.ViewModel
 import com.vitorpamplona.amethyst.BuildConfig
+import com.vitorpamplona.amethyst.commons.account.AccountSessionManager
 import com.vitorpamplona.amethyst.commons.account.ui.login.LoginErrorManager
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.invalid_key
@@ -38,7 +39,6 @@ import com.vitorpamplona.amethyst.commons.resources.login_nostrconnect_not_suppo
 import com.vitorpamplona.amethyst.commons.resources.password_is_required
 import com.vitorpamplona.amethyst.commons.resources.sign_request_rejected_description
 import com.vitorpamplona.amethyst.commons.tor.TorSettingsFlow
-import com.vitorpamplona.amethyst.ui.screen.AccountSessionManager
 import com.vitorpamplona.quartz.nip19Bech32.Bech32Transcription
 import com.vitorpamplona.quartz.nip19Bech32.bech32.bechToBytes
 

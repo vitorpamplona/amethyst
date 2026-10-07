@@ -27,6 +27,9 @@ import android.os.SystemClock
 import androidx.security.crypto.EncryptedSharedPreferences
 import coil3.disk.DiskCache
 import coil3.memory.MemoryCache
+import com.vitorpamplona.amethyst.commons.account.AccountSessionHooks
+import com.vitorpamplona.amethyst.commons.account.AccountSessionManager
+import com.vitorpamplona.amethyst.commons.account.AccountState
 import com.vitorpamplona.amethyst.commons.browser.BrowserHistoryRegistry
 import com.vitorpamplona.amethyst.commons.browser.BrowserIconRegistry
 import com.vitorpamplona.amethyst.commons.connectedApps.DataStoreNostrSignerPermissionStore
@@ -55,6 +58,7 @@ import com.vitorpamplona.amethyst.commons.model.preferences.RelayGroupDeletionSt
 import com.vitorpamplona.amethyst.commons.model.preferences.TorSettingsStore
 import com.vitorpamplona.amethyst.commons.model.preferences.UiSettingsStore
 import com.vitorpamplona.amethyst.commons.napplet.permissions.NappletPermissionLedger
+import com.vitorpamplona.amethyst.commons.nests.room.activity.NestBridge
 import com.vitorpamplona.amethyst.commons.relayClient.BlockedRelayFilteringClient
 import com.vitorpamplona.amethyst.commons.relayClient.diagnostics.BootRelayDiagnostics
 import com.vitorpamplona.amethyst.commons.relayClient.event.EventFinderQueryState
@@ -68,6 +72,7 @@ import com.vitorpamplona.amethyst.commons.richtext.CachedRichTextParser
 import com.vitorpamplona.amethyst.commons.robohash.CachedRobohash
 import com.vitorpamplona.amethyst.commons.scheduledposts.ScheduledPostStore
 import com.vitorpamplona.amethyst.commons.scheduledposts.ScheduledPostWorkGate
+import com.vitorpamplona.amethyst.commons.service.call.CallSessionBridge
 import com.vitorpamplona.amethyst.commons.service.connectivity.ConnectivityStatus
 import com.vitorpamplona.amethyst.commons.service.georelay.GeoRelayCsvLoader
 import com.vitorpamplona.amethyst.commons.service.georelay.GeohashRelays
@@ -111,6 +116,7 @@ import com.vitorpamplona.amethyst.service.images.ImageLoaderSetup
 import com.vitorpamplona.amethyst.service.images.ThumbnailDiskCache
 import com.vitorpamplona.amethyst.service.location.LocationState
 import com.vitorpamplona.amethyst.service.notifications.AlwaysOnNotificationServiceManager
+import com.vitorpamplona.amethyst.service.notifications.ConversationShortcuts
 import com.vitorpamplona.amethyst.service.notifications.NotificationDispatcher
 import com.vitorpamplona.amethyst.service.notifications.NwcPaymentNotificationWatcher
 import com.vitorpamplona.amethyst.service.notifications.PokeyReceiver
@@ -149,12 +155,11 @@ import com.vitorpamplona.amethyst.service.uploads.blossom.bud10.BlossomServerRes
 import com.vitorpamplona.amethyst.service.uploads.blossom.bud10.LocalBlossomCacheProbe
 import com.vitorpamplona.amethyst.service.uploads.nip95.Nip95CacheFactory
 import com.vitorpamplona.amethyst.ui.resourceCacheInit
-import com.vitorpamplona.amethyst.ui.screen.AccountSessionManager
-import com.vitorpamplona.amethyst.ui.screen.AccountState
 import com.vitorpamplona.amethyst.ui.tor.TorManager
 import com.vitorpamplona.amethyst.ui.tor.TorService
 import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.nip01Core.core.Event
+import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.NostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.RelayLogger
@@ -1096,7 +1101,45 @@ class AppModules(
             clientBuilder = { client },
             localPreferences = LocalPreferences,
             scope = applicationIOScope,
+            hooks = AndroidAccountSessionHooks(),
         )
+
+    private inner class AndroidAccountSessionHooks : AccountSessionHooks {
+        override fun onSessionEnding() {
+            // The Nest audio-room activity reads the active AccountViewModel through a process-singleton
+            // bridge: drop the ref so it cannot survive into the next session. See [NestBridge].
+            NestBridge.clear()
+            // A call belongs to the account that placed it. See [CallSessionBridge].
+            CallSessionBridge.clear()
+        }
+
+        override suspend fun onAccountRemoving(npub: String) {
+            // TODO: also drop this account's WebView storage profile — the cookies/localStorage of every
+            // site it visited survive here, keyed by NappletWebViewProfiles.forPubKey(hex). It CANNOT be
+            // done from this process: WebView profiles live in the WebView data directory, which belongs
+            // to the `:napplet` process (nothing calls setDataDirectorySuffix, so booting WebView here
+            // too would collide on the same directory). Deleting it needs a broker message that has
+            // `:napplet` call ProfileStore.deleteProfile(name) — and that must refuse a profile still in
+            // use by a live WebView. Not wired for this release; there is no existing hook that reaches
+            // the sandbox on account deletion.
+            // The launcher is the one place an account's contacts live outside our own storage, so the
+            // conversation shortcuts go first. See [ConversationShortcuts].
+            ConversationShortcuts.removeForAccount(appContext, npub)
+        }
+
+        /**
+         * Drops everything a deleted account left in the publish pipelines: parked scheduled posts,
+         * checkpointed PoW mining jobs, and any of its jobs still queued or mining (a post must not
+         * publish after its account is gone).
+         */
+        override suspend fun onAccountRemoved(pubkey: HexKey) {
+            scheduledPostStore.removeForAccount(pubkey)
+            powPublishQueue.cancelForOwner(pubkey)
+            powJobStore.removeForAccount(pubkey)
+        }
+
+        override fun cashuCountersFor(npub: String) = CashuPreferences.forAccount(npub)
+    }
 
     // Surfaces non-zap Lightning payments reported by the logged-in account's NWC
     // wallet(s) as tray notifications (zaps are already shown via ZapNotification).

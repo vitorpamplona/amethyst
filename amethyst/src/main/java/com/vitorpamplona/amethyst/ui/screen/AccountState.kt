@@ -25,6 +25,7 @@ import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.key
 import androidx.lifecycle.viewmodel.compose.LocalViewModelStoreOwner
 import androidx.lifecycle.viewmodel.compose.rememberViewModelStoreOwner
+import com.vitorpamplona.amethyst.commons.account.AccountState
 
 /**
  * Provides a [androidx.lifecycle.ViewModelStoreOwner] scoped to the currently logged-in account so

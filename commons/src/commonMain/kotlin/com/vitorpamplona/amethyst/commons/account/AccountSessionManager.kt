@@ -18,26 +18,19 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.ui.screen
+package com.vitorpamplona.amethyst.commons.account
 
 import androidx.compose.runtime.Stable
-import com.vitorpamplona.amethyst.AccountInfo
-import com.vitorpamplona.amethyst.Amethyst
-import com.vitorpamplona.amethyst.LocalPreferences
 import com.vitorpamplona.amethyst.commons.defaults.DefaultNIP65RelaySet
 import com.vitorpamplona.amethyst.commons.model.Account
 import com.vitorpamplona.amethyst.commons.model.AccountSettings
 import com.vitorpamplona.amethyst.commons.model.navigation.Route
-import com.vitorpamplona.amethyst.commons.nests.room.activity.NestBridge
-import com.vitorpamplona.amethyst.commons.service.call.CallSessionBridge
-import com.vitorpamplona.amethyst.model.accountsCache.AccountCacheState
-import com.vitorpamplona.amethyst.model.nip60Cashu.CashuPreferences
-import com.vitorpamplona.amethyst.service.notifications.ConversationShortcuts
 import com.vitorpamplona.quartz.nip01Core.core.hexToByteArray
 import com.vitorpamplona.quartz.nip01Core.crypto.KeyPair
 import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerSync
 import com.vitorpamplona.quartz.nip05DnsIdentifiers.Nip05Client
+import com.vitorpamplona.quartz.nip05DnsIdentifiers.resolveUserHexOrNull
 import com.vitorpamplona.quartz.nip06KeyDerivation.Nip06
 import com.vitorpamplona.quartz.nip19Bech32.Bech32Transcription
 import com.vitorpamplona.quartz.nip19Bech32.Nip19Parser
@@ -58,15 +51,15 @@ import com.vitorpamplona.quartz.utils.Log
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.IO
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import java.util.regex.Pattern
 
-val EMAIL_PATTERN: Pattern = Pattern.compile(".+@.+\\.[a-z]+")
+val EMAIL_PATTERN = Regex(".+@.+\\.[a-z]+")
 
 sealed class AccountState {
     object Loading : AccountState()
@@ -82,11 +75,12 @@ sealed class AccountState {
 
 @Stable
 class AccountSessionManager(
-    val accountsCache: AccountCacheState,
+    val accountsCache: AccountCache,
     val nip05ClientBuilder: () -> Nip05Client,
     val clientBuilder: () -> INostrClient,
-    val localPreferences: LocalPreferences,
+    val localPreferences: AccountSessionStore,
     val scope: CoroutineScope,
+    val hooks: AccountSessionHooks = object : AccountSessionHooks {},
 ) {
     private val _accountContent = MutableStateFlow<AccountState>(AccountState.Loading)
     val accountContent = _accountContent.asStateFlow()
@@ -229,13 +223,12 @@ class AccountSessionManager(
                 } else {
                     loginSync(newKey, transientAccount, loginWithExternalSigner, packageName, onError)
                 }
-            } else if (EMAIL_PATTERN.matcher(cleanKey).matches()) {
+            } else if (EMAIL_PATTERN.matches(cleanKey)) {
                 // Delegate to the shared quartz resolver so NIP-05 handling stays in
                 // lockstep with the CLI and anywhere else we accept user identifiers.
                 try {
                     val hex =
-                        com.vitorpamplona.quartz.nip05DnsIdentifiers
-                            .resolveUserHexOrNull(cleanKey, nip05ClientBuilder())
+                        resolveUserHexOrNull(cleanKey, nip05ClientBuilder())
                     if (hex == null) {
                         onError("User not found in the nip05 server: $cleanKey")
                     } else {
@@ -320,14 +313,14 @@ class AccountSessionManager(
     fun createNewAccount(name: String? = null): AccountSettings {
         val keyPair = KeyPair()
         val bootstrap =
-            com.vitorpamplona.amethyst.commons.account.bootstrapAccountEvents(
+            bootstrapAccountEvents(
                 signer = NostrSignerSync(keyPair),
                 name = name,
             )
         return AccountSettings(
             keyPair = keyPair,
             transientAccount = false,
-            cashuCounters = CashuPreferences.forAccount(keyPair.pubKey.toNpub()),
+            cashuCounters = hooks.cashuCountersFor(keyPair.pubKey.toNpub()),
             backupUserMetadata = bootstrap.userMetadata,
             backupContactList = bootstrap.contactList,
             backupNIP65RelayList = bootstrap.nip65RelayList,
@@ -364,17 +357,9 @@ class AccountSessionManager(
         accountInfo: AccountInfo,
         routeBuilder: ((account: Account) -> Route?)? = null,
     ) {
-        // The Nest audio-room activity reads the active AccountViewModel
-        // through a process-singleton bridge. Drop the previous user's
-        // ref before swapping so a stale ref can't survive into the new
-        // session — see [NestBridge].
-        NestBridge
-            .clear()
-        // A call belongs to the account that placed it, so end it before swapping users — see
-        // [CallSessionBridge]. This is the real "account switch" hook; MainActivity being
-        // destroyed is not.
-        CallSessionBridge
-            .clear()
+        // Whatever the previous user had running (an audio room, a call) belongs to them, so it ends
+        // before the swap. This is the real "account switch" hook; the Activity being destroyed is not.
+        hooks.onSessionEnding()
         localPreferences.switchToAccount(accountInfo)
         loginWithDefaultAccount(routeBuilder)
     }
@@ -399,52 +384,27 @@ class AccountSessionManager(
                 Log.e("Logoff", "Cannot decode npub for account being logged off; aborting cleanup")
                 return@launch
             }
-            // TODO: also drop this account's WebView storage profile — the cookies/localStorage of every
-            // site it visited survive here, keyed by NappletWebViewProfiles.forPubKey(hex). It CANNOT be
-            // done from this process: WebView profiles live in the WebView data directory, which belongs
-            // to the `:napplet` process (nothing calls setDataDirectorySuffix, so booting WebView here
-            // too would collide on the same directory). Deleting it needs a broker message that has
-            // `:napplet` call ProfileStore.deleteProfile(name) — and that must refuse a profile still in
-            // use by a live WebView. Not wired for this release; there is no existing hook that reaches
-            // the sandbox on account deletion.
-            // The launcher is the one place an account's contacts live outside our own
-            // storage, so the conversation shortcuts go before anything else — whether or not
-            // this is the account currently on screen. See [ConversationShortcuts].
-            ConversationShortcuts.removeForAccount(Amethyst.instance.appContext, accountInfo.npub)
+            // Runs before anything else, whether or not this is the account currently on screen: the
+            // platform may keep the account's contacts outside our own storage (Android's launcher
+            // shortcuts).
+            hooks.onAccountRemoving(accountInfo.npub)
 
             if (accountInfo.npub == currentAccountNPub()) {
-                // Drop the Nest bridge ref before tearing down the
-                // current account so the audio-room activity can't
-                // pick up a stale AccountViewModel — see [NestBridge].
-                NestBridge
-                    .clear()
-                // End any call this account had running before its state is torn down.
-                CallSessionBridge
-                    .clear()
+                // End what the account had running before its state is torn down.
+                hooks.onSessionEnding()
                 // log off and relogin with the 0 account
                 localPreferences.deleteAccount(accountInfo)
                 accountsCache.removeAccount(hex)
                 accountsCache.deleteAccountFiles(hex)
-                purgePendingPosts(hex)
+                hooks.onAccountRemoved(hex)
                 loginWithDefaultAccount()
             } else {
                 // delete without switching logins
                 localPreferences.deleteAccount(accountInfo)
                 accountsCache.removeAccount(hex)
                 accountsCache.deleteAccountFiles(hex)
-                purgePendingPosts(hex)
+                hooks.onAccountRemoved(hex)
             }
         }
-    }
-
-    /**
-     * Drops everything a deleted account left in the publish pipelines: parked
-     * scheduled posts, checkpointed PoW mining jobs, and any of its jobs still
-     * queued or mining (a post must not publish after its account is gone).
-     */
-    private suspend fun purgePendingPosts(hex: String) {
-        Amethyst.instance.scheduledPostStore.removeForAccount(hex)
-        Amethyst.instance.powPublishQueue.cancelForOwner(hex)
-        Amethyst.instance.powJobStore.removeForAccount(hex)
     }
 }

@@ -22,6 +22,7 @@ package com.vitorpamplona.amethyst.model.accountsCache
 
 import android.content.ContentResolver
 import com.vitorpamplona.amethyst.LocalPreferences
+import com.vitorpamplona.amethyst.commons.account.AccountCache
 import com.vitorpamplona.amethyst.commons.connectedApps.nip46.InMemoryNip46ClientStore
 import com.vitorpamplona.amethyst.commons.connectedApps.nip46.Nip46ClientStore
 import com.vitorpamplona.amethyst.commons.connectedApps.signers.InMemoryNostrSignerPermissionStore
@@ -109,7 +110,7 @@ class AccountCacheState(
      * takes none; no-op by default so tests and non-Android hosts build an Account without it.
      */
     val startBuzzPersistence: (Account) -> Unit = { },
-) {
+) : AccountCache {
     val accounts = MutableStateFlow<Map<HexKey, Account>>(emptyMap())
 
     /** Guards [loadAccount]'s check-then-create so concurrent callers can't build twin Accounts. */
@@ -132,7 +133,7 @@ class AccountCacheState(
             AppPreferenceStores(rootFilesDir = { accountDir.toOkioPath() })
         }
 
-    fun removeAccount(pubkey: HexKey) {
+    override fun removeAccount(pubkey: HexKey) {
         accounts.update { existingAccounts ->
             val oldValue = existingAccounts[pubkey]
             oldValue?.scope?.cancel()
@@ -190,7 +191,7 @@ class AccountCacheState(
      * [loadAccount]). Call only on permanent account deletion — [removeAccount] just
      * drops the in-memory copy and leaves these files behind.
      */
-    fun deleteAccountFiles(pubkey: HexKey) {
+    override fun deleteAccountFiles(pubkey: HexKey) {
         val dir = File(accountsRootDir(), pubkey)
         if (dir.exists() && !dir.deleteRecursively()) {
             Log.w("AccountCacheState") { "Failed to delete account directory ${dir.absolutePath}" }
@@ -215,7 +216,7 @@ class AccountCacheState(
         }
     }
 
-    fun loadAccount(accountSettings: AccountSettings): Account =
+    override fun loadAccount(accountSettings: AccountSettings): Account =
         loadAccount(
             signer =
                 if (accountSettings.keyPair.privKey != null) {

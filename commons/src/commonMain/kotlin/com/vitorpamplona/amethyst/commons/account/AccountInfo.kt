@@ -18,37 +18,17 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.ui.screen.loggedOff
+package com.vitorpamplona.amethyst.commons.account
 
-import androidx.compose.animation.Crossfade
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.saveable.rememberSaveable
-import androidx.compose.runtime.setValue
-import com.vitorpamplona.amethyst.commons.account.AccountSessionManager
-import com.vitorpamplona.amethyst.ui.screen.loggedOff.login.LoginPage
-import com.vitorpamplona.amethyst.ui.screen.loggedOff.signup.SignUpPage
+import androidx.compose.runtime.Immutable
+import kotlinx.serialization.Serializable
 
-@Composable
-fun LoginOrSignupScreen(
-    newAccountKey: String?,
-    accountSessionManager: AccountSessionManager,
-    isFirstLogin: Boolean,
-) {
-    var wantsNewUser by rememberSaveable {
-        mutableStateOf(false)
-    }
-
-    Crossfade(wantsNewUser, label = "LoginOrSignupScreen") {
-        if (it) {
-            SignUpPage(accountSessionManager) {
-                wantsNewUser = false
-            }
-        } else {
-            LoginPage(accountSessionManager, isFirstLogin, newAccountKey) {
-                wantsNewUser = true
-            }
-        }
-    }
-}
+/** One saved login: what the account switcher lists and what a switch hands back to the store. */
+@Immutable
+@Serializable
+data class AccountInfo(
+    val npub: String,
+    val hasPrivKey: Boolean = false,
+    val loggedInWithExternalSigner: Boolean = false,
+    val isTransient: Boolean = false,
+)

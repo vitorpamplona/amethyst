@@ -22,8 +22,9 @@ package com.vitorpamplona.amethyst
 
 import android.content.Context
 import android.content.SharedPreferences
-import androidx.compose.runtime.Immutable
 import androidx.core.content.edit
+import com.vitorpamplona.amethyst.commons.account.AccountInfo
+import com.vitorpamplona.amethyst.commons.account.AccountSessionStore
 import com.vitorpamplona.amethyst.commons.fitness.FitnessGoalsStore
 import com.vitorpamplona.amethyst.commons.model.AccountSettings
 import com.vitorpamplona.amethyst.commons.model.HomeFeedType
@@ -110,7 +111,6 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
-import kotlinx.serialization.Serializable
 import okio.Path.Companion.toOkioPath
 import java.io.File
 
@@ -119,15 +119,6 @@ import java.io.File
 // It will only apply in Debug builds
 private const val DEBUG_PLAINTEXT_PREFERENCES = false
 private const val DEBUG_PREFERENCES_NAME = "debug_prefs"
-
-@Immutable
-@Serializable
-data class AccountInfo(
-    val npub: String,
-    val hasPrivKey: Boolean = false,
-    val loggedInWithExternalSigner: Boolean = false,
-    val isTransient: Boolean = false,
-)
 
 internal object PrefKeys {
     const val CURRENT_ACCOUNT = "currently_logged_in_account"
@@ -263,7 +254,7 @@ internal object PrefKeys {
     const val LATEST_NUTZAP_INFO = "latestNutzapInfo"
 }
 
-object LocalPreferences {
+object LocalPreferences : AccountSessionStore {
     private const val COMMA = ","
 
     private var currentAccount: String? = null
@@ -540,7 +531,7 @@ object LocalPreferences {
 
     private fun legacyAllAccountInfo(): String? = encryptedPreferences().getString(PrefKeys.ALL_ACCOUNT_INFO, null)
 
-    suspend fun currentAccount(): String? {
+    override suspend fun currentAccount(): String? {
         if (currentAccount == null) {
             currentAccount =
                 withContext(Dispatchers.IO) {
@@ -658,7 +649,7 @@ object LocalPreferences {
         addAccount(accInfo)
     }
 
-    suspend fun switchToAccount(accountInfo: AccountInfo) = updateCurrentAccount(accountInfo)
+    override suspend fun switchToAccount(accountInfo: AccountInfo) = updateCurrentAccount(accountInfo)
 
     /** Removes the account from the app level shared preferences */
     private suspend fun removeAccount(accountInfo: AccountInfo) {
@@ -695,7 +686,7 @@ object LocalPreferences {
      * deleted
      */
     @Suppress("ApplySharedPref")
-    suspend fun deleteAccount(accountInfo: AccountInfo) {
+    override suspend fun deleteAccount(accountInfo: AccountInfo) {
         Log.d("LocalPreferences") { "Saving to encrypted storage updatePrefsForLogout ${accountInfo.npub}" }
         withContext(Dispatchers.IO) {
             // Drop the in-memory copy as well; otherwise re-adding the same account later
@@ -730,7 +721,7 @@ object LocalPreferences {
      * Make [accountSettings] the current account, persisting + caching it. Returns the settings that
      * actually became current — normally [accountSettings] itself, but see the downgrade guard below.
      */
-    suspend fun setDefaultAccount(accountSettings: AccountSettings): AccountSettings {
+    override suspend fun setDefaultAccount(accountSettings: AccountSettings): AccountSettings {
         val npub = accountSettings.keyPair.pubKey.toNpub()
 
         // Downgrade guard: adding a read-only npub for a pubkey we already hold a SIGNING account for
@@ -759,7 +750,7 @@ object LocalPreferences {
         return accountSettings
     }
 
-    suspend fun allSavedAccounts(): List<AccountInfo> = savedAccounts()
+    override suspend fun allSavedAccounts(): List<AccountInfo> = savedAccounts()
 
     suspend fun saveToEncryptedStorage(settings: AccountSettings) {
         Log.d("LocalPreferences", "Saving to encrypted storage")
@@ -1018,7 +1009,7 @@ object LocalPreferences {
         Log.d("LocalPreferences", "Saved to encrypted storage")
     }
 
-    suspend fun loadAccountConfigFromEncryptedStorage(): AccountSettings? = currentAccount()?.let { loadAccountConfigFromEncryptedStorage(it) }
+    override suspend fun loadAccountConfigFromEncryptedStorage(): AccountSettings? = currentAccount()?.let { loadAccountConfigFromEncryptedStorage(it) }
 
     /**
      * The UI settings as the global `secret_keeper` file holds them.
@@ -1067,7 +1058,7 @@ object LocalPreferences {
     /** Reactive flag: true (default) unless a freshly-generated account still needs to back up its key. */
     suspend fun hasBackedUpKeys(npub: String): MutableStateFlow<Boolean> = hasBackedUpKeysFlow(npub)
 
-    suspend fun setHasBackedUpKeys(
+    override suspend fun setHasBackedUpKeys(
         value: Boolean,
         npub: String,
     ) {

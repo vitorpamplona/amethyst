@@ -21,7 +21,7 @@
 package com.vitorpamplona.amethyst.service.eventCache
 
 import android.content.ComponentCallbacks2
-import com.vitorpamplona.amethyst.AccountInfo
+import com.vitorpamplona.amethyst.commons.account.AccountInfo
 import com.vitorpamplona.amethyst.commons.model.Account
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
 import com.vitorpamplona.quartz.nip19Bech32.decodePublicKeyAsHexOrNull
