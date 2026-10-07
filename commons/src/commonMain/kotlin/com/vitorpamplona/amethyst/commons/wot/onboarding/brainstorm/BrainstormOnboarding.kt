@@ -94,8 +94,9 @@ class BrainstormOnboarding(
         onStep(TrustProviderOnboardingStep.REQUESTING_SCORES)
         val trigger = call { http.post("$api/user/graperank", null, auth) }
         // 403: a run is recent; 429: the tier's quota is used. Scores exist or are coming either way.
-        if (!trigger.isSuccessful && trigger.status != 403 && trigger.status != 429 && trigger.status >= 500) {
-            throw TrustProviderException(TrustProviderException.Reason.UNREACHABLE, "Brainstorm could not start the score run (${trigger.status})")
+        // (5xx already threw in call.)
+        if (!trigger.isSuccessful && trigger.status != 403 && trigger.status != 429) {
+            throw unexpected("score run refused (HTTP ${trigger.status})")
         }
 
         onStep(TrustProviderOnboardingStep.FETCHING_SERVICE_KEY)

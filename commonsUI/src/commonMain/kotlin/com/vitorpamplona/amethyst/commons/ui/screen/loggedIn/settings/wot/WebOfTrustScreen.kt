@@ -21,6 +21,9 @@
 package com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.settings.wot
 
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.animateIntAsState
+import androidx.compose.animation.core.tween
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -38,8 +41,11 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.FilledTonalButton
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
@@ -47,7 +53,6 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Slider
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.getValue
@@ -59,9 +64,18 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.platform.LocalUriHandler
+import androidx.compose.ui.geometry.CornerRadius
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.text.LinkAnnotation
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.TextLinkStyles
+import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.text.withLink
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -72,10 +86,8 @@ import com.vitorpamplona.amethyst.commons.model.navigation.Route
 import com.vitorpamplona.amethyst.commons.relayClient.user.observeUserName
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.web_of_trust
-import com.vitorpamplona.amethyst.commons.resources.wot_active_subtitle
 import com.vitorpamplona.amethyst.commons.resources.wot_brainstorm_description
 import com.vitorpamplona.amethyst.commons.resources.wot_download_now
-import com.vitorpamplona.amethyst.commons.resources.wot_downloading_body
 import com.vitorpamplona.amethyst.commons.resources.wot_downloading_progress
 import com.vitorpamplona.amethyst.commons.resources.wot_downloading_progress_unknown
 import com.vitorpamplona.amethyst.commons.resources.wot_downloading_title
@@ -96,27 +108,23 @@ import com.vitorpamplona.amethyst.commons.resources.wot_manual_relay_error
 import com.vitorpamplona.amethyst.commons.resources.wot_manual_relay_label
 import com.vitorpamplona.amethyst.commons.resources.wot_manual_title
 import com.vitorpamplona.amethyst.commons.resources.wot_min_score_explainer
-import com.vitorpamplona.amethyst.commons.resources.wot_min_score_pass
 import com.vitorpamplona.amethyst.commons.resources.wot_min_score_title
-import com.vitorpamplona.amethyst.commons.resources.wot_never_updated
+import com.vitorpamplona.amethyst.commons.resources.wot_more_actions
 import com.vitorpamplona.amethyst.commons.resources.wot_no_scores_body
 import com.vitorpamplona.amethyst.commons.resources.wot_no_scores_title
 import com.vitorpamplona.amethyst.commons.resources.wot_not_downloaded_title
+import com.vitorpamplona.amethyst.commons.resources.wot_of_scored
 import com.vitorpamplona.amethyst.commons.resources.wot_off_body
 import com.vitorpamplona.amethyst.commons.resources.wot_off_title
 import com.vitorpamplona.amethyst.commons.resources.wot_people_in_network
 import com.vitorpamplona.amethyst.commons.resources.wot_private_entry_explainer
 import com.vitorpamplona.amethyst.commons.resources.wot_private_entry_title
-import com.vitorpamplona.amethyst.commons.resources.wot_provider_relay
 import com.vitorpamplona.amethyst.commons.resources.wot_redownload
-import com.vitorpamplona.amethyst.commons.resources.wot_redownload_explainer
 import com.vitorpamplona.amethyst.commons.resources.wot_remove_provider
-import com.vitorpamplona.amethyst.commons.resources.wot_remove_provider_explainer
 import com.vitorpamplona.amethyst.commons.resources.wot_retry
 import com.vitorpamplona.amethyst.commons.resources.wot_section_change_provider
 import com.vitorpamplona.amethyst.commons.resources.wot_section_choose_provider
 import com.vitorpamplona.amethyst.commons.resources.wot_section_effects
-import com.vitorpamplona.amethyst.commons.resources.wot_section_filtering
 import com.vitorpamplona.amethyst.commons.resources.wot_section_provider
 import com.vitorpamplona.amethyst.commons.resources.wot_set_up
 import com.vitorpamplona.amethyst.commons.resources.wot_set_up_again
@@ -128,11 +136,8 @@ import com.vitorpamplona.amethyst.commons.resources.wot_setup_fetching_key
 import com.vitorpamplona.amethyst.commons.resources.wot_setup_requesting_scores
 import com.vitorpamplona.amethyst.commons.resources.wot_setup_saving
 import com.vitorpamplona.amethyst.commons.resources.wot_setup_signing_in
-import com.vitorpamplona.amethyst.commons.resources.wot_stat_in_network
-import com.vitorpamplona.amethyst.commons.resources.wot_stat_scored
-import com.vitorpamplona.amethyst.commons.resources.wot_stat_updated
 import com.vitorpamplona.amethyst.commons.resources.wot_sync_now
-import com.vitorpamplona.amethyst.commons.resources.wot_updating_title
+import com.vitorpamplona.amethyst.commons.resources.wot_syncing
 import com.vitorpamplona.amethyst.commons.resources.wot_use_provider
 import com.vitorpamplona.amethyst.commons.resources.wot_waiting_wifi_body
 import com.vitorpamplona.amethyst.commons.resources.wot_waiting_wifi_title
@@ -142,10 +147,7 @@ import com.vitorpamplona.amethyst.commons.ui.note.LoadUser
 import com.vitorpamplona.amethyst.commons.ui.note.UserPicture
 import com.vitorpamplona.amethyst.commons.ui.note.timeAgoNoDot
 import com.vitorpamplona.amethyst.commons.ui.pluralStringRes
-import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.backups.StatTile
-import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.backups.StatusTag
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.backups.TintedPanel
-import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.settings.SettingsBlockTile
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.settings.SettingsControlRow
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.settings.SettingsDivider
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.settings.SettingsSection
@@ -168,10 +170,13 @@ import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.displayUrl
 import com.vitorpamplona.quartz.nip19Bech32.decodePublicKeyAsHexOrNull
 import com.vitorpamplona.quartz.nip85TrustedAssertions.list.tags.ServiceProviderTag
+import com.vitorpamplona.quartz.nip85TrustedAssertions.users.index.TrustNetworkIndex
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.launch
 import org.jetbrains.compose.resources.StringResource
+import kotlin.math.max
 import kotlin.math.roundToInt
+import kotlin.math.sqrt
 
 /** What the Web of Trust screen shows. Read from the account by [WebOfTrustScreen]. */
 @Immutable
@@ -289,7 +294,7 @@ fun WebOfTrustScreen(
                         isPrivate = isPrivate,
                     ),
                 actions = actions,
-                providerAvatar = { UserPicture(it.pubkey, 36.dp, accountViewModel = accountViewModel, nav = nav) },
+                providerAvatar = { UserPicture(it.pubkey, 40.dp, accountViewModel = accountViewModel, nav = nav) },
                 modifier = Modifier.padding(padding),
             )
         }
@@ -336,12 +341,14 @@ private fun TrustProviderOnboardingStep.label(): StringResource =
     }
 
 /**
- * The Web of Trust screen's body, without the top bar: a hero with the network's state, the
- * minimum score, the provider, how to pick one, and what the filtering affects.
+ * The Web of Trust screen's body, without the top bar. Once a network is loaded the hero *is*
+ * the control: the network's size over its rank distribution, and the minimum-score slider
+ * that cuts it, so dragging shows who gets through. Then the provider (one row, rare actions in
+ * its overflow menu), how to pick another, and what the filtering affects.
  *
- * Built from the settings kit (SettingsSection / SettingsBlockTile / SettingsControlRow) and the
- * hero pieces of the backup review screens (TintedPanel, StatTile), so it reads like the
- * rest of Settings.
+ * Built from the settings kit (SettingsSection / SettingsControlRow / SettingsSwitchTile) and the
+ * hero panel of the backup review screens (TintedPanel), so it reads like the rest
+ * of Settings.
  */
 @Composable
 fun WebOfTrustContent(
@@ -357,11 +364,11 @@ fun WebOfTrustContent(
                 .padding(horizontal = 16.dp, vertical = 12.dp),
         verticalArrangement = Arrangement.spacedBy(20.dp),
     ) {
-        StatusHero(state, actions.onDownloadNow)
-
         val network = state.network
         if (state.provider != null && network != null) {
-            FilteringSection(network, state.minScore, actions.onMinScoreChange)
+            NetworkHero(network, state.minScore, actions.onMinScoreChange)
+        } else {
+            StatusHero(state, actions.onDownloadNow)
         }
 
         state.provider?.let { ProviderSection(it, state, actions, providerAvatar) }
@@ -373,7 +380,140 @@ fun WebOfTrustContent(
 }
 
 // -------------------------------------------------------------------------------------------
-// Hero: what the network is doing right now
+// Hero, with a network: its size, its rank distribution and the minimum score
+// -------------------------------------------------------------------------------------------
+
+/** Rank buckets drawn by [RankHistogram]: two ranks per bar over 0..100. */
+private const val HISTOGRAM_BARS = 50
+
+@Composable
+private fun NetworkHero(
+    network: TrustNetwork,
+    minScore: Int,
+    onMinScoreChange: (Int) -> Unit,
+) {
+    // Local while dragging, so the count and the bars follow the thumb; saved (and synced) on release.
+    var dragging by remember(minScore) { mutableFloatStateOf(minScore.toFloat()) }
+    val threshold = dragging.roundToInt()
+    val inNetwork = network.index.countAtLeast(threshold)
+    val shown by animateIntAsState(inNetwork, tween(durationMillis = 220))
+    val scheme = MaterialTheme.colorScheme
+
+    Column(
+        Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(28.dp))
+            .background(Brush.verticalGradient(listOf(scheme.primaryContainer.copy(alpha = 0.6f), scheme.surfaceContainer)))
+            .padding(start = 20.dp, end = 20.dp, top = 20.dp, bottom = 16.dp),
+    ) {
+        Row(verticalAlignment = Alignment.Top) {
+            Column(Modifier.weight(1f)) {
+                Text(
+                    formatGrouped(shown.toLong()),
+                    fontSize = 44.sp,
+                    lineHeight = 48.sp,
+                    fontWeight = FontWeight.ExtraBold,
+                    color = scheme.primary,
+                )
+                Text(
+                    pluralStringRes(Res.plurals.wot_people_in_network, inNetwork),
+                    style = MaterialTheme.typography.titleMedium,
+                    color = scheme.onSurface,
+                )
+                Text(
+                    stringRes(Res.string.wot_of_scored, formatGrouped(network.index.size.toLong())),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = scheme.placeholderText,
+                )
+            }
+            HeroIcon(MaterialSymbols.Shield, active = true)
+        }
+
+        Spacer(Modifier.height(20.dp))
+
+        // Aligned with the slider's track, whose ends sit half a thumb in from the edges.
+        RankHistogram(network.index, threshold, Modifier.fillMaxWidth().height(64.dp).padding(horizontal = 2.dp))
+        Slider(
+            value = dragging,
+            onValueChange = { dragging = it },
+            onValueChangeFinished = { onMinScoreChange(dragging.roundToInt()) },
+            valueRange = 0f..100f,
+        )
+
+        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            Text(stringRes(Res.string.wot_min_score_title), style = MaterialTheme.typography.labelLarge, color = scheme.onSurface)
+            ScorePill(threshold)
+        }
+        Text(
+            stringRes(Res.string.wot_min_score_explainer),
+            style = MaterialTheme.typography.bodySmall,
+            color = scheme.placeholderText,
+            modifier = Modifier.padding(top = 6.dp),
+        )
+    }
+}
+
+/**
+ * How many people the provider scores at each rank, as bars over 0..100. Bars at or above
+ * [threshold] are the people who get through. Heights are square-rooted so the long tail of
+ * low scores does not flatten the rest.
+ */
+@Composable
+private fun RankHistogram(
+    index: TrustNetworkIndex,
+    threshold: Int,
+    modifier: Modifier = Modifier,
+) {
+    val buckets =
+        remember(index) {
+            IntArray(HISTOGRAM_BARS).also { bars ->
+                for (rank in 0 until 128) bars[(rank / 2).coerceAtMost(HISTOGRAM_BARS - 1)] += index.countAt(rank)
+            }
+        }
+    val tallest = remember(buckets) { max(1, buckets.max()) }
+    val passing = MaterialTheme.colorScheme.primary
+    val filtered = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.22f)
+
+    Canvas(modifier) {
+        val slot = size.width / HISTOGRAM_BARS
+        val barWidth = slot * 0.7f
+        val corner = CornerRadius(barWidth / 2, barWidth / 2)
+        val minHeight = 3.dp.toPx()
+        buckets.forEachIndexed { bar, count ->
+            if (count == 0) return@forEachIndexed
+            val height = max(minHeight, size.height * sqrt(count.toFloat() / tallest))
+            // A bar holds ranks 2·bar and 2·bar + 1; it passes when its upper rank does.
+            val color = if (2 * bar + 1 >= threshold) passing else filtered
+            drawRoundRect(
+                color = color,
+                topLeft = Offset(bar * slot + (slot - barWidth) / 2, size.height - height),
+                size = Size(barWidth, height),
+                cornerRadius = corner,
+            )
+        }
+    }
+}
+
+@Composable
+private fun ScorePill(value: Int) {
+    Box(
+        Modifier
+            .clip(RoundedCornerShape(50))
+            .background(MaterialTheme.colorScheme.primary)
+            .padding(horizontal = 10.dp, vertical = 2.dp),
+        contentAlignment = Alignment.Center,
+    ) {
+        Text(
+            value.toString(),
+            style = MaterialTheme.typography.labelLarge,
+            fontWeight = FontWeight.Bold,
+            color = MaterialTheme.colorScheme.onPrimary,
+        )
+    }
+}
+
+// -------------------------------------------------------------------------------------------
+// Hero, without a network: off, first download, waiting, errors
 // -------------------------------------------------------------------------------------------
 
 @Composable
@@ -381,43 +521,17 @@ private fun StatusHero(
     state: WebOfTrustUiState,
     onDownloadNow: () -> Unit,
 ) {
-    val network = state.network
     val status = state.status
     TintedPanel(MaterialTheme.colorScheme.surfaceContainer) {
-        Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
+        Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
             when {
                 state.provider == null -> {
                     HeroHeadline(MaterialSymbols.Shield, stringRes(Res.string.wot_off_title), stringRes(Res.string.wot_off_body), active = false)
                 }
 
                 status.running != null -> {
-                    val title = if (network == null) Res.string.wot_downloading_title else Res.string.wot_updating_title
-                    HeroHeadline(MaterialSymbols.CloudDownload, stringRes(title), stringRes(Res.string.wot_downloading_body), active = true)
+                    HeroHeadline(MaterialSymbols.CloudDownload, stringRes(Res.string.wot_downloading_title), null, active = true)
                     SyncProgress(status)
-                }
-
-                network != null -> {
-                    ActiveHeadline(state.providerName, network, state.minScore)
-                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        StatTile(
-                            value = formatGrouped(network.index.countAtLeast(state.minScore).toLong()),
-                            caption = stringRes(Res.string.wot_stat_in_network),
-                            color = MaterialTheme.colorScheme.primary,
-                            modifier = Modifier.weight(1f),
-                        )
-                        StatTile(
-                            value = formatGrouped(network.index.size.toLong()),
-                            caption = stringRes(Res.string.wot_stat_scored),
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            modifier = Modifier.weight(1f),
-                        )
-                        StatTile(
-                            value = timeAgoNoDot(network.header.lastUpdate).trim(),
-                            caption = stringRes(Res.string.wot_stat_updated),
-                            color = MaterialTheme.colorScheme.tertiary,
-                            modifier = Modifier.weight(1f),
-                        )
-                    }
                 }
 
                 status.lastError == TrustNetworkState.NO_SCORES_YET -> {
@@ -436,7 +550,7 @@ private fun StatusHero(
                 }
 
                 else -> {
-                    HeroHeadline(MaterialSymbols.CloudDownload, stringRes(Res.string.wot_not_downloaded_title), stringRes(Res.string.wot_waiting_wifi_body), active = true)
+                    HeroHeadline(MaterialSymbols.CloudDownload, stringRes(Res.string.wot_not_downloaded_title), null, active = true)
                     Button(onClick = onDownloadNow, modifier = Modifier.fillMaxWidth()) { Text(stringRes(Res.string.wot_download_now)) }
                 }
             }
@@ -448,7 +562,7 @@ private fun StatusHero(
 private fun HeroHeadline(
     symbol: MaterialSymbol,
     title: String,
-    body: String,
+    body: String?,
     active: Boolean,
     isError: Boolean = false,
 ) {
@@ -456,7 +570,9 @@ private fun HeroHeadline(
         HeroIcon(symbol, active, isError)
         Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
             Text(title, fontSize = 22.sp, lineHeight = 26.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface)
-            Text(body, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.placeholderText)
+            if (body != null) {
+                Text(body, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
         }
     }
 }
@@ -471,7 +587,7 @@ private fun HeroIcon(
     val (container, content) =
         when {
             isError -> scheme.errorContainer to scheme.onErrorContainer
-            active -> scheme.primaryContainer to scheme.onPrimaryContainer
+            active -> scheme.primary to scheme.onPrimary
             else -> scheme.surfaceContainerHighest to scheme.onSurfaceVariant
         }
     Box(
@@ -483,124 +599,37 @@ private fun HeroIcon(
 }
 
 @Composable
-private fun ActiveHeadline(
-    providerName: String?,
-    network: TrustNetwork,
-    minScore: Int,
-) {
-    val inNetwork = network.index.countAtLeast(minScore)
-    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(14.dp)) {
-        HeroIcon(MaterialSymbols.Shield, active = true)
-        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
-            Text(
-                pluralStringRes(Res.plurals.wot_people_in_network, inNetwork, formatGrouped(inNetwork.toLong())),
-                fontSize = 22.sp,
-                lineHeight = 26.sp,
-                fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.onSurface,
-            )
-            if (providerName != null) {
-                Text(
-                    stringRes(Res.string.wot_active_subtitle, providerName),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.placeholderText,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                )
-            }
-        }
-    }
-}
-
-@Composable
 private fun SyncProgress(status: TrustNetworkSyncStatus) {
     val expected = status.expected
     Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
         if (expected != null && expected > 0) {
             LinearProgressIndicator(
                 progress = { (status.verified.toFloat() / expected).coerceIn(0f, 1f) },
-                modifier = Modifier.fillMaxWidth().height(6.dp).clip(RoundedCornerShape(3.dp)),
-            )
-            Text(
-                stringRes(Res.string.wot_downloading_progress, formatGrouped(status.verified.toLong()), formatGrouped(expected.toLong())),
-                style = MaterialTheme.typography.labelMedium,
-                color = MaterialTheme.colorScheme.placeholderText,
+                modifier = Modifier.fillMaxWidth().height(8.dp).clip(RoundedCornerShape(4.dp)),
             )
         } else {
-            LinearProgressIndicator(modifier = Modifier.fillMaxWidth().height(6.dp).clip(RoundedCornerShape(3.dp)))
-            Text(
-                stringRes(Res.string.wot_downloading_progress_unknown, formatGrouped(status.verified.toLong())),
-                style = MaterialTheme.typography.labelMedium,
-                color = MaterialTheme.colorScheme.placeholderText,
-            )
+            LinearProgressIndicator(modifier = Modifier.fillMaxWidth().height(8.dp).clip(RoundedCornerShape(4.dp)))
         }
-    }
-}
-
-// -------------------------------------------------------------------------------------------
-// Minimum score
-// -------------------------------------------------------------------------------------------
-
-@Composable
-private fun FilteringSection(
-    network: TrustNetwork,
-    minScore: Int,
-    onMinScoreChange: (Int) -> Unit,
-) {
-    // Local while dragging, so the pass count follows the thumb; saved (and synced) on release.
-    var dragging by remember(minScore) { mutableFloatStateOf(minScore.toFloat()) }
-    val value = dragging.roundToInt()
-
-    SettingsSection(Res.string.wot_section_filtering) {
-        SettingsBlockTile(
-            icon = MaterialSymbols.Tune,
-            title = stringRes(Res.string.wot_min_score_title),
-            description = stringRes(Res.string.wot_min_score_explainer),
-        ) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Slider(
-                    value = dragging,
-                    onValueChange = { dragging = it },
-                    onValueChangeFinished = { onMinScoreChange(dragging.roundToInt()) },
-                    valueRange = 0f..100f,
-                    modifier = Modifier.weight(1f),
-                )
-                Spacer(Modifier.width(12.dp))
-                ScorePill(value)
-            }
-            Text(
-                stringRes(
-                    Res.string.wot_min_score_pass,
-                    formatGrouped(network.index.countAtLeast(value).toLong()),
-                    formatGrouped(network.index.size.toLong()),
-                ),
-                style = MaterialTheme.typography.labelMedium,
-                color = MaterialTheme.colorScheme.primary,
-            )
-        }
-    }
-}
-
-@Composable
-private fun ScorePill(value: Int) {
-    Box(
-        Modifier
-            .clip(RoundedCornerShape(50))
-            .background(MaterialTheme.colorScheme.primaryContainer)
-            .padding(horizontal = 12.dp, vertical = 4.dp),
-        contentAlignment = Alignment.Center,
-    ) {
         Text(
-            value.toString(),
-            style = MaterialTheme.typography.labelLarge,
-            fontWeight = FontWeight.Bold,
-            color = MaterialTheme.colorScheme.onPrimaryContainer,
+            syncProgressText(status),
+            style = MaterialTheme.typography.labelMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
     }
 }
 
+@Composable
+private fun syncProgressText(status: TrustNetworkSyncStatus): String {
+    val expected = status.expected
+    return when {
+        expected != null && expected > 0 -> stringRes(Res.string.wot_downloading_progress, formatGrouped(status.verified.toLong()), formatGrouped(expected.toLong()))
+        status.verified > 0 -> stringRes(Res.string.wot_downloading_progress_unknown, formatGrouped(status.verified.toLong()))
+        else -> stringRes(Res.string.wot_syncing)
+    }
+}
+
 // -------------------------------------------------------------------------------------------
-// The current provider
+// The current provider: one row, rare actions in its menu
 // -------------------------------------------------------------------------------------------
 
 @Composable
@@ -612,78 +641,107 @@ private fun ProviderSection(
 ) {
     val network = state.network
     val syncing = state.status.running != null
+    val scheme = MaterialTheme.colorScheme
 
     SettingsSection(Res.string.wot_section_provider) {
-        ProviderRow(provider, state.providerName, providerAvatar, actions.onOpenProvider)
-        SettingsDivider()
-        SettingsControlRow(
-            icon = MaterialSymbols.Sync,
-            title = stringRes(Res.string.wot_sync_now),
-            description =
-                network?.let { stringRes(Res.string.wot_last_updated, timeAgoNoDot(it.header.lastUpdate).trim()) }
-                    ?: stringRes(Res.string.wot_never_updated),
-            onClick = if (syncing) null else actions.onDownloadNow,
+        Row(
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .clickable(onClick = actions.onOpenProvider)
+                    .padding(start = 16.dp, end = 4.dp, top = 12.dp, bottom = 12.dp),
+            verticalAlignment = Alignment.CenterVertically,
         ) {
-            if (syncing) CircularProgressIndicator(Modifier.size(20.dp), strokeWidth = 2.dp)
+            Box(Modifier.size(40.dp).clip(CircleShape)) { providerAvatar(provider) }
+            Column(Modifier.weight(1f).padding(start = 16.dp, end = 4.dp)) {
+                Text(
+                    state.providerName ?: provider.pubkey.toShortDisplay(),
+                    style = MaterialTheme.typography.bodyLarge,
+                    fontWeight = FontWeight.SemiBold,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+                Text(
+                    provider.relayUrl.displayUrl(),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = scheme.onSurfaceVariant,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+                Text(
+                    when {
+                        // With no network yet, the hero already shows the download's progress.
+                        syncing && network == null -> stringRes(Res.string.wot_syncing)
+                        syncing -> syncProgressText(state.status)
+                        network != null -> stringRes(Res.string.wot_last_updated, timeAgoNoDot(network.header.lastUpdate).trim())
+                        else -> stringRes(Res.string.wot_not_downloaded_title)
+                    },
+                    style = MaterialTheme.typography.labelMedium,
+                    color = if (syncing) scheme.primary else scheme.placeholderText,
+                    maxLines = 1,
+                )
+            }
+            if (syncing) {
+                Box(Modifier.size(48.dp), contentAlignment = Alignment.Center) {
+                    CircularProgressIndicator(Modifier.size(20.dp), strokeWidth = 2.dp)
+                }
+            } else {
+                IconButton(onClick = actions.onDownloadNow) {
+                    Icon(symbol = MaterialSymbols.Sync, contentDescription = stringRes(Res.string.wot_sync_now), tint = scheme.primary)
+                }
+            }
+            ProviderMenu(canRedownload = network != null && !syncing, actions)
         }
-        if (network != null) {
-            SettingsDivider()
-            SettingsControlRow(
-                icon = MaterialSymbols.CloudDownload,
-                title = stringRes(Res.string.wot_redownload),
-                description = stringRes(Res.string.wot_redownload_explainer),
-                onClick = if (syncing) null else actions.onRedownload,
-            ) {}
-        }
-        SettingsDivider()
-        SettingsControlRow(
-            icon = MaterialSymbols.Delete,
-            title = stringRes(Res.string.wot_remove_provider),
-            description = stringRes(Res.string.wot_remove_provider_explainer),
-            onClick = actions.onRemoveProvider,
-        ) {}
     }
 }
 
 @Composable
-private fun ProviderRow(
-    provider: ServiceProviderTag,
-    name: String?,
-    avatar: @Composable (ServiceProviderTag) -> Unit,
-    onClick: () -> Unit,
+private fun ProviderMenu(
+    canRedownload: Boolean,
+    actions: WebOfTrustActions,
 ) {
-    Row(
-        modifier =
-            Modifier
-                .fillMaxWidth()
-                .clickable(onClick = onClick)
-                .padding(horizontal = 16.dp, vertical = 12.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Box(Modifier.size(36.dp).clip(CircleShape)) { avatar(provider) }
-        Column(Modifier.weight(1f).padding(start = 16.dp)) {
-            Text(
-                name ?: provider.pubkey.toShortDisplay(),
-                style = MaterialTheme.typography.bodyLarge,
-                fontWeight = FontWeight.SemiBold,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-            )
-            Text(
-                stringRes(Res.string.wot_provider_relay, provider.relayUrl.displayUrl()),
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
+    var open by remember { mutableStateOf(false) }
+    Box {
+        IconButton(onClick = { open = true }) {
+            Icon(
+                symbol = MaterialSymbols.MoreVert,
+                contentDescription = stringRes(Res.string.wot_more_actions),
+                tint = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
-        Icon(
-            symbol = MaterialSymbols.ChevronRight,
-            contentDescription = null,
-            modifier = Modifier.size(20.dp),
-            tint = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
+        DropdownMenu(expanded = open, onDismissRequest = { open = false }) {
+            DropdownMenuItem(
+                text = { Text(stringRes(Res.string.wot_redownload)) },
+                leadingIcon = { MenuIcon(MaterialSymbols.CloudDownload) },
+                enabled = canRedownload,
+                onClick = {
+                    open = false
+                    actions.onRedownload()
+                },
+            )
+            DropdownMenuItem(
+                text = { Text(stringRes(Res.string.wot_remove_provider), color = MaterialTheme.colorScheme.error) },
+                leadingIcon = { MenuIcon(MaterialSymbols.Delete, isDanger = true) },
+                onClick = {
+                    open = false
+                    actions.onRemoveProvider()
+                },
+            )
+        }
     }
+}
+
+@Composable
+private fun MenuIcon(
+    symbol: MaterialSymbol,
+    isDanger: Boolean = false,
+) {
+    Icon(
+        symbol = symbol,
+        contentDescription = null,
+        modifier = Modifier.size(20.dp),
+        tint = if (isDanger) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant,
+    )
 }
 
 // -------------------------------------------------------------------------------------------
@@ -743,82 +801,78 @@ private fun GuidedProviderRow(
     enabled: Boolean,
     onSetUp: () -> Unit,
 ) {
-    val uriHandler = LocalUriHandler.current
     val running = (setup as? WebOfTrustSetup.Running)?.takeIf { it.providerId == provider.id }
     val failed = (setup as? WebOfTrustSetup.Failed)?.takeIf { it.providerId == provider.id }
+    val scheme = MaterialTheme.colorScheme
 
-    Column(
-        Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 14.dp),
-        verticalArrangement = Arrangement.spacedBy(10.dp),
-    ) {
+    Column(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 12.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Box(
-                Modifier.size(36.dp).clip(RoundedCornerShape(12.dp)).background(MaterialTheme.colorScheme.tertiaryContainer),
+                Modifier.size(36.dp).clip(RoundedCornerShape(10.dp)).background(scheme.tertiaryContainer),
                 contentAlignment = Alignment.Center,
             ) {
-                Text(
-                    provider.name.take(1),
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.onTertiaryContainer,
-                )
+                Text(provider.name.take(1), fontWeight = FontWeight.Bold, color = scheme.onTertiaryContainer)
             }
-            Column(Modifier.weight(1f).padding(start = 16.dp)) {
-                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            Column(Modifier.weight(1f).padding(start = 16.dp, end = 8.dp)) {
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                     Text(provider.name, style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.SemiBold)
-                    if (inUse) StatusTag(stringRes(Res.string.wot_in_use), MaterialTheme.colorScheme.primary)
+                    if (inUse) {
+                        Icon(
+                            symbol = MaterialSymbols.CheckCircle,
+                            contentDescription = stringRes(Res.string.wot_in_use),
+                            modifier = Modifier.size(18.dp),
+                            tint = scheme.primary,
+                            filled = true,
+                        )
+                    }
                 }
-                Text(
-                    stringRes(providerDescription(provider.id)),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
+                if (running != null) {
+                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        CircularProgressIndicator(Modifier.size(12.dp), strokeWidth = 1.5.dp)
+                        Text(stringRes(running.step), style = MaterialTheme.typography.bodySmall, color = scheme.primary)
+                    }
+                } else {
+                    val description = stringRes(providerDescription(provider.id))
+                    val learnMore = stringRes(Res.string.wot_learn_more)
+                    val linkStyle = TextLinkStyles(SpanStyle(color = scheme.primary, fontWeight = FontWeight.SemiBold))
+                    Text(
+                        buildAnnotatedString {
+                            append(description)
+                            append(" · ")
+                            withLink(LinkAnnotation.Url(provider.homepage, linkStyle)) { append(learnMore) }
+                        },
+                        style = MaterialTheme.typography.bodySmall,
+                        color = scheme.onSurfaceVariant,
+                    )
+                }
+            }
+            if (running == null) {
+                if (inUse) {
+                    FilledTonalButton(onClick = onSetUp, enabled = enabled) { Text(stringRes(Res.string.wot_set_up_again)) }
+                } else {
+                    Button(onClick = onSetUp, enabled = enabled) { Text(stringRes(Res.string.wot_set_up)) }
+                }
             }
         }
 
-        if (running != null) {
+        if (failed != null) {
             Row(
-                Modifier.padding(start = 52.dp),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(10.dp),
+                Modifier
+                    .padding(start = 52.dp)
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(12.dp))
+                    .background(scheme.errorContainer)
+                    .padding(10.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
             ) {
-                CircularProgressIndicator(Modifier.size(18.dp), strokeWidth = 2.dp)
-                Text(stringRes(running.step), style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary)
-            }
-        } else {
-            if (failed != null) {
-                Row(
-                    Modifier
-                        .padding(start = 52.dp)
-                        .fillMaxWidth()
-                        .clip(RoundedCornerShape(12.dp))
-                        .background(MaterialTheme.colorScheme.errorContainer)
-                        .padding(10.dp),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                ) {
-                    Icon(
-                        symbol = MaterialSymbols.Error,
-                        contentDescription = null,
-                        modifier = Modifier.size(18.dp),
-                        tint = MaterialTheme.colorScheme.onErrorContainer,
-                    )
-                    Text(failed.message, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onErrorContainer)
-                }
-            }
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.padding(start = 52.dp)) {
-                Button(onClick = onSetUp, enabled = enabled, contentPadding = ButtonDefaults.ButtonWithIconContentPadding) {
-                    Icon(symbol = MaterialSymbols.Shield, contentDescription = null, modifier = Modifier.size(18.dp))
-                    Spacer(Modifier.width(8.dp))
-                    Text(stringRes(if (inUse) Res.string.wot_set_up_again else Res.string.wot_set_up))
-                }
-                TextButton(onClick = { runCatching { uriHandler.openUri(provider.homepage) } }) {
-                    Text(stringRes(Res.string.wot_learn_more))
-                }
+                Icon(symbol = MaterialSymbols.Error, contentDescription = null, modifier = Modifier.size(18.dp), tint = scheme.onErrorContainer)
+                Text(failed.message, style = MaterialTheme.typography.bodySmall, color = scheme.onErrorContainer)
             }
         }
     }
 }
 
-/** What each guided provider does, in the user's language. */
+/** What each guided provider is, in the user's language. */
 private fun providerDescription(id: String): StringResource =
     when (id) {
         else -> Res.string.wot_brainstorm_description
@@ -870,25 +924,44 @@ private fun ManualProviderForm(
 }
 
 // -------------------------------------------------------------------------------------------
-// What the network changes
+// What the network changes: three tiles
 // -------------------------------------------------------------------------------------------
 
 @Composable
 private fun EffectsSection() {
     SettingsSection(Res.string.wot_section_effects) {
-        EffectRow(MaterialSymbols.Mail, Res.string.wot_effect_messages_title, Res.string.wot_effect_messages_body)
-        SettingsDivider()
-        EffectRow(MaterialSymbols.Notifications, Res.string.wot_effect_notifications_title, Res.string.wot_effect_notifications_body)
-        SettingsDivider()
-        EffectRow(MaterialSymbols.Forum, Res.string.wot_effect_replies_title, Res.string.wot_effect_replies_body)
+        Row(Modifier.fillMaxWidth().padding(12.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            EffectTile(MaterialSymbols.Mail, Res.string.wot_effect_messages_title, Res.string.wot_effect_messages_body, Modifier.weight(1f))
+            EffectTile(MaterialSymbols.Notifications, Res.string.wot_effect_notifications_title, Res.string.wot_effect_notifications_body, Modifier.weight(1f))
+            EffectTile(MaterialSymbols.Forum, Res.string.wot_effect_replies_title, Res.string.wot_effect_replies_body, Modifier.weight(1f))
+        }
     }
 }
 
 @Composable
-private fun EffectRow(
+private fun EffectTile(
     symbol: MaterialSymbol,
     title: StringResource,
     body: StringResource,
+    modifier: Modifier = Modifier,
 ) {
-    SettingsControlRow(icon = symbol, title = stringRes(title), description = stringRes(body)) {}
+    Column(
+        modifier.padding(vertical = 4.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(4.dp),
+    ) {
+        Box(
+            Modifier.size(40.dp).clip(CircleShape).background(MaterialTheme.colorScheme.primaryContainer),
+            contentAlignment = Alignment.Center,
+        ) {
+            Icon(symbol = symbol, contentDescription = null, modifier = Modifier.size(20.dp), tint = MaterialTheme.colorScheme.onPrimaryContainer)
+        }
+        Text(stringRes(title), style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.SemiBold, textAlign = TextAlign.Center)
+        Text(
+            stringRes(body),
+            style = MaterialTheme.typography.labelSmall,
+            color = MaterialTheme.colorScheme.placeholderText,
+            textAlign = TextAlign.Center,
+        )
+    }
 }

@@ -116,6 +116,9 @@ class TrustNetworkIndex(
         return i >= 0 && rank[i] >= minRank
     }
 
+    /** How many entries have exactly [rank]. O(1), for drawing the rank distribution. */
+    fun countAt(rank: Int): Int = if (rank in 0 until 128) rankHistogram[rank] else 0
+
     /** How many entries rank at [minRank] or above. O(128). */
     fun countAtLeast(minRank: Int): Int {
         var total = 0

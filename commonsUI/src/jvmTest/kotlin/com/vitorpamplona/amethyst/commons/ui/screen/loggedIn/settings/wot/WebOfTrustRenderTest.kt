@@ -106,6 +106,7 @@ class WebOfTrustRenderTest {
             "no-scores-yet" to { state(status = TrustNetworkSyncStatus(lastError = TrustNetworkState.NO_SCORES_YET)) },
             "waiting-wifi" to { state(status = TrustNetworkSyncStatus(waitingForUnmetered = true)) },
             "active" to { state(network = network) },
+            "updating" to { state(network = network, status = TrustNetworkSyncStatus(running = TrustNetworkSyncStatus.Kind.UPDATE, verified = 1_200)) },
         )
 
     private fun render(

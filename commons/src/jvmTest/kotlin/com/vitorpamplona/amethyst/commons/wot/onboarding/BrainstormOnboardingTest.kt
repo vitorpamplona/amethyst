@@ -32,6 +32,7 @@ import kotlinx.serialization.json.jsonPrimitive
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
+import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
 class BrainstormOnboardingTest {
@@ -120,6 +121,15 @@ class BrainstormOnboardingTest {
             val registration = BrainstormOnboarding(FakeBrainstorm(graperankStatus = 403, calculated = "null"), api = "https://api.test").register(signer)
             assertEquals(serviceKey, registration.serviceKey)
             assertEquals(false, registration.scoresReady)
+        }
+
+    @Test
+    fun aRefusedScoreRunStopsTheSetUp() =
+        runBlocking {
+            val http = FakeBrainstorm(graperankStatus = 401)
+            val error = assertFailsWith<TrustProviderException> { BrainstormOnboarding(http, api = "https://api.test").register(signer) }
+            assertEquals(TrustProviderException.Reason.UNEXPECTED_RESPONSE, error.reason)
+            assertFalse(http.calls.any { it.endsWith("/user/history") }, "no provider is saved after a refused run")
         }
 
     @Test
