@@ -94,6 +94,21 @@ class FetchRelayErrorsTest {
         assertTrue(r.stderr.contains("closed the request: $REASON"), "a human-readable warning on stderr: ${r.stderr}")
     }
 
+    // Text mode used to append the payload as a Kotlin map: `(relay_errors={ws://…={reason=closed, …}})`.
+    @Test
+    fun aTextModeRefusalIsReadable() {
+        val r = amy("fetch", "--kind", "1", "--limit", "100", "--relay", refusing.url, "--timeout", "5")
+
+        assertEquals(1, r.exit, r.stderr)
+        val lines = r.stderr.lines()
+        val errorLine = lines.indexOfFirst { it.startsWith("error: no_relay_served") }
+        assertTrue(errorLine >= 0, r.stderr)
+        assertFalse(r.stderr.contains("={"), "no raw map dump: ${r.stderr}")
+        assertEquals("  relay_errors:", lines[errorLine + 1], r.stderr)
+        assertTrue(lines.drop(errorLine + 2).any { it.trim() == "reason:  closed" }, r.stderr)
+        assertTrue(lines.drop(errorLine + 2).any { it.trim() == "message: $REASON" }, r.stderr)
+    }
+
     @Test
     fun theRefusalIsReportedWhenPaginatingToo() {
         val r = amy("--json", "fetch", "--kind", "1", "--limit", "100", "--paginate", "--relay", refusing.url, "--timeout", "5")
