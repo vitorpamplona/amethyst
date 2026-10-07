@@ -28,6 +28,7 @@ import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.nip46_signer_notif_sign_title
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.signers.EventTemplate
+import com.vitorpamplona.quartz.utils.TimeUtils
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -83,6 +84,25 @@ data class SignerConsentInfo(
      */
     val narrowOp: NostrSignerOp? = null,
     val narrowOpLabel: String? = null,
+    /**
+     * What an "always" decision on [op] covers, when that is broader than [operationSummary]. The
+     * headline can name this request ("send a private message to Vitor"), but the remembered grant
+     * is the whole op (every seal), and a deny button must not promise less than it does.
+     */
+    val rememberedOpLabel: String? = null,
+    /**
+     * For a people-list update (follow / mute list), what it changes against the list Amethyst
+     * already has ("Adds Nind · keeps the other 15"). [changeIsWarning] marks the alarming cases: a
+     * wipe, several removals at once, or a current list that hasn't loaded to compare against.
+     */
+    val changeSummary: String? = null,
+    val changeIsWarning: Boolean = false,
+    /**
+     * When the app asked, so a prompt left open a long time can say the app may have stopped
+     * waiting: most web apps give up on a signer after a minute or two, and a signature granted
+     * after that is never used.
+     */
+    val requestedAtMillis: Long = TimeUtils.nowMillis(),
 )
 
 /** One pending per-operation consent request, as the batched sheet renders it. */
@@ -155,6 +175,21 @@ object SignerConsentCoordinator {
                 val stillPending = _pending.updateAndGet { list -> list.filterNot { it.token == token } }
                 if (stillPending.isEmpty()) SignerConsentNotifier.cancel(context, batchNotificationId)
             }
+        }
+    }
+
+    /**
+     * Brings the consent dialog back to the front when requests are still waiting on it. Called when
+     * Amethyst returns to the foreground: the dialog's task is excluded from Recents, so after a trip
+     * to the launcher nothing else would show it again.
+     */
+    fun resurfacePending(context: Context) {
+        if (_pending.value.isEmpty()) return
+        runCatching {
+            context.startActivity(
+                Intent(context, SignerConsentActivity::class.java)
+                    .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_SINGLE_TOP),
+            )
         }
     }
 

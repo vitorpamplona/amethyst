@@ -29,6 +29,7 @@ import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.chats.isMinichatReply
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.IO
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.flowOn
@@ -54,7 +55,7 @@ class MinichatFeedViewModel(
             .flow()
             .replies.stateFlow
             .mapLatest { collectReplies() }
-            .flowOn(Dispatchers.Default)
+            .flowOn(Dispatchers.IO)
             .stateIn(viewModelScope, SharingStarted.Eagerly, collectReplies())
 
     private fun collectReplies(): List<Note> =

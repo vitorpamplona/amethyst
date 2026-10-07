@@ -108,8 +108,16 @@ object Output {
                 val prefix = color.bold(color.red("error"))
                 val codePart = color.yellow(code)
                 val base = if (detail != null) "$prefix: $codePart: $detail" else "$prefix: $codePart"
-                val suffix = if (cleanExtra.isEmpty()) "" else cleanExtra.entries.joinToString(", ", " (", ")") { "${it.key}=${it.value}" }
+                // Scalars ride on the error line; structured extras (fetch's per-relay `relay_errors`) get the
+                // same indented rendering as normal output underneath, instead of a Kotlin `{a={b=c}}` dump.
+                val (structured, scalar) = cleanExtra.entries.partition { unwrap(it.value).let { v -> v is Map<*, *> || v is List<*> } }
+                val suffix = if (scalar.isEmpty()) "" else scalar.joinToString(", ", " (", ")") { "${it.key}=${it.value}" }
                 System.err.println(base + suffix)
+                if (structured.isNotEmpty()) {
+                    val body = StringBuilder()
+                    renderMapBody(body, structured.associate { it.key to unwrap(it.value) }, "  ", color)
+                    System.err.print(body)
+                }
             }
         }
         return when (code) {

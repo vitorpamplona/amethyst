@@ -21,9 +21,13 @@
 package com.vitorpamplona.amethyst.commons.model.nip46Signer
 
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.channels.BufferOverflow
+import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.launch
 
 /** One serviced NIP-46 request, for the "recent activity" feed. */
 data class Nip46ActivityEntry(
@@ -43,14 +47,41 @@ data class Nip46ActivityEntry(
  * A bounded, newest-first, in-memory log of the requests this account's signer has serviced, so the
  * user can see what apps are actually doing. Not persisted across app restarts (it is a live feed,
  * not an audit trail); it survives service restarts because it lives on the account's signer state.
+ *
+ * [record] is called once per serviced request, from many concurrent request handlers, at up to
+ * thousands of requests per second. So it only hands the entry to a drop-oldest channel (only the
+ * newest [capacity] entries can ever be shown anyway); one coroutine in [scope] drains it and
+ * publishes a fresh [entries] snapshot at most once per [publishIntervalMs], instead of every request
+ * rebuilding the list and waking every observer.
  */
 class Nip46ActivityLog(
+    scope: CoroutineScope,
     private val capacity: Int = 100,
+    private val publishIntervalMs: Long = 250,
 ) {
     private val _entries = MutableStateFlow<List<Nip46ActivityEntry>>(emptyList())
     val entries: StateFlow<List<Nip46ActivityEntry>> = _entries
 
+    private val incoming = Channel<Nip46ActivityEntry>(capacity = capacity, onBufferOverflow = BufferOverflow.DROP_OLDEST)
+
+    init {
+        scope.launch {
+            // Newest first; confined to this coroutine, so it needs no synchronization.
+            val window = ArrayDeque<Nip46ActivityEntry>(capacity)
+            while (true) {
+                window.addFirst(incoming.receive())
+                while (true) {
+                    window.addFirst(incoming.tryReceive().getOrNull() ?: break)
+                }
+                while (window.size > capacity) window.removeLast()
+                _entries.value = window.toList()
+                // Whatever arrives meanwhile waits in [incoming] and goes out with the next snapshot.
+                delay(publishIntervalMs)
+            }
+        }
+    }
+
     fun record(entry: Nip46ActivityEntry) {
-        _entries.update { (listOf(entry) + it).take(capacity) }
+        incoming.trySend(entry)
     }
 }

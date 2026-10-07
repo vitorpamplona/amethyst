@@ -42,6 +42,7 @@ import com.vitorpamplona.quartz.nip01Core.metadata.MetadataEvent
 import com.vitorpamplona.quartz.nip01Core.relay.client.NostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.AdaptiveRelayLimiter
 import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.FetchAllResult
+import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.PagedFetchResult
 import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.PublishResult
 import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.fetchAllPagesFromPoolWithHooks
 import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.fetchAllWithHooks
@@ -659,16 +660,20 @@ class Context(
      * the limit, so an unbounded filter pages that relay's entire matching history.
      * A `search` filter is fetched as a single relevance-ranked page (see
      * [com.vitorpamplona.quartz.nip01Core.relay.client.accessories.fetchAllPages]).
+     * [onRelayResult] receives each relay's [PagedFetchResult], including the reason a
+     * relay refused the walk.
      */
     suspend fun drainAllPages(
         filters: Map<NormalizedRelayUrl, List<Filter>>,
         idleTimeoutMs: Long = 30_000,
         maxConcurrentRelays: Int = 8,
+        onRelayResult: ((relay: NormalizedRelayUrl, result: PagedFetchResult) -> Unit)? = null,
     ): List<Pair<NormalizedRelayUrl, Event>> =
         client.fetchAllPagesFromPoolWithHooks(
             filters = filters,
             idleTimeoutMs = idleTimeoutMs,
             maxConcurrentRelays = maxConcurrentRelays,
+            onRelayResult = onRelayResult,
         ) { _, event -> verifyAndStore(event) }
 
     /**

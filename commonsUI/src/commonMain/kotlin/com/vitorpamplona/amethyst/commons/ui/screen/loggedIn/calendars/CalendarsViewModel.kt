@@ -59,6 +59,7 @@ import com.vitorpamplona.quartz.nip52Calendar.rsvp.CalendarRSVPEvent
 import com.vitorpamplona.quartz.utils.TimeUtils
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.IO
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -192,7 +193,7 @@ class CalendarsViewModel : ViewModel() {
             }
             // The seed scan inside observeEvents walks the whole notes cache (LocalCache.filter
             // does that for every query, whatever the kinds), so it must not run on the UI thread.
-            .flowOn(Dispatchers.Default)
+            .flowOn(Dispatchers.IO)
             .stateIn(viewModelScope, SharingStarted.WhileSubscribed(STOP_TIMEOUT_MS), emptyList())
 
     /**
@@ -246,7 +247,7 @@ class CalendarsViewModel : ViewModel() {
             filterAddresses,
         ) { feedNotes, addresses ->
             feedNotes.applyCalendarFilter(addresses)
-        }.flowOn(Dispatchers.Default)
+        }.flowOn(Dispatchers.IO)
             .stateIn(viewModelScope, SharingStarted.WhileSubscribed(STOP_TIMEOUT_MS), emptyList())
 
     /**
@@ -257,21 +258,21 @@ class CalendarsViewModel : ViewModel() {
     val eventsByDay: StateFlow<Map<Long, List<Note>>> =
         notes
             .map { groupByDayKeyExpanded(it) }
-            .flowOn(Dispatchers.Default)
+            .flowOn(Dispatchers.IO)
             .stateIn(viewModelScope, SharingStarted.WhileSubscribed(STOP_TIMEOUT_MS), emptyMap())
 
     /** Lane assignments for the month grid's bars. */
     val monthBars: StateFlow<Map<Long, List<MonthGridBarSegment>>> =
         notes
             .map { computeMonthGridBars(it) }
-            .flowOn(Dispatchers.Default)
+            .flowOn(Dispatchers.IO)
             .stateIn(viewModelScope, SharingStarted.WhileSubscribed(STOP_TIMEOUT_MS), emptyMap())
 
     /** The feed lens's upcoming/past split. */
     val upcomingPast: StateFlow<UpcomingPastSplit> =
         notes
             .map { partitionUpcomingPast(it) }
-            .flowOn(Dispatchers.Default)
+            .flowOn(Dispatchers.IO)
             .stateIn(
                 viewModelScope,
                 SharingStarted.WhileSubscribed(STOP_TIMEOUT_MS),
@@ -318,7 +319,7 @@ class CalendarsViewModel : ViewModel() {
 
         if (rsvpPinner == null) {
             rsvpPinner =
-                viewModelScope.launch(Dispatchers.Default) {
+                viewModelScope.launch(Dispatchers.IO) {
                     LocalCache.addressables.filterIntoSet(CalendarRSVPEvent.KIND).forEach { heldRsvps.add(it) }
                     LocalCache
                         .observeNewEvents<CalendarRSVPEvent>(Filter(kinds = listOf(CalendarRSVPEvent.KIND)))
@@ -365,7 +366,7 @@ class CalendarsViewModel : ViewModel() {
                     FilterByListParams.create(list, hiddenUsers)
                 }.conflate()
                     .map(::foldFollowsGoing)
-            }.flowOn(Dispatchers.Default)
+            }.flowOn(Dispatchers.IO)
             .stateIn(viewModelScope, SharingStarted.WhileSubscribed(STOP_TIMEOUT_MS), null)
 
     private fun foldFollowsGoing(params: FilterByListParams): FollowsGoing {

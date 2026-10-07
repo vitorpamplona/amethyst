@@ -1137,7 +1137,6 @@
     <string name="relay_auth_event_title">Login no relay</string>
     <string name="relay_auth_event_explainer">Não é uma publicação. Ela faz seu login neste relay: quem a tiver pode ler o que o relay mostra só para você, como suas mensagens privadas.</string>
     <string name="relay_auth_event_unusual_relay">Este não é um endereço de relay comum. Verifique-o antes de assinar.</string>
-    <string name="relay_auth_event_no_relay">Nenhum relay indicado neste login</string>
     <string name="relay_auth_event_challenge">Desafio: %1$s</string>
     <string name="relay_auth_session_forgotten_undo">%1$s perguntará novamente na próxima vez que precisar de você.</string>
     <string name="relay_auth_session_undo_blocked">Não restaurado. “Nunca autenticar” está ativado, então o Amethyst não fará login em %1$s.</string>
@@ -4452,10 +4451,6 @@
         <item quantity="one">⚠ Isto solicita a exclusão de %1$d dos seus eventos.</item>
         <item quantity="other">⚠ Isto solicita a exclusão de %1$d dos seus eventos.</item>
     </plurals>
-    <plurals name="napplet_consent_effect_tags">
-        <item quantity="one">Carrega %1$d tag. Toque em “Mostrar evento” para ver exatamente o que seria assinado.</item>
-        <item quantity="other">Carrega %1$d tags. Toque em “Mostrar evento” para ver exatamente o que seria assinado.</item>
-    </plurals>
     <string name="napplet_consent_get_pubkey">Este nApplet quer ler sua chave pública.</string>
     <string name="napplet_consent_identity_read">Este nApplet quer ler seu perfil e dados da conta.</string>
     <string name="napplet_consent_nip44_decrypt">Este site quer descriptografar uma mensagem de %1$s com sua chave Nostr.</string>
@@ -4478,7 +4473,6 @@
     <string name="napplet_op_decrypt">ler suas mensagens privadas</string>
     <string name="napplet_op_decrypt_from">ler suas mensagens privadas com %1$s</string>
     <string name="napplet_op_encrypt">criptografar uma mensagem</string>
-    <string name="napplet_op_relay_login">entrar nos relays como você</string>
     <string name="napplet_op_sign_kind_named">assinar para %1$s (kind: %2$d)</string>
     <string name="napplet_permissions_title">Apps conectados</string>
     <string name="napplets">nApplets</string>

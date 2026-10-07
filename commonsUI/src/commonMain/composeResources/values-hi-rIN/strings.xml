@@ -99,6 +99,23 @@
     <string name="chats_history_incomplete_sub">%1$s अनभिगम्य। दबाएँ यह देखने के लिए कि कौनसा है</string>
     <string name="chats_history_relays_title">%1$s। इतिहास पुनःप्रसारक अनुसार</string>
     <string name="chats_history_relay_since">%1$s से</string>
+    <string name="chats_history_gate_auto_title">अधिक पुराने रहस्यीकृत सन्देशों के लिए खोज चालू</string>
+    <string name="chats_history_gate_auto_body">एक पृष्ठ अधिक का आवहन आपके सभी सीधासन्देश पुनःप्रसारकों से।</string>
+    <string name="chats_history_gate_paused_title">अधिक पुराने रहस्यीकृत सन्देशों का आवहन अभी हुआ नहीं</string>
+    <string name="chats_history_gate_loaded_to">आवहन हो गया %1$s तक।</string>
+    <string name="chats_history_gate_has_more">आपके सीधासन्देश पुनःप्रसारकों में और अधिक इतिहास है।</string>
+    <string name="chats_history_gate_continue">आगे</string>
+    <string name="chats_history_gate_none_title">कोई अधिक पुराने रहस्यीकृत सन्देश नहीं %1$s के साथ अब तक</string>
+    <string name="chats_history_gate_none_body">आपके पुनःप्रसारक %1$s तक सम्पूर्ण हैं। अधिक पुराने सन्देश सम्भाव्यतः उससे पूर्व।</string>
+    <string name="chats_history_gate_keep_looking">खोजते रहें</string>
+    <string name="chats_history_gate_search_title">अधिक पीछे खोज चालू…</string>
+    <string name="chats_history_gate_search_body">पीछे जाँच की गयी %1$s तक। रुकता है जब एक रहस्यीकृत सन्देश %2$s के साथ प्राप्त होता है।</string>
+    <string name="chats_history_gate_stop">रोकें</string>
+    <string name="chats_history_gate_incomplete_title">सर्वत्र खोज असफल</string>
+    <string name="chats_history_gate_incomplete_body">%1$s ने उत्तर नहीं दिया। आपके अन्य पुनःप्रसारकों में अधिक पुराने कुछ नहीं।</string>
+    <string name="chats_history_gate_start_title">यह आपकी रहस्यीकृत चर्चा का आरम्भ है %1$s के साथ</string>
+    <string name="chats_history_gate_start_body">सभी सीधासन्देश पुनःप्रसारकों में खोज की गयी अन्त तक।</string>
+    <string name="chats_history_gate_this_group">यह समूह</string>
     <string name="action_dismiss">हटाएँ</string>
     <plurals name="chats_history_relays">
         <item quantity="one">%1$d पुनःप्रसारक</item>
@@ -548,6 +565,7 @@
     <string name="mutual">आपका</string>
     <string name="gallery">चित्रालय</string>
     <string name="reports">वृत्तान्त</string>
+    <string name="report_card_title">वृत्तान्त। %1$s</string>
     <string name="number_reports">%1$s वृत्तान्त</string>
     <string name="relays"> पुनःप्रसारक</string>
     <string name="website">जालस्थान</string>
@@ -966,6 +984,25 @@
     <string name="my_fitness_unit_mi">मील</string>
     <string name="my_fitness_unit_m">मीटर</string>
     <string name="my_fitness_unit_ft">पाद</string>
+    <string name="my_fitness_goals_title">इस सप्ताह</string>
+    <string name="my_fitness_goals_edit">लक्ष्यों का सम्पादन</string>
+    <string name="my_fitness_goal_active_minutes">सक्रिय मिनुट</string>
+    <string name="my_fitness_goal_distance">%1$s दूरी</string>
+    <string name="my_fitness_progress_of">%2$s में से %1$s</string>
+    <string name="my_fitness_pace_met">लक्ष्य प्राप्त</string>
+    <string name="my_fitness_pace_on_track">लक्ष्यप्राप्ति के मार्ग पर</string>
+    <string name="my_fitness_pace_behind">गति के पृष्ठभूत</string>
+    <string name="my_fitness_to_go">%1$s शेष</string>
+    <string name="my_fitness_all_goals_met">प्रत्येक लक्ष्य प्राप्त इस सप्ताह</string>
+    <string name="my_fitness_week_trend">साप्ताहिक सक्रिय समय</string>
+    <string name="my_fitness_week_of">%1$s का सप्ताह</string>
+    <string name="my_fitness_goal_line">लक्ष्य</string>
+    <string name="my_fitness_weeks_met">लक्ष्य प्राप्त पिछले %2$d सप्ताहों में से %1$d</string>
+    <string name="my_fitness_average_change">मध्यमान %1$s प्रतिसप्ताह निकटकालतः। %2$s पिछले चार सप्ताहों की तुलना में</string>
+    <string name="my_fitness_average">मध्यमान %1$s प्रतिसप्ताह निकटकालतः</string>
+    <string name="my_fitness_consistency">सातत्य</string>
+    <string name="my_fitness_heatmap_less">न्यून</string>
+    <string name="my_fitness_heatmap_more">अधिक</string>
     <string name="nsite_none_found">कोई नोस्टरस्थान प्राप्त नहीं अब तक।</string>
     <string name="browser_reload">पुनःआवहन</string>
     <string name="browser_unsupported">क्रमकाभ्यन्तर जालवीक्षक के लिए आण्ड्रोइड ग्यारह अथवा नवीनतर आवश्यक।</string>
@@ -1120,7 +1157,6 @@
     <string name="relay_auth_event_title">पुनःप्रसारक प्रवेशांकन</string>
     <string name="relay_auth_event_explainer">यह एक पत्र प्रकाशन नहीं। यह आपको इस पुनःप्रसारक में प्रवेशांकन करता है। जो भी इसे रखता है वह सब पढ सकेगा जो यह पुनःप्रसारक केवल आपको दिखाता है। जैसे कि आपके निजी सन्देश।</string>
     <string name="relay_auth_event_unusual_relay">यह एक साधारण पुनःप्रसारक पता नहीं। इसकी जाँच करें हस्ताक्षरण पूर्व।</string>
-    <string name="relay_auth_event_no_relay">कोई पुनःप्रसारक नामित नहीं इस प्रवेशांकन में</string>
     <string name="relay_auth_event_challenge">चुनौती। %1$s</string>
     <string name="relay_auth_session_forgotten_undo">%1$s पुनःपूछेगा अगली बार जब उसे आपकी आवश्यकता हो।</string>
     <string name="relay_auth_session_undo_blocked">पुनःस्थापित नहीं। कभी प्रवेशांकन ना करें यह आज्ञा सक्रिय है। इसीलिए अमेथिस्ट %1$s में प्रवेशांकन नहीं करेगा।</string>
@@ -4435,10 +4471,6 @@
         <item quantity="one">सावधान। यह आपके घटनाओं में से %1$d को मिटाने का अनुरोध करता है।</item>
         <item quantity="other">सावधान। यह आपके घटनाओं में से %1$d को मिटाने का अनुरोध करता है।</item>
     </plurals>
-    <plurals name="napplet_consent_effect_tags">
-        <item quantity="one">%1$d विषयसूचक धारी। घटना दिखाओ दबाएँ यह देखने के लिए कि वस्तुतः क्या हस्ताक्षरित होगा।</item>
-        <item quantity="other">%1$d विषयसूचक धारी। घटना दिखाओ दबाएँ यह देखने के लिए कि वस्तुतः क्या हस्ताक्षरित होगा।</item>
-    </plurals>
     <string name="napplet_consent_get_pubkey">यह नोस्टर संलग्नक्रमक आपकी ख्याप्यकुंचिका पढना चाहता है।</string>
     <string name="napplet_consent_identity_read">यह नोस्टर संलग्नक्रमक आपका परिचय तथा लेखा जानकारी पढना चाहता है।</string>
     <string name="napplet_consent_nip44_decrypt">यह स्थान आपके नोस्टर कुंचिका से %1$s को एक सन्देश का अरहस्यीकरण करना चाहता है।</string>
@@ -4461,7 +4493,6 @@
     <string name="napplet_op_decrypt">आपके निजी सन्देशों का पठन</string>
     <string name="napplet_op_decrypt_from">आपके निजी सन्देशों का पठन %1$s के द्वारा</string>
     <string name="napplet_op_encrypt">सन्देश रहस्यीकरण</string>
-    <string name="napplet_op_relay_login">आपके रूप में पुनःप्रसारकों में प्रवेशांकन करें</string>
     <string name="napplet_op_sign_kind_named">%1$s के लिए हस्ताक्षरण (प्रकार : %2$d)</string>
     <string name="napplet_permissions_title">संयोजित क्रमक</string>
     <string name="napplets">नोस्टर संलग्नक्रमक</string>

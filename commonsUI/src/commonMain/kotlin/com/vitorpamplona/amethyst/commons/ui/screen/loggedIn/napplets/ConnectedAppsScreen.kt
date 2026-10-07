@@ -61,6 +61,7 @@ import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
 import com.vitorpamplona.amethyst.commons.model.navigation.Route
+import com.vitorpamplona.amethyst.commons.napplet.NappletSignerKey
 import com.vitorpamplona.amethyst.commons.napplet.permissions.NappletPermissionLedger
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.napplet_connected_app_empty
@@ -86,6 +87,7 @@ import com.vitorpamplona.quartz.nip5dNapplets.NamedNappletEvent
 import com.vitorpamplona.quartz.nip5dNapplets.NappletManifest
 import com.vitorpamplona.quartz.nip5dNapplets.RootNappletEvent
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.IO
 import kotlinx.coroutines.withContext
 
 /** Author placeholder used by the browser permission path — not a real pubkey. */
@@ -110,8 +112,8 @@ fun ConnectedAppsScreen(
 
     LaunchedEffect(Unit) {
         val initial =
-            withContext(Dispatchers.Default) {
-                loadConnectedApps(capabilityLedger, signerLedger)
+            withContext(Dispatchers.IO) {
+                loadConnectedApps(capabilityLedger, signerLedger, accountViewModel.account.signer.pubKey)
             }
         items = initial
         // Only include real napplet authors in the manifest subscription — skip the "browser"
@@ -383,9 +385,18 @@ private fun AppSignerPolicy.shortLabel(): String =
 private suspend fun loadConnectedApps(
     capabilityLedger: NappletPermissionLedger,
     signerLedger: NostrSignerPermissionLedger,
+    accountPubKey: HexKey,
 ): List<ConnectedAppEntry> {
     val capGrants = capabilityLedger.allPersistedGrants()
-    val signerPolicies = signerLedger.store.allPolicies()
+    // The broker stores signer decisions per account (NappletSignerKey). Map this account's keys
+    // back to the app they belong to and drop every other account's, so each app is one row.
+    val signerPolicies =
+        signerLedger.store
+            .allPolicies()
+            .mapNotNull { (key, policy) ->
+                val app = if (NappletSignerKey.isSignerKey(key)) NappletSignerKey.appCoordinateOf(key, accountPubKey) else key
+                app?.let { it to policy }
+            }.toMap()
     val allCoordinates = (capGrants.keys + signerPolicies.keys).toSet()
     return allCoordinates
         // NIP-46 remote-signer clients have their own screen (Nip46ConnectedAppsScreen) because,

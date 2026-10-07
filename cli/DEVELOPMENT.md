@@ -301,7 +301,9 @@ contract.
   `http_error`, `bad_response`, `not_found`, `exists`, `read_only`,
   `no_identity`, `bad_account`, `signer_error`, `decrypt_failed`.
 - **Relay routing:** `no_relays`, `no_dm_relays`, `no_inbox_relays`,
-  `no_servers`, `servers_unreachable`, `relay_error`, `sync_error`.
+  `no_servers`, `servers_unreachable`, `relay_error`, `sync_error`,
+  `no_relay_served` (`fetch`: every queried relay CLOSED the REQ, refused it for
+  auth, or could not be reached, and nothing arrived; payload carries `relay_errors`).
 - **Groups:** `not_member` (you aren't in the group / group unknown),
   `target_not_member` (the *other* user isn't).
 - **Cashu:** `no_wallet`, `no_mint`, `insufficient_funds`,

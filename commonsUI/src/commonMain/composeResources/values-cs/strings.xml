@@ -1157,7 +1157,6 @@
     <string name="relay_auth_event_title">Přihlášení k relé</string>
     <string name="relay_auth_event_explainer">Toto není příspěvek. Přihlašuje vás k tomuto relé: kdo ho má, může číst to, co relé ukazuje jen vám, například vaše soukromé zprávy.</string>
     <string name="relay_auth_event_unusual_relay">Toto není běžná adresa relé. Před podepsáním ji zkontrolujte.</string>
-    <string name="relay_auth_event_no_relay">V tomto přihlášení není uvedeno žádné relé</string>
     <string name="relay_auth_event_challenge">Výzva: %1$s</string>
     <string name="relay_auth_session_forgotten_undo">%1$s se zeptá znovu, až vás bude příště potřebovat.</string>
     <string name="relay_auth_session_undo_blocked">Neobnoveno. Je zapnuto “Nikdy se neověřovat”, takže se Amethyst k %1$s nepřihlásí.</string>
@@ -4584,12 +4583,6 @@
         <item quantity="many">⚠ Tímto se požaduje smazání %1$d vaší události.</item>
         <item quantity="other">⚠ Tímto se požaduje smazání %1$d vašich událostí.</item>
     </plurals>
-    <plurals name="napplet_consent_effect_tags">
-        <item quantity="one">Nese %1$d značku. Klepnutím na “Zobrazit událost” uvidíte přesně, co by bylo podepsáno.</item>
-        <item quantity="few">Nese %1$d značky. Klepnutím na “Zobrazit událost” uvidíte přesně, co by bylo podepsáno.</item>
-        <item quantity="many">Nese %1$d značky. Klepnutím na “Zobrazit událost” uvidíte přesně, co by bylo podepsáno.</item>
-        <item quantity="other">Nese %1$d značek. Klepnutím na “Zobrazit událost” uvidíte přesně, co by bylo podepsáno.</item>
-    </plurals>
     <string name="napplet_consent_get_pubkey">Tento nApplet chce číst váš veřejný klíč.</string>
     <string name="napplet_consent_identity_read">Tento nApplet chce číst váš profil a data účtu.</string>
     <string name="napplet_consent_nip44_decrypt">Tento web chce dešifrovat zprávu od %1$s vaším Nostr klíčem.</string>
@@ -4614,7 +4607,6 @@
     <string name="napplet_op_decrypt">číst vaše soukromé zprávy</string>
     <string name="napplet_op_decrypt_from">číst vaše soukromé zprávy s %1$s</string>
     <string name="napplet_op_encrypt">zašifrovat zprávu</string>
-    <string name="napplet_op_relay_login">přihlásit se k relé vaším jménem</string>
     <string name="napplet_op_sign_kind_named">podepsat pro %1$s (druh: %2$d)</string>
     <string name="napplet_permissions_title">Připojené aplikace</string>
     <string name="napplets">nApplety</string>

@@ -116,6 +116,22 @@ class AppPreferenceStores(
                 )
             }.store
 
+    /**
+     * The store for [name] if it is already open or its file exists, else null — without opening one.
+     *
+     * For read paths keyed by untrusted input (the signer permissions look up an `nsp_<hash>` file per
+     * remote client): [getDataStore] would open, and keep for the life of the process, a store and a
+     * scope for every key ever asked about, even though reading never creates the file. A missing
+     * file means nothing was ever written, so the caller can answer "absent" directly.
+     */
+    fun getDataStoreIfExists(name: String): DataStore<Preferences>? {
+        storeCache.get(name)?.let { return it.store }
+        return if (platformFileSystem.exists(file(name))) getDataStore(name) else null
+    }
+
+    /** Whether a store for [name] is open in this process. For tests. */
+    fun isOpen(name: String): Boolean = storeCache.get(name) != null
+
     /** The file UI, Tor, OTS, Namecoin and friends share. */
     fun sharedSettings(): DataStore<Preferences> = getDataStore(SHARED_SETTINGS)
 

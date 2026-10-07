@@ -119,6 +119,7 @@ import com.vitorpamplona.quartz.nip52Calendar.calendar.CalendarCollectionEvent
 import com.vitorpamplona.quartz.nip52Calendar.rsvp.CalendarRSVPEvent
 import com.vitorpamplona.quartz.utils.TimeUtils
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.IO
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.map
 
@@ -868,7 +869,7 @@ private fun rememberRsvpsFor(targetAddress: Address): State<List<CalendarRSVPEve
                     all
                         .filter { it.calendarEventAddress() == targetAddress }
                         .sortedByDescending { it.createdAt }
-                }.flowOn(Dispatchers.Default)
+                }.flowOn(Dispatchers.IO)
         }
 
     return rsvps.collectAsStateWithLifecycle(emptyList())
@@ -884,7 +885,7 @@ private fun rememberCalendarsContaining(targetAddress: Address): State<List<Cale
                     all
                         .filter { it.calendarEventAddresses().contains(targetAddress) }
                         .sortedByDescending { it.createdAt }
-                }.flowOn(Dispatchers.Default)
+                }.flowOn(Dispatchers.IO)
         }
 
     return calendars.collectAsStateWithLifecycle(emptyList())

@@ -26,6 +26,7 @@ import com.vitorpamplona.quartz.nip01Core.relay.sockets.WebSocket
 import com.vitorpamplona.quartz.nip01Core.relay.sockets.WebSocketListener
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.IO
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
@@ -79,7 +80,7 @@ class InProcessWebSocket(
 
     override fun connect() {
         if (session != null) return
-        val newScope = CoroutineScope(Dispatchers.Default + SupervisorJob())
+        val newScope = CoroutineScope(Dispatchers.IO + SupervisorJob())
         val newIncoming = Channel<String>(UNLIMITED)
         val newOutgoing = Channel<String>(UNLIMITED)
         val s = server.connect { json -> newOutgoing.trySend(json) }

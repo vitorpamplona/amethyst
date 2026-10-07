@@ -294,7 +294,7 @@ Filter flags are shared by `fetch` and `subscribe`: `--kind K[,K]`, `--author U[
 
 | Command | What it does |
 |---|---|
-| `amy fetch [filter flags] [--timeout SECS]` | One-shot query — collect until every relay sends EOSE or goes silent for `--timeout` (default 8s — an **idle window**, reset by every arriving event, so a slow-but-streaming relay is never cut off; a wall-clock ceiling of 10x the window still bounds a relay that trickles forever), dedupe, sort newest-first, print and exit. `--limit` defaults to 100. |
+| `amy fetch [filter flags] [--timeout SECS]` | One-shot query — collect until every relay sends EOSE or goes silent for `--timeout` (default 8s — an **idle window**, reset by every arriving event, so a slow-but-streaming relay is never cut off; a wall-clock ceiling of 10x the window still bounds a relay that trickles forever), dedupe, sort newest-first, print and exit. `--limit` defaults to 100. A relay that refuses the REQ is never silent: its `CLOSED` reason (e.g. relay.zapstore.dev's `filters are too vague` for a `limit` above ~50), an auth refusal, or its connect error lands in `relay_errors` (`{url: {reason, message}}`, reason `closed`/`auth_required`/`unreachable`) with a warning on stderr when another relay did serve; when no relay served the request it fails with `no_relay_served`, whose error carries the same `relay_errors`. |
 | `amy fetch CODE [--timeout SECS]` | Code mode — pass a single `nevent`/`naddr`/`nprofile`/`npub`/`note` or `name@domain`. Resolves relays the outbox way: the hints embedded in the code **plus** the author's NIP-65 write relays (draining their kind:10002 on a cache miss), exactly how the app opens a shared link. |
 | `amy subscribe [filter flags] [--timeout SECS]` | Live stream — print each matching event as it arrives (NDJSON under `--json`). Runs until `--timeout` SECS or until interrupted. |
 | `amy count [filter flags] [--timeout SECS]` | NIP-45 COUNT — per-relay match counts, no event download. |
@@ -970,6 +970,12 @@ the exit code**: `bad_args` → 2, `timeout` → 124, every other code → 1.
 Notable error codes (the full canonical list is in
 [DEVELOPMENT.md](./DEVELOPMENT.md)):
 
+- **`no_relay_served`** (exit 1) — `amy fetch` got nothing because every
+  queried relay `CLOSED` the request, refused it for auth, or could not be
+  reached. The payload's `relay_errors` maps each relay to `{reason, message}`,
+  the relay's own words — so an empty result is never mistaken for an empty
+  relay. With some relays serving, the fetch succeeds and still reports the
+  refusers under `relay_errors`.
 - **`rejected`** (exit 1) — a publish was refused by **every** targeted
   relay **and at least one relay actually answered `OK false`**; the payload
   carries `event_id` + `rejected_by`. When every failure is transport-level

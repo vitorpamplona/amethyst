@@ -485,14 +485,13 @@ open class ChannelNewMessageViewModel :
             pubKeyHex = keyPair.pubKey.toHexKey()
         }
 
+        // Bitchat mines 8 bits by default; cap the effort so a slow device still sends.
+        // PoWMiner.mine moves itself onto its own mining threads.
+        val started = TimeSource.Monotonic.markNow()
         val mined =
-            withContext(Dispatchers.Default) {
-                // Bitchat mines 8 bits by default; cap the effort so a slow device still sends.
-                val started = TimeSource.Monotonic.markNow()
-                runCatching {
-                    PoWMiner.mine(template, pubKeyHex, 8, account.powMinerWorkers(), isActive = { started.elapsedNow() < 2.seconds })
-                }.getOrDefault(template)
-            }
+            runCatching {
+                PoWMiner.mine(template, pubKeyHex, 8, account.powMinerWorkers(), isActive = { started.elapsedNow() < 2.seconds })
+            }.getOrDefault(template)
 
         runCatching { account.signWithAndSendPrivately(mined, signer, relays) }
     }

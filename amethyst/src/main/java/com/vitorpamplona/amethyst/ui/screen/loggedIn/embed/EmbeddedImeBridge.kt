@@ -105,6 +105,7 @@ private fun parseFocus(o: JsonObject) =
         enterKeyHint = o.stringOrNull("enterKeyHint") ?: "",
         multiline = o.booleanOrNull("multiline") ?: false,
         readOnly = o.booleanOrNull("readOnly") ?: false,
+        hasNext = o.booleanOrNull("hasNext") ?: false,
         text = o.stringOrNull("text") ?: "",
         selStart = o.intOrNull("selStart") ?: 0,
         selEnd = o.intOrNull("selEnd") ?: 0,
@@ -124,6 +125,11 @@ sealed interface ImeEvent {
          * whose keystrokes the page discards.
          */
         val readOnly: Boolean = false,
+        /**
+         * Another text field follows this one in its form. Chrome then gives a single-line field the keyboard's
+         * "Next" action, which moves focus there instead of pressing Enter (which would submit the form).
+         */
+        val hasNext: Boolean = false,
         val text: String,
         val selStart: Int,
         val selEnd: Int,

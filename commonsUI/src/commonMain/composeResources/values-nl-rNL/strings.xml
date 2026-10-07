@@ -3672,10 +3672,6 @@
         <item quantity="one">⚠ Dit vraagt om verwijdering van %1$d van je events.</item>
         <item quantity="other">⚠ Dit vraagt om verwijdering van %1$d van je events.</item>
     </plurals>
-    <plurals name="napplet_consent_effect_tags">
-        <item quantity="one">Bevat %1$d tag. Tik op “Show Event” om precies te zien wat er zou worden ondertekend.</item>
-        <item quantity="other">Bevat %1$d tags. Tik op “Show Event” om precies te zien wat er zou worden ondertekend.</item>
-    </plurals>
     <string name="napplet_consent_get_pubkey">Deze nApplet wil je publieke sleutel lezen.</string>
     <string name="napplet_consent_identity_read">Deze nApplet wil je profiel- en accountgegevens lezen.</string>
     <string name="napplet_consent_notify">Deze nApplet wil je meldingen tonen.</string>

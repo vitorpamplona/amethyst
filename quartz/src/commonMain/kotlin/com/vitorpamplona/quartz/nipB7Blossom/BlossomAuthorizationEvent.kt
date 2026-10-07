@@ -24,6 +24,7 @@ import androidx.compose.runtime.Immutable
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
+import com.vitorpamplona.quartz.nip40Expiration.expiration
 import com.vitorpamplona.quartz.utils.TimeUtils
 import kotlin.io.encoding.Base64
 
@@ -36,6 +37,17 @@ class BlossomAuthorizationEvent(
     content: String,
     sig: HexKey,
 ) : Event(id, pubKey, createdAt, KIND, tags, content, sig) {
+    /** The BUD-01 verb this token allows: `upload`, `delete`, `list`, `get` or `media`. */
+    fun type() = tags.firstOrNull { it.size > 1 && it[0] == "t" }?.get(1)
+
+    /** The blob hashes (`x` tags) the token is limited to; empty means any blob the verb reaches. */
+    fun hashes() = tags.mapNotNull { if (it.size > 1 && it[0] == "x") it[1] else null }
+
+    /** BUD-11 `server` domains the token is scoped to; empty means any server accepts it. */
+    fun servers() = tags.mapNotNull { if (it.size > 1 && it[0] == "server") it[1] else null }
+
+    fun expiration() = tags.expiration()
+
     /**
      * This event's JSON as standard Base64 WITH padding — the same encoder as
      * NIP-98's [com.vitorpamplona.quartz.nip98HttpAuth.HTTPAuthorizationEvent.rawToken].

@@ -37,7 +37,7 @@ three can never drift apart.
 
 ## Reproducible builds
 
-Five things have to be fixed, and each is:
+Six things have to be fixed, and each is:
 
 | Source of non-determinism | Pinned by |
 |---|---|
@@ -46,6 +46,13 @@ Five things have to be fixed, and each is:
 | absolute paths baked into `__FILE__`, assertions, debug records | `-ffile-prefix-map` / `-fdebug-prefix-map` in [`repro-env.sh`](repro-env.sh) |
 | timestamps | `SOURCE_DATE_EPOCH`, derived from the pinned tag's commit rather than from build time; `__DATE__`/`__TIME__` redacted |
 | codegen/link ordering keyed on the real build path | canonical build path (`/tmp/amethyst-zxingcpp-build`) |
+| NDK install path, via the linker's build-id | `-Wl,--build-id=none` in [`repro-env.sh`](repro-env.sh) |
+
+> **Why there is no build-id.** lld hashes the *unstripped* library, and its debug info still
+> names the NDK's absolute install path (sysroot headers, libc++). The same NDK revision unpacked
+> in a different directory therefore produced a different 20-byte `.note.gnu.build-id` and nothing
+> else, which was enough to fail F-Droid's rebuild. The note is not used on Android (the library
+> ships stripped and no symbols are uploaded), so it is dropped rather than path-mapped.
 
 > **Why the NDK is pinned.** clang compiles the C++ and lld links the `.so`, and both stamp their
 > versions into the binary's `.comment` section. Swapping the NDK changes the bytes exactly as
@@ -60,8 +67,8 @@ Five things have to be fixed, and each is:
 > *output*, which is what catches a stale CMake cache or an overriding environment variable that
 > slipped a different toolchain past the gate.
 
-Verified on this machine: two clean builds of `arm64-v8a` produced identical bytes
-(`dec4397c…39dbf`), and `verify-reproducible.sh` confirmed they match the committed library.
+Verified: all four ABIs built against the pinned NDK unpacked at two different paths produced
+identical bytes (`arm64-v8a` is `067c0837…3e828f`), matching the committed libraries.
 
 ## What is built
 

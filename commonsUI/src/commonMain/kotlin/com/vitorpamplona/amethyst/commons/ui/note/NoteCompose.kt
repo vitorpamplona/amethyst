@@ -171,6 +171,7 @@ import com.vitorpamplona.amethyst.commons.ui.note.types.RenderAttestorProficienc
 import com.vitorpamplona.amethyst.commons.ui.note.types.RenderAttestorRecommendation
 import com.vitorpamplona.amethyst.commons.ui.note.types.RenderBadgeAward
 import com.vitorpamplona.amethyst.commons.ui.note.types.RenderBallot
+import com.vitorpamplona.amethyst.commons.ui.note.types.RenderBlossomAuth
 import com.vitorpamplona.amethyst.commons.ui.note.types.RenderBlossomPieceIndex
 import com.vitorpamplona.amethyst.commons.ui.note.types.RenderBolt12Zap
 import com.vitorpamplona.amethyst.commons.ui.note.types.RenderBookshelfDirectory
@@ -198,6 +199,7 @@ import com.vitorpamplona.amethyst.commons.ui.note.types.RenderGeocacheFoundLog
 import com.vitorpamplona.amethyst.commons.ui.note.types.RenderGitStatusEvent
 import com.vitorpamplona.amethyst.commons.ui.note.types.RenderGoal
 import com.vitorpamplona.amethyst.commons.ui.note.types.RenderHighlight
+import com.vitorpamplona.amethyst.commons.ui.note.types.RenderHttpAuth
 import com.vitorpamplona.amethyst.commons.ui.note.types.RenderInteractiveStory
 import com.vitorpamplona.amethyst.commons.ui.note.types.RenderLearningResource
 import com.vitorpamplona.amethyst.commons.ui.note.types.RenderLiveActivityChatMessage
@@ -459,10 +461,12 @@ import com.vitorpamplona.quartz.nip89AppHandlers.recommendation.AppRecommendatio
 import com.vitorpamplona.quartz.nip90Dvms.contentDiscoveryResponse.DvmContentDiscoveryResponseEvent
 import com.vitorpamplona.quartz.nip90Dvms.status.DvmStatusEvent
 import com.vitorpamplona.quartz.nip94FileMetadata.FileMetadataEvent
+import com.vitorpamplona.quartz.nip98HttpAuth.HTTPAuthorizationEvent
 import com.vitorpamplona.quartz.nip99Classifieds.ClassifiedsEvent
 import com.vitorpamplona.quartz.nipA0VoiceMessages.BaseVoiceEvent
 import com.vitorpamplona.quartz.nipA4PublicMessages.PublicMessageEvent
 import com.vitorpamplona.quartz.nipB1Bolt12Zaps.zap.Bolt12ZapEvent
+import com.vitorpamplona.quartz.nipB7Blossom.BlossomAuthorizationEvent
 import com.vitorpamplona.quartz.nipBCOnchainZaps.zap.OnchainZapEvent
 import com.vitorpamplona.quartz.nipC0CodeSnippets.CodeSnippetEvent
 import com.vitorpamplona.quartz.nipC7Chats.ChatEvent
@@ -1058,7 +1062,7 @@ private fun RenderNoteRow(
         }
 
         is SoftwareApplicationEvent -> {
-            RenderSoftwareApplication(baseNote, accountViewModel, nav)
+            RenderSoftwareApplication(baseNote, accountViewModel, nav, backgroundColor)
         }
 
         is SoftwareAssetEvent -> {
@@ -1070,7 +1074,7 @@ private fun RenderNoteRow(
             // The EventFactory always materializes the NIP-51 class; dispatch to NIP-82 when the
             // tag signature matches.
             if (noteEvent.isNip82SoftwareRelease()) {
-                RenderSoftwareRelease(baseNote, accountViewModel, nav)
+                RenderSoftwareRelease(baseNote, backgroundColor, accountViewModel, nav)
             }
         }
 
@@ -1311,6 +1315,14 @@ private fun RenderNoteRow(
 
         is RelayAuthEvent -> {
             RenderRelayAuth(baseNote, accountViewModel, nav)
+        }
+
+        is HTTPAuthorizationEvent -> {
+            RenderHttpAuth(baseNote)
+        }
+
+        is BlossomAuthorizationEvent -> {
+            RenderBlossomAuth(baseNote)
         }
 
         is PinListEvent -> {
