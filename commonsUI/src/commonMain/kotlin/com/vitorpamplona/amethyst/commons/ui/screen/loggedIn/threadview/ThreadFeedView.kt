@@ -77,6 +77,8 @@ import com.vitorpamplona.amethyst.commons.birdstar.ui.RenderBirdDetection
 import com.vitorpamplona.amethyst.commons.birdstar.ui.RenderBirdex
 import com.vitorpamplona.amethyst.commons.chats.ui.ThinSendButton
 import com.vitorpamplona.amethyst.commons.feeds.FeedState
+import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
+import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
 import com.vitorpamplona.amethyst.commons.model.navigation.routeFor
@@ -91,6 +93,7 @@ import com.vitorpamplona.amethyst.commons.resources.reply_here
 import com.vitorpamplona.amethyst.commons.resources.send_a_direct_message
 import com.vitorpamplona.amethyst.commons.resources.send_the_seller_a_message
 import com.vitorpamplona.amethyst.commons.resources.thread_collapsed_reply_count
+import com.vitorpamplona.amethyst.commons.resources.thread_reply_outside_network
 import com.vitorpamplona.amethyst.commons.richtext.MediaUrlImage
 import com.vitorpamplona.amethyst.commons.ui.components.AutoNonlazyGrid
 import com.vitorpamplona.amethyst.commons.ui.components.GenericLoadable
@@ -448,14 +451,25 @@ fun RenderThreadFeed(
     val items by loaded.feed.collectAsStateWithLifecycle()
     val levels by viewModel.levelCacheFlow.collectAsStateWithLifecycle()
 
+    // Replies whose author is outside the Web of Trust network start collapsed. Empty while no
+    // network is active, so threads look exactly as before for users without one.
+    val trustNetwork by accountViewModel.account.trustNetwork.network
+        .collectAsStateWithLifecycle()
+    val minTrustScore by accountViewModel.account.trustNetwork.minTrustScore
+        .collectAsStateWithLifecycle()
+    val outsideNetwork =
+        remember(items, trustNetwork, minTrustScore, noteId) {
+            if (trustNetwork == null) emptySet() else outOfNetworkReplies(items.list, noteId, accountViewModel)
+        }
+
     // Hides every descendant of a collapsed reply and counts how many were hidden. The feed is
     // ordered depth-first, so a note's descendants are the contiguous items that follow it with a
     // strictly deeper reply level.
     val visible by
-        remember(items, levels) {
+        remember(items, levels, outsideNetwork) {
             derivedStateOf {
                 val full = items.list
-                if (viewModel.collapsedReplies.isEmpty()) {
+                if (viewModel.collapsedReplies.isEmpty() && outsideNetwork.isEmpty()) {
                     VisibleThread(full, emptyMap())
                 } else {
                     val result = ArrayList<Note>(full.size)
@@ -473,7 +487,7 @@ fun RenderThreadFeed(
                         collapsedAncestorId = null
                         result.add(note)
 
-                        if (viewModel.isCollapsed(note.idHex)) {
+                        if (viewModel.isCollapsed(note.idHex, outsideNetwork)) {
                             hideDeeperThan = level
                             collapsedAncestorId = note.idHex
                         }
@@ -524,7 +538,7 @@ fun RenderThreadFeed(
             contentType = { index, item ->
                 when {
                     index == 0 -> "master"
-                    viewModel.isCollapsed(item.idHex) -> "collapsed"
+                    viewModel.isCollapsed(item.idHex, outsideNetwork) -> "collapsed"
                     else -> "reply"
                 }
             },
@@ -553,12 +567,13 @@ fun RenderThreadFeed(
                         nav = nav,
                     )
                 }
-            } else if (viewModel.isCollapsed(item.idHex)) {
+            } else if (viewModel.isCollapsed(item.idHex, outsideNetwork)) {
                 CollapsedNoteCompose(
                     baseNote = item,
                     modifier = modifier,
                     hiddenReplyCount = visible.hiddenCounts[item.idHex] ?: 0,
-                    onExpand = { viewModel.toggleCollapsed(item.idHex) },
+                    outsideNetwork = item.idHex in outsideNetwork,
+                    onExpand = { viewModel.toggleCollapsed(item.idHex, outsideNetwork) },
                     accountViewModel = accountViewModel,
                     nav = nav,
                 )
@@ -573,7 +588,7 @@ fun RenderThreadFeed(
                 // drafts: those open the edit-draft screen so the post can be resumed, matching
                 // the behavior everywhere else a draft is tapped.
                 val onClick =
-                    remember(item) {
+                    remember(item, outsideNetwork) {
                         {
                             if (item.isDraft()) {
                                 nav.nav {
@@ -582,7 +597,7 @@ fun RenderThreadFeed(
                                     }
                                 }
                             } else {
-                                viewModel.toggleCollapsed(item.idHex)
+                                viewModel.toggleCollapsed(item.idHex, outsideNetwork)
                             }
                         }
                     }
@@ -608,6 +623,30 @@ fun RenderThreadFeed(
 }
 
 /**
+ * Replies (by id) whose author is outside the Web of Trust network: they start collapsed. The
+ * thread's root, its author and the focused note are never included; neither are follows or
+ * the user (see `Account.trustNetworkVerdict`).
+ */
+private fun outOfNetworkReplies(
+    thread: List<Note>,
+    focusedNoteId: String,
+    accountViewModel: AccountViewModel,
+): Set<String> {
+    val account = accountViewModel.account
+    val root = thread.firstOrNull() ?: return emptySet()
+    val rootAuthor = root.author?.pubkeyHex
+    val result = HashSet<String>()
+    for (i in 1 until thread.size) {
+        val note = thread[i]
+        if (note.idHex == focusedNoteId) continue
+        val author = note.author?.pubkeyHex ?: continue
+        if (author == rootAuthor) continue
+        if (account.isOutsideTrustNetwork(author)) result.add(note.idHex)
+    }
+    return result
+}
+
+/**
  * Holds the thread items currently visible after collapsing, plus, for each collapsed reply id,
  * the number of descendant replies that were hidden underneath it.
  */
@@ -627,6 +666,7 @@ private fun CollapsedNoteCompose(
     baseNote: Note,
     modifier: Modifier,
     hiddenReplyCount: Int,
+    outsideNetwork: Boolean = false,
     onExpand: () -> Unit,
     accountViewModel: AccountViewModel,
     nav: INav,
@@ -649,14 +689,34 @@ private fun CollapsedNoteCompose(
             Column(modifier = Modifier.weight(1f)) {
                 NoteUsernameDisplay(baseNote, accountViewModel = accountViewModel)
 
-                LoadDecryptedContent(baseNote, accountViewModel) { body ->
-                    Text(
-                        text = body,
-                        color = MaterialTheme.colorScheme.placeholderText,
-                        maxLines = 2,
-                        overflow = TextOverflow.Ellipsis,
-                        style = MaterialTheme.typography.bodyMedium,
-                    )
+                if (outsideNetwork) {
+                    // No preview: a reply collapsed for being outside the network is often spam.
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(
+                            symbol = MaterialSymbols.Shield,
+                            contentDescription = null,
+                            modifier = Modifier.size(14.dp),
+                            tint = MaterialTheme.colorScheme.placeholderText,
+                        )
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Text(
+                            text = stringRes(Res.string.thread_reply_outside_network),
+                            color = MaterialTheme.colorScheme.placeholderText,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                            style = MaterialTheme.typography.bodySmall,
+                        )
+                    }
+                } else {
+                    LoadDecryptedContent(baseNote, accountViewModel) { body ->
+                        Text(
+                            text = body,
+                            color = MaterialTheme.colorScheme.placeholderText,
+                            maxLines = 2,
+                            overflow = TextOverflow.Ellipsis,
+                            style = MaterialTheme.typography.bodyMedium,
+                        )
+                    }
                 }
             }
 

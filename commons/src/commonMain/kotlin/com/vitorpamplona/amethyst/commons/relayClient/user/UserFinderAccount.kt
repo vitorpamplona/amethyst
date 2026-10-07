@@ -82,7 +82,10 @@ interface UserFinderAccount {
     /** Home relays used specifically for NIP-51 contact-card (kind 30382) discovery. */
     fun cardHomeRelays(): Set<NormalizedRelayUrl>
 
-    /** NIP-85 trusted-assertions rank provider, or null when unsupported (e.g. Desktop). */
+    /**
+     * NIP-85 trusted-assertions rank provider whose cards must be fetched per profile, or null
+     * when unsupported (e.g. Desktop) or already served by the local trust network index.
+     */
     fun trustProvider(): ServiceProviderTag?
 
     /**

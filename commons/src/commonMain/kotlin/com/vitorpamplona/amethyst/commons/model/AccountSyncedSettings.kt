@@ -67,6 +67,7 @@ class AccountSyncedSettings(
             MutableStateFlow(internalSettings.security.maxHashtagLimit),
             MutableStateFlow(internalSettings.security.sendKind0EventsToLocalRelay),
             MutableStateFlow(internalSettings.security.addClientTag),
+            MutableStateFlow(internalSettings.security.minTrustScore),
         )
     val videoPlayer =
         AccountVideoPlayerPreferences(
@@ -119,6 +120,7 @@ class AccountSyncedSettings(
                     security.maxHashtagLimit.value,
                     security.sendKind0EventsToLocalRelay.value,
                     security.addClientTag.value,
+                    security.minTrustScore.value,
                 ),
             videoPlayer = AccountVideoPlayerPreferencesInternal(videoPlayer.buttonItems.value, videoPlayer.captionsEnabled.value),
             media = AccountMediaPreferencesInternal(media.audioVisualizer.value.name),
@@ -202,6 +204,10 @@ class AccountSyncedSettings(
 
         if (security.addClientTag.value != syncedSettingsInternal.security.addClientTag) {
             security.addClientTag.tryEmit(syncedSettingsInternal.security.addClientTag)
+        }
+
+        if (security.minTrustScore.value != syncedSettingsInternal.security.minTrustScore) {
+            security.minTrustScore.tryEmit(syncedSettingsInternal.security.minTrustScore)
         }
 
         val newVideoPlayerButtonItems =
@@ -405,7 +411,18 @@ class AccountSecurityPreferences(
     val maxHashtagLimit: MutableStateFlow<Int> = MutableStateFlow(8),
     var sendKind0EventsToLocalRelay: MutableStateFlow<Boolean> = MutableStateFlow(false),
     val addClientTag: MutableStateFlow<Boolean> = MutableStateFlow(true),
+    val minTrustScore: MutableStateFlow<Int> = MutableStateFlow(DefaultMinTrustScore),
 ) {
+    fun updateMinTrustScore(score: Int): Boolean {
+        val clamped = score.coerceIn(0, 100)
+        return if (minTrustScore.value != clamped) {
+            minTrustScore.update { clamped }
+            true
+        } else {
+            false
+        }
+    }
+
     fun updateShowSensitiveContent(show: Boolean?): Boolean {
         if (showSensitiveContent.value != show) {
             showSensitiveContent.update { show }

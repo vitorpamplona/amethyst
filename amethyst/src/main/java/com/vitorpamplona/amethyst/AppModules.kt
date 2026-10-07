@@ -148,6 +148,7 @@ import com.vitorpamplona.amethyst.service.uploads.blossom.BlossomSyncForegroundS
 import com.vitorpamplona.amethyst.service.uploads.blossom.bud10.BlossomServerResolver
 import com.vitorpamplona.amethyst.service.uploads.blossom.bud10.LocalBlossomCacheProbe
 import com.vitorpamplona.amethyst.service.uploads.nip95.Nip95CacheFactory
+import com.vitorpamplona.amethyst.service.wot.TrustNetworkSyncWorker
 import com.vitorpamplona.amethyst.ui.resourceCacheInit
 import com.vitorpamplona.amethyst.ui.screen.AccountSessionManager
 import com.vitorpamplona.amethyst.ui.screen.AccountState
@@ -1072,6 +1073,9 @@ class AppModules(
             meterSigner = { MeteringNostrSigner(it, resourceUsage) },
             signerPermissionStore = signerPermissionStore,
             nip46ClientStore = nip46ClientStore,
+            // Same sockets as the app (Tor, blocked relays), but never filed into LocalCache.
+            trustNetworkClientBuilder = { NostrClient(websocketBuilder) },
+            canDownloadLargeFiles = { !connManager.isMobileOrFalse.value },
             // Restore + persist the Buzz bookkeeping that has no Nostr event to rebuild from: the
             // joined workspace relays (so the app knows which relays to sync as workspaces on cold
             // start — Buzz membership is server-side) and the starred channels. Per account: the
@@ -1097,6 +1101,17 @@ class AppModules(
             localPreferences = LocalPreferences,
             scope = applicationIOScope,
         )
+
+    // Web of Trust: whenever the app comes to the foreground, bring the active account's network
+    // index up to date. A no-op unless an update, a full check or the first download is due.
+    init {
+        applicationIOScope.launch {
+            combine(foregroundTracker.isForeground, sessionManager.accountContent) { foreground, state ->
+                if (foreground) (state as? AccountState.LoggedIn)?.account else null
+            }.filterNotNull()
+                .collect { it.trustNetwork.syncIfStale() }
+        }
+    }
 
     // Surfaces non-zap Lightning payments reported by the logged-in account's NWC
     // wallet(s) as tray notifications (zaps are already shown via ZapNotification).
@@ -1393,6 +1408,9 @@ class AppModules(
             },
             onNoPendingWork = { ScheduledPostWorker.cancelPeriodic(appContext) },
         ).start()
+
+        // Daily Web of Trust upkeep (Wi-Fi only) for accounts that only get push notifications.
+        TrustNetworkSyncWorker.schedule(appContext)
 
         // "Starting soon" reminders for NIP-52 appointments the user RSVP'd to as
         // ACCEPTED. The 15-min periodic scanner is only scheduled while it can

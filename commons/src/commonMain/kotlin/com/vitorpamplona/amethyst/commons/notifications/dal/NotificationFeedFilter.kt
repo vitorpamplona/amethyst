@@ -700,6 +700,19 @@ class NotificationFeedFilter(
         // follow/list modes) also applies the per-kind relevance heuristics.
         val isRawGlobal = followList() is TopFilter.Global
 
+        // Curated also applies the Web of Trust when one is active: an author outside the
+        // network is dropped. Zaps cost the sender money, and chess and Concord already have
+        // their own membership, so they are exempt.
+        val isOutsideNetwork =
+            followList() is TopFilter.Selected &&
+                notifAuthor != null &&
+                !isChessEvent &&
+                !isConcord &&
+                noteEvent !is ZapReceiptEvent &&
+                noteEvent !is Bolt12ZapEvent &&
+                account.isOutsideTrustNetwork(notifAuthor)
+        if (isOutsideNetwork) return false
+
         // The p-tag gate is OR'd with isNotifiablePublicChatReply so channel
         // replies into my messages still notify without a p-tag. Kept inline
         // (not a pre-computed val) so the cheap kind check short-circuits ahead

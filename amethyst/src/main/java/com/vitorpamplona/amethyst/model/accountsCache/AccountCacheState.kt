@@ -109,6 +109,13 @@ class AccountCacheState(
      * takes none; no-op by default so tests and non-Android hosts build an Account without it.
      */
     val startBuzzPersistence: (Account) -> Unit = { },
+    /**
+     * Builds a throwaway relay client for each Web of Trust sync, apart from [client]: the shared
+     * client files everything into [cache], and a sync downloads hundreds of thousands of cards.
+     */
+    val trustNetworkClientBuilder: (() -> INostrClient)? = null,
+    /** False on a metered network: background Web of Trust downloads then wait. */
+    val canDownloadLargeFiles: () -> Boolean = { true },
 ) {
     val accounts = MutableStateFlow<Map<HexKey, Account>>(emptyMap())
 
@@ -388,6 +395,10 @@ class AccountCacheState(
             // scopes itself further by coordinator underneath it, because a
             // gid is unique only within one (spec/00.md §4).
             cordnFilesDir = accountDir.toOkioPath(),
+            // The Web of Trust index lives with the account, so deleting the account deletes it.
+            trustNetworkDir = accountDir.toOkioPath() / "wot",
+            trustNetworkClientBuilder = trustNetworkClientBuilder,
+            canDownloadLargeFiles = canDownloadLargeFiles,
             mlsGroupStateStore = mlsStore,
             marmotMessageStore = marmotMessageStore,
             marmotKeyPackageStore = marmotKeyPackageStore,

@@ -467,7 +467,11 @@ fun observeUserAssertionsScore(
     }
 
     // Subscribe in the LocalCache for changes that arrive in the device
-    val flow = remember(user) { user.cards().rankFlow(accountViewModel.account.trustProviderList) }
+    val flow =
+        remember(user) {
+            val account = accountViewModel.account
+            user.cards().rankFlow(account.trustProviderList, account.trustNetwork.network, user.pubkeyHex)
+        }
 
     return flow.collectAsStateWithLifecycle(null)
 }
@@ -482,7 +486,11 @@ fun observeUserAssertionsFollowerCount(
     UserFinderFilterAssemblerSubscription(user, accountViewModel)
 
     // Subscribe in the LocalCache for changes that arrive in the device
-    val flow = remember(user) { user.cards().followerCountStrFlow(accountViewModel.account.trustProviderList) }
+    val flow =
+        remember(user) {
+            val account = accountViewModel.account
+            user.cards().followerCountStrFlow(account.trustProviderList, account.trustNetwork.network, user.pubkeyHex)
+        }
 
     return flow.collectAsStateWithLifecycle("--")
 }

@@ -84,6 +84,8 @@ import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.IO
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.flow.sample
 import kotlinx.coroutines.isActive
@@ -372,6 +374,23 @@ class AccountFeedContentStates(
                 notificationsEveryone.clear()
                 notificationsEveryone.invalidateData()
             }
+        }
+
+        // A new Web of Trust index (download, update, provider change) or a new minimum score
+        // moves people between Known and New Requests and in or out of Curated notifications,
+        // with no event flowing through LocalCache. Rebuild those feeds; clear the card feeds
+        // first, since their refresh is additive-only and would keep cards that no longer pass.
+        scope.launch(Dispatchers.IO) {
+            @OptIn(FlowPreview::class)
+            combine(account.trustNetwork.network, account.trustNetwork.minTrustScore) { network, score -> network to score }
+                .drop(1)
+                .debounce(500)
+                .collect {
+                    dmKnown.invalidateData()
+                    dmNew.invalidateData()
+                    notifications.clear()
+                    notifications.invalidateData()
+                }
         }
 
         // Heartbeat staleness produces no cache event (a beat just ages past 420s), so re-check

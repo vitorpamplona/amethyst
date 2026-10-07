@@ -74,7 +74,7 @@ class ChatroomListKnownFeedFilter(
                 val newest = chatroom.newestMessage
                 if (newest != null &&
                     isDmEnabled(newest) &&
-                    (chatroom.senderIntersects(followingKeySet) || chatList.hasSentMessagesTo(key)) &&
+                    account.isKnownChatroom(key, chatroom, followingKeySet) &&
                     !account.isAllHidden(key.users)
                 ) {
                     newest
@@ -619,8 +619,7 @@ class ChatroomListKnownFeedFilter(
                     if (room != null &&
                         (
                             newNote.author?.pubkeyHex == me.pubkeyHex ||
-                                room.senderIntersects(followingKeySet) ||
-                                account.chatroomList.hasSentMessagesTo(roomKey)
+                                account.isKnownChatroom(roomKey, room, followingKeySet)
                         ) &&
                         !account.isAllHidden(roomKey.users)
                     ) {

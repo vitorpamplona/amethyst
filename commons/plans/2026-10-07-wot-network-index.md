@@ -1,6 +1,6 @@
 # Web of Trust network index (NIP-85 kind 30382, ~300k users)
 
-Status: **design — decisions settled 2026-10-07 (see §6), nothing implemented.**
+Status: **implemented 2026-10-07** (phases 1–5 except public chats and `amy wot`; see §7).
 
 ## 1. Goal
 
@@ -385,3 +385,30 @@ Settled on 2026-10-07:
 
 Still open: D6a (memoize prefixes on `User`), D9b (resuming a cold sync), D9c (network
 policy), D18 public chats. Phase 0 measurements should settle the first three.
+
+## 7. Implementation notes (2026-10-07)
+
+| Piece | Where |
+|---|---|
+| Index, builder, codec | `quartz/.../nip85TrustedAssertions/users/index/TrustNetwork{Index,Builder,Codec}.kt` (11 unit tests) |
+| Sync (cold / update / full check) | `.../users/index/TrustNetworkSync.kt`; live run in `WotNetworkIndexBenchmark.productionSync`: 151k cards in 6.5 s cold, 1.2 s update, 2.9 s full check |
+| Per-account state | `commons/.../wot/network/TrustNetworkState.kt`, owned by `Account.trustNetwork`; files in `accounts/<pubkey>/wot/` |
+| Verdict | `Account.trustNetworkVerdict` / `isOutsideTrustNetwork` / `isKnownChatroom` |
+| Minimum score | `AccountSyncedSettings.security.minTrustScore` (synced, default 5) |
+| Consumers | DM Known/New filters + DM push (`isKnownChatroom`); Curated notifications in-app (`NotificationFeedFilter`) and push (`EventNotificationConsumer`); collapsed out-of-network replies (`ThreadFeedView`); rank/follower badges from the index (`UserCardsCache`), which also drops the per-profile provider subscription |
+| Onboarding | `commons/.../wot/onboarding/` (`TrustProviderOnboarding`, `BrainstormOnboarding`, OkHttp transport) |
+| Settings screen | `commonsUI/.../settings/wot/WebOfTrustScreen.kt` (`Route.WebOfTrust`, in Settings › Account), render-tested in both themes |
+| Android | dedicated sync client + metered check (`AppModules`/`AccountCacheState`), foreground trigger, daily `TrustNetworkSyncWorker` |
+
+Behaviours added during implementation:
+- A cold download that returns **zero cards** does not activate filtering (a provider still
+  computing a new user's scores has published nothing yet); the screen says so and retries.
+- The index on disk is used **before** the 10040 resolves at startup (5 s grace), so a push that
+  wakes the process is filtered.
+- The full check re-fetches the provider's rank-0 cards each time (they are dropped from the
+  index, so negentropy sees them as missing). Brainstorm had 678 for the test account: a few
+  hundred KB a week.
+
+Not done: `amy wot` commands, public-chat filtering (open), Desktop wiring (its `DesktopIAccount`
+does not use the commons `Account` yet), and the phone measurements for phase 0.
+

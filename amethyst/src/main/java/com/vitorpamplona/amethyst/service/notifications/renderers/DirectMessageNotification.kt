@@ -87,9 +87,15 @@ object DirectMessageNotification {
         val chatroomList = LocalCache.getOrCreateChatroomList(account.signer.pubKey)
         val followingKeySet = account.followingKeySet()
 
+        // A process woken by this push may not have read the trust network yet.
+        account.trustNetwork.awaitLoaded()
+        val room = chatroomList.rooms.get(chatRoom)
         val isKnownRoom =
-            chatroomList.rooms.get(chatRoom)?.senderIntersects(followingKeySet) == true ||
+            if (room != null) {
+                account.isKnownChatroom(chatRoom, room, followingKeySet)
+            } else {
                 chatroomList.hasSentMessagesTo(chatRoom)
+            }
         if (!isKnownRoom) return
 
         val author = chatNote.author ?: return

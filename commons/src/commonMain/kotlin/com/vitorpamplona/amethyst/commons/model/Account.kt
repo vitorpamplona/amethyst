@@ -152,6 +152,7 @@ import com.vitorpamplona.amethyst.commons.model.nipA3PaymentTargets.NipA3Payment
 import com.vitorpamplona.amethyst.commons.model.nipB7Blossom.BlossomServerListState
 import com.vitorpamplona.amethyst.commons.model.nipBCOnchainZaps.OnchainWalletState
 import com.vitorpamplona.amethyst.commons.model.privateChatLastReadRoute
+import com.vitorpamplona.amethyst.commons.model.privateChats.Chatroom
 import com.vitorpamplona.amethyst.commons.model.privateChats.hasEncryptedContent
 import com.vitorpamplona.amethyst.commons.model.serverList.AssumedRelayListsState
 import com.vitorpamplona.amethyst.commons.model.serverList.MergedFollowListsState
@@ -188,6 +189,7 @@ import com.vitorpamplona.amethyst.commons.service.pow.PoWReplay
 import com.vitorpamplona.amethyst.commons.service.upload.FileHeader
 import com.vitorpamplona.amethyst.commons.util.logTime
 import com.vitorpamplona.amethyst.commons.viewmodels.ReplyMode
+import com.vitorpamplona.amethyst.commons.wot.network.TrustNetworkState
 import com.vitorpamplona.quartz.buzz.media.BuzzImeta
 import com.vitorpamplona.quartz.buzz.threading.buzzThread
 import com.vitorpamplona.quartz.buzz.threading.buzzThreadRootForReplyTo
@@ -470,6 +472,19 @@ class Account(
      */
     val marmotPushStateStore: com.vitorpamplona.quartz.marmot.mip05PushNotifications.MarmotPushStateStore? = null,
     val powQueue: () -> PoWPublishQueue? = { null },
+    /**
+     * Where the Web of Trust network index lives (the account's own directory), or null to
+     * run without one. See [TrustNetworkState].
+     */
+    trustNetworkDir: Path? = null,
+    /**
+     * Builds a relay client for the trust network sync, apart from [client]: the shared client
+     * files everything it receives into [cache], and a sync receives hundreds of thousands of
+     * cards. Null disables syncing (the index on disk is still used).
+     */
+    trustNetworkClientBuilder: (() -> INostrClient)? = null,
+    /** False on a metered network: background trust network downloads then wait. */
+    canDownloadLargeFiles: () -> Boolean = { true },
     relayAuthPermissionStore: RelayAuthPermissionStore = InMemoryRelayAuthPermissionStore(),
     signerPermissionStore: NostrSignerPermissionStore = InMemoryNostrSignerPermissionStore(),
     nip46ClientStore: Nip46ClientStore = InMemoryNip46ClientStore(),
@@ -512,9 +527,11 @@ class Account(
 
     override fun cardHomeRelays(): Set<NormalizedRelayUrl> = homeRelays.flow.value
 
-    override fun trustProvider(): ServiceProviderTag? = trustProviderList.liveUserRankProvider.value
+    // A provider whose cards are already in the local trust network index needs no per-profile
+    // subscription: the badges read the index (UserCardsCache.rankFlow / followerCountStrFlow).
+    override fun trustProvider(): ServiceProviderTag? = trustProviderList.liveUserRankProvider.value?.takeUnless { trustNetwork.network.value?.isFrom(it) == true }
 
-    override fun followerCountProvider(): ServiceProviderTag? = trustProviderList.liveUserFollowerCount.value
+    override fun followerCountProvider(): ServiceProviderTag? = trustProviderList.liveUserFollowerCount.value?.takeUnless { trustNetwork.network.value?.isFrom(it) == true }
 
     override fun declaredFollowsByOutboxRelay(): Map<NormalizedRelayUrl, Set<HexKey>> = declaredFollowsPerOutboxRelay.value
 
@@ -909,6 +926,17 @@ class Account(
 
     val trustProviderListDecryptionCache = TrustProviderListDecryptionCache(signer)
     val trustProviderList = TrustProviderListState(signer, cache, trustProviderListDecryptionCache, scope, settings)
+
+    /** The NIP-85 rank provider's network: who counts as known beyond follows. */
+    val trustNetwork =
+        TrustNetworkState(
+            rankProvider = trustProviderList.liveUserRankProvider,
+            minTrustScore = settings.syncedSettings.security.minTrustScore,
+            directory = trustNetworkDir,
+            clientBuilder = trustNetworkClientBuilder,
+            scope = scope,
+            canDownloadLarge = canDownloadLargeFiles,
+        )
 
     val followSetDecryptionCache = FollowSetDecryptionCache(signer)
     val blockPeopleList = BlockPeopleListState(signer, cache, followSetDecryptionCache, scope)
@@ -1353,6 +1381,30 @@ class Account(
 
     suspend fun updateMaxHashtagLimit(limit: Int) {
         if (settings.updateMaxHashtagLimit(limit)) {
+            sendNewAppSpecificData()
+        }
+    }
+
+    /**
+     * Points the account's kind 10040 user-score entries (`30382:rank`, `30382:followers`) at
+     * [providerKey] on [relay], replacing any previous provider and keeping every other entry.
+     * The trust network then downloads that provider's cards.
+     */
+    suspend fun setTrustScoreProvider(
+        providerKey: HexKey,
+        relay: NormalizedRelayUrl,
+        isPrivate: Boolean,
+    ) {
+        sendMyPublicAndPrivateOutbox(trustProviderList.withScoreProvider(providerKey, relay, isPrivate))
+    }
+
+    /** Removes the user-score provider from the kind 10040, which turns Web of Trust filtering off. */
+    suspend fun removeTrustScoreProvider() {
+        trustProviderList.withoutScoreProvider()?.let { sendMyPublicAndPrivateOutbox(it) }
+    }
+
+    suspend fun updateMinTrustScore(score: Int) {
+        if (settings.updateMinTrustScore(score)) {
             sendNewAppSpecificData()
         }
     }
@@ -3708,6 +3760,33 @@ class Account(
     fun isHidden(userHex: String): Boolean = hiddenUsers.flow.value.isUserHidden(userHex)
 
     override fun followingKeySet(): Set<HexKey> = kind3FollowList.flow.value.authors
+
+    /**
+     * The Web of Trust verdict on [pubkey]: true for this account, its follows and anyone the
+     * NIP-85 rank provider ranks at the minimum score; false for everyone else; null while no
+     * trust network is active, so callers keep the behaviour they had before it existed.
+     */
+    fun trustNetworkVerdict(pubkey: HexKey): Boolean? {
+        if (!trustNetwork.isActive) return null
+        return pubkey == signer.pubKey || pubkey in followingKeySet() || trustNetwork.passes(pubkey)
+    }
+
+    /** True only when a trust network is active and [pubkey] is not in it. */
+    fun isOutsideTrustNetwork(pubkey: HexKey): Boolean = trustNetworkVerdict(pubkey) == false
+
+    /**
+     * Whether a private chat room belongs in Known rather than New Requests: a sender is
+     * followed or (when a trust network is active) in the network, or this account has written
+     * to the room. The single rule for both DM tabs and DM push notifications.
+     */
+    fun isKnownChatroom(
+        key: ChatroomKey,
+        room: Chatroom,
+        followingKeySet: Set<HexKey> = followingKeySet(),
+    ): Boolean =
+        room.senderIntersects(followingKeySet) ||
+            chatroomList.hasSentMessagesTo(key) ||
+            (trustNetwork.isActive && room.activeSenders.any { trustNetwork.passes(it.pubkeyHex) })
 
     fun isAcceptable(user: User): Boolean {
         if (userProfile().pubkeyHex == user.pubkeyHex) {

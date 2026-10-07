@@ -2060,6 +2060,20 @@ class AccountViewModel(
 
     fun updateMaxHashtagLimit(limit: Int) = launchSigner { account.updateMaxHashtagLimit(limit) }
 
+    fun updateMinTrustScore(score: Int) = launchSigner { account.updateMinTrustScore(score) }
+
+    /** Points the account's Web of Trust at [providerKey] on [relay] and starts its download. */
+    fun setTrustScoreProvider(
+        providerKey: HexKey,
+        relay: NormalizedRelayUrl,
+        isPrivate: Boolean,
+    ) = launchSigner {
+        account.trustNetwork.expectNewProvider()
+        account.setTrustScoreProvider(providerKey, relay, isPrivate)
+    }
+
+    fun removeTrustScoreProvider() = launchSigner { account.removeTrustScoreProvider() }
+
     fun changeReactionTypes(
         reactionSet: List<String>,
         onDone: () -> Unit,

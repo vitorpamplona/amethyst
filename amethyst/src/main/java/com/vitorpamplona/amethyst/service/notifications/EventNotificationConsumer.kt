@@ -34,6 +34,7 @@ import com.vitorpamplona.amethyst.commons.model.Account
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
 import com.vitorpamplona.amethyst.commons.model.isMutedPublicChatMessage
+import com.vitorpamplona.amethyst.commons.model.topNavFeeds.TopFilter
 import com.vitorpamplona.amethyst.commons.nipACWebRtcCalls.CallManager
 import com.vitorpamplona.amethyst.commons.notifications.dal.NotificationFeedFilter
 import com.vitorpamplona.amethyst.commons.relayClient.event.EventFinderQueryState
@@ -246,6 +247,15 @@ class EventNotificationConsumer(
             }
         }
 
+        // Curated notifications apply the Web of Trust to push as well, with the in-app filter's
+        // exemptions: zaps cost the sender money and chess has its own players. DMs follow the
+        // Known/New rule instead (DirectMessageNotification). A process just woken by this push
+        // may not have read the network index yet, so wait for it (tens of ms) before deciding.
+        if (account.settings.defaultNotificationFollowList.value is TopFilter.Selected && isFilteredByTrustNetwork(event)) {
+            account.trustNetwork.awaitLoaded()
+            if (account.isOutsideTrustNetwork(event.pubKey)) return
+        }
+
         when (event) {
             is EncryptedDmEvent -> DirectMessageNotification.notify(applicationContext, account, event)
             is ChatMessageEvent -> DirectMessageNotification.notify(applicationContext, account, event)
@@ -299,6 +309,23 @@ class EventNotificationConsumer(
             is LiveChessMoveEvent -> ChessNotification.notify(applicationContext, account, event, Res.string.app_notification_chess_your_turn)
         }
     }
+
+    private fun isFilteredByTrustNetwork(event: Event): Boolean =
+        when (event) {
+            is EncryptedDmEvent,
+            is ChatMessageEvent,
+            is ChatMessageEncryptedFileHeaderEvent,
+            is StreamMessageV2Event,
+            is ChatEvent,
+            is ZapReceiptEvent,
+            is NutzapEvent,
+            is OnchainZapEvent,
+            is LiveChessGameAcceptEvent,
+            is LiveChessMoveEvent,
+            -> false
+
+            else -> true
+        }
 
     // Reply-vs-mention decisions are source-kind-specific, so they stay in the
     // dispatcher; the actual rendering is in ReplyNotification / MentionNotification.
