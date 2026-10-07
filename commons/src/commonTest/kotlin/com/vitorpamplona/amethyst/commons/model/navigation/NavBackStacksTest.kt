@@ -24,6 +24,7 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertNotEquals
+import kotlin.test.assertNotNull
 import kotlin.test.assertNull
 import kotlin.test.assertSame
 import kotlin.test.assertTrue
@@ -146,5 +147,21 @@ class NavBackStacksTest {
     fun anUnreadableSavedFormIsDropped() {
         assertNull(NavBackStacks.decode("not json"))
         assertNull(NavBackStacks.decode("""{"stack":[],"savedTabs":[],"nextId":3}"""))
+    }
+
+    // A tab left after a share re-argued it (newStack hands the same destination new arguments in
+    // place) is filed under the route the bar asks for. Restoring after process death must file it
+    // the same way, or the next tap misses it and opens a fresh, stateless copy.
+    @Test
+    fun aReArguedTabLeftBehindSurvivesProcessDeath() {
+        val stacks = NavBackStacks()
+        stacks.switchTab(Route.Pictures())
+        val feed = stacks.top
+        stacks.newStack(Route.Pictures(attachments = listOf("content://shared")))
+        stacks.switchTab(Route.Message)
+
+        val restored = assertNotNull(NavBackStacks.decode(stacks.encode()))
+        restored.switchTab(Route.Pictures())
+        assertEquals(feed.id, restored.top.id, "the tab came back as a new screen")
     }
 }

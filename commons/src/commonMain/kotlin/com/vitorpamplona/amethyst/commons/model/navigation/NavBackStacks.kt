@@ -247,7 +247,9 @@ class NavBackStacks private constructor(
                 if (saved.stack.isEmpty()) return null
                 NavBackStacks(
                     initialStack = saved.stack.map { it.toEntry() },
-                    initialSavedTabs = saved.savedTabs.map { it.toEntry() }.associateBy { it.route },
+                    // Filed under the route the bar asks for, as switchTab files them: a tab re-argued
+                    // in place by newStack no longer matches its own route.
+                    initialSavedTabs = saved.savedTabs.map { it.toEntry() }.associateBy { it.tabRoute ?: it.route },
                     nextId = saved.nextId,
                 )
             }.getOrNull()
