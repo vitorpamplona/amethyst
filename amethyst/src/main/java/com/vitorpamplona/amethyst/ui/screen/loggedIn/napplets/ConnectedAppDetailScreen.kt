@@ -103,6 +103,7 @@ import com.vitorpamplona.amethyst.commons.resources.napplet_consent_deny_always
 import com.vitorpamplona.amethyst.commons.resources.napplet_decision_allow
 import com.vitorpamplona.amethyst.commons.resources.napplet_decision_ask
 import com.vitorpamplona.amethyst.commons.resources.napplet_decision_deny
+import com.vitorpamplona.amethyst.commons.resources.napplet_op_blossom
 import com.vitorpamplona.amethyst.commons.resources.napplet_op_decrypt
 import com.vitorpamplona.amethyst.commons.resources.napplet_op_decrypt_from
 import com.vitorpamplona.amethyst.commons.resources.napplet_op_encrypt
@@ -144,6 +145,7 @@ import com.vitorpamplona.amethyst.napplet.resolveNappletMeta
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
 import com.vitorpamplona.quartz.nip42RelayAuth.RelayAuthEvent
+import com.vitorpamplona.quartz.nipB7Blossom.BlossomAuthorizationEvent
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -854,6 +856,9 @@ private fun NostrSignerOp.opLabel(): String =
         is NostrSignerOp.SignKind ->
             if (kind == RelayAuthEvent.KIND) {
                 stringRes(Res.string.napplet_op_sign_in)
+            } else if (kind == BlossomAuthorizationEvent.KIND) {
+                // One grant covers every media-server verb (upload, delete, list), so name the server use.
+                stringRes(Res.string.napplet_op_blossom)
             } else {
                 stringRes(Res.string.napplet_op_sign_kind, kind)
             }

@@ -52,6 +52,11 @@ import com.vitorpamplona.amethyst.commons.resources.consent_report_content
 import com.vitorpamplona.amethyst.commons.resources.consent_report_person
 import com.vitorpamplona.amethyst.commons.resources.consent_report_person_reason
 import com.vitorpamplona.amethyst.commons.resources.napplet_op_app_login
+import com.vitorpamplona.amethyst.commons.resources.napplet_op_blossom
+import com.vitorpamplona.amethyst.commons.resources.napplet_op_blossom_delete
+import com.vitorpamplona.amethyst.commons.resources.napplet_op_blossom_get
+import com.vitorpamplona.amethyst.commons.resources.napplet_op_blossom_list
+import com.vitorpamplona.amethyst.commons.resources.napplet_op_blossom_upload
 import com.vitorpamplona.amethyst.commons.resources.napplet_op_http_auth
 import com.vitorpamplona.amethyst.commons.resources.napplet_op_http_auth_unknown
 import com.vitorpamplona.amethyst.commons.resources.napplet_op_relay_login_to
@@ -72,6 +77,7 @@ import com.vitorpamplona.quartz.nip51Lists.muteList.MuteListEvent
 import com.vitorpamplona.quartz.nip56Reports.ReportEvent
 import com.vitorpamplona.quartz.nip59Giftwrap.seals.SealEvent
 import com.vitorpamplona.quartz.nip98HttpAuth.HTTPAuthorizationEvent
+import com.vitorpamplona.quartz.nipB7Blossom.BlossomAuthorizationEvent
 
 /**
  * A kind-22242 that names no relay is a web app proving to its own server who you are (Brainstorm
@@ -261,6 +267,14 @@ suspend fun signRequestSummary(
             }
         }
         MetadataEvent.KIND -> loadStringRes(Res.string.napplet_op_update_profile)
+        BlossomAuthorizationEvent.KIND ->
+            when (tags.firstOrNull { it.size > 1 && it[0] == "t" }?.get(1)) {
+                "upload", "media" -> loadStringRes(Res.string.napplet_op_blossom_upload)
+                "delete" -> loadStringRes(Res.string.napplet_op_blossom_delete)
+                "list" -> loadStringRes(Res.string.napplet_op_blossom_list)
+                "get" -> loadStringRes(Res.string.napplet_op_blossom_get)
+                else -> loadStringRes(Res.string.napplet_op_blossom)
+            }
         HTTPAuthorizationEvent.KIND -> {
             val url = tags.firstOrNull { it.size > 1 && it[0] == "u" }?.get(1)
             val method = tags.firstOrNull { it.size > 1 && it[0] == "method" }?.get(1)?.uppercase()

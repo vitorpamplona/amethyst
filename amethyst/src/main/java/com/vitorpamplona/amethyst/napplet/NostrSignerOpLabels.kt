@@ -35,6 +35,7 @@ import com.vitorpamplona.amethyst.commons.napplet.protocol.toNarrowSignerOp
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.napplet_consent_seal_unknown
 import com.vitorpamplona.amethyst.commons.resources.napplet_fallback_title
+import com.vitorpamplona.amethyst.commons.resources.napplet_op_blossom
 import com.vitorpamplona.amethyst.commons.resources.napplet_op_decrypt
 import com.vitorpamplona.amethyst.commons.resources.napplet_op_decrypt_from
 import com.vitorpamplona.amethyst.commons.resources.napplet_op_encrypt
@@ -55,6 +56,7 @@ import com.vitorpamplona.quartz.nip01Core.signers.EventTemplate
 import com.vitorpamplona.quartz.nip19Bech32.entities.NPub
 import com.vitorpamplona.quartz.nip42RelayAuth.RelayAuthEvent
 import com.vitorpamplona.quartz.nip59Giftwrap.seals.SealEvent
+import com.vitorpamplona.quartz.nipB7Blossom.BlossomAuthorizationEvent
 import com.vitorpamplona.quartz.utils.TimeUtils
 
 /** Human-readable label for a [NostrSignerOp]. */
@@ -65,6 +67,9 @@ suspend fun NostrSignerOp.label(context: Context): String =
                 // A login (to a relay or an app server; the stored grant covers both) is not "signing" anything the
                 // user would recognise; say what it does.
                 loadStringRes(Res.string.napplet_op_sign_in)
+            } else if (kind == BlossomAuthorizationEvent.KIND) {
+                // One grant covers every media-server verb (upload, delete, list), so name the server use.
+                loadStringRes(Res.string.napplet_op_blossom)
             } else {
                 loadStringRes(Res.string.napplet_op_sign_kind_named, kindNameFor(kind), kind)
             }

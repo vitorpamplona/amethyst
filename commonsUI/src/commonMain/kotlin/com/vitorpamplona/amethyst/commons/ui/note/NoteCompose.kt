@@ -171,6 +171,7 @@ import com.vitorpamplona.amethyst.commons.ui.note.types.RenderAttestorProficienc
 import com.vitorpamplona.amethyst.commons.ui.note.types.RenderAttestorRecommendation
 import com.vitorpamplona.amethyst.commons.ui.note.types.RenderBadgeAward
 import com.vitorpamplona.amethyst.commons.ui.note.types.RenderBallot
+import com.vitorpamplona.amethyst.commons.ui.note.types.RenderBlossomAuth
 import com.vitorpamplona.amethyst.commons.ui.note.types.RenderBlossomPieceIndex
 import com.vitorpamplona.amethyst.commons.ui.note.types.RenderBolt12Zap
 import com.vitorpamplona.amethyst.commons.ui.note.types.RenderBookshelfDirectory
@@ -465,6 +466,7 @@ import com.vitorpamplona.quartz.nip99Classifieds.ClassifiedsEvent
 import com.vitorpamplona.quartz.nipA0VoiceMessages.BaseVoiceEvent
 import com.vitorpamplona.quartz.nipA4PublicMessages.PublicMessageEvent
 import com.vitorpamplona.quartz.nipB1Bolt12Zaps.zap.Bolt12ZapEvent
+import com.vitorpamplona.quartz.nipB7Blossom.BlossomAuthorizationEvent
 import com.vitorpamplona.quartz.nipBCOnchainZaps.zap.OnchainZapEvent
 import com.vitorpamplona.quartz.nipC0CodeSnippets.CodeSnippetEvent
 import com.vitorpamplona.quartz.nipC7Chats.ChatEvent
@@ -1317,6 +1319,10 @@ private fun RenderNoteRow(
 
         is HTTPAuthorizationEvent -> {
             RenderHttpAuth(baseNote)
+        }
+
+        is BlossomAuthorizationEvent -> {
+            RenderBlossomAuth(baseNote)
         }
 
         is PinListEvent -> {
