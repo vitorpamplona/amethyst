@@ -61,7 +61,6 @@ import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.commons.account.AccountSessionManager
 import com.vitorpamplona.amethyst.commons.account.ui.TorSettingsSetup
 import com.vitorpamplona.amethyst.commons.account.ui.login.LoginButton
@@ -79,6 +78,7 @@ import com.vitorpamplona.amethyst.commons.resources.ncryptsec_password
 import com.vitorpamplona.amethyst.commons.resources.show_password
 import com.vitorpamplona.amethyst.commons.resources.temporary_account
 import com.vitorpamplona.amethyst.commons.tor.TorSettingsFlow
+import com.vitorpamplona.amethyst.commons.ui.components.rememberViewModel
 import com.vitorpamplona.amethyst.commons.ui.insets.imePaddingSafe
 import com.vitorpamplona.amethyst.commons.ui.platform.LocalAppPlatform
 import com.vitorpamplona.amethyst.commons.ui.platform.LocalAppServices
@@ -93,7 +93,7 @@ import kotlinx.coroutines.delay
 @Preview(device = "spec:width=2160px,height=2340px,dpi=440")
 @Composable
 fun LoginPagePreview() {
-    val loginViewModel: LoginViewModel = viewModel { LoginViewModel() }
+    val loginViewModel: LoginViewModel = rememberViewModel { LoginViewModel() }
     loginViewModel.init(TorSettingsFlow())
 
     ThemeComparisonRow(
@@ -111,7 +111,7 @@ fun LoginPage(
     onWantsToLogin: () -> Unit,
 ) {
     val requiresTerms = LocalAppPlatform.current.requiresTermsAcceptance
-    val loginViewModel: LoginViewModel = viewModel { LoginViewModel(requiresTerms) }
+    val loginViewModel: LoginViewModel = rememberViewModel { LoginViewModel(requiresTerms) }
     loginViewModel.init(accountSessionManager)
     loginViewModel.init(LocalAppServices.current.torSettings)
 

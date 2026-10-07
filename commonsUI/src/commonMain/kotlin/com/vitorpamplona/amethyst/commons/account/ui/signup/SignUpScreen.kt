@@ -44,7 +44,6 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.commons.account.AccountSessionManager
 import com.vitorpamplona.amethyst.commons.account.ui.TorSettingsSetup
 import com.vitorpamplona.amethyst.commons.account.ui.login.LoginErrorManager
@@ -59,6 +58,7 @@ import com.vitorpamplona.amethyst.commons.resources.how_should_we_call_you
 import com.vitorpamplona.amethyst.commons.resources.my_awesome_name
 import com.vitorpamplona.amethyst.commons.resources.welcome
 import com.vitorpamplona.amethyst.commons.tor.TorSettingsFlow
+import com.vitorpamplona.amethyst.commons.ui.components.rememberViewModel
 import com.vitorpamplona.amethyst.commons.ui.insets.imePaddingSafe
 import com.vitorpamplona.amethyst.commons.ui.platform.LocalAppPlatform
 import com.vitorpamplona.amethyst.commons.ui.platform.LocalAppServices
@@ -72,7 +72,7 @@ import com.vitorpamplona.amethyst.commons.ui.theme.placeholderText
 @Preview(device = "spec:width=2160px,height=2340px,dpi=440")
 @Composable
 fun SignUpPagePreview() {
-    val signUpViewModel: SignUpViewModel = viewModel { SignUpViewModel() }
+    val signUpViewModel: SignUpViewModel = rememberViewModel { SignUpViewModel() }
     signUpViewModel.init(TorSettingsFlow())
 
     ThemeComparisonRow(
@@ -88,7 +88,7 @@ fun SignUpPage(
     onWantsToLogin: () -> Unit,
 ) {
     val requiresTerms = LocalAppPlatform.current.requiresTermsAcceptance
-    val signUpViewModel: SignUpViewModel = viewModel { SignUpViewModel(requiresTerms) }
+    val signUpViewModel: SignUpViewModel = rememberViewModel { SignUpViewModel(requiresTerms) }
     signUpViewModel.init(accountSessionManager)
     signUpViewModel.init(LocalAppServices.current.torSettings)
 

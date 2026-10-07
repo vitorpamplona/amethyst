@@ -41,6 +41,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -146,7 +147,10 @@ private fun DisplayAllAccounts(
         }
     }
 
-    accounts?.forEach { acc -> DisplayAccount(acc, accountViewModel, accountSessionManager) }
+    accounts?.forEach { acc ->
+        // Keyed, so removing an account does not hand its row's remembered state to the next one.
+        key(acc.npub) { DisplayAccount(acc, accountViewModel, accountSessionManager) }
+    }
 }
 
 @Composable
@@ -216,7 +220,7 @@ private fun ActiveMarker(
     accountViewModel: AccountViewModel,
 ) {
     val isCurrentUser by
-        remember(accountViewModel) {
+        remember(accountViewModel, acc.npub) {
             derivedStateOf { accountViewModel.account.userProfile().pubkeyNpub() == acc.npub }
         }
 

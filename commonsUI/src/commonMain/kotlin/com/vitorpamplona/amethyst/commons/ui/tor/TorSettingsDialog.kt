@@ -46,7 +46,6 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
-import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.connect_through_your_orbot_setup_short
 import com.vitorpamplona.amethyst.commons.resources.invalid_port_number
@@ -87,6 +86,7 @@ import com.vitorpamplona.amethyst.commons.tor.resourceId
 import com.vitorpamplona.amethyst.commons.ui.components.SetDialogToEdgeToEdge
 import com.vitorpamplona.amethyst.commons.ui.components.TitleExplainer
 import com.vitorpamplona.amethyst.commons.ui.components.edgeToEdgeDialogProperties
+import com.vitorpamplona.amethyst.commons.ui.components.rememberViewModel
 import com.vitorpamplona.amethyst.commons.ui.navigation.topbars.SavingTopBar
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.settings.SettingsRow
 import com.vitorpamplona.amethyst.commons.ui.stringRes
@@ -138,7 +138,7 @@ fun TorDialogContents(
     onPost: (torSettings: TorSettings) -> Unit,
     onError: (String) -> Unit,
 ) {
-    val dialogViewModel = viewModel { TorDialogViewModel() }
+    val dialogViewModel = rememberViewModel { TorDialogViewModel() }
 
     // runs only once and before the rest of the screen is build
     // to avoid blinking and animations from the default/previous

@@ -107,7 +107,10 @@ object AndroidAppPlatform : AppPlatform {
 
     @Composable
     override fun ExternalSignerLoginButton(loginViewModel: LoginViewModel) {
-        if (isExternalSignerInstalled(LocalContext.current)) {
+        // A PackageManager query: once per screen, not on every keystroke of the key field.
+        val context = LocalContext.current
+        val installed = remember(context) { isExternalSignerInstalled(context) }
+        if (installed) {
             ExternalSignerButton(loginViewModel)
         }
     }
