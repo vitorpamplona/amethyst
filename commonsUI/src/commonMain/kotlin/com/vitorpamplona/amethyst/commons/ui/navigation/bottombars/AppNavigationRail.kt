@@ -18,7 +18,7 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.ui.navigation.bottombars
+package com.vitorpamplona.amethyst.commons.ui.navigation.bottombars
 
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.rememberScrollState
@@ -32,13 +32,11 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.commons.model.navigation.BottomBarEntry
 import com.vitorpamplona.amethyst.commons.model.navigation.Route
-import com.vitorpamplona.amethyst.commons.ui.navigation.bottombars.LocalTabReselectCoordinator
-import com.vitorpamplona.amethyst.commons.ui.navigation.bottombars.rememberBottomBarSlot
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.Nav
 import com.vitorpamplona.amethyst.commons.ui.navigation.topbars.LoggedInUserPictureDrawer
+import com.vitorpamplona.amethyst.commons.ui.platform.LocalAppServices
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 
 /**
@@ -55,7 +53,7 @@ fun AppNavigationRail(
 ) {
     val items by accountViewModel.account.settings.syncedSettings.navigation.bottomBarItems
         .collectAsStateWithLifecycle()
-    val favorites by Amethyst.instance.favoriteApps.favorites
+    val favorites by LocalAppServices.current.favoriteApps.favorites
         .collectAsStateWithLifecycle()
     val favoritesById = remember(favorites) { favorites.associateBy { it.id } }
 
