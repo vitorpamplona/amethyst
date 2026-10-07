@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.embed
 
+import android.content.ClipboardManager
 import android.content.Context
 import android.os.SystemClock
 import android.text.Editable
@@ -64,8 +65,11 @@ class RemoteImeView(
     // IME batch-edit depth (Flutter's batchEditNestDepth): coalesce a batch into one state flush.
     private var batchDepth = 0
 
-    // The last state we sent, so we never ship a no-op (avoids feedback churn with the page).
-    private var lastSent: String? = null
+    // The last state we sent, so we never ship a no-op (avoids feedback churn with the page): the text, and the
+    // selection + composing region. Kept apart so a caret move ships only the selection — the shim reads a
+    // message without `text` as selection-only — instead of the whole field (20 KB per tap in a long draft).
+    private var lastSentText: String? = null
+    private var lastSentSel: String? = null
 
     // True while this view mirrors a live page field, i.e. between a page focus and the blur that releases it.
     // Distinct from [hasFocus]: clearing focus on a View can hand it straight back (a lone focusable in the
@@ -129,8 +133,15 @@ class RemoteImeView(
                 }
             },
         )
-        // The IME's "Go/Search/Send/Done" — the page submits/handles it (single-line has no newline).
-        setOnEditorActionListener { _, _, _ -> sendEnter() }
+        // The IME's action key. Next/Previous move focus between the form's fields, as in Chrome; every other
+        // action (Go/Search/Send/Done) is an Enter the page handles (single-line has no newline).
+        setOnEditorActionListener { _, actionId, _ ->
+            when (actionId) {
+                EditorInfo.IME_ACTION_NEXT -> sendFocusMove("ime.next")
+                EditorInfo.IME_ACTION_PREVIOUS -> sendFocusMove("ime.prev")
+                else -> sendEnter()
+            }
+        }
     }
 
     /** Binds the controller of whatever embedded tab is active; null unbinds (no relay target). */
@@ -289,7 +300,7 @@ class RemoteImeView(
             // gesture is held, so each re-assert restarts the clock — bounded by reassertCount so a page that
             // truly keeps the caret collapsed still wins.
             rangeBecameAt = SystemClock.uptimeMillis()
-            lastSent = null // force a non-no-op flush so the range re-ships
+            lastSentSel = null // force a non-no-op flush so the range re-ships
             flushState()
             return
         }
@@ -356,6 +367,54 @@ class RemoteImeView(
         return true
     }
 
+    private fun sendFocusMove(type: String): Boolean {
+        if (!mirroring) return false
+        removeCallbacks(flush)
+        flushState()
+        bridge?.sendImeOp(buildJsonObject { put("type", type) }.toString())
+        return true
+    }
+
+    /**
+     * Paste and cut (the host toolbar, a hardware Ctrl+V/Ctrl+X) go to the page as what they are, not as an edit of
+     * this buffer: the page sees a `paste`/`cut` event first, as in Chrome, and may handle it itself — clean the
+     * pasted text, turn it into chips, refuse it — so the field, not this mirror, decides the result and reports
+     * it back. Copy stays local: the selection is already here. A keyboard's clipboard chip types the text
+     * instead (commitText), which Chrome treats as typing too.
+     */
+    override fun onTextContextMenuItem(id: Int): Boolean {
+        if (!mirroring || fieldReadOnly) return super.onTextContextMenuItem(id)
+        return when (id) {
+            android.R.id.paste, android.R.id.pasteAsPlainText -> {
+                val clip = clipboard.primaryClip
+                val text = if (clip != null && clip.itemCount > 0) clip.getItemAt(0).coerceToText(context)?.toString() else null
+                if (text.isNullOrEmpty()) return false
+                removeCallbacks(flush)
+                flushState()
+                bridge?.sendImeOp(
+                    buildJsonObject {
+                        put("type", "ime.paste")
+                        put("text", text)
+                    }.toString(),
+                )
+                true
+            }
+            android.R.id.cut -> {
+                if (selectionStart == selectionEnd) return false
+                // Copy it ourselves (the page's synthetic cut event can't reach the system clipboard), then let
+                // the page remove it.
+                super.onTextContextMenuItem(android.R.id.copy)
+                removeCallbacks(flush)
+                flushState()
+                bridge?.sendImeOp(buildJsonObject { put("type", "ime.cut") }.toString())
+                true
+            }
+            else -> super.onTextContextMenuItem(id)
+        }
+    }
+
+    private val clipboard get() = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+
     // A hardware (or IME-synthesized) Enter key on a multi-line field. Shift+Enter keeps the native line
     // break; single-line fields already route Enter through the editor action above.
     override fun onKeyDown(
@@ -382,7 +441,7 @@ class RemoteImeView(
         val len = text?.length ?: 0
         setSelection(selStart.coerceIn(0, len), selEnd.coerceIn(0, len))
         applyingRemote = false
-        lastSent = stateJson().toString()
+        markSent()
         // Start the abandonment window when a fresh range appears, so onPageState can tell Chrome's instant
         // collapse from a later user tap-to-collapse.
         if (selectionStart != selectionEnd) rangeBecameAt = SystemClock.uptimeMillis()
@@ -416,7 +475,20 @@ class RemoteImeView(
         schedule()
     }
 
-    private fun stateJson(): JsonObject {
+    private fun selectionKey(): String {
+        val editable = text
+        val composingStart = if (editable != null) BaseInputConnection.getComposingSpanStart(editable) else -1
+        val composingEnd = if (editable != null) BaseInputConnection.getComposingSpanEnd(editable) else -1
+        return "$selectionStart:$selectionEnd:$composingStart:$composingEnd"
+    }
+
+    /** Records the current buffer as what the page already has (it was applied from the page). */
+    private fun markSent() {
+        lastSentText = text?.toString() ?: ""
+        lastSentSel = selectionKey()
+    }
+
+    private fun stateJson(withText: Boolean): JsonObject {
         val editable = text
         val composingStart = if (editable != null) BaseInputConnection.getComposingSpanStart(editable) else -1
         val composingEnd = if (editable != null) BaseInputConnection.getComposingSpanEnd(editable) else -1
@@ -432,7 +504,8 @@ class RemoteImeView(
             // Omitting the key (rather than sending the current text) makes the shim treat the message as
             // selection-only — `var next = (msg.text != null) ? String(msg.text) : prev` — so the
             // host-drawn handles and Copy keep working off a synced selection while nothing can be written.
-            if (!fieldReadOnly) put("text", editable?.toString() ?: "")
+            // The same omission carries an unchanged text: a caret move doesn't resend the field.
+            if (withText && !fieldReadOnly) put("text", editable?.toString() ?: "")
             put("selStart", selectionStart)
             put("selEnd", selectionEnd)
             put("composingStart", composingStart)
@@ -442,11 +515,13 @@ class RemoteImeView(
 
     private fun flushState() {
         if (applyingRemote) return
-        val json = stateJson()
-        val str = json.toString()
-        if (str == lastSent) return
-        lastSent = str
-        bridge?.sendImeOp(str)
+        val current = text?.toString() ?: ""
+        val textChanged = current != lastSentText
+        val sel = selectionKey()
+        if (!textChanged && sel == lastSentSel) return
+        lastSentText = current
+        lastSentSel = sel
+        bridge?.sendImeOp(stateJson(withText = textChanged).toString())
     }
 
     private fun configureFor(focus: ImeEvent.Focus) {
@@ -473,18 +548,8 @@ class RemoteImeView(
                             (if (focus.multiline) InputType.TYPE_TEXT_FLAG_MULTI_LINE else InputType.TYPE_TEXT_VARIATION_NORMAL)
                 }
             }
-        imeOptions = editorActionFor(focus) or EditorInfo.IME_FLAG_NO_FULLSCREEN or EditorInfo.IME_FLAG_NO_EXTRACT_UI
+        imeOptions = imeActionFor(focus.enterKeyHint, focus.multiline, focus.inputType, focus.hasNext) or EditorInfo.IME_FLAG_NO_FULLSCREEN or EditorInfo.IME_FLAG_NO_EXTRACT_UI
     }
-
-    private fun editorActionFor(focus: ImeEvent.Focus): Int =
-        when (focus.enterKeyHint) {
-            "go" -> EditorInfo.IME_ACTION_GO
-            "search" -> EditorInfo.IME_ACTION_SEARCH
-            "send" -> EditorInfo.IME_ACTION_SEND
-            "next" -> EditorInfo.IME_ACTION_NEXT
-            "done" -> EditorInfo.IME_ACTION_DONE
-            else -> if (focus.multiline) EditorInfo.IME_ACTION_NONE else EditorInfo.IME_ACTION_GO
-        }
 
     override fun onCreateInputConnection(outAttrs: EditorInfo): InputConnection? {
         val base = super.onCreateInputConnection(outAttrs) ?: return null
@@ -547,3 +612,31 @@ class RemoteImeView(
         private const val RANGE_LOSS_DEBOUNCE_MS = 250L
     }
 }
+
+/**
+ * The keyboard action for a page field, as Chrome picks it on Android: the page's `enterkeyhint` when it names
+ * one; otherwise a line break for multi-line fields, Search for `type=search`, Next when another field follows
+ * in the form (so the action key walks the form instead of submitting it from its first field), and Go.
+ */
+internal fun imeActionFor(
+    enterKeyHint: String,
+    multiline: Boolean,
+    inputType: String,
+    hasNext: Boolean,
+): Int =
+    when (enterKeyHint) {
+        "go" -> EditorInfo.IME_ACTION_GO
+        "search" -> EditorInfo.IME_ACTION_SEARCH
+        "send" -> EditorInfo.IME_ACTION_SEND
+        "next" -> EditorInfo.IME_ACTION_NEXT
+        "previous" -> EditorInfo.IME_ACTION_PREVIOUS
+        "done" -> EditorInfo.IME_ACTION_DONE
+        "enter" -> EditorInfo.IME_ACTION_NONE
+        else ->
+            when {
+                multiline -> EditorInfo.IME_ACTION_NONE
+                inputType == "search" -> EditorInfo.IME_ACTION_SEARCH
+                hasNext -> EditorInfo.IME_ACTION_NEXT
+                else -> EditorInfo.IME_ACTION_GO
+            }
+    }

@@ -30,6 +30,7 @@ const HTML = `<!doctype html><meta charset=utf-8><title>ime</title>
 </div>
 <textarea id="chat" rows="1"></textarea>
 <textarea id="notes" rows="3"></textarea>
+<form id="pf"><input id="n1"><input id="n2"><textarea id="n3"></textarea><input id="n4"></form>
 <div id="search" contenteditable="true" role="combobox" enterkeyhint="search" style="border:1px solid #000;padding:8px"></div>
 <script>
   // A rich search box (Brainstorm's home): a contenteditable that takes Enter from beforeinput, not keydown.
@@ -259,6 +260,42 @@ await step(
   const problem = searches.length !== 1 || searches[0] !== 'Vitor' ? `page searched ${JSON.stringify(searches)} (no beforeinput insertParagraph reached it)` : text !== 'Vitor' ? `field became ${JSON.stringify(text)}` : null
   results.push(['  ...the page searched "Vitor" and the field kept no line break', JSON.stringify(searches), problem])
   if (problem) failures.push(`search Enter: ${problem}`)
+}
+
+await step(
+  'a form field with another after it offers Next',
+  () => page.click('#n1'),
+  (m) => { const f = find(m, 'ime.focus'); return !f ? 'no ime.focus' : f.hasNext === true ? null : `hasNext=${f.hasNext}` },
+)
+await step(
+  'Next moves focus to the following field',
+  () => page.evaluate(() => window.__imeIn({ data: JSON.stringify({ type: 'ime.next' }) })),
+  (m) => { const f = find(m, 'ime.focus'); return !f ? 'focus did not move' : null },
+)
+{
+  const id = await page.evaluate(() => document.activeElement.id)
+  results.push(['  ...to the second field', id, id === 'n2' ? null : `focused ${id}`])
+  if (id !== 'n2') failures.push(`Next: focused ${id}`)
+}
+await step(
+  'a textarea never offers Next (Enter is a line break)',
+  () => page.click('#n3'),
+  (m) => { const f = find(m, 'ime.focus'); return !f ? 'no ime.focus' : f.hasNext ? 'hasNext on a textarea' : null },
+)
+await step(
+  'the last field in the form offers Go, not Next',
+  () => page.click('#n4'),
+  (m) => { const f = find(m, 'ime.focus'); return !f ? 'no ime.focus' : f.hasNext ? 'hasNext on the last field' : null },
+)
+await step(
+  'Previous moves focus back',
+  () => page.evaluate(() => window.__imeIn({ data: JSON.stringify({ type: 'ime.prev' }) })),
+  () => null,
+)
+{
+  const id = await page.evaluate(() => document.activeElement.id)
+  results.push(['  ...to the textarea before it', id, id === 'n3' ? null : `focused ${id}`])
+  if (id !== 'n3') failures.push(`Previous: focused ${id}`)
 }
 
 console.log(`\nshim: ${SHIM}\n`)
