@@ -172,18 +172,23 @@ private fun NappletConsentDialog(
                         style = MaterialTheme.typography.titleLarge,
                         textAlign = TextAlign.Center,
                     )
-                    Text(
-                        info.capabilityLabel,
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        textAlign = TextAlign.Center,
-                    )
-                    Text(
-                        info.coordinate.substringAfter(':', "").ifBlank { info.coordinate.substringBefore(':').take(12) + "…" },
-                        style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        textAlign = TextAlign.Center,
-                    )
+                    if (info.capabilityLabel.isNotBlank()) {
+                        Text(
+                            info.capabilityLabel,
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            textAlign = TextAlign.Center,
+                        )
+                    }
+                    // A website's title is already its host; repeating the URL under it says nothing.
+                    if (!info.coordinate.startsWith("browser:")) {
+                        Text(
+                            info.coordinate.substringAfter(':', "").ifBlank { info.coordinate.substringBefore(':').take(12) + "…" },
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            textAlign = TextAlign.Center,
+                        )
+                    }
                 }
 
                 // Operation detail box (may include content preview), plus the full event behind a
@@ -250,7 +255,7 @@ private fun NappletConsentDialog(
                                         } else {
                                             stringRes(Res.string.napplet_consent_show_event)
                                         },
-                                        style = MaterialTheme.typography.labelSmall,
+                                        style = MaterialTheme.typography.labelLarge,
                                     )
                                 }
                             }

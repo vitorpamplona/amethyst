@@ -325,6 +325,33 @@ val events: SharedFlow<Event> = client
     )
 ```
 
+## Choosing a Dispatcher
+
+`Dispatchers.Default` has one thread per core. If those few threads block on a
+lock, disk, network or IPC, every CPU-bound coroutine in the app stalls. The
+full rule is in `commons/ARCHITECTURE.md` ("Choosing a dispatcher"); in short:
+
+| Work | Dispatcher |
+|------|------------|
+| Touches `LocalCache`, `Note`/`User`, `Account`, a signer, relay client, store, prefs, files, any shared cache | `Dispatchers.IO` |
+| Provably lock-free CPU: verify, hash, parse bytes, rasterize, math on immutable data | `Dispatchers.Default` |
+| CPU job that holds a thread for seconds+ | IO-backed threads: `PoWMiner.MiningDispatcher` (mining), IO (`BagSweep`) |
+| Caller-supplied callbacks | IO (assume they block) |
+
+A suspend function that blocks wraps that call in `withContext(Dispatchers.IO)`
+itself, so it is safe from any caller. When unsure, use IO: a misplaced IO task
+costs a little CPU scheduling, while a blocked Default task stalls the app.
+
+❌ **Cache or signer work on Default**
+```kotlin
+notes.map { it.filter(account::isAcceptable) }.flowOn(Dispatchers.Default)  // Note + mute lists take locks
+```
+
+✅ **IO for anything that can wait**
+```kotlin
+notes.map { it.filter(account::isAcceptable) }.flowOn(Dispatchers.IO)
+```
+
 ## Anti-Patterns
 
 ❌ **Using GlobalScope**
@@ -364,7 +391,7 @@ flow.map { Thread.sleep(1000); process(it) }
 
 ✅ **Suspend, don't block**
 ```kotlin
-flow.map { delay(1000); process(it) }.flowOn(Dispatchers.Default)
+flow.map { delay(1000); process(it) }.flowOn(Dispatchers.IO)
 ```
 
 ---

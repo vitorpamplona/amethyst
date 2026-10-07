@@ -143,15 +143,14 @@ that loop via `collectLatest`.
   first-connect dialog can no longer wedge the loop forever.
 - **FIXED — consent no longer blocks other clients (needs on-device
   validation).** The service now fans each request out into a child coroutine
-  under a `Semaphore(maxConcurrentHandles=16)`; dedup/staleness/rate-limit stay on
+  under a `Semaphore(maxConcurrentHandles)` (now 1024); dedup/staleness stay on
   the single consumer, only `handle()` runs concurrently. So a request awaiting a
   prompt no longer stalls auto-allowed traffic, and several prompts can be pending
-  at once. Two guards keep this safe: (1) the identity signer's crypto is
-  serialized by `BunkerRequestProcessor.cryptoLock` — authorization (the prompt)
-  runs UNLOCKED, only the sign/encrypt/decrypt holds the lock — so an external
-  NIP-55 app never sees concurrent IPC ops; (2) first-connect consent is
-  serialized by `Nip46PermissionAuthorizer.connectLock` so two connects can't stack
-  dialogs. Per-op prompts batch: the shared `SignerConsentCoordinator.pending`
+  at once. The identity signer's crypto is NOT serialized (the old
+  `BunkerRequestProcessor.cryptoLock` was removed 2026-10-06): local keys are pure
+  crypto and NIP-55 signers like Amber accept overlapping calls, so a high-throughput
+  client's ops run in parallel. First-connect consent is still serialized by
+  `Nip46PermissionAuthorizer.connectLock` so two connects can't stack dialogs. Per-op prompts batch: the shared `SignerConsentCoordinator.pending`
   flow drives one dialog (1 pending) or a checkbox list (>1). Covered by
   `BunkerRequestProcessorConcurrencyTest`, but the on-device paths below still need
   a real run:
@@ -160,8 +159,8 @@ that loop via `collectLatest`.
         "Remember" toggle. Approving a subset leaves the rest pending.
   - [ ] **Auto-allowed keeps flowing:** while a prompt sits open, a REASONABLE
         auto-allowed request from another app still gets signed and answered.
-  - [ ] **No concurrent external-signer ops:** with a NIP-55 external signer, two
-        approved requests do not drive overlapping IPC (they serialize).
+  - [ ] **Concurrent external-signer ops:** with a NIP-55 external signer (Amber),
+        a burst of approved requests drives overlapping calls and every one is answered.
   - [ ] **Fail-closed on dismiss:** backing out of the batched sheet denies every
         still-open request (not just the selected ones).
 - **Relay-set change cancels in-flight work.** A `logout` (or a new nostrconnect
@@ -170,10 +169,24 @@ that loop via `collectLatest`.
   but the client is leaving; a pairing-time cancel makes other clients retry).
   Proper fix: manage subscriptions incrementally (diff add/remove) instead of a
   full restart. Deferred (same reason).
-- **Low-severity, left as-is:** activity-log records an O(capacity) list copy per
-  serviced request (negligible under rate-limiting); the per-author rate limiter
-  evicts by insertion order rather than LRU (the 3-arg `accessOrder`
-  `LinkedHashMap` isn't in KMP commonMain); first-time transport-key/secret mint
+- **Per-author rate limiter removed (2026-10-06).** A single app must be able to
+  drive ~10k requests/s, so the 40-per-10s fixed window (and its `rate limited`
+  error reply) is gone. The remaining flood bounds were resized for that rate:
+  `maxQueue` 256 → 10,000, `seenCap` 4096 → 10,000, `maxConcurrentHandles`
+  16 → 1024. Covered by `NostrConnectSignerServiceTest.burstFromOneClientIsFullyServiced`.
+- **Unpaired clients are still limited.** Paired clients are exempt, but a key
+  that isn't paired gets 10 requests per 60 s, and all unpaired keys together
+  get 100 per 60 s, checked before decrypting; over-limit requests are dropped
+  with no reply. The per-key check runs before the pairing lookup (a DataStore
+  read), and only keys found unpaired spend the shared budget, so a flood can't
+  lock out a paired app. Known paired keys are cached in memory for the run.
+  Reads of the per-app permission store check the file exists first, so a
+  pairing lookup for an unknown key opens no DataStore.
+- **Per-request bookkeeping batched (2026-10-06).** The activity log and the
+  persisted seen-id set each take a drop-oldest channel send per request; one
+  coroutine publishes the log at most every 250 ms and saves the ids every 2 s.
+  Stale-request warnings are summarized once per second.
+- **Low-severity, left as-is:** first-time transport-key/secret mint
   is unsynchronized (practically serialized on the UI thread).
 
 ## Deliberately NOT changed

@@ -153,4 +153,20 @@ class BlossomAuthorizationEventTest {
             assertEquals("get", event.tags.first { it[0] == "t" }[1])
             assertEquals(hash, event.tags.first { it[0] == "x" }[1])
         }
+
+    @Test
+    fun accessorsReadTheVerbHashesAndServerScope() =
+        runTest {
+            val event = BlossomAuthorizationEvent.createDeleteAuth(hash, "Delete blob", signer, servers = listOf("https://cdn.example.com/"))
+            assertEquals("delete", event.type())
+            assertEquals(listOf(hash), event.hashes())
+            assertEquals(listOf("cdn.example.com"), event.servers())
+            assertTrue(event.expiration()!! > event.createdAt)
+
+            // Brainstorm's shape: no size, no server scope.
+            val list = BlossomAuthorizationEvent.createListAuth(signer, "List")
+            assertEquals("list", list.type())
+            assertTrue(list.hashes().isEmpty())
+            assertTrue(list.servers().isEmpty())
+        }
 }

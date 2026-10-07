@@ -18,7 +18,7 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.ui.screen.loggedIn.napplets
+package com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.napplets
 
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
@@ -46,7 +46,6 @@ import com.vitorpamplona.amethyst.commons.ui.platform.AppBottomBar
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.napplets.datasource.NappletsFilterAssemblerSubscription
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
-import com.vitorpamplona.amethyst.napplet.NappletLauncher
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip5dNapplets.NamedNappletEvent
 import com.vitorpamplona.quartz.nip5dNapplets.RootNappletEvent
@@ -60,7 +59,7 @@ import com.vitorpamplona.quartz.nip5dNapplets.RootNappletEvent
  * and each row is rendered through the shared [NoteCompose] — the same path the main feed uses for
  * these events — so it gets the author header, the
  * [com.vitorpamplona.amethyst.commons.ui.note.StaticWebsiteCard] (title, description, capability chips,
- * and an Open button wired to the sandboxed [NappletLauncher]), and the standard reaction bar
+ * and an Open button wired to the sandboxed napplet launcher), and the standard reaction bar
  * (reply/boost/like/zap) for free, without a second card implementation that could drift.
  */
 @Composable

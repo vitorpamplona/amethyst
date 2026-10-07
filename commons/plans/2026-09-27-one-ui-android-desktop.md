@@ -522,13 +522,22 @@ assemblers, `EventSync`, …). Packages are renamed on the way:
      `LikeReaction`, `ZapReaction`, `ReusableZapButton` and `QuickZapAmountRow` note slots are
      gone: shared code calls the composables directly, so Desktop draws the real row. The
      follow-pack feed, which only waited on it, moved too. 225 of 252 screens shared.
-   - **Next:** 27 screens remain, and what blocks them is the platform itself:
+   - **Wave 15 (2026-10-07):** One blocker each. `AppPlatform` gained `rememberCallStarter`
+     (Android asks for the call permissions, then opens `CallActivity`; null elsewhere, so the
+     chat room hides its call buttons), `GeocacheMapTab` (osmdroid) and `DetectedWorkoutCarousel`
+     (Health Connect). `AppServices` gained `cordnBlobStore`. Buzz invite minting is the expect
+     `mintBuzzInviteUrl` over the HTTP client (OkHttp on JVM/Android, unsupported on iOS for now),
+     and the Buzz import collects channel ids in a `ConcurrentSet`. Moved: the DM chat room, the
+     geocaches screen, the napplets list, the new-workout form, the Cordn migration screen and the
+     relay-group channel list with its Buzz import and invite menu. 231 of 252 screens shared.
+   - **Next:** 21 screens remain, and what blocks them is the platform itself:
      - The Nests activity and PiP.
      - The call screens.
      - The WebView browser and napplet launcher.
-     - The osmdroid geocache map.
-     - Health Connect workouts.
-     - The Cordn backup/migrate file flows.
+     - Health Connect's fitness screen.
+     - The Cordn backup file flow.
+     - The git repository browser, the QR image scan, the new-calendar-event form and the
+       Nests list (two to four blockers each).
      - Share-as-image (bitmaps).
      - `AccountSessionManager` (login and sign-up).
      - The HLS video uploader (LightCompressor).

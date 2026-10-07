@@ -24,18 +24,24 @@ import android.content.Context
 import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.commons.browser.OmniboxInput
 import com.vitorpamplona.amethyst.commons.connectedApps.signers.NostrSignerOp
+import com.vitorpamplona.amethyst.commons.model.Account
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
 import com.vitorpamplona.amethyst.commons.napplet.NappletCapability
 import com.vitorpamplona.amethyst.commons.napplet.NappletIdentity
+import com.vitorpamplona.amethyst.commons.napplet.NappletRecentEncryptions
 import com.vitorpamplona.amethyst.commons.napplet.protocol.NappletRequest
 import com.vitorpamplona.amethyst.commons.napplet.protocol.counterpartyPubKey
 import com.vitorpamplona.amethyst.commons.napplet.protocol.toNarrowSignerOp
 import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.napplet_consent_seal_unknown
 import com.vitorpamplona.amethyst.commons.resources.napplet_fallback_title
+import com.vitorpamplona.amethyst.commons.resources.napplet_op_blossom
 import com.vitorpamplona.amethyst.commons.resources.napplet_op_decrypt
 import com.vitorpamplona.amethyst.commons.resources.napplet_op_decrypt_from
 import com.vitorpamplona.amethyst.commons.resources.napplet_op_encrypt
-import com.vitorpamplona.amethyst.commons.resources.napplet_op_relay_login
+import com.vitorpamplona.amethyst.commons.resources.napplet_op_seal_message
+import com.vitorpamplona.amethyst.commons.resources.napplet_op_seal_message_to
+import com.vitorpamplona.amethyst.commons.resources.napplet_op_sign_in
 import com.vitorpamplona.amethyst.commons.resources.napplet_op_sign_kind_named
 import com.vitorpamplona.amethyst.commons.resources.nip46_signer_allow_always_for
 import com.vitorpamplona.amethyst.commons.ui.loadStringRes
@@ -49,6 +55,8 @@ import com.vitorpamplona.quartz.nip01Core.jackson.JacksonMapper
 import com.vitorpamplona.quartz.nip01Core.signers.EventTemplate
 import com.vitorpamplona.quartz.nip19Bech32.entities.NPub
 import com.vitorpamplona.quartz.nip42RelayAuth.RelayAuthEvent
+import com.vitorpamplona.quartz.nip59Giftwrap.seals.SealEvent
+import com.vitorpamplona.quartz.nipB7Blossom.BlossomAuthorizationEvent
 import com.vitorpamplona.quartz.utils.TimeUtils
 
 /** Human-readable label for a [NostrSignerOp]. */
@@ -56,8 +64,12 @@ suspend fun NostrSignerOp.label(context: Context): String =
     when (this) {
         is NostrSignerOp.SignKind ->
             if (kind == RelayAuthEvent.KIND) {
-                // A relay login is not "signing" anything the user would recognise; say what it does.
-                loadStringRes(Res.string.napplet_op_relay_login)
+                // A login (to a relay or an app server; the stored grant covers both) is not "signing" anything the
+                // user would recognise; say what it does.
+                loadStringRes(Res.string.napplet_op_sign_in)
+            } else if (kind == BlossomAuthorizationEvent.KIND) {
+                // One grant covers every media-server verb (upload, delete, list), so name the server use.
+                loadStringRes(Res.string.napplet_op_blossom)
             } else {
                 loadStringRes(Res.string.napplet_op_sign_kind_named, kindNameFor(kind), kind)
             }
@@ -87,6 +99,8 @@ suspend fun buildSignerConsentInfo(
     identity: NappletIdentity,
     op: NostrSignerOp,
     request: NappletRequest,
+    account: Account? = null,
+    recentEncryptions: NappletRecentEncryptions? = null,
 ): SignerConsentInfo {
     val untitled = loadStringRes(Res.string.napplet_fallback_title, identity.authorPubKey.take(8))
     val (title, iconUrl) =
@@ -100,59 +114,52 @@ suspend fun buildSignerConsentInfo(
     // broad "always allow", instead of only the all-conversations-forever choice. Mirrors the NIP-46
     // dialog, so the same decision reads the same way whichever surface asked.
     val narrowOp = request.toNarrowSignerOp()
-    val counterparty = request.counterpartyPubKey()
-    // For decrypt this names the counterparty ("read your private messages with Alice").
-    val summary = (narrowOp ?: op).label(context)
-    val preview =
+
+    // The event a sign/publish request would sign, when there is one.
+    val (signKind, signTags, signContent) =
         when (request) {
-            is NappletRequest.Publish -> Nip46ConsentInfoBuilder.signPreview(request.kind, request.tags, request.content)
-            is NappletRequest.SignEvent -> Nip46ConsentInfoBuilder.signPreview(request.kind, request.tags, request.content)
-            is NappletRequest.PublishEncrypted -> request.content.take(160).trim()
-            // Encryption shows the plaintext the page wants sealed; decryption has only ciphertext,
-            // which tells the user nothing, so its preview stays empty and the counterparty in
-            // rawData carries the meaning.
-            is NappletRequest.Nip44Encrypt -> request.plaintext.take(160).trim()
-            else -> ""
+            is NappletRequest.Publish -> Triple(request.kind, request.tags, request.content)
+            is NappletRequest.SignEvent -> Triple(request.kind, request.tags, request.content)
+            else -> Triple(null, null, null)
+        }
+    // A seal's content is ciphertext and it carries no tags; if this broker just encrypted it, show
+    // the message and its recipient instead (see NappletRecentEncryptions).
+    val seal = if (signKind != null && signContent != null) sealContents(signKind, signContent, recentEncryptions) else null
+    val isUnreadableSeal = signKind == SealEvent.KIND && seal == null
+    val change = if (signKind != null && signTags != null) listChange(account, signKind, signTags) ?: deletionChange(signKind, signTags) ?: reportChange(signKind, signTags) ?: profileChange(account, signKind, signTags, signContent ?: "") else null
+
+    val counterparty = seal?.recipient ?: request.counterpartyPubKey()
+    // For decrypt this names the counterparty ("read your private messages with Alice").
+    val summary =
+        when {
+            seal != null -> loadStringRes(Res.string.napplet_op_seal_message_to, counterpartyLabel(seal.recipient))
+            isUnreadableSeal -> loadStringRes(Res.string.napplet_op_seal_message)
+            else -> (signKind?.let { k -> signTags?.let { signRequestSummary(k, it) } }) ?: (narrowOp ?: op).label(context)
+        }
+    val preview =
+        when {
+            seal != null ->
+                seal.rumor
+                    ?.content
+                    ?.take(160)
+                    ?.trim() ?: ""
+            isUnreadableSeal -> loadStringRes(Res.string.napplet_consent_seal_unknown)
+            else -> plainPreview(request)
         }
     val rawData =
-        when (request) {
-            is NappletRequest.Publish ->
-                JacksonMapper.toJsonPretty(EventTemplate<Nothing>(TimeUtils.now(), request.kind, request.tags, request.content))
-            is NappletRequest.SignEvent ->
-                JacksonMapper.toJsonPretty(EventTemplate<Nothing>(request.createdAt, request.kind, request.tags, request.content))
-            is NappletRequest.PublishEncrypted -> {
-                val node = JacksonMapper.mapper.createObjectNode()
-                node.put("kind", request.kind)
-                node.put("recipient", request.recipient)
-                node.put("encryption", request.encryption)
-                val tagsNode = node.putArray("tags")
-                for (tag in request.tags) {
-                    val tagNode = tagsNode.addArray()
-                    for (item in tag) tagNode.add(item)
-                }
-                node.put("content", request.content)
-                JacksonMapper.mapper.writerWithDefaultPrettyPrinter().writeValueAsString(node)
-            }
-            is NappletRequest.Nip44Encrypt -> {
-                val node = JacksonMapper.mapper.createObjectNode()
-                node.put("operation", "nip44.encrypt")
-                node.put("peer", request.peer)
-                node.put("plaintext", request.plaintext)
-                JacksonMapper.mapper.writerWithDefaultPrettyPrinter().writeValueAsString(node)
-            }
-            is NappletRequest.Nip44Decrypt -> {
-                val node = JacksonMapper.mapper.createObjectNode()
-                node.put("operation", "nip44.decrypt")
-                node.put("peer", request.peer)
-                node.put("ciphertext", request.ciphertext)
-                JacksonMapper.mapper.writerWithDefaultPrettyPrinter().writeValueAsString(node)
-            }
-            else -> ""
+        if (seal != null) {
+            seal.rumorJson
+        } else {
+            rawDataFor(request)
         }
     val previewTemplate =
-        when (request) {
-            is NappletRequest.Publish -> EventTemplate<Event>(TimeUtils.now(), request.kind, request.tags, request.content)
-            is NappletRequest.SignEvent -> EventTemplate<Event>(request.createdAt, request.kind, request.tags, request.content)
+        when {
+            // Render the message itself, as it will read in the conversation.
+            seal != null -> seal.rumor
+            // Ciphertext rendered as a note says nothing: leave the explanation line instead.
+            isUnreadableSeal -> null
+            request is NappletRequest.Publish -> EventTemplate<Event>(TimeUtils.now(), request.kind, request.tags, request.content)
+            request is NappletRequest.SignEvent -> EventTemplate<Event>(request.createdAt, request.kind, request.tags, request.content)
             else -> null
         }
     return SignerConsentInfo(
@@ -174,8 +181,59 @@ suspend fun buildSignerConsentInfo(
             (narrowOp as? NostrSignerOp.DecryptFrom)?.let {
                 loadStringRes(Res.string.nip46_signer_allow_always_for, counterpartyLabel(it.counterparty))
             },
+        rememberedOpLabel = op.label(context),
+        changeSummary = change?.text,
+        changeIsWarning = change?.warning ?: false,
     )
 }
+
+private fun plainPreview(request: NappletRequest): String =
+    when (request) {
+        is NappletRequest.Publish -> Nip46ConsentInfoBuilder.signPreview(request.kind, request.tags, request.content)
+        is NappletRequest.SignEvent -> Nip46ConsentInfoBuilder.signPreview(request.kind, request.tags, request.content)
+        is NappletRequest.PublishEncrypted -> request.content.take(160).trim()
+        // Encryption shows the plaintext the page wants sealed; decryption has only ciphertext,
+        // which tells the user nothing, so its preview stays empty and the counterparty in
+        // rawData carries the meaning.
+        is NappletRequest.Nip44Encrypt -> request.plaintext.take(160).trim()
+        else -> ""
+    }
+
+private fun rawDataFor(request: NappletRequest): String =
+    when (request) {
+        is NappletRequest.Publish ->
+            JacksonMapper.toJsonPretty(EventTemplate<Nothing>(TimeUtils.now(), request.kind, request.tags, request.content))
+        is NappletRequest.SignEvent ->
+            JacksonMapper.toJsonPretty(EventTemplate<Nothing>(request.createdAt, request.kind, request.tags, request.content))
+        is NappletRequest.PublishEncrypted -> {
+            val node = JacksonMapper.mapper.createObjectNode()
+            node.put("kind", request.kind)
+            node.put("recipient", request.recipient)
+            node.put("encryption", request.encryption)
+            val tagsNode = node.putArray("tags")
+            for (tag in request.tags) {
+                val tagNode = tagsNode.addArray()
+                for (item in tag) tagNode.add(item)
+            }
+            node.put("content", request.content)
+            JacksonMapper.mapper.writerWithDefaultPrettyPrinter().writeValueAsString(node)
+        }
+        is NappletRequest.Nip44Encrypt -> {
+            val node = JacksonMapper.mapper.createObjectNode()
+            node.put("operation", "nip44.encrypt")
+            node.put("peer", request.peer)
+            node.put("plaintext", request.plaintext)
+            JacksonMapper.mapper.writerWithDefaultPrettyPrinter().writeValueAsString(node)
+        }
+        is NappletRequest.Nip44Decrypt -> {
+            val node = JacksonMapper.mapper.createObjectNode()
+            node.put("operation", "nip44.decrypt")
+            node.put("peer", request.peer)
+            node.put("ciphertext", request.ciphertext)
+            JacksonMapper.mapper.writerWithDefaultPrettyPrinter().writeValueAsString(node)
+        }
+        else -> ""
+    }
 
 /**
  * Creates a [SignerConnectInfo] for the first-connect dialog. [declared] is the capability set the

@@ -1120,7 +1120,6 @@
     <string name="relay_auth_event_title">पुनःप्रसारक प्रवेशांकन</string>
     <string name="relay_auth_event_explainer">यह एक पत्र प्रकाशन नहीं। यह आपको इस पुनःप्रसारक में प्रवेशांकन करता है। जो भी इसे रखता है वह सब पढ सकेगा जो यह पुनःप्रसारक केवल आपको दिखाता है। जैसे कि आपके निजी सन्देश।</string>
     <string name="relay_auth_event_unusual_relay">यह एक साधारण पुनःप्रसारक पता नहीं। इसकी जाँच करें हस्ताक्षरण पूर्व।</string>
-    <string name="relay_auth_event_no_relay">कोई पुनःप्रसारक नामित नहीं इस प्रवेशांकन में</string>
     <string name="relay_auth_event_challenge">चुनौती। %1$s</string>
     <string name="relay_auth_session_forgotten_undo">%1$s पुनःपूछेगा अगली बार जब उसे आपकी आवश्यकता हो।</string>
     <string name="relay_auth_session_undo_blocked">पुनःस्थापित नहीं। कभी प्रवेशांकन ना करें यह आज्ञा सक्रिय है। इसीलिए अमेथिस्ट %1$s में प्रवेशांकन नहीं करेगा।</string>
@@ -4435,10 +4434,6 @@
         <item quantity="one">सावधान। यह आपके घटनाओं में से %1$d को मिटाने का अनुरोध करता है।</item>
         <item quantity="other">सावधान। यह आपके घटनाओं में से %1$d को मिटाने का अनुरोध करता है।</item>
     </plurals>
-    <plurals name="napplet_consent_effect_tags">
-        <item quantity="one">%1$d विषयसूचक धारी। घटना दिखाओ दबाएँ यह देखने के लिए कि वस्तुतः क्या हस्ताक्षरित होगा।</item>
-        <item quantity="other">%1$d विषयसूचक धारी। घटना दिखाओ दबाएँ यह देखने के लिए कि वस्तुतः क्या हस्ताक्षरित होगा।</item>
-    </plurals>
     <string name="napplet_consent_get_pubkey">यह नोस्टर संलग्नक्रमक आपकी ख्याप्यकुंचिका पढना चाहता है।</string>
     <string name="napplet_consent_identity_read">यह नोस्टर संलग्नक्रमक आपका परिचय तथा लेखा जानकारी पढना चाहता है।</string>
     <string name="napplet_consent_nip44_decrypt">यह स्थान आपके नोस्टर कुंचिका से %1$s को एक सन्देश का अरहस्यीकरण करना चाहता है।</string>
@@ -4461,7 +4456,6 @@
     <string name="napplet_op_decrypt">आपके निजी सन्देशों का पठन</string>
     <string name="napplet_op_decrypt_from">आपके निजी सन्देशों का पठन %1$s के द्वारा</string>
     <string name="napplet_op_encrypt">सन्देश रहस्यीकरण</string>
-    <string name="napplet_op_relay_login">आपके रूप में पुनःप्रसारकों में प्रवेशांकन करें</string>
     <string name="napplet_op_sign_kind_named">%1$s के लिए हस्ताक्षरण (प्रकार : %2$d)</string>
     <string name="napplet_permissions_title">संयोजित क्रमक</string>
     <string name="napplets">नोस्टर संलग्नक्रमक</string>

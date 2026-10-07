@@ -119,6 +119,7 @@ import com.vitorpamplona.quartz.nip51Lists.releaseArtifactSet.ReleaseArtifactSet
 import com.vitorpamplona.quartz.nipB7Blossom.BlossomServerUrl
 import com.vitorpamplona.quartz.nipB7Blossom.BlossomUri
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.IO
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.map
@@ -146,7 +147,7 @@ fun produceNip82Releases(app: SoftwareApplicationEvent): State<List<ReleaseArtif
                         },
                     )
                 }.distinctUntilChanged()
-                .flowOn(Dispatchers.Default)
+                .flowOn(Dispatchers.IO)
         }
     return flow.collectAsStateWithLifecycle(initialValue = emptyList())
 }

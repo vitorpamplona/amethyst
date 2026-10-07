@@ -30,6 +30,7 @@ import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.connectedApps.signers.NostrConnectPrompt
 import com.vitorpamplona.amethyst.commons.connectedApps.signers.NostrSignerConsentPrompt
 import com.vitorpamplona.amethyst.commons.connectedApps.signers.NostrSignerPermissionLedger
+import com.vitorpamplona.amethyst.commons.connectedApps.signers.SignerOpGrant
 import com.vitorpamplona.amethyst.commons.model.Account
 import com.vitorpamplona.amethyst.commons.napplet.NappletBroker
 import com.vitorpamplona.amethyst.commons.napplet.NappletConsentPrompt
@@ -37,6 +38,7 @@ import com.vitorpamplona.amethyst.commons.napplet.NappletIdentityGateway
 import com.vitorpamplona.amethyst.commons.napplet.NappletNotification
 import com.vitorpamplona.amethyst.commons.napplet.NappletNotificationStore
 import com.vitorpamplona.amethyst.commons.napplet.NappletNotifyGateway
+import com.vitorpamplona.amethyst.commons.napplet.NappletRecentEncryptions
 import com.vitorpamplona.amethyst.commons.napplet.NappletRelayCleartext
 import com.vitorpamplona.amethyst.commons.napplet.NappletRelayGateway
 import com.vitorpamplona.amethyst.commons.napplet.NappletResourceGateway
@@ -68,6 +70,7 @@ import com.vitorpamplona.quartz.nip89AppHandlers.clientTag.withoutClientTag
 import com.vitorpamplona.quartz.utils.sha256.sha256
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.withTimeout
+import kotlinx.coroutines.withTimeoutOrNull
 import okhttp3.OkHttpClient
 import java.io.ByteArrayInputStream
 import kotlin.time.Duration.Companion.seconds
@@ -152,18 +155,26 @@ class AccountNappletGateways(
                 )
             }
 
+        val recentEncryptions = NappletRecentEncryptions()
+
         val signerConsent =
             NostrSignerConsentPrompt { identity, op, request ->
-                SignerConsentCoordinator.requestConsent(
-                    context = context,
-                    info = buildSignerConsentInfo(context, identity, op, request),
-                )
+                // Fail closed if the prompt is never answered. The broker holds its consent lock while
+                // this waits, so an unanswered dialog (left behind when the user went to the launcher,
+                // its task then unreachable) would otherwise block every later signing request from
+                // every web app until the process died. Same bound as the NIP-46 path.
+                withTimeoutOrNull(SIGNER_CONSENT_TIMEOUT) {
+                    SignerConsentCoordinator.requestConsent(
+                        context = context,
+                        info = buildSignerConsentInfo(context, identity, op, request, account, recentEncryptions),
+                    )
+                } ?: SignerOpGrant.DenyOnce
             }
 
         // Everything the broker signs belongs to the guest — a napplet, an nSite, or a web app
         // calling NIP-07 — never to Amethyst, so our client tag has no business on it. It would also
         // corrupt the template a NIP-07 caller re-checks the returned event against.
-        return NappletBroker(account.signer.withoutClientTag(), ledger, consent, signerLedger = signerLedger, nostrConnectPrompt = connectPrompt, signerConsentPrompt = signerConsent, relay = relay, storage = storage, wallet = wallet, resource = resource, upload = upload, identityReads = identityReads, theme = theme, notify = notify)
+        return NappletBroker(account.signer.withoutClientTag(), ledger, consent, signerLedger = signerLedger, nostrConnectPrompt = connectPrompt, signerConsentPrompt = signerConsent, recentEncryptions = recentEncryptions, relay = relay, storage = storage, wallet = wallet, resource = resource, upload = upload, identityReads = identityReads, theme = theme, notify = notify)
     }
 
     /**
@@ -298,6 +309,7 @@ class AccountNappletGateways(
     companion object {
         private val QUERY_TIMEOUT = 8.seconds
         private val WALLET_TIMEOUT = 60.seconds
+        private val SIGNER_CONSENT_TIMEOUT = 120.seconds
 
         /** Amethyst's brand purple (`AmethystPurple`, commons Colors.kt), exposed as the theme primary. */
         private const val AMETHYST_PURPLE = "#9A82DB"

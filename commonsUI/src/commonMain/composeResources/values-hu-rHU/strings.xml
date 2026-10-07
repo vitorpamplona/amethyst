@@ -1120,7 +1120,6 @@
     <string name="relay_auth_event_title">Bejelentkezés az átjátszóba</string>
     <string name="relay_auth_event_explainer">Ez nem egy bejegyzés. Ez bejelentkezteti Önt erre az átjátszóra: aki az átjátszót üzemelteti, olvashatja mindazt, amit az átjátszó csak Önnek jelenít meg – például a privát üzeneteit.</string>
     <string name="relay_auth_event_unusual_relay">Ez nem egy egyszerű átjátszócím. Ellenőrizze az aláírás előtt.</string>
-    <string name="relay_auth_event_no_relay">Nincs átjátszó megnevezve ebben a bejelentkezésben</string>
     <string name="relay_auth_event_challenge">Kihívás: %1$s</string>
     <string name="relay_auth_session_forgotten_undo">Ha szükség lesz rá, a(z) %1$s ismét rákérdez.</string>
     <string name="relay_auth_session_undo_blocked">Nincs helyreállítva. A „Soha ne jelentkezzen be” be van kapcsolva, ezért az Amethyst nem fog bejelentkezni ide: %1$s.</string>
@@ -4435,10 +4434,6 @@
         <item quantity="one">⚠ Ez az Ön %1$d eseményének törlését kéri.</item>
         <item quantity="other">⚠ Ez az Ön %1$d eseményének törlését kéri.</item>
     </plurals>
-    <plurals name="napplet_consent_effect_tags">
-        <item quantity="one">%1$d címkét tartalmaz. Koppintson az „Esemény megjelenítése” elemre, hogy pontosan lássa, mi kerülne aláírásra.</item>
-        <item quantity="other">%1$d címkét tartalmaz. Koppintson az „Esemény megjelenítése” elemre, hogy pontosan lássa, mi kerülne aláírásra.</item>
-    </plurals>
     <string name="napplet_consent_get_pubkey">Ez a nKisalkalmazás olvasni szeretné az Ön nyilvános kulcsát.</string>
     <string name="napplet_consent_identity_read">Ez a nKisalkalmazás olvasni szeretné az Ön profil- és fiókadatait.</string>
     <string name="napplet_consent_nip44_decrypt">Ez az oldal az Ön Nostr-kulcsával vissza szeretne fejteni egy üzenetet, amit %1$s felhasználótol kapott.</string>
@@ -4461,7 +4456,6 @@
     <string name="napplet_op_decrypt">saját privát üzenetek olvasása</string>
     <string name="napplet_op_decrypt_from">elolvashatja a magánüzeneteit vele: %1$s</string>
     <string name="napplet_op_encrypt">egy üzenet titkosítása</string>
-    <string name="napplet_op_relay_login">bejelentkezés az átjátszókra az Ön nevében</string>
     <string name="napplet_op_sign_kind_named">aláírás a következőhöz: %1$s (típus: %2$d)</string>
     <string name="napplet_permissions_title">Összekapcsolt alkalmazások</string>
     <string name="napplets">nKisalkalmazások</string>

@@ -25,6 +25,9 @@ import com.vitorpamplona.quartz.cyberspace.CyberspaceBagContents
 import com.vitorpamplona.quartz.cyberspace.CyberspaceBagEvent
 import com.vitorpamplona.quartz.cyberspace.CyberspaceHint
 import com.vitorpamplona.quartz.cyberspace.RegionSweep
+import kotlinx.coroutines.CoroutineDispatcher
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.IO
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.flow.Flow
@@ -185,6 +188,17 @@ object BagSweep {
 
     /** How many candidates pass between progress emissions. */
     private const val PROGRESS_EVERY = 64L
+
+    /**
+     * Where [sweep] should be collected. A sweep is minutes of CPU on one thread,
+     * so it must not sit on Default, where it would take one of the few core-sized
+     * workers for that long; but a feed can show several bags, and plain IO would
+     * let every started sweep spin a thread of its own. Two at a time keeps the
+     * rest of the device responsive; any further sweep waits its turn.
+     */
+    val SweepDispatcher: CoroutineDispatcher = Dispatchers.IO.limitedParallelism(MAX_CONCURRENT_SWEEPS)
+
+    private const val MAX_CONCURRENT_SWEEPS = 2
 
     /**
      * What this bag's hint promises, from its tags alone.

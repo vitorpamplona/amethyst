@@ -578,6 +578,7 @@
     <string name="mutual">Yours</string>
     <string name="gallery">Gallery</string>
     <string name="reports">Reports</string>
+    <string name="report_card_title">Report: %1$s</string>
     <string name="number_reports">%1$s Reports</string>
     <string name="relays"> Relays</string>
     <string name="website">Website</string>
@@ -1210,7 +1211,20 @@
     <string name="relay_auth_event_title">Relay login</string>
     <string name="relay_auth_event_explainer">Not a post. It logs you in to this relay: whoever holds it can read what the relay only shows to you, like your private messages.</string>
     <string name="relay_auth_event_unusual_relay">This is not a plain relay address. Check it before signing.</string>
-    <string name="relay_auth_event_no_relay">No relay named in this login</string>
+    <string name="relay_auth_event_app_title">Sign-in</string>
+    <string name="http_auth_event_title">Web request sign-in</string>
+    <string name="http_auth_event_with_file">Bound to the file it sends.</string>
+    <string name="blossom_auth_event_title">Media server permission</string>
+    <string name="blossom_auth_upload">Upload a file</string>
+    <string name="blossom_auth_delete">Delete a file</string>
+    <string name="blossom_auth_list">List your files</string>
+    <string name="blossom_auth_get">Download a file</string>
+    <string name="blossom_auth_media">Process a file</string>
+    <string name="blossom_auth_unknown">Use a media server (%1$s)</string>
+    <string name="blossom_auth_file">File %1$s</string>
+    <string name="blossom_auth_any_file">Any of your files</string>
+    <string name="blossom_auth_server">Only on %1$s</string>
+    <string name="blossom_auth_any_server">Works on any media server</string>
     <string name="relay_auth_event_challenge">Challenge: %1$s</string>
     <string name="relay_auth_session_forgotten_undo">%1$s will ask again the next time it needs you.</string>
     <string name="relay_auth_session_undo_blocked">Not restored. “Never log in” is on, so Amethyst won't log in to %1$s.</string>
@@ -4583,10 +4597,6 @@
         <item quantity="one">⚠ This requests deletion of %1$d of your events.</item>
         <item quantity="other">⚠ This requests deletion of %1$d of your events.</item>
     </plurals>
-    <plurals name="napplet_consent_effect_tags">
-        <item quantity="one">Carries %1$d tag. Tap “Show Event” to see exactly what would be signed.</item>
-        <item quantity="other">Carries %1$d tags. Tap “Show Event” to see exactly what would be signed.</item>
-    </plurals>
     <string name="napplet_consent_get_pubkey">This nApplet wants to read your public key.</string>
     <string name="napplet_consent_identity_read">This nApplet wants to read your profile and account data.</string>
     <string name="napplet_consent_nip44_decrypt">This site wants to decrypt a message from %1$s with your Nostr key.</string>
@@ -4609,7 +4619,64 @@
     <string name="napplet_op_decrypt">read your private messages</string>
     <string name="napplet_op_decrypt_from">read your private messages with %1$s</string>
     <string name="napplet_op_encrypt">encrypt a message</string>
-    <string name="napplet_op_relay_login">log in to relays as you</string>
+    <string name="napplet_op_sign_in">sign you in to relays and apps</string>
+    <string name="napplet_op_app_login">sign you in</string>
+    <string name="napplet_op_relay_login_to">log in to %1$s as you</string>
+    <string name="napplet_op_http_auth">sign a %1$s request to %2$s</string>
+    <string name="napplet_op_http_auth_unknown">sign a web request that names no address</string>
+    <string name="napplet_op_blossom">use media servers as you</string>
+    <string name="napplet_op_blossom_upload">upload a file to a media server</string>
+    <string name="napplet_op_blossom_delete">delete a file from a media server</string>
+    <string name="napplet_op_blossom_list">list your files on a media server</string>
+    <string name="napplet_op_blossom_get">download a file from a media server</string>
+    <string name="napplet_consent_wants_described">This site wants to %1$s.</string>
+    <plurals name="napplet_consent_waiting_long">
+        <item quantity="one">Asked %1$d minute ago. The app may have stopped waiting.</item>
+        <item quantity="other">Asked %1$d minutes ago. The app may have stopped waiting.</item>
+    </plurals>
+    <string name="napplet_op_seal_message_to">send a private message to %1$s</string>
+    <string name="napplet_op_seal_message">send a private message</string>
+    <string name="napplet_consent_seal_unknown">An encrypted private message. Amethyst didn't encrypt it, so it can't show what's inside.</string>
+    <string name="napplet_op_update_profile">update your profile</string>
+    <string name="consent_profile_changes">Changes your %1$s</string>
+    <string name="consent_profile_removes">Removes your %1$s</string>
+    <string name="consent_profile_removes_other">Removes fields from your profile</string>
+    <string name="consent_profile_no_change">No change to your profile</string>
+    <string name="consent_profile_unknown">Your current profile hasn't loaded, so Amethyst can't show what this changes. Signing replaces it.</string>
+    <string name="consent_profile_field_name">name</string>
+    <string name="consent_profile_field_display_name">display name</string>
+    <string name="consent_profile_field_picture">picture</string>
+    <string name="consent_profile_field_banner">banner</string>
+    <string name="consent_profile_field_about">bio</string>
+    <string name="consent_profile_field_website">website</string>
+    <string name="consent_profile_field_nip05">verified address</string>
+    <string name="consent_profile_field_lightning">lightning address</string>
+    <string name="consent_report_person">Reports %1$s publicly</string>
+    <string name="consent_report_person_reason">Reports %1$s publicly as %2$s</string>
+    <string name="consent_report_content">Reports content publicly</string>
+    <string name="consent_delete_about">Deletes your %1$s about %2$s</string>
+    <string name="consent_delete_events">events</string>
+    <string name="consent_delete_nothing">Names nothing to delete</string>
+    <plurals name="consent_delete_count">
+        <item quantity="one">Deletes %1$d of your %2$s</item>
+        <item quantity="other">Deletes %1$d of your %2$s</item>
+    </plurals>
+    <string name="consent_list_adds">Adds %1$s</string>
+    <string name="consent_list_removes">Removes %1$s</string>
+    <string name="consent_list_no_change">No change to who is on this list</string>
+    <string name="consent_list_unknown">Your current list hasn't loaded, so Amethyst can't show what this changes. Signing replaces it.</string>
+    <plurals name="consent_list_keeps">
+        <item quantity="one">keeps the other %1$d</item>
+        <item quantity="other">keeps the other %1$d</item>
+    </plurals>
+    <plurals name="consent_list_wipe">
+        <item quantity="one">Removes everyone (%1$d) from this list</item>
+        <item quantity="other">Removes everyone (%1$d) from this list</item>
+    </plurals>
+    <plurals name="consent_list_names_more">
+        <item quantity="one">%1$s and %2$d more</item>
+        <item quantity="other">%1$s and %2$d more</item>
+    </plurals>
     <string name="napplet_op_sign_kind_named">sign for %1$s (kind: %2$d)</string>
     <string name="napplet_permissions_title">Connected Apps</string>
     <string name="napplets">nApplets</string>
