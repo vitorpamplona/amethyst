@@ -296,7 +296,8 @@ fun PlatformChips(platforms: List<String>) {
     if (platforms.isEmpty()) return
     val known = platforms.filter { SoftwarePlatforms.os(it) != SoftwareOs.OTHER }
     val custom = platforms.filter { SoftwarePlatforms.os(it) == SoftwareOs.OTHER }.distinct()
-    val byOs = remember(known) { known.groupBy { SoftwarePlatforms.os(it) }.toSortedMap() }
+    // Sorted entries, not toSortedMap(): that one is JVM-only and breaks the native targets.
+    val byOs = remember(known) { known.groupBy { SoftwarePlatforms.os(it) }.entries.sortedBy { it.key } }
     FlowRow(
         horizontalArrangement = Arrangement.spacedBy(6.dp),
         verticalArrangement = Arrangement.spacedBy(6.dp),
