@@ -348,6 +348,7 @@ suspend fun INostrClient.fetchAllPagesFromPoolWithHooks(
     filters: Map<NormalizedRelayUrl, List<Filter>>,
     idleTimeoutMs: Long = 30_000L,
     maxConcurrentRelays: Int = 8,
+    onRelayResult: ((relay: NormalizedRelayUrl, result: PagedFetchResult) -> Unit)? = null,
     onEvent: suspend (relay: NormalizedRelayUrl, event: Event) -> Boolean,
 ): List<Pair<NormalizedRelayUrl, Event>> {
     if (filters.isEmpty()) return emptyList()
@@ -379,6 +380,7 @@ suspend fun INostrClient.fetchAllPagesFromPoolWithHooks(
                 filters = filters,
                 idleTimeoutMs = idleTimeoutMs,
                 maxConcurrentRelays = maxConcurrentRelays,
+                onRelayResult = onRelayResult,
             ) { event, relay -> eventChannel.trySend(relay to event) }
         } finally {
             eventChannel.close()

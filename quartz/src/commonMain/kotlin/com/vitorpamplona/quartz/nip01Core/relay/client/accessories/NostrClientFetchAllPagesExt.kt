@@ -72,6 +72,13 @@ data class PagedFetchResult(
     /** Total number of distinct events delivered across all pages. */
     val downloaded: Int,
     val end: End,
+    /**
+     * The relay's own words when it refused the walk ([End.CLOSED], [End.AUTH_REQUIRED],
+     * [End.CANNOT_CONNECT]): the CLOSED message (`"rate-limited: slow down"`) or the
+     * transport's error. Null for every other ending. Often the only explanation for an
+     * empty result, so a caller reporting one should show it.
+     */
+    val message: String? = null,
 ) {
     enum class End {
         /**
@@ -280,6 +287,11 @@ suspend fun INostrClient.fetchAllPages(
     // empty page that silently truncated large results.
     val subId = newSubId()
 
+    // The text of the last refusal (CLOSED message or connection error), written on the
+    // relay's reader thread before its signal is sent; the channel orders it, as with the
+    // EOSE hints below.
+    var refusal: String? = null
+
     while (true) {
         coroutineContext.ensureActive()
 
@@ -469,6 +481,7 @@ suspend fun INostrClient.fetchAllPages(
                         relay: NormalizedRelayUrl,
                         forFilters: List<Filter>?,
                     ) {
+                        refusal = message
                         if (MachineReadablePrefix.parse(message) == MachineReadablePrefix.AUTH_REQUIRED) {
                             doneChannel.trySend(PageSignal.AUTH_REQUIRED)
                         } else {
@@ -481,6 +494,7 @@ suspend fun INostrClient.fetchAllPages(
                         message: String,
                         forFilters: List<Filter>?,
                     ) {
+                        refusal = message
                         doneChannel.trySend(PageSignal.CANNOT_CONNECT)
                     }
                 }
@@ -653,7 +667,8 @@ suspend fun INostrClient.fetchAllPages(
         until = nextUntil
     }
 
-    return PagedFetchResult(totalEvents, end)
+    val refused = end == PagedFetchResult.End.CLOSED || end == PagedFetchResult.End.AUTH_REQUIRED || end == PagedFetchResult.End.CANNOT_CONNECT
+    return PagedFetchResult(totalEvents, end, refusal.takeIf { refused })
 }
 
 suspend fun INostrClient.fetchAllPages(
