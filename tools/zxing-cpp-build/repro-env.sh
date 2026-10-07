@@ -37,11 +37,13 @@ REPRO_CFLAGS="${REPRO_CFLAGS} -Wno-builtin-macro-redefined -D__DATE__=\"redacted
 
 export ZXING_REPRO_CFLAGS="${REPRO_CFLAGS}"
 
-# lld's default build-id is a hash of the content, so it is already a function
-# of the input bytes — but pin it rather than inherit whatever the NDK's
-# default becomes. A content hash also means a matching rebuild keeps the same
-# BuildID, which is what an auditor compares.
-export ZXING_REPRO_LDFLAGS="-Wl,--build-id=sha1"
+# No build-id at all. lld hashes the *unstripped* output, whose debug info
+# still carries the NDK's absolute install path (sysroot headers, libc++), so
+# the same NDK revision unpacked in a different directory produced a different
+# 20-byte .note.gnu.build-id and nothing else. Nothing on Android needs the note
+# (we ship stripped and upload no symbols), so dropping it removes the last
+# input that depended on where the NDK lives.
+export ZXING_REPRO_LDFLAGS="-Wl,--build-id=none"
 
 # Pin SOURCE_DATE_EPOCH to the commit the tag points at: deterministic for a
 # given ZXING_CPP_VERSION, and independent of when the build actually runs.
