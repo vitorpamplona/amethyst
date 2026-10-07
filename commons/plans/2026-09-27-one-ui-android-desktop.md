@@ -542,7 +542,7 @@ assemblers, `EventSync`, …). Packages are renamed on the way:
      - The git repository browser, the QR image scan, the new-calendar-event form and the
        Nests list (two to four blockers each).
      - Share-as-image (bitmaps).
-     - `AccountSessionManager` (login and sign-up).
+     - ~~`AccountSessionManager` (login and sign-up)~~: done in 7c.
      - The HLS video uploader (LightCompressor).
      Each needs a slot or a port of its own, so step 7 started alongside them.
 7. **Navigation**:
@@ -579,11 +579,26 @@ assemblers, `EventSync`, …). Packages are renamed on the way:
          `AppServices`: section-collapse prefs, scheduled posts and a display-only Tor status.
          The debug flag and the flavour come through `AppPlatform`.
      - Still in the app, waiting on other work:
-       - The account-switcher sheet's contents wait on the `AccountSessionManager` port
-         (login and sign-up), already listed under step 6.
        - The 23 destinations whose screens are app-only move with their screens.
        - The `AppNavigation` root (intents, screen time, the overlay hosts and the embedded-tab
          layer) is step 8's Android shim.
+   - **7c, the login session (2026-10-07).**
+     - `AccountSessionManager` and `AccountInfo` are in commons `account/`. The manager reaches
+       the platform through three ports:
+       - `AccountSessionStore`: the saved-login roster (`LocalPreferences`).
+       - `AccountCache`: the live `Account`s (`AccountCacheState`).
+       - `AccountSessionHooks`: the call and audio-room teardown, launcher shortcuts, the
+         publish-pipeline purge and the Cashu counters.
+     - The login and sign-up screens, their view models, the key field, the Tor setup and its
+       dialog, the add-account dialog and the account-switcher sheet are in commonsUI.
+     - Android fills five `AppPlatform` slots for them:
+       - whether the build asks for the terms of use (Play does);
+       - the terms checkbox;
+       - the NIP-55 signer-app button;
+       - keys from `nostr:` links while logged off;
+       - toasts.
+     - Still in the app: `AccountScreen` (Tor and relay lifecycles, the per-account
+       ViewModelStore) and `LoggedInPage`, both part of step 8's root.
 8. **The app root port** and the new JVM shim. Then the Desktop feature inventory, and
    retiring the old `desktopApp`.
 

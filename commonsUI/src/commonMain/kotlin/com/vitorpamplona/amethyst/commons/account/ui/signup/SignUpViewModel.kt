@@ -18,7 +18,7 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.ui.screen.loggedOff.signup
+package com.vitorpamplona.amethyst.commons.account.ui.signup
 
 import androidx.compose.runtime.Stable
 import androidx.compose.runtime.getValue
@@ -26,15 +26,17 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.lifecycle.ViewModel
-import com.vitorpamplona.amethyst.BuildConfig
 import com.vitorpamplona.amethyst.commons.account.AccountSessionManager
 import com.vitorpamplona.amethyst.commons.account.ui.login.LoginErrorManager
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.name_is_required
 import com.vitorpamplona.amethyst.commons.tor.TorSettingsFlow
 
+/** The sign-up form's state; where [requiresTermsAcceptance] holds, it waits for the terms of use. */
 @Stable
-class SignUpViewModel : ViewModel() {
+class SignUpViewModel(
+    requiresTermsAcceptance: Boolean = false,
+) : ViewModel() {
     lateinit var accountSessionManager: AccountSessionManager
     lateinit var torSettings: TorSettingsFlow
 
@@ -42,7 +44,7 @@ class SignUpViewModel : ViewModel() {
 
     var displayName by mutableStateOf(TextFieldValue(""))
 
-    var acceptedTerms by mutableStateOf(BuildConfig.FLAVOR != "play")
+    var acceptedTerms by mutableStateOf(!requiresTermsAcceptance)
     var termsAcceptanceIsRequiredError by mutableStateOf(false)
 
     fun init(accountSessionManager: AccountSessionManager) {

@@ -612,7 +612,7 @@ object LocalPreferences : AccountSessionStore {
             }
         }
 
-    fun accountsFlow() = savedAccounts
+    override fun accountsFlow(): StateFlow<List<AccountInfo>?> = savedAccounts
 
     private suspend fun updateSavedAccounts(accounts: List<AccountInfo>) =
         withContext(Dispatchers.IO) {

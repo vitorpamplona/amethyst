@@ -25,6 +25,7 @@ import com.vitorpamplona.amethyst.commons.cashu.UnavailableCashuKeysetCounterSto
 import com.vitorpamplona.amethyst.commons.model.Account
 import com.vitorpamplona.amethyst.commons.model.AccountSettings
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
+import kotlinx.coroutines.flow.StateFlow
 
 /**
  * Where [AccountSessionManager] keeps the saved logins: the roster, which one is current, and each
@@ -50,6 +51,9 @@ interface AccountSessionStore {
     suspend fun currentAccount(): String?
 
     suspend fun allSavedAccounts(): List<AccountInfo>
+
+    /** The saved logins as they change; null until [allSavedAccounts] first loads them. */
+    fun accountsFlow(): StateFlow<List<AccountInfo>?>
 
     suspend fun switchToAccount(accountInfo: AccountInfo)
 

@@ -28,6 +28,8 @@ import com.vitorpamplona.quartz.nip01Core.crypto.KeyPair
 import com.vitorpamplona.quartz.nip19Bech32.toNpub
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.job
 import kotlinx.coroutines.joinAll
 import kotlinx.coroutines.test.runTest
@@ -53,6 +55,8 @@ class AccountSessionManagerTest {
             override suspend fun currentAccount(): String? = null
 
             override suspend fun allSavedAccounts(): List<AccountInfo> = emptyList()
+
+            override fun accountsFlow(): StateFlow<List<AccountInfo>?> = MutableStateFlow(emptyList())
 
             override suspend fun switchToAccount(accountInfo: AccountInfo) {
                 events += "switch"

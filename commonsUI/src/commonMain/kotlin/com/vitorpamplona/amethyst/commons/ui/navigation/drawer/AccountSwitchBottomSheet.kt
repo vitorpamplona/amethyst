@@ -18,7 +18,7 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.ui.navigation.drawer
+package com.vitorpamplona.amethyst.commons.ui.navigation.drawer
 
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -47,15 +47,13 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.vitorpamplona.amethyst.Amethyst
-import com.vitorpamplona.amethyst.LocalPreferences
 import com.vitorpamplona.amethyst.commons.account.AccountInfo
 import com.vitorpamplona.amethyst.commons.account.AccountSessionManager
+import com.vitorpamplona.amethyst.commons.account.ui.AddAccountDialog
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.User
@@ -75,6 +73,8 @@ import com.vitorpamplona.amethyst.commons.resources.scheduled_posts_logout_warni
 import com.vitorpamplona.amethyst.commons.scheduledposts.ScheduledPostStatus
 import com.vitorpamplona.amethyst.commons.ui.components.RobohashFallbackAsyncImage
 import com.vitorpamplona.amethyst.commons.ui.loadPluralStringRes
+import com.vitorpamplona.amethyst.commons.ui.platform.LocalAppPlatform
+import com.vitorpamplona.amethyst.commons.ui.platform.LocalAppServices
 import com.vitorpamplona.amethyst.commons.ui.pluralStringRes
 import com.vitorpamplona.amethyst.commons.ui.richtext.CreateTextWithEmoji
 import com.vitorpamplona.amethyst.commons.ui.screen.LocalDisplaySettings
@@ -84,9 +84,9 @@ import com.vitorpamplona.amethyst.commons.ui.theme.Size10dp
 import com.vitorpamplona.amethyst.commons.ui.theme.Size55dp
 import com.vitorpamplona.amethyst.commons.util.toShortDisplay
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
-import com.vitorpamplona.amethyst.ui.screen.loggedOff.AddAccountDialog
 import com.vitorpamplona.quartz.nip19Bech32.decodePublicKeyAsHexOrNull
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.IO
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -134,13 +134,15 @@ private fun DisplayAllAccounts(
     accountViewModel: AccountViewModel,
     accountSessionManager: AccountSessionManager,
 ) {
-    val accounts by LocalPreferences.accountsFlow().collectAsStateWithLifecycle()
+    val accounts by accountSessionManager.localPreferences
+        .accountsFlow()
+        .collectAsStateWithLifecycle()
 
     // Trigger lazy load from encrypted storage if the flow hasn't been populated yet.
     // accountsFlow() starts as null and only gets a value when allSavedAccounts() is called.
     LaunchedEffect(Unit) {
         if (accounts == null) {
-            LocalPreferences.allSavedAccounts()
+            accountSessionManager.localPreferences.allSavedAccounts()
         }
     }
 
@@ -279,11 +281,12 @@ private fun LogoutButton(
 ) {
     val scheduledPostsLogoutToastZeroStr = stringRes(Res.string.scheduled_posts_logout_toast_zero)
     var logoutDialog by remember { mutableStateOf(false) }
-    val context = LocalContext.current
+    val toaster = LocalAppPlatform.current.rememberToaster()
     val scope = rememberCoroutineScope()
+    val scheduledPostStore = LocalAppServices.current.scheduledPostStore
     if (logoutDialog) {
         val accountHex = remember(acc) { decodePublicKeyAsHexOrNull(acc.npub) }
-        val allPosts by Amethyst.instance.scheduledPostStore.flow
+        val allPosts by scheduledPostStore.flow
             .collectAsStateWithLifecycle()
         val unpublishedCount by remember(accountHex) {
             derivedStateOf {
@@ -343,9 +346,7 @@ private fun LogoutButton(
                                 } else {
                                     scheduledPostsLogoutToastZeroStr
                                 }
-                            android.widget.Toast
-                                .makeText(context, toastMessage, android.widget.Toast.LENGTH_SHORT)
-                                .show()
+                            toaster.show(toastMessage, long = false)
                         }
                     },
                 ) {

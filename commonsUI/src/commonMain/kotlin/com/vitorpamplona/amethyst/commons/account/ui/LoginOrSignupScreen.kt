@@ -18,7 +18,7 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.ui.screen.loggedOff
+package com.vitorpamplona.amethyst.commons.account.ui
 
 import androidx.compose.animation.Crossfade
 import androidx.compose.runtime.Composable
@@ -27,8 +27,8 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import com.vitorpamplona.amethyst.commons.account.AccountSessionManager
-import com.vitorpamplona.amethyst.ui.screen.loggedOff.login.LoginPage
-import com.vitorpamplona.amethyst.ui.screen.loggedOff.signup.SignUpPage
+import com.vitorpamplona.amethyst.commons.account.ui.login.LoginPage
+import com.vitorpamplona.amethyst.commons.account.ui.signup.SignUpPage
 
 @Composable
 fun LoginOrSignupScreen(

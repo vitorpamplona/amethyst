@@ -18,7 +18,7 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.ui.screen.loggedOff
+package com.vitorpamplona.amethyst.commons.account.ui
 
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.MaterialTheme
@@ -37,7 +37,7 @@ import com.vitorpamplona.amethyst.commons.resources.connect_via_tor2
 import com.vitorpamplona.amethyst.commons.tor.TorSettingsFlow
 import com.vitorpamplona.amethyst.commons.ui.components.appendLink
 import com.vitorpamplona.amethyst.commons.ui.stringRes
-import com.vitorpamplona.amethyst.ui.tor.ConnectTorDialog
+import com.vitorpamplona.amethyst.commons.ui.tor.ConnectTorDialog
 
 @Composable
 fun TorSettingsSetup(

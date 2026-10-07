@@ -18,9 +18,8 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.ui.screen.loggedOff.signup
+package com.vitorpamplona.amethyst.commons.account.ui.signup
 
-import android.widget.Toast
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -38,18 +37,16 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.commons.account.AccountSessionManager
+import com.vitorpamplona.amethyst.commons.account.ui.TorSettingsSetup
 import com.vitorpamplona.amethyst.commons.account.ui.login.LoginErrorManager
 import com.vitorpamplona.amethyst.commons.account.ui.signup.LoginButton
 import com.vitorpamplona.amethyst.commons.account.ui.signup.SignUpButton
@@ -63,20 +60,19 @@ import com.vitorpamplona.amethyst.commons.resources.my_awesome_name
 import com.vitorpamplona.amethyst.commons.resources.welcome
 import com.vitorpamplona.amethyst.commons.tor.TorSettingsFlow
 import com.vitorpamplona.amethyst.commons.ui.insets.imePaddingSafe
+import com.vitorpamplona.amethyst.commons.ui.platform.LocalAppPlatform
+import com.vitorpamplona.amethyst.commons.ui.platform.LocalAppServices
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.Size10dp
 import com.vitorpamplona.amethyst.commons.ui.theme.Size20dp
 import com.vitorpamplona.amethyst.commons.ui.theme.Size40dp
 import com.vitorpamplona.amethyst.commons.ui.theme.ThemeComparisonRow
 import com.vitorpamplona.amethyst.commons.ui.theme.placeholderText
-import com.vitorpamplona.amethyst.ui.screen.loggedOff.TorSettingsSetup
-import com.vitorpamplona.amethyst.ui.screen.loggedOff.legal.TermsGate
-import kotlinx.coroutines.launch
 
 @Preview(device = "spec:width=2160px,height=2340px,dpi=440")
 @Composable
 fun SignUpPagePreview() {
-    val signUpViewModel: SignUpViewModel = viewModel()
+    val signUpViewModel: SignUpViewModel = viewModel { SignUpViewModel() }
     signUpViewModel.init(TorSettingsFlow())
 
     ThemeComparisonRow(
@@ -91,9 +87,10 @@ fun SignUpPage(
     accountSessionManager: AccountSessionManager,
     onWantsToLogin: () -> Unit,
 ) {
-    val signUpViewModel: SignUpViewModel = viewModel()
+    val requiresTerms = LocalAppPlatform.current.requiresTermsAcceptance
+    val signUpViewModel: SignUpViewModel = viewModel { SignUpViewModel(requiresTerms) }
     signUpViewModel.init(accountSessionManager)
-    signUpViewModel.init(Amethyst.instance.torPrefs.value)
+    signUpViewModel.init(LocalAppServices.current.torSettings)
 
     SignUpPage(signUpViewModel, onWantsToLogin)
 }
@@ -103,8 +100,8 @@ fun SignUpPage(
     signUpViewModel: SignUpViewModel,
     onWantsToLogin: () -> Unit,
 ) {
-    val context = LocalContext.current
-    val scope = rememberCoroutineScope()
+    val platform = LocalAppPlatform.current
+    val toaster = platform.rememberToaster()
 
     Column(
         modifier =
@@ -182,19 +179,10 @@ fun SignUpPage(
 
         TorSettingsSetup(
             torSettingsFlow = signUpViewModel.torSettings,
-            onError = {
-                scope.launch {
-                    Toast
-                        .makeText(
-                            context,
-                            it,
-                            Toast.LENGTH_LONG,
-                        ).show()
-                }
-            },
+            onError = { toaster.show(it, long = true) },
         )
 
-        TermsGate(
+        platform.TermsGate(
             checked = signUpViewModel.acceptedTerms,
             onCheckedChange = signUpViewModel::updateAcceptedTerms,
             showError = signUpViewModel.termsAcceptanceIsRequiredError,

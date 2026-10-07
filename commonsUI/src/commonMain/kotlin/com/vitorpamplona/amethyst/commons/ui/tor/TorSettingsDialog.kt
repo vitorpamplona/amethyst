@@ -18,7 +18,7 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.ui.tor
+package com.vitorpamplona.amethyst.commons.ui.tor
 
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.expandVertically
@@ -46,7 +46,6 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
-import androidx.compose.ui.window.DialogProperties
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.connect_through_your_orbot_setup_short
@@ -87,6 +86,7 @@ import com.vitorpamplona.amethyst.commons.tor.parseTorType
 import com.vitorpamplona.amethyst.commons.tor.resourceId
 import com.vitorpamplona.amethyst.commons.ui.components.SetDialogToEdgeToEdge
 import com.vitorpamplona.amethyst.commons.ui.components.TitleExplainer
+import com.vitorpamplona.amethyst.commons.ui.components.edgeToEdgeDialogProperties
 import com.vitorpamplona.amethyst.commons.ui.navigation.topbars.SavingTopBar
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.settings.SettingsRow
 import com.vitorpamplona.amethyst.commons.ui.stringRes
@@ -106,11 +106,7 @@ fun ConnectTorDialog(
 ) {
     Dialog(
         onDismissRequest = onClose,
-        properties =
-            DialogProperties(
-                usePlatformDefaultWidth = false,
-                decorFitsSystemWindows = false,
-            ),
+        properties = edgeToEdgeDialogProperties(),
     ) {
         SetDialogToEdgeToEdge()
         TorDialogContents(
@@ -142,7 +138,7 @@ fun TorDialogContents(
     onPost: (torSettings: TorSettings) -> Unit,
     onError: (String) -> Unit,
 ) {
-    val dialogViewModel = viewModel<TorDialogViewModel>()
+    val dialogViewModel = viewModel { TorDialogViewModel() }
 
     // runs only once and before the rest of the screen is build
     // to avoid blinking and animations from the default/previous

@@ -25,6 +25,7 @@ import androidx.compose.runtime.Stable
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.UriHandler
+import com.vitorpamplona.amethyst.commons.account.ui.login.LoginViewModel
 import com.vitorpamplona.amethyst.commons.favorites.FavoriteApp
 import com.vitorpamplona.amethyst.commons.feeds.FeedContentState
 import com.vitorpamplona.amethyst.commons.model.UiSettingsFlow
@@ -68,6 +69,29 @@ interface AppPlatform {
 
     /** Dumps the app's runtime state (memory, caches, subscriptions) to the log, for the logo's debug tap. */
     fun logDebugState() {}
+
+    /** Whether a first login must accept the terms of use (the Play Store build). */
+    val requiresTermsAcceptance: Boolean get() = false
+
+    /** The terms-of-use checkbox the login and sign-up forms show where [requiresTermsAcceptance]. */
+    @Composable
+    fun TermsGate(
+        checked: Boolean,
+        onCheckedChange: (Boolean) -> Unit,
+        showError: Boolean,
+    ) {}
+
+    /** Logs in through a signer app (Android's NIP-55 signers), when one is installed. */
+    @Composable
+    fun ExternalSignerLoginButton(loginViewModel: LoginViewModel) {}
+
+    /** Hands the login form the keys the app is opened with (a `nostr:` link) while logged off. */
+    @Composable
+    fun IncomingLoginKeys(onKey: suspend (String) -> Unit) {}
+
+    /** Shows brief messages over the app (Android's toasts); drops them where there is none. */
+    @Composable
+    fun rememberToaster(): Toaster = Toaster.None
 
     /** The settings screen's legal links, when the build's distribution calls for them. */
     fun legalSettingsCategory(uriHandler: UriHandler): SettingsCategory? = null
@@ -323,3 +347,15 @@ fun DetectedWorkoutCarousel(
     accountViewModel: AccountViewModel,
     onPick: (Route.NewWorkout) -> Unit,
 ) = LocalAppPlatform.current.DetectedWorkoutCarousel(accountViewModel, onPick)
+
+/** Shows a brief message over the app; [long] keeps it up longer. */
+fun interface Toaster {
+    fun show(
+        message: String,
+        long: Boolean,
+    )
+
+    companion object {
+        val None = Toaster { _, _ -> }
+    }
+}

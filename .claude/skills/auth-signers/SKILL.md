@@ -78,7 +78,7 @@ Entry points:
 - **Bunker URL** (`bunker://...`) → `NostrSignerRemote.fromBunkerUri(bunkerUri, localSigner, client)` in `nip46RemoteSigner/signer/NostrSignerRemote.kt` parses the URI and returns a `NostrSignerRemote`; then call its `suspend fun connect()` to perform the NIP-46 handshake.
 - **Installed external signer app** (Amber, nos2x, etc. on Android) → `ExternalSignerLogin.launch(...)` opens the signer app; approval yields a `NostrSignerExternal`.
 
-The UI hosts both flows via `amethyst/.../ui/screen/loggedOff/login/` — look there for `ExternalSignerButton.kt` and the bunker-URL paste screen.
+The login form (key field, `LoginViewModel`, `AccountSessionManager` calls) is shared in commonsUI `commons/account/ui/login/`; the Android signer-app button, `ExternalSignerButton.kt`, stays in `amethyst/.../ui/screen/loggedOff/login/` and reaches the form through `AppPlatform.ExternalSignerLoginButton`.
 
 ## Trade-offs
 

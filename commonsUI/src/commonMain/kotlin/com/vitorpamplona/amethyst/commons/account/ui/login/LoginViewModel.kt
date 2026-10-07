@@ -18,7 +18,7 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.ui.screen.loggedOff.login
+package com.vitorpamplona.amethyst.commons.account.ui.login
 
 import androidx.compose.runtime.Stable
 import androidx.compose.runtime.derivedStateOf
@@ -27,7 +27,6 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.lifecycle.ViewModel
-import com.vitorpamplona.amethyst.BuildConfig
 import com.vitorpamplona.amethyst.commons.account.AccountSessionManager
 import com.vitorpamplona.amethyst.commons.account.ui.login.LoginErrorManager
 import com.vitorpamplona.amethyst.commons.resources.Res
@@ -42,8 +41,14 @@ import com.vitorpamplona.amethyst.commons.tor.TorSettingsFlow
 import com.vitorpamplona.quartz.nip19Bech32.Bech32Transcription
 import com.vitorpamplona.quartz.nip19Bech32.bech32.bechToBytes
 
+/**
+ * The login form's state. [requiresTermsAcceptance] is the build's: where it holds, a first login
+ * stays disabled until the user accepts the terms of use.
+ */
 @Stable
-class LoginViewModel : ViewModel() {
+class LoginViewModel(
+    private val requiresTermsAcceptance: Boolean = false,
+) : ViewModel() {
     lateinit var accountSessionManager: AccountSessionManager
     lateinit var torSettings: TorSettingsFlow
 
@@ -93,7 +98,7 @@ class LoginViewModel : ViewModel() {
     ) {
         clear()
         this.isFirstLogin = isFirstLogin
-        acceptedTerms = !isFirstLogin || BuildConfig.FLAVOR != "play"
+        acceptedTerms = !isFirstLogin || !requiresTermsAcceptance
         if (newAccountKey != null) {
             key = TextFieldValue(newAccountKey)
         }
@@ -104,7 +109,7 @@ class LoginViewModel : ViewModel() {
         password = TextFieldValue("")
 
         errorManager.clearErrors()
-        acceptedTerms = BuildConfig.FLAVOR != "play"
+        acceptedTerms = !requiresTermsAcceptance
         processingLogin = false
         isTemporary = false
         offerTemporaryLogin = false

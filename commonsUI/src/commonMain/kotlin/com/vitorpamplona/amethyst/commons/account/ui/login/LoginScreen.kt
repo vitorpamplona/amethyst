@@ -18,9 +18,8 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.ui.screen.loggedOff.login
+package com.vitorpamplona.amethyst.commons.account.ui.login
 
-import android.widget.Toast
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -45,7 +44,6 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -54,7 +52,6 @@ import androidx.compose.ui.autofill.ContentType
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.semantics.contentType
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.input.ImeAction
@@ -65,8 +62,8 @@ import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.commons.account.AccountSessionManager
+import com.vitorpamplona.amethyst.commons.account.ui.TorSettingsSetup
 import com.vitorpamplona.amethyst.commons.account.ui.login.LoginButton
 import com.vitorpamplona.amethyst.commons.account.ui.login.LoginErrorManager
 import com.vitorpamplona.amethyst.commons.account.ui.login.SignUpButton
@@ -83,22 +80,20 @@ import com.vitorpamplona.amethyst.commons.resources.show_password
 import com.vitorpamplona.amethyst.commons.resources.temporary_account
 import com.vitorpamplona.amethyst.commons.tor.TorSettingsFlow
 import com.vitorpamplona.amethyst.commons.ui.insets.imePaddingSafe
+import com.vitorpamplona.amethyst.commons.ui.platform.LocalAppPlatform
+import com.vitorpamplona.amethyst.commons.ui.platform.LocalAppServices
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.Size10dp
 import com.vitorpamplona.amethyst.commons.ui.theme.Size20dp
 import com.vitorpamplona.amethyst.commons.ui.theme.Size40dp
 import com.vitorpamplona.amethyst.commons.ui.theme.ThemeComparisonRow
 import com.vitorpamplona.amethyst.commons.ui.theme.placeholderText
-import com.vitorpamplona.amethyst.ui.screen.loggedOff.TorSettingsSetup
-import com.vitorpamplona.amethyst.ui.screen.loggedOff.legal.TermsGate
-import com.vitorpamplona.quartz.nip55AndroidSigner.client.isExternalSignerInstalled
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.launch
 
 @Preview(device = "spec:width=2160px,height=2340px,dpi=440")
 @Composable
 fun LoginPagePreview() {
-    val loginViewModel: LoginViewModel = viewModel()
+    val loginViewModel: LoginViewModel = viewModel { LoginViewModel() }
     loginViewModel.init(TorSettingsFlow())
 
     ThemeComparisonRow(
@@ -115,9 +110,10 @@ fun LoginPage(
     newAccountKey: String? = null,
     onWantsToLogin: () -> Unit,
 ) {
-    val loginViewModel: LoginViewModel = viewModel()
+    val requiresTerms = LocalAppPlatform.current.requiresTermsAcceptance
+    val loginViewModel: LoginViewModel = viewModel { LoginViewModel(requiresTerms) }
     loginViewModel.init(accountSessionManager)
-    loginViewModel.init(Amethyst.instance.torPrefs.value)
+    loginViewModel.init(LocalAppServices.current.torSettings)
 
     LaunchedEffect(loginViewModel, isFirstLogin, newAccountKey) {
         loginViewModel.load(isFirstLogin, newAccountKey)
@@ -131,8 +127,8 @@ fun LoginPage(
     loginViewModel: LoginViewModel,
     onWantsToLogin: () -> Unit,
 ) {
-    val context = LocalContext.current
-    val scope = rememberCoroutineScope()
+    val platform = LocalAppPlatform.current
+    val toaster = platform.rememberToaster()
 
     Column(
         modifier =
@@ -187,16 +183,7 @@ fun LoginPage(
 
         TorSettingsSetup(
             torSettingsFlow = loginViewModel.torSettings,
-            onError = {
-                scope.launch {
-                    Toast
-                        .makeText(
-                            context,
-                            it,
-                            Toast.LENGTH_LONG,
-                        ).show()
-                }
-            },
+            onError = { toaster.show(it, long = true) },
         )
 
         if (loginViewModel.offerTemporaryLogin) {
@@ -207,7 +194,7 @@ fun LoginPage(
         }
 
         if (loginViewModel.isFirstLogin) {
-            TermsGate(
+            platform.TermsGate(
                 checked = loginViewModel.acceptedTerms,
                 onCheckedChange = loginViewModel::updateAcceptedTerms,
                 showError = loginViewModel.termsAcceptanceIsRequiredError,
@@ -224,9 +211,7 @@ fun LoginPage(
             )
         }
 
-        if (isExternalSignerInstalled(context)) {
-            ExternalSignerButton(loginViewModel)
-        }
+        platform.ExternalSignerLoginButton(loginViewModel)
 
         Spacer(modifier = Modifier.height(Size40dp))
 
@@ -239,7 +224,7 @@ fun LoginPage(
         }
     }
 
-    OpenURIIfNotLoggedIn { key ->
+    platform.IncomingLoginKeys { key ->
         loginViewModel.updateKey(TextFieldValue(key), true)
         loginViewModel.updateOfferTemporaryLogin(true)
     }
