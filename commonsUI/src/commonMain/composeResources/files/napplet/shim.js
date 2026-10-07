@@ -582,16 +582,25 @@
       try { return n.dispatchEvent(new KeyboardEvent(type, { bubbles: true, cancelable: true, key: 'Enter', code: 'Enter', keyCode: 13, which: 13, charCode: type === 'keypress' ? 13 : 0 })); }
       catch (_) { return true; }
     }
-    // The keyboard's Enter, in Chrome's order: keydown, keypress, then the default action — only if the page
-    // cancelled neither. Chat composers are multi-line textareas that send on a keydown Enter and cancel it, so
-    // inserting the line break straight away (as this used to for textareas) never let them see the key: Enter
-    // made a new line instead of sending.
+    // Like a native line break, announced first and cancelable: editors built on contenteditable (and some on
+    // textareas) take Enter here, from `beforeinput`, rather than from the key.
+    function beforeLineBreak(n, inputType){
+      try { return n.dispatchEvent(new InputEvent('beforeinput', { bubbles: true, cancelable: true, inputType: inputType, data: null })); }
+      catch (_) { return true; }
+    }
+    // The keyboard's Enter, in Chrome's order: keydown, keypress, then the default action — a cancelable
+    // `beforeinput` and the line break — only as far as the page lets each step through. Chat composers send
+    // on a keydown Enter and cancel it; rich editors (Brainstorm's search box is a contenteditable) send from
+    // `beforeinput` insertParagraph. Inserting the line break straight away, as this used to, let neither see
+    // the Enter: it made a new line instead of sending or searching.
     function enter(n){
       if (!n) return;
       var t = (n.tagName || '').toUpperCase();
-      var proceed = key(n, 'keydown') && key(n, 'keypress');
+      var multiline = isCE(n) || t === 'TEXTAREA';
+      var proceed = key(n, 'keydown') && key(n, 'keypress') &&
+        (!multiline || beforeLineBreak(n, isCE(n) ? 'insertParagraph' : 'insertLineBreak'));
       if (proceed) {
-        if (isCE(n) || t === 'TEXTAREA') {
+        if (multiline) {
           var s = selOf(n);
           if (isCE(n)) ceReplace(n, s[0], s[1], '\n');
           else { var v = valOf(n); setVal(n, v.slice(0, s[0]) + '\n' + v.slice(s[1])); }

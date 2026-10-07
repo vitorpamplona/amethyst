@@ -30,7 +30,13 @@ const HTML = `<!doctype html><meta charset=utf-8><title>ime</title>
 </div>
 <textarea id="chat" rows="1"></textarea>
 <textarea id="notes" rows="3"></textarea>
+<div id="search" contenteditable="true" role="combobox" enterkeyhint="search" style="border:1px solid #000;padding:8px"></div>
 <script>
+  // A rich search box (Brainstorm's home): a contenteditable that takes Enter from beforeinput, not keydown.
+  window.searches = []
+  document.getElementById('search').addEventListener('beforeinput', function (e) {
+    if (e.inputType === 'insertParagraph' || e.inputType === 'insertLineBreak') { e.preventDefault(); window.searches.push(this.textContent) }
+  })
   // A chat composer the way chat apps write one: send on a keydown Enter, cancel the key, then clear the
   // field by assigning its value (what a framework's state reset does), which fires no input event.
   window.sentMsgs = []
@@ -234,6 +240,26 @@ await step(
     return st.text === 'one\n' ? null : `ime.state carried ${JSON.stringify(st.text)}`
   },
 )
+
+await step(
+  'Enter in a contenteditable search box searches instead of adding a line break',
+  async () => {
+    await page.click('#search')
+    await page.waitForTimeout(150)
+    await drain()
+    await hostSet('Vitor')
+    await page.waitForTimeout(50)
+    await drain()
+    await hostEnter()
+  },
+  () => null,
+)
+{
+  const [searches, text] = await page.evaluate(() => [window.searches.slice(), document.getElementById('search').textContent])
+  const problem = searches.length !== 1 || searches[0] !== 'Vitor' ? `page searched ${JSON.stringify(searches)} (no beforeinput insertParagraph reached it)` : text !== 'Vitor' ? `field became ${JSON.stringify(text)}` : null
+  results.push(['  ...the page searched "Vitor" and the field kept no line break', JSON.stringify(searches), problem])
+  if (problem) failures.push(`search Enter: ${problem}`)
+}
 
 console.log(`\nshim: ${SHIM}\n`)
 for (const [name, types, problem] of results) {
