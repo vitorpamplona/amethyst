@@ -1,6 +1,6 @@
 # Web of Trust network index (NIP-85 kind 30382, ~300k users)
 
-Status: **design — decisions under review, nothing implemented.**
+Status: **design — decisions settled 2026-10-07 (see §6), nothing implemented.**
 
 ## 1. Goal
 
@@ -72,8 +72,8 @@ on the shared client is filed into it by `CacheClientConnector`
 
 ## 4. Decisions
 
-Each has a recommendation (**Rec.**). The ones marked **❓** need a call from you before
-implementation starts.
+Each has a recommendation (**Rec.**) or a recorded decision. The ones still marked **❓** are
+open; §6 logs what was decided.
 
 ### D1. Which provider feeds the index
 Use the 10040 entry whose service is `30382:rank` (`liveUserRankProvider`): its pubkey `P`
@@ -95,9 +95,15 @@ starts a fresh cold sync. The file header records `(P, R)` so a mismatch is dete
 - `hops` is stored but **not** used to gate (D7).
 
 ### D3. Before the index is ready
-When the index is missing, still downloading, or WoT is off, every surface behaves
-**exactly as today**. Otherwise the first sync would empty the DM list and notifications for
-minutes. "Ready" means a complete snapshot for the current `(P, R)` is loaded.
+When the index is missing, still downloading, or there is no rank provider, every surface
+behaves **exactly as today**. Otherwise the first sync would empty the DM list and
+notifications for minutes. "Ready" means a complete snapshot for the current `(P, R)` is loaded.
+
+"Missing" and "not loaded yet" are different states:
+- **Missing** (no file, or a `(P, R)` mismatch): let everything through, as today.
+- **On disk but not loaded yet** (a process just started, e.g. by a push): **wait for the
+  load**, bounded by a timeout, before deciding. Push filtering depends on this (D11, D18);
+  otherwise every notification that wakes a cold process would skip the filter.
 
 ### D4. Use LocalCache? **No.**
 - **Size.** 300k cards ≈ 254 MB for the event objects alone, plus 300k `AddressableNote`s and the `User` objects `about.cards()` creates, against ~6 MB for the index.
@@ -141,10 +147,9 @@ provider, relay, syncCursor, lastFullCheck, version
 Keep `rank` (the gate), `followers` (the badge), and `hops` (cheap, useful for UI such as
 "3 hops away").
 
-**❓** Brainstorm also publishes `reporters` and `muters`: counts of people in *your*
-network who reported or muted this person. That is a strong spam signal ("muted by 12 people
-you trust"), at 2 × 4 B × N ≈ 2.4 MB more. **Rec.** Leave them out of v1, but version the
-file format so they can be added without a migration.
+**Decided: don't store `reporters` / `muters`.** Brainstorm publishes these counts of people
+in your network who reported or muted someone; they would cost 2 × 4 B × N ≈ 2.4 MB. The
+file format is versioned, so this can be revisited without a migration.
 
 ### D8. Relay client for the sync
 **A second `NostrClient`** with the same `websocketBuilder`, so Tor routing and the relay
@@ -160,9 +165,11 @@ client's subscription slots. Desktop already does this for its kind-10050 indexe
 4. Sort, deduplicate by d-tag (newest `created_at` wins), drop rank 0, write the file (D11), swap the snapshot in.
 5. Every event must have `kind == 30382`, `pubkey == P`, and a 64-hex d-tag. Anything else is dropped.
 
-**❓ D9a. Signature checks.** A relay that inserts forged cards could make strangers "known".
-- **Rec.** Check every signature with `ParallelEventVerifier`, on low-priority threads. This is roughly 2.5–5 min of CPU on a phone, once; updates are small.
-- The cheaper option, checking a random 1–2% sample, only catches a small injection with modest probability, so we don't recommend it.
+**D9a. Signature checks — decided: check every signature.** A relay that inserts forged
+cards could otherwise make strangers "known". Use `ParallelEventVerifier` on low-priority
+threads, so its backlog limit slows the socket instead of growing memory. This is roughly
+2.5–5 min of CPU on a phone for the cold sync, once; small updates and the full check (D12)
+verify too. A failed signature drops that event.
 
 **❓ D9b. Resuming an interrupted cold download.** A 70–180 MB download on mobile can be killed.
 **Rec.** v1 restarts from scratch but writes a "pages done" checkpoint (the `until` cursor
@@ -197,12 +204,21 @@ magic "AWOT" | u16 version | 32B provider | relay (u16 len + utf8)
 
 - Written with okio to a temp file and then moved into place (`atomicWrite`), so a crash
   leaves the old file or the new one, never half.
-- Read with one `readByteArray` and decoded on `Dispatchers.IO` when the `Account` is
-  created: 14–40 ms on JVM, a small multiple of that on a phone.
+- Read with one `readByteArray` and decoded on `Dispatchers.IO` as soon as the `Account` is
+  created, including accounts loaded only for push. 14–40 ms on JVM; phase 0 measures it on a
+  phone.
+- **Loading must be fast because push filtering waits on it** (D3). Consumers call a
+  suspending `awaitLoaded(timeout)`; a cold process that a notification wakes pays the load
+  once.
+- If phase 0 shows the decode is too slow on low-end phones, the fallback is a jvmAndroid
+  `actual` that memory-maps the file and binary-searches the mapped `LongBuffer` directly:
+  no decode, the OS pages it in on demand. The format above already allows this (fixed-width
+  sections, big-endian).
 - A bad magic, version, or `(P, R)` mismatch means the file is ignored and a cold sync is scheduled.
 
-A second, optional file `network-ids-v1.bin` holds `(eventId 32B, createdAt i64)` per entry,
-about 12 MB. It is read **only** by the weekly full check (D12) and never at startup.
+A second file `network-ids-v1.bin` holds `(eventId 32B, createdAt i64)` per entry, about
+12 MB. It is **kept** (decided) and read **only** by the weekly full check (D12), never at
+startup. It is written together with the index, so the two always describe the same set.
 
 ### D12. Weekly full check
 Purpose: catch deletions or rank-0 cards we missed (a relay outage, an update window
@@ -214,30 +230,31 @@ overflow).
 - On Android this is a WorkManager periodic job (unmetered, battery not low) that resolves
   the account from `accountsCache` like `ScheduledPostWorker`.
 
-**❓** If you would rather not store the ids file, the fallback is a full re-download once a
-month on Wi-Fi. That is simpler, but 50–180 MB a month.
+Decided: keep the ids file and use negentropy; no periodic full re-download.
 
 ### D13. Multiple accounts
 Several `Account`s can be live at once: background notifications load every writable
 account.
-- **Rec.** Every live account with WoT enabled **loads** its index (~6 MB each), so
-  notification filtering works for all of them.
+- Every live account with a rank provider **loads** its index (~6 MB each), so push
+  filtering works for all of them.
 - Only the **active** account runs the foreground update.
-- The weekly worker goes through every WoT-enabled account.
+- The weekly worker goes through every account with a rank provider.
 
 ### D14. Settings model
 | Setting | Where | Why |
 |---|---|---|
 | Provider (P, R) | the 10040 itself (already on relays, backed up locally) | One source of truth, interoperable |
 | `minTrustScore` (default 5) | `AccountSyncedSettings` (NIP-78) | A preference that should follow the user across devices |
-| WoT filtering on/off | `AccountSyncedSettings` | Same |
 | Brainstorm session token | memory only | Expires after 60 min (`AUTH_ACCESS_TOKEN_EXPIRE_MINUTES`); re-login just asks for one signature |
 | Sync state | the index header | Local by nature |
 
-**❓ D14a.** Is "WoT filtering on" implied by having a `30382:rank` provider, or a separate
-switch? **Rec.** A separate switch, default **on** once onboarding finishes. Users who
-already have a 10040 from elsewhere then get the feature only after opting in, instead of
-having their DM list change silently on update.
+**D14a. No separate switch — decided.** WoT filtering is on whenever the 10040 has a
+`30382:rank` provider. Removing the provider (from the settings screen) turns it off.
+
+Consequence to handle in the release: users who already have a 10040 from elsewhere will see
+DM Known/New, Curated notifications and replies change after the update, once their first
+sync finishes. The settings screen should show "Filtering by <provider>, minimum score N"
+and the sync progress, so the change can be explained and undone.
 
 ### D15. Brainstorm onboarding (from `brainstorm_server` and `Brainstorm-UI` sources)
 Base URL `https://api.brainstorm.world`; the NIP-85 relay is `wss://scores.brainstorm.world`.
@@ -257,12 +274,25 @@ Base URL `https://api.brainstorm.world`; the NIP-85 relay is `wss://scores.brain
 7. Once `last_time_calculated_graperank` is set (poll `/user/history`, or poll `COUNT` until it
    is above 0), start the cold sync (D9).
 
-**❓ Open questions for this step:**
-- **D15a. Public or private 10040 entries.** Brainstorm's own web app only recognises *public* entries (`declaresTrustProvider`), and other clients can only use public ones. Private entries hide which provider you use. **Rec.** Public; that is what Brainstorm's flow publishes.
+**Details of this step:**
+- **D15a. Public or private 10040 entries — decided: both.** Reading already handles both
+  (`liveTrustProviderList` decrypts the private side). Onboarding offers the choice, with
+  **public** as the default: Brainstorm's web app recognises only public entries
+  (`declaresTrustProvider`), and other clients can only use public ones. Private hides which
+  provider you use, at the cost of that interop. `TrustProviderListEvent.add(..., isPrivate)`
+  already supports both.
 - **D15b. An existing 10040 points at another rank provider.** **Rec.** Warn and ask before replacing it, as Brainstorm's UI does. Never replace silently.
 - **D15c. Signers.** Two signatures (22242, 10040) go through the normal `NostrSigner`, so NIP-55 and NIP-46 signers work. Each call is a prompt for users who approve manually.
 - **D15d. Free vs paid tiers.** `brainstorm_server` has billing tiers and manual-run quotas (`enforce_manual_quota`). The UI should surface 403/429 as "recomputed recently / quota reached", not as a failure.
-- **D15e. Generic provider.** Should the settings screen also accept any NIP-85 provider (paste a pubkey and relay), or Brainstorm only? **Rec.** Show the current provider whatever it is (from the 10040) and offer Brainstorm as the one-tap setup.
+- **D15e. Any NIP-85 provider — decided.** The index, sync and filtering work with any
+  provider listed under `30382:rank`. Two ways to set one up:
+  - **Manual (any provider):** enter or paste the provider's service pubkey and relay; we
+    write the 10040 entries. This needs no knowledge of the provider's API.
+  - **Guided sign-up, one adapter per provider:** NIP-85 does not specify how to create an
+    account with a provider or obtain its service key, so each provider's sign-up is its own
+    integration behind a small interface, e.g. `TrustProviderOnboarding { login(); requestScores(); serviceKey(); relay }`.
+    Brainstorm (above) is the first adapter; others are added one by one as their APIs are
+    known.
 
 ### D16. Rank and follower count move to the index
 - **Rec.** `rankFlow` and `followerCountStrFlow` read the snapshot (`snapshotFlow.map { it.rank(user) }`) when the index is ready **and** `P` is the provider for that slot. Brainstorm registers the same key for `rank` and `followers`.
@@ -279,11 +309,11 @@ DM Known/New and the notification feed are additive filters; they won't re-check
 ### D18. Consumers, one by one
 | Surface | Change | Phase |
 |---|---|---|
-| DM Known | `senderIntersects(follows) \|\| hasSentMessagesTo \|\| (wotOn && activeSenders.any { accepted })`. New stays its exact opposite, including the incremental path at `:167-173`. Group DMs: **any** accepted sender makes the room Known, matching how follows work today. | 4 |
-| Notifications, Curated | Gate the author (`NotificationFeedFilter.kt:712`): `isAuthorInFollows \|\| accepted(author)` when `followList()` is `Selected` and WoT is on. Zaps are already handled: `notifAuthor` resolves a `ZapReceiptEvent` to the zap *request* sender, including private zaps (`:615-621`). | 4 |
-| Push notifications | ❓ Today push ignores the TopFilter entirely. **Rec.** Apply the same WoT check when the account's notification filter is Curated. Otherwise a stranger's reply buzzes the phone but is hidden in the app. | 4 |
-| Replies | ❓ Options: (a) add a "network" sorting tier between follows and the rest, (b) also collapse replies from outside the network behind "N more replies from outside your network", (c) hide them. **Rec.** (a) and (b). | 5 |
-| Public chats / live chat | ❓ An opt-in "hide messages from outside my network" per chat type. **Rec.** Phase 5, off by default. | 5 |
+| DM Known | `senderIntersects(follows) \|\| hasSentMessagesTo \|\| (rankProvider != null && activeSenders.any { accepted })`. New stays its exact opposite, including the incremental path at `:167-173`. Group DMs: **any** accepted sender makes the room Known, matching how follows work today. | 4 |
+| Notifications, Curated | Gate the author (`NotificationFeedFilter.kt:712`): `isAuthorInFollows \|\| accepted(author)` when `followList()` is `Selected` and a rank provider exists. Zaps are already handled: `notifAuthor` resolves a `ZapReceiptEvent` to the zap *request* sender, including private zaps (`:615-621`). | 4 |
+| Push notifications | **Decided: apply Curated filtering to push too.** Today push applies only `account.isAcceptable`. When the account's notification filter is Curated, the push path (`EventNotificationConsumer` / the renderers) uses the same author check as the in-app feed, after `awaitLoaded` (D3). Ideally both call one shared predicate so they cannot drift. | 4 |
+| Replies | **Decided: collapse replies from outside the network** behind "N more replies from outside your network", expandable on tap. Follows, me and the thread author are never collapsed. Sorting tiers stay as they are. | 5 |
+| Public chats / live chat | Not decided. Phase 5, revisit after replies ship. | 5 |
 
 ### D19. Where code lives
 | Piece | Module / package |
@@ -291,7 +321,8 @@ DM Known/New and the notification feed are additive filters; they won't re-check
 | `NetworkSnapshot` (arrays, lookup, merge, binary codec) | `quartz/.../nip85TrustedAssertions/users/index/`. Pure NIP-85 utility, no UI, KMP. |
 | Sync (cold, update, full check) as `INostrClient` extensions | `quartz/.../nip85TrustedAssertions/users/index/` beside it |
 | `WebOfTrustNetworkState` (load, save, schedule, `StateFlow`, accepted()) | `commons/.../wot/`, owned by `Account` |
-| Brainstorm HTTP client + onboarding flow | `commons/.../wot/brainstorm/` |
+| `TrustProviderOnboarding` interface + manual setup | `commons/.../wot/onboarding/` |
+| Brainstorm adapter (HTTP client, sign-up flow) | `commons/.../wot/onboarding/brainstorm/` |
 | Settings screen, strings | `commonsUI` (strings in `composeResources`, per CLAUDE.md) |
 | WorkManager job, foreground trigger | `amethyst/` shim |
 | `amy wot sync \| check <npub> \| stats \| brainstorm login\|register` | `cli/`, a thin layer over the above |
@@ -299,19 +330,31 @@ DM Known/New and the notification feed are additive filters; they won't re-check
 
 ## 5. Phases
 
-0. **Measure first.** `amy wot sync` against a real ~300k network: wall time, bytes, signature-check time, peak heap. Repeat on a mid-range phone through a debug button. This decides D9a/D9b/D9c.
+0. **Measure first.** `amy wot sync` against a real ~300k network: wall time, bytes, signature-check time, peak heap. Repeat on a mid-range phone through a debug button, and measure the cold index load there (decides whether D11 needs the memory-mapped fallback, and settles D9b/D9c).
 1. **Index + storage + sync** (quartz/commons) with unit tests:
    - file format round trip;
    - merge, rank-0 and kind-5 removal;
    - the shared-timestamp `UNPAGEABLE` → negentropy fallback;
    - `(P, R)` mismatch.
 2. **Account wiring + D16**: rank and follower badges served from the index; drop the per-profile provider subscriptions.
-3. **Web of Trust settings + Brainstorm onboarding** (D14, D15), including the min-score slider with a live "N of M people pass" count.
-4. **Consumers**: DM Known/New, Curated notifications, push (D18).
-5. **Replies and chats** (D18).
+3. **Web of Trust settings**: current provider and sync status, the min-score slider with a live "N of M people pass" count, manual provider setup, and the Brainstorm adapter (D14, D15).
+4. **Consumers**: DM Known/New, Curated notifications in-app and in push (D18).
+5. **Collapse out-of-network replies**; then revisit chats (D18).
 
-## 6. Open questions (summary)
+## 6. Decisions log
 
-D6a (memoize prefixes on `User`), D7 (keep `reporters`/`muters`), D9a (check all signatures),
-D9b (resume), D9c (network policy), D12 (store the ids file vs monthly re-download), D14a
-(separate switch), D15a–e (Brainstorm flow details), D18 (zaps, push, replies, chats).
+Settled on 2026-10-07:
+
+| # | Decision |
+|---|---|
+| D9a | Check every signature (cold sync, updates, full check). |
+| D11 / D12 | Keep the ids file; the weekly full check uses negentropy against it. |
+| D14a | No separate switch: filtering is on whenever a `30382:rank` provider exists. |
+| D15a | Support public and private 10040 entries; onboarding offers both, public by default. |
+| D7 | Don't store `reporters` / `muters`. |
+| D18 push | Apply Curated filtering to push notifications; this is why the index must load fast (D3, D11). |
+| D18 replies | Collapse replies from outside the network. |
+| D15e | Accept any NIP-85 provider. Manual setup for any; guided sign-up via per-provider adapters, since provider account creation isn't specified. Brainstorm first. |
+
+Still open: D6a (memoize prefixes on `User`), D9b (resuming a cold sync), D9c (network
+policy), D18 public chats. Phase 0 measurements should settle the first three.

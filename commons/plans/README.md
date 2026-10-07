@@ -15,7 +15,7 @@ _Audited 2026-06-30 (+ 2026-09-12 split entry, 2026-09-27 migration and one-UI e
 ## Queued
 | Plan | Summary |
 | ---- | ------- |
-| [2026-10-07-wot-network-index.md](2026-10-07-wot-network-index.md) | Download every NIP-85 kind 30382 card from the user's trust provider (~300k) into a 6 MB on-disk sorted index (not LocalCache), kept current with small updates, to gate DM Known/New, Curated notifications and replies by a minimum trust score; includes Brainstorm onboarding. Decisions under review, not started. |
+| [2026-10-07-wot-network-index.md](2026-10-07-wot-network-index.md) | Download every NIP-85 kind 30382 card from the user's trust provider (~300k) into a 6 MB on-disk sorted index (not LocalCache), kept current with small updates, to gate DM Known/New, Curated notifications and replies by a minimum trust score; includes Brainstorm onboarding. Decisions settled, not started. |
 | [2026-08-03-poll-results-page.md](2026-08-03-poll-results-page.md) | Extended NIP-88 poll results page (per-option counts + who voted for what) for Android and Desktop; also specifies four tally-correctness fixes and the missing poll-relay subscription. Proposed, not started. |
 
 ## Shipped
