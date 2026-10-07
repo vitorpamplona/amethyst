@@ -23,7 +23,7 @@ package com.vitorpamplona.amethyst.commons.relayClient.softwareapps
 import com.vitorpamplona.amethyst.commons.model.AddressableNote
 import com.vitorpamplona.amethyst.commons.model.cache.ICacheProvider
 import com.vitorpamplona.amethyst.commons.relayClient.composeSubscriptionManagers.ComposeSubscriptionManager
-import com.vitorpamplona.amethyst.commons.relayClient.eoseManagers.SingleSubEoseManager
+import com.vitorpamplona.amethyst.commons.relayClient.eoseManagers.PerUniqueIdEoseManager
 import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.ExplainedFilter
 import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.SubPurpose
 import com.vitorpamplona.amethyst.commons.relays.SincePerRelayMap
@@ -60,44 +60,45 @@ class SoftwareReleasesFilterAssembler(
  * the hints recorded for its address, and its publisher's outbox. The filter is the one the page
  * reads the cache with ([SoftwareReleases.filter]): only the publisher and the maintainers it
  * credits, by the app's `i` id.
+ *
+ * One subscription and one EOSE cursor per app: a cursor shared by every app would hand the second
+ * app opened the first one's `since`, and its older releases would never be asked for.
  */
 class SoftwareReleasesSubAssembler(
     val cache: ICacheProvider,
     client: INostrClient,
     allKeys: () -> Set<SoftwareReleasesQueryState>,
-) : SingleSubEoseManager<SoftwareReleasesQueryState>(client, allKeys) {
+) : PerUniqueIdEoseManager<SoftwareReleasesQueryState, String>(client, allKeys) {
     override fun updateFilter(
-        keys: List<SoftwareReleasesQueryState>,
+        key: SoftwareReleasesQueryState,
         since: SincePerRelayMap?,
     ): List<RelayBasedFilter> {
-        if (keys.isEmpty()) return emptyList()
+        val app = key.app.event as? SoftwareApplicationEvent ?: return emptyList()
+        val wanted = SoftwareReleases.filter(app)
+        val relays =
+            (
+                key.app.relayUrls() +
+                    cache.relayHints.hintsForAddress(key.app.idHex) +
+                    cache.getUserIfExists(app.pubKey)?.outboxRelays().orEmpty()
+            ).toSet()
 
-        return keys.flatMap { key ->
-            val app = key.app.event as? SoftwareApplicationEvent ?: return@flatMap emptyList()
-            val wanted = SoftwareReleases.filter(app)
-            val relays =
-                (
-                    key.app.relayUrls() +
-                        cache.relayHints.hintsForAddress(key.app.idHex) +
-                        cache.getUserIfExists(app.pubKey)?.outboxRelays().orEmpty()
-                ).toSet()
-
-            relays.map { relay ->
-                RelayBasedFilter(
-                    relay = relay,
-                    filter =
-                        ExplainedFilter(
-                            purpose = SubPurpose.ADD_ONS,
-                            kinds = wanted.kinds,
-                            authors = wanted.authors,
-                            tags = wanted.tags,
-                            limit = 100,
-                            since = since?.get(relay)?.time,
-                        ),
-                )
-            }
+        return relays.map { relay ->
+            RelayBasedFilter(
+                relay = relay,
+                filter =
+                    ExplainedFilter(
+                        purpose = SubPurpose.ADD_ONS,
+                        kinds = wanted.kinds,
+                        authors = wanted.authors,
+                        tags = wanted.tags,
+                        limit = 100,
+                        since = since?.get(relay)?.time,
+                    ),
+            )
         }
     }
 
-    override fun distinct(key: SoftwareReleasesQueryState) = key.app.idHex
+    // Keyed on the app version too: a newer app event can credit a new maintainer, whose releases
+    // are older than the cursor the previous version earned.
+    override fun id(key: SoftwareReleasesQueryState) = key.app.idHex + ":" + key.app.event?.id
 }

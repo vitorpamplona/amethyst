@@ -199,6 +199,23 @@ class Nip82ReleaseTest {
     }
 
     @Test
+    fun versionOrderFollowsSemVerForSemVerVersions() {
+        val cmp = Nip82VersionComparator
+        // In SemVer everything after the first `-` is the pre-release, numbers included.
+        assertTrue(cmp.compare("1.0.0-1", "1.0.0") < 0)
+        assertTrue(cmp.compare("1.0.0-1", "1.0.0-2") < 0)
+        assertTrue(cmp.compare("1.0.0-2", "1.0.0-10") < 0)
+        // Numeric identifiers sort before alphanumeric ones.
+        assertTrue(cmp.compare("1.0.0-1", "1.0.0-alpha") < 0)
+        assertTrue(cmp.compare("1.0.0-0.3.7", "1.0.0-alpha") < 0)
+        assertTrue(cmp.compare("1.0.0-1", "0.9.9") > 0)
+
+        // SemVer's own precedence example.
+        val semver = listOf("1.0.0-alpha", "1.0.0-alpha.1", "1.0.0-alpha.beta", "1.0.0-beta", "1.0.0-beta.2", "1.0.0-beta.11", "1.0.0-rc.1", "1.0.0")
+        assertEquals(semver, semver.reversed().sortedWith(cmp))
+    }
+
+    @Test
     fun versionOrderSplitsDigitsFromALetterSuffix() {
         val cmp = Nip82VersionComparator
         // A pre-release glued to its last number keeps that number in the release core.

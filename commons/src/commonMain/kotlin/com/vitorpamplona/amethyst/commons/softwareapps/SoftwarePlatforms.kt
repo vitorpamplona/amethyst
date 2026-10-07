@@ -148,11 +148,21 @@ object SoftwarePlatforms {
     ): Int? {
         if (devicePlatforms.isEmpty()) return null
         if (platforms.isNotEmpty()) {
-            val lowered = platforms.map { it.lowercase() }
-            return devicePlatforms.indexOfFirst { it in lowered }.takeIf { it >= 0 }
+            val offered = platforms.mapTo(HashSet(), ::canonical)
+            return devicePlatforms.indexOfFirst { canonical(it) in offered }.takeIf { it >= 0 }
         }
         // No `f` tags: any device of the OS the MIME type implies, ranked after exact matches.
         val os = osForMime(mime) ?: return null
         return if (os == os(devicePlatforms.first())) devicePlatforms.size else null
+    }
+
+    /**
+     * One spelling per platform, so aliases match: `macos-arm64`, `darwin-aarch64` and
+     * `darwin-arm64` are the same Mac, `linux-arm64` and `linux-aarch64` the same Linux box.
+     */
+    private fun canonical(platformId: String): String {
+        val os = os(platformId)
+        if (os == SoftwareOs.OTHER) return platformId.lowercase()
+        return os.name + "-" + (cpu(platformId)?.name ?: rawArch(platformId))
     }
 }

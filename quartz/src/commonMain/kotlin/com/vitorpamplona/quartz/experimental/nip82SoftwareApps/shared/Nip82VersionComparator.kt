@@ -31,12 +31,14 @@ package com.vitorpamplona.quartz.experimental.nip82SoftwareApps.shared
  * pre-release segment is ranked by its identifier (`dev` < `alpha` < `beta` < `rc`, then
  * unknown words alphabetically) and its trailing number (`rc1` < `rc2`); later segments
  * follow the generic rules: numbers as integers, words case-insensitively, numbers before
- * words, missing before present. This orders the spec's example as written:
+ * words, missing before present. A SemVer version (`MAJOR.MINOR.PATCH[-pre]`) takes its
+ * pre-release from the first `-` on, numbers included, as SemVer precedence requires. This orders the spec's example as written:
  * `1.0.0-dev < 1.0.0-alpha < 1.0.0-alpha.2 < 1.0.0-beta < 1.0.0-beta.2 < 1.0.0-rc1 < 1.0.0 < 1.0.1`,
  * and agrees with SemVer precedence wherever the two do not conflict.
  */
 object Nip82VersionComparator : Comparator<String> {
     private val SEPARATORS = charArrayOf('.', '-', '_')
+    private val SEMVER = Regex("""(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)(?:-([0-9A-Za-z-]+(?:\.[0-9A-Za-z-]+)*))?""")
 
     private class Parsed(
         val core: List<String>,
@@ -46,6 +48,13 @@ object Nip82VersionComparator : Comparator<String> {
     private fun parse(version: String): Parsed {
         var v = version.trim().substringBefore('+')
         if (v.length > 1 && (v[0] == 'v' || v[0] == 'V') && v[1].isDigit()) v = v.substring(1)
+
+        // SemVer, which Appendix D makes binding where it applies: the pre-release is everything
+        // after the first `-`, so `1.0.0-1` is a pre-release of 1.0.0, not version 1.0.0.1.
+        SEMVER.matchEntire(v)?.let { m ->
+            val (major, minor, patch, pre) = m.destructured
+            return Parsed(listOf(major, minor, patch), if (pre.isEmpty()) emptyList() else pre.split(*SEPARATORS))
+        }
 
         val segments = v.split(*SEPARATORS).flatMap(::splitNumericPrefix)
         val coreSize = segments.indexOfFirst { !it.isNumeric() }.let { if (it < 0) segments.size else it }
@@ -115,6 +124,9 @@ object Nip82VersionComparator : Comparator<String> {
         a: String,
         b: String,
     ): Int {
+        // A bare number (SemVer's `1.0.0-1`) is no identifier: numbers sort before words.
+        if (a.isNumeric() || b.isNumeric()) return compareSegment(a, b)
+
         val aWord = a.trimEnd { it.isDigit() }
         val bWord = b.trimEnd { it.isDigit() }
 

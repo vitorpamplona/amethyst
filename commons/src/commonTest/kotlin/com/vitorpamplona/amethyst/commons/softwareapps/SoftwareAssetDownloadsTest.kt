@@ -94,7 +94,8 @@ class SoftwareAssetDownloadsTest {
                 sig = "",
             )
         assertEquals("tar.gz", SoftwareAssetDownloads.extension(tarball))
-        assertEquals("https://cdn.example.com/$hash.tar.gz", SoftwareAssetDownloads.url(tarball))
+        // One suffix: blossom.napplet.soy 404s on `<hash>.tar.gz` but serves `<hash>.tgz`.
+        assertEquals("https://cdn.example.com/$hash.tgz", SoftwareAssetDownloads.url(tarball))
         assertEquals("TAR.GZ", SoftwareAssetDownloads.formatLabel(tarball))
         assertEquals("TAR.GZ · musl", SoftwareAssetDownloads.describe(tarball, SoftwareOs.LINUX, null).title)
     }

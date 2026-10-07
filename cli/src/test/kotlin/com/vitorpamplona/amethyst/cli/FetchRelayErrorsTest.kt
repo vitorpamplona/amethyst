@@ -91,7 +91,7 @@ class FetchRelayErrorsTest {
         assertEquals("no_relay_served", error["error"].asText())
         assertTrue(error["detail"].asText().contains(REASON), "the detail names the relay's reason: $error")
         assertRefusal(error["relay_errors"], refusing.url)
-        assertTrue(r.stderr.contains("closed the request: $REASON"), "a human-readable warning on stderr: ${r.stderr}")
+        assertEquals(listOf(r.stderr.trim()), r.stderr.trim().lines(), "the error is all of stderr: ${r.stderr}")
     }
 
     // Text mode used to append the payload as a Kotlin map: `(relay_errors={ws://…={reason=closed, …}})`.
@@ -132,6 +132,7 @@ class FetchRelayErrorsTest {
         assertEquals(1, errors.size(), "only the refusing relay is listed: $errors")
         assertRefusal(errors, refusing.url)
         assertNull(errors[serving.url.normalized()], "the serving relay answered")
+        assertTrue(r.stderr.contains("closed the request: $REASON"), "a human-readable warning on stderr: ${r.stderr}")
     }
 
     @Test

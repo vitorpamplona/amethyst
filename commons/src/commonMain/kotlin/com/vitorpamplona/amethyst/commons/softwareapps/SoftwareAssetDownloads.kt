@@ -55,6 +55,7 @@ class DownloadGroups(
 
 /** Where to download a NIP-82 asset from, and what to call the file. */
 object SoftwareAssetDownloads {
+    private val SINGLE_SUFFIX_TARBALL = mapOf("tar.gz" to "tgz", "tar.xz" to "txz", "tar.bz2" to "tbz2", "tar.zst" to "tzst")
     private val TARBALL = Regex("""\.(tar\.(?:gz|xz|bz2|zst)|tgz)$""", RegexOption.IGNORE_CASE)
 
     /**
@@ -166,7 +167,9 @@ object SoftwareAssetDownloads {
     fun url(asset: SoftwareAssetEvent): String? {
         val url = asset.url() ?: return null
         val hash = asset.hash() ?: return url
-        val ext = extension(asset) ?: return url
+        // A compound extension in its one-suffix form (`tar.gz` -> `tgz`): some Blossom servers
+        // only read the last dot, and 404 on `<hash>.tar.gz`.
+        val ext = extension(asset)?.let { SINGLE_SUFFIX_TARBALL[it.lowercase()] ?: it } ?: return url
 
         val pathEnd = url.indexOfAny(charArrayOf('?', '#')).let { if (it < 0) url.length else it }
         val path = url.substring(0, pathEnd)

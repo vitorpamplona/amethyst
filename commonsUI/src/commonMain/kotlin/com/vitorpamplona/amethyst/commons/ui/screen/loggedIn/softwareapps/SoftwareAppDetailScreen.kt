@@ -64,6 +64,8 @@ import com.vitorpamplona.amethyst.commons.resources.loading_feed
 import com.vitorpamplona.amethyst.commons.resources.nip82_no_comments
 import com.vitorpamplona.amethyst.commons.resources.nip82_older_releases_hide
 import com.vitorpamplona.amethyst.commons.resources.nip82_older_releases_show
+import com.vitorpamplona.amethyst.commons.resources.nip82_prereleases_hide
+import com.vitorpamplona.amethyst.commons.resources.nip82_prereleases_show
 import com.vitorpamplona.amethyst.commons.resources.nip82_section_about
 import com.vitorpamplona.amethyst.commons.resources.nip82_section_latest_release
 import com.vitorpamplona.amethyst.commons.resources.nip82_section_license
@@ -109,6 +111,7 @@ import com.vitorpamplona.amethyst.commons.ui.thread.drawReplyLevel
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.quartz.experimental.nip82SoftwareApps.application.SoftwareApplicationEvent
 import com.vitorpamplona.quartz.nip01Core.core.Address
+import org.jetbrains.compose.resources.StringResource
 
 @Composable
 fun SoftwareAppDetailScreen(
@@ -219,6 +222,7 @@ private fun SoftwareAppDetailBody(
         }
 
     var showOlder by rememberSaveable(event.id) { mutableStateOf(false) }
+    var showEarlierPreReleases by rememberSaveable(event.id) { mutableStateOf(false) }
 
     LazyColumn(
         contentPadding = rememberFeedContentPadding(FeedPadding),
@@ -324,8 +328,10 @@ private fun SoftwareAppDetailBody(
                     SectionLabel(stringRes(Res.string.nip82_section_prereleases))
                 }
             }
+            // The newest one only: an app that ships nightlies can have dozens ahead of its last
+            // stable release, and each body loads its assets.
             items(
-                preReleases,
+                if (showEarlierPreReleases) preReleases else preReleases.subList(0, 1),
                 key = { "pre-${it.id}" },
             ) { release ->
                 Column(PaddingHorizontal12Modifier) {
@@ -338,14 +344,28 @@ private fun SoftwareAppDetailBody(
                     )
                 }
             }
+            if (preReleases.size > 1) {
+                item(key = "pre-releases-toggle") {
+                    Spacer(Modifier.height(8.dp))
+                    ReleasesToggle(
+                        count = preReleases.size - 1,
+                        expanded = showEarlierPreReleases,
+                        showLabel = Res.string.nip82_prereleases_show,
+                        hideLabel = Res.string.nip82_prereleases_hide,
+                        onToggle = { showEarlierPreReleases = !showEarlierPreReleases },
+                    )
+                }
+            }
         }
 
         if (olderReleases.isNotEmpty()) {
             item(key = "older-releases-toggle") {
                 Spacer(Modifier.height(8.dp))
-                OlderReleasesToggle(
+                ReleasesToggle(
                     count = olderReleases.size,
                     expanded = showOlder,
+                    showLabel = Res.string.nip82_older_releases_show,
+                    hideLabel = Res.string.nip82_older_releases_hide,
                     onToggle = { showOlder = !showOlder },
                 )
             }
@@ -485,9 +505,11 @@ private fun SectionLabel(title: String) {
 }
 
 @Composable
-private fun OlderReleasesToggle(
+private fun ReleasesToggle(
     count: Int,
     expanded: Boolean,
+    showLabel: StringResource,
+    hideLabel: StringResource,
     onToggle: () -> Unit,
 ) {
     Box(
@@ -502,12 +524,7 @@ private fun OlderReleasesToggle(
     ) {
         Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
             Text(
-                text =
-                    if (expanded) {
-                        stringRes(Res.string.nip82_older_releases_hide)
-                    } else {
-                        stringRes(Res.string.nip82_older_releases_show)
-                    },
+                text = stringRes(if (expanded) hideLabel else showLabel),
                 style = MaterialTheme.typography.labelLarge,
                 color = MaterialTheme.colorScheme.primary,
                 modifier = Modifier.weight(1f),

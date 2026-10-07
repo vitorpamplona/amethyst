@@ -206,7 +206,7 @@ object FetchCommand {
 
     /**
      * Emits [result] plus `relay_errors` (relay URL → `{reason, message}`) and warns on
-     * stderr for each of those relays. When none of the queried relays served the request
+     * stderr for each of those relays that refused while another one served. When none of the queried relays served the request
      * and nothing came back, it is an error (`no_relay_served`, exit 1) rather than an
      * empty success.
      */
@@ -215,15 +215,17 @@ object FetchCommand {
         relays: Set<NormalizedRelayUrl>,
         relayErrors: Map<NormalizedRelayUrl, RelayError>,
     ): Int {
-        val errors = relayErrors.entries.sortedBy { it.key.url }.associate { it.key.url to it.value.toMap() }
-        relayErrors.entries.sortedBy { it.key.url }.forEach { (relay, error) ->
-            System.err.println("warning: ${relay.url} ${error.describe()}")
-        }
+        val sorted = relayErrors.entries.sortedBy { it.key.url }
+        val errors = sorted.associate { it.key.url to it.value.toMap() }
 
+        // The error carries every reason itself; warning first would print each one twice and leave
+        // `--json` stderr as more than the one error object.
         if (result["count"] == 0 && relays.isNotEmpty() && relayErrors.keys.containsAll(relays)) {
-            val detail = relayErrors.entries.joinToString("; ") { (relay, error) -> "${relay.url}: ${error.message.ifEmpty { error.reason }}" }
+            val detail = sorted.joinToString("; ") { (relay, error) -> "${relay.url}: ${error.message.ifEmpty { error.reason }}" }
             return Output.error("no_relay_served", detail, mapOf("relay_errors" to errors))
         }
+
+        sorted.forEach { (relay, error) -> System.err.println("warning: ${relay.url} ${error.describe()}") }
 
         Output.emit(if (errors.isEmpty()) result else result + ("relay_errors" to errors))
         return 0

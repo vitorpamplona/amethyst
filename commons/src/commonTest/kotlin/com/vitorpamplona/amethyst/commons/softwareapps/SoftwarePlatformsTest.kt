@@ -79,4 +79,19 @@ class SoftwarePlatformsTest {
         assertNull(SoftwarePlatforms.deviceFit(emptyList(), "application/x-msi", phone))
         assertNull(SoftwarePlatforms.deviceFit(listOf("android-arm64-v8a"), null, emptyList()))
     }
+
+    @Test
+    fun deviceFitMatchesAliasesOfTheSamePlatform() {
+        // Publishers write `macos-` for `darwin-`, and `arm64` and `aarch64` for the same CPU.
+        val armMac = listOf("darwin-arm64", "darwin-x86_64")
+        assertEquals(0, SoftwarePlatforms.deviceFit(listOf("macos-arm64"), "application/zip", armMac))
+        assertEquals(0, SoftwarePlatforms.deviceFit(listOf("darwin-aarch64"), "application/zip", armMac))
+        assertEquals(1, SoftwarePlatforms.deviceFit(listOf("MacOS-x86_64"), "application/zip", armMac))
+
+        val armLinux = listOf("linux-aarch64")
+        assertEquals(0, SoftwarePlatforms.deviceFit(listOf("linux-arm64"), "application/vnd.appimage", armLinux))
+        assertNull(SoftwarePlatforms.deviceFit(listOf("linux-x86_64"), "application/vnd.appimage", armLinux))
+        // Same CPU, other OS.
+        assertNull(SoftwarePlatforms.deviceFit(listOf("android-arm64-v8a"), null, armLinux))
+    }
 }

@@ -1248,6 +1248,8 @@
     <string name="nip82_by_author">by</string>
     <string name="nip82_older_releases_show">Show older releases</string>
     <string name="nip82_older_releases_hide">Hide older releases</string>
+    <string name="nip82_prereleases_show">Show earlier pre-releases</string>
+    <string name="nip82_prereleases_hide">Hide earlier pre-releases</string>
     <string name="nip82_new_release">New release</string>
     <string name="nip82_commit_label">Commit %1$s</string>
     <string name="nip82_section_downloads">Downloads</string>

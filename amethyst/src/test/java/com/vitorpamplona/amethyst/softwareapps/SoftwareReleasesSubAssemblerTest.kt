@@ -51,7 +51,7 @@ class SoftwareReleasesSubAssemblerTest {
 
         val assembler = SoftwareReleasesSubAssembler(LocalCache, mockk(relaxed = true)) { emptySet() }
         try {
-            val filters = assembler.updateFilter(listOf(SoftwareReleasesQueryState(note)), null)
+            val filters = assembler.updateFilter(SoftwareReleasesQueryState(note), null)
 
             assertTrue("the relay the app came from is asked: ${filters.map { it.relay }}", filters.any { it.relay == relay })
             filters.forEach { f ->
@@ -69,7 +69,7 @@ class SoftwareReleasesSubAssemblerTest {
         val note = LocalCache.getOrCreateAddressableNote(Address(SoftwareApplicationEvent.KIND, "ab".repeat(32), "com.example.missing"))
         val assembler = SoftwareReleasesSubAssembler(LocalCache, mockk(relaxed = true)) { emptySet() }
         try {
-            assertTrue(assembler.updateFilter(listOf(SoftwareReleasesQueryState(note)), null).isEmpty())
+            assertTrue(assembler.updateFilter(SoftwareReleasesQueryState(note), null).isEmpty())
         } finally {
             assembler.destroy()
         }

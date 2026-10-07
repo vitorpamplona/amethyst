@@ -21,7 +21,10 @@
 package com.vitorpamplona.amethyst.commons.relayClient.softwareapps
 
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.commons.model.AddressableNote
 import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.LifecycleAwareKeyDataSourceSubscription
 
@@ -33,4 +36,13 @@ fun SoftwareReleasesFilterAssemblerSubscription(
 ) {
     val state = remember(app) { SoftwareReleasesQueryState(app) }
     LifecycleAwareKeyDataSourceSubscription(state, filterAssembler)
+
+    // The filter is built from the app event (its id, publisher and credited maintainers), so a page
+    // opened from a bare link has nothing to ask for until that event lands. Re-assemble when it
+    // does, and when a newer version of the app replaces it.
+    val noteState by remember(app) { app.flow().metadata.stateFlow }.collectAsStateWithLifecycle()
+    val appEventId = noteState.note.event?.id
+    LaunchedEffect(appEventId) {
+        if (appEventId != null) filterAssembler.invalidateFilters()
+    }
 }
