@@ -118,7 +118,7 @@ class NavBottomBarStackTest {
             nav.navBottomBar(first)
             advanceUntilIdle()
             assertEquals(listOf(Route.Home, first), routes(stacks))
-            assertEquals(setOf<Route>(second), stacks.savedTabs.keys)
+            assertEquals(setOf<Route>(second), stacks.savedTabs.keys.toSet())
         }
 
     @Test

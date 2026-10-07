@@ -92,7 +92,7 @@ class NavBackStacksTest {
         stacks.newStack(Route.Notification(scrollToEventId = "e1"))
 
         stacks.switchTab(Route.Home)
-        assertEquals(setOf<Route>(Route.Notification()), stacks.savedTabs.keys)
+        assertEquals(setOf<Route>(Route.Notification()), stacks.savedTabs.keys.toSet())
 
         stacks.switchTab(Route.Notification())
         assertSame(notifications, stacks.top)
