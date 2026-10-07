@@ -25,6 +25,8 @@ import com.vitorpamplona.amethyst.cli.Context
 import com.vitorpamplona.amethyst.cli.DataDir
 import com.vitorpamplona.amethyst.cli.Output
 import com.vitorpamplona.amethyst.commons.relayClient.oneshot.EventLocator
+import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.FetchAllResult
+import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.PagedFetchResult
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip19Bech32.Nip19Parser
@@ -122,11 +124,16 @@ object FetchCommand {
             val relays = RawEventSupport.queryTargets(ctx, args)
             if (relays.isEmpty()) return Output.error("no_relays", "no relays available; pass --relay or run `amy relay add`")
 
+            val relayErrors = mutableMapOf<NormalizedRelayUrl, RelayError>()
             val received =
                 if (paginate) {
-                    ctx.drainAllPages(relays.associateWith { listOf(filter) }, timeoutMs)
+                    ctx.drainAllPages(relays.associateWith { listOf(filter) }, timeoutMs) { relay, result ->
+                        refusalOf(result)?.let { synchronized(relayErrors) { relayErrors[relay] = it } }
+                    }
                 } else {
-                    ctx.drain(relays.associateWith { listOf(filter) }, timeoutMs)
+                    val result = ctx.drainResult(relays.associateWith { listOf(filter) }, timeoutMs)
+                    result.doneReasons.forEach { (relay, reason) -> refusalOf(reason)?.let { relayErrors[relay] = it } }
+                    result.events
                 }
             val ordered =
                 received
@@ -141,16 +148,90 @@ object FetchCommand {
                     .map { Output.mapper.readTree(it.toJson()) }
                     .toList()
 
-            Output.emit(
+            return emitWithRelayErrors(
                 mapOf(
                     "queried_relays" to relays.map { it.url },
                     "count" to events.size,
                     "events" to events,
                 ),
+                relays,
+                relayErrors,
             )
-            return 0
         }
     }
+
+    /**
+     * Why a relay gave us nothing, in its own words: a CLOSED reason (relay.zapstore.dev
+     * answers a large `limit` with `filters are too vague`), an `auth-required` refusal, or
+     * the connection error. Without it an empty result looks like an empty relay.
+     */
+    private class RelayError(
+        val reason: String,
+        val message: String,
+    ) {
+        fun toMap() = mapOf("reason" to reason, "message" to message)
+
+        /** "closed the request: filters are too vague", for the stderr warning. */
+        fun describe(): String {
+            val what =
+                when (reason) {
+                    CLOSED -> "closed the request"
+                    AUTH_REQUIRED -> "requires authentication"
+                    else -> "could not be reached"
+                }
+            return if (message.isEmpty()) what else "$what: $message"
+        }
+    }
+
+    /** A [FetchAllResult.doneReasons] entry as a [RelayError]; null when the relay answered. */
+    private fun refusalOf(doneReason: String): RelayError? {
+        val kind = doneReason.substringBefore(':')
+        val message = doneReason.substringAfter(':', "").trim()
+        return when (kind) {
+            "closed" -> RelayError(CLOSED, message)
+            "auth-refused" -> RelayError(AUTH_REQUIRED, message)
+            "cannot" -> RelayError(UNREACHABLE, message)
+            else -> null
+        }
+    }
+
+    /** A paged walk's ending as a [RelayError]; null unless the relay refused it. */
+    private fun refusalOf(result: PagedFetchResult): RelayError? =
+        when (result.end) {
+            PagedFetchResult.End.CLOSED -> RelayError(CLOSED, result.message.orEmpty())
+            PagedFetchResult.End.AUTH_REQUIRED -> RelayError(AUTH_REQUIRED, result.message.orEmpty())
+            PagedFetchResult.End.CANNOT_CONNECT -> RelayError(UNREACHABLE, result.message.orEmpty())
+            else -> null
+        }
+
+    /**
+     * Emits [result] plus `relay_errors` (relay URL → `{reason, message}`) and warns on
+     * stderr for each of those relays. When none of the queried relays served the request
+     * and nothing came back, it is an error (`no_relay_served`, exit 1) rather than an
+     * empty success.
+     */
+    private fun emitWithRelayErrors(
+        result: Map<String, Any?>,
+        relays: Set<NormalizedRelayUrl>,
+        relayErrors: Map<NormalizedRelayUrl, RelayError>,
+    ): Int {
+        val errors = relayErrors.entries.sortedBy { it.key.url }.associate { it.key.url to it.value.toMap() }
+        relayErrors.entries.sortedBy { it.key.url }.forEach { (relay, error) ->
+            System.err.println("warning: ${relay.url} ${error.describe()}")
+        }
+
+        if (result["count"] == 0 && relays.isNotEmpty() && relayErrors.keys.containsAll(relays)) {
+            val detail = relayErrors.entries.joinToString("; ") { (relay, error) -> "${relay.url}: ${error.message.ifEmpty { error.reason }}" }
+            return Output.error("no_relay_served", detail, mapOf("relay_errors" to errors))
+        }
+
+        Output.emit(if (errors.isEmpty()) result else result + ("relay_errors" to errors))
+        return 0
+    }
+
+    private const val CLOSED = "closed"
+    private const val AUTH_REQUIRED = "auth_required"
+    private const val UNREACHABLE = "unreachable"
 
     private fun looksLikeCode(s: String): Boolean {
         val t = s.removePrefix("nostr:")
@@ -213,9 +294,10 @@ object FetchCommand {
             // Outbox model: hint relays + the author's advertised write relays.
             val relays = (hintRelays + (author?.let { EventLocator.authorOutboxRelays(NoteSupport.access(ctx), it, timeoutMs) } ?: emptySet())).ifEmpty { ctx.bootstrapRelays() }
 
-            val received = ctx.drain(relays.associateWith { listOf(filter) }, timeoutMs)
+            val drained = ctx.drainResult(relays.associateWith { listOf(filter) }, timeoutMs)
+            val relayErrors = buildMap { drained.doneReasons.forEach { (relay, reason) -> refusalOf(reason)?.let { put(relay, it) } } }
             val events =
-                received
+                drained.events
                     .asSequence()
                     .map { it.second }
                     .distinctBy { it.id }
@@ -224,7 +306,7 @@ object FetchCommand {
                     .map { Output.mapper.readTree(it.toJson()) }
                     .toList()
 
-            Output.emit(
+            return emitWithRelayErrors(
                 mapOf(
                     "code" to codeArg,
                     "resolved_author" to author,
@@ -232,8 +314,9 @@ object FetchCommand {
                     "count" to events.size,
                     "events" to events,
                 ),
+                relays,
+                relayErrors,
             )
-            return 0
         }
     }
 }
