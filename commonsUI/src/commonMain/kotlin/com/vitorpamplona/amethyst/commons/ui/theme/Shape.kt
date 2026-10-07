@@ -72,7 +72,10 @@ val TabRowHeight = Modifier
 val SmallestBorder = RoundedCornerShape(5.dp)
 val SmallBorder = RoundedCornerShape(7.dp)
 val SmallishBorder = RoundedCornerShape(9.dp)
-val QuoteBorder = RoundedCornerShape(15.dp)
+
+/** The corner radius of [QuoteBorder], the rounded frame of note images. */
+val ImageCornerRadius = 15.dp
+val QuoteBorder = RoundedCornerShape(ImageCornerRadius)
 
 val ButtonBorder = RoundedCornerShape(20.dp)
 val LeftHalfCircleButtonBorder = ButtonBorder.copy(topEnd = CornerSize(0f), bottomEnd = CornerSize(0f))
