@@ -45,6 +45,8 @@ class ChatroomListNewFeedFilter(
     override fun feed(): List<Note> {
         val chatList = account.chatroomList
         val followingKeySet = account.followingKeySet()
+        // A pinned room is Known (see ChatroomListKnownFeedFilter), never a request.
+        val pinned = account.settings.syncedSettings.chats.pinnedChatrooms.value
 
         val privateMessages =
             chatList.rooms.mapNotNull { key, chatroom ->
@@ -53,6 +55,7 @@ class ChatroomListNewFeedFilter(
                     isDmEnabled(newest) &&
                     !chatroom.senderIntersects(followingKeySet) &&
                     !chatList.hasSentMessagesTo(key) &&
+                    key !in pinned &&
                     !account.isAllHidden(key.users)
                 ) {
                     newest
@@ -155,6 +158,7 @@ class ChatroomListNewFeedFilter(
     ): MutableMap<ChatroomKey, Note> {
         val me = account.userProfile()
         val followingKeySet = account.followingKeySet()
+        val pinned = account.settings.syncedSettings.chats.pinnedChatrooms.value
 
         val newRelevantPrivateMessages = mutableMapOf<ChatroomKey, Note>()
         newItems.forEach { newNote ->
@@ -168,7 +172,8 @@ class ChatroomListNewFeedFilter(
                     (
                         newNote.author?.pubkeyHex != me.pubkeyHex &&
                             !room.senderIntersects(followingKeySet) &&
-                            !account.chatroomList.hasSentMessagesTo(roomKey)
+                            !account.chatroomList.hasSentMessagesTo(roomKey) &&
+                            roomKey !in pinned
                     ) &&
                     !account.isAllHidden(roomKey.users)
                 ) {
