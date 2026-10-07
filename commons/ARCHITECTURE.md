@@ -226,6 +226,36 @@ When adding platform code, prefer the **most common** source set that still
 compiles: `commonMain` → `jvmAndroid` → platform-specific. See
 `/kotlin-multiplatform`.
 
+### Choosing a dispatcher
+`Dispatchers.Default` has only one thread per core (minimum 2), shared by every
+CPU-bound coroutine in the process. When 4–8 of those threads wait on anything,
+whether disk, network, binder IPC or simply a lock someone else holds, the whole
+pool stops. So:
+
+- **`Dispatchers.IO` is the default choice.** Use it for anything that touches
+  `LocalCache`, `Note`/`User`, `Account`, a signer, the relay client, a
+  store, preferences, files, or any shared cache. All of those can take a lock
+  (`Note` has a `syncLock`; quartz's `*Cache` classes and `ConcurrentLruCache`
+  lock on write; Compose's snapshot system has a global lock), and with the
+  number of coroutines this app runs, a short lock wait becomes a pileup.
+- **`Dispatchers.Default` only for code you can show never waits:** signature
+  verification, hashing, parsing a byte array, rasterizing, or arithmetic over
+  immutable data you already hold. If the work calls back into caller-supplied
+  code, assume the callback can block and run it on IO
+  (see `ParallelEventVerifier`: verifies on Default, callbacks on IO).
+- **Long CPU jobs get their own threads.** Work that holds a thread for seconds
+  or minutes runs on IO-backed threads (`PoWMiner.MiningDispatcher` for mining,
+  plain IO for the single-threaded `BagSweep`), never on Default, so it cannot
+  queue every other Default task behind it.
+- **A suspend function moves its own blocking work.** Wrap the blocking call in
+  `withContext(Dispatchers.IO)` inside the function (as `NostrSignerExternal`
+  does for its ContentResolver IPC) instead of trusting every caller to pick
+  the right thread. Callers on Main and on Default are then both safe.
+- **No `runBlocking`** outside tests, previews and the CLI's entry point.
+
+In `commonMain`, `Dispatchers.IO` needs `import kotlinx.coroutines.IO`; it is
+available on every target this module builds.
+
 ### Where does my code go? (quick guide)
 1. **Pure Nostr protocol** (events/NIPs/crypto)? → not here, it's `quartz`.
 2. **A composable** (screens and navigation chrome included)? → `commonsUI`, in

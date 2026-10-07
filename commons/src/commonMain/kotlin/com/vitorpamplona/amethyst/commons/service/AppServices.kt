@@ -24,6 +24,7 @@ import com.vitorpamplona.amethyst.commons.browser.BrowserHistoryRegistry
 import com.vitorpamplona.amethyst.commons.browser.BrowserIconRegistry
 import com.vitorpamplona.amethyst.commons.connectedApps.nip46.Nip46ClientStore
 import com.vitorpamplona.amethyst.commons.connectedApps.signers.NostrSignerPermissionStore
+import com.vitorpamplona.amethyst.commons.cordn.CordnBlobStore
 import com.vitorpamplona.amethyst.commons.favorites.FavoriteAppsRegistry
 import com.vitorpamplona.amethyst.commons.model.location.DeviceLocation
 import com.vitorpamplona.amethyst.commons.model.preferences.AppPreferenceStores
@@ -109,6 +110,12 @@ interface AppServices {
 
     /** The app-wide BUD-04 mirror sweep, which keeps running while the user navigates. */
     val blossomMirrorQueue: BlossomMirrorQueue
+
+    /**
+     * The Blossom-backed store a Cordn migration hands documents through, uploading to [servers]
+     * (empty when it only fetches).
+     */
+    fun cordnBlobStore(servers: List<String>): CordnBlobStore
 
     /** The place name already reverse-geocoded for [geohash], or null when none is cached yet. */
     fun cachedPlaceName(geohash: String): String? = null

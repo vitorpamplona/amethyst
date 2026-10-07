@@ -26,6 +26,7 @@ import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.UriHandler
 import com.vitorpamplona.amethyst.commons.favorites.FavoriteApp
+import com.vitorpamplona.amethyst.commons.feeds.FeedContentState
 import com.vitorpamplona.amethyst.commons.model.UiSettingsFlow
 import com.vitorpamplona.amethyst.commons.model.navigation.Route
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
@@ -34,6 +35,8 @@ import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.qrcode.ScanOutcome
 import com.vitorpamplona.amethyst.commons.ui.settings.SettingsCategory
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.quartz.concord.cord02Community.ImagePointer
+import com.vitorpamplona.quartz.nip01Core.core.HexKey
+import com.vitorpamplona.quartz.nipACWebRtcCalls.tags.CallType
 import kotlinx.collections.immutable.ImmutableMap
 import kotlinx.collections.immutable.persistentMapOf
 
@@ -130,6 +133,37 @@ interface AppPlatform {
     /** Opens favorite apps and web links in the platform's app surface. */
     @Composable
     fun rememberAppLauncher(): AppLauncher = AppLauncher.None
+
+    /**
+     * Starts a [callType] call with [peers], asking for the call permissions first where the
+     * platform needs them. Null where calls are not supported, so callers hide their buttons.
+     */
+    @Composable
+    fun rememberCallStarter(
+        peers: Set<HexKey>,
+        callType: CallType,
+    ): (() -> Unit)? = null
+
+    /** Whether [GeocacheMapTab] draws a map here; the geocaches screen hides its Map tab when not. */
+    val hasGeocacheMap: Boolean get() = false
+
+    /** The map view of the nearby geocaches. Empty where the platform has no map. */
+    @Composable
+    fun GeocacheMapTab(
+        feedContentState: FeedContentState,
+        accountViewModel: AccountViewModel,
+        nav: INav,
+    ) {}
+
+    /**
+     * Recent workouts the device already recorded (Android's Health Connect), offered as a tap to
+     * pre-fill the new-workout form. Empty where there is no health store.
+     */
+    @Composable
+    fun DetectedWorkoutCarousel(
+        accountViewModel: AccountViewModel,
+        onPick: (Route.NewWorkout) -> Unit,
+    ) {}
 
     /**
      * The image model for a CORD-02 community picture: the plain URL for a url-only pointer, or a
@@ -264,3 +298,22 @@ interface AppLauncher {
         ) {}
     }
 }
+
+@Composable
+fun rememberCallStarter(
+    peers: Set<HexKey>,
+    callType: CallType,
+): (() -> Unit)? = LocalAppPlatform.current.rememberCallStarter(peers, callType)
+
+@Composable
+fun GeocacheMapTab(
+    feedContentState: FeedContentState,
+    accountViewModel: AccountViewModel,
+    nav: INav,
+) = LocalAppPlatform.current.GeocacheMapTab(feedContentState, accountViewModel, nav)
+
+@Composable
+fun DetectedWorkoutCarousel(
+    accountViewModel: AccountViewModel,
+    onPick: (Route.NewWorkout) -> Unit,
+) = LocalAppPlatform.current.DetectedWorkoutCarousel(accountViewModel, onPick)

@@ -67,12 +67,14 @@ object ImageReencoder {
                 ?: DEFAULT_MAX_INPUT_PIXELS
 
     /**
-     * CPU-bound work runs on `Default` (not `IO`). The serial cap
-     * keeps memory bounded — only one BufferedImage in flight at any
-     * given moment, regardless of how many callers fan in.
+     * Runs on a one-thread view of `IO`, not `Default`: each job reads the
+     * source file and writes a temp file around the decode/encode, and a
+     * `Default` worker blocked on disk is one fewer core for everything
+     * else. The serial cap keeps memory bounded — only one BufferedImage
+     * in flight at any given moment, regardless of how many callers fan in.
      */
     @Suppress("OPT_IN_USAGE")
-    private val compressionDispatcher = Dispatchers.Default.limitedParallelism(1)
+    private val compressionDispatcher = Dispatchers.IO.limitedParallelism(1)
 
     /**
      * Re-encode a file from disk.

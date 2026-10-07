@@ -110,6 +110,7 @@ import com.vitorpamplona.quartz.nip22Comments.CommentEvent
 import com.vitorpamplona.quartz.nipC7Chats.ChatEvent
 import kotlinx.collections.immutable.toImmutableSet
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.IO
 import kotlinx.coroutines.withContext
 
 // null amount = open the on-chain dialog with no prefill.
@@ -389,7 +390,7 @@ fun ChatMessageActionSheet(
                     // PIN_MESSAGES holder who can write the Control Plane (null otherwise).
                     // Read off the main thread: it verifies the channel's whole Pin List.
                     val concordPinState by produceState<Boolean?>(null, note) {
-                        value = withContext(Dispatchers.Default) { accountViewModel.account.concord.concordPinState(note) }
+                        value = withContext(Dispatchers.IO) { accountViewModel.account.concord.concordPinState(note) }
                     }
                     val concordPinned = concordPinState
                     if (concordPinned != null && !note.isDraft()) {

@@ -445,7 +445,7 @@ class CashuWalletState(
         if (_walletEvent.value == null) {
             _discovering.value = true
             jobs +=
-                scope.launch(Dispatchers.Default) {
+                scope.launch(Dispatchers.IO) {
                     kotlinx.coroutines.delay(DISCOVERY_TIMEOUT_MS)
                     _discovering.value = false
                 }
@@ -457,7 +457,7 @@ class CashuWalletState(
         // it here races against kind:7375 events that arrive from
         // relays after start() returns, so the sweep would find
         // _tokenEntries empty and no-op.
-        scope.launch(Dispatchers.Default) {
+        scope.launch(Dispatchers.IO) {
             val initial = scanCacheForOwnEvents()
             applyEvents(initial)
             recomputePending()
@@ -484,7 +484,7 @@ class CashuWalletState(
         // Reactive incremental update: any new event arrival that matches our
         // pubkey + the NIP-60/61 kinds we care about gets indexed.
         jobs +=
-            scope.launch(Dispatchers.Default) {
+            scope.launch(Dispatchers.IO) {
                 cache.live.newEventBundles.collect { notes ->
                     val all = notes.mapNotNull { it.event }
 
@@ -523,7 +523,7 @@ class CashuWalletState(
             }
 
         jobs +=
-            scope.launch(Dispatchers.Default) {
+            scope.launch(Dispatchers.IO) {
                 cache.live.deletedEventBundles.collect { notes ->
                     val ids = notes.mapNotNull { it.event?.id }.toSet()
                     if (ids.isNotEmpty()) removeEvents(ids)

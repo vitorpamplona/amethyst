@@ -27,6 +27,7 @@ import com.vitorpamplona.amethyst.commons.search.parseSearchInput
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.FlowPreview
+import kotlinx.coroutines.IO
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -97,7 +98,7 @@ class SearchBarState(
             }
             // The scan walks every cached user; callers hand us a Compose scope,
             // so keep it off the main dispatcher.
-            .flowOn(Dispatchers.Default)
+            .flowOn(Dispatchers.IO)
             .launchIn(scope)
     }
 

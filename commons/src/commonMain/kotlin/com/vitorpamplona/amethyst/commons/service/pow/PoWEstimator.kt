@@ -20,9 +20,9 @@
  */
 package com.vitorpamplona.amethyst.commons.service.pow
 
+import com.vitorpamplona.quartz.nip13Pow.miner.PoWMiner
 import com.vitorpamplona.quartz.utils.sha256.sha256Into
 import kotlinx.coroutines.CoroutineDispatcher
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
@@ -58,7 +58,7 @@ object PoWEstimator {
     private val cachedRates = mutableMapOf<Int, Double>()
     private val benchLock = Mutex()
 
-    suspend fun hashesPerSecond(dispatcher: CoroutineDispatcher = Dispatchers.Default): Double = hashesPerSecond(1, dispatcher)
+    suspend fun hashesPerSecond(dispatcher: CoroutineDispatcher = PoWMiner.MiningDispatcher): Double = hashesPerSecond(1, dispatcher)
 
     /**
      * Aggregate hash rate with [workers] concurrent miners — what
@@ -69,7 +69,7 @@ object PoWEstimator {
      */
     suspend fun hashesPerSecond(
         workers: Int,
-        dispatcher: CoroutineDispatcher = Dispatchers.Default,
+        dispatcher: CoroutineDispatcher = PoWMiner.MiningDispatcher,
     ): Double {
         val count = workers.coerceAtLeast(1)
         benchLock.withLock {

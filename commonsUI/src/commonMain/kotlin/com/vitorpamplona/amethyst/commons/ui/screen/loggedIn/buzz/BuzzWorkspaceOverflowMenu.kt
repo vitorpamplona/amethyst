@@ -18,9 +18,8 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.ui.screen.loggedIn.buzz
+package com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.buzz
 
-import android.content.Intent
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.material3.AlertDialog
@@ -39,9 +38,9 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalClipboard
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
-import com.vitorpamplona.amethyst.commons.actions.BuzzInviteMinter
+import com.vitorpamplona.amethyst.commons.actions.buzzInviteMintingSupported
+import com.vitorpamplona.amethyst.commons.actions.mintBuzzInviteUrl
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.resources.Res
@@ -55,6 +54,7 @@ import com.vitorpamplona.amethyst.commons.resources.buzz_invite_error_title
 import com.vitorpamplona.amethyst.commons.resources.buzz_invite_link_title
 import com.vitorpamplona.amethyst.commons.resources.buzz_invite_share
 import com.vitorpamplona.amethyst.commons.resources.more_options
+import com.vitorpamplona.amethyst.commons.ui.components.rememberTextSharer
 import com.vitorpamplona.amethyst.commons.ui.components.util.setText
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
@@ -69,7 +69,7 @@ import kotlinx.coroutines.launch
  *   appends every discovered channel to the kind-10009 list at once;
  * - "Agent Console" ([onOpenAgentConsole]) — the owner's per-community fleet console;
  * - "Add people to this workspace" (kind-9030, delegated to the screen's [onAddPeople] dialog);
- * - "Create invite link" (mints via the relay's `/api/invites` endpoint — see [BuzzInviteMinter]).
+ * - "Create invite link" (mints via the relay's `/api/invites` endpoint — see [mintBuzzInviteUrl]).
  *
  * Any member sees all of them, but the relay only serves the owner/admin ones, so a rejection
  * surfaces as the error dialog.
@@ -84,10 +84,11 @@ fun BuzzWorkspaceOverflowMenu(
 ) {
     var menuOpen by remember { mutableStateOf(false) }
     var minting by remember { mutableStateOf(false) }
-    var result by remember { mutableStateOf<BuzzInviteMinter.MintedInvite?>(null) }
+    var result by remember { mutableStateOf<String?>(null) }
     var error by remember { mutableStateOf<String?>(null) }
     val scope = rememberCoroutineScope()
-    val context = LocalContext.current
+    val sharer = rememberTextSharer()
+    val shareTitle = stringRes(Res.string.buzz_invite_share)
     val clipboard = LocalClipboard.current
 
     IconButton(onClick = { menuOpen = true }) {
@@ -131,39 +132,39 @@ fun BuzzWorkspaceOverflowMenu(
                 onAddPeople()
             },
         )
-        DropdownMenuItem(
-            leadingIcon = {
-                if (minting) {
-                    CircularProgressIndicator(modifier = Modifier.size(18.dp), strokeWidth = 2.dp)
-                } else {
-                    Icon(symbol = MaterialSymbols.Link, contentDescription = null, modifier = Modifier.size(20.dp))
-                }
-            },
-            text = { Text(stringRes(Res.string.buzz_invite_create)) },
-            enabled = !minting,
-            onClick = {
-                menuOpen = false
-                if (minting) return@DropdownMenuItem
-                minting = true
-                error = null
-                scope.launch {
-                    try {
-                        result =
-                            BuzzInviteMinter.mint(
-                                relay = relay,
-                                ttlSecs = null,
-                                okHttpClient = accountViewModel.httpClientBuilder::okHttpClientForPushRegistration,
-                                httpAuth = accountViewModel.account::createHTTPAuthorization,
-                            )
-                    } catch (e: Exception) {
-                        if (e is CancellationException) throw e
-                        error = e.message ?: e.javaClass.simpleName
-                    } finally {
-                        minting = false
+        if (buzzInviteMintingSupported) {
+            DropdownMenuItem(
+                leadingIcon = {
+                    if (minting) {
+                        CircularProgressIndicator(modifier = Modifier.size(18.dp), strokeWidth = 2.dp)
+                    } else {
+                        Icon(symbol = MaterialSymbols.Link, contentDescription = null, modifier = Modifier.size(20.dp))
                     }
-                }
-            },
-        )
+                },
+                text = { Text(stringRes(Res.string.buzz_invite_create)) },
+                enabled = !minting,
+                onClick = {
+                    menuOpen = false
+                    if (minting) return@DropdownMenuItem
+                    minting = true
+                    error = null
+                    scope.launch {
+                        try {
+                            result =
+                                accountViewModel.httpClientBuilder.mintBuzzInviteUrl(
+                                    relay = relay,
+                                    httpAuth = accountViewModel.account::createHTTPAuthorization,
+                                )
+                        } catch (e: Exception) {
+                            if (e is CancellationException) throw e
+                            error = e.message ?: e.toString()
+                        } finally {
+                            minting = false
+                        }
+                    }
+                },
+            )
+        }
     }
 
     result?.let { minted ->
@@ -172,23 +173,18 @@ fun BuzzWorkspaceOverflowMenu(
             title = { Text(stringRes(Res.string.buzz_invite_link_title)) },
             text = {
                 SelectionContainer {
-                    Text(minted.url, style = MaterialTheme.typography.bodyMedium)
+                    Text(minted, style = MaterialTheme.typography.bodyMedium)
                 }
             },
             confirmButton = {
                 TextButton(onClick = {
-                    val send =
-                        Intent(Intent.ACTION_SEND).apply {
-                            type = "text/plain"
-                            putExtra(Intent.EXTRA_TEXT, minted.url)
-                        }
-                    context.startActivity(Intent.createChooser(send, null))
+                    sharer.share(minted, null, shareTitle)
                     result = null
                 }) { Text(stringRes(Res.string.buzz_invite_share)) }
             },
             dismissButton = {
                 TextButton(onClick = {
-                    scope.launch { clipboard.setText(minted.url) }
+                    scope.launch { clipboard.setText(minted) }
                     result = null
                 }) { Text(stringRes(Res.string.buzz_invite_copy)) }
             },

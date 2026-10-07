@@ -18,7 +18,7 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.relayGroup
+package com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.publicChannels.relayGroup
 
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -61,7 +61,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.commons.buzz.ui.PresenceDot
 import com.vitorpamplona.amethyst.commons.chats.publicChannels.relayGroup.newestTimelineNote
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
@@ -69,6 +68,7 @@ import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.buzz.BuzzCommunityMembership
 import com.vitorpamplona.amethyst.commons.model.buzz.BuzzRelayDialect
+import com.vitorpamplona.amethyst.commons.model.buzz.BuzzRelayImportViewModel
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
 import com.vitorpamplona.amethyst.commons.model.navigation.Route
 import com.vitorpamplona.amethyst.commons.model.navigation.routeFor
@@ -98,6 +98,7 @@ import com.vitorpamplona.amethyst.commons.resources.relay_tor_clearnet_action
 import com.vitorpamplona.amethyst.commons.resources.relay_tor_clearnet_body
 import com.vitorpamplona.amethyst.commons.resources.relay_tor_clearnet_title
 import com.vitorpamplona.amethyst.commons.ui.components.RobohashFallbackAsyncImage
+import com.vitorpamplona.amethyst.commons.ui.components.rememberViewModel
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.navigation.routes.routeFor
 import com.vitorpamplona.amethyst.commons.ui.navigation.topbars.TopBarExtensibleWithBackButton
@@ -109,7 +110,10 @@ import com.vitorpamplona.amethyst.commons.ui.platform.AppBottomBar
 import com.vitorpamplona.amethyst.commons.ui.platform.LocalAppServices
 import com.vitorpamplona.amethyst.commons.ui.pluralStringRes
 import com.vitorpamplona.amethyst.commons.ui.screen.LocalDisplaySettings
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.buzz.BuzzAddPeopleDialog
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.buzz.BuzzDmListViewModel
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.buzz.BuzzImportRow
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.buzz.BuzzWorkspaceOverflowMenu
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.buzz.HiddenDmHeader
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.feed.observeChatPreviewText
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.feed.types.buzzTimelinePreviewSummary
@@ -119,10 +123,6 @@ import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.warningColor
 import com.vitorpamplona.amethyst.commons.util.sortedBySnapshot
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.buzz.BuzzAddPeopleDialog
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.buzz.BuzzImportRow
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.buzz.BuzzRelayImportViewModel
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.buzz.BuzzWorkspaceOverflowMenu
 import com.vitorpamplona.quartz.buzz.workspace.BUZZ_CHANNEL_TYPE_DM
 import com.vitorpamplona.quartz.buzz.workspace.BUZZ_CHANNEL_TYPE_FORUM
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
@@ -131,8 +131,11 @@ import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.displayUrl
 import com.vitorpamplona.quartz.nip29RelayGroups.GroupId
 import com.vitorpamplona.quartz.nip29RelayGroups.metadata.GroupMetadataEvent
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 /** A first screen's worth of recent messages to prefetch per visible group card, ahead of a tap. */
 private const val CHANNEL_LIST_WARMUP_LIMIT = 10
@@ -218,8 +221,13 @@ fun RelayGroupChannelListScreen(
     val allChannels by produceState(initialValue = initialChannels, relay) {
         LocalCache
             .observeEvents<GroupMetadataEvent>(Filter(kinds = listOf(GroupMetadataEvent.KIND)))
-            .collect {
-                value = LocalCache.getRelayGroupChannelsOnRelay(relay).sortedBySnapshot { it.toBestDisplayName().lowercase() }
+            .collectLatest {
+                // Off the main thread, and only the newest: a relay streaming its directory emits
+                // in bursts, and each rescan walks every cached channel and sorts by display name.
+                value =
+                    withContext(Dispatchers.Default) {
+                        LocalCache.getRelayGroupChannelsOnRelay(relay).sortedBySnapshot { it.toBestDisplayName().lowercase() }
+                    }
             }
     }
 
@@ -269,7 +277,7 @@ fun RelayGroupChannelListScreen(
     // Resolved once for the list, not per DM row.
     val timeLabels = rememberTimeAgoLabels()
 
-    val buzzVm: BuzzRelayImportViewModel = viewModel(key = "BuzzImport-${relay.url}")
+    val buzzVm: BuzzRelayImportViewModel = rememberViewModel(key = "BuzzImport-${relay.url}") { BuzzRelayImportViewModel() }
     LaunchedEffect(relay, isBuzz) { if (isBuzz) buzzVm.bind(accountViewModel.account, relay.url) }
     val buzzChannels by buzzVm.channels.collectAsStateWithLifecycle()
     val buzzAdded by buzzVm.added.collectAsStateWithLifecycle()
@@ -277,7 +285,7 @@ fun RelayGroupChannelListScreen(
 
     // This community's recent Direct Messages, shown inline below the channels (like Buzz's own
     // sidebar) instead of behind a separate drawer entry. Only mounted for Buzz relays.
-    val dmVm: BuzzDmListViewModel = viewModel(key = "BuzzDmInline-${relay.url}")
+    val dmVm: BuzzDmListViewModel = rememberViewModel(key = "BuzzDmInline-${relay.url}") { BuzzDmListViewModel() }
     LaunchedEffect(relay, isBuzz) { if (isBuzz) dmVm.bind(accountViewModel.account, relay.url) }
     val dmRows by dmVm.rows.collectAsStateWithLifecycle()
     val hiddenDmRows by dmVm.hiddenRows.collectAsStateWithLifecycle()
