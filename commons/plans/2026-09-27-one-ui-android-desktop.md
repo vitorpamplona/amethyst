@@ -571,8 +571,19 @@ assemblers, `EventSync`, …). Packages are renamed on the way:
        (`NavigationHost`) are in commonsUI `ui/navigation/host`.
      - 238 of the 261 destinations register from commonsUI (`sharedDestinations`). The app
        registers only the 23 whose screens are still app-only.
-     - Next: the rail, the drawer layout and the bottom-bar shell. Then the 23 app-only
-       destinations, which move as their screens move.
+     - The shell is shared too:
+       - `AppShellLayout` (commonsUI `ui/navigation/shell`) handles the modal drawer, rail and
+         docked-drawer tiers, the docked notification panel and the account-switcher sheet.
+       - `AppNavigationRail` and `NotificationSidePanel` live in commonsUI.
+       - `DrawerContent` is in commonsUI `ui/navigation/drawer`. Its app hooks come through
+         `AppServices`: section-collapse prefs, scheduled posts and a display-only Tor status.
+         The debug flag and the flavour come through `AppPlatform`.
+     - Still in the app, waiting on other work:
+       - The account-switcher sheet's contents wait on the `AccountSessionManager` port
+         (login and sign-up), already listed under step 6.
+       - The 23 destinations whose screens are app-only move with their screens.
+       - The `AppNavigation` root (intents, screen time, the overlay hosts and the embedded-tab
+         layer) is step 8's Android shim.
 8. **The app root port** and the new JVM shim. Then the Desktop feature inventory, and
    retiring the old `desktopApp`.
 
