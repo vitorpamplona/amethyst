@@ -85,7 +85,7 @@ The app owns its back stack; Navigation 3's `NavDisplay` only renders it. There 
   starts at `Route.Home`) and `savedTabs` (the root entry of every bottom-bar tab the user left,
   which keeps that tab's ViewModels and scroll state alive). Each `NavStackEntry` has an `id`;
   its `contentKey` (`"nav-$id"`) is what saved state and ViewModels are keyed by, so the same
-  route opened twice is two screens. `tabRoot` / `drawerRoot` mark tab roots and drawer screens.
+  route opened twice is two screens. `tabRoute` (the bar route, for tab roots) and `drawerRoot` mark tab roots and drawer screens.
 - **`Nav`** (commonsUI `ui/navigation/navs/Nav.kt`) implements the shared `INav` over it: `nav`, `navDrawer`, `newStack`,
   `navBottomBar` (= `switchTab`), `popBack`, `popUpTo`, each after the keyboard settles.
   `nav.currentRoute` is snapshot state; read it (or `derivedStateOf` over it) instead of

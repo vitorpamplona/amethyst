@@ -37,6 +37,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
+import androidx.compose.runtime.snapshots.Snapshot
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.core.content.IntentCompat
@@ -333,7 +334,7 @@ private fun NavigateIfIntentRequested(
 ) {
     accountViewModel.firstRoute?.let { newRoute ->
         accountViewModel.firstRoute = null
-        val currentRoute = getRouteWithArguments(newRoute::class, nav)
+        val currentRoute = Snapshot.withoutReadObservation { getRouteWithArguments(newRoute::class, nav) }
         if (!isSameRoute(currentRoute, newRoute)) {
             nav.newStack(newRoute)
         }
@@ -348,14 +349,28 @@ private fun NavigateIfIntentRequested(
         // Microsoft's swift key sends Gifs as new actions.
         // The media targets land on a feed the user may well be standing on already, so they can't
         // guard on the destination — they rely on the intent being consumed below instead.
-        when (target) {
-            ShareTarget.HIGHLIGHT -> if (isBaseRoute<Route.NewHighlight>(nav)) return
-            ShareTarget.DIRECT_MESSAGE -> if (isBaseRoute<Route.ShareToDM>(nav)) return
-            ShareTarget.NEW_POST -> if (isBaseRoute<Route.NewShortNote>(nav)) return
-            ShareTarget.PICTURE, ShareTarget.SHORT_VIDEO, ShareTarget.VIDEO -> Unit
-            // Always re-runs: the route carries the image, so a second share of a different
-            // picture must decode that one rather than sit on the previous result.
-            ShareTarget.SCAN_QR -> Unit
+        //
+        // Read without observing: the current route is snapshot state, and subscribing to it here
+        // would re-run this whole block on every navigation, which is exactly when the guard stops
+        // guarding (the user has left the composer).
+        val alreadyOnDestination =
+            Snapshot.withoutReadObservation {
+                when (target) {
+                    ShareTarget.HIGHLIGHT -> isBaseRoute<Route.NewHighlight>(nav)
+                    ShareTarget.DIRECT_MESSAGE -> isBaseRoute<Route.ShareToDM>(nav)
+                    ShareTarget.NEW_POST -> isBaseRoute<Route.NewShortNote>(nav)
+                    ShareTarget.PICTURE, ShareTarget.SHORT_VIDEO, ShareTarget.VIDEO -> false
+                    // Always re-runs: the route carries the image, so a second share of a different
+                    // picture must decode that one rather than sit on the previous result.
+                    ShareTarget.SCAN_QR -> false
+                }
+            }
+        if (alreadyOnDestination) {
+            // The composer this share opened is already up (the activity was restored with the
+            // share still in its intent). Consume the intent, so a later pass can't reopen the
+            // composer once the user leaves it, and so the listener below takes over.
+            activity.intent.action = null
+            return
         }
 
         // saves the intent to avoid processing again

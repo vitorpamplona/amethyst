@@ -27,6 +27,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationRail
 import androidx.compose.material3.NavigationRailItem
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
@@ -59,8 +60,6 @@ fun AppNavigationRail(
 
     val reselectCoordinator = LocalTabReselectCoordinator.current
 
-    val currentRoute = nav.currentRoute
-
     NavigationRail(
         containerColor = MaterialTheme.colorScheme.background,
         header = {
@@ -76,7 +75,9 @@ fun AppNavigationRail(
             // selection source (live back stack vs the bar's passed-in route) differ per surface.
             items.forEach { entry ->
                 val slot = rememberBottomBarSlot(entry, favoritesById, accountViewModel) ?: return@forEach
-                val selected = remember(currentRoute, slot.route) { railSelected(slot.route, currentRoute) }
+                // Derived, so navigating between screens that leave every item's selection unchanged
+                // (most pushes) does not recompose the rail.
+                val selected by remember(nav, slot.route) { derivedStateOf { railSelected(slot.route, nav.currentRoute) } }
                 NavigationRailItem(
                     selected = selected,
                     onClick = {

@@ -29,9 +29,13 @@ stack as plain snapshot state, and `NavDisplay` renders it. There is no `NavCont
 
 Each `NavStackEntry` has a unique `id`. Its `contentKey` (`"nav-$id"`) keys the screen's
 `rememberSaveable` state and its ViewModelStore, so the same route opened twice is two
-independent screens. Two flags live on the entry as snapshot state:
+independent screens. The rest is snapshot state, because it can change on an entry already on
+screen:
 
-- `tabRoot`: reached from the bottom bar or the rail. It has no back arrow, and tab switches fade.
+- `route`: `newStack` onto the same destination hands the entry new arguments in place.
+- `tabRoute`: the bar route it is the root of, if any (`tabRoot` is `tabRoute != null`). A tab
+  root has no back arrow, and tab switches fade. Saved tabs are filed under this, so a tab
+  re-argued by a deep link is still found by the bar.
 - `drawerRoot`: opened from the navigation drawer. It can pop, but it keeps the bottom bar.
 
 Operations (each one in `Nav` runs after `ImeSettler.settle()`):
@@ -40,7 +44,7 @@ Operations (each one in `Nav` runs after `ImeSettler.settle()`):
 |-------------|-----------------|--------|
 | `nav(route)` | `push` | Pushes `route`, unless it is already on top |
 | `navDrawer(route)` | `push(drawerRoot = true)` | Same push, marked as a drawer screen |
-| `newStack(route)` | `newStack` | Drops the latest copy of `route` and everything above it, then shows it once. A same-class top is replaced and keeps its flags |
+| `newStack(route)` | `newStack` | Drops the latest copy of `route` and everything above it, then shows it once. A same-class top takes the new arguments in place (same entry, as Navigation 2's single-top did) |
 | `popUpTo(route, klass)` | `popUpTo` | Drops the latest `klass` entry and everything above it, then pushes `route` |
 | `navBottomBar(route)` | `switchTab` | Drops pushes above the current tab root. Keeps the left tab root in `savedTabs`, then restores `route`'s saved entry or opens it fresh |
 | `popBack()` | `pop` | Pops the top. The last entry is never popped |

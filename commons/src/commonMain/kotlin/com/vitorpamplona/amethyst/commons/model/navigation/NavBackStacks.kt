@@ -37,18 +37,30 @@ import kotlin.reflect.KClass
  * opened twice), so identity is the [id], never the route; [contentKey] is what Navigation 3 keys
  * the screen's saved UI state and ViewModels by.
  *
- * The two root flags are state because they can be set on an entry already on screen: tapping the
- * tab the user is standing on marks it a tab root in place.
+ * Everything else is state because it can change on an entry already on screen: [NavBackStacks.newStack]
+ * hands the screen on top new arguments in place, and tapping the tab the user is standing on marks
+ * it a tab root.
  */
 @Stable
 class NavStackEntry(
-    val route: Route,
+    route: Route,
     val id: Long,
-    tabRoot: Boolean = false,
+    tabRoute: Route? = null,
     drawerRoot: Boolean = false,
 ) {
+    /** What this screen shows. Replaced in place when the same destination is reopened with other arguments. */
+    var route by mutableStateOf(route)
+        internal set
+
+    /**
+     * The bottom-bar route this entry is the root of, or null when it is not a tab root. Kept apart
+     * from [route] because the two can diverge — a deep link reopens the Notifications tab as
+     * `Notification(eventId)` — while the tab must still be found again under the route the bar asks for.
+     */
+    var tabRoute by mutableStateOf(tabRoute)
+
     /** Reached from the bottom bar or rail: no back arrow, and tab switches fade instead of slide. */
-    var tabRoot by mutableStateOf(tabRoot)
+    val tabRoot: Boolean get() = tabRoute != null
 
     /** Opened from the navigation drawer: it can pop, but keeps the bottom bar like a tab root. */
     var drawerRoot by mutableStateOf(drawerRoot)
@@ -59,7 +71,7 @@ class NavStackEntry(
 
     override fun hashCode(): Int = id.hashCode()
 
-    override fun toString(): String = "NavStackEntry($id, $route, tabRoot=$tabRoot, drawerRoot=$drawerRoot)"
+    override fun toString(): String = "NavStackEntry($id, $route, tabRoute=$tabRoute, drawerRoot=$drawerRoot)"
 }
 
 /**
@@ -92,9 +104,9 @@ class NavBackStacks private constructor(
 
     private fun newEntry(
         route: Route,
-        tabRoot: Boolean = false,
+        tabRoute: Route? = null,
         drawerRoot: Boolean = false,
-    ) = NavStackEntry(route, nextId++, tabRoot, drawerRoot)
+    ) = NavStackEntry(route, nextId++, tabRoute, drawerRoot)
 
     /** Pushes [route], unless it is already the screen on top. Returns whether it pushed. */
     fun push(
@@ -116,15 +128,15 @@ class NavBackStacks private constructor(
     /**
      * Opens [route] as the start of a fresh stretch of history: drops the most recent copy of
      * [route] and everything above it, then shows [route] once. When the screen left on top is the
-     * same destination with other arguments, it is replaced rather than stacked under the new one,
-     * and the replacement keeps its place: a tab root stays a tab root, a drawer screen a drawer one.
+     * same destination with other arguments, that screen takes the new arguments in place rather
+     * than stacking a second copy — the same entry, so its ViewModels, saved state and root flags
+     * carry over and nothing animates, as Navigation 2's single-top launch behaved.
      */
     fun newStack(route: Route) {
         val existing = stack.indexOfLast { it.route == route }
         if (existing >= 0) removeFrom(existing)
         if (stack.isNotEmpty() && topRoute::class == route::class) {
-            val replaced = top
-            stack[stack.lastIndex] = newEntry(route, tabRoot = replaced.tabRoot, drawerRoot = replaced.drawerRoot)
+            top.route = route
         } else {
             stack.add(newEntry(route))
         }
@@ -150,27 +162,34 @@ class NavBackStacks private constructor(
 
         // Dropping those pushes is often the whole job: re-tapping the tab the user is inside, and
         // every tap of Home from somewhere inside Home, end here.
-        if (topRoute == route) {
-            top.tabRoot = true
+        if (isTab(top, route)) {
+            top.tabRoute = route
             return
         }
 
         val homeIndex = stack.indexOfFirst { it.route == Route.Home }
         if (homeIndex >= 0) {
-            // Only a tab root can sit above Home now; keep it, with its state, for the next visit.
+            // Only a tab root can sit above Home now; keep it, with its state, for the next visit,
+            // filed under the route the bar will ask for it by.
             while (stack.lastIndex > homeIndex) {
                 val left = stack.removeAt(stack.lastIndex)
-                if (left.tabRoot) savedTabs[left.route] = left
+                left.tabRoute?.let { savedTabs[it] = left }
             }
         }
 
-        if (topRoute == route) {
-            top.tabRoot = true
+        if (isTab(top, route)) {
+            top.tabRoute = route
             return
         }
 
-        stack.add(savedTabs.remove(route)?.also { it.tabRoot = true } ?: newEntry(route, tabRoot = true))
+        stack.add(savedTabs.remove(route)?.also { it.tabRoute = route } ?: newEntry(route, tabRoute = route))
     }
+
+    /** Whether [entry] is [route]'s tab: the screen itself, or the tab root the bar opened as [route]. */
+    private fun isTab(
+        entry: NavStackEntry,
+        route: Route,
+    ) = entry.route == route || entry.tabRoute == route
 
     /**
      * Drops every screen the user pushed on top of the tab root they are in (or on top of Home,
@@ -203,8 +222,8 @@ class NavBackStacks private constructor(
     private class SavedEntry(
         val route: Route,
         val id: Long,
-        val tabRoot: Boolean,
-        val drawerRoot: Boolean,
+        val tabRoute: Route? = null,
+        val drawerRoot: Boolean = false,
     )
 
     @Serializable
@@ -214,12 +233,12 @@ class NavBackStacks private constructor(
         val nextId: Long,
     )
 
-    private fun NavStackEntry.toSaved() = SavedEntry(route, id, tabRoot, drawerRoot)
+    private fun NavStackEntry.toSaved() = SavedEntry(route, id, tabRoute, drawerRoot)
 
     companion object {
         private val json = Json { ignoreUnknownKeys = true }
 
-        private fun SavedEntry.toEntry() = NavStackEntry(route, id, tabRoot, drawerRoot)
+        private fun SavedEntry.toEntry() = NavStackEntry(route, id, tabRoute, drawerRoot)
 
         /** Restores what [encode] wrote, or null when it can't be read (an app update renamed a route). */
         fun decode(encoded: String): NavBackStacks? =

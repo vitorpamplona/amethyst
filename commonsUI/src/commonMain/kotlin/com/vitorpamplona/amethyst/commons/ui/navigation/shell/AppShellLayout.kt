@@ -156,8 +156,12 @@ private fun ModalDrawerShell(
     suspendEdgeSwipe: () -> Boolean,
     content: @Composable () -> Unit,
 ) {
-    val windowSize = LocalWindowInfo.current.containerSize
-    val isLandscape = windowSize.width > windowSize.height
+    // Derived, so a window being resized (a desktop drag, a foldable mid-unfold) recomposes this shell
+    // only when the orientation actually flips, not on every size change along the way.
+    val windowInfo = LocalWindowInfo.current
+    val isLandscape by remember(windowInfo) {
+        derivedStateOf { windowInfo.containerSize.let { it.width > it.height } }
+    }
     LaunchedEffect(key1 = isLandscape) {
         // Dismiss an open drawer when the device rotates to landscape; the layout
         // underneath changes too much for the sheet to stay meaningful.

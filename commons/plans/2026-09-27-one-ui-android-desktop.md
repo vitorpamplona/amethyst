@@ -550,7 +550,7 @@ assemblers, `EventSync`, …). Packages are renamed on the way:
      - `NavBackStacks` (`navs/NavBackStacks.kt`) is the back stack, as snapshot state.
        - `stack` is what is on screen.
        - `savedTabs` holds the root of every tab the user left.
-       - Entries carry ids and `tabRoot` / `drawerRoot` flags.
+       - Entries carry ids, a `tabRoute` (the bar route a tab root was opened as) and a `drawerRoot` flag.
        - It is saved through kotlinx-serialization, so `Route` is now `@Serializable` itself.
      - `Nav` implements `INav` over it with unchanged semantics: the push guard, drawer
        screens keeping the bar, tab switches that drop pushes above the tab root and never

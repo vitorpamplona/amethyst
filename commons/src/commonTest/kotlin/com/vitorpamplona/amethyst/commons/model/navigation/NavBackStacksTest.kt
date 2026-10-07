@@ -25,6 +25,7 @@ import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertNotEquals
 import kotlin.test.assertNull
+import kotlin.test.assertSame
 import kotlin.test.assertTrue
 
 class NavBackStacksTest {
@@ -68,13 +69,48 @@ class NavBackStacksTest {
     }
 
     @Test
-    fun newStackReplacesTheSameDestinationOnTop() {
+    fun newStackHandsTheSameDestinationOnTopNewArguments() {
         val stacks = NavBackStacks()
         stacks.switchTab(Route.Pictures())
+        val feed = stacks.top
         stacks.newStack(Route.Pictures(attachments = listOf("content://shared")))
 
         assertEquals(listOf(Route.Home, Route.Pictures(attachments = listOf("content://shared"))), stacks.routes())
-        assertTrue(stacks.top.tabRoot, "a replaced tab root stays a tab root")
+        // The same entry, as Navigation 2's single-top launch kept it: its ViewModels and saved state
+        // carry over, and it stays a tab root.
+        assertSame(feed, stacks.top)
+        assertTrue(stacks.top.tabRoot, "a re-argued tab root stays a tab root")
+    }
+
+    @Test
+    fun aTabReopenedWithArgumentsIsStillFoundByTheBar() {
+        // A notification deep link while on the Notifications tab re-argues the tab root. Leaving and
+        // returning through the bar, which asks for the plain route, must still land on that entry.
+        val stacks = NavBackStacks()
+        stacks.switchTab(Route.Notification())
+        val notifications = stacks.top
+        stacks.newStack(Route.Notification(scrollToEventId = "e1"))
+
+        stacks.switchTab(Route.Home)
+        assertEquals(setOf<Route>(Route.Notification()), stacks.savedTabs.keys)
+
+        stacks.switchTab(Route.Notification())
+        assertSame(notifications, stacks.top)
+        assertTrue(stacks.savedTabs.isEmpty())
+    }
+
+    @Test
+    fun reTappingAReArguedTabStaysOnIt() {
+        val stacks = NavBackStacks()
+        stacks.switchTab(Route.Notification())
+        stacks.newStack(Route.Notification(scrollToEventId = "e1"))
+        val notifications = stacks.top
+        stacks.push(Route.Note("n"))
+
+        stacks.switchTab(Route.Notification())
+
+        assertEquals(listOf(Route.Home, Route.Notification(scrollToEventId = "e1")), stacks.routes())
+        assertSame(notifications, stacks.top)
     }
 
     @Test
@@ -98,7 +134,7 @@ class NavBackStacksTest {
 
         assertEquals(stacks.routes(), restored.routes())
         assertEquals(stacks.stack.map { it.contentKey }, restored.stack.map { it.contentKey })
-        assertEquals(stacks.stack.map { it.tabRoot to it.drawerRoot }, restored.stack.map { it.tabRoot to it.drawerRoot })
+        assertEquals(stacks.stack.map { it.tabRoute to it.drawerRoot }, restored.stack.map { it.tabRoute to it.drawerRoot })
         assertEquals(stacks.savedTabs.keys.toSet(), restored.savedTabs.keys.toSet())
 
         // Ids keep counting from where they left off, so a new screen never reuses a saved key.
