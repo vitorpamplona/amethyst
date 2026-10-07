@@ -30,17 +30,21 @@ import com.vitorpamplona.amethyst.commons.model.location.DeviceLocation
 import com.vitorpamplona.amethyst.commons.model.preferences.AppPreferenceStores
 import com.vitorpamplona.amethyst.commons.model.preferences.CALENDAR_REMINDER_SETTINGS_STORE
 import com.vitorpamplona.amethyst.commons.model.preferences.CalendarReminderSettingsStore
+import com.vitorpamplona.amethyst.commons.model.preferences.DrawerSectionCollapsePreferences
 import com.vitorpamplona.amethyst.commons.model.preferences.NamecoinSettingsStore
 import com.vitorpamplona.amethyst.commons.model.preferences.OtsSettingsStore
 import com.vitorpamplona.amethyst.commons.napplet.permissions.NappletPermissionLedger
 import com.vitorpamplona.amethyst.commons.relayManagement.Nip86Executor
+import com.vitorpamplona.amethyst.commons.scheduledposts.ScheduledPostStore
 import com.vitorpamplona.amethyst.commons.service.ai.AltTextSuggester
 import com.vitorpamplona.amethyst.commons.service.namecoin.NamecoinClients
 import com.vitorpamplona.amethyst.commons.service.upload.BlossomBlobClient
 import com.vitorpamplona.amethyst.commons.service.upload.blossom.BlossomMirrorQueue
+import com.vitorpamplona.amethyst.commons.tor.TorServiceStatus
 import com.vitorpamplona.amethyst.commons.tor.TorSettingsFlow
 import com.vitorpamplona.quartz.nip05DnsIdentifiers.namecoin.NamecoinNameResolver
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.flowOf
 
 /**
  * App-wide stores that outlive any one account and that screens read directly: the favorites
@@ -67,6 +71,18 @@ interface AppServices {
 
     /** Whether the embedded Tor service has fully bootstrapped, so Tor-routed relays can answer. */
     val torBootstrapped: Flow<Boolean>
+
+    /**
+     * Tor's state for display: off, still connecting (including a proxy that is bound but still
+     * downloading its directory), or ready.
+     */
+    val torStatus: Flow<TorServiceStatus> get() = flowOf(TorServiceStatus.Off)
+
+    /** Device-wide drawer state: which headings the user folded away. Never synced. */
+    val drawerSectionCollapsePrefs: DrawerSectionCollapsePreferences
+
+    /** Posts scheduled for later, across every account on this device. */
+    val scheduledPostStore: ScheduledPostStore
 
     /** The app's preference files, one DataStore per name. */
     val appStores: AppPreferenceStores

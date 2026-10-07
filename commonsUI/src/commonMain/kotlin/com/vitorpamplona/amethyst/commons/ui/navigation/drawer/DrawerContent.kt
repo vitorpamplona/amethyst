@@ -18,7 +18,7 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.ui.navigation.drawer
+package com.vitorpamplona.amethyst.commons.ui.navigation.drawer
 
 import androidx.compose.animation.animateContentSize
 import androidx.compose.foundation.BorderStroke
@@ -88,8 +88,6 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil3.compose.AsyncImage
-import com.vitorpamplona.amethyst.Amethyst
-import com.vitorpamplona.amethyst.BuildConfig
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbol
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
@@ -128,17 +126,17 @@ import com.vitorpamplona.amethyst.commons.resources.status_update
 import com.vitorpamplona.amethyst.commons.resources.tor_splash_connecting
 import com.vitorpamplona.amethyst.commons.resources.tor_status_connected
 import com.vitorpamplona.amethyst.commons.scheduledposts.ScheduledPostStatus
+import com.vitorpamplona.amethyst.commons.tor.TorServiceStatus
 import com.vitorpamplona.amethyst.commons.ui.components.RobohashFallbackAsyncImage
 import com.vitorpamplona.amethyst.commons.ui.layouts.PermanentDrawerWidth
 import com.vitorpamplona.amethyst.commons.ui.navigation.bottombars.NavBarCatalog
 import com.vitorpamplona.amethyst.commons.ui.navigation.bottombars.NavBarItemDef
-import com.vitorpamplona.amethyst.commons.ui.navigation.drawer.DrawerSection
-import com.vitorpamplona.amethyst.commons.ui.navigation.drawer.DrawerSectionVisibility
-import com.vitorpamplona.amethyst.commons.ui.navigation.drawer.DrawerSections
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.EmptyNav
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.navigation.routes.routeFor
 import com.vitorpamplona.amethyst.commons.ui.painterRes
+import com.vitorpamplona.amethyst.commons.ui.platform.LocalAppPlatform
+import com.vitorpamplona.amethyst.commons.ui.platform.LocalAppServices
 import com.vitorpamplona.amethyst.commons.ui.richtext.CreateTextWithEmoji
 import com.vitorpamplona.amethyst.commons.ui.screen.LocalDisplaySettings
 import com.vitorpamplona.amethyst.commons.ui.stringRes
@@ -164,9 +162,6 @@ import com.vitorpamplona.amethyst.commons.ui.theme.placeholderText
 import com.vitorpamplona.amethyst.commons.ui.theme.profileContentHeaderModifier
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.amethyst.commons.viewmodels.mockAccountViewModel
-import com.vitorpamplona.amethyst.isDebug
-import com.vitorpamplona.amethyst.ui.painterRes
-import com.vitorpamplona.amethyst.ui.tor.TorServiceStatus
 import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip38UserStatus.UserStatusEvent
@@ -625,7 +620,7 @@ fun ListContent(
     // Device-global and never synced: which headings the user folded away, restored from disk at
     // startup so the menu opens the way they left it. Collected once here rather than per section —
     // one collector feeds every heading. See DrawerSectionCollapsePreferences.
-    val collapsePrefs = Amethyst.instance.drawerSectionCollapsePrefs
+    val collapsePrefs = LocalAppServices.current.drawerSectionCollapsePrefs
     val collapsed by collapsePrefs.flow.collectAsStateWithLifecycle()
 
     Column(modifier) {
@@ -673,7 +668,7 @@ private fun CreateRows(nav: INav) {
         },
     )
 
-    if (isDebug) {
+    if (LocalAppPlatform.current.isDebugBuild) {
         IconRow(
             title = Res.string.route_chess,
             icon = MaterialSymbols.ChessKnight,
@@ -744,7 +739,7 @@ private fun ScheduledPostsNavigationRow(
     nav: INav,
 ) {
     val accountHex = accountViewModel.account.signer.pubKey
-    val allPosts by Amethyst.instance.scheduledPostStore.flow
+    val allPosts by LocalAppServices.current.scheduledPostStore.flow
         .collectAsStateWithLifecycle()
     val pendingCount by remember(accountHex) {
         derivedStateOf {
@@ -860,48 +855,6 @@ private fun CollapsibleSection(
 @Composable
 fun NavigationRow(
     title: StringResource,
-    icon: Int,
-    iconReference: Int,
-    tint: Color,
-    nav: INav,
-    route: Route,
-) {
-    IconRow(
-        title,
-        icon,
-        iconReference,
-        tint,
-        onClick = {
-            nav.closeDrawer()
-            nav.navDrawer(route)
-        },
-    )
-}
-
-@Composable
-fun NavigationRow(
-    title: StringResource,
-    icon: Int,
-    iconReference: Int,
-    tint: Color,
-    nav: INav,
-    computeRoute: () -> Route,
-) {
-    IconRow(
-        title,
-        icon,
-        iconReference,
-        tint,
-        onClick = {
-            nav.closeDrawer()
-            nav.navDrawer(computeRoute)
-        },
-    )
-}
-
-@Composable
-fun NavigationRow(
-    title: StringResource,
     icon: MaterialSymbol,
     tint: Color,
     nav: INav,
@@ -935,40 +888,6 @@ fun NavigationRow(
             nav.navDrawer(computeRoute)
         },
     )
-}
-
-@Composable
-fun IconRow(
-    title: StringResource,
-    icon: Int,
-    iconReference: Int,
-    tint: Color,
-    onClick: () -> Unit,
-) {
-    val title = stringRes(title)
-
-    Row(
-        modifier =
-            Modifier
-                .fillMaxWidth()
-                .clickable(
-                    onClick = onClick,
-                    onClickLabel = title,
-                ).padding(vertical = 15.dp, horizontal = 25.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Icon(
-            painter = painterRes(icon, iconReference),
-            contentDescription = title,
-            modifier = Size22Modifier,
-            tint = tint,
-        )
-        Text(
-            modifier = IconRowTextModifier,
-            text = title,
-            fontSize = Font18SP,
-        )
-    }
 }
 
 @Composable
@@ -1087,22 +1006,25 @@ fun BottomContent(
                 modifier = Modifier.weight(1f, fill = false),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
+                val platform = LocalAppPlatform.current
                 val string =
-                    remember {
+                    remember(platform) {
                         buildAnnotatedString {
                             withLink(
                                 LinkAnnotation.Clickable(
                                     "clickable",
                                     TextStyleBottomNavBar,
                                 ) {
-                                    nav.nav(Route.Note(BuildConfig.RELEASE_NOTES_ID))
+                                    platform.releaseNotesId?.let { nav.nav(Route.Note(it)) }
                                     nav.closeDrawer()
                                 },
                             ) {
                                 append("v")
-                                append(BuildConfig.VERSION_NAME)
-                                append("-")
-                                append(BuildConfig.FLAVOR.uppercase())
+                                append(platform.appVersionName)
+                                if (platform.appFlavor.isNotEmpty()) {
+                                    append("-")
+                                    append(platform.appFlavor.uppercase())
+                                }
                             }
                         }
                     }
@@ -1143,8 +1065,9 @@ fun BottomContent(
  */
 @Composable
 private fun TorStatusIcon(nav: INav) {
-    val torStatus by Amethyst.instance.torManager.status
-        .collectAsStateWithLifecycle()
+    val appServices = LocalAppServices.current
+    val torStatus by remember(appServices) { appServices.torStatus }
+        .collectAsStateWithLifecycle(TorServiceStatus.Off)
     if (torStatus is TorServiceStatus.Off) return
 
     val connected = torStatus.isFullyBootstrapped

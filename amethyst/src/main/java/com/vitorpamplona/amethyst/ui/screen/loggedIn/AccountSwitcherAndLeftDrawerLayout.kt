@@ -21,12 +21,12 @@
 package com.vitorpamplona.amethyst.ui.screen.loggedIn
 
 import androidx.compose.runtime.Composable
+import com.vitorpamplona.amethyst.commons.ui.navigation.drawer.DrawerContent
+import com.vitorpamplona.amethyst.commons.ui.navigation.drawer.PermanentDrawerContent
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.Nav
 import com.vitorpamplona.amethyst.commons.ui.navigation.shell.AppShellLayout
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.amethyst.ui.navigation.drawer.AccountSwitchBottomSheet
-import com.vitorpamplona.amethyst.ui.navigation.drawer.DrawerContent
-import com.vitorpamplona.amethyst.ui.navigation.drawer.PermanentDrawerContent
 import com.vitorpamplona.amethyst.ui.screen.AccountSessionManager
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.embed.EmbeddedSelectionDrag
 
