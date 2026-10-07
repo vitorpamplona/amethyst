@@ -30,6 +30,7 @@ import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
 import com.vitorpamplona.amethyst.commons.model.chats.ChatFeedType
 import com.vitorpamplona.amethyst.commons.model.chats.ConcordServerRoomNote
+import com.vitorpamplona.amethyst.commons.model.chats.PinnedChatroomNote
 import com.vitorpamplona.amethyst.commons.model.chats.RelayGroupServerRoomNote
 import com.vitorpamplona.amethyst.commons.model.concord.ConcordChannel
 import com.vitorpamplona.amethyst.commons.model.concord.ConcordViewMode
@@ -37,7 +38,9 @@ import com.vitorpamplona.amethyst.commons.model.geohashChat.GeohashChatChannel
 import com.vitorpamplona.amethyst.commons.model.nip29RelayGroups.RelayGroupChannel
 import com.vitorpamplona.amethyst.commons.model.nip29RelayGroups.RelayGroupViewMode
 import com.vitorpamplona.amethyst.commons.model.publicChatChannelIdOf
+import com.vitorpamplona.amethyst.commons.util.KmpLock
 import com.vitorpamplona.amethyst.commons.util.replace
+import com.vitorpamplona.amethyst.commons.util.withLock
 import com.vitorpamplona.quartz.concord.cord03Channels.ConcordChannelId
 import com.vitorpamplona.quartz.experimental.bitchat.geohash.GeohashChatEvent
 import com.vitorpamplona.quartz.experimental.ephemChat.chat.EphemeralChatEvent
@@ -64,17 +67,34 @@ class ChatroomListKnownFeedFilter(
     /** A room note is NIP-04 when its event is a [EncryptedDmEvent], otherwise it is a NIP-17 message. */
     private fun isDmEnabled(note: Note): Boolean = isEnabled(if (note.event is EncryptedDmEvent) ChatFeedType.NIP04 else ChatFeedType.NIP17)
 
+    private fun pinnedRooms(): Set<ChatroomKey> = account.settings.syncedSettings.chats.pinnedChatrooms.value
+
+    // One stable placeholder per pinned room, so feed diffing sees the same row across rebuilds.
+    private val placeholderLock = KmpLock()
+    private val pinnedPlaceholders = HashMap<ChatroomKey, PinnedChatroomNote>()
+
+    private fun pinnedPlaceholder(room: ChatroomKey): PinnedChatroomNote = placeholderLock.withLock { pinnedPlaceholders.getOrPut(room) { PinnedChatroomNote(room) } }
+
+    /** The DM room a row stands for: a real NIP-04/NIP-17 message, or a pinned room with nothing loaded. */
+    private fun privateRoomKeyOf(
+        note: Note,
+        myPubKey: HexKey,
+    ): ChatroomKey? = (note as? PinnedChatroomNote)?.room ?: (note.event as? ChatroomKeyable)?.chatroomKey(myPubKey)
+
     // returns the last Note of each user.
     override fun feed(): List<Note> {
         val chatList = account.chatroomList
         val followingKeySet = account.followingKeySet()
+        val pinned = pinnedRooms()
 
+        // Pinning a room is an explicit "I know this conversation", so a pinned room is Known even
+        // when its counterpart is a stranger I never answered.
         val privateMessages =
             chatList.rooms.mapNotNull { key, chatroom ->
                 val newest = chatroom.newestMessage
                 if (newest != null &&
                     isDmEnabled(newest) &&
-                    (chatroom.senderIntersects(followingKeySet) || chatList.hasSentMessagesTo(key)) &&
+                    (chatroom.senderIntersects(followingKeySet) || chatList.hasSentMessagesTo(key) || key in pinned) &&
                     !account.isAllHidden(key.users)
                 ) {
                     newest
@@ -82,6 +102,25 @@ class ChatroomListKnownFeedFilter(
                     null
                 }
             }
+
+        // Pinned rooms with no message loaded. NIP-17 gift wraps can't be fetched per counterpart, so
+        // a pinned conversation whose newest message is older than the inbox's download window would
+        // otherwise drop off Messages entirely. Keep a placeholder row until a message arrives.
+        val pinnedWithoutMessages =
+            if (!isEnabled(ChatFeedType.NIP17) && !isEnabled(ChatFeedType.NIP04)) {
+                emptyList()
+            } else {
+                pinned.mapNotNull { key ->
+                    if (chatList.rooms.get(key)?.newestMessage == null && !account.isAllHidden(key.users)) {
+                        pinnedPlaceholder(key)
+                    } else {
+                        null
+                    }
+                }
+            }
+
+        // Every pin change rebuilds this feed, so forget the placeholders of rooms no longer pinned.
+        placeholderLock.withLock { pinnedPlaceholders.keys.retainAll(pinned) }
 
         val publicChannels =
             if (!isEnabled(ChatFeedType.NIP28)) {
@@ -242,7 +281,7 @@ class ChatroomListKnownFeedFilter(
 
         return sort(
             (
-                privateMessages + publicChannels + ephemeralChats + geohashChannels +
+                privateMessages + pinnedWithoutMessages + publicChannels + ephemeralChats + geohashChannels +
                     marmotGroups + cordnGroups + relayGroups + concordChannels
             ).toSet(),
         )
@@ -326,7 +365,7 @@ class ChatroomListKnownFeedFilter(
         newRelevantPrivateMessages.forEach { newNotePair ->
             var hasUpdated = false
             oldList.forEach { oldNote ->
-                val oldRoom = (oldNote.event as? ChatroomKeyable)?.chatroomKey(me.pubkeyHex)
+                val oldRoom = privateRoomKeyOf(oldNote, me.pubkeyHex)
 
                 if (newNotePair.key == oldRoom) {
                     hasUpdated = true
@@ -608,6 +647,7 @@ class ChatroomListKnownFeedFilter(
     ): MutableMap<ChatroomKey, Note> {
         val me = account.userProfile()
         val followingKeySet = account.followingKeySet()
+        val pinned = pinnedRooms()
 
         val newRelevantPrivateMessages = mutableMapOf<ChatroomKey, Note>()
         newItems
@@ -620,7 +660,8 @@ class ChatroomListKnownFeedFilter(
                         (
                             newNote.author?.pubkeyHex == me.pubkeyHex ||
                                 room.senderIntersects(followingKeySet) ||
-                                account.chatroomList.hasSentMessagesTo(roomKey)
+                                account.chatroomList.hasSentMessagesTo(roomKey) ||
+                                roomKey in pinned
                         ) &&
                         !account.isAllHidden(roomKey.users)
                     ) {
@@ -639,7 +680,7 @@ class ChatroomListKnownFeedFilter(
     }
 
     override fun sort(items: Set<Note>): List<Note> {
-        val pinned = account.settings.syncedSettings.chats.pinnedChatrooms.value
+        val pinned = pinnedRooms()
         if (pinned.isEmpty()) return items.sortedByDefaultFeedOrder()
 
         val me = account.userProfile().pubkeyHex
@@ -660,7 +701,7 @@ class ChatroomListKnownFeedFilter(
         myPubKey: HexKey,
         pinned: Set<ChatroomKey>,
     ): Boolean {
-        val room = (note.event as? ChatroomKeyable)?.chatroomKey(myPubKey) ?: return false
+        val room = privateRoomKeyOf(note, myPubKey) ?: return false
         return room in pinned
     }
 
