@@ -56,6 +56,8 @@ import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeoutOrNull
 import okio.FileSystem
 import okio.Path
+import kotlin.concurrent.atomics.AtomicBoolean
+import kotlin.concurrent.atomics.ExperimentalAtomicApi
 
 /** A loaded trust network: who the provider asserts about, and where it came from. */
 @Immutable
@@ -126,6 +128,10 @@ class TrustNetworkState(
     private var forceNextDownload = false
     private val syncLock = Mutex()
     private var syncJob: Job? = null
+
+    /** Claimed before a sync starts, so two triggers at once (foreground, worker) start one. */
+    @OptIn(ExperimentalAtomicApi::class)
+    private val syncing = AtomicBoolean(false)
 
     private val indexFile = directory?.div(INDEX_FILE)
     private val idsFile = directory?.div(IDS_FILE)
@@ -200,7 +206,7 @@ class TrustNetworkState(
     fun syncIfStale(force: Boolean = false) {
         val provider = rankProvider.value ?: return
         if (clientBuilder == null || directory == null) return
-        if (syncJob?.isActive == true) return
+        if (isSyncing()) return
 
         val current = _network.value?.takeIf { it.isFrom(provider) }
         val now = TimeUtils.now()
@@ -217,10 +223,7 @@ class TrustNetworkState(
             return
         }
 
-        syncJob =
-            scope.launch(Dispatchers.IO) {
-                syncLock.withLock { runSync(provider, current, kind) }
-            }
+        launchSync { runSync(provider, current, kind) }
     }
 
     /** Suspends until the running sync, if any, finishes. */
@@ -232,10 +235,23 @@ class TrustNetworkState(
     fun redownload() {
         val provider = rankProvider.value ?: return
         if (clientBuilder == null || directory == null) return
-        if (syncJob?.isActive == true) return
+        if (isSyncing()) return
+        launchSync { runSync(provider, null, TrustNetworkSyncStatus.Kind.DOWNLOAD) }
+    }
+
+    @OptIn(ExperimentalAtomicApi::class)
+    private fun isSyncing() = syncing.load()
+
+    @OptIn(ExperimentalAtomicApi::class)
+    private fun launchSync(sync: suspend () -> Unit) {
+        if (!syncing.compareAndSet(expectedValue = false, newValue = true)) return
         syncJob =
             scope.launch(Dispatchers.IO) {
-                syncLock.withLock { runSync(provider, null, TrustNetworkSyncStatus.Kind.DOWNLOAD) }
+                try {
+                    syncLock.withLock { sync() }
+                } finally {
+                    syncing.store(false)
+                }
             }
     }
 
