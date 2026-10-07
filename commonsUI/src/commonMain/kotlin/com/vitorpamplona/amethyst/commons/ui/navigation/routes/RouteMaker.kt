@@ -51,7 +51,7 @@ import com.vitorpamplona.quartz.nip28PublicChat.base.IsInPublicChatChannel
 import com.vitorpamplona.quartz.nip28PublicChat.message.ChannelMessageEvent
 import com.vitorpamplona.quartz.nip29RelayGroups.GroupId
 import com.vitorpamplona.quartz.nip29RelayGroups.groupId
-import com.vitorpamplona.quartz.nip29RelayGroups.isGroupScoped
+import com.vitorpamplona.quartz.nip29RelayGroups.isGroupChatContent
 import com.vitorpamplona.quartz.nip34Git.issue.GitIssueEvent
 import com.vitorpamplona.quartz.nip34Git.patch.GitPatchEvent
 import com.vitorpamplona.quartz.nip34Git.pr.GitPullRequestEvent
@@ -178,7 +178,10 @@ fun routeFor(
 
     val noteEvent = note.event ?: return Route.EventRedirect(note.idHex)
 
-    if (noteEvent.isGroupScoped()) {
+    // Only group *content* opens its group from the `h` tag alone (the kinds the comment above
+    // names). Other kinds carry `h` for their own reasons — Zapstore tags every app it publishes
+    // with one — and routing those by it opened an empty group chat instead of the app.
+    if (noteEvent.isGroupChatContent()) {
         val groupId = noteEvent.groupId()
         val hostRelay = note.relays.firstOrNull()
         if (groupId != null && hostRelay != null) {
