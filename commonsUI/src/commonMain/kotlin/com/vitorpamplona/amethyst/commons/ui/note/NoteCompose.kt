@@ -1062,7 +1062,7 @@ private fun RenderNoteRow(
         }
 
         is SoftwareApplicationEvent -> {
-            RenderSoftwareApplication(baseNote, accountViewModel, nav)
+            RenderSoftwareApplication(baseNote, accountViewModel, nav, backgroundColor)
         }
 
         is SoftwareAssetEvent -> {
@@ -1074,7 +1074,7 @@ private fun RenderNoteRow(
             // The EventFactory always materializes the NIP-51 class; dispatch to NIP-82 when the
             // tag signature matches.
             if (noteEvent.isNip82SoftwareRelease()) {
-                RenderSoftwareRelease(baseNote, accountViewModel, nav)
+                RenderSoftwareRelease(baseNote, backgroundColor, accountViewModel, nav)
             }
         }
 

@@ -55,18 +55,26 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.commons.feeds.FeedState
 import com.vitorpamplona.amethyst.commons.model.AddressableNote
 import com.vitorpamplona.amethyst.commons.model.Note
+import com.vitorpamplona.amethyst.commons.model.toImmutableListOfLists
 import com.vitorpamplona.amethyst.commons.relayClient.event.observeNoteEvent
 import com.vitorpamplona.amethyst.commons.relayClient.reqCommand.event.EventFinderFilterAssemblerSubscription
+import com.vitorpamplona.amethyst.commons.relayClient.softwareapps.SoftwareReleasesFilterAssemblerSubscription
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.loading_feed
 import com.vitorpamplona.amethyst.commons.resources.nip82_no_comments
 import com.vitorpamplona.amethyst.commons.resources.nip82_older_releases_hide
 import com.vitorpamplona.amethyst.commons.resources.nip82_older_releases_show
+import com.vitorpamplona.amethyst.commons.resources.nip82_prereleases_hide
+import com.vitorpamplona.amethyst.commons.resources.nip82_prereleases_show
 import com.vitorpamplona.amethyst.commons.resources.nip82_section_about
 import com.vitorpamplona.amethyst.commons.resources.nip82_section_latest_release
+import com.vitorpamplona.amethyst.commons.resources.nip82_section_license
 import com.vitorpamplona.amethyst.commons.resources.nip82_section_links
 import com.vitorpamplona.amethyst.commons.resources.nip82_section_platforms
+import com.vitorpamplona.amethyst.commons.resources.nip82_section_prereleases
 import com.vitorpamplona.amethyst.commons.resources.nip82_section_topics
+import com.vitorpamplona.amethyst.commons.softwareapps.SoftwareReleases
+import com.vitorpamplona.amethyst.commons.ui.components.TranslatableRichTextViewer
 import com.vitorpamplona.amethyst.commons.ui.components.rememberViewModel
 import com.vitorpamplona.amethyst.commons.ui.feeds.WatchLifecycleAndUpdateModel
 import com.vitorpamplona.amethyst.commons.ui.layouts.DisappearingScaffold
@@ -80,14 +88,14 @@ import com.vitorpamplona.amethyst.commons.ui.note.types.AppAuthorLine
 import com.vitorpamplona.amethyst.commons.ui.note.types.AppIcon
 import com.vitorpamplona.amethyst.commons.ui.note.types.AppLinksColumn
 import com.vitorpamplona.amethyst.commons.ui.note.types.Chip
-import com.vitorpamplona.amethyst.commons.ui.note.types.PlatformLicenseRow
+import com.vitorpamplona.amethyst.commons.ui.note.types.LicenseChip
+import com.vitorpamplona.amethyst.commons.ui.note.types.PlatformChips
 import com.vitorpamplona.amethyst.commons.ui.note.types.RenderSoftwareReleaseBody
 import com.vitorpamplona.amethyst.commons.ui.note.types.ReplyRenderType
 import com.vitorpamplona.amethyst.commons.ui.note.types.ScreenshotsStrip
 import com.vitorpamplona.amethyst.commons.ui.note.types.TopicChipFlow
 import com.vitorpamplona.amethyst.commons.ui.note.types.VersionChip
-import com.vitorpamplona.amethyst.commons.ui.note.types.findAllNip82Releases
-import com.vitorpamplona.amethyst.commons.ui.note.types.findLatestNip82Release
+import com.vitorpamplona.amethyst.commons.ui.note.types.produceNip82Releases
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.threadview.dal.ThreadFeedViewModel
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.threadview.datasources.ThreadFilterAssemblerSubscription
 import com.vitorpamplona.amethyst.commons.ui.stringRes
@@ -103,6 +111,7 @@ import com.vitorpamplona.amethyst.commons.ui.thread.drawReplyLevel
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.quartz.experimental.nip82SoftwareApps.application.SoftwareApplicationEvent
 import com.vitorpamplona.quartz.nip01Core.core.Address
+import org.jetbrains.compose.resources.StringResource
 
 @Composable
 fun SoftwareAppDetailScreen(
@@ -140,6 +149,7 @@ private fun SoftwareAppDetailScreenContent(
     WatchLifecycleAndUpdateModel(threadViewModel)
     ThreadFilterAssemblerSubscription(addressTag, accountViewModel)
     EventFinderFilterAssemblerSubscription(note, accountViewModel)
+    SoftwareReleasesFilterAssemblerSubscription(note, accountViewModel.dataSources().softwareReleases)
 
     DisappearingScaffold(
         isInvertedLayout = false,
@@ -189,9 +199,16 @@ private fun SoftwareAppDetailBody(
     val license = remember(event) { event.license() }
     val website = remember(event) { event.url() }
     val repo = remember(event) { event.repository() }
+    val gitRepo = remember(event) { event.gitRepository()?.let { Address(it.kind, it.pubKeyHex, it.dTag) } }
 
-    val latestRelease = remember(event) { findLatestNip82Release(event) }
-    val olderReleases = remember(event) { findAllNip82Releases(event).drop(1) }
+    val releases by produceNip82Releases(event)
+    val arranged = remember(releases) { SoftwareReleases.arrange(releases) }
+    val latestRelease = arranged.latest
+    val preReleases = arranged.preReleases
+    val olderReleases = arranged.older
+
+    val background = MaterialTheme.colorScheme.background
+    val backgroundColor = remember(background) { mutableStateOf(background) }
 
     val threadState by threadViewModel.feedState.feedContent.collectAsStateWithLifecycle()
     val comments: List<Note> =
@@ -205,6 +222,7 @@ private fun SoftwareAppDetailBody(
         }
 
     var showOlder by rememberSaveable(event.id) { mutableStateOf(false) }
+    var showEarlierPreReleases by rememberSaveable(event.id) { mutableStateOf(false) }
 
     LazyColumn(
         contentPadding = rememberFeedContentPadding(FeedPadding),
@@ -233,19 +251,38 @@ private fun SoftwareAppDetailBody(
             item(key = "about") {
                 Spacer(Modifier.height(12.dp))
                 Section(title = stringRes(Res.string.nip82_section_about)) {
-                    Text(
-                        text = description,
-                        style = MaterialTheme.typography.bodyMedium,
+                    val tags = remember(event) { event.tags.toImmutableListOfLists() }
+                    TranslatableRichTextViewer(
+                        content = description,
+                        canPreview = true,
+                        quotesLeft = 1,
+                        modifier = Modifier.fillMaxWidth(),
+                        tags = tags,
+                        backgroundColor = backgroundColor,
+                        id = note.idHex,
+                        callbackUri = note.toNostrUri(),
+                        authorPubKey = event.pubKey,
+                        accountViewModel = accountViewModel,
+                        nav = nav,
                     )
                 }
             }
         }
 
-        if (platforms.isNotEmpty() || license != null) {
+        if (platforms.isNotEmpty()) {
             item(key = "platforms") {
                 Spacer(Modifier.height(12.dp))
                 Section(title = stringRes(Res.string.nip82_section_platforms)) {
-                    PlatformLicenseRow(platforms = platforms, license = license)
+                    PlatformChips(platforms)
+                }
+            }
+        }
+
+        if (license != null) {
+            item(key = "license") {
+                Spacer(Modifier.height(12.dp))
+                Section(title = stringRes(Res.string.nip82_section_license)) {
+                    LicenseChip(license)
                 }
             }
         }
@@ -259,11 +296,11 @@ private fun SoftwareAppDetailBody(
             }
         }
 
-        if (website != null || repo != null) {
+        if (website != null || repo != null || gitRepo != null) {
             item(key = "links") {
                 Spacer(Modifier.height(12.dp))
                 Section(title = stringRes(Res.string.nip82_section_links)) {
-                    AppLinksColumn(website = website, repository = repo)
+                    AppLinksColumn(website = website, repository = repo, gitRepository = gitRepo, nav = nav)
                 }
             }
         }
@@ -275,9 +312,47 @@ private fun SoftwareAppDetailBody(
                     SectionLabel(stringRes(Res.string.nip82_section_latest_release))
                     RenderSoftwareReleaseBody(
                         event = latestRelease,
+                        app = event,
+                        backgroundColor = backgroundColor,
                         accountViewModel = accountViewModel,
                         nav = nav,
-                        showAppId = false,
+                    )
+                }
+            }
+        }
+
+        if (preReleases.isNotEmpty()) {
+            item(key = "pre-releases-label") {
+                Spacer(Modifier.height(12.dp))
+                Column(PaddingHorizontal12Modifier) {
+                    SectionLabel(stringRes(Res.string.nip82_section_prereleases))
+                }
+            }
+            // The newest one only: an app that ships nightlies can have dozens ahead of its last
+            // stable release, and each body loads its assets.
+            items(
+                if (showEarlierPreReleases) preReleases else preReleases.subList(0, 1),
+                key = { "pre-${it.id}" },
+            ) { release ->
+                Column(PaddingHorizontal12Modifier) {
+                    RenderSoftwareReleaseBody(
+                        event = release,
+                        app = event,
+                        backgroundColor = backgroundColor,
+                        accountViewModel = accountViewModel,
+                        nav = nav,
+                    )
+                }
+            }
+            if (preReleases.size > 1) {
+                item(key = "pre-releases-toggle") {
+                    Spacer(Modifier.height(8.dp))
+                    ReleasesToggle(
+                        count = preReleases.size - 1,
+                        expanded = showEarlierPreReleases,
+                        showLabel = Res.string.nip82_prereleases_show,
+                        hideLabel = Res.string.nip82_prereleases_hide,
+                        onToggle = { showEarlierPreReleases = !showEarlierPreReleases },
                     )
                 }
             }
@@ -286,9 +361,11 @@ private fun SoftwareAppDetailBody(
         if (olderReleases.isNotEmpty()) {
             item(key = "older-releases-toggle") {
                 Spacer(Modifier.height(8.dp))
-                OlderReleasesToggle(
+                ReleasesToggle(
                     count = olderReleases.size,
                     expanded = showOlder,
+                    showLabel = Res.string.nip82_older_releases_show,
+                    hideLabel = Res.string.nip82_older_releases_hide,
                     onToggle = { showOlder = !showOlder },
                 )
             }
@@ -301,9 +378,10 @@ private fun SoftwareAppDetailBody(
                     Column(PaddingHorizontal12Modifier) {
                         RenderSoftwareReleaseBody(
                             event = release,
+                            app = event,
+                            backgroundColor = backgroundColor,
                             accountViewModel = accountViewModel,
                             nav = nav,
-                            showAppId = false,
                         )
                     }
                 }
@@ -427,9 +505,11 @@ private fun SectionLabel(title: String) {
 }
 
 @Composable
-private fun OlderReleasesToggle(
+private fun ReleasesToggle(
     count: Int,
     expanded: Boolean,
+    showLabel: StringResource,
+    hideLabel: StringResource,
     onToggle: () -> Unit,
 ) {
     Box(
@@ -444,12 +524,7 @@ private fun OlderReleasesToggle(
     ) {
         Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
             Text(
-                text =
-                    if (expanded) {
-                        stringRes(Res.string.nip82_older_releases_hide)
-                    } else {
-                        stringRes(Res.string.nip82_older_releases_show)
-                    },
+                text = stringRes(if (expanded) hideLabel else showLabel),
                 style = MaterialTheme.typography.labelLarge,
                 color = MaterialTheme.colorScheme.primary,
                 modifier = Modifier.weight(1f),

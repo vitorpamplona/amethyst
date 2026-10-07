@@ -21,11 +21,15 @@
 package com.vitorpamplona.quartz.nip51Lists.releaseArtifactSet
 
 import androidx.compose.runtime.Immutable
+import com.vitorpamplona.quartz.experimental.nip82SoftwareApps.application.SoftwareApplicationEvent
 import com.vitorpamplona.quartz.experimental.nip82SoftwareApps.asset.SoftwareAssetEvent
+import com.vitorpamplona.quartz.experimental.nip82SoftwareApps.release.app
 import com.vitorpamplona.quartz.experimental.nip82SoftwareApps.release.appId
 import com.vitorpamplona.quartz.experimental.nip82SoftwareApps.release.assets
 import com.vitorpamplona.quartz.experimental.nip82SoftwareApps.release.channel
+import com.vitorpamplona.quartz.experimental.nip82SoftwareApps.release.commit
 import com.vitorpamplona.quartz.experimental.nip82SoftwareApps.release.isNip82SoftwareRelease
+import com.vitorpamplona.quartz.experimental.nip82SoftwareApps.release.platforms
 import com.vitorpamplona.quartz.experimental.nip82SoftwareApps.release.version
 import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.nip01Core.core.BaseAddressableEvent
@@ -37,6 +41,8 @@ import com.vitorpamplona.quartz.nip01Core.hints.EventHintBundle
 import com.vitorpamplona.quartz.nip01Core.hints.EventHintProvider
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
+import com.vitorpamplona.quartz.nip01Core.tags.aTag.ATag
+import com.vitorpamplona.quartz.nip01Core.tags.aTag.toATag
 import com.vitorpamplona.quartz.nip01Core.tags.dTag.dTag
 import com.vitorpamplona.quartz.nip50Search.IndexableFieldVisitor
 import com.vitorpamplona.quartz.nip50Search.SearchableEvent
@@ -55,8 +61,9 @@ import kotlin.uuid.Uuid
  *
  * Two specs publish this kind and both are parsed here:
  * - NIP-51 "release artifact set": a `title`, a `description` and `e`/`a` items.
- * - NIP-82 "software release": `d = <app-id>@<version>`, `i` (app id), `version`,
- *   `c` (channel), `e` tags to its kind 3063 assets, and the release notes as content.
+ * - NIP-82 "software release": `a` (the kind 32267 app), `d = <app-id>@<version>`,
+ *   `i` (app id), `version`, `c` (channel), `e` tags to its kind 3063 assets, `f` (the
+ *   union of its assets' platforms), and the release notes as content.
  *   Use `isNip82SoftwareRelease()` to tell them apart.
  */
 @Immutable
@@ -113,6 +120,27 @@ class ReleaseArtifactSetEvent(
     /** NIP-82: the application identifier (`i` tag). */
     fun appId() = tags.appId()
 
+    /**
+     * NIP-82: the `a` pointer to the kind 32267 application, with its relay hint. Its pubkey
+     * is the app's publisher, which need not be this release's signer.
+     */
+    fun app(): ATag? = tags.app()
+
+    /**
+     * The address of the kind 32267 application this release belongs to: the `a` tag, or,
+     * for releases that predate the required `a` tag, the signer's app with the `i` id.
+     */
+    fun appAddress(): Address? = app()?.let { Address(it.kind, it.pubKeyHex, it.dTag) } ?: appId()?.let { Address(SoftwareApplicationEvent.KIND, pubKey, it) }
+
+    /** NIP-82: the aggregate platforms of this release's assets (`f` tags). */
+    fun platforms() = tags.platforms()
+
+    /**
+     * The build commit, when the publisher put one on the release. NIP-82 defines `commit`
+     * on assets only; some publishers add it here as well.
+     */
+    fun commit() = tags.commit()
+
     /** NIP-82: the release version. */
     fun version() = tags.version()
 
@@ -134,7 +162,43 @@ class ReleaseArtifactSetEvent(
             version: String,
         ) = "$appId@$version"
 
-        /** Builds a NIP-82 software release. */
+        /**
+         * Builds a NIP-82 software release of [app]. The `f` tags are the union of the
+         * assets' platforms, as NIP-82 requires.
+         */
+        fun buildSoftwareRelease(
+            app: ATag,
+            version: String,
+            channel: String,
+            assets: List<EventHintBundle<SoftwareAssetEvent>>,
+            releaseNotes: String = "",
+            createdAt: Long = TimeUtils.now(),
+            initializer: TagArrayBuilder<ReleaseArtifactSetEvent>.() -> Unit = {},
+        ) = eventTemplate(KIND, releaseNotes, createdAt) {
+            this.app(app)
+            dTag(buildSoftwareReleaseDTag(app.dTag, version))
+            appId(app.dTag)
+            version(version)
+            channel(channel)
+            assets(assets)
+            platforms(assets.flatMap { it.event.platforms() })
+            initializer()
+        }
+
+        /** Builds a NIP-82 software release of [app]. */
+        fun buildSoftwareRelease(
+            app: EventHintBundle<SoftwareApplicationEvent>,
+            version: String,
+            channel: String,
+            assets: List<EventHintBundle<SoftwareAssetEvent>>,
+            releaseNotes: String = "",
+            createdAt: Long = TimeUtils.now(),
+            initializer: TagArrayBuilder<ReleaseArtifactSetEvent>.() -> Unit = {},
+        ) = buildSoftwareRelease(app.toATag(), version, channel, assets, releaseNotes, createdAt, initializer)
+
+        @Deprecated(
+            "NIP-82 requires the `a` pointer to the application, which an app id alone cannot build. Pass the app's ATag or its event.",
+        )
         fun buildSoftwareRelease(
             appId: String,
             version: String,
@@ -149,6 +213,7 @@ class ReleaseArtifactSetEvent(
             version(version)
             channel(channel)
             assets(assets)
+            platforms(assets.flatMap { it.event.platforms() })
             initializer()
         }
 

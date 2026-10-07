@@ -88,6 +88,7 @@ import com.vitorpamplona.amethyst.commons.relayClient.reqCommand.channel.Channel
 import com.vitorpamplona.amethyst.commons.relayClient.searchCommand.SearchFilterAssembler
 import com.vitorpamplona.amethyst.commons.relayClient.shorts.ShortsFilterAssembler
 import com.vitorpamplona.amethyst.commons.relayClient.softwareapps.SoftwareAppsFilterAssembler
+import com.vitorpamplona.amethyst.commons.relayClient.softwareapps.SoftwareReleasesFilterAssembler
 import com.vitorpamplona.amethyst.commons.relayClient.thread.ThreadFilterAssembler
 import com.vitorpamplona.amethyst.commons.relayClient.url.UrlFilterAssembler
 import com.vitorpamplona.amethyst.commons.relayClient.user.UserFinderFilterAssembler
@@ -217,6 +218,7 @@ class RelaySubscriptionsCoordinator(
     val onePodcast = OnePodcastFilterAssembler(cache, client)
     val myPodcast = MyPodcastFilterAssembler(cache, client)
     val softwareApps = SoftwareAppsFilterAssembler(client)
+    val softwareReleases = SoftwareReleasesFilterAssembler(cache, client) // the open app page's releases
     val napplets = NappletsFilterAssembler(client)
     val connectedApps = ConnectedAppsFilterAssembler(client)
     val nsites = NsitesFilterAssembler(client)
@@ -281,6 +283,7 @@ class RelaySubscriptionsCoordinator(
             onePodcast,
             myPodcast,
             softwareApps,
+            softwareReleases,
             badges,
             profileBadges,
             profileAppRecommendations,

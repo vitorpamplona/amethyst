@@ -59,6 +59,9 @@ import kotlinx.coroutines.sync.Semaphore
  * @param onRelayStart optional hook fired as each relay's download begins.
  * @param onRelayComplete optional `(relay, totalEvents)` hook fired when a relay
  *   drains (or errors out to an empty first page).
+ * @param onRelayResult optional `(relay, result)` hook with each relay's full
+ *                     [PagedFetchResult]: why its walk ended and, for a refusal, the
+ *                     relay's own [PagedFetchResult.message].
  * @param onEvent      called once per delivered event with its source relay.
  */
 suspend fun INostrClient.fetchAllPagesFromPool(
@@ -68,6 +71,7 @@ suspend fun INostrClient.fetchAllPagesFromPool(
     onNewPage: ((until: Long, relay: NormalizedRelayUrl) -> Unit)? = null,
     onRelayStart: ((relay: NormalizedRelayUrl) -> Unit)? = null,
     onRelayComplete: ((relay: NormalizedRelayUrl, totalEvents: Int) -> Unit)? = null,
+    onRelayResult: ((relay: NormalizedRelayUrl, result: PagedFetchResult) -> Unit)? = null,
     onEvent: (event: Event, relay: NormalizedRelayUrl) -> Unit,
 ) {
     if (filters.isEmpty()) return
@@ -87,6 +91,7 @@ suspend fun INostrClient.fetchAllPagesFromPool(
                             onNewPage = onNewPage?.let { cb -> { until -> cb(until, relay) } },
                         ) { event -> onEvent(event, relay) }
                     onRelayComplete?.invoke(relay, result.downloaded)
+                    onRelayResult?.invoke(relay, result)
                 } finally {
                     semaphore.release()
                 }

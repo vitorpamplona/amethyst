@@ -35,6 +35,7 @@ import kotlinx.coroutines.runBlocking
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
+import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 /**
@@ -179,6 +180,7 @@ class NostrClientFetchAllPagesDrainTest {
 
             assertEquals(PagedFetchResult.End.CLOSED, result.end, "a CLOSED is the relay declining, not an empty corpus")
             assertFalse(result.drained)
+            assertEquals("rate-limited: slow down", result.message, "the relay's reason is the only explanation the caller gets")
         }
 
     /**
@@ -208,6 +210,7 @@ class NostrClientFetchAllPagesDrainTest {
 
             assertEquals(PagedFetchResult.End.AUTH_REQUIRED, result.end, "an auth wall must not read as a policy refusal")
             assertFalse(result.drained, "nothing was proven about what the relay holds")
+            assertEquals("auth-required: we only serve authenticated users", result.message)
         }
 
     @Test
@@ -230,6 +233,33 @@ class NostrClientFetchAllPagesDrainTest {
 
             assertEquals(PagedFetchResult.End.CANNOT_CONNECT, result.end, "never got to ask")
             assertFalse(result.drained)
+            assertEquals("connection refused", result.message)
+        }
+
+    /**
+     * relay.zapstore.dev refuses any `limit` above ~50 with a CLOSED and no events. That text
+     * is the only reason the caller gets for an empty result, so it must come back.
+     */
+    @Test
+    fun aRefusedFirstPageKeepsTheRelaysReason() =
+        runBlocking {
+            val client = ScriptedClient()
+            val feeder =
+                launch {
+                    client.awaitPage(1)
+                    client.listener!!.onClosed("blocked: filters are too vague", relay, null)
+                }
+
+            val result =
+                client.fetchAllPages(
+                    relay = relay,
+                    filters = listOf(Filter(kinds = listOf(1), limit = 100)),
+                    idleTimeoutMs = 2_000,
+                ) { }
+            feeder.join()
+
+            assertEquals(PagedFetchResult.End.CLOSED, result.end)
+            assertEquals("blocked: filters are too vague", result.message)
         }
 
     @Test
@@ -259,6 +289,7 @@ class NostrClientFetchAllPagesDrainTest {
             assertEquals(1, client.subscribeCount, "the limit was met, so there was no second page")
             assertEquals(PagedFetchResult.End.LIMIT_REACHED, result.end, "a fulfilled limit is the caller stopping, not the corpus ending")
             assertFalse(result.drained)
+            assertNull(result.message, "the walk ended on an answer, not a refusal")
         }
 
     // ---- termination: the walk must END, whatever the relay does -------------

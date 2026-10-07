@@ -22,6 +22,7 @@ package com.vitorpamplona.quartz.experimental.nip82SoftwareApps.asset
 
 import com.vitorpamplona.quartz.experimental.nip82SoftwareApps.asset.tags.ApkCertificateHashTag
 import com.vitorpamplona.quartz.experimental.nip82SoftwareApps.asset.tags.CommitTag
+import com.vitorpamplona.quartz.experimental.nip82SoftwareApps.asset.tags.FilenameTag
 import com.vitorpamplona.quartz.experimental.nip82SoftwareApps.asset.tags.MinAllowedVersionCodeTag
 import com.vitorpamplona.quartz.experimental.nip82SoftwareApps.asset.tags.MinAllowedVersionTag
 import com.vitorpamplona.quartz.experimental.nip82SoftwareApps.asset.tags.MinPlatformVersionTag
@@ -42,6 +43,8 @@ import com.vitorpamplona.quartz.nip94FileMetadata.tags.UrlTag
 fun TagArrayBuilder<SoftwareAssetEvent>.appId(appId: String) = addUnique(AppIdTag.assemble(appId))
 
 fun TagArrayBuilder<SoftwareAssetEvent>.url(url: String) = addUnique(UrlTag.assemble(url))
+
+fun TagArrayBuilder<SoftwareAssetEvent>.filename(filename: String) = addUnique(FilenameTag.assemble(filename))
 
 fun TagArrayBuilder<SoftwareAssetEvent>.mimeType(mimeType: String) = addUnique(MimeTypeTag.assemble(mimeType))
 

@@ -22,6 +22,7 @@ package com.vitorpamplona.quartz.experimental.nip82SoftwareApps.asset
 
 import com.vitorpamplona.quartz.experimental.nip82SoftwareApps.asset.tags.ApkCertificateHashTag
 import com.vitorpamplona.quartz.experimental.nip82SoftwareApps.asset.tags.CommitTag
+import com.vitorpamplona.quartz.experimental.nip82SoftwareApps.asset.tags.FilenameTag
 import com.vitorpamplona.quartz.experimental.nip82SoftwareApps.asset.tags.MinAllowedVersionCodeTag
 import com.vitorpamplona.quartz.experimental.nip82SoftwareApps.asset.tags.MinAllowedVersionTag
 import com.vitorpamplona.quartz.experimental.nip82SoftwareApps.asset.tags.MinPlatformVersionTag
@@ -42,6 +43,8 @@ import com.vitorpamplona.quartz.nip94FileMetadata.tags.UrlTag
 fun TagArray.appId() = firstNotNullOfOrNull(AppIdTag::parse)
 
 fun TagArray.url() = firstNotNullOfOrNull(UrlTag::parse)
+
+fun TagArray.filename() = firstNotNullOfOrNull(FilenameTag::parse)
 
 fun TagArray.mimeType() = firstNotNullOfOrNull(MimeTypeTag::parse)
 

@@ -48,6 +48,8 @@ class SoftwareAssetEvent(
 
     fun url() = tags.url()
 
+    fun filename() = tags.filename()
+
     fun mimeType() = tags.mimeType()
 
     fun hash() = tags.hash()

@@ -25,8 +25,10 @@ import com.vitorpamplona.quartz.experimental.nip82SoftwareApps.release.tags.AppI
 import com.vitorpamplona.quartz.experimental.nip82SoftwareApps.release.tags.AssetTag
 import com.vitorpamplona.quartz.experimental.nip82SoftwareApps.release.tags.ChannelTag
 import com.vitorpamplona.quartz.experimental.nip82SoftwareApps.release.tags.VersionTag
+import com.vitorpamplona.quartz.experimental.nip82SoftwareApps.shared.PlatformTag
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
 import com.vitorpamplona.quartz.nip01Core.hints.EventHintBundle
+import com.vitorpamplona.quartz.nip01Core.tags.aTag.ATag
 import com.vitorpamplona.quartz.nip51Lists.releaseArtifactSet.ReleaseArtifactSetEvent
 
 fun TagArrayBuilder<ReleaseArtifactSetEvent>.appId(appId: String) = addUnique(AppIdTag.assemble(appId))
@@ -38,3 +40,11 @@ fun TagArrayBuilder<ReleaseArtifactSetEvent>.channel(channel: String) = addUniqu
 fun TagArrayBuilder<ReleaseArtifactSetEvent>.asset(asset: EventHintBundle<SoftwareAssetEvent>) = add(AssetTag.assemble(asset))
 
 fun TagArrayBuilder<ReleaseArtifactSetEvent>.assets(assets: List<EventHintBundle<SoftwareAssetEvent>>) = addAll(AssetTag.assemble(assets))
+
+/** NIP-82: the `a` pointer to the kind 32267 application this release belongs to. */
+fun TagArrayBuilder<ReleaseArtifactSetEvent>.app(app: ATag) = addUniqueValueIfNew(app.toATagArray())
+
+/** NIP-82: one aggregate platform. Duplicates are dropped: the release carries the union of its assets' `f` tags. */
+fun TagArrayBuilder<ReleaseArtifactSetEvent>.platform(platform: String) = addUniqueValueIfNew(PlatformTag.assemble(platform))
+
+fun TagArrayBuilder<ReleaseArtifactSetEvent>.platforms(platforms: List<String>) = addAllUniqueValueIfNew(PlatformTag.assemble(platforms))

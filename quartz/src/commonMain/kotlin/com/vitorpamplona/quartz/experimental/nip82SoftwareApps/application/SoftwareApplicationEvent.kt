@@ -30,6 +30,7 @@ import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.nip01Core.tags.aTag.ATag
 import com.vitorpamplona.quartz.nip01Core.tags.dTag.dTag
 import com.vitorpamplona.quartz.nip01Core.tags.hashtags.HashtagTag
+import com.vitorpamplona.quartz.nip34Git.repository.GitRepositoryEvent
 import com.vitorpamplona.quartz.nip50Search.IndexableFieldVisitor
 import com.vitorpamplona.quartz.nip50Search.SearchableEvent
 import com.vitorpamplona.quartz.utils.TimeUtils
@@ -89,11 +90,16 @@ class SoftwareApplicationEvent(
 
     fun appLinks() = tags.mapNotNull(ATag::parse)
 
+    /** NIP-82: the app's NIP-34 repository, its first `a` tag of kind 30617. */
+    fun gitRepository(): ATag? = tags.firstNotNullOfOrNull { ATag.parseIfOfKind(it, GIT_REPOSITORY_KIND) }
+
     /** [appLinks] as validated address ids, in tag order, without building the [ATag]s. */
     fun appLinkAddressIds(): List<String> = tags.mapNotNull(ATag::parseValidAddress)
 
     companion object {
         const val KIND = 32267
+
+        private val GIT_REPOSITORY_KIND = GitRepositoryEvent.KIND.toString()
 
         fun build(
             appId: String,
