@@ -1000,9 +1000,46 @@
     <string name="my_fitness_weeks_met">लक्ष्य प्राप्त पिछले %2$d सप्ताहों में से %1$d</string>
     <string name="my_fitness_average_change">मध्यमान %1$s प्रतिसप्ताह निकटकालतः। %2$s पिछले चार सप्ताहों की तुलना में</string>
     <string name="my_fitness_average">मध्यमान %1$s प्रतिसप्ताह निकटकालतः</string>
-    <string name="my_fitness_consistency">सातत्य</string>
+    <string name="my_fitness_consistency">सुसंगति</string>
     <string name="my_fitness_heatmap_less">न्यून</string>
     <string name="my_fitness_heatmap_more">अधिक</string>
+    <string name="my_fitness_patterns">आपके प्रतिमान</string>
+    <string name="my_fitness_peak_day">अधिकतम व्यस्त दिन</string>
+    <string name="my_fitness_peak_time">सामान्य समय</string>
+    <string name="my_fitness_weekday_average">मध्यमान प्रति कार्यदिवस</string>
+    <string name="my_fitness_time_of_day">सत्र संख्या दिन के समय अनुसार</string>
+    <string name="my_fitness_daypart_morning">प्रातःकाल</string>
+    <string name="my_fitness_daypart_afternoon">मध्याह्न</string>
+    <string name="my_fitness_daypart_evening">सायंकाल</string>
+    <string name="my_fitness_daypart_night">रात्रि</string>
+    <string name="my_fitness_mix">गतिविधि मिश्रण। पिछले चार सप्ताह</string>
+    <string name="my_fitness_mix_other">अन्य</string>
+    <string name="my_fitness_per_week">%1$s प्रतिसप्ताह</string>
+    <string name="my_fitness_mix_change">%1$s प्रतिसप्ताह पूर्व की तुलना में</string>
+    <string name="my_fitness_records">व्यक्तिगत उपलब्धियाँ</string>
+    <string name="my_fitness_record_new">नव्य</string>
+    <string name="my_fitness_history_note">%1$s के पूर्व केवल आपके द्वारा प्रकाशित व्यायामों का आकलन किया जाता है। अमेथिस्ट पिछले चार सप्ताह के अभिलेख स्वास्थ्य संयोजन से पढता है।</string>
+    <string name="my_fitness_history_footer">आपके अभ्यास छः मास तक। व्यायाम जिनका आपने प्रकाशन किया। तथा पिछले चार सप्ताह के स्वास्थ्य संयोजन अभिलेखित इस संचारयन्त्र पर। आपके लक्ष्य तथा ये संख्याएँ इस यन्त्र पर आकलित। तथा कुछ भी प्रकाशित नहीं।</string>
+    <string name="my_fitness_empty_history">कुछ भी अभिलेखित नहीं अब तक। व्यायाम जो आप प्रकाशित करते हैं तथा जो भी आपकी घडी अभिलेखित करती है सब यहाँ दिखेंगे।</string>
+    <string name="my_fitness_goal_editor_hint">एक सौ पचास सक्रिय मिनुट प्रतिसप्ताह। यह विश्वस्वास्थ्यसंगठन के दिशानिर्देश हैं वयस्क जनों के लिए।</string>
+    <string name="my_fitness_goal_distance_off">कोई दूरी लक्ष्य नहीं</string>
+    <string name="my_fitness_minutes_value">%1$d मि॰</string>
+    <plurals name="my_fitness_workout_count">
+        <item quantity="one">%1$d व्यायाम</item>
+        <item quantity="other">%1$d व्यायाम</item>
+    </plurals>
+    <plurals name="my_fitness_days_left">
+        <item quantity="one">%1$d दिन शेष</item>
+        <item quantity="other">%1$d दिन शेष</item>
+    </plurals>
+    <plurals name="my_fitness_goal_streak">
+        <item quantity="one">%1$d सप्ताह निरन्तर</item>
+        <item quantity="other">%1$d सप्ताह निरन्तर</item>
+    </plurals>
+    <plurals name="my_fitness_best_streak">
+        <item quantity="one">सर्वोत्तम। %1$d सप्ताह</item>
+        <item quantity="other">सर्वोत्तम। %1$d सप्ताह</item>
+    </plurals>
     <string name="nsite_none_found">कोई नोस्टरस्थान प्राप्त नहीं अब तक।</string>
     <string name="browser_reload">पुनःआवहन</string>
     <string name="browser_unsupported">क्रमकाभ्यन्तर जालवीक्षक के लिए आण्ड्रोइड ग्यारह अथवा नवीनतर आवश्यक।</string>
@@ -1157,6 +1194,20 @@
     <string name="relay_auth_event_title">पुनःप्रसारक प्रवेशांकन</string>
     <string name="relay_auth_event_explainer">यह एक पत्र प्रकाशन नहीं। यह आपको इस पुनःप्रसारक में प्रवेशांकन करता है। जो भी इसे रखता है वह सब पढ सकेगा जो यह पुनःप्रसारक केवल आपको दिखाता है। जैसे कि आपके निजी सन्देश।</string>
     <string name="relay_auth_event_unusual_relay">यह एक साधारण पुनःप्रसारक पता नहीं। इसकी जाँच करें हस्ताक्षरण पूर्व।</string>
+    <string name="relay_auth_event_app_title">हस्ताक्षर प्रवेश</string>
+    <string name="http_auth_event_title">जाल अनुरोध हस्ताक्षर प्रवेश</string>
+    <string name="http_auth_event_with_file">बद्ध उस अभिलेख से जो यह भेजता है।</string>
+    <string name="blossom_auth_event_title">श्रव्यदृश्याभिलेख सेवासंगणक अनुमति</string>
+    <string name="blossom_auth_upload">अभिलेख आरोहण</string>
+    <string name="blossom_auth_delete">अभिलेख मिटाएँ</string>
+    <string name="blossom_auth_list">आपके अभिलेखों की सूची</string>
+    <string name="blossom_auth_get">अभिलेख अवरोहण</string>
+    <string name="blossom_auth_media">अभिलेख वर्तन</string>
+    <string name="blossom_auth_unknown">श्रव्यदृश्याभिलेख सेवासंगणक का उपयोग करें (%1$s)</string>
+    <string name="blossom_auth_file">अभिलेख %1$s</string>
+    <string name="blossom_auth_any_file">आपके अभिलेखों में किसी भी</string>
+    <string name="blossom_auth_server">केवल %1$s पर</string>
+    <string name="blossom_auth_any_server">किसी भी श्रव्यदृश्याभिलेख सेवासंगणक पर कार्य करता है</string>
     <string name="relay_auth_event_challenge">चुनौती। %1$s</string>
     <string name="relay_auth_session_forgotten_undo">%1$s पुनःपूछेगा अगली बार जब उसे आपकी आवश्यकता हो।</string>
     <string name="relay_auth_session_undo_blocked">पुनःस्थापित नहीं। कभी प्रवेशांकन ना करें यह आज्ञा सक्रिय है। इसीलिए अमेथिस्ट %1$s में प्रवेशांकन नहीं करेगा।</string>
@@ -1171,6 +1222,8 @@
     <string name="nip82_download">अवरोहण</string>
     <string name="nip82_section_about">जानकारी</string>
     <string name="nip82_section_platforms">मंच</string>
+    <string name="nip82_section_license">अनुमतिपत्र</string>
+    <string name="nip82_platform_with_cpus">%1$s। %2$s</string>
     <string name="nip82_section_topics">विषय सूची</string>
     <string name="nip82_section_links">योजक</string>
     <string name="nip82_section_latest_release">नवीनतम संस्करण</string>
