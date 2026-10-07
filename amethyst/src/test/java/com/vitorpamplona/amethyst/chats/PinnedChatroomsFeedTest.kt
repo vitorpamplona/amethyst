@@ -23,6 +23,7 @@ package com.vitorpamplona.amethyst.chats
 import com.vitorpamplona.amethyst.commons.chats.rooms.dal.ChatroomListKnownFeedFilter
 import com.vitorpamplona.amethyst.commons.chats.rooms.dal.ChatroomListNewFeedFilter
 import com.vitorpamplona.amethyst.commons.model.Account
+import com.vitorpamplona.amethyst.commons.model.AccountChatPreferences
 import com.vitorpamplona.amethyst.commons.model.AccountSettings
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.User
@@ -30,11 +31,11 @@ import com.vitorpamplona.amethyst.commons.model.chats.ChatFeedType
 import com.vitorpamplona.amethyst.commons.model.chats.PinnedChatroomNote
 import com.vitorpamplona.amethyst.commons.model.privateChats.ChatroomList
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
-import com.vitorpamplona.quartz.nip01Core.crypto.KeyPair
 import com.vitorpamplona.quartz.nip17Dm.base.ChatroomKey
 import com.vitorpamplona.quartz.nip17Dm.messages.ChatMessageEvent
 import io.mockk.every
 import io.mockk.mockk
+import kotlinx.coroutines.flow.MutableStateFlow
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertSame
 import org.junit.Assert.assertTrue
@@ -57,7 +58,15 @@ class PinnedChatroomsFeedTest {
     private val hiddenRoom = ChatroomKey(setOf(hidden))
 
     private val chatroomList = ChatroomList(me)
-    private val settings = AccountSettings(KeyPair()).also { it.enabledChatFeeds.value = setOf(ChatFeedType.NIP17) }
+    private val pinnedRooms = MutableStateFlow<Set<ChatroomKey>>(emptySet())
+
+    // AccountSettings can't be built off-device (it reads the system locale), and the DM filters
+    // only read the enabled chat feeds and the pinned rooms off it.
+    private val settings =
+        mockk<AccountSettings>().also {
+            every { it.enabledChatFeeds } returns MutableStateFlow(setOf(ChatFeedType.NIP17))
+            every { it.syncedSettings.chats } returns AccountChatPreferences(pinnedRooms)
+        }
 
     private fun user(hex: HexKey) = mockk<User>(relaxed = true).also { every { it.pubkeyHex } returns hex }
 
@@ -71,7 +80,7 @@ class PinnedChatroomsFeedTest {
         }
 
     private fun pin(vararg rooms: ChatroomKey) {
-        settings.syncedSettings.chats.pinnedChatrooms.value = rooms.toSet()
+        pinnedRooms.value = rooms.toSet()
     }
 
     private fun messageFrom(
