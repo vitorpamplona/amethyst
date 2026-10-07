@@ -40,6 +40,33 @@ Brainstorm 10040s point at, and the one Brainstorm's web app uses
 | Index file load (JVM) | 6.3 MB file, read and decoded in **14–40 ms** |
 | Signature check | ~75 µs per event on JVM, 1–2k events/s parse+verify on a phone (`quartz/plans/2026-07-02-nostrclient-receiver-perf.md`). That is minutes for 300k. |
 
+### Phase 0 on the JVM: download → verify → build → save (2026-10-07)
+
+`quartz/src/jvmTest/.../prodbench/WotNetworkIndexBenchmark.kt` (opt-in with
+`-PprodRelayBench=1`) runs the real Quartz stack: `NostrClient` + `fetchAllPages`, Schnorr
+verify, the D5/D6 index layout, and the D11 files. Observer
+`460c25e6…065c`, whose 10040 names rank provider `7d7ffd72…9377` on
+`wss://scores.brainstorm.world`. Run from a 4-core cloud container.
+
+| Stage | Result |
+|---|---|
+| Download (3 pages, `DRAINED`) | **5.2 s**, 151,831 cards, ~29k cards/s |
+| Heap if events are held | 84.6 MB (556 B per parsed card), which the one-pass pipeline avoids |
+| Verify every signature (4 cores) | **3.2 s**, 0 invalid, ~48k verifies/s (83 µs per verify per core) |
+| Build index (sort, dedupe, drop rank 0) | **0.39 s**, 151,153 entries; **77,671 with rank ≥ 5** |
+| Save index + ids files | **0.23 s**; index **3.3 MB**, ids **6.0 MB** |
+| Load + decode index | **34 ms** first, 17 ms best |
+| Lookup (hex read + binary search) | ~400 ns |
+| **One pass** (verify while downloading, no events held, then build + save) | **8.5 s** total: download done at 7.9 s, last verify at 8.0 s |
+
+Notes:
+- Paging by `until` worked here (`DRAINED`), because this relay's `max_limit` is 100k.
+- At 300k, expect roughly double: about 15–20 s on this hardware.
+- The build stage used a boxed sort; a primitive sort will be faster.
+- **Not measured yet: a phone.** Signature checks dominate the CPU there (the perf plan
+  puts parse plus verify at 1–2k/s), so expect minutes, not seconds. That run is still
+  needed for D9b/D9c.
+
 How Brainstorm publishes (read from `NosFabrica/brainstorm_server`,
 `app/message_queue_tasks/upload_nostr_events.py`):
 
@@ -330,7 +357,7 @@ DM Known/New and the notification feed are additive filters; they won't re-check
 
 ## 5. Phases
 
-0. **Measure first.** `amy wot sync` against a real ~300k network: wall time, bytes, signature-check time, peak heap. Repeat on a mid-range phone through a debug button, and measure the cold index load there (decides whether D11 needs the memory-mapped fallback, and settles D9b/D9c).
+0. **Measure first.** *(JVM part done, see §2; phone still pending.)* `amy wot sync` against a real ~300k network: wall time, bytes, signature-check time, peak heap. Repeat on a mid-range phone through a debug button, and measure the cold index load there (decides whether D11 needs the memory-mapped fallback, and settles D9b/D9c).
 1. **Index + storage + sync** (quartz/commons) with unit tests:
    - file format round trip;
    - merge, rank-0 and kind-5 removal;
