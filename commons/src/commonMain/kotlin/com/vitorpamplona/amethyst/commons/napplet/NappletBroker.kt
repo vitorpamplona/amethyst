@@ -81,6 +81,9 @@ class NappletBroker(
     private val signerLedger: NostrSignerPermissionLedger? = null,
     private val nostrConnectPrompt: NostrConnectPrompt? = null,
     private val signerConsentPrompt: NostrSignerConsentPrompt? = null,
+    // Plaintext of recent nip44.encrypt calls, read back by the consent prompt for the seal that
+    // carries the ciphertext (see [NappletRecentEncryptions]).
+    private val recentEncryptions: NappletRecentEncryptions? = null,
     // Wall-clock source (ms) for the post-cancel re-prompt cooldown; injectable for tests.
     private val nowMillis: () -> Long = { TimeUtils.nowMillis() },
 ) {
@@ -140,6 +143,11 @@ class NappletBroker(
             }
         }
 
+        // The per-operation signer gate below shows the event itself; for requests it covers, a second,
+        // generic "this site wants to use Relays" prompt first only made the user answer twice.
+        val signerOp = if (signerLedger != null) request.toSignerOp() else null
+        val signerPromptDecides = signerOp != null && signerConsentPrompt != null
+
         val authorized =
             when {
                 // Keyboard/command action registration is a shell-mediated UI affordance, not key
@@ -149,6 +157,9 @@ class NappletBroker(
                 !capability.requiresConsent -> true
                 // A standing allow short-circuits, except for per-use capabilities (e.g. payments).
                 ledger.decide(identity, capability) == PermissionDecision.ALLOW && !capability.requiresPerUseConsent -> true
+                // Signing / encryption: one prompt, the signer's. A standing capability DENY was already
+                // honored above; per-use capabilities keep their own prompt.
+                signerPromptDecides && !capability.requiresPerUseConsent -> true
                 else -> authorizeWithConsent(identity, capability, request)
             }
 
@@ -156,7 +167,7 @@ class NappletBroker(
 
         // Additional per-operation gate for signing/encryption.
         if (signerLedger != null) {
-            val op = request.toSignerOp()
+            val op = signerOp
             if (op != null && !authorizeSignerOp(identity, op, request)) {
                 return NappletResponse.Denied(capability, "Signing operation declined.")
             }
@@ -248,7 +259,11 @@ class NappletBroker(
 
             // NIP-07 nip44.encrypt/decrypt: the shell runs the crypto with the real key and hands back
             // only the result, so the page can build its own NIP-59 seals without ever seeing the key.
-            is NappletRequest.Nip44Encrypt -> NappletResponse.Text(signer.nip44Encrypt(request.plaintext, request.peer))
+            is NappletRequest.Nip44Encrypt -> {
+                val ciphertext = signer.nip44Encrypt(request.plaintext, request.peer)
+                recentEncryptions?.record(ciphertext, request.peer, request.plaintext)
+                NappletResponse.Text(ciphertext)
+            }
 
             is NappletRequest.Nip44Decrypt -> NappletResponse.Text(signer.nip44Decrypt(request.ciphertext, request.peer))
 
@@ -518,7 +533,7 @@ class NappletBroker(
     private fun signerCoordinateFor(identity: NappletIdentity): String = signerCoordinateFor(identity.coordinate)
 
     /** [signerCoordinateFor] for a bare app coordinate — what the Connected Apps UI holds. */
-    private fun signerCoordinateFor(coordinate: String): String = "napplet:${signer.pubKey}:$coordinate"
+    private fun signerCoordinateFor(coordinate: String): String = NappletSignerKey.of(signer.pubKey, coordinate)
 
     /**
      * Namespaces an in-memory session grant to the applet that was actually prompted for. Mirrors

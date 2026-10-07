@@ -51,9 +51,11 @@ import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -61,6 +63,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -80,6 +83,7 @@ import com.vitorpamplona.amethyst.commons.resources.napplet_consent_fewer_option
 import com.vitorpamplona.amethyst.commons.resources.napplet_consent_hide_event
 import com.vitorpamplona.amethyst.commons.resources.napplet_consent_more_options
 import com.vitorpamplona.amethyst.commons.resources.napplet_consent_show_event
+import com.vitorpamplona.amethyst.commons.resources.napplet_consent_waiting_long
 import com.vitorpamplona.amethyst.commons.resources.napplet_consent_wants_to
 import com.vitorpamplona.amethyst.commons.resources.napplet_signer_allow_24h
 import com.vitorpamplona.amethyst.commons.resources.napplet_signer_allow_30d
@@ -97,6 +101,7 @@ import com.vitorpamplona.amethyst.commons.resources.nip46_signer_batch_signing_a
 import com.vitorpamplona.amethyst.commons.resources.nip46_signer_batch_title
 import com.vitorpamplona.amethyst.commons.resources.nip46_signer_messages_with
 import com.vitorpamplona.amethyst.commons.service.call.CallSessionBridge
+import com.vitorpamplona.amethyst.commons.ui.components.LocalReadOnlyPreview
 import com.vitorpamplona.amethyst.commons.ui.components.RobohashFallbackAsyncImage
 import com.vitorpamplona.amethyst.commons.ui.components.ShowFullTextCache
 import com.vitorpamplona.amethyst.commons.ui.components.blockInteractions
@@ -112,6 +117,7 @@ import com.vitorpamplona.amethyst.ui.theme.AmethystTheme
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip59Giftwrap.rumors.RumorAssembler
 import com.vitorpamplona.quartz.utils.TimeUtils
+import kotlinx.coroutines.delay
 
 class SignerConsentActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -171,7 +177,8 @@ private fun SignerConsentDialog(
 
     Dialog(
         onDismissRequest = onDismiss,
-        properties = DialogProperties(usePlatformDefaultWidth = false),
+        // Only Back and the buttons decide: a stray tap beside the sheet must not deny the request.
+        properties = DialogProperties(usePlatformDefaultWidth = false, dismissOnClickOutside = false),
     ) {
         Surface(
             modifier =
@@ -217,6 +224,7 @@ private fun SignerConsentDialog(
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         textAlign = TextAlign.Center,
                     )
+                    WaitingTooLongNote(info.requestedAtMillis)
                     // Show WHICH account would sign/encrypt/decrypt (avatar + name), not the coordinate hex.
                     if (info.accountName != null) {
                         ConnectedAccountRow(info.accountName, info.accountPicture, info.accountPubKey)
@@ -226,7 +234,7 @@ private fun SignerConsentDialog(
                     if (info.counterpartyName != null) {
                         Text(
                             stringRes(Res.string.nip46_signer_messages_with),
-                            style = MaterialTheme.typography.labelSmall,
+                            style = MaterialTheme.typography.labelLarge,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
                         ConnectedAccountRow(info.counterpartyName, info.counterpartyPicture, info.counterpartyPubKey)
@@ -346,7 +354,8 @@ private fun SignerConsentDialog(
                     modifier = Modifier.fillMaxWidth().padding(horizontal = 24.dp),
                     colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.error),
                 ) {
-                    Text(stringRes(Res.string.napplet_signer_deny_op, info.operationSummary))
+                    // Names what is remembered (the op), which can be broader than this request's headline.
+                    Text(stringRes(Res.string.napplet_signer_deny_op, info.rememberedOpLabel ?: info.operationSummary))
                 }
             }
         }
@@ -387,10 +396,19 @@ private fun SignerConsentPreview(info: SignerConsentInfo) {
         shape = MaterialTheme.shapes.medium,
     ) {
         Column(modifier = Modifier.padding(12.dp)) {
+            info.changeSummary?.let {
+                Text(
+                    it,
+                    style = MaterialTheme.typography.bodyMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = if (info.changeIsWarning) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurface,
+                )
+                Spacer(Modifier.height(8.dp))
+            }
             if (previewNote != null && accountViewModel != null) {
                 UnsignedNotePreview(previewNote, accountViewModel, previewNav)
             } else if (info.contentPreview.isNotBlank()) {
-                Text("“${info.contentPreview}”", style = MaterialTheme.typography.bodySmall)
+                Text("“${info.contentPreview}”", style = MaterialTheme.typography.bodyMedium)
             }
             if (info.rawData.isNotBlank()) {
                 if (showRawData) {
@@ -399,7 +417,7 @@ private fun SignerConsentPreview(info: SignerConsentInfo) {
                         SelectionContainer {
                             Text(
                                 info.rawData,
-                                style = MaterialTheme.typography.labelSmall.copy(fontFamily = FontFamily.Monospace),
+                                style = MaterialTheme.typography.bodySmall.copy(fontFamily = FontFamily.Monospace),
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 softWrap = false,
                             )
@@ -416,7 +434,7 @@ private fun SignerConsentPreview(info: SignerConsentInfo) {
                         } else {
                             stringRes(Res.string.napplet_consent_show_event)
                         },
-                        style = MaterialTheme.typography.labelSmall,
+                        style = MaterialTheme.typography.labelLarge,
                     )
                 }
             }
@@ -449,19 +467,43 @@ private fun UnsignedNotePreview(
 
     // Read-only: renderers carry their own actions (poll votes, RSVPs, badge accepts, profile and
     // link taps) that would act on an event that does not exist yet. Drags still scroll the dialog.
-    Column(Modifier.blockInteractions()) {
-        NoteBody(
-            baseNote = note,
-            showAuthorPicture = true,
-            unPackReply = ReplyRenderType.LINE,
-            showSecondRow = false,
-            quotesLeft = 0,
-            backgroundColor = backgroundColor,
-            editState = editState,
-            accountViewModel = accountViewModel,
-            nav = nav,
-            // An empty slot replaces the default ⋮ options menu.
-            moreOptions = {},
+    CompositionLocalProvider(LocalReadOnlyPreview provides true) {
+        Column(Modifier.blockInteractions()) {
+            NoteBody(
+                baseNote = note,
+                showAuthorPicture = true,
+                unPackReply = ReplyRenderType.LINE,
+                showSecondRow = false,
+                quotesLeft = 0,
+                backgroundColor = backgroundColor,
+                editState = editState,
+                accountViewModel = accountViewModel,
+                nav = nav,
+                // An empty slot replaces the default ⋮ options menu.
+                moreOptions = {},
+            )
+        }
+    }
+}
+
+/**
+ * Most web apps stop waiting for a signer after a minute or two; a signature granted later is never
+ * used. Once a prompt has been open that long, say so, so the user knows to check the app or retry.
+ */
+@Composable
+private fun WaitingTooLongNote(requestedAtMillis: Long) {
+    val minutes by produceState(0, requestedAtMillis) {
+        while (true) {
+            value = ((System.currentTimeMillis() - requestedAtMillis) / 60_000L).toInt()
+            delay(5_000)
+        }
+    }
+    if (minutes >= 1) {
+        Text(
+            pluralStringRes(Res.plurals.napplet_consent_waiting_long, minutes, minutes),
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.error,
+            textAlign = TextAlign.Center,
         )
     }
 }
@@ -494,7 +536,8 @@ private fun BatchedConsentDialog(
 
     Dialog(
         onDismissRequest = onDismiss,
-        properties = DialogProperties(usePlatformDefaultWidth = false),
+        // Only Back and the buttons decide: a stray tap beside the sheet must not deny the request.
+        properties = DialogProperties(usePlatformDefaultWidth = false, dismissOnClickOutside = false),
     ) {
         Surface(
             modifier =
@@ -588,7 +631,7 @@ private fun BatchedConsentDialog(
                                     if (p.info.contentPreview.isNotBlank()) {
                                         Text(
                                             p.info.contentPreview,
-                                            style = MaterialTheme.typography.bodySmall,
+                                            style = MaterialTheme.typography.bodyMedium,
                                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                                             maxLines = 1,
                                         )

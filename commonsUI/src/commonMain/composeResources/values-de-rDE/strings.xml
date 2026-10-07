@@ -1137,7 +1137,6 @@
     <string name="relay_auth_event_title">Relay-Anmeldung</string>
     <string name="relay_auth_event_explainer">Kein Beitrag. Damit meldest du dich bei diesem Relay an: Wer es besitzt, kann lesen, was das Relay nur dir zeigt, etwa deine privaten Nachrichten.</string>
     <string name="relay_auth_event_unusual_relay">Das ist keine gewöhnliche Relay-Adresse. Prüfe sie vor dem Signieren.</string>
-    <string name="relay_auth_event_no_relay">In dieser Anmeldung ist kein Relay angegeben</string>
     <string name="relay_auth_event_challenge">Challenge: %1$s</string>
     <string name="relay_auth_session_forgotten_undo">%1$s fragt beim nächsten Mal wieder, wenn es dich braucht.</string>
     <string name="relay_auth_session_undo_blocked">Nicht wiederhergestellt. “Nie authentifizieren” ist aktiv, daher meldet sich Amethyst nicht bei %1$s an.</string>
@@ -4452,10 +4451,6 @@
         <item quantity="one">⚠ Dies fordert die Löschung von %1$d deiner Ereignisse an.</item>
         <item quantity="other">⚠ Dies fordert die Löschung von %1$d deiner Ereignisse an.</item>
     </plurals>
-    <plurals name="napplet_consent_effect_tags">
-        <item quantity="one">Enthält %1$d Tag. Tippe auf “Ereignis anzeigen”, um genau zu sehen, was signiert würde.</item>
-        <item quantity="other">Enthält %1$d Tags. Tippe auf “Ereignis anzeigen”, um genau zu sehen, was signiert würde.</item>
-    </plurals>
     <string name="napplet_consent_get_pubkey">Dieses nApplet möchte Ihren öffentlichen Schlüssel lesen.</string>
     <string name="napplet_consent_identity_read">Dieses nApplet möchte Ihr Profil und Ihre Kontodaten lesen.</string>
     <string name="napplet_consent_nip44_decrypt">Diese Website möchte eine Nachricht von %1$s mit Ihrem Nostr-Schlüssel entschlüsseln.</string>
@@ -4478,7 +4473,6 @@
     <string name="napplet_op_decrypt">deine privaten Nachrichten lesen</string>
     <string name="napplet_op_decrypt_from">deine privaten Nachrichten mit %1$s lesen</string>
     <string name="napplet_op_encrypt">eine Nachricht verschlüsseln</string>
-    <string name="napplet_op_relay_login">dich in deinem Namen bei Relays anmelden</string>
     <string name="napplet_op_sign_kind_named">für %1$s signieren (Typ: %2$d)</string>
     <string name="napplet_permissions_title">Verbundene Apps</string>
     <string name="napplets">nApplets</string>
