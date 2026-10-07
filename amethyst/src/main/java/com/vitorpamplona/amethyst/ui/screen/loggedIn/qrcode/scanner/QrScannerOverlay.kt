@@ -38,6 +38,9 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.derivedStateOf
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
@@ -178,6 +181,10 @@ fun QrScannerControls(
     onPaste: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    // Derived, so a pinch -- a new zoom ratio on every touch event -- recomposes only the chip
+    // that prints it, not every control on the screen.
+    val zoomed by remember(state) { derivedStateOf { state.zoomRatio > 1.05f } }
+
     Box(modifier.fillMaxSize()) {
         IconButton(
             onClick = onClose,
@@ -191,9 +198,9 @@ fun QrScannerControls(
             )
         }
 
-        if (state.zoomRatio > 1.05f) {
+        if (zoomed) {
             ZoomChip(
-                zoomRatio = state.zoomRatio,
+                state = state,
                 onReset = { state.resetZoom() },
                 modifier = Modifier.align(Alignment.TopEnd).statusBarsPadding().padding(12.dp),
             )
@@ -255,12 +262,15 @@ private fun HintStack(
     state: QrScannerState,
     modifier: Modifier = Modifier,
 ) {
+    // `candidates` is a new list on every frame while codes are in view (their outlines move), so
+    // reading its size directly recomposed this at the camera's frame rate.
+    val severalCodes by remember(state) { derivedStateOf { state.candidates.size > 1 } }
     val progress = state.sequenceProgress
     val message =
         when {
             state.notice != null -> state.notice
             progress != null -> pluralStringRes(Res.plurals.qr_scanner_sequence_progress, progress.second, progress.first, progress.second)
-            state.candidates.size > 1 -> stringRes(Res.string.qr_scanner_pick_one)
+            severalCodes -> stringRes(Res.string.qr_scanner_pick_one)
             state.isDark && !state.torchOn -> stringRes(Res.string.qr_scanner_dark_hint)
             else -> null
         } ?: return
@@ -282,7 +292,7 @@ private fun HintStack(
 
 @Composable
 private fun ZoomChip(
-    zoomRatio: Float,
+    state: QrScannerState,
     onReset: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -292,7 +302,7 @@ private fun ZoomChip(
         color = Color.Black.copy(alpha = 0.55f),
     ) {
         Text(
-            text = "%.1f×  %s".format(zoomRatio, stringRes(Res.string.qr_scanner_zoom_reset)),
+            text = "%.1f×  %s".format(state.zoomRatio, stringRes(Res.string.qr_scanner_zoom_reset)),
             color = Color.White,
             fontSize = 12.sp,
             modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),

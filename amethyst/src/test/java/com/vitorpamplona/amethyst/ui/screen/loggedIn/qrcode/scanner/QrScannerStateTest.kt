@@ -147,5 +147,54 @@ class QrScannerStateTest {
         assertFalse(state.isDark)
     }
 
+    // ---- several codes, one of them hard to read ----
+
+    @Test
+    fun `a lone read right after two codes were in view is not taken`() {
+        val state = QrScannerState()
+
+        // A thorough frame reads both codes; the fast frame after it only reads the easy one.
+        assertNull(state.onFrame(scan(result("npub1easy"), result("npub1hard")), 1_000L))
+        assertNull(state.onFrame(scan(result("npub1easy")), 1_033L))
+
+        // The set stays on screen, so the user can still tap the one they meant.
+        assertEquals(listOf("npub1easy", "npub1hard"), state.candidates.map { it.text })
+    }
+
+    @Test
+    fun `a lone code is taken once the other has been out of view a while`() {
+        val state = QrScannerState()
+
+        assertNull(state.onFrame(scan(result("npub1aaa"), result("npub1bbb")), 1_000L))
+        assertNull(state.onFrame(scan(result("npub1aaa")), 1_000L + QrScannerState.MULTI_HOLD_MS - 1))
+        assertEquals("npub1aaa", state.onFrame(scan(result("npub1aaa")), 1_000L + QrScannerState.MULTI_HOLD_MS))
+    }
+
+    @Test
+    fun `frames are ignored while the picture's code chooser is open`() {
+        val state = QrScannerState()
+        state.imageCodes = listOf(classified())
+
+        assertNull(state.onFrame(scan(result("npub1aaa")), 1_000L))
+        assertTrue(state.isAwaitingUser)
+    }
+
+    // ---- multi-part sequences in one frame ----
+
+    @Test
+    fun `every part in view is fed, so a side-by-side sequence completes`() {
+        val state = QrScannerState()
+        val frameOfParts = scan(result("ab", "seq", 0, 3), result("cd", "seq", 1, 3), result("ef", "seq", 2, 3))
+
+        assertEquals("abcdef", state.onFrame(frameOfParts, 1_000L))
+    }
+
+    @Test
+    fun `a part of a sequence cannot be tapped as an answer`() {
+        val state = QrScannerState()
+
+        assertNull(state.onCandidateTapped(result("ab", "seq", 0, 3), 1_000L))
+    }
+
     private fun classified() = classifyScannedPayload("not something this screen takes")
 }

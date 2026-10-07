@@ -21,6 +21,10 @@
 package com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.qrcode
 
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import com.vitorpamplona.amethyst.commons.model.navigation.Route
 import com.vitorpamplona.amethyst.commons.qrcode.ScannedPayload
 import com.vitorpamplona.amethyst.commons.qrcode.classifyScannedPayload
@@ -37,17 +41,24 @@ import kotlinx.coroutines.CancellationException
  * A payload we decode but cannot route no longer closes the scanner: it stays open and explains
  * itself (see `ScanOutcomeSheet`), because "that is a Lightning invoice, not a profile" and "the
  * camera never read anything" used to look identical from the outside.
+ *
+ * [onScan] is called exactly once: with the route, or with `null` when the user backed out.
  */
 @Composable
 fun NIP19QrCodeScanner(
     accountViewModel: AccountViewModel,
     onScan: (Route?) -> Unit,
 ) {
+    // The dialog closes itself after a handled scan by calling onDismiss, which would otherwise
+    // report "the user backed out" right after the result it just delivered.
+    var delivered by remember { mutableStateOf(false) }
+
     QrCodeScannerDialog(
-        onDismiss = { onScan(null) },
+        onDismiss = { if (!delivered) onScan(null) },
         onScan = { contents ->
             val route = routeFor(contents, accountViewModel)
             if (route != null) {
+                delivered = true
                 onScan(route)
                 ScanOutcome.Handled
             } else {
@@ -60,9 +71,13 @@ fun NIP19QrCodeScanner(
 /**
  * The route a scanned string leads to, or null when nothing here can open it.
  *
- * A bare hex pubkey gets re-encoded as an npub first. Plenty of web tools hand out a raw
- * 64-character key with no bech32 wrapper, and treating that as unreadable has been a reported
- * papercut since 2023 (issue #417).
+ * A bare 64-character hex key is deliberately NOT routed here. It could as easily be a private
+ * key as a public one, and opening a private key as a profile sends it to relays as an author
+ * filter. It returns null, so the scanner's outcome sheet asks, and the npub comes back through
+ * here only once the user says it is a public key (issue #417 is still served, one tap later).
+ *
+ * Routes the trimmed payload: a code ending in a newline classified fine but then failed to
+ * parse, which read as "can't open this" for a perfectly good wallet-connect URI.
  */
 private fun routeFor(
     contents: String,
@@ -70,8 +85,7 @@ private fun routeFor(
 ): Route? =
     try {
         val payload = classifyScannedPayload(contents)
-        val uri = if (payload is ScannedPayload.HexPubKey) payload.npub else contents
-        uriToRoute(uri, accountViewModel.account)
+        if (payload is ScannedPayload.HexKey) null else uriToRoute(payload.raw, accountViewModel.account)
     } catch (e: Throwable) {
         if (e is CancellationException) throw e
         // The payload itself never reaches the log. A QR code is as likely to hold an nsec, a
@@ -90,13 +104,18 @@ private fun routeFor(
  * Scans a QR code and hands back whatever it says.
  *
  * For callers that do their own validation — a wallet-connect URI, a `bunker://` offer, a key on
- * the login screen. `null` means the user backed out.
+ * the login screen. `null` means the user backed out. Called exactly once: before this latch, a
+ * scan delivered the code and then `null`, and a caller that launched work for each (the
+ * geocache log) ran the "nothing scanned" path concurrently with the real one.
  */
 @Composable
 fun SimpleQrCodeScanner(onScan: (String?) -> Unit) {
+    var delivered by remember { mutableStateOf(false) }
+
     QrCodeScannerDialog(
-        onDismiss = { onScan(null) },
+        onDismiss = { if (!delivered) onScan(null) },
         onScan = { contents ->
+            delivered = true
             onScan(contents)
             ScanOutcome.Handled
         },

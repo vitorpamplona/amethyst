@@ -20,21 +20,29 @@
  */
 package com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.qrcode
 
-/** The dark/light modules of an encoded QR code, row-major, without its quiet zone. */
-class QrMatrix(
-    val width: Int,
-    val height: Int,
-    private val modules: BooleanArray,
-) {
-    operator fun get(
-        x: Int,
-        y: Int,
-    ): Boolean = modules[y * width + x]
-}
+import kotlin.test.Test
+import kotlin.test.assertEquals
+import kotlin.test.assertNotNull
+import kotlin.test.assertNull
 
-/**
- * Encodes [contents] (UTF-8, error correction Q, falling back to M then L for payloads too long
- * for Q) into its module grid, or null when this platform has no encoder yet or the payload does
- * not fit a QR code at all.
- */
-expect fun encodeQrMatrix(contents: String): QrMatrix?
+class QrMatrixTest {
+    @Test
+    fun aShortPayloadEncodesAsTheBareModuleGrid() {
+        val matrix = assertNotNull(encodeQrMatrix("npub1test"))
+
+        // Version 1 is 21 modules. The quiet zone is not in the matrix: QrCodeDrawer adds it.
+        assertEquals(21, matrix.width)
+        assertEquals(matrix.width, matrix.height)
+    }
+
+    @Test
+    fun aPayloadTooLongForLevelQStillEncodesAtALowerLevel() {
+        // Byte mode holds 1663 bytes at version 40-Q and 2953 at 40-L.
+        assertNotNull(encodeQrMatrix("a".repeat(2_500)))
+    }
+
+    @Test
+    fun aPayloadTooLongForAnyLevelIsNull() {
+        assertNull(encodeQrMatrix("a".repeat(3_000)))
+    }
+}

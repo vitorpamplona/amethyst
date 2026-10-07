@@ -50,9 +50,15 @@ class StructuredAppendAccumulator(
      * Feeds one decoded part in.
      *
      * Returns the joined payload once every part has been seen, or null while the sequence is
-     * still incomplete. A part from a different sequence, or one arriving after [timeoutMs] of
-     * silence, restarts the accumulation rather than corrupting it — someone who gives up
-     * halfway and points the camera at a different code should not get a splice of the two.
+     * still incomplete. A part from a different sequence, one arriving after [timeoutMs] of
+     * silence, or one that disagrees with the part already held at its index restarts the
+     * accumulation rather than corrupting it — someone who gives up halfway and points the camera
+     * at a different code should not get a splice of the two.
+     *
+     * The id alone cannot tell two sequences apart: for QR it is the one-byte parity of the whole
+     * message, so two different 3-part codes share an id one time in 256. A conflicting part at
+     * an index catches the common case (both posters in view), and [parityMatches] checks the
+     * joined result against the id before it is handed out.
      */
     fun add(
         result: ScanResult,
@@ -63,6 +69,13 @@ class StructuredAppendAccumulator(
         val id = result.sequenceId
         val stale = nowMs - lastUpdateMs > timeoutMs
         if (id != sequenceId || expected != result.sequenceSize || stale) {
+            reset()
+            sequenceId = id
+            expected = result.sequenceSize
+        }
+
+        val held = parts[result.sequenceIndex]
+        if (held != null && held != result.text) {
             reset()
             sequenceId = id
             expected = result.sequenceSize
@@ -83,7 +96,8 @@ class StructuredAppendAccumulator(
         }
 
         reset()
-        return joined.toString()
+        val text = joined.toString()
+        return if (parityMatches(text, id)) text else null
     }
 
     /**
@@ -110,6 +124,28 @@ class StructuredAppendAccumulator(
     }
 
     companion object {
+        /**
+         * Whether [text] agrees with a QR Structured Append parity byte, as zxing-cpp reports it:
+         * the XOR of every byte of the original message, in decimal.
+         *
+         * Only checked when the answer is unambiguous. The parity is taken over the encoded
+         * bytes, and once the text has been decoded the encoding is gone — so a message with
+         * any non-ASCII character, or an id that is not a parity byte (another symbology, or a
+         * decoder that reports something else), is let through rather than rejected on a guess.
+         */
+        fun parityMatches(
+            text: String,
+            sequenceId: String?,
+        ): Boolean {
+            val parity = sequenceId?.toIntOrNull()?.takeIf { it in 0..255 } ?: return true
+            var xor = 0
+            for (char in text) {
+                if (char.code > 0x7F) return true
+                xor = xor xor char.code
+            }
+            return xor == parity
+        }
+
         /**
          * Long enough to walk around a poster and catch the parts, short enough that an abandoned
          * half-sequence does not linger into the next scan.

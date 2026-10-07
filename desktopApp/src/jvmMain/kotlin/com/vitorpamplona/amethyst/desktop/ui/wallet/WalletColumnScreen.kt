@@ -67,6 +67,7 @@ import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.qrcode.QrCodeDrawer
 import com.vitorpamplona.amethyst.desktop.account.AccountManager
 import com.vitorpamplona.amethyst.desktop.account.AccountState
 import com.vitorpamplona.amethyst.desktop.cache.DesktopLocalCache
@@ -75,7 +76,6 @@ import com.vitorpamplona.amethyst.desktop.network.DesktopRelayConnectionManager
 import com.vitorpamplona.amethyst.desktop.nwc.NwcPaymentHandler
 import com.vitorpamplona.amethyst.desktop.security.privacyLockBlurWhenUnfocused
 import com.vitorpamplona.amethyst.desktop.ui.ZapFeedback
-import com.vitorpamplona.amethyst.desktop.ui.auth.QrCodeCanvas
 import com.vitorpamplona.quartz.lightning.LnInvoiceUtil
 import com.vitorpamplona.quartz.lightning.Lud06
 import com.vitorpamplona.quartz.nip47WalletConnect.Nip47WalletConnect.Nip47URINorm
@@ -892,13 +892,13 @@ private fun ReceiveDialog(
                     Spacer(Modifier.height(16.dp))
 
                     // QR code — sensitive, blur when window unfocused
-                    QrCodeCanvas(
-                        data = generatedInvoice!!,
+                    QrCodeDrawer(
+                        contents = generatedInvoice!!,
                         modifier =
                             Modifier
                                 .align(Alignment.CenterHorizontally)
-                                .privacyLockBlurWhenUnfocused(),
-                        size = 240.dp,
+                                .privacyLockBlurWhenUnfocused()
+                                .size(240.dp),
                     )
 
                     Spacer(Modifier.height(24.dp))

@@ -42,6 +42,7 @@ import com.vitorpamplona.amethyst.commons.qrcode.ScannedPayload
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.qr_scanner_label_bunker
 import com.vitorpamplona.amethyst.commons.resources.qr_scanner_label_cashu
+import com.vitorpamplona.amethyst.commons.resources.qr_scanner_label_hex_key
 import com.vitorpamplona.amethyst.commons.resources.qr_scanner_label_lightning
 import com.vitorpamplona.amethyst.commons.resources.qr_scanner_label_nostr
 import com.vitorpamplona.amethyst.commons.resources.qr_scanner_label_note
@@ -156,7 +157,7 @@ private fun codeLabel(payload: ScannedPayload): String =
                 else -> stringRes(Res.string.qr_scanner_label_nostr)
             }
 
-        is ScannedPayload.HexPubKey -> stringRes(Res.string.qr_scanner_label_profile)
+        is ScannedPayload.HexKey -> stringRes(Res.string.qr_scanner_label_hex_key)
         is ScannedPayload.PrivateKey -> stringRes(Res.string.qr_scanner_label_nsec)
         is ScannedPayload.WalletConnect -> stringRes(Res.string.qr_scanner_label_wallet)
         is ScannedPayload.Bunker -> stringRes(Res.string.qr_scanner_label_bunker)

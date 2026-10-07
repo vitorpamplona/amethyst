@@ -91,6 +91,7 @@ import com.vitorpamplona.amethyst.commons.resources.new_key_step_intro_npub
 import com.vitorpamplona.amethyst.commons.resources.new_key_step_intro_nsec
 import com.vitorpamplona.amethyst.commons.resources.new_key_step_intro_title
 import com.vitorpamplona.amethyst.commons.resources.new_key_warning_message
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.qrcode.QrCodeDrawer
 import com.vitorpamplona.amethyst.desktop.util.copyToClipboard
 import com.vitorpamplona.amethyst.desktop.util.copyToClipboardThenClear
 import com.vitorpamplona.quartz.nip19Bech32.decodePrivateKeyAsHexOrNull
@@ -354,7 +355,7 @@ private fun PublicKeySection(npub: String) {
     }
     if (showQr) {
         Spacer(Modifier.height(12.dp))
-        QrCodeCanvas(data = npub)
+        QrCodeDrawer(contents = npub, modifier = Modifier.size(200.dp))
     }
 }
 

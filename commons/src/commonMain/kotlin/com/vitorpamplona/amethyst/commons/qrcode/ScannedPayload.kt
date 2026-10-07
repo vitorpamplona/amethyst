@@ -90,21 +90,33 @@ sealed interface ScannedPayload {
         override val containsSecret get() = true
     }
 
-    /** An `http(s)://` link. [url] is [raw] with any `web+nostr:` style wrapper removed. */
+    /**
+     * An `http(s)://` link. [url] is [raw] with the scheme and host lowercased: a QR code's
+     * alphanumeric mode can only carry uppercase, so generators that use it hand out
+     * `HTTPS://EXAMPLE.COM/...`, and Android matches intent-filter schemes case-sensitively — an
+     * uppercase scheme reaches no browser at all.
+     */
     data class Web(
         override val raw: String,
         val url: String,
     ) : ScannedPayload
 
     /**
-     * A bare 64-character hex pubkey with no bech32 wrapper — what issue #417 hit in 2023 and
-     * what every "copy the pubkey" web tool still produces. [npub] is the same key encoded, so
-     * callers can hand it to the normal NIP-19 routing path.
+     * A bare 64-character hex key with no bech32 wrapper — what issue #417 hit in 2023 and what
+     * every "copy the pubkey" web tool still produces. [npub] is the same 32 bytes encoded as a
+     * pubkey, so a caller that knows it is one can hand it to the normal NIP-19 routing path.
+     *
+     * Marked secret because nothing in the string says which kind of key it is: a raw private
+     * key is the same 64 hex characters, and key generators and backups export exactly that.
+     * Opening one as a profile sends it to relays as an author filter, so it is never routed
+     * without the user saying it is a public key, and never echoed onto the screen.
      */
-    data class HexPubKey(
+    data class HexKey(
         override val raw: String,
         val npub: String,
-    ) : ScannedPayload
+    ) : ScannedPayload {
+        override val containsSecret get() = true
+    }
 
     /**
      * Key material we can recognise but not decode. Two things land here:
@@ -177,12 +189,31 @@ fun classifyScannedPayload(text: String): ScannedPayload {
 
     if (HEX_64.matches(raw)) {
         val npub = runCatching { NPub.create(raw.lowercase()) }.getOrNull()
-        if (npub != null) return ScannedPayload.HexPubKey(raw, npub)
+        if (npub != null) return ScannedPayload.HexKey(raw, npub)
     }
 
     if (lower.startsWith("http://") || lower.startsWith("https://")) {
-        return ScannedPayload.Web(raw, raw)
+        return ScannedPayload.Web(raw, normalizeSchemeAndHost(raw))
     }
 
     return ScannedPayload.Unknown(raw)
+}
+
+/**
+ * Lowercases a URL's scheme and host, the two parts that are case-insensitive by spec, and leaves
+ * the path, query and fragment alone — those are the server's business and often case-sensitive.
+ * An authority carrying userinfo (`user:pass@host`) keeps its case: userinfo is case-sensitive,
+ * and splitting it out reliably is more than a scanned link needs.
+ */
+private fun normalizeSchemeAndHost(url: String): String {
+    val schemeEnd = url.indexOf("://")
+    if (schemeEnd < 0) return url
+    val authorityStart = schemeEnd + 3
+    val authorityEnd =
+        url
+            .indexOfAny(charArrayOf('/', '?', '#'), authorityStart)
+            .let { if (it < 0) url.length else it }
+    val authority = url.substring(authorityStart, authorityEnd)
+    val host = if ('@' in authority) authority else authority.lowercase()
+    return url.substring(0, schemeEnd).lowercase() + "://" + host + url.substring(authorityEnd)
 }

@@ -85,9 +85,9 @@ import com.vitorpamplona.amethyst.commons.resources.backup_keys_title
 import com.vitorpamplona.amethyst.commons.resources.backup_keys_unlock_subtitle
 import com.vitorpamplona.amethyst.commons.resources.backup_keys_unlock_title
 import com.vitorpamplona.amethyst.commons.ui.components.KeyTranscriptionGrid
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.qrcode.QrCodeDrawer
 import com.vitorpamplona.amethyst.desktop.account.AccountState
 import com.vitorpamplona.amethyst.desktop.security.DesktopLockScreen
-import com.vitorpamplona.amethyst.desktop.ui.auth.QrCodeCanvas
 import com.vitorpamplona.amethyst.desktop.util.copyToClipboard
 import com.vitorpamplona.amethyst.desktop.util.copyToClipboardThenClear
 import com.vitorpamplona.quartz.nip19Bech32.decodePrivateKeyAsHexOrNull
@@ -203,7 +203,7 @@ private fun PublicKeySection(npub: String) {
 
     if (showQr) {
         Spacer(Modifier.height(12.dp))
-        QrCodeCanvas(data = npub)
+        QrCodeDrawer(contents = npub, modifier = Modifier.size(200.dp))
     }
 }
 

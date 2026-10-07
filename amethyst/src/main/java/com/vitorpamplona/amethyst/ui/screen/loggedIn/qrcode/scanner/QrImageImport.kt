@@ -49,6 +49,16 @@ object QrImageImport {
      */
     private const val FIRST_PASS_MAX_EDGE = 2_000
 
+    /**
+     * Longest edge any pass decodes at: about 50 MB as ARGB_8888.
+     *
+     * Bitmap pixels live in native memory, so going past this does not reliably throw an
+     * [OutOfMemoryError] we could catch — a 108 MP photo at full size is ~430 MB, which can push
+     * the process into the low-memory killer instead. Nothing in a phone photo needs more
+     * pixels than this to resolve a QR code that is meant to be scanned.
+     */
+    private const val MAX_DECODE_EDGE = 4_096
+
     /** Below this, a code is likely too few pixels per module; the upscale pass is worth trying. */
     private const val SMALL_IMAGE_EDGE = 600
 
@@ -63,20 +73,23 @@ object QrImageImport {
             val longestEdge = max(bounds.outWidth, bounds.outHeight)
             if (longestEdge <= 0) return@withContext emptyList()
 
-            // Three passes, cheapest first. A code that a downscaled pass misses because its
-            // modules blurred together often survives at full resolution, and a code in a small
-            // thumbnail often needs *more* pixels per module than it shipped with.
+            // Cheapest first, then doubling the resolution while it stays under MAX_DECODE_EDGE. A
+            // code that a downscaled pass misses because its modules blurred together often
+            // survives one step up, and a code in a small thumbnail often needs *more* pixels per
+            // module than it shipped with (the upscale pass below).
             val sampleSizes =
                 buildList {
-                    add(sampleSizeFor(longestEdge, FIRST_PASS_MAX_EDGE))
-                    if (sampleSizeFor(longestEdge, FIRST_PASS_MAX_EDGE) != 1) add(1)
+                    var sample = sampleSizeFor(longestEdge, FIRST_PASS_MAX_EDGE)
+                    add(sample)
+                    while (sample > 1 && longestEdge / (sample / 2) <= MAX_DECODE_EDGE) {
+                        sample /= 2
+                        add(sample)
+                    }
                 }
 
             // Checked between passes because a pass itself is one long blocking call into JNI
-            // and cannot be interrupted. The expensive pass is the full-resolution retry: a
-            // modern phone photo is 50-108 MP, so closing the scanner while one is running
-            // otherwise leaves several hundred megabytes and a thorough decode grinding away on
-            // an IO thread for a result nobody is waiting for any more.
+            // and cannot be interrupted, so closing the scanner mid-ladder should not leave the
+            // remaining passes grinding away on an IO thread for a result nobody wants.
             for (sampleSize in sampleSizes) {
                 ensureActive()
                 val found = decodeAt(context, uri, sampleSize, upscale = false, decoder)
@@ -139,10 +152,9 @@ object QrImageImport {
             if (upscale) upscaled = original.scale(original.width * 2, original.height * 2)
             decoder.decode(upscaled ?: original, DecodeEffort.Thorough)
         } catch (e: OutOfMemoryError) {
-            // Not an Exception, so a plain `catch (e: Exception)` misses it. The retry ladder
-            // deliberately re-decodes at inSampleSize = 1, and a modern phone camera hands us
-            // 50-108 MP: ~400 MB as ARGB_8888, which is well past the heap on most devices.
-            // Failing to read a picture must never take the app down with it.
+            // Not an Exception, so a plain `catch (e: Exception)` misses it. The ladder stays
+            // under MAX_DECODE_EDGE, but the upscale pass and zxing-cpp's own working buffers
+            // still allocate, and failing to read a picture must never take the app down with it.
             Log.w("QrScanner", "Ran out of memory decoding a picked image", e)
             emptyList()
         } catch (e: Exception) {

@@ -393,6 +393,8 @@
     <string name="qr_scanner_kind_cashu">This is a Cashu token.</string>
     <string name="qr_scanner_kind_web">This is a web link.</string>
     <string name="qr_scanner_kind_text">This is plain text, not a Nostr code.</string>
+    <string name="qr_scanner_kind_hex_key">This is a raw 64-character key. It could be a public key or a private key, and opening a private key as a profile would send it to your relays. Only open it if you know it is a public key.</string>
+    <string name="qr_scanner_open_as_profile">It is a public key — open profile</string>
     <string name="qr_scanner_kind_nostr_unsupported">This is a Nostr code, but not one this screen can open.</string>
     <string name="qr_scanner_label_profile">Profile</string>
     <string name="qr_scanner_label_note">Note</string>
@@ -406,6 +408,7 @@
     <string name="qr_scanner_label_cashu">Cashu token</string>
     <string name="qr_scanner_label_web">Web link</string>
     <string name="qr_scanner_label_text">Plain text</string>
+    <string name="qr_scanner_label_hex_key">Raw key (public or private)</string>
     <string name="qr_scanner_open_link">Open link</string>
     <string name="qr_scanner_copy">Copy</string>
     <string name="qr_scanner_copied">Copied</string>

@@ -45,14 +45,17 @@ import androidx.compose.ui.unit.dp
 import androidx.core.net.toUri
 import com.vitorpamplona.amethyst.commons.model.navigation.Route
 import com.vitorpamplona.amethyst.commons.qrcode.ScannedPayload
+import com.vitorpamplona.amethyst.commons.qrcode.assembleStructuredAppend
 import com.vitorpamplona.amethyst.commons.qrcode.classifyScannedPayload
 import com.vitorpamplona.amethyst.commons.qrcode.ui.QrImageCodeChooser
 import com.vitorpamplona.amethyst.commons.qrcode.ui.ScanOutcomeSheet
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.qr_scanner_no_code_in_image
+import com.vitorpamplona.amethyst.commons.resources.qr_scanner_sequence_progress
 import com.vitorpamplona.amethyst.commons.resources.qr_scanner_try_again
 import com.vitorpamplona.amethyst.commons.resources.qr_scanner_unavailable
 import com.vitorpamplona.amethyst.commons.resources.scan_qr
+import com.vitorpamplona.amethyst.commons.ui.loadPluralStringRes
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.navigation.topbars.TopBarWithBackButton
 import com.vitorpamplona.amethyst.commons.ui.stringRes
@@ -108,11 +111,16 @@ fun ScanQrImageScreen(
     val context = LocalContext.current
 
     // Navigating or explaining, for one chosen code. Shared by the single-code path and the
-    // chooser, so both treat a hex pubkey and an unsupported payload the same way.
+    // chooser, so both treat a hex key and an unsupported payload the same way.
     val resolve: (ScannedPayload) -> Unit = { payload ->
-        // A bare hex pubkey is re-encoded first, the same as in the live scanner.
-        val routable = if (payload is ScannedPayload.HexPubKey) payload.npub else payload.raw
-        val route = runCatching { uriToRoute(routable, accountViewModel.account) }.getOrNull()
+        // A bare hex key is never routed directly: it may be a private key, and a profile sends
+        // its key to relays. The outcome sheet asks, and comes back here with the npub.
+        val route =
+            if (payload is ScannedPayload.HexKey) {
+                null
+            } else {
+                runCatching { uriToRoute(payload.raw, accountViewModel.account) }.getOrNull()
+            }
 
         if (route != null) {
             nav.newStack(route)
@@ -127,18 +135,23 @@ fun ScanQrImageScreen(
             return@LaunchedEffect
         }
 
-        // Distinct: a picture of a screen often repeats the same code across a reflection or a
-        // duplicated crop, and offering the identical string twice is a choice with no answer.
-        val found =
+        // Multi-part codes are joined before anything is classified, so a fragment is never offered
+        // on its own; distinct, because a picture of a screen often repeats the same code across
+        // a reflection or a duplicated crop, and the identical string twice is a choice with no
+        // answer.
+        val assembled =
             withContext(Dispatchers.IO) {
-                QrImageImport
-                    .decode(context, uri.toUri(), decoder)
-                    .map { it.text }
-                    .distinct()
-                    .map(::classifyScannedPayload)
+                assembleStructuredAppend(QrImageImport.decode(context, uri.toUri(), decoder))
             }
+        val found = assembled.texts.map(::classifyScannedPayload)
+        val incomplete = assembled.incomplete
 
         when {
+            found.isEmpty() && incomplete != null -> {
+                val (captured, total) = incomplete
+                state = ImageScanState.Failed(loadPluralStringRes(Res.plurals.qr_scanner_sequence_progress, captured, captured, total))
+            }
+
             found.isEmpty() -> state = ImageScanState.Failed(noCodeFound)
             // One code is unambiguous, so asking would only add a tap.
             found.size == 1 -> resolve(found.first())
@@ -198,6 +211,10 @@ fun ScanQrImageScreen(
             onCopy = { text ->
                 copyToClipboard(context, text)
                 nav.popBack()
+            },
+            onOpenProfile = { npub ->
+                state = ImageScanState.Working
+                resolve(classifyScannedPayload(npub))
             },
         )
     }

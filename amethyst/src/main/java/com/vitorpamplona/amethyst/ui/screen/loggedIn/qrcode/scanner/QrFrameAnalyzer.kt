@@ -46,15 +46,21 @@ data class FrameScan(
  * 2. **Brightness is measured.** A sparse sample of the Y plane costs almost nothing and is what
  *    lets the UI offer the torch exactly when the scene is too dark, rather than parking a
  *    permanent button in the corner or firing the light at people unprompted.
+ *
+ * [isPaused] is polled from the analysis thread before each decode. While a sheet over the
+ * camera is waiting on the user every result would be discarded, and a thorough pass is the most
+ * expensive thing the scanner does, so frames are closed unread instead.
  */
 class QrFrameAnalyzer(
     private val decoder: BarcodeDecoder,
+    private val isPaused: () -> Boolean = { false },
     private val onFrame: (FrameScan) -> Unit,
 ) : ImageAnalysis.Analyzer {
     private var frameCount = 0L
 
     override fun analyze(image: ImageProxy) {
         image.use {
+            if (isPaused()) return
             val effort =
                 if (frameCount++ % THOROUGH_EVERY == 0L) DecodeEffort.Thorough else DecodeEffort.Fast
 
