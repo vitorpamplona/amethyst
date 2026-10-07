@@ -80,6 +80,7 @@ import com.vitorpamplona.amethyst.cli.commands.StoreCommands
 import com.vitorpamplona.amethyst.cli.commands.StreamCommands
 import com.vitorpamplona.amethyst.cli.commands.SubscribeCommand
 import com.vitorpamplona.amethyst.cli.commands.SyncCommand
+import com.vitorpamplona.amethyst.cli.commands.TrustCommand
 import com.vitorpamplona.amethyst.cli.commands.UseCommand
 import com.vitorpamplona.amethyst.cli.commands.VerifyCommand
 import com.vitorpamplona.amethyst.cli.commands.ZapCommand
@@ -334,6 +335,7 @@ private suspend fun dispatch(argv: Array<String>): Int {
         "podcast20" -> Podcast20Commands.dispatch(dataDir, tail)
         "bunker" -> BunkerCommand.run(dataDir, tail)
         "fof" -> FofCommand.dispatch(dataDir, tail)
+        "trust" -> TrustCommand.dispatch(dataDir, tail)
         // `wot` overclaimed the whole web-of-trust concept for a cheap
         // single-hop follower count; renamed to `fof` (follows-of-follows).
         // Kept as a warning alias — the real WoT engine is `graperank`.
@@ -367,7 +369,7 @@ private fun printVerbList() {
         |  social:      notes delete notifications profile follow unfollow search zap dm outbox
         |  groups:      marmot relaygroup concord cordn geochat
         |  relays:      relay admin serve store
-        |  trust:       graperank fof
+        |  trust:       trust graperank fof
         |  media/sites: blossom nsite napplet podcast podcast20 git
         |  payments:    cashu offer debit
         |  signing:     bunker
@@ -727,6 +729,18 @@ private fun printUsage() {
         |  follow USER [--timeout SECS]               add USER to your contact list
         |  unfollow USER [--timeout SECS]             remove USER from your contact list
         |                                              (USER: npub|nprofile|hex|name@domain)
+        |
+        |Web of Trust network (NIP-85 consumer; files in ~/.amy/<account>/wot/):
+        |  trust sync [--update|--full|--redownload]  download / update / full-check your 30382:rank
+        |    [--observer USER] [--min-score N]         provider's cards into a local index (every
+        |    [--timeout SECS]                          signature checked). Default: whatever is due.
+        |  trust status [--observer USER]             local index: provider, entries, how many pass,
+        |    [--min-score N]                           last sync, what is due, sizes. No network.
+        |  trust check USER… [--observer USER]        known or stranger, and why (the rule behind the
+        |    [--min-score N] [--timeout SECS]          DM tabs, Curated notifications, collapsed replies).
+        |                                              --observer: another user's network, read-only.
+        |  trust setup brainstorm [--private]         Brainstorm sign-up + point your kind:10040 at it.
+        |    [--timeout SECS]                          (Other providers: graperank register.)
         |
         |Web of Trust (GrapeRank):
         |  graperank [OBSERVER]                       crawl + score: subjective trust (0..1) over the

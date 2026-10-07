@@ -28,7 +28,6 @@ import com.vitorpamplona.amethyst.commons.model.nip85TrustedAssertions.TrustProv
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
-import com.vitorpamplona.quartz.nip01Core.signers.SignerExceptions
 import com.vitorpamplona.quartz.nip85TrustedAssertions.list.TrustProviderListEvent
 import com.vitorpamplona.quartz.nip85TrustedAssertions.list.tags.ProviderTypes
 import com.vitorpamplona.quartz.nip85TrustedAssertions.list.tags.ServiceProviderTag
@@ -65,50 +64,17 @@ class TrustProviderListState(
     fun getTrustProviderList(): TrustProviderListEvent? = trustProviderListNote.event as? TrustProviderListEvent
 
     /**
-     * A new kind 10040 in which the user-score entries (`30382:rank` and `30382:followers`)
-     * name [providerKey] on [relay], replacing whichever provider they named before. Every
-     * other entry, public or private, is kept. [isPrivate] puts the new entries in the
-     * NIP-44 encrypted content instead of the public tags.
+     * A new kind 10040 in which the user-score entries name [providerKey] on [relay]. See
+     * [withScoreProvider] (the free function), which this applies to the current list.
      */
     suspend fun withScoreProvider(
         providerKey: HexKey,
         relay: NormalizedRelayUrl,
         isPrivate: Boolean,
-    ): TrustProviderListEvent {
-        val entries = SCORE_SERVICES.map { ServiceProviderTag(it, providerKey, relay).toTagArray() }
-        return rewriteScoreEntries(publicEntries = if (isPrivate) emptyList() else entries, privateEntries = if (isPrivate) entries else emptyList())
-    }
+    ): TrustProviderListEvent = withScoreProvider(getTrustProviderList() ?: settings.backupTrustProviderList, providerKey, relay, isPrivate, signer)
 
     /** A new kind 10040 without any user-score entry, or null when there is nothing to remove. */
-    suspend fun withoutScoreProvider(): TrustProviderListEvent? {
-        val existing = getTrustProviderList() ?: settings.backupTrustProviderList ?: return null
-        if (decryptionCache.serviceProviderSet(existing).none { it.service in SCORE_SERVICES }) return null
-        return rewriteScoreEntries(emptyList(), emptyList())
-    }
-
-    private suspend fun rewriteScoreEntries(
-        publicEntries: List<Array<String>>,
-        privateEntries: List<Array<String>>,
-    ): TrustProviderListEvent {
-        val existing = getTrustProviderList() ?: settings.backupTrustProviderList
-        val isScoreEntry = { tag: Array<String> -> ServiceProviderTag.parse(tag)?.service in SCORE_SERVICES }
-
-        val publicTags = existing?.tags?.filterNot(isScoreEntry).orEmpty() + publicEntries
-        val oldPrivate =
-            if (existing == null || existing.content.isBlank()) {
-                emptyArray()
-            } else {
-                // Never drop entries we cannot read: refuse instead.
-                existing.privateTags(signer) ?: throw SignerExceptions.UnauthorizedDecryptionException()
-            }
-        val privateTags = oldPrivate.filterNot(isScoreEntry) + privateEntries
-
-        return if (privateTags.isEmpty()) {
-            TrustProviderListEvent.resign(content = "", tags = publicTags.toTypedArray(), signer = signer)
-        } else {
-            TrustProviderListEvent.resign(tags = publicTags.toTypedArray(), privateTags = privateTags.toTypedArray(), signer = signer)
-        }
-    }
+    suspend fun withoutScoreProvider(): TrustProviderListEvent? = withoutScoreProvider(getTrustProviderList() ?: settings.backupTrustProviderList, signer)
 
     suspend fun trustProviderListWithBackup(note: Note): Set<ServiceProviderTag> {
         val event = note.event as? TrustProviderListEvent ?: settings.backupTrustProviderList
@@ -181,10 +147,5 @@ class TrustProviderListState(
                 }
             }
         }
-    }
-
-    companion object {
-        /** The entries that name a user-score provider (what Brainstorm registers). */
-        val SCORE_SERVICES = setOf(ProviderTypes.rank, ProviderTypes.followerCount)
     }
 }

@@ -3766,10 +3766,7 @@ class Account(
      * NIP-85 rank provider ranks at the minimum score; false for everyone else; null while no
      * trust network is active, so callers keep the behaviour they had before it existed.
      */
-    fun trustNetworkVerdict(pubkey: HexKey): Boolean? {
-        if (!trustNetwork.isActive) return null
-        return pubkey == signer.pubKey || pubkey in followingKeySet() || trustNetwork.passes(pubkey)
-    }
+    fun trustNetworkVerdict(pubkey: HexKey): Boolean? = trustNetwork.explain(pubkey, signer.pubKey, followingKeySet()).isKnown
 
     /** True only when a trust network is active and [pubkey] is not in it. */
     fun isOutsideTrustNetwork(pubkey: HexKey): Boolean = trustNetworkVerdict(pubkey) == false

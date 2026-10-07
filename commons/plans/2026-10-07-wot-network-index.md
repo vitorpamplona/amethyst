@@ -1,6 +1,6 @@
 # Web of Trust network index (NIP-85 kind 30382, ~300k users)
 
-Status: **implemented 2026-10-07** (phases 1–5 except public chats and `amy wot`; see §7).
+Status: **implemented 2026-10-07** (phases 1–5 except public chats; see §7).
 
 ## 1. Goal
 
@@ -352,7 +352,7 @@ DM Known/New and the notification feed are additive filters; they won't re-check
 | Brainstorm adapter (HTTP client, sign-up flow) | `commons/.../wot/onboarding/brainstorm/` |
 | Settings screen, strings | `commonsUI` (strings in `composeResources`, per CLAUDE.md) |
 | WorkManager job, foreground trigger | `amethyst/` shim |
-| `amy wot sync \| check <npub> \| stats \| brainstorm login\|register` | `cli/`, a thin layer over the above |
+| `amy trust sync \| status \| check \| setup` | `cli/`, a thin layer over the above |
 | Desktop | wired through `DesktopIAccount` once the one-UI move reaches it; the core is already shared |
 
 ## 5. Phases
@@ -409,6 +409,10 @@ Behaviours added during implementation:
   index, so negentropy sees them as missing). Brainstorm had 678 for the test account: a few
   hundred KB a week.
 
-Not done: `amy wot` commands, public-chat filtering (open), Desktop wiring (its `DesktopIAccount`
+Added later: `amy trust sync | status | check | setup` (named `trust` because `amy wot` is the
+deprecated alias of `fof`), a thin layer over `TrustNetworkState.syncNow` / `explain` and the
+extracted `withScoreProvider`. Live: 151k cards in 10.9 s, update 1.2 s, full check 2.6 s.
+
+Not done: public-chat filtering (open), Desktop wiring (its `DesktopIAccount`
 does not use the commons `Account` yet), and the phone measurements for phase 0.
 

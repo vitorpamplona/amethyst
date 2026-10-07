@@ -74,6 +74,7 @@ Status legend: ✅ shipped · 📦 logic lives in `commons/`, needs a command ·
 | Podcasting 2.0 / podstr (`amy podcast20`) | ✅ | `Podcast20Commands` — kind:30078 metadata, 30054 episodes, 30055 trailers, list. |
 | Follows-of-follows (`amy fof get/list/sync`) | ✅ | `FofCommand` — single-hop social proof from the local store (`wot` kept as deprecation alias). |
 | NIP-85 GrapeRank web-of-trust (`amy graperank`) | ✅ | `GrapeRankCommand` — outbox-model crawl + scoring engine in `commons/wot/` (`GrapeRank`, `TrustGraph`, `TrustGraphBuilder`); every score run persists kind:30382 `UserAssertionEvent` cards to the local store (diffed against prior ranks, kind:5 retractions), `publish` mirrors that set to the operator relays via NIP-77 up-sync, `rank` reads cards back, plus `register` / `unregister` / `providers` for the kind:10040 `TrustProviderListEvent` discovery layer. |
+| NIP-85 Web of Trust network (`amy trust sync/status/check/setup`) | ✅ | Thin layer over commons `TrustNetworkState` (the apps' index, sync and verdict) and `wot/onboarding/` (Brainstorm sign-up); the consumer side of `graperank`. |
 | NIP-72 communities | 🆕 | |
 | NIP-78 app-specific data (settings sync) | 🆕 | |
 | Long-form (NIP-23) publish / read | 🆕 | |

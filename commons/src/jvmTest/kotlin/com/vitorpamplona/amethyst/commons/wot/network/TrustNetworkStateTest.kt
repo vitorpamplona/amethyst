@@ -149,4 +149,29 @@ class TrustNetworkStateTest {
             assertFalse(wot.isActive)
             assertFalse(wot.passes(trusted))
         }
+
+    @Test
+    fun explainsEveryVerdict() =
+        runBlocking {
+            writeIndex()
+            val wot = state(MutableStateFlow(provider))
+            wot.awaitReady()
+            val me = hex()
+            val friend = hex()
+            assertEquals(TrustVerdict.SELF, wot.explain(me, me, setOf(friend)))
+            assertEquals(TrustVerdict.FOLLOW, wot.explain(friend, me, setOf(friend)))
+            assertEquals(TrustVerdict.TRUSTED, wot.explain(trusted, me, emptySet()))
+            assertEquals(TrustVerdict.BELOW_MIN_SCORE, wot.explain(lowRank, me, emptySet()))
+            assertEquals(TrustVerdict.NOT_IN_NETWORK, wot.explain(hex(), me, emptySet()))
+            assertEquals(false, TrustVerdict.NOT_IN_NETWORK.isKnown)
+        }
+
+    @Test
+    fun withoutANetworkTheVerdictIsNeutral() =
+        runBlocking {
+            val wot = state(MutableStateFlow(provider))
+            wot.awaitReady()
+            assertEquals(TrustVerdict.NO_NETWORK, wot.explain(hex(), hex(), emptySet()))
+            assertNull(TrustVerdict.NO_NETWORK.isKnown)
+        }
 }

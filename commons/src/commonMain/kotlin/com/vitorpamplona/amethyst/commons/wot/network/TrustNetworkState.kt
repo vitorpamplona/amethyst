@@ -68,6 +68,33 @@ class TrustNetwork(
     fun isFrom(provider: ServiceProviderTag) = header.provider == provider.pubkey && header.relay == provider.relayUrl.url
 }
 
+/** Why someone is or is not in the user's network. [isKnown] is null when no network is active. */
+enum class TrustVerdict(
+    val isKnown: Boolean?,
+) {
+    /** No network for the current provider: callers behave as if the feature were off. */
+    NO_NETWORK(null),
+    SELF(true),
+    FOLLOW(true),
+
+    /** The provider ranks them at or above the minimum score. */
+    TRUSTED(true),
+
+    /** The provider scored them, below the minimum score. */
+    BELOW_MIN_SCORE(false),
+
+    /** The provider has no card for them. */
+    NOT_IN_NETWORK(false),
+}
+
+/** What one sync did: the [kind] that ran, its [result], and whether it replaced the network. */
+class TrustNetworkRun(
+    val kind: TrustNetworkSyncStatus.Kind,
+    val result: TrustNetworkSyncResult?,
+    val applied: Boolean,
+    val error: String?,
+)
+
 /** What the background sync is doing, for the settings screen. */
 @Immutable
 data class TrustNetworkSyncStatus(
@@ -113,6 +140,11 @@ class TrustNetworkState(
     private val canDownloadLarge: () -> Boolean = { true },
     /** How long an index on disk outlives an empty provider list at startup. */
     private val providerGraceMs: Long = PROVIDER_GRACE_MS,
+    /**
+     * Whether a provider change starts the due sync by itself. The apps want that; a one-shot
+     * caller (the CLI) turns it off and calls [syncNow].
+     */
+    private val autoSync: Boolean = true,
 ) {
     private val _network = MutableStateFlow<TrustNetwork?>(null)
 
@@ -123,6 +155,13 @@ class TrustNetworkState(
     val status: StateFlow<TrustNetworkSyncStatus> = _status.asStateFlow()
 
     private val loaded = MutableStateFlow(false)
+
+    /** The provider [network] was last matched against, once that has happened. */
+    private val appliedProvider = MutableStateFlow<Applied?>(null)
+
+    private class Applied(
+        val provider: ServiceProviderTag?,
+    )
 
     /** Set by [expectNewProvider]: the next provider change downloads at once, on any network. */
     private var forceNextDownload = false
@@ -168,6 +207,22 @@ class TrustNetworkState(
     fun followersOf(pubkey: HexKey): Int? = _network.value?.index?.followersOf(pubkey)
 
     /**
+     * Why [pubkey] is or is not in [me]'s network, given who [me] follows. The single rule
+     * behind every Web of Trust decision (DM tabs, notifications, replies, `amy trust check`).
+     */
+    fun explain(
+        pubkey: HexKey,
+        me: HexKey,
+        follows: Set<HexKey>,
+    ): TrustVerdict {
+        val index = _network.value?.index ?: return TrustVerdict.NO_NETWORK
+        if (pubkey == me) return TrustVerdict.SELF
+        if (pubkey in follows) return TrustVerdict.FOLLOW
+        val rank = index.rankOf(pubkey) ?: return TrustVerdict.NOT_IN_NETWORK
+        return if (rank >= minTrustScore.value) TrustVerdict.TRUSTED else TrustVerdict.BELOW_MIN_SCORE
+    }
+
+    /**
      * Waits until the index file has been read (or [timeoutMs] passes). Returns at once after
      * the first load. For code that runs in a freshly started process, like push handling.
      */
@@ -176,18 +231,28 @@ class TrustNetworkState(
         withTimeoutOrNull(timeoutMs) { loaded.first { it } }
     }
 
+    /**
+     * Waits until the index has been read and matched against the current provider, so
+     * [network] is final. For one-shot callers; the apps use [awaitLoaded].
+     */
+    suspend fun awaitReady(timeoutMs: Long = 10_000) {
+        withTimeoutOrNull(timeoutMs) { appliedProvider.first { it != null && it.provider == rankProvider.value } }
+    }
+
     private suspend fun onProvider(provider: ServiceProviderTag?) {
         if (provider == null) {
             _network.value = null
+            appliedProvider.value = Applied(null)
             return
         }
         val current = _network.value
         if (current == null || !current.isFrom(provider)) {
             _network.value = withContext(Dispatchers.IO) { readIndex()?.takeIf { it.isFrom(provider) } }
         }
+        appliedProvider.value = Applied(provider)
         val force = forceNextDownload
         forceNextDownload = false
-        syncIfStale(force)
+        if (autoSync) syncIfStale(force)
     }
 
     /**
@@ -239,6 +304,35 @@ class TrustNetworkState(
         launchSync { runSync(provider, null, TrustNetworkSyncStatus.Kind.DOWNLOAD) }
     }
 
+    /**
+     * Runs a sync now and returns what happened: [kind], or whatever is due when null
+     * (download, full check or update). For one-shot callers like the CLI; the apps use
+     * [syncIfStale]. Returns null when there is no provider, nowhere to store the index, no
+     * client, or another sync is running.
+     */
+    @OptIn(ExperimentalAtomicApi::class)
+    suspend fun syncNow(kind: TrustNetworkSyncStatus.Kind? = null): TrustNetworkRun? {
+        awaitReady()
+        val provider = rankProvider.value ?: return null
+        if (clientBuilder == null || directory == null) return null
+        if (!syncing.compareAndSet(expectedValue = false, newValue = true)) return null
+        try {
+            return syncLock.withLock {
+                val current = _network.value?.takeIf { it.isFrom(provider) }
+                val due =
+                    when {
+                        kind != null -> kind
+                        current == null -> TrustNetworkSyncStatus.Kind.DOWNLOAD
+                        TimeUtils.now() - current.header.lastFullCheck >= FULL_CHECK_EVERY_SECS -> TrustNetworkSyncStatus.Kind.FULL_CHECK
+                        else -> TrustNetworkSyncStatus.Kind.UPDATE
+                    }
+                runSync(provider, current.takeUnless { due == TrustNetworkSyncStatus.Kind.DOWNLOAD }, due)
+            }
+        } finally {
+            syncing.store(false)
+        }
+    }
+
     @OptIn(ExperimentalAtomicApi::class)
     private fun isSyncing() = syncing.load()
 
@@ -259,8 +353,8 @@ class TrustNetworkState(
         provider: ServiceProviderTag,
         current: TrustNetwork?,
         requested: TrustNetworkSyncStatus.Kind,
-    ) {
-        val builder = clientBuilder ?: return
+    ): TrustNetworkRun {
+        val builder = clientBuilder ?: return TrustNetworkRun(requested, null, applied = false, error = "no client")
         // An update or full check needs the id column; without it, download again.
         val ids = if (current != null) readIds()?.takeIf { it.size == current.index.size } else null
         val kind = if (current == null || ids == null) TrustNetworkSyncStatus.Kind.DOWNLOAD else requested
@@ -293,33 +387,37 @@ class TrustNetworkState(
             if (result == null || !result.complete) {
                 // A partial walk must not become the network (a cold one would wrongly reject
                 // everyone it missed), nor advance the cursor past what it skipped.
-                _status.value = TrustNetworkSyncStatus(lastError = result?.detail ?: "incomplete")
-                return
+                val error = result?.detail ?: "incomplete"
+                _status.value = TrustNetworkSyncStatus(lastError = error)
+                return TrustNetworkRun(kind, result, applied = false, error = error)
             }
 
             if (kind == TrustNetworkSyncStatus.Kind.DOWNLOAD && result.index.size == 0) {
                 // A provider still computing a new user's scores has published nothing yet.
                 // An empty network would leave only follows as "known", so keep waiting.
                 _status.value = TrustNetworkSyncStatus(lastError = NO_SCORES_YET)
-                return
+                return TrustNetworkRun(kind, result, applied = false, error = NO_SCORES_YET)
             }
 
             // The provider may have changed while we were downloading.
             if (rankProvider.value != provider) {
                 _status.value = TrustNetworkSyncStatus()
-                return
+                return TrustNetworkRun(kind, result, applied = false, error = "provider changed")
             }
 
             writeFiles(result.header, result.index, result.ids)
             _network.value = TrustNetwork(result.header, result.index)
             _status.value = TrustNetworkSyncStatus()
             Log.d(TAG) { "$kind done: ${result.index.size} entries, ${result.received} received, ${result.invalid} invalid (${result.detail})" }
+            return TrustNetworkRun(kind, result, applied = true, error = null)
         } catch (e: CancellationException) {
             _status.value = TrustNetworkSyncStatus()
             throw e
         } catch (e: Exception) {
             Log.w(TAG, "Trust network $kind failed for ${provider.relayUrl.url}", e)
-            _status.value = TrustNetworkSyncStatus(lastError = e.message ?: e::class.simpleName)
+            val error = e.message ?: e::class.simpleName
+            _status.value = TrustNetworkSyncStatus(lastError = error)
+            return TrustNetworkRun(kind, null, applied = false, error = error)
         } finally {
             client.close()
         }
