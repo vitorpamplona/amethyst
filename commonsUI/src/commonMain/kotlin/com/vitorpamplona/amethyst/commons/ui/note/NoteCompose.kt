@@ -1062,7 +1062,7 @@ private fun RenderNoteRow(
         }
 
         is SoftwareApplicationEvent -> {
-            RenderSoftwareApplication(baseNote, accountViewModel, nav)
+            RenderSoftwareApplication(baseNote, accountViewModel, nav, backgroundColor)
         }
 
         is SoftwareAssetEvent -> {

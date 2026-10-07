@@ -1047,7 +1047,7 @@ private fun FullBleedNoteCompose(
                 } else if (noteEvent is AppRecommendationEvent) {
                     RenderAppRecommendation(baseNote, accountViewModel, nav)
                 } else if (noteEvent is SoftwareApplicationEvent) {
-                    RenderSoftwareApplication(baseNote, accountViewModel, nav)
+                    RenderSoftwareApplication(baseNote, accountViewModel, nav, backgroundColor)
                 } else if (noteEvent is SoftwareAssetEvent) {
                     RenderSoftwareAsset(baseNote, accountViewModel, nav)
                 } else if (noteEvent is ReleaseArtifactSetEvent && noteEvent.isNip82SoftwareRelease()) {

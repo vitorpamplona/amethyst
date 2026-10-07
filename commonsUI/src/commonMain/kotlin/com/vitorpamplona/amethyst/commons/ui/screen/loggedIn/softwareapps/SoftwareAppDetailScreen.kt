@@ -55,6 +55,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.commons.feeds.FeedState
 import com.vitorpamplona.amethyst.commons.model.AddressableNote
 import com.vitorpamplona.amethyst.commons.model.Note
+import com.vitorpamplona.amethyst.commons.model.toImmutableListOfLists
 import com.vitorpamplona.amethyst.commons.relayClient.event.observeNoteEvent
 import com.vitorpamplona.amethyst.commons.relayClient.reqCommand.event.EventFinderFilterAssemblerSubscription
 import com.vitorpamplona.amethyst.commons.resources.Res
@@ -69,6 +70,7 @@ import com.vitorpamplona.amethyst.commons.resources.nip82_section_platforms
 import com.vitorpamplona.amethyst.commons.resources.nip82_section_prereleases
 import com.vitorpamplona.amethyst.commons.resources.nip82_section_topics
 import com.vitorpamplona.amethyst.commons.softwareapps.SoftwareReleases
+import com.vitorpamplona.amethyst.commons.ui.components.TranslatableRichTextViewer
 import com.vitorpamplona.amethyst.commons.ui.components.rememberViewModel
 import com.vitorpamplona.amethyst.commons.ui.feeds.WatchLifecycleAndUpdateModel
 import com.vitorpamplona.amethyst.commons.ui.layouts.DisappearingScaffold
@@ -241,9 +243,19 @@ private fun SoftwareAppDetailBody(
             item(key = "about") {
                 Spacer(Modifier.height(12.dp))
                 Section(title = stringRes(Res.string.nip82_section_about)) {
-                    Text(
-                        text = description,
-                        style = MaterialTheme.typography.bodyMedium,
+                    val tags = remember(event) { event.tags.toImmutableListOfLists() }
+                    TranslatableRichTextViewer(
+                        content = description,
+                        canPreview = true,
+                        quotesLeft = 1,
+                        modifier = Modifier.fillMaxWidth(),
+                        tags = tags,
+                        backgroundColor = backgroundColor,
+                        id = note.idHex,
+                        callbackUri = note.toNostrUri(),
+                        authorPubKey = event.pubKey,
+                        accountViewModel = accountViewModel,
+                        nav = nav,
                     )
                 }
             }

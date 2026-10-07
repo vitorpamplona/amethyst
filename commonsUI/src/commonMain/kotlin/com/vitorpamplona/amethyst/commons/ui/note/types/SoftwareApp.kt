@@ -43,9 +43,11 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.State
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -62,6 +64,7 @@ import coil3.compose.AsyncImage
 import com.vitorpamplona.amethyst.commons.model.MediaAspectRatioCache
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.navigation.Route
+import com.vitorpamplona.amethyst.commons.model.toImmutableListOfLists
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.nip82_by_author
 import com.vitorpamplona.amethyst.commons.resources.nip82_download
@@ -69,8 +72,10 @@ import com.vitorpamplona.amethyst.commons.resources.nip82_repository_label
 import com.vitorpamplona.amethyst.commons.resources.nip82_version_label
 import com.vitorpamplona.amethyst.commons.richtext.MediaUrlImage
 import com.vitorpamplona.amethyst.commons.softwareapps.SoftwareAssetDownloads
+import com.vitorpamplona.amethyst.commons.softwareapps.SoftwarePlatforms
 import com.vitorpamplona.amethyst.commons.softwareapps.SoftwareReleases
 import com.vitorpamplona.amethyst.commons.ui.components.ClickableTextPrimary
+import com.vitorpamplona.amethyst.commons.ui.components.TranslatableRichTextViewer
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.note.LinkIcon
 import com.vitorpamplona.amethyst.commons.ui.note.NoteAuthorPicture
@@ -108,6 +113,7 @@ fun RenderSoftwareApplication(
     note: Note,
     accountViewModel: AccountViewModel,
     nav: INav,
+    backgroundColor: MutableState<Color> = MaterialTheme.colorScheme.background.let { remember(it) { mutableStateOf(it) } },
 ) {
     val event = note.event as? SoftwareApplicationEvent ?: return
 
@@ -172,17 +178,33 @@ fun RenderSoftwareApplication(
 
         if (description.isNotBlank()) {
             Spacer(StdVertSpacer)
-            Text(
-                text = description,
-                style = MaterialTheme.typography.bodyMedium,
-                maxLines = 3,
-                overflow = TextOverflow.Ellipsis,
+            // Same viewer as a note body: markdown, links, translation and "Show more".
+            val tags = remember(event) { event.tags.toImmutableListOfLists() }
+            TranslatableRichTextViewer(
+                content = description,
+                canPreview = true,
+                quotesLeft = 1,
+                modifier = Modifier.fillMaxWidth(),
+                tags = tags,
+                backgroundColor = backgroundColor,
+                id = note.idHex,
+                callbackUri = note.toNostrUri(),
+                authorPubKey = event.pubKey,
+                accountViewModel = accountViewModel,
+                nav = nav,
             )
         }
 
         if (images.isNotEmpty()) {
             Spacer(StdVertSpacer)
             ScreenshotsStrip(images, accountViewModel, imageHeight = 200.dp)
+        }
+
+        // Zapstore publishes many apps with only a name and an icon. Without a summary,
+        // description or screenshots the card was a bare header, so show what the app page
+        // shows instead.
+        if (summary.isNullOrBlank() && description.isBlank() && images.isEmpty()) {
+            AppCardDetails(event)
         }
     }
 
@@ -506,3 +528,55 @@ internal fun formatBytes(bytes: Long): String {
     val gb = mb / 1024
     return "${DecimalPatternFormatter("0.00").format(gb)}\u00A0GB"
 }
+
+/**
+ * The app's platforms (as OSes), license, website or source link, and its id when the name
+ * hides it: the facts the feed card shows when the app has no summary, description or
+ * screenshots to show.
+ */
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+internal fun AppCardDetails(event: SoftwareApplicationEvent) {
+    val oses = remember(event) { SoftwarePlatforms.osesOfPlatforms(event.platforms()) }
+    val license = remember(event) { event.license() }
+    val link = remember(event) { (event.url() ?: event.repository())?.let(::displayLink) }
+    val appId = remember(event) { event.appId().takeIf { it.isNotBlank() && it != event.name() } }
+
+    if (oses.isEmpty() && license == null && link == null && appId == null) return
+
+    if (oses.isNotEmpty() || license != null) {
+        Spacer(StdVertSpacer)
+        FlowRow(
+            horizontalArrangement = Arrangement.spacedBy(6.dp),
+            verticalArrangement = Arrangement.spacedBy(6.dp),
+        ) {
+            oses.forEach { Chip(osLabel(it)) }
+            license?.let { Chip(it, tint = MaterialTheme.colorScheme.secondaryContainer) }
+        }
+    }
+
+    if (link != null || appId != null) {
+        Spacer(StdVertSpacer)
+        link?.let {
+            Text(
+                text = it,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.grayText,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+        }
+        appId?.let {
+            Text(
+                text = it,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.grayText,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+        }
+    }
+}
+
+/** A website or repository URL without its scheme or trailing slash: `github.com/owner/repo`. */
+internal fun displayLink(url: String): String = url.substringAfter("://").removeSuffix("/")

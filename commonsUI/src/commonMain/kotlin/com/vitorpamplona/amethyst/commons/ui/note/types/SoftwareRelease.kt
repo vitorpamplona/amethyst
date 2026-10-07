@@ -95,7 +95,6 @@ import com.vitorpamplona.amethyst.commons.softwareapps.SoftwareCpu
 import com.vitorpamplona.amethyst.commons.softwareapps.SoftwareOs
 import com.vitorpamplona.amethyst.commons.softwareapps.SoftwarePlatforms
 import com.vitorpamplona.amethyst.commons.softwareapps.SoftwareReleases
-import com.vitorpamplona.amethyst.commons.ui.components.ExpandableRichTextViewer
 import com.vitorpamplona.amethyst.commons.ui.components.TranslatableRichTextViewer
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.platform.LocalAppServices
@@ -208,7 +207,7 @@ fun RenderSoftwareRelease(
         if (expanded && trusted) {
             ReleaseDetails(event, app, backgroundColor, accountViewModel, nav)
         } else {
-            ReleaseNotes(event, backgroundColor, expandable = !expanded, accountViewModel, nav)
+            ReleaseNotes(event, backgroundColor, accountViewModel, nav)
             ReleaseSummaryFooter(event, shownApp)
         }
     }
@@ -305,11 +304,11 @@ private fun ChannelChip(channel: String?) {
     Chip(channel.uppercase(), tint = MaterialTheme.colorScheme.tertiaryContainer)
 }
 
+/** The release notes, through the same viewer as a note body: markdown, translation, "Show more". */
 @Composable
 private fun ReleaseNotes(
     event: ReleaseArtifactSetEvent,
     backgroundColor: MutableState<Color>,
-    expandable: Boolean,
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
@@ -318,33 +317,18 @@ private fun ReleaseNotes(
 
     val tags = remember(event) { event.tags.toImmutableListOfLists() }
     Spacer(StdVertSpacer)
-    if (expandable) {
-        ExpandableRichTextViewer(
-            content = notes,
-            canPreview = true,
-            quotesLeft = 1,
-            modifier = Modifier.fillMaxWidth(),
-            tags = tags,
-            backgroundColor = backgroundColor,
-            id = event.id,
-            authorPubKey = event.pubKey,
-            accountViewModel = accountViewModel,
-            nav = nav,
-        )
-    } else {
-        TranslatableRichTextViewer(
-            content = notes,
-            canPreview = true,
-            quotesLeft = 1,
-            modifier = Modifier.fillMaxWidth(),
-            tags = tags,
-            backgroundColor = backgroundColor,
-            id = event.id,
-            authorPubKey = event.pubKey,
-            accountViewModel = accountViewModel,
-            nav = nav,
-        )
-    }
+    TranslatableRichTextViewer(
+        content = notes,
+        canPreview = true,
+        quotesLeft = 1,
+        modifier = Modifier.fillMaxWidth(),
+        tags = tags,
+        backgroundColor = backgroundColor,
+        id = event.id,
+        authorPubKey = event.pubKey,
+        accountViewModel = accountViewModel,
+        nav = nav,
+    )
 }
 
 /**
@@ -398,7 +382,7 @@ private fun ReleaseDetails(
     val commit = assets.firstNotNullOfOrNull { it.commit() } ?: event.commit()
     commit?.let { CommitLine(it, app, nav) }
 
-    ReleaseNotes(event, backgroundColor, expandable = false, accountViewModel, nav)
+    ReleaseNotes(event, backgroundColor, accountViewModel, nav)
 
     if (assetIds.isNotEmpty()) {
         Spacer(StdVertSpacer)
