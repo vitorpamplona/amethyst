@@ -564,9 +564,15 @@ assemblers, `EventSync`, …). Packages are renamed on the way:
        which retires the `PopFamilies` workaround.
      - The rail, the drawer layout, screen time and the intent router read `nav.currentRoute`.
      - The R8 keep rules for enum route arguments are gone with Navigation 2.
-   - **7b, next:** move `NavBackStacks`, `Nav`, the destination table and `NavDisplay` host to
-     `commonsUI`. The remaining Android-only destinations register through a slot, and the
-     intent router stays in the shim. Then the rail, the drawer and the bottom bar.
+   - **7b, in progress (2026-10-07).** The navigation core is shared:
+     - `NavBackStacks` is in commons `model/navigation`.
+     - `Nav`, `rememberNav` and `ImeSettler` are in commonsUI `ui/navigation/navs`.
+     - The destination table, builders, transitions and the `NavDisplay` host
+       (`NavigationHost`) are in commonsUI `ui/navigation/host`.
+     - 238 of the 261 destinations register from commonsUI (`sharedDestinations`). The app
+       registers only the 23 whose screens are still app-only.
+     - Next: the rail, the drawer layout and the bottom-bar shell. Then the 23 app-only
+       destinations, which move as their screens move.
 8. **The app root port** and the new JVM shim. Then the Desktop feature inventory, and
    retiring the old `desktopApp`.
 
