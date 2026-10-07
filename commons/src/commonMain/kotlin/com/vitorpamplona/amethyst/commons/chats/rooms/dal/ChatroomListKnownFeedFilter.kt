@@ -119,6 +119,9 @@ class ChatroomListKnownFeedFilter(
                 }
             }
 
+        // Every pin change rebuilds this feed, so forget the placeholders of rooms no longer pinned.
+        placeholderLock.withLock { pinnedPlaceholders.keys.retainAll(pinned) }
+
         val publicChannels =
             if (!isEnabled(ChatFeedType.NIP28)) {
                 emptyList()
