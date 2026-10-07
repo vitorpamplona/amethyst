@@ -210,14 +210,24 @@ device) wait for an unmetered network.
 
 ### D10. Small updates
 The trigger is the app coming to the foreground (`ForegroundTracker`), plus right after the
-user asks Brainstorm to recompute. It runs only if the last update was more than **12 h** ago,
-since Brainstorm recomputes weekly by default.
+user asks Brainstorm to recompute. It runs when the last update is more than **15 minutes**
+old. Brainstorm recomputes weekly, but other providers may compute on demand, and with the
+pre-check below a check that finds nothing costs two COUNTs (~30 ms each once connected).
 
-1. `cursor = snapshot.syncCursor - 3600` (one hour of overlap absorbs batches sharing a timestamp and late relay arrivals).
-2. `COUNT {kinds:[30382], authors:[P], since: cursor}`. If it exceeds about 20k and the network is metered, postpone; it is effectively a full re-publish.
-3. Fetch `{kinds:[30382], authors:[P], since: cursor}` and `{kinds:[5], authors:[P], since: cursor}`.
-4. Merge: upsert cards (newest per d-tag); rank 0 or a kind-5 `a` tag `30382:P:<target>` removes the entry.
-5. Write the file, swap the snapshot in, and advance the cursor to the newest `created_at` seen.
+1. **Anything new?** `COUNT {30382, authors:[P], since: cursor}` against the cards held at or
+   after the cursor (entries + tombstones), plus `COUNT {5, authors:[P], since: cursor+1}`
+   against 0. Both match → stop: "nothing new". Counting the cursor's own second catches a
+   batch that was still arriving at the last sync (providers sign a whole run with one
+   `created_at`).
+2. **Otherwise** NIP-77 reconcile the window `since: cursor - 3600` against the ids held in
+   that window and fetch only the missing ids; then fetch kind 5 `since: cursor + 1`.
+3. Relays without NIP-77 or COUNT: fetch 30382 + 5 strictly newer than the cursor.
+4. Merge: upsert cards (newest per d-tag); rank 0 or a kind-5 `a` tag `30382:P:<target>`
+   removes the entry.
+5. Write the files, swap the snapshot in, and advance the cursor to the newest `created_at`.
+
+*First version (fixed):* a plain `since: cursor - 3600` fetch. Because a batch-publishing
+provider puts every card in that hour, each update re-downloaded all 155k cards (~93 MB).
 
 ### D11. On disk
 A single file per account: `filesDir/accounts/<pubkey>/wot/network-v1.bin`. It lives inside the
@@ -244,8 +254,11 @@ magic "AWOT" | u16 version | 32B provider | relay (u16 len + utf8)
 - A bad magic, version, or `(P, R)` mismatch means the file is ignored and a cold sync is scheduled.
 
 A second file `network-ids-v1.bin` holds `(eventId 32B, createdAt i64)` per entry, about
-12 MB. It is **kept** (decided) and read **only** by the weekly full check (D12), never at
+12 MB, then the **tombstones**: `(subject 16B, eventId 32B, createdAt i64)` for each rank-0
+card the provider still serves. It is **kept** (decided) and read **only** by syncs, never at
 startup. It is written together with the index, so the two always describe the same set.
+Tombstones make updates and full checks treat those cards as known instead of fetching them
+again (format version 2; a version 1 file triggers a fresh download).
 
 ### D12. Weekly full check
 Purpose: catch deletions or rank-0 cards we missed (a relay outage, an update window
@@ -405,9 +418,13 @@ Behaviours added during implementation:
   computing a new user's scores has published nothing yet); the screen says so and retries.
 - The index on disk is used **before** the 10040 resolves at startup (5 s grace), so a push that
   wakes the process is filtered.
-- The full check re-fetches the provider's rank-0 cards each time (they are dropped from the
-  index, so negentropy sees them as missing). Brainstorm had 678 for the test account: a few
-  hundred KB a week.
+- The provider's rank-0 cards are kept as tombstones in the ids file (D11), so neither the
+  update nor the full check fetches them again (678 per check for the test account before).
+- Update cost, live (Brainstorm, 154,755 cards): "nothing new" in 0.8–0.9 s for a whole
+  `amy trust sync` including JVM start and connect; the two COUNTs take ~30 ms after a
+  130–430 ms connect. The full check after a re-download needed 11 cards. Covered by
+  `TrustNetworkSyncTest` against a local geode relay (batch arriving mid-sync, re-rank,
+  rank-0 removal, kind-5 deletion).
 
 Added later: `amy trust sync | status | check | setup` (named `trust` because `amy wot` is the
 deprecated alias of `fof`), a thin layer over `TrustNetworkState.syncNow` / `explain` and the

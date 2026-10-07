@@ -48,13 +48,17 @@ data class TrustNetworkHeader(
  * | i64 syncCursor | i64 lastFullCheck | i64 lastUpdate | i32 N
  * | keys N×16 | rank N×1 | hops N×1 | followers N×4
  * ```
- * Ids file (`network-ids-v1.bin`), aligned with the index:
+ * Ids file (`network-ids-v1.bin`), aligned with the index, then the tombstones:
  * ```
  * "AWID" | u16 version | i32 N | ids N×32 | createdAt N×8
+ * | i32 T | keys T×16 | ids T×32 | createdAt T×8
  * ```
  */
 object TrustNetworkCodec {
     const val VERSION = 1
+
+    /** The ids file gained tombstones in version 2; a version 1 file is ignored (and re-downloaded). */
+    const val IDS_VERSION = 2
     private val INDEX_MAGIC = "AWOT".encodeToByteArray()
     private val IDS_MAGIC = "AWID".encodeToByteArray()
 
@@ -100,12 +104,17 @@ object TrustNetworkCodec {
 
     fun encodeIds(ids: TrustNetworkIds): ByteArray {
         val n = ids.size
-        val out = Writer(4 + 2 + 4 + n * 40)
+        val t = ids.tombstones
+        val out = Writer(4 + 2 + 4 + n * 40 + 4 + t * 56)
         out.bytes(IDS_MAGIC)
-        out.short(VERSION)
+        out.short(IDS_VERSION)
         out.int(n)
         out.bytes(ids.ids)
         for (v in ids.createdAt) out.long(v)
+        out.int(t)
+        for (v in ids.tombstoneKeys) out.long(v)
+        out.bytes(ids.tombstoneIds)
+        for (v in ids.tombstoneCreatedAt) out.long(v)
         return out.buffer
     }
 
@@ -113,12 +122,17 @@ object TrustNetworkCodec {
         runCatching {
             val reader = Reader(bytes)
             require(reader.bytes(4).contentEquals(IDS_MAGIC)) { "not an ids file" }
-            require(reader.short() == VERSION) { "unknown version" }
+            require(reader.short() == IDS_VERSION) { "unknown version" }
             val n = reader.int()
-            require(n >= 0 && reader.remaining() == n * 40) { "truncated ids" }
+            require(n >= 0 && reader.remaining() >= n * 40 + 4) { "truncated ids" }
             val idBytes = reader.bytes(32 * n)
             val createdAt = LongArray(n) { reader.long() }
-            TrustNetworkIds(idBytes, createdAt)
+            val t = reader.int()
+            require(t >= 0 && reader.remaining() == t * 56) { "truncated tombstones" }
+            val graveKeys = LongArray(2 * t) { reader.long() }
+            val graveIds = reader.bytes(32 * t)
+            val graveCreatedAt = LongArray(t) { reader.long() }
+            TrustNetworkIds(idBytes, createdAt, graveKeys, graveIds, graveCreatedAt)
         }.getOrNull()
 
     private class Writer(

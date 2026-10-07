@@ -473,8 +473,11 @@ class TrustNetworkState(
         const val INDEX_FILE = "network-v1.bin"
         const val IDS_FILE = "network-ids-v1.bin"
 
-        /** Providers recompute weekly by default (Brainstorm); twice a day is plenty. */
-        const val UPDATE_EVERY_SECS = 12 * 60 * 60L
+        /**
+         * Some providers recompute on demand, and checking costs two COUNTs of a few bytes when
+         * nothing changed (see `updateTrustNetwork`), so every app open after 15 minutes asks.
+         */
+        const val UPDATE_EVERY_SECS = 15 * 60L
         const val FULL_CHECK_EVERY_SECS = 7 * 24 * 60 * 60L
         private const val PROVIDER_GRACE_MS = 5_000L
 

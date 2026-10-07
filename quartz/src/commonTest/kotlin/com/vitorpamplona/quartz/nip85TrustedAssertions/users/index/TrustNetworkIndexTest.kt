@@ -112,10 +112,13 @@ class TrustNetworkIndexTest {
         builder.add(card(s, rank = 40, createdAt = 1000))
         builder.add(card(s, rank = 0, createdAt = 2000))
         builder.add(card(t, rank = null))
-        val (index, _) = builder.build()
+        val (index, ids) = builder.build()
         assertFalse(s in index)
         assertFalse(t in index)
         assertEquals(0, index.size)
+        // Kept as tombstones, so a reconcile does not fetch them again.
+        assertEquals(2, ids.tombstones)
+        assertEquals(2, ids.countSince(0))
     }
 
     @Test

@@ -32,6 +32,7 @@ import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.negentropyRec
 import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.negentropySync
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
+import com.vitorpamplona.quartz.nip01Core.store.IdAndTime
 import com.vitorpamplona.quartz.nip09Deletions.DeletionRequestEvent
 import com.vitorpamplona.quartz.nip85TrustedAssertions.users.UserAssertionEvent
 import com.vitorpamplona.quartz.utils.Log
@@ -79,7 +80,7 @@ fun trustNetworkDeletionFilter(
     since: Long,
 ) = Filter(kinds = listOf(DeletionRequestEvent.KIND), authors = listOf(provider), since = since)
 
-/** How far back each small update re-asks: absorbs batches that share a timestamp and late relay arrivals. */
+/** How far before the sync cursor each update reconciles: catches a batch still arriving at the last sync, and late relay arrivals. */
 const val TRUST_NETWORK_UPDATE_OVERLAP_SECS = 3600L
 
 private const val TAG = "TrustNetworkSync"
@@ -151,9 +152,25 @@ suspend fun INostrClient.downloadTrustNetwork(
 }
 
 /**
- * Applies what [header]'s provider published since the last sync: new and changed cards, and
- * removals (rank-0 cards and kind-5 deletions). Re-asks [TRUST_NETWORK_UPDATE_OVERLAP_SECS]
- * before the cursor, which is harmless: re-applying a card is idempotent.
+ * Applies what [header]'s provider published since the last sync, without re-downloading what
+ * the index already holds. Providers publish in batches that share a `created_at` (one
+ * Brainstorm run signed 155k cards within a few seconds), so re-asking a time window would
+ * re-download the whole batch every time.
+ *
+ *  1. **Is there anything new?** NIP-45 COUNTs: the relay's cards at or after the sync cursor,
+ *     compared with the cards (entries and tombstones) held for that window, and deletions
+ *     newer than the cursor. Two round trips of a few bytes each. Equal and zero means nothing
+ *     changed, and the update ends there, so it is cheap enough to run on every app open.
+ *     Counting the cursor's own second catches a batch that was still arriving at the last
+ *     sync (providers sign a whole run with one `created_at`).
+ *  2. **Cards:** a NIP-77 reconcile of the window from [TRUST_NETWORK_UPDATE_OVERLAP_SECS]
+ *     before the cursor on, against the ids already held for that window. Only missing cards
+ *     are fetched; cards the relay no longer has are dropped. The overlap catches a batch that
+ *     was still arriving during the last sync (it shares the cursor's second).
+ *  3. **Deletions:** kind 5s strictly newer than the cursor.
+ *
+ * Relays without NIP-77 get a plain fetch of everything strictly newer than the cursor instead;
+ * late arrivals at the cursor's second are then left to the weekly [reconcileTrustNetwork].
  *
  * Needs the current [ids] column (not only the index) because the merged index rewrites it.
  */
@@ -165,32 +182,56 @@ suspend fun INostrClient.updateTrustNetwork(
     relay: NormalizedRelayUrl,
     progress: TrustNetworkProgress? = null,
 ): TrustNetworkSyncResult {
-    val since = (header.syncCursor - TRUST_NETWORK_UPDATE_OVERLAP_SECS).coerceAtLeast(0)
-    val builder = TrustNetworkBuilder(header.provider, initialCapacity = index.size + 1024)
+    val provider = header.provider
+    val newer = header.syncCursor + 1
+    val relayCards = countOrNull(relay, trustNetworkFilter(provider, header.syncCursor))
+    val newDeletions = countOrNull(relay, trustNetworkDeletionFilter(provider, newer))
+    if (relayCards != null && relayCards == ids.countSince(header.syncCursor) && newDeletions == 0) {
+        return TrustNetworkSyncResult(header.copy(lastUpdate = TimeUtils.now()), index, ids, complete = true, invalid = 0, received = 0, detail = "nothing new")
+    }
+
+    val builder = TrustNetworkBuilder(provider, initialCapacity = index.size + 1024)
     builder.addAll(index, ids)
     val before = builder.cardCount
     val invalid = AtomicInt(0)
 
-    val filters = listOf(trustNetworkFilter(header.provider, since), trustNetworkDeletionFilter(header.provider, since))
-    val paged = verifying(builder, invalid, null, progress) { submit -> fetchAllPages(relay, filters, IDLE_MS) { submit(it) } }
+    val windowStart = (header.syncCursor - TRUST_NETWORK_UPDATE_OVERLAP_SECS).coerceAtLeast(0)
+    val reconciled = reconcileInto(builder, relay, trustNetworkFilter(provider, windowStart), ids.entriesSince(windowStart), invalid, progress)
+
+    val complete: Boolean
+    val detail: String
+    if (reconciled != null) {
+        val deletions =
+            if (newDeletions == 0) {
+                null
+            } else {
+                verifying(builder, invalid, null, progress) { submit -> fetchAllPages(relay, listOf(trustNetworkDeletionFilter(provider, newer)), IDLE_MS) { submit(it) } }
+            }
+        complete = reconciled.complete && (deletions == null || deletions.drained)
+        detail = "need ${reconciled.need}, gone ${reconciled.gone}" + (deletions?.let { ", deletions ${it.downloaded}" } ?: "")
+    } else {
+        val filters = listOf(trustNetworkFilter(provider, newer), trustNetworkDeletionFilter(provider, newer))
+        val paged = verifying(builder, invalid, null, progress) { submit -> fetchAllPages(relay, filters, IDLE_MS) { submit(it) } }
+        complete = paged.drained
+        detail = "${paged.end}${paged.message?.let { ": $it" } ?: ""}"
+    }
 
     val (newIndex, newIds) = builder.build()
-    val cursor = maxOf(header.syncCursor, builder.newestCreatedAt)
     return TrustNetworkSyncResult(
-        header = header.copy(syncCursor = cursor, lastUpdate = TimeUtils.now()),
+        header = header.copy(syncCursor = maxOf(header.syncCursor, builder.newestCreatedAt), lastUpdate = TimeUtils.now()),
         index = newIndex,
         ids = newIds,
-        complete = paged.drained,
+        complete = complete,
         invalid = invalid.load(),
-        received = builder.cardCount - before,
-        detail = "${paged.end}${paged.message?.let { ": $it" } ?: ""}",
+        received = builder.cardCount - before + (reconciled?.gone ?: 0),
+        detail = detail,
     )
 }
 
 /**
  * The weekly full check: reconciles the local id set with the relay over NIP-77, downloads the
  * cards we are missing and drops the ones the relay no longer has. Catches whatever the small
- * updates missed (a relay outage, a deletion outside the overlap window).
+ * updates missed (a relay outage, a deletion the update did not see).
  *
  * Returns null when the relay cannot reconcile (no NIP-77, or it refused); the caller then
  * falls back to a cold [downloadTrustNetwork].
@@ -203,12 +244,46 @@ suspend fun INostrClient.reconcileTrustNetwork(
     relay: NormalizedRelayUrl,
     progress: TrustNetworkProgress? = null,
 ): TrustNetworkSyncResult? {
-    val filter = trustNetworkFilter(header.provider)
     val builder = TrustNetworkBuilder(header.provider, initialCapacity = index.size + 1024)
     builder.addAll(index, ids)
     val before = builder.cardCount
-    val local = builder.idsAndTimes()
+    val invalid = AtomicInt(0)
 
+    val reconciled = reconcileInto(builder, relay, trustNetworkFilter(header.provider), ids.entriesSince(), invalid, progress) ?: return null
+
+    val (newIndex, newIds) = builder.build()
+    val now = TimeUtils.now()
+    return TrustNetworkSyncResult(
+        header = header.copy(syncCursor = maxOf(header.syncCursor, builder.newestCreatedAt), lastFullCheck = now, lastUpdate = now),
+        index = newIndex,
+        ids = newIds,
+        complete = reconciled.complete,
+        invalid = invalid.load(),
+        received = builder.cardCount - before + reconciled.gone,
+        detail = "need ${reconciled.need}, gone ${reconciled.gone}",
+    )
+}
+
+private class Reconciled(
+    val complete: Boolean,
+    val need: Int,
+    val gone: Int,
+)
+
+/**
+ * NIP-77 reconcile of [filter] against [local]: fetches (and verifies into [builder]) the cards
+ * the relay has and we lack, and drops from [builder] the ones only we have. Null when the
+ * relay cannot reconcile.
+ */
+@OptIn(ExperimentalAtomicApi::class)
+private suspend fun INostrClient.reconcileInto(
+    builder: TrustNetworkBuilder,
+    relay: NormalizedRelayUrl,
+    filter: Filter,
+    local: List<IdAndTime>,
+    invalid: AtomicInt,
+    progress: TrustNetworkProgress?,
+): Reconciled? {
     val need = ArrayList<HexKey>()
     val have = ArrayList<HexKey>()
     try {
@@ -223,11 +298,10 @@ suspend fun INostrClient.reconcileTrustNetwork(
     } catch (e: CancellationException) {
         throw e
     } catch (e: Exception) {
-        Log.w(TAG, "Full check could not reconcile with ${relay.url}", e)
+        Log.w(TAG, "Could not reconcile the trust network with ${relay.url}", e)
         return null
     }
 
-    val invalid = AtomicInt(0)
     var complete = true
     if (need.isNotEmpty()) {
         verifying(builder, invalid, need.size, progress) { submit ->
@@ -239,18 +313,7 @@ suspend fun INostrClient.reconcileTrustNetwork(
         }
     }
     builder.removeEventIds(have)
-
-    val (newIndex, newIds) = builder.build()
-    val now = TimeUtils.now()
-    return TrustNetworkSyncResult(
-        header = header.copy(syncCursor = maxOf(header.syncCursor, builder.newestCreatedAt), lastFullCheck = now, lastUpdate = now),
-        index = newIndex,
-        ids = newIds,
-        complete = complete,
-        invalid = invalid.load(),
-        received = builder.cardCount - before + have.size,
-        detail = "need ${need.size}, gone ${have.size}",
-    )
+    return Reconciled(complete, need.size, have.size)
 }
 
 private suspend fun INostrClient.countOrNull(

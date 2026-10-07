@@ -21,6 +21,7 @@
 package com.vitorpamplona.quartz.nip85TrustedAssertions.users.index
 
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
+import com.vitorpamplona.quartz.nip01Core.store.IdAndTime
 import com.vitorpamplona.quartz.utils.Hex
 
 /**
@@ -140,21 +141,56 @@ class TrustNetworkIndex(
 
 /**
  * The event id and `created_at` of the card behind each [TrustNetworkIndex] entry, in the same
- * order. Kept apart from the index because only the negentropy full check reads it: it is
- * never loaded at startup.
+ * order, plus the provider's **tombstones**: its rank-0 cards, which mean "removed" and so are
+ * not in the index, but which the relay still holds. Keeping their ids lets a reconcile treat
+ * them as known instead of fetching them again on every check, and keeps the "anything new?"
+ * count exact.
+ *
+ * Kept apart from the index because only syncs read it: it is never loaded at startup.
  */
 class TrustNetworkIds(
-    /** 32 bytes per entry. */
+    /** 32 bytes per index entry. */
     val ids: ByteArray,
     val createdAt: LongArray,
+    /** 2 longs per tombstone: the subject's (hi, lo), like the index keys. */
+    val tombstoneKeys: LongArray = LongArray(0),
+    /** 32 bytes per tombstone. */
+    val tombstoneIds: ByteArray = ByteArray(0),
+    val tombstoneCreatedAt: LongArray = LongArray(0),
 ) {
     init {
         require(ids.size == 32 * createdAt.size) { "column sizes disagree" }
+        require(tombstoneKeys.size == 2 * tombstoneCreatedAt.size && tombstoneIds.size == 32 * tombstoneCreatedAt.size) { "tombstone sizes disagree" }
     }
 
+    /** Index entries. */
     val size: Int get() = createdAt.size
 
+    val tombstones: Int get() = tombstoneCreatedAt.size
+
     fun idHex(i: Int): HexKey = Hex.encode(ids.copyOfRange(32 * i, 32 * i + 32))
+
+    fun tombstoneIdHex(i: Int): HexKey = Hex.encode(tombstoneIds.copyOfRange(32 * i, 32 * i + 32))
+
+    /** (created_at, id) of every card held, entries and tombstones, at or after [since]. */
+    fun entriesSince(since: Long = Long.MIN_VALUE): List<IdAndTime> {
+        val result = ArrayList<IdAndTime>()
+        for (i in 0 until size) {
+            if (createdAt[i] >= since) result.add(IdAndTime(createdAt[i], idHex(i)))
+        }
+        for (i in 0 until tombstones) {
+            if (tombstoneCreatedAt[i] >= since) result.add(IdAndTime(tombstoneCreatedAt[i], tombstoneIdHex(i)))
+        }
+        return result
+    }
+
+    /** How many cards (entries and tombstones) were created at or after [since]. */
+    fun countSince(since: Long): Int {
+        var total = 0
+        for (t in createdAt) if (t >= since) total++
+        for (t in tombstoneCreatedAt) if (t >= since) total++
+        return total
+    }
 
     companion object {
         val EMPTY = TrustNetworkIds(ByteArray(0), LongArray(0))

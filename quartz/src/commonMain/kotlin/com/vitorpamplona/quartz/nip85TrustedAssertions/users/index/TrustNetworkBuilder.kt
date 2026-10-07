@@ -172,6 +172,20 @@ class TrustNetworkBuilder(
             )
             if (idColumn.createdAt[i] > newestCreatedAt) newestCreatedAt = idColumn.createdAt[i]
         }
+        // Tombstones come back as the rank-0 cards they are, so supersession still applies.
+        for (i in 0 until idColumn.tombstones) {
+            append(
+                hi = idColumn.tombstoneKeys[2 * i],
+                lo = idColumn.tombstoneKeys[2 * i + 1],
+                rank = 0,
+                hops = -1,
+                followers = 0,
+                createdAt = idColumn.tombstoneCreatedAt[i],
+                id = idColumn.tombstoneIds,
+                idOffset = 32 * i,
+            )
+            if (idColumn.tombstoneCreatedAt[i] > newestCreatedAt) newestCreatedAt = idColumn.tombstoneCreatedAt[i]
+        }
     }
 
     /** (created_at, id) of every card accepted so far, for a negentropy local side. */
@@ -217,7 +231,11 @@ class TrustNetworkBuilder(
         return Hex.encode(ids.copyOfRange(32 * i, 32 * i + 32)) in deletedIds
     }
 
-    /** Applies supersession and removals and returns the sorted index with its id column. */
+    /**
+     * Applies supersession and removals and returns the sorted index with its id column. A
+     * subject whose newest card has rank 0 (or no rank) is left out of the index but kept as a
+     * tombstone in the id column; a deleted card is dropped entirely.
+     */
     fun build(): Pair<TrustNetworkIndex, TrustNetworkIds> {
         // Sort positions by subject, newest card first within a subject.
         val order = IntArray(size) { it }
@@ -228,6 +246,8 @@ class TrustNetworkBuilder(
 
         val keep = IntArray(size)
         var kept = 0
+        val graves = IntArray(size)
+        var buried = 0
         var k = 0
         while (k < size) {
             val newest = order[k]
@@ -236,11 +256,14 @@ class TrustNetworkBuilder(
             while (next < size && hi[order[next]] == hi[newest] && lo[order[next]] == lo[newest]) next++
             k = next
 
-            if (rank[newest].toInt() == 0) continue
             val deletedAt = if (deletedSubjects.isEmpty()) null else deletedSubjects[Key(hi[newest], lo[newest])]
             if (deletedAt != null && deletedAt >= createdAt[newest]) continue
             if (isDeletedId(newest)) continue
-            keep[kept++] = newest
+            if (rank[newest].toInt() == 0) {
+                graves[buried++] = newest
+            } else {
+                keep[kept++] = newest
+            }
         }
 
         val keys = LongArray(2 * kept)
@@ -259,7 +282,17 @@ class TrustNetworkBuilder(
             outCreatedAt[j] = createdAt[i]
             ids.copyInto(outIds, 32 * j, 32 * i, 32 * i + 32)
         }
-        return TrustNetworkIndex(keys, outRank, outHops, outFollowers) to TrustNetworkIds(outIds, outCreatedAt)
+        val graveKeys = LongArray(2 * buried)
+        val graveIds = ByteArray(32 * buried)
+        val graveCreatedAt = LongArray(buried)
+        for (j in 0 until buried) {
+            val i = graves[j]
+            graveKeys[2 * j] = hi[i]
+            graveKeys[2 * j + 1] = lo[i]
+            graveCreatedAt[j] = createdAt[i]
+            ids.copyInto(graveIds, 32 * j, 32 * i, 32 * i + 32)
+        }
+        return TrustNetworkIndex(keys, outRank, outHops, outFollowers) to TrustNetworkIds(outIds, outCreatedAt, graveKeys, graveIds, graveCreatedAt)
     }
 
     companion object {
