@@ -1,0 +1,298 @@
+/*
+ * Copyright (c) 2025 Vitor Pamplona
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy of
+ * this software and associated documentation files (the "Software"), to deal in
+ * the Software without restriction, including without limitation the rights to use,
+ * copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the
+ * Software, and to permit persons to whom the Software is furnished to do so,
+ * subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in all
+ * copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS
+ * FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR
+ * COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN
+ * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
+ * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+ */
+package com.vitorpamplona.quartz.nip85TrustedAssertions.users.index
+
+import com.vitorpamplona.quartz.nip01Core.core.Event
+import com.vitorpamplona.quartz.nip01Core.core.HexKey
+import com.vitorpamplona.quartz.nip01Core.store.IdAndTime
+import com.vitorpamplona.quartz.nip01Core.tags.dTag.dTag
+import com.vitorpamplona.quartz.nip09Deletions.DeletionRequestEvent
+import com.vitorpamplona.quartz.nip85TrustedAssertions.users.UserAssertionEvent
+import com.vitorpamplona.quartz.nip85TrustedAssertions.users.followerCount
+import com.vitorpamplona.quartz.nip85TrustedAssertions.users.hops
+import com.vitorpamplona.quartz.nip85TrustedAssertions.users.rank
+import com.vitorpamplona.quartz.utils.Hex
+
+/**
+ * Accumulates one provider's kind 30382 cards (and the removals that retract them) and turns
+ * them into a [TrustNetworkIndex] + [TrustNetworkIds] pair.
+ *
+ * Holds only the columns the index needs, never the events, so a cold sync of 300k cards stays
+ * at a few tens of MB however the events arrive.
+ *
+ * Rules applied by [build], matching how providers publish:
+ *  - the newest card per subject wins (addressable supersession);
+ *  - a card whose rank is 0, or that has no rank, is a removal: Brainstorm publishes a
+ *    rank-0 card before the kind-5 that deletes it, "so that even if the relay rejects kind 5,
+ *    the score is effectively zeroed out";
+ *  - a kind-5 by the provider removes the subject's card when it is not newer than the
+ *    deletion (`a` tag `30382:<provider>:<subject>`), or the exact card (`e` tag);
+ *  - [removeEventIds] drops cards a negentropy full check found the relay no longer has.
+ *
+ * Not thread-safe: feed it from one coroutine (the verifier's drain does).
+ */
+class TrustNetworkBuilder(
+    val provider: HexKey,
+    initialCapacity: Int = 1024,
+) {
+    private var size = 0
+    private var hi = LongArray(initialCapacity)
+    private var lo = LongArray(initialCapacity)
+    private var rank = ByteArray(initialCapacity)
+    private var hops = ByteArray(initialCapacity)
+    private var followers = IntArray(initialCapacity)
+    private var createdAt = LongArray(initialCapacity)
+    private var ids = ByteArray(32 * initialCapacity)
+
+    private data class Key(
+        val hi: Long,
+        val lo: Long,
+    )
+
+    /** Subject → newest deletion time. */
+    private val deletedSubjects = HashMap<Key, Long>()
+    private val deletedIds = HashSet<HexKey>()
+
+    /** Newest `created_at` among everything accepted so far: the next update's cursor. */
+    var newestCreatedAt: Long = 0
+        private set
+
+    /** Cards accepted (before supersession and removals are applied). */
+    val cardCount: Int get() = size
+
+    /**
+     * Adds a verified event from the provider: a kind 30382 card or a kind 5 deletion.
+     * Returns false (and ignores it) when it is neither, is signed by someone else, or names a
+     * subject that is not a 64-hex pubkey. Signatures must be checked before calling this.
+     */
+    fun add(event: Event): Boolean {
+        if (event.pubKey != provider) return false
+        return when (event.kind) {
+            UserAssertionEvent.KIND -> addCard(event)
+            DeletionRequestEvent.KIND -> addDeletion(event)
+            else -> false
+        }
+    }
+
+    private fun addCard(event: Event): Boolean {
+        val subject = event.tags.dTag()
+        if (!Hex.isHex64(subject)) return false
+        val eventId = Hex.decode(event.id)
+        if (eventId.size != 32) return false
+        append(
+            hi = Hex.readLong(subject, 0),
+            lo = Hex.readLong(subject, 16),
+            rank = (event.tags.rank() ?: 0).coerceIn(0, 127).toByte(),
+            hops = (event.tags.hops() ?: -1).coerceIn(-1, 127).toByte(),
+            followers = (event.tags.followerCount() ?: 0).coerceAtLeast(0),
+            createdAt = event.createdAt,
+            id = eventId,
+            idOffset = 0,
+        )
+        if (event.createdAt > newestCreatedAt) newestCreatedAt = event.createdAt
+        return true
+    }
+
+    private fun addDeletion(event: Event): Boolean {
+        val prefix = "${UserAssertionEvent.KIND}:$provider:"
+        var any = false
+        for (tag in event.tags) {
+            if (tag.size < 2) continue
+            when (tag[0]) {
+                "a" -> {
+                    val value = tag[1]
+                    if (!value.startsWith(prefix)) continue
+                    val subject = value.substring(prefix.length)
+                    if (!Hex.isHex64(subject)) continue
+                    removeSubject(subject, event.createdAt)
+                    any = true
+                }
+
+                "e" -> {
+                    if (Hex.isHex64(tag[1])) {
+                        deletedIds.add(tag[1])
+                        any = true
+                    }
+                }
+            }
+        }
+        if (any && event.createdAt > newestCreatedAt) newestCreatedAt = event.createdAt
+        return any
+    }
+
+    /** Removes the card about [subject] if it is not newer than [asOf]. */
+    fun removeSubject(
+        subject: HexKey,
+        asOf: Long,
+    ) {
+        val key = Key(Hex.readLong(subject, 0), Hex.readLong(subject, 16))
+        val previous = deletedSubjects[key]
+        if (previous == null || previous < asOf) deletedSubjects[key] = asOf
+    }
+
+    /** Drops the cards with these event ids (a full check found the relay no longer has them). */
+    fun removeEventIds(eventIds: Collection<HexKey>) {
+        deletedIds.addAll(eventIds)
+    }
+
+    /** Seeds the builder with an existing index, so an update can merge into it. */
+    fun addAll(
+        index: TrustNetworkIndex,
+        idColumn: TrustNetworkIds,
+    ) {
+        require(index.size == idColumn.size) { "index and ids disagree" }
+        for (i in 0 until index.size) {
+            append(
+                hi = index.keys[2 * i],
+                lo = index.keys[2 * i + 1],
+                rank = index.rank[i],
+                hops = index.hops[i],
+                followers = index.followers[i],
+                createdAt = idColumn.createdAt[i],
+                id = idColumn.ids,
+                idOffset = 32 * i,
+            )
+            if (idColumn.createdAt[i] > newestCreatedAt) newestCreatedAt = idColumn.createdAt[i]
+        }
+    }
+
+    /** (created_at, id) of every card accepted so far, for a negentropy local side. */
+    fun idsAndTimes(): List<IdAndTime> =
+        List(size) { i ->
+            IdAndTime(createdAt[i], Hex.encode(ids.copyOfRange(32 * i, 32 * i + 32)))
+        }
+
+    private fun append(
+        hi: Long,
+        lo: Long,
+        rank: Byte,
+        hops: Byte,
+        followers: Int,
+        createdAt: Long,
+        id: ByteArray,
+        idOffset: Int,
+    ) {
+        if (size == this.hi.size) grow()
+        this.hi[size] = hi
+        this.lo[size] = lo
+        this.rank[size] = rank
+        this.hops[size] = hops
+        this.followers[size] = followers
+        this.createdAt[size] = createdAt
+        id.copyInto(ids, 32 * size, idOffset, idOffset + 32)
+        size++
+    }
+
+    private fun grow() {
+        val capacity = (hi.size * 2).coerceAtLeast(16)
+        hi = hi.copyOf(capacity)
+        lo = lo.copyOf(capacity)
+        rank = rank.copyOf(capacity)
+        hops = hops.copyOf(capacity)
+        followers = followers.copyOf(capacity)
+        createdAt = createdAt.copyOf(capacity)
+        ids = ids.copyOf(32 * capacity)
+    }
+
+    private fun isDeletedId(i: Int): Boolean {
+        if (deletedIds.isEmpty()) return false
+        return Hex.encode(ids.copyOfRange(32 * i, 32 * i + 32)) in deletedIds
+    }
+
+    /** Applies supersession and removals and returns the sorted index with its id column. */
+    fun build(): Pair<TrustNetworkIndex, TrustNetworkIds> {
+        // Sort positions by subject, newest card first within a subject.
+        val order = IntArray(size) { it }
+        mergeSort(order) { a, b ->
+            val c = TrustNetworkIndex.compareKeys(hi[a], lo[a], hi[b], lo[b])
+            if (c != 0) c else createdAt[b].compareTo(createdAt[a])
+        }
+
+        val keep = IntArray(size)
+        var kept = 0
+        var k = 0
+        while (k < size) {
+            val newest = order[k]
+            // skip the older cards about the same subject
+            var next = k + 1
+            while (next < size && hi[order[next]] == hi[newest] && lo[order[next]] == lo[newest]) next++
+            k = next
+
+            if (rank[newest].toInt() == 0) continue
+            val deletedAt = if (deletedSubjects.isEmpty()) null else deletedSubjects[Key(hi[newest], lo[newest])]
+            if (deletedAt != null && deletedAt >= createdAt[newest]) continue
+            if (isDeletedId(newest)) continue
+            keep[kept++] = newest
+        }
+
+        val keys = LongArray(2 * kept)
+        val outRank = ByteArray(kept)
+        val outHops = ByteArray(kept)
+        val outFollowers = IntArray(kept)
+        val outCreatedAt = LongArray(kept)
+        val outIds = ByteArray(32 * kept)
+        for (j in 0 until kept) {
+            val i = keep[j]
+            keys[2 * j] = hi[i]
+            keys[2 * j + 1] = lo[i]
+            outRank[j] = rank[i]
+            outHops[j] = hops[i]
+            outFollowers[j] = followers[i]
+            outCreatedAt[j] = createdAt[i]
+            ids.copyInto(outIds, 32 * j, 32 * i, 32 * i + 32)
+        }
+        return TrustNetworkIndex(keys, outRank, outHops, outFollowers) to TrustNetworkIds(outIds, outCreatedAt)
+    }
+
+    companion object {
+        /** Stable merge sort of [array] by [compare], without boxing. */
+        private inline fun mergeSort(
+            array: IntArray,
+            compare: (Int, Int) -> Int,
+        ) {
+            if (array.size < 2) return
+            var src = array
+            var dst = IntArray(array.size)
+            var width = 1
+            while (width < array.size) {
+                var left = 0
+                while (left < array.size) {
+                    val mid = minOf(left + width, array.size)
+                    val right = minOf(left + 2 * width, array.size)
+                    var i = left
+                    var j = mid
+                    var out = left
+                    while (i < mid && j < right) {
+                        dst[out++] = if (compare(src[i], src[j]) <= 0) src[i++] else src[j++]
+                    }
+                    while (i < mid) dst[out++] = src[i++]
+                    while (j < right) dst[out++] = src[j++]
+                    left += 2 * width
+                }
+                val tmp = src
+                src = dst
+                dst = tmp
+                width *= 2
+            }
+            if (src !== array) src.copyInto(array)
+        }
+    }
+}

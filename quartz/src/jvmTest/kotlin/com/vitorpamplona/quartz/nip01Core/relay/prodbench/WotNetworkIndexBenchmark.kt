@@ -33,6 +33,10 @@ import com.vitorpamplona.quartz.nip85TrustedAssertions.list.TrustProviderListEve
 import com.vitorpamplona.quartz.nip85TrustedAssertions.list.tags.ProviderTypes
 import com.vitorpamplona.quartz.nip85TrustedAssertions.users.followerCount
 import com.vitorpamplona.quartz.nip85TrustedAssertions.users.hops
+import com.vitorpamplona.quartz.nip85TrustedAssertions.users.index.TrustNetworkCodec
+import com.vitorpamplona.quartz.nip85TrustedAssertions.users.index.downloadTrustNetwork
+import com.vitorpamplona.quartz.nip85TrustedAssertions.users.index.reconcileTrustNetwork
+import com.vitorpamplona.quartz.nip85TrustedAssertions.users.index.updateTrustNetwork
 import com.vitorpamplona.quartz.nip85TrustedAssertions.users.rank
 import com.vitorpamplona.quartz.utils.Hex
 import kotlinx.coroutines.CoroutineScope
@@ -403,6 +407,63 @@ class WotNetworkIndexBenchmark {
             }
         }
         dir.deleteRecursively()
+        httpClient.dispatcher.executorService.shutdown()
+    }
+
+    /** The production path: quartz's downloadTrustNetwork + codec + reconcile, live. */
+    @Test
+    fun productionSync() {
+        if (System.getenv("PROD_RELAY_BENCH") == null && System.getProperty("prodRelayBench") == null) {
+            println("WotNetworkIndexBenchmark.productionSync skipped. Run with -PprodRelayBench=1 to enable.")
+            return
+        }
+        val observer = System.getProperty("wotObserver") ?: DEFAULT_OBSERVER
+        val httpClient =
+            OkHttpClient
+                .Builder()
+                .connectTimeout(15, TimeUnit.SECONDS)
+                .readTimeout(120, TimeUnit.SECONDS)
+                .build()
+
+        runBlocking {
+            val client = NostrClient(BasicOkHttpWebSocket.Builder { httpClient })
+            try {
+                val list =
+                    LIST_RELAYS.firstNotNullOfOrNull { relay ->
+                        client.fetchFirst(relay, Filter(kinds = listOf(TrustProviderListEvent.KIND), authors = listOf(observer))) as? TrustProviderListEvent
+                    }
+                val provider = list?.serviceProviders()?.firstOrNull { it.service == ProviderTypes.rank } ?: return@runBlocking
+                println("=== production downloadTrustNetwork: ${provider.pubkey} @ ${provider.relayUrl.url} ===")
+
+                var lastReport = 0
+                val t0 = System.nanoTime()
+                val cold =
+                    client.downloadTrustNetwork(provider.pubkey, provider.relayUrl) { verified, expected ->
+                        if (verified - lastReport >= 50_000) {
+                            lastReport = verified
+                            println("   progress $verified / $expected")
+                        }
+                    }
+                val coldMs = (System.nanoTime() - t0) / 1e6
+                println("cold:   ${"%,.0f".format(coldMs)} ms, ${cold.index.size} entries, complete=${cold.complete}, invalid=${cold.invalid}, detail=${cold.detail}, pass>=5: ${cold.index.countAtLeast(MIN_SCORE)}")
+
+                val t1 = System.nanoTime()
+                val bytes = TrustNetworkCodec.encodeIndex(cold.header, cold.index)
+                val idBytes = TrustNetworkCodec.encodeIds(cold.ids)
+                val decoded = TrustNetworkCodec.decodeIndex(bytes)!!
+                println("codec:  ${"%,.0f".format((System.nanoTime() - t1) / 1e6)} ms encode+decode, index ${mb(bytes.size.toLong())}, ids ${mb(idBytes.size.toLong())}, roundtrip ${decoded.second.size == cold.index.size}")
+
+                val t2 = System.nanoTime()
+                val update = client.updateTrustNetwork(cold.header, cold.index, cold.ids, provider.relayUrl)
+                println("update: ${"%,.0f".format((System.nanoTime() - t2) / 1e6)} ms, received ${update.received}, entries ${update.index.size}, complete=${update.complete}")
+
+                val t3 = System.nanoTime()
+                val full = client.reconcileTrustNetwork(cold.header, cold.index, cold.ids, provider.relayUrl)
+                println("full check: ${"%,.0f".format((System.nanoTime() - t3) / 1e6)} ms, ${full?.detail}, entries ${full?.index?.size}, complete=${full?.complete}")
+            } finally {
+                client.close()
+            }
+        }
         httpClient.dispatcher.executorService.shutdown()
     }
 }
