@@ -4473,7 +4473,6 @@
     <string name="napplet_op_decrypt">ler suas mensagens privadas</string>
     <string name="napplet_op_decrypt_from">ler suas mensagens privadas com %1$s</string>
     <string name="napplet_op_encrypt">criptografar uma mensagem</string>
-    <string name="napplet_op_relay_login">entrar nos relays como você</string>
     <string name="napplet_op_sign_kind_named">assinar para %1$s (kind: %2$d)</string>
     <string name="napplet_permissions_title">Apps conectados</string>
     <string name="napplets">nApplets</string>

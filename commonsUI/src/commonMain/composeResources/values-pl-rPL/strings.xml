@@ -4590,7 +4590,6 @@
     <string name="napplet_op_decrypt">odczytaj prywatne wiadomości</string>
     <string name="napplet_op_decrypt_from">przeczytaj swoje prywatne wiadomości za pomocą %1$s</string>
     <string name="napplet_op_encrypt">zaszyfruj wiadomość</string>
-    <string name="napplet_op_relay_login">zaloguj się do transmiterów</string>
     <string name="napplet_op_sign_kind_named">podpisz dla %1$s (typ: %2$d)</string>
     <string name="napplet_permissions_title">Podłączone aplikacje</string>
     <string name="napplets">nApplets</string>

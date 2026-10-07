@@ -4607,7 +4607,6 @@
     <string name="napplet_op_decrypt">číst vaše soukromé zprávy</string>
     <string name="napplet_op_decrypt_from">číst vaše soukromé zprávy s %1$s</string>
     <string name="napplet_op_encrypt">zašifrovat zprávu</string>
-    <string name="napplet_op_relay_login">přihlásit se k relé vaším jménem</string>
     <string name="napplet_op_sign_kind_named">podepsat pro %1$s (druh: %2$d)</string>
     <string name="napplet_permissions_title">Připojené aplikace</string>
     <string name="napplets">nApplety</string>

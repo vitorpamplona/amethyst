@@ -4456,7 +4456,6 @@
     <string name="napplet_op_decrypt">आपके निजी सन्देशों का पठन</string>
     <string name="napplet_op_decrypt_from">आपके निजी सन्देशों का पठन %1$s के द्वारा</string>
     <string name="napplet_op_encrypt">सन्देश रहस्यीकरण</string>
-    <string name="napplet_op_relay_login">आपके रूप में पुनःप्रसारकों में प्रवेशांकन करें</string>
     <string name="napplet_op_sign_kind_named">%1$s के लिए हस्ताक्षरण (प्रकार : %2$d)</string>
     <string name="napplet_permissions_title">संयोजित क्रमक</string>
     <string name="napplets">नोस्टर संलग्नक्रमक</string>

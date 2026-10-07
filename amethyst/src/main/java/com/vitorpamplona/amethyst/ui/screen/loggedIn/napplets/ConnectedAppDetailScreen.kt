@@ -106,7 +106,7 @@ import com.vitorpamplona.amethyst.commons.resources.napplet_decision_deny
 import com.vitorpamplona.amethyst.commons.resources.napplet_op_decrypt
 import com.vitorpamplona.amethyst.commons.resources.napplet_op_decrypt_from
 import com.vitorpamplona.amethyst.commons.resources.napplet_op_encrypt
-import com.vitorpamplona.amethyst.commons.resources.napplet_op_relay_login
+import com.vitorpamplona.amethyst.commons.resources.napplet_op_sign_in
 import com.vitorpamplona.amethyst.commons.resources.napplet_op_sign_kind
 import com.vitorpamplona.amethyst.commons.resources.napplet_permissions_ask_each_time
 import com.vitorpamplona.amethyst.commons.resources.napplet_policy_full_trust
@@ -853,7 +853,7 @@ private fun NostrSignerOp.opLabel(): String =
     when (this) {
         is NostrSignerOp.SignKind ->
             if (kind == RelayAuthEvent.KIND) {
-                stringRes(Res.string.napplet_op_relay_login)
+                stringRes(Res.string.napplet_op_sign_in)
             } else {
                 stringRes(Res.string.napplet_op_sign_kind, kind)
             }

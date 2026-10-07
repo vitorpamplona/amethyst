@@ -35,6 +35,19 @@ import com.vitorpamplona.amethyst.commons.resources.consent_list_no_change
 import com.vitorpamplona.amethyst.commons.resources.consent_list_removes
 import com.vitorpamplona.amethyst.commons.resources.consent_list_unknown
 import com.vitorpamplona.amethyst.commons.resources.consent_list_wipe
+import com.vitorpamplona.amethyst.commons.resources.consent_profile_changes
+import com.vitorpamplona.amethyst.commons.resources.consent_profile_field_about
+import com.vitorpamplona.amethyst.commons.resources.consent_profile_field_banner
+import com.vitorpamplona.amethyst.commons.resources.consent_profile_field_display_name
+import com.vitorpamplona.amethyst.commons.resources.consent_profile_field_lightning
+import com.vitorpamplona.amethyst.commons.resources.consent_profile_field_name
+import com.vitorpamplona.amethyst.commons.resources.consent_profile_field_nip05
+import com.vitorpamplona.amethyst.commons.resources.consent_profile_field_picture
+import com.vitorpamplona.amethyst.commons.resources.consent_profile_field_website
+import com.vitorpamplona.amethyst.commons.resources.consent_profile_no_change
+import com.vitorpamplona.amethyst.commons.resources.consent_profile_removes
+import com.vitorpamplona.amethyst.commons.resources.consent_profile_removes_other
+import com.vitorpamplona.amethyst.commons.resources.consent_profile_unknown
 import com.vitorpamplona.amethyst.commons.resources.consent_report_content
 import com.vitorpamplona.amethyst.commons.resources.consent_report_person
 import com.vitorpamplona.amethyst.commons.resources.consent_report_person_reason
@@ -42,12 +55,14 @@ import com.vitorpamplona.amethyst.commons.resources.napplet_op_app_login
 import com.vitorpamplona.amethyst.commons.resources.napplet_op_http_auth
 import com.vitorpamplona.amethyst.commons.resources.napplet_op_http_auth_unknown
 import com.vitorpamplona.amethyst.commons.resources.napplet_op_relay_login_to
+import com.vitorpamplona.amethyst.commons.resources.napplet_op_update_profile
 import com.vitorpamplona.amethyst.commons.ui.loadPluralStringRes
 import com.vitorpamplona.amethyst.commons.ui.loadStringRes
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.relays.kindNameFor
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.jackson.JacksonMapper
+import com.vitorpamplona.quartz.nip01Core.metadata.MetadataEvent
 import com.vitorpamplona.quartz.nip01Core.signers.EventTemplate
 import com.vitorpamplona.quartz.nip01Core.tags.people.taggedUserIds
 import com.vitorpamplona.quartz.nip02FollowList.ContactListEvent
@@ -245,6 +260,7 @@ suspend fun signRequestSummary(
                 loadStringRes(Res.string.napplet_op_relay_login_to, relay.removePrefix("wss://").removePrefix("ws://").trimEnd('/'))
             }
         }
+        MetadataEvent.KIND -> loadStringRes(Res.string.napplet_op_update_profile)
         HTTPAuthorizationEvent.KIND -> {
             val url = tags.firstOrNull { it.size > 1 && it[0] == "u" }?.get(1)
             val method = tags.firstOrNull { it.size > 1 && it[0] == "method" }?.get(1)?.uppercase()
@@ -256,3 +272,82 @@ suspend fun signRequestSummary(
         }
         else -> null
     }
+
+/** A profile field the consent prompt can name. */
+enum class ProfileField { NAME, DISPLAY_NAME, PICTURE, BANNER, ABOUT, WEBSITE, NIP05, LIGHTNING }
+
+/** Which named fields a profile update changes or removes, and whether it drops any data at all. */
+class ProfileFieldChanges(
+    val changed: List<ProfileField>,
+    val removed: List<ProfileField>,
+    val removesData: Boolean,
+)
+
+/**
+ * Compares a proposed kind 0 ([tags] + [content], unsigned) with [current]. Reads the content JSON,
+ * as every Amethyst screen does, so the line matches what the profile will show once published.
+ */
+fun profileFieldChanges(
+    current: MetadataEvent,
+    tags: Array<Array<String>>,
+    content: String,
+): ProfileFieldChanges? {
+    val proposed = MetadataEvent("0".repeat(64), current.pubKey, current.createdAt + 1, tags, content, "0".repeat(128))
+    val diff = proposed.diffFrom(current) ?: return null
+    val fields =
+        listOfNotNull(
+            diff.name?.let { ProfileField.NAME to it.isRemoval() },
+            diff.displayName?.let { ProfileField.DISPLAY_NAME to it.isRemoval() },
+            diff.picture?.let { ProfileField.PICTURE to it.isRemoval() },
+            diff.banner?.let { ProfileField.BANNER to it.isRemoval() },
+            diff.about?.let { ProfileField.ABOUT to it.isRemoval() },
+            diff.website?.let { ProfileField.WEBSITE to it.isRemoval() },
+            diff.nip05?.let { ProfileField.NIP05 to it.isRemoval() },
+            diff.lud16?.let { ProfileField.LIGHTNING to it.isRemoval() },
+            diff.lud06?.let { ProfileField.LIGHTNING to it.isRemoval() },
+        ).distinctBy { it.first }
+    return ProfileFieldChanges(
+        changed = fields.filterNot { it.second }.map { it.first },
+        removed = fields.filter { it.second }.map { it.first },
+        removesData = diff.removesData(),
+    )
+}
+
+private fun ProfileField.label() =
+    when (this) {
+        ProfileField.NAME -> Res.string.consent_profile_field_name
+        ProfileField.DISPLAY_NAME -> Res.string.consent_profile_field_display_name
+        ProfileField.PICTURE -> Res.string.consent_profile_field_picture
+        ProfileField.BANNER -> Res.string.consent_profile_field_banner
+        ProfileField.ABOUT -> Res.string.consent_profile_field_about
+        ProfileField.WEBSITE -> Res.string.consent_profile_field_website
+        ProfileField.NIP05 -> Res.string.consent_profile_field_nip05
+        ProfileField.LIGHTNING -> Res.string.consent_profile_field_lightning
+    }
+
+/**
+ * For a profile update (kind 0), which fields change against the profile Amethyst has. The preview
+ * card shows the whole new profile, which looks the same whether one word changed or a field was
+ * dropped; this line names the difference, in red when a field is removed (a profile is replaced
+ * whole, so an app that omits a field erases it).
+ */
+suspend fun profileChange(
+    account: Account?,
+    kind: Int,
+    tags: Array<Array<String>>,
+    content: String,
+): ListChange? {
+    if (kind != MetadataEvent.KIND || account == null) return null
+    val current = account.userMetadata.getUserMetadataEvent() ?: return ListChange(loadStringRes(Res.string.consent_profile_unknown), warning = true)
+    val changes = profileFieldChanges(current, tags, content) ?: return null
+
+    if (changes.changed.isEmpty() && changes.removed.isEmpty() && !changes.removesData) {
+        return ListChange(loadStringRes(Res.string.consent_profile_no_change), warning = false)
+    }
+
+    val parts = mutableListOf<String>()
+    if (changes.changed.isNotEmpty()) parts += loadStringRes(Res.string.consent_profile_changes, changes.changed.map { loadStringRes(it.label()) }.joinToString(", "))
+    if (changes.removed.isNotEmpty()) parts += loadStringRes(Res.string.consent_profile_removes, changes.removed.map { loadStringRes(it.label()) }.joinToString(", "))
+    if (parts.isEmpty()) parts += loadStringRes(Res.string.consent_profile_removes_other)
+    return ListChange(parts.joinToString(" · "), warning = changes.removesData)
+}

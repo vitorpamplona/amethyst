@@ -70,9 +70,11 @@ import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.number_followers
 import com.vitorpamplona.amethyst.commons.resources.profile_card_bot
 import com.vitorpamplona.amethyst.commons.resources.profile_card_follows_you
+import com.vitorpamplona.amethyst.commons.ui.components.LocalReadOnlyPreview
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.navigation.routes.routeFor
 import com.vitorpamplona.amethyst.commons.ui.note.BaseUserPicture
+import com.vitorpamplona.amethyst.commons.ui.note.InnerUserPicture
 import com.vitorpamplona.amethyst.commons.ui.note.ObserveDisplayNip05Status
 import com.vitorpamplona.amethyst.commons.ui.note.ShowFollowingOrUnfollowingButton
 import com.vitorpamplona.amethyst.commons.ui.note.ShowUserButton
@@ -86,6 +88,7 @@ import com.vitorpamplona.amethyst.commons.ui.theme.bitcoinColor
 import com.vitorpamplona.amethyst.commons.ui.theme.innerPostModifier
 import com.vitorpamplona.amethyst.commons.ui.theme.placeholderText
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
+import com.vitorpamplona.quartz.nip01Core.metadata.MetadataEvent
 import com.vitorpamplona.quartz.nip01Core.metadata.UserMetadata
 
 // A kind-0 in the feed is a person, not a JSON blob. The card mirrors the profile
@@ -121,8 +124,17 @@ fun RenderProfileCard(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
+    // In a signer prompt the event is a profile about to REPLACE the current one, so it must show
+    // what it says, not the author's cached profile: otherwise an update that drops a field or
+    // changes the bio looks like no change at all.
+    val proposed =
+        if (LocalReadOnlyPreview.current) {
+            remember(baseNote.event) { (baseNote.event as? MetadataEvent)?.contactMetaData() ?: UserMetadata() }
+        } else {
+            null
+        }
     WatchAuthor(baseNote, accountViewModel) { author ->
-        ProfileCard(author, backgroundColor, accountViewModel, nav)
+        ProfileCard(author, backgroundColor, accountViewModel, nav, proposed)
     }
 }
 
@@ -132,9 +144,10 @@ fun ProfileCard(
     backgroundColor: MutableState<Color>,
     accountViewModel: AccountViewModel,
     nav: INav,
+    proposed: UserMetadata? = null,
 ) {
     val userInfo by observeUserInfo(author, accountViewModel)
-    val metadata = userInfo?.info
+    val metadata = proposed ?: userInfo?.info
     val tags = userInfo?.tags
 
     Column(
@@ -142,12 +155,13 @@ fun ProfileCard(
             nav.nav(routeFor(author))
         },
     ) {
-        ProfileCardHeader(author, metadata?.banner, backgroundColor, accountViewModel)
+        ProfileCardHeader(author, metadata?.banner, backgroundColor, accountViewModel, proposedPicture = proposed?.let { it.picture ?: "" })
 
         Column(CardBodyPadding) {
             ProfileCardNames(author, metadata, tags)
 
-            ObserveDisplayNip05Status(author, accountViewModel, nav)
+            // The verified badge checks the CURRENT address; a proposed change shows as plain text.
+            if (proposed == null) ObserveDisplayNip05Status(author, accountViewModel, nav)
 
             metadata?.about?.ifBlank { null }?.let { about ->
                 Spacer(Modifier.height(Size5dp))
@@ -177,6 +191,8 @@ private fun ProfileCardHeader(
     banner: String?,
     backgroundColor: MutableState<Color>,
     accountViewModel: AccountViewModel,
+    // Non-null in a signer prompt: the picture the new profile sets ("" for none).
+    proposedPicture: String? = null,
 ) {
     val cardBackground = backgroundColor.value
 
@@ -200,7 +216,17 @@ private fun ProfileCardHeader(
                 modifier = AvatarRingModifier.background(cardBackground),
                 contentAlignment = Alignment.Center,
             ) {
-                BaseUserPicture(author, AvatarSize, accountViewModel)
+                if (proposedPicture != null) {
+                    InnerUserPicture(
+                        userHex = author.pubkeyHex,
+                        userPicture = proposedPicture.ifBlank { null },
+                        userName = null,
+                        size = AvatarSize,
+                        modifier = Modifier,
+                    )
+                } else {
+                    BaseUserPicture(author, AvatarSize, accountViewModel)
+                }
             }
 
             Spacer(Modifier.weight(1f))

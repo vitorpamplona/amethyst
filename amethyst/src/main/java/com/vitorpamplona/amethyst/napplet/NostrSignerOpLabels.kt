@@ -38,9 +38,9 @@ import com.vitorpamplona.amethyst.commons.resources.napplet_fallback_title
 import com.vitorpamplona.amethyst.commons.resources.napplet_op_decrypt
 import com.vitorpamplona.amethyst.commons.resources.napplet_op_decrypt_from
 import com.vitorpamplona.amethyst.commons.resources.napplet_op_encrypt
-import com.vitorpamplona.amethyst.commons.resources.napplet_op_relay_login
 import com.vitorpamplona.amethyst.commons.resources.napplet_op_seal_message
 import com.vitorpamplona.amethyst.commons.resources.napplet_op_seal_message_to
+import com.vitorpamplona.amethyst.commons.resources.napplet_op_sign_in
 import com.vitorpamplona.amethyst.commons.resources.napplet_op_sign_kind_named
 import com.vitorpamplona.amethyst.commons.resources.nip46_signer_allow_always_for
 import com.vitorpamplona.amethyst.commons.ui.loadStringRes
@@ -62,8 +62,9 @@ suspend fun NostrSignerOp.label(context: Context): String =
     when (this) {
         is NostrSignerOp.SignKind ->
             if (kind == RelayAuthEvent.KIND) {
-                // A relay login is not "signing" anything the user would recognise; say what it does.
-                loadStringRes(Res.string.napplet_op_relay_login)
+                // A login (to a relay or an app server; the stored grant covers both) is not "signing" anything the
+                // user would recognise; say what it does.
+                loadStringRes(Res.string.napplet_op_sign_in)
             } else {
                 loadStringRes(Res.string.napplet_op_sign_kind_named, kindNameFor(kind), kind)
             }
@@ -120,7 +121,7 @@ suspend fun buildSignerConsentInfo(
     // the message and its recipient instead (see NappletRecentEncryptions).
     val seal = if (signKind != null && signContent != null) sealContents(signKind, signContent, recentEncryptions) else null
     val isUnreadableSeal = signKind == SealEvent.KIND && seal == null
-    val change = if (signKind != null && signTags != null) listChange(account, signKind, signTags) ?: deletionChange(signKind, signTags) ?: reportChange(signKind, signTags) else null
+    val change = if (signKind != null && signTags != null) listChange(account, signKind, signTags) ?: deletionChange(signKind, signTags) ?: reportChange(signKind, signTags) ?: profileChange(account, signKind, signTags, signContent ?: "") else null
 
     val counterparty = seal?.recipient ?: request.counterpartyPubKey()
     // For decrypt this names the counterparty ("read your private messages with Alice").

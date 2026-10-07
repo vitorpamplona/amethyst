@@ -4456,7 +4456,6 @@
     <string name="napplet_op_decrypt">saját privát üzenetek olvasása</string>
     <string name="napplet_op_decrypt_from">elolvashatja a magánüzeneteit vele: %1$s</string>
     <string name="napplet_op_encrypt">egy üzenet titkosítása</string>
-    <string name="napplet_op_relay_login">bejelentkezés az átjátszókra az Ön nevében</string>
     <string name="napplet_op_sign_kind_named">aláírás a következőhöz: %1$s (típus: %2$d)</string>
     <string name="napplet_permissions_title">Összekapcsolt alkalmazások</string>
     <string name="napplets">nKisalkalmazások</string>
