@@ -8,6 +8,13 @@
 # path, so a match here means any checkout -- ours, F-Droid's, an auditor's --
 # produces the same bytes. See README.md -> "Reproducible builds".
 #
+# The second build runs against a copy of the NDK in a different directory. Two
+# builds from the same NDK path cannot see a dependency on where the NDK lives,
+# and that is exactly how the build-id leak got through: lld hashed debug info
+# that named the NDK's install path, so F-Droid's rebuild differed from ours in
+# 20 bytes while this script reported a perfect match. Each output is also
+# checked for absolute paths, which is what such a leak usually looks like.
+#
 # Usage:
 #   ./verify-reproducible.sh                  # every ABI
 #   ./verify-reproducible.sh --abi arm64-v8a  # one ABI (faster)
@@ -19,15 +26,20 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
 JNILIBS="$PROJECT_ROOT/amethyst/src/main/jniLibs"
 LIB_NAME="libzxingcpp_android.so"
-
-PASSTHRU=("$@")
+BUILD_ROOT="${ZXING_REPRO_DIR:-/tmp/amethyst-zxingcpp-build}"
 
 # Only the ABIs this run actually rebuilds. Hashing the whole tree would let an
 # untouched ABI hash identically in both runs and report the lot reproducible --
 # the same trap tools/arti-build hit and documents.
 ABIS=(arm64-v8a armeabi-v7a x86 x86_64)
-for ((i = 0; i < ${#PASSTHRU[@]}; i++)); do
-    [ "${PASSTHRU[$i]}" = "--abi" ] && ABIS=("${PASSTHRU[$((i + 1))]}")
+PASSTHRU=()
+while [ $# -gt 0 ]; do
+    case "$1" in
+        --abi)
+            [ $# -ge 2 ] && [ -n "$2" ] || { echo "--abi needs a value" >&2; exit 2; }
+            ABIS=("$2"); PASSTHRU+=("$1" "$2"); shift 2 ;;
+        *) echo "Unknown argument: $1 (only --abi is supported here)" >&2; exit 2 ;;
+    esac
 done
 
 sha256() {
@@ -36,23 +48,63 @@ sha256() {
 
 hashes_in() {
     local dir="$1" abi
+    # `if`, not `[ -f ] && sha256`: the latter returns 1 for a missing last ABI, and under set -e
+    # that aborted the caller's $(...) with no message at all.
     ( cd "$dir" && for abi in "${ABIS[@]}"; do
-        [ -f "$abi/$LIB_NAME" ] && sha256 "$abi/$LIB_NAME"
+        if [ -f "$abi/$LIB_NAME" ]; then sha256 "$abi/$LIB_NAME"; fi
     done )
 }
 
+NDK="$("$SCRIPT_DIR/build-zxingcpp.sh" --print-ndk)"
+
 RUN_A="$(mktemp -d -t zxingcpp-verify-a.XXXXXX)"
 RUN_B="$(mktemp -d -t zxingcpp-verify-b.XXXXXX)"
-trap 'rm -rf "$RUN_A" "$RUN_B"' EXIT
+# Next to the real NDK so it can be hard-linked (instant, no extra space); a plain copy into the
+# scratch dir is the fallback when that directory is not writable or on another filesystem.
+RELOCATED_NDK="$(dirname "$NDK")/.zxingcpp-verify-ndk.$$"
+trap 'rm -rf "$RUN_A" "$RUN_B" "$RELOCATED_NDK"' EXIT
 
-printf '==> Build 1 of 2\n'
-"$SCRIPT_DIR/build-zxingcpp.sh" --out "$RUN_A" ${PASSTHRU[@]+"${PASSTHRU[@]}"} >/dev/null
+if ! cp -al "$NDK" "$RELOCATED_NDK" 2>/dev/null; then
+    rm -rf "$RELOCATED_NDK"
+    RELOCATED_NDK="$RUN_B/ndk"
+    printf '==> Copying the NDK to a second location (could not hard-link it)\n'
+    cp -a "$NDK" "$RELOCATED_NDK"
+fi
 
-printf '==> Build 2 of 2\n'
-"$SCRIPT_DIR/build-zxingcpp.sh" --out "$RUN_B" ${PASSTHRU[@]+"${PASSTHRU[@]}"} >/dev/null
+printf '==> Build 1 of 2 (NDK at %s)\n' "$NDK"
+ANDROID_NDK_HOME="$NDK" "$SCRIPT_DIR/build-zxingcpp.sh" --out "$RUN_A/out" ${PASSTHRU[@]+"${PASSTHRU[@]}"} >/dev/null
 
-A="$(hashes_in "$RUN_A")"
-B="$(hashes_in "$RUN_B")"
+printf '==> Build 2 of 2 (NDK at %s)\n' "$RELOCATED_NDK"
+ANDROID_NDK_HOME="$RELOCATED_NDK" "$SCRIPT_DIR/build-zxingcpp.sh" --out "$RUN_B/out" ${PASSTHRU[@]+"${PASSTHRU[@]}"} >/dev/null
+
+STRINGS_TOOL=""
+for candidate in "$NDK"/toolchains/llvm/prebuilt/*/bin/llvm-strings; do
+    [ -x "$candidate" ] && { STRINGS_TOOL="$candidate"; break; }
+done
+[ -n "$STRINGS_TOOL" ] || STRINGS_TOOL="$(command -v strings || true)"
+
+if [ -n "$STRINGS_TOOL" ]; then
+    LEAKS=""
+    for abi in "${ABIS[@]}"; do
+        for run in "$RUN_A/out" "$RUN_B/out"; do
+            found="$("$STRINGS_TOOL" "$run/$abi/$LIB_NAME" | grep -F -e "$NDK" -e "$RELOCATED_NDK" -e "$BUILD_ROOT" -e "$PROJECT_ROOT" || true)"
+            # Plus any other host path. Anchored on real top-level directories rather than "any
+            # /x/y", which random bytes in .rodata match -- and never /build/ or /zxing-cpp/, the
+            # stable prefixes repro-env.sh rewrites paths to on purpose.
+            found="$found$("$STRINGS_TOOL" "$run/$abi/$LIB_NAME" | grep -E '^/(home|Users|root|tmp|private|var|opt|usr|mnt)/' || true)"
+            [ -n "$found" ] && LEAKS="$LEAKS\n  $abi: $(printf '%s' "$found" | head -3 | tr '\n' ' ')"
+        done
+    done
+    if [ -n "$LEAKS" ]; then
+        printf '\nNOT REPRODUCIBLE -- absolute paths in the output:%b\n' "$LEAKS"
+        exit 1
+    fi
+else
+    printf 'warning: no strings tool found; absolute paths not checked\n'
+fi
+
+A="$(hashes_in "$RUN_A/out")"
+B="$(hashes_in "$RUN_B/out")"
 
 if [ "$A" != "$B" ]; then
     printf '\nNOT REPRODUCIBLE -- the two builds differ:\n'

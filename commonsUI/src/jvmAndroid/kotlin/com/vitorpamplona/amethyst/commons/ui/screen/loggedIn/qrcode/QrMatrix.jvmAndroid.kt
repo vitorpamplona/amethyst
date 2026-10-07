@@ -25,23 +25,32 @@ import com.google.zxing.WriterException
 import com.google.zxing.qrcode.decoder.ErrorCorrectionLevel
 import com.google.zxing.qrcode.encoder.Encoder
 
+/**
+ * Error correction Q first, for codes photographed off a screen; a payload too long for Q at the
+ * largest version still fits at M or L, and a slightly less forgiving code beats the empty square
+ * that used to be drawn in its place.
+ */
+private val ERROR_CORRECTION_FALLBACK = listOf(ErrorCorrectionLevel.Q, ErrorCorrectionLevel.M, ErrorCorrectionLevel.L)
+
 actual fun encodeQrMatrix(contents: String): QrMatrix? {
     if (contents.isEmpty()) return null
 
     val code =
-        try {
-            Encoder.encode(
-                contents,
-                ErrorCorrectionLevel.Q,
-                mapOf(
-                    EncodeHintType.CHARACTER_SET to "UTF-8",
-                    EncodeHintType.MARGIN to QR_QUIET_ZONE_MODULES,
-                    EncodeHintType.ERROR_CORRECTION to ErrorCorrectionLevel.Q,
-                ),
-            )
-        } catch (e: WriterException) {
-            return null
-        }
+        ERROR_CORRECTION_FALLBACK.firstNotNullOfOrNull { level ->
+            try {
+                Encoder.encode(
+                    contents,
+                    level,
+                    mapOf(
+                        EncodeHintType.CHARACTER_SET to "UTF-8",
+                        EncodeHintType.MARGIN to QR_QUIET_ZONE_MODULES,
+                        EncodeHintType.ERROR_CORRECTION to level,
+                    ),
+                )
+            } catch (e: WriterException) {
+                null
+            }
+        } ?: return null
 
     val matrix = code.matrix
     return QrMatrix(

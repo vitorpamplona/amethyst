@@ -81,9 +81,26 @@ class QrScannerState {
      */
     var imageCodes by mutableStateOf<List<ScannedPayload>>(emptyList())
 
+    /** A line shown with [imageCodes] about anything else the picture held, such as a partial sequence. */
+    var imageCodesNote by mutableStateOf<String?>(null)
+
     private var lastSubmittedText: String? = null
     private var lastSubmittedAt = 0L
     private var darkSinceMs = 0L
+
+    /** The last frame that held more than one code, and when; see [MULTI_HOLD_MS]. */
+    private var lastMulti: List<ScanResult> = emptyList()
+    private var lastMultiAtMs = 0L
+
+    /** The code the last thorough frame found alone in view, and when; see [onFrame]. */
+    private var thoroughLoneText: String? = null
+    private var thoroughLoneAtMs = 0L
+
+    /**
+     * True while a sheet over the camera is waiting on the user. The analyzer reads it from its
+     * own thread to skip decoding frames whose result would be thrown away.
+     */
+    val isAwaitingUser: Boolean get() = rejected != null || imageCodes.isNotEmpty()
 
     fun resetZoom() {
         zoomRatio = 1f
@@ -107,9 +124,10 @@ class QrScannerState {
         // whether or not the camera is busy reading something else.
         if (sequence.dropIfStale(nowMs)) sequenceProgress = null
 
-        // Nothing is decided while the "we can't open this" sheet is up: the user is reading it,
-        // and the offending code is very probably still sitting in front of the lens.
-        if (rejected != null) {
+        // Nothing is decided while a sheet is up: the "we can't open this" sheet, because the user
+        // is reading it and the offending code is very probably still in front of the lens; the
+        // picture's code chooser, because a frame accepted now would close the scanner under it.
+        if (isAwaitingUser) {
             candidates = emptyList()
             return null
         }
@@ -120,18 +138,68 @@ class QrScannerState {
             return null
         }
 
-        candidates = found
+        if (found.size > 1) {
+            lastMulti = found
+            lastMultiAtMs = nowMs
+        }
+        if (scan.thorough) {
+            thoroughLoneText = found.singleOrNull()?.text
+            thoroughLoneAtMs = nowMs
+        }
 
         // A multi-part code is never complete on its first part, so it can't be a single answer.
-        found.firstOrNull { it.isPartOfSequence }?.let { part ->
-            val joined = sequence.add(part, nowMs)
+        // Every part in view is fed, not just the first: a poster prints its parts side by side,
+        // and the decoder reports them in the same order every frame, so feeding one per frame
+        // fed the same one forever and the sequence never got past "1 of N". Only one sequence's
+        // parts, though -- the one being collected, else the first in view's: two posters' parts
+        // fed in turn restart each other and neither completes.
+        val parts = found.filter { it.isPartOfSequence }
+        if (parts.isNotEmpty()) {
+            candidates = found
+            val batch =
+                parts.filter { sequence.isCurrentSequence(it) }.ifEmpty {
+                    val first = parts.first()
+                    parts.filter { it.sequenceId == first.sequenceId && it.sequenceSize == first.sequenceSize }
+                }
+            var joined: String? = null
+            for (part in batch) {
+                joined = sequence.add(part, nowMs)
+                if (joined != null) break
+            }
             sequenceProgress = if (joined == null) sequence.captured to sequence.total else null
             return joined?.let { accept(it, nowMs) }
         }
 
-        if (found.size > 1) return null
+        if (found.size > 1) {
+            candidates = found
+            return null
+        }
 
-        return accept(found.first().text, nowMs)
+        // One code now, but more than one a moment ago. Decoding is not all-or-nothing per frame:
+        // an easy code next to a marginal one reads alone on most frames and with its neighbour
+        // only on the thorough ones, so taking the lone read would pick one of two codes for the
+        // user -- the exact thing the tap exists to prevent. Keep showing the whole set, with
+        // the fresh outline for the one just read, until the other has been gone a while.
+        val only = found.first()
+        if (lastMultiAtMs != 0L && nowMs - lastMultiAtMs < MULTI_HOLD_MS) {
+            candidates =
+                if (lastMulti.any { it.text == only.text }) {
+                    lastMulti.map { if (it.text == only.text) only else it }
+                } else {
+                    found
+                }
+            return null
+        }
+
+        candidates = found
+
+        // Alone on a fast frame is not proof of alone: the neighbour may simply be too hard for the
+        // fast pass, and no frame has yet shown both. Wait for a thorough pass (every
+        // QrFrameAnalyzer.THOROUGH_EVERY frames, so a few hundred milliseconds at most) to agree.
+        val confirmedAlone = thoroughLoneText == only.text && nowMs - thoroughLoneAtMs < MULTI_HOLD_MS
+        if (!confirmedAlone) return null
+
+        return accept(only.text, nowMs)
     }
 
     /** Taking one of several visible codes, because the user tapped it. */
@@ -139,6 +207,8 @@ class QrScannerState {
         result: ScanResult,
         nowMs: Long,
     ): String? {
+        // A part of a multi-part code is a fragment of something else, not an answer.
+        if (result.isPartOfSequence) return null
         candidates = emptyList()
         // Deliberately bypasses the dedupe window. That window exists to stop ONE code decoding
         // thirty times a second from firing the caller thirty times; a tap is one decision by a
@@ -204,6 +274,12 @@ class QrScannerState {
     companion object {
         /** Long enough that one steady code fires once; short enough to rescan on purpose. */
         const val DEDUPE_MS = 1_500L
+
+        /**
+         * How long a lone code waits after several were in view. Thorough passes run about six
+         * times a second, so a code that only those can read shows up well inside this.
+         */
+        const val MULTI_HOLD_MS = 750L
 
         /** Mean luminance below this reads as "the torch would help". */
         const val DARK_THRESHOLD = 0.18f

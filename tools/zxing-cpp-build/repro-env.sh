@@ -19,7 +19,8 @@
 #                                -> -ffile-prefix-map rewrites them to stable
 #      virtual paths, so two machines with different checkout dirs agree.
 #   4. Timestamps                -> SOURCE_DATE_EPOCH, derived from the pinned
-#      tag's commit rather than from when the build happens.
+#      commit rather than from when the build happens. The NDK's clang reads it
+#      for __DATE__/__TIME__ itself.
 #   5. Archive metadata          -> ar writes mtimes/uids into static archives;
 #      the D (deterministic) flag zeroes them. The NDK's llvm-ar defaults to D,
 #      but it is set explicitly so a host ar cannot change the answer.
@@ -32,8 +33,9 @@ REPRO_CFLAGS="${REPRO_CFLAGS} -ffile-prefix-map=${BUILD_ROOT}=/build"
 REPRO_CFLAGS="${REPRO_CFLAGS} -fdebug-prefix-map=${SOURCE_DIR}=/zxing-cpp"
 REPRO_CFLAGS="${REPRO_CFLAGS} -fdebug-prefix-map=${BUILD_ROOT}=/build"
 
-# No __DATE__/__TIME__ anywhere in the output, whatever upstream does with them.
-REPRO_CFLAGS="${REPRO_CFLAGS} -Wno-builtin-macro-redefined -D__DATE__=\"redacted\" -D__TIME__=\"redacted\""
+# No __DATE__/__TIME__ override: clang (r26+) takes both from SOURCE_DATE_EPOCH below. The
+# -D__DATE__=\"redacted\" this used to pass reached clang as the bare identifier `redacted`, not a
+# string literal, so any upstream use of either macro would have failed to compile.
 
 export ZXING_REPRO_CFLAGS="${REPRO_CFLAGS}"
 
@@ -45,8 +47,8 @@ export ZXING_REPRO_CFLAGS="${REPRO_CFLAGS}"
 # input that depended on where the NDK lives.
 export ZXING_REPRO_LDFLAGS="-Wl,--build-id=none"
 
-# Pin SOURCE_DATE_EPOCH to the commit the tag points at: deterministic for a
-# given ZXING_CPP_VERSION, and independent of when the build actually runs.
+# Pin SOURCE_DATE_EPOCH to the pinned commit (ZXING_CPP_COMMIT): deterministic
+# for a given source, and independent of when the build actually runs.
 if [ -d "${SOURCE_DIR}/.git" ]; then
     _epoch="$(git -C "${SOURCE_DIR}" log -1 --format=%ct 2>/dev/null || true)"
     [ -n "${_epoch}" ] && export SOURCE_DATE_EPOCH="${_epoch}"

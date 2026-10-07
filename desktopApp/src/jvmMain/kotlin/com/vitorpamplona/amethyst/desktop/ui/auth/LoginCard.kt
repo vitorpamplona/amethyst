@@ -61,6 +61,7 @@ import com.vitorpamplona.amethyst.commons.resources.login_card_subtitle
 import com.vitorpamplona.amethyst.commons.resources.login_card_title
 import com.vitorpamplona.amethyst.commons.resources.login_generate_button
 import com.vitorpamplona.amethyst.commons.ui.components.util.setText
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.qrcode.QrCodeDrawer
 import com.vitorpamplona.amethyst.desktop.account.LoginProgress
 import com.vitorpamplona.amethyst.desktop.account.validateBunkerUri
 import kotlinx.coroutines.Dispatchers
@@ -301,9 +302,9 @@ private fun NostrConnectContent(
     } else {
         val uri = nostrConnectUri
         if (uri != null) {
-            QrCodeCanvas(
-                data = uri,
-                size = 200.dp,
+            QrCodeDrawer(
+                contents = uri,
+                modifier = Modifier.size(200.dp),
             )
 
             Spacer(Modifier.height(12.dp))

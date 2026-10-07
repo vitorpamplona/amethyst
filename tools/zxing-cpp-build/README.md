@@ -42,9 +42,9 @@ Six things have to be fixed, and each is:
 | Source of non-determinism | Pinned by |
 |---|---|
 | compiler + linker version | [`tools/arti-build/ANDROID_NDK_VERSION`](../arti-build/ANDROID_NDK_VERSION); `build-zxingcpp.sh` refuses any other revision |
-| upstream source | [`ZXING_CPP_VERSION`](ZXING_CPP_VERSION), cloned at that tag and nothing else |
+| upstream source | [`ZXING_CPP_COMMIT`](ZXING_CPP_COMMIT), the exact commit; [`ZXING_CPP_VERSION`](ZXING_CPP_VERSION) names the tag it was cloned from, and a fresh clone fails if the tag no longer points there. A reused clone is force-checked-out and cleaned, so local edits cannot ride along |
 | absolute paths baked into `__FILE__`, assertions, debug records | `-ffile-prefix-map` / `-fdebug-prefix-map` in [`repro-env.sh`](repro-env.sh) |
-| timestamps | `SOURCE_DATE_EPOCH`, derived from the pinned tag's commit rather than from build time; `__DATE__`/`__TIME__` redacted |
+| timestamps | `SOURCE_DATE_EPOCH`, derived from the pinned commit rather than from build time; clang takes `__DATE__`/`__TIME__` from it |
 | codegen/link ordering keyed on the real build path | canonical build path (`/tmp/amethyst-zxingcpp-build`) |
 | NDK install path, via the linker's build-id | `-Wl,--build-id=none` in [`repro-env.sh`](repro-env.sh) |
 
@@ -66,6 +66,11 @@ Six things have to be fixed, and each is:
 > if they are not what was asked for. The revision gate checks the *input*; this checks the
 > *output*, which is what catches a stale CMake cache or an overriding environment variable that
 > slipped a different toolchain past the gate.
+
+`verify-reproducible.sh` builds twice, the second time against a copy of the NDK in another
+directory, and also fails if either output contains the NDK path, the build root, the checkout or
+another host path. Building twice from one NDK path could not have caught the build-id leak above,
+and an unchecked dependency on where the NDK lives is exactly what F-Droid's rebuild trips on.
 
 Verified: all four ABIs built against the pinned NDK unpacked at two different paths produced
 identical bytes (`arm64-v8a` is `067c0837…3e828f`), matching the committed libraries.
@@ -100,7 +105,10 @@ The vendored file keeps its upstream Apache-2.0 header and is excluded from spot
 
 ## Updating zxing-cpp
 
-1. Change [`ZXING_CPP_VERSION`](ZXING_CPP_VERSION) to the new tag.
+1. Change [`ZXING_CPP_VERSION`](ZXING_CPP_VERSION) to the new tag and
+   [`ZXING_CPP_COMMIT`](ZXING_CPP_COMMIT) to the commit it points at
+   (`git ls-remote https://github.com/zxing-cpp/zxing-cpp.git 'refs/tags/<tag>*'`; for an
+   annotated tag, take the `^{}` line).
 2. Run `./build-zxingcpp.sh`.
 3. Re-copy `BarcodeReader.kt` from the pinned clone
    (`/tmp/amethyst-zxingcpp-build/.zxing-cpp-source/wrappers/android/zxingcpp/src/main/java/zxingcpp/`)
