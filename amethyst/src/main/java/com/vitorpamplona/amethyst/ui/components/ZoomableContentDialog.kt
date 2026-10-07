@@ -55,7 +55,9 @@ import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Rect
+import androidx.compose.ui.geometry.RoundRect
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Outline
 import androidx.compose.ui.graphics.Shape
@@ -68,7 +70,9 @@ import androidx.compose.ui.layout.onPlaced
 import androidx.compose.ui.layout.positionInWindow
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.unit.Density
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.LayoutDirection
+import androidx.compose.ui.unit.dp
 import androidx.compose.ui.util.lerp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
@@ -116,6 +120,7 @@ fun ZoomableImageDialog(
     sourceBounds: Rect? = null,
     onDismiss: () -> Unit,
     accountViewModel: AccountViewModel,
+    sourceCornerRadius: Dp = 0.dp,
 ) {
     // Animation progress: 0f = at source position/size, 1f = fullscreen.
     val progress = remember { Animatable(0f) }
@@ -228,6 +233,7 @@ fun ZoomableImageDialog(
                 allImages = allImages,
                 imageUrl = imageUrl,
                 sourceBounds = sourceBounds,
+                sourceCornerRadius = sourceCornerRadius,
                 imageBounds = { imageBounds },
                 onImageBoundsChanged = updateImageBounds,
                 currentZoomState = { currentZoomState },
@@ -245,6 +251,7 @@ private fun DialogContent(
     allImages: ImmutableList<BaseMediaContent>,
     imageUrl: BaseMediaContent,
     sourceBounds: Rect?,
+    sourceCornerRadius: Dp,
     imageBounds: () -> Rect?,
     onImageBoundsChanged: (Rect) -> Unit,
     currentZoomState: () -> ZoomState?,
@@ -327,6 +334,10 @@ private fun DialogContent(
                                 // Window coordinates, mapped back into this layer's pre-transform
                                 // space. A layer outline, not a draw-phase clip, so animating it
                                 // doesn't re-record the pager's display list every frame.
+                                //
+                                // The window keeps the thumbnail's rounded corners and squares them
+                                // off as it grows, reaching 0 exactly at full screen (and rounding
+                                // back on the way out), instead of snapping square on the first frame.
                                 shape =
                                     RectClipShape(
                                         Rect(
@@ -335,6 +346,7 @@ private fun DialogContent(
                                             right = (lerp(src.right, size.width, p) - tx) / scale,
                                             bottom = (lerp(src.bottom, size.height, p) - ty) / scale,
                                         ),
+                                        cornerRadius = lerp(sourceCornerRadius.toPx(), 0f, p) / scale,
                                     )
                                 clip = true
                             }
@@ -542,12 +554,18 @@ private fun coverScale(
 /** Clips a layer to a fixed [rect] in its own coordinates, regardless of the layer's size. */
 private class RectClipShape(
     private val rect: Rect,
+    private val cornerRadius: Float = 0f,
 ) : Shape {
     override fun createOutline(
         size: Size,
         layoutDirection: LayoutDirection,
         density: Density,
-    ): Outline = Outline.Rectangle(rect)
+    ): Outline =
+        if (cornerRadius > 0f) {
+            Outline.Rounded(RoundRect(rect, CornerRadius(cornerRadius)))
+        } else {
+            Outline.Rectangle(rect)
+        }
 }
 
 private fun BaseMediaContent.aspectRatioOrNull(): Float? =

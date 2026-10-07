@@ -54,6 +54,7 @@ import androidx.compose.ui.layout.boundsInWindow
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalClipboard
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.unit.dp
 import androidx.core.net.toUri
 import androidx.lifecycle.viewModelScope
 import coil3.compose.AsyncImagePainter
@@ -117,6 +118,7 @@ import com.vitorpamplona.amethyst.commons.ui.note.BlankNote
 import com.vitorpamplona.amethyst.commons.ui.note.DownloadForOfflineIcon
 import com.vitorpamplona.amethyst.commons.ui.painterRes
 import com.vitorpamplona.amethyst.commons.ui.stringRes
+import com.vitorpamplona.amethyst.commons.ui.theme.ImageCornerRadius
 import com.vitorpamplona.amethyst.commons.ui.theme.Size30Modifier
 import com.vitorpamplona.amethyst.commons.ui.theme.Size40dp
 import com.vitorpamplona.amethyst.commons.ui.theme.Size6dp
@@ -394,6 +396,9 @@ fun ZoomableContentView(
                     dialogOpen = false
                 },
                 accountViewModel = accountViewModel,
+                // The thumbnail's corners (imageModifier clips to QuoteBorder): the grow animation
+                // squares them off as it opens instead of snapping them square.
+                sourceCornerRadius = if (roundedCorner) ImageCornerRadius else 0.dp,
             )
         }
     }
