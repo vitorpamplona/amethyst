@@ -51,6 +51,7 @@ import com.vitorpamplona.amethyst.commons.model.buzz.BuzzWorkspaces
 import com.vitorpamplona.amethyst.commons.model.buzz.ChannelInvitesState
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
 import com.vitorpamplona.amethyst.commons.model.cache.filter
+import com.vitorpamplona.amethyst.commons.model.chats.ChatFeedType
 import com.vitorpamplona.amethyst.commons.model.composer.NewMessageTagger
 import com.vitorpamplona.amethyst.commons.model.concord.ConcordChannel
 import com.vitorpamplona.amethyst.commons.model.concord.ConcordChannelListState
@@ -152,6 +153,8 @@ import com.vitorpamplona.amethyst.commons.model.nipA3PaymentTargets.NipA3Payment
 import com.vitorpamplona.amethyst.commons.model.nipB7Blossom.BlossomServerListState
 import com.vitorpamplona.amethyst.commons.model.nipBCOnchainZaps.OnchainWalletState
 import com.vitorpamplona.amethyst.commons.model.privateChatLastReadRoute
+import com.vitorpamplona.amethyst.commons.model.privateChats.DM_CHAT_FEED_TYPES
+import com.vitorpamplona.amethyst.commons.model.privateChats.chatFeedType
 import com.vitorpamplona.amethyst.commons.model.privateChats.hasEncryptedContent
 import com.vitorpamplona.amethyst.commons.model.serverList.AssumedRelayListsState
 import com.vitorpamplona.amethyst.commons.model.serverList.MergedFollowListsState
@@ -1036,6 +1039,49 @@ class Account(
         MarmotGroupList(signer.pubKey)
 
     val newNotesPreProcessor = EventProcessor(this, cache)
+
+    private val appliedChatFeedsState = MutableStateFlow(settings.enabledChatFeeds.value)
+
+    /**
+     * [AccountSettings.enabledChatFeeds] once the rooms have caught up with it: a DM protocol turned off
+     * has had its messages dropped from [chatroomList], one turned back on has had them re-indexed from
+     * the cache. Feeds that read the rooms rebuild off this rather than the raw setting, so they never
+     * render a half-applied toggle.
+     */
+    val appliedChatFeeds: StateFlow<Set<ChatFeedType>> = appliedChatFeedsState
+
+    // The Settings › Messages toggle a room message belongs to, or null if it is not a DM. Drafts are
+    // indexed by their rumor, which is already decrypted by the time it sits in a room.
+    private fun dmChatFeedTypeOf(note: Note): ChatFeedType? =
+        when (val event = note.event) {
+            is ChatroomKeyable -> event.chatFeedType()
+            is DraftWrapEvent -> (draftsDecryptionCache.preCachedDraft(event) as? ChatroomKeyable)?.chatFeedType()
+            else -> null
+        }
+
+    /**
+     * A DM protocol was turned off: nothing of it may stay loaded. Drops its messages from every room
+     * (a room left empty disappears from Messages) and forgets its history paging, so turning it back on
+     * pages again from the top instead of trusting cursors for messages that are gone.
+     */
+    private fun unloadDmProtocol(type: ChatFeedType) {
+        chatroomList.removeMessagesIf { dmChatFeedTypeOf(it) == type }
+        when (type) {
+            ChatFeedType.NIP04 -> chatroomList.resetNip04History()
+            ChatFeedType.NIP17 -> chatroomList.giftWrapHistory.reset()
+            else -> {}
+        }
+    }
+
+    /**
+     * A DM protocol was turned back on: re-index the messages the cache still holds. They will not come
+     * through [LocalCache]'s new-event stream again (they are not new), so they have to be routed here.
+     */
+    private suspend fun reloadDmProtocol(type: ChatFeedType) {
+        cache.notes
+            .filter { _, note -> dmChatFeedTypeOf(note) == type }
+            .forEach { newNotesPreProcessor.consume(it) }
+    }
 
     /**
      * Owns the WebRTC call state machine.
@@ -4254,6 +4300,18 @@ class Account(
                         hiddenUsers.hideUser(spammer.pubkeyHex)
                     }
                 }
+            }
+        }
+
+        scope.launch(Dispatchers.IO) {
+            var previous = settings.enabledChatFeeds.value
+            settings.enabledChatFeeds.collect { current ->
+                DM_CHAT_FEED_TYPES.forEach { type ->
+                    if (type in previous && type !in current) unloadDmProtocol(type)
+                    if (type !in previous && type in current) reloadDmProtocol(type)
+                }
+                previous = current
+                appliedChatFeedsState.value = current
             }
         }
 

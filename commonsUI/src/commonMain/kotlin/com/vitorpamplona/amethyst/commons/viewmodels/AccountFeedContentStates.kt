@@ -322,14 +322,23 @@ class AccountFeedContentStates(
         }
 
         // Toggling a chat type on/off in Settings › Messages changes which sections the inbox shows,
-        // but no event flows through LocalCache — force a full rebuild of both tabs so hidden types
-        // disappear (and re-enabled ones reappear from cache) immediately.
+        // but no event flows through LocalCache — force a full rebuild of both tabs so turned-off types
+        // disappear (and re-enabled ones reappear from cache) immediately. Keyed off the APPLIED set:
+        // the account first drops (or re-indexes) the DM rooms, so the rebuild never sees them half-done.
+        // Notifications rebuild too, since DMs of a turned-off protocol leave them as well; clear first
+        // so the refresh removes cards instead of taking the additive path.
         scope.launch(Dispatchers.IO) {
-            account.settings.enabledChatFeeds
+            account.appliedChatFeeds
                 .drop(1)
                 .collect {
                     dmKnown.invalidateData()
                     dmNew.invalidateData()
+                    notifications.clear()
+                    notifications.invalidateData()
+                    notificationsFollowing.clear()
+                    notificationsFollowing.invalidateData()
+                    notificationsEveryone.clear()
+                    notificationsEveryone.invalidateData()
                 }
         }
 

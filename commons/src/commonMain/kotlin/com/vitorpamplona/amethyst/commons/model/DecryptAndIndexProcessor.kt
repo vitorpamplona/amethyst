@@ -26,6 +26,7 @@ import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
 import com.vitorpamplona.amethyst.commons.model.chatMessageMarksRoomAsRead
 import com.vitorpamplona.amethyst.commons.model.privateChatLastReadRoute
 import com.vitorpamplona.amethyst.commons.model.privateChats.ChatroomList
+import com.vitorpamplona.amethyst.commons.model.privateChats.chatFeedType
 import com.vitorpamplona.amethyst.commons.nipACWebRtcCalls.CallManager
 import com.vitorpamplona.quartz.concord.cord05Invites.ConcordDirectInvite
 import com.vitorpamplona.quartz.experimental.ephemChat.chat.EphemeralChatEvent
@@ -105,8 +106,11 @@ class EventProcessor(
             -> callManager?.onSignalingEvent(event)
 
             is ChatroomKeyable -> {
-                chatHandler.add(event, eventNote, publicNote)
-                markOwnChatMessageAsRead(event)
+                // A DM protocol turned off in Settings › Messages never reaches the rooms.
+                if (account.settings.isChatFeedEnabled(event.chatFeedType())) {
+                    chatHandler.add(event, eventNote, publicNote)
+                    markOwnChatMessageAsRead(event)
+                }
             }
 
             is DraftWrapEvent -> draftHandler.add(event, eventNote, publicNote)
@@ -263,7 +267,9 @@ class DraftEventHandler(
 
         when (rumor) {
             is ChatroomKeyable -> {
-                account.chatroomList.add(rumor, draftEventWrap)
+                if (account.settings.isChatFeedEnabled(rumor.chatFeedType())) {
+                    account.chatroomList.add(rumor, draftEventWrap)
+                }
             }
 
             is EphemeralChatEvent -> {

@@ -51,7 +51,13 @@ class Chatroom : NotesGatherer {
     // progress and the cursors share the lifetime of the cached messages. The conversation history
     // loader binds its (single-active) orchestrator to this. Lazy — most rooms in the rooms list are
     // never opened for history paging, so they never allocate it.
-    val nip04History by lazy { RelayLoadingCursors() }
+    private val nip04HistoryHolder = lazy { RelayLoadingCursors() }
+    val nip04History by nip04HistoryHolder
+
+    /** Forgets this room's NIP-04 paging progress, without allocating cursors for a room that never paged. */
+    fun resetNip04History() {
+        if (nip04HistoryHolder.isInitialized()) nip04History.reset()
+    }
 
     // Per-instance lock shared by previously @Synchronized methods.
     private val syncLock = KmpLock()

@@ -34,6 +34,7 @@ import com.vitorpamplona.amethyst.commons.model.Account
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
 import com.vitorpamplona.amethyst.commons.model.isMutedPublicChatMessage
+import com.vitorpamplona.amethyst.commons.model.privateChats.chatFeedType
 import com.vitorpamplona.amethyst.commons.nipACWebRtcCalls.CallManager
 import com.vitorpamplona.amethyst.commons.notifications.dal.NotificationFeedFilter
 import com.vitorpamplona.amethyst.commons.relayClient.event.EventFinderQueryState
@@ -66,6 +67,7 @@ import com.vitorpamplona.quartz.nip01Core.core.toHexKey
 import com.vitorpamplona.quartz.nip01Core.tags.people.isTaggedUser
 import com.vitorpamplona.quartz.nip04Dm.messages.EncryptedDmEvent
 import com.vitorpamplona.quartz.nip10Notes.TextNoteEvent
+import com.vitorpamplona.quartz.nip17Dm.base.ChatroomKeyable
 import com.vitorpamplona.quartz.nip17Dm.files.ChatMessageEncryptedFileHeaderEvent
 import com.vitorpamplona.quartz.nip17Dm.messages.ChatMessageEvent
 import com.vitorpamplona.quartz.nip18Reposts.GenericRepostEvent
@@ -229,6 +231,9 @@ class EventNotificationConsumer(
 
         // Don't push-notify events this account authored.
         if (event.pubKey == account.signer.pubKey) return
+
+        // A DM protocol turned off in Settings › Messages doesn't notify.
+        if (event is ChatroomKeyable && !account.settings.isChatFeedEnabled(event.chatFeedType())) return
 
         // Drop reactions/zaps/reposts whose target note lives on a muted thread, or in a
         // public chat the user has silenced (matches the in-app feed, which mutes all four).

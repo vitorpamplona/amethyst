@@ -117,6 +117,21 @@ class ChatroomList(
         }
     }
 
+    /** Drops every message matching [predicate] from every room (e.g. all of a DM protocol the user turned off). */
+    fun removeMessagesIf(predicate: (Note) -> Boolean) {
+        rooms.forEach { _, room ->
+            room.messages.forEach { msg ->
+                if (predicate(msg)) room.removeMessageSync(msg)
+            }
+        }
+    }
+
+    /** Forgets the NIP-04 paging progress of the rooms list and of every conversation. */
+    fun resetNip04History() {
+        nip04History.reset()
+        rooms.forEach { _, room -> room.resetNip04History() }
+    }
+
     fun hasSentMessagesTo(key: ChatroomKey?): Boolean {
         if (key == null) return false
         return rooms.get(key)?.ownerSentMessage == true
