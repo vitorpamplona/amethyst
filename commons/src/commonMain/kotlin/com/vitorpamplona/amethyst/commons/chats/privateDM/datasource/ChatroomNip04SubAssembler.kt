@@ -20,9 +20,12 @@
  */
 package com.vitorpamplona.amethyst.commons.chats.privateDM.datasource
 
+import com.vitorpamplona.amethyst.commons.model.User
+import com.vitorpamplona.amethyst.commons.model.chats.ChatFeedType
 import com.vitorpamplona.amethyst.commons.model.privateChats.DmHistoryTuning
 import com.vitorpamplona.amethyst.commons.relayClient.eoseManagers.DmRelayLog
 import com.vitorpamplona.amethyst.commons.relayClient.eoseManagers.PerUserAndFollowListEoseManager
+import com.vitorpamplona.amethyst.commons.relayClient.eoseManagers.launchChatFeedToggleObserver
 import com.vitorpamplona.amethyst.commons.relayClient.paging.WindowLoadTracker
 import com.vitorpamplona.amethyst.commons.relayClient.paging.trackingListener
 import com.vitorpamplona.amethyst.commons.relays.SincePerRelayMap
@@ -31,6 +34,7 @@ import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
 import com.vitorpamplona.quartz.nip01Core.relay.client.subscriptions.Subscription
 import com.vitorpamplona.quartz.utils.Log
 import com.vitorpamplona.quartz.utils.TimeUtils
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.StateFlow
 
 /**
@@ -49,7 +53,7 @@ class ChatroomNip04SubAssembler(
         key: ChatroomQueryState,
         since: SincePerRelayMap?,
     ): List<RelayBasedFilter>? =
-        if (key.account.isWriteable()) {
+        if (key.account.isWriteable() && key.account.settings.isChatFeedEnabled(ChatFeedType.NIP04)) {
             val sinceTime = DmHistoryTuning.recentBoundary()
             val filters = filterNip04DMs(key.room.users, key.account, sinceTime)
             windowLoad.setExpectedRelays(filters?.mapTo(mutableSetOf()) { it.relay } ?: emptySet())
@@ -65,10 +69,25 @@ class ChatroomNip04SubAssembler(
 
     override fun list(key: ChatroomQueryState) = key.listId
 
+    private val userJobMap = mutableMapOf<User, Job>()
+
     override fun newSub(key: ChatroomQueryState): Subscription {
         windowLoad.startLoading(key.account.scope)
+
+        val user = user(key)
+        userJobMap[user]?.cancel()
+        userJobMap[user] = key.account.scope.launchChatFeedToggleObserver(key.account, ChatFeedType.NIP04) { invalidateFilters() }
+
         return requestNewSubscription(
             windowLoad.trackingListener { relay, filters -> newEose(key, relay, TimeUtils.now(), filters) },
         )
+    }
+
+    override fun endSub(
+        key: User,
+        subId: String,
+    ) {
+        super.endSub(key, subId)
+        userJobMap.remove(key)?.cancel()
     }
 }

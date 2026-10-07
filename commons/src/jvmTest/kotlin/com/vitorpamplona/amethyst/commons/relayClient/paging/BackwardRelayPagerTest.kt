@@ -84,6 +84,57 @@ class BackwardRelayPagerTest {
     }
 
     @Test
+    fun aDisabledScopeNeitherAdvancesNorShowsRelays() {
+        var enabled = false
+        val cursors = RelayLoadingCursors()
+        val p = BackwardRelayPager("test")
+        p.bind(cursors, scope, isEnabled = { enabled }) { listOf(r1, r2) }
+
+        // Off (e.g. NIP-04 turned off in Settings › Messages): nothing to page, nothing to show.
+        assertTrue(p.status.value.exhausted)
+        assertTrue(
+            p.status.value.relayProgress
+                .isEmpty(),
+        )
+        assertFalse(p.advance(r1))
+        assertFalse(p.advanceAll())
+        assertFalse(p.loadingMore.value)
+        assertTrue(p.armedRelays(listOf(r1, r2)).isEmpty())
+        // The cursors were not touched while off.
+        assertEquals(null, cursors.requestedUntilFor(r1))
+
+        // Back on: the relays come back and paging resumes.
+        enabled = true
+        p.onEnabledChanged()
+        assertFalse(p.status.value.exhausted)
+        assertEquals(setOf(r1, r2), p.status.value.relayProgress.keys)
+        assertTrue(p.advance(r1))
+        assertEquals(listOf(r1), p.armedRelays(listOf(r1, r2)))
+    }
+
+    @Test
+    fun turningAScopeOffMidPageDropsTheSpinnerAndKeepsTheCursors() {
+        var enabled = true
+        val cursors = RelayLoadingCursors()
+        val p = BackwardRelayPager("test")
+        p.bind(cursors, scope, isEnabled = { enabled }) { listOf(r1) }
+
+        assertTrue(p.advance(r1))
+        assertTrue(p.loadingMore.value)
+        val requested = cursors.requestedUntilFor(r1)
+
+        enabled = false
+        p.onEnabledChanged()
+        assertFalse(p.loadingMore.value)
+        assertTrue(p.status.value.exhausted)
+        assertTrue(
+            p.status.value.relayProgress
+                .isEmpty(),
+        )
+        assertEquals(requested, cursors.requestedUntilFor(r1))
+    }
+
+    @Test
     fun nonEmptyPageMovesTheCursorThenBottomsOut() {
         val (p, _) = pagerOf(r1)
         p.advance(r1)

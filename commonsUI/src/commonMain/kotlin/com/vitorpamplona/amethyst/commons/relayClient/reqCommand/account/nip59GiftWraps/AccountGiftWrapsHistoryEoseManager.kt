@@ -21,9 +21,11 @@
 package com.vitorpamplona.amethyst.commons.relayClient.reqCommand.account.nip59GiftWraps
 
 import com.vitorpamplona.amethyst.commons.model.Account
+import com.vitorpamplona.amethyst.commons.model.User
 import com.vitorpamplona.amethyst.commons.model.chats.ChatFeedType
 import com.vitorpamplona.amethyst.commons.relayClient.eoseManagers.DmRelayLog
 import com.vitorpamplona.amethyst.commons.relayClient.eoseManagers.PerUserEoseManager
+import com.vitorpamplona.amethyst.commons.relayClient.eoseManagers.launchChatFeedToggleObserver
 import com.vitorpamplona.amethyst.commons.relayClient.nip17Dm.filterGiftWrapsToPubkey
 import com.vitorpamplona.amethyst.commons.relayClient.paging.BackwardRelayPager
 import com.vitorpamplona.amethyst.commons.relayClient.paging.PagingStatus
@@ -38,6 +40,7 @@ import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.utils.Log
 import com.vitorpamplona.quartz.utils.TimeUtils
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.StateFlow
 
 /**
@@ -123,11 +126,35 @@ class AccountGiftWrapsHistoryEoseManager(
         return true
     }
 
+    private val userJobMap = mutableMapOf<User, Job>()
+
     override fun newSub(key: AccountQueryState): Subscription {
         // Repoint the single-active orchestrator at this account's gift-wrap cursors (on its ChatroomList)
         // and the relays it fans out to, refreshing the display flows from the restored progress.
-        pager.bind(key.account.chatroomList.giftWrapHistory, key.account.scope) { historyRelays(key.account) }
+        // With NIP-17 turned off in Settings › Messages the pager neither advances nor shows relays.
+        pager.bind(
+            key.account.chatroomList.giftWrapHistory,
+            key.account.scope,
+            isEnabled = { key.account.settings.isChatFeedEnabled(ChatFeedType.NIP17) },
+        ) { historyRelays(key.account) }
+
+        val user = user(key)
+        userJobMap[user]?.cancel()
+        userJobMap[user] =
+            key.account.scope.launchChatFeedToggleObserver(key.account, ChatFeedType.NIP17) {
+                pager.onEnabledChanged()
+                invalidateFilters()
+            }
+
         return requestNewSubscription(historyListener(key))
+    }
+
+    override fun endSub(
+        key: User,
+        subId: String,
+    ) {
+        super.endSub(key, subId)
+        userJobMap.remove(key)?.cancel()
     }
 
     private fun historyListener(key: AccountQueryState): SubscriptionListener {
