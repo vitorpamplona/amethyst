@@ -26,6 +26,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
+import com.vitorpamplona.amethyst.commons.model.chats.ChatFeedType
 import com.vitorpamplona.amethyst.commons.ui.layouts.DisappearingScaffold
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.platform.rememberCallStarter
@@ -49,11 +50,14 @@ fun ChatroomScreen(
 ) {
     val callsEnabled by accountViewModel.account.settings.callsEnabled
         .collectAsState()
+    // Calls signal over NIP-17's gift-wrap inbox, so they go away with it (AccountSettings.isCallingActive).
+    val chatFeeds by accountViewModel.account.settings.enabledChatFeeds
+        .collectAsState()
     val peers = roomId.users
     // Null where the platform cannot place calls; the buttons are hidden then.
     val startVoiceCall = rememberCallStarter(peers, CallType.VOICE)
     val startVideoCall = rememberCallStarter(peers, CallType.VIDEO)
-    val isCallSupported = roomId.users.size <= 5 && callsEnabled
+    val isCallSupported = roomId.users.size <= 5 && callsEnabled && ChatFeedType.NIP17 in chatFeeds
 
     DisappearingScaffold(
         isInvertedLayout = true,

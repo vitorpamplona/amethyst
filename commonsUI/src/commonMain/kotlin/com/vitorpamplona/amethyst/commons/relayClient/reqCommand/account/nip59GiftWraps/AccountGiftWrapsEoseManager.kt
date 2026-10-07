@@ -26,7 +26,10 @@ import com.vitorpamplona.amethyst.commons.model.privateChats.DmHistoryTuning
 import com.vitorpamplona.amethyst.commons.relayClient.eoseManagers.DmRelayLog
 import com.vitorpamplona.amethyst.commons.relayClient.eoseManagers.PerUserEoseManager
 import com.vitorpamplona.amethyst.commons.relayClient.eoseManagers.launchChatFeedToggleObserver
+import com.vitorpamplona.amethyst.commons.relayClient.nip17Dm.GiftWrapInbox
+import com.vitorpamplona.amethyst.commons.relayClient.nip17Dm.filterConcordDirectInvitesToPubkey
 import com.vitorpamplona.amethyst.commons.relayClient.nip17Dm.filterGiftWrapsToPubkey
+import com.vitorpamplona.amethyst.commons.relayClient.nip17Dm.filterMarmotWelcomesToPubkey
 import com.vitorpamplona.amethyst.commons.relayClient.paging.WindowLoadTracker
 import com.vitorpamplona.amethyst.commons.relayClient.paging.trackingListener
 import com.vitorpamplona.amethyst.commons.relayClient.reqCommand.account.AccountQueryState
@@ -45,11 +48,21 @@ import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 
 /**
- * Always-on **live tail** for the account's NIP-17 gift wraps (kind 1059). It keeps a fixed
- * one-week floor with no upper bound, so the messages list is usable on boot and new incoming
- * messages always stream in. It deliberately never widens: pulling older history is the job of
+ * Always-on **live tail** for the account's gift wraps (kind 1059, plus 21059 with NIP-17). It keeps a
+ * fixed one-week floor with no upper bound, so the messages list is usable on boot and new incoming
+ * messages always stream in. It deliberately never widens: pulling older NIP-17 history is the job of
  * [AccountGiftWrapsHistoryEoseManager], which fetches the past in bounded, one-shot slices so a
  * widen never re-streams what this tail already holds.
+ *
+ * Several features share the one wrap inbox, so its filter follows the Settings › Messages toggles:
+ *  - **NIP-17 on:** every wrap to us on our DM relays — DMs, NIP-AC call signalling (21059), Marmot
+ *    Welcomes and Concord Direct Invites all ride it.
+ *  - **NIP-17 off, Marmot on:** kind-1059 wraps to us only (no calls: they are off with NIP-17). Welcome
+ *    wraps carry no tag that tells them apart, so DMs still download and are dropped after unwrapping.
+ *  - **NIP-17 and Marmot off, Concord on:** only the `k=3313` Direct Invite wraps.
+ *
+ * With Concord on, invites are also read from the stock Concord relays (outside our DM relays), where
+ * a sender delivers when it can't find our lists.
  */
 class AccountGiftWrapsEoseManager(
     client: INostrClient,
@@ -66,17 +79,39 @@ class AccountGiftWrapsEoseManager(
         key: AccountQueryState,
         since: SincePerRelayMap?,
     ): List<RelayBasedFilter> {
-        if (!key.account.isWriteable() || !key.account.settings.isChatFeedEnabled(ChatFeedType.NIP17)) {
-            windowLoad.setExpectedRelays(emptySet())
-            return emptyList()
-        }
-        val relays = key.account.dmRelays.flow.value
-        windowLoad.setExpectedRelays(relays.toSet())
+        val account = key.account
+        val nip17 = account.settings.isChatFeedEnabled(ChatFeedType.NIP17)
+        // The boot spinner is the DM list's: it only waits on the NIP-17 inbox.
+        if (!account.isWriteable() || !nip17) windowLoad.setExpectedRelays(emptySet())
+        if (!account.isWriteable()) return emptyList()
+
+        val marmot = account.settings.isChatFeedEnabled(ChatFeedType.MARMOT)
+        val concord = account.settings.isChatFeedEnabled(ChatFeedType.CONCORD)
+        val me = user(key).pubkeyHex
+        val relays = account.dmRelays.flow.value
         val sinceTime = DmHistoryTuning.recentBoundary()
-        DmRelayLog.log("giftwrap.live", key.account)
-        Log.d(TAG) { "[giftwrap.live] REQ since=$sinceTime (no until) on ${relays.size} relay(s): ${relays.map { it.url }}" }
-        return relays.flatMap { relay ->
-            filterGiftWrapsToPubkey(relay = relay, pubkey = user(key).pubkeyHex, since = sinceTime)
+        val inviteSince = account.concord.directInviteInbox.since()
+
+        return buildList {
+            when (GiftWrapInbox.choose(nip17, marmot, concord)) {
+                GiftWrapInbox.EVERYTHING -> {
+                    windowLoad.setExpectedRelays(relays.toSet())
+                    DmRelayLog.log("giftwrap.live", account)
+                    Log.d(TAG) { "[giftwrap.live] REQ since=$sinceTime (no until) on ${relays.size} relay(s): ${relays.map { it.url }}" }
+                    relays.forEach { addAll(filterGiftWrapsToPubkey(relay = it, pubkey = me, since = sinceTime)) }
+                }
+
+                GiftWrapInbox.MARMOT_WELCOMES -> relays.forEach { addAll(filterMarmotWelcomesToPubkey(relay = it, pubkey = me, since = sinceTime)) }
+
+                GiftWrapInbox.CONCORD_INVITES -> relays.forEach { addAll(filterConcordDirectInvitesToPubkey(relay = it, pubkey = me, since = inviteSince)) }
+
+                GiftWrapInbox.NONE -> {}
+            }
+            if (concord) {
+                (account.concord.concordDirectInviteStockRelays() - relays).forEach {
+                    addAll(filterConcordDirectInvitesToPubkey(relay = it, pubkey = me, since = inviteSince))
+                }
+            }
         }
     }
 
@@ -94,6 +129,8 @@ class AccountGiftWrapsEoseManager(
                         .collectLatest { invalidateFilters() }
                 },
                 key.account.scope.launchChatFeedToggleObserver(key.account, ChatFeedType.NIP17) { invalidateFilters() },
+                key.account.scope.launchChatFeedToggleObserver(key.account, ChatFeedType.MARMOT) { invalidateFilters() },
+                key.account.scope.launchChatFeedToggleObserver(key.account, ChatFeedType.CONCORD) { invalidateFilters() },
             )
 
         return requestNewSubscription(

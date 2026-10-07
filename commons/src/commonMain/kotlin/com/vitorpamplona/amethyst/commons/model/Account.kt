@@ -375,13 +375,13 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.debounce
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.merge
 import kotlinx.coroutines.flow.sample
 import kotlinx.coroutines.flow.stateIn
-import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
@@ -392,12 +392,6 @@ import com.vitorpamplona.quartz.experimental.profileGallery.thumbhash as gallery
 
 /** How long past a disappearing message's deadline the sweep waits, to purge nearby deadlines in one pass (CORD-08). */
 private const val CONCORD_EXPIRY_COALESCE_MS = 2_000L
-
-/** Delay before the first Direct Invite sweep, so it doesn't compete with the start-up fetches. */
-private const val DIRECT_INVITE_SWEEP_START_MS = 20_000L
-
-/** How often to sweep for Direct Invites while the account is loaded. */
-private const val DIRECT_INVITE_SWEEP_EVERY_MS = 15 * 60_000L
 
 @OptIn(DelicateCoroutinesApi::class)
 @Stable
@@ -1104,7 +1098,7 @@ class Account(
             scope = scope,
             isFollowing = { isFollowing(it) },
             publishEvent = { wrap -> scope.launch { publishCallSignaling(wrap) } },
-            isCallsEnabled = { settings.callsEnabled.value },
+            isCallsEnabled = { settings.isCallingActive() },
         )
 
     // Per-message publish acceptance (relay OKs), feeding the delivery ticks on
@@ -4212,17 +4206,16 @@ class Account(
             }
         }
 
-        // Direct Invites (CORD-05 §6) are shown on Notifications and Messages, not only on the Concord
-        // hub, so they have to be looked for without the hub open. Invites delivered to our DM relays
-        // also arrive through the normal gift-wrap path; this sweep covers the stock relays a sender
-        // falls back to when it can't find our lists. Single-flight, so an overlap with the hub's own
-        // request is dropped.
+        // Direct Invites (CORD-05 §6) arrive live through the account's gift-wrap subscription (our DM
+        // relays plus the stock Concord set). One that parks may be a catch-up a Grant already
+        // authorizes, so adopt those as they land rather than waiting for the next revision tick.
         scope.launch {
-            delay(DIRECT_INVITE_SWEEP_START_MS)
-            while (isActive) {
-                concord.requestConcordDirectInviteSweep()
-                delay(DIRECT_INVITE_SWEEP_EVERY_MS)
-            }
+            concord.directInviteInbox.pending
+                .map { it.keys }
+                .distinctUntilChanged()
+                .collect {
+                    runCatching { concord.drainConcordCatchUps() }.onFailure { Log.w("Concord", "catch-up drain failed", it) }
+                }
         }
 
         // Keep Concord channel metadata (community name/icon, membership) live across the whole

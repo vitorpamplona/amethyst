@@ -227,19 +227,6 @@ private fun sendFailureMessage(result: ConcordDirectInviteSendResult) =
     }
 
 /**
- * Sweeps the inbox relays for Direct Invites once when the hub opens (wraps the DM pipeline sees
- * arrive on their own). Call it once per screen, outside any lazy list: inside a lazy item it would
- * re-run every time the item scrolled back into view.
- */
-@Composable
-fun RefreshConcordDirectInvites(accountViewModel: AccountViewModel) {
-    val concord = accountViewModel.account.concord
-    // Sweeps in the account's scope: the hub leaves composition whenever it swaps layouts, which
-    // cancelled a sweep launched here before any relay answered.
-    LaunchedEffect(concord) { concord.requestConcordDirectInviteSweep() }
-}
-
-/**
  * The Direct Invites waiting for this account (CORD-05 §6), as lazy items with Accept / Decline —
  * shown at the top of the Concord communities list. Adds nothing when there are none.
  *

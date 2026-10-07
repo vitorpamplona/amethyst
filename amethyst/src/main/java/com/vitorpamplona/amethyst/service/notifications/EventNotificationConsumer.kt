@@ -450,6 +450,8 @@ class EventNotificationConsumer(
         event: CallOfferEvent,
         account: Account,
     ) {
+        // Calls turned off in Settings (or with NIP-17, which carries them) never ring.
+        if (!account.settings.isCallingActive()) return
         if (!account.isFollowing(event.pubKey)) return
         if (TimeUtils.now() - event.createdAt > CallManager.MAX_EVENT_AGE_SECONDS) return
 

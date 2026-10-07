@@ -121,9 +121,10 @@ sealed interface DirectInviteAcceptPlan {
 /**
  * The Direct Invite inbox (CORD-05 §6) — headless, shared by the app and `amy`.
  *
- * Wraps arrive from anywhere — a `{"kinds":[1059],"#p":[me],"#k":["3313"]}` sweep
- * ([com.vitorpamplona.amethyst.commons.actions.ConcordActions.directInvitesFilter]), or the general
- * NIP-17 giftwrap pipeline, which honours an untagged invite all the same — and are [offer]ed here.
+ * Wraps arrive from anywhere — the app's gift-wrap subscription (the NIP-17 inbox, which honours an
+ * untagged invite all the same, or its `{"kinds":[1059],"#p":[me],"#k":["3313"]}` invite-only filter
+ * ([com.vitorpamplona.amethyst.commons.actions.ConcordActions.directInvitesFilter]) when NIP-17 is
+ * off, plus that filter on the stock Concord relays), or `amy`'s one-shot drain — and are [offer]ed here.
  * The inbox opens each wrap once (two NIP-44 decrypts; none more when the DM pipeline already
  * unsealed it, [offerRumor]), dedupes by wrap id, drops a wrap whose NIP-40 `expiration` has passed,
  * validates the bundle exactly like a fetched one, and parks it in [pending]. **Nothing** else

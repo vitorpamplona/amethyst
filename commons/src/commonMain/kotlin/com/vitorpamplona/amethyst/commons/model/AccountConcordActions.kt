@@ -937,8 +937,8 @@ class AccountConcordActions(
     // ---- CORD-05 §6 Direct Invites ---------------------------------------------
 
     /**
-     * The Direct Invite inbox: wraps from the dedicated sweep ([refreshConcordDirectInvites]) and
-     * from the NIP-17 giftwrap pipeline land here, parked until the user accepts or declines.
+     * The Direct Invite inbox: wraps the account's gift-wrap subscription delivers (the NIP-17 inbox,
+     * or its invite-only filter when NIP-17 is off) land here, parked until the user accepts or declines.
      */
     val directInviteInbox =
         ConcordDirectInviteInbox(
@@ -1014,63 +1014,19 @@ class AccountConcordActions(
             .stateIn(account.scope, SharingStarted.Eagerly, emptyList())
 
     /**
-     * Where this account scans for Direct Invites — where senders deliver them (CORD-05 §6): our DM
-     * inbox relays (kind 10050, plus the NIP-65 read and private/local relays the DM feed already
-     * reads), plus the stock Concord set.
+     * The stock Concord relays a Direct Invite sender falls back to when it can't find our relay lists
+     * (none published, or none reachable — CORD-05 §6). We can't know which case a sender hit, so the
+     * account's gift-wrap subscription always reads invites here too, next to our DM inbox relays: an
+     * account with no published kind 10050 otherwise never received Armada's invites.
      */
-    private fun concordDirectInviteScanRelays(): Set<NormalizedRelayUrl> =
-        // Our inbox relays AND the stock set, always: a sender that could not find our relay lists
-        // (none published, or none reachable) delivers to the stock set (CORD-05 §6), and we can't
-        // know which case a sender hit. Sweeping only our DM relays missed every invite from such a
-        // sender; Armada's to an account with no published kind 10050 never arrived.
-        account.dmRelays.flow.value + ConcordActions.directInviteDeliveryRelays(null)
-
-    private val directInviteSweep = Mutex()
-
-    /**
-     * Runs a Direct Invite sweep ([refreshConcordDirectInvites]) in the account's scope, unless one
-     * is already running. It used to run in the invite list's composition, which the hub replaces
-     * the moment its communities load, so every sweep was cancelled before a relay answered and no
-     * invite delivered to the stock set ever arrived.
-     */
-    fun requestConcordDirectInviteSweep() {
-        account.scope.launch {
-            if (!directInviteSweep.tryLock()) return@launch
-            try {
-                refreshConcordDirectInvites()
-            } catch (e: CancellationException) {
-                throw e
-            } catch (e: Exception) {
-                Log.w("Concord", "Direct Invite sweep failed", e)
-            } finally {
-                directInviteSweep.unlock()
-            }
-        }
-    }
-
-    /**
-     * Sweeps our inbox relays for Direct Invite wraps
-     * (`{"kinds":[1059],"#p":[me],"#k":["3313"]}` since the inbox cursor, rewound by NIP-59's backdate
-     * window) and offers each to the inbox. Returns how many new invites were parked. Read-only: it
-     * decrypts, it never joins or contacts a community's relays.
-     */
-    suspend fun refreshConcordDirectInvites(): Int {
-        val relays = concordDirectInviteScanRelays()
-        if (relays.isEmpty()) return 0
-        val before = directInviteInbox.pending.value.keys
-        val filter = ConcordActions.directInvitesFilter(account.signer.pubKey, directInviteInbox.since())
-        val wraps = account.client.fetchAll(filters = relays.associateWith { listOf(filter) })
-        wraps.distinctBy { it.id }.forEach { directInviteInbox.offer(it) }
-        drainConcordCatchUps()
-        return (directInviteInbox.pending.value.keys - before).size
-    }
+    fun concordDirectInviteStockRelays(): Set<NormalizedRelayUrl> = ConcordActions.directInviteDeliveryRelays(null)
 
     /**
      * Adopts, without a click, every parked catch-up the held fold says is exactly the delivery a
      * Grant prescribes (Armada `judgeCatchUp`, [ConcordInviteVend.judgeCatchUp]): a staff sender, a
      * recipient who isn't banned, and only live Private Channels our Roles entitle us to. Consent
-     * came from the Grant. Anything else waits for a manual Accept. Runs after an inbox sweep and on
-     * the revision tick (a Grant folding late turns a waiting catch-up adoptable).
+     * came from the Grant. Anything else waits for a manual Accept. Runs whenever the inbox parks an
+     * invite and on the revision tick (a Grant folding late turns a waiting catch-up adoptable).
      */
     internal suspend fun drainConcordCatchUps() {
         if (!account.isWriteable()) return
