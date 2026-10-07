@@ -33,6 +33,7 @@ import com.vitorpamplona.amethyst.commons.model.preferences.DrawerSectionCollaps
 import com.vitorpamplona.amethyst.commons.model.preferences.NamecoinSettingsStore
 import com.vitorpamplona.amethyst.commons.model.preferences.OtsSettingsStore
 import com.vitorpamplona.amethyst.commons.napplet.permissions.NappletPermissionLedger
+import com.vitorpamplona.amethyst.commons.relayClient.auth.AuthCoordinator
 import com.vitorpamplona.amethyst.commons.relayManagement.Nip86Executor
 import com.vitorpamplona.amethyst.commons.relayManagement.Nip86Retriever
 import com.vitorpamplona.amethyst.commons.scheduledposts.ScheduledPostStore
@@ -40,6 +41,7 @@ import com.vitorpamplona.amethyst.commons.service.AppServices
 import com.vitorpamplona.amethyst.commons.service.BlossomServerFinder
 import com.vitorpamplona.amethyst.commons.service.ai.AltTextSuggester
 import com.vitorpamplona.amethyst.commons.service.namecoin.NamecoinClients
+import com.vitorpamplona.amethyst.commons.service.pow.PoWPublishQueue
 import com.vitorpamplona.amethyst.commons.service.upload.BlossomBlobClient
 import com.vitorpamplona.amethyst.commons.service.upload.blossom.BlossomMirrorQueue
 import com.vitorpamplona.amethyst.commons.tor.TorSettingsFlow
@@ -125,6 +127,12 @@ object AndroidAppServices : AppServices {
     override fun cachedPlaceName(geohash: String): String? = CachedReversedGeoLocations.cached(geohash)
 
     override fun createAltTextSuggester(): AltTextSuggester = MLKitImageLabelService(Amethyst.instance.appContext)
+
+    override val authCoordinator: AuthCoordinator get() = Amethyst.instance.authCoordinator
+
+    override val powPublishQueue: PoWPublishQueue get() = Amethyst.instance.powPublishQueue
+
+    override suspend fun takeCrashReport(): String? = Amethyst.instance.crashReportCache.loadAndDelete()
 }
 
 /** [BlossomServerFinder] over the app's BUD-10 resolver, read lazily (main process only). */

@@ -597,10 +597,22 @@ assemblers, `EventSync`, …). Packages are renamed on the way:
        - the NIP-55 signer-app button;
        - keys from `nostr:` links while logged off;
        - toasts.
-     - Still in the app: `AccountScreen` (Tor and relay lifecycles, the per-account
-       ViewModelStore) and `LoggedInPage`, both part of step 8's root.
+     - `AccountScreen` and `LoggedInPage` followed in 8a.
 8. **The app root port** and the new JVM shim. Then the Desktop feature inventory, and
    retiring the old `desktopApp`.
+   - **8a, the shared app root (2026-10-07).** `AmethystApp(sessionManager, root)` in commonsUI
+     `ui/app` is the whole app below the window:
+     - the login, loading and logged-in crossfade;
+     - the per-account ViewModel store (`AccountScopedViewModelStore`, expect/actual);
+     - the account's `AccountViewModel` and its always-on subscriptions and preloads;
+     - the navigation shell with `sharedDestinations`, the first-route hand-off and the root
+       dialogs (errors, notify requests, crash reports, broadcast and Blossom progress, relay AUTH).
+     - Platforms fill an `AppRoot`: how to build the `AccountViewModel`, their own destinations,
+       app and logged-in effects, a shell overlay, the edge-swipe guard, navigation effects and
+       a screen-time hook. Android's is `AndroidAppRoot`: intents and shares, call screens, the
+       resource-usage alert, embedded tabs, push registration and the NIP-55 launcher.
+     - `AuthCoordinator` moved to commons; `AppServices` gained `authCoordinator`,
+       `powPublishQueue` and `takeCrashReport()`.
 
 Steps 2–5 can interleave. Step 5's helpers can start before 3–4 if they take `Account` /
 `AccountViewModel` unchanged and only move later.
