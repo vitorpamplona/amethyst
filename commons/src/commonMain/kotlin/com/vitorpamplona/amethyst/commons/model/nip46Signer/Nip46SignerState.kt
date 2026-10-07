@@ -53,6 +53,9 @@ import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.IO
+import kotlinx.coroutines.channels.BufferOverflow
+import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -64,6 +67,13 @@ import kotlinx.coroutines.launch
 
 /** How many recently-serviced request ids to persist for cross-restart replay dedup. */
 private const val MAX_SEEN_IDS = 128
+
+/**
+ * How often newly serviced request ids are written to the account settings. Batching keeps a
+ * high-throughput client from copying and re-saving the id set on every request; the settings save
+ * itself is debounced by 1 s, so this must stay above that or a steady stream would starve it.
+ */
+private const val SEEN_IDS_FLUSH_MS = 2_000L
 
 /**
  * Auto-forget a connected app after this long with no activity. Each connected NIP-46 app makes the
@@ -108,24 +118,38 @@ class Nip46SignerState(
     private val extraRelays = MutableStateFlow<Set<NormalizedRelayUrl>>(emptySet())
 
     /** Newest-first, in-memory feed of serviced requests, so the UI can show what apps are doing. */
-    val activityLog = Nip46ActivityLog()
+    val activityLog = Nip46ActivityLog(scope)
 
     /**
-     * A bounded, recently-serviced set of kind-24133 event ids, persisted so a relay replaying stored
-     * requests after an app restart is deduped by exact id (see [NostrConnectSignerService.initialSeen]).
-     * Touched only from the service's single consumer coroutine, so it needs no synchronization.
+     * Ids of serviced kind-24133 events waiting to be persisted, so a relay replaying stored requests
+     * after an app restart is deduped by exact id (see [NostrConnectSignerService.initialSeen]). Only
+     * the newest [MAX_SEEN_IDS] are kept, so a drop-oldest channel holds no more than will be saved.
      */
-    private val recentHandledIds = LinkedHashSet(settings.nip46SeenRequestIds.value)
+    private val handledIds = Channel<HexKey>(capacity = MAX_SEEN_IDS, onBufferOverflow = BufferOverflow.DROP_OLDEST)
 
+    /** Called by the service for every serviced request, so it only queues the id for [flushHandledIds]. */
     private fun rememberHandledId(eventId: HexKey) {
-        if (!recentHandledIds.add(eventId)) return
-        while (recentHandledIds.size > MAX_SEEN_IDS) {
-            recentHandledIds.iterator().let {
-                it.next()
-                it.remove()
+        handledIds.trySend(eventId)
+    }
+
+    /** Merges queued ids into the persisted set at most once per [SEEN_IDS_FLUSH_MS]. Runs for the account's life. */
+    private suspend fun flushHandledIds() {
+        // Insertion-ordered so the oldest id is evicted first; confined to this coroutine.
+        val recent = LinkedHashSet(settings.nip46SeenRequestIds.value)
+        while (true) {
+            recent.add(handledIds.receive())
+            while (true) {
+                recent.add(handledIds.tryReceive().getOrNull() ?: break)
             }
+            while (recent.size > MAX_SEEN_IDS) {
+                recent.iterator().let {
+                    it.next()
+                    it.remove()
+                }
+            }
+            settings.changeNip46SeenRequestIds(recent.toSet())
+            delay(SEEN_IDS_FLUSH_MS)
         }
-        settings.changeNip46SeenRequestIds(recentHandledIds.toSet())
     }
 
     /**
@@ -184,6 +208,8 @@ class Nip46SignerState(
         )
 
     init {
+        scope.launch { flushHandledIds() }
+
         // extraRelays is a live projection of the persisted client store (the nostrconnect apps' own
         // relays). Load it on start so paired apps stay reachable across restarts; it is refreshed
         // whenever a client connects or is forgotten (bunker-flow apps use the inbox relays instead).

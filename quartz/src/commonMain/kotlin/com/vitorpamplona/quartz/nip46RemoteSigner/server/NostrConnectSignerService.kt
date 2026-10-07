@@ -75,25 +75,38 @@ class NostrConnectSignerService(
      * accumulate every event id it saw; past this many the oldest are evicted (far past any realistic
      * same-event redelivery window). NOTE: this is keyed by the wrapper event id, not the inner NIP-46
      * request id, and it does not survive a service restart — the [maxRequestAgeSeconds] gate is what
-     * suppresses relay replays of old requests across re-subscriptions.
+     * suppresses relay replays of old requests across re-subscriptions. Sized for a client pushing
+     * ~10k requests/s: at that rate it covers about one second of relay fan-in lag.
      */
-    val seenCap: Int = 4096,
+    val seenCap: Int = 10_000,
     /**
      * Bound on events buffered between the relay threads and the single consumer.
      * Under a flood (a looping client, or a hostile peer p-tagging us) the newest
      * events past this many are dropped instead of growing memory without limit.
      * Envelope decryption is local, but each serviced request can drive an external
-     * NIP-55 op on the identity signer, so the queue must not run away.
+     * NIP-55 op on the identity signer, so the queue must not run away. Paired clients are not rate
+     * limited (a single app may legitimately drive ~10k requests/s), so this is sized to absorb about
+     * a second of that burst while the consumer catches up.
      */
-    val maxQueue: Int = 256,
+    val maxQueue: Int = 10_000,
     /**
-     * Max requests decrypted per author within [rateWindowSeconds]. Past it, the first extra request
-     * in the window is answered with a `rate limited` error and the rest are dropped unanswered.
+     * Requests an UNPAIRED author may send per [unpairedWindowSeconds]. A stranger can only `connect`
+     * (with the secret) or `ping`, so a few attempts is all a legitimate new app needs. Checked before
+     * decrypting; past it the request is dropped without a reply, so a flood costs us no crypto and
+     * gets nothing back to amplify. Paired clients ([Nip46RequestAuthorizer.isPaired]) are exempt.
      */
-    val maxRequestsPerWindow: Int = 40,
-    val rateWindowSeconds: Long = 10,
-    /** Cap on distinct authors tracked for rate-limiting (evicts oldest) so key-rotation can't grow it. */
-    val maxTrackedAuthors: Int = 512,
+    val maxUnpairedRequestsPerAuthor: Int = 10,
+    /**
+     * Requests ALL unpaired authors together may send per [unpairedWindowSeconds], so rotating keys
+     * can't multiply [maxUnpairedRequestsPerAuthor]. A flood can only delay new pairings, never a
+     * paired client's traffic.
+     */
+    val maxUnpairedRequestsTotal: Int = 100,
+    val unpairedWindowSeconds: Long = 60,
+    /** Cap on distinct unpaired authors tracked by the limiter (evicts oldest) so key rotation can't grow it. */
+    val maxTrackedUnpairedAuthors: Int = 512,
+    /** Cap on the in-memory set of authors already confirmed paired (evicts oldest; they are re-checked). */
+    val maxKnownPairedAuthors: Int = 1024,
     /**
      * Requests older than this (by `created_at`) are ignored. kind-24133 is ephemeral, but many relays
      * store and REPLAY it whenever we re-subscribe (a relay-set change, reconnect, toggle, or rotation),
@@ -105,14 +118,16 @@ class NostrConnectSignerService(
      */
     val maxRequestAgeSeconds: Long = 30,
     /**
-     * How many requests may be in-flight (past dedup/rate-limit) at once. Each request is handled in
+     * How many requests may be in-flight (past dedup/staleness/unpaired limit) at once. Each request is handled in
      * its own child coroutine so that a request awaiting a user consent prompt does NOT block other
      * clients' auto-allowed traffic — and so several prompts can be pending together and be approved in
-     * one batch. Intake (dedup, staleness, rate-limit) stays on the single consumer; only [handle] fans
-     * out. The actual crypto is still serialized inside [BunkerRequestProcessor]. This bounds how many
-     * child coroutines (and pending prompts) can accumulate under a flood.
+     * one batch. Intake (dedup, staleness, unpaired limit) stays on the single consumer; only [handle] fans
+     * out. The envelope crypto runs in parallel; only the identity-signer op is serialized inside
+     * [BunkerRequestProcessor]. This bounds how many child coroutines (and pending prompts) can
+     * accumulate under a flood, and is large enough that a few prompts awaiting the user don't stall
+     * a high-throughput client's auto-allowed traffic.
      */
-    val maxConcurrentHandles: Int = 16,
+    val maxConcurrentHandles: Int = 1024,
     /**
      * Event ids serviced in a previous run, used to seed the in-memory dedup set so a relay replaying
      * stored requests across an app restart is caught by EXACT event id — immune to client clock skew,
@@ -124,55 +139,58 @@ class NostrConnectSignerService(
     val onHandledId: (suspend (eventId: String) -> Unit)? = null,
 ) {
     /**
-     * Fixed-window per-author rate limit. Touched only by the single consumer
-     * coroutine (never the relay threads), so a plain map needs no synchronization.
+     * Fixed-window limit for unpaired authors: per author, plus one shared budget across all of them.
+     * Touched only by the single consumer coroutine (never the relay threads), so it needs no
+     * synchronization.
      */
-    private class RateLimiter(
-        val maxPerWindow: Int,
+    private class UnpairedLimiter(
+        val maxPerAuthor: Int,
+        val maxTotal: Int,
         val windowSeconds: Long,
         val maxAuthors: Int,
     ) {
         private class Window(
             var start: Long,
-            var count: Int,
-            var notified: Boolean = false,
-        )
-
-        enum class Decision {
-            ALLOW,
-
-            /** Over the limit, and the first such request this window: answer it with an error. */
-            DENY_AND_NOTIFY,
-
-            /** Over the limit and the author was already told this window: drop silently. */
-            DENY,
+            var count: Int = 0,
+        ) {
+            fun rollIfExpired(
+                now: Long,
+                windowSeconds: Long,
+            ) {
+                if (now - start >= windowSeconds) {
+                    start = now
+                    count = 0
+                }
+            }
         }
 
+        private val total = Window(0)
         private val windows = LinkedHashMap<String, Window>()
 
-        fun check(
+        /** Spends one request of [author]'s own budget; false when it is used up this window. */
+        fun tryAcquireAuthor(
             author: String,
             now: Long,
-        ): Decision {
-            val window = windows.getOrPut(author) { Window(now, 0) }
-            if (now - window.start >= windowSeconds) {
-                window.start = now
-                window.count = 0
-                window.notified = false
-            }
+        ): Boolean {
+            val window = windows.getOrPut(author) { Window(now) }
+            window.rollIfExpired(now, windowSeconds)
             if (windows.size > maxAuthors) {
                 windows.iterator().let {
                     it.next()
                     it.remove()
                 }
             }
-            if (window.count >= maxPerWindow) {
-                if (window.notified) return Decision.DENY
-                window.notified = true
-                return Decision.DENY_AND_NOTIFY
-            }
+            if (window.count >= maxPerAuthor) return false
             window.count++
-            return Decision.ALLOW
+            return true
+        }
+
+        /** Spends one request of the budget shared by all unpaired authors; false when it is used up. */
+        fun tryAcquireTotal(now: Long): Boolean {
+            total.rollIfExpired(now, windowSeconds)
+            if (total.count >= maxTotal) return false
+            total.count++
+            return true
         }
     }
 
@@ -198,7 +216,6 @@ class NostrConnectSignerService(
         val self = transportSigner.pubKey
         // Bounded + DROP_LATEST so a flood bounds memory instead of growing an unlimited queue.
         val events = Channel<NostrConnectEvent>(capacity = maxQueue, onBufferOverflow = BufferOverflow.DROP_LATEST)
-        val rateLimiter = RateLimiter(maxRequestsPerWindow, rateWindowSeconds, maxTrackedAuthors)
         val subId = newSubId()
         val listener =
             object : SubscriptionListener {
@@ -224,6 +241,17 @@ class NostrConnectSignerService(
         val seen = LinkedHashSet(initialSeen)
         // Bounds how many requests can be in-flight (and how many prompts can be pending) at once.
         val handleGate = Semaphore(maxConcurrentHandles)
+        // A relay replaying a busy client's history can hand us thousands of stale requests a second;
+        // log them as one summary per second instead of a line each on this single consumer.
+        var staleSinceLog = 0
+        var lastStaleLogAt = 0L
+        val unpairedLimiter = UnpairedLimiter(maxUnpairedRequestsPerAuthor, maxUnpairedRequestsTotal, unpairedWindowSeconds, maxTrackedUnpairedAuthors)
+        // Authors already confirmed paired, so their traffic skips the limiter and the store lookup.
+        // This only decides rate limiting: the processor still authorizes every request, so an app
+        // forgotten mid-run is refused there even while it lingers here.
+        val knownPaired = LinkedHashSet<String>()
+        var unpairedDroppedSinceLog = 0
+        var lastUnpairedLogAt = 0L
         // Only ask relays for recent requests: kind-24133 is ephemeral, but relays that store it would
         // otherwise replay every old request each time we (re)subscribe. See [maxRequestAgeSeconds].
         val filter = Filter(kinds = listOf(NostrConnectEvent.KIND), tags = mapOf("p" to listOf(self)), since = TimeUtils.now() - maxRequestAgeSeconds)
@@ -241,37 +269,45 @@ class NostrConnectSignerService(
                 // Drop stale requests a relay replayed from storage past the rolling age window (the
                 // `since` filter covers compliant relays; this covers the rest; exact-id replays within
                 // the window are already caught by [seen] above). A live NIP-46 request is seconds old.
-                if (TimeUtils.now() - event.createdAt > maxRequestAgeSeconds) {
-                    Log.w("NIP46Signer") { "ignoring stale request ${event.id.take(8)}… (created ${event.createdAt})" }
+                val now = TimeUtils.now()
+                if (now - event.createdAt > maxRequestAgeSeconds) {
+                    staleSinceLog++
+                    if (now - lastStaleLogAt >= 1) {
+                        val count = staleSinceLog
+                        Log.w("NIP46Signer") { "ignored $count stale request(s); latest ${event.id.take(8)}… created ${event.createdAt}" }
+                        staleSinceLog = 0
+                        lastStaleLogAt = now
+                    }
                     continue
                 }
-                // Rate-limit per author BEFORE decrypting: the limit exists to bound the work (envelope
-                // decrypt, reply encrypt/sign/publish, identity-signer ops) a flooding client can force.
-                // The request id is inside the encrypted content, so answering costs a decrypt plus a
-                // reply. That is paid ONCE per author per window: the first over-limit request gets a
-                // `rate limited` error (so a legitimate bursty client learns why instead of timing out),
-                // the rest of the window is dropped silently.
-                when (rateLimiter.check(event.pubKey, TimeUtils.now())) {
-                    RateLimiter.Decision.ALLOW -> {}
-
-                    RateLimiter.Decision.DENY_AND_NOTIFY -> {
-                        Log.w("NIP46Signer") { "rate-limited request from ${event.pubKey.take(8)}…; replying with an error" }
-                        // The client is told this request failed, so a relay replaying it after a
-                        // restart must not get it serviced: persist its id like a serviced one.
-                        onHandledId?.invoke(event.id)
-                        handleGate.acquire()
-                        launch {
-                            try {
-                                replyRateLimited(event)
-                            } finally {
-                                handleGate.release()
+                // Unknown authors are limited BEFORE anything else. Their own budget (in memory) comes
+                // first, so the pairing lookup (a store read) runs a bounded number of times per key.
+                // Only authors that turn out unpaired spend the shared budget, so strangers exhausting
+                // it can never lock out a paired app whose first request this run is still unknown.
+                if (event.pubKey !in knownPaired) {
+                    val allowed =
+                        if (!unpairedLimiter.tryAcquireAuthor(event.pubKey, now)) {
+                            false
+                        } else if (isPaired(event.pubKey)) {
+                            knownPaired.add(event.pubKey)
+                            if (knownPaired.size > maxKnownPairedAuthors) {
+                                knownPaired.iterator().let {
+                                    it.next()
+                                    it.remove()
+                                }
                             }
+                            true
+                        } else {
+                            unpairedLimiter.tryAcquireTotal(now)
                         }
-                        continue
-                    }
-
-                    RateLimiter.Decision.DENY -> {
-                        Log.w("NIP46Signer") { "rate-limited request from ${event.pubKey.take(8)}…" }
+                    if (!allowed) {
+                        unpairedDroppedSinceLog++
+                        if (now - lastUnpairedLogAt >= 1) {
+                            val count = unpairedDroppedSinceLog
+                            Log.w("NIP46Signer") { "dropped $count request(s) from unpaired clients over the limit; latest from ${event.pubKey.take(8)}…" }
+                            unpairedDroppedSinceLog = 0
+                            lastUnpairedLogAt = now
+                        }
                         continue
                     }
                 }
@@ -281,7 +317,7 @@ class NostrConnectSignerService(
                 // restart even if it is ultimately denied (the in-memory `seen` already covers this run).
                 onHandledId?.invoke(event.id)
                 // Acquire BEFORE launching so intake applies backpressure at the cap instead of spawning
-                // unbounded child coroutines; dedup/rate-limit above already ran on this single consumer.
+                // unbounded child coroutines; dedup/staleness/limit above already ran on this single consumer.
                 handleGate.acquire()
                 launch {
                     try {
@@ -297,19 +333,16 @@ class NostrConnectSignerService(
         }
     }
 
-    /** Answers an over-limit request with [BunkerRequestProcessor.ERROR_RATE_LIMITED], without processing it. */
-    private suspend fun replyRateLimited(event: NostrConnectEvent) {
-        val client = event.talkingWith(transportSigner.pubKey)
+    /** A store failure must not kill the intake loop; the author is then treated as unpaired (limited). */
+    private suspend fun isPaired(author: String): Boolean =
         try {
-            val request = event.decryptMessage(transportSigner) as? BunkerRequest ?: return
-            val reply = NostrConnectEvent.create(BunkerResponseError(request.id, BunkerRequestProcessor.ERROR_RATE_LIMITED), client, transportSigner)
-            this.client.publish(reply, relays)
+            processor.authorizer.isPaired(author)
         } catch (e: CancellationException) {
             throw e
         } catch (e: Exception) {
-            Log.w("NIP46Signer") { "could not answer rate-limited request ${event.id.take(8)}: ${e.message}" }
+            Log.w("NIP46Signer") { "pairing lookup failed for ${author.take(8)}…: ${e.message}" }
+            false
         }
-    }
 
     private suspend fun handle(event: NostrConnectEvent) {
         val client = event.talkingWith(transportSigner.pubKey)
