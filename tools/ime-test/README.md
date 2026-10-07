@@ -79,6 +79,43 @@ shim emits for it — and that only exists in a browser. A JVM test of the
 host-side parser (`parseImeEvent`, kotlinx.serialization) would only re-parse
 envelopes the test itself fabricated.
 
+## `shim-parity.mjs` — does every way of editing a field behave as in the browser?
+
+A differential test. Each scenario (a field pattern plus a list of user actions) runs twice in headless
+Chromium: **natively**, edited the way Android Chrome edits from a soft keyboard (committed text via
+`Input.insertText`, Backspace/Enter as real keys, composition via `Input.imeSetComposition`, a real clipboard
+paste), and **through the shim**, driven by a model of `RemoteImeView` that ships `ime.set` / `ime.action` /
+`ime.paste` / `ime.cut` the way the app does. It then compares the field's text and caret, what the page did
+(sent, searched, submitted, refused) and whether the host's mirror still matches the field.
+
+The fixtures cover the patterns real pages use: plain inputs and textareas, `maxlength`, number/email/password,
+an input mask that refuses characters in `beforeinput`, React-style controlled inputs (including one that
+transforms what you type and one the page rewrites mid-typing), a chat composer that sends on a keydown Enter and
+clears itself, a form, a keydown-driven search box, a combobox, a Brainstorm-style chip editor (chips whose text
+differs from their token; Enter and Backspace handled in `beforeinput`), contenteditables with and without
+`white-space: pre-wrap`, a field the page remounts mid-typing, a page paste handler, and a 20k-character draft.
+
+```bash
+node shim-parity.mjs            # all scenarios; exits 1 if any differs from native
+node shim-parity.mjs chips      # only scenarios whose name contains "chips"
+SHIM=/path/to/shim.js node shim-parity.mjs   # check a candidate (or an old) shim
+```
+
+## `shim-perf.mjs` — what a keystroke costs the page
+
+Replays 200 host keystrokes into the shim on long fields (a 20k-character textarea, 1,000-line and
+1,000-paragraph contenteditables, a page that rewrites its value on every input) and prints p50/p95/max per
+keystroke. Run it before and after touching the contenteditable offset mapping: that is where a careless walk
+turns a keystroke quadratic.
+
+## `device.html` — the same fixtures, on a device
+
+The riskiest fixtures (form Next/Go, chips, line breaks, `maxlength`, a paste handler, a chat box) as one page
+to drive by hand through the real keyboard. Serve this directory (`python3 -m http.server 8765`) and load
+`http://10.0.2.2:8765/device.html` in an **embedded** tab (a bottom-bar web app — the Browser tab opens URLs
+full screen, where the native keyboard is used and the relay is not involved); `window.__out` logs what the
+page did.
+
 ## `perf.html` — why does the embed feel slower than the full-screen browser?
 
 `index.html` profiles the IME relay. `perf.html` answers a different question:
