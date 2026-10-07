@@ -58,6 +58,7 @@ import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.toImmutableListOfLists
 import com.vitorpamplona.amethyst.commons.relayClient.event.observeNoteEvent
 import com.vitorpamplona.amethyst.commons.relayClient.reqCommand.event.EventFinderFilterAssemblerSubscription
+import com.vitorpamplona.amethyst.commons.relayClient.softwareapps.SoftwareReleasesFilterAssemblerSubscription
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.loading_feed
 import com.vitorpamplona.amethyst.commons.resources.nip82_no_comments
@@ -145,6 +146,7 @@ private fun SoftwareAppDetailScreenContent(
     WatchLifecycleAndUpdateModel(threadViewModel)
     ThreadFilterAssemblerSubscription(addressTag, accountViewModel)
     EventFinderFilterAssemblerSubscription(note, accountViewModel)
+    SoftwareReleasesFilterAssemblerSubscription(note, accountViewModel.dataSources().softwareReleases)
 
     DisappearingScaffold(
         isInvertedLayout = false,
