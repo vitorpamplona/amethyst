@@ -18,9 +18,9 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.service.relayClient.notifyCommand.model
+package com.vitorpamplona.amethyst.commons.relayClient.notify
 
-import android.util.LruCache
+import androidx.collection.LruCache
 import com.vitorpamplona.amethyst.commons.model.Account
 import com.vitorpamplona.amethyst.commons.relayClient.notify.NotifyRequestsCache
 import com.vitorpamplona.quartz.nip01Core.core.HexKey

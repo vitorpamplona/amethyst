@@ -18,32 +18,24 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.service.relayClient
+package com.vitorpamplona.amethyst.desktop.app
 
-import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
-import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
-import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.EventCollector
-import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.RelayInsertConfirmationCollector
+import com.vitorpamplona.quartz.utils.Log
+import java.awt.Desktop
+import java.net.URI
 
-class CacheClientConnector(
-    val client: INostrClient,
-    val cache: LocalCache,
-) {
-    val receiver =
-        EventCollector(client) { event, relay ->
-            cache.justConsume(event, relay, false)
+/** Hands a URI to the operating system: the browser for web links, the registered app for the rest. */
+object DesktopBrowser {
+    fun open(uri: String): Boolean =
+        try {
+            if (Desktop.isDesktopSupported() && Desktop.getDesktop().isSupported(Desktop.Action.BROWSE)) {
+                Desktop.getDesktop().browse(URI(uri))
+                true
+            } else {
+                false
+            }
+        } catch (e: Exception) {
+            Log.w("DesktopBrowser", "Could not open $uri", e)
+            false
         }
-
-    // markAsSeen drills into the gift-wrap chain (wrap → seal → rumor) via
-    // LocalCache.addRelayToNoteAndInners, so an OK acceptance for a wrap also
-    // tags the inner rumor note the chat UI renders.
-    val confirmationWatcher =
-        RelayInsertConfirmationCollector(client) { eventId, relay ->
-            cache.markAsSeen(eventId, relay.url)
-        }
-
-    fun destroy() {
-        receiver.destroy()
-        confirmationWatcher.destroy()
-    }
 }

@@ -18,7 +18,7 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.model.privacyOptions
+package com.vitorpamplona.amethyst.commons.service.http
 
 import com.vitorpamplona.amethyst.commons.service.http.DualHttpClientManager
 import com.vitorpamplona.amethyst.commons.service.http.IRoleBasedHttpClientBuilder
@@ -26,7 +26,6 @@ import com.vitorpamplona.amethyst.commons.service.http.ProxiedSocketFactory
 import com.vitorpamplona.amethyst.commons.service.resourceusage.UsageKeys
 import com.vitorpamplona.amethyst.commons.tor.TorSettingsFlow
 import com.vitorpamplona.amethyst.commons.tor.TorType
-import com.vitorpamplona.amethyst.service.resourceusage.HttpUsageMeter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
 import okhttp3.OkHttpClient
 import java.net.InetSocketAddress
@@ -41,12 +40,12 @@ class RoleBasedHttpClientBuilder(
      * interceptor so the resource-usage ledger can attribute HTTP traffic
      * per subsystem. Null keeps the raw shared clients (tests).
      */
-    val usageMeter: HttpUsageMeter? = null,
+    val usageMeter: ((role: String, base: OkHttpClient) -> OkHttpClient)? = null,
 ) : IRoleBasedHttpClientBuilder {
     private fun metered(
         role: String,
         base: OkHttpClient,
-    ): OkHttpClient = usageMeter?.counted(role, base) ?: base
+    ): OkHttpClient = usageMeter?.invoke(role, base) ?: base
 
     fun shouldUseTorForImageDownload(url: String) =
         shouldUseTorFor(

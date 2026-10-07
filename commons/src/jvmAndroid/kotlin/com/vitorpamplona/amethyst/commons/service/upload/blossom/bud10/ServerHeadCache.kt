@@ -18,7 +18,7 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.service.uploads.blossom.bud10
+package com.vitorpamplona.amethyst.commons.service.upload.blossom.bud10
 
 import androidx.collection.LruCache
 import kotlinx.coroutines.CancellationException

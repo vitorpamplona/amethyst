@@ -613,6 +613,29 @@ assemblers, `EventSync`, …). Packages are renamed on the way:
        resource-usage alert, embedded tabs, push registration and the NIP-55 launcher.
      - `AuthCoordinator` moved to commons; `AppServices` gained `authCoordinator`,
        `powPublishQueue` and `takeCrashReport()`.
+   - **8b, the desktop shim (2026-10-07).** `desktopApp/…/desktop/app/` renders `AmethystApp` in
+     a desktop window: `./gradlew :desktopApp:runOneUi`. The legacy `run` is untouched until 8d.
+     - Account storage is shared: `AccountSettingsStores`/`AccountSettingsSource` (the settings
+       records) and `StoreAccountSessionStore` (roster, records, secrets, keys in the OS keyring
+       through `PrivateKeyVault`) are in commons; Android keeps only its legacy fallback on top.
+       `AccountCacheState` moved too, with the signer app, Marmot QUIC, Keystore and Buzz stores
+       injected.
+     - The graph classes moved from `amethyst` to commons: the relay and cache connectors, the
+       NOTIFY coordinator, `RoleBasedHttpClientBuilder` (usage meter injected), the Tor-state
+       connector, the PoW restorer, the BUD-10 resolver/probe/HEAD cache, and the Namecoin
+       clients and resolver (`NamecoinServices`). `BlossomCordnBlobStore` is the platform-free
+       Cordn transport.
+     - `DesktopAppModules` mirrors Android's `AppModules` minus what only a phone has
+       (connectivity callbacks, the battery ledger, foreground services, push). `DesktopAppRoot`,
+       `DesktopAppServices`, `DesktopAppPlatform` and `DesktopAccountViewModelHost` fill the ports.
+     - Its files live in `~/.amethyst/app` (or `-Damethyst.dataDir`); keys share the legacy app's
+       keyring entries, which are keyed by npub the same way.
+     - Verified under Xvfb: the shared login screen, a read-only login, the permanent drawer with
+       the home feed from live relays and the docked notifications, and the login surviving a restart.
+     - Left for 8c (see below): note media and link previews (`NotePlatform` is `None`), uploads,
+       NIP-46 bunker login, OS notifications, menu bar and shortcuts, file pickers, toasts,
+       language list, location, the local Blossom cache probe, and moving the legacy app's
+       accounts (`accounts.json.enc`) over.
 
 Steps 2–5 can interleave. Step 5's helpers can start before 3–4 if they take `Account` /
 `AccountViewModel` unchanged and only move later.

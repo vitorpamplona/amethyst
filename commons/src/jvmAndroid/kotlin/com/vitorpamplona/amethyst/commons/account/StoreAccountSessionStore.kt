@@ -26,6 +26,7 @@ import com.vitorpamplona.amethyst.commons.cashu.CashuKeysetCounterStore
 import com.vitorpamplona.amethyst.commons.cashu.UnavailableCashuKeysetCounterStore
 import com.vitorpamplona.amethyst.commons.keystorage.PrivateKeyVault
 import com.vitorpamplona.amethyst.commons.model.AccountSettings
+import com.vitorpamplona.amethyst.commons.model.GeohashIdentityStore
 import com.vitorpamplona.amethyst.commons.model.preferences.AccountPreferenceStores
 import com.vitorpamplona.amethyst.commons.model.preferences.AccountRosterStore
 import com.vitorpamplona.amethyst.commons.model.preferences.AccountSecrets
@@ -33,9 +34,11 @@ import com.vitorpamplona.amethyst.commons.model.preferences.AccountSecretsEncryp
 import com.vitorpamplona.amethyst.commons.model.preferences.AccountSettingsSource
 import com.vitorpamplona.amethyst.commons.model.preferences.AccountSettingsStores
 import com.vitorpamplona.amethyst.commons.model.preferences.AppPreferenceStores
+import com.vitorpamplona.amethyst.commons.model.preferences.GeohashIdentitySecrets
 import com.vitorpamplona.amethyst.commons.model.preferences.SecretEncryption
 import com.vitorpamplona.amethyst.commons.model.preferences.toAccountSecrets
 import com.vitorpamplona.amethyst.commons.model.preferences.toAccountSettings
+import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.JsonMapper
 import com.vitorpamplona.quartz.nip01Core.core.hexToByteArray
 import com.vitorpamplona.quartz.nip01Core.core.toHexKey
@@ -214,6 +217,16 @@ class StoreAccountSessionStore(
             updateCurrentAccount(remaining.first())
         }
     }
+
+    /** Where [pubKeyHex]'s location-chat identity lives: its encrypted secrets file, next to the account's own. */
+    fun geohashIdentityStore(pubKeyHex: HexKey): GeohashIdentityStore =
+        object : GeohashIdentityStore {
+            private val npub by lazy { pubKeyHex.hexToByteArray().toNpub() }
+
+            override suspend fun read(): GeohashIdentitySecrets = secretsStores.loadGeohashIdentity(npub) ?: GeohashIdentitySecrets()
+
+            override suspend fun write(value: GeohashIdentitySecrets) = secretsStores.saveGeohashIdentity(npub, value)
+        }
 
     companion object {
         private const val TAG = "StoreAccountSessionStore"

@@ -39,6 +39,13 @@ dependencies {
     implementation(project(":commons"))
     implementation(project(":commonsUI"))
 
+    // Marmot's raw-QUIC transport for agent text stream previews, as on Android
+    implementation(project(":marmotQuic"))
+    implementation(project(":quic"))
+
+    // The shared preference files (DataStore), as commons opens them
+    implementation(libs.androidx.datastore.preferences)
+
     // Lifecycle ViewModel (needed to access ViewModel supertype from commons)
     implementation(libs.androidx.lifecycle.viewmodel.compose)
 
@@ -104,6 +111,19 @@ dependencies {
 
     // Compose UI testing (createComposeRule / onNodeWithText / etc.)
     testImplementation(libs.jetbrains.compose.ui.test.junit4)
+}
+
+// Runs the shared app (commonsUI's AmethystApp) in a desktop window, on the new desktop graph.
+// Replaces `run` once the legacy desktop screens are retired.
+tasks.register<JavaExec>("runOneUi") {
+    group = "application"
+    description = "Runs the shared One UI app in a desktop window"
+    mainClass.set("com.vitorpamplona.amethyst.desktop.app.AmethystDesktopKt")
+    classpath = sourceSets["main"].runtimeClasspath
+    jvmArgs("--add-opens=java.base/java.nio=ALL-UNNAMED", "-Xmx2g", "-Damethyst.version=$appVersion")
+    listOf("amethyst.dataDir", "amethyst.debug").forEach { key ->
+        System.getProperty(key)?.let { jvmArgs("-D$key=$it") }
+    }
 }
 
 compose.desktop {

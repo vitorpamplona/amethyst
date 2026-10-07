@@ -18,19 +18,19 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.service.relayClient
+package com.vitorpamplona.amethyst.commons.relayClient
 
 import com.vitorpamplona.amethyst.commons.service.connectivity.ConnectivityStatus
 import com.vitorpamplona.amethyst.commons.service.resourceusage.UsageKeys
 import com.vitorpamplona.amethyst.commons.tor.RelayClassification
 import com.vitorpamplona.amethyst.commons.tor.TorRelayEvaluation
 import com.vitorpamplona.amethyst.commons.tor.TorRelaySettings
-import com.vitorpamplona.amethyst.ui.tor.TorServiceStatus
 import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
 import com.vitorpamplona.quartz.utils.Log
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.FlowPreview
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
@@ -47,7 +47,11 @@ class RelayProxyClientConnector(
     val torConnection: StateFlow<OkHttpClient>,
     val clearConnection: StateFlow<OkHttpClient>,
     val connectivityStatus: StateFlow<ConnectivityStatus>,
-    val torStatus: StateFlow<TorServiceStatus>,
+    /**
+     * Whether Tor can build circuits right now. A change re-runs [apply], which reconnects the
+     * Tor-routed relays the websocket builder held back while Tor was still bootstrapping.
+     */
+    val torBootstrapped: Flow<Boolean>,
     val client: INostrClient,
     val scope: CoroutineScope,
     /**
@@ -64,7 +68,7 @@ class RelayProxyClientConnector(
         val torConnection: OkHttpClient,
         val clearConnection: OkHttpClient,
         val connectivity: ConnectivityStatus,
-        val torStatus: TorServiceStatus,
+        val torBootstrapped: Boolean,
     )
 
     // The OkHttp clients in use the last time we forced a reconnect. These are only
@@ -110,9 +114,9 @@ class RelayProxyClientConnector(
             torConnection,
             clearConnection,
             connectivityStatus,
-            torStatus,
-        ) { torSettings, torConnection, clearConnection, connectivity, torStatus ->
-            RelayServiceInfra(torSettings, torConnection, clearConnection, connectivity, torStatus)
+            torBootstrapped,
+        ) { torSettings, torConnection, clearConnection, connectivity, torBootstrapped ->
+            RelayServiceInfra(torSettings, torConnection, clearConnection, connectivity, torBootstrapped)
         }.debounce(100)
             .onEach { apply(it) }
             .onStart {
@@ -150,7 +154,7 @@ class RelayProxyClientConnector(
                     onTrigger(UsageKeys.TRIGGER_OFF)
                     client.disconnect()
                 }
-                if (infra.torStatus.isFullyBootstrapped) {
+                if (infra.torBootstrapped) {
                     Log.d("ManageRelayServices", "Connectivity off, Tor idle")
                 }
                 // disconnect() already cleared every relay's backoff. Forget the network
@@ -161,7 +165,7 @@ class RelayProxyClientConnector(
             infra.connectivity is ConnectivityStatus.Active && !client.isActive() -> {
                 Log.d("ManageRelayServices", "Connectivity On: Resuming Relay Services")
 
-                if (infra.torStatus.isFullyBootstrapped) {
+                if (infra.torBootstrapped) {
                     Log.d("ManageRelayServices", "Connectivity resumed, Tor active")
                 }
 

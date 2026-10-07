@@ -41,6 +41,7 @@ import com.vitorpamplona.amethyst.commons.model.marmot.AndroidPushStateStore
 import com.vitorpamplona.amethyst.commons.model.marmot.MarmotGroupNotifier
 import com.vitorpamplona.amethyst.commons.model.nip46Signer.Nip46ConsentPrompter
 import com.vitorpamplona.amethyst.commons.model.preferences.AppPreferenceStores
+import com.vitorpamplona.amethyst.commons.relayClient.assemblers.CashuMintDirectoryFilterAssembler
 import com.vitorpamplona.amethyst.commons.relayClient.nip47WalletConnect.NWCPaymentFilterAssembler
 import com.vitorpamplona.amethyst.commons.relayauth.DataStoreRelayAuthPermissionStore
 import com.vitorpamplona.amethyst.commons.service.http.EncryptionKeyCache
@@ -72,7 +73,7 @@ import java.io.File
 class AccountCacheState(
     val geolocationFlow: () -> StateFlow<LocationResult>,
     val nwcFilterAssembler: () -> NWCPaymentFilterAssembler,
-    val cashuMintDirectoryFilterAssembler: () -> com.vitorpamplona.amethyst.commons.relayClient.assemblers.CashuMintDirectoryFilterAssembler,
+    val cashuMintDirectoryFilterAssembler: () -> CashuMintDirectoryFilterAssembler,
     val okHttpClientForMoney: (String) -> OkHttpClient,
     /**
      * The signer for an account whose key lives in a signer app ([AccountSettings.externalSignerPackageName]):
