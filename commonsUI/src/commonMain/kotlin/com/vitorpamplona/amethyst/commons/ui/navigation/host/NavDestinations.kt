@@ -42,7 +42,8 @@ import com.vitorpamplona.amethyst.commons.model.navigation.NavStackEntry
 import com.vitorpamplona.amethyst.commons.model.navigation.Route
 import com.vitorpamplona.amethyst.commons.ui.layouts.CappedScreenContent
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.LocalNavStackEntry
-import kotlinx.serialization.serializer
+import kotlinx.serialization.InternalSerializationApi
+import kotlinx.serialization.serializerOrNull
 import kotlin.concurrent.Volatile
 import kotlin.reflect.KClass
 
@@ -90,16 +91,24 @@ enum class NavFamily {
     NONE,
 }
 
-/**
- * One destination: how it animates, whether it takes the reading-column cap, and what it draws.
- * [serialName] is the route's serial name, which R8 leaves alone (unlike its class name).
- */
+/** One destination: how it animates, whether it takes the reading-column cap, and what it draws. */
 class NavDestination(
-    val serialName: String,
+    private val route: KClass<out Route>,
     val family: NavFamily,
     val capWidth: Boolean,
     val content: @Composable (Route) -> Unit,
-)
+) {
+    /**
+     * The route's serial name, which R8 leaves alone (unlike its class name). Resolved on first use:
+     * this module has no serialization compiler plugin, so the lookup is reflective, and doing it for
+     * every destination as the table is built would cost the first frame. Only screen time asks, and
+     * only for screens the user opens. Falls back to the class name if the lookup ever fails.
+     */
+    @OptIn(InternalSerializationApi::class)
+    val serialName: String by lazy {
+        route.serializerOrNull()?.descriptor?.serialName ?: route.simpleName ?: ""
+    }
+}
 
 /**
  * Every screen the app can show, keyed by route class. Built once by the front end with the
@@ -112,12 +121,11 @@ class NavDestinations {
 
     fun register(
         klass: KClass<out Route>,
-        serialName: String,
         family: NavFamily,
         capWidth: Boolean,
         content: @Composable (Route) -> Unit,
     ) {
-        destinations[klass] = NavDestination(serialName, family, capWidth, content)
+        destinations[klass] = NavDestination(klass, family, capWidth, content)
     }
 
     fun of(route: Route): NavDestination = destinations[route::class] ?: error("No destination registered for ${route::class.simpleName}")
@@ -152,52 +160,52 @@ class NavDestinations {
 
 /** Stock fade-transition destination, capped to the reading-column width on wide panes. */
 inline fun <reified T : Route> NavDestinations.composableCapped(noinline content: @Composable () -> Unit) {
-    register(T::class, serializer<T>().descriptor.serialName, NavFamily.NONE, capWidth = true) { content() }
+    register(T::class, NavFamily.NONE, capWidth = true) { content() }
 }
 
 /** [composableCapped], for a route that carries arguments. */
 inline fun <reified T : Route> NavDestinations.composableCappedArgs(noinline content: @Composable (T) -> Unit) {
-    register(T::class, serializer<T>().descriptor.serialName, NavFamily.NONE, capWidth = true) { content(it as T) }
+    register(T::class, NavFamily.NONE, capWidth = true) { content(it as T) }
 }
 
 /** Stock fade-transition destination at full width. */
 inline fun <reified T : Route> NavDestinations.composable(noinline content: @Composable () -> Unit) {
-    register(T::class, serializer<T>().descriptor.serialName, NavFamily.NONE, capWidth = false) { content() }
+    register(T::class, NavFamily.NONE, capWidth = false) { content() }
 }
 
 inline fun <reified T : Route> NavDestinations.composableArgs(
     capWidth: Boolean = true,
     noinline content: @Composable (T) -> Unit,
 ) {
-    register(T::class, serializer<T>().descriptor.serialName, NavFamily.NONE, capWidth) { content(it as T) }
+    register(T::class, NavFamily.NONE, capWidth) { content(it as T) }
 }
 
 inline fun <reified T : Route> NavDestinations.composableFromEnd(
     capWidth: Boolean = true,
     noinline content: @Composable () -> Unit,
 ) {
-    register(T::class, serializer<T>().descriptor.serialName, NavFamily.END, capWidth) { content() }
+    register(T::class, NavFamily.END, capWidth) { content() }
 }
 
 inline fun <reified T : Route> NavDestinations.composableFromEndArgs(
     capWidth: Boolean = true,
     noinline content: @Composable (T) -> Unit,
 ) {
-    register(T::class, serializer<T>().descriptor.serialName, NavFamily.END, capWidth) { content(it as T) }
+    register(T::class, NavFamily.END, capWidth) { content(it as T) }
 }
 
 inline fun <reified T : Route> NavDestinations.composableFromBottom(
     capWidth: Boolean = true,
     noinline content: @Composable () -> Unit,
 ) {
-    register(T::class, serializer<T>().descriptor.serialName, NavFamily.BOTTOM, capWidth) { content() }
+    register(T::class, NavFamily.BOTTOM, capWidth) { content() }
 }
 
 inline fun <reified T : Route> NavDestinations.composableFromBottomArgs(
     capWidth: Boolean = true,
     noinline content: @Composable (T) -> Unit,
 ) {
-    register(T::class, serializer<T>().descriptor.serialName, NavFamily.BOTTOM, capWidth) { content(it as T) }
+    register(T::class, NavFamily.BOTTOM, capWidth) { content(it as T) }
 }
 
 val slideInVerticallyFromBottom = slideInVertically(animationSpec = tween(), initialOffsetY = { it })

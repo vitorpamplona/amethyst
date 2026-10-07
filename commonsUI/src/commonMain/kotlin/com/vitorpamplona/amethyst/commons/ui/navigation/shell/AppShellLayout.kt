@@ -108,7 +108,7 @@ fun AppShellLayout(
 
     // Publish docked-ness on the Nav so drawer consumers (openDrawer, edge swipes, the
     // status editor) can behave correctly without each re-deriving the layout tier.
-    LaunchedEffect(docked) {
+    LaunchedEffect(nav, docked) {
         nav.isDrawerDocked = docked
         // Entering the permanent tier with the modal drawer still Open would otherwise
         // carry the stale Open value back to the modal tier and pop the drawer uninvited.

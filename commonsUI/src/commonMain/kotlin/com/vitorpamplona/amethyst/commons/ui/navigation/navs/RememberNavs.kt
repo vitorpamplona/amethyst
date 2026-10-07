@@ -21,8 +21,10 @@
 package com.vitorpamplona.amethyst.commons.ui.navigation.navs
 
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.saveable.Saver
 import androidx.compose.runtime.saveable.rememberSaveable
 import com.vitorpamplona.amethyst.commons.model.navigation.NavBackStacks
@@ -38,9 +40,13 @@ private val NavBackStacksSaver =
 fun rememberNav(): Nav {
     val stacks = rememberSaveable(saver = NavBackStacksSaver) { NavBackStacks() }
     val scope = rememberCoroutineScope()
-    val ime = rememberImeSettler()
+    // The settler is rebuilt whenever its inputs change (density, the keyboard controller), and the
+    // app handles density and size changes without recreating the activity. Nav must survive that:
+    // a new instance would reset the drawer state and the docked flag and recompose every screen that
+    // takes it. So Nav keeps one settler that always defers to the latest.
+    val ime by rememberUpdatedState(rememberImeSettler())
 
-    return remember(stacks, scope, ime) {
-        Nav(stacks, scope, ime)
+    return remember(stacks, scope) {
+        Nav(stacks, scope) { ime.settle() }
     }
 }
