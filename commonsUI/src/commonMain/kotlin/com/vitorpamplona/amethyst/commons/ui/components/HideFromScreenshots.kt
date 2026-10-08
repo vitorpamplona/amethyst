@@ -18,24 +18,13 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.commons.ui.components.util
+package com.vitorpamplona.amethyst.commons.ui.components
 
-import androidx.compose.ui.platform.Clipboard
-
-/** Puts [text] on the system clipboard as plain text. */
-expect suspend fun Clipboard.setText(text: String)
+import androidx.compose.runtime.Composable
 
 /**
- * Copies a secret ([text] is a private key or a password): where the platform can, the clip is
- * marked sensitive so the system's copy preview and clipboard history don't show it.
+ * Keeps the current screen out of screenshots, screen recordings and the app switcher's preview
+ * for as long as it is composed (Android's FLAG_SECURE). Platforms without such a switch ignore it.
  */
-expect suspend fun Clipboard.setSensitiveText(text: String)
-
-/** The clipboard's current plain text, or null when it holds none. */
-expect suspend fun Clipboard.getText(): String?
-
-/**
- * Whether the clipboard holds text, answered from its metadata without reading the contents — so offering
- * "Paste and go" neither makes Android announce a paste nor iOS prompt for one. Only the tap should read.
- */
-expect suspend fun Clipboard.hasText(): Boolean
+@Composable
+expect fun HideFromScreenshots()

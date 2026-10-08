@@ -22,11 +22,21 @@ package com.vitorpamplona.amethyst.commons.ui.components.util
 
 import android.content.ClipData
 import android.content.ClipDescription
+import android.os.PersistableBundle
 import androidx.compose.ui.platform.ClipEntry
 import androidx.compose.ui.platform.Clipboard
 
 actual suspend fun Clipboard.setText(text: String) {
     setClipEntry(ClipEntry(ClipData.newPlainText("", text)))
+}
+
+actual suspend fun Clipboard.setSensitiveText(text: String) {
+    val clip =
+        ClipData.newPlainText("", text).apply {
+            // ClipDescription.EXTRA_IS_SENSITIVE, spelled out: the constant is API 33, the key works earlier.
+            description.extras = PersistableBundle().apply { putBoolean("android.content.extra.IS_SENSITIVE", true) }
+        }
+    setClipEntry(ClipEntry(clip))
 }
 
 actual suspend fun Clipboard.getText(): String? =

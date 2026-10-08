@@ -151,6 +151,7 @@ import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.home.nip75Goals.New
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.interestSets.display.InterestSetScreen
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.interestSets.list.ListOfInterestSetsScreen
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.interestSets.list.metadata.InterestSetMetadataScreen
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.keyBackup.AccountBackupScreen
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.lists.display.lists.PeopleListScreen
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.lists.display.packs.FollowPackScreen
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.lists.list.ListOfPeopleListsScreen
@@ -228,6 +229,7 @@ import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.settings.SpammingUs
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.settings.UpdateZapAmountScreen
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.settings.UserSettingsScreen
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.settings.VideoPlayerSettingsScreen
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.settings.cordn.CordnBackupScreen
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.settings.cordn.CordnCoordinatorsScreen
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.settings.cordn.CordnHubScreen
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.settings.cordn.CordnKeyPackagesScreen
@@ -287,6 +289,8 @@ fun NavDestinations.sharedDestinations(
         NewCalendarEventScreen(nav, accountViewModel, editKind = it.kind, editPubKeyHex = it.pubKeyHex, editDTag = it.dTag)
     }
     composableFromEnd<Route.Nests> { NestsScreen(accountViewModel, nav) }
+    composableFromEnd<Route.AccountBackup> { AccountBackupScreen(accountViewModel, nav) }
+    composableFromEnd<Route.CordnBackup> { CordnBackupScreen(accountViewModel, nav) }
     composableFromEndArgs<Route.AddToMusicPlaylist> { AddToMusicPlaylistSheet(trackAddress = it.trackAddress, accountViewModel = accountViewModel, nav = nav) }
     composableFromEnd<Route.Badges> { BadgesScreen(accountViewModel, nav) }
     composableFromEnd<Route.ProfileBadges> { ProfileBadgesScreen(accountViewModel, nav) }

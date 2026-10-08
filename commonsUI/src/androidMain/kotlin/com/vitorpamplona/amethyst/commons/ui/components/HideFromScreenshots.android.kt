@@ -18,24 +18,34 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.commons.ui.components.util
+package com.vitorpamplona.amethyst.commons.ui.components
 
-import androidx.compose.ui.platform.Clipboard
+import android.app.Activity
+import android.content.Context
+import android.content.ContextWrapper
+import android.view.WindowManager
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.ui.platform.LocalContext
 
-/** Puts [text] on the system clipboard as plain text. */
-expect suspend fun Clipboard.setText(text: String)
+@Composable
+actual fun HideFromScreenshots() {
+    val context = LocalContext.current
+    DisposableEffect(context) {
+        // Cleared on dispose so the flag never leaks to the screens that follow.
+        val window = context.findActivity()?.window
+        window?.setFlags(WindowManager.LayoutParams.FLAG_SECURE, WindowManager.LayoutParams.FLAG_SECURE)
+        onDispose {
+            window?.clearFlags(WindowManager.LayoutParams.FLAG_SECURE)
+        }
+    }
+}
 
-/**
- * Copies a secret ([text] is a private key or a password): where the platform can, the clip is
- * marked sensitive so the system's copy preview and clipboard history don't show it.
- */
-expect suspend fun Clipboard.setSensitiveText(text: String)
-
-/** The clipboard's current plain text, or null when it holds none. */
-expect suspend fun Clipboard.getText(): String?
-
-/**
- * Whether the clipboard holds text, answered from its metadata without reading the contents — so offering
- * "Paste and go" neither makes Android announce a paste nor iOS prompt for one. Only the tap should read.
- */
-expect suspend fun Clipboard.hasText(): Boolean
+private fun Context.findActivity(): Activity? {
+    var current: Context? = this
+    while (current is ContextWrapper) {
+        if (current is Activity) return current
+        current = current.baseContext
+    }
+    return null
+}

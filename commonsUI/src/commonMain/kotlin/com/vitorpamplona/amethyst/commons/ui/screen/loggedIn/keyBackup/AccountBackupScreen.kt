@@ -18,14 +18,8 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.ui.screen.loggedIn.keyBackup
+package com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.keyBackup
 
-import android.content.ClipData
-import android.content.Context
-import android.content.ContextWrapper
-import android.os.PersistableBundle
-import android.view.WindowManager
-import android.widget.Toast
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -57,7 +51,6 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.Stable
 import androidx.compose.runtime.getValue
@@ -69,10 +62,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.autofill.ContentType
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.platform.ClipEntry
 import androidx.compose.ui.platform.Clipboard
 import androidx.compose.ui.platform.LocalClipboard
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.semantics.contentType
 import androidx.compose.ui.semantics.semantics
@@ -87,7 +78,6 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
-import androidx.fragment.app.FragmentActivity
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LifecycleEventEffect
 import androidx.lifecycle.viewModelScope
@@ -123,8 +113,12 @@ import com.vitorpamplona.amethyst.commons.resources.failed_to_encrypt_key
 import com.vitorpamplona.amethyst.commons.resources.hide_password
 import com.vitorpamplona.amethyst.commons.resources.secret_key_copied_to_clipboard
 import com.vitorpamplona.amethyst.commons.resources.show_password
+import com.vitorpamplona.amethyst.commons.ui.components.HideFromScreenshots
 import com.vitorpamplona.amethyst.commons.ui.components.KeyTranscriptionGrid
+import com.vitorpamplona.amethyst.commons.ui.components.ShortNotice
+import com.vitorpamplona.amethyst.commons.ui.components.rememberShortNotice
 import com.vitorpamplona.amethyst.commons.ui.components.util.getText
+import com.vitorpamplona.amethyst.commons.ui.components.util.setSensitiveText
 import com.vitorpamplona.amethyst.commons.ui.components.util.setText
 import com.vitorpamplona.amethyst.commons.ui.insets.imePaddingSafe
 import com.vitorpamplona.amethyst.commons.ui.loadStringRes
@@ -179,14 +173,7 @@ private fun AccountBackupScreenContent(
     // Redact the secret key from screenshots and the app switcher while this
     // screen is on-screen. Cleared on dispose so the flag never leaks to other
     // screens. This is the only FLAG_SECURE usage in the app — scoped on purpose.
-    val context = LocalContext.current
-    DisposableEffect(context) {
-        val window = context.getFragmentActivity()?.window
-        window?.setFlags(WindowManager.LayoutParams.FLAG_SECURE, WindowManager.LayoutParams.FLAG_SECURE)
-        onDispose {
-            window?.clearFlags(WindowManager.LayoutParams.FLAG_SECURE)
-        }
-    }
+    HideFromScreenshots()
 
     Scaffold(
         topBar = {
@@ -274,7 +261,7 @@ private fun SecretKeyCard(
     gate: KeyAccessGate,
     accountViewModel: AccountViewModel,
 ) {
-    val context = LocalContext.current
+    val shortNotice = rememberShortNotice()
     val clipboard = LocalClipboard.current
 
     var revealed by remember { mutableStateOf(false) }
@@ -340,7 +327,7 @@ private fun SecretKeyCard(
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     FilledTonalButton(
                         modifier = Modifier.weight(1f),
-                        onClick = { gate.withAccess { copyNSec(context, accountViewModel.viewModelScope, nsec, clipboard) } },
+                        onClick = { gate.withAccess { copyNSec(shortNotice, accountViewModel.viewModelScope, nsec, clipboard) } },
                     ) {
                         ButtonContent(MaterialSymbols.ContentCopy, stringRes(Res.string.backup_keys_copy))
                     }
@@ -384,7 +371,7 @@ private fun EncryptedKeyCard(
     accountViewModel: AccountViewModel,
     gate: KeyAccessGate,
 ) {
-    val context = LocalContext.current
+    val shortNotice = rememberShortNotice()
     val clipboard = LocalClipboard.current
     val scope = rememberCoroutineScope()
     val keyboardController = LocalSoftwareKeyboardController.current
@@ -437,7 +424,7 @@ private fun EncryptedKeyCard(
                     password = ""
                     repeated = ""
                 } else {
-                    Toast.makeText(context, loadStringRes(Res.string.failed_to_encrypt_key), Toast.LENGTH_SHORT).show()
+                    shortNotice.show(loadStringRes(Res.string.failed_to_encrypt_key))
                 }
             }
         }
@@ -602,7 +589,7 @@ private fun EncryptedKeyCard(
                                 onClick = {
                                     scope.launch {
                                         clipboard.setText(encryptedValue)
-                                        Toast.makeText(context, loadStringRes(Res.string.secret_key_copied_to_clipboard), Toast.LENGTH_SHORT).show()
+                                        shortNotice.show(loadStringRes(Res.string.secret_key_copied_to_clipboard))
                                     }
                                 },
                             ) {
@@ -733,51 +720,25 @@ private fun rememberKeyAccessGate(accountViewModel: AccountViewModel): KeyAccess
     return gate
 }
 
-fun Context.getFragmentActivity(): FragmentActivity? {
-    var currentContext = this
-    while (currentContext is ContextWrapper) {
-        if (currentContext is FragmentActivity) {
-            return currentContext
-        }
-        currentContext = currentContext.baseContext
-    }
-    return null
-}
-
 private fun copyNSec(
-    context: Context,
+    shortNotice: ShortNotice,
     scope: CoroutineScope,
     nsec: String,
     clipboardManager: Clipboard,
 ) {
     // The auto-clear below must outlive this screen, so [scope] is not a composition scope.
     scope.launch {
-        clipboardManager.setClipEntry(ClipEntry(sensitiveClip(nsec)))
-        Toast
-            .makeText(
-                context,
-                loadStringRes(Res.string.secret_key_copied_to_clipboard),
-                Toast.LENGTH_SHORT,
-            ).show()
+        clipboardManager.setSensitiveText(nsec)
+        shortNotice.show(loadStringRes(Res.string.secret_key_copied_to_clipboard))
 
         // Best-effort auto-clear: after a delay, wipe the clipboard only if it
         // still holds this exact nsec (don't clobber anything copied since).
         delay(CLIPBOARD_CLEAR_DELAY_MS)
         if (clipboardManager.getText() == nsec) {
-            clipboardManager.setClipEntry(ClipEntry(ClipData.newPlainText("", "")))
+            clipboardManager.setText("")
         }
     }
 }
-
-/**
- * Marks the clip as sensitive so Android 13+ hides it in the copy confirmation overlay and
- * clipboard previews. That overlay is a system window, outside this screen's FLAG_SECURE.
- */
-private fun sensitiveClip(text: String): ClipData =
-    ClipData.newPlainText("", text).apply {
-        // ClipDescription.EXTRA_IS_SENSITIVE, spelled out: the constant is API 33, the key works earlier.
-        description.extras = PersistableBundle().apply { putBoolean("android.content.extra.IS_SENSITIVE", true) }
-    }
 
 @Composable
 private fun ShowKeyQRDialog(

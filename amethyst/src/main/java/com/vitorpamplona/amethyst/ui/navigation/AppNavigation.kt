@@ -68,11 +68,9 @@ import com.vitorpamplona.amethyst.ui.note.share.ShareNoteAsImageScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.browser.WebAppScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.cordnGroup.CordnGroupChatScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.favorites.NostrAppScreen
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.keyBackup.AccountBackupScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.napplets.ConnectedAppDetailScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.qrcode.ScanQrImageScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.settings.ResourceUsageScreen
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.settings.cordn.CordnBackupScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.video.hls.NewHlsVideoScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.workouts.fitness.MyFitnessScreen
 import com.vitorpamplona.quartz.nip19Bech32.Nip19Parser
@@ -106,14 +104,12 @@ internal fun NavDestinations.androidDestinations(
     composableFromEndArgs<Route.ConnectedAppDetail> { ConnectedAppDetailScreen(it.coordinate, accountViewModel, nav) }
     composableFromEnd<Route.NewHlsVideo> { NewHlsVideoScreen(accountViewModel, nav) }
     composableFromBottomArgs<Route.ScanQrImage> { ScanQrImageScreen(it.uri, accountViewModel, nav) }
-    composableFromEnd<Route.AccountBackup> { AccountBackupScreen(accountViewModel, nav) }
     composableFromEnd<Route.NowPlayingSettings> {
         val context = LocalContext.current
         val access = remember(context) { AndroidNowPlayingAccess(context.applicationContext) }
         NowPlayingSettingsScreen(accountViewModel, nav, access) { appId, label -> AndroidAppIcon(appId, label) }
     }
     composableFromEnd<Route.ResourceUsage> { ResourceUsageScreen(accountViewModel, nav) }
-    composableFromEnd<Route.CordnBackup> { CordnBackupScreen(accountViewModel, nav) }
     composableFromEndArgs<Route.UpdateReactionType> { UpdateReactionTypeScreen(accountViewModel, nav) }
     composableFromEndArgs<Route.ShareNoteAsImage> { ShareNoteAsImageScreen(it.id, accountViewModel, nav) }
     composableFromEndArgs<Route.ShareNoteAsImageFile> { ShareNoteAsImageFileScreen(it.id, accountViewModel, nav) }

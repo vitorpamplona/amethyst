@@ -18,11 +18,8 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.ui.screen.loggedIn.settings.cordn
+package com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.settings.cordn
 
-import android.net.Uri
-import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
@@ -48,7 +45,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
@@ -75,14 +71,14 @@ import com.vitorpamplona.amethyst.commons.resources.cordn_backup_title
 import com.vitorpamplona.amethyst.commons.resources.cordn_group_unavailable
 import com.vitorpamplona.amethyst.commons.resources.cordn_group_unavailable_detail
 import com.vitorpamplona.amethyst.commons.ui.components.EmptyState
+import com.vitorpamplona.amethyst.commons.ui.components.rememberFileBytesAccess
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.navigation.topbars.TopBarWithBackButton
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.settings.SettingsSection
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
-import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 
 /**
  * Exporting and restoring cordn state.
@@ -119,53 +115,51 @@ fun CordnBackupScreen(
     nav: INav,
 ) {
     val runtime = accountViewModel.account.cordnRuntime
-    val context = LocalContext.current
+    val files = rememberFileBytesAccess()
     val scope = rememberCoroutineScope()
 
     var passphrase by remember { mutableStateOf("") }
     var busy by remember { mutableStateOf(false) }
     var status by remember { mutableStateOf<String?>(null) }
     var error by remember { mutableStateOf<String?>(null) }
-    var pendingRestore by remember { mutableStateOf<Uri?>(null) }
+    var pendingRestore by remember { mutableStateOf<ByteArray?>(null) }
 
     val exported = stringRes(Res.string.cordn_backup_exported)
     val restored = stringRes(Res.string.cordn_backup_restored)
     val failed = stringRes(Res.string.cordn_backup_failed)
 
-    val saver =
-        rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("application/octet-stream")) { uri ->
-            val target = uri ?: return@rememberLauncherForActivityResult
-            val runtimeNow = runtime ?: return@rememberLauncherForActivityResult
-            scope.launch {
-                busy = true
-                error = null
-                status = null
-                try {
-                    val bytes = runtimeNow.exportArchive(passphrase)
-                    withContext(Dispatchers.IO) {
-                        context.contentResolver.openOutputStream(target)?.use { it.write(bytes) }
-                    }
+    fun export() {
+        val runtimeNow = runtime ?: return
+        scope.launch {
+            busy = true
+            error = null
+            status = null
+            try {
+                // The archive is only built once the user picked where it goes.
+                val saved = files.save("cordn-backup.bin", "application/octet-stream") { runtimeNow.exportArchive(passphrase) }
+                if (saved) {
                     status = exported
                     passphrase = ""
-                } catch (e: Exception) {
-                    error = e.message ?: failed
-                } finally {
-                    busy = false
                 }
+            } catch (e: Exception) {
+                if (e is CancellationException) throw e
+                error = e.message ?: failed
+            } finally {
+                busy = false
             }
         }
+    }
 
-    // OpenDocument, not GetContent. `GetContent("*/*")` sends ACTION_GET_CONTENT,
-    // which on this Android version is intercepted by the system photo picker's
-    // shim (`PhotopickerGetContentActivity`) before it hands off to DocumentsUI —
-    // and a file chosen through that handoff came back as a cancelled result, so
-    // Restore opened a picker, took a tap, and quietly did nothing. An archive is
-    // not media; ACTION_OPEN_DOCUMENT is the right intent for it and reaches SAF
-    // directly.
-    val picker =
-        rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
-            pendingRestore = uri
+    fun pickRestore() {
+        scope.launch {
+            try {
+                pendingRestore = files.open(listOf("*/*"))
+            } catch (e: Exception) {
+                if (e is CancellationException) throw e
+                error = e.message ?: failed
+            }
         }
+    }
 
     val snackbarHostState = remember { SnackbarHostState() }
 
@@ -253,7 +247,7 @@ fun CordnBackupScreen(
                     )
 
                     Button(
-                        onClick = { saver.launch("cordn-backup.bin") },
+                        onClick = ::export,
                         // No passphrase, no export. The file carries ratchet
                         // trees and private key material; there is no version
                         // of it that is safe to write unprotected.
@@ -277,7 +271,7 @@ fun CordnBackupScreen(
                     )
 
                     Button(
-                        onClick = { picker.launch(arrayOf("*/*")) },
+                        onClick = ::pickRestore,
                         enabled = !busy && passphrase.isNotBlank(),
                         modifier = Modifier.fillMaxWidth(),
                     ) {
@@ -288,7 +282,7 @@ fun CordnBackupScreen(
         }
     }
 
-    pendingRestore?.let { uri ->
+    pendingRestore?.let { bytes ->
         AlertDialog(
             onDismissRequest = { pendingRestore = null },
             title = { Text(stringRes(Res.string.cordn_backup_restore_confirm_title)) },
@@ -302,14 +296,9 @@ fun CordnBackupScreen(
                         error = null
                         status = null
                         try {
-                            val bytes = withContext(Dispatchers.IO) { context.contentResolver.openInputStream(uri)?.use { it.readBytes() } }
-                            if (bytes == null) {
-                                error = failed
-                            } else {
-                                runtimeNow.importArchive(bytes, passphrase)
-                                status = restored
-                                passphrase = ""
-                            }
+                            runtimeNow.importArchive(bytes, passphrase)
+                            status = restored
+                            passphrase = ""
                         } catch (e: Exception) {
                             error = e.message ?: failed
                         } finally {
