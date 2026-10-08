@@ -53,6 +53,7 @@ import com.vitorpamplona.amethyst.commons.resources.request_deletion
 import com.vitorpamplona.amethyst.commons.resources.timestamp_it
 import com.vitorpamplona.amethyst.commons.resources.timestamp_pending
 import com.vitorpamplona.amethyst.commons.resources.unfollow
+import com.vitorpamplona.amethyst.commons.ui.actions.EditPostView
 import com.vitorpamplona.amethyst.commons.ui.components.ClickableBox
 import com.vitorpamplona.amethyst.commons.ui.components.GenericLoadable
 import com.vitorpamplona.amethyst.commons.ui.components.M3ActionDialog
@@ -67,7 +68,6 @@ import com.vitorpamplona.amethyst.commons.ui.note.copyNoteTextAction
 import com.vitorpamplona.amethyst.commons.ui.note.elements.DropDownParams
 import com.vitorpamplona.amethyst.commons.ui.note.elements.observeBookmarksFollowsAndAccount
 import com.vitorpamplona.amethyst.commons.ui.note.externalLinkForNote
-import com.vitorpamplona.amethyst.commons.ui.note.platform.EditPostView
 import com.vitorpamplona.amethyst.commons.ui.note.types.EditState
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.report.ReportNoteDialog
 import com.vitorpamplona.amethyst.commons.ui.stringRes

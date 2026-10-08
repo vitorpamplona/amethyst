@@ -46,11 +46,15 @@ import kotlinx.collections.immutable.ImmutableList
 import okio.Path
 import com.vitorpamplona.amethyst.commons.ui.components.LoadUrlPreview as AppLoadUrlPreview
 import com.vitorpamplona.amethyst.commons.ui.components.rememberUrlPreviewState as AppRememberUrlPreviewState
+import com.vitorpamplona.amethyst.commons.ui.note.types.RenderGitIssueEvent as AppRenderGitIssueEvent
+import com.vitorpamplona.amethyst.commons.ui.note.types.RenderGitPatchEvent as AppRenderGitPatchEvent
+import com.vitorpamplona.amethyst.commons.ui.note.types.RenderGitPullRequestEvent as AppRenderGitPullRequestEvent
+import com.vitorpamplona.amethyst.commons.ui.note.types.RenderGitPullRequestUpdateEvent as AppRenderGitPullRequestUpdateEvent
+import com.vitorpamplona.amethyst.commons.ui.note.types.RenderGitRepositoryEvent as AppRenderGitRepositoryEvent
 import com.vitorpamplona.amethyst.commons.ui.note.types.RenderMeetingRoomEvent as AppRenderMeetingRoomEvent
 import com.vitorpamplona.amethyst.commons.ui.note.types.RenderMeetingRoomPresence as AppRenderMeetingRoomPresence
 import com.vitorpamplona.amethyst.commons.ui.note.types.RenderMeetingSpaceEvent as AppRenderMeetingSpaceEvent
 import com.vitorpamplona.amethyst.service.playback.composable.VideoView as AppVideoView
-import com.vitorpamplona.amethyst.ui.actions.EditPostView as AppEditPostView
 import com.vitorpamplona.amethyst.ui.actions.uploads.RecordAudioBox as AppRecordAudioBox
 import com.vitorpamplona.amethyst.ui.actions.uploads.RecordVoiceButton as AppRecordVoiceButton
 import com.vitorpamplona.amethyst.ui.actions.uploads.VoiceMessagePreview as AppVoiceMessagePreview
@@ -64,13 +68,7 @@ import com.vitorpamplona.amethyst.ui.note.types.RenderAudioFromIMeta as AppRende
 import com.vitorpamplona.amethyst.ui.note.types.RenderAudioHeader as AppRenderAudioHeader
 import com.vitorpamplona.amethyst.ui.note.types.RenderAudioTrack as AppRenderAudioTrack
 import com.vitorpamplona.amethyst.ui.note.types.RenderAudioWithWaveform as AppRenderAudioWithWaveform
-import com.vitorpamplona.amethyst.ui.note.types.RenderCalendarRSVPEvent as AppRenderCalendarRSVPEvent
 import com.vitorpamplona.amethyst.ui.note.types.RenderChessGame as AppRenderChessGame
-import com.vitorpamplona.amethyst.ui.note.types.RenderGitIssueEvent as AppRenderGitIssueEvent
-import com.vitorpamplona.amethyst.ui.note.types.RenderGitPatchEvent as AppRenderGitPatchEvent
-import com.vitorpamplona.amethyst.ui.note.types.RenderGitPullRequestEvent as AppRenderGitPullRequestEvent
-import com.vitorpamplona.amethyst.ui.note.types.RenderGitPullRequestUpdateEvent as AppRenderGitPullRequestUpdateEvent
-import com.vitorpamplona.amethyst.ui.note.types.RenderGitRepositoryEvent as AppRenderGitRepositoryEvent
 import com.vitorpamplona.amethyst.ui.note.types.RenderLiveChessChallenge as AppRenderLiveChessChallenge
 import com.vitorpamplona.amethyst.ui.note.types.RenderLiveChessGameEnd as AppRenderLiveChessGameEnd
 import com.vitorpamplona.amethyst.ui.note.types.RenderMusicTrack as AppRenderMusicTrack
@@ -466,17 +464,6 @@ object AndroidNotePlatform : NotePlatform {
     )
 
     @Composable
-    override fun RenderCalendarRSVPEvent(
-        baseNote: Note,
-        accountViewModel: AccountViewModel,
-        nav: INav,
-    ) = AppRenderCalendarRSVPEvent(
-        note = baseNote,
-        accountViewModel = accountViewModel,
-        nav = nav,
-    )
-
-    @Composable
     override fun RenderMeetingSpaceEvent(
         baseNote: Note,
         accountViewModel: AccountViewModel,
@@ -597,19 +584,4 @@ object AndroidNotePlatform : NotePlatform {
         isUploading: Boolean,
         modifier: Modifier,
     ) = AppVoiceMessagePreview(voiceMetadata, localFile, onRemove, onReRecord, isUploading, modifier)
-
-    @Composable
-    override fun EditPostView(
-        onClose: () -> Unit,
-        edit: Note,
-        versionLookingAt: Note?,
-        accountViewModel: AccountViewModel,
-        nav: INav,
-    ) = AppEditPostView(
-        onClose = onClose,
-        edit = edit,
-        versionLookingAt = versionLookingAt,
-        accountViewModel = accountViewModel,
-        nav = nav,
-    )
 }

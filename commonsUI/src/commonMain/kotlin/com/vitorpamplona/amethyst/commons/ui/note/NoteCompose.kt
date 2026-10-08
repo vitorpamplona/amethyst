@@ -128,7 +128,6 @@ import com.vitorpamplona.amethyst.commons.ui.note.elements.TimeAgoStyle
 import com.vitorpamplona.amethyst.commons.ui.note.formatDateTime
 import com.vitorpamplona.amethyst.commons.ui.note.platform.RenderAudioHeader
 import com.vitorpamplona.amethyst.commons.ui.note.platform.RenderAudioTrack
-import com.vitorpamplona.amethyst.commons.ui.note.platform.RenderCalendarRSVPEvent
 import com.vitorpamplona.amethyst.commons.ui.note.platform.RenderChessGame
 import com.vitorpamplona.amethyst.commons.ui.note.platform.RenderGitIssueEvent
 import com.vitorpamplona.amethyst.commons.ui.note.platform.RenderGitPatchEvent
@@ -180,6 +179,7 @@ import com.vitorpamplona.amethyst.commons.ui.note.types.RenderBolt12Zap
 import com.vitorpamplona.amethyst.commons.ui.note.types.RenderBookshelfDirectory
 import com.vitorpamplona.amethyst.commons.ui.note.types.RenderCalendarCollectionEvent
 import com.vitorpamplona.amethyst.commons.ui.note.types.RenderCalendarDateSlotEvent
+import com.vitorpamplona.amethyst.commons.ui.note.types.RenderCalendarRSVPEvent
 import com.vitorpamplona.amethyst.commons.ui.note.types.RenderCalendarTimeSlotEvent
 import com.vitorpamplona.amethyst.commons.ui.note.types.RenderChannelInvite
 import com.vitorpamplona.amethyst.commons.ui.note.types.RenderChannelMessage

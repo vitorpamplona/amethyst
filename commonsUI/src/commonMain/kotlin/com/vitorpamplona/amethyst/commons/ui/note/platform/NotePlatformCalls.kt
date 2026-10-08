@@ -403,17 +403,6 @@ fun RenderGitPullRequestUpdateEvent(
 )
 
 @Composable
-fun RenderCalendarRSVPEvent(
-    baseNote: Note,
-    accountViewModel: AccountViewModel,
-    nav: INav,
-) = LocalNotePlatform.current.RenderCalendarRSVPEvent(
-    baseNote = baseNote,
-    accountViewModel = accountViewModel,
-    nav = nav,
-)
-
-@Composable
 fun RenderMeetingSpaceEvent(
     baseNote: Note,
     accountViewModel: AccountViewModel,
@@ -516,21 +505,6 @@ fun VoiceMessagePreview(
     isUploading: Boolean = false,
     modifier: Modifier = Modifier,
 ) = LocalNotePlatform.current.VoiceMessagePreview(voiceMetadata, localFile, onRemove, onReRecord, isUploading, modifier)
-
-@Composable
-fun EditPostView(
-    onClose: () -> Unit,
-    edit: Note,
-    versionLookingAt: Note?,
-    accountViewModel: AccountViewModel,
-    nav: INav,
-) = LocalNotePlatform.current.EditPostView(
-    onClose = onClose,
-    edit = edit,
-    versionLookingAt = versionLookingAt,
-    accountViewModel = accountViewModel,
-    nav = nav,
-)
 
 @Composable
 fun rememberUrlPreviewState(

@@ -1,0 +1,420 @@
+/*
+ * Copyright (c) 2025 Vitor Pamplona
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy of
+ * this software and associated documentation files (the "Software"), to deal in
+ * the Software without restriction, including without limitation the rights to use,
+ * copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the
+ * Software, and to permit persons to whom the Software is furnished to do so,
+ * subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in all
+ * copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS
+ * FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR
+ * COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN
+ * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
+ * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+ */
+package com.vitorpamplona.amethyst.commons.ui.note
+
+import androidx.compose.animation.animateContentSize
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.consumeWindowInsets
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.MutableState
+import androidx.compose.runtime.Stable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.input.KeyboardCapitalization
+import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.input.TextFieldValue
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.dp
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewmodel.compose.viewModel
+import com.vitorpamplona.amethyst.commons.emojicoder.EmojiCoder
+import com.vitorpamplona.amethyst.commons.model.Account
+import com.vitorpamplona.amethyst.commons.model.AddressableNote
+import com.vitorpamplona.amethyst.commons.model.navigation.routeFor
+import com.vitorpamplona.amethyst.commons.relayClient.event.observeNoteEventAndMapNotNull
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.add
+import com.vitorpamplona.amethyst.commons.resources.new_reaction_symbol
+import com.vitorpamplona.amethyst.commons.ui.components.AnimatedBorderTextCornerRadius
+import com.vitorpamplona.amethyst.commons.ui.insets.imePaddingSafe
+import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
+import com.vitorpamplona.amethyst.commons.ui.navigation.routes.routeFor
+import com.vitorpamplona.amethyst.commons.ui.navigation.topbars.SavingTopBar
+import com.vitorpamplona.amethyst.commons.ui.note.LikedIcon
+import com.vitorpamplona.amethyst.commons.ui.note.LoadAddressableNote
+import com.vitorpamplona.amethyst.commons.ui.note.types.RenderEmojiPack
+import com.vitorpamplona.amethyst.commons.ui.richtext.InLineIconRenderer
+import com.vitorpamplona.amethyst.commons.ui.stringRes
+import com.vitorpamplona.amethyst.commons.ui.theme.ButtonBorder
+import com.vitorpamplona.amethyst.commons.ui.theme.StdVertSpacer
+import com.vitorpamplona.amethyst.commons.ui.theme.placeholderText
+import com.vitorpamplona.amethyst.commons.util.firstFullChar
+import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
+import com.vitorpamplona.quartz.nip01Core.core.Address
+import com.vitorpamplona.quartz.nip30CustomEmoji.CustomEmoji
+import com.vitorpamplona.quartz.nip30CustomEmoji.EmojiUrlTag
+import com.vitorpamplona.quartz.nip30CustomEmoji.selection.EmojiListEvent
+import kotlinx.collections.immutable.ImmutableList
+import kotlinx.collections.immutable.persistentListOf
+import kotlinx.collections.immutable.toImmutableList
+import kotlinx.coroutines.launch
+
+@Stable
+class UpdateReactionTypeViewModel : ViewModel() {
+    lateinit var accountViewModel: AccountViewModel
+    lateinit var account: Account
+    var nextChoice by mutableStateOf(TextFieldValue(""))
+    var reactionSet by mutableStateOf(listOf<String>())
+
+    fun init(accountViewModel: AccountViewModel) {
+        this.accountViewModel = accountViewModel
+        this.account = accountViewModel.account
+    }
+
+    fun load() {
+        this.reactionSet = account.settings.syncedSettings.reactions.reactionChoices.value
+    }
+
+    fun toListOfChoices(commaSeparatedAmounts: String): List<Long> = commaSeparatedAmounts.split(",").map { it.trim().toLongOrNull() ?: 0 }
+
+    fun addChoice() {
+        val newValue =
+            if (EmojiCoder.isCoded(nextChoice.text)) {
+                EmojiCoder.cropToFirstMessage(nextChoice.text)
+            } else {
+                nextChoice.text.trim().firstFullChar()
+            }
+
+        reactionSet = reactionSet + newValue
+
+        nextChoice = TextFieldValue("")
+    }
+
+    fun addChoice(customEmoji: EmojiUrlTag) {
+        reactionSet = reactionSet + (customEmoji.encode())
+    }
+
+    fun removeChoice(reaction: String) {
+        reactionSet = reactionSet - reaction
+    }
+
+    fun sendPost() {
+        accountViewModel.changeReactionTypes(reactionSet) {
+            nextChoice = TextFieldValue("")
+        }
+    }
+
+    fun cancel() {
+        nextChoice = TextFieldValue("")
+    }
+
+    fun hasChanged(): Boolean = reactionSet != account.settings.syncedSettings.reactions.reactionChoices.value
+}
+
+@Composable
+fun UpdateReactionTypeScreen(
+    accountViewModel: AccountViewModel,
+    nav: INav,
+) {
+    val postViewModel: UpdateReactionTypeViewModel = viewModel()
+    postViewModel.init(accountViewModel)
+
+    LaunchedEffect(postViewModel, accountViewModel) {
+        postViewModel.load()
+    }
+
+    UpdateReactionTypeScreen(postViewModel, accountViewModel, nav)
+}
+
+@OptIn(ExperimentalLayoutApi::class, ExperimentalMaterial3Api::class)
+@Composable
+fun UpdateReactionTypeScreen(
+    postViewModel: UpdateReactionTypeViewModel,
+    accountViewModel: AccountViewModel,
+    nav: INav,
+) {
+    Scaffold(
+        topBar = {
+            SavingTopBar(
+                isActive = postViewModel::hasChanged,
+                onCancel = {
+                    postViewModel.cancel()
+                    nav.popBack()
+                },
+                onPost = {
+                    postViewModel.sendPost()
+                    nav.popBack()
+                },
+            )
+        },
+    ) { pad ->
+        Surface(
+            modifier =
+                Modifier
+                    .padding(pad)
+                    .consumeWindowInsets(pad)
+                    .imePaddingSafe(),
+        ) {
+            Column(
+                modifier = Modifier.padding(10.dp),
+            ) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
+                    Column(
+                        modifier = Modifier.verticalScroll(rememberScrollState()),
+                    ) {
+                        Row(modifier = Modifier.fillMaxWidth()) {
+                            Column(modifier = Modifier.animateContentSize()) {
+                                FlowRow(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.Center,
+                                ) {
+                                    postViewModel.reactionSet.forEach { reactionType ->
+                                        RenderReactionOption(reactionType, postViewModel)
+                                    }
+                                }
+                            }
+                        }
+
+                        Spacer(modifier = Modifier.height(10.dp))
+
+                        Row(
+                            modifier = Modifier.fillMaxWidth().padding(vertical = 5.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            OutlinedTextField(
+                                label = { Text(text = stringRes(Res.string.new_reaction_symbol)) },
+                                value = postViewModel.nextChoice,
+                                onValueChange = { postViewModel.nextChoice = it },
+                                keyboardOptions =
+                                    KeyboardOptions.Default.copy(
+                                        capitalization = KeyboardCapitalization.None,
+                                        keyboardType = KeyboardType.Text,
+                                    ),
+                                placeholder = {
+                                    Text(
+                                        text = "\uD83D\uDCAF, \uD83C\uDF89, \uD83D\uDC4E",
+                                        color = MaterialTheme.colorScheme.placeholderText,
+                                    )
+                                },
+                                singleLine = true,
+                                modifier = Modifier.padding(end = 10.dp).weight(1f),
+                            )
+
+                            Button(
+                                onClick = { postViewModel.addChoice() },
+                                shape = ButtonBorder,
+                                colors =
+                                    ButtonDefaults.buttonColors(
+                                        containerColor = MaterialTheme.colorScheme.primary,
+                                    ),
+                            ) {
+                                Text(text = stringRes(Res.string.add), color = Color.White)
+                            }
+                        }
+                    }
+                }
+
+                Spacer(StdVertSpacer)
+
+                EmojiSelector(
+                    accountViewModel = accountViewModel,
+                    nav = nav,
+                ) {
+                    postViewModel.addChoice(it)
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun RenderReactionOption(
+    reactionType: String,
+    postViewModel: UpdateReactionTypeViewModel,
+) {
+    Box(
+        modifier =
+            Modifier
+                .padding(3.dp)
+                .clickable { postViewModel.removeChoice(reactionType) }
+                .border(
+                    width = 1.dp,
+                    color = MaterialTheme.colorScheme.surfaceDim,
+                    shape = RoundedCornerShape(8.dp),
+                ).padding(8.dp),
+    ) {
+        if (reactionType.startsWith(":")) {
+            val noStartColon = reactionType.removePrefix(":")
+            val url = noStartColon.substringAfter(":")
+
+            val renderable =
+                persistentListOf(
+                    CustomEmoji.ImageUrlType(url),
+                    CustomEmoji.TextType(" ✖"),
+                )
+
+            InLineIconRenderer(
+                renderable,
+                style = SpanStyle(color = MaterialTheme.colorScheme.onBackground),
+                maxLines = 1,
+            )
+        } else {
+            when (reactionType) {
+                "+" -> {
+                    Row {
+                        LikedIcon(modifier = Modifier.size(20.dp), tint = Color.Unspecified)
+
+                        Text(
+                            text = " ✖",
+                            color = MaterialTheme.colorScheme.onBackground,
+                            textAlign = TextAlign.Center,
+                        )
+                    }
+                }
+
+                "-" -> {
+                    Text(
+                        text = "\uD83D\uDC4E ✖",
+                        color = MaterialTheme.colorScheme.onBackground,
+                        textAlign = TextAlign.Center,
+                    )
+                }
+
+                else -> {
+                    if (EmojiCoder.isCoded(reactionType)) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            AnimatedBorderTextCornerRadius(
+                                reactionType,
+                                color = MaterialTheme.colorScheme.onBackground,
+                                textAlign = TextAlign.Center,
+                            )
+                            Text(
+                                text = " ✖",
+                                color = MaterialTheme.colorScheme.onBackground,
+                                textAlign = TextAlign.Center,
+                            )
+                        }
+                    } else {
+                        Text(
+                            text = "$reactionType ✖",
+                            color = MaterialTheme.colorScheme.onBackground,
+                            textAlign = TextAlign.Center,
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun EmojiSelector(
+    accountViewModel: AccountViewModel,
+    nav: INav,
+    onClick: ((EmojiUrlTag) -> Unit)? = null,
+) {
+    LoadAddressableNote(
+        accountViewModel.account.emoji.getEmojiListAddress(),
+    ) { emptyNote ->
+        emptyNote?.let { usersEmojiList ->
+            val collections by observeNoteEventAndMapNotNull(usersEmojiList, accountViewModel) { event: EmojiListEvent ->
+                event.emojiPacks().toImmutableList()
+            }
+
+            collections?.let { EmojiCollectionGallery(it, accountViewModel, nav, onClick) }
+        }
+    }
+}
+
+@Composable
+fun EmojiCollectionGallery(
+    emojiCollections: ImmutableList<Address>,
+    accountViewModel: AccountViewModel,
+    nav: INav,
+    onClick: ((EmojiUrlTag) -> Unit)? = null,
+) {
+    val color = MaterialTheme.colorScheme.background
+    val bgColor = remember { mutableStateOf(color) }
+
+    val listState = rememberLazyListState()
+
+    LazyColumn(
+        state = listState,
+    ) {
+        itemsIndexed(emojiCollections, key = { _, item -> item }) { _, item ->
+            LoadAddressableNote(item) {
+                it?.let { WatchAndRenderNote(it, bgColor, accountViewModel, nav, onClick) }
+            }
+        }
+    }
+}
+
+@Composable
+private fun WatchAndRenderNote(
+    emojiPack: AddressableNote,
+    bgColor: MutableState<Color>,
+    accountViewModel: AccountViewModel,
+    nav: INav,
+    onClick: ((EmojiUrlTag) -> Unit)?,
+) {
+    val scope = rememberCoroutineScope()
+
+    Column(
+        Modifier.fillMaxWidth().clickable {
+            scope.launch { routeFor(emojiPack, accountViewModel.account)?.let { nav.nav(it) } }
+        },
+    ) {
+        RenderEmojiPack(
+            baseNote = emojiPack,
+            actionable = false,
+            backgroundColor = bgColor,
+            accountViewModel = accountViewModel,
+            onClick = onClick,
+        )
+    }
+}

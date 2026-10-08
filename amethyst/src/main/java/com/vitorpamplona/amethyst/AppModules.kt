@@ -70,6 +70,7 @@ import com.vitorpamplona.amethyst.commons.relayClient.diagnostics.BootRelayDiagn
 import com.vitorpamplona.amethyst.commons.relayClient.event.EventFinderQueryState
 import com.vitorpamplona.amethyst.commons.relayClient.notify.NotifyCoordinator
 import com.vitorpamplona.amethyst.commons.relayClient.reqCommand.RelaySubscriptionsCoordinator
+import com.vitorpamplona.amethyst.commons.relayClient.reqCommand.account.AccountSubscriptionRegistry
 import com.vitorpamplona.amethyst.commons.relayClient.speedLogger.RelaySpeedLogger
 import com.vitorpamplona.amethyst.commons.relayClient.user.UserFinderQueryState
 import com.vitorpamplona.amethyst.commons.relays.health.TorCircuitHealthTracker
@@ -92,6 +93,7 @@ import com.vitorpamplona.amethyst.commons.service.http.LocalBlossomMediaCallFact
 import com.vitorpamplona.amethyst.commons.service.http.OkHttpWebSocket
 import com.vitorpamplona.amethyst.commons.service.http.OnionLocationCache
 import com.vitorpamplona.amethyst.commons.service.http.RoleBasedHttpClientBuilder
+import com.vitorpamplona.amethyst.commons.service.images.ImageDiskCacheReconciler
 import com.vitorpamplona.amethyst.commons.service.lnurl.OkHttpLnurlEndpointResolver
 import com.vitorpamplona.amethyst.commons.service.namecoin.NamecoinServices
 import com.vitorpamplona.amethyst.commons.service.pow.PoWJobStore
@@ -121,7 +123,6 @@ import com.vitorpamplona.amethyst.service.connectivity.ConnectivityManager
 import com.vitorpamplona.amethyst.service.crashreports.CrashReportCache
 import com.vitorpamplona.amethyst.service.crashreports.UnexpectedCrashSaver
 import com.vitorpamplona.amethyst.service.images.ImageCacheFactory
-import com.vitorpamplona.amethyst.service.images.ImageDiskCacheReconciler
 import com.vitorpamplona.amethyst.service.images.ImageLoaderSetup
 import com.vitorpamplona.amethyst.service.images.ThumbnailDiskCache
 import com.vitorpamplona.amethyst.service.location.LocationState
@@ -137,7 +138,6 @@ import com.vitorpamplona.amethyst.service.playback.diskCache.VideoCacheFactory
 import com.vitorpamplona.amethyst.service.playback.pip.BackgroundMedia
 import com.vitorpamplona.amethyst.service.playback.service.PlaybackServiceClient
 import com.vitorpamplona.amethyst.service.pow.PowMiningForegroundService
-import com.vitorpamplona.amethyst.service.relayClient.reqCommand.account.AccountSubscriptionRegistry
 import com.vitorpamplona.amethyst.service.resourceusage.BatteryDrainSampler
 import com.vitorpamplona.amethyst.service.resourceusage.ForegroundTimeIntegrator
 import com.vitorpamplona.amethyst.service.resourceusage.ForegroundTracker
