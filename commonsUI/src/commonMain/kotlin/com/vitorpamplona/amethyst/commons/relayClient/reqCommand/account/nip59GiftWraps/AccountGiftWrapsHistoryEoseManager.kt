@@ -91,7 +91,7 @@ class AccountGiftWrapsHistoryEoseManager(
         since: SincePerRelayMap?,
     ): List<RelayBasedFilter> {
         if (!key.account.isWriteable()) return emptyList()
-        if (!key.account.settings.isChatFeedEnabled(ChatFeedType.NIP17)) return emptyList()
+        if (!key.account.chatFeedToggles.isEnabled(ChatFeedType.NIP17)) return emptyList()
         // Only relays that have been advanced (armed) and aren't done carry a REQ. A relay that finished a
         // page keeps the same `until` here, so re-assembly (triggered when ANOTHER relay advances) doesn't
         // re-REQ it — it stays parked until the UI advances it again.
@@ -123,10 +123,24 @@ class AccountGiftWrapsHistoryEoseManager(
         return true
     }
 
+    override val watchedChatFeeds = setOf(ChatFeedType.NIP17)
+
+    // The toggle flipped: let the pager drop (or restore) its relays before the filters rebuild.
+    override fun onChatFeedsToggled() {
+        pager.onEnabledChanged()
+        invalidateFilters()
+    }
+
     override fun newSub(key: AccountQueryState): Subscription {
         // Repoint the single-active orchestrator at this account's gift-wrap cursors (on its ChatroomList)
         // and the relays it fans out to, refreshing the display flows from the restored progress.
-        pager.bind(key.account.chatroomList.giftWrapHistory, key.account.scope) { historyRelays(key.account) }
+        // With NIP-17 turned off in Settings › Messages the pager neither advances nor shows relays.
+        pager.bind(
+            key.account.chatroomList.giftWrapHistory,
+            key.account.scope,
+            isEnabled = { key.account.chatFeedToggles.isEnabled(ChatFeedType.NIP17) },
+        ) { historyRelays(key.account) }
+
         return requestNewSubscription(historyListener(key))
     }
 

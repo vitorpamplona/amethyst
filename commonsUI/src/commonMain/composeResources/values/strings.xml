@@ -1725,6 +1725,9 @@
     <string name="call_permission_denied_cancel">Cancel</string>
     <string name="call_settings_enable_calls">Enable voice and video calls</string>
     <string name="call_settings_enable_calls_description">When disabled, call buttons are hidden from chat screens and all incoming calls are silently ignored.</string>
+    <string name="call_settings_off_with_nip17">Calls are off: they use the same encrypted channel as private messages (NIP-17), which are turned off in Messages settings.</string>
+    <string name="open_messages_settings">Open Messages settings</string>
+    <string name="chat_composer_off_with_nip17">Private messages (NIP-17) are turned off in Messages settings, so you can't send messages here.</string>
     <string name="call_settings_video_quality">Video Quality</string>
     <string name="call_settings_max_bitrate">Max Video Bitrate</string>
     <string name="call_settings_turn_servers">TURN / STUN Servers</string>
@@ -3786,7 +3789,7 @@
     <string name="chat_type_marmot_title">Encrypted groups</string>
     <string name="chat_type_nip04_desc">Older, less-private encrypted direct messages (NIP-04).</string>
     <string name="chat_type_nip04_title">Legacy DMs</string>
-    <string name="chat_type_nip17_desc">End-to-end encrypted, gift-wrapped direct messages (NIP-17).</string>
+    <string name="chat_type_nip17_desc">End-to-end encrypted, gift-wrapped direct messages (NIP-17). Voice and video calls use the same channel, so they turn off with it.</string>
     <string name="chat_type_nip17_title">Private messages</string>
     <string name="chat_type_nip28_desc">Open, public chat rooms anyone can read and join (NIP-28).</string>
     <string name="chat_type_nip28_title">Public channels</string>

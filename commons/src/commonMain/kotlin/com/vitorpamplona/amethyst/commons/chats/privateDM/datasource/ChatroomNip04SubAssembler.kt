@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst.commons.chats.privateDM.datasource
 
+import com.vitorpamplona.amethyst.commons.model.chats.ChatFeedType
 import com.vitorpamplona.amethyst.commons.model.privateChats.DmHistoryTuning
 import com.vitorpamplona.amethyst.commons.relayClient.eoseManagers.DmRelayLog
 import com.vitorpamplona.amethyst.commons.relayClient.eoseManagers.PerUserAndFollowListEoseManager
@@ -49,7 +50,7 @@ class ChatroomNip04SubAssembler(
         key: ChatroomQueryState,
         since: SincePerRelayMap?,
     ): List<RelayBasedFilter>? =
-        if (key.account.isWriteable()) {
+        if (key.account.isWriteable() && key.account.chatFeedToggles.isEnabled(ChatFeedType.NIP04)) {
             val sinceTime = DmHistoryTuning.recentBoundary()
             val filters = filterNip04DMs(key.room.users, key.account, sinceTime)
             windowLoad.setExpectedRelays(filters?.mapTo(mutableSetOf()) { it.relay } ?: emptySet())
@@ -64,6 +65,8 @@ class ChatroomNip04SubAssembler(
     override fun user(key: ChatroomQueryState) = key.account.userProfile()
 
     override fun list(key: ChatroomQueryState) = key.listId
+
+    override val watchedChatFeeds = setOf(ChatFeedType.NIP04)
 
     override fun newSub(key: ChatroomQueryState): Subscription {
         windowLoad.startLoading(key.account.scope)

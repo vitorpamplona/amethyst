@@ -52,10 +52,13 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.CallTurnServer
 import com.vitorpamplona.amethyst.commons.model.CallVideoResolution
+import com.vitorpamplona.amethyst.commons.model.chats.ChatFeedType
+import com.vitorpamplona.amethyst.commons.model.navigation.Route
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.call_settings
 import com.vitorpamplona.amethyst.commons.resources.call_settings_add_turn
@@ -65,6 +68,7 @@ import com.vitorpamplona.amethyst.commons.resources.call_settings_enable_calls
 import com.vitorpamplona.amethyst.commons.resources.call_settings_enable_calls_description
 import com.vitorpamplona.amethyst.commons.resources.call_settings_max_bitrate
 import com.vitorpamplona.amethyst.commons.resources.call_settings_no_custom_turn
+import com.vitorpamplona.amethyst.commons.resources.call_settings_off_with_nip17
 import com.vitorpamplona.amethyst.commons.resources.call_settings_remove_turn
 import com.vitorpamplona.amethyst.commons.resources.call_settings_turn_credential
 import com.vitorpamplona.amethyst.commons.resources.call_settings_turn_description
@@ -93,15 +97,30 @@ fun CallSettingsScreen(
                 .padding(padding)
                 .verticalScroll(rememberScrollState()),
         ) {
-            CallSettingsContent(accountViewModel)
+            CallSettingsContent(accountViewModel, nav)
         }
     }
 }
 
 @Composable
-private fun CallSettingsContent(accountViewModel: AccountViewModel) {
+private fun CallSettingsContent(
+    accountViewModel: AccountViewModel,
+    nav: INav,
+) {
     val settings = accountViewModel.account.settings
     val callsEnabled by settings.callsEnabled.collectAsState()
+    val chatFeeds by accountViewModel.account.chatFeedToggles.applied
+        .collectAsStateWithLifecycle()
+
+    // Calls signal over NIP-17's gift-wrap inbox (ChatFeedToggles.isCallingActive): with NIP-17 off
+    // they stay off whatever the switch below says, so say why and where to turn it back on.
+    if (ChatFeedType.NIP17 !in chatFeeds) {
+        Nip17OffNotice(
+            text = stringRes(Res.string.call_settings_off_with_nip17),
+            onOpenMessagesSettings = { nav.nav(Route.MessagesSettings) },
+            modifier = Modifier.padding(start = 16.dp, end = 16.dp, top = 16.dp),
+        )
+    }
 
     EnableCallsSection(
         enabled = callsEnabled,

@@ -48,7 +48,6 @@ import com.vitorpamplona.quartz.experimental.ephemChat.chat.RoomId
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
-import com.vitorpamplona.quartz.nip04Dm.messages.EncryptedDmEvent
 import com.vitorpamplona.quartz.nip17Dm.base.ChatroomKey
 import com.vitorpamplona.quartz.nip17Dm.base.ChatroomKeyable
 import com.vitorpamplona.quartz.nip28PublicChat.message.ChannelMessageEvent
@@ -62,10 +61,7 @@ class ChatroomListKnownFeedFilter(
 ) : AdditiveFeedFilter<Note>() {
     override fun feedKey(): String = account.userProfile().pubkeyHex
 
-    private fun isEnabled(type: ChatFeedType): Boolean = type in account.settings.enabledChatFeeds.value
-
-    /** A room note is NIP-04 when its event is a [EncryptedDmEvent], otherwise it is a NIP-17 message. */
-    private fun isDmEnabled(note: Note): Boolean = isEnabled(if (note.event is EncryptedDmEvent) ChatFeedType.NIP04 else ChatFeedType.NIP17)
+    private fun isEnabled(type: ChatFeedType): Boolean = account.chatFeedToggles.isEnabled(type)
 
     private fun pinnedRooms(): Set<ChatroomKey> = account.settings.syncedSettings.chats.pinnedChatrooms.value
 
@@ -93,7 +89,6 @@ class ChatroomListKnownFeedFilter(
             chatList.rooms.mapNotNull { key, chatroom ->
                 val newest = chatroom.newestMessage
                 if (newest != null &&
-                    isDmEnabled(newest) &&
                     (chatroom.senderIntersects(followingKeySet) || chatList.hasSentMessagesTo(key) || key in pinned) &&
                     !account.isAllHidden(key.users)
                 ) {
@@ -107,7 +102,10 @@ class ChatroomListKnownFeedFilter(
         // a pinned conversation whose newest message is older than the inbox's download window would
         // otherwise drop off Messages entirely. Keep a placeholder row until a message arrives.
         val pinnedWithoutMessages =
-            if (!isEnabled(ChatFeedType.NIP17) && !isEnabled(ChatFeedType.NIP04)) {
+            // Only while NIP-17 is on: the placeholder stands in for messages its download window missed.
+            // With NIP-17 off the room was emptied on purpose, and "No recent messages loaded" would be
+            // wrong (and its NIP-04 messages, if any, still give it a real row).
+            if (!isEnabled(ChatFeedType.NIP17)) {
                 emptyList()
             } else {
                 pinned.mapNotNull { key ->
@@ -652,8 +650,10 @@ class ChatroomListKnownFeedFilter(
         val newRelevantPrivateMessages = mutableMapOf<ChatroomKey, Note>()
         newItems
             .forEach { newNote ->
-                if (!isDmEnabled(newNote)) return@forEach
-                val roomKey = (newNote.event as? ChatroomKeyable)?.chatroomKey(me.pubkeyHex)
+                val dm = newNote.event as? ChatroomKeyable
+                // Same gate as ingestion: a protocol turned off never reaches the rooms.
+                if (dm != null && !account.chatFeedToggles.isEnabled(dm)) return@forEach
+                val roomKey = dm?.chatroomKey(me.pubkeyHex)
                 if (roomKey != null) {
                     val room = account.chatroomList.rooms.get(roomKey)
                     if (room != null &&

@@ -94,7 +94,7 @@ class RelayGroupJoinedChatTailSubAssembler(
     ): List<RelayBasedFilter>? {
         // The preload only mounts keys while the toggle is on; re-checked here so a flip to off
         // empties any subscription that outlives the recomposition.
-        if (!key.account.settings.isChatFeedEnabled(ChatFeedType.NIP29)) return null
+        if (!key.account.chatFeedToggles.isEnabled(ChatFeedType.NIP29)) return null
 
         val relay = key.groupId.relayUrl
         // The tracker is shared by every key of this assembler, so it must describe the whole joined

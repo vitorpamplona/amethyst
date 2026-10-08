@@ -42,12 +42,15 @@ import com.vitorpamplona.amethyst.commons.chats.privateDM.history.ChatHistoryGat
 import com.vitorpamplona.amethyst.commons.feeds.FeedContentState
 import com.vitorpamplona.amethyst.commons.feeds.FeedState
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
+import com.vitorpamplona.amethyst.commons.model.chats.ChatFeedType
 import com.vitorpamplona.amethyst.commons.model.chats.formatHistoryReachDate
+import com.vitorpamplona.amethyst.commons.model.navigation.Route
 import com.vitorpamplona.amethyst.commons.model.privateChatLastReadRoute
 import com.vitorpamplona.amethyst.commons.relayClient.reqCommand.account.nip59GiftWraps.AccountGiftWrapsHistoryEoseManager
 import com.vitorpamplona.amethyst.commons.relayClient.reqCommand.event.EventFinderFilterAssemblerSubscription
 import com.vitorpamplona.amethyst.commons.relayClient.user.observeUserName
 import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.chat_composer_off_with_nip17
 import com.vitorpamplona.amethyst.commons.resources.chats_history_gate_this_group
 import com.vitorpamplona.amethyst.commons.resources.chats_history_proto_nip04
 import com.vitorpamplona.amethyst.commons.ui.actions.uploads.rememberSharedMediaResolver
@@ -70,6 +73,7 @@ import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.privateDM.dat
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.privateDM.header.DmReportWarningCard
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.privateDM.send.ChatNewMessageViewModel
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.privateDM.send.PrivateMessageEditFieldRow
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.settings.Nip17OffNotice
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.DoubleVertSpacer
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
@@ -360,17 +364,28 @@ fun ChatroomViewUI(
 
         val scope = rememberCoroutineScope()
 
-        // LAST ROW
-        PrivateMessageEditFieldRow(
-            newPostModel,
-            accountViewModel,
-            onSendNewMessage = {
-                scope.launch {
-                    feedViewModel.feedState.sendToTop()
-                }
-            },
-            nav,
-        )
+        // LAST ROW. The composer only sends NIP-17; with NIP-17 off a sent message would be dropped
+        // on arrival, so say so instead of offering to send.
+        val chatFeeds by accountViewModel.account.chatFeedToggles.applied
+            .collectAsStateWithLifecycle()
+        if (ChatFeedType.NIP17 in chatFeeds) {
+            PrivateMessageEditFieldRow(
+                newPostModel,
+                accountViewModel,
+                onSendNewMessage = {
+                    scope.launch {
+                        feedViewModel.feedState.sendToTop()
+                    }
+                },
+                nav,
+            )
+        } else {
+            Nip17OffNotice(
+                text = stringRes(Res.string.chat_composer_off_with_nip17),
+                onOpenMessagesSettings = { nav.nav(Route.MessagesSettings) },
+                modifier = Modifier.padding(horizontal = 10.dp, vertical = 8.dp),
+            )
+        }
     }
 }
 

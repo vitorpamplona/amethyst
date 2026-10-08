@@ -26,12 +26,9 @@ import com.vitorpamplona.amethyst.commons.relayClient.AccountScopedQuery
 import com.vitorpamplona.amethyst.commons.relayClient.channel.relayGroup.buildRelayGroupStateFilters
 import com.vitorpamplona.amethyst.commons.relayClient.composeSubscriptionManagers.ComposeSubscriptionManager
 import com.vitorpamplona.amethyst.commons.relayClient.eoseManagers.PerUniqueIdEoseManager
-import com.vitorpamplona.amethyst.commons.relayClient.eoseManagers.launchChatFeedToggleObserver
 import com.vitorpamplona.amethyst.commons.relays.SincePerRelayMap
 import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
-import com.vitorpamplona.quartz.nip01Core.relay.client.subscriptions.Subscription
-import kotlinx.coroutines.Job
 
 /** One request to keep the relay-signed state of the user's joined groups live. */
 class RelayGroupJoinedStateQueryState(
@@ -71,7 +68,7 @@ class RelayGroupJoinedStateSubAssembler(
         key: RelayGroupJoinedStateQueryState,
         since: SincePerRelayMap?,
     ): List<RelayBasedFilter>? {
-        if (!key.account.settings.isChatFeedEnabled(ChatFeedType.NIP29)) return null
+        if (!key.account.chatFeedToggles.isEnabled(ChatFeedType.NIP29)) return null
         val joined = key.account.relayGroupList.liveRelayGroupList.value
         if (joined.isEmpty()) return null
 
@@ -80,20 +77,5 @@ class RelayGroupJoinedStateSubAssembler(
 
     override fun id(key: RelayGroupJoinedStateQueryState) = key.account
 
-    private val toggleJobs = mutableMapOf<Account, Job>()
-
-    override fun newSub(key: RelayGroupJoinedStateQueryState): Subscription {
-        toggleJobs.remove(key.account)?.cancel()
-        toggleJobs[key.account] =
-            key.account.scope.launchChatFeedToggleObserver(key.account, ChatFeedType.NIP29) { invalidateFilters() }
-        return super.newSub(key)
-    }
-
-    override fun endSub(
-        key: Account,
-        subId: String,
-    ) {
-        super.endSub(key, subId)
-        toggleJobs.remove(key)?.cancel()
-    }
+    override val watchedChatFeeds = setOf(ChatFeedType.NIP29)
 }

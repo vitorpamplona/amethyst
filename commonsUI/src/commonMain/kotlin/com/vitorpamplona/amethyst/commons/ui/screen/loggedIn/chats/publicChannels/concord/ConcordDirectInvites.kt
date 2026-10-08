@@ -227,9 +227,9 @@ private fun sendFailureMessage(result: ConcordDirectInviteSendResult) =
     }
 
 /**
- * Sweeps the inbox relays for Direct Invites once when the hub opens (wraps the DM pipeline sees
- * arrive on their own). Call it once per screen, outside any lazy list: inside a lazy item it would
- * re-run every time the item scrolled back into view.
+ * Sweeps the stock Concord relays for Direct Invites once when the hub opens (invites on our DM relays
+ * arrive live through the gift-wrap subscription). Call it once per screen, outside any lazy list:
+ * inside a lazy item it would re-run every time the item scrolled back into view.
  */
 @Composable
 fun RefreshConcordDirectInvites(accountViewModel: AccountViewModel) {

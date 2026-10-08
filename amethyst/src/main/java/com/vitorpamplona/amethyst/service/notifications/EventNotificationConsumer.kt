@@ -66,6 +66,7 @@ import com.vitorpamplona.quartz.nip01Core.core.toHexKey
 import com.vitorpamplona.quartz.nip01Core.tags.people.isTaggedUser
 import com.vitorpamplona.quartz.nip04Dm.messages.EncryptedDmEvent
 import com.vitorpamplona.quartz.nip10Notes.TextNoteEvent
+import com.vitorpamplona.quartz.nip17Dm.base.ChatroomKeyable
 import com.vitorpamplona.quartz.nip17Dm.files.ChatMessageEncryptedFileHeaderEvent
 import com.vitorpamplona.quartz.nip17Dm.messages.ChatMessageEvent
 import com.vitorpamplona.quartz.nip18Reposts.GenericRepostEvent
@@ -229,6 +230,9 @@ class EventNotificationConsumer(
 
         // Don't push-notify events this account authored.
         if (event.pubKey == account.signer.pubKey) return
+
+        // A DM protocol turned off in Settings › Messages doesn't notify.
+        if (event is ChatroomKeyable && !account.chatFeedToggles.isEnabled(event)) return
 
         // Drop reactions/zaps/reposts whose target note lives on a muted thread, or in a
         // public chat the user has silenced (matches the in-app feed, which mutes all four).
@@ -445,6 +449,8 @@ class EventNotificationConsumer(
         event: CallOfferEvent,
         account: Account,
     ) {
+        // Calls turned off in Settings (or with NIP-17, which carries them) never ring.
+        if (!account.chatFeedToggles.isCallingActive()) return
         if (!account.isFollowing(event.pubKey)) return
         if (TimeUtils.now() - event.createdAt > CallManager.MAX_EVENT_AGE_SECONDS) return
 

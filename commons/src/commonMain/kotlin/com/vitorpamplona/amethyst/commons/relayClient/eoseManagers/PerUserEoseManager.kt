@@ -95,6 +95,7 @@ abstract class PerUserEoseManager<T>(
     ) {
         dismissSubscription(subId)
         userSubscriptionMap.remove(key)
+        unwatchChatFeeds(key)
     }
 
     fun findOrCreateSubFor(key: T): Subscription {
@@ -114,6 +115,7 @@ abstract class PerUserEoseManager<T>(
 
         uniqueSubscribedAccounts.forEach {
             val user = user(it)
+            watchChatFeeds(user, it)
             val newFilters =
                 updateFilter(it, since(it))
                     ?.ifEmpty { null }
