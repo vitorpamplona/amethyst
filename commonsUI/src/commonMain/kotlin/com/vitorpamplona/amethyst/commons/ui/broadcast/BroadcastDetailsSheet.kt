@@ -55,7 +55,6 @@ import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.SheetState
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -86,6 +85,7 @@ import com.vitorpamplona.amethyst.commons.resources.timeout
 import com.vitorpamplona.amethyst.commons.service.broadcast.BroadcastEvent
 import com.vitorpamplona.amethyst.commons.service.broadcast.BroadcastStatus
 import com.vitorpamplona.amethyst.commons.service.broadcast.RelayResult
+import com.vitorpamplona.amethyst.commons.ui.components.rememberModalSheetState
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.ThemeComparisonRow
 import com.vitorpamplona.amethyst.commons.ui.theme.allGoodColor
@@ -112,7 +112,7 @@ fun MultiBroadcastDetailsSheet(
     onRetryRelay: (BroadcastEvent, NormalizedRelayUrl) -> Unit = { _, _ -> },
     onRetryAllFailed: (BroadcastEvent) -> Unit = {},
     sheetState: SheetState =
-        rememberModalBottomSheetState(
+        rememberModalSheetState(
             skipPartiallyExpanded = true,
         ),
 ) {

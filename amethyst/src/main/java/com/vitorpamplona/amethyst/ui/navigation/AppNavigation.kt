@@ -218,7 +218,7 @@ internal fun NavigateIfIntentRequested(
             ShareTarget.VIDEO -> nav.navToSharedFeed(Route.Video(attachments = attachments, message = message))
             ShareTarget.NEW_POST -> nav.newStack(Route.NewShortNote(message = message, attachment = attachments.firstOrNull()))
             ShareTarget.SCAN_QR ->
-                attachments.firstOrNull()?.let { nav.newStack(Route.ScanQrImage(it.toString())) }
+                attachments.firstOrNull()?.let { nav.newStack(Route.ScanQrImage(it)) }
         }
 
         // Consume the launch intent so a later recomposition can't re-fire
@@ -324,7 +324,7 @@ internal fun NavigateIfIntentRequested(
                                     nav.newStack(Route.NewShortNote(message = message, attachment = attachment))
                                 }
 
-                            ShareTarget.SCAN_QR -> attachment?.let { nav.newStack(Route.ScanQrImage(it.toString())) }
+                            ShareTarget.SCAN_QR -> attachment?.let { nav.newStack(Route.ScanQrImage(it)) }
                         }
                     } else {
                         val uri = intent.data?.toString()

@@ -55,8 +55,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalClipboardManager
-import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.platform.LocalClipboard
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -124,6 +123,7 @@ import com.vitorpamplona.amethyst.commons.resources.cordn_share_copy
 import com.vitorpamplona.amethyst.commons.resources.cordn_share_explainer
 import com.vitorpamplona.amethyst.commons.resources.cordn_share_title
 import com.vitorpamplona.amethyst.commons.ui.components.EmptyState
+import com.vitorpamplona.amethyst.commons.ui.components.util.setText
 import com.vitorpamplona.amethyst.commons.ui.loadStringRes
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.note.UserPicture
@@ -805,7 +805,8 @@ internal fun CopyableKeyRow(
     copied: String,
     copyDescription: String,
 ) {
-    val clipboard = LocalClipboardManager.current
+    val clipboard = LocalClipboard.current
+    val scope = rememberCoroutineScope()
 
     Column(Modifier.fillMaxWidth().padding(vertical = 6.dp)) {
         Text(
@@ -821,7 +822,7 @@ internal fun CopyableKeyRow(
                 maxLines = 1,
             )
             IconButton(
-                onClick = { clipboard.setText(AnnotatedString(copied)) },
+                onClick = { scope.launch { clipboard.setText(copied) } },
                 modifier = Modifier.size(24.dp).padding(start = 4.dp),
             ) {
                 Icon(
@@ -990,7 +991,8 @@ private fun ShareGroup(
                 ?.getOrNull()
         } ?: return
 
-    val clipboard = LocalClipboardManager.current
+    val clipboard = LocalClipboard.current
+    val scope = rememberCoroutineScope()
     var copied by remember { mutableStateOf(false) }
 
     Text(stringRes(Res.string.cordn_share_title), style = MaterialTheme.typography.titleMedium)
@@ -1007,7 +1009,7 @@ private fun ShareGroup(
 
     OutlinedButton(
         onClick = {
-            clipboard.setText(AnnotatedString(ref))
+            scope.launch { clipboard.setText(ref) }
             copied = true
         },
         modifier = Modifier.padding(top = 8.dp),

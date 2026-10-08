@@ -27,7 +27,6 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Text
-import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextAlign
@@ -36,6 +35,7 @@ import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.quick_action_share
 import com.vitorpamplona.amethyst.commons.ui.components.M3ActionSection
+import com.vitorpamplona.amethyst.commons.ui.components.rememberModalSheetState
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 
@@ -51,7 +51,7 @@ fun ShareOptionsBottomSheet(
     nav: INav,
     onDismiss: () -> Unit,
 ) {
-    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+    val sheetState = rememberModalSheetState(skipPartiallyExpanded = true)
 
     ModalBottomSheet(onDismissRequest = onDismiss, sheetState = sheetState) {
         Column(

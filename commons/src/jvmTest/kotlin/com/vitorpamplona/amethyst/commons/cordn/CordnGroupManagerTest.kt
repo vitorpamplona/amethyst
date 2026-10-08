@@ -38,6 +38,7 @@ import com.vitorpamplona.quartz.nip01Core.crypto.KeyPair
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
 import com.vitorpamplona.quartz.nip01Core.signers.EventTemplate
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerSync
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.awaitCancellation
 import kotlinx.coroutines.cancelAndJoin
 import kotlinx.coroutines.launch
@@ -64,7 +65,7 @@ import kotlin.test.assertTrue
  * point: a cursor or epoch mistake shows up as Bob failing to read, not as an
  * assertion about internals.
  */
-@OptIn(ExperimentalEncodingApi::class)
+@OptIn(ExperimentalEncodingApi::class, ExperimentalCoroutinesApi::class)
 class CordnGroupManagerTest {
     private val gid = "6d1f0f6a-2a3e-4f2c-9a1d-7c6b5e4d3a21"
     private val coordinatorKey = "cc".repeat(32)

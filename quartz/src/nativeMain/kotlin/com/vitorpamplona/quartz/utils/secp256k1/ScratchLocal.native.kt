@@ -25,7 +25,7 @@ package com.vitorpamplona.quartz.utils.secp256k1
  * Kotlin/Native coroutines are cooperative — scratch buffers are safe to share
  * within a single thread's call stack.
  */
-internal actual class ScratchLocal<T> actual constructor(
+internal actual class ScratchLocal<T : Any> actual constructor(
     initializer: () -> T,
 ) {
     private val value: T = initializer()

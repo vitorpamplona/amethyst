@@ -41,7 +41,6 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
-import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -74,6 +73,7 @@ import com.vitorpamplona.amethyst.commons.search.calendar.atTime
 import com.vitorpamplona.amethyst.commons.search.calendar.fromPickerMillis
 import com.vitorpamplona.amethyst.commons.search.calendar.secondOfDay
 import com.vitorpamplona.amethyst.commons.ui.actions.uploads.SelectSingleFromGallery
+import com.vitorpamplona.amethyst.commons.ui.components.rememberModalSheetState
 import com.vitorpamplona.amethyst.commons.ui.components.rememberViewModel
 import com.vitorpamplona.amethyst.commons.ui.note.DateTimeStyle
 import com.vitorpamplona.amethyst.commons.ui.note.formatDateTime
@@ -109,7 +109,7 @@ fun CreateNestSheet(
     LaunchedEffect(viewModel) { viewModel.bindAccountIfMissing(accountViewModel) }
 
     val state by viewModel.state.collectAsState()
-    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+    val sheetState = rememberModalSheetState(skipPartiallyExpanded = true)
     val scope = rememberCoroutineScope()
     val appPlatform = LocalAppPlatform.current
 

@@ -36,7 +36,6 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
-import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -59,6 +58,7 @@ import com.vitorpamplona.amethyst.commons.resources.geocache_owner_lock_ftf_expl
 import com.vitorpamplona.amethyst.commons.resources.geocache_owner_no_finders
 import com.vitorpamplona.amethyst.commons.resources.geocache_owner_qr_warning
 import com.vitorpamplona.amethyst.commons.resources.geocache_owner_show_qr
+import com.vitorpamplona.amethyst.commons.ui.components.rememberModalSheetState
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.qrcode.QrCodeDrawer
 import com.vitorpamplona.amethyst.commons.ui.stringRes
@@ -193,7 +193,7 @@ fun GeocacheOwnerActions(
 
     if (showQr) {
         val key = listing.verificationKey()
-        ModalBottomSheet(onDismissRequest = { showQr = false }, sheetState = rememberModalBottomSheetState()) {
+        ModalBottomSheet(onDismissRequest = { showQr = false }, sheetState = rememberModalSheetState()) {
             Column(
                 Modifier.fillMaxWidth().padding(24.dp),
                 horizontalAlignment = Alignment.CenterHorizontally,

@@ -35,7 +35,6 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Text
-import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.getValue
@@ -88,6 +87,7 @@ import com.vitorpamplona.amethyst.commons.resources.quick_action_share
 import com.vitorpamplona.amethyst.commons.resources.today
 import com.vitorpamplona.amethyst.commons.ui.components.ClickableBox
 import com.vitorpamplona.amethyst.commons.ui.components.TranslatableRichTextViewer
+import com.vitorpamplona.amethyst.commons.ui.components.rememberModalSheetState
 import com.vitorpamplona.amethyst.commons.ui.components.rememberShortNotice
 import com.vitorpamplona.amethyst.commons.ui.components.rememberTextSharer
 import com.vitorpamplona.amethyst.commons.ui.components.util.setText
@@ -456,7 +456,7 @@ private fun CordnReactionDetailSheet(
 
     ModalBottomSheet(
         onDismissRequest = onDismiss,
-        sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
+        sheetState = rememberModalSheetState(skipPartiallyExpanded = true),
     ) {
         Column(Modifier.fillMaxWidth().verticalScroll(rememberScrollState()).padding(bottom = 24.dp)) {
             Text(
@@ -582,7 +582,7 @@ private fun CordnQuoteActionSheet(
 ) {
     ModalBottomSheet(
         onDismissRequest = onDismiss,
-        sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
+        sheetState = rememberModalSheetState(skipPartiallyExpanded = true),
     ) {
         Column(Modifier.padding(bottom = 24.dp)) {
             TileRow {
@@ -716,7 +716,7 @@ private fun CordnMessageDetailsSheet(
 
     ModalBottomSheet(
         onDismissRequest = onDismiss,
-        sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
+        sheetState = rememberModalSheetState(skipPartiallyExpanded = true),
     ) {
         Column(
             Modifier.padding(start = 16.dp, end = 16.dp, bottom = 24.dp),
@@ -824,7 +824,7 @@ private fun CordnMessageActionSheet(
 
     ModalBottomSheet(
         onDismissRequest = onDismiss,
-        sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
+        sheetState = rememberModalSheetState(skipPartiallyExpanded = true),
     ) {
         Column(
             modifier = Modifier.verticalScroll(rememberScrollState()).padding(bottom = 24.dp),

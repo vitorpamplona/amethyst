@@ -40,7 +40,6 @@ import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
-import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -64,6 +63,7 @@ import com.vitorpamplona.amethyst.commons.resources.nest_create_field_service
 import com.vitorpamplona.amethyst.commons.resources.nest_create_field_summary
 import com.vitorpamplona.amethyst.commons.resources.nest_edit_save
 import com.vitorpamplona.amethyst.commons.resources.nest_edit_title
+import com.vitorpamplona.amethyst.commons.ui.components.rememberModalSheetState
 import com.vitorpamplona.amethyst.commons.ui.components.rememberViewModel
 import com.vitorpamplona.amethyst.commons.ui.insets.imePaddingSafe
 import com.vitorpamplona.amethyst.commons.ui.stringRes
@@ -93,7 +93,7 @@ fun EditNestSheet(
     LaunchedEffect(viewModel, event) { viewModel.bind(accountViewModel, event) }
 
     val state by viewModel.state.collectAsState()
-    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+    val sheetState = rememberModalSheetState(skipPartiallyExpanded = true)
     val scope = rememberCoroutineScope()
 
     var confirmCloseOpen by remember { mutableStateOf(false) }

@@ -65,7 +65,6 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
-import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
@@ -90,6 +89,7 @@ import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.buzz.AgentWorkItem
 import com.vitorpamplona.amethyst.commons.model.buzz.AgentWorkKind
 import com.vitorpamplona.amethyst.commons.model.buzz.AgentWorkState
+import com.vitorpamplona.amethyst.commons.ui.components.rememberModalSheetState
 import com.vitorpamplona.amethyst.commons.ui.components.rememberViewModel
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.navigation.topbars.TopBarWithBackButton
@@ -204,7 +204,7 @@ fun AgentWorkBoardScreen(
     }
 
     if (composing) {
-        val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+        val sheetState = rememberModalSheetState(skipPartiallyExpanded = true)
         NewTaskSheet(
             sheetState = sheetState,
             onDismiss = { composing = false },

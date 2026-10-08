@@ -30,7 +30,6 @@ import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.ModalNavigationDrawer
 import androidx.compose.material3.SheetValue
 import androidx.compose.material3.VerticalDivider
-import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.derivedStateOf
@@ -46,6 +45,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalWindowInfo
 import com.vitorpamplona.amethyst.commons.model.navigation.Route
 import com.vitorpamplona.amethyst.commons.ui.components.PlatformBackHandler
+import com.vitorpamplona.amethyst.commons.ui.components.rememberModalSheetState
 import com.vitorpamplona.amethyst.commons.ui.layouts.LocalScreenLayout
 import com.vitorpamplona.amethyst.commons.ui.layouts.NavigationStyle
 import com.vitorpamplona.amethyst.commons.ui.navigation.bottombars.AppNavigationRail
@@ -81,7 +81,7 @@ fun AppShellLayout(
     var openAccountSwitcherBottomSheet by rememberSaveable { mutableStateOf(false) }
 
     val sheetState =
-        rememberModalBottomSheetState(
+        rememberModalSheetState(
             skipPartiallyExpanded = true,
             confirmValueChange = { it != SheetValue.PartiallyExpanded },
         )

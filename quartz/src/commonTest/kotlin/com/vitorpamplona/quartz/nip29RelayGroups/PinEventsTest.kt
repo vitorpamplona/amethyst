@@ -136,7 +136,6 @@ class PinEventsTest {
         val event: Event = EventFactory.create("00".repeat(32), relaySelf, 100, GroupPinnedEvent.KIND, tags, "", "22".repeat(64))
 
         assertTrue(event is GroupPinnedEvent, "an a-tagged pin list has no `h`, so it is still a pin list, not a Buzz summary")
-        event as GroupPinnedEvent
         assertEquals(listOf(id1, addr, id2), event.pins().map { it.ref })
         assertTrue(event.pins()[1] is AddressPin)
         assertEquals(listOf(id1, id2), event.pinnedEventIds())
