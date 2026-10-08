@@ -110,6 +110,7 @@ class TrustNetworkSchedulingTest {
         var newsGate: CompletableDeferred<Unit>? = null
         var downloadGate: CompletableDeferred<Unit>? = null
         var downloadSize = 3
+        var downloadComplete = true
 
         override suspend fun <T> connect(block: suspend (TrustNetworkConnection) -> T): T =
             block(
@@ -129,7 +130,9 @@ class TrustNetworkSchedulingTest {
                     ): TrustNetworkSyncResult {
                         calls.add("download:${provider.pubkey}")
                         downloadGate?.await()
-                        return result(provider, downloadSize)
+                        return result(provider, downloadSize).let {
+                            if (downloadComplete) it else TrustNetworkSyncResult(it.header, it.index, it.ids, complete = false, invalid = 0, received = it.received, detail = "partial")
+                        }
                     }
 
                     override suspend fun update(
@@ -270,6 +273,37 @@ class TrustNetworkSchedulingTest {
 
             withTimeout(5_000) { wot.network.first { it?.isFrom(providerB) == true } }
             assertEquals(listOf("download:${providerA.pubkey}", "download:${providerB.pubkey}"), source.calls.toList())
+        }
+
+    @Test
+    fun filteringStaysOffUntilTheWholeSetIsDownloaded() =
+        runBlocking {
+            val source = FakeSource().apply { downloadGate = CompletableDeferred() }
+            val wot = state(MutableStateFlow(ResolvedProvider(providerA)), source)
+            wot.awaitReady()
+            withTimeout(5_000) { while (source.calls.isEmpty()) delay(10) }
+
+            // A provider, and a download running: not yet.
+            assertEquals(false, wot.isActive)
+            assertEquals(false, wot.snapshot(hex(), emptySet()).isActive)
+
+            source.downloadGate?.complete(Unit)
+            withTimeout(5_000) { wot.network.first { it?.isFrom(providerA) == true } }
+            assertTrue(wot.isActive)
+        }
+
+    @Test
+    fun aPartialDownloadNeverTurnsFilteringOn() =
+        runBlocking {
+            val source = FakeSource().apply { downloadComplete = false }
+            val wot = state(MutableStateFlow(ResolvedProvider(providerA)), source)
+            wot.awaitReady()
+            wot.awaitIdle()
+            withTimeout(5_000) { wot.status.first { it.problem is TrustNetworkProblem.Failed } }
+            assertNull(wot.network.value)
+            assertEquals(false, wot.isActive)
+            // Nor saved, so the next start cannot pick it up either.
+            assertNull(store.readIndex())
         }
 
     @Test

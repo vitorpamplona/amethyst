@@ -44,7 +44,11 @@ class TrustVerdicts(
     /** Bumps when a card seen between syncs moves someone in or out. */
     private val revision: Int = 0,
 ) {
-    /** A network is loaded for the current provider, so filtering applies. */
+    /**
+     * Filtering applies: the user has a provider and its complete set is loaded (see
+     * `TrustNetworkState.isActive`). While false every answer is "no network" and nothing is
+     * hidden, collapsed or moved.
+     */
     val isActive: Boolean get() = network != null
 
     /** The provider's rank for [pubkey]: a newer card seen since the sync, else the index. */

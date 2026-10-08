@@ -387,10 +387,12 @@ class AccountFeedContentStates(
             // Not "skip the first value": the network can finish loading before this collector
             // starts but after the feeds were first built. So the first active answers always
             // rebuild once, and after that only answers that differ from the last rebuild.
+            // The first one at once (the feeds were built unfiltered moments ago, at start or
+            // while the download ran); later ones settle for a second, as follows change in bursts.
             var builtWith: TrustVerdicts? = null
             @OptIn(FlowPreview::class)
             account.trustVerdicts
-                .debounce(1_000)
+                .debounce { if (builtWith == null) 0L else 1_000L }
                 .filter { verdicts -> builtWith?.let { !verdicts.sameAnswersAs(it) } ?: verdicts.isActive }
                 .collect {
                     builtWith = it

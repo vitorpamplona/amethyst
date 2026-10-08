@@ -59,9 +59,12 @@ import kotlinx.coroutines.withTimeoutOrNull
  * One account's Web of Trust network: the NIP-85 rank provider's cards, as a
  * `TrustNetworkIndex` kept on disk ([store]) and in memory, outside `LocalCache`.
  *
- *  - **Active** whenever the account's kind 10040 names a `30382:rank` provider and an index
- *    for that provider is loaded. While inactive every consumer behaves as before the feature
- *    existed, so the first download never empties a feed.
+ *  - **Active** ([isActive]) only when both hold: the account's kind 10040 names a
+ *    `30382:rank` provider, and that provider's **whole** set of cards is downloaded. A
+ *    download in progress, a partial one (never applied nor saved), a provider with no scores
+ *    yet, or a removed provider (its files are deleted) all leave it inactive, and while
+ *    inactive every consumer behaves as before the feature existed: nothing is hidden,
+ *    collapsed or moved because a download has not finished.
  *  - **Loads at construction**, so a process woken by a push notification can wait on
  *    [awaitLoaded] (tens of ms) instead of letting strangers through. Until [rankProvider]
  *    resolves, the index on disk is used as is.
@@ -145,7 +148,13 @@ class TrustNetworkState(
 
     private val currentProvider: ServiceProviderTag? get() = rankProvider.value?.provider
 
-    /** True when an index for the current provider is loaded and filtering applies. */
+    /**
+     * The switch every filter keys on (through [TrustVerdicts.isActive]): true when the provider
+     * on the list has its complete set loaded. [network] only ever holds a complete set: a sync
+     * applies its result only when complete, and only applied results are saved. Before the
+     * provider list is first read, the set on disk stands for it (it was complete when saved,
+     * and is deleted when the list drops the provider), so a push in a cold process is filtered.
+     */
     val isActive: Boolean get() = _network.value != null
 
     /** The decisions as of now, for [me] following [follows]. Prefer [verdicts] in feeds. */
@@ -438,9 +447,8 @@ class TrustNetworkState(
         if (!result.complete) return TrustNetworkRun(kind, TrustNetworkOutcome.Incomplete(result.detail), result)
 
         // A provider still computing a new user's scores has published nothing yet. An empty
-        // network would leave only follows as "known", so keep waiting.
-        // An empty network would leave only follows as "known", so never apply one, whichever
-        // sync produced it (a full check that fell back to a download included).
+        // network would leave only follows as "known", so never apply one, whichever sync
+        // produced it (a full check that fell back to a download included).
         if (result.index.size == 0) return TrustNetworkRun(kind, TrustNetworkOutcome.NoScoresYet, result)
 
         if (result.unchanged && current != null) return commitUnchanged(provider, kind, current, result.header, result)
