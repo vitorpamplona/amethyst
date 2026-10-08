@@ -71,7 +71,7 @@ class DesktopAccountViewModelHost(
     override val relayAuthState: StateFlow<PersistentMap<NormalizedRelayUrl, RelayAuthSnapshot>>
         get() = modules.authCoordinator.receiver.authStateFlow
 
-    override val mediaUploader: MediaUploader get() = DesktopMediaUploader
+    override val mediaUploader: MediaUploader by lazy { DesktopMediaUploader(modules::blossomClient) }
 
     override val scheduledPostStore: ScheduledPostStore get() = modules.scheduledPostStore
 

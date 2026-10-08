@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst.desktop.ui.notifications
 
+import com.vitorpamplona.amethyst.commons.model.cache.ICacheEventStream
 import com.vitorpamplona.amethyst.commons.moderation.notifications.NotifKind
 import com.vitorpamplona.amethyst.commons.moderation.notifications.NotificationDispatcher
 import com.vitorpamplona.amethyst.commons.moderation.notifications.NotificationKinds
@@ -28,7 +29,17 @@ import com.vitorpamplona.amethyst.commons.moderation.notifications.NotificationS
 import com.vitorpamplona.amethyst.commons.moderation.notifications.PermissionState
 import com.vitorpamplona.amethyst.commons.moderation.notifications.nowEpochSeconds
 import com.vitorpamplona.amethyst.commons.moderation.notifications.sanitizeForToast
-import com.vitorpamplona.amethyst.desktop.cache.DesktopLocalCache
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.desktop_notification_dm
+import com.vitorpamplona.amethyst.commons.resources.desktop_notification_follow
+import com.vitorpamplona.amethyst.commons.resources.desktop_notification_mention
+import com.vitorpamplona.amethyst.commons.resources.desktop_notification_reaction
+import com.vitorpamplona.amethyst.commons.resources.desktop_notification_reply
+import com.vitorpamplona.amethyst.commons.resources.desktop_notification_repost
+import com.vitorpamplona.amethyst.commons.resources.desktop_notification_someone
+import com.vitorpamplona.amethyst.commons.resources.desktop_notification_zap
+import com.vitorpamplona.amethyst.commons.resources.desktop_notification_zap_amount
+import com.vitorpamplona.amethyst.commons.ui.loadStringRes
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip04Dm.messages.EncryptedDmEvent
 import com.vitorpamplona.quartz.nip10Notes.TextNoteEvent
@@ -63,7 +74,12 @@ class DesktopNotificationAutoDispatcher(
     private val dispatcher: NotificationDispatcher,
     private val settings: NotificationSettings,
     private val myPubKeyHex: String,
-    private val localCache: DesktopLocalCache,
+    /** New events, from whichever cache the window runs on. */
+    private val eventStream: ICacheEventStream,
+    /** The author of a cached event, to tell a reply to the user's note from one to someone else's. */
+    private val authorOf: (eventId: String) -> String?,
+    /** The name to show for a pubkey, when its profile is cached. */
+    private val displayNameOf: (pubKey: String) -> String?,
     private val isWindowFocused: StateFlow<Boolean>,
     private val sessionStartSec: Long,
     private val scope: CoroutineScope,
@@ -74,7 +90,7 @@ class DesktopNotificationAutoDispatcher(
     fun start(): Job =
         scope.launch {
             log.info("Auto-dispatcher started (pubKey=${myPubKeyHex.take(8)}, sessionStart=$sessionStartSec)")
-            localCache.eventStream.newEventBundles.collect { bundle ->
+            eventStream.newEventBundles.collect { bundle ->
                 for (note in bundle) {
                     val event = note.event ?: continue
                     tryDispatch(event)
@@ -142,12 +158,7 @@ class DesktopNotificationAutoDispatcher(
             NotificationKinds.tagsAnEventForUser(
                 event = event,
                 myPubKeyHex = myPubKeyHex,
-                isTargetAuthoredByMe = { targetId ->
-                    localCache.notes
-                        .get(targetId)
-                        ?.event
-                        ?.pubKey == myPubKeyHex
-                },
+                isTargetAuthoredByMe = { targetId -> authorOf(targetId) == myPubKeyHex },
             )
         if (!accepts) {
             logSkip(eid, kind.name, "not-tagged-for-user (author=${event.pubKey.take(8)})")
@@ -163,9 +174,9 @@ class DesktopNotificationAutoDispatcher(
         recentFires[dedupeKey] = now
         recentFires.entries.removeAll { now - it.value > 300 }
 
-        val spec = buildSpec(event, kind)
         scope.launch {
             try {
+                val spec = buildSpec(event, kind)
                 val result = dispatcher.send(spec)
                 log.info("[AutoDispatch] FIRED kind=$kind id=${eid.take(8)} result=$result title='${spec.title}'")
             } catch (t: Throwable) {
@@ -190,7 +201,7 @@ class DesktopNotificationAutoDispatcher(
             else -> null
         }
 
-    private fun buildSpec(
+    private suspend fun buildSpec(
         event: Event,
         kind: NotifKind,
     ): NotificationSpec {
@@ -199,22 +210,25 @@ class DesktopNotificationAutoDispatcher(
                 is ZapReceiptEvent -> event.zapRequest?.pubKey ?: event.pubKey
                 else -> event.pubKey
             }
-        val displayName =
-            localCache.getUserIfExists(effectivePubKey)?.toBestDisplayName()
-                ?: "Someone"
-
-        val amountText =
-            (event as? ZapReceiptEvent)?.amount?.let { " ${it.toLong() / 1000} sats" } ?: ""
+        val displayName = displayNameOf(effectivePubKey) ?: loadStringRes(Res.string.desktop_notification_someone)
 
         val title =
             when (kind) {
-                NotifKind.ZAP -> "⚡ $displayName zapped you$amountText"
-                NotifKind.DM -> "New encrypted message"
-                NotifKind.REPLY -> "$displayName replied"
-                NotifKind.MENTION -> "$displayName mentioned you"
-                NotifKind.REPOST -> "$displayName reposted"
-                NotifKind.REACTION -> "$displayName reacted"
-                NotifKind.FOLLOW -> "$displayName followed you"
+                NotifKind.ZAP -> {
+                    val sats = (event as? ZapReceiptEvent)?.amount?.let { (it.toLong() / 1000).toString() }
+                    if (sats != null) {
+                        loadStringRes(Res.string.desktop_notification_zap_amount, displayName, sats)
+                    } else {
+                        loadStringRes(Res.string.desktop_notification_zap, displayName)
+                    }
+                }
+
+                NotifKind.DM -> loadStringRes(Res.string.desktop_notification_dm)
+                NotifKind.REPLY -> loadStringRes(Res.string.desktop_notification_reply, displayName)
+                NotifKind.MENTION -> loadStringRes(Res.string.desktop_notification_mention, displayName)
+                NotifKind.REPOST -> loadStringRes(Res.string.desktop_notification_repost, displayName)
+                NotifKind.REACTION -> loadStringRes(Res.string.desktop_notification_reaction, displayName)
+                NotifKind.FOLLOW -> loadStringRes(Res.string.desktop_notification_follow, displayName)
             }
 
         // Never leak DM ciphertext into the body — decryption pipeline

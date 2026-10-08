@@ -53,7 +53,6 @@ import com.vitorpamplona.amethyst.commons.relayClient.auth.AuthCoordinator
 import com.vitorpamplona.amethyst.commons.relayClient.notify.NotifyCoordinator
 import com.vitorpamplona.amethyst.commons.relayClient.reqCommand.RelaySubscriptionsCoordinator
 import com.vitorpamplona.amethyst.commons.relays.nip11RelayInfo.Nip11CachedRetriever
-import com.vitorpamplona.amethyst.commons.scheduledposts.ScheduledPostStore
 import com.vitorpamplona.amethyst.commons.service.connectivity.ConnectivityStatus
 import com.vitorpamplona.amethyst.commons.service.http.DualHttpClientManager
 import com.vitorpamplona.amethyst.commons.service.http.DualHttpClientManagerForRelays
@@ -73,6 +72,10 @@ import com.vitorpamplona.amethyst.commons.state.UiSettingsState
 import com.vitorpamplona.amethyst.commons.tor.AccountsTorStateConnector
 import com.vitorpamplona.amethyst.commons.tor.TorRelayState
 import com.vitorpamplona.amethyst.commons.tor.TorSettings
+import com.vitorpamplona.amethyst.desktop.network.runSleepResumeMonitor
+import com.vitorpamplona.amethyst.desktop.service.scheduledposts.DesktopScheduledPostScheduler
+import com.vitorpamplona.amethyst.desktop.service.scheduledposts.DesktopScheduledPostStore
+import com.vitorpamplona.amethyst.desktop.service.scheduledposts.OsScheduler
 import com.vitorpamplona.amethyst.desktop.tor.DesktopTorManager
 import com.vitorpamplona.marmotquic.QuicAgentTextStreamTransport
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
@@ -303,7 +306,15 @@ class DesktopAppModules(
         NappletPermissionLedger(InMemoryNappletPermissionStore()) { sessionManager.loggedInAccount()?.pubKey ?: "" }
     }
 
-    val scheduledPostStore = ScheduledPostStore(filesPath / ScheduledPostStore.FILE_NAME)
+    // The legacy app's store (~/.amethyst/scheduled): posts scheduled there still go out, and the
+    // OS timer's headless `--publish-scheduled` run drains the same file.
+    val scheduledPostStore = DesktopScheduledPostStore.create()
+
+    /** Publishes the logged-in account's due posts while the window is open. */
+    val scheduledPostScheduler by lazy { DesktopScheduledPostScheduler(scheduledPostStore, applicationIOScope) }
+
+    /** The OS timer that relaunches the app headless to publish while it is closed. */
+    val osScheduler by lazy { OsScheduler(OsScheduler.resolveAppLaunchCommand() ?: emptyList()) }
 
     val powJobStore by lazy { PoWJobStore(File(filesDir, PoWJobStore.FILE_NAME), applicationIOScope) }
 
@@ -321,6 +332,9 @@ class DesktopAppModules(
     fun blossomClient(serverBaseUrl: String) = BlossomClient(roleBasedHttpClientBuilder.okHttpClientForUploads(serverBaseUrl))
 
     val blossomMirrorQueue by lazy { BlossomMirrorQueue(scope = applicationIOScope, clientFor = ::blossomClient) }
+
+    /** OS notifications: the native notifier, its settings, and what is worth a notification. */
+    val notifications by lazy { DesktopNotifications(applicationIOScope) }
 
     /** The OS keyring (or its encrypted-file fallback). */
     private val keyStorage = SecureKeyStorage.create(null)
@@ -387,6 +401,12 @@ class DesktopAppModules(
 
     /** Starts the process-wide work: the saved account's session and the PoW jobs left on disk. */
     fun initiate() {
+        // After the computer sleeps, the relay sockets are dead though OkHttp still reports them
+        // open: re-dial every relay when a wake is detected.
+        applicationIOScope.launch {
+            runSleepResumeMonitor { client.reconnect(onlyIfChanged = false, ignoreRetryDelays = true) }
+        }
+
         // Resumes PoW mining jobs checkpointed before the last exit, for every loaded account.
         // Idempotent (the queue dedupes by job id), so re-emissions are safe.
         applicationIOScope.launch {

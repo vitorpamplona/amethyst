@@ -20,12 +20,16 @@
  */
 package com.vitorpamplona.amethyst.desktop.app
 
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.material3.SnackbarHost
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Window
 import androidx.compose.ui.window.WindowPosition
@@ -80,7 +84,7 @@ fun main() {
     Runtime.getRuntime().addShutdownHook(Thread { modules.torManager.stopSync() })
 
     val services = DesktopAppServices(modules)
-    val platform = DesktopAppPlatform(appVersionName = version, isDebugBuild = isDebug)
+    val platform = DesktopAppPlatform(appVersionName = version, isDebugBuild = isDebug, notifications = modules.notifications)
     val root = DesktopAppRoot(modules)
 
     application {
@@ -120,7 +124,10 @@ fun main() {
                         // The lightbox and the video player go full screen through the AWT window.
                         LocalAwtWindow provides window,
                     ) {
-                        AmethystApp(modules.sessionManager, root)
+                        Box(Modifier.fillMaxSize()) {
+                            AmethystApp(modules.sessionManager, root)
+                            SnackbarHost(platform.snackbarHostState, Modifier.align(Alignment.BottomCenter))
+                        }
                     }
                 }
             }

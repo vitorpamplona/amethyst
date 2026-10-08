@@ -25,18 +25,26 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.snapshotFlow
+import androidx.compose.ui.platform.LocalWindowInfo
 import com.vitorpamplona.amethyst.commons.account.AccountSessionManager
 import com.vitorpamplona.amethyst.commons.model.Account
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.desktop_key_not_kept_description
 import com.vitorpamplona.amethyst.commons.resources.desktop_key_not_kept_title
 import com.vitorpamplona.amethyst.commons.resources.dismiss
+import com.vitorpamplona.amethyst.commons.scheduledposts.ScheduledPostStatus
 import com.vitorpamplona.amethyst.commons.ui.app.AppRoot
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.Nav
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.withContext
 
 /**
  * The desktop's answers to the shared app root. The window size comes from the default
@@ -70,6 +78,46 @@ class DesktopAppRoot(
         modules.okHttpClients.defaultHttpClientWithoutProxy.collectAsState()
 
         KeyNotKeptDialog(modules)
+
+        // Keeps the OS timer registered only while posts wait to go out, so they publish even
+        // when the app is closed. A no-op from `gradle run`, where there is no app binary.
+        LaunchedEffect(Unit) {
+            var lastHadPending: Boolean? = null
+            modules.scheduledPostStore.flow.collect { posts ->
+                val hasPending = posts.any { it.status == ScheduledPostStatus.PENDING || it.status == ScheduledPostStatus.PUBLISHING }
+                if (hasPending != lastHadPending) {
+                    lastHadPending = hasPending
+                    withContext(Dispatchers.IO) {
+                        if (hasPending) modules.osScheduler.ensureRegistered() else modules.osScheduler.unregister()
+                    }
+                }
+            }
+        }
+    }
+
+    /** OS notifications for the logged-in account, held back while the window has focus. */
+    @Composable
+    override fun LoggedInEffects(accountViewModel: AccountViewModel) {
+        val windowInfo = LocalWindowInfo.current
+        val focused = remember { MutableStateFlow(windowInfo.isWindowFocused) }
+        LaunchedEffect(windowInfo) {
+            snapshotFlow { windowInfo.isWindowFocused }.collect { focused.value = it }
+        }
+        DisposableEffect(accountViewModel.account) {
+            val job = modules.notifications.watch(accountViewModel.account, modules.cache, focused)
+            onDispose { job.cancel() }
+        }
+
+        // Each account publishes only its own scheduled posts, to its outbox relays.
+        DisposableEffect(accountViewModel.account) {
+            val account = accountViewModel.account
+            modules.scheduledPostScheduler.start(
+                client = modules.client,
+                accountPubkey = account.signer.pubKey,
+                resolveRelays = { account.outboxRelays.flow.value },
+            )
+            onDispose { modules.scheduledPostScheduler.stop() }
+        }
     }
 
     @Composable
