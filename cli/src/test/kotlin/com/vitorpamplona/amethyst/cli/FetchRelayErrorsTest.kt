@@ -83,7 +83,7 @@ class FetchRelayErrorsTest {
 
     @Test
     fun aRelayThatClosesTheReqIsReportedAsNoRelayServed() {
-        val r = amy("--json", "fetch", "--kind", "1", "--limit", "100", "--relay", refusing.url, "--timeout", IDLE_TIMEOUT_SECONDS)
+        val r = amy("--json", "fetch", "--kind", "1", "--limit", "100", "--relay", refusing.url, "--timeout", "5")
 
         assertEquals(1, r.exit, "a refusal is not an empty success: ${r.stderr}")
         assertTrue(r.stdout.isBlank(), "errors must not write stdout")
@@ -97,7 +97,7 @@ class FetchRelayErrorsTest {
     // Text mode used to append the payload as a Kotlin map: `(relay_errors={ws://…={reason=closed, …}})`.
     @Test
     fun aTextModeRefusalIsReadable() {
-        val r = amy("fetch", "--kind", "1", "--limit", "100", "--relay", refusing.url, "--timeout", IDLE_TIMEOUT_SECONDS)
+        val r = amy("fetch", "--kind", "1", "--limit", "100", "--relay", refusing.url, "--timeout", "5")
 
         assertEquals(1, r.exit, r.stderr)
         val lines = r.stderr.lines()
@@ -111,7 +111,7 @@ class FetchRelayErrorsTest {
 
     @Test
     fun theRefusalIsReportedWhenPaginatingToo() {
-        val r = amy("--json", "fetch", "--kind", "1", "--limit", "100", "--paginate", "--relay", refusing.url, "--timeout", IDLE_TIMEOUT_SECONDS)
+        val r = amy("--json", "fetch", "--kind", "1", "--limit", "100", "--paginate", "--relay", refusing.url, "--timeout", "5")
 
         assertEquals(1, r.exit, r.stderr)
         val error = jsonErrorOf(r)
@@ -121,7 +121,7 @@ class FetchRelayErrorsTest {
 
     @Test
     fun aServingRelayStillSucceedsAndListsTheOneThatRefused() {
-        val r = amy("--json", "fetch", "--kind", "1", "--limit", "100", "--relay", "${refusing.url},${serving.url}", "--timeout", IDLE_TIMEOUT_SECONDS)
+        val r = amy("--json", "fetch", "--kind", "1", "--limit", "100", "--relay", "${refusing.url},${serving.url}", "--timeout", "5")
 
         assertEquals(0, r.exit, r.stderr)
         val result = Output.mapper.readTree(r.stdoutLines.single())
@@ -138,7 +138,7 @@ class FetchRelayErrorsTest {
     @Test
     fun aRelayThatAnswersHasNoRelayErrors() {
         // The same relay serves a limit it accepts: it EOSEs with nothing, which is an answer.
-        val r = amy("--json", "fetch", "--kind", "1", "--limit", "50", "--relay", refusing.url, "--timeout", IDLE_TIMEOUT_SECONDS)
+        val r = amy("--json", "fetch", "--kind", "1", "--limit", "50", "--relay", refusing.url, "--timeout", "5")
 
         assertEquals(0, r.exit, r.stderr)
         val result = Output.mapper.readTree(r.stdoutLines.single())
@@ -167,11 +167,5 @@ class FetchRelayErrorsTest {
 
     private companion object {
         const val REASON = "filters are too vague"
-
-        // amy's --timeout is an idle window: it only elapses while a relay is silent. Every relay
-        // here answers (EOSE or CLOSED) as soon as it is asked, so a passing run never waits on
-        // it, but on a loaded CI runner the serving relay's first connect could take longer than
-        // 5s, leaving it "stalled" and its note uncounted (seen on macos-latest).
-        const val IDLE_TIMEOUT_SECONDS = "30"
     }
 }
