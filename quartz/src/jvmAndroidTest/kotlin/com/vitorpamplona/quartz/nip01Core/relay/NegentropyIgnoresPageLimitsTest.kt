@@ -57,7 +57,8 @@ class NegentropyIgnoresPageLimitsTest {
                     }
 
                 // The reconcile itself — how many ids the relay said it holds. The download that
-                // follows is ordinary REQs, which default_limit rightly still pages.
+                // follows is ordinary REQs, which default_limit still pages; NegentropyDownloadTest
+                // covers that half.
                 assertEquals(30, result.needCount, "the reconcile saw the whole set, not a default_limit page")
             } finally {
                 client.disconnect()

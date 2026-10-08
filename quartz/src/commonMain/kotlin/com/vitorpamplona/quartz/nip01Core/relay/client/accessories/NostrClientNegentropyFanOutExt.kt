@@ -134,7 +134,7 @@ suspend fun negentropySyncFanOut(
                                     servedAny = true
                                     used.incrementAndFetch()
                                 }
-                                for (event in client.fetchByIds(relay, batch, idleTimeoutMs)) {
+                                for (event in client.fetchByIds(relay, batch, idleTimeoutMs, filter)) {
                                     events.send(event)
                                 }
                             }

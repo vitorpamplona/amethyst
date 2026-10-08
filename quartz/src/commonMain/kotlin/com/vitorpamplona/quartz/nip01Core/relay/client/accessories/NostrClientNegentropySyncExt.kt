@@ -599,7 +599,7 @@ private suspend fun INostrClient.syncPipeline(
             launch {
                 for (batch in idBatches) {
                     coroutineContext.ensureActive()
-                    for (event in fetchByIds(relay, batch, idleTimeoutMs)) {
+                    for (event in fetchByIds(relay, batch, idleTimeoutMs, filter)) {
                         deliver(event)
                     }
                 }
@@ -1377,11 +1377,27 @@ internal fun isNegentropyRejectionNotice(reason: String): Boolean =
         reason.contains("unknown envelope", ignoreCase = true)
 
 /**
- * One `REQ` for [batch] ids; collects the matching events and returns them on
- * `EOSE`/close/timeout. All events for a single relay arrive on its one reader
- * thread, so collecting here needs no synchronisation.
+ * Downloads [batch] ids and returns the matching events on `EOSE`/close/timeout.
+ * All events for a single relay arrive on its one reader thread, so collecting
+ * here needs no synchronisation.
  *
- * Events are deduped *within this batch* (a [HashSet] bounded by the batch size, so
+ * Usually one `REQ`, but two kinds of relay make it more:
+ *
+ *  - **A relay that caps every `REQ`, ids included.** relay.nostr.net answers a
+ *    500-id `REQ` with 100 events and relay.nostr.wirednet.jp with 200, `limit`
+ *    or not, then sends `EOSE` as if that were all. So after an `EOSE` that left
+ *    ids unserved, the ones still missing are asked for again, for as long as
+ *    each round brings something new. A round that brings nothing ends it: those
+ *    ids are ones the relay will not serve (it names them in a reconcile but
+ *    cannot load them, or deleted them since).
+ *  - **A relay that refuses an ids-only filter.** relay.conduit.market closes it
+ *    with "wildcard subscriptions are not available"; the same ids with the sync
+ *    filter's `kinds` are served. So the `REQ` carries [scope]'s `kinds`, which
+ *    every id a reconcile of [scope] named matches. A scope with no kinds may hold
+ *    a long `authors` list, too heavy to repeat on every batch, so its ids go out
+ *    bare and its `authors` and tags are added only to re-ask a `CLOSED` batch.
+ *
+ * Events are deduped across the rounds (a [HashSet] bounded by the batch size, so
  * still O(pipeline) memory). A REQ-by-ids should return each id once, but the client
  * may re-send the REQ on a reconnect/filter-sync mid-flight, which makes the relay
  * replay the batch; without this the same event would be delivered twice. We rely on
@@ -1391,11 +1407,51 @@ internal suspend fun INostrClient.fetchByIds(
     relay: NormalizedRelayUrl,
     batch: List<HexKey>,
     idleTimeoutMs: Long,
+    scope: Filter? = null,
 ): List<Event> {
-    val subId = newSubId()
-    val done = Channel<Unit>(Channel.CONFLATED)
     val collected = ArrayList<Event>(batch.size)
     val seen = HashSet<HexKey>(batch.size)
+    var missing = batch
+
+    var widened = false
+
+    while (true) {
+        val before = collected.size
+        val filter =
+            when {
+                widened -> Filter(ids = missing, authors = scope?.authors, kinds = scope?.kinds, tags = scope?.tags, tagsAll = scope?.tagsAll)
+                else -> Filter(ids = missing, kinds = scope?.kinds)
+            }
+        val endedByEose = fetchByIdsRound(relay, filter, idleTimeoutMs, seen, collected)
+        if (!endedByEose) {
+            if (widened || !scope.narrowsBeyondKinds()) break
+            widened = true
+        } else if (collected.size == before) {
+            break
+        }
+        if (collected.size >= batch.size) break
+        missing = missing.filter { it !in seen }
+        if (missing.isEmpty()) break
+    }
+    return collected
+}
+
+private fun Filter?.narrowsBeyondKinds() = this != null && (authors != null || tags != null || tagsAll != null)
+
+/**
+ * One `REQ` of [fetchByIds]: adds what arrives to [collected] and returns whether
+ * the relay ended it with `EOSE` (rather than `CLOSED`, a failed connection or the
+ * idle bound, none of which a re-ask would fix).
+ */
+private suspend fun INostrClient.fetchByIdsRound(
+    relay: NormalizedRelayUrl,
+    filter: Filter,
+    idleTimeoutMs: Long,
+    seen: HashSet<HexKey>,
+    collected: ArrayList<Event>,
+): Boolean {
+    val subId = newSubId()
+    val done = Channel<Boolean>(Channel.CONFLATED)
 
     // Per-batch idle clock: each event resets it, so a batch that keeps streaming is
     // never cut off, but a batch that stalls (relay stops mid-flight) unblocks after
@@ -1420,7 +1476,7 @@ internal suspend fun INostrClient.fetchByIds(
                 relay: NormalizedRelayUrl,
                 forFilters: List<Filter>?,
             ) {
-                done.trySend(Unit)
+                done.trySend(true)
             }
 
             override fun onClosed(
@@ -1428,7 +1484,7 @@ internal suspend fun INostrClient.fetchByIds(
                 relay: NormalizedRelayUrl,
                 forFilters: List<Filter>?,
             ) {
-                done.trySend(Unit)
+                done.trySend(false)
             }
 
             override fun onCannotConnect(
@@ -1436,18 +1492,17 @@ internal suspend fun INostrClient.fetchByIds(
                 message: String,
                 forFilters: List<Filter>?,
             ) {
-                done.trySend(Unit)
+                done.trySend(false)
             }
         }
 
     try {
-        subscribe(subId, mapOf(relay to listOf(Filter(ids = batch))), listener)
-        done.receiveWithinIdle(clock, batchIdleMs)
+        subscribe(subId, mapOf(relay to listOf(filter)), listener)
+        return done.receiveWithinIdle(clock, batchIdleMs) == true
     } finally {
         unsubscribe(subId)
         done.close()
     }
-    return collected
 }
 
 /** Seconds: a window this small that still overflows can't be split further. */
