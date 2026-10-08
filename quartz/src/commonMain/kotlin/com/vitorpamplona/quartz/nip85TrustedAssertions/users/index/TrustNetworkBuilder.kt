@@ -318,6 +318,7 @@ class TrustNetworkBuilder(
 
         val deletedPrefixes = deletedIdPrefixes()
         val deletedAtBySubject = KeyTable.of(deletedSubjects.map { (key, at) -> key to at })
+        val duplicate = BooleanArray(size)
         val keep = IntArray(size)
         var kept = 0
         val graves = IntArray(size)
@@ -332,9 +333,23 @@ class TrustNetworkBuilder(
             // the one before it). A kind-5 deletion of the subject makes that card a tombstone:
             // out of the index, but remembered, so a relay that kept the card cannot bring it back.
             val deletedAt = if (deletedAtBySubject.isEmpty()) KeyTable.MISSING else deletedAtBySubject.valueOf(hi[first], lo[first])
+            // The same card twice (an update re-fetching a card the index already holds): sorted
+            // next to each other, so keep the first and carry over whether the relay holds it.
+            // Otherwise the copy would be buried as an "older version" of itself.
+            var original = order[k]
+            for (g in k + 1 until next) {
+                val i = order[g]
+                if (createdAt[i] == createdAt[original] && compareIds(i, original) == 0) {
+                    duplicate[i] = true
+                    if (held[i]) held[original] = true
+                } else {
+                    original = i
+                }
+            }
             var chosen = -1
             for (g in k until next) {
                 val i = order[g]
+                if (duplicate[i]) continue
                 if (isDeletedId(i, deletedPrefixes)) continue
                 if (chosen < 0) {
                     chosen = i

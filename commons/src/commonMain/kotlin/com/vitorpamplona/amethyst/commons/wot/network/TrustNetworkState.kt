@@ -479,10 +479,13 @@ class TrustNetworkState(
         commitLock.withLock {
             if (currentProvider != provider) return@withLock TrustNetworkRun(kind, TrustNetworkOutcome.ProviderChanged, result)
             // Same index instance: feeds keyed on it do not rebuild. Only a finished full check
-            // is saved (its date decides when the next one runs); an update's lastUpdate is not,
-            // which only means the next process start asks again.
+            // is saved (its date decides when the next one runs), or held counts the saved
+            // header lacked (a file from before they existed would otherwise make every process
+            // start reconcile again); an update's lastUpdate is not, which only means the next
+            // process start asks again.
+            val countsLearned = header.heldAtCursor != current.header.heldAtCursor || header.heldAfterCursor != current.header.heldAfterCursor
             val saved =
-                if (result != null && header.lastFullCheck != current.header.lastFullCheck) {
+                if (result != null && (header.lastFullCheck != current.header.lastFullCheck || countsLearned)) {
                     withContext(Dispatchers.IO) { store?.write(header, current.index, result.ids) }
                 } else {
                     null
