@@ -383,6 +383,7 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.merge
 import kotlinx.coroutines.flow.sample
 import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
@@ -393,6 +394,12 @@ import com.vitorpamplona.quartz.experimental.profileGallery.thumbhash as gallery
 
 /** How long past a disappearing message's deadline the sweep waits, to purge nearby deadlines in one pass (CORD-08). */
 private const val CONCORD_EXPIRY_COALESCE_MS = 2_000L
+
+/** Delay before the first stock-relay Direct Invite sweep, so it doesn't compete with the start-up fetches. */
+private const val DIRECT_INVITE_SWEEP_START_MS = 20_000L
+
+/** How often to sweep the stock relays for Direct Invites while the account is loaded. */
+private const val DIRECT_INVITE_SWEEP_EVERY_MS = 15 * 60_000L
 
 @OptIn(DelicateCoroutinesApi::class)
 @Stable
@@ -4216,9 +4223,20 @@ class Account(
             }
         }
 
-        // Direct Invites (CORD-05 §6) arrive live through the account's gift-wrap subscription (our DM
-        // relays plus the stock Concord set). One that parks may be a catch-up a Grant already
-        // authorizes, so adopt those as they land rather than waiting for the next revision tick.
+        // Direct Invites (CORD-05 §6) on our DM relays arrive live through the account's gift-wrap
+        // subscription. Senders that can't find our lists fall back to the stock Concord relays, which
+        // are swept periodically instead (single-flight, so an overlap with the hub's own request is
+        // dropped). Shown on Notifications and Messages, so swept without the hub open.
+        scope.launch {
+            delay(DIRECT_INVITE_SWEEP_START_MS)
+            while (isActive) {
+                concord.requestConcordDirectInviteSweep()
+                delay(DIRECT_INVITE_SWEEP_EVERY_MS)
+            }
+        }
+
+        // An invite that parks may be a catch-up a Grant already authorizes, so adopt those as they
+        // land rather than waiting for the next revision tick.
         scope.launch {
             concord.directInviteInbox.pending
                 .map { it.keys }

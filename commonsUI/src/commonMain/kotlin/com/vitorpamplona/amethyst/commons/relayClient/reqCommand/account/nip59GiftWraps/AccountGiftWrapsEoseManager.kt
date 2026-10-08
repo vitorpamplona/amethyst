@@ -61,8 +61,9 @@ import kotlinx.coroutines.launch
  *    wraps carry no tag that tells them apart, so DMs still download and are dropped after unwrapping.
  *  - **NIP-17 and Marmot off, Concord on:** only the `k=3313` Direct Invite wraps.
  *
- * With Concord on, invites are also read from the stock Concord relays (outside our DM relays), where
- * a sender delivers when it can't find our lists.
+ * The stock Concord relays, where an invite sender falls back when it can't find our lists, are swept
+ * periodically by [com.vitorpamplona.amethyst.commons.model.AccountConcordActions.requestConcordDirectInviteSweep]
+ * instead of being held open here.
  */
 class AccountGiftWrapsEoseManager(
     client: INostrClient,
@@ -106,11 +107,6 @@ class AccountGiftWrapsEoseManager(
                 GiftWrapInbox.CONCORD_INVITES -> relays.forEach { addAll(filterConcordDirectInvitesToPubkey(relay = it, pubkey = me, since = inviteSince)) }
 
                 GiftWrapInbox.NONE -> {}
-            }
-            if (concord) {
-                (account.concord.concordDirectInviteStockRelays() - relays).forEach {
-                    addAll(filterConcordDirectInvitesToPubkey(relay = it, pubkey = me, since = inviteSince))
-                }
             }
         }
     }

@@ -37,6 +37,7 @@ import com.vitorpamplona.amethyst.commons.defaults.DefaultDmIndexerRelays
 import com.vitorpamplona.amethyst.commons.model.ConcordInviteResult
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.cache.filter
+import com.vitorpamplona.amethyst.commons.model.chats.ChatFeedType
 import com.vitorpamplona.amethyst.commons.model.chats.ConcordDirectInviteNote
 import com.vitorpamplona.amethyst.commons.model.concord.ConcordChannel
 import com.vitorpamplona.amethyst.commons.model.concord.ConcordChannelListState
@@ -1015,11 +1016,52 @@ class AccountConcordActions(
 
     /**
      * The stock Concord relays a Direct Invite sender falls back to when it can't find our relay lists
-     * (none published, or none reachable — CORD-05 §6). We can't know which case a sender hit, so the
-     * account's gift-wrap subscription always reads invites here too, next to our DM inbox relays: an
-     * account with no published kind 10050 otherwise never received Armada's invites.
+     * (none published, or none reachable — CORD-05 §6). We can't know which case a sender hit, so they
+     * are swept too: an account with no published kind 10050 otherwise never received Armada's invites.
+     * Our DM relays are left out — the account's gift-wrap subscription already reads invites there.
      */
-    fun concordDirectInviteStockRelays(): Set<NormalizedRelayUrl> = ConcordActions.directInviteDeliveryRelays(null)
+    private fun concordDirectInviteStockRelays(): Set<NormalizedRelayUrl> = ConcordActions.directInviteDeliveryRelays(null) - account.dmRelays.flow.value
+
+    private val directInviteSweep = Mutex()
+
+    /**
+     * Runs a Direct Invite sweep of the stock relays ([refreshConcordDirectInvites]) in the account's
+     * scope, unless one is already running or Concord is turned off in Settings › Messages. Runs in the
+     * account's scope because the hub leaves composition whenever it swaps layouts, which cancelled a
+     * sweep launched there before any relay answered.
+     */
+    fun requestConcordDirectInviteSweep() {
+        if (!account.settings.isChatFeedEnabled(ChatFeedType.CONCORD)) return
+        account.scope.launch {
+            if (!directInviteSweep.tryLock()) return@launch
+            try {
+                refreshConcordDirectInvites()
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                Log.w("Concord", "Direct Invite sweep failed", e)
+            } finally {
+                directInviteSweep.unlock()
+            }
+        }
+    }
+
+    /**
+     * One-shot sweep of the stock Concord relays for Direct Invite wraps
+     * (`{"kinds":[1059],"#p":[me],"#k":["3313"]}` since the inbox cursor, rewound by NIP-59's backdate
+     * window), offering each to the inbox. A periodic fetch rather than a live subscription, so an
+     * account that never gets an invite there doesn't hold those connections open. Returns how many new
+     * invites were parked. Read-only: it decrypts, it never joins or contacts a community's relays.
+     */
+    suspend fun refreshConcordDirectInvites(): Int {
+        val relays = concordDirectInviteStockRelays()
+        if (relays.isEmpty()) return 0
+        val before = directInviteInbox.pending.value.keys
+        val filter = ConcordActions.directInvitesFilter(account.signer.pubKey, directInviteInbox.since())
+        val wraps = account.client.fetchAll(filters = relays.associateWith { listOf(filter) })
+        wraps.distinctBy { it.id }.forEach { directInviteInbox.offer(it) }
+        return (directInviteInbox.pending.value.keys - before).size
+    }
 
     /**
      * Adopts, without a click, every parked catch-up the held fold says is exactly the delivery a

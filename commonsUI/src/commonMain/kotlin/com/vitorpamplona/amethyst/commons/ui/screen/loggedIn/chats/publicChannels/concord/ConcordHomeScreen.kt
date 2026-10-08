@@ -80,6 +80,7 @@ import com.vitorpamplona.amethyst.commons.ui.platform.AppBottomBar
 import com.vitorpamplona.amethyst.commons.ui.platform.rememberConcordImageModel
 import com.vitorpamplona.amethyst.commons.ui.pluralStringRes
 import com.vitorpamplona.amethyst.commons.ui.screen.LocalDisplaySettings
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.publicChannels.concord.RefreshConcordDirectInvites
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.publicChannels.concord.concordPendingDirectInvites
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.publicChannels.concord.datasource.ConcordChannelSubscription
 import com.vitorpamplona.amethyst.commons.ui.stringRes
@@ -120,7 +121,9 @@ fun ConcordHomeScreen(
     // the stock relays for users who actually use Concord.
     LaunchedEffect(Unit) { accountViewModel.importConcordCommunities() }
 
-    // Direct Invites (CORD-05 §6), delivered live by the account's gift-wrap subscription.
+    // Direct Invites (CORD-05 §6): one stock-relay sweep per visit, kept out of the lazy list so it
+    // does not re-run each time the invites scroll back into view.
+    RefreshConcordDirectInvites(accountViewModel)
     val invites by account.concord.pendingConcordDirectInvites.collectAsStateWithLifecycle()
 
     // Per-community expansion, cycled on tap: absent = CLOSED → UNREAD (peek only the channels with
