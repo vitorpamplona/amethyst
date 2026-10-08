@@ -27,6 +27,7 @@ import com.vitorpamplona.quartz.experimental.postingStreak.PostingStreakEvent
 import com.vitorpamplona.quartz.experimental.profileTheme.active.ActiveProfileThemeEvent
 import com.vitorpamplona.quartz.experimental.profileTheme.definition.ThemeDefinitionEvent
 import com.vitorpamplona.quartz.experimental.topEight.TopEightEvent
+import com.vitorpamplona.quartz.marmot.mip00KeyPackages.LegacyKeyPackageEvent
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip18Reposts.BaseRepostEvent
 import com.vitorpamplona.quartz.nip23LongContent.draft.LongFormDraftEvent
@@ -111,8 +112,9 @@ val TYPED_WITHOUT_A_CARD: Set<Int> =
         MostroDisputeEvent.KIND,
         MostroDevFeePaymentEvent.KIND,
         RoboSatsCoordinatorRatingEvent.KIND,
-        // Encrypted or key-transfer traffic: nothing to show.
+        // Encrypted, key-material or key-transfer traffic: nothing to show.
         PnsEvent.KIND,
+        LegacyKeyPackageEvent.KIND,
         EncryptionKeyRequestEvent.KIND,
         EncryptionKeyTransferEvent.KIND,
         // Siblings of kinds that have cards, which the cards do not handle yet.

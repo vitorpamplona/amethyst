@@ -45,13 +45,15 @@ Files:
 
 Ordered by how directly each gap affects Amethyst.
 
-1. **Marmot legacy KeyPackages (443).** White Noise's MDK 0.8.x still publishes kind:443. 7 of
-   the 20 authors seen published *only* 443 in the window. Quartz has
-   `KeyPackageUtils.LEGACY_KIND` and `MarmotFilters.keyPackagesMigration()` (`{kinds:[30443,443]}`),
-   but nothing calls the migration filter and `EventFactory` has no 443 branch, so Amethyst
-   can't find those users' KeyPackages to invite them. Keychat's **10443** is a different case:
-   it is a replaceable KeyPackage that requires the old NIP-EE extension `0xF233`, not `0xF2EE`,
-   so a reader alone would not make it interoperate.
+1. **Marmot legacy KeyPackages (443).** *Fixed after this census:* White Noise's MDK 0.8.x still
+   publishes kind:443, and 7 of the 20 authors seen published *only* 443, but Amethyst asked relays
+   for 30443 alone, so those users could not be invited. Quartz now types 443
+   (`LegacyKeyPackageEvent`) and the invite fetch (`KeyPackageFetcher.fetchKeyPackageForInvite`,
+   used by the app and `amy marmot group add`) reads both kinds, preferring a valid 30443. MDK 0.8
+   packages can join legacy-profile groups but not current-profile ones until those users upgrade;
+   MDK 0.7.1 packages lack `mls_proposals` and stay invalid. Keychat's **10443** is a different
+   case: it is a replaceable KeyPackage that requires the old NIP-EE extension `0xF233`, not
+   `0xF2EE`, so a reader alone would not make it interoperate.
 2. **NIP-34 git additions.**
    - **1624 cover note**: overrides a PR or issue description. `cli/ROADMAP.md` already lists it
      as missing.
@@ -71,8 +73,8 @@ Ordered by how directly each gap affects Amethyst.
 5. **1080 Private Note Storage** (NIP PR #1893, already unwrapped by nostrdb). It is live and
    could hold private drafts or settings across devices.
 6. **Render-worthy app content:**
-   - Ditto: 16767 active profile theme (already mentioned in `RepostRenderability.kt`), 36767
-     theme definition, 13473 posting streak (58 authors), 18678 Top 8 (1 author), 31124 Blobbi pets
+   - Ditto: 16767 active profile theme, 36767 theme definition, 13473 posting streak (58 authors)
+     and 18678 Top 8 (1 author) — *typed after this census, no cards yet*; 31124 Blobbi pets
    - 10222 Communikeys community definition
    - 30301 Kanban board (NIP PR #1665; collides with WalletScrutiny verifications)
    - 5555 Word5 score
