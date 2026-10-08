@@ -20,13 +20,30 @@
  */
 package com.vitorpamplona.quartz.nip69P2pOrderEvents.tags
 
+import com.vitorpamplona.quartz.nip01Core.core.TagArray
+import com.vitorpamplona.quartz.nip01Core.core.fastAny
 import com.vitorpamplona.quartz.nip01Core.core.has
 import com.vitorpamplona.quartz.utils.ensure
 
+/**
+ * `z`: which document a P2P event is. NIP-69 orders say `order`. Mostro's split kinds keep the
+ * tag (mostro_separate_kinds.md, Phase 4) with `rating` (38384), `info` (38385), `dispute`
+ * (38386) and `dev-fee-payment` (8383).
+ */
 class DocumentTypeTag {
     companion object {
         const val TAG_NAME = "z"
         const val ORDER = "order"
+        const val RATING = "rating"
+        const val INFO = "info"
+        const val DISPUTE = "dispute"
+        const val DEV_FEE_PAYMENT = "dev-fee-payment"
+
+        /** True when [tags] carry a `z` naming [type]. Allocation-free, for the factory's tag split. */
+        fun isType(
+            tags: TagArray,
+            type: String,
+        ) = tags.fastAny { it.size > 1 && it[0] == TAG_NAME && it[1] == type }
 
         fun parse(tag: Array<String>): String? {
             ensure(tag.has(1)) { return null }

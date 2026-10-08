@@ -257,6 +257,11 @@ import com.vitorpamplona.quartz.nip66RelayMonitor.discovery.RelayDiscoveryEvent
 import com.vitorpamplona.quartz.nip66RelayMonitor.monitor.RelayMonitorEvent
 import com.vitorpamplona.quartz.nip68Picture.PictureEvent
 import com.vitorpamplona.quartz.nip69P2pOrderEvents.P2POrderEvent
+import com.vitorpamplona.quartz.nip69P2pOrderEvents.mostroDevFee.MostroDevFeePaymentEvent
+import com.vitorpamplona.quartz.nip69P2pOrderEvents.mostroDispute.MostroDisputeEvent
+import com.vitorpamplona.quartz.nip69P2pOrderEvents.mostroInfo.MostroInfoEvent
+import com.vitorpamplona.quartz.nip69P2pOrderEvents.mostroRating.MostroUserRatingEvent
+import com.vitorpamplona.quartz.nip69P2pOrderEvents.robosatsRating.RoboSatsCoordinatorRatingEvent
 import com.vitorpamplona.quartz.nip71Video.AddressableNormalVideoEvent
 import com.vitorpamplona.quartz.nip71Video.AddressableShortVideoEvent
 import com.vitorpamplona.quartz.nip71Video.VideoNormalEvent
@@ -717,6 +722,13 @@ object KindNames {
             CashuMintEvent.KIND to KindName("Cashu Mint", "87"),
             FedimintEvent.KIND to KindName("Fedimint", "87"),
             P2POrderEvent.KIND to KindName("P2P Order", "69"),
+            // Kind numbers shared with other apps (Paygress, Borkstr, ...): the label names the
+            // shape EventFactory reads on them.
+            MostroUserRatingEvent.KIND to KindName("Mostro User Rating", null),
+            MostroInfoEvent.KIND to KindName("Mostro Instance Info", null),
+            MostroDisputeEvent.KIND to KindName("Mostro Dispute", null),
+            MostroDevFeePaymentEvent.KIND to KindName("Mostro Dev Fee Payment", null),
+            RoboSatsCoordinatorRatingEvent.KIND to KindName("RoboSats Coordinator Rating", null),
             GroupMetadataEvent.KIND to KindName("Group Metadata", "29"),
             GroupAdminsEvent.KIND to KindName("Group Admins", "29"),
             GroupMembersEvent.KIND to KindName("Group Members", "29"),

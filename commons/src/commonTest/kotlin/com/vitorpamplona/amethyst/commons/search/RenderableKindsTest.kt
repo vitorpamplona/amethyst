@@ -124,6 +124,8 @@ class RenderableKindsTest {
                 9041,
                 33863,
                 38383,
+                // Mostro instance terms: searchable by instance name, no card yet
+                38385,
                 38000,
                 // DVM job requests
                 5050,

@@ -222,6 +222,7 @@ object SearchableKinds {
             38000, // MintRecommendationEvent
             38192, // Ps1SaveEvent
             38383, // P2POrderEvent
+            38385, // MostroInfoEvent
             39000, // GroupMetadataEvent
             39003, // GroupRolesEvent
             39089, // StarterPackEvent

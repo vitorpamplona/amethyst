@@ -125,6 +125,7 @@ import com.vitorpamplona.quartz.nip5dNapplets.RootNappletEvent
 import com.vitorpamplona.quartz.nip64Chess.game.ChessGameEvent
 import com.vitorpamplona.quartz.nip68Picture.PictureEvent
 import com.vitorpamplona.quartz.nip69P2pOrderEvents.P2POrderEvent
+import com.vitorpamplona.quartz.nip69P2pOrderEvents.mostroInfo.MostroInfoEvent
 import com.vitorpamplona.quartz.nip71Video.AddressableVideoEvent
 import com.vitorpamplona.quartz.nip71Video.RegularVideoEvent
 import com.vitorpamplona.quartz.nip72ModCommunities.definition.CommunityDefinitionEvent
@@ -687,6 +688,12 @@ object SearchFieldExtractor {
             // currency and payment methods are the keywords that qualify it.
             is P2POrderEvent -> {
                 tiers(event, listOf(event.makerName()), listOf(event.currency()) + event.paymentMethods().orEmpty(), null)
+            }
+
+            // kind 38385 -- a Mostro instance is looked up by its name; the currencies it
+            // trades are the keywords that qualify it, as on an order.
+            is MostroInfoEvent -> {
+                tiers(event, listOf(event.instanceName()), event.fiatCurrenciesAccepted().orEmpty(), null)
             }
 
             is AudioTrackEvent -> {

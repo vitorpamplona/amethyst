@@ -4,8 +4,8 @@ Every concrete `SearchableEvent` implementor in Quartz, with the exact `indexabl
 expression. **Update this file in the same PR as any change to the searchable set or to an
 `indexableContent()` body** (see SKILL.md). Verified against the code 2026-10-08.
 
-Counts: 196 concrete classes covering 197 kind values (`GitStatusEvent` spans 4 kinds;
-kind 30063 is shared by two NIPs and kind 38000 by three classes — see the footnotes). The kind
+Counts: 197 concrete classes covering 198 kind values (`GitStatusEvent` spans 4 kinds;
+kind 30063 is shared by two NIPs, kind 38000 by three classes and kind 38385 with other apps — see the footnotes). The kind
 set is exactly `SearchableKinds.ALL` (`nip50Search/SearchableKinds.kt`). File paths are under
 `quartz/src/commonMain/kotlin/com/vitorpamplona/quartz/`.
 
@@ -180,6 +180,7 @@ Separator legend: **NL** = `joinToString("\n")`, **SP** = `joinToString(" ")`.
 | 38000 | PredictionMarketEvent ‡ | experimental/predictionMarkets | `(listOfNotNull(title(), description()) + outcomes() + listOfNotNull(resolution(), cancelReason(), socialPost()))` NL |
 | 38192 | Ps1SaveEvent | experimental/ps1saves | `listOfNotNull(summary(), saveTitle(), region(), filename())` NL |
 | 38383 | P2POrderEvent | nip69P2pOrderEvents | `(listOfNotNull(makerName(), currency()) + paymentMethods().orEmpty()).joinToString(" ")` (SP) |
+| 38385 | MostroInfoEvent § | nip69P2pOrderEvents/mostroInfo | `(listOfNotNull(instanceName()) + fiatCurrenciesAccepted().orEmpty()).joinToString(" ")` (SP) |
 | 39000 | GroupMetadataEvent | nip29RelayGroups/metadata | `(listOfNotNull(name(), about()) + hashtags())` NL |
 | 39003 | GroupRolesEvent | nip29RelayGroups/metadata | `roles().flatMap { listOfNotNull(it.name, it.description) }` NL |
 | 39089 | StarterPackEvent | nip51Lists/starterPack | `(listOfNotNull(title(), description()) + hashtags())` NL |
@@ -226,6 +227,12 @@ spam votes that make up most of the kind). Kind-level probes (`EventFactory.prob
 the `title` tag, or JSON `content`, in that order; it also indexes its outcome labels, the
 resolution, the cancel reason, and `content` as `socialPost()` when it is a non-blank, non-JSON post
 and the market has no `description()` it would merely repeat.
+
+§ **Kind 38385 is shared** by Mostro instance info and other apps (Paygress lease revocations,
+bond-trade assignments, game scores). `EventFactory` builds `MostroInfoEvent` only when a `z` of
+`info` or a `mostro_version` tag is present, else `UnrecognizedKind38385Event` — addressable but
+unsearchable. Kind-level probes answer as `MostroInfoEvent`. Mostro's 38384 / 38386 and RoboSats'
+31986 are split the same way, but none of their classes is searchable.
 
 ## Abstract bases (no kind of their own)
 

@@ -368,6 +368,15 @@ import com.vitorpamplona.quartz.nip66RelayMonitor.discovery.RelayDiscoveryEvent
 import com.vitorpamplona.quartz.nip66RelayMonitor.monitor.RelayMonitorEvent
 import com.vitorpamplona.quartz.nip68Picture.PictureEvent
 import com.vitorpamplona.quartz.nip69P2pOrderEvents.P2POrderEvent
+import com.vitorpamplona.quartz.nip69P2pOrderEvents.mostroDevFee.MostroDevFeePaymentEvent
+import com.vitorpamplona.quartz.nip69P2pOrderEvents.mostroDispute.MostroDisputeEvent
+import com.vitorpamplona.quartz.nip69P2pOrderEvents.mostroDispute.UnrecognizedKind38386Event
+import com.vitorpamplona.quartz.nip69P2pOrderEvents.mostroInfo.MostroInfoEvent
+import com.vitorpamplona.quartz.nip69P2pOrderEvents.mostroInfo.UnrecognizedKind38385Event
+import com.vitorpamplona.quartz.nip69P2pOrderEvents.mostroRating.MostroUserRatingEvent
+import com.vitorpamplona.quartz.nip69P2pOrderEvents.mostroRating.UnrecognizedKind38384Event
+import com.vitorpamplona.quartz.nip69P2pOrderEvents.robosatsRating.RoboSatsCoordinatorRatingEvent
+import com.vitorpamplona.quartz.nip69P2pOrderEvents.robosatsRating.UnrecognizedKind31986Event
 import com.vitorpamplona.quartz.nip71Video.AddressableNormalVideoEvent
 import com.vitorpamplona.quartz.nip71Video.AddressableShortVideoEvent
 import com.vitorpamplona.quartz.nip71Video.VideoNormalEvent
@@ -881,6 +890,37 @@ class EventFactory {
                 FollowSetEvent.KIND -> FollowSetEvent(id, pubKey, createdAt, tags, content, sig)
                 PictureCurationSetEvent.KIND -> PictureCurationSetEvent(id, pubKey, createdAt, tags, content, sig)
                 P2POrderEvent.KIND -> P2POrderEvent(id, pubKey, createdAt, tags, content, sig)
+                // Mostro split its kind 38383 into 38384 ratings / 38385 info / 38386 disputes,
+                // but Paygress (a compute marketplace) publishes heartbeats, lease revocations and
+                // promotion announcements on the same three numbers, and other apps add their own.
+                // Each is told apart by its Mostro `z` tag; the rest stays addressable but unread.
+                MostroUserRatingEvent.KIND ->
+                    if (MostroUserRatingEvent.isMostroRating(tags)) {
+                        MostroUserRatingEvent(id, pubKey, createdAt, tags, content, sig)
+                    } else {
+                        UnrecognizedKind38384Event(id, pubKey, createdAt, tags, content, sig)
+                    }
+                MostroInfoEvent.KIND ->
+                    if (MostroInfoEvent.isMostroInfo(tags)) {
+                        MostroInfoEvent(id, pubKey, createdAt, tags, content, sig)
+                    } else {
+                        UnrecognizedKind38385Event(id, pubKey, createdAt, tags, content, sig)
+                    }
+                MostroDisputeEvent.KIND ->
+                    if (MostroDisputeEvent.isMostroDispute(tags)) {
+                        MostroDisputeEvent(id, pubKey, createdAt, tags, content, sig)
+                    } else {
+                        UnrecognizedKind38386Event(id, pubKey, createdAt, tags, content, sig)
+                    }
+                MostroDevFeePaymentEvent.KIND -> MostroDevFeePaymentEvent(id, pubKey, createdAt, tags, content, sig)
+                // RoboSats coordinator ratings carry a coordinator-signed token; Borkstr's NIP
+                // compatibility reports share the number without one.
+                RoboSatsCoordinatorRatingEvent.KIND ->
+                    if (RoboSatsCoordinatorRatingEvent.isCoordinatorRating(tags)) {
+                        RoboSatsCoordinatorRatingEvent(id, pubKey, createdAt, tags, content, sig)
+                    } else {
+                        UnrecognizedKind31986Event(id, pubKey, createdAt, tags, content, sig)
+                    }
                 PictureEvent.KIND -> PictureEvent(id, pubKey, createdAt, tags, content, sig)
                 PinListEvent.KIND -> PinListEvent(id, pubKey, createdAt, tags, content, sig)
                 PnsEvent.KIND -> PnsEvent(id, pubKey, createdAt, tags, content, sig)
@@ -1008,7 +1048,9 @@ class EventFactory {
          * chosen by tags, where a tagless event can land on a different class than the kind's
          * real events. Kind 38000 is the case that matters: with no tags it is an
          * [UnrecognizedKind38000Event] (junk, unsearchable), yet every typed shape of it — mint recommendation, ballot, prediction market —
-         * is a searchable, renderable class, so it answers as its primary class. (The other
+         * is a searchable, renderable class, so it answers as its primary class. Mostro's 38384,
+         * 38385 and 38386 and RoboSats' 31986 do the same: with no tags they fall to their
+         * `UnrecognizedKind…Event`, and 38385's primary class is searchable. (The other
          * tag-split kinds, 39005 and 20001, already land on a typed class with no tags.)
          *
          * The id is non-blank so kinds that lazily hash a missing id (NIP-17 chat) skip that work
@@ -1017,6 +1059,10 @@ class EventFactory {
         fun probe(kind: Int): Event =
             when (kind) {
                 MintRecommendationEvent.KIND -> MintRecommendationEvent(PROBE_ID, PROBE_ID, 0L, emptyArray(), "", "")
+                MostroUserRatingEvent.KIND -> MostroUserRatingEvent(PROBE_ID, PROBE_ID, 0L, emptyArray(), "", "")
+                MostroInfoEvent.KIND -> MostroInfoEvent(PROBE_ID, PROBE_ID, 0L, emptyArray(), "", "")
+                MostroDisputeEvent.KIND -> MostroDisputeEvent(PROBE_ID, PROBE_ID, 0L, emptyArray(), "", "")
+                RoboSatsCoordinatorRatingEvent.KIND -> RoboSatsCoordinatorRatingEvent(PROBE_ID, PROBE_ID, 0L, emptyArray(), "", "")
                 else -> create(PROBE_ID, PROBE_ID, 0L, kind, emptyArray(), "", "")
             }
 
