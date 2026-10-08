@@ -793,6 +793,28 @@ On Fedora Silverblue / very minimal distros, FUSE might be missing. Use
 
 ---
 
+## Video and audio on Linux
+
+The desktop player decodes through the system's GStreamer. The `.deb` and
+`.rpm` depend on the plugins it needs (base and good, plus the H.264/AAC
+decoders as a recommended package), so the package manager installs them.
+The AppImage, the tar.gz and `./gradlew :desktopApp:run` cannot declare
+dependencies: without the plugins, every video shows "Can't play this video —
+Failed to create native player". Install them with:
+
+```bash
+# Debian / Ubuntu
+sudo apt install gstreamer1.0-plugins-base gstreamer1.0-plugins-good gstreamer1.0-libav
+# Fedora (the decoders come from gstreamer1-plugin-libav or gstreamer1-plugin-openh264)
+sudo dnf install gstreamer1-plugins-base gstreamer1-plugins-good gstreamer1-plugin-libav
+# openSUSE
+sudo zypper install gstreamer-plugins-base gstreamer-plugins-good gstreamer-plugins-libav
+```
+
+The app reads the plugin list at start, so restart it after installing.
+
+---
+
 ## Uninstall + state paths
 
 State is shared across install channels (DMG, Homebrew, MSI, Winget, .deb,

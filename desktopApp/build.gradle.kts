@@ -1,4 +1,7 @@
 import org.jetbrains.compose.desktop.application.dsl.TargetFormat
+import org.jetbrains.compose.desktop.application.tasks.AbstractJPackageTask
+import java.net.URI
+import java.nio.file.FileSystems
 import java.nio.file.Files
 import java.util.zip.ZipFile
 
@@ -249,6 +252,93 @@ compose.desktop {
         buildTypes.release.proguard {
             version.set("7.9.1") // Kotlin 2.3 metadata support
             configurationFiles.from(project.file("compose-rules.pro"))
+        }
+    }
+}
+
+// --- GStreamer in the .rpm (Linux) ---
+//
+// The media player (kdroidFilter) drives the system GStreamer from a native library it unpacks
+// from its jar when the first video plays, so neither jpackage nor rpmbuild sees it and the .rpm
+// required no GStreamer: on a system without it every video said "Failed to create native
+// player". Neither jpackage nor the Compose DSL can add a Requires. jpackage does take its spec
+// from --resource-dir when a <package>.spec is there, but the Compose task empties that directory
+// right before it runs jpackage, and deletes its inputs after. So the rpm tasks finish by
+// repackaging the matching app image (createDistributable's, the same content) with the
+// task's own package options and a resource dir holding jpackage's template, read from the JDK it
+// packages with, plus these lines. The .deb gets the same packages from
+// scripts/add-deb-gstreamer-deps.sh in CI.
+//
+// base: playbin, appsink, volume; good: HTTP, MP4, HLS, audio output; libav/openh264: H.264 and
+// AAC decoding. The boolean forms take Fedora's or openSUSE's name; the decoders are weak
+// deps, since a distribution may keep them in a separate repository.
+val rpmGStreamerDeps =
+    """
+    Requires: (gstreamer1-plugins-base or gstreamer-plugins-base)
+    Requires: (gstreamer1-plugins-good or gstreamer-plugins-good)
+    Recommends: (gstreamer1-plugin-libav or gstreamer-plugins-libav)
+    Recommends: gstreamer1-plugin-openh264
+    """.trimIndent()
+
+// What an app image already holds; jpackage refuses these next to --app-image.
+val appImageOptions =
+    setOf(
+        "--input", "--runtime-image", "--main-jar", "--main-class", "--java-options", "--arguments",
+        "--resource-dir", "--app-content", "--add-launcher", "--add-modules", "--module", "--module-path",
+        "--jlink-options",
+    )
+
+listOf("packageRpm" to "main", "packageReleaseRpm" to "main-release").forEach { (rpmTask, buildType) ->
+    tasks.withType<AbstractJPackageTask>().matching { it.name == rpmTask }.configureEach {
+        dependsOn(if (buildType == "main") "createDistributable" else "createReleaseDistributable")
+        val packagingJdk = javaHome
+        val appName = packageName
+        val rpmPackageName = linuxPackageName.orElse(packageName.map { it.lowercase() })
+        val composeArgs = layout.buildDirectory.file("compose/tmp/$rpmTask.args.txt")
+        val ourArgs = layout.buildDirectory.file("compose/tmp/$rpmTask.gstreamer.args.txt")
+        val specDir = layout.buildDirectory.dir("compose/tmp/$rpmTask-rpm-resources")
+        val appImages = layout.buildDirectory.dir("compose/binaries/$buildType/app")
+        val deps = rpmGStreamerDeps
+        val skip = appImageOptions
+        doLast {
+            val jdk = packagingJdk.get()
+            val template =
+                FileSystems.newFileSystem(URI.create("jrt:/"), mapOf("java.home" to jdk)).use { jrt ->
+                    Files.readString(jrt.getPath("/modules/jdk.jpackage/jdk/jpackage/internal/resources/template.spec"))
+                }
+            val anchor = Regex("(?m)^Autoreq: 0$")
+            check(anchor.containsMatchIn(template)) {
+                "jpackage's spec template has no 'Autoreq: 0' line to add the GStreamer Requires after"
+            }
+            val resources = specDir.get().asFile.apply { deleteRecursively(); mkdirs() }
+            File(resources, "${rpmPackageName.get()}.spec").writeText(anchor.replaceFirst(template, "Autoreq: 0\n$deps"))
+
+            // The task's own options, one per line with quoted values, minus the app-image ones.
+            val lines = composeArgs.get().asFile.readLines()
+            val args = mutableListOf<String>()
+            var i = 0
+            while (i < lines.size) {
+                val takesValue = i + 1 < lines.size && !lines[i + 1].startsWith("--")
+                if (lines[i] !in skip) {
+                    args += lines[i]
+                    if (takesValue) args += lines[i + 1]
+                }
+                i += if (takesValue) 2 else 1
+            }
+            val appImage = appImages.get().dir(appName.get()).asFile
+            check(appImage.isDirectory) { "No app image at $appImage to repackage the .rpm from" }
+            args += listOf("--app-image", "\"${appImage.absolutePath}\"", "--resource-dir", "\"${resources.absolutePath}\"")
+
+            val dest = File(args[args.indexOf("--dest") + 1].trim('"'))
+            dest.listFiles { f -> f.name.endsWith(".rpm") }?.forEach { it.delete() }
+            val argFile = ourArgs.get().asFile.apply { writeText(args.joinToString("\n")) }
+            val process =
+                ProcessBuilder(File(jdk, "bin/jpackage").absolutePath, "@${argFile.absolutePath}")
+                    .redirectErrorStream(true)
+                    .start()
+            val output = process.inputStream.bufferedReader().readText()
+            check(process.waitFor() == 0) { "jpackage could not repackage the .rpm with its GStreamer dependencies:\n$output" }
+            logger.lifecycle("Repackaged ${dest.listFiles { f -> f.name.endsWith(".rpm") }?.joinToString { it.name }} with its GStreamer dependencies")
         }
     }
 }
