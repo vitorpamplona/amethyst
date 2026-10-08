@@ -78,7 +78,7 @@ fun RelayGroupJoinedChatTailPreload(accountViewModel: AccountViewModel) {
     val dataSource = accountViewModel.dataSources().relayGroupJoinedChatTail
 
     val joined by account.relayGroupList.liveRelayGroupList.collectAsStateWithLifecycle()
-    val enabledFeeds by account.settings.enabledChatFeeds.collectAsStateWithLifecycle()
+    val enabledFeeds by account.chatFeedToggles.applied.collectAsStateWithLifecycle()
 
     if (ChatFeedType.NIP29 in enabledFeeds) {
         joined.forEach { tag ->

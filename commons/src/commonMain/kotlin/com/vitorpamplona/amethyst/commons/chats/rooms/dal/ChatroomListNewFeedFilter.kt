@@ -27,7 +27,6 @@ import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
 import com.vitorpamplona.amethyst.commons.model.chats.ChatFeedType
 import com.vitorpamplona.amethyst.commons.util.replace
-import com.vitorpamplona.quartz.nip04Dm.messages.EncryptedDmEvent
 import com.vitorpamplona.quartz.nip17Dm.base.ChatroomKey
 import com.vitorpamplona.quartz.nip17Dm.base.ChatroomKeyable
 
@@ -36,10 +35,7 @@ class ChatroomListNewFeedFilter(
 ) : AdditiveFeedFilter<Note>() {
     override fun feedKey(): String = account.userProfile().pubkeyHex
 
-    private fun isEnabled(type: ChatFeedType): Boolean = type in account.settings.enabledChatFeeds.value
-
-    /** A room note is NIP-04 when its event is a [EncryptedDmEvent], otherwise it is a NIP-17 message. */
-    private fun isDmEnabled(note: Note): Boolean = isEnabled(if (note.event is EncryptedDmEvent) ChatFeedType.NIP04 else ChatFeedType.NIP17)
+    private fun isEnabled(type: ChatFeedType): Boolean = account.chatFeedToggles.isEnabled(type)
 
     // returns the last Note of each user.
     override fun feed(): List<Note> {
@@ -52,7 +48,6 @@ class ChatroomListNewFeedFilter(
             chatList.rooms.mapNotNull { key, chatroom ->
                 val newest = chatroom.newestMessage
                 if (newest != null &&
-                    isDmEnabled(newest) &&
                     !chatroom.senderIntersects(followingKeySet) &&
                     !chatList.hasSentMessagesTo(key) &&
                     key !in pinned &&
@@ -162,9 +157,9 @@ class ChatroomListNewFeedFilter(
 
         val newRelevantPrivateMessages = mutableMapOf<ChatroomKey, Note>()
         newItems.forEach { newNote ->
-            if (!isDmEnabled(newNote)) return@forEach
             val noteEvent = newNote.event
-            if (noteEvent is ChatroomKeyable) {
+            // Same gate as ingestion: a protocol turned off never reaches the rooms.
+            if (noteEvent is ChatroomKeyable && account.chatFeedToggles.isEnabled(noteEvent)) {
                 val roomKey = noteEvent.chatroomKey(me.pubkeyHex)
                 val room = account.chatroomList.rooms.get(roomKey)
 

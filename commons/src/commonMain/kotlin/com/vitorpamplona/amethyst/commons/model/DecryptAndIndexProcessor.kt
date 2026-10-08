@@ -105,8 +105,11 @@ class EventProcessor(
             -> callManager?.onSignalingEvent(event)
 
             is ChatroomKeyable -> {
-                chatHandler.add(event, eventNote, publicNote)
-                markOwnChatMessageAsRead(event)
+                // A DM protocol turned off in Settings › Messages never reaches the rooms; admit checks
+                // and adds atomically with an unload, so nothing slips in as it turns off.
+                if (account.chatFeedToggles.admit(event) { account.chatroomList.add(event, eventNote) }) {
+                    markOwnChatMessageAsRead(event)
+                }
             }
 
             is DraftWrapEvent -> draftHandler.add(event, eventNote, publicNote)
@@ -263,7 +266,7 @@ class DraftEventHandler(
 
         when (rumor) {
             is ChatroomKeyable -> {
-                account.chatroomList.add(rumor, draftEventWrap)
+                account.chatFeedToggles.admit(rumor) { account.chatroomList.add(rumor, draftEventWrap) }
             }
 
             is EphemeralChatEvent -> {

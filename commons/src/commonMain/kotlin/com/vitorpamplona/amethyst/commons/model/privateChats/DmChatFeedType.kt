@@ -18,36 +18,24 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.commons.relayClient.eoseManagers
+package com.vitorpamplona.amethyst.commons.model.privateChats
 
-import com.vitorpamplona.amethyst.commons.model.Account
 import com.vitorpamplona.amethyst.commons.model.chats.ChatFeedType
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.IO
-import kotlinx.coroutines.Job
-import kotlinx.coroutines.flow.distinctUntilChanged
-import kotlinx.coroutines.flow.drop
-import kotlinx.coroutines.flow.map
-import kotlinx.coroutines.launch
+import com.vitorpamplona.quartz.nip04Dm.messages.EncryptedDmEvent
+import com.vitorpamplona.quartz.nip17Dm.base.BaseDMGroupEvent
+import com.vitorpamplona.quartz.nip17Dm.base.ChatroomKeyable
+
+/** The DM protocols whose messages live in the [ChatroomList], each behind its own Settings › Messages toggle. */
+val DM_CHAT_FEED_TYPES: Set<ChatFeedType> = setOf(ChatFeedType.NIP04, ChatFeedType.NIP17)
 
 /**
- * Rebuilds a Messages-inbox subscription's filters whenever the user flips [type]'s
- * load-toggle in Settings › Messages. A disabled type's `updateFilter` returns no filters, so a
- * flip to off empties the live subscription and a flip back on re-arms it — no restart needed.
- *
- * Only the boolean for [type] is watched (via distinct + drop(1)), so unrelated toggle changes
- * don't churn this assembler.
+ * The Settings › Messages toggle that governs this DM: kind 4 is NIP-04, the gift-wrapped kind 14/15
+ * rumors are NIP-17. Null for any other room message, so a new DM kind has to be mapped here
+ * deliberately instead of silently riding the NIP-17 switch.
  */
-fun CoroutineScope.launchChatFeedToggleObserver(
-    account: Account,
-    type: ChatFeedType,
-    onToggle: () -> Unit,
-): Job =
-    launch(Dispatchers.IO) {
-        account.settings.enabledChatFeeds
-            .map { type in it }
-            .distinctUntilChanged()
-            .drop(1)
-            .collect { onToggle() }
+fun ChatroomKeyable.chatFeedType(): ChatFeedType? =
+    when (this) {
+        is EncryptedDmEvent -> ChatFeedType.NIP04
+        is BaseDMGroupEvent -> ChatFeedType.NIP17
+        else -> null
     }

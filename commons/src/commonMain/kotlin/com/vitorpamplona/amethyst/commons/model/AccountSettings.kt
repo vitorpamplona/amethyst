@@ -321,8 +321,6 @@ class AccountSettings(
         }
     }
 
-    fun isChatFeedEnabled(type: ChatFeedType): Boolean = type in enabledChatFeeds.value
-
     fun setChatFeedEnabled(
         type: ChatFeedType,
         enabled: Boolean,
