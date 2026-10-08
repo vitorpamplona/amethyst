@@ -46,6 +46,7 @@ import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.persistentListOf
+import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.delay
 
 /**
@@ -69,7 +70,8 @@ fun DisplayBroadcastProgress(accountViewModel: AccountViewModel) {
     val miningJobs by powQueue.jobs
         .collectAsStateWithLifecycle()
     val trackedBroadcasts by accountViewModel.broadcastTracker.activeBroadcasts.collectAsStateWithLifecycle()
-    val activeBroadcasts = if (trackingEnabled) trackedBroadcasts else persistentListOf()
+    val visibleBroadcasts = remember(trackedBroadcasts) { trackedBroadcasts.filterNot { it.hidden }.toImmutableList() }
+    val activeBroadcasts = if (trackingEnabled) visibleBroadcasts else persistentListOf()
 
     // State for details sheet
     var seeDetails by remember { mutableStateOf(false) }
@@ -91,7 +93,7 @@ fun DisplayBroadcastProgress(accountViewModel: AccountViewModel) {
         LaunchedEffect(canAutoDismiss) {
             if (canAutoDismiss) {
                 delay(1_500)
-                accountViewModel.broadcastTracker.clear()
+                accountViewModel.broadcastTracker.hide(activeBroadcasts.ids())
             }
         }
     } else {
@@ -99,7 +101,7 @@ fun DisplayBroadcastProgress(accountViewModel: AccountViewModel) {
             broadcasts = activeBroadcasts,
             onDismiss = {
                 accountViewModel.runOnIO {
-                    accountViewModel.broadcastTracker.clear()
+                    accountViewModel.broadcastTracker.hide(activeBroadcasts.ids())
                 }
                 seeDetails = false
             },
@@ -150,7 +152,7 @@ fun DisplaySnack(
                 }
             },
             onDismiss = {
-                accountViewModel.broadcastTracker.clear()
+                accountViewModel.broadcastTracker.hide(activeBroadcasts.ids())
             },
             modifier =
                 Modifier
@@ -162,3 +164,5 @@ fun DisplaySnack(
         )
     }
 }
+
+private fun List<BroadcastEvent>.ids() = mapTo(HashSet()) { it.id }

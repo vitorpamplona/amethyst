@@ -168,7 +168,7 @@ class BroadcastTracker(
 
                                     // Update active broadcasts with new progress
                                     _activeBroadcasts.update { list ->
-                                        list.map { if (it.id == trackingId) currentBroadcast else it }.toImmutableList()
+                                        list.replacing(currentBroadcast)
                                     }
                                 }
                             }
@@ -191,7 +191,7 @@ class BroadcastTracker(
 
             // Remove from active, emit to completed
             _activeBroadcasts.update { list ->
-                list.map { if (it.id == trackingId) finalBroadcast else it }.toImmutableList()
+                list.replacing(finalBroadcast)
             }
 
             Log.d(TAG) { "Broadcast $trackingId complete: ${finalBroadcast.successCount}/${finalBroadcast.totalRelays} success" }
@@ -342,7 +342,7 @@ class BroadcastTracker(
                                 currentBroadcast = currentBroadcast.withResult(response.relay, response.result)
 
                                 _activeBroadcasts.update { list ->
-                                    list.map { if (it.id == broadcast.id) currentBroadcast else it }.toImmutableList()
+                                    list.replacing(currentBroadcast)
                                 }
                             }
                         }
@@ -365,7 +365,7 @@ class BroadcastTracker(
 
         // Update in active broadcasts
         _activeBroadcasts.update { list ->
-            list.map { if (it.id == broadcast.id) finalBroadcast else it }.toImmutableList()
+            list.replacing(finalBroadcast)
         }
 
         Log.d(TAG) { "Retry complete for ${broadcast.id}: ${finalBroadcast.successCount}/${finalBroadcast.totalRelays} success" }
@@ -373,11 +373,9 @@ class BroadcastTracker(
         return finalBroadcast
     }
 
-    /**
-     * Clears all active broadcasts and cache (e.g., on logout).
-     */
-    fun clear() {
-        _activeBroadcasts.update { persistentListOf() }
+    /** Dismisses [ids] from the banner; see [hiding]. */
+    fun hide(ids: Set<String>) {
+        _activeBroadcasts.update { it.hiding(ids) }
     }
 
     private data class RelayResponse(

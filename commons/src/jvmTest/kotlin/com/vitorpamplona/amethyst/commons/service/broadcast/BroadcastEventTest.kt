@@ -194,6 +194,64 @@ class BroadcastEventTest {
     }
 
     @Test
+    fun hidingRemovesWhatHasAResultAndHidesWhatIsStillSending() {
+        val sending = broadcast(id = "sending").withResult(outboxA, RelayResult.Success)
+        val out = broadcast(id = "out").withResult(outboxA, RelayResult.Success).withResult(outboxB, RelayResult.Success)
+        val failed = broadcast(id = "failed").withResult(outboxB, RelayResult.Error("blocked"))
+        val untouched = broadcast(id = "untouched")
+
+        val after = listOf(sending, out, failed, untouched).hiding(setOf("sending", "out", "failed"))
+
+        assertEquals(listOf("sending", "untouched"), after.map { it.id })
+        assertTrue(after.first { it.id == "sending" }.hidden)
+        assertFalse(after.first { it.id == "untouched" }.hidden)
+    }
+
+    @Test
+    fun aHiddenBroadcastStaysHiddenWhenTheTrackerWritesItsCopyBack() {
+        // the tracker keeps its own copy, which never saw the hide.
+        val trackersCopy = broadcast()
+        val list = listOf(trackersCopy).hiding(setOf("b1"))
+
+        val after = list.replacing(trackersCopy.withResult(inbox, RelayResult.Success))
+
+        assertTrue(after.single().hidden)
+    }
+
+    @Test
+    fun aHiddenBroadcastComesBackWhenItNeedsAttention() {
+        val trackersCopy = broadcast()
+        val list = listOf(trackersCopy).hiding(setOf("b1"))
+
+        val after = list.replacing(trackersCopy.withResult(outboxB, RelayResult.Timeout))
+
+        assertFalse(after.single().hidden)
+        assertTrue(after.single().needsAttention)
+    }
+
+    @Test
+    fun aHiddenBroadcastIsDroppedOnceOut() {
+        val trackersCopy = broadcast()
+        val list = listOf(trackersCopy).hiding(setOf("b1"))
+
+        val after =
+            list.replacing(
+                trackersCopy.withResult(outboxA, RelayResult.Success).withResult(outboxB, RelayResult.Success),
+            )
+
+        assertTrue(after.isEmpty(), "slower relays no longer matter")
+    }
+
+    @Test
+    fun replacingKeepsVisibleBroadcastsAndIgnoresUnknownOnes() {
+        val visible = broadcast(id = "visible")
+        val out = visible.withResult(outboxA, RelayResult.Success).withResult(outboxB, RelayResult.Success)
+
+        assertEquals(listOf(out), listOf(visible).replacing(out), "a visible broadcast that is out stays for the banner")
+        assertEquals(listOf(visible), listOf(visible).replacing(broadcast(id = "gone")))
+    }
+
+    @Test
     fun autoDismissesOnlyWhenEveryBroadcastIsOut() {
         val out =
             broadcast(id = "out")

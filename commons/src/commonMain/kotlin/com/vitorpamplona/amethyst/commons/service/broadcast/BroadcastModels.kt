@@ -24,6 +24,8 @@ import androidx.compose.runtime.Immutable
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.utils.TimeUtils
+import kotlinx.collections.immutable.ImmutableList
+import kotlinx.collections.immutable.toImmutableList
 
 /**
  * Result of a relay's response to an event publish.
@@ -77,6 +79,8 @@ data class BroadcastEvent(
     val outboxRelays: Set<NormalizedRelayUrl> = emptySet(),
     val startedAt: Long = TimeUtils.now(),
     val results: Map<NormalizedRelayUrl, RelayResult> = emptyMap(),
+    /** Dismissed while still sending; the banner skips it unless it comes to need attention. */
+    val hidden: Boolean = false,
 ) {
     /** In progress while any relay has yet to answer or is being retried. */
     val status: BroadcastStatus
@@ -165,3 +169,32 @@ private fun RelayResult?.isFailure() = this is RelayResult.Error || this is Rela
  * is out; anything else (still sending, or an outbox relay failed) stays up.
  */
 fun Collection<BroadcastEvent>.canAutoDismiss(): Boolean = isNotEmpty() && all { it.isOut }
+
+/**
+ * Dismisses [ids] from the banner. A broadcast with a result to show — out, or
+ * needing attention — is dropped, since the user has seen it; one still sending
+ * is only hidden, so a later failure can bring it back.
+ */
+fun List<BroadcastEvent>.hiding(ids: Set<String>): ImmutableList<BroadcastEvent> =
+    mapNotNull {
+        when {
+            it.id !in ids -> it
+            it.isOut || it.needsAttention -> null
+            else -> it.copy(hidden = true)
+        }
+    }.toImmutableList()
+
+/**
+ * Writes the tracker's copy of a broadcast back into the list. The copy never
+ * saw a [hiding], so the listed [BroadcastEvent.hidden] is kept until the
+ * broadcast needs attention; a hidden broadcast that is out is dropped.
+ */
+fun List<BroadcastEvent>.replacing(updated: BroadcastEvent): ImmutableList<BroadcastEvent> =
+    mapNotNull {
+        if (it.id != updated.id) {
+            it
+        } else {
+            val merged = updated.copy(hidden = it.hidden && !updated.needsAttention)
+            if (merged.hidden && merged.isOut) null else merged
+        }
+    }.toImmutableList()
