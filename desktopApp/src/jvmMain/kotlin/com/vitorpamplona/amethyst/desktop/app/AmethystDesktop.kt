@@ -35,14 +35,19 @@ import androidx.lifecycle.ViewModelStore
 import androidx.lifecycle.ViewModelStoreOwner
 import androidx.lifecycle.viewmodel.compose.LocalViewModelStoreOwner
 import com.vitorpamplona.amethyst.commons.ui.app.AmethystApp
+import com.vitorpamplona.amethyst.commons.ui.components.DefaultInlineQuoteRenderer
+import com.vitorpamplona.amethyst.commons.ui.components.LocalInlineQuoteRenderer
 import com.vitorpamplona.amethyst.commons.ui.components.LocalWindowViewModelStoreOwner
 import com.vitorpamplona.amethyst.commons.ui.note.elements.NowProvider
+import com.vitorpamplona.amethyst.commons.ui.note.platform.LocalNotePlatform
 import com.vitorpamplona.amethyst.commons.ui.platform.LocalAppPlatform
 import com.vitorpamplona.amethyst.commons.ui.platform.LocalAppServices
+import com.vitorpamplona.amethyst.commons.ui.richtext.LocalRichTextPlatform
 import com.vitorpamplona.amethyst.commons.ui.screen.collectDisplaySettings
 import com.vitorpamplona.amethyst.commons.ui.theme.AmethystMaterialTheme
 import com.vitorpamplona.amethyst.commons.ui.theme.isDarkTheme
 import com.vitorpamplona.amethyst.desktop.service.images.DesktopImageLoaderSetup
+import com.vitorpamplona.amethyst.desktop.ui.media.LocalAwtWindow
 import com.vitorpamplona.quartz.utils.Log
 import com.vitorpamplona.quartz.utils.LogLevel
 import java.io.File
@@ -107,6 +112,11 @@ fun main() {
                         LocalWindowViewModelStoreOwner provides windowViewModels,
                         LocalAppServices provides services,
                         LocalAppPlatform provides platform,
+                        LocalNotePlatform provides DesktopNotePlatform,
+                        LocalRichTextPlatform provides DesktopRichTextPlatform,
+                        LocalInlineQuoteRenderer provides DefaultInlineQuoteRenderer,
+                        // The lightbox and the video player go full screen through the AWT window.
+                        LocalAwtWindow provides window,
                     ) {
                         AmethystApp(modules.sessionManager, root)
                     }

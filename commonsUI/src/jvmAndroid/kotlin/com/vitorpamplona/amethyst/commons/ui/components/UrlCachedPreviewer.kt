@@ -18,12 +18,15 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.model
+package com.vitorpamplona.amethyst.commons.ui.components
 
-import android.util.LruCache
+import androidx.collection.LruCache
 import androidx.compose.runtime.Stable
+import androidx.lifecycle.viewModelScope
 import com.vitorpamplona.amethyst.commons.preview.UrlPreview
-import com.vitorpamplona.amethyst.commons.ui.components.UrlPreviewState
+import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 import okhttp3.OkHttpClient
 
 @Stable
@@ -73,5 +76,15 @@ object UrlCachedPreviewer {
                 onReady(state)
             },
         )
+    }
+}
+
+/** Loads the OpenGraph preview of [url] through [UrlCachedPreviewer], on the account's preview HTTP client. */
+fun AccountViewModel.urlPreview(
+    url: String,
+    onResult: suspend (UrlPreviewState) -> Unit,
+) {
+    viewModelScope.launch(Dispatchers.IO) {
+        UrlCachedPreviewer.previewInfo(url, httpClientBuilder::okHttpClientForPreview, onResult)
     }
 }
