@@ -65,7 +65,13 @@ import com.vitorpamplona.quartz.nip19Bech32.entities.NPub
  * multi-relay [Context.drainAllPages] path, fully draining sets larger than one
  * `REQ`. Both honor the same limit: `--limit N` returns the newest N, absent is 100,
  * and `--limit 0` is unbounded — combined with `--paginate` that drains the entire
- * filter, so mind broad filters. Code mode is always single-shot.
+ * filter, so mind broad filters. Code mode is always single-shot. Under `--paginate`,
+ * `--limit` caps the walk, not each `REQ`: every page asks for at most 500.
+ *
+ * `--paginate --limit 0` streams: each event is written as it arrives instead of being
+ * held for sorting, so the walk runs in O(ids) memory however large it gets — in
+ * ARRIVAL order (relay by relay, page by page), not newest-first. Same keys, same single
+ * JSON object under `--json`; `count` and `relay_errors` follow the `events` array.
  */
 object FetchCommand {
     /** Output/paging cap for a fetch (either path) when `--limit` is omitted. */
@@ -80,7 +86,10 @@ object FetchCommand {
         |        [--since TS] [--until TS] [--limit N]  --timeout 8s.
         |        [--search TEXT] [--relay URL[,URL…]]
         |        [--timeout SECS] [--paginate|--all]    --paginate walks each relay page-by-page
-        |                                                past its per-REQ cap (alias --all).
+        |                                                past its per-REQ cap (alias --all);
+        |                                                --limit caps the walk, pages ask <= 500.
+        |                                                --paginate --limit 0 streams events in
+        |                                                arrival order (not newest-first).
         |  fetch <nevent1…|naddr1…|nprofile1…|npub1…|note1…|name@domain>
         |                                               outbox-model resolution of a shared code.
         """.trimMargin()
@@ -125,6 +134,11 @@ object FetchCommand {
             if (relays.isEmpty()) return Output.error("no_relays", "no relays available; pass --relay or run `amy relay add`")
 
             val relayErrors = mutableMapOf<NormalizedRelayUrl, RelayError>()
+
+            // Unbounded walk: there is no "newest N" to keep, so nothing needs sorting —
+            // write each event out as it arrives instead of holding the whole history.
+            if (paginate && effectiveLimit == null) return streamAllPages(ctx, filter, relays, timeoutMs, relayErrors)
+
             val received =
                 if (paginate) {
                     ctx.drainAllPages(relays.associateWith { listOf(filter) }, timeoutMs) { relay, result ->
@@ -158,6 +172,41 @@ object FetchCommand {
                 relayErrors,
             )
         }
+    }
+
+    /**
+     * `--paginate --limit 0`: page every relay to the end and write each verified, deduped
+     * event the moment it arrives. Holding them to sort first is what ran a 24h walk of
+     * relay.libernet.app (~28k events, ~230 MB of JSON) out of a 1 GB heap; here memory is
+     * the dedup set's ids. The price is order: events come out in ARRIVAL order (relay by
+     * relay, each newest-first page by page), not globally newest-first. The result shape
+     * is unchanged — the same keys, one JSON object on one line under `--json`, with `count`
+     * and `relay_errors` written after the `events` array.
+     */
+    private suspend fun streamAllPages(
+        ctx: Context,
+        filter: Filter,
+        relays: Set<NormalizedRelayUrl>,
+        timeoutMs: Long,
+        relayErrors: MutableMap<NormalizedRelayUrl, RelayError>,
+    ): Int {
+        val stream = Output.listStream(mapOf("queried_relays" to relays.map { it.url }), "events")
+        val count =
+            ctx.streamAllPages(relays.associateWith { listOf(filter) }, timeoutMs, onRelayResult = { relay, result ->
+                refusalOf(result)?.let { synchronized(relayErrors) { relayErrors[relay] = it } }
+            }) { _, event -> stream.item(event.toJson()) }
+
+        // Nothing arrived, so nothing was written: answer exactly as the buffered path would
+        // (an empty result, or `no_relay_served` when every relay refused).
+        if (!stream.started) {
+            return emitWithRelayErrors(mapOf("queried_relays" to relays.map { it.url }, "count" to 0, "events" to emptyList<Any>()), relays, relayErrors)
+        }
+
+        val sorted = relayErrors.entries.sortedBy { it.key.url }
+        sorted.forEach { (relay, error) -> System.err.println("warning: ${relay.url} ${error.describe()}") }
+        val errors = sorted.associate { it.key.url to it.value.toMap() }
+        stream.finish(if (errors.isEmpty()) mapOf("count" to count) else mapOf("count" to count, "relay_errors" to errors))
+        return 0
     }
 
     /**
