@@ -21,7 +21,9 @@
 package com.vitorpamplona.amethyst.service.playback.playerPool
 
 import androidx.media3.common.C
+import androidx.media3.common.Format
 import androidx.media3.common.MediaItem
+import androidx.media3.common.MimeTypes
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.common.util.Util
 import androidx.media3.datasource.DataSource
@@ -30,8 +32,13 @@ import androidx.media3.exoplayer.hls.HlsMediaSource
 import androidx.media3.exoplayer.source.DefaultMediaSourceFactory
 import androidx.media3.exoplayer.source.MediaSource
 import androidx.media3.exoplayer.source.MergingMediaSource
-import androidx.media3.exoplayer.source.SingleSampleMediaSource
+import androidx.media3.exoplayer.source.ProgressiveMediaSource
+import androidx.media3.exoplayer.source.lazilyLoadingSingleTrack
 import androidx.media3.exoplayer.upstream.LoadErrorHandlingPolicy
+import androidx.media3.extractor.ExtractorsFactory
+import androidx.media3.extractor.text.DefaultSubtitleParserFactory
+import androidx.media3.extractor.text.SubtitleExtractor
+import androidx.media3.extractor.text.SubtitleParser
 import com.vitorpamplona.amethyst.service.playback.PLAYBACK_DIAG_TAG
 import com.vitorpamplona.amethyst.service.playback.composable.mediaitem.MediaItemCache
 import com.vitorpamplona.amethyst.service.playback.diskCache.HlsLivenessCache
@@ -116,6 +123,10 @@ class CustomMediaSourceFactory(
     // Stateless, so one instance serves both HLS factories.
     private val playlistParserFactory = LowLatencyStrippingHlsPlaylistParserFactory()
 
+    // The same parser set DefaultMediaSourceFactory side-loads subtitles with (WebVTT, SubRip,
+    // TTML, SSA, ...). Stateless; each track gets its own parser from create().
+    private val subtitleParserFactory: SubtitleParser.Factory = DefaultSubtitleParserFactory()
+
     // HLS is built explicitly rather than through DefaultMediaSourceFactory, which exposes no hook
     // for a playlist parser factory. See LowLatencyStrippingHlsPlaylistParserFactory for why we need
     // one. Everything else still routes through the Default factories above.
@@ -193,7 +204,10 @@ class CustomMediaSourceFactory(
 
     /**
      * Rebuilds what [DefaultMediaSourceFactory] does for `subtitleConfigurations`: each side-loaded
-     * track becomes its own single-sample source, merged alongside the video.
+     * track becomes its own source, merged alongside the video. Like media3's default, the file is
+     * parsed into cues while it loads ([SubtitleExtractor]) — the player's TextRenderer only takes
+     * cues, its legacy in-renderer decoding of raw `text/vtt` samples is off — and a track whose
+     * format no parser understands is left out rather than offered as one that cannot play.
      *
      * Subtitle files are small, immutable documents, so they follow the video's cache decision —
      * a track fetched beside a cached VOD playlist is worth keeping too, and one beside a live
@@ -208,19 +222,43 @@ class CustomMediaSourceFactory(
         if (subtitles.isEmpty()) return source
 
         val dataSource = if (bypassCache) plainDataSource else cachingDataSource
-        val sources =
-            Array(subtitles.size + 1) { index ->
-                if (index == 0) {
-                    source
-                } else {
-                    SingleSampleMediaSource
-                        .Factory(dataSource)
-                        .apply { loadErrorHandlingPolicy?.let { setLoadErrorHandlingPolicy(it) } }
-                        .createMediaSource(subtitles[index - 1], C.TIME_UNSET)
-                }
-            }
+        val subtitleSources = subtitles.mapNotNull { subtitleSource(it, dataSource) }
+        if (subtitleSources.isEmpty()) return source
 
-        return MergingMediaSource(*sources)
+        return MergingMediaSource(source, *subtitleSources.toTypedArray())
+    }
+
+    private fun subtitleSource(
+        subtitle: MediaItem.SubtitleConfiguration,
+        dataSource: DataSource.Factory,
+    ): MediaSource? {
+        val format =
+            Format
+                .Builder()
+                .setSampleMimeType(subtitle.mimeType)
+                .setLanguage(subtitle.language)
+                .setSelectionFlags(subtitle.selectionFlags)
+                .setRoleFlags(subtitle.roleFlags)
+                .setLabel(subtitle.label)
+                .setId(subtitle.id)
+                .build()
+        if (!subtitleParserFactory.supportsFormat(format)) return null
+
+        // What the extractor will emit, declared up front so nothing is fetched before selection.
+        val cuesFormat =
+            format
+                .buildUpon()
+                .setSampleMimeType(MimeTypes.APPLICATION_MEDIA3_CUES)
+                .setCodecs(format.sampleMimeType)
+                .setCueReplacementBehavior(subtitleParserFactory.getCueReplacementBehavior(format))
+                .build()
+        val extractors = ExtractorsFactory { arrayOf(SubtitleExtractor(subtitleParserFactory.create(format), format)) }
+
+        return ProgressiveMediaSource
+            .Factory(dataSource, extractors)
+            .lazilyLoadingSingleTrack(0, cuesFormat)
+            .apply { loadErrorHandlingPolicy?.let { setLoadErrorHandlingPolicy(it) } }
+            .createMediaSource(MediaItem.fromUri(subtitle.uri))
     }
 
     // Only the explicit event-kind flag (kind:30311 live activities). Returns false when the flag

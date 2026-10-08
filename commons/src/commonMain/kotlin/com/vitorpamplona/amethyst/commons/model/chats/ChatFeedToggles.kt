@@ -110,9 +110,10 @@ class ChatFeedToggles(
      */
     fun isCallingActive(): Boolean = settings.callsEnabled.value && isEnabled(ChatFeedType.NIP17)
 
-    /** [isCallingActive] as a flow, for screens that show or hide call controls. */
-    val callingActive: Flow<Boolean> =
+    /** [isCallingActive] as a flow, for screens that show or hide call controls. Built on first use. */
+    val callingActive: Flow<Boolean> by lazy {
         combine(settings.callsEnabled, applied) { calls, feeds -> calls && ChatFeedType.NIP17 in feeds }.distinctUntilChanged()
+    }
 
     /** The DM protocol a room message belongs to, or null if it is not a DM. Drafts count by their rumor. */
     fun dmChatFeedTypeOf(note: Note): ChatFeedType? =

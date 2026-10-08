@@ -145,7 +145,7 @@ object MprisParser {
                 }
 
                 arrayKey != null && line.startsWith("string ") -> {
-                    result.getOrPut(arrayKey!!) { mutableListOf() }.add(unquote(line.removePrefix("string ")))
+                    result.getOrPut(arrayKey) { mutableListOf() }.add(unquote(line.removePrefix("string ")))
                 }
             }
         }

@@ -565,6 +565,7 @@
     <string name="stale_relay_hint_label">Source relays may be stale</string>
     <string name="stale_relay_hint_icon_description">Stale relay warning</string>
     <string name="pinned_to_top">Pinned to top</string>
+    <string name="pinned_chat_no_messages_loaded">No recent messages loaded</string>
     <string name="upload_image">Upload Image</string>
     <string name="upload_file">Upload File</string>
     <string name="take_a_picture">Take a picture</string>

@@ -42,7 +42,6 @@ import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -72,6 +71,7 @@ import com.vitorpamplona.amethyst.commons.resources.chess_game_waiting
 import com.vitorpamplona.amethyst.commons.resources.chess_loading_game
 import com.vitorpamplona.amethyst.commons.resources.go_back
 import com.vitorpamplona.amethyst.commons.resources.relay_settings
+import com.vitorpamplona.amethyst.commons.ui.components.rememberModalSheetState
 import com.vitorpamplona.amethyst.commons.ui.components.rememberWindowViewModel
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.platform.LocalAppServices
@@ -378,7 +378,7 @@ fun ChessGameScreen(
     if (showRelaySettings) {
         ModalBottomSheet(
             onDismissRequest = { showRelaySettings = false },
-            sheetState = rememberModalBottomSheetState(),
+            sheetState = rememberModalSheetState(),
         ) {
             RelaySettingsSheet(
                 writeRelays = writeRelays,

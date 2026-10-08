@@ -34,7 +34,6 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Text
-import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.produceState
@@ -48,6 +47,7 @@ import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.calendar_add_to_calendar_none
 import com.vitorpamplona.amethyst.commons.resources.calendar_add_to_calendar_title
 import com.vitorpamplona.amethyst.commons.resources.calendar_untitled
+import com.vitorpamplona.amethyst.commons.ui.components.rememberModalSheetState
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.quartz.nip01Core.core.Address
@@ -71,7 +71,7 @@ fun AddToCalendarSheet(
     accountViewModel: AccountViewModel,
     onDismiss: () -> Unit,
 ) {
-    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+    val sheetState = rememberModalSheetState(skipPartiallyExpanded = true)
     val myPubKey = accountViewModel.userProfile().pubkeyHex
 
     val ownCalendars by produceState<List<CalendarCollectionEvent>>(initialValue = ownCalendars(myPubKey), myPubKey) {

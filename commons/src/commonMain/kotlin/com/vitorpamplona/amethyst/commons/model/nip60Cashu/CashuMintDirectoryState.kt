@@ -241,7 +241,8 @@ class CashuMintDirectoryState(
         announced.forEach { e ->
             val d = e.dTag()
             val url = e.mintUrl()
-            if (d != null && url != null) urlByDTag[d] = url
+            // dTag() is "" when the tag is missing: such announcements can't be matched by d-tag.
+            if (d.isNotEmpty() && url != null) urlByDTag[d] = url
         }
 
         // 3. Count recommendations per URL, deduplicating by (recommender, mint URL).

@@ -234,7 +234,7 @@ class HdrGainmapPipelineInstrumentedTest {
             val socket = runCatching { server.accept() }.getOrNull() ?: break
             socket.use {
                 val input = it.getInputStream().bufferedReader()
-                while (input.readLine()?.isNotEmpty() == true) Unit
+                while (input.readLine()?.isNotEmpty() == true) continue
                 it.getOutputStream().apply {
                     write("HTTP/1.1 200 OK\r\nContent-Type: image/jpeg\r\nContent-Length: ${body.size}\r\nConnection: close\r\n\r\n".toByteArray())
                     write(body)
