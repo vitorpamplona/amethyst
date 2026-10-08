@@ -80,24 +80,61 @@
     "since": "2026-10-05T15:39:33-04:00",
     "translators": [
       {
-        "user": "raj2516",
+        "user": "maxblake2015",
         "languages": [
-          "Hindi"
+          "Polish"
         ]
       },
       {
         "user": "vitorpamplona",
         "languages": [
+          "Arabic",
+          "Arabic, Saudi Arabia",
+          "Bengali",
+          "Chinese Simplified",
+          "Chinese Simplified, Singapore",
+          "Chinese Traditional",
+          "Chinese Traditional, Hong Kong",
           "Czech",
+          "Dutch",
+          "Esperanto",
+          "Finnish",
+          "French",
+          "French, Canada",
           "German",
+          "Greek",
+          "Hindi",
+          "Hungarian",
+          "Indonesian",
+          "Italian",
+          "Japanese",
+          "Korean",
+          "Latvian",
+          "Persian",
+          "Polish",
+          "Portuguese",
           "Portuguese, Brazilian",
-          "Swedish"
+          "Russian",
+          "Rսssian, Սkraine",
+          "Serbian (Cyrillic)",
+          "Slovenian",
+          "Spanish",
+          "Spanish, Mexico",
+          "Spanish, United States",
+          "Swahili, Kenya",
+          "Swedish",
+          "Tamil",
+          "Thai",
+          "Turkish",
+          "Ukrainian",
+          "Uzbek",
+          "Vietnamese"
         ]
       },
       {
-        "user": "maxblake2015",
+        "user": "raj2516",
         "languages": [
-          "Polish"
+          "Hindi"
         ]
       },
       {
