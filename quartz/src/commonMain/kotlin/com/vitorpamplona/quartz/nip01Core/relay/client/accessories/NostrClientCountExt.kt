@@ -35,6 +35,7 @@ import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.CountMessage
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.CountResult
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.MachineReadablePrefix
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.Message
+import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.NoticeMessage
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip45Count.mergeCountResults
@@ -62,6 +63,11 @@ import kotlin.coroutines.coroutineContext
  * the COUNT through [INostrClient.syncFilters] and the answer arrives; without a usable
  * AUTH the call gives up as soon as the challenge resolves against us.
  *
+ * A relay without NIP-45 says so at once, and the call returns `null` then instead of
+ * after [idleTimeoutMs]: purplepag.es with a `CLOSED unsupported:`, most others with a
+ * NOTICE (see [isCountRejectionNotice]). Seven of 21 relays sampled answer that way. A
+ * relay that cannot be reached returns `null` as soon as the connection fails, too.
+ *
  * @param relay Target relay to query.
  * @param filter The filter to count against.
  * @param idleTimeoutMs How long to wait for the response (default 15 s).
@@ -73,6 +79,7 @@ suspend fun INostrClient.count(
     idleTimeoutMs: Long = 15_000,
 ): CountResult? {
     val pendingOnAuthRequired = hasAuthResponder()
+    val target = relay
     val subId = newSubId()
     val resultChannel = Channel<CountResult>(UNLIMITED)
     val authRefusalChannel = Channel<Unit>(UNLIMITED)
@@ -90,13 +97,23 @@ suspend fun INostrClient.count(
                 if (msg is CountMessage && msg.queryId == subId) {
                     resultChannel.trySend(msg.result)
                 }
-                if (pendingOnAuthRequired &&
-                    msg is ClosedMessage &&
-                    msg.subId == subId &&
-                    MachineReadablePrefix.parse(msg.message) == MachineReadablePrefix.AUTH_REQUIRED
-                ) {
-                    authRefusalChannel.trySend(Unit)
+                if (msg is ClosedMessage && msg.subId == subId) {
+                    if (pendingOnAuthRequired && MachineReadablePrefix.parse(msg.message) == MachineReadablePrefix.AUTH_REQUIRED) {
+                        authRefusalChannel.trySend(Unit)
+                    } else {
+                        gaveUpChannel.trySend(Unit)
+                    }
                 }
+                if (msg is NoticeMessage && relay.url == target && isCountRejectionNotice(msg.message)) {
+                    gaveUpChannel.trySend(Unit)
+                }
+            }
+
+            override fun onCannotConnect(
+                relay: IRelayClient,
+                errorMessage: String,
+            ) {
+                if (relay.url == target) gaveUpChannel.trySend(Unit)
             }
         }
 
@@ -189,10 +206,24 @@ suspend fun INostrClient.count(
                     val relayUrl = subIdToRelay[msg.queryId] ?: return
                     resultChannel.trySend(relayUrl to msg.result)
                 }
-                if (pendingOnAuthRequired && msg is ClosedMessage && MachineReadablePrefix.parse(msg.message) == MachineReadablePrefix.AUTH_REQUIRED) {
+                if (msg is ClosedMessage) {
                     val relayUrl = subIdToRelay[msg.subId] ?: return
-                    authRefusalChannel.trySend(relayUrl)
+                    if (pendingOnAuthRequired && MachineReadablePrefix.parse(msg.message) == MachineReadablePrefix.AUTH_REQUIRED) {
+                        authRefusalChannel.trySend(relayUrl)
+                    } else {
+                        gaveUpChannel.trySend(relayUrl)
+                    }
                 }
+                if (msg is NoticeMessage && relay.url in filters && isCountRejectionNotice(msg.message)) {
+                    gaveUpChannel.trySend(relay.url)
+                }
+            }
+
+            override fun onCannotConnect(
+                relay: IRelayClient,
+                errorMessage: String,
+            ) {
+                if (relay.url in filters) gaveUpChannel.trySend(relay.url)
             }
         }
 
@@ -299,3 +330,16 @@ suspend fun INostrClient.countMerged(
 
     return mergeCountResults(results.values)
 }
+
+/**
+ * A NOTICE that refuses the COUNT verb itself, as relays without NIP-45 word it:
+ * `ERROR: bad msg: unknown cmd` (strfry), `Unknown message type: COUNT`, `ERROR: bad msg:
+ * invalid message: {'message_type': ['Invalid enum value COUNT']}` (nostr.wine), `invalid
+ * message` (relay.conduit.market). A NOTICE names no subscription, so this stays narrow: a
+ * relay that does speak NIP-45 never says any of these to a well-formed COUNT, and a miss
+ * only costs the idle window it always cost.
+ */
+internal fun isCountRejectionNotice(message: String): Boolean =
+    message.contains("COUNT") ||
+        message.contains("unknown cmd", ignoreCase = true) ||
+        message.trim().equals("invalid message", ignoreCase = true)
