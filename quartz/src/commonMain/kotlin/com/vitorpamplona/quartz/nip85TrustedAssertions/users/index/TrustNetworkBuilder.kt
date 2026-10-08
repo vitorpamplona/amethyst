@@ -62,11 +62,6 @@ class TrustNetworkBuilder(
     private var createdAt = LongArray(initialCapacity)
     private var ids = ByteArray(32 * initialCapacity)
 
-    private data class Key(
-        val hi: Long,
-        val lo: Long,
-    )
-
     /** Subject → newest deletion time. */
     private val deletedSubjects = HashMap<Key, Long>()
     private val deletedIds = HashSet<HexKey>()
@@ -77,6 +72,9 @@ class TrustNetworkBuilder(
 
     /** Cards accepted (before supersession and removals are applied). */
     val cardCount: Int get() = size
+
+    /** A deletion or a removal by id was added: [build] may drop cards. */
+    val hasRemovals: Boolean get() = deletedSubjects.isNotEmpty() || deletedIds.isNotEmpty()
 
     /**
      * Adds a verified event from the provider: a kind 30382 card or a kind 5 deletion.
@@ -227,17 +225,18 @@ class TrustNetworkBuilder(
     }
 
     /** The first 128 bits of each id in [deletedIds], so [isDeletedId] checks a card without allocating. */
-    private fun deletedIdPrefixes(): Set<Key> =
-        deletedIds.mapNotNullTo(HashSet(deletedIds.size * 2)) { id ->
-            if (Hex.isHex64(id)) Key(Hex.readLong(id, 0), Hex.readLong(id, 16)) else null
-        }
+    private fun deletedIdPrefixes(): KeyTable =
+        KeyTable.of(
+            deletedIds.mapNotNull { id ->
+                if (Hex.isHex64(id)) Key(Hex.readLong(id, 0), Hex.readLong(id, 16)) to 0L else null
+            },
+        )
 
     private fun isDeletedId(
         i: Int,
-        prefixes: Set<Key>,
+        prefixes: KeyTable,
     ): Boolean {
-        if (prefixes.isEmpty()) return false
-        if (Key(readLong(ids, 32 * i), readLong(ids, 32 * i + 8)) !in prefixes) return false
+        if (prefixes.isEmpty() || !prefixes.contains(readLong(ids, 32 * i), readLong(ids, 32 * i + 8))) return false
         // Rare: confirm the whole id.
         return Hex.encode(ids.copyOfRange(32 * i, 32 * i + 32)) in deletedIds
     }
@@ -265,25 +264,35 @@ class TrustNetworkBuilder(
         }
 
         val deletedPrefixes = deletedIdPrefixes()
+        val deletedAtBySubject = KeyTable.of(deletedSubjects.map { (key, at) -> key to at })
         val keep = IntArray(size)
         var kept = 0
         val graves = IntArray(size)
         var buried = 0
         var k = 0
         while (k < size) {
-            val newest = order[k]
-            // skip the older cards about the same subject
+            val first = order[k]
             var next = k + 1
-            while (next < size && hi[order[next]] == hi[newest] && lo[order[next]] == lo[newest]) next++
-            k = next
+            while (next < size && hi[order[next]] == hi[first] && lo[order[next]] == lo[first]) next++
 
-            val deletedAt = if (deletedSubjects.isEmpty()) null else deletedSubjects[Key(hi[newest], lo[newest])]
-            if (deletedAt != null && deletedAt >= createdAt[newest]) continue
-            if (isDeletedId(newest, deletedPrefixes)) continue
-            if (memberRank(rank[newest].toInt()) == null) {
-                graves[buried++] = newest
+            // The subject's newest card that is not deleted. A card deleted by id falls back to the
+            // one before it; a deletion of the subject covers every card up to its time.
+            val deletedAt = if (deletedAtBySubject.isEmpty()) KeyTable.MISSING else deletedAtBySubject.valueOf(hi[first], lo[first])
+            var chosen = -1
+            for (g in k until next) {
+                val i = order[g]
+                if (deletedAt != KeyTable.MISSING && deletedAt >= createdAt[i]) break
+                if (isDeletedId(i, deletedPrefixes)) continue
+                chosen = i
+                break
+            }
+            k = next
+            if (chosen < 0) continue
+
+            if (memberRank(rank[chosen].toInt()) == null) {
+                graves[buried++] = chosen
             } else {
-                keep[kept++] = newest
+                keep[kept++] = chosen
             }
         }
 
@@ -347,6 +356,69 @@ class TrustNetworkBuilder(
                 width *= 2
             }
             if (src !== array) src.copyInto(array)
+        }
+    }
+}
+
+/** A subject or id prefix: the first 128 bits. */
+private data class Key(
+    val hi: Long,
+    val lo: Long,
+)
+
+/**
+ * (hi, lo) keys sorted unsigned, each with a value: membership and lookups by binary search,
+ * with no allocation per probe (a `Map<Key, Long>` boxes a key on every lookup).
+ */
+private class KeyTable(
+    private val hi: LongArray,
+    private val lo: LongArray,
+    private val values: LongArray,
+) {
+    fun isEmpty() = hi.isEmpty()
+
+    fun contains(
+        h: Long,
+        l: Long,
+    ) = find(h, l) >= 0
+
+    /** The value for (h, l), or [MISSING]. */
+    fun valueOf(
+        h: Long,
+        l: Long,
+    ): Long {
+        val i = find(h, l)
+        return if (i < 0) MISSING else values[i]
+    }
+
+    private fun find(
+        h: Long,
+        l: Long,
+    ): Int {
+        var low = 0
+        var high = hi.size - 1
+        while (low <= high) {
+            val mid = (low + high) ushr 1
+            val c = TrustNetworkIndex.compareKeys(hi[mid], lo[mid], h, l)
+            when {
+                c < 0 -> low = mid + 1
+                c > 0 -> high = mid - 1
+                else -> return mid
+            }
+        }
+        return -1
+    }
+
+    companion object {
+        const val MISSING = Long.MIN_VALUE
+
+        fun of(entries: List<Pair<Key, Long>>): KeyTable {
+            val sorted = entries.sortedWith { a, b -> TrustNetworkIndex.compareKeys(a.first.hi, a.first.lo, b.first.hi, b.first.lo) }
+            return KeyTable(
+                LongArray(sorted.size) { sorted[it].first.hi },
+                LongArray(sorted.size) { sorted[it].first.lo },
+                LongArray(sorted.size) { sorted[it].second },
+            )
         }
     }
 }

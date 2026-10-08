@@ -186,6 +186,31 @@ class TrustNetworkIndexTest {
     }
 
     @Test
+    fun aCardDeletedByIdFallsBackToTheOneBefore() {
+        val s = hex()
+        val older = card(s, rank = 30, createdAt = 1000)
+        val newer = card(s, rank = 70, createdAt = 2000)
+        val builder = TrustNetworkBuilder(provider)
+        builder.add(older)
+        builder.add(newer)
+        // A full check found the relay no longer has the newer card: the older one still counts.
+        builder.removeEventIds(listOf(newer.id))
+        val (index, ids) = builder.build()
+        assertEquals(30, index.rankOf(s))
+        assertEquals(1000, ids.createdAt[0])
+    }
+
+    @Test
+    fun aSubjectDeletionCoversEveryOlderCard() {
+        val s = hex()
+        val builder = TrustNetworkBuilder(provider)
+        builder.add(card(s, rank = 30, createdAt = 1000))
+        builder.add(card(s, rank = 70, createdAt = 2000))
+        builder.add(deletion(2500, s))
+        assertNull(builder.build().first.rankOf(s))
+    }
+
+    @Test
     fun countAtLeastMatchesAScan() {
         val builder = TrustNetworkBuilder(provider)
         repeat(500) { builder.add(card(hex(), rank = 1 + random.nextInt(100))) }

@@ -36,6 +36,7 @@ import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.async
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -95,9 +96,10 @@ class TrustNetworkSchedulingTest {
         provider: ServiceProviderTag,
         updatedAgo: Long = 60,
         withIds: Boolean = true,
+        fullCheckAgo: Long = 3600,
     ) {
         val (index, ids) = network(provider)
-        store.write(TrustNetworkHeader(provider.pubkey, provider.relayUrl.url, 1000, now - 3600, now - updatedAgo, heldAtCursor = 3), index, ids)
+        store.write(TrustNetworkHeader(provider.pubkey, provider.relayUrl.url, 1000, now - fullCheckAgo, now - updatedAgo, heldAtCursor = 3), index, ids)
         if (!withIds) FileSystem.SYSTEM.delete(dir / TrustNetworkStore.IDS_FILE)
     }
 
@@ -105,6 +107,7 @@ class TrustNetworkSchedulingTest {
     private inner class FakeSource : TrustNetworkSource {
         val calls = CopyOnWriteArrayList<String>()
         var news = TrustNetworkNews(cards = false, deletions = 0)
+        var newsGate: CompletableDeferred<Unit>? = null
         var downloadGate: CompletableDeferred<Unit>? = null
         var downloadSize = 3
 
@@ -116,6 +119,7 @@ class TrustNetworkSchedulingTest {
                         header: TrustNetworkHeader,
                     ): TrustNetworkNews {
                         calls.add("news")
+                        newsGate?.await()
                         return news
                     }
 
@@ -291,5 +295,53 @@ class TrustNetworkSchedulingTest {
             rankProvider.value = ResolvedProvider(providerA)
             withTimeout(5_000) { wot.network.first { it?.isFrom(providerA) == true } }
             assertEquals(listOf("download:${providerA.pubkey}"), source.calls.toList())
+        }
+
+    @Test
+    fun aProviderRemovedDuringACheckStaysRemoved() =
+        runBlocking {
+            writeIndex(providerA)
+            val gate = CompletableDeferred<Unit>()
+            val source = FakeSource().apply { newsGate = gate }
+            val rankProvider = MutableStateFlow<ResolvedProvider?>(ResolvedProvider(providerA))
+            val wot = state(rankProvider, source)
+            wot.awaitReady()
+            val run = scope.async { wot.syncNow(TrustNetworkSyncStatus.Kind.UPDATE) }
+            withTimeout(5_000) { while (source.calls.isEmpty()) delay(10) }
+
+            // The user removes the provider while the counts are on their way.
+            rankProvider.value = ResolvedProvider(null)
+            withTimeout(5_000) { wot.network.first { it == null } }
+            gate.complete(Unit)
+
+            assertIs<TrustNetworkOutcome.ProviderChanged>(run.await()?.outcome)
+            assertNull(wot.network.value, "the removed provider's network must not come back")
+            assertNull(store.readIndex())
+        }
+
+    @Test
+    fun aFullCheckThatCannotReconcileUpdatesAndRetries() =
+        runBlocking {
+            writeIndex(providerA)
+            val source = FakeSource()
+            val wot = state(MutableStateFlow(ResolvedProvider(providerA)), source)
+            wot.awaitReady()
+            repeat(TrustNetworkState.MAX_FAILED_FULL_CHECKS) {
+                wot.syncNow(TrustNetworkSyncStatus.Kind.FULL_CHECK)
+            }
+            // Two failures fall back to a cheap update; the third downloads again.
+            assertEquals(listOf("reconcile", "update", "reconcile", "update", "reconcile", "download:${providerA.pubkey}"), source.calls.toList())
+        }
+
+    @Test
+    fun anIndexIsNeverPairedWithAnotherSavesIds() =
+        runBlocking {
+            val (index, ids) = network(providerA)
+            val header = TrustNetworkHeader(providerA.pubkey, relay.url, 1000, now, now)
+            val first = store.write(header, index, ids)
+            assertNotNull(store.readIds(first))
+            // Another save (same size) whose index write never happened: its ids do not match.
+            store.write(header, index, ids)
+            assertNull(store.readIds(first))
         }
 }

@@ -89,10 +89,12 @@ internal suspend fun openTrustNetwork(
     val provider = list?.rankProvider(if (isSelf) ctx.signer else null)
     val dir = if (isSelf) File(ctx.dataDir.root, "wot") else File(ctx.dataDir.root, "wot/observers/$observer")
     val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+    // Unknown, not absent (which would delete the files): no list found, or a private part that
+    // could not be decrypted and may hold the provider.
+    val resolved = MutableStateFlow(list?.takeIf { provider != null || it.content.isBlank() }?.let { ResolvedProvider(provider) })
     val state =
         TrustNetworkState(
-            // No list found: the provider is unknown, not absent (which would delete the files).
-            rankProvider = MutableStateFlow(list?.let { ResolvedProvider(provider) }),
+            rankProvider = resolved,
             minTrustScore = MutableStateFlow(minScore),
             store = TrustNetworkStore(dir.toOkioPath()),
             // A throwaway client, like the apps: a sync receives hundreds of thousands of cards.
@@ -100,7 +102,7 @@ internal suspend fun openTrustNetwork(
             scope = scope,
             autoSync = false,
         )
-    if (list != null) state.awaitReady() else state.awaitLoaded()
+    if (resolved.value != null) state.awaitReady() else state.awaitLoaded()
     return TrustSession(state, provider, list, dir, scope)
 }
 

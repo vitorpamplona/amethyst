@@ -21,6 +21,8 @@
 package com.vitorpamplona.quartz.nip85TrustedAssertions.users.index
 
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
+import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.NegentropyLocalIndex
+import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.store.IdAndTime
 import com.vitorpamplona.quartz.utils.Hex
 
@@ -173,6 +175,8 @@ class TrustNetworkIds(
     /** 32 bytes per tombstone. */
     val tombstoneIds: ByteArray = ByteArray(0),
     val tombstoneCreatedAt: LongArray = LongArray(0),
+    /** Pairs this file with its index file (see [TrustNetworkHeader.generation]). */
+    val generation: Long = 0,
 ) {
     init {
         require(ids.size == 32 * createdAt.size) { "column sizes disagree" }
@@ -182,11 +186,25 @@ class TrustNetworkIds(
     /** Index entries. */
     val size: Int get() = createdAt.size
 
+    fun withGeneration(generation: Long) = TrustNetworkIds(ids, createdAt, tombstoneKeys, tombstoneIds, tombstoneCreatedAt, generation)
+
     val tombstones: Int get() = tombstoneCreatedAt.size
 
     fun idHex(i: Int): HexKey = Hex.encode(ids.copyOfRange(32 * i, 32 * i + 32))
 
     fun tombstoneIdHex(i: Int): HexKey = Hex.encode(tombstoneIds.copyOfRange(32 * i, 32 * i + 32))
+
+    /**
+     * Every card held (entries and tombstones) as a NIP-77 local set. Sorted once as packed
+     * longs; ids become strings only for the window negentropy asks for, instead of a list of
+     * every card (300k strings) plus a sorted copy of it.
+     */
+    fun negentropyIndex(): NegentropyLocalIndex =
+        if (size + tombstones < PACKED_POSITIONS) {
+            PackedIdsIndex(this)
+        } else {
+            NegentropyLocalIndex.of(entriesSince())
+        }
 
     /** (created_at, id) of every card held, entries and tombstones, at or after [since]. */
     fun entriesSince(since: Long = Long.MIN_VALUE): List<IdAndTime> {
@@ -210,5 +228,67 @@ class TrustNetworkIds(
 
     companion object {
         val EMPTY = TrustNetworkIds(ByteArray(0), LongArray(0))
+
+        /** Positions fit in the low 21 bits of a packed (created_at, position) long. */
+        internal const val PACKED_POSITIONS = 1 shl 21
+    }
+}
+
+/** [TrustNetworkIds.negentropyIndex]: `created_at shl 21 or position`, sorted. */
+private class PackedIdsIndex(
+    private val ids: TrustNetworkIds,
+) : NegentropyLocalIndex {
+    private val packed: LongArray by lazy {
+        val n = ids.size + ids.tombstones
+        LongArray(n) { i ->
+            val createdAt = if (i < ids.size) ids.createdAt[i] else ids.tombstoneCreatedAt[i - ids.size]
+            (createdAt.coerceIn(0, MAX_CREATED_AT) shl 21) or i.toLong()
+        }.also { it.sort() }
+    }
+
+    override suspend fun count(window: Filter): Int {
+        val (start, end) = range(window)
+        return end - start
+    }
+
+    override suspend fun entriesFor(window: Filter): List<IdAndTime> {
+        val (start, end) = range(window)
+        return List(end - start) { k ->
+            val i = (packed[start + k] and POSITION_MASK).toInt()
+            if (i < ids.size) IdAndTime(ids.createdAt[i], ids.idHex(i)) else IdAndTime(ids.tombstoneCreatedAt[i - ids.size], ids.tombstoneIdHex(i - ids.size))
+        }
+    }
+
+    /** [start, end) of the cards with created_at in [since, until], both inclusive. */
+    private fun range(window: Filter): Pair<Int, Int> {
+        val until = window.until
+        val lo = (window.since ?: 0L).coerceIn(0, MAX_CREATED_AT) shl 21
+        val hi = if (until == null) Long.MAX_VALUE else ((until.coerceIn(0, MAX_CREATED_AT) shl 21) or POSITION_MASK)
+        return firstAtLeast(lo) to firstAbove(hi)
+    }
+
+    private fun firstAtLeast(value: Long): Int {
+        var low = 0
+        var high = packed.size
+        while (low < high) {
+            val mid = (low + high) ushr 1
+            if (packed[mid] < value) low = mid + 1 else high = mid
+        }
+        return low
+    }
+
+    private fun firstAbove(value: Long): Int {
+        var low = 0
+        var high = packed.size
+        while (low < high) {
+            val mid = (low + high) ushr 1
+            if (packed[mid] <= value) low = mid + 1 else high = mid
+        }
+        return low
+    }
+
+    private companion object {
+        const val POSITION_MASK = (1L shl 21) - 1
+        const val MAX_CREATED_AT = (1L shl 42) - 1
     }
 }

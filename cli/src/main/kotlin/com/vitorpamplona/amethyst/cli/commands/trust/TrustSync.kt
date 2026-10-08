@@ -91,7 +91,7 @@ object TrustSync {
                 val index =
                     session.state.network.value
                         ?.index
-                val result = (run.outcome as? TrustNetworkOutcome.Applied)?.result
+                val result = run.result
                 val fields =
                     mapOf(
                         "observer" to observer,
@@ -99,7 +99,7 @@ object TrustSync {
                         "provider" to provider.pubkey,
                         "relay" to provider.relayUrl.url,
                         "applied" to run.applied,
-                        "complete" to run.applied,
+                        "complete" to (result?.complete ?: run.applied),
                         "received" to (result?.received ?: 0),
                         "invalid" to (result?.invalid ?: 0),
                         "detail" to run.outcome.describe(),

@@ -41,6 +41,12 @@ data class TrustNetworkHeader(
      * Lets an update compare it with the relay's count without reading the ids file.
      */
     val heldAtCursor: Int? = null,
+    /**
+     * A random number written into both files at each save. An index is used with an ids file
+     * only when the two match, so a crash between the two writes cannot pair an index with the
+     * ids of another one (they can have the same size).
+     */
+    val generation: Long = 0,
 )
 
 /**
@@ -50,21 +56,25 @@ data class TrustNetworkHeader(
  * Index file (`network-v2.bin`):
  * ```
  * "AWOT" | u16 version | 32B provider | u16 relayLen + utf8 relay
- * | i64 syncCursor | i64 lastFullCheck | i64 lastUpdate | i32 heldAtCursor | i32 N
+ * | i64 syncCursor | i64 lastFullCheck | i64 lastUpdate | i32 heldAtCursor (-1 unknown)
+ * | i64 generation | i32 N
  * | keys N×16 | rank N×1 | hops N×1 | followers N×4
  * ```
  * Ids file (`network-ids-v2.bin`), aligned with the index, then the tombstones:
  * ```
- * "AWID" | u16 version | i32 N | ids N×32 | createdAt N×8
+ * "AWID" | u16 version | i64 generation | i32 N | ids N×32 | createdAt N×8
  * | i32 T | keys T×16 | ids T×32 | createdAt T×8
  * ```
  */
 object TrustNetworkCodec {
-    /** Version 2 added `heldAtCursor`; a version 1 file is ignored (and re-downloaded). */
-    const val VERSION = 2
+    /**
+     * Version 2 added `heldAtCursor`, version 3 the `generation`; older files are ignored (and
+     * downloaded again).
+     */
+    const val VERSION = 3
 
-    /** The ids file gained tombstones in version 2; a version 1 file is ignored (and re-downloaded). */
-    const val IDS_VERSION = 2
+    /** The ids file gained tombstones in version 2 and the `generation` in 3; older ones are ignored. */
+    const val IDS_VERSION = 3
     private val INDEX_MAGIC = "AWOT".encodeToByteArray()
     private val IDS_MAGIC = "AWID".encodeToByteArray()
 
@@ -74,7 +84,7 @@ object TrustNetworkCodec {
     ): ByteArray {
         val relay = header.relay.encodeToByteArray()
         val n = index.size
-        val out = Writer(4 + 2 + 32 + 2 + relay.size + 8 * 3 + 4 + 4 + n * 22)
+        val out = Writer(4 + 2 + 32 + 2 + relay.size + 8 * 3 + 4 + 8 + 4 + n * 22)
         out.bytes(INDEX_MAGIC)
         out.short(VERSION)
         out.bytes(Hex.decode(header.provider))
@@ -84,6 +94,7 @@ object TrustNetworkCodec {
         out.long(header.lastFullCheck)
         out.long(header.lastUpdate)
         out.int(header.heldAtCursor ?: -1)
+        out.long(header.generation)
         out.int(n)
         for (v in index.keys) out.long(v)
         out.bytes(index.rank)
@@ -112,9 +123,10 @@ object TrustNetworkCodec {
     fun encodeIds(ids: TrustNetworkIds): ByteArray {
         val n = ids.size
         val t = ids.tombstones
-        val out = Writer(4 + 2 + 4 + n * 40 + 4 + t * 56)
+        val out = Writer(4 + 2 + 8 + 4 + n * 40 + 4 + t * 56)
         out.bytes(IDS_MAGIC)
         out.short(IDS_VERSION)
+        out.long(ids.generation)
         out.int(n)
         out.bytes(ids.ids)
         for (v in ids.createdAt) out.long(v)
@@ -130,6 +142,7 @@ object TrustNetworkCodec {
             val reader = Reader(bytes)
             require(reader.bytes(4).contentEquals(IDS_MAGIC)) { "not an ids file" }
             require(reader.short() == IDS_VERSION) { "unknown version" }
+            val generation = reader.long()
             val n = reader.int()
             require(n >= 0 && reader.remaining() >= n * 40 + 4) { "truncated ids" }
             val idBytes = reader.bytes(32 * n)
@@ -139,7 +152,7 @@ object TrustNetworkCodec {
             val graveKeys = LongArray(2 * t) { reader.long() }
             val graveIds = reader.bytes(32 * t)
             val graveCreatedAt = LongArray(t) { reader.long() }
-            TrustNetworkIds(idBytes, createdAt, graveKeys, graveIds, graveCreatedAt)
+            TrustNetworkIds(idBytes, createdAt, graveKeys, graveIds, graveCreatedAt, generation)
         }.getOrNull()
 
     private class Writer(
@@ -206,7 +219,7 @@ object TrustNetworkCodec {
             require(short() == VERSION) { "unknown version" }
             val provider = Hex.encode(bytes(32))
             val relay = bytes(short()).decodeToString()
-            return TrustNetworkHeader(provider, relay, syncCursor = long(), lastFullCheck = long(), lastUpdate = long(), heldAtCursor = int().takeIf { it >= 0 })
+            return TrustNetworkHeader(provider, relay, syncCursor = long(), lastFullCheck = long(), lastUpdate = long(), heldAtCursor = int().takeIf { it >= 0 }, generation = long())
         }
     }
 }

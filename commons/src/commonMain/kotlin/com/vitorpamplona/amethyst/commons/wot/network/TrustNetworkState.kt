@@ -23,7 +23,10 @@ package com.vitorpamplona.amethyst.commons.wot.network
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip85TrustedAssertions.list.tags.ServiceProviderTag
 import com.vitorpamplona.quartz.nip85TrustedAssertions.users.UserAssertionEvent
+import com.vitorpamplona.quartz.nip85TrustedAssertions.users.index.TrustNetworkHeader
+import com.vitorpamplona.quartz.nip85TrustedAssertions.users.index.TrustNetworkIds
 import com.vitorpamplona.quartz.nip85TrustedAssertions.users.index.TrustNetworkProgress
+import com.vitorpamplona.quartz.nip85TrustedAssertions.users.index.TrustNetworkSyncResult
 import com.vitorpamplona.quartz.nip85TrustedAssertions.users.index.memberRank
 import com.vitorpamplona.quartz.nip85TrustedAssertions.users.index.passesMinRank
 import com.vitorpamplona.quartz.utils.Hex
@@ -47,6 +50,8 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeoutOrNull
 
@@ -114,6 +119,16 @@ class TrustNetworkState(
     private var running: Deferred<TrustNetworkRun>? = null
     private var forceDownloadUntil = 0L
 
+    /**
+     * Held while the provider changes and while a sync publishes its result, so a sync for a
+     * provider that is being replaced (or removed) can never write its files or network after
+     * the change.
+     */
+    private val commitLock = Mutex()
+
+    /** Full checks that could not reconcile in a row. Only the running sync touches it. */
+    private var failedFullChecks = 0
+
     init {
         scope.launch(Dispatchers.IO) {
             // Load whatever is on disk right away: the provider list may take a moment to
@@ -176,18 +191,35 @@ class TrustNetworkState(
      * Kind 5 deletions are left to the sync.
      */
     fun offer(events: Iterable<UserAssertionEvent>) {
-        val loaded = _network.value ?: return
-        val provider = loaded.header.provider
-        val minScore = minTrustScore.value
-        var cards: MutableMap<HexKey, TrustOverlayCard>? = null
+        val cards = events.toList()
+        if (cards.isEmpty()) return
         var flipped = false
-        for (event in events) {
-            if (event.pubKey != provider) continue
+        // Compare-and-set: a sync pruning the overlay or a provider change clearing it at the
+        // same time is never undone by a stale copy.
+        _overlay.update { overlay ->
+            flipped = false
+            val loaded = _network.value ?: return@update overlay
+            withCards(overlay, loaded, cards, minTrustScore.value) { flipped = true }
+        }
+        if (flipped) verdictRevision.update { it + 1 }
+    }
+
+    /** [overlay] plus the [cards] newer than [loaded]'s index. Calls [onFlip] when one moves someone in or out. */
+    private fun withCards(
+        overlay: Map<HexKey, TrustOverlayCard>,
+        loaded: TrustNetwork,
+        cards: List<UserAssertionEvent>,
+        minScore: Int,
+        onFlip: () -> Unit,
+    ): Map<HexKey, TrustOverlayCard> {
+        var result: MutableMap<HexKey, TrustOverlayCard>? = null
+        for (event in cards) {
+            if (event.pubKey != loaded.header.provider) continue
             // At or before the cursor the index has it (or a deletion the sync saw removed it).
             if (event.createdAt <= loaded.header.syncCursor) continue
             val subject = event.aboutUser()
             if (subject == null || !Hex.isHex64(subject)) continue
-            val held = (cards ?: _overlay.value)[subject]
+            val held = (result ?: overlay)[subject]
             if (held != null && held.createdAt >= event.createdAt) continue
 
             val before = passesMinRank(if (held != null) held.rank else loaded.index.rankOf(subject), minScore)
@@ -198,12 +230,11 @@ class TrustNetworkState(
                     createdAt = event.createdAt,
                 )
             // One copy of the overlay per batch, not per card.
-            val batch = cards ?: _overlay.value.toMutableMap().also { cards = it }
+            val batch = result ?: overlay.toMutableMap().also { result = it }
             batch[subject] = card
-            if (passesMinRank(card.rank, minScore) != before) flipped = true
+            if (passesMinRank(card.rank, minScore) != before) onFlip()
         }
-        cards?.let { _overlay.value = it }
-        if (flipped) verdictRevision.update { it + 1 }
+        return result ?: overlay
     }
 
     /**
@@ -224,6 +255,11 @@ class TrustNetworkState(
     }
 
     private suspend fun onProvider(choice: ResolvedProvider) {
+        commitLock.withLock { applyProvider(choice) }
+        if (autoSync) syncIfStale()
+    }
+
+    private suspend fun applyProvider(choice: ResolvedProvider) {
         val provider = choice.provider
         if (provider == null) {
             // The list says there is no provider (removed here or on another device): drop the
@@ -239,7 +275,6 @@ class TrustNetworkState(
             }
         }
         applied.value = choice
-        if (autoSync) syncIfStale()
     }
 
     /**
@@ -261,6 +296,15 @@ class TrustNetworkState(
     /** Re-downloads everything for the current provider, discarding the local index. */
     fun redownload() {
         scope.launch(control) { start(requested = TrustNetworkSyncStatus.Kind.DOWNLOAD, force = true) }
+    }
+
+    /**
+     * Starts whatever sync is due, once the provider list is read, and waits for it (or for the
+     * one already running). For a background job that must not end before the sync does.
+     */
+    suspend fun syncDue(): TrustNetworkRun? {
+        awaitReady()
+        return withContext(control) { start(requested = null, force = false) ?: running }?.await()
     }
 
     /** Suspends until the running sync, if any, finishes. */
@@ -362,13 +406,12 @@ class TrustNetworkState(
         // means the next process start asks again.
         val news = if (requested == TrustNetworkSyncStatus.Kind.UPDATE && current?.header?.heldAtCursor != null) relay.news(provider, current.header) else null
         if (current != null && news != null && !news.any) {
-            val header = current.header.copy(lastUpdate = clock())
-            _network.value = TrustNetwork(header, current.index)
-            return TrustNetworkRun(requested, TrustNetworkOutcome.Unchanged(header))
+            return commitUnchanged(provider, requested, current, current.header.copy(lastUpdate = clock()), result = null)
         }
 
-        // An update or full check needs the id column; without it, download again.
-        val ids = if (current != null) withContext(Dispatchers.IO) { store.readIds() }?.takeIf { it.size == current.index.size } else null
+        // An update or full check needs the id column saved with this index; without it,
+        // download again.
+        val ids = if (current != null) withContext(Dispatchers.IO) { store.readIds(current.header) }?.takeIf { it.size == current.index.size } else null
         val kind = if (current == null || ids == null) TrustNetworkSyncStatus.Kind.DOWNLOAD else requested
         if (kind == TrustNetworkSyncStatus.Kind.DOWNLOAD && !mayDownload) return TrustNetworkRun(kind, TrustNetworkOutcome.WaitingForUnmetered)
 
@@ -386,33 +429,73 @@ class TrustNetworkState(
                 }
 
                 TrustNetworkSyncStatus.Kind.FULL_CHECK -> {
-                    // A relay without NIP-77 cannot reconcile: download again, if allowed.
-                    relay.reconcile(provider, current!!.header, current.index, ids!!, progress)
-                        ?: if (mayDownload) relay.download(provider, progress) else return TrustNetworkRun(kind, TrustNetworkOutcome.WaitingForUnmetered)
+                    fullCheck(relay, provider, current!!, ids!!, mayDownload, progress) ?: return TrustNetworkRun(kind, TrustNetworkOutcome.WaitingForUnmetered)
                 }
             }
 
         // A partial walk must not become the network (a cold one would wrongly reject everyone
         // it missed), nor advance the cursor past what it skipped.
-        if (!result.complete) return TrustNetworkRun(kind, TrustNetworkOutcome.Incomplete(result.detail))
+        if (!result.complete) return TrustNetworkRun(kind, TrustNetworkOutcome.Incomplete(result.detail), result)
 
         // A provider still computing a new user's scores has published nothing yet. An empty
         // network would leave only follows as "known", so keep waiting.
-        if (kind == TrustNetworkSyncStatus.Kind.DOWNLOAD && result.index.size == 0) return TrustNetworkRun(kind, TrustNetworkOutcome.NoScoresYet)
+        if (kind == TrustNetworkSyncStatus.Kind.DOWNLOAD && result.index.size == 0) return TrustNetworkRun(kind, TrustNetworkOutcome.NoScoresYet, result)
 
-        if (currentProvider != provider) return TrustNetworkRun(kind, TrustNetworkOutcome.ProviderChanged)
+        if (result.unchanged && current != null) return commitUnchanged(provider, kind, current, result.header, result)
 
-        if (result.unchanged && current != null) {
-            _network.value = TrustNetwork(result.header, current.index)
-            return TrustNetworkRun(kind, TrustNetworkOutcome.Unchanged(result.header))
+        return commitLock.withLock {
+            if (currentProvider != provider) return@withLock TrustNetworkRun(kind, TrustNetworkOutcome.ProviderChanged, result)
+            val header = withContext(Dispatchers.IO) { store.write(result.header, result.index, result.ids) }
+            // The sync fetched everything up to its cursor; only cards seen after it still add.
+            // Pruned before the network is published, so no snapshot pairs the new index with
+            // cards older than it.
+            _overlay.update { cards -> cards.filterValues { it.createdAt > header.syncCursor } }
+            _network.value = TrustNetwork(header, result.index)
+            Log.d(TAG) { "$kind done: ${result.index.size} entries, ${result.received} received, ${result.invalid} invalid (${result.detail})" }
+            TrustNetworkRun(kind, TrustNetworkOutcome.Applied(result), result)
+        }
+    }
+
+    /** Publishes [header] over [current]'s index (nothing to write), unless the provider changed. */
+    private suspend fun commitUnchanged(
+        provider: ServiceProviderTag,
+        kind: TrustNetworkSyncStatus.Kind,
+        current: TrustNetwork,
+        header: TrustNetworkHeader,
+        result: TrustNetworkSyncResult?,
+    ): TrustNetworkRun =
+        commitLock.withLock {
+            if (currentProvider != provider) return@withLock TrustNetworkRun(kind, TrustNetworkOutcome.ProviderChanged, result)
+            // Same index instance: feeds keyed on it do not rebuild. The files keep the older
+            // lastUpdate, which only means the next process start asks again.
+            _network.value = TrustNetwork(header.copy(generation = current.header.generation), current.index)
+            TrustNetworkRun(kind, TrustNetworkOutcome.Unchanged(header), result)
         }
 
-        withContext(Dispatchers.IO) { store.write(result.header, result.index, result.ids) }
-        _network.value = TrustNetwork(result.header, result.index)
-        // The sync fetched everything up to its cursor; only cards seen after it still add.
-        _overlay.update { cards -> cards.filterValues { it.createdAt > result.header.syncCursor } }
-        Log.d(TAG) { "$kind done: ${result.index.size} entries, ${result.received} received, ${result.invalid} invalid (${result.detail})" }
-        return TrustNetworkRun(kind, TrustNetworkOutcome.Applied(result))
+    /**
+     * The weekly check. A relay that cannot reconcile (no NIP-77, or a timeout: they look the
+     * same) gets a cheap update instead, so the network stays current, and the check is retried
+     * next time; after [MAX_FAILED_FULL_CHECKS] in a row, a fresh download replaces it, when
+     * allowed. Null when that download must wait for an unmetered network.
+     */
+    private suspend fun fullCheck(
+        relay: TrustNetworkConnection,
+        provider: ServiceProviderTag,
+        current: TrustNetwork,
+        ids: TrustNetworkIds,
+        mayDownload: Boolean,
+        progress: TrustNetworkProgress,
+    ): TrustNetworkSyncResult? {
+        val reconciled = relay.reconcile(provider, current.header, current.index, ids, progress)
+        if (reconciled != null) {
+            failedFullChecks = 0
+            return reconciled
+        }
+        failedFullChecks++
+        if (failedFullChecks < MAX_FAILED_FULL_CHECKS) return relay.update(provider, current.header, current.index, ids, null, progress)
+        if (!mayDownload) return null
+        failedFullChecks = 0
+        return relay.download(provider, progress)
     }
 
     companion object {
@@ -425,6 +508,7 @@ class TrustNetworkState(
         const val UPDATE_EVERY_SECS = 15 * 60L
         const val FULL_CHECK_EVERY_SECS = 7 * 24 * 60 * 60L
         const val FORCE_DOWNLOAD_WINDOW_SECS = 10 * 60L
+        const val MAX_FAILED_FULL_CHECKS = 3
 
         /**
          * Which sync is due for [current] at [now]: a download when there is no index, a full

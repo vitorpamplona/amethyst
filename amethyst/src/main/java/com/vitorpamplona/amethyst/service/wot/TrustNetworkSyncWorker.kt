@@ -29,6 +29,7 @@ import androidx.work.PeriodicWorkRequestBuilder
 import androidx.work.WorkManager
 import androidx.work.WorkerParameters
 import com.vitorpamplona.amethyst.Amethyst
+import com.vitorpamplona.amethyst.LocalPreferences
 import com.vitorpamplona.quartz.utils.Log
 import java.util.concurrent.TimeUnit
 
@@ -45,10 +46,15 @@ class TrustNetworkSyncWorker(
     workerParams: WorkerParameters,
 ) : CoroutineWorker(appContext, workerParams) {
     override suspend fun doWork(): Result {
-        val accounts = Amethyst.instance.accountsCache.accounts.value.values
-        accounts.forEach { it.trustNetwork.syncIfStale() }
-        accounts.forEach { it.trustNetwork.awaitIdle() }
-        Log.d(TAG) { "Checked the trust network of ${accounts.size} accounts" }
+        // A cold process has no accounts loaded yet: load the ones that can sign, like the
+        // always-on notification service does.
+        val cache = Amethyst.instance.accountsCache
+        cache.loadAllWritableAccounts(LocalPreferences)
+        val accounts = cache.accounts.value.values
+        // Each waits for its provider list and then for the sync it starts (or the one already
+        // running), so the job does not end, and let the process die, mid-sync.
+        val runs = accounts.map { it.trustNetwork.syncDue() }
+        Log.d(TAG) { "Checked the trust network of ${accounts.size} accounts: ${runs.map { it?.outcome?.let { o -> o::class.simpleName } }}" }
         return Result.success()
     }
 

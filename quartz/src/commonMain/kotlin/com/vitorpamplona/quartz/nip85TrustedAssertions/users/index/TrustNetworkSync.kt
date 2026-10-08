@@ -23,6 +23,7 @@ package com.vitorpamplona.quartz.nip85TrustedAssertions.users.index
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
+import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.NegentropyLocalIndex
 import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.PagedFetchResult
 import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.ParallelEventVerifier
 import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.count
@@ -32,7 +33,6 @@ import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.negentropyRec
 import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.negentropySync
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
-import com.vitorpamplona.quartz.nip01Core.store.IdAndTime
 import com.vitorpamplona.quartz.nip09Deletions.DeletionRequestEvent
 import com.vitorpamplona.quartz.nip85TrustedAssertions.users.UserAssertionEvent
 import com.vitorpamplona.quartz.utils.Log
@@ -209,7 +209,7 @@ suspend fun INostrClient.updateTrustNetwork(
     val invalid = AtomicInt(0)
 
     val windowStart = (header.syncCursor - TRUST_NETWORK_UPDATE_OVERLAP_SECS).coerceAtLeast(0)
-    val reconciled = reconcileInto(builder, relay, trustNetworkFilter(provider, windowStart), ids.entriesSince(windowStart), invalid, progress, seeded = before)
+    val reconciled = reconcileInto(builder, relay, trustNetworkFilter(provider, windowStart), ids.negentropyIndex(), invalid, progress, seeded = before)
 
     val complete: Boolean
     val detail: String
@@ -227,6 +227,13 @@ suspend fun INostrClient.updateTrustNetwork(
         val paged = verifying(builder, invalid, null, progress, seeded = before) { submit -> fetchAllPages(relay, filters, IDLE_MS) { submit(it) } }
         complete = paged.drained
         detail = "${paged.end}${paged.message?.let { ": $it" } ?: ""}"
+    }
+
+    // The counts said something changed, but nothing arrived or went (a relay without NIP-45
+    // always says so): keep the same index, so nothing is rewritten and no feed rebuilds.
+    if (complete && builder.cardCount == before && !builder.hasRemovals) {
+        val held = header.heldAtCursor ?: ids.countSince(header.syncCursor)
+        return TrustNetworkSyncResult(header.copy(lastUpdate = TimeUtils.now(), heldAtCursor = held), index, ids, complete = true, invalid = invalid.load(), received = 0, detail = detail, unchanged = true)
     }
 
     val (newIndex, newIds) = builder.build()
@@ -264,7 +271,7 @@ suspend fun INostrClient.reconcileTrustNetwork(
     val before = builder.cardCount
     val invalid = AtomicInt(0)
 
-    val reconciled = reconcileInto(builder, relay, trustNetworkFilter(header.provider), ids.entriesSince(), invalid, progress, seeded = before) ?: return null
+    val reconciled = reconcileInto(builder, relay, trustNetworkFilter(header.provider), ids.negentropyIndex(), invalid, progress, seeded = before) ?: return null
 
     val (newIndex, newIds) = builder.build()
     val now = TimeUtils.now()
@@ -296,7 +303,7 @@ private suspend fun INostrClient.reconcileInto(
     builder: TrustNetworkBuilder,
     relay: NormalizedRelayUrl,
     filter: Filter,
-    local: List<IdAndTime>,
+    local: NegentropyLocalIndex,
     invalid: AtomicInt,
     progress: TrustNetworkProgress?,
     seeded: Int,
@@ -307,7 +314,7 @@ private suspend fun INostrClient.reconcileInto(
         negentropyReconcile(
             relay = relay,
             filter = filter,
-            localEntries = local,
+            localIndex = local,
             idleTimeoutMs = IDLE_MS,
             onHaveIds = { batch -> have.addAll(batch) },
             onNeedIds = { batch -> need.addAll(batch) },
@@ -320,6 +327,7 @@ private suspend fun INostrClient.reconcileInto(
     }
 
     val stalled = AtomicInt(0)
+    val invalidBefore = invalid.load()
     if (need.isNotEmpty()) {
         verifying(builder, invalid, need.size, progress, seeded) { submit ->
             // A few batches in flight at once: a provider recompute can need every card.
@@ -336,7 +344,8 @@ private suspend fun INostrClient.reconcileInto(
         }
     }
     builder.removeEventIds(have)
-    return Reconciled(stalled.load() == 0, need.size, have.size)
+    // A card whose signature failed counts as missing: the relay did not give us a valid one.
+    return Reconciled(stalled.load() == 0 && invalid.load() == invalidBefore, need.size, have.size)
 }
 
 /**
@@ -349,16 +358,18 @@ private suspend fun INostrClient.fetchByIds(
     ids: List<HexKey>,
     submit: (Event) -> Unit,
 ): Boolean {
-    var missing = ids
+    var missing = ids.toHashSet()
     while (missing.isNotEmpty()) {
-        val events = fetchAll(relay, Filter(ids = missing), IDLE_MS)
-        if (events.isEmpty()) return false
-        val got = HashSet<HexKey>(events.size * 2)
+        val events = fetchAll(relay, Filter(ids = missing.toList()), IDLE_MS)
+        var progress = false
         for (event in events) {
-            got.add(event.id)
-            submit(event)
+            // Only what was asked for: a relay answering with other events must not loop forever.
+            if (missing.remove(event.id)) {
+                progress = true
+                submit(event)
+            }
         }
-        missing = missing.filter { it !in got }
+        if (!progress) return false
     }
     return true
 }

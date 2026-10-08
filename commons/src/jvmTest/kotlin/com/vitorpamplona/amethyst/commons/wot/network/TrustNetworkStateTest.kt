@@ -133,7 +133,7 @@ class TrustNetworkStateTest {
             withTimeout(5_000) { wot.network.first { it == null } }
             assertFalse(wot.verdicts().passes(trusted))
             assertNull(store.readIndex())
-            assertNull(store.readIds())
+            assertFalse(FileSystem.SYSTEM.exists(dir / TrustNetworkStore.IDS_FILE))
         }
 
     @Test
@@ -252,4 +252,10 @@ class TrustNetworkStateTest {
             assertTrue(removed.sameAnswersAs(wot.verdicts()))
             assertTrue(wot.isActive)
         }
+
+    @Test
+    fun withoutANetworkFollowsDoNotChangeTheAnswers() {
+        val none = TrustVerdicts(null, emptyMap(), 5, me, setOf(hex()))
+        assertTrue(none.sameAnswersAs(TrustVerdicts(null, emptyMap(), 5, me, setOf(hex(), hex()))))
+    }
 }

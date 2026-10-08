@@ -25,7 +25,9 @@ import com.vitorpamplona.geode.RelayEngine
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.crypto.KeyPair
 import com.vitorpamplona.quartz.nip01Core.relay.client.NostrClient
+import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.NegentropyLocalIndex
 import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.publishAndConfirm
+import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.normalizeRelayUrl
 import com.vitorpamplona.quartz.nip01Core.relay.sockets.okhttp.BasicOkHttpWebSocket
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerInternal
@@ -39,6 +41,7 @@ import kotlin.test.assertFalse
 import kotlin.test.assertNotEquals
 import kotlin.test.assertNotNull
 import kotlin.test.assertNull
+import kotlin.test.assertSame
 import kotlin.test.assertTrue
 
 /**
@@ -133,6 +136,12 @@ class TrustNetworkSyncTest {
                 assertEquals(0, full.received, "nothing to fetch, nothing gone: ${full.detail}")
                 assertEquals(298, full.index.size)
 
+                // The counts say something changed (a relay without NIP-45 always does), but the
+                // reconcile finds nothing: the same index comes back, so nothing is rewritten.
+                val noNews = client.updateTrustNetwork(full.header, full.index, full.ids, relay, knownNews = TrustNetworkNews(cards = true, deletions = 0))
+                assertTrue(noNews.unchanged)
+                assertSame(full.index, noNews.index)
+
                 // The ids file round-trips with the tombstone.
                 val decoded = assertNotNull(TrustNetworkCodec.decodeIds(TrustNetworkCodec.encodeIds(full.ids)))
                 assertEquals(1, decoded.tombstones)
@@ -143,6 +152,21 @@ class TrustNetworkSyncTest {
                 client.close()
                 server.stop(gracePeriodMillis = 200, timeoutMillis = 1_000)
                 engine.close()
+            }
+        }
+
+    @Test
+    fun theIdsNegentropyIndexMatchesAListIndex() =
+        runBlocking {
+            val subjects = List(500) { hex() }
+            val builder = TrustNetworkBuilder(provider.pubKey)
+            subjects.forEachIndexed { i, s -> builder.add(card(s, if (i % 10 == 0) 0 else 1 + i % 90, batchTime + i % 7)) }
+            val ids = builder.build().second
+            val packed = ids.negentropyIndex()
+            val list = NegentropyLocalIndex.of(ids.entriesSince())
+            for (window in listOf(Filter(), Filter(since = batchTime + 3), Filter(until = batchTime + 2), Filter(since = batchTime + 2, until = batchTime + 4), Filter(since = batchTime + 99))) {
+                assertEquals(list.count(window), packed.count(window), "count of $window")
+                assertEquals(list.entriesFor(window).map { it.id }.toSet(), packed.entriesFor(window).map { it.id }.toSet(), "entries of $window")
             }
         }
 

@@ -39,6 +39,8 @@ import kotlinx.coroutines.DelicateCoroutinesApi
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.IO
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.FlowCollector
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.flowOn
@@ -105,10 +107,26 @@ class TrustProviderListState(
     @OptIn(ExperimentalCoroutinesApi::class)
     private val resolvedTrustProviderList: StateFlow<Set<ServiceProviderTag>?> =
         getTrustProviderListFlow()
-            .transformLatest { noteState -> emit(resolvedProviders(noteState.note)) }
-            .onStart { emit(resolvedProviders(trustProviderListNote)) }
+            .transformLatest { noteState -> emitResolved(noteState.note) }
+            .onStart { emitResolved(trustProviderListNote) }
             .flowOn(Dispatchers.IO)
             .stateIn(scope, SharingStarted.Eagerly, null)
+
+    /**
+     * Emits [note]'s providers once known. When the private part cannot be decrypted yet (an
+     * external signer that refuses in the background), tries again with a growing pause, so a
+     * process woken by a push still resolves once the user opens the app.
+     */
+    private suspend fun FlowCollector<Set<ServiceProviderTag>?>.emitResolved(note: Note) {
+        var pauseMs = 15_000L
+        while (true) {
+            val resolved = resolvedProviders(note)
+            emit(resolved)
+            if (resolved != null) return
+            delay(pauseMs)
+            pauseMs = (pauseMs * 2).coerceAtMost(10 * 60_000L)
+        }
+    }
 
     private suspend fun resolvedProviders(note: Note): Set<ServiceProviderTag>? {
         val event = note.event as? TrustProviderListEvent ?: settings.backupTrustProviderList ?: return emptySet()

@@ -244,6 +244,16 @@ fun ChatFeedLoaded(
     // Public chats collapse runs of messages from outside the Web of Trust network into one row.
     var revealed by remember { mutableStateOf(emptySet<String>()) }
     val outsideNetwork = rememberOutsideNetworkRuns(items.list, revealed, collapseOutsideNetwork, accountViewModel)
+    // What the list draws: a collapsed run is one row (its oldest message), not one empty item
+    // per message, which a long run of them would compose all at once.
+    val rows =
+        remember(items, outsideNetwork) {
+            if (outsideNetwork.byId.isEmpty()) {
+                items.list
+            } else {
+                items.list.filter { note -> outsideNetwork.byId[note.idHex]?.let { it.head.idHex == note.idHex } ?: true }
+            }
+        }
 
     val newest = items.list.firstOrNull()
     AutoScrollToNewest(listState, newest, mine = accountViewModel.isLoggedUser(newest?.author?.pubkeyHex))
@@ -251,7 +261,7 @@ fun ChatFeedLoaded(
     val scope = rememberCoroutineScope()
     val highlightedNoteId = remember { mutableStateOf<String?>(null) }
     val onScrollToNote: (Note) -> Unit = { note ->
-        val index = items.list.indexOfFirst { it.idHex == note.idHex }
+        val index = rows.indexOfFirst { it.idHex == note.idHex }
         if (index >= 0) {
             scope.launch {
                 listState.animateScrollToItem(index)
@@ -266,7 +276,7 @@ fun ChatFeedLoaded(
     val jumpId = jumpToNoteId?.value
     LaunchedEffect(jumpId) {
         if (jumpId != null) {
-            val index = items.list.indexOfFirst { it.idHex == jumpId }
+            val index = rows.indexOfFirst { it.idHex == jumpId }
             if (index >= 0) {
                 listState.animateScrollToItem(index)
                 highlightedNoteId.value = jumpId
@@ -281,13 +291,13 @@ fun ChatFeedLoaded(
         reverseLayout = true,
         state = listState,
     ) {
-        itemsIndexed(items.list, key = { _, item -> item.idHex }, contentType = { _, item -> chatRowContentType(item) }) { index, item ->
+        itemsIndexed(rows, key = { _, item -> item.idHex }, contentType = { _, item -> chatRowContentType(item) }) { index, item ->
             val noteEvent = item.event
             if (avoidDraft == null || noteEvent !is DraftWrapEvent || noteEvent.dTag() !in avoidDraft.usedDraftTags) {
                 // Reverse layout: index - 1 is the newer message (visually below),
                 // index + 1 the older one (visually above).
-                val newer = items.list.getOrNull(index - 1)
-                val older = items.list.getOrNull(index + 1)
+                val newer = rows.getOrNull(index - 1)
+                val older = rows.getOrNull(index + 1)
 
                 // Send/arrival motion: new items fade in and existing ones slide to
                 // make room, so a sent message enters instead of appearing.
@@ -302,17 +312,15 @@ fun ChatFeedLoaded(
 
                 Column(modifier = itemModifier) {
                     if (outsideRun != null) {
-                        // The run's oldest message holds the row; the others draw nothing. No divisor
-                        // either: a subject change would print the author's name and the new subject.
+                        // The run's row, at its oldest message. No divisor: a subject change would
+                        // print the author's name and the new subject.
                         markersInGap?.invoke(item.event?.createdAt, older?.event?.createdAt)
-                        if (outsideRun.head.idHex == item.idHex) {
-                            val newestInRun = outsideRun.members.first()
-                            LaunchedEffect(routeForLastRead, newestInRun.idHex) {
-                                accountViewModel.loadAndMarkAsRead(routeForLastRead, newestInRun.createdAt(), dismissNotificationId = newestInRun.idHex)
-                            }
-                            OutsideNetworkChatRow(outsideRun.members.size) {
-                                revealed = revealed + outsideRun.members.map { it.idHex }
-                            }
+                        val newestInRun = outsideRun.members.first()
+                        LaunchedEffect(routeForLastRead, newestInRun.idHex) {
+                            accountViewModel.loadAndMarkAsRead(routeForLastRead, newestInRun.createdAt(), dismissNotificationId = newestInRun.idHex)
+                        }
+                        OutsideNetworkChatRow(outsideRun.members.size) {
+                            revealed = revealed + outsideRun.members.map { it.idHex }
                         }
                     } else {
                         // A day/subject header belongs ABOVE the message it introduces. `reverseLayout`

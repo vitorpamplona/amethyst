@@ -3785,6 +3785,25 @@ class Account(
 
     override fun followingKeySet(): Set<HexKey> = kind3FollowList.flow.value.authors
 
+    /**
+     * A note in a Concord community this account has joined. Notes keep a gatherer reference
+     * from every account and community that ever touched them, so membership is checked here.
+     */
+    fun isInJoinedConcordCommunity(note: Note?): Boolean =
+        note?.inGatherers?.any { g ->
+            g is ConcordChannel && concordSessions.sessionFor(g.channelId.communityId) != null
+        } == true
+
+    /**
+     * A Concord message in a joined community, or a reaction/repost to one (those are not
+     * attached to the channel themselves, so they are recognized through their target).
+     */
+    fun isConcordActivity(note: Note): Boolean {
+        if (isInJoinedConcordCommunity(note)) return true
+        val event = note.event
+        return (event is ReactionEvent || event is RepostEvent || event is GenericRepostEvent) && isInJoinedConcordCommunity(note.replyTo?.lastOrNull())
+    }
+
     /** True only when a trust network is active and [pubkey] is not in it (see [TrustVerdicts]). */
     fun isOutsideTrustNetwork(pubkey: HexKey): Boolean = currentTrustVerdicts().isOutside(pubkey)
 

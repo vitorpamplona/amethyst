@@ -29,7 +29,6 @@ import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.buzz.BuzzRelayDialect
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
 import com.vitorpamplona.amethyst.commons.model.cache.filterIntoSet
-import com.vitorpamplona.amethyst.commons.model.concord.ConcordChannel
 import com.vitorpamplona.amethyst.commons.model.isMutedPublicChatMessage
 import com.vitorpamplona.amethyst.commons.model.marmotGroups.MarmotGroupChatroom
 import com.vitorpamplona.amethyst.commons.model.topNavFeeds.IFeedTopNavFilter
@@ -664,25 +663,10 @@ class NotificationFeedFilter(
         // gatherer reference from every account/community that ever touched them, so require the
         // community to be one THIS account has currently joined (mirrors the Marmot check above) —
         // otherwise a note from a prior account or a left community would leak onto Notifications.
-        fun Note?.inJoinedConcordCommunity() =
-            this?.inGatherers?.any { g ->
-                g is ConcordChannel && account.concordSessions.sessionFor(g.channelId.communityId) != null
-            } == true
-
-        val isConcordMessage = it.inJoinedConcordCommunity()
-
-        // A like/repost is NOT itself attached to the channel gatherer — only chat messages/replies are
-        // (see LocalCache.consumeConcordRumor) — so `inGatherers` never flags it as Concord, and its
-        // author (a fellow member) usually isn't a follow, so it falls through the follow filter and is
-        // dropped. Recognize it through its TARGET: a reaction/repost pointing at a message in a
-        // community I've joined is a Concord reaction, and bypasses the follow filter like a reply does.
-        // Relevance (does it target ME) is still enforced below by the p-tag gate — a well-formed kind-7
-        // p-tags the reacted author (NIP-25), which is exactly what our own ChannelChat.reaction writes.
-        val isConcordReaction =
-            (noteEvent is ReactionEvent || noteEvent is RepostEvent || noteEvent is GenericRepostEvent) &&
-                it.replyTo?.lastOrNull().inJoinedConcordCommunity()
-
-        val isConcord = isConcordMessage || isConcordReaction
+        // Concord membership (see Account.isConcordActivity): a message in a community this
+        // account joined, or a reaction/repost to one.
+        val isConcordMessage = account.isInJoinedConcordCommunity(it)
+        val isConcord = account.isConcordActivity(it)
 
         // A bare reaction/repost (no p-tag) to my own already-loaded note — e.g. a Buzz like, which is
         // just `["e", <id>]` — is relevant to me: bypass the follow filter and satisfy the p-tag gate,

@@ -624,8 +624,9 @@ fun RenderThreadFeed(
 /**
  * Replies (by id) whose author is outside the Web of Trust network: they start collapsed. The
  * thread's root, its author, the focused note and the replies above it are never included (a
- * collapsed reply hides everything under it, which would hide the note the user opened);
- * neither are follows or the user (see [TrustVerdicts]).
+ * collapsed reply hides everything under it, which would hide the note the user opened), nor
+ * is a reply someone in the network answered; neither are follows or the user (see
+ * [TrustVerdicts]).
  */
 private fun outOfNetworkReplies(
     thread: List<Note>,
@@ -642,9 +643,31 @@ private fun outOfNetworkReplies(
         if (note.idHex in keepOpen) continue
         val author = note.author?.pubkeyHex ?: continue
         if (author == rootAuthor) continue
-        if (verdicts.isOutside(author)) result.add(note.idHex)
+        if (verdicts.isOutside(author) && !hasKnownReplyBelow(thread, levels, i, verdicts)) result.add(note.idHex)
     }
     return result
+}
+
+/**
+ * Whether someone in the user's network (the user, a follow, anyone who passes) replied under
+ * [thread]`[at]`. Collapsing a reply hides everything under it, which would hide their part of
+ * the conversation. The thread is depth-first: the replies under a note are the items after it
+ * at a deeper level.
+ */
+private fun hasKnownReplyBelow(
+    thread: List<Note>,
+    levels: Map<Note, Int>,
+    at: Int,
+    verdicts: TrustVerdicts,
+): Boolean {
+    val level = levels[thread[at]] ?: return false
+    for (j in at + 1 until thread.size) {
+        val below = levels[thread[j]] ?: continue
+        if (below <= level) return false
+        val author = thread[j].author?.pubkeyHex ?: continue
+        if (verdicts.explain(author).isKnown == true) return true
+    }
+    return false
 }
 
 /**

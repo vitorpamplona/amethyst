@@ -107,10 +107,11 @@ sealed interface TrustNetworkOutcome {
     ) : TrustNetworkOutcome
 }
 
-/** What one sync did: the [kind] that ran and its [outcome]. */
+/** What one sync did: the [kind] that ran, its [outcome], and the relay's [result] when it got one. */
 class TrustNetworkRun(
     val kind: TrustNetworkSyncStatus.Kind,
     val outcome: TrustNetworkOutcome,
+    val result: TrustNetworkSyncResult? = null,
 ) {
     /** The network now reflects the relay (replaced, or confirmed unchanged). */
     val applied: Boolean get() = outcome is TrustNetworkOutcome.Applied || outcome is TrustNetworkOutcome.Unchanged

@@ -253,7 +253,8 @@ class EventNotificationConsumer(
         // the network index yet, so wait for it (tens of ms) before deciding.
         if (account.settings.defaultNotificationFollowList.value is TopFilter.Selected) {
             account.trustNetwork.awaitLoaded()
-            if (account.curatedHidesByTrust(event)) return
+            val inJoinedCommunity = LocalCache.getNoteIfExists(event)?.let { account.isConcordActivity(it) } == true
+            if (account.curatedHidesByTrust(event, inJoinedCommunity = inJoinedCommunity)) return
         }
 
         when (event) {

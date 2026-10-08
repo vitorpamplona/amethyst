@@ -29,6 +29,7 @@ import com.vitorpamplona.quartz.nip85TrustedAssertions.users.index.TrustNetworkI
 import com.vitorpamplona.quartz.utils.Log
 import okio.FileSystem
 import okio.Path
+import kotlin.random.Random
 
 /**
  * The two files of one account's trust network, in [directory] (the account's own directory, so
@@ -52,18 +53,25 @@ class TrustNetworkStore(
         return read(INDEX_FILE) { bytes -> TrustNetworkCodec.decodeIndex(bytes)?.let { (header, index) -> TrustNetwork(header, index) } }
     }
 
-    fun readIds(): TrustNetworkIds? = read(IDS_FILE, TrustNetworkCodec::decodeIds)
+    /** The ids saved with the index whose header is [header], or null when they are not (any more) on disk. */
+    fun readIds(header: TrustNetworkHeader): TrustNetworkIds? = read(IDS_FILE, TrustNetworkCodec::decodeIds)?.takeIf { it.generation == header.generation }
 
+    /**
+     * Saves [index] and its [ids], paired by a new random generation, and returns [header] as
+     * written (use it from now on: [readIds] matches on its generation).
+     */
     fun write(
         header: TrustNetworkHeader,
         index: TrustNetworkIndex,
         ids: TrustNetworkIds,
-    ) {
+    ): TrustNetworkHeader {
+        val written = header.copy(generation = Random.nextLong())
         fileSystem.createDirectories(directory)
-        // ids first: an index on disk always has matching ids, or a size mismatch that makes
-        // the next sync download again.
-        atomicWrite(directory / IDS_FILE, TrustNetworkCodec.encodeIds(ids))
-        atomicWrite(directory / INDEX_FILE, TrustNetworkCodec.encodeIndex(header, index))
+        // A crash between the two leaves files of different generations: the next sync then
+        // downloads again instead of pairing an index with someone else's ids.
+        atomicWrite(directory / IDS_FILE, TrustNetworkCodec.encodeIds(ids.withGeneration(written.generation)))
+        atomicWrite(directory / INDEX_FILE, TrustNetworkCodec.encodeIndex(written, index))
+        return written
     }
 
     fun delete() {

@@ -65,13 +65,19 @@ class TrustVerdicts(
     /** True only when a network is active and [pubkey] is not in it. */
     fun isOutside(pubkey: HexKey): Boolean = explain(pubkey).isKnown == false
 
-    /** Every answer is the same as [other]'s: same index, cards, minimum, user and follows. */
+    /**
+     * Every answer is the same as [other]'s: same index, cards, minimum, user and follows. With
+     * no network on either side every answer is "no network", whatever the follows.
+     */
     fun sameAnswersAs(other: TrustVerdicts): Boolean =
-        network?.index === other.network?.index &&
-            revision == other.revision &&
-            minScore == other.minScore &&
-            me == other.me &&
-            follows === other.follows
+        (network == null && other.network == null) ||
+            (
+                network?.index === other.network?.index &&
+                    revision == other.revision &&
+                    minScore == other.minScore &&
+                    me == other.me &&
+                    follows === other.follows
+            )
 
     companion object {
         fun inactive(me: HexKey) = TrustVerdicts(null, emptyMap(), 0, me, emptySet())
