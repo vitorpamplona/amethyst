@@ -30,25 +30,13 @@ import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.failed_to_save_the_video
 import com.vitorpamplona.amethyst.commons.resources.video_saved_to_the_gallery
 import com.vitorpamplona.amethyst.commons.service.isVideoOnline
-import com.vitorpamplona.amethyst.commons.ui.components.UrlPreviewState
 import com.vitorpamplona.amethyst.commons.ui.loadStringRes
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
-import com.vitorpamplona.amethyst.model.UrlCachedPreviewer
 import com.vitorpamplona.amethyst.ui.actions.MediaSaverToDisk
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 
 // Account actions that need Android (a content Uri, the media store) or the JVM HTTP stack the
 // app's OkHttp clients come from. They stay out of AccountViewModel so the view model needs neither.
-
-fun AccountViewModel.urlPreview(
-    url: String,
-    onResult: suspend (UrlPreviewState) -> Unit,
-) {
-    viewModelScope.launch(Dispatchers.IO) {
-        UrlCachedPreviewer.previewInfo(url, httpClientBuilder::okHttpClientForPreview, onResult)
-    }
-}
 
 suspend fun AccountViewModel.checkVideoIsOnline(videoUrl: String): Boolean = httpClientBuilder.isVideoOnline(videoUrl)
 

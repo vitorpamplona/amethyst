@@ -34,15 +34,18 @@ import com.vitorpamplona.amethyst.commons.service.upload.BlossomClient
 import com.vitorpamplona.amethyst.commons.service.upload.BlossomPaymentException
 import com.vitorpamplona.amethyst.commons.service.upload.FileHeader
 import com.vitorpamplona.amethyst.commons.service.uploads.CompressorQuality
+import com.vitorpamplona.amethyst.commons.service.uploads.ImageDownloader
 import com.vitorpamplona.amethyst.commons.service.uploads.MediaCompressorResult
+import com.vitorpamplona.amethyst.commons.service.uploads.MediaUploadResult
 import com.vitorpamplona.amethyst.commons.service.uploads.MediaUploader
 import com.vitorpamplona.amethyst.commons.service.uploads.MediaUri
 import com.vitorpamplona.amethyst.commons.service.uploads.UploadError
 import com.vitorpamplona.amethyst.commons.service.uploads.UploadOrchestrator
 import com.vitorpamplona.amethyst.commons.service.uploads.UploadingState
 import com.vitorpamplona.amethyst.commons.service.uploads.UploadingState.UploadingFinalState
+import com.vitorpamplona.amethyst.commons.service.uploads.nip96.Nip96Uploader
 import com.vitorpamplona.amethyst.service.uploads.blossom.BlossomUploader
-import com.vitorpamplona.amethyst.service.uploads.nip96.Nip96Uploader
+import com.vitorpamplona.amethyst.service.uploads.nip96.upload
 import com.vitorpamplona.quartz.buzz.media.BuzzMediaSanitizer
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip01Core.signers.SignerExceptions
@@ -471,7 +474,8 @@ class AndroidMediaUploader(
             originalHash: String?,
             okHttpClient: (String) -> OkHttpClient,
         ): UploadingFinalState {
-            if (uploadResult.url.isNullOrBlank()) {
+            val url = uploadResult.url
+            if (url.isNullOrBlank()) {
                 return error(UploadError.SERVER_DID_NOT_PROVIDE_URL)
             }
 
@@ -479,7 +483,7 @@ class AndroidMediaUploader(
 
             // Use streaming verification for memory efficiency with large files
             val verification =
-                ImageDownloader().waitAndVerifyStream(uploadResult.url, okHttpClient)
+                ImageDownloader().waitAndVerifyStream(url, okHttpClient)
                     ?: return error(UploadError.COULD_NOT_DOWNLOAD_FROM_SERVER)
 
             updateState(0.8, UploadingState.Hashing)
@@ -498,7 +502,7 @@ class AndroidMediaUploader(
             return finish(
                 UploadOrchestrator.OrchestratorResult.ServerResult(
                     fileHeader,
-                    uploadResult.url,
+                    url,
                     uploadResult.magnet,
                     uploadResult.sha256,
                     originalContentType,
@@ -707,6 +711,15 @@ class AndroidMediaUploader(
             Log.w("AndroidMediaUploader", "Failed to delete temp file", e)
         }
     }
+
+    override fun mimeType(uri: MediaUri): String? = appContext.contentResolver.getType(uri)
+
+    override suspend fun stripMetadata(
+        uri: MediaUri,
+        mimeType: String?,
+    ): MediaUri = withContext(Dispatchers.IO) { MetadataStripper.strip(uri, mimeType, appContext).uri }
+
+    override suspend fun readBytes(uri: MediaUri): ByteArray? = withContext(Dispatchers.IO) { appContext.contentResolver.openInputStream(uri)?.use { it.readBytes() } }
 }
 
 /** Lifetime of a Buzz workspace upload token; Buzz rejects one that outlives 60s from signing. */

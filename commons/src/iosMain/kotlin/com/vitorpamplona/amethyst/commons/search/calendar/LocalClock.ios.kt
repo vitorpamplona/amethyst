@@ -84,6 +84,8 @@ actual object LocalClock {
         return if (sundayBased in 0..6) sundayBased else 1
     }
 
+    actual fun zoneId(): String = NSTimeZone.localTimeZone.name
+
     actual fun monthLabel(date: SearchDate): String = labelLock.withLock { monthFormatter.stringFromDate(dateAt(startOfDay(date.firstOfMonth()))) }
 
     actual fun dayLabel(date: SearchDate): String = labelLock.withLock { dayFormatter.stringFromDate(dateAt(startOfDay(date))) }

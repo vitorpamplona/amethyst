@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst.desktop.ui.notifications
 
+import com.vitorpamplona.amethyst.commons.model.cache.ICacheEventStream
 import com.vitorpamplona.amethyst.commons.moderation.notifications.NotifKind
 import com.vitorpamplona.amethyst.commons.moderation.notifications.NotificationDispatcher
 import com.vitorpamplona.amethyst.commons.moderation.notifications.NotificationKinds
@@ -28,7 +29,17 @@ import com.vitorpamplona.amethyst.commons.moderation.notifications.NotificationS
 import com.vitorpamplona.amethyst.commons.moderation.notifications.PermissionState
 import com.vitorpamplona.amethyst.commons.moderation.notifications.nowEpochSeconds
 import com.vitorpamplona.amethyst.commons.moderation.notifications.sanitizeForToast
-import com.vitorpamplona.amethyst.desktop.cache.DesktopLocalCache
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.desktop_notification_dm
+import com.vitorpamplona.amethyst.commons.resources.desktop_notification_follow
+import com.vitorpamplona.amethyst.commons.resources.desktop_notification_mention
+import com.vitorpamplona.amethyst.commons.resources.desktop_notification_reaction
+import com.vitorpamplona.amethyst.commons.resources.desktop_notification_reply
+import com.vitorpamplona.amethyst.commons.resources.desktop_notification_repost
+import com.vitorpamplona.amethyst.commons.resources.desktop_notification_someone
+import com.vitorpamplona.amethyst.commons.resources.desktop_notification_zap
+import com.vitorpamplona.amethyst.commons.resources.desktop_notification_zap_amount
+import com.vitorpamplona.amethyst.commons.ui.loadStringRes
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip04Dm.messages.EncryptedDmEvent
 import com.vitorpamplona.quartz.nip10Notes.TextNoteEvent
@@ -43,11 +54,12 @@ import com.vitorpamplona.quartz.nip57Zaps.ZapReceiptEvent
 import com.vitorpamplona.quartz.nip59Giftwrap.wraps.GiftWrapEvent
 import com.vitorpamplona.quartz.nip61Nutzaps.nutzap.NutzapEvent
 import com.vitorpamplona.quartz.nipBCOnchainZaps.zap.OnchainZapEvent
+import com.vitorpamplona.quartz.utils.Log
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
-import java.util.logging.Logger
 
 /**
  * Subscribes to [DesktopLocalCache]'s new-event stream and fires OS toasts
@@ -59,22 +71,28 @@ import java.util.logging.Logger
  * Runs one collector for the app's lifetime, scoped to [scope]. Cancel
  * the scope to stop.
  */
+private const val TAG = "AutoDispatch"
+
 class DesktopNotificationAutoDispatcher(
     private val dispatcher: NotificationDispatcher,
     private val settings: NotificationSettings,
     private val myPubKeyHex: String,
-    private val localCache: DesktopLocalCache,
+    /** New events, from whichever cache the window runs on. */
+    private val eventStream: ICacheEventStream,
+    /** The author of a cached event, to tell a reply to the user's note from one to someone else's. */
+    private val authorOf: (eventId: String) -> String?,
+    /** The name to show for a pubkey, when its profile is cached. */
+    private val displayNameOf: (pubKey: String) -> String?,
     private val isWindowFocused: StateFlow<Boolean>,
     private val sessionStartSec: Long,
     private val scope: CoroutineScope,
 ) {
-    private val log = Logger.getLogger(DesktopNotificationAutoDispatcher::class.java.simpleName)
     private val recentFires = HashMap<String, Long>()
 
     fun start(): Job =
         scope.launch {
-            log.info("Auto-dispatcher started (pubKey=${myPubKeyHex.take(8)}, sessionStart=$sessionStartSec)")
-            localCache.eventStream.newEventBundles.collect { bundle ->
+            Log.d(TAG) { "Auto-dispatcher started (pubKey=${myPubKeyHex.take(8)}, sessionStart=$sessionStartSec)" }
+            eventStream.newEventBundles.collect { bundle ->
                 for (note in bundle) {
                     val event = note.event ?: continue
                     tryDispatch(event)
@@ -82,12 +100,13 @@ class DesktopNotificationAutoDispatcher(
             }
         }
 
-    private fun logSkip(
+    // Runs for every event that reaches the cache, so nothing is built unless debug logging is on.
+    private inline fun logSkip(
         eventId: String,
         kindLabel: String,
-        reason: String,
+        reason: () -> String,
     ) {
-        log.info("[AutoDispatch] SKIP kind=$kindLabel id=${eventId.take(8)} reason=$reason")
+        Log.d(TAG) { "SKIP kind=$kindLabel id=${eventId.take(8)} reason=${reason()}" }
     }
 
     private fun tryDispatch(event: Event) {
@@ -100,41 +119,41 @@ class DesktopNotificationAutoDispatcher(
 
         val kind = notifKindFor(event)
         if (kind == null) {
-            logSkip(eid, "kind=${event.kind}", "unmapped-kind")
+            logSkip(eid, "kind=${event.kind}") { "unmapped-kind" }
             return
         }
 
         if (!settings.enabled.value) {
-            logSkip(eid, kind.name, "master-off")
+            logSkip(eid, kind.name) { "master-off" }
             return
         }
         if (!settings.kinds.value.enabledFor(kind)) {
-            logSkip(eid, kind.name, "kind-toggle-off")
+            logSkip(eid, kind.name) { "kind-toggle-off" }
             return
         }
 
         val now = nowEpochSeconds()
         if (settings.dnd.value.isActive(now)) {
-            logSkip(eid, kind.name, "dnd-active")
+            logSkip(eid, kind.name) { "dnd-active" }
             return
         }
         if (isWindowFocused.value) {
-            logSkip(eid, kind.name, "window-focused")
+            logSkip(eid, kind.name) { "window-focused" }
             return
         }
 
         if (event.createdAt < sessionStartSec) {
-            logSkip(eid, kind.name, "pre-session (created=${event.createdAt} < start=$sessionStartSec)")
+            logSkip(eid, kind.name) { "pre-session (created=${event.createdAt} < start=$sessionStartSec)" }
             return
         }
         if ((now - event.createdAt) > 30) {
-            logSkip(eid, kind.name, "stale (${now - event.createdAt}s old)")
+            logSkip(eid, kind.name) { "stale (${now - event.createdAt}s old)" }
             return
         }
 
         val perm = dispatcher.permission.value
         if (perm != PermissionState.Granted && perm != PermissionState.NotApplicable) {
-            logSkip(eid, kind.name, "permission=$perm")
+            logSkip(eid, kind.name) { "permission=$perm" }
             return
         }
 
@@ -142,34 +161,31 @@ class DesktopNotificationAutoDispatcher(
             NotificationKinds.tagsAnEventForUser(
                 event = event,
                 myPubKeyHex = myPubKeyHex,
-                isTargetAuthoredByMe = { targetId ->
-                    localCache.notes
-                        .get(targetId)
-                        ?.event
-                        ?.pubKey == myPubKeyHex
-                },
+                isTargetAuthoredByMe = { targetId -> authorOf(targetId) == myPubKeyHex },
             )
         if (!accepts) {
-            logSkip(eid, kind.name, "not-tagged-for-user (author=${event.pubKey.take(8)})")
+            logSkip(eid, kind.name) { "not-tagged-for-user (author=${event.pubKey.take(8)})" }
             return
         }
 
         val dedupeKey = kind.name + "|" + event.id
         val last = recentFires[dedupeKey]
         if (last != null && (now - last) < 30) {
-            logSkip(eid, kind.name, "deduped (${now - last}s ago)")
+            logSkip(eid, kind.name) { "deduped (${now - last}s ago)" }
             return
         }
         recentFires[dedupeKey] = now
         recentFires.entries.removeAll { now - it.value > 300 }
 
-        val spec = buildSpec(event, kind)
         scope.launch {
             try {
+                val spec = buildSpec(event, kind)
                 val result = dispatcher.send(spec)
-                log.info("[AutoDispatch] FIRED kind=$kind id=${eid.take(8)} result=$result title='${spec.title}'")
+                Log.d(TAG) { "FIRED kind=$kind id=${eid.take(8)} result=$result" }
+            } catch (e: CancellationException) {
+                throw e
             } catch (t: Throwable) {
-                log.warning("[AutoDispatch] FAILED kind=$kind id=${eid.take(8)} error=${t.message}")
+                Log.w(TAG, "FAILED kind=$kind id=${eid.take(8)}", t)
             }
         }
     }
@@ -190,7 +206,7 @@ class DesktopNotificationAutoDispatcher(
             else -> null
         }
 
-    private fun buildSpec(
+    private suspend fun buildSpec(
         event: Event,
         kind: NotifKind,
     ): NotificationSpec {
@@ -199,22 +215,25 @@ class DesktopNotificationAutoDispatcher(
                 is ZapReceiptEvent -> event.zapRequest?.pubKey ?: event.pubKey
                 else -> event.pubKey
             }
-        val displayName =
-            localCache.getUserIfExists(effectivePubKey)?.toBestDisplayName()
-                ?: "Someone"
-
-        val amountText =
-            (event as? ZapReceiptEvent)?.amount?.let { " ${it.toLong() / 1000} sats" } ?: ""
+        val displayName = displayNameOf(effectivePubKey) ?: loadStringRes(Res.string.desktop_notification_someone)
 
         val title =
             when (kind) {
-                NotifKind.ZAP -> "⚡ $displayName zapped you$amountText"
-                NotifKind.DM -> "New encrypted message"
-                NotifKind.REPLY -> "$displayName replied"
-                NotifKind.MENTION -> "$displayName mentioned you"
-                NotifKind.REPOST -> "$displayName reposted"
-                NotifKind.REACTION -> "$displayName reacted"
-                NotifKind.FOLLOW -> "$displayName followed you"
+                NotifKind.ZAP -> {
+                    val sats = (event as? ZapReceiptEvent)?.amount?.let { (it.toLong() / 1000).toString() }
+                    if (sats != null) {
+                        loadStringRes(Res.string.desktop_notification_zap_amount, displayName, sats)
+                    } else {
+                        loadStringRes(Res.string.desktop_notification_zap, displayName)
+                    }
+                }
+
+                NotifKind.DM -> loadStringRes(Res.string.desktop_notification_dm)
+                NotifKind.REPLY -> loadStringRes(Res.string.desktop_notification_reply, displayName)
+                NotifKind.MENTION -> loadStringRes(Res.string.desktop_notification_mention, displayName)
+                NotifKind.REPOST -> loadStringRes(Res.string.desktop_notification_repost, displayName)
+                NotifKind.REACTION -> loadStringRes(Res.string.desktop_notification_reaction, displayName)
+                NotifKind.FOLLOW -> loadStringRes(Res.string.desktop_notification_follow, displayName)
             }
 
         // Never leak DM ciphertext into the body — decryption pipeline

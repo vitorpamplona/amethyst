@@ -46,6 +46,10 @@ data class AccountSecrets(
     val defaultPaymentSourceId: String? = null,
     val legacyDefaultNwcWalletId: String? = null,
     val legacyZapPaymentRequestServer: String? = null,
+    /** NIP-46 login: the `bunker://` address of the signer this account signs through. */
+    val remoteSignerBunkerUri: String? = null,
+    /** NIP-46 login: this client's transport private key (hex) for that signer. */
+    val remoteSignerTransportKey: String? = null,
 )
 
 /**
@@ -65,6 +69,8 @@ internal object AccountSecretKeys {
     val defaultPaymentSourceId = stringPreferencesKey("defaultPaymentSourceId")
     val legacyDefaultNwcWalletId = stringPreferencesKey("defaultNwcWalletId")
     val legacyZapPaymentRequestServer = stringPreferencesKey("zapPaymentServer")
+    val remoteSignerBunkerUri = stringPreferencesKey("remoteSignerBunkerUri")
+    val remoteSignerTransportKey = stringPreferencesKey("remoteSignerTransportKey")
 
     /** Records that the one-off copy out of the legacy file has run for this account. */
     val migrated = stringPreferencesKey("migrated.accountSecrets")

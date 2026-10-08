@@ -23,6 +23,8 @@ package com.vitorpamplona.amethyst.desktop.platform
 import androidx.compose.ui.graphics.Color
 import com.vitorpamplona.amethyst.commons.ui.theme.Primary80
 import com.vitorpamplona.quartz.utils.Log
+import java.io.File
+import java.util.concurrent.TimeUnit
 
 /**
  * Resolves the user's preferred OS accent color. Falls back to Amethyst's purple
@@ -130,7 +132,7 @@ object PlatformAccent {
                 "$home/.kde/share/config/kdeglobals",
             )
         for (path in candidates) {
-            val file = java.io.File(path)
+            val file = File(path)
             if (!file.exists()) continue
             try {
                 val text = file.readText()
@@ -165,25 +167,28 @@ object PlatformAccent {
         return Color(r, g, b)
     }
 
+    /**
+     * The trimmed output of [cmd], or null if it fails, exits non-zero or takes over 2 s. It waits
+     * first and reads after: reading first would block until the child closes its output, which a
+     * child that leaves a daemon holding it (gsettings starting dconf) never does, so the timeout
+     * would never apply. The answers are a line or two, well within the pipe's buffer.
+     */
     private fun exec(vararg cmd: String): String? =
         try {
             val proc =
                 ProcessBuilder(*cmd)
                     .redirectErrorStream(true)
                     .start()
-            val out =
-                proc.inputStream
-                    .bufferedReader()
-                    .readText()
-                    .trim()
-            val finished = proc.waitFor(2, java.util.concurrent.TimeUnit.SECONDS)
-            if (!finished) {
+            if (!proc.waitFor(2, TimeUnit.SECONDS)) {
                 proc.destroyForcibly()
                 null
             } else if (proc.exitValue() != 0) {
                 null
             } else {
-                out
+                proc.inputStream
+                    .bufferedReader()
+                    .readText()
+                    .trim()
             }
         } catch (e: Exception) {
             Log.d("PlatformAccent") { "Failed to exec ${cmd.joinToString(" ")}: ${e.message}" }

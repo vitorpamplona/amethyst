@@ -21,6 +21,7 @@
 package com.vitorpamplona.amethyst.desktop.ui.media
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.focusable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
@@ -77,6 +78,8 @@ fun GlobalFullscreenOverlay() {
                 .fillMaxSize()
                 .background(Color.Black)
                 .focusRequester(focusRequester)
+                // A focus target, or requestFocus() above finds none and the keys never arrive.
+                .focusable()
                 .onKeyEvent { event ->
                     if (event.type != KeyEventType.KeyDown) return@onKeyEvent false
                     when (event.key) {
@@ -125,6 +128,9 @@ fun GlobalFullscreenOverlay() {
             viewMode = ViewMode.FULLSCREEN,
             onPlayPause = { GlobalMediaPlayer.toggleVideoPlayPause() },
             onSeek = { GlobalMediaPlayer.seekVideo(it) },
+            onSkip = { GlobalMediaPlayer.skipVideo(it) },
+            speed = videoState.speed,
+            onSpeedChange = { GlobalMediaPlayer.setVideoSpeed(it) },
             onVolumeChange = { GlobalMediaPlayer.setVideoVolume(it) },
             onMuteToggle = { GlobalMediaPlayer.toggleVideoMute() },
             onViewModeChange = { mode ->

@@ -160,7 +160,7 @@ fun BottomBarSettingsContent(accountViewModel: AccountViewModel) {
     //
     // Deliberately unkeyed. The holder captures this `accountViewModel` in its persist lambda, so a
     // holder that outlived an account switch would write account A's edits to account B. It cannot:
-    // SetAccountCentricViewModelStore wraps the whole logged-in tree in `key(account.signer.pubKey)`,
+    // AccountScopedViewModelStore wraps the whole logged-in tree in `key(account.signer.pubKey)`,
     // so a switch disposes this composable (and the NavController with it) and re-runs this remember
     // against the new account's ViewModel. Keying on accountViewModel here would be a no-op that
     // implies the subtree survives a switch — if that ever becomes true, this comment is the bug.

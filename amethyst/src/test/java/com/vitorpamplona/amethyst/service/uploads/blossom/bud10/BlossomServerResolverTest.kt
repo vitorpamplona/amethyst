@@ -21,6 +21,7 @@
 package com.vitorpamplona.amethyst.service.uploads.blossom.bud10
 
 import com.vitorpamplona.amethyst.commons.service.http.IRoleBasedHttpClientBuilder
+import com.vitorpamplona.amethyst.commons.service.upload.blossom.bud10.BlossomServerResolver
 import com.vitorpamplona.quartz.nipB7Blossom.BlossomServersEvent
 import io.mockk.mockk
 import kotlinx.coroutines.CoroutineScope

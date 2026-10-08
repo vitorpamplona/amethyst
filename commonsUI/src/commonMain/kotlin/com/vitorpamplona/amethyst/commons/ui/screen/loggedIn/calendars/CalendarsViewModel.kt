@@ -91,7 +91,7 @@ import kotlinx.coroutines.launch
  * Two lifetimes ride along for free, and both are what you'd want: the bottom bar's
  * `popUpTo(Home) { saveState = true }` saves this entry rather than clearing it, so leaving the
  * tab and coming back keeps the lens; and the ViewModel store hangs off the account-scoped owner
- * ([com.vitorpamplona.amethyst.ui.screen.SetAccountCentricViewModelStore]), so switching accounts
+ * ([com.vitorpamplona.amethyst.commons.ui.app.AccountScopedViewModelStore]), so switching accounts
  * drops it with everything else that belongs to the old account.
  *
  * Not restored after process death — the defaults below are computed from *today*, which is where

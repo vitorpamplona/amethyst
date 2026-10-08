@@ -291,4 +291,47 @@ class UploadOrchestrator(
         }
         throw firstError!!
     }
+
+    companion object {
+        /**
+         * The bytes [upload] would send, for servers this class doesn't speak to (NIP-96, NIP-95):
+         * re-encoded at [quality], or, when passed through, stripped of EXIF if [stripExif]. [block]
+         * gets that file and its metadata; every temp is deleted afterwards, even on cancellation.
+         */
+        suspend fun <T> withPreparedFile(
+            file: File,
+            stripExif: Boolean,
+            quality: CompressionQuality?,
+            block: suspend (prepared: File, metadata: MediaMetadata) -> T,
+        ): T {
+            var reencodedTemp: File? = null
+            var strippedTemp: File? = null
+            try {
+                val reencode =
+                    when {
+                        quality == null -> ReencodeResult.PassThrough(ImageReencoder.PassReason.BypassByUser)
+                        else -> ImageReencoder.reencode(file, quality)
+                    }
+                val afterReencode =
+                    when (reencode) {
+                        is ReencodeResult.Reencoded -> reencode.file.also { reencodedTemp = it }
+                        is ReencodeResult.PassThrough -> file
+                    }
+                val finalFile =
+                    if (stripExif && reencode is ReencodeResult.PassThrough) {
+                        val stripped = MediaCompressor.stripExif(afterReencode)
+                        if (stripped != afterReencode) strippedTemp = stripped
+                        stripped
+                    } else {
+                        afterReencode
+                    }
+                return block(finalFile, MediaMetadataReader.compute(finalFile))
+            } finally {
+                withContext(NonCancellable) {
+                    strippedTemp?.deleteOrWarn("UploadOrchestrator", "prepared stripped temp")
+                    reencodedTemp?.deleteOrWarn("UploadOrchestrator", "prepared reencoded temp")
+                }
+            }
+        }
+    }
 }

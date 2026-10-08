@@ -25,6 +25,12 @@ import androidx.compose.ui.platform.Clipboard
 /** Puts [text] on the system clipboard as plain text. */
 expect suspend fun Clipboard.setText(text: String)
 
+/**
+ * Copies a secret ([text] is a private key or a password): where the platform can, the clip is
+ * marked sensitive so the system's copy preview and clipboard history don't show it.
+ */
+expect suspend fun Clipboard.setSensitiveText(text: String)
+
 /** The clipboard's current plain text, or null when it holds none. */
 expect suspend fun Clipboard.getText(): String?
 
