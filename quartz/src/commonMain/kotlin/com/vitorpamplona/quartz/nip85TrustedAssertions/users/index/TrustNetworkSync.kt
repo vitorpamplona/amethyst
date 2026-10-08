@@ -158,11 +158,25 @@ suspend fun INostrClient.downloadTrustNetwork(
         }
     }
 
+    // A provider still publishing its first run (right after sign-up) leaves the relay with more
+    // cards than the walk saw: everyone not yet published would count as outside the network.
+    // Recount, and call the download incomplete when clearly more arrived than it got; the next
+    // try reads the finished batch. A few cards (a re-rank landing mid-download) are left to the
+    // next update, whose counts will differ.
+    if (complete) {
+        val after = countOrNull(relay, filter)
+        val got = builder.cardCount + invalid.load()
+        if (after != null && after - got > missingAllowed(after)) {
+            complete = false
+            detail = "the provider is still publishing: $got cards downloaded, $after on the relay now"
+        }
+    }
+
     val now = TimeUtils.now()
     val (index, ids) = builder.build()
     val cursor = cursorAfter(0, builder.newestCreatedAt, startedAt)
     return TrustNetworkSyncResult(
-        header = TrustNetworkHeader(provider, relay.url, syncCursor = cursor, lastFullCheck = now, lastUpdate = now, heldAtCursor = ids.countSince(cursor)),
+        header = TrustNetworkHeader(provider, relay.url, syncCursor = cursor, lastFullCheck = now, lastUpdate = now, heldAtCursor = ids.countSince(cursor), heldAfterCursor = ids.countSince(cursor + 1)),
         index = index,
         ids = ids,
         complete = complete,
@@ -208,7 +222,13 @@ suspend fun INostrClient.updateTrustNetwork(
     val startedAt = TimeUtils.now()
     val provider = header.provider
     val newer = header.syncCursor + 1
-    val news = knownNews ?: trustNetworkNews(header, relay, held = header.heldAtCursor ?: ids.countSince(header.syncCursor))
+    val news =
+        knownNews ?: trustNetworkNews(
+            header,
+            relay,
+            held = header.heldAtCursor ?: ids.countSince(header.syncCursor),
+            heldAfter = header.heldAfterCursor ?: ids.countSince(header.syncCursor + 1),
+        )
     if (!news.any) {
         return TrustNetworkSyncResult(header.copy(lastUpdate = startedAt), index, ids, complete = true, invalid = 0, received = 0, detail = "nothing new", unchanged = true)
     }
@@ -220,8 +240,7 @@ suspend fun INostrClient.updateTrustNetwork(
     // The counts said something changed but the ids say nothing did (a relay without NIP-45
     // always says so): no index is built, nothing is rewritten, no feed rebuilds.
     if (diff != null && diff.isEmpty && newDeletions == 0) {
-        val held = header.heldAtCursor ?: ids.countSince(header.syncCursor)
-        return TrustNetworkSyncResult(header.copy(lastUpdate = TimeUtils.now(), heldAtCursor = held), index, ids, complete = true, invalid = 0, received = 0, detail = "need 0, gone 0", unchanged = true)
+        return TrustNetworkSyncResult(header.copy(lastUpdate = TimeUtils.now()).withHeldCounts(ids), index, ids, complete = true, invalid = 0, received = 0, detail = "need 0, gone 0", unchanged = true)
     }
 
     val builder = TrustNetworkBuilder(provider, initialCapacity = index.size + ids.tombstones + (diff?.need?.size ?: 1024))
@@ -252,14 +271,13 @@ suspend fun INostrClient.updateTrustNetwork(
     // The counts said something changed, but nothing arrived or went (a relay without NIP-45
     // always says so): keep the same index, so nothing is rewritten and no feed rebuilds.
     if (complete && builder.cardCount == before && !builder.hasRemovals) {
-        val held = header.heldAtCursor ?: ids.countSince(header.syncCursor)
-        return TrustNetworkSyncResult(header.copy(lastUpdate = TimeUtils.now(), heldAtCursor = held), index, ids, complete = true, invalid = invalid.load(), received = 0, detail = detail, unchanged = true)
+        return TrustNetworkSyncResult(header.copy(lastUpdate = TimeUtils.now()).withHeldCounts(ids), index, ids, complete = true, invalid = invalid.load(), received = 0, detail = detail, unchanged = true)
     }
 
     val (newIndex, newIds) = builder.build()
     val cursor = cursorAfter(header.syncCursor, builder.newestCreatedAt, startedAt)
     return TrustNetworkSyncResult(
-        header = header.copy(syncCursor = cursor, lastUpdate = TimeUtils.now(), heldAtCursor = newIds.countSince(cursor)),
+        header = header.copy(syncCursor = cursor, lastUpdate = TimeUtils.now()).withHeldCounts(newIds),
         index = newIndex,
         ids = newIds,
         complete = complete,
@@ -289,7 +307,7 @@ suspend fun INostrClient.reconcileTrustNetwork(
     val diff = reconcileIds(relay, trustNetworkFilter(header.provider), ids.negentropyIndex()) ?: return null
     if (diff.isEmpty) {
         val now = TimeUtils.now()
-        return TrustNetworkSyncResult(header.copy(lastFullCheck = now, lastUpdate = now), index, ids, complete = true, invalid = 0, received = 0, detail = "need 0, gone 0", unchanged = true)
+        return TrustNetworkSyncResult(header.copy(lastFullCheck = now, lastUpdate = now).withHeldCounts(ids), index, ids, complete = true, invalid = 0, received = 0, detail = "need 0, gone 0", unchanged = true)
     }
 
     val builder = TrustNetworkBuilder(header.provider, initialCapacity = index.size + ids.tombstones + diff.need.size)
@@ -302,7 +320,7 @@ suspend fun INostrClient.reconcileTrustNetwork(
     val now = TimeUtils.now()
     val cursor = cursorAfter(header.syncCursor, builder.newestCreatedAt, startedAt)
     return TrustNetworkSyncResult(
-        header = header.copy(syncCursor = cursor, lastFullCheck = now, lastUpdate = now, heldAtCursor = newIds.countSince(cursor)),
+        header = header.copy(syncCursor = cursor, lastFullCheck = now, lastUpdate = now).withHeldCounts(newIds),
         index = newIndex,
         ids = newIds,
         complete = reconciled.complete,
@@ -381,11 +399,22 @@ private suspend fun INostrClient.applyDiff(
             }
         }
     }
-    builder.removeEventIds(diff.have)
     // A card whose signature failed counts as missing: the relay did not give us a valid one.
     val unobtained = missing.load() + (invalid.load() - invalidBefore)
-    if (unobtained > 0) Log.w(TAG) { "$unobtained of ${diff.need.size} cards could not be had from ${relay.url}" }
-    return Reconciled(unobtained <= missingAllowed(diff.need.size), diff.need.size, diff.have.size)
+    // The cards only we hold are mostly ones the relay replaced with a newer version, and the diff
+    // does not say which replacement goes with which. When every needed card arrived, the rest are
+    // gone for good. When some did not, dropping them would take out the people whose new card
+    // failed, so keep them all: each one that was replaced loses to its newer card in the build,
+    // and the truly gone are dropped by the next reconcile that gets everything.
+    val gone =
+        if (unobtained == 0) {
+            builder.removeEventIds(diff.have)
+            diff.have.size
+        } else {
+            Log.w(TAG) { "$unobtained of ${diff.need.size} cards could not be had from ${relay.url}; keeping the ${diff.have.size} it no longer lists until a reconcile gets them all" }
+            0
+        }
+    return Reconciled(unobtained <= missingAllowed(diff.need.size), diff.need.size, gone)
 }
 
 /**
@@ -444,11 +473,20 @@ suspend fun INostrClient.trustNetworkNews(
     header: TrustNetworkHeader,
     relay: NormalizedRelayUrl,
     held: Int? = header.heldAtCursor,
+    heldAfter: Int? = header.heldAfterCursor,
 ): TrustNetworkNews {
     val relayCards = countOrNull(relay, trustNetworkFilter(header.provider, header.syncCursor))
+    // A replacement in the cursor's batch keeps the count above equal (the relay drops the old
+    // card as it stores the new one), but the new card is always newer than the old: counting
+    // past the cursor catches it.
+    val relayNewer = countOrNull(relay, trustNetworkFilter(header.provider, header.syncCursor + 1))
     val deletions = countOrNull(relay, trustNetworkDeletionFilter(header.provider, header.syncCursor + 1))
-    return TrustNetworkNews(cards = held == null || relayCards == null || relayCards != held, deletions = deletions)
+    val cards = held == null || relayCards == null || relayCards != held || heldAfter == null || relayNewer == null || relayNewer != heldAfter
+    return TrustNetworkNews(cards = cards, deletions = deletions)
 }
+
+/** [TrustNetworkHeader.heldAtCursor] and [TrustNetworkHeader.heldAfterCursor] from [ids], the id column saved with this header. */
+private fun TrustNetworkHeader.withHeldCounts(ids: TrustNetworkIds) = copy(heldAtCursor = ids.countSince(syncCursor), heldAfterCursor = ids.countSince(syncCursor + 1))
 
 private suspend fun INostrClient.countOrNull(
     relay: NormalizedRelayUrl,

@@ -112,6 +112,9 @@ class TrustNetworkSchedulingTest {
         var downloadSize = 3
         var downloadComplete = true
 
+        /** The update finds nothing new but learns the held counts (a version 3 file lacks one). */
+        var updateLearnsCounts = false
+
         override suspend fun <T> connect(block: suspend (TrustNetworkConnection) -> T): T =
             block(
                 object : TrustNetworkConnection {
@@ -144,6 +147,9 @@ class TrustNetworkSchedulingTest {
                         progress: TrustNetworkProgress,
                     ): TrustNetworkSyncResult {
                         calls.add("update")
+                        if (updateLearnsCounts) {
+                            return TrustNetworkSyncResult(header.copy(lastUpdate = now, heldAfterCursor = 0), index, ids, complete = true, invalid = 0, received = 0, detail = "need 0, gone 0", unchanged = true)
+                        }
                         return result(provider)
                     }
 
@@ -241,6 +247,29 @@ class TrustNetworkSchedulingTest {
             val run = assertNotNull(wot.syncNow(TrustNetworkSyncStatus.Kind.UPDATE))
             assertIs<TrustNetworkOutcome.Applied>(run.outcome)
             assertEquals(listOf("news", "update"), source.calls.toList())
+        }
+
+    @Test
+    fun countsLearnedByAnUnchangedUpdateAreSaved() =
+        runBlocking {
+            // A file written before heldAfterCursor existed: the counts can't answer, so the update
+            // reconciles. It finds nothing, but now knows the count: saving it is what keeps the
+            // next process start from reconciling the whole batch again.
+            writeIndex(providerA)
+            assertNull(store.readIndex()!!.header.heldAfterCursor)
+            val source =
+                FakeSource().apply {
+                    news = TrustNetworkNews(cards = true, deletions = 0)
+                    updateLearnsCounts = true
+                }
+            val wot = state(MutableStateFlow(ResolvedProvider(providerA)), source)
+            wot.awaitReady()
+            val loaded = wot.network.value!!.index
+
+            val run = assertNotNull(wot.syncNow(TrustNetworkSyncStatus.Kind.UPDATE))
+            assertIs<TrustNetworkOutcome.Unchanged>(run.outcome)
+            assertSame(loaded, wot.network.value!!.index, "still the same index: feeds do not rebuild")
+            assertEquals(0, store.readIndex()!!.header.heldAfterCursor, "the learned count is on disk")
         }
 
     @Test

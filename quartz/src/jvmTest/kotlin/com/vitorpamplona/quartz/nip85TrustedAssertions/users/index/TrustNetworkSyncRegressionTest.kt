@@ -1,0 +1,205 @@
+/*
+ * Copyright (c) 2025 Vitor Pamplona
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy of
+ * this software and associated documentation files (the "Software"), to deal in
+ * the Software without restriction, including without limitation the rights to use,
+ * copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the
+ * Software, and to permit persons to whom the Software is furnished to do so,
+ * subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in all
+ * copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS
+ * FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR
+ * COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN
+ * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
+ * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+ */
+package com.vitorpamplona.quartz.nip85TrustedAssertions.users.index
+
+import com.vitorpamplona.geode.KtorRelay
+import com.vitorpamplona.geode.RelayEngine
+import com.vitorpamplona.quartz.nip01Core.core.Event
+import com.vitorpamplona.quartz.nip01Core.crypto.KeyPair
+import com.vitorpamplona.quartz.nip01Core.relay.client.NostrClient
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.normalizeRelayUrl
+import com.vitorpamplona.quartz.nip01Core.relay.sockets.okhttp.BasicOkHttpWebSocket
+import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerInternal
+import com.vitorpamplona.quartz.utils.Hex
+import kotlinx.coroutines.runBlocking
+import okhttp3.OkHttpClient
+import kotlin.random.Random
+import kotlin.test.Test
+import kotlin.test.assertEquals
+import kotlin.test.assertFalse
+import kotlin.test.assertNotNull
+import kotlin.test.assertNull
+import kotlin.test.assertTrue
+
+/**
+ * Ways the trust network sync used to end up with the wrong people in or out of the network,
+ * each against a real (local, geode) relay. The provider signs a whole run with one
+ * `created_at`, like Brainstorm.
+ */
+class TrustNetworkSyncRegressionTest {
+    private val provider = NostrSignerInternal(KeyPair())
+    private val random = Random(5)
+    private val batchTime = 1_700_000_000L
+
+    private fun hex() = Hex.encode(random.nextBytes(32))
+
+    private suspend fun card(
+        subject: String,
+        rank: Int,
+        at: Long,
+    ): Event = provider.sign(at, 30382, arrayOf(arrayOf("d", subject), arrayOf("rank", rank.toString())), "")
+
+    private fun badSignature(event: Event) = Event(event.id, event.pubKey, event.createdAt, event.kind, event.tags, event.content, "00".repeat(64))
+
+    private suspend fun <T> withRelay(
+        events: List<Event>,
+        block: suspend (RelayEngine, NostrClient, NormalizedRelayUrl) -> T,
+    ): T {
+        val engine = RelayEngine(url = "ws://127.0.0.1:7790/".normalizeRelayUrl())
+        engine.store.batchInsert(events)
+        val server = KtorRelay(engine, port = 0).start()
+        val client = NostrClient(BasicOkHttpWebSocket.Builder { OkHttpClient() })
+        try {
+            return block(engine, client, server.url.normalizeRelayUrl())
+        } finally {
+            client.close()
+            server.stop(gracePeriodMillis = 200, timeoutMillis = 1_000)
+            engine.close()
+        }
+    }
+
+    @Test
+    fun aReplacementInTheLatestBatchIsSeenByTheUpdate() =
+        runBlocking {
+            val subjects = List(300) { hex() }
+            val batch = subjects.map { card(it, 50, batchTime) }
+            val cold = withRelay(batch) { _, client, relay -> client.downloadTrustNetwork(provider.pubKey, relay) }
+            assertTrue(cold.complete)
+
+            // The relay keeps one card per subject: the newer card replaces the old one, so the
+            // count of cards at or after the cursor does not move. One person is removed (the
+            // provider's rank-0 marker), another is re-ranked.
+            val later = batchTime + 600
+            val relayNow = batch.drop(2) + card(subjects[0], 0, later) + card(subjects[1], 80, later)
+            withRelay(relayNow) { _, client, relay ->
+                val updated = client.updateTrustNetwork(cold.header, cold.index, cold.ids, relay)
+                assertFalse(updated.unchanged, "the update must see the replacements: ${updated.detail}")
+                assertTrue(updated.complete)
+                assertNull(updated.index.rankOf(subjects[0]), "the removed person is out")
+                assertEquals(80, updated.index.rankOf(subjects[1]))
+                assertEquals(299, updated.index.size)
+
+                // And the counts are exact again afterwards: nothing new.
+                val idle = client.updateTrustNetwork(updated.header, updated.index, updated.ids, relay)
+                assertTrue(idle.unchanged, idle.detail)
+            }
+        }
+
+    @Test
+    fun aReplacementThatCannotBeHadKeepsThePersonIn() =
+        runBlocking {
+            val subjects = List(300) { hex() }
+            val v1 = subjects.map { card(it, 50, batchTime) }
+            val cold = withRelay(v1) { _, client, relay -> client.downloadTrustNetwork(provider.pubKey, relay) }
+
+            // A recompute re-signs everyone; the relay serves one of the new cards with a bad signature.
+            val v2 = subjects.map { card(it, 60, batchTime + 60) }
+            val full =
+                withRelay(listOf(badSignature(v2[0])) + v2.drop(1)) { _, client, relay ->
+                    assertNotNull(client.reconcileTrustNetwork(cold.header, cold.index, cold.ids, relay))
+                }
+            assertEquals(1, full.invalid)
+            assertEquals(50, full.index.rankOf(subjects[0]), "keeps the card it had until a valid one arrives")
+            assertEquals(60, full.index.rankOf(subjects[1]))
+            assertEquals(300, full.index.size, "nobody drops out: ${full.detail}")
+
+            // Once the relay serves a valid card, the next reconcile takes it and drops the old one.
+            val fixed =
+                withRelay(v2) { _, client, relay ->
+                    assertNotNull(client.reconcileTrustNetwork(full.header, full.index, full.ids, relay))
+                }
+            assertTrue(fixed.complete)
+            assertEquals(60, fixed.index.rankOf(subjects[0]))
+            assertEquals(300, fixed.index.size)
+            assertEquals(0, fixed.ids.tombstones, "the old cards are dropped, not buried")
+        }
+
+    @Test
+    fun aDownloadWhileTheProviderIsStillPublishingIsNotTheNetwork() =
+        runBlocking {
+            // Distinct seconds, so the walk pages normally from the newest card backwards.
+            val first = List(3_000) { i -> card(hex(), 50, batchTime + i) }
+            // The rest of the run lands after the walk has passed the newest second.
+            val rest = List(2_000) { card(hex(), 50, batchTime + 10_000) }
+            var published = false
+            val result =
+                withRelay(first) { engine, client, relay ->
+                    client.downloadTrustNetwork(provider.pubKey, relay) { verified, _ ->
+                        if (verified >= 1_000 && !published) {
+                            published = true
+                            runBlocking { engine.store.batchInsert(rest) }
+                        }
+                    }
+                }
+            assertTrue(published, "the test must publish during the walk")
+            assertFalse(result.complete, "a third of the network is missing: ${result.detail}")
+            assertTrue(result.detail!!.contains("still publishing"), result.detail)
+        }
+
+    @Test
+    fun aDownloadOfAFinishedRunIsComplete() =
+        runBlocking {
+            val cards = List(3_000) { i -> card(hex(), 50, batchTime + i) }
+            val result = withRelay(cards) { _, client, relay -> client.downloadTrustNetwork(provider.pubKey, relay) }
+            assertTrue(result.complete, result.detail)
+            assertEquals(3_000, result.index.size)
+        }
+
+    @Test
+    fun aCardReceivedAgainIsOneCard() =
+        runBlocking {
+            val subject = hex()
+            val first = TrustNetworkBuilder(provider.pubKey)
+            val c = card(subject, 50, batchTime)
+            first.add(c)
+            val (index, ids) = first.build()
+
+            // An update re-fetching a card the index already holds (a relay without NIP-77 pages
+            // past the cursor again), even more than once.
+            val again = TrustNetworkBuilder(provider.pubKey)
+            again.addAll(index, ids)
+            again.add(c)
+            again.add(c)
+            val (index2, ids2) = again.build()
+            assertEquals(1, index2.size)
+            assertEquals(50, index2.rankOf(subject))
+            assertEquals(0, ids2.tombstones, "a copy of the card is not an older version of it")
+            assertEquals(1, ids2.countSince(batchTime))
+        }
+
+    @Test
+    fun anIndexFromTheVersionBeforeStillReads() {
+        val header = TrustNetworkHeader(provider.pubKey, "wss://scores.example.com", syncCursor = batchTime, lastFullCheck = 1, lastUpdate = 2, heldAtCursor = 300, heldAfterCursor = 0, generation = 7)
+        val builder = TrustNetworkBuilder(provider.pubKey)
+        val current = TrustNetworkCodec.encodeIndex(header, builder.build().first)
+        assertEquals(header, TrustNetworkCodec.decodeHeader(current))
+
+        // Version 3: the same bytes without heldAfterCursor (the i32 after heldAtCursor).
+        val relayLength = header.relay.encodeToByteArray().size
+        val heldAfterAt = 4 + 2 + 32 + 2 + relayLength + 8 * 3 + 4
+        val v3 = current.copyOfRange(0, heldAfterAt) + current.copyOfRange(heldAfterAt + 4, current.size)
+        v3[4] = 0
+        v3[5] = 3
+        val decoded = assertNotNull(TrustNetworkCodec.decodeIndex(v3), "a version 3 file is still read")
+        assertEquals(header.copy(heldAfterCursor = null), decoded.first, "unknown, so the next update reconciles once")
+    }
+}
