@@ -22,12 +22,18 @@ package com.vitorpamplona.amethyst.commons.account
 
 import androidx.compose.runtime.Stable
 import com.vitorpamplona.amethyst.commons.defaults.DefaultNIP65RelaySet
+import com.vitorpamplona.amethyst.commons.domain.nip46.BunkerLoginUseCase
+import com.vitorpamplona.amethyst.commons.domain.nip46.NostrConnectLoginUseCase
+import com.vitorpamplona.amethyst.commons.domain.nip46.stripBunkerSecret
 import com.vitorpamplona.amethyst.commons.model.Account
 import com.vitorpamplona.amethyst.commons.model.AccountSettings
 import com.vitorpamplona.amethyst.commons.model.navigation.Route
+import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.hexToByteArray
+import com.vitorpamplona.quartz.nip01Core.core.toHexKey
 import com.vitorpamplona.quartz.nip01Core.crypto.KeyPair
 import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
+import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerInternal
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerSync
 import com.vitorpamplona.quartz.nip05DnsIdentifiers.Nip05Client
 import com.vitorpamplona.quartz.nip05DnsIdentifiers.resolveUserHexOrNull
@@ -45,6 +51,7 @@ import com.vitorpamplona.quartz.nip19Bech32.entities.NPub
 import com.vitorpamplona.quartz.nip19Bech32.entities.NRelay
 import com.vitorpamplona.quartz.nip19Bech32.entities.NSec
 import com.vitorpamplona.quartz.nip19Bech32.toNpub
+import com.vitorpamplona.quartz.nip46RemoteSigner.BunkerClientMetadata
 import com.vitorpamplona.quartz.nip49PrivKeyEnc.Nip49
 import com.vitorpamplona.quartz.utils.Hex
 import com.vitorpamplona.quartz.utils.Log
@@ -58,8 +65,11 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.withTimeout
 
 val EMAIL_PATTERN = Regex(".+@.+\\.[a-z]+")
+
+private const val BUNKER_URI_PREFIX = "bunker://"
 
 sealed class AccountState {
     object Loading : AccountState()
@@ -81,6 +91,8 @@ class AccountSessionManager(
     val localPreferences: AccountSessionStore,
     val scope: CoroutineScope,
     val hooks: AccountSessionHooks = object : AccountSessionHooks {},
+    /** Who this app says it is to a NIP-46 remote signer it logs in with. */
+    val remoteSignerMetadata: BunkerClientMetadata? = null,
 ) {
     private val _accountContent = MutableStateFlow<AccountState>(AccountState.Loading)
     val accountContent = _accountContent.asStateFlow()
@@ -114,6 +126,10 @@ class AccountSessionManager(
         loginWithExternalSigner: Boolean = false,
         packageName: String = "",
     ) = withContext(Dispatchers.IO) {
+        if (key.startsWith(BUNKER_URI_PREFIX)) {
+            return@withContext startUI(localPreferences.setDefaultAccount(remoteSignerLogin(key, transientAccount)))
+        }
+
         val parsed = Nip19Parser.uriToRoute(key)?.entity
         val pubKeyParsed =
             when (parsed) {
@@ -180,6 +196,57 @@ class AccountSessionManager(
 
         startUI(current)
     }
+
+    /**
+     * Connects to the NIP-46 signer at [bunkerUri] with a fresh transport key and returns the settings
+     * of the account it signs for. The account cache opens its own signer from those settings, so
+     * the one used to connect is closed here.
+     */
+    private suspend fun remoteSignerLogin(
+        bunkerUri: String,
+        transientAccount: Boolean,
+    ): AccountSettings {
+        val transport = KeyPair()
+        val result = BunkerLoginUseCase.execute(bunkerUri, NostrSignerInternal(transport), clientBuilder(), remoteSignerMetadata)
+        result.signer.closeSubscription()
+        return remoteSignerSettings(result.pubKeyHex, stripBunkerSecret(bunkerUri), transport, transientAccount)
+    }
+
+    /**
+     * Logs in through a NIP-46 signer that scans a `nostrconnect://` address: [onUri] receives the
+     * address to show, and this returns once the signer answered (or throws when it never does).
+     */
+    suspend fun loginWithNostrConnect(
+        relays: List<String>,
+        appName: String,
+        transientAccount: Boolean,
+        onUri: (String) -> Unit,
+    ) = withContext(Dispatchers.IO) {
+        val transport = KeyPair()
+        val uriData = NostrConnectLoginUseCase.generateUri(transport, relays, appName)
+        onUri(uriData.uri)
+
+        val result =
+            withTimeout(NostrConnectLoginUseCase.NOSTRCONNECT_TIMEOUT_MS) {
+                NostrConnectLoginUseCase.awaitAndLogin(uriData, clientBuilder())
+            }
+        result.signer.closeSubscription()
+
+        val bunkerUri = BUNKER_URI_PREFIX + result.signer.remotePubkey + "?" + uriData.relays.joinToString("&") { "relay=${it.url}" }
+        startUI(localPreferences.setDefaultAccount(remoteSignerSettings(result.pubKeyHex, bunkerUri, transport, transientAccount)))
+    }
+
+    private fun remoteSignerSettings(
+        userPubKeyHex: HexKey,
+        bunkerUri: String,
+        transport: KeyPair,
+        transientAccount: Boolean,
+    ) = AccountSettings(
+        keyPair = KeyPair(pubKey = userPubKeyHex.hexToByteArray()),
+        transientAccount = transientAccount,
+        remoteSignerBunkerUri = bunkerUri,
+        remoteSignerTransportKey = transport.privKey!!.toHexKey(),
+    )
 
     fun startUI(
         accountSettings: AccountSettings,

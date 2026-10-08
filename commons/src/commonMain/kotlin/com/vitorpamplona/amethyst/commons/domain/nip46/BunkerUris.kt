@@ -18,22 +18,19 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.commons.account
+package com.vitorpamplona.amethyst.commons.domain.nip46
 
-import androidx.compose.runtime.Immutable
-import kotlinx.serialization.Serializable
-
-/** One saved login: what the account switcher lists and what a switch hands back to the store. */
-@Immutable
-@Serializable
-data class AccountInfo(
-    val npub: String,
-    val hasPrivKey: Boolean = false,
-    val loggedInWithExternalSigner: Boolean = false,
-    val isTransient: Boolean = false,
-    /** Signs through a NIP-46 remote signer (a `bunker://` login). */
-    val loggedInWithRemoteSigner: Boolean = false,
-) {
-    /** Whether this login can sign: a key on this device, a signer app, or a remote signer. */
-    fun canSign() = hasPrivKey || loggedInWithExternalSigner || loggedInWithRemoteSigner
+/**
+ * [uri] without its `secret=` parameter. The pairing secret is single-use: keeping it would let
+ * anyone who reads the saved address replay the pairing.
+ */
+fun stripBunkerSecret(uri: String): String {
+    val idx = uri.indexOf('?')
+    if (idx < 0) return uri
+    val params =
+        uri
+            .substring(idx + 1)
+            .split("&")
+            .filter { !it.startsWith("secret=", ignoreCase = true) }
+    return if (params.isEmpty()) uri.substring(0, idx) else uri.substring(0, idx) + "?" + params.joinToString("&")
 }

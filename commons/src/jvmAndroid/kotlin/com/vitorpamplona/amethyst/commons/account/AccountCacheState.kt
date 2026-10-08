@@ -48,11 +48,15 @@ import com.vitorpamplona.amethyst.commons.service.http.EncryptionKeyCache
 import com.vitorpamplona.amethyst.commons.service.pow.PoWPublishQueue
 import com.vitorpamplona.quartz.marmot.appComponents.agentTextStream.transport.MarmotQuicTransport
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
+import com.vitorpamplona.quartz.nip01Core.core.hexToByteArray
 import com.vitorpamplona.quartz.nip01Core.core.toHexKey
+import com.vitorpamplona.quartz.nip01Core.crypto.KeyPair
 import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerInternal
 import com.vitorpamplona.quartz.nip03Timestamp.OtsResolver
+import com.vitorpamplona.quartz.nip46RemoteSigner.BunkerClientMetadata
+import com.vitorpamplona.quartz.nip46RemoteSigner.signer.NostrSignerRemote
 import com.vitorpamplona.quartz.nip60Cashu.mintApi.OkHttpMintTransport
 import com.vitorpamplona.quartz.nip89AppHandlers.clientTag.NostrSignerWithClientTag
 import com.vitorpamplona.quartz.utils.Log
@@ -69,6 +73,7 @@ import kotlinx.coroutines.flow.update
 import okhttp3.OkHttpClient
 import okio.Path.Companion.toOkioPath
 import java.io.File
+import java.util.concurrent.ConcurrentHashMap
 
 class AccountCacheState(
     val geolocationFlow: () -> StateFlow<LocationResult>,
@@ -117,6 +122,8 @@ class AccountCacheState(
      * takes none; no-op by default so tests and non-Android hosts build an Account without it.
      */
     val startBuzzPersistence: (Account) -> Unit = { },
+    /** Who this app says it is when it asks a NIP-46 remote signer to sign (NIP-46 client metadata). */
+    val remoteSignerMetadata: BunkerClientMetadata? = null,
 ) : AccountCache {
     val accounts = MutableStateFlow<Map<HexKey, Account>>(emptyMap())
 
@@ -150,6 +157,8 @@ class AccountCacheState(
             // Unregisters the tracker's persistent listener from the shared
             // client; without this every removed account leaks a listener.
             oldValue?.chatDeliveryTracker?.destroy()
+            // A remote signer listens on its relays until it is closed.
+            remoteSigners.remove(pubkey)?.closeSubscription()
             existingAccounts.minus(pubkey)
         }
     }
@@ -162,7 +171,7 @@ class AccountCacheState(
      */
     suspend fun loadAllWritableAccounts(localPreferences: AccountSessionStore) {
         localPreferences.allSavedAccounts().forEach { savedAccount ->
-            if (!savedAccount.hasPrivKey && !savedAccount.loggedInWithExternalSigner) return@forEach
+            if (!savedAccount.canSign()) return@forEach
             try {
                 val accountSettings = localPreferences.loadAccountConfigFromEncryptedStorage(savedAccount.npub) ?: return@forEach
                 loadAccount(accountSettings)
@@ -223,11 +232,33 @@ class AccountCacheState(
         }
     }
 
-    override fun loadAccount(accountSettings: AccountSettings): Account =
-        loadAccount(
+    /** The NIP-46 signers of the loaded remote-signer accounts, closed when their account is removed. */
+    private val remoteSigners = ConcurrentHashMap<HexKey, NostrSignerRemote>()
+
+    private fun remoteSignerFor(settings: AccountSettings): NostrSignerRemote {
+        val pubKey = settings.keyPair.pubKey.toHexKey()
+        return remoteSigners.getOrPut(pubKey) {
+            val transport = NostrSignerInternal(KeyPair(privKey = settings.remoteSignerTransportKey!!.hexToByteArray()))
+            NostrSignerRemote
+                .fromBunkerUri(settings.remoteSignerBunkerUri!!, transport, client, clientMetadata = remoteSignerMetadata)
+                .also {
+                    // The user's key, not the transport key: self-encryption (private lists, drafts)
+                    // keys off signer.pubKey.
+                    it.bindUserPubkey(pubKey)
+                    it.openSubscription()
+                }
+        }
+    }
+
+    override fun loadAccount(accountSettings: AccountSettings): Account {
+        // Checked before a signer is built: a remote signer opens a relay subscription.
+        accounts.value[accountSettings.keyPair.pubKey.toHexKey()]?.let { return it }
+        return loadAccount(
             signer =
                 if (accountSettings.keyPair.privKey != null) {
                     NostrSignerInternal(accountSettings.keyPair)
+                } else if (accountSettings.usesRemoteSigner()) {
+                    remoteSignerFor(accountSettings)
                 } else {
                     when (val packageName = accountSettings.externalSignerPackageName) {
                         null -> {
@@ -242,6 +273,7 @@ class AccountCacheState(
                 },
             accountSettings = accountSettings,
         )
+    }
 
     fun loadAccount(
         signer: NostrSigner,

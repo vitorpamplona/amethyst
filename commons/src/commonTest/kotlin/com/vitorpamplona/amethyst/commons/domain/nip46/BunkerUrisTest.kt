@@ -18,22 +18,22 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.commons.account
+package com.vitorpamplona.amethyst.commons.domain.nip46
 
-import androidx.compose.runtime.Immutable
-import kotlinx.serialization.Serializable
+import kotlin.test.Test
+import kotlin.test.assertEquals
 
-/** One saved login: what the account switcher lists and what a switch hands back to the store. */
-@Immutable
-@Serializable
-data class AccountInfo(
-    val npub: String,
-    val hasPrivKey: Boolean = false,
-    val loggedInWithExternalSigner: Boolean = false,
-    val isTransient: Boolean = false,
-    /** Signs through a NIP-46 remote signer (a `bunker://` login). */
-    val loggedInWithRemoteSigner: Boolean = false,
-) {
-    /** Whether this login can sign: a key on this device, a signer app, or a remote signer. */
-    fun canSign() = hasPrivKey || loggedInWithExternalSigner || loggedInWithRemoteSigner
+class BunkerUrisTest {
+    @Test
+    fun dropsTheSecretAndKeepsTheRelays() =
+        assertEquals(
+            "bunker://abc?relay=wss://a&relay=wss://b",
+            stripBunkerSecret("bunker://abc?relay=wss://a&secret=s3cret&relay=wss://b"),
+        )
+
+    @Test
+    fun dropsTheQueryWhenOnlyTheSecretWasThere() = assertEquals("bunker://abc", stripBunkerSecret("bunker://abc?secret=s3cret"))
+
+    @Test
+    fun leavesAnAddressWithoutQueryAlone() = assertEquals("bunker://abc", stripBunkerSecret("bunker://abc"))
 }

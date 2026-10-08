@@ -129,6 +129,7 @@ fun LoginPage(
 ) {
     val platform = LocalAppPlatform.current
     val toaster = platform.rememberToaster()
+    loginViewModel.remoteSignerLoginSupported = platform.supportsRemoteSignerLogin
 
     Column(
         modifier =
@@ -212,6 +213,10 @@ fun LoginPage(
         }
 
         platform.ExternalSignerLoginButton(loginViewModel)
+
+        if (platform.supportsRemoteSignerLogin) {
+            RemoteSignerLoginButton(loginViewModel)
+        }
 
         Spacer(modifier = Modifier.height(Size40dp))
 

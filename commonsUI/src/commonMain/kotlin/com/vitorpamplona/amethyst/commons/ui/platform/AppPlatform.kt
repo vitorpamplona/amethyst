@@ -73,6 +73,12 @@ interface AppPlatform {
     /** Whether a first login must accept the terms of use (the Play Store build). */
     val requiresTermsAcceptance: Boolean get() = false
 
+    /**
+     * Whether the login screen offers NIP-46 remote signers (`bunker://` addresses and a
+     * `nostrconnect://` code). Off where the app is a bunker and never a bunker's client (Android).
+     */
+    val supportsRemoteSignerLogin: Boolean get() = false
+
     /** The terms-of-use checkbox the login and sign-up forms show where [requiresTermsAcceptance]. */
     @Composable
     fun TermsGate(

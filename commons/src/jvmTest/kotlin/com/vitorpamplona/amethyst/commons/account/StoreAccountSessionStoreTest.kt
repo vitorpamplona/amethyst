@@ -107,6 +107,35 @@ class StoreAccountSessionStoreTest {
         }
 
     @Test
+    fun aRemoteSignerLoginKeepsItsSignerAcrossARestart() =
+        runTest {
+            val store = newStore()
+            val user = KeyPair()
+            val transport = KeyPair()
+            val npub = user.pubKey.toNpub()
+            val bunkerUri = "bunker://${KeyPair().pubKey.toHexKey()}?relay=wss://relay.nsec.app"
+
+            store.setDefaultAccount(
+                AccountSettings(
+                    keyPair = KeyPair(pubKey = user.pubKey),
+                    remoteSignerBunkerUri = bunkerUri,
+                    remoteSignerTransportKey = transport.privKey!!.toHexKey(),
+                ),
+            )
+            store.forgetLoadedSettings()
+
+            val loaded = assertNotNull(store.loadAccountConfigFromEncryptedStorage(npub))
+            assertNull(loaded.keyPair.privKey)
+            assertEquals(bunkerUri, loaded.remoteSignerBunkerUri)
+            assertEquals(transport.privKey!!.toHexKey(), loaded.remoteSignerTransportKey)
+            assertTrue(loaded.isWriteable())
+            // The transport key is a secret: it lives in the encrypted secrets, never in the key vault.
+            assertTrue(vault.keys.isEmpty())
+            // hasPrivKey reads "can sign" (it does for signer-app logins too).
+            assertEquals(listOf(AccountInfo(npub, hasPrivKey = true, loggedInWithRemoteSigner = true)), store.allSavedAccounts())
+        }
+
+    @Test
     fun addingTheReadOnlyNpubOfASigningAccountKeepsTheSigningOne() =
         runTest {
             val store = newStore()

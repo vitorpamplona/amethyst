@@ -147,6 +147,7 @@ class StoreAccountSessionStore(
                 hasPrivKey = settings.isWriteable(),
                 loggedInWithExternalSigner = settings.externalSignerPackageName != null,
                 isTransient = settings.transientAccount,
+                loggedInWithRemoteSigner = settings.usesRemoteSigner(),
             )
         updateCurrentAccount(info)
         updateSavedAccounts(allSavedAccounts().filter { it.npub != info.npub } + info)
@@ -158,10 +159,36 @@ class StoreAccountSessionStore(
         val npub = settings.keyPair.pubKey.toNpub()
         settingsStores.save(settings)
         secretsStores.saveSecrets(npub, settings.toAccountSecrets())
-        settings.keyPair.privKey?.let { keyVault.save(npub, it.toHexKey()) }
+        settings.keyPair.privKey?.let { saveKey(npub, it.toHexKey()) }
         accountStores.getDataStore(npub).edit {
             it[lastReadPerRouteKey] = JsonMapper.toJson(settings.lastReadPerRoute.value.mapValues { entry -> entry.value.value })
             it[pendingAttestationsKey] = JsonMapper.toJson(settings.pendingAttestations.value)
+        }
+    }
+
+    private val _keyVaultFailure = MutableStateFlow<Throwable?>(null)
+
+    /**
+     * Set when a private key could not be kept in [keyVault] (no OS keyring and no fallback password).
+     * The login still goes on for this session; the key is gone after a restart. Cleared by the UI
+     * once the user was told.
+     */
+    val keyVaultFailure: StateFlow<Throwable?> = _keyVaultFailure
+
+    fun clearKeyVaultFailure() {
+        _keyVaultFailure.value = null
+    }
+
+    private suspend fun saveKey(
+        npub: String,
+        privKeyHex: String,
+    ) {
+        try {
+            keyVault.save(npub, privKeyHex)
+        } catch (e: Exception) {
+            if (e is CancellationException) throw e
+            Log.w(TAG, "Could not keep the private key of $npub", e)
+            _keyVaultFailure.value = e
         }
     }
 

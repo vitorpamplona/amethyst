@@ -20,10 +20,22 @@
  */
 package com.vitorpamplona.amethyst.desktop.app
 
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import com.vitorpamplona.amethyst.commons.account.AccountSessionManager
 import com.vitorpamplona.amethyst.commons.model.Account
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.desktop_key_not_kept_description
+import com.vitorpamplona.amethyst.commons.resources.desktop_key_not_kept_title
+import com.vitorpamplona.amethyst.commons.resources.dismiss
 import com.vitorpamplona.amethyst.commons.ui.app.AppRoot
+import com.vitorpamplona.amethyst.commons.ui.navigation.navs.Nav
+import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 
 /**
@@ -35,6 +47,9 @@ class DesktopAppRoot(
     private val modules: DesktopAppModules,
 ) : AppRoot {
     private val host by lazy { DesktopAccountViewModelHost(modules) }
+
+    /** Hands the logged-in shell's navigator to the menu bar, which lives outside the shared app. */
+    val navigator = DesktopNavigator()
 
     override fun createAccountViewModel(account: Account): AccountViewModel =
         AccountViewModel(
@@ -53,5 +68,43 @@ class DesktopAppRoot(
         modules.relayProxyClientConnector.relayServices.collectAsState()
         modules.okHttpClients.defaultHttpClient.collectAsState()
         modules.okHttpClients.defaultHttpClientWithoutProxy.collectAsState()
+
+        KeyNotKeptDialog(modules)
     }
+
+    @Composable
+    override fun NavigationEffects(
+        accountViewModel: AccountViewModel,
+        nav: Nav,
+        sessionManager: AccountSessionManager,
+    ) {
+        DisposableEffect(nav, accountViewModel) {
+            navigator.nav = nav
+            navigator.userPubKeyHex = accountViewModel.account.signer.pubKey
+            onDispose {
+                if (navigator.nav === nav) {
+                    navigator.nav = null
+                    navigator.userPubKeyHex = null
+                }
+            }
+        }
+    }
+}
+
+/** Tells the user, once, that the OS keyring refused their private key: they will log in again next time. */
+@Composable
+private fun KeyNotKeptDialog(modules: DesktopAppModules) {
+    val failure by modules.sessionStore.keyVaultFailure.collectAsState()
+    if (failure == null) return
+
+    AlertDialog(
+        onDismissRequest = modules.sessionStore::clearKeyVaultFailure,
+        title = { Text(stringRes(Res.string.desktop_key_not_kept_title)) },
+        text = { Text(stringRes(Res.string.desktop_key_not_kept_description)) },
+        confirmButton = {
+            TextButton(onClick = modules.sessionStore::clearKeyVaultFailure) {
+                Text(stringRes(Res.string.dismiss))
+            }
+        },
+    )
 }

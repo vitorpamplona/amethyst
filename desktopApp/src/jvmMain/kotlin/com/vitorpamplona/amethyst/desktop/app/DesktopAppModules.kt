@@ -86,6 +86,7 @@ import com.vitorpamplona.quartz.nip03Timestamp.okhttp.OkHttpBitcoinExplorer
 import com.vitorpamplona.quartz.nip03Timestamp.ots.OtsBlockHeightCache
 import com.vitorpamplona.quartz.nip05DnsIdentifiers.Nip05Client
 import com.vitorpamplona.quartz.nip05DnsIdentifiers.OkHttpNip05Fetcher
+import com.vitorpamplona.quartz.nip46RemoteSigner.BunkerClientMetadata
 import com.vitorpamplona.quartz.nipBCOnchainZaps.chain.CachingOnchainBackend
 import com.vitorpamplona.quartz.nipBCOnchainZaps.chain.EsploraBackend
 import com.vitorpamplona.quartz.utils.Log
@@ -321,11 +322,14 @@ class DesktopAppModules(
 
     val blossomMirrorQueue by lazy { BlossomMirrorQueue(scope = applicationIOScope, clientFor = ::blossomClient) }
 
+    /** The OS keyring (or its encrypted-file fallback). */
+    private val keyStorage = SecureKeyStorage.create(null)
+
     val sessionStore =
         StoreAccountSessionStore(
             rootFilesDir = { filesPath },
             appStores = appStores,
-            keyVault = SecureKeyStorageVault(SecureKeyStorage.create(null)),
+            keyVault = SecureKeyStorageVault(keyStorage),
             scope = applicationIOScope,
         )
 
@@ -354,6 +358,7 @@ class DesktopAppModules(
             powQueue = { powPublishQueue },
             signerPermissionStore = signerPermissionStore,
             nip46ClientStore = nip46ClientStore,
+            remoteSignerMetadata = REMOTE_SIGNER_METADATA,
         )
 
     val sessionManager =
@@ -364,6 +369,7 @@ class DesktopAppModules(
             localPreferences = sessionStore,
             scope = applicationIOScope,
             hooks = DesktopAccountSessionHooks(),
+            remoteSignerMetadata = REMOTE_SIGNER_METADATA,
         )
 
     private inner class DesktopAccountSessionHooks : AccountSessionHooks {
@@ -389,6 +395,15 @@ class DesktopAppModules(
             }
         }
 
-        sessionManager.loginWithDefaultAccountIfLoggedOff()
+        applicationIOScope.launch {
+            // Before the first login, so a user of the legacy app starts where they left off.
+            LegacyDesktopAccountImport(sessionStore, keyStorage, filesDir).start()
+            sessionManager.loginWithDefaultAccountIfLoggedOff()
+        }
+    }
+
+    companion object {
+        /** What a NIP-46 remote signer shows when this app asks to connect. */
+        val REMOTE_SIGNER_METADATA = BunkerClientMetadata(name = "Amethyst Desktop", url = "https://amethyst.social")
     }
 }

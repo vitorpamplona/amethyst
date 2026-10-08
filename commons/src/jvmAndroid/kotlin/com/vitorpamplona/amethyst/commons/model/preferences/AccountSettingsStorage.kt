@@ -279,6 +279,8 @@ fun AccountSettings.toAccountSecrets() =
                 .takeIf { it.isNotEmpty() }
                 ?.let { JsonMapper.toJson(it) },
         defaultPaymentSourceId = defaultPaymentSourceId.value,
+        remoteSignerBunkerUri = remoteSignerBunkerUri,
+        remoteSignerTransportKey = remoteSignerTransportKey,
     )
 
 /**
@@ -494,6 +496,8 @@ suspend fun AccountSettingsSource.toAccountSettings(): AccountSettings =
             transientAccount = false,
             cashuCounters = cashuCounters,
             externalSignerPackageName = externalSignerPackageName,
+            remoteSignerBunkerUri = secrets.remoteSignerBunkerUri,
+            remoteSignerTransportKey = secrets.remoteSignerTransportKey,
             localRelayServers = MutableStateFlow(localRelayServers),
             defaultFileServer = defaultFileServerResolved,
             stripLocationOnUpload = stripLocationOnUpload,

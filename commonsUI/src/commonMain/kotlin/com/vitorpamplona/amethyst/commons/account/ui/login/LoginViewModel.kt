@@ -27,6 +27,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
 import com.vitorpamplona.amethyst.commons.account.AccountSessionManager
 import com.vitorpamplona.amethyst.commons.account.ui.login.LoginErrorManager
 import com.vitorpamplona.amethyst.commons.resources.Res
@@ -36,10 +37,14 @@ import com.vitorpamplona.amethyst.commons.resources.key_is_required
 import com.vitorpamplona.amethyst.commons.resources.login_bunker_not_supported
 import com.vitorpamplona.amethyst.commons.resources.login_nostrconnect_not_supported
 import com.vitorpamplona.amethyst.commons.resources.password_is_required
+import com.vitorpamplona.amethyst.commons.resources.remote_signer_login_failed
 import com.vitorpamplona.amethyst.commons.resources.sign_request_rejected_description
 import com.vitorpamplona.amethyst.commons.tor.TorSettingsFlow
 import com.vitorpamplona.quartz.nip19Bech32.Bech32Transcription
 import com.vitorpamplona.quartz.nip19Bech32.bech32.bechToBytes
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.launch
 
 /**
  * The login form's state. [requiresTermsAcceptance] is the build's: where it holds, a first login
@@ -83,6 +88,18 @@ class LoginViewModel(
     }
 
     var isFirstLogin by mutableStateOf(false)
+
+    /**
+     * Whether this build signs in through NIP-46 remote signers (`bunker://`, `nostrconnect://`).
+     * Desktop does; Android is a bunker, never a bunker's client, and rejects these addresses.
+     */
+    var remoteSignerLoginSupported = false
+
+    /** The `nostrconnect://` address a remote signer should scan, while a connection is pending. */
+    var nostrConnectUri by mutableStateOf<String?>(null)
+        private set
+
+    private var nostrConnectJob: Job? = null
 
     fun init(accountSessionManager: AccountSessionManager) {
         this.accountSessionManager = accountSessionManager
@@ -163,7 +180,7 @@ class LoginViewModel(
         // Amethyst for Android is the bunker, never the bunker's client: the only remote signing it
         // can persist is an external signer app (see AccountSettings.isWriteable).
         val trimmedKey = key.text.trim()
-        if (trimmedKey.startsWith("bunker:", ignoreCase = true)) {
+        if (!remoteSignerLoginSupported && trimmedKey.startsWith("bunker:", ignoreCase = true)) {
             errorManager.error(Res.string.login_bunker_not_supported)
             return false
         }
@@ -213,7 +230,46 @@ class LoginViewModel(
         }
     }
 
+    /** Shows a `nostrconnect://` address and logs in once a remote signer answers it. */
+    fun loginWithNostrConnect() {
+        if (!acceptedTerms) {
+            termsAcceptanceIsRequiredError = true
+            return
+        }
+        if (nostrConnectJob?.isActive == true) return
+
+        processingLogin = true
+        nostrConnectJob =
+            viewModelScope.launch {
+                try {
+                    accountSessionManager.loginWithNostrConnect(
+                        relays = NOSTR_CONNECT_RELAYS,
+                        appName = NOSTR_CONNECT_APP_NAME,
+                        transientAccount = isTemporary,
+                        onUri = { nostrConnectUri = it },
+                    )
+                } catch (e: CancellationException) {
+                    throw e
+                } catch (e: Exception) {
+                    errorManager.error(Res.string.remote_signer_login_failed, e.message ?: e::class.simpleName.orEmpty())
+                } finally {
+                    nostrConnectUri = null
+                    processingLogin = false
+                }
+            }
+    }
+
+    fun cancelNostrConnect() {
+        nostrConnectJob?.cancel()
+    }
+
     companion object {
+        /** Where the `nostrconnect://` handshake happens; the signer replies on the same relays. */
+        private val NOSTR_CONNECT_RELAYS = listOf("wss://relay.nsec.app")
+
+        // URL-encoded: it rides in the nostrconnect:// query string.
+        private const val NOSTR_CONNECT_APP_NAME = "Amethyst"
+
         // version + log_n + salt(16) + nonce(24) + key security + ciphertext(48), per NIP-49.
         private const val NCRYPTSEC_PAYLOAD_SIZE = 91
     }

@@ -96,6 +96,8 @@ fun main() {
             state = windowState,
             title = "Amethyst",
         ) {
+            DesktopMenuBar(root.navigator, onQuit = ::exitApplication)
+
             // The window outlives every destination: screens that share state across destinations
             // (the chess lobby and board, the Cordn group draft) keep it here.
             val windowViewModels =
