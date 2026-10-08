@@ -114,7 +114,17 @@ private fun reportPosition(
 
     val current = winner
     when {
-        current === tracked -> {}
+        // The winner moved: on the last frame of a scroll it may be farther than one that stopped
+        // nearer the center, which reported before and will not report again.
+        current === tracked -> {
+            val closer = trackedVideos.minByOrNull { it.distanceToCenter ?: Float.MAX_VALUE }
+            val closerDistance = closer?.distanceToCenter
+            if (closer != null && closer !== tracked && closerDistance != null && closerDistance < distanceToCenter) {
+                tracked.active.value = false
+                winner = closer
+                closer.active.value = true
+            }
+        }
 
         current == null -> {
             winner = tracked

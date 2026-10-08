@@ -57,8 +57,10 @@ import com.vitorpamplona.amethyst.commons.resources.accessibility_download_for_o
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.desktop.service.media.GlobalMediaPlayer
 import com.vitorpamplona.amethyst.desktop.service.media.VideoThumbnailCache
+import com.vitorpamplona.quartz.utils.Log
 import io.github.kdroidfilter.composemediaplayer.VideoPlayerSurface
-import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 import java.awt.Desktop
 import java.net.URI
@@ -88,30 +90,41 @@ fun DesktopVideoPlayer(
     pauseWhenHidden: Boolean = false,
     loadOnDemand: Boolean = false,
 ) {
-    val videoState by GlobalMediaPlayer.videoState.collectAsState()
-    val isActiveVideo = videoState.url == url
+    // Only this video's state: every other card on screen would otherwise recompose on each tick
+    // of whichever video is playing.
+    val ownState =
+        remember(url) {
+            GlobalMediaPlayer.videoState.map { it.takeIf { state -> state.url == url } }.distinctUntilChanged()
+        }
+    val videoState by ownState.collectAsState(GlobalMediaPlayer.videoState.value.takeIf { it.url == url })
+    val isActiveVideo = videoState != null
     val scope = rememberCoroutineScope()
+
+    // This card, as the one composable allowed to draw the engine (see videoSurfaceOwner).
+    val surfaceOwner = remember { Any() }
+    val currentSurfaceOwner by GlobalMediaPlayer.videoSurfaceOwner.collectAsState()
+    val isFullscreen by GlobalMediaPlayer.isFullscreen.collectAsState()
+    LaunchedEffect(isActiveVideo, currentSurfaceOwner) {
+        // The video is this one and nobody draws it (its owner left): take it over.
+        if (isActiveVideo && currentSurfaceOwner == null) GlobalMediaPlayer.claimVideoSurface(surfaceOwner)
+    }
+    DisposableEffect(surfaceOwner) {
+        onDispose { GlobalMediaPlayer.releaseVideoSurface(surfaceOwner) }
+    }
 
     var loaded by remember(url) { mutableStateOf(!loadOnDemand || autoPlay) }
     var thumbnail by remember(url) { mutableStateOf(VideoThumbnailCache.getCached(url)) }
-    var aspectRatio by remember { mutableFloatStateOf(16f / 9f) }
+    var aspectRatio by remember(url) { mutableFloatStateOf(16f / 9f) }
 
-    LaunchedEffect(url, isActiveVideo, loaded) {
-        if (loaded && !isActiveVideo && thumbnail == null) {
-            for (attempt in 1..3) {
-                val result = VideoThumbnailCache.getThumbnail(url)
-                if (result != null) {
-                    thumbnail = result
-                    break
-                }
-                if (attempt < 3) delay(2000L * attempt)
-            }
+    LaunchedEffect(url, loaded) {
+        if (loaded && thumbnail == null) {
+            VideoThumbnailCache.getThumbnail(url)?.let { thumbnail = it }
         }
     }
 
     LaunchedEffect(url, autoPlay) {
         if (autoPlay) {
-            GlobalMediaPlayer.playVideo(url, initialSeekPosition)
+            GlobalMediaPlayer.playVideo(url, initialSeekPosition, owner = surfaceOwner)
         }
     }
 
@@ -130,9 +143,10 @@ fun DesktopVideoPlayer(
                     hasBeenVisible[0] = true
                     val ended = state.url == url && state.position >= 0.99f
                     if (autoPlayWhenVisible && loaded && !ended && (state.url != url || !state.isPlaying)) {
-                        GlobalMediaPlayer.playVideo(url)
+                        GlobalMediaPlayer.playVideo(url, owner = surfaceOwner)
                     }
-                } else if (hasBeenVisible[0] && pauseWhenHidden && state.url == url && state.isPlaying) {
+                } else if (hasBeenVisible[0] && pauseWhenHidden && state.url == url) {
+                    // Also while it is still loading, or it would start once loaded, off screen.
                     GlobalMediaPlayer.pauseVideo()
                 }
             }
@@ -149,15 +163,12 @@ fun DesktopVideoPlayer(
 
     // Surface playback errors to the log — kdroidFilter reports these only via state, so without
     // this a stream that fails to start ("live doesn't start") leaves no trace.
-    LaunchedEffect(isActiveVideo, videoState.errorReason) {
-        if (isActiveVideo && videoState.errorReason != null) {
-            println("DesktopVideoPlayer ERROR url=$url reason=${videoState.errorReason}")
-        }
+    val errorReason = videoState?.errorReason
+    LaunchedEffect(errorReason) {
+        if (errorReason != null) Log.w("DesktopVideoPlayer") { "Can't play $url: $errorReason" }
     }
 
-    if (isActiveVideo && videoState.aspectRatio != 16f / 9f) {
-        aspectRatio = videoState.aspectRatio
-    }
+    videoState?.aspectRatio?.let { if (it != 16f / 9f) aspectRatio = it }
 
     BoxWithConstraints(modifier = modifier.then(visibilityModifier)) {
         val desiredHeight = maxWidth / aspectRatio
@@ -174,15 +185,16 @@ fun DesktopVideoPlayer(
                     ),
             contentAlignment = Alignment.Center,
         ) {
-            val errorReason = if (isActiveVideo) videoState.errorReason else null
-            val activePlayer = if (isActiveVideo) GlobalMediaPlayer.activeVideoPlayerState else null
+            // In full screen the overlay draws the engine; a second surface would resize it too.
+            val drawsEngine = isActiveVideo && currentSurfaceOwner === surfaceOwner && !isFullscreen
+            val activePlayer = if (drawsEngine) GlobalMediaPlayer.activeVideoPlayerState else null
 
             if (!loaded) {
                 IconButton(
                     onClick = {
                         loaded = true
                         // A click on the download button is a request to watch it.
-                        GlobalMediaPlayer.playVideo(url)
+                        GlobalMediaPlayer.playVideo(url, owner = surfaceOwner)
                     },
                     modifier = Modifier.size(75.dp),
                 ) {
@@ -198,7 +210,7 @@ fun DesktopVideoPlayer(
 
             if (errorReason != null) {
                 PlaybackErrorMessage(url = url, reason = errorReason)
-            } else if (isActiveVideo && activePlayer != null) {
+            } else if (activePlayer != null) {
                 VideoPlayerSurface(
                     playerState = activePlayer,
                     modifier = Modifier.fillMaxSize().clip(MaterialTheme.shapes.small),
@@ -219,21 +231,23 @@ fun DesktopVideoPlayer(
             }
 
             if (errorReason == null) {
+                val state = videoState
                 VideoControls(
-                    isPlaying = if (isActiveVideo) videoState.isPlaying else false,
-                    isBuffering = if (isActiveVideo) videoState.isBuffering else false,
-                    position = if (isActiveVideo) videoState.position else 0f,
-                    duration = if (isActiveVideo) videoState.duration else 0L,
-                    currentTime = if (isActiveVideo) videoState.currentTime else 0L,
-                    volume = if (isActiveVideo) videoState.volume else 100,
+                    isPlaying = state?.isPlaying ?: false,
+                    isBuffering = state?.isBuffering ?: false,
+                    position = state?.position ?: 0f,
+                    duration = state?.duration ?: 0L,
+                    currentTime = state?.currentTime ?: 0L,
+                    volume = state?.volume ?: 100,
                     // Before it loads, show the state it would start in.
-                    isMuted = if (isActiveVideo) videoState.isMuted else GlobalMediaPlayer.defaultMuted,
+                    isMuted = state?.isMuted ?: GlobalMediaPlayer.defaultMuted,
                     viewMode = viewMode,
                     onPlayPause = {
                         if (isActiveVideo) {
+                            GlobalMediaPlayer.claimVideoSurface(surfaceOwner)
                             GlobalMediaPlayer.toggleVideoPlayPause()
                         } else {
-                            GlobalMediaPlayer.playVideo(url, initialSeekPosition)
+                            GlobalMediaPlayer.playVideo(url, initialSeekPosition, owner = surfaceOwner)
                         }
                     },
                     onSeek = { pos ->
@@ -242,7 +256,7 @@ fun DesktopVideoPlayer(
                         }
                     },
                     onSkip = { delta -> if (isActiveVideo) GlobalMediaPlayer.skipVideo(delta) },
-                    speed = if (isActiveVideo) videoState.speed else 1f,
+                    speed = state?.speed ?: 1f,
                     onSpeedChange = { speed -> if (isActiveVideo) GlobalMediaPlayer.setVideoSpeed(speed) },
                     onVolumeChange = { vol -> if (isActiveVideo) GlobalMediaPlayer.setVideoVolume(vol) },
                     onMuteToggle = {
@@ -256,8 +270,7 @@ fun DesktopVideoPlayer(
                     onFullscreen =
                         if (onFullscreen != null) {
                             {
-                                val pos = if (isActiveVideo) videoState.position else 0f
-                                onFullscreen(pos)
+                                onFullscreen(state?.position ?: 0f)
                             }
                         } else {
                             null

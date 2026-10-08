@@ -54,6 +54,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -156,6 +157,8 @@ fun VideoControls(
 
     val visible = shown || !isPlaying
     val canSkip = onSkip != null && !isLive
+    // The double-tap gesture starts once per canSkip; it must call the latest onSkip.
+    val currentOnSkip by rememberUpdatedState(onSkip)
 
     Box(
         modifier =
@@ -176,7 +179,7 @@ fun VideoControls(
                     detectTapGestures(
                         onTap = { shown = !shown },
                         onDoubleTap = { offset ->
-                            if (canSkip) onSkip?.invoke(if (offset.x < widthPx[0] / 2) -SKIP_MILLIS else SKIP_MILLIS)
+                            if (canSkip) currentOnSkip?.invoke(if (offset.x < widthPx[0] / 2) -SKIP_MILLIS else SKIP_MILLIS)
                         },
                     )
                 },
@@ -366,13 +369,15 @@ private fun ProgressBar(
 ) {
     var dragging by remember { mutableStateOf(false) }
     var dragPosition by remember { mutableFloatStateOf(0f) }
+    // The gestures below start once and outlive recompositions: they must call the latest onSeek.
+    val currentOnSeek by rememberUpdatedState(onSeek)
 
     Canvas(
         Modifier
             .fillMaxWidth()
             .padding(horizontal = 10.dp)
             .pointerInput(Unit) {
-                detectTapGestures { offset -> onSeek((offset.x / size.width).coerceIn(0f, 1f)) }
+                detectTapGestures { offset -> currentOnSeek((offset.x / size.width).coerceIn(0f, 1f)) }
             }.pointerInput(Unit) {
                 detectDragGestures(
                     onDragStart = { offset ->
@@ -384,7 +389,7 @@ private fun ProgressBar(
                         dragPosition = (change.position.x / size.width).coerceIn(0f, 1f)
                     },
                     onDragEnd = {
-                        onSeek(dragPosition)
+                        currentOnSeek(dragPosition)
                         dragging = false
                     },
                     onDragCancel = { dragging = false },
