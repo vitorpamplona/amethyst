@@ -2,6 +2,10 @@ import java.io.File
 import java.util.zip.ZipEntry
 import java.util.zip.ZipFile
 import java.util.zip.ZipOutputStream
+import com.android.build.api.artifact.SingleArtifact
+import org.gradle.api.artifacts.component.ModuleComponentIdentifier
+import org.gradle.api.artifacts.result.ResolvedComponentResult
+import org.gradle.api.artifacts.result.ResolvedDependencyResult
 import org.gradle.api.services.BuildService
 import org.gradle.api.services.BuildServiceParameters
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
@@ -495,6 +499,118 @@ val verifyNativeAbis =
 
 tasks.named("preBuild") {
     dependsOn(verifyNativeAbis)
+}
+
+// Tracker gate for what we ship. The play flavor carries Google SDKs (FCM, ML Kit,
+// Cast) that are fine on their own but are one transitive bump away from pulling
+// in an analytics or ads SDK, and the usage logging they do bundle (datatransport)
+// is only kept on-device by a single `tools:node="remove"` in
+// src/play/AndroidManifest.xml. Neither regression shows up anywhere else: the
+// app builds, runs and looks identical. So each release variant is checked
+// against its resolved runtime classpath and its merged manifest.
+val verifyNoTrackers =
+    tasks.register("verifyNoTrackers") {
+        group = "verification"
+        description = "Fails if a release variant ships a tracking SDK or lets Google's datatransport logging upload."
+    }
+
+tasks.named("check") {
+    dependsOn(verifyNoTrackers)
+}
+
+androidComponents.onVariants(androidComponents.selector().withBuildType("release")) { variant ->
+    val variantName = variant.name
+    val flavor = variant.flavorName
+    // "group:name" prefixes, so `firebase-analytics` also catches `-ktx` and
+    // `play-services-ads` also catches `-ads-identifier` / `-ads-lite`.
+    val trackerModules =
+        listOf(
+            "com.google.firebase:firebase-analytics",
+            "com.google.firebase:firebase-crashlytics",
+            "com.google.firebase:firebase-perf",
+            "com.google.firebase:firebase-sessions",
+            "com.google.firebase:firebase-inappmessaging",
+            "com.google.android.gms:play-services-measurement",
+            "com.google.android.gms:play-services-analytics",
+            "com.google.android.gms:play-services-tagmanager",
+            "com.google.android.gms:play-services-ads",
+            "com.google.android.gms:play-services-appset",
+            // Logs through the Play services process, where the manifest block below can't reach.
+            "com.google.android.gms:play-services-clearcut",
+            "com.google.android.ump:",
+            "com.google.ads.",
+        )
+    // F-Droid ships none of Google's proprietary SDKs at all.
+    val googleProprietaryGroups =
+        listOf("com.google.firebase", "com.google.android.gms", "com.google.mlkit", "com.google.android.datatransport")
+    val forbiddenManifestNames =
+        listOf(
+            // datatransport's only upload path on API 21+; see src/play/AndroidManifest.xml.
+            "com.google.android.datatransport.runtime.scheduling.jobscheduling.JobInfoSchedulerService",
+            "com.google.android.gms.permission.AD_ID",
+            "android.permission.ACCESS_ADSERVICES_",
+        )
+
+    val modules =
+        variant.runtimeConfiguration.incoming.resolutionResult.rootComponent.map { root ->
+            val seen = mutableSetOf<ResolvedComponentResult>()
+            val pending = ArrayDeque(listOf(root))
+            while (pending.isNotEmpty()) {
+                val component = pending.removeFirst()
+                if (!seen.add(component)) continue
+                component.dependencies
+                    .filterIsInstance<ResolvedDependencyResult>()
+                    .forEach { pending.addLast(it.selected) }
+            }
+            seen
+                .mapNotNull { it.id as? ModuleComponentIdentifier }
+                .map { "${it.group}:${it.module}" }
+                .toSortedSet()
+        }
+    val mergedManifest = variant.artifacts.get(SingleArtifact.MERGED_MANIFEST)
+
+    val variantTask =
+        tasks.register("verify${variantName.replaceFirstChar { it.uppercase() }}NoTrackers") {
+            group = "verification"
+            description = "Checks the $variantName runtime classpath and merged manifest for tracking SDKs."
+            inputs.property("modules", modules)
+            inputs.file(mergedManifest)
+
+            doLast {
+                val problems = mutableListOf<String>()
+                val resolved = modules.get()
+
+                resolved
+                    .filter { module -> trackerModules.any { module.startsWith(it) } }
+                    .forEach { problems += "tracking SDK on the runtime classpath: $it" }
+                if (flavor == "fdroid") {
+                    resolved
+                        .filter { module -> googleProprietaryGroups.any { module.startsWith("$it:") } }
+                        .forEach { problems += "proprietary Google SDK in the F-Droid build: $it" }
+                }
+
+                val manifest = mergedManifest.get().asFile
+                val declared = Regex("android:name=\"([^\"]+)\"").findAll(manifest.readText()).map { it.groupValues[1] }.toSet()
+                forbiddenManifestNames.forEach { forbidden ->
+                    declared
+                        .filter { it.startsWith(forbidden) }
+                        .forEach { problems += "merged manifest declares $it" }
+                }
+
+                if (problems.isNotEmpty()) {
+                    throw GradleException(
+                        buildString {
+                            appendLine("$variantName would ship tracking code:")
+                            problems.forEach { appendLine("    $it") }
+                            appendLine("Find what pulls a module in with")
+                            appendLine("    ./gradlew :amethyst:dependencyInsight --configuration ${variantName}RuntimeClasspath --dependency <module>")
+                            append("and exclude it, or keep the component out of the manifest with tools:node=\"remove\".")
+                        },
+                    )
+                }
+            }
+        }
+    verifyNoTrackers.configure { dependsOn(variantTask) }
 }
 
 // androidx.appfunctions-compiler runs in a per-module mode by default,

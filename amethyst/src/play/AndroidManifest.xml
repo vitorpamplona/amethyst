@@ -21,11 +21,21 @@
             </intent-filter>
         </service>
 
-        <!--Remove Firebase Logging-->
+        <!-- Blocks Google's datatransport usage logging (Firelog/CCT) for every SDK
+             that bundles it, not just Firebase: firebase-messaging, ML Kit
+             (language-id, translate, GenAI) and the Cast framework all queue their
+             telemetry through it. On API 21+ (all of our minSdk) the library only
+             uploads from this JobScheduler service; without it the schedule call is
+             rejected, the library swallows the error, and nothing leaves the device.
+             This line is the whole block, so :amethyst:verifyNoTrackers fails the
+             build if a merged manifest ever ships the service again. -->
         <service
             android:name="com.google.android.datatransport.runtime.scheduling.jobscheduling.JobInfoSchedulerService" tools:node="remove">
         </service>
 
+        <!-- Defensive only: firebase-analytics is not a dependency (verifyNoTrackers
+             fails the build if it becomes one), so this flag has nothing to disable
+             today. Kept so a future Analytics dependency starts with collection off. -->
         <meta-data android:name="firebase_analytics_collection_enabled" android:value="false"/>
 
         <meta-data android:name="com.google.firebase.messaging.default_notification_icon"

@@ -376,11 +376,17 @@ jobs:
       # Same daemon cap as the sibling job: lintAnalyze draws on the Gradle
       # daemon's heap, which is why the earlier 4g experiment broke it. Only the
       # Kotlin daemon is trimmed.
+      #
+      # verifyNoTrackers checks the release variants' resolved classpaths and
+      # merged manifests (no analytics/ads SDKs, Google's datatransport logging
+      # kept from uploading, F-Droid free of proprietary Google SDKs). It only
+      # needs dependency resolution and manifest merging, so it rides along here.
       - name: Lint Android (gradle)
         run: |
           ./gradlew \
             -Dkotlin.daemon.jvmargs="-Xmx4g -XX:MaxMetaspaceSize=1g" \
             --max-workers=3 \
+            :amethyst:verifyNoTrackers \
             :amethyst:lintFdroidBenchmark \
             :amethyst:lintPlayBenchmark
 
