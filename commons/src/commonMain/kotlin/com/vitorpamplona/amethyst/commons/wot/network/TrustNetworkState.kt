@@ -25,6 +25,7 @@ import com.vitorpamplona.quartz.nip85TrustedAssertions.list.tags.ServiceProvider
 import com.vitorpamplona.quartz.nip85TrustedAssertions.users.UserAssertionEvent
 import com.vitorpamplona.quartz.nip85TrustedAssertions.users.index.TrustNetworkHeader
 import com.vitorpamplona.quartz.nip85TrustedAssertions.users.index.TrustNetworkIds
+import com.vitorpamplona.quartz.nip85TrustedAssertions.users.index.TrustNetworkPartial
 import com.vitorpamplona.quartz.nip85TrustedAssertions.users.index.TrustNetworkProgress
 import com.vitorpamplona.quartz.nip85TrustedAssertions.users.index.TrustNetworkSyncResult
 import com.vitorpamplona.quartz.nip85TrustedAssertions.users.index.memberRank
@@ -459,7 +460,11 @@ class TrustNetworkState(
         val result =
             when (kind) {
                 TrustNetworkSyncStatus.Kind.DOWNLOAD -> {
-                    relay.download(provider, progress)
+                    // A download cut off earlier (the process killed, the relay gone) resumes from
+                    // its last checkpoint: at a phone's pace, the whole download is minutes.
+                    val partial = withContext(Dispatchers.IO) { store.readPartial(provider.pubkey) }
+                    if (partial != null) Log.d(TAG) { "Resuming the download from ${partial.cards} cards" }
+                    relay.download(provider, progress, checkpoint = { savePartial(store, it) }, resumeFrom = partial)
                 }
 
                 TrustNetworkSyncStatus.Kind.UPDATE -> {
@@ -473,18 +478,30 @@ class TrustNetworkState(
 
         // A partial walk must not become the network (a cold one would wrongly reject everyone
         // it missed), nor advance the cursor past what it skipped.
-        if (!result.complete) return TrustNetworkRun(kind, TrustNetworkOutcome.Incomplete(result.detail), result)
+        if (!result.complete) {
+            // Keep what the download got, so the next try only fetches the rest.
+            if (kind == TrustNetworkSyncStatus.Kind.DOWNLOAD && result.index.size + result.ids.tombstones > 0) {
+                withContext(Dispatchers.IO) { savePartial(store, TrustNetworkPartial(result.header, result.index, result.ids)) }
+            }
+            return TrustNetworkRun(kind, TrustNetworkOutcome.Incomplete(result.detail), result)
+        }
 
         // A provider still computing a new user's scores has published nothing yet. An empty
         // network would leave only follows as "known", so never apply one, whichever sync
         // produced it (a full check that fell back to a download included).
-        if (result.index.size == 0) return TrustNetworkRun(kind, TrustNetworkOutcome.NoScoresYet, result)
+        if (result.index.size == 0) {
+            if (kind == TrustNetworkSyncStatus.Kind.DOWNLOAD) withContext(Dispatchers.IO) { store.deletePartial() }
+            return TrustNetworkRun(kind, TrustNetworkOutcome.NoScoresYet, result)
+        }
 
         if (result.unchanged && current != null) return commitUnchanged(provider, kind, current, result.header, result)
 
         return commitLock.withLock {
             if (currentProvider != provider) return@withLock TrustNetworkRun(kind, TrustNetworkOutcome.ProviderChanged, result)
-            val header = withContext(Dispatchers.IO) { store.write(result.header, result.index, result.ids) }
+            val header =
+                withContext(Dispatchers.IO) {
+                    store.write(result.header, result.index, result.ids).also { store.deletePartial() }
+                }
             // The sync fetched everything up to its cursor; only cards seen after it still add.
             // Pruned before the network is published, so no snapshot pairs the new index with
             // cards older than it.
@@ -494,6 +511,18 @@ class TrustNetworkState(
             pruneOverlay(header.syncCursor)
             Log.d(TAG) { "$kind done: ${result.index.size} entries, ${result.received} received, ${result.invalid} invalid (${result.detail})" }
             TrustNetworkRun(kind, TrustNetworkOutcome.Applied(result), result)
+        }
+    }
+
+    /** A checkpoint that fails to save only costs the resume, never the download. */
+    private fun savePartial(
+        store: TrustNetworkStore,
+        partial: TrustNetworkPartial,
+    ) {
+        try {
+            store.writePartial(partial)
+        } catch (e: Exception) {
+            Log.w(TAG, "Could not save the download's progress", e)
         }
     }
 

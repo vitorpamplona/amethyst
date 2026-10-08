@@ -25,10 +25,12 @@ import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
 import com.vitorpamplona.quartz.nip85TrustedAssertions.list.tags.ProviderTypes
 import com.vitorpamplona.quartz.nip85TrustedAssertions.list.tags.ServiceProviderTag
 import com.vitorpamplona.quartz.nip85TrustedAssertions.users.index.TrustNetworkBuilder
+import com.vitorpamplona.quartz.nip85TrustedAssertions.users.index.TrustNetworkCheckpoint
 import com.vitorpamplona.quartz.nip85TrustedAssertions.users.index.TrustNetworkHeader
 import com.vitorpamplona.quartz.nip85TrustedAssertions.users.index.TrustNetworkIds
 import com.vitorpamplona.quartz.nip85TrustedAssertions.users.index.TrustNetworkIndex
 import com.vitorpamplona.quartz.nip85TrustedAssertions.users.index.TrustNetworkNews
+import com.vitorpamplona.quartz.nip85TrustedAssertions.users.index.TrustNetworkPartial
 import com.vitorpamplona.quartz.nip85TrustedAssertions.users.index.TrustNetworkProgress
 import com.vitorpamplona.quartz.nip85TrustedAssertions.users.index.TrustNetworkSyncResult
 import com.vitorpamplona.quartz.utils.Hex
@@ -115,6 +117,9 @@ class TrustNetworkSchedulingTest {
         /** The update finds nothing new but learns the held counts (a version 3 file lacks one). */
         var updateLearnsCounts = false
 
+        /** Cards each download was asked to resume from (0 = from scratch). */
+        val resumedFrom = CopyOnWriteArrayList<Int>()
+
         override suspend fun <T> connect(block: suspend (TrustNetworkConnection) -> T): T =
             block(
                 object : TrustNetworkConnection {
@@ -130,8 +135,11 @@ class TrustNetworkSchedulingTest {
                     override suspend fun download(
                         provider: ServiceProviderTag,
                         progress: TrustNetworkProgress,
+                        checkpoint: TrustNetworkCheckpoint?,
+                        resumeFrom: TrustNetworkPartial?,
                     ): TrustNetworkSyncResult {
                         calls.add("download:${provider.pubkey}")
+                        resumedFrom.add(resumeFrom?.cards ?: 0)
                         downloadGate?.await()
                         return result(provider, downloadSize).let {
                             if (downloadComplete) it else TrustNetworkSyncResult(it.header, it.index, it.ids, complete = false, invalid = 0, received = it.received, detail = "partial")
@@ -270,6 +278,34 @@ class TrustNetworkSchedulingTest {
             assertIs<TrustNetworkOutcome.Unchanged>(run.outcome)
             assertSame(loaded, wot.network.value!!.index, "still the same index: feeds do not rebuild")
             assertEquals(0, store.readIndex()!!.header.heldAfterCursor, "the learned count is on disk")
+        }
+
+    @Test
+    fun aCutOffDownloadResumesFromWhatItGot() =
+        runBlocking {
+            // The first download (started on load) stops short: what it got is saved, not used.
+            val source =
+                FakeSource().apply {
+                    downloadSize = 5
+                    downloadComplete = false
+                }
+            val wot = state(MutableStateFlow(ResolvedProvider(providerA)), source)
+            wot.awaitReady()
+            wot.awaitIdle()
+            withTimeout(5_000) { wot.status.first { it.problem is TrustNetworkProblem.Failed } }
+            assertNull(wot.network.value, "a partial download never becomes the network")
+            assertNull(store.readIndex())
+            assertEquals(5, store.readPartial(providerA.pubkey)?.cards)
+            assertNull(store.readPartial(providerB.pubkey), "another provider's download starts over")
+
+            // The next one is handed those cards; once it finishes, the checkpoint goes.
+            source.downloadComplete = true
+            val done = assertNotNull(wot.syncNow(TrustNetworkSyncStatus.Kind.DOWNLOAD))
+            assertIs<TrustNetworkOutcome.Applied>(done.outcome)
+            assertEquals(0, source.resumedFrom.first(), "the first download starts from scratch")
+            assertEquals(5, source.resumedFrom.last(), "the next resumes from the checkpoint")
+            assertNotNull(store.readIndex())
+            assertNull(store.readPartial(providerA.pubkey), "the checkpoint is gone once the network is saved")
         }
 
     @Test
