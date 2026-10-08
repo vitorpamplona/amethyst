@@ -676,6 +676,27 @@ assemblers, `EventSync`, …). Packages are renamed on the way:
      first-run splash. When the table is empty, delete everything outside `desktop/app/` that
      `desktop/app/` does not reach, and the `runLegacy` task.
 
+9. **What was left in `amethyst/`** (2026-10-08: 476 files, 102k lines, then 418 files, 89k
+   lines). Dead copies left behind by earlier moves went, and so did the screens that only a
+   few Android calls kept in the app:
+
+   - Git repository browser, music playlist sheet, calendar event editor, the audio-room list,
+     create/edit sheets and room panels, key backup, Cordn backup.
+   - New ports for them: `jvmDestinations()` (shared screens that need the JVM, registered by
+     Android and Desktop), `LocalClock.zoneId/atTime/secondOfDay`, `HideFromScreenshots()`,
+     `Clipboard.setSensitiveText()`, `rememberFileBytesAccess()`.
+   - The NIP-96 client is shared (`commonsUI/jvmAndroid`), and Desktop uploads to NIP-96 and
+     NIP-95 servers.
+   - Desktop's date-skeleton formatter now puts the letters in the JDK's canonical order:
+     Android's `getBestDateTimePattern` takes "EEEMMMd", `ofLocalizedPattern` threw on it, which
+     broke the calendar cards on Desktop.
+
+   What stays, and why: the Cordn group chat (voice recording and playback have no shared
+   port yet), notification system settings (push provider, battery optimisation, channels) and
+   resource usage (Android process stats), the audio room's own activity, full screen, action
+   bar and foreground-service lifecycle, and the Android platform itself (services, media3,
+   CameraX, WebView napplet host, osmdroid maps, Tor, notifications).
+
 Steps 2–5 can interleave. Step 5's helpers can start before 3–4 if they take `Account` /
 `AccountViewModel` unchanged and only move later.
 
