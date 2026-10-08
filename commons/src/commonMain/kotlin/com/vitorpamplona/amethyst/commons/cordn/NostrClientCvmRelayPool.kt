@@ -20,6 +20,8 @@
  */
 package com.vitorpamplona.amethyst.commons.cordn
 
+import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.ExplainedFilter
+import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.SubPurpose
 import com.vitorpamplona.quartz.contextvm.transport.CvmRelayPool
 import com.vitorpamplona.quartz.contextvm.transport.CvmSubscription
 import com.vitorpamplona.quartz.nip01Core.core.Event
@@ -64,7 +66,7 @@ class NostrClientCvmRelayPool(
         // unsubscribes both, and the other request waits out its full
         // 20-second timeout for a response the relay stopped sending.
         val subId = "cordn-${pubKey.take(8)}-${RandomInstance.randomChars(8)}"
-        val filter = Filter(kinds = kinds.toList(), tags = mapOf("p" to listOf(pubKey)))
+        val filter = ExplainedFilter(kinds = kinds.toList(), tags = mapOf("p" to listOf(pubKey)), purpose = SubPurpose.COORDINATOR_GROUPS)
 
         client.subscribe(
             subId = subId,

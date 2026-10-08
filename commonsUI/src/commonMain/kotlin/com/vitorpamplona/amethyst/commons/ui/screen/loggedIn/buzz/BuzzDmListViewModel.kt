@@ -34,6 +34,8 @@ import com.vitorpamplona.amethyst.commons.model.buzz.reconnectPoolAfterJoin
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
 import com.vitorpamplona.amethyst.commons.model.cache.filter
 import com.vitorpamplona.amethyst.commons.relayClient.channel.relayGroup.RELAY_GROUP_METADATA_KINDS
+import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.SubPurpose
+import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.taggedAs
 import com.vitorpamplona.amethyst.commons.relayauth.RelayAuthDecision
 import com.vitorpamplona.quartz.buzz.dvDmVisibility.DmVisibilityEvent
 import com.vitorpamplona.quartz.buzz.notifications.MemberAddedNotificationEvent
@@ -207,7 +209,7 @@ class BuzzDmListViewModel : ViewModel() {
                 Filter(kinds = listOf(MemberAddedNotificationEvent.KIND), tags = mapOf("p" to listOf(myPubkey))),
                 Filter(kinds = listOf(DmVisibilityEvent.KIND), tags = mapOf("p" to listOf(myPubkey))),
             )
-        account.client.fetchAllWithHooks(
+        account.client.taggedAs(SubPurpose.RELAY_GROUPS).fetchAllWithHooks(
             filters = relays.associateWith { filters },
             idleTimeoutMs = 8_000,
             pendingOnAuthRequired = true,
@@ -226,7 +228,7 @@ class BuzzDmListViewModel : ViewModel() {
                 .groupBy({ it.value }, { it.key })
                 .mapValues { (_, ids) -> listOf(Filter(kinds = RELAY_GROUP_METADATA_KINDS, tags = mapOf("d" to ids))) }
         if (byRelay.isEmpty()) return
-        account.client.fetchAllWithHooks(filters = byRelay, idleTimeoutMs = 8_000, pendingOnAuthRequired = true) { _, _ -> false }
+        account.client.taggedAs(SubPurpose.RELAY_GROUPS).fetchAllWithHooks(filters = byRelay, idleTimeoutMs = 8_000, pendingOnAuthRequired = true) { _, _ -> false }
     }
 
     /**

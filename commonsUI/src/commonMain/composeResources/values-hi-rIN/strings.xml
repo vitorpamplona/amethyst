@@ -552,6 +552,7 @@
     <string name="stale_relay_hint_label">स्रोत पुनःप्रसारक सम्भवतः पुराने हो चुके</string>
     <string name="stale_relay_hint_icon_description">पुराना पुनःप्रसारक चेतावनी</string>
     <string name="pinned_to_top">ऊपर टँकित</string>
+    <string name="pinned_chat_no_messages_loaded">कोई निकटकाल सन्देश प्राप्त नहीं</string>
     <string name="upload_image">चित्र आरोहण</string>
     <string name="upload_file">अभिलेख आरोहण</string>
     <string name="take_a_picture">एक चित्र लें</string>
@@ -1253,7 +1254,7 @@
     <string name="nip82_os_windows">विण्डोव्स</string>
     <string name="nip82_os_linux">लिनक्स</string>
     <string name="nip82_os_freebsd">मुक्तबीएसडी</string>
-    <string name="nip82_os_wasm">जालयन्त्रादेशलेख</string>
+    <string name="nip82_os_wasm">जालवीक्षक यन्त्रस्तर क्रमलेख</string>
     <string name="nip82_os_other">अन्य</string>
     <string name="nip82_cpu_apple_silicon">आप्पिल क्रमवर्तक</string>
     <string name="nip82_cpu_intel_mac">इण्टेल</string>
@@ -6557,4 +6558,7 @@
         <item quantity="one">स %1$d अधिक उत्तर</item>
         <item quantity="other">स %1$d अधिक उत्तर</item>
     </plurals>
+    <!-- Mostro instance terms (kind 38385) -->
+    <!-- Kanban boards (kind 30301) and cards (kind 30302) -->
+    <!-- WalletScrutiny build verifications (kind 30301) -->
 </resources>

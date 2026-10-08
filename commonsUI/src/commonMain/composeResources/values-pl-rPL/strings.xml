@@ -385,6 +385,12 @@
         <item quantity="many">Zdobyto %1$s z %2$s części — kontynuuj</item>
         <item quantity="other">Zdobyto %1$s z %2$s części — kontynuuj</item>
     </plurals>
+    <plurals name="qr_scanner_partial_sequence_note">
+        <item quantity="one">Ten obrazek zawiera również %1$s z %2$s części kodu wieloczęściowego. Można go odczytać dopiero po zeskanowaniu wszystkich części.</item>
+        <item quantity="few">Ten obrazek zawiera również %1$s z %2$s części kodu wieloczęściowego. Można go odczytać dopiero po zeskanowaniu wszystkich części.</item>
+        <item quantity="many">Ten obrazek zawiera również %1$s z %2$s części kodu wieloczęściowego. Można go odczytać dopiero po zeskanowaniu wszystkich części.</item>
+        <item quantity="other">Ten obrazek zawiera również %1$s z %2$s części kodu wieloczęściowego. Można go odczytać dopiero po zeskanowaniu wszystkich części.</item>
+    </plurals>
     <string name="qr_scanner_zoom_reset">Zresetuj zoom</string>
     <string name="qr_scanner_unsupported_title">Ametyst nie może otworzyć tego kodu</string>
     <string name="qr_scanner_unsupported_secret">Ten kod zawiera klucz prywatny lub hasło parowania, dlatego jego treść nie jest tutaj wyświetlana. Należy skorzystać z odpowiedniego ekranu, na którym należy go wprowadzić.</string>
@@ -564,6 +570,7 @@
     <string name="stale_relay_hint_label">Transmitery źródłowe mogą być nieaktualne</string>
     <string name="stale_relay_hint_icon_description">Ostrzeżenie o nieaktualnym transmiterze</string>
     <string name="pinned_to_top">Przypięte do góry</string>
+    <string name="pinned_chat_no_messages_loaded">Nie wczytano ostatnich wiadomości</string>
     <string name="upload_image">Dodaj zdjęcie</string>
     <string name="upload_file">Prześlij plik</string>
     <string name="take_a_picture">Zrób zdjęcie</string>
@@ -1047,6 +1054,30 @@
     <string name="my_fitness_goal_editor_hint">150 minut aktywności fizycznej tygodniowo to wytyczna WHO dla osób dorosłych.</string>
     <string name="my_fitness_goal_distance_off">Brak odległości celu</string>
     <string name="my_fitness_minutes_value">%1$d min.</string>
+    <plurals name="my_fitness_workout_count">
+        <item quantity="one">%1$d trening</item>
+        <item quantity="few">%1$d treningów</item>
+        <item quantity="many">%1$d treningów</item>
+        <item quantity="other">%1$d treningi</item>
+    </plurals>
+    <plurals name="my_fitness_days_left">
+        <item quantity="one">Pozostał %1$d dzień</item>
+        <item quantity="few">Pozostało %1$d dni</item>
+        <item quantity="many">Pozostało %1$d dni</item>
+        <item quantity="other">Pozostały %1$d dni</item>
+    </plurals>
+    <plurals name="my_fitness_goal_streak">
+        <item quantity="one">%1$d tygodniowa seria</item>
+        <item quantity="few">%1$d tygodniowa seria</item>
+        <item quantity="many">%1$d tygodniowa seria</item>
+        <item quantity="other">%1$d tygodniowa seria</item>
+    </plurals>
+    <plurals name="my_fitness_best_streak">
+        <item quantity="one">Najlepszy: %1$d tydzień</item>
+        <item quantity="few">Najlepsze: %1$d tygodnie</item>
+        <item quantity="many">Najlepsze: %1$d tygodni</item>
+        <item quantity="other">Najlepszy: %1$d tygodnie</item>
+    </plurals>
     <string name="nsite_none_found">Nie znaleziono żadnych witryn nSite.</string>
     <string name="browser_reload">Odśwież</string>
     <string name="browser_unsupported">Przeglądarka w aplikacji wymaga Androida 11 lub nowszego.</string>
@@ -1202,6 +1233,7 @@
     <string name="relay_auth_event_explainer">To nie jest wpis. Loguje Cię do tego transmitera: każdy, kto go posiada, może przeczytać to, co transmiter pokazuje wyłącznie Tobie, na przykład Twoje prywatne wiadomości.</string>
     <string name="relay_auth_event_unusual_relay">To nie jest zwykły adres transmitera. Sprawdź go przed przystąpieniem.</string>
     <string name="relay_auth_event_app_title">Zaloguj się</string>
+    <string name="http_auth_event_title">Żądanie logowania do sieci</string>
     <string name="http_auth_event_with_file">Powiązane z wysyłanym plikiem.</string>
     <string name="blossom_auth_event_title">Uprawnienia serwera multimediów</string>
     <string name="blossom_auth_upload">Wgraj plik</string>
@@ -1706,6 +1738,9 @@
     <string name="call_permission_denied_cancel">Anuluj</string>
     <string name="call_settings_enable_calls">Włącz połączenia głosowe i wideo</string>
     <string name="call_settings_enable_calls_description">Gdy wyłączone, przyciski połączeń na ekranach czatu są ukryte, a wszystkie połączenia przychodzące są cicho ignorowane.</string>
+    <string name="call_settings_off_with_nip17">Zawieszono połączenia: korzystają one z tego samego szyfrowanego kanału co prywatne wiadomości (NIP-17), które są wyłączone w ustawieniach aplikacji „Wiadomości”.</string>
+    <string name="open_messages_settings">Otwórz ustawienia wiadomości</string>
+    <string name="chat_composer_off_with_nip17">Prywatne wiadomości (NIP-17) są wyłączone w ustawieniach wiadomości, więc nie możesz tutaj wysyłać wiadomości.</string>
     <string name="call_settings_video_quality">Jakość Wideo</string>
     <string name="call_settings_max_bitrate">Maks. przepływność wideo</string>
     <string name="call_settings_turn_servers">Serwery TURN / STUN</string>
@@ -2427,6 +2462,7 @@
     <string name="video_player_settings_location_top_bar">Górny pasek</string>
     <string name="video_player_settings_location_overflow">Rozwijane menu</string>
     <string name="video_player_settings_action_fullscreen">Pełny ekran</string>
+    <string name="video_player_exit_fullscreen">Wyjdź z trybu pełnoekranowego</string>
     <string name="video_player_settings_action_fullscreen_description">Otwórz film w trybie pełnoekranowego powiększenia</string>
     <string name="video_player_settings_action_mute">Wycisz</string>
     <string name="video_player_settings_action_mute_description">Włącz lub wyłącz dźwięk</string>
@@ -2672,6 +2708,28 @@
     <string name="git_pr_no_changes">Nie znaleziono zmian w pliku.</string>
     <string name="git_pr_changes_retry">Ponów próbę ładowania zmian</string>
     <string name="git_pr_revised">Zaktualizowane</string>
+    <string name="git_cover_note">Notatka okładki</string>
+    <string name="git_ci_success">CI przeszło</string>
+    <string name="git_ci_failure">CI nieudane</string>
+    <string name="git_ci_pending">CI uruchomione</string>
+    <string name="git_ci_cancelled">CI anulowane</string>
+    <string name="git_ci_neutral">CI neutralne</string>
+    <string name="git_ci_count">%1$d/%2$d</string>
+    <string name="git_ci_runs_title">CI działa</string>
+    <string name="git_ci_runs_disclaimer">Każdy może opublikować wyniki testów CI dla dowolnego repozytorium. Zanim zaufasz wynikom, sprawdź, kto podpisał poszczególne testy.</string>
+    <string name="git_ci_signed_by">Podpisane przez</string>
+    <string name="git_ci_queued">W kolejce</string>
+    <string name="git_ci_in_progress">W trakcie</string>
+    <string name="git_ci_conclusion_success">Sukces</string>
+    <string name="git_ci_conclusion_failure">Niepowodzenie</string>
+    <string name="git_ci_conclusion_neutral">Neutralny</string>
+    <string name="git_ci_conclusion_cancelled">Anulowany</string>
+    <string name="git_ci_conclusion_skipped">Pominięty</string>
+    <string name="git_ci_conclusion_timed_out">Przekroczono czas</string>
+    <string name="git_ci_conclusion_startup_failure">Błąd uruchamiania</string>
+    <string name="git_ci_conclusion_unknown">Nieznany wynik</string>
+    <string name="git_ci_no_jobs">Brak wyników zadania.</string>
+    <string name="git_ci_job_loading">Wczytywanie wyniku zadania…</string>
     <string name="git_repo_settings_title">Edytuj repozytorium</string>
     <string name="git_repo_settings_name">Nazwa</string>
     <string name="git_repo_settings_description">Opis</string>
@@ -4473,6 +4531,33 @@
     <string name="location_pick_on_map">Wybierz miejsce na mapie</string>
     <string name="login_bunker_not_supported">Aplikacja Amethyst na Androida nie może zalogować się przy użyciu adresu typu bunker://. Udostępnia ona takie adresy, aby inne aplikacje mogły poprosić ją o podpisanie, ale sama nie może się za ich pomocą zalogować. Należy skorzystać z zewnętrznej aplikacji do podpisywania lub z Amethyst Desktop.</string>
     <string name="login_nostrconnect_not_supported">To aplikacja, która prosi o nawiązanie połączenia z Twoim podpisywaczem, a nie sposób na zalogowanie się. Najpierw się zaloguj, a potem otwórz ją z poziomu ekranu podpisywacza NIP-46.</string>
+    <string name="desktop_key_not_kept_title">Twój klucz nie został zapisany</string>
+    <string name="desktop_key_not_kept_description">Ten komputer nie posiada zestawu kluczy, z którego mogłaby skorzystać Amethyst, więc Twój klucz prywatny jest przechowywany tylko do momentu zamknięcia programu Amethyst. Przy następnym uruchomieniu konieczne będzie ponowne zalogowanie się.</string>
+    <string name="desktop_notifications">Powiadomienia z pulpitu</string>
+    <string name="desktop_notifications_description">Wyświetlaj wzmianki, odpowiedzi, reakcje, zapy i wiadomości jako powiadomienia systemowe, gdy aplikacja Amethyst działa w tle.</string>
+    <string name="desktop_notifications_denied">System zablokował powiadomienia od Amethyst. Zezwól na nie w ustawieniach systemu.</string>
+    <string name="desktop_notifications_preview">Pokaż tekst wiadomości</string>
+    <string name="desktop_notifications_preview_description">W powiadomieniu należy podać treść wypowiedzi, a nie tylko to, kto ją wygłosił.</string>
+    <string name="desktop_notification_someone">Ktoś</string>
+    <string name="desktop_notification_dm">Nowa zaszyfrowana wiadomość</string>
+    <string name="desktop_notification_reply">%1$s odpowiedział</string>
+    <string name="desktop_notification_mention">%1$s wspomniał o Tobie</string>
+    <string name="desktop_notification_repost">%1$s udostępniony</string>
+    <string name="desktop_notification_follow">%1$s zaczął cię obserwować</string>
+    <string name="desktop_upload_server_not_supported">Pliki przesyłane z komputera trafiają na serwery Blossom. Wybierz jeden z nich w ustawieniach serwera multimediów.</string>
+    <string name="desktop_menu_file">Plik</string>
+    <string name="desktop_menu_go">Przejdź</string>
+    <string name="desktop_menu_help">Pomoc</string>
+    <string name="desktop_menu_quit">Zamknij Ametyst</string>
+    <string name="desktop_menu_messages">Wiadomości</string>
+    <string name="desktop_menu_notifications">Powiadomienia</string>
+    <string name="desktop_menu_about">O aplikacji Amethyst</string>
+    <string name="desktop_menu_report_issue">Zgłoś problem</string>
+    <string name="login_with_remote_signer">Zaloguj się przy użyciu zdalnego sygnatariusza</string>
+    <string name="remote_signer_scan_title">Podłącz swojego sygnatariusza</string>
+    <string name="remote_signer_scan_description">Zeskanuj ten kod przy użyciu sygnatariusza NIP-46 lub wklej do niego adres. W polu klucza należy wpisać adres typu bunker:// z Twojego sygnatariusza.</string>
+    <string name="remote_signer_waiting">Oczekiwanie na akceptację przez sygnatariusza…</string>
+    <string name="remote_signer_login_failed">Nie udało się zalogować przy użyciu zdalnego sygnatariusza: %1$s</string>
     <string name="login_with_a_private_key_to_be_able_to_boost_posts">Używasz klucza publicznego, a klucze publiczne są tylko do odczytu. Zaloguj się za pomocą klucza prywatnego, aby zwiększyć liczbę postów</string>
     <string name="login_with_a_private_key_to_be_able_to_follow">Używasz klucza publicznego, a klucze publiczne są tylko do odczytu. Zaloguj się za pomocą klucza prywatnego, aby móc obserwować</string>
     <string name="login_with_a_private_key_to_be_able_to_hide_word">Używasz klucza publicznego, a klucze publiczne są tylko do odczytu. Zaloguj się za pomocą klucza prywatnego, aby móc ukryć słowo lub zdanie</string>
@@ -6856,4 +6941,63 @@
         <item quantity="many">+%1$d więcej odpowiedzi</item>
         <item quantity="other">+%1$d odpowiedzi więcej</item>
     </plurals>
+    <!-- Mostro instance terms (kind 38385) -->
+    <string name="mostro_instance_unnamed">Instancja „Mostro” bez nazwy</string>
+    <string name="mostro_version">Wersja %1$s</string>
+    <string name="mostro_fee">Opłata</string>
+    <string name="mostro_order_size">Rozmiar zamówienia</string>
+    <string name="mostro_order_size_range">%1$s – %2$s satoszy</string>
+    <string name="mostro_order_size_min">Od %1$s satoszy</string>
+    <string name="mostro_order_size_max">Do %1$s satoszy</string>
+    <string name="mostro_currencies">Waluty</string>
+    <string name="mostro_all_currencies">Wszystkie waluty</string>
+    <string name="mostro_order_expiration">Zamówienia oczekujące</string>
+    <string name="mostro_escrow">Escrow</string>
+    <string name="mostro_escrow_cashu">Cashu ecash</string>
+    <string name="mostro_in_maintenance">W trakcie konserwacji: nie przyjmujemy nowych zamówień</string>
+    <!-- Kanban boards (kind 30301) and cards (kind 30302) -->
+    <string name="kanban_board_label">Tablica Kanban</string>
+    <string name="kanban_card_label">Karta kanban</string>
+    <string name="kanban_untitled">Bez tytułu</string>
+    <plurals name="kanban_column_card_count">
+        <item quantity="one">%1$d karta</item>
+        <item quantity="few">%1$d kart</item>
+        <item quantity="many">%1$d kart</item>
+        <item quantity="other">%1$d karty</item>
+    </plurals>
+    <plurals name="kanban_unplaced_cards">
+        <item quantity="one">Karta %1$d nie znajduje się w żadnej kolumnie</item>
+        <item quantity="few">%1$d kart nie znajduje się w żadnej z kolumn</item>
+        <item quantity="many">%1$d kart nie znajduje się w żadnej z kolumn</item>
+        <item quantity="other">%1$d karty nie znajdują się w żadnej z kolumn</item>
+    </plurals>
+    <string name="kanban_assigned_to">Przypisany do</string>
+    <plurals name="kanban_more_assignees">
+        <item quantity="one">+%1$d więcej</item>
+        <item quantity="few">+%1$d więcej</item>
+        <item quantity="many">+%1$d więcej</item>
+        <item quantity="other">+%1$d więcej</item>
+    </plurals>
+    <string name="kanban_on_board">Na pokładzie %1$s</string>
+    <string name="kanban_open_board">Otwórz tablicę</string>
+    <!-- WalletScrutiny build verifications (kind 30301) -->
+    <string name="build_verification_label">Kontrola powtarzalności kompilacji</string>
+    <string name="build_verdict_reproducible">Powtarzalne</string>
+    <string name="build_verdict_not_reproducible">Nieodtwarzalne</string>
+    <string name="build_verdict_ftbfs">Nie udało się skompilować z kodu źródłowego</string>
+    <string name="build_verdict_spam">Oznaczono jako spam</string>
+    <string name="build_verdict_notag">Brak tagu źródłowego dla tej wersji</string>
+    <string name="build_verdict_nosource">Brak publicznego kodu źródłowego</string>
+    <string name="build_verdict_warning">Zweryfikowano z ostrzeżeniami</string>
+    <string name="build_verdict_obfuscated">Zagmatwana kompilacja</string>
+    <string name="build_verdict_unknown">Werdykt: %1$s</string>
+    <string name="build_verified_by">Zweryfikowane przez</string>
+    <plurals name="build_files_checked">
+        <item quantity="one">%1$d plik sprawdzony</item>
+        <item quantity="few">%1$d sprawdzonych plików</item>
+        <item quantity="many">%1$d sprawdzonych plików</item>
+        <item quantity="other">%1$d sprawdzone pliki</item>
+    </plurals>
+    <string name="build_show_report">Pokaż raport</string>
+    <string name="build_hide_report">Ukryj raport</string>
 </resources>

@@ -6732,4 +6732,7 @@
         <item quantity="many">+%1$d další odpovědi</item>
         <item quantity="other">+%1$d dalších odpovědí</item>
     </plurals>
+    <!-- Mostro instance terms (kind 38385) -->
+    <!-- Kanban boards (kind 30301) and cards (kind 30302) -->
+    <!-- WalletScrutiny build verifications (kind 30301) -->
 </resources>

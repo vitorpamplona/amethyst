@@ -272,12 +272,6 @@
          NavBarItemDef labels are R.string ids. -->
     <!-- NIP-71 video credits: what a video says about the people and works it references. -->
     <string name="always_on_notif_channel_description">Utrzymuje aktywne połączenia z transmiterami skrzynki odbiorczej, umożliwiając otrzymywanie powiadomień w czasie rzeczywistym</string>
-    <plurals name="always_on_notif_connected">
-        <item quantity="one">Połączono z %1$d transmiterem odbiorczym</item>
-        <item quantity="few">Połączono z %1$d transmiterami odbiorczymi</item>
-        <item quantity="many">Połączono z %1$d transmiterami odbiorczymi</item>
-        <item quantity="other">Połączono z %1$d transmiterami odbiorczymi</item>
-    </plurals>
     <plurals name="always_on_notif_connected_foreground">
         <item quantity="one">Podłączono do %1$d transmitera</item>
         <item quantity="few">Podłączono do %1$d transmiterów</item>

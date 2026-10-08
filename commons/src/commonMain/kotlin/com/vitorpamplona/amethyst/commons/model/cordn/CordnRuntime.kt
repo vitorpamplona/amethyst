@@ -45,6 +45,8 @@ import com.vitorpamplona.amethyst.commons.cordn.FileCordnHandoffStore
 import com.vitorpamplona.amethyst.commons.cordn.FileCordnKeyPackageStore
 import com.vitorpamplona.amethyst.commons.cordn.OpenedWelcome
 import com.vitorpamplona.amethyst.commons.model.cordnGroups.CordnGroupList
+import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.ExplainedFilter
+import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.SubPurpose
 import com.vitorpamplona.amethyst.commons.util.deleteRecursivelyQuietly
 import com.vitorpamplona.amethyst.commons.util.platformFileSystem
 import com.vitorpamplona.quartz.contextvm.core.CvmKinds
@@ -57,7 +59,6 @@ import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.metadata.MetadataEvent
 import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.fetchAll
-import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip65RelayList.AdvertisedRelayListEvent
@@ -250,7 +251,7 @@ class CordnRuntime(
                                 filters =
                                     config.relays.associateWith {
                                         listOf(
-                                            Filter(
+                                            ExplainedFilter(
                                                 kinds =
                                                     listOf(
                                                         MetadataEvent.KIND,
@@ -258,6 +259,7 @@ class CordnRuntime(
                                                         CvmKinds.SERVER_ANNOUNCEMENT,
                                                     ),
                                                 authors = listOf(config.pubKey),
+                                                purpose = SubPurpose.COORDINATOR_GROUPS,
                                             ),
                                         )
                                     },

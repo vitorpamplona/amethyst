@@ -22,6 +22,8 @@ package com.vitorpamplona.amethyst.commons.model.nip62Vanish
 
 import androidx.compose.runtime.Stable
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
+import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.SubPurpose
+import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.taggedAs
 import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.fetchFirst
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
@@ -105,7 +107,7 @@ class VanishRequestsState(
         try {
             val foundEvent =
                 withContext(Dispatchers.IO) {
-                    client.fetchFirst(
+                    client.taggedAs(SubPurpose.RELAY_INFO, "Vanish compliance check").fetchFirst(
                         relay = relay,
                         filter =
                             Filter(
