@@ -366,6 +366,7 @@ suspend fun INostrClient.fetchAllPages(
     var boundaryFilters: List<Int>? = null
     var largestPage = 0
     var shortPagesInARow = 0
+    var lastPageable: List<Int>? = null
     var reAsks = 0
 
     while (true) {
@@ -399,13 +400,31 @@ suspend fun INostrClient.fetchAllPages(
                 stillNeedsMore && pageableThisPage
             }
         val capToPageSize = pageable.size == 1
+        // Pages shrink honestly when a filter drops out (its limit met, a search after page 1):
+        // that is not throttling, so the short-page evidence starts over with the new set.
+        if (pageable != lastPageable) {
+            largestPage = 0
+            shortPagesInARow = 0
+            lastPageable = pageable
+        }
         val activeFilters =
             pageable.map { index ->
                 val filter = filters[index]
                 val pageLimit =
                     filter.limit?.let {
-                        val remainder = it - matchCountPerFilter[index] + seenAtBoundary.size
-                        if (capToPageSize) minOf(remainder, pageSize) else remainder
+                        val remainder = it - matchCountPerFilter[index]
+                        val seen = seenAtBoundary.size
+                        when {
+                            !capToPageSize -> remainder + seen
+                            // A normal page: at most pageSize, so a relay that refuses anything
+                            // above its max (purplepag.es) is never asked for more.
+                            seen < pageSize -> minOf(remainder + seen, pageSize)
+                            // The boundary second alone fills a page: capping here would bring
+                            // back only duplicates, step past the second and drop its tail. Ask
+                            // past pageSize; a relay that can serve it will, one that cannot was
+                            // going to lose that tail anyway.
+                            else -> minOf(remainder, pageSize) + seen
+                        }
                     }
                 IndexedValue(index, filter.copy(until = until ?: filter.until, limit = pageLimit))
             }

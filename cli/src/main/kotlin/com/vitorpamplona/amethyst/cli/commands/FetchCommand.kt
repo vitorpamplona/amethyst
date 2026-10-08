@@ -25,6 +25,7 @@ import com.vitorpamplona.amethyst.cli.Context
 import com.vitorpamplona.amethyst.cli.DataDir
 import com.vitorpamplona.amethyst.cli.Output
 import com.vitorpamplona.amethyst.commons.relayClient.oneshot.EventLocator
+import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.FetchAllResult
 import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.PagedFetchResult
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
@@ -35,6 +36,7 @@ import com.vitorpamplona.quartz.nip19Bech32.entities.NEvent
 import com.vitorpamplona.quartz.nip19Bech32.entities.NNote
 import com.vitorpamplona.quartz.nip19Bech32.entities.NProfile
 import com.vitorpamplona.quartz.nip19Bech32.entities.NPub
+import kotlin.coroutines.cancellation.CancellationException
 
 /**
  * `amy fetch [--kind …] [--author …] [--id …] [--tag …] [--since/--until TS]
@@ -192,9 +194,17 @@ object FetchCommand {
     ): Int {
         val stream = Output.listStream(mapOf("queried_relays" to relays.map { it.url }), "events")
         val count =
-            ctx.streamAllPages(relays.associateWith { listOf(filter) }, timeoutMs, onRelayResult = { relay, result ->
-                refusalOf(result)?.let { synchronized(relayErrors) { relayErrors[relay] = it } }
-            }) { _, event -> stream.item(event.toJson()) }
+            try {
+                ctx.streamAllPages(relays.associateWith { listOf(filter) }, timeoutMs, onRelayResult = { relay, result ->
+                    refusalOf(result)?.let { synchronized(relayErrors) { relayErrors[relay] = it } }
+                }) { _, event -> stream.item({ event.toJson() }, { eventAsMap(event) }) }
+            } catch (e: Throwable) {
+                // Close the half-written object (with an `error`) before anything else reports:
+                // a second JSON object after a cut-off one is unparseable either way.
+                stream.abort(e.message ?: e::class.simpleName)
+                if (e is CancellationException || !stream.started) throw e
+                return 1
+            }
 
         // Nothing arrived, so nothing was written: answer exactly as the buffered path would
         // (an empty result, or `no_relay_served` when every relay refused).
@@ -208,6 +218,18 @@ object FetchCommand {
         stream.finish(if (errors.isEmpty()) mapOf("count" to count) else mapOf("count" to count, "relay_errors" to errors))
         return 0
     }
+
+    /** An event as the map its NIP-01 JSON would parse to, for text-mode rendering. */
+    private fun eventAsMap(event: Event): Map<String, Any?> =
+        linkedMapOf(
+            "id" to event.id,
+            "pubkey" to event.pubKey,
+            "created_at" to event.createdAt,
+            "kind" to event.kind,
+            "tags" to event.tags.map { it.toList() },
+            "content" to event.content,
+            "sig" to event.sig,
+        )
 
     /**
      * Why a relay gave us nothing, in its own words: a CLOSED reason (relay.zapstore.dev
