@@ -32,9 +32,8 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import com.vitorpamplona.amethyst.commons.resources.Res
-import com.vitorpamplona.amethyst.commons.resources.call_settings_open_messages_settings
+import com.vitorpamplona.amethyst.commons.resources.open_messages_settings
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 
 /**
@@ -49,20 +48,21 @@ fun Nip17OffNotice(
 ) {
     Card(
         modifier = modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.errorContainer),
+        // The user turned NIP-17 off on purpose: this explains a choice, it doesn't report an error.
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.secondaryContainer),
     ) {
         Column(Modifier.padding(start = 16.dp, end = 8.dp, top = 12.dp, bottom = 4.dp)) {
             Text(
                 text = text,
-                fontSize = 14.sp,
-                color = MaterialTheme.colorScheme.onErrorContainer,
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSecondaryContainer,
                 modifier = Modifier.padding(end = 8.dp),
             )
             TextButton(
                 onClick = onOpenMessagesSettings,
                 modifier = Modifier.align(Alignment.End),
             ) {
-                Text(stringRes(Res.string.call_settings_open_messages_settings))
+                Text(stringRes(Res.string.open_messages_settings))
             }
         }
     }

@@ -52,6 +52,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.CallTurnServer
@@ -109,7 +110,7 @@ private fun CallSettingsContent(
     val settings = accountViewModel.account.settings
     val callsEnabled by settings.callsEnabled.collectAsState()
     val chatFeeds by accountViewModel.account.chatFeedToggles.applied
-        .collectAsState()
+        .collectAsStateWithLifecycle()
 
     // Calls signal over NIP-17's gift-wrap inbox (ChatFeedToggles.isCallingActive): with NIP-17 off
     // they stay off whatever the switch below says, so say why and where to turn it back on.

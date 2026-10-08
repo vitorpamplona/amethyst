@@ -1726,7 +1726,7 @@
     <string name="call_settings_enable_calls">Enable voice and video calls</string>
     <string name="call_settings_enable_calls_description">When disabled, call buttons are hidden from chat screens and all incoming calls are silently ignored.</string>
     <string name="call_settings_off_with_nip17">Calls are off: they use the same encrypted channel as private messages (NIP-17), which are turned off in Messages settings.</string>
-    <string name="call_settings_open_messages_settings">Open Messages settings</string>
+    <string name="open_messages_settings">Open Messages settings</string>
     <string name="chat_composer_off_with_nip17">Private messages (NIP-17) are turned off in Messages settings, so you can't send messages here.</string>
     <string name="call_settings_video_quality">Video Quality</string>
     <string name="call_settings_max_bitrate">Max Video Bitrate</string>
