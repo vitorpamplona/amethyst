@@ -6652,6 +6652,11 @@
         <item quantity="other">%1$d messages from outside your network</item>
     </plurals>
     <string name="chat_outside_network_show">Show</string>
+    <string name="profile_in_network">In your network</string>
+    <string name="profile_outside_network">Outside your network</string>
+    <string name="profile_trust_score">Score %1$d</string>
+    <string name="profile_not_scored">Not scored</string>
+    <string name="profile_you_follow">You follow them</string>
     <string name="thread_reply_outside_network">Outside your network · tap to show</string>
     <string name="wot_off_title">Keep strangers out</string>
     <string name="wot_off_body">Pick a trust provider. Only people in your extended network reach you.</string>
