@@ -376,13 +376,18 @@ class AccountFeedContentStates(
             }
         }
 
-        // A new Web of Trust index (download, update, provider change) or a new minimum score
+        // A new Web of Trust index (download, update, provider change), a newer card seen between
+        // syncs that moves someone in or out (verdictRevision), or a new minimum score
         // moves people between Known and New Requests and in or out of Curated notifications,
         // with no event flowing through LocalCache. Rebuild those feeds; clear the card feeds
         // first, since their refresh is additive-only and would keep cards that no longer pass.
         scope.launch(Dispatchers.IO) {
             @OptIn(FlowPreview::class)
-            combine(account.trustNetwork.network, account.trustNetwork.minTrustScore) { network, score -> network to score }
+            combine(
+                account.trustNetwork.network,
+                account.trustNetwork.minTrustScore,
+                account.trustNetwork.verdictRevision,
+            ) { network, score, revision -> Triple(network, score, revision) }
                 .drop(1)
                 .debounce(500)
                 .collect {

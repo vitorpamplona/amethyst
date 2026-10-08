@@ -330,6 +330,7 @@ import com.vitorpamplona.quartz.nip72ModCommunities.rules.tags.KindRuleTag
 import com.vitorpamplona.quartz.nip72ModCommunities.rules.tags.PubkeyRuleTag
 import com.vitorpamplona.quartz.nip72ModCommunities.rules.tags.WotTag
 import com.vitorpamplona.quartz.nip85TrustedAssertions.list.tags.ServiceProviderTag
+import com.vitorpamplona.quartz.nip85TrustedAssertions.users.UserAssertionEvent
 import com.vitorpamplona.quartz.nip88Polls.poll.PollEvent
 import com.vitorpamplona.quartz.nip88Polls.poll.tags.PollType
 import com.vitorpamplona.quartz.nip88Polls.response.PollResponseEvent
@@ -527,11 +528,12 @@ class Account(
 
     override fun cardHomeRelays(): Set<NormalizedRelayUrl> = homeRelays.flow.value
 
-    // A provider whose cards are already in the local trust network index needs no per-profile
-    // subscription: the badges read the index (UserCardsCache.rankFlow / followerCountStrFlow).
-    override fun trustProvider(): ServiceProviderTag? = trustProviderList.liveUserRankProvider.value?.takeUnless { trustNetwork.network.value?.isFrom(it) == true }
+    // Profiles on screen ask the providers for their cards even when the trust network holds
+    // them: a card newer than the last sync updates the network until the next one
+    // (TrustNetworkState.offer).
+    override fun trustProvider(): ServiceProviderTag? = trustProviderList.liveUserRankProvider.value
 
-    override fun followerCountProvider(): ServiceProviderTag? = trustProviderList.liveUserFollowerCount.value?.takeUnless { trustNetwork.network.value?.isFrom(it) == true }
+    override fun followerCountProvider(): ServiceProviderTag? = trustProviderList.liveUserFollowerCount.value
 
     override fun declaredFollowsByOutboxRelay(): Map<NormalizedRelayUrl, Set<HexKey>> = declaredFollowsPerOutboxRelay.value
 
@@ -4337,6 +4339,8 @@ class Account(
             cache.live.newEventBundles.collect { newNotes ->
                 logTime("Account ${userProfile().toBestDisplayName()} newEventBundle Update with ${newNotes.size} new notes") {
                     upgradeAttestations()
+                    // Cards fetched for profiles on screen keep the trust network fresh between syncs.
+                    trustNetwork.offer(newNotes.mapNotNull { it.event as? UserAssertionEvent })
                     newNotesPreProcessor.runNew(newNotes)
                     followSets.newNotes(newNotes)
                     starterPacks.newNotes(newNotes)

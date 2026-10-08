@@ -470,7 +470,7 @@ fun observeUserAssertionsScore(
     val flow =
         remember(user) {
             val account = accountViewModel.account
-            user.cards().rankFlow(account.trustProviderList, account.trustNetwork.network, user.pubkeyHex)
+            user.cards().rankFlow(account.trustProviderList, account.trustNetwork, user.pubkeyHex)
         }
 
     return flow.collectAsStateWithLifecycle(null)
@@ -489,7 +489,7 @@ fun observeUserAssertionsFollowerCount(
     val flow =
         remember(user) {
             val account = accountViewModel.account
-            user.cards().followerCountStrFlow(account.trustProviderList, account.trustNetwork.network, user.pubkeyHex)
+            user.cards().followerCountStrFlow(account.trustProviderList, account.trustNetwork, user.pubkeyHex)
         }
 
     return flow.collectAsStateWithLifecycle("--")

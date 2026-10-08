@@ -457,8 +457,10 @@ fun RenderThreadFeed(
         .collectAsStateWithLifecycle()
     val minTrustScore by accountViewModel.account.trustNetwork.minTrustScore
         .collectAsStateWithLifecycle()
+    val verdictRevision by accountViewModel.account.trustNetwork.verdictRevision
+        .collectAsStateWithLifecycle()
     val outsideNetwork =
-        remember(items, trustNetwork, minTrustScore, noteId) {
+        remember(items, trustNetwork, minTrustScore, verdictRevision, noteId) {
             if (trustNetwork == null) emptySet() else outOfNetworkReplies(items.list, noteId, accountViewModel)
         }
 

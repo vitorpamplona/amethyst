@@ -24,6 +24,7 @@ import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
 import com.vitorpamplona.quartz.nip85TrustedAssertions.list.tags.ProviderTypes
 import com.vitorpamplona.quartz.nip85TrustedAssertions.list.tags.ServiceProviderTag
+import com.vitorpamplona.quartz.nip85TrustedAssertions.users.UserAssertionEvent
 import com.vitorpamplona.quartz.nip85TrustedAssertions.users.index.TrustNetworkBuilder
 import com.vitorpamplona.quartz.nip85TrustedAssertions.users.index.TrustNetworkCodec
 import com.vitorpamplona.quartz.nip85TrustedAssertions.users.index.TrustNetworkHeader
@@ -173,5 +174,51 @@ class TrustNetworkStateTest {
             wot.awaitReady()
             assertEquals(TrustVerdict.NO_NETWORK, wot.explain(hex(), hex(), emptySet()))
             assertNull(TrustVerdict.NO_NETWORK.isKnown)
+        }
+
+    private fun newerCard(
+        subject: String,
+        rank: Int,
+        at: Long,
+        author: String = providerKey,
+    ) = UserAssertionEvent(hex(), author, at, arrayOf(arrayOf("d", subject), arrayOf("rank", rank.toString()), arrayOf("followers", "12")), "", "0".repeat(128))
+
+    @Test
+    fun cardsSeenBetweenSyncsUpdateTheNetwork() =
+        runBlocking {
+            // The index on disk was synced up to created_at 1000.
+            writeIndex()
+            val wot = state(MutableStateFlow(provider))
+            wot.awaitReady()
+            val stranger = hex()
+
+            wot.offer(
+                listOf(
+                    // Already in the index (at the cursor): ignored.
+                    newerCard(lowRank, 90, at = 1000),
+                    // Someone the index does not have yet, and a rise above the minimum.
+                    newerCard(stranger, 30, at = 2000),
+                    // Another author's card: ignored.
+                    newerCard(trusted, 1, at = 2000, author = hex()),
+                ),
+            )
+            assertEquals(30, wot.rankOf(stranger))
+            assertEquals(12, wot.followersOf(stranger))
+            assertTrue(wot.passes(stranger))
+            assertFalse(wot.passes(lowRank))
+            assertEquals(40, wot.rankOf(trusted))
+            assertEquals(1, wot.verdictRevision.value, "letting someone in re-runs the feeds")
+
+            // The provider removes them (rank 0), then an older copy arrives late: still removed.
+            wot.offer(listOf(newerCard(stranger, 0, at = 3000)))
+            wot.offer(listOf(newerCard(stranger, 30, at = 2500)))
+            assertNull(wot.rankOf(stranger))
+            assertEquals(TrustVerdict.NOT_IN_NETWORK, wot.explain(stranger, hex(), emptySet()))
+            assertEquals(2, wot.verdictRevision.value)
+
+            // A rank change that does not cross the minimum updates the badge, not the feeds.
+            wot.offer(listOf(newerCard(trusted, 60, at = 2000)))
+            assertEquals(60, wot.rankOf(trusted))
+            assertEquals(2, wot.verdictRevision.value)
         }
 }

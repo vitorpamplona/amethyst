@@ -26,6 +26,7 @@ import com.vitorpamplona.amethyst.commons.util.platformFileSystem
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
 import com.vitorpamplona.quartz.nip85TrustedAssertions.list.tags.ServiceProviderTag
+import com.vitorpamplona.quartz.nip85TrustedAssertions.users.UserAssertionEvent
 import com.vitorpamplona.quartz.nip85TrustedAssertions.users.index.TrustNetworkCodec
 import com.vitorpamplona.quartz.nip85TrustedAssertions.users.index.TrustNetworkHeader
 import com.vitorpamplona.quartz.nip85TrustedAssertions.users.index.TrustNetworkIds
@@ -35,6 +36,7 @@ import com.vitorpamplona.quartz.nip85TrustedAssertions.users.index.TrustNetworkS
 import com.vitorpamplona.quartz.nip85TrustedAssertions.users.index.downloadTrustNetwork
 import com.vitorpamplona.quartz.nip85TrustedAssertions.users.index.reconcileTrustNetwork
 import com.vitorpamplona.quartz.nip85TrustedAssertions.users.index.updateTrustNetwork
+import com.vitorpamplona.quartz.utils.Hex
 import com.vitorpamplona.quartz.utils.Log
 import com.vitorpamplona.quartz.utils.TimeUtils
 import kotlinx.coroutines.CancellationException
@@ -67,6 +69,18 @@ class TrustNetwork(
 ) {
     fun isFrom(provider: ServiceProviderTag) = header.provider == provider.pubkey && header.relay == provider.relayUrl.url
 }
+
+/**
+ * The provider's card for someone, seen between syncs (a profile on screen fetched it) and newer
+ * than the loaded index. Held in memory until the next sync, which downloads it for good.
+ */
+@Immutable
+class TrustOverlayCard(
+    /** 0 when the card has no rank or a rank of 0: the provider removed them. */
+    val rank: Int,
+    val followers: Int,
+    val createdAt: Long,
+)
 
 /** Why someone is or is not in the user's network. [isKnown] is null when no network is active. */
 enum class TrustVerdict(
@@ -151,6 +165,21 @@ class TrustNetworkState(
     /** The active network, or null while there is no provider or no index for it yet. */
     val network: StateFlow<TrustNetwork?> = _network.asStateFlow()
 
+    /**
+     * Cards newer than the index, by subject, seen between syncs. Lookups read them before the
+     * index, so a provider that recomputes on demand shows up on screen right away.
+     */
+    private val _overlay = MutableStateFlow<Map<HexKey, TrustOverlayCard>>(emptyMap())
+    val overlay: StateFlow<Map<HexKey, TrustOverlayCard>> = _overlay.asStateFlow()
+
+    /**
+     * Bumps when a card from [overlay] moves someone in or out of the network, so feeds that
+     * sort people by it (DM tabs, Curated notifications, collapsed replies) re-run. Rank-only
+     * changes do not bump it.
+     */
+    private val _verdictRevision = MutableStateFlow(0)
+    val verdictRevision: StateFlow<Int> = _verdictRevision.asStateFlow()
+
     private val _status = MutableStateFlow(TrustNetworkSyncStatus())
     val status: StateFlow<TrustNetworkSyncStatus> = _status.asStateFlow()
 
@@ -200,11 +229,52 @@ class TrustNetworkState(
     val isActive: Boolean get() = _network.value != null
 
     /** True when [pubkey] ranks at or above the minimum score. False when inactive. */
-    fun passes(pubkey: HexKey): Boolean = _network.value?.index?.passes(pubkey, minTrustScore.value) ?: false
+    fun passes(pubkey: HexKey): Boolean = rankOf(pubkey)?.let { it >= minTrustScore.value } ?: false
 
-    fun rankOf(pubkey: HexKey): Int? = _network.value?.index?.rankOf(pubkey)
+    /** The provider's rank for [pubkey]: a newer card seen since the sync, else the index. */
+    fun rankOf(pubkey: HexKey): Int? {
+        val network = _network.value ?: return null
+        val card = _overlay.value[pubkey] ?: return network.index.rankOf(pubkey)
+        return card.rank.takeIf { it > 0 }
+    }
 
-    fun followersOf(pubkey: HexKey): Int? = _network.value?.index?.followersOf(pubkey)
+    fun followersOf(pubkey: HexKey): Int? {
+        val network = _network.value ?: return null
+        val card = _overlay.value[pubkey] ?: return network.index.followersOf(pubkey)
+        return card.followers.takeIf { card.rank > 0 }
+    }
+
+    /**
+     * Takes the provider's cards that reached the app between syncs (profiles on screen ask
+     * the provider's relay for theirs). A card newer than the index wins until the next sync,
+     * which downloads it anyway. Expects signatures already checked, as `LocalCache` does.
+     * Kind 5 deletions are left to the sync.
+     */
+    fun offer(events: Iterable<UserAssertionEvent>) {
+        val network = _network.value ?: return
+        val provider = network.header.provider
+        var flipped = false
+        for (event in events) {
+            if (event.pubKey != provider) continue
+            // At or before the cursor the index has it (or a deletion the sync saw removed it).
+            if (event.createdAt <= network.header.syncCursor) continue
+            val subject = event.aboutUser()
+            if (subject == null || !Hex.isHex64(subject)) continue
+            val held = _overlay.value[subject]
+            if (held != null && held.createdAt >= event.createdAt) continue
+
+            val before = passes(subject)
+            val card =
+                TrustOverlayCard(
+                    rank = (event.rank() ?: 0).coerceIn(0, 127),
+                    followers = (event.followerCount() ?: 0).coerceAtLeast(0),
+                    createdAt = event.createdAt,
+                )
+            _overlay.update { it + (subject to card) }
+            if (passes(subject) != before) flipped = true
+        }
+        if (flipped) _verdictRevision.update { it + 1 }
+    }
 
     /**
      * Why [pubkey] is or is not in [me]'s network, given who [me] follows. The single rule
@@ -215,10 +285,10 @@ class TrustNetworkState(
         me: HexKey,
         follows: Set<HexKey>,
     ): TrustVerdict {
-        val index = _network.value?.index ?: return TrustVerdict.NO_NETWORK
+        if (_network.value == null) return TrustVerdict.NO_NETWORK
         if (pubkey == me) return TrustVerdict.SELF
         if (pubkey in follows) return TrustVerdict.FOLLOW
-        val rank = index.rankOf(pubkey) ?: return TrustVerdict.NOT_IN_NETWORK
+        val rank = rankOf(pubkey) ?: return TrustVerdict.NOT_IN_NETWORK
         return if (rank >= minTrustScore.value) TrustVerdict.TRUSTED else TrustVerdict.BELOW_MIN_SCORE
     }
 
@@ -242,11 +312,13 @@ class TrustNetworkState(
     private suspend fun onProvider(provider: ServiceProviderTag?) {
         if (provider == null) {
             _network.value = null
+            _overlay.value = emptyMap()
             appliedProvider.value = Applied(null)
             return
         }
         val current = _network.value
         if (current == null || !current.isFrom(provider)) {
+            _overlay.value = emptyMap()
             _network.value = withContext(Dispatchers.IO) { readIndex()?.takeIf { it.isFrom(provider) } }
         }
         appliedProvider.value = Applied(provider)
@@ -407,6 +479,8 @@ class TrustNetworkState(
 
             writeFiles(result.header, result.index, result.ids)
             _network.value = TrustNetwork(result.header, result.index)
+            // The sync fetched everything up to its cursor; only cards seen after it still add.
+            _overlay.update { cards -> cards.filterValues { it.createdAt > result.header.syncCursor } }
             _status.value = TrustNetworkSyncStatus()
             Log.d(TAG) { "$kind done: ${result.index.size} entries, ${result.received} received, ${result.invalid} invalid (${result.detail})" }
             return TrustNetworkRun(kind, result, applied = true, error = null)
