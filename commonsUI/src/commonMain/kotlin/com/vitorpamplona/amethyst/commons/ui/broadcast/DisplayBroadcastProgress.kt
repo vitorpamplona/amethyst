@@ -32,6 +32,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -89,11 +90,14 @@ fun DisplayBroadcastProgress(accountViewModel: AccountViewModel) {
         // Keyed on the decision, not the list: a slow relay answering during
         // the grace period must not push the dismissal back. Until every post
         // is out — still sending, or an outbox relay failed — the banner stays.
+        // After the delay, hide what is out by then: the list may have changed
+        // without the decision flipping, if a new post went out within a frame.
         val canAutoDismiss = activeBroadcasts.canAutoDismiss()
+        val latestBroadcasts by rememberUpdatedState(activeBroadcasts)
         LaunchedEffect(canAutoDismiss) {
             if (canAutoDismiss) {
                 delay(1_500)
-                accountViewModel.broadcastTracker.hide(activeBroadcasts.ids())
+                accountViewModel.broadcastTracker.hide(latestBroadcasts.filter { it.isOut }.ids())
             }
         }
     } else {

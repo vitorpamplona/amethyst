@@ -208,6 +208,22 @@ class BroadcastEventTest {
     }
 
     @Test
+    fun hidingWithoutOutboxTargetsDropsResultsAndHidesWhatIsPending() {
+        val pending = broadcast(id = "pending", outbox = emptySet())
+        val accepted = broadcast(id = "accepted", outbox = emptySet()).withResult(inbox, RelayResult.Success)
+        val allFailed =
+            broadcast(id = "allFailed", outbox = emptySet())
+                .withResult(outboxA, RelayResult.Timeout)
+                .withResult(outboxB, RelayResult.Timeout)
+                .withResult(inbox, RelayResult.Error("no"))
+
+        val after = listOf(pending, accepted, allFailed).hiding(setOf("pending", "accepted", "allFailed"))
+
+        assertEquals(listOf("pending"), after.map { it.id })
+        assertTrue(after.single().hidden)
+    }
+
+    @Test
     fun aHiddenBroadcastStaysHiddenWhenTheTrackerWritesItsCopyBack() {
         // the tracker keeps its own copy, which never saw the hide.
         val trackersCopy = broadcast()

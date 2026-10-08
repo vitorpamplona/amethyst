@@ -76,6 +76,9 @@ class BroadcastTracker(
         relays: Set<NormalizedRelayUrl>,
         client: INostrClient,
     ) {
+        // nothing would be sent, and an entry with no relays is neither out nor failed.
+        if (relays.isEmpty()) return
+
         val trackingId = RandomInstance.randomChars(16)
 
         val broadcast =
