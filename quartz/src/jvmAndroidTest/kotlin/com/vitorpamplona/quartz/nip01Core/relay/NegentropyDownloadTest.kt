@@ -24,11 +24,17 @@ import com.vitorpamplona.geode.InProcessRelays
 import com.vitorpamplona.geode.fixtures.SyntheticEvents
 import com.vitorpamplona.geode.testing.preload
 import com.vitorpamplona.quartz.nip01Core.core.Event
+import com.vitorpamplona.quartz.nip01Core.relay.client.EmptyNostrClient
+import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.NostrClient
+import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.DownloadPace
 import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.NegentropySyncResult
+import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.fetchByIds
 import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.negentropySync
+import com.vitorpamplona.quartz.nip01Core.relay.client.reqs.SubscriptionListener
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toRelay.ReqCmd
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.relay.server.policies.IRelayPolicy
 import com.vitorpamplona.quartz.nip01Core.relay.server.policies.LimitsPolicy
 import com.vitorpamplona.quartz.nip01Core.relay.server.policies.PassThroughPolicy
@@ -40,10 +46,12 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeout
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertTrue
 
 /**
  * NIP-77 syncs against relays seen losing events in production without an error: the
@@ -116,6 +124,59 @@ class NegentropyDownloadTest {
             assertEquals(10, result.downloaded)
             assertEquals(events.drop(20).map { it.id }.toSet(), delivered.toSet())
         }
+
+    /** no.str.cr closes the socket under several 500-id downloads at once; every one in flight lost its ids. */
+    @Test
+    fun aBatchTheRelayDroppedIsAskedForAgainOneAtATime() =
+        runBlocking {
+            val events = SyntheticEvents.batch(30, kind = 1) { author }
+            val client = DropsFirst(this, events, drops = 1)
+            val pace = DownloadPace()
+
+            val got = client.fetchByIds(InProcessRelays.DEFAULT_URL, events.map { it.id }, idleTimeoutMs = 5_000, pace = pace)
+
+            assertEquals(30, got.size)
+            assertEquals(2, client.requests)
+            assertTrue(pace.oneAtATime, "the sync's other batches stop overlapping")
+        }
+
+    @Test
+    fun aRelayThatKeepsDroppingIsGivenUpOn() =
+        runBlocking {
+            val events = SyntheticEvents.batch(5, kind = 1) { author }
+            val client = DropsFirst(this, events, drops = Int.MAX_VALUE)
+
+            val got = client.fetchByIds(InProcessRelays.DEFAULT_URL, events.map { it.id }, idleTimeoutMs = 5_000)
+
+            assertEquals(0, got.size)
+            assertEquals(4, client.requests, "the first ask and three re-asks")
+        }
+
+    /** Drops the connection under its first [drops] `REQ`s, then serves [corpus] by id. */
+    private class DropsFirst(
+        private val scope: CoroutineScope,
+        private val corpus: List<Event>,
+        private val drops: Int,
+    ) : INostrClient by EmptyNostrClient() {
+        @Volatile var requests = 0
+
+        override fun subscribe(
+            subId: String,
+            filters: Map<NormalizedRelayUrl, List<Filter>>,
+            listener: SubscriptionListener?,
+        ) {
+            val (relay, relayFilters) = filters.entries.single()
+            val req = ++requests
+            scope.launch {
+                if (req <= drops) {
+                    listener?.onCannotConnect(relay, "WebSocket Failure: EOFException", relayFilters)
+                } else {
+                    corpus.filter { e -> relayFilters.any { it.match(e) } }.forEach { listener?.onEvent(it, false, relay, relayFilters) }
+                    listener?.onEose(relay, relayFilters)
+                }
+            }
+        }
+    }
 
     private suspend fun sync(
         count: Int,

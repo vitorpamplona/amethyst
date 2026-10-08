@@ -123,6 +123,9 @@ suspend fun negentropySyncFanOut(
             // single-threaded and the maxEvents cap exact.
             val events = Channel<Event>(DELIVERY_BUFFER)
 
+            // One per connection: a relay that drops one slows only that one's downloads.
+            val paces = clients.associateWith { DownloadPace() }
+
             val workers =
                 clients.flatMap { client ->
                     List(reqsPerClient.coerceAtLeast(1)) {
@@ -134,7 +137,7 @@ suspend fun negentropySyncFanOut(
                                     servedAny = true
                                     used.incrementAndFetch()
                                 }
-                                for (event in client.fetchByIds(relay, batch, idleTimeoutMs, filter)) {
+                                for (event in client.fetchByIds(relay, batch, idleTimeoutMs, filter, paces.getValue(client))) {
                                     events.send(event)
                                 }
                             }

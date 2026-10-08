@@ -27,6 +27,7 @@ import com.vitorpamplona.amethyst.cli.Output
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.DeletionSettleResult
+import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.DownloadPace
 import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.NegentropyReconcileResult
 import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.NegentropySyncException
 import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.fetchByIds
@@ -178,6 +179,7 @@ object SyncCommand {
                         coroutineScope {
                             // needIds = relay has, we lack; haveIds = we have, relay lacks.
                             val needBatches = Channel<List<HexKey>>(DOWNLOAD_WORKERS * 2)
+                            val pace = DownloadPace()
                             val haveBatches = Channel<List<HexKey>>(Channel.UNLIMITED)
 
                             val downloaders =
@@ -187,7 +189,7 @@ object SyncCommand {
                                             // fetchByIds re-asks a relay that serves only part of
                                             // a batch; anything we deleted is rejected by our own
                                             // tombstone and stays a "need".
-                                            val events = ctx.client.fetchByIds(relay, batch, timeoutMs, filter)
+                                            val events = ctx.client.fetchByIds(relay, batch, timeoutMs, filter, pace)
                                             downloaded.addAndGet(events.count { ctx.verifyAndStore(it) })
                                         }
                                     }

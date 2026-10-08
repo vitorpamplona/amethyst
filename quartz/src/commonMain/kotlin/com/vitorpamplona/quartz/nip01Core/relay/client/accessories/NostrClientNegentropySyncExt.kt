@@ -41,9 +41,11 @@ import com.vitorpamplona.quartz.nip01Core.store.IdAndTime
 import com.vitorpamplona.quartz.nip77Negentropy.NegErrMessage
 import com.vitorpamplona.quartz.nip77Negentropy.NegMsgMessage
 import com.vitorpamplona.quartz.nip77Negentropy.NegentropySession
+import com.vitorpamplona.quartz.utils.Log
 import com.vitorpamplona.quartz.utils.TimeUtils
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.joinAll
@@ -683,13 +685,14 @@ private suspend fun INostrClient.syncPipeline(
     deliver: suspend (Event) -> Unit,
 ) = coroutineScope {
     val idBatches = Channel<List<HexKey>>(idBufferBatches.coerceAtLeast(1))
+    val pace = DownloadPace()
 
     val workers =
         List(maxConcurrentReqs.coerceAtLeast(1)) {
             launch {
                 for (batch in idBatches) {
                     coroutineContext.ensureActive()
-                    for (event in fetchByIds(relay, batch, idleTimeoutMs, filter)) {
+                    for (event in fetchByIds(relay, batch, idleTimeoutMs, filter, pace)) {
                         deliver(event)
                     }
                 }
@@ -1490,6 +1493,12 @@ internal fun isNegentropyRejectionNotice(reason: String): Boolean =
  * An `auth-required:` refusal is re-asked once, after this client's NIP-42 responder
  * (if it has one) authenticates.
  *
+ * A dropped connection is re-asked too, a few times, after a short pause. no.str.cr closes
+ * the socket once a few 500-id downloads stream at once (the paged walk, one `REQ` at a
+ * time, never trips it), and every batch in flight lost its ids for good. Batches that
+ * share a [pace] also stop overlapping from the first drop on, which is what that relay
+ * needs; a relay that never drops keeps all of them.
+ *
  * Events are deduped across the rounds (a [HashSet] bounded by the batch size, so
  * still O(pipeline) memory). A REQ-by-ids should return each id once, but the client
  * may re-send the REQ on a reconnect/filter-sync mid-flight, which makes the relay
@@ -1501,6 +1510,7 @@ suspend fun INostrClient.fetchByIds(
     batch: List<HexKey>,
     idleTimeoutMs: Long,
     scope: Filter? = null,
+    pace: DownloadPace? = null,
 ): List<Event> {
     val collected = ArrayList<Event>(batch.size)
     val seen = HashSet<HexKey>(batch.size)
@@ -1508,6 +1518,7 @@ suspend fun INostrClient.fetchByIds(
 
     var widened = false
     var authed = false
+    var drops = 0
     val batchIdleMs = if (idleTimeoutMs > 0) idleTimeoutMs else DEFAULT_DOWNLOAD_IDLE_MS
 
     while (true) {
@@ -1518,7 +1529,14 @@ suspend fun INostrClient.fetchByIds(
                 widened -> Filter(ids = missing, authors = scope?.authors, kinds = scope?.kinds, tags = scope?.tags, tagsAll = scope?.tagsAll)
                 else -> Filter(ids = missing, kinds = scope?.kinds)
             }
-        when (fetchByIdsRound(relay, filter, batchIdleMs, seen, collected)) {
+        val end =
+            if (pace != null) {
+                pace.turn { fetchByIdsRound(relay, filter, batchIdleMs, seen, collected) }
+            } else {
+                fetchByIdsRound(relay, filter, batchIdleMs, seen, collected)
+            }
+        Log.d("negentropySync") { "${relay.url} asked for ${missing.size} ids, got ${collected.size - before}: $end" }
+        when (end) {
             RoundEnd.EOSE -> {
                 if (collected.size == before) break
             }
@@ -1528,9 +1546,19 @@ suspend fun INostrClient.fetchByIds(
                 authed = true
             }
 
-            RoundEnd.OTHER -> {
+            RoundEnd.DROPPED -> {
+                pace?.oneAtATime = true
+                if (++drops > MAX_DOWNLOAD_DROPS) break
+                delay(DROP_PAUSE_MS * drops)
+            }
+
+            RoundEnd.CLOSED -> {
                 if (widened || !scope.narrowsBeyondKinds()) break
                 widened = true
+            }
+
+            RoundEnd.IDLE -> {
+                break
             }
         }
         if (collected.size >= batch.size) break
@@ -1542,7 +1570,19 @@ suspend fun INostrClient.fetchByIds(
 
 private fun Filter?.narrowsBeyondKinds() = this != null && (authors != null || tags != null || tagsAll != null)
 
-private enum class RoundEnd { EOSE, AUTH_REQUIRED, OTHER }
+/**
+ * Shared by the [fetchByIds] batches of one sync against one connection: they run side by
+ * side until the relay drops the connection under them, and one at a time from then on.
+ */
+class DownloadPace {
+    @Volatile
+    internal var oneAtATime = false
+    private val mutex = Mutex()
+
+    internal suspend fun <T> turn(round: suspend () -> T): T = if (oneAtATime) mutex.withLock { round() } else round()
+}
+
+private enum class RoundEnd { EOSE, AUTH_REQUIRED, CLOSED, DROPPED, IDLE }
 
 /**
  * One `REQ` of [fetchByIds]: adds what arrives to [collected] and says how the relay
@@ -1586,8 +1626,9 @@ private suspend fun INostrClient.fetchByIdsRound(
                 relay: NormalizedRelayUrl,
                 forFilters: List<Filter>?,
             ) {
+                Log.d("negentropySync") { "${relay.url} closed a ${filter.ids?.size}-id download: $message" }
                 val authRequired = MachineReadablePrefix.parse(message) == MachineReadablePrefix.AUTH_REQUIRED
-                done.trySend(if (authRequired) RoundEnd.AUTH_REQUIRED else RoundEnd.OTHER)
+                done.trySend(if (authRequired) RoundEnd.AUTH_REQUIRED else RoundEnd.CLOSED)
             }
 
             override fun onCannotConnect(
@@ -1595,18 +1636,25 @@ private suspend fun INostrClient.fetchByIdsRound(
                 message: String,
                 forFilters: List<Filter>?,
             ) {
-                done.trySend(RoundEnd.OTHER)
+                Log.d("negentropySync") { "${relay.url} dropped a ${filter.ids?.size}-id download: $message" }
+                done.trySend(RoundEnd.DROPPED)
             }
         }
 
     try {
         subscribe(subId, mapOf(relay to listOf(filter)), listener)
-        return done.receiveWithinIdle(clock, batchIdleMs) ?: RoundEnd.OTHER
+        return done.receiveWithinIdle(clock, batchIdleMs) ?: RoundEnd.IDLE
     } finally {
         unsubscribe(subId)
         done.close()
     }
 }
+
+/** Times one [fetchByIds] batch is re-asked after the relay dropped the connection under it. */
+private const val MAX_DOWNLOAD_DROPS = 3
+
+/** Pause before re-asking a dropped batch, times the drops so far. */
+private const val DROP_PAUSE_MS = 1_000L
 
 /** Seconds: a window this small that still overflows can't be split further. */
 private const val MIN_WINDOW_SECONDS = 1L
