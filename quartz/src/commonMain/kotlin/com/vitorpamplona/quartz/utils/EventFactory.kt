@@ -452,6 +452,7 @@ import com.vitorpamplona.quartz.nipF4Podcasts.favorites.FavoritePodcastsListEven
 import com.vitorpamplona.quartz.nipF4Podcasts.metadata.PodcastMetadataEvent
 import com.vitorpamplona.quartz.nipXXPodcasting20.episode.Podcasting20EpisodeEvent
 import com.vitorpamplona.quartz.nipXXPodcasting20.trailer.Podcasting20TrailerEvent
+import com.vitorpamplona.quartz.nipXXPrivateNoteStorage.PnsEvent
 import com.vitorpamplona.quartz.nipXXPushNotifications.deregistration.PushDeregistrationEvent
 import com.vitorpamplona.quartz.nipXXPushNotifications.preferences.PushPreferencesEvent
 import com.vitorpamplona.quartz.nipXXPushNotifications.registration.PushRegistrationEvent
@@ -850,6 +851,7 @@ class EventFactory {
                 P2POrderEvent.KIND -> P2POrderEvent(id, pubKey, createdAt, tags, content, sig)
                 PictureEvent.KIND -> PictureEvent(id, pubKey, createdAt, tags, content, sig)
                 PinListEvent.KIND -> PinListEvent(id, pubKey, createdAt, tags, content, sig)
+                PnsEvent.KIND -> PnsEvent(id, pubKey, createdAt, tags, content, sig)
                 ProfileBadgesEvent.KIND -> ProfileBadgesEvent(id, pubKey, createdAt, tags, content, sig)
                 ZapPollEvent.KIND -> ZapPollEvent(id, pubKey, createdAt, tags, content, sig)
                 PollEvent.KIND -> PollEvent(id, pubKey, createdAt, tags, content, sig)

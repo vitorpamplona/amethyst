@@ -338,6 +338,7 @@ import com.vitorpamplona.quartz.nipF4Podcasts.favorites.FavoritePodcastsListEven
 import com.vitorpamplona.quartz.nipF4Podcasts.metadata.PodcastMetadataEvent
 import com.vitorpamplona.quartz.nipXXPodcasting20.episode.Podcasting20EpisodeEvent
 import com.vitorpamplona.quartz.nipXXPodcasting20.trailer.Podcasting20TrailerEvent
+import com.vitorpamplona.quartz.nipXXPrivateNoteStorage.PnsEvent
 import com.vitorpamplona.quartz.nipXXPushNotifications.deregistration.PushDeregistrationEvent
 import com.vitorpamplona.quartz.nipXXPushNotifications.preferences.PushPreferencesEvent
 import com.vitorpamplona.quartz.nipXXPushNotifications.registration.PushRegistrationEvent
@@ -483,6 +484,7 @@ object KindNames {
             PictureEvent.KIND to KindName("Pictures", "68"),
             WorkoutRecordEvent.KIND to KindName("Workouts", null),
             PinListEvent.KIND to KindName("Pins", "51"),
+            PnsEvent.KIND to KindName("Private Note Storage", null),
             ZapPollEvent.KIND to KindName("Zap Poll", null),
             PollEvent.KIND to KindName("Poll", "88"),
             PollResponseEvent.KIND to KindName("Poll Response", "88"),
