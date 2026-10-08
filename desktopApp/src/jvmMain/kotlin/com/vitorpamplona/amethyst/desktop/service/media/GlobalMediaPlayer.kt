@@ -28,6 +28,7 @@ import com.vitorpamplona.amethyst.desktop.ui.media.MediaType
 import io.github.kdroidfilter.composemediaplayer.VideoPlayerError
 import io.github.kdroidfilter.composemediaplayer.VideoPlayerState
 import io.github.kdroidfilter.composemediaplayer.createVideoPlayerState
+import io.github.vinceglb.filekit.PlatformFile
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -43,6 +44,7 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.merge
 import kotlinx.coroutines.launch
+import java.io.IOException
 
 data class MediaPlaybackState(
     val url: String? = null,
@@ -144,6 +146,11 @@ object GlobalMediaPlayer {
     @Volatile private var videoSeekWhilePaused: Long? = null
 
     @Volatile private var audioSeekWhilePaused: Long? = null
+
+    // While an encrypted file downloads the engine has not started, so it reports not loading.
+    @Volatile private var videoDownloading = false
+
+    @Volatile private var audioDownloading = false
     private var audioSyncJob: Job? = null
 
     // --- Verbs ---------------------------------------------------------------
@@ -191,6 +198,8 @@ object GlobalMediaPlayer {
         // The kdroidFilter player retains `volume` and speed across openUri calls, so set both for
         // the new track: normal speed, and muted or not as the user last chose.
         videoSeekWhilePaused = null
+        // Set before the engine's first report, which would otherwise clear the spinner.
+        videoDownloading = MediaHttp.isEncrypted(url)
         val muted = defaultMuted
         if (muted) preMuteVideoVolume = 100
         player.volume = if (muted) 0f else 1f
@@ -209,7 +218,7 @@ object GlobalMediaPlayer {
         videoOpenJob?.cancel()
         videoOpenJob =
             scope.launch(Dispatchers.IO) {
-                player.openUri(url)
+                if (!openSource(player, url, _videoState) { videoDownloading = it }) return@launch
                 // openUri auto-plays per InitialPlayerState.PLAY default. For an
                 // initial seek we wait for the first hasMedia=true emission then
                 // stop collecting (Flow.first terminates the collector cleanly,
@@ -244,10 +253,11 @@ object GlobalMediaPlayer {
         player.volume = 1f
 
         audioSeekWhilePaused = null
+        audioDownloading = MediaHttp.isEncrypted(url)
         _audioState.value = MediaPlaybackState(url = url, type = MediaType.AUDIO, isBuffering = true)
 
         scope.launch(Dispatchers.IO) {
-            player.openUri(url)
+            openSource(player, url, _audioState) { audioDownloading = it }
         }
     }
 
@@ -418,6 +428,40 @@ object GlobalMediaPlayer {
         }
 
     /**
+     * Opens [url] on [player]: the decrypted copy for an encrypted blob (see
+     * [DecryptedMediaFiles]; the engine would otherwise stream ciphertext), the URL itself for
+     * everything else. Returns false, with the error on [state], when the blob cannot be fetched.
+     */
+    private suspend fun openSource(
+        player: VideoPlayerState,
+        url: String,
+        state: MutableStateFlow<MediaPlaybackState>,
+        downloading: (Boolean) -> Unit,
+    ): Boolean {
+        val decrypted =
+            if (MediaHttp.isEncrypted(url)) {
+                downloading(true)
+                try {
+                    DecryptedMediaFiles.fileFor(url)
+                } catch (e: IOException) {
+                    println("GlobalMediaPlayer: could not fetch encrypted $url: ${e.message}")
+                    if (state.value.url == url) {
+                        state.value = state.value.copy(isBuffering = false, errorReason = "Could not download the encrypted file")
+                    }
+                    return false
+                } finally {
+                    downloading(false)
+                }
+            } else {
+                null
+            }
+        // A newer request took the engine over while this one was downloading.
+        if (state.value.url != url) return false
+        if (decrypted != null) player.openFile(PlatformFile(decrypted)) else player.openUri(url)
+        return true
+    }
+
+    /**
      * A new engine for a newly opened video, retiring the one before it. kdroidFilter's Linux
      * player frees and reallocates its frame bitmaps on its own thread when the picture size
      * changes, so reusing one engine across videos of different sizes let a surface still drawing
@@ -476,7 +520,7 @@ object GlobalMediaPlayer {
                     _videoState.value =
                         current.copy(
                             isPlaying = snap.isPlaying,
-                            isBuffering = snap.isLoading,
+                            isBuffering = snap.isLoading || videoDownloading,
                             duration = (snap.duration * 1000.0).toLong().coerceAtLeast(0L),
                             currentTime = (snap.currentTime * 1000.0).toLong().coerceAtLeast(0L),
                             position = posFraction,
@@ -505,7 +549,7 @@ object GlobalMediaPlayer {
                     _audioState.value =
                         current.copy(
                             isPlaying = snap.isPlaying,
-                            isBuffering = snap.isLoading,
+                            isBuffering = snap.isLoading || audioDownloading,
                             duration = (snap.duration * 1000.0).toLong().coerceAtLeast(0L),
                             currentTime = (snap.currentTime * 1000.0).toLong().coerceAtLeast(0L),
                             position = posFraction,

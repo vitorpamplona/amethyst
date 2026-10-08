@@ -23,7 +23,6 @@ package com.vitorpamplona.amethyst.desktop.service.media
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.toComposeImageBitmap
 import com.vitorpamplona.amethyst.commons.util.deleteOrWarn
-import com.vitorpamplona.amethyst.desktop.network.DesktopHttpClient
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import okhttp3.Request
@@ -38,6 +37,7 @@ import org.jetbrains.skia.Image
 import java.awt.image.BufferedImage
 import java.io.ByteArrayOutputStream
 import java.io.File
+import java.io.IOException
 import java.nio.file.Files
 import java.security.MessageDigest
 import java.util.concurrent.ConcurrentHashMap
@@ -124,6 +124,17 @@ object VideoThumbnailCache {
     }
 
     private suspend fun extractFirstFrame(url: String): ImageBitmap? {
+        // An encrypted blob is ciphertext until decrypted whole; frame the decrypted copy.
+        if (MediaHttp.isEncrypted(url)) {
+            val plain =
+                try {
+                    DecryptedMediaFiles.fileFor(url)
+                } catch (_: IOException) {
+                    null
+                } ?: return null
+            return tryJCodec(plain) ?: tryFfmpegFile(plain)
+        }
+
         // For HLS we skip straight to ffmpeg — JCodec can't read m3u8.
         val isHls = url.contains(".m3u8", ignoreCase = true) || url.contains("/hls/", ignoreCase = true)
 
@@ -172,7 +183,7 @@ object VideoThumbnailCache {
 
         var wrote = false
         var rangeHonored = false
-        DesktopHttpClient.currentClient().newCall(buildRangeRequest(url)).executeAsync().use { resp ->
+        MediaHttp.client(url).newCall(buildRangeRequest(url)).executeAsync().use { resp ->
             if (!resp.isSuccessful && resp.code != 206) return null
             val contentType = resp.header("Content-Type")?.lowercase().orEmpty()
             if (contentType.startsWith("text/") || "html" in contentType) return null

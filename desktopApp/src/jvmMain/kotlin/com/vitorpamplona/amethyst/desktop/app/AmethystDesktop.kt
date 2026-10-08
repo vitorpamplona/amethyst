@@ -57,6 +57,7 @@ import com.vitorpamplona.amethyst.desktop.platform.IconResources
 import com.vitorpamplona.amethyst.desktop.platform.PlatformInfo
 import com.vitorpamplona.amethyst.desktop.service.images.DesktopImageLoaderSetup
 import com.vitorpamplona.amethyst.desktop.service.media.GlobalMediaPlayer
+import com.vitorpamplona.amethyst.desktop.service.media.MediaHttp
 import com.vitorpamplona.amethyst.desktop.service.scheduledposts.runHeadlessPublish
 import com.vitorpamplona.amethyst.desktop.ui.media.GlobalFullscreenOverlay
 import com.vitorpamplona.amethyst.desktop.ui.media.LocalAwtWindow
@@ -104,6 +105,8 @@ fun main(args: Array<String>) {
 
     // Images go through the role builder, so each URL follows the user's Tor choice for images.
     DesktopImageLoaderSetup.setup { url -> modules.roleBasedHttpClientBuilder.okHttpClientForImage(url) }
+    // So do video thumbnails, saves and encrypted media, which those clients also decrypt.
+    MediaHttp.install(modules.roleBasedHttpClientBuilder::okHttpClientForVideo, modules.keyCache)
 
     modules.initiate()
 

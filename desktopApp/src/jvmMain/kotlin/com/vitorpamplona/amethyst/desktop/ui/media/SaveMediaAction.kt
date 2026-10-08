@@ -20,7 +20,7 @@
  */
 package com.vitorpamplona.amethyst.desktop.ui.media
 
-import com.vitorpamplona.amethyst.desktop.network.DesktopHttpClient
+import com.vitorpamplona.amethyst.desktop.service.media.MediaHttp
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import okhttp3.Request
@@ -30,8 +30,6 @@ import java.awt.Frame
 import java.io.File
 
 object SaveMediaAction {
-    private val httpClient get() = DesktopHttpClient.currentClient()
-
     /**
      * Opens a save dialog and downloads the media URL to the chosen file.
      * Returns the saved file path or null if cancelled/failed.
@@ -60,7 +58,8 @@ object SaveMediaAction {
         return withContext(Dispatchers.IO) {
             try {
                 val request = Request.Builder().url(url).build()
-                val response = httpClient.newCall(request).executeAsync()
+                // The app's media client: follows the Tor choice and decrypts an encrypted blob.
+                val response = MediaHttp.client(url).newCall(request).executeAsync()
                 response.use { resp ->
                     if (!resp.isSuccessful) return@withContext null
                     val total = resp.body.contentLength()
