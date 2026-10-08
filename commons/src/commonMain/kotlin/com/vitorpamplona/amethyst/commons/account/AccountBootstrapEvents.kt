@@ -42,7 +42,7 @@ import com.vitorpamplona.quartz.nip65RelayList.AdvertisedRelayListEvent
 
 /**
  * Full set of "new Amethyst account" bootstrap events: the nine signed
- * events that [com.vitorpamplona.amethyst.ui.screen.AccountSessionManager.createNewAccount]
+ * events that [com.vitorpamplona.amethyst.commons.account.AccountSessionManager.createNewAccount]
  * produces for a brand-new user, in the exact same order and with the same
  * relay defaults. Used by:
  *

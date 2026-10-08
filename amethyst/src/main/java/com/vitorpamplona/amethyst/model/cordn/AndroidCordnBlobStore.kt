@@ -23,6 +23,7 @@ package com.vitorpamplona.amethyst.model.cordn
 import android.content.Context
 import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.commons.cordn.CordnBlobStore
+import com.vitorpamplona.amethyst.commons.cordn.CordnMediaService
 import com.vitorpamplona.amethyst.service.uploads.blossom.BlossomUploader
 import com.vitorpamplona.quartz.nip01Core.core.toHexKey
 import com.vitorpamplona.quartz.nip01Core.crypto.KeyPair

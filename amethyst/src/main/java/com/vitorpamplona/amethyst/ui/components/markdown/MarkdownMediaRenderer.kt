@@ -39,6 +39,7 @@ import com.vitorpamplona.amethyst.commons.richtext.MediaUrlImage
 import com.vitorpamplona.amethyst.commons.richtext.RichTextParser
 import com.vitorpamplona.amethyst.commons.ui.components.DisplayFullNote
 import com.vitorpamplona.amethyst.commons.ui.components.DisplayUser
+import com.vitorpamplona.amethyst.commons.ui.components.LoadUrlPreview
 import com.vitorpamplona.amethyst.commons.ui.fragmentHashtagOrNull
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.richtext.HashtagIcon
@@ -47,7 +48,6 @@ import com.vitorpamplona.amethyst.commons.ui.theme.Font17SP
 import com.vitorpamplona.amethyst.commons.ui.theme.Size17Modifier
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.amethyst.commons.viewmodels.LoadedBechLink
-import com.vitorpamplona.amethyst.ui.components.LoadUrlPreview
 import com.vitorpamplona.amethyst.ui.components.ZoomableContentView
 import com.vitorpamplona.quartz.nip19Bech32.entities.NAddress
 import com.vitorpamplona.quartz.nip19Bech32.entities.NEmbed

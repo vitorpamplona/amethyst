@@ -13,9 +13,11 @@ over Nostr belongs here as a package, not as a Gradle module; `quic`/`nestsClien
 modules because they are transports with no Nostr in them. Commons stores
 shared code between Amethyst Android (`amethyst`) and Amethyst Desktop (`desktopApp`). Android now
 also ships on laptops, so the direction is **one UI**: every screen and the navigation shell at every
-window size move to `commonsUI`, `amethyst` shrinks to an Android shim, and a new `desktopApp`
-becomes a JVM shim that renders the same UI (see `commons/plans/2026-09-27-one-ui-android-desktop.md`).
-Until it lands, today's `desktopApp` still has its own mouse-first screens and navigation. `cli` ships `amy`,
+window size move to `commonsUI`, `amethyst` shrinks to an Android shim, and `desktopApp` is a JVM
+shim that renders the same UI (`desktopApp/…/desktop/app/`, see
+`commons/plans/2026-09-27-one-ui-android-desktop.md`). The legacy desktop app (its own screens,
+deck and navigation) still builds as `:desktopApp:runLegacy` until its desktop-only features move
+to the shared UI; don't extend it. `cli` ships `amy`,
 a non-interactive JVM command-line client that drives the same `quartz` + `commons` code — used by
 humans, agents, and interop tests. `quic` is a from-scratch pure-Kotlin QUIC v1 + HTTP/3 +
 WebTransport client (no JNI, no BouncyCastle), built because no Android-compatible Java QUIC library
@@ -109,7 +111,7 @@ amethyst/
   `nestsClient`'s `WebTransportSession`.
 - `amethyst/` & `desktopApp/` = Platform shims: process/window entry points, services, system
   integrations and the actuals of shared ports. Screens and navigation are shared UI and are
-  moving to `commonsUI` (today's `desktopApp` screens are legacy, to be replaced).
+  moving to `commonsUI` (the legacy `desktopApp` screens, outside `desktop/app/`, are to be replaced).
 - `cli/` = Thin assembly layer over `quartz/` + `commons/` (no new logic
   allowed). May also depend on `:geode` (for `amy serve`, which embeds the
   standalone relay); never on `:commonsUI`, `:amethyst` or `:desktopApp`.
@@ -224,8 +226,8 @@ etc. instead of re-implementing them.
   its dependencies allow — `AccountViewModel` itself is in `commonsUI`
   (`commons.viewmodels`), reaching Android through `AccountViewModelHost`. A
   screen that still needs an app-only helper may live in `amethyst/`, but keep
-  Android APIs out of it (behind a port or slot) so it can move later. Don't add screens to today's `desktopApp`
-  that the shared UI will have to re-create.
+  Android APIs out of it (behind a port or slot) so it can move later. Don't add screens to the legacy `desktopApp`
+  screens that the shared UI will have to re-create.
 
 When extracting a composable: move it to `commonsUI/commonMain/` (see
 `/compose-expert`), add expect/actual for any platform behavior (see
@@ -235,7 +237,7 @@ version. `quartz/` is protocol-only — no composables.
 ## Build Commands
 
 ```bash
-# Run desktop app
+# Run desktop app (the shared UI; the legacy desktop app is :desktopApp:runLegacy)
 ./gradlew :desktopApp:run
 
 # Run Android app
@@ -447,8 +449,9 @@ Do this before considering the task complete.
 One shell, picked by window size rather than by platform: `ScreenLayoutSpec`
 chooses the bottom bar (compact), the rail, or the permanent drawer (wide,
 landscape, tall enough), and docks the notification panel on very wide windows.
-It is moving to `commonsUI` with `AppNavigation`. Today's `desktopApp` still has
-its own sidebar shell, which will be replaced.
+It lives in `commonsUI` (`AppShellLayout`, run by `AmethystApp`), and both Android
+and the desktop window use it. Only the legacy desktop app (`runLegacy`) still has
+its own sidebar shell.
 
 ## Git Workflow
 

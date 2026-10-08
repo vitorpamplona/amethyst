@@ -87,6 +87,38 @@ class DateSkeletonFormatterTest {
     }
 
     @Test
+    fun skeletonsInAnyLetterOrderFormat() {
+        // Android's getBestDateTimePattern takes the letters in any order; the JDK's
+        // ofLocalizedPattern only in its canonical one (y M E d, then the time). The calendar
+        // cards pass "EEEMMMd" and "EEEEMMMMdy".
+        Locale.setDefault(Locale.US)
+        assertEquals("Tue, May 28", DateSkeletonFormatter("EEEMMMd").format(millis(2024, 5, 28)))
+        // The JDK picks the same pattern for both orders (its CLDR match may shorten the weekday).
+        val full = DateSkeletonFormatter("yMMMMEEEEd").format(millis(2024, 5, 28))
+        assertEquals(full, DateSkeletonFormatter("EEEEMMMMdy").format(millis(2024, 5, 28)))
+        assertTrue(full, full.startsWith("Tue") && full.endsWith("May 28, 2024"))
+        Locale.setDefault(Locale.UK)
+        assertEquals("Tue, 28 May", DateSkeletonFormatter("EEEMMMd").format(millis(2024, 5, 28)))
+    }
+
+    @Test
+    fun everySkeletonTheAppUsesFormats() {
+        Locale.setDefault(Locale.US)
+        val skeletons = listOf("EEE", "EEEEMMMMdy", "EEEMMMd", "MMM", "MMMMy", "MMMd", "MMMdHm", "MMMdhma", "MMMdjm", "jm", "yMMM", "yMMMMEEEEd", "yMMMd")
+        for (skeleton in skeletons) {
+            assertTrue(skeleton, DateSkeletonFormatter(skeleton).format(millis(2024, 5, 28, hour = 14)).isNotBlank())
+        }
+    }
+
+    @Test
+    fun canonicalSkeletonReordersRunsAndDropsAmPm() {
+        assertEquals("MMMEEEd", canonicalSkeleton("EEEMMMd"))
+        assertEquals("yMMMMEEEEd", canonicalSkeleton("EEEEMMMMdy"))
+        assertEquals("MMMdhm", canonicalSkeleton("MMMdhma"))
+        assertEquals("MMMdjm", canonicalSkeleton("MMMdjm"))
+    }
+
+    @Test
     fun calendarDayDistinguishesDaysAndYears() {
         assertEquals(calendarYearAndDay(millis(2024, 3, 1, hour = 1)), calendarYearAndDay(millis(2024, 3, 1, hour = 23)))
         assertTrue(calendarYearAndDay(millis(2024, 3, 1)) != calendarYearAndDay(millis(2024, 3, 2)))

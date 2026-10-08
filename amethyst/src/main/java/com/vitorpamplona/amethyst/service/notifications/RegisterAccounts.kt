@@ -20,10 +20,10 @@
  */
 package com.vitorpamplona.amethyst.service.notifications
 
-import com.vitorpamplona.amethyst.AccountInfo
 import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.BuildConfig
 import com.vitorpamplona.amethyst.LocalPreferences
+import com.vitorpamplona.amethyst.commons.account.AccountInfo
 import com.vitorpamplona.amethyst.commons.model.AccountSettings
 import com.vitorpamplona.amethyst.isDebug
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl

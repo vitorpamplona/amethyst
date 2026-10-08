@@ -249,6 +249,15 @@ fun RenderAudioFromIMeta(
 )
 
 @Composable
+fun RenderAudioPlayer(
+    mediaUrl: String,
+    title: String?,
+    mimeType: String?,
+    waveform: WaveformData?,
+    accountViewModel: AccountViewModel,
+) = LocalNotePlatform.current.RenderAudioPlayer(mediaUrl, title, mimeType, waveform, accountViewModel)
+
+@Composable
 fun RenderAudioWithWaveform(
     mediaUrl: String,
     title: String?,
