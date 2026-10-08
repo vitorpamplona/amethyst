@@ -57,6 +57,7 @@ import com.vitorpamplona.quartz.experimental.nip95.header.FileStorageHeaderEvent
 import com.vitorpamplona.quartz.experimental.nipsOnNostr.NipTextEvent
 import com.vitorpamplona.quartz.experimental.predictionMarkets.PredictionMarketEvent
 import com.vitorpamplona.quartz.experimental.profileGallery.ProfileGalleryEntryEvent
+import com.vitorpamplona.quartz.experimental.profileTheme.definition.ThemeDefinitionEvent
 import com.vitorpamplona.quartz.experimental.ps1saves.Ps1SaveEvent
 import com.vitorpamplona.quartz.experimental.trustedLists.TrustedListEvent
 import com.vitorpamplona.quartz.experimental.zapPolls.ZapPollEvent
@@ -258,6 +259,12 @@ object SearchFieldExtractor {
             // sticker shortcode are what a picker search matches. Never the content.
             is StickerPackEvent -> {
                 tiers(event, listOf(event.title()), listOf(event.description()) + event.stickers().map { it.code }, null)
+            }
+
+            // kind 36767 -- a shareable theme's name and description; never its colors,
+            // font families or URLs, and `content` is empty by spec.
+            is ThemeDefinitionEvent -> {
+                tiers(event, event.title(), event.description(), null)
             }
 
             is ChannelCreateEvent -> {

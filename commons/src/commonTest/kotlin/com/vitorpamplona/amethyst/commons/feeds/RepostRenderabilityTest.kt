@@ -35,14 +35,18 @@ class RepostRenderabilityTest {
     private val createdAt = 1_700_000_000L
     private val boostedEventId = "33".repeat(32)
 
+    // Kind 16767 (Ditto's profile theme) was the example here until Quartz typed it.
+    // This one is unassigned, so no Quartz class will claim it.
+    private val unknownKind = "19999"
+
     private fun genericRepost(tags: Array<Array<String>>) = GenericRepostEvent(id, pubKey, createdAt, tags, "", sig)
 
     private fun repost(tags: Array<Array<String>>) = RepostEvent(id, pubKey, createdAt, tags, "", sig)
 
     @Test
     fun hidesGenericRepostOfUnknownKind() {
-        // kind 16767 (Ditto profile theme) has no Quartz class → cannot render → hide.
-        val event = genericRepost(arrayOf(arrayOf("e", boostedEventId), arrayOf("k", "16767")))
+        // An unassigned kind has no Quartz class → cannot render → hide.
+        val event = genericRepost(arrayOf(arrayOf("e", boostedEventId), arrayOf("k", unknownKind)))
         assertFalse(event.isRenderableRepost())
     }
 
@@ -61,7 +65,7 @@ class RepostRenderabilityTest {
 
     @Test
     fun hidesKind6RepostOfUnknownKind() {
-        val event = repost(arrayOf(arrayOf("e", boostedEventId), arrayOf("k", "16767")))
+        val event = repost(arrayOf(arrayOf("e", boostedEventId), arrayOf("k", unknownKind)))
         assertFalse(event.isRenderableRepost())
     }
 

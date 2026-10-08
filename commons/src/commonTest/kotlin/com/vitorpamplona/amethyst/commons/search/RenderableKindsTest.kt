@@ -206,6 +206,8 @@ class RenderableKindsTest {
                 30024,
                 // sticker packs: their shortcodes are indexed like emoji packs', no card yet
                 30031,
+                // profile theme definitions: their name and description are indexed, no card yet
+                36767,
                 // accepted-badge sets and feed definitions: lists with no card yet
                 30008,
                 31890,

@@ -216,6 +216,7 @@ object SearchableKinds {
             34550, // CommunityDefinitionEvent
             35128, // NamedSiteEvent
             35129, // NamedNappletEvent
+            36767, // ThemeDefinitionEvent
             36787, // MusicTrackEvent
             37516, // GeocacheListingEvent
             37517, // GeocacheCurationListEvent

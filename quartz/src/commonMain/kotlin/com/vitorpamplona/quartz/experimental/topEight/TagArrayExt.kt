@@ -18,27 +18,23 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.quartz.utils
+package com.vitorpamplona.quartz.experimental.topEight
 
-import com.vitorpamplona.quartz.nip10Notes.TextNoteEvent
-import com.vitorpamplona.quartz.nip18Reposts.GenericRepostEvent
-import com.vitorpamplona.quartz.nip18Reposts.RepostEvent
-import kotlin.test.Test
-import kotlin.test.assertFalse
-import kotlin.test.assertTrue
+import com.vitorpamplona.quartz.nip01Core.core.TagArray
+import com.vitorpamplona.quartz.nip01Core.tags.people.PTag
 
-class EventFactoryIsKnownKindTest {
-    @Test
-    fun knownForTypedKinds() {
-        assertTrue(EventFactory.isKnownKind(TextNoteEvent.KIND), "kind ${TextNoteEvent.KIND} (text note) should be known")
-        assertTrue(EventFactory.isKnownKind(RepostEvent.KIND), "kind ${RepostEvent.KIND} (repost) should be known")
-        assertTrue(EventFactory.isKnownKind(GenericRepostEvent.KIND), "kind ${GenericRepostEvent.KIND} (generic repost) should be known")
+/**
+ * The ranked people, rank 1 first: well-formed `p` tags in tag order, duplicates dropped ("first
+ * occurrence wins") and cut at [TopEightEvent.MAX_ENTRIES] — clients "SHOULD ignore `p` tags past
+ * the eighth when reading" so that a list of hundreds costs nothing.
+ */
+fun TagArray.topEight(): List<PTag> {
+    val result = ArrayList<PTag>(TopEightEvent.MAX_ENTRIES)
+    for (tag in this) {
+        val person = PTag.parse(tag) ?: continue
+        if (result.any { it.pubKey == person.pubKey }) continue
+        result.add(person)
+        if (result.size == TopEightEvent.MAX_ENTRIES) break
     }
-
-    @Test
-    fun unknownForUntypedKind() {
-        // 19999 is unassigned: no Quartz class claims it, so it is parsed as a bare Event and
-        // reported as not known. (Kind 16767 was the example until Quartz typed Ditto's profile theme.)
-        assertFalse(EventFactory.isKnownKind(19999), "kind 19999 has no Quartz class and should be unknown")
-    }
+    return result
 }

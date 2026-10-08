@@ -28,8 +28,8 @@ import kotlin.contracts.contract
 
 /**
  * A repost (kind 6 / kind 16) wraps another event. When that inner kind has no
- * typed Quartz class — e.g. a Ditto kind-16767 profile theme wrapped in a
- * generic repost — Amethyst can neither parse nor render it, so the repost would
+ * typed Quartz class — e.g. a kind some app invented that Quartz does not model,
+ * wrapped in a generic repost — Amethyst can neither parse nor render it, so the repost would
  * show as a permanently blank card. Feeds use this predicate in their acceptance
  * allow-list to drop such reposts, mirroring how regular unknown-kind events are
  * never displayed (no UI component renders a bare [Event]).

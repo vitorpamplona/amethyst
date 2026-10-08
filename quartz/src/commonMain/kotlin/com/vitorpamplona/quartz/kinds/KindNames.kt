@@ -65,7 +65,10 @@ import com.vitorpamplona.quartz.experimental.nip95.header.FileStorageHeaderEvent
 import com.vitorpamplona.quartz.experimental.nipsOnNostr.NipTextEvent
 import com.vitorpamplona.quartz.experimental.nns.NNSEvent
 import com.vitorpamplona.quartz.experimental.notifications.wake.WakeUpEvent
+import com.vitorpamplona.quartz.experimental.postingStreak.PostingStreakEvent
 import com.vitorpamplona.quartz.experimental.profileGallery.ProfileGalleryEntryEvent
+import com.vitorpamplona.quartz.experimental.profileTheme.active.ActiveProfileThemeEvent
+import com.vitorpamplona.quartz.experimental.profileTheme.definition.ThemeDefinitionEvent
 import com.vitorpamplona.quartz.experimental.ps1saves.Ps1SaveEvent
 import com.vitorpamplona.quartz.experimental.publications.PublicationContentEvent
 import com.vitorpamplona.quartz.experimental.publications.PublicationIndexEvent
@@ -73,6 +76,7 @@ import com.vitorpamplona.quartz.experimental.ratings.EntityRatingEvent
 import com.vitorpamplona.quartz.experimental.ratings.RelayReviewEvent
 import com.vitorpamplona.quartz.experimental.roadstr.confirmation.RoadEventConfirmationEvent
 import com.vitorpamplona.quartz.experimental.roadstr.report.RoadEventReportEvent
+import com.vitorpamplona.quartz.experimental.topEight.TopEightEvent
 import com.vitorpamplona.quartz.experimental.trustedLists.addressables.AddressableTrustedListEvent
 import com.vitorpamplona.quartz.experimental.trustedLists.events.EventTrustedListEvent
 import com.vitorpamplona.quartz.experimental.trustedLists.externalIds.ExternalIdTrustedListEvent
@@ -715,6 +719,10 @@ object KindNames {
             ExerciseTemplateEvent.KIND to KindName("Exercise Template", null),
             WorkoutTemplateEvent.KIND to KindName("Workout Template", null),
             FundraiserEvent.KIND to KindName("Fundraiser", null),
+            ThemeDefinitionEvent.KIND to KindName("Theme", null),
+            ActiveProfileThemeEvent.KIND to KindName("Profile Theme", null),
+            PostingStreakEvent.KIND to KindName("Posting Streak", null),
+            TopEightEvent.KIND to KindName("Top 8", null),
             CommunityRulesEvent.KIND to KindName("Community Rules", "72"),
             NamedSiteEvent.KIND to KindName("Website", "5A"),
             NamedNappletEvent.KIND to KindName("Napplet", "5D"),
