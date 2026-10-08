@@ -174,4 +174,26 @@ class NostrClientFetchAllPagesPageSizeTest {
             assertEquals(1_000, got.count { it.kind == 1 })
             assertEquals(1_500, got.count { it.kind == 3 })
         }
+
+    @Test
+    fun aSecondDenserThanAPageIsStillReadInFullFromARelayThatServesMore() =
+        runBlocking {
+            // 600 events share one second. pageSize (500) cannot cover it, but this relay serves
+            // up to 5000 per REQ: once the already-seen events of the second fill a page, the
+            // re-fetch must ask past pageSize, or the duplicate-only page steps past the second
+            // and its last 100 events are lost.
+            val dense =
+                FakePagingRelay.corpus(100, newest = 2_000) +
+                    (0 until 600).map { i ->
+                        Event(("d$i").padStart(64, '0'), "f".repeat(64), 1_000, 1, emptyArray(), "dense $i", "0".repeat(128))
+                    } +
+                    FakePagingRelay.corpus(100, newest = 900)
+            val client = FakePagingRelay(this, dense, maxLimit = 5_000)
+            val got = mutableListOf<HexKey>()
+
+            val result = client.fetchAllPages(relay, listOf(Filter(kinds = listOf(1), limit = 50_000)), idleTimeoutMs = 2_000) { got.add(it.id) }
+
+            assertEquals(PagedFetchResult.End.DRAINED, result.end)
+            assertEquals(800, got.distinct().size, "every event of the dense second arrived")
+        }
 }

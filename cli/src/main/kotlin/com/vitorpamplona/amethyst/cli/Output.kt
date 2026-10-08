@@ -110,9 +110,19 @@ object Output {
             private set
 
         private var first = true
+        private var finished = false
+        private var items = 0
+
+        // Ctrl-C mid-walk: still end stdout with a complete object instead of a cut-off one.
+        private val onShutdown = Thread { abort("interrupted") }
 
         private fun start() {
             started = true
+            try {
+                Runtime.getRuntime().addShutdownHook(onShutdown)
+            } catch (e: IllegalStateException) {
+                // Already shutting down: nothing to guard.
+            }
             when (mode) {
                 Mode.JSON -> {
                     out.write("{")
@@ -135,27 +145,71 @@ object Output {
             }
         }
 
-        /** One list item, given as its JSON text (e.g. `Event.toJson()`). */
-        fun item(json: String) {
+        /**
+         * One list item. [json] is written under `--json`; text mode renders [asMap], so an item
+         * is never serialised and parsed back just to be printed.
+         */
+        @Synchronized
+        fun item(
+            json: () -> String,
+            asMap: () -> Map<*, *>,
+        ) {
+            if (finished) return
             if (!started) start()
             when (mode) {
                 Mode.JSON -> {
                     if (!first) out.write(",")
-                    out.write(json)
+                    out.write(json())
                 }
 
                 Mode.TEXT -> {
                     val body = StringBuilder()
-                    renderListBody(body, listOf(mapper.readValue(json, Map::class.java)), "  ", color)
+                    renderListBody(body, listOf(asMap()), "  ", color)
                     out.write(body.toString())
+                    // A person is watching: show each item as it arrives.
+                    out.flush()
                 }
             }
             first = false
+            items++
+        }
+
+        /**
+         * Ends a stream that cannot [finish]: an exception, a cancellation or Ctrl-C mid-walk.
+         * Under `--json` it closes the list and the object with the items written so far plus an
+         * `error`, so stdout still holds exactly one complete JSON object. No-op once finished.
+         */
+        @Synchronized
+        fun abort(reason: String?) {
+            if (!started || finished) return
+            finished = true
+            when (mode) {
+                Mode.JSON -> {
+                    out.write("],\"count\":")
+                    out.write(items.toString())
+                    out.write(",\"error\":")
+                    out.write(mapper.writeValueAsString(mapOf("code" to "aborted", "detail" to reason)))
+                    out.write("}\n")
+                }
+
+                Mode.TEXT -> {
+                    out.write("error: aborted${reason?.let { " ($it)" } ?: ""} after $items items\n")
+                }
+            }
+            out.flush()
         }
 
         /** Closes the list, writes [tail] and flushes. Only valid once [started]. */
+        @Synchronized
         fun finish(tail: Map<String, Any?>) {
             check(started) { "finish() before any item: emit the result instead" }
+            if (finished) return
+            finished = true
+            try {
+                Runtime.getRuntime().removeShutdownHook(onShutdown)
+            } catch (e: IllegalStateException) {
+                // Shutting down already; abort() has run or will no-op.
+            }
             when (mode) {
                 Mode.JSON -> {
                     out.write("]")

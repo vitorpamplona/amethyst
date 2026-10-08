@@ -271,4 +271,23 @@ class NostrClientFetchAllPagesThrottleTest {
             assertTrue(recorder.waits.isEmpty())
             assertEquals(3, client.requests.size)
         }
+
+    @Test
+    fun pagesThatShrinkBecauseAFilterFinishedAreNotThrottling() =
+        runBlocking {
+            // Page one answers a bounded filter (500) and an unbounded one together; once the
+            // bounded filter has its 500 it drops out and the unbounded one pages at the relay's
+            // default of 200. Against the first page those are all "short", but nothing is wrong:
+            // the walk must end without a single backoff.
+            val client = FakePagingRelay(this, FakePagingRelay.corpus(1_500), maxLimit = 1_000, defaultLimit = 200)
+            val recorder = RecordingBackoff()
+            val filters = listOf(Filter(kinds = listOf(1), limit = 500), Filter(kinds = listOf(1)))
+
+            val result = client.fetchAllPages(relay, filters, idleTimeoutMs = 2_000, throttleBackoff = recorder.backoff) { }
+
+            // The bounded filter got its 500, so the walk reports that cap, not DRAINED.
+            assertEquals(PagedFetchResult.End.LIMIT_REACHED, result.end)
+            assertEquals(1_500, result.downloaded)
+            assertEquals(emptyList(), recorder.waits, "a filter dropping out is not a throttled relay")
+        }
 }
