@@ -18,30 +18,25 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.ui.screen.loggedIn.nests.create
+package com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.nests.create
 
-import android.content.Context
 import androidx.lifecycle.ViewModel
-import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.commons.model.Account
-import com.vitorpamplona.amethyst.commons.model.mediaServers.ServerType
 import com.vitorpamplona.amethyst.commons.resources.Res
-import com.vitorpamplona.amethyst.commons.resources.avif_metadata_strip_failed
 import com.vitorpamplona.amethyst.commons.resources.failed_to_upload_media_no_details
 import com.vitorpamplona.amethyst.commons.resources.metadata_strip_failed_title
 import com.vitorpamplona.amethyst.commons.resources.metadata_strip_failed_upload_cancelled
 import com.vitorpamplona.amethyst.commons.resources.server_did_not_provide_a_url_after_uploading
 import com.vitorpamplona.amethyst.commons.service.uploads.CompressorQuality
+import com.vitorpamplona.amethyst.commons.service.uploads.MediaUploader
 import com.vitorpamplona.amethyst.commons.service.uploads.SelectedMedia
-import com.vitorpamplona.amethyst.commons.service.uploads.nip96.Nip96Uploader
+import com.vitorpamplona.amethyst.commons.service.uploads.UploadError
+import com.vitorpamplona.amethyst.commons.service.uploads.UploadOrchestrator
+import com.vitorpamplona.amethyst.commons.service.uploads.UploadingState
 import com.vitorpamplona.amethyst.commons.ui.loadStringRes
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.nests.create.CreateNestSheet
+import com.vitorpamplona.amethyst.commons.ui.uploads.errorResource
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
-import com.vitorpamplona.amethyst.service.uploads.AvifMetadataNotVerifiableException
-import com.vitorpamplona.amethyst.service.uploads.MediaCompressor
-import com.vitorpamplona.amethyst.service.uploads.MetadataStripper
-import com.vitorpamplona.amethyst.service.uploads.blossom.BlossomUploader
-import com.vitorpamplona.amethyst.service.uploads.nip96.upload
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.nests.room.activity.NestActivity
 import com.vitorpamplona.quartz.nip53LiveActivities.meetingSpaces.MeetingSpaceEvent
 import com.vitorpamplona.quartz.nip53LiveActivities.meetingSpaces.endpoint
 import com.vitorpamplona.quartz.nip53LiveActivities.meetingSpaces.image
@@ -56,13 +51,13 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
-import kotlin.coroutines.cancellation.CancellationException
+import kotlin.concurrent.Volatile
 
 /**
  * Backing ViewModel for [CreateNestSheet]. Holds form state, runs
  * [publishAndBuildLaunchInfo] which signs and broadcasts a NIP-53 kind
  * 30312 [MeetingSpaceEvent] tagging the user as `host`, then returns
- * the launch parameters for [NestActivity].
+ * the launch parameters for the room screen.
  *
  * The defaults point at `nostrnests.com`'s public moq-rs deployment so a
  * blank form produces a working room. The user can edit them to point at
@@ -127,7 +122,7 @@ class CreateNestViewModel : ViewModel() {
 
     fun uploadForImage(
         uri: SelectedMedia,
-        context: Context,
+        uploader: MediaUploader,
         onError: (String, String) -> Unit,
     ) {
         val avm = account ?: return
@@ -135,7 +130,7 @@ class CreateNestViewModel : ViewModel() {
             upload(
                 galleryUri = uri,
                 account = avm.account,
-                context = context,
+                uploader = uploader,
                 onError = onError,
             )?.let { url ->
                 _state.update { it.copy(imageUrl = url, error = null) }
@@ -146,82 +141,53 @@ class CreateNestViewModel : ViewModel() {
     private suspend fun upload(
         galleryUri: SelectedMedia,
         account: Account,
-        context: Context,
+        uploader: MediaUploader,
         onError: (String, String) -> Unit,
     ): String? {
         _state.update { it.copy(isUploadingImage = true) }
         return try {
-            val strippingResult =
-                if (account.settings.stripLocationOnUpload) {
-                    MetadataStripper.strip(galleryUri.uri, galleryUri.mimeType, context.applicationContext)
-                } else {
-                    null
-                }
-
-            val sourceUri =
-                if (account.settings.stripLocationOnUpload &&
-                    strippingResult != null &&
-                    !strippingResult.stripped
-                ) {
-                    onError(
-                        loadStringRes(Res.string.metadata_strip_failed_title),
-                        loadStringRes(Res.string.metadata_strip_failed_upload_cancelled),
-                    )
-                    return null
-                } else {
-                    strippingResult?.uri ?: galleryUri.uri
-                }
-
-            val compResult = MediaCompressor().compress(sourceUri, galleryUri.mimeType, CompressorQuality.MEDIUM, context.applicationContext)
-
-            return try {
-                val result =
-                    if (account.settings.defaultFileServer.type == ServerType.NIP96) {
-                        Nip96Uploader().upload(
-                            uri = compResult.uri,
-                            contentType = compResult.contentType,
-                            size = compResult.size,
-                            alt = null,
-                            sensitiveContent = null,
-                            serverBaseUrl = account.settings.defaultFileServer.baseUrl,
-                            okHttpClient = Amethyst.instance.roleBasedHttpClientBuilder::okHttpClientForUploads,
-                            onProgress = {},
-                            httpAuth = account::createHTTPAuthorization,
-                            context = context,
-                        )
-                    } else {
-                        BlossomUploader().upload(
-                            uri = compResult.uri,
-                            contentType = compResult.contentType,
-                            size = compResult.size,
-                            alt = null,
-                            sensitiveContent = null,
-                            serverBaseUrl = account.settings.defaultFileServer.baseUrl,
-                            okHttpClient = Amethyst.instance.roleBasedHttpClientBuilder::okHttpClientForUploads,
-                            httpAuth = account::createBlossomUploadAuth,
-                            context = context,
+            val result =
+                UploadOrchestrator().upload(
+                    uri = galleryUri.uri,
+                    mimeType = galleryUri.mimeType,
+                    alt = null,
+                    contentWarningReason = null,
+                    compressionQuality = CompressorQuality.MEDIUM,
+                    server = account.settings.defaultFileServer,
+                    account = account,
+                    uploader = uploader,
+                    stripMetadata = account.settings.stripLocationOnUpload,
+                    // A cover whose location could not be removed is not uploaded.
+                    onStrippingFailed = { false },
+                )
+            when (result) {
+                is UploadingState.Finished -> {
+                    val url = (result.result as? UploadOrchestrator.OrchestratorResult.ServerResult)?.url
+                    if (url == null) {
+                        onError(
+                            loadStringRes(Res.string.failed_to_upload_media_no_details),
+                            loadStringRes(Res.string.server_did_not_provide_a_url_after_uploading),
                         )
                     }
-
-                if (result.url == null) {
-                    onError(
-                        loadStringRes(Res.string.failed_to_upload_media_no_details),
-                        loadStringRes(Res.string.server_did_not_provide_a_url_after_uploading),
-                    )
+                    url
                 }
 
-                result.url
-            } catch (e: Exception) {
-                if (e is CancellationException) throw e
-                onError(loadStringRes(Res.string.failed_to_upload_media_no_details), e.message ?: e.javaClass.simpleName)
-                null
+                is UploadingState.Error -> {
+                    val title =
+                        when (result.error) {
+                            UploadError.UPLOAD_CANCELLED, UploadError.AVIF_METADATA_STRIP_FAILED -> Res.string.metadata_strip_failed_title
+                            else -> Res.string.failed_to_upload_media_no_details
+                        }
+                    val message =
+                        if (result.error == UploadError.UPLOAD_CANCELLED) {
+                            loadStringRes(Res.string.metadata_strip_failed_upload_cancelled)
+                        } else {
+                            loadStringRes(result.errorResource, *result.params)
+                        }
+                    onError(loadStringRes(title), message)
+                    null
+                }
             }
-        } catch (e: AvifMetadataNotVerifiableException) {
-            onError(
-                loadStringRes(Res.string.metadata_strip_failed_title),
-                loadStringRes(Res.string.avif_metadata_strip_failed, e.message ?: e.javaClass.simpleName),
-            )
-            null
         } finally {
             _state.update { it.copy(isUploadingImage = false) }
         }
@@ -239,7 +205,7 @@ class CreateNestViewModel : ViewModel() {
 
     /**
      * Build the kind-30312 event, sign + broadcast it, and return the
-     * launch info the sheet needs to start [NestActivity]. Returns
+     * launch info the sheet needs to start the room screen. Returns
      * null on validation or network failure (with [FormState.error]
      * set so the UI can render it).
      */
@@ -374,7 +340,7 @@ class CreateNestViewModel : ViewModel() {
     }
 
     /**
-     * Captured fields needed to launch [NestActivity]. Mirrors the
+     * Captured fields needed to launch the room screen. Mirrors the
      * `EXTRA_*` set the activity expects; pulled out here so the sheet
      * is a thin renderer.
      */

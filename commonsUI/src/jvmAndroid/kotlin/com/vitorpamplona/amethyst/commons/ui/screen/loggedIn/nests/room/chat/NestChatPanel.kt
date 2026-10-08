@@ -18,7 +18,7 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.ui.screen.loggedIn.nests.room.chat
+package com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.nests.room.chat
 
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -42,23 +42,22 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.commons.model.AddressableNote
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.nest_chat_empty
+import com.vitorpamplona.amethyst.commons.ui.components.rememberViewModel
+import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.feed.ChatroomMessageCompose
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.nests.room.chat.NestEditFieldRow
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.nests.room.chat.NestNewMessageViewModel
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.amethyst.commons.viewmodels.NestViewModel
-import com.vitorpamplona.amethyst.ui.navigation.navs.BouncingIntentNav
 import com.vitorpamplona.quartz.nip53LiveActivities.meetingSpaces.MeetingSpaceEvent
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
-import androidx.lifecycle.viewmodel.compose.viewModel as composeViewModel
 
 /**
  * In-room chat panel. Renders the kind-1311 transcript that the
@@ -74,31 +73,26 @@ import androidx.lifecycle.viewmodel.compose.viewModel as composeViewModel
  * message list itself is still driven from the [NestViewModel] so
  * presence / reactions / chat all share a single lifecycle.
  *
- * Navigation: the activity has no Compose NavHost in scope. Taps
- * that resolve to a NIP-19 entity (profile, quoted note, hashtag,
- * addressable channel) are dispatched through [BouncingIntentNav]
- * — a `nostr:` URI Intent at MainActivity. Anything that doesn't
- * have a `nostr:` URI is a no-op for now. The audio room keeps
- * running in its own task while the user explores; back from
- * MainActivity returns to the room.
+ * Navigation: the room may have no Compose NavHost in scope (Android
+ * hosts it in its own activity), so taps on a profile, quoted note,
+ * hashtag or channel go to the [nav] the host hands in.
  */
 @Composable
-internal fun ColumnScope.NestChatPanel(
+fun ColumnScope.NestChatPanel(
     event: MeetingSpaceEvent,
     roomNote: AddressableNote,
     viewModel: NestViewModel,
     accountViewModel: AccountViewModel,
+    nav: INav,
     modifier: Modifier = Modifier,
 ) {
     val messages by viewModel.chat.collectAsState()
-    val context = LocalContext.current
     val scope = rememberCoroutineScope()
-    val nav = remember(context, scope) { BouncingIntentNav(context, scope) }
 
     val routeForLastRead = remember(event) { "NestChat/${event.address().toValue()}" }
 
     val nestScreenModel: NestNewMessageViewModel =
-        composeViewModel(key = "Nest/${event.address().toValue()}")
+        rememberViewModel(key = "Nest/${event.address().toValue()}") { NestNewMessageViewModel() }
     nestScreenModel.init(accountViewModel)
     nestScreenModel.load(roomNote)
 
@@ -168,7 +162,7 @@ private fun NestChatMessageList(
     routeForLastRead: String,
     listState: LazyListState,
     accountViewModel: AccountViewModel,
-    nav: BouncingIntentNav,
+    nav: INav,
     onWantsToReply: (Note) -> Unit,
     onWantsToEditDraft: (Note) -> Unit,
 ) {

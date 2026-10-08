@@ -18,7 +18,7 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.ui.screen.loggedIn.nests.room.stage
+package com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.nests.room.stage
 
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.FastOutSlowInEasing
@@ -67,7 +67,7 @@ import kotlinx.collections.immutable.persistentListOf
  * reactions doesn't bleed the Row into the next column.
  */
 @Composable
-internal fun SpeakerReactionOverlay(
+fun SpeakerReactionOverlay(
     reactions: List<RoomReaction>,
     modifier: Modifier = Modifier,
 ) {

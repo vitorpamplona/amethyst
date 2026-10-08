@@ -18,7 +18,7 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.ui.screen.loggedIn.nests.room.stage
+package com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.nests.room.stage
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -46,12 +46,12 @@ import com.vitorpamplona.amethyst.commons.resources.nest_hand_raise_approve
 import com.vitorpamplona.amethyst.commons.resources.nest_hand_raise_queue_title
 import com.vitorpamplona.amethyst.commons.ui.note.ClickableUserPicture
 import com.vitorpamplona.amethyst.commons.ui.note.UsernameDisplay
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.nests.room.participants.RoomParticipantActions
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.Size35dp
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.amethyst.commons.viewmodels.NestViewModel
 import com.vitorpamplona.amethyst.commons.viewmodels.RoomPresence
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.nests.room.participants.RoomParticipantActions
 import com.vitorpamplona.quartz.nip53LiveActivities.meetingSpaces.MeetingSpaceEvent
 import com.vitorpamplona.quartz.nip53LiveActivities.streaming.tags.ROLE
 
@@ -68,7 +68,7 @@ import com.vitorpamplona.quartz.nip53LiveActivities.streaming.tags.ROLE
  * Visibility gating to host-only is the caller's responsibility.
  */
 @Composable
-internal fun HandRaiseQueueSection(
+fun HandRaiseQueueSection(
     event: MeetingSpaceEvent,
     viewModel: NestViewModel,
     accountViewModel: AccountViewModel,

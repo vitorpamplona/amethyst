@@ -18,7 +18,7 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.ui.screen.loggedIn.nests.create
+package com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.nests.create
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -51,10 +51,8 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.commons.nests.room.activity.NestBridge
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.nest_create_cancel
@@ -70,20 +68,29 @@ import com.vitorpamplona.amethyst.commons.resources.nest_create_submit
 import com.vitorpamplona.amethyst.commons.resources.nest_create_title
 import com.vitorpamplona.amethyst.commons.resources.nest_create_when
 import com.vitorpamplona.amethyst.commons.resources.next
+import com.vitorpamplona.amethyst.commons.search.calendar.LocalClock
+import com.vitorpamplona.amethyst.commons.search.calendar.SearchDate
+import com.vitorpamplona.amethyst.commons.search.calendar.atTime
+import com.vitorpamplona.amethyst.commons.search.calendar.fromPickerMillis
+import com.vitorpamplona.amethyst.commons.search.calendar.secondOfDay
 import com.vitorpamplona.amethyst.commons.ui.actions.uploads.SelectSingleFromGallery
+import com.vitorpamplona.amethyst.commons.ui.components.rememberViewModel
+import com.vitorpamplona.amethyst.commons.ui.note.DateTimeStyle
+import com.vitorpamplona.amethyst.commons.ui.note.formatDateTime
+import com.vitorpamplona.amethyst.commons.ui.note.rememberIs24HourClock
+import com.vitorpamplona.amethyst.commons.ui.platform.LocalAppPlatform
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.nests.NestsScreen
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.placeholderText
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.nests.NestsScreen
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.nests.room.activity.NestActivity
+import com.vitorpamplona.quartz.utils.TimeUtils
 import kotlinx.coroutines.launch
-import android.text.format.DateFormat as AndroidDateFormat
 
 /**
  * Bottom sheet that lets the logged-in user start a new NIP-53 kind 30312
  * audio room. On submit, [CreateNestViewModel] builds and signs the
  * MeetingSpaceEvent (with the user as `host`), broadcasts it to the
- * account's relays, and then launches [NestActivity] against the
+ * account's relays, and then launches the room screen against the
  * fresh address — the user lands inside the room as host with the
  * Talk button enabled.
  *
@@ -98,13 +105,13 @@ fun CreateNestSheet(
 ) {
     val viewModelKey = remember(accountViewModel) { accountViewModel.account.userProfile().pubkeyHex }
     val viewModel: CreateNestViewModel =
-        viewModel(key = "CreateNest-$viewModelKey")
+        rememberViewModel(key = "CreateNest-$viewModelKey") { CreateNestViewModel() }
     LaunchedEffect(viewModel) { viewModel.bindAccountIfMissing(accountViewModel) }
 
     val state by viewModel.state.collectAsState()
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     val scope = rememberCoroutineScope()
-    val context = LocalContext.current
+    val appPlatform = LocalAppPlatform.current
 
     ModalBottomSheet(
         onDismissRequest = onDismiss,
@@ -169,7 +176,7 @@ fun CreateNestSheet(
                     ) { media ->
                         viewModel.uploadForImage(
                             uri = media,
-                            context = context,
+                            uploader = accountViewModel.host.mediaUploader,
                             onError = accountViewModel.toastManager::toast,
                         )
                     }
@@ -224,10 +231,7 @@ fun CreateNestSheet(
                             // separately-tasked NestActivity (mirrors
                             // the join-card flow).
                             NestBridge.set(accountViewModel)
-                            NestActivity.launch(
-                                context = context,
-                                addressValue = launchInfo.addressValue,
-                            )
+                            appPlatform.openNestRoom(launchInfo.addressValue)
                             onDismiss()
                         }
                     },
@@ -263,24 +267,18 @@ private fun ScheduleStartPicker(
     var showDate by remember { mutableStateOf(false) }
     var showTime by remember { mutableStateOf(false) }
 
-    val context = LocalContext.current
-
     val pretty =
         if (unixSeconds <= 0L) {
             stringRes(Res.string.nest_create_when)
         } else {
-            val instant = java.util.Date(unixSeconds * 1000L)
-            java.text.DateFormat
-                .getDateTimeInstance(java.text.DateFormat.MEDIUM, java.text.DateFormat.SHORT)
-                .format(instant)
+            formatDateTime(unixSeconds * 1000L, DateTimeStyle.MEDIUM, DateTimeStyle.SHORT)
         }
 
-    val initialMillis = if (unixSeconds > 0L) unixSeconds * 1000L else System.currentTimeMillis()
-    val initialLocal =
-        java.time.Instant
-            .ofEpochMilli(initialMillis)
-            .atZone(java.time.ZoneId.systemDefault())
-            .toLocalDateTime()
+    val initialSeconds = if (unixSeconds > 0L) unixSeconds else TimeUtils.now()
+    val initialMillis = initialSeconds * 1000L
+    val initialSecondOfDay = LocalClock.secondOfDay(initialSeconds)
+    val initialHour = initialSecondOfDay / TimeUtils.ONE_HOUR
+    val initialMinute = (initialSecondOfDay % TimeUtils.ONE_HOUR) / TimeUtils.ONE_MINUTE
 
     // Re-key the picker state on `unixSeconds` so the dialog opens
     // pre-populated with the COMMITTED value. Without this key, a
@@ -292,9 +290,9 @@ private fun ScheduleStartPicker(
         )
     val timePickerState =
         androidx.compose.material3.rememberTimePickerState(
-            initialHour = initialLocal.hour,
-            initialMinute = initialLocal.minute,
-            is24Hour = AndroidDateFormat.is24HourFormat(context),
+            initialHour = initialHour,
+            initialMinute = initialMinute,
+            is24Hour = rememberIs24HourClock(),
         )
 
     // On dismiss (Cancel or back-press), restore the picker states
@@ -303,8 +301,8 @@ private fun ScheduleStartPicker(
     // and survive `cancel`, so we have to rewind them by hand.
     fun resetPickersToCommitted() {
         datePickerState.selectedDateMillis = initialMillis
-        timePickerState.hour = initialLocal.hour
-        timePickerState.minute = initialLocal.minute
+        timePickerState.hour = initialHour
+        timePickerState.minute = initialMinute
     }
 
     androidx.compose.material3.OutlinedButton(
@@ -353,22 +351,11 @@ private fun ScheduleStartPicker(
                         // DatePicker hands back UTC midnight of the
                         // selected calendar date. Reinterpret that
                         // calendar date as local + the picked
-                        // hour:minute, then convert to UTC seconds
-                        // using the zone offset AT THE PICKED INSTANT.
-                        // The previous code used `Instant.now()`'s
-                        // offset, which was off by one hour for rooms
-                        // scheduled across a DST transition.
-                        val zone = java.time.ZoneId.systemDefault()
-                        val localDate =
-                            java.time.Instant
-                                .ofEpochMilli(dayMillisUtc)
-                                .atZone(java.time.ZoneOffset.UTC)
-                                .toLocalDate()
-                        val pickedZdt =
-                            localDate
-                                .atTime(timePickerState.hour, timePickerState.minute)
-                                .atZone(zone)
-                        onChange(pickedZdt.toEpochSecond())
+                        // hour:minute, converted with the zone offset
+                        // AT THE PICKED INSTANT, so rooms scheduled
+                        // across a DST transition land on the hour.
+                        val localDate = SearchDate.fromPickerMillis(dayMillisUtc)
+                        onChange(LocalClock.atTime(localDate, timePickerState.hour, timePickerState.minute))
                     }
                     showTime = false
                 }) { Text(stringRes(Res.string.nest_create_submit)) }

@@ -18,7 +18,7 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.ui.screen.loggedIn.nests.room.lifecycle
+package com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.nests.room.lifecycle
 
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
@@ -68,7 +68,7 @@ import kotlinx.coroutines.launch
  *     never reaches the relay (audit Android #12).
  */
 @Composable
-internal fun NestPresencePublisher(
+fun NestPresencePublisher(
     account: Account,
     event: MeetingSpaceEvent,
     ui: NestUiState,

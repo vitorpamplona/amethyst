@@ -18,7 +18,7 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.ui.screen.loggedIn.nests.room.stage
+package com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.nests.room.stage
 
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.LinearEasing
@@ -45,10 +45,12 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.nests.room.stage.SpeakerReactionOverlay
 import com.vitorpamplona.amethyst.commons.ui.theme.BitcoinOrange
 import com.vitorpamplona.amethyst.commons.util.showAmountInteger
 import com.vitorpamplona.amethyst.commons.viewmodels.REACTION_WINDOW_SEC
 import com.vitorpamplona.amethyst.commons.viewmodels.RoomZap
+import com.vitorpamplona.quartz.utils.TimeUtils
 import kotlinx.coroutines.delay
 
 /**
@@ -65,7 +67,7 @@ import kotlinx.coroutines.delay
  * from emoji reactions at a glance.
  */
 @Composable
-internal fun SpeakerZapOverlay(
+fun SpeakerZapOverlay(
     zaps: List<RoomZap>,
     modifier: Modifier = Modifier,
 ) {
@@ -95,7 +97,7 @@ private fun ZapChip(zap: RoomZap) {
     // replaces the value at this slot.
     var progress by remember(zap.eventId) { mutableFloatStateOf(0f) }
     LaunchedEffect(zap.eventId) {
-        val ageMs = (System.currentTimeMillis() / 1000L - zap.createdAtSec).coerceAtLeast(0L) * 1000L
+        val ageMs = (TimeUtils.now() - zap.createdAtSec).coerceAtLeast(0L) * 1000L
         val remaining = (ZAP_WINDOW_MS - ageMs).coerceAtLeast(0L)
         progress = (ageMs.toFloat() / ZAP_WINDOW_MS).coerceIn(0f, 1f)
         if (remaining <= 0L) return@LaunchedEffect
@@ -103,7 +105,7 @@ private fun ZapChip(zap: RoomZap) {
         repeat(steps.toInt()) {
             delay(100L)
             progress =
-                ((System.currentTimeMillis() / 1000L - zap.createdAtSec).toFloat() * 1000f / ZAP_WINDOW_MS)
+                ((TimeUtils.now() - zap.createdAtSec).toFloat() * 1000f / ZAP_WINDOW_MS)
                     .coerceIn(0f, 1f)
         }
         progress = 1f

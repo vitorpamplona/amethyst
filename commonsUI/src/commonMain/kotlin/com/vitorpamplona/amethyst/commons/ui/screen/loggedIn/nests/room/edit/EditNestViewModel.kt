@@ -18,9 +18,10 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.ui.screen.loggedIn.nests.room.edit
+package com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.nests.room.edit
 
 import androidx.lifecycle.ViewModel
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.nests.room.edit.EditNestSheet
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.quartz.nip53LiveActivities.meetingSpaces.MeetingSpaceEvent
 import com.vitorpamplona.quartz.nip53LiveActivities.meetingSpaces.endpoint
@@ -34,6 +35,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
+import kotlin.concurrent.Volatile
 
 /**
  * Backing ViewModel for [EditNestSheet]. Loads the existing
@@ -133,7 +135,7 @@ class EditNestViewModel : ViewModel() {
          * template MUST reuse the original `dTag` and preserve every
          * participant tag verbatim, including the host.
          */
-        internal fun buildEditTemplate(
+        fun buildEditTemplate(
             original: MeetingSpaceEvent,
             form: FormState,
             status: StatusTag.STATUS,

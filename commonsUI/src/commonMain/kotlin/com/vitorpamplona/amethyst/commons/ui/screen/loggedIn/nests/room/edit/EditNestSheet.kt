@@ -18,7 +18,7 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.ui.screen.loggedIn.nests.room.edit
+package com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.nests.room.edit
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -51,7 +51,6 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.nest_close_action
 import com.vitorpamplona.amethyst.commons.resources.nest_close_room_confirm_action
@@ -65,6 +64,7 @@ import com.vitorpamplona.amethyst.commons.resources.nest_create_field_service
 import com.vitorpamplona.amethyst.commons.resources.nest_create_field_summary
 import com.vitorpamplona.amethyst.commons.resources.nest_edit_save
 import com.vitorpamplona.amethyst.commons.resources.nest_edit_title
+import com.vitorpamplona.amethyst.commons.ui.components.rememberViewModel
 import com.vitorpamplona.amethyst.commons.ui.insets.imePaddingSafe
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
@@ -89,7 +89,7 @@ fun EditNestSheet(
     onDismiss: () -> Unit,
 ) {
     val key = remember(event) { "EditNest-${event.dTag()}" }
-    val viewModel: EditNestViewModel = viewModel(key = key)
+    val viewModel: EditNestViewModel = rememberViewModel(key = key) { EditNestViewModel() }
     LaunchedEffect(viewModel, event) { viewModel.bind(accountViewModel, event) }
 
     val state by viewModel.state.collectAsState()

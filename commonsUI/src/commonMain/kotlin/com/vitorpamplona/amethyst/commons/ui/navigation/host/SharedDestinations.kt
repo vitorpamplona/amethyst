@@ -166,6 +166,7 @@ import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.music.NewMusicPlayl
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.music.NewMusicTrackScreen
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.napplets.ConnectedAppsScreen
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.napplets.NappletsScreen
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.nests.NestsScreen
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.nests.room.lobby.NestLobbyScreen
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.newUser.ImportFollowListPickFollowsScreen
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.newUser.ImportFollowListSelectUserScreen
@@ -285,6 +286,7 @@ fun NavDestinations.sharedDestinations(
     composableFromBottomArgs<Route.EditCalendarEvent> {
         NewCalendarEventScreen(nav, accountViewModel, editKind = it.kind, editPubKeyHex = it.pubKeyHex, editDTag = it.dTag)
     }
+    composableFromEnd<Route.Nests> { NestsScreen(accountViewModel, nav) }
     composableFromEndArgs<Route.AddToMusicPlaylist> { AddToMusicPlaylistSheet(trackAddress = it.trackAddress, accountViewModel = accountViewModel, nav = nav) }
     composableFromEnd<Route.Badges> { BadgesScreen(accountViewModel, nav) }
     composableFromEnd<Route.ProfileBadges> { ProfileBadgesScreen(accountViewModel, nav) }

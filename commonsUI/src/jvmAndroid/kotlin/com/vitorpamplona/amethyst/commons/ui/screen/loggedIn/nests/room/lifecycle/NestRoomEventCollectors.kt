@@ -18,7 +18,7 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.ui.screen.loggedIn.nests.room.lifecycle
+package com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.nests.room.lifecycle
 
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -52,7 +52,7 @@ import kotlinx.coroutines.isActive
  * already in cache, not opening relay REQs of its own.
  */
 @Composable
-internal fun NestRoomEventCollectors(
+fun NestRoomEventCollectors(
     viewModel: NestViewModel,
     event: MeetingSpaceEvent,
     roomATag: String,
@@ -100,7 +100,7 @@ private fun PresenceEvictionTicker(viewModel: NestViewModel) {
     LaunchedEffect(viewModel) {
         while (isActive) {
             delay(PRESENCE_EVICT_INTERVAL_MS)
-            viewModel.evictStalePresences(System.currentTimeMillis() / 1000 - PRESENCE_STALE_THRESHOLD_SEC)
+            viewModel.evictStalePresences(TimeUtils.now() - PRESENCE_STALE_THRESHOLD_SEC)
         }
     }
 }
@@ -142,7 +142,7 @@ private fun ReactionsCollector(
                 tags = mapOf("a" to listOf(roomATag)),
             )
         LocalCache.observeEvents<ReactionEvent>(filter).collect { events ->
-            val nowSec = System.currentTimeMillis() / 1000
+            val nowSec = TimeUtils.now()
             events.forEach { viewModel.onReactionEvent(it, nowSec) }
         }
     }
@@ -173,7 +173,7 @@ private fun ZapsCollector(
                 tags = mapOf("a" to listOf(roomATag)),
             )
         LocalCache.observeNotes(filter).collect { notes ->
-            val nowSec = System.currentTimeMillis() / 1000
+            val nowSec = TimeUtils.now()
             notes.forEach { note ->
                 viewModel.onChatEvent(note)
                 (note.event as? ZapReceiptEvent)?.let { viewModel.onZapEvent(it, nowSec) }
@@ -195,7 +195,7 @@ private fun ZapsEvictionTicker(viewModel: NestViewModel) {
         if (!hasZaps) return@LaunchedEffect
         while (isActive) {
             delay(REACTIONS_TICK_MS)
-            viewModel.evictZaps(System.currentTimeMillis() / 1000 - REACTION_WINDOW_SEC_LOCAL)
+            viewModel.evictZaps(TimeUtils.now() - REACTION_WINDOW_SEC_LOCAL)
         }
     }
 }
@@ -213,7 +213,7 @@ private fun ReactionsEvictionTicker(viewModel: NestViewModel) {
         if (!hasReactions) return@LaunchedEffect
         while (isActive) {
             delay(REACTIONS_TICK_MS)
-            viewModel.evictReactions(System.currentTimeMillis() / 1000 - REACTION_WINDOW_SEC_LOCAL)
+            viewModel.evictReactions(TimeUtils.now() - REACTION_WINDOW_SEC_LOCAL)
         }
     }
 }

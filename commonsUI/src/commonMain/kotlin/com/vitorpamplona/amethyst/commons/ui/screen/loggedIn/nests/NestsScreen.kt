@@ -18,7 +18,7 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.ui.screen.loggedIn.nests
+package com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.nests
 
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.AlertDialog
@@ -53,11 +53,11 @@ import com.vitorpamplona.amethyst.commons.ui.layouts.DisappearingScaffold
 import com.vitorpamplona.amethyst.commons.ui.navigation.bottombars.FabBottomBarPadded
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.platform.AppBottomBar
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.nests.create.CreateNestSheet
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.nests.create.CreateNestViewModel
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.nests.datasource.NestsFilterAssemblerSubscription
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.nests.create.CreateNestSheet
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.nests.create.CreateNestViewModel
 
 @Composable
 fun NestsScreen(

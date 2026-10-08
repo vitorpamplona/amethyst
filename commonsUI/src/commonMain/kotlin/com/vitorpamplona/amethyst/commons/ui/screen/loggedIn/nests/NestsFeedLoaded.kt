@@ -18,7 +18,7 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.ui.screen.loggedIn.nests
+package com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.nests
 
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
@@ -52,7 +52,6 @@ import androidx.compose.ui.Alignment.Companion.TopEnd
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -94,6 +93,8 @@ import com.vitorpamplona.amethyst.commons.ui.note.UsernameDisplay
 import com.vitorpamplona.amethyst.commons.ui.note.ZapReaction
 import com.vitorpamplona.amethyst.commons.ui.note.elements.MoreOptionsButton
 import com.vitorpamplona.amethyst.commons.ui.note.timeAgoNoDot
+import com.vitorpamplona.amethyst.commons.ui.platform.AppPlatform
+import com.vitorpamplona.amethyst.commons.ui.platform.LocalAppPlatform
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.discover.nip53LiveActivities.LoadParticipants
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.DividerThickness
@@ -108,7 +109,6 @@ import com.vitorpamplona.amethyst.commons.ui.theme.StdHorzSpacer
 import com.vitorpamplona.amethyst.commons.ui.theme.StdPadding
 import com.vitorpamplona.amethyst.commons.ui.theme.grayText
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.nests.room.activity.NestActivity
 import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.nip01Core.tags.dTag.dTag
 import com.vitorpamplona.quartz.nip53LiveActivities.meetingSpaces.MeetingSpaceEvent
@@ -120,6 +120,7 @@ import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.IO
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.mapLatest
@@ -280,7 +281,7 @@ private fun NestFeedCard(
     val meetingEvent = baseNote.event as? MeetingSpaceEvent ?: return
     val addressableNote = baseNote as? AddressableNote ?: return
 
-    val context = LocalContext.current
+    val appPlatform = LocalAppPlatform.current
     val status = meetingEvent.checkStatus(meetingEvent.status())
 
     val isUiClosed =
@@ -304,7 +305,7 @@ private fun NestFeedCard(
     val onClick =
         remember(meetingEvent, isUiClosed) {
             {
-                openRoom(meetingEvent, baseNote, isUiClosed, accountViewModel, nav, context)
+                openRoom(meetingEvent, baseNote, isUiClosed, accountViewModel, nav, appPlatform)
             }
         }
 
@@ -345,11 +346,11 @@ private fun NestEndedCompactCard(
 ) {
     val meetingEvent = baseNote.event as? MeetingSpaceEvent ?: return
 
-    val context = LocalContext.current
+    val appPlatform = LocalAppPlatform.current
     val onClick =
         remember(meetingEvent) {
             {
-                openRoom(meetingEvent, baseNote, isUiClosed = true, accountViewModel, nav, context)
+                openRoom(meetingEvent, baseNote, isUiClosed = true, accountViewModel, nav, appPlatform)
             }
         }
 
@@ -446,7 +447,7 @@ private fun openRoom(
     isUiClosed: Boolean,
     accountViewModel: AccountViewModel,
     nav: INav,
-    context: android.content.Context,
+    appPlatform: AppPlatform,
 ) {
     val service = meetingEvent.service()
     val endpoint = meetingEvent.endpoint()
@@ -456,10 +457,7 @@ private fun openRoom(
             nav.nav(Route.NestLobby(meetingEvent.address().toValue()))
         } else {
             NestBridge.set(accountViewModel)
-            NestActivity.launch(
-                context = context,
-                addressValue = meetingEvent.address().toValue(),
-            )
+            appPlatform.openNestRoom(meetingEvent.address().toValue())
         }
     } else {
         nav.nav { routeFor(baseNote, accountViewModel.account) }

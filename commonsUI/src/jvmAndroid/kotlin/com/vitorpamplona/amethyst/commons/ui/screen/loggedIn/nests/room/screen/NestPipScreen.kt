@@ -18,7 +18,7 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.ui.screen.loggedIn.nests.room.screen
+package com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.nests.room.screen
 
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.animateDpAsState
@@ -87,7 +87,7 @@ import com.vitorpamplona.amethyst.commons.viewmodels.RoomMember
  * [com.vitorpamplona.amethyst.ui.screen.loggedIn.nests.room.activity.NestActivity.buildPipActions].
  */
 @Composable
-internal fun NestPipScreen(
+fun NestPipScreen(
     title: String?,
     onStage: List<RoomMember>,
     ui: NestUiState,

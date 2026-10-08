@@ -18,7 +18,7 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.ui.screen.loggedIn.nests.room.stage
+package com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.nests.room.stage
 
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.FastOutSlowInEasing
@@ -157,7 +157,7 @@ private val STAGE_MAX_HEIGHT = 320.dp
  * appear when the local user is on stage.
  */
 @Composable
-internal fun StageGrid(
+fun StageGrid(
     members: List<RoomMember>,
     speakingNow: ImmutableSet<String>,
     accountViewModel: AccountViewModel,
@@ -308,7 +308,7 @@ private fun EmptyStageHint() {
  * badge still renders because the audience is the hand-raise queue.
  */
 @Composable
-internal fun AudienceGrid(
+fun AudienceGrid(
     members: List<RoomMember>,
     accountViewModel: AccountViewModel,
     modifier: Modifier = Modifier,
