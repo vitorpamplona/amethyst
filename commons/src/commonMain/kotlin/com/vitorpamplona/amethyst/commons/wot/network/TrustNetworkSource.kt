@@ -22,10 +22,12 @@ package com.vitorpamplona.amethyst.commons.wot.network
 
 import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
 import com.vitorpamplona.quartz.nip85TrustedAssertions.list.tags.ServiceProviderTag
+import com.vitorpamplona.quartz.nip85TrustedAssertions.users.index.TrustNetworkCheckpoint
 import com.vitorpamplona.quartz.nip85TrustedAssertions.users.index.TrustNetworkHeader
 import com.vitorpamplona.quartz.nip85TrustedAssertions.users.index.TrustNetworkIds
 import com.vitorpamplona.quartz.nip85TrustedAssertions.users.index.TrustNetworkIndex
 import com.vitorpamplona.quartz.nip85TrustedAssertions.users.index.TrustNetworkNews
+import com.vitorpamplona.quartz.nip85TrustedAssertions.users.index.TrustNetworkPartial
 import com.vitorpamplona.quartz.nip85TrustedAssertions.users.index.TrustNetworkProgress
 import com.vitorpamplona.quartz.nip85TrustedAssertions.users.index.TrustNetworkSyncResult
 import com.vitorpamplona.quartz.nip85TrustedAssertions.users.index.downloadTrustNetwork
@@ -49,9 +51,12 @@ interface TrustNetworkConnection {
         header: TrustNetworkHeader,
     ): TrustNetworkNews
 
+    /** A cold download, resumed from [resumeFrom] when given; [checkpoint] saves its progress. */
     suspend fun download(
         provider: ServiceProviderTag,
         progress: TrustNetworkProgress,
+        checkpoint: TrustNetworkCheckpoint? = null,
+        resumeFrom: TrustNetworkPartial? = null,
     ): TrustNetworkSyncResult
 
     suspend fun update(
@@ -101,7 +106,9 @@ class RelayTrustNetworkSource(
         override suspend fun download(
             provider: ServiceProviderTag,
             progress: TrustNetworkProgress,
-        ) = client.downloadTrustNetwork(provider.pubkey, provider.relayUrl, progress)
+            checkpoint: TrustNetworkCheckpoint?,
+            resumeFrom: TrustNetworkPartial?,
+        ) = client.downloadTrustNetwork(provider.pubkey, provider.relayUrl, resumeFrom = resumeFrom, checkpoint = checkpoint, progress = progress)
 
         override suspend fun update(
             provider: ServiceProviderTag,

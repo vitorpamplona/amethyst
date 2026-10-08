@@ -22,10 +22,12 @@ package com.vitorpamplona.amethyst.commons.wot.network
 
 import com.vitorpamplona.amethyst.commons.util.moveOrCopy
 import com.vitorpamplona.amethyst.commons.util.platformFileSystem
+import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip85TrustedAssertions.users.index.TrustNetworkCodec
 import com.vitorpamplona.quartz.nip85TrustedAssertions.users.index.TrustNetworkHeader
 import com.vitorpamplona.quartz.nip85TrustedAssertions.users.index.TrustNetworkIds
 import com.vitorpamplona.quartz.nip85TrustedAssertions.users.index.TrustNetworkIndex
+import com.vitorpamplona.quartz.nip85TrustedAssertions.users.index.TrustNetworkPartial
 import com.vitorpamplona.quartz.utils.Log
 import okio.FileSystem
 import okio.Path
@@ -37,6 +39,8 @@ import kotlin.random.Random
  *
  *  - [INDEX_FILE]: the index, read at startup.
  *  - [IDS_FILE]: event ids and tombstones, read only by syncs.
+ *  - [PARTIAL_INDEX_FILE] and [PARTIAL_IDS_FILE]: what a cold download that has not finished
+ *    collected so far, so it resumes. Never read as the network.
  *
  * Files are written to a temp file and moved into place, so a crash leaves the old file or the
  * new one, never half. A file that cannot be read (wrong version, truncated) reads as missing.
@@ -64,20 +68,44 @@ class TrustNetworkStore(
         header: TrustNetworkHeader,
         index: TrustNetworkIndex,
         ids: TrustNetworkIds,
+    ): TrustNetworkHeader = writePair(INDEX_FILE, IDS_FILE, header, index, ids)
+
+    /** What [provider]'s unfinished cold download collected, or null when there is none for it. */
+    fun readPartial(provider: HexKey): TrustNetworkPartial? {
+        val (header, index) = read(PARTIAL_INDEX_FILE, TrustNetworkCodec::decodeIndex) ?: return null
+        if (header.provider != provider) return null
+        val ids = read(PARTIAL_IDS_FILE, TrustNetworkCodec::decodeIds)?.takeIf { it.generation == header.generation && it.size == index.size } ?: return null
+        return TrustNetworkPartial(header, index, ids)
+    }
+
+    /** Saves a checkpoint of a cold download (replacing the previous one). */
+    fun writePartial(partial: TrustNetworkPartial) {
+        writePair(PARTIAL_INDEX_FILE, PARTIAL_IDS_FILE, partial.header, partial.index, partial.ids)
+    }
+
+    fun deletePartial() = deleteFiles(PARTIAL_INDEX_FILE, PARTIAL_IDS_FILE)
+
+    fun delete() = deleteFiles(INDEX_FILE, IDS_FILE, PARTIAL_INDEX_FILE, PARTIAL_IDS_FILE)
+
+    private fun writePair(
+        indexFile: String,
+        idsFile: String,
+        header: TrustNetworkHeader,
+        index: TrustNetworkIndex,
+        ids: TrustNetworkIds,
     ): TrustNetworkHeader {
         val written = header.copy(generation = Random.nextLong())
         fileSystem.createDirectories(directory)
         // A crash between the two leaves files of different generations: the next sync then
         // downloads again instead of pairing an index with someone else's ids.
-        atomicWrite(directory / IDS_FILE, TrustNetworkCodec.encodeIds(ids.withGeneration(written.generation)))
-        atomicWrite(directory / INDEX_FILE, TrustNetworkCodec.encodeIndex(written, index))
+        atomicWrite(directory / idsFile, TrustNetworkCodec.encodeIds(ids.withGeneration(written.generation)))
+        atomicWrite(directory / indexFile, TrustNetworkCodec.encodeIndex(written, index))
         return written
     }
 
-    fun delete() {
+    private fun deleteFiles(vararg names: String) {
         try {
-            fileSystem.delete(directory / INDEX_FILE, mustExist = false)
-            fileSystem.delete(directory / IDS_FILE, mustExist = false)
+            names.forEach { fileSystem.delete(directory / it, mustExist = false) }
         } catch (e: Exception) {
             Log.w(TAG, "Could not delete the trust network files", e)
         }
@@ -123,6 +151,8 @@ class TrustNetworkStore(
         private const val TAG = "TrustNetworkStore"
         const val INDEX_FILE = "network-v2.bin"
         const val IDS_FILE = "network-ids-v2.bin"
+        const val PARTIAL_INDEX_FILE = "partial-network-v2.bin"
+        const val PARTIAL_IDS_FILE = "partial-network-ids-v2.bin"
         private val LEGACY_FILES = listOf("network-v1.bin", "network-ids-v1.bin")
     }
 }

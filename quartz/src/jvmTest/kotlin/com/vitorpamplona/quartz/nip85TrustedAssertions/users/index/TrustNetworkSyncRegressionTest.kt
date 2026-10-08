@@ -202,4 +202,41 @@ class TrustNetworkSyncRegressionTest {
         val decoded = assertNotNull(TrustNetworkCodec.decodeIndex(v3), "a version 3 file is still read")
         assertEquals(header.copy(heldAfterCursor = null), decoded.first, "unknown, so the next update reconciles once")
     }
+
+    @Test
+    fun aDownloadSavesCheckpointsAsItGoes() =
+        runBlocking {
+            val cards = List(3_000) { i -> card(hex(), 50, batchTime + i) }
+            val saved = mutableListOf<Int>()
+            val result =
+                withRelay(cards) { _, client, relay ->
+                    client.downloadTrustNetwork(provider.pubKey, relay, checkpoint = { saved += it.cards }, checkpointEvery = 1_000)
+                }
+            assertTrue(result.complete)
+            assertEquals(listOf(1_000, 2_000, 3_000), saved, "one checkpoint every 1,000 cards, each holding everything so far")
+        }
+
+    @Test
+    fun aCutOffDownloadResumesWithOnlyTheRest() =
+        runBlocking {
+            val subjects = List(3_000) { hex() }
+            val cards = subjects.mapIndexed { i, s -> card(s, 50, batchTime + i) }
+
+            // What a download cut off after 1,000 cards had, plus a card the relay has dropped since.
+            val dropped = card(hex(), 50, batchTime - 5)
+            val partialBuilder = TrustNetworkBuilder(provider.pubKey)
+            (cards.takeLast(1_000) + dropped).forEach { partialBuilder.add(it) }
+            val (partialIndex, partialIds) = partialBuilder.build()
+            val partial = TrustNetworkPartial(TrustNetworkHeader(provider.pubKey, "ws://127.0.0.1:7790/", 0, 0, 0), partialIndex, partialIds)
+
+            val result =
+                withRelay(cards) { _, client, relay ->
+                    client.downloadTrustNetwork(provider.pubKey, relay, resumeFrom = partial)
+                }
+            assertTrue(result.complete, result.detail)
+            assertTrue(result.detail!!.contains("need 2000"), "only the rest is fetched: ${result.detail}")
+            assertEquals(3_000, result.index.size)
+            assertNull(result.index.rankOf(dropped.tags.first { it[0] == "d" }[1]), "a card the relay dropped since does not come back")
+            assertEquals(batchTime + 2_999, result.header.syncCursor)
+        }
 }

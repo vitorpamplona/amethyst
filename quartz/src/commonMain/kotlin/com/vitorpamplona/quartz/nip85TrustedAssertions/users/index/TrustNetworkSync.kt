@@ -46,6 +46,31 @@ import kotlin.concurrent.atomics.AtomicInt
 import kotlin.concurrent.atomics.ExperimentalAtomicApi
 import kotlin.concurrent.atomics.incrementAndFetch
 
+/**
+ * What a cold download has collected so far: its cards (entries and tombstones), saved so a
+ * download that is cut off (the process killed, the relay gone) resumes instead of starting over.
+ * Never a network: most of it is missing, and filtering with it would reject everyone else.
+ */
+class TrustNetworkPartial(
+    val header: TrustNetworkHeader,
+    val index: TrustNetworkIndex,
+    val ids: TrustNetworkIds,
+) {
+    val cards: Int get() = index.size + ids.tombstones
+}
+
+/** Receives a [TrustNetworkPartial] every [TRUST_NETWORK_CHECKPOINT_EVERY] cards of a cold download. */
+fun interface TrustNetworkCheckpoint {
+    fun save(partial: TrustNetworkPartial)
+}
+
+/**
+ * Cards between two checkpoints of a cold download. Each one sorts what has arrived (a second or
+ * two at 150k on a phone), so a handful per download; at a phone's ~550 cards/s, an interruption
+ * loses under a minute.
+ */
+const val TRUST_NETWORK_CHECKPOINT_EVERY = 25_000
+
 /** Progress of a sync: cards verified so far, and the relay's NIP-45 count when it gave one. */
 fun interface TrustNetworkProgress {
     fun onProgress(
@@ -123,38 +148,67 @@ private fun missingAllowed(need: Int) = maxOf(16, need / 200)
 suspend fun INostrClient.downloadTrustNetwork(
     provider: HexKey,
     relay: NormalizedRelayUrl,
+    /** What an earlier, cut-off download of this provider collected: only the rest is fetched. */
+    resumeFrom: TrustNetworkPartial? = null,
+    /** Saves what has arrived every [checkpointEvery] cards. */
+    checkpoint: TrustNetworkCheckpoint? = null,
+    checkpointEvery: Int = TRUST_NETWORK_CHECKPOINT_EVERY,
+    // Last, so callers can pass it as a trailing lambda.
     progress: TrustNetworkProgress? = null,
 ): TrustNetworkSyncResult {
     val startedAt = TimeUtils.now()
     val filter = trustNetworkFilter(provider)
     val expected = countOrNull(relay, filter)
-    progress?.onProgress(0, expected)
 
     // The relay's count only hints the size: growing is cheap, a huge upfront allocation is not.
     val builder = TrustNetworkBuilder(provider, initialCapacity = (expected ?: 4096).coerceIn(1024, 262_144))
+    val resume = resumeFrom?.takeIf { it.header.provider == provider && it.cards > 0 }
+    resume?.let { builder.addAll(it.index, it.ids) }
+    progress?.onProgress(builder.cardCount, expected)
     val invalid = AtomicInt(0)
 
-    val paged = verifying(builder, invalid, expected, progress, seeded = 0) { submit -> fetchAllPages(relay, listOf(filter), IDLE_MS) { submit(it) } }
-
-    var complete = paged.drained
-    var detail = "${paged.end}${paged.message?.let { ": $it" } ?: ""}"
-
-    if (!complete && paged.end == PagedFetchResult.End.UNPAGEABLE) {
-        Log.d(TAG) { "Paging stalled on a shared timestamp at ${builder.cardCount} cards; switching to negentropy" }
-        try {
-            val local = builder.idsAndTimes()
-            val synced =
-                verifying(builder, invalid, expected, progress, seeded = 0) { submit ->
-                    negentropySync(relay, filter, localEntries = local, idleTimeoutMs = IDLE_MS) { submit(it) }
+    val save: ((Int) -> Unit)? =
+        checkpoint?.let { sink ->
+            { accepted ->
+                if (accepted % checkpointEvery == 0) {
+                    val (index, ids) = builder.build()
+                    sink.save(TrustNetworkPartial(TrustNetworkHeader(provider, relay.url, syncCursor = 0, lastFullCheck = 0, lastUpdate = 0), index, ids))
                 }
-            // By-id batches that time out are dropped without an error: only a full count is complete.
-            complete = synced.downloaded >= synced.needCount
-            detail = "negentropy ${synced.downloaded} of ${synced.needCount}"
-        } catch (e: CancellationException) {
-            throw e
-        } catch (e: Exception) {
-            Log.w(TAG, "Negentropy fallback failed on ${relay.url}", e)
-            detail = "negentropy failed: ${e.message}"
+            }
+        }
+
+    var complete: Boolean
+    var detail: String
+    // Resuming: reconcile what the cut-off download had with the relay, so only the rest is
+    // fetched and a card the relay replaced or dropped since then goes. A relay without NIP-77
+    // gets the whole walk again; the builder merges the cards it already had.
+    val resumed = resume?.let { reconcileIds(relay, filter, it.ids.negentropyIndex()) }
+    if (resumed != null) {
+        Log.d(TAG) { "Resuming a download of ${builder.cardCount} cards: need ${resumed.need.size}, gone ${resumed.have.size}" }
+        val reconciled = applyDiff(builder, relay, resumed, invalid, progress, seeded = 0, expected = expected, onAccepted = save)
+        complete = reconciled.complete
+        detail = "resumed from ${resume.cards}: need ${reconciled.need}, gone ${reconciled.gone}"
+    } else {
+        val paged = verifying(builder, invalid, expected, progress, seeded = 0, onAccepted = save) { submit -> fetchAllPages(relay, listOf(filter), IDLE_MS) { submit(it) } }
+        complete = paged.drained
+        detail = "${paged.end}${paged.message?.let { ": $it" } ?: ""}"
+        if (!complete && paged.end == PagedFetchResult.End.UNPAGEABLE) {
+            Log.d(TAG) { "Paging stalled on a shared timestamp at ${builder.cardCount} cards; switching to negentropy" }
+            try {
+                val local = builder.idsAndTimes()
+                val synced =
+                    verifying(builder, invalid, expected, progress, seeded = 0, onAccepted = save) { submit ->
+                        negentropySync(relay, filter, localEntries = local, idleTimeoutMs = IDLE_MS) { submit(it) }
+                    }
+                // By-id batches that time out are dropped without an error: only a full count is complete.
+                complete = synced.downloaded >= synced.needCount
+                detail = "negentropy ${synced.downloaded} of ${synced.needCount}"
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                Log.w(TAG, "Negentropy fallback failed on ${relay.url}", e)
+                detail = "negentropy failed: ${e.message}"
+            }
         }
     }
 
@@ -383,11 +437,13 @@ private suspend fun INostrClient.applyDiff(
     invalid: AtomicInt,
     progress: TrustNetworkProgress?,
     seeded: Int,
+    expected: Int? = diff.need.size,
+    onAccepted: ((Int) -> Unit)? = null,
 ): Reconciled {
     val missing = AtomicInt(0)
     val invalidBefore = invalid.load()
     if (diff.need.isNotEmpty()) {
-        verifying(builder, invalid, diff.need.size, progress, seeded) { submit ->
+        verifying(builder, invalid, expected, progress, seeded, onAccepted) { submit ->
             // A few batches in flight at once: a provider recompute can need every card.
             val slots = Semaphore(FETCH_BY_ID_CONCURRENCY)
             coroutineScope {
@@ -513,6 +569,8 @@ private suspend fun <T> verifying(
     progress: TrustNetworkProgress?,
     /** Cards the builder held before this sync: progress counts only what the sync adds. */
     seeded: Int,
+    /** Called with the running count after each accepted card, on the same single writer as the builder. */
+    onAccepted: ((Int) -> Unit)? = null,
     fetch: suspend (submit: (Event) -> Unit) -> T,
 ): T =
     coroutineScope {
@@ -525,6 +583,7 @@ private suspend fun <T> verifying(
                     if (builder.add(event)) {
                         val n = accepted.incrementAndFetch()
                         if (n % 1000 == 0) progress?.onProgress(builder.cardCount - seeded, expected)
+                        onAccepted?.invoke(n)
                     }
                 },
             )
