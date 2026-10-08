@@ -6749,11 +6749,10 @@
     <string name="wot_copy_no_rank">Their list names no rank provider.</string>
     <string name="wot_manual_add_tag">Add a tag</string>
     <string name="wot_manual_remove_tag">Remove this tag</string>
+    <string name="wot_manual_change_relay">Change relay</string>
     <string name="wot_manual_needs_rank">Add a %1$s row: it decides who is in your network.</string>
     <string name="wot_manual_key_label">Service key (npub or hex)</string>
     <string name="wot_manual_key_error">Not a valid public key</string>
-    <string name="wot_manual_relay_label">Relay (wss://…)</string>
-    <string name="wot_manual_relay_error">Not a valid relay address</string>
     <string name="wot_private_entry_title">Keep provider private</string>
     <string name="wot_private_entry_explainer">Hidden from other apps</string>
     <string name="wot_use_provider">Use this provider</string>

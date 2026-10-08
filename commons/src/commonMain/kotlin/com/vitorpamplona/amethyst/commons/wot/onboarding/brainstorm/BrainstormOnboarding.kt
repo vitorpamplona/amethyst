@@ -60,7 +60,9 @@ import kotlinx.serialization.json.jsonPrimitive
  *     coming, so neither stops the sign-up.
  *  4. `GET /user/history` → `{data:{ta_pubkey, last_time_calculated_graperank}}`: the key the
  *     user's kind 30382 cards are signed with, published to `wss://scores.brainstorm.world`.
- *  5. `GET /setup/{pubkey}` → `[[name, key, relay], …]`: the kind 10040 rows Brainstorm serves
+ *  5. `POST /user/assistantProfile` (Bearer token), while no scores exist yet: publishes the
+ *     assistant key's profile now instead of before the first batch.
+ *  6. `GET /setup/{pubkey}` → `[[name, key, relay], …]`: the kind 10040 rows Brainstorm serves
  *     this user with (`30382:rank`, `followers`, `hops`, `reporters`, `muters`, and `30392` for
  *     Trusted Lists), the same ones its site publishes. When that fails, the two its site has
  *     always published: `30382:rank` and `30382:followers` under `ta_pubkey`.
@@ -123,6 +125,20 @@ class BrainstormOnboarding(
         val serviceKey = history.string("ta_pubkey")?.lowercase()
         if (serviceKey == null || !Hex.isHex64(serviceKey)) throw unexpected("no service key")
         val calculated = history["last_time_calculated_graperank"]
+        val scoresReady = calculated != null && calculated !is JsonNull
+
+        // Brainstorm publishes the assistant's profile (kind 0) only before its first batch of
+        // scores, minutes away for a new user; until then the provider shows as a bare key. Its
+        // site asks for it at sign-up, so do the same. Best effort: the sign-up does not need it.
+        if (!scoresReady) {
+            try {
+                http.post("$api/user/assistantProfile", null, auth)
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                // The first batch publishes it anyway.
+            }
+        }
 
         // /setup is not authenticated: use it only when its rank row names the key the signed-in
         // /user/history just returned.
@@ -131,7 +147,7 @@ class BrainstormOnboarding(
                 ?: SCORE_SERVICES.map { TrustProviderRow(it.toValue(), serviceKey, relay) }
         return TrustProviderRegistration(
             rows = rows,
-            scoresReady = calculated != null && calculated !is JsonNull,
+            scoresReady = scoresReady,
         )
     }
 

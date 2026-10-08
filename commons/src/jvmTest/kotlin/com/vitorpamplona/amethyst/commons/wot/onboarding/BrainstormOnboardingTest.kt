@@ -151,9 +151,12 @@ class BrainstormOnboardingTest {
     @Test
     fun aRecentRunIsNotAnError() =
         runBlocking {
-            val registration = BrainstormOnboarding(FakeBrainstorm(graperankStatus = 403, calculated = "null"), api = "https://api.test").register(signer)
+            val http = FakeBrainstorm(graperankStatus = 403, calculated = "null")
+            val registration = BrainstormOnboarding(http, api = "https://api.test").register(signer)
             assertEquals(serviceKey, registration.serviceKey)
             assertEquals(false, registration.scoresReady)
+            // No scores yet: the assistant's profile is asked for now, so the provider has a name.
+            assertTrue("POST https://api.test/user/assistantProfile" in http.calls)
         }
 
     @Test

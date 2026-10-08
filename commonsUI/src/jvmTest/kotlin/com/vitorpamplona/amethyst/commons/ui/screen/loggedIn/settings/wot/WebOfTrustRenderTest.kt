@@ -149,7 +149,7 @@ class WebOfTrustRenderTest {
         scenarios.forEach { (name, state) ->
             val ui = state()
             val content: @Composable () -> Unit = {
-                WebOfTrustContent(ui, actions, providerAvatar = { Box(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.secondary)) })
+                WebOfTrustContent(ui, actions, providerAvatar = { Box(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.secondary)) }, relayPicker = {})
             }
             val light = render(name, false, content)
             val dark = render(name, true, content)
@@ -166,7 +166,7 @@ class WebOfTrustRenderTest {
         val house = "78ed0837eba0ba244384195ce41d2a21575476a8e99e43f02d6e9729860e29e6"
         val relay = RelayUrlNormalizer.normalize("wss://scores.brainstorm.world")
         val copied = WebOfTrustCopy.Copied(house, listOf("30382:rank", "30382:followers", "30392", "30393").map { TrustProviderRow(it, house, relay) })
-        val content: @Composable () -> Unit = { ManualRowsForm(enabled = true, copied = copied) {} }
+        val content: @Composable () -> Unit = { ManualRowsForm(enabled = true, copied = copied, relayPicker = {}) {} }
         val light = render("manual-rows", false, content)
         val dark = render("manual-rows", true, content)
         assertTrue(light.distinctColours() > 20, "the light form drew ${light.distinctColours()} colours")

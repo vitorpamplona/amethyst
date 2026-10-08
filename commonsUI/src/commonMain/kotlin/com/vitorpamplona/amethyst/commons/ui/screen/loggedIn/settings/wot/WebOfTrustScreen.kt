@@ -117,12 +117,11 @@ import com.vitorpamplona.amethyst.commons.resources.wot_error_title
 import com.vitorpamplona.amethyst.commons.resources.wot_in_use
 import com.vitorpamplona.amethyst.commons.resources.wot_last_updated
 import com.vitorpamplona.amethyst.commons.resources.wot_manual_add_tag
+import com.vitorpamplona.amethyst.commons.resources.wot_manual_change_relay
 import com.vitorpamplona.amethyst.commons.resources.wot_manual_explainer
 import com.vitorpamplona.amethyst.commons.resources.wot_manual_key_error
 import com.vitorpamplona.amethyst.commons.resources.wot_manual_key_label
 import com.vitorpamplona.amethyst.commons.resources.wot_manual_needs_rank
-import com.vitorpamplona.amethyst.commons.resources.wot_manual_relay_error
-import com.vitorpamplona.amethyst.commons.resources.wot_manual_relay_label
 import com.vitorpamplona.amethyst.commons.resources.wot_manual_remove_tag
 import com.vitorpamplona.amethyst.commons.resources.wot_manual_title
 import com.vitorpamplona.amethyst.commons.resources.wot_min_score_explainer
@@ -171,6 +170,7 @@ import com.vitorpamplona.amethyst.commons.ui.platform.AppLauncher
 import com.vitorpamplona.amethyst.commons.ui.platform.rememberAppLauncher
 import com.vitorpamplona.amethyst.commons.ui.pluralStringRes
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.backups.TintedPanel
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.relays.common.RelayUrlEditField
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.settings.SettingsControlRow
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.settings.SettingsDivider
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.settings.SettingsSection
@@ -306,6 +306,7 @@ fun WebOfTrustScreen(
                     ),
                 actions = actions,
                 providerAvatar = { UserPicture(it.pubkey, 40.dp, accountViewModel = accountViewModel, nav = nav) },
+                relayPicker = { onPicked -> RelayUrlEditField(onNewRelay = onPicked, modifier = Modifier.fillMaxWidth(), accountViewModel = accountViewModel, nav = nav) },
                 modifier = Modifier.padding(padding),
             )
         }
@@ -382,6 +383,8 @@ fun WebOfTrustContent(
     state: WebOfTrustUiState,
     actions: WebOfTrustActions,
     providerAvatar: @Composable (ServiceProviderTag) -> Unit,
+    /** The relay field of a hand-written row: the app's relay entry, with its suggestions. */
+    relayPicker: @Composable (onPicked: (NormalizedRelayUrl) -> Unit) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     Column(
@@ -400,7 +403,7 @@ fun WebOfTrustContent(
 
         state.provider?.let { ProviderSection(it, state, actions, providerAvatar) }
 
-        ChooseProviderSection(state, actions)
+        ChooseProviderSection(state, actions, relayPicker)
 
         EffectsSection()
     }
@@ -795,6 +798,7 @@ private fun MenuIcon(
 private fun ChooseProviderSection(
     state: WebOfTrustUiState,
     actions: WebOfTrustActions,
+    relayPicker: @Composable (onPicked: (NormalizedRelayUrl) -> Unit) -> Unit,
 ) {
     var showManual by remember { mutableStateOf(false) }
     val busy = state.setup is WebOfTrustSetup.Running || state.setup is WebOfTrustSetup.Saving
@@ -829,7 +833,7 @@ private fun ChooseProviderSection(
             Column {
                 CopyViewBlock(state, actions)
                 // Stays open until the list is saved: a refused signature keeps what was typed.
-                ManualRowsForm(enabled = !busy, copied = lastCopied) { rows ->
+                ManualRowsForm(enabled = !busy, copied = lastCopied, relayPicker = relayPicker) { rows ->
                     actions.onManualRows(rows) { showManual = false }
                 }
                 SettingsSwitchTile(
@@ -1044,6 +1048,7 @@ private data class ManualRow(
 internal fun ManualRowsForm(
     enabled: Boolean,
     copied: WebOfTrustCopy.Copied? = null,
+    relayPicker: @Composable (onPicked: (NormalizedRelayUrl) -> Unit) -> Unit,
     onSave: (List<TrustProviderRow>) -> Unit,
 ) {
     val names = remember { KNOWN_SCORE_TAGS.map { it.toValue() } }
@@ -1067,6 +1072,7 @@ internal fun ManualRowsForm(
                 row = row,
                 choices = names.filter { it !in taken },
                 canRemove = rows.size > 1,
+                relayPicker = relayPicker,
                 onChange = { changed -> rows = rows.toMutableList().also { it[index] = changed } },
                 onRemove = { rows = rows.toMutableList().also { it.removeAt(index) } },
             )
@@ -1105,11 +1111,11 @@ private fun ManualRowEditor(
     row: ManualRow,
     choices: List<String>,
     canRemove: Boolean,
+    relayPicker: @Composable (onPicked: (NormalizedRelayUrl) -> Unit) -> Unit,
     onChange: (ManualRow) -> Unit,
     onRemove: () -> Unit,
 ) {
     val keyError = row.keyText.isNotBlank() && row.key == null
-    val relayError = row.relayText.isNotBlank() && row.relay == null
 
     Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically) {
@@ -1134,15 +1140,37 @@ private fun ManualRowEditor(
             singleLine = true,
             modifier = Modifier.fillMaxWidth(),
         )
-        OutlinedTextField(
-            value = row.relayText,
-            onValueChange = { onChange(row.copy(relayText = it)) },
-            label = { Text(stringRes(Res.string.wot_manual_relay_label)) },
-            isError = relayError,
-            supportingText = if (relayError) ({ Text(stringRes(Res.string.wot_manual_relay_error)) }) else null,
-            singleLine = true,
-            modifier = Modifier.fillMaxWidth(),
-        )
+        val relay = row.relay
+        if (relay == null) {
+            relayPicker { picked -> onChange(row.copy(relayText = picked.url)) }
+        } else {
+            // Picked: one line, with a way back to the picker.
+            Row(
+                Modifier
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(12.dp))
+                    .background(MaterialTheme.colorScheme.surfaceContainerHigh)
+                    .padding(start = 12.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Icon(symbol = MaterialSymbols.Public, contentDescription = null, modifier = Modifier.size(18.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text(
+                    relay.displayUrl(),
+                    style = MaterialTheme.typography.bodyMedium,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.weight(1f).padding(start = 10.dp),
+                )
+                IconButton(onClick = { onChange(row.copy(relayText = "")) }) {
+                    Icon(
+                        symbol = MaterialSymbols.Close,
+                        contentDescription = stringRes(Res.string.wot_manual_change_relay),
+                        modifier = Modifier.size(18.dp),
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+            }
+        }
     }
 }
 
