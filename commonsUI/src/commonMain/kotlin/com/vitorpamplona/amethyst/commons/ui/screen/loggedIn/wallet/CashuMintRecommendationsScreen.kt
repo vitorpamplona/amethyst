@@ -161,7 +161,7 @@ fun CashuMintRecommendationsScreen(
                 Text(
                     stringRes(
                         Res.string.cashu_settings_delete_confirm_body,
-                        target.mintUrls().firstOrNull() ?: target.dTag(),
+                        target.mintUrls().firstOrNull() ?: target.dTag().ifEmpty { target.id.take(8) },
                     ),
                 )
             },
@@ -346,9 +346,10 @@ private fun RecommendationRow(
     // d-tag (which may be the mint's announcement pubkey or the URL itself
     // when no announcement was cached at publish time).
     val mintUrl = remember(event.id) { event.mintUrls().firstOrNull() }
-    val dTag = remember(event.id) { event.dTag() }
-    val title = mintUrl ?: dTag
-    val subtitle = if (mintUrl != null && mintUrl != dTag) dTag else null
+    // dTag() is "" when the tag is missing.
+    val dTag = remember(event.id) { event.dTag().ifEmpty { null } }
+    val title = mintUrl ?: dTag ?: event.id.take(16)
+    val subtitle = if (mintUrl != null && dTag != null && mintUrl != dTag) dTag else null
 
     Card(
         modifier = Modifier.fillMaxWidth(),

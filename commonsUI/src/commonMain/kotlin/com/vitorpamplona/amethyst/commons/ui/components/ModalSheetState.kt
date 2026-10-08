@@ -23,31 +23,28 @@ package com.vitorpamplona.amethyst.commons.ui.components
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.SheetState
 import androidx.compose.material3.SheetValue
-import androidx.compose.material3.rememberBottomSheetState
+import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
-
-@OptIn(ExperimentalMaterial3Api::class)
-private val HiddenOrExpanded = setOf(SheetValue.Hidden, SheetValue.Expanded)
-
-@OptIn(ExperimentalMaterial3Api::class)
-private val AllSheetValues = setOf(SheetValue.Hidden, SheetValue.PartiallyExpanded, SheetValue.Expanded)
 
 /**
  * The [SheetState] for a `ModalBottomSheet`: starts [SheetValue.Hidden] and, with
  * [skipPartiallyExpanded], opens straight to [SheetValue.Expanded].
  *
- * Material3 deprecated `rememberModalBottomSheetState` in favour of the general
- * `rememberBottomSheetState`; this is that call with the same anchors the deprecated one
- * used, kept in one place so the call sites don't each spell out the enabled-values set.
+ * Every sheet goes through here so the deprecated `rememberModalBottomSheetState` is called in
+ * exactly one place. Its suggested replacement, `rememberBottomSheetState`, is not equivalent:
+ * the deprecated function pins `isBottomSheetPartiallyExpandedDeterministicEnabled` to false,
+ * while `rememberBottomSheetState` takes the global flag (default true), which changes where a
+ * sheet that keeps [SheetValue.PartiallyExpanded] places and settles that anchor. The flag is
+ * only reachable through Material3 internals (`rememberSheetState`, the flag-carrying `Saver`),
+ * so the deprecated call stays until Material3 exposes it or the sheets move to the new behavior
+ * on purpose.
  */
 @ExperimentalMaterial3Api
 @Composable
 fun rememberModalSheetState(
     skipPartiallyExpanded: Boolean = false,
     confirmValueChange: (SheetValue) -> Boolean = { true },
-): SheetState =
-    rememberBottomSheetState(
-        initialValue = SheetValue.Hidden,
-        enabledValues = if (skipPartiallyExpanded) HiddenOrExpanded else AllSheetValues,
-        confirmValueChange = confirmValueChange,
-    )
+): SheetState {
+    @Suppress("DEPRECATION")
+    return rememberModalBottomSheetState(skipPartiallyExpanded, confirmValueChange)
+}

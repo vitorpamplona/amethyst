@@ -94,7 +94,7 @@ class CashuWalletReader(
                 is CashuMintQuoteEvent -> quoteEvents.getOrPut(event.id) { event }
                 is NutzapEvent -> nutzapEvents.getOrPut(event.id) { event }
                 is MintRecommendationEvent -> {
-                    val key = event.dTag()
+                    val key = event.dTag().ifEmpty { event.id }
                     val current = recommendationEvents[key]
                     if (current == null || event.createdAt > current.createdAt) recommendationEvents[key] = event
                 }
