@@ -35,7 +35,9 @@ import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.MachineReadabl
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
+import com.vitorpamplona.quartz.utils.Log
 import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.ensureActive
 import kotlin.coroutines.coroutineContext
 
@@ -140,6 +142,37 @@ data class PagedFetchResult(
 }
 
 /**
+ * The per-`REQ` `limit` [fetchAllPages] sends for a lone bounded filter: strfry's default
+ * `max_limit`, and the cap relays that refuse rather than clamp (purplepag.es:
+ * `blocked: limit too high: 50000 (max 500)`) enforce. A relay with a lower cap clamps
+ * it and the walk simply takes more pages.
+ */
+const val DEFAULT_PAGE_SIZE = 500
+
+/**
+ * How long [fetchAllPages] waits before re-asking a page a relay answered empty (or CLOSED)
+ * when its own earlier answers say it is throttling, not done — see [fetchAllPages]:
+ * one entry per re-ask, so the list's size is the bound. Once it is used up the page's
+ * answer is believed and the walk ends as it always would have. The count resets whenever a
+ * page delivers something, so it bounds each stall, never the whole walk.
+ *
+ * [sleep] is the wait itself, injectable so a test can record the delays instead of
+ * spending them.
+ */
+class PageRetryBackoff(
+    val delaysMs: List<Long>,
+    val sleep: suspend (Long) -> Unit = { delay(it) },
+) {
+    companion object {
+        /** Three re-asks, 2 s, 5 s and 10 s apart: at most 17 s spent on one stall. */
+        val DEFAULT = PageRetryBackoff(listOf(2_000L, 5_000L, 10_000L))
+
+        /** Never re-ask: an empty EOSEd page always ends the walk. */
+        val NONE = PageRetryBackoff(emptyList())
+    }
+}
+
+/**
  * Downloads all pages of events matching [filters] from a single [relay] using
  * paginated `until` cursors.
  *
@@ -163,9 +196,32 @@ data class PagedFetchResult(
  * and can never advance, so once a page yields nothing new we step strictly past that
  * second (`until = boundary - 1`) and continue. If the second was denser than the
  * relay's page cap its unreachable tail is lost — there is no client-side fix (raising
- * the request `limit` is futile: while paging we already send one above the relay's
- * cap, so a larger value is clamped to the same page). Stepping past at least keeps
- * the download progressing to older events instead of stalling forever.
+ * the request `limit` is futile: the relay clamps it to the same page, or refuses it).
+ * Stepping past at least keeps the download progressing to older events instead of
+ * stalling forever.
+ *
+ * **A filter's [Filter.limit] caps the walk, not the page.** Each `REQ` asks for no more
+ * than the filter still needs (plus the boundary second's repeats), and — when it is the
+ * only filter being paged — at most [pageSize], while the walk keeps going until the
+ * total is met. Sending the total itself worked against relays that clamp, but
+ * purplepag.es answers `limit = 50000` with `CLOSED blocked: limit too high: 50000 (max
+ * 500)`, so the walk never started. Several filters share one cursor, so each keeps asking
+ * for its whole remainder (cutting one short would skip the gap down to another filter's
+ * oldest event); against a relay that refuses large limits, walk them one at a time. A
+ * filter without a limit is sent without one, exactly as before: the relay's default page.
+ *
+ * **A throttled relay is re-asked before it is believed.** relay.damus.io, paged quickly
+ * on one connection, shrinks its pages to a handful of events and then EOSEs an EMPTY page
+ * for a range that holds hundreds; a fresh subscription id does not help, time does. So an
+ * empty EOSEd page that the relay's own earlier answers contradict — after a page under half
+ * the size of the largest it served, either re-asking the boundary second it just served
+ * events in, or after two such short pages in a row — is re-asked at the same cursor after
+ * each of [throttleBackoff]'s delays. Only once those run out is it taken as
+ * [PagedFetchResult.End.DRAINED]. An honestly paging relay never produces either reading
+ * (its walk ends on one short tail page, the boundary repeat and an empty page below the
+ * step), so it never waits. The same relay sometimes ends the shrinking run with a CLOSED
+ * (`read bandwidth budget exhausted`) instead; a CLOSED right after a short page gets the
+ * same re-asks and, if it outlasts them, still ends the walk as [PagedFetchResult.End.CLOSED].
  *
  * **Two guards keep that step from becoming a walk that never ends**, both learned
  * from a relay in production rather than from reasoning:
@@ -232,6 +288,11 @@ data class PagedFetchResult(
  *   otherwise the not-yet-sent events above that cursor are skipped. What actually
  *   bounds this walk is a [Filter.limit] (the documented way to cap a download) or
  *   cancelling the caller, which the [ensureActive] at the top of each page honors.
+ * @param pageSize    The most a lone bounded filter asks for in one `REQ` ([DEFAULT_PAGE_SIZE]).
+ *   Raise it for a relay known to serve larger pages; it never changes what is downloaded,
+ *   only how many `REQ`s it takes.
+ * @param throttleBackoff How an empty page the relay's earlier answers contradict is re-asked
+ *   (see above). [PageRetryBackoff.NONE] takes every empty EOSEd page at its word.
  * @param onEvent     Called once for every distinct event delivered, in page order.
  * @return What was delivered and WHY the walk stopped — see [PagedFetchResult].
  *   The reason is part of the answer, not a detail: `downloaded` cannot tell
@@ -244,8 +305,11 @@ suspend fun INostrClient.fetchAllPages(
     filters: List<Filter>,
     idleTimeoutMs: Long = 30_000L,
     onNewPage: ((Long) -> Unit)? = null,
+    pageSize: Int = DEFAULT_PAGE_SIZE,
+    throttleBackoff: PageRetryBackoff = PageRetryBackoff.DEFAULT,
     onEvent: suspend (Event) -> Unit,
 ): PagedFetchResult {
+    require(pageSize > 0) { "pageSize must be positive: $pageSize" }
     // Waiting out an `auth-required:` page refusal is worth something only when this client has
     // a NIP-42 responder to answer with. When it does, the AUTH's OK drives syncFilters, which
     // re-sends this very REQ (same subscription id, same filters — an `auth-required:` refusal
@@ -292,29 +356,58 @@ suspend fun INostrClient.fetchAllPages(
     // EOSE hints below.
     var refusal: String? = null
 
+    // Throttle evidence for the empty-page re-ask (see [PageRetryBackoff]):
+    //  - the filter indices active on the page that set the current boundary. Only while
+    //    the SAME filters are asked again does an empty inclusive re-fetch contradict what
+    //    the relay just served (a filter that dropped out may have been the one matching).
+    //  - the largest page the relay has answered so far, and how many delivering pages in
+    //    a row came back shorter than it.
+    //  - re-asks spent on the current cursor; reset by any page that delivers something.
+    var boundaryFilters: List<Int>? = null
+    var largestPage = 0
+    var shortPagesInARow = 0
+    var reAsks = 0
+
     while (true) {
         coroutineContext.ensureActive()
 
-        val pagedFilters =
-            if (until == null) {
-                filters
-            } else {
-                filters.map {
-                    it.copy(until = until)
-                }
-            }
-
         // The filters actually queried this page, each kept with its index into
-        // matchCountPerFilter. A filter drops out once it has its limit's worth of
+        // matchCountPerFilter (and so into [filters], whose `limit` stays the TOTAL
+        // the caller asked for). A filter drops out once it has its limit's worth of
         // events; a `search` filter additionally runs on the FIRST page only
         // (until == null), because relevance-ranked results can't be paged by a
         // created_at cursor. The listener below iterates this SAME list, so what we
         // count always matches what we subscribed for.
-        val activeFilters =
-            pagedFilters.withIndex().filter { (index, filter) ->
-                val stillNeedsMore = filter.limit == null || matchCountPerFilter[index] < filter.limit
-                val pageableThisPage = until == null || filter.search == null
+        //
+        // What goes on the wire is never more than a filter still needs: its remainder,
+        // topped up by the boundary second's already-delivered events, which the inclusive
+        // re-fetch sends again (without that, a walk one event short would be answered with
+        // nothing but a duplicate, step past the boundary, and lose the rest of that second).
+        //
+        // A lone bounded filter also asks for at most [pageSize], so `limit = 50000` is a
+        // cap on the walk, not a REQ a relay with `max_limit = 500` refuses outright. That
+        // is safe only for ONE filter: the cursor is shared, so with several, a filter cut
+        // short at [pageSize] whose page ends newer than another's would have the gap
+        // between the two skipped when the cursor moves to the oldest event of the page. So
+        // a multi-filter page keeps asking for each filter's full remainder, as before. An
+        // unbounded filter is sent as it was: no `limit`, the relay's own default page.
+        val pageable =
+            filters.indices.filter { index ->
+                val limit = filters[index].limit
+                val stillNeedsMore = limit == null || matchCountPerFilter[index] < limit
+                val pageableThisPage = until == null || filters[index].search == null
                 stillNeedsMore && pageableThisPage
+            }
+        val capToPageSize = pageable.size == 1
+        val activeFilters =
+            pageable.map { index ->
+                val filter = filters[index]
+                val pageLimit =
+                    filter.limit?.let {
+                        val remainder = it - matchCountPerFilter[index] + seenAtBoundary.size
+                        if (capToPageSize) minOf(remainder, pageSize) else remainder
+                    }
+                IndexedValue(index, filter.copy(until = until ?: filter.until, limit = pageLimit))
             }
 
         if (activeFilters.isEmpty()) {
@@ -430,7 +523,8 @@ suspend fun INostrClient.fetchAllPages(
                                 val active = activeFilters[i]
                                 val index = active.index
                                 val filter = active.value
-                                if (matchCountPerFilter[index] < (filter.limit ?: Int.MAX_VALUE) && filter.match(event)) {
+                                // The caller's total, not this page's wire limit.
+                                if (matchCountPerFilter[index] < (filters[index].limit ?: Int.MAX_VALUE) && filter.match(event)) {
                                     matchCountPerFilter[index]++
                                     atLeastOne = true
                                     if (filter.search == null) advancesCursor = true
@@ -544,6 +638,62 @@ suspend fun INostrClient.fetchAllPages(
         // The page ended on an EOSE saying more is visible only after AUTH, and no AUTH
         // took the wall down: whatever it did deliver stands, but it cannot prove absence.
         val authBlocked = pageEnd == PageSignal.EOSE && eoseHints.hasHint(EoseMessage.HINT_AUTH)
+
+        Log.d("fetchAllPages") { "${relay.url} until=$until received=$received delivered=$delivered end=$pageEnd hints=$eoseHints" }
+
+        // An EOSEd empty page that the relay's own earlier answers say cannot be empty:
+        // throttling, not the end of the corpus. relay.damus.io, paged fast on one
+        // connection, shrinks its pages to a handful of events and then answers EMPTY for
+        // a range that holds hundreds — measured: ~700 of ~250k events, then a false
+        // DRAINED. A fresh subscription id does not help; time does. So wait and re-ask
+        // the SAME cursor, a bounded number of times, before believing it.
+        //
+        // It takes a short page — one smaller than a page the relay already served — and
+        // then one of two readings an honestly paging relay never produces, so its walk
+        // never waits:
+        //  - the empty page re-asked a boundary second INCLUSIVELY, with the same filters,
+        //    right after the relay served matching events in that very second. An honest
+        //    relay cannot answer that with nothing — at the least it re-sends the boundary.
+        //  - the delivering pages before it were short twice in a row. A normal walk has
+        //    exactly one short page — the tail of the corpus — before it ends.
+        //
+        // The same relay also ends that shrinking run with a CLOSED instead (measured:
+        // pages of 500, 500, 131, 3, then `ERROR: read bandwidth budget exhausted (1048570
+        // bytes/min per IP)`), so a CLOSED right after a short page is re-asked the same way.
+        // A CLOSED with no shrinking before it — a policy refusal, a first-page rejection —
+        // never waits, and one that outlasts the backoff still ends the walk as CLOSED.
+        if (received == 0 && reAsks < throttleBackoff.delaysMs.size) {
+            val throttled =
+                when (pageEnd) {
+                    PageSignal.EOSE -> {
+                        val contradictsBoundary =
+                            boundary != null &&
+                                seenAtBoundary.isNotEmpty() &&
+                                boundaryFilters == activeFilters.map { it.index }
+                        !authBlocked &&
+                            !eoseHints.hasHint(EoseMessage.HINT_FINISH) &&
+                            (shortPagesInARow >= 2 || (shortPagesInARow >= 1 && contradictsBoundary))
+                    }
+                    PageSignal.CLOSED -> shortPagesInARow >= 1
+                    else -> false
+                }
+            if (throttled) {
+                val waitMs = throttleBackoff.delaysMs[reAsks++]
+                Log.d("fetchAllPages") { "${relay.url} ${if (pageEnd == PageSignal.CLOSED) "CLOSED ($refusal)" else "empty page"} at until=$until looks throttled; re-asking in ${waitMs}ms (#$reAsks)" }
+                throttleBackoff.sleep(waitMs)
+                continue
+            }
+        }
+
+        if (pageEnd == PageSignal.EOSE && received > 0) {
+            if (received > largestPage) largestPage = received
+            // "Short" is at most half the largest page: a relay whose pages wobble by a few
+            // events (post-limit filtering of deleted or expired events) never counts.
+            if (delivered > 0) {
+                shortPagesInARow = if (received * 2 <= largestPage) shortPagesInARow + 1 else 0
+            }
+        }
+        if (delivered > 0) reAsks = 0
 
         // The relay sent nothing at-or-below `until`. Whether that DRAINS the set
         // depends on why the page ended and on what was asked:
@@ -664,6 +814,7 @@ suspend fun INostrClient.fetchAllPages(
         } else {
             seenAtBoundary = idsAtPageMin
         }
+        boundaryFilters = activeFilters.map { it.index }
         until = nextUntil
     }
 
@@ -676,6 +827,8 @@ suspend fun INostrClient.fetchAllPages(
     filters: List<Filter>,
     idleTimeoutMs: Long = 30_000L,
     onNewPage: ((Long) -> Unit)? = null,
+    pageSize: Int = DEFAULT_PAGE_SIZE,
+    throttleBackoff: PageRetryBackoff = PageRetryBackoff.DEFAULT,
     onEvent: suspend (Event) -> Unit,
 ): PagedFetchResult =
     fetchAllPages(
@@ -683,6 +836,8 @@ suspend fun INostrClient.fetchAllPages(
         filters = filters,
         idleTimeoutMs = idleTimeoutMs,
         onNewPage = onNewPage,
+        pageSize = pageSize,
+        throttleBackoff = throttleBackoff,
         onEvent = onEvent,
     )
 

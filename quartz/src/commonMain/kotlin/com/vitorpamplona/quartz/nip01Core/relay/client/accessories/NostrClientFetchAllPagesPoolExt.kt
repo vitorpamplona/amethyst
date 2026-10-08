@@ -62,6 +62,9 @@ import kotlinx.coroutines.sync.Semaphore
  * @param onRelayResult optional `(relay, result)` hook with each relay's full
  *                     [PagedFetchResult]: why its walk ended and, for a refusal, the
  *                     relay's own [PagedFetchResult.message].
+ * @param pageSize     per-`REQ` `limit` for a bounded filter — see [fetchAllPages].
+ * @param throttleBackoff how each relay's walk re-asks a page its relay throttled empty —
+ *                     see [fetchAllPages] and [PageRetryBackoff].
  * @param onEvent      called once per delivered event with its source relay.
  */
 suspend fun INostrClient.fetchAllPagesFromPool(
@@ -72,6 +75,8 @@ suspend fun INostrClient.fetchAllPagesFromPool(
     onRelayStart: ((relay: NormalizedRelayUrl) -> Unit)? = null,
     onRelayComplete: ((relay: NormalizedRelayUrl, totalEvents: Int) -> Unit)? = null,
     onRelayResult: ((relay: NormalizedRelayUrl, result: PagedFetchResult) -> Unit)? = null,
+    pageSize: Int = DEFAULT_PAGE_SIZE,
+    throttleBackoff: PageRetryBackoff = PageRetryBackoff.DEFAULT,
     onEvent: (event: Event, relay: NormalizedRelayUrl) -> Unit,
 ) {
     if (filters.isEmpty()) return
@@ -89,6 +94,8 @@ suspend fun INostrClient.fetchAllPagesFromPool(
                             filters = filtersForRelay,
                             idleTimeoutMs = idleTimeoutMs,
                             onNewPage = onNewPage?.let { cb -> { until -> cb(until, relay) } },
+                            pageSize = pageSize,
+                            throttleBackoff = throttleBackoff,
                         ) { event -> onEvent(event, relay) }
                     onRelayComplete?.invoke(relay, result.downloaded)
                     onRelayResult?.invoke(relay, result)
