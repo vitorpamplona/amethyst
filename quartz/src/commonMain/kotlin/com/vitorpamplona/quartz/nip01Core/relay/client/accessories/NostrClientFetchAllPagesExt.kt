@@ -39,7 +39,9 @@ import com.vitorpamplona.quartz.utils.Log
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.ensureActive
+import kotlin.concurrent.Volatile
 import kotlin.coroutines.coroutineContext
+import kotlin.time.TimeSource
 
 /**
  * Why ONE page stopped. The three terminal signals used to be indistinguishable —
@@ -142,12 +144,42 @@ data class PagedFetchResult(
 }
 
 /**
- * The per-`REQ` `limit` [fetchAllPages] sends for a lone bounded filter: strfry's default
- * `max_limit`, and the cap relays that refuse rather than clamp (purplepag.es:
- * `blocked: limit too high: 50000 (max 500)`) enforce. A relay with a lower cap clamps
- * it and the walk simply takes more pages.
+ * Opt-in diagnostics for [fetchAllPages]: when [enabled], each page's debug log line also says
+ * how the relay ordered and repeated its events (out of order, newer than `until`, repeated on
+ * the page, delivered on an earlier page). The last needs a set of every id the walk delivered,
+ * so this is for investigating a relay (`amy --verbose`), never for normal use.
  */
-const val DEFAULT_PAGE_SIZE = 500
+object PagingDiagnostics {
+    @Volatile
+    var enabled: Boolean = false
+}
+
+/**
+ * Reads a `CLOSED` reason as a refusal of the `REQ`'s `limit` — purplepag.es answers
+ * `limit = 50000` with `blocked: limit too high: 50000 (max 500)` — and returns the largest
+ * limit worth asking for instead: the relay's stated max when the message names one below
+ * [sent], otherwise half of [sent]. Null when the message is not about the limit (a rate
+ * limit is throttling, not a cap) or [sent] cannot go any lower.
+ */
+internal fun lowerLimitAfterRefusal(
+    message: String?,
+    sent: Int,
+): Int? {
+    if (message == null || sent <= 1) return null
+    if (MachineReadablePrefix.parse(message) == MachineReadablePrefix.RATE_LIMITED) return null
+    if (!message.contains("limit", ignoreCase = true) || RATE_LIMIT.containsMatchIn(message)) return null
+    val stated =
+        STATED_MAX
+            .find(message)
+            ?.groupValues
+            ?.get(1)
+            ?.toIntOrNull()
+    return if (stated != null && stated in 1 until sent) stated else sent / 2
+}
+
+private val RATE_LIMIT = Regex("rate[- ]?limit", RegexOption.IGNORE_CASE)
+
+private val STATED_MAX = Regex("max(?:imum)?\\D{0,12}?(\\d+)", RegexOption.IGNORE_CASE)
 
 /**
  * How long [fetchAllPages] waits before re-asking a page a relay answered empty (or CLOSED)
@@ -200,15 +232,17 @@ class PageRetryBackoff(
  * Stepping past at least keeps the download progressing to older events instead of
  * stalling forever.
  *
- * **A filter's [Filter.limit] caps the walk, not the page.** Each `REQ` asks for no more
- * than the filter still needs (plus the boundary second's repeats), and — when it is the
- * only filter being paged — at most [pageSize], while the walk keeps going until the
- * total is met. Sending the total itself worked against relays that clamp, but
+ * **A filter's [Filter.limit] caps the walk, not the page.** Each `REQ` asks for what the
+ * filter still needs (plus the boundary second's repeats), so a relay that serves 50000 in
+ * one `REQ` is walked in one page, and one that clamps to its own max (strfry and most
+ * others) is walked at that max. A relay that refuses an oversized limit instead —
  * purplepag.es answers `limit = 50000` with `CLOSED blocked: limit too high: 50000 (max
- * 500)`, so the walk never started. Several filters share one cursor, so each keeps asking
- * for its whole remainder (cutting one short would skip the gap down to another filter's
- * oldest event); against a relay that refuses large limits, walk them one at a time. A
- * filter without a limit is sent without one, exactly as before: the relay's default page.
+ * 500)` — has the same page re-asked lower, at the max its message states or else at half
+ * the refused limit, and the walk keeps that cap from then on. That is done for a lone
+ * pageable filter only: several filters share one cursor, so cutting one short would skip
+ * the gap down to another filter's oldest event; against a relay that refuses large limits,
+ * walk them one at a time. A filter without a limit is sent without one: the relay's
+ * default page.
  *
  * **A throttled relay is re-asked before it is believed.** relay.damus.io, paged quickly
  * on one connection, shrinks its pages to a handful of events and then EOSEs an EMPTY page
@@ -288,9 +322,11 @@ class PageRetryBackoff(
  *   otherwise the not-yet-sent events above that cursor are skipped. What actually
  *   bounds this walk is a [Filter.limit] (the documented way to cap a download) or
  *   cancelling the caller, which the [ensureActive] at the top of each page honors.
- * @param pageSize    The most a lone bounded filter asks for in one `REQ` ([DEFAULT_PAGE_SIZE]).
- *   Raise it for a relay known to serve larger pages; it never changes what is downloaded,
- *   only how many `REQ`s it takes.
+ * @param pageSize    A cap the caller already knows the relay enforces (its NIP-11
+ *   `limitation.max_limit`), so a lone bounded filter never asks above it and no refusal has
+ *   to teach it. Null (the default) asks for the whole remainder and learns a refusing
+ *   relay's cap from its `CLOSED`. It never changes what is downloaded, only how many `REQ`s
+ *   it takes.
  * @param throttleBackoff How an empty page the relay's earlier answers contradict is re-asked
  *   (see above). [PageRetryBackoff.NONE] takes every empty EOSEd page at its word.
  * @param onEvent     Called once for every distinct event delivered, in page order.
@@ -305,11 +341,11 @@ suspend fun INostrClient.fetchAllPages(
     filters: List<Filter>,
     idleTimeoutMs: Long = 30_000L,
     onNewPage: ((Long) -> Unit)? = null,
-    pageSize: Int = DEFAULT_PAGE_SIZE,
+    pageSize: Int? = null,
     throttleBackoff: PageRetryBackoff = PageRetryBackoff.DEFAULT,
     onEvent: suspend (Event) -> Unit,
 ): PagedFetchResult {
-    require(pageSize > 0) { "pageSize must be positive: $pageSize" }
+    require(pageSize == null || pageSize > 0) { "pageSize must be positive: $pageSize" }
     // Waiting out an `auth-required:` page refusal is worth something only when this client has
     // a NIP-42 responder to answer with. When it does, the AUTH's OK drives syncFilters, which
     // re-sends this very REQ (same subscription id, same filters — an `auth-required:` refusal
@@ -368,6 +404,26 @@ suspend fun INostrClient.fetchAllPages(
     var shortPagesInARow = 0
     var lastPageable: List<Int>? = null
     var reAsks = 0
+    // Pacing for a relay that keeps answering with short pages (see below): the wait to take
+    // before the next REQ, and how many paced pages in a row it has been.
+    var paceMs = 0L
+    var pacedPages = 0
+    // A page left wholly unanswered (no event, no EOSE, no CLOSED) is re-asked once per stall.
+    var silenceReAsked = false
+
+    // The most a lone bounded filter asks for in one REQ: what the caller knows the relay
+    // enforces, else unknown (ask for everything) until a refusal of the limit sets it.
+    var limitCap: Int? = pageSize
+    // The relay refused a boundary-second top-up above [limitCap]: that second's tail is out
+    // of reach, so stop asking past the cap (each ask would be refused again).
+    var topUpRefused = false
+
+    // Numbers the REQs of this walk in the debug log, retries included.
+    var reqCount = 0
+    // Only with [PagingDiagnostics.enabled] (`amy --verbose`): every id handed to [onEvent], to
+    // report a relay that re-serves events the cursor already passed. O(walk) memory, so it is
+    // an explicit opt-in, not tied to the log level (the desktop app always logs DEBUG).
+    val walkIds: HashSet<HexKey>? = if (PagingDiagnostics.enabled) HashSet() else null
 
     while (true) {
         coroutineContext.ensureActive()
@@ -385,13 +441,13 @@ suspend fun INostrClient.fetchAllPages(
         // re-fetch sends again (without that, a walk one event short would be answered with
         // nothing but a duplicate, step past the boundary, and lose the rest of that second).
         //
-        // A lone bounded filter also asks for at most [pageSize], so `limit = 50000` is a
-        // cap on the walk, not a REQ a relay with `max_limit = 500` refuses outright. That
-        // is safe only for ONE filter: the cursor is shared, so with several, a filter cut
-        // short at [pageSize] whose page ends newer than another's would have the gap
-        // between the two skipped when the cursor moves to the oldest event of the page. So
-        // a multi-filter page keeps asking for each filter's full remainder, as before. An
-        // unbounded filter is sent as it was: no `limit`, the relay's own default page.
+        // A lone bounded filter asks for at most [limitCap] once one is known (passed in, or
+        // learned from a relay that refused a larger limit). That is safe only for ONE
+        // filter: the cursor is shared, so with several, a filter cut short whose page ends
+        // newer than another's would have the gap between the two skipped when the cursor
+        // moves to the oldest event of the page. So a multi-filter page keeps asking for each
+        // filter's full remainder. An unbounded filter is sent without a `limit`: the relay's
+        // own default page.
         val pageable =
             filters.indices.filter { index ->
                 val limit = filters[index].limit
@@ -414,16 +470,17 @@ suspend fun INostrClient.fetchAllPages(
                     filter.limit?.let {
                         val remainder = it - matchCountPerFilter[index]
                         val seen = seenAtBoundary.size
+                        val cap = limitCap
                         when {
-                            !capToPageSize -> remainder + seen
-                            // A normal page: at most pageSize, so a relay that refuses anything
-                            // above its max (purplepag.es) is never asked for more.
-                            seen < pageSize -> minOf(remainder + seen, pageSize)
+                            !capToPageSize || cap == null -> remainder + seen
+                            // A normal page: at most the cap, so a relay that refuses anything
+                            // above its max (purplepag.es) is never asked for more again.
+                            seen < cap || topUpRefused -> minOf(remainder + seen, cap)
                             // The boundary second alone fills a page: capping here would bring
                             // back only duplicates, step past the second and drop its tail. Ask
-                            // past pageSize; a relay that can serve it will, one that cannot was
-                            // going to lose that tail anyway.
-                            else -> minOf(remainder, pageSize) + seen
+                            // past the cap; a relay that can serve it will, and one that refuses
+                            // sets [topUpRefused] and loses that tail, as it had to.
+                            else -> minOf(remainder, cap) + seen
                         }
                     }
                 IndexedValue(index, filter.copy(until = until ?: filter.until, limit = pageLimit))
@@ -442,12 +499,20 @@ suspend fun INostrClient.fetchAllPages(
             break
         }
 
+        // A relay trickling short pages gets a pause before the next REQ (see below).
+        if (paceMs > 0) {
+            Log.d("fetchAllPages") { "${relay.url} pages keep coming back short; pausing ${paceMs}ms before the next REQ" }
+            throttleBackoff.sleep(paceMs)
+            paceMs = 0
+        }
+
         // Announce the page only now that we know it will actually be fetched: a
         // search-only filter drops out of activeFilters above and breaks with no
         // REQ, so firing this earlier would report a page that never happens.
         if (until != null) onNewPage?.invoke(until)
 
         val doneChannel = Channel<PageSignal>(Channel.CONFLATED)
+        var pageStart = TimeSource.Monotonic.markNow()
 
         // Read before this page's REQ goes out — see [awaitAuthOutcome]'s `since`.
         val authMark = if (pendingOnAuthRequired) authSuccessMark(relay) else 0
@@ -469,6 +534,23 @@ suspend fun INostrClient.fetchAllPages(
          * deliver nothing, and only one of them can be fixed by stepping past.
          */
         var aboveBoundary = 0
+
+        // The ids of the second the page is currently in, to drop an event the relay repeats
+        // on the same page (see the listener). O(one second), like the boundary dedup.
+        var runSecond = Long.MIN_VALUE
+        val runIds = HashSet<HexKey>()
+        // The open-ended first page also carries events stored while the query ran, out of
+        // `created_at` order (eden.nostr.land, measured: one of them twice, seconds apart), so
+        // the per-second ids above can miss a repeat there. The first page alone keeps every id:
+        // O(that page), and only once per walk.
+        val firstPageIds: HashSet<HexKey>? = if (until == null) HashSet() else null
+
+        // Diagnostics only: how the relay ordered and repeated this page's events.
+        val pageIdsSeen: HashSet<HexKey>? = if (walkIds != null) HashSet() else null
+        var repeatedOnPage = 0
+        var deliveredBefore = 0
+        var outOfOrder = 0
+        var lastCreatedAt = Long.MAX_VALUE
         var pageMinTs = Long.MAX_VALUE
         val idsAtPageMin = HashSet<HexKey>()
 
@@ -515,6 +597,11 @@ suspend fun INostrClient.fetchAllPages(
                             // Before the dedup return, so it is counted for every event
                             // the page received, not just the ones that reach the match.
                             if (boundary != null && event.createdAt > boundary) aboveBoundary++
+                            if (pageIdsSeen != null) {
+                                if (!pageIdsSeen.add(event.id)) repeatedOnPage++
+                                if (event.createdAt > lastCreatedAt) outOfOrder++
+                                lastCreatedAt = event.createdAt
+                            }
                             // Drop a boundary-second event we already delivered on an
                             // earlier page (the inclusive re-fetch returns it again).
                             if (boundary != null && event.createdAt == boundary && event.id in seenAtBoundary) return
@@ -524,6 +611,17 @@ suspend fun INostrClient.fetchAllPages(
                                 val seenOnPage = reServedIds ?: HashSet(pageIds).also { reServedIds = it }
                                 if (event.id in seenOnPage) return
                             }
+                            // Drop an event the relay sends twice on one page: purplepag.es,
+                            // measured, repeats 59-84 events per 500-event page, and each repeat
+                            // counted toward the limit (a walk for 3000 stopped at 2716 distinct).
+                            // Pages come newest-first, so a repeat lands in the same second as the
+                            // original and that second's ids are enough to catch it.
+                            if (event.createdAt != runSecond) {
+                                runSecond = event.createdAt
+                                runIds.clear()
+                            }
+                            if (!runIds.add(event.id)) return
+                            if (firstPageIds != null && !firstPageIds.add(event.id)) return
 
                             // Count this event against every active filter it satisfies
                             // (one event can match more than one). Only a non-search filter
@@ -550,6 +648,7 @@ suspend fun INostrClient.fetchAllPages(
                                 }
                             }
                             if (atLeastOne) {
+                                if (walkIds != null && !walkIds.add(event.id)) deliveredBefore++
                                 onEvent(event)
                                 delivered++
                                 if (pageIds != null) {
@@ -612,6 +711,9 @@ suspend fun INostrClient.fetchAllPages(
                     }
                 }
 
+            reqCount++
+            Log.d("fetchAllPages") { "${relay.url} REQ #$reqCount until=${until ?: "-"} limit=${activeFilters.joinToString(",") { it.value.limit?.toString() ?: "none" }}" }
+            pageStart = TimeSource.Monotonic.markNow()
             subscribe(subId, mapOf(relay to activeFilters.map { it.value }), listener)
 
             // Wait for the page's terminal signal (EOSE / CLOSED / cannot-connect),
@@ -658,7 +760,11 @@ suspend fun INostrClient.fetchAllPages(
         // took the wall down: whatever it did deliver stands, but it cannot prove absence.
         val authBlocked = pageEnd == PageSignal.EOSE && eoseHints.hasHint(EoseMessage.HINT_AUTH)
 
-        Log.d("fetchAllPages") { "${relay.url} until=$until received=$received delivered=$delivered end=$pageEnd hints=$eoseHints" }
+        Log.d("fetchAllPages") {
+            val reason = if (pageEnd == PageSignal.CLOSED || pageEnd == PageSignal.AUTH_REQUIRED || pageEnd == PageSignal.CANNOT_CONNECT) " ($refusal)" else ""
+            val shape = if (pageIdsSeen != null) " outOfOrder=$outOfOrder aboveUntil=$aboveBoundary repeatedOnPage=$repeatedOnPage deliveredBefore=$deliveredBefore" else ""
+            "${relay.url} REQ #$reqCount -> received=$received delivered=$delivered end=${pageEnd ?: "IDLE"}$reason$shape hints=$eoseHints in ${pageStart.elapsedNow().inWholeMilliseconds}ms"
+        }
 
         // An EOSEd empty page that the relay's own earlier answers say cannot be empty:
         // throttling, not the end of the corpus. relay.damus.io, paged fast on one
@@ -681,6 +787,26 @@ suspend fun INostrClient.fetchAllPages(
         // bytes/min per IP)`), so a CLOSED right after a short page is re-asked the same way.
         // A CLOSED with no shrinking before it — a policy refusal, a first-page rejection —
         // never waits, and one that outlasts the backoff still ends the walk as CLOSED.
+        // The relay refused this page's `limit` (purplepag.es: `blocked: limit too high: 50000
+        // (max 500)`). Re-ask the same page lower and keep that cap for the rest of the walk.
+        // Only for a lone filter (see the cap above); each refusal lowers the ask, so this ends.
+        if (received == 0 && pageEnd == PageSignal.CLOSED && activeFilters.size == 1) {
+            val sent = activeFilters[0].value.limit
+            val cap = limitCap
+            if (sent != null && cap != null && sent > cap) {
+                // A boundary-second top-up past a known cap: the relay holds to its cap.
+                topUpRefused = true
+                Log.d("fetchAllPages") { "${relay.url} refused a top-up of $sent past its cap $cap ($refusal); asking at the cap" }
+                continue
+            }
+            val lower = if (sent != null) lowerLimitAfterRefusal(refusal, sent) else null
+            if (lower != null) {
+                limitCap = lower
+                Log.d("fetchAllPages") { "${relay.url} refused limit=$sent ($refusal); re-asking at $lower" }
+                continue
+            }
+        }
+
         if (received == 0 && reAsks < throttleBackoff.delaysMs.size) {
             val throttled =
                 when (pageEnd) {
@@ -694,11 +820,23 @@ suspend fun INostrClient.fetchAllPages(
                             (shortPagesInARow >= 2 || (shortPagesInARow >= 1 && contradictsBoundary))
                     }
                     PageSignal.CLOSED -> shortPagesInARow >= 1
+                    // No answer at all after the relay had been serving pages (nos.lol, measured:
+                    // three full pages, then a REQ with no event, EOSE or NOTICE). An honest relay
+                    // always ends a page, so it is worth one more ask; only one, because each
+                    // costs a whole idle timeout and a dead relay is silent too.
+                    null -> largestPage > 0 && !silenceReAsked
                     else -> false
                 }
             if (throttled) {
+                if (pageEnd == null) silenceReAsked = true
                 val waitMs = throttleBackoff.delaysMs[reAsks++]
-                Log.d("fetchAllPages") { "${relay.url} ${if (pageEnd == PageSignal.CLOSED) "CLOSED ($refusal)" else "empty page"} at until=$until looks throttled; re-asking in ${waitMs}ms (#$reAsks)" }
+                val what =
+                    when (pageEnd) {
+                        PageSignal.CLOSED -> "CLOSED ($refusal)"
+                        null -> "no answer"
+                        else -> "empty page"
+                    }
+                Log.d("fetchAllPages") { "${relay.url} $what at until=$until looks throttled; re-asking in ${waitMs}ms (#$reAsks)" }
                 throttleBackoff.sleep(waitMs)
                 continue
             }
@@ -706,13 +844,30 @@ suspend fun INostrClient.fetchAllPages(
 
         if (pageEnd == PageSignal.EOSE && received > 0) {
             if (received > largestPage) largestPage = received
-            // "Short" is at most half the largest page: a relay whose pages wobble by a few
-            // events (post-limit filtering of deleted or expired events) never counts.
+            // "Short" is at most half the largest page, or of what this page asked for when
+            // that was less (the walk's last, topped-up page asks for just what is missing): a
+            // relay whose pages wobble by a few events (post-limit filtering of deleted or
+            // expired events) never counts.
             if (delivered > 0) {
-                shortPagesInARow = if (received * 2 <= largestPage) shortPagesInARow + 1 else 0
+                val asked = activeFilters.sumOf { it.value.limit ?: largestPage }
+                shortPagesInARow = if (received * 2 <= minOf(largestPage, asked)) shortPagesInARow + 1 else 0
             }
         }
-        if (delivered > 0) reAsks = 0
+        if (delivered > 0) {
+            reAsks = 0
+            silenceReAsked = false
+        }
+        // Two short pages in a row that still delivered: the relay is trickling, not ending
+        // (relay.damus.io, measured: two full pages, then 1-4 events a page every ~120 ms for
+        // as long as it was asked, and a full 500 again after a 2 s pause). An honest walk has
+        // one short page, its tail, so it never pauses. Pause before the next REQ, longer each
+        // paced page in a row, holding at the last step; a full page ends the pacing.
+        if (shortPagesInARow >= 2 && delivered > 0 && throttleBackoff.delaysMs.isNotEmpty()) {
+            paceMs = throttleBackoff.delaysMs[minOf(pacedPages, throttleBackoff.delaysMs.size - 1)]
+            pacedPages++
+        } else if (shortPagesInARow == 0) {
+            pacedPages = 0
+        }
 
         // The relay sent nothing at-or-below `until`. Whether that DRAINS the set
         // depends on why the page ended and on what was asked:
@@ -838,6 +993,7 @@ suspend fun INostrClient.fetchAllPages(
     }
 
     val refused = end == PagedFetchResult.End.CLOSED || end == PagedFetchResult.End.AUTH_REQUIRED || end == PagedFetchResult.End.CANNOT_CONNECT
+    Log.d("fetchAllPages") { "${relay.url} walk ended $end: $totalEvents events in $reqCount REQs${limitCap?.let { ", cap $it" } ?: ""}" }
     return PagedFetchResult(totalEvents, end, refusal.takeIf { refused })
 }
 
@@ -846,7 +1002,7 @@ suspend fun INostrClient.fetchAllPages(
     filters: List<Filter>,
     idleTimeoutMs: Long = 30_000L,
     onNewPage: ((Long) -> Unit)? = null,
-    pageSize: Int = DEFAULT_PAGE_SIZE,
+    pageSize: Int? = null,
     throttleBackoff: PageRetryBackoff = PageRetryBackoff.DEFAULT,
     onEvent: suspend (Event) -> Unit,
 ): PagedFetchResult =

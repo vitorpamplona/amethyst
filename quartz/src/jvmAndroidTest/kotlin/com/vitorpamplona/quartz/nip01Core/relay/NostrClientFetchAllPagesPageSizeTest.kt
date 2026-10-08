@@ -22,9 +22,9 @@ package com.vitorpamplona.quartz.nip01Core.relay
 
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
-import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.DEFAULT_PAGE_SIZE
 import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.PagedFetchResult
 import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.fetchAllPages
+import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.lowerLimitAfterRefusal
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
 import kotlinx.coroutines.runBlocking
@@ -34,16 +34,16 @@ import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 /**
- * A filter's `limit` caps the WALK; what goes on the wire is the PAGE. They used to be the
- * same number: `--paginate --limit 50000` sent `limit = 50000` on every REQ, which a relay
- * that clamps quietly serves as its own page, but purplepag.es refuses outright —
- * `CLOSED blocked: limit too high: 50000 (max 500)` — so the walk never started.
+ * A filter's `limit` caps the WALK; each REQ asks for what is still missing. A relay that
+ * serves it all answers in one page, one that clamps pages at its own max, and one that
+ * refuses outright — purplepag.es: `CLOSED blocked: limit too high: 50000 (max 500)` — is
+ * re-asked lower (its stated max, else half) and paged at that from then on.
  */
 class NostrClientFetchAllPagesPageSizeTest {
     private val relay = RelayUrlNormalizer.normalize("wss://pages.example.com")
 
     @Test
-    fun aLimitAboveThePageSizeIsAskedForInPagesAndStillStopsAtTheTotal() =
+    fun aRelayThatRefusesALargeLimitIsReAskedAtItsStatedMaxAndStillStopsAtTheTotal() =
         runBlocking {
             val client = FakePagingRelay(this, FakePagingRelay.corpus(2_000), maxLimit = 500, refuseAboveMax = true)
             val got = mutableListOf<HexKey>()
@@ -53,11 +53,77 @@ class NostrClientFetchAllPagesPageSizeTest {
             assertEquals(PagedFetchResult.End.LIMIT_REACHED, result.end, "the walk got going and stopped at the caller's total")
             assertEquals(1_200, result.downloaded)
             assertEquals(1_200, got.distinct().size)
-            // 500, 500, then the 201 still missing plus the one boundary event the inclusive
-            // re-fetch sends again.
-            val wireLimits = client.requests.map { it.single().limit }
-            assertTrue(wireLimits.all { it != null && it <= DEFAULT_PAGE_SIZE }, "no REQ asked for more than a page: $wireLimits")
-            assertEquals(listOf<Int?>(500, 500, 202), wireLimits)
+            // 1200 is refused with "(max 500)"; then 500, 500, and the 201 still missing plus the
+            // one boundary event the inclusive re-fetch sends again.
+            assertEquals(listOf<Int?>(1_200, 500, 500, 202), client.requests.map { it.single().limit })
+        }
+
+    @Test
+    fun aRelayThatServesTheWholeLimitIsAskedOnce() =
+        runBlocking {
+            val client = FakePagingRelay(this, FakePagingRelay.corpus(2_000), maxLimit = 5_000)
+
+            val result = client.fetchAllPages(relay, listOf(Filter(kinds = listOf(1), limit = 1_200)), idleTimeoutMs = 2_000) { }
+
+            assertEquals(PagedFetchResult.End.LIMIT_REACHED, result.end)
+            assertEquals(1_200, result.downloaded)
+            assertEquals(listOf<Int?>(1_200), client.requests.map { it.single().limit }, "one REQ, no page size imposed")
+        }
+
+    @Test
+    fun aRelayThatClampsIsPagedAtItsOwnMax() =
+        runBlocking {
+            // strfry and most relays: an oversized limit is served as their max, never refused.
+            val client = FakePagingRelay(this, FakePagingRelay.corpus(2_000), maxLimit = 300)
+
+            val result = client.fetchAllPages(relay, listOf(Filter(kinds = listOf(1), limit = 1_000)), idleTimeoutMs = 2_000) { }
+
+            assertEquals(PagedFetchResult.End.LIMIT_REACHED, result.end)
+            assertEquals(1_000, result.downloaded)
+            assertEquals(
+                1_000,
+                client.requests
+                    .first()
+                    .single()
+                    .limit,
+            )
+        }
+
+    @Test
+    fun aRefusalThatStatesNoMaxIsReAskedAtHalfTheLimit() =
+        runBlocking {
+            val client = FakePagingRelay(this, FakePagingRelay.corpus(1_000), maxLimit = 400, refuseAboveMax = true, statesMaxInRefusal = false)
+
+            val result = client.fetchAllPages(relay, listOf(Filter(kinds = listOf(1), limit = 1_600)), idleTimeoutMs = 2_000) { }
+
+            assertEquals(PagedFetchResult.End.DRAINED, result.end)
+            assertEquals(1_000, result.downloaded)
+            val wireLimits = client.requests.map { it.single().limit!! }
+            assertEquals(listOf(1_600, 800, 400), wireLimits.take(3), "halved until the relay accepts")
+            assertTrue(wireLimits.drop(2).all { it <= 400 }, "the accepted cap is kept for the rest of the walk: $wireLimits")
+        }
+
+    @Test
+    fun aRefusedTopUpOfADenseSecondDoesNotLoopTheWalk() =
+        runBlocking {
+            // 600 events in one second on a relay that refuses anything above 500: the top-up
+            // past the cap is refused, so that second's tail is out of reach, and the walk
+            // must step past it and finish rather than re-ask forever.
+            val dense =
+                FakePagingRelay.corpus(100, newest = 2_000) +
+                    (0 until 600).map { i ->
+                        Event(("d$i").padStart(64, '0'), "f".repeat(64), 1_000, 1, emptyArray(), "dense $i", "0".repeat(128))
+                    } +
+                    FakePagingRelay.corpus(100, newest = 900)
+            val client = FakePagingRelay(this, dense, maxLimit = 500, refuseAboveMax = true)
+            val got = mutableListOf<HexKey>()
+
+            val result = client.fetchAllPages(relay, listOf(Filter(kinds = listOf(1), limit = 50_000)), idleTimeoutMs = 2_000) { got.add(it.id) }
+
+            assertEquals(PagedFetchResult.End.DRAINED, result.end)
+            assertEquals(got.size, got.distinct().size)
+            assertTrue(got.size >= 600, "everything outside the dense second's tail arrived: ${got.size}")
+            assertTrue(client.requests.size < 20, "no refusal loop: ${client.requests.size} REQs")
         }
 
     @Test
@@ -178,10 +244,10 @@ class NostrClientFetchAllPagesPageSizeTest {
     @Test
     fun aSecondDenserThanAPageIsStillReadInFullFromARelayThatServesMore() =
         runBlocking {
-            // 600 events share one second. pageSize (500) cannot cover it, but this relay serves
-            // up to 5000 per REQ: once the already-seen events of the second fill a page, the
-            // re-fetch must ask past pageSize, or the duplicate-only page steps past the second
-            // and its last 100 events are lost.
+            // 600 events share one second. A caller's pageSize (500) cannot cover it, but this
+            // relay serves up to 5000 per REQ: once the already-seen events of the second fill a
+            // page, the re-fetch must ask past pageSize, or the duplicate-only page steps past
+            // the second and its last 100 events are lost.
             val dense =
                 FakePagingRelay.corpus(100, newest = 2_000) +
                     (0 until 600).map { i ->
@@ -191,9 +257,54 @@ class NostrClientFetchAllPagesPageSizeTest {
             val client = FakePagingRelay(this, dense, maxLimit = 5_000)
             val got = mutableListOf<HexKey>()
 
-            val result = client.fetchAllPages(relay, listOf(Filter(kinds = listOf(1), limit = 50_000)), idleTimeoutMs = 2_000) { got.add(it.id) }
+            val result = client.fetchAllPages(relay, listOf(Filter(kinds = listOf(1), limit = 50_000)), idleTimeoutMs = 2_000, pageSize = 500) { got.add(it.id) }
 
             assertEquals(PagedFetchResult.End.DRAINED, result.end)
             assertEquals(800, got.distinct().size, "every event of the dense second arrived")
+        }
+
+    @Test
+    fun aRefusalIsReadForTheLimitItStates() {
+        assertEquals(500, lowerLimitAfterRefusal("blocked: limit too high: 50000 (max 500)", 50_000))
+        assertEquals(25_000, lowerLimitAfterRefusal("blocked: limit too high", 50_000))
+        assertEquals(1_000, lowerLimitAfterRefusal("error: limit exceeds max_limit of 1000", 5_000))
+        // A stated max that is not lower than what was sent cannot be the reason: halve.
+        assertEquals(250, lowerLimitAfterRefusal("blocked: limit too high (max 500)", 500))
+        assertNull(lowerLimitAfterRefusal("rate-limited: slow down, limit 10 REQs a second", 500), "throttling, not a cap")
+        assertNull(lowerLimitAfterRefusal("error: rate limit exceeded", 500))
+        assertNull(lowerLimitAfterRefusal("auth-required: we only serve members", 500))
+        assertNull(lowerLimitAfterRefusal("blocked: limit too high", 1), "nothing lower to ask for")
+        assertNull(lowerLimitAfterRefusal(null, 500))
+    }
+
+    @Test
+    fun anEventARelayRepeatsOnAPageIsDeliveredAndCountedOnce() =
+        runBlocking {
+            // purplepag.es, measured: a 500-event page carried 59 to 84 repeats of events already
+            // on that page, all of them delivered and counted, so a walk for 3000 stopped at
+            // 2716 distinct events.
+            val client = FakePagingRelay(this, FakePagingRelay.corpus(2_000), maxLimit = 500, answer = { _, honest -> honest.flatMap { listOf(it, it) } })
+            val got = mutableListOf<HexKey>()
+
+            val result = client.fetchAllPages(relay, listOf(Filter(kinds = listOf(1), limit = 1_200)), idleTimeoutMs = 2_000) { got.add(it.id) }
+
+            assertEquals(PagedFetchResult.End.LIMIT_REACHED, result.end)
+            assertEquals(1_200, got.size, "each event delivered once")
+            assertEquals(1_200, got.distinct().size, "and the limit counts distinct events")
+            assertEquals(1_200, result.downloaded)
+        }
+
+    @Test
+    fun anEventRepeatedOutOfOrderOnTheFirstPageIsDeliveredOnce() =
+        runBlocking {
+            // eden.nostr.land, measured: an open-ended first page interleaves events stored while
+            // the query ran, out of created_at order, and one came twice in different seconds.
+            val client = FakePagingRelay(this, FakePagingRelay.corpus(1_000), maxLimit = 500, answer = { req, honest -> if (req == 1) honest.take(150) + honest.first() + honest.drop(150) else honest })
+            val got = mutableListOf<HexKey>()
+
+            client.fetchAllPages(relay, listOf(Filter(kinds = listOf(1), limit = 300)), idleTimeoutMs = 2_000) { got.add(it.id) }
+
+            assertEquals(300, got.size)
+            assertEquals(300, got.distinct().size)
         }
 }

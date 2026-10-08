@@ -121,7 +121,8 @@ class NostrClientFetchAllPagesThrottleTest {
 
             assertEquals(PagedFetchResult.End.DRAINED, result.end)
             assertEquals(2_000, result.downloaded)
-            assertEquals(listOf(2_000L), recorder.waits)
+            // A pause before the REQ after the second short page, then the empty page's re-ask.
+            assertEquals(listOf(2_000L, 2_000L), recorder.waits)
         }
 
     @Test
@@ -228,7 +229,8 @@ class NostrClientFetchAllPagesThrottleTest {
 
             assertEquals(PagedFetchResult.End.DRAINED, result.end)
             assertEquals(3_000, result.downloaded)
-            assertEquals(listOf(2_000L), recorder.waits)
+            // A pause before the REQ after the second short page, then the CLOSED's re-ask.
+            assertEquals(listOf(2_000L, 2_000L), recorder.waits)
         }
 
     @Test
@@ -289,5 +291,73 @@ class NostrClientFetchAllPagesThrottleTest {
             assertEquals(PagedFetchResult.End.LIMIT_REACHED, result.end)
             assertEquals(1_500, result.downloaded)
             assertEquals(emptyList(), recorder.waits, "a filter dropping out is not a throttled relay")
+        }
+
+    @Test
+    fun pagesThatKeepComingBackShortArePacedNotHammered() =
+        runBlocking {
+            // relay.damus.io, measured: two full pages, then pages of 1-4 events every ~120 ms
+            // for as long as the walk keeps asking; after a 2 s pause it served 500 again. This
+            // relay trickles 3 events a page until the walk has paused since its last full page.
+            val waits = Collections.synchronizedList(mutableListOf<Long>())
+            var waitsAtLastFullPage = 0
+            val client =
+                FakePagingRelay(this, FakePagingRelay.corpus(3_000), maxLimit = 500) { req, honest ->
+                    if (req <= 2 || waits.size > waitsAtLastFullPage) {
+                        waitsAtLastFullPage = waits.size
+                        honest
+                    } else {
+                        honest.take(3)
+                    }
+                }
+
+            val result = client.fetchAllPages(relay, listOf(Filter(kinds = listOf(1))), idleTimeoutMs = 2_000, throttleBackoff = PageRetryBackoff(listOf(2_000L, 5_000L, 10_000L)) { waits.add(it) }) { }
+
+            assertEquals(PagedFetchResult.End.DRAINED, result.end)
+            assertEquals(3_000, result.downloaded)
+            assertTrue(waits.isNotEmpty(), "the walk paused")
+            assertTrue(client.requests.size < 60, "paced, not ~1000 trickle REQs: ${client.requests.size}")
+        }
+
+    @Test
+    fun aPageTheRelayLeavesUnansweredIsReAskedOnce() =
+        runBlocking {
+            // nos.lol, measured once: three full pages, then a REQ with no event, no EOSE and no
+            // NOTICE until the idle timeout. Re-asked after a pause, the walk goes on.
+            val recorder = RecordingBackoff()
+            val client = FakePagingRelay(this, FakePagingRelay.corpus(1_500), maxLimit = 500, silentOn = { it == 2 })
+
+            val result = client.fetchAllPages(relay, listOf(Filter(kinds = listOf(1))), idleTimeoutMs = 300, throttleBackoff = recorder.backoff) { }
+
+            assertEquals(PagedFetchResult.End.DRAINED, result.end)
+            assertEquals(1_500, result.downloaded)
+            assertEquals(listOf(2_000L), recorder.waits)
+        }
+
+    @Test
+    fun aRelayThatStaysSilentEndsIdleAfterOneReAsk() =
+        runBlocking {
+            val recorder = RecordingBackoff()
+            val client = FakePagingRelay(this, FakePagingRelay.corpus(1_500), maxLimit = 500, silentOn = { it >= 2 })
+
+            val result = client.fetchAllPages(relay, listOf(Filter(kinds = listOf(1))), idleTimeoutMs = 300, throttleBackoff = recorder.backoff) { }
+
+            assertEquals(PagedFetchResult.End.IDLE, result.end)
+            assertEquals(500, result.downloaded)
+            assertEquals(listOf(2_000L), recorder.waits, "one re-ask, not one per backoff step")
+            assertEquals(3, client.requests.size)
+        }
+
+    @Test
+    fun aSilentFirstPageIsNotWaitedOn() =
+        runBlocking {
+            // Nothing was ever served, so silence is not a throttle reading: no re-ask.
+            val recorder = RecordingBackoff()
+            val client = FakePagingRelay(this, FakePagingRelay.corpus(100), silentOn = { true })
+
+            val result = client.fetchAllPages(relay, listOf(Filter(kinds = listOf(1))), idleTimeoutMs = 300, throttleBackoff = recorder.backoff) { }
+
+            assertEquals(PagedFetchResult.End.IDLE, result.end)
+            assertEquals(emptyList(), recorder.waits)
         }
 }
