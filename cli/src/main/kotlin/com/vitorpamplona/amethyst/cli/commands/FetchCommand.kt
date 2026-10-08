@@ -68,7 +68,8 @@ import kotlin.coroutines.cancellation.CancellationException
  * `REQ`. Both honor the same limit: `--limit N` returns the newest N, absent is 100,
  * and `--limit 0` is unbounded — combined with `--paginate` that drains the entire
  * filter, so mind broad filters. Code mode is always single-shot. Under `--paginate`,
- * `--limit` caps the walk, not each `REQ`: every page asks for at most 500.
+ * `--limit` caps the walk: each page asks for what is still missing, and a relay that
+ * refuses that limit (purplepag.es: `limit too high … (max 500)`) is re-asked at its max.
  *
  * `--paginate --limit 0` streams: each event is written as it arrives instead of being
  * held for sorting, so the walk runs in O(ids) memory however large it gets — in
@@ -89,7 +90,8 @@ object FetchCommand {
         |        [--search TEXT] [--relay URL[,URL…]]
         |        [--timeout SECS] [--paginate|--all]    --paginate walks each relay page-by-page
         |                                                past its per-REQ cap (alias --all);
-        |                                                --limit caps the walk, pages ask <= 500.
+        |                                                --limit caps the walk; a relay refusing
+        |                                                a big page is re-asked at its max.
         |                                                --paginate --limit 0 streams events in
         |                                                arrival order (not newest-first).
         |  fetch <nevent1…|naddr1…|nprofile1…|npub1…|note1…|name@domain>

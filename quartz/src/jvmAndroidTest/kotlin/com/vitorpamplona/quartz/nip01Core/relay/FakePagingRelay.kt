@@ -39,6 +39,7 @@ import java.util.Collections
  *  - [refuseAboveMax]: answer a `limit` above [maxLimit] with purplepag.es's CLOSED instead
  *    of clamping it.
  *  - [closeWith]: given the 1-based REQ number, a CLOSED reason to answer it with instead.
+ *  - [silentOn]: given the 1-based REQ number, whether to leave it unanswered entirely.
  *  - [answer]: given the 1-based REQ number and the honest page, return what the relay
  *    actually sends — e.g. a throttled relay's shrunken or empty page.
  *
@@ -50,7 +51,9 @@ class FakePagingRelay(
     private val maxLimit: Int = 500,
     private val defaultLimit: Int = maxLimit,
     private val refuseAboveMax: Boolean = false,
+    private val statesMaxInRefusal: Boolean = true,
     private val closeWith: (req: Int) -> String? = { null },
+    private val silentOn: (req: Int) -> Boolean = { false },
     private val answer: (req: Int, honest: List<Event>) -> List<Event> = { _, honest -> honest },
 ) : INostrClient by EmptyNostrClient() {
     val requests: MutableList<List<Filter>> = Collections.synchronizedList(mutableListOf())
@@ -66,9 +69,12 @@ class FakePagingRelay(
         scope.launch {
             val tooHigh = relayFilters.firstNotNullOfOrNull { f -> f.limit?.takeIf { it > maxLimit } }
             if (refuseAboveMax && tooHigh != null) {
-                listener?.onClosed("blocked: limit too high: $tooHigh (max $maxLimit)", relay, relayFilters)
+                val reason = if (statesMaxInRefusal) "blocked: limit too high: $tooHigh (max $maxLimit)" else "blocked: limit too high"
+                listener?.onClosed(reason, relay, relayFilters)
                 return@launch
             }
+            // A relay that takes the REQ and never answers it: no event, no EOSE, no CLOSED.
+            if (silentOn(req)) return@launch
             closeWith(req)?.let { reason ->
                 listener?.onClosed(reason, relay, relayFilters)
                 return@launch

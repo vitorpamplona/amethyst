@@ -349,7 +349,7 @@ suspend fun INostrClient.fetchAllPagesFromPoolWithHooks(
     idleTimeoutMs: Long = 30_000L,
     maxConcurrentRelays: Int = 8,
     onRelayResult: ((relay: NormalizedRelayUrl, result: PagedFetchResult) -> Unit)? = null,
-    pageSize: Int = DEFAULT_PAGE_SIZE,
+    pageSize: Int? = null,
     throttleBackoff: PageRetryBackoff = PageRetryBackoff.DEFAULT,
     onEvent: suspend (relay: NormalizedRelayUrl, event: Event) -> Boolean,
 ): List<Pair<NormalizedRelayUrl, Event>> {
@@ -375,7 +375,7 @@ suspend fun INostrClient.streamAllPagesFromPoolWithHooks(
     idleTimeoutMs: Long = 30_000L,
     maxConcurrentRelays: Int = 8,
     onRelayResult: ((relay: NormalizedRelayUrl, result: PagedFetchResult) -> Unit)? = null,
-    pageSize: Int = DEFAULT_PAGE_SIZE,
+    pageSize: Int? = null,
     throttleBackoff: PageRetryBackoff = PageRetryBackoff.DEFAULT,
     onEvent: suspend (relay: NormalizedRelayUrl, event: Event) -> Boolean,
 ): Int {
