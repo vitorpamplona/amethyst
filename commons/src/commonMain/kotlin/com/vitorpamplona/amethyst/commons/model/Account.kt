@@ -168,6 +168,7 @@ import com.vitorpamplona.amethyst.commons.model.topNavFeeds.IFeedTopNavFilter
 import com.vitorpamplona.amethyst.commons.model.topNavFeeds.OutboxLoaderState
 import com.vitorpamplona.amethyst.commons.model.topNavFeeds.TopFilter
 import com.vitorpamplona.amethyst.commons.model.trustedAssertions.TrustProviderListState
+import com.vitorpamplona.amethyst.commons.model.trustedAssertions.TrustProviderRow
 import com.vitorpamplona.amethyst.commons.nipACWebRtcCalls.CallManager
 import com.vitorpamplona.amethyst.commons.nipACWebRtcCalls.CallState
 import com.vitorpamplona.amethyst.commons.relayClient.auth.InMemoryRelayAuthPermissionStore
@@ -236,6 +237,7 @@ import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.crypto.KeyPair
 import com.vitorpamplona.quartz.nip01Core.hints.EventHintBundle
 import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
+import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.fetchAll
 import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.fetchFirst
 import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.publishAndConfirm
 import com.vitorpamplona.quartz.nip01Core.relay.client.paging.RelayLoadingCursors
@@ -335,6 +337,7 @@ import com.vitorpamplona.quartz.nip72ModCommunities.rules.CommunityRulesEvent
 import com.vitorpamplona.quartz.nip72ModCommunities.rules.tags.KindRuleTag
 import com.vitorpamplona.quartz.nip72ModCommunities.rules.tags.PubkeyRuleTag
 import com.vitorpamplona.quartz.nip72ModCommunities.rules.tags.WotTag
+import com.vitorpamplona.quartz.nip85TrustedAssertions.list.TrustProviderListEvent
 import com.vitorpamplona.quartz.nip85TrustedAssertions.list.tags.ServiceProviderTag
 import com.vitorpamplona.quartz.nip85TrustedAssertions.users.UserAssertionEvent
 import com.vitorpamplona.quartz.nip88Polls.poll.PollEvent
@@ -1447,6 +1450,39 @@ class Account(
         // The user is waiting for it: its first download may start on mobile data.
         trustNetwork.expectNewProvider()
         sendMyPublicAndPrivateOutbox(trustProviderList.withScoreProvider(providerKey, relay, isPrivate))
+    }
+
+    /**
+     * Publishes the kind 10040 rows a provider set up for the user (see [TrustProviderRow]),
+     * replacing the previous score provider. [rows] must include a `30382:rank` row.
+     */
+    suspend fun setTrustProviderRows(
+        rows: List<TrustProviderRow>,
+        isPrivate: Boolean,
+    ) {
+        trustNetwork.expectNewProvider()
+        sendMyPublicAndPrivateOutbox(trustProviderList.withProviderRows(rows, isPrivate))
+    }
+
+    /**
+     * The public kind 10040 rows of [pubkey]'s list, from the newest version found on their
+     * outbox, the index relays and [hints]; null when no list was found. Copying them into the
+     * user's own list ([setTrustProviderRows]) shows the network as [pubkey] sees it.
+     */
+    suspend fun fetchTrustProviderRowsOf(
+        pubkey: HexKey,
+        hints: Set<NormalizedRelayUrl> = emptySet(),
+    ): List<TrustProviderRow>? {
+        val cached = cache.getAddressableNoteIfExists(TrustProviderListEvent.createAddress(pubkey))?.event as? TrustProviderListEvent
+        val relays = cache.getUserIfExists(pubkey)?.outboxRelays().orEmpty() + indexRelays() + hints
+        val filter = Filter(kinds = listOf(TrustProviderListEvent.KIND), authors = listOf(pubkey), limit = 1)
+        val fetched =
+            client
+                .fetchAll(filters = relays.associateWith { listOf(filter) }, idleTimeoutMs = 8_000)
+                .filter { it.kind == TrustProviderListEvent.KIND && it.pubKey == pubkey }
+                .maxByOrNull { it.createdAt }
+        val newest = listOfNotNull(cached, fetched).maxByOrNull { it.createdAt } ?: return null
+        return newest.tags.mapNotNull { TrustProviderRow.parse(it.toList()) }.distinctBy { it.name }
     }
 
     /** Removes the user-score provider from the kind 10040, which turns Web of Trust filtering off. */

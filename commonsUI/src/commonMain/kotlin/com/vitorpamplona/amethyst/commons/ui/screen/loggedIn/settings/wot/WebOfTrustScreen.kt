@@ -52,7 +52,9 @@ import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Slider
+import androidx.compose.material3.SuggestionChip
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.getValue
@@ -71,6 +73,7 @@ import androidx.compose.ui.text.LinkAnnotation
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.TextLinkStyles
 import androidx.compose.ui.text.buildAnnotatedString
+import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -82,10 +85,22 @@ import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbol
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.navigation.Route
+import com.vitorpamplona.amethyst.commons.model.trustedAssertions.KNOWN_SCORE_TAGS
+import com.vitorpamplona.amethyst.commons.model.trustedAssertions.TrustProviderRow
 import com.vitorpamplona.amethyst.commons.relayClient.user.observeUserName
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.web_of_trust
 import com.vitorpamplona.amethyst.commons.resources.wot_brainstorm_description
+import com.vitorpamplona.amethyst.commons.resources.wot_copy_action
+import com.vitorpamplona.amethyst.commons.resources.wot_copy_done
+import com.vitorpamplona.amethyst.commons.resources.wot_copy_explainer
+import com.vitorpamplona.amethyst.commons.resources.wot_copy_field
+import com.vitorpamplona.amethyst.commons.resources.wot_copy_house
+import com.vitorpamplona.amethyst.commons.resources.wot_copy_loading
+import com.vitorpamplona.amethyst.commons.resources.wot_copy_no_list
+import com.vitorpamplona.amethyst.commons.resources.wot_copy_no_rank
+import com.vitorpamplona.amethyst.commons.resources.wot_copy_title
+import com.vitorpamplona.amethyst.commons.resources.wot_copy_unknown_user
 import com.vitorpamplona.amethyst.commons.resources.wot_download_now
 import com.vitorpamplona.amethyst.commons.resources.wot_downloading_progress
 import com.vitorpamplona.amethyst.commons.resources.wot_downloading_progress_unknown
@@ -99,12 +114,14 @@ import com.vitorpamplona.amethyst.commons.resources.wot_effect_replies_title
 import com.vitorpamplona.amethyst.commons.resources.wot_error_title
 import com.vitorpamplona.amethyst.commons.resources.wot_in_use
 import com.vitorpamplona.amethyst.commons.resources.wot_last_updated
-import com.vitorpamplona.amethyst.commons.resources.wot_learn_more
+import com.vitorpamplona.amethyst.commons.resources.wot_manual_add_tag
 import com.vitorpamplona.amethyst.commons.resources.wot_manual_explainer
 import com.vitorpamplona.amethyst.commons.resources.wot_manual_key_error
 import com.vitorpamplona.amethyst.commons.resources.wot_manual_key_label
+import com.vitorpamplona.amethyst.commons.resources.wot_manual_needs_rank
 import com.vitorpamplona.amethyst.commons.resources.wot_manual_relay_error
 import com.vitorpamplona.amethyst.commons.resources.wot_manual_relay_label
+import com.vitorpamplona.amethyst.commons.resources.wot_manual_remove_tag
 import com.vitorpamplona.amethyst.commons.resources.wot_manual_title
 import com.vitorpamplona.amethyst.commons.resources.wot_min_score_explainer
 import com.vitorpamplona.amethyst.commons.resources.wot_min_score_title
@@ -132,6 +149,7 @@ import com.vitorpamplona.amethyst.commons.resources.wot_setup_error_signer
 import com.vitorpamplona.amethyst.commons.resources.wot_setup_error_unexpected
 import com.vitorpamplona.amethyst.commons.resources.wot_setup_error_unreachable
 import com.vitorpamplona.amethyst.commons.resources.wot_setup_fetching_key
+import com.vitorpamplona.amethyst.commons.resources.wot_setup_on_website
 import com.vitorpamplona.amethyst.commons.resources.wot_setup_requesting_scores
 import com.vitorpamplona.amethyst.commons.resources.wot_setup_saving
 import com.vitorpamplona.amethyst.commons.resources.wot_setup_signing_in
@@ -157,6 +175,7 @@ import com.vitorpamplona.amethyst.commons.ui.theme.placeholderText
 import com.vitorpamplona.amethyst.commons.util.formatGrouped
 import com.vitorpamplona.amethyst.commons.util.toShortDisplay
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
+import com.vitorpamplona.amethyst.commons.viewmodels.WebOfTrustCopy
 import com.vitorpamplona.amethyst.commons.viewmodels.WebOfTrustSetup
 import com.vitorpamplona.amethyst.commons.viewmodels.WebOfTrustViewModel
 import com.vitorpamplona.amethyst.commons.wot.network.TrustNetwork
@@ -171,6 +190,7 @@ import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.displayUrl
 import com.vitorpamplona.quartz.nip19Bech32.decodePublicKeyAsHexOrNull
+import com.vitorpamplona.quartz.nip85TrustedAssertions.list.tags.ProviderTypes
 import com.vitorpamplona.quartz.nip85TrustedAssertions.list.tags.ServiceProviderTag
 import com.vitorpamplona.quartz.nip85TrustedAssertions.users.index.TrustNetworkIndex
 import org.jetbrains.compose.resources.StringResource
@@ -191,6 +211,8 @@ class WebOfTrustUiState(
     val guidedProviders: List<TrustProviderOnboarding>,
     val setup: WebOfTrustSetup,
     val isPrivate: Boolean,
+    /** Copying another user's rows, in the hand-written fallback. */
+    val copy: WebOfTrustCopy = WebOfTrustCopy.Idle,
 )
 
 /** What the Web of Trust screen can ask for. */
@@ -201,7 +223,11 @@ class WebOfTrustActions(
     val onRemoveProvider: () -> Unit,
     val onMinScoreChange: (Int) -> Unit,
     val onSetUp: (TrustProviderOnboarding) -> Unit,
-    val onManualProvider: (HexKey, NormalizedRelayUrl) -> Unit,
+    val onManualRows: (List<TrustProviderRow>) -> Unit,
+    /** Reads the rows of an npub or NIP-05, to see the network as they do. */
+    val onCopyFrom: (String) -> Unit,
+    /** Reads the rows of a provider's own observer: its default view. */
+    val onCopyHouse: (TrustProviderOnboarding) -> Unit,
     val onPrivateChange: (Boolean) -> Unit,
     val onOpenProvider: () -> Unit,
 )
@@ -219,13 +245,14 @@ fun WebOfTrustScreen(
 ) {
     val account = accountViewModel.account
     val viewModel: WebOfTrustViewModel =
-        rememberViewModel(key = "wot-${account.signer.pubKey}", factory = WebOfTrustViewModel.Factory(account, accountViewModel.host.trustProviderHttp))
+        rememberViewModel(key = "wot-${account.signer.pubKey}", factory = WebOfTrustViewModel.Factory(account, accountViewModel.host.trustProviderHttp, accountViewModel.nip05ClientBuilder()))
     val provider by account.trustProviderList.liveUserRankProvider.collectAsStateWithLifecycle()
     val network by account.trustNetwork.network.collectAsStateWithLifecycle()
     val status by account.trustNetwork.status.collectAsStateWithLifecycle()
     val minScore by account.trustNetwork.minTrustScore.collectAsStateWithLifecycle()
     val setup by viewModel.setup.collectAsStateWithLifecycle()
     val isPrivate by viewModel.isPrivate.collectAsStateWithLifecycle()
+    val copy by viewModel.copy.collectAsStateWithLifecycle()
 
     val actions =
         remember(accountViewModel, viewModel) {
@@ -235,7 +262,9 @@ fun WebOfTrustScreen(
                 onRemoveProvider = { accountViewModel.removeTrustScoreProvider() },
                 onMinScoreChange = { accountViewModel.updateMinTrustScore(it) },
                 onSetUp = viewModel::setUp,
-                onManualProvider = viewModel::useProvider,
+                onManualRows = viewModel::useProviderRows,
+                onCopyFrom = { viewModel.copyRowsFrom(it) },
+                onCopyHouse = viewModel::copyHouseRows,
                 onPrivateChange = viewModel::setPrivate,
                 onOpenProvider = {
                     account.trustProviderList.liveUserRankProvider.value
@@ -260,6 +289,7 @@ fun WebOfTrustScreen(
                         guidedProviders = viewModel.providers,
                         setup = setup,
                         isPrivate = isPrivate,
+                        copy = copy,
                     ),
                 actions = actions,
                 providerAvatar = { UserPicture(it.pubkey, 40.dp, accountViewModel = accountViewModel, nav = nav) },
@@ -748,8 +778,10 @@ private fun ChooseProviderSection(
             GuidedProviderRow(provider, state.setup, inUse = inUse, enabled = !busy) { actions.onSetUp(provider) }
         }
         SettingsDivider()
+        // The fallback: the provider writes the kind 10040 (here or on its site); this is for
+        // when that goes wrong, or for a provider with neither.
         SettingsControlRow(
-            icon = MaterialSymbols.Key,
+            icon = MaterialSymbols.Tune,
             title = stringRes(Res.string.wot_manual_title),
             description = stringRes(Res.string.wot_manual_explainer),
             onClick = { showManual = !showManual },
@@ -762,22 +794,24 @@ private fun ChooseProviderSection(
             )
         }
         AnimatedVisibility(showManual) {
-            ManualProviderForm(enabled = !busy) { key, relay ->
-                actions.onManualProvider(key, relay)
-                showManual = false
+            Column {
+                CopyViewBlock(state, actions)
+                ManualRowsForm(enabled = !busy, copied = state.copy as? WebOfTrustCopy.Copied) { rows ->
+                    actions.onManualRows(rows)
+                    showManual = false
+                }
+                SettingsSwitchTile(
+                    icon = MaterialSymbols.Lock,
+                    title = Res.string.wot_private_entry_title,
+                    description = Res.string.wot_private_entry_explainer,
+                    checked = state.isPrivate,
+                    onCheckedChange = actions.onPrivateChange,
+                )
             }
         }
         (state.setup as? WebOfTrustSetup.Failed)?.takeIf { it.providerId == WebOfTrustViewModel.MANUAL }?.let { failed ->
             SetupError(setupErrorText(failed, stringRes(Res.string.wot_manual_title)), Modifier.padding(start = 68.dp, end = 16.dp, bottom = 12.dp))
         }
-        SettingsDivider()
-        SettingsSwitchTile(
-            icon = MaterialSymbols.Lock,
-            title = Res.string.wot_private_entry_title,
-            description = Res.string.wot_private_entry_explainer,
-            checked = state.isPrivate,
-            onCheckedChange = actions.onPrivateChange,
-        )
     }
 }
 
@@ -826,7 +860,7 @@ private fun GuidedProviderRow(
                     }
                 } else {
                     val description = providerDescription(provider)?.let { stringRes(it) }
-                    val learnMore = stringRes(Res.string.wot_learn_more)
+                    val onWebsite = stringRes(Res.string.wot_setup_on_website)
                     val linkStyle = TextLinkStyles(SpanStyle(color = scheme.primary, fontWeight = FontWeight.SemiBold))
                     Text(
                         buildAnnotatedString {
@@ -834,7 +868,9 @@ private fun GuidedProviderRow(
                                 append(description)
                                 append(" · ")
                             }
-                            withLink(LinkAnnotation.Url(provider.homepage, linkStyle)) { append(learnMore) }
+                            // Their site signs the user up and publishes the kind 10040 itself;
+                            // Amethyst picks the list up from the relays.
+                            withLink(LinkAnnotation.Url(provider.setupUrl, linkStyle)) { append(onWebsite) }
                         },
                         style = MaterialTheme.typography.bodySmall,
                         color = scheme.onSurfaceVariant,
@@ -880,26 +916,185 @@ private fun providerDescription(provider: TrustProviderOnboarding): StringResour
         else -> null
     }
 
+/**
+ * Another way to fill the rows: copy someone's (an npub or NIP-05, or a provider's own observer)
+ * and see the network as they do. The rows land in the editor below for review; nothing is
+ * published until the user saves them.
+ */
 @Composable
-private fun ManualProviderForm(
-    enabled: Boolean,
-    onSave: (key: HexKey, relay: NormalizedRelayUrl) -> Unit,
+private fun CopyViewBlock(
+    state: WebOfTrustUiState,
+    actions: WebOfTrustActions,
 ) {
-    var keyText by remember { mutableStateOf("") }
-    var relayText by remember { mutableStateOf("") }
-
-    val key = remember(keyText) { keyText.trim().takeIf { it.isNotEmpty() }?.let { decodePublicKeyAsHexOrNull(it) } }
-    val relay = remember(relayText) { relayText.trim().takeIf { it.isNotEmpty() }?.let { RelayUrlNormalizer.normalizeOrNull(it) } }
-    val keyError = keyText.isNotBlank() && key == null
-    val relayError = relayText.isNotBlank() && relay == null
+    var who by remember { mutableStateOf("") }
+    val loading = state.copy is WebOfTrustCopy.Loading
+    val scheme = MaterialTheme.colorScheme
 
     Column(
-        Modifier.fillMaxWidth().padding(start = 68.dp, end = 16.dp, bottom = 14.dp),
-        verticalArrangement = Arrangement.spacedBy(10.dp),
+        Modifier.fillMaxWidth().padding(start = 68.dp, end = 16.dp, bottom = 16.dp),
+        verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
+        Text(stringRes(Res.string.wot_copy_title), style = MaterialTheme.typography.titleSmall)
+        Text(stringRes(Res.string.wot_copy_explainer), style = MaterialTheme.typography.bodySmall, color = scheme.onSurfaceVariant)
+        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            OutlinedTextField(
+                value = who,
+                onValueChange = { who = it },
+                label = { Text(stringRes(Res.string.wot_copy_field)) },
+                singleLine = true,
+                modifier = Modifier.weight(1f),
+            )
+            FilledTonalButton(onClick = { actions.onCopyFrom(who.trim()) }, enabled = who.isNotBlank() && !loading) {
+                Text(stringRes(Res.string.wot_copy_action))
+            }
+        }
+        state.guidedProviders.filter { it.houseObserver != null }.forEach { provider ->
+            SuggestionChip(
+                onClick = { actions.onCopyHouse(provider) },
+                enabled = !loading,
+                label = { Text(stringRes(Res.string.wot_copy_house, provider.name)) },
+            )
+        }
+        when (val copy = state.copy) {
+            is WebOfTrustCopy.Loading -> {
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    CircularProgressIndicator(Modifier.size(12.dp), strokeWidth = 1.5.dp)
+                    Text(stringRes(Res.string.wot_copy_loading), style = MaterialTheme.typography.bodySmall, color = scheme.primary)
+                }
+            }
+
+            is WebOfTrustCopy.Copied -> {
+                Text(
+                    pluralStringRes(Res.plurals.wot_copy_done, copy.rows.size, copy.rows.size),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = scheme.primary,
+                )
+            }
+
+            is WebOfTrustCopy.Failed -> {
+                SetupError(
+                    stringRes(
+                        when (copy.reason) {
+                            WebOfTrustCopy.Failed.Reason.UNKNOWN_USER -> Res.string.wot_copy_unknown_user
+                            WebOfTrustCopy.Failed.Reason.NO_LIST -> Res.string.wot_copy_no_list
+                            WebOfTrustCopy.Failed.Reason.NO_RANK -> Res.string.wot_copy_no_rank
+                        },
+                    ),
+                )
+            }
+
+            WebOfTrustCopy.Idle -> {}
+        }
+    }
+}
+
+/** One kind 10040 row being written by hand: a tag name, and the key and relay as typed. */
+@Immutable
+private data class ManualRow(
+    val name: String,
+    val keyText: String = "",
+    val relayText: String = "",
+) {
+    val key: HexKey? = keyText.trim().takeIf { it.isNotEmpty() }?.let { decodePublicKeyAsHexOrNull(it) }
+    val relay: NormalizedRelayUrl? = relayText.trim().takeIf { it.isNotEmpty() }?.let { RelayUrlNormalizer.normalizeOrNull(it) }
+
+    fun toRow(): TrustProviderRow? = if (key != null && relay != null) TrustProviderRow(name, key, relay) else null
+}
+
+/**
+ * The kind 10040 rows, written by hand: each a tag name (from the ones Amethyst knows,
+ * [KNOWN_SCORE_TAGS]), the key that serves it and its relay. Starts with `30382:rank`, the one
+ * the network needs; a row added copies the key and relay of the last, since one provider key
+ * usually serves every tag.
+ */
+@Composable
+internal fun ManualRowsForm(
+    enabled: Boolean,
+    copied: WebOfTrustCopy.Copied? = null,
+    onSave: (List<TrustProviderRow>) -> Unit,
+) {
+    val names = remember { KNOWN_SCORE_TAGS.map { it.toValue() } }
+    val rankName = remember { ProviderTypes.rank.toValue() }
+    // Someone's rows were copied: they replace what is here, to review before saving.
+    var rows by remember(copied) {
+        mutableStateOf(copied?.rows?.map { row -> ManualRow(row.name, row.key, row.relay.url) } ?: listOf(ManualRow(rankName)))
+    }
+
+    val parsed = rows.map { it.toRow() }
+    val hasRank = rows.any { it.name == rankName }
+    val canSave = enabled && hasRank && parsed.all { it != null }
+
+    Column(
+        Modifier.fillMaxWidth().padding(start = 68.dp, end = 16.dp, bottom = 8.dp),
+        verticalArrangement = Arrangement.spacedBy(12.dp),
+    ) {
+        rows.forEachIndexed { index, row ->
+            val taken = rows.mapTo(HashSet()) { it.name } - row.name
+            ManualRowEditor(
+                row = row,
+                choices = names.filter { it !in taken },
+                canRemove = rows.size > 1,
+                onChange = { changed -> rows = rows.toMutableList().also { it[index] = changed } },
+                onRemove = { rows = rows.toMutableList().also { it.removeAt(index) } },
+            )
+        }
+
+        val unused = names.filter { name -> rows.none { it.name == name } }
+        if (unused.isNotEmpty()) {
+            TextButton(
+                onClick = {
+                    val last = rows.lastOrNull()
+                    rows = rows + ManualRow(unused.first(), last?.keyText.orEmpty(), last?.relayText.orEmpty())
+                },
+            ) {
+                Icon(symbol = MaterialSymbols.Add, contentDescription = null, modifier = Modifier.size(18.dp))
+                Spacer(Modifier.width(6.dp))
+                Text(stringRes(Res.string.wot_manual_add_tag))
+            }
+        }
+
+        if (!hasRank) {
+            Text(stringRes(Res.string.wot_manual_needs_rank, rankName), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error)
+        }
+
+        Button(
+            onClick = { if (canSave) onSave(parsed.filterNotNull()) },
+            enabled = canSave,
+            modifier = Modifier.fillMaxWidth(),
+        ) {
+            Text(stringRes(Res.string.wot_use_provider))
+        }
+    }
+}
+
+@Composable
+private fun ManualRowEditor(
+    row: ManualRow,
+    choices: List<String>,
+    canRemove: Boolean,
+    onChange: (ManualRow) -> Unit,
+    onRemove: () -> Unit,
+) {
+    val keyError = row.keyText.isNotBlank() && row.key == null
+    val relayError = row.relayText.isNotBlank() && row.relay == null
+
+    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            TagNamePicker(row.name, choices, Modifier.weight(1f)) { onChange(row.copy(name = it)) }
+            if (canRemove) {
+                IconButton(onClick = onRemove) {
+                    Icon(
+                        symbol = MaterialSymbols.Close,
+                        contentDescription = stringRes(Res.string.wot_manual_remove_tag),
+                        modifier = Modifier.size(20.dp),
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+            }
+        }
         OutlinedTextField(
-            value = keyText,
-            onValueChange = { keyText = it },
+            value = row.keyText,
+            onValueChange = { onChange(row.copy(keyText = it)) },
             label = { Text(stringRes(Res.string.wot_manual_key_label)) },
             isError = keyError,
             supportingText = if (keyError) ({ Text(stringRes(Res.string.wot_manual_key_error)) }) else null,
@@ -907,20 +1102,52 @@ private fun ManualProviderForm(
             modifier = Modifier.fillMaxWidth(),
         )
         OutlinedTextField(
-            value = relayText,
-            onValueChange = { relayText = it },
+            value = row.relayText,
+            onValueChange = { onChange(row.copy(relayText = it)) },
             label = { Text(stringRes(Res.string.wot_manual_relay_label)) },
             isError = relayError,
             supportingText = if (relayError) ({ Text(stringRes(Res.string.wot_manual_relay_error)) }) else null,
             singleLine = true,
             modifier = Modifier.fillMaxWidth(),
         )
-        Button(
-            onClick = { if (key != null && relay != null) onSave(key, relay) },
-            enabled = enabled && key != null && relay != null,
-            modifier = Modifier.fillMaxWidth(),
+    }
+}
+
+/** The row's tag name as a chip; tapping it lists the names no other row uses yet. */
+@Composable
+private fun TagNamePicker(
+    name: String,
+    choices: List<String>,
+    modifier: Modifier = Modifier,
+    onPick: (String) -> Unit,
+) {
+    var open by remember { mutableStateOf(false) }
+    val scheme = MaterialTheme.colorScheme
+    Box(modifier) {
+        Row(
+            Modifier
+                .clip(RoundedCornerShape(8.dp))
+                .background(scheme.secondaryContainer)
+                .clickable(enabled = choices.size > 1) { open = true }
+                .padding(start = 10.dp, end = 6.dp, top = 6.dp, bottom = 6.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(4.dp),
         ) {
-            Text(stringRes(Res.string.wot_use_provider))
+            Text(name, style = MaterialTheme.typography.labelLarge, fontFamily = FontFamily.Monospace, color = scheme.onSecondaryContainer)
+            if (choices.size > 1) {
+                Icon(symbol = MaterialSymbols.ExpandMore, contentDescription = null, modifier = Modifier.size(18.dp), tint = scheme.onSecondaryContainer)
+            }
+        }
+        DropdownMenu(expanded = open, onDismissRequest = { open = false }) {
+            choices.forEach { choice ->
+                DropdownMenuItem(
+                    text = { Text(choice, fontFamily = FontFamily.Monospace) },
+                    onClick = {
+                        open = false
+                        onPick(choice)
+                    },
+                )
+            }
         }
     }
 }

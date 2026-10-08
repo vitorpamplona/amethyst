@@ -20,6 +20,8 @@
  */
 package com.vitorpamplona.amethyst.commons.wot.onboarding.brainstorm
 
+import com.vitorpamplona.amethyst.commons.model.trustedAssertions.SCORE_SERVICES
+import com.vitorpamplona.amethyst.commons.model.trustedAssertions.TrustProviderRow
 import com.vitorpamplona.amethyst.commons.wot.onboarding.TrustProviderException
 import com.vitorpamplona.amethyst.commons.wot.onboarding.TrustProviderHttp
 import com.vitorpamplona.amethyst.commons.wot.onboarding.TrustProviderHttpResponse
@@ -27,18 +29,22 @@ import com.vitorpamplona.amethyst.commons.wot.onboarding.TrustProviderOnboarding
 import com.vitorpamplona.amethyst.commons.wot.onboarding.TrustProviderOnboardingStep
 import com.vitorpamplona.amethyst.commons.wot.onboarding.TrustProviderRegistration
 import com.vitorpamplona.quartz.nip01Core.core.Event
+import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip01Core.signers.SignerExceptions
+import com.vitorpamplona.quartz.nip85TrustedAssertions.list.tags.ProviderTypes
 import com.vitorpamplona.quartz.nip85TrustedAssertions.list.tags.ServiceProviderTag
 import com.vitorpamplona.quartz.utils.Hex
 import com.vitorpamplona.quartz.utils.TimeUtils
 import kotlinx.coroutines.CancellationException
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonNull
 import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.jsonPrimitive
 
 /**
@@ -54,6 +60,10 @@ import kotlinx.serialization.json.jsonPrimitive
  *     coming, so neither stops the sign-up.
  *  4. `GET /user/history` → `{data:{ta_pubkey, last_time_calculated_graperank}}`: the key the
  *     user's kind 30382 cards are signed with, published to `wss://scores.brainstorm.world`.
+ *  5. `GET /setup/{pubkey}` → `[[name, key, relay], …]`: the kind 10040 rows Brainstorm serves
+ *     this user with (`30382:rank`, `followers`, `hops`, `reporters`, `muters`, and `30392` for
+ *     Trusted Lists), the same ones its site publishes. When that fails, the two its site has
+ *     always published: `30382:rank` and `30382:followers` under `ta_pubkey`.
  */
 class BrainstormOnboarding(
     private val http: TrustProviderHttp,
@@ -62,6 +72,10 @@ class BrainstormOnboarding(
     override val id = "brainstorm"
     override val name = "Brainstorm"
     override val homepage = "https://brainstorm.world"
+    override val setupUrl = "https://brainstorm.world/setup/activate"
+
+    // brainstorm_server serves its default observer as NIP-05 `_` (nip05_service.py).
+    override val houseObserver = "_@brainstorm.world"
     override val relay: NormalizedRelayUrl = RelayUrlNormalizer.normalize(SCORES_RELAY)
 
     // The service key is per user and only known after a sign-up, but Brainstorm's scores relay
@@ -111,10 +125,35 @@ class BrainstormOnboarding(
         val calculated = history["last_time_calculated_graperank"]
 
         return TrustProviderRegistration(
-            serviceKey = serviceKey,
-            relay = relay,
+            rows = setupRows(pubkey) ?: SCORE_SERVICES.map { TrustProviderRow(it.toValue(), serviceKey, relay) },
             scoresReady = calculated != null && calculated !is JsonNull,
         )
+    }
+
+    /**
+     * The kind 10040 rows Brainstorm serves [pubkey] with, or null when it cannot say (then the
+     * caller falls back to the user-score rows). Rows that are not well formed are left out; a
+     * list without a `30382:rank` row is not used.
+     */
+    private suspend fun setupRows(pubkey: HexKey): List<TrustProviderRow>? {
+        val response =
+            try {
+                http.get("$api/setup/$pubkey")
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                return null
+            }
+        if (!response.isSuccessful) return null
+        val rows =
+            try {
+                (Json.parseToJsonElement(response.body) as? JsonArray)?.mapNotNull { row ->
+                    (row as? JsonArray)?.mapNotNull { (it as? JsonPrimitive)?.takeIf { p -> p.isString }?.content }?.let { TrustProviderRow.parse(it) }
+                }
+            } catch (e: Exception) {
+                null
+            } ?: return null
+        return rows.distinctBy { it.name }.takeIf { list -> list.any { it.name == ProviderTypes.rank.toValue() } }
     }
 
     private suspend fun call(request: suspend () -> TrustProviderHttpResponse): TrustProviderHttpResponse {

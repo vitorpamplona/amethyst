@@ -79,4 +79,55 @@ class ScoreProviderEditsTest {
             assertNull(removed.rankProvider(signer))
             assertNull(withoutScoreProvider(removed, signer))
         }
+
+    @Test
+    fun aProvidersRowsReplaceTheSameNamesAndTheOldScoreProvider() =
+        runBlocking {
+            // Another provider's list, a Trusted Lists row and a client tag are already there.
+            val lists = arrayOf("30392", "d".repeat(64), relay.url)
+            val base = existing()
+            val withExtras =
+                TrustProviderListEvent.resign(
+                    tags = base.tags + arrayOf(lists, arrayOf("client", "Other")),
+                    privateTags = base.privateTags(signer)!!,
+                    signer = signer,
+                )
+            val rows =
+                listOf(
+                    TrustProviderRow("30382:rank", newProvider, relay),
+                    TrustProviderRow("30382:hops", newProvider, relay),
+                    TrustProviderRow("30392", newProvider, relay),
+                )
+            val updated = withProviderRows(withExtras, rows, isPrivate = false, signer = signer)
+
+            val names = updated.tags.map { it[0] }
+            assertEquals(1, names.count { it == "30392" })
+            assertEquals(newProvider, updated.tags.single { it[0] == "30392" }[1])
+            assertTrue(arrayOf("client", "Other").contentEquals(updated.tags.single { it[0] == "client" }))
+            assertTrue(eventProvider in updated.serviceProviders())
+            // The old provider's followers row is gone even though the new rows have none.
+            assertTrue(updated.serviceProviders().none { it.pubkey == oldProvider })
+            assertTrue(updated.privateTags(signer).orEmpty().isEmpty())
+            assertEquals(newProvider, updated.rankProvider(signer)?.pubkey)
+        }
+
+    @Test
+    fun stoppingTheProviderRemovesEveryRowItsKeyServes() =
+        runBlocking {
+            val rows = listOf("30382:rank", "30382:followers", "30382:hops", "30392").map { TrustProviderRow(it, newProvider, relay) }
+            val set = withProviderRows(existing(), rows, isPrivate = false, signer = signer)
+            val removed = assertNotNull(withoutScoreProvider(set, signer))
+            assertTrue(removed.tags.none { it.size > 1 && it[1] == newProvider })
+            assertEquals(listOf(eventProvider), removed.serviceProviders())
+        }
+
+    @Test
+    fun rowsAreValidatedWhenParsed() {
+        assertNotNull(TrustProviderRow.parse(listOf("30382:rank", "A".repeat(64), "wss://x.com")))
+        assertNotNull(TrustProviderRow.parse(listOf("30392", "a".repeat(64), "wss://x.com")))
+        assertNull(TrustProviderRow.parse(listOf("client", "a".repeat(64), "wss://x.com")))
+        assertNull(TrustProviderRow.parse(listOf("30382:", "a".repeat(64), "wss://x.com")))
+        assertNull(TrustProviderRow.parse(listOf("30382:rank", "abc", "wss://x.com")))
+        assertNull(TrustProviderRow.parse(listOf("30382:rank", "a".repeat(64))))
+    }
 }

@@ -20,19 +20,25 @@
  */
 package com.vitorpamplona.amethyst.commons.wot.onboarding
 
+import com.vitorpamplona.amethyst.commons.model.trustedAssertions.TrustProviderRow
 import com.vitorpamplona.amethyst.commons.wot.onboarding.brainstorm.BrainstormOnboarding
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
+import com.vitorpamplona.quartz.nip85TrustedAssertions.list.tags.ProviderTypes
 import com.vitorpamplona.quartz.nip85TrustedAssertions.list.tags.ServiceProviderTag
 
 /**
  * A NIP-85 trust provider whose sign-up Amethyst knows how to run.
  *
  * NIP-85 says how a provider publishes scores and how a user points to it (kind 10040), but not
- * how a user becomes a provider's customer or learns the per-user key it signs with. Each
+ * how a user becomes a provider's customer or learns the per-user keys it signs with. Each
  * provider has its own API for that, so each one is an implementation of this interface.
- * Providers without one can still be used: the user enters the service key and relay by hand.
+ *
+ * The provider decides the kind 10040 rows ([TrustProviderRegistration.rows]): it knows which
+ * key serves which tag. The user can also sign up on the provider's own site ([setupUrl]),
+ * which publishes the list itself. Writing the rows by hand is the fallback for when that goes
+ * wrong, or for a provider without either.
  */
 interface TrustProviderOnboarding {
     /** Stable id, for saving which guided provider the user picked. */
@@ -44,6 +50,15 @@ interface TrustProviderOnboarding {
     /** Where to read about the provider. */
     val homepage: String
 
+    /** Where the user can sign up and publish their kind 10040 on the provider's own site. */
+    val setupUrl: String
+
+    /**
+     * The provider's own observer (a NIP-05 or npub), when it has one: the user can copy its
+     * kind 10040 rows to see the network as the provider's default view, without signing up.
+     */
+    val houseObserver: String? get() = null
+
     /** The relay the provider publishes its kind 30382 cards to. */
     val relay: NormalizedRelayUrl
 
@@ -52,7 +67,8 @@ interface TrustProviderOnboarding {
 
     /**
      * Signs in as [signer]'s user, asks the provider to compute their scores and returns the
-     * key it signs them with. Calls [onStep] as it goes. Throws [TrustProviderException].
+     * kind 10040 rows it serves them with. Calls [onStep] as it goes. Throws
+     * [TrustProviderException].
      */
     suspend fun register(
         signer: NostrSigner,
@@ -66,13 +82,25 @@ enum class TrustProviderOnboardingStep {
     FETCHING_SERVICE_KEY,
 }
 
-/** What a sign-up returns: the per-user key the provider signs this user's cards with. */
+/** What a sign-up returns: the kind 10040 rows the provider serves this user with. */
 class TrustProviderRegistration(
-    val serviceKey: HexKey,
-    val relay: NormalizedRelayUrl,
+    /** As the provider hands them over; always holds a `30382:rank` row. */
+    val rows: List<TrustProviderRow>,
     /** False while the provider has not finished computing the first scores. */
     val scoresReady: Boolean,
-)
+) {
+    init {
+        require(rows.any { it.name == ProviderTypes.rank.toValue() }) { "A registration needs a 30382:rank row" }
+    }
+
+    /** The per-user key that signs the `30382:rank` cards: the network's provider. */
+    val serviceKey: HexKey get() = rankRow.key
+
+    /** Where the rank cards are published. */
+    val relay: NormalizedRelayUrl get() = rankRow.relay
+
+    private val rankRow: TrustProviderRow get() = rows.first { it.name == ProviderTypes.rank.toValue() }
+}
 
 class TrustProviderException(
     val reason: Reason,

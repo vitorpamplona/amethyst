@@ -77,7 +77,13 @@ class TrustProviderListState(
         isPrivate: Boolean,
     ): TrustProviderListEvent = withScoreProvider(getTrustProviderList() ?: settings.backupTrustProviderList, providerKey, relay, isPrivate, signer)
 
-    /** A new kind 10040 without any user-score entry, or null when there is nothing to remove. */
+    /** A new kind 10040 with [rows] in it. See [withProviderRows] (the free function). */
+    suspend fun withProviderRows(
+        rows: List<TrustProviderRow>,
+        isPrivate: Boolean,
+    ): TrustProviderListEvent = withProviderRows(getTrustProviderList() ?: settings.backupTrustProviderList, rows, isPrivate, signer)
+
+    /** A new kind 10040 without the score provider's rows, or null when there is nothing to remove. */
     suspend fun withoutScoreProvider(): TrustProviderListEvent? = withoutScoreProvider(getTrustProviderList() ?: settings.backupTrustProviderList, signer)
 
     suspend fun trustProviderListWithBackup(note: Note): Set<ServiceProviderTag> {

@@ -27,7 +27,7 @@ import com.vitorpamplona.amethyst.cli.Output
 import com.vitorpamplona.amethyst.cli.commands.RawEventSupport
 import com.vitorpamplona.amethyst.cli.commands.graperank.fetchLatestProviderList
 import com.vitorpamplona.amethyst.commons.model.trustedAssertions.rankProvider
-import com.vitorpamplona.amethyst.commons.model.trustedAssertions.withScoreProvider
+import com.vitorpamplona.amethyst.commons.model.trustedAssertions.withProviderRows
 import com.vitorpamplona.amethyst.commons.wot.onboarding.KnownTrustProviders
 import com.vitorpamplona.amethyst.commons.wot.onboarding.OkHttpTrustProviderHttp
 import com.vitorpamplona.amethyst.commons.wot.onboarding.TrustProviderException
@@ -35,10 +35,10 @@ import com.vitorpamplona.amethyst.commons.wot.onboarding.TrustProviderException
 /**
  * `amy trust setup PROVIDER [--private] [--timeout SECS]`
  *
- * Runs a provider's guided sign-up (today: `brainstorm`) and points the account's kind 10040
- * user-score entries (`30382:rank`, `30382:followers`) at the service key it returns,
- * replacing any previous score provider and keeping every other entry. `--private` puts the
- * entries in the encrypted content. Then `amy trust sync` downloads the network.
+ * Runs a provider's guided sign-up (today: `brainstorm`) and publishes the kind 10040 rows the
+ * provider serves the account with (`rows` in the output: `30382:rank`, `30382:followers`, …),
+ * replacing rows of the same names and any previous score provider, keeping every other entry.
+ * `--private` puts the rows in the encrypted content. Then `amy trust sync` downloads the network.
  *
  * Any other NIP-85 provider needs no sign-up code: `amy graperank register PROVIDER --relay URL`.
  */
@@ -73,7 +73,7 @@ object TrustSetup {
             val me = ctx.identity.pubKeyHex
             val outbox = ctx.outboxRelays()
             val latest = fetchLatestProviderList(ctx, me, outbox, timeoutMs)
-            val event = withScoreProvider(latest, registration.serviceKey, registration.relay, isPrivate, ctx.signer)
+            val event = withProviderRows(latest, registration.rows, isPrivate, ctx.signer)
             val ack = ctx.publish(event, outbox)
             RawEventSupport.publishGuard(ack, event.id)?.let { return it }
 
@@ -82,6 +82,7 @@ object TrustSetup {
                     "provider" to onboarding.id,
                     "service_key" to registration.serviceKey,
                     "relay" to registration.relay.url,
+                    "rows" to registration.rows.map { it.toTagArray().toList() },
                     "scores_ready" to registration.scoresReady,
                     "private" to isPrivate,
                     "replaced" to latest?.rankProvider(ctx.signer)?.pubkey?.takeIf { it != registration.serviceKey },

@@ -36,6 +36,17 @@ import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
 class BrainstormOnboardingTest {
+    companion object {
+        /** api.brainstorm.world/setup/{pubkey}, as answered on 2026-10-08. */
+        const val SETUP =
+            """[["30382:rank","7d7ffd720b907fe597a7f454afe02f2dc1eca440baa029e9117b1c3209839377","wss://scores.brainstorm.world"],""" +
+                """["30382:followers","7d7ffd720b907fe597a7f454afe02f2dc1eca440baa029e9117b1c3209839377","wss://scores.brainstorm.world"],""" +
+                """["30382:reporters","7d7ffd720b907fe597a7f454afe02f2dc1eca440baa029e9117b1c3209839377","wss://scores.brainstorm.world"],""" +
+                """["30382:muters","7d7ffd720b907fe597a7f454afe02f2dc1eca440baa029e9117b1c3209839377","wss://scores.brainstorm.world"],""" +
+                """["30382:hops","7d7ffd720b907fe597a7f454afe02f2dc1eca440baa029e9117b1c3209839377","wss://scores.brainstorm.world"],""" +
+                """["30392","7d7ffd720b907fe597a7f454afe02f2dc1eca440baa029e9117b1c3209839377","wss://scores.brainstorm.world"]]"""
+    }
+
     private val signer = NostrSignerInternal(KeyPair())
     private val serviceKey = "7d7ffd720b907fe597a7f454afe02f2dc1eca440baa029e9117b1c3209839377"
 
@@ -43,6 +54,8 @@ class BrainstormOnboardingTest {
     private class FakeBrainstorm(
         val graperankStatus: Int = 200,
         val calculated: String = "\"2026-10-07T07:13:37\"",
+        /** `GET /setup/{pubkey}`'s answer, as api.brainstorm.world gives it; null for a 404. */
+        val setup: String? = SETUP,
     ) : TrustProviderHttp {
         val calls = mutableListOf<String>()
         var loginEvent: String? = null
@@ -55,6 +68,8 @@ class BrainstormOnboardingTest {
             calls.add("GET $url")
             return when {
                 url.contains("/authChallenge/") -> TrustProviderHttpResponse(200, """{"code":200,"message":null,"data":{"challenge":"abc123"}}""")
+
+                url.contains("/setup/") -> setup?.let { TrustProviderHttpResponse(200, it) } ?: TrustProviderHttpResponse(404, "")
 
                 url.endsWith("/user/history") -> {
                     authHeader = headers["Authorization"]
@@ -100,9 +115,16 @@ class BrainstormOnboardingTest {
                     "POST https://api.test/authChallenge/${signer.pubKey}/verify",
                     "POST https://api.test/user/graperank",
                     "GET https://api.test/user/history",
+                    "GET https://api.test/setup/${signer.pubKey}",
                 ),
                 http.calls,
             )
+            // The rows Brainstorm serves, published as it hands them over.
+            assertEquals(
+                listOf("30382:rank", "30382:followers", "30382:reporters", "30382:muters", "30382:hops", "30392"),
+                registration.rows.map { it.name },
+            )
+            assertTrue(registration.rows.all { it.key == serviceKey && it.relay.url == "wss://scores.brainstorm.world/" })
             assertEquals("Bearer jwt-token", http.authHeader)
             assertEquals(TrustProviderOnboardingStep.entries.toList(), steps.toList())
 
@@ -113,6 +135,17 @@ class BrainstormOnboardingTest {
             val tags = event["tags"]!!.jsonArray.map { tag -> tag.jsonArray.map { it.jsonPrimitive.content } }
             assertTrue(listOf("t", "brainstorm_login") in tags)
             assertTrue(listOf("challenge", "abc123") in tags)
+        }
+
+    @Test
+    fun withoutItsRowsTheSiteDefaultsAreUsed() =
+        runBlocking {
+            for (setup in listOf(null, "not json", """[["30382:followers","$serviceKey","wss://x.com"],["bad"]]""")) {
+                val registration = BrainstormOnboarding(FakeBrainstorm(setup = setup), api = "https://api.test").register(signer)
+                // What brainstorm.world itself publishes: rank and followers under the service key.
+                assertEquals(listOf("30382:rank", "30382:followers"), registration.rows.map { it.name })
+                assertEquals(serviceKey, registration.serviceKey)
+            }
         }
 
     @Test

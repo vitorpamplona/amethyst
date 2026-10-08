@@ -26,6 +26,7 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.CreationExtras
 import com.vitorpamplona.amethyst.commons.model.Account
+import com.vitorpamplona.amethyst.commons.model.trustedAssertions.TrustProviderRow
 import com.vitorpamplona.amethyst.commons.wot.onboarding.KnownTrustProviders
 import com.vitorpamplona.amethyst.commons.wot.onboarding.TrustProviderException
 import com.vitorpamplona.amethyst.commons.wot.onboarding.TrustProviderHttp
@@ -34,6 +35,9 @@ import com.vitorpamplona.amethyst.commons.wot.onboarding.TrustProviderOnboarding
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.signers.SignerExceptions
+import com.vitorpamplona.quartz.nip05DnsIdentifiers.INip05Client
+import com.vitorpamplona.quartz.nip05DnsIdentifiers.resolveUserHexOrNull
+import com.vitorpamplona.quartz.nip85TrustedAssertions.list.tags.ProviderTypes
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -65,21 +69,52 @@ sealed interface WebOfTrustSetup {
     ) : WebOfTrustSetup
 }
 
+/** Where copying another user's kind 10040 rows is. */
+@Immutable
+sealed interface WebOfTrustCopy {
+    data object Idle : WebOfTrustCopy
+
+    data object Loading : WebOfTrustCopy
+
+    /** [rows] are [pubkey]'s public rows, ready to review and use. */
+    data class Copied(
+        val pubkey: HexKey,
+        val rows: List<TrustProviderRow>,
+    ) : WebOfTrustCopy
+
+    data class Failed(
+        val reason: Reason,
+    ) : WebOfTrustCopy {
+        enum class Reason {
+            /** Not a key, nor a NIP-05 that resolves. */
+            UNKNOWN_USER,
+
+            /** No kind 10040 found for them. */
+            NO_LIST,
+
+            /** Their list names no `30382:rank` provider in public. */
+            NO_RANK,
+        }
+    }
+}
+
 /**
- * The Web of Trust settings' actions: guided sign-ups ([providers]) and choosing a provider by
- * hand. The network itself (download, minimum score, removal) is read and changed through
- * [Account] directly.
+ * The Web of Trust settings' actions: guided sign-ups ([providers]), which publish the kind 10040
+ * rows the provider hands over, and the fallbacks of writing those rows by hand or copying another
+ * user's (to see the network as they do). The network
+ * itself (download, minimum score, removal) is read and changed through [Account] directly.
  */
 class WebOfTrustViewModel(
     private val account: Account,
     http: TrustProviderHttp,
+    private val nip05Client: INip05Client?,
 ) : ViewModel() {
     val providers: List<TrustProviderOnboarding> = KnownTrustProviders.all(http)
 
     private val _setup = MutableStateFlow<WebOfTrustSetup>(WebOfTrustSetup.Idle)
     val setup: StateFlow<WebOfTrustSetup> = _setup.asStateFlow()
 
-    /** Whether the provider is written to the encrypted part of the kind 10040. */
+    /** Whether hand-written rows go to the encrypted part of the kind 10040 (a fallback option). */
     private val _isPrivate = MutableStateFlow(false)
     val isPrivate: StateFlow<Boolean> = _isPrivate.asStateFlow()
 
@@ -87,7 +122,10 @@ class WebOfTrustViewModel(
         _isPrivate.value = value
     }
 
-    /** Signs up with [onboarding] and makes it the account's provider. One sign-up at a time. */
+    /**
+     * Signs up with [onboarding] and publishes the rows it serves the user with, as the provider
+     * would (in the public tags). One sign-up at a time.
+     */
     fun setUp(onboarding: TrustProviderOnboarding) {
         if (_setup.value is WebOfTrustSetup.Running || _setup.value is WebOfTrustSetup.Saving) return
         _setup.value = WebOfTrustSetup.Running(onboarding.id, TrustProviderOnboardingStep.SIGNING_IN)
@@ -96,7 +134,7 @@ class WebOfTrustViewModel(
                 try {
                     val registration = onboarding.register(account.signer) { step -> _setup.value = WebOfTrustSetup.Running(onboarding.id, step) }
                     _setup.value = WebOfTrustSetup.Saving(onboarding.id)
-                    account.setTrustScoreProvider(registration.serviceKey, registration.relay, _isPrivate.value)
+                    account.setTrustProviderRows(registration.rows, isPrivate = false)
                     WebOfTrustSetup.Idle
                 } catch (e: CancellationException) {
                     throw e
@@ -110,14 +148,51 @@ class WebOfTrustViewModel(
         }
     }
 
-    /** Uses the provider signing with [key] on [relay], entered by hand. */
-    fun useProvider(
-        key: HexKey,
-        relay: NormalizedRelayUrl,
+    private val _copy = MutableStateFlow<WebOfTrustCopy>(WebOfTrustCopy.Idle)
+    val copy: StateFlow<WebOfTrustCopy> = _copy.asStateFlow()
+
+    /**
+     * Reads the public kind 10040 rows of [who] (an npub, hex key or NIP-05) for the user to
+     * review and use: their provider's cards are computed for them, so the network shows as
+     * they see it. [hints] are relays that may hold their list.
+     */
+    fun copyRowsFrom(
+        who: String,
+        hints: Set<NormalizedRelayUrl> = emptySet(),
     ) {
+        if (_copy.value is WebOfTrustCopy.Loading) return
+        _copy.value = WebOfTrustCopy.Loading
+        viewModelScope.launch {
+            _copy.value =
+                try {
+                    val pubkey = resolveUserHexOrNull(who, nip05Client)
+                    val rows = pubkey?.let { account.fetchTrustProviderRowsOf(it, hints) }
+                    when {
+                        pubkey == null -> WebOfTrustCopy.Failed(WebOfTrustCopy.Failed.Reason.UNKNOWN_USER)
+                        rows == null -> WebOfTrustCopy.Failed(WebOfTrustCopy.Failed.Reason.NO_LIST)
+                        rows.none { it.name == ProviderTypes.rank.toValue() } -> WebOfTrustCopy.Failed(WebOfTrustCopy.Failed.Reason.NO_RANK)
+                        else -> WebOfTrustCopy.Copied(pubkey, rows)
+                    }
+                } catch (e: CancellationException) {
+                    throw e
+                } catch (e: Exception) {
+                    WebOfTrustCopy.Failed(WebOfTrustCopy.Failed.Reason.NO_LIST)
+                }
+        }
+    }
+
+    /** Copies the rows of [onboarding]'s own observer: the provider's default view. */
+    fun copyHouseRows(onboarding: TrustProviderOnboarding) {
+        val house = onboarding.houseObserver ?: return
+        copyRowsFrom(house, setOf(onboarding.relay))
+    }
+
+    /** Publishes kind 10040 [rows] written by hand (they must include a `30382:rank` row). */
+    fun useProviderRows(rows: List<TrustProviderRow>) {
         viewModelScope.launch {
             try {
-                account.setTrustScoreProvider(key, relay, _isPrivate.value)
+                account.setTrustProviderRows(rows, _isPrivate.value)
+                _copy.value = WebOfTrustCopy.Idle
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
@@ -129,12 +204,13 @@ class WebOfTrustViewModel(
     class Factory(
         private val account: Account,
         private val http: TrustProviderHttp,
+        private val nip05Client: INip05Client?,
     ) : ViewModelProvider.Factory {
         @Suppress("UNCHECKED_CAST")
         override fun <T : ViewModel> create(
             modelClass: KClass<T>,
             extras: CreationExtras,
-        ): T = WebOfTrustViewModel(account, http) as T
+        ): T = WebOfTrustViewModel(account, http, nip05Client) as T
     }
 
     companion object {

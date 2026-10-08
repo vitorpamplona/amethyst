@@ -28,7 +28,9 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.ImageComposeScene
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.Density
+import com.vitorpamplona.amethyst.commons.model.trustedAssertions.TrustProviderRow
 import com.vitorpamplona.amethyst.commons.ui.theme.AmethystPreviewTheme
+import com.vitorpamplona.amethyst.commons.viewmodels.WebOfTrustCopy
 import com.vitorpamplona.amethyst.commons.viewmodels.WebOfTrustSetup
 import com.vitorpamplona.amethyst.commons.wot.network.TrustNetwork
 import com.vitorpamplona.amethyst.commons.wot.network.TrustNetworkProblem
@@ -80,7 +82,7 @@ class WebOfTrustRenderTest {
         TrustNetwork(TrustNetworkHeader(providerKey, provider.relayUrl.url, now, now - 3600, now - 3600), builder.build().first)
     }
 
-    private val actions = WebOfTrustActions({}, {}, {}, {}, {}, { _, _ -> }, {}, {})
+    private val actions = WebOfTrustActions({}, {}, {}, {}, {}, {}, {}, {}, {}, {})
 
     private fun state(
         provider: ServiceProviderTag? = this.provider,
@@ -156,5 +158,18 @@ class WebOfTrustRenderTest {
             assertTrue(dark.distinctColours() > 20, "$name: the dark screen drew ${dark.distinctColours()} colours")
             assertTrue(light.getRGB(2, 2) != dark.getRGB(2, 2), "$name: the screen ignored the theme")
         }
+    }
+
+    @Test
+    fun theHandWrittenRowsFormRenders() {
+        // As copied from Brainstorm's default view: two rows Amethyst knows, two it does not.
+        val house = "78ed0837eba0ba244384195ce41d2a21575476a8e99e43f02d6e9729860e29e6"
+        val relay = RelayUrlNormalizer.normalize("wss://scores.brainstorm.world")
+        val copied = WebOfTrustCopy.Copied(house, listOf("30382:rank", "30382:followers", "30392", "30393").map { TrustProviderRow(it, house, relay) })
+        val content: @Composable () -> Unit = { ManualRowsForm(enabled = true, copied = copied) {} }
+        val light = render("manual-rows", false, content)
+        val dark = render("manual-rows", true, content)
+        assertTrue(light.distinctColours() > 20, "the light form drew ${light.distinctColours()} colours")
+        assertTrue(light.getRGB(2, 2) != dark.getRGB(2, 2), "the form ignored the theme")
     }
 }

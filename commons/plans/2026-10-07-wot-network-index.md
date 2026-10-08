@@ -335,6 +335,26 @@ Base URL `https://api.brainstorm.world`; the NIP-85 relay is `wss://scores.brain
     integration behind a small interface, e.g. `TrustProviderOnboarding { login(); requestScores(); serviceKey(); relay }`.
     Brainstorm (above) is the first adapter; others are added one by one as their APIs are
     known.
+- **D15f. The provider writes the 10040 rows — decided (2026-10-08).** A provider knows which
+  key serves which tag, so the rows come from it, not from us. Brainstorm's
+  `GET /setup/{pubkey}` (no token) returns exactly the rows its site publishes, e.g.
+  `30382:rank|followers|reporters|muters|hops` under the per-user key plus a bare `30392` row
+  for Trusted Lists; the guided sign-up publishes those, merged into the user's list (rows of
+  the same names and the old score provider replaced, everything else kept). When `/setup`
+  fails, it falls back to `rank` + `followers` under `ta_pubkey`, what brainstorm.world has
+  always published. A survey of 138 kind 10040s on four big relays found 112 naming
+  Brainstorm, nearly all tagged `client: Brainstorm`: users mostly set it up on the site.
+  So each provider also names a website page (`setupUrl`, for Brainstorm `/setup/activate`)
+  where the user can do it there; Amethyst then reads the list from the relays.
+- **D15g. Fallbacks — decided (2026-10-08).** For when the provider's setup goes wrong, or a
+  provider has no adapter: **set up by hand** (a row editor: a tag name from a hardcoded list
+  `30382:rank|followers|hops|reporters|muters`, a key and a relay per row; a `rank` row is
+  required; "keep private" lives here), or **copy someone's view**: copy another user's public
+  rows (npub or NIP-05) and see the network as they do, since their provider computes the
+  cards for them. A provider can name its own observer (`houseObserver`; Brainstorm's is
+  `_@brainstorm.world`), offered as "Brainstorm's default view". Copied rows land in the
+  editor for review; nothing is published until saved. "Stop using" removes every row the
+  rank provider's key serves.
 
 ### D16. Rank and follower count move to the index
 - **Rec.** `rankFlow` and `followerCountStrFlow` read the snapshot (`snapshotFlow.map { it.rank(user) }`) when the index is ready **and** `P` is the provider for that slot. Brainstorm registers the same key for `rank` and `followers`.
@@ -397,6 +417,8 @@ Settled on 2026-10-07:
 | D18 push | Apply Curated filtering to push notifications; this is why the index must load fast (D3, D11). |
 | D18 replies | Collapse replies from outside the network. |
 | D15e | Accept any NIP-85 provider. Manual setup for any; guided sign-up via per-provider adapters, since provider account creation isn't specified. Brainstorm first. |
+| D15f | The provider writes the 10040 rows (Brainstorm `GET /setup/{pubkey}`), here or on its site (`setupUrl`). |
+| D15g | Hand-written rows and copying another user's rows (or a provider's house observer) are the fallbacks. |
 
 Still open: D6a (memoize prefixes on `User`), D9b (resuming a cold sync), D9c (network
 policy), D18 public chats. Phase 0 measurements should settle the first three.

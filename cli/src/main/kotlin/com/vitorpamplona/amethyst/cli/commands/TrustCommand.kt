@@ -22,6 +22,7 @@ package com.vitorpamplona.amethyst.cli.commands
 
 import com.vitorpamplona.amethyst.cli.DataDir
 import com.vitorpamplona.amethyst.cli.commands.trust.TrustCheck
+import com.vitorpamplona.amethyst.cli.commands.trust.TrustCopy
 import com.vitorpamplona.amethyst.cli.commands.trust.TrustSetup
 import com.vitorpamplona.amethyst.cli.commands.trust.TrustStatus
 import com.vitorpamplona.amethyst.cli.commands.trust.TrustSync
@@ -37,9 +38,10 @@ import com.vitorpamplona.amethyst.cli.commands.trust.TrustSync
  *  - `check USER…` — known or stranger, and why: the rule behind the DM tabs, Curated
  *    notifications and collapsed replies.
  *  - `setup brainstorm [--private]` — Brainstorm's guided sign-up, then the kind 10040.
+ *  - `copy USER [--private]` — use USER's kind 10040 rows: the network as USER sees it.
  */
 object TrustCommand {
-    const val USAGE = "trust <sync|status|check|setup>"
+    const val USAGE = "trust <sync|status|check|setup|copy>"
 
     suspend fun dispatch(
         dataDir: DataDir,
@@ -54,6 +56,7 @@ object TrustCommand {
                 "status" to { rest -> TrustStatus.run(dataDir, rest) },
                 "check" to { rest -> TrustCheck.run(dataDir, rest) },
                 "setup" to { rest -> TrustSetup.run(dataDir, rest) },
+                "copy" to { rest -> TrustCopy.run(dataDir, rest) },
             ),
         )
 }
