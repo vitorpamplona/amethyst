@@ -24,7 +24,9 @@ import com.vitorpamplona.quartz.experimental.decoupling.transfer.request.Encrypt
 import com.vitorpamplona.quartz.experimental.decoupling.transfer.response.EncryptionKeyTransferEvent
 import com.vitorpamplona.quartz.experimental.fitness.workout.WorkoutTemplateEvent
 import com.vitorpamplona.quartz.experimental.kanban.board.KanbanBoardEvent
+import com.vitorpamplona.quartz.experimental.kanban.board.UnrecognizedKind30301Event
 import com.vitorpamplona.quartz.experimental.kanban.card.KanbanCardEvent
+import com.vitorpamplona.quartz.experimental.kanban.card.UnrecognizedKind30302Event
 import com.vitorpamplona.quartz.experimental.postingStreak.PostingStreakEvent
 import com.vitorpamplona.quartz.experimental.profileTheme.active.ActiveProfileThemeEvent
 import com.vitorpamplona.quartz.experimental.profileTheme.definition.ThemeDefinitionEvent
@@ -34,6 +36,8 @@ import com.vitorpamplona.quartz.experimental.zapstore.identityProof.IdentityProo
 import com.vitorpamplona.quartz.marmot.mip00KeyPackages.LegacyKeyPackageEvent
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip18Reposts.BaseRepostEvent
+import com.vitorpamplona.quartz.nip18Reposts.GenericRepostEvent
+import com.vitorpamplona.quartz.nip18Reposts.RepostEvent
 import com.vitorpamplona.quartz.nip23LongContent.draft.LongFormDraftEvent
 import com.vitorpamplona.quartz.nip30CustomEmoji.stickers.StickerPackEvent
 import com.vitorpamplona.quartz.nip34Git.ci.coordinatorAdvertisement.CiCoordinatorAdvertisementEvent
@@ -50,6 +54,7 @@ import com.vitorpamplona.quartz.nip5aStaticWebsites.SiteSnapshotEvent
 import com.vitorpamplona.quartz.nip69P2pOrderEvents.mostroDevFee.MostroDevFeePaymentEvent
 import com.vitorpamplona.quartz.nip69P2pOrderEvents.mostroDispute.MostroDisputeEvent
 import com.vitorpamplona.quartz.nip69P2pOrderEvents.mostroInfo.MostroInfoEvent
+import com.vitorpamplona.quartz.nip69P2pOrderEvents.mostroInfo.UnrecognizedKind38385Event
 import com.vitorpamplona.quartz.nip69P2pOrderEvents.mostroRating.MostroUserRatingEvent
 import com.vitorpamplona.quartz.nip69P2pOrderEvents.robosatsRating.RoboSatsCoordinatorRatingEvent
 import com.vitorpamplona.quartz.nipXXPrivateNoteStorage.PnsEvent
@@ -73,6 +78,9 @@ import kotlin.contracts.contract
  * A kind Quartz types but Amethyst has no card for ([TYPED_WITHOUT_A_CARD]) is hidden too: it would
  * fall through to the plain-text card and show its raw `content` — a CI log tail, an empty theme.
  *
+ * A kind shared by a carded class and uncarded ones ([KINDS_WITH_A_CARD_BY_CLASS]) is decided per
+ * event: the repost is shown only when the event it embeds parses to a class with a card.
+ *
  * Conservative: a repost that declares no boosted `k` kind is assumed renderable
  * — we only hide when we can positively prove the inner kind is unknown.
  *
@@ -85,8 +93,45 @@ fun Event?.isRenderableRepost(): Boolean {
     contract { returns(true) implies (this@isRenderableRepost != null) }
     if (this !is BaseRepostEvent) return false
     val boostedKind = boostedKind()
+    if (boostedKind != null && boostedKind in KINDS_WITH_A_CARD_BY_CLASS) return embeddedEvent()?.hasACardOfItsShape() == true
     return boostedKind == null || (EventFactory.isKnownKind(boostedKind) && boostedKind !in TYPED_WITHOUT_A_CARD)
 }
+
+/**
+ * Kinds several apps share, where Quartz picks the class from the tags and only some of the classes
+ * have a card: 30301 (Kanban board, WalletScrutiny verification, or an encrypted planner's task),
+ * 30302 (Kanban card, or a Fieldbook membership record) and 38385 (Mostro instance terms, or a
+ * Paygress / bondtrade / game record). The kind alone cannot say whether a repost of one shows
+ * anything, so [isRenderableRepost] decides on the reposted event itself.
+ */
+val KINDS_WITH_A_CARD_BY_CLASS: Set<Int> =
+    setOf(
+        KanbanBoardEvent.KIND,
+        KanbanCardEvent.KIND,
+        MostroInfoEvent.KIND,
+    )
+
+/**
+ * False for the shapes of a [KINDS_WITH_A_CARD_BY_CLASS] kind that Amethyst draws nothing for (the
+ * `UnrecognizedKind…Event` classes `EventFactory` builds for other apps' formats); true otherwise.
+ */
+fun Event.hasACardOfItsShape(): Boolean =
+    this !is UnrecognizedKind30301Event &&
+        this !is UnrecognizedKind30302Event &&
+        this !is UnrecognizedKind38385Event
+
+/**
+ * The event a repost carries in its `content` (NIP-18 asks for the stringified event). Parsed only
+ * for the shared kinds above, which are rare in a feed, so the JSON parse costs nothing overall.
+ * Without it a repost of a shared kind stays hidden: on 30301 the commonest shape by far is the
+ * planner's encrypted task, so assuming a board would be wrong more often than right.
+ */
+private fun BaseRepostEvent.embeddedEvent(): Event? =
+    when (this) {
+        is RepostEvent -> containedPost()
+        is GenericRepostEvent -> containedPost()
+        else -> null
+    }
 
 /**
  * Kinds Quartz parses but Amethyst draws no card for, so a repost of one stays hidden exactly as it
@@ -109,9 +154,9 @@ val TYPED_WITHOUT_A_CARD: Set<Int> =
         CiRequestReadinessListEvent.KIND,
         CiRepositoryStatusEvent.KIND,
         CiSecretUpdateEvent.KIND,
-        // P2P-trading side traffic: ratings, instance terms, disputes, fee receipts.
+        // P2P-trading side traffic: ratings, disputes, fee receipts. (Instance terms, 38385, have
+        // a card: see KINDS_WITH_A_CARD_BY_CLASS.)
         MostroUserRatingEvent.KIND,
-        MostroInfoEvent.KIND,
         MostroDisputeEvent.KIND,
         MostroDevFeePaymentEvent.KIND,
         RoboSatsCoordinatorRatingEvent.KIND,
@@ -125,12 +170,11 @@ val TYPED_WITHOUT_A_CARD: Set<Int> =
         LongFormDraftEvent.KIND,
         StickerPackEvent.KIND,
         WorkoutTemplateEvent.KIND,
-        // App-release trust (Zapstore identity proofs, WalletScrutiny bundles and verdicts) and
-        // Kanban boards/cards (kind 30301 is shared by the board and the verdict).
+        // App-release trust: Zapstore identity proofs and WalletScrutiny asset bundles. (The
+        // verdicts and Kanban boards on 30301, and Kanban cards on 30302, have cards: see
+        // KINDS_WITH_A_CARD_BY_CLASS.)
         IdentityProofEvent.KIND,
         AssetBundleEvent.KIND,
-        KanbanBoardEvent.KIND,
-        KanbanCardEvent.KIND,
         // Profile customisation: belongs on a profile, not in a feed.
         ActiveProfileThemeEvent.KIND,
         ThemeDefinitionEvent.KIND,

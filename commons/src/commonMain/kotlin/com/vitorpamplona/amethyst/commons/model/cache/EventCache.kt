@@ -179,6 +179,8 @@ import com.vitorpamplona.quartz.experimental.fitness.workout.WorkoutRecordEvent
 import com.vitorpamplona.quartz.experimental.interactiveStories.InteractiveStoryPrologueEvent
 import com.vitorpamplona.quartz.experimental.interactiveStories.InteractiveStoryReadingStateEvent
 import com.vitorpamplona.quartz.experimental.interactiveStories.InteractiveStorySceneEvent
+import com.vitorpamplona.quartz.experimental.kanban.board.KanbanBoardEvent
+import com.vitorpamplona.quartz.experimental.kanban.card.KanbanCardEvent
 import com.vitorpamplona.quartz.experimental.library.BlossomPieceIndexEvent
 import com.vitorpamplona.quartz.experimental.library.BookshelfDirectoryEvent
 import com.vitorpamplona.quartz.experimental.library.LearningResourceEvent
@@ -202,6 +204,7 @@ import com.vitorpamplona.quartz.experimental.ratings.RelayReviewEvent
 import com.vitorpamplona.quartz.experimental.roadstr.confirmation.RoadEventConfirmationEvent
 import com.vitorpamplona.quartz.experimental.roadstr.report.RoadEventReportEvent
 import com.vitorpamplona.quartz.experimental.videoCollaboration.VideoCollaborationEvent
+import com.vitorpamplona.quartz.experimental.walletScrutiny.verification.BuildVerificationEvent
 import com.vitorpamplona.quartz.experimental.zapPolls.ZapPollEvent
 import com.vitorpamplona.quartz.marmot.mip00KeyPackages.KeyPackageEvent
 import com.vitorpamplona.quartz.marmot.mip00KeyPackages.KeyPackageRelayListEvent
@@ -379,6 +382,7 @@ import com.vitorpamplona.quartz.nip65RelayList.AdvertisedRelayListEvent
 import com.vitorpamplona.quartz.nip66RelayMonitor.discovery.RelayDiscoveryEvent
 import com.vitorpamplona.quartz.nip66RelayMonitor.monitor.RelayMonitorEvent
 import com.vitorpamplona.quartz.nip68Picture.PictureEvent
+import com.vitorpamplona.quartz.nip69P2pOrderEvents.mostroInfo.MostroInfoEvent
 import com.vitorpamplona.quartz.nip71Video.AddressableNormalVideoEvent
 import com.vitorpamplona.quartz.nip71Video.AddressableShortVideoEvent
 import com.vitorpamplona.quartz.nip71Video.VideoNormalEvent
@@ -1422,6 +1426,13 @@ open class EventCache :
                 event.tagsWithoutCitations().mapNotNull { checkGetOrCreateNote(it) }
             }
 
+            is KanbanCardEvent -> {
+                // Files the card under its board's addressable note, so the board's replies hold
+                // its cards: the board card counts them per column, and the board's thread lists
+                // them. Only the board `a`; a tracker card's other `a` is what it mirrors.
+                listOfNotNull(event.board()?.let { getOrCreateAddressableNote(Address(it.kind, it.pubKeyHex, it.dTag)) })
+            }
+
             is GeocacheFoundLogEvent -> {
                 // Files the log under the cache's addressable note, so a cache's replies hold its
                 // found logs next to the NIP-22 comments that carry its did-not-finds and
@@ -2283,6 +2294,25 @@ open class EventCache :
         if (relay != null && isRelaySignedGroupEvent(event, relay)) {
             val latest = getOrCreateAddressableNote(event.address()).event as? GroupPinnedEvent
             latest?.let { getOrCreateRelayGroupChannel(GroupId(it.groupId(), relay)).updatePinned(it) }
+        }
+        return new
+    }
+
+    /**
+     * A Kanban card (kind 30302) is stored like any addressable event and also counted as a reply
+     * of its board ([computeReplyTo] links the board), which [consumeBaseReplaceable] alone does
+     * not do: the board card reads its column counts from those replies. A newer version of the
+     * card is unlinked from the old board first, inside [consumeBaseReplaceable].
+     */
+    private fun consumeKanbanCard(
+        event: KanbanCardEvent,
+        relay: NormalizedRelayUrl?,
+        wasVerified: Boolean,
+    ): Boolean {
+        val new = consumeBaseReplaceable(event, relay, wasVerified)
+        if (new) {
+            val note = getOrCreateAddressableNote(event.address())
+            if (note.event === event) note.replyTo?.forEach { it.addReply(note) }
         }
         return new
     }
@@ -3994,7 +4024,16 @@ open class EventCache :
                 is PredictionMarketEvent,
                 // Unread junk on 38000 still supersedes an older version at its address.
                 is UnrecognizedKind38000Event,
+                // The shapes of the shared kinds 30301, 30302 and 38385 that have cards: Kanban
+                // boards and cards, WalletScrutiny verdicts and Mostro instance terms. Their
+                // UnrecognizedKind…Event siblings (other apps' formats) stay unconsumed, so
+                // nothing ever draws them.
+                is KanbanBoardEvent,
+                is BuildVerificationEvent,
+                is MostroInfoEvent,
                 -> consumeBaseReplaceable(event, relay, wasVerified)
+
+                is KanbanCardEvent -> consumeKanbanCard(event, relay, wasVerified)
 
                 // ============================================================
                 // Regular kinds with no per-kind logic: stored as plain notes.

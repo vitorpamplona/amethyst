@@ -124,7 +124,9 @@ class RenderableKindsTest {
                 9041,
                 33863,
                 38383,
-                // Mostro instance terms: searchable by instance name, no card yet
+                // Mostro instance terms: they have a card, but what they index is an instance name
+                // and its currency codes, so a search for "USD" or "EUR" would be a page of
+                // instance terms. Reached from a link or a repost, not from global search.
                 38385,
                 38000,
                 // DVM job requests
@@ -146,9 +148,6 @@ class RenderableKindsTest {
                 30620,
                 38192,
                 40100,
-                // Kanban boards and cards (and WalletScrutiny build verifications on 30301): no card yet
-                30301,
-                30302,
                 // curation sets and relay/interest lists
                 30002,
                 30003,

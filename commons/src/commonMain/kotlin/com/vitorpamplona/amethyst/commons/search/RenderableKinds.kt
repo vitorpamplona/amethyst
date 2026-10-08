@@ -25,6 +25,8 @@ import com.vitorpamplona.quartz.experimental.audio.track.AudioTrackEvent
 import com.vitorpamplona.quartz.experimental.fitness.workout.WorkoutRecordEvent
 import com.vitorpamplona.quartz.experimental.interactiveStories.InteractiveStoryPrologueEvent
 import com.vitorpamplona.quartz.experimental.interactiveStories.InteractiveStorySceneEvent
+import com.vitorpamplona.quartz.experimental.kanban.board.KanbanBoardEvent
+import com.vitorpamplona.quartz.experimental.kanban.card.KanbanCardEvent
 import com.vitorpamplona.quartz.experimental.music.playlist.MusicPlaylistEvent
 import com.vitorpamplona.quartz.experimental.music.track.MusicTrackEvent
 import com.vitorpamplona.quartz.experimental.nip82SoftwareApps.application.SoftwareApplicationEvent
@@ -224,6 +226,11 @@ object RenderableKinds {
             // geocaches
             GeocacheListingEvent.KIND,
             GeocacheFoundLogEvent.KIND,
+            // Kanban boards and cards (titles and descriptions), and the WalletScrutiny build
+            // verifications that share 30301 (their reports). The encrypted planner tasks also on
+            // 30301 index nothing and are never cached, so they cannot surface as a blank row.
+            KanbanBoardEvent.KIND,
+            KanbanCardEvent.KIND,
             // everything else with a card
             BadgeDefinitionEvent.KIND,
             EmojiPackEvent.KIND,
