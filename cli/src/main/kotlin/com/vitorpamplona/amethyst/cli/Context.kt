@@ -48,6 +48,7 @@ import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.fetchAllPages
 import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.fetchAllWithHooks
 import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.publishAndCollectResults
 import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.publishAndConfirm
+import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.streamAllPagesFromPoolWithHooks
 import com.vitorpamplona.quartz.nip01Core.relay.client.auth.RelayAuthenticator
 import com.vitorpamplona.quartz.nip01Core.relay.client.reqs.SubscriptionListener
 import com.vitorpamplona.quartz.nip01Core.relay.client.single.newSubId
@@ -675,6 +676,26 @@ class Context(
             maxConcurrentRelays = maxConcurrentRelays,
             onRelayResult = onRelayResult,
         ) { _, event -> verifyAndStore(event) }
+
+    /**
+     * [drainAllPages] for a walk too large to hold: the same paging, verify+store and
+     * cross-relay dedup, but each accepted event is handed to [onEvent] as it arrives and
+     * then dropped — only the dedup set's ids stay in memory. Events come in arrival order
+     * (relay by relay, page by page), not sorted. Returns how many were accepted.
+     */
+    suspend fun streamAllPages(
+        filters: Map<NormalizedRelayUrl, List<Filter>>,
+        idleTimeoutMs: Long = 30_000,
+        maxConcurrentRelays: Int = 8,
+        onRelayResult: ((relay: NormalizedRelayUrl, result: PagedFetchResult) -> Unit)? = null,
+        onEvent: (relay: NormalizedRelayUrl, event: Event) -> Unit,
+    ): Int =
+        client.streamAllPagesFromPoolWithHooks(
+            filters = filters,
+            idleTimeoutMs = idleTimeoutMs,
+            maxConcurrentRelays = maxConcurrentRelays,
+            onRelayResult = onRelayResult,
+        ) { relay, event -> verifyAndStore(event).also { if (it) onEvent(relay, event) } }
 
     /**
      * Publish [request] to [relays], then wait for the FIRST event matching [responseFilter]

@@ -23,6 +23,8 @@ package com.vitorpamplona.amethyst.cli
 import com.fasterxml.jackson.databind.JsonNode
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
+import java.io.BufferedWriter
+import java.io.OutputStreamWriter
 import java.time.Instant
 import java.time.ZoneOffset
 import java.time.format.DateTimeFormatter
@@ -80,6 +82,99 @@ object Output {
         when (mode) {
             Mode.JSON -> println(mapper.writeValueAsString(result))
             Mode.TEXT -> println(text(Ansi.forStream(isStderr = false)))
+        }
+    }
+
+    /**
+     * A result with one list too large to hold in memory (`fetch --paginate --limit 0`):
+     * the [head] keys first, then the [listKey] list one item at a time as it arrives,
+     * then the tail keys passed to [ListStream.finish]. Under `--json` it is still ONE JSON
+     * object on one line — just written incrementally, so nothing but the current item is
+     * ever held. Nothing is written until the first [ListStream.item], so a command that
+     * ends up with no items can still answer with a plain [emit] or an [error] instead.
+     */
+    internal fun listStream(
+        head: Map<String, Any?>,
+        listKey: String,
+    ): ListStream = ListStream(head, listKey)
+
+    internal class ListStream(
+        private val head: Map<String, Any?>,
+        private val listKey: String,
+    ) {
+        private val out = BufferedWriter(OutputStreamWriter(System.out, Charsets.UTF_8), 1 shl 16)
+        private val color = Ansi.forStream(isStderr = false)
+
+        /** True once the head (and so the open list) has been written. */
+        var started = false
+            private set
+
+        private var first = true
+
+        private fun start() {
+            started = true
+            when (mode) {
+                Mode.JSON -> {
+                    out.write("{")
+                    for ((k, v) in head) {
+                        out.write(mapper.writeValueAsString(k))
+                        out.write(":")
+                        out.write(mapper.writeValueAsString(v))
+                        out.write(",")
+                    }
+                    out.write(mapper.writeValueAsString(listKey))
+                    out.write(":[")
+                }
+
+                Mode.TEXT -> {
+                    val body = StringBuilder()
+                    renderMapBody(body, unwrap(head) as Map<*, *>, "", color)
+                    body.append(color.bold(listKey)).append(":\n")
+                    out.write(body.toString())
+                }
+            }
+        }
+
+        /** One list item, given as its JSON text (e.g. `Event.toJson()`). */
+        fun item(json: String) {
+            if (!started) start()
+            when (mode) {
+                Mode.JSON -> {
+                    if (!first) out.write(",")
+                    out.write(json)
+                }
+
+                Mode.TEXT -> {
+                    val body = StringBuilder()
+                    renderListBody(body, listOf(mapper.readValue(json, Map::class.java)), "  ", color)
+                    out.write(body.toString())
+                }
+            }
+            first = false
+        }
+
+        /** Closes the list, writes [tail] and flushes. Only valid once [started]. */
+        fun finish(tail: Map<String, Any?>) {
+            check(started) { "finish() before any item: emit the result instead" }
+            when (mode) {
+                Mode.JSON -> {
+                    out.write("]")
+                    for ((k, v) in tail) {
+                        out.write(",")
+                        out.write(mapper.writeValueAsString(k))
+                        out.write(":")
+                        out.write(mapper.writeValueAsString(v))
+                    }
+                    out.write("}\n")
+                }
+
+                Mode.TEXT -> {
+                    val body = StringBuilder()
+                    renderMapBody(body, unwrap(tail) as Map<*, *>, "", color)
+                    out.write(body.toString())
+                }
+            }
+            out.flush()
         }
     }
 
