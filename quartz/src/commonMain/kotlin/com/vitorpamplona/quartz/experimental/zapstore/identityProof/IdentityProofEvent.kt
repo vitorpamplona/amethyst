@@ -53,11 +53,12 @@ import kotlin.io.encoding.Base64
  *
  * The Nostr signature proves the npub vouches for the certificate; the certificate signature
  * proves the certificate key vouches for the npub. Checking the second needs the certificate,
- * which the event does not carry (it comes from the APK's signing block). With it, Quartz can
- * check [certificateHashMatches] (SHA-256) and, for Ed25519 certificates only,
- * [verifyEd25519Signature]. RSA and ECDSA P-256, which every live proof uses (the 2026-10 census
- * saw 256- and 512-byte RSA signatures only), need an X.509/SPKI parser and RSA / P-256 verifiers
- * that Quartz does not have; see the platform's `java.security` on JVM/Android.
+ * which the event does not carry: it comes from the APK's signing block (a NIP-82 asset's
+ * `apk_certificate_hash` only names it). Given its DER bytes, [verify] runs every check: shape, certificate
+ * hash, revocation, expiry and the certificate signature (RSA, EC and Ed25519 keys on JVM and
+ * Android through `java.security`; every live proof in the 2026-10 census is RSA, with 256- and
+ * 512-byte signatures). iOS, macOS and Linux native report
+ * [IdentityProofVerification.UNSUPPORTED_ALGORITHM] for now.
  *
  * No references (the certificate hash is a value, not an event), so no hint provider. Machine
  * data with empty content: not a SearchableEvent.
@@ -115,7 +116,7 @@ class IdentityProofEvent(
      * Verifies [signature] over [signedMessage] with an Ed25519 certificate's 32-byte public key.
      * False for any other key type, a malformed proof, or a bad signature; never throws. This is
      * only half of a proof check: the caller must also confirm the key belongs to a certificate
-     * that [certificateHashMatches].
+     * that [certificateHashMatches]. Prefer [verify] when the certificate is at hand.
      */
     fun verifyEd25519Signature(publicKey: ByteArray): Boolean {
         if (publicKey.size != 32) return false
@@ -130,9 +131,35 @@ class IdentityProofEvent(
     }
 
     /**
+     * Full verification against the signing certificate's DER bytes ([certificateDer], as an APK's
+     * signing block or `apksigner verify --print-certs` gives it). The checks run in this order and
+     * the first failure is returned: [isWellFormed] and a decodable signature
+     * ([IdentityProofVerification.MALFORMED]), [certificateHashMatches]
+     * ([IdentityProofVerification.CERT_MISMATCH]), [isRevoked], [isExpired] at [now], then the
+     * signature over [signedMessage] with the certificate's public key
+     * ([IdentityProofVerification.BAD_CERTIFICATE], [IdentityProofVerification.UNSUPPORTED_ALGORITHM]
+     * or [IdentityProofVerification.BAD_SIGNATURE]). Never throws.
+     *
+     * The event's own Nostr signature is not checked here: that is the event layer's job, as for
+     * any event.
+     */
+    fun verify(
+        certificateDer: ByteArray,
+        now: Long = TimeUtils.now(),
+    ): IdentityProofVerification {
+        if (!isWellFormed()) return IdentityProofVerification.MALFORMED
+        val message = signedMessage() ?: return IdentityProofVerification.MALFORMED
+        val signature = signatureBytes() ?: return IdentityProofVerification.MALFORMED
+        if (!certificateHashMatches(certificateDer)) return IdentityProofVerification.CERT_MISMATCH
+        if (isRevoked()) return IdentityProofVerification.REVOKED
+        if (isExpired(now)) return IdentityProofVerification.EXPIRED
+        return verifyCertificateSignature(certificateDer, message.encodeToByteArray(), signature)
+    }
+
+    /**
      * True when this proof is about the certificate that signed [asset] and was published by the
      * same key that published the asset — the pairing Zapstore checks before trusting a release.
-     * Only a claim until the certificate signature is verified.
+     * Only a claim until [verify] passes with that certificate.
      */
     fun claimsSignerOf(asset: SoftwareAssetEvent): Boolean = asset.pubKey == pubKey && asset.apkCertificateHashes().any { isForCertificate(it) }
 
