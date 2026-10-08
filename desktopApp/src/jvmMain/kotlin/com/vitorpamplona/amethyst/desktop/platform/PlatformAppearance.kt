@@ -21,13 +21,20 @@
 package com.vitorpamplona.amethyst.desktop.platform
 
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.State
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import com.vitorpamplona.quartz.utils.Log
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.channels.awaitClose
+import kotlinx.coroutines.flow.callbackFlow
+import kotlinx.coroutines.flow.conflate
+import kotlinx.coroutines.withContext
 import java.awt.Window
+import java.awt.event.WindowEvent
 import java.awt.event.WindowFocusListener
+import java.util.concurrent.TimeUnit
 
 /**
  * Reads the OS's preferred light/dark appearance.
@@ -41,6 +48,9 @@ import java.awt.event.WindowFocusListener
  * system theme see Amethyst follow within a second of bringing the window forward.
  */
 object PlatformAppearance {
+    /** The preference when the app started: read once, ahead of the first frame, so it opens in the right theme. */
+    val startupDark: Boolean by lazy { isSystemDark() }
+
     /**
      * Resolves the OS dark/light preference, with an override hook for testing
      * on a single machine: `-Damethyst.appearance=light|dark` (system property)
@@ -123,7 +133,7 @@ object PlatformAppearance {
                     .bufferedReader()
                     .readText()
                     .trim()
-            val finished = proc.waitFor(2, java.util.concurrent.TimeUnit.SECONDS)
+            val finished = proc.waitFor(2, TimeUnit.SECONDS)
             if (!finished) {
                 proc.destroyForcibly()
                 null
@@ -139,25 +149,29 @@ object PlatformAppearance {
 }
 
 /**
- * Returns a Compose [State]<Boolean> that tracks the OS dark/light preference and
- * refreshes whenever the given AWT [Window] gains focus. Lightweight (~30ms shell-out
- * on focus) and avoids polling.
+ * The OS dark/light preference, re-read whenever [awtWindow] gains focus (the OSes have no portable
+ * change event, and focus is when a user who just flipped it comes back). It starts from
+ * [PlatformAppearance.startupDark], and the re-reads shell out off the UI thread.
  */
 @Composable
 fun rememberSystemDark(awtWindow: Window?): State<Boolean> {
-    val state = remember { mutableStateOf(PlatformAppearance.isSystemDark()) }
-    DisposableEffect(awtWindow) {
-        if (awtWindow == null) return@DisposableEffect onDispose {}
-        val listener =
-            object : WindowFocusListener {
-                override fun windowGainedFocus(e: java.awt.event.WindowEvent?) {
-                    state.value = PlatformAppearance.isSystemDark()
-                }
+    val state = remember { mutableStateOf(PlatformAppearance.startupDark) }
+    LaunchedEffect(awtWindow) {
+        if (awtWindow == null) return@LaunchedEffect
+        callbackFlow {
+            val listener =
+                object : WindowFocusListener {
+                    override fun windowGainedFocus(e: WindowEvent?) {
+                        trySend(Unit)
+                    }
 
-                override fun windowLostFocus(e: java.awt.event.WindowEvent?) = Unit
-            }
-        awtWindow.addWindowFocusListener(listener)
-        onDispose { awtWindow.removeWindowFocusListener(listener) }
+                    override fun windowLostFocus(e: WindowEvent?) = Unit
+                }
+            awtWindow.addWindowFocusListener(listener)
+            awaitClose { awtWindow.removeWindowFocusListener(listener) }
+        }.conflate().collect {
+            state.value = withContext(Dispatchers.IO) { PlatformAppearance.isSystemDark() }
+        }
     }
     return state
 }

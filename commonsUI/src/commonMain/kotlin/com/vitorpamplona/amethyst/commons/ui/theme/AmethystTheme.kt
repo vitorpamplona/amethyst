@@ -32,6 +32,7 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.unit.Density
+import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbolsDefaults
 import com.vitorpamplona.amethyst.commons.icons.symbols.ProvideAppIcons
 import com.vitorpamplona.amethyst.commons.model.AccentColorType
 import com.vitorpamplona.amethyst.commons.model.FontFamilyType
@@ -82,13 +83,20 @@ fun amethystLightColors(accent: AccentColorType): ColorScheme =
         inversePrimary = accentPrimary(accent, dark = true),
     )
 
-/** Whether [prefTheme] resolves to dark, following the system for anything but an explicit choice. */
+/**
+ * Whether [prefTheme] resolves to dark, following the system for anything but an explicit choice.
+ * [systemDark] is the system's preference; a front end that reads it better than Compose does (the
+ * desktop asks the OS, which Compose cannot do on Linux) passes its own.
+ */
 @Composable
-fun isDarkTheme(prefTheme: ThemeType): Boolean =
+fun isDarkTheme(
+    prefTheme: ThemeType,
+    systemDark: Boolean = isSystemInDarkTheme(),
+): Boolean =
     when (prefTheme) {
         ThemeType.DARK -> true
         ThemeType.LIGHT -> false
-        else -> isSystemInDarkTheme()
+        else -> systemDark
     }
 
 /**
@@ -97,6 +105,9 @@ fun isDarkTheme(prefTheme: ThemeType): Boolean =
  * icon font. Platform chrome (Android's system bars) is the caller's to apply.
  *
  * [profilePictureCache] is true where the image loader registers the avatar thumbnail cache.
+ * [systemFontFamily] is what the "system" font choice draws with (null: Compose's default, which is
+ * already the OS font on Android), and [iconWeight] the Material Symbols stroke weight: the desktop
+ * passes the OS's own UI font and an icon weight that matches its icons.
  */
 @Composable
 fun AmethystMaterialTheme(
@@ -106,11 +117,16 @@ fun AmethystMaterialTheme(
     fontSize: FontSizeType = FontSizeType.NORMAL,
     displaySettings: DisplaySettings = DisplaySettings(),
     profilePictureCache: Boolean = false,
+    systemFontFamily: FontFamily? = null,
+    iconWeight: Int = MaterialSymbolsDefaults.WEIGHT,
     colors: ColorScheme = remember(darkTheme, accentColor) { if (darkTheme) amethystDarkColors(accentColor) else amethystLightColors(accentColor) },
     content: @Composable () -> Unit,
 ) {
-    val resolvedFontFamily = remember(fontFamily) { fontFamily.toFontFamily() }
-    val typography = remember(fontFamily) { Typography.withFontFamily(resolvedFontFamily) }
+    val resolvedFontFamily =
+        remember(fontFamily, systemFontFamily) {
+            if (fontFamily == FontFamilyType.SYSTEM) systemFontFamily else fontFamily.toFontFamily()
+        }
+    val typography = remember(resolvedFontFamily) { Typography.withFontFamily(resolvedFontFamily) }
 
     val density = LocalDensity.current
     val scaledDensity =
@@ -123,7 +139,7 @@ fun AmethystMaterialTheme(
         typography = typography,
         shapes = Shapes,
         content = {
-            ProvideAppIcons {
+            ProvideAppIcons(weight = iconWeight) {
                 CompositionLocalProvider(
                     LocalDensity provides scaledDensity,
                     LocalProfilePictureCache provides profilePictureCache,

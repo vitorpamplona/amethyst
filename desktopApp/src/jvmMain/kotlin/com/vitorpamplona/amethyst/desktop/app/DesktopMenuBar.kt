@@ -25,9 +25,18 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.input.key.Key
+import androidx.compose.ui.input.key.KeyEvent
+import androidx.compose.ui.input.key.KeyEventType
 import androidx.compose.ui.input.key.KeyShortcut
+import androidx.compose.ui.input.key.isAltPressed
+import androidx.compose.ui.input.key.isCtrlPressed
+import androidx.compose.ui.input.key.isMetaPressed
+import androidx.compose.ui.input.key.isShiftPressed
+import androidx.compose.ui.input.key.key
+import androidx.compose.ui.input.key.type
 import androidx.compose.ui.window.FrameWindowScope
 import androidx.compose.ui.window.MenuBar
+import androidx.compose.ui.window.MenuScope
 import com.vitorpamplona.amethyst.commons.model.navigation.Route
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.bookmarks
@@ -47,6 +56,8 @@ import com.vitorpamplona.amethyst.commons.resources.screen_search_title
 import com.vitorpamplona.amethyst.commons.resources.settings
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.stringRes
+import com.vitorpamplona.amethyst.desktop.platform.Platform
+import com.vitorpamplona.amethyst.desktop.platform.PlatformInfo
 
 /**
  * The window's navigator, once a logged-in shell exists: [DesktopAppRoot] sets it from inside the
@@ -66,44 +77,104 @@ class DesktopNavigator {
     }
 }
 
-private val isMac =
-    System
-        .getProperty("os.name")
-        .orEmpty()
-        .lowercase()
-        .contains("mac")
+/**
+ * What the menu bar and the keyboard shortcuts do: Cmd+key on macOS, Ctrl+key elsewhere. Everything
+ * but quitting needs a logged-in shell.
+ */
+private enum class Command(
+    val key: Key,
+    val shift: Boolean = false,
+    val needsLogin: Boolean = true,
+) {
+    NEW_POST(Key.N),
+    SETTINGS(Key.Comma),
+    QUIT(Key.Q, needsLogin = false),
+    HOME(Key.One),
+    MESSAGES(Key.Two),
+    NOTIFICATIONS(Key.Three),
+    SEARCH(Key.F),
+    PROFILE(Key.P, shift = true),
+    BOOKMARKS(Key.B, shift = true),
+    DRAFTS(Key.D, shift = true),
+    ;
 
-private fun shortcut(
-    key: Key,
-    shift: Boolean = false,
-) = if (isMac) KeyShortcut(key, meta = true, shift = shift) else KeyShortcut(key, ctrl = true, shift = shift)
+    val shortcut: KeyShortcut
+        get() = if (isMac) KeyShortcut(key, meta = true, shift = shift) else KeyShortcut(key, ctrl = true, shift = shift)
+}
 
-/** The desktop menu bar: the system one on macOS, the window's own elsewhere. */
+// The real host, not the theming preview: the system menu bar and the Cmd key only exist on a Mac.
+private val isMac = PlatformInfo.host == Platform.MACOS
+
+private fun DesktopNavigator.run(
+    command: Command,
+    onQuit: () -> Unit,
+) {
+    when (command) {
+        Command.NEW_POST -> go(Route.NewShortNote())
+        Command.SETTINGS -> go(Route.AllSettings)
+        Command.QUIT -> onQuit()
+        Command.HOME -> goTop(Route.Home)
+        Command.MESSAGES -> goTop(Route.Message)
+        Command.NOTIFICATIONS -> goTop(Route.Notification())
+        Command.SEARCH -> goTop(Route.Search())
+        Command.PROFILE -> userPubKeyHex?.let { go(Route.Profile(it)) }
+        Command.BOOKMARKS -> go(Route.Bookmarks)
+        Command.DRAFTS -> go(Route.Drafts)
+    }
+}
+
+/**
+ * The window's keyboard shortcuts where there is no menu bar to carry them (Linux, Windows): pass it
+ * to the window's `onPreviewKeyEvent`. On macOS the menu bar handles them and this does nothing.
+ */
+fun DesktopNavigator.handleShortcut(
+    event: KeyEvent,
+    onQuit: () -> Unit,
+): Boolean {
+    if (isMac || event.type != KeyEventType.KeyDown) return false
+    if (!event.isCtrlPressed || event.isAltPressed || event.isMetaPressed) return false
+    val command = Command.entries.firstOrNull { it.key == event.key && it.shift == event.isShiftPressed } ?: return false
+    if (command.needsLogin && nav == null) return false
+    run(command, onQuit)
+    return true
+}
+
+/**
+ * The macOS menu bar, at the top of the screen. Linux and Windows get none: Swing would draw it
+ * inside the window, in a look neither OS uses (GNOME apps have no menu bar), and everything in it
+ * is in the drawer; their shortcuts go through [handleShortcut].
+ */
 @Composable
 fun FrameWindowScope.DesktopMenuBar(
     navigator: DesktopNavigator,
     onQuit: () -> Unit,
 ) {
+    if (!isMac) return
+
     val loggedIn = navigator.nav != null
+
+    @Composable
+    fun MenuScope.CommandItem(
+        label: String,
+        command: Command,
+    ) = Item(label, enabled = loggedIn || !command.needsLogin, shortcut = command.shortcut) { navigator.run(command, onQuit) }
 
     MenuBar {
         Menu(stringRes(Res.string.desktop_menu_file)) {
-            Item(stringRes(Res.string.new_post), enabled = loggedIn, shortcut = shortcut(Key.N)) { navigator.go(Route.NewShortNote()) }
-            Item(stringRes(Res.string.settings), enabled = loggedIn, shortcut = shortcut(Key.Comma)) { navigator.go(Route.AllSettings) }
+            CommandItem(stringRes(Res.string.new_post), Command.NEW_POST)
+            CommandItem(stringRes(Res.string.settings), Command.SETTINGS)
             Separator()
-            Item(stringRes(Res.string.desktop_menu_quit), shortcut = shortcut(Key.Q), onClick = onQuit)
+            CommandItem(stringRes(Res.string.desktop_menu_quit), Command.QUIT)
         }
         Menu(stringRes(Res.string.desktop_menu_go)) {
-            Item(stringRes(Res.string.desktop_menu_home), enabled = loggedIn, shortcut = shortcut(Key.One)) { navigator.goTop(Route.Home) }
-            Item(stringRes(Res.string.desktop_menu_messages), enabled = loggedIn, shortcut = shortcut(Key.Two)) { navigator.goTop(Route.Message) }
-            Item(stringRes(Res.string.desktop_menu_notifications), enabled = loggedIn, shortcut = shortcut(Key.Three)) { navigator.goTop(Route.Notification()) }
-            Item(stringRes(Res.string.screen_search_title), enabled = loggedIn, shortcut = shortcut(Key.F)) { navigator.goTop(Route.Search()) }
+            CommandItem(stringRes(Res.string.desktop_menu_home), Command.HOME)
+            CommandItem(stringRes(Res.string.desktop_menu_messages), Command.MESSAGES)
+            CommandItem(stringRes(Res.string.desktop_menu_notifications), Command.NOTIFICATIONS)
+            CommandItem(stringRes(Res.string.screen_search_title), Command.SEARCH)
             Separator()
-            Item(stringRes(Res.string.profile), enabled = loggedIn, shortcut = shortcut(Key.P, shift = true)) {
-                navigator.userPubKeyHex?.let { navigator.go(Route.Profile(it)) }
-            }
-            Item(stringRes(Res.string.bookmarks), enabled = loggedIn, shortcut = shortcut(Key.B, shift = true)) { navigator.go(Route.Bookmarks) }
-            Item(stringRes(Res.string.drafts), enabled = loggedIn, shortcut = shortcut(Key.D, shift = true)) { navigator.go(Route.Drafts) }
+            CommandItem(stringRes(Res.string.profile), Command.PROFILE)
+            CommandItem(stringRes(Res.string.bookmarks), Command.BOOKMARKS)
+            CommandItem(stringRes(Res.string.drafts), Command.DRAFTS)
         }
         Menu(stringRes(Res.string.desktop_menu_help)) {
             Item(stringRes(Res.string.desktop_menu_about)) { DesktopBrowser.open(PROJECT_URL) }

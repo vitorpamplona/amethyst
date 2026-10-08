@@ -20,10 +20,14 @@
  */
 package com.vitorpamplona.amethyst.desktop.app
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
@@ -35,6 +39,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Window
+import androidx.compose.ui.window.WindowPlacement
 import androidx.compose.ui.window.WindowPosition
 import androidx.compose.ui.window.application
 import androidx.compose.ui.window.rememberWindowState
@@ -54,7 +59,13 @@ import com.vitorpamplona.amethyst.commons.ui.screen.collectDisplaySettings
 import com.vitorpamplona.amethyst.commons.ui.theme.AmethystMaterialTheme
 import com.vitorpamplona.amethyst.commons.ui.theme.isDarkTheme
 import com.vitorpamplona.amethyst.desktop.platform.IconResources
+import com.vitorpamplona.amethyst.desktop.platform.PlatformAppearance
+import com.vitorpamplona.amethyst.desktop.platform.PlatformFonts
+import com.vitorpamplona.amethyst.desktop.platform.PlatformIconWeight
 import com.vitorpamplona.amethyst.desktop.platform.PlatformInfo
+import com.vitorpamplona.amethyst.desktop.platform.applyNativeWindowChrome
+import com.vitorpamplona.amethyst.desktop.platform.rememberSystemDark
+import com.vitorpamplona.amethyst.desktop.platform.titleBarInsetTop
 import com.vitorpamplona.amethyst.desktop.service.images.DesktopImageLoaderSetup
 import com.vitorpamplona.amethyst.desktop.service.media.GlobalMediaPlayer
 import com.vitorpamplona.amethyst.desktop.service.media.MediaHttp
@@ -88,6 +99,9 @@ fun main(args: Array<String>) {
         System.setProperty("apple.awt.application.appearance", "system")
     }
     setDockIcon()
+    // Read ahead of the first frame, off the UI thread: the OS theme (a shell-out) and the OS fonts.
+    PlatformAppearance.startupDark
+    PlatformFonts.ui
 
     val isDebug = System.getProperty("amethyst.debug") == "true"
     Log.minLevel = if (isDebug) LogLevel.DEBUG else LogLevel.INFO
@@ -140,7 +154,11 @@ fun main(args: Array<String>) {
             state = windowState,
             title = "Amethyst",
             icon = IconResources.adaptedBitmapPainter,
+            onPreviewKeyEvent = { root.navigator.handleShortcut(it, onQuit = ::exitApplication) },
         ) {
+            // macOS: the title bar turns transparent over the app, which draws its own strip there.
+            applyNativeWindowChrome()
+
             DesktopMenuBar(root.navigator, onQuit = ::exitApplication)
 
             // The window outlives every destination: screens that share state across destinations
@@ -155,7 +173,9 @@ fun main(args: Array<String>) {
             // Set while a video plays in the OS full-screen overlay.
             val immersiveFullscreen = remember { mutableStateOf(false) }
 
-            DesktopTheme(modules) {
+            val systemDark by rememberSystemDark(window)
+
+            DesktopTheme(modules, systemDark) {
                 NowProvider {
                     CompositionLocalProvider(
                         LocalViewModelStoreOwner provides windowViewModels,
@@ -171,6 +191,17 @@ fun main(args: Array<String>) {
                     ) {
                         Box(Modifier.fillMaxSize()) {
                             Column(Modifier.fillMaxSize()) {
+                                // Under macOS's transparent title bar, a strip in the app's
+                                // background color: the traffic lights sit on the app itself, and the
+                                // window reads as one surface. Full screen has no title bar.
+                                if (PlatformInfo.isMacOS && windowState.placement != WindowPlacement.Fullscreen) {
+                                    Spacer(
+                                        Modifier
+                                            .fillMaxWidth()
+                                            .height(titleBarInsetTop)
+                                            .background(MaterialTheme.colorScheme.background),
+                                    )
+                                }
                                 Box(Modifier.weight(1f).fillMaxWidth()) {
                                     AmethystApp(modules.sessionManager, root)
                                     SnackbarHost(platform.snackbarHostState, Modifier.align(Alignment.BottomCenter))
@@ -190,10 +221,15 @@ fun main(args: Array<String>) {
     }
 }
 
-/** The shared Material theme, driven by the UI settings the user picked in the app. */
+/**
+ * The shared Material theme, driven by the UI settings the user picked in the app, in the OS's own
+ * look: "system" theme follows the OS's dark/light setting, "system" font is the OS's UI font, and
+ * icons take the stroke weight of the OS's own icons. The colors stay the app's.
+ */
 @Composable
 private fun DesktopTheme(
     modules: DesktopAppModules,
+    systemDark: Boolean,
     content: @Composable () -> Unit,
 ) {
     val prefs = modules.uiPrefs
@@ -204,11 +240,13 @@ private fun DesktopTheme(
     val displaySettings = collectDisplaySettings(modules.uiState)
 
     AmethystMaterialTheme(
-        darkTheme = isDarkTheme(theme),
+        darkTheme = isDarkTheme(theme, systemDark),
         accentColor = accentColor,
         fontFamily = fontFamily,
         fontSize = fontSize,
         displaySettings = displaySettings,
+        systemFontFamily = PlatformFonts.ui,
+        iconWeight = PlatformIconWeight.current,
         content = content,
     )
 }
