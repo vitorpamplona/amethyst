@@ -18,25 +18,31 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.service.cashu
+package com.vitorpamplona.amethyst.commons.service.crashreports
 
-import android.util.LruCache
-import com.vitorpamplona.amethyst.commons.service.cashu.CashuParser
-import com.vitorpamplona.amethyst.commons.ui.components.GenericLoadable
-import com.vitorpamplona.quartz.nip60Cashu.token.CashuToken
-import kotlinx.collections.immutable.ImmutableList
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
+import java.io.File
 
-object CachedCashuParser {
-    val cashuCache = LruCache<String, GenericLoadable<ImmutableList<CashuToken>>>(20)
+private const val STACK_TRACE_FILENAME = "stack.trace"
 
-    fun cached(token: String): GenericLoadable<ImmutableList<CashuToken>> = cashuCache[token] ?: GenericLoadable.Loading()
+/**
+ * The last crash's report, kept in [dir] until the next start hands it to the user. Android passes
+ * its files dir, where this file has always lived (`openFileOutput` wrote it there).
+ */
+class CrashReportCache(
+    private val dir: File,
+) {
+    private val file get() = File(dir, STACK_TRACE_FILENAME)
 
-    fun parse(token: String): GenericLoadable<ImmutableList<CashuToken>> {
-        if (cashuCache[token] !is GenericLoadable.Loaded) {
-            val newCachuData = CashuParser().parse(token)
-            cashuCache.put(token, newCachuData)
-        }
-
-        return cashuCache[token]
+    fun writeReport(report: String) {
+        file.writeText(report)
     }
+
+    suspend fun loadAndDelete(): String? =
+        withContext(Dispatchers.IO) {
+            val stack = file.takeIf { it.exists() }?.readText()
+            file.delete()
+            stack
+        }
 }

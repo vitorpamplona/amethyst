@@ -248,32 +248,6 @@ interface NotePlatform {
         accountViewModel: AccountViewModel,
     ) {}
 
-    // Chess
-
-    @Composable
-    fun RenderChessGame(
-        note: Note,
-        backgroundColor: MutableState<Color>,
-        accountViewModel: AccountViewModel,
-        nav: INav,
-    ) {}
-
-    @Composable
-    fun RenderLiveChessChallenge(
-        note: Note,
-        backgroundColor: MutableState<Color>,
-        accountViewModel: AccountViewModel,
-        nav: INav,
-    ) {}
-
-    @Composable
-    fun RenderLiveChessGameEnd(
-        note: Note,
-        backgroundColor: MutableState<Color>,
-        accountViewModel: AccountViewModel,
-        nav: INav,
-    ) {}
-
     // Git
 
     @Composable

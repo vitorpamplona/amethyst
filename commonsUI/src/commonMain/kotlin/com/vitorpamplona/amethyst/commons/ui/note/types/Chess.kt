@@ -18,9 +18,8 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.ui.note.types
+package com.vitorpamplona.amethyst.commons.ui.note.types
 
-import androidx.activity.compose.LocalActivity
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -123,7 +122,6 @@ fun RenderLiveChessChallenge(
 ) {
     val event = (note.event as? LiveChessGameChallengeEvent) ?: return
     val gameId = event.gameId()
-    val activity = LocalActivity.current as androidx.fragment.app.FragmentActivity
 
     val chessViewModel: ChessViewModel =
         viewModel(

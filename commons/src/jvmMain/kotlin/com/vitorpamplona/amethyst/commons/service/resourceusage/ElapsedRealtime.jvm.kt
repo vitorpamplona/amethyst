@@ -18,29 +18,7 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.commons.util
+package com.vitorpamplona.amethyst.commons.service.resourceusage
 
-import platform.Foundation.NSNumber
-import platform.Foundation.NSNumberFormatter
-import platform.Foundation.NSNumberFormatterDecimalStyle
-import platform.Foundation.numberWithDouble
-import platform.Foundation.numberWithLongLong
-
-actual fun formatGrouped(value: Long): String {
-    val formatter = NSNumberFormatter().apply { numberStyle = NSNumberFormatterDecimalStyle }
-    return formatter.stringFromNumber(NSNumber.numberWithLongLong(value)) ?: value.toString()
-}
-
-actual fun formatDecimal(
-    value: Double,
-    maxFractionDigits: Int,
-    minFractionDigits: Int,
-): String {
-    val formatter =
-        NSNumberFormatter().apply {
-            numberStyle = NSNumberFormatterDecimalStyle
-            maximumFractionDigits = maxFractionDigits.toULong()
-            minimumFractionDigits = minFractionDigits.toULong()
-        }
-    return formatter.stringFromNumber(NSNumber.numberWithDouble(value)) ?: value.toString()
-}
+// A desktop has no boot clock that counts sleep; the monotonic clock is the closest.
+actual fun elapsedRealtimeMillis(): Long = System.nanoTime() / 1_000_000

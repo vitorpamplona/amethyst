@@ -18,13 +18,14 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.service.lnurl
+package com.vitorpamplona.amethyst.commons.service.lnurl
 
-import android.util.LruCache
+import androidx.collection.LruCache
 import androidx.compose.runtime.Stable
+import com.vitorpamplona.amethyst.commons.util.formatDecimal
 import com.vitorpamplona.quartz.lightning.LnInvoiceUtil
+import com.vitorpamplona.quartz.utils.toDoubleValue
 import kotlinx.coroutines.CancellationException
-import java.text.NumberFormat
 
 @Stable
 data class InvoiceAmount(
@@ -46,7 +47,7 @@ object CachedLnInvoiceParser {
         if (myInvoice != null) {
             val myInvoiceAmount =
                 try {
-                    NumberFormat.getInstance().format(LnInvoiceUtil.getAmountInSats(myInvoice))
+                    formatDecimal(LnInvoiceUtil.getAmountInSats(myInvoice).toDoubleValue(), maxFractionDigits = 3)
                 } catch (e: Exception) {
                     if (e is CancellationException) throw e
                     e.printStackTrace()

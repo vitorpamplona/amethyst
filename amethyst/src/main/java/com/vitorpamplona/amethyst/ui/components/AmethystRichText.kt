@@ -34,14 +34,16 @@ import com.vitorpamplona.amethyst.commons.richtext.RichTextViewerState
 import com.vitorpamplona.amethyst.commons.richtext.SecretEmoji
 import com.vitorpamplona.amethyst.commons.richtext.Segment
 import com.vitorpamplona.amethyst.commons.richtext.WithdrawSegment
+import com.vitorpamplona.amethyst.commons.ui.components.CashuPreview
+import com.vitorpamplona.amethyst.commons.ui.components.MayBeWithdrawal
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
+import com.vitorpamplona.amethyst.commons.ui.note.creators.invoice.ClinkOfferPreview
+import com.vitorpamplona.amethyst.commons.ui.note.creators.invoice.MayBeInvoicePreview
 import com.vitorpamplona.amethyst.commons.ui.richtext.DefaultRichTextSegmentRenderer
 import com.vitorpamplona.amethyst.commons.ui.richtext.RichTextPlatform
 import com.vitorpamplona.amethyst.commons.ui.richtext.RichTextSegmentRenderer
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.amethyst.ui.components.markdown.RenderContentAsMarkdown
-import com.vitorpamplona.amethyst.ui.note.creators.invoice.ClinkOfferPreview
-import com.vitorpamplona.amethyst.ui.note.creators.invoice.MayBeInvoicePreview
 
 /**
  * Android's leaves on the shared [DefaultRichTextSegmentRenderer]: LaTeX, the payment cards

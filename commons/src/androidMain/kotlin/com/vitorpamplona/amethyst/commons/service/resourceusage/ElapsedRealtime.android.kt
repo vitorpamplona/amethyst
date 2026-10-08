@@ -18,37 +18,8 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.service.resourceusage
+package com.vitorpamplona.amethyst.commons.service.resourceusage
 
 import android.os.SystemClock
-import com.vitorpamplona.amethyst.commons.service.resourceusage.UsageKeys
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Job
-import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.launch
 
-/**
- * Integrates time-with-UI-visible into the ledger ([UsageKeys.APP_FG_MS]).
- * Screen-on time is what display power is proportional to, and it's the
- * denominator that makes every other counter interpretable (MB per hour in
- * app vs MB while backgrounded).
- */
-class ForegroundTimeIntegrator(
-    private val isForeground: Flow<Boolean>,
-    accountant: ResourceUsageAccountant,
-    nowMs: () -> Long = { SystemClock.elapsedRealtime() },
-) : TimeSegmentIntegrator<Unit>(accountant, nowMs) {
-    fun start(scope: CoroutineScope): Job {
-        registerFlushHook()
-        return scope.launch {
-            isForeground.collect { fg -> transitionTo(if (fg) Unit else null) }
-        }
-    }
-
-    override fun account(
-        state: Unit,
-        elapsedMs: Long,
-    ) {
-        if (elapsedMs > 0) accountant.add(UsageKeys.APP_FG_MS, elapsedMs)
-    }
-}
+actual fun elapsedRealtimeMillis(): Long = SystemClock.elapsedRealtime()

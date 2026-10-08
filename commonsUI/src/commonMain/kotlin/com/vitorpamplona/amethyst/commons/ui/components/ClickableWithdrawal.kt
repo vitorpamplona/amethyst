@@ -18,7 +18,7 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.ui.components
+package com.vitorpamplona.amethyst.commons.ui.components
 
 import androidx.compose.material3.LocalTextStyle
 import androidx.compose.material3.Text
@@ -28,7 +28,6 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextDirection
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.error_dialog_pay_withdraw_error
@@ -37,10 +36,12 @@ import com.vitorpamplona.amethyst.commons.ui.components.ClickableTextPrimary
 import com.vitorpamplona.amethyst.commons.ui.components.CrossfadeIfEnabled
 import com.vitorpamplona.amethyst.commons.ui.note.ErrorMessageDialog
 import com.vitorpamplona.amethyst.commons.ui.stringRes
+import com.vitorpamplona.amethyst.commons.ui.wallet.payInvoice
+import com.vitorpamplona.amethyst.commons.ui.wallet.rememberWalletAppLauncher
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
-import com.vitorpamplona.amethyst.ui.note.payViaIntent
 import com.vitorpamplona.quartz.lightning.LnWithdrawalUtil
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.IO
 import kotlinx.coroutines.launch
 
 @Composable
@@ -69,7 +70,7 @@ fun MayBeWithdrawal(
 @Composable
 fun ClickableWithdrawal(withdrawalString: String) {
     val noWalletFoundStr = stringRes(Res.string.no_wallet_found)
-    val context = LocalContext.current
+    val walletLauncher = rememberWalletAppLauncher()
 
     var showErrorMessageDialog by remember { mutableStateOf<String?>(null) }
 
@@ -83,6 +84,6 @@ fun ClickableWithdrawal(withdrawalString: String) {
 
     ClickableTextPrimary(
         text = "$withdrawalString ",
-        onClick = { payViaIntent(withdrawalString, context, noWalletFoundStr, { }) { showErrorMessageDialog = it } },
+        onClick = { walletLauncher.payInvoice(withdrawalString, noWalletFoundStr, { }) { showErrorMessageDialog = it } },
     )
 }

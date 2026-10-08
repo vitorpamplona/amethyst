@@ -18,9 +18,8 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.service.resourceusage
+package com.vitorpamplona.amethyst.commons.service.resourceusage
 
-import android.os.SystemClock
 import com.vitorpamplona.amethyst.commons.service.resourceusage.UsageKeys
 import okhttp3.Interceptor
 import okhttp3.OkHttpClient
@@ -57,7 +56,7 @@ class RadioBurstEstimator(
     private val accountant: ResourceUsageAccountant,
     private val isMobile: () -> Boolean,
     private val isForeground: () -> Boolean,
-    private val nowMs: () -> Long = { SystemClock.elapsedRealtime() },
+    private val nowMs: () -> Long = { elapsedRealtimeMillis() },
 ) {
     @Volatile private var lastActivityMs = Long.MIN_VALUE
 
@@ -95,7 +94,7 @@ class UsageCountingInterceptor(
     private val isForeground: () -> Boolean,
     private val bursts: RadioBurstEstimator? = null,
     private val defaultRole: String = UsageKeys.ROLE_OTHER,
-    private val nowMs: () -> Long = { SystemClock.elapsedRealtime() },
+    private val nowMs: () -> Long = { elapsedRealtimeMillis() },
 ) : Interceptor {
     override fun intercept(chain: Interceptor.Chain): Response {
         val request = chain.request()

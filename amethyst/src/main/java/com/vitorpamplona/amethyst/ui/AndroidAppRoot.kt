@@ -29,6 +29,7 @@ import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.commons.account.AccountSessionManager
 import com.vitorpamplona.amethyst.commons.model.Account
 import com.vitorpamplona.amethyst.commons.model.navigation.favoriteIds
+import com.vitorpamplona.amethyst.commons.service.resourceusage.ScreenTimeIntegrator
 import com.vitorpamplona.amethyst.commons.ui.app.AppRoot
 import com.vitorpamplona.amethyst.commons.ui.layouts.ScreenLayoutSpec
 import com.vitorpamplona.amethyst.commons.ui.layouts.rememberScreenLayoutSpec
@@ -36,7 +37,6 @@ import com.vitorpamplona.amethyst.commons.ui.navigation.host.NavDestinations
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.Nav
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.amethyst.service.resourceusage.DisplayResourceUsageAlert
-import com.vitorpamplona.amethyst.service.resourceusage.ScreenTimeIntegrator
 import com.vitorpamplona.amethyst.ui.navigation.NavigateIfIntentRequested
 import com.vitorpamplona.amethyst.ui.navigation.ObserveIncomingCalls
 import com.vitorpamplona.amethyst.ui.navigation.androidDestinations

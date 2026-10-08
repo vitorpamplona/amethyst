@@ -118,6 +118,7 @@ fun main(args: Array<String>) {
             ?: "dev"
 
     val modules = DesktopAppModules(filesDir, version, isDebug)
+    modules.installCrashReporter()
 
     // Images go through the role builder, so each URL follows the user's Tor choice for images.
     DesktopImageLoaderSetup.setup { url -> modules.roleBasedHttpClientBuilder.okHttpClientForImage(url) }

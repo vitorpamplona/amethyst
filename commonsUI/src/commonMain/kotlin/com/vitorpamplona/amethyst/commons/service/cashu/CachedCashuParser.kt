@@ -18,29 +18,22 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.commons.util
+package com.vitorpamplona.amethyst.commons.service.cashu
 
-import platform.Foundation.NSNumber
-import platform.Foundation.NSNumberFormatter
-import platform.Foundation.NSNumberFormatterDecimalStyle
-import platform.Foundation.numberWithDouble
-import platform.Foundation.numberWithLongLong
+import androidx.collection.LruCache
+import com.vitorpamplona.amethyst.commons.service.cashu.CashuParser
+import com.vitorpamplona.amethyst.commons.ui.components.GenericLoadable
+import com.vitorpamplona.quartz.nip60Cashu.token.CashuToken
+import kotlinx.collections.immutable.ImmutableList
 
-actual fun formatGrouped(value: Long): String {
-    val formatter = NSNumberFormatter().apply { numberStyle = NSNumberFormatterDecimalStyle }
-    return formatter.stringFromNumber(NSNumber.numberWithLongLong(value)) ?: value.toString()
-}
+object CachedCashuParser {
+    val cashuCache = LruCache<String, GenericLoadable<ImmutableList<CashuToken>>>(20)
 
-actual fun formatDecimal(
-    value: Double,
-    maxFractionDigits: Int,
-    minFractionDigits: Int,
-): String {
-    val formatter =
-        NSNumberFormatter().apply {
-            numberStyle = NSNumberFormatterDecimalStyle
-            maximumFractionDigits = maxFractionDigits.toULong()
-            minimumFractionDigits = minFractionDigits.toULong()
-        }
-    return formatter.stringFromNumber(NSNumber.numberWithDouble(value)) ?: value.toString()
+    fun cached(token: String): GenericLoadable<ImmutableList<CashuToken>> = cashuCache[token] ?: GenericLoadable.Loading()
+
+    fun parse(token: String): GenericLoadable<ImmutableList<CashuToken>> {
+        val cached = cashuCache[token]
+        if (cached is GenericLoadable.Loaded) return cached
+        return CashuParser().parse(token).also { cashuCache.put(token, it) }
+    }
 }

@@ -27,4 +27,11 @@ actual fun formatGrouped(value: Long): String = NumberFormat.getNumberInstance()
 actual fun formatDecimal(
     value: Double,
     maxFractionDigits: Int,
-): String = NumberFormat.getNumberInstance().apply { maximumFractionDigits = maxFractionDigits }.format(value)
+    minFractionDigits: Int,
+): String =
+    NumberFormat
+        .getNumberInstance()
+        .apply {
+            maximumFractionDigits = maxFractionDigits
+            minimumFractionDigits = minFractionDigits
+        }.format(value)

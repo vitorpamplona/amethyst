@@ -18,9 +18,8 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.service.resourceusage
+package com.vitorpamplona.amethyst.commons.service.resourceusage
 
-import android.os.SystemClock
 import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.purposeOrNull
 import com.vitorpamplona.amethyst.commons.service.resourceusage.UsageKeys
 import com.vitorpamplona.quartz.nip01Core.relay.client.listeners.RelayConnectionListener
@@ -59,7 +58,7 @@ class RelayUsageListener(
     private val accountant: ResourceUsageAccountant,
     private val isMobile: () -> Boolean,
     private val isForeground: () -> Boolean,
-    private val nowMs: () -> Long = { SystemClock.elapsedRealtime() },
+    private val nowMs: () -> Long = { elapsedRealtimeMillis() },
 ) : RelayConnectionListener {
     /**
      * Relay -> when its current session became ready. Touched from the per-relay

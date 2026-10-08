@@ -45,6 +45,7 @@ import com.vitorpamplona.amethyst.commons.resources.resource_usage_reason_conn_t
 import com.vitorpamplona.amethyst.commons.resources.resource_usage_reason_reconnects
 import com.vitorpamplona.amethyst.commons.resources.resource_usage_reason_wakelock
 import com.vitorpamplona.amethyst.commons.service.crashreports.DEV_REPORT_PUBKEY
+import com.vitorpamplona.amethyst.commons.service.resourceusage.ResourceUsageAlerts
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.navigation.routes.routeToMessage
 import com.vitorpamplona.amethyst.commons.ui.pluralStringRes

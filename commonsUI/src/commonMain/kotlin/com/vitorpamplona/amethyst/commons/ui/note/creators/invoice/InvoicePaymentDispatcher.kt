@@ -18,7 +18,7 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.ui.note.creators.invoice
+package com.vitorpamplona.amethyst.commons.ui.note.creators.invoice
 
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
@@ -28,7 +28,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.ui.platform.LocalContext
 import com.vitorpamplona.amethyst.commons.model.payments.PaymentSource
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.cancel
@@ -42,9 +41,11 @@ import com.vitorpamplona.amethyst.commons.resources.sats
 import com.vitorpamplona.amethyst.commons.service.nwc.nwcFailureDetail
 import com.vitorpamplona.amethyst.commons.service.nwc.nwcTimeoutMessage
 import com.vitorpamplona.amethyst.commons.ui.stringRes
+import com.vitorpamplona.amethyst.commons.ui.wallet.payInvoice
+import com.vitorpamplona.amethyst.commons.ui.wallet.rememberWalletAppLauncher
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
-import com.vitorpamplona.amethyst.ui.note.payViaIntent
 import com.vitorpamplona.quartz.lightning.LnInvoiceUtil
+import com.vitorpamplona.quartz.utils.toLongValue
 import kotlinx.coroutines.launch
 
 /**
@@ -69,7 +70,7 @@ fun InvoicePaymentDispatcher(
     val noWalletFoundStr = stringRes(Res.string.no_wallet_found)
     val clinkDebitNoResponseStr = stringRes(Res.string.clink_debit_no_response)
     if (bolt11 == null) return
-    val context = LocalContext.current
+    val walletLauncher = rememberWalletAppLauncher()
     // The NIP-47 callbacks below are invoked by the relay dispatcher, not by
     // composition, so their bodies run in this scope to read their messages.
     val scope = rememberCoroutineScope()
@@ -79,7 +80,7 @@ fun InvoicePaymentDispatcher(
     if (source == null) {
         // No in-app wallet configured -> hand off to an external wallet app (it confirms).
         LaunchedEffect(bolt11) {
-            payViaIntent(bolt11, context, noWalletFoundStr, onSuccess, onError)
+            walletLauncher.payInvoice(bolt11, noWalletFoundStr, onSuccess, onError)
             onClear()
         }
         return
@@ -88,7 +89,7 @@ fun InvoicePaymentDispatcher(
     val amountSats =
         remember(bolt11) {
             try {
-                LnInvoiceUtil.getAmountInSats(bolt11).toLong().takeIf { it > 0 }
+                LnInvoiceUtil.getAmountInSats(bolt11).toLongValue().takeIf { it > 0 }
             } catch (_: Exception) {
                 null
             }
@@ -137,7 +138,6 @@ private fun ConfirmPaymentDialog(
     onConfirm: () -> Unit,
     onDismiss: () -> Unit,
 ) {
-    val context = LocalContext.current
     val message =
         if (amountSats != null) {
             val amountText = "$amountSats ${stringRes(Res.string.sats)}"

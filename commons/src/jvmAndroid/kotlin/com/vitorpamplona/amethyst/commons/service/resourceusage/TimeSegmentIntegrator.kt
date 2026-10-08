@@ -18,9 +18,7 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.service.resourceusage
-
-import android.os.SystemClock
+package com.vitorpamplona.amethyst.commons.service.resourceusage
 
 /**
  * Timer-free duration integrator: the elapsed time of the current state is
@@ -29,7 +27,7 @@ import android.os.SystemClock
  * segments (a call, a backgrounded night with relays connected) still land in
  * the right day bucket without any periodic timer.
  *
- * Durations are measured with [SystemClock.elapsedRealtime] — the monotonic
+ * Durations are measured with [elapsedRealtimeMillis] — the monotonic
  * clock — never the wall clock: an NTP/timezone correction mid-segment must
  * not fabricate or delete accounted time. (Wall time is only ever used for
  * choosing the epoch-day bucket, which happens in the accountant.)
@@ -39,7 +37,7 @@ import android.os.SystemClock
  */
 abstract class TimeSegmentIntegrator<S : Any>(
     protected val accountant: ResourceUsageAccountant,
-    private val nowMs: () -> Long = { SystemClock.elapsedRealtime() },
+    private val nowMs: () -> Long = { elapsedRealtimeMillis() },
 ) {
     private val lock = Any()
     private var current: S? = null
@@ -90,7 +88,7 @@ class SessionTimeIntegrator(
     accountant: ResourceUsageAccountant,
     private val msKey: String,
     private val startsKey: String? = null,
-    nowMs: () -> Long = { SystemClock.elapsedRealtime() },
+    nowMs: () -> Long = { elapsedRealtimeMillis() },
 ) : TimeSegmentIntegrator<Unit>(accountant, nowMs) {
     fun setActive(active: Boolean) {
         val prev = transitionTo(if (active) Unit else null)

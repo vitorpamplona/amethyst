@@ -18,28 +18,11 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.service.crashreports
+package com.vitorpamplona.amethyst.commons.service.resourceusage
 
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.launch
-
-class UnexpectedCrashSaver(
-    val cache: CrashReportCache,
-    val scope: CoroutineScope,
-) : Thread.UncaughtExceptionHandler {
-    private val defaultUEH: Thread.UncaughtExceptionHandler? = Thread.getDefaultUncaughtExceptionHandler()
-
-    override fun uncaughtException(
-        t: Thread,
-        e: Throwable,
-    ) {
-        if (e !is OutOfMemoryError) {
-            // OOM reports are junk
-            val threadName = t.name
-            scope.launch {
-                cache.writeReport(ReportAssembler().buildReport(e, threadName))
-            }
-        }
-        defaultUEH!!.uncaughtException(t, e)
-    }
-}
+/**
+ * Milliseconds since boot, deep sleep included: what the usage meter measures time segments with.
+ * Android's elapsedRealtime counts the time the phone slept with a relay connected; the JVM's
+ * nanoTime would not.
+ */
+expect fun elapsedRealtimeMillis(): Long

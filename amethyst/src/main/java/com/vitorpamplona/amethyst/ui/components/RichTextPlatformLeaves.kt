@@ -78,6 +78,7 @@ import com.vitorpamplona.amethyst.commons.richtext.VideoSegment
 import com.vitorpamplona.amethyst.commons.richtext.WithdrawSegment
 import com.vitorpamplona.amethyst.commons.ui.components.AnimatedBorderTextCornerRadius
 import com.vitorpamplona.amethyst.commons.ui.components.BechLink
+import com.vitorpamplona.amethyst.commons.ui.components.CashuPreview
 import com.vitorpamplona.amethyst.commons.ui.components.ClickableBuzzInviteLink
 import com.vitorpamplona.amethyst.commons.ui.components.ClickableConcordInviteLink
 import com.vitorpamplona.amethyst.commons.ui.components.ClickableEmail
@@ -90,6 +91,7 @@ import com.vitorpamplona.amethyst.commons.ui.components.ConcordInviteCard
 import com.vitorpamplona.amethyst.commons.ui.components.CreateClickableText
 import com.vitorpamplona.amethyst.commons.ui.components.HashTag
 import com.vitorpamplona.amethyst.commons.ui.components.LoadUrlPreview
+import com.vitorpamplona.amethyst.commons.ui.components.MayBeWithdrawal
 import com.vitorpamplona.amethyst.commons.ui.components.NowhereLinkCard
 import com.vitorpamplona.amethyst.commons.ui.components.RelayGroupCard
 import com.vitorpamplona.amethyst.commons.ui.components.RenderCustomEmoji
@@ -100,12 +102,12 @@ import com.vitorpamplona.amethyst.commons.ui.components.measureSpaceWidth
 import com.vitorpamplona.amethyst.commons.ui.components.rememberBlossomUriOpener
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.EmptyNav
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
+import com.vitorpamplona.amethyst.commons.ui.note.creators.invoice.ClinkOfferPreview
+import com.vitorpamplona.amethyst.commons.ui.note.creators.invoice.MayBeInvoicePreview
 import com.vitorpamplona.amethyst.commons.ui.theme.CashuCardBorders
 import com.vitorpamplona.amethyst.commons.ui.theme.HalfVertPadding
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.amethyst.commons.viewmodels.mockAccountViewModel
-import com.vitorpamplona.amethyst.ui.note.creators.invoice.ClinkOfferPreview
-import com.vitorpamplona.amethyst.ui.note.creators.invoice.MayBeInvoicePreview
 import com.vitorpamplona.quartz.nipB7Blossom.BlossomUri
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch

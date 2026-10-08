@@ -277,45 +277,6 @@ fun RenderAudioWithWaveform(
 )
 
 @Composable
-fun RenderChessGame(
-    note: Note,
-    backgroundColor: MutableState<Color>,
-    accountViewModel: AccountViewModel,
-    nav: INav,
-) = LocalNotePlatform.current.RenderChessGame(
-    note = note,
-    backgroundColor = backgroundColor,
-    accountViewModel = accountViewModel,
-    nav = nav,
-)
-
-@Composable
-fun RenderLiveChessChallenge(
-    note: Note,
-    backgroundColor: MutableState<Color>,
-    accountViewModel: AccountViewModel,
-    nav: INav,
-) = LocalNotePlatform.current.RenderLiveChessChallenge(
-    note = note,
-    backgroundColor = backgroundColor,
-    accountViewModel = accountViewModel,
-    nav = nav,
-)
-
-@Composable
-fun RenderLiveChessGameEnd(
-    note: Note,
-    backgroundColor: MutableState<Color>,
-    accountViewModel: AccountViewModel,
-    nav: INav,
-) = LocalNotePlatform.current.RenderLiveChessGameEnd(
-    note = note,
-    backgroundColor = backgroundColor,
-    accountViewModel = accountViewModel,
-    nav = nav,
-)
-
-@Composable
 fun RenderGitRepositoryEvent(
     baseNote: Note,
     accountViewModel: AccountViewModel,

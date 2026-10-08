@@ -23,6 +23,7 @@ package com.vitorpamplona.amethyst.service.resourceusage
 import android.os.Build
 import com.vitorpamplona.amethyst.BuildConfig
 import com.vitorpamplona.amethyst.MemorySnapshot
+import com.vitorpamplona.amethyst.commons.service.resourceusage.UsageSummary
 import java.util.Locale
 
 /**

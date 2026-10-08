@@ -128,14 +128,11 @@ import com.vitorpamplona.amethyst.commons.ui.note.elements.TimeAgoStyle
 import com.vitorpamplona.amethyst.commons.ui.note.formatDateTime
 import com.vitorpamplona.amethyst.commons.ui.note.platform.RenderAudioHeader
 import com.vitorpamplona.amethyst.commons.ui.note.platform.RenderAudioTrack
-import com.vitorpamplona.amethyst.commons.ui.note.platform.RenderChessGame
 import com.vitorpamplona.amethyst.commons.ui.note.platform.RenderGitIssueEvent
 import com.vitorpamplona.amethyst.commons.ui.note.platform.RenderGitPatchEvent
 import com.vitorpamplona.amethyst.commons.ui.note.platform.RenderGitPullRequestEvent
 import com.vitorpamplona.amethyst.commons.ui.note.platform.RenderGitPullRequestUpdateEvent
 import com.vitorpamplona.amethyst.commons.ui.note.platform.RenderGitRepositoryEvent
-import com.vitorpamplona.amethyst.commons.ui.note.platform.RenderLiveChessChallenge
-import com.vitorpamplona.amethyst.commons.ui.note.platform.RenderLiveChessGameEnd
 import com.vitorpamplona.amethyst.commons.ui.note.platform.RenderMeetingRoomEvent
 import com.vitorpamplona.amethyst.commons.ui.note.platform.RenderMeetingRoomPresence
 import com.vitorpamplona.amethyst.commons.ui.note.platform.RenderMeetingSpaceEvent
@@ -186,6 +183,7 @@ import com.vitorpamplona.amethyst.commons.ui.note.types.RenderChannelMessage
 import com.vitorpamplona.amethyst.commons.ui.note.types.RenderChat
 import com.vitorpamplona.amethyst.commons.ui.note.types.RenderChatMessage
 import com.vitorpamplona.amethyst.commons.ui.note.types.RenderChatMessageEncryptedFile
+import com.vitorpamplona.amethyst.commons.ui.note.types.RenderChessGame
 import com.vitorpamplona.amethyst.commons.ui.note.types.RenderCitation
 import com.vitorpamplona.amethyst.commons.ui.note.types.RenderClassifieds
 import com.vitorpamplona.amethyst.commons.ui.note.types.RenderCommunity
@@ -208,6 +206,8 @@ import com.vitorpamplona.amethyst.commons.ui.note.types.RenderInteractiveStory
 import com.vitorpamplona.amethyst.commons.ui.note.types.RenderLearningResource
 import com.vitorpamplona.amethyst.commons.ui.note.types.RenderLiveActivityChatMessage
 import com.vitorpamplona.amethyst.commons.ui.note.types.RenderLiveActivityEvent
+import com.vitorpamplona.amethyst.commons.ui.note.types.RenderLiveChessChallenge
+import com.vitorpamplona.amethyst.commons.ui.note.types.RenderLiveChessGameEnd
 import com.vitorpamplona.amethyst.commons.ui.note.types.RenderLongFormContent
 import com.vitorpamplona.amethyst.commons.ui.note.types.RenderMusicPlaylist
 import com.vitorpamplona.amethyst.commons.ui.note.types.RenderNipContent

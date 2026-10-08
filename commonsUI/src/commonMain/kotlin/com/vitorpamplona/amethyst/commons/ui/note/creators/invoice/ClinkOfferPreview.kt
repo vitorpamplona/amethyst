@@ -18,7 +18,7 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.ui.note.creators.invoice
+package com.vitorpamplona.amethyst.commons.ui.note.creators.invoice
 
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Row
@@ -41,7 +41,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.commons.hashtags.CustomHashTagIcons
@@ -58,6 +57,8 @@ import com.vitorpamplona.amethyst.commons.resources.error_dialog_pay_invoice_err
 import com.vitorpamplona.amethyst.commons.resources.pay
 import com.vitorpamplona.amethyst.commons.resources.sats
 import com.vitorpamplona.amethyst.commons.service.ClinkOfferPayer
+import com.vitorpamplona.amethyst.commons.ui.components.PaymentCard
+import com.vitorpamplona.amethyst.commons.ui.components.PaymentCardAmount
 import com.vitorpamplona.amethyst.commons.ui.loadStringRes
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.navigation.routes.routeFor
@@ -71,16 +72,14 @@ import com.vitorpamplona.amethyst.commons.ui.theme.Size18Modifier
 import com.vitorpamplona.amethyst.commons.ui.theme.Size25dp
 import com.vitorpamplona.amethyst.commons.ui.theme.SmallBorder
 import com.vitorpamplona.amethyst.commons.ui.theme.StdHorzSpacer
+import com.vitorpamplona.amethyst.commons.util.formatGrouped
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
-import com.vitorpamplona.amethyst.ui.components.PaymentCard
-import com.vitorpamplona.amethyst.ui.components.PaymentCardAmount
 import com.vitorpamplona.quartz.experimental.clink.common.SatRange
 import com.vitorpamplona.quartz.experimental.clink.offers.OfferErrorCode
 import com.vitorpamplona.quartz.experimental.clink.pointers.ClinkPointerParser
 import com.vitorpamplona.quartz.experimental.clink.pointers.NOffer
 import com.vitorpamplona.quartz.experimental.clink.pointers.OfferPriceType
 import kotlinx.coroutines.launch
-import java.text.NumberFormat
 
 /**
  * Inline card for a CLINK Offers pointer (`noffer1…`) found in a note. Tapping "Pay"
@@ -94,7 +93,6 @@ fun ClinkOfferPreview(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    val context = LocalContext.current
     val scope = rememberCoroutineScope()
 
     var requesting by remember { mutableStateOf(false) }
@@ -144,7 +142,7 @@ fun ClinkOfferPreview(
         if (activeOffer.priceType == OfferPriceType.FIXED) {
             activeOffer.price?.let {
                 PaymentCardAmount(
-                    amount = NumberFormat.getIntegerInstance().format(it),
+                    amount = formatGrouped(it),
                     unit = stringRes(Res.string.sats),
                 )
             }

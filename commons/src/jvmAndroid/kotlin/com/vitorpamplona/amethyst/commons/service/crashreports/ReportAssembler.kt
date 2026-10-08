@@ -18,10 +18,7 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.service.crashreports
-
-import android.os.Build
-import com.vitorpamplona.amethyst.BuildConfig
+package com.vitorpamplona.amethyst.commons.service.crashreports
 
 /**
  * Longest headline (`ClassName: message`) a report will carry for the throwable or its cause.
@@ -42,7 +39,15 @@ private fun Throwable.headline(): String {
     return full.take(cut) + "… (${full.length} chars)"
 }
 
-class ReportAssembler {
+/**
+ * A crash report for a developer to read: the exception, the build, and the device it ran on.
+ * [versionLine] names the build ("1.17.0-PLAY"); [deviceRows] describe the device (Android's
+ * manufacturer and model, the desktop's OS and Java), each a row of the report's table.
+ */
+class ReportAssembler(
+    private val versionLine: String = "",
+    private val deviceRows: List<Pair<String, String>> = emptyList(),
+) {
     fun buildReport(
         e: Throwable,
         threadName: String = Thread.currentThread().name,
@@ -55,51 +60,18 @@ class ReportAssembler {
             // retraces back to the real exception class. See scripts/retrace.sh.
             append(e.javaClass.name)
             append(": ")
-            appendLine(BuildConfig.VERSION_NAME + "-" + BuildConfig.FLAVOR.uppercase())
+            appendLine(versionLine)
             appendLine()
 
-            // Device and Product Information
             appendLine("| Prop | Value |")
             appendLine("|------|-------|")
-            append("| Manuf |")
-            append(Build.MANUFACTURER)
-            appendLine(" |")
-            append("| Model |")
-            append(Build.MODEL)
-            appendLine(" |")
-            append("| Prod |")
-            append(Build.PRODUCT)
-            appendLine(" |")
-
-            // OS Information
-            append("| Android |")
-            append(Build.VERSION.RELEASE)
-            appendLine(" |")
-            append("| SDK Int |")
-            append(Build.VERSION.SDK_INT.toString())
-            appendLine(" |")
-
-            // Hardware Information
-            append("| Brand |")
-            append(Build.BRAND)
-            appendLine(" |")
-            append("| Hardware |")
-            append(Build.HARDWARE)
-            appendLine(" |")
-
-            // Other Useful Information
-            append("| Device | ")
-            append(Build.DEVICE)
-            appendLine(" |")
-            append("| Host | ")
-            append(Build.HOST)
-            appendLine(" |")
-            append("| User | ")
-            append(Build.USER)
-            appendLine(" |")
-            append("| Thread | ")
-            append(threadName)
-            appendLine(" |")
+            (deviceRows + ("Thread" to threadName)).forEach { (name, value) ->
+                append("| ")
+                append(name)
+                append(" | ")
+                append(value)
+                appendLine(" |")
+            }
             appendLine()
 
             appendLine("```")

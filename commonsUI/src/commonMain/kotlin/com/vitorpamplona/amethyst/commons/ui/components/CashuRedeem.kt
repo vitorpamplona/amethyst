@@ -18,9 +18,8 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.ui.components
+package com.vitorpamplona.amethyst.commons.ui.components
 
-import android.content.Intent
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -41,13 +40,11 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextDirection
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import androidx.core.net.toUri
 import com.vitorpamplona.amethyst.commons.hashtags.Cashu
 import com.vitorpamplona.amethyst.commons.hashtags.CustomHashTagIcons
 import com.vitorpamplona.amethyst.commons.resources.Res
@@ -56,6 +53,7 @@ import com.vitorpamplona.amethyst.commons.resources.cashu_mint_label
 import com.vitorpamplona.amethyst.commons.resources.cashu_no_wallet_found
 import com.vitorpamplona.amethyst.commons.resources.cashu_redeem
 import com.vitorpamplona.amethyst.commons.resources.sats
+import com.vitorpamplona.amethyst.commons.service.cashu.CachedCashuParser
 import com.vitorpamplona.amethyst.commons.ui.components.CrossfadeIfEnabled
 import com.vitorpamplona.amethyst.commons.ui.components.GenericLoadable
 import com.vitorpamplona.amethyst.commons.ui.components.LoadingAnimation
@@ -67,14 +65,15 @@ import com.vitorpamplona.amethyst.commons.ui.theme.Size18Modifier
 import com.vitorpamplona.amethyst.commons.ui.theme.Size20Modifier
 import com.vitorpamplona.amethyst.commons.ui.theme.StdHorzSpacer
 import com.vitorpamplona.amethyst.commons.ui.theme.ThemeComparisonColumn
+import com.vitorpamplona.amethyst.commons.ui.wallet.rememberWalletAppLauncher
+import com.vitorpamplona.amethyst.commons.util.formatDecimal
+import com.vitorpamplona.amethyst.commons.util.formatGrouped
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
-import com.vitorpamplona.amethyst.service.cashu.CachedCashuParser
 import com.vitorpamplona.quartz.nip60Cashu.token.CashuToken
 import kotlinx.collections.immutable.ImmutableList
-import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.IO
 import kotlinx.coroutines.withContext
-import java.text.NumberFormat
 
 @Composable
 fun CashuPreview(
@@ -147,11 +146,11 @@ private fun cashuAmountLabel(
 ): Pair<String, String> {
     val unit = token.unit
     return when (unit) {
-        null, "sat" -> NumberFormat.getIntegerInstance().format(token.totalAmount) to satsLabel
+        null, "sat" -> formatGrouped(token.totalAmount) to satsLabel
         "usd", "eur" ->
-            NumberFormat.getInstance().apply { minimumFractionDigits = 2 }.format(token.totalAmount / 100.0) to
+            formatDecimal(token.totalAmount / 100.0, maxFractionDigits = 2, minFractionDigits = 2) to
                 unit.uppercase()
-        else -> NumberFormat.getIntegerInstance().format(token.totalAmount) to unit
+        else -> formatGrouped(token.totalAmount) to unit
     }
 }
 
@@ -163,7 +162,7 @@ fun CashuPreviewNew(
 ) {
     val cashuStr = stringRes(Res.string.cashu)
     val cashuNoWalletFoundStr = stringRes(Res.string.cashu_no_wallet_found)
-    val context = LocalContext.current
+    val walletLauncher = rememberWalletAppLauncher()
 
     PaymentCard(
         title = stringRes(Res.string.cashu),
@@ -234,15 +233,7 @@ fun CashuPreviewNew(
 
             FilledTonalButton(
                 onClick = {
-                    try {
-                        val intent = Intent(Intent.ACTION_VIEW, "cashu://${token.token}".toUri())
-                        intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
-
-                        context.startActivity(intent)
-                    } catch (e: Exception) {
-                        if (e is CancellationException) throw e
-                        toast(cashuStr, cashuNoWalletFoundStr)
-                    }
+                    walletLauncher.openPaymentUri("cashu://${token.token}", cashuNoWalletFoundStr, {}) { toast(cashuStr, it) }
                 },
                 shape = ButtonBorder,
             ) {

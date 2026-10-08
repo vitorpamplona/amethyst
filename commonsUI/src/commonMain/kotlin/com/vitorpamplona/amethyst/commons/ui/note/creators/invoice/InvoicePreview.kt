@@ -18,7 +18,7 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.ui.note.creators.invoice
+package com.vitorpamplona.amethyst.commons.ui.note.creators.invoice
 
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -35,7 +35,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextDirection
 import androidx.compose.ui.unit.dp
@@ -47,19 +46,20 @@ import com.vitorpamplona.amethyst.commons.resources.invoice_expired
 import com.vitorpamplona.amethyst.commons.resources.lightning_invoice
 import com.vitorpamplona.amethyst.commons.resources.pay
 import com.vitorpamplona.amethyst.commons.resources.sats
+import com.vitorpamplona.amethyst.commons.service.lnurl.CachedLnInvoiceParser
+import com.vitorpamplona.amethyst.commons.service.lnurl.InvoiceAmount
 import com.vitorpamplona.amethyst.commons.ui.components.CrossfadeIfEnabled
+import com.vitorpamplona.amethyst.commons.ui.components.PaymentCard
+import com.vitorpamplona.amethyst.commons.ui.components.PaymentCardAmount
+import com.vitorpamplona.amethyst.commons.ui.components.PaymentCardDescription
 import com.vitorpamplona.amethyst.commons.ui.note.ErrorMessageDialog
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.ButtonBorder
 import com.vitorpamplona.amethyst.commons.ui.theme.Size18Modifier
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
-import com.vitorpamplona.amethyst.service.lnurl.CachedLnInvoiceParser
-import com.vitorpamplona.amethyst.service.lnurl.InvoiceAmount
-import com.vitorpamplona.amethyst.ui.components.PaymentCard
-import com.vitorpamplona.amethyst.ui.components.PaymentCardAmount
-import com.vitorpamplona.amethyst.ui.components.PaymentCardDescription
 import com.vitorpamplona.quartz.utils.TimeUtils
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.IO
 import kotlinx.coroutines.withContext
 
 @Composable
@@ -106,8 +106,6 @@ fun InvoicePreview(
     expiresAt: Long?,
     accountViewModel: AccountViewModel,
 ) {
-    val context = LocalContext.current
-
     var showErrorMessageDialog by remember { mutableStateOf<String?>(null) }
     var payingInvoice by remember { mutableStateOf<String?>(null) }
 

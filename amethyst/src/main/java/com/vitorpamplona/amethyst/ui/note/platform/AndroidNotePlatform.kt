@@ -68,9 +68,6 @@ import com.vitorpamplona.amethyst.ui.note.types.RenderAudioFromIMeta as AppRende
 import com.vitorpamplona.amethyst.ui.note.types.RenderAudioHeader as AppRenderAudioHeader
 import com.vitorpamplona.amethyst.ui.note.types.RenderAudioTrack as AppRenderAudioTrack
 import com.vitorpamplona.amethyst.ui.note.types.RenderAudioWithWaveform as AppRenderAudioWithWaveform
-import com.vitorpamplona.amethyst.ui.note.types.RenderChessGame as AppRenderChessGame
-import com.vitorpamplona.amethyst.ui.note.types.RenderLiveChessChallenge as AppRenderLiveChessChallenge
-import com.vitorpamplona.amethyst.ui.note.types.RenderLiveChessGameEnd as AppRenderLiveChessGameEnd
 import com.vitorpamplona.amethyst.ui.note.types.RenderMusicTrack as AppRenderMusicTrack
 import com.vitorpamplona.amethyst.ui.note.types.RenderNamedNappletEvent as AppRenderNamedNappletEvent
 import com.vitorpamplona.amethyst.ui.note.types.RenderNamedSiteEvent as AppRenderNamedSiteEvent
@@ -333,45 +330,6 @@ object AndroidNotePlatform : NotePlatform {
         mimeType = mimeType,
         waveform = waveform,
         note = note,
-        accountViewModel = accountViewModel,
-        nav = nav,
-    )
-
-    @Composable
-    override fun RenderChessGame(
-        note: Note,
-        backgroundColor: MutableState<Color>,
-        accountViewModel: AccountViewModel,
-        nav: INav,
-    ) = AppRenderChessGame(
-        note = note,
-        backgroundColor = backgroundColor,
-        accountViewModel = accountViewModel,
-        nav = nav,
-    )
-
-    @Composable
-    override fun RenderLiveChessChallenge(
-        note: Note,
-        backgroundColor: MutableState<Color>,
-        accountViewModel: AccountViewModel,
-        nav: INav,
-    ) = AppRenderLiveChessChallenge(
-        note = note,
-        backgroundColor = backgroundColor,
-        accountViewModel = accountViewModel,
-        nav = nav,
-    )
-
-    @Composable
-    override fun RenderLiveChessGameEnd(
-        note: Note,
-        backgroundColor: MutableState<Color>,
-        accountViewModel: AccountViewModel,
-        nav: INav,
-    ) = AppRenderLiveChessGameEnd(
-        note = note,
-        backgroundColor = backgroundColor,
         accountViewModel = accountViewModel,
         nav = nav,
     )

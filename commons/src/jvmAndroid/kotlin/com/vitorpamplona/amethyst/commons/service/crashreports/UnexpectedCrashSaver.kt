@@ -18,29 +18,27 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.commons.util
+package com.vitorpamplona.amethyst.commons.service.crashreports
 
-import platform.Foundation.NSNumber
-import platform.Foundation.NSNumberFormatter
-import platform.Foundation.NSNumberFormatterDecimalStyle
-import platform.Foundation.numberWithDouble
-import platform.Foundation.numberWithLongLong
+/**
+ * Keeps a report of a crash for the next start, then lets the crash go on as it would have.
+ * Written synchronously: the process is about to die, and a coroutine launched now may never run.
+ */
+class UnexpectedCrashSaver(
+    val cache: CrashReportCache,
+    val assembler: ReportAssembler,
+) : Thread.UncaughtExceptionHandler {
+    private val defaultUEH: Thread.UncaughtExceptionHandler? = Thread.getDefaultUncaughtExceptionHandler()
 
-actual fun formatGrouped(value: Long): String {
-    val formatter = NSNumberFormatter().apply { numberStyle = NSNumberFormatterDecimalStyle }
-    return formatter.stringFromNumber(NSNumber.numberWithLongLong(value)) ?: value.toString()
-}
-
-actual fun formatDecimal(
-    value: Double,
-    maxFractionDigits: Int,
-    minFractionDigits: Int,
-): String {
-    val formatter =
-        NSNumberFormatter().apply {
-            numberStyle = NSNumberFormatterDecimalStyle
-            maximumFractionDigits = maxFractionDigits.toULong()
-            minimumFractionDigits = minFractionDigits.toULong()
+    override fun uncaughtException(
+        t: Thread,
+        e: Throwable,
+    ) {
+        // OOM reports are junk
+        if (e !is OutOfMemoryError) {
+            runCatching { cache.writeReport(assembler.buildReport(e, t.name)) }
         }
-    return formatter.stringFromNumber(NSNumber.numberWithDouble(value)) ?: value.toString()
+        // Without a default handler (a desktop JVM) the JVM would have printed the trace.
+        defaultUEH?.uncaughtException(t, e) ?: e.printStackTrace()
+    }
 }

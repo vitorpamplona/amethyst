@@ -18,9 +18,8 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.service.resourceusage
+package com.vitorpamplona.amethyst.commons.service.resourceusage
 
-import android.os.SystemClock
 import com.vitorpamplona.amethyst.commons.service.resourceusage.UsageKeys
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
@@ -39,7 +38,7 @@ class RelayConnectionTimeIntegrator(
     private val isMobile: Flow<Boolean?>,
     private val isForeground: Flow<Boolean>,
     accountant: ResourceUsageAccountant,
-    nowMs: () -> Long = { SystemClock.elapsedRealtime() },
+    nowMs: () -> Long = { elapsedRealtimeMillis() },
 ) : TimeSegmentIntegrator<RelayConnectionTimeIntegrator.SegmentState>(accountant, nowMs) {
     data class SegmentState(
         val count: Int,

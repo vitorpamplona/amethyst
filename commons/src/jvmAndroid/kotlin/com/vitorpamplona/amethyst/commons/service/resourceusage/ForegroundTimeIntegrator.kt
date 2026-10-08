@@ -18,29 +18,36 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.commons.util
+package com.vitorpamplona.amethyst.commons.service.resourceusage
 
-import platform.Foundation.NSNumber
-import platform.Foundation.NSNumberFormatter
-import platform.Foundation.NSNumberFormatterDecimalStyle
-import platform.Foundation.numberWithDouble
-import platform.Foundation.numberWithLongLong
+import com.vitorpamplona.amethyst.commons.service.resourceusage.UsageKeys
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.launch
 
-actual fun formatGrouped(value: Long): String {
-    val formatter = NSNumberFormatter().apply { numberStyle = NSNumberFormatterDecimalStyle }
-    return formatter.stringFromNumber(NSNumber.numberWithLongLong(value)) ?: value.toString()
-}
-
-actual fun formatDecimal(
-    value: Double,
-    maxFractionDigits: Int,
-    minFractionDigits: Int,
-): String {
-    val formatter =
-        NSNumberFormatter().apply {
-            numberStyle = NSNumberFormatterDecimalStyle
-            maximumFractionDigits = maxFractionDigits.toULong()
-            minimumFractionDigits = minFractionDigits.toULong()
+/**
+ * Integrates time-with-UI-visible into the ledger ([UsageKeys.APP_FG_MS]).
+ * Screen-on time is what display power is proportional to, and it's the
+ * denominator that makes every other counter interpretable (MB per hour in
+ * app vs MB while backgrounded).
+ */
+class ForegroundTimeIntegrator(
+    private val isForeground: Flow<Boolean>,
+    accountant: ResourceUsageAccountant,
+    nowMs: () -> Long = { elapsedRealtimeMillis() },
+) : TimeSegmentIntegrator<Unit>(accountant, nowMs) {
+    fun start(scope: CoroutineScope): Job {
+        registerFlushHook()
+        return scope.launch {
+            isForeground.collect { fg -> transitionTo(if (fg) Unit else null) }
         }
-    return formatter.stringFromNumber(NSNumber.numberWithDouble(value)) ?: value.toString()
+    }
+
+    override fun account(
+        state: Unit,
+        elapsedMs: Long,
+    ) {
+        if (elapsedMs > 0) accountant.add(UsageKeys.APP_FG_MS, elapsedMs)
+    }
 }

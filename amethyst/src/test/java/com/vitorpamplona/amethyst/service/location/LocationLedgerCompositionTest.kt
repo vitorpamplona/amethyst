@@ -23,7 +23,7 @@ package com.vitorpamplona.amethyst.service.location
 import android.content.Context
 import android.location.LocationListener
 import android.location.LocationManager
-import com.vitorpamplona.amethyst.service.resourceusage.RefCountedSession
+import com.vitorpamplona.amethyst.commons.service.resourceusage.RefCountedSession
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.verify
