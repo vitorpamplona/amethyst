@@ -62,7 +62,17 @@ class JobResultQuoteTag {
             ensure(tag[4].isNotEmpty()) { return null }
             ensure(CiProvenanceKind.parse(tag[4]) == null) { return null }
             val publisher = tag[3].takeIf { it.length == 64 && Hex.isHex(it) }
-            return CiJobResultQuote(tag[1], RelayUrlNormalizer.normalizeOrNull(tag[2]), publisher, tag[4])
+            return CiJobResultQuote(tag[1], RelayUrlNormalizer.normalizeHintOrNull(tag[2]), publisher, tag[4])
+        }
+
+        /** [parse]'s publisher, with the same checks but no relay normalisation or allocation: for graph edges. */
+        fun parsePublisher(tag: Array<String>): HexKey? {
+            ensure(tag.has(4)) { return null }
+            ensure(tag[0] == TAG_NAME) { return null }
+            ensure(tag[1].length == 64 && Hex.isHex(tag[1])) { return null }
+            ensure(tag[4].isNotEmpty()) { return null }
+            ensure(CiProvenanceKind.parse(tag[4]) == null) { return null }
+            return tag[3].takeIf { it.length == 64 && Hex.isHex(it) }
         }
 
         fun parseAsHint(tag: Array<String>): EventIdHint? {

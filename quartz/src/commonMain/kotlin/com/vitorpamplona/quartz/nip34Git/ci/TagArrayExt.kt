@@ -139,25 +139,50 @@ fun TagArray.ciBoundedExpiration(
 // ---- Graph edges shared by the run-related kinds (9840, 9841, 9842, 39842) ----
 
 /** Hints from the PR context (`E`, `e`) and from quotes (`q`) that carry a relay. */
-fun TagArray.ciRunEventHints(): List<EventIdHint> = mapNotNull(RootEventTag::parseAsHint) + mapNotNull(ReplyEventTag::parseAsHint) + mapNotNull(QTag::parseEventAsHint)
+fun TagArray.ciRunEventHints(): List<EventIdHint> {
+    // Runs for every relay copy of every CI event: one list, filled in the old concatenation's order.
+    val result = mapNotNullTo(ArrayList(), RootEventTag::parseAsHint)
+    mapNotNullTo(result, ReplyEventTag::parseAsHint)
+    mapNotNullTo(result, QTag::parseEventAsHint)
+    return result
+}
 
 /** `ROOT` (`E`, the PR), `PARENT` (`e`, the PR or PR Update that supplied the commit), and the quoted events (`q`). */
-fun TagArray.ciRunLinkedEventIds(): List<HexKey> = mapNotNull(RootEventTag::parseKey) + mapNotNull(ReplyEventTag::parseKey) + mapNotNull(QTag::parseEventId)
+fun TagArray.ciRunLinkedEventIds(): List<HexKey> {
+    val result = mapNotNullTo(ArrayList(), RootEventTag::parseKey)
+    mapNotNullTo(result, ReplyEventTag::parseKey)
+    mapNotNullTo(result, QTag::parseEventId)
+    return result
+}
 
-fun TagArray.ciRunPubKeyHints(): List<PubKeyHint> = mapNotNull(RootAuthorTag::parseAsHint) + mapNotNull(PTag::parseAsHint)
+fun TagArray.ciRunPubKeyHints(): List<PubKeyHint> {
+    val result = mapNotNullTo(ArrayList(), RootAuthorTag::parseAsHint)
+    mapNotNullTo(result, PTag::parseAsHint)
+    return result
+}
 
 /**
  * `ROOT_AUTHOR` (`P`), every lowercase `p` (the parent author on results, the coordinator on a
  * Manual Trigger), and the pubkey slot of the CI quotes: a provenance quote's requester and a Job
  * Result quote's compute provider.
  */
-fun TagArray.ciRunLinkedPubKeys(): List<HexKey> =
-    mapNotNull { RootAuthorTag.parseKey(it) } +
-        mapNotNull(PTag::parseKey) +
-        mapNotNull { ProvenanceQuoteTag.parse(it)?.requester } +
-        mapNotNull { JobResultQuoteTag.parse(it)?.publisher }
+fun TagArray.ciRunLinkedPubKeys(): List<HexKey> {
+    val result = mapNotNullTo(ArrayList()) { RootAuthorTag.parseKey(it) }
+    mapNotNullTo(result, PTag::parseKey)
+    mapNotNullTo(result, ProvenanceQuoteTag::parseRequester)
+    mapNotNullTo(result, JobResultQuoteTag::parsePublisher)
+    return result
+}
 
-fun TagArray.ciRunAddressHints(): List<AddressHint> = mapNotNull(RepositoryTag::parseAsHint) + mapNotNull(WorkflowRunQuoteTag::parseAsHint)
+fun TagArray.ciRunAddressHints(): List<AddressHint> {
+    val result = mapNotNullTo(ArrayList(), RepositoryTag::parseAsHint)
+    mapNotNullTo(result, WorkflowRunQuoteTag::parseAsHint)
+    return result
+}
 
 /** `REPOSITORY` (`a`, validated 30617 coordinates) and a quoted Workflow Progress run (`q` 39842 address). */
-fun TagArray.ciRunLinkedAddressIds(): List<String> = mapNotNull(RepositoryTag::parseAddressId) + mapNotNull(WorkflowRunQuoteTag::parseAddressId)
+fun TagArray.ciRunLinkedAddressIds(): List<String> {
+    val result = mapNotNullTo(ArrayList(), RepositoryTag::parseAddressId)
+    mapNotNullTo(result, WorkflowRunQuoteTag::parseAddressId)
+    return result
+}

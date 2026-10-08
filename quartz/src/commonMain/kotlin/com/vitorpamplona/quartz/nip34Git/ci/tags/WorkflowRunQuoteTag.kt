@@ -55,7 +55,7 @@ class WorkflowRunQuoteTag {
 
         fun parse(tag: Array<String>): ATag? {
             val address = parseAddress(tag) ?: return null
-            return ATag(address, tag.getOrNull(2)?.let { RelayUrlNormalizer.normalizeOrNull(it) })
+            return ATag(address, tag.getOrNull(2)?.let { RelayUrlNormalizer.normalizeHintOrNull(it) })
         }
 
         fun parseAddressId(tag: Array<String>): String? = parseAddress(tag)?.toValue()

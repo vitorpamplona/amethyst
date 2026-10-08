@@ -75,7 +75,7 @@ class WorkoutTemplateEvent(
     }
 
     // Only hints whose coordinate is a well-formed address, the same filter linkedAddressIds() applies.
-    override fun addressHints(): List<AddressHint> = tags.exerciseSetHints().filter { AddressSerializer.parse(it.addressId) != null }
+    override fun addressHints(): List<AddressHint> = tags.exerciseSetHints().filter { AddressSerializer.isAddressShape(it.addressId) }
 
     /**
      * `EXERCISE`: the kind 33401 exercise templates the plan prescribes, once each even when a

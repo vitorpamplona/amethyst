@@ -54,7 +54,9 @@ class KeyTag(
             ensure(tag1.has(1)) { return false }
             ensure(tag2.has(1)) { return false }
             ensure(tag1[0] == tag2[0]) { return false }
-            ensure(tag1[1] == tag2[1]) { return false }
+            // Case-insensitive: [parse] lowercases the key, so a key read from an uppercase `n`
+            // must still match its own tag when it is removed.
+            ensure(tag1[1].equals(tag2[1], ignoreCase = true)) { return false }
             return true
         }
 

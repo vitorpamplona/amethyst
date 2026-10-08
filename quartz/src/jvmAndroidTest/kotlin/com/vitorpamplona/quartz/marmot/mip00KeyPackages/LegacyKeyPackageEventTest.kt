@@ -304,7 +304,7 @@ class LegacyKeyPackageEventTest {
         val now = TimeUtils.now()
         val peer = Peer(createdAt = now - 600)
         val legacy = peer.legacy(now)
-        val chosen = KeyPackageUtils.selectForInvite(listOf(legacy, peer.addressable), peer.signer.pubKey, now)
+        val chosen = KeyPackageUtils.selectForInvite(listOf(legacy, peer.addressable), peer.signer.pubKey, TimeUtils.now())
         assertEquals(peer.addressable.id, chosen?.id)
     }
 
@@ -314,7 +314,7 @@ class LegacyKeyPackageEventTest {
         val peer = Peer(createdAt = now)
         val older = peer.legacy(now - 600)
         val newer = peer.legacy(now - 60)
-        val chosen = KeyPackageUtils.selectForInvite(listOf(older, newer), peer.signer.pubKey, now)
+        val chosen = KeyPackageUtils.selectForInvite(listOf(older, newer), peer.signer.pubKey, TimeUtils.now())
         assertIs<LegacyKeyPackageEvent>(chosen)
         assertEquals(newer.id, chosen.id)
     }
@@ -328,7 +328,7 @@ class LegacyKeyPackageEventTest {
                 peer.signer.sign(KeyPackageEvent.build("AA==", peer.addressable.dTag(), peer.ref, peer.relays, createdAt = now))
             }
         val legacy = peer.legacy(now - 60)
-        val chosen = KeyPackageUtils.selectForInvite(listOf(broken, legacy), peer.signer.pubKey, now)
+        val chosen = KeyPackageUtils.selectForInvite(listOf(broken, legacy), peer.signer.pubKey, TimeUtils.now())
         assertEquals(legacy.id, chosen?.id)
     }
 
@@ -337,7 +337,7 @@ class LegacyKeyPackageEventTest {
         val now = TimeUtils.now()
         val peer = Peer(createdAt = now)
         val stranger = Peer(createdAt = now)
-        assertNull(KeyPackageUtils.selectForInvite(listOf(stranger.legacy(now), stranger.addressable), peer.signer.pubKey, now))
+        assertNull(KeyPackageUtils.selectForInvite(listOf(stranger.legacy(now), stranger.addressable), peer.signer.pubKey, TimeUtils.now()))
     }
 
     // ===== fetch =====
@@ -369,6 +369,31 @@ class LegacyKeyPackageEventTest {
         }
 
     @Test
+    fun theInviteLookupRefusesAPackageItsAuthorDidNotSign() =
+        runBlocking {
+            // A relay can serve anything. Here it serves the MDK user's real KeyPackage under their
+            // pubkey but with a signature that is not theirs, the shape of an attacker substituting
+            // its own package: a legacy 443 has no identity proof, so only the event signature
+            // binds it to the target. The store is written directly, as a malicious relay would.
+            val real = mdk080()
+            val forged = LegacyKeyPackageEvent(real.id, real.pubKey, real.createdAt, real.tags, real.content, "00".repeat(64))
+            hub.getOrCreate(InProcessRelays.DEFAULT_URL).store.insert(forged)
+
+            val client = NostrClient(hub, scope)
+            val found =
+                KeyPackageFetcher.fetchKeyPackageForInvite(
+                    client = client,
+                    targetPubKey = real.pubKey,
+                    relays = setOf(InProcessRelays.DEFAULT_URL),
+                    idleTimeoutMs = 2_000,
+                    settleAfterFirstMs = 200,
+                    nowSeconds = real.createdAt,
+                )
+            assertNull(found, "an unsigned/forged package must never be chosen for an invite")
+            client.disconnect()
+        }
+
+    @Test
     fun theInviteLookupStillPrefers30443() =
         runBlocking {
             val client = NostrClient(hub, scope)
@@ -379,7 +404,7 @@ class LegacyKeyPackageEventTest {
             assertTrue(client.publishAndConfirm(peer.legacy(now), relays))
 
             val found =
-                KeyPackageFetcher.fetchKeyPackageForInvite(client, peer.signer.pubKey, relays, idleTimeoutMs = 2_000, settleAfterFirstMs = 500, nowSeconds = now)
+                KeyPackageFetcher.fetchKeyPackageForInvite(client, peer.signer.pubKey, relays, idleTimeoutMs = 2_000, settleAfterFirstMs = 500, nowSeconds = TimeUtils.now())
             assertEquals(peer.addressable.id, found?.id)
             client.disconnect()
         }

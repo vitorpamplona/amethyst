@@ -18,12 +18,19 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.quartz.utils
+package com.vitorpamplona.quartz.nip69P2pOrderEvents
 
-actual fun BigDecimal.toPlainStringValue(): String = toPlainString()
+import com.vitorpamplona.quartz.nip69P2pOrderEvents.tags.BondTag
+import java.math.BigDecimal
+import kotlin.test.Test
+import kotlin.test.assertEquals
 
-actual fun BigDecimal.toLongValue(): Long = toLong()
-
-actual fun BigDecimal.toDoubleValue(): Double = toDouble()
-
-actual fun BigDecimal.compareToValue(other: BigDecimal): Int = compareTo(other)
+class BondTagPlainStringTest {
+    @Test
+    fun aBondInScientificFormIsWrittenAsAPlainNumber() {
+        // java.math.BigDecimal.toString() prints "3E+2" for this value; no Nostr client parses that.
+        assertEquals("300", BondTag.assemble(BigDecimal("3E+2"))[1])
+        assertEquals("0.0000001", BondTag.assemble(BigDecimal("1E-7"))[1])
+        assertEquals(BigDecimal("1E-7").compareTo(BondTag.parse(BondTag.assemble(BigDecimal("1E-7")))!!), 0)
+    }
+}

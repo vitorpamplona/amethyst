@@ -24,6 +24,7 @@ import com.vitorpamplona.quartz.nip01Core.core.has
 import com.vitorpamplona.quartz.utils.BigDecimal
 import com.vitorpamplona.quartz.utils.ensure
 import com.vitorpamplona.quartz.utils.parseBigDecimalOrNull
+import com.vitorpamplona.quartz.utils.toPlainStringValue
 
 /**
  * NIP-69 `bond`: "the bond amount, the bond is a security deposit that both parties must pay."
@@ -44,7 +45,7 @@ class BondTag {
             return parseBigDecimalOrNull(tag[1])
         }
 
-        fun assemble(bond: BigDecimal) = arrayOf(TAG_NAME, bond.toString())
+        fun assemble(bond: BigDecimal) = arrayOf(TAG_NAME, bond.toPlainStringValue())
 
         fun assemble(bond: Long) = assemble(BigDecimal(bond))
     }

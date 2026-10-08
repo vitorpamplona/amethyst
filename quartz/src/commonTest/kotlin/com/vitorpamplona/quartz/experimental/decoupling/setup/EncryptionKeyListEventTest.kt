@@ -73,4 +73,13 @@ class EncryptionKeyListEventTest {
         assertContentEquals(arrayOf("n", liveKey), template.tags.single())
         assertContentEquals(arrayOf("n", liveKey, "ff"), KeyTag.assemble(liveKey, "ff"))
     }
+
+    @Test
+    fun removingAKeyReadFromAnUppercaseTagRemovesThatTag() {
+        // parse() lowercases the key, so the removal must not compare case-sensitively.
+        val event = list(arrayOf("n", liveKey.uppercase()))
+        val key = event.keys().single()
+        val template = EncryptionKeyListEvent.remove(key, event, createdAt = 1L)
+        assertEquals(emptyList(), template.tags.filter { it[0] == "n" })
+    }
 }

@@ -54,9 +54,10 @@ class AppTag {
             ensure(tag.has(2)) { return null }
             ensure(tag[0] == TAG_NAME) { return null }
             ensure(tag[1].isNotEmpty()) { return null }
-            ensure(tag[1].contains(':')) { return null }
+            // Shape-checked like ATag.parseAsHint, so `foo:bar` is never indexed as an address.
+            ensure(AddressSerializer.isAddressShape(tag[1])) { return null }
             ensure(tag[2].isNotEmpty()) { return null }
-            val relayHint = RelayUrlNormalizer.normalizeOrNull(tag[2]) ?: return null
+            val relayHint = RelayUrlNormalizer.normalizeHintOrNull(tag[2]) ?: return null
             return AddressHint(tag[1], relayHint)
         }
 

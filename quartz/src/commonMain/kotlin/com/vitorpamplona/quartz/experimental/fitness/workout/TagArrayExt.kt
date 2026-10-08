@@ -107,8 +107,14 @@ fun TagArray.exerciseSetHints() = mapNotNull(ExerciseSetTag::parseAsHint)
  * The distinct exercise-template coordinates the `exercise` tags point at, each re-parsed as a
  * NIP-01 address so only well-formed `kind:<64-hex>:d` values come out (a prescription repeats one
  * coordinate per set, and some clients write their own non-nostr ids in the slot).
+ *
+ * The raw values are de-duplicated before anything is parsed, and only address-shaped ones (not
+ * Workstr's `workstr:exercise:` ids) reach the parser.
  */
-fun TagArray.exerciseTemplateAddresses() = mapNotNull { ExerciseSetTag.parseAddressId(it)?.let(AddressSerializer::parse) }.distinct()
+fun TagArray.exerciseTemplateAddresses() =
+    mapNotNullTo(LinkedHashSet()) { ExerciseSetTag.parseAddressId(it)?.takeIf(AddressSerializer::isAddressShape) }
+        .mapNotNull(AddressSerializer::parse)
+        .distinct()
 
 // --- NIP-101e workout template (kind 33402) ---
 

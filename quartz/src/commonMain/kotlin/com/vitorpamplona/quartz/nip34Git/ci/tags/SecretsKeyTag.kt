@@ -59,7 +59,7 @@ class SecretsKeyTag {
             ensure(tag[0] == TAG_NAME) { return null }
             ensure(tag[1].isNotEmpty()) { return null }
             ensure(tag[2].length == 64 && Hex.isHex(tag[2])) { return null }
-            val relays = (3 until tag.size).mapNotNull { RelayUrlNormalizer.normalizeOrNull(tag[it]) }
+            val relays = (3 until tag.size).mapNotNull { RelayUrlNormalizer.normalizeHintOrNull(tag[it]) }
             ensure(relays.isNotEmpty()) { return null }
             return CiSecretsKey(tag[1], tag[2], relays)
         }

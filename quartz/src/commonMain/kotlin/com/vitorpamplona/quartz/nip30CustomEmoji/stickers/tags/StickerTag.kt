@@ -90,6 +90,26 @@ data class StickerTag(
             rating: String? = null,
         ) = if (rating != null) arrayOf(TAG_NAME, code, url, rating) else arrayOf(TAG_NAME, code, url)
 
-        fun assemble(sticker: StickerTag) = assemble(sticker.code, sticker.url, sticker.rating)
+        /**
+         * Round-trips what [parse] read: a sticker that came in the Sonar layout (it has a [sha256])
+         * goes back out in that layout, keeping its hash, MIME type, description and emoji; any
+         * other sticker is written in the DEN Chat layout. Sonar's slot 5 has no known meaning and
+         * was always empty on relays, so it is written empty.
+         */
+        fun assemble(sticker: StickerTag): Array<String> =
+            if (sticker.sha256 != null) {
+                arrayOf(
+                    TAG_NAME,
+                    sticker.code,
+                    sticker.url,
+                    sticker.sha256,
+                    sticker.mimeType ?: "",
+                    "",
+                    sticker.description ?: "",
+                    sticker.emoji ?: "",
+                )
+            } else {
+                assemble(sticker.code, sticker.url, sticker.rating)
+            }
     }
 }

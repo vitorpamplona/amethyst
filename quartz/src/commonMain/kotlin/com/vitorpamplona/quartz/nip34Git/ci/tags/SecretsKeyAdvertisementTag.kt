@@ -53,7 +53,7 @@ class SecretsKeyAdvertisementTag {
 
         fun parseAsHint(tag: Array<String>): EventIdHint? {
             val id = parseId(tag) ?: return null
-            val relay = RelayUrlNormalizer.normalizeOrNull(tag[2]) ?: return null
+            val relay = RelayUrlNormalizer.normalizeHintOrNull(tag[2]) ?: return null
             return EventIdHint(id, relay)
         }
 

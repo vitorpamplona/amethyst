@@ -22,6 +22,7 @@ package com.vitorpamplona.quartz.marmot.mip00KeyPackages
 
 import com.vitorpamplona.quartz.marmot.MarmotFilters
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
+import com.vitorpamplona.quartz.nip01Core.crypto.verify
 import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.fetchAllWithHooks
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
@@ -101,7 +102,7 @@ object KeyPackageFetcher {
         settleAfterFirstMs: Long = 3_000,
     ): KeyPackageEvent? {
         if (relays.isEmpty()) return null
-        return drain<KeyPackageEvent>(client, MarmotFilters.keyPackagesByAuthor(targetPubKey), relays, idleTimeoutMs, settleAfterFirstMs)
+        return drain<KeyPackageEvent>(client, MarmotFilters.keyPackagesByAuthor(targetPubKey), targetPubKey, relays, idleTimeoutMs, settleAfterFirstMs) { true }
             .maxByOrNull { it.createdAt }
     }
 
@@ -118,7 +119,9 @@ object KeyPackageFetcher {
      * newest event that fails validation is skipped for an older one that
      * passes, and null means "nothing usable", not "nothing found".
      *
-     * Draining and the [settleAfterFirstMs] cut-off work as in [fetchKeyPackage].
+     * Only a kind 30443 starts the [settleAfterFirstMs] cut-off: MIP-00 says a client MUST prefer a
+     * valid 30443, so a fast relay's legacy 443 must not end the drain before a slower relay's
+     * 30443 arrives. When only 443s show up, the drain runs until the relays go idle.
      */
     suspend fun fetchKeyPackageForInvite(
         client: INostrClient,
@@ -129,21 +132,29 @@ object KeyPackageFetcher {
         nowSeconds: Long = TimeUtils.now(),
     ): PublishedKeyPackage? {
         if (relays.isEmpty()) return null
-        val found = drain<PublishedKeyPackage>(client, MarmotFilters.keyPackagesMigration(targetPubKey), relays, idleTimeoutMs, settleAfterFirstMs)
+        val found = drain<PublishedKeyPackage>(client, MarmotFilters.keyPackagesMigration(targetPubKey), targetPubKey, relays, idleTimeoutMs, settleAfterFirstMs) { it is KeyPackageEvent }
         return KeyPackageUtils.selectForInvite(found, targetPubKey, nowSeconds)
     }
 
     /**
-     * Collect every [T] the [filter] returns from [relays], stopping
-     * [settleAfterFirstMs] after the first one arrives or when every relay
+     * Collect every [T] signed by [author] that the [filter] returns from [relays], stopping
+     * [settleAfterFirstMs] after the first one that [startsSettle] arrives or when every relay
      * went idle for [idleTimeoutMs].
+     *
+     * The event signature is checked here because nothing upstream does: the fetch hook hands over
+     * raw relay events, and [KeyPackageUtils.selectForInvite] trusts `pubKey`. For a legacy 443,
+     * which carries no identity proof, the Nostr signature is the only thing binding the key
+     * package to [author]; without it a relay could serve its own package under the target's
+     * pubkey and receive the Welcome.
      */
     private suspend inline fun <reified T : PublishedKeyPackage> drain(
         client: INostrClient,
         filter: Filter,
+        author: HexKey,
         relays: Set<NormalizedRelayUrl>,
         idleTimeoutMs: Long,
         settleAfterFirstMs: Long,
+        crossinline startsSettle: (T) -> Boolean,
     ): List<T> {
         // Collected from inside onEvent (single-threaded) rather than read from the
         // return value, which a cancelled fetch discards.
@@ -153,9 +164,9 @@ object KeyPackageFetcher {
             val fetch =
                 launch {
                     client.fetchAllWithHooks(filters = relays.associateWith { listOf(filter) }, idleTimeoutMs = idleTimeoutMs) { _, event ->
-                        if (event is T) {
+                        if (event is T && event.pubKey == author && event.verify()) {
                             found.add(event)
-                            firstArrived.complete(Unit)
+                            if (startsSettle(event)) firstArrived.complete(Unit)
                         }
                         true
                     }

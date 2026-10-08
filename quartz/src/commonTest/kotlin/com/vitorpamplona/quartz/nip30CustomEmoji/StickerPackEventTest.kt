@@ -31,6 +31,7 @@ import com.vitorpamplona.quartz.nip30CustomEmoji.stickers.image
 import com.vitorpamplona.quartz.nip30CustomEmoji.stickers.tags.StickerTag
 import com.vitorpamplona.quartz.utils.EventFactory
 import kotlin.test.Test
+import kotlin.test.assertContentEquals
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertIs
@@ -191,5 +192,14 @@ class StickerPackEventTest {
         assertEquals(stickers, event.stickers())
         assertEquals(listOf("sticker", "happy_cat", "https://x.example/a.png", "sfw"), event.tags.first { it[0] == "sticker" }.toList())
         assertEquals(listOf("sticker", "plain", "https://x.example/b.png"), event.tags.last { it[0] == "sticker" }.toList())
+    }
+
+    @Test
+    fun sonarStickersKeepTheirFieldsWhenWrittenBack() {
+        val tag = arrayOf("sticker", "s0", "https://push.example.com/$hash", hash, "image/png", "", "Sticker 0", "\uD83D\uDE02")
+        assertContentEquals(tag, StickerTag.assemble(StickerTag.parse(tag)!!))
+
+        val bare = arrayOf("sticker", "s1", "https://push.example.com/$hash", hash, "", "", "", "")
+        assertContentEquals(bare, StickerTag.parse(bare)!!.toTagArray())
     }
 }

@@ -1073,9 +1073,31 @@ class EventFactory {
          * equals [Event] exactly when the kind has no dedicated class.
          *
          * Used to decide whether a repost's inner (boosted) kind is something
-         * Amethyst can parse and render at all.
+         * Amethyst can parse and render at all — once per repost in a feed, so the
+         * compiled-in answer is memoised per kind instead of allocating a probe
+         * event each time. [factories] is consulted first and never cached, so a
+         * builder registered later is still seen.
          */
-        fun isKnownKind(kind: Int): Boolean = probe(kind)::class != Event::class
+        fun isKnownKind(kind: Int): Boolean {
+            if (kind in factories) return true
+            if (kind !in 0..MAX_CACHED_KIND) return isCompiledInKind(kind)
+            return when (knownKindCache[kind]) {
+                KIND_KNOWN -> true
+                KIND_UNKNOWN -> false
+                else -> isCompiledInKind(kind).also { knownKindCache[kind] = if (it) KIND_KNOWN else KIND_UNKNOWN }
+            }
+        }
+
+        // The `when` above has no factory for a kind registered in [factories], so this probes the
+        // compiled-in branches only when the factory map has no entry (checked by the caller).
+        private fun isCompiledInKind(kind: Int): Boolean = probe(kind)::class != Event::class
+
+        private const val MAX_CACHED_KIND = 65535
+        private const val KIND_KNOWN: Byte = 1
+        private const val KIND_UNKNOWN: Byte = 2
+
+        // 0 = not computed yet. Racing writers store the same value, so no lock is needed.
+        private val knownKindCache = ByteArray(MAX_CACHED_KIND + 1)
 
         /**
          * A tagless, contentless instance of [kind], for questions asked of a kind rather than of
