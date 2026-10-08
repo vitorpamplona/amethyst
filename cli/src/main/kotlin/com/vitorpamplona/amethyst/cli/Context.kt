@@ -611,14 +611,16 @@ class Context(
      * `auth-required` CLOSED is kept pending rather than treated as terminal: the
      * NIP-42 responder answers the challenge and the client re-fires this same
      * subscription (`syncFilters`), so the post-auth events are collected instead of
-     * returning empty. If auth never satisfies it, the relay simply falls through to
-     * the [idleTimeoutMs]. Needed for Concord planes, whose kind-1059 wraps are served
+     * returning empty. On by default, as in quartz: a relay.nostr.build REQ (`auth-required:
+     * authenticate with AUTH before subscribing`) otherwise came back empty in ~4 s even with
+     * an account to answer the challenge, while a challenge nobody can answer still ends in
+     * the short AUTH grace. Needed too for Concord planes, whose kind-1059 wraps are served
      * only to a connection authenticated as the derived stream key.
      */
     suspend fun drain(
         filters: Map<NormalizedRelayUrl, List<Filter>>,
         idleTimeoutMs: Long = 8_000,
-        pendingOnAuthRequired: Boolean = false,
+        pendingOnAuthRequired: Boolean = true,
     ): List<Pair<NormalizedRelayUrl, Event>> = drainResult(filters, idleTimeoutMs, pendingOnAuthRequired).events
 
     /**
@@ -636,7 +638,7 @@ class Context(
     suspend fun drainResult(
         filters: Map<NormalizedRelayUrl, List<Filter>>,
         idleTimeoutMs: Long = 8_000,
-        pendingOnAuthRequired: Boolean = false,
+        pendingOnAuthRequired: Boolean = true,
     ): FetchAllResult =
         client.fetchAllWithHooks(
             filters = filters,
