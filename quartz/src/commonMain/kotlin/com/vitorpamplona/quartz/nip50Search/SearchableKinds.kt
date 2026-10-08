@@ -107,6 +107,7 @@ object SearchableKinds {
             3302, // ConcordChatEditEvent
             5050, // DvmTextGenerationRequestEvent
             5100, // DvmImageGenerationRequestEvent
+            5128, // SiteSnapshotEvent
             5129, // NappletSnapshotEvent
             5250, // DvmTextToSpeechRequestEvent
             5302, // DvmContentSearchRequestEvent
@@ -156,7 +157,9 @@ object SearchableKinds {
             30019, // MarketplaceEvent
             30020, // AuctionEvent
             30023, // LongFormContentEvent
+            30024, // LongFormDraftEvent
             30030, // EmojiPackEvent
+            30031, // StickerPackEvent
             30040, // PublicationIndexEvent
             30041, // PublicationContentEvent
             30045, // BookshelfDirectoryEvent
@@ -203,6 +206,7 @@ object SearchableKinds {
             32267, // SoftwareApplicationEvent
             33331, // SnoObjectEvent
             33401, // ExerciseTemplateEvent
+            33402, // WorkoutTemplateEvent
             33534, // RelayRoleEvent
             33863, // FundraiserEvent
             34139, // MusicPlaylistEvent

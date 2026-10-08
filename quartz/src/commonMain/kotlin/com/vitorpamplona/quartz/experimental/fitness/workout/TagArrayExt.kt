@@ -22,6 +22,7 @@ package com.vitorpamplona.quartz.experimental.fitness.workout
 
 import com.vitorpamplona.quartz.experimental.fitness.workout.tags.AvgHeartRateTag
 import com.vitorpamplona.quartz.experimental.fitness.workout.tags.CaloriesTag
+import com.vitorpamplona.quartz.experimental.fitness.workout.tags.DifficultyTag
 import com.vitorpamplona.quartz.experimental.fitness.workout.tags.DistanceTag
 import com.vitorpamplona.quartz.experimental.fitness.workout.tags.DurationTag
 import com.vitorpamplona.quartz.experimental.fitness.workout.tags.ElevationGainTag
@@ -29,8 +30,12 @@ import com.vitorpamplona.quartz.experimental.fitness.workout.tags.ElevationLossT
 import com.vitorpamplona.quartz.experimental.fitness.workout.tags.ExerciseSetTag
 import com.vitorpamplona.quartz.experimental.fitness.workout.tags.ExerciseTag
 import com.vitorpamplona.quartz.experimental.fitness.workout.tags.ExerciseType
+import com.vitorpamplona.quartz.experimental.fitness.workout.tags.IntervalTag
 import com.vitorpamplona.quartz.experimental.fitness.workout.tags.MaxHeartRateTag
 import com.vitorpamplona.quartz.experimental.fitness.workout.tags.RepsTag
+import com.vitorpamplona.quartz.experimental.fitness.workout.tags.RestBetweenRoundsTag
+import com.vitorpamplona.quartz.experimental.fitness.workout.tags.RestBetweenSetsTag
+import com.vitorpamplona.quartz.experimental.fitness.workout.tags.RoundsTag
 import com.vitorpamplona.quartz.experimental.fitness.workout.tags.SetsTag
 import com.vitorpamplona.quartz.experimental.fitness.workout.tags.SourceTag
 import com.vitorpamplona.quartz.experimental.fitness.workout.tags.SplitTag
@@ -43,6 +48,7 @@ import com.vitorpamplona.quartz.experimental.fitness.workout.tags.WorkoutEndTag
 import com.vitorpamplona.quartz.experimental.fitness.workout.tags.WorkoutStartTag
 import com.vitorpamplona.quartz.experimental.fitness.workout.tags.WorkoutStartTimeTag
 import com.vitorpamplona.quartz.experimental.fitness.workout.tags.WorkoutTypeTag
+import com.vitorpamplona.quartz.nip01Core.core.AddressSerializer
 import com.vitorpamplona.quartz.nip01Core.core.TagArray
 
 fun TagArray.title() = firstNotNullOfOrNull(TitleTag::parse)
@@ -96,6 +102,25 @@ fun TagArray.exerciseSets() = mapNotNull(ExerciseSetTag::parse)
 fun TagArray.exerciseSetAddressIds() = mapNotNull(ExerciseSetTag::parseAddressId)
 
 fun TagArray.exerciseSetHints() = mapNotNull(ExerciseSetTag::parseAsHint)
+
+/**
+ * The distinct exercise-template coordinates the `exercise` tags point at, each re-parsed as a
+ * NIP-01 address so only well-formed `kind:<64-hex>:d` values come out (a prescription repeats one
+ * coordinate per set, and some clients write their own non-nostr ids in the slot).
+ */
+fun TagArray.exerciseTemplateAddresses() = mapNotNull { ExerciseSetTag.parseAddressId(it)?.let(AddressSerializer::parse) }.distinct()
+
+// --- NIP-101e workout template (kind 33402) ---
+
+fun TagArray.rounds() = firstNotNullOfOrNull(RoundsTag::parse)
+
+fun TagArray.intervalSeconds() = firstNotNullOfOrNull(IntervalTag::parse)
+
+fun TagArray.restBetweenRoundsSeconds() = firstNotNullOfOrNull(RestBetweenRoundsTag::parse)
+
+fun TagArray.restBetweenSetsSeconds() = firstNotNullOfOrNull(RestBetweenSetsTag::parse)
+
+fun TagArray.difficulty() = firstNotNullOfOrNull(DifficultyTag::parse)
 
 fun TagArray.templateAddressId() = firstNotNullOfOrNull(TemplateTag::parseAddressId)
 

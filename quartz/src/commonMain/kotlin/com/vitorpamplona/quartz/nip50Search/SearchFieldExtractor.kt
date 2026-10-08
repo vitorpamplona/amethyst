@@ -47,6 +47,7 @@ import com.vitorpamplona.quartz.experimental.decentralizedLists.searchableListTi
 import com.vitorpamplona.quartz.experimental.edits.TextNoteModificationEvent
 import com.vitorpamplona.quartz.experimental.fitness.workout.ExerciseTemplateEvent
 import com.vitorpamplona.quartz.experimental.fitness.workout.WorkoutRecordEvent
+import com.vitorpamplona.quartz.experimental.fitness.workout.WorkoutTemplateEvent
 import com.vitorpamplona.quartz.experimental.interactiveStories.InteractiveStoryBaseEvent
 import com.vitorpamplona.quartz.experimental.library.LearningResourceEvent
 import com.vitorpamplona.quartz.experimental.music.playlist.MusicPlaylistEvent
@@ -76,6 +77,7 @@ import com.vitorpamplona.quartz.nip17Dm.files.ChatMessageEncryptedFileHeaderEven
 import com.vitorpamplona.quartz.nip17Dm.messages.ChatMessageEvent
 import com.vitorpamplona.quartz.nip22Comments.CommentEvent
 import com.vitorpamplona.quartz.nip23LongContent.LongFormContentEvent
+import com.vitorpamplona.quartz.nip23LongContent.draft.LongFormDraftEvent
 import com.vitorpamplona.quartz.nip28PublicChat.admin.ChannelCreateEvent
 import com.vitorpamplona.quartz.nip28PublicChat.admin.ChannelMetadataEvent
 import com.vitorpamplona.quartz.nip29RelayGroups.metadata.GroupMetadataEvent
@@ -83,6 +85,7 @@ import com.vitorpamplona.quartz.nip29RelayGroups.metadata.GroupRolesEvent
 import com.vitorpamplona.quartz.nip29RelayGroups.moderation.CreateGroupEvent
 import com.vitorpamplona.quartz.nip29RelayGroups.moderation.GroupEditMetadataEvent
 import com.vitorpamplona.quartz.nip30CustomEmoji.pack.EmojiPackEvent
+import com.vitorpamplona.quartz.nip30CustomEmoji.stickers.StickerPackEvent
 import com.vitorpamplona.quartz.nip32Labeling.LabelEvent
 import com.vitorpamplona.quartz.nip34Git.issue.GitIssueEvent
 import com.vitorpamplona.quartz.nip34Git.pr.GitPullRequestEvent
@@ -115,6 +118,7 @@ import com.vitorpamplona.quartz.nip58Badges.accepted.AcceptedBadgeSetEvent
 import com.vitorpamplona.quartz.nip58Badges.definition.BadgeDefinitionEvent
 import com.vitorpamplona.quartz.nip5aStaticWebsites.NamedSiteEvent
 import com.vitorpamplona.quartz.nip5aStaticWebsites.RootSiteEvent
+import com.vitorpamplona.quartz.nip5aStaticWebsites.SiteSnapshotEvent
 import com.vitorpamplona.quartz.nip5dNapplets.NamedNappletEvent
 import com.vitorpamplona.quartz.nip5dNapplets.NappletSnapshotEvent
 import com.vitorpamplona.quartz.nip5dNapplets.RootNappletEvent
@@ -186,6 +190,10 @@ object SearchFieldExtractor {
                 tiers(event, event.title(), event.summary(), event.content)
             }
 
+            is LongFormDraftEvent -> {
+                tiers(event, event.title(), event.summary(), event.content)
+            }
+
             is WikiArticleEvent -> {
                 tiers(event, event.title(), event.summary(), event.content)
             }
@@ -243,6 +251,12 @@ object SearchFieldExtractor {
             // never indexed; the public shortcodes are keywords beside the description.
             is EmojiPackEvent -> {
                 tiers(event, listOf(event.titleOrName()), listOf(event.description()) + event.publicEmojiCodes(), null)
+            }
+
+            // kind 30031 -- the pack's name is the title; its description and every
+            // sticker shortcode are what a picker search matches. Never the content.
+            is StickerPackEvent -> {
+                tiers(event, listOf(event.title()), listOf(event.description()) + event.stickers().map { it.code }, null)
             }
 
             is ChannelCreateEvent -> {
@@ -362,6 +376,10 @@ object SearchFieldExtractor {
             }
 
             is WorkoutRecordEvent -> {
+                tiers(event, event.title(), null, event.content)
+            }
+
+            is WorkoutTemplateEvent -> {
                 tiers(event, event.title(), null, event.content)
             }
 
@@ -525,6 +543,10 @@ object SearchFieldExtractor {
             }
 
             is RootSiteEvent -> {
+                tiers(event, event.title(), event.description(), null, website = event.source())
+            }
+
+            is SiteSnapshotEvent -> {
                 tiers(event, event.title(), event.description(), null, website = event.source())
             }
 

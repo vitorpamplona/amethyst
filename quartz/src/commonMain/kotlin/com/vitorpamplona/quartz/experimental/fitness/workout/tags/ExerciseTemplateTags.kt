@@ -63,7 +63,7 @@ class EquipmentTag {
     }
 }
 
-/** Difficulty of a kind-33401 exercise: `beginner` | `intermediate` | `advanced`. */
+/** Difficulty of a kind-33401 exercise or a kind-33402 workout template: `beginner` | `intermediate` | `advanced`. */
 class DifficultyTag {
     companion object {
         const val TAG_NAME = "difficulty"
@@ -74,5 +74,7 @@ class DifficultyTag {
             ensure(tag[1].isNotEmpty()) { return null }
             return tag[1]
         }
+
+        fun assemble(difficulty: String) = arrayOf(TAG_NAME, difficulty)
     }
 }

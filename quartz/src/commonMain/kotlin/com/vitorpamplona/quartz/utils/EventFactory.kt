@@ -140,11 +140,14 @@ import com.vitorpamplona.quartz.experimental.decentralizedLists.header.ListHeade
 import com.vitorpamplona.quartz.experimental.decentralizedLists.item.AddressableListItemEvent
 import com.vitorpamplona.quartz.experimental.decentralizedLists.item.ListItemEvent
 import com.vitorpamplona.quartz.experimental.decoupling.setup.EncryptionKeyListEvent
+import com.vitorpamplona.quartz.experimental.decoupling.transfer.request.EncryptionKeyRequestEvent
+import com.vitorpamplona.quartz.experimental.decoupling.transfer.response.EncryptionKeyTransferEvent
 import com.vitorpamplona.quartz.experimental.edits.TextNoteModificationEvent
 import com.vitorpamplona.quartz.experimental.ephemChat.chat.EphemeralChatEvent
 import com.vitorpamplona.quartz.experimental.ephemChat.list.EphemeralChatListEvent
 import com.vitorpamplona.quartz.experimental.fitness.workout.ExerciseTemplateEvent
 import com.vitorpamplona.quartz.experimental.fitness.workout.WorkoutRecordEvent
+import com.vitorpamplona.quartz.experimental.fitness.workout.WorkoutTemplateEvent
 import com.vitorpamplona.quartz.experimental.interactiveStories.InteractiveStoryPrologueEvent
 import com.vitorpamplona.quartz.experimental.interactiveStories.InteractiveStoryReadingStateEvent
 import com.vitorpamplona.quartz.experimental.interactiveStories.InteractiveStorySceneEvent
@@ -208,6 +211,7 @@ import com.vitorpamplona.quartz.nip18Reposts.GenericRepostEvent
 import com.vitorpamplona.quartz.nip18Reposts.RepostEvent
 import com.vitorpamplona.quartz.nip22Comments.CommentEvent
 import com.vitorpamplona.quartz.nip23LongContent.LongFormContentEvent
+import com.vitorpamplona.quartz.nip23LongContent.draft.LongFormDraftEvent
 import com.vitorpamplona.quartz.nip25Reactions.ExternalReactionEvent
 import com.vitorpamplona.quartz.nip25Reactions.ReactionEvent
 import com.vitorpamplona.quartz.nip28PublicChat.admin.ChannelCreateEvent
@@ -235,6 +239,7 @@ import com.vitorpamplona.quartz.nip29RelayGroups.request.GroupLeaveRequestEvent
 import com.vitorpamplona.quartz.nip29RelayGroups.tags.GroupIdTag
 import com.vitorpamplona.quartz.nip30CustomEmoji.pack.EmojiPackEvent
 import com.vitorpamplona.quartz.nip30CustomEmoji.selection.EmojiListEvent
+import com.vitorpamplona.quartz.nip30CustomEmoji.stickers.StickerPackEvent
 import com.vitorpamplona.quartz.nip32Labeling.LabelEvent
 import com.vitorpamplona.quartz.nip34Git.ci.coordinatorAdvertisement.CiCoordinatorAdvertisementEvent
 import com.vitorpamplona.quartz.nip34Git.ci.jobResult.CiJobResultEvent
@@ -340,6 +345,7 @@ import com.vitorpamplona.quartz.nip59Giftwrap.wraps.EphemeralGiftWrapEvent
 import com.vitorpamplona.quartz.nip59Giftwrap.wraps.GiftWrapEvent
 import com.vitorpamplona.quartz.nip5aStaticWebsites.NamedSiteEvent
 import com.vitorpamplona.quartz.nip5aStaticWebsites.RootSiteEvent
+import com.vitorpamplona.quartz.nip5aStaticWebsites.SiteSnapshotEvent
 import com.vitorpamplona.quartz.nip5dNapplets.NamedNappletEvent
 import com.vitorpamplona.quartz.nip5dNapplets.NappletSnapshotEvent
 import com.vitorpamplona.quartz.nip5dNapplets.RootNappletEvent
@@ -681,8 +687,11 @@ class EventFactory {
                 CommunityRulesEvent.KIND -> CommunityRulesEvent(id, pubKey, createdAt, tags, content, sig)
                 ContactListEvent.KIND -> ContactListEvent(id, pubKey, createdAt, tags, content, sig)
                 DeletionRequestEvent.KIND -> DeletionRequestEvent(id, pubKey, createdAt, tags, content, sig)
+                EncryptionKeyRequestEvent.KIND -> EncryptionKeyRequestEvent(id, pubKey, createdAt, tags, content, sig)
+                EncryptionKeyTransferEvent.KIND -> EncryptionKeyTransferEvent(id, pubKey, createdAt, tags, content, sig)
                 DraftWrapEvent.KIND -> DraftWrapEvent(id, pubKey, createdAt, tags, content, sig)
                 EmojiPackEvent.KIND -> EmojiPackEvent(id, pubKey, createdAt, tags, content, sig)
+                StickerPackEvent.KIND -> StickerPackEvent(id, pubKey, createdAt, tags, content, sig)
                 EmojiListEvent.KIND -> EmojiListEvent(id, pubKey, createdAt, tags, content, sig)
                 EphemeralChatEvent.KIND -> EphemeralChatEvent(id, pubKey, createdAt, tags, content, sig)
                 EphemeralChatListEvent.KIND -> EphemeralChatListEvent(id, pubKey, createdAt, tags, content, sig)
@@ -779,6 +788,7 @@ class EventFactory {
                 PrivateZapEvent.KIND -> PrivateZapEvent(id, pubKey, createdAt, tags, content, sig)
                 ZapRequestEvent.KIND -> ZapRequestEvent(id, pubKey, createdAt, tags, content, sig)
                 LongFormContentEvent.KIND -> LongFormContentEvent(id, pubKey, createdAt, tags, content, sig)
+                LongFormDraftEvent.KIND -> LongFormDraftEvent(id, pubKey, createdAt, tags, content, sig)
                 MarketplaceEvent.KIND -> MarketplaceEvent(id, pubKey, createdAt, tags, content, sig)
                 MeetingRoomEvent.KIND -> MeetingRoomEvent(id, pubKey, createdAt, tags, content, sig)
                 MeetingRoomPresenceEvent.KIND -> MeetingRoomPresenceEvent(id, pubKey, createdAt, tags, content, sig)
@@ -934,6 +944,7 @@ class EventFactory {
                 RoadEventConfirmationEvent.KIND -> RoadEventConfirmationEvent(id, pubKey, createdAt, tags, content, sig)
                 RoadEventReportEvent.KIND -> RoadEventReportEvent(id, pubKey, createdAt, tags, content, sig)
                 RootSiteEvent.KIND -> RootSiteEvent(id, pubKey, createdAt, tags, content, sig)
+                SiteSnapshotEvent.KIND -> SiteSnapshotEvent(id, pubKey, createdAt, tags, content, sig)
                 RepostEvent.KIND -> RepostEvent(id, pubKey, createdAt, tags, content, sig)
                 RequestToVanishEvent.KIND -> RequestToVanishEvent(id, pubKey, createdAt, tags, content, sig)
                 ConcordCommunityListEvent.KIND -> ConcordCommunityListEvent(id, pubKey, createdAt, tags, content, sig)
@@ -973,6 +984,7 @@ class EventFactory {
                 WikiArticleEvent.KIND -> WikiArticleEvent(id, pubKey, createdAt, tags, content, sig)
                 WorkoutRecordEvent.KIND -> WorkoutRecordEvent(id, pubKey, createdAt, tags, content, sig)
                 ExerciseTemplateEvent.KIND -> ExerciseTemplateEvent(id, pubKey, createdAt, tags, content, sig)
+                WorkoutTemplateEvent.KIND -> WorkoutTemplateEvent(id, pubKey, createdAt, tags, content, sig)
                 else -> factories[kind]?.build(id, pubKey, createdAt, tags, content, sig) ?: Event(id, pubKey, createdAt, kind, tags, content, sig)
             } as T
 

@@ -2,9 +2,9 @@
 
 Every concrete `SearchableEvent` implementor in Quartz, with the exact `indexableContent()`
 expression. **Update this file in the same PR as any change to the searchable set or to an
-`indexableContent()` body** (see SKILL.md). Verified against the code 2026-10-05.
+`indexableContent()` body** (see SKILL.md). Verified against the code 2026-10-08.
 
-Counts: 192 concrete classes covering 193 kind values (`GitStatusEvent` spans 4 kinds;
+Counts: 196 concrete classes covering 197 kind values (`GitStatusEvent` spans 4 kinds;
 kind 30063 is shared by two NIPs and kind 38000 by three classes — see the footnotes). The kind
 set is exactly `SearchableKinds.ALL` (`nip50Search/SearchableKinds.kt`). File paths are under
 `quartz/src/commonMain/kotlin/com/vitorpamplona/quartz/`.
@@ -63,6 +63,7 @@ Separator legend: **NL** = `joinToString("\n")`, **SP** = `joinToString(" ")`.
 | 3302 | ConcordChatEditEvent | concord/cord03Channels | `content` |
 | 5050 | DvmTextGenerationRequestEvent | nip90Dvms/textGeneration | `inputs().filter { it.type == "prompt" \|\| it.type == "text" }.joinToString(" ") { it.value }` (SP) |
 | 5100 | DvmImageGenerationRequestEvent | nip90Dvms/imageGeneration | `listOfNotNull(prompt(), negativePrompt()).joinToString(" ")` (SP) |
+| 5128 | SiteSnapshotEvent | nip5aStaticWebsites | `listOfNotNull(title(), description())` NL |
 | 5129 | NappletSnapshotEvent | nip5dNapplets | `listOfNotNull(title(), description())` NL |
 | 5250 | DvmTextToSpeechRequestEvent | nip90Dvms/textToSpeech | `text() ?: ""` |
 | 5302 | DvmContentSearchRequestEvent | nip90Dvms/contentSearch | `searchQuery() ?: ""` |
@@ -112,7 +113,9 @@ Separator legend: **NL** = `joinToString("\n")`, **SP** = `joinToString(" ")`.
 | 30019 | MarketplaceEvent | nip15Marketplace/marketplace | `marketplaceData()?.let { listOfNotNull(it.name, it.about).joinToString("\n") } ?: ""` |
 | 30020 | AuctionEvent | nip15Marketplace/auction | `auctionData()?.let { (listOfNotNull(it.name, it.description) + tags.hashtags()).joinToString("\n") } ?: ""` |
 | 30023 | LongFormContentEvent | nip23LongContent | `(listOfNotNull(title(), summary(), content) + topics())` NL |
+| 30024 | LongFormDraftEvent | nip23LongContent/draft | `tags.longFormIndexableContent(content)` — the same as 30023: `(listOfNotNull(title(), summary(), content) + topics())` NL |
 | 30030 | EmojiPackEvent | nip30CustomEmoji/pack | `(listOfNotNull(titleOrName(), description()) + publicEmojiCodes())` NL — the public `emoji` tags' shortcodes; `content` is NOT indexed (it is the NIP-44 ciphertext of the private emoji tags) |
+| 30031 | StickerPackEvent | nip30CustomEmoji/stickers | `(listOfNotNull(title(), description()) + stickers().map { it.code })` NL (never `content`) |
 | 30040 | PublicationIndexEvent | experimental/publications | `listOfNotNull(title(), author(), summary())` NL |
 | 30041 | PublicationContentEvent | experimental/publications | `listOfNotNull(title(), content)` NL |
 | 30045 | BookshelfDirectoryEvent | experimental/library | `listOfNotNull(title(), summary(), content)` NL |
@@ -159,6 +162,7 @@ Separator legend: **NL** = `joinToString("\n")`, **SP** = `joinToString(" ")`.
 | 32267 | SoftwareApplicationEvent | experimental/nip82SoftwareApps/application | `listOfNotNull(name(), summary(), content)` NL |
 | 33331 | SnoObjectEvent | cyberspace/deck0003Sno | `nameTag().orEmpty()` — the `name` tag only; `content` is SNO geometry JSON |
 | 33401 | ExerciseTemplateEvent | experimental/fitness/workout | `listOfNotNull(title(), content)` NL |
+| 33402 | WorkoutTemplateEvent | experimental/fitness/workout | `listOfNotNull(title(), content)` NL |
 | 33534 | RelayRoleEvent | nip43RelayMembers/roles | `listOfNotNull(label(), description())` NL |
 | 33863 | FundraiserEvent | experimental/agora | `listOfNotNull(title(), content)` NL |
 | 34139 | MusicPlaylistEvent | experimental/music/playlist | `listOfNotNull(title(), description(), content)` NL |

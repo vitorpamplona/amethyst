@@ -97,6 +97,38 @@ class ExerciseSetTag(
             return AddressHint(tag[1], relayHint)
         }
 
+        /**
+         * Assembles the coordinate form. Unknown set fields are written as empty strings, which is how
+         * a NIP-101e template leaves a parameter "configurable by the user performing the workout".
+         */
+        fun assemble(
+            reference: String,
+            relayHint: String? = null,
+            weightKg: Double? = null,
+            reps: Int? = null,
+            rpe: Double? = null,
+            setType: String? = null,
+            setNumber: Int? = null,
+        ): Array<String> {
+            val fields =
+                mutableListOf(
+                    TAG_NAME,
+                    reference,
+                    relayHint ?: "",
+                    weightKg?.let(::formatNumber) ?: "",
+                    reps?.toString() ?: "",
+                    rpe?.let(::formatNumber) ?: "",
+                    setType ?: "",
+                )
+            setNumber?.let { fields.add(it.toString()) }
+            return fields.toTypedArray()
+        }
+
+        fun assemble(set: ExerciseSetTag) = assemble(set.reference, set.relayHint, set.weightKg, set.reps, set.rpe, set.setType, set.setNumber)
+
+        /** `80.0` -> `80`, `82.5` -> `82.5`: whole numbers without a trailing `.0`. */
+        private fun formatNumber(value: Double): String = if (value % 1.0 == 0.0) value.toLong().toString() else value.toString()
+
         fun parse(tag: Array<String>): ExerciseSetTag? {
             ensure(tag.has(1)) { return null }
             ensure(tag[0] == TAG_NAME) { return null }

@@ -18,7 +18,7 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.quartz.nip23LongContent
+package com.vitorpamplona.quartz.nip23LongContent.draft
 
 import androidx.compose.runtime.Immutable
 import com.vitorpamplona.quartz.nip01Core.core.Address
@@ -35,32 +35,59 @@ import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.nip01Core.tags.dTag.dTag
 import com.vitorpamplona.quartz.nip01Core.tags.hashtags.hashtags
 import com.vitorpamplona.quartz.nip01Core.tags.publishedAt.PublishedAtProvider
-import com.vitorpamplona.quartz.nip10Notes.BaseThreadedEvent
-import com.vitorpamplona.quartz.nip22Comments.RootScope
+import com.vitorpamplona.quartz.nip10Notes.BaseNoteEvent
+import com.vitorpamplona.quartz.nip23LongContent.LongFormContentEvent
+import com.vitorpamplona.quartz.nip23LongContent.forEachLongFormIndexableField
+import com.vitorpamplona.quartz.nip23LongContent.longFormAddressHints
+import com.vitorpamplona.quartz.nip23LongContent.longFormEventHints
+import com.vitorpamplona.quartz.nip23LongContent.longFormImage
+import com.vitorpamplona.quartz.nip23LongContent.longFormIndexableContent
+import com.vitorpamplona.quartz.nip23LongContent.longFormLinkedAddressIds
+import com.vitorpamplona.quartz.nip23LongContent.longFormLinkedEventIds
+import com.vitorpamplona.quartz.nip23LongContent.longFormLinkedPubKeys
+import com.vitorpamplona.quartz.nip23LongContent.longFormPubKeyHints
+import com.vitorpamplona.quartz.nip23LongContent.longFormPublishedAt
+import com.vitorpamplona.quartz.nip23LongContent.longFormSummary
+import com.vitorpamplona.quartz.nip23LongContent.longFormTitle
 import com.vitorpamplona.quartz.nip50Search.IndexableFieldVisitor
 import com.vitorpamplona.quartz.nip50Search.SearchableEvent
 import com.vitorpamplona.quartz.utils.TimeUtils
 import kotlin.uuid.ExperimentalUuidApi
 import kotlin.uuid.Uuid
 
+/**
+ * NIP-23 long-form **draft**, kind 30024: "the same structure" as a published article
+ * ([LongFormContentEvent], kind 30023) — a markdown `content`, `title`, `summary`, `image`,
+ * `published_at`, `t` hashtags and NIP-27 references — under a separate kind so clients keep it out of
+ * article feeds. Publishing a draft means signing the same tags and content as a 30023.
+ *
+ * Not the NIP-37 draft wrap (kind 31234, `DraftWrapEvent`), which hides an encrypted draft of any
+ * kind; a 30024 is plain text anyone can read.
+ *
+ * Accessors, hint providers and search text are those of kind 30023, read through the same
+ * `TagArray` helpers. Two deliberate differences: a draft is not a NIP-10 thread
+ * (it extends [BaseNoteEvent], not `BaseThreadedEvent`) and not a NIP-22 root, since comments belong
+ * on the published article.
+ *
+ * Searchable with the same fields as kind 30023 (`title`, `summary`, `content`, then the `t` topics): the author published
+ * this human-written text unencrypted, which is what the search policy indexes, and a search filtered
+ * to kind 30023 never returns drafts.
+ */
 @Immutable
-class LongFormContentEvent(
+class LongFormDraftEvent(
     id: HexKey,
     pubKey: HexKey,
     createdAt: Long,
     tags: Array<Array<String>>,
     content: String,
     sig: HexKey,
-) : BaseThreadedEvent(id, pubKey, createdAt, KIND, tags, content, sig),
+) : BaseNoteEvent(id, pubKey, createdAt, KIND, tags, content, sig),
     AddressableEvent,
     EventHintProvider,
     PubKeyHintProvider,
     AddressHintProvider,
     PublishedAtProvider,
-    RootScope,
     SearchableEvent {
-    // Topics (`t`) are appended after the body, as CommentEvent does: authors pick
-    // topics that the article text does not necessarily mention. Shared with the draft (30024).
     override fun indexableContent() = tags.longFormIndexableContent(content)
 
     // The read path: hands over the same fields indexableContent() joins, without
@@ -69,14 +96,17 @@ class LongFormContentEvent(
 
     override fun eventHints(): List<EventIdHint> = tags.longFormEventHints(citedNIP19())
 
+    /** `QUOTE`: events quoted with `q`; `MENTION`: events cited as `nostr:` URIs in the text. */
     override fun linkedEventIds(): List<HexKey> = tags.longFormLinkedEventIds(citedNIP19())
 
     override fun addressHints(): List<AddressHint> = tags.longFormAddressHints(citedNIP19())
 
+    /** `QUOTE`: addresses quoted with `q`; `MENTION`: addresses cited as `nostr:` URIs in the text. */
     override fun linkedAddressIds(): List<String> = tags.longFormLinkedAddressIds(citedNIP19())
 
     override fun pubKeyHints(): List<PubKeyHint> = tags.longFormPubKeyHints(citedNIP19())
 
+    /** `MENTION`: people tagged with `p` or cited as `nostr:` URIs in the text; `ZAP_SPLIT`: NIP-57 zap-split recipients. */
     override fun linkedPubKeys(): List<HexKey> = tags.longFormLinkedPubKeys(citedNIP19())
 
     override fun dTag() = tags.dTag()
@@ -93,11 +123,11 @@ class LongFormContentEvent(
 
     fun summary() = tags.longFormSummary()
 
-    // Drops a `published_at` in the future.
     override fun publishedAt(): Long? = tags.longFormPublishedAt(createdAt)
 
     companion object {
-        const val KIND = 30023
+        const val KIND = 30024
+        const val ALT_DESCRIPTION = "Long-form draft"
 
         @OptIn(ExperimentalUuidApi::class)
         fun build(
@@ -108,8 +138,8 @@ class LongFormContentEvent(
             publishedAt: Long? = null,
             dTag: String = Uuid.random().toString(),
             createdAt: Long = TimeUtils.now(),
-            initializer: TagArrayBuilder<LongFormContentEvent>.() -> Unit = {},
-        ) = eventTemplate(KIND, description, createdAt) {
+            initializer: TagArrayBuilder<LongFormDraftEvent>.() -> Unit = {},
+        ) = eventTemplate<LongFormDraftEvent>(KIND, description, createdAt) {
             dTag(dTag)
 
             title(title)
@@ -121,9 +151,3 @@ class LongFormContentEvent(
         }
     }
 }
-
-@Deprecated(
-    "Renamed to LongFormContentEvent. NIP-23 names kind 30023 long-form content.",
-    ReplaceWith("LongFormContentEvent", "com.vitorpamplona.quartz.nip23LongContent.LongFormContentEvent"),
-)
-typealias LongTextNoteEvent = LongFormContentEvent
