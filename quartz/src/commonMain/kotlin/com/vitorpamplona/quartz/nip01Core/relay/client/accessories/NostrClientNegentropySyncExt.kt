@@ -110,13 +110,12 @@ class NegentropySyncResult(
  *     observed as `NEG-ERR … "blocked: too many query results"`): the [filter] is
  *     split by `created_at` windows and each window reconciled on its own, a
  *     window that still overflows being halved and retried.
- *  4. Handles a relay that reconciles only part of the set **without saying so**:
- *     relay.ohstr.com builds its reconcile from its newest 500 events (its REQ
- *     `max_limit`), so a sync of 25,691 events reconciled 500 and finished clean.
- *     After a pass, one `REQ` asks for anything at or below the oldest event the
- *     pass delivered; an event there that we neither downloaded nor hold means the
- *     relay left that stretch out, and another pass reconciles it. A relay that
- *     reconciles everything costs that one `REQ`.
+ *  4. Handles a relay that reconciles only part of the set **without saying so**
+ *     (some build the reconcile from their newest `max_limit` matches). After a pass,
+ *     one `REQ` asks for anything at or below the second the pass reconciled down to;
+ *     an event there that we neither downloaded nor hold means the relay left that
+ *     stretch out, and another pass reconciles it (see [NegentropyPassCursor]). A
+ *     relay that reconciles everything costs that one `REQ`.
  *
  * This method is negentropy-only. It does NOT silently fall back to plain paging:
  * if a window genuinely cannot be reconciled — a minimal `created_at` window still
@@ -1478,9 +1477,9 @@ private sealed interface NegFrame {
 }
 
 /**
- * Reconcile passes [negentropySync] runs against a relay that reconciles part of its set.
- * relay.ohstr.com (newest 500) needs about one per 500 events; past this the relay is
- * handing out a sliver per pass, and paging is the better tool.
+ * Reconcile passes [negentropySync] runs against a relay that reconciles part of its set: a
+ * relay reconciling its newest 500 needs one per 500 events. Past this the relay is handing out
+ * a sliver per pass, and paging is the better tool.
  */
 private const val MAX_SYNC_PASSES = 200
 

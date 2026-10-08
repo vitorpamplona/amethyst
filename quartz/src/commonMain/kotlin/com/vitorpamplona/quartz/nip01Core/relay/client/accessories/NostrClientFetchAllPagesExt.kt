@@ -227,9 +227,8 @@ class PageRetryBackoff(
  * **Several filters are walked one after another, each on its own cursor.** One cursor
  * cannot serve them: a relay pages each filter of a `REQ` on its own, so a dense filter's
  * page ends hours back while a sparse one's reaches weeks back, and moving the shared cursor
- * to the oldest event of the page skips everything the dense filter holds in between.
- * EventSync's `authors = me` + `#p = me` lost 4,256 of 5,900 events on nostr.mom that way,
- * and 7,666 of 9,080 on relay.nostr.net. A later walk skips the events an earlier one
+ * to the oldest event of the page skips everything the dense filter holds in between (most of
+ * a `#p = me` set, walked beside a sparse `authors = me`). A later walk skips the events an earlier one
  * delivered (by id, only those a later filter also matches), so each is delivered once, in
  * each walk's page order; [onNewPage] starts over from the top for each filter. The
  * [PagedFetchResult.end] is the most serious of the walks' (see [severity]), so the result

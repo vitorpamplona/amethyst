@@ -48,16 +48,15 @@ import kotlin.concurrent.atomics.incrementAndFetch
  *
  * Usually one `REQ`, but two kinds of relay make it more:
  *
- *  - **A relay that caps every `REQ`, ids included.** relay.nostr.net answers a
- *    500-id `REQ` with 100 events and relay.nostr.wirednet.jp with 200, `limit`
- *    or not, then sends `EOSE` as if that were all. So after an `EOSE` that left
+ *  - **A relay that caps every `REQ`, ids included.** Some answer a 500-id `REQ`
+ *    with their page size (100, 200), `limit` or not, then send `EOSE` as if that
+ *    were all. So after an `EOSE` that left
  *    ids unserved, the ones still missing are asked for again, for as long as
  *    each round brings something new. A round that brings nothing ends it: those
  *    ids are ones the relay will not serve (it names them in a reconcile but
  *    cannot load them, or deleted them since).
- *  - **A relay that refuses an ids-only filter.** relay.conduit.market closes it
- *    with "wildcard subscriptions are not available"; the same ids with the sync
- *    filter's `kinds` are served. So the `REQ` carries [reconciledFrom]'s `kinds`, which
+ *  - **A relay that refuses an ids-only filter** as a "wildcard subscription", and
+ *    serves the same ids once the `REQ` names the sync filter's `kinds`. So the `REQ` carries [reconciledFrom]'s `kinds`, which
  *    every id a reconcile of [reconciledFrom] named matches. A filter with no kinds may hold
  *    a long `authors` list, too heavy to repeat on every batch, so its ids go out
  *    bare and its `authors` and tags are added only to re-ask a `CLOSED` batch.
@@ -65,11 +64,10 @@ import kotlin.concurrent.atomics.incrementAndFetch
  * An `auth-required:` refusal is re-asked once, after this client's NIP-42 responder
  * (if it has one) authenticates.
  *
- * A dropped connection is re-asked too, a few times, after a short pause. no.str.cr closes
- * the socket once a few 500-id downloads stream at once (the paged walk, one `REQ` at a
- * time, never trips it), and every batch in flight lost its ids for good. Batches that
- * share a [pace] also stop overlapping from the first drop on, which is what that relay
- * needs; a relay that never drops keeps all of them.
+ * A dropped connection is re-asked too, a few times, after a short pause: some relays close
+ * the socket once several large downloads stream at once (one `REQ` at a time never trips
+ * them), which used to lose every batch in flight. Batches that share a [pace] also stop
+ * overlapping from the first drop on; a relay that never drops keeps all of them.
  *
  * Events are deduped across the rounds (a [HashSet] bounded by the batch size, so
  * still O(pipeline) memory). A REQ-by-ids should return each id once, but the client

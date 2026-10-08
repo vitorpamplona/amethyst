@@ -129,8 +129,8 @@ suspend fun INostrClient.fetchAllWithHooks(
     // listener cannot wait on the AUTH itself — it runs on the relay's reader thread and
     // must not block it — so it only reports, and the resolver does the waiting.
     val authRefusalChannel = Channel<Pair<NormalizedRelayUrl, String>>(UNLIMITED)
-    // Relays that refused a filter's `limit` (purplepag.es: `blocked: limit too high: 1000 (max
-    // 500)`), handed to the resolver below to be re-asked at the limit they state.
+    // Relays that refused a filter's `limit` (`blocked: limit too high: 1000 (max 500)`), handed
+    // to the resolver below to be re-asked at the limit they state.
     val limitRefusalChannel = Channel<Pair<NormalizedRelayUrl, String>>(UNLIMITED)
     // Subscriptions opened to re-ask a relay at a lower limit; closed with the main one.
     val retrySubIds = mutableListOf<String>()
