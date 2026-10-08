@@ -32,6 +32,7 @@ import com.vitorpamplona.quartz.nip50Search.SearchableEvent
 import com.vitorpamplona.quartz.nip69P2pOrderEvents.tags.FiatAmountTag
 import com.vitorpamplona.quartz.nip69P2pOrderEvents.tags.OrderStatus
 import com.vitorpamplona.quartz.nip69P2pOrderEvents.tags.OrderType
+import com.vitorpamplona.quartz.utils.BigDecimal
 import com.vitorpamplona.quartz.utils.TimeUtils
 import kotlin.uuid.ExperimentalUuidApi
 import kotlin.uuid.Uuid
@@ -110,7 +111,7 @@ class P2POrderEvent(
             layer: String? = null,
             makerName: String? = null,
             geohash: String? = null,
-            bond: Long? = null,
+            bond: BigDecimal? = null,
             dTag: String = Uuid.random().toString(),
             createdAt: Long = TimeUtils.now(),
             initializer: TagArrayBuilder<P2POrderEvent>.() -> Unit = {},

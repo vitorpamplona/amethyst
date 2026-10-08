@@ -32,8 +32,8 @@ import com.vitorpamplona.quartz.marmot.appComponents.MarmotWebUrl
 import com.vitorpamplona.quartz.marmot.appComponents.MessageRetentionV1
 import com.vitorpamplona.quartz.marmot.foundation.appEvents.MarmotAppEvent
 import com.vitorpamplona.quartz.marmot.foundation.appEvents.MarmotMessageEdit
-import com.vitorpamplona.quartz.marmot.mip00KeyPackages.KeyPackageEvent
 import com.vitorpamplona.quartz.marmot.mip00KeyPackages.KeyPackageFetcher
+import com.vitorpamplona.quartz.marmot.mip00KeyPackages.PublishedKeyPackage
 import com.vitorpamplona.quartz.marmot.protocolCore.GroupLifecycleState
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
@@ -430,13 +430,14 @@ class AccountMarmotActions(
                 "(memberKeyPackageRelays=${memberKeyPackageRelays.size}, memberOutbox=${memberOutbox.size}, myOutbox=${myOutbox.size}): ${fetchRelays.map { it.url }}"
         }
 
-        val event =
-            com.vitorpamplona.quartz.marmot.mip00KeyPackages.KeyPackageFetcher
-                .fetchKeyPackage(account.client, memberPubKey, fetchRelays)
+        // Both kinds: White Noise's MDK still publishes legacy kind:443, some
+        // of its users nothing else. The newest valid 30443 wins; a valid 443
+        // is the fallback (MIP-00 migration rules).
+        val event = KeyPackageFetcher.fetchKeyPackageForInvite(account.client, memberPubKey, fetchRelays)
 
         if (event == null) {
             Log.w("MarmotDbg") {
-                "fetchKeyPackageAndAddMember: NO KeyPackage found for ${memberPubKey.take(8)}… on any of ${fetchRelays.size} relay(s)"
+                "fetchKeyPackageAndAddMember: NO valid KeyPackage found for ${memberPubKey.take(8)}… on any of ${fetchRelays.size} relay(s)"
             }
             return "Error: No KeyPackage found for this user. They may not have published one yet."
         }
@@ -475,7 +476,7 @@ class AccountMarmotActions(
      */
     suspend fun addMarmotGroupMember(
         nostrGroupId: HexKey,
-        keyPackageEvent: com.vitorpamplona.quartz.marmot.mip00KeyPackages.KeyPackageEvent,
+        keyPackageEvent: PublishedKeyPackage,
         groupRelays: List<NormalizedRelayUrl>,
     ) {
         val memberPubKey = keyPackageEvent.pubKey

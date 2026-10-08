@@ -56,6 +56,9 @@ fun TagArray.expiresAt() = firstNotNullOfOrNull(ExpiresAtTag::parse)
 
 fun TagArray.platform() = firstNotNullOfOrNull(PlatformTag::parse)
 
+/** The publisher's instance name from the `y` tag's third slot (Mostro), or null. */
+fun TagArray.instanceName() = firstNotNullOfOrNull(PlatformTag::parseInstanceName)
+
 fun TagArray.documentType() = firstNotNullOfOrNull(DocumentTypeTag::parse)
 
 fun TagArray.source() = firstNotNullOfOrNull(SourceTag::parse)

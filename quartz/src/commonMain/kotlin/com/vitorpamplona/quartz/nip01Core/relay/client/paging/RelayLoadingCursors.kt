@@ -193,6 +193,16 @@ class RelayLoadingCursors {
         }
     }
 
+    /**
+     * Forgets every relay's progress and the pinned [floor], as if this scope had never paged. For when
+     * the scope's loaded messages are dropped wholesale (e.g. the feature was turned off): the cursors
+     * would otherwise claim history that is no longer held, and the next pages would skip it.
+     */
+    fun reset() {
+        cursors.clear()
+        floor = null
+    }
+
     /** Relays from [all] that have been armed (advanced at least once) and are not yet [isDone]. */
     fun armedRelays(all: Collection<NormalizedRelayUrl>): List<NormalizedRelayUrl> =
         all.filter {

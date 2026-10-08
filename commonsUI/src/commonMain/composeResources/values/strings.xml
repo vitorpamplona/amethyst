@@ -1725,6 +1725,9 @@
     <string name="call_permission_denied_cancel">Cancel</string>
     <string name="call_settings_enable_calls">Enable voice and video calls</string>
     <string name="call_settings_enable_calls_description">When disabled, call buttons are hidden from chat screens and all incoming calls are silently ignored.</string>
+    <string name="call_settings_off_with_nip17">Calls are off: they use the same encrypted channel as private messages (NIP-17), which are turned off in Messages settings.</string>
+    <string name="open_messages_settings">Open Messages settings</string>
+    <string name="chat_composer_off_with_nip17">Private messages (NIP-17) are turned off in Messages settings, so you can't send messages here.</string>
     <string name="call_settings_video_quality">Video Quality</string>
     <string name="call_settings_max_bitrate">Max Video Bitrate</string>
     <string name="call_settings_turn_servers">TURN / STUN Servers</string>
@@ -2687,6 +2690,33 @@
     <string name="git_pr_no_changes">No file changes found.</string>
     <string name="git_pr_changes_retry">Retry loading changes</string>
     <string name="git_pr_revised">Revised</string>
+    <string name="git_cover_note">Cover note</string>
+    <string name="git_ci_success">CI passed</string>
+    <string name="git_ci_failure">CI failed</string>
+    <string name="git_ci_pending">CI running</string>
+    <string name="git_ci_cancelled">CI cancelled</string>
+    <string name="git_ci_neutral">CI neutral</string>
+    <string name="git_ci_count">%1$d/%2$d</string>
+    <string name="git_ci_runs_title">CI runs</string>
+    <string name="git_ci_runs_disclaimer">Anyone can publish CI results for any repository. Check who signed each run before trusting it.</string>
+    <string name="git_ci_signed_by">Signed by</string>
+    <string name="git_ci_queued">Queued</string>
+    <string name="git_ci_in_progress">In progress</string>
+    <string name="git_ci_conclusion_success">Success</string>
+    <string name="git_ci_conclusion_failure">Failure</string>
+    <string name="git_ci_conclusion_neutral">Neutral</string>
+    <string name="git_ci_conclusion_cancelled">Cancelled</string>
+    <string name="git_ci_conclusion_skipped">Skipped</string>
+    <string name="git_ci_conclusion_timed_out">Timed out</string>
+    <string name="git_ci_conclusion_startup_failure">Startup failure</string>
+    <string name="git_ci_conclusion_unknown">Unknown result</string>
+    <string name="git_ci_no_jobs">No job results yet.</string>
+    <string name="git_ci_job_loading">Loading job result…</string>
+    <string name="git_ci_full_log">Full log</string>
+    <plurals name="git_ci_earlier_attempts">
+        <item quantity="one">%1$d earlier attempt</item>
+        <item quantity="other">%1$d earlier attempts</item>
+    </plurals>
     <string name="git_repo_settings_title">Edit repository</string>
     <string name="git_repo_settings_name">Name</string>
     <string name="git_repo_settings_description">Description</string>
@@ -3786,7 +3816,7 @@
     <string name="chat_type_marmot_title">Encrypted groups</string>
     <string name="chat_type_nip04_desc">Older, less-private encrypted direct messages (NIP-04).</string>
     <string name="chat_type_nip04_title">Legacy DMs</string>
-    <string name="chat_type_nip17_desc">End-to-end encrypted, gift-wrapped direct messages (NIP-17).</string>
+    <string name="chat_type_nip17_desc">End-to-end encrypted, gift-wrapped direct messages (NIP-17). Voice and video calls use the same channel, so they turn off with it.</string>
     <string name="chat_type_nip17_title">Private messages</string>
     <string name="chat_type_nip28_desc">Open, public chat rooms anyone can read and join (NIP-28).</string>
     <string name="chat_type_nip28_title">Public channels</string>
@@ -6717,4 +6747,68 @@
     <string name="wot_effect_notifications_body">Curated hides strangers</string>
     <string name="wot_effect_replies_title">Replies</string>
     <string name="wot_effect_replies_body">Strangers start collapsed</string>
+
+    <!-- Mostro instance terms (kind 38385) -->
+    <string name="mostro_instance_label">Mostro P2P exchange</string>
+    <string name="mostro_instance_unnamed">Unnamed Mostro instance</string>
+    <string name="mostro_version">Version %1$s</string>
+    <string name="mostro_fee">Fee</string>
+    <string name="mostro_order_size">Order size</string>
+    <string name="mostro_order_size_range">%1$s – %2$s sats</string>
+    <string name="mostro_order_size_min">From %1$s sats</string>
+    <string name="mostro_order_size_max">Up to %1$s sats</string>
+    <string name="mostro_currencies">Currencies</string>
+    <string name="mostro_all_currencies">All currencies</string>
+    <plurals name="mostro_more_currencies">
+        <item quantity="one">+%1$d more</item>
+        <item quantity="other">+%1$d more</item>
+    </plurals>
+    <string name="mostro_order_expiration">Orders wait</string>
+    <plurals name="mostro_order_expiration_hours">
+        <item quantity="one">%1$d hour</item>
+        <item quantity="other">%1$d hours</item>
+    </plurals>
+    <string name="mostro_escrow">Escrow</string>
+    <string name="mostro_escrow_lightning">Lightning hold invoice</string>
+    <string name="mostro_escrow_cashu">Cashu ecash</string>
+    <string name="mostro_in_maintenance">In maintenance: not taking new orders</string>
+
+    <!-- Kanban boards (kind 30301) and cards (kind 30302) -->
+    <string name="kanban_board_label">Kanban board</string>
+    <string name="kanban_card_label">Kanban card</string>
+    <string name="kanban_untitled">Untitled</string>
+    <plurals name="kanban_column_card_count">
+        <item quantity="one">%1$d card</item>
+        <item quantity="other">%1$d cards</item>
+    </plurals>
+    <plurals name="kanban_unplaced_cards">
+        <item quantity="one">%1$d card in no column</item>
+        <item quantity="other">%1$d cards in no column</item>
+    </plurals>
+    <string name="kanban_assigned_to">Assigned to</string>
+    <plurals name="kanban_more_assignees">
+        <item quantity="one">+%1$d more</item>
+        <item quantity="other">+%1$d more</item>
+    </plurals>
+    <string name="kanban_on_board">On board %1$s</string>
+    <string name="kanban_open_board">Open the board</string>
+
+    <!-- WalletScrutiny build verifications (kind 30301) -->
+    <string name="build_verification_label">Reproducible build check</string>
+    <string name="build_verdict_reproducible">Reproducible</string>
+    <string name="build_verdict_not_reproducible">Not reproducible</string>
+    <string name="build_verdict_ftbfs">Failed to build from source</string>
+    <string name="build_verdict_spam">Marked as spam</string>
+    <string name="build_verdict_notag">No source tag for this release</string>
+    <string name="build_verdict_nosource">No public source code</string>
+    <string name="build_verdict_warning">Verified with warnings</string>
+    <string name="build_verdict_obfuscated">Obfuscated build</string>
+    <string name="build_verdict_unknown">Verdict: %1$s</string>
+    <string name="build_verified_by">Verified by</string>
+    <plurals name="build_files_checked">
+        <item quantity="one">%1$d file checked</item>
+        <item quantity="other">%1$d files checked</item>
+    </plurals>
+    <string name="build_show_report">Show report</string>
+    <string name="build_hide_report">Hide report</string>
 </resources>

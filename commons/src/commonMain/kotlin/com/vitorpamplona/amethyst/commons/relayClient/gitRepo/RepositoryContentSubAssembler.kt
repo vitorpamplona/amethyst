@@ -51,8 +51,12 @@ class RepositoryContentSubAssembler(
                 }
             val repoRelays = (announcedRelays + hintRelays + key.repository.relayUrls()).toSet()
 
-            repoRelays.map { relay ->
-                filterRepositoryContent(relay, repoEvent, since?.get(relay)?.time)
+            repoRelays.flatMap { relay ->
+                val relaySince = since?.get(relay)?.time
+                listOf(
+                    filterRepositoryContent(relay, repoEvent, relaySince),
+                    filterRepositoryCi(relay, repoEvent, relaySince),
+                )
             }
         }
     }

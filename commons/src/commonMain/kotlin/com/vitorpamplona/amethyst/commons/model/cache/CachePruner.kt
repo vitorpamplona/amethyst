@@ -253,6 +253,17 @@ class CachePruner(
         }
     }
 
+    /**
+     * Drops the gift wrap and seal that delivered each of [rumors], keeping the rumors. A wrap still in
+     * the cache is skipped on arrival as already seen, so without this a rumor collected after its room
+     * let go of it could never come back from a re-fetch of the same wrap.
+     */
+    fun forgetGiftWraps(rumors: Collection<Note>) {
+        val children = mutableListOf<Note>()
+        rumors.forEach { children.addAll(removeIfWrap(it)) }
+        unlinkAndRemove(children)
+    }
+
     private fun removeIfWrap(note: Note): List<Note> {
         val host = note.rumorHost ?: return emptyList()
 

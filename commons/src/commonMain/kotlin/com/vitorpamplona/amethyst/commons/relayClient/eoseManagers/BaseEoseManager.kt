@@ -20,6 +20,8 @@
  */
 package com.vitorpamplona.amethyst.commons.relayClient.eoseManagers
 
+import com.vitorpamplona.amethyst.commons.model.chats.ChatFeedType
+import com.vitorpamplona.amethyst.commons.relayClient.AccountScopedQuery
 import com.vitorpamplona.amethyst.commons.service.BundledUpdate
 import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.reqs.SubscriptionListener
@@ -54,6 +56,32 @@ abstract class BaseEoseManager<T>(
         updateSubscriptions(allKeys())
         orchestrator.updateRelays()
     }
+
+    /**
+     * The Settings › Messages toggles this manager's filters read. While a subscription is open, a flip
+     * of any of them (once applied — see [com.vitorpamplona.amethyst.commons.model.chats.ChatFeedToggles])
+     * calls [onChatFeedsToggled]. Empty for managers that don't depend on one.
+     */
+    protected open val watchedChatFeeds: Set<ChatFeedType> = emptySet()
+
+    /** A watched toggle flipped: rebuilds the filters. Override to reset state that depends on it first. */
+    protected open fun onChatFeedsToggled() = invalidateFilters()
+
+    private val chatFeedWatchers by lazy { ChatFeedWatchers(watchedChatFeeds) { onChatFeedsToggled() } }
+
+    /**
+     * For the base classes: call with each subscription's key before building its filters, so a toggle
+     * flip can't fall between the build and the watcher. A no-op for keys not scoped to an account.
+     */
+    protected fun watchChatFeeds(
+        subKey: Any,
+        key: T,
+    ) {
+        (key as? AccountScopedQuery)?.let { chatFeedWatchers.ensure(subKey, it.account) }
+    }
+
+    /** For the base classes: call when the subscription for [subKey] ends. */
+    protected fun unwatchChatFeeds(subKey: Any) = chatFeedWatchers.stop(subKey)
 
     override fun destroy() {
         bundler.cancel()

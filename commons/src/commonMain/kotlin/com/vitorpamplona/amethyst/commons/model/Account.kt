@@ -51,6 +51,8 @@ import com.vitorpamplona.amethyst.commons.model.buzz.BuzzWorkspaces
 import com.vitorpamplona.amethyst.commons.model.buzz.ChannelInvitesState
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
 import com.vitorpamplona.amethyst.commons.model.cache.filter
+import com.vitorpamplona.amethyst.commons.model.chats.ChatFeedToggles
+import com.vitorpamplona.amethyst.commons.model.chats.ChatFeedType
 import com.vitorpamplona.amethyst.commons.model.composer.NewMessageTagger
 import com.vitorpamplona.amethyst.commons.model.concord.ConcordChannel
 import com.vitorpamplona.amethyst.commons.model.concord.ConcordChannelListState
@@ -167,6 +169,7 @@ import com.vitorpamplona.amethyst.commons.model.topNavFeeds.OutboxLoaderState
 import com.vitorpamplona.amethyst.commons.model.topNavFeeds.TopFilter
 import com.vitorpamplona.amethyst.commons.model.trustedAssertions.TrustProviderListState
 import com.vitorpamplona.amethyst.commons.nipACWebRtcCalls.CallManager
+import com.vitorpamplona.amethyst.commons.nipACWebRtcCalls.CallState
 import com.vitorpamplona.amethyst.commons.relayClient.auth.InMemoryRelayAuthPermissionStore
 import com.vitorpamplona.amethyst.commons.relayClient.auth.RelayAuthPermissionCache
 import com.vitorpamplona.amethyst.commons.relayClient.auth.RelayAuthPermissionLedger
@@ -377,7 +380,9 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.debounce
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.map
@@ -396,10 +401,10 @@ import com.vitorpamplona.quartz.experimental.profileGallery.thumbhash as gallery
 /** How long past a disappearing message's deadline the sweep waits, to purge nearby deadlines in one pass (CORD-08). */
 private const val CONCORD_EXPIRY_COALESCE_MS = 2_000L
 
-/** Delay before the first Direct Invite sweep, so it doesn't compete with the start-up fetches. */
+/** Delay before the first stock-relay Direct Invite sweep, so it doesn't compete with the start-up fetches. */
 private const val DIRECT_INVITE_SWEEP_START_MS = 20_000L
 
-/** How often to sweep for Direct Invites while the account is loaded. */
+/** How often to sweep the stock relays for Direct Invites while the account is loaded. */
 private const val DIRECT_INVITE_SWEEP_EVERY_MS = 15 * 60_000L
 
 @OptIn(DelicateCoroutinesApi::class)
@@ -1088,6 +1093,28 @@ class Account(
     val newNotesPreProcessor = EventProcessor(this, cache)
 
     /**
+     * The Settings › Messages load toggles, applied in one order (gate, rooms, then [ChatFeedToggles.applied]).
+     * Everything that loads, shows or notifies a chat type asks here rather than the raw setting.
+     */
+    val chatFeedToggles: ChatFeedToggles =
+        ChatFeedToggles(
+            settings = settings,
+            chatroomList = chatroomList,
+            draftRumor = { draftsDecryptionCache.preCachedDraft(it) },
+            decryptDraft = { draftsDecryptionCache.cachedDraft(it) },
+            findCachedNotes = { predicate -> cache.notes.filter { _, note -> predicate(note) } },
+            reindexDraft = { newNotesPreProcessor.consume(it) },
+            onDmProtocolOff = { type ->
+                // Calls signal over NIP-17's inbox: once it closes the peer's renegotiation and hangup
+                // can't reach us, so end any call in progress rather than leave it hanging.
+                if (type == ChatFeedType.NIP17) {
+                    if (callManager.state.value is CallState.IncomingCall) callManager.rejectCall() else callManager.hangup()
+                }
+            },
+            forgetGiftWraps = { cache.pruner.forgetGiftWraps(it) },
+        )
+
+    /**
      * Owns the WebRTC call state machine.
      *
      * Account-scoped on purpose: a call outlives the main UI. It runs in its own
@@ -1108,7 +1135,7 @@ class Account(
             scope = scope,
             isFollowing = { isFollowing(it) },
             publishEvent = { wrap -> scope.launch { publishCallSignaling(wrap) } },
-            isCallsEnabled = { settings.callsEnabled.value },
+            isCallsEnabled = { chatFeedToggles.isCallingActive() },
         )
 
     // Per-message publish acceptance (relay OKs), feeding the delivery ticks on
@@ -3170,6 +3197,11 @@ class Account(
 
     override suspend fun sendNip17EncryptedFile(template: EventTemplate<ChatMessageEncryptedFileHeaderEvent>) {
         if (!isWriteable()) return
+        // See sendNip17PrivateMessage: a NIP-17 file sent with NIP-17 off would be dropped on arrival.
+        if (!chatFeedToggles.isEnabled(ChatFeedType.NIP17)) {
+            Log.w("Account") { "Not sending a NIP-17 file: NIP-17 is turned off in Messages settings" }
+            return
+        }
 
         val powDifficulty = powDifficultyFor(GiftWrapEvent.KIND)
         if (powDifficulty != null) {
@@ -3203,6 +3235,14 @@ class Account(
         template: EventTemplate<ChatMessageEvent>,
         onSent: suspend () -> Unit,
     ) {
+        // With NIP-17 off in Messages settings the message would be dropped on arrival (our own copy
+        // included), so it never goes out. The composer already hides itself; this covers every other
+        // way in: a room's subject dialog, an inline reply from a notification posted before the
+        // switch, the desktop chat.
+        if (!chatFeedToggles.isEnabled(ChatFeedType.NIP17)) {
+            Log.w("Account") { "Not sending a NIP-17 message: NIP-17 is turned off in Messages settings" }
+            return
+        }
         val powDifficulty = powDifficultyFor(GiftWrapEvent.KIND)
         if (powDifficulty != null) {
             // See sendNip17EncryptedFile: sign inline, queue only wrap mining.
@@ -4295,17 +4335,29 @@ class Account(
             }
         }
 
-        // Direct Invites (CORD-05 §6) are shown on Notifications and Messages, not only on the Concord
-        // hub, so they have to be looked for without the hub open. Invites delivered to our DM relays
-        // also arrive through the normal gift-wrap path; this sweep covers the stock relays a sender
-        // falls back to when it can't find our lists. Single-flight, so an overlap with the hub's own
-        // request is dropped.
+        // Direct Invites (CORD-05 §6) on our DM relays arrive live through the account's gift-wrap
+        // subscription. Senders that can't find our lists fall back to the stock Concord relays, which
+        // are swept periodically instead (single-flight, so an overlap with the hub's own request is
+        // dropped). Shown on Notifications and Messages, so swept without the hub open.
         scope.launch {
             delay(DIRECT_INVITE_SWEEP_START_MS)
             while (isActive) {
                 concord.requestConcordDirectInviteSweep()
                 delay(DIRECT_INVITE_SWEEP_EVERY_MS)
             }
+        }
+
+        // An invite that parks may be a catch-up a Grant already authorizes, so adopt those as they
+        // land rather than waiting for the next revision tick, and once Concord is turned back on.
+        scope.launch {
+            combine(
+                concord.directInviteInbox.pending.map { it.keys },
+                chatFeedToggles.applied.map { ChatFeedType.CONCORD in it },
+            ) { keys, on -> keys to on }
+                .distinctUntilChanged()
+                .collect {
+                    runCatching { concord.drainConcordCatchUps() }.onFailure { Log.w("Concord", "catch-up drain failed", it) }
+                }
         }
 
         // Keep Concord channel metadata (community name/icon, membership) live across the whole
@@ -4385,6 +4437,8 @@ class Account(
                 }
             }
         }
+
+        chatFeedToggles.start(scope)
 
         scope.launch {
             cache.live.newEventBundles.collect { newNotes ->

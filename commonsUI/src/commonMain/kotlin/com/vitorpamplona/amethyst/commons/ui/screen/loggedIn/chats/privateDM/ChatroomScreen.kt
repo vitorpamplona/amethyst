@@ -47,13 +47,14 @@ fun ChatroomScreen(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    val callsEnabled by accountViewModel.account.settings.callsEnabled
-        .collectAsState()
+    // Off with the Calls setting, and with NIP-17, whose gift-wrap inbox carries the call signalling.
+    val toggles = accountViewModel.account.chatFeedToggles
+    val callingActive by toggles.callingActive.collectAsState(toggles.isCallingActive())
     val peers = roomId.users
     // Null where the platform cannot place calls; the buttons are hidden then.
     val startVoiceCall = rememberCallStarter(peers, CallType.VOICE)
     val startVideoCall = rememberCallStarter(peers, CallType.VIDEO)
-    val isCallSupported = roomId.users.size <= 5 && callsEnabled
+    val isCallSupported = roomId.users.size <= 5 && callingActive
 
     DisappearingScaffold(
         isInvertedLayout = true,

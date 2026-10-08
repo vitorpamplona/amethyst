@@ -40,14 +40,19 @@ import com.vitorpamplona.quartz.experimental.decentralizedLists.header.ListHeade
 import com.vitorpamplona.quartz.experimental.decentralizedLists.item.AddressableListItemEvent
 import com.vitorpamplona.quartz.experimental.decentralizedLists.item.ListItemEvent
 import com.vitorpamplona.quartz.experimental.decoupling.setup.EncryptionKeyListEvent
+import com.vitorpamplona.quartz.experimental.decoupling.transfer.request.EncryptionKeyRequestEvent
+import com.vitorpamplona.quartz.experimental.decoupling.transfer.response.EncryptionKeyTransferEvent
 import com.vitorpamplona.quartz.experimental.edits.TextNoteModificationEvent
 import com.vitorpamplona.quartz.experimental.ephemChat.chat.EphemeralChatEvent
 import com.vitorpamplona.quartz.experimental.ephemChat.list.EphemeralChatListEvent
 import com.vitorpamplona.quartz.experimental.fitness.workout.ExerciseTemplateEvent
 import com.vitorpamplona.quartz.experimental.fitness.workout.WorkoutRecordEvent
+import com.vitorpamplona.quartz.experimental.fitness.workout.WorkoutTemplateEvent
 import com.vitorpamplona.quartz.experimental.interactiveStories.InteractiveStoryPrologueEvent
 import com.vitorpamplona.quartz.experimental.interactiveStories.InteractiveStoryReadingStateEvent
 import com.vitorpamplona.quartz.experimental.interactiveStories.InteractiveStorySceneEvent
+import com.vitorpamplona.quartz.experimental.kanban.board.KanbanBoardEvent
+import com.vitorpamplona.quartz.experimental.kanban.card.KanbanCardEvent
 import com.vitorpamplona.quartz.experimental.library.BlossomPieceIndexEvent
 import com.vitorpamplona.quartz.experimental.library.BookshelfDirectoryEvent
 import com.vitorpamplona.quartz.experimental.library.LearningResourceEvent
@@ -62,7 +67,10 @@ import com.vitorpamplona.quartz.experimental.nip95.header.FileStorageHeaderEvent
 import com.vitorpamplona.quartz.experimental.nipsOnNostr.NipTextEvent
 import com.vitorpamplona.quartz.experimental.nns.NNSEvent
 import com.vitorpamplona.quartz.experimental.notifications.wake.WakeUpEvent
+import com.vitorpamplona.quartz.experimental.postingStreak.PostingStreakEvent
 import com.vitorpamplona.quartz.experimental.profileGallery.ProfileGalleryEntryEvent
+import com.vitorpamplona.quartz.experimental.profileTheme.active.ActiveProfileThemeEvent
+import com.vitorpamplona.quartz.experimental.profileTheme.definition.ThemeDefinitionEvent
 import com.vitorpamplona.quartz.experimental.ps1saves.Ps1SaveEvent
 import com.vitorpamplona.quartz.experimental.publications.PublicationContentEvent
 import com.vitorpamplona.quartz.experimental.publications.PublicationIndexEvent
@@ -70,15 +78,19 @@ import com.vitorpamplona.quartz.experimental.ratings.EntityRatingEvent
 import com.vitorpamplona.quartz.experimental.ratings.RelayReviewEvent
 import com.vitorpamplona.quartz.experimental.roadstr.confirmation.RoadEventConfirmationEvent
 import com.vitorpamplona.quartz.experimental.roadstr.report.RoadEventReportEvent
+import com.vitorpamplona.quartz.experimental.topEight.TopEightEvent
 import com.vitorpamplona.quartz.experimental.trustedLists.addressables.AddressableTrustedListEvent
 import com.vitorpamplona.quartz.experimental.trustedLists.events.EventTrustedListEvent
 import com.vitorpamplona.quartz.experimental.trustedLists.externalIds.ExternalIdTrustedListEvent
 import com.vitorpamplona.quartz.experimental.trustedLists.users.UserTrustedListEvent
 import com.vitorpamplona.quartz.experimental.videoCollaboration.VideoCollaborationEvent
+import com.vitorpamplona.quartz.experimental.walletScrutiny.assetBundle.AssetBundleEvent
 import com.vitorpamplona.quartz.experimental.zapPolls.ZapPollEvent
+import com.vitorpamplona.quartz.experimental.zapstore.identityProof.IdentityProofEvent
 import com.vitorpamplona.quartz.feedDefinition.FeedDefinitionEvent
 import com.vitorpamplona.quartz.marmot.mip00KeyPackages.KeyPackageEvent
 import com.vitorpamplona.quartz.marmot.mip00KeyPackages.KeyPackageRelayListEvent
+import com.vitorpamplona.quartz.marmot.mip00KeyPackages.LegacyKeyPackageEvent
 import com.vitorpamplona.quartz.marmot.mip02Welcome.WelcomeEvent
 import com.vitorpamplona.quartz.marmot.mip03GroupMessages.GroupEvent
 import com.vitorpamplona.quartz.marmot.mip05PushNotifications.NotificationRequestEvent
@@ -104,6 +116,7 @@ import com.vitorpamplona.quartz.nip18Reposts.GenericRepostEvent
 import com.vitorpamplona.quartz.nip18Reposts.RepostEvent
 import com.vitorpamplona.quartz.nip22Comments.CommentEvent
 import com.vitorpamplona.quartz.nip23LongContent.LongFormContentEvent
+import com.vitorpamplona.quartz.nip23LongContent.draft.LongFormDraftEvent
 import com.vitorpamplona.quartz.nip25Reactions.ExternalReactionEvent
 import com.vitorpamplona.quartz.nip25Reactions.ReactionEvent
 import com.vitorpamplona.quartz.nip28PublicChat.admin.ChannelCreateEvent
@@ -128,7 +141,19 @@ import com.vitorpamplona.quartz.nip29RelayGroups.request.GroupJoinRequestEvent
 import com.vitorpamplona.quartz.nip29RelayGroups.request.GroupLeaveRequestEvent
 import com.vitorpamplona.quartz.nip30CustomEmoji.pack.EmojiPackEvent
 import com.vitorpamplona.quartz.nip30CustomEmoji.selection.EmojiListEvent
+import com.vitorpamplona.quartz.nip30CustomEmoji.stickers.StickerPackEvent
 import com.vitorpamplona.quartz.nip32Labeling.LabelEvent
+import com.vitorpamplona.quartz.nip34Git.ci.coordinatorAdvertisement.CiCoordinatorAdvertisementEvent
+import com.vitorpamplona.quartz.nip34Git.ci.jobResult.CiJobResultEvent
+import com.vitorpamplona.quartz.nip34Git.ci.manualTrigger.CiManualTriggerEvent
+import com.vitorpamplona.quartz.nip34Git.ci.repositoryStatus.CiRepositoryStatusEvent
+import com.vitorpamplona.quartz.nip34Git.ci.requestReadiness.CiRequestReadinessListEvent
+import com.vitorpamplona.quartz.nip34Git.ci.secretUpdate.CiSecretUpdateEvent
+import com.vitorpamplona.quartz.nip34Git.ci.serviceRequest.CiServiceRequestEvent
+import com.vitorpamplona.quartz.nip34Git.ci.serviceStop.CiServiceStopEvent
+import com.vitorpamplona.quartz.nip34Git.ci.workflowProgress.CiWorkflowProgressEvent
+import com.vitorpamplona.quartz.nip34Git.ci.workflowResult.CiWorkflowResultEvent
+import com.vitorpamplona.quartz.nip34Git.coverNote.GitCoverNoteEvent
 import com.vitorpamplona.quartz.nip34Git.grasp.UserGraspListEvent
 import com.vitorpamplona.quartz.nip34Git.issue.GitIssueEvent
 import com.vitorpamplona.quartz.nip34Git.patch.GitPatchEvent
@@ -218,6 +243,7 @@ import com.vitorpamplona.quartz.nip59Giftwrap.wraps.EphemeralGiftWrapEvent
 import com.vitorpamplona.quartz.nip59Giftwrap.wraps.GiftWrapEvent
 import com.vitorpamplona.quartz.nip5aStaticWebsites.NamedSiteEvent
 import com.vitorpamplona.quartz.nip5aStaticWebsites.RootSiteEvent
+import com.vitorpamplona.quartz.nip5aStaticWebsites.SiteSnapshotEvent
 import com.vitorpamplona.quartz.nip5dNapplets.NamedNappletEvent
 import com.vitorpamplona.quartz.nip5dNapplets.NappletSnapshotEvent
 import com.vitorpamplona.quartz.nip5dNapplets.RootNappletEvent
@@ -240,6 +266,11 @@ import com.vitorpamplona.quartz.nip66RelayMonitor.discovery.RelayDiscoveryEvent
 import com.vitorpamplona.quartz.nip66RelayMonitor.monitor.RelayMonitorEvent
 import com.vitorpamplona.quartz.nip68Picture.PictureEvent
 import com.vitorpamplona.quartz.nip69P2pOrderEvents.P2POrderEvent
+import com.vitorpamplona.quartz.nip69P2pOrderEvents.mostroDevFee.MostroDevFeePaymentEvent
+import com.vitorpamplona.quartz.nip69P2pOrderEvents.mostroDispute.MostroDisputeEvent
+import com.vitorpamplona.quartz.nip69P2pOrderEvents.mostroInfo.MostroInfoEvent
+import com.vitorpamplona.quartz.nip69P2pOrderEvents.mostroRating.MostroUserRatingEvent
+import com.vitorpamplona.quartz.nip69P2pOrderEvents.robosatsRating.RoboSatsCoordinatorRatingEvent
 import com.vitorpamplona.quartz.nip71Video.AddressableNormalVideoEvent
 import com.vitorpamplona.quartz.nip71Video.AddressableShortVideoEvent
 import com.vitorpamplona.quartz.nip71Video.VideoNormalEvent
@@ -338,6 +369,7 @@ import com.vitorpamplona.quartz.nipF4Podcasts.favorites.FavoritePodcastsListEven
 import com.vitorpamplona.quartz.nipF4Podcasts.metadata.PodcastMetadataEvent
 import com.vitorpamplona.quartz.nipXXPodcasting20.episode.Podcasting20EpisodeEvent
 import com.vitorpamplona.quartz.nipXXPodcasting20.trailer.Podcasting20TrailerEvent
+import com.vitorpamplona.quartz.nipXXPrivateNoteStorage.PnsEvent
 import com.vitorpamplona.quartz.nipXXPushNotifications.deregistration.PushDeregistrationEvent
 import com.vitorpamplona.quartz.nipXXPushNotifications.preferences.PushPreferencesEvent
 import com.vitorpamplona.quartz.nipXXPushNotifications.registration.PushRegistrationEvent
@@ -428,6 +460,7 @@ object KindNames {
             DeletionRequestEvent.KIND to KindName("Deletions", "09"),
             DraftWrapEvent.KIND to KindName("Drafts", "37"),
             EmojiPackEvent.KIND to KindName("Emoji Packs", "30"),
+            StickerPackEvent.KIND to KindName("Sticker Packs", null),
             EmojiListEvent.KIND to KindName("Emoji Pack List", "30"),
             EphemeralChatEvent.KIND to KindName("Ephemeral Chat", null),
             EphemeralChatListEvent.KIND to KindName("Ephemeral Chatrooms", null),
@@ -446,6 +479,17 @@ object KindNames {
             GitPatchEvent.KIND to KindName("Git Patch", "34"),
             GitRepositoryEvent.KIND to KindName("Git Repo", "34"),
             GitReplyEvent.KIND to KindName("Git Reply", "34"),
+            GitCoverNoteEvent.KIND to KindName("Git Cover Note", null),
+            CiManualTriggerEvent.KIND to KindName("CI Manual Trigger", null),
+            CiJobResultEvent.KIND to KindName("CI Job Result", null),
+            CiWorkflowResultEvent.KIND to KindName("CI Workflow Result", null),
+            CiServiceRequestEvent.KIND to KindName("CI Service Request", null),
+            CiServiceStopEvent.KIND to KindName("CI Service Stop", null),
+            CiWorkflowProgressEvent.KIND to KindName("CI Workflow Progress", null),
+            CiCoordinatorAdvertisementEvent.KIND to KindName("CI Coordinator", null),
+            CiRequestReadinessListEvent.KIND to KindName("CI Request Readiness", null),
+            CiRepositoryStatusEvent.KIND to KindName("CI Repo Status", null),
+            CiSecretUpdateEvent.KIND to KindName("CI Secret Update", null),
             ZapGoalEvent.KIND to KindName("Zap Goals", "75"),
             InterestListEvent.KIND to KindName("Hashtag Follows", "51"),
             HighlightEvent.KIND to KindName("Highlights", "84"),
@@ -463,6 +507,7 @@ object KindNames {
             PrivateZapEvent.KIND to KindName("Private Zaps", "57"),
             ZapRequestEvent.KIND to KindName("Zap Req", "57"),
             LongFormContentEvent.KIND to KindName("Blogs", "23"),
+            LongFormDraftEvent.KIND to KindName("Blog Drafts", "23"),
             MeetingRoomEvent.KIND to KindName("Meeting Room", "53"),
             MeetingRoomPresenceEvent.KIND to KindName("Room Presence", "53"),
             MeetingSpaceEvent.KIND to KindName("Meeting Space", "53"),
@@ -483,6 +528,7 @@ object KindNames {
             PictureEvent.KIND to KindName("Pictures", "68"),
             WorkoutRecordEvent.KIND to KindName("Workouts", null),
             PinListEvent.KIND to KindName("Pins", "51"),
+            PnsEvent.KIND to KindName("Private Note Storage", null),
             ZapPollEvent.KIND to KindName("Zap Poll", null),
             PollEvent.KIND to KindName("Poll", "88"),
             PollResponseEvent.KIND to KindName("Poll Response", "88"),
@@ -540,6 +586,7 @@ object KindNames {
             ChatEvent.KIND to KindName("Relay Chat", "C7"),
             ThreadEvent.KIND to KindName("Thread", "7D"),
             AppDataEvent.KIND to KindName("App Data", "78"),
+            LegacyKeyPackageEvent.KIND to KindName("MLS KeyPackage (Legacy)", null),
             WelcomeEvent.KIND to KindName("MLS Welcome", null),
             GroupEvent.KIND to KindName("MLS Group Message", null),
             NotificationRequestEvent.KIND to KindName("MLS Notification Request", null),
@@ -557,6 +604,12 @@ object KindNames {
             GitPullRequestUpdateEvent.KIND to KindName("Git PR Update", "34"),
             LabelEvent.KIND to KindName("Label", "32"),
             SoftwareAssetEvent.KIND to KindName("Software Asset", "82"),
+            IdentityProofEvent.KIND to KindName("Cryptographic Identity Proof", null),
+            AssetBundleEvent.KIND to KindName("Asset Bundle (WalletScrutiny)", null),
+            // Kind 30301 is shared with WalletScrutiny build verifications and a planner app: the
+            // label names the shape the kind is probed as.
+            KanbanBoardEvent.KIND to KindName("Kanban Board", null),
+            KanbanCardEvent.KIND to KindName("Kanban Card", null),
             AdminCommandEvent.KIND to KindName("Nests Admin Command", null),
             DvmTextExtractionRequestEvent.KIND to KindName("DVM Text Extraction Req", "90"),
             DvmSummarizationRequestEvent.KIND to KindName("DVM Summarization Req", "90"),
@@ -564,6 +617,7 @@ object KindNames {
             DvmTextGenerationRequestEvent.KIND to KindName("DVM Text Generation Req", "90"),
             DvmImageGenerationRequestEvent.KIND to KindName("DVM Image Generation Req", "90"),
             NappletSnapshotEvent.KIND to KindName("Napplet Snapshot", "5D"),
+            SiteSnapshotEvent.KIND to KindName("Website Snapshot", "5A"),
             DvmVideoConversionRequestEvent.KIND to KindName("DVM Video Conversion Req", "90"),
             DvmVideoTranslationRequestEvent.KIND to KindName("DVM Video Translation Req", "90"),
             DvmImageToVideoRequestEvent.KIND to KindName("DVM Image To Video Req", "90"),
@@ -618,6 +672,8 @@ object KindNames {
             NutzapInfoEvent.KIND to KindName("Nutzap Info", "61"),
             MediaFollowListEvent.KIND to KindName("Media Follows", "51"),
             EncryptionKeyListEvent.KIND to KindName("Encryption Keys", null),
+            EncryptionKeyRequestEvent.KIND to KindName("Encryption Key Request", null),
+            EncryptionKeyTransferEvent.KIND to KindName("Encryption Key Transfer", null),
             KeyPackageRelayListEvent.KIND to KindName("MLS KeyPackage Relays", null),
             FavoriteAlgoFeedsListEvent.KIND to KindName("Favorite Feeds", "51"),
             FavoriteFollowSetsListEvent.KIND to KindName("Favorite Follow Sets", "51"),
@@ -673,7 +729,12 @@ object KindNames {
             FeedDefinitionEvent.KIND to KindName("Feed Definition", null),
             SoftwareApplicationEvent.KIND to KindName("Software Application", "82"),
             ExerciseTemplateEvent.KIND to KindName("Exercise Template", null),
+            WorkoutTemplateEvent.KIND to KindName("Workout Template", null),
             FundraiserEvent.KIND to KindName("Fundraiser", null),
+            ThemeDefinitionEvent.KIND to KindName("Theme", null),
+            ActiveProfileThemeEvent.KIND to KindName("Profile Theme", null),
+            PostingStreakEvent.KIND to KindName("Posting Streak", null),
+            TopEightEvent.KIND to KindName("Top 8", null),
             CommunityRulesEvent.KIND to KindName("Community Rules", "72"),
             NamedSiteEvent.KIND to KindName("Website", "5A"),
             NamedNappletEvent.KIND to KindName("Napplet", "5D"),
@@ -681,6 +742,13 @@ object KindNames {
             CashuMintEvent.KIND to KindName("Cashu Mint", "87"),
             FedimintEvent.KIND to KindName("Fedimint", "87"),
             P2POrderEvent.KIND to KindName("P2P Order", "69"),
+            // Kind numbers shared with other apps (Paygress, Borkstr, ...): the label names the
+            // shape EventFactory reads on them.
+            MostroUserRatingEvent.KIND to KindName("Mostro User Rating", null),
+            MostroInfoEvent.KIND to KindName("Mostro Instance Info", null),
+            MostroDisputeEvent.KIND to KindName("Mostro Dispute", null),
+            MostroDevFeePaymentEvent.KIND to KindName("Mostro Dev Fee Payment", null),
+            RoboSatsCoordinatorRatingEvent.KIND to KindName("RoboSats Coordinator Rating", null),
             GroupMetadataEvent.KIND to KindName("Group Metadata", "29"),
             GroupAdminsEvent.KIND to KindName("Group Admins", "29"),
             GroupMembersEvent.KIND to KindName("Group Members", "29"),

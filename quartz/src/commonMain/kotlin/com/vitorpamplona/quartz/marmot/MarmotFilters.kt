@@ -131,6 +131,11 @@ object MarmotFilters {
      * Filter for KeyPackages during migration (both kind:443 and kind:30443).
      * Used during the transition period from legacy to addressable KeyPackages.
      *
+     * This is the invite lookup ([com.vitorpamplona.quartz.marmot.mip00KeyPackages.KeyPackageFetcher.fetchKeyPackageForInvite]):
+     * White Noise's MDK still publishes kind:443, some of its users only that,
+     * and MIP-00 lets an inviter fall back to a valid 443 when no valid 30443
+     * exists.
+     *
      * {kinds: [30443, 443], authors: [pubkey]}
      */
     fun keyPackagesMigration(pubkey: HexKey): Filter =

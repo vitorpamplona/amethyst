@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst.commons.chats.privateDM.datasource
 
+import com.vitorpamplona.amethyst.commons.model.chats.ChatFeedType
 import com.vitorpamplona.amethyst.commons.relayClient.eoseManagers.DmRelayLog
 import com.vitorpamplona.amethyst.commons.relayClient.eoseManagers.PerUserAndFollowListEoseManager
 import com.vitorpamplona.amethyst.commons.relayClient.paging.BackwardRelayPager
@@ -74,6 +75,7 @@ class ChatroomNip04HistorySubAssembler(
     ): List<RelayBasedFilter>? {
         val relays = nip04DmRelayRouting(key.room.users, key.account)
         if (!key.account.isWriteable() || relays == null) return emptyList()
+        if (!key.account.chatFeedToggles.isEnabled(ChatFeedType.NIP04)) return emptyList()
 
         // Only armed (advanced, not done) relays carry a REQ, each at its own requested cursor. A parked
         // relay keeps the same filter here, so re-assembly (another relay advancing) doesn't re-REQ it.
@@ -103,10 +105,24 @@ class ChatroomNip04HistorySubAssembler(
         }
     }
 
+    override val watchedChatFeeds = setOf(ChatFeedType.NIP04)
+
+    // The toggle flipped: let the pager drop (or restore) its relays before the filters rebuild.
+    override fun onChatFeedsToggled() {
+        pager.onEnabledChanged()
+        invalidateFilters()
+    }
+
     override fun newSub(key: ChatroomQueryState): Subscription {
         // Repoint the single-active orchestrator at this conversation's cursors (on its Chatroom) and the
         // relays it fans out to, refreshing the display flows from the restored progress.
-        pager.bind(cursorsFor(key), key.account.scope) { nip04DmRelayRouting(key.room.users, key.account)?.all }
+        // With NIP-04 turned off in Settings › Messages the pager neither advances nor shows relays.
+        pager.bind(
+            cursorsFor(key),
+            key.account.scope,
+            isEnabled = { key.account.chatFeedToggles.isEnabled(ChatFeedType.NIP04) },
+        ) { nip04DmRelayRouting(key.room.users, key.account)?.all }
+
         return requestNewSubscription(historyListener(key))
     }
 

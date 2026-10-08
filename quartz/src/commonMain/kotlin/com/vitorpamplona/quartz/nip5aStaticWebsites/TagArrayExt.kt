@@ -21,8 +21,11 @@
 package com.vitorpamplona.quartz.nip5aStaticWebsites
 
 import com.vitorpamplona.quartz.nip01Core.core.TagArray
+import com.vitorpamplona.quartz.nip01Core.tags.aTag.ATag
+import com.vitorpamplona.quartz.nip5aStaticWebsites.tags.AppTag
 import com.vitorpamplona.quartz.nip5aStaticWebsites.tags.DescriptionTag
 import com.vitorpamplona.quartz.nip5aStaticWebsites.tags.IconTag
+import com.vitorpamplona.quartz.nip5aStaticWebsites.tags.OriginSiteTag
 import com.vitorpamplona.quartz.nip5aStaticWebsites.tags.PathTag
 import com.vitorpamplona.quartz.nip5aStaticWebsites.tags.ServerTag
 import com.vitorpamplona.quartz.nip5aStaticWebsites.tags.SourceTag
@@ -42,3 +45,21 @@ fun TagArray.siteSource() = firstNotNullOfOrNull(SourceTag::parse)
 fun TagArray.siteIcon() = firstNotNullOfOrNull(IconTag::parse)
 
 fun TagArray.siteAggregateHash() = firstNotNullOfOrNull(XTag::parse)
+
+/**
+ * The site the lowercase `a` tag points at: the immediate parent nsite of a copied root/named
+ * site, or the root/named site a kind 5128 snapshot captures. Null when absent or malformed.
+ */
+fun TagArray.siteParent() = firstNotNullOfOrNull(ATag::parseAddress)
+
+fun TagArray.siteParentHint() = firstNotNullOfOrNull(ATag::parseAsHint)
+
+/** The uppercase `A` tag: the origin nsite of a copy lineage. Null when absent or malformed. */
+fun TagArray.siteOrigin() = firstNotNullOfOrNull(OriginSiteTag::parseAddress)
+
+fun TagArray.siteOriginHint() = firstNotNullOfOrNull(OriginSiteTag::parseAsHint)
+
+/** The `app` tags: upstream app descriptors (NIP-89 31990 or other) this manifest is part of. */
+fun TagArray.siteApps() = mapNotNull(AppTag::parseAddress)
+
+fun TagArray.siteAppHints() = mapNotNull(AppTag::parseAsHint)

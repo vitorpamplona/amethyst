@@ -25,6 +25,13 @@ operator fun BigDecimal.plus(other: BigDecimal): BigDecimal = add(other)
 operator fun BigDecimal.minus(other: BigDecimal): BigDecimal = subtract(other)
 
 /**
+ * Plain decimal notation, never scientific: the JVM's `BigDecimal.toString()` writes `3E+2` for a
+ * value with a negative scale, which [parseBigDecimalOrNull] and most Nostr readers reject. Use
+ * this whenever a decimal goes into a tag.
+ */
+expect fun BigDecimal.toPlainStringValue(): String
+
+/**
  * Truncate to a Long, the way Number.toLong() does on every platform.
  *
  * It has to be an expect *function* rather than a member of `expect class

@@ -121,8 +121,8 @@ fun ConcordHomeScreen(
     // the stock relays for users who actually use Concord.
     LaunchedEffect(Unit) { accountViewModel.importConcordCommunities() }
 
-    // Direct Invites (CORD-05 §6): one inbox sweep per visit, kept out of the lazy list so it does
-    // not re-run each time the invites scroll back into view.
+    // Direct Invites (CORD-05 §6): one stock-relay sweep per visit, kept out of the lazy list so it
+    // does not re-run each time the invites scroll back into view.
     RefreshConcordDirectInvites(accountViewModel)
     val invites by account.concord.pendingConcordDirectInvites.collectAsStateWithLifecycle()
 

@@ -56,6 +56,7 @@ import com.vitorpamplona.quartz.nip01Core.tags.people.isTaggedUser
 import com.vitorpamplona.quartz.nip04Dm.messages.EncryptedDmEvent
 import com.vitorpamplona.quartz.nip10Notes.BaseNoteEvent
 import com.vitorpamplona.quartz.nip10Notes.TextNoteEvent
+import com.vitorpamplona.quartz.nip17Dm.base.ChatroomKeyable
 import com.vitorpamplona.quartz.nip17Dm.files.ChatMessageEncryptedFileHeaderEvent
 import com.vitorpamplona.quartz.nip17Dm.messages.ChatMessageEvent
 import com.vitorpamplona.quartz.nip18Reposts.GenericRepostEvent
@@ -610,6 +611,10 @@ class NotificationFeedFilter(
                     noteEvent is EncryptedDmEvent
             )
         ) {
+            return false
+        }
+        // A DM protocol turned off in Settings › Messages doesn't notify either.
+        if (noteEvent is ChatroomKeyable && !account.chatFeedToggles.isEnabled(noteEvent)) {
             return false
         }
         val notifAuthor =

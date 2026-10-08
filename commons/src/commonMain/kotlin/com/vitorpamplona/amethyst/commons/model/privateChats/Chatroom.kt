@@ -51,7 +51,13 @@ class Chatroom : NotesGatherer {
     // progress and the cursors share the lifetime of the cached messages. The conversation history
     // loader binds its (single-active) orchestrator to this. Lazy — most rooms in the rooms list are
     // never opened for history paging, so they never allocate it.
-    val nip04History by lazy { RelayLoadingCursors() }
+    private val nip04HistoryHolder = lazy { RelayLoadingCursors() }
+    val nip04History by nip04HistoryHolder
+
+    /** Forgets this room's NIP-04 paging progress, without allocating cursors for a room that never paged. */
+    fun resetNip04History() {
+        if (nip04HistoryHolder.isInitialized()) nip04History.reset()
+    }
 
     // Per-instance lock shared by previously @Synchronized methods.
     private val syncLock = KmpLock()
@@ -101,6 +107,32 @@ class Chatroom : NotesGatherer {
             return@withLock false
         }
 
+    /**
+     * Adds [msgs] in one locked pass with one change event (e.g. a DM protocol turned back on and
+     * re-indexed from the cache) — adding them one by one floods the 100-slot change buffer, so an open
+     * conversation would miss most of them. @return the messages that were not already here.
+     */
+    fun addMessagesSync(msgs: Collection<Note>): Set<Note> =
+        syncLock.withLock {
+            val added = msgs.filterTo(HashSet()) { it !in messages }
+            if (added.isEmpty()) return@withLock emptySet()
+
+            messages = messages + added
+            added.forEach { msg ->
+                msg.addGatherer(this)
+                msg.author?.let { if (it !in activeSenders) activeSenders = activeSenders + it }
+                if ((msg.createdAt() ?: 0L) > (newestMessage?.createdAt() ?: 0L)) newestMessage = msg
+                val newSubject = msg.event?.subject()
+                if (newSubject != null && (msg.createdAt() ?: 0L) > (subjectCreatedAt ?: 0)) {
+                    subject.tryEmit(newSubject)
+                    subjectCreatedAt = msg.createdAt()
+                }
+            }
+
+            changesFlow?.get()?.tryEmit(ListChange.SetAddition(added))
+            added
+        }
+
     fun removeMessageSync(msg: Note): Boolean =
         syncLock.withLock {
             if (msg in messages) {
@@ -110,6 +142,10 @@ class Chatroom : NotesGatherer {
                 if (msg == newestMessage) {
                     newestMessage = messages.maxByOrNull { it.createdAt() ?: 0L }
                 }
+
+                // activeSenders is left alone on purpose: single removals are expirations, deletions and
+                // hidden-user pruning, and a sender whose messages merely aged out still makes the room
+                // Known. Only a whole protocol unload (removeMessagesIf) rebuilds it.
 
                 if (msg.event?.subject() == subject.value) {
                     messages
@@ -131,6 +167,35 @@ class Chatroom : NotesGatherer {
                 return@withLock true
             }
             return@withLock false
+        }
+
+    /**
+     * Drops every message matching [predicate] in one locked pass with one change event (e.g. a whole
+     * DM protocol turned off): removing them one by one copies the set per message and floods the
+     * 100-slot change buffer, so an open conversation would miss most of the deletions. Unlike a
+     * single removal, the derived state is rebuilt from what is left — newest message, senders and
+     * subject — since a bulk removal can take every message a sender or subject came from.
+     * @return the removed messages.
+     */
+    fun removeMessagesIf(predicate: (Note) -> Boolean): Set<Note> =
+        syncLock.withLock {
+            val toRemove = messages.filterTo(HashSet(), predicate)
+            if (toRemove.isEmpty()) return@withLock emptySet()
+
+            messages = messages - toRemove
+            toRemove.forEach { it.removeGatherer(this) }
+
+            newestMessage = messages.maxByOrNull { it.createdAt() ?: 0L }
+            activeSenders = messages.mapNotNullTo(HashSet()) { it.author }
+
+            if (toRemove.any { it.event?.subject() == subject.value }) {
+                val newestWithSubject = messages.filter { it.event?.subject() != null }.maxByOrNull { it.createdAt() ?: 0L }
+                subject.tryEmit(newestWithSubject?.event?.subject())
+                subjectCreatedAt = newestWithSubject?.createdAt()
+            }
+
+            changesFlow?.get()?.tryEmit(ListChange.SetDeletion(toRemove))
+            toRemove
         }
 
     fun senderIntersects(keySet: Set<HexKey>): Boolean = activeSenders.any { it.pubkeyHex in keySet }

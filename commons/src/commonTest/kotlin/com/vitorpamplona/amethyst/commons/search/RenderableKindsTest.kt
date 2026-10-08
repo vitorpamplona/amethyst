@@ -97,6 +97,7 @@ class RenderableKindsTest {
                 1618,
                 1621,
                 1622,
+                1624,
                 1630,
                 1631,
                 1632,
@@ -123,6 +124,10 @@ class RenderableKindsTest {
                 9041,
                 33863,
                 38383,
+                // Mostro instance terms: they have a card, but what they index is an instance name
+                // and its currency codes, so a search for "USD" or "EUR" would be a page of
+                // instance terms. Reached from a link or a repost, not from global search.
+                38385,
                 38000,
                 // DVM job requests
                 5050,
@@ -130,7 +135,8 @@ class RenderableKindsTest {
                 5250,
                 5302,
                 5303,
-                // napplet snapshots: the app is searchable, a snapshot of it is not
+                // napplet and nsite snapshots: the app or site is searchable, a snapshot of it is not
+                5128,
                 5129,
                 // torrents, roads, birds, canvases and other feeds Amethyst does not render
                 1315,
@@ -165,9 +171,10 @@ class RenderableKindsTest {
                 10100,
                 30175,
                 30176,
-                // calendar RSVPs, exercise templates and app definitions
+                // calendar RSVPs, exercise and workout templates and app definitions
                 31925,
                 33401,
+                33402,
                 31990,
                 // geocache curation lists: the caches themselves are in the window, but a list of
                 // them has no card yet, so a result would be a blank row
@@ -196,6 +203,13 @@ class RenderableKindsTest {
                 // marketplace bid confirmations and DVM OP_RETURN jobs: side traffic of a sale or a job
                 1022,
                 5901,
+                // long-form drafts: indexed like the article they become, but an unpublished draft
+                // is not a result to show in global search
+                30024,
+                // sticker packs: their shortcodes are indexed like emoji packs', no card yet
+                30031,
+                // profile theme definitions: their name and description are indexed, no card yet
+                36767,
                 // accepted-badge sets and feed definitions: lists with no card yet
                 30008,
                 31890,
