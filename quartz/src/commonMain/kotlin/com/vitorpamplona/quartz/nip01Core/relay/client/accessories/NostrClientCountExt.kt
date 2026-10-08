@@ -186,7 +186,9 @@ suspend fun INostrClient.count(
     if (filters.isEmpty()) return emptyMap()
     val pendingOnAuthRequired = hasAuthResponder()
 
-    val subIdToRelay = mutableMapOf<String, NormalizedRelayUrl>()
+    // Filled before the listener is registered: it reads this map on every CLOSED and COUNT
+    // the shared client receives, from the relays' reader threads.
+    val subIdToRelay = filters.keys.associateBy { newSubId() }
     val resultChannel = Channel<Pair<NormalizedRelayUrl, CountResult>>(UNLIMITED)
     val authRefusalChannel = Channel<NormalizedRelayUrl>(UNLIMITED)
     // Relays that met a NIP-42 wall we could not get over. They are counted as
@@ -233,10 +235,8 @@ suspend fun INostrClient.count(
         addConnectionListener(listener)
 
         val authMarks = if (pendingOnAuthRequired) authSuccessMarks(filters.keys) else emptyMap()
-        filters.forEach { (relay, filterList) ->
-            val subId = newSubId()
-            subIdToRelay[subId] = relay
-            count(subId = subId, filters = mapOf(relay to filterList))
+        subIdToRelay.forEach { (subId, relay) ->
+            count(subId = subId, filters = mapOf(relay to filters.getValue(relay)))
         }
 
         coroutineScope {
@@ -272,8 +272,12 @@ suspend fun INostrClient.count(
                                 select<Boolean> {
                                     resultChannel.onReceive { (relay, result) ->
                                         // put() returns the previous value: null means this relay
-                                        // had not answered yet, i.e. real progress.
-                                        results.put(relay, result) == null
+                                        // had not answered yet, i.e. real progress — unless it
+                                        // already counted as given up (a CLOSED, a NOTICE or a
+                                        // failed connection, then the answer after a reconnect):
+                                        // keep the answer, but count the relay once, or the loop
+                                        // ends before the last relay answers.
+                                        results.put(relay, result) == null && !gaveUp.remove(relay)
                                     }
                                     gaveUpChannel.onReceive { relay ->
                                         relay !in results && gaveUp.add(relay)
@@ -337,9 +341,14 @@ suspend fun INostrClient.countMerged(
  * invalid message: {'message_type': ['Invalid enum value COUNT']}` (nostr.wine), `invalid
  * message` (relay.conduit.market). A NOTICE names no subscription, so this stays narrow: a
  * relay that does speak NIP-45 never says any of these to a well-formed COUNT, and a miss
- * only costs the idle window it always cost.
+ * only costs the idle window it always cost. A NOTICE that names `COUNT` counts only when it
+ * also says the verb is unknown or unsupported: "too many concurrent COUNT requests" is about
+ * one query on a relay that counts, and must not end every COUNT open to it.
  */
 internal fun isCountRejectionNotice(message: String): Boolean =
-    message.contains("COUNT") ||
+    (message.contains("COUNT") && COUNT_UNKNOWN.containsMatchIn(message)) ||
         message.contains("unknown cmd", ignoreCase = true) ||
         message.trim().equals("invalid message", ignoreCase = true)
+
+/** Words that make a NOTICE naming `COUNT` a refusal of the verb, not a remark about one query. */
+private val COUNT_UNKNOWN = Regex("unknown|invalid|unsupported|not supported", RegexOption.IGNORE_CASE)

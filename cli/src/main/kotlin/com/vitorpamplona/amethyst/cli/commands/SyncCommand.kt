@@ -258,7 +258,9 @@ object SyncCommand {
                     "local_events" to localEvents.size,
                     "windows" to result.windows,
                     "need" to result.needCount,
-                    "have" to result.haveCount,
+                    // Download-only syncs do not count what the relay lacks: a relay that
+                    // reconciles part of its set makes every older event of ours look missing.
+                    "have" to if (up) result.haveCount else null,
                     "downloaded" to downloaded.get(),
                     "uploaded" to uploaded.get(),
                     "deletions_sent_up" to deletions.sentUp,
