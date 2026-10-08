@@ -586,15 +586,11 @@
     <!-- NIP-71 video credits: what a video says about the people and works it references. -->
     <string name="always_on_notif_channel_description">Keeps connections to your inbox relays active for real-time notifications</string>
     <string name="always_on_notif_channel_name" translatable="false">Relay Connection Service</string>
-    <plurals name="always_on_notif_connected">
-        <item quantity="one">Connected to %1$d inbox relay</item>
-        <item quantity="other">Connected to %1$d inbox relays</item>
-    </plurals>
     <plurals name="always_on_notif_connected_foreground">
         <item quantity="one">Connected to %1$d relay</item>
         <item quantity="other">Connected to %1$d relays</item>
     </plurals>
-    <string name="always_on_notif_connecting">Connecting to inbox relays\u2026</string>
+    <string name="always_on_notif_connecting">Connecting to relays\u2026</string>
     <string name="always_on_notif_hide_details">Hide details</string>
     <string name="always_on_notif_show_details">Show details</string>
     <string name="always_on_notif_tile_subtitle_off">Off</string>

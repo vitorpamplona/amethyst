@@ -160,9 +160,6 @@
          NavBarItemDef labels are R.string ids. -->
     <!-- NIP-71 video credits: what a video says about the people and works it references. -->
     <string name="always_on_notif_channel_description">保持與收件匣 relay 的連線，以接收即時通知</string>
-    <plurals name="always_on_notif_connected">
-        <item quantity="other">已連接至 %1$d 個收件匣 relay</item>
-    </plurals>
     <plurals name="always_on_notif_connected_foreground">
         <item quantity="other">已連接至 %1$d 個 relay</item>
     </plurals>

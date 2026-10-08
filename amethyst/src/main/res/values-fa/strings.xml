@@ -2281,10 +2281,6 @@
     
 <string name="changed_chat_profile_to">پروفایل چت جدید:</string>
     <string name="always_on_notif_channel_description">اتصالات به relay های صندوق ورودی شما را برای اعلان‌های بلادرنگ فعال نگه می‌دارد</string>
-    <plurals name="always_on_notif_connected">
-    <item quantity="one">متصل به %1$d relay صندوق ورودی</item>
-    <item quantity="other">متصل به %1$d relay صندوق ورودی</item>
-</plurals>
     <plurals name="always_on_notif_connected_foreground">
     <item quantity="one">متصل به %1$d relay</item>
     <item quantity="other">متصل به %1$d relay</item>
