@@ -63,6 +63,8 @@ import com.vitorpamplona.amethyst.commons.model.toImmutableListOfLists
 import com.vitorpamplona.amethyst.commons.nip34Git.GitBrowseState
 import com.vitorpamplona.amethyst.commons.nip34Git.GitRepoSnapshotCache
 import com.vitorpamplona.amethyst.commons.nip34Git.GitRepositoryBrowserViewModel
+import com.vitorpamplona.amethyst.commons.nip34Git.ui.GitCiStatusBadge
+import com.vitorpamplona.amethyst.commons.nip34Git.ui.GitCoverNoteBanner
 import com.vitorpamplona.amethyst.commons.nip34Git.ui.GitStatusPill
 import com.vitorpamplona.amethyst.commons.relayClient.event.observeNoteEvent
 import com.vitorpamplona.amethyst.commons.resources.Res
@@ -116,6 +118,7 @@ import com.vitorpamplona.quartz.nip34Git.repository.GitRepositoryEvent
 private val ChipShape = RoundedCornerShape(8.dp)
 private val HeaderSpacing = Arrangement.spacedBy(Size8dp)
 private val LinkRowSpacing = Arrangement.spacedBy(Size8dp)
+private val CoverNoteSpacing = Modifier.padding(bottom = Size8dp)
 
 @Composable
 private fun GitCardContainer(
@@ -446,6 +449,8 @@ private fun RenderGitPatchEvent(
             )
 
             GitStatusPill(targetIdHex = note.idHex, defaultIfMissing = StatusKind.OPEN)
+
+            GitCiStatusBadge(targetIdHex = note.idHex, accountViewModel = accountViewModel, nav = nav)
         }
 
         val repository = remember(noteEvent) { noteEvent.repositoryAddress() }
@@ -469,6 +474,18 @@ private fun RenderGitPatchEvent(
         }
 
         Spacer(modifier = HalfDoubleVertSpacer)
+
+        GitCoverNoteBanner(
+            rootIdHex = note.idHex,
+            rootAuthor = noteEvent.pubKey,
+            repositoryAddress = repository,
+            canPreview = canPreview,
+            quotesLeft = quotesLeft,
+            backgroundColor = backgroundColor,
+            accountViewModel = accountViewModel,
+            nav = nav,
+            modifier = CoverNoteSpacing,
+        )
 
         // In a collapsed feed preview keep the lightweight markdown body; in the
         // full (thread) view parse the patch into a proper file-by-file diff.
@@ -559,6 +576,18 @@ private fun RenderGitIssueEvent(
 
         Spacer(modifier = HalfDoubleVertSpacer)
 
+        GitCoverNoteBanner(
+            rootIdHex = note.idHex,
+            rootAuthor = noteEvent.pubKey,
+            repositoryAddress = repository,
+            canPreview = canPreview,
+            quotesLeft = quotesLeft,
+            backgroundColor = backgroundColor,
+            accountViewModel = accountViewModel,
+            nav = nav,
+            modifier = CoverNoteSpacing,
+        )
+
         GitMarkdownBody(note, makeItShort, canPreview, quotesLeft, backgroundColor, accountViewModel, nav, renderedSubject = subject)
 
         if (!makeItShort) {
@@ -618,9 +647,9 @@ private fun RenderGitPullRequestEvent(
             Spacer(modifier = StdVertSpacer)
         }
 
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
+        FlowRow(
             horizontalArrangement = HeaderSpacing,
+            verticalArrangement = Arrangement.spacedBy(Size5dp),
         ) {
             TypeChip(
                 text = stringRes(id = Res.string.kind_git_pr),
@@ -639,6 +668,13 @@ private fun RenderGitPullRequestEvent(
                     symbol = MaterialSymbols.Sync,
                 )
             }
+
+            GitCiStatusBadge(
+                targetIdHex = note.idHex,
+                accountViewModel = accountViewModel,
+                nav = nav,
+                modifier = Modifier.align(Alignment.CenterVertically),
+            )
         }
 
         val subject = remember(noteEvent) { noteEvent.subject()?.takeIf { it.isNotBlank() } }
@@ -690,6 +726,18 @@ private fun RenderGitPullRequestEvent(
         }
 
         Spacer(modifier = HalfDoubleVertSpacer)
+
+        GitCoverNoteBanner(
+            rootIdHex = note.idHex,
+            rootAuthor = noteEvent.pubKey,
+            repositoryAddress = repository,
+            canPreview = canPreview,
+            quotesLeft = quotesLeft,
+            backgroundColor = backgroundColor,
+            accountViewModel = accountViewModel,
+            nav = nav,
+            modifier = CoverNoteSpacing,
+        )
 
         GitMarkdownBody(note, makeItShort, canPreview, quotesLeft, backgroundColor, accountViewModel, nav, renderedSubject = subject)
 

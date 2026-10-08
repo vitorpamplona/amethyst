@@ -179,6 +179,8 @@ import com.vitorpamplona.quartz.experimental.fitness.workout.WorkoutRecordEvent
 import com.vitorpamplona.quartz.experimental.interactiveStories.InteractiveStoryPrologueEvent
 import com.vitorpamplona.quartz.experimental.interactiveStories.InteractiveStoryReadingStateEvent
 import com.vitorpamplona.quartz.experimental.interactiveStories.InteractiveStorySceneEvent
+import com.vitorpamplona.quartz.experimental.kanban.board.KanbanBoardEvent
+import com.vitorpamplona.quartz.experimental.kanban.card.KanbanCardEvent
 import com.vitorpamplona.quartz.experimental.library.BlossomPieceIndexEvent
 import com.vitorpamplona.quartz.experimental.library.BookshelfDirectoryEvent
 import com.vitorpamplona.quartz.experimental.library.LearningResourceEvent
@@ -202,9 +204,11 @@ import com.vitorpamplona.quartz.experimental.ratings.RelayReviewEvent
 import com.vitorpamplona.quartz.experimental.roadstr.confirmation.RoadEventConfirmationEvent
 import com.vitorpamplona.quartz.experimental.roadstr.report.RoadEventReportEvent
 import com.vitorpamplona.quartz.experimental.videoCollaboration.VideoCollaborationEvent
+import com.vitorpamplona.quartz.experimental.walletScrutiny.verification.BuildVerificationEvent
 import com.vitorpamplona.quartz.experimental.zapPolls.ZapPollEvent
 import com.vitorpamplona.quartz.marmot.mip00KeyPackages.KeyPackageEvent
 import com.vitorpamplona.quartz.marmot.mip00KeyPackages.KeyPackageRelayListEvent
+import com.vitorpamplona.quartz.marmot.mip00KeyPackages.LegacyKeyPackageEvent
 import com.vitorpamplona.quartz.marmot.mip02Welcome.WelcomeEvent
 import com.vitorpamplona.quartz.marmot.mip03GroupMessages.GroupEvent
 import com.vitorpamplona.quartz.nip01Core.core.Address
@@ -277,6 +281,10 @@ import com.vitorpamplona.quartz.nip29RelayGroups.request.GroupLeaveRequestEvent
 import com.vitorpamplona.quartz.nip30CustomEmoji.pack.EmojiPackEvent
 import com.vitorpamplona.quartz.nip30CustomEmoji.selection.EmojiListEvent
 import com.vitorpamplona.quartz.nip32Labeling.LabelEvent
+import com.vitorpamplona.quartz.nip34Git.ci.jobResult.CiJobResultEvent
+import com.vitorpamplona.quartz.nip34Git.ci.workflowProgress.CiWorkflowProgressEvent
+import com.vitorpamplona.quartz.nip34Git.ci.workflowResult.CiWorkflowResultEvent
+import com.vitorpamplona.quartz.nip34Git.coverNote.GitCoverNoteEvent
 import com.vitorpamplona.quartz.nip34Git.grasp.UserGraspListEvent
 import com.vitorpamplona.quartz.nip34Git.issue.GitIssueEvent
 import com.vitorpamplona.quartz.nip34Git.patch.GitPatchEvent
@@ -374,6 +382,7 @@ import com.vitorpamplona.quartz.nip65RelayList.AdvertisedRelayListEvent
 import com.vitorpamplona.quartz.nip66RelayMonitor.discovery.RelayDiscoveryEvent
 import com.vitorpamplona.quartz.nip66RelayMonitor.monitor.RelayMonitorEvent
 import com.vitorpamplona.quartz.nip68Picture.PictureEvent
+import com.vitorpamplona.quartz.nip69P2pOrderEvents.mostroInfo.MostroInfoEvent
 import com.vitorpamplona.quartz.nip71Video.AddressableNormalVideoEvent
 import com.vitorpamplona.quartz.nip71Video.AddressableShortVideoEvent
 import com.vitorpamplona.quartz.nip71Video.VideoNormalEvent
@@ -1393,6 +1402,13 @@ open class EventCache :
                 listOfNotNull(event.threadRoot(), event.replyTo()).distinct().mapNotNull { checkGetOrCreateNote(it) }
             }
 
+            is GitCoverNoteEvent -> {
+                // A cover note threads alongside the NIP-34 replies of the issue / patch / PR it
+                // covers (its root `e`), so the item's history shows each edit and the card can quote
+                // its target. The banner above the description is resolved separately (GitCoverNotes).
+                listOfNotNull(event.rootEventId()?.let { checkGetOrCreateNote(it) })
+            }
+
             is GitStatusEvent -> {
                 // A status event roots itself at a patch/PR/issue via a
                 // marked-`root` `e` tag; link only that so the transition
@@ -1408,6 +1424,13 @@ open class EventCache :
 
             is CommentEvent -> {
                 event.tagsWithoutCitations().mapNotNull { checkGetOrCreateNote(it) }
+            }
+
+            is KanbanCardEvent -> {
+                // Files the card under its board's addressable note, so the board's replies hold
+                // its cards: the board card counts them per column, and the board's thread lists
+                // them. Only the board `a`; a tracker card's other `a` is what it mirrors.
+                listOfNotNull(event.board()?.let { getOrCreateAddressableNote(Address(it.kind, it.pubKeyHex, it.dTag)) })
             }
 
             is GeocacheFoundLogEvent -> {
@@ -2271,6 +2294,25 @@ open class EventCache :
         if (relay != null && isRelaySignedGroupEvent(event, relay)) {
             val latest = getOrCreateAddressableNote(event.address()).event as? GroupPinnedEvent
             latest?.let { getOrCreateRelayGroupChannel(GroupId(it.groupId(), relay)).updatePinned(it) }
+        }
+        return new
+    }
+
+    /**
+     * A Kanban card (kind 30302) is stored like any addressable event and also counted as a reply
+     * of its board ([computeReplyTo] links the board), which [consumeBaseReplaceable] alone does
+     * not do: the board card reads its column counts from those replies. A newer version of the
+     * card is unlinked from the old board first, inside [consumeBaseReplaceable].
+     */
+    private fun consumeKanbanCard(
+        event: KanbanCardEvent,
+        relay: NormalizedRelayUrl?,
+        wasVerified: Boolean,
+    ): Boolean {
+        val new = consumeBaseReplaceable(event, relay, wasVerified)
+        if (new) {
+            val note = getOrCreateAddressableNote(event.address())
+            if (note.event === event) note.replyTo?.forEach { it.addReply(note) }
         }
         return new
     }
@@ -3897,6 +3939,9 @@ open class EventCache :
                 is CyberspaceBagEvent,
                 is GitRepositoryEvent,
                 is GitRepositoryStateEvent,
+                // Nostr CI Workflow Progress (39842): the live marker of a run, replaced as it advances.
+                // CiStatusIndex reads it for the PR / patch CI badge; not linked into any thread.
+                is CiWorkflowProgressEvent,
                 is UserGraspListEvent,
                 is RootSiteEvent,
                 is NamedSiteEvent,
@@ -3979,7 +4024,16 @@ open class EventCache :
                 is PredictionMarketEvent,
                 // Unread junk on 38000 still supersedes an older version at its address.
                 is UnrecognizedKind38000Event,
+                // The shapes of the shared kinds 30301, 30302 and 38385 that have cards: Kanban
+                // boards and cards, WalletScrutiny verdicts and Mostro instance terms. Their
+                // UnrecognizedKind…Event siblings (other apps' formats) stay unconsumed, so
+                // nothing ever draws them.
+                is KanbanBoardEvent,
+                is BuildVerificationEvent,
+                is MostroInfoEvent,
                 -> consumeBaseReplaceable(event, relay, wasVerified)
+
+                is KanbanCardEvent -> consumeKanbanCard(event, relay, wasVerified)
 
                 // ============================================================
                 // Regular kinds with no per-kind logic: stored as plain notes.
@@ -4025,6 +4079,11 @@ open class EventCache :
                 is GitPullRequestEvent,
                 is GitPullRequestUpdateEvent,
                 is GitStatusEvent,
+                // Cover notes are linked to the item they cover (computeReplyTo); the CI results are
+                // not linked into any thread — CiStatusIndex and the runs sheet read them instead.
+                is GitCoverNoteEvent,
+                is CiJobResultEvent,
+                is CiWorkflowResultEvent,
                 is SnoShardEvent,
                 is ChessGameEvent,
                 is JesterEvent,
@@ -4069,6 +4128,9 @@ open class EventCache :
                 is WelcomeEvent,
                 is WorkoutRecordEvent,
                 is ConcordTimerNoticeEvent,
+                // Legacy MIP-00 KeyPackages (kind 443): the invite lookup now asks for them,
+                // so they arrive; stored like any regular event, never rendered.
+                is LegacyKeyPackageEvent,
                 -> consumeRegularEvent(event, relay, wasVerified)
 
                 else -> {

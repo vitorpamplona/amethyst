@@ -47,7 +47,10 @@ import com.vitorpamplona.quartz.experimental.decentralizedLists.searchableListTi
 import com.vitorpamplona.quartz.experimental.edits.TextNoteModificationEvent
 import com.vitorpamplona.quartz.experimental.fitness.workout.ExerciseTemplateEvent
 import com.vitorpamplona.quartz.experimental.fitness.workout.WorkoutRecordEvent
+import com.vitorpamplona.quartz.experimental.fitness.workout.WorkoutTemplateEvent
 import com.vitorpamplona.quartz.experimental.interactiveStories.InteractiveStoryBaseEvent
+import com.vitorpamplona.quartz.experimental.kanban.board.KanbanBoardEvent
+import com.vitorpamplona.quartz.experimental.kanban.card.KanbanCardEvent
 import com.vitorpamplona.quartz.experimental.library.LearningResourceEvent
 import com.vitorpamplona.quartz.experimental.music.playlist.MusicPlaylistEvent
 import com.vitorpamplona.quartz.experimental.music.track.MusicTrackEvent
@@ -56,8 +59,10 @@ import com.vitorpamplona.quartz.experimental.nip95.header.FileStorageHeaderEvent
 import com.vitorpamplona.quartz.experimental.nipsOnNostr.NipTextEvent
 import com.vitorpamplona.quartz.experimental.predictionMarkets.PredictionMarketEvent
 import com.vitorpamplona.quartz.experimental.profileGallery.ProfileGalleryEntryEvent
+import com.vitorpamplona.quartz.experimental.profileTheme.definition.ThemeDefinitionEvent
 import com.vitorpamplona.quartz.experimental.ps1saves.Ps1SaveEvent
 import com.vitorpamplona.quartz.experimental.trustedLists.TrustedListEvent
+import com.vitorpamplona.quartz.experimental.walletScrutiny.verification.BuildVerificationEvent
 import com.vitorpamplona.quartz.experimental.zapPolls.ZapPollEvent
 import com.vitorpamplona.quartz.feedDefinition.FeedDefinitionEvent
 import com.vitorpamplona.quartz.nip01Core.core.Event
@@ -76,6 +81,7 @@ import com.vitorpamplona.quartz.nip17Dm.files.ChatMessageEncryptedFileHeaderEven
 import com.vitorpamplona.quartz.nip17Dm.messages.ChatMessageEvent
 import com.vitorpamplona.quartz.nip22Comments.CommentEvent
 import com.vitorpamplona.quartz.nip23LongContent.LongFormContentEvent
+import com.vitorpamplona.quartz.nip23LongContent.draft.LongFormDraftEvent
 import com.vitorpamplona.quartz.nip28PublicChat.admin.ChannelCreateEvent
 import com.vitorpamplona.quartz.nip28PublicChat.admin.ChannelMetadataEvent
 import com.vitorpamplona.quartz.nip29RelayGroups.metadata.GroupMetadataEvent
@@ -83,6 +89,7 @@ import com.vitorpamplona.quartz.nip29RelayGroups.metadata.GroupRolesEvent
 import com.vitorpamplona.quartz.nip29RelayGroups.moderation.CreateGroupEvent
 import com.vitorpamplona.quartz.nip29RelayGroups.moderation.GroupEditMetadataEvent
 import com.vitorpamplona.quartz.nip30CustomEmoji.pack.EmojiPackEvent
+import com.vitorpamplona.quartz.nip30CustomEmoji.stickers.StickerPackEvent
 import com.vitorpamplona.quartz.nip32Labeling.LabelEvent
 import com.vitorpamplona.quartz.nip34Git.issue.GitIssueEvent
 import com.vitorpamplona.quartz.nip34Git.pr.GitPullRequestEvent
@@ -115,12 +122,14 @@ import com.vitorpamplona.quartz.nip58Badges.accepted.AcceptedBadgeSetEvent
 import com.vitorpamplona.quartz.nip58Badges.definition.BadgeDefinitionEvent
 import com.vitorpamplona.quartz.nip5aStaticWebsites.NamedSiteEvent
 import com.vitorpamplona.quartz.nip5aStaticWebsites.RootSiteEvent
+import com.vitorpamplona.quartz.nip5aStaticWebsites.SiteSnapshotEvent
 import com.vitorpamplona.quartz.nip5dNapplets.NamedNappletEvent
 import com.vitorpamplona.quartz.nip5dNapplets.NappletSnapshotEvent
 import com.vitorpamplona.quartz.nip5dNapplets.RootNappletEvent
 import com.vitorpamplona.quartz.nip64Chess.game.ChessGameEvent
 import com.vitorpamplona.quartz.nip68Picture.PictureEvent
 import com.vitorpamplona.quartz.nip69P2pOrderEvents.P2POrderEvent
+import com.vitorpamplona.quartz.nip69P2pOrderEvents.mostroInfo.MostroInfoEvent
 import com.vitorpamplona.quartz.nip71Video.AddressableVideoEvent
 import com.vitorpamplona.quartz.nip71Video.RegularVideoEvent
 import com.vitorpamplona.quartz.nip72ModCommunities.definition.CommunityDefinitionEvent
@@ -186,6 +195,10 @@ object SearchFieldExtractor {
                 tiers(event, event.title(), event.summary(), event.content)
             }
 
+            is LongFormDraftEvent -> {
+                tiers(event, event.title(), event.summary(), event.content)
+            }
+
             is WikiArticleEvent -> {
                 tiers(event, event.title(), event.summary(), event.content)
             }
@@ -243,6 +256,18 @@ object SearchFieldExtractor {
             // never indexed; the public shortcodes are keywords beside the description.
             is EmojiPackEvent -> {
                 tiers(event, listOf(event.titleOrName()), listOf(event.description()) + event.publicEmojiCodes(), null)
+            }
+
+            // kind 30031 -- the pack's name is the title; its description and every
+            // sticker shortcode are what a picker search matches. Never the content.
+            is StickerPackEvent -> {
+                tiers(event, listOf(event.title()), listOf(event.description()) + event.stickers().map { it.code }, null)
+            }
+
+            // kind 36767 -- a shareable theme's name and description; never its colors,
+            // font families or URLs, and `content` is empty by spec.
+            is ThemeDefinitionEvent -> {
+                tiers(event, event.title(), event.description(), null)
             }
 
             is ChannelCreateEvent -> {
@@ -362,6 +387,10 @@ object SearchFieldExtractor {
             }
 
             is WorkoutRecordEvent -> {
+                tiers(event, event.title(), null, event.content)
+            }
+
+            is WorkoutTemplateEvent -> {
                 tiers(event, event.title(), null, event.content)
             }
 
@@ -528,6 +557,10 @@ object SearchFieldExtractor {
                 tiers(event, event.title(), event.description(), null, website = event.source())
             }
 
+            is SiteSnapshotEvent -> {
+                tiers(event, event.title(), event.description(), null, website = event.source())
+            }
+
             is RootNappletEvent -> {
                 tiers(event, event.title(), event.description(), null)
             }
@@ -665,6 +698,28 @@ object SearchFieldExtractor {
             // currency and payment methods are the keywords that qualify it.
             is P2POrderEvent -> {
                 tiers(event, listOf(event.makerName()), listOf(event.currency()) + event.paymentMethods().orEmpty(), null)
+            }
+
+            // kind 38385 -- a Mostro instance is looked up by its name; the currencies it
+            // trades are the keywords that qualify it, as on an order.
+            is MostroInfoEvent -> {
+                tiers(event, listOf(event.instanceName()), event.fiatCurrenciesAccepted().orEmpty(), null)
+            }
+
+            // kinds 30301 / 30302 -- a Kanban board or card is found by its title; the description
+            // qualifies it, as a list's does.
+            is KanbanBoardEvent -> {
+                tiers(event, event.title(), event.description(), null)
+            }
+
+            is KanbanCardEvent -> {
+                tiers(event, event.title(), event.description(), null)
+            }
+
+            // kind 30301 (WalletScrutiny) -- the one-line description names what was reproduced;
+            // the markdown report is the body.
+            is BuildVerificationEvent -> {
+                tiers(event, event.description(), null, event.report())
             }
 
             is AudioTrackEvent -> {

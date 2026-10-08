@@ -140,14 +140,21 @@ import com.vitorpamplona.quartz.experimental.decentralizedLists.header.ListHeade
 import com.vitorpamplona.quartz.experimental.decentralizedLists.item.AddressableListItemEvent
 import com.vitorpamplona.quartz.experimental.decentralizedLists.item.ListItemEvent
 import com.vitorpamplona.quartz.experimental.decoupling.setup.EncryptionKeyListEvent
+import com.vitorpamplona.quartz.experimental.decoupling.transfer.request.EncryptionKeyRequestEvent
+import com.vitorpamplona.quartz.experimental.decoupling.transfer.response.EncryptionKeyTransferEvent
 import com.vitorpamplona.quartz.experimental.edits.TextNoteModificationEvent
 import com.vitorpamplona.quartz.experimental.ephemChat.chat.EphemeralChatEvent
 import com.vitorpamplona.quartz.experimental.ephemChat.list.EphemeralChatListEvent
 import com.vitorpamplona.quartz.experimental.fitness.workout.ExerciseTemplateEvent
 import com.vitorpamplona.quartz.experimental.fitness.workout.WorkoutRecordEvent
+import com.vitorpamplona.quartz.experimental.fitness.workout.WorkoutTemplateEvent
 import com.vitorpamplona.quartz.experimental.interactiveStories.InteractiveStoryPrologueEvent
 import com.vitorpamplona.quartz.experimental.interactiveStories.InteractiveStoryReadingStateEvent
 import com.vitorpamplona.quartz.experimental.interactiveStories.InteractiveStorySceneEvent
+import com.vitorpamplona.quartz.experimental.kanban.board.KanbanBoardEvent
+import com.vitorpamplona.quartz.experimental.kanban.board.UnrecognizedKind30301Event
+import com.vitorpamplona.quartz.experimental.kanban.card.KanbanCardEvent
+import com.vitorpamplona.quartz.experimental.kanban.card.UnrecognizedKind30302Event
 import com.vitorpamplona.quartz.experimental.library.BlossomPieceIndexEvent
 import com.vitorpamplona.quartz.experimental.library.BookshelfDirectoryEvent
 import com.vitorpamplona.quartz.experimental.library.LearningResourceEvent
@@ -162,8 +169,11 @@ import com.vitorpamplona.quartz.experimental.nip95.header.FileStorageHeaderEvent
 import com.vitorpamplona.quartz.experimental.nipsOnNostr.NipTextEvent
 import com.vitorpamplona.quartz.experimental.nns.NNSEvent
 import com.vitorpamplona.quartz.experimental.notifications.wake.WakeUpEvent
+import com.vitorpamplona.quartz.experimental.postingStreak.PostingStreakEvent
 import com.vitorpamplona.quartz.experimental.predictionMarkets.PredictionMarketEvent
 import com.vitorpamplona.quartz.experimental.profileGallery.ProfileGalleryEntryEvent
+import com.vitorpamplona.quartz.experimental.profileTheme.active.ActiveProfileThemeEvent
+import com.vitorpamplona.quartz.experimental.profileTheme.definition.ThemeDefinitionEvent
 import com.vitorpamplona.quartz.experimental.ps1saves.Ps1SaveEvent
 import com.vitorpamplona.quartz.experimental.publications.PublicationContentEvent
 import com.vitorpamplona.quartz.experimental.publications.PublicationIndexEvent
@@ -171,15 +181,20 @@ import com.vitorpamplona.quartz.experimental.ratings.EntityRatingEvent
 import com.vitorpamplona.quartz.experimental.ratings.RelayReviewEvent
 import com.vitorpamplona.quartz.experimental.roadstr.confirmation.RoadEventConfirmationEvent
 import com.vitorpamplona.quartz.experimental.roadstr.report.RoadEventReportEvent
+import com.vitorpamplona.quartz.experimental.topEight.TopEightEvent
 import com.vitorpamplona.quartz.experimental.trustedLists.addressables.AddressableTrustedListEvent
 import com.vitorpamplona.quartz.experimental.trustedLists.events.EventTrustedListEvent
 import com.vitorpamplona.quartz.experimental.trustedLists.externalIds.ExternalIdTrustedListEvent
 import com.vitorpamplona.quartz.experimental.trustedLists.users.UserTrustedListEvent
 import com.vitorpamplona.quartz.experimental.videoCollaboration.VideoCollaborationEvent
+import com.vitorpamplona.quartz.experimental.walletScrutiny.assetBundle.AssetBundleEvent
+import com.vitorpamplona.quartz.experimental.walletScrutiny.verification.BuildVerificationEvent
 import com.vitorpamplona.quartz.experimental.zapPolls.ZapPollEvent
+import com.vitorpamplona.quartz.experimental.zapstore.identityProof.IdentityProofEvent
 import com.vitorpamplona.quartz.feedDefinition.FeedDefinitionEvent
 import com.vitorpamplona.quartz.marmot.mip00KeyPackages.KeyPackageEvent
 import com.vitorpamplona.quartz.marmot.mip00KeyPackages.KeyPackageRelayListEvent
+import com.vitorpamplona.quartz.marmot.mip00KeyPackages.LegacyKeyPackageEvent
 import com.vitorpamplona.quartz.marmot.mip02Welcome.WelcomeEvent
 import com.vitorpamplona.quartz.marmot.mip03GroupMessages.GroupEvent
 import com.vitorpamplona.quartz.marmot.mip05PushNotifications.NotificationRequestEvent
@@ -208,6 +223,7 @@ import com.vitorpamplona.quartz.nip18Reposts.GenericRepostEvent
 import com.vitorpamplona.quartz.nip18Reposts.RepostEvent
 import com.vitorpamplona.quartz.nip22Comments.CommentEvent
 import com.vitorpamplona.quartz.nip23LongContent.LongFormContentEvent
+import com.vitorpamplona.quartz.nip23LongContent.draft.LongFormDraftEvent
 import com.vitorpamplona.quartz.nip25Reactions.ExternalReactionEvent
 import com.vitorpamplona.quartz.nip25Reactions.ReactionEvent
 import com.vitorpamplona.quartz.nip28PublicChat.admin.ChannelCreateEvent
@@ -235,7 +251,19 @@ import com.vitorpamplona.quartz.nip29RelayGroups.request.GroupLeaveRequestEvent
 import com.vitorpamplona.quartz.nip29RelayGroups.tags.GroupIdTag
 import com.vitorpamplona.quartz.nip30CustomEmoji.pack.EmojiPackEvent
 import com.vitorpamplona.quartz.nip30CustomEmoji.selection.EmojiListEvent
+import com.vitorpamplona.quartz.nip30CustomEmoji.stickers.StickerPackEvent
 import com.vitorpamplona.quartz.nip32Labeling.LabelEvent
+import com.vitorpamplona.quartz.nip34Git.ci.coordinatorAdvertisement.CiCoordinatorAdvertisementEvent
+import com.vitorpamplona.quartz.nip34Git.ci.jobResult.CiJobResultEvent
+import com.vitorpamplona.quartz.nip34Git.ci.manualTrigger.CiManualTriggerEvent
+import com.vitorpamplona.quartz.nip34Git.ci.repositoryStatus.CiRepositoryStatusEvent
+import com.vitorpamplona.quartz.nip34Git.ci.requestReadiness.CiRequestReadinessListEvent
+import com.vitorpamplona.quartz.nip34Git.ci.secretUpdate.CiSecretUpdateEvent
+import com.vitorpamplona.quartz.nip34Git.ci.serviceRequest.CiServiceRequestEvent
+import com.vitorpamplona.quartz.nip34Git.ci.serviceStop.CiServiceStopEvent
+import com.vitorpamplona.quartz.nip34Git.ci.workflowProgress.CiWorkflowProgressEvent
+import com.vitorpamplona.quartz.nip34Git.ci.workflowResult.CiWorkflowResultEvent
+import com.vitorpamplona.quartz.nip34Git.coverNote.GitCoverNoteEvent
 import com.vitorpamplona.quartz.nip34Git.grasp.UserGraspListEvent
 import com.vitorpamplona.quartz.nip34Git.issue.GitIssueEvent
 import com.vitorpamplona.quartz.nip34Git.patch.GitPatchEvent
@@ -329,6 +357,7 @@ import com.vitorpamplona.quartz.nip59Giftwrap.wraps.EphemeralGiftWrapEvent
 import com.vitorpamplona.quartz.nip59Giftwrap.wraps.GiftWrapEvent
 import com.vitorpamplona.quartz.nip5aStaticWebsites.NamedSiteEvent
 import com.vitorpamplona.quartz.nip5aStaticWebsites.RootSiteEvent
+import com.vitorpamplona.quartz.nip5aStaticWebsites.SiteSnapshotEvent
 import com.vitorpamplona.quartz.nip5dNapplets.NamedNappletEvent
 import com.vitorpamplona.quartz.nip5dNapplets.NappletSnapshotEvent
 import com.vitorpamplona.quartz.nip5dNapplets.RootNappletEvent
@@ -351,6 +380,15 @@ import com.vitorpamplona.quartz.nip66RelayMonitor.discovery.RelayDiscoveryEvent
 import com.vitorpamplona.quartz.nip66RelayMonitor.monitor.RelayMonitorEvent
 import com.vitorpamplona.quartz.nip68Picture.PictureEvent
 import com.vitorpamplona.quartz.nip69P2pOrderEvents.P2POrderEvent
+import com.vitorpamplona.quartz.nip69P2pOrderEvents.mostroDevFee.MostroDevFeePaymentEvent
+import com.vitorpamplona.quartz.nip69P2pOrderEvents.mostroDispute.MostroDisputeEvent
+import com.vitorpamplona.quartz.nip69P2pOrderEvents.mostroDispute.UnrecognizedKind38386Event
+import com.vitorpamplona.quartz.nip69P2pOrderEvents.mostroInfo.MostroInfoEvent
+import com.vitorpamplona.quartz.nip69P2pOrderEvents.mostroInfo.UnrecognizedKind38385Event
+import com.vitorpamplona.quartz.nip69P2pOrderEvents.mostroRating.MostroUserRatingEvent
+import com.vitorpamplona.quartz.nip69P2pOrderEvents.mostroRating.UnrecognizedKind38384Event
+import com.vitorpamplona.quartz.nip69P2pOrderEvents.robosatsRating.RoboSatsCoordinatorRatingEvent
+import com.vitorpamplona.quartz.nip69P2pOrderEvents.robosatsRating.UnrecognizedKind31986Event
 import com.vitorpamplona.quartz.nip71Video.AddressableNormalVideoEvent
 import com.vitorpamplona.quartz.nip71Video.AddressableShortVideoEvent
 import com.vitorpamplona.quartz.nip71Video.VideoNormalEvent
@@ -452,6 +490,7 @@ import com.vitorpamplona.quartz.nipF4Podcasts.favorites.FavoritePodcastsListEven
 import com.vitorpamplona.quartz.nipF4Podcasts.metadata.PodcastMetadataEvent
 import com.vitorpamplona.quartz.nipXXPodcasting20.episode.Podcasting20EpisodeEvent
 import com.vitorpamplona.quartz.nipXXPodcasting20.trailer.Podcasting20TrailerEvent
+import com.vitorpamplona.quartz.nipXXPrivateNoteStorage.PnsEvent
 import com.vitorpamplona.quartz.nipXXPushNotifications.deregistration.PushDeregistrationEvent
 import com.vitorpamplona.quartz.nipXXPushNotifications.preferences.PushPreferencesEvent
 import com.vitorpamplona.quartz.nipXXPushNotifications.registration.PushRegistrationEvent
@@ -669,8 +708,11 @@ class EventFactory {
                 CommunityRulesEvent.KIND -> CommunityRulesEvent(id, pubKey, createdAt, tags, content, sig)
                 ContactListEvent.KIND -> ContactListEvent(id, pubKey, createdAt, tags, content, sig)
                 DeletionRequestEvent.KIND -> DeletionRequestEvent(id, pubKey, createdAt, tags, content, sig)
+                EncryptionKeyRequestEvent.KIND -> EncryptionKeyRequestEvent(id, pubKey, createdAt, tags, content, sig)
+                EncryptionKeyTransferEvent.KIND -> EncryptionKeyTransferEvent(id, pubKey, createdAt, tags, content, sig)
                 DraftWrapEvent.KIND -> DraftWrapEvent(id, pubKey, createdAt, tags, content, sig)
                 EmojiPackEvent.KIND -> EmojiPackEvent(id, pubKey, createdAt, tags, content, sig)
+                StickerPackEvent.KIND -> StickerPackEvent(id, pubKey, createdAt, tags, content, sig)
                 EmojiListEvent.KIND -> EmojiListEvent(id, pubKey, createdAt, tags, content, sig)
                 EphemeralChatEvent.KIND -> EphemeralChatEvent(id, pubKey, createdAt, tags, content, sig)
                 EphemeralChatListEvent.KIND -> EphemeralChatListEvent(id, pubKey, createdAt, tags, content, sig)
@@ -723,6 +765,17 @@ class EventFactory {
                 GitStatusAppliedEvent.KIND -> GitStatusAppliedEvent(id, pubKey, createdAt, tags, content, sig)
                 GitStatusClosedEvent.KIND -> GitStatusClosedEvent(id, pubKey, createdAt, tags, content, sig)
                 GitStatusDraftEvent.KIND -> GitStatusDraftEvent(id, pubKey, createdAt, tags, content, sig)
+                GitCoverNoteEvent.KIND -> GitCoverNoteEvent(id, pubKey, createdAt, tags, content, sig)
+                CiManualTriggerEvent.KIND -> CiManualTriggerEvent(id, pubKey, createdAt, tags, content, sig)
+                CiJobResultEvent.KIND -> CiJobResultEvent(id, pubKey, createdAt, tags, content, sig)
+                CiWorkflowResultEvent.KIND -> CiWorkflowResultEvent(id, pubKey, createdAt, tags, content, sig)
+                CiServiceRequestEvent.KIND -> CiServiceRequestEvent(id, pubKey, createdAt, tags, content, sig)
+                CiServiceStopEvent.KIND -> CiServiceStopEvent(id, pubKey, createdAt, tags, content, sig)
+                CiWorkflowProgressEvent.KIND -> CiWorkflowProgressEvent(id, pubKey, createdAt, tags, content, sig)
+                CiCoordinatorAdvertisementEvent.KIND -> CiCoordinatorAdvertisementEvent(id, pubKey, createdAt, tags, content, sig)
+                CiRequestReadinessListEvent.KIND -> CiRequestReadinessListEvent(id, pubKey, createdAt, tags, content, sig)
+                CiRepositoryStatusEvent.KIND -> CiRepositoryStatusEvent(id, pubKey, createdAt, tags, content, sig)
+                CiSecretUpdateEvent.KIND -> CiSecretUpdateEvent(id, pubKey, createdAt, tags, content, sig)
                 UserGraspListEvent.KIND -> UserGraspListEvent(id, pubKey, createdAt, tags, content, sig)
                 GoodWikiAuthorListEvent.KIND -> GoodWikiAuthorListEvent(id, pubKey, createdAt, tags, content, sig)
                 GoodWikiRelayListEvent.KIND -> GoodWikiRelayListEvent(id, pubKey, createdAt, tags, content, sig)
@@ -756,6 +809,7 @@ class EventFactory {
                 PrivateZapEvent.KIND -> PrivateZapEvent(id, pubKey, createdAt, tags, content, sig)
                 ZapRequestEvent.KIND -> ZapRequestEvent(id, pubKey, createdAt, tags, content, sig)
                 LongFormContentEvent.KIND -> LongFormContentEvent(id, pubKey, createdAt, tags, content, sig)
+                LongFormDraftEvent.KIND -> LongFormDraftEvent(id, pubKey, createdAt, tags, content, sig)
                 MarketplaceEvent.KIND -> MarketplaceEvent(id, pubKey, createdAt, tags, content, sig)
                 MeetingRoomEvent.KIND -> MeetingRoomEvent(id, pubKey, createdAt, tags, content, sig)
                 MeetingRoomPresenceEvent.KIND -> MeetingRoomPresenceEvent(id, pubKey, createdAt, tags, content, sig)
@@ -784,6 +838,7 @@ class EventFactory {
                 MuteListEvent.KIND -> MuteListEvent(id, pubKey, createdAt, tags, content, sig)
                 KeyPackageEvent.KIND -> KeyPackageEvent(id, pubKey, createdAt, tags, content, sig)
                 KeyPackageRelayListEvent.KIND -> KeyPackageRelayListEvent(id, pubKey, createdAt, tags, content, sig)
+                LegacyKeyPackageEvent.KIND -> LegacyKeyPackageEvent(id, pubKey, createdAt, tags, content, sig)
                 WelcomeEvent.KIND -> WelcomeEvent(id, pubKey, createdAt, tags, content, sig)
                 GroupEvent.KIND -> GroupEvent(id, pubKey, createdAt, tags, content, sig)
                 NotificationRequestEvent.KIND -> NotificationRequestEvent(id, pubKey, createdAt, tags, content, sig)
@@ -848,8 +903,57 @@ class EventFactory {
                 FollowSetEvent.KIND -> FollowSetEvent(id, pubKey, createdAt, tags, content, sig)
                 PictureCurationSetEvent.KIND -> PictureCurationSetEvent(id, pubKey, createdAt, tags, content, sig)
                 P2POrderEvent.KIND -> P2POrderEvent(id, pubKey, createdAt, tags, content, sig)
+                // Mostro split its kind 38383 into 38384 ratings / 38385 info / 38386 disputes,
+                // but Paygress (a compute marketplace) publishes heartbeats, lease revocations and
+                // promotion announcements on the same three numbers, and other apps add their own.
+                // Each is told apart by its Mostro `z` tag; the rest stays addressable but unread.
+                MostroUserRatingEvent.KIND ->
+                    if (MostroUserRatingEvent.isMostroRating(tags)) {
+                        MostroUserRatingEvent(id, pubKey, createdAt, tags, content, sig)
+                    } else {
+                        UnrecognizedKind38384Event(id, pubKey, createdAt, tags, content, sig)
+                    }
+                MostroInfoEvent.KIND ->
+                    if (MostroInfoEvent.isMostroInfo(tags)) {
+                        MostroInfoEvent(id, pubKey, createdAt, tags, content, sig)
+                    } else {
+                        UnrecognizedKind38385Event(id, pubKey, createdAt, tags, content, sig)
+                    }
+                MostroDisputeEvent.KIND ->
+                    if (MostroDisputeEvent.isMostroDispute(tags)) {
+                        MostroDisputeEvent(id, pubKey, createdAt, tags, content, sig)
+                    } else {
+                        UnrecognizedKind38386Event(id, pubKey, createdAt, tags, content, sig)
+                    }
+                MostroDevFeePaymentEvent.KIND -> MostroDevFeePaymentEvent(id, pubKey, createdAt, tags, content, sig)
+                // RoboSats coordinator ratings carry a coordinator-signed token; Borkstr's NIP
+                // compatibility reports share the number without one.
+                RoboSatsCoordinatorRatingEvent.KIND ->
+                    if (RoboSatsCoordinatorRatingEvent.isCoordinatorRating(tags)) {
+                        RoboSatsCoordinatorRatingEvent(id, pubKey, createdAt, tags, content, sig)
+                    } else {
+                        UnrecognizedKind31986Event(id, pubKey, createdAt, tags, content, sig)
+                    }
+                // kind:30301 is a Kanban board in NIP PR #1665, but WalletScrutiny publishes its
+                // reproducible-build verifications on it and an encrypted planner app its tasks.
+                // Verifications carry `i` + `status`, boards a `title` or a named `col`; the planner's
+                // events fall to UnrecognizedKind30301Event (addressable, never indexed, no edges).
+                KanbanBoardEvent.KIND ->
+                    when {
+                        BuildVerificationEvent.isBuildVerification(tags) -> BuildVerificationEvent(id, pubKey, createdAt, tags, content, sig)
+                        KanbanBoardEvent.isKanbanBoard(tags) -> KanbanBoardEvent(id, pubKey, createdAt, tags, content, sig)
+                        else -> UnrecognizedKind30301Event(id, pubKey, createdAt, tags, content, sig)
+                    }
+                // Kanban cards (NIP PR #1665) share 30302 with Fieldbook's team memberships.
+                KanbanCardEvent.KIND ->
+                    if (KanbanCardEvent.isKanbanCard(tags)) {
+                        KanbanCardEvent(id, pubKey, createdAt, tags, content, sig)
+                    } else {
+                        UnrecognizedKind30302Event(id, pubKey, createdAt, tags, content, sig)
+                    }
                 PictureEvent.KIND -> PictureEvent(id, pubKey, createdAt, tags, content, sig)
                 PinListEvent.KIND -> PinListEvent(id, pubKey, createdAt, tags, content, sig)
+                PnsEvent.KIND -> PnsEvent(id, pubKey, createdAt, tags, content, sig)
                 ProfileBadgesEvent.KIND -> ProfileBadgesEvent(id, pubKey, createdAt, tags, content, sig)
                 ZapPollEvent.KIND -> ZapPollEvent(id, pubKey, createdAt, tags, content, sig)
                 PollEvent.KIND -> PollEvent(id, pubKey, createdAt, tags, content, sig)
@@ -857,6 +961,9 @@ class EventFactory {
                 PodcastMetadataEvent.KIND -> PodcastMetadataEvent(id, pubKey, createdAt, tags, content, sig)
                 PodcastEpisodeEvent.KIND -> PodcastEpisodeEvent(id, pubKey, createdAt, tags, content, sig)
                 Ps1SaveEvent.KIND -> Ps1SaveEvent(id, pubKey, createdAt, tags, content, sig)
+                PostingStreakEvent.KIND -> PostingStreakEvent(id, pubKey, createdAt, tags, content, sig)
+                ActiveProfileThemeEvent.KIND -> ActiveProfileThemeEvent(id, pubKey, createdAt, tags, content, sig)
+                ThemeDefinitionEvent.KIND -> ThemeDefinitionEvent(id, pubKey, createdAt, tags, content, sig)
                 AuthoredPodcastsEvent.KIND -> AuthoredPodcastsEvent(id, pubKey, createdAt, tags, content, sig)
                 FavoritePodcastsListEvent.KIND -> FavoritePodcastsListEvent(id, pubKey, createdAt, tags, content, sig)
                 Podcasting20EpisodeEvent.KIND -> Podcasting20EpisodeEvent(id, pubKey, createdAt, tags, content, sig)
@@ -910,6 +1017,7 @@ class EventFactory {
                 RoadEventConfirmationEvent.KIND -> RoadEventConfirmationEvent(id, pubKey, createdAt, tags, content, sig)
                 RoadEventReportEvent.KIND -> RoadEventReportEvent(id, pubKey, createdAt, tags, content, sig)
                 RootSiteEvent.KIND -> RootSiteEvent(id, pubKey, createdAt, tags, content, sig)
+                SiteSnapshotEvent.KIND -> SiteSnapshotEvent(id, pubKey, createdAt, tags, content, sig)
                 RepostEvent.KIND -> RepostEvent(id, pubKey, createdAt, tags, content, sig)
                 RequestToVanishEvent.KIND -> RequestToVanishEvent(id, pubKey, createdAt, tags, content, sig)
                 ConcordCommunityListEvent.KIND -> ConcordCommunityListEvent(id, pubKey, createdAt, tags, content, sig)
@@ -922,11 +1030,16 @@ class EventFactory {
                 SimpleGroupListEvent.KIND -> SimpleGroupListEvent(id, pubKey, createdAt, tags, content, sig)
                 SoftwareApplicationEvent.KIND -> SoftwareApplicationEvent(id, pubKey, createdAt, tags, content, sig)
                 SoftwareAssetEvent.KIND -> SoftwareAssetEvent(id, pubKey, createdAt, tags, content, sig)
+                // Zapstore's APK-signing-certificate proof and WalletScrutiny's asset bundles sit
+                // beside NIP-82: both are about app releases, neither points at a NIP-82 event.
+                IdentityProofEvent.KIND -> IdentityProofEvent(id, pubKey, createdAt, tags, content, sig)
+                AssetBundleEvent.KIND -> AssetBundleEvent(id, pubKey, createdAt, tags, content, sig)
                 StallEvent.KIND -> StallEvent(id, pubKey, createdAt, tags, content, sig)
                 UserStatusEvent.KIND -> UserStatusEvent(id, pubKey, createdAt, tags, content, sig)
                 TextNoteEvent.KIND -> TextNoteEvent(id, pubKey, createdAt, tags, content, sig)
                 ThreadEvent.KIND -> ThreadEvent(id, pubKey, createdAt, tags, content, sig)
                 TextNoteModificationEvent.KIND -> TextNoteModificationEvent(id, pubKey, createdAt, tags, content, sig)
+                TopEightEvent.KIND -> TopEightEvent(id, pubKey, createdAt, tags, content, sig)
                 TorrentEvent.KIND -> TorrentEvent(id, pubKey, createdAt, tags, content, sig)
                 TorrentCommentEvent.KIND -> TorrentCommentEvent(id, pubKey, createdAt, tags, content, sig)
                 TrustedRelayListEvent.KIND -> TrustedRelayListEvent(id, pubKey, createdAt, tags, content, sig)
@@ -949,6 +1062,7 @@ class EventFactory {
                 WikiArticleEvent.KIND -> WikiArticleEvent(id, pubKey, createdAt, tags, content, sig)
                 WorkoutRecordEvent.KIND -> WorkoutRecordEvent(id, pubKey, createdAt, tags, content, sig)
                 ExerciseTemplateEvent.KIND -> ExerciseTemplateEvent(id, pubKey, createdAt, tags, content, sig)
+                WorkoutTemplateEvent.KIND -> WorkoutTemplateEvent(id, pubKey, createdAt, tags, content, sig)
                 else -> factories[kind]?.build(id, pubKey, createdAt, tags, content, sig) ?: Event(id, pubKey, createdAt, kind, tags, content, sig)
             } as T
 
@@ -959,9 +1073,31 @@ class EventFactory {
          * equals [Event] exactly when the kind has no dedicated class.
          *
          * Used to decide whether a repost's inner (boosted) kind is something
-         * Amethyst can parse and render at all.
+         * Amethyst can parse and render at all — once per repost in a feed, so the
+         * compiled-in answer is memoised per kind instead of allocating a probe
+         * event each time. [factories] is consulted first and never cached, so a
+         * builder registered later is still seen.
          */
-        fun isKnownKind(kind: Int): Boolean = probe(kind)::class != Event::class
+        fun isKnownKind(kind: Int): Boolean {
+            if (kind in factories) return true
+            if (kind !in 0..MAX_CACHED_KIND) return isCompiledInKind(kind)
+            return when (knownKindCache[kind]) {
+                KIND_KNOWN -> true
+                KIND_UNKNOWN -> false
+                else -> isCompiledInKind(kind).also { knownKindCache[kind] = if (it) KIND_KNOWN else KIND_UNKNOWN }
+            }
+        }
+
+        // The `when` above has no factory for a kind registered in [factories], so this probes the
+        // compiled-in branches only when the factory map has no entry (checked by the caller).
+        private fun isCompiledInKind(kind: Int): Boolean = probe(kind)::class != Event::class
+
+        private const val MAX_CACHED_KIND = 65535
+        private const val KIND_KNOWN: Byte = 1
+        private const val KIND_UNKNOWN: Byte = 2
+
+        // 0 = not computed yet. Racing writers store the same value, so no lock is needed.
+        private val knownKindCache = ByteArray(MAX_CACHED_KIND + 1)
 
         /**
          * A tagless, contentless instance of [kind], for questions asked of a kind rather than of
@@ -972,8 +1108,12 @@ class EventFactory {
          * chosen by tags, where a tagless event can land on a different class than the kind's
          * real events. Kind 38000 is the case that matters: with no tags it is an
          * [UnrecognizedKind38000Event] (junk, unsearchable), yet every typed shape of it — mint recommendation, ballot, prediction market —
-         * is a searchable, renderable class, so it answers as its primary class. (The other
-         * tag-split kinds, 39005 and 20001, already land on a typed class with no tags.)
+         * is a searchable, renderable class, so it answers as its primary class. Mostro's 38384,
+         * 38385 and 38386 and RoboSats' 31986 do the same: with no tags they fall to their
+         * `UnrecognizedKind…Event`, and 38385's primary class is searchable. Kind 30301 answers as
+         * its Kanban board (WalletScrutiny's verifications on it are searchable too) and 30302 as
+         * the Kanban card. (The other tag-split kinds, 39005 and 20001, already land on a typed
+         * class with no tags.)
          *
          * The id is non-blank so kinds that lazily hash a missing id (NIP-17 chat) skip that work
          * — only the runtime type matters here.
@@ -981,6 +1121,12 @@ class EventFactory {
         fun probe(kind: Int): Event =
             when (kind) {
                 MintRecommendationEvent.KIND -> MintRecommendationEvent(PROBE_ID, PROBE_ID, 0L, emptyArray(), "", "")
+                MostroUserRatingEvent.KIND -> MostroUserRatingEvent(PROBE_ID, PROBE_ID, 0L, emptyArray(), "", "")
+                MostroInfoEvent.KIND -> MostroInfoEvent(PROBE_ID, PROBE_ID, 0L, emptyArray(), "", "")
+                MostroDisputeEvent.KIND -> MostroDisputeEvent(PROBE_ID, PROBE_ID, 0L, emptyArray(), "", "")
+                RoboSatsCoordinatorRatingEvent.KIND -> RoboSatsCoordinatorRatingEvent(PROBE_ID, PROBE_ID, 0L, emptyArray(), "", "")
+                KanbanBoardEvent.KIND -> KanbanBoardEvent(PROBE_ID, PROBE_ID, 0L, emptyArray(), "", "")
+                KanbanCardEvent.KIND -> KanbanCardEvent(PROBE_ID, PROBE_ID, 0L, emptyArray(), "", "")
                 else -> create(PROBE_ID, PROBE_ID, 0L, kind, emptyArray(), "", "")
             }
 

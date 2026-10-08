@@ -24,9 +24,10 @@ import com.vitorpamplona.quartz.experimental.decoupling.setup.tags.KeyTag
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
 
+/** Adds `["n", key]`, or the legacy `["n", key, nonce]` when [nonce] is given. */
 fun TagArrayBuilder<EncryptionKeyListEvent>.key(
     key: HexKey,
-    nonce: HexKey,
+    nonce: HexKey? = null,
 ) = add(KeyTag.assemble(key, nonce))
 
 fun TagArrayBuilder<EncryptionKeyListEvent>.key(key: KeyTag) = add(key.toTagArray())

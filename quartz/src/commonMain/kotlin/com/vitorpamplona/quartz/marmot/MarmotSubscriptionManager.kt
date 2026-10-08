@@ -177,14 +177,15 @@ class MarmotSubscriptionManager(
     fun ownKeyPackageFilter(): Filter = MarmotFilters.keyPackagesByAuthor(userPubKey)
 
     /**
-     * Build a KeyPackage filter for a specific user.
-     * Used on-demand when inviting a user to a group.
+     * Build a filter for one user's current KeyPackages (kind:30443 only).
+     * Inviting does not use it: [com.vitorpamplona.quartz.marmot.mip00KeyPackages.KeyPackageFetcher]'s
+     * invite fetch also reads legacy kind:443 packages and validates before choosing one.
      */
     fun keyPackageFilter(pubkey: HexKey): Filter = MarmotFilters.keyPackagesByAuthor(pubkey)
 
     /**
-     * Build KeyPackage filters for multiple users.
-     * Used when inviting multiple users at once.
+     * Build a filter for several users' current KeyPackages (kind:30443 only); like
+     * [keyPackageFilter], not the invite path.
      */
     fun keyPackageFilterForMultiple(pubkeys: List<HexKey>): Filter = MarmotFilters.keyPackagesByAuthors(pubkeys)
 

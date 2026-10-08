@@ -108,7 +108,7 @@ object KeyPackageUtils {
     }
 
     /** Legacy non-addressable KeyPackage kind (pre-migration) */
-    const val LEGACY_KIND = 443
+    const val LEGACY_KIND = LegacyKeyPackageEvent.KIND // 443
 
     /** Current addressable KeyPackage kind */
     const val CURRENT_KIND = KeyPackageEvent.KIND // 30443
@@ -157,26 +157,82 @@ object KeyPackageUtils {
     }
 
     /**
+     * Pick the KeyPackage to invite [author] with, from everything a
+     * [com.vitorpamplona.quartz.marmot.MarmotFilters.keyPackagesMigration]
+     * query returned.
+     *
+     * MIP-00 "Consuming legacy kind:443 events": clients "MUST prefer valid
+     * `kind:30443` events. If no valid `kind:30443` is available, clients MAY
+     * fall back to the freshest valid `kind:443` event", and within 443s
+     * "MUST prefer the event with the highest `created_at`". So:
+     *
+     * 1. drop events by anyone but [author] (a relay can answer with anything);
+     * 2. among kind 30443 candidates that pass [isCryptographicallyValid], take
+     *    the newest;
+     * 3. only if there is none, do the same among kind 443 candidates.
+     *
+     * Both kinds go through the same [isCryptographicallyValid] — tag shape,
+     * ciphersuite, required extensions and proposals, KeyPackageRef, credential
+     * identity, signature and lifetime — so the fallback never accepts a
+     * package the 30443 path would refuse. Ties on `created_at` go to the lower
+     * event id, the deterministic tie-break `transports/nostr.md` uses.
+     *
+     * @return the chosen event, or null when no candidate of either kind is valid
+     */
+    fun selectForInvite(
+        candidates: Collection<PublishedKeyPackage>,
+        author: HexKey,
+        nowSeconds: Long = TimeUtils.now(),
+    ): PublishedKeyPackage? {
+        val byAuthor = candidates.filter { it.pubKey == author }
+        return newestValid(byAuthor.filterIsInstance<KeyPackageEvent>(), nowSeconds)
+            ?: newestValid(byAuthor.filterIsInstance<LegacyKeyPackageEvent>(), nowSeconds)
+    }
+
+    private fun newestValid(
+        candidates: List<PublishedKeyPackage>,
+        nowSeconds: Long,
+    ): PublishedKeyPackage? =
+        candidates
+            .sortedWith(compareByDescending<PublishedKeyPackage> { it.createdAt }.thenBy { it.id })
+            .firstOrNull { isCryptographicallyValid(it, nowSeconds) }
+
+    /**
      * Validates a KeyPackage event has required fields and proper encoding.
      *
      * Performs the same strict tag-level MIP-00 checks used by MDK so that
      * malformed or adversarial events are rejected at parse time:
-     *  - `d` tag is exactly 64 lowercase hex characters (32-byte slot ID)
+     *  - `d` tag is exactly 64 lowercase hex characters (32-byte slot ID);
+     *    kind 30443 only — a legacy kind 443 has no `d` and may not claim
+     *    the current profile
      *  - `mls_protocol_version` is exactly "1.0"
      *  - `mls_ciphersuite` is exactly "0x0001"
      *  - `mls_extensions` contains both "0xf2ee" (NostrGroupData) and
      *    "0x000a" (LastResort)
      *  - `mls_proposals` contains "0x000a" (SelfRemove)
      *  - `encoding` is "base64" and content is non-empty
-     *  - `i` (keyPackageRef) tag is non-empty
+     *  - `i` (keyPackageRef) tag is non-empty (optional on kind 443)
      *
      * For deep cryptographic checks (KeyPackageRef hash match, credential
      * identity == event.pubkey) call [isCryptographicallyValid].
      */
-    fun isValid(event: KeyPackageEvent): Boolean {
-        // d tag: exactly 64 hex chars per MIP-00
-        val dTag = event.dTag()
-        if (dTag.length != 64 || !dTag.all { it.isHexChar() }) return false
+    fun isValid(event: PublishedKeyPackage): Boolean {
+        when (event) {
+            is KeyPackageEvent -> {
+                // d tag: exactly 64 hex chars per MIP-00
+                val dTag = event.dTag()
+                if (dTag.length != 64 || !dTag.all { it.isHexChar() }) return false
+            }
+
+            is LegacyKeyPackageEvent -> {
+                // MIP-00 "Validation differences": the d tag MUST NOT be
+                // required for kind 443, and every other rule applies equally.
+                // Kind 443 predates the current profile, which defines its
+                // KeyPackages as kind 30443 only, so a 443 claiming that
+                // profile is not one any conformant client produced.
+                if (event.isCurrentProfile()) return false
+            }
+        }
 
         // mls_protocol_version == "1.0"
         if (event.mlsProtocolVersion() != MlsProtocolVersionTag.CURRENT_VERSION) return false
@@ -211,8 +267,10 @@ object KeyPackageUtils {
 
         if (event.content.isEmpty()) return false
 
-        // i (KeyPackageRef) tag MUST be present
-        if (event.keyPackageRef().isNullOrEmpty()) return false
+        // i (KeyPackageRef) tag MUST be present on kind 30443. MIP-00 lets a
+        // legacy 443 omit it ("compute it from event content if missing"), and
+        // isCryptographicallyValid checks it against the content when present.
+        if (event is KeyPackageEvent && event.keyPackageRef().isNullOrEmpty()) return false
 
         return true
     }
@@ -230,12 +288,11 @@ object KeyPackageUtils {
      */
     @OptIn(ExperimentalEncodingApi::class)
     fun isCryptographicallyValid(
-        event: KeyPackageEvent,
+        event: PublishedKeyPackage,
         nowSeconds: Long = TimeUtils.now(),
     ): Boolean {
         if (!isValid(event)) return false
 
-        val iTag = event.keyPackageRef() ?: return false
         val keyPackage =
             try {
                 decodeKeyPackage(Base64.decode(event.content))
@@ -243,8 +300,11 @@ object KeyPackageUtils {
                 return false
             }
 
-        // i tag MUST equal the computed KeyPackageRef
-        if (keyPackage.reference().toHexKey() != iTag.lowercase()) return false
+        // i tag MUST equal the computed KeyPackageRef. isValid already made it
+        // mandatory on kind 30443; a legacy 443 without one is checked against
+        // nothing, which is what MIP-00 allows ("compute it from event content").
+        val iTag = event.keyPackageRef()
+        if (iTag != null && keyPackage.reference().toHexKey() != iTag.lowercase()) return false
 
         // Credential identity MUST equal the event's pubkey (32-byte x-only).
         // MIP-00 requires BasicCredential with the raw 32-byte Nostr pubkey.

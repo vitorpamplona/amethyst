@@ -33,27 +33,12 @@ import com.vitorpamplona.quartz.nip01Core.hints.types.EventIdHint
 import com.vitorpamplona.quartz.nip01Core.hints.types.PubKeyHint
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.nip01Core.tags.dTag.dTag
-import com.vitorpamplona.quartz.nip01Core.tags.hashtags.HashtagTag
 import com.vitorpamplona.quartz.nip01Core.tags.hashtags.hashtags
-import com.vitorpamplona.quartz.nip01Core.tags.people.PTag
 import com.vitorpamplona.quartz.nip01Core.tags.publishedAt.PublishedAtProvider
 import com.vitorpamplona.quartz.nip10Notes.BaseThreadedEvent
-import com.vitorpamplona.quartz.nip18Reposts.quotes.QTag
-import com.vitorpamplona.quartz.nip19Bech32.addressHints
-import com.vitorpamplona.quartz.nip19Bech32.addressIds
-import com.vitorpamplona.quartz.nip19Bech32.eventHints
-import com.vitorpamplona.quartz.nip19Bech32.eventIds
-import com.vitorpamplona.quartz.nip19Bech32.pubKeyHints
-import com.vitorpamplona.quartz.nip19Bech32.pubKeys
 import com.vitorpamplona.quartz.nip22Comments.RootScope
-import com.vitorpamplona.quartz.nip23LongContent.tags.ImageTag
-import com.vitorpamplona.quartz.nip23LongContent.tags.PublishedAtTag
-import com.vitorpamplona.quartz.nip23LongContent.tags.SummaryTag
-import com.vitorpamplona.quartz.nip23LongContent.tags.TitleTag
 import com.vitorpamplona.quartz.nip50Search.IndexableFieldVisitor
 import com.vitorpamplona.quartz.nip50Search.SearchableEvent
-import com.vitorpamplona.quartz.nip57Zaps.splits.zapSplitHintsTo
-import com.vitorpamplona.quartz.nip57Zaps.splits.zapSplitPubKeysTo
 import com.vitorpamplona.quartz.utils.TimeUtils
 import kotlin.uuid.ExperimentalUuidApi
 import kotlin.uuid.Uuid
@@ -75,66 +60,24 @@ class LongFormContentEvent(
     RootScope,
     SearchableEvent {
     // Topics (`t`) are appended after the body, as CommentEvent does: authors pick
-    // topics that the article text does not necessarily mention.
-    override fun indexableContent() = (listOfNotNull(title(), summary(), content) + topics()).joinToString("\n")
+    // topics that the article text does not necessarily mention. Shared with the draft (30024).
+    override fun indexableContent() = tags.longFormIndexableContent(content)
 
     // The read path: hands over the same fields indexableContent() joins, without
     // building the joined string a scan would throw away.
-    override fun forEachIndexableField(visitor: IndexableFieldVisitor) {
-        if (!visitor.visit(title())) return
-        if (!visitor.visit(summary())) return
-        if (!visitor.visit(content)) return
-        // Inline over the tags rather than topics(): this runs per event per search keystroke.
-        for (tag in tags) {
-            val topic = HashtagTag.parse(tag) ?: continue
-            if (!visitor.visit(topic)) return
-        }
-    }
+    override fun forEachIndexableField(visitor: IndexableFieldVisitor) = tags.forEachLongFormIndexableField(content, visitor)
 
-    override fun eventHints(): List<EventIdHint> {
-        val qHints = tags.mapNotNull(QTag::parseEventAsHint)
-        val nip19Hints = citedNIP19().eventHints()
+    override fun eventHints(): List<EventIdHint> = tags.longFormEventHints(citedNIP19())
 
-        return qHints + nip19Hints
-    }
+    override fun linkedEventIds(): List<HexKey> = tags.longFormLinkedEventIds(citedNIP19())
 
-    override fun linkedEventIds(): List<HexKey> {
-        val result = ArrayList<HexKey>()
-        quotedEvents().mapTo(result) { it.eventId }
-        result.addAll(citedNIP19().eventIds())
-        return result
-    }
+    override fun addressHints(): List<AddressHint> = tags.longFormAddressHints(citedNIP19())
 
-    override fun addressHints(): List<AddressHint> {
-        val qHints = tags.mapNotNull(QTag::parseAddressAsHint)
-        val nip19Hints = citedNIP19().addressHints()
+    override fun linkedAddressIds(): List<String> = tags.longFormLinkedAddressIds(citedNIP19())
 
-        return qHints + nip19Hints
-    }
+    override fun pubKeyHints(): List<PubKeyHint> = tags.longFormPubKeyHints(citedNIP19())
 
-    override fun linkedAddressIds(): List<String> {
-        val result = ArrayList<String>()
-        quotedAddresses().mapTo(result) { it.address.toValue() }
-        result.addAll(citedNIP19().addressIds())
-        return result
-    }
-
-    // Runs on every relay copy of every article: one list, filled in the order the old
-    // `p + zap + nip19` concatenation produced, instead of three lists and two copies.
-    override fun pubKeyHints(): List<PubKeyHint> {
-        val result = tags.mapNotNullTo(ArrayList(), PTag::parseAsHint)
-        tags.zapSplitHintsTo(result)
-        result.addAll(citedNIP19().pubKeyHints())
-        return result
-    }
-
-    override fun linkedPubKeys(): List<HexKey> {
-        val result = ArrayList<HexKey>()
-        result.addAll(mentionKeys())
-        tags.zapSplitPubKeysTo(result)
-        result.addAll(citedNIP19().pubKeys())
-        return result
-    }
+    override fun linkedPubKeys(): List<HexKey> = tags.longFormLinkedPubKeys(citedNIP19())
 
     override fun dTag() = tags.dTag()
 
@@ -144,24 +87,14 @@ class LongFormContentEvent(
 
     fun topics() = hashtags()
 
-    fun title() = tags.firstNotNullOfOrNull(TitleTag::parse)
+    fun title() = tags.longFormTitle()
 
-    fun image() = tags.firstNotNullOfOrNull(ImageTag::parse)
+    fun image() = tags.longFormImage()
 
-    fun summary() = tags.firstNotNullOfOrNull(SummaryTag::parse)
+    fun summary() = tags.longFormSummary()
 
-    override fun publishedAt(): Long? {
-        val publishedAt = tags.firstNotNullOfOrNull(PublishedAtTag::parse)
-
-        if (publishedAt == null) return null
-
-        // removes posts in the future.
-        return if (publishedAt <= createdAt) {
-            publishedAt
-        } else {
-            null
-        }
-    }
+    // Drops a `published_at` in the future.
+    override fun publishedAt(): Long? = tags.longFormPublishedAt(createdAt)
 
     companion object {
         const val KIND = 30023

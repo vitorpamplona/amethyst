@@ -23,9 +23,17 @@ package com.vitorpamplona.quartz.nip69P2pOrderEvents.tags
 import com.vitorpamplona.quartz.nip01Core.core.has
 import com.vitorpamplona.quartz.utils.ensure
 
+/**
+ * `y`: the platform that published the event (`mostro`, `robosats`, `lnp2pbot`, ...).
+ *
+ * Mostro adds the instance's display name as a second value, `["y", "mostro", "<instance name>"]`
+ * (other_events.md: it "MAY include a second value with the Mostro instance name"), which
+ * [parseInstanceName] reads.
+ */
 class PlatformTag {
     companion object {
         const val TAG_NAME = "y"
+        const val MOSTRO = "mostro"
 
         fun parse(tag: Array<String>): String? {
             ensure(tag.has(1)) { return null }
@@ -34,6 +42,19 @@ class PlatformTag {
             return tag[1]
         }
 
+        /** The instance name in the third slot, or null when the tag carries none. */
+        fun parseInstanceName(tag: Array<String>): String? {
+            ensure(tag.has(2)) { return null }
+            ensure(tag[0] == TAG_NAME) { return null }
+            ensure(tag[2].isNotBlank()) { return null }
+            return tag[2]
+        }
+
         fun assemble(platform: String) = arrayOf(TAG_NAME, platform)
+
+        fun assemble(
+            platform: String,
+            instanceName: String?,
+        ) = if (instanceName.isNullOrBlank()) assemble(platform) else arrayOf(TAG_NAME, platform, instanceName)
     }
 }

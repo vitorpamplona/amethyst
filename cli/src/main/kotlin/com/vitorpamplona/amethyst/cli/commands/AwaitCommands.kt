@@ -29,9 +29,7 @@ import com.vitorpamplona.amethyst.cli.Output
 import com.vitorpamplona.amethyst.cli.commands.AwaitCommands.awaitAdmin
 import com.vitorpamplona.amethyst.cli.commands.AwaitCommands.awaitMember
 import com.vitorpamplona.quartz.marmot.RecipientRelayFetcher
-import com.vitorpamplona.quartz.marmot.mip00KeyPackages.KeyPackageEvent
 import com.vitorpamplona.quartz.marmot.mip00KeyPackages.KeyPackageFetcher
-import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.fetchFirst
 import kotlinx.coroutines.delay
 
 /**
@@ -83,7 +81,6 @@ object AwaitCommands {
         Context.open(dataDir).use { ctx ->
             ctx.prepare()
             val target = ctx.requireUserHex(rest[0])
-            val filter = ctx.marmot.subscriptionManager.keyPackageFilter(target)
             // MIP-00: target's KeyPackages live on the relays advertised in
             // their kind:10051 (fallback: kind:10002 write). Resolve the
             // right relay set once up front against bootstrap seeds; the
@@ -109,16 +106,23 @@ object AwaitCommands {
             }
             val deadline = System.currentTimeMillis() + timeoutSecs * 1000
             while (System.currentTimeMillis() < deadline) {
+                // Waits for what `group add` would actually invite with: a
+                // valid kind:30443, else a valid legacy kind:443. Settling on
+                // any 30443, valid or not, let the wait succeed and the add
+                // then fail, and never saw a 443-only peer at all.
                 val event =
-                    ctx.client.fetchFirst(
-                        filters = relays.associateWith { listOf(filter) },
+                    KeyPackageFetcher.fetchKeyPackageForInvite(
+                        client = ctx.client,
+                        targetPubKey = target,
+                        relays = relays,
                         idleTimeoutMs = 3_000,
                     )
-                if (event is KeyPackageEvent) {
+                if (event != null) {
                     Output.emit(
                         mapOf(
                             "event_id" to event.id,
                             "author" to event.pubKey,
+                            "kind" to event.kind,
                             "found_on" to relays.map { it.url },
                         ),
                     )

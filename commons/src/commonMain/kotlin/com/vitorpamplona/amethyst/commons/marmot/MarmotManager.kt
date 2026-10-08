@@ -65,6 +65,7 @@ import com.vitorpamplona.quartz.marmot.mip00KeyPackages.KeyPackageBundleStore
 import com.vitorpamplona.quartz.marmot.mip00KeyPackages.KeyPackageEvent
 import com.vitorpamplona.quartz.marmot.mip00KeyPackages.KeyPackageRotationManager
 import com.vitorpamplona.quartz.marmot.mip00KeyPackages.KeyPackageUtils
+import com.vitorpamplona.quartz.marmot.mip00KeyPackages.PublishedKeyPackage
 import com.vitorpamplona.quartz.marmot.mip01Groups.MarmotGroupData
 import com.vitorpamplona.quartz.marmot.mip02Welcome.WelcomeEvent
 import com.vitorpamplona.quartz.marmot.mip03GroupMessages.GroupEvent
@@ -878,7 +879,9 @@ class MarmotManager(
     )
 
     /**
-     * Add a member to a group by consuming their published [KeyPackageEvent].
+     * Add a member to a group by consuming their published KeyPackage: a
+     * kind 30443 [KeyPackageEvent] or, for a peer still on MDK's legacy path,
+     * a kind 443 `LegacyKeyPackageEvent`.
      *
      * Convenience over [addMember] that handles base64 decoding and lifts the
      * event id into the WelcomeDelivery. Prefer this overload — both the UI's
@@ -886,7 +889,7 @@ class MarmotManager(
      */
     suspend fun addMember(
         nostrGroupId: HexKey,
-        keyPackageEvent: KeyPackageEvent,
+        keyPackageEvent: PublishedKeyPackage,
         relays: List<NormalizedRelayUrl>,
     ): Pair<OutboundGroupEvent?, WelcomeDelivery?> {
         val (event, welcomes) = addMembers(nostrGroupId, listOf(keyPackageEvent), relays)
@@ -915,12 +918,12 @@ class MarmotManager(
 
     /**
      * Add several members to a group in a SINGLE commit, from their published
-     * [KeyPackageEvent]s. See [addMemberInvites] for the batching contract.
+     * KeyPackages (either kind). See [addMemberInvites] for the batching contract.
      */
     @OptIn(kotlin.io.encoding.ExperimentalEncodingApi::class)
     suspend fun addMembers(
         nostrGroupId: HexKey,
-        keyPackageEvents: List<KeyPackageEvent>,
+        keyPackageEvents: List<PublishedKeyPackage>,
         relays: List<NormalizedRelayUrl>,
     ): Pair<OutboundGroupEvent?, List<WelcomeDelivery>> =
         addMemberInvites(

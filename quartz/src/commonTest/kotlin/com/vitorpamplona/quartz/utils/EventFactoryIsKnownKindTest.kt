@@ -37,8 +37,8 @@ class EventFactoryIsKnownKindTest {
 
     @Test
     fun unknownForUntypedKind() {
-        // 16767 is a Ditto-proprietary "Active profile theme" event with no Quartz class,
-        // so it is parsed as a bare Event and reported as not known.
-        assertFalse(EventFactory.isKnownKind(16767), "kind 16767 has no Quartz class and should be unknown")
+        // 19999 is unassigned: no Quartz class claims it, so it is parsed as a bare Event and
+        // reported as not known. (Kind 16767 was the example until Quartz typed Ditto's profile theme.)
+        assertFalse(EventFactory.isKnownKind(19999), "kind 19999 has no Quartz class and should be unknown")
     }
 }
