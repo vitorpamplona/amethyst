@@ -28,13 +28,14 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.ImageComposeScene
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.Density
-import com.vitorpamplona.amethyst.commons.resources.Res
-import com.vitorpamplona.amethyst.commons.resources.wot_setup_requesting_scores
 import com.vitorpamplona.amethyst.commons.ui.theme.AmethystPreviewTheme
+import com.vitorpamplona.amethyst.commons.viewmodels.WebOfTrustSetup
 import com.vitorpamplona.amethyst.commons.wot.network.TrustNetwork
-import com.vitorpamplona.amethyst.commons.wot.network.TrustNetworkState
+import com.vitorpamplona.amethyst.commons.wot.network.TrustNetworkProblem
 import com.vitorpamplona.amethyst.commons.wot.network.TrustNetworkSyncStatus
+import com.vitorpamplona.amethyst.commons.wot.onboarding.TrustProviderException
 import com.vitorpamplona.amethyst.commons.wot.onboarding.TrustProviderHttp
+import com.vitorpamplona.amethyst.commons.wot.onboarding.TrustProviderOnboardingStep
 import com.vitorpamplona.amethyst.commons.wot.onboarding.brainstorm.BrainstormOnboarding
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
@@ -100,10 +101,10 @@ class WebOfTrustRenderTest {
     private val scenarios: Map<String, () -> WebOfTrustUiState> =
         linkedMapOf(
             "off" to { state(provider = null) },
-            "setting-up" to { state(provider = null, setup = WebOfTrustSetup.Running("brainstorm", Res.string.wot_setup_requesting_scores)) },
-            "setup-failed" to { state(provider = null, setup = WebOfTrustSetup.Failed("brainstorm", "Could not reach Brainstorm. Check your connection and try again.")) },
+            "setting-up" to { state(provider = null, setup = WebOfTrustSetup.Running("brainstorm", TrustProviderOnboardingStep.REQUESTING_SCORES)) },
+            "setup-failed" to { state(provider = null, setup = WebOfTrustSetup.Failed("brainstorm", TrustProviderException.Reason.UNREACHABLE, "timeout")) },
             "downloading" to { state(status = TrustNetworkSyncStatus(running = TrustNetworkSyncStatus.Kind.DOWNLOAD, verified = 63_000, expected = 151_831)) },
-            "no-scores-yet" to { state(status = TrustNetworkSyncStatus(lastError = TrustNetworkState.NO_SCORES_YET)) },
+            "no-scores-yet" to { state(status = TrustNetworkSyncStatus(problem = TrustNetworkProblem.NoScoresYet)) },
             "waiting-wifi" to { state(status = TrustNetworkSyncStatus(waitingForUnmetered = true)) },
             "active" to { state(network = network) },
             "updating" to { state(network = network, status = TrustNetworkSyncStatus(running = TrustNetworkSyncStatus.Kind.UPDATE, verified = 1_200)) },

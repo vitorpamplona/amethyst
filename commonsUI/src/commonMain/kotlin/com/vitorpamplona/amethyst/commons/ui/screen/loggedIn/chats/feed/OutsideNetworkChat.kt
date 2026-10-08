@@ -32,7 +32,6 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Immutable
-import androidx.compose.runtime.compositionLocalOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
@@ -51,27 +50,24 @@ import com.vitorpamplona.amethyst.commons.ui.pluralStringRes
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.placeholderText
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
+import com.vitorpamplona.amethyst.commons.wot.network.TrustVerdicts
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 
 /**
  * Who a public chat vouches for regardless of the Web of Trust: a stream's host and speakers, a
- * relay group's members, a channel's creator. Their messages never collapse.
+ * relay group's members, a channel's creator. Their messages never collapse. Build it from the
+ * room's observed state, so a change (a new speaker, a new member) builds a new one.
  */
-fun interface ChatRoomVouches {
-    fun vouchesFor(author: HexKey): Boolean
+@Immutable
+class ChatRoomVouches(
+    private val authors: Set<HexKey>,
+) {
+    fun vouchesFor(author: HexKey): Boolean = author in authors
 
     companion object {
-        val NOBODY = ChatRoomVouches { false }
+        val NOBODY = ChatRoomVouches(emptySet())
     }
 }
-
-/**
- * Set by public chats (NIP-28 channels, live-stream chat, ephemeral chats, relay groups) to
- * collapse messages from people outside the user's Web of Trust network, except the ones the
- * room vouches for. Null (the default) leaves the chat alone: private chats never set it, since
- * Known / New Requests already sorts them by the same rule.
- */
-val LocalChatCollapseOutsideNetwork = compositionLocalOf<ChatRoomVouches?> { null }
 
 /**
  * Consecutive messages from outside the network, collapsed into one row. [head] is the run's
@@ -96,8 +92,9 @@ class OutsideNetworkRuns(
 
 /**
  * Groups the messages from outside the network into runs, skipping the ones the user already
- * revealed. Nothing collapses while no network is active, when [enabled] is false, or for the
- * user's own messages and the people they follow (see `TrustNetworkState.explain`).
+ * revealed and the people the room [vouches] for. Nothing collapses while no network is active,
+ * when [vouches] is null, or for the user's own messages and the people they follow (see
+ * [TrustVerdicts]).
  */
 @Composable
 fun rememberOutsideNetworkRuns(
@@ -107,19 +104,12 @@ fun rememberOutsideNetworkRuns(
     accountViewModel: AccountViewModel,
 ): OutsideNetworkRuns {
     if (vouches == null) return OutsideNetworkRuns.NONE
-    val account = accountViewModel.account
-    val trustNetwork = account.trustNetwork
-    val network by trustNetwork.network.collectAsStateWithLifecycle()
-    val minScore by trustNetwork.minTrustScore.collectAsStateWithLifecycle()
-    val revision by trustNetwork.verdictRevision.collectAsStateWithLifecycle()
-    // Following someone lets their messages through.
-    val follows by account.kind3FollowList.flow.collectAsStateWithLifecycle()
-
-    return remember(notes, revealed, network?.index, minScore, revision, follows, vouches) {
-        if (network == null) {
+    val verdicts by accountViewModel.account.trustVerdicts.collectAsStateWithLifecycle()
+    return remember(notes, revealed, verdicts, vouches) {
+        if (!verdicts.isActive) {
             OutsideNetworkRuns.NONE
         } else {
-            outsideNetworkRuns(notes, revealed) { author -> !vouches.vouchesFor(author) && account.isOutsideTrustNetwork(author) }
+            outsideNetworkRuns(notes, revealed) { author -> !vouches.vouchesFor(author) && verdicts.isOutside(author) }
         }
     }
 }

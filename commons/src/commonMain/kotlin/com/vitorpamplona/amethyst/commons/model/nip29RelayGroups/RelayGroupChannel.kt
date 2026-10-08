@@ -138,6 +138,9 @@ class RelayGroupChannel(
     @Volatile
     private var allMembers: Set<HexKey> = emptySet()
 
+    /** Members and admins, as of the last roster event. */
+    fun memberKeys(): Set<HexKey> = allMembers
+
     private fun recomputeAllMembers() {
         allMembers = if (admins.isEmpty()) members else members + admins.mapTo(HashSet()) { it.pubKey }
         // Who is in the channel decides which names collide there.

@@ -26,6 +26,7 @@ import com.vitorpamplona.amethyst.cli.DataDir
 import com.vitorpamplona.amethyst.cli.Output
 import com.vitorpamplona.amethyst.commons.model.DefaultMinTrustScore
 import com.vitorpamplona.amethyst.commons.wot.network.TrustNetworkState
+import com.vitorpamplona.amethyst.commons.wot.network.TrustNetworkSyncStatus
 import com.vitorpamplona.quartz.utils.TimeUtils
 
 /**
@@ -53,7 +54,7 @@ object TrustStatus {
                 val loadMs = (System.nanoTime() - started) / 1_000_000
                 val network = session.state.network.value
                 val header = network?.header
-                val now = TimeUtils.now()
+                val due = TrustNetworkState.dueSync(network, TimeUtils.now(), force = false)
                 Output.emit(
                     mapOf(
                         "observer" to observer,
@@ -66,8 +67,8 @@ object TrustStatus {
                         "sync_cursor" to header?.syncCursor,
                         "last_update" to header?.lastUpdate,
                         "last_full_check" to header?.lastFullCheck,
-                        "update_due" to (header == null || now - header.lastUpdate >= TrustNetworkState.UPDATE_EVERY_SECS),
-                        "full_check_due" to (header == null || now - header.lastFullCheck >= TrustNetworkState.FULL_CHECK_EVERY_SECS),
+                        "update_due" to (due != null),
+                        "full_check_due" to (due == TrustNetworkSyncStatus.Kind.FULL_CHECK || due == TrustNetworkSyncStatus.Kind.DOWNLOAD),
                         "index_bytes" to session.indexFile().takeIf { it.exists() }?.length(),
                         "ids_bytes" to session.idsFile().takeIf { it.exists() }?.length(),
                         "load_ms" to loadMs,

@@ -37,23 +37,23 @@ data class TrustNetworkHeader(
     /** When the last small update finished, unix seconds. */
     val lastUpdate: Long,
     /**
-     * Cards held (entries and tombstones) created at or after [syncCursor], or -1 when unknown.
+     * Cards held (entries and tombstones) created at or after [syncCursor], or null when unknown.
      * Lets an update compare it with the relay's count without reading the ids file.
      */
-    val heldAtCursor: Int = -1,
+    val heldAtCursor: Int? = null,
 )
 
 /**
  * Binary formats for the two files of a trust network: big-endian, fixed-width sections, so
  * a platform can also memory-map and binary-search the key section in place.
  *
- * Index file (`network-v1.bin`):
+ * Index file (`network-v2.bin`):
  * ```
  * "AWOT" | u16 version | 32B provider | u16 relayLen + utf8 relay
  * | i64 syncCursor | i64 lastFullCheck | i64 lastUpdate | i32 heldAtCursor | i32 N
  * | keys N×16 | rank N×1 | hops N×1 | followers N×4
  * ```
- * Ids file (`network-ids-v1.bin`), aligned with the index, then the tombstones:
+ * Ids file (`network-ids-v2.bin`), aligned with the index, then the tombstones:
  * ```
  * "AWID" | u16 version | i32 N | ids N×32 | createdAt N×8
  * | i32 T | keys T×16 | ids T×32 | createdAt T×8
@@ -83,7 +83,7 @@ object TrustNetworkCodec {
         out.long(header.syncCursor)
         out.long(header.lastFullCheck)
         out.long(header.lastUpdate)
-        out.int(header.heldAtCursor)
+        out.int(header.heldAtCursor ?: -1)
         out.int(n)
         for (v in index.keys) out.long(v)
         out.bytes(index.rank)
@@ -206,7 +206,7 @@ object TrustNetworkCodec {
             require(short() == VERSION) { "unknown version" }
             val provider = Hex.encode(bytes(32))
             val relay = bytes(short()).decodeToString()
-            return TrustNetworkHeader(provider, relay, syncCursor = long(), lastFullCheck = long(), lastUpdate = long(), heldAtCursor = int())
+            return TrustNetworkHeader(provider, relay, syncCursor = long(), lastFullCheck = long(), lastUpdate = long(), heldAtCursor = int().takeIf { it >= 0 })
         }
     }
 }

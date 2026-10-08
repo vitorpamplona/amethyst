@@ -59,7 +59,6 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -141,6 +140,7 @@ import com.vitorpamplona.amethyst.commons.resources.wot_syncing
 import com.vitorpamplona.amethyst.commons.resources.wot_use_provider
 import com.vitorpamplona.amethyst.commons.resources.wot_waiting_wifi_body
 import com.vitorpamplona.amethyst.commons.resources.wot_waiting_wifi_title
+import com.vitorpamplona.amethyst.commons.ui.components.rememberViewModel
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.navigation.topbars.TopBarWithBackButton
 import com.vitorpamplona.amethyst.commons.ui.note.LoadUser
@@ -157,13 +157,15 @@ import com.vitorpamplona.amethyst.commons.ui.theme.placeholderText
 import com.vitorpamplona.amethyst.commons.util.formatGrouped
 import com.vitorpamplona.amethyst.commons.util.toShortDisplay
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
+import com.vitorpamplona.amethyst.commons.viewmodels.WebOfTrustSetup
+import com.vitorpamplona.amethyst.commons.viewmodels.WebOfTrustViewModel
 import com.vitorpamplona.amethyst.commons.wot.network.TrustNetwork
-import com.vitorpamplona.amethyst.commons.wot.network.TrustNetworkState
+import com.vitorpamplona.amethyst.commons.wot.network.TrustNetworkProblem
 import com.vitorpamplona.amethyst.commons.wot.network.TrustNetworkSyncStatus
-import com.vitorpamplona.amethyst.commons.wot.onboarding.KnownTrustProviders
 import com.vitorpamplona.amethyst.commons.wot.onboarding.TrustProviderException
 import com.vitorpamplona.amethyst.commons.wot.onboarding.TrustProviderOnboarding
 import com.vitorpamplona.amethyst.commons.wot.onboarding.TrustProviderOnboardingStep
+import com.vitorpamplona.amethyst.commons.wot.onboarding.brainstorm.BrainstormOnboarding
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
@@ -171,8 +173,6 @@ import com.vitorpamplona.quartz.nip01Core.relay.normalizer.displayUrl
 import com.vitorpamplona.quartz.nip19Bech32.decodePublicKeyAsHexOrNull
 import com.vitorpamplona.quartz.nip85TrustedAssertions.list.tags.ServiceProviderTag
 import com.vitorpamplona.quartz.nip85TrustedAssertions.users.index.TrustNetworkIndex
-import kotlinx.coroutines.CancellationException
-import kotlinx.coroutines.launch
 import org.jetbrains.compose.resources.StringResource
 import kotlin.math.max
 import kotlin.math.roundToInt
@@ -192,22 +192,6 @@ class WebOfTrustUiState(
     val setup: WebOfTrustSetup,
     val isPrivate: Boolean,
 )
-
-/** Where a guided sign-up is. */
-@Immutable
-sealed interface WebOfTrustSetup {
-    data object Idle : WebOfTrustSetup
-
-    data class Running(
-        val providerId: String,
-        val step: StringResource,
-    ) : WebOfTrustSetup
-
-    data class Failed(
-        val providerId: String,
-        val message: String,
-    ) : WebOfTrustSetup
-}
 
 /** What the Web of Trust screen can ask for. */
 @Immutable
@@ -234,45 +218,29 @@ fun WebOfTrustScreen(
     nav: INav,
 ) {
     val account = accountViewModel.account
+    val viewModel: WebOfTrustViewModel =
+        rememberViewModel(key = "wot-${account.signer.pubKey}", factory = WebOfTrustViewModel.Factory(account, accountViewModel.host.trustProviderHttp))
     val provider by account.trustProviderList.liveUserRankProvider.collectAsStateWithLifecycle()
     val network by account.trustNetwork.network.collectAsStateWithLifecycle()
     val status by account.trustNetwork.status.collectAsStateWithLifecycle()
     val minScore by account.trustNetwork.minTrustScore.collectAsStateWithLifecycle()
-
-    val providers = remember(accountViewModel) { KnownTrustProviders.all(accountViewModel.host.trustProviderHttp) }
-    var isPrivate by remember { mutableStateOf(false) }
-    var setup by remember { mutableStateOf<WebOfTrustSetup>(WebOfTrustSetup.Idle) }
-    val scope = rememberCoroutineScope()
-    val errorTexts = setupErrorTexts(providers)
+    val setup by viewModel.setup.collectAsStateWithLifecycle()
+    val isPrivate by viewModel.isPrivate.collectAsStateWithLifecycle()
 
     val actions =
-        remember(accountViewModel, providers, isPrivate) {
+        remember(accountViewModel, viewModel) {
             WebOfTrustActions(
                 onDownloadNow = { account.trustNetwork.syncIfStale(force = true) },
                 onRedownload = { account.trustNetwork.redownload() },
                 onRemoveProvider = { accountViewModel.removeTrustScoreProvider() },
                 onMinScoreChange = { accountViewModel.updateMinTrustScore(it) },
-                onSetUp = { onboarding ->
-                    setup = WebOfTrustSetup.Running(onboarding.id, Res.string.wot_setup_signing_in)
-                    scope.launch {
-                        setup =
-                            try {
-                                val registration = onboarding.register(account.signer) { step -> setup = WebOfTrustSetup.Running(onboarding.id, step.label()) }
-                                setup = WebOfTrustSetup.Running(onboarding.id, Res.string.wot_setup_saving)
-                                accountViewModel.setTrustScoreProvider(registration.serviceKey, registration.relay, isPrivate)
-                                WebOfTrustSetup.Idle
-                            } catch (e: CancellationException) {
-                                throw e
-                            } catch (e: TrustProviderException) {
-                                WebOfTrustSetup.Failed(onboarding.id, errorTexts[onboarding.id]?.get(e.reason) ?: e.message.orEmpty())
-                            } catch (e: Exception) {
-                                WebOfTrustSetup.Failed(onboarding.id, e.message ?: e::class.simpleName.orEmpty())
-                            }
-                    }
+                onSetUp = viewModel::setUp,
+                onManualProvider = viewModel::useProvider,
+                onPrivateChange = viewModel::setPrivate,
+                onOpenProvider = {
+                    account.trustProviderList.liveUserRankProvider.value
+                        ?.let { nav.nav(Route.Profile(it.pubkey)) }
                 },
-                onManualProvider = { key, relay -> accountViewModel.setTrustScoreProvider(key, relay, isPrivate) },
-                onPrivateChange = { isPrivate = it },
-                onOpenProvider = { provider?.let { nav.nav(Route.Profile(it.pubkey)) } },
             )
         }
 
@@ -289,7 +257,7 @@ fun WebOfTrustScreen(
                         network = network?.takeIf { net -> provider?.let { net.isFrom(it) } == true },
                         status = status,
                         minScore = minScore,
-                        guidedProviders = providers,
+                        guidedProviders = viewModel.providers,
                         setup = setup,
                         isPrivate = isPrivate,
                     ),
@@ -321,23 +289,39 @@ private fun WithProviderName(
     }
 }
 
+/** What the guided sign-up is doing, in the user's language. */
 @Composable
-private fun setupErrorTexts(providers: List<TrustProviderOnboarding>): Map<String, Map<TrustProviderException.Reason, String>> =
-    providers.associate { p ->
-        p.id to
-            mapOf(
-                TrustProviderException.Reason.UNREACHABLE to stringRes(Res.string.wot_setup_error_unreachable, p.name),
-                TrustProviderException.Reason.SIGN_IN_REJECTED to stringRes(Res.string.wot_setup_error_rejected, p.name),
-                TrustProviderException.Reason.SIGNER_DECLINED to stringRes(Res.string.wot_setup_error_signer),
-                TrustProviderException.Reason.UNEXPECTED_RESPONSE to stringRes(Res.string.wot_setup_error_unexpected, p.name),
-            )
+private fun setupStepText(setup: WebOfTrustSetup): String? =
+    when (setup) {
+        is WebOfTrustSetup.Running -> {
+            when (setup.step) {
+                TrustProviderOnboardingStep.SIGNING_IN -> stringRes(Res.string.wot_setup_signing_in)
+                TrustProviderOnboardingStep.REQUESTING_SCORES -> stringRes(Res.string.wot_setup_requesting_scores)
+                TrustProviderOnboardingStep.FETCHING_SERVICE_KEY -> stringRes(Res.string.wot_setup_fetching_key)
+            }
+        }
+
+        is WebOfTrustSetup.Saving -> {
+            stringRes(Res.string.wot_setup_saving)
+        }
+
+        else -> {
+            null
+        }
     }
 
-private fun TrustProviderOnboardingStep.label(): StringResource =
-    when (this) {
-        TrustProviderOnboardingStep.SIGNING_IN -> Res.string.wot_setup_signing_in
-        TrustProviderOnboardingStep.REQUESTING_SCORES -> Res.string.wot_setup_requesting_scores
-        TrustProviderOnboardingStep.FETCHING_SERVICE_KEY -> Res.string.wot_setup_fetching_key
+/** Why a sign-up with [providerName] failed, in the user's language. */
+@Composable
+private fun setupErrorText(
+    failed: WebOfTrustSetup.Failed,
+    providerName: String,
+): String =
+    when (failed.reason) {
+        TrustProviderException.Reason.UNREACHABLE -> stringRes(Res.string.wot_setup_error_unreachable, providerName)
+        TrustProviderException.Reason.SIGN_IN_REJECTED -> stringRes(Res.string.wot_setup_error_rejected, providerName)
+        TrustProviderException.Reason.SIGNER_DECLINED -> stringRes(Res.string.wot_setup_error_signer)
+        TrustProviderException.Reason.UNEXPECTED_RESPONSE -> stringRes(Res.string.wot_setup_error_unexpected, providerName)
+        null -> failed.message
     }
 
 /**
@@ -534,13 +518,14 @@ private fun StatusHero(
                     SyncProgress(status)
                 }
 
-                status.lastError == TrustNetworkState.NO_SCORES_YET -> {
+                status.problem == TrustNetworkProblem.NoScoresYet -> {
                     HeroHeadline(MaterialSymbols.Schedule, stringRes(Res.string.wot_no_scores_title), stringRes(Res.string.wot_no_scores_body), active = true)
                     OutlinedButton(onClick = onDownloadNow, modifier = Modifier.fillMaxWidth()) { Text(stringRes(Res.string.wot_retry)) }
                 }
 
-                status.lastError != null -> {
-                    HeroHeadline(MaterialSymbols.Error, stringRes(Res.string.wot_error_title), status.lastError.orEmpty(), active = false, isError = true)
+                status.problem is TrustNetworkProblem.Failed -> {
+                    val failed = status.problem as TrustNetworkProblem.Failed
+                    HeroHeadline(MaterialSymbols.Error, stringRes(Res.string.wot_error_title), failed.message, active = false, isError = true)
                     Button(onClick = onDownloadNow, modifier = Modifier.fillMaxWidth()) { Text(stringRes(Res.string.wot_retry)) }
                 }
 
@@ -754,12 +739,12 @@ private fun ChooseProviderSection(
     actions: WebOfTrustActions,
 ) {
     var showManual by remember { mutableStateOf(false) }
-    val busy = state.setup is WebOfTrustSetup.Running
+    val busy = state.setup is WebOfTrustSetup.Running || state.setup is WebOfTrustSetup.Saving
 
     SettingsSection(if (state.provider != null) Res.string.wot_section_change_provider else Res.string.wot_section_choose_provider) {
         state.guidedProviders.forEachIndexed { index, provider ->
             if (index > 0) SettingsDivider()
-            val inUse = state.provider?.relayUrl == provider.relay
+            val inUse = state.provider?.let(provider::serves) == true
             GuidedProviderRow(provider, state.setup, inUse = inUse, enabled = !busy) { actions.onSetUp(provider) }
         }
         SettingsDivider()
@@ -782,6 +767,9 @@ private fun ChooseProviderSection(
                 showManual = false
             }
         }
+        (state.setup as? WebOfTrustSetup.Failed)?.takeIf { it.providerId == WebOfTrustViewModel.MANUAL }?.let { failed ->
+            SetupError(setupErrorText(failed, stringRes(Res.string.wot_manual_title)), Modifier.padding(start = 68.dp, end = 16.dp, bottom = 12.dp))
+        }
         SettingsDivider()
         SettingsSwitchTile(
             icon = MaterialSymbols.Lock,
@@ -801,7 +789,12 @@ private fun GuidedProviderRow(
     enabled: Boolean,
     onSetUp: () -> Unit,
 ) {
-    val running = (setup as? WebOfTrustSetup.Running)?.takeIf { it.providerId == provider.id }
+    val inProgress =
+        when (setup) {
+            is WebOfTrustSetup.Running -> setup.providerId == provider.id
+            is WebOfTrustSetup.Saving -> setup.providerId == provider.id
+            else -> false
+        }
     val failed = (setup as? WebOfTrustSetup.Failed)?.takeIf { it.providerId == provider.id }
     val scheme = MaterialTheme.colorScheme
 
@@ -826,19 +819,21 @@ private fun GuidedProviderRow(
                         )
                     }
                 }
-                if (running != null) {
+                if (inProgress) {
                     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         CircularProgressIndicator(Modifier.size(12.dp), strokeWidth = 1.5.dp)
-                        Text(stringRes(running.step), style = MaterialTheme.typography.bodySmall, color = scheme.primary)
+                        Text(setupStepText(setup).orEmpty(), style = MaterialTheme.typography.bodySmall, color = scheme.primary)
                     }
                 } else {
-                    val description = stringRes(providerDescription(provider.id))
+                    val description = providerDescription(provider)?.let { stringRes(it) }
                     val learnMore = stringRes(Res.string.wot_learn_more)
                     val linkStyle = TextLinkStyles(SpanStyle(color = scheme.primary, fontWeight = FontWeight.SemiBold))
                     Text(
                         buildAnnotatedString {
-                            append(description)
-                            append(" · ")
+                            if (description != null) {
+                                append(description)
+                                append(" · ")
+                            }
                             withLink(LinkAnnotation.Url(provider.homepage, linkStyle)) { append(learnMore) }
                         },
                         style = MaterialTheme.typography.bodySmall,
@@ -846,7 +841,7 @@ private fun GuidedProviderRow(
                     )
                 }
             }
-            if (running == null) {
+            if (!inProgress) {
                 if (inUse) {
                     FilledTonalButton(onClick = onSetUp, enabled = enabled) { Text(stringRes(Res.string.wot_set_up_again)) }
                 } else {
@@ -855,27 +850,34 @@ private fun GuidedProviderRow(
             }
         }
 
-        if (failed != null) {
-            Row(
-                Modifier
-                    .padding(start = 52.dp)
-                    .fillMaxWidth()
-                    .clip(RoundedCornerShape(12.dp))
-                    .background(scheme.errorContainer)
-                    .padding(10.dp),
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-            ) {
-                Icon(symbol = MaterialSymbols.Error, contentDescription = null, modifier = Modifier.size(18.dp), tint = scheme.onErrorContainer)
-                Text(failed.message, style = MaterialTheme.typography.bodySmall, color = scheme.onErrorContainer)
-            }
-        }
+        if (failed != null) SetupError(setupErrorText(failed, provider.name), Modifier.padding(start = 52.dp))
     }
 }
 
-/** What each guided provider is, in the user's language. */
-private fun providerDescription(id: String): StringResource =
-    when (id) {
-        else -> Res.string.wot_brainstorm_description
+@Composable
+private fun SetupError(
+    text: String,
+    modifier: Modifier = Modifier,
+) {
+    val scheme = MaterialTheme.colorScheme
+    Row(
+        modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(12.dp))
+            .background(scheme.errorContainer)
+            .padding(10.dp),
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        Icon(symbol = MaterialSymbols.Error, contentDescription = null, modifier = Modifier.size(18.dp), tint = scheme.onErrorContainer)
+        Text(text, style = MaterialTheme.typography.bodySmall, color = scheme.onErrorContainer)
+    }
+}
+
+/** What a guided provider is, in the user's language; null for one with no description yet. */
+private fun providerDescription(provider: TrustProviderOnboarding): StringResource? =
+    when (provider) {
+        is BrainstormOnboarding -> Res.string.wot_brainstorm_description
+        else -> null
     }
 
 @Composable

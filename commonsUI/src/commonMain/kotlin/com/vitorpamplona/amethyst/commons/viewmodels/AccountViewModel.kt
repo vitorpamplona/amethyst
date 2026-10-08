@@ -2067,10 +2067,7 @@ class AccountViewModel(
         providerKey: HexKey,
         relay: NormalizedRelayUrl,
         isPrivate: Boolean,
-    ) = launchSigner {
-        account.trustNetwork.expectNewProvider()
-        account.setTrustScoreProvider(providerKey, relay, isPrivate)
-    }
+    ) = launchSigner { account.setTrustScoreProvider(providerKey, relay, isPrivate) }
 
     fun removeTrustScoreProvider() = launchSigner { account.removeTrustScoreProvider() }
 

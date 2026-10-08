@@ -65,21 +65,12 @@ fun ProfileTrustBadge(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    val account = accountViewModel.account
-    val trustNetwork = account.trustNetwork
-    val network by trustNetwork.network.collectAsStateWithLifecycle()
-    if (network == null) return
+    val verdicts by accountViewModel.account.trustVerdicts.collectAsStateWithLifecycle()
+    if (!verdicts.isActive) return
 
-    val minScore by trustNetwork.minTrustScore.collectAsStateWithLifecycle()
-    val revision by trustNetwork.verdictRevision.collectAsStateWithLifecycle()
-    val follows by account.kind3FollowList.flow.collectAsStateWithLifecycle()
     // Also asks the provider for this person's card, so a newer score shows up here.
     val rank by observeUserAssertionsScore(user, accountViewModel)
-
-    val verdict =
-        remember(user, network?.index, minScore, revision, follows, rank) {
-            trustNetwork.explain(user.pubkeyHex, account.signer.pubKey, follows.authors)
-        }
+    val verdict = remember(user, verdicts) { verdicts.explain(user.pubkeyHex) }
 
     TrustVerdictBadge(verdict, rank, onClick = { nav.nav(Route.WebOfTrust) })
 }

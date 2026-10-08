@@ -26,7 +26,10 @@ import com.vitorpamplona.amethyst.cli.commands.graperank.providerListOf
 import com.vitorpamplona.amethyst.commons.defaults.Constants
 import com.vitorpamplona.amethyst.commons.model.DefaultMinTrustScore
 import com.vitorpamplona.amethyst.commons.model.trustedAssertions.rankProvider
+import com.vitorpamplona.amethyst.commons.wot.network.RelayTrustNetworkSource
+import com.vitorpamplona.amethyst.commons.wot.network.ResolvedProvider
 import com.vitorpamplona.amethyst.commons.wot.network.TrustNetworkState
+import com.vitorpamplona.amethyst.commons.wot.network.TrustNetworkStore
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.relay.client.NostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.sockets.okhttp.BasicOkHttpWebSocket
@@ -54,9 +57,9 @@ internal class TrustSession(
 ) : AutoCloseable {
     override fun close() = scope.cancel()
 
-    fun indexFile() = File(dir, TrustNetworkState.INDEX_FILE)
+    fun indexFile() = File(dir, TrustNetworkStore.INDEX_FILE)
 
-    fun idsFile() = File(dir, TrustNetworkState.IDS_FILE)
+    fun idsFile() = File(dir, TrustNetworkStore.IDS_FILE)
 }
 
 /**
@@ -88,16 +91,16 @@ internal suspend fun openTrustNetwork(
     val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     val state =
         TrustNetworkState(
-            rankProvider = MutableStateFlow(provider),
+            // No list found: the provider is unknown, not absent (which would delete the files).
+            rankProvider = MutableStateFlow(list?.let { ResolvedProvider(provider) }),
             minTrustScore = MutableStateFlow(minScore),
-            directory = dir.toOkioPath(),
+            store = TrustNetworkStore(dir.toOkioPath()),
             // A throwaway client, like the apps: a sync receives hundreds of thousands of cards.
-            clientBuilder = if (withClient) ({ NostrClient(BasicOkHttpWebSocket.Builder { ctx.okhttp }) }) else null,
+            source = if (withClient) RelayTrustNetworkSource { NostrClient(BasicOkHttpWebSocket.Builder { ctx.okhttp }) } else null,
             scope = scope,
-            providerGraceMs = 0,
             autoSync = false,
         )
-    state.awaitReady()
+    if (list != null) state.awaitReady() else state.awaitLoaded()
     return TrustSession(state, provider, list, dir, scope)
 }
 

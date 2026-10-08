@@ -34,6 +34,7 @@ import com.vitorpamplona.amethyst.commons.model.isMutedPublicChatMessage
 import com.vitorpamplona.amethyst.commons.model.marmotGroups.MarmotGroupChatroom
 import com.vitorpamplona.amethyst.commons.model.topNavFeeds.IFeedTopNavFilter
 import com.vitorpamplona.amethyst.commons.model.topNavFeeds.TopFilter
+import com.vitorpamplona.amethyst.commons.wot.curatedHidesByTrust
 import com.vitorpamplona.quartz.buzz.jobs.JobErrorEvent
 import com.vitorpamplona.quartz.buzz.jobs.JobResultEvent
 import com.vitorpamplona.quartz.buzz.notifications.MemberAddedNotificationEvent
@@ -56,7 +57,6 @@ import com.vitorpamplona.quartz.nip01Core.tags.people.isTaggedUser
 import com.vitorpamplona.quartz.nip04Dm.messages.EncryptedDmEvent
 import com.vitorpamplona.quartz.nip10Notes.BaseNoteEvent
 import com.vitorpamplona.quartz.nip10Notes.TextNoteEvent
-import com.vitorpamplona.quartz.nip17Dm.base.ChatroomKeyable
 import com.vitorpamplona.quartz.nip17Dm.files.ChatMessageEncryptedFileHeaderEvent
 import com.vitorpamplona.quartz.nip17Dm.messages.ChatMessageEvent
 import com.vitorpamplona.quartz.nip18Reposts.GenericRepostEvent
@@ -701,20 +701,9 @@ class NotificationFeedFilter(
         // follow/list modes) also applies the per-kind relevance heuristics.
         val isRawGlobal = followList() is TopFilter.Global
 
-        // Curated also applies the Web of Trust when one is active, with the same exemptions as
-        // push: zaps of every kind cost the sender money, chess and Concord have their own
-        // membership, and private messages follow the DM tabs' Known rule instead (a stranger
-        // the user already wrote to is Known).
-        if (followList() is TopFilter.Selected && notifAuthor != null && !isChessEvent && !isConcord && account.trustNetwork.isActive) {
-            val outside =
-                when (noteEvent) {
-                    is ZapReceiptEvent, is Bolt12ZapEvent, is NutzapEvent, is OnchainZapEvent -> false
-                    // Buzz DMs, like push.
-                    is StreamMessageV2Event, is ChatEvent -> false
-                    is ChatroomKeyable -> !account.isKnownChatroom(noteEvent.chatroomKey(loggedInUserHex))
-                    else -> account.isOutsideTrustNetwork(notifAuthor)
-                }
-            if (outside) return false
+        // Curated also applies the Web of Trust, with the same exemptions as push.
+        if (followList() is TopFilter.Selected && notifAuthor != null && noteEvent != null && account.curatedHidesByTrust(noteEvent, notifAuthor, inJoinedCommunity = isConcord)) {
+            return false
         }
 
         // The p-tag gate is OR'd with isNotifiablePublicChatReply so channel

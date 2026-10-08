@@ -31,6 +31,7 @@ import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip01Core.signers.SignerExceptions
+import com.vitorpamplona.quartz.nip85TrustedAssertions.list.tags.ServiceProviderTag
 import com.vitorpamplona.quartz.utils.Hex
 import com.vitorpamplona.quartz.utils.TimeUtils
 import kotlinx.coroutines.CancellationException
@@ -62,6 +63,10 @@ class BrainstormOnboarding(
     override val name = "Brainstorm"
     override val homepage = "https://brainstorm.world"
     override val relay: NormalizedRelayUrl = RelayUrlNormalizer.normalize(SCORES_RELAY)
+
+    // The service key is per user and only known after a sign-up, but Brainstorm's scores relay
+    // carries nothing but Brainstorm's keys, so an entry on it is Brainstorm's.
+    override fun serves(provider: ServiceProviderTag): Boolean = provider.relayUrl == relay
 
     override suspend fun register(
         signer: NostrSigner,

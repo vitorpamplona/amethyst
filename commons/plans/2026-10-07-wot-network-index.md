@@ -441,6 +441,18 @@ Added 2026-10-08:
   `LocalChatCollapseOutsideNetwork`). Not applied to private chats (Known / New Requests),
   Concord (members-only) or geohash chats (throwaway keys would collapse nearly everything).
 
+Structure after the 2026-10-08 cleanup (`commons/.../wot/`):
+
+| Piece | Job |
+|---|---|
+| `TrustVerdicts` | One frozen snapshot of everything a decision depends on (network, cards seen since the sync, minimum score, user, follows) and the single rule, `explain`. `Account.trustVerdicts` publishes a new one only when an answer can change; feeds and screens key on it. `Account.currentTrustVerdicts()` is the live one for one-off checks (push). |
+| `TrustNetworkStore` | The two files (`network-v2.bin`, `network-ids-v2.bin`); deletes the v1 names. |
+| `TrustNetworkSource` | The relay (`RelayTrustNetworkSource`), or a fake in `TrustNetworkSchedulingTest`. |
+| `TrustNetworkState` | Loads, matches the provider, schedules syncs (on one confined dispatcher), keeps the between-syncs cards. Outcomes are typed (`TrustNetworkOutcome`, `TrustNetworkProblem`). |
+| `curatedHidesByTrust` | The one list of Curated exemptions, used in-app and by push. |
+| `TrustProviderListState.resolvedRankProvider` | The provider once the 10040 is read and decrypted; replaces the 5 s grace timer. |
+| `WebOfTrustViewModel` | Guided sign-up and manual provider entry, out of the composable. |
+
 Not done: Nests lobby and minichat (own message lists), Desktop wiring (its `DesktopIAccount`
 does not use the commons `Account` yet), and the phone measurements for phase 0.
 

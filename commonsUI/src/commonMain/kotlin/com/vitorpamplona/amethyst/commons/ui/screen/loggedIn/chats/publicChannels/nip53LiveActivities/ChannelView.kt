@@ -25,11 +25,12 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.nip53LiveActivities.LiveActivitiesChannel
 import com.vitorpamplona.amethyst.commons.ui.components.rememberViewModel
@@ -37,7 +38,6 @@ import com.vitorpamplona.amethyst.commons.ui.feeds.WatchLifecycleAndUpdateModel
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.note.LoadLiveActivityChannel
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.feed.ChatRoomVouches
-import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.feed.LocalChatCollapseOutsideNetwork
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.feed.RefreshingChatroomFeedView
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.publicChannels.dal.ChannelFeedViewModel
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.publicChannels.datasource.ChannelFilterAssemblerSubscription
@@ -138,17 +138,22 @@ fun LiveActivityChannelView(
             NestJoinCard(channel, accountViewModel, nav)
             LiveStreamTopZappers(channel, accountViewModel, nav)
             LiveStreamGoalHeader(channel, accountViewModel, nav)
-            CompositionLocalProvider(LocalChatCollapseOutsideNetwork provides remember(channel) { ChatRoomVouches { it == channel.address.pubKeyHex || channel.info?.participantKeys()?.contains(it) == true } }) {
-                RefreshingChatroomFeedView(
-                    feedContentState = feedViewModel.feedState,
-                    accountViewModel = accountViewModel,
-                    nav = nav,
-                    routeForLastRead = "Channel/${channel.address.toValue()}",
-                    avoidDraft = newPostModel.draftTag,
-                    onWantsToReply = newPostModel::reply,
-                    onWantsToEditDraft = newPostModel::editFromDraft,
-                )
-            }
+            // Who the room vouches for, rebuilt when its metadata changes (a new speaker, member).
+            val channelState by channel
+                .flow()
+                .metadata.stateFlow
+                .collectAsStateWithLifecycle()
+            val vouches = remember(channelState) { ChatRoomVouches(setOf(channel.address.pubKeyHex) + channel.info?.participantKeys().orEmpty()) }
+            RefreshingChatroomFeedView(
+                feedContentState = feedViewModel.feedState,
+                accountViewModel = accountViewModel,
+                nav = nav,
+                routeForLastRead = "Channel/${channel.address.toValue()}",
+                avoidDraft = newPostModel.draftTag,
+                onWantsToReply = newPostModel::reply,
+                onWantsToEditDraft = newPostModel::editFromDraft,
+                collapseOutsideNetwork = vouches,
+            )
         }
 
         Spacer(modifier = DoubleVertSpacer)

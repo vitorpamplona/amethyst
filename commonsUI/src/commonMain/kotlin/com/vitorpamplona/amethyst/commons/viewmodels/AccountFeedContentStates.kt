@@ -84,11 +84,8 @@ import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.IO
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.debounce
-import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.drop
-import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.sample
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
@@ -378,22 +375,13 @@ class AccountFeedContentStates(
             }
         }
 
-        // A new Web of Trust index (download, update, provider change), a newer card seen between
-        // syncs that moves someone in or out (verdictRevision), or a new minimum score
-        // moves people between Known and New Requests and in or out of Curated notifications,
-        // with no event flowing through LocalCache. Rebuild those feeds; clear the card feeds
-        // first, since their refresh is additive-only and would keep cards that no longer pass.
+        // A new Web of Trust answer (see Account.trustVerdicts) moves people between Known and
+        // New Requests and in or out of Curated notifications, with no event flowing through
+        // LocalCache. Rebuild those feeds; clear the card feeds first, since their refresh is
+        // additive-only and would keep cards that no longer pass.
         scope.launch(Dispatchers.IO) {
             @OptIn(FlowPreview::class)
-            combine(
-                // The index, not the network: a check that found nothing new publishes a new
-                // header over the same index, and must not wipe the notification list.
-                account.trustNetwork.network
-                    .map { it?.index }
-                    .distinctUntilChanged(),
-                account.trustNetwork.minTrustScore,
-                account.trustNetwork.verdictRevision,
-            ) { network, score, revision -> Triple(network, score, revision) }
+            account.trustVerdicts
                 .drop(1)
                 .debounce(500)
                 .collect {

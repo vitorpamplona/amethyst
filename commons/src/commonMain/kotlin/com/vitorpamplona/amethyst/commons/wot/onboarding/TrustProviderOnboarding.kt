@@ -24,6 +24,7 @@ import com.vitorpamplona.amethyst.commons.wot.onboarding.brainstorm.BrainstormOn
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
+import com.vitorpamplona.quartz.nip85TrustedAssertions.list.tags.ServiceProviderTag
 
 /**
  * A NIP-85 trust provider whose sign-up Amethyst knows how to run.
@@ -45,6 +46,9 @@ interface TrustProviderOnboarding {
 
     /** The relay the provider publishes its kind 30382 cards to. */
     val relay: NormalizedRelayUrl
+
+    /** Whether the 10040 entry [provider] points at this provider (to mark it "in use"). */
+    fun serves(provider: ServiceProviderTag): Boolean
 
     /**
      * Signs in as [signer]'s user, asks the provider to compute their scores and returns the

@@ -100,7 +100,7 @@ class TrustNetworkSyncTest {
 
                 // Nothing new: the COUNT pre-check ends the update without downloading.
                 val idle = client.updateTrustNetwork(caughtUp.header, caughtUp.index, caughtUp.ids, relay)
-                assertEquals("nothing new", idle.detail)
+                assertTrue(idle.unchanged, "the COUNT pre-check ends the update")
                 assertEquals(0, idle.received)
 
                 // The provider re-ranks one person, removes another with a rank-0 card (its
@@ -125,12 +125,12 @@ class TrustNetworkSyncTest {
 
                 // The tombstone keeps the pre-check exact: nothing new again.
                 val idleAgain = client.updateTrustNetwork(changed.header, changed.index, changed.ids, relay)
-                assertEquals("nothing new", idleAgain.detail)
+                assertTrue(idleAgain.unchanged)
 
                 // The full check agrees with the relay and fetches nothing (rank-0 cards included).
                 val full = assertNotNull(client.reconcileTrustNetwork(idleAgain.header, idleAgain.index, idleAgain.ids, relay))
                 assertTrue(full.complete)
-                assertEquals("need 0, gone 0", full.detail)
+                assertEquals(0, full.received, "nothing to fetch, nothing gone: ${full.detail}")
                 assertEquals(298, full.index.size)
 
                 // The ids file round-trips with the tombstone.

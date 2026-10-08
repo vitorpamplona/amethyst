@@ -34,7 +34,7 @@ import com.vitorpamplona.quartz.nip02FollowList.ContactListEvent
  * `amy trust check USER… [--observer USER] [--min-score N]`
  *
  * Known or stranger, and why, for each USER (npub, hex, alias or NIP-05): the verdict the DM
- * tabs, Curated notifications and collapsed replies use (`TrustNetworkState.explain`), plus the
+ * tabs, Curated notifications and collapsed replies use (`TrustVerdicts.explain`), plus the
  * provider's rank, follower count and hops. Reads the local index and contact list; run
  * `amy trust sync` first. With `--observer`, answers for that user's network (their contact
  * list is fetched when the local store has none).

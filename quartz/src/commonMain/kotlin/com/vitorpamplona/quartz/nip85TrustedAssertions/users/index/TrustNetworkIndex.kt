@@ -25,6 +25,19 @@ import com.vitorpamplona.quartz.nip01Core.store.IdAndTime
 import com.vitorpamplona.quartz.utils.Hex
 
 /**
+ * The rank a provider's card gives someone, or null when the card removes them: a provider takes
+ * someone out of its network with a rank of 0 or no rank at all. The one place that rule lives;
+ * the index, the builder and the cards seen between syncs all go through it.
+ */
+fun memberRank(rank: Int?): Int? = rank?.takeIf { it > 0 }
+
+/** True when [rank] (as returned by [memberRank]) reaches [minRank]. */
+fun passesMinRank(
+    rank: Int?,
+    minRank: Int,
+): Boolean = rank != null && rank >= minRank
+
+/**
  * Who a NIP-85 trust provider asserts about, as a compact, immutable, sorted index: one entry
  * per subject of the provider's kind 30382 cards (the card's d-tag).
  *
@@ -113,7 +126,7 @@ class TrustNetworkIndex(
         minRank: Int,
     ): Boolean {
         val i = indexOf(pubkey)
-        return i >= 0 && rank[i] >= minRank
+        return i >= 0 && passesMinRank(memberRank(rank[i].toInt()), minRank)
     }
 
     /** How many entries have exactly [rank]. O(1), for drawing the rank distribution. */

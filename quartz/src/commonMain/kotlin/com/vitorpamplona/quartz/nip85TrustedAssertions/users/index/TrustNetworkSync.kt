@@ -39,6 +39,9 @@ import com.vitorpamplona.quartz.utils.Log
 import com.vitorpamplona.quartz.utils.TimeUtils
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.Semaphore
+import kotlinx.coroutines.sync.withPermit
 import kotlin.concurrent.atomics.AtomicInt
 import kotlin.concurrent.atomics.ExperimentalAtomicApi
 import kotlin.concurrent.atomics.incrementAndFetch
@@ -64,8 +67,10 @@ class TrustNetworkSyncResult(
     val invalid: Int,
     /** Cards and deletions accepted by this run (for an update, the delta size). */
     val received: Int,
-    /** Why the relay walk ended, for logs and the UI. */
+    /** Why the relay walk ended, for logs. Not for decisions: use [complete] and [unchanged]. */
     val detail: String?,
+    /** The relay had nothing new: [index] and [ids] are the ones the update was given. */
+    val unchanged: Boolean = false,
 )
 
 /** Every kind 30382 card the [provider] has published. */
@@ -86,6 +91,7 @@ const val TRUST_NETWORK_UPDATE_OVERLAP_SECS = 3600L
 private const val TAG = "TrustNetworkSync"
 private const val IDLE_MS = 60_000L
 private const val FETCH_BY_ID_BATCH = 500
+private const val FETCH_BY_ID_CONCURRENCY = 4
 
 /**
  * Downloads, verifies and indexes every card [provider] has published on [relay]: the cold
@@ -177,6 +183,7 @@ suspend fun INostrClient.downloadTrustNetwork(
  * late arrivals at the cursor's second are then left to the weekly [reconcileTrustNetwork].
  *
  * Needs the current [ids] column (not only the index) because the merged index rewrites it.
+ * Pass [knownNews] when the caller already asked [trustNetworkNews], so the counts are not repeated.
  */
 @OptIn(ExperimentalAtomicApi::class)
 suspend fun INostrClient.updateTrustNetwork(
@@ -185,13 +192,14 @@ suspend fun INostrClient.updateTrustNetwork(
     ids: TrustNetworkIds,
     relay: NormalizedRelayUrl,
     progress: TrustNetworkProgress? = null,
+    knownNews: TrustNetworkNews? = null,
 ): TrustNetworkSyncResult {
     val startedAt = TimeUtils.now()
     val provider = header.provider
     val newer = header.syncCursor + 1
-    val news = trustNetworkNews(header, relay, held = header.heldAtCursor.takeIf { it >= 0 } ?: ids.countSince(header.syncCursor))
+    val news = knownNews ?: trustNetworkNews(header, relay, held = header.heldAtCursor ?: ids.countSince(header.syncCursor))
     if (!news.any) {
-        return TrustNetworkSyncResult(header.copy(lastUpdate = startedAt), index, ids, complete = true, invalid = 0, received = 0, detail = "nothing new")
+        return TrustNetworkSyncResult(header.copy(lastUpdate = startedAt), index, ids, complete = true, invalid = 0, received = 0, detail = "nothing new", unchanged = true)
     }
     val newDeletions = news.deletions
 
@@ -311,31 +319,48 @@ private suspend fun INostrClient.reconcileInto(
         return null
     }
 
-    var complete = true
+    val stalled = AtomicInt(0)
     if (need.isNotEmpty()) {
         verifying(builder, invalid, need.size, progress, seeded) { submit ->
-            for (batch in need.chunked(FETCH_BY_ID_BATCH)) {
-                // A relay whose max_limit is below the batch answers part of it: ask again for
-                // the rest until it stops making progress.
-                var missing: List<HexKey> = batch
-                while (missing.isNotEmpty()) {
-                    val events = fetchAll(relay, Filter(ids = missing), IDLE_MS)
-                    if (events.isEmpty()) {
-                        complete = false
-                        break
+            // A few batches in flight at once: a provider recompute can need every card.
+            val slots = Semaphore(FETCH_BY_ID_CONCURRENCY)
+            coroutineScope {
+                for (batch in need.chunked(FETCH_BY_ID_BATCH)) {
+                    launch {
+                        slots.withPermit {
+                            if (!fetchByIds(relay, batch, submit)) stalled.incrementAndFetch()
+                        }
                     }
-                    val got = HashSet<HexKey>(events.size * 2)
-                    for (event in events) {
-                        got.add(event.id)
-                        submit(event)
-                    }
-                    missing = missing.filter { it !in got }
                 }
             }
         }
     }
     builder.removeEventIds(have)
-    return Reconciled(complete, need.size, have.size)
+    return Reconciled(stalled.load() == 0, need.size, have.size)
+}
+
+/**
+ * Fetches [ids] from [relay] and hands each event to [submit]. A relay whose max_limit is below
+ * the batch answers part of it, so this asks again for the rest until it stops making progress.
+ * False when some ids never came.
+ */
+private suspend fun INostrClient.fetchByIds(
+    relay: NormalizedRelayUrl,
+    ids: List<HexKey>,
+    submit: (Event) -> Unit,
+): Boolean {
+    var missing = ids
+    while (missing.isNotEmpty()) {
+        val events = fetchAll(relay, Filter(ids = missing), IDLE_MS)
+        if (events.isEmpty()) return false
+        val got = HashSet<HexKey>(events.size * 2)
+        for (event in events) {
+            got.add(event.id)
+            submit(event)
+        }
+        missing = missing.filter { it !in got }
+    }
+    return true
 }
 
 /**
@@ -367,11 +392,11 @@ class TrustNetworkNews(
 suspend fun INostrClient.trustNetworkNews(
     header: TrustNetworkHeader,
     relay: NormalizedRelayUrl,
-    held: Int = header.heldAtCursor,
+    held: Int? = header.heldAtCursor,
 ): TrustNetworkNews {
     val relayCards = countOrNull(relay, trustNetworkFilter(header.provider, header.syncCursor))
     val deletions = countOrNull(relay, trustNetworkDeletionFilter(header.provider, header.syncCursor + 1))
-    return TrustNetworkNews(cards = held < 0 || relayCards == null || relayCards != held, deletions = deletions)
+    return TrustNetworkNews(cards = held == null || relayCards == null || relayCards != held, deletions = deletions)
 }
 
 private suspend fun INostrClient.countOrNull(

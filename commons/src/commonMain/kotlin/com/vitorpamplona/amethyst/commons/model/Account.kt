@@ -189,7 +189,10 @@ import com.vitorpamplona.amethyst.commons.service.pow.PoWReplay
 import com.vitorpamplona.amethyst.commons.service.upload.FileHeader
 import com.vitorpamplona.amethyst.commons.util.logTime
 import com.vitorpamplona.amethyst.commons.viewmodels.ReplyMode
+import com.vitorpamplona.amethyst.commons.wot.network.RelayTrustNetworkSource
 import com.vitorpamplona.amethyst.commons.wot.network.TrustNetworkState
+import com.vitorpamplona.amethyst.commons.wot.network.TrustNetworkStore
+import com.vitorpamplona.amethyst.commons.wot.network.TrustVerdicts
 import com.vitorpamplona.quartz.buzz.media.BuzzImeta
 import com.vitorpamplona.quartz.buzz.threading.buzzThread
 import com.vitorpamplona.quartz.buzz.threading.buzzThreadRootForReplyTo
@@ -932,13 +935,30 @@ class Account(
     /** The NIP-85 rank provider's network: who counts as known beyond follows. */
     val trustNetwork =
         TrustNetworkState(
-            rankProvider = trustProviderList.liveUserRankProvider,
+            rankProvider = trustProviderList.resolvedRankProvider,
             minTrustScore = settings.syncedSettings.security.minTrustScore,
-            directory = trustNetworkDir,
-            clientBuilder = trustNetworkClientBuilder,
+            store = trustNetworkDir?.let { TrustNetworkStore(it) },
+            source = trustNetworkClientBuilder?.let { RelayTrustNetworkSource(it) },
             scope = scope,
             canDownloadLarge = canDownloadLargeFiles,
         )
+
+    /**
+     * The Web of Trust decisions, published whenever an answer can change (network, minimum
+     * score, follows, a card seen between syncs). Key feeds and screens on it; see [TrustVerdicts].
+     */
+    val trustVerdicts: StateFlow<TrustVerdicts> =
+        trustNetwork.verdicts(
+            me = signer.pubKey,
+            follows = kind3FollowList.flow.map { it.authors }.stateIn(scope, SharingStarted.Eagerly, kind3FollowList.flow.value.authors),
+            scope = scope,
+        )
+
+    /**
+     * The Web of Trust decisions as of this instant. For one-off checks (a push, a room) that
+     * cannot wait for [trustVerdicts] to publish, e.g. right after [TrustNetworkState.awaitLoaded].
+     */
+    fun currentTrustVerdicts(): TrustVerdicts = trustNetwork.snapshot(signer.pubKey, followingKeySet())
 
     val followSetDecryptionCache = FollowSetDecryptionCache(signer)
     val blockPeopleList = BlockPeopleListState(signer, cache, followSetDecryptionCache, scope)
@@ -1397,6 +1417,8 @@ class Account(
         relay: NormalizedRelayUrl,
         isPrivate: Boolean,
     ) {
+        // The user is waiting for it: its first download may start on mobile data.
+        trustNetwork.expectNewProvider()
         sendMyPublicAndPrivateOutbox(trustProviderList.withScoreProvider(providerKey, relay, isPrivate))
     }
 
@@ -3763,15 +3785,8 @@ class Account(
 
     override fun followingKeySet(): Set<HexKey> = kind3FollowList.flow.value.authors
 
-    /**
-     * The Web of Trust verdict on [pubkey]: true for this account, its follows and anyone the
-     * NIP-85 rank provider ranks at the minimum score; false for everyone else; null while no
-     * trust network is active, so callers keep the behaviour they had before it existed.
-     */
-    fun trustNetworkVerdict(pubkey: HexKey): Boolean? = trustNetwork.explain(pubkey, signer.pubKey, followingKeySet()).isKnown
-
-    /** True only when a trust network is active and [pubkey] is not in it. */
-    fun isOutsideTrustNetwork(pubkey: HexKey): Boolean = trustNetworkVerdict(pubkey) == false
+    /** True only when a trust network is active and [pubkey] is not in it (see [TrustVerdicts]). */
+    fun isOutsideTrustNetwork(pubkey: HexKey): Boolean = currentTrustVerdicts().isOutside(pubkey)
 
     /** [isKnownChatroom] for a room that may not be loaded yet: then only "I wrote to it" counts. */
     fun isKnownChatroom(key: ChatroomKey): Boolean {
@@ -3788,10 +3803,11 @@ class Account(
         key: ChatroomKey,
         room: Chatroom,
         followingKeySet: Set<HexKey> = followingKeySet(),
-    ): Boolean =
-        room.senderIntersects(followingKeySet) ||
-            chatroomList.hasSentMessagesTo(key) ||
-            (trustNetwork.isActive && room.activeSenders.any { trustNetwork.passes(it.pubkeyHex) })
+    ): Boolean {
+        if (room.senderIntersects(followingKeySet) || chatroomList.hasSentMessagesTo(key)) return true
+        val verdicts = currentTrustVerdicts()
+        return verdicts.isActive && room.activeSenders.any { verdicts.passes(it.pubkeyHex) }
+    }
 
     fun isAcceptable(user: User): Boolean {
         if (userProfile().pubkeyHex == user.pubkeyHex) {

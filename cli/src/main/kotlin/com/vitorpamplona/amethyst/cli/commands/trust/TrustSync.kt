@@ -25,6 +25,7 @@ import com.vitorpamplona.amethyst.cli.Context
 import com.vitorpamplona.amethyst.cli.DataDir
 import com.vitorpamplona.amethyst.cli.Output
 import com.vitorpamplona.amethyst.commons.model.DefaultMinTrustScore
+import com.vitorpamplona.amethyst.commons.wot.network.TrustNetworkOutcome
 import com.vitorpamplona.amethyst.commons.wot.network.TrustNetworkSyncStatus
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.distinctUntilChangedBy
@@ -90,6 +91,7 @@ object TrustSync {
                 val index =
                     session.state.network.value
                         ?.index
+                val result = (run.outcome as? TrustNetworkOutcome.Applied)?.result
                 val fields =
                     mapOf(
                         "observer" to observer,
@@ -97,22 +99,34 @@ object TrustSync {
                         "provider" to provider.pubkey,
                         "relay" to provider.relayUrl.url,
                         "applied" to run.applied,
-                        "complete" to run.result?.complete,
-                        "received" to run.result?.received,
-                        "invalid" to run.result?.invalid,
-                        "detail" to run.result?.detail,
+                        "complete" to run.applied,
+                        "received" to (result?.received ?: 0),
+                        "invalid" to (result?.invalid ?: 0),
+                        "detail" to run.outcome.describe(),
                         "entries" to (index?.size ?: 0),
                         "passing" to (index?.countAtLeast(minScore) ?: 0),
                         "min_score" to minScore,
                         "elapsed_ms" to elapsed,
                     )
-                if (!run.applied) return Output.error("sync_failed", run.error, fields)
+                if (!run.applied) return Output.error("sync_failed", run.outcome.describe(), fields)
                 Output.emit(fields)
                 return 0
             }
         }
     }
 }
+
+/** One line for humans and the `detail` field. */
+private fun TrustNetworkOutcome.describe(): String? =
+    when (this) {
+        is TrustNetworkOutcome.Applied -> result.detail
+        is TrustNetworkOutcome.Unchanged -> "nothing new"
+        TrustNetworkOutcome.NoScoresYet -> "the provider has published no scores yet"
+        TrustNetworkOutcome.WaitingForUnmetered -> "waiting for an unmetered network"
+        TrustNetworkOutcome.ProviderChanged -> "the provider changed during the sync"
+        is TrustNetworkOutcome.Incomplete -> detail ?: "incomplete"
+        is TrustNetworkOutcome.Failed -> message
+    }
 
 /** No `30382:rank` provider in the account's kind 10040. */
 internal fun noProvider(): Int =

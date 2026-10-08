@@ -282,6 +282,7 @@ import com.vitorpamplona.amethyst.commons.util.showAmount
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.amethyst.commons.viewmodels.mockAccountViewModel
 import com.vitorpamplona.amethyst.commons.viewmodels.thread.LevelFeedViewModel
+import com.vitorpamplona.amethyst.commons.wot.network.TrustVerdicts
 import com.vitorpamplona.quartz.cyberspace.CyberspaceBagEvent
 import com.vitorpamplona.quartz.cyberspace.deck0003Sno.SnoAvatarEvent
 import com.vitorpamplona.quartz.cyberspace.deck0003Sno.SnoObjectEvent
@@ -453,18 +454,11 @@ fun RenderThreadFeed(
 
     // Replies whose author is outside the Web of Trust network start collapsed. Empty while no
     // network is active, so threads look exactly as before for users without one.
-    val trustNetwork by accountViewModel.account.trustNetwork.network
-        .collectAsStateWithLifecycle()
-    val minTrustScore by accountViewModel.account.trustNetwork.minTrustScore
-        .collectAsStateWithLifecycle()
-    val verdictRevision by accountViewModel.account.trustNetwork.verdictRevision
-        .collectAsStateWithLifecycle()
-    // Following someone lets their replies through.
-    val follows by accountViewModel.account.kind3FollowList.flow
+    val verdicts by accountViewModel.account.trustVerdicts
         .collectAsStateWithLifecycle()
     val outsideNetwork =
-        remember(items, levels, trustNetwork?.index, minTrustScore, verdictRevision, follows, noteId) {
-            if (trustNetwork == null) emptySet() else outOfNetworkReplies(items.list, levels, noteId, accountViewModel)
+        remember(items, levels, verdicts, noteId) {
+            if (!verdicts.isActive) emptySet() else outOfNetworkReplies(items.list, levels, noteId, verdicts)
         }
 
     // Hides every descendant of a collapsed reply and counts how many were hidden. The feed is
@@ -631,15 +625,14 @@ fun RenderThreadFeed(
  * Replies (by id) whose author is outside the Web of Trust network: they start collapsed. The
  * thread's root, its author, the focused note and the replies above it are never included (a
  * collapsed reply hides everything under it, which would hide the note the user opened);
- * neither are follows or the user (see `Account.trustNetworkVerdict`).
+ * neither are follows or the user (see [TrustVerdicts]).
  */
 private fun outOfNetworkReplies(
     thread: List<Note>,
     levels: Map<Note, Int>,
     focusedNoteId: String,
-    accountViewModel: AccountViewModel,
+    verdicts: TrustVerdicts,
 ): Set<String> {
-    val account = accountViewModel.account
     val root = thread.firstOrNull() ?: return emptySet()
     val rootAuthor = root.author?.pubkeyHex
     val keepOpen = focusedNoteAndAncestors(thread, levels, focusedNoteId)
@@ -649,7 +642,7 @@ private fun outOfNetworkReplies(
         if (note.idHex in keepOpen) continue
         val author = note.author?.pubkeyHex ?: continue
         if (author == rootAuthor) continue
-        if (account.isOutsideTrustNetwork(author)) result.add(note.idHex)
+        if (verdicts.isOutside(author)) result.add(note.idHex)
     }
     return result
 }

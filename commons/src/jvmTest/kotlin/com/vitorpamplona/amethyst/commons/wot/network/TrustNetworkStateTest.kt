@@ -26,13 +26,13 @@ import com.vitorpamplona.quartz.nip85TrustedAssertions.list.tags.ProviderTypes
 import com.vitorpamplona.quartz.nip85TrustedAssertions.list.tags.ServiceProviderTag
 import com.vitorpamplona.quartz.nip85TrustedAssertions.users.UserAssertionEvent
 import com.vitorpamplona.quartz.nip85TrustedAssertions.users.index.TrustNetworkBuilder
-import com.vitorpamplona.quartz.nip85TrustedAssertions.users.index.TrustNetworkCodec
 import com.vitorpamplona.quartz.nip85TrustedAssertions.users.index.TrustNetworkHeader
 import com.vitorpamplona.quartz.utils.Hex
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
@@ -48,13 +48,16 @@ import kotlin.test.assertFalse
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
+/** Loading, matching the provider, and the decisions. Syncing is in TrustNetworkSchedulingTest. */
 class TrustNetworkStateTest {
     private val random = Random(7)
     private val providerKey = hex()
     private val relay = RelayUrlNormalizer.normalize("wss://scores.example.com")
     private val provider = ServiceProviderTag(ProviderTypes.rank, providerKey, relay)
     private val dir: Path = (System.getProperty("java.io.tmpdir") + "/wot-state-" + System.nanoTime()).toPath()
+    private val store = TrustNetworkStore(dir)
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+    private val me = hex()
 
     private val trusted = hex()
     private val lowRank = hex()
@@ -64,33 +67,31 @@ class TrustNetworkStateTest {
     private fun card(
         subject: String,
         rank: Int,
-    ) = Event(hex(), providerKey, 1000, 30382, arrayOf(arrayOf("d", subject), arrayOf("rank", rank.toString())), "", "0".repeat(128))
+        author: String,
+    ) = Event(hex(), author, 1000, 30382, arrayOf(arrayOf("d", subject), arrayOf("rank", rank.toString())), "", "0".repeat(128))
 
     private fun writeIndex(providerOnDisk: String = providerKey) {
         val builder = TrustNetworkBuilder(providerOnDisk)
-        builder.add(card(trusted, 40).let { Event(it.id, providerOnDisk, it.createdAt, it.kind, it.tags, it.content, it.sig) })
-        builder.add(card(lowRank, 2).let { Event(it.id, providerOnDisk, it.createdAt, it.kind, it.tags, it.content, it.sig) })
+        builder.add(card(trusted, 40, providerOnDisk))
+        builder.add(card(lowRank, 2, providerOnDisk))
         val (index, ids) = builder.build()
         val now = System.currentTimeMillis() / 1000
-        FileSystem.SYSTEM.createDirectories(dir)
-        FileSystem.SYSTEM.write(dir / TrustNetworkState.IDS_FILE) { write(TrustNetworkCodec.encodeIds(ids)) }
-        FileSystem.SYSTEM.write(dir / TrustNetworkState.INDEX_FILE) {
-            write(TrustNetworkCodec.encodeIndex(TrustNetworkHeader(providerOnDisk, relay.url, 1000, now, now), index))
-        }
+        store.write(TrustNetworkHeader(providerOnDisk, relay.url, 1000, now, now, heldAtCursor = 2), index, ids)
     }
 
     private fun state(
-        rankProvider: MutableStateFlow<ServiceProviderTag?>,
+        rankProvider: MutableStateFlow<ResolvedProvider?> = MutableStateFlow(ResolvedProvider(provider)),
         minScore: MutableStateFlow<Int> = MutableStateFlow(5),
     ) = TrustNetworkState(
         rankProvider = rankProvider,
         minTrustScore = minScore,
-        directory = dir,
-        // No client: these tests cover loading and querying, not syncing.
-        clientBuilder = null,
+        store = store,
+        // No source: these tests cover loading and deciding, not syncing.
+        source = null,
         scope = scope,
-        providerGraceMs = 50,
     )
+
+    private fun TrustNetworkState.verdicts() = snapshot(me, emptySet())
 
     @AfterTest
     fun cleanup() {
@@ -103,77 +104,103 @@ class TrustNetworkStateTest {
         runBlocking {
             writeIndex()
             val minScore = MutableStateFlow(5)
-            val wot = state(MutableStateFlow(provider), minScore)
+            val wot = state(minScore = minScore)
             wot.awaitLoaded()
 
             assertTrue(wot.isActive)
-            assertTrue(wot.passes(trusted))
-            assertFalse(wot.passes(lowRank))
-            assertFalse(wot.passes(hex()))
+            assertTrue(wot.verdicts().passes(trusted))
+            assertFalse(wot.verdicts().passes(lowRank))
+            assertFalse(wot.verdicts().passes(hex()))
             assertEquals(40, wot.rankOf(trusted))
 
             minScore.value = 1
-            assertTrue(wot.passes(lowRank))
+            assertTrue(wot.verdicts().passes(lowRank))
         }
 
     @Test
-    fun keepsTheIndexWhileTheProviderListIsStillLoading() =
+    fun keepsTheIndexUntilTheProviderListIsRead() =
         runBlocking {
             writeIndex()
-            val rankProvider = MutableStateFlow<ServiceProviderTag?>(null)
+            val rankProvider = MutableStateFlow<ResolvedProvider?>(null)
             val wot = state(rankProvider)
             wot.awaitLoaded()
             // Startup: the 10040 has not been read yet, so a push can still be filtered.
+            delay(200)
             assertTrue(wot.isActive)
 
-            // The provider never shows up: filtering turns off after the grace period.
+            // The list is read and names no provider: filtering turns off and the files go.
+            rankProvider.value = ResolvedProvider(null)
             withTimeout(5_000) { wot.network.first { it == null } }
-            assertFalse(wot.isActive)
-            assertFalse(wot.passes(trusted))
+            assertFalse(wot.verdicts().passes(trusted))
+            assertNull(store.readIndex())
+            assertNull(store.readIds())
         }
 
     @Test
     fun ignoresAnIndexFromAnotherProvider() =
         runBlocking {
             writeIndex(providerOnDisk = hex())
-            val wot = state(MutableStateFlow(provider))
-            wot.awaitLoaded()
-            withTimeout(5_000) { wot.network.first { it == null } }
+            val wot = state()
+            wot.awaitReady()
+            assertNull(wot.network.value)
             assertNull(wot.rankOf(trusted))
         }
 
     @Test
     fun withoutAFileNothingIsFiltered() =
         runBlocking {
-            val wot = state(MutableStateFlow(provider))
-            wot.awaitLoaded()
+            val wot = state()
+            wot.awaitReady()
             assertFalse(wot.isActive)
-            assertFalse(wot.passes(trusted))
+            assertFalse(wot.verdicts().isOutside(trusted))
         }
 
     @Test
     fun explainsEveryVerdict() =
         runBlocking {
             writeIndex()
-            val wot = state(MutableStateFlow(provider))
+            val wot = state()
             wot.awaitReady()
-            val me = hex()
             val friend = hex()
-            assertEquals(TrustVerdict.SELF, wot.explain(me, me, setOf(friend)))
-            assertEquals(TrustVerdict.FOLLOW, wot.explain(friend, me, setOf(friend)))
-            assertEquals(TrustVerdict.TRUSTED, wot.explain(trusted, me, emptySet()))
-            assertEquals(TrustVerdict.BELOW_MIN_SCORE, wot.explain(lowRank, me, emptySet()))
-            assertEquals(TrustVerdict.NOT_IN_NETWORK, wot.explain(hex(), me, emptySet()))
+            val verdicts = wot.snapshot(me, setOf(friend))
+            assertEquals(TrustVerdict.SELF, verdicts.explain(me))
+            assertEquals(TrustVerdict.FOLLOW, verdicts.explain(friend))
+            assertEquals(TrustVerdict.TRUSTED, verdicts.explain(trusted))
+            assertEquals(TrustVerdict.BELOW_MIN_SCORE, verdicts.explain(lowRank))
+            assertEquals(TrustVerdict.NOT_IN_NETWORK, verdicts.explain(hex()))
             assertEquals(false, TrustVerdict.NOT_IN_NETWORK.isKnown)
         }
 
     @Test
     fun withoutANetworkTheVerdictIsNeutral() =
         runBlocking {
-            val wot = state(MutableStateFlow(provider))
+            val wot = state()
             wot.awaitReady()
-            assertEquals(TrustVerdict.NO_NETWORK, wot.explain(hex(), hex(), emptySet()))
+            assertEquals(TrustVerdict.NO_NETWORK, wot.verdicts().explain(hex()))
             assertNull(TrustVerdict.NO_NETWORK.isKnown)
+        }
+
+    @Test
+    fun publishesVerdictsOnlyWhenAnAnswerCanChange() =
+        runBlocking {
+            writeIndex()
+            val follows = MutableStateFlow(emptySet<String>())
+            val minScore = MutableStateFlow(5)
+            val wot = state(minScore = minScore)
+            wot.awaitReady()
+            val flow = wot.verdicts(me, follows, scope)
+            val first = withTimeout(5_000) { flow.first { it.isActive } }
+
+            // Following someone is a new answer.
+            val friend = hex()
+            follows.value = setOf(friend)
+            val followed = withTimeout(5_000) { flow.first { it !== first } }
+            assertEquals(TrustVerdict.FOLLOW, followed.explain(friend))
+
+            // So is a new minimum score.
+            minScore.value = 1
+            val lowered = withTimeout(5_000) { flow.first { it !== followed } }
+            assertTrue(lowered.passes(lowRank))
         }
 
     private fun newerCard(
@@ -188,9 +215,10 @@ class TrustNetworkStateTest {
         runBlocking {
             // The index on disk was synced up to created_at 1000.
             writeIndex()
-            val wot = state(MutableStateFlow(provider))
+            val wot = state()
             wot.awaitReady()
             val stranger = hex()
+            val start = wot.verdicts()
 
             wot.offer(
                 listOf(
@@ -204,21 +232,24 @@ class TrustNetworkStateTest {
             )
             assertEquals(30, wot.rankOf(stranger))
             assertEquals(12, wot.followersOf(stranger))
-            assertTrue(wot.passes(stranger))
-            assertFalse(wot.passes(lowRank))
+            val letIn = wot.verdicts()
+            assertTrue(letIn.passes(stranger))
+            assertFalse(letIn.passes(lowRank))
             assertEquals(40, wot.rankOf(trusted))
-            assertEquals(1, wot.verdictRevision.value, "letting someone in re-runs the feeds")
+            assertFalse(start.sameAnswersAs(letIn), "letting someone in is a new answer")
 
             // The provider removes them (rank 0), then an older copy arrives late: still removed.
             wot.offer(listOf(newerCard(stranger, 0, at = 3000)))
             wot.offer(listOf(newerCard(stranger, 30, at = 2500)))
             assertNull(wot.rankOf(stranger))
-            assertEquals(TrustVerdict.NOT_IN_NETWORK, wot.explain(stranger, hex(), emptySet()))
-            assertEquals(2, wot.verdictRevision.value)
+            val removed = wot.verdicts()
+            assertEquals(TrustVerdict.NOT_IN_NETWORK, removed.explain(stranger))
+            assertFalse(letIn.sameAnswersAs(removed))
 
-            // A rank change that does not cross the minimum updates the badge, not the feeds.
+            // A rank change that does not cross the minimum updates the badge, not the answers.
             wot.offer(listOf(newerCard(trusted, 60, at = 2000)))
             assertEquals(60, wot.rankOf(trusted))
-            assertEquals(2, wot.verdictRevision.value)
+            assertTrue(removed.sameAnswersAs(wot.verdicts()))
+            assertTrue(wot.isActive)
         }
 }

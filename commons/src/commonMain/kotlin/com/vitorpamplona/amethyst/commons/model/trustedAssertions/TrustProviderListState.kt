@@ -25,10 +25,12 @@ import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.NoteState
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
 import com.vitorpamplona.amethyst.commons.model.nip85TrustedAssertions.TrustProviderListDecryptionCache
+import com.vitorpamplona.amethyst.commons.wot.network.ResolvedProvider
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip85TrustedAssertions.list.TrustProviderListEvent
+import com.vitorpamplona.quartz.nip85TrustedAssertions.list.serviceProviderSet
 import com.vitorpamplona.quartz.nip85TrustedAssertions.list.tags.ProviderTypes
 import com.vitorpamplona.quartz.nip85TrustedAssertions.list.tags.ServiceProviderTag
 import com.vitorpamplona.quartz.utils.Log
@@ -94,6 +96,32 @@ class TrustProviderListState(
                 SharingStarted.Eagerly,
                 emptySet(),
             )
+
+    /**
+     * The list once it is known for sure: read (or its backup), with its private part decrypted.
+     * Null until then, and while the private part cannot be decrypted (a signer that is not
+     * available), so "not known yet" never reads as "no providers".
+     */
+    @OptIn(ExperimentalCoroutinesApi::class)
+    private val resolvedTrustProviderList: StateFlow<Set<ServiceProviderTag>?> =
+        getTrustProviderListFlow()
+            .transformLatest { noteState -> emit(resolvedProviders(noteState.note)) }
+            .onStart { emit(resolvedProviders(trustProviderListNote)) }
+            .flowOn(Dispatchers.IO)
+            .stateIn(scope, SharingStarted.Eagerly, null)
+
+    private suspend fun resolvedProviders(note: Note): Set<ServiceProviderTag>? {
+        val event = note.event as? TrustProviderListEvent ?: settings.backupTrustProviderList ?: return emptySet()
+        if (event.content.isBlank()) return event.tags.serviceProviderSet()
+        val private = decryptionCache.cachedPrivateLists.privateTags(event) ?: return null
+        return (event.tags + private).serviceProviderSet()
+    }
+
+    /** The rank provider once the list is known for sure (see [resolvedTrustProviderList]). */
+    val resolvedRankProvider: StateFlow<ResolvedProvider?> =
+        resolvedTrustProviderList
+            .map { providers -> providers?.let { ResolvedProvider(it.firstOrNull { tag -> tag.service == ProviderTypes.rank }) } }
+            .stateIn(scope, SharingStarted.Eagerly, null)
 
     @OptIn(ExperimentalCoroutinesApi::class)
     override val liveUserRankProvider: StateFlow<ServiceProviderTag?> =

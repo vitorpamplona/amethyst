@@ -25,7 +25,6 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
@@ -36,7 +35,6 @@ import com.vitorpamplona.amethyst.commons.ui.components.rememberViewModel
 import com.vitorpamplona.amethyst.commons.ui.feeds.WatchLifecycleAndUpdateModel
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.feed.ChatRoomVouches
-import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.feed.LocalChatCollapseOutsideNetwork
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.feed.RefreshingChatroomFeedView
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.publicChannels.dal.ChannelFeedViewModel
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.publicChannels.datasource.ChannelFilterAssemblerSubscription
@@ -132,17 +130,16 @@ private fun ChannelView(
                         .weight(1f, true)
                 },
         ) {
-            CompositionLocalProvider(LocalChatCollapseOutsideNetwork provides ChatRoomVouches.NOBODY) {
-                RefreshingChatroomFeedView(
-                    feedContentState = feedViewModel.feedState,
-                    accountViewModel = accountViewModel,
-                    nav = nav,
-                    routeForLastRead = "Channel/${channel.roomId.toKey()}",
-                    avoidDraft = newPostModel.draftTag,
-                    onWantsToReply = newPostModel::reply,
-                    onWantsToEditDraft = newPostModel::editFromDraft,
-                )
-            }
+            RefreshingChatroomFeedView(
+                feedContentState = feedViewModel.feedState,
+                accountViewModel = accountViewModel,
+                nav = nav,
+                routeForLastRead = "Channel/${channel.roomId.toKey()}",
+                avoidDraft = newPostModel.draftTag,
+                onWantsToReply = newPostModel::reply,
+                onWantsToEditDraft = newPostModel::editFromDraft,
+                collapseOutsideNetwork = ChatRoomVouches.NOBODY,
+            )
         }
 
         Spacer(modifier = DoubleVertSpacer)

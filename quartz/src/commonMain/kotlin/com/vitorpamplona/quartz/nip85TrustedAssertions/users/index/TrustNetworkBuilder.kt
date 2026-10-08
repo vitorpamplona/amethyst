@@ -280,7 +280,7 @@ class TrustNetworkBuilder(
             val deletedAt = if (deletedSubjects.isEmpty()) null else deletedSubjects[Key(hi[newest], lo[newest])]
             if (deletedAt != null && deletedAt >= createdAt[newest]) continue
             if (isDeletedId(newest, deletedPrefixes)) continue
-            if (rank[newest].toInt() == 0) {
+            if (memberRank(rank[newest].toInt()) == null) {
                 graves[buried++] = newest
             } else {
                 keep[kept++] = newest

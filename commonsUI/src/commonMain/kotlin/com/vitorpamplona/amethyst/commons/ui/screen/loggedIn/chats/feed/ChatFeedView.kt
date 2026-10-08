@@ -120,6 +120,11 @@ fun RefreshingChatroomFeedView(
     // Optional per-row override for rows the caller renders itself rather than as
     // a chat bubble. Null for every surface whose feed is only messages.
     rowRenderer: ChatFeedRowRenderer? = null,
+    /**
+     * Set by public chats: collapses runs of messages from outside the Web of Trust network,
+     * except from the people the room vouches for. Null leaves the chat alone (private chats).
+     */
+    collapseOutsideNetwork: ChatRoomVouches? = null,
 ) {
     SaveableFeedState(feedContentState, scrollStateKey) { listState ->
         listStateObserver(listState)
@@ -139,6 +144,7 @@ fun RefreshingChatroomFeedView(
             onJumpHandled,
             onWantsToEditChatMessage,
             rowRenderer,
+            collapseOutsideNetwork,
         )
     }
 }
@@ -160,6 +166,11 @@ fun RenderChatFeedView(
     onJumpHandled: () -> Unit = {},
     onWantsToEditChatMessage: ((Note) -> Unit)? = null,
     rowRenderer: ChatFeedRowRenderer? = null,
+    /**
+     * Set by public chats: collapses runs of messages from outside the Web of Trust network,
+     * except from the people the room vouches for. Null leaves the chat alone (private chats).
+     */
+    collapseOutsideNetwork: ChatRoomVouches? = null,
 ) {
     val feedState by feed.feedContent.collectAsStateWithLifecycle()
 
@@ -194,6 +205,7 @@ fun RenderChatFeedView(
                     onJumpHandled,
                     onWantsToEditChatMessage,
                     rowRenderer,
+                    collapseOutsideNetwork,
                 )
             }
         }
@@ -217,6 +229,11 @@ fun ChatFeedLoaded(
     onJumpHandled: () -> Unit = {},
     onWantsToEditChatMessage: ((Note) -> Unit)? = null,
     rowRenderer: ChatFeedRowRenderer? = null,
+    /**
+     * Set by public chats: collapses runs of messages from outside the Web of Trust network,
+     * except from the people the room vouches for. Null leaves the chat alone (private chats).
+     */
+    collapseOutsideNetwork: ChatRoomVouches? = null,
 ) {
     val items by loaded.feed.collectAsStateWithLifecycle()
 
@@ -226,7 +243,7 @@ fun ChatFeedLoaded(
 
     // Public chats collapse runs of messages from outside the Web of Trust network into one row.
     var revealed by remember { mutableStateOf(emptySet<String>()) }
-    val outsideNetwork = rememberOutsideNetworkRuns(items.list, revealed, LocalChatCollapseOutsideNetwork.current, accountViewModel)
+    val outsideNetwork = rememberOutsideNetworkRuns(items.list, revealed, collapseOutsideNetwork, accountViewModel)
 
     val newest = items.list.firstOrNull()
     AutoScrollToNewest(listState, newest, mine = accountViewModel.isLoggedUser(newest?.author?.pubkeyHex))
