@@ -281,10 +281,9 @@ class NostrClientFetchAllPagesThrottleTest {
     @Test
     fun pagesThatShrinkBecauseAFilterFinishedAreNotThrottling() =
         runBlocking {
-            // Page one answers a bounded filter (500) and an unbounded one together; once the
-            // bounded filter has its 500 it drops out and the unbounded one pages at the relay's
-            // default of 200. Against the first page those are all "short", but nothing is wrong:
-            // the walk must end without a single backoff.
+            // A bounded filter (500) walked at the relay's max of 1000, then an unbounded one at
+            // its default of 200. Against the first walk's page those are all "short", but nothing
+            // is wrong: the walk must end without a single backoff.
             val client = FakePagingRelay(this, FakePagingRelay.corpus(1_500), maxLimit = 1_000, defaultLimit = 200)
             val recorder = RecordingBackoff()
             val filters = listOf(Filter(kinds = listOf(1), limit = 500), Filter(kinds = listOf(1)))
@@ -379,13 +378,15 @@ class NostrClientFetchAllPagesThrottleTest {
             // the damus trickle with a second filter. The same filters stay productive, so the
             // evidence holds and the walk pauses instead of hammering the relay.
             val notes = FakePagingRelay.corpus(1_000)
-            val client =
+            lateinit var client: FakePagingRelay
+            client =
                 FakePagingRelay(this, notes + reactions(1_000, everySeconds = 1), maxLimit = 500) { req, honest ->
                     if (req <= 2) {
                         honest
                     } else {
-                        // Past the boundary second (its events were delivered already): two seconds, both kinds.
-                        honest.filter { it.createdAt < honest.first().createdAt }.take(4)
+                        // Past the boundary second (its events were delivered already): four events.
+                        val until = client.requests[req - 1].first().until
+                        honest.filter { until == null || it.createdAt < until }.take(4)
                     }
                 }
             val recorder = RecordingBackoff()

@@ -214,12 +214,11 @@ class NostrClientFetchAllPagesPageSizeTest {
         }
 
     @Test
-    fun severalFiltersAreNotCutToThePageSize() =
+    fun severalFiltersAreEachWalkedForTheirWholeRemainder() =
         runBlocking {
-            // The cursor is shared, so capping each of several filters at a page would let
-            // the one whose page ends newer lose the gap down to the other's oldest event.
-            // Two kinds interleaved second by second, a relay that serves big pages: every
-            // event of both must arrive, as it did before the page size existed.
+            // Several filters are walked one at a time, each on its own cursor, so each asks
+            // for its own whole remainder. Two kinds interleaved second by second, a relay
+            // that serves big pages: every event of both must arrive.
             val corpus =
                 (0 until 4_000).map { i ->
                     val createdAt = 1_000_000L - i
@@ -235,7 +234,15 @@ class NostrClientFetchAllPagesPageSizeTest {
                     idleTimeoutMs = 2_000,
                 ) { got.add(it) }
 
-            assertEquals(listOf<Int?>(1_000, 1_500), client.requests.first().map { it.limit }, "each filter asks for its whole remainder")
+            assertEquals(listOf<Int?>(1_000), client.requests.first().map { it.limit }, "one filter per REQ")
+            assertEquals(
+                1_500,
+                client.requests
+                    .first { it.single().kinds == listOf(3) }
+                    .single()
+                    .limit,
+                "each filter asks for its whole remainder",
+            )
             assertEquals(2_500, result.downloaded)
             assertEquals(1_000, got.count { it.kind == 1 })
             assertEquals(1_500, got.count { it.kind == 3 })

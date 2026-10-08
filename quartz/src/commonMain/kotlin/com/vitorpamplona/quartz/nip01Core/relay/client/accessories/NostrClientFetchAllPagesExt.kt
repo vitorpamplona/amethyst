@@ -275,11 +275,19 @@ class PageRetryBackoff(
  * others) is walked at that max. A relay that refuses an oversized limit instead —
  * purplepag.es answers `limit = 50000` with `CLOSED blocked: limit too high: 50000 (max
  * 500)` — has the same page re-asked lower, at the max its message states or else at half
- * the refused limit, and the walk keeps that cap from then on. That is done for a lone
- * pageable filter only: several filters share one cursor, so cutting one short would skip
- * the gap down to another filter's oldest event; against a relay that refuses large limits,
- * walk them one at a time. A filter without a limit is sent without one: the relay's
- * default page.
+ * the refused limit, and the walk keeps that cap from then on. A filter without a limit is
+ * sent without one: the relay's default page.
+ *
+ * **Several filters are walked one after another, each on its own cursor.** One cursor
+ * cannot serve them: a relay pages each filter of a `REQ` on its own, so a dense filter's
+ * page ends hours back while a sparse one's reaches weeks back, and moving the shared cursor
+ * to the oldest event of the page skips everything the dense filter holds in between.
+ * EventSync's `authors = me` + `#p = me` lost 4,256 of 5,900 events on nostr.mom that way,
+ * and 7,666 of 9,080 on relay.nostr.net. A later walk skips the events an earlier filter
+ * already delivered, so each is delivered once, in each walk's page order; [onNewPage]
+ * starts over from the top for each filter. The [PagedFetchResult.end] is the first one that
+ * is not [PagedFetchResult.End.DRAINED], so the result drains only if every filter did.
+ * Filters with a `search` share one walk as before, since NIP-50 hits never page.
  *
  * **A throttled relay is re-asked before it is believed.** relay.damus.io, paged quickly
  * on one connection, shrinks its pages to a handful of events and then EOSEs an EMPTY page
@@ -383,6 +391,64 @@ suspend fun INostrClient.fetchAllPages(
     onEvent: suspend (Event) -> Unit,
 ): PagedFetchResult {
     require(pageSize == null || pageSize > 0) { "pageSize must be positive: $pageSize" }
+    if (filters.size < 2 || filters.any { it.search != null }) {
+        return walkPages(relay, filters, idleTimeoutMs, onNewPage, pageSize, throttleBackoff, onEvent)
+    }
+
+    // One walk per filter (see the KDoc): a later walk skips what an earlier one delivered,
+    // which is every event matching that filter if it drained, else every one newer than the
+    // oldest second it reached plus the ones it delivered in that second.
+    val walked = ArrayList<WalkedFilter>(filters.size)
+    var downloaded = 0
+    var first: PagedFetchResult? = null
+    for (filter in filters) {
+        var oldest = Long.MAX_VALUE
+        val atOldest = HashSet<HexKey>()
+        val result =
+            walkPages(relay, listOf(filter), idleTimeoutMs, onNewPage, pageSize, throttleBackoff) { event ->
+                if (event.createdAt < oldest) {
+                    oldest = event.createdAt
+                    atOldest.clear()
+                }
+                if (event.createdAt == oldest) atOldest.add(event.id)
+                if (walked.none { it.delivered(event) }) {
+                    downloaded++
+                    onEvent(event)
+                }
+            }
+        walked.add(if (result.drained) WalkedFilter(filter, null, emptySet()) else WalkedFilter(filter, oldest, atOldest))
+        if (first == null || (first.drained && !result.drained)) first = result
+        // Nothing to ask the next filter on.
+        if (result.end == PagedFetchResult.End.CANNOT_CONNECT) break
+    }
+    return first!!.copy(downloaded = downloaded)
+}
+
+/**
+ * What one filter's walk delivered: everything it matches if it drained ([floor] null), else
+ * everything newer than [floor] and the [atFloor] ids in that second (a relay walked newest
+ * first, so the rest of that second and everything older were never reached).
+ */
+private class WalkedFilter(
+    val filter: Filter,
+    val floor: Long?,
+    val atFloor: Set<HexKey>,
+) {
+    fun delivered(event: Event): Boolean {
+        if (!filter.match(event)) return false
+        return floor == null || event.createdAt > floor || (event.createdAt == floor && event.id in atFloor)
+    }
+}
+
+private suspend fun INostrClient.walkPages(
+    relay: NormalizedRelayUrl,
+    filters: List<Filter>,
+    idleTimeoutMs: Long,
+    onNewPage: ((Long) -> Unit)?,
+    pageSize: Int?,
+    throttleBackoff: PageRetryBackoff,
+    onEvent: suspend (Event) -> Unit,
+): PagedFetchResult {
     // Waiting out an `auth-required:` page refusal is worth something only when this client has
     // a NIP-42 responder to answer with. When it does, the AUTH's OK drives syncFilters, which
     // re-sends this very REQ (same subscription id, same filters — an `auth-required:` refusal
