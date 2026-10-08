@@ -129,6 +129,17 @@ import com.vitorpamplona.quartz.nip29RelayGroups.request.GroupLeaveRequestEvent
 import com.vitorpamplona.quartz.nip30CustomEmoji.pack.EmojiPackEvent
 import com.vitorpamplona.quartz.nip30CustomEmoji.selection.EmojiListEvent
 import com.vitorpamplona.quartz.nip32Labeling.LabelEvent
+import com.vitorpamplona.quartz.nip34Git.ci.coordinatorAdvertisement.CiCoordinatorAdvertisementEvent
+import com.vitorpamplona.quartz.nip34Git.ci.jobResult.CiJobResultEvent
+import com.vitorpamplona.quartz.nip34Git.ci.manualTrigger.CiManualTriggerEvent
+import com.vitorpamplona.quartz.nip34Git.ci.repositoryStatus.CiRepositoryStatusEvent
+import com.vitorpamplona.quartz.nip34Git.ci.requestReadiness.CiRequestReadinessListEvent
+import com.vitorpamplona.quartz.nip34Git.ci.secretUpdate.CiSecretUpdateEvent
+import com.vitorpamplona.quartz.nip34Git.ci.serviceRequest.CiServiceRequestEvent
+import com.vitorpamplona.quartz.nip34Git.ci.serviceStop.CiServiceStopEvent
+import com.vitorpamplona.quartz.nip34Git.ci.workflowProgress.CiWorkflowProgressEvent
+import com.vitorpamplona.quartz.nip34Git.ci.workflowResult.CiWorkflowResultEvent
+import com.vitorpamplona.quartz.nip34Git.coverNote.GitCoverNoteEvent
 import com.vitorpamplona.quartz.nip34Git.grasp.UserGraspListEvent
 import com.vitorpamplona.quartz.nip34Git.issue.GitIssueEvent
 import com.vitorpamplona.quartz.nip34Git.patch.GitPatchEvent
@@ -447,6 +458,17 @@ object KindNames {
             GitPatchEvent.KIND to KindName("Git Patch", "34"),
             GitRepositoryEvent.KIND to KindName("Git Repo", "34"),
             GitReplyEvent.KIND to KindName("Git Reply", "34"),
+            GitCoverNoteEvent.KIND to KindName("Git Cover Note", null),
+            CiManualTriggerEvent.KIND to KindName("CI Manual Trigger", null),
+            CiJobResultEvent.KIND to KindName("CI Job Result", null),
+            CiWorkflowResultEvent.KIND to KindName("CI Workflow Result", null),
+            CiServiceRequestEvent.KIND to KindName("CI Service Request", null),
+            CiServiceStopEvent.KIND to KindName("CI Service Stop", null),
+            CiWorkflowProgressEvent.KIND to KindName("CI Workflow Progress", null),
+            CiCoordinatorAdvertisementEvent.KIND to KindName("CI Coordinator", null),
+            CiRequestReadinessListEvent.KIND to KindName("CI Request Readiness", null),
+            CiRepositoryStatusEvent.KIND to KindName("CI Repo Status", null),
+            CiSecretUpdateEvent.KIND to KindName("CI Secret Update", null),
             ZapGoalEvent.KIND to KindName("Zap Goals", "75"),
             InterestListEvent.KIND to KindName("Hashtag Follows", "51"),
             HighlightEvent.KIND to KindName("Highlights", "84"),

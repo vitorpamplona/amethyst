@@ -236,6 +236,17 @@ import com.vitorpamplona.quartz.nip29RelayGroups.tags.GroupIdTag
 import com.vitorpamplona.quartz.nip30CustomEmoji.pack.EmojiPackEvent
 import com.vitorpamplona.quartz.nip30CustomEmoji.selection.EmojiListEvent
 import com.vitorpamplona.quartz.nip32Labeling.LabelEvent
+import com.vitorpamplona.quartz.nip34Git.ci.coordinatorAdvertisement.CiCoordinatorAdvertisementEvent
+import com.vitorpamplona.quartz.nip34Git.ci.jobResult.CiJobResultEvent
+import com.vitorpamplona.quartz.nip34Git.ci.manualTrigger.CiManualTriggerEvent
+import com.vitorpamplona.quartz.nip34Git.ci.repositoryStatus.CiRepositoryStatusEvent
+import com.vitorpamplona.quartz.nip34Git.ci.requestReadiness.CiRequestReadinessListEvent
+import com.vitorpamplona.quartz.nip34Git.ci.secretUpdate.CiSecretUpdateEvent
+import com.vitorpamplona.quartz.nip34Git.ci.serviceRequest.CiServiceRequestEvent
+import com.vitorpamplona.quartz.nip34Git.ci.serviceStop.CiServiceStopEvent
+import com.vitorpamplona.quartz.nip34Git.ci.workflowProgress.CiWorkflowProgressEvent
+import com.vitorpamplona.quartz.nip34Git.ci.workflowResult.CiWorkflowResultEvent
+import com.vitorpamplona.quartz.nip34Git.coverNote.GitCoverNoteEvent
 import com.vitorpamplona.quartz.nip34Git.grasp.UserGraspListEvent
 import com.vitorpamplona.quartz.nip34Git.issue.GitIssueEvent
 import com.vitorpamplona.quartz.nip34Git.patch.GitPatchEvent
@@ -724,6 +735,17 @@ class EventFactory {
                 GitStatusAppliedEvent.KIND -> GitStatusAppliedEvent(id, pubKey, createdAt, tags, content, sig)
                 GitStatusClosedEvent.KIND -> GitStatusClosedEvent(id, pubKey, createdAt, tags, content, sig)
                 GitStatusDraftEvent.KIND -> GitStatusDraftEvent(id, pubKey, createdAt, tags, content, sig)
+                GitCoverNoteEvent.KIND -> GitCoverNoteEvent(id, pubKey, createdAt, tags, content, sig)
+                CiManualTriggerEvent.KIND -> CiManualTriggerEvent(id, pubKey, createdAt, tags, content, sig)
+                CiJobResultEvent.KIND -> CiJobResultEvent(id, pubKey, createdAt, tags, content, sig)
+                CiWorkflowResultEvent.KIND -> CiWorkflowResultEvent(id, pubKey, createdAt, tags, content, sig)
+                CiServiceRequestEvent.KIND -> CiServiceRequestEvent(id, pubKey, createdAt, tags, content, sig)
+                CiServiceStopEvent.KIND -> CiServiceStopEvent(id, pubKey, createdAt, tags, content, sig)
+                CiWorkflowProgressEvent.KIND -> CiWorkflowProgressEvent(id, pubKey, createdAt, tags, content, sig)
+                CiCoordinatorAdvertisementEvent.KIND -> CiCoordinatorAdvertisementEvent(id, pubKey, createdAt, tags, content, sig)
+                CiRequestReadinessListEvent.KIND -> CiRequestReadinessListEvent(id, pubKey, createdAt, tags, content, sig)
+                CiRepositoryStatusEvent.KIND -> CiRepositoryStatusEvent(id, pubKey, createdAt, tags, content, sig)
+                CiSecretUpdateEvent.KIND -> CiSecretUpdateEvent(id, pubKey, createdAt, tags, content, sig)
                 UserGraspListEvent.KIND -> UserGraspListEvent(id, pubKey, createdAt, tags, content, sig)
                 GoodWikiAuthorListEvent.KIND -> GoodWikiAuthorListEvent(id, pubKey, createdAt, tags, content, sig)
                 GoodWikiRelayListEvent.KIND -> GoodWikiRelayListEvent(id, pubKey, createdAt, tags, content, sig)

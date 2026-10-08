@@ -4,7 +4,7 @@ Every concrete `SearchableEvent` implementor in Quartz, with the exact `indexabl
 expression. **Update this file in the same PR as any change to the searchable set or to an
 `indexableContent()` body** (see SKILL.md). Verified against the code 2026-10-05.
 
-Counts: 191 concrete classes covering 192 kind values (`GitStatusEvent` spans 4 kinds;
+Counts: 192 concrete classes covering 193 kind values (`GitStatusEvent` spans 4 kinds;
 kind 30063 is shared by two NIPs and kind 38000 by three classes — see the footnotes). The kind
 set is exactly `SearchableKinds.ALL` (`nip50Search/SearchableKinds.kt`). File paths are under
 `quartz/src/commonMain/kotlin/com/vitorpamplona/quartz/`.
@@ -53,6 +53,7 @@ Separator legend: **NL** = `joinToString("\n")`, **SP** = `joinToString(" ")`.
 | 1618 | GitPullRequestEvent | nip34Git/pr | `(listOfNotNull(subject(), content) + labels())` NL |
 | 1621 | GitIssueEvent | nip34Git/issue | `(listOfNotNull(subject(), content) + topics())` NL |
 | 1622 | GitReplyEvent | nip34Git/reply | `content` |
+| 1624 | GitCoverNoteEvent | nip34Git/coverNote | `content` (markdown cover note) |
 | 1630–1633 | GitStatusEvent | nip34Git/status | inherited `GitStatusEvent`: `content` (open/applied/closed/draft) |
 | 1808 | AudioHeaderEvent | experimental/audio/header | `content` |
 | 1985 | LabelEvent | nip32Labeling | `(listOf(content) + labels().map { it.label }).filter { it.isNotEmpty() }` NL |

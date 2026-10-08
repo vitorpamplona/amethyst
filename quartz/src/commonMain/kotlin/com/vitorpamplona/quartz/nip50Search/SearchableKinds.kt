@@ -94,6 +94,7 @@ object SearchableKinds {
             1618, // GitPullRequestEvent
             1621, // GitIssueEvent
             1622, // GitReplyEvent
+            1624, // GitCoverNoteEvent
             1630, // GitStatusOpenEvent
             1631, // GitStatusAppliedEvent
             1632, // GitStatusClosedEvent
