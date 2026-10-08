@@ -37,6 +37,7 @@ import com.vitorpamplona.quartz.nip17Dm.messages.ChatMessageEvent
 import io.mockk.every
 import io.mockk.mockk
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertSame
 import org.junit.Assert.assertTrue
@@ -63,11 +64,15 @@ class PinnedChatroomsFeedTest {
 
     // AccountSettings can't be built off-device (it reads the system locale), and the DM filters
     // only read the enabled chat feeds and the pinned rooms off it.
+    private val enabledFeeds = MutableStateFlow(setOf(ChatFeedType.NIP17))
+
     private val settings =
         mockk<AccountSettings>().also {
-            every { it.enabledChatFeeds } returns MutableStateFlow(setOf(ChatFeedType.NIP17))
+            every { it.enabledChatFeeds } returns enabledFeeds
             every { it.syncedSettings.chats } returns AccountChatPreferences(pinnedRooms)
         }
+
+    private val toggles by lazy { ChatFeedToggles(settings, chatroomList, draftRumor = { null }, findCachedNotes = { emptyList() }, reindexDraft = {}) }
 
     private fun user(hex: HexKey) = mockk<User>(relaxed = true).also { every { it.pubkeyHex } returns hex }
 
@@ -77,8 +82,7 @@ class PinnedChatroomsFeedTest {
             every { it.followingKeySet() } returns emptySet()
             every { it.chatroomList } returns chatroomList
             every { it.settings } returns settings
-            every { it.chatFeedToggles } returns
-                ChatFeedToggles(settings, chatroomList, draftRumor = { null }, findCachedNotes = { emptyList() }, reindexDraft = {})
+            every { it.chatFeedToggles } returns toggles
             every { it.isAllHidden(any()) } answers { firstArg<Set<HexKey>>().all { key -> key == hidden } }
         }
 
@@ -164,4 +168,13 @@ class PinnedChatroomsFeedTest {
         assertTrue(ChatroomListNewFeedFilter(account).feed().isEmpty())
         assertEquals(listOf(msg), ChatroomListKnownFeedFilter(account).feed())
     }
+
+    // With NIP-17 off the rooms were emptied on purpose: no "No recent messages loaded" row for them.
+    @Test
+    fun noPlaceholdersWhileNip17IsOff() =
+        runTest {
+            pin(quietRoom)
+            toggles.apply(setOf(ChatFeedType.NIP04))
+            assertTrue("placeholder shown with NIP-17 off", ChatroomListKnownFeedFilter(account).feed().none { it is PinnedChatroomNote })
+        }
 }

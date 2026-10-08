@@ -102,7 +102,10 @@ class ChatroomListKnownFeedFilter(
         // a pinned conversation whose newest message is older than the inbox's download window would
         // otherwise drop off Messages entirely. Keep a placeholder row until a message arrives.
         val pinnedWithoutMessages =
-            if (!isEnabled(ChatFeedType.NIP17) && !isEnabled(ChatFeedType.NIP04)) {
+            // Only while NIP-17 is on: the placeholder stands in for messages its download window missed.
+            // With NIP-17 off the room was emptied on purpose, and "No recent messages loaded" would be
+            // wrong (and its NIP-04 messages, if any, still give it a real row).
+            if (!isEnabled(ChatFeedType.NIP17)) {
                 emptyList()
             } else {
                 pinned.mapNotNull { key ->

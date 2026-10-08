@@ -374,6 +374,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.filter
@@ -1050,6 +1051,7 @@ class Account(
             settings = settings,
             chatroomList = chatroomList,
             draftRumor = { draftsDecryptionCache.preCachedDraft(it) },
+            decryptDraft = { draftsDecryptionCache.cachedDraft(it) },
             findCachedNotes = { predicate -> cache.notes.filter { _, note -> predicate(note) } },
             reindexDraft = { newNotesPreProcessor.consume(it) },
             onDmProtocolOff = { type ->
@@ -1059,6 +1061,7 @@ class Account(
                     if (callManager.state.value is CallState.IncomingCall) callManager.rejectCall() else callManager.hangup()
                 }
             },
+            forgetGiftWraps = { cache.pruner.forgetGiftWraps(it) },
         )
 
     /**
@@ -3118,6 +3121,11 @@ class Account(
 
     override suspend fun sendNip17EncryptedFile(template: EventTemplate<ChatMessageEncryptedFileHeaderEvent>) {
         if (!isWriteable()) return
+        // See sendNip17PrivateMessage: a NIP-17 file sent with NIP-17 off would be dropped on arrival.
+        if (!chatFeedToggles.isEnabled(ChatFeedType.NIP17)) {
+            Log.w("Account") { "Not sending a NIP-17 file: NIP-17 is turned off in Messages settings" }
+            return
+        }
 
         val powDifficulty = powDifficultyFor(GiftWrapEvent.KIND)
         if (powDifficulty != null) {
@@ -3151,6 +3159,14 @@ class Account(
         template: EventTemplate<ChatMessageEvent>,
         onSent: suspend () -> Unit,
     ) {
+        // With NIP-17 off in Messages settings the message would be dropped on arrival (our own copy
+        // included), so it never goes out. The composer already hides itself; this covers every other
+        // way in: a room's subject dialog, an inline reply from a notification posted before the
+        // switch, the desktop chat.
+        if (!chatFeedToggles.isEnabled(ChatFeedType.NIP17)) {
+            Log.w("Account") { "Not sending a NIP-17 message: NIP-17 is turned off in Messages settings" }
+            return
+        }
         val powDifficulty = powDifficultyFor(GiftWrapEvent.KIND)
         if (powDifficulty != null) {
             // See sendNip17EncryptedFile: sign inline, queue only wrap mining.
@@ -4203,10 +4219,12 @@ class Account(
         }
 
         // An invite that parks may be a catch-up a Grant already authorizes, so adopt those as they
-        // land rather than waiting for the next revision tick.
+        // land rather than waiting for the next revision tick, and once Concord is turned back on.
         scope.launch {
-            concord.directInviteInbox.pending
-                .map { it.keys }
+            combine(
+                concord.directInviteInbox.pending.map { it.keys },
+                chatFeedToggles.applied.map { ChatFeedType.CONCORD in it },
+            ) { keys, on -> keys to on }
                 .distinctUntilChanged()
                 .collect {
                     runCatching { concord.drainConcordCatchUps() }.onFailure { Log.w("Concord", "catch-up drain failed", it) }

@@ -1079,6 +1079,9 @@ class AccountConcordActions(
 
     private suspend fun drainConcordCatchUpsLocked() {
         if (!account.isWriteable()) return
+        // Invites still park while Concord is off (the NIP-17 inbox delivers them, and dropping one would
+        // lose it for good), but nothing is adopted until it is back on.
+        if (!account.chatFeedToggles.isEnabled(ChatFeedType.CONCORD)) return
         val me = account.signer.pubKey
         val now = TimeUtils.nowMillis()
         for (opened in directInviteInbox.pending.value.values) {

@@ -144,10 +144,16 @@ class ChatroomList(
     /**
      * Drops every message matching [predicate] from every room (e.g. all of a DM protocol the user
      * turned off), then re-derives whether the owner still has a message in each room it touched, so a
-     * room is not kept in Known on the strength of messages that are gone.
+     * room is not kept in Known on the strength of messages that are gone. Returns the dropped notes.
      */
-    fun removeMessagesIf(predicate: (Note) -> Boolean) {
-        rooms.forEach { _, room -> refreshOwnerSent(room, room.removeMessagesIf(predicate)) }
+    fun removeMessagesIf(predicate: (Note) -> Boolean): Set<Note> {
+        val removed = mutableSetOf<Note>()
+        rooms.forEach { _, room ->
+            val fromRoom = room.removeMessagesIf(predicate)
+            refreshOwnerSent(room, fromRoom)
+            removed.addAll(fromRoom)
+        }
+        return removed
     }
 
     /** Forgets the NIP-04 paging progress of the rooms list and of every conversation. */

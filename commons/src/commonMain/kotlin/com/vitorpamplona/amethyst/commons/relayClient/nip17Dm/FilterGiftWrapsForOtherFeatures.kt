@@ -33,7 +33,7 @@ enum class GiftWrapInbox {
     /** Every wrap to us, kinds 1059 + 21059: NIP-17 DMs, NIP-AC calls, Marmot Welcomes, Concord invites. */
     EVERYTHING,
 
-    /** Kind-1059 wraps to us, for Marmot Welcomes (NIP-17 DMs among them are dropped after unwrapping). */
+    /** Kind-1059 wraps to us, for Marmot Welcomes (NIP-17 DMs among them are unwrapped but kept out of rooms). */
     MARMOT_WELCOMES,
 
     /** Only the `k=3313` Concord Direct Invite wraps. */
@@ -62,8 +62,10 @@ enum class GiftWrapInbox {
 /**
  * Marmot Welcomes (MIP-02) for an account that has the NIP-17 inbox turned off: kind-1059 wraps to
  * [pubkey], without the kind-21059 ephemeral wraps (calls) the NIP-17 filter adds. A Welcome wrap
- * carries no tag that says what it holds, so this still downloads the NIP-17 DMs addressed to us;
- * they are dropped after unwrapping, before they reach a room.
+ * carries no tag that says what it holds, so this still downloads the NIP-17 DMs addressed to us and
+ * unwraps them (two decryptions each) into the cache, like with NIP-17 on; only the rooms and
+ * notifications skip them. That is the cost of reading Welcomes; it also lets turning NIP-17 back on
+ * re-index them without a new download.
  */
 fun filterMarmotWelcomesToPubkey(
     relay: NormalizedRelayUrl,

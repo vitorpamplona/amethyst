@@ -23,6 +23,8 @@ package com.vitorpamplona.amethyst.commons.relayClient.eoseManagers
 import com.vitorpamplona.amethyst.commons.model.Account
 import com.vitorpamplona.amethyst.commons.model.IAccount
 import com.vitorpamplona.amethyst.commons.model.chats.ChatFeedType
+import com.vitorpamplona.amethyst.commons.util.KmpLock
+import com.vitorpamplona.amethyst.commons.util.withLock
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.IO
 import kotlinx.coroutines.Job
@@ -33,15 +35,19 @@ import kotlinx.coroutines.launch
 
 /**
  * Per-subscription watchers for a subscription manager whose filters read some Settings › Messages
- * toggles ([types]): while a subscription is open, a flip of any of them — as published by the account's
- * [com.vitorpamplona.amethyst.commons.model.chats.ChatFeedToggles.applied], i.e. once the rooms have
- * caught up — calls [onToggle]. [BaseEoseManager] owns one, so a manager only declares which toggles it
- * reads (`watchedChatFeeds`) and the base classes start and stop the watchers with each subscription.
+ * toggles ([types]): while a subscription is open, every flip of any of them — as counted by the account's
+ * [com.vitorpamplona.amethyst.commons.model.chats.ChatFeedToggles.flips], i.e. once the rooms have
+ * caught up — calls [onToggle], including an off-and-on too quick for the enabled set to show.
+ * [BaseEoseManager] owns one, so a manager only declares which toggles it reads (`watchedChatFeeds`)
+ * and the base classes start and stop the watchers with each subscription.
  */
 class ChatFeedWatchers(
     private val types: Set<ChatFeedType>,
     private val onToggle: () -> Unit,
 ) {
+    // Filters are rebuilt from whichever thread invalidated them, so two builds of one subscription can
+    // race here; unguarded, both would launch a watcher and the loser would never be cancelled.
+    private val lock = KmpLock()
     private val jobs = mutableMapOf<Any, Job>()
 
     /**
@@ -53,22 +59,27 @@ class ChatFeedWatchers(
         subKey: Any,
         account: IAccount,
     ) {
-        if (types.isEmpty() || jobs[subKey]?.isActive == true) return
+        if (types.isEmpty()) return
         // Only a full Account has toggles; other IAccount implementations (the legacy desktop one) don't.
         val owner = account as? Account ?: return
         val toggles = owner.chatFeedToggles
-        val baseline = toggles.applied.value intersect types
-        jobs[subKey] =
-            owner.scope.launch(Dispatchers.IO) {
-                toggles.applied
-                    .map { it intersect types }
-                    .distinctUntilChanged()
-                    .dropWhile { it == baseline }
-                    .collect { onToggle() }
-            }
+        lock.withLock {
+            if (jobs[subKey]?.isActive == true) return
+            // Flip counts, not the enabled set: an off-and-on that conflates to the same set still reset
+            // the cursors this subscription pages with (see ChatFeedToggles.flips).
+            val baseline = toggles.flips.value.filterKeys { it in types }
+            jobs[subKey] =
+                owner.scope.launch(Dispatchers.IO) {
+                    toggles.flips
+                        .map { counts -> counts.filterKeys { it in types } }
+                        .distinctUntilChanged()
+                        .dropWhile { it == baseline }
+                        .collect { onToggle() }
+                }
+        }
     }
 
     fun stop(subKey: Any) {
-        jobs.remove(subKey)?.cancel()
+        lock.withLock { jobs.remove(subKey) }?.cancel()
     }
 }

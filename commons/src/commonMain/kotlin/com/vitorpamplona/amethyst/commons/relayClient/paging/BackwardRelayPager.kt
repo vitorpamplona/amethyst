@@ -174,8 +174,9 @@ class BackwardRelayPager(
     /**
      * Re-reads the bound scope's `isEnabled` gate after it flipped. Turning it off also drops the
      * in-flight and stalled tracking: the owner's REQ goes away with the gate, so those pages will never
-     * settle and would otherwise leave the spinner up until the silence watchdog fires. The cursors are
-     * kept, so turning it back on resumes where paging stopped.
+     * settle and would otherwise leave the spinner up until the silence watchdog fires. The pager itself
+     * keeps the cursors; turning a DM protocol off also unloads its messages, and ChatFeedToggles resets
+     * the cursors then, so turning it back on pages again from the newest.
      */
     fun onEnabledChanged() {
         if (!isEnabled()) {
