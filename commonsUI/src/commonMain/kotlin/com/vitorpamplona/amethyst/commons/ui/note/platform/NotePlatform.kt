@@ -237,6 +237,19 @@ interface NotePlatform {
         nav: INav,
     ) {}
 
+    /**
+     * A playable audio clip that belongs to no [Note], such as a voice message in an MLS group
+     * whose messages never enter the cache: [mediaUrl] plays with [waveform]'s bars when given.
+     */
+    @Composable
+    fun RenderAudioPlayer(
+        mediaUrl: String,
+        title: String?,
+        mimeType: String?,
+        waveform: WaveformData?,
+        accountViewModel: AccountViewModel,
+    ) {}
+
     // Chess
 
     @Composable

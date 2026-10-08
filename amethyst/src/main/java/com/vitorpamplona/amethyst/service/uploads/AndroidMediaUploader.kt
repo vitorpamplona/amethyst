@@ -711,6 +711,15 @@ class AndroidMediaUploader(
             Log.w("AndroidMediaUploader", "Failed to delete temp file", e)
         }
     }
+
+    override fun mimeType(uri: MediaUri): String? = appContext.contentResolver.getType(uri)
+
+    override suspend fun stripMetadata(
+        uri: MediaUri,
+        mimeType: String?,
+    ): MediaUri = withContext(Dispatchers.IO) { MetadataStripper.strip(uri, mimeType, appContext).uri }
+
+    override suspend fun readBytes(uri: MediaUri): ByteArray? = withContext(Dispatchers.IO) { appContext.contentResolver.openInputStream(uri)?.use { it.readBytes() } }
 }
 
 /** Lifetime of a Buzz workspace upload token; Buzz rejects one that outlives 60s from signing. */

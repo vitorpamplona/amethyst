@@ -66,7 +66,6 @@ import com.vitorpamplona.amethyst.ui.note.UpdateReactionTypeScreen
 import com.vitorpamplona.amethyst.ui.note.share.ShareNoteAsImageFileScreen
 import com.vitorpamplona.amethyst.ui.note.share.ShareNoteAsImageScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.browser.WebAppScreen
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.cordnGroup.CordnGroupChatScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.favorites.NostrAppScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.napplets.ConnectedAppDetailScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.qrcode.ScanQrImageScreen
@@ -113,9 +112,6 @@ internal fun NavDestinations.androidDestinations(
     composableFromEndArgs<Route.UpdateReactionType> { UpdateReactionTypeScreen(accountViewModel, nav) }
     composableFromEndArgs<Route.ShareNoteAsImage> { ShareNoteAsImageScreen(it.id, accountViewModel, nav) }
     composableFromEndArgs<Route.ShareNoteAsImageFile> { ShareNoteAsImageFileScreen(it.id, accountViewModel, nav) }
-    composableFromEndArgs<Route.CordnGroupChat> {
-        CordnGroupChatScreen(it.coordinatorPubKey, it.gid, accountViewModel, nav)
-    }
 }
 
 /** True for both share flavors: a single file/text (SEND) and a multi-file selection (SEND_MULTIPLE). */

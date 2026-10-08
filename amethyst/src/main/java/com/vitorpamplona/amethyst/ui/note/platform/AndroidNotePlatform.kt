@@ -38,6 +38,7 @@ import com.vitorpamplona.amethyst.commons.ui.note.platform.NotePlatform
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.amethyst.service.playback.composable.VideoViewInner
 import com.vitorpamplona.amethyst.ui.note.creators.location.DEFAULT_MAP_ZOOM
+import com.vitorpamplona.amethyst.ui.note.types.RenderAudioWaveformPlayer
 import com.vitorpamplona.quartz.nip94FileMetadata.tags.DimensionTag
 import com.vitorpamplona.quartz.nipA0VoiceMessages.AudioMeta
 import com.vitorpamplona.quartz.podcasts.PodcastAudio
@@ -300,6 +301,23 @@ object AndroidNotePlatform : NotePlatform {
         note = note,
         accountViewModel = accountViewModel,
         nav = nav,
+    )
+
+    @Composable
+    override fun RenderAudioPlayer(
+        mediaUrl: String,
+        title: String?,
+        mimeType: String?,
+        waveform: WaveformData?,
+        accountViewModel: AccountViewModel,
+    ) = RenderAudioWaveformPlayer(
+        mediaUrl = mediaUrl,
+        title = title,
+        mimeType = mimeType,
+        waveform = waveform,
+        authorName = null,
+        callbackUri = null,
+        accountViewModel = accountViewModel,
     )
 
     @Composable

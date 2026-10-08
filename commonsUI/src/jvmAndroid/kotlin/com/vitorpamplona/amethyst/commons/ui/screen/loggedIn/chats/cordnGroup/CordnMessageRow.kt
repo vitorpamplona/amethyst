@@ -18,10 +18,8 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.cordnGroup
+package com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.cordnGroup
 
-import android.content.Intent
-import android.widget.Toast
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -50,7 +48,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalClipboard
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -91,6 +88,8 @@ import com.vitorpamplona.amethyst.commons.resources.quick_action_share
 import com.vitorpamplona.amethyst.commons.resources.today
 import com.vitorpamplona.amethyst.commons.ui.components.ClickableBox
 import com.vitorpamplona.amethyst.commons.ui.components.TranslatableRichTextViewer
+import com.vitorpamplona.amethyst.commons.ui.components.rememberShortNotice
+import com.vitorpamplona.amethyst.commons.ui.components.rememberTextSharer
 import com.vitorpamplona.amethyst.commons.ui.components.util.setText
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.note.QuickActionAlertDialog
@@ -151,7 +150,7 @@ import kotlin.math.abs
  * instead, and the layout above them is the same one every other chat uses.
  */
 @Composable
-internal fun CordnMessageRow(
+fun CordnMessageRow(
     message: CordnDeliveredMessage,
     room: CordnGroupChatroom,
     annotations: CordnAnnotationIndex,
@@ -519,7 +518,7 @@ private fun CordnReactionDetailSheet(
  * received bubble instead of being tinted against the screen background.
  */
 @Composable
-internal fun CordnQuotedMessage(
+fun CordnQuotedMessage(
     parent: CordnDeliveredMessage,
     annotations: CordnAnnotationIndex,
     me: HexKey,
@@ -606,7 +605,7 @@ private fun CordnQuoteActionSheet(
  * divider read from the live cursor would vanish the moment it became useful.
  */
 @Composable
-internal fun UnreadDivider() {
+fun UnreadDivider() {
     ChatDivisor(stringRes(Res.string.cordn_chat_unread_divider), MaterialTheme.colorScheme.primary)
 }
 
@@ -761,7 +760,7 @@ private fun CopyTextTile(
     text: String,
     onDismiss: () -> Unit,
 ) {
-    val context = LocalContext.current
+    val shortNotice = rememberShortNotice()
     val clipboard = LocalClipboard.current
     val scope = rememberCoroutineScope()
     val copied = stringRes(Res.string.copied_to_clipboard)
@@ -769,7 +768,7 @@ private fun CopyTextTile(
     ActionTile(MaterialSymbols.ContentCopy, stringRes(Res.string.copy_text)) {
         scope.launch {
             clipboard.setText(text)
-            Toast.makeText(context, copied, Toast.LENGTH_SHORT).show()
+            shortNotice.show(copied)
         }
         onDismiss()
     }
@@ -923,15 +922,11 @@ private fun ShareTextTile(
     text: String,
     onDismiss: () -> Unit,
 ) {
-    val context = LocalContext.current
+    val sharer = rememberTextSharer()
+    val shareLabel = stringRes(Res.string.quick_action_share)
 
-    ActionTile(MaterialSymbols.Share, stringRes(Res.string.quick_action_share)) {
-        val send =
-            Intent(Intent.ACTION_SEND).apply {
-                type = "text/plain"
-                putExtra(Intent.EXTRA_TEXT, text)
-            }
-        context.startActivity(Intent.createChooser(send, null))
+    ActionTile(MaterialSymbols.Share, shareLabel) {
+        sharer.share(text, title = null, chooserTitle = shareLabel)
         onDismiss()
     }
 }
@@ -943,7 +938,7 @@ private fun ShareTextTile(
  *
  * The feed is reverse-laid-out: [newer] is the message rendered below, [older] above.
  */
-internal fun cordnGroupPositionFor(
+fun cordnGroupPositionFor(
     newer: CordnDeliveredMessage?,
     message: CordnDeliveredMessage,
     older: CordnDeliveredMessage?,
@@ -979,7 +974,7 @@ private fun groupsWith(
 }
 
 /** Whether both fall on the same local calendar day. A null [older] is a new day. */
-internal fun CordnDeliveredMessage.sameDayAs(older: CordnDeliveredMessage?): Boolean {
+fun CordnDeliveredMessage.sameDayAs(older: CordnDeliveredMessage?): Boolean {
     if (older == null) return false
     return localDayOf(envelope.createdAt) == localDayOf(older.envelope.createdAt)
 }
@@ -993,7 +988,7 @@ private fun localDayOf(epochSeconds: Long): LocalDate = Instant.ofEpochSecond(ep
  * morning" sit flush against each other.
  */
 @Composable
-internal fun DaySeparator(
+fun DaySeparator(
     createdAt: Long,
     today: LocalDate,
 ) {
@@ -1034,7 +1029,7 @@ private const val TODAY_POLL_MS = 60_000L
  * costs no recomposition.
  */
 @Composable
-internal fun rememberToday(): LocalDate {
+fun rememberToday(): LocalDate {
     val zone = remember { ZoneId.systemDefault() }
     return produceState(LocalDate.now(zone), zone) {
         while (true) {

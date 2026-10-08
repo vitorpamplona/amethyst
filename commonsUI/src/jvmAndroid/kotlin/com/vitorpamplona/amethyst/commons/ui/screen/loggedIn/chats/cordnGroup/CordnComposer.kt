@@ -18,9 +18,8 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.cordnGroup
+package com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.cordnGroup
 
-import android.net.Uri
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -50,12 +49,14 @@ import com.vitorpamplona.amethyst.commons.model.nip30CustomEmojis.EmojiSuggestio
 import com.vitorpamplona.amethyst.commons.nip30CustomEmojis.ui.ShowEmojiSuggestionList
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.cordn_composer_hint
+import com.vitorpamplona.amethyst.commons.service.uploads.MediaUri
 import com.vitorpamplona.amethyst.commons.ui.actions.UrlUserTagOutputTransformation
 import com.vitorpamplona.amethyst.commons.ui.actions.uploads.SelectFromGallery
 import com.vitorpamplona.amethyst.commons.ui.components.ThinPaddingTextField
 import com.vitorpamplona.amethyst.commons.ui.note.creators.emojiSuggestions.WatchAndLoadMyEmojiList
 import com.vitorpamplona.amethyst.commons.ui.note.creators.userSuggestions.ShowUserSuggestionList
 import com.vitorpamplona.amethyst.commons.ui.note.creators.userSuggestions.UserSuggestionState
+import com.vitorpamplona.amethyst.commons.ui.note.platform.VoiceMessagePreview
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.text.MentionPreservingInputTransformation
 import com.vitorpamplona.amethyst.commons.ui.text.currentWord
@@ -66,7 +67,6 @@ import com.vitorpamplona.amethyst.commons.ui.theme.EditFieldTrailingIconModifier
 import com.vitorpamplona.amethyst.commons.ui.theme.SuggestionListDefaultHeightChat
 import com.vitorpamplona.amethyst.commons.ui.theme.placeholderText
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
-import com.vitorpamplona.amethyst.ui.actions.uploads.VoiceMessagePreview
 import com.vitorpamplona.quartz.nipA0VoiceMessages.AudioMeta
 
 /**
@@ -88,12 +88,12 @@ import com.vitorpamplona.quartz.nipA0VoiceMessages.AudioMeta
  * no part of this conversation into it.
  */
 @Composable
-internal fun CordnComposer(
+fun CordnComposer(
     room: CordnGroupChatroom,
     attaching: Boolean,
     pendingVoice: RecordingResult?,
     accountViewModel: AccountViewModel,
-    onAttach: (Uri) -> Unit,
+    onAttach: (MediaUri, String?) -> Unit,
     onVoiceNote: (RecordingResult) -> Unit,
     onRemoveVoice: () -> Unit,
     onSend: (String) -> Unit,
@@ -227,7 +227,7 @@ internal fun CordnComposer(
             },
             // Anything the keyboard or a paste hands over as content — a GIF, a shared
             // image — takes the same encrypted-upload path as the file picker.
-            onContentReceived = { uri, _ -> onAttach(uri) },
+            onContentReceived = { uri, mimeType -> onAttach(uri, mimeType) },
             inputTransformation = MentionPreservingInputTransformation,
             outputTransformation = UrlUserTagOutputTransformation(MaterialTheme.colorScheme.primary),
             modifier = Modifier.fillMaxWidth(),
@@ -258,7 +258,7 @@ internal fun CordnComposer(
                         enabled = !attaching,
                         tint = MaterialTheme.colorScheme.placeholderText,
                         modifier = Modifier,
-                        onImageChosen = { picked -> picked.forEach { onAttach(it.uri) } },
+                        onImageChosen = { picked -> picked.forEach { onAttach(it.uri, it.mimeType) } },
                     )
                     VoiceNoteButton(enabled = !attaching, onRecorded = onVoiceNote)
                 }

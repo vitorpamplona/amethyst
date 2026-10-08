@@ -236,6 +236,15 @@ object DesktopNotePlatform : NotePlatform {
     }
 
     @Composable
+    override fun RenderAudioPlayer(
+        mediaUrl: String,
+        title: String?,
+        mimeType: String?,
+        waveform: WaveformData?,
+        accountViewModel: AccountViewModel,
+    ) = AudioPlayer(url = mediaUrl, modifier = Modifier.fillMaxWidth())
+
+    @Composable
     override fun RenderAudioWithWaveform(
         mediaUrl: String,
         title: String?,

@@ -29,9 +29,11 @@ import com.vitorpamplona.amethyst.commons.service.http.IRoleBasedHttpClientBuild
 import com.vitorpamplona.amethyst.commons.service.http.RoleBasedHttpClientBuilder
 import com.vitorpamplona.amethyst.commons.service.image.BlurhashWrapper
 import com.vitorpamplona.amethyst.commons.service.image.ThumbhashWrapper
+import com.vitorpamplona.amethyst.commons.service.upload.AmethystTempDir
 import com.vitorpamplona.amethyst.commons.service.upload.BlossomClient
 import com.vitorpamplona.amethyst.commons.service.upload.CompressionQuality
 import com.vitorpamplona.amethyst.commons.service.upload.FileHeader
+import com.vitorpamplona.amethyst.commons.service.upload.MediaCompressor
 import com.vitorpamplona.amethyst.commons.service.upload.MediaMetadata
 import com.vitorpamplona.amethyst.commons.service.uploads.CompressorQuality
 import com.vitorpamplona.amethyst.commons.service.uploads.ImageDownloader
@@ -39,6 +41,7 @@ import com.vitorpamplona.amethyst.commons.service.uploads.MediaCompressorResult
 import com.vitorpamplona.amethyst.commons.service.uploads.MediaUploadResult
 import com.vitorpamplona.amethyst.commons.service.uploads.MediaUploader
 import com.vitorpamplona.amethyst.commons.service.uploads.MediaUri
+import com.vitorpamplona.amethyst.commons.service.uploads.StringMediaUri
 import com.vitorpamplona.amethyst.commons.service.uploads.UploadError
 import com.vitorpamplona.amethyst.commons.service.uploads.UploadOrchestrator
 import com.vitorpamplona.amethyst.commons.service.uploads.UploadingState
@@ -54,8 +57,11 @@ import com.vitorpamplona.quartz.utils.ciphers.AESGCM
 import com.vitorpamplona.quartz.utils.ciphers.NostrCipher
 import com.vitorpamplona.quartz.utils.sha256.sha256
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import java.io.File
 import java.net.URI
+import java.nio.file.Files
 import com.vitorpamplona.amethyst.commons.service.upload.UploadOrchestrator as BlossomUploadPipeline
 
 /**
@@ -351,6 +357,29 @@ class DesktopMediaUploader(
         url: String,
         httpClients: IRoleBasedHttpClientBuilder,
     ): FileHeader? = null
+
+    override fun displayName(uri: MediaUri): String? = fileOf(uri).name
+
+    override fun mimeType(uri: MediaUri): String? = runCatching { Files.probeContentType(fileOf(uri).toPath()) }.getOrNull()
+
+    // The JVM pipeline's EXIF strip: JPEGs lose their tags, other formats come back as they were.
+    override suspend fun stripMetadata(
+        uri: MediaUri,
+        mimeType: String?,
+    ): MediaUri {
+        val source = fileOf(uri)
+        val stripped = withContext(Dispatchers.IO) { MediaCompressor.stripExif(source) }
+        return if (stripped == source) uri else StringMediaUri(stripped.absolutePath)
+    }
+
+    override suspend fun readBytes(uri: MediaUri): ByteArray? = withContext(Dispatchers.IO) { fileOf(uri).takeIf { it.isFile }?.readBytes() }
+
+    // Only what the pipeline wrote into its own temp directory: a caller that passes the user's
+    // file by mistake must not delete it.
+    override fun discardTempFile(uri: MediaUri) {
+        val file = fileOf(uri).canonicalFile
+        if (file.isFile && file.startsWith(AmethystTempDir.rootDir().canonicalFile)) file.delete()
+    }
 
     private companion object {
         // What Android allows in a NIP-95 event: larger files make relay events too heavy.

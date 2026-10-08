@@ -22,6 +22,7 @@ package com.vitorpamplona.amethyst.commons.ui.navigation.host
 
 import com.vitorpamplona.amethyst.commons.model.navigation.Route
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.cordnGroup.CordnGroupChatScreen
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.gitRepo.GitNewIssueScreen
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.gitRepo.GitRepositoryCodeScreen
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.gitRepo.GitRepositoryIssuesScreen
@@ -31,7 +32,8 @@ import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.quartz.nip01Core.core.Address
 
 /**
- * The shared screens that need the JVM (the git repository browser clones over HTTP with OkHttp).
+ * The shared screens that need the JVM: the git repository browser (it clones over HTTP with
+ * OkHttp) and the cordn group chat (its attachments go through the JVM Blossom client).
  * Android and Desktop both register these next to [sharedDestinations]; iOS has no git browser yet.
  */
 fun NavDestinations.jvmDestinations(
@@ -42,5 +44,8 @@ fun NavDestinations.jvmDestinations(
     composableFromEndArgs<Route.GitRepositoryCode> { GitRepositoryCodeScreen(Address(it.kind, it.pubKeyHex, it.dTag), accountViewModel, nav) }
     composableFromEndArgs<Route.GitRepositoryIssues> { GitRepositoryIssuesScreen(Address(it.kind, it.pubKeyHex, it.dTag), accountViewModel, nav) }
     composableFromEndArgs<Route.GitRepositoryPulls> { GitRepositoryPullsScreen(Address(it.kind, it.pubKeyHex, it.dTag), accountViewModel, nav) }
+    composableFromEndArgs<Route.CordnGroupChat> {
+        CordnGroupChatScreen(it.coordinatorPubKey, it.gid, accountViewModel, nav)
+    }
     composableFromEndArgs<Route.GitRepositoryNewIssue> { GitNewIssueScreen(Address(it.kind, it.pubKeyHex, it.dTag), accountViewModel, nav) }
 }

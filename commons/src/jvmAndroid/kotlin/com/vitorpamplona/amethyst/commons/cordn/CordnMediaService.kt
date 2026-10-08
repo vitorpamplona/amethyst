@@ -18,12 +18,11 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.model.cordn
+package com.vitorpamplona.amethyst.commons.cordn
 
-import android.content.Context
-import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.commons.model.Account
-import com.vitorpamplona.amethyst.service.uploads.blossom.BlossomUploader
+import com.vitorpamplona.amethyst.commons.service.http.IRoleBasedHttpClientBuilder
+import com.vitorpamplona.amethyst.commons.service.upload.BlossomClient
 import com.vitorpamplona.quartz.cordn.appEncryptedMedia.CordnBlobUpload
 import com.vitorpamplona.quartz.cordn.appEncryptedMedia.CordnEncryptedMedia
 import com.vitorpamplona.quartz.cordn.appEncryptedMedia.CordnMediaAttachment
@@ -33,7 +32,6 @@ import com.vitorpamplona.quartz.mls.group.MlsGroup
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import okhttp3.Request
-import java.io.ByteArrayInputStream
 
 /**
  * Sending and fetching cordn attachments.
@@ -70,6 +68,7 @@ import java.io.ByteArrayInputStream
  */
 class CordnMediaService(
     private val account: Account,
+    private val httpClients: IRoleBasedHttpClientBuilder,
 ) {
     /**
      * Encrypts [bytes] under a fresh per-file key and uploads the ciphertext.
@@ -83,7 +82,6 @@ class CordnMediaService(
         bytes: ByteArray,
         mimeType: String,
         filename: String,
-        context: Context,
         /** The host to put it on. Defaults to the account's, which is what the
          *  upload dialog's server spinner starts on. */
         serverBaseUrl: String = account.settings.defaultFileServer.baseUrl,
@@ -110,7 +108,7 @@ class CordnMediaService(
             val sealed = CordnMediaEncryption.encrypt(bytes, fileKey, mimeType, filename)
             CordnMediaTag.build(
                 media = sealed,
-                url = put(sealed, server, context),
+                url = put(sealed, server),
                 dimensions = dimensions,
                 blurhash = blurhash,
                 alt = alt,
@@ -128,25 +126,17 @@ class CordnMediaService(
     private suspend fun put(
         sealed: CordnEncryptedMedia,
         server: String,
-        context: Context,
     ): String {
         val blob = CordnBlobUpload.of(sealed)
+        // BlossomClient.upload is the BUD-02 `/upload` endpoint, never `/media`.
+        check(!blob.useMediaEndpoint) { "cordn blobs are ciphertext and must never be re-encoded" }
 
+        // The auth event is public too, so it names the blob by its hash, as the app's uploader
+        // always has: "Uploading <hash>".
+        val auth = account.createBlossomUploadAuth(blob.hash, blob.length, "Uploading ${blob.baseFileName}").toAuthorizationHeader()
         val result =
-            BlossomUploader().upload(
-                inputStream = ByteArrayInputStream(blob.bytes),
-                hash = blob.hash,
-                length = blob.length,
-                baseFileName = blob.baseFileName,
-                contentType = blob.contentType,
-                alt = blob.alt,
-                sensitiveContent = blob.sensitiveContent,
-                serverBaseUrl = server,
-                okHttpClient = Amethyst.instance.roleBasedHttpClientBuilder::okHttpClientForUploads,
-                httpAuth = { hash, size, alt -> account.createBlossomUploadAuth(hash, size, alt) },
-                context = context,
-                useMediaEndpoint = blob.useMediaEndpoint,
-            )
+            BlossomClient(httpClients.okHttpClientForUploads(server))
+                .upload(bytes = blob.bytes, contentType = blob.contentType, serverBaseUrl = server, authHeader = auth)
 
         return result.url ?: throw IllegalStateException("the blob server returned no URL")
     }
@@ -171,7 +161,7 @@ class CordnMediaService(
                     .get()
                     .build()
             val response =
-                Amethyst.instance.roleBasedHttpClientBuilder
+                httpClients
                     .okHttpClientForImage(attachment.url)
                     .newCall(request)
                     .execute()
