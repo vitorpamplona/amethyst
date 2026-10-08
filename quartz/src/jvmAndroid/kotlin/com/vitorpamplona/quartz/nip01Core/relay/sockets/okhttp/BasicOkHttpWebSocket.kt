@@ -68,10 +68,19 @@ class BasicOkHttpWebSocket(
      */
     private val ended = AtomicBoolean(false)
 
-    override fun needsReconnect() = socket == null
+    /**
+     * True from the start of [connect] until OkHttp hands back its socket. A dial in flight is not
+     * a dead session: reporting it as one let a concurrent reconnect pass tear it down and dial
+     * again, and the first dial, never ended, opened as well. Measured with amy under load: two
+     * connections to one relay, the REQ sent twice and every message of the page delivered twice.
+     */
+    @Volatile private var dialing = false
+
+    override fun needsReconnect() = ended.get() || (socket == null && !dialing)
 
     override fun connect() {
-        if (socket != null || ended.get()) return
+        if (socket != null || dialing || ended.get()) return
+        dialing = true
 
         val request = Request.Builder().url(url.url).build()
 
@@ -168,15 +177,30 @@ class BasicOkHttpWebSocket(
                 }
             }
 
-        socket = httpClient(url).newWebSocket(request, listener)
+        try {
+            val dialed = httpClient(url).newWebSocket(request, listener)
+            socket = dialed
+            // A disconnect() that landed while dialing ended the session but had no socket to
+            // cancel yet: cancel it now, or it opens and lives on beside the relay client's next one.
+            if (ended.get()) {
+                socket = null
+                dialed.cancel()
+            }
+        } finally {
+            dialing = false
+        }
     }
 
     override fun disconnect() {
         // Claim the session ourselves: OkHttp's cancel() raises no callback when no reader is
         // left to fail (the state a relay-initiated close leaves behind), and when it does the
         // failure arrives later on its own thread. The relay client needs the answer now.
-        val closing = socket ?: return
+        //
+        // Claimed even with no socket yet: a dial still in flight must not open after this
+        // (connect() cancels it once OkHttp returns it), and its callbacks must find the session
+        // ended. Nothing was open, so there is nothing to report.
         if (!ended.compareAndSet(false, true)) return
+        val closing = socket ?: return
         socket = null
         closing.cancel()
         out.onClosed(1000, "client disconnect")
