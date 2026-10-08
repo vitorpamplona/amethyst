@@ -64,6 +64,7 @@ import androidx.compose.material3.Slider
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -106,6 +107,7 @@ import com.vitorpamplona.amethyst.commons.resources.wot_copy_done
 import com.vitorpamplona.amethyst.commons.resources.wot_copy_explainer
 import com.vitorpamplona.amethyst.commons.resources.wot_copy_field
 import com.vitorpamplona.amethyst.commons.resources.wot_copy_house
+import com.vitorpamplona.amethyst.commons.resources.wot_copy_loading
 import com.vitorpamplona.amethyst.commons.resources.wot_copy_no_list
 import com.vitorpamplona.amethyst.commons.resources.wot_copy_no_rank
 import com.vitorpamplona.amethyst.commons.resources.wot_copy_unknown_user
@@ -174,6 +176,8 @@ import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.navigation.topbars.TopBarWithBackButton
 import com.vitorpamplona.amethyst.commons.ui.note.LoadUser
 import com.vitorpamplona.amethyst.commons.ui.note.UserPicture
+import com.vitorpamplona.amethyst.commons.ui.note.creators.userSuggestions.ShowUserSuggestionList
+import com.vitorpamplona.amethyst.commons.ui.note.creators.userSuggestions.UserSuggestionState
 import com.vitorpamplona.amethyst.commons.ui.note.timeAgoNoDot
 import com.vitorpamplona.amethyst.commons.ui.platform.AppLauncher
 import com.vitorpamplona.amethyst.commons.ui.platform.rememberAppLauncher
@@ -184,6 +188,7 @@ import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.settings.SettingsCo
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.settings.SettingsDivider
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.settings.SettingsSection
 import com.vitorpamplona.amethyst.commons.ui.stringRes
+import com.vitorpamplona.amethyst.commons.ui.theme.SuggestionListDefaultHeightPage
 import com.vitorpamplona.amethyst.commons.ui.theme.placeholderText
 import com.vitorpamplona.amethyst.commons.util.formatGrouped
 import com.vitorpamplona.amethyst.commons.util.toShortDisplay
@@ -315,7 +320,61 @@ fun WebOfTrustScreen(
                 actions = actions,
                 providerAvatar = { UserPicture(it.pubkey, 40.dp, accountViewModel = accountViewModel, nav = nav) },
                 relayPicker = { onPicked -> RelayUrlEditField(onNewRelay = onPicked, modifier = Modifier.fillMaxWidth(), accountViewModel = accountViewModel, nav = nav) },
+                userPicker = { onPicked -> CopyFromUserField(accountViewModel, onPicked) },
                 modifier = Modifier.padding(padding),
+            )
+        }
+    }
+}
+
+/**
+ * Whose view to copy: the app's user search (names, NIP-05, npubs) as the user types, or what was
+ * typed as is (an npub, hex key or NIP-05) with the go button.
+ */
+@Composable
+private fun CopyFromUserField(
+    accountViewModel: AccountViewModel,
+    onPicked: (String) -> Unit,
+) {
+    var text by remember { mutableStateOf("") }
+    val suggestions = remember(accountViewModel) { UserSuggestionState(accountViewModel.account, accountViewModel.nip05ClientBuilder()) }
+    DisposableEffect(suggestions) { onDispose { suggestions.reset() } }
+
+    fun submit() {
+        if (text.isNotBlank()) {
+            onPicked(text.trim())
+            suggestions.reset()
+        }
+    }
+
+    Column {
+        OutlinedTextField(
+            value = text,
+            onValueChange = {
+                text = it
+                if (it.length > 2) suggestions.processCurrentWord(it) else suggestions.reset()
+            },
+            label = { Text(stringRes(Res.string.wot_copy_field)) },
+            singleLine = true,
+            keyboardOptions = KeyboardOptions(imeAction = ImeAction.Go, autoCorrectEnabled = false),
+            keyboardActions = KeyboardActions(onGo = { submit() }),
+            trailingIcon = {
+                IconButton(onClick = ::submit, enabled = text.isNotBlank()) {
+                    Icon(symbol = MaterialSymbols.AutoMirrored.ArrowForward, contentDescription = stringRes(Res.string.wot_copy_action))
+                }
+            },
+            modifier = Modifier.fillMaxWidth(),
+        )
+        if (text.length > 2) {
+            ShowUserSuggestionList(
+                userSuggestions = suggestions,
+                onSelect = { user ->
+                    text = ""
+                    suggestions.reset()
+                    onPicked(user.pubkeyHex)
+                },
+                accountViewModel = accountViewModel,
+                modifier = SuggestionListDefaultHeightPage,
             )
         }
     }
@@ -393,6 +452,8 @@ fun WebOfTrustContent(
     providerAvatar: @Composable (ServiceProviderTag) -> Unit,
     /** The relay field of a hand-written row: the app's relay entry, with its suggestions. */
     relayPicker: @Composable (onPicked: (NormalizedRelayUrl) -> Unit) -> Unit,
+    /** Whose view to copy: the app's user search; hands over a pubkey, npub or NIP-05. */
+    userPicker: @Composable (onPicked: (String) -> Unit) -> Unit,
     modifier: Modifier = Modifier,
     /** Opens "Set up by hand" from the start (previews and screenshots). */
     manualExpanded: Boolean = false,
@@ -413,7 +474,7 @@ fun WebOfTrustContent(
 
         state.provider?.let { ProviderSection(it, state, actions, providerAvatar) }
 
-        ChooseProviderSection(state, actions, relayPicker, manualExpanded)
+        ChooseProviderSection(state, actions, relayPicker, userPicker, manualExpanded)
 
         EffectsSection()
     }
@@ -809,6 +870,7 @@ private fun ChooseProviderSection(
     state: WebOfTrustUiState,
     actions: WebOfTrustActions,
     relayPicker: @Composable (onPicked: (NormalizedRelayUrl) -> Unit) -> Unit,
+    userPicker: @Composable (onPicked: (String) -> Unit) -> Unit,
     manualExpanded: Boolean = false,
 ) {
     var showManual by remember { mutableStateOf(manualExpanded) }
@@ -838,7 +900,7 @@ private fun ChooseProviderSection(
         }
         AnimatedVisibility(showManual) {
             // Stays open until the list is saved: a refused signature keeps what was typed.
-            ManualFallback(state, actions, enabled = !busy, relayPicker = relayPicker, onSaved = { showManual = false })
+            ManualFallback(state, actions, enabled = !busy, relayPicker = relayPicker, userPicker = userPicker, onSaved = { showManual = false })
         }
         (state.setup as? WebOfTrustSetup.Failed)?.takeIf { it.providerId == WebOfTrustViewModel.MANUAL }?.let { failed ->
             SetupError(setupErrorText(failed, stringRes(Res.string.wot_manual_title)), Modifier.padding(start = 68.dp, end = 16.dp, bottom = 12.dp))
@@ -962,6 +1024,7 @@ private fun ManualFallback(
     actions: WebOfTrustActions,
     enabled: Boolean,
     relayPicker: @Composable (onPicked: (NormalizedRelayUrl) -> Unit) -> Unit,
+    userPicker: @Composable (onPicked: (String) -> Unit) -> Unit,
     onSaved: () -> Unit,
 ) {
     val copied = state.copy as? WebOfTrustCopy.Copied
@@ -994,7 +1057,7 @@ private fun ManualFallback(
 
         when (mode) {
             ManualMode.COPY -> {
-                CopyViewPane(state, actions)
+                CopyViewPane(state, actions, userPicker)
             }
 
             ManualMode.KEY -> {
@@ -1018,8 +1081,8 @@ private fun ManualFallback(
 private fun CopyViewPane(
     state: WebOfTrustUiState,
     actions: WebOfTrustActions,
+    userPicker: @Composable (onPicked: (String) -> Unit) -> Unit,
 ) {
-    var who by remember { mutableStateOf("") }
     val loading = state.copy is WebOfTrustCopy.Loading
     val scheme = MaterialTheme.colorScheme
 
@@ -1050,25 +1113,14 @@ private fun CopyViewPane(
             }
         }
 
-        val submit = { if (who.isNotBlank() && !loading) actions.onCopyFrom(who.trim()) }
-        OutlinedTextField(
-            value = who,
-            onValueChange = { who = it },
-            label = { Text(stringRes(Res.string.wot_copy_field)) },
-            singleLine = true,
-            keyboardOptions = KeyboardOptions(imeAction = ImeAction.Go, autoCorrectEnabled = false),
-            keyboardActions = KeyboardActions(onGo = { submit() }),
-            trailingIcon = {
-                if (loading) {
-                    CircularProgressIndicator(Modifier.size(20.dp), strokeWidth = 2.dp)
-                } else {
-                    IconButton(onClick = submit, enabled = who.isNotBlank()) {
-                        Icon(symbol = MaterialSymbols.AutoMirrored.ArrowForward, contentDescription = stringRes(Res.string.wot_copy_action))
-                    }
-                }
-            },
-            modifier = Modifier.fillMaxWidth(),
-        )
+        userPicker { who -> if (!loading) actions.onCopyFrom(who) }
+
+        if (loading) {
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                CircularProgressIndicator(Modifier.size(12.dp), strokeWidth = 1.5.dp)
+                Text(stringRes(Res.string.wot_copy_loading), style = MaterialTheme.typography.bodySmall, color = scheme.primary)
+            }
+        }
 
         (state.copy as? WebOfTrustCopy.Failed)?.let { failed ->
             SetupError(

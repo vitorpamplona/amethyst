@@ -6737,7 +6737,7 @@
     <string name="wot_manual_mode_copy">Copy a view</string>
     <string name="wot_manual_mode_key">Enter a key</string>
     <string name="wot_copy_explainer">Use the provider list of someone you trust, and see the network as they do.</string>
-    <string name="wot_copy_field">npub or name@domain</string>
+    <string name="wot_copy_field">Search people, npub or name@domain</string>
     <string name="wot_copy_action">Copy</string>
     <string name="wot_copy_house">%1$s's default view</string>
     <string name="wot_copy_loading">Looking up their list…</string>

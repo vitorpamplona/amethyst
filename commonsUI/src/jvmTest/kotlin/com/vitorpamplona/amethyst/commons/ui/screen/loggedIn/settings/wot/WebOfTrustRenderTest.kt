@@ -124,6 +124,12 @@ class WebOfTrustRenderTest {
         content: @Composable () -> Unit,
     ) = render(name, dark, height * 2, content)
 
+    /** Stands in for the app's user search, which needs an account. */
+    @Composable
+    private fun UserPickerStub() {
+        OutlinedTextField(value = "", onValueChange = {}, label = { Text("Search people, npub or name@domain") }, singleLine = true, modifier = Modifier.fillMaxWidth())
+    }
+
     /** Stands in for the app's relay entry (RelayUrlEditField), which needs an account. */
     @Composable
     private fun RelayPickerStub() {
@@ -174,7 +180,7 @@ class WebOfTrustRenderTest {
         scenarios.forEach { (name, state) ->
             val ui = state()
             val content: @Composable () -> Unit = {
-                WebOfTrustContent(ui, actions, providerAvatar = { Box(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.secondary)) }, relayPicker = {})
+                WebOfTrustContent(ui, actions, providerAvatar = { Box(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.secondary)) }, relayPicker = {}, userPicker = {})
             }
             val light = render(name, false, content)
             val dark = render(name, true, content)
@@ -206,6 +212,7 @@ class WebOfTrustRenderTest {
                 actions,
                 providerAvatar = {},
                 relayPicker = { RelayPickerStub() },
+                userPicker = { UserPickerStub() },
                 manualExpanded = true,
             )
         }
@@ -217,7 +224,7 @@ class WebOfTrustRenderTest {
         val relay = RelayUrlNormalizer.normalize("wss://scores.brainstorm.world")
         val copied = WebOfTrustCopy.Copied(house, listOf("30382:rank", "30382:followers", "30392", "30393").map { TrustProviderRow(it, house, relay) })
         val keyForm: @Composable () -> Unit = {
-            WebOfTrustContent(state(provider = null, copy = copied), actions, providerAvatar = {}, relayPicker = { RelayPickerStub() }, manualExpanded = true)
+            WebOfTrustContent(state(provider = null, copy = copied), actions, providerAvatar = {}, relayPicker = { RelayPickerStub() }, userPicker = { UserPickerStub() }, manualExpanded = true)
         }
         renderTall("manual-key", false, keyForm)
         renderTall("manual-key", true, keyForm)
