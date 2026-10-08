@@ -148,11 +148,10 @@ class AdaptiveRelayLimiter(
                 is NoticeMessage -> msg.message
                 else -> return
             }
-        val t = text.lowercase()
         // Route each complaint to the matching actuator. Not mutually exclusive:
         // if a relay somehow reports both, we act on both (they don't conflict).
-        if (RATE_LIMIT_MARKERS.any { it in t }) throttleRate(relay.url)
-        if (SUB_LIMIT_MARKERS.any { it in t }) demoteConcurrency(relay.url)
+        if (isRateLimitMessage(text)) throttleRate(relay.url)
+        if (isSubscriptionLimitMessage(text)) demoteConcurrency(relay.url)
     }
 
     /** Step [relay] one rung down the concurrency-cap ladder, unless already at the floor. */
@@ -251,49 +250,5 @@ class AdaptiveRelayLimiter(
                 if (limit.compareAndSet(cur, newLimit)) return
             }
         }
-    }
-
-    companion object {
-        /** True when [message] complains about how many subscriptions are open at once. */
-        internal fun isSubscriptionLimitMessage(message: String): Boolean {
-            val t = message.lowercase()
-            return SUB_LIMIT_MARKERS.any { it in t }
-        }
-
-        /** True when [message] complains about how fast subscriptions are sent. */
-        internal fun isRateLimitMessage(message: String): Boolean {
-            val t = message.lowercase()
-            return RATE_LIMIT_MARKERS.any { it in t }
-        }
-
-        // A cap on how many subscriptions may be OPEN at once. Fix: fewer
-        // concurrent subs (demote the concurrency cap).
-        private val SUB_LIMIT_MARKERS =
-            listOf(
-                "too many concurrent",
-                "concurrent req",
-                "too many subscription",
-                "number of subscriptions",
-                "subscriptions exceeds",
-                "subscription limit",
-                "subscription count",
-                "maximum concurrent subscription",
-                "max subscription",
-                "too many req",
-            )
-
-        // Too many subscription CHANGES per second. Fix: space the REQs out in
-        // time (a per-relay min interval), not fewer concurrent subs.
-        private val RATE_LIMIT_MARKERS =
-            listOf(
-                "rate-limit",
-                "rate limit",
-                "ratelimit",
-                "too many messages",
-                "too many requests",
-                "burst exhausted",
-                "throttl",
-                "slow down",
-            )
     }
 }

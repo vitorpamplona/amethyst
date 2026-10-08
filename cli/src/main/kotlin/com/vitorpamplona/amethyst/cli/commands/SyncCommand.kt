@@ -27,18 +27,13 @@ import com.vitorpamplona.amethyst.cli.Output
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.DeletionSettleResult
-import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.DownloadPace
-import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.NegentropyReconcileResult
 import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.NegentropySyncException
-import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.fetchByIds
-import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.negentropyReconcile
 import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.negentropySettleDeletions
 import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.negentropySync
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
 import com.vitorpamplona.quartz.nip01Core.store.IdAndTime
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.coroutineScope
-import kotlinx.coroutines.joinAll
 import kotlinx.coroutines.launch
 import java.util.concurrent.atomic.AtomicInteger
 
@@ -47,11 +42,10 @@ import java.util.concurrent.atomic.AtomicInteger
  *
  * NIP-77 Negentropy set-reconciliation between the local event store and a
  * relay (nak's `sync`, adapted to amy's local-store model). The protocol
- * itself is quartz's [negentropyReconcile]: it pins the relay with a
- * keep-alive subscription, splits the filter by `created_at` window whenever
- * the relay caps the set (strfry `max_sync_events`), and streams the two
- * directions of the diff as each round completes. This command closes the
- * loop on that stream:
+ * itself is quartz's [negentropySync]: it pins the relay with a keep-alive
+ * subscription, splits the filter by `created_at` window whenever the relay
+ * caps the set (strfry `max_sync_events`), downloads the relay's side by id,
+ * and hands back ours once each have is settled. This command closes the loop:
  *
  *   --down  (default)  download events the relay has and we lack (REQ by id)
  *   --up               upload events we have and the relay lacks (EVENT)
@@ -78,12 +72,11 @@ import java.util.concurrent.atomic.AtomicInteger
  * So `amy sync` (default `--down`) makes the relay honor your deletions; `--up` makes
  * your store honor the relay's; `--up --down` converges both ways.
  *
- * A download-only sync (the default) is quartz's `negentropySync`. With `--up`, content
- * is pipelined with the reconcile: need-id batches feed [DOWNLOAD_WORKERS] concurrent
- * by-id downloads (`fetchByIds`) and have-ids feed a single uploader. Thin assembly
- * only: the windowing, streaming, and back-pressure live in quartz
- * (`negentropySync` / `negentropyReconcile`); this file only routes ids to
- * `fetchByIds` / `Context.publish`.
+ * Content is quartz's `negentropySync` in every direction: its [DOWNLOAD_WORKERS]
+ * concurrent by-id downloads feed `Context.verifyAndStore`, and the haves it settles feed
+ * a single uploader. Thin assembly only: the windowing, streaming, back-pressure and the
+ * walk-back past a relay that reconciles part of its set live in quartz; this file only
+ * routes events to the store and haves to `Context.publish`.
  */
 object SyncCommand {
     private const val ID_CHUNK = 500
@@ -98,6 +91,9 @@ object SyncCommand {
 
     /** Overlapped `created_at`-window reconciles after an over-cap split. */
     private const val RECONCILE_CONCURRENCY = 2
+
+    /** The `wantId` gate of an upload-only sync: the reconcile still names the relay's ids. */
+    private val NO_DOWNLOADS: (HexKey) -> Boolean = { false }
 
     /**
      * Cap on deletion-settle rounds. Each round resolves the residual it can and
@@ -155,16 +151,24 @@ object SyncCommand {
             val downloaded = AtomicInteger(0)
             val uploaded = AtomicInteger(0)
 
-            // ── Pass 1: content settle — download needs, upload haves. No deletion
-            // logic, so a plain sync costs exactly what it always did.
+            // ── Pass 1: content settle — download needs, upload haves, through quartz's
+            // sync (which also walks back past a relay that reconciles only part of its
+            // set). No deletion logic, so a plain sync costs exactly what it always did.
+            // Anything we deleted is rejected by our own tombstone and stays a "need".
             val result =
                 try {
-                    if (!up) {
-                        // Download only: quartz's own sync, which also walks back past a
-                        // relay that reconciles only part of the set (relay.ohstr.com
-                        // reconciles its newest 500). Anything we deleted is rejected by
-                        // our own tombstone and stays a "need".
-                        val synced =
+                    coroutineScope {
+                        val haveBatches = Channel<List<HexKey>>(Channel.UNLIMITED)
+                        val uploader =
+                            launch {
+                                for (batch in haveBatches) {
+                                    for (id in batch) {
+                                        val ev = localById[id] ?: continue
+                                        if (ctx.publish(ev, setOf(relay)).values.any { it.accepted }) uploaded.incrementAndGet()
+                                    }
+                                }
+                            }
+                        try {
                             ctx.client.negentropySync(
                                 relay = relay,
                                 filter = filter,
@@ -173,57 +177,13 @@ object SyncCommand {
                                 idleTimeoutMs = timeoutMs,
                                 reconcileConcurrency = RECONCILE_CONCURRENCY,
                                 localEntries = localEntries,
+                                // --up alone uploads and downloads nothing.
+                                wantId = if (down) null else NO_DOWNLOADS,
+                                onHaveIds = { batch -> if (up) haveBatches.send(batch) },
                             ) { if (ctx.verifyAndStore(it)) downloaded.incrementAndGet() }
-                        NegentropyReconcileResult(synced.needCount, 0, synced.windows, synced.peerCap)
-                    } else {
-                        coroutineScope {
-                            // needIds = relay has, we lack; haveIds = we have, relay lacks.
-                            val needBatches = Channel<List<HexKey>>(DOWNLOAD_WORKERS * 2)
-                            val pace = DownloadPace()
-                            val haveBatches = Channel<List<HexKey>>(Channel.UNLIMITED)
-
-                            val downloaders =
-                                List(DOWNLOAD_WORKERS) {
-                                    launch {
-                                        for (batch in needBatches) {
-                                            // fetchByIds re-asks a relay that serves only part of
-                                            // a batch; anything we deleted is rejected by our own
-                                            // tombstone and stays a "need".
-                                            val events = ctx.client.fetchByIds(relay, batch, timeoutMs, filter, pace)
-                                            downloaded.addAndGet(events.count { ctx.verifyAndStore(it) })
-                                        }
-                                    }
-                                }
-                            val uploader =
-                                launch {
-                                    for (batch in haveBatches) {
-                                        for (id in batch) {
-                                            val ev = localById[id] ?: continue
-                                            if (ctx.publish(ev, setOf(relay)).values.any { it.accepted }) uploaded.incrementAndGet()
-                                        }
-                                    }
-                                }
-
-                            val reconcile =
-                                try {
-                                    ctx.client.negentropyReconcile(
-                                        relay = relay,
-                                        filter = filter,
-                                        localEntries = localEntries,
-                                        batchSize = ID_CHUNK,
-                                        idleTimeoutMs = timeoutMs,
-                                        reconcileConcurrency = RECONCILE_CONCURRENCY,
-                                        onHaveIds = if (up) { batch -> haveBatches.send(batch) } else null,
-                                        onNeedIds = { batch -> if (down) needBatches.send(batch) },
-                                    )
-                                } finally {
-                                    needBatches.close()
-                                    haveBatches.close()
-                                }
-
-                            downloaders.joinAll()
+                        } finally {
+                            haveBatches.close()
                             uploader.join()
-                            reconcile
                         }
                     }
                 } catch (e: NegentropySyncException) {
@@ -258,9 +218,7 @@ object SyncCommand {
                     "local_events" to localEvents.size,
                     "windows" to result.windows,
                     "need" to result.needCount,
-                    // Download-only syncs do not count what the relay lacks: a relay that
-                    // reconciles part of its set makes every older event of ours look missing.
-                    "have" to if (up) result.haveCount else null,
+                    "have" to result.haveCount,
                     "downloaded" to downloaded.get(),
                     "uploaded" to uploaded.get(),
                     "deletions_sent_up" to deletions.sentUp,

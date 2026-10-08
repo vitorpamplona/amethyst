@@ -51,6 +51,7 @@ import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeout
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
 /**
@@ -141,6 +142,44 @@ class NegentropyDownloadTest {
             assertEquals(events.take(10).map { it.id }.toSet(), delivered.toSet())
         }
 
+    /**
+     * The first pass against a truncating relay reports every older event of ours as a have:
+     * it never looked there. Only what the walk-back confirms the relay lacks is handed back.
+     */
+    @Test
+    fun onlyHavesTheRelayReallyLacksAreHandedBack() =
+        runBlocking {
+            val events = SyntheticEvents.batch(30, kind = 1) { author }
+            val ours = SyntheticEvents.fakeEvent(idSeed = 999, pubKey = author, createdAt = 5)
+            val held = events.take(10).map { IdAndTime(it.createdAt, it.id) } + IdAndTime(ours.createdAt, ours.id)
+            val haves = mutableListOf<String>()
+
+            val hub = InProcessRelays(defaultPolicy = { ReconcilesNewest(5) })
+            val scope = CoroutineScope(Dispatchers.Default + SupervisorJob())
+            val client = NostrClient(hub, scope)
+            try {
+                hub.getOrCreate(InProcessRelays.DEFAULT_URL).preload(events)
+                val result =
+                    withTimeout(20_000) {
+                        client.negentropySync(
+                            relay = InProcessRelays.DEFAULT_URL,
+                            filter = Filter(kinds = listOf(1)),
+                            localEntries = held,
+                            idleTimeoutMs = 5_000,
+                            onHaveIds = { haves.addAll(it) },
+                        ) { }
+                    }
+
+                assertEquals(listOf(ours.id), haves)
+                assertEquals(1, result.haveCount)
+                assertEquals(20, result.downloaded)
+            } finally {
+                client.disconnect()
+                scope.cancel()
+                hub.close()
+            }
+        }
+
     /** A relay that ignores the window's `until` names the same newest events every pass. */
     @Test
     fun aRelayThatIgnoresTheWindowEndsWithoutDeliveringTwice() =
@@ -168,12 +207,12 @@ class NegentropyDownloadTest {
         runBlocking {
             val events = SyntheticEvents.batch(5, kind = 1) { author }
             val client = DropsFirst(this, events, drops = Int.MAX_VALUE)
-            val pace = DownloadPace()
+            val pace = DownloadPace(pause = {})
 
             client.fetchByIds(InProcessRelays.DEFAULT_URL, events.map { it.id }, idleTimeoutMs = 5_000, pace = pace)
             client.fetchByIds(InProcessRelays.DEFAULT_URL, events.map { it.id }, idleTimeoutMs = 5_000, pace = pace)
 
-            assertTrue(pace.exhausted)
+            assertTrue(pace.gaveUp)
             assertEquals(6, client.requests, "four rounds of the first batch, two of the second")
         }
 
@@ -183,13 +222,13 @@ class NegentropyDownloadTest {
         runBlocking {
             val events = SyntheticEvents.batch(30, kind = 1) { author }
             val client = DropsFirst(this, events, drops = 1)
-            val pace = DownloadPace()
+            val pace = DownloadPace(pause = {})
 
             val got = client.fetchByIds(InProcessRelays.DEFAULT_URL, events.map { it.id }, idleTimeoutMs = 5_000, pace = pace)
 
             assertEquals(30, got.size)
             assertEquals(2, client.requests)
-            assertTrue(pace.oneAtATime, "the sync's other batches stop overlapping")
+            assertFalse(pace.overlapping, "the sync's other batches stop overlapping")
         }
 
     @Test
@@ -198,7 +237,7 @@ class NegentropyDownloadTest {
             val events = SyntheticEvents.batch(5, kind = 1) { author }
             val client = DropsFirst(this, events, drops = Int.MAX_VALUE)
 
-            val got = client.fetchByIds(InProcessRelays.DEFAULT_URL, events.map { it.id }, idleTimeoutMs = 5_000)
+            val got = client.fetchByIds(InProcessRelays.DEFAULT_URL, events.map { it.id }, idleTimeoutMs = 5_000, pace = DownloadPace(pause = {}))
 
             assertEquals(0, got.size)
             assertEquals(4, client.requests, "the first ask and three re-asks")

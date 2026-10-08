@@ -25,7 +25,6 @@ import com.vitorpamplona.quartz.nip01Core.relay.client.EmptyNostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.NostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.count
-import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.isCountRejectionNotice
 import com.vitorpamplona.quartz.nip01Core.relay.client.listeners.RelayConnectionListener
 import com.vitorpamplona.quartz.nip01Core.relay.client.single.IRelayClient
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.ClosedMessage
@@ -51,7 +50,6 @@ import okhttp3.OkHttpClient
 import java.util.concurrent.CopyOnWriteArrayList
 import kotlin.test.Test
 import kotlin.test.assertEquals
-import kotlin.test.assertFalse
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
@@ -121,21 +119,6 @@ class NostrClientCountRefusalTest {
 
             assertEquals(mapOf(a to 1, b to 2, c to 3), results.mapValues { it.value.count })
         }
-
-    @Test
-    fun theNoticesRelaysWithoutCountSendAreRecognised() {
-        // Captured live: strfry, snort.social, nostr.wine, relay.conduit.market.
-        assertTrue(isCountRejectionNotice("ERROR: bad msg: unknown cmd"))
-        assertTrue(isCountRejectionNotice("Unknown message type: COUNT"))
-        assertTrue(isCountRejectionNotice("ERROR: bad msg: invalid message: {'message_type': ['Invalid enum value COUNT']}"))
-        assertTrue(isCountRejectionNotice("invalid message"))
-
-        assertFalse(isCountRejectionNotice("rate-limited: slow down"))
-        assertFalse(isCountRejectionNotice("ERROR: bad msg: invalid message: event too large"))
-        assertFalse(isCountRejectionNotice("could not parse filter"))
-        // About one query on a relay that does count: not a refusal of the verb.
-        assertFalse(isCountRejectionNotice("rate-limited: too many concurrent COUNT requests"))
-    }
 
     /** Answers each COUNT with the messages [script] gives for its relay, each after its delay. */
     private class ScriptedCountClient(

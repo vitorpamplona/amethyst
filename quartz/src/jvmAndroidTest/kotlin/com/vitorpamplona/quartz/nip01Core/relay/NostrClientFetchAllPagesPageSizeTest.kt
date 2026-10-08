@@ -24,7 +24,6 @@ import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.PagedFetchResult
 import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.fetchAllPages
-import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.lowerLimitAfterRefusal
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
 import kotlinx.coroutines.runBlocking
@@ -269,39 +268,6 @@ class NostrClientFetchAllPagesPageSizeTest {
             assertEquals(PagedFetchResult.End.DRAINED, result.end)
             assertEquals(800, got.distinct().size, "every event of the dense second arrived")
         }
-
-    @Test
-    fun aRefusalIsReadForTheLimitItStates() {
-        assertEquals(500, lowerLimitAfterRefusal("blocked: limit too high: 50000 (max 500)", 50_000))
-        assertEquals(25_000, lowerLimitAfterRefusal("blocked: limit too high", 50_000))
-        assertEquals(1_000, lowerLimitAfterRefusal("error: limit exceeds max_limit of 1000", 5_000))
-        // A stated max that is not lower than what was sent cannot be the reason: halve.
-        assertEquals(250, lowerLimitAfterRefusal("blocked: limit too high (max 500)", 500))
-        assertNull(lowerLimitAfterRefusal("rate-limited: slow down, limit 10 REQs a second", 500), "throttling, not a cap")
-        assertNull(lowerLimitAfterRefusal("error: rate limit exceeded", 500))
-        assertNull(lowerLimitAfterRefusal("auth-required: we only serve members", 500))
-        assertNull(lowerLimitAfterRefusal("blocked: limit too high", 1), "nothing lower to ask for")
-        assertNull(lowerLimitAfterRefusal(null, 500))
-    }
-
-    @Test
-    fun onlyARefusalOfTheEventLimitLowersIt() {
-        // Seen in the 2026-10 survey of 743 production relays: relay.cxplay.org.
-        assertEquals(1_000, lowerLimitAfterRefusal("invalid: limitation.max_limit 1000", 5_000))
-        // relay.wavefunc.live (survey of 246 relays, one or two per relay software): read as
-        // "no max stated", it was halved four times (5000, 2500, 1250, 625, 312).
-        assertEquals(500, lowerLimitAfterRefusal("restricted: limit must not exceed 500", 5_000))
-        assertEquals(200, lowerLimitAfterRefusal("error: limit exceeds 200", 5_000))
-        // "limit" about something else: halving the event limit would cost a REQ per halving
-        // and leave a needlessly small cap, and fix nothing.
-        assertNull(lowerLimitAfterRefusal("error: number of subscriptions exceeds limit", 5_000), "too many open subscriptions")
-        assertNull(lowerLimitAfterRefusal("blocked: subscription limit reached (20)", 5_000))
-        assertNull(lowerLimitAfterRefusal("error: max subscriptions limit of 10 reached", 5_000))
-        assertNull(lowerLimitAfterRefusal("error: too many filters, limit is 10", 5_000), "too many filters per REQ")
-        assertNull(lowerLimitAfterRefusal("blocked: REQ contains 12 filters, maximum is 10 (limit)", 5_000))
-        assertNull(lowerLimitAfterRefusal("ERROR: rate limit exceeded, slow down", 5_000))
-        assertNull(lowerLimitAfterRefusal("error: request limit exceeded, too many requests", 5_000))
-    }
 
     @Test
     fun anEventARelayRepeatsOnAPageIsDeliveredAndCountedOnce() =

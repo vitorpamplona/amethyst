@@ -25,14 +25,12 @@ import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.PageRetryBackoff
 import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.PagedFetchResult
 import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.fetchAllPages
-import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.isThrottleMessage
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
 import kotlinx.coroutines.runBlocking
 import java.util.Collections
 import kotlin.test.Test
 import kotlin.test.assertEquals
-import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
 /**
@@ -433,16 +431,6 @@ class NostrClientFetchAllPagesThrottleTest {
             assertEquals(1_500, result.downloaded)
             assertEquals(listOf(2_000L), recorder.waits)
         }
-
-    @Test
-    fun aThrottleMessageIsToldApartFromARefusal() {
-        assertTrue(isThrottleMessage(budget))
-        assertTrue(isThrottleMessage("rate-limited: slow down"))
-        assertTrue(isThrottleMessage("error: too many requests"))
-        assertFalse(isThrottleMessage("blocked: limit too high: 5000 (max 500)"))
-        assertFalse(isThrottleMessage("blocked: too much"))
-        assertFalse(isThrottleMessage("auth-required: members only"))
-    }
 
     @Test
     fun aFirstPageSentTwiceDoesNotMakeHonestPagesLookShort() =

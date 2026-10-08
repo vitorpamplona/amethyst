@@ -28,7 +28,6 @@ import com.vitorpamplona.quartz.nip01Core.relay.client.auth.DEFAULT_AUTH_GRACE_M
 import com.vitorpamplona.quartz.nip01Core.relay.client.auth.authSuccessMark
 import com.vitorpamplona.quartz.nip01Core.relay.client.auth.awaitAuthOutcome
 import com.vitorpamplona.quartz.nip01Core.relay.client.auth.hasAuthResponder
-import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayReqRefusals
 import com.vitorpamplona.quartz.nip01Core.relay.client.reqs.SubscriptionListener
 import com.vitorpamplona.quartz.nip01Core.relay.client.single.newSubId
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.EoseMessage
@@ -164,83 +163,6 @@ object PagingDiagnostics {
     @Volatile
     var enabled: Boolean = false
 }
-
-/**
- * Reads a `CLOSED` reason as a refusal of the `REQ`'s `limit` — purplepag.es answers
- * `limit = 50000` with `blocked: limit too high: 50000 (max 500)` — and returns the largest
- * limit worth asking for instead: the relay's stated max when the message names one below
- * [sent], otherwise half of [sent]. Null when the message is not about the event limit or
- * [sent] cannot go any lower. Relays say "limit" about other things too, and halving the
- * event limit fixes none of them: a rate limit is throttling ([isThrottleMessage]), and a cap
- * on open subscriptions ("number of subscriptions exceeds limit") or on filters per REQ is
- * [AdaptiveRelayLimiter]'s and [RelayReqRefusals]'s to handle.
- *
- * Seen on relays (2026-10 surveys: 743 relays, then one or two per relay software from 5,728
- * NIP-11 documents): `blocked: limit too high: 5000 (max 500)` (purplepag.es),
- * `invalid: limitation.max_limit 1000` (relay.cxplay.org) and `restricted: limit must not
- * exceed 500` (relay.wavefunc.live).
- */
-internal fun lowerLimitAfterRefusal(
-    message: String?,
-    sent: Int,
-): Int? {
-    if (message == null || sent <= 1) return null
-    if (!message.contains("limit", ignoreCase = true)) return null
-    if (isThrottleMessage(message)) return null
-    if (AdaptiveRelayLimiter.isSubscriptionLimitMessage(message)) return null
-    if (RelayReqRefusals.parseMaxFilters(message) != null || TOO_MANY_FILTERS.containsMatchIn(message)) return null
-    val stated = statedLimit(message)
-    return if (stated != null && stated in 1 until sent) stated else sent / 2
-}
-
-/** The cap a limit refusal states (`max 500`, `exceeds 500`), if it states one. */
-private fun statedLimit(message: String): Int? =
-    (STATED_MAX.find(message) ?: STATED_CEILING.find(message))
-        ?.groupValues
-        ?.get(1)
-        ?.toIntOrNull()
-
-/**
- * [lowerLimitAfterRefusal] for a `REQ` of several filters, whose refusal does not say which
- * filter it was about: the limits to re-ask with, or null if [message] is not a refusal of a
- * limit or nothing is left to lower. With a stated max, only the filters above it come down,
- * to it: `[1000, 100]` refused with `(max 500)` is re-asked as `[500, 100]`, not `[500, 50]`.
- * With none stated, or every filter already at or under it, the largest is halved.
- */
-internal fun lowerLimitsAfterRefusal(
-    message: String?,
-    limits: List<Int?>,
-): List<Int?>? {
-    val largest = limits.filterNotNull().maxOrNull() ?: return null
-    if (message == null || lowerLimitAfterRefusal(message, largest) == null) return null
-    val stated = statedLimit(message)
-    if (stated != null && stated >= 1) {
-        val capped = limits.map { limit -> if (limit != null && limit > stated) stated else limit }
-        if (capped != limits) return capped
-    }
-    return limits.map { limit -> if (limit == largest) limit / 2 else limit }
-}
-
-/**
- * True when a relay's message says it is throttling this client rather than refusing what was
- * asked: a `rate-limited:` prefix, the wording [AdaptiveRelayLimiter] treats as a rate limit,
- * or a spent read budget (relay.damus.io and the bostr proxies in front of it: `ERROR: read
- * bandwidth budget exhausted (1048570 bytes/min per IP) (retry in 30ms)`). Waiting helps;
- * asking for less does not.
- */
-internal fun isThrottleMessage(message: String): Boolean =
-    MachineReadablePrefix.parse(message) == MachineReadablePrefix.RATE_LIMITED ||
-        AdaptiveRelayLimiter.isRateLimitMessage(message) ||
-        BUDGET_EXHAUSTED.containsMatchIn(message)
-
-private val BUDGET_EXHAUSTED = Regex("budget (?:is )?exhausted|retry in \\d", RegexOption.IGNORE_CASE)
-
-private val TOO_MANY_FILTERS = Regex("(?:too many|number of|max(?:imum)?) filters", RegexOption.IGNORE_CASE)
-
-// "limit must not exceed 500" (relay.wavefunc.live), "limit exceeds 200": the cap without "max".
-private val STATED_CEILING = Regex("exceeds?\\D{0,12}?(\\d+)", RegexOption.IGNORE_CASE)
-
-private val STATED_MAX = Regex("max(?:imum)?\\D{0,12}?(\\d+)", RegexOption.IGNORE_CASE)
 
 /**
  * How long [fetchAllPages] waits before re-asking a page a relay answered empty (or CLOSED)
