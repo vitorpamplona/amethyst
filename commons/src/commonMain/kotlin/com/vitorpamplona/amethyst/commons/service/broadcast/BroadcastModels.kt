@@ -77,8 +77,17 @@ data class BroadcastEvent(
     val outboxRelays: Set<NormalizedRelayUrl> = emptySet(),
     val startedAt: Long = TimeUtils.now(),
     val results: Map<NormalizedRelayUrl, RelayResult> = emptyMap(),
-    val status: BroadcastStatus = BroadcastStatus.IN_PROGRESS,
 ) {
+    /** In progress while any relay has yet to answer or is being retried. */
+    val status: BroadcastStatus
+        get() =
+            when {
+                targetRelays.any { results[it].isAwaited() } -> BroadcastStatus.IN_PROGRESS
+                results.values.all { it is RelayResult.Success } -> BroadcastStatus.SUCCESS
+                results.values.none { it is RelayResult.Success } -> BroadcastStatus.FAILED
+                else -> BroadcastStatus.PARTIAL
+            }
+
     /** Number of relays that accepted the event */
     val successCount: Int
         get() = results.count { it.value is RelayResult.Success }
@@ -112,6 +121,20 @@ data class BroadcastEvent(
                 outboxRelays.all { results[it] is RelayResult.Success }
             }
 
+    /**
+     * Whether the user should be told: an outbox relay rejected the event or
+     * timed out and is not being retried, or — when none of the targets is an
+     * outbox relay — every relay answered and none accepted. Known as soon as
+     * it happens, without waiting for the other relays.
+     */
+    val needsAttention: Boolean
+        get() =
+            if (outboxRelays.isEmpty()) {
+                status == BroadcastStatus.FAILED
+            } else {
+                outboxRelays.any { results[it].isFailure() }
+            }
+
     /** List of relays that failed and are not currently retrying */
     val failedRelays: List<NormalizedRelayUrl>
         get() =
@@ -130,18 +153,12 @@ data class BroadcastEvent(
     fun withResult(
         relay: NormalizedRelayUrl,
         result: RelayResult,
-    ): BroadcastEvent {
-        val newResults = results + (relay to result)
-        val newStatus =
-            when {
-                newResults.size < targetRelays.size -> BroadcastStatus.IN_PROGRESS
-                newResults.all { it.value is RelayResult.Success } -> BroadcastStatus.SUCCESS
-                newResults.none { it.value is RelayResult.Success } -> BroadcastStatus.FAILED
-                else -> BroadcastStatus.PARTIAL
-            }
-        return copy(results = newResults, status = newStatus)
-    }
+    ): BroadcastEvent = copy(results = results + (relay to result))
 }
+
+private fun RelayResult?.isAwaited() = this == null || this is RelayResult.Pending || this is RelayResult.Retrying
+
+private fun RelayResult?.isFailure() = this is RelayResult.Error || this is RelayResult.Timeout
 
 /**
  * The broadcast banner may hide on its own only once every broadcast it shows

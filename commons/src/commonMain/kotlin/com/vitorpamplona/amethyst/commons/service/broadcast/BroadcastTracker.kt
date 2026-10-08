@@ -216,7 +216,7 @@ class BroadcastTracker(
                         relays.forEach { relay ->
                             updated = updated.withResult(relay, RelayResult.Retrying)
                         }
-                        updated.copy(status = BroadcastStatus.IN_PROGRESS)
+                        updated
                     } else {
                         broadcast
                     }
@@ -262,7 +262,7 @@ class BroadcastTracker(
                 relaysToRetry.forEach { relay ->
                     updated = updated.withResult(relay, RelayResult.Retrying)
                 }
-                (list + updated.copy(status = BroadcastStatus.IN_PROGRESS)).toImmutableList()
+                (list + updated).toImmutableList()
             }
         }
 
@@ -352,26 +352,7 @@ class BroadcastTracker(
                             currentBroadcast = currentBroadcast.withResult(relay, RelayResult.Timeout)
                         }
 
-                        // Recalculate status
-                        val newStatus =
-                            when {
-                                currentBroadcast.results.values.any { it is RelayResult.Pending || it is RelayResult.Retrying } -> {
-                                    BroadcastStatus.IN_PROGRESS
-                                }
-
-                                currentBroadcast.results.all { it.value is RelayResult.Success } -> {
-                                    BroadcastStatus.SUCCESS
-                                }
-
-                                currentBroadcast.results.none { it.value is RelayResult.Success } -> {
-                                    BroadcastStatus.FAILED
-                                }
-
-                                else -> {
-                                    BroadcastStatus.PARTIAL
-                                }
-                            }
-                        currentBroadcast.copy(status = newStatus)
+                        currentBroadcast
                     }
 
                 client.publish(event, relaysToRetry)

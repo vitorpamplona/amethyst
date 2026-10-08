@@ -174,7 +174,8 @@ fun BroadcastBanner(
                 }
 
                 if (broadcasts.isNotEmpty()) {
-                    val isAllFinished = broadcasts.all { it.status != BroadcastStatus.IN_PROGRESS }
+                    // a failed outbox relay is shown at once, without waiting for the rest.
+                    val showResult = broadcasts.any { it.needsAttention } || broadcasts.all { it.status != BroadcastStatus.IN_PROGRESS }
 
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
@@ -182,7 +183,7 @@ fun BroadcastBanner(
                         modifier = Modifier.fillMaxWidth(),
                     ) {
                         Box(modifier = Modifier.weight(1f)) {
-                            if (isAllFinished) {
+                            if (showResult) {
                                 if (broadcasts.size == 1) {
                                     CompletedBroadcastContent(broadcasts.first(), onRetryAll)
                                 } else {
@@ -555,7 +556,8 @@ fun CompletedBroadcastContent(
                 BroadcastStatus.SUCCESS -> MaterialSymbols.CheckCircle to successColor
                 BroadcastStatus.PARTIAL -> MaterialSymbols.Error to warningColor
                 BroadcastStatus.FAILED -> MaterialSymbols.Error to MaterialTheme.colorScheme.error
-                BroadcastStatus.IN_PROGRESS -> MaterialSymbols.CheckCircle to MaterialTheme.colorScheme.primary
+                // shown before every relay answered only when an outbox relay failed.
+                BroadcastStatus.IN_PROGRESS -> MaterialSymbols.Error to warningColor
             }
 
         // Small status icon (like BroadcastBanner)
@@ -797,7 +799,6 @@ fun BroadcastBannerSingleEventPreview() {
                                 Constants.mom to RelayResult.Success,
                                 Constants.nos to RelayResult.Success,
                             ),
-                        status = BroadcastStatus.SUCCESS,
                     ),
                 ),
             )
@@ -813,7 +814,6 @@ fun BroadcastBannerSingleEventPreview() {
                                 Constants.mom to RelayResult.Success,
                                 Constants.nos to RelayResult.Success,
                             ),
-                        status = BroadcastStatus.PARTIAL,
                     ),
                 ),
             )
@@ -829,7 +829,6 @@ fun BroadcastBannerSingleEventPreview() {
                                 Constants.mom to RelayResult.Error("code"),
                                 Constants.nos to RelayResult.Error("code"),
                             ),
-                        status = BroadcastStatus.FAILED,
                     ),
                 ),
             )
@@ -918,7 +917,6 @@ fun BroadcastBannerDoubleEventPreview() {
                                 Constants.mom to RelayResult.Success,
                                 Constants.nos to RelayResult.Success,
                             ),
-                        status = BroadcastStatus.SUCCESS,
                     ),
                     BroadcastEvent(
                         id = Uuid.random().toString(),
@@ -929,7 +927,6 @@ fun BroadcastBannerDoubleEventPreview() {
                                 Constants.mom to RelayResult.Success,
                                 Constants.nos to RelayResult.Success,
                             ),
-                        status = BroadcastStatus.SUCCESS,
                     ),
                 ),
             )
@@ -946,7 +943,6 @@ fun BroadcastBannerDoubleEventPreview() {
                                 Constants.mom to RelayResult.Success,
                                 Constants.nos to RelayResult.Success,
                             ),
-                        status = BroadcastStatus.SUCCESS,
                     ),
                     BroadcastEvent(
                         id = Uuid.random().toString(),
@@ -957,7 +953,6 @@ fun BroadcastBannerDoubleEventPreview() {
                                 Constants.mom to RelayResult.Error("code"),
                                 Constants.nos to RelayResult.Success,
                             ),
-                        status = BroadcastStatus.PARTIAL,
                     ),
                 ),
             )
@@ -974,7 +969,6 @@ fun BroadcastBannerDoubleEventPreview() {
                                 Constants.mom to RelayResult.Error("code"),
                                 Constants.nos to RelayResult.Success,
                             ),
-                        status = BroadcastStatus.FAILED,
                     ),
                     BroadcastEvent(
                         id = Uuid.random().toString(),
@@ -985,7 +979,6 @@ fun BroadcastBannerDoubleEventPreview() {
                                 Constants.mom to RelayResult.Timeout,
                                 Constants.nos to RelayResult.Success,
                             ),
-                        status = BroadcastStatus.FAILED,
                     ),
                 ),
             )

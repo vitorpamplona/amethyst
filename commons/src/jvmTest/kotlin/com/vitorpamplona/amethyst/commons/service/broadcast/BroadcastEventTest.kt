@@ -23,6 +23,7 @@ package com.vitorpamplona.amethyst.commons.service.broadcast
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import org.junit.Test
+import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
@@ -124,6 +125,72 @@ class BroadcastEventTest {
         assertFalse(pending.isOut)
         assertTrue(accepted.isOut)
         assertFalse(allFailed.isOut)
+    }
+
+    @Test
+    fun statusSummarisesOnceEveryRelayAnswered() {
+        val pending = broadcast()
+        val success = pending.withResult(outboxA, RelayResult.Success).withResult(outboxB, RelayResult.Success).withResult(inbox, RelayResult.Success)
+        val partial = success.withResult(inbox, RelayResult.Timeout)
+        val failed =
+            pending
+                .withResult(outboxA, RelayResult.Error("no"))
+                .withResult(outboxB, RelayResult.Timeout)
+                .withResult(inbox, RelayResult.Timeout)
+
+        assertEquals(BroadcastStatus.IN_PROGRESS, pending.status)
+        assertEquals(BroadcastStatus.SUCCESS, success.status)
+        assertEquals(BroadcastStatus.PARTIAL, partial.status)
+        assertEquals(BroadcastStatus.FAILED, failed.status)
+    }
+
+    @Test
+    fun statusIsInProgressWhileARelayIsRetrying() {
+        val b =
+            broadcast()
+                .withResult(outboxA, RelayResult.Success)
+                .withResult(outboxB, RelayResult.Success)
+                .withResult(inbox, RelayResult.Retrying)
+
+        assertEquals(BroadcastStatus.IN_PROGRESS, b.status, "a retry answer is not an answer")
+    }
+
+    @Test
+    fun needsAttentionAsSoonAsAnOutboxRelayFails() {
+        val rejected = broadcast().withResult(outboxB, RelayResult.Error("blocked"))
+        val timedOut = broadcast().withResult(outboxB, RelayResult.Timeout)
+
+        assertTrue(rejected.needsAttention, "the other relays are still pending, but the failure is known")
+        assertEquals(BroadcastStatus.IN_PROGRESS, rejected.status)
+        assertTrue(timedOut.needsAttention)
+    }
+
+    @Test
+    fun noAttentionWhileTheOutboxIsFineOrRetrying() {
+        val sending = broadcast().withResult(outboxA, RelayResult.Success)
+        val inboxFailed =
+            sending
+                .withResult(outboxB, RelayResult.Success)
+                .withResult(inbox, RelayResult.Error("no"))
+        val retrying =
+            sending
+                .withResult(outboxB, RelayResult.Error("blocked"))
+                .withResult(outboxB, RelayResult.Retrying)
+
+        assertFalse(sending.needsAttention)
+        assertFalse(inboxFailed.needsAttention, "only outbox failures matter")
+        assertFalse(retrying.needsAttention)
+    }
+
+    @Test
+    fun withoutOutboxTargetsAttentionMeansNothingAccepted() {
+        val pending = broadcast(outbox = emptySet()).withResult(inbox, RelayResult.Error("no"))
+        val allFailed = pending.withResult(outboxA, RelayResult.Timeout).withResult(outboxB, RelayResult.Timeout)
+        val oneAccepted = pending.withResult(outboxA, RelayResult.Timeout).withResult(outboxB, RelayResult.Success)
+
+        assertFalse(pending.needsAttention, "other relays may still accept it")
+        assertTrue(allFailed.needsAttention)
+        assertFalse(oneAccepted.needsAttention)
     }
 
     @Test
