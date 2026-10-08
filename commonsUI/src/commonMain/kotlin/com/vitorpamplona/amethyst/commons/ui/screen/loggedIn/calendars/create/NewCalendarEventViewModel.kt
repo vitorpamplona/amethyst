@@ -18,16 +18,18 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.ui.screen.loggedIn.calendars.create
+package com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.calendars.create
 
-import android.net.Uri
 import androidx.compose.runtime.mutableStateOf
 import androidx.lifecycle.ViewModel
 import com.vitorpamplona.amethyst.commons.model.Account
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
 import com.vitorpamplona.amethyst.commons.model.nip52Calendar.parseIsoDateToUnixSeconds
+import com.vitorpamplona.amethyst.commons.search.calendar.LocalClock
+import com.vitorpamplona.amethyst.commons.search.calendar.SearchDate
 import com.vitorpamplona.amethyst.commons.service.uploads.CompressorQuality
 import com.vitorpamplona.amethyst.commons.service.uploads.MediaUploader
+import com.vitorpamplona.amethyst.commons.service.uploads.MediaUri
 import com.vitorpamplona.amethyst.commons.service.uploads.UploadOrchestrator
 import com.vitorpamplona.amethyst.commons.service.uploads.UploadingState
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
@@ -36,10 +38,6 @@ import com.vitorpamplona.quartz.nip01Core.tags.hashtags.hashtags
 import com.vitorpamplona.quartz.nip01Core.tags.people.PTag
 import com.vitorpamplona.quartz.nip52Calendar.appt.day.CalendarDateSlotEvent
 import com.vitorpamplona.quartz.nip52Calendar.appt.time.CalendarTimeSlotEvent
-import java.text.SimpleDateFormat
-import java.time.ZoneId
-import java.util.Locale
-import java.util.TimeZone
 import com.vitorpamplona.quartz.nip52Calendar.appt.day.image as dayImage
 import com.vitorpamplona.quartz.nip52Calendar.appt.day.locations as dayLocations
 import com.vitorpamplona.quartz.nip52Calendar.appt.day.participants as dayParticipants
@@ -155,7 +153,7 @@ class NewCalendarEventViewModel : ViewModel() {
      * doesn't have to drag in NewMediaModel's full surface area.
      */
     suspend fun uploadAndSetImage(
-        uri: Uri,
+        uri: MediaUri,
         mimeType: String?,
         uploader: MediaUploader,
     ): Boolean {
@@ -195,7 +193,7 @@ class NewCalendarEventViewModel : ViewModel() {
             val parsedImage = imageUrl.value.trim().takeIf { it.isNotBlank() }
             val parsedLocation = location.value.trim().takeIf { it.isNotBlank() }
             val parsedParticipants = participants.map { PTag(it) }
-            val tzId = TimeZone.getDefault().id
+            val tzId = LocalClock.zoneId()
             val targetDTag = editAddress?.dTag
 
             if (isAllDay.value) {
@@ -272,10 +270,5 @@ class NewCalendarEventViewModel : ViewModel() {
     }
 }
 
-private val IsoFormat =
-    SimpleDateFormat("yyyy-MM-dd", Locale.US).apply {
-        // 31922 uses calendar-date strings; format the user's local date.
-        timeZone = TimeZone.getTimeZone(ZoneId.systemDefault())
-    }
-
-private fun toIsoDate(epochSeconds: Long): String = IsoFormat.format(java.util.Date(epochSeconds * 1000))
+// 31922 uses calendar-date strings; format the user's local date.
+private fun toIsoDate(epochSeconds: Long): String = SearchDate.civilFromDays(LocalClock.epochDayCounter().epochDay(epochSeconds)).ymd()

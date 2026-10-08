@@ -66,6 +66,7 @@ import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.calendars.CalendarC
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.calendars.CalendarReminderSettingsScreen
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.calendars.CalendarsScreen
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.calendars.create.NewCalendarCollectionScreen
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.calendars.create.NewCalendarEventScreen
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.calendars.detail.CalendarEventDetailScreen
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.cordnGroup.CordnCreateGroupScreen
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.cordnGroup.CordnCreateMembersScreen
@@ -280,6 +281,10 @@ fun NavDestinations.sharedDestinations(
     composableFromEnd<Route.Communities> { CommunitiesScreen(accountViewModel, nav) }
     composableFromEnd<Route.NewCommunity> { NewCommunityScreen(accountViewModel, nav) }
     composableFromEndArgs<Route.EditCommunity> { EditCommunityScreen(Address(it.kind, it.pubKeyHex, it.dTag), accountViewModel, nav) }
+    composableFromBottomArgs<Route.NewCalendarEvent> { NewCalendarEventScreen(nav, accountViewModel) }
+    composableFromBottomArgs<Route.EditCalendarEvent> {
+        NewCalendarEventScreen(nav, accountViewModel, editKind = it.kind, editPubKeyHex = it.pubKeyHex, editDTag = it.dTag)
+    }
     composableFromEndArgs<Route.AddToMusicPlaylist> { AddToMusicPlaylistSheet(trackAddress = it.trackAddress, accountViewModel = accountViewModel, nav = nav) }
     composableFromEnd<Route.Badges> { BadgesScreen(accountViewModel, nav) }
     composableFromEnd<Route.ProfileBadges> { ProfileBadgesScreen(accountViewModel, nav) }

@@ -18,7 +18,7 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.ui.screen.loggedIn.calendars.create
+package com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.calendars.create
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -50,11 +50,9 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.resources.Res
@@ -78,6 +76,8 @@ import com.vitorpamplona.amethyst.commons.resources.calendar_event_summary
 import com.vitorpamplona.amethyst.commons.resources.calendar_event_title
 import com.vitorpamplona.amethyst.commons.resources.edit_calendar_event
 import com.vitorpamplona.amethyst.commons.resources.new_calendar_event
+import com.vitorpamplona.amethyst.commons.ui.actions.uploads.GallerySelectSingle
+import com.vitorpamplona.amethyst.commons.ui.components.rememberViewModel
 import com.vitorpamplona.amethyst.commons.ui.insets.imePaddingSafe
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.navigation.topbars.SavingTopBar
@@ -86,6 +86,8 @@ import com.vitorpamplona.amethyst.commons.ui.note.LoadUser
 import com.vitorpamplona.amethyst.commons.ui.note.UsernameDisplay
 import com.vitorpamplona.amethyst.commons.ui.note.creators.userSuggestions.ShowUserSuggestionList
 import com.vitorpamplona.amethyst.commons.ui.note.creators.userSuggestions.UserSuggestionState
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.calendars.create.CalendarDateTimePickerButton
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.calendars.create.NewCalendarEventViewModel
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.Size30dp
 import com.vitorpamplona.amethyst.commons.ui.theme.SuggestionListDefaultHeightChat
@@ -101,7 +103,7 @@ fun NewCalendarEventScreen(
     editPubKeyHex: String? = null,
     editDTag: String? = null,
 ) {
-    val vm: NewCalendarEventViewModel = viewModel()
+    val vm: NewCalendarEventViewModel = rememberViewModel { NewCalendarEventViewModel() }
     vm.init(accountViewModel)
     if (editKind != null && editPubKeyHex != null && editDTag != null) {
         // loadForEdit is idempotent across recompositions; safe to call from the composable body.
@@ -264,18 +266,14 @@ private fun ImageRow(
     vm: NewCalendarEventViewModel,
     accountViewModel: AccountViewModel,
 ) {
-    val context = LocalContext.current
     val scope = rememberCoroutineScope()
-    val launcher =
-        androidx.activity.compose.rememberLauncherForActivityResult(
-            contract =
-                androidx.activity.result.contract.ActivityResultContracts
-                    .GetContent(),
-        ) { uri ->
-            if (uri == null) return@rememberLauncherForActivityResult
-            val mime = context.contentResolver.getType(uri)
+    var pickImage by remember { mutableStateOf(false) }
+    if (pickImage) {
+        GallerySelectSingle(imagesOnly = true) { media ->
+            pickImage = false
+            if (media == null) return@GallerySelectSingle
             scope.launch {
-                val ok = vm.uploadAndSetImage(uri, mime, accountViewModel.host.mediaUploader)
+                val ok = vm.uploadAndSetImage(media.uri, media.mimeType, accountViewModel.host.mediaUploader)
                 if (!ok) {
                     accountViewModel.toastManager.toast(
                         Res.string.calendar_event_image_upload_failed,
@@ -284,6 +282,7 @@ private fun ImageRow(
                 }
             }
         }
+    }
 
     Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
         OutlinedTextField(
@@ -300,7 +299,7 @@ private fun ImageRow(
                 strokeWidth = 2.dp,
             )
         } else {
-            IconButton(onClick = { launcher.launch("image/*") }) {
+            IconButton(onClick = { pickImage = true }) {
                 Icon(
                     symbol = MaterialSymbols.AddPhotoAlternate,
                     contentDescription = stringRes(Res.string.calendar_event_pick_image),

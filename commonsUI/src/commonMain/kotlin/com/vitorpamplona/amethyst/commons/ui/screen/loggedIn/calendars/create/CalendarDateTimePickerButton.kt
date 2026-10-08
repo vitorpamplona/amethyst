@@ -18,7 +18,7 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.ui.screen.loggedIn.calendars.create
+package com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.calendars.create
 
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.material3.DatePicker
@@ -37,19 +37,20 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalConfiguration
-import androidx.compose.ui.platform.LocalContext
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.calendar_event_pick_time
 import com.vitorpamplona.amethyst.commons.resources.cancel
 import com.vitorpamplona.amethyst.commons.resources.confirm
+import com.vitorpamplona.amethyst.commons.search.calendar.LocalClock
+import com.vitorpamplona.amethyst.commons.search.calendar.SearchDate
+import com.vitorpamplona.amethyst.commons.search.calendar.atTime
+import com.vitorpamplona.amethyst.commons.search.calendar.fromPickerMillis
+import com.vitorpamplona.amethyst.commons.search.calendar.secondOfDay
+import com.vitorpamplona.amethyst.commons.ui.note.DateTimeStyle
+import com.vitorpamplona.amethyst.commons.ui.note.formatDateTime
+import com.vitorpamplona.amethyst.commons.ui.note.rememberIs24HourClock
 import com.vitorpamplona.amethyst.commons.ui.stringRes
-import java.text.DateFormat
-import java.time.Instant
-import java.time.ZoneId
-import java.time.ZoneOffset
-import java.util.Date
-import android.text.format.DateFormat as AndroidDateFormat
+import com.vitorpamplona.quartz.utils.TimeUtils
 
 /**
  * Tap-to-edit button that opens a Material3 DatePicker (and, when [includeTime] is true,
@@ -71,25 +72,20 @@ fun CalendarDateTimePickerButton(
     var showDate by remember { mutableStateOf(false) }
     var showTime by remember { mutableStateOf(false) }
 
-    val locale = LocalConfiguration.current.locales[0]
-    val context = LocalContext.current
     val pretty =
         if (unixSeconds <= 0L) {
             placeholder
         } else if (includeTime) {
-            DateFormat
-                .getDateTimeInstance(DateFormat.MEDIUM, DateFormat.SHORT, locale)
-                .format(Date(unixSeconds * 1000))
+            formatDateTime(unixSeconds * 1000, DateTimeStyle.MEDIUM, DateTimeStyle.SHORT)
         } else {
-            DateFormat.getDateInstance(DateFormat.FULL, locale).format(Date(unixSeconds * 1000))
+            formatDateTime(unixSeconds * 1000, DateTimeStyle.LONG, DateTimeStyle.NONE)
         }
 
-    val initialMillis = if (unixSeconds > 0L) unixSeconds * 1000L else System.currentTimeMillis()
-    val initialLocal =
-        Instant
-            .ofEpochMilli(initialMillis)
-            .atZone(ZoneId.systemDefault())
-            .toLocalDateTime()
+    val initialSeconds = if (unixSeconds > 0L) unixSeconds else TimeUtils.now()
+    val initialMillis = initialSeconds * 1000L
+    val initialSecondOfDay = LocalClock.secondOfDay(initialSeconds)
+    val initialHour = (initialSecondOfDay / TimeUtils.ONE_HOUR).toInt()
+    val initialMinute = ((initialSecondOfDay % TimeUtils.ONE_HOUR) / TimeUtils.ONE_MINUTE).toInt()
 
     val datePickerState =
         rememberDatePickerState(
@@ -97,15 +93,15 @@ fun CalendarDateTimePickerButton(
         )
     val timePickerState =
         rememberTimePickerState(
-            initialHour = initialLocal.hour,
-            initialMinute = initialLocal.minute,
-            is24Hour = AndroidDateFormat.is24HourFormat(context),
+            initialHour = initialHour,
+            initialMinute = initialMinute,
+            is24Hour = rememberIs24HourClock(),
         )
 
     fun reset() {
         datePickerState.selectedDateMillis = initialMillis
-        timePickerState.hour = initialLocal.hour
-        timePickerState.minute = initialLocal.minute
+        timePickerState.hour = initialHour
+        timePickerState.minute = initialMinute
     }
 
     OutlinedButton(
@@ -181,19 +177,14 @@ private fun commit(
     onChange: (Long) -> Unit,
 ) {
     if (dayMillisUtc == null) return
-    val zone = ZoneId.systemDefault()
-    val localDate =
-        Instant
-            .ofEpochMilli(dayMillisUtc)
-            .atZone(ZoneOffset.UTC)
-            .toLocalDate()
+    val localDate = SearchDate.fromPickerMillis(dayMillisUtc)
     val picked =
         if (includeTime) {
-            localDate.atTime(hour, minute).atZone(zone).toEpochSecond()
+            LocalClock.atTime(localDate, hour, minute)
         } else {
             // For date-only events, anchor to midnight in the user's local zone so the day
             // boundary matches their wall-clock intent.
-            localDate.atStartOfDay(zone).toEpochSecond()
+            LocalClock.startOfDay(localDate)
         }
     onChange(picked)
 }

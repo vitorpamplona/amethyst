@@ -57,7 +57,6 @@ import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.navigation.Route
@@ -69,6 +68,7 @@ import com.vitorpamplona.amethyst.commons.resources.music_playlist_create_action
 import com.vitorpamplona.amethyst.commons.resources.music_playlist_new_title_placeholder
 import com.vitorpamplona.amethyst.commons.resources.music_playlist_track_count_short
 import com.vitorpamplona.amethyst.commons.resources.music_playlist_untitled
+import com.vitorpamplona.amethyst.commons.ui.components.rememberViewModel
 import com.vitorpamplona.amethyst.commons.ui.insets.imePaddingSafe
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.EmptyNav
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
@@ -98,7 +98,7 @@ fun AddToMusicPlaylistSheet(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    val vm: AddToMusicPlaylistViewModel = viewModel()
+    val vm: AddToMusicPlaylistViewModel = rememberViewModel { AddToMusicPlaylistViewModel() }
     vm.init(accountViewModel, trackAddress)
 
     Scaffold(
