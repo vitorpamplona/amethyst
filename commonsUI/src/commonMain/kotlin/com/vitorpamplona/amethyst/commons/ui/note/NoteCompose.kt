@@ -196,6 +196,7 @@ import com.vitorpamplona.amethyst.commons.ui.note.types.RenderFhirResource
 import com.vitorpamplona.amethyst.commons.ui.note.types.RenderFundraiser
 import com.vitorpamplona.amethyst.commons.ui.note.types.RenderGeocache
 import com.vitorpamplona.amethyst.commons.ui.note.types.RenderGeocacheFoundLog
+import com.vitorpamplona.amethyst.commons.ui.note.types.RenderGitCoverNoteEvent
 import com.vitorpamplona.amethyst.commons.ui.note.types.RenderGitStatusEvent
 import com.vitorpamplona.amethyst.commons.ui.note.types.RenderGoal
 import com.vitorpamplona.amethyst.commons.ui.note.types.RenderHighlight
@@ -365,6 +366,7 @@ import com.vitorpamplona.quartz.nip28PublicChat.admin.ChannelCreateEvent
 import com.vitorpamplona.quartz.nip28PublicChat.admin.ChannelMetadataEvent
 import com.vitorpamplona.quartz.nip28PublicChat.message.ChannelMessageEvent
 import com.vitorpamplona.quartz.nip30CustomEmoji.pack.EmojiPackEvent
+import com.vitorpamplona.quartz.nip34Git.coverNote.GitCoverNoteEvent
 import com.vitorpamplona.quartz.nip34Git.issue.GitIssueEvent
 import com.vitorpamplona.quartz.nip34Git.patch.GitPatchEvent
 import com.vitorpamplona.quartz.nip34Git.pr.GitPullRequestEvent
@@ -1419,6 +1421,10 @@ private fun RenderNoteRow(
 
         is GitStatusEvent -> {
             RenderGitStatusEvent(baseNote, quotesLeft, backgroundColor, accountViewModel, nav)
+        }
+
+        is GitCoverNoteEvent -> {
+            RenderGitCoverNoteEvent(baseNote, makeItShort, canPreview, quotesLeft, backgroundColor, accountViewModel, nav)
         }
 
         is EncryptedDmEvent -> {

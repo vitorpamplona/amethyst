@@ -278,6 +278,10 @@ import com.vitorpamplona.quartz.nip29RelayGroups.request.GroupLeaveRequestEvent
 import com.vitorpamplona.quartz.nip30CustomEmoji.pack.EmojiPackEvent
 import com.vitorpamplona.quartz.nip30CustomEmoji.selection.EmojiListEvent
 import com.vitorpamplona.quartz.nip32Labeling.LabelEvent
+import com.vitorpamplona.quartz.nip34Git.ci.jobResult.CiJobResultEvent
+import com.vitorpamplona.quartz.nip34Git.ci.workflowProgress.CiWorkflowProgressEvent
+import com.vitorpamplona.quartz.nip34Git.ci.workflowResult.CiWorkflowResultEvent
+import com.vitorpamplona.quartz.nip34Git.coverNote.GitCoverNoteEvent
 import com.vitorpamplona.quartz.nip34Git.grasp.UserGraspListEvent
 import com.vitorpamplona.quartz.nip34Git.issue.GitIssueEvent
 import com.vitorpamplona.quartz.nip34Git.patch.GitPatchEvent
@@ -1392,6 +1396,13 @@ open class EventCache :
                 // it answers, when nested), so the forum list's reply count sees it. A direct reply
                 // carries only the `reply` marker, which then IS the root.
                 listOfNotNull(event.threadRoot(), event.replyTo()).distinct().mapNotNull { checkGetOrCreateNote(it) }
+            }
+
+            is GitCoverNoteEvent -> {
+                // A cover note threads alongside the NIP-34 replies of the issue / patch / PR it
+                // covers (its root `e`), so the item's history shows each edit and the card can quote
+                // its target. The banner above the description is resolved separately (GitCoverNotes).
+                listOfNotNull(event.rootEventId()?.let { checkGetOrCreateNote(it) })
             }
 
             is GitStatusEvent -> {
@@ -3898,6 +3909,9 @@ open class EventCache :
                 is CyberspaceBagEvent,
                 is GitRepositoryEvent,
                 is GitRepositoryStateEvent,
+                // Nostr CI Workflow Progress (39842): the live marker of a run, replaced as it advances.
+                // CiStatusIndex reads it for the PR / patch CI badge; not linked into any thread.
+                is CiWorkflowProgressEvent,
                 is UserGraspListEvent,
                 is RootSiteEvent,
                 is NamedSiteEvent,
@@ -4026,6 +4040,11 @@ open class EventCache :
                 is GitPullRequestEvent,
                 is GitPullRequestUpdateEvent,
                 is GitStatusEvent,
+                // Cover notes are linked to the item they cover (computeReplyTo); the CI results are
+                // not linked into any thread — CiStatusIndex and the runs sheet read them instead.
+                is GitCoverNoteEvent,
+                is CiJobResultEvent,
+                is CiWorkflowResultEvent,
                 is SnoShardEvent,
                 is ChessGameEvent,
                 is JesterEvent,

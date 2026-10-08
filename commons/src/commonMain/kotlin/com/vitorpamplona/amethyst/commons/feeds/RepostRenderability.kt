@@ -46,7 +46,6 @@ import com.vitorpamplona.quartz.nip34Git.ci.serviceRequest.CiServiceRequestEvent
 import com.vitorpamplona.quartz.nip34Git.ci.serviceStop.CiServiceStopEvent
 import com.vitorpamplona.quartz.nip34Git.ci.workflowProgress.CiWorkflowProgressEvent
 import com.vitorpamplona.quartz.nip34Git.ci.workflowResult.CiWorkflowResultEvent
-import com.vitorpamplona.quartz.nip34Git.coverNote.GitCoverNoteEvent
 import com.vitorpamplona.quartz.nip5aStaticWebsites.SiteSnapshotEvent
 import com.vitorpamplona.quartz.nip69P2pOrderEvents.mostroDevFee.MostroDevFeePaymentEvent
 import com.vitorpamplona.quartz.nip69P2pOrderEvents.mostroDispute.MostroDisputeEvent
@@ -98,8 +97,8 @@ fun Event?.isRenderableRepost(): Boolean {
  */
 val TYPED_WITHOUT_A_CARD: Set<Int> =
     setOf(
-        // NIP-34 cover notes and the Nostr CI family: shown on their repository's pages, not alone.
-        GitCoverNoteEvent.KIND,
+        // The Nostr CI family: shown as a status badge and a runs sheet on the PR / patch it ran for,
+        // never as a card of its own. (NIP-34 cover notes, 1624, have a card: RenderGitCoverNoteEvent.)
         CiManualTriggerEvent.KIND,
         CiJobResultEvent.KIND,
         CiWorkflowResultEvent.KIND,
