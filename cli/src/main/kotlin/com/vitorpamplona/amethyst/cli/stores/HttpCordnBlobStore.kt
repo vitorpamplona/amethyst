@@ -83,7 +83,7 @@ class HttpCordnBlobStore(
                                 .get()
                                 .build(),
                         ).execute()
-                        .use { if (it.isSuccessful) it.body?.bytes() else null }
+                        .use { if (it.isSuccessful) it.body.bytes() else null }
                 }.getOrNull()
             }
         }

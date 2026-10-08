@@ -35,7 +35,6 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Text
-import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -52,6 +51,7 @@ import com.vitorpamplona.amethyst.commons.resources.calendar_filter_all
 import com.vitorpamplona.amethyst.commons.resources.calendar_filter_no_calendars
 import com.vitorpamplona.amethyst.commons.resources.calendar_filter_sheet_title
 import com.vitorpamplona.amethyst.commons.resources.calendar_untitled
+import com.vitorpamplona.amethyst.commons.ui.components.rememberModalSheetState
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 
 /**
@@ -91,7 +91,7 @@ fun CalendarFilterChip(
     if (showSheet) {
         ModalBottomSheet(
             onDismissRequest = { showSheet = false },
-            sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
+            sheetState = rememberModalSheetState(skipPartiallyExpanded = true),
         ) {
             Column(
                 modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),

@@ -100,9 +100,9 @@
     <string name="chats_history_relays_title">%1$s। इतिहास पुनःप्रसारक अनुसार</string>
     <string name="chats_history_relay_since">%1$s से</string>
     <string name="chats_history_gate_auto_title">अधिक पुराने रहस्यीकृत सन्देशों के लिए खोज चालू</string>
-    <string name="chats_history_gate_auto_body">एक पृष्ठ अधिक का आवहन आपके सभी सीधासन्देश पुनःप्रसारकों से।</string>
+    <string name="chats_history_gate_auto_body">एक पृष्ठ अधिक का आवहन चालू आपके सभी सीधासन्देश पुनःप्रसारकों से।</string>
     <string name="chats_history_gate_paused_title">अधिक पुराने रहस्यीकृत सन्देशों का आवहन अभी हुआ नहीं</string>
-    <string name="chats_history_gate_loaded_to">आवहन हो गया %1$s तक।</string>
+    <string name="chats_history_gate_loaded_to">आवहन हो गया पीछे %1$s तक।</string>
     <string name="chats_history_gate_has_more">आपके सीधासन्देश पुनःप्रसारकों में और अधिक इतिहास है।</string>
     <string name="chats_history_gate_continue">आगे</string>
     <string name="chats_history_gate_none_title">कोई अधिक पुराने रहस्यीकृत सन्देश नहीं %1$s के साथ अब तक</string>
@@ -1002,7 +1002,7 @@
     <string name="my_fitness_to_go">%1$s शेष</string>
     <string name="my_fitness_all_goals_met">प्रत्येक लक्ष्य प्राप्त इस सप्ताह</string>
     <string name="my_fitness_week_trend">साप्ताहिक सक्रिय समय</string>
-    <string name="my_fitness_week_of">%1$s का सप्ताह</string>
+    <string name="my_fitness_week_of">%1$s के सप्ताह</string>
     <string name="my_fitness_goal_line">लक्ष्य</string>
     <string name="my_fitness_weeks_met">लक्ष्य प्राप्त पिछले %2$d सप्ताहों में से %1$d</string>
     <string name="my_fitness_average_change">मध्यमान %1$s प्रतिसप्ताह निकटकालतः। %2$s पिछले चार सप्ताहों की तुलना में</string>
@@ -4580,6 +4580,30 @@
     <string name="napplet_op_decrypt">आपके निजी सन्देशों का पठन</string>
     <string name="napplet_op_decrypt_from">आपके निजी सन्देशों का पठन %1$s के द्वारा</string>
     <string name="napplet_op_encrypt">सन्देश रहस्यीकरण</string>
+    <string name="napplet_op_sign_in">पुनःप्रसारकों तथा क्रमकों में आपका हस्ताक्षर प्रवेश</string>
+    <string name="napplet_op_app_login">आपका हस्ताक्षर प्रवेश</string>
+    <string name="napplet_op_relay_login_to">प्रवेशांकन %1$s में आपके रूप में</string>
+    <string name="napplet_op_http_auth">हस्ताक्षर करें एक %1$s अनुरोध का %2$s को</string>
+    <string name="napplet_op_http_auth_unknown">हस्ताक्षर करें एक जाल अनुरोध का जिसमें कोई पता नामित नहीं</string>
+    <string name="napplet_op_blossom">श्रव्यदृश्याभिलेख का प्रयोग करें आपके रूप में</string>
+    <string name="napplet_op_blossom_upload">श्रव्यदृश्याभिलेख सेवासंगणक तक अभिलेख का आरोहण</string>
+    <string name="napplet_op_blossom_delete">श्रव्यदृश्याभिलेख सेवासंगणक से अभिलेख मिटाएँ</string>
+    <string name="napplet_op_blossom_list">श्रव्यदृश्याभिलेख सेवासंगणक पर आपके अभिलेखों की सूची</string>
+    <string name="napplet_op_blossom_get">श्रव्यदृश्याभिलेख सेवासंगणक से अभिलेख का अवरोहण</string>
+    <string name="napplet_consent_wants_described">यह जालस्थान %1$s चाहता है।</string>
+    <plurals name="napplet_consent_waiting_long">
+        <item quantity="one">पूछा गया %1$d मिनुट पूर्व। क्रमक सम्भाव्यतः प्रतीक्षा करना रोक दिया।</item>
+        <item quantity="other">पूछा गया %1$d मिनुट पूर्व। क्रमक सम्भाव्यतः प्रतीक्षा करना रोक दिया।</item>
+    </plurals>
+    <string name="napplet_op_seal_message_to">निजी सन्देश भेजें इनको %1$s</string>
+    <string name="napplet_op_seal_message">निजी सन्देश भेजें</string>
+    <string name="napplet_consent_seal_unknown">एक रहस्यीकृत निजी सन्देश। अमेथिस्ट ने इसका रहस्यीकरण नहीं किया। इसलिए इसके भीतर क्या है दिखा नहीं सकता।</string>
+    <string name="napplet_op_update_profile">अपने परिचय का अद्यतन करें</string>
+    <string name="consent_profile_changes">आपके %1$s का परिवर्तन करता है</string>
+    <string name="consent_profile_removes">आपके %1$s को हटाता है</string>
+    <string name="consent_profile_removes_other">आपके परिचय से प्रपत्रस्थानों को हटाता है</string>
+    <string name="consent_profile_no_change">आपके परिचय में कोई परिवर्तन नहीं</string>
+    <string name="consent_profile_unknown">आपका वर्तमान परिचय का आवहन नहीं हुआ। इसलिए अमेथिस्ट दिखा नहीं सकता कि इसमें क्या परिवर्तित होगा। हस्ताक्षरण से यह प्रतिस्थापित होगा।</string>
     <string name="consent_profile_field_name">नाम</string>
     <string name="consent_profile_field_display_name">प्रदर्शन नाम</string>
     <string name="consent_profile_field_picture">चित्र</string>
@@ -4588,6 +4612,32 @@
     <string name="consent_profile_field_website">जालस्थान</string>
     <string name="consent_profile_field_nip05">सत्यापित पता</string>
     <string name="consent_profile_field_lightning">लैटनिंग पता</string>
+    <string name="consent_report_person">%1$s का वृत्तान्त देता है सार्वजनिकतः</string>
+    <string name="consent_report_person_reason">%1$s का वृत्तान्त देता है सार्वजनिकतः %2$s के रूप में</string>
+    <string name="consent_report_content">विषयवस्तु का वृत्तान्त देता है सार्वजनिकतः</string>
+    <string name="consent_delete_about">%2$s के विषय में आपके %1$s को मिटाता है</string>
+    <string name="consent_delete_events">घटनाएँ</string>
+    <string name="consent_delete_nothing">कुछ भी नामित नहीं मिटाने के लिए</string>
+    <plurals name="consent_delete_count">
+        <item quantity="one">आपके %2$s में से %1$d मिटाता है</item>
+        <item quantity="other">आपके %2$s में से %1$d मिटाता है</item>
+    </plurals>
+    <string name="consent_list_adds">%1$s जोडता है</string>
+    <string name="consent_list_removes">%1$s हटाता है</string>
+    <string name="consent_list_no_change">कोई परिवर्तन नहीं कि कौन इस सूची में है</string>
+    <string name="consent_list_unknown">आपकी वर्तमान सूची का आवहन नहीं हुआ। इसलिए अमेथिस्ट दिखा नहीं सकता कि इसमें क्या परिवर्तित होगा। हस्ताक्षरण से यह प्रतिस्थापित होगा।</string>
+    <plurals name="consent_list_keeps">
+        <item quantity="one">अन्य %1$d रखता है</item>
+        <item quantity="other">अन्य %1$d रखता है</item>
+    </plurals>
+    <plurals name="consent_list_wipe">
+        <item quantity="one">सभी (%1$d) को इस सूची से हटाता है</item>
+        <item quantity="other">सभी (%1$d) को इस सूची से हटाता है</item>
+    </plurals>
+    <plurals name="consent_list_names_more">
+        <item quantity="one">%1$s तथा %2$d अधिक</item>
+        <item quantity="other">%1$s तथा %2$d अधिक</item>
+    </plurals>
     <string name="napplet_op_sign_kind_named">%1$s के लिए हस्ताक्षरण (प्रकार : %2$d)</string>
     <string name="napplet_permissions_title">संयोजित क्रमक</string>
     <string name="napplets">नोस्टर संलग्नक्रमक</string>
@@ -4758,6 +4808,10 @@
     <string name="nip46_signer_remote_app">दूरस्थ हस्ताक्षरकर्ता क्रमक</string>
     <string name="nip46_signer_title">दूरस्थ हस्ताक्षरकर्ता</string>
     <string name="nip51_list_has_private_members">इस सूची में निजी सदस्य हैं जो केवल इसका कर्ता देख सकेगा</string>
+    <plurals name="nip82_downloads_count">
+        <item quantity="one">%1$d अवरोहण</item>
+        <item quantity="other">%1$d अवरोहण</item>
+    </plurals>
     <plurals name="nip82_assets_count">
         <item quantity="one">%1$d सम्पत्ति समावेशित</item>
         <item quantity="other">%1$d सम्पत्ति समावेशित</item>

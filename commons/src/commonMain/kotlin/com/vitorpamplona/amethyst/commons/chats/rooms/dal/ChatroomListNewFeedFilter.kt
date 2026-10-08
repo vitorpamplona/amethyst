@@ -45,6 +45,7 @@ class ChatroomListNewFeedFilter(
     override fun feed(): List<Note> {
         val chatList = account.chatroomList
         val followingKeySet = account.followingKeySet()
+        // A pinned room is Known (Account.isKnownChatroom), never a request.
 
         val privateMessages =
             chatList.rooms.mapNotNull { key, chatroom ->

@@ -976,7 +976,6 @@ private fun CordnCreationOutcome(
     val open: () -> Unit = {
         onDismiss()
         coordinatorPubKey?.let { nav.nav(Route.CordnGroupChat(it, creation.gid)) }
-        Unit
     }
 
     AlertDialog(

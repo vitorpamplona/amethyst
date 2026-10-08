@@ -21,6 +21,7 @@
 package com.vitorpamplona.amethyst.commons.model.concord
 
 import com.vitorpamplona.amethyst.commons.actions.ConcordChannelPins
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.advanceTimeBy
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runCurrent
@@ -36,6 +37,7 @@ import kotlin.test.assertTrue
  * one duty at a time, and a debt is attempted once — so a burst of ticks costs one write and a failing
  * write never spins — while a new debt is a new attempt.
  */
+@OptIn(ExperimentalCoroutinesApi::class)
 class ConcordPinDutySchedulerTest {
     @Test
     fun oneAttemptPerDebtAndOneDutyPerChannel() =

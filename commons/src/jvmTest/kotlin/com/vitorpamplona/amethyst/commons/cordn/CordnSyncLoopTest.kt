@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst.commons.cordn
 
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -42,6 +43,7 @@ import kotlin.test.assertIs
  * joined into a subscription that was already open. The happy path is one
  * `catch_up` and one `subscribe`, and it is not what this class is for.
  */
+@OptIn(ExperimentalCoroutinesApi::class)
 class CordnSyncLoopTest {
     /**
      * A [CordnSyncSource] that does exactly what it is told.

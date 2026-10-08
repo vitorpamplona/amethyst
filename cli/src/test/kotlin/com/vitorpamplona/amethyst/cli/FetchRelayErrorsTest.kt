@@ -125,7 +125,7 @@ class FetchRelayErrorsTest {
 
         assertEquals(0, r.exit, r.stderr)
         val result = Output.mapper.readTree(r.stdoutLines.single())
-        assertEquals(1, result["count"].asInt())
+        assertEquals(1, result["count"].asInt(), "the serving relay's note: $result ${r.stderr}")
         assertEquals(note.id, result["events"][0]["id"].asText())
 
         val errors = result["relay_errors"]

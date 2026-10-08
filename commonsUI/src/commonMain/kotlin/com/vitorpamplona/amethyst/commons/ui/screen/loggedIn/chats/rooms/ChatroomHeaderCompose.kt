@@ -57,6 +57,7 @@ import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
 import com.vitorpamplona.amethyst.commons.model.chatMessageMarksRoomAsRead
 import com.vitorpamplona.amethyst.commons.model.chats.ConcordDirectInviteNote
 import com.vitorpamplona.amethyst.commons.model.chats.ConcordServerRoomNote
+import com.vitorpamplona.amethyst.commons.model.chats.PinnedChatroomNote
 import com.vitorpamplona.amethyst.commons.model.chats.RelayGroupServerRoomNote
 import com.vitorpamplona.amethyst.commons.model.concord.ConcordChannel
 import com.vitorpamplona.amethyst.commons.model.concordChannelLastReadRoute
@@ -117,6 +118,7 @@ import com.vitorpamplona.amethyst.commons.resources.marmot_group
 import com.vitorpamplona.amethyst.commons.resources.mute_notifications
 import com.vitorpamplona.amethyst.commons.resources.muted_chat_content_description
 import com.vitorpamplona.amethyst.commons.resources.pin_conversation
+import com.vitorpamplona.amethyst.commons.resources.pinned_chat_no_messages_loaded
 import com.vitorpamplona.amethyst.commons.resources.pinned_to_top
 import com.vitorpamplona.amethyst.commons.resources.public_chat
 import com.vitorpamplona.amethyst.commons.resources.referenced_event_not_found
@@ -200,6 +202,7 @@ fun ChatroomHeaderCompose(
     // instead — the room was in the feed, correctly, and simply had no pixels.
     val rendersWithoutEvent =
         baseNote is RelayGroupServerRoomNote ||
+            baseNote is PinnedChatroomNote ||
             baseNote is ConcordServerRoomNote ||
             baseNote is ConcordDirectInviteNote ||
             (
@@ -252,6 +255,12 @@ private fun ChatroomEntry(
 
     if (lastMessage is ConcordServerRoomNote) {
         ConcordServerRoomCompose(lastMessage, accountViewModel, nav)
+        return
+    }
+
+    // A pinned DM whose messages are all older than the loaded gift wraps: same row, no preview.
+    if (lastMessage is PinnedChatroomNote) {
+        UserRoomCompose(lastMessage.room, lastMessage, isDraft = false, accountViewModel, nav)
         return
     }
 
@@ -1284,7 +1293,11 @@ private fun UserRoomCompose(
             TimeAgo(lastMessage.createdAt(), hasNewMessages)
         },
         secondRow = {
-            LastMessagePreview(lastMessage, accountViewModel)
+            if (lastMessage is PinnedChatroomNote) {
+                PreviewLine(stringRes(Res.string.pinned_chat_no_messages_loaded))
+            } else {
+                LastMessagePreview(lastMessage, accountViewModel)
+            }
         },
         onClick = { nav.nav(Route.Room(room)) },
         onLongClick = { popupExpanded = true },

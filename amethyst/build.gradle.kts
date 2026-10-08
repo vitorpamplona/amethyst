@@ -16,20 +16,18 @@ plugins {
     alias(libs.plugins.androidxBaselineProfile)
 }
 
+// providers.exec rather than ProcessBuilder: Gradle deprecated starting external processes at
+// configuration time outside its provider API (an error from Gradle 11), and this way the
+// configuration cache also tracks the command's output as a build input.
 fun getCurrentBranch(workingDir: java.io.File): String =
     try {
-        val process =
-            ProcessBuilder("git", "rev-parse", "--abbrev-ref", "HEAD")
-                .directory(workingDir)
-                .redirectErrorStream(true)
-                .start()
-        val branch =
-            process.inputStream
-                .bufferedReader()
-                .use { it.readText() }
-                .trim()
-        val exitCode = process.waitFor()
-        if (exitCode != 0) "unknown" else branch
+        val git =
+            providers.exec {
+                commandLine("git", "rev-parse", "--abbrev-ref", "HEAD")
+                this.workingDir = workingDir
+                isIgnoreExitValue = true
+            }
+        if (git.result.get().exitValue != 0) "unknown" else git.standardOutput.asText.get().trim()
     } catch (e: Exception) {
         println("Could not determine git branch: ${e.message}")
         "unknown"

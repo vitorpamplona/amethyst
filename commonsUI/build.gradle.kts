@@ -247,9 +247,9 @@ kotlin {
             create("skikoMain") {
                 dependsOn(commonMain.get())
                 dependencies {
-                    // BackHandler for desktop (Esc) and iOS (swipe), behind PlatformBackHandler.
-                    // JetBrains Compose, Apache-2.0; Android uses AndroidX's instead.
-                    implementation(libs.jetbrains.compose.ui.backhandler)
+                    // NavigationBackHandler for desktop (Esc) and iOS (swipe), behind
+                    // PlatformBackHandler. Apache-2.0; Android uses AndroidX activity's BackHandler.
+                    implementation(libs.jetbrains.navigationevent.compose)
                 }
             }
         getByName("jvmMain").dependsOn(skikoMain)

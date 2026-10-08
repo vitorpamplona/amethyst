@@ -3809,14 +3809,15 @@ class Account(
 
     /** [isKnownChatroom] for a room that may not be loaded yet: then only "I wrote to it" counts. */
     fun isKnownChatroom(key: ChatroomKey): Boolean {
-        val room = chatroomList.rooms.get(key) ?: return chatroomList.hasSentMessagesTo(key)
+        val room = chatroomList.rooms.get(key) ?: return chatroomList.hasSentMessagesTo(key) || key in settings.syncedSettings.chats.pinnedChatrooms.value
         return isKnownChatroom(key, room)
     }
 
     /**
      * Whether a private chat room belongs in Known rather than New Requests: a sender is
-     * followed or (when a trust network is active) in the network, or this account has written
-     * to the room. The single rule for the DM tabs and DM notifications, in-app and push.
+     * followed or (when a trust network is active) in the network, this account has written to
+     * the room, or the user pinned it (an explicit "I know this conversation"). The single rule
+     * for the DM tabs and DM notifications, in-app and push.
      */
     fun isKnownChatroom(
         key: ChatroomKey,
@@ -3824,6 +3825,7 @@ class Account(
         followingKeySet: Set<HexKey> = followingKeySet(),
     ): Boolean {
         if (room.senderIntersects(followingKeySet) || chatroomList.hasSentMessagesTo(key)) return true
+        if (key in settings.syncedSettings.chats.pinnedChatrooms.value) return true
         val verdicts = currentTrustVerdicts()
         return verdicts.isActive && room.activeSenders.any { verdicts.passes(it.pubkeyHex) }
     }
