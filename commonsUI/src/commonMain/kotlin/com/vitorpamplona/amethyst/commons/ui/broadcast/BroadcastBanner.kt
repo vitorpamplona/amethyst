@@ -182,9 +182,9 @@ fun BroadcastBanner(
                         }
                     } else {
                         if (broadcasts.size == 1) {
-                            SingleBroadcastContent(broadcasts.first())
+                            SingleBroadcastContent(broadcasts.first(), onDismiss)
                         } else {
-                            MultipleBroadcastsContent(broadcasts)
+                            MultipleBroadcastsContent(broadcasts, onDismiss)
                         }
                     }
                 }
@@ -416,7 +416,10 @@ private fun PoWCancelDialog(
 }
 
 @Composable
-private fun SingleBroadcastContent(broadcast: BroadcastEvent) {
+private fun SingleBroadcastContent(
+    broadcast: BroadcastEvent,
+    onDismiss: () -> Unit,
+) {
     Row(
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -467,11 +470,17 @@ private fun SingleBroadcastContent(broadcast: BroadcastEvent) {
                 trackColor = MaterialTheme.colorScheme.surfaceVariant,
             )
         }
+
+        // hides the banner only; the send keeps going in the background.
+        DismissX(onDismiss)
     }
 }
 
 @Composable
-private fun MultipleBroadcastsContent(broadcasts: ImmutableList<BroadcastEvent>) {
+private fun MultipleBroadcastsContent(
+    broadcasts: ImmutableList<BroadcastEvent>,
+    onDismiss: () -> Unit,
+) {
     val totalRelays = broadcasts.sumOf { it.totalRelays }
     val completedResponses = broadcasts.sumOf { it.results.size }
 
@@ -521,6 +530,9 @@ private fun MultipleBroadcastsContent(broadcasts: ImmutableList<BroadcastEvent>)
                 trackColor = MaterialTheme.colorScheme.surfaceVariant,
             )
         }
+
+        // hides the banner only; the send keeps going in the background.
+        DismissX(onDismiss)
     }
 }
 
@@ -601,16 +613,7 @@ fun CompletedBroadcastContent(
             }
         }
 
-        // Dismiss X
-        Text(
-            text = "×",
-            style = MaterialTheme.typography.titleMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier =
-                Modifier
-                    .clickable(onClick = onDismiss)
-                    .padding(start = 2.dp),
-        )
+        DismissX(onDismiss)
     }
 }
 
@@ -704,17 +707,21 @@ fun MultipleCompletedBroadcastContent(
             }
         }
 
-        // Dismiss X
-        Text(
-            text = "×",
-            style = MaterialTheme.typography.titleMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier =
-                Modifier
-                    .clickable(onClick = onDismiss)
-                    .padding(start = 2.dp),
-        )
+        DismissX(onDismiss)
     }
+}
+
+@Composable
+private fun DismissX(onDismiss: () -> Unit) {
+    Text(
+        text = "×",
+        style = MaterialTheme.typography.titleMedium,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+        modifier =
+            Modifier
+                .clickable(onClick = onDismiss)
+                .padding(start = 2.dp),
+    )
 }
 
 @Composable

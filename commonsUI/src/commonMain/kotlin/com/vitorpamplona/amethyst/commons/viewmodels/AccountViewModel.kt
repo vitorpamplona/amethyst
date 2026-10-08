@@ -575,6 +575,7 @@ class AccountViewModel(
                             event = event,
                             relays = relays,
                             client = account.client,
+                            outboxRelays = account.nip65RelayList.outboxFlow.value,
                         )
 
                         account.consumeReactionEvent(event)
@@ -1663,6 +1664,7 @@ class AccountViewModel(
                     event = event,
                     relays = relays,
                     client = account.client,
+                    outboxRelays = account.nip65RelayList.outboxFlow.value,
                 )
                 consumeTracked(event)
             }

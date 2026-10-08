@@ -73,6 +73,8 @@ data class BroadcastEvent(
     val id: String,
     val event: Event,
     val targetRelays: List<NormalizedRelayUrl>,
+    /** The author's NIP-65 outbox relays among [targetRelays]; see [isOut]. */
+    val outboxRelays: Set<NormalizedRelayUrl> = emptySet(),
     val startedAt: Long = TimeUtils.now(),
     val results: Map<NormalizedRelayUrl, RelayResult> = emptyMap(),
     val status: BroadcastStatus = BroadcastStatus.IN_PROGRESS,
@@ -97,9 +99,18 @@ data class BroadcastEvent(
     val progress: Float
         get() = if (totalRelays == 0) 0f else results.size.toFloat() / totalRelays
 
-    /** Whether all relays have responded */
-    val isComplete: Boolean
-        get() = results.size >= targetRelays.size
+    /**
+     * Whether the event has reached the relays that matter: every outbox relay
+     * accepted it, or — when none of the targets is an outbox relay — any one
+     * relay did. Slower relays may still be answering.
+     */
+    val isOut: Boolean
+        get() =
+            if (outboxRelays.isEmpty()) {
+                successCount > 0
+            } else {
+                outboxRelays.all { results[it] is RelayResult.Success }
+            }
 
     /** List of relays that failed and are not currently retrying */
     val failedRelays: List<NormalizedRelayUrl>
@@ -131,3 +142,9 @@ data class BroadcastEvent(
         return copy(results = newResults, status = newStatus)
     }
 }
+
+/**
+ * The broadcast banner may hide on its own only once every broadcast it shows
+ * is out; anything else (still sending, or an outbox relay failed) stays up.
+ */
+fun Collection<BroadcastEvent>.canAutoDismiss(): Boolean = isNotEmpty() && all { it.isOut }

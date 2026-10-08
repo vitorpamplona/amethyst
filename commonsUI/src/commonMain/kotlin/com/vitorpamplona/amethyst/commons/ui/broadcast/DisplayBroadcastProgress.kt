@@ -39,6 +39,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.commons.model.BooleanType
 import com.vitorpamplona.amethyst.commons.service.broadcast.BroadcastEvent
+import com.vitorpamplona.amethyst.commons.service.broadcast.canAutoDismiss
 import com.vitorpamplona.amethyst.commons.service.pow.PoWJobState
 import com.vitorpamplona.amethyst.commons.ui.platform.LocalAppServices
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
@@ -49,8 +50,10 @@ import kotlinx.coroutines.delay
 
 /**
  * Displays broadcast progress UI components:
- * - BroadcastBanner: Shows active broadcasts with progress
- * - CompletedBroadcastIndicator: Shows completed broadcast for tap-to-view (auto-dismisses after 10s)
+ * - BroadcastBanner: Shows active broadcasts with progress; its X hides it at any time
+ *   without stopping the send
+ * - It hides on its own shortly after every post is out ([BroadcastEvent.isOut]: all
+ *   outbox relays accepted), and stays up with Retry when an outbox relay failed
  * - BroadcastDetailsSheet: Shows detailed relay status on tap
  *
  * The relay-progress part is hidden when the "Tracked broadcasts" UI setting
@@ -84,11 +87,13 @@ fun DisplayBroadcastProgress(accountViewModel: AccountViewModel) {
             accountViewModel,
         )
 
-        LaunchedEffect(activeBroadcasts) {
-            // this effect gets restarted every time the active broadcast changes
-            if (activeBroadcasts.isNotEmpty() && activeBroadcasts.all { it.isComplete }) {
-                // All relays responded — dismiss quickly
-                delay(3_000)
+        // Keyed on the decision, not the list: a slow relay answering during
+        // the grace period must not push the dismissal back. Until every post
+        // is out — still sending, or an outbox relay failed — the banner stays.
+        val canAutoDismiss = activeBroadcasts.canAutoDismiss()
+        LaunchedEffect(canAutoDismiss) {
+            if (canAutoDismiss) {
+                delay(1_500)
                 accountViewModel.broadcastTracker.clear()
             }
         }
