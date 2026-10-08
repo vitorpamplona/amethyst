@@ -349,10 +349,38 @@ suspend fun INostrClient.fetchAllPagesFromPoolWithHooks(
     idleTimeoutMs: Long = 30_000L,
     maxConcurrentRelays: Int = 8,
     onRelayResult: ((relay: NormalizedRelayUrl, result: PagedFetchResult) -> Unit)? = null,
+    pageSize: Int = DEFAULT_PAGE_SIZE,
+    throttleBackoff: PageRetryBackoff = PageRetryBackoff.DEFAULT,
     onEvent: suspend (relay: NormalizedRelayUrl, event: Event) -> Boolean,
 ): List<Pair<NormalizedRelayUrl, Event>> {
-    if (filters.isEmpty()) return emptyList()
     val collected = mutableListOf<Pair<NormalizedRelayUrl, Event>>()
+    streamAllPagesFromPoolWithHooks(filters, idleTimeoutMs, maxConcurrentRelays, onRelayResult, pageSize, throttleBackoff) { relay, event ->
+        onEvent(relay, event).also { accepted -> if (accepted) collected.add(relay to event) }
+    }
+    return collected
+}
+
+/**
+ * [fetchAllPagesFromPoolWithHooks] without the result list: the same paging, the same
+ * single-consumer hook and the same cross-relay dedup, but nothing is kept beyond the
+ * dedup set's ids — an accepted event is the hook's to keep, write out or drop. Use it
+ * for a walk too large to hold (a relay's whole history for a broad filter): memory is
+ * O(distinct ids), not O(events). Events reach [onEvent] in arrival order, relay by
+ * relay as each one pages, NOT sorted.
+ *
+ * @return how many distinct events [onEvent] accepted.
+ */
+suspend fun INostrClient.streamAllPagesFromPoolWithHooks(
+    filters: Map<NormalizedRelayUrl, List<Filter>>,
+    idleTimeoutMs: Long = 30_000L,
+    maxConcurrentRelays: Int = 8,
+    onRelayResult: ((relay: NormalizedRelayUrl, result: PagedFetchResult) -> Unit)? = null,
+    pageSize: Int = DEFAULT_PAGE_SIZE,
+    throttleBackoff: PageRetryBackoff = PageRetryBackoff.DEFAULT,
+    onEvent: suspend (relay: NormalizedRelayUrl, event: Event) -> Boolean,
+): Int {
+    if (filters.isEmpty()) return 0
+    var accepted = 0
     // fetchAllPagesFromPool's onEvent can't suspend, but the hook does — bridge
     // through a channel and run the hook single-threaded in one consumer so its
     // side effects (e.g. store writes) stay serialized.
@@ -371,7 +399,7 @@ suspend fun INostrClient.fetchAllPagesFromPoolWithHooks(
                     if (seen.contains(event.id)) continue
                     if (onEvent(relay, event)) {
                         seen.add(event.id)
-                        collected.add(relay to event)
+                        accepted++
                     }
                 }
             }
@@ -381,11 +409,13 @@ suspend fun INostrClient.fetchAllPagesFromPoolWithHooks(
                 idleTimeoutMs = idleTimeoutMs,
                 maxConcurrentRelays = maxConcurrentRelays,
                 onRelayResult = onRelayResult,
+                pageSize = pageSize,
+                throttleBackoff = throttleBackoff,
             ) { event, relay -> eventChannel.trySend(relay to event) }
         } finally {
             eventChannel.close()
         }
         consumer.join()
     }
-    return collected
+    return accepted
 }
