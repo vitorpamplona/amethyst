@@ -125,6 +125,58 @@ class NegentropyDownloadTest {
             assertEquals(events.drop(20).map { it.id }.toSet(), delivered.toSet())
         }
 
+    /**
+     * An incremental sync that already holds a truncating relay's newest events downloads
+     * nothing in the first pass, and still has to look below them.
+     */
+    @Test
+    fun holdingTheRelaysNewestEventsStillWalksBackPastThem() =
+        runBlocking {
+            val events = SyntheticEvents.batch(30, kind = 1) { author }
+            val held = events.takeLast(20).map { IdAndTime(it.createdAt, it.id) }
+            val delivered = mutableListOf<String>()
+            val result = sync(events, Filter(kinds = listOf(1)), local = held, onEvent = { delivered.add(it) }) { ReconcilesNewest(5) }
+
+            assertEquals(10, result.downloaded)
+            assertEquals(events.take(10).map { it.id }.toSet(), delivered.toSet())
+        }
+
+    /** A relay that ignores the window's `until` names the same newest events every pass. */
+    @Test
+    fun aRelayThatIgnoresTheWindowEndsWithoutDeliveringTwice() =
+        runBlocking {
+            val delivered = mutableListOf<String>()
+            sync(30, Filter(kinds = listOf(1)), onEvent = { delivered.add(it) }) { IgnoresUntil(5) }
+
+            assertEquals(delivered.size, delivered.toSet().size, "no event delivered twice: $delivered")
+        }
+
+    @Test
+    fun eventsTheRelaySendsUnaskedAreNotCollected() =
+        runBlocking {
+            val events = SyntheticEvents.batch(10, kind = 1) { author }
+            val client = DropsFirst(this, events.take(5), drops = 0, extra = events.drop(5))
+
+            val got = client.fetchByIds(InProcessRelays.DEFAULT_URL, events.take(5).map { it.id }, idleTimeoutMs = 5_000)
+
+            assertEquals(events.take(5).map { it.id }.toSet(), got.map { it.id }.toSet())
+        }
+
+    /** A relay that will not take a connection stops the sync's downloads instead of idling each batch. */
+    @Test
+    fun aPaceGivesUpAfterRoundsKeepFailing() =
+        runBlocking {
+            val events = SyntheticEvents.batch(5, kind = 1) { author }
+            val client = DropsFirst(this, events, drops = Int.MAX_VALUE)
+            val pace = DownloadPace()
+
+            client.fetchByIds(InProcessRelays.DEFAULT_URL, events.map { it.id }, idleTimeoutMs = 5_000, pace = pace)
+            client.fetchByIds(InProcessRelays.DEFAULT_URL, events.map { it.id }, idleTimeoutMs = 5_000, pace = pace)
+
+            assertTrue(pace.exhausted)
+            assertEquals(6, client.requests, "four rounds of the first batch, two of the second")
+        }
+
     /** no.str.cr closes the socket under several 500-id downloads at once; every one in flight lost its ids. */
     @Test
     fun aBatchTheRelayDroppedIsAskedForAgainOneAtATime() =
@@ -157,6 +209,7 @@ class NegentropyDownloadTest {
         private val scope: CoroutineScope,
         private val corpus: List<Event>,
         private val drops: Int,
+        private val extra: List<Event> = emptyList(),
     ) : INostrClient by EmptyNostrClient() {
         @Volatile var requests = 0
 
@@ -171,7 +224,7 @@ class NegentropyDownloadTest {
                 if (req <= drops) {
                     listener?.onCannotConnect(relay, "WebSocket Failure: EOFException", relayFilters)
                 } else {
-                    corpus.filter { e -> relayFilters.any { it.match(e) } }.forEach { listener?.onEvent(it, false, relay, relayFilters) }
+                    (corpus.filter { e -> relayFilters.any { it.match(e) } } + extra).forEach { listener?.onEvent(it, false, relay, relayFilters) }
                     listener?.onEose(relay, relayFilters)
                 }
             }
@@ -212,6 +265,13 @@ class NegentropyDownloadTest {
         private val n: Int,
     ) : PassThroughPolicy() {
         override fun accept(cmd: NegOpenCmd): PolicyResult<NegOpenCmd> = PolicyResult.Accepted(NegOpenCmd(cmd.subId, cmd.filter.copy(limit = n), cmd.initialMessage))
+    }
+
+    /** Reconciles its newest [n] matches whatever window it is asked for. */
+    private class IgnoresUntil(
+        private val n: Int,
+    ) : PassThroughPolicy() {
+        override fun accept(cmd: NegOpenCmd): PolicyResult<NegOpenCmd> = PolicyResult.Accepted(NegOpenCmd(cmd.subId, cmd.filter.copy(until = null, limit = n), cmd.initialMessage))
     }
 
     /** Refuses a `REQ` filter that names ids and nothing else, as conduit does. */
