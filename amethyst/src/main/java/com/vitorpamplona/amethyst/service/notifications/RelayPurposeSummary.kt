@@ -27,6 +27,7 @@ import com.vitorpamplona.amethyst.commons.relays.ui.SubPurposeLabels
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.relay_purpose_browsing
 import com.vitorpamplona.amethyst.commons.resources.relay_purpose_line
+import com.vitorpamplona.amethyst.commons.resources.relay_purpose_other
 import com.vitorpamplona.amethyst.commons.ui.loadPluralStringRes
 import com.vitorpamplona.amethyst.commons.ui.loadStringRes
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
@@ -47,6 +48,11 @@ import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
  * Purposes with no label — feeds and whatever screen is open — collapse into one "browsing" line.
  * Those disappear on their own once the app is backgrounded, which is exactly when this notification
  * matters most, so spelling them out would add noise precisely when the user is least interested.
+ *
+ * Every connected relay lands on at least one line. A relay can be connected with no tagged REQ at
+ * all — it is held open by an untagged filter, a NIP-45 COUNT, or an event still waiting to be
+ * published — and those used to be dropped silently, so the lines could add up to less than the
+ * count above them ("53 relays", then lines summing to 36). They now go to an "Other" line.
  */
 object RelayPurposeSummary {
     /**
@@ -57,20 +63,27 @@ object RelayPurposeSummary {
         val client = Amethyst.instance.client
         val named = mutableMapOf<SubPurpose, MutableSet<NormalizedRelayUrl>>()
         val browsing = mutableSetOf<NormalizedRelayUrl>()
+        val other = mutableSetOf<NormalizedRelayUrl>()
 
         client.connectedRelaysFlow().value.forEach { relay ->
-            client
-                .activeRequests(relay)
-                .values
-                .flatten()
-                .purposes()
-                .forEach { purpose ->
+            val purposes =
+                client
+                    .activeRequests(relay)
+                    .values
+                    .flatten()
+                    .purposes()
+
+            if (purposes.isEmpty()) {
+                other.add(relay)
+            } else {
+                purposes.forEach { purpose ->
                     if (SubPurposeLabels.isWorthNamingInNotification(purpose)) {
                         named.getOrPut(purpose) { mutableSetOf() }.add(relay)
                     } else {
                         browsing.add(relay)
                     }
                 }
+            }
         }
 
         val lines =
@@ -82,6 +95,9 @@ object RelayPurposeSummary {
 
         if (browsing.isNotEmpty()) {
             lines.add(loadPluralStringRes(Res.plurals.relay_purpose_line, browsing.size, loadStringRes(Res.string.relay_purpose_browsing), browsing.size))
+        }
+        if (other.isNotEmpty()) {
+            lines.add(loadPluralStringRes(Res.plurals.relay_purpose_line, other.size, loadStringRes(Res.string.relay_purpose_other), other.size))
         }
         return lines
     }
