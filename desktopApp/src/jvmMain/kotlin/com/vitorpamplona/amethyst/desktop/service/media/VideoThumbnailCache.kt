@@ -238,7 +238,8 @@ object VideoThumbnailCache {
 
     private fun tryFfmpegFile(file: File): ImageBitmap? = runFfmpegToImage(file.absolutePath)
 
-    private fun tryFfmpegUrl(url: String): ImageBitmap? = runFfmpegToImage(url)
+    // ffmpeg fetches by itself too, so a video that goes over Tor reaches it through the relay.
+    private fun tryFfmpegUrl(url: String): ImageBitmap? = runFfmpegToImage(MediaRelay.streamingUrl(url))
 
     /**
      * Spawns `ffmpeg -ss 1 -i <input> -frames:v 1 -f image2pipe -c:v png -an pipe:1`,

@@ -105,8 +105,13 @@ fun main(args: Array<String>) {
 
     // Images go through the role builder, so each URL follows the user's Tor choice for images.
     DesktopImageLoaderSetup.setup { url -> modules.roleBasedHttpClientBuilder.okHttpClientForImage(url) }
-    // So do video thumbnails, saves and encrypted media, which those clients also decrypt.
-    MediaHttp.install(modules.roleBasedHttpClientBuilder::okHttpClientForVideo, modules.keyCache)
+    // So do video thumbnails, saves and encrypted media, which those clients also decrypt, and
+    // the videos Android would send over Tor: those whose video client has a proxy port now.
+    MediaHttp.install(
+        clientFor = modules.roleBasedHttpClientBuilder::okHttpClientForVideo,
+        keyCache = modules.keyCache,
+        viaTor = { url -> modules.roleBasedHttpClientBuilder.proxyPortForVideo(url) != null },
+    )
 
     modules.initiate()
 

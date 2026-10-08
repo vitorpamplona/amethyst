@@ -457,7 +457,9 @@ object GlobalMediaPlayer {
             }
         // A newer request took the engine over while this one was downloading.
         if (state.value.url != url) return false
-        if (decrypted != null) player.openFile(PlatformFile(decrypted)) else player.openUri(url)
+        // Anything else streams from the engine's own HTTP stack, unless it goes over Tor: then
+        // through the relay, so the app's Tor-routed client fetches it, as on Android.
+        if (decrypted != null) player.openFile(PlatformFile(decrypted)) else player.openUri(MediaRelay.streamingUrl(url))
         return true
     }
 

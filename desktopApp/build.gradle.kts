@@ -157,6 +157,7 @@ compose.desktop {
                 "jdk.security.auth", // JAAS authentication callbacks
                 "jdk.unsupported",   // sun.misc.Unsafe (secp256k1-kmp-jni-jvm, JNA)
                 "jdk.localedata",    // CLDR data for the shared app's date and number formatters
+                "jdk.httpserver",    // Loopback relay that streams Tor-routed video through OkHttp
             )
 
             packageName = "Amethyst"
