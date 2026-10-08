@@ -403,6 +403,9 @@ suspend fun INostrClient.fetchAllPages(
     var largestPage = 0
     var shortPagesInARow = 0
     var lastPageable: List<Int>? = null
+    // The filters that delivered on the last page that delivered anything. One of them coming
+    // back empty is a filter running dry, which shrinks every later page honestly.
+    var lastProductive: List<Int>? = null
     var reAsks = 0
     // Pacing for a relay that keeps answering with short pages (see below): the wait to take
     // before the next REQ, and how many paced pages in a row it has been.
@@ -462,6 +465,7 @@ suspend fun INostrClient.fetchAllPages(
             largestPage = 0
             shortPagesInARow = 0
             lastPageable = pageable
+            lastProductive = null
         }
         val activeFilters =
             pageable.map { index ->
@@ -485,6 +489,8 @@ suspend fun INostrClient.fetchAllPages(
                     }
                 IndexedValue(index, filter.copy(until = until ?: filter.until, limit = pageLimit))
             }
+        // To tell, after the page, which filters it delivered for.
+        val matchesBeforePage = matchCountPerFilter.copyOf()
 
         if (activeFilters.isEmpty()) {
             // Every filter either met its limit or is a search that has had its
@@ -843,6 +849,19 @@ suspend fun INostrClient.fetchAllPages(
         }
 
         if (pageEnd == PageSignal.EOSE && received > 0) {
+            // A filter that delivered before and nothing now has run out of older events (EventSync's
+            // `#p=me` beside a longer `authors=me`): the pages after it are honestly smaller, so the
+            // short-page evidence starts over from this page, as when a filter drops out. Only the
+            // filters still delivering count; a trickling relay keeps the same ones and is caught.
+            if (delivered > 0) {
+                val productive = activeFilters.map { it.index }.filter { matchCountPerFilter[it] > matchesBeforePage[it] }
+                val previous = lastProductive
+                if (previous != null && !productive.containsAll(previous)) {
+                    largestPage = 0
+                    shortPagesInARow = 0
+                }
+                lastProductive = productive
+            }
             if (received > largestPage) largestPage = received
             // "Short" is at most half the largest page, or of what this page asked for when
             // that was less (the walk's last, topped-up page asks for just what is missing): a

@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.quartz.nip01Core.relay
 
+import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.PageRetryBackoff
 import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.PagedFetchResult
@@ -359,5 +360,69 @@ class NostrClientFetchAllPagesThrottleTest {
 
             assertEquals(PagedFetchResult.End.IDLE, result.end)
             assertEquals(emptyList(), recorder.waits)
+        }
+
+    @Test
+    fun twoFiltersPagingNormallyNeverWait() =
+        runBlocking {
+            // A walk with two unbounded filters (EventSync's authors=me + #p=me) where one runs
+            // out early: every later page holds only the other filter's events, about half of
+            // page one. That is an honest relay, not a trickle, so it must never pace.
+            val notes = FakePagingRelay.corpus(5_000)
+            val reactions = reactions(500, everySeconds = 1)
+            val client = FakePagingRelay(this, notes + reactions, maxLimit = 500)
+            val recorder = RecordingBackoff()
+
+            val result =
+                client.fetchAllPages(relay, listOf(Filter(kinds = listOf(1)), Filter(kinds = listOf(7))), idleTimeoutMs = 2_000, throttleBackoff = recorder.backoff) { }
+
+            assertEquals(PagedFetchResult.End.DRAINED, result.end)
+            assertEquals(5_500, result.downloaded)
+            assertTrue(recorder.waits.isEmpty(), "an honest relay never pays a pause: ${recorder.waits}")
+        }
+
+    @Test
+    fun twoFiltersOnATricklingRelayAreStillPaced() =
+        runBlocking {
+            // Both filters keep delivering, but only a few events a page after two full ones:
+            // the damus trickle with a second filter. The same filters stay productive, so the
+            // evidence holds and the walk pauses instead of hammering the relay.
+            val notes = FakePagingRelay.corpus(1_000)
+            val client =
+                FakePagingRelay(this, notes + reactions(1_000, everySeconds = 1), maxLimit = 500) { req, honest ->
+                    if (req <= 2) {
+                        honest
+                    } else {
+                        // Past the boundary second (its events were delivered already): two seconds, both kinds.
+                        honest.filter { it.createdAt < honest.first().createdAt }.take(4)
+                    }
+                }
+            val recorder = RecordingBackoff()
+
+            val result =
+                client.fetchAllPages(relay, listOf(Filter(kinds = listOf(1)), Filter(kinds = listOf(7))), idleTimeoutMs = 2_000, throttleBackoff = recorder.backoff) { }
+
+            assertEquals(PagedFetchResult.End.DRAINED, result.end)
+            assertEquals(2_000, result.downloaded, "pacing slows the walk, it never drops events")
+            assertTrue(recorder.waits.isNotEmpty(), "a trickle across two filters must still be paced")
+            assertEquals(2_000L, recorder.waits.first())
+        }
+
+    /** [count] kind-7 events, one every [everySeconds] seconds from the corpus' newest second, ids apart from the notes'. */
+    private fun reactions(
+        count: Int,
+        everySeconds: Int,
+    ): List<Event> =
+        (0 until count).map { i ->
+            val createdAt = 1_000_000L - i * everySeconds
+            Event(
+                id = "7" + createdAt.toString(16).padStart(63, '0'),
+                pubKey = "f".repeat(64),
+                createdAt = createdAt,
+                kind = 7,
+                tags = emptyArray(),
+                content = "+",
+                sig = "0".repeat(128),
+            )
         }
 }
