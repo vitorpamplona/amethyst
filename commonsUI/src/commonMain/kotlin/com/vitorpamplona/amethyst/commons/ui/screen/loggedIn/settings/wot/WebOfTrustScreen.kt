@@ -70,6 +70,7 @@ import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.text.LinkAnnotation
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.TextLinkStyles
@@ -133,6 +134,7 @@ import com.vitorpamplona.amethyst.commons.resources.wot_not_downloaded_title
 import com.vitorpamplona.amethyst.commons.resources.wot_of_scored
 import com.vitorpamplona.amethyst.commons.resources.wot_off_body
 import com.vitorpamplona.amethyst.commons.resources.wot_off_title
+import com.vitorpamplona.amethyst.commons.resources.wot_open_website
 import com.vitorpamplona.amethyst.commons.resources.wot_people_in_network
 import com.vitorpamplona.amethyst.commons.resources.wot_private_entry_explainer
 import com.vitorpamplona.amethyst.commons.resources.wot_private_entry_title
@@ -165,6 +167,8 @@ import com.vitorpamplona.amethyst.commons.ui.navigation.topbars.TopBarWithBackBu
 import com.vitorpamplona.amethyst.commons.ui.note.LoadUser
 import com.vitorpamplona.amethyst.commons.ui.note.UserPicture
 import com.vitorpamplona.amethyst.commons.ui.note.timeAgoNoDot
+import com.vitorpamplona.amethyst.commons.ui.platform.AppLauncher
+import com.vitorpamplona.amethyst.commons.ui.platform.rememberAppLauncher
 import com.vitorpamplona.amethyst.commons.ui.pluralStringRes
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.backups.TintedPanel
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.settings.SettingsControlRow
@@ -232,6 +236,8 @@ class WebOfTrustActions(
     val onCopyHouse: (TrustProviderOnboarding) -> Unit,
     val onPrivateChange: (Boolean) -> Unit,
     val onOpenProvider: () -> Unit,
+    /** Opens a provider's site in Amethyst's browser, which signs for it (NIP-07). */
+    val onOpenSite: (url: String) -> Unit,
 )
 
 /**
@@ -256,8 +262,10 @@ fun WebOfTrustScreen(
     val isPrivate by viewModel.isPrivate.collectAsStateWithLifecycle()
     val copy by viewModel.copy.collectAsStateWithLifecycle()
 
+    val appLauncher = rememberAppLauncher()
+    val uriHandler = LocalUriHandler.current
     val actions =
-        remember(accountViewModel, viewModel) {
+        remember(accountViewModel, viewModel, appLauncher, uriHandler) {
             WebOfTrustActions(
                 onDownloadNow = { account.trustNetwork.syncIfStale(force = true) },
                 onRedownload = { account.trustNetwork.redownload() },
@@ -272,6 +280,9 @@ fun WebOfTrustScreen(
                     account.trustProviderList.liveUserRankProvider.value
                         ?.let { nav.nav(Route.Profile(it.pubkey)) }
                 },
+                // Amethyst's own browser signs in to the provider's site with this account. A front
+                // end without one opens the system browser.
+                onOpenSite = { url -> if (appLauncher === AppLauncher.None) uriHandler.openUri(url) else appLauncher.launchUrl(url) },
             )
         }
 
@@ -709,7 +720,8 @@ private fun ProviderSection(
                     Icon(symbol = MaterialSymbols.Sync, contentDescription = stringRes(Res.string.wot_sync_now), tint = scheme.primary)
                 }
             }
-            ProviderMenu(canRedownload = network != null && !syncing, actions)
+            val site = state.guidedProviders.firstOrNull { it.serves(provider) }?.homepage
+            ProviderMenu(canRedownload = network != null && !syncing, site = site, actions = actions)
         }
     }
 }
@@ -717,6 +729,8 @@ private fun ProviderSection(
 @Composable
 private fun ProviderMenu(
     canRedownload: Boolean,
+    /** The provider's site, when it is one Amethyst knows. */
+    site: String?,
     actions: WebOfTrustActions,
 ) {
     var open by remember { mutableStateOf(false) }
@@ -729,6 +743,16 @@ private fun ProviderMenu(
             )
         }
         DropdownMenu(expanded = open, onDismissRequest = { open = false }) {
+            if (site != null) {
+                DropdownMenuItem(
+                    text = { Text(stringRes(Res.string.wot_open_website)) },
+                    leadingIcon = { MenuIcon(MaterialSymbols.OpenInBrowser) },
+                    onClick = {
+                        open = false
+                        actions.onOpenSite(site)
+                    },
+                )
+            }
             DropdownMenuItem(
                 text = { Text(stringRes(Res.string.wot_redownload)) },
                 leadingIcon = { MenuIcon(MaterialSymbols.CloudDownload) },
@@ -779,7 +803,7 @@ private fun ChooseProviderSection(
         state.guidedProviders.forEachIndexed { index, provider ->
             if (index > 0) SettingsDivider()
             val inUse = state.provider?.let(provider::serves) == true
-            GuidedProviderRow(provider, state.setup, inUse = inUse, enabled = !busy) { actions.onSetUp(provider) }
+            GuidedProviderRow(provider, state.setup, inUse = inUse, enabled = !busy, onOpenSite = actions.onOpenSite) { actions.onSetUp(provider) }
         }
         SettingsDivider()
         // The fallback: the provider writes the kind 10040 (here or on its site); this is for
@@ -829,6 +853,7 @@ private fun GuidedProviderRow(
     setup: WebOfTrustSetup,
     inUse: Boolean,
     enabled: Boolean,
+    onOpenSite: (String) -> Unit,
     onSetUp: () -> Unit,
 ) {
     val inProgress =
@@ -876,9 +901,9 @@ private fun GuidedProviderRow(
                                 append(description)
                                 append(" · ")
                             }
-                            // Their site signs the user up and publishes the kind 10040 itself;
-                            // Amethyst picks the list up from the relays.
-                            withLink(LinkAnnotation.Url(provider.setupUrl, linkStyle)) { append(onWebsite) }
+                            // Their site signs the user up and publishes the kind 10040 itself, in
+                            // Amethyst's browser (which signs for it); the list comes back over relays.
+                            withLink(LinkAnnotation.Clickable("setup", linkStyle) { onOpenSite(provider.setupUrl) }) { append(onWebsite) }
                         },
                         style = MaterialTheme.typography.bodySmall,
                         color = scheme.onSurfaceVariant,

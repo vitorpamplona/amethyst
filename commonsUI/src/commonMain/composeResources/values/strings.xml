@@ -6713,6 +6713,7 @@
     <string name="wot_sync_now">Sync now</string>
     <string name="wot_syncing">Syncing…</string>
     <string name="wot_last_updated">Updated %1$s</string>
+    <string name="wot_open_website">Open their website</string>
     <string name="wot_redownload">Download again</string>
     <string name="wot_remove_provider">Stop using</string>
     <string name="wot_more_actions">More actions</string>
