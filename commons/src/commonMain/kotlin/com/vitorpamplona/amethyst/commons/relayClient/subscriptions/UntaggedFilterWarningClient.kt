@@ -36,8 +36,10 @@ import com.vitorpamplona.quartz.utils.concurrent.ConcurrentMap
  * `fetchAll(Filter(...))` slips past review easily, so this names the offender the first time it
  * runs instead of leaving it to surface as an unexplained relay count on someone's phone.
  *
- * Each producer is reported once, keyed by its subscription-id prefix and kinds, so an assembler
- * that re-sends its REQ every few seconds does not flood the log. Never wired into release builds.
+ * Each producer is reported once, keyed by the shape of what it asks for (kinds and tag names), so an
+ * assembler that re-sends its REQ every few seconds does not flood the log. The sub id cannot be the
+ * key: the one-shot helpers (`fetchAll`, `count`, …) draw a fresh random one on every call, so it
+ * would log every call and grow the set without bound. Never wired into release builds.
  */
 class UntaggedFilterWarningClient(
     private val delegate: INostrClient,
@@ -66,14 +68,15 @@ class UntaggedFilterWarningClient(
         subId: String,
         filters: Map<NormalizedRelayUrl, List<Filter>>,
     ) {
+        // The common case, checked without allocating: assemblers re-send their REQs constantly.
+        if (filters.values.all { list -> list.all { it is ExplainedFilter } }) return
         val untagged = filters.values.flatten().filter { it !is ExplainedFilter }
-        if (untagged.isEmpty()) return
 
-        val kinds = untagged.flatMapTo(sortedSetOf()) { it.kinds.orEmpty() }
-        // Sub ids end in a random or counter suffix; the prefix is what names the producer.
-        val key = "$verb ${subId.substringBeforeLast('-')} $kinds"
+        val kinds = untagged.flatMapTo(mutableSetOf()) { it.kinds.orEmpty() }.sorted()
+        val tagNames = untagged.flatMapTo(mutableSetOf()) { it.tags?.keys.orEmpty() }.sorted()
+        val key = "$verb $kinds $tagNames ${untagged.any { it.authors != null }}"
         if (reported.putIfAbsent(key, true) == null) {
-            Log.w(TAG) { "$verb $subId sent ${untagged.size} filter(s) with no purpose, kinds=$kinds, to ${filters.size} relay(s)" }
+            Log.w(TAG) { "$verb $subId sent ${untagged.size} filter(s) with no purpose, kinds=$kinds, tags=$tagNames, to ${filters.size} relay(s)" }
         }
     }
 

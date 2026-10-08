@@ -30,6 +30,7 @@ import com.vitorpamplona.amethyst.commons.resources.relay_purpose_line
 import com.vitorpamplona.amethyst.commons.resources.relay_purpose_sending
 import com.vitorpamplona.amethyst.commons.ui.loadPluralStringRes
 import com.vitorpamplona.amethyst.commons.ui.loadStringRes
+import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.utils.Log
 
@@ -53,7 +54,7 @@ import com.vitorpamplona.quartz.utils.Log
  * A relay with no tagged REQ can still be connected for a real reason: an event of ours is waiting
  * for its OK there. Those get their own "sending" line. Anything still left over is a subscription
  * that never said why it exists — a plain `Filter` that should have been an `ExplainedFilter` — so
- * it is logged with its filters, which is what finds the producer, rather than shown as a vague
+ * it is logged with its subscription ids and kinds, which is what finds the producer, rather than shown as a vague
  * "other" line that would hide it.
  */
 object RelayPurposeSummary {
@@ -70,8 +71,10 @@ object RelayPurposeSummary {
         val sending = mutableSetOf<NormalizedRelayUrl>()
 
         client.connectedRelaysFlow().value.forEach { relay ->
+            // COUNTs hold a relay open just as REQs do, and are tagged the same way.
             val requests = client.activeRequests(relay)
-            val purposes = requests.values.flatten().purposes()
+            val counts = client.activeCounts(relay)
+            val purposes = requests.values.flatten().purposes() + counts.values.flatten().purposes()
 
             purposes.forEach { purpose ->
                 if (SubPurposeLabels.isWorthNamingInNotification(purpose)) {
@@ -85,8 +88,9 @@ object RelayPurposeSummary {
                 if (client.activeOutboxEvents(relay).isNotEmpty()) {
                     sending.add(relay)
                 } else {
-                    Log.w(TAG) {
-                        "$relay is connected with no purpose: reqs=$requests counts=${client.activeCounts(relay)}"
+                    // Sub ids and kinds name the producer; the filters themselves carry pubkeys.
+                    Log.d(TAG) {
+                        "$relay is connected with no purpose: reqs=${requests.describe()} counts=${counts.describe()}"
                     }
                 }
             }
@@ -107,4 +111,6 @@ object RelayPurposeSummary {
         }
         return lines
     }
+
+    private fun Map<String, List<Filter>>.describe(): String = entries.joinToString { (subId, filters) -> "$subId${filters.flatMap { it.kinds.orEmpty() }.toSet()}" }
 }
