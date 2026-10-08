@@ -85,7 +85,7 @@ object TrustSync {
                         } finally {
                             progress.cancel()
                         }
-                    } ?: return Output.error("sync_busy", "another trust network sync is running")
+                    } ?: return Output.error("sync_not_started", "no sync started: another one is running, or the index on disk is not matched to this provider yet")
                 val elapsed = System.currentTimeMillis() - started
 
                 val index =

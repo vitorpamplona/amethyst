@@ -685,11 +685,6 @@ class NotificationFeedFilter(
         // follow/list modes) also applies the per-kind relevance heuristics.
         val isRawGlobal = followList() is TopFilter.Global
 
-        // Curated also applies the Web of Trust, with the same exemptions as push.
-        if (followList() is TopFilter.Selected && notifAuthor != null && noteEvent != null && account.curatedHidesByTrust(noteEvent, notifAuthor, inJoinedCommunity = isConcord)) {
-            return false
-        }
-
         // The p-tag gate is OR'd with isNotifiablePublicChatReply so channel
         // replies into my messages still notify without a p-tag. Kept inline
         // (not a pre-computed val) so the cheap kind check short-circuits ahead
@@ -706,7 +701,10 @@ class NotificationFeedFilter(
             // For a Concord note the explicit p-tag above IS the relevance signal (the reply/reaction/
             // mention targets me directly), so skip the per-kind heuristic — which for a reaction would
             // otherwise need my target message already loaded to resolve replyTo.
-            (isRawGlobal || isConcord || isThreadReplyToMe || tagsAnEventByUser(it, loggedInUserHex))
+            (isRawGlobal || isConcord || isThreadReplyToMe || tagsAnEventByUser(it, loggedInUserHex)) &&
+            // Curated also applies the Web of Trust, with the same exemptions as push. Last, so
+            // only notes that are notifications at all pay for the lookup.
+            !(followList() is TopFilter.Selected && noteEvent != null && notifAuthor != null && account.curatedHidesByTrust(noteEvent, notifAuthor, inJoinedCommunity = isConcord))
     }
 
     override fun sort(items: Set<Note>): List<Note> = items.sortedByDefaultFeedOrder()

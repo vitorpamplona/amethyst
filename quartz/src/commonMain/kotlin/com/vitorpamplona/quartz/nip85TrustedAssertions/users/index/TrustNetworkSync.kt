@@ -93,6 +93,16 @@ private const val IDLE_MS = 60_000L
 private const val FETCH_BY_ID_BATCH = 500
 private const val FETCH_BY_ID_CONCURRENCY = 4
 
+/** Cards per negentropy window: the local side never materialises more than this at once. */
+private const val NEGENTROPY_WINDOW = 50_000
+
+/**
+ * Cards a reconcile may fail to get (the relay lists them but will not serve them, or their
+ * signature fails) and still count as complete: one bad card must not freeze the network. They
+ * are asked for again by the next reconcile.
+ */
+private fun missingAllowed(need: Int) = maxOf(16, need / 200)
+
 /**
  * Downloads, verifies and indexes every card [provider] has published on [relay]: the cold
  * sync of a new trust network.
@@ -120,7 +130,8 @@ suspend fun INostrClient.downloadTrustNetwork(
     val expected = countOrNull(relay, filter)
     progress?.onProgress(0, expected)
 
-    val builder = TrustNetworkBuilder(provider, initialCapacity = (expected ?: 4096).coerceIn(1024, 1_000_000))
+    // The relay's count only hints the size: growing is cheap, a huge upfront allocation is not.
+    val builder = TrustNetworkBuilder(provider, initialCapacity = (expected ?: 4096).coerceIn(1024, 262_144))
     val invalid = AtomicInt(0)
 
     val paged = verifying(builder, invalid, expected, progress, seeded = 0) { submit -> fetchAllPages(relay, listOf(filter), IDLE_MS) { submit(it) } }
@@ -203,13 +214,22 @@ suspend fun INostrClient.updateTrustNetwork(
     }
     val newDeletions = news.deletions
 
-    val builder = TrustNetworkBuilder(provider, initialCapacity = index.size + 1024)
+    val windowStart = (header.syncCursor - TRUST_NETWORK_UPDATE_OVERLAP_SECS).coerceAtLeast(0)
+    val diff = reconcileIds(relay, trustNetworkFilter(provider, windowStart), ids.negentropyIndex())
+
+    // The counts said something changed but the ids say nothing did (a relay without NIP-45
+    // always says so): no index is built, nothing is rewritten, no feed rebuilds.
+    if (diff != null && diff.isEmpty && newDeletions == 0) {
+        val held = header.heldAtCursor ?: ids.countSince(header.syncCursor)
+        return TrustNetworkSyncResult(header.copy(lastUpdate = TimeUtils.now(), heldAtCursor = held), index, ids, complete = true, invalid = 0, received = 0, detail = "need 0, gone 0", unchanged = true)
+    }
+
+    val builder = TrustNetworkBuilder(provider, initialCapacity = index.size + ids.tombstones + (diff?.need?.size ?: 1024))
     builder.addAll(index, ids)
     val before = builder.cardCount
     val invalid = AtomicInt(0)
 
-    val windowStart = (header.syncCursor - TRUST_NETWORK_UPDATE_OVERLAP_SECS).coerceAtLeast(0)
-    val reconciled = reconcileInto(builder, relay, trustNetworkFilter(provider, windowStart), ids.negentropyIndex(), invalid, progress, seeded = before)
+    val reconciled = diff?.let { applyDiff(builder, relay, it, invalid, progress, seeded = before) }
 
     val complete: Boolean
     val detail: String
@@ -266,12 +286,17 @@ suspend fun INostrClient.reconcileTrustNetwork(
     progress: TrustNetworkProgress? = null,
 ): TrustNetworkSyncResult? {
     val startedAt = TimeUtils.now()
-    val builder = TrustNetworkBuilder(header.provider, initialCapacity = index.size + 1024)
+    val diff = reconcileIds(relay, trustNetworkFilter(header.provider), ids.negentropyIndex()) ?: return null
+    if (diff.isEmpty) {
+        val now = TimeUtils.now()
+        return TrustNetworkSyncResult(header.copy(lastFullCheck = now, lastUpdate = now), index, ids, complete = true, invalid = 0, received = 0, detail = "need 0, gone 0", unchanged = true)
+    }
+
+    val builder = TrustNetworkBuilder(header.provider, initialCapacity = index.size + ids.tombstones + diff.need.size)
     builder.addAll(index, ids)
     val before = builder.cardCount
     val invalid = AtomicInt(0)
-
-    val reconciled = reconcileInto(builder, relay, trustNetworkFilter(header.provider), ids.negentropyIndex(), invalid, progress, seeded = before) ?: return null
+    val reconciled = applyDiff(builder, relay, diff, invalid, progress, seeded = before)
 
     val (newIndex, newIds) = builder.build()
     val now = TimeUtils.now()
@@ -293,21 +318,20 @@ private class Reconciled(
     val gone: Int,
 )
 
-/**
- * NIP-77 reconcile of [filter] against [local]: fetches (and verifies into [builder]) the cards
- * the relay has and we lack, and drops from [builder] the ones only we have. Null when the
- * relay cannot reconcile.
- */
-@OptIn(ExperimentalAtomicApi::class)
-private suspend fun INostrClient.reconcileInto(
-    builder: TrustNetworkBuilder,
+/** What a NIP-77 reconcile found: ids the relay has and we lack, ids only we hold. */
+private class IdDiff(
+    val need: List<HexKey>,
+    val have: List<HexKey>,
+) {
+    val isEmpty: Boolean get() = need.isEmpty() && have.isEmpty()
+}
+
+/** NIP-77 diff of [filter] against [local]. Null when the relay cannot reconcile. */
+private suspend fun INostrClient.reconcileIds(
     relay: NormalizedRelayUrl,
     filter: Filter,
     local: NegentropyLocalIndex,
-    invalid: AtomicInt,
-    progress: TrustNetworkProgress?,
-    seeded: Int,
-): Reconciled? {
+): IdDiff? {
     val need = ArrayList<HexKey>()
     val have = ArrayList<HexKey>()
     try {
@@ -315,6 +339,7 @@ private suspend fun INostrClient.reconcileInto(
             relay = relay,
             filter = filter,
             localIndex = local,
+            targetWindow = NEGENTROPY_WINDOW,
             idleTimeoutMs = IDLE_MS,
             onHaveIds = { batch -> have.addAll(batch) },
             onNeedIds = { batch -> need.addAll(batch) },
@@ -325,39 +350,54 @@ private suspend fun INostrClient.reconcileInto(
         Log.w(TAG, "Could not reconcile the trust network with ${relay.url}", e)
         return null
     }
+    return IdDiff(need, have)
+}
 
-    val stalled = AtomicInt(0)
+/**
+ * Applies [diff] to [builder]: fetches (and verifies) the cards it needs and drops the ones the
+ * relay no longer has. Complete unless more than [missingAllowed] cards could not be had.
+ */
+@OptIn(ExperimentalAtomicApi::class)
+private suspend fun INostrClient.applyDiff(
+    builder: TrustNetworkBuilder,
+    relay: NormalizedRelayUrl,
+    diff: IdDiff,
+    invalid: AtomicInt,
+    progress: TrustNetworkProgress?,
+    seeded: Int,
+): Reconciled {
+    val missing = AtomicInt(0)
     val invalidBefore = invalid.load()
-    if (need.isNotEmpty()) {
-        verifying(builder, invalid, need.size, progress, seeded) { submit ->
+    if (diff.need.isNotEmpty()) {
+        verifying(builder, invalid, diff.need.size, progress, seeded) { submit ->
             // A few batches in flight at once: a provider recompute can need every card.
             val slots = Semaphore(FETCH_BY_ID_CONCURRENCY)
             coroutineScope {
-                for (batch in need.chunked(FETCH_BY_ID_BATCH)) {
+                for (batch in diff.need.chunked(FETCH_BY_ID_BATCH)) {
                     launch {
-                        slots.withPermit {
-                            if (!fetchByIds(relay, batch, submit)) stalled.incrementAndFetch()
-                        }
+                        slots.withPermit { missing.addAndFetch(fetchByIds(relay, batch, submit)) }
                     }
                 }
             }
         }
     }
-    builder.removeEventIds(have)
+    builder.removeEventIds(diff.have)
     // A card whose signature failed counts as missing: the relay did not give us a valid one.
-    return Reconciled(stalled.load() == 0 && invalid.load() == invalidBefore, need.size, have.size)
+    val unobtained = missing.load() + (invalid.load() - invalidBefore)
+    if (unobtained > 0) Log.w(TAG) { "$unobtained of ${diff.need.size} cards could not be had from ${relay.url}" }
+    return Reconciled(unobtained <= missingAllowed(diff.need.size), diff.need.size, diff.have.size)
 }
 
 /**
  * Fetches [ids] from [relay] and hands each event to [submit]. A relay whose max_limit is below
  * the batch answers part of it, so this asks again for the rest until it stops making progress.
- * False when some ids never came.
+ * Returns how many ids never came.
  */
 private suspend fun INostrClient.fetchByIds(
     relay: NormalizedRelayUrl,
     ids: List<HexKey>,
     submit: (Event) -> Unit,
-): Boolean {
+): Int {
     var missing = ids.toHashSet()
     while (missing.isNotEmpty()) {
         val events = fetchAll(relay, Filter(ids = missing.toList()), IDLE_MS)
@@ -369,9 +409,9 @@ private suspend fun INostrClient.fetchByIds(
                 submit(event)
             }
         }
-        if (!progress) return false
+        if (!progress) return missing.size
     }
-    return true
+    return 0
 }
 
 /**

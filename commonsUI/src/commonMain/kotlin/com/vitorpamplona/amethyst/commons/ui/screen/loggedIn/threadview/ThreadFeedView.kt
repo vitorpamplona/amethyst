@@ -625,8 +625,8 @@ fun RenderThreadFeed(
  * Replies (by id) whose author is outside the Web of Trust network: they start collapsed. The
  * thread's root, its author, the focused note and the replies above it are never included (a
  * collapsed reply hides everything under it, which would hide the note the user opened), nor
- * is a reply someone in the network answered; neither are follows or the user (see
- * [TrustVerdicts]).
+ * is a reply that the root's author or someone in the network answered; neither are follows or
+ * the user (see [TrustVerdicts]).
  */
 private fun outOfNetworkReplies(
     thread: List<Note>,
@@ -637,37 +637,51 @@ private fun outOfNetworkReplies(
     val root = thread.firstOrNull() ?: return emptySet()
     val rootAuthor = root.author?.pubkeyHex
     val keepOpen = focusedNoteAndAncestors(thread, levels, focusedNoteId)
+    val answered =
+        knownReplyBelow(thread, levels) { reply ->
+            val author = reply.author?.pubkeyHex
+            author != null && (author == rootAuthor || verdicts.explain(author).isKnown == true)
+        }
     val result = HashSet<String>()
     for (i in 1 until thread.size) {
         val note = thread[i]
         if (note.idHex in keepOpen) continue
         val author = note.author?.pubkeyHex ?: continue
         if (author == rootAuthor) continue
-        if (verdicts.isOutside(author) && !hasKnownReplyBelow(thread, levels, i, verdicts)) result.add(note.idHex)
+        if (!answered[i] && verdicts.isOutside(author)) result.add(note.idHex)
     }
     return result
 }
 
 /**
- * Whether someone in the user's network (the user, a follow, anyone who passes) replied under
- * [thread]`[at]`. Collapsing a reply hides everything under it, which would hide their part of
- * the conversation. The thread is depth-first: the replies under a note are the items after it
- * at a deeper level.
+ * For each item of [thread], whether a [known] reply is anywhere under it. Collapsing a
+ * reply hides everything under it, which would hide their part of the conversation. The thread
+ * is depth-first: the replies under a note are the items after it at a deeper level. One
+ * backwards pass: the stack holds the subtrees already seen, nearest on top, each with whether
+ * a known author is in it; a note owns the ones deeper than itself.
  */
-private fun hasKnownReplyBelow(
+internal fun knownReplyBelow(
     thread: List<Note>,
     levels: Map<Note, Int>,
-    at: Int,
-    verdicts: TrustVerdicts,
-): Boolean {
-    val level = levels[thread[at]] ?: return false
-    for (j in at + 1 until thread.size) {
-        val below = levels[thread[j]] ?: continue
-        if (below <= level) return false
-        val author = thread[j].author?.pubkeyHex ?: continue
-        if (verdicts.explain(author).isKnown == true) return true
+    known: (Note) -> Boolean,
+): BooleanArray {
+    val result = BooleanArray(thread.size)
+    val stackLevels = IntArray(thread.size)
+    val stackKnown = BooleanArray(thread.size)
+    var top = 0
+    for (i in thread.indices.reversed()) {
+        val level = levels[thread[i]] ?: continue
+        var below = false
+        while (top > 0 && stackLevels[top - 1] > level) {
+            top--
+            below = below || stackKnown[top]
+        }
+        result[i] = below
+        stackLevels[top] = level
+        stackKnown[top] = below || known(thread[i])
+        top++
     }
-    return false
+    return result
 }
 
 /**

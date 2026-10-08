@@ -77,6 +77,7 @@ import com.vitorpamplona.amethyst.commons.softwareapps.dal.SoftwareAppsFeedFilte
 import com.vitorpamplona.amethyst.commons.video.dal.VideoFeedFilter
 import com.vitorpamplona.amethyst.commons.webBookmarks.dal.WebBookmarkFeedFilter
 import com.vitorpamplona.amethyst.commons.workouts.dal.WorkoutFeedFilter
+import com.vitorpamplona.amethyst.commons.wot.network.TrustVerdicts
 import com.vitorpamplona.quartz.nip90Dvms.dvmHeartbeat.DvmHeartbeatEvent
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -86,6 +87,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.drop
+import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.flow.sample
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
@@ -382,11 +384,16 @@ class AccountFeedContentStates(
         // LocalCache. Rebuild those feeds; clear the card feeds first, since their refresh is
         // additive-only and would keep cards that no longer pass.
         scope.launch(Dispatchers.IO) {
+            // Not "skip the first value": the network can finish loading before this collector
+            // starts but after the feeds were first built. So the first active answers always
+            // rebuild once, and after that only answers that differ from the last rebuild.
+            var builtWith: TrustVerdicts? = null
             @OptIn(FlowPreview::class)
             account.trustVerdicts
-                .drop(1)
-                .debounce(500)
+                .debounce(1_000)
+                .filter { verdicts -> builtWith?.let { !verdicts.sameAnswersAs(it) } ?: verdicts.isActive }
                 .collect {
+                    builtWith = it
                     dmKnown.invalidateData()
                     dmNew.invalidateData()
                     notifications.clear()

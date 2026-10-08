@@ -237,10 +237,6 @@ fun ChatFeedLoaded(
 ) {
     val items by loaded.feed.collectAsStateWithLifecycle()
 
-    // Hoisted load driver (above the LazyColumn): pages each relay off viewport visibility, so feed
-    // reorders no longer re-fire paging. The per-gap markers below are pure UI.
-    sentinels?.invoke(items.list, listState)
-
     // Public chats collapse runs of messages from outside the Web of Trust network into one row.
     var revealed by remember { mutableStateOf(emptySet<String>()) }
     val outsideNetwork = rememberOutsideNetworkRuns(items.list, revealed, collapseOutsideNetwork, accountViewModel)
@@ -255,20 +251,43 @@ fun ChatFeedLoaded(
             }
         }
 
+    // Hoisted load driver (above the LazyColumn): pages each relay off viewport visibility, so feed
+    // reorders no longer re-fire paging. The per-gap markers below are pure UI. Given the rows the
+    // list draws, since it maps visible item indexes into them.
+    sentinels?.invoke(rows, listState)
+
     val newest = items.list.firstOrNull()
     AutoScrollToNewest(listState, newest, mine = accountViewModel.isLoggedUser(newest?.author?.pubkeyHex))
 
     val scope = rememberCoroutineScope()
     val highlightedNoteId = remember { mutableStateOf<String?>(null) }
-    val onScrollToNote: (Note) -> Unit = { note ->
-        val index = rows.indexOfFirst { it.idHex == note.idHex }
+
+    // A target inside a collapsed run is not a row: reveal the run, then scroll once it is drawn.
+    var pendingScrollId by remember { mutableStateOf<String?>(null) }
+    val scrollToNote: (String) -> Unit = { id ->
+        val index = rows.indexOfFirst { it.idHex == id }
         if (index >= 0) {
             scope.launch {
                 listState.animateScrollToItem(index)
-                highlightedNoteId.value = note.idHex
+                highlightedNoteId.value = id
+            }
+        } else {
+            outsideNetwork.byId[id]?.let { run ->
+                revealed = revealed + run.members.map { it.idHex }
+                pendingScrollId = id
             }
         }
     }
+    LaunchedEffect(rows, pendingScrollId) {
+        val id = pendingScrollId ?: return@LaunchedEffect
+        val index = rows.indexOfFirst { it.idHex == id }
+        if (index >= 0) {
+            pendingScrollId = null
+            listState.animateScrollToItem(index)
+            highlightedNoteId.value = id
+        }
+    }
+    val onScrollToNote: (Note) -> Unit = { note -> scrollToNote(note.idHex) }
 
     // External jump request (pinned-message bar). Keyed on the id alone, so a message arriving mid-jump
     // can't cancel the scroll animation or restart the effect. Always clears the request after one
@@ -276,11 +295,7 @@ fun ChatFeedLoaded(
     val jumpId = jumpToNoteId?.value
     LaunchedEffect(jumpId) {
         if (jumpId != null) {
-            val index = rows.indexOfFirst { it.idHex == jumpId }
-            if (index >= 0) {
-                listState.animateScrollToItem(index)
-                highlightedNoteId.value = jumpId
-            }
+            scrollToNote(jumpId)
             onJumpHandled()
         }
     }

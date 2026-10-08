@@ -84,19 +84,10 @@ object DirectMessageNotification {
         decrypt: Boolean,
     ) {
         val chatNote = LocalCache.getNoteIfExists(eventId) ?: return
-        val chatroomList = LocalCache.getOrCreateChatroomList(account.signer.pubKey)
-        val followingKeySet = account.followingKeySet()
 
         // A process woken by this push may not have read the trust network yet.
         account.trustNetwork.awaitLoaded()
-        val room = chatroomList.rooms.get(chatRoom)
-        val isKnownRoom =
-            if (room != null) {
-                account.isKnownChatroom(chatRoom, room, followingKeySet)
-            } else {
-                chatroomList.hasSentMessagesTo(chatRoom)
-            }
-        if (!isKnownRoom) return
+        if (!account.isKnownChatroom(chatRoom)) return
 
         val author = chatNote.author ?: return
         // Decrypt (NIP-04) or read (NIP-17) the body once — never re-decrypt on

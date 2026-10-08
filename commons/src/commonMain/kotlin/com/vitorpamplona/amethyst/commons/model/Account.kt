@@ -3807,10 +3807,18 @@ class Account(
     /** True only when a trust network is active and [pubkey] is not in it (see [TrustVerdicts]). */
     fun isOutsideTrustNetwork(pubkey: HexKey): Boolean = currentTrustVerdicts().isOutside(pubkey)
 
-    /** [isKnownChatroom] for a room that may not be loaded yet: then only "I wrote to it" counts. */
+    /**
+     * [isKnownChatroom] for a room that may not be loaded yet (a push that beat it): then the
+     * same rule is applied to the room's members instead of its senders.
+     */
     fun isKnownChatroom(key: ChatroomKey): Boolean {
-        val room = chatroomList.rooms.get(key) ?: return chatroomList.hasSentMessagesTo(key) || key in settings.syncedSettings.chats.pinnedChatrooms.value
-        return isKnownChatroom(key, room)
+        val room = chatroomList.rooms.get(key)
+        if (room != null) return isKnownChatroom(key, room)
+        if (chatroomList.hasSentMessagesTo(key) || key in settings.syncedSettings.chats.pinnedChatrooms.value) return true
+        val follows = followingKeySet()
+        if (key.users.any { it in follows }) return true
+        val verdicts = currentTrustVerdicts()
+        return verdicts.isActive && key.users.any { verdicts.passes(it) }
     }
 
     /**

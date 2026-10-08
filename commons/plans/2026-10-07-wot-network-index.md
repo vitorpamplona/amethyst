@@ -254,8 +254,10 @@ magic "AWOT" | u16 version | 32B provider | relay (u16 len + utf8)
 - A bad magic, version, or `(P, R)` mismatch means the file is ignored and a cold sync is scheduled.
 
 A second file `network-ids-v1.bin` holds `(eventId 32B, createdAt i64)` per entry, about
-12 MB, then the **tombstones**: `(subject 16B, eventId 32B, createdAt i64)` for each rank-0
-card the provider still serves. It is **kept** (decided) and read **only** by syncs, never at
+12 MB, then the **tombstones**: `(subject 16B, eventId 32B, createdAt i64)` for each card the
+relay still serves that does not count: a rank-0 or kind-5-deleted card, an older version the
+relay kept beside the newest (Brainstorm's relay holds a few), or a `d` tag that is not a
+lowercase pubkey (keyed by its event id, so it can never supersede a real card). It is **kept** (decided) and read **only** by syncs, never at
 startup. It is written together with the index, so the two always describe the same set.
 Tombstones make updates and full checks treat those cards as known instead of fetching them
 again (format version 2; a version 1 file triggers a fresh download).

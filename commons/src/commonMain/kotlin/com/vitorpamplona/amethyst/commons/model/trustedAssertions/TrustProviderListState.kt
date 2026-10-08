@@ -107,8 +107,9 @@ class TrustProviderListState(
     @OptIn(ExperimentalCoroutinesApi::class)
     private val resolvedTrustProviderList: StateFlow<Set<ServiceProviderTag>?> =
         getTrustProviderListFlow()
+            // The note flow is a StateFlow, so its current note arrives first; no onStart, whose
+            // retries would hold off a newer 10040 until the next pause ended.
             .transformLatest { noteState -> emitResolved(noteState.note) }
-            .onStart { emitResolved(trustProviderListNote) }
             .flowOn(Dispatchers.IO)
             .stateIn(scope, SharingStarted.Eagerly, null)
 

@@ -116,9 +116,10 @@ class TrustNetworkIndexTest {
         assertFalse(s in index)
         assertFalse(t in index)
         assertEquals(0, index.size)
-        // Kept as tombstones, so a reconcile does not fetch them again.
-        assertEquals(2, ids.tombstones)
-        assertEquals(2, ids.countSince(0))
+        // Kept as tombstones, so a reconcile does not fetch them again: both removals, and the
+        // rank-40 card the relay served beside its rank-0 replacement.
+        assertEquals(3, ids.tombstones)
+        assertEquals(3, ids.countSince(0))
     }
 
     @Test
@@ -136,12 +137,72 @@ class TrustNetworkIndexTest {
     }
 
     @Test
+    fun aDeletedCardStaysAsATombstone() {
+        val s = hex()
+        val builder = TrustNetworkBuilder(provider)
+        builder.add(card(s, rank = 40, createdAt = 1000))
+        builder.add(deletion(2000, s))
+        val (index, ids) = builder.build()
+        assertFalse(s in index)
+        // The relay still holds the card: without its id, every reconcile would fetch it again.
+        assertEquals(1, ids.tombstones)
+    }
+
+    @Test
+    fun aTimestampTieKeepsTheLowestId() {
+        val s = hex()
+        val a = card(s, rank = 30, createdAt = 1000)
+        val b = card(s, rank = 70, createdAt = 1000)
+        val low = if (a.id < b.id) a else b
+        for (order in listOf(listOf(a, b), listOf(b, a))) {
+            val builder = TrustNetworkBuilder(provider)
+            order.forEach { builder.add(it) }
+            // As NIP-01 relays do: the lowest id wins, so both sides keep the same card.
+            assertEquals(low.tags.first { it[0] == "rank" }[1].toInt(), builder.build().first.rankOf(s))
+        }
+    }
+
+    @Test
+    fun anOlderVersionTheRelayStillServesStaysAsATombstone() {
+        val s = hex()
+        val builder = TrustNetworkBuilder(provider)
+        builder.add(card(s, rank = 30, createdAt = 1000))
+        builder.add(card(s, rank = 70, createdAt = 2000))
+        val (index, ids) = builder.build()
+        assertEquals(70, index.rankOf(s))
+        // The relay served both: without the older id, every reconcile would fetch it again.
+        assertEquals(1, ids.tombstones)
+
+        // A version replaced across runs (the relay dropped it, as NIP-01 says) is not kept.
+        val update = TrustNetworkBuilder(provider)
+        update.addAll(index, ids)
+        update.add(card(s, rank = 90, createdAt = 3000))
+        val (merged, mergedIds) = update.build()
+        assertEquals(90, merged.rankOf(s))
+        assertEquals(1, mergedIds.tombstones)
+    }
+
+    @Test
+    fun anUppercaseSubjectCannotOverrideTheRealCard() {
+        val s = hex()
+        val builder = TrustNetworkBuilder(provider)
+        builder.add(card(s, rank = 70, createdAt = 1000))
+        builder.add(card(s.uppercase(), rank = 7, createdAt = 2000))
+        val (index, ids) = builder.build()
+        assertEquals(70, index.rankOf(s))
+        assertEquals(1, ids.tombstones)
+    }
+
+    @Test
     fun ignoresOtherAuthorsKindsAndBadSubjects() {
         val builder = TrustNetworkBuilder(provider)
         assertFalse(builder.add(card(hex(), rank = 50, author = hex())))
-        assertFalse(builder.add(card("abc", rank = 50)))
         assertFalse(builder.add(Event(hex(), provider, 1, 1, emptyArray(), "", sig)))
-        assertEquals(0, builder.build().first.size)
+        // The relay serves a card with a bad subject for the filter: remembered, never a member.
+        assertTrue(builder.add(card("abc", rank = 50)))
+        val (index, ids) = builder.build()
+        assertEquals(0, index.size)
+        assertEquals(1, ids.tombstones)
     }
 
     @Test

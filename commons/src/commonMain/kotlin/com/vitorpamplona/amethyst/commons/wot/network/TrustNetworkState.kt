@@ -429,7 +429,7 @@ class TrustNetworkState(
                 }
 
                 TrustNetworkSyncStatus.Kind.FULL_CHECK -> {
-                    fullCheck(relay, provider, current!!, ids!!, mayDownload, progress) ?: return TrustNetworkRun(kind, TrustNetworkOutcome.WaitingForUnmetered)
+                    fullCheck(relay, provider, current!!, ids!!, mayDownload, progress)
                 }
             }
 
@@ -439,7 +439,9 @@ class TrustNetworkState(
 
         // A provider still computing a new user's scores has published nothing yet. An empty
         // network would leave only follows as "known", so keep waiting.
-        if (kind == TrustNetworkSyncStatus.Kind.DOWNLOAD && result.index.size == 0) return TrustNetworkRun(kind, TrustNetworkOutcome.NoScoresYet, result)
+        // An empty network would leave only follows as "known", so never apply one, whichever
+        // sync produced it (a full check that fell back to a download included).
+        if (result.index.size == 0) return TrustNetworkRun(kind, TrustNetworkOutcome.NoScoresYet, result)
 
         if (result.unchanged && current != null) return commitUnchanged(provider, kind, current, result.header, result)
 
@@ -449,8 +451,10 @@ class TrustNetworkState(
             // The sync fetched everything up to its cursor; only cards seen after it still add.
             // Pruned before the network is published, so no snapshot pairs the new index with
             // cards older than it.
-            _overlay.update { cards -> cards.filterValues { it.createdAt > header.syncCursor } }
+            // Published first, so a card offered from now on is checked against the new cursor;
+            // then the cards it superseded go, and verdicts re-run if any did.
             _network.value = TrustNetwork(header, result.index)
+            pruneOverlay(header.syncCursor)
             Log.d(TAG) { "$kind done: ${result.index.size} entries, ${result.received} received, ${result.invalid} invalid (${result.detail})" }
             TrustNetworkRun(kind, TrustNetworkOutcome.Applied(result), result)
         }
@@ -466,17 +470,35 @@ class TrustNetworkState(
     ): TrustNetworkRun =
         commitLock.withLock {
             if (currentProvider != provider) return@withLock TrustNetworkRun(kind, TrustNetworkOutcome.ProviderChanged, result)
-            // Same index instance: feeds keyed on it do not rebuild. The files keep the older
-            // lastUpdate, which only means the next process start asks again.
-            _network.value = TrustNetwork(header.copy(generation = current.header.generation), current.index)
+            // Same index instance: feeds keyed on it do not rebuild. Only a finished full check
+            // is saved (its date decides when the next one runs); an update's lastUpdate is not,
+            // which only means the next process start asks again.
+            val saved =
+                if (result != null && header.lastFullCheck != current.header.lastFullCheck) {
+                    withContext(Dispatchers.IO) { store?.write(header, current.index, result.ids) }
+                } else {
+                    null
+                }
+            _network.value = TrustNetwork(saved ?: header.copy(generation = current.header.generation), current.index)
             TrustNetworkRun(kind, TrustNetworkOutcome.Unchanged(header), result)
         }
+
+    /** Drops the cards seen between syncs that the index now holds (at or before [cursor]). */
+    private fun pruneOverlay(cursor: Long) {
+        var removed = false
+        _overlay.update { cards ->
+            val kept = cards.filterValues { it.createdAt > cursor }
+            removed = kept.size != cards.size
+            kept
+        }
+        if (removed) verdictRevision.update { it + 1 }
+    }
 
     /**
      * The weekly check. A relay that cannot reconcile (no NIP-77, or a timeout: they look the
      * same) gets a cheap update instead, so the network stays current, and the check is retried
-     * next time; after [MAX_FAILED_FULL_CHECKS] in a row, a fresh download replaces it, when
-     * allowed. Null when that download must wait for an unmetered network.
+     * in [FULL_CHECK_RETRY_SECS]; after [MAX_FAILED_FULL_CHECKS] in a row in one process, a fresh
+     * download replaces it when [mayDownload].
      */
     private suspend fun fullCheck(
         relay: TrustNetworkConnection,
@@ -485,17 +507,31 @@ class TrustNetworkState(
         ids: TrustNetworkIds,
         mayDownload: Boolean,
         progress: TrustNetworkProgress,
-    ): TrustNetworkSyncResult? {
+    ): TrustNetworkSyncResult {
         val reconciled = relay.reconcile(provider, current.header, current.index, ids, progress)
         if (reconciled != null) {
             failedFullChecks = 0
             return reconciled
         }
         failedFullChecks++
-        if (failedFullChecks < MAX_FAILED_FULL_CHECKS) return relay.update(provider, current.header, current.index, ids, null, progress)
-        if (!mayDownload) return null
-        failedFullChecks = 0
-        return relay.download(provider, progress)
+        if (failedFullChecks >= MAX_FAILED_FULL_CHECKS && mayDownload) {
+            failedFullChecks = 0
+            return relay.download(provider, progress)
+        }
+        // Keep current with a cheap update, and try the check again in a day rather than on
+        // every app open (a relay that ignores NIP-77 makes each attempt wait out a timeout).
+        val updated = relay.update(provider, current.header, current.index, ids, null, progress)
+        val retryAt = clock() - FULL_CHECK_EVERY_SECS + FULL_CHECK_RETRY_SECS
+        return TrustNetworkSyncResult(
+            header = updated.header.copy(lastFullCheck = maxOf(updated.header.lastFullCheck, retryAt)),
+            index = updated.index,
+            ids = updated.ids,
+            complete = updated.complete,
+            invalid = updated.invalid,
+            received = updated.received,
+            detail = "full check unavailable; ${updated.detail}",
+            unchanged = updated.unchanged,
+        )
     }
 
     companion object {
@@ -509,6 +545,7 @@ class TrustNetworkState(
         const val FULL_CHECK_EVERY_SECS = 7 * 24 * 60 * 60L
         const val FORCE_DOWNLOAD_WINDOW_SECS = 10 * 60L
         const val MAX_FAILED_FULL_CHECKS = 3
+        const val FULL_CHECK_RETRY_SECS = 24 * 60 * 60L
 
         /**
          * Which sync is due for [current] at [now]: a download when there is no index, a full

@@ -45,7 +45,10 @@ import com.vitorpamplona.quartz.utils.Hex
  *    the score is effectively zeroed out";
  *  - a kind-5 by the provider removes the subject's card when it is not newer than the
  *    deletion (`a` tag `30382:<provider>:<subject>`), or the exact card (`e` tag);
- *  - [removeEventIds] drops cards a negentropy full check found the relay no longer has.
+ *  - [removeEventIds] drops cards a negentropy full check found the relay no longer has;
+ *  - a card the relay was seen holding but that does not count (an older version it kept
+ *    beside the newest, or a `d` tag that is not a lowercase 64-hex pubkey) stays as a
+ *    tombstone, so a reconcile does not fetch it again every time.
  *
  * Not thread-safe: feed it from one coroutine (the verifier's drain does).
  */
@@ -61,6 +64,9 @@ class TrustNetworkBuilder(
     private var followers = IntArray(initialCapacity)
     private var createdAt = LongArray(initialCapacity)
     private var ids = ByteArray(32 * initialCapacity)
+
+    /** The card came from the relay in this run, or was a tombstone: the relay holds it. */
+    private var held = BooleanArray(initialCapacity)
 
     /** Subject → newest deletion time. */
     private val deletedSubjects = HashMap<Key, Long>()
@@ -91,21 +97,45 @@ class TrustNetworkBuilder(
     }
 
     private fun addCard(event: Event): Boolean {
-        val subject = event.tags.dTag()
-        if (!Hex.isHex64(subject)) return false
+        if (!Hex.isHex64(event.id)) return false
         val eventId = Hex.decode(event.id)
-        if (eventId.size != 32) return false
-        append(
-            hi = Hex.readLong(subject, 0),
-            lo = Hex.readLong(subject, 16),
-            rank = (event.tags.rank() ?: 0).coerceIn(0, 127).toByte(),
-            hops = (event.tags.hops() ?: -1).coerceIn(-1, 127).toByte(),
-            followers = (event.tags.followerCount() ?: 0).coerceAtLeast(0),
-            createdAt = event.createdAt,
-            id = eventId,
-            idOffset = 0,
-        )
+        val subject = event.tags.dTag()
+        if (isSubject(subject)) {
+            append(
+                hi = Hex.readLong(subject, 0),
+                lo = Hex.readLong(subject, 16),
+                rank = (event.tags.rank() ?: 0).coerceIn(0, 127).toByte(),
+                hops = (event.tags.hops() ?: -1).coerceIn(-1, 127).toByte(),
+                followers = (event.tags.followerCount() ?: 0).coerceAtLeast(0),
+                createdAt = event.createdAt,
+                id = eventId,
+                idOffset = 0,
+                held = true,
+            )
+        } else {
+            // Not about a pubkey (an uppercase `d` is another address, not the pubkey's card), but
+            // the relay serves it for the filter: a rank-0 card under a key of its own (its id's
+            // first bits) keeps it a tombstone that can never supersede a real card.
+            append(
+                hi = Hex.readLong(event.id, 0),
+                lo = Hex.readLong(event.id, 16),
+                rank = 0,
+                hops = -1,
+                followers = 0,
+                createdAt = event.createdAt,
+                id = eventId,
+                idOffset = 0,
+                held = true,
+            )
+        }
         if (event.createdAt > newestCreatedAt) newestCreatedAt = event.createdAt
+        return true
+    }
+
+    /** A card's `d` tag names a pubkey: 64 lowercase hex characters, as NIP-01 writes them. */
+    private fun isSubject(subject: String?): Boolean {
+        if (subject == null || !Hex.isHex64(subject)) return false
+        for (c in subject) if (c in 'A'..'F') return false
         return true
     }
 
@@ -119,14 +149,14 @@ class TrustNetworkBuilder(
                     val value = tag[1]
                     if (!value.startsWith(prefix)) continue
                     val subject = value.substring(prefix.length)
-                    if (!Hex.isHex64(subject)) continue
+                    if (!isSubject(subject)) continue
                     removeSubject(subject, event.createdAt)
                     any = true
                 }
 
                 "e" -> {
                     if (Hex.isHex64(tag[1])) {
-                        deletedIds.add(tag[1])
+                        deletedIds.add(tag[1].lowercase())
                         any = true
                     }
                 }
@@ -148,7 +178,7 @@ class TrustNetworkBuilder(
 
     /** Drops the cards with these event ids (a full check found the relay no longer has them). */
     fun removeEventIds(eventIds: Collection<HexKey>) {
-        deletedIds.addAll(eventIds)
+        eventIds.mapTo(deletedIds) { it.lowercase() }
     }
 
     /** Seeds the builder with an existing index, so an update can merge into it. */
@@ -167,6 +197,7 @@ class TrustNetworkBuilder(
                 createdAt = idColumn.createdAt[i],
                 id = idColumn.ids,
                 idOffset = 32 * i,
+                held = false,
             )
             if (idColumn.createdAt[i] > newestCreatedAt) newestCreatedAt = idColumn.createdAt[i]
         }
@@ -181,6 +212,7 @@ class TrustNetworkBuilder(
                 createdAt = idColumn.tombstoneCreatedAt[i],
                 id = idColumn.tombstoneIds,
                 idOffset = 32 * i,
+                held = true,
             )
             if (idColumn.tombstoneCreatedAt[i] > newestCreatedAt) newestCreatedAt = idColumn.tombstoneCreatedAt[i]
         }
@@ -201,6 +233,7 @@ class TrustNetworkBuilder(
         createdAt: Long,
         id: ByteArray,
         idOffset: Int,
+        held: Boolean,
     ) {
         if (size == this.hi.size) grow()
         this.hi[size] = hi
@@ -210,6 +243,7 @@ class TrustNetworkBuilder(
         this.followers[size] = followers
         this.createdAt[size] = createdAt
         id.copyInto(ids, 32 * size, idOffset, idOffset + 32)
+        this.held[size] = held
         size++
     }
 
@@ -222,6 +256,7 @@ class TrustNetworkBuilder(
         followers = followers.copyOf(capacity)
         createdAt = createdAt.copyOf(capacity)
         ids = ids.copyOf(32 * capacity)
+        held = held.copyOf(capacity)
     }
 
     /** The first 128 bits of each id in [deletedIds], so [isDeletedId] checks a card without allocating. */
@@ -241,6 +276,18 @@ class TrustNetworkBuilder(
         return Hex.encode(ids.copyOfRange(32 * i, 32 * i + 32)) in deletedIds
     }
 
+    /** Unsigned byte order of the ids at positions [a] and [b]. */
+    private fun compareIds(
+        a: Int,
+        b: Int,
+    ): Int {
+        for (k in 0 until 32) {
+            val c = (ids[32 * a + k].toInt() and 0xFF) - (ids[32 * b + k].toInt() and 0xFF)
+            if (c != 0) return c
+        }
+        return 0
+    }
+
     private fun readLong(
         bytes: ByteArray,
         offset: Int,
@@ -252,15 +299,21 @@ class TrustNetworkBuilder(
 
     /**
      * Applies supersession and removals and returns the sorted index with its id column. A
-     * subject whose newest card has rank 0 (or no rank) is left out of the index but kept as a
-     * tombstone in the id column; a deleted card is dropped entirely.
+     * subject whose newest card has rank 0 (or no rank), or was deleted by a kind 5, is left out
+     * of the index but kept as a tombstone in the id column; a card the relay no longer has
+     * ([removeEventIds]) is dropped entirely.
      */
     fun build(): Pair<TrustNetworkIndex, TrustNetworkIds> {
-        // Sort positions by subject, newest card first within a subject.
+        // Sort positions by subject, newest card first within a subject; within the same second
+        // the lowest id first, the card NIP-01 keeps (as the relay does).
         val order = IntArray(size) { it }
         mergeSort(order) { a, b ->
             val c = TrustNetworkIndex.compareKeys(hi[a], lo[a], hi[b], lo[b])
-            if (c != 0) c else createdAt[b].compareTo(createdAt[a])
+            when {
+                c != 0 -> c
+                createdAt[a] != createdAt[b] -> createdAt[b].compareTo(createdAt[a])
+                else -> compareIds(a, b)
+            }
         }
 
         val deletedPrefixes = deletedIdPrefixes()
@@ -275,21 +328,26 @@ class TrustNetworkBuilder(
             var next = k + 1
             while (next < size && hi[order[next]] == hi[first] && lo[order[next]] == lo[first]) next++
 
-            // The subject's newest card that is not deleted. A card deleted by id falls back to the
-            // one before it; a deletion of the subject covers every card up to its time.
+            // The subject's newest card the relay still has (a card removed by id falls back to
+            // the one before it). A kind-5 deletion of the subject makes that card a tombstone:
+            // out of the index, but remembered, so a relay that kept the card cannot bring it back.
             val deletedAt = if (deletedAtBySubject.isEmpty()) KeyTable.MISSING else deletedAtBySubject.valueOf(hi[first], lo[first])
             var chosen = -1
             for (g in k until next) {
                 val i = order[g]
-                if (deletedAt != KeyTable.MISSING && deletedAt >= createdAt[i]) break
                 if (isDeletedId(i, deletedPrefixes)) continue
-                chosen = i
-                break
+                if (chosen < 0) {
+                    chosen = i
+                } else if (held[i]) {
+                    // An older version the relay still serves (it kept both).
+                    graves[buried++] = i
+                }
             }
             k = next
             if (chosen < 0) continue
+            val deleted = deletedAt != KeyTable.MISSING && deletedAt >= createdAt[chosen]
 
-            if (memberRank(rank[chosen].toInt()) == null) {
+            if (deleted || memberRank(rank[chosen].toInt()) == null) {
                 graves[buried++] = chosen
             } else {
                 keep[kept++] = chosen
