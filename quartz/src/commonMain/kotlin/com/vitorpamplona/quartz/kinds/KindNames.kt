@@ -51,6 +51,8 @@ import com.vitorpamplona.quartz.experimental.fitness.workout.WorkoutTemplateEven
 import com.vitorpamplona.quartz.experimental.interactiveStories.InteractiveStoryPrologueEvent
 import com.vitorpamplona.quartz.experimental.interactiveStories.InteractiveStoryReadingStateEvent
 import com.vitorpamplona.quartz.experimental.interactiveStories.InteractiveStorySceneEvent
+import com.vitorpamplona.quartz.experimental.kanban.board.KanbanBoardEvent
+import com.vitorpamplona.quartz.experimental.kanban.card.KanbanCardEvent
 import com.vitorpamplona.quartz.experimental.library.BlossomPieceIndexEvent
 import com.vitorpamplona.quartz.experimental.library.BookshelfDirectoryEvent
 import com.vitorpamplona.quartz.experimental.library.LearningResourceEvent
@@ -82,7 +84,9 @@ import com.vitorpamplona.quartz.experimental.trustedLists.events.EventTrustedLis
 import com.vitorpamplona.quartz.experimental.trustedLists.externalIds.ExternalIdTrustedListEvent
 import com.vitorpamplona.quartz.experimental.trustedLists.users.UserTrustedListEvent
 import com.vitorpamplona.quartz.experimental.videoCollaboration.VideoCollaborationEvent
+import com.vitorpamplona.quartz.experimental.walletScrutiny.assetBundle.AssetBundleEvent
 import com.vitorpamplona.quartz.experimental.zapPolls.ZapPollEvent
+import com.vitorpamplona.quartz.experimental.zapstore.identityProof.IdentityProofEvent
 import com.vitorpamplona.quartz.feedDefinition.FeedDefinitionEvent
 import com.vitorpamplona.quartz.marmot.mip00KeyPackages.KeyPackageEvent
 import com.vitorpamplona.quartz.marmot.mip00KeyPackages.KeyPackageRelayListEvent
@@ -600,6 +604,12 @@ object KindNames {
             GitPullRequestUpdateEvent.KIND to KindName("Git PR Update", "34"),
             LabelEvent.KIND to KindName("Label", "32"),
             SoftwareAssetEvent.KIND to KindName("Software Asset", "82"),
+            IdentityProofEvent.KIND to KindName("Cryptographic Identity Proof", null),
+            AssetBundleEvent.KIND to KindName("Asset Bundle (WalletScrutiny)", null),
+            // Kind 30301 is shared with WalletScrutiny build verifications and a planner app: the
+            // label names the shape the kind is probed as.
+            KanbanBoardEvent.KIND to KindName("Kanban Board", null),
+            KanbanCardEvent.KIND to KindName("Kanban Card", null),
             AdminCommandEvent.KIND to KindName("Nests Admin Command", null),
             DvmTextExtractionRequestEvent.KIND to KindName("DVM Text Extraction Req", "90"),
             DvmSummarizationRequestEvent.KIND to KindName("DVM Summarization Req", "90"),

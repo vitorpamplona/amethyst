@@ -4,8 +4,8 @@ Every concrete `SearchableEvent` implementor in Quartz, with the exact `indexabl
 expression. **Update this file in the same PR as any change to the searchable set or to an
 `indexableContent()` body** (see SKILL.md). Verified against the code 2026-10-08.
 
-Counts: 198 concrete classes covering 199 kind values (`GitStatusEvent` spans 4 kinds;
-kind 30063 is shared by two NIPs, kind 38000 by three classes and kind 38385 with other apps — see the footnotes). The kind
+Counts: 201 concrete classes covering 201 kind values (`GitStatusEvent` spans 4 kinds;
+kind 30063 is shared by two NIPs, kind 38000 by three classes, kind 30301 by two and kind 38385 with other apps — see the footnotes). The kind
 set is exactly `SearchableKinds.ALL` (`nip50Search/SearchableKinds.kt`). File paths are under
 `quartz/src/commonMain/kotlin/com/vitorpamplona/quartz/`.
 
@@ -132,6 +132,9 @@ Separator legend: **NL** = `joinToString("\n")`, **SP** = `joinToString(" ")`.
 | 30267 | AppCurationSetEvent | nip51Lists/appCurationSet | `listOfNotNull(titleOrName(), description())` NL |
 | 30296 | InteractiveStoryPrologueEvent | experimental/interactiveStories | inherited base: `(listOfNotNull(title(), summary(), content) + optionLabels())` NL |
 | 30297 | InteractiveStorySceneEvent | experimental/interactiveStories | inherited base: `(listOfNotNull(title(), summary(), content) + optionLabels())` NL |
+| 30301 | KanbanBoardEvent ¶ | experimental/kanban/board | `listOfNotNull(title(), description())` NL |
+| 30301 | BuildVerificationEvent ¶ | experimental/walletScrutiny/verification | `listOfNotNull(description(), report())` NL (both from the JSON `content`) |
+| 30302 | KanbanCardEvent ¶ | experimental/kanban/card | `listOfNotNull(title(), description())` NL |
 | 30311 | LiveActivitiesEvent | nip53LiveActivities/streaming | `listOfNotNull(title(), summary(), content)` NL |
 | 30312 | MeetingSpaceEvent | nip53LiveActivities/meetingSpaces | `listOfNotNull(room(), summary(), content)` NL |
 | 30313 | MeetingRoomEvent | nip53LiveActivities/meetingSpaces | `listOfNotNull(title(), summary())` NL |
@@ -234,6 +237,15 @@ bond-trade assignments, game scores). `EventFactory` builds `MostroInfoEvent` on
 `info` or a `mostro_version` tag is present, else `UnrecognizedKind38385Event` — addressable but
 unsearchable. Kind-level probes answer as `MostroInfoEvent`. Mostro's 38384 / 38386 and RoboSats'
 31986 are split the same way, but none of their classes is searchable.
+
+¶ **Kind 30301 is shared** by Kanban boards (NIP PR #1665), WalletScrutiny reproducible-build
+verifications and an encrypted planner app. `EventFactory` builds `BuildVerificationEvent` when a
+non-blank `i` and `status` are present, else `KanbanBoardEvent` on a non-blank `title` or a `col`
+with a name, else `UnrecognizedKind30301Event` — addressable but unsearchable (the planner's
+NIP-44 tasks). Kind-level probes answer as `KanbanBoardEvent`. A verification indexes the
+`description` and the markdown report (`content`) of its JSON `content`. Kind 30302 is split the
+same way: `KanbanCardEvent` on a `title` or an `a` to a 30301 board, else
+`UnrecognizedKind30302Event` (Fieldbook team memberships).
 
 ## Abstract bases (no kind of their own)
 

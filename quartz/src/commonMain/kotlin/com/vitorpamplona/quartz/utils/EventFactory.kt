@@ -151,6 +151,10 @@ import com.vitorpamplona.quartz.experimental.fitness.workout.WorkoutTemplateEven
 import com.vitorpamplona.quartz.experimental.interactiveStories.InteractiveStoryPrologueEvent
 import com.vitorpamplona.quartz.experimental.interactiveStories.InteractiveStoryReadingStateEvent
 import com.vitorpamplona.quartz.experimental.interactiveStories.InteractiveStorySceneEvent
+import com.vitorpamplona.quartz.experimental.kanban.board.KanbanBoardEvent
+import com.vitorpamplona.quartz.experimental.kanban.board.UnrecognizedKind30301Event
+import com.vitorpamplona.quartz.experimental.kanban.card.KanbanCardEvent
+import com.vitorpamplona.quartz.experimental.kanban.card.UnrecognizedKind30302Event
 import com.vitorpamplona.quartz.experimental.library.BlossomPieceIndexEvent
 import com.vitorpamplona.quartz.experimental.library.BookshelfDirectoryEvent
 import com.vitorpamplona.quartz.experimental.library.LearningResourceEvent
@@ -183,7 +187,10 @@ import com.vitorpamplona.quartz.experimental.trustedLists.events.EventTrustedLis
 import com.vitorpamplona.quartz.experimental.trustedLists.externalIds.ExternalIdTrustedListEvent
 import com.vitorpamplona.quartz.experimental.trustedLists.users.UserTrustedListEvent
 import com.vitorpamplona.quartz.experimental.videoCollaboration.VideoCollaborationEvent
+import com.vitorpamplona.quartz.experimental.walletScrutiny.assetBundle.AssetBundleEvent
+import com.vitorpamplona.quartz.experimental.walletScrutiny.verification.BuildVerificationEvent
 import com.vitorpamplona.quartz.experimental.zapPolls.ZapPollEvent
+import com.vitorpamplona.quartz.experimental.zapstore.identityProof.IdentityProofEvent
 import com.vitorpamplona.quartz.feedDefinition.FeedDefinitionEvent
 import com.vitorpamplona.quartz.marmot.mip00KeyPackages.KeyPackageEvent
 import com.vitorpamplona.quartz.marmot.mip00KeyPackages.KeyPackageRelayListEvent
@@ -927,6 +934,23 @@ class EventFactory {
                     } else {
                         UnrecognizedKind31986Event(id, pubKey, createdAt, tags, content, sig)
                     }
+                // kind:30301 is a Kanban board in NIP PR #1665, but WalletScrutiny publishes its
+                // reproducible-build verifications on it and an encrypted planner app its tasks.
+                // Verifications carry `i` + `status`, boards a `title` or a named `col`; the planner's
+                // events fall to UnrecognizedKind30301Event (addressable, never indexed, no edges).
+                KanbanBoardEvent.KIND ->
+                    when {
+                        BuildVerificationEvent.isBuildVerification(tags) -> BuildVerificationEvent(id, pubKey, createdAt, tags, content, sig)
+                        KanbanBoardEvent.isKanbanBoard(tags) -> KanbanBoardEvent(id, pubKey, createdAt, tags, content, sig)
+                        else -> UnrecognizedKind30301Event(id, pubKey, createdAt, tags, content, sig)
+                    }
+                // Kanban cards (NIP PR #1665) share 30302 with Fieldbook's team memberships.
+                KanbanCardEvent.KIND ->
+                    if (KanbanCardEvent.isKanbanCard(tags)) {
+                        KanbanCardEvent(id, pubKey, createdAt, tags, content, sig)
+                    } else {
+                        UnrecognizedKind30302Event(id, pubKey, createdAt, tags, content, sig)
+                    }
                 PictureEvent.KIND -> PictureEvent(id, pubKey, createdAt, tags, content, sig)
                 PinListEvent.KIND -> PinListEvent(id, pubKey, createdAt, tags, content, sig)
                 PnsEvent.KIND -> PnsEvent(id, pubKey, createdAt, tags, content, sig)
@@ -1006,6 +1030,10 @@ class EventFactory {
                 SimpleGroupListEvent.KIND -> SimpleGroupListEvent(id, pubKey, createdAt, tags, content, sig)
                 SoftwareApplicationEvent.KIND -> SoftwareApplicationEvent(id, pubKey, createdAt, tags, content, sig)
                 SoftwareAssetEvent.KIND -> SoftwareAssetEvent(id, pubKey, createdAt, tags, content, sig)
+                // Zapstore's APK-signing-certificate proof and WalletScrutiny's asset bundles sit
+                // beside NIP-82: both are about app releases, neither points at a NIP-82 event.
+                IdentityProofEvent.KIND -> IdentityProofEvent(id, pubKey, createdAt, tags, content, sig)
+                AssetBundleEvent.KIND -> AssetBundleEvent(id, pubKey, createdAt, tags, content, sig)
                 StallEvent.KIND -> StallEvent(id, pubKey, createdAt, tags, content, sig)
                 UserStatusEvent.KIND -> UserStatusEvent(id, pubKey, createdAt, tags, content, sig)
                 TextNoteEvent.KIND -> TextNoteEvent(id, pubKey, createdAt, tags, content, sig)
@@ -1060,8 +1088,10 @@ class EventFactory {
          * [UnrecognizedKind38000Event] (junk, unsearchable), yet every typed shape of it — mint recommendation, ballot, prediction market —
          * is a searchable, renderable class, so it answers as its primary class. Mostro's 38384,
          * 38385 and 38386 and RoboSats' 31986 do the same: with no tags they fall to their
-         * `UnrecognizedKind…Event`, and 38385's primary class is searchable. (The other
-         * tag-split kinds, 39005 and 20001, already land on a typed class with no tags.)
+         * `UnrecognizedKind…Event`, and 38385's primary class is searchable. Kind 30301 answers as
+         * its Kanban board (WalletScrutiny's verifications on it are searchable too) and 30302 as
+         * the Kanban card. (The other tag-split kinds, 39005 and 20001, already land on a typed
+         * class with no tags.)
          *
          * The id is non-blank so kinds that lazily hash a missing id (NIP-17 chat) skip that work
          * — only the runtime type matters here.
@@ -1073,6 +1103,8 @@ class EventFactory {
                 MostroInfoEvent.KIND -> MostroInfoEvent(PROBE_ID, PROBE_ID, 0L, emptyArray(), "", "")
                 MostroDisputeEvent.KIND -> MostroDisputeEvent(PROBE_ID, PROBE_ID, 0L, emptyArray(), "", "")
                 RoboSatsCoordinatorRatingEvent.KIND -> RoboSatsCoordinatorRatingEvent(PROBE_ID, PROBE_ID, 0L, emptyArray(), "", "")
+                KanbanBoardEvent.KIND -> KanbanBoardEvent(PROBE_ID, PROBE_ID, 0L, emptyArray(), "", "")
+                KanbanCardEvent.KIND -> KanbanCardEvent(PROBE_ID, PROBE_ID, 0L, emptyArray(), "", "")
                 else -> create(PROBE_ID, PROBE_ID, 0L, kind, emptyArray(), "", "")
             }
 

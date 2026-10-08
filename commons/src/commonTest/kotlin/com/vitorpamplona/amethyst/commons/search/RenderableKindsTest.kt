@@ -146,6 +146,9 @@ class RenderableKindsTest {
                 30620,
                 38192,
                 40100,
+                // Kanban boards and cards (and WalletScrutiny build verifications on 30301): no card yet
+                30301,
+                30302,
                 // curation sets and relay/interest lists
                 30002,
                 30003,

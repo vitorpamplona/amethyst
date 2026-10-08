@@ -176,6 +176,8 @@ object SearchableKinds {
             30267, // AppCurationSetEvent
             30296, // InteractiveStoryPrologueEvent
             30297, // InteractiveStorySceneEvent
+            30301, // KanbanBoardEvent (and BuildVerificationEvent)
+            30302, // KanbanCardEvent
             30311, // LiveActivitiesEvent
             30312, // MeetingSpaceEvent
             30313, // MeetingRoomEvent

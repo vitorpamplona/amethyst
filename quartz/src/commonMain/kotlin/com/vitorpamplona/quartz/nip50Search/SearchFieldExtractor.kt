@@ -49,6 +49,8 @@ import com.vitorpamplona.quartz.experimental.fitness.workout.ExerciseTemplateEve
 import com.vitorpamplona.quartz.experimental.fitness.workout.WorkoutRecordEvent
 import com.vitorpamplona.quartz.experimental.fitness.workout.WorkoutTemplateEvent
 import com.vitorpamplona.quartz.experimental.interactiveStories.InteractiveStoryBaseEvent
+import com.vitorpamplona.quartz.experimental.kanban.board.KanbanBoardEvent
+import com.vitorpamplona.quartz.experimental.kanban.card.KanbanCardEvent
 import com.vitorpamplona.quartz.experimental.library.LearningResourceEvent
 import com.vitorpamplona.quartz.experimental.music.playlist.MusicPlaylistEvent
 import com.vitorpamplona.quartz.experimental.music.track.MusicTrackEvent
@@ -60,6 +62,7 @@ import com.vitorpamplona.quartz.experimental.profileGallery.ProfileGalleryEntryE
 import com.vitorpamplona.quartz.experimental.profileTheme.definition.ThemeDefinitionEvent
 import com.vitorpamplona.quartz.experimental.ps1saves.Ps1SaveEvent
 import com.vitorpamplona.quartz.experimental.trustedLists.TrustedListEvent
+import com.vitorpamplona.quartz.experimental.walletScrutiny.verification.BuildVerificationEvent
 import com.vitorpamplona.quartz.experimental.zapPolls.ZapPollEvent
 import com.vitorpamplona.quartz.feedDefinition.FeedDefinitionEvent
 import com.vitorpamplona.quartz.nip01Core.core.Event
@@ -701,6 +704,22 @@ object SearchFieldExtractor {
             // trades are the keywords that qualify it, as on an order.
             is MostroInfoEvent -> {
                 tiers(event, listOf(event.instanceName()), event.fiatCurrenciesAccepted().orEmpty(), null)
+            }
+
+            // kinds 30301 / 30302 -- a Kanban board or card is found by its title; the description
+            // qualifies it, as a list's does.
+            is KanbanBoardEvent -> {
+                tiers(event, event.title(), event.description(), null)
+            }
+
+            is KanbanCardEvent -> {
+                tiers(event, event.title(), event.description(), null)
+            }
+
+            // kind 30301 (WalletScrutiny) -- the one-line description names what was reproduced;
+            // the markdown report is the body.
+            is BuildVerificationEvent -> {
+                tiers(event, event.description(), null, event.report())
             }
 
             is AudioTrackEvent -> {

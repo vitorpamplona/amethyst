@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.quartz.nip01Core.hints
 
+import com.vitorpamplona.quartz.experimental.kanban.card.KanbanCardEvent
 import com.vitorpamplona.quartz.experimental.music.playlist.MusicPlaylistEvent
 import com.vitorpamplona.quartz.experimental.nests.admin.AdminCommandEvent
 import com.vitorpamplona.quartz.experimental.nip82SoftwareApps.application.SoftwareApplicationEvent
@@ -72,6 +73,8 @@ class LinkedAddressIdsValidationTest {
             "InterestList" to { t -> InterestListEvent(id, pk, 1, t, "", sig) },
             "PictureCurationSet" to { t -> PictureCurationSetEvent(id, pk, 1, t, "", sig) },
             "FavoriteRelayList" to { t -> FavoriteRelayListEvent(id, pk, 1, t, "", sig) },
+            // The valid 30023 address is not a board, so it reads as the tracked event.
+            "KanbanCard" to { t -> KanbanCardEvent(id, pk, 1, t, "", sig) },
         )
 
     private val qProviders: List<Pair<String, (Array<Array<String>>) -> Event>> =
