@@ -87,6 +87,13 @@ import com.vitorpamplona.amethyst.commons.ui.note.LoadAddressableNote
 import com.vitorpamplona.amethyst.commons.ui.note.LoadDecryptedContent
 import com.vitorpamplona.amethyst.commons.ui.note.StatusKind
 import com.vitorpamplona.amethyst.commons.ui.note.elements.DisplayUncitedHashtags
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.gitRepo.GitRepositoryBrowserViewModelFactory
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.gitRepo.RepoExternalNotice
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.gitRepo.RepoLanguageBar
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.gitRepo.RepoLastCommit
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.gitRepo.RepoStatTiles
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.gitRepo.computeLanguageBreakdown
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.gitRepo.repoHasFetchableClone
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.Font12SP
 import com.vitorpamplona.amethyst.commons.ui.theme.HalfDoubleVertSpacer
@@ -98,13 +105,6 @@ import com.vitorpamplona.amethyst.commons.ui.theme.StdVertSpacer
 import com.vitorpamplona.amethyst.commons.ui.theme.grayText
 import com.vitorpamplona.amethyst.commons.ui.theme.placeholderText
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.gitRepo.GitRepositoryBrowserViewModelFactory
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.gitRepo.RepoExternalNotice
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.gitRepo.RepoLanguageBar
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.gitRepo.RepoLastCommit
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.gitRepo.RepoStatTiles
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.gitRepo.computeLanguageBreakdown
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.gitRepo.repoHasFetchableClone
 import com.vitorpamplona.quartz.nip01Core.tags.hashtags.hasHashtags
 import com.vitorpamplona.quartz.nip34Git.issue.GitIssueEvent
 import com.vitorpamplona.quartz.nip34Git.patch.GitPatchEvent

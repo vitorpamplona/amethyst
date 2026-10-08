@@ -18,25 +18,29 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.ui.screen.loggedIn.gitRepo.dal
+package com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.gitRepo.dal
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
+import androidx.lifecycle.viewmodel.CreationExtras
 import com.vitorpamplona.amethyst.commons.model.Account
 import com.vitorpamplona.amethyst.commons.model.AddressableNote
 import com.vitorpamplona.amethyst.commons.model.GitStatusIndex
 import com.vitorpamplona.amethyst.commons.ui.screen.AndroidFeedViewModel
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.gitRepo.dal.RepositoryIssuesFeedFilter
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.IO
 import kotlinx.coroutines.launch
+import kotlin.reflect.KClass
 
-class RepositoryPatchesFeedViewModel(
+class RepositoryIssuesFeedViewModel(
     val note: AddressableNote,
     val account: Account,
     val showClosed: Boolean,
-) : AndroidFeedViewModel(RepositoryPatchesFeedFilter(note, account, showClosed)) {
+) : AndroidFeedViewModel(RepositoryIssuesFeedFilter(note, account, showClosed)) {
     init {
-        // Status events (kinds 1630-1633) don't mutate the patch/PR note, so the additive
+        // Status events (kinds 1630-1633) don't mutate the issue note, so the additive
         // feed update can't move an item between the Open/Closed buckets on its own.
         // Watch the status index and force a full re-partition whenever it changes.
         viewModelScope.launch(Dispatchers.IO) {
@@ -50,6 +54,9 @@ class RepositoryPatchesFeedViewModel(
         val showClosed: Boolean,
     ) : ViewModelProvider.Factory {
         @Suppress("UNCHECKED_CAST")
-        override fun <T : ViewModel> create(modelClass: Class<T>): T = RepositoryPatchesFeedViewModel(note, account, showClosed) as T
+        override fun <T : ViewModel> create(
+            modelClass: KClass<T>,
+            extras: CreationExtras,
+        ): T = RepositoryIssuesFeedViewModel(note, account, showClosed) as T
     }
 }

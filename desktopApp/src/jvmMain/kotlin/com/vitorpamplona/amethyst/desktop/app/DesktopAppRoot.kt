@@ -39,6 +39,8 @@ import com.vitorpamplona.amethyst.commons.resources.desktop_key_not_kept_title
 import com.vitorpamplona.amethyst.commons.resources.dismiss
 import com.vitorpamplona.amethyst.commons.scheduledposts.ScheduledPostStatus
 import com.vitorpamplona.amethyst.commons.ui.app.AppRoot
+import com.vitorpamplona.amethyst.commons.ui.navigation.host.NavDestinations
+import com.vitorpamplona.amethyst.commons.ui.navigation.host.jvmDestinations
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.Nav
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
@@ -119,6 +121,12 @@ class DesktopAppRoot(
             onDispose { modules.scheduledPostScheduler.stop() }
         }
     }
+
+    override fun registerDestinations(
+        destinations: NavDestinations,
+        accountViewModel: AccountViewModel,
+        nav: Nav,
+    ) = destinations.jvmDestinations(accountViewModel, nav)
 
     @Composable
     override fun NavigationEffects(

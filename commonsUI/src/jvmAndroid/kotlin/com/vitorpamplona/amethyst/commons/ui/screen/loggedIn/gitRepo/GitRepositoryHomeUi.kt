@@ -18,7 +18,7 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.ui.screen.loggedIn.gitRepo
+package com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.gitRepo
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -71,6 +71,7 @@ import com.vitorpamplona.amethyst.commons.ui.navigation.routes.routeFor
 import com.vitorpamplona.amethyst.commons.ui.note.ClickableUserPicture
 import com.vitorpamplona.amethyst.commons.ui.note.ReactionsRow
 import com.vitorpamplona.amethyst.commons.ui.note.elements.TimeAgo
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.gitRepo.gitSubjectOf
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.DividerThickness
 import com.vitorpamplona.amethyst.commons.ui.theme.grayText

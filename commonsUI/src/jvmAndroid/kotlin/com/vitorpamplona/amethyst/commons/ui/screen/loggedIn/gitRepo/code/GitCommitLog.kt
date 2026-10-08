@@ -18,9 +18,8 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.ui.screen.loggedIn.gitRepo.code
+package com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.gitRepo.code
 
-import android.text.format.DateUtils
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -68,10 +67,12 @@ import com.vitorpamplona.amethyst.commons.resources.git_repo_no_commits
 import com.vitorpamplona.amethyst.commons.ui.components.PlatformBackHandler
 import com.vitorpamplona.amethyst.commons.ui.note.ArrowBackIcon
 import com.vitorpamplona.amethyst.commons.ui.note.GitDiffView
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.calendars.relativeTimeSpan
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.quartz.nip34Git.git.GitCommit
 import com.vitorpamplona.quartz.nip34Git.git.GitRepoSnapshot
 import com.vitorpamplona.quartz.nip34Git.patch.ParsedPatch
+import com.vitorpamplona.quartz.utils.TimeUtils
 import kotlin.coroutines.cancellation.CancellationException
 
 /**
@@ -227,8 +228,9 @@ private fun CommitRow(
                             .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
                             .padding(horizontal = 5.dp, vertical = 1.dp),
                 )
+                val time by produceState("", commit.authorTimeSec) { value = relativeTime(commit.authorTimeSec) }
                 Text(
-                    text = "${commit.authorName} · ${relativeTime(commit.authorTimeSec)}",
+                    text = "${commit.authorName} · $time",
                     style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f),
                     maxLines = 1,
@@ -260,9 +262,9 @@ private fun LogHeader(
     }
 }
 
-private fun relativeTime(epochSec: Long): String =
+private suspend fun relativeTime(epochSec: Long): String =
     if (epochSec <= 0) {
         ""
     } else {
-        DateUtils.getRelativeTimeSpanString(epochSec * 1000L, System.currentTimeMillis(), DateUtils.MINUTE_IN_MILLIS).toString()
+        relativeTimeSpan(epochSec, TimeUtils.now(), dayResolution = false)
     }

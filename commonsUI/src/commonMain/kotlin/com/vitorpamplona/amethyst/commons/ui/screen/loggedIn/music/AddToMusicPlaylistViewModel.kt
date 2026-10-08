@@ -18,7 +18,7 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.ui.screen.loggedIn.music
+package com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.music
 
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.mutableStateOf
@@ -32,6 +32,7 @@ import com.vitorpamplona.quartz.experimental.music.playlist.MusicPlaylistEvent
 import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.nip01Core.core.AddressSerializer
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.IO
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex

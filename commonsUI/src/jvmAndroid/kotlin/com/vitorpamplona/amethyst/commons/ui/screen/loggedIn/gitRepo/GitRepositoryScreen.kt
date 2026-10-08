@@ -18,7 +18,7 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.ui.screen.loggedIn.gitRepo
+package com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.gitRepo
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -56,6 +56,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.viewmodel.CreationExtras
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.commons.feeds.FeedState
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
@@ -91,13 +92,26 @@ import com.vitorpamplona.amethyst.commons.ui.note.ArrowBackIcon
 import com.vitorpamplona.amethyst.commons.ui.note.LoadAddressableNote
 import com.vitorpamplona.amethyst.commons.ui.note.elements.MoreOptionsButton
 import com.vitorpamplona.amethyst.commons.ui.screen.RefresheableFeedView
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.gitRepo.GitItemFeedLoaded
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.gitRepo.GitRepoSettingsDialog
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.gitRepo.RepoActivityPulse
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.gitRepo.RepoExternalNotice
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.gitRepo.RepoHero
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.gitRepo.RepoLanguageBar
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.gitRepo.RepoLastCommit
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.gitRepo.RepoSocialRow
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.gitRepo.RepoStatTiles
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.gitRepo.RepoTitleBar
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.gitRepo.code.GitCodeTab
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.gitRepo.code.GitReadmeSection
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.gitRepo.computeLanguageBreakdown
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.gitRepo.dal.RepositoryIssuesFeedViewModel
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.gitRepo.dal.RepositoryPatchesFeedViewModel
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.gitRepo.gitLabelsOf
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.gitRepo.repoHasFetchableClone
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.amethyst.commons.viewmodels.FeedViewModel
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.gitRepo.code.GitCodeTab
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.gitRepo.code.GitReadmeSection
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.gitRepo.dal.RepositoryIssuesFeedViewModel
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.gitRepo.dal.RepositoryPatchesFeedViewModel
 import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.nip34Git.repository.GitRepositoryEvent
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -105,6 +119,7 @@ import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
 import okhttp3.OkHttpClient
+import kotlin.reflect.KClass
 
 // ---------------------------------------------------------------------------
 // Project Home + drill-in screens.
@@ -166,15 +181,15 @@ fun GitRepositoryPullsScreen(
     }
 }
 
-/**
- * Builds the [GitRepositoryBrowserViewModel]. The factory lives app-side because the KMP
- * lifecycle artifact used in commons doesn't expose the `create(Class<T>)` override.
- */
-internal class GitRepositoryBrowserViewModelFactory(
+/** Builds the [GitRepositoryBrowserViewModel] with the HTTP client its clones and fetches go through. */
+class GitRepositoryBrowserViewModelFactory(
     private val okHttpClient: (String) -> OkHttpClient,
 ) : ViewModelProvider.Factory {
     @Suppress("UNCHECKED_CAST")
-    override fun <T : ViewModel> create(modelClass: Class<T>): T = GitRepositoryBrowserViewModel(okHttpClient) as T
+    override fun <T : ViewModel> create(
+        modelClass: KClass<T>,
+        extras: CreationExtras,
+    ): T = GitRepositoryBrowserViewModel(okHttpClient) as T
 }
 
 @Composable

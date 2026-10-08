@@ -18,9 +18,8 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.ui.screen.loggedIn.gitRepo.code
+package com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.gitRepo.code
 
-import android.widget.Toast
 import androidx.compose.foundation.background
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.isSystemInDarkTheme
@@ -47,7 +46,6 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalClipboard
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
@@ -55,6 +53,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil3.compose.AsyncImage
+import coil3.compose.LocalPlatformContext
 import coil3.request.ImageRequest
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
@@ -71,6 +70,7 @@ import com.vitorpamplona.amethyst.commons.resources.git_repo_copy_file
 import com.vitorpamplona.amethyst.commons.resources.git_repo_file_load_error
 import com.vitorpamplona.amethyst.commons.resources.git_repo_plain_text
 import com.vitorpamplona.amethyst.commons.ui.components.RichTextViewer
+import com.vitorpamplona.amethyst.commons.ui.components.rememberShortNotice
 import com.vitorpamplona.amethyst.commons.ui.components.util.setText
 import com.vitorpamplona.amethyst.commons.ui.loadStringRes
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
@@ -195,7 +195,7 @@ private fun CodeBar(
     code: String,
 ) {
     val clipboard = LocalClipboard.current
-    val context = LocalContext.current
+    val shortNotice = rememberShortNotice()
     val scope = rememberCoroutineScope()
 
     Row(
@@ -217,7 +217,7 @@ private fun CodeBar(
             onClick = {
                 scope.launch {
                     clipboard.setText(code)
-                    Toast.makeText(context, loadStringRes(Res.string.copied_to_clipboard), Toast.LENGTH_SHORT).show()
+                    shortNotice.show(loadStringRes(Res.string.copied_to_clipboard))
                 }
             },
         ) {
@@ -322,7 +322,7 @@ private fun ImageFile(
     name: String,
     modifier: Modifier,
 ) {
-    val context = LocalContext.current
+    val context = LocalPlatformContext.current
     val request = remember(bytes) { ImageRequest.Builder(context).data(bytes).build() }
     Box(
         modifier = modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(12.dp),

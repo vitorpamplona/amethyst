@@ -50,6 +50,7 @@ import com.vitorpamplona.amethyst.commons.ui.navigation.host.NavDestinations
 import com.vitorpamplona.amethyst.commons.ui.navigation.host.composableFromBottomArgs
 import com.vitorpamplona.amethyst.commons.ui.navigation.host.composableFromEnd
 import com.vitorpamplona.amethyst.commons.ui.navigation.host.composableFromEndArgs
+import com.vitorpamplona.amethyst.commons.ui.navigation.host.jvmDestinations
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.Nav
 import com.vitorpamplona.amethyst.commons.ui.navigation.routes.consumesSharesInPlace
 import com.vitorpamplona.amethyst.commons.ui.navigation.routes.getRouteWithArguments
@@ -68,13 +69,7 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.browser.WebAppScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.calendars.create.NewCalendarEventScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.cordnGroup.CordnGroupChatScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.favorites.NostrAppScreen
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.gitRepo.GitNewIssueScreen
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.gitRepo.GitRepositoryCodeScreen
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.gitRepo.GitRepositoryIssuesScreen
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.gitRepo.GitRepositoryPullsScreen
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.gitRepo.GitRepositoryScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.keyBackup.AccountBackupScreen
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.music.AddToMusicPlaylistSheet
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.napplets.ConnectedAppDetailScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.nests.NestsScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.qrcode.ScanQrImageScreen
@@ -82,7 +77,6 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.settings.ResourceUsageScree
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.settings.cordn.CordnBackupScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.video.hls.NewHlsVideoScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.workouts.fitness.MyFitnessScreen
-import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.nip19Bech32.Nip19Parser
 import com.vitorpamplona.quartz.nip84Highlights.parse.SharedHighlightParser
 import kotlinx.coroutines.delay
@@ -107,6 +101,7 @@ internal fun NavDestinations.androidDestinations(
     accountViewModel: AccountViewModel,
     nav: Nav,
 ) {
+    jvmDestinations(accountViewModel, nav)
     composableFromEnd<Route.MyFitness> { MyFitnessScreen(accountViewModel, nav) }
     composableFromEndArgs<Route.WebApp>(capWidth = false) { WebAppScreen(it.url, accountViewModel, nav) }
     composableFromEndArgs<Route.NostrApp>(capWidth = false) { NostrAppScreen(it.coordinate, accountViewModel, nav) }
@@ -116,7 +111,6 @@ internal fun NavDestinations.androidDestinations(
         NewCalendarEventScreen(nav, accountViewModel, editKind = it.kind, editPubKeyHex = it.pubKeyHex, editDTag = it.dTag)
     }
     composableFromEnd<Route.Nests> { NestsScreen(accountViewModel, nav) }
-    composableFromEndArgs<Route.AddToMusicPlaylist> { AddToMusicPlaylistSheet(trackAddress = it.trackAddress, accountViewModel = accountViewModel, nav = nav) }
     composableFromEnd<Route.NewHlsVideo> { NewHlsVideoScreen(accountViewModel, nav) }
     composableFromBottomArgs<Route.ScanQrImage> { ScanQrImageScreen(it.uri, accountViewModel, nav) }
     composableFromEnd<Route.AccountBackup> { AccountBackupScreen(accountViewModel, nav) }
@@ -130,11 +124,6 @@ internal fun NavDestinations.androidDestinations(
     composableFromEndArgs<Route.UpdateReactionType> { UpdateReactionTypeScreen(accountViewModel, nav) }
     composableFromEndArgs<Route.ShareNoteAsImage> { ShareNoteAsImageScreen(it.id, accountViewModel, nav) }
     composableFromEndArgs<Route.ShareNoteAsImageFile> { ShareNoteAsImageFileScreen(it.id, accountViewModel, nav) }
-    composableFromEndArgs<Route.GitRepository> { GitRepositoryScreen(Address(it.kind, it.pubKeyHex, it.dTag), accountViewModel, nav) }
-    composableFromEndArgs<Route.GitRepositoryCode> { GitRepositoryCodeScreen(Address(it.kind, it.pubKeyHex, it.dTag), accountViewModel, nav) }
-    composableFromEndArgs<Route.GitRepositoryIssues> { GitRepositoryIssuesScreen(Address(it.kind, it.pubKeyHex, it.dTag), accountViewModel, nav) }
-    composableFromEndArgs<Route.GitRepositoryPulls> { GitRepositoryPullsScreen(Address(it.kind, it.pubKeyHex, it.dTag), accountViewModel, nav) }
-    composableFromEndArgs<Route.GitRepositoryNewIssue> { GitNewIssueScreen(Address(it.kind, it.pubKeyHex, it.dTag), accountViewModel, nav) }
     composableFromEndArgs<Route.CordnGroupChat> {
         CordnGroupChatScreen(it.coordinatorPubKey, it.gid, accountViewModel, nav)
     }

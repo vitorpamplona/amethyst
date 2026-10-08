@@ -158,6 +158,7 @@ import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.lists.list.metadata
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.lists.memberEdit.FollowListAndPackAndUserScreen
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.livestreams.LiveStreamsScreen
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.longs.LongsScreen
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.music.AddToMusicPlaylistSheet
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.music.MusicPlaylistsScreen
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.music.MusicTracksScreen
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.music.NewMusicPlaylistScreen
@@ -279,6 +280,7 @@ fun NavDestinations.sharedDestinations(
     composableFromEnd<Route.Communities> { CommunitiesScreen(accountViewModel, nav) }
     composableFromEnd<Route.NewCommunity> { NewCommunityScreen(accountViewModel, nav) }
     composableFromEndArgs<Route.EditCommunity> { EditCommunityScreen(Address(it.kind, it.pubKeyHex, it.dTag), accountViewModel, nav) }
+    composableFromEndArgs<Route.AddToMusicPlaylist> { AddToMusicPlaylistSheet(trackAddress = it.trackAddress, accountViewModel = accountViewModel, nav = nav) }
     composableFromEnd<Route.Badges> { BadgesScreen(accountViewModel, nav) }
     composableFromEnd<Route.ProfileBadges> { ProfileBadgesScreen(accountViewModel, nav) }
     composableFromEnd<Route.ProfileAppRecommendations> { ProfileAppRecommendationsScreen(accountViewModel, nav) }
