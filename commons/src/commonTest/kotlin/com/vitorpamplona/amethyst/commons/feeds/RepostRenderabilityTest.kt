@@ -70,6 +70,24 @@ class RepostRenderabilityTest {
     }
 
     @Test
+    fun hidesRepostsOfTypedKindsWithoutACard() {
+        // CI job results (9841) are typed, but would render as a bare log tail.
+        val event = genericRepost(arrayOf(arrayOf("e", boostedEventId), arrayOf("k", "9841")))
+        assertFalse(event.isRenderableRepost())
+        TYPED_WITHOUT_A_CARD.forEach { kind ->
+            assertFalse(genericRepost(arrayOf(arrayOf("e", boostedEventId), arrayOf("k", kind.toString()))).isRenderableRepost(), "kind $kind")
+        }
+    }
+
+    @Test
+    fun everyKindWithoutACardIsActuallyTyped() {
+        // The set exists to undo isKnownKind for typed kinds; an untyped entry is already hidden
+        // and would only be dead weight, most likely a typo.
+        val untyped = TYPED_WITHOUT_A_CARD.filterNot(EventFactory::isKnownKind)
+        assertTrue(untyped.isEmpty(), "not typed by Quartz: $untyped")
+    }
+
+    @Test
     fun nonRepostReturnsFalse() {
         val textNote: Event = EventFactory.create(id, pubKey, createdAt, 1, emptyArray(), "", sig)
         assertFalse(textNote.isRenderableRepost())
