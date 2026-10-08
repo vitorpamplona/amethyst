@@ -21,12 +21,15 @@
 package com.vitorpamplona.amethyst.desktop.app
 
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -53,8 +56,12 @@ import com.vitorpamplona.amethyst.commons.ui.theme.isDarkTheme
 import com.vitorpamplona.amethyst.desktop.platform.IconResources
 import com.vitorpamplona.amethyst.desktop.platform.PlatformInfo
 import com.vitorpamplona.amethyst.desktop.service.images.DesktopImageLoaderSetup
+import com.vitorpamplona.amethyst.desktop.service.media.GlobalMediaPlayer
 import com.vitorpamplona.amethyst.desktop.service.scheduledposts.runHeadlessPublish
+import com.vitorpamplona.amethyst.desktop.ui.media.GlobalFullscreenOverlay
 import com.vitorpamplona.amethyst.desktop.ui.media.LocalAwtWindow
+import com.vitorpamplona.amethyst.desktop.ui.media.LocalIsImmersiveFullscreen
+import com.vitorpamplona.amethyst.desktop.ui.media.NowPlayingBar
 import com.vitorpamplona.quartz.utils.Log
 import com.vitorpamplona.quartz.utils.LogLevel
 import java.awt.Taskbar
@@ -100,7 +107,13 @@ fun main(args: Array<String>) {
 
     modules.initiate()
 
-    Runtime.getRuntime().addShutdownHook(Thread { modules.torManager.stopSync() })
+    Runtime.getRuntime().addShutdownHook(
+        Thread {
+            // Releases the native video and audio engines before the JVM goes.
+            GlobalMediaPlayer.shutdown()
+            modules.torManager.stopSync()
+        },
+    )
 
     val services = DesktopAppServices(modules)
     val platform = DesktopAppPlatform(appVersionName = version, isDebugBuild = isDebug, notifications = modules.notifications)
@@ -131,6 +144,9 @@ fun main(args: Array<String>) {
                     }
                 }
 
+            // Set while a video plays in the OS full-screen overlay.
+            val immersiveFullscreen = remember { mutableStateOf(false) }
+
             DesktopTheme(modules) {
                 NowProvider {
                     CompositionLocalProvider(
@@ -143,10 +159,21 @@ fun main(args: Array<String>) {
                         LocalInlineQuoteRenderer provides DefaultInlineQuoteRenderer,
                         // The lightbox and the video player go full screen through the AWT window.
                         LocalAwtWindow provides window,
+                        LocalIsImmersiveFullscreen provides immersiveFullscreen,
                     ) {
                         Box(Modifier.fillMaxSize()) {
-                            AmethystApp(modules.sessionManager, root)
-                            SnackbarHost(platform.snackbarHostState, Modifier.align(Alignment.BottomCenter))
+                            Column(Modifier.fillMaxSize()) {
+                                Box(Modifier.weight(1f).fillMaxWidth()) {
+                                    AmethystApp(modules.sessionManager, root)
+                                    SnackbarHost(platform.snackbarHostState, Modifier.align(Alignment.BottomCenter))
+                                }
+                                // Whatever plays keeps playing across screens and after its card
+                                // scrolls away; this bar is where it is paused, seeked or stopped.
+                                NowPlayingBar()
+                            }
+                            // The video player's full-screen button: the playing video over the
+                            // whole window, in OS full screen.
+                            GlobalFullscreenOverlay()
                         }
                     }
                 }

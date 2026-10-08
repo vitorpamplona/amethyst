@@ -57,6 +57,7 @@ import com.vitorpamplona.amethyst.commons.ui.components.urlPreview
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.note.platform.NotePlatform
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
+import com.vitorpamplona.amethyst.desktop.service.media.GlobalMediaPlayer
 import com.vitorpamplona.amethyst.desktop.ui.media.AnimatedGifImage
 import com.vitorpamplona.amethyst.desktop.ui.media.AudioPlayer
 import com.vitorpamplona.amethyst.desktop.ui.media.DesktopVideoPlayer
@@ -83,6 +84,19 @@ object DesktopNotePlatform : NotePlatform {
             else -> null
         }
 
+    /**
+     * Shows [url] in the window's OS full-screen overlay, starting it at [position] (0..1) unless
+     * it is already the playing video: that one carries on where it is, with no seek to stutter it.
+     */
+    private fun playFullscreen(
+        url: String,
+        position: Float,
+    ) {
+        val current = GlobalMediaPlayer.videoState.value
+        if (current.url != url || current.errorReason != null) GlobalMediaPlayer.playVideo(url, position)
+        if (!GlobalMediaPlayer.isFullscreen.value) GlobalMediaPlayer.toggleFullscreen()
+    }
+
     private fun Modifier.declaredRatio(dim: DimensionTag?): Modifier {
         val ratio = dim?.takeIf { it.width > 0 && it.height > 0 }?.let { it.width.toFloat() / it.height }
         return if (ratio != null) this.aspectRatio(ratio, matchHeightConstraintsFirst = false) else this
@@ -106,7 +120,7 @@ object DesktopNotePlatform : NotePlatform {
                     url = url,
                     modifier = Modifier.fillMaxWidth().heightIn(max = MaxInlineMediaHeight).clip(shape),
                     isLive = (content as? MediaUrlVideo)?.isLiveStream == true,
-                    onFullscreen = { showViewer = true },
+                    onFullscreen = { position -> playFullscreen(url, position) },
                 )
             }
 
@@ -192,6 +206,7 @@ object DesktopNotePlatform : NotePlatform {
             url = videoUri,
             modifier = Modifier.fillMaxWidth().heightIn(max = MaxInlineMediaHeight).clip(shape),
             isLive = isLiveStream,
+            onFullscreen = { position -> playFullscreen(videoUri, position) },
         )
     }
 
