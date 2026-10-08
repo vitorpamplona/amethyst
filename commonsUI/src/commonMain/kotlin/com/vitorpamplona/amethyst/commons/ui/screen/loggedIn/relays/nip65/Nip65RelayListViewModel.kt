@@ -25,6 +25,8 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.vitorpamplona.amethyst.commons.model.Account
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
+import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.SubPurpose
+import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.taggedAs
 import com.vitorpamplona.amethyst.commons.relays.ui.RelayCountResult
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.events_from_you
@@ -134,7 +136,7 @@ class Nip65RelayListViewModel : ViewModel() {
 
         _homeRelays.value.forEach { item ->
             viewModelScope.launch(Dispatchers.IO) {
-                val result = client.count(item.relay, Filter(authors = listOf(account.pubKey)))
+                val result = client.taggedAs(SubPurpose.RELAY_INFO).count(item.relay, Filter(authors = listOf(account.pubKey)))
                 if (result != null) {
                     val countResult =
                         RelayCountResult(
@@ -153,7 +155,7 @@ class Nip65RelayListViewModel : ViewModel() {
 
         _notificationRelays.value.forEach { item ->
             viewModelScope.launch(Dispatchers.IO) {
-                val result = client.count(item.relay, Filter(tags = mapOf("p" to listOf(account.pubKey))))
+                val result = client.taggedAs(SubPurpose.RELAY_INFO).count(item.relay, Filter(tags = mapOf("p" to listOf(account.pubKey))))
                 if (result != null) {
                     val countResult =
                         RelayCountResult(

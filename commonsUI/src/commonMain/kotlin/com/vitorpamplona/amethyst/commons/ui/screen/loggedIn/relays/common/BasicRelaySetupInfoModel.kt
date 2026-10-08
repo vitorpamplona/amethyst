@@ -24,6 +24,8 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.vitorpamplona.amethyst.commons.model.Account
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
+import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.SubPurpose
+import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.taggedAs
 import com.vitorpamplona.amethyst.commons.relays.ui.CountFilter
 import com.vitorpamplona.amethyst.commons.relays.ui.RelayCountResult
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.relays.common.BasicRelaySetupInfo
@@ -104,7 +106,7 @@ abstract class BasicRelaySetupInfoModel : ViewModel() {
 
             filters.forEach { countFilter ->
                 viewModelScope.launch(Dispatchers.IO) {
-                    val result = client.count(item.relay, countFilter.filter)
+                    val result = client.taggedAs(SubPurpose.RELAY_INFO).count(item.relay, countFilter.filter)
                     if (result != null) {
                         _countResults.update { currentMap ->
                             val current = currentMap[item.relay] ?: RelayCountResult()

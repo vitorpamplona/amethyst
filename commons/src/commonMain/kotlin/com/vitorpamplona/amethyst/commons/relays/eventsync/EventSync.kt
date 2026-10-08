@@ -21,6 +21,8 @@
 package com.vitorpamplona.amethyst.commons.relays.eventsync
 
 import androidx.compose.runtime.Stable
+import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.ExplainedFilter
+import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.SubPurpose
 import com.vitorpamplona.amethyst.commons.relays.eventsync.EventSync.Companion.MAX_ACTIVITY_LOG
 import com.vitorpamplona.amethyst.commons.relays.eventsync.EventSync.Companion.MAX_CONCURRENT_RELAYS
 import com.vitorpamplona.amethyst.commons.relays.eventsync.EventSync.LiveSyncActivity.SourceRelayInfo
@@ -35,7 +37,6 @@ import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.OkMessage
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toRelay.Command
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toRelay.EventCmd
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toRelay.ReqCmd
-import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.tags.people.isTaggedUser
 import com.vitorpamplona.quartz.nip59Giftwrap.wraps.EphemeralGiftWrapEvent
@@ -357,9 +358,9 @@ class EventSync(
 
         val defaultFilters =
             buildList {
-                if (outboxTargets.isNotEmpty()) add(Filter(authors = listOf(myPubKey), since = filterSince, until = filterUntil))
+                if (outboxTargets.isNotEmpty()) add(ExplainedFilter(authors = listOf(myPubKey), since = filterSince, until = filterUntil, purpose = SubPurpose.ACCOUNT_DATA, purposeDetail = "Event Sync"))
                 if (inboxTargets.isNotEmpty() || dmTargets.isNotEmpty()) {
-                    add(Filter(tags = mapOf("p" to listOf(myPubKey)), since = filterSince, until = filterUntil))
+                    add(ExplainedFilter(tags = mapOf("p" to listOf(myPubKey)), since = filterSince, until = filterUntil, purpose = SubPurpose.NOTIFICATIONS, purposeDetail = "Event Sync"))
                 }
             }
 
@@ -376,9 +377,9 @@ class EventSync(
                     defaultFilters
                 } else {
                     buildList {
-                        if (it !in outboxTargets) add(Filter(authors = listOf(myPubKey), since = filterSince, until = filterUntil))
+                        if (it !in outboxTargets) add(ExplainedFilter(authors = listOf(myPubKey), since = filterSince, until = filterUntil, purpose = SubPurpose.ACCOUNT_DATA, purposeDetail = "Event Sync"))
                         if (it !in inboxTargets && it !in dmTargets) {
-                            add(Filter(tags = mapOf("p" to listOf(myPubKey)), since = filterSince, until = filterUntil))
+                            add(ExplainedFilter(tags = mapOf("p" to listOf(myPubKey)), since = filterSince, until = filterUntil, purpose = SubPurpose.NOTIFICATIONS, purposeDetail = "Event Sync"))
                         }
                     }
                 }

@@ -21,11 +21,12 @@
 package com.vitorpamplona.amethyst.commons.relayClient.polls.results
 
 import com.vitorpamplona.amethyst.commons.model.Note
+import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.ExplainedFilter
+import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.SubPurpose
 import com.vitorpamplona.amethyst.commons.viewmodels.nip88Polls.PollLoadReport
 import com.vitorpamplona.amethyst.commons.viewmodels.nip88Polls.PollResponseLoader
 import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.count
-import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip45Count.mergeCountResults
 import com.vitorpamplona.quartz.nip88Polls.poll.PollEvent
@@ -57,9 +58,11 @@ class RelayPollResponseLoader(
         if (relays.isEmpty()) return PollLoadReport(null, approximate = false, relaysAsked = 0, relaysAnswered = 0)
 
         val filter =
-            Filter(
+            ExplainedFilter(
                 kinds = listOf(PollResponseEvent.KIND),
                 tags = mapOf("e" to listOf(poll.id)),
+                purpose = SubPurpose.ENGAGEMENT,
+                purposeDetail = "Poll results",
             )
 
         val results = client.count(relays.associateWith { listOf(filter) }, idleTimeoutMs = TIMEOUT_MS)

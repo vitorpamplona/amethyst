@@ -26,6 +26,8 @@ import com.vitorpamplona.amethyst.commons.model.Account
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
 import com.vitorpamplona.amethyst.commons.model.nip29RelayGroups.RelayGroupDeletions
 import com.vitorpamplona.amethyst.commons.relayClient.channel.relayGroup.RELAY_GROUP_METADATA_KINDS
+import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.SubPurpose
+import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.taggedAs
 import com.vitorpamplona.amethyst.commons.relayauth.RelayAuthDecision
 import com.vitorpamplona.amethyst.commons.util.ConcurrentSet
 import com.vitorpamplona.quartz.buzz.notifications.MemberAddedNotificationEvent
@@ -134,7 +136,7 @@ class BuzzRelayImportViewModel : ViewModel() {
                 val seenChannelIds = ConcurrentSet<String>()
 
                 // 1. Warm-auth then read the relay's kind-44100 member-added notifications for me.
-                account.client.fetchAllWithHooks(
+                account.client.taggedAs(SubPurpose.RELAY_GROUPS).fetchAllWithHooks(
                     filters =
                         mapOf(
                             relay to
@@ -160,7 +162,7 @@ class BuzzRelayImportViewModel : ViewModel() {
                 //    40099 a deleted channel — its metadata now blank — would show optimistically here
                 //    forever. LocalCache records the delete into RelayGroupDeletions on consume.
                 if (channelIds.isNotEmpty()) {
-                    account.client.fetchAllWithHooks(
+                    account.client.taggedAs(SubPurpose.RELAY_GROUPS).fetchAllWithHooks(
                         filters =
                             mapOf(
                                 relay to

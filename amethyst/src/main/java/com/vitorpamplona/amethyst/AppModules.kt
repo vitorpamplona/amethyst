@@ -60,6 +60,7 @@ import com.vitorpamplona.amethyst.commons.relayClient.diagnostics.BootRelayDiagn
 import com.vitorpamplona.amethyst.commons.relayClient.event.EventFinderQueryState
 import com.vitorpamplona.amethyst.commons.relayClient.reqCommand.RelaySubscriptionsCoordinator
 import com.vitorpamplona.amethyst.commons.relayClient.speedLogger.RelaySpeedLogger
+import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.UntaggedFilterWarningClient
 import com.vitorpamplona.amethyst.commons.relayClient.user.UserFinderQueryState
 import com.vitorpamplona.amethyst.commons.relays.health.TorCircuitHealthTracker
 import com.vitorpamplona.amethyst.commons.relays.nip11RelayInfo.Nip11CachedRetriever
@@ -832,9 +833,14 @@ class AppModules(
     // and publish (relay targeting is otherwise distributed across dozens of
     // feed/loader/finder/broadcast sites, most of which don't subtract it).
     // The blocked set is read per-call from the logged-in account.
+    //
+    // Debug builds also warn, once per producer, about any REQ/COUNT whose filters carry no
+    // purpose: those keep relays connected that the always-on notification cannot explain.
     val client: INostrClient =
         BlockedRelayFilteringClient(
-            NostrClient(websocketBuilder, applicationIOScope, CachingEventDecoder()),
+            NostrClient(websocketBuilder, applicationIOScope, CachingEventDecoder()).let {
+                if (BuildConfig.DEBUG) UntaggedFilterWarningClient(it) else it
+            },
             blockedRelays = {
                 sessionManager
                     .loggedInAccount()

@@ -20,6 +20,8 @@
  */
 package com.vitorpamplona.amethyst.commons.cordn
 
+import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.ExplainedFilter
+import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.SubPurpose
 import com.vitorpamplona.quartz.contextvm.cep06Announcements.AnnouncedTools
 import com.vitorpamplona.quartz.contextvm.cep06Announcements.DiscoverySurface
 import com.vitorpamplona.quartz.contextvm.cep06Announcements.ServerAnnouncement
@@ -29,7 +31,6 @@ import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.fetchAllWithHooks
-import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
@@ -138,7 +139,7 @@ class CordnCoordinatorDiscovery(
         coroutineScope {
             if (relays.isEmpty()) return@coroutineScope Result(emptyList(), emptySet())
 
-            val filters = listOf(Filter(kinds = CvmKinds.ANNOUNCEMENTS.toList(), limit = limit))
+            val filters = listOf(ExplainedFilter(kinds = CvmKinds.ANNOUNCEMENTS.toList(), limit = limit, purpose = SubPurpose.COORDINATOR_GROUPS))
 
             val perRelay =
                 relays

@@ -20,6 +20,8 @@
  */
 package com.vitorpamplona.amethyst.commons.nip64Chess
 
+import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.ExplainedFilter
+import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.SubPurpose
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.publishAndConfirm
@@ -83,10 +85,12 @@ class ChessEventBroadcaster(
             // Use a valid filter with recent since timestamp to trigger connection
             // without expecting real results
             val dummyFilter =
-                Filter(
+                ExplainedFilter(
                     kinds = listOf(JesterProtocol.KIND),
                     since = (currentTimeMillis() / 1000) + 3600, // 1 hour in future = no results
                     limit = 1,
+                    purpose = SubPurpose.GAMES,
+                    purposeDetail = "Connect",
                 )
 
             val listener =

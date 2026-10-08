@@ -46,6 +46,8 @@ import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
+import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.SubPurpose
+import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.taggedAs
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.buzz_forum_no_replies
 import com.vitorpamplona.amethyst.commons.resources.buzz_forum_thread_title
@@ -113,7 +115,7 @@ fun BuzzForumThreadScreen(
     LaunchedEffect(rootId, refreshKey) {
         if (refreshKey > 0) delay(600) // let our just-sent reply persist on the relay before re-fetching
         LocalCache.filter(replyFilter).forEach { (it.event as? ForumCommentEvent)?.let(::accept) }
-        accountViewModel.account.client.subscribeAsFlow(relay, replyFilter).collect { events ->
+        accountViewModel.account.client.taggedAs(SubPurpose.RELAY_GROUPS).subscribeAsFlow(relay, replyFilter).collect { events ->
             events.filterIsInstance<ForumCommentEvent>().forEach(::accept)
         }
     }
