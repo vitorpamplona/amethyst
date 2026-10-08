@@ -24,11 +24,15 @@ import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.crypto.verify
 import com.vitorpamplona.quartz.nip50Search.IndexableFields
 import com.vitorpamplona.quartz.nip50Search.SearchFieldExtractor
+import com.vitorpamplona.quartz.nip69P2pOrderEvents.tags.BondTag
 import com.vitorpamplona.quartz.nip69P2pOrderEvents.tags.FiatAmountTag
 import com.vitorpamplona.quartz.nip69P2pOrderEvents.tags.OrderStatus
 import com.vitorpamplona.quartz.nip69P2pOrderEvents.tags.OrderType
+import com.vitorpamplona.quartz.utils.BigDecimal
 import com.vitorpamplona.quartz.utils.EventFactory
+import com.vitorpamplona.quartz.utils.compareToValue
 import kotlin.test.Test
+import kotlin.test.assertContentEquals
 import kotlin.test.assertEquals
 import kotlin.test.assertIs
 import kotlin.test.assertNull
@@ -120,9 +124,8 @@ class P2POrderEventTest {
         assertEquals("FreePort", order.makerName())
         assertEquals("robosats", order.platform())
         assertNull(order.tags.instanceName())
-        // RoboSats writes its bond as a percentage ("3.00"); the NIP-69 accessor reads whole
-        // numbers only, so it is absent rather than misread.
-        assertNull(order.bond())
+        // RoboSats writes its bond as a percentage of the trade ("3.00"), a decimal.
+        assertEquals(0, order.bond()?.compareToValue(BigDecimal("3.00")))
         assertEquals("FreePort USD CashApp", order.indexableContent())
     }
 
@@ -160,6 +163,17 @@ class P2POrderEventTest {
     }
 
     @Test
+    fun bondReadsDecimalsAndWholeNumbers() {
+        assertEquals(0, BondTag.parse(arrayOf("bond", "0"))?.compareToValue(BigDecimal(0)))
+        assertEquals(0, BondTag.parse(arrayOf("bond", "2.50"))?.compareToValue(BigDecimal("2.5")))
+        assertNull(BondTag.parse(arrayOf("bond", "3%")))
+        assertNull(BondTag.parse(arrayOf("bond", "")))
+        assertNull(BondTag.parse(arrayOf("bond")))
+        assertContentEquals(arrayOf("bond", "2.50"), BondTag.assemble(BigDecimal("2.50")))
+        assertContentEquals(arrayOf("bond", "0"), BondTag.assemble(0L))
+    }
+
+    @Test
     fun buildRoundTrips() {
         val template =
             P2POrderEvent.build(
@@ -172,6 +186,7 @@ class P2POrderEventTest {
                 premium = "1",
                 platform = "mostro",
                 expiresAt = 1800000000L,
+                bond = BigDecimal("3.00"),
                 dTag = "order-1",
                 createdAt = 1L,
             )
@@ -180,5 +195,6 @@ class P2POrderEventTest {
         assertEquals("EUR", order.currency())
         assertEquals("100", order.fiatAmount()?.max)
         assertEquals("order", order.documentType())
+        assertEquals(0, order.bond()?.compareToValue(BigDecimal("3")))
     }
 }
