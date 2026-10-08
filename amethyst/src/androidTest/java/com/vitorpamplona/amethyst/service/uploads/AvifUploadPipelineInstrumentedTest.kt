@@ -109,8 +109,9 @@ class AvifUploadPipelineInstrumentedTest {
         assertNotNull("AVIF blurhash should be generated via ImageDecoder", result!!.blurhash)
         assertNotNull("AVIF thumbhash should be generated via ImageDecoder", result.thumbhash)
         assertNotNull("AVIF dimensions should be returned", result.dim)
-        assertEquals(8, result.dim!!.width)
-        assertEquals(8, result.dim.height)
+        val dim = result.dim!!
+        assertEquals(8, dim.width)
+        assertEquals(8, dim.height)
     }
 
     @Test

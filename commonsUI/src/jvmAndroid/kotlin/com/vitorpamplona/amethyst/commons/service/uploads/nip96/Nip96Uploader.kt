@@ -18,14 +18,8 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.service.uploads.nip96
+package com.vitorpamplona.amethyst.commons.service.uploads.nip96
 
-import android.content.ContentResolver
-import android.content.Context
-import android.net.Uri
-import android.provider.OpenableColumns
-import android.webkit.MimeTypeMap
-import androidx.core.net.toFile
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.failed_to_delete_with_message
@@ -33,9 +27,8 @@ import com.vitorpamplona.amethyst.commons.resources.failed_to_upload_to_server_w
 import com.vitorpamplona.amethyst.commons.service.HttpStatusMessages
 import com.vitorpamplona.amethyst.commons.service.uploads.AVIF_EXTENSION
 import com.vitorpamplona.amethyst.commons.service.uploads.AVIF_MIME
+import com.vitorpamplona.amethyst.commons.service.uploads.MediaUploadResult
 import com.vitorpamplona.amethyst.commons.ui.loadStringRes
-import com.vitorpamplona.amethyst.service.uploads.MediaUploadResult
-import com.vitorpamplona.amethyst.service.uploads.PreviewMetadataCalculator
 import com.vitorpamplona.quartz.nip01Core.core.JsonMapper
 import com.vitorpamplona.quartz.nip36SensitiveContent.ContentWarningTag
 import com.vitorpamplona.quartz.nip94FileMetadata.tags.DimensionTag
@@ -56,79 +49,38 @@ import okhttp3.RequestBody
 import okhttp3.coroutines.executeAsync
 import okio.BufferedSink
 import okio.source
+import java.io.File
 import java.io.InputStream
 
+/**
+ * NIP-96 HTTP file storage client: multipart upload (waiting on the server's processing URL when
+ * it has one) and delete. Platforms feed it a stream or a [File]; [extensionFor] lets Android
+ * consult its `MimeTypeMap` before the built-in table.
+ */
 class Nip96Uploader {
     suspend fun upload(
-        uri: Uri,
+        file: File,
         contentType: String?,
-        size: Long?,
         alt: String?,
         sensitiveContent: String?,
         serverBaseUrl: String,
         okHttpClient: (String) -> OkHttpClient,
         onProgress: (percentage: Float) -> Unit,
         httpAuth: suspend (String, String, ByteArray?) -> HTTPAuthorizationEvent?,
-        context: Context,
-    ) = upload(
-        uri,
-        contentType,
-        size,
-        alt,
-        sensitiveContent,
-        ServerInfoRetriever().loadInfo(serverBaseUrl, okHttpClient),
-        okHttpClient,
-        onProgress,
-        httpAuth,
-        context,
-    )
-
-    fun ContentResolver.querySize(uri: Uri) =
-        query(uri, null, null, null, null)?.use {
-            it.moveToFirst()
-            val sizeIndex = it.getColumnIndex(OpenableColumns.SIZE)
-            it.getLong(sizeIndex)
+    ): MediaUploadResult =
+        file.inputStream().use { stream ->
+            upload(
+                inputStream = stream,
+                length = file.length(),
+                contentType = contentType,
+                alt = alt,
+                sensitiveContent = sensitiveContent,
+                server = ServerInfoRetriever().loadInfo(serverBaseUrl, okHttpClient),
+                okHttpClient = okHttpClient,
+                onProgress = onProgress,
+                httpAuth = httpAuth,
+            )
         }
-
-    fun fileSize(uri: Uri) = runCatching { uri.toFile().length() }.getOrNull()
-
-    suspend fun upload(
-        uri: Uri,
-        contentType: String?,
-        size: Long?,
-        alt: String?,
-        sensitiveContent: String?,
-        server: ServerInfo,
-        okHttpClient: (String) -> OkHttpClient,
-        onProgress: (percentage: Float) -> Unit,
-        httpAuth: suspend (String, String, ByteArray?) -> HTTPAuthorizationEvent?,
-        context: Context,
-    ): MediaUploadResult {
-        val contentResolver = context.contentResolver
-        val myContentType = contentType ?: contentResolver.getType(uri)
-        val length = size ?: contentResolver.querySize(uri) ?: fileSize(uri) ?: 0
-
-        val localMetadata = PreviewMetadataCalculator.computeFromUri(context, uri, myContentType)
-        val imageInputStream = contentResolver.openInputStream(uri)
-
-        checkNotNull(imageInputStream) { "Can't open the image input stream" }
-
-        return imageInputStream
-            .use { stream ->
-                upload(
-                    stream,
-                    length,
-                    myContentType,
-                    alt,
-                    sensitiveContent,
-                    server,
-                    okHttpClient,
-                    onProgress,
-                    httpAuth,
-                    context,
-                )
-            }.mergeLocalMetadata(localMetadata)
-    }
 
     suspend fun upload(
         inputStream: InputStream,
@@ -140,12 +92,12 @@ class Nip96Uploader {
         okHttpClient: (String) -> OkHttpClient,
         onProgress: (percentage: Float) -> Unit,
         httpAuth: suspend (String, String, ByteArray?) -> HTTPAuthorizationEvent?,
-        context: Context,
+        extensionFor: (mimeType: String) -> String? = { null },
     ): MediaUploadResult {
         val fileName = RandomInstance.randomChars(16)
         val extension =
             contentType?.let {
-                MimeTypeMap.getSingleton().getExtensionFromMimeType(it) ?: fallbackExtensionForMimeType(it)
+                extensionFor(it) ?: fallbackExtensionForMimeType(it)
             } ?: ""
 
         val client = okHttpClient(server.apiUrl)
@@ -189,7 +141,7 @@ class Nip96Uploader {
                     response.body.use { body ->
                         val result = JsonMapper.fromJson<UploadResult>(body.string())
                         if (!result.processingUrl.isNullOrBlank()) {
-                            waitProcessing(result, server, okHttpClient, onProgress)
+                            waitProcessing(result, okHttpClient, onProgress)
                         } else if (result.status == "success") {
                             val event = result.nip94Event
                             if (event != null) {
@@ -234,15 +186,25 @@ class Nip96Uploader {
     fun String.displayUrl() = this.removeSuffix("/").removePrefix("https://")
 
     // Android's MimeTypeMap does not know every MIME we upload (notably HLS playlist types
-    // and AVIF on older Android). When it returns null we fall back to a small static table
-    // so the multipart filename still carries a real extension — otherwise the server gets
-    // "name." and echoes it back, which breaks HLS URL rewriting (and rejects extension-less
-    // uploads on some NIP-96 servers).
+    // and AVIF on older Android), and the JVM has no such map at all. When the platform has no
+    // answer we fall back to a small static table so the multipart filename still carries a real
+    // extension — otherwise the server gets "name." and echoes it back, which breaks HLS URL
+    // rewriting (and rejects extension-less uploads on some NIP-96 servers).
     internal fun fallbackExtensionForMimeType(mimeType: String): String? =
         when (mimeType.lowercase()) {
             "application/vnd.apple.mpegurl", "application/x-mpegurl", "audio/x-mpegurl", "audio/mpegurl" -> "m3u8"
             "video/mp2t" -> "ts"
             "video/iso.segment", "video/mp4" -> "mp4"
+            "video/webm" -> "webm"
+            "video/quicktime" -> "mov"
+            "image/jpeg" -> "jpg"
+            "image/png" -> "png"
+            "image/gif" -> "gif"
+            "image/webp" -> "webp"
+            "audio/mpeg" -> "mp3"
+            "audio/mp4", "audio/aac" -> "m4a"
+            "audio/ogg" -> "ogg"
+            "audio/wav", "audio/x-wav" -> "wav"
             AVIF_MIME -> AVIF_EXTENSION
             else -> null
         }
@@ -287,10 +249,10 @@ class Nip96Uploader {
         server: ServerInfo,
         okHttpClient: (String) -> OkHttpClient,
         httpAuth: (String, String, ByteArray?) -> HTTPAuthorizationEvent?,
-        context: Context,
+        extensionFor: (mimeType: String) -> String? = { null },
     ): Boolean {
         val extension =
-            contentType?.let { MimeTypeMap.getSingleton().getExtensionFromMimeType(it) } ?: ""
+            contentType?.let { extensionFor(it) ?: fallbackExtensionForMimeType(it) } ?: ""
 
         val client = okHttpClient(server.apiUrl)
 
@@ -323,7 +285,6 @@ class Nip96Uploader {
 
     private suspend fun waitProcessing(
         result: UploadResult,
-        server: ServerInfo,
         okHttpClient: (String) -> OkHttpClient,
         onProgress: (percentage: Float) -> Unit,
     ): MediaUploadResult {

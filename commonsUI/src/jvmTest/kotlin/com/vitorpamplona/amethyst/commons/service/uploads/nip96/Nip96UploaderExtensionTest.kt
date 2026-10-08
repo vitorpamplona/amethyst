@@ -18,11 +18,11 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.service.uploads.nip96
+package com.vitorpamplona.amethyst.commons.service.uploads.nip96
 
-import org.junit.Assert.assertEquals
-import org.junit.Assert.assertNull
-import org.junit.Test
+import kotlin.test.Test
+import kotlin.test.assertEquals
+import kotlin.test.assertNull
 
 class Nip96UploaderExtensionTest {
     private val uploader = Nip96Uploader()
@@ -42,6 +42,14 @@ class Nip96UploaderExtensionTest {
         assertEquals("m3u8", uploader.fallbackExtensionForMimeType("application/vnd.apple.mpegurl"))
         assertEquals("ts", uploader.fallbackExtensionForMimeType("video/mp2t"))
         assertEquals("mp4", uploader.fallbackExtensionForMimeType("video/mp4"))
+    }
+
+    @Test
+    fun `fallback covers the common media types the JVM has no map for`() {
+        assertEquals("jpg", uploader.fallbackExtensionForMimeType("image/jpeg"))
+        assertEquals("png", uploader.fallbackExtensionForMimeType("image/png"))
+        assertEquals("webm", uploader.fallbackExtensionForMimeType("video/webm"))
+        assertEquals("mp3", uploader.fallbackExtensionForMimeType("audio/mpeg"))
     }
 
     @Test

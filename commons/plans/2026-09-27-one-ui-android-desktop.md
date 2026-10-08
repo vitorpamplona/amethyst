@@ -671,7 +671,7 @@ assemblers, `EventSync`, …). Packages are renamed on the way:
      | Live-now bar, relay metrics | Shared live and relay screens |
      | Upload compression preview, GIF picker | The shared composer |
 
-     Platform gaps still open on the new desktop: NIP-96/NIP-95 uploads, napplets and nsites (no
+     Platform gaps still open on the new desktop: napplets and nsites (no
      sandboxed web view), location, the local Blossom cache probe, the language list, Tor's
      first-run splash. When the table is empty, delete everything outside `desktop/app/` that
      `desktop/app/` does not reach, and the `runLegacy` task.
