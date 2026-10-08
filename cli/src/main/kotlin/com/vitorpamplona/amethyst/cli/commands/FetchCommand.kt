@@ -73,8 +73,9 @@ import kotlin.coroutines.cancellation.CancellationException
  *
  * `--paginate --limit 0` streams: each event is written as it arrives instead of being
  * held for sorting, so the walk runs in O(ids) memory however large it gets — in
- * ARRIVAL order (relay by relay, page by page), not newest-first. Same keys, same single
- * JSON object under `--json`; `count` and `relay_errors` follow the `events` array.
+ * ARRIVAL order (several relays page at once and interleave), not newest-first. Same
+ * keys, same single JSON object under `--json`; `count` and `relay_errors` follow the
+ * `events` array, and also close a stream that a failure cut short.
  */
 object FetchCommand {
     /** Output/paging cap for a fetch (either path) when `--limit` is omitted. */
@@ -202,8 +203,10 @@ object FetchCommand {
                 }) { _, event -> stream.item({ event.toJson() }, { eventAsMap(event) }) }
             } catch (e: Throwable) {
                 // Close the half-written object (with an `error`) before anything else reports:
-                // a second JSON object after a cut-off one is unparseable either way.
-                stream.abort(e.message ?: e::class.simpleName)
+                // a second JSON object after a cut-off one is unparseable either way. The relays
+                // that refused so far are part of that answer, as on the normal path.
+                val errors = reportRelayErrors(relayErrors)
+                stream.abort(e.message ?: e::class.simpleName, if (errors.isEmpty()) emptyMap() else mapOf("relay_errors" to errors))
                 if (e is CancellationException || !stream.started) throw e
                 return 1
             }
@@ -214,11 +217,16 @@ object FetchCommand {
             return emitWithRelayErrors(mapOf("queried_relays" to relays.map { it.url }, "count" to 0, "events" to emptyList<Any>()), relays, relayErrors)
         }
 
-        val sorted = relayErrors.entries.sortedBy { it.key.url }
-        sorted.forEach { (relay, error) -> System.err.println("warning: ${relay.url} ${error.describe()}") }
-        val errors = sorted.associate { it.key.url to it.value.toMap() }
+        val errors = reportRelayErrors(relayErrors)
         stream.finish(if (errors.isEmpty()) mapOf("count" to count) else mapOf("count" to count, "relay_errors" to errors))
         return 0
+    }
+
+    /** Warns about each refusing relay on stderr and returns them as the `relay_errors` map. */
+    private fun reportRelayErrors(relayErrors: Map<NormalizedRelayUrl, RelayError>): Map<String, Map<String, Any?>> {
+        val sorted = synchronized(relayErrors) { relayErrors.entries.sortedBy { it.key.url }.map { it.key to it.value } }
+        sorted.forEach { (relay, error) -> System.err.println("warning: ${relay.url} ${error.describe()}") }
+        return sorted.associate { (relay, error) -> relay.url to error.toMap() }
     }
 
     /** An event as the map its NIP-01 JSON would parse to, for text-mode rendering. */

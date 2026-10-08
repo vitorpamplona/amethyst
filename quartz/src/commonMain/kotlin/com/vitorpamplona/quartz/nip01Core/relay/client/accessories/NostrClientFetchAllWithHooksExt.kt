@@ -365,8 +365,13 @@ suspend fun INostrClient.fetchAllPagesFromPoolWithHooks(
  * single-consumer hook and the same cross-relay dedup, but nothing is kept beyond the
  * dedup set's ids — an accepted event is the hook's to keep, write out or drop. Use it
  * for a walk too large to hold (a relay's whole history for a broad filter): memory is
- * O(distinct ids), not O(events). Events reach [onEvent] in arrival order, relay by
- * relay as each one pages, NOT sorted.
+ * O(distinct ids), not O(events). Events reach [onEvent] in arrival order, NOT sorted:
+ * up to [maxConcurrentRelays] relays page at once, so their events interleave.
+ *
+ * A slow [onEvent] holds the walk back: events reach it through a small bounded buffer, and a
+ * relay whose events are waiting does not take its next page. Without that, a consumer slower
+ * than the network (signature checks, store writes, a slow stdout pipe) let every page of every
+ * relay pile up on the heap, which is the out-of-memory a streamed walk exists to avoid.
  *
  * @return how many distinct events [onEvent] accepted.
  */
@@ -381,10 +386,10 @@ suspend fun INostrClient.streamAllPagesFromPoolWithHooks(
 ): Int {
     if (filters.isEmpty()) return 0
     var accepted = 0
-    // fetchAllPagesFromPool's onEvent can't suspend, but the hook does — bridge
-    // through a channel and run the hook single-threaded in one consumer so its
-    // side effects (e.g. store writes) stay serialized.
-    val eventChannel = Channel<Pair<NormalizedRelayUrl, Event>>(UNLIMITED)
+    // Bridge through a channel and run the hook single-threaded in one consumer so its side
+    // effects (e.g. store writes) stay serialized. Bounded, and sent to with a suspending send,
+    // so a consumer that falls behind stalls the walks feeding it (see above).
+    val eventChannel = Channel<Pair<NormalizedRelayUrl, Event>>(STREAM_BUFFER)
     coroutineScope {
         val consumer =
             launch {
@@ -411,7 +416,7 @@ suspend fun INostrClient.streamAllPagesFromPoolWithHooks(
                 onRelayResult = onRelayResult,
                 pageSize = pageSize,
                 throttleBackoff = throttleBackoff,
-            ) { event, relay -> eventChannel.trySend(relay to event) }
+            ) { event, relay -> eventChannel.send(relay to event) }
         } finally {
             eventChannel.close()
         }
@@ -419,3 +424,9 @@ suspend fun INostrClient.streamAllPagesFromPoolWithHooks(
     }
     return accepted
 }
+
+/**
+ * How many accepted-but-unconsumed events [streamAllPagesFromPoolWithHooks] holds before the
+ * walks feeding it wait for its consumer: enough to smooth over a burst, a page's worth at most.
+ */
+private const val STREAM_BUFFER = 256

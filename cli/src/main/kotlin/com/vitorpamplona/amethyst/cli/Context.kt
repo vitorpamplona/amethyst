@@ -681,7 +681,8 @@ class Context(
      * [drainAllPages] for a walk too large to hold: the same paging, verify+store and
      * cross-relay dedup, but each accepted event is handed to [onEvent] as it arrives and
      * then dropped — only the dedup set's ids stay in memory. Events come in arrival order
-     * (relay by relay, page by page), not sorted. Returns how many were accepted.
+     * (several relays page at once, so their events interleave), not sorted. A slow [onEvent]
+     * holds the walks back. Returns how many were accepted.
      */
     suspend fun streamAllPages(
         filters: Map<NormalizedRelayUrl, List<Filter>>,

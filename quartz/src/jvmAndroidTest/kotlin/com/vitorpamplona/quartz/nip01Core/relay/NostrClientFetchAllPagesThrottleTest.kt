@@ -106,8 +106,7 @@ class NostrClientFetchAllPagesThrottleTest {
     fun twoShortPagesThenAnEmptyPageBelowAStepAreReAsked() =
         runBlocking {
             // The other shape: the throttled pages are short twice in a row, the next only
-            // repeats the boundary (so the walk steps one second past it), and the page below
-            // the step comes back empty. Nothing contradicts the empty page itself — it asked
+            // repeats the boundary, and the page after comes back empty. Nothing contradicts the empty page itself — it asked
             // below anything the relay served — but a normal walk never has two short pages.
             val client =
                 FakePagingRelay(this, FakePagingRelay.corpus(2_000), maxLimit = 500) { req, honest ->
@@ -124,8 +123,10 @@ class NostrClientFetchAllPagesThrottleTest {
 
             assertEquals(PagedFetchResult.End.DRAINED, result.end)
             assertEquals(2_000, result.downloaded)
-            // A pause before the REQ after the second short page, then the empty page's re-ask.
-            assertEquals(listOf(2_000L, 2_000L), recorder.waits)
+            // A pause before the REQ after the second short page; then the boundary-repeat-only
+            // page is re-asked rather than stepped past (it could have dropped the rest of that
+            // second), and the empty answer to that re-ask is re-asked too.
+            assertEquals(listOf(2_000L, 2_000L, 5_000L), recorder.waits)
         }
 
     @Test
@@ -323,32 +324,20 @@ class NostrClientFetchAllPagesThrottleTest {
         }
 
     @Test
-    fun aPageTheRelayLeavesUnansweredIsReAskedOnce() =
+    fun aPageTheRelayLeavesUnansweredEndsTheWalkWithoutAWait() =
         runBlocking {
-            // nos.lol, measured once: three full pages, then a REQ with no event, no EOSE and no
-            // NOTICE until the idle timeout. Re-asked after a pause, the walk goes on.
+            // A page with no answer at all is not re-asked: each ask would cost a whole idle
+            // window, and a dead relay is silent too. (The silent pages measured mid-walk were
+            // the walk's own dropped connection, fixed in NostrClientFetchAllPagesConnectionTest.)
             val recorder = RecordingBackoff()
             val client = FakePagingRelay(this, FakePagingRelay.corpus(1_500), maxLimit = 500, silentOn = { it == 2 })
 
             val result = client.fetchAllPages(relay, listOf(Filter(kinds = listOf(1))), idleTimeoutMs = 300, throttleBackoff = recorder.backoff) { }
 
-            assertEquals(PagedFetchResult.End.DRAINED, result.end)
-            assertEquals(1_500, result.downloaded)
-            assertEquals(listOf(2_000L), recorder.waits)
-        }
-
-    @Test
-    fun aRelayThatStaysSilentEndsIdleAfterOneReAsk() =
-        runBlocking {
-            val recorder = RecordingBackoff()
-            val client = FakePagingRelay(this, FakePagingRelay.corpus(1_500), maxLimit = 500, silentOn = { it >= 2 })
-
-            val result = client.fetchAllPages(relay, listOf(Filter(kinds = listOf(1))), idleTimeoutMs = 300, throttleBackoff = recorder.backoff) { }
-
             assertEquals(PagedFetchResult.End.IDLE, result.end)
             assertEquals(500, result.downloaded)
-            assertEquals(listOf(2_000L), recorder.waits, "one re-ask, not one per backoff step")
-            assertEquals(3, client.requests.size)
+            assertEquals(emptyList(), recorder.waits)
+            assertEquals(2, client.requests.size)
         }
 
     @Test
@@ -492,5 +481,83 @@ class NostrClientFetchAllPagesThrottleTest {
             assertEquals(PagedFetchResult.End.DRAINED, result.end)
             assertEquals(401, result.downloaded)
             assertEquals(emptyList(), recorder.waits)
+        }
+
+    @Test
+    fun aDuplicateOnlyPageWhileThrottledIsReAskedNotSteppedPast() =
+        runBlocking {
+            // relay.damus.io while trickling, measured: pages of 1-4 events, some of them only
+            // the boundary second's already-delivered events. Read as "a second too dense to
+            // page", the walk stepped past it and lost whatever of that second it had not seen.
+            // Every second holds 3 events; after two full pages the relay trickles two short
+            // pages, then answers with just the boundary's first (already delivered) event,
+            // and serves honestly again once the walk has paused.
+            val corpus =
+                (0 until 900).map { i ->
+                    val createdAt = 1_000_000L - i / 3
+                    Event((i + 1).toString(16).padStart(64, '0'), "f".repeat(64), createdAt, 1, emptyArray(), "e$i", "0".repeat(128))
+                }
+            val waits = Collections.synchronizedList(mutableListOf<Long>())
+            val client =
+                FakePagingRelay(this, corpus, maxLimit = 300) { req, honest ->
+                    when {
+                        req <= 2 -> honest
+                        req <= 4 -> honest.take(5)
+                        req == 5 -> honest.take(1)
+                        else -> honest
+                    }
+                }
+            val got = mutableListOf<HexKey>()
+
+            val result = client.fetchAllPages(relay, listOf(Filter(kinds = listOf(1))), idleTimeoutMs = 2_000, throttleBackoff = PageRetryBackoff(listOf(2_000L, 5_000L, 10_000L)) { waits.add(it) }) { got.add(it.id) }
+
+            assertEquals(PagedFetchResult.End.DRAINED, result.end)
+            assertEquals(900, got.distinct().size, "no event of a boundary second was skipped")
+            assertTrue(waits.isNotEmpty())
+        }
+
+    @Test
+    fun aThrottleCloseOnABoundaryTopUpIsBackedOffNotReadAsALimitRefusal() =
+        runBlocking {
+            // A known cap (pageSize 300) and a second denser than it: the walk asks past the cap
+            // to finish the second. A relay that then CLOSEs for throttling did not refuse the
+            // larger limit; reading it as one gave up that second's tail, for this and every
+            // later dense second, and skipped the backoff.
+            val dense =
+                FakePagingRelay.corpus(100, newest = 2_000) +
+                    (0 until 400).map { i ->
+                        Event(("d$i").padStart(64, '0'), "f".repeat(64), 1_000, 1, emptyArray(), "dense $i", "0".repeat(128))
+                    } +
+                    FakePagingRelay.corpus(100, newest = 900)
+            val recorder = RecordingBackoff()
+            val client = FakePagingRelay(this, dense, maxLimit = 5_000, closeWith = { req -> budget.takeIf { req == 3 } })
+            val got = mutableListOf<HexKey>()
+
+            val result = client.fetchAllPages(relay, listOf(Filter(kinds = listOf(1), limit = 50_000)), idleTimeoutMs = 2_000, pageSize = 300, throttleBackoff = recorder.backoff) { got.add(it.id) }
+
+            assertEquals(PagedFetchResult.End.DRAINED, result.end)
+            assertEquals(600, got.distinct().size, "the dense second was read in full after the throttle lifted")
+            assertEquals(listOf(2_000L), recorder.waits)
+        }
+
+    @Test
+    fun aCursorIsAnnouncedOnceHoweverOftenItIsReAsked() =
+        runBlocking {
+            // A throttled cursor re-asked after a backoff is several REQs for one page, not
+            // several pages: onNewPage feeds progress counters.
+            val client =
+                FakePagingRelay(this, FakePagingRelay.corpus(3_000), maxLimit = 500) { req, honest ->
+                    when (req) {
+                        2 -> honest.take(3)
+                        3, 4 -> emptyList()
+                        else -> honest
+                    }
+                }
+            val announced = mutableListOf<Long>()
+
+            client.fetchAllPages(relay, listOf(Filter(kinds = listOf(1))), idleTimeoutMs = 2_000, onNewPage = { announced.add(it) }, throttleBackoff = RecordingBackoff().backoff) { }
+
+            assertTrue(client.requests.size > announced.distinct().size + 1, "re-asks happened: ${client.requests.size} REQs, ${announced.distinct().size} cursors")
+            assertEquals(announced.distinct(), announced, "each cursor announced once: $announced")
         }
 }

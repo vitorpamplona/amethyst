@@ -66,7 +66,8 @@ import kotlinx.coroutines.sync.Semaphore
  *                     relay's from its refusals — see [fetchAllPages].
  * @param throttleBackoff how each relay's walk re-asks a page its relay throttled empty —
  *                     see [fetchAllPages] and [PageRetryBackoff].
- * @param onEvent      called once per delivered event with its source relay.
+ * @param onEvent      called once per delivered event with its source relay. It may suspend:
+ *                     a relay's walk waits for it before taking its next page.
  */
 suspend fun INostrClient.fetchAllPagesFromPool(
     filters: Map<NormalizedRelayUrl, List<Filter>>,
@@ -78,7 +79,7 @@ suspend fun INostrClient.fetchAllPagesFromPool(
     onRelayResult: ((relay: NormalizedRelayUrl, result: PagedFetchResult) -> Unit)? = null,
     pageSize: Int? = null,
     throttleBackoff: PageRetryBackoff = PageRetryBackoff.DEFAULT,
-    onEvent: (event: Event, relay: NormalizedRelayUrl) -> Unit,
+    onEvent: suspend (event: Event, relay: NormalizedRelayUrl) -> Unit,
 ) {
     if (filters.isEmpty()) return
     val semaphore = Semaphore(maxConcurrentRelays.coerceAtLeast(1))

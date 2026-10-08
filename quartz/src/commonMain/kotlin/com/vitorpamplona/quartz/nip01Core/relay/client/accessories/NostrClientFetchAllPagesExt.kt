@@ -447,8 +447,8 @@ suspend fun INostrClient.fetchAllPages(
     // before the next REQ, and how many paced pages in a row it has been.
     var paceMs = 0L
     var pacedPages = 0
-    // A page left wholly unanswered (no event, no EOSE, no CLOSED) is re-asked once per stall.
-    var silenceReAsked = false
+    // The last cursor reported to onNewPage: a re-asked cursor is one page, however many REQs.
+    var announcedUntil: Long? = null
 
     // The most a lone bounded filter asks for in one REQ: what the caller knows the relay
     // enforces, else unknown (ask for everything) until a refusal of the limit sets it.
@@ -552,7 +552,11 @@ suspend fun INostrClient.fetchAllPages(
             // Announce the page only now that we know it will actually be fetched: a
             // search-only filter drops out of activeFilters above and breaks with no
             // REQ, so firing this earlier would report a page that never happens.
-            if (until != null) onNewPage?.invoke(until)
+            // Once per cursor: a refused, throttled or paced re-ask is the same page again.
+            if (until != null && until != announcedUntil) {
+                announcedUntil = until
+                onNewPage?.invoke(until)
+            }
 
             val doneChannel = Channel<PageSignal>(Channel.CONFLATED)
             val pageSubId = newSubId()
@@ -854,8 +858,11 @@ suspend fun INostrClient.fetchAllPages(
             if (received == 0 && pageEnd == PageSignal.CLOSED && activeFilters.size == 1) {
                 val sent = activeFilters[0].value.limit
                 val cap = limitCap
-                if (sent != null && cap != null && sent > cap) {
-                    // A boundary-second top-up past a known cap: the relay holds to its cap.
+                if (sent != null && cap != null && sent > cap && lowerLimitAfterRefusal(refusal, sent) != null) {
+                    // A boundary-second top-up past a known cap, refused for its limit: the relay
+                    // holds to its cap. Any other CLOSED here (a throttle, a hiccup) is not that,
+                    // and must not give up every later dense second's tail; it goes to the
+                    // throttle check below like any other CLOSED.
                     topUpRefused = true
                     Log.d("fetchAllPages") { "${relay.url} refused a top-up of $sent past its cap $cap ($refusal); asking at the cap" }
                     continue
@@ -889,23 +896,16 @@ suspend fun INostrClient.fetchAllPages(
                         // throttling (damus.bostr.online, measured: a CLOSED `read bandwidth budget
                         // exhausted ... (retry in 30ms)` that the walk took as its end).
                         PageSignal.CLOSED -> shortPagesInARow >= 1 || refusal?.let(::isThrottleMessage) == true
-                        // No answer at all after the relay had been serving pages (nos.lol, measured:
-                        // three full pages, then a REQ with no event, EOSE or NOTICE). An honest relay
-                        // always ends a page, so it is worth one more ask; only one, because each
-                        // costs a whole idle timeout and a dead relay is silent too.
-                        null -> largestPage > 0 && !silenceReAsked
+                        // A page with no answer at all (no event, EOSE or CLOSED) is not re-asked:
+                        // each ask costs a whole idle window, and a dead relay is silent too. The
+                        // silent pages measured mid-walk (REQ #2 on yabu.me, yestr.me, no.str.cr,
+                        // ...) were the walk's own doing, a connection the pool dropped between
+                        // pages, and went away with that (0 in 300+ walks since).
                         else -> false
                     }
                 if (throttled) {
-                    if (pageEnd == null) silenceReAsked = true
                     val waitMs = throttleBackoff.delaysMs[reAsks++]
-                    val what =
-                        when (pageEnd) {
-                            PageSignal.CLOSED -> "CLOSED ($refusal)"
-                            null -> "no answer"
-                            else -> "empty page"
-                        }
-                    Log.d("fetchAllPages") { "${relay.url} $what at until=$until looks throttled; re-asking in ${waitMs}ms (#$reAsks)" }
+                    Log.d("fetchAllPages") { "${relay.url} ${if (pageEnd == PageSignal.CLOSED) "CLOSED ($refusal)" else "empty page"} at until=$until looks throttled; re-asking in ${waitMs}ms (#$reAsks)" }
                     throttleBackoff.sleep(waitMs)
                     continue
                 }
@@ -937,10 +937,7 @@ suspend fun INostrClient.fetchAllPages(
                     shortPagesInARow = if (served * 2 <= minOf(largestPage, asked)) shortPagesInARow + 1 else 0
                 }
             }
-            if (delivered > 0) {
-                reAsks = 0
-                silenceReAsked = false
-            }
+            if (delivered > 0) reAsks = 0
             // Two short pages in a row that still delivered: the relay is trickling, not ending
             // (relay.damus.io, measured: two full pages, then 1-4 events a page every ~120 ms for
             // as long as it was asked, and a full 500 again after a 2 s pause). An honest walk has
@@ -1009,6 +1006,23 @@ suspend fun INostrClient.fetchAllPages(
                 // are resolved by stepping strictly past it. `boundary` is null only on
                 // the first page, which has no dedup and so can't be all-duplicate.
                 val step = boundary ?: break // first page, all-duplicate: impossible, and `end` stays UNPAGEABLE
+
+                // Unless the relay is trickling (two short pages in a row): then a page of only
+                // the boundary's repeats is the throttle cutting the page short, not the second
+                // running out (relay.damus.io, measured: pages of 1-4 events, some of them all
+                // repeats). Stepping past would drop the rest of that second, so the same cursor is
+                // re-asked after the backoff instead; an honest walk has one short page, its tail,
+                // and never gets here. Not at the `since` floor, where stepping past ends the walk.
+                if (shortPagesInARow >= 2 &&
+                    pageEnd == PageSignal.EOSE &&
+                    reAsks < throttleBackoff.delaysMs.size &&
+                    activeFilters.none { it.value.since.let { since -> since != null && step <= since } }
+                ) {
+                    val waitMs = throttleBackoff.delaysMs[reAsks++]
+                    Log.d("fetchAllPages") { "${relay.url} only repeats at until=$until while trickling; re-asking in ${waitMs}ms (#$reAsks)" }
+                    throttleBackoff.sleep(waitMs)
+                    continue
+                }
 
                 // The relay is not honouring `until`: every event it sent was NEWER than
                 // the cursor this page asked for. Stepping past cannot help — the next

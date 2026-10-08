@@ -180,13 +180,22 @@ object Output {
          * `error`, so stdout still holds exactly one complete JSON object. No-op once finished.
          */
         @Synchronized
-        fun abort(reason: String?) {
+        fun abort(
+            reason: String?,
+            extra: Map<String, Any?> = emptyMap(),
+        ) {
             if (!started || finished) return
             finished = true
             when (mode) {
                 Mode.JSON -> {
                     out.write("],\"count\":")
                     out.write(items.toString())
+                    extra.forEach { (key, value) ->
+                        out.write(",")
+                        out.write(mapper.writeValueAsString(key))
+                        out.write(":")
+                        out.write(mapper.writeValueAsString(value))
+                    }
                     out.write(",\"error\":")
                     out.write(mapper.writeValueAsString(mapOf("code" to "aborted", "detail" to reason)))
                     out.write("}\n")
