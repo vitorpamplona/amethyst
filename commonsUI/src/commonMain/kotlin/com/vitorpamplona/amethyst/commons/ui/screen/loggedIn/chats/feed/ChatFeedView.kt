@@ -34,6 +34,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.commons.chats.ui.AutoScrollToNewest
@@ -223,6 +224,10 @@ fun ChatFeedLoaded(
     // reorders no longer re-fire paging. The per-gap markers below are pure UI.
     sentinels?.invoke(items.list, listState)
 
+    // Public chats collapse runs of messages from outside the Web of Trust network into one row.
+    var revealed by remember { mutableStateOf(emptySet<String>()) }
+    val outsideNetwork = rememberOutsideNetworkRuns(items.list, revealed, LocalChatCollapseOutsideNetwork.current, accountViewModel)
+
     val newest = items.list.firstOrNull()
     AutoScrollToNewest(listState, newest, mine = accountViewModel.isLoggedUser(newest?.author?.pubkeyHex))
 
@@ -276,48 +281,65 @@ fun ChatFeedLoaded(
                         Modifier.animateItem()
                     }
 
+                val outsideRun = outsideNetwork.byId[item.idHex]
+
                 Column(modifier = itemModifier) {
-                    // A day/subject header belongs ABOVE the message it introduces. `reverseLayout`
-                    // flips the order of the lazy list's items, but NOT the content inside one item:
-                    // this Column still lays out top-to-bottom, so the divisor must be composed
-                    // before the bubble. Composing it after put the header below its own message —
-                    // i.e. visually heading the NEXT (newer) message while showing this one's date,
-                    // which is why a "Jul 1, 2025" header sat on top of a Sep 23 bubble.
-                    NewDateOrSubjectDivisor(older, item, accountViewModel)
-
-                    // Per-relay paging markers for the gap toward the next-older message. Older items sit
-                    // ABOVE newer ones under `reverseLayout`, so that gap is the space above this bubble —
-                    // which means these belong before it, for the same reason the divisor does. Composed
-                    // after the bubble they rendered in the gap toward the NEWER message, contradicting the
-                    // bounds they are handed.
-                    markersInGap?.invoke(
-                        item.event?.createdAt,
-                        older?.event?.createdAt,
-                    )
-
-                    // A claimed row is rendered by the caller instead of as a
-                    // bubble. The date divisor above still applies — a system
-                    // row belongs under the day it happened on like anything
-                    // else — which is why the claim is checked here and not
-                    // around the whole item.
-                    val claimed = rowRenderer?.takeIf { it.claims(item) }
-                    if (claimed != null) {
-                        claimed.Render(item)
+                    if (outsideRun != null) {
+                        // The run's oldest message holds the row; the others draw nothing. No divisor
+                        // either: a subject change would print the author's name and the new subject.
+                        markersInGap?.invoke(item.event?.createdAt, older?.event?.createdAt)
+                        if (outsideRun.head.idHex == item.idHex) {
+                            val newestInRun = outsideRun.members.first()
+                            LaunchedEffect(routeForLastRead, newestInRun.idHex) {
+                                accountViewModel.loadAndMarkAsRead(routeForLastRead, newestInRun.createdAt(), dismissNotificationId = newestInRun.idHex)
+                            }
+                            OutsideNetworkChatRow(outsideRun.members.size) {
+                                revealed = revealed + outsideRun.members.map { it.idHex }
+                            }
+                        }
                     } else {
-                        ChatroomMessageCompose(
-                            baseNote = item,
-                            routeForLastRead = routeForLastRead,
-                            accountViewModel = accountViewModel,
-                            nav = nav,
-                            onWantsToReply = onWantsToReply,
-                            onWantsToEditDraft = onWantsToEditDraft,
-                            onScrollToNote = onScrollToNote,
-                            shouldHighlight = highlightedNoteId.value == item.idHex,
-                            onHighlightFinished = { highlightedNoteId.value = null },
-                            groupPosition = watchChatGroupPosition(newer, item, older),
-                            previousNoteId = older?.idHex,
-                            onWantsToEditChatMessage = onWantsToEditChatMessage,
+                        // A day/subject header belongs ABOVE the message it introduces. `reverseLayout`
+                        // flips the order of the lazy list's items, but NOT the content inside one item:
+                        // this Column still lays out top-to-bottom, so the divisor must be composed
+                        // before the bubble. Composing it after put the header below its own message —
+                        // i.e. visually heading the NEXT (newer) message while showing this one's date,
+                        // which is why a "Jul 1, 2025" header sat on top of a Sep 23 bubble.
+                        NewDateOrSubjectDivisor(older, item, accountViewModel)
+
+                        // Per-relay paging markers for the gap toward the next-older message. Older items sit
+                        // ABOVE newer ones under `reverseLayout`, so that gap is the space above this bubble —
+                        // which means these belong before it, for the same reason the divisor does. Composed
+                        // after the bubble they rendered in the gap toward the NEWER message, contradicting the
+                        // bounds they are handed.
+                        markersInGap?.invoke(
+                            item.event?.createdAt,
+                            older?.event?.createdAt,
                         )
+
+                        // A claimed row is rendered by the caller instead of as a
+                        // bubble. The date divisor above still applies — a system
+                        // row belongs under the day it happened on like anything
+                        // else — which is why the claim is checked here and not
+                        // around the whole item.
+                        val claimed = rowRenderer?.takeIf { it.claims(item) }
+                        if (claimed != null) {
+                            claimed.Render(item)
+                        } else {
+                            ChatroomMessageCompose(
+                                baseNote = item,
+                                routeForLastRead = routeForLastRead,
+                                accountViewModel = accountViewModel,
+                                nav = nav,
+                                onWantsToReply = onWantsToReply,
+                                onWantsToEditDraft = onWantsToEditDraft,
+                                onScrollToNote = onScrollToNote,
+                                shouldHighlight = highlightedNoteId.value == item.idHex,
+                                onHighlightFinished = { highlightedNoteId.value = null },
+                                groupPosition = watchChatGroupPosition(newer, item, older),
+                                previousNoteId = older?.idHex,
+                                onWantsToEditChatMessage = onWantsToEditChatMessage,
+                            )
+                        }
                     }
                 }
             }

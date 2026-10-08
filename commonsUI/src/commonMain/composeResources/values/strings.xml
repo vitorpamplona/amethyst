@@ -6647,6 +6647,11 @@
     <!-- Web of Trust (NIP-85 trust network) -->
     <string name="web_of_trust">Web of Trust</string>
     <string name="web_of_trust_search_keywords">web of trust, wot, trust, spam, strangers, network, requests, brainstorm, graperank, nip-85, score, provider</string>
+    <plurals name="chat_outside_network_messages">
+        <item quantity="one">%1$d message from outside your network</item>
+        <item quantity="other">%1$d messages from outside your network</item>
+    </plurals>
+    <string name="chat_outside_network_show">Show</string>
     <string name="thread_reply_outside_network">Outside your network · tap to show</string>
     <string name="wot_off_title">Keep strangers out</string>
     <string name="wot_off_body">Pick a trust provider. Only people in your extended network reach you.</string>

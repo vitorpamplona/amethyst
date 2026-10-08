@@ -430,6 +430,17 @@ Added later: `amy trust sync | status | check | setup` (named `trust` because `a
 deprecated alias of `fof`), a thin layer over `TrustNetworkState.syncNow` / `explain` and the
 extracted `withScoreProvider`. Live: 151k cards in 10.9 s, update 1.2 s, full check 2.6 s.
 
-Not done: public-chat filtering (open), Desktop wiring (its `DesktopIAccount`
+Added 2026-10-08:
+- **Cards seen between syncs** (`TrustNetworkState.offer`): profiles on screen ask the provider
+  for their cards again, and a card newer than the sync cursor wins over the index until the next
+  sync downloads it. Lookups read it first; feeds re-run only when it moves someone in or out
+  (`verdictRevision`).
+- **Public chats** (NIP-28, live-stream chat, ephemeral chats, NIP-29 groups): consecutive
+  messages from outside the network collapse into one quiet row, "3 messages from outside your
+  network · Show", with no names, pictures, text or times (`OutsideNetworkChat.kt`, opt-in via
+  `LocalChatCollapseOutsideNetwork`). Not applied to private chats (Known / New Requests),
+  Concord (members-only) or geohash chats (throwaway keys would collapse nearly everything).
+
+Not done: Nests lobby and minichat (own message lists), Desktop wiring (its `DesktopIAccount`
 does not use the commons `Account` yet), and the phone measurements for phase 0.
 

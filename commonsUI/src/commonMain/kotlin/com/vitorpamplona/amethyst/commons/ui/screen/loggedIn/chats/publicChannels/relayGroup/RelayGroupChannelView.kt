@@ -30,6 +30,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -57,6 +58,7 @@ import com.vitorpamplona.amethyst.commons.ui.feeds.RelayReachSentinels
 import com.vitorpamplona.amethyst.commons.ui.feeds.RelayReachState
 import com.vitorpamplona.amethyst.commons.ui.feeds.WatchLifecycleAndUpdateModel
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.feed.LocalChatCollapseOutsideNetwork
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.feed.RefreshingChatroomFeedView
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.publicChannels.dal.ChannelFeedViewModel
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.publicChannels.datasource.ChannelFilterAssemblerSubscription
@@ -219,48 +221,50 @@ private fun ChannelView(
                         .weight(1f, true)
                 },
         ) {
-            RefreshingChatroomFeedView(
-                feedContentState = feedViewModel.feedState,
-                accountViewModel = accountViewModel,
-                nav = nav,
-                routeForLastRead = relayGroupChannelLastReadRoute(channel.groupId),
-                avoidDraft = newPostModel.draftTag,
-                onWantsToReply = newPostModel::reply,
-                onWantsToEditDraft = newPostModel::editFromDraft,
-                onWantsToEditChatMessage = newPostModel::editBuzzMessage,
-                jumpToNoteId = jumpToNoteId,
-                onJumpHandled = { jumpToNoteId.value = null },
-                // A status card at the oldest end: what it's reaching for while paging, "All caught up" when dry.
-                olderBoundary = {
-                    DmHistoryLoadingCard(
-                        "Group",
-                        "Group",
-                        loadingHistory,
-                        historyStatus.exhausted,
-                        historyStatus.relayCount,
-                        historyStatus.stalledCount,
-                        historyStatus.reachedBack,
-                        historyStatus.relayProgress,
-                        ::formatHistoryReachDate,
-                    )
-                },
-                // The host relay's window-limit marker at its reached cursor (pure UI). Hidden when exhausted.
-                markersInGap =
-                    if (limits.isEmpty()) {
-                        null
-                    } else {
-                        { newer, older -> RelayReachMarkers(limits, newer, older) {} }
+            CompositionLocalProvider(LocalChatCollapseOutsideNetwork provides true) {
+                RefreshingChatroomFeedView(
+                    feedContentState = feedViewModel.feedState,
+                    accountViewModel = accountViewModel,
+                    nav = nav,
+                    routeForLastRead = relayGroupChannelLastReadRoute(channel.groupId),
+                    avoidDraft = newPostModel.draftTag,
+                    onWantsToReply = newPostModel::reply,
+                    onWantsToEditDraft = newPostModel::editFromDraft,
+                    onWantsToEditChatMessage = newPostModel::editBuzzMessage,
+                    jumpToNoteId = jumpToNoteId,
+                    onJumpHandled = { jumpToNoteId.value = null },
+                    // A status card at the oldest end: what it's reaching for while paging, "All caught up" when dry.
+                    olderBoundary = {
+                        DmHistoryLoadingCard(
+                            "Group",
+                            "Group",
+                            loadingHistory,
+                            historyStatus.exhausted,
+                            historyStatus.relayCount,
+                            historyStatus.stalledCount,
+                            historyStatus.reachedBack,
+                            historyStatus.relayProgress,
+                            ::formatHistoryReachDate,
+                        )
                     },
-                // Pulls the next page while its marker is on screen, off viewport visibility.
-                sentinels =
-                    if (limits.isEmpty()) {
-                        null
-                    } else {
-                        { items, listState ->
-                            RelayReachSentinels(limits, listState) { index -> items.getOrNull(index)?.event?.createdAt }
-                        }
-                    },
-            )
+                    // The host relay's window-limit marker at its reached cursor (pure UI). Hidden when exhausted.
+                    markersInGap =
+                        if (limits.isEmpty()) {
+                            null
+                        } else {
+                            { newer, older -> RelayReachMarkers(limits, newer, older) {} }
+                        },
+                    // Pulls the next page while its marker is on screen, off viewport visibility.
+                    sentinels =
+                        if (limits.isEmpty()) {
+                            null
+                        } else {
+                            { items, listState ->
+                                RelayReachSentinels(limits, listState) { index -> items.getOrNull(index)?.event?.createdAt }
+                            }
+                        },
+                )
+            }
         }
 
         // Buzz workspaces surface a live "… is typing" row just above the composer, fed by
