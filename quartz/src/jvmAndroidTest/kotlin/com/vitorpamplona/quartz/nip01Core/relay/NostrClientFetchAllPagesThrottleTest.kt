@@ -469,4 +469,28 @@ class NostrClientFetchAllPagesThrottleTest {
             assertEquals(3_000, result.downloaded)
             assertEquals(emptyList(), recorder.waits, "honest pages are not throttling")
         }
+
+    @Test
+    fun anEmptyPageAtTheSinceFloorIsTheEndNotAThrottle() =
+        runBlocking {
+            // wheat.happytavern.co (grain), measured: a walk bounded by `since` ends on a page
+            // asking `until == since`, which this relay answers with nothing even though it just
+            // served events in that second. Read as "the relay contradicts itself", the walk
+            // re-asked three times (2 s, 5 s, 10 s) before believing the end it had reached.
+            // 401 events: a page of 300, a short one of 101 down to `since`, then the floor.
+            val since = 999_600L
+            val recorder = RecordingBackoff()
+            lateinit var client: FakePagingRelay
+            client =
+                FakePagingRelay(this, FakePagingRelay.corpus(1_000), maxLimit = 300) { req, honest ->
+                    val filter = client.requests[req - 1].single()
+                    if (filter.until != null && filter.until == filter.since) emptyList() else honest
+                }
+
+            val result = client.fetchAllPages(relay, listOf(Filter(kinds = listOf(1), since = since)), idleTimeoutMs = 2_000, throttleBackoff = recorder.backoff) { }
+
+            assertEquals(PagedFetchResult.End.DRAINED, result.end)
+            assertEquals(401, result.downloaded)
+            assertEquals(emptyList(), recorder.waits)
+        }
 }

@@ -175,8 +175,10 @@ object PagingDiagnostics {
  * on open subscriptions ("number of subscriptions exceeds limit") or on filters per REQ is
  * [AdaptiveRelayLimiter]'s and [RelayReqRefusals]'s to handle.
  *
- * Seen on relays (2026-10 survey of 743): `blocked: limit too high: 5000 (max 500)`
- * (purplepag.es) and `invalid: limitation.max_limit 1000` (relay.cxplay.org).
+ * Seen on relays (2026-10 surveys: 743 relays, then one or two per relay software from 5,728
+ * NIP-11 documents): `blocked: limit too high: 5000 (max 500)` (purplepag.es),
+ * `invalid: limitation.max_limit 1000` (relay.cxplay.org) and `restricted: limit must not
+ * exceed 500` (relay.wavefunc.live).
  */
 internal fun lowerLimitAfterRefusal(
     message: String?,
@@ -188,8 +190,7 @@ internal fun lowerLimitAfterRefusal(
     if (AdaptiveRelayLimiter.isSubscriptionLimitMessage(message)) return null
     if (RelayReqRefusals.parseMaxFilters(message) != null || TOO_MANY_FILTERS.containsMatchIn(message)) return null
     val stated =
-        STATED_MAX
-            .find(message)
+        (STATED_MAX.find(message) ?: STATED_CEILING.find(message))
             ?.groupValues
             ?.get(1)
             ?.toIntOrNull()
@@ -211,6 +212,9 @@ internal fun isThrottleMessage(message: String): Boolean =
 private val BUDGET_EXHAUSTED = Regex("budget (?:is )?exhausted|retry in \\d", RegexOption.IGNORE_CASE)
 
 private val TOO_MANY_FILTERS = Regex("(?:too many|number of|max(?:imum)?) filters", RegexOption.IGNORE_CASE)
+
+// "limit must not exceed 500" (relay.wavefunc.live), "limit exceeds 200": the cap without "max".
+private val STATED_CEILING = Regex("exceeds?\\D{0,12}?(\\d+)", RegexOption.IGNORE_CASE)
 
 private val STATED_MAX = Regex("max(?:imum)?\\D{0,12}?(\\d+)", RegexOption.IGNORE_CASE)
 
@@ -868,10 +872,15 @@ suspend fun INostrClient.fetchAllPages(
                 val throttled =
                     when (pageEnd) {
                         PageSignal.EOSE -> {
+                            // Not at the walk's `since` floor, though: the last page of a walk
+                            // bounded by `since` asks `until == since`, which some relays answer
+                            // with nothing (wheat.happytavern.co, grain, measured: three re-asks,
+                            // 17 s, on every such walk). That page is the end, not a contradiction.
                             val contradictsBoundary =
                                 boundary != null &&
                                     seenAtBoundary.isNotEmpty() &&
-                                    boundaryFilters == activeFilters.map { it.index }
+                                    boundaryFilters == activeFilters.map { it.index } &&
+                                    activeFilters.none { it.value.since.let { since -> since != null && boundary <= since } }
                             !authBlocked &&
                                 !eoseHints.hasHint(EoseMessage.HINT_FINISH) &&
                                 (shortPagesInARow >= 2 || (shortPagesInARow >= 1 && contradictsBoundary))
