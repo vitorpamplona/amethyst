@@ -21,6 +21,8 @@
 package com.vitorpamplona.amethyst.commons.model.privateChats
 
 import com.vitorpamplona.amethyst.commons.model.Note
+import com.vitorpamplona.amethyst.commons.model.User
+import com.vitorpamplona.amethyst.commons.model.UserContext
 import com.vitorpamplona.amethyst.commons.model.chats.ChatFeedType
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
@@ -94,6 +96,33 @@ class DmProtocolToggleTest {
         val room = list.rooms.get(nip04("a", third, 200).chatroomKey(me))!!
         assertTrue(room.messages.isEmpty())
         assertNull(room.newestMessage)
+    }
+
+    @Test
+    fun unloadingRebuildsSendersAndTheOwnerSentFlag() {
+        val ctx = UserContext { Note("addr") }
+        val meUser = User(me, ctx)
+        val otherUser = User(other, ctx)
+        val list = ChatroomList(me)
+
+        // The other side wrote over NIP-17; only the owner's own messages were NIP-04.
+        val theirs = nip17("b", other, 100)
+        list.ingest(theirs).author = otherUser
+        val mine = nip04("a", me, 200)
+        val myNote =
+            Note(mine.id).apply {
+                event = mine
+                author = meUser
+            }
+        list.addMessage(theirs.chatroomKey(me), myNote)
+        val room = list.rooms.get(theirs.chatroomKey(me))!!
+        assertTrue(list.hasSentMessagesTo(theirs.chatroomKey(me)))
+
+        list.unload(ChatFeedType.NIP04)
+
+        assertFalse(list.hasSentMessagesTo(theirs.chatroomKey(me)), "no message of the owner is left in the room")
+        assertFalse(room.senderIntersects(setOf(me)), "the owner only spoke over NIP-04")
+        assertTrue(room.senderIntersects(setOf(other)))
     }
 
     @Test

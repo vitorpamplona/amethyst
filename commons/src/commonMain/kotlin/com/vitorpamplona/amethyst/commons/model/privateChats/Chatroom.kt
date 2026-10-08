@@ -139,6 +139,35 @@ class Chatroom : NotesGatherer {
             return@withLock false
         }
 
+    /**
+     * Drops every message matching [predicate] in one locked pass with one change event (e.g. a whole
+     * DM protocol turned off): removing them one by one copies the set per message and floods the
+     * 100-slot change buffer, so an open conversation would miss most of the deletions. Unlike a
+     * single removal, the derived state is rebuilt from what is left — newest message, senders and
+     * subject — since a bulk removal can take every message a sender or subject came from.
+     * @return the removed messages.
+     */
+    fun removeMessagesIf(predicate: (Note) -> Boolean): Set<Note> =
+        syncLock.withLock {
+            val toRemove = messages.filterTo(HashSet(), predicate)
+            if (toRemove.isEmpty()) return@withLock emptySet()
+
+            messages = messages - toRemove
+            toRemove.forEach { it.removeGatherer(this) }
+
+            newestMessage = messages.maxByOrNull { it.createdAt() ?: 0L }
+            activeSenders = messages.mapNotNullTo(HashSet()) { it.author }
+
+            if (toRemove.any { it.event?.subject() == subject.value }) {
+                val newestWithSubject = messages.filter { it.event?.subject() != null }.maxByOrNull { it.createdAt() ?: 0L }
+                subject.tryEmit(newestWithSubject?.event?.subject())
+                subjectCreatedAt = newestWithSubject?.createdAt()
+            }
+
+            changesFlow?.get()?.tryEmit(ListChange.SetDeletion(toRemove))
+            toRemove
+        }
+
     fun senderIntersects(keySet: Set<HexKey>): Boolean = activeSenders.any { it.pubkeyHex in keySet }
 
     fun pruneMessagesToTheLatestOnly(): Set<Note> =

@@ -117,11 +117,15 @@ class ChatroomList(
         }
     }
 
-    /** Drops every message matching [predicate] from every room (e.g. all of a DM protocol the user turned off). */
+    /**
+     * Drops every message matching [predicate] from every room (e.g. all of a DM protocol the user
+     * turned off), then re-derives whether the owner still has a message in each room it touched, so a
+     * room is not kept in Known on the strength of messages that are gone.
+     */
     fun removeMessagesIf(predicate: (Note) -> Boolean) {
         rooms.forEach { _, room ->
-            room.messages.forEach { msg ->
-                if (predicate(msg)) room.removeMessageSync(msg)
+            if (room.removeMessagesIf(predicate).isNotEmpty()) {
+                room.ownerSentMessage = room.messages.any { it.author?.pubkeyHex == ownerPubKey }
             }
         }
     }

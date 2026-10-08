@@ -169,6 +169,7 @@ import com.vitorpamplona.amethyst.commons.model.topNavFeeds.OutboxLoaderState
 import com.vitorpamplona.amethyst.commons.model.topNavFeeds.TopFilter
 import com.vitorpamplona.amethyst.commons.model.trustedAssertions.TrustProviderListState
 import com.vitorpamplona.amethyst.commons.nipACWebRtcCalls.CallManager
+import com.vitorpamplona.amethyst.commons.nipACWebRtcCalls.CallState
 import com.vitorpamplona.amethyst.commons.relayClient.auth.InMemoryRelayAuthPermissionStore
 import com.vitorpamplona.amethyst.commons.relayClient.auth.RelayAuthPermissionCache
 import com.vitorpamplona.amethyst.commons.relayClient.auth.RelayAuthPermissionLedger
@@ -1058,11 +1059,20 @@ class Account(
      * (a room left empty disappears from Messages) and forgets its history paging, so turning it back on
      * pages again from the top instead of trusting cursors for messages that are gone.
      */
-    private fun unloadDmProtocol(type: ChatFeedType) {
+    private suspend fun unloadDmProtocol(type: ChatFeedType) {
         chatroomList.removeMessagesIf { dmChatFeedTypeOf(it) == type }
         when (type) {
-            ChatFeedType.NIP04 -> chatroomList.resetNip04History()
-            ChatFeedType.NIP17 -> chatroomList.giftWrapHistory.reset()
+            ChatFeedType.NIP04 -> {
+                chatroomList.resetNip04History()
+            }
+
+            ChatFeedType.NIP17 -> {
+                chatroomList.giftWrapHistory.reset()
+                // Calls signal over NIP-17's inbox: once it closes the peer's renegotiation and hangup
+                // can't reach us, so end any call in progress rather than leave it hanging.
+                if (callManager.state.value is CallState.IncomingCall) callManager.rejectCall() else callManager.hangup()
+            }
+
             else -> {}
         }
     }

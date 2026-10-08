@@ -56,6 +56,7 @@ import com.vitorpamplona.amethyst.commons.longs.dal.LongsFeedFilter
 import com.vitorpamplona.amethyst.commons.model.Account
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
+import com.vitorpamplona.amethyst.commons.model.privateChats.DM_CHAT_FEED_TYPES
 import com.vitorpamplona.amethyst.commons.model.topNavFeeds.TopFilter
 import com.vitorpamplona.amethyst.commons.music.dal.MusicPlaylistsFeedFilter
 import com.vitorpamplona.amethyst.commons.music.dal.MusicTracksFeedFilter
@@ -84,7 +85,9 @@ import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.IO
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.drop
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.sample
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
@@ -325,14 +328,24 @@ class AccountFeedContentStates(
         // but no event flows through LocalCache — force a full rebuild of both tabs so turned-off types
         // disappear (and re-enabled ones reappear from cache) immediately. Keyed off the APPLIED set:
         // the account first drops (or re-indexes) the DM rooms, so the rebuild never sees them half-done.
-        // Notifications rebuild too, since DMs of a turned-off protocol leave them as well; clear first
-        // so the refresh removes cards instead of taking the additive path.
         scope.launch(Dispatchers.IO) {
             account.appliedChatFeeds
                 .drop(1)
                 .collect {
                     dmKnown.invalidateData()
                     dmNew.invalidateData()
+                }
+        }
+
+        // Notifications only change when a DM protocol flips (its DMs leave them too), so the other chat
+        // types don't rebuild all three. Clear first so the refresh removes cards instead of taking the
+        // additive path.
+        scope.launch(Dispatchers.IO) {
+            account.appliedChatFeeds
+                .map { it intersect DM_CHAT_FEED_TYPES }
+                .distinctUntilChanged()
+                .drop(1)
+                .collect {
                     notifications.clear()
                     notifications.invalidateData()
                     notificationsFollowing.clear()

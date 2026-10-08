@@ -135,6 +135,31 @@ class BackwardRelayPagerTest {
     }
 
     @Test
+    fun aLatePageAfterTurningOffCannotMarkTheFreshCursorsDone() {
+        var enabled = true
+        val cursors = RelayLoadingCursors()
+        val p = BackwardRelayPager("test")
+        p.bind(cursors, scope, isEnabled = { enabled }) { listOf(r1) }
+        assertTrue(p.advance(r1))
+
+        // Turned off mid-page: the owner resets the cursors, then the in-flight page answers.
+        enabled = false
+        p.onEnabledChanged()
+        cursors.reset()
+        p.onEvent(r1, 500)
+        assertFalse(p.onEose(r1))
+        p.onClosed(r1, "auth-required")
+
+        // Back on: the relay is untouched — not done, nothing reached, not stalled — and pages again.
+        enabled = true
+        p.onEnabledChanged()
+        assertFalse(cursors.isDone(r1))
+        assertEquals(0, p.status.value.stalledCount)
+        assertTrue(p.advance(r1))
+        assertEquals(cursors.floor, p.requestedUntilFor(r1))
+    }
+
+    @Test
     fun nonEmptyPageMovesTheCursorThenBottomsOut() {
         val (p, _) = pagerOf(r1)
         p.advance(r1)

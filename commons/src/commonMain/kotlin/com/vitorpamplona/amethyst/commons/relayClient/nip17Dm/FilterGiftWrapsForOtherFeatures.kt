@@ -23,11 +23,10 @@ package com.vitorpamplona.amethyst.commons.relayClient.nip17Dm
 import com.vitorpamplona.amethyst.commons.actions.ConcordActions
 import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.ExplainedFilter
 import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.SubPurpose
-import com.vitorpamplona.quartz.marmot.MarmotFilters
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
-import com.vitorpamplona.quartz.utils.TimeUtils
+import com.vitorpamplona.quartz.nip59Giftwrap.wraps.GiftWrapEvent
 
 /** What the account's gift-wrap subscription asks its DM relays for, by which features are on. */
 enum class GiftWrapInbox {
@@ -70,17 +69,15 @@ fun filterMarmotWelcomesToPubkey(
     relay: NormalizedRelayUrl,
     pubkey: HexKey?,
     since: Long?,
-): List<RelayBasedFilter> {
-    if (pubkey.isNullOrEmpty()) return emptyList()
-    // Same 2-day widening as the NIP-17 filter: a wrap's created_at is randomized into the past.
-    val filter =
-        if (since != null) {
-            MarmotFilters.giftWrapsForUserSince(pubkey, since - TimeUtils.twoDays())
-        } else {
-            MarmotFilters.giftWrapsForUser(pubkey)
-        }
-    return listOf(RelayBasedFilter(relay, ExplainedFilter.of(filter, SubPurpose.ENCRYPTED_GROUPS, "Marmot welcomes")))
-}
+): List<RelayBasedFilter> =
+    filterGiftWrapsToPubkey(
+        relay = relay,
+        pubkey = pubkey,
+        since = since,
+        kinds = listOf(GiftWrapEvent.KIND),
+        purpose = SubPurpose.ENCRYPTED_GROUPS,
+        purposeDetail = "Marmot welcomes",
+    )
 
 /**
  * Concord Direct Invites (CORD-05 §6): kind-1059 wraps to [pubkey] tagged `k=3313`, from [since]

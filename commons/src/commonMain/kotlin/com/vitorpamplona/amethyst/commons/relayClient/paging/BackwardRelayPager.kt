@@ -227,12 +227,16 @@ class BackwardRelayPager(
     }
 
     // --- Subscription callbacks: the owner forwards these from its SubscriptionListener. ---
+    // All of them are dropped while the scope is disabled: the owner resets the cursors when it turns
+    // the scope off, and a page still in flight at that moment would otherwise land on the fresh
+    // cursors — an empty one marking the relay done for good, a short one pinning its reached point.
 
     /** Records one delivered event for [relay] (a sign of life + a page tally entry). */
     fun onEvent(
         relay: NormalizedRelayUrl,
         createdAt: Long,
     ) {
+        if (!isEnabled()) return
         loadTracker.onActivity()
         cursors?.onEvent(relay, createdAt)
         stalledRelays.remove(relay)
@@ -240,6 +244,7 @@ class BackwardRelayPager(
 
     /** Finalizes [relay]'s page on EOSE. @return true if this EOSE is the one that marked it done. */
     fun onEose(relay: NormalizedRelayUrl): Boolean {
+        if (!isEnabled()) return false
         val c = cursors ?: return false
         stalledRelays.remove(relay)
         c.onEose(relay)
@@ -254,6 +259,7 @@ class BackwardRelayPager(
         relay: NormalizedRelayUrl,
         message: String,
     ) {
+        if (!isEnabled()) return
         loadTracker.onSettled(relay)
         markStalled(relay, "CLOSED: $message")
         publishStatus()
@@ -264,6 +270,7 @@ class BackwardRelayPager(
         relay: NormalizedRelayUrl,
         message: String,
     ) {
+        if (!isEnabled()) return
         loadTracker.onSettled(relay)
         markStalled(relay, "cannot connect: $message")
         publishStatus()
