@@ -23,10 +23,14 @@ package com.vitorpamplona.amethyst.commons.feeds
 import com.vitorpamplona.quartz.experimental.decoupling.transfer.request.EncryptionKeyRequestEvent
 import com.vitorpamplona.quartz.experimental.decoupling.transfer.response.EncryptionKeyTransferEvent
 import com.vitorpamplona.quartz.experimental.fitness.workout.WorkoutTemplateEvent
+import com.vitorpamplona.quartz.experimental.kanban.board.KanbanBoardEvent
+import com.vitorpamplona.quartz.experimental.kanban.card.KanbanCardEvent
 import com.vitorpamplona.quartz.experimental.postingStreak.PostingStreakEvent
 import com.vitorpamplona.quartz.experimental.profileTheme.active.ActiveProfileThemeEvent
 import com.vitorpamplona.quartz.experimental.profileTheme.definition.ThemeDefinitionEvent
 import com.vitorpamplona.quartz.experimental.topEight.TopEightEvent
+import com.vitorpamplona.quartz.experimental.walletScrutiny.assetBundle.AssetBundleEvent
+import com.vitorpamplona.quartz.experimental.zapstore.identityProof.IdentityProofEvent
 import com.vitorpamplona.quartz.marmot.mip00KeyPackages.LegacyKeyPackageEvent
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip18Reposts.BaseRepostEvent
@@ -122,6 +126,12 @@ val TYPED_WITHOUT_A_CARD: Set<Int> =
         LongFormDraftEvent.KIND,
         StickerPackEvent.KIND,
         WorkoutTemplateEvent.KIND,
+        // App-release trust (Zapstore identity proofs, WalletScrutiny bundles and verdicts) and
+        // Kanban boards/cards (kind 30301 is shared by the board and the verdict).
+        IdentityProofEvent.KIND,
+        AssetBundleEvent.KIND,
+        KanbanBoardEvent.KIND,
+        KanbanCardEvent.KIND,
         // Profile customisation: belongs on a profile, not in a feed.
         ActiveProfileThemeEvent.KIND,
         ThemeDefinitionEvent.KIND,

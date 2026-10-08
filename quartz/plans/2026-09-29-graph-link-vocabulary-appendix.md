@@ -1002,3 +1002,35 @@ which this appendix had filed under 5129 by analogy.
 | 38385 | `MostroInfoEvent` | serbero -> SOLVER (U); reputation issuer -> REPUTATION_ISSUER (U); reputation_import_issuers -> REPUTATION_IMPORT_ISSUER (U) | serbero(), reputationIssuer(), reputationImportIssuers() | d is the instance's own key (AUTHOR); lnd_node_pubkey is a Lightning key. |
 | 38386 | `MostroDisputeEvent` | *none* | – | the dispute id is a UUID, not a Nostr reference. |
 | 31986, 38384, 38385, 38386 | `UnrecognizedKind…Event` | *none* | – | other apps' events on these kinds (Paygress, bondtrade, Borkstr): addressable, unread. |
+
+### Second batch (Marmot 443, Ditto profile kinds, app-release trust, Kanban)
+
+New relations:
+
+| Relation | Kinds | Justification |
+|---|---|---|
+| `ADOPTED` | 16767, 36767 | the theme definition a theme was adopted from (Ditto's Attribution section: "adopting"; past participle per rule 7) |
+| `ADOPTED_AUTHOR` | 16767, 36767 | that theme's original creator (rule 3) |
+| `BOARD` | 30302 | the Kanban board a card belongs to (NIP PR #1665: "the board this card will be a part of") |
+| `ASSIGNEE` | 30302 | the PR's word for a card's `p` |
+| `TRACKED` | 30302 | the event or address a tracker card mirrors (the PR's "tracker card") |
+| `TRACKED_BOARD` | 30302 | the board holding a tracked card; `refs/card` names only a `d`, so the card itself is not addressable |
+| `ATTACHMENT` | 30301 (verification) | a WalletScrutiny file-attachment event the verifier used |
+| `BASED_ON` / `BASED_ON_AUTHOR` | 30301 (verification) | the verification whose method this one reuses, and its author (rule 3) |
+
+`FAVORITE` gains 18678 (prop: 1-based `rank`); `MAINTAINER` (30617) gains 30301 boards.
+
+| Kind | Class | Links | Built from | Notes |
+|---|---|---|---|---|
+| 443 | `LegacyKeyPackageEvent` | *none* | – | Marmot's pre-2026-05 KeyPackage kind; read only, as an invite fallback to 30443. Content is TLS key material. |
+| 16767 | `ActiveProfileThemeEvent` | a -> ADOPTED (A); p -> ADOPTED_AUTHOR (U) | adoptedThemeDefinition() (ATag, 36767 only), themeCreator() (PTag, first) | Ditto / jotstr / Armada. c, f, bg, title, description: values. |
+| 36767 | `ThemeDefinitionEvent` | a -> ADOPTED (A); p -> ADOPTED_AUTHOR (U); t -> HASHTAG (T) | same helpers | Armada credits copied definitions with a/p (undocumented by Ditto; same meaning). |
+| 13473 | `PostingStreakEvent` | *none* | – | start/end are timestamps. |
+| 18678 | `TopEightEvent` | p -> FAVORITE (U) [rank] | topEight() (PTag, deduplicated, capped at 8) | Hints only for the ranked eight. |
+| 30509 | `IdentityProofEvent` | *none* | – | Zapstore. d is the SHA-256 of the APK signing certificate (a value), joining NIP-82 3063 `apk_certificate_hash` by value. |
+| 9401 | `AssetBundleEvent` | *none* (i -> TAG (T) later) | productId() (AppIdTag) | WalletScrutiny. x are file hashes; the release is named by i + version, values not references. |
+| 30301 | `KanbanBoardEvent` | p -> MAINTAINER (U) | maintainerKeys() | NIP PR #1665; primary class of the shared kind. Columns are values. |
+| 30301 | `BuildVerificationEvent` | file-attachment -> ATTACHMENT (E); based-on -> BASED_ON (E); its author -> BASED_ON_AUTHOR (U) | fileAttachments(), basedOn() | WalletScrutiny verdicts; chosen by `i` + `status`. x joins 9401 by hash. |
+| 30301 | `UnrecognizedKind30301Event` | *none* | – | an encrypted planner app (b is a hash). |
+| 30302 | `KanbanCardEvent` | a[30301] -> BOARD (A); other a -> TRACKED (A); e -> TRACKED (E); refs/board -> TRACKED_BOARD (A); p -> ASSIGNEE (U) | board(), trackedAddress(), trackedEvent(), trackedCardBoard(), assigneeKeys() | k is a kind value. |
+| 30302 | `UnrecognizedKind30302Event` | *none* | – | Fieldbook team memberships. |
