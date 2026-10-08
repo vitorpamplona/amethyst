@@ -395,7 +395,6 @@ class LongFormPostViewModel :
                     event = event,
                     relays = relays,
                     client = accountViewModel.account.client,
-                    outboxRelays = accountViewModel.account.nip65RelayList.outboxFlow.value,
                 )
                 accountViewModel.account.consumePostEvent(event, relays, extras)
             }

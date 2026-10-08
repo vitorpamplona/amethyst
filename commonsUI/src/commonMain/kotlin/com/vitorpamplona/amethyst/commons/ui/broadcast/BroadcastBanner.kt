@@ -36,6 +36,7 @@ import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -77,6 +78,7 @@ import com.vitorpamplona.amethyst.commons.resources.bradcasting_result_success
 import com.vitorpamplona.amethyst.commons.resources.broadcasting
 import com.vitorpamplona.amethyst.commons.resources.broadcasting_name
 import com.vitorpamplona.amethyst.commons.resources.broadcasting_number_events
+import com.vitorpamplona.amethyst.commons.resources.dismiss
 import com.vitorpamplona.amethyst.commons.resources.event_sent
 import com.vitorpamplona.amethyst.commons.resources.post
 import com.vitorpamplona.amethyst.commons.resources.pow_cancel_dialog_discard
@@ -174,18 +176,28 @@ fun BroadcastBanner(
                 if (broadcasts.isNotEmpty()) {
                     val isAllFinished = broadcasts.all { it.status != BroadcastStatus.IN_PROGRESS }
 
-                    if (isAllFinished) {
-                        if (broadcasts.size == 1) {
-                            CompletedBroadcastContent(broadcasts.first(), onRetryAll, onDismiss)
-                        } else {
-                            MultipleCompletedBroadcastContent(broadcasts, onRetryAll, onDismiss)
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        modifier = Modifier.fillMaxWidth(),
+                    ) {
+                        Box(modifier = Modifier.weight(1f)) {
+                            if (isAllFinished) {
+                                if (broadcasts.size == 1) {
+                                    CompletedBroadcastContent(broadcasts.first(), onRetryAll)
+                                } else {
+                                    MultipleCompletedBroadcastContent(broadcasts, onRetryAll)
+                                }
+                            } else {
+                                if (broadcasts.size == 1) {
+                                    SingleBroadcastContent(broadcasts.first())
+                                } else {
+                                    MultipleBroadcastsContent(broadcasts)
+                                }
+                            }
                         }
-                    } else {
-                        if (broadcasts.size == 1) {
-                            SingleBroadcastContent(broadcasts.first(), onDismiss)
-                        } else {
-                            MultipleBroadcastsContent(broadcasts, onDismiss)
-                        }
+
+                        DismissX(onDismiss)
                     }
                 }
             }
@@ -416,10 +428,7 @@ private fun PoWCancelDialog(
 }
 
 @Composable
-private fun SingleBroadcastContent(
-    broadcast: BroadcastEvent,
-    onDismiss: () -> Unit,
-) {
+private fun SingleBroadcastContent(broadcast: BroadcastEvent) {
     Row(
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -470,17 +479,11 @@ private fun SingleBroadcastContent(
                 trackColor = MaterialTheme.colorScheme.surfaceVariant,
             )
         }
-
-        // hides the banner only; the send keeps going in the background.
-        DismissX(onDismiss)
     }
 }
 
 @Composable
-private fun MultipleBroadcastsContent(
-    broadcasts: ImmutableList<BroadcastEvent>,
-    onDismiss: () -> Unit,
-) {
+private fun MultipleBroadcastsContent(broadcasts: ImmutableList<BroadcastEvent>) {
     val totalRelays = broadcasts.sumOf { it.totalRelays }
     val completedResponses = broadcasts.sumOf { it.results.size }
 
@@ -530,9 +533,6 @@ private fun MultipleBroadcastsContent(
                 trackColor = MaterialTheme.colorScheme.surfaceVariant,
             )
         }
-
-        // hides the banner only; the send keeps going in the background.
-        DismissX(onDismiss)
     }
 }
 
@@ -540,7 +540,6 @@ private fun MultipleBroadcastsContent(
 fun CompletedBroadcastContent(
     broadcast: BroadcastEvent,
     onRetryAll: () -> Unit,
-    onDismiss: () -> Unit,
 ) {
     Row(
         verticalAlignment = Alignment.CenterVertically,
@@ -612,8 +611,6 @@ fun CompletedBroadcastContent(
                 )
             }
         }
-
-        DismissX(onDismiss)
     }
 }
 
@@ -621,7 +618,6 @@ fun CompletedBroadcastContent(
 fun MultipleCompletedBroadcastContent(
     broadcasts: ImmutableList<BroadcastEvent>,
     onRetryAll: () -> Unit,
-    onDismiss: () -> Unit,
 ) {
     Row(
         verticalAlignment = Alignment.CenterVertically,
@@ -706,22 +702,23 @@ fun MultipleCompletedBroadcastContent(
                 )
             }
         }
-
-        DismissX(onDismiss)
     }
 }
 
+/** Hides the banner at any stage; a send still in flight keeps going. */
 @Composable
 private fun DismissX(onDismiss: () -> Unit) {
-    Text(
-        text = "×",
-        style = MaterialTheme.typography.titleMedium,
-        color = MaterialTheme.colorScheme.onSurfaceVariant,
-        modifier =
-            Modifier
-                .clickable(onClick = onDismiss)
-                .padding(start = 2.dp),
-    )
+    IconButton(
+        onClick = onDismiss,
+        modifier = Modifier.size(22.dp),
+    ) {
+        Icon(
+            symbol = MaterialSymbols.Close,
+            contentDescription = stringRes(Res.string.dismiss),
+            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.size(14.dp),
+        )
+    }
 }
 
 @Composable

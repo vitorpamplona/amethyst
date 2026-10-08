@@ -50,10 +50,7 @@ import kotlinx.coroutines.delay
 
 /**
  * Displays broadcast progress UI components:
- * - BroadcastBanner: Shows active broadcasts with progress; its X hides it at any time
- *   without stopping the send
- * - It hides on its own shortly after every post is out ([BroadcastEvent.isOut]: all
- *   outbox relays accepted), and stays up with Retry when an outbox relay failed
+ * - BroadcastBanner: Shows active broadcasts with progress; hides once every post is out
  * - BroadcastDetailsSheet: Shows detailed relay status on tap
  *
  * The relay-progress part is hidden when the "Tracked broadcasts" UI setting

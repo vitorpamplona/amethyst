@@ -259,7 +259,7 @@ class AccountViewModel(
     var firstRoute: Route? = null
 
     val toastManager = ToastManager()
-    val broadcastTracker = BroadcastTracker()
+    val broadcastTracker = BroadcastTracker(outboxRelays = { account.nip65RelayList.outboxFlow.value })
     val feedStates = AccountFeedContentStates(account, viewModelScope, host.memoryPressure)
 
     /**
@@ -575,7 +575,6 @@ class AccountViewModel(
                             event = event,
                             relays = relays,
                             client = account.client,
-                            outboxRelays = account.nip65RelayList.outboxFlow.value,
                         )
 
                         account.consumeReactionEvent(event)
@@ -1664,7 +1663,6 @@ class AccountViewModel(
                     event = event,
                     relays = relays,
                     client = account.client,
-                    outboxRelays = account.nip65RelayList.outboxFlow.value,
                 )
                 consumeTracked(event)
             }

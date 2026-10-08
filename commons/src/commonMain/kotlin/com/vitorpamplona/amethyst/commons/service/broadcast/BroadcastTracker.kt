@@ -51,7 +51,10 @@ import kotlinx.coroutines.withTimeoutOrNull
  * - Detailed per-relay success/error information
  * - Retry functionality for failed relays
  */
-class BroadcastTracker {
+class BroadcastTracker(
+    /** The author's NIP-65 outbox relays, read when a broadcast starts; see [BroadcastEvent.isOut]. */
+    private val outboxRelays: () -> Set<NormalizedRelayUrl>,
+) {
     companion object {
         private const val TAG = "BroadcastTracker"
         const val TIMEOUT_SECONDS = 10L
@@ -66,15 +69,12 @@ class BroadcastTracker {
      * @param event The Nostr event to broadcast
      * @param relays Target relays to send to
      * @param client The Nostr client for sending
-     * @param outboxRelays The author's NIP-65 outbox relays; the event counts as
-     *   out ([BroadcastEvent.isOut]) once those among [relays] accept it
      */
     @OptIn(DelicateCoroutinesApi::class)
     suspend fun trackBroadcast(
         event: Event,
         relays: Set<NormalizedRelayUrl>,
         client: INostrClient,
-        outboxRelays: Set<NormalizedRelayUrl>,
     ) {
         val trackingId = RandomInstance.randomChars(16)
 
@@ -83,7 +83,7 @@ class BroadcastTracker {
                 id = trackingId,
                 event = event,
                 targetRelays = relays.toList(),
-                outboxRelays = outboxRelays intersect relays,
+                outboxRelays = outboxRelays() intersect relays,
             )
 
         // Add to active broadcasts and cache event for retries
