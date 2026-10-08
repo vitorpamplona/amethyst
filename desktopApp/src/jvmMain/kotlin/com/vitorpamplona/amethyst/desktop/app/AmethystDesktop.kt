@@ -50,18 +50,37 @@ import com.vitorpamplona.amethyst.commons.ui.richtext.LocalRichTextPlatform
 import com.vitorpamplona.amethyst.commons.ui.screen.collectDisplaySettings
 import com.vitorpamplona.amethyst.commons.ui.theme.AmethystMaterialTheme
 import com.vitorpamplona.amethyst.commons.ui.theme.isDarkTheme
+import com.vitorpamplona.amethyst.desktop.platform.IconResources
+import com.vitorpamplona.amethyst.desktop.platform.PlatformInfo
 import com.vitorpamplona.amethyst.desktop.service.images.DesktopImageLoaderSetup
+import com.vitorpamplona.amethyst.desktop.service.scheduledposts.runHeadlessPublish
 import com.vitorpamplona.amethyst.desktop.ui.media.LocalAwtWindow
 import com.vitorpamplona.quartz.utils.Log
 import com.vitorpamplona.quartz.utils.LogLevel
+import java.awt.Taskbar
 import java.io.File
+import kotlin.system.exitProcess
 
 /**
  * The desktop window of the shared app: the same [AmethystApp] Android renders, on the desktop graph.
- * Run it with `./gradlew :desktopApp:runOneUi`. Its files live apart from the legacy desktop app's
- * (`~/.amethyst/app`, or `-Damethyst.dataDir=...`); keys come from the same OS keyring.
+ * Run it with `./gradlew :desktopApp:run` (the legacy app: `runLegacy`). Its files live apart from
+ * the legacy app's (`~/.amethyst/app`, or `-Damethyst.dataDir=...`); keys come from the same OS
+ * keyring, and the legacy logins are imported on the first start.
  */
-fun main() {
+fun main(args: Array<String>) {
+    // The OS timer relaunches the app this way to publish scheduled posts while it is closed: no
+    // window, no keyring, just the pre-signed posts that are due.
+    if (args.contains("--publish-scheduled")) exitProcess(runHeadlessPublish())
+
+    // macOS: the menu bar goes to the top of the screen, under the app's own name. Both must be set
+    // before AWT starts.
+    if (PlatformInfo.isMacOS) {
+        System.setProperty("apple.laf.useScreenMenuBar", "true")
+        System.setProperty("apple.awt.application.name", "Amethyst")
+        System.setProperty("apple.awt.application.appearance", "system")
+    }
+    setDockIcon()
+
     val isDebug = System.getProperty("amethyst.debug") == "true"
     Log.minLevel = if (isDebug) LogLevel.DEBUG else LogLevel.INFO
 
@@ -99,6 +118,7 @@ fun main() {
             onCloseRequest = ::exitApplication,
             state = windowState,
             title = "Amethyst",
+            icon = IconResources.adaptedBitmapPainter,
         ) {
             DesktopMenuBar(root.navigator, onQuit = ::exitApplication)
 
@@ -156,4 +176,19 @@ private fun DesktopTheme(
         displaySettings = displaySettings,
         content = content,
     )
+}
+
+/**
+ * The dock and app-switcher icon. macOS reads it from the Taskbar API, not from the window's icon,
+ * so without this a JVM started from Gradle shows the generic Java icon.
+ */
+private fun setDockIcon() {
+    try {
+        val image = IconResources.adaptedBufferedImage ?: return
+        if (!Taskbar.isTaskbarSupported()) return
+        val taskbar = Taskbar.getTaskbar()
+        if (taskbar.isSupported(Taskbar.Feature.ICON_IMAGE)) taskbar.iconImage = image
+    } catch (e: Exception) {
+        Log.w("AmethystDesktop", "Could not set the dock icon", e)
+    }
 }

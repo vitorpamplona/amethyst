@@ -7,6 +7,20 @@ description: Compose Multiplatform Desktop patterns for the `desktopApp/` module
 
 Expert in Compose Multiplatform Desktop development for AmethystMultiplatform. Covers Desktop-specific APIs, OS conventions, navigation patterns, and UX principles.
 
+## Two desktop apps (read first)
+
+- **The desktop app** (`./gradlew :desktopApp:run`, and what gets packaged) is the JVM shim in
+  `desktopApp/src/jvmMain/kotlin/com/vitorpamplona/amethyst/desktop/app/`: `AmethystDesktop.kt`
+  (`main`, the `Window`, the theme and locals), `DesktopAppModules` (the graph), `DesktopAppRoot`,
+  `DesktopAppPlatform`, `DesktopNotePlatform`, `DesktopMenuBar`. It renders the shared
+  `AmethystApp` from `commonsUI`: screens and navigation are shared, so new UI goes to
+  `commonsUI` and the shim only fills platform ports (`AppPlatform`, `NotePlatform`,
+  `AppServices`, `AccountViewModelHost`).
+- **The legacy app** (`./gradlew :desktopApp:runLegacy`, `desktop/Main.kt` and everything outside
+  `desktop/app/`) keeps its deck, custom feeds and other desktop-only screens until they move to
+  the shared UI. Don't extend it. Most of what follows describes it; the OS conventions (Cmd vs
+  Ctrl, file dialogs, keyring) still apply to the shim.
+
 ## When to Use This Skill
 
 **Auto-invoke when:**

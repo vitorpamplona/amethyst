@@ -113,30 +113,32 @@ dependencies {
     testImplementation(libs.jetbrains.compose.ui.test.junit4)
 }
 
-// Runs the shared app (commonsUI's AmethystApp) in a desktop window, on the new desktop graph.
-// Replaces `run` once the legacy desktop screens are retired.
-tasks.register<JavaExec>("runOneUi") {
+// The legacy desktop app (its own screens, deck and navigation), kept runnable until its
+// desktop-only features move to the shared UI. `run` and the packaged app start the shared one.
+tasks.register<JavaExec>("runLegacy") {
     group = "application"
-    description = "Runs the shared One UI app in a desktop window"
-    mainClass.set("com.vitorpamplona.amethyst.desktop.app.AmethystDesktopKt")
+    description = "Runs the legacy desktop app"
+    mainClass.set("com.vitorpamplona.amethyst.desktop.MainKt")
     classpath = sourceSets["main"].runtimeClasspath
-    jvmArgs("--add-opens=java.base/java.nio=ALL-UNNAMED", "-Xmx2g", "-Damethyst.version=$appVersion")
-    listOf("amethyst.dataDir", "amethyst.debug").forEach { key ->
+    jvmArgs("--add-opens=java.base/java.nio=ALL-UNNAMED", "-Xmx2g")
+    listOf("amethyst.platform", "amethyst.appearance", "amethyst.accent").forEach { key ->
         System.getProperty(key)?.let { jvmArgs("-D$key=$it") }
     }
 }
 
 compose.desktop {
     application {
-        mainClass = "com.vitorpamplona.amethyst.desktop.MainKt"
+        mainClass = "com.vitorpamplona.amethyst.desktop.app.AmethystDesktopKt"
         jvmArgs += "--add-opens=java.base/java.nio=ALL-UNNAMED"
 
         jvmArgs += "-Xmx2g"
 
-        // Forward platform-preview overrides from the gradle invocation to the
-        // launched app's JVM so `./gradlew :desktopApp:run -Damethyst.platform=GNOME`
-        // works in addition to the env-var form (`AMETHYST_PLATFORM=GNOME`).
-        listOf("amethyst.platform", "amethyst.appearance", "amethyst.accent").forEach { key ->
+        // The shared app reads its version from here (there is no BuildConfig on desktop).
+        jvmArgs += "-Damethyst.version=$appVersion"
+
+        // Forward overrides from the gradle invocation to the launched app's JVM, so
+        // `./gradlew :desktopApp:run -Damethyst.dataDir=/tmp/amy` keeps a test profile apart.
+        listOf("amethyst.dataDir", "amethyst.debug").forEach { key ->
             System.getProperty(key)?.let { jvmArgs += "-D$key=$it" }
         }
 
@@ -151,6 +153,7 @@ compose.desktop {
                 "java.sql",          // JDBC metadata (Jackson, SQLite driver)
                 "jdk.security.auth", // JAAS authentication callbacks
                 "jdk.unsupported",   // sun.misc.Unsafe (secp256k1-kmp-jni-jvm, JNA)
+                "jdk.localedata",    // CLDR data for the shared app's date and number formatters
             )
 
             packageName = "Amethyst"

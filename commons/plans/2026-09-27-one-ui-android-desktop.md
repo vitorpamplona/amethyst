@@ -614,7 +614,7 @@ assemblers, `EventSync`, …). Packages are renamed on the way:
      - `AuthCoordinator` moved to commons; `AppServices` gained `authCoordinator`,
        `powPublishQueue` and `takeCrashReport()`.
    - **8b, the desktop shim (2026-10-07).** `desktopApp/…/desktop/app/` renders `AmethystApp` in
-     a desktop window: `./gradlew :desktopApp:runOneUi`. The legacy `run` is untouched until 8d.
+     a desktop window (then `runOneUi`; `run` since 8d).
      - Account storage is shared: `AccountSettingsStores`/`AccountSettingsSource` (the settings
        records) and `StoreAccountSessionStore` (roster, records, secrets, keys in the OS keyring
        through `PrivateKeyVault`) are in commons; Android keeps only its legacy fallback on top.
@@ -636,6 +636,45 @@ assemblers, `EventSync`, …). Packages are renamed on the way:
        NIP-46 bunker login, OS notifications, menu bar and shortcuts, file pickers, toasts,
        language list, location, the local Blossom cache probe, and moving the legacy app's
        accounts (`accounts.json.enc`) over.
+   - **8c, the platform pieces (2026-10-08).**
+     - Note media: `DesktopNotePlatform` (Coil images and GIFs, the legacy media player for video
+       and audio, the lightbox) and `DesktopRichTextPlatform`. The rich-text segment renderer is
+       shared now (`DefaultRichTextSegmentRenderer`; Android subclasses it for LaTeX, payment
+       cards, Blossom previews and secret emoji), and so are `ImageGallery`, `RelayGroupCard` and
+       the link-preview loader.
+     - NIP-46 login (`bunker://` in the key field, a `nostrconnect://` code to scan), kept in the
+       account's encrypted secrets and built into a `NostrSignerRemote` by `AccountCacheState`.
+       Offered where `AppPlatform.supportsRemoteSignerLogin`: desktop yes, Android no (it is a
+       bunker, never a bunker's client).
+     - `LegacyDesktopAccountImport`: the legacy app's logins move over on the first start; every
+       start opens the consolidated keyring vault the legacy app created. Verified with a real
+       Secret Service keyring: an nsec saved by the legacy app logs the new app in.
+     - A key the keyring refuses no longer fails the login; the window says it was not kept.
+     - Uploads through the JVM Blossom pipeline (`DesktopMediaUploader`), the system file dialog
+       for `GallerySelect`, OS notifications (`DesktopNotifications` over the legacy
+       auto-dispatcher, now cache-agnostic) with their settings in the shared notification
+       screen, snackbar toasts, the File/Go/Help menu bar, relays re-dialled after sleep, and
+       scheduled posts (legacy store, in-app scheduler, OS timer).
+   - **8d, the switch (2026-10-08).** `./gradlew :desktopApp:run` and the packaged app start the
+     shared UI (`AmethystDesktopKt`, which also takes over `--publish-scheduled`, the macOS menu
+     bar settings and the dock icon); `jdk.localedata` joined the packaged runtime. The maintainer
+     chose to keep the legacy app runnable (`./gradlew :desktopApp:runLegacy`) rather than delete
+     it, until its desktop-only features move to `commonsUI`:
+
+     | Legacy-only feature | Where it should land |
+     |---|---|
+     | Deck: multi-column layout and workspaces | A wide-window mode of the shared shell |
+     | Custom feed builder | `commonsUI` feeds (Android gets it too) |
+     | Spotlight and advanced search | The shared search screen |
+     | Messages privacy lock | Shared settings over `commons/privacylock` |
+     | Hashtag-spam filters, WoT badge | Shared moderation settings, note header |
+     | Live-now bar, relay metrics | Shared live and relay screens |
+     | Upload compression preview, GIF picker | The shared composer |
+
+     Platform gaps still open on the new desktop: NIP-96/NIP-95 uploads, napplets and nsites (no
+     sandboxed web view), location, the local Blossom cache probe, the language list, Tor's
+     first-run splash. When the table is empty, delete everything outside `desktop/app/` that
+     `desktop/app/` does not reach, and the `runLegacy` task.
 
 Steps 2–5 can interleave. Step 5's helpers can start before 3–4 if they take `Account` /
 `AccountViewModel` unchanged and only move later.
