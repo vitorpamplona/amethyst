@@ -32,8 +32,6 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -42,7 +40,6 @@ import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -71,7 +68,6 @@ import com.vitorpamplona.amethyst.commons.resources.call_settings_enable_calls_d
 import com.vitorpamplona.amethyst.commons.resources.call_settings_max_bitrate
 import com.vitorpamplona.amethyst.commons.resources.call_settings_no_custom_turn
 import com.vitorpamplona.amethyst.commons.resources.call_settings_off_with_nip17
-import com.vitorpamplona.amethyst.commons.resources.call_settings_open_messages_settings
 import com.vitorpamplona.amethyst.commons.resources.call_settings_remove_turn
 import com.vitorpamplona.amethyst.commons.resources.call_settings_turn_credential
 import com.vitorpamplona.amethyst.commons.resources.call_settings_turn_description
@@ -118,7 +114,11 @@ private fun CallSettingsContent(
     // Calls signal over NIP-17's gift-wrap inbox (ChatFeedToggles.isCallingActive): with NIP-17 off
     // they stay off whatever the switch below says, so say why and where to turn it back on.
     if (ChatFeedType.NIP17 !in chatFeeds) {
-        CallsOffWithNip17Notice(onOpenMessagesSettings = { nav.nav(Route.MessagesSettings) })
+        Nip17OffNotice(
+            text = stringRes(Res.string.call_settings_off_with_nip17),
+            onOpenMessagesSettings = { nav.nav(Route.MessagesSettings) },
+            modifier = Modifier.padding(start = 16.dp, end = 16.dp, top = 16.dp),
+        )
     }
 
     EnableCallsSection(
@@ -168,32 +168,6 @@ private fun CallSettingsContent(
     )
 
     Spacer(modifier = Modifier.height(16.dp))
-}
-
-@Composable
-private fun CallsOffWithNip17Notice(onOpenMessagesSettings: () -> Unit) {
-    Card(
-        modifier =
-            Modifier
-                .fillMaxWidth()
-                .padding(start = 16.dp, end = 16.dp, top = 16.dp),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.errorContainer),
-    ) {
-        Column(Modifier.padding(start = 16.dp, end = 8.dp, top = 12.dp, bottom = 4.dp)) {
-            Text(
-                text = stringRes(Res.string.call_settings_off_with_nip17),
-                fontSize = 14.sp,
-                color = MaterialTheme.colorScheme.onErrorContainer,
-                modifier = Modifier.padding(end = 8.dp),
-            )
-            TextButton(
-                onClick = onOpenMessagesSettings,
-                modifier = Modifier.align(Alignment.End),
-            ) {
-                Text(stringRes(Res.string.call_settings_open_messages_settings))
-            }
-        }
-    }
 }
 
 @Composable

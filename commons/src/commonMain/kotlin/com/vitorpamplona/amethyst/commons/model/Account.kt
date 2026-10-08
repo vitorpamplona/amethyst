@@ -1051,7 +1051,7 @@ class Account(
             chatroomList = chatroomList,
             draftRumor = { draftsDecryptionCache.preCachedDraft(it) },
             findCachedNotes = { predicate -> cache.notes.filter { _, note -> predicate(note) } },
-            reindex = { newNotesPreProcessor.consume(it) },
+            reindexDraft = { newNotesPreProcessor.consume(it) },
             onDmProtocolOff = { type ->
                 // Calls signal over NIP-17's inbox: once it closes the peer's renegotiation and hangup
                 // can't reach us, so end any call in progress rather than leave it hanging.

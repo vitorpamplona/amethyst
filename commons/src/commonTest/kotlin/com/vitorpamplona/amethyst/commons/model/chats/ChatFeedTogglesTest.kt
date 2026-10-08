@@ -27,7 +27,11 @@ import com.vitorpamplona.quartz.nip01Core.crypto.KeyPair
 import com.vitorpamplona.quartz.nip04Dm.messages.EncryptedDmEvent
 import com.vitorpamplona.quartz.nip17Dm.base.ChatroomKeyable
 import com.vitorpamplona.quartz.nip17Dm.messages.ChatMessageEvent
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.test.runTest
+import kotlinx.coroutines.withContext
+import kotlinx.coroutines.withTimeout
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
@@ -61,10 +65,7 @@ class ChatFeedTogglesTest {
                 chatroomList = rooms,
                 draftRumor = { null },
                 findCachedNotes = { predicate -> cached.filter(predicate) },
-                reindex = { note ->
-                    reindexed += note
-                    rooms.add(note.event as ChatroomKeyable, note)
-                },
+                reindexDraft = { note -> reindexed += note },
                 onDmProtocolOff = { type -> hookSaw += Triple(type, toggles.isEnabled(type), type in toggles.applied.value) },
             )
     }
@@ -109,8 +110,16 @@ class ChatFeedTogglesTest {
 
             toggles.apply(ChatFeedType.ALL)
 
-            assertEquals(listOf(dm04), reindexed, "only the protocol turned on is re-indexed")
+            // Messages go back in bulk, only for the protocol turned on; no drafts to route.
             assertTrue(dm04 in roomOf(dm04).messages)
+            assertFalse(
+                rooms.rooms
+                    .get((dm17.event as ChatroomKeyable).chatroomKey(me))
+                    ?.messages
+                    .orEmpty()
+                    .contains(dm17),
+            )
+            assertTrue(reindexed.isEmpty())
             assertTrue(ChatFeedType.NIP04 in toggles.applied.value)
         }
 
@@ -137,6 +146,44 @@ class ChatFeedTogglesTest {
             assertTrue(hookSaw.isEmpty())
             assertEquals(setOf(dm04), roomOf(dm04).messages)
             assertFalse(toggles.isEnabled(ChatFeedType.NIP28))
+        }
+
+    @Test
+    fun admitOnlyAddsWhileTheProtocolIsOn() =
+        runTest {
+            val dm04 = nip04Note("a")
+            val event = dm04.event as ChatroomKeyable
+
+            assertTrue(toggles.admit(event) { ingest(dm04) })
+            toggles.apply(ChatFeedType.ALL - ChatFeedType.NIP04)
+
+            var ran = false
+            assertFalse(toggles.admit(event) { ran = true })
+            assertFalse(ran)
+        }
+
+    @Test
+    fun startClearsAProtocolThatBeginsOff() =
+        runTest {
+            // Rooms are shared per pubkey; an earlier account object may have filled them.
+            val dm04 = nip04Note("a").also { ingest(it) }
+            settings.setChatFeedEnabled(ChatFeedType.NIP04, false)
+            val fresh =
+                ChatFeedToggles(
+                    settings = settings,
+                    chatroomList = rooms,
+                    draftRumor = { null },
+                    findCachedNotes = { emptyList() },
+                    reindexDraft = {},
+                )
+
+            val job = fresh.start(backgroundScope)
+            withContext(Dispatchers.Default) {
+                withTimeout(5_000) { while (roomOf(dm04).messages.isNotEmpty()) delay(10) }
+            }
+            job.cancel()
+
+            assertTrue(roomOf(dm04).messages.isEmpty())
         }
 
     @Test

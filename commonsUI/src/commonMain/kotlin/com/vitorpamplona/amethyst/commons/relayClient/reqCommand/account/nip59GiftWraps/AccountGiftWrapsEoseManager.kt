@@ -60,6 +60,9 @@ import kotlinx.coroutines.launch
  *    wraps carry no tag that tells them apart, so DMs still download and are dropped after unwrapping.
  *  - **NIP-17 and Marmot off, Concord on:** only the `k=3313` Direct Invite wraps.
  *
+ * With Concord on, the `k=3313` filter rides along in every mode, from the invite inbox's cursor rather
+ * than the one-week floor, so an older invite on our DM relays is still found.
+ *
  * The stock Concord relays, where an invite sender falls back when it can't find our lists, are swept
  * periodically by [com.vitorpamplona.amethyst.commons.model.AccountConcordActions.requestConcordDirectInviteSweep]
  * instead of being held open here.
@@ -104,10 +107,11 @@ class AccountGiftWrapsEoseManager(
 
                 GiftWrapInbox.MARMOT_WELCOMES -> relays.forEach { addAll(filterMarmotWelcomesToPubkey(relay = it, pubkey = me, since = sinceTime)) }
 
-                GiftWrapInbox.CONCORD_INVITES -> relays.forEach { addAll(filterConcordDirectInvitesToPubkey(relay = it, pubkey = me, since = inviteSince)) }
-
-                GiftWrapInbox.NONE -> {}
+                GiftWrapInbox.CONCORD_INVITES, GiftWrapInbox.NONE -> {}
             }
+            // Concord invites from the invite inbox's cursor on (all of them on a cold start) — the wrap
+            // filters above only reach back a week. Same REQ as those, so a relay sends an invite once.
+            if (concord) relays.forEach { addAll(filterConcordDirectInvitesToPubkey(relay = it, pubkey = me, since = inviteSince)) }
         }
     }
 

@@ -23,7 +23,6 @@ package com.vitorpamplona.amethyst.commons.relayClient.reqCommand.account.marmot
 import com.vitorpamplona.amethyst.commons.model.User
 import com.vitorpamplona.amethyst.commons.model.chats.ChatFeedType
 import com.vitorpamplona.amethyst.commons.relayClient.eoseManagers.PerUserEoseManager
-import com.vitorpamplona.amethyst.commons.relayClient.eoseManagers.launchChatFeedToggleObserver
 import com.vitorpamplona.amethyst.commons.relayClient.reqCommand.account.AccountQueryState
 import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.ExplainedFilter
 import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.SubPurpose
@@ -56,7 +55,7 @@ class MarmotGroupEventsEoseManager(
     ): List<RelayBasedFilter> {
         val manager = key.account.marmotManager ?: return emptyList()
         if (!key.account.isWriteable()) return emptyList()
-        if (!key.account.settings.isChatFeedEnabled(ChatFeedType.MARMOT)) return emptyList()
+        if (!key.account.chatFeedToggles.isEnabled(ChatFeedType.MARMOT)) return emptyList()
 
         val result = mutableListOf<RelayBasedFilter>()
         val fallbackRelays = key.account.homeRelays.flow.value
@@ -110,6 +109,8 @@ class MarmotGroupEventsEoseManager(
         return result
     }
 
+    override val watchedChatFeeds = setOf(ChatFeedType.MARMOT)
+
     val userJobMap = mutableMapOf<User, List<Job>>()
 
     override fun newSub(key: AccountQueryState): Subscription {
@@ -136,7 +137,6 @@ class MarmotGroupEventsEoseManager(
                         invalidateFilters()
                     }
                 },
-                key.account.scope.launchChatFeedToggleObserver(key.account, ChatFeedType.MARMOT) { invalidateFilters() },
             )
 
         return super.newSub(key)

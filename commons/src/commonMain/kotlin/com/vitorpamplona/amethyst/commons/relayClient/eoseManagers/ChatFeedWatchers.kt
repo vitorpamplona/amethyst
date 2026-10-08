@@ -22,70 +22,53 @@ package com.vitorpamplona.amethyst.commons.relayClient.eoseManagers
 
 import com.vitorpamplona.amethyst.commons.model.Account
 import com.vitorpamplona.amethyst.commons.model.IAccount
-import com.vitorpamplona.amethyst.commons.model.User
 import com.vitorpamplona.amethyst.commons.model.chats.ChatFeedType
-import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.IO
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.distinctUntilChanged
-import kotlinx.coroutines.flow.drop
+import kotlinx.coroutines.flow.dropWhile
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 
 /**
- * Rebuilds a Messages-inbox subscription's filters whenever the user flips [type]'s
- * load-toggle in Settings › Messages. A disabled type's `updateFilter` returns no filters, so a
- * flip to off empties the live subscription and a flip back on re-arms it — no restart needed.
- *
- * Only the boolean for [type] is watched (via distinct + drop(1)), so unrelated toggle changes
- * don't churn this assembler.
- */
-fun CoroutineScope.launchChatFeedToggleObserver(
-    account: Account,
-    type: ChatFeedType,
-    onToggle: () -> Unit,
-): Job =
-    launch(Dispatchers.IO) {
-        account.settings.enabledChatFeeds
-            .map { type in it }
-            .distinctUntilChanged()
-            .drop(1)
-            .collect { onToggle() }
-    }
-
-/**
- * Per-user watchers for a subscription manager whose filters read some Settings › Messages toggles
- * ([types]): while a user's subscription is open, a flip of any of them — as published by the account's
+ * Per-subscription watchers for a subscription manager whose filters read some Settings › Messages
+ * toggles ([types]): while a subscription is open, a flip of any of them — as published by the account's
  * [com.vitorpamplona.amethyst.commons.model.chats.ChatFeedToggles.applied], i.e. once the rooms have
- * caught up — calls [onToggle]. The base EOSE managers own one, started and stopped with each user's
- * subscription, so a manager only declares which toggles it reads.
+ * caught up — calls [onToggle]. [BaseEoseManager] owns one, so a manager only declares which toggles it
+ * reads (`watchedChatFeeds`) and the base classes start and stop the watchers with each subscription.
  */
 class ChatFeedWatchers(
     private val types: Set<ChatFeedType>,
     private val onToggle: () -> Unit,
 ) {
-    private val jobs = mutableMapOf<User, Job>()
+    private val jobs = mutableMapOf<Any, Job>()
 
-    fun start(
-        user: User,
+    /**
+     * Starts watching for [subKey] unless already watching. Call it *before* building that
+     * subscription's filters: the baseline is read here, synchronously, so a toggle applied between the
+     * filter build and the watcher's first collection is still seen as a change.
+     */
+    fun ensure(
+        subKey: Any,
         account: IAccount,
     ) {
-        if (types.isEmpty()) return
+        if (types.isEmpty() || jobs[subKey]?.isActive == true) return
         // Only a full Account has toggles; other IAccount implementations (the legacy desktop one) don't.
         val owner = account as? Account ?: return
-        jobs.remove(user)?.cancel()
-        jobs[user] =
+        val toggles = owner.chatFeedToggles
+        val baseline = toggles.applied.value intersect types
+        jobs[subKey] =
             owner.scope.launch(Dispatchers.IO) {
-                owner.chatFeedToggles.applied
+                toggles.applied
                     .map { it intersect types }
                     .distinctUntilChanged()
-                    .drop(1)
+                    .dropWhile { it == baseline }
                     .collect { onToggle() }
             }
     }
 
-    fun stop(user: User) {
-        jobs.remove(user)?.cancel()
+    fun stop(subKey: Any) {
+        jobs.remove(subKey)?.cancel()
     }
 }

@@ -126,7 +126,9 @@ class DmProtocolToggleTest {
     }
 
     @Test
-    fun removingASingleMessageKeepsSendersAndTheOwnerFlagTrue() {
+    fun aSingleRemovalKeepsTheRoomClassification() {
+        // Expired (disappearing) messages and deletions go through the single-removal path; the room must
+        // stay Known even when the owner's or a followed sender's only message is the one that left.
         val ctx = UserContext { Note("addr") }
         val meUser = User(me, ctx)
         val list = ChatroomList(me)
@@ -140,13 +142,43 @@ class DmProtocolToggleTest {
         val key = mine.chatroomKey(me)
         list.addMessage(key, myNote)
         val room = list.rooms.get(key)!!
-        assertTrue(list.hasSentMessagesTo(key))
-        assertTrue(room.senderIntersects(setOf(me)))
 
         list.removeMessage(key, myNote)
 
-        assertFalse(list.hasSentMessagesTo(key))
-        assertFalse(room.senderIntersects(setOf(me)))
+        assertTrue(list.hasSentMessagesTo(key))
+        assertTrue(room.senderIntersects(setOf(me)))
+    }
+
+    @Test
+    fun bulkAddRestoresRoomsSendersAndTheOwnerFlag() {
+        val ctx = UserContext { Note("addr") }
+        val meUser = User(me, ctx)
+        val otherUser = User(other, ctx)
+        val list = ChatroomList(me)
+
+        val theirs =
+            nip17("b", other, 100).let { e ->
+                Note(e.id).apply {
+                    event = e
+                    author = otherUser
+                }
+            }
+        // Sent by me to the other side: a kind 4 tags its recipient.
+        val toOther = EncryptedDmEvent("a".padEnd(64, '0'), me, 200, arrayOf(arrayOf("p", other)), "x?iv=y", someSig)
+        val mine =
+            Note(toOther.id).apply {
+                event = toOther
+                author = meUser
+            }
+
+        list.addAll(listOf(theirs, mine, theirs))
+
+        val key = (theirs.event as ChatroomKeyable).chatroomKey(me)
+        val room = list.rooms.get(key)!!
+        assertEquals(setOf(theirs, mine), room.messages)
+        assertEquals(mine, room.newestMessage)
+        assertTrue(room.senderIntersects(setOf(other)))
+        assertTrue(list.hasSentMessagesTo(key))
     }
 
     @Test

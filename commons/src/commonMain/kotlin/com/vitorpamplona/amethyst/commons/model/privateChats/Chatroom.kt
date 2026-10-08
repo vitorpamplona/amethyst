@@ -107,6 +107,32 @@ class Chatroom : NotesGatherer {
             return@withLock false
         }
 
+    /**
+     * Adds [msgs] in one locked pass with one change event (e.g. a DM protocol turned back on and
+     * re-indexed from the cache) — adding them one by one floods the 100-slot change buffer, so an open
+     * conversation would miss most of them. @return the messages that were not already here.
+     */
+    fun addMessagesSync(msgs: Collection<Note>): Set<Note> =
+        syncLock.withLock {
+            val added = msgs.filterTo(HashSet()) { it !in messages }
+            if (added.isEmpty()) return@withLock emptySet()
+
+            messages = messages + added
+            added.forEach { msg ->
+                msg.addGatherer(this)
+                msg.author?.let { if (it !in activeSenders) activeSenders = activeSenders + it }
+                if ((msg.createdAt() ?: 0L) > (newestMessage?.createdAt() ?: 0L)) newestMessage = msg
+                val newSubject = msg.event?.subject()
+                if (newSubject != null && (msg.createdAt() ?: 0L) > (subjectCreatedAt ?: 0)) {
+                    subject.tryEmit(newSubject)
+                    subjectCreatedAt = msg.createdAt()
+                }
+            }
+
+            changesFlow?.get()?.tryEmit(ListChange.SetAddition(added))
+            added
+        }
+
     fun removeMessageSync(msg: Note): Boolean =
         syncLock.withLock {
             if (msg in messages) {
@@ -117,10 +143,9 @@ class Chatroom : NotesGatherer {
                     newestMessage = messages.maxByOrNull { it.createdAt() ?: 0L }
                 }
 
-                // A sender whose last message left is no longer one (removeMessagesIf rebuilds the same).
-                msg.author?.let { author ->
-                    if (messages.none { it.author == author }) activeSenders = activeSenders - author
-                }
+                // activeSenders is left alone on purpose: single removals are expirations, deletions and
+                // hidden-user pruning, and a sender whose messages merely aged out still makes the room
+                // Known. Only a whole protocol unload (removeMessagesIf) rebuilds it.
 
                 if (msg.event?.subject() == subject.value) {
                     messages

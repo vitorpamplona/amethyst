@@ -25,6 +25,8 @@ import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.privateChats.ChatroomList
 import com.vitorpamplona.amethyst.commons.model.privateChats.DM_CHAT_FEED_TYPES
 import com.vitorpamplona.amethyst.commons.model.privateChats.chatFeedType
+import com.vitorpamplona.amethyst.commons.util.KmpLock
+import com.vitorpamplona.amethyst.commons.util.withLock
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip17Dm.base.ChatroomKeyable
 import com.vitorpamplona.quartz.nip37Drafts.DraftWrapEvent
@@ -65,13 +67,17 @@ class ChatFeedToggles(
     private val draftRumor: (DraftWrapEvent) -> Event?,
     /** The cached notes matching a predicate; re-indexing walks the cache once per protocol turned on. */
     private val findCachedNotes: ((Note) -> Boolean) -> List<Note>,
-    /** Routes one cached note back through the account's intake (rooms, drafts…). */
-    private val reindex: suspend (Note) -> Unit,
+    /** Routes one cached draft back through the account's draft intake (DM messages are re-added in bulk). */
+    private val reindexDraft: suspend (Note) -> Unit,
     /** Extra cleanup once a DM protocol is off, e.g. ending a call that rode it. */
     private val onDmProtocolOff: suspend (ChatFeedType) -> Unit = {},
 ) {
     @Volatile
     private var gate: Set<ChatFeedType> = settings.enabledChatFeeds.value
+
+    // The room side of the gate: a DM is checked and added under it ([admit]) and an unload clears the
+    // rooms under it, so a message that passed the gate just before it closed can't land after the unload.
+    private val roomLock = KmpLock()
 
     private val appliedState = MutableStateFlow(gate)
 
@@ -83,6 +89,20 @@ class ChatFeedToggles(
 
     /** Whether this DM's protocol is on; a message of an unknown kind is not ours to block. */
     fun isEnabled(event: ChatroomKeyable): Boolean = event.chatFeedType()?.let { isEnabled(it) } ?: true
+
+    /** Runs [add] (putting [event] in its room) only if its protocol is on, atomically with an unload. */
+    fun admit(
+        event: ChatroomKeyable,
+        add: () -> Unit,
+    ): Boolean =
+        roomLock.withLock {
+            if (isEnabled(event)) {
+                add()
+                true
+            } else {
+                false
+            }
+        }
 
     /**
      * NIP-AC calls signal through NIP-17's gift-wrap inbox (kind 21059), so turning NIP-17 off turns
@@ -102,8 +122,16 @@ class ChatFeedToggles(
             else -> null
         }
 
-    /** Applies the setting as it changes, for as long as [scope] lives. */
-    fun start(scope: CoroutineScope): Job = scope.launch(Dispatchers.IO) { settings.enabledChatFeeds.collect { apply(it) } }
+    /**
+     * Applies the setting as it changes, for as long as [scope] lives. First clears any DM protocol that
+     * starts off: the rooms are shared per pubkey in the cache, so an earlier account object for the same
+     * key may have filled them with it.
+     */
+    fun start(scope: CoroutineScope): Job =
+        scope.launch(Dispatchers.IO) {
+            DM_CHAT_FEED_TYPES.forEach { if (it !in gate) unload(it) }
+            settings.enabledChatFeeds.collect { apply(it) }
+        }
 
     /** Steps 1–3 for one new value of the setting. */
     suspend fun apply(enabled: Set<ChatFeedType>) {
@@ -117,7 +145,7 @@ class ChatFeedToggles(
     }
 
     private suspend fun unload(type: ChatFeedType) {
-        chatroomList.removeMessagesIf { dmChatFeedTypeOf(it) == type }
+        roomLock.withLock { chatroomList.removeMessagesIf { dmChatFeedTypeOf(it) == type } }
         when (type) {
             ChatFeedType.NIP04 -> chatroomList.resetNip04History()
             ChatFeedType.NIP17 -> chatroomList.giftWrapHistory.reset()
@@ -126,7 +154,10 @@ class ChatFeedToggles(
         onDmProtocolOff(type)
     }
 
+    // Messages go back into their rooms in one batch per room; drafts take the draft intake.
     private suspend fun reload(type: ChatFeedType) {
-        findCachedNotes { dmChatFeedTypeOf(it) == type }.forEach { reindex(it) }
+        val (drafts, messages) = findCachedNotes { dmChatFeedTypeOf(it) == type }.partition { it.event is DraftWrapEvent }
+        roomLock.withLock { chatroomList.addAll(messages) }
+        drafts.forEach { reindexDraft(it) }
     }
 }

@@ -1063,14 +1063,21 @@ class AccountConcordActions(
         return (directInviteInbox.pending.value.keys - before).size
     }
 
+    // Two triggers drain (an invite parking, a revision tick); without this both could adopt the same
+    // catch-up at once and race their read-modify-write of the community entry.
+    private val catchUpDrain = Mutex()
+
     /**
      * Adopts, without a click, every parked catch-up the held fold says is exactly the delivery a
      * Grant prescribes (Armada `judgeCatchUp`, [ConcordInviteVend.judgeCatchUp]): a staff sender, a
      * recipient who isn't banned, and only live Private Channels our Roles entitle us to. Consent
      * came from the Grant. Anything else waits for a manual Accept. Runs whenever the inbox parks an
-     * invite and on the revision tick (a Grant folding late turns a waiting catch-up adoptable).
+     * invite and on the revision tick (a Grant folding late turns a waiting catch-up adoptable), one
+     * pass at a time.
      */
-    internal suspend fun drainConcordCatchUps() {
+    internal suspend fun drainConcordCatchUps() = catchUpDrain.withLock { drainConcordCatchUpsLocked() }
+
+    private suspend fun drainConcordCatchUpsLocked() {
         if (!account.isWriteable()) return
         val me = account.signer.pubKey
         val now = TimeUtils.nowMillis()

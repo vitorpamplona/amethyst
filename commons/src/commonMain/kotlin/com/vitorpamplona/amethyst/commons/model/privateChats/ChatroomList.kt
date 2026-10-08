@@ -107,11 +107,14 @@ class ChatroomList(
         msg: Note,
     ) = removeMessage(getOrCreatePrivateChatroom(room), msg)
 
+    // ownerSentMessage stays as it was: a single removal is an expiration or deletion, and the owner
+    // having written here still makes the room Known after their message is gone. Only a protocol
+    // unload (removeMessagesIf) re-derives it.
     private fun removeMessage(
         privateChatroom: Chatroom,
         msg: Note,
     ) {
-        if (privateChatroom.removeMessageSync(msg)) refreshOwnerSent(privateChatroom, listOf(msg))
+        privateChatroom.removeMessageSync(msg)
     }
 
     // Whether the owner still has a message in [room], re-derived only when one of theirs just left.
@@ -122,6 +125,20 @@ class ChatroomList(
         if (removed.any { it.author?.pubkeyHex == ownerPubKey }) {
             room.ownerSentMessage = room.messages.any { it.author?.pubkeyHex == ownerPubKey }
         }
+    }
+
+    /**
+     * Adds every note whose event is a DM including the owner to its room, one batch per room (see
+     * [Chatroom.addMessagesSync]).
+     */
+    fun addAll(notes: Collection<Note>) {
+        notes
+            .groupBy { (it.event as? ChatroomKeyable)?.takeIf { event -> event.isIncluded(ownerPubKey) }?.chatroomKey(ownerPubKey) }
+            .forEach { (key, roomNotes) ->
+                if (key == null) return@forEach
+                val room = getOrCreatePrivateChatroom(key)
+                if (room.addMessagesSync(roomNotes).any { it.author?.pubkeyHex == ownerPubKey }) room.ownerSentMessage = true
+            }
     }
 
     /**
