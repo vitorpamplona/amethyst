@@ -33,25 +33,25 @@ import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 
-fun TagArrayBuilder<KeyPackageEvent>.mlsProtocolVersion(version: String = MlsProtocolVersionTag.CURRENT_VERSION) = addUnique(MlsProtocolVersionTag.assemble(version))
+fun <T : PublishedKeyPackage> TagArrayBuilder<T>.mlsProtocolVersion(version: String = MlsProtocolVersionTag.CURRENT_VERSION) = addUnique(MlsProtocolVersionTag.assemble(version))
 
-fun TagArrayBuilder<KeyPackageEvent>.mlsCiphersuite(ciphersuite: String = MlsCiphersuiteTag.DEFAULT_CIPHERSUITE) = addUnique(MlsCiphersuiteTag.assemble(ciphersuite))
+fun <T : PublishedKeyPackage> TagArrayBuilder<T>.mlsCiphersuite(ciphersuite: String = MlsCiphersuiteTag.DEFAULT_CIPHERSUITE) = addUnique(MlsCiphersuiteTag.assemble(ciphersuite))
 
-fun TagArrayBuilder<KeyPackageEvent>.mlsExtensions(extensionIds: List<String>) = addUnique(MlsExtensionsTag.assemble(extensionIds))
+fun <T : PublishedKeyPackage> TagArrayBuilder<T>.mlsExtensions(extensionIds: List<String>) = addUnique(MlsExtensionsTag.assemble(extensionIds))
 
-fun TagArrayBuilder<KeyPackageEvent>.mlsProposals(proposalIds: List<String>) = addUnique(MlsProposalsTag.assemble(proposalIds))
+fun <T : PublishedKeyPackage> TagArrayBuilder<T>.mlsProposals(proposalIds: List<String>) = addUnique(MlsProposalsTag.assemble(proposalIds))
 
-fun TagArrayBuilder<KeyPackageEvent>.appComponents(componentIds: List<String>) = addUnique(AppComponentsTag.assemble(componentIds))
+fun <T : PublishedKeyPackage> TagArrayBuilder<T>.appComponents(componentIds: List<String>) = addUnique(AppComponentsTag.assemble(componentIds))
 
 /**
  * MIP-era only. The current profile forbids this tag: a sender MUST NOT add
  * one and a receiver MUST NOT switch decoders on it, because each field is
  * decoded by the rule that defines it rather than by a negotiated marker.
  */
-fun TagArrayBuilder<KeyPackageEvent>.encoding() = addUnique(EncodingTag.assemble())
+fun <T : PublishedKeyPackage> TagArrayBuilder<T>.encoding() = addUnique(EncodingTag.assemble())
 
-fun TagArrayBuilder<KeyPackageEvent>.keyPackageRef(ref: HexKey) = addUnique(KeyPackageRefTag.assemble(ref))
+fun <T : PublishedKeyPackage> TagArrayBuilder<T>.keyPackageRef(ref: HexKey) = addUnique(KeyPackageRefTag.assemble(ref))
 
-fun TagArrayBuilder<KeyPackageEvent>.keyPackageRelays(relays: List<NormalizedRelayUrl>) = addUnique(RelaysTag.assemble(relays))
+fun <T : PublishedKeyPackage> TagArrayBuilder<T>.keyPackageRelays(relays: List<NormalizedRelayUrl>) = addUnique(RelaysTag.assemble(relays))
 
-fun TagArrayBuilder<KeyPackageEvent>.client(name: String) = addUnique(ClientTag.assemble(name))
+fun <T : PublishedKeyPackage> TagArrayBuilder<T>.client(name: String) = addUnique(ClientTag.assemble(name))

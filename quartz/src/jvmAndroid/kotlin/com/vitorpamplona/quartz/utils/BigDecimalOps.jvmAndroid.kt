@@ -20,6 +20,8 @@
  */
 package com.vitorpamplona.quartz.utils
 
+actual fun BigDecimal.toPlainStringValue(): String = toPlainString()
+
 actual fun BigDecimal.toLongValue(): Long = toLong()
 
 actual fun BigDecimal.toDoubleValue(): Double = toDouble()

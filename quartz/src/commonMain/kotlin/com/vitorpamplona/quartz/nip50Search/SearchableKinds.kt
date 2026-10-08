@@ -94,6 +94,7 @@ object SearchableKinds {
             1618, // GitPullRequestEvent
             1621, // GitIssueEvent
             1622, // GitReplyEvent
+            1624, // GitCoverNoteEvent
             1630, // GitStatusOpenEvent
             1631, // GitStatusAppliedEvent
             1632, // GitStatusClosedEvent
@@ -106,6 +107,7 @@ object SearchableKinds {
             3302, // ConcordChatEditEvent
             5050, // DvmTextGenerationRequestEvent
             5100, // DvmImageGenerationRequestEvent
+            5128, // SiteSnapshotEvent
             5129, // NappletSnapshotEvent
             5250, // DvmTextToSpeechRequestEvent
             5302, // DvmContentSearchRequestEvent
@@ -155,7 +157,9 @@ object SearchableKinds {
             30019, // MarketplaceEvent
             30020, // AuctionEvent
             30023, // LongFormContentEvent
+            30024, // LongFormDraftEvent
             30030, // EmojiPackEvent
+            30031, // StickerPackEvent
             30040, // PublicationIndexEvent
             30041, // PublicationContentEvent
             30045, // BookshelfDirectoryEvent
@@ -172,6 +176,8 @@ object SearchableKinds {
             30267, // AppCurationSetEvent
             30296, // InteractiveStoryPrologueEvent
             30297, // InteractiveStorySceneEvent
+            30301, // KanbanBoardEvent (and BuildVerificationEvent)
+            30302, // KanbanCardEvent
             30311, // LiveActivitiesEvent
             30312, // MeetingSpaceEvent
             30313, // MeetingRoomEvent
@@ -202,6 +208,7 @@ object SearchableKinds {
             32267, // SoftwareApplicationEvent
             33331, // SnoObjectEvent
             33401, // ExerciseTemplateEvent
+            33402, // WorkoutTemplateEvent
             33534, // RelayRoleEvent
             33863, // FundraiserEvent
             34139, // MusicPlaylistEvent
@@ -211,12 +218,14 @@ object SearchableKinds {
             34550, // CommunityDefinitionEvent
             35128, // NamedSiteEvent
             35129, // NamedNappletEvent
+            36767, // ThemeDefinitionEvent
             36787, // MusicTrackEvent
             37516, // GeocacheListingEvent
             37517, // GeocacheCurationListEvent
             38000, // MintRecommendationEvent
             38192, // Ps1SaveEvent
             38383, // P2POrderEvent
+            38385, // MostroInfoEvent
             39000, // GroupMetadataEvent
             39003, // GroupRolesEvent
             39089, // StarterPackEvent

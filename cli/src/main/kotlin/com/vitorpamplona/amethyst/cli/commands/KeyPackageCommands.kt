@@ -94,15 +94,17 @@ object KeyPackageCommands {
                     targetOutbox = recipient.nip65Write(),
                     myOutbox = seed,
                 )
+            // The one `group add` would invite with: newest valid kind:30443,
+            // else newest valid legacy kind:443.
             val event =
-                KeyPackageFetcher.fetchKeyPackage(
+                KeyPackageFetcher.fetchKeyPackageForInvite(
                     client = ctx.client,
                     targetPubKey = targetHex,
                     relays = relays,
                     idleTimeoutMs = 10_000,
                 )
             if (event == null) {
-                return Output.error("not_found", "no KeyPackage for $targetHex on ${relays.size} relay(s)")
+                return Output.error("not_found", "no valid KeyPackage for $targetHex on ${relays.size} relay(s)")
             }
             Output.emit(
                 mapOf(

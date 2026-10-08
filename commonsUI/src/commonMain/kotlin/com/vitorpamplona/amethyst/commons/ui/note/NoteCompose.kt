@@ -59,6 +59,8 @@ import com.vitorpamplona.amethyst.commons.birdstar.ui.RenderBirdex
 import com.vitorpamplona.amethyst.commons.concord.ui.ConcordCommunityPill
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
+import com.vitorpamplona.amethyst.commons.kanban.ui.RenderKanbanBoard
+import com.vitorpamplona.amethyst.commons.kanban.ui.RenderKanbanCard
 import com.vitorpamplona.amethyst.commons.model.AddressableNote
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
@@ -70,6 +72,7 @@ import com.vitorpamplona.amethyst.commons.model.nip28PublicChats.PublicChatChann
 import com.vitorpamplona.amethyst.commons.model.nip29RelayGroups.RelayGroupChannel
 import com.vitorpamplona.amethyst.commons.model.replyingDirectlyTo
 import com.vitorpamplona.amethyst.commons.model.textNoteModifications
+import com.vitorpamplona.amethyst.commons.nip69P2pOrderEvents.ui.RenderMostroInfo
 import com.vitorpamplona.amethyst.commons.nipC0CodeSnippets.ui.RenderCodeSnippetEvent
 import com.vitorpamplona.amethyst.commons.relayClient.event.observeCommunityApprovalNeedStatus
 import com.vitorpamplona.amethyst.commons.relayClient.event.observeNoteEvent
@@ -196,6 +199,7 @@ import com.vitorpamplona.amethyst.commons.ui.note.types.RenderFhirResource
 import com.vitorpamplona.amethyst.commons.ui.note.types.RenderFundraiser
 import com.vitorpamplona.amethyst.commons.ui.note.types.RenderGeocache
 import com.vitorpamplona.amethyst.commons.ui.note.types.RenderGeocacheFoundLog
+import com.vitorpamplona.amethyst.commons.ui.note.types.RenderGitCoverNoteEvent
 import com.vitorpamplona.amethyst.commons.ui.note.types.RenderGitStatusEvent
 import com.vitorpamplona.amethyst.commons.ui.note.types.RenderGoal
 import com.vitorpamplona.amethyst.commons.ui.note.types.RenderHighlight
@@ -301,6 +305,7 @@ import com.vitorpamplona.amethyst.commons.ui.theme.newItemBackgroundColor
 import com.vitorpamplona.amethyst.commons.ui.theme.placeholderText
 import com.vitorpamplona.amethyst.commons.ui.theme.replyModifier
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
+import com.vitorpamplona.amethyst.commons.walletScrutiny.ui.RenderBuildVerification
 import com.vitorpamplona.quartz.buzz.notifications.MemberAddedNotificationEvent
 import com.vitorpamplona.quartz.buzz.stream.StreamMessageV2Event
 import com.vitorpamplona.quartz.cyberspace.CyberspaceBagEvent
@@ -324,6 +329,10 @@ import com.vitorpamplona.quartz.experimental.fitness.workout.ExerciseTemplateEve
 import com.vitorpamplona.quartz.experimental.fitness.workout.WorkoutRecordEvent
 import com.vitorpamplona.quartz.experimental.forks.IForkableEvent
 import com.vitorpamplona.quartz.experimental.interactiveStories.InteractiveStoryBaseEvent
+import com.vitorpamplona.quartz.experimental.kanban.board.KanbanBoardEvent
+import com.vitorpamplona.quartz.experimental.kanban.board.UnrecognizedKind30301Event
+import com.vitorpamplona.quartz.experimental.kanban.card.KanbanCardEvent
+import com.vitorpamplona.quartz.experimental.kanban.card.UnrecognizedKind30302Event
 import com.vitorpamplona.quartz.experimental.library.BlossomPieceIndexEvent
 import com.vitorpamplona.quartz.experimental.library.BookshelfDirectoryEvent
 import com.vitorpamplona.quartz.experimental.library.LearningResourceEvent
@@ -344,6 +353,7 @@ import com.vitorpamplona.quartz.experimental.ratings.RelayReviewEvent
 import com.vitorpamplona.quartz.experimental.roadstr.confirmation.RoadEventConfirmationEvent
 import com.vitorpamplona.quartz.experimental.roadstr.report.RoadEventReportEvent
 import com.vitorpamplona.quartz.experimental.videoCollaboration.VideoCollaborationEvent
+import com.vitorpamplona.quartz.experimental.walletScrutiny.verification.BuildVerificationEvent
 import com.vitorpamplona.quartz.experimental.zapPolls.ZapPollEvent
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.metadata.MetadataEvent
@@ -365,6 +375,7 @@ import com.vitorpamplona.quartz.nip28PublicChat.admin.ChannelCreateEvent
 import com.vitorpamplona.quartz.nip28PublicChat.admin.ChannelMetadataEvent
 import com.vitorpamplona.quartz.nip28PublicChat.message.ChannelMessageEvent
 import com.vitorpamplona.quartz.nip30CustomEmoji.pack.EmojiPackEvent
+import com.vitorpamplona.quartz.nip34Git.coverNote.GitCoverNoteEvent
 import com.vitorpamplona.quartz.nip34Git.issue.GitIssueEvent
 import com.vitorpamplona.quartz.nip34Git.patch.GitPatchEvent
 import com.vitorpamplona.quartz.nip34Git.pr.GitPullRequestEvent
@@ -443,6 +454,8 @@ import com.vitorpamplona.quartz.nip64Chess.game.ChessGameEvent
 import com.vitorpamplona.quartz.nip65RelayList.AdvertisedRelayListEvent
 import com.vitorpamplona.quartz.nip66RelayMonitor.discovery.RelayDiscoveryEvent
 import com.vitorpamplona.quartz.nip68Picture.PictureEvent
+import com.vitorpamplona.quartz.nip69P2pOrderEvents.mostroInfo.MostroInfoEvent
+import com.vitorpamplona.quartz.nip69P2pOrderEvents.mostroInfo.UnrecognizedKind38385Event
 import com.vitorpamplona.quartz.nip71Video.VideoEvent
 import com.vitorpamplona.quartz.nip72ModCommunities.approval.CommunityPostApprovalEvent
 import com.vitorpamplona.quartz.nip72ModCommunities.communityAddress
@@ -1421,6 +1434,10 @@ private fun RenderNoteRow(
             RenderGitStatusEvent(baseNote, quotesLeft, backgroundColor, accountViewModel, nav)
         }
 
+        is GitCoverNoteEvent -> {
+            RenderGitCoverNoteEvent(baseNote, makeItShort, canPreview, quotesLeft, backgroundColor, accountViewModel, nav)
+        }
+
         is EncryptedDmEvent -> {
             RenderPrivateMessage(
                 baseNote,
@@ -1513,6 +1530,32 @@ private fun RenderNoteRow(
         is MintRecommendationEvent -> {
             RenderMintRecommendation(noteEvent)
         }
+
+        is MostroInfoEvent -> {
+            RenderMostroInfo(baseNote)
+        }
+
+        // Kind 30301 is shared: the board and the WalletScrutiny verdict each have a card, and
+        // the class EventFactory picked from the tags is what decides between them.
+        is KanbanBoardEvent -> {
+            RenderKanbanBoard(baseNote, makeItShort, accountViewModel)
+        }
+
+        is BuildVerificationEvent -> {
+            RenderBuildVerification(baseNote, makeItShort, canPreview, quotesLeft, backgroundColor, accountViewModel, nav)
+        }
+
+        is KanbanCardEvent -> {
+            RenderKanbanCard(baseNote, makeItShort, accountViewModel, nav)
+        }
+
+        // Other apps' formats on those shared kinds (an encrypted planner's tasks, Fieldbook
+        // memberships, Paygress revocations...). EventCache never stores them, so this only
+        // guards the fall-through below, which would print their raw content.
+        is UnrecognizedKind30301Event,
+        is UnrecognizedKind30302Event,
+        is UnrecognizedKind38385Event,
+        -> {}
 
         is PredictionMarketEvent -> {
             RenderPredictionMarket(baseNote, makeItShort, accountViewModel)

@@ -40,6 +40,7 @@ import com.vitorpamplona.quartz.nip69P2pOrderEvents.tags.PlatformTag
 import com.vitorpamplona.quartz.nip69P2pOrderEvents.tags.PremiumTag
 import com.vitorpamplona.quartz.nip69P2pOrderEvents.tags.RatingTag
 import com.vitorpamplona.quartz.nip69P2pOrderEvents.tags.SourceTag
+import com.vitorpamplona.quartz.utils.BigDecimal
 
 fun TagArrayBuilder<P2POrderEvent>.orderType(type: OrderType) = addUnique(OrderTypeTag.assemble(type))
 
@@ -74,3 +75,5 @@ fun TagArrayBuilder<P2POrderEvent>.makerName(name: String) = addUnique(MakerName
 fun TagArrayBuilder<P2POrderEvent>.geohash(geohash: String) = addAll(GeoHashTag.assemble(geohash).toList())
 
 fun TagArrayBuilder<P2POrderEvent>.bond(bond: Long) = addUnique(BondTag.assemble(bond))
+
+fun TagArrayBuilder<P2POrderEvent>.bond(bond: BigDecimal) = addUnique(BondTag.assemble(bond))

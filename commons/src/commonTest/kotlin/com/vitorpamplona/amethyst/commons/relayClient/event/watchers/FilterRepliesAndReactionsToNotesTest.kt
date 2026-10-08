@@ -25,8 +25,13 @@ import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
 import com.vitorpamplona.quartz.nip22Comments.CommentEvent
+import com.vitorpamplona.quartz.nip34Git.ci.jobResult.CiJobResultEvent
+import com.vitorpamplona.quartz.nip34Git.ci.workflowProgress.CiWorkflowProgressEvent
+import com.vitorpamplona.quartz.nip34Git.ci.workflowResult.CiWorkflowResultEvent
+import com.vitorpamplona.quartz.nip34Git.coverNote.GitCoverNoteEvent
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
 class FilterRepliesAndReactionsToNotesTest {
@@ -84,5 +89,18 @@ class FilterRepliesAndReactionsToNotesTest {
                 .filter.kinds!!
                 .contains(CommentEvent.KIND),
         )
+    }
+
+    @Test
+    fun ciRunsRideTheRootScopeAndCoverNotesTheLowercaseRoot() {
+        val filters = filterRepliesAndReactionsToNotes(listOf(note(rootId)), null)!!
+
+        val rootScope = filters.single { it.filter.tags?.containsKey("E") == true }.filter.kinds!!
+        assertTrue(rootScope.contains(CiWorkflowResultEvent.KIND))
+        assertTrue(rootScope.contains(CiWorkflowProgressEvent.KIND))
+        // Job Results carry log tails: fetched by id from the runs sheet, never in the feed fan-out.
+        assertFalse(filters.any { it.filter.kinds?.contains(CiJobResultEvent.KIND) == true })
+
+        assertTrue(filters.any { it.filter.tags?.containsKey("e") == true && it.filter.kinds?.contains(GitCoverNoteEvent.KIND) == true })
     }
 }

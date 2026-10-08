@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.quartz.nip50Search
 
+import com.vitorpamplona.quartz.nip69P2pOrderEvents.mostroInfo.MostroInfoEvent
 import com.vitorpamplona.quartz.nip87Ecash.recommendation.MintRecommendationEvent
 import com.vitorpamplona.quartz.utils.EventFactory
 import org.junit.Assert.assertEquals
@@ -73,6 +74,13 @@ class IndexableContentGoldenTest {
                 // Kind 38000 picks its class by tags; without a mint `k` it would sample as the
                 // plain Event its junk parses to rather than as the mint recommendation it indexes.
                 *if (kind == MintRecommendationEvent.KIND) arrayOf(arrayOf("k", "38172")) else emptyArray(),
+                // Kind 38385 is Mostro's only with its `z`; the instance name and currencies are
+                // what it indexes.
+                *if (kind == MostroInfoEvent.KIND) {
+                    arrayOf(arrayOf("z", "info"), arrayOf("y", "mostro", "The Instance"), arrayOf("fiat_currencies_accepted", "USD,EUR"))
+                } else {
+                    emptyArray()
+                },
             ),
             "The content body.",
             "",

@@ -92,8 +92,10 @@ object GroupAddMemberCommand {
                         targetOutbox = recipient.nip65Write(),
                         myOutbox = seed,
                     )
+                // Newest valid kind:30443, else newest valid legacy kind:443
+                // (White Noise's MDK still publishes 443).
                 val kpEvent =
-                    KeyPackageFetcher.fetchKeyPackage(
+                    KeyPackageFetcher.fetchKeyPackageForInvite(
                         client = ctx.client,
                         targetPubKey = pub,
                         relays = kpRelays,

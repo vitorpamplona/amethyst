@@ -51,6 +51,7 @@ import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.GitPullRequestUpdateIndex
 import com.vitorpamplona.amethyst.commons.model.Note
+import com.vitorpamplona.amethyst.commons.nip34Git.ui.GitCiStatusBadge
 import com.vitorpamplona.amethyst.commons.nip34Git.ui.GitStatusPill
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.git_pr_revised
@@ -220,6 +221,9 @@ private fun GitItemRowContent(
                 GitStatusPill(targetIdHex = note.idHex, defaultIfMissing = StatusKind.OPEN)
                 if (note.event is GitPullRequestEvent) {
                     GitRevisedChip(note.idHex)
+                }
+                if (note.event is GitPullRequestEvent || note.event is GitPatchEvent) {
+                    GitCiStatusBadge(targetIdHex = note.idHex, accountViewModel = accountViewModel, nav = nav)
                 }
                 labels.take(6).forEach { LabelChip(it) }
             }

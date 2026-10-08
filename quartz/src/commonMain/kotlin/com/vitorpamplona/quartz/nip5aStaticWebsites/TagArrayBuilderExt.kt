@@ -20,11 +20,16 @@
  */
 package com.vitorpamplona.quartz.nip5aStaticWebsites
 
+import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
+import com.vitorpamplona.quartz.nip01Core.tags.aTag.ATag
+import com.vitorpamplona.quartz.nip5aStaticWebsites.tags.AppTag
 import com.vitorpamplona.quartz.nip5aStaticWebsites.tags.DescriptionTag
 import com.vitorpamplona.quartz.nip5aStaticWebsites.tags.IconTag
+import com.vitorpamplona.quartz.nip5aStaticWebsites.tags.OriginSiteTag
 import com.vitorpamplona.quartz.nip5aStaticWebsites.tags.PathTag
 import com.vitorpamplona.quartz.nip5aStaticWebsites.tags.ServerTag
 import com.vitorpamplona.quartz.nip5aStaticWebsites.tags.SourceTag
@@ -47,3 +52,20 @@ fun <T : Event> TagArrayBuilder<T>.siteAggregateHash(aggregateHash: HexKey) = ad
 
 /** Computes the NIP-5A aggregate hash from [paths] and adds it as the `x` tag. */
 fun <T : Event> TagArrayBuilder<T>.siteAggregateHash(paths: List<PathTag>) = siteAggregateHash(SiteAggregateHash.compute(paths))
+
+/** The single lowercase `a` tag: a copy's immediate parent nsite, or the site a snapshot captures. */
+fun <T : Event> TagArrayBuilder<T>.siteParent(
+    address: Address,
+    relay: NormalizedRelayUrl? = null,
+) = addUnique(ATag.assemble(address, relay))
+
+/** The single uppercase `A` tag: the origin nsite of a copy lineage. */
+fun <T : Event> TagArrayBuilder<T>.siteOrigin(
+    address: Address,
+    relay: NormalizedRelayUrl? = null,
+) = addUnique(OriginSiteTag.assemble(address, relay))
+
+fun <T : Event> TagArrayBuilder<T>.siteApp(
+    address: Address,
+    relay: NormalizedRelayUrl? = null,
+) = add(AppTag.assemble(address, relay))

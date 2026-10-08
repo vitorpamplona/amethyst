@@ -22,7 +22,6 @@ package com.vitorpamplona.quartz.marmot.mip00KeyPackages
 
 import androidx.compose.runtime.Immutable
 import com.vitorpamplona.quartz.marmot.mip00KeyPackages.tags.AppComponentsTag
-import com.vitorpamplona.quartz.marmot.mip00KeyPackages.tags.EncodingTag
 import com.vitorpamplona.quartz.marmot.mip00KeyPackages.tags.MlsProposalsTag
 import com.vitorpamplona.quartz.mls.components.AppDataDictionary
 import com.vitorpamplona.quartz.mls.components.ComponentsList
@@ -50,6 +49,9 @@ import kotlin.io.encoding.ExperimentalEncodingApi
  * Required tags: d, mls_protocol_version, mls_ciphersuite, mls_extensions,
  *                mls_proposals, encoding, i, relays
  * Optional tags: client
+ *
+ * The tag accessors are shared with the legacy kind 443 form and live on
+ * [PublishedKeyPackage].
  */
 @Immutable
 class KeyPackageEvent(
@@ -59,46 +61,8 @@ class KeyPackageEvent(
     tags: Array<Array<String>>,
     content: String,
     sig: HexKey,
-) : BaseAddressableEvent(id, pubKey, createdAt, KIND, tags, content, sig) {
-    /** Base64-encoded TLS-serialized KeyPackageBundle */
-    fun keyPackageBase64() = content
-
-    /** MLS protocol version (e.g., "1.0") */
-    fun mlsProtocolVersion() = tags.mlsProtocolVersion()
-
-    /** MLS ciphersuite ID (e.g., "0x0001") */
-    fun mlsCiphersuite() = tags.mlsCiphersuite()
-
-    /** Supported non-default MLS extension IDs */
-    fun mlsExtensions() = tags.mlsExtensions()
-
-    /** Supported non-default MLS proposal type IDs */
-    fun mlsProposals() = tags.mlsProposals()
-
-    /** Content encoding format — MIP-era only; forbidden in the current profile. */
-    fun encoding() = tags.encoding()
-
-    /** Marmot app-component ids this KeyPackage advertises (current profile). */
-    fun appComponents() = tags.appComponents()
-
-    /**
-     * True when this event advertises the current profile: it carries an
-     * `app_components` tag naming `0x8009`. A MIP-era event has no such tag.
-     */
-    fun isCurrentProfile() = appComponents()?.any { it.equals(AppComponentsTag.ACCOUNT_IDENTITY_PROOF_V2, true) } == true
-
-    /** Hex-encoded KeyPackageRef for efficient relay queries */
-    fun keyPackageRef() = tags.keyPackageRef()
-
-    /** Relays where this KeyPackage is published */
-    fun relays() = tags.keyPackageRelays()
-
-    /** Optional client name */
-    fun clientName() = tags.clientName()
-
-    /** Whether content encoding is valid (must be base64) */
-    fun hasValidEncoding() = encoding() == EncodingTag.BASE64
-
+) : BaseAddressableEvent(id, pubKey, createdAt, KIND, tags, content, sig),
+    PublishedKeyPackage {
     companion object {
         const val KIND = 30443
 

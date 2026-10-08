@@ -38,7 +38,15 @@ class EncryptionKeyListEvent(
     content: String,
     sig: HexKey,
 ) : BaseAddressableEvent(id, pubKey, createdAt, KIND, tags, content, sig) {
+    /** Every well-formed `n` entry, in tag order (the draft `["n", key]` and the legacy nonce form). */
     fun keys() = tags.mapNotNull(KeyTag::parse)
+
+    /**
+     * The user's current encryption public key: the first well-formed `n` (NIP-4E: "the first `n`
+     * value MUST be" the key). Null when the user has not decoupled encryption from identity, in
+     * which case peers encrypt to the identity key itself.
+     */
+    fun encryptionKey(): KeyTag? = tags.firstNotNullOfOrNull(KeyTag::parse)
 
     // Kind 10044 is replaceable: NIP-01 fixes its address to `kind:pubkey:`, so a stray `d`
     // tag must not split one user's key list into several addresses.
@@ -75,5 +83,16 @@ class EncryptionKeyListEvent(
             keys(keys)
             initializer()
         }
+
+        /**
+         * Announces [encryptionPubKey] as the user's encryption key in the draft form
+         * `["n", key]`. Publishing a new one rotates the key: NIP-4E reads the first `n`, so a
+         * rotation replaces the list rather than appending to it ([add] keeps the old key first).
+         */
+        fun build(
+            encryptionPubKey: HexKey,
+            createdAt: Long = TimeUtils.now(),
+            initializer: TagArrayBuilder<EncryptionKeyListEvent>.() -> Unit = {},
+        ) = build(listOf(KeyTag(encryptionPubKey.lowercase())), createdAt, initializer)
     }
 }
