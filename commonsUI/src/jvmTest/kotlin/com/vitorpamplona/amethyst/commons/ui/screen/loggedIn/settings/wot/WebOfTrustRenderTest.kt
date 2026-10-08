@@ -23,7 +23,10 @@ package com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.settings.wot
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.ImageComposeScene
 import androidx.compose.ui.Modifier
@@ -89,6 +92,7 @@ class WebOfTrustRenderTest {
         network: TrustNetwork? = null,
         status: TrustNetworkSyncStatus = TrustNetworkSyncStatus(),
         setup: WebOfTrustSetup = WebOfTrustSetup.Idle,
+        copy: WebOfTrustCopy = WebOfTrustCopy.Idle,
     ) = WebOfTrustUiState(
         provider = provider,
         providerName = provider?.let { "Brainstorm Assistant" },
@@ -98,6 +102,7 @@ class WebOfTrustRenderTest {
         guidedProviders = listOf(brainstorm),
         setup = setup,
         isPrivate = false,
+        copy = copy,
     )
 
     private val scenarios: Map<String, () -> WebOfTrustUiState> =
@@ -112,13 +117,33 @@ class WebOfTrustRenderTest {
             "updating" to { state(network = network, status = TrustNetworkSyncStatus(running = TrustNetworkSyncStatus.Kind.UPDATE, verified = 1_200)) },
         )
 
+    /** The whole screen, for a section far down it. */
+    private fun renderTall(
+        name: String,
+        dark: Boolean,
+        content: @Composable () -> Unit,
+    ) = render(name, dark, height * 2, content)
+
+    /** Stands in for the app's relay entry (RelayUrlEditField), which needs an account. */
+    @Composable
+    private fun RelayPickerStub() {
+        OutlinedTextField(value = "", onValueChange = {}, label = { Text("Add a relay") }, singleLine = true, modifier = Modifier.fillMaxWidth())
+    }
+
     private fun render(
         name: String,
         dark: Boolean,
         content: @Composable () -> Unit,
+    ): BufferedImage = render(name, dark, height, content)
+
+    private fun render(
+        name: String,
+        dark: Boolean,
+        sceneHeight: Int,
+        content: @Composable () -> Unit,
     ): BufferedImage {
         val scene =
-            ImageComposeScene(width = width, height = height, density = Density(2f)) {
+            ImageComposeScene(width = width, height = sceneHeight, density = Density(2f)) {
                 AmethystPreviewTheme(dark = dark) {
                     Box(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)) {
                         content()
@@ -171,5 +196,30 @@ class WebOfTrustRenderTest {
         val dark = render("manual-rows", true, content)
         assertTrue(light.distinctColours() > 20, "the light form drew ${light.distinctColours()} colours")
         assertTrue(light.getRGB(2, 2) != dark.getRGB(2, 2), "the form ignored the theme")
+    }
+
+    @Test
+    fun theHandWrittenSetupRendersOpen() {
+        val content: @Composable () -> Unit = {
+            WebOfTrustContent(
+                state(provider = null),
+                actions,
+                providerAvatar = {},
+                relayPicker = { RelayPickerStub() },
+                manualExpanded = true,
+            )
+        }
+        renderTall("manual-open", false, content)
+        renderTall("manual-open", true, content)
+
+        // A copy arrived: the key form, filled for review.
+        val house = "78ed0837eba0ba244384195ce41d2a21575476a8e99e43f02d6e9729860e29e6"
+        val relay = RelayUrlNormalizer.normalize("wss://scores.brainstorm.world")
+        val copied = WebOfTrustCopy.Copied(house, listOf("30382:rank", "30382:followers", "30392", "30393").map { TrustProviderRow(it, house, relay) })
+        val keyForm: @Composable () -> Unit = {
+            WebOfTrustContent(state(provider = null, copy = copied), actions, providerAvatar = {}, relayPicker = { RelayPickerStub() }, manualExpanded = true)
+        }
+        renderTall("manual-key", false, keyForm)
+        renderTall("manual-key", true, keyForm)
     }
 }

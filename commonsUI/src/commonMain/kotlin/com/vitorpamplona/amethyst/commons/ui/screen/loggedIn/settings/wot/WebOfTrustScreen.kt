@@ -41,6 +41,8 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
@@ -48,16 +50,19 @@ import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.FilterChip
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SegmentedButton
+import androidx.compose.material3.SegmentedButtonDefaults
+import androidx.compose.material3.SingleChoiceSegmentedButtonRow
 import androidx.compose.material3.Slider
-import androidx.compose.material3.SuggestionChip
+import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.LaunchedEffect
@@ -79,6 +84,7 @@ import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.TextLinkStyles
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.text.withLink
@@ -100,10 +106,8 @@ import com.vitorpamplona.amethyst.commons.resources.wot_copy_done
 import com.vitorpamplona.amethyst.commons.resources.wot_copy_explainer
 import com.vitorpamplona.amethyst.commons.resources.wot_copy_field
 import com.vitorpamplona.amethyst.commons.resources.wot_copy_house
-import com.vitorpamplona.amethyst.commons.resources.wot_copy_loading
 import com.vitorpamplona.amethyst.commons.resources.wot_copy_no_list
 import com.vitorpamplona.amethyst.commons.resources.wot_copy_no_rank
-import com.vitorpamplona.amethyst.commons.resources.wot_copy_title
 import com.vitorpamplona.amethyst.commons.resources.wot_copy_unknown_user
 import com.vitorpamplona.amethyst.commons.resources.wot_download_now
 import com.vitorpamplona.amethyst.commons.resources.wot_downloading_progress
@@ -123,6 +127,8 @@ import com.vitorpamplona.amethyst.commons.resources.wot_manual_change_relay
 import com.vitorpamplona.amethyst.commons.resources.wot_manual_explainer
 import com.vitorpamplona.amethyst.commons.resources.wot_manual_key_error
 import com.vitorpamplona.amethyst.commons.resources.wot_manual_key_label
+import com.vitorpamplona.amethyst.commons.resources.wot_manual_mode_copy
+import com.vitorpamplona.amethyst.commons.resources.wot_manual_mode_key
 import com.vitorpamplona.amethyst.commons.resources.wot_manual_needs_rank
 import com.vitorpamplona.amethyst.commons.resources.wot_manual_remove_key
 import com.vitorpamplona.amethyst.commons.resources.wot_manual_tags
@@ -177,7 +183,6 @@ import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.relays.common.Relay
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.settings.SettingsControlRow
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.settings.SettingsDivider
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.settings.SettingsSection
-import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.settings.SettingsSwitchTile
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.placeholderText
 import com.vitorpamplona.amethyst.commons.util.formatGrouped
@@ -389,6 +394,8 @@ fun WebOfTrustContent(
     /** The relay field of a hand-written row: the app's relay entry, with its suggestions. */
     relayPicker: @Composable (onPicked: (NormalizedRelayUrl) -> Unit) -> Unit,
     modifier: Modifier = Modifier,
+    /** Opens "Set up by hand" from the start (previews and screenshots). */
+    manualExpanded: Boolean = false,
 ) {
     Column(
         modifier =
@@ -406,7 +413,7 @@ fun WebOfTrustContent(
 
         state.provider?.let { ProviderSection(it, state, actions, providerAvatar) }
 
-        ChooseProviderSection(state, actions, relayPicker)
+        ChooseProviderSection(state, actions, relayPicker, manualExpanded)
 
         EffectsSection()
     }
@@ -802,8 +809,9 @@ private fun ChooseProviderSection(
     state: WebOfTrustUiState,
     actions: WebOfTrustActions,
     relayPicker: @Composable (onPicked: (NormalizedRelayUrl) -> Unit) -> Unit,
+    manualExpanded: Boolean = false,
 ) {
-    var showManual by remember { mutableStateOf(false) }
+    var showManual by remember { mutableStateOf(manualExpanded) }
     val busy = state.setup is WebOfTrustSetup.Running || state.setup is WebOfTrustSetup.Saving
 
     SettingsSection(if (state.provider != null) Res.string.wot_section_change_provider else Res.string.wot_section_choose_provider) {
@@ -829,24 +837,8 @@ private fun ChooseProviderSection(
             )
         }
         AnimatedVisibility(showManual) {
-            // The rows last copied: they fill the editor once, and a later copy still loading (or
-            // failing) leaves the user's edits alone.
-            var lastCopied by remember { mutableStateOf<WebOfTrustCopy.Copied?>(null) }
-            LaunchedEffect(state.copy) { (state.copy as? WebOfTrustCopy.Copied)?.let { lastCopied = it } }
-            Column {
-                CopyViewBlock(state, actions)
-                // Stays open until the list is saved: a refused signature keeps what was typed.
-                ManualRowsForm(enabled = !busy, copied = lastCopied, relayPicker = relayPicker) { rows ->
-                    actions.onManualRows(rows) { showManual = false }
-                }
-                SettingsSwitchTile(
-                    icon = MaterialSymbols.Lock,
-                    title = Res.string.wot_private_entry_title,
-                    description = Res.string.wot_private_entry_explainer,
-                    checked = state.isPrivate,
-                    onCheckedChange = actions.onPrivateChange,
-                )
-            }
+            // Stays open until the list is saved: a refused signature keeps what was typed.
+            ManualFallback(state, actions, enabled = !busy, relayPicker = relayPicker, onSaved = { showManual = false })
         }
         (state.setup as? WebOfTrustSetup.Failed)?.takeIf { it.providerId == WebOfTrustViewModel.MANUAL }?.let { failed ->
             SetupError(setupErrorText(failed, stringRes(Res.string.wot_manual_title)), Modifier.padding(start = 68.dp, end = 16.dp, bottom = 12.dp))
@@ -956,13 +948,74 @@ private fun providerDescription(provider: TrustProviderOnboarding): StringResour
         else -> null
     }
 
+/** The two ways to write the kind 10040 by hand. */
+private enum class ManualMode { COPY, KEY }
+
 /**
- * Another way to fill the rows: copy someone's (an npub or NIP-05, or a provider's own observer)
- * and see the network as they do. The rows land in the editor below for review; nothing is
- * published until the user saves them.
+ * "Set up by hand": copy someone's view (their rows, or a provider's default observer) or enter a
+ * provider key and the tags it serves. A copy lands in the key form for review; nothing is
+ * published until the user saves. The keys live here, so switching modes keeps them.
  */
 @Composable
-private fun CopyViewBlock(
+private fun ManualFallback(
+    state: WebOfTrustUiState,
+    actions: WebOfTrustActions,
+    enabled: Boolean,
+    relayPicker: @Composable (onPicked: (NormalizedRelayUrl) -> Unit) -> Unit,
+    onSaved: () -> Unit,
+) {
+    val copied = state.copy as? WebOfTrustCopy.Copied
+    var mode by remember { mutableStateOf(if (copied != null) ManualMode.KEY else ManualMode.COPY) }
+    var keys by remember { mutableStateOf(copied?.let { keysOf(it.rows) } ?: defaultKeys()) }
+    // A new copy replaces the keys and shows them for review; one still loading or failing
+    // leaves the user's edits alone.
+    LaunchedEffect(copied) {
+        if (copied != null) {
+            keys = keysOf(copied.rows)
+            mode = ManualMode.KEY
+        }
+    }
+
+    Column(
+        Modifier.fillMaxWidth().padding(start = 16.dp, end = 16.dp, top = 4.dp, bottom = 16.dp),
+        verticalArrangement = Arrangement.spacedBy(16.dp),
+    ) {
+        SingleChoiceSegmentedButtonRow(Modifier.fillMaxWidth()) {
+            ManualMode.entries.forEachIndexed { index, entry ->
+                SegmentedButton(
+                    selected = mode == entry,
+                    onClick = { mode = entry },
+                    shape = SegmentedButtonDefaults.itemShape(index = index, count = ManualMode.entries.size),
+                ) {
+                    Text(stringRes(if (entry == ManualMode.COPY) Res.string.wot_manual_mode_copy else Res.string.wot_manual_mode_key))
+                }
+            }
+        }
+
+        when (mode) {
+            ManualMode.COPY -> {
+                CopyViewPane(state, actions)
+            }
+
+            ManualMode.KEY -> {
+                ManualKeysForm(
+                    keys = keys,
+                    onKeysChange = { keys = it },
+                    enabled = enabled,
+                    copiedRows = copied?.rows?.size,
+                    isPrivate = state.isPrivate,
+                    onPrivateChange = actions.onPrivateChange,
+                    relayPicker = relayPicker,
+                    onSave = { rows -> actions.onManualRows(rows, onSaved) },
+                )
+            }
+        }
+    }
+}
+
+/** Copy a view: a provider's default view first (one tap), then anyone's, by npub or address. */
+@Composable
+private fun CopyViewPane(
     state: WebOfTrustUiState,
     actions: WebOfTrustActions,
 ) {
@@ -970,60 +1023,63 @@ private fun CopyViewBlock(
     val loading = state.copy is WebOfTrustCopy.Loading
     val scheme = MaterialTheme.colorScheme
 
-    Column(
-        Modifier.fillMaxWidth().padding(start = 68.dp, end = 16.dp, bottom = 16.dp),
-        verticalArrangement = Arrangement.spacedBy(8.dp),
-    ) {
-        Text(stringRes(Res.string.wot_copy_title), style = MaterialTheme.typography.titleSmall)
+    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
         Text(stringRes(Res.string.wot_copy_explainer), style = MaterialTheme.typography.bodySmall, color = scheme.onSurfaceVariant)
-        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            OutlinedTextField(
-                value = who,
-                onValueChange = { who = it },
-                label = { Text(stringRes(Res.string.wot_copy_field)) },
-                singleLine = true,
-                modifier = Modifier.weight(1f),
-            )
-            FilledTonalButton(onClick = { actions.onCopyFrom(who.trim()) }, enabled = who.isNotBlank() && !loading) {
-                Text(stringRes(Res.string.wot_copy_action))
-            }
-        }
+
         state.guidedProviders.filter { it.houseObserver != null }.forEach { provider ->
-            SuggestionChip(
-                onClick = { actions.onCopyHouse(provider) },
-                enabled = !loading,
-                label = { Text(stringRes(Res.string.wot_copy_house, provider.name)) },
-            )
-        }
-        when (val copy = state.copy) {
-            is WebOfTrustCopy.Loading -> {
-                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    CircularProgressIndicator(Modifier.size(12.dp), strokeWidth = 1.5.dp)
-                    Text(stringRes(Res.string.wot_copy_loading), style = MaterialTheme.typography.bodySmall, color = scheme.primary)
+            Row(
+                Modifier
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(16.dp))
+                    .background(scheme.surfaceContainerHighest)
+                    .clickable(enabled = !loading) { actions.onCopyHouse(provider) }
+                    .padding(horizontal = 12.dp, vertical = 10.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Box(
+                    Modifier.size(36.dp).clip(RoundedCornerShape(10.dp)).background(scheme.tertiaryContainer),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Text(provider.name.take(1), fontWeight = FontWeight.Bold, color = scheme.onTertiaryContainer)
                 }
+                Column(Modifier.weight(1f).padding(horizontal = 12.dp)) {
+                    Text(stringRes(Res.string.wot_copy_house, provider.name), style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.SemiBold)
+                    Text(provider.houseObserver.orEmpty(), style = MaterialTheme.typography.bodySmall, color = scheme.onSurfaceVariant)
+                }
+                Icon(symbol = MaterialSymbols.AutoMirrored.ArrowForward, contentDescription = null, modifier = Modifier.size(20.dp), tint = scheme.primary)
             }
+        }
 
-            is WebOfTrustCopy.Copied -> {
-                Text(
-                    pluralStringRes(Res.plurals.wot_copy_done, copy.rows.size, copy.rows.size),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = scheme.primary,
-                )
-            }
+        val submit = { if (who.isNotBlank() && !loading) actions.onCopyFrom(who.trim()) }
+        OutlinedTextField(
+            value = who,
+            onValueChange = { who = it },
+            label = { Text(stringRes(Res.string.wot_copy_field)) },
+            singleLine = true,
+            keyboardOptions = KeyboardOptions(imeAction = ImeAction.Go, autoCorrectEnabled = false),
+            keyboardActions = KeyboardActions(onGo = { submit() }),
+            trailingIcon = {
+                if (loading) {
+                    CircularProgressIndicator(Modifier.size(20.dp), strokeWidth = 2.dp)
+                } else {
+                    IconButton(onClick = submit, enabled = who.isNotBlank()) {
+                        Icon(symbol = MaterialSymbols.AutoMirrored.ArrowForward, contentDescription = stringRes(Res.string.wot_copy_action))
+                    }
+                }
+            },
+            modifier = Modifier.fillMaxWidth(),
+        )
 
-            is WebOfTrustCopy.Failed -> {
-                SetupError(
-                    stringRes(
-                        when (copy.reason) {
-                            WebOfTrustCopy.Failed.Reason.UNKNOWN_USER -> Res.string.wot_copy_unknown_user
-                            WebOfTrustCopy.Failed.Reason.NO_LIST -> Res.string.wot_copy_no_list
-                            WebOfTrustCopy.Failed.Reason.NO_RANK -> Res.string.wot_copy_no_rank
-                        },
-                    ),
-                )
-            }
-
-            WebOfTrustCopy.Idle -> {}
+        (state.copy as? WebOfTrustCopy.Failed)?.let { failed ->
+            SetupError(
+                stringRes(
+                    when (failed.reason) {
+                        WebOfTrustCopy.Failed.Reason.UNKNOWN_USER -> Res.string.wot_copy_unknown_user
+                        WebOfTrustCopy.Failed.Reason.NO_LIST -> Res.string.wot_copy_no_list
+                        WebOfTrustCopy.Failed.Reason.NO_RANK -> Res.string.wot_copy_no_rank
+                    },
+                ),
+            )
         }
     }
 }
@@ -1044,6 +1100,9 @@ private data class ManualKey(
     val isComplete: Boolean get() = key != null && relay != null && tags.isNotEmpty()
 }
 
+/** A blank key serving the user scores, `30382:rank` and `30382:followers`. */
+private fun defaultKeys() = listOf(ManualKey(tags = setOf(ProviderTypes.rank.toValue(), ProviderTypes.followerCount.toValue())))
+
 /** Copied rows as keys: one per (key, relay), with the tags each serves, in the order they came. */
 private fun keysOf(rows: List<TrustProviderRow>): List<ManualKey> =
     rows
@@ -1054,11 +1113,9 @@ private fun keysOf(rows: List<TrustProviderRow>): List<ManualKey> =
 private fun chipLabel(tag: String): String = if (tag.startsWith("${ProviderTypes.rank.kind}:")) tag.substringAfter(':') else tag
 
 /**
- * The kind 10040 rows, written by hand: a provider key and its relay, and the tags it serves as
- * chips ([KNOWN_SCORE_TAGS], plus any a copy brought). `30382:rank` is the one the network needs.
- * A provider that signs some tags with another key gets a second key, each tag going to one key.
+ * The kind 10040 rows, written by hand, with their own state: what the screenshot tests draw.
+ * The screen keeps the keys in [ManualFallback] instead, so they survive a switch of mode.
  */
-@OptIn(ExperimentalLayoutApi::class)
 @Composable
 internal fun ManualRowsForm(
     enabled: Boolean,
@@ -1066,32 +1123,44 @@ internal fun ManualRowsForm(
     relayPicker: @Composable (onPicked: (NormalizedRelayUrl) -> Unit) -> Unit,
     onSave: (List<TrustProviderRow>) -> Unit,
 ) {
+    var keys by remember(copied) { mutableStateOf(copied?.let { keysOf(it.rows) } ?: defaultKeys()) }
+    ManualKeysForm(keys, { keys = it }, enabled, copied?.rows?.size, isPrivate = false, onPrivateChange = {}, relayPicker = relayPicker, onSave = onSave)
+}
+
+/**
+ * Enter a key: a provider key and its relay, and the tags it serves as chips ([KNOWN_SCORE_TAGS],
+ * plus any a copy brought). `30382:rank` is the one the network needs. A provider that signs
+ * some tags with another key gets a second key, each tag going to one key.
+ */
+@Composable
+private fun ManualKeysForm(
+    keys: List<ManualKey>,
+    onKeysChange: (List<ManualKey>) -> Unit,
+    enabled: Boolean,
+    /** How many rows a copy just brought, to say so; null when not from a copy. */
+    copiedRows: Int?,
+    isPrivate: Boolean,
+    onPrivateChange: (Boolean) -> Unit,
+    relayPicker: @Composable (onPicked: (NormalizedRelayUrl) -> Unit) -> Unit,
+    onSave: (List<TrustProviderRow>) -> Unit,
+) {
     val rankName = remember { ProviderTypes.rank.toValue() }
-    // Someone's rows were copied: they replace what is here, to review before saving.
-    var keys by remember(copied) {
-        mutableStateOf(copied?.rows?.let { keysOf(it) } ?: listOf(ManualKey(tags = setOf(rankName, ProviderTypes.followerCount.toValue()))))
-    }
-    // The tags on offer: the known ones, then any other a copy brought (a Trusted Lists row).
-    val allTags =
-        remember(copied) {
-            val known = KNOWN_SCORE_TAGS.map { it.toValue() }
-            known +
-                copied
-                    ?.rows
-                    ?.map { it.name }
-                    ?.filter { it !in known }
-                    ?.distinct()
-                    .orEmpty()
-        }
+    // The tags on offer: the known ones, then any other the keys carry (a copied Trusted Lists row).
+    val known = remember { KNOWN_SCORE_TAGS.map { it.toValue() } }
+    val allTags = known + keys.flatMap { it.tags }.filter { it !in known }.distinct()
+    val unassigned = allTags.filter { tag -> keys.none { tag in it.tags } }
 
     val hasRank = keys.any { rankName in it.tags }
     val canSave = enabled && hasRank && keys.all { it.isComplete }
+    val scheme = MaterialTheme.colorScheme
 
-    Column(
-        Modifier.fillMaxWidth().padding(start = 68.dp, end = 16.dp, bottom = 8.dp),
-        verticalArrangement = Arrangement.spacedBy(16.dp),
-    ) {
+    Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
+        if (copiedRows != null) {
+            Text(pluralStringRes(Res.plurals.wot_copy_done, copiedRows, copiedRows), style = MaterialTheme.typography.bodySmall, color = scheme.primary)
+        }
+
         keys.forEachIndexed { index, manual ->
+            if (index > 0) HorizontalDivider(color = scheme.outlineVariant)
             val takenElsewhere = keys.filterIndexed { other, _ -> other != index }.flatMapTo(HashSet()) { it.tags }
             ManualKeyEditor(
                 manual = manual,
@@ -1099,22 +1168,32 @@ internal fun ManualRowsForm(
                 takenElsewhere = takenElsewhere,
                 canRemove = keys.size > 1,
                 relayPicker = relayPicker,
-                onChange = { changed -> keys = keys.toMutableList().also { it[index] = changed } },
-                onRemove = { keys = keys.toMutableList().also { it.removeAt(index) } },
+                onChange = { changed -> onKeysChange(keys.toMutableList().also { it[index] = changed }) },
+                onRemove = { onKeysChange(keys.toMutableList().also { it.removeAt(index) }) },
             )
         }
 
-        // A tag left over can go to another key.
-        if (allTags.any { tag -> keys.none { tag in it.tags } }) {
-            TextButton(onClick = { keys = keys + ManualKey(relayText = keys.lastOrNull()?.relayText.orEmpty()) }) {
-                Icon(symbol = MaterialSymbols.Add, contentDescription = null, modifier = Modifier.size(18.dp))
-                Spacer(Modifier.width(6.dp))
-                Text(stringRes(Res.string.wot_manual_add_key))
-            }
+        // Rare: a tag left over can go to a key of its own.
+        if (unassigned.isNotEmpty()) {
+            Text(
+                "+ " + stringRes(Res.string.wot_manual_add_key),
+                style = MaterialTheme.typography.labelLarge,
+                color = scheme.primary,
+                modifier = Modifier.clip(RoundedCornerShape(8.dp)).clickable { onKeysChange(keys + ManualKey(relayText = keys.lastOrNull()?.relayText.orEmpty())) }.padding(vertical = 4.dp),
+            )
         }
 
         if (!hasRank) {
-            Text(stringRes(Res.string.wot_manual_needs_rank, chipLabel(rankName)), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error)
+            Text(stringRes(Res.string.wot_manual_needs_rank, chipLabel(rankName)), style = MaterialTheme.typography.bodySmall, color = scheme.error)
+        }
+
+        // What the save writes, before the button that writes it.
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Column(Modifier.weight(1f)) {
+                Text(stringRes(Res.string.wot_private_entry_title), style = MaterialTheme.typography.bodyMedium)
+                Text(stringRes(Res.string.wot_private_entry_explainer), style = MaterialTheme.typography.bodySmall, color = scheme.onSurfaceVariant)
+            }
+            Switch(checked = isPrivate, onCheckedChange = onPrivateChange)
         }
 
         Button(
@@ -1147,23 +1226,26 @@ private fun ManualKeyEditor(
     val keyError = manual.keyText.isNotBlank() && manual.key == null
     val scheme = MaterialTheme.colorScheme
 
-    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            OutlinedTextField(
-                value = manual.keyText,
-                onValueChange = { onChange(manual.copy(keyText = it)) },
-                label = { Text(stringRes(Res.string.wot_manual_key_label)) },
-                isError = keyError,
-                supportingText = if (keyError) ({ Text(stringRes(Res.string.wot_manual_key_error)) }) else null,
-                singleLine = true,
-                modifier = Modifier.weight(1f),
-            )
-            if (canRemove) {
-                IconButton(onClick = onRemove) {
-                    Icon(symbol = MaterialSymbols.Close, contentDescription = stringRes(Res.string.wot_manual_remove_key), modifier = Modifier.size(20.dp), tint = scheme.onSurfaceVariant)
-                }
-            }
-        }
+    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+        OutlinedTextField(
+            value = manual.keyText,
+            onValueChange = { onChange(manual.copy(keyText = it)) },
+            label = { Text(stringRes(Res.string.wot_manual_key_label)) },
+            isError = keyError,
+            supportingText = if (keyError) ({ Text(stringRes(Res.string.wot_manual_key_error)) }) else null,
+            singleLine = true,
+            trailingIcon =
+                if (canRemove) {
+                    {
+                        IconButton(onClick = onRemove) {
+                            Icon(symbol = MaterialSymbols.Delete, contentDescription = stringRes(Res.string.wot_manual_remove_key), modifier = Modifier.size(20.dp), tint = scheme.onSurfaceVariant)
+                        }
+                    }
+                } else {
+                    null
+                },
+            modifier = Modifier.fillMaxWidth(),
+        )
 
         val relay = manual.relay
         if (relay == null) {
@@ -1174,7 +1256,7 @@ private fun ManualKeyEditor(
                 Modifier
                     .fillMaxWidth()
                     .clip(RoundedCornerShape(12.dp))
-                    .background(scheme.surfaceContainerHigh)
+                    .background(scheme.surfaceContainerHighest)
                     .padding(start = 12.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
@@ -1193,7 +1275,7 @@ private fun ManualKeyEditor(
         }
 
         Text(stringRes(Res.string.wot_manual_tags), style = MaterialTheme.typography.labelMedium, color = scheme.onSurfaceVariant)
-        FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(0.dp)) {
             allTags.forEach { tag ->
                 val selected = tag in manual.tags
                 FilterChip(

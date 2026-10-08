@@ -6733,21 +6733,22 @@
     <string name="wot_setup_error_signer">Your signer did not sign the request.</string>
     <string name="wot_setup_error_unexpected">%1$s answered something unexpected. Try again later.</string>
     <string name="wot_manual_title">Set up by hand</string>
-    <string name="wot_manual_explainer">If a provider's setup fails, or for any NIP-85 service</string>
-    <string name="wot_copy_title">Copy someone's view</string>
+    <string name="wot_manual_explainer">When a provider's setup fails</string>
+    <string name="wot_manual_mode_copy">Copy a view</string>
+    <string name="wot_manual_mode_key">Enter a key</string>
     <string name="wot_copy_explainer">Use the provider list of someone you trust, and see the network as they do.</string>
     <string name="wot_copy_field">npub or name@domain</string>
     <string name="wot_copy_action">Copy</string>
     <string name="wot_copy_house">%1$s's default view</string>
     <string name="wot_copy_loading">Looking up their list…</string>
     <plurals name="wot_copy_done">
-        <item quantity="one">Copied %1$d row. Check it below, then save.</item>
-        <item quantity="other">Copied %1$d rows. Check them below, then save.</item>
+        <item quantity="one">Copied %1$d tag. Check it, then save.</item>
+        <item quantity="other">Copied %1$d tags. Check them, then save.</item>
     </plurals>
     <string name="wot_copy_unknown_user">Not a valid npub or address.</string>
     <string name="wot_copy_no_list">No public provider list found for them.</string>
     <string name="wot_copy_no_rank">Their list names no rank provider.</string>
-    <string name="wot_manual_add_key">Add another key</string>
+    <string name="wot_manual_add_key">Another key</string>
     <string name="wot_manual_remove_key">Remove this key</string>
     <string name="wot_manual_tags">Tags it serves</string>
     <string name="wot_manual_change_relay">Change relay</string>
