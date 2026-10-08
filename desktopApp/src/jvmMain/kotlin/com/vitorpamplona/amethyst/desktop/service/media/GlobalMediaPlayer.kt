@@ -25,6 +25,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import com.vitorpamplona.amethyst.desktop.ui.media.MediaType
+import com.vitorpamplona.quartz.utils.Log
 import io.github.kdroidfilter.composemediaplayer.VideoPlayerError
 import io.github.kdroidfilter.composemediaplayer.VideoPlayerState
 import io.github.kdroidfilter.composemediaplayer.createVideoPlayerState
@@ -77,6 +78,8 @@ data class MediaPlaybackState(
  * `DesktopVideoPlayer` instance — see that file for the active/inactive dispatch.
  */
 object GlobalMediaPlayer {
+    private const val TAG = "GlobalMediaPlayer"
+
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
 
     // Engine handles. Constructed lazily on first playback request so that app
@@ -172,7 +175,7 @@ object GlobalMediaPlayer {
         // went live), fall through and re-open instead of leaving a stuck/errored surface.
         val loaded = videoPlayer
         if (loaded != null && current.url == url && current.errorReason == null) {
-            println("GlobalMediaPlayer.playVideo REUSE url=$url isPlaying=${current.isPlaying}")
+            Log.d(TAG) { "playVideo reuse url=$url isPlaying=${current.isPlaying}" }
             if (startAt > 0f) loaded.seekTo(startAt * 1000f)
             if (!current.isPlaying) loaded.play()
             return
@@ -193,7 +196,7 @@ object GlobalMediaPlayer {
                 return
             }
 
-        println("GlobalMediaPlayer.playVideo OPEN url=$url (was=${current.url} err=${current.errorReason})")
+        Log.d(TAG) { "playVideo open url=$url (was=${current.url} err=${current.errorReason})" }
 
         // The kdroidFilter player retains `volume` and speed across openUri calls, so set both for
         // the new track: normal speed, and muted or not as the user last chose.
@@ -422,7 +425,7 @@ object GlobalMediaPlayer {
         videoPlayer ?: synchronized(initLock) {
             videoPlayer ?: runCatching { createVideoPlayerState() }
                 .onSuccess { startVideoSync(it) }
-                .onFailure { println("kdroidFilter: video engine init failed: ${it.message}") }
+                .onFailure { Log.w(TAG, "Video engine init failed", it) }
                 .getOrNull()
                 ?.also { videoPlayer = it }
         }
@@ -444,7 +447,7 @@ object GlobalMediaPlayer {
                 try {
                     DecryptedMediaFiles.fileFor(url)
                 } catch (e: IOException) {
-                    println("GlobalMediaPlayer: could not fetch encrypted $url: ${e.message}")
+                    Log.w(TAG) { "Could not fetch encrypted $url: ${e.message}" }
                     if (state.value.url == url) {
                         state.value = state.value.copy(isBuffering = false, errorReason = "Could not download the encrypted file")
                     }
@@ -459,7 +462,17 @@ object GlobalMediaPlayer {
         if (state.value.url != url) return false
         // Anything else streams from the engine's own HTTP stack, unless it goes over Tor: then
         // through the relay, so the app's Tor-routed client fetches it, as on Android.
-        if (decrypted != null) player.openFile(PlatformFile(decrypted)) else player.openUri(MediaRelay.streamingUrl(url))
+        if (decrypted != null) {
+            player.openFile(PlatformFile(decrypted))
+            return true
+        }
+        val streaming = MediaRelay.streamingUrl(url)
+        if (streaming == null) {
+            // It should go over Tor, which the relay can only do for http(s).
+            state.value = state.value.copy(isBuffering = false, errorReason = "This video can't be played over Tor")
+            return false
+        }
+        player.openUri(streaming)
         return true
     }
 
@@ -474,7 +487,7 @@ object GlobalMediaPlayer {
     private fun replaceVideoPlayer(): VideoPlayerState? {
         val fresh =
             runCatching { createVideoPlayerState() }
-                .onFailure { println("kdroidFilter: video engine init failed: ${it.message}") }
+                .onFailure { Log.w(TAG, "Video engine init failed", it) }
                 .getOrNull() ?: return null
         val previous = synchronized(initLock) { videoPlayer.also { videoPlayer = fresh } }
         startVideoSync(fresh)
@@ -499,7 +512,7 @@ object GlobalMediaPlayer {
         audioPlayer ?: synchronized(initLock) {
             audioPlayer ?: runCatching { createVideoPlayerState() }
                 .onSuccess { startAudioSync(it) }
-                .onFailure { println("kdroidFilter: audio engine init failed: ${it.message}") }
+                .onFailure { Log.w(TAG, "Audio engine init failed", it) }
                 .getOrNull()
                 ?.also { audioPlayer = it }
         }

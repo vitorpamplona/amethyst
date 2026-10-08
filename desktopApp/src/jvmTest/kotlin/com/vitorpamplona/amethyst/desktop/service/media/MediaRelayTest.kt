@@ -29,6 +29,7 @@ import java.net.HttpURLConnection
 import java.net.InetAddress
 import java.net.InetSocketAddress
 import java.net.Proxy
+import java.net.Socket
 import java.net.URI
 import java.util.Collections
 import kotlin.test.AfterTest
@@ -74,6 +75,13 @@ class MediaRelayTest {
                     }
                     exchange.close()
                 }
+                createContext("/live/elsewhere.m3u8") { exchange ->
+                    val bytes = "#EXTM3U\n#EXTINF:4.0,\nrtmp://example.com/live/seg1\n".toByteArray()
+                    exchange.responseHeaders.add("Content-Type", "application/vnd.apple.mpegurl")
+                    exchange.sendResponseHeaders(200, bytes.size.toLong())
+                    exchange.responseBody.write(bytes)
+                    exchange.close()
+                }
                 createContext("/live/index.m3u8") { exchange ->
                     val playlist =
                         "#EXTM3U\n#EXT-X-KEY:METHOD=AES-128,URI=\"keys/k1\"\n#EXTINF:4.0,\nseg1.ts\n#EXTINF:4.0,\n$base/elsewhere/seg2.ts\n"
@@ -109,7 +117,7 @@ class MediaRelayTest {
     @Test
     fun aTorVideoStreamsThroughTheAppsClientWithItsRanges() {
         val original = "$base/media/video.mp4?x=1"
-        val relayed = MediaRelay.streamingUrl(original)
+        val relayed = MediaRelay.streamingUrl(original)!!
         assertTrue(relayed.startsWith("http://127.0.0.1:"), relayed)
 
         val (code, headers, body) = get(relayed, range = "bytes=1000-1999")
@@ -135,7 +143,7 @@ class MediaRelayTest {
 
     @Test
     fun everyPlaylistUriComesBackThroughTheRelay() {
-        val (code, _, body) = get(MediaRelay.streamingUrl("$base/live/index.m3u8"))
+        val (code, _, body) = get(MediaRelay.streamingUrl("$base/live/index.m3u8")!!)
         assertEquals(200, code)
 
         val lines = body.decodeToString().lines()
@@ -146,15 +154,54 @@ class MediaRelayTest {
         // A rewritten segment address leads back to the original, resolved against the playlist.
         val segment = uris.first { it.contains("seg1.ts") }
         val path = segment.toHttpUrl().encodedPath.split('/', limit = 3)[2]
-        assertEquals("$base/live/seg1.ts", MediaRelay.originalFor(path, null))
+        assertEquals("$base/live/seg1.ts", MediaRelay.originalFor(path))
     }
 
     @Test
     fun theRelayAnswersOnlyUnderItsSecret() {
-        val relayed = MediaRelay.streamingUrl("$base/media/video.mp4")
+        val relayed = MediaRelay.streamingUrl("$base/media/video.mp4")!!
         val port = relayed.toHttpUrl().port
         val (code, _, _) = get("http://127.0.0.1:$port/not-the-secret/http/127.0.0.1/media/video.mp4")
         assertEquals(404, code)
+        assertTrue(fetched.isEmpty())
+    }
+
+    @Test
+    fun aUrlTheServersUriParserWouldRejectStillStreams() {
+        // OkHttp keeps '|' and '{' raw in a query; java.net.URI, which the relay's server parses
+        // request lines with, rejects them, so the original must not appear in the relay path.
+        // (The test's upstream is a JDK server too and rejects them in turn, so only the fetch is
+        // checked: it happening at all means the relay took the request.)
+        val original = "$base/media/video.mp4?x=a|b&y={c}"
+        get(MediaRelay.streamingUrl(original)!!)
+
+        assertEquals(listOf(original.toHttpUrl().toString()), fetched)
+    }
+
+    @Test
+    fun aTorVideoTheRelayCannotCarryIsRefusedRatherThanSentDirect() {
+        assertEquals(null, MediaRelay.streamingUrl("rtmp://example.com/live/stream"))
+    }
+
+    @Test
+    fun aPlaylistNamingANonHttpUriIsRefused() {
+        val (code, _, _) = get(MediaRelay.streamingUrl("$base/live/elsewhere.m3u8")!!)
+        assertEquals(502, code)
+    }
+
+    @Test
+    fun aRequestForAnotherHostIsRefused() {
+        // What a web page reaching the relay by DNS rebinding would send.
+        val relayed = MediaRelay.streamingUrl("$base/media/video.mp4")!!.toHttpUrl()
+        val status =
+            Socket(Proxy.NO_PROXY).use { socket ->
+                socket.connect(InetSocketAddress("127.0.0.1", relayed.port))
+                socket.getOutputStream().write(
+                    "GET ${relayed.encodedPath} HTTP/1.1\r\nHost: attacker.example:${relayed.port}\r\nConnection: close\r\n\r\n".toByteArray(),
+                )
+                socket.getInputStream().bufferedReader().readLine()
+            }
+        assertTrue(status.contains(" 403"), status)
         assertTrue(fetched.isEmpty())
     }
 }

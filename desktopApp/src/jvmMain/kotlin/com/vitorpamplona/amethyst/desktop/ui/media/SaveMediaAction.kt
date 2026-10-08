@@ -21,13 +21,18 @@
 package com.vitorpamplona.amethyst.desktop.ui.media
 
 import com.vitorpamplona.amethyst.desktop.service.media.MediaHttp
+import com.vitorpamplona.quartz.utils.Log
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.withContext
 import okhttp3.Request
 import okhttp3.coroutines.executeAsync
 import java.awt.FileDialog
 import java.awt.Frame
 import java.io.File
+import java.nio.file.Files
+import java.nio.file.StandardCopyOption
 
 object SaveMediaAction {
     /**
@@ -54,30 +59,44 @@ object SaveMediaAction {
                 File(dir, dialog.file ?: return@withContext null)
             } ?: return null
 
-        // Download on IO
+        // Download on IO, beside the target: an existing file there is only replaced once the
+        // download is complete, never truncated by one that fails halfway.
         return withContext(Dispatchers.IO) {
+            val partial = File(file.parentFile, ".${file.name}.part")
             try {
                 val request = Request.Builder().url(url).build()
                 // The app's media client: follows the Tor choice and decrypts an encrypted blob.
-                val response = MediaHttp.client(url).newCall(request).executeAsync()
-                response.use { resp ->
+                MediaHttp.client(url).newCall(request).executeAsync().use { resp ->
                     if (!resp.isSuccessful) return@withContext null
                     val total = resp.body.contentLength()
                     resp.body.byteStream().use { input ->
-                        file.outputStream().use { output ->
-                            val buffer = ByteArray(8192)
+                        partial.outputStream().use { output ->
+                            val buffer = ByteArray(64 * 1024)
                             var downloaded = 0L
+                            var reported = 0L
                             var bytesRead: Int
                             while (input.read(buffer).also { bytesRead = it } != -1) {
+                                ensureActive()
                                 output.write(buffer, 0, bytesRead)
                                 downloaded += bytesRead
-                                onProgress?.invoke(downloaded, total)
+                                // Every 256 KiB is plenty for a progress bar.
+                                if (downloaded - reported >= 256 * 1024) {
+                                    reported = downloaded
+                                    onProgress?.invoke(downloaded, total)
+                                }
                             }
+                            onProgress?.invoke(downloaded, total)
                         }
                     }
                 }
+                Files.move(partial.toPath(), file.toPath(), StandardCopyOption.REPLACE_EXISTING)
                 file
-            } catch (_: Exception) {
+            } catch (e: CancellationException) {
+                partial.delete()
+                throw e
+            } catch (e: Exception) {
+                Log.w("SaveMediaAction", "Could not save $url", e)
+                partial.delete()
                 null
             }
         }

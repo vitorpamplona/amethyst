@@ -40,10 +40,19 @@ import java.util.concurrent.ConcurrentHashMap
  * the file. The copies go when the app exits (and the temp-dir sweep catches a crash).
  *
  * Range requests are no help anyway: the AEAD tag covers the whole blob, so it is decrypted whole.
+ *
+ * Only the last [MAX_FILES] stay on disk, and a copy whose key the account dropped (an expired or
+ * deleted message) goes the next time any is opened: plaintext should not outlive its message.
  */
 object DecryptedMediaFiles {
-    private val files = ConcurrentHashMap<String, File>()
+    private const val MAX_FILES = 8
+
+    // Access-ordered: the eldest is the least recently opened. Guarded by itself.
+    private val files = LinkedHashMap<String, File>(16, 0.75f, true)
     private val downloads = ConcurrentHashMap<String, Mutex>()
+
+    /** The decrypted copy of [url] if it was already downloaded, without downloading it. */
+    fun cachedFile(url: String): File? = synchronized(files) { files[url] }?.takeIf { it.exists() }
 
     /**
      * The decrypted copy of [url], downloading it on first use; null when [url] is not encrypted.
@@ -51,12 +60,37 @@ object DecryptedMediaFiles {
      */
     suspend fun fileFor(url: String): File? {
         if (!MediaHttp.isEncrypted(url)) return null
-        files[url]?.takeIf { it.exists() }?.let { return it }
+        cachedFile(url)?.let { return it }
 
-        return downloads.getOrPut(url) { Mutex() }.withLock {
-            files[url]?.takeIf { it.exists() }?.let { return@withLock it }
-            download(url).also { files[url] = it }
+        val lock = downloads.getOrPut(url) { Mutex() }
+        try {
+            return lock.withLock {
+                cachedFile(url)?.let { return@withLock it }
+                download(url).also { remember(url, it) }
+            }
+        } finally {
+            if (!lock.isLocked) downloads.remove(url, lock)
         }
+    }
+
+    private fun remember(
+        url: String,
+        file: File,
+    ) {
+        val dropped = mutableListOf<File>()
+        synchronized(files) {
+            files[url] = file
+            val iterator = files.entries.iterator()
+            while (iterator.hasNext()) {
+                val (other, otherFile) = iterator.next()
+                if (other != url && (files.size > MAX_FILES || !MediaHttp.isEncrypted(other))) {
+                    dropped += otherFile
+                    iterator.remove()
+                }
+            }
+        }
+        // The engine may still have one open; deleteOnExit catches what cannot go now.
+        dropped.forEach { it.delete() }
     }
 
     private suspend fun download(url: String): File =
