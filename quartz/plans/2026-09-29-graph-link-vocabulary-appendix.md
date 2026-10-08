@@ -943,3 +943,62 @@ Not in the vocabulary tables yet; each needs the maintainer's review like the ta
 | Kind | Class | Links | Built from | Notes |
 |---|---|---|---|---|
 | 9 | `ChatEvent` | q[last, the reply] -> PARENT (E); q[slot 3 pubkey of the parent] -> PARENT_AUTHOR (U); q[other] -> QUOTE (E,A); p -> MENTION (U); content nostr: -> MENTION (E,A,U) | replyingTo() (last q), quotedEvents() (QEventTag::parse incl. author slot), QTag::parseEventId/parseAddressId, PTag::parseKey, citedNIP19() (BaseNoteEvent) | NIP-C7: 'A reply to a kind 9 ... quotes the parent using a q tag'; other kinds MAY be quoted per NIP-18. Draft PARENT row (kind 9 via q) confirmed. UNCERTAIN: by tags alone a kind 9 that only quotes (not replies) is indistinguishable from a reply; Quartz takes the LAST q as parent and returns tag[1] even when it is an address (replyingTo() does not check shape). PARENT_AUTHOR from q[3] follows rule 3; NIP-C7 puts the parent's pubkey in the q tag, so no p is needed. |
+
+## Classes added 2026-10-08 (kind census)
+
+Typed after the 2026-10-08 relay census (`tools/kind-census/`): 27 classes over 24 kinds. Each
+class's `linked*` overrides carry a KDoc naming these relations, so its future `links()` is a
+transcription. Kinds shared with other apps (38384, 38385, 38386, 31986) are split by tags in
+`EventFactory`, as kind 38000 is. Their `UnrecognizedKind…Event` fallbacks carry no links.
+
+### Relations these classes add
+
+| Relation | Kinds | Justification |
+|---|---|---|
+| `COORDINATOR` | 9840, 9843, 9844, 29846 | the CI coordinator a request, stop, manual trigger or secret update is addressed to (the spec's word for the `p`) |
+| `REQUESTER` | 9841, 9842, 39842 | the author of the Service Request or Manual Trigger a run's provenance quote names (slot 3 of the `q`; required by the spec because 9843/9840 are regular events) |
+| `SERVICE_REQUEST` | 9842, 39842 | the standing 9843 Service Request a request-gated run was authorized by (`q` with the `service-request` marker) |
+| `MANUAL_TRIGGER` | 9841, 9842, 39842 | the 9840 Manual Trigger a run replays (`q` with the `manual-trigger` marker) |
+| `JOB_RESULT` | 9842, 39842 | each 9841 Job Result that makes up the run (`q` with a job-id marker; prop: job id) |
+| `COMPUTE_PROVIDER` | 9842, 39842 | each quoted Job Result's signer (slot 3 of the `q`; rule 3 for JOB_RESULT) |
+| `WORKFLOW_RUN` | 9841 | the 39842 Workflow Progress address of the run a Job Result belongs to (`q`) |
+| `READY_FOR` | 19844 | a repository (`a`) or every repository of a maintainer (`p`) the coordinator is ready to accept a Service Request for |
+| `SECRET_ORIGIN` | 39844 | the maintainer that provisioned an effective CI secret (slot 2 of `secret`); value and name are props, never the secret itself |
+| `SECRETS_KEY` | 29846 | the Coordinator Advertisement whose `secrets-key` the update is encrypted to (`e` with the `secrets-key` marker) |
+| `SOLVER` | 38385 | a Mostro instance's dispute solver (`serbero`) |
+| `REPUTATION_ISSUER` | 38385 | the key whose reputation attestations the instance publishes |
+| `REPUTATION_IMPORT_ISSUER` | 38385 | each issuer whose reputation the instance imports (`reputation_import_issuers`) |
+| `ORDER` | 8383 | the 38383 order a Mostro dev fee was paid on, derived as `38383:<signer>:<order-id>` (Mostro publishes each order on `d` = its id) |
+
+`RATED` (34259) gains 38384 (the rated trader's key in `d`, as NIP-85's subject is) and 31986 (the
+coordinator in `p`). `EXERCISE` (1301) gains 33402. `SNAPSHOTTED`, `ORIGIN` and `APP` gain 5128,
+which this appendix had filed under 5129 by analogy.
+
+### The classes
+
+| Kind | Class | Links | Built from | Notes |
+|---|---|---|---|---|
+| 1624 | `GitCoverNoteEvent` | e[root] -> ROOT (E); p -> ROOT_AUTHOR (U); q -> QUOTE (E,A); content nostr: -> MENTION (E,A,U) | coverNoteRoot() (MarkedETag, falling back to the first `e`), PTag::parseKey, QTag::parseEventId, QAddressableTag::parse, citedNIP19() | gitworkshop/ngit cover note. k is the root's kind, not a link. Live notes omit the `root` marker. |
+| 9840 | `CiManualTriggerEvent` | p -> COORDINATOR (U); a -> REPOSITORY (A); E -> ROOT (E); e -> PARENT (E); P -> ROOT_AUTHOR (U) | ciRunLinkedEventIds(), ciRunLinkedAddressIds(), PTag::parseKey | Nostr CI draft (CI extension to NIP-34). c (commits), w (workflow path + sha256), r (git ref): values. |
+| 9841 | `CiJobResultEvent` | a -> REPOSITORY (A); E -> ROOT (E); e -> PARENT (E); P -> ROOT_AUTHOR (U); p -> PARENT_AUTHOR (U); q[39842] -> WORKFLOW_RUN (A); q[manual-trigger] -> MANUAL_TRIGGER (E); q slot 3 -> REQUESTER (U) | ciRun* helpers (RepositoryTag, NIP-22 root/reply tags, QTag/QAddressableTag) | job, name, conclusion, logs/artifact (Blossom URLs), output, exit_code, runs_on: values. |
+| 9842 | `CiWorkflowResultEvent` | a -> REPOSITORY (A); E -> ROOT (E); e -> PARENT (E); P -> ROOT_AUTHOR (U); p -> PARENT_AUTHOR (U); q[job id] -> JOB_RESULT (E); q[job id] slot 3 -> COMPUTE_PROVIDER (U); q[service-request] -> SERVICE_REQUEST (E); q[manual-trigger] -> MANUAL_TRIGGER (E); provenance q slot 3 -> REQUESTER (U) | ciRun* helpers | r is either a git ref (`refs/…`) or the run id: values. |
+| 9843 | `CiServiceRequestEvent` | a -> REPOSITORY (A); p -> COORDINATOR (U) | RepositoryTag::parseAddressId, PTag::parseKey | exactly one of each, or neither is read. |
+| 9844 | `CiServiceStopEvent` | a -> REPOSITORY (A); p -> COORDINATOR (U) | RepositoryTag::parseAddressId, PTag::parseKey | |
+| 19843 | `CiCoordinatorAdvertisementEvent` | *none* | – | W/R/M/X/B are capability and policy values; secrets-key is an encryption key, not a user. |
+| 19844 | `CiRequestReadinessListEvent` | a -> READY_FOR (A); p -> READY_FOR (U) | readyRepositoryAddressIds(), readyMaintainers() | NIP-51 public list shape; items with a 4th element are dropped (the spec forbids markers). |
+| 29846 | `CiSecretUpdateEvent` | a -> REPOSITORY (A); p -> COORDINATOR (U); e[secrets-key] -> SECRETS_KEY (E) | RepositoryTag, PTag, SecretsKeyAdvertisementTag | ephemeral; content is NIP-44 ciphertext. sender/recipient are encryption keys, not users. |
+| 39842 | `CiWorkflowProgressEvent` | as 9842 | ciRun* helpers | addressable (d = run id). A queued marker hides the service-request quote, as the spec requires. |
+| 39844 | `CiRepositoryStatusEvent` | a -> REPOSITORY (A); secret[slot 2] -> SECRET_ORIGIN (U) | ciRepositoryAddressIds(), secrets() | d repeats the first a: not a second link. |
+| 1080 | `PnsEvent` | *none* | – | NIP-PNS draft (#1893). Content is ciphertext; a link would leak what PNS hides. The signer is a derived key unlinkable to the user. |
+| 4454 | `EncryptionKeyRequestEvent` | *none* | – | NIP-4E draft. P/pubkey (client key), n (requested encryption key) and relay: key material and delivery hints. |
+| 4455 | `EncryptionKeyTransferEvent` | p -> RECIPIENT (U) | recipientKeys() | P (sender client key) is the other half of the NIP-44 conversation key, not a link. |
+| 5128 | `SiteSnapshotEvent` | a -> SNAPSHOTTED (A); A -> ORIGIN (A); app -> APP (A) | OriginSiteTag, AppTag (ATag) | NIP-5A. path hashes, x, server/source URLs: values. |
+| 30024 | `LongFormDraftEvent` | q -> QUOTE (E,A); p -> MENTION (U); zap -> ZAP_SPLIT (U); content nostr: -> MENTION (E,A,U); t -> HASHTAG (T) | nip23LongContent/TagArrayExt (shared with 30023) | NIP-23 draft; the same references as 30023. Not a NIP-10 thread or NIP-22 root. |
+| 30031 | `StickerPackEvent` | *none* | – | DEN Chat / Sonar sticker packs (no spec). Sticker URLs and hashes are values. |
+| 33402 | `WorkoutTemplateEvent` | exercise[coordinate] -> EXERCISE (A) | exerciseTemplateAddresses() | NIP-101e draft (POWR); set values are props. Workstr's `workstr:exercise:` ids are not addresses. |
+| 8383 | `MostroDevFeePaymentEvent` | order-id (derived) -> ORDER (A) | orderAddressId() | Built only when order-id is a UUID. amount/hash/destination: values. |
+| 31986 | `RoboSatsCoordinatorRatingEvent` | p -> RATED (U) | PTag::parseKey | sig is a coordinator token over robot pubkey + order id, not a link; d = alias:orderId. |
+| 38384 | `MostroUserRatingEvent` | d -> RATED (U) | ratedPubKey() (64-hex d only) | The instance signs; the d is the rated trade key (the NIP-85 subject pattern). |
+| 38385 | `MostroInfoEvent` | serbero -> SOLVER (U); reputation issuer -> REPUTATION_ISSUER (U); reputation_import_issuers -> REPUTATION_IMPORT_ISSUER (U) | serbero(), reputationIssuer(), reputationImportIssuers() | d is the instance's own key (AUTHOR); lnd_node_pubkey is a Lightning key. |
+| 38386 | `MostroDisputeEvent` | *none* | – | the dispute id is a UUID, not a Nostr reference. |
+| 31986, 38384, 38385, 38386 | `UnrecognizedKind…Event` | *none* | – | other apps' events on these kinds (Paygress, bondtrade, Borkstr): addressable, unread. |
