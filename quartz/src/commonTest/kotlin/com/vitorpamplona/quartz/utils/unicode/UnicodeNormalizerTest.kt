@@ -64,14 +64,14 @@ class UnicodeNormalizerTest {
     fun platformNormalizerMatchesReferenceResults() {
         val normalizer = UnicodeNormalizer()
         cases.forEach { (input, expected) ->
-            assertEquals(expected, normalizer.normalizeNFKC(input), "input: ${input.codePoints()}")
+            assertEquals(expected, normalizer.normalizeNFKC(input), "input: ${input.hexCodePoints()}")
         }
     }
 
     @Test
     fun pureKotlinNormalizerMatchesReferenceResults() {
         cases.forEach { (input, expected) ->
-            assertEquals(expected, NfkcNormalizer.normalize(input), "input: ${input.codePoints()}")
+            assertEquals(expected, NfkcNormalizer.normalize(input), "input: ${input.hexCodePoints()}")
         }
     }
 
@@ -82,5 +82,5 @@ class UnicodeNormalizerTest {
         assertEquals("", NfkcNormalizer.normalize(""))
     }
 
-    private fun String.codePoints() = map { it.code.toString(16) }
+    private fun String.hexCodePoints() = map { it.code.toString(16) }
 }

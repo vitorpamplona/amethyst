@@ -33,8 +33,8 @@ import com.vitorpamplona.quartz.nip87Ecash.recommendation.MintRecommendationEven
 import com.vitorpamplona.quartz.nip87Ecash.recommendation.UnrecognizedKind38000Event
 import kotlin.test.Test
 import kotlin.test.assertEquals
-import kotlin.test.assertFalse
 import kotlin.test.assertIs
+import kotlin.test.assertIsNot
 import kotlin.test.assertTrue
 
 /**
@@ -117,7 +117,7 @@ class EventFactoryKind38000Test {
             // Stores key 30000–39999 by `d` only when the event is addressable: replacement and
             // `a`-tag deletion must still reach the spam.
             assertIs<AddressableEvent>(event)
-            assertFalse(event is SearchableEvent)
+            assertIsNot<SearchableEvent>(event)
         }
     }
 

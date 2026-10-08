@@ -84,11 +84,11 @@ class CordnLinkInspectionTest {
         // count has to include the group being joined.
         val alone = CordnLinkInspection.of(link()) as CordnLinkInspection.Valid
         assertEquals(1, alone.exposure!!.linkedGroupCount)
-        assertTrue(ExposureNote.GROUPS_LINKED_BY_SESSION !in alone.exposure!!.notes())
+        assertTrue(ExposureNote.GROUPS_LINKED_BY_SESSION !in alone.exposure.notes())
 
         val joining = CordnLinkInspection.of(link(), existingGroupsOnCoordinator = 2) as CordnLinkInspection.Valid
         assertEquals(3, joining.exposure!!.linkedGroupCount)
-        assertTrue(ExposureNote.GROUPS_LINKED_BY_SESSION in joining.exposure!!.notes())
+        assertTrue(ExposureNote.GROUPS_LINKED_BY_SESSION in joining.exposure.notes())
     }
 
     @Test

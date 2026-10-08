@@ -131,7 +131,7 @@ object ConcordModCommands {
             }
         val published = wrap != null && ctx.publish(wrap, ConcordCommands.relaysFor(ctx, sc)).values.any { it.accepted }
         // The mode as it reads once the edition lands: the same fold, with it.
-        val after = if (published && wrap != null) ConcordCommunityState.fold(editions + ConcordActions.controlEditions(listOf(wrap), cp), cid, sc.owner) else before
+        val after = if (published) ConcordCommunityState.fold(editions + ConcordActions.controlEditions(listOf(wrap), cp), cid, sc.owner) else before
         return mapOf(
             "registry_published" to published,
             "public" to after.isPublic,

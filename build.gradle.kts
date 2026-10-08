@@ -62,9 +62,9 @@ allprojects {
     apply(plugin = "com.diffplug.spotless")
 
     if (project === rootProject) {
-        spotless {
-            predeclareDeps()
-        }
+        // Declaring a format on `spotlessPredeclare` is what turns predeclaration on (resolving
+        // the formatter deps from the root project's repositories); the old
+        // `spotless { predeclareDeps() }` switch is deprecated and did nothing more.
         configure<SpotlessExtensionPredeclare> {
             kotlin {
                 ktlint("1.7.1")

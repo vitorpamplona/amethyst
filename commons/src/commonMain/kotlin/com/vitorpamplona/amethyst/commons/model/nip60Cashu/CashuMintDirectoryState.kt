@@ -239,9 +239,8 @@ class CashuMintDirectoryState(
         //    recommendation, so we accept both.
         val urlByDTag: MutableMap<String, String> = HashMap()
         announced.forEach { e ->
-            val d = e.dTag()
             val url = e.mintUrl()
-            if (d != null && url != null) urlByDTag[d] = url
+            if (url != null) urlByDTag[e.dTag()] = url
         }
 
         // 3. Count recommendations per URL, deduplicating by (recommender, mint URL).

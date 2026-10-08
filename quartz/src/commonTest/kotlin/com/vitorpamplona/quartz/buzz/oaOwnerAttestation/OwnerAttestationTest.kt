@@ -212,9 +212,9 @@ class OwnerAttestationTest {
         assertNull(OwnerAttestation.verifiedOwnerOf(KeyPair().pubKey.toHexKey(), 0, 1_000, arrayOf(tag)))
 
         // Every condition must apply to the profile event itself, kind= included.
-        val kindOne = OwnerAttestation.sign(agentPub, "kind=1", owner.privKey!!).toTag()
+        val kindOne = OwnerAttestation.sign(agentPub, "kind=1", owner.privKey).toTag()
         assertNull(OwnerAttestation.verifiedOwnerOf(agentPub, 0, 1_000, arrayOf(kindOne)))
-        val expired = OwnerAttestation.sign(agentPub, "created_at<500", owner.privKey!!).toTag()
+        val expired = OwnerAttestation.sign(agentPub, "created_at<500", owner.privKey).toTag()
         assertNull(OwnerAttestation.verifiedOwnerOf(agentPub, 0, 1_000, arrayOf(expired)))
         assertEquals(ownerPub, OwnerAttestation.verifiedOwnerOf(agentPub, 0, 400, arrayOf(expired)))
     }

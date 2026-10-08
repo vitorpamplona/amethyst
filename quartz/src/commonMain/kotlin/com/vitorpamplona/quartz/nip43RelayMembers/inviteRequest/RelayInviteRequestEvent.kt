@@ -47,6 +47,9 @@ class RelayInviteRequestEvent(
     companion object {
         const val KIND = 28935
 
+        // Naming its own (deprecated) class in the builder's type is not a use worth a warning.
+        @Suppress("DEPRECATION")
+        @Deprecated("Removed from NIP-43. Mint invite codes with the NIP-86 `createclaim` method (Nip86Request.createClaim).")
         fun build(
             createdAt: Long = TimeUtils.now(),
             initializer: TagArrayBuilder<RelayInviteRequestEvent>.() -> Unit = {},

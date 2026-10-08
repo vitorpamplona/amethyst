@@ -739,10 +739,7 @@ class CashuWalletState(
                     // kind:38000 is parameterized-replaceable — keep only the
                     // newest event per (pubKey, dTag). Our isRelevantEvent
                     // already gates by self+cashu so we only see our own.
-                    // dTag() is nullable on this event type; fall back to the
-                    // event id so a missing d-tag doesn't collapse every
-                    // such event into the same map slot.
-                    val key = event.dTag() ?: event.id
+                    val key = event.dTag()
                     val current = recommendationEvents[key]
                     if (current == null || event.createdAt > current.createdAt) {
                         recommendationEvents[key] = event

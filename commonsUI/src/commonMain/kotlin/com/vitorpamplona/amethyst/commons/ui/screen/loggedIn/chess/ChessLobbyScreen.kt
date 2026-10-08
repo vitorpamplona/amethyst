@@ -42,7 +42,6 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -76,6 +75,7 @@ import com.vitorpamplona.amethyst.commons.resources.back
 import com.vitorpamplona.amethyst.commons.resources.dismiss
 import com.vitorpamplona.amethyst.commons.resources.relay_settings
 import com.vitorpamplona.amethyst.commons.resources.route_chess
+import com.vitorpamplona.amethyst.commons.ui.components.rememberModalSheetState
 import com.vitorpamplona.amethyst.commons.ui.components.rememberWindowViewModel
 import com.vitorpamplona.amethyst.commons.ui.feeds.RefresheableBox
 import com.vitorpamplona.amethyst.commons.ui.navigation.bottombars.FabBottomBarPadded
@@ -243,7 +243,7 @@ fun ChessLobbyScreen(
     if (showRelaySettings) {
         ModalBottomSheet(
             onDismissRequest = { showRelaySettings = false },
-            sheetState = rememberModalBottomSheetState(),
+            sheetState = rememberModalSheetState(),
         ) {
             ChessRelaySettingsSheet(
                 chessViewModel = chessViewModel,

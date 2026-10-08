@@ -41,7 +41,6 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
-import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -71,6 +70,7 @@ import com.vitorpamplona.amethyst.commons.resources.nest_create_title
 import com.vitorpamplona.amethyst.commons.resources.nest_create_when
 import com.vitorpamplona.amethyst.commons.resources.next
 import com.vitorpamplona.amethyst.commons.ui.actions.uploads.SelectSingleFromGallery
+import com.vitorpamplona.amethyst.commons.ui.components.rememberModalSheetState
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.placeholderText
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
@@ -102,7 +102,7 @@ fun CreateNestSheet(
     LaunchedEffect(viewModel) { viewModel.bindAccountIfMissing(accountViewModel) }
 
     val state by viewModel.state.collectAsState()
-    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+    val sheetState = rememberModalSheetState(skipPartiallyExpanded = true)
     val scope = rememberCoroutineScope()
     val context = LocalContext.current
 

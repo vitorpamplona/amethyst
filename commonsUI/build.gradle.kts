@@ -245,12 +245,10 @@ kotlin {
         // deliberately NOT in this set — it renders through android.graphics.
         val skikoMain =
             create("skikoMain") {
+                // PlatformBackHandler (desktop Esc, iOS swipe) uses androidx.navigationevent's
+                // NavigationBackHandler, which navigation3-ui already exposes as an api dependency.
+                // Android uses AndroidX activity's BackHandler instead.
                 dependsOn(commonMain.get())
-                dependencies {
-                    // BackHandler for desktop (Esc) and iOS (swipe), behind PlatformBackHandler.
-                    // JetBrains Compose, Apache-2.0; Android uses AndroidX's instead.
-                    implementation(libs.jetbrains.compose.ui.backhandler)
-                }
             }
         getByName("jvmMain").dependsOn(skikoMain)
         iosMain.dependsOn(skikoMain)

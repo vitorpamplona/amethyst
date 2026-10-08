@@ -18,18 +18,24 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.quartz.utils.secp256k1
+package androidx.media3.exoplayer.source
+
+import androidx.media3.common.Format
+import androidx.media3.common.util.UnstableApi
 
 /**
- * KMP-compatible thread-local storage.
+ * Reaches media3's package-private [ProgressiveMediaSource.Factory.enableLazyLoadingWithSingleTrack],
+ * which is how [DefaultMediaSourceFactory] side-loads a subtitle file: the source reports its one
+ * track up front and fetches nothing until that track is selected. Without it, a progressive
+ * source must open the file to discover its tracks, so every caption would be downloaded before
+ * the video could start, and an unreachable one would fail preparation of the whole merged item.
  *
- * On JVM/Android: delegates to java.lang.ThreadLocal for true per-thread isolation.
- * On Native: single-threaded assumption — just holds the value directly.
- * (Kotlin/Native has its own threading model; for the secp256k1 use case,
- * scratch buffers don't need thread isolation since coroutines are cooperative.)
+ * Lives in media3's package only for that access. Amethyst's HLS path builds its own sources
+ * (see CustomMediaSourceFactory) and so has to rebuild the subtitle wrap DefaultMediaSourceFactory
+ * would otherwise apply.
  */
-internal expect class ScratchLocal<T : Any>(
-    initializer: () -> T,
-) {
-    fun get(): T
-}
+@UnstableApi
+internal fun ProgressiveMediaSource.Factory.lazilyLoadingSingleTrack(
+    trackId: Int,
+    format: Format,
+): ProgressiveMediaSource.Factory = enableLazyLoadingWithSingleTrack(trackId, format)
