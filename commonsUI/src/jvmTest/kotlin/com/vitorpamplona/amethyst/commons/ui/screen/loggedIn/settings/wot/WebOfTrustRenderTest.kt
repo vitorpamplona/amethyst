@@ -82,7 +82,7 @@ class WebOfTrustRenderTest {
         TrustNetwork(TrustNetworkHeader(providerKey, provider.relayUrl.url, now, now - 3600, now - 3600), builder.build().first)
     }
 
-    private val actions = WebOfTrustActions({}, {}, {}, {}, {}, {}, {}, {}, {}, {})
+    private val actions = WebOfTrustActions({}, {}, {}, {}, {}, { _, _ -> }, {}, {}, {}, {})
 
     private fun state(
         provider: ServiceProviderTag? = this.provider,

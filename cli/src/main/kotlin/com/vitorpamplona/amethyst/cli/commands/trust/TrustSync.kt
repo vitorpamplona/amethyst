@@ -68,7 +68,7 @@ object TrustSync {
             ctx.prepare()
             val observer = observerArg?.let { ctx.requireUserHex(it) } ?: ctx.identity.pubKeyHex
             openTrustNetwork(ctx, observer, minScore, refresh = true, withClient = true, timeoutMs = timeoutMs).use { session ->
-                val provider = session.provider ?: return noProvider()
+                val provider = session.provider ?: return noProvider(observer.takeIf { it != ctx.identity.pubKeyHex })
                 System.err.println("[amy] trust network: provider ${provider.pubkey} @ ${provider.relayUrl.url}")
 
                 val started = System.currentTimeMillis()
@@ -128,9 +128,13 @@ private fun TrustNetworkOutcome.describe(): String? =
         is TrustNetworkOutcome.Failed -> message
     }
 
-/** No `30382:rank` provider in the account's kind 10040. */
-internal fun noProvider(): Int =
+/** No `30382:rank` provider in the kind 10040 of [observer] (null: the account's own). */
+internal fun noProvider(observer: String? = null): Int =
     Output.error(
         "no_provider",
-        "the account's kind 10040 names no 30382:rank provider; run `amy trust setup brainstorm` or `amy graperank register PROVIDER --relay URL`",
+        if (observer == null) {
+            "the account's kind 10040 names no 30382:rank provider; run `amy trust setup brainstorm`, `amy trust copy USER` or `amy graperank register PROVIDER --relay URL`"
+        } else {
+            "$observer's kind 10040 names no public 30382:rank provider"
+        },
     )

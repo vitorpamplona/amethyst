@@ -137,7 +137,11 @@ class TrustProviderListState(
 
     private suspend fun resolvedProviders(note: Note): Set<ServiceProviderTag>? {
         val event = note.event as? TrustProviderListEvent ?: settings.backupTrustProviderList ?: return emptySet()
-        if (event.content.isBlank()) return event.tags.serviceProviderSet()
+        val public = event.tags.serviceProviderSet()
+        if (event.content.isBlank()) return public
+        // A public rank row already decides the provider (public rows come first), so a signer that
+        // cannot decrypt (a read-only login, a bunker without NIP-44) must not hold it unresolved.
+        if (public.any { it.service == ProviderTypes.rank }) return public
         val private = decryptionCache.cachedPrivateLists.privateTags(event) ?: return null
         return (event.tags + private).serviceProviderSet()
     }

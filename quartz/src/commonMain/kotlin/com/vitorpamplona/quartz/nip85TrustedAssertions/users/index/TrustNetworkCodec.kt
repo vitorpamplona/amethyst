@@ -37,7 +37,8 @@ data class TrustNetworkHeader(
     /** When the last small update finished, unix seconds. */
     val lastUpdate: Long,
     /**
-     * Cards held (entries and tombstones) created at or after [syncCursor], or null when unknown.
+     * Cards held (entries and tombstones) created in the update window, from
+     * `TRUST_NETWORK_UPDATE_OVERLAP_SECS` before [syncCursor] on, or null when unknown.
      * Lets an update compare it with the relay's count without reading the ids file.
      */
     val heldAtCursor: Int? = null,

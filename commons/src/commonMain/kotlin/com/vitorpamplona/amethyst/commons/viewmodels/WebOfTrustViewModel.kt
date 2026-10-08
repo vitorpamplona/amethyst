@@ -188,16 +188,24 @@ class WebOfTrustViewModel(
     }
 
     /** Publishes kind 10040 [rows] written by hand (they must include a `30382:rank` row). */
-    fun useProviderRows(rows: List<TrustProviderRow>) {
+    fun useProviderRows(
+        rows: List<TrustProviderRow>,
+        onSaved: () -> Unit = {},
+    ) {
+        if (_setup.value is WebOfTrustSetup.Running || _setup.value is WebOfTrustSetup.Saving) return
+        _setup.value = WebOfTrustSetup.Saving(MANUAL)
         viewModelScope.launch {
-            try {
-                account.setTrustProviderRows(rows, _isPrivate.value)
-                _copy.value = WebOfTrustCopy.Idle
-            } catch (e: CancellationException) {
-                throw e
-            } catch (e: Exception) {
-                _setup.value = WebOfTrustSetup.Failed(MANUAL, (e as? SignerExceptions)?.let { TrustProviderException.Reason.SIGNER_DECLINED }, e.message.orEmpty())
-            }
+            _setup.value =
+                try {
+                    account.setTrustProviderRows(rows, _isPrivate.value)
+                    _copy.value = WebOfTrustCopy.Idle
+                    onSaved()
+                    WebOfTrustSetup.Idle
+                } catch (e: CancellationException) {
+                    throw e
+                } catch (e: Exception) {
+                    WebOfTrustSetup.Failed(MANUAL, (e as? SignerExceptions)?.let { TrustProviderException.Reason.SIGNER_DECLINED }, e.message.orEmpty())
+                }
         }
     }
 

@@ -109,7 +109,9 @@ fun rememberOutsideNetworkRuns(
         if (!verdicts.isActive) {
             OutsideNetworkRuns.NONE
         } else {
-            outsideNetworkRuns(notes, revealed) { author -> !vouches.vouchesFor(author) && verdicts.isOutside(author) }
+            // One verdict per author: a long chat repeats the same few senders.
+            val byAuthor = HashMap<String, Boolean>()
+            outsideNetworkRuns(notes, revealed) { author -> byAuthor.getOrPut(author) { !vouches.vouchesFor(author) && verdicts.isOutside(author) } }
         }
     }
 }

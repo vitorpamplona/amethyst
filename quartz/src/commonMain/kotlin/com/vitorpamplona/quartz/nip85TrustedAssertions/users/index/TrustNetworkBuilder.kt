@@ -72,6 +72,14 @@ class TrustNetworkBuilder(
     private val deletedSubjects = HashMap<Key, Long>()
     private val deletedIds = HashSet<HexKey>()
 
+    /**
+     * Cards a kind 5 deleted by id (`e` tag). Unlike [deletedIds] (the relay no longer has the
+     * card, so the subject falls back to its previous one), a deleted card removes its subject as
+     * of its own time: the relay replaced the older versions long ago, and may still serve this
+     * one if it ignores kind 5s, so it is buried as a tombstone.
+     */
+    private val deletedByKind5 = HashSet<HexKey>()
+
     /** Newest `created_at` among everything accepted so far: the next update's cursor. */
     var newestCreatedAt: Long = 0
         private set
@@ -80,7 +88,7 @@ class TrustNetworkBuilder(
     val cardCount: Int get() = size
 
     /** A deletion or a removal by id was added: [build] may drop cards. */
-    val hasRemovals: Boolean get() = deletedSubjects.isNotEmpty() || deletedIds.isNotEmpty()
+    val hasRemovals: Boolean get() = deletedSubjects.isNotEmpty() || deletedIds.isNotEmpty() || deletedByKind5.isNotEmpty()
 
     /**
      * Adds a verified event from the provider: a kind 30382 card or a kind 5 deletion.
@@ -156,13 +164,16 @@ class TrustNetworkBuilder(
 
                 "e" -> {
                     if (Hex.isHex64(tag[1])) {
-                        deletedIds.add(tag[1].lowercase())
+                        deletedByKind5.add(tag[1].lowercase())
                         any = true
                     }
                 }
             }
         }
-        if (any && event.createdAt > newestCreatedAt) newestCreatedAt = event.createdAt
+        // Even one that names nothing here (another kind's cards, a malformed subject) moves the
+        // cursor past it: the deletions COUNT after the cursor would otherwise find it again on
+        // every update and re-run the whole merge.
+        if (event.createdAt > newestCreatedAt) newestCreatedAt = event.createdAt
         return any
     }
 
@@ -259,21 +270,23 @@ class TrustNetworkBuilder(
         held = held.copyOf(capacity)
     }
 
-    /** The first 128 bits of each id in [deletedIds], so [isDeletedId] checks a card without allocating. */
-    private fun deletedIdPrefixes(): KeyTable =
+    /** The first 128 bits of each id in [idSet], so [isIn] checks a card without allocating. */
+    private fun idPrefixes(idSet: Set<HexKey>): KeyTable =
         KeyTable.of(
-            deletedIds.mapNotNull { id ->
+            idSet.mapNotNull { id ->
                 if (Hex.isHex64(id)) Key(Hex.readLong(id, 0), Hex.readLong(id, 16)) to 0L else null
             },
         )
 
-    private fun isDeletedId(
+    /** Whether the card at [i] has an id in [idSet], whose [prefixes] are given. */
+    private fun isIn(
         i: Int,
         prefixes: KeyTable,
+        idSet: Set<HexKey>,
     ): Boolean {
         if (prefixes.isEmpty() || !prefixes.contains(readLong(ids, 32 * i), readLong(ids, 32 * i + 8))) return false
         // Rare: confirm the whole id.
-        return Hex.encode(ids.copyOfRange(32 * i, 32 * i + 32)) in deletedIds
+        return Hex.encode(ids.copyOfRange(32 * i, 32 * i + 32)) in idSet
     }
 
     /** Unsigned byte order of the ids at positions [a] and [b]. */
@@ -316,7 +329,8 @@ class TrustNetworkBuilder(
             }
         }
 
-        val deletedPrefixes = deletedIdPrefixes()
+        val deletedPrefixes = idPrefixes(deletedIds)
+        val kind5Prefixes = idPrefixes(deletedByKind5)
         val deletedAtBySubject = KeyTable.of(deletedSubjects.map { (key, at) -> key to at })
         val duplicate = BooleanArray(size)
         val keep = IntArray(size)
@@ -332,7 +346,7 @@ class TrustNetworkBuilder(
             // The subject's newest card the relay still has (a card removed by id falls back to
             // the one before it). A kind-5 deletion of the subject makes that card a tombstone:
             // out of the index, but remembered, so a relay that kept the card cannot bring it back.
-            val deletedAt = if (deletedAtBySubject.isEmpty()) KeyTable.MISSING else deletedAtBySubject.valueOf(hi[first], lo[first])
+            var deletedAt = if (deletedAtBySubject.isEmpty()) KeyTable.MISSING else deletedAtBySubject.valueOf(hi[first], lo[first])
             // The same card twice (an update re-fetching a card the index already holds): sorted
             // next to each other, so keep the first and carry over whether the relay holds it.
             // Otherwise the copy would be buried as an "older version" of itself.
@@ -346,11 +360,18 @@ class TrustNetworkBuilder(
                     original = i
                 }
             }
+            // A card deleted by id deletes its subject as of its own time (see [deletedByKind5]).
+            if (!kind5Prefixes.isEmpty()) {
+                for (g in k until next) {
+                    val i = order[g]
+                    if (!duplicate[i] && isIn(i, kind5Prefixes, deletedByKind5) && createdAt[i] > deletedAt) deletedAt = createdAt[i]
+                }
+            }
             var chosen = -1
             for (g in k until next) {
                 val i = order[g]
                 if (duplicate[i]) continue
-                if (isDeletedId(i, deletedPrefixes)) continue
+                if (isIn(i, deletedPrefixes, deletedIds)) continue
                 if (chosen < 0) {
                     chosen = i
                 } else if (held[i]) {

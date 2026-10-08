@@ -194,6 +194,35 @@ class TrustNetworkIndexTest {
     }
 
     @Test
+    fun aCardDeletedByIdTakesItsSubjectOut() {
+        val s = hex()
+        val first = TrustNetworkBuilder(provider)
+        first.add(card(s, rank = 50, createdAt = 1000))
+        val (index, ids) = first.build()
+
+        // The provider replaces the card, then deletes the replacement by id: the relay holds no
+        // card for the subject any more, so the old one must not come back.
+        val newer = card(s, rank = 60, createdAt = 2000)
+        val update = TrustNetworkBuilder(provider)
+        update.addAll(index, ids)
+        update.add(newer)
+        update.add(Event(hex(), provider, 3000, 5, arrayOf(arrayOf("e", newer.id)), "", sig))
+        val (merged, mergedIds) = update.build()
+        assertNull(merged.rankOf(s))
+        // Remembered, in case the relay ignored the kind 5 and still serves it.
+        assertEquals(1, mergedIds.tombstones)
+    }
+
+    @Test
+    fun aDeletionThatNamesNothingStillMovesTheCursor() {
+        val builder = TrustNetworkBuilder(provider)
+        builder.add(card(hex(), rank = 50, createdAt = 1000))
+        // A kind 5 for another kind's cards, signed by the same key.
+        assertFalse(builder.add(Event(hex(), provider, 5000, 5, arrayOf(arrayOf("a", "30383:$provider:${hex()}")), "", sig)))
+        assertEquals(5000, builder.newestCreatedAt)
+    }
+
+    @Test
     fun ignoresOtherAuthorsKindsAndBadSubjects() {
         val builder = TrustNetworkBuilder(provider)
         assertFalse(builder.add(card(hex(), rank = 50, author = hex())))

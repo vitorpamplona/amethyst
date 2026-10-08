@@ -124,8 +124,13 @@ class BrainstormOnboarding(
         if (serviceKey == null || !Hex.isHex64(serviceKey)) throw unexpected("no service key")
         val calculated = history["last_time_calculated_graperank"]
 
+        // /setup is not authenticated: use it only when its rank row names the key the signed-in
+        // /user/history just returned.
+        val rows =
+            setupRows(pubkey)?.takeIf { rows -> rows.any { it.name == ProviderTypes.rank.toValue() && it.key == serviceKey } }
+                ?: SCORE_SERVICES.map { TrustProviderRow(it.toValue(), serviceKey, relay) }
         return TrustProviderRegistration(
-            rows = setupRows(pubkey) ?: SCORE_SERVICES.map { TrustProviderRow(it.toValue(), serviceKey, relay) },
+            rows = rows,
             scoresReady = calculated != null && calculated !is JsonNull,
         )
     }

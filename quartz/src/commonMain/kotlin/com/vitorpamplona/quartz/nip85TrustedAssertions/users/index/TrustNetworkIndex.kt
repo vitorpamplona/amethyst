@@ -194,6 +194,9 @@ class TrustNetworkIds(
 
     fun tombstoneIdHex(i: Int): HexKey = Hex.encode(tombstoneIds.copyOfRange(32 * i, 32 * i + 32))
 
+    /** Every tombstone's event id, as hex. */
+    fun tombstoneIdSet(): Set<HexKey> = HashSet<HexKey>(tombstones * 2).also { set -> for (i in 0 until tombstones) set.add(tombstoneIdHex(i)) }
+
     /**
      * Every card held (entries and tombstones) as a NIP-77 local set. Sorted once as packed
      * longs; ids become strings only for the window negentropy asks for, instead of a list of

@@ -176,7 +176,7 @@ suspend fun INostrClient.downloadTrustNetwork(
     val (index, ids) = builder.build()
     val cursor = cursorAfter(0, builder.newestCreatedAt, startedAt)
     return TrustNetworkSyncResult(
-        header = TrustNetworkHeader(provider, relay.url, syncCursor = cursor, lastFullCheck = now, lastUpdate = now, heldAtCursor = ids.countSince(cursor), heldAfterCursor = ids.countSince(cursor + 1)),
+        header = TrustNetworkHeader(provider, relay.url, syncCursor = cursor, lastFullCheck = now, lastUpdate = now).withHeldCounts(ids),
         index = index,
         ids = ids,
         complete = complete,
@@ -192,12 +192,12 @@ suspend fun INostrClient.downloadTrustNetwork(
  * Brainstorm run signed 155k cards within a few seconds), so re-asking a time window would
  * re-download the whole batch every time.
  *
- *  1. **Is there anything new?** NIP-45 COUNTs: the relay's cards at or after the sync cursor,
+ *  1. **Is there anything new?** NIP-45 COUNTs: the relay's cards in the update window (see 2),
  *     compared with the cards (entries and tombstones) held for that window, and deletions
- *     newer than the cursor. Two round trips of a few bytes each. Equal and zero means nothing
+ *     newer than the cursor ([trustNetworkNews]). A few bytes each. Equal and zero means nothing
  *     changed, and the update ends there, so it is cheap enough to run on every app open.
- *     Counting the cursor's own second catches a batch that was still arriving at the last
- *     sync (providers sign a whole run with one `created_at`).
+ *     Counting the whole window catches a batch that was still arriving at the last sync
+ *     (providers sign a whole run with one `created_at`).
  *  2. **Cards:** a NIP-77 reconcile of the window from [TRUST_NETWORK_UPDATE_OVERLAP_SECS]
  *     before the cursor on, against the ids already held for that window. Only missing cards
  *     are fetched; cards the relay no longer has are dropped. The overlap catches a batch that
@@ -226,7 +226,7 @@ suspend fun INostrClient.updateTrustNetwork(
         knownNews ?: trustNetworkNews(
             header,
             relay,
-            held = header.heldAtCursor ?: ids.countSince(header.syncCursor),
+            held = header.heldAtCursor ?: ids.countSince(header.windowStart()),
             heldAfter = header.heldAfterCursor ?: ids.countSince(header.syncCursor + 1),
         )
     if (!news.any) {
@@ -234,7 +234,7 @@ suspend fun INostrClient.updateTrustNetwork(
     }
     val newDeletions = news.deletions
 
-    val windowStart = (header.syncCursor - TRUST_NETWORK_UPDATE_OVERLAP_SECS).coerceAtLeast(0)
+    val windowStart = header.windowStart()
     val diff = reconcileIds(relay, trustNetworkFilter(provider, windowStart), ids.negentropyIndex())
 
     // The counts said something changed but the ids say nothing did (a relay without NIP-45
@@ -248,7 +248,7 @@ suspend fun INostrClient.updateTrustNetwork(
     val before = builder.cardCount
     val invalid = AtomicInt(0)
 
-    val reconciled = diff?.let { applyDiff(builder, relay, it, invalid, progress, seeded = before) }
+    val reconciled = diff?.let { applyDiff(builder, relay, it, invalid, progress, seeded = before, seededIds = ids) }
 
     val complete: Boolean
     val detail: String
@@ -269,9 +269,11 @@ suspend fun INostrClient.updateTrustNetwork(
     }
 
     // The counts said something changed, but nothing arrived or went (a relay without NIP-45
-    // always says so): keep the same index, so nothing is rewritten and no feed rebuilds.
+    // always says so): keep the same index, so nothing is rewritten and no feed rebuilds. A kind 5
+    // that named nothing here still moves the cursor past it, or the next update finds it again.
     if (complete && builder.cardCount == before && !builder.hasRemovals) {
-        return TrustNetworkSyncResult(header.copy(lastUpdate = TimeUtils.now()).withHeldCounts(ids), index, ids, complete = true, invalid = invalid.load(), received = 0, detail = detail, unchanged = true)
+        val cursor = cursorAfter(header.syncCursor, builder.newestCreatedAt, startedAt)
+        return TrustNetworkSyncResult(header.copy(syncCursor = cursor, lastUpdate = TimeUtils.now()).withHeldCounts(ids), index, ids, complete = true, invalid = invalid.load(), received = 0, detail = detail, unchanged = true)
     }
 
     val (newIndex, newIds) = builder.build()
@@ -314,7 +316,7 @@ suspend fun INostrClient.reconcileTrustNetwork(
     builder.addAll(index, ids)
     val before = builder.cardCount
     val invalid = AtomicInt(0)
-    val reconciled = applyDiff(builder, relay, diff, invalid, progress, seeded = before)
+    val reconciled = applyDiff(builder, relay, diff, invalid, progress, seeded = before, seededIds = ids)
 
     val (newIndex, newIds) = builder.build()
     val now = TimeUtils.now()
@@ -383,6 +385,8 @@ private suspend fun INostrClient.applyDiff(
     invalid: AtomicInt,
     progress: TrustNetworkProgress?,
     seeded: Int,
+    /** The ids column the builder was seeded with: tells its tombstones apart. */
+    seededIds: TrustNetworkIds,
 ): Reconciled {
     val missing = AtomicInt(0)
     val invalidBefore = invalid.load()
@@ -411,8 +415,14 @@ private suspend fun INostrClient.applyDiff(
             builder.removeEventIds(diff.have)
             diff.have.size
         } else {
-            Log.w(TAG) { "$unobtained of ${diff.need.size} cards could not be had from ${relay.url}; keeping the ${diff.have.size} it no longer lists until a reconcile gets them all" }
-            0
+            // Tombstones still go: they are rank 0 and never the member of their subject, so
+            // dropping one cannot put anyone in. Kept, the ones a newer card replaced would pile
+            // up for as long as one card stays unobtainable.
+            val tombstones = seededIds.tombstoneIdSet()
+            val goneTombstones = diff.have.filter { it in tombstones }
+            builder.removeEventIds(goneTombstones)
+            Log.w(TAG) { "$unobtained of ${diff.need.size} cards could not be had from ${relay.url}; keeping the ${diff.have.size - goneTombstones.size} cards it no longer lists until a reconcile gets them all" }
+            goneTombstones.size
         }
     return Reconciled(unobtained <= missingAllowed(diff.need.size), diff.need.size, gone)
 }
@@ -456,7 +466,7 @@ private fun cursorAfter(
 
 /** What the relay's counts say changed since [TrustNetworkHeader.syncCursor]. */
 class TrustNetworkNews(
-    /** Cards at or after the cursor differ from the ones held, or the relay could not count. */
+    /** Cards in the update window differ from the ones held, or the relay could not count. */
     val cards: Boolean,
     /** Deletions newer than the cursor, or null when the relay could not count. */
     val deletions: Int?,
@@ -465,9 +475,11 @@ class TrustNetworkNews(
 }
 
 /**
- * Two NIP-45 COUNTs of a few bytes each: the relay's cards at or after the cursor against the
- * [held] count, and deletions after it. Counting the cursor's own second catches a batch that
- * was still arriving at the last sync (providers sign a whole run with one `created_at`).
+ * Three NIP-45 COUNTs of a few bytes each: the relay's cards in the update window (from
+ * [TRUST_NETWORK_UPDATE_OVERLAP_SECS] before the cursor) against the [held] count, its cards newer
+ * than the cursor against [heldAfter], and deletions newer than the cursor. Counting the window
+ * catches a batch that was still arriving at the last sync (providers sign a whole run with one
+ * `created_at`, which a kind 5 signed meanwhile can put below the cursor).
  */
 suspend fun INostrClient.trustNetworkNews(
     header: TrustNetworkHeader,
@@ -475,7 +487,7 @@ suspend fun INostrClient.trustNetworkNews(
     held: Int? = header.heldAtCursor,
     heldAfter: Int? = header.heldAfterCursor,
 ): TrustNetworkNews {
-    val relayCards = countOrNull(relay, trustNetworkFilter(header.provider, header.syncCursor))
+    val relayCards = countOrNull(relay, trustNetworkFilter(header.provider, header.windowStart()))
     // A replacement in the cursor's batch keeps the count above equal (the relay drops the old
     // card as it stores the new one), but the new card is always newer than the old: counting
     // past the cursor catches it.
@@ -485,8 +497,15 @@ suspend fun INostrClient.trustNetworkNews(
     return TrustNetworkNews(cards = cards, deletions = deletions)
 }
 
+/**
+ * Where an update starts looking: [TRUST_NETWORK_UPDATE_OVERLAP_SECS] before the cursor. The
+ * cursor is the newest card or kind 5 applied, so the rest of a batch still arriving at the last
+ * sync can sit a little below it (a kind 5 signed after the batch began moves the cursor past it).
+ */
+private fun TrustNetworkHeader.windowStart() = (syncCursor - TRUST_NETWORK_UPDATE_OVERLAP_SECS).coerceAtLeast(0)
+
 /** [TrustNetworkHeader.heldAtCursor] and [TrustNetworkHeader.heldAfterCursor] from [ids], the id column saved with this header. */
-private fun TrustNetworkHeader.withHeldCounts(ids: TrustNetworkIds) = copy(heldAtCursor = ids.countSince(syncCursor), heldAfterCursor = ids.countSince(syncCursor + 1))
+private fun TrustNetworkHeader.withHeldCounts(ids: TrustNetworkIds) = copy(heldAtCursor = ids.countSince(windowStart()), heldAfterCursor = ids.countSince(syncCursor + 1))
 
 private suspend fun INostrClient.countOrNull(
     relay: NormalizedRelayUrl,

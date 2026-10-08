@@ -38,6 +38,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.commons.chats.ui.AutoScrollToNewest
+import com.vitorpamplona.amethyst.commons.chats.ui.NewDateDivisor
 import com.vitorpamplona.amethyst.commons.chats.ui.NewDateOrSubjectDivisor
 import com.vitorpamplona.amethyst.commons.chats.ui.watchChatGroupPosition
 import com.vitorpamplona.amethyst.commons.feeds.FeedContentState
@@ -58,6 +59,9 @@ import com.vitorpamplona.quartz.nip37Drafts.DraftWrapEvent
 import kotlinx.coroutines.launch
 
 private const val SUBJECT_ONLY_CONTENT_TYPE = -2
+
+/** A collapsed run of messages from outside the network: a pill, not a bubble. */
+private const val OUTSIDE_RUN_CONTENT_TYPE = -3
 
 /**
  * The lazy-list content type of a chat row: its event kind, except that a NIP-17 rename with no
@@ -306,7 +310,11 @@ fun ChatFeedLoaded(
         reverseLayout = true,
         state = listState,
     ) {
-        itemsIndexed(rows, key = { _, item -> item.idHex }, contentType = { _, item -> chatRowContentType(item) }) { index, item ->
+        itemsIndexed(
+            rows,
+            key = { _, item -> item.idHex },
+            contentType = { _, item -> if (outsideNetwork.byId.containsKey(item.idHex)) OUTSIDE_RUN_CONTENT_TYPE else chatRowContentType(item) },
+        ) { index, item ->
             val noteEvent = item.event
             if (avoidDraft == null || noteEvent !is DraftWrapEvent || noteEvent.dTag() !in avoidDraft.usedDraftTags) {
                 // Reverse layout: index - 1 is the newer message (visually below),
@@ -327,8 +335,9 @@ fun ChatFeedLoaded(
 
                 Column(modifier = itemModifier) {
                     if (outsideRun != null) {
-                        // The run's row, at its oldest message. No divisor: a subject change would
-                        // print the author's name and the new subject.
+                        // The run's row, at its oldest message. The day header only: a subject change
+                        // would print the author's name and the new subject.
+                        NewDateDivisor(older, item)
                         markersInGap?.invoke(item.event?.createdAt, older?.event?.createdAt)
                         val newestInRun = outsideRun.members.first()
                         LaunchedEffect(routeForLastRead, newestInRun.idHex) {

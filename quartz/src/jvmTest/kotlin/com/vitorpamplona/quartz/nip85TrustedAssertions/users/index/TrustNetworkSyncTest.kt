@@ -124,7 +124,9 @@ class TrustNetworkSyncTest {
                 assertEquals(298, changed.index.size, "one re-ranked, one tombstoned, one deleted")
                 assertEquals(1, changed.ids.tombstones, "the rank-0 card is kept as a tombstone")
                 assertEquals(later, changed.header.syncCursor)
-                assertEquals(2, changed.header.heldAtCursor, "the re-rank and the rank-0 card")
+                // The update window reaches an hour before the cursor: the earlier batch is in it too.
+                assertEquals(299, changed.header.heldAtCursor, "every card held in the update window")
+                assertEquals(0, changed.header.heldAfterCursor, "the re-rank and the rank-0 card are at the cursor, none after it")
 
                 // The tombstone keeps the pre-check exact: nothing new again.
                 val idleAgain = client.updateTrustNetwork(changed.header, changed.index, changed.ids, relay)

@@ -235,6 +235,7 @@ import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.crypto.KeyPair
+import com.vitorpamplona.quartz.nip01Core.crypto.verify
 import com.vitorpamplona.quartz.nip01Core.hints.EventHintBundle
 import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.fetchAll
@@ -1476,11 +1477,14 @@ class Account(
         val cached = cache.getAddressableNoteIfExists(TrustProviderListEvent.createAddress(pubkey))?.event as? TrustProviderListEvent
         val relays = cache.getUserIfExists(pubkey)?.outboxRelays().orEmpty() + indexRelays() + hints
         val filter = Filter(kinds = listOf(TrustProviderListEvent.KIND), authors = listOf(pubkey), limit = 1)
+        // fetchAll neither verifies nor stores: any relay asked could forge a newer list and pick
+        // the provider the user is about to publish. Newest first, the first that verifies.
         val fetched =
             client
                 .fetchAll(filters = relays.associateWith { listOf(filter) }, idleTimeoutMs = 8_000)
                 .filter { it.kind == TrustProviderListEvent.KIND && it.pubKey == pubkey }
-                .maxByOrNull { it.createdAt }
+                .sortedByDescending { it.createdAt }
+                .firstOrNull { it.verify() }
         val newest = listOfNotNull(cached, fetched).maxByOrNull { it.createdAt } ?: return null
         return newest.tags.mapNotNull { TrustProviderRow.parse(it.toList()) }.distinctBy { it.name }
     }
@@ -3885,16 +3889,20 @@ class Account(
 
     /**
      * [isKnownChatroom] for a room that may not be loaded yet (a push that beat it): then the
-     * same rule is applied to the room's members instead of its senders.
+     * same rule is applied to [sender], the only member the message vouches for. The room's
+     * other members are whoever the sender chose to tag, so a stranger tagging a follow (or a
+     * well-ranked key) must not make the room Known.
      */
-    fun isKnownChatroom(key: ChatroomKey): Boolean {
+    fun isKnownChatroom(
+        key: ChatroomKey,
+        sender: HexKey,
+    ): Boolean {
         val room = chatroomList.rooms.get(key)
         if (room != null) return isKnownChatroom(key, room)
         if (chatroomList.hasSentMessagesTo(key) || key in settings.syncedSettings.chats.pinnedChatrooms.value) return true
-        val follows = followingKeySet()
-        if (key.users.any { it in follows }) return true
+        if (sender in followingKeySet()) return true
         val verdicts = currentTrustVerdicts()
-        return verdicts.isActive && key.users.any { verdicts.passes(it) }
+        return verdicts.isActive && verdicts.passes(sender)
     }
 
     /**

@@ -377,7 +377,9 @@ class TrustNetworkSchedulingTest {
             withTimeout(5_000) { wot.network.first { it == null } }
             gate.complete(Unit)
 
-            assertIs<TrustNetworkOutcome.ProviderChanged>(run.await()?.outcome)
+            // Cancelled when the provider went away (or, had it raced to its commit, dropped there).
+            val outcome = run.await()?.outcome
+            assertTrue(outcome == null || outcome is TrustNetworkOutcome.ProviderChanged, "outcome=$outcome")
             assertNull(wot.network.value, "the removed provider's network must not come back")
             assertNull(store.readIndex())
         }

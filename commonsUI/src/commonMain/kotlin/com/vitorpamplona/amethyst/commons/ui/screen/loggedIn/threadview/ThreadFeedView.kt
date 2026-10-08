@@ -646,6 +646,9 @@ private fun outOfNetworkReplies(
     for (i in 1 until thread.size) {
         val note = thread[i]
         if (note.idHex in keepOpen) continue
+        // Levels are computed off the main thread and can trail the list: a reply with none yet
+        // cannot be placed (it may be above the focused note), so it is judged once it has one.
+        if (levels[note] == null) continue
         val author = note.author?.pubkeyHex ?: continue
         if (author == rootAuthor) continue
         if (!answered[i] && verdicts.isOutside(author)) result.add(note.idHex)

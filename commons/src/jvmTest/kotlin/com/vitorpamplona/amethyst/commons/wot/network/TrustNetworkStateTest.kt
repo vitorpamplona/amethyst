@@ -144,6 +144,8 @@ class TrustNetworkStateTest {
             wot.awaitReady()
             assertNull(wot.network.value)
             assertNull(wot.rankOf(trusted))
+            // Deleted, or a cold start (a push) would filter with it until the list is read.
+            assertNull(store.readIndex())
         }
 
     @Test

@@ -31,6 +31,9 @@ import androidx.work.WorkerParameters
 import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.LocalPreferences
 import com.vitorpamplona.quartz.utils.Log
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.coroutineScope
 import java.util.concurrent.TimeUnit
 
 /**
@@ -51,8 +54,10 @@ class TrustNetworkSyncWorker(
         val cache = Amethyst.instance.accountsCache
         cache.loadAllWritableAccounts(LocalPreferences)
         val accounts = cache.accounts.value.values
-        // Each waits for its provider list and then for the sync it starts (or the one already
-        // running), so the job does not end, and let the process die, mid-sync.
+        // The provider lists resolve together (each can wait up to 10s); the syncs then run one at
+        // a time, since a download holds tens of MB. Each waits for the sync it starts (or the
+        // one already running), so the job does not end, and let the process die, mid-sync.
+        coroutineScope { accounts.map { async { it.trustNetwork.awaitReady() } }.awaitAll() }
         val runs = accounts.map { it.trustNetwork.syncDue() }
         Log.d(TAG) { "Checked the trust network of ${accounts.size} accounts: ${runs.map { it?.outcome?.let { o -> o::class.simpleName } }}" }
         return Result.success()

@@ -130,4 +130,14 @@ class ScoreProviderEditsTest {
         assertNull(TrustProviderRow.parse(listOf("30382:rank", "abc", "wss://x.com")))
         assertNull(TrustProviderRow.parse(listOf("30382:rank", "a".repeat(64))))
     }
+
+    @Test
+    fun switchingProviderDropsEveryRowTheOldOneServed() =
+        runBlocking {
+            val brainstorm = listOf("30382:rank", "30382:followers", "30382:hops", "30392").map { TrustProviderRow(it, oldProvider, relay) }
+            val first = withProviderRows(null, brainstorm, isPrivate = false, signer = signer)
+            val switched = withProviderRows(first, listOf(TrustProviderRow("30382:rank", newProvider, relay)), isPrivate = false, signer = signer)
+            assertTrue(switched.tags.none { it.size > 1 && it[1] == oldProvider }, "tags=${switched.tags.map { it.toList() }}")
+            assertEquals(newProvider, switched.rankProvider(signer)?.pubkey)
+        }
 }

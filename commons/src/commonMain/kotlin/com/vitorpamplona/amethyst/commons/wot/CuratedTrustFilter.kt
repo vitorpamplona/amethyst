@@ -56,7 +56,7 @@ fun Account.curatedHidesByTrust(
     return when (event) {
         is ZapReceiptEvent, is Bolt12ZapEvent, is NutzapEvent, is OnchainZapEvent -> false
         is LiveChessGameAcceptEvent, is LiveChessMoveEvent, is StreamMessageV2Event, is ChatEvent -> false
-        is ChatroomKeyable -> !isKnownChatroom(event.chatroomKey(signer.pubKey))
+        is ChatroomKeyable -> !isKnownChatroom(event.chatroomKey(signer.pubKey), event.pubKey)
         else -> verdicts.isOutside(author)
     }
 }

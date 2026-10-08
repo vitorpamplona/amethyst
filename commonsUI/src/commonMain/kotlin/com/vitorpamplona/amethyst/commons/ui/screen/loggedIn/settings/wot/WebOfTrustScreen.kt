@@ -57,6 +57,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Immutable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -223,7 +224,8 @@ class WebOfTrustActions(
     val onRemoveProvider: () -> Unit,
     val onMinScoreChange: (Int) -> Unit,
     val onSetUp: (TrustProviderOnboarding) -> Unit,
-    val onManualRows: (List<TrustProviderRow>) -> Unit,
+    /** Publishes hand-written rows; calls back once they are saved. */
+    val onManualRows: (rows: List<TrustProviderRow>, onSaved: () -> Unit) -> Unit,
     /** Reads the rows of an npub or NIP-05, to see the network as they do. */
     val onCopyFrom: (String) -> Unit,
     /** Reads the rows of a provider's own observer: its default view. */
@@ -496,8 +498,10 @@ private fun RankHistogram(
         buckets.forEachIndexed { bar, count ->
             if (count == 0) return@forEachIndexed
             val height = max(minHeight, size.height * sqrt(count.toFloat() / tallest))
-            // A bar holds ranks 2·bar and 2·bar + 1; it passes when its upper rank does.
-            val color = if (2 * bar + 1 >= threshold) passing else filtered
+            // A bar holds ranks 2·bar and 2·bar + 1 (the last one everything above too); it passes
+            // when its highest rank does.
+            val highest = if (bar == HISTOGRAM_BARS - 1) 127 else 2 * bar + 1
+            val color = if (highest >= threshold) passing else filtered
             drawRoundRect(
                 color = color,
                 topLeft = Offset(bar * slot + (slot - barWidth) / 2, size.height - height),
@@ -794,11 +798,15 @@ private fun ChooseProviderSection(
             )
         }
         AnimatedVisibility(showManual) {
+            // The rows last copied: they fill the editor once, and a later copy still loading (or
+            // failing) leaves the user's edits alone.
+            var lastCopied by remember { mutableStateOf<WebOfTrustCopy.Copied?>(null) }
+            LaunchedEffect(state.copy) { (state.copy as? WebOfTrustCopy.Copied)?.let { lastCopied = it } }
             Column {
                 CopyViewBlock(state, actions)
-                ManualRowsForm(enabled = !busy, copied = state.copy as? WebOfTrustCopy.Copied) { rows ->
-                    actions.onManualRows(rows)
-                    showManual = false
+                // Stays open until the list is saved: a refused signature keeps what was typed.
+                ManualRowsForm(enabled = !busy, copied = lastCopied) { rows ->
+                    actions.onManualRows(rows) { showManual = false }
                 }
                 SettingsSwitchTile(
                     icon = MaterialSymbols.Lock,

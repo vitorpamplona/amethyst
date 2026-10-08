@@ -95,10 +95,11 @@ suspend fun TrustProviderListEvent.rankProvider(signer: NostrSigner?): ServicePr
 
 /**
  * A new kind 10040 built on [existing] with [rows] in it: every row of [existing] (public or
- * private) with the same name as one of [rows] is replaced, and so is any user-score entry
- * (`30382:rank`, `30382:followers`), so the previous score provider never lingers beside the
- * new one. Every other row is kept: other providers, Trusted Lists, `client`. [isPrivate] puts
- * [rows] in the NIP-44 encrypted content instead of the public tags.
+ * private) with the same name as one of [rows] is replaced, and so is every row the previous
+ * score provider's key serves and any user-score entry (`30382:rank`, `30382:followers`), so the
+ * previous provider never lingers beside the new one. Every other row is kept: other providers,
+ * Trusted Lists, `client`. [isPrivate] puts [rows] in the NIP-44 encrypted content instead of
+ * the public tags.
  */
 suspend fun withProviderRows(
     existing: TrustProviderListEvent?,
@@ -106,11 +107,12 @@ suspend fun withProviderRows(
     isPrivate: Boolean,
     signer: NostrSigner,
 ): TrustProviderListEvent {
+    val parts = ListParts.read(existing, signer)
     val names = rows.mapTo(HashSet()) { it.name } + SCORE_SERVICES.map { it.toValue() }
+    val previousKey = parts.rankKey()
     val entries = rows.map { it.toTagArray() }
-    return rewriteEntries(
-        existing,
-        drop = { tag -> tag.isNotEmpty() && tag[0] in names },
+    return parts.rewrite(
+        drop = { tag -> tag.isNotEmpty() && (tag[0] in names || (previousKey != null && tag.size > 1 && tag[1] == previousKey)) },
         publicEntries = if (isPrivate) emptyList() else entries,
         privateEntries = if (isPrivate) entries else emptyList(),
         signer = signer,
@@ -136,13 +138,11 @@ suspend fun withoutScoreProvider(
     signer: NostrSigner,
 ): TrustProviderListEvent? {
     if (existing == null) return null
-    val private = if (existing.content.isBlank()) emptyList() else existing.privateTags(signer)?.serviceProviders().orEmpty()
-    val all = existing.serviceProviders() + private
-    if (all.none { it.service in SCORE_SERVICES }) return null
-    val providerKey = existing.rankProvider(signer)?.pubkey
+    val parts = ListParts.read(existing, signer)
+    if ((parts.public + parts.private).none { ServiceProviderTag.parse(it)?.service in SCORE_SERVICES }) return null
+    val providerKey = parts.rankKey()
     val scoreNames = SCORE_SERVICES.mapTo(HashSet()) { it.toValue() }
-    return rewriteEntries(
-        existing,
+    return parts.rewrite(
         drop = { tag -> tag.isNotEmpty() && (tag[0] in scoreNames || (providerKey != null && tag.size > 1 && tag[1] == providerKey)) },
         publicEntries = emptyList(),
         privateEntries = emptyList(),
@@ -150,26 +150,46 @@ suspend fun withoutScoreProvider(
     )
 }
 
-private suspend fun rewriteEntries(
-    existing: TrustProviderListEvent?,
-    drop: (Array<String>) -> Boolean,
-    publicEntries: List<Array<String>>,
-    privateEntries: List<Array<String>>,
-    signer: NostrSigner,
-): TrustProviderListEvent {
-    val publicTags = existing?.tags?.filterNot(drop).orEmpty() + publicEntries
-    val oldPrivate =
-        if (existing == null || existing.content.isBlank()) {
-            emptyArray()
-        } else {
-            // Never drop entries we cannot read: refuse instead.
-            existing.privateTags(signer) ?: throw SignerExceptions.UnauthorizedDecryptionException()
-        }
-    val privateTags = oldPrivate.filterNot(drop) + privateEntries
+/**
+ * A kind 10040's public and private rows, the private ones decrypted once: with an external
+ * signer every decryption can be a prompt.
+ */
+private class ListParts(
+    val public: List<Array<String>>,
+    val private: List<Array<String>>,
+) {
+    /** The score provider's key: the first `30382:rank` row, public before private. */
+    fun rankKey(): HexKey? = (public + private).firstNotNullOfOrNull { tag -> ServiceProviderTag.parse(tag)?.takeIf { it.service == ProviderTypes.rank }?.pubkey }
 
-    return if (privateTags.isEmpty()) {
-        TrustProviderListEvent.resign(content = "", tags = publicTags.toTypedArray(), signer = signer)
-    } else {
-        TrustProviderListEvent.resign(tags = publicTags.toTypedArray(), privateTags = privateTags.toTypedArray(), signer = signer)
+    suspend fun rewrite(
+        drop: (Array<String>) -> Boolean,
+        publicEntries: List<Array<String>>,
+        privateEntries: List<Array<String>>,
+        signer: NostrSigner,
+    ): TrustProviderListEvent {
+        val publicTags = public.filterNot(drop) + publicEntries
+        val privateTags = private.filterNot(drop) + privateEntries
+        return if (privateTags.isEmpty()) {
+            TrustProviderListEvent.resign(content = "", tags = publicTags.toTypedArray(), signer = signer)
+        } else {
+            TrustProviderListEvent.resign(tags = publicTags.toTypedArray(), privateTags = privateTags.toTypedArray(), signer = signer)
+        }
+    }
+
+    companion object {
+        suspend fun read(
+            existing: TrustProviderListEvent?,
+            signer: NostrSigner,
+        ): ListParts {
+            if (existing == null) return ListParts(emptyList(), emptyList())
+            val private =
+                if (existing.content.isBlank()) {
+                    emptyList()
+                } else {
+                    // Never drop entries we cannot read: refuse instead.
+                    existing.privateTags(signer)?.toList() ?: throw SignerExceptions.UnauthorizedDecryptionException()
+                }
+            return ListParts(existing.tags.toList(), private)
+        }
     }
 }

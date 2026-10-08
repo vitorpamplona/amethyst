@@ -39,6 +39,8 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.IO
 import kotlinx.coroutines.async
+import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -120,6 +122,7 @@ class TrustNetworkState(
 
     // Only touched on [control].
     private var running: Deferred<TrustNetworkRun>? = null
+    private var runningFor: ServiceProviderTag? = null
     private var forceDownloadUntil = 0L
 
     /**
@@ -264,6 +267,11 @@ class TrustNetworkState(
     }
 
     private suspend fun onProvider(choice: ResolvedProvider) {
+        // A sync for the provider being replaced (or removed) would only be dropped at its commit,
+        // after downloading tens of MB, and the new provider's sync waits for it to end.
+        withContext(control) {
+            if (running?.isActive == true && runningFor != choice.provider) running?.cancel()
+        }
         commitLock.withLock { applyProvider(choice) }
         if (autoSync) syncIfStale()
     }
@@ -280,7 +288,15 @@ class TrustNetworkState(
             val current = _network.value
             if (current == null || !current.isFrom(provider)) {
                 _overlay.value = emptyMap()
-                _network.value = withContext(Dispatchers.IO) { store?.readIndex()?.takeIf { it.isFrom(provider) } }
+                _network.value =
+                    withContext(Dispatchers.IO) {
+                        val onDisk = store?.readIndex()
+                        // Another provider's files are no longer the user's network: a cold start
+                        // (a push) would filter with them until the list is read, for as long as
+                        // the new provider's first download takes.
+                        if (onDisk != null && !onDisk.isFrom(provider)) store.delete()
+                        onDisk?.takeIf { it.isFrom(provider) }
+                    }
             }
         }
         applied.value = choice
@@ -313,7 +329,7 @@ class TrustNetworkState(
      */
     suspend fun syncDue(): TrustNetworkRun? {
         awaitReady()
-        return withContext(control) { start(requested = null, force = false) ?: running }?.await()
+        return withContext(control) { start(requested = null, force = false) ?: running }?.awaitRun()
     }
 
     /** Suspends until the running sync, if any, finishes. */
@@ -328,8 +344,17 @@ class TrustNetworkState(
      */
     suspend fun syncNow(kind: TrustNetworkSyncStatus.Kind? = null): TrustNetworkRun? {
         awaitReady()
-        return withContext(control) { start(requested = kind, force = true) }?.await()
+        return withContext(control) { start(requested = kind, force = true) }?.awaitRun()
     }
+
+    /** The run's result, or null when it was cancelled (its provider was replaced) while this caller lives on. */
+    private suspend fun Deferred<TrustNetworkRun>.awaitRun(): TrustNetworkRun? =
+        try {
+            await()
+        } catch (e: CancellationException) {
+            currentCoroutineContext().ensureActive()
+            null
+        }
 
     /** On [control]: decides and launches a sync. Null when none started. */
     private fun start(
@@ -357,9 +382,13 @@ class TrustNetworkState(
 
         val run = scope.async(Dispatchers.IO) { runSync(store, source, provider, current.takeUnless { kind == TrustNetworkSyncStatus.Kind.DOWNLOAD }, kind, allowMetered) }
         running = run
+        runningFor = provider
         run.invokeOnCompletion {
             scope.launch(control) {
-                if (running === run) running = null
+                if (running === run) {
+                    running = null
+                    runningFor = null
+                }
                 // The provider changed while it ran: its result was dropped, and the new
                 // provider's trigger found it running. Start the new one now.
                 if (autoSync && currentProvider != provider) start(requested = null, force = false)
@@ -484,8 +513,10 @@ class TrustNetworkState(
             // start reconcile again); an update's lastUpdate is not, which only means the next
             // process start asks again.
             val countsLearned = header.heldAtCursor != current.header.heldAtCursor || header.heldAfterCursor != current.header.heldAfterCursor
+            // A kind 5 that changed nothing still moves the cursor past it, or every update finds it again.
+            val cursorMoved = header.syncCursor != current.header.syncCursor
             val saved =
-                if (result != null && (header.lastFullCheck != current.header.lastFullCheck || countsLearned)) {
+                if (result != null && (header.lastFullCheck != current.header.lastFullCheck || countsLearned || cursorMoved)) {
                     withContext(Dispatchers.IO) { store?.write(header, current.index, result.ids) }
                 } else {
                     null
