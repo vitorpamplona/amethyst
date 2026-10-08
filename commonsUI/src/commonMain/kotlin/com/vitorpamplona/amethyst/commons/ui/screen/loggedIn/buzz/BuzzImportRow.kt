@@ -260,10 +260,10 @@ private fun BuzzChannelPreviewLine(
                 summary != null -> summary
                 author != null -> {
                     val authorName by observeUserName(author, accountViewModel)
-                    val body = (lastNote?.let { observeChatPreviewText(it, 80) } ?: "")
+                    val body = observeChatPreviewText(lastNote, 80)
                     if (body.isBlank()) authorName else "$authorName: $body"
                 }
-                else -> (lastNote?.let { observeChatPreviewText(it, 80) } ?: "")
+                else -> observeChatPreviewText(lastNote, 80)
             }
         }
     Text(

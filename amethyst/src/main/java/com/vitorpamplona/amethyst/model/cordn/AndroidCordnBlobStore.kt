@@ -76,7 +76,7 @@ class AndroidCordnBlobStore(
                         sensitiveContent = null,
                         serverBaseUrl = server,
                         okHttpClient = Amethyst.instance.roleBasedHttpClientBuilder::okHttpClientForUploads,
-                        httpAuth = { h, size, alt -> BlossomAuthorizationEvent.createUploadAuth(h, size, alt ?: "", signer) },
+                        httpAuth = { h, size, alt -> BlossomAuthorizationEvent.createUploadAuth(h, size, alt, signer) },
                         context = context,
                         useMediaEndpoint = false,
                     ).url != null
@@ -103,7 +103,7 @@ class AndroidCordnBlobStore(
                                 .get()
                                 .build(),
                         ).execute()
-                        .use { if (it.isSuccessful) it.body?.bytes() else null }
+                        .use { if (it.isSuccessful) it.body.bytes() else null }
                 }.getOrNull()
             }
         }

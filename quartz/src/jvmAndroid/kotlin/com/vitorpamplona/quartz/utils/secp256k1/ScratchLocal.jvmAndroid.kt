@@ -21,10 +21,12 @@
 package com.vitorpamplona.quartz.utils.secp256k1
 
 /** JVM/Android: delegates to java.lang.ThreadLocal for per-thread scratch buffers. */
-internal actual class ScratchLocal<T> actual constructor(
+internal actual class ScratchLocal<T : Any> actual constructor(
     initializer: () -> T,
 ) {
     private val tl = ThreadLocal.withInitial(initializer)
 
-    actual fun get(): T = tl.get()
+    // Android's SDK annotates ThreadLocal.get() as nullable; withInitial never yields null for a
+    // non-null T, so the assertion only satisfies the annotation.
+    actual fun get(): T = tl.get()!!
 }

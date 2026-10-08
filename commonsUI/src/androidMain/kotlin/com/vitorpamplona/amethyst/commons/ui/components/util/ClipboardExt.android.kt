@@ -24,6 +24,7 @@ import android.content.ClipData
 import android.content.ClipDescription
 import androidx.compose.ui.platform.ClipEntry
 import androidx.compose.ui.platform.Clipboard
+import androidx.compose.ui.platform.nativeClipboardManager
 
 actual suspend fun Clipboard.setText(text: String) {
     setClipEntry(ClipEntry(ClipData.newPlainText("", text)))
@@ -40,6 +41,6 @@ actual suspend fun Clipboard.getText(): String? =
 // getPrimaryClip does. Only the types whose items carry the text getText reads: a text/uri-list clip
 // (ClipData.newUri) has none, so offering to paste it would do nothing.
 actual suspend fun Clipboard.hasText(): Boolean =
-    nativeClipboard.primaryClipDescription?.let {
+    nativeClipboardManager.primaryClipDescription?.let {
         it.hasMimeType(ClipDescription.MIMETYPE_TEXT_PLAIN) || it.hasMimeType(ClipDescription.MIMETYPE_TEXT_HTML)
     } == true

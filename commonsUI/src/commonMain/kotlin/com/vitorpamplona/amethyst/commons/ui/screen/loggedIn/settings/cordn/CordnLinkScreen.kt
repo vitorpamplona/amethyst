@@ -43,7 +43,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalClipboardManager
+import androidx.compose.ui.platform.LocalClipboard
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.commons.cordn.CordnLinkInspection
 import com.vitorpamplona.amethyst.commons.cordn.ui.CordnExposureCard
@@ -67,6 +67,7 @@ import com.vitorpamplona.amethyst.commons.resources.cordn_link_request_sent
 import com.vitorpamplona.amethyst.commons.resources.cordn_link_scan
 import com.vitorpamplona.amethyst.commons.resources.cordn_link_section_input
 import com.vitorpamplona.amethyst.commons.resources.cordn_link_title
+import com.vitorpamplona.amethyst.commons.ui.components.util.getText
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.navigation.topbars.TopBarWithBackButton
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.qrcode.SimpleQrCodeScanner
@@ -111,7 +112,7 @@ fun CordnLinkScreen(
     val requestFailed = stringRes(Res.string.cordn_link_request_failed)
     val asked = stringRes(Res.string.cordn_link_request_sent)
     var scanning by remember { mutableStateOf(false) }
-    val clipboard = LocalClipboardManager.current
+    val clipboard = LocalClipboard.current
 
     Scaffold(
         topBar = { TopBarWithBackButton(stringRes(Res.string.cordn_link_title), nav) },
@@ -160,9 +161,11 @@ fun CordnLinkScreen(
                         }
                         OutlinedButton(
                             onClick = {
-                                clipboard.getText()?.text?.let {
-                                    input = it
-                                    inspection = CordnLinkInspection.of(it)
+                                scope.launch {
+                                    clipboard.getText()?.let {
+                                        input = it
+                                        inspection = CordnLinkInspection.of(it)
+                                    }
                                 }
                             },
                         ) {

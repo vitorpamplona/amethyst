@@ -369,8 +369,8 @@ class Nip43MembershipTest {
             relay.rpc(Nip86Request.deleteRole("mod"))
             assertEquals(listOf("king"), relay.roles().map { it.roleId() })
             assertEquals(listOf(RelayMember(alice.pubKey)), relay.memberList()!!.membersWithRoles())
-            val deletion = relay.store.query<Event>(Filter(kinds = listOf(5), authors = listOf(relay.relaySigner!!.pubKey))).single()
-            assertTrue(deletion.tags.any { it[0] == "a" && it[1] == "33534:${relay.relaySigner!!.pubKey}:mod" })
+            val deletion = relay.store.query<Event>(Filter(kinds = listOf(5), authors = listOf(relay.relaySigner.pubKey))).single()
+            assertTrue(deletion.tags.any { it[0] == "a" && it[1] == "33534:${relay.relaySigner.pubKey}:mod" })
 
             // A role re-created under a deleted id is published again, after the tombstone.
             relay.rpc(Nip86Request.createRole("mod", "Back"))

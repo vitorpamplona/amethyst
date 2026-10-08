@@ -39,7 +39,6 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Text
-import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.getValue
@@ -78,6 +77,7 @@ import com.vitorpamplona.amethyst.commons.resources.relay_group_unpin_message
 import com.vitorpamplona.amethyst.commons.resources.reply_description
 import com.vitorpamplona.amethyst.commons.resources.show_less
 import com.vitorpamplona.amethyst.commons.ui.components.ClickableBox
+import com.vitorpamplona.amethyst.commons.ui.components.rememberModalSheetState
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.note.ChangeReactionIcon
 import com.vitorpamplona.amethyst.commons.ui.note.QuickActionAlertDialog
@@ -254,7 +254,7 @@ fun ChatMessageActionSheet(
 
     ModalBottomSheet(
         onDismissRequest = onDismiss,
-        sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
+        sheetState = rememberModalSheetState(skipPartiallyExpanded = true),
     ) {
         Column(modifier = Modifier.verticalScroll(rememberScrollState())) {
             if (!note.isDraft()) {

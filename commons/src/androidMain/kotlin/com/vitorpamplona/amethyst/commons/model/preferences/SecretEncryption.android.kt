@@ -51,6 +51,8 @@ actual class SecretEncryption {
     // the state of the operation in progress, so two coroutines encrypting on
     // different Dispatchers.IO threads through the same object would corrupt
     // each other's output.
+    // withInitial never yields null, but Android's SDK annotates ThreadLocal.get() as nullable,
+    // hence the `!!` where it is read.
     private val ciphers = ThreadLocal.withInitial { Cipher.getInstance(TRANSFORMATION) }
 
     private val keyStore = KeyStore.getInstance(ANDROID_KEY_STORE).apply { load(null) }
@@ -150,7 +152,7 @@ actual class SecretEncryption {
     actual fun encrypt(bytes: ByteArray): ByteArray {
         try {
             // Initializes the cipher in encrypt mode and encrypts data
-            val cipher = ciphers.get()
+            val cipher = ciphers.get()!!
             cipher.init(Cipher.ENCRYPT_MODE, getKey())
             val iv = cipher.iv
             val encrypted = cipher.doFinal(bytes)
@@ -171,7 +173,7 @@ actual class SecretEncryption {
             // IvParameterSpec), so we must pass the 128-bit auth tag length.
             val iv = bytes.copyOfRange(0, GCM_IV_LENGTH)
             val data = bytes.copyOfRange(GCM_IV_LENGTH, bytes.size)
-            val cipher = ciphers.get()
+            val cipher = ciphers.get()!!
             cipher.init(Cipher.DECRYPT_MODE, getKey(), GCMParameterSpec(GCM_TAG_LENGTH_BITS, iv))
             return cipher.doFinal(data)
         } catch (e: Exception) {

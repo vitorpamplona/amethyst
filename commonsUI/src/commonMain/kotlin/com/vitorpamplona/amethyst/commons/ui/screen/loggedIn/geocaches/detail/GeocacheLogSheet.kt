@@ -34,7 +34,6 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
-import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -51,6 +50,7 @@ import com.vitorpamplona.amethyst.commons.resources.geocache_log_post
 import com.vitorpamplona.amethyst.commons.resources.geocache_log_type_dnf
 import com.vitorpamplona.amethyst.commons.resources.geocache_log_type_maintenance
 import com.vitorpamplona.amethyst.commons.resources.geocache_log_type_note
+import com.vitorpamplona.amethyst.commons.ui.components.rememberModalSheetState
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.quartz.nip01Core.hints.EventHintBundle
@@ -85,7 +85,7 @@ fun GeocacheLogSheet(
     accountViewModel: AccountViewModel,
     onDismiss: () -> Unit,
 ) {
-    val sheetState = rememberModalBottomSheetState()
+    val sheetState = rememberModalSheetState()
     val scope = rememberCoroutineScope()
     var message by remember { mutableStateOf("") }
     var publishing by remember { mutableStateOf(false) }

@@ -36,7 +36,6 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
-import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -83,6 +82,7 @@ import com.vitorpamplona.amethyst.commons.resources.nest_promote_speaker
 import com.vitorpamplona.amethyst.commons.resources.nest_toast_host_action_failed_template_null
 import com.vitorpamplona.amethyst.commons.resources.nest_toast_host_action_failed_title
 import com.vitorpamplona.amethyst.commons.resources.no_wallet_found
+import com.vitorpamplona.amethyst.commons.ui.components.rememberModalSheetState
 import com.vitorpamplona.amethyst.commons.ui.components.toasts.multiline.UserBasedErrorMessage
 import com.vitorpamplona.amethyst.commons.ui.note.UsernameDisplay
 import com.vitorpamplona.amethyst.commons.ui.note.ZapCustomDialog
@@ -129,7 +129,7 @@ internal fun ParticipantHostActionsSheet(
     isLocalUserHost: Boolean = accountViewModel.account.signer.pubKey == event.pubKey,
     catalog: RoomSpeakerCatalog? = null,
 ) {
-    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+    val sheetState = rememberModalSheetState(skipPartiallyExpanded = true)
     val targetUser = remember(target) { LocalCache.getOrCreateUser(target) }
 
     // Reactive display name for confirmation-dialog bodies (kick /

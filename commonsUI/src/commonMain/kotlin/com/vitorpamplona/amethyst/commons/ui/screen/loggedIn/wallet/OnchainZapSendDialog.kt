@@ -49,7 +49,6 @@ import androidx.compose.material3.SuggestionChip
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
-import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -118,6 +117,7 @@ import com.vitorpamplona.amethyst.commons.resources.onchain_send_to
 import com.vitorpamplona.amethyst.commons.resources.onchain_send_use_note_split
 import com.vitorpamplona.amethyst.commons.resources.send
 import com.vitorpamplona.amethyst.commons.ui.components.namecoin.NamecoinResolutionRow
+import com.vitorpamplona.amethyst.commons.ui.components.rememberModalSheetState
 import com.vitorpamplona.amethyst.commons.ui.insets.imePaddingSafe
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.EmptyNav
 import com.vitorpamplona.amethyst.commons.ui.note.UserPicture
@@ -190,7 +190,7 @@ fun OnchainZapSendDialog(
     prefillAmountSats: Long? = null,
     prefillComment: String = "",
 ) {
-    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+    val sheetState = rememberModalSheetState(skipPartiallyExpanded = true)
     val scope = rememberCoroutineScope()
 
     val userSuggestions =
