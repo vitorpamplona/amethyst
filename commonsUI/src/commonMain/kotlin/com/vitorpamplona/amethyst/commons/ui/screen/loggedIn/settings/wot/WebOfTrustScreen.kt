@@ -29,6 +29,8 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -45,6 +47,7 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.FilledTonalButton
+import androidx.compose.material3.FilterChip
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
@@ -75,7 +78,6 @@ import androidx.compose.ui.text.LinkAnnotation
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.TextLinkStyles
 import androidx.compose.ui.text.buildAnnotatedString
-import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -116,13 +118,14 @@ import com.vitorpamplona.amethyst.commons.resources.wot_effect_replies_title
 import com.vitorpamplona.amethyst.commons.resources.wot_error_title
 import com.vitorpamplona.amethyst.commons.resources.wot_in_use
 import com.vitorpamplona.amethyst.commons.resources.wot_last_updated
-import com.vitorpamplona.amethyst.commons.resources.wot_manual_add_tag
+import com.vitorpamplona.amethyst.commons.resources.wot_manual_add_key
 import com.vitorpamplona.amethyst.commons.resources.wot_manual_change_relay
 import com.vitorpamplona.amethyst.commons.resources.wot_manual_explainer
 import com.vitorpamplona.amethyst.commons.resources.wot_manual_key_error
 import com.vitorpamplona.amethyst.commons.resources.wot_manual_key_label
 import com.vitorpamplona.amethyst.commons.resources.wot_manual_needs_rank
-import com.vitorpamplona.amethyst.commons.resources.wot_manual_remove_tag
+import com.vitorpamplona.amethyst.commons.resources.wot_manual_remove_key
+import com.vitorpamplona.amethyst.commons.resources.wot_manual_tags
 import com.vitorpamplona.amethyst.commons.resources.wot_manual_title
 import com.vitorpamplona.amethyst.commons.resources.wot_min_score_explainer
 import com.vitorpamplona.amethyst.commons.resources.wot_min_score_title
@@ -1025,25 +1028,37 @@ private fun CopyViewBlock(
     }
 }
 
-/** One kind 10040 row being written by hand: a tag name, and the key and relay as typed. */
+/**
+ * One provider key being written by hand, as typed, and the kind 10040 tags it serves. Most
+ * providers serve every tag with one key, so this is usually the only one.
+ */
 @Immutable
-private data class ManualRow(
-    val name: String,
+private data class ManualKey(
     val keyText: String = "",
     val relayText: String = "",
+    val tags: Set<String> = emptySet(),
 ) {
     val key: HexKey? = keyText.trim().takeIf { it.isNotEmpty() }?.let { decodePublicKeyAsHexOrNull(it) }
     val relay: NormalizedRelayUrl? = relayText.trim().takeIf { it.isNotEmpty() }?.let { RelayUrlNormalizer.normalizeOrNull(it) }
 
-    fun toRow(): TrustProviderRow? = if (key != null && relay != null) TrustProviderRow(name, key, relay) else null
+    val isComplete: Boolean get() = key != null && relay != null && tags.isNotEmpty()
 }
 
+/** Copied rows as keys: one per (key, relay), with the tags each serves, in the order they came. */
+private fun keysOf(rows: List<TrustProviderRow>): List<ManualKey> =
+    rows
+        .groupBy { it.key to it.relay }
+        .map { (keyAndRelay, served) -> ManualKey(keyAndRelay.first, keyAndRelay.second.url, served.mapTo(LinkedHashSet()) { it.name }) }
+
+/** A tag's name on its chip: the metric for user assertions (`rank`), the tag as is otherwise (`30392`). */
+private fun chipLabel(tag: String): String = if (tag.startsWith("${ProviderTypes.rank.kind}:")) tag.substringAfter(':') else tag
+
 /**
- * The kind 10040 rows, written by hand: each a tag name (from the ones Amethyst knows,
- * [KNOWN_SCORE_TAGS]), the key that serves it and its relay. Starts with `30382:rank`, the one
- * the network needs; a row added copies the key and relay of the last, since one provider key
- * usually serves every tag.
+ * The kind 10040 rows, written by hand: a provider key and its relay, and the tags it serves as
+ * chips ([KNOWN_SCORE_TAGS], plus any a copy brought). `30382:rank` is the one the network needs.
+ * A provider that signs some tags with another key gets a second key, each tag going to one key.
  */
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 internal fun ManualRowsForm(
     enabled: Boolean,
@@ -1051,53 +1066,65 @@ internal fun ManualRowsForm(
     relayPicker: @Composable (onPicked: (NormalizedRelayUrl) -> Unit) -> Unit,
     onSave: (List<TrustProviderRow>) -> Unit,
 ) {
-    val names = remember { KNOWN_SCORE_TAGS.map { it.toValue() } }
     val rankName = remember { ProviderTypes.rank.toValue() }
     // Someone's rows were copied: they replace what is here, to review before saving.
-    var rows by remember(copied) {
-        mutableStateOf(copied?.rows?.map { row -> ManualRow(row.name, row.key, row.relay.url) } ?: listOf(ManualRow(rankName)))
+    var keys by remember(copied) {
+        mutableStateOf(copied?.rows?.let { keysOf(it) } ?: listOf(ManualKey(tags = setOf(rankName, ProviderTypes.followerCount.toValue()))))
     }
+    // The tags on offer: the known ones, then any other a copy brought (a Trusted Lists row).
+    val allTags =
+        remember(copied) {
+            val known = KNOWN_SCORE_TAGS.map { it.toValue() }
+            known +
+                copied
+                    ?.rows
+                    ?.map { it.name }
+                    ?.filter { it !in known }
+                    ?.distinct()
+                    .orEmpty()
+        }
 
-    val parsed = rows.map { it.toRow() }
-    val hasRank = rows.any { it.name == rankName }
-    val canSave = enabled && hasRank && parsed.all { it != null }
+    val hasRank = keys.any { rankName in it.tags }
+    val canSave = enabled && hasRank && keys.all { it.isComplete }
 
     Column(
         Modifier.fillMaxWidth().padding(start = 68.dp, end = 16.dp, bottom = 8.dp),
-        verticalArrangement = Arrangement.spacedBy(12.dp),
+        verticalArrangement = Arrangement.spacedBy(16.dp),
     ) {
-        rows.forEachIndexed { index, row ->
-            val taken = rows.mapTo(HashSet()) { it.name } - row.name
-            ManualRowEditor(
-                row = row,
-                choices = names.filter { it !in taken },
-                canRemove = rows.size > 1,
+        keys.forEachIndexed { index, manual ->
+            val takenElsewhere = keys.filterIndexed { other, _ -> other != index }.flatMapTo(HashSet()) { it.tags }
+            ManualKeyEditor(
+                manual = manual,
+                allTags = allTags,
+                takenElsewhere = takenElsewhere,
+                canRemove = keys.size > 1,
                 relayPicker = relayPicker,
-                onChange = { changed -> rows = rows.toMutableList().also { it[index] = changed } },
-                onRemove = { rows = rows.toMutableList().also { it.removeAt(index) } },
+                onChange = { changed -> keys = keys.toMutableList().also { it[index] = changed } },
+                onRemove = { keys = keys.toMutableList().also { it.removeAt(index) } },
             )
         }
 
-        val unused = names.filter { name -> rows.none { it.name == name } }
-        if (unused.isNotEmpty()) {
-            TextButton(
-                onClick = {
-                    val last = rows.lastOrNull()
-                    rows = rows + ManualRow(unused.first(), last?.keyText.orEmpty(), last?.relayText.orEmpty())
-                },
-            ) {
+        // A tag left over can go to another key.
+        if (allTags.any { tag -> keys.none { tag in it.tags } }) {
+            TextButton(onClick = { keys = keys + ManualKey(relayText = keys.lastOrNull()?.relayText.orEmpty()) }) {
                 Icon(symbol = MaterialSymbols.Add, contentDescription = null, modifier = Modifier.size(18.dp))
                 Spacer(Modifier.width(6.dp))
-                Text(stringRes(Res.string.wot_manual_add_tag))
+                Text(stringRes(Res.string.wot_manual_add_key))
             }
         }
 
         if (!hasRank) {
-            Text(stringRes(Res.string.wot_manual_needs_rank, rankName), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error)
+            Text(stringRes(Res.string.wot_manual_needs_rank, chipLabel(rankName)), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error)
         }
 
         Button(
-            onClick = { if (canSave) onSave(parsed.filterNotNull()) },
+            onClick = {
+                if (canSave) {
+                    // In the order the tags are offered, so the list reads the same every time.
+                    val rows = keys.flatMap { manual -> manual.tags.map { tag -> TrustProviderRow(tag, manual.key!!, manual.relay!!) } }
+                    onSave(rows.sortedBy { allTags.indexOf(it.name) })
+                }
+            },
             enabled = canSave,
             modifier = Modifier.fillMaxWidth(),
         ) {
@@ -1106,54 +1133,52 @@ internal fun ManualRowsForm(
     }
 }
 
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
-private fun ManualRowEditor(
-    row: ManualRow,
-    choices: List<String>,
+private fun ManualKeyEditor(
+    manual: ManualKey,
+    allTags: List<String>,
+    takenElsewhere: Set<String>,
     canRemove: Boolean,
     relayPicker: @Composable (onPicked: (NormalizedRelayUrl) -> Unit) -> Unit,
-    onChange: (ManualRow) -> Unit,
+    onChange: (ManualKey) -> Unit,
     onRemove: () -> Unit,
 ) {
-    val keyError = row.keyText.isNotBlank() && row.key == null
+    val keyError = manual.keyText.isNotBlank() && manual.key == null
+    val scheme = MaterialTheme.colorScheme
 
-    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically) {
-            TagNamePicker(row.name, choices, Modifier.weight(1f)) { onChange(row.copy(name = it)) }
+            OutlinedTextField(
+                value = manual.keyText,
+                onValueChange = { onChange(manual.copy(keyText = it)) },
+                label = { Text(stringRes(Res.string.wot_manual_key_label)) },
+                isError = keyError,
+                supportingText = if (keyError) ({ Text(stringRes(Res.string.wot_manual_key_error)) }) else null,
+                singleLine = true,
+                modifier = Modifier.weight(1f),
+            )
             if (canRemove) {
                 IconButton(onClick = onRemove) {
-                    Icon(
-                        symbol = MaterialSymbols.Close,
-                        contentDescription = stringRes(Res.string.wot_manual_remove_tag),
-                        modifier = Modifier.size(20.dp),
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
+                    Icon(symbol = MaterialSymbols.Close, contentDescription = stringRes(Res.string.wot_manual_remove_key), modifier = Modifier.size(20.dp), tint = scheme.onSurfaceVariant)
                 }
             }
         }
-        OutlinedTextField(
-            value = row.keyText,
-            onValueChange = { onChange(row.copy(keyText = it)) },
-            label = { Text(stringRes(Res.string.wot_manual_key_label)) },
-            isError = keyError,
-            supportingText = if (keyError) ({ Text(stringRes(Res.string.wot_manual_key_error)) }) else null,
-            singleLine = true,
-            modifier = Modifier.fillMaxWidth(),
-        )
-        val relay = row.relay
+
+        val relay = manual.relay
         if (relay == null) {
-            relayPicker { picked -> onChange(row.copy(relayText = picked.url)) }
+            relayPicker { picked -> onChange(manual.copy(relayText = picked.url)) }
         } else {
             // Picked: one line, with a way back to the picker.
             Row(
                 Modifier
                     .fillMaxWidth()
                     .clip(RoundedCornerShape(12.dp))
-                    .background(MaterialTheme.colorScheme.surfaceContainerHigh)
+                    .background(scheme.surfaceContainerHigh)
                     .padding(start = 12.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                Icon(symbol = MaterialSymbols.Public, contentDescription = null, modifier = Modifier.size(18.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant)
+                Icon(symbol = MaterialSymbols.Public, contentDescription = null, modifier = Modifier.size(18.dp), tint = scheme.onSurfaceVariant)
                 Text(
                     relay.displayUrl(),
                     style = MaterialTheme.typography.bodyMedium,
@@ -1161,52 +1186,23 @@ private fun ManualRowEditor(
                     overflow = TextOverflow.Ellipsis,
                     modifier = Modifier.weight(1f).padding(start = 10.dp),
                 )
-                IconButton(onClick = { onChange(row.copy(relayText = "")) }) {
-                    Icon(
-                        symbol = MaterialSymbols.Close,
-                        contentDescription = stringRes(Res.string.wot_manual_change_relay),
-                        modifier = Modifier.size(18.dp),
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
+                IconButton(onClick = { onChange(manual.copy(relayText = "")) }) {
+                    Icon(symbol = MaterialSymbols.Close, contentDescription = stringRes(Res.string.wot_manual_change_relay), modifier = Modifier.size(18.dp), tint = scheme.onSurfaceVariant)
                 }
             }
         }
-    }
-}
 
-/** The row's tag name as a chip; tapping it lists the names no other row uses yet. */
-@Composable
-private fun TagNamePicker(
-    name: String,
-    choices: List<String>,
-    modifier: Modifier = Modifier,
-    onPick: (String) -> Unit,
-) {
-    var open by remember { mutableStateOf(false) }
-    val scheme = MaterialTheme.colorScheme
-    Box(modifier) {
-        Row(
-            Modifier
-                .clip(RoundedCornerShape(8.dp))
-                .background(scheme.secondaryContainer)
-                .clickable(enabled = choices.size > 1) { open = true }
-                .padding(start = 10.dp, end = 6.dp, top = 6.dp, bottom = 6.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(4.dp),
-        ) {
-            Text(name, style = MaterialTheme.typography.labelLarge, fontFamily = FontFamily.Monospace, color = scheme.onSecondaryContainer)
-            if (choices.size > 1) {
-                Icon(symbol = MaterialSymbols.ExpandMore, contentDescription = null, modifier = Modifier.size(18.dp), tint = scheme.onSecondaryContainer)
-            }
-        }
-        DropdownMenu(expanded = open, onDismissRequest = { open = false }) {
-            choices.forEach { choice ->
-                DropdownMenuItem(
-                    text = { Text(choice, fontFamily = FontFamily.Monospace) },
-                    onClick = {
-                        open = false
-                        onPick(choice)
-                    },
+        Text(stringRes(Res.string.wot_manual_tags), style = MaterialTheme.typography.labelMedium, color = scheme.onSurfaceVariant)
+        FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            allTags.forEach { tag ->
+                val selected = tag in manual.tags
+                FilterChip(
+                    selected = selected,
+                    onClick = { onChange(manual.copy(tags = if (selected) manual.tags - tag else manual.tags + tag)) },
+                    label = { Text(chipLabel(tag)) },
+                    // Another key serves it: free it there first.
+                    enabled = selected || tag !in takenElsewhere,
+                    leadingIcon = if (selected) ({ Icon(symbol = MaterialSymbols.Check, contentDescription = null, modifier = Modifier.size(16.dp)) }) else null,
                 )
             }
         }
