@@ -21,12 +21,31 @@
 package com.vitorpamplona.quartz.experimental.decoupling
 
 import com.vitorpamplona.quartz.experimental.decoupling.setup.EncryptionKeyListEvent
+import com.vitorpamplona.quartz.experimental.decoupling.setup.tags.KeyTag
+import com.vitorpamplona.quartz.experimental.decoupling.store.EncryptionKeyStore
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.hexToByteArray
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
+import com.vitorpamplona.quartz.nip01Core.signers.SignerExceptions
 import com.vitorpamplona.quartz.nip44Encryption.Nip44
 
-class DecoupledCipher {
+/**
+ * NIP-44 encryption between users who may have decoupled encryption from identity (NIP-4E, kind
+ * 10044).
+ *
+ * A user's encryption key is the first `n` of their 10044 ([EncryptionKeyListEvent.encryptionKey]);
+ * a user without one encrypts and decrypts with the identity key, through the signer. The secret of
+ * one of *our* 10044 keys comes from one of two places:
+ * - the [keyStore], for the draft form `["n", key]` — a random key this device generated or
+ *   received through a 4454/4455 transfer;
+ * - derivation by the signer (`NostrSigner.deriveKey`), for Quartz's legacy `["n", key, nonce]`
+ *   form. Remote signers cannot derive, so for them that form simply yields no key.
+ *
+ * Without a [keyStore] only the legacy form and the identity key work.
+ */
+class DecoupledCipher(
+    private val keyStore: EncryptionKeyStore? = null,
+) {
     fun innerEncrypt(
         content: String,
         privKey: ByteArray,
@@ -45,6 +64,35 @@ class DecoupledCipher {
         pubKey = fromPublicKey.hexToByteArray(),
     )
 
+    /**
+     * The secret of [key], one of [signer]'s own 10044 keys, or null when this device does not hold
+     * it (a draft key never transferred here, or a legacy key behind a signer that cannot derive).
+     */
+    suspend fun secretFor(
+        key: KeyTag,
+        signer: NostrSigner,
+    ): ByteArray? {
+        val nonce = key.nonce ?: return keyStore?.get(signer.pubKey, key.pubkey)
+        return EncryptionKeyCache.getOrLoad(
+            deriveFromPubKey = signer.pubKey,
+            nonce = nonce,
+            load = {
+                try {
+                    signer.deriveKey(nonce).hexToByteArray()
+                } catch (e: SignerExceptions.UnsupportedMethodException) {
+                    null
+                }
+            },
+        )
+    }
+
+    /**
+     * Encrypts [decryptedContent] from [signer] to the owner of [toKeyList]: to their 10044 key when
+     * they announce one, else to their identity. Sends from our own 10044 key when [fromKeyList]
+     * announces one — and then returns null if this device does not hold its secret, because a
+     * receiver will decrypt against that announced key, so falling back to the identity key would
+     * produce a message nobody can open.
+     */
     suspend fun encrypt(
         decryptedContent: String,
         toPublicKey: HexKey,
@@ -52,28 +100,19 @@ class DecoupledCipher {
         toKeyList: EncryptionKeyListEvent,
         signer: NostrSigner,
     ): String? {
-        val toKeys = toKeyList.keys()
-        val sendToKey = if (toKeys.isEmpty()) toKeyList.pubKey else toKeys.random().pubkey
+        val sendToKey = toKeyList.encryptionKey()?.pubkey ?: toKeyList.pubKey
 
-        val fromKeys = fromKeyList.keys()
+        val ourKey = fromKeyList.encryptionKey() ?: return signer.nip44Encrypt(decryptedContent, sendToKey)
 
-        // uses the main key
-        return if (fromKeys.isEmpty()) {
-            signer.nip44Encrypt(decryptedContent, sendToKey)
-        } else {
-            val keyToUse = fromKeys.random()
-
-            EncryptionKeyCache
-                .getOrLoad(
-                    deriveFromPubKey = signer.pubKey,
-                    nonce = keyToUse.nonce,
-                    load = { signer.deriveKey(keyToUse.nonce).hexToByteArray() },
-                )?.let { derivedPrivKey ->
-                    return innerEncrypt(decryptedContent, derivedPrivKey, sendToKey)
-                }
-        }
+        val secret = secretFor(ourKey, signer) ?: return null
+        return innerEncrypt(decryptedContent, secret, sendToKey)
     }
 
+    /**
+     * Decrypts [encryptedContent] sent by the owner of [fromKeyList] (from their 10044 key, or their
+     * identity) to [toPublicKey]: our identity, which the signer handles, or one of our 10044 keys
+     * listed in [toEncryptedKeyList] whose secret this device holds. Null when it holds none.
+     */
     suspend fun decrypt(
         encryptedContent: String,
         fromPublicKey: HexKey,
@@ -82,25 +121,14 @@ class DecoupledCipher {
         toEncryptedKeyList: EncryptionKeyListEvent,
         signer: NostrSigner,
     ): String? {
-        val fromKeys = fromKeyList.keys()
-        val sentFromKey = if (fromKeys.isEmpty()) fromKeyList.pubKey else fromKeys.random().pubkey
+        val sentFromKey = fromKeyList.encryptionKey()?.pubkey ?: fromKeyList.pubKey
 
-        val keyToUse = toEncryptedKeyList.keys().firstOrNull { it.pubkey == toPublicKey }
-
-        // uses the main key
-        return if (signer.pubKey == toPublicKey) {
-            signer.nip44Decrypt(encryptedContent, sentFromKey)
-        } else if (keyToUse != null) {
-            EncryptionKeyCache
-                .getOrLoad(
-                    deriveFromPubKey = signer.pubKey,
-                    nonce = keyToUse.nonce,
-                    load = { signer.deriveKey(keyToUse.nonce).hexToByteArray() },
-                )?.let { derivedPrivKey ->
-                    innerDecrypt(encryptedContent, derivedPrivKey, sentFromKey)
-                }
-        } else {
-            null
+        if (signer.pubKey == toPublicKey) {
+            return signer.nip44Decrypt(encryptedContent, sentFromKey)
         }
+
+        val keyToUse = toEncryptedKeyList.keys().firstOrNull { it.pubkey == toPublicKey } ?: return null
+        val secret = secretFor(keyToUse, signer) ?: return null
+        return innerDecrypt(encryptedContent, secret, sentFromKey)
     }
 }
