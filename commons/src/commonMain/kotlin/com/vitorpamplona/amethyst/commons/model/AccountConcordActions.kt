@@ -48,6 +48,8 @@ import com.vitorpamplona.amethyst.commons.model.concord.ConcordKickNotice
 import com.vitorpamplona.amethyst.commons.model.concord.ConcordPinDutyScheduler
 import com.vitorpamplona.amethyst.commons.model.concord.DirectInviteAcceptPlan
 import com.vitorpamplona.amethyst.commons.model.concordChannelLastReadRoute
+import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.SubPurpose
+import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.taggedAs
 import com.vitorpamplona.amethyst.commons.util.ConcurrentSet
 import com.vitorpamplona.amethyst.commons.viewmodels.ReplyMode
 import com.vitorpamplona.quartz.concord.cord02Community.ConcordCommunityList.withControlRoot
@@ -187,6 +189,13 @@ class AccountConcordActions(
     private val account: Account,
 ) {
     /**
+     * Every REQ this class sends is Concord's, but most go out as plain filters through the one-shot
+     * helpers — some on the 15-minute invite sweep and the control-plane sync, which run with the
+     * app backgrounded. Tagging them here is what lets those relays say why they are connected.
+     */
+    private val concordClient by lazy { account.client.taggedAs(SubPurpose.COMMUNITY_CHATS) }
+
+    /**
      * Add a joined Concord community (secret-bearing entry) to the private Community List (kind 33302)
      * list, and announce a self-signed Guestbook JOIN so this member is visible to
      * whoever later refounds the community (CORD-06 re-keys the Guestbook membership).
@@ -302,7 +311,7 @@ class AccountConcordActions(
         val wrap = ConcordActions.buildGuestbookJoin(account.signer, guestbook, TimeUtils.now(), inviteCreator, inviteLabel)
         account.concordSessions.ingest(wrap)
         val relays = entry.relays.mapNotNullTo(mutableSetOf()) { RelayUrlNormalizer.normalizeOrNull(it) }
-        if (relays.isNotEmpty()) account.client.publish(wrap, relays)
+        if (relays.isNotEmpty()) concordClient.publish(wrap, relays)
     }
 
     /**
@@ -334,7 +343,7 @@ class AccountConcordActions(
         // List that could never load again. Confirm every genesis wrap before saving it.
         val landed =
             coroutineScope {
-                community.genesisWraps.map { async { account.client.publishAndConfirm(it, publishTo) } }.awaitAll()
+                community.genesisWraps.map { async { concordClient.publishAndConfirm(it, publishTo) } }.awaitAll()
             }
         if (!landed.all { it }) {
             Log.w("Concord") { "createConcordCommunity: no relay in $publishTo accepted the genesis; not creating ${community.communityIdHex}" }
@@ -389,7 +398,7 @@ class AccountConcordActions(
         // timeout). Treating the second as "no list yet" is precisely how a read-merge-write wipes
         // the signer_sk of every link it failed to read, so the two must be told apart.
         val result =
-            account.client.fetchAllWithHooks(
+            concordClient.fetchAllWithHooks(
                 filters = relays.associateWith { listOf(filter) },
             ) { _, _ -> true }
 
@@ -432,7 +441,7 @@ class AccountConcordActions(
         // local signing worked, and every caller's "did the record land?" gate becomes decorative.
         val landed =
             runCatching {
-                account.client.publishAndConfirm(ConcordInviteListEvent.create(account.signer, merged, TimeUtils.now()), publishTo)
+                concordClient.publishAndConfirm(ConcordInviteListEvent.create(account.signer, merged, TimeUtils.now()), publishTo)
             }.onFailure { Log.w("Concord", "invite list publish failed", it) }.getOrDefault(false)
         return if (landed) merged else null
     }
@@ -513,7 +522,7 @@ class AccountConcordActions(
         // user-visible Refounding, and a serial fetch per link makes a removal take time linear in
         // how many links the creator ever minted, each able to wait out its own idle timeout.
         val byAuthor = links.associateBy { it.signerPubKeyHex().lowercase() }
-        val wraps = account.client.fetchAll(filters = relays.associateWith { listOf(ConcordActions.bundlesFilter(byAuthor.keys.toList())) })
+        val wraps = concordClient.fetchAll(filters = relays.associateWith { listOf(ConcordActions.bundlesFilter(byAuthor.keys.toList())) })
         val wrapsByAuthor = wraps.groupBy { it.pubKey.lowercase() }
 
         return coroutineScope {
@@ -535,7 +544,7 @@ class AccountConcordActions(
                                 )
                             // Confirmed: a link counted as moved but never stored is a link its
                             // holders can no longer redeem, reported as a success.
-                            account.client.publishAndConfirm(ConcordActions.remintBundleAt(link.signerSk.hexToByteArray(), token, moved, now), relays)
+                            concordClient.publishAndConfirm(ConcordActions.remintBundleAt(link.signerSk.hexToByteArray(), token, moved, now), relays)
                         }.onFailure { Log.w("Concord", "invite refresh failed for ${entry.id}", it) }.getOrDefault(false)
                     }
                 }.awaitAll()
@@ -617,7 +626,7 @@ class AccountConcordActions(
             return null
         }
 
-        if (publishTo.isNotEmpty()) account.client.publish(minted.bundleEvent, publishTo)
+        if (publishTo.isNotEmpty()) concordClient.publish(minted.bundleEvent, publishTo)
         // The member-facing shadow of the list we just wrote (CORD-05 §5): the link now makes the
         // community Public. Best-effort — the link works without it.
         publishConcordInviteRegistry(entry, recorded, minted = listOf(minted.linkSignerPubKey))
@@ -687,7 +696,7 @@ class AccountConcordActions(
         // destroying the only `signer_sk` that could ever retire the link while the link stays live.
         val published =
             runCatching {
-                account.client.publishAndConfirm(ConcordActions.revokeBundleAt(link.signerSk.hexToByteArray(), TimeUtils.now()), relays)
+                concordClient.publishAndConfirm(ConcordActions.revokeBundleAt(link.signerSk.hexToByteArray(), TimeUtils.now()), relays)
             }.onFailure { Log.w("Concord", "invite revocation failed for $communityId", it) }.getOrDefault(false)
         if (!published) return ConcordRevokeResult.FAILED
 
@@ -736,7 +745,7 @@ class AccountConcordActions(
                     try {
                         val guestbook = ConcordActions.guestbookPlane(entry.root.hexToByteArray(), entry.id.hexToByteArray(), entry.rootEpoch)
                         val leave = ConcordActions.buildGuestbookLeave(account.signer, guestbook, TimeUtils.now())
-                        account.client.publishAndConfirm(leave, relays, LEAVE_CONFIRM_SECS)
+                        concordClient.publishAndConfirm(leave, relays, LEAVE_CONFIRM_SECS)
                     } catch (e: CancellationException) {
                         throw e
                     } catch (e: Exception) {
@@ -791,7 +800,7 @@ class AccountConcordActions(
         if (relays.isEmpty()) return ConcordInviteResult.NotReachable
 
         val filters = relays.associateWith { listOf(ConcordActions.bundleFilter(parsed.linkSignerPubKey)) }
-        val wraps = account.client.fetchAll(filters = filters)
+        val wraps = concordClient.fetchAll(filters = filters)
 
         // Resolve the coordinate per CORD-05 §2 (newest wins; a vsk=9 tombstone revokes even over a
         // stale openable copy) so we honour revocation and can tell the user *why* a link won't open
@@ -890,7 +899,7 @@ class AccountConcordActions(
         // and the bundle's own list is the one that goes stale.
         val joinRelays = bundle.relays.mapNotNullTo(mutableSetOf()) { RelayUrlNormalizer.normalizeOrNull(it) } + relays
         val planeWraps = mutableListOf<Event>()
-        account.client.fetchAllPagesFromPool(
+        concordClient.fetchAllPagesFromPool(
             filters = joinRelays.associateWith { listOf(ConcordActions.planeFilter(joinKeys.address)) },
         ) { event, _ -> planeWraps.add(event) }
         val joinEditions = ConcordActions.controlEditions(planeWraps, joinKeys)
@@ -1058,7 +1067,7 @@ class AccountConcordActions(
         if (relays.isEmpty()) return 0
         val before = directInviteInbox.pending.value.keys
         val filter = ConcordActions.directInvitesFilter(account.signer.pubKey, directInviteInbox.since())
-        val wraps = account.client.fetchAll(filters = relays.associateWith { listOf(filter) })
+        val wraps = concordClient.fetchAll(filters = relays.associateWith { listOf(filter) })
         wraps.distinctBy { it.id }.forEach { directInviteInbox.offer(it) }
         return (directInviteInbox.pending.value.keys - before).size
     }
@@ -1121,7 +1130,7 @@ class AccountConcordActions(
         val lists =
             cached ?: run {
                 val seed = DefaultDmIndexerRelays.RELAYS.mapNotNullTo(mutableSetOf()) { RelayUrlNormalizer.normalizeOrNull(it) } + account.outboxRelays.flow.value
-                RecipientRelayFetcher.fetchRelayLists(account.client, recipient, seed)
+                RecipientRelayFetcher.fetchRelayLists(concordClient, recipient, seed)
             }
         return ConcordActions.directInviteDeliveryRelays(lists)
     }
@@ -1162,7 +1171,7 @@ class AccountConcordActions(
         val relays = concordDirectInviteDeliveryRelays(recipient)
         if (relays.isEmpty()) return ConcordDirectInviteSendResult.NOT_DELIVERED
         val delivered =
-            runCatching { account.client.publishAndConfirm(wrap, relays) }
+            runCatching { concordClient.publishAndConfirm(wrap, relays) }
                 .onFailure { Log.w("Concord", "direct invite publish failed for $communityId", it) }
                 .getOrDefault(false)
         return if (delivered) ConcordDirectInviteSendResult.SENT else ConcordDirectInviteSendResult.NOT_DELIVERED
@@ -1479,7 +1488,7 @@ class AccountConcordActions(
         val plane = session.currentChannelPlane(channelIdHex) ?: return
         val wrap = ConcordActions.buildChannelTyping(account.signer, plane.key, channelIdHex, plane.epoch, TimeUtils.now())
         val relays = entry.relays.mapNotNullTo(mutableSetOf()) { RelayUrlNormalizer.normalizeOrNull(it) }
-        if (relays.isNotEmpty()) account.client.publish(wrap, relays)
+        if (relays.isNotEmpty()) concordClient.publish(wrap, relays)
     }
 
     /** Instant local echo (the session folds it back as a Note) + publish to the community relays. */
@@ -1489,7 +1498,7 @@ class AccountConcordActions(
     ) {
         account.concordSessions.ingest(wrap)
         val relays = entry.relays.mapNotNullTo(mutableSetOf()) { RelayUrlNormalizer.normalizeOrNull(it) }
-        if (relays.isNotEmpty()) account.client.publish(wrap, relays)
+        if (relays.isNotEmpty()) concordClient.publish(wrap, relays)
     }
 
     /**
@@ -1506,7 +1515,7 @@ class AccountConcordActions(
         if (relays.isEmpty()) return false
         val landed =
             try {
-                account.client.publishAndConfirm(wrap, relays)
+                concordClient.publishAndConfirm(wrap, relays)
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
@@ -1563,7 +1572,7 @@ class AccountConcordActions(
             return
         }
         account.chatDeliveryTracker.trackWrappedPublic(rumorId, wrap.id, relays)
-        account.client.publish(wrap, relays)
+        concordClient.publish(wrap, relays)
         account.chatDeliveryTracker.markSent(rumorId)
     }
 
@@ -2324,7 +2333,7 @@ class AccountConcordActions(
         //    republished only after the rekey blobs are known to have landed. A chunk no relay
         //    accepted aborts here with nothing adopted; the reserved keys make the retry idempotent.
         for (wrap in build.rekeyWraps) {
-            if (!runCatching { account.client.publishAndConfirm(wrap, publishTo) }.getOrDefault(false)) {
+            if (!runCatching { concordClient.publishAndConfirm(wrap, publishTo) }.getOrDefault(false)) {
                 Log.w("Concord") { "Refounding ${entry.id} aborted: a rekey chunk was not accepted by any relay; retrying reuses the same root" }
                 return false
             }
@@ -2335,7 +2344,7 @@ class AccountConcordActions(
         //    root, and the next Refounding re-compacts from the same signed heads.
         var compactionLanded = true
         for (wrap in build.controlWraps) {
-            if (!runCatching { account.client.publishAndConfirm(wrap, publishTo) }.getOrDefault(false)) compactionLanded = false
+            if (!runCatching { concordClient.publishAndConfirm(wrap, publishTo) }.getOrDefault(false)) compactionLanded = false
         }
         if (!compactionLanded) Log.w("Concord") { "Refounding ${entry.id}: some compacted Control Plane heads were not accepted at epoch ${build.newEpoch}" }
 
@@ -2382,7 +2391,7 @@ class AccountConcordActions(
             val keep = ConcordPrivateChannels.keepSet(state.authority, id, me).filterTo(HashSet()) { it in keptLower || it == me }
             val newKey = ConcordChannelRekey.mintKey()
             val wraps = ConcordPrivateChannels.buildRotation(account.signer, priorRoot, held, newKey, keep, TimeUtils.now(), citation)
-            val landed = wraps.all { runCatching { account.client.publishAndConfirm(it, publishTo) }.getOrDefault(false) }
+            val landed = wraps.all { runCatching { concordClient.publishAndConfirm(it, publishTo) }.getOrDefault(false) }
             if (!landed) {
                 Log.w("Concord") { "Refounding ${entry.id}: the rekey of private channel $id did not land; it keeps its key" }
                 continue
@@ -2413,7 +2422,7 @@ class AccountConcordActions(
                     .map { relay ->
                         async {
                             val events = ArrayList<Event>()
-                            val result = runCatching { account.client.fetchAllPages(relay, listOf(filter)) { events.add(it) } }.getOrNull()
+                            val result = runCatching { concordClient.fetchAllPages(relay, listOf(filter)) { events.add(it) } }.getOrNull()
                             if (result?.end == PagedFetchResult.End.DRAINED) events else null
                         }
                     }.awaitAll()
@@ -2693,7 +2702,7 @@ class AccountConcordActions(
             if (relays.isEmpty()) continue
 
             val filters = relays.associateWith { listOf(ConcordActions.bundleFilter(parsed.linkSignerPubKey)) }
-            val wraps = account.client.fetchAll(filters = filters)
+            val wraps = concordClient.fetchAll(filters = filters)
             // Only a live bundle counts: an expired/revoked link is not a rotation we missed.
             val bundle = (ConcordActions.classifyInvite(wraps, parsed.linkSignerPubKey, parsed.fragment.token) as? InviteBundleStatus.Live)?.invite ?: continue
 
@@ -2951,7 +2960,7 @@ class AccountConcordActions(
         for (root in (listOf(entry.root) + entry.heldRoots.map { it.key }).distinct()) {
             for (epoch in 1L..MAX_PROBED_CHANNEL_EPOCH) window[ConcordChannelRekey.address(root.hexToByteArray(), channelId, epoch).publicKeyHex] = epoch
         }
-        val seen = runCatching { account.client.fetchAll(filters = relays.associateWith { listOf(ConcordActions.planeFilterFor(window.keys.toList())) }) }.getOrDefault(emptyList())
+        val seen = runCatching { concordClient.fetchAll(filters = relays.associateWith { listOf(ConcordActions.planeFilterFor(window.keys.toList())) }) }.getOrDefault(emptyList())
         val highest = seen.mapNotNull { window[it.pubKey] }.maxOrNull() ?: 0
         return if (highest >= MAX_PROBED_CHANNEL_EPOCH) null else highest
     }
@@ -3019,7 +3028,7 @@ class AccountConcordActions(
         val newKey = pendingConcordChannelRotations.getOrPut(reservation) { ConcordChannelRekey.mintKey() }
         val wraps = ConcordPrivateChannels.buildRotation(account.signer, entry.root.hexToByteArray(), held, newKey, keep, TimeUtils.now(), citation)
         for (wrap in wraps) {
-            if (!runCatching { account.client.publishAndConfirm(wrap, publishTo) }.getOrDefault(false)) {
+            if (!runCatching { concordClient.publishAndConfirm(wrap, publishTo) }.getOrDefault(false)) {
                 Log.w("Concord") { "Channel rekey of $channelIdHex aborted: a chunk was not accepted by any relay; retrying reuses the same key" }
                 return false
             }
@@ -3112,7 +3121,7 @@ class AccountConcordActions(
             (parsed.fragment.relays.mapNotNull { RelayUrlNormalizer.normalizeOrNull(it) } + account.outboxRelays.flow.value).toSet()
         if (relays.isEmpty()) return null
         val filters = relays.associateWith { listOf(ConcordActions.bundleFilter(parsed.linkSignerPubKey)) }
-        val wraps = account.client.fetchAll(filters = filters)
+        val wraps = concordClient.fetchAll(filters = filters)
         // Resolved like a join (newest per coordinate, signer-verified): a revoked link previews as
         // nothing, never as the stale bundle a relay still serves. An expired one still renders.
         return when (val status = ConcordActions.classifyInvite(wraps, parsed.linkSignerPubKey, parsed.fragment.token)) {
@@ -3150,7 +3159,7 @@ class AccountConcordActions(
         val filter = Filter(kinds = listOf(ConcordCommunityListFragmentEvent.KIND, ConcordCommunityListEvent.KIND), authors = listOf(account.signer.pubKey))
         // Stock relays like relay.ditto.pub can be slow (~10–20s to first response), so give
         // the fetch a generous window to drain every relay before we pick the newest copy.
-        val events = account.client.fetchAll(filters = relays.associateWith { listOf(filter) }, idleTimeoutMs = 30_000L)
+        val events = concordClient.fetchAll(filters = relays.associateWith { listOf(filter) }, idleTimeoutMs = 30_000L)
         val fragments = events.filterIsInstance<ConcordCommunityListFragmentEvent>()
         val legacy = events.filterIsInstance<ConcordCommunityListEvent>().maxByOrNull { it.createdAt }
         Log.d("Concord") {
@@ -3211,7 +3220,7 @@ class AccountConcordActions(
             }
         if (filters.isEmpty()) return
         val byRelay = filters.groupBy { it.relay }.mapValues { (_, group) -> group.map { it.filter } }
-        account.client.fetchAll(filters = byRelay, idleTimeoutMs = 20_000L)
+        concordClient.fetchAll(filters = byRelay, idleTimeoutMs = 20_000L)
     }
 
     /**
@@ -3258,7 +3267,7 @@ class AccountConcordActions(
                                 val wraps = ArrayList<Event>()
                                 val end =
                                     try {
-                                        account.client.fetchAllPages(relay, listOf(ConcordActions.planeFilterFor(authors.toList()))) { wraps.add(it) }.end
+                                        concordClient.fetchAllPages(relay, listOf(ConcordActions.planeFilterFor(authors.toList()))) { wraps.add(it) }.end
                                     } catch (e: CancellationException) {
                                         throw e
                                     } catch (e: Exception) {

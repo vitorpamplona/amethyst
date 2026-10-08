@@ -25,6 +25,8 @@ import com.vitorpamplona.amethyst.commons.model.Account
 import com.vitorpamplona.amethyst.commons.napplet.NappletAttendance
 import com.vitorpamplona.amethyst.commons.napplet.NappletRelayCleartext
 import com.vitorpamplona.amethyst.commons.napplet.protocol.NappletProtocolJson
+import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.SubPurpose
+import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.taggedAs
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.reqs.SubscriptionListener
@@ -116,7 +118,12 @@ class NappletLiveSubscriptions(
         close(owner, nappletSubId)
         // liveSeq guarantees a unique client subId, so a rapid re-open of the same applet subId
         // can't collide with the subscription it's replacing.
-        val sub = LiveSub("napplet-$nappletSubId-${liveSeq.incrementAndGet()}", account.client)
+        val sub =
+            LiveSub(
+                "napplet-$nappletSubId-${liveSeq.incrementAndGet()}",
+                // The napplet writes its own filters, so they arrive untagged.
+                account.client.taggedAs(SubPurpose.ADD_ONS, "Napplet"),
+            )
         liveSubs[key] = sub
         sub.deliveryJob =
             scope.launch {

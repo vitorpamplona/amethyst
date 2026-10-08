@@ -5329,6 +5329,7 @@
     <string name="relay_purpose_relay_list_finder">Relay List Finder</string>
     <string name="relay_purpose_reports_from_follows">Reports from Follows</string>
     <string name="relay_purpose_search">Search</string>
+    <string name="relay_purpose_sending">Sending your events</string>
     <string name="relay_purpose_tags">Hashtags</string>
     <string name="relay_purpose_thread">Conversation</string>
     <string name="relay_purpose_topics">Topics</string>
