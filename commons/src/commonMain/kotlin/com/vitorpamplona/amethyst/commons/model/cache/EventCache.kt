@@ -205,6 +205,7 @@ import com.vitorpamplona.quartz.experimental.videoCollaboration.VideoCollaborati
 import com.vitorpamplona.quartz.experimental.zapPolls.ZapPollEvent
 import com.vitorpamplona.quartz.marmot.mip00KeyPackages.KeyPackageEvent
 import com.vitorpamplona.quartz.marmot.mip00KeyPackages.KeyPackageRelayListEvent
+import com.vitorpamplona.quartz.marmot.mip00KeyPackages.LegacyKeyPackageEvent
 import com.vitorpamplona.quartz.marmot.mip02Welcome.WelcomeEvent
 import com.vitorpamplona.quartz.marmot.mip03GroupMessages.GroupEvent
 import com.vitorpamplona.quartz.nip01Core.core.Address
@@ -4069,6 +4070,9 @@ open class EventCache :
                 is WelcomeEvent,
                 is WorkoutRecordEvent,
                 is ConcordTimerNoticeEvent,
+                // Legacy MIP-00 KeyPackages (kind 443): the invite lookup now asks for them,
+                // so they arrive; stored like any regular event, never rendered.
+                is LegacyKeyPackageEvent,
                 -> consumeRegularEvent(event, relay, wasVerified)
 
                 else -> {

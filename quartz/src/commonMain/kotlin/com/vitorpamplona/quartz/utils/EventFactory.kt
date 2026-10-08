@@ -187,6 +187,7 @@ import com.vitorpamplona.quartz.experimental.zapPolls.ZapPollEvent
 import com.vitorpamplona.quartz.feedDefinition.FeedDefinitionEvent
 import com.vitorpamplona.quartz.marmot.mip00KeyPackages.KeyPackageEvent
 import com.vitorpamplona.quartz.marmot.mip00KeyPackages.KeyPackageRelayListEvent
+import com.vitorpamplona.quartz.marmot.mip00KeyPackages.LegacyKeyPackageEvent
 import com.vitorpamplona.quartz.marmot.mip02Welcome.WelcomeEvent
 import com.vitorpamplona.quartz.marmot.mip03GroupMessages.GroupEvent
 import com.vitorpamplona.quartz.marmot.mip05PushNotifications.NotificationRequestEvent
@@ -830,6 +831,7 @@ class EventFactory {
                 MuteListEvent.KIND -> MuteListEvent(id, pubKey, createdAt, tags, content, sig)
                 KeyPackageEvent.KIND -> KeyPackageEvent(id, pubKey, createdAt, tags, content, sig)
                 KeyPackageRelayListEvent.KIND -> KeyPackageRelayListEvent(id, pubKey, createdAt, tags, content, sig)
+                LegacyKeyPackageEvent.KIND -> LegacyKeyPackageEvent(id, pubKey, createdAt, tags, content, sig)
                 WelcomeEvent.KIND -> WelcomeEvent(id, pubKey, createdAt, tags, content, sig)
                 GroupEvent.KIND -> GroupEvent(id, pubKey, createdAt, tags, content, sig)
                 NotificationRequestEvent.KIND -> NotificationRequestEvent(id, pubKey, createdAt, tags, content, sig)

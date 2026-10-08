@@ -24,7 +24,9 @@ import com.vitorpamplona.quartz.marmot.MarmotFilters
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.fetchAllWithHooks
+import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
+import com.vitorpamplona.quartz.utils.TimeUtils
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
@@ -67,16 +69,21 @@ object KeyPackageFetcher {
         }
 
     /**
-     * Drain every kind:443 KeyPackage event for [targetPubKey] across [relays]
+     * Drain every kind:30443 KeyPackage event for [targetPubKey] across [relays]
      * and return the most recently published one (highest `created_at`), or
      * `null` if nothing arrived before the timeout.
      *
-     * Returning the newest is important after a KeyPackage rotation: MIP-00
-     * does not use addressable replacement for kind:443, so a relay may still
-     * hold the prior KP alongside the new one. `fetchFirst` would race the
-     * relays and pick whichever replied first, which would frequently be the
-     * older event. Draining to EOSE and selecting by `created_at` matches
-     * MDK/whitenoise semantics and keeps freshly-rotated bundles reachable.
+     * No validation and no legacy kind:443: this answers "which of the
+     * account's own 30443 publications is newest", which is what
+     * `latestKeyPackageOwner` asks. To pick a KeyPackage to INVITE someone
+     * with, use [fetchKeyPackageForInvite].
+     *
+     * Returning the newest is important after a KeyPackage rotation: a relay
+     * that missed the replacement may still hold the prior KP of a slot, and
+     * other slots hold other KPs. `fetchFirst` would race the relays and pick
+     * whichever replied first, which would frequently be the older event.
+     * Draining to EOSE and selecting by `created_at` matches MDK/whitenoise
+     * semantics and keeps freshly-rotated bundles reachable.
      *
      * Draining to EOSE is bounded by [settleAfterFirstMs], though. The relay
      * set unions the invitee's relays with ours, and one of them that never
@@ -94,16 +101,59 @@ object KeyPackageFetcher {
         settleAfterFirstMs: Long = 3_000,
     ): KeyPackageEvent? {
         if (relays.isEmpty()) return null
-        val filter = MarmotFilters.keyPackagesByAuthor(targetPubKey)
+        return drain<KeyPackageEvent>(client, MarmotFilters.keyPackagesByAuthor(targetPubKey), relays, idleTimeoutMs, settleAfterFirstMs)
+            .maxByOrNull { it.createdAt }
+    }
+
+    /**
+     * Find the KeyPackage to invite [targetPubKey] with.
+     *
+     * Queries both KeyPackage kinds ([MarmotFilters.keyPackagesMigration],
+     * `{kinds: [30443, 443]}`) and lets [KeyPackageUtils.selectForInvite]
+     * choose: the newest VALID kind 30443, else the newest valid legacy
+     * kind 443. White Noise's MDK still publishes 443, and some of its users
+     * publish nothing else; querying 30443 alone left them uninvitable.
+     *
+     * Unlike [fetchKeyPackage], an invalid candidate is never returned: the
+     * newest event that fails validation is skipped for an older one that
+     * passes, and null means "nothing usable", not "nothing found".
+     *
+     * Draining and the [settleAfterFirstMs] cut-off work as in [fetchKeyPackage].
+     */
+    suspend fun fetchKeyPackageForInvite(
+        client: INostrClient,
+        targetPubKey: HexKey,
+        relays: Set<NormalizedRelayUrl>,
+        idleTimeoutMs: Long = 30_000,
+        settleAfterFirstMs: Long = 3_000,
+        nowSeconds: Long = TimeUtils.now(),
+    ): PublishedKeyPackage? {
+        if (relays.isEmpty()) return null
+        val found = drain<PublishedKeyPackage>(client, MarmotFilters.keyPackagesMigration(targetPubKey), relays, idleTimeoutMs, settleAfterFirstMs)
+        return KeyPackageUtils.selectForInvite(found, targetPubKey, nowSeconds)
+    }
+
+    /**
+     * Collect every [T] the [filter] returns from [relays], stopping
+     * [settleAfterFirstMs] after the first one arrives or when every relay
+     * went idle for [idleTimeoutMs].
+     */
+    private suspend inline fun <reified T : PublishedKeyPackage> drain(
+        client: INostrClient,
+        filter: Filter,
+        relays: Set<NormalizedRelayUrl>,
+        idleTimeoutMs: Long,
+        settleAfterFirstMs: Long,
+    ): List<T> {
         // Collected from inside onEvent (single-threaded) rather than read from the
         // return value, which a cancelled fetch discards.
-        val found = mutableListOf<KeyPackageEvent>()
+        val found = mutableListOf<T>()
         val firstArrived = CompletableDeferred<Unit>()
         coroutineScope {
             val fetch =
                 launch {
                     client.fetchAllWithHooks(filters = relays.associateWith { listOf(filter) }, idleTimeoutMs = idleTimeoutMs) { _, event ->
-                        if (event is KeyPackageEvent) {
+                        if (event is T) {
                             found.add(event)
                             firstArrived.complete(Unit)
                         }
@@ -119,7 +169,7 @@ object KeyPackageFetcher {
             fetch.join()
             settle.cancel()
         }
-        return found.maxByOrNull { it.createdAt }
+        return found
     }
 
     /**

@@ -86,6 +86,7 @@ import com.vitorpamplona.quartz.experimental.zapPolls.ZapPollEvent
 import com.vitorpamplona.quartz.feedDefinition.FeedDefinitionEvent
 import com.vitorpamplona.quartz.marmot.mip00KeyPackages.KeyPackageEvent
 import com.vitorpamplona.quartz.marmot.mip00KeyPackages.KeyPackageRelayListEvent
+import com.vitorpamplona.quartz.marmot.mip00KeyPackages.LegacyKeyPackageEvent
 import com.vitorpamplona.quartz.marmot.mip02Welcome.WelcomeEvent
 import com.vitorpamplona.quartz.marmot.mip03GroupMessages.GroupEvent
 import com.vitorpamplona.quartz.marmot.mip05PushNotifications.NotificationRequestEvent
@@ -581,6 +582,7 @@ object KindNames {
             ChatEvent.KIND to KindName("Relay Chat", "C7"),
             ThreadEvent.KIND to KindName("Thread", "7D"),
             AppDataEvent.KIND to KindName("App Data", "78"),
+            LegacyKeyPackageEvent.KIND to KindName("MLS KeyPackage (Legacy)", null),
             WelcomeEvent.KIND to KindName("MLS Welcome", null),
             GroupEvent.KIND to KindName("MLS Group Message", null),
             NotificationRequestEvent.KIND to KindName("MLS Notification Request", null),
