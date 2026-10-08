@@ -189,12 +189,36 @@ internal fun lowerLimitAfterRefusal(
     if (isThrottleMessage(message)) return null
     if (AdaptiveRelayLimiter.isSubscriptionLimitMessage(message)) return null
     if (RelayReqRefusals.parseMaxFilters(message) != null || TOO_MANY_FILTERS.containsMatchIn(message)) return null
-    val stated =
-        (STATED_MAX.find(message) ?: STATED_CEILING.find(message))
-            ?.groupValues
-            ?.get(1)
-            ?.toIntOrNull()
+    val stated = statedLimit(message)
     return if (stated != null && stated in 1 until sent) stated else sent / 2
+}
+
+/** The cap a limit refusal states (`max 500`, `exceeds 500`), if it states one. */
+private fun statedLimit(message: String): Int? =
+    (STATED_MAX.find(message) ?: STATED_CEILING.find(message))
+        ?.groupValues
+        ?.get(1)
+        ?.toIntOrNull()
+
+/**
+ * [lowerLimitAfterRefusal] for a `REQ` of several filters, whose refusal does not say which
+ * filter it was about: the limits to re-ask with, or null if [message] is not a refusal of a
+ * limit or nothing is left to lower. With a stated max, only the filters above it come down,
+ * to it: `[1000, 100]` refused with `(max 500)` is re-asked as `[500, 100]`, not `[500, 50]`.
+ * With none stated, or every filter already at or under it, the largest is halved.
+ */
+internal fun lowerLimitsAfterRefusal(
+    message: String?,
+    limits: List<Int?>,
+): List<Int?>? {
+    val largest = limits.filterNotNull().maxOrNull() ?: return null
+    if (message == null || lowerLimitAfterRefusal(message, largest) == null) return null
+    val stated = statedLimit(message)
+    if (stated != null && stated >= 1) {
+        val capped = limits.map { limit -> if (limit != null && limit > stated) stated else limit }
+        if (capped != limits) return capped
+    }
+    return limits.map { limit -> if (limit == largest) limit / 2 else limit }
 }
 
 /**
@@ -283,10 +307,12 @@ class PageRetryBackoff(
  * page ends hours back while a sparse one's reaches weeks back, and moving the shared cursor
  * to the oldest event of the page skips everything the dense filter holds in between.
  * EventSync's `authors = me` + `#p = me` lost 4,256 of 5,900 events on nostr.mom that way,
- * and 7,666 of 9,080 on relay.nostr.net. A later walk skips the events an earlier filter
- * already delivered, so each is delivered once, in each walk's page order; [onNewPage]
- * starts over from the top for each filter. The [PagedFetchResult.end] is the first one that
- * is not [PagedFetchResult.End.DRAINED], so the result drains only if every filter did.
+ * and 7,666 of 9,080 on relay.nostr.net. A later walk skips the events an earlier one
+ * delivered (by id, only those a later filter also matches), so each is delivered once, in
+ * each walk's page order; [onNewPage] starts over from the top for each filter. The
+ * [PagedFetchResult.end] is the most serious of the walks' (see [severity]), so the result
+ * drains only if every filter did; a relay that cannot be reached, or stays silent through a
+ * whole walk, is not asked for the remaining filters.
  * Filters with a `search` share one walk as before, since NIP-50 hits never page.
  *
  * **A throttled relay is re-asked before it is believed.** relay.damus.io, paged quickly
@@ -395,49 +421,82 @@ suspend fun INostrClient.fetchAllPages(
         return walkPages(relay, filters, idleTimeoutMs, onNewPage, pageSize, throttleBackoff, onEvent)
     }
 
-    // One walk per filter (see the KDoc): a later walk skips what an earlier one delivered,
-    // which is every event matching that filter if it drained, else every one newer than the
-    // oldest second it reached plus the ones it delivered in that second.
-    val walked = ArrayList<WalkedFilter>(filters.size)
+    // One walk per filter (see the KDoc). An event a walk delivers that a LATER filter also
+    // matches is remembered by id, and a later walk skips exactly those: right whatever the
+    // relay served out of order, skipped inside a walk, or stored after a walk drained, and
+    // O(overlap) memory. Filters that cannot share an event are never compared.
+    val sharedIds = HashSet<HexKey>()
+    val laterOverlapping =
+        filters.indices.map { i ->
+            (i + 1 until filters.size).map { filters[it] }.filter { canShareAnEvent(filters[i], it) }
+        }
     var downloaded = 0
-    var first: PagedFetchResult? = null
-    for (filter in filters) {
-        var oldest = Long.MAX_VALUE
-        val atOldest = HashSet<HexKey>()
+    var worst: PagedFetchResult? = null
+    for ((index, filter) in filters.withIndex()) {
+        val later = laterOverlapping[index]
         val result =
             walkPages(relay, listOf(filter), idleTimeoutMs, onNewPage, pageSize, throttleBackoff) { event ->
-                if (event.createdAt < oldest) {
-                    oldest = event.createdAt
-                    atOldest.clear()
-                }
-                if (event.createdAt == oldest) atOldest.add(event.id)
-                if (walked.none { it.delivered(event) }) {
+                if (event.id !in sharedIds) {
+                    if (later.isNotEmpty() && later.any { it.match(event) }) sharedIds.add(event.id)
                     downloaded++
                     onEvent(event)
                 }
             }
-        walked.add(if (result.drained) WalkedFilter(filter, null, emptySet()) else WalkedFilter(filter, oldest, atOldest))
-        if (first == null || (first.drained && !result.drained)) first = result
-        // Nothing to ask the next filter on.
+        if (worst == null || result.end.severity() > worst.end.severity()) worst = result
+        // Nothing to ask the next filter on: the relay is unreachable, or connected and
+        // silent (each further filter would wait out its own idle window for nothing).
         if (result.end == PagedFetchResult.End.CANNOT_CONNECT) break
+        if (result.end == PagedFetchResult.End.IDLE && result.downloaded == 0) break
     }
-    return first!!.copy(downloaded = downloaded)
+    return worst!!.copy(downloaded = downloaded)
 }
 
 /**
- * What one filter's walk delivered: everything it matches if it drained ([floor] null), else
- * everything newer than [floor] and the [atFloor] ids in that second (a relay walked newest
- * first, so the rest of that second and everything older were never reached).
+ * The ending a several-filter walk reports: the most serious of its walks', so a filter that
+ * met its `limit` does not hide another that was refused, and the result drains only if every
+ * filter drained.
  */
-private class WalkedFilter(
-    val filter: Filter,
-    val floor: Long?,
-    val atFloor: Set<HexKey>,
-) {
-    fun delivered(event: Event): Boolean {
-        if (!filter.match(event)) return false
-        return floor == null || event.createdAt > floor || (event.createdAt == floor && event.id in atFloor)
+private fun PagedFetchResult.End.severity(): Int =
+    when (this) {
+        PagedFetchResult.End.DRAINED -> 0
+        PagedFetchResult.End.LIMIT_REACHED -> 1
+        PagedFetchResult.End.UNPAGEABLE -> 2
+        PagedFetchResult.End.IDLE -> 3
+        PagedFetchResult.End.CLOSED -> 4
+        PagedFetchResult.End.AUTH_REQUIRED -> 5
+        PagedFetchResult.End.CANNOT_CONNECT -> 6
     }
+
+/**
+ * False when no event can match both filters: disjoint `ids`, `authors` or `kinds`, the same
+ * tag with disjoint values, or `created_at` ranges that do not meet. GrapeRank pages several
+ * filters over disjoint author chunks; those are never matched against each other.
+ */
+internal fun canShareAnEvent(
+    a: Filter,
+    b: Filter,
+): Boolean {
+    fun <T> disjoint(
+        x: List<T>?,
+        y: List<T>?,
+    ): Boolean {
+        if (x == null || y == null) return false
+        val ySet = y.toHashSet()
+        return x.none { it in ySet }
+    }
+    if (disjoint(a.ids, b.ids) || disjoint(a.authors, b.authors) || disjoint(a.kinds, b.kinds)) return false
+    val aTags = a.tags
+    val bTags = b.tags
+    if (aTags != null && bTags != null) {
+        for ((key, values) in aTags) {
+            if (disjoint(values, bTags[key])) return false
+        }
+    }
+    val aSince = a.since ?: Long.MIN_VALUE
+    val bSince = b.since ?: Long.MIN_VALUE
+    val aUntil = a.until ?: Long.MAX_VALUE
+    val bUntil = b.until ?: Long.MAX_VALUE
+    return aSince <= bUntil && bSince <= aUntil
 }
 
 private suspend fun INostrClient.walkPages(

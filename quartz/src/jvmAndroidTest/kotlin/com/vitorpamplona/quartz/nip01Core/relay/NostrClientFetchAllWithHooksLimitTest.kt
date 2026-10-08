@@ -62,6 +62,18 @@ class NostrClientFetchAllWithHooksLimitTest {
             assertEquals(listOf<Int?>(1_000, 500, 250), client.requests.map { it.single().limit })
         }
 
+    /** The refusal does not say which filter it was about: only the one above the max comes down. */
+    @Test
+    fun onlyTheFiltersAboveTheStatedMaxAreLowered() =
+        runBlocking {
+            val client = FakePagingRelay(this, FakePagingRelay.corpus(2_000), maxLimit = 500, refuseAboveMax = true)
+            val filters = listOf(Filter(kinds = listOf(1), limit = 1_000), Filter(kinds = listOf(1), since = 999_000, limit = 100))
+
+            client.fetchAllWithHooks(mapOf(relay to filters), idleTimeoutMs = 2_000) { _, _ -> true }
+
+            assertEquals(listOf(listOf<Int?>(1_000, 100), listOf<Int?>(500, 100)), client.requests.map { req -> req.map { it.limit } })
+        }
+
     @Test
     fun aPolicyRefusalIsStillTheEnd() =
         runBlocking {

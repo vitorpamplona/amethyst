@@ -180,7 +180,7 @@ suspend fun INostrClient.fetchAllWithHooks(
                 // A refusal of a filter's `limit`, not of the query: re-ask that relay lower
                 // rather than come back empty for what a relay clamping its pages would serve.
                 val sent = filters[relay]
-                if (sent != null && sent.any { f -> f.limit?.let { lowerLimitAfterRefusal(message, it) } != null }) {
+                if (sent != null && lowerLimitsAfterRefusal(message, sent.map { it.limit }) != null) {
                     limitRefusalChannel.trySend(relay to message)
                     return
                 }
@@ -228,25 +228,37 @@ suspend fun INostrClient.fetchAllWithHooks(
                 } else {
                     null
                 }
-            // Re-asks a relay that refused a filter's `limit`, on its own subscription, at the
-            // limit its message states (else half), like [fetchAllPages]. Each refusal comes back
+            // Re-asks a relay that refused a filter's `limit`, on its own subscription, with the
+            // filters above the limit its message states brought down to it (else the largest
+            // halved) — see [lowerLimitsAfterRefusal]. Each refusal comes back
             // at once, and each re-ask lowers the limit, so it ends; a refusal that lowers nothing
             // more ends the relay as `closed:`, as any other refusal does.
             val limitResolver =
                 launch {
                     val current = HashMap<NormalizedRelayUrl, List<Filter>>()
                     val attempts = HashMap<NormalizedRelayUrl, Int>()
+                    val retryOf = HashMap<NormalizedRelayUrl, String>()
+                    // Relays this resolver already ended: a refusal re-sent after that (an AUTH or
+                    // a reconnect replays the refused subscription) must not open another re-ask.
+                    val finished = HashSet<NormalizedRelayUrl>()
                     for ((relay, message) in limitRefusalChannel) {
+                        if (relay in finished) continue
                         val base = current[relay] ?: filters[relay] ?: continue
-                        val lowered = base.map { f -> f.limit?.let { lowerLimitAfterRefusal(message, it) }?.let { f.copy(limit = it) } ?: f }
+                        val limits = lowerLimitsAfterRefusal(message, base.map { it.limit })
                         val attempt = (attempts[relay] ?: 0) + 1
                         attempts[relay] = attempt
-                        if (lowered == base || attempt > MAX_LIMIT_RETRIES) {
+                        if (limits == null || attempt > MAX_LIMIT_RETRIES) {
+                            finished.add(relay)
                             doneChannel.trySend(relay to "closed:$message")
                             continue
                         }
+                        val lowered = base.mapIndexed { i, f -> if (limits[i] == f.limit) f else f.copy(limit = limits[i]) }
                         current[relay] = lowered
+                        // One re-ask open per relay: the one it refused is closed first, so a replay
+                        // of it cannot serve the same events a second time.
+                        retryOf[relay]?.let { unsubscribe(it) }
                         val retryId = newSubId()
+                        retryOf[relay] = retryId
                         retrySubIds.add(retryId)
                         subscribe(retryId, mapOf(relay to lowered), listener)
                     }

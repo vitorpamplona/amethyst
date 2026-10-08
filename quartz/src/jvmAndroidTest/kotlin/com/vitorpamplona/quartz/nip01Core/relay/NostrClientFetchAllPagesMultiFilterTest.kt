@@ -22,13 +22,18 @@ package com.vitorpamplona.quartz.nip01Core.relay
 
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
+import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.PageRetryBackoff
 import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.PagedFetchResult
+import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.canShareAnEvent
 import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.fetchAllPages
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
 import kotlinx.coroutines.runBlocking
+import java.util.concurrent.CopyOnWriteArrayList
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
+import kotlin.test.assertTrue
 
 /**
  * Several filters on one relay: EventSync's `authors = me` + `#p = me`. A relay pages each
@@ -82,6 +87,62 @@ class NostrClientFetchAllPagesMultiFilterTest {
             assertEquals(320, got.size, "no note delivered twice")
             assertEquals(320, got.toSet().size)
         }
+
+    /** The first filter drained; a reaction stored after that must still reach the second walk. */
+    @Test
+    fun anEventStoredAfterAnEarlierWalkDrainedIsStillDelivered() =
+        runBlocking {
+            val corpus = CopyOnWriteArrayList(dense + sparse)
+            val late = sparse.first().let { Event("8" + it.id.drop(1), it.pubKey, it.createdAt + 1, 7, emptyArray(), "+", it.sig) }
+            val client = FakePagingRelay(this, corpus, maxLimit = 50)
+            val got = mutableListOf<HexKey>()
+
+            val result =
+                client.fetchAllPages(relay, listOf(Filter(kinds = listOf(7)), Filter(kinds = listOf(1, 7))), idleTimeoutMs = 2_000) {
+                    got.add(it.id)
+                    // The first walk has all 20 reactions: the relay stores one more before the second.
+                    if (got.size == 20) corpus.add(late)
+                }
+
+            assertEquals(PagedFetchResult.End.DRAINED, result.end)
+            assertTrue(late.id in got, "the late reaction matches the drained first filter, and was never delivered by it")
+            assertEquals(321, got.toSet().size)
+            assertEquals(321, got.size)
+        }
+
+    @Test
+    fun aSilentRelayIsNotAskedForTheRemainingFilters() =
+        runBlocking {
+            val client = FakePagingRelay(this, dense + sparse, silentOn = { true })
+
+            val result = client.fetchAllPages(relay, listOf(Filter(kinds = listOf(1)), Filter(kinds = listOf(7))), idleTimeoutMs = 300, throttleBackoff = PageRetryBackoff.NONE) { }
+
+            assertEquals(PagedFetchResult.End.IDLE, result.end)
+            assertEquals(listOf(listOf(1)), client.requests.map { req -> req.single().kinds }, "one idle window, not one per filter")
+        }
+
+    @Test
+    fun aRefusedFilterIsNotHiddenBehindAMetLimit() =
+        runBlocking {
+            // Every REQ for the reactions is refused outright.
+            lateinit var client: FakePagingRelay
+            client = FakePagingRelay(this, dense + sparse, maxLimit = 50, closeWith = { req -> if (client.requests[req - 1].single().kinds == listOf(7)) "blocked: no reactions here" else null })
+
+            val result = client.fetchAllPages(relay, listOf(Filter(kinds = listOf(1), limit = 60), Filter(kinds = listOf(7))), idleTimeoutMs = 2_000) { }
+
+            assertEquals(PagedFetchResult.End.CLOSED, result.end)
+            assertEquals("blocked: no reactions here", result.message)
+        }
+
+    @Test
+    fun filtersThatCannotShareAnEventAreNeverCompared() {
+        assertFalse(canShareAnEvent(Filter(authors = listOf("a")), Filter(authors = listOf("b"))))
+        assertFalse(canShareAnEvent(Filter(kinds = listOf(1)), Filter(kinds = listOf(7))))
+        assertFalse(canShareAnEvent(Filter(tags = mapOf("p" to listOf("x"))), Filter(tags = mapOf("p" to listOf("y")))))
+        assertFalse(canShareAnEvent(Filter(since = 10, until = 20), Filter(since = 21)))
+        assertTrue(canShareAnEvent(Filter(authors = listOf("a")), Filter(tags = mapOf("p" to listOf("a")))))
+        assertTrue(canShareAnEvent(Filter(kinds = listOf(1, 7)), Filter(kinds = listOf(7))))
+    }
 
     @Test
     fun aFilterThatStopsShortLeavesItsOlderEventsToTheNext() =
