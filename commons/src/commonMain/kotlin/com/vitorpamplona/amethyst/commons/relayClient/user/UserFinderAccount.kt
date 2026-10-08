@@ -83,8 +83,9 @@ interface UserFinderAccount {
     fun cardHomeRelays(): Set<NormalizedRelayUrl>
 
     /**
-     * NIP-85 trusted-assertions rank provider whose cards must be fetched per profile, or null
-     * when unsupported (e.g. Desktop) or already served by the local trust network index.
+     * NIP-85 trusted-assertions rank provider whose cards are fetched per profile, or null when
+     * unsupported (e.g. Desktop). Fetched even when the local trust network index holds them: a
+     * card newer than its last sync updates it until the next one.
      */
     fun trustProvider(): ServiceProviderTag?
 

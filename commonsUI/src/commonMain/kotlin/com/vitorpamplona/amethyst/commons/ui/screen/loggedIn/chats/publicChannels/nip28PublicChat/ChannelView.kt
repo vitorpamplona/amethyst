@@ -36,6 +36,7 @@ import com.vitorpamplona.amethyst.commons.ui.components.rememberViewModel
 import com.vitorpamplona.amethyst.commons.ui.feeds.WatchLifecycleAndUpdateModel
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.note.LoadPublicChatChannel
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.feed.ChatRoomVouches
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.feed.LocalChatCollapseOutsideNetwork
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.feed.RefreshingChatroomFeedView
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.publicChannels.dal.ChannelFeedViewModel
@@ -130,7 +131,7 @@ fun ChannelView(
                         .weight(1f, true)
                 },
         ) {
-            CompositionLocalProvider(LocalChatCollapseOutsideNetwork provides true) {
+            CompositionLocalProvider(LocalChatCollapseOutsideNetwork provides remember(channel) { ChatRoomVouches { it == channel.creator?.pubkeyHex } }) {
                 RefreshingChatroomFeedView(
                     feedContentState = feedViewModel.feedState,
                     accountViewModel = accountViewModel,

@@ -86,7 +86,9 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.debounce
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.drop
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.sample
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
@@ -384,7 +386,11 @@ class AccountFeedContentStates(
         scope.launch(Dispatchers.IO) {
             @OptIn(FlowPreview::class)
             combine(
-                account.trustNetwork.network,
+                // The index, not the network: a check that found nothing new publishes a new
+                // header over the same index, and must not wipe the notification list.
+                account.trustNetwork.network
+                    .map { it?.index }
+                    .distinctUntilChanged(),
                 account.trustNetwork.minTrustScore,
                 account.trustNetwork.verdictRevision,
             ) { network, score, revision -> Triple(network, score, revision) }

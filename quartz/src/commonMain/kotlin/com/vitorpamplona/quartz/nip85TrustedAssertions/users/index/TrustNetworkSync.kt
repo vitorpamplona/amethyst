@@ -109,6 +109,7 @@ suspend fun INostrClient.downloadTrustNetwork(
     relay: NormalizedRelayUrl,
     progress: TrustNetworkProgress? = null,
 ): TrustNetworkSyncResult {
+    val startedAt = TimeUtils.now()
     val filter = trustNetworkFilter(provider)
     val expected = countOrNull(relay, filter)
     progress?.onProgress(0, expected)
@@ -116,7 +117,7 @@ suspend fun INostrClient.downloadTrustNetwork(
     val builder = TrustNetworkBuilder(provider, initialCapacity = (expected ?: 4096).coerceIn(1024, 1_000_000))
     val invalid = AtomicInt(0)
 
-    val paged = verifying(builder, invalid, expected, progress) { submit -> fetchAllPages(relay, listOf(filter), IDLE_MS) { submit(it) } }
+    val paged = verifying(builder, invalid, expected, progress, seeded = 0) { submit -> fetchAllPages(relay, listOf(filter), IDLE_MS) { submit(it) } }
 
     var complete = paged.drained
     var detail = "${paged.end}${paged.message?.let { ": $it" } ?: ""}"
@@ -125,11 +126,13 @@ suspend fun INostrClient.downloadTrustNetwork(
         Log.d(TAG) { "Paging stalled on a shared timestamp at ${builder.cardCount} cards; switching to negentropy" }
         try {
             val local = builder.idsAndTimes()
-            verifying(builder, invalid, expected, progress) { submit ->
-                negentropySync(relay, filter, localEntries = local, idleTimeoutMs = IDLE_MS) { submit(it) }
-            }
-            complete = true
-            detail = "negentropy"
+            val synced =
+                verifying(builder, invalid, expected, progress, seeded = 0) { submit ->
+                    negentropySync(relay, filter, localEntries = local, idleTimeoutMs = IDLE_MS) { submit(it) }
+                }
+            // By-id batches that time out are dropped without an error: only a full count is complete.
+            complete = synced.downloaded >= synced.needCount
+            detail = "negentropy ${synced.downloaded} of ${synced.needCount}"
         } catch (e: CancellationException) {
             throw e
         } catch (e: Exception) {
@@ -140,8 +143,9 @@ suspend fun INostrClient.downloadTrustNetwork(
 
     val now = TimeUtils.now()
     val (index, ids) = builder.build()
+    val cursor = cursorAfter(0, builder.newestCreatedAt, startedAt)
     return TrustNetworkSyncResult(
-        header = TrustNetworkHeader(provider, relay.url, syncCursor = builder.newestCreatedAt, lastFullCheck = now, lastUpdate = now),
+        header = TrustNetworkHeader(provider, relay.url, syncCursor = cursor, lastFullCheck = now, lastUpdate = now, heldAtCursor = ids.countSince(cursor)),
         index = index,
         ids = ids,
         complete = complete,
@@ -182,13 +186,14 @@ suspend fun INostrClient.updateTrustNetwork(
     relay: NormalizedRelayUrl,
     progress: TrustNetworkProgress? = null,
 ): TrustNetworkSyncResult {
+    val startedAt = TimeUtils.now()
     val provider = header.provider
     val newer = header.syncCursor + 1
-    val relayCards = countOrNull(relay, trustNetworkFilter(provider, header.syncCursor))
-    val newDeletions = countOrNull(relay, trustNetworkDeletionFilter(provider, newer))
-    if (relayCards != null && relayCards == ids.countSince(header.syncCursor) && newDeletions == 0) {
-        return TrustNetworkSyncResult(header.copy(lastUpdate = TimeUtils.now()), index, ids, complete = true, invalid = 0, received = 0, detail = "nothing new")
+    val news = trustNetworkNews(header, relay, held = header.heldAtCursor.takeIf { it >= 0 } ?: ids.countSince(header.syncCursor))
+    if (!news.any) {
+        return TrustNetworkSyncResult(header.copy(lastUpdate = startedAt), index, ids, complete = true, invalid = 0, received = 0, detail = "nothing new")
     }
+    val newDeletions = news.deletions
 
     val builder = TrustNetworkBuilder(provider, initialCapacity = index.size + 1024)
     builder.addAll(index, ids)
@@ -196,7 +201,7 @@ suspend fun INostrClient.updateTrustNetwork(
     val invalid = AtomicInt(0)
 
     val windowStart = (header.syncCursor - TRUST_NETWORK_UPDATE_OVERLAP_SECS).coerceAtLeast(0)
-    val reconciled = reconcileInto(builder, relay, trustNetworkFilter(provider, windowStart), ids.entriesSince(windowStart), invalid, progress)
+    val reconciled = reconcileInto(builder, relay, trustNetworkFilter(provider, windowStart), ids.entriesSince(windowStart), invalid, progress, seeded = before)
 
     val complete: Boolean
     val detail: String
@@ -205,20 +210,21 @@ suspend fun INostrClient.updateTrustNetwork(
             if (newDeletions == 0) {
                 null
             } else {
-                verifying(builder, invalid, null, progress) { submit -> fetchAllPages(relay, listOf(trustNetworkDeletionFilter(provider, newer)), IDLE_MS) { submit(it) } }
+                verifying(builder, invalid, null, progress, seeded = before) { submit -> fetchAllPages(relay, listOf(trustNetworkDeletionFilter(provider, newer)), IDLE_MS) { submit(it) } }
             }
         complete = reconciled.complete && (deletions == null || deletions.drained)
         detail = "need ${reconciled.need}, gone ${reconciled.gone}" + (deletions?.let { ", deletions ${it.downloaded}" } ?: "")
     } else {
         val filters = listOf(trustNetworkFilter(provider, newer), trustNetworkDeletionFilter(provider, newer))
-        val paged = verifying(builder, invalid, null, progress) { submit -> fetchAllPages(relay, filters, IDLE_MS) { submit(it) } }
+        val paged = verifying(builder, invalid, null, progress, seeded = before) { submit -> fetchAllPages(relay, filters, IDLE_MS) { submit(it) } }
         complete = paged.drained
         detail = "${paged.end}${paged.message?.let { ": $it" } ?: ""}"
     }
 
     val (newIndex, newIds) = builder.build()
+    val cursor = cursorAfter(header.syncCursor, builder.newestCreatedAt, startedAt)
     return TrustNetworkSyncResult(
-        header = header.copy(syncCursor = maxOf(header.syncCursor, builder.newestCreatedAt), lastUpdate = TimeUtils.now()),
+        header = header.copy(syncCursor = cursor, lastUpdate = TimeUtils.now(), heldAtCursor = newIds.countSince(cursor)),
         index = newIndex,
         ids = newIds,
         complete = complete,
@@ -244,17 +250,19 @@ suspend fun INostrClient.reconcileTrustNetwork(
     relay: NormalizedRelayUrl,
     progress: TrustNetworkProgress? = null,
 ): TrustNetworkSyncResult? {
+    val startedAt = TimeUtils.now()
     val builder = TrustNetworkBuilder(header.provider, initialCapacity = index.size + 1024)
     builder.addAll(index, ids)
     val before = builder.cardCount
     val invalid = AtomicInt(0)
 
-    val reconciled = reconcileInto(builder, relay, trustNetworkFilter(header.provider), ids.entriesSince(), invalid, progress) ?: return null
+    val reconciled = reconcileInto(builder, relay, trustNetworkFilter(header.provider), ids.entriesSince(), invalid, progress, seeded = before) ?: return null
 
     val (newIndex, newIds) = builder.build()
     val now = TimeUtils.now()
+    val cursor = cursorAfter(header.syncCursor, builder.newestCreatedAt, startedAt)
     return TrustNetworkSyncResult(
-        header = header.copy(syncCursor = maxOf(header.syncCursor, builder.newestCreatedAt), lastFullCheck = now, lastUpdate = now),
+        header = header.copy(syncCursor = cursor, lastFullCheck = now, lastUpdate = now, heldAtCursor = newIds.countSince(cursor)),
         index = newIndex,
         ids = newIds,
         complete = reconciled.complete,
@@ -283,6 +291,7 @@ private suspend fun INostrClient.reconcileInto(
     local: List<IdAndTime>,
     invalid: AtomicInt,
     progress: TrustNetworkProgress?,
+    seeded: Int,
 ): Reconciled? {
     val need = ArrayList<HexKey>()
     val have = ArrayList<HexKey>()
@@ -304,16 +313,65 @@ private suspend fun INostrClient.reconcileInto(
 
     var complete = true
     if (need.isNotEmpty()) {
-        verifying(builder, invalid, need.size, progress) { submit ->
+        verifying(builder, invalid, need.size, progress, seeded) { submit ->
             for (batch in need.chunked(FETCH_BY_ID_BATCH)) {
-                val events = fetchAll(relay, Filter(ids = batch), IDLE_MS)
-                if (events.size < batch.size) complete = false
-                for (event in events) submit(event)
+                // A relay whose max_limit is below the batch answers part of it: ask again for
+                // the rest until it stops making progress.
+                var missing: List<HexKey> = batch
+                while (missing.isNotEmpty()) {
+                    val events = fetchAll(relay, Filter(ids = missing), IDLE_MS)
+                    if (events.isEmpty()) {
+                        complete = false
+                        break
+                    }
+                    val got = HashSet<HexKey>(events.size * 2)
+                    for (event in events) {
+                        got.add(event.id)
+                        submit(event)
+                    }
+                    missing = missing.filter { it !in got }
+                }
             }
         }
     }
     builder.removeEventIds(have)
     return Reconciled(complete, need.size, have.size)
+}
+
+/**
+ * The sync cursor after a run: the newest `created_at` applied, but never past when the run
+ * started. A card signed with a clock running ahead must not push the cursor into the future,
+ * where it would hide every later card from the "anything new?" count.
+ */
+private fun cursorAfter(
+    previous: Long,
+    newest: Long,
+    startedAt: Long,
+) = maxOf(previous, minOf(newest, startedAt))
+
+/** What the relay's counts say changed since [TrustNetworkHeader.syncCursor]. */
+class TrustNetworkNews(
+    /** Cards at or after the cursor differ from the ones held, or the relay could not count. */
+    val cards: Boolean,
+    /** Deletions newer than the cursor, or null when the relay could not count. */
+    val deletions: Int?,
+) {
+    val any: Boolean get() = cards || deletions != 0
+}
+
+/**
+ * Two NIP-45 COUNTs of a few bytes each: the relay's cards at or after the cursor against the
+ * [held] count, and deletions after it. Counting the cursor's own second catches a batch that
+ * was still arriving at the last sync (providers sign a whole run with one `created_at`).
+ */
+suspend fun INostrClient.trustNetworkNews(
+    header: TrustNetworkHeader,
+    relay: NormalizedRelayUrl,
+    held: Int = header.heldAtCursor,
+): TrustNetworkNews {
+    val relayCards = countOrNull(relay, trustNetworkFilter(header.provider, header.syncCursor))
+    val deletions = countOrNull(relay, trustNetworkDeletionFilter(header.provider, header.syncCursor + 1))
+    return TrustNetworkNews(cards = held < 0 || relayCards == null || relayCards != held, deletions = deletions)
 }
 
 private suspend fun INostrClient.countOrNull(
@@ -339,6 +397,8 @@ private suspend fun <T> verifying(
     invalid: AtomicInt,
     expected: Int?,
     progress: TrustNetworkProgress?,
+    /** Cards the builder held before this sync: progress counts only what the sync adds. */
+    seeded: Int,
     fetch: suspend (submit: (Event) -> Unit) -> T,
 ): T =
     coroutineScope {
@@ -350,7 +410,7 @@ private suspend fun <T> verifying(
                 onVerified = { event, _ ->
                     if (builder.add(event)) {
                         val n = accepted.incrementAndFetch()
-                        if (n % 1000 == 0) progress?.onProgress(builder.cardCount, expected)
+                        if (n % 1000 == 0) progress?.onProgress(builder.cardCount - seeded, expected)
                     }
                 },
             )
@@ -359,6 +419,6 @@ private suspend fun <T> verifying(
         } finally {
             verifier.close()
             verifier.join()
-            progress?.onProgress(builder.cardCount, expected)
+            progress?.onProgress(builder.cardCount - seeded, expected)
         }
     }

@@ -27,6 +27,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.commons.model.Note
@@ -35,6 +36,7 @@ import com.vitorpamplona.amethyst.commons.ui.components.rememberViewModel
 import com.vitorpamplona.amethyst.commons.ui.feeds.WatchLifecycleAndUpdateModel
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.note.LoadLiveActivityChannel
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.feed.ChatRoomVouches
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.feed.LocalChatCollapseOutsideNetwork
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.feed.RefreshingChatroomFeedView
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.publicChannels.dal.ChannelFeedViewModel
@@ -136,7 +138,7 @@ fun LiveActivityChannelView(
             NestJoinCard(channel, accountViewModel, nav)
             LiveStreamTopZappers(channel, accountViewModel, nav)
             LiveStreamGoalHeader(channel, accountViewModel, nav)
-            CompositionLocalProvider(LocalChatCollapseOutsideNetwork provides true) {
+            CompositionLocalProvider(LocalChatCollapseOutsideNetwork provides remember(channel) { ChatRoomVouches { it == channel.address.pubKeyHex || channel.info?.participantKeys()?.contains(it) == true } }) {
                 RefreshingChatroomFeedView(
                     feedContentState = feedViewModel.feedState,
                     accountViewModel = accountViewModel,

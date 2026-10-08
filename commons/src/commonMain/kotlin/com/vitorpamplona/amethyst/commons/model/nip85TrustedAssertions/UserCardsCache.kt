@@ -197,5 +197,7 @@ class UserCardsCache : UserDependencies {
         network: StateFlow<TrustNetwork?>,
     ): Flow<TrustNetwork?> =
         combine(provider, network) { p, n -> if (p != null && n != null && n.isFrom(p)) n else null }
-            .distinctUntilChanged()
+            // Same index, same answers: a header-only change (an update that found nothing) must
+            // not restart every profile's flow.
+            .distinctUntilChanged { a, b -> a?.index === b?.index }
 }

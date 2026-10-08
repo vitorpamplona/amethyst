@@ -95,6 +95,8 @@ class TrustNetworkSyncTest {
                 assertTrue(caughtUp.complete)
                 assertEquals(300, caughtUp.index.size)
                 assertEquals(100, caughtUp.received, "only the missing part of the batch is fetched")
+                assertEquals(300, caughtUp.header.heldAtCursor, "the whole batch shares the cursor's second")
+                assertFalse(client.trustNetworkNews(caughtUp.header, relay).any, "the header alone answers 'anything new?'")
 
                 // Nothing new: the COUNT pre-check ends the update without downloading.
                 val idle = client.updateTrustNetwork(caughtUp.header, caughtUp.index, caughtUp.ids, relay)
@@ -119,6 +121,7 @@ class TrustNetworkSyncTest {
                 assertEquals(298, changed.index.size, "one re-ranked, one tombstoned, one deleted")
                 assertEquals(1, changed.ids.tombstones, "the rank-0 card is kept as a tombstone")
                 assertEquals(later, changed.header.syncCursor)
+                assertEquals(2, changed.header.heldAtCursor, "the re-rank and the rank-0 card")
 
                 // The tombstone keeps the pre-check exact: nothing new again.
                 val idleAgain = client.updateTrustNetwork(changed.header, changed.index, changed.ids, relay)

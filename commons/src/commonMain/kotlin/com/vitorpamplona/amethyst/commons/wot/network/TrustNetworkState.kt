@@ -35,6 +35,7 @@ import com.vitorpamplona.quartz.nip85TrustedAssertions.users.index.TrustNetworkP
 import com.vitorpamplona.quartz.nip85TrustedAssertions.users.index.TrustNetworkSyncResult
 import com.vitorpamplona.quartz.nip85TrustedAssertions.users.index.downloadTrustNetwork
 import com.vitorpamplona.quartz.nip85TrustedAssertions.users.index.reconcileTrustNetwork
+import com.vitorpamplona.quartz.nip85TrustedAssertions.users.index.trustNetworkNews
 import com.vitorpamplona.quartz.nip85TrustedAssertions.users.index.updateTrustNetwork
 import com.vitorpamplona.quartz.utils.Hex
 import com.vitorpamplona.quartz.utils.Log
@@ -192,8 +193,12 @@ class TrustNetworkState(
         val provider: ServiceProviderTag?,
     )
 
-    /** Set by [expectNewProvider]: the next provider change downloads at once, on any network. */
-    private var forceNextDownload = false
+    /**
+     * Until when (unix seconds) a new provider's first download may use a metered network: the
+     * user just set it up and is waiting. Expires so a 10040 publish that failed, or that named
+     * the same provider, cannot arm it for a later, unrelated change.
+     */
+    private var forceDownloadUntil = 0L
     private val syncLock = Mutex()
     private var syncJob: Job? = null
 
@@ -253,6 +258,8 @@ class TrustNetworkState(
     fun offer(events: Iterable<UserAssertionEvent>) {
         val network = _network.value ?: return
         val provider = network.header.provider
+        val minScore = minTrustScore.value
+        var cards: MutableMap<HexKey, TrustOverlayCard>? = null
         var flipped = false
         for (event in events) {
             if (event.pubKey != provider) continue
@@ -260,19 +267,22 @@ class TrustNetworkState(
             if (event.createdAt <= network.header.syncCursor) continue
             val subject = event.aboutUser()
             if (subject == null || !Hex.isHex64(subject)) continue
-            val held = _overlay.value[subject]
+            val held = (cards ?: _overlay.value)[subject]
             if (held != null && held.createdAt >= event.createdAt) continue
 
-            val before = passes(subject)
+            val before = held?.let { it.rank >= minScore && it.rank > 0 } ?: network.index.passes(subject, minScore)
             val card =
                 TrustOverlayCard(
                     rank = (event.rank() ?: 0).coerceIn(0, 127),
                     followers = (event.followerCount() ?: 0).coerceAtLeast(0),
                     createdAt = event.createdAt,
                 )
-            _overlay.update { it + (subject to card) }
-            if (passes(subject) != before) flipped = true
+            // One copy of the overlay per batch, not per card.
+            val batch = cards ?: _overlay.value.toMutableMap().also { cards = it }
+            batch[subject] = card
+            if ((card.rank > 0 && card.rank >= minScore) != before) flipped = true
         }
+        cards?.let { _overlay.value = it }
         if (flipped) _verdictRevision.update { it + 1 }
     }
 
@@ -311,6 +321,10 @@ class TrustNetworkState(
 
     private suspend fun onProvider(provider: ServiceProviderTag?) {
         if (provider == null) {
+            // A provider this process had applied was removed (here or on another device):
+            // drop its files too, or the next cold start would filter pushes with it during the
+            // provider grace period. A null right at startup is the 10040 still loading, so keep.
+            if (appliedProvider.value?.provider != null) deleteFiles()
             _network.value = null
             _overlay.value = emptyMap()
             appliedProvider.value = Applied(null)
@@ -322,9 +336,7 @@ class TrustNetworkState(
             _network.value = withContext(Dispatchers.IO) { readIndex()?.takeIf { it.isFrom(provider) } }
         }
         appliedProvider.value = Applied(provider)
-        val force = forceNextDownload
-        forceNextDownload = false
-        if (autoSync) syncIfStale(force)
+        if (autoSync) syncIfStale(force = TimeUtils.now() < forceDownloadUntil)
     }
 
     /**
@@ -332,7 +344,7 @@ class TrustNetworkState(
      * it, so its first download starts as soon as the new 10040 is seen, even on mobile data.
      */
     fun expectNewProvider() {
-        forceNextDownload = true
+        forceDownloadUntil = TimeUtils.now() + FORCE_DOWNLOAD_WINDOW_SECS
     }
 
     /**
@@ -343,6 +355,9 @@ class TrustNetworkState(
     fun syncIfStale(force: Boolean = false) {
         val provider = rankProvider.value ?: return
         if (clientBuilder == null || directory == null) return
+        // Until the file on disk is read and matched to this provider, "no index" would mean a
+        // cold download of tens of MB. onProvider calls back here once it is.
+        if (appliedProvider.value?.provider != provider) return
         if (isSyncing()) return
 
         val current = _network.value?.takeIf { it.isFrom(provider) }
@@ -359,8 +374,9 @@ class TrustNetworkState(
             _status.update { it.copy(waitingForUnmetered = true) }
             return
         }
+        if (kind == TrustNetworkSyncStatus.Kind.DOWNLOAD) forceDownloadUntil = 0
 
-        launchSync { runSync(provider, current, kind) }
+        launchSync(provider) { runSync(provider, current, kind, allowMetered = force) }
     }
 
     /** Suspends until the running sync, if any, finishes. */
@@ -373,7 +389,7 @@ class TrustNetworkState(
         val provider = rankProvider.value ?: return
         if (clientBuilder == null || directory == null) return
         if (isSyncing()) return
-        launchSync { runSync(provider, null, TrustNetworkSyncStatus.Kind.DOWNLOAD) }
+        launchSync(provider) { runSync(provider, null, TrustNetworkSyncStatus.Kind.DOWNLOAD, allowMetered = true) }
     }
 
     /**
@@ -398,7 +414,7 @@ class TrustNetworkState(
                         TimeUtils.now() - current.header.lastFullCheck >= FULL_CHECK_EVERY_SECS -> TrustNetworkSyncStatus.Kind.FULL_CHECK
                         else -> TrustNetworkSyncStatus.Kind.UPDATE
                     }
-                runSync(provider, current.takeUnless { due == TrustNetworkSyncStatus.Kind.DOWNLOAD }, due)
+                runSync(provider, current.takeUnless { due == TrustNetworkSyncStatus.Kind.DOWNLOAD }, due, allowMetered = true)
             }
         } finally {
             syncing.store(false)
@@ -409,7 +425,10 @@ class TrustNetworkState(
     private fun isSyncing() = syncing.load()
 
     @OptIn(ExperimentalAtomicApi::class)
-    private fun launchSync(sync: suspend () -> Unit) {
+    private fun launchSync(
+        provider: ServiceProviderTag,
+        sync: suspend () -> Unit,
+    ) {
         if (!syncing.compareAndSet(expectedValue = false, newValue = true)) return
         syncJob =
             scope.launch(Dispatchers.IO) {
@@ -418,6 +437,9 @@ class TrustNetworkState(
                 } finally {
                     syncing.store(false)
                 }
+                // The provider changed while this ran: its result was discarded, and the new
+                // provider's own trigger found a sync running. Start the new one now.
+                if (autoSync && rankProvider.value != provider) syncIfStale(force = TimeUtils.now() < forceDownloadUntil)
             }
     }
 
@@ -425,21 +447,46 @@ class TrustNetworkState(
         provider: ServiceProviderTag,
         current: TrustNetwork?,
         requested: TrustNetworkSyncStatus.Kind,
+        /** The user asked for this run, so a download may use a metered network. */
+        allowMetered: Boolean,
     ): TrustNetworkRun {
         val builder = clientBuilder ?: return TrustNetworkRun(requested, null, applied = false, error = "no client")
-        // An update or full check needs the id column; without it, download again.
-        val ids = if (current != null) readIds()?.takeIf { it.size == current.index.size } else null
-        val kind = if (current == null || ids == null) TrustNetworkSyncStatus.Kind.DOWNLOAD else requested
+        val mayDownload = allowMetered || canDownloadLarge()
+        var kind = requested
 
-        _status.value = TrustNetworkSyncStatus(running = kind)
-        val progress =
-            TrustNetworkProgress { verified, expected ->
-                _status.update { it.copy(verified = verified, expected = expected) }
-            }
-
+        _status.value = TrustNetworkSyncStatus(running = requested)
         val client = builder()
         try {
             client.connect()
+
+            // The common case: nothing changed. Two COUNTs answer it, before the ids file (12 MB
+            // at 300k) is read, and nothing is written: the files keep an older lastUpdate,
+            // which only means the next process start asks again.
+            if (requested == TrustNetworkSyncStatus.Kind.UPDATE && current != null && current.header.heldAtCursor >= 0) {
+                val news = client.trustNetworkNews(current.header, provider.relayUrl)
+                if (!news.any) {
+                    val header = current.header.copy(lastUpdate = TimeUtils.now())
+                    _network.value = TrustNetwork(header, current.index)
+                    _status.value = TrustNetworkSyncStatus()
+                    val result = TrustNetworkSyncResult(header, current.index, TrustNetworkIds.EMPTY, complete = true, invalid = 0, received = 0, detail = "nothing new")
+                    return TrustNetworkRun(requested, result, applied = true, error = null)
+                }
+            }
+
+            // An update or full check needs the id column; without it, download again.
+            val ids = if (current != null) readIds()?.takeIf { it.size == current.index.size } else null
+            if (current == null || ids == null) kind = TrustNetworkSyncStatus.Kind.DOWNLOAD
+            if (kind == TrustNetworkSyncStatus.Kind.DOWNLOAD && !mayDownload) {
+                _status.value = TrustNetworkSyncStatus(waitingForUnmetered = true)
+                return TrustNetworkRun(kind, null, applied = false, error = "waiting for an unmetered network")
+            }
+
+            _status.value = TrustNetworkSyncStatus(running = kind)
+            val progress =
+                TrustNetworkProgress { verified, expected ->
+                    _status.update { it.copy(verified = verified, expected = expected) }
+                }
+
             val result: TrustNetworkSyncResult? =
                 when (kind) {
                     TrustNetworkSyncStatus.Kind.DOWNLOAD -> {
@@ -451,8 +498,14 @@ class TrustNetworkState(
                     }
 
                     TrustNetworkSyncStatus.Kind.FULL_CHECK -> {
+                        // A relay without NIP-77 cannot reconcile: download again, if allowed.
                         client.reconcileTrustNetwork(current!!.header, current.index, ids!!, provider.relayUrl, progress)
-                            ?: client.downloadTrustNetwork(provider.pubkey, provider.relayUrl, progress)
+                            ?: if (mayDownload) {
+                                client.downloadTrustNetwork(provider.pubkey, provider.relayUrl, progress)
+                            } else {
+                                _status.value = TrustNetworkSyncStatus(waitingForUnmetered = true)
+                                return TrustNetworkRun(kind, null, applied = false, error = "waiting for an unmetered network")
+                            }
                     }
                 }
 
@@ -477,7 +530,9 @@ class TrustNetworkState(
                 return TrustNetworkRun(kind, result, applied = false, error = "provider changed")
             }
 
-            writeFiles(result.header, result.index, result.ids)
+            // Unchanged cards (an update that found nothing): keep the files and the index
+            // instance, so feeds keyed on it do not rebuild.
+            if (current == null || result.index !== current.index) writeFiles(result.header, result.index, result.ids)
             _network.value = TrustNetwork(result.header, result.index)
             // The sync fetched everything up to its cursor; only cards seen after it still add.
             _overlay.update { cards -> cards.filterValues { it.createdAt > result.header.syncCursor } }
@@ -520,6 +575,16 @@ class TrustNetworkState(
         }
     }
 
+    private fun deleteFiles() {
+        val dir = directory ?: return
+        try {
+            fileSystem.delete(dir / INDEX_FILE, mustExist = false)
+            fileSystem.delete(dir / IDS_FILE, mustExist = false)
+        } catch (e: Exception) {
+            Log.w(TAG, "Could not delete the trust network files", e)
+        }
+    }
+
     private fun writeFiles(
         header: TrustNetworkHeader,
         index: TrustNetworkIndex,
@@ -554,6 +619,7 @@ class TrustNetworkState(
         const val UPDATE_EVERY_SECS = 15 * 60L
         const val FULL_CHECK_EVERY_SECS = 7 * 24 * 60 * 60L
         private const val PROVIDER_GRACE_MS = 5_000L
+        private const val FORCE_DOWNLOAD_WINDOW_SECS = 10 * 60L
 
         /** [TrustNetworkSyncStatus.lastError] when the provider has published no cards yet. */
         const val NO_SCORES_YET = "no-scores-yet"

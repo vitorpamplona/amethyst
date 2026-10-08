@@ -51,13 +51,27 @@ import com.vitorpamplona.amethyst.commons.ui.pluralStringRes
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.placeholderText
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
+import com.vitorpamplona.quartz.nip01Core.core.HexKey
 
 /**
- * Whether this chat collapses messages from people outside the user's Web of Trust network.
- * Public chats set it (NIP-28 channels, live-stream chat, ephemeral chats, relay groups); private
- * chats never do, since Known / New Requests already sorts them by the same rule.
+ * Who a public chat vouches for regardless of the Web of Trust: a stream's host and speakers, a
+ * relay group's members, a channel's creator. Their messages never collapse.
  */
-val LocalChatCollapseOutsideNetwork = compositionLocalOf { false }
+fun interface ChatRoomVouches {
+    fun vouchesFor(author: HexKey): Boolean
+
+    companion object {
+        val NOBODY = ChatRoomVouches { false }
+    }
+}
+
+/**
+ * Set by public chats (NIP-28 channels, live-stream chat, ephemeral chats, relay groups) to
+ * collapse messages from people outside the user's Web of Trust network, except the ones the
+ * room vouches for. Null (the default) leaves the chat alone: private chats never set it, since
+ * Known / New Requests already sorts them by the same rule.
+ */
+val LocalChatCollapseOutsideNetwork = compositionLocalOf<ChatRoomVouches?> { null }
 
 /**
  * Consecutive messages from outside the network, collapsed into one row. [head] is the run's
@@ -89,20 +103,23 @@ class OutsideNetworkRuns(
 fun rememberOutsideNetworkRuns(
     notes: List<Note>,
     revealed: Set<String>,
-    enabled: Boolean,
+    vouches: ChatRoomVouches?,
     accountViewModel: AccountViewModel,
 ): OutsideNetworkRuns {
-    if (!enabled) return OutsideNetworkRuns.NONE
-    val trustNetwork = accountViewModel.account.trustNetwork
+    if (vouches == null) return OutsideNetworkRuns.NONE
+    val account = accountViewModel.account
+    val trustNetwork = account.trustNetwork
     val network by trustNetwork.network.collectAsStateWithLifecycle()
     val minScore by trustNetwork.minTrustScore.collectAsStateWithLifecycle()
     val revision by trustNetwork.verdictRevision.collectAsStateWithLifecycle()
+    // Following someone lets their messages through.
+    val follows by account.kind3FollowList.flow.collectAsStateWithLifecycle()
 
-    return remember(notes, revealed, network, minScore, revision) {
+    return remember(notes, revealed, network?.index, minScore, revision, follows, vouches) {
         if (network == null) {
             OutsideNetworkRuns.NONE
         } else {
-            outsideNetworkRuns(notes, revealed) { author -> accountViewModel.account.isOutsideTrustNetwork(author) }
+            outsideNetworkRuns(notes, revealed) { author -> !vouches.vouchesFor(author) && account.isOutsideTrustNetwork(author) }
         }
     }
 }

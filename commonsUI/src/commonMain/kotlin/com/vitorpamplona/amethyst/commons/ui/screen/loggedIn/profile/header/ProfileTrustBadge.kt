@@ -77,7 +77,7 @@ fun ProfileTrustBadge(
     val rank by observeUserAssertionsScore(user, accountViewModel)
 
     val verdict =
-        remember(user, network, minScore, revision, follows, rank) {
+        remember(user, network?.index, minScore, revision, follows, rank) {
             trustNetwork.explain(user.pubkeyHex, account.signer.pubKey, follows.authors)
         }
 

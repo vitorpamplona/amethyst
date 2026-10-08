@@ -459,9 +459,12 @@ fun RenderThreadFeed(
         .collectAsStateWithLifecycle()
     val verdictRevision by accountViewModel.account.trustNetwork.verdictRevision
         .collectAsStateWithLifecycle()
+    // Following someone lets their replies through.
+    val follows by accountViewModel.account.kind3FollowList.flow
+        .collectAsStateWithLifecycle()
     val outsideNetwork =
-        remember(items, trustNetwork, minTrustScore, verdictRevision, noteId) {
-            if (trustNetwork == null) emptySet() else outOfNetworkReplies(items.list, noteId, accountViewModel)
+        remember(items, levels, trustNetwork?.index, minTrustScore, verdictRevision, follows, noteId) {
+            if (trustNetwork == null) emptySet() else outOfNetworkReplies(items.list, levels, noteId, accountViewModel)
         }
 
     // Hides every descendant of a collapsed reply and counts how many were hidden. The feed is
@@ -626,24 +629,52 @@ fun RenderThreadFeed(
 
 /**
  * Replies (by id) whose author is outside the Web of Trust network: they start collapsed. The
- * thread's root, its author and the focused note are never included; neither are follows or
- * the user (see `Account.trustNetworkVerdict`).
+ * thread's root, its author, the focused note and the replies above it are never included (a
+ * collapsed reply hides everything under it, which would hide the note the user opened);
+ * neither are follows or the user (see `Account.trustNetworkVerdict`).
  */
 private fun outOfNetworkReplies(
     thread: List<Note>,
+    levels: Map<Note, Int>,
     focusedNoteId: String,
     accountViewModel: AccountViewModel,
 ): Set<String> {
     val account = accountViewModel.account
     val root = thread.firstOrNull() ?: return emptySet()
     val rootAuthor = root.author?.pubkeyHex
+    val keepOpen = focusedNoteAndAncestors(thread, levels, focusedNoteId)
     val result = HashSet<String>()
     for (i in 1 until thread.size) {
         val note = thread[i]
-        if (note.idHex == focusedNoteId) continue
+        if (note.idHex in keepOpen) continue
         val author = note.author?.pubkeyHex ?: continue
         if (author == rootAuthor) continue
         if (account.isOutsideTrustNetwork(author)) result.add(note.idHex)
+    }
+    return result
+}
+
+/**
+ * The focused note and every reply above it. The thread is depth-first, so its ancestors are
+ * the earlier items each at a shallower level than the last one found.
+ */
+internal fun focusedNoteAndAncestors(
+    thread: List<Note>,
+    levels: Map<Note, Int>,
+    focusedNoteId: String,
+): Set<String> {
+    val focused = thread.indexOfFirst { it.idHex == focusedNoteId }
+    if (focused < 0) return setOf(focusedNoteId)
+    val result = HashSet<String>()
+    result.add(focusedNoteId)
+    var level = levels[thread[focused]] ?: return result
+    for (i in focused - 1 downTo 0) {
+        val candidate = levels[thread[i]] ?: continue
+        if (candidate < level) {
+            result.add(thread[i].idHex)
+            level = candidate
+            if (level <= 0) break
+        }
     }
     return result
 }

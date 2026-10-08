@@ -58,6 +58,7 @@ import com.vitorpamplona.amethyst.commons.ui.feeds.RelayReachSentinels
 import com.vitorpamplona.amethyst.commons.ui.feeds.RelayReachState
 import com.vitorpamplona.amethyst.commons.ui.feeds.WatchLifecycleAndUpdateModel
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.feed.ChatRoomVouches
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.feed.LocalChatCollapseOutsideNetwork
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.feed.RefreshingChatroomFeedView
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.publicChannels.dal.ChannelFeedViewModel
@@ -221,7 +222,7 @@ private fun ChannelView(
                         .weight(1f, true)
                 },
         ) {
-            CompositionLocalProvider(LocalChatCollapseOutsideNetwork provides true) {
+            CompositionLocalProvider(LocalChatCollapseOutsideNetwork provides remember(channel) { ChatRoomVouches { channel.membershipOf(it).isMember() } }) {
                 RefreshingChatroomFeedView(
                     feedContentState = feedViewModel.feedState,
                     accountViewModel = accountViewModel,

@@ -36,6 +36,11 @@ data class TrustNetworkHeader(
     val lastFullCheck: Long,
     /** When the last small update finished, unix seconds. */
     val lastUpdate: Long,
+    /**
+     * Cards held (entries and tombstones) created at or after [syncCursor], or -1 when unknown.
+     * Lets an update compare it with the relay's count without reading the ids file.
+     */
+    val heldAtCursor: Int = -1,
 )
 
 /**
@@ -45,7 +50,7 @@ data class TrustNetworkHeader(
  * Index file (`network-v1.bin`):
  * ```
  * "AWOT" | u16 version | 32B provider | u16 relayLen + utf8 relay
- * | i64 syncCursor | i64 lastFullCheck | i64 lastUpdate | i32 N
+ * | i64 syncCursor | i64 lastFullCheck | i64 lastUpdate | i32 heldAtCursor | i32 N
  * | keys N×16 | rank N×1 | hops N×1 | followers N×4
  * ```
  * Ids file (`network-ids-v1.bin`), aligned with the index, then the tombstones:
@@ -55,7 +60,8 @@ data class TrustNetworkHeader(
  * ```
  */
 object TrustNetworkCodec {
-    const val VERSION = 1
+    /** Version 2 added `heldAtCursor`; a version 1 file is ignored (and re-downloaded). */
+    const val VERSION = 2
 
     /** The ids file gained tombstones in version 2; a version 1 file is ignored (and re-downloaded). */
     const val IDS_VERSION = 2
@@ -68,7 +74,7 @@ object TrustNetworkCodec {
     ): ByteArray {
         val relay = header.relay.encodeToByteArray()
         val n = index.size
-        val out = Writer(4 + 2 + 32 + 2 + relay.size + 8 * 3 + 4 + n * 22)
+        val out = Writer(4 + 2 + 32 + 2 + relay.size + 8 * 3 + 4 + 4 + n * 22)
         out.bytes(INDEX_MAGIC)
         out.short(VERSION)
         out.bytes(Hex.decode(header.provider))
@@ -77,6 +83,7 @@ object TrustNetworkCodec {
         out.long(header.syncCursor)
         out.long(header.lastFullCheck)
         out.long(header.lastUpdate)
+        out.int(header.heldAtCursor)
         out.int(n)
         for (v in index.keys) out.long(v)
         out.bytes(index.rank)
@@ -199,7 +206,7 @@ object TrustNetworkCodec {
             require(short() == VERSION) { "unknown version" }
             val provider = Hex.encode(bytes(32))
             val relay = bytes(short()).decodeToString()
-            return TrustNetworkHeader(provider, relay, syncCursor = long(), lastFullCheck = long(), lastUpdate = long())
+            return TrustNetworkHeader(provider, relay, syncCursor = long(), lastFullCheck = long(), lastUpdate = long(), heldAtCursor = int())
         }
     }
 }

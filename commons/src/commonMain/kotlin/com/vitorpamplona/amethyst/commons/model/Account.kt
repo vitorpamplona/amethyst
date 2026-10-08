@@ -3773,10 +3773,16 @@ class Account(
     /** True only when a trust network is active and [pubkey] is not in it. */
     fun isOutsideTrustNetwork(pubkey: HexKey): Boolean = trustNetworkVerdict(pubkey) == false
 
+    /** [isKnownChatroom] for a room that may not be loaded yet: then only "I wrote to it" counts. */
+    fun isKnownChatroom(key: ChatroomKey): Boolean {
+        val room = chatroomList.rooms.get(key) ?: return chatroomList.hasSentMessagesTo(key)
+        return isKnownChatroom(key, room)
+    }
+
     /**
      * Whether a private chat room belongs in Known rather than New Requests: a sender is
      * followed or (when a trust network is active) in the network, or this account has written
-     * to the room. The single rule for both DM tabs and DM push notifications.
+     * to the room. The single rule for the DM tabs and DM notifications, in-app and push.
      */
     fun isKnownChatroom(
         key: ChatroomKey,

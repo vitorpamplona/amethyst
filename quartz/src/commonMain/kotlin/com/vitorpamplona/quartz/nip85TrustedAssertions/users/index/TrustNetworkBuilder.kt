@@ -226,9 +226,29 @@ class TrustNetworkBuilder(
         ids = ids.copyOf(32 * capacity)
     }
 
-    private fun isDeletedId(i: Int): Boolean {
-        if (deletedIds.isEmpty()) return false
+    /** The first 128 bits of each id in [deletedIds], so [isDeletedId] checks a card without allocating. */
+    private fun deletedIdPrefixes(): Set<Key> =
+        deletedIds.mapNotNullTo(HashSet(deletedIds.size * 2)) { id ->
+            if (Hex.isHex64(id)) Key(Hex.readLong(id, 0), Hex.readLong(id, 16)) else null
+        }
+
+    private fun isDeletedId(
+        i: Int,
+        prefixes: Set<Key>,
+    ): Boolean {
+        if (prefixes.isEmpty()) return false
+        if (Key(readLong(ids, 32 * i), readLong(ids, 32 * i + 8)) !in prefixes) return false
+        // Rare: confirm the whole id.
         return Hex.encode(ids.copyOfRange(32 * i, 32 * i + 32)) in deletedIds
+    }
+
+    private fun readLong(
+        bytes: ByteArray,
+        offset: Int,
+    ): Long {
+        var v = 0L
+        for (b in offset until offset + 8) v = (v shl 8) or (bytes[b].toLong() and 0xFF)
+        return v
     }
 
     /**
@@ -244,6 +264,7 @@ class TrustNetworkBuilder(
             if (c != 0) c else createdAt[b].compareTo(createdAt[a])
         }
 
+        val deletedPrefixes = deletedIdPrefixes()
         val keep = IntArray(size)
         var kept = 0
         val graves = IntArray(size)
@@ -258,7 +279,7 @@ class TrustNetworkBuilder(
 
             val deletedAt = if (deletedSubjects.isEmpty()) null else deletedSubjects[Key(hi[newest], lo[newest])]
             if (deletedAt != null && deletedAt >= createdAt[newest]) continue
-            if (isDeletedId(newest)) continue
+            if (isDeletedId(newest, deletedPrefixes)) continue
             if (rank[newest].toInt() == 0) {
                 graves[buried++] = newest
             } else {
