@@ -121,6 +121,9 @@ object DesktopNotePlatform : NotePlatform {
                     modifier = Modifier.fillMaxWidth().heightIn(max = MaxInlineMediaHeight).clip(shape),
                     isLive = (content as? MediaUrlVideo)?.isLiveStream == true,
                     onFullscreen = { position -> playFullscreen(url, position) },
+                    autoPlayWhenVisible = accountViewModel.settings.autoPlayVideos(),
+                    pauseWhenHidden = true,
+                    loadOnDemand = !accountViewModel.settings.startVideoPlayback(),
                 )
             }
 
@@ -185,6 +188,9 @@ object DesktopNotePlatform : NotePlatform {
             url = videoUri,
             modifier = Modifier.fillMaxWidth().heightIn(max = MaxInlineMediaHeight).clip(shape),
             onFullscreen = onDialog?.let { open -> { _ -> open() } },
+            autoPlayWhenVisible = accountViewModel.settings.autoPlayVideos(),
+            pauseWhenHidden = true,
+            loadOnDemand = !accountViewModel.settings.startVideoPlayback(),
         )
     }
 
@@ -207,6 +213,9 @@ object DesktopNotePlatform : NotePlatform {
             modifier = Modifier.fillMaxWidth().heightIn(max = MaxInlineMediaHeight).clip(shape),
             isLive = isLiveStream,
             onFullscreen = { position -> playFullscreen(videoUri, position) },
+            autoPlayWhenVisible = accountViewModel.settings.autoPlayVideos(),
+            pauseWhenHidden = true,
+            loadOnDemand = !accountViewModel.settings.startVideoPlayback(),
         )
     }
 

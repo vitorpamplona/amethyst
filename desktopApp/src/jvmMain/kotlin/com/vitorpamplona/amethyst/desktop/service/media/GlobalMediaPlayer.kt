@@ -20,6 +20,9 @@
  */
 package com.vitorpamplona.amethyst.desktop.service.media
 
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import com.vitorpamplona.amethyst.desktop.ui.media.MediaType
 import io.github.kdroidfilter.composemediaplayer.VideoPlayerError
@@ -30,10 +33,15 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.flow.merge
 import kotlinx.coroutines.launch
 
 data class MediaPlaybackState(
@@ -47,6 +55,8 @@ data class MediaPlaybackState(
     val aspectRatio: Float = 16f / 9f,
     val volume: Int = 100,
     val isMuted: Boolean = false,
+    /** Playback rate, 1 = normal. */
+    val speed: Float = 1f,
     /** Last observed error from the engine, or null. JVM emits only SourceError/UnknownError. */
     val errorReason: String? = null,
 )
@@ -80,6 +90,10 @@ object GlobalMediaPlayer {
 
     private val initLock = Any()
 
+    private const val RETIRE_DELAY_MS = 2_000L
+
+    private const val CLOCK_POLL_MS = 250L
+
     /**
      * The kdroidFilter player driving currently-active or last-played video, or
      * `null` if the native player failed to initialize (e.g. missing GStreamer
@@ -101,9 +115,35 @@ object GlobalMediaPlayer {
     // Stashed pre-mute volume (0..100). kdroidFilter has no isMuted concept, so
     // we emulate by zeroing volume and remembering the prior value.
     private var preMuteVideoVolume: Int = 100
+
+    /**
+     * Whether a newly opened video starts muted. Starts true, as on Android, so a feed that
+     * autoplays does not blast sound; every mute or unmute the user makes becomes the default
+     * for the next video.
+     */
+    var defaultMuted: Boolean by mutableStateOf(true)
+        private set
+
+    /** Sets whether the next video starts muted, from a card that is not the loaded video. */
+    fun setDefaultMute(muted: Boolean) {
+        defaultMuted = muted
+    }
+
+    // Where each video was when [releaseVideo] let it go, as a 0..1 fraction, so coming back to it
+    // resumes there instead of from the start. Bounded: only the most recent few are worth keeping.
+    private val savedPositions =
+        object : LinkedHashMap<String, Float>(16, 0.75f, true) {
+            override fun removeEldestEntry(eldest: MutableMap.MutableEntry<String, Float>?) = size > 64
+        }
     private var preMuteAudioVolume: Int = 100
 
     private var videoSyncJob: Job? = null
+
+    // Where a seek made while paused went, in ms. The Linux engine reports 0 while a paused seek
+    // settles, so the controls show this target until the engine plays and reports again.
+    @Volatile private var videoSeekWhilePaused: Long? = null
+
+    @Volatile private var audioSeekWhilePaused: Long? = null
     private var audioSyncJob: Job? = null
 
     // --- Verbs ---------------------------------------------------------------
@@ -112,9 +152,30 @@ object GlobalMediaPlayer {
         url: String,
         seekPosition: Float = 0f,
     ) {
+        val startAt =
+            if (seekPosition > 0f) {
+                seekPosition
+            } else {
+                synchronized(savedPositions) { savedPositions.remove(url) } ?: 0f
+            }
         val current = _videoState.value
+
+        // Reuse the engine only when it's already on this URL AND healthy. If the last attempt
+        // errored (a common transient for live HLS — a dead segment, a 403, a stream that just
+        // went live), fall through and re-open instead of leaving a stuck/errored surface.
+        val loaded = videoPlayer
+        if (loaded != null && current.url == url && current.errorReason == null) {
+            println("GlobalMediaPlayer.playVideo REUSE url=$url isPlaying=${current.isPlaying}")
+            if (startAt > 0f) loaded.seekTo(startAt * 1000f)
+            if (!current.isPlaying) loaded.play()
+            return
+        }
+
+        // The video being replaced picks up where it was when it comes back.
+        rememberPosition(current)
+
         val player =
-            ensureVideoPlayer() ?: run {
+            replaceVideoPlayer() ?: run {
                 _videoState.value =
                     MediaPlaybackState(
                         url = url,
@@ -125,25 +186,24 @@ object GlobalMediaPlayer {
                 return
             }
 
-        // Reuse the engine only when it's already on this URL AND healthy. If the last attempt
-        // errored (a common transient for live HLS — a dead segment, a 403, a stream that just
-        // went live), fall through and re-open instead of leaving a stuck/errored surface.
-        if (current.url == url && current.errorReason == null) {
-            println("GlobalMediaPlayer.playVideo REUSE url=$url isPlaying=${current.isPlaying}")
-            if (seekPosition > 0f) player.seekTo(seekPosition * 1000f)
-            if (!current.isPlaying) player.play()
-            return
-        }
-
         println("GlobalMediaPlayer.playVideo OPEN url=$url (was=${current.url} err=${current.errorReason})")
 
-        // Reset engine volume to match the UI's default for the new track. The
-        // kdroidFilter player retains `volume` across openUri calls, so a mute
-        // on the prior track would otherwise carry over while the UI shows the
-        // default 100% / unmuted state.
-        player.volume = 1f
+        // The kdroidFilter player retains `volume` and speed across openUri calls, so set both for
+        // the new track: normal speed, and muted or not as the user last chose.
+        videoSeekWhilePaused = null
+        val muted = defaultMuted
+        if (muted) preMuteVideoVolume = 100
+        player.volume = if (muted) 0f else 1f
+        player.playbackSpeed = 1f
 
-        _videoState.value = MediaPlaybackState(url = url, type = MediaType.VIDEO, isBuffering = true)
+        _videoState.value =
+            MediaPlaybackState(
+                url = url,
+                type = MediaType.VIDEO,
+                isBuffering = true,
+                volume = if (muted) 0 else 100,
+                isMuted = muted,
+            )
 
         // Cancel any in-flight open so a rapid switch can't interleave openUri on the shared engine.
         videoOpenJob?.cancel()
@@ -154,9 +214,9 @@ object GlobalMediaPlayer {
                 // initial seek we wait for the first hasMedia=true emission then
                 // stop collecting (Flow.first terminates the collector cleanly,
                 // unlike `return@collect` which only exits the lambda).
-                if (seekPosition > 0f) {
+                if (startAt > 0f) {
                     snapshotFlow { player.hasMedia }.first { it }
-                    player.seekTo(seekPosition * 1000f)
+                    player.seekTo(startAt * 1000f)
                 }
             }
     }
@@ -183,6 +243,7 @@ object GlobalMediaPlayer {
         // Reset engine volume — see playVideo() for rationale.
         player.volume = 1f
 
+        audioSeekWhilePaused = null
         _audioState.value = MediaPlaybackState(url = url, type = MediaType.AUDIO, isBuffering = true)
 
         scope.launch(Dispatchers.IO) {
@@ -195,6 +256,10 @@ object GlobalMediaPlayer {
         if (_videoState.value.isPlaying) player.pause() else player.play()
     }
 
+    fun pauseVideo() {
+        if (_videoState.value.isPlaying) videoPlayer?.pause()
+    }
+
     fun toggleAudioPlayPause() {
         val player = audioPlayer ?: return
         if (_audioState.value.isPlaying) player.pause() else player.play()
@@ -202,11 +267,35 @@ object GlobalMediaPlayer {
 
     /** UI passes position in 0..1. kdroidFilter wants 0..1000. */
     fun seekVideo(position: Float) {
-        videoPlayer?.seekTo((position * 1000f).coerceIn(0f, 1000f))
+        val target = position.coerceIn(0f, 1f)
+        videoPlayer?.seekTo(target * 1000f)
+        val state = _videoState.value
+        val targetMillis = (target * state.duration).toLong()
+        videoSeekWhilePaused = if (state.isPlaying) null else targetMillis
+        _videoState.value = state.copy(position = target, currentTime = targetMillis)
+    }
+
+    /** Moves the video [deltaMillis] forward (or back, when negative), within its length. */
+    fun skipVideo(deltaMillis: Long) {
+        val state = _videoState.value
+        if (state.duration <= 0L) return
+        val target = (state.currentTime + deltaMillis).coerceIn(0L, state.duration)
+        seekVideo(target.toFloat() / state.duration)
+    }
+
+    fun setVideoSpeed(speed: Float) {
+        val player = videoPlayer ?: return
+        player.playbackSpeed = speed
+        _videoState.value = _videoState.value.copy(speed = player.playbackSpeed)
     }
 
     fun seekAudio(position: Float) {
-        audioPlayer?.seekTo((position * 1000f).coerceIn(0f, 1000f))
+        val target = position.coerceIn(0f, 1f)
+        audioPlayer?.seekTo(target * 1000f)
+        val state = _audioState.value
+        val targetMillis = (target * state.duration).toLong()
+        audioSeekWhilePaused = if (state.isPlaying) null else targetMillis
+        _audioState.value = state.copy(position = target, currentTime = targetMillis)
     }
 
     /** UI passes volume in 0..100. kdroidFilter wants 0..1. */
@@ -214,7 +303,10 @@ object GlobalMediaPlayer {
         videoPlayer?.volume = volume.coerceIn(0, 100) / 100f
         val muted = _videoState.value.isMuted && volume == 0
         _videoState.value = _videoState.value.copy(volume = volume, isMuted = muted)
-        if (volume > 0) preMuteVideoVolume = volume
+        if (volume > 0) {
+            preMuteVideoVolume = volume
+            defaultMuted = false
+        }
     }
 
     fun setAudioVolume(volume: Int) {
@@ -234,6 +326,7 @@ object GlobalMediaPlayer {
             preMuteVideoVolume = state.volume.coerceAtLeast(1)
             videoPlayer?.volume = 0f
             _videoState.value = _videoState.value.copy(isMuted = true, volume = 0)
+            defaultMuted = true
         }
     }
 
@@ -254,6 +347,27 @@ object GlobalMediaPlayer {
         videoPlayer?.stop()
         _videoState.value = MediaPlaybackState()
         _isFullscreen.value = false
+    }
+
+    /**
+     * Lets go of [url] once nothing shows it any more, as Android releases a player whose card left
+     * the screen: stops it if it is the loaded video and paused, keeping its position (as
+     * [playVideo] does for a video it replaces) for when it comes back. One still playing (resumed
+     * from the now-playing bar) or on screen in full screen is left alone.
+     */
+    fun releaseVideo(url: String) {
+        val state = _videoState.value
+        if (state.url != url || state.isPlaying || _isFullscreen.value) return
+        rememberPosition(state)
+        stopVideo()
+    }
+
+    /** Keeps where [state]'s video is, unless it has not started, has finished or failed. */
+    private fun rememberPosition(state: MediaPlaybackState) {
+        val url = state.url ?: return
+        if (state.errorReason == null && state.position > 0f && state.position < 0.98f) {
+            synchronized(savedPositions) { savedPositions[url] = state.position }
+        }
     }
 
     fun stopAudio() {
@@ -303,6 +417,38 @@ object GlobalMediaPlayer {
                 ?.also { videoPlayer = it }
         }
 
+    /**
+     * A new engine for a newly opened video, retiring the one before it. kdroidFilter's Linux
+     * player frees and reallocates its frame bitmaps on its own thread when the picture size
+     * changes, so reusing one engine across videos of different sizes let a surface still drawing
+     * the previous video's last frame read freed memory (a SIGSEGV in
+     * `SkImages::RasterFromBitmap`) — routine once the feed switches videos as it scrolls. A fresh
+     * engine has no previous frame to free.
+     */
+    private fun replaceVideoPlayer(): VideoPlayerState? {
+        val fresh =
+            runCatching { createVideoPlayerState() }
+                .onFailure { println("kdroidFilter: video engine init failed: ${it.message}") }
+                .getOrNull() ?: return null
+        val previous = synchronized(initLock) { videoPlayer.also { videoPlayer = fresh } }
+        startVideoSync(fresh)
+        if (previous != null) retireVideoPlayer(previous)
+        return fresh
+    }
+
+    /**
+     * Silences [player] now and releases it once no surface can still be drawing it: the cards
+     * showing it swap to the new engine on their next frame, well inside [RETIRE_DELAY_MS].
+     */
+    private fun retireVideoPlayer(player: VideoPlayerState) {
+        runCatching { player.pause() }
+        scope.launch(Dispatchers.Main) {
+            delay(RETIRE_DELAY_MS)
+            runCatching { player.stop() }
+            runCatching { player.dispose() }
+        }
+    }
+
     private fun ensureAudioPlayer(): VideoPlayerState? =
         audioPlayer ?: synchronized(initLock) {
             audioPlayer ?: runCatching { createVideoPlayerState() }
@@ -316,17 +462,10 @@ object GlobalMediaPlayer {
         videoSyncJob?.cancel()
         videoSyncJob =
             scope.launch {
-                snapshotFlow {
-                    EngineSnapshot(
-                        isPlaying = player.isPlaying,
-                        isLoading = player.isLoading,
-                        hasMedia = player.hasMedia,
-                        currentTime = player.currentTime,
-                        duration = player.duration,
-                        aspectRatio = player.aspectRatio,
-                        errorMessage = player.error?.let(::describeError),
-                    )
-                }.collect { snap ->
+                engineSnapshots(player).collect { raw ->
+                    if (raw.isPlaying) videoSeekWhilePaused = null
+                    val held = videoSeekWhilePaused
+                    val snap = if (held != null && raw.currentTime <= 0.0) raw.copy(currentTime = held / 1000.0) else raw
                     val current = _videoState.value
                     val posFraction =
                         if (snap.duration > 0.0) {
@@ -352,17 +491,10 @@ object GlobalMediaPlayer {
         audioSyncJob?.cancel()
         audioSyncJob =
             scope.launch {
-                snapshotFlow {
-                    EngineSnapshot(
-                        isPlaying = player.isPlaying,
-                        isLoading = player.isLoading,
-                        hasMedia = player.hasMedia,
-                        currentTime = player.currentTime,
-                        duration = player.duration,
-                        aspectRatio = player.aspectRatio,
-                        errorMessage = player.error?.let(::describeError),
-                    )
-                }.collect { snap ->
+                engineSnapshots(player).collect { raw ->
+                    if (raw.isPlaying) audioSeekWhilePaused = null
+                    val held = audioSeekWhilePaused
+                    val snap = if (held != null && raw.currentTime <= 0.0) raw.copy(currentTime = held / 1000.0) else raw
                     val current = _audioState.value
                     val posFraction =
                         if (snap.duration > 0.0) {
@@ -382,6 +514,34 @@ object GlobalMediaPlayer {
                 }
             }
     }
+
+    /**
+     * The engine's state as it changes. Its flags are Compose state, but its clock is not on every
+     * platform (the Linux engine asks GStreamer on each read of `currentTime`), so a snapshotFlow
+     * alone saw the time move only when a flag flipped: the counter sat at 0:00 through playback.
+     * While playing, the clock is also sampled every [CLOCK_POLL_MS].
+     */
+    private fun engineSnapshots(player: VideoPlayerState): Flow<EngineSnapshot> =
+        merge(
+            snapshotFlow { player.engineSnapshot() },
+            flow {
+                while (true) {
+                    delay(CLOCK_POLL_MS)
+                    if (player.isPlaying) emit(player.engineSnapshot())
+                }
+            },
+        ).distinctUntilChanged()
+
+    private fun VideoPlayerState.engineSnapshot() =
+        EngineSnapshot(
+            isPlaying = isPlaying,
+            isLoading = isLoading,
+            hasMedia = hasMedia,
+            currentTime = currentTime,
+            duration = duration,
+            aspectRatio = aspectRatio,
+            errorMessage = error?.let(::describeError),
+        )
 
     private fun describeError(error: VideoPlayerError): String =
         when (error) {

@@ -125,6 +125,9 @@ fun GlobalFullscreenOverlay() {
             viewMode = ViewMode.FULLSCREEN,
             onPlayPause = { GlobalMediaPlayer.toggleVideoPlayPause() },
             onSeek = { GlobalMediaPlayer.seekVideo(it) },
+            onSkip = { GlobalMediaPlayer.skipVideo(it) },
+            speed = videoState.speed,
+            onSpeedChange = { GlobalMediaPlayer.setVideoSpeed(it) },
             onVolumeChange = { GlobalMediaPlayer.setVideoVolume(it) },
             onMuteToggle = { GlobalMediaPlayer.toggleVideoMute() },
             onViewModeChange = { mode ->
