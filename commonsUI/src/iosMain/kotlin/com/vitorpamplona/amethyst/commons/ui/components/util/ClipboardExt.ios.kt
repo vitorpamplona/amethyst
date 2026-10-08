@@ -36,3 +36,6 @@ actual suspend fun Clipboard.getText(): String? {
 }
 
 actual suspend fun Clipboard.hasText(): Boolean = UIPasteboard.generalPasteboard.hasStrings
+
+// No system flag to mark a clip sensitive here: an ordinary copy.
+actual suspend fun Clipboard.setSensitiveText(text: String) = setText(text)

@@ -154,6 +154,15 @@ jobs:
           chmod +x scripts/relax-deb-libicu.sh
           scripts/relax-deb-libicu.sh desktopApp/build/compose/binaries/main/deb/*.deb
 
+      # The media player drives the system GStreamer from a native library jpackage
+      # never sees, so the .deb has to be told to depend on it.
+      - name: Add GStreamer deps to .deb
+        if: matrix.desktop-task == 'packageDeb'
+        run: |
+          set -euo pipefail
+          chmod +x scripts/add-deb-gstreamer-deps.sh
+          scripts/add-deb-gstreamer-deps.sh desktopApp/build/compose/binaries/main/deb/*.deb
+
       - name: Upload Desktop Distribution
         uses: actions/upload-artifact@v7
         with:

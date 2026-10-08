@@ -35,7 +35,7 @@ import coil3.request.Options
 import com.vitorpamplona.amethyst.commons.service.http.BlossomReadAuthTokenProvider
 import com.vitorpamplona.amethyst.commons.service.image.readAuthAware
 import com.vitorpamplona.amethyst.commons.service.image.withAuthHeader
-import com.vitorpamplona.amethyst.service.uploads.blossom.bud10.BlossomServerResolver
+import com.vitorpamplona.amethyst.commons.service.upload.blossom.bud10.BlossomServerResolver
 import com.vitorpamplona.quartz.nipB7Blossom.BlossomUri
 import com.vitorpamplona.quartz.utils.startsWithIgnoreCase
 import okhttp3.Call

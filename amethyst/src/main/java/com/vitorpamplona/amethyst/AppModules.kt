@@ -27,15 +27,21 @@ import android.os.SystemClock
 import androidx.security.crypto.EncryptedSharedPreferences
 import coil3.disk.DiskCache
 import coil3.memory.MemoryCache
+import com.vitorpamplona.amethyst.commons.account.AccountCacheState
+import com.vitorpamplona.amethyst.commons.account.AccountSessionHooks
+import com.vitorpamplona.amethyst.commons.account.AccountSessionManager
+import com.vitorpamplona.amethyst.commons.account.AccountState
 import com.vitorpamplona.amethyst.commons.browser.BrowserHistoryRegistry
 import com.vitorpamplona.amethyst.commons.browser.BrowserIconRegistry
 import com.vitorpamplona.amethyst.commons.connectedApps.DataStoreNostrSignerPermissionStore
 import com.vitorpamplona.amethyst.commons.connectedApps.nip46.DataStoreNip46ClientStore
+import com.vitorpamplona.amethyst.commons.cordn.KeyStoreCordnBlobCipher
 import com.vitorpamplona.amethyst.commons.favorites.FavoriteAppsRegistry
 import com.vitorpamplona.amethyst.commons.model.Account
 import com.vitorpamplona.amethyst.commons.model.NoteState
 import com.vitorpamplona.amethyst.commons.model.UiSettings
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
+import com.vitorpamplona.amethyst.commons.model.cache.MemoryTrimmingService
 import com.vitorpamplona.amethyst.commons.model.nip03Timestamp.BitcoinExplorerEndpoint
 import com.vitorpamplona.amethyst.commons.model.nip03Timestamp.IncomingOtsEventVerifier
 import com.vitorpamplona.amethyst.commons.model.nip03Timestamp.TorAwareOkHttpOtsResolverBuilder
@@ -55,9 +61,14 @@ import com.vitorpamplona.amethyst.commons.model.preferences.RelayGroupDeletionSt
 import com.vitorpamplona.amethyst.commons.model.preferences.TorSettingsStore
 import com.vitorpamplona.amethyst.commons.model.preferences.UiSettingsStore
 import com.vitorpamplona.amethyst.commons.napplet.permissions.NappletPermissionLedger
+import com.vitorpamplona.amethyst.commons.nests.room.activity.NestBridge
 import com.vitorpamplona.amethyst.commons.relayClient.BlockedRelayFilteringClient
+import com.vitorpamplona.amethyst.commons.relayClient.CacheClientConnector
+import com.vitorpamplona.amethyst.commons.relayClient.RelayProxyClientConnector
+import com.vitorpamplona.amethyst.commons.relayClient.auth.AuthCoordinator
 import com.vitorpamplona.amethyst.commons.relayClient.diagnostics.BootRelayDiagnostics
 import com.vitorpamplona.amethyst.commons.relayClient.event.EventFinderQueryState
+import com.vitorpamplona.amethyst.commons.relayClient.notify.NotifyCoordinator
 import com.vitorpamplona.amethyst.commons.relayClient.reqCommand.RelaySubscriptionsCoordinator
 import com.vitorpamplona.amethyst.commons.relayClient.speedLogger.RelaySpeedLogger
 import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.UntaggedFilterWarningClient
@@ -69,6 +80,7 @@ import com.vitorpamplona.amethyst.commons.richtext.CachedRichTextParser
 import com.vitorpamplona.amethyst.commons.robohash.CachedRobohash
 import com.vitorpamplona.amethyst.commons.scheduledposts.ScheduledPostStore
 import com.vitorpamplona.amethyst.commons.scheduledposts.ScheduledPostWorkGate
+import com.vitorpamplona.amethyst.commons.service.call.CallSessionBridge
 import com.vitorpamplona.amethyst.commons.service.connectivity.ConnectivityStatus
 import com.vitorpamplona.amethyst.commons.service.georelay.GeoRelayCsvLoader
 import com.vitorpamplona.amethyst.commons.service.georelay.GeohashRelays
@@ -80,22 +92,26 @@ import com.vitorpamplona.amethyst.commons.service.http.EncryptionKeyCache
 import com.vitorpamplona.amethyst.commons.service.http.LocalBlossomMediaCallFactory
 import com.vitorpamplona.amethyst.commons.service.http.OkHttpWebSocket
 import com.vitorpamplona.amethyst.commons.service.http.OnionLocationCache
+import com.vitorpamplona.amethyst.commons.service.http.RoleBasedHttpClientBuilder
 import com.vitorpamplona.amethyst.commons.service.lnurl.OkHttpLnurlEndpointResolver
+import com.vitorpamplona.amethyst.commons.service.namecoin.NamecoinServices
 import com.vitorpamplona.amethyst.commons.service.pow.PoWJobStore
 import com.vitorpamplona.amethyst.commons.service.pow.PoWPolicy
 import com.vitorpamplona.amethyst.commons.service.pow.PoWPublishQueue
+import com.vitorpamplona.amethyst.commons.service.pow.PowJobRestorer
 import com.vitorpamplona.amethyst.commons.service.resourceusage.UsageKeys
 import com.vitorpamplona.amethyst.commons.service.upload.BlossomClient
 import com.vitorpamplona.amethyst.commons.service.upload.blossom.BlossomMirrorQueue
+import com.vitorpamplona.amethyst.commons.service.upload.blossom.bud10.BlossomServerResolver
+import com.vitorpamplona.amethyst.commons.service.upload.blossom.bud10.LocalBlossomCacheProbe
 import com.vitorpamplona.amethyst.commons.state.UiSettingsState
+import com.vitorpamplona.amethyst.commons.tor.AccountsTorStateConnector
 import com.vitorpamplona.amethyst.commons.tor.TorRelayState
 import com.vitorpamplona.amethyst.commons.tor.TorSettings
 import com.vitorpamplona.amethyst.connectedApps.consent.Nip46ConsentBridge
-import com.vitorpamplona.amethyst.model.accountsCache.AccountCacheState
+import com.vitorpamplona.amethyst.model.accountsCache.defaultMarmotStreamTransport
 import com.vitorpamplona.amethyst.model.nip60Cashu.CashuPreferences
 import com.vitorpamplona.amethyst.model.preferences.UiSharedPreferences
-import com.vitorpamplona.amethyst.model.privacyOptions.RoleBasedHttpClientBuilder
-import com.vitorpamplona.amethyst.model.torState.AccountsTorStateConnector
 import com.vitorpamplona.amethyst.napplet.DataStoreNappletPermissionStore
 import com.vitorpamplona.amethyst.service.calendar.CalendarReminderWorker
 import com.vitorpamplona.amethyst.service.calendar.calendarReminderLogMigrations
@@ -105,13 +121,13 @@ import com.vitorpamplona.amethyst.service.cast.CastRegistry
 import com.vitorpamplona.amethyst.service.connectivity.ConnectivityManager
 import com.vitorpamplona.amethyst.service.crashreports.CrashReportCache
 import com.vitorpamplona.amethyst.service.crashreports.UnexpectedCrashSaver
-import com.vitorpamplona.amethyst.service.eventCache.MemoryTrimmingService
 import com.vitorpamplona.amethyst.service.images.ImageCacheFactory
 import com.vitorpamplona.amethyst.service.images.ImageDiskCacheReconciler
 import com.vitorpamplona.amethyst.service.images.ImageLoaderSetup
 import com.vitorpamplona.amethyst.service.images.ThumbnailDiskCache
 import com.vitorpamplona.amethyst.service.location.LocationState
 import com.vitorpamplona.amethyst.service.notifications.AlwaysOnNotificationServiceManager
+import com.vitorpamplona.amethyst.service.notifications.ConversationShortcuts
 import com.vitorpamplona.amethyst.service.notifications.NotificationDispatcher
 import com.vitorpamplona.amethyst.service.notifications.NwcPaymentNotificationWatcher
 import com.vitorpamplona.amethyst.service.notifications.PokeyReceiver
@@ -121,12 +137,7 @@ import com.vitorpamplona.amethyst.service.playback.diskCache.VideoCache
 import com.vitorpamplona.amethyst.service.playback.diskCache.VideoCacheFactory
 import com.vitorpamplona.amethyst.service.playback.pip.BackgroundMedia
 import com.vitorpamplona.amethyst.service.playback.service.PlaybackServiceClient
-import com.vitorpamplona.amethyst.service.pow.PowJobRestorer
 import com.vitorpamplona.amethyst.service.pow.PowMiningForegroundService
-import com.vitorpamplona.amethyst.service.relayClient.CacheClientConnector
-import com.vitorpamplona.amethyst.service.relayClient.RelayProxyClientConnector
-import com.vitorpamplona.amethyst.service.relayClient.authCommand.model.AuthCoordinator
-import com.vitorpamplona.amethyst.service.relayClient.notifyCommand.model.NotifyCoordinator
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.account.AccountSubscriptionRegistry
 import com.vitorpamplona.amethyst.service.resourceusage.BatteryDrainSampler
 import com.vitorpamplona.amethyst.service.resourceusage.ForegroundTimeIntegrator
@@ -146,16 +157,13 @@ import com.vitorpamplona.amethyst.service.resourceusage.UsageCountingInterceptor
 import com.vitorpamplona.amethyst.service.safeCacheDir
 import com.vitorpamplona.amethyst.service.scheduledposts.ScheduledPostWorker
 import com.vitorpamplona.amethyst.service.uploads.blossom.BlossomSyncForegroundService
-import com.vitorpamplona.amethyst.service.uploads.blossom.bud10.BlossomServerResolver
-import com.vitorpamplona.amethyst.service.uploads.blossom.bud10.LocalBlossomCacheProbe
 import com.vitorpamplona.amethyst.service.uploads.nip95.Nip95CacheFactory
 import com.vitorpamplona.amethyst.ui.resourceCacheInit
-import com.vitorpamplona.amethyst.ui.screen.AccountSessionManager
-import com.vitorpamplona.amethyst.ui.screen.AccountState
 import com.vitorpamplona.amethyst.ui.tor.TorManager
 import com.vitorpamplona.amethyst.ui.tor.TorService
 import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.nip01Core.core.Event
+import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.NostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.RelayLogger
@@ -171,22 +179,12 @@ import com.vitorpamplona.quartz.nip03Timestamp.okhttp.OkHttpBitcoinExplorer
 import com.vitorpamplona.quartz.nip03Timestamp.ots.OtsBlockHeightCache
 import com.vitorpamplona.quartz.nip05DnsIdentifiers.Nip05Client
 import com.vitorpamplona.quartz.nip05DnsIdentifiers.OkHttpNip05Fetcher
-import com.vitorpamplona.quartz.nip05DnsIdentifiers.namecoin.CompositeNamecoinBackend
-import com.vitorpamplona.quartz.nip05DnsIdentifiers.namecoin.DEFAULT_ELECTRUMX_SERVERS
-import com.vitorpamplona.quartz.nip05DnsIdentifiers.namecoin.ElectrumXClient
-import com.vitorpamplona.quartz.nip05DnsIdentifiers.namecoin.ElectrumxNameBackend
-import com.vitorpamplona.quartz.nip05DnsIdentifiers.namecoin.ElectrumxServer
-import com.vitorpamplona.quartz.nip05DnsIdentifiers.namecoin.IElectrumXClient
-import com.vitorpamplona.quartz.nip05DnsIdentifiers.namecoin.NameShowResult
-import com.vitorpamplona.quartz.nip05DnsIdentifiers.namecoin.NamecoinBackend
-import com.vitorpamplona.quartz.nip05DnsIdentifiers.namecoin.NamecoinCoreRpcClient
-import com.vitorpamplona.quartz.nip05DnsIdentifiers.namecoin.NamecoinNameResolver
-import com.vitorpamplona.quartz.nip05DnsIdentifiers.namecoin.TOR_ELECTRUMX_SERVERS
 import com.vitorpamplona.quartz.nip19Bech32.decodePublicKeyAsHexOrNull
 import com.vitorpamplona.quartz.nip52Calendar.appt.day.CalendarDateSlotEvent
 import com.vitorpamplona.quartz.nip52Calendar.appt.tags.RSVPStatusTag
 import com.vitorpamplona.quartz.nip52Calendar.appt.time.CalendarTimeSlotEvent
 import com.vitorpamplona.quartz.nip52Calendar.rsvp.CalendarRSVPEvent
+import com.vitorpamplona.quartz.nip55AndroidSigner.client.NostrSignerExternal
 import com.vitorpamplona.quartz.nipB7Blossom.BlossomServersEvent
 import com.vitorpamplona.quartz.nipBCOnchainZaps.chain.CachingOnchainBackend
 import com.vitorpamplona.quartz.nipBCOnchainZaps.chain.EsploraBackend
@@ -558,135 +556,15 @@ class AppModules(
         )
 
     // Offers easy methods to know when connections are happening through Tor or not
-    val roleBasedHttpClientBuilder = RoleBasedHttpClientBuilder(okHttpClients, torPrefs.value, httpUsageMeter)
+    val roleBasedHttpClientBuilder = RoleBasedHttpClientBuilder(okHttpClients, torPrefs.value, httpUsageMeter::counted)
 
-    val electrumXClient by lazy {
-        Log.d("AppModules", "ElectrumXClient Init")
-        val client =
-            ElectrumXClient(
-                socketFactory = { roleBasedHttpClientBuilder.socketFactoryForNip05() },
-            )
-        applicationIOScope.launch {
-            try {
-                val pinnedCerts = namecoinPrefs.loadPinnedCerts()
-                if (pinnedCerts.isNotEmpty()) {
-                    client.setDynamicCerts(pinnedCerts)
-                }
-            } catch (_: Exception) {
-                // Non-fatal — defaults will still work
-            }
-        }
-        client
+    // The ElectrumX and Namecoin Core clients and the `.bit` resolver composed from the settings.
+    val namecoinServices by lazy {
+        Log.d("AppModules", "NamecoinServices Init")
+        NamecoinServices(namecoinPrefs, roleBasedHttpClientBuilder, applicationIOScope)
     }
 
-    /**
-     * Long-lived Namecoin Core JSON-RPC client. The current
-     * [NamecoinCoreRpcConfig] is pushed in via [setConfig] each time the
-     * user saves settings; this avoids reading SharedPreferences on the
-     * hot lookup path.
-     */
-    val namecoinCoreRpcClient by lazy {
-        Log.d("AppModules", "NamecoinCoreRpcClient Init")
-        val client =
-            NamecoinCoreRpcClient(
-                httpClientForUrl = roleBasedHttpClientBuilder::okHttpClientForNip05,
-            )
-        // Bootstrap the active config and the pinned trust store from the
-        // same shared SharedPreferences entry the ElectrumX client uses.
-        // Mirrors the ElectrumXClient init path above so user-pinned certs
-        // are available on both backends after process restart.
-        applicationIOScope.launch {
-            try {
-                client.setConfig(namecoinPrefs.current.namecoinCoreRpc)
-                val pinnedCerts = namecoinPrefs.loadPinnedCerts()
-                if (pinnedCerts.isNotEmpty()) {
-                    client.setDynamicCerts(pinnedCerts)
-                }
-            } catch (_: Exception) {
-                // Non-fatal — user can re-pin via Settings.
-            }
-        }
-        client
-    }
-
-    /**
-     * Compose the active Namecoin lookup backend based on user settings.
-     *
-     * The returned [IElectrumXClient] is what the resolver actually calls.
-     * It dispatches to either Namecoin Core RPC or ElectrumX (custom-only,
-     * default-only, or both) and applies the user's fallback policy.
-     *
-     * The function builds a fresh composite per call so that settings
-     * changes take effect immediately (no app restart required).
-     */
-    fun buildNamecoinBackend(): IElectrumXClient {
-        val settings = namecoinPrefs.current
-        val custom = settings.toElectrumxServers()
-        val defaults =
-            if (roleBasedHttpClientBuilder.shouldUseTorForNIP05("https://electrumx.example.com")) {
-                TOR_ELECTRUMX_SERVERS
-            } else {
-                DEFAULT_ELECTRUMX_SERVERS
-            }
-
-        val customExBackend =
-            custom?.let { servers -> ElectrumxNameBackend(electrumXClient) { servers } }
-        val defaultExBackend = ElectrumxNameBackend(electrumXClient) { defaults }
-
-        return when (settings.backend) {
-            NamecoinBackend.NAMECOIN_CORE_RPC -> {
-                // Refresh client config in case the user just saved it.
-                namecoinCoreRpcClient.setConfig(settings.namecoinCoreRpc)
-                CompositeNamecoinBackend(
-                    primary = namecoinCoreRpcClient,
-                    customElectrumx = customExBackend,
-                    defaultElectrumx = defaultExBackend,
-                    policy = settings.toFallbackPolicy(),
-                    isPrimaryCoreRpc = true,
-                )
-            }
-
-            NamecoinBackend.ELECTRUMX -> {
-                // Custom servers first (if any). If the user only has the public
-                // defaults configured, primary == defaultElectrumx and the
-                // fallback toggle is moot.
-                val primary: com.vitorpamplona.quartz.nip05DnsIdentifiers.namecoin.NamecoinNameBackend =
-                    customExBackend ?: defaultExBackend
-                CompositeNamecoinBackend(
-                    primary = primary,
-                    customElectrumx = null,
-                    defaultElectrumx = if (customExBackend != null) defaultExBackend else null,
-                    policy = settings.toFallbackPolicy(),
-                    isPrimaryCoreRpc = false,
-                )
-            }
-        }
-    }
-
-    val namecoinResolver by
-        lazy {
-            Log.d("AppModules", "Namecoin Resolver Init")
-            NamecoinNameResolver(
-                electrumxClient =
-                    object : IElectrumXClient {
-                        override suspend fun nameShowWithFallback(
-                            identifier: String,
-                            servers: List<ElectrumxServer>,
-                        ): NameShowResult? = buildNamecoinBackend().nameShowWithFallback(identifier, servers)
-                    },
-                serverListProvider = {
-                    // Kept for compatibility with NamecoinNameResolver's API;
-                    // the composite backend ignores this and consults user
-                    // settings directly via buildNamecoinBackend().
-                    namecoinPrefs.customServersOrNull
-                        ?: if (roleBasedHttpClientBuilder.shouldUseTorForNIP05("https://electrumx.example.com")) {
-                            TOR_ELECTRUMX_SERVERS
-                        } else {
-                            DEFAULT_ELECTRUMX_SERVERS
-                        }
-                },
-            )
-        }
+    val namecoinResolver get() = namecoinServices.resolver
 
     val nip05Client by
         lazy {
@@ -869,7 +747,7 @@ class AppModules(
             okHttpClientForRelays.defaultHttpClient,
             okHttpClientForRelays.defaultHttpClientWithoutProxy,
             connManager.status,
-            torManager.status,
+            torManager.status.map { it.isFullyBootstrapped },
             client,
             applicationIOScope,
             onTrigger = { cause -> resourceUsage.add(UsageKeys.relayTrigger(cause), 1) },
@@ -1062,7 +940,9 @@ class AppModules(
             nwcFilterAssembler = { sources.nwc },
             cashuMintDirectoryFilterAssembler = { sources.cashuMintDirectory },
             okHttpClientForMoney = roleBasedHttpClientBuilder::okHttpClientForMoney,
-            contentResolverFn = { appContext.contentResolver },
+            externalSignerFactory = { pubKey, packageName -> NostrSignerExternal(pubKey, packageName, appContext.contentResolver) },
+            marmotStreamTransportFactory = ::defaultMarmotStreamTransport,
+            cordnBlobCipher = { KeyStoreCordnBlobCipher() },
             otsResolverBuilder = { otsResolverBuilder.build() },
             cache = cache,
             client = client,
@@ -1102,7 +982,45 @@ class AppModules(
             clientBuilder = { client },
             localPreferences = LocalPreferences,
             scope = applicationIOScope,
+            hooks = AndroidAccountSessionHooks(),
         )
+
+    private inner class AndroidAccountSessionHooks : AccountSessionHooks {
+        override fun onSessionEnding() {
+            // The Nest audio-room activity reads the active AccountViewModel through a process-singleton
+            // bridge: drop the ref so it cannot survive into the next session. See [NestBridge].
+            NestBridge.clear()
+            // A call belongs to the account that placed it. See [CallSessionBridge].
+            CallSessionBridge.clear()
+        }
+
+        override suspend fun onAccountRemoving(npub: String) {
+            // TODO: also drop this account's WebView storage profile — the cookies/localStorage of every
+            // site it visited survive here, keyed by NappletWebViewProfiles.forPubKey(hex). It CANNOT be
+            // done from this process: WebView profiles live in the WebView data directory, which belongs
+            // to the `:napplet` process (nothing calls setDataDirectorySuffix, so booting WebView here
+            // too would collide on the same directory). Deleting it needs a broker message that has
+            // `:napplet` call ProfileStore.deleteProfile(name) — and that must refuse a profile still in
+            // use by a live WebView. Not wired for this release; there is no existing hook that reaches
+            // the sandbox on account deletion.
+            // The launcher is the one place an account's contacts live outside our own storage, so the
+            // conversation shortcuts go first. See [ConversationShortcuts].
+            ConversationShortcuts.removeForAccount(appContext, npub)
+        }
+
+        /**
+         * Drops everything a deleted account left in the publish pipelines: parked scheduled posts,
+         * checkpointed PoW mining jobs, and any of its jobs still queued or mining (a post must not
+         * publish after its account is gone).
+         */
+        override suspend fun onAccountRemoved(pubkey: HexKey) {
+            scheduledPostStore.removeForAccount(pubkey)
+            powPublishQueue.cancelForOwner(pubkey)
+            powJobStore.removeForAccount(pubkey)
+        }
+
+        override fun cashuCountersFor(npub: String) = CashuPreferences.forAccount(npub)
+    }
 
     // Surfaces non-zap Lightning payments reported by the logged-in account's NWC
     // wallet(s) as tray notifications (zaps are already shown via ZapNotification).
@@ -1604,7 +1522,7 @@ class AppModules(
             // Backgrounding is a natural moment to flush the DNS cache.
             dnsStore.save()
             val loggedIn = accountsCache.accounts.value.values
-            trimmingService.run(loggedIn, LocalPreferences.allSavedAccounts(), level)
+            trimmingService.run(loggedIn, LocalPreferences.allSavedAccounts(), underPressure = level >= ComponentCallbacks2.TRIM_MEMORY_BACKGROUND)
             // Trim in-process caches proportional to OS memory pressure.
             //
             // Since API 34 the OS only ever delivers two trim levels (the foreground

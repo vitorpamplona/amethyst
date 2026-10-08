@@ -41,7 +41,10 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -51,6 +54,7 @@ import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.desktop.service.media.GlobalMediaPlayer
+import com.vitorpamplona.amethyst.desktop.service.media.MediaPlaybackState
 import com.vitorpamplona.amethyst.desktop.service.media.VideoThumbnailCache
 import kotlinx.coroutines.launch
 
@@ -65,9 +69,13 @@ fun NowPlayingBar(modifier: Modifier = Modifier) {
     val hasAudio = audioState.url != null
     val visible = hasVideo || hasAudio
 
-    // Show video bar if video is active, otherwise audio
-    val activeState = if (hasVideo) videoState else audioState
-    val activeType = if (hasVideo) MediaType.VIDEO else MediaType.AUDIO
+    // Show video bar if video is active, otherwise audio. Once nothing plays it keeps what it last
+    // showed, so it slides out with that rather than empty.
+    val lastShown = remember { arrayOfNulls<Pair<MediaPlaybackState, MediaType>>(1) }
+    if (visible) lastShown[0] = if (hasVideo) videoState to MediaType.VIDEO else audioState to MediaType.AUDIO
+    val (activeState, activeType) = lastShown[0] ?: (audioState to MediaType.AUDIO)
+
+    var dragged by remember(activeState.url) { mutableStateOf<Float?>(null) }
 
     AnimatedVisibility(
         visible = visible,
@@ -75,8 +83,6 @@ fun NowPlayingBar(modifier: Modifier = Modifier) {
         exit = slideOutVertically { it },
         modifier = modifier,
     ) {
-        if (!visible) return@AnimatedVisibility
-
         Row(
             modifier =
                 Modifier
@@ -138,14 +144,19 @@ fun NowPlayingBar(modifier: Modifier = Modifier) {
             )
 
             // Seek bar
+            // Seeks once the drag ends, not with a native seek per drag event.
             Slider(
-                value = activeState.position,
-                onValueChange = {
-                    if (activeType == MediaType.VIDEO) {
-                        GlobalMediaPlayer.seekVideo(it)
-                    } else {
-                        GlobalMediaPlayer.seekAudio(it)
+                value = dragged ?: activeState.position,
+                onValueChange = { dragged = it },
+                onValueChangeFinished = {
+                    dragged?.let {
+                        if (activeType == MediaType.VIDEO) {
+                            GlobalMediaPlayer.seekVideo(it)
+                        } else {
+                            GlobalMediaPlayer.seekAudio(it)
+                        }
                     }
+                    dragged = null
                 },
                 modifier = Modifier.weight(1f),
                 colors =

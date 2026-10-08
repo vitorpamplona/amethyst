@@ -34,10 +34,12 @@ import com.vitorpamplona.amethyst.commons.model.preferences.DrawerSectionCollaps
 import com.vitorpamplona.amethyst.commons.model.preferences.NamecoinSettingsStore
 import com.vitorpamplona.amethyst.commons.model.preferences.OtsSettingsStore
 import com.vitorpamplona.amethyst.commons.napplet.permissions.NappletPermissionLedger
+import com.vitorpamplona.amethyst.commons.relayClient.auth.AuthCoordinator
 import com.vitorpamplona.amethyst.commons.relayManagement.Nip86Executor
 import com.vitorpamplona.amethyst.commons.scheduledposts.ScheduledPostStore
 import com.vitorpamplona.amethyst.commons.service.ai.AltTextSuggester
 import com.vitorpamplona.amethyst.commons.service.namecoin.NamecoinClients
+import com.vitorpamplona.amethyst.commons.service.pow.PoWPublishQueue
 import com.vitorpamplona.amethyst.commons.service.upload.BlossomBlobClient
 import com.vitorpamplona.amethyst.commons.service.upload.blossom.BlossomMirrorQueue
 import com.vitorpamplona.amethyst.commons.tor.TorServiceStatus
@@ -138,4 +140,13 @@ interface AppServices {
 
     /** A new on-device alt-text suggester for image uploads, or null where the platform has none. */
     fun createAltTextSuggester(): AltTextSuggester? = null
+
+    /** NIP-42 relay authentication for every logged-in account, and the prompt bus its dialog reads. */
+    val authCoordinator: AuthCoordinator
+
+    /** The proof-of-work publish queue, whose mining jobs the broadcast banner shows. */
+    val powPublishQueue: PoWPublishQueue
+
+    /** The stack trace the last crash left behind, removed as it is read; null when there is none. */
+    suspend fun takeCrashReport(): String? = null
 }

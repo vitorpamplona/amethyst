@@ -53,6 +53,9 @@ expect object LocalClock {
     /** Which weekday a week starts on here, 0 = Sunday. */
     fun firstDayOfWeek(): Int
 
+    /** The reader's IANA time zone ("America/Sao_Paulo"), as NIP-52 events record it. */
+    fun zoneId(): String
+
     /** The month above a calendar grid, in the reader's own spelling ("April 2026"). */
     fun monthLabel(date: SearchDate): String
 

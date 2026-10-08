@@ -22,6 +22,7 @@ package com.vitorpamplona.amethyst.service.uploads
 
 import android.media.MediaDataSource
 import com.vitorpamplona.amethyst.commons.service.upload.FileHeader
+import com.vitorpamplona.amethyst.commons.service.uploads.ImageDownloader
 import com.vitorpamplona.quartz.nip01Core.core.toHexKey
 import com.vitorpamplona.quartz.nip94FileMetadata.tags.DimensionTag
 import com.vitorpamplona.quartz.utils.Log

@@ -33,10 +33,10 @@ import com.vitorpamplona.amethyst.commons.model.mediaServers.ServerType
 import com.vitorpamplona.amethyst.commons.model.nipB7Blossom.BlossomServerListState
 import com.vitorpamplona.amethyst.commons.service.http.DefaultContentTypeInterceptor
 import com.vitorpamplona.amethyst.commons.service.upload.FileHeader
-import com.vitorpamplona.amethyst.service.uploads.ImageDownloader
+import com.vitorpamplona.amethyst.commons.service.uploads.ImageDownloader
+import com.vitorpamplona.amethyst.commons.service.uploads.nip96.Nip96Uploader
+import com.vitorpamplona.amethyst.commons.service.uploads.nip96.ServerInfoRetriever
 import com.vitorpamplona.amethyst.service.uploads.blossom.BlossomUploader
-import com.vitorpamplona.amethyst.service.uploads.nip96.Nip96Uploader
-import com.vitorpamplona.amethyst.service.uploads.nip96.ServerInfoRetriever
 import com.vitorpamplona.amethyst.service.uploads.prepare
 import com.vitorpamplona.quartz.nip01Core.core.toHexKey
 import com.vitorpamplona.quartz.nip01Core.crypto.KeyPair
@@ -162,7 +162,6 @@ class ImageUploadTesting {
                     httpAuth = { url, method, body ->
                         signer.sign(HTTPAuthorizationEvent.build(url, method, body))
                     },
-                    context = InstrumentationRegistry.getInstrumentation().targetContext,
                 )
 
         val url = result.url!!

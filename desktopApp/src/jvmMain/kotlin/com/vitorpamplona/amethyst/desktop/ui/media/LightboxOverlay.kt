@@ -27,6 +27,7 @@ import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.focusable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
@@ -217,6 +218,8 @@ fun LightboxOverlay(
                 .fillMaxSize()
                 .background(if (viewMode == ViewMode.FULLSCREEN) Color.Black else Color.Black.copy(alpha = 0.9f))
                 .focusRequester(focusRequester)
+                // A focus target, or requestFocus() finds none and Escape and the arrows never arrive.
+                .focusable()
                 .onKeyEvent { event ->
                     if (event.type != KeyEventType.KeyDown) return@onKeyEvent false
                     when (event.key) {

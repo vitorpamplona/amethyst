@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.nests.room.participants
 
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.nests.room.participants.RoomParticipantActions
 import com.vitorpamplona.quartz.nip53LiveActivities.meetingSpaces.MeetingSpaceEvent
 import com.vitorpamplona.quartz.nip53LiveActivities.streaming.tags.ROLE
 import org.junit.Assert.assertEquals

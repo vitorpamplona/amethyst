@@ -92,6 +92,22 @@ interface MediaUploader {
 
     /** Deletes a temporary copy [compressIfNeeded] wrote, once the caller is done with it. */
     fun discardTempFile(uri: MediaUri) = Unit
+
+    /** The MIME type the platform reports for [uri] (Android's content resolver), if any. */
+    fun mimeType(uri: MediaUri): String? = null
+
+    /**
+     * A copy of [uri] without location and camera metadata, for callers that encrypt and upload
+     * the bytes themselves rather than through [upload]. Returns [uri] itself when there was
+     * nothing to strip; a new copy is a temp file for [discardTempFile].
+     */
+    suspend fun stripMetadata(
+        uri: MediaUri,
+        mimeType: String?,
+    ): MediaUri = uri
+
+    /** The whole file at [uri], or null when it cannot be read. */
+    suspend fun readBytes(uri: MediaUri): ByteArray? = null
 }
 
 /** No media pipeline on this front end yet: every upload fails with a clear message. */
