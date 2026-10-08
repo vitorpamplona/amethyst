@@ -2382,9 +2382,6 @@
 
 
     <string name="always_on_notif_channel_description">รักษาการเชื่อมต่อกับ relay กล่องข้อความของคุณให้ใช้งานได้เพื่อรับการแจ้งเตือนแบบเรียลไทม์</string>
-    <plurals name="always_on_notif_connected">
-    <item quantity="other">เชื่อมต่อกับ %1$d inbox relay แล้ว</item>
-</plurals>
     <plurals name="always_on_notif_connected_foreground">
     <item quantity="other">เชื่อมต่อกับ %1$d relay แล้ว</item>
 </plurals>

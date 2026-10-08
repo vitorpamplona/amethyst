@@ -30,6 +30,8 @@ import com.vitorpamplona.amethyst.commons.connectedApps.signers.NostrSignerPermi
 import com.vitorpamplona.amethyst.commons.model.AccountSettings
 import com.vitorpamplona.amethyst.commons.model.nip46Signer.Nip46ActivityEntry
 import com.vitorpamplona.amethyst.commons.model.nip46Signer.Nip46ActivityLog
+import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.SubPurpose
+import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.taggedAs
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.hexToByteArray
 import com.vitorpamplona.quartz.nip01Core.core.toHexKey
@@ -243,7 +245,8 @@ class Nip46SignerState(
                     val processor = BunkerRequestProcessor(signer, { listeningRelays.value }, authorizer)
                     val service =
                         NostrConnectSignerService(
-                            client = client,
+                            // The bunker REQ is built inside Quartz, so it is tagged at the client.
+                            client = client.taggedAs(SubPurpose.SIGNER),
                             transportSigner = transportSigner(),
                             processor = processor,
                             relays = relays,

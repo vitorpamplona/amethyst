@@ -31,6 +31,8 @@ import com.vitorpamplona.amethyst.commons.nip64Chess.IUserMetadataProvider
 import com.vitorpamplona.amethyst.commons.nip64Chess.RelayFetchProgress
 import com.vitorpamplona.amethyst.commons.nip64Chess.RelayGameSummary
 import com.vitorpamplona.amethyst.commons.nip64Chess.subscription.ChessFilterBuilder
+import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.ExplainedFilter
+import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.SubPurpose
 import com.vitorpamplona.quartz.nip64Chess.ChessGameEnd
 import com.vitorpamplona.quartz.nip64Chess.ChessMoveEvent
 import com.vitorpamplona.quartz.nip64Chess.Color
@@ -198,9 +200,10 @@ class AndroidRelayFetcher(
 
         // Filter 1: Fetch the start event by its ID
         val startEventFilter =
-            com.vitorpamplona.quartz.nip01Core.relay.filters.Filter(
+            ExplainedFilter(
                 ids = listOf(startEventId),
                 kinds = listOf(JesterProtocol.KIND),
+                purpose = SubPurpose.GAMES,
             )
 
         // Filter 2: Fetch moves that reference the start event

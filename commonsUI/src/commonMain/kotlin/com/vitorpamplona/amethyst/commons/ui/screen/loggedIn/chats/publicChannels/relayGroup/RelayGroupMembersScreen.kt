@@ -72,6 +72,8 @@ import com.vitorpamplona.amethyst.commons.model.navigation.Route
 import com.vitorpamplona.amethyst.commons.model.nip29RelayGroups.RelayGroupChannel
 import com.vitorpamplona.amethyst.commons.model.nip29RelayGroups.RelayGroupMembership
 import com.vitorpamplona.amethyst.commons.relayClient.reqCommand.channel.observeChannel
+import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.SubPurpose
+import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.taggedAs
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.buzz_add_people_hint
 import com.vitorpamplona.amethyst.commons.resources.buzz_agent_working
@@ -169,7 +171,7 @@ private fun RelayGroupMembers(
     LaunchedEffect(relay, myPubkey) {
         if (!BuzzRelayDialect.isBuzz(relay)) return@LaunchedEffect
         val filter = Filter(kinds = listOf(ObserverFrameEvent.KIND), tags = mapOf("p" to listOf(myPubkey)))
-        accountViewModel.account.client.subscribeAsFlow(relay, filter).collect { events ->
+        accountViewModel.account.client.taggedAs(SubPurpose.RELAY_GROUPS).subscribeAsFlow(relay, filter).collect { events ->
             events.filterIsInstance<ObserverFrameEvent>().forEach { frame ->
                 BuzzAgentActivityState.record(frame.agentPubKey() ?: frame.pubKey, frame.createdAt)
             }

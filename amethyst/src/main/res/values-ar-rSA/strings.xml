@@ -160,14 +160,6 @@
          NavBarItemDef labels are R.string ids. -->
     <!-- NIP-71 video credits: what a video says about the people and works it references. -->
     <string name="always_on_notif_channel_description">يحافظ على الاتصال بـ relay صندوق الوارد الخاص بك لتلقّي الإشعارات في الوقت الفعلي</string>
-    <plurals name="always_on_notif_connected">
-        <item quantity="zero">متصل بـ %1$d relay للصندوق الوارد</item>
-        <item quantity="one">متصل بـ %1$d relay للصندوق الوارد</item>
-        <item quantity="two">متصل بـ %1$d relay للصندوق الوارد</item>
-        <item quantity="few">متصل بـ %1$d relay للصندوق الوارد</item>
-        <item quantity="many">متصل بـ %1$d relay للصندوق الوارد</item>
-        <item quantity="other">متصل بـ %1$d relay للصندوق الوارد</item>
-    </plurals>
     <plurals name="always_on_notif_connected_foreground">
         <item quantity="zero">متصل بـ %1$d relay</item>
         <item quantity="one">متصل بـ %1$d relay</item>

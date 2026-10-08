@@ -357,4 +357,26 @@ class RelayAuthPurposeDeriverTest {
             purposes.map { it.kind }.toSet(),
         )
     }
+
+    @Test
+    fun venuePurposeNamingNoVenueFallsBackToItsAuthors() {
+        // Concord's bundle fetch: tagged as a community read, but it names a link signer, not a venue.
+        val filter = ExplainedFilter(kinds = listOf(33313), authors = listOf(alice), purpose = SubPurpose.COMMUNITY_CHATS)
+
+        val purposes = RelayAuthPurposeDeriver.derive(emptyList(), mapOf("sub" to listOf(filter)))
+
+        assertEquals(listOf(AuthPurposeKind.READ_OUTBOX), purposes.map { it.kind })
+        assertEquals(setOf(alice), purposes[0].counterparties)
+    }
+
+    @Test
+    fun venuePurposeWithNothingToNameStillPrompts() {
+        // Buzz's warm-auth read: `#p` = me on a group relay. Tagging it must not turn a prompt into
+        // a silent deny — with no venue and no author it is unattributed, exactly as a plain filter.
+        val filter = ExplainedFilter(kinds = listOf(44100), tags = mapOf("p" to listOf(alice)), purpose = SubPurpose.RELAY_GROUPS)
+
+        val purposes = RelayAuthPurposeDeriver.derive(emptyList(), mapOf("sub" to listOf(filter)))
+
+        assertEquals(listOf(AuthPurposeKind.OTHER), purposes.map { it.kind })
+    }
 }

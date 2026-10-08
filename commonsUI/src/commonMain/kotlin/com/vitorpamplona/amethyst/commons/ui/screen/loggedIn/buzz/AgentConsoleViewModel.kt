@@ -30,6 +30,8 @@ import com.vitorpamplona.amethyst.commons.model.buzz.BuzzRelayDialect
 import com.vitorpamplona.amethyst.commons.model.buzz.reconnectPoolAfterJoin
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
 import com.vitorpamplona.amethyst.commons.model.cache.filter
+import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.SubPurpose
+import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.taggedAs
 import com.vitorpamplona.amethyst.commons.relayauth.RelayAuthDecision
 import com.vitorpamplona.quartz.buzz.amTurnMetrics.AgentTurnMetricEvent
 import com.vitorpamplona.quartz.buzz.amTurnMetrics.AgentTurnMetricPayload
@@ -151,7 +153,7 @@ class AgentConsoleViewModel : ViewModel() {
 
         // The turn-metric read is `#p`-gated, so the Buzz relay requires NIP-42 auth — warm-auth
         // (pendingOnAuthRequired) so it authenticates on the `auth-required` CLOSED and retries.
-        account.client.fetchAllWithHooks(
+        account.client.taggedAs(SubPurpose.RELAY_GROUPS).fetchAllWithHooks(
             filters = relays.associateWith { filters },
             idleTimeoutMs = 8_000,
             pendingOnAuthRequired = true,
@@ -225,7 +227,7 @@ class AgentConsoleViewModel : ViewModel() {
             viewModelScope.launch(Dispatchers.IO) {
                 relays.forEach { relay ->
                     launch {
-                        account.client.subscribeAsFlow(relay, filter).collect { events ->
+                        account.client.taggedAs(SubPurpose.RELAY_GROUPS).subscribeAsFlow(relay, filter).collect { events ->
                             // Observer frames are ephemeral and unbounded over a long session; keep the
                             // dedup set from growing without limit. We only render the newest ~200 rows,
                             // so dropping the seen-history occasionally risks at most a stale duplicate.
@@ -295,7 +297,7 @@ class AgentConsoleViewModel : ViewModel() {
             viewModelScope.launch(Dispatchers.IO) {
                 relays.forEach { relay ->
                     launch {
-                        account.client.subscribeAsFlow(relay, filters).collect {
+                        account.client.taggedAs(SubPurpose.RELAY_GROUPS).subscribeAsFlow(relay, filters).collect {
                             // The client's global listener has already consumed the batch into LocalCache;
                             // re-derive both tabs from it. reloadFromCache is idempotent + decrypt-cached.
                             reloadFromCache(account)

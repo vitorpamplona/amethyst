@@ -2628,9 +2628,6 @@
 
 
     <string name="always_on_notif_channel_description">Menjaga koneksi ke relay inbox Anda aktif untuk notifikasi real-time</string>
-    <plurals name="always_on_notif_connected">
-    <item quantity="other">Terhubung ke %1$d relay inbox</item>
-</plurals>
     <plurals name="always_on_notif_connected_foreground">
     <item quantity="other">Terhubung ke %1$d relay</item>
 </plurals>

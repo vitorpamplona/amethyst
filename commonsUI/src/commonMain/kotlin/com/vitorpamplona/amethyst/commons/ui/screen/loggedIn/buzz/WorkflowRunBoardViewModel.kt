@@ -26,6 +26,8 @@ import androidx.lifecycle.viewModelScope
 import com.vitorpamplona.amethyst.commons.model.Account
 import com.vitorpamplona.amethyst.commons.model.buzz.WorkflowRun
 import com.vitorpamplona.amethyst.commons.model.buzz.WorkflowRunAggregator
+import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.SubPurpose
+import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.taggedAs
 import com.vitorpamplona.quartz.buzz.workflow.ApprovalDenyEvent
 import com.vitorpamplona.quartz.buzz.workflow.ApprovalGrantEvent
 import com.vitorpamplona.quartz.buzz.workflow.WorkflowApprovalRequestedEvent
@@ -150,7 +152,11 @@ class WorkflowRunBoardViewModel : ViewModel() {
                 // `onStart(emptyList)` so the merged flow produces a first value even before any event
                 // arrives — otherwise `combine` would never emit for an empty channel and the board
                 // would sit on the spinner forever.
-                val baseFlow = account.client.subscribeAsFlow(relay, listOf(baseFilter)).onStart { emit(emptyList()) }
+                val baseFlow =
+                    account.client
+                        .taggedAs(SubPurpose.RELAY_GROUPS)
+                        .subscribeAsFlow(relay, listOf(baseFilter))
+                        .onStart { emit(emptyList()) }
 
                 val decisionFlow =
                     baseFlow
@@ -165,7 +171,10 @@ class WorkflowRunBoardViewModel : ViewModel() {
                             if (approvers.isEmpty()) {
                                 flowOf(emptyList())
                             } else {
-                                account.client.subscribeAsFlow(relay, listOf(Filter(kinds = DECISION_KINDS, authors = approvers))).onStart { emit(emptyList()) }
+                                account.client
+                                    .taggedAs(SubPurpose.RELAY_GROUPS)
+                                    .subscribeAsFlow(relay, listOf(Filter(kinds = DECISION_KINDS, authors = approvers)))
+                                    .onStart { emit(emptyList()) }
                             }
                         }
 

@@ -160,10 +160,6 @@
          NavBarItemDef labels are R.string ids. -->
     <!-- NIP-71 video credits: what a video says about the people and works it references. -->
     <string name="always_on_notif_channel_description">Διατηρεί ενεργές τις συνδέσεις στα relays εισερχομένων για πραγματικού χρόνου ειδοποιήσεις</string>
-    <plurals name="always_on_notif_connected">
-        <item quantity="one">Συνδέθηκε σε %1$d relay εισερχομένων</item>
-        <item quantity="other">Συνδέθηκε σε %1$d relays εισερχομένων</item>
-    </plurals>
     <plurals name="always_on_notif_connected_foreground">
         <item quantity="one">Συνδέθηκε σε %1$d relay</item>
         <item quantity="other">Συνδέθηκε σε %1$d relays</item>

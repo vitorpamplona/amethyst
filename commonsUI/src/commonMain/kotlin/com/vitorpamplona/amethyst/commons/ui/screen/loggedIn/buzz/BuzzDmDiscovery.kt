@@ -32,6 +32,8 @@ import com.vitorpamplona.amethyst.commons.model.buzz.membershipNoticeFilter
 import com.vitorpamplona.amethyst.commons.model.buzz.membershipNotices
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
 import com.vitorpamplona.amethyst.commons.relayClient.channel.relayGroup.RELAY_GROUP_METADATA_KINDS
+import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.ExplainedFilter
+import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.SubPurpose
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.fetchAllWithHooks
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
@@ -132,7 +134,7 @@ private suspend fun fetchMissingDirectories(
             .filterKeys { id -> memberships[id]?.let { classifyBuzzChannel(LocalCache, id, it, knownTypes) } == ChannelClassification.UNKNOWN }
             .entries
             .groupBy({ it.value }, { it.key })
-            .mapValues { (_, ids) -> listOf(Filter(kinds = RELAY_GROUP_METADATA_KINDS, tags = mapOf("d" to ids))) }
+            .mapValues { (_, ids) -> listOf(ExplainedFilter(kinds = RELAY_GROUP_METADATA_KINDS, tags = mapOf("d" to ids), purpose = SubPurpose.RELAY_GROUPS)) }
     if (byRelay.isEmpty()) return
     account.client.fetchAllWithHooks(filters = byRelay, idleTimeoutMs = 8_000, pendingOnAuthRequired = true) { _, _ -> false }
 }

@@ -20,6 +20,8 @@
  */
 package com.vitorpamplona.amethyst.commons.cordn
 
+import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.ExplainedFilter
+import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.SubPurpose
 import com.vitorpamplona.quartz.cordn.appMultiDevice.CordnCarriedKeyPackage
 import com.vitorpamplona.quartz.cordn.appMultiDevice.CordnDeviceTip
 import com.vitorpamplona.quartz.cordn.appMultiDevice.CordnDocumentException
@@ -37,7 +39,6 @@ import com.vitorpamplona.quartz.nip01Core.crypto.verify
 import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.fetchFirst
 import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.publishAndConfirm
-import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
@@ -195,11 +196,12 @@ class CordnMigration(
                 filters =
                     relays.associateWith {
                         listOf(
-                            Filter(
+                            ExplainedFilter(
                                 kinds = listOf(code.kind),
                                 authors = listOf(code.ephemeralPubKey),
                                 tags = mapOf(CordnDeviceTip.TAG_D to listOf(code.dTag)),
                                 limit = 1,
+                                purpose = SubPurpose.COORDINATOR_GROUPS,
                             ),
                         )
                     },
