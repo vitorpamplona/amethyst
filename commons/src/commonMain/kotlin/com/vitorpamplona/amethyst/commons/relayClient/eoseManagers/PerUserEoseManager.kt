@@ -21,6 +21,7 @@
 package com.vitorpamplona.amethyst.commons.relayClient.eoseManagers
 
 import com.vitorpamplona.amethyst.commons.model.User
+import com.vitorpamplona.amethyst.commons.model.chats.ChatFeedType
 import com.vitorpamplona.amethyst.commons.relayClient.AccountScopedQuery
 import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.attributedTo
 import com.vitorpamplona.amethyst.commons.relays.EOSEAccountFast
@@ -89,21 +90,42 @@ abstract class PerUserEoseManager<T>(
             },
         )
 
+    /**
+     * The Settings › Messages toggles this manager's filters read. While a user's subscription is open,
+     * a flip of any of them (once applied — see [com.vitorpamplona.amethyst.commons.model.chats.ChatFeedToggles])
+     * calls [onChatFeedsToggled]. Empty for managers that don't depend on one.
+     */
+    protected open val watchedChatFeeds: Set<ChatFeedType> = emptySet()
+
+    /** A watched toggle flipped: rebuilds the filters. Override to reset state that depends on it first. */
+    protected open fun onChatFeedsToggled() = invalidateFilters()
+
+    private val chatFeedWatchers by lazy { ChatFeedWatchers(watchedChatFeeds) { onChatFeedsToggled() } }
+
     open fun endSub(
         key: User,
         subId: String,
     ) {
         dismissSubscription(subId)
         userSubscriptionMap.remove(key)
+        chatFeedWatchers.stop(key)
+    }
+
+    private fun openSub(
+        key: T,
+        user: User,
+    ): Subscription {
+        (key as? AccountScopedQuery)?.let { chatFeedWatchers.start(user, it.account) }
+        return newSub(key).also { userSubscriptionMap[user] = it.id }
     }
 
     fun findOrCreateSubFor(key: T): Subscription {
         val user = user(key)
         val subId = userSubscriptionMap[user]
         return if (subId == null) {
-            newSub(key).also { userSubscriptionMap[user] = it.id }
+            openSub(key, user)
         } else {
-            getSubscription(subId) ?: newSub(key).also { userSubscriptionMap[user] = it.id }
+            getSubscription(subId) ?: openSub(key, user)
         }
     }
 

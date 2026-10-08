@@ -22,13 +22,20 @@ package com.vitorpamplona.amethyst.commons.model.privateChats
 
 import com.vitorpamplona.amethyst.commons.model.chats.ChatFeedType
 import com.vitorpamplona.quartz.nip04Dm.messages.EncryptedDmEvent
+import com.vitorpamplona.quartz.nip17Dm.base.BaseDMGroupEvent
 import com.vitorpamplona.quartz.nip17Dm.base.ChatroomKeyable
 
 /** The DM protocols whose messages live in the [ChatroomList], each behind its own Settings › Messages toggle. */
 val DM_CHAT_FEED_TYPES: Set<ChatFeedType> = setOf(ChatFeedType.NIP04, ChatFeedType.NIP17)
 
 /**
- * The Settings › Messages toggle that governs this DM: kind 4 is NIP-04; every other chatroom message
- * (the gift-wrapped kind 14/15 rumors) is NIP-17.
+ * The Settings › Messages toggle that governs this DM: kind 4 is NIP-04, the gift-wrapped kind 14/15
+ * rumors are NIP-17. Null for any other room message, so a new DM kind has to be mapped here
+ * deliberately instead of silently riding the NIP-17 switch.
  */
-fun ChatroomKeyable.chatFeedType(): ChatFeedType = if (this is EncryptedDmEvent) ChatFeedType.NIP04 else ChatFeedType.NIP17
+fun ChatroomKeyable.chatFeedType(): ChatFeedType? =
+    when (this) {
+        is EncryptedDmEvent -> ChatFeedType.NIP04
+        is BaseDMGroupEvent -> ChatFeedType.NIP17
+        else -> null
+    }

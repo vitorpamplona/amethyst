@@ -126,6 +126,30 @@ class DmProtocolToggleTest {
     }
 
     @Test
+    fun removingASingleMessageKeepsSendersAndTheOwnerFlagTrue() {
+        val ctx = UserContext { Note("addr") }
+        val meUser = User(me, ctx)
+        val list = ChatroomList(me)
+
+        val mine = nip17("m", me, 100)
+        val myNote =
+            Note(mine.id).apply {
+                event = mine
+                author = meUser
+            }
+        val key = mine.chatroomKey(me)
+        list.addMessage(key, myNote)
+        val room = list.rooms.get(key)!!
+        assertTrue(list.hasSentMessagesTo(key))
+        assertTrue(room.senderIntersects(setOf(me)))
+
+        list.removeMessage(key, myNote)
+
+        assertFalse(list.hasSentMessagesTo(key))
+        assertFalse(room.senderIntersects(setOf(me)))
+    }
+
+    @Test
     fun resettingNip04HistoryForgetsListAndRoomCursors() {
         val list = ChatroomList(me)
         list.ingest(nip04("a", other, 200))

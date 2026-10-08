@@ -100,20 +100,27 @@ class ChatroomList(
     fun removeMessage(
         user: User,
         msg: Note,
-    ) {
-        val privateChatroom = getOrCreatePrivateChatroom(user)
-        if (msg in privateChatroom.messages) {
-            privateChatroom.removeMessageSync(msg)
-        }
-    }
+    ) = removeMessage(getOrCreatePrivateChatroom(user), msg)
 
     fun removeMessage(
         room: ChatroomKey,
         msg: Note,
+    ) = removeMessage(getOrCreatePrivateChatroom(room), msg)
+
+    private fun removeMessage(
+        privateChatroom: Chatroom,
+        msg: Note,
     ) {
-        val privateChatroom = getOrCreatePrivateChatroom(room)
-        if (msg in privateChatroom.messages) {
-            privateChatroom.removeMessageSync(msg)
+        if (privateChatroom.removeMessageSync(msg)) refreshOwnerSent(privateChatroom, listOf(msg))
+    }
+
+    // Whether the owner still has a message in [room], re-derived only when one of theirs just left.
+    private fun refreshOwnerSent(
+        room: Chatroom,
+        removed: Collection<Note>,
+    ) {
+        if (removed.any { it.author?.pubkeyHex == ownerPubKey }) {
+            room.ownerSentMessage = room.messages.any { it.author?.pubkeyHex == ownerPubKey }
         }
     }
 
@@ -123,11 +130,7 @@ class ChatroomList(
      * room is not kept in Known on the strength of messages that are gone.
      */
     fun removeMessagesIf(predicate: (Note) -> Boolean) {
-        rooms.forEach { _, room ->
-            if (room.removeMessagesIf(predicate).isNotEmpty()) {
-                room.ownerSentMessage = room.messages.any { it.author?.pubkeyHex == ownerPubKey }
-            }
-        }
+        rooms.forEach { _, room -> refreshOwnerSent(room, room.removeMessagesIf(predicate)) }
     }
 
     /** Forgets the NIP-04 paging progress of the rooms list and of every conversation. */

@@ -112,9 +112,10 @@ private fun CallSettingsContent(
 ) {
     val settings = accountViewModel.account.settings
     val callsEnabled by settings.callsEnabled.collectAsState()
-    val chatFeeds by settings.enabledChatFeeds.collectAsState()
+    val chatFeeds by accountViewModel.account.chatFeedToggles.applied
+        .collectAsState()
 
-    // Calls signal over NIP-17's gift-wrap inbox (AccountSettings.isCallingActive): with NIP-17 off
+    // Calls signal over NIP-17's gift-wrap inbox (ChatFeedToggles.isCallingActive): with NIP-17 off
     // they stay off whatever the switch below says, so say why and where to turn it back on.
     if (ChatFeedType.NIP17 !in chatFeeds) {
         CallsOffWithNip17Notice(onOpenMessagesSettings = { nav.nav(Route.MessagesSettings) })

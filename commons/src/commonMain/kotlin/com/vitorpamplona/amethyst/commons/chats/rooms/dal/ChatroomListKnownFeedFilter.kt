@@ -36,7 +36,6 @@ import com.vitorpamplona.amethyst.commons.model.concord.ConcordViewMode
 import com.vitorpamplona.amethyst.commons.model.geohashChat.GeohashChatChannel
 import com.vitorpamplona.amethyst.commons.model.nip29RelayGroups.RelayGroupChannel
 import com.vitorpamplona.amethyst.commons.model.nip29RelayGroups.RelayGroupViewMode
-import com.vitorpamplona.amethyst.commons.model.privateChats.chatFeedType
 import com.vitorpamplona.amethyst.commons.model.publicChatChannelIdOf
 import com.vitorpamplona.amethyst.commons.util.replace
 import com.vitorpamplona.quartz.concord.cord03Channels.ConcordChannelId
@@ -59,7 +58,7 @@ class ChatroomListKnownFeedFilter(
 ) : AdditiveFeedFilter<Note>() {
     override fun feedKey(): String = account.userProfile().pubkeyHex
 
-    private fun isEnabled(type: ChatFeedType): Boolean = type in account.settings.enabledChatFeeds.value
+    private fun isEnabled(type: ChatFeedType): Boolean = account.chatFeedToggles.isEnabled(type)
 
     // returns the last Note of each user.
     override fun feed(): List<Note> {
@@ -610,7 +609,7 @@ class ChatroomListKnownFeedFilter(
             .forEach { newNote ->
                 val dm = newNote.event as? ChatroomKeyable
                 // Same gate as ingestion: a protocol turned off never reaches the rooms.
-                if (dm != null && !isEnabled(dm.chatFeedType())) return@forEach
+                if (dm != null && !account.chatFeedToggles.isEnabled(dm)) return@forEach
                 val roomKey = dm?.chatroomKey(me.pubkeyHex)
                 if (roomKey != null) {
                     val room = account.chatroomList.rooms.get(roomKey)

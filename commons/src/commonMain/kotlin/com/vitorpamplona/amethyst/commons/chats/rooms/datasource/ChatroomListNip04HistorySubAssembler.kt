@@ -21,13 +21,11 @@
 package com.vitorpamplona.amethyst.commons.chats.rooms.datasource
 
 import com.vitorpamplona.amethyst.commons.model.Account
-import com.vitorpamplona.amethyst.commons.model.User
 import com.vitorpamplona.amethyst.commons.model.chats.ChatFeedType
 import com.vitorpamplona.amethyst.commons.relayClient.chatrooms.filterNip04DMsFromMe
 import com.vitorpamplona.amethyst.commons.relayClient.chatrooms.filterNip04DMsToMe
 import com.vitorpamplona.amethyst.commons.relayClient.eoseManagers.DmRelayLog
 import com.vitorpamplona.amethyst.commons.relayClient.eoseManagers.PerUserEoseManager
-import com.vitorpamplona.amethyst.commons.relayClient.eoseManagers.launchChatFeedToggleObserver
 import com.vitorpamplona.amethyst.commons.relayClient.paging.BackwardRelayPager
 import com.vitorpamplona.amethyst.commons.relayClient.paging.PagingStatus
 import com.vitorpamplona.amethyst.commons.relays.SincePerRelayMap
@@ -40,7 +38,6 @@ import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.utils.Log
 import com.vitorpamplona.quartz.utils.TimeUtils
-import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.StateFlow
 
 /**
@@ -72,7 +69,7 @@ class ChatroomListNip04HistorySubAssembler(
     ): List<RelayBasedFilter>? {
         val user = user(key)
         if (!key.account.isWriteable()) return emptyList()
-        if (!key.account.settings.isChatFeedEnabled(ChatFeedType.NIP04)) return emptyList()
+        if (!key.account.chatFeedToggles.isEnabled(ChatFeedType.NIP04)) return emptyList()
         val homeRelays = key.account.homeRelays.flow.value
         val dmRelays = key.account.dmRelays.flow.value
         val armed = pager.armedRelays((homeRelays + dmRelays).toSet())
@@ -100,7 +97,13 @@ class ChatroomListNip04HistorySubAssembler(
         }
     }
 
-    private val userJobMap = mutableMapOf<User, Job>()
+    override val watchedChatFeeds = setOf(ChatFeedType.NIP04)
+
+    // The toggle flipped: let the pager drop (or restore) its relays before the filters rebuild.
+    override fun onChatFeedsToggled() {
+        pager.onEnabledChanged()
+        invalidateFilters()
+    }
 
     override fun newSub(key: ChatroomListState): Subscription {
         // Repoint the single-active orchestrator at this account's rooms-list NIP-04 cursors (on its
@@ -109,26 +112,10 @@ class ChatroomListNip04HistorySubAssembler(
         pager.bind(
             key.account.chatroomList.nip04History,
             key.account.scope,
-            isEnabled = { key.account.settings.isChatFeedEnabled(ChatFeedType.NIP04) },
+            isEnabled = { key.account.chatFeedToggles.isEnabled(ChatFeedType.NIP04) },
         ) { allRelays(key.account) }
 
-        val user = user(key)
-        userJobMap[user]?.cancel()
-        userJobMap[user] =
-            key.account.scope.launchChatFeedToggleObserver(key.account, ChatFeedType.NIP04) {
-                pager.onEnabledChanged()
-                invalidateFilters()
-            }
-
         return requestNewSubscription(historyListener(key))
-    }
-
-    override fun endSub(
-        key: User,
-        subId: String,
-    ) {
-        super.endSub(key, subId)
-        userJobMap.remove(key)?.cancel()
     }
 
     private fun historyListener(key: ChatroomListState): SubscriptionListener {

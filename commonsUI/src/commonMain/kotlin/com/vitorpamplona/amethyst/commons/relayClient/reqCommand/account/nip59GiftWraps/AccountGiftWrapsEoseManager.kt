@@ -25,7 +25,6 @@ import com.vitorpamplona.amethyst.commons.model.chats.ChatFeedType
 import com.vitorpamplona.amethyst.commons.model.privateChats.DmHistoryTuning
 import com.vitorpamplona.amethyst.commons.relayClient.eoseManagers.DmRelayLog
 import com.vitorpamplona.amethyst.commons.relayClient.eoseManagers.PerUserEoseManager
-import com.vitorpamplona.amethyst.commons.relayClient.eoseManagers.launchChatFeedToggleObserver
 import com.vitorpamplona.amethyst.commons.relayClient.nip17Dm.GiftWrapInbox
 import com.vitorpamplona.amethyst.commons.relayClient.nip17Dm.filterConcordDirectInvitesToPubkey
 import com.vitorpamplona.amethyst.commons.relayClient.nip17Dm.filterGiftWrapsToPubkey
@@ -81,13 +80,14 @@ class AccountGiftWrapsEoseManager(
         since: SincePerRelayMap?,
     ): List<RelayBasedFilter> {
         val account = key.account
-        val nip17 = account.settings.isChatFeedEnabled(ChatFeedType.NIP17)
+        val toggles = account.chatFeedToggles
+        val nip17 = toggles.isEnabled(ChatFeedType.NIP17)
         // The boot spinner is the DM list's: it only waits on the NIP-17 inbox.
         if (!account.isWriteable() || !nip17) windowLoad.setExpectedRelays(emptySet())
         if (!account.isWriteable()) return emptyList()
 
-        val marmot = account.settings.isChatFeedEnabled(ChatFeedType.MARMOT)
-        val concord = account.settings.isChatFeedEnabled(ChatFeedType.CONCORD)
+        val marmot = toggles.isEnabled(ChatFeedType.MARMOT)
+        val concord = toggles.isEnabled(ChatFeedType.CONCORD)
         val me = user(key).pubkeyHex
         val relays = account.dmRelays.flow.value
         val sinceTime = DmHistoryTuning.recentBoundary()
@@ -111,6 +111,8 @@ class AccountGiftWrapsEoseManager(
         }
     }
 
+    override val watchedChatFeeds = setOf(ChatFeedType.NIP17, ChatFeedType.MARMOT, ChatFeedType.CONCORD)
+
     private val userJobMap = mutableMapOf<User, List<Job>>()
 
     @OptIn(FlowPreview::class)
@@ -124,9 +126,6 @@ class AccountGiftWrapsEoseManager(
                     key.account.dmRelays.flow
                         .collectLatest { invalidateFilters() }
                 },
-                key.account.scope.launchChatFeedToggleObserver(key.account, ChatFeedType.NIP17) { invalidateFilters() },
-                key.account.scope.launchChatFeedToggleObserver(key.account, ChatFeedType.MARMOT) { invalidateFilters() },
-                key.account.scope.launchChatFeedToggleObserver(key.account, ChatFeedType.CONCORD) { invalidateFilters() },
             )
 
         return requestNewSubscription(

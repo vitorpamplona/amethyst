@@ -312,12 +312,6 @@ class AccountSettings(
 
     fun isChatFeedEnabled(type: ChatFeedType): Boolean = type in enabledChatFeeds.value
 
-    /**
-     * NIP-AC calls signal through NIP-17's gift-wrap inbox (kind 21059), so turning NIP-17 off in
-     * Settings › Messages turns voice and video calls off too, whatever [callsEnabled] says.
-     */
-    fun isCallingActive(): Boolean = callsEnabled.value && isChatFeedEnabled(ChatFeedType.NIP17)
-
     fun setChatFeedEnabled(
         type: ChatFeedType,
         enabled: Boolean,

@@ -27,7 +27,6 @@ import com.vitorpamplona.amethyst.commons.relayClient.chatrooms.filterNip04DMsFr
 import com.vitorpamplona.amethyst.commons.relayClient.chatrooms.filterNip04DMsToMe
 import com.vitorpamplona.amethyst.commons.relayClient.eoseManagers.DmRelayLog
 import com.vitorpamplona.amethyst.commons.relayClient.eoseManagers.PerUserEoseManager
-import com.vitorpamplona.amethyst.commons.relayClient.eoseManagers.launchChatFeedToggleObserver
 import com.vitorpamplona.amethyst.commons.relayClient.paging.WindowLoadTracker
 import com.vitorpamplona.amethyst.commons.relayClient.paging.trackingListener
 import com.vitorpamplona.amethyst.commons.relays.SincePerRelayMap
@@ -60,7 +59,7 @@ class ChatroomListNip04SubAssembler(
         key: ChatroomListState,
         since: SincePerRelayMap?,
     ): List<RelayBasedFilter>? =
-        if (key.account.isWriteable() && key.account.settings.isChatFeedEnabled(ChatFeedType.NIP04)) {
+        if (key.account.isWriteable() && key.account.chatFeedToggles.isEnabled(ChatFeedType.NIP04)) {
             val homeRelays = key.account.homeRelays.flow.value
             val dmRelays = key.account.dmRelays.flow.value
             windowLoad.setExpectedRelays((homeRelays + dmRelays).toSet())
@@ -75,6 +74,8 @@ class ChatroomListNip04SubAssembler(
         }
 
     override fun user(key: ChatroomListState) = key.account.userProfile()
+
+    override val watchedChatFeeds = setOf(ChatFeedType.NIP04)
 
     private val userJobMap = mutableMapOf<User, List<Job>>()
 
@@ -93,7 +94,6 @@ class ChatroomListNip04SubAssembler(
                     key.account.dmRelays.flow
                         .collectLatest { invalidateFilters() }
                 },
-                key.account.scope.launchChatFeedToggleObserver(key.account, ChatFeedType.NIP04) { invalidateFilters() },
             )
 
         return requestNewSubscription(

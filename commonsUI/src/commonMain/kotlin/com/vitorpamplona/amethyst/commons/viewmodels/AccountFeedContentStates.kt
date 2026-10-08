@@ -329,7 +329,7 @@ class AccountFeedContentStates(
         // disappear (and re-enabled ones reappear from cache) immediately. Keyed off the APPLIED set:
         // the account first drops (or re-indexes) the DM rooms, so the rebuild never sees them half-done.
         scope.launch(Dispatchers.IO) {
-            account.appliedChatFeeds
+            account.chatFeedToggles.applied
                 .drop(1)
                 .collect {
                     dmKnown.invalidateData()
@@ -341,7 +341,7 @@ class AccountFeedContentStates(
         // types don't rebuild all three. Clear first so the refresh removes cards instead of taking the
         // additive path.
         scope.launch(Dispatchers.IO) {
-            account.appliedChatFeeds
+            account.chatFeedToggles.applied
                 .map { it intersect DM_CHAT_FEED_TYPES }
                 .distinctUntilChanged()
                 .drop(1)

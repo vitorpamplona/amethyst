@@ -117,6 +117,11 @@ class Chatroom : NotesGatherer {
                     newestMessage = messages.maxByOrNull { it.createdAt() ?: 0L }
                 }
 
+                // A sender whose last message left is no longer one (removeMessagesIf rebuilds the same).
+                msg.author?.let { author ->
+                    if (messages.none { it.author == author }) activeSenders = activeSenders - author
+                }
+
                 if (msg.event?.subject() == subject.value) {
                     messages
                         .maxByOrNull {

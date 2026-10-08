@@ -21,6 +21,8 @@
 package com.vitorpamplona.amethyst.commons.relayClient.eoseManagers
 
 import com.vitorpamplona.amethyst.commons.model.Account
+import com.vitorpamplona.amethyst.commons.model.IAccount
+import com.vitorpamplona.amethyst.commons.model.User
 import com.vitorpamplona.amethyst.commons.model.chats.ChatFeedType
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -51,3 +53,39 @@ fun CoroutineScope.launchChatFeedToggleObserver(
             .drop(1)
             .collect { onToggle() }
     }
+
+/**
+ * Per-user watchers for a subscription manager whose filters read some Settings › Messages toggles
+ * ([types]): while a user's subscription is open, a flip of any of them — as published by the account's
+ * [com.vitorpamplona.amethyst.commons.model.chats.ChatFeedToggles.applied], i.e. once the rooms have
+ * caught up — calls [onToggle]. The base EOSE managers own one, started and stopped with each user's
+ * subscription, so a manager only declares which toggles it reads.
+ */
+class ChatFeedWatchers(
+    private val types: Set<ChatFeedType>,
+    private val onToggle: () -> Unit,
+) {
+    private val jobs = mutableMapOf<User, Job>()
+
+    fun start(
+        user: User,
+        account: IAccount,
+    ) {
+        if (types.isEmpty()) return
+        // Only a full Account has toggles; other IAccount implementations (the legacy desktop one) don't.
+        val owner = account as? Account ?: return
+        jobs.remove(user)?.cancel()
+        jobs[user] =
+            owner.scope.launch(Dispatchers.IO) {
+                owner.chatFeedToggles.applied
+                    .map { it intersect types }
+                    .distinctUntilChanged()
+                    .drop(1)
+                    .collect { onToggle() }
+            }
+    }
+
+    fun stop(user: User) {
+        jobs.remove(user)?.cancel()
+    }
+}

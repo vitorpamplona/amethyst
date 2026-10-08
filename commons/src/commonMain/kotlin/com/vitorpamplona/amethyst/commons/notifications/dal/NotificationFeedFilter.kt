@@ -32,7 +32,6 @@ import com.vitorpamplona.amethyst.commons.model.cache.filterIntoSet
 import com.vitorpamplona.amethyst.commons.model.concord.ConcordChannel
 import com.vitorpamplona.amethyst.commons.model.isMutedPublicChatMessage
 import com.vitorpamplona.amethyst.commons.model.marmotGroups.MarmotGroupChatroom
-import com.vitorpamplona.amethyst.commons.model.privateChats.chatFeedType
 import com.vitorpamplona.amethyst.commons.model.topNavFeeds.IFeedTopNavFilter
 import com.vitorpamplona.amethyst.commons.model.topNavFeeds.TopFilter
 import com.vitorpamplona.quartz.buzz.jobs.JobErrorEvent
@@ -615,7 +614,7 @@ class NotificationFeedFilter(
             return false
         }
         // A DM protocol turned off in Settings › Messages doesn't notify either.
-        if (noteEvent is ChatroomKeyable && !account.settings.isChatFeedEnabled(noteEvent.chatFeedType())) {
+        if (noteEvent is ChatroomKeyable && !account.chatFeedToggles.isEnabled(noteEvent)) {
             return false
         }
         val notifAuthor =

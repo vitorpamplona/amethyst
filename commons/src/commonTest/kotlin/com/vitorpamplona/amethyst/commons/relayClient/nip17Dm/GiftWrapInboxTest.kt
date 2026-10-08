@@ -20,9 +20,6 @@
  */
 package com.vitorpamplona.amethyst.commons.relayClient.nip17Dm
 
-import com.vitorpamplona.amethyst.commons.model.AccountSettings
-import com.vitorpamplona.amethyst.commons.model.chats.ChatFeedType
-import com.vitorpamplona.quartz.nip01Core.crypto.KeyPair
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip59Giftwrap.wraps.EphemeralGiftWrapEvent
 import com.vitorpamplona.quartz.nip59Giftwrap.wraps.GiftWrapEvent
@@ -31,7 +28,6 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertNull
-import kotlin.test.assertTrue
 
 /**
  * The account's single gift-wrap subscription picks the narrowest filter the enabled features need:
@@ -82,18 +78,5 @@ class GiftWrapInboxTest {
         assertEquals(listOf(me), filter.filter.tags?.get("p"))
         assertEquals(listOf("3313"), filter.filter.tags?.get("k"))
         assertNull(filter.filter.since)
-    }
-
-    @Test
-    fun callsGoAwayWithNip17() {
-        val settings = AccountSettings(KeyPair())
-        assertTrue(settings.isCallingActive())
-
-        settings.setChatFeedEnabled(ChatFeedType.NIP17, false)
-        assertFalse(settings.isCallingActive())
-
-        settings.setChatFeedEnabled(ChatFeedType.NIP17, true)
-        settings.callsEnabled.value = false
-        assertFalse(settings.isCallingActive())
     }
 }

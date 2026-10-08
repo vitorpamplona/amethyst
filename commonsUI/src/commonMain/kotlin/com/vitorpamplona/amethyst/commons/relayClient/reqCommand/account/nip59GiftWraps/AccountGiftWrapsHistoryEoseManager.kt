@@ -21,11 +21,9 @@
 package com.vitorpamplona.amethyst.commons.relayClient.reqCommand.account.nip59GiftWraps
 
 import com.vitorpamplona.amethyst.commons.model.Account
-import com.vitorpamplona.amethyst.commons.model.User
 import com.vitorpamplona.amethyst.commons.model.chats.ChatFeedType
 import com.vitorpamplona.amethyst.commons.relayClient.eoseManagers.DmRelayLog
 import com.vitorpamplona.amethyst.commons.relayClient.eoseManagers.PerUserEoseManager
-import com.vitorpamplona.amethyst.commons.relayClient.eoseManagers.launchChatFeedToggleObserver
 import com.vitorpamplona.amethyst.commons.relayClient.nip17Dm.filterGiftWrapsToPubkey
 import com.vitorpamplona.amethyst.commons.relayClient.paging.BackwardRelayPager
 import com.vitorpamplona.amethyst.commons.relayClient.paging.PagingStatus
@@ -40,7 +38,6 @@ import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.utils.Log
 import com.vitorpamplona.quartz.utils.TimeUtils
-import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.StateFlow
 
 /**
@@ -94,7 +91,7 @@ class AccountGiftWrapsHistoryEoseManager(
         since: SincePerRelayMap?,
     ): List<RelayBasedFilter> {
         if (!key.account.isWriteable()) return emptyList()
-        if (!key.account.settings.isChatFeedEnabled(ChatFeedType.NIP17)) return emptyList()
+        if (!key.account.chatFeedToggles.isEnabled(ChatFeedType.NIP17)) return emptyList()
         // Only relays that have been advanced (armed) and aren't done carry a REQ. A relay that finished a
         // page keeps the same `until` here, so re-assembly (triggered when ANOTHER relay advances) doesn't
         // re-REQ it — it stays parked until the UI advances it again.
@@ -126,7 +123,13 @@ class AccountGiftWrapsHistoryEoseManager(
         return true
     }
 
-    private val userJobMap = mutableMapOf<User, Job>()
+    override val watchedChatFeeds = setOf(ChatFeedType.NIP17)
+
+    // The toggle flipped: let the pager drop (or restore) its relays before the filters rebuild.
+    override fun onChatFeedsToggled() {
+        pager.onEnabledChanged()
+        invalidateFilters()
+    }
 
     override fun newSub(key: AccountQueryState): Subscription {
         // Repoint the single-active orchestrator at this account's gift-wrap cursors (on its ChatroomList)
@@ -135,26 +138,10 @@ class AccountGiftWrapsHistoryEoseManager(
         pager.bind(
             key.account.chatroomList.giftWrapHistory,
             key.account.scope,
-            isEnabled = { key.account.settings.isChatFeedEnabled(ChatFeedType.NIP17) },
+            isEnabled = { key.account.chatFeedToggles.isEnabled(ChatFeedType.NIP17) },
         ) { historyRelays(key.account) }
 
-        val user = user(key)
-        userJobMap[user]?.cancel()
-        userJobMap[user] =
-            key.account.scope.launchChatFeedToggleObserver(key.account, ChatFeedType.NIP17) {
-                pager.onEnabledChanged()
-                invalidateFilters()
-            }
-
         return requestNewSubscription(historyListener(key))
-    }
-
-    override fun endSub(
-        key: User,
-        subId: String,
-    ) {
-        super.endSub(key, subId)
-        userJobMap.remove(key)?.cancel()
     }
 
     private fun historyListener(key: AccountQueryState): SubscriptionListener {

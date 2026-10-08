@@ -34,7 +34,6 @@ import com.vitorpamplona.amethyst.commons.model.Account
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
 import com.vitorpamplona.amethyst.commons.model.isMutedPublicChatMessage
-import com.vitorpamplona.amethyst.commons.model.privateChats.chatFeedType
 import com.vitorpamplona.amethyst.commons.nipACWebRtcCalls.CallManager
 import com.vitorpamplona.amethyst.commons.notifications.dal.NotificationFeedFilter
 import com.vitorpamplona.amethyst.commons.relayClient.event.EventFinderQueryState
@@ -233,7 +232,7 @@ class EventNotificationConsumer(
         if (event.pubKey == account.signer.pubKey) return
 
         // A DM protocol turned off in Settings › Messages doesn't notify.
-        if (event is ChatroomKeyable && !account.settings.isChatFeedEnabled(event.chatFeedType())) return
+        if (event is ChatroomKeyable && !account.chatFeedToggles.isEnabled(event)) return
 
         // Drop reactions/zaps/reposts whose target note lives on a muted thread, or in a
         // public chat the user has silenced (matches the in-app feed, which mutes all four).
@@ -451,7 +450,7 @@ class EventNotificationConsumer(
         account: Account,
     ) {
         // Calls turned off in Settings (or with NIP-17, which carries them) never ring.
-        if (!account.settings.isCallingActive()) return
+        if (!account.chatFeedToggles.isCallingActive()) return
         if (!account.isFollowing(event.pubKey)) return
         if (TimeUtils.now() - event.createdAt > CallManager.MAX_EVENT_AGE_SECONDS) return
 

@@ -26,7 +26,6 @@ import com.vitorpamplona.amethyst.commons.model.Account
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
 import com.vitorpamplona.amethyst.commons.model.chats.ChatFeedType
-import com.vitorpamplona.amethyst.commons.model.privateChats.chatFeedType
 import com.vitorpamplona.amethyst.commons.util.replace
 import com.vitorpamplona.quartz.nip17Dm.base.ChatroomKey
 import com.vitorpamplona.quartz.nip17Dm.base.ChatroomKeyable
@@ -36,7 +35,7 @@ class ChatroomListNewFeedFilter(
 ) : AdditiveFeedFilter<Note>() {
     override fun feedKey(): String = account.userProfile().pubkeyHex
 
-    private fun isEnabled(type: ChatFeedType): Boolean = type in account.settings.enabledChatFeeds.value
+    private fun isEnabled(type: ChatFeedType): Boolean = account.chatFeedToggles.isEnabled(type)
 
     // returns the last Note of each user.
     override fun feed(): List<Note> {
@@ -156,7 +155,7 @@ class ChatroomListNewFeedFilter(
         newItems.forEach { newNote ->
             val noteEvent = newNote.event
             // Same gate as ingestion: a protocol turned off never reaches the rooms.
-            if (noteEvent is ChatroomKeyable && isEnabled(noteEvent.chatFeedType())) {
+            if (noteEvent is ChatroomKeyable && account.chatFeedToggles.isEnabled(noteEvent)) {
                 val roomKey = noteEvent.chatroomKey(me.pubkeyHex)
                 val room = account.chatroomList.rooms.get(roomKey)
 

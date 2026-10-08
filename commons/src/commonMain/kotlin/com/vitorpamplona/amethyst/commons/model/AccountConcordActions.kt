@@ -1031,7 +1031,7 @@ class AccountConcordActions(
      * sweep launched there before any relay answered.
      */
     fun requestConcordDirectInviteSweep() {
-        if (!account.settings.isChatFeedEnabled(ChatFeedType.CONCORD)) return
+        if (!account.chatFeedToggles.isEnabled(ChatFeedType.CONCORD)) return
         account.scope.launch {
             if (!directInviteSweep.tryLock()) return@launch
             try {
