@@ -23,6 +23,7 @@ package com.vitorpamplona.quartz.nip01Core.relay
 import com.vitorpamplona.geode.InProcessRelays
 import com.vitorpamplona.geode.fixtures.SyntheticEvents
 import com.vitorpamplona.geode.testing.preload
+import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.relay.client.NostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.NegentropySyncResult
 import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.negentropySync
@@ -33,6 +34,8 @@ import com.vitorpamplona.quartz.nip01Core.relay.server.policies.LimitsPolicy
 import com.vitorpamplona.quartz.nip01Core.relay.server.policies.PassThroughPolicy
 import com.vitorpamplona.quartz.nip01Core.relay.server.policies.PolicyResult
 import com.vitorpamplona.quartz.nip01Core.relay.server.policies.RelayLimits
+import com.vitorpamplona.quartz.nip01Core.store.IdAndTime
+import com.vitorpamplona.quartz.nip77Negentropy.NegOpenCmd
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -43,8 +46,9 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 
 /**
- * The download half of a NIP-77 sync, against relays seen dropping it in production: the
- * reconcile named every id, and the `REQ`s for those ids came back short.
+ * NIP-77 syncs against relays seen losing events in production without an error: the
+ * reconcile named every id and the `REQ`s for them came back short, or the reconcile itself
+ * covered only part of the set.
  */
 class NegentropyDownloadTest {
     private val author = "ab".repeat(32)
@@ -76,24 +80,77 @@ class NegentropyDownloadTest {
             assertEquals(30, result.downloaded)
         }
 
+    /** relay.ohstr.com reconciled its newest 500 of 25,691 events and finished clean. */
+    @Test
+    fun aRelayThatReconcilesOnlyItsNewestEventsIsAskedForTheOlderOnes() =
+        runBlocking {
+            val delivered = mutableListOf<String>()
+            val result = sync(30, Filter(kinds = listOf(1)), onEvent = { delivered.add(it) }) { ReconcilesNewest(5) }
+
+            assertEquals(30, result.downloaded)
+            assertEquals(30, delivered.toSet().size)
+        }
+
+    /** The cut can fall inside a second: three events a second, five per reconcile. */
+    @Test
+    fun aCutInsideASecondDeliversEachEventOnce() =
+        runBlocking {
+            val events = List(30) { i -> SyntheticEvents.fakeEvent(idSeed = i + 1, pubKey = author, createdAt = 100L + i / 3) }
+            val delivered = mutableListOf<String>()
+            val result = sync(events, Filter(kinds = listOf(1)), onEvent = { delivered.add(it) }) { ReconcilesNewest(5) }
+
+            assertEquals(30, delivered.size, "no event delivered twice: $delivered")
+            assertEquals(30, delivered.toSet().size)
+            assertEquals(30, result.downloaded)
+        }
+
+    /** Walks back pass by pass to the events we hold, and stops there. */
+    @Test
+    fun theWalkBackStopsAtTheEventsWeHold() =
+        runBlocking {
+            val events = SyntheticEvents.batch(30, kind = 1) { author }
+            val held = events.take(20).map { IdAndTime(it.createdAt, it.id) }
+            val delivered = mutableListOf<String>()
+            val result = sync(events, Filter(kinds = listOf(1)), local = held, onEvent = { delivered.add(it) }) { ReconcilesNewest(5) }
+
+            assertEquals(10, result.downloaded)
+            assertEquals(events.drop(20).map { it.id }.toSet(), delivered.toSet())
+        }
+
     private suspend fun sync(
         count: Int,
         filter: Filter,
+        onEvent: (String) -> Unit = {},
+        policy: () -> IRelayPolicy,
+    ): NegentropySyncResult = sync(SyntheticEvents.batch(count, kind = 1) { author }, filter, onEvent = onEvent, policy = policy)
+
+    private suspend fun sync(
+        events: List<Event>,
+        filter: Filter,
+        local: List<IdAndTime> = emptyList(),
+        onEvent: (String) -> Unit = {},
         policy: () -> IRelayPolicy,
     ): NegentropySyncResult {
         val hub = InProcessRelays(defaultPolicy = policy)
         val scope = CoroutineScope(Dispatchers.Default + SupervisorJob())
         val client = NostrClient(hub, scope)
         try {
-            hub.getOrCreate(InProcessRelays.DEFAULT_URL).preload(SyntheticEvents.batch(count, kind = 1) { author })
+            hub.getOrCreate(InProcessRelays.DEFAULT_URL).preload(events)
             return withTimeout(20_000) {
-                client.negentropySync(relay = InProcessRelays.DEFAULT_URL, filter = filter, idleTimeoutMs = 5_000) { }
+                client.negentropySync(relay = InProcessRelays.DEFAULT_URL, filter = filter, localEntries = local, idleTimeoutMs = 5_000) { onEvent(it.id) }
             }
         } finally {
             client.disconnect()
             scope.cancel()
             hub.close()
         }
+    }
+
+    /** Builds every reconcile from its newest [n] matches, as ohstr does with its `max_limit`. */
+    private class ReconcilesNewest(
+        private val n: Int,
+    ) : PassThroughPolicy() {
+        override fun accept(cmd: NegOpenCmd): PolicyResult<NegOpenCmd> = PolicyResult.Accepted(NegOpenCmd(cmd.subId, cmd.filter.copy(limit = n), cmd.initialMessage))
     }
 
     /** Refuses a `REQ` filter that names ids and nothing else, as conduit does. */

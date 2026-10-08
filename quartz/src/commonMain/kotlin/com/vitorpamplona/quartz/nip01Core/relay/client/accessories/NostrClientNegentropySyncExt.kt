@@ -23,11 +23,15 @@ package com.vitorpamplona.quartz.nip01Core.relay.client.accessories
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
+import com.vitorpamplona.quartz.nip01Core.relay.client.auth.AuthOutcome
+import com.vitorpamplona.quartz.nip01Core.relay.client.auth.authSuccessMark
+import com.vitorpamplona.quartz.nip01Core.relay.client.auth.awaitAuthOutcome
 import com.vitorpamplona.quartz.nip01Core.relay.client.listeners.RelayConnectionListener
 import com.vitorpamplona.quartz.nip01Core.relay.client.reqs.SubscriptionListener
 import com.vitorpamplona.quartz.nip01Core.relay.client.single.IRelayClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.single.newSubId
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.ClosedMessage
+import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.MachineReadablePrefix
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.Message
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.NoticeMessage
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
@@ -112,6 +116,13 @@ class NegentropySyncResult(
  *     observed as `NEG-ERR … "blocked: too many query results"`): the [filter] is
  *     split by `created_at` windows and each window reconciled on its own, a
  *     window that still overflows being halved and retried.
+ *  4. Handles a relay that reconciles only part of the set **without saying so**:
+ *     relay.ohstr.com builds its reconcile from its newest 500 events (its REQ
+ *     `max_limit`), so a sync of 25,691 events reconciled 500 and finished clean.
+ *     After a pass, one `REQ` asks for anything at or below the oldest event the
+ *     pass delivered; an event there that we neither downloaded nor hold means the
+ *     relay left that stretch out, and another pass reconciles it. A relay that
+ *     reconciles everything costs that one `REQ`.
  *
  * This method is negentropy-only. It does NOT silently fall back to plain paging:
  * if a window genuinely cannot be reconciled — a minimal `created_at` window still
@@ -218,54 +229,108 @@ suspend fun INostrClient.negentropySync(
     // it — fatal mid-sync, and frequent when many small windows each have such a gap.
     // A never-matching keep-alive subscription holds the connection open without
     // delivering anything.
+    val local = localIndex ?: NegentropyLocalIndex.of(localEntries)
+    // A window handed to the caller is drained outside this function, so the
+    // events in it never reach the consumer below and the truncation probe would
+    // mistake them for ones the relay left out.
+    var handedOff = false
+    val handOff: (suspend (Filter) -> Unit)? =
+        onUnreconcilableWindow?.let { drain ->
+            { window ->
+                handedOff = true
+                drain(window)
+            }
+        }
+
     val keepAliveSubId = newSubId()
     subscribe(keepAliveSubId, mapOf(relay to listOf(Filter(ids = listOf(KEEP_ALIVE_ID)))), null)
     try {
-        coroutineScope {
-            // Bounded funnel: every delivered event passes through this one consumer
-            // (so onEvent + the maxEvents cap run single-threaded) and the bound
-            // back-pressures the download workers when the consumer can't keep up.
-            val events = Channel<Event>(DELIVERY_BUFFER)
+        var pass = filter
+        // The second the previous pass ended on, and what it delivered there: the
+        // next pass reaches back to that second inclusively (the relay may have cut
+        // the set in the middle of it), so those events come again and are dropped.
+        var boundary: Long? = null
+        var boundaryIds: Set<HexKey> = emptySet()
 
-            val producer =
-                launch {
-                    try {
-                        syncPipeline(
-                            relay = relay,
-                            filter = filter,
-                            idleTimeoutMs = idleTimeoutMs,
-                            fetchBatch = fetchBatch,
-                            maxConcurrentReqs = maxConcurrentReqs,
-                            reconcileConcurrency = reconcileConcurrency,
-                            idBufferBatches = idBufferBatches,
-                            local = localIndex ?: NegentropyLocalIndex.of(localEntries),
-                            targetWindow = targetWindow,
-                            onUnreconcilableWindow = onUnreconcilableWindow,
-                            onWindow = { windows.incrementAndFetch() },
-                            onPeerCap = { peerCap = it },
-                            // Only accumulate here; progress is reported from the
-                            // single consumer loop below so the user callback is never
-                            // invoked from two coroutines at once.
-                            onNeed = { need.addAndFetch(it) },
-                            onSkipped = { skipped.addAndFetch(it) },
-                            wantId = wantId,
-                            deliver = { events.send(it) },
-                        )
-                    } finally {
-                        events.close()
+        while (true) {
+            var oldest = Long.MAX_VALUE
+            val atOldest = HashSet<HexKey>()
+            var fresh = 0
+
+            val reachedCap =
+                coroutineScope {
+                    // Bounded funnel: every delivered event passes through this one consumer
+                    // (so onEvent + the maxEvents cap run single-threaded) and the bound
+                    // back-pressures the download workers when the consumer can't keep up.
+                    val events = Channel<Event>(DELIVERY_BUFFER)
+
+                    val producer =
+                        launch {
+                            try {
+                                syncPipeline(
+                                    relay = relay,
+                                    filter = pass,
+                                    idleTimeoutMs = idleTimeoutMs,
+                                    fetchBatch = fetchBatch,
+                                    maxConcurrentReqs = maxConcurrentReqs,
+                                    reconcileConcurrency = reconcileConcurrency,
+                                    idBufferBatches = idBufferBatches,
+                                    local = local,
+                                    targetWindow = targetWindow,
+                                    onUnreconcilableWindow = handOff,
+                                    onWindow = { windows.incrementAndFetch() },
+                                    onPeerCap = { peerCap = it },
+                                    // Only accumulate here; progress is reported from the
+                                    // single consumer loop below so the user callback is never
+                                    // invoked from two coroutines at once.
+                                    onNeed = { need.addAndFetch(it) },
+                                    onSkipped = { skipped.addAndFetch(it) },
+                                    wantId = wantId,
+                                    deliver = { events.send(it) },
+                                )
+                            } finally {
+                                events.close()
+                            }
+                        }
+
+                    var capped = false
+                    for (event in events) {
+                        if (event.createdAt == boundary && event.id in boundaryIds) {
+                            // Counted as a need again by this pass's reconcile.
+                            need.addAndFetch(-1)
+                            continue
+                        }
+                        fresh++
+                        if (event.createdAt < oldest) {
+                            oldest = event.createdAt
+                            atOldest.clear()
+                        }
+                        if (event.createdAt == oldest) atOldest.add(event.id)
+
+                        downloaded++
+                        onEvent(event)
+                        onProgress?.invoke(need.load(), downloaded)
+                        if (maxEvents in 1..downloaded) {
+                            capped = true
+                            break
+                        }
                     }
+
+                    // If we broke out early (cap reached) the producer may still be working —
+                    // stop it. If the producer finished normally this is a no-op.
+                    producer.cancel()
+                    capped
                 }
 
-            for (event in events) {
-                downloaded++
-                onEvent(event)
-                onProgress?.invoke(need.load(), downloaded)
-                if (maxEvents in 1..downloaded) break
-            }
-
-            // If we broke out early (cap reached) the producer may still be working —
-            // stop it. If the producer finished normally this is a no-op.
-            producer.cancel()
+            if (reachedCap || fresh == 0 || handedOff) break
+            // A pass that ended on the same second as the last one adds to what is
+            // known there; forgetting the earlier ones would read them as left out.
+            if (oldest == boundary) atOldest.addAll(boundaryIds)
+            val older = pass.copy(until = oldest)
+            if (!relayHoldsMore(relay, older, atOldest, local, wantId, idleTimeoutMs)) break
+            boundary = oldest
+            boundaryIds = atOldest
+            pass = older
         }
     } finally {
         unsubscribe(keepAliveSubId)
@@ -315,6 +380,31 @@ suspend fun INostrClient.negentropySync(
         onProgress = onProgress,
         onEvent = onEvent,
     )
+
+/**
+ * Whether [relay] serves an event in [window] that a reconcile of it should have
+ * named: one that is neither among [delivered] (what the pass delivered at the
+ * window's top second), nor held in [local], nor declined by [wantId]. Asks for the
+ * newest few only; a relay that reconciled its whole set answers with events we
+ * hold, and one that cut the set short answers with the first events it left out.
+ */
+private suspend fun INostrClient.relayHoldsMore(
+    relay: NormalizedRelayUrl,
+    window: Filter,
+    delivered: Set<HexKey>,
+    local: NegentropyLocalIndex,
+    wantId: ((HexKey) -> Boolean)?,
+    idleTimeoutMs: Long,
+): Boolean {
+    val probe = window.copy(limit = delivered.size + TRUNCATION_PROBE_DEPTH)
+    val probeIdleMs = if (idleTimeoutMs > 0) minOf(idleTimeoutMs, DEFAULT_DOWNLOAD_IDLE_MS) else DEFAULT_DOWNLOAD_IDLE_MS
+    return fetchAll(relay, probe, probeIdleMs).any { event ->
+        event.id !in delivered &&
+            window.match(event) &&
+            wantId?.invoke(event.id) != false &&
+            local.entriesFor(window.copy(since = event.createdAt, until = event.createdAt)).none { it.id == event.id }
+    }
+}
 
 /**
  * Result of [negentropySyncOrFetch].
@@ -1397,13 +1487,16 @@ internal fun isNegentropyRejectionNotice(reason: String): Boolean =
  *    a long `authors` list, too heavy to repeat on every batch, so its ids go out
  *    bare and its `authors` and tags are added only to re-ask a `CLOSED` batch.
  *
+ * An `auth-required:` refusal is re-asked once, after this client's NIP-42 responder
+ * (if it has one) authenticates.
+ *
  * Events are deduped across the rounds (a [HashSet] bounded by the batch size, so
  * still O(pipeline) memory). A REQ-by-ids should return each id once, but the client
  * may re-send the REQ on a reconnect/filter-sync mid-flight, which makes the relay
  * replay the batch; without this the same event would be delivered twice. We rely on
  * NIP-77 yielding a distinct id set across batches, so no global dedup is needed.
  */
-internal suspend fun INostrClient.fetchByIds(
+suspend fun INostrClient.fetchByIds(
     relay: NormalizedRelayUrl,
     batch: List<HexKey>,
     idleTimeoutMs: Long,
@@ -1414,20 +1507,31 @@ internal suspend fun INostrClient.fetchByIds(
     var missing = batch
 
     var widened = false
+    var authed = false
+    val batchIdleMs = if (idleTimeoutMs > 0) idleTimeoutMs else DEFAULT_DOWNLOAD_IDLE_MS
 
     while (true) {
         val before = collected.size
+        val authMark = authSuccessMark(relay)
         val filter =
             when {
                 widened -> Filter(ids = missing, authors = scope?.authors, kinds = scope?.kinds, tags = scope?.tags, tagsAll = scope?.tagsAll)
                 else -> Filter(ids = missing, kinds = scope?.kinds)
             }
-        val endedByEose = fetchByIdsRound(relay, filter, idleTimeoutMs, seen, collected)
-        if (!endedByEose) {
-            if (widened || !scope.narrowsBeyondKinds()) break
-            widened = true
-        } else if (collected.size == before) {
-            break
+        when (fetchByIdsRound(relay, filter, batchIdleMs, seen, collected)) {
+            RoundEnd.EOSE -> {
+                if (collected.size == before) break
+            }
+
+            RoundEnd.AUTH_REQUIRED -> {
+                if (authed || awaitAuthOutcome(relay, authMark, settleMs = batchIdleMs) != AuthOutcome.AUTHENTICATED) break
+                authed = true
+            }
+
+            RoundEnd.OTHER -> {
+                if (widened || !scope.narrowsBeyondKinds()) break
+                widened = true
+            }
         }
         if (collected.size >= batch.size) break
         missing = missing.filter { it !in seen }
@@ -1438,27 +1542,25 @@ internal suspend fun INostrClient.fetchByIds(
 
 private fun Filter?.narrowsBeyondKinds() = this != null && (authors != null || tags != null || tagsAll != null)
 
+private enum class RoundEnd { EOSE, AUTH_REQUIRED, OTHER }
+
 /**
- * One `REQ` of [fetchByIds]: adds what arrives to [collected] and returns whether
- * the relay ended it with `EOSE` (rather than `CLOSED`, a failed connection or the
- * idle bound, none of which a re-ask would fix).
+ * One `REQ` of [fetchByIds]: adds what arrives to [collected] and says how the relay
+ * ended it. [batchIdleMs] is always finite, even when the caller disabled the
+ * whole-sync watchdog: each event resets the clock, so a batch that keeps streaming
+ * is never cut off, but one that stalls (relay stops mid-flight) unblocks instead of
+ * hanging a worker.
  */
 private suspend fun INostrClient.fetchByIdsRound(
     relay: NormalizedRelayUrl,
     filter: Filter,
-    idleTimeoutMs: Long,
+    batchIdleMs: Long,
     seen: HashSet<HexKey>,
     collected: ArrayList<Event>,
-): Boolean {
+): RoundEnd {
     val subId = newSubId()
-    val done = Channel<Boolean>(Channel.CONFLATED)
-
-    // Per-batch idle clock: each event resets it, so a batch that keeps streaming is
-    // never cut off, but a batch that stalls (relay stops mid-flight) unblocks after
-    // the idle bound instead of hanging a worker. A download batch always keeps a
-    // finite bound even when the caller disabled the whole-sync watchdog.
+    val done = Channel<RoundEnd>(Channel.CONFLATED)
     val clock = IdleClock()
-    val batchIdleMs = if (idleTimeoutMs > 0) idleTimeoutMs else DEFAULT_DOWNLOAD_IDLE_MS
 
     val listener =
         object : SubscriptionListener {
@@ -1476,7 +1578,7 @@ private suspend fun INostrClient.fetchByIdsRound(
                 relay: NormalizedRelayUrl,
                 forFilters: List<Filter>?,
             ) {
-                done.trySend(true)
+                done.trySend(RoundEnd.EOSE)
             }
 
             override fun onClosed(
@@ -1484,7 +1586,8 @@ private suspend fun INostrClient.fetchByIdsRound(
                 relay: NormalizedRelayUrl,
                 forFilters: List<Filter>?,
             ) {
-                done.trySend(false)
+                val authRequired = MachineReadablePrefix.parse(message) == MachineReadablePrefix.AUTH_REQUIRED
+                done.trySend(if (authRequired) RoundEnd.AUTH_REQUIRED else RoundEnd.OTHER)
             }
 
             override fun onCannotConnect(
@@ -1492,13 +1595,13 @@ private suspend fun INostrClient.fetchByIdsRound(
                 message: String,
                 forFilters: List<Filter>?,
             ) {
-                done.trySend(false)
+                done.trySend(RoundEnd.OTHER)
             }
         }
 
     try {
         subscribe(subId, mapOf(relay to listOf(filter)), listener)
-        return done.receiveWithinIdle(clock, batchIdleMs) == true
+        return done.receiveWithinIdle(clock, batchIdleMs) ?: RoundEnd.OTHER
     } finally {
         unsubscribe(subId)
         done.close()
@@ -1540,6 +1643,13 @@ private const val CAP_MARGIN = 0.8
  * scan the relay did before refusing it.
  */
 private const val BUDGET_GROWTH = 1.25
+
+/**
+ * Events past the ones a pass delivered at its oldest second that the truncation
+ * probe asks for. A relay that cut its set short serves the first event it left out
+ * at the top of this page; the rest is margin for events we already hold locally.
+ */
+private const val TRUNCATION_PROBE_DEPTH = 20
 
 /** Bounded buffer between the download workers and the single delivery consumer. */
 private const val DELIVERY_BUFFER = 256
