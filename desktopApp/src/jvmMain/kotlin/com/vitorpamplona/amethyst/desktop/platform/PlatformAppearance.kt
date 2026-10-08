@@ -122,25 +122,28 @@ object PlatformAppearance {
         return match.groupValues[1].toIntOrNull(16) == 0
     }
 
+    /**
+     * The trimmed output of [cmd], or null if it fails, exits non-zero or takes over 2 s. It waits
+     * first and reads after: reading first would block until the child closes its output, which a
+     * child that leaves a daemon holding it (gsettings starting dconf) never does, so the timeout
+     * would never apply. The answers are a line or two, well within the pipe's buffer.
+     */
     private fun exec(vararg cmd: String): String? =
         try {
             val proc =
                 ProcessBuilder(*cmd)
                     .redirectErrorStream(true)
                     .start()
-            val out =
-                proc.inputStream
-                    .bufferedReader()
-                    .readText()
-                    .trim()
-            val finished = proc.waitFor(2, TimeUnit.SECONDS)
-            if (!finished) {
+            if (!proc.waitFor(2, TimeUnit.SECONDS)) {
                 proc.destroyForcibly()
                 null
             } else if (proc.exitValue() != 0) {
                 null
             } else {
-                out
+                proc.inputStream
+                    .bufferedReader()
+                    .readText()
+                    .trim()
             }
         } catch (e: Exception) {
             Log.d("PlatformAppearance") { "Failed to exec ${cmd.joinToString(" ")}: ${e.message}" }

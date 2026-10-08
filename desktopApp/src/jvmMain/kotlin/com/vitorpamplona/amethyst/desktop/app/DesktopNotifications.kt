@@ -47,9 +47,13 @@ import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.settings.SettingsRo
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.desktop.ui.notifications.DesktopNotificationAutoDispatcher
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 /**
  * OS notifications for mentions, replies, reactions, zaps and messages: the native notifier
@@ -69,23 +73,35 @@ class DesktopNotifications(
     /** Events older than the app are history, not news. */
     private val sessionStartSec = nowEpochSeconds()
 
-    /** Notifies [account] of new events for it while the window is not focused. */
+    /**
+     * Notifies [account] of new events for it while the window is not focused. Watches the event
+     * stream only while notifications are on (they start off), and loads the native notifier off
+     * the UI thread the first time they are.
+     */
     fun watch(
         account: Account,
         cache: LocalCache,
         isWindowFocused: StateFlow<Boolean>,
     ): Job =
-        DesktopNotificationAutoDispatcher(
-            dispatcher = dispatcher,
-            settings = settings,
-            myPubKeyHex = account.signer.pubKey,
-            eventStream = cache.getEventStream(),
-            authorOf = { id -> cache.getNoteIfExists(id)?.event?.pubKey },
-            displayNameOf = { pubKey -> cache.getUserIfExists(pubKey)?.toBestDisplayName() },
-            isWindowFocused = isWindowFocused,
-            sessionStartSec = sessionStartSec,
-            scope = scope,
-        ).start()
+        scope.launch {
+            settings.enabled.collectLatest { on ->
+                if (!on) return@collectLatest
+                val notifier = withContext(Dispatchers.IO) { dispatcher }
+                coroutineScope {
+                    DesktopNotificationAutoDispatcher(
+                        dispatcher = notifier,
+                        settings = settings,
+                        myPubKeyHex = account.signer.pubKey,
+                        eventStream = cache.getEventStream(),
+                        authorOf = { id -> cache.getNoteIfExists(id)?.event?.pubKey },
+                        displayNameOf = { pubKey -> cache.getUserIfExists(pubKey)?.toBestDisplayName() },
+                        isWindowFocused = isWindowFocused,
+                        sessionStartSec = sessionStartSec,
+                        scope = this,
+                    ).start()
+                }
+            }
+        }
 
     companion object {
         private const val BUNDLE_ID = "com.vitorpamplona.amethyst.desktop"

@@ -24,18 +24,38 @@ import com.vitorpamplona.quartz.utils.Log
 import java.awt.Desktop
 import java.net.URI
 
-/** Hands a URI to the operating system: the browser for web links, the registered app for the rest. */
+/**
+ * Hands a URI to the operating system: the browser for web links, the registered app for the rest.
+ * AWT's BROWSE is missing on many Linux desktops (anything without GNOME's libraries), where the
+ * freedesktop `xdg-open` does the same job.
+ */
 object DesktopBrowser {
-    fun open(uri: String): Boolean =
+    fun open(uri: String): Boolean {
         try {
             if (Desktop.isDesktopSupported() && Desktop.getDesktop().isSupported(Desktop.Action.BROWSE)) {
                 Desktop.getDesktop().browse(URI(uri))
-                true
-            } else {
-                false
+                return true
             }
         } catch (e: Exception) {
             Log.w("DesktopBrowser", "Could not open $uri", e)
+        }
+        if (!System
+                .getProperty("os.name")
+                .orEmpty()
+                .lowercase()
+                .contains("linux")
+        ) {
+            return false
+        }
+        return try {
+            ProcessBuilder("xdg-open", uri)
+                .redirectOutput(ProcessBuilder.Redirect.DISCARD)
+                .redirectError(ProcessBuilder.Redirect.DISCARD)
+                .start()
+            true
+        } catch (e: Exception) {
+            Log.w("DesktopBrowser", "Could not open $uri with xdg-open", e)
             false
         }
+    }
 }

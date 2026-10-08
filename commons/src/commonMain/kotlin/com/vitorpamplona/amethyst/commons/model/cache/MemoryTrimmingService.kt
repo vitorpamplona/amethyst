@@ -18,31 +18,31 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.service.eventCache
+package com.vitorpamplona.amethyst.commons.model.cache
 
-import android.content.ComponentCallbacks2
 import com.vitorpamplona.amethyst.commons.account.AccountInfo
 import com.vitorpamplona.amethyst.commons.model.Account
-import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
 import com.vitorpamplona.quartz.nip19Bech32.decodePublicKeyAsHexOrNull
 import com.vitorpamplona.quartz.utils.Log
-import java.util.concurrent.atomic.AtomicBoolean
+import kotlinx.coroutines.sync.Mutex
 
+/**
+ * Prunes [cache] when the app needs memory back. Android runs it on the OS trim callbacks (and
+ * its own heap watchdog); the desktop, which gets no such callback, from a heap watchdog alone.
+ */
 class MemoryTrimmingService(
     val cache: LocalCache,
 ) {
-    var isTrimmingMemoryMutex = AtomicBoolean(false)
+    private val trimming = Mutex()
 
     /**
-     * Two-tier pruning keyed to the OS trim levels still delivered since API 34
-     * (the foreground RUNNING_* and deeper MODERATE/COMPLETE levels were deprecated
-     * because apps are no longer notified of them).
+     * Two tiers.
      *
-     * Tier 1 — UI hidden (fires on every app switch):
+     * Tier 1 — always (on Android, every app switch):
      *   Sweep stale WeakRefs, drop expired and superseded-replaceable events.
      *   Safe to run frequently; no UI-visible side effects.
      *
-     * Tier 2 — background / real reclaim pressure (process on the LRU list):
+     * Tier 2 — [underPressure], real reclaim pressure:
      *   Tier 1 + drop events from muted/blocked users + old chat messages +
      *   unobserved thread replies / reactions. May cause feeds to re-fetch content
      *   that was scrolled past; triggers recomposition wherever StateFlows cleared.
@@ -50,7 +50,7 @@ class MemoryTrimmingService(
     private fun doTrim(
         account: Collection<Account>,
         otherAccounts: List<AccountInfo>,
-        level: Int,
+        underPressure: Boolean,
     ) {
         // Tier 1: always run — cheap housekeeping; cleanObservers only removes flows that are
         // not currently held by the UI, so it is safe and inexpensive at any pressure level.
@@ -59,7 +59,7 @@ class MemoryTrimmingService(
         cache.pruner.pruneExpiredEvents()
         cache.pruner.prunePastVersionsOfReplaceables()
 
-        if (level >= ComponentCallbacks2.TRIM_MEMORY_BACKGROUND) {
+        if (underPressure) {
             // Tier 2: real reclaim pressure — drop events from muted/blocked users, old
             // messages, and unobserved reactions.
             account.forEach {
@@ -72,17 +72,18 @@ class MemoryTrimmingService(
         }
     }
 
+    /** Prunes, unless a trim is already running. */
     suspend fun run(
         account: Collection<Account>,
         otherAccounts: List<AccountInfo>,
-        level: Int = ComponentCallbacks2.TRIM_MEMORY_BACKGROUND,
+        underPressure: Boolean = true,
     ) {
-        if (isTrimmingMemoryMutex.compareAndSet(false, true)) {
-            Log.d("ServiceManager") { "Trimming Memory (level=$level)" }
+        if (trimming.tryLock()) {
+            Log.d("MemoryTrimmingService") { "Trimming memory (underPressure=$underPressure)" }
             try {
-                doTrim(account, otherAccounts, level)
+                doTrim(account, otherAccounts, underPressure)
             } finally {
-                isTrimmingMemoryMutex.getAndSet(false)
+                trimming.unlock()
             }
         }
     }

@@ -48,6 +48,10 @@ class LegacyDesktopAccountImport(
 ) {
     private val marker get() = File(filesDir, MARKER_FILE)
 
+    // Present while an import runs: one cut short (a keyring error on the second of three logins)
+    // leaves the store no longer empty, which alone would skip the rest for good.
+    private val partialMarker get() = File(filesDir, "$MARKER_FILE.partial")
+
     /**
      * Runs on every start, before the first login: opens the keyring's consolidated vault (the one
      * item the legacy app moved every key into, so macOS asks once), imports the legacy logins the
@@ -72,7 +76,11 @@ class LegacyDesktopAccountImport(
     private suspend fun importIfNeeded() {
         if (marker.exists()) return
         try {
-            if (sessionStore.allSavedAccounts().isEmpty()) import()
+            if (partialMarker.exists() || sessionStore.allSavedAccounts().isEmpty()) {
+                partialMarker.createNewFile()
+                import()
+                partialMarker.delete()
+            }
             marker.createNewFile()
         } catch (e: Exception) {
             if (e is CancellationException) throw e
@@ -83,7 +91,9 @@ class LegacyDesktopAccountImport(
 
     private suspend fun import() {
         val legacy = DesktopAccountStorage(keyStorage, homeDir)
-        val accounts = legacy.loadAccounts().filter { !it.isTransient }
+        // A resumed import skips the logins that already made it.
+        val alreadyImported = sessionStore.allSavedAccounts().mapTo(HashSet()) { it.npub }
+        val accounts = legacy.loadAccounts().filter { !it.isTransient && it.npub !in alreadyImported }
         if (accounts.isEmpty()) return
 
         // The keys are in the vault only once it covers their aliases.

@@ -33,14 +33,20 @@ import com.vitorpamplona.amethyst.commons.keystorage.SecureKeyStorage
 import com.vitorpamplona.amethyst.commons.keystorage.SecureKeyStorageVault
 import com.vitorpamplona.amethyst.commons.model.UiSettingsFlow
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
+import com.vitorpamplona.amethyst.commons.model.cache.MemoryTrimmingService
 import com.vitorpamplona.amethyst.commons.model.location.LocationResult
 import com.vitorpamplona.amethyst.commons.model.marmot.MarmotGroupNotifier
 import com.vitorpamplona.amethyst.commons.model.nip03Timestamp.BitcoinExplorerEndpoint
 import com.vitorpamplona.amethyst.commons.model.nip03Timestamp.TorAwareOkHttpOtsResolverBuilder
 import com.vitorpamplona.amethyst.commons.model.nip46Signer.Nip46ConsentPrompter
 import com.vitorpamplona.amethyst.commons.model.preferences.AppPreferenceStores
+import com.vitorpamplona.amethyst.commons.model.preferences.BuzzAttestationStore
+import com.vitorpamplona.amethyst.commons.model.preferences.BuzzChannelStarStore
+import com.vitorpamplona.amethyst.commons.model.preferences.BuzzWorkspaceStore
+import com.vitorpamplona.amethyst.commons.model.preferences.ConcordDirectInviteDeclineStore
 import com.vitorpamplona.amethyst.commons.model.preferences.DrawerSectionCollapsePreferences
 import com.vitorpamplona.amethyst.commons.model.preferences.NamecoinSettingsStore
+import com.vitorpamplona.amethyst.commons.model.preferences.NowPlayingSettingsStore
 import com.vitorpamplona.amethyst.commons.model.preferences.OtsSettingsStore
 import com.vitorpamplona.amethyst.commons.model.preferences.TorSettingsStore
 import com.vitorpamplona.amethyst.commons.model.preferences.UiSettingsStore
@@ -73,6 +79,7 @@ import com.vitorpamplona.amethyst.commons.tor.AccountsTorStateConnector
 import com.vitorpamplona.amethyst.commons.tor.TorRelayState
 import com.vitorpamplona.amethyst.commons.tor.TorSettings
 import com.vitorpamplona.amethyst.desktop.network.runSleepResumeMonitor
+import com.vitorpamplona.amethyst.desktop.service.media.GlobalMediaPlayer
 import com.vitorpamplona.amethyst.desktop.service.scheduledposts.DesktopScheduledPostScheduler
 import com.vitorpamplona.amethyst.desktop.service.scheduledposts.DesktopScheduledPostStore
 import com.vitorpamplona.amethyst.desktop.service.scheduledposts.OsScheduler
@@ -99,12 +106,16 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.onEach
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import okio.Path
@@ -149,6 +160,11 @@ class DesktopAppModules(
             .distinctUntilChanged()
             .onEach { UiSettingsStore(sharedSettingsStore).save(it) }
             .launchIn(applicationIOScope)
+
+    /** Saves the UI preferences now: a change made in the last second before quitting is still in the debounce. */
+    fun flushUiPrefs() {
+        runBlocking { UiSettingsStore(sharedSettingsStore).save(uiPrefs.toSettings()) }
+    }
 
     val torPrefs: TorSettingsStore =
         TorSettingsStore(
@@ -373,6 +389,15 @@ class DesktopAppModules(
             signerPermissionStore = signerPermissionStore,
             nip46ClientStore = nip46ClientStore,
             remoteSignerMetadata = REMOTE_SIGNER_METADATA,
+            // Per account, as on Android: joined Buzz workspaces and starred channels, NIP-OA
+            // attestations, declined Concord invites and the now-playing status settings.
+            startBuzzPersistence = { account ->
+                BuzzWorkspaceStore(sharedSettingsStore, account.scope, account.pubKey, account.buzzWorkspaces)
+                BuzzChannelStarStore(sharedSettingsStore, account.scope, account.pubKey, account.buzzChannelStars)
+                BuzzAttestationStore(sharedSettingsStore, account.scope, account.pubKey, account.buzzAttestation)
+                ConcordDirectInviteDeclineStore(sharedSettingsStore, account.scope, account.pubKey, account.concord.directInviteInbox)
+                NowPlayingSettingsStore(sharedSettingsStore, account.scope, account.pubKey, account.nowPlayingSettings)
+            },
         )
 
     val sessionManager =
@@ -387,6 +412,12 @@ class DesktopAppModules(
         )
 
     private inner class DesktopAccountSessionHooks : AccountSessionHooks {
+        // What one account played must not keep playing, or show in the bar, for the next.
+        override fun onSessionEnding() {
+            GlobalMediaPlayer.stopVideo()
+            GlobalMediaPlayer.stopAudio()
+        }
+
         // A deleted account's parked posts and checkpointed mining jobs must not publish later.
         override suspend fun onAccountRemoved(pubkey: HexKey) {
             scheduledPostStore.removeForAccount(pubkey)
@@ -400,7 +431,41 @@ class DesktopAppModules(
     val accountsTorStateConnector = AccountsTorStateConnector(accountsCache, torEvaluatorFlow, applicationIOScope)
 
     /** Starts the process-wide work: the saved account's session and the PoW jobs left on disk. */
+    private val trimmingService = MemoryTrimmingService(cache)
+
+    private val memoryPressureEvents = MutableSharedFlow<Unit>(extraBufferCapacity = 1)
+
+    /** Fires when the heap runs high; the account ViewModels drop what they can rebuild. */
+    val memoryPressure: Flow<Unit> = memoryPressureEvents
+
+    /**
+     * The JVM has no memory-pressure callback, and a desktop session runs for days, so the heap is
+     * watched instead, as Android does for the trim it is never sent: above [HEAP_HIGH_WATER] the
+     * event cache is pruned and the ViewModels told, at most every [MIN_RECLAIM_INTERVAL_MS].
+     */
+    private fun startHeapWatchdog() {
+        applicationIOScope.launch {
+            var lastRunAt = 0L
+            while (isActive) {
+                delay(HEAP_CHECK_INTERVAL_MS)
+                val runtime = Runtime.getRuntime()
+                val max = runtime.maxMemory()
+                val used = runtime.totalMemory() - runtime.freeMemory()
+                val ratio = used.toDouble() / max
+                val now = System.nanoTime() / 1_000_000
+                if (ratio >= HEAP_HIGH_WATER && now - lastRunAt >= MIN_RECLAIM_INTERVAL_MS) {
+                    lastRunAt = now
+                    Log.w("DesktopAppModules") { "Heap at ${(ratio * 100).toInt()}% (${used shr 20} MB of ${max shr 20} MB): reclaiming" }
+                    memoryPressureEvents.tryEmit(Unit)
+                    trimmingService.run(accountsCache.accounts.value.values, sessionStore.allSavedAccounts())
+                }
+            }
+        }
+    }
+
     fun initiate() {
+        startHeapWatchdog()
+
         // After the computer sleeps, the relay sockets are dead though OkHttp still reports them
         // open: re-dial every relay when a wake is detected.
         applicationIOScope.launch {
@@ -423,6 +488,12 @@ class DesktopAppModules(
     }
 
     companion object {
+        // As on Android (see its AppModules): 70% leaves real headroom; once a minute is cheap; a
+        // prune that frees little must not spin.
+        private const val HEAP_HIGH_WATER = 0.70
+        private const val HEAP_CHECK_INTERVAL_MS = 60_000L
+        private const val MIN_RECLAIM_INTERVAL_MS = 120_000L
+
         /** What a NIP-46 remote signer shows when this app asks to connect. */
         val REMOTE_SIGNER_METADATA = BunkerClientMetadata(name = "Amethyst Desktop", url = "https://amethyst.social")
     }

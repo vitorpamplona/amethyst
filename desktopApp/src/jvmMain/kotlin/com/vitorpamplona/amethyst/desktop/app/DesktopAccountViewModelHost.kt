@@ -41,17 +41,17 @@ import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.emptyFlow
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.onStart
+import java.util.concurrent.ConcurrentHashMap
 
 /** What every account's ViewModel reaches on a desktop: the shared graph in [modules]. */
 class DesktopAccountViewModelHost(
     private val modules: DesktopAppModules,
 ) : AccountViewModelHost {
-    // The JVM has no memory-pressure callback; the caches trim on their own size limits.
-    override val memoryPressure: Flow<Unit> get() = emptyFlow()
+    // The JVM has no memory-pressure callback: this is the heap watchdog's.
+    override val memoryPressure: Flow<Unit> get() = modules.memoryPressure
 
     // The local Blossom cache (BUD-10 bridge on 127.0.0.1) is not probed on desktop yet.
     override val localBlossomCacheAvailable: Flow<Boolean> get() = flowOf(false)
@@ -75,12 +75,18 @@ class DesktopAccountViewModelHost(
 
     override val scheduledPostStore: ScheduledPostStore get() = modules.scheduledPostStore
 
-    override suspend fun hasBackedUpKeys(npub: String): StateFlow<Boolean> = MutableStateFlow(modules.sessionStore.hasBackedUpKeys(npub))
+    // One flow per login, so the backup nudge watching it hears the change and goes away.
+    private val backedUpKeys = ConcurrentHashMap<String, MutableStateFlow<Boolean>>()
+
+    override suspend fun hasBackedUpKeys(npub: String): StateFlow<Boolean> = backedUpKeys[npub] ?: MutableStateFlow(modules.sessionStore.hasBackedUpKeys(npub)).let { backedUpKeys.putIfAbsent(npub, it) ?: it }
 
     override suspend fun setHasBackedUpKeys(
         npub: String,
         value: Boolean,
-    ) = modules.sessionStore.setHasBackedUpKeys(value, npub)
+    ) {
+        modules.sessionStore.setHasBackedUpKeys(value, npub)
+        backedUpKeys[npub]?.value = value
+    }
 
     override val savedAccounts: Flow<Set<HexKey>> =
         modules.sessionStore
@@ -88,7 +94,7 @@ class DesktopAccountViewModelHost(
             .map { toPubKeys(it) }
             .onStart { emit(toPubKeys(modules.sessionStore.allSavedAccounts())) }
 
-    // No OS notifications yet, so there is nothing to dismiss.
+    // Not wired to the desktop notifier yet: a toast for a message read here stays until dismissed.
     override fun dismissNotificationFor(eventId: HexKey) = Unit
 
     override fun openLightningWallet(invoice: String): Boolean = DesktopBrowser.open("lightning:$invoice")

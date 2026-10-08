@@ -67,6 +67,10 @@ class DesktopNavigator {
     var nav by mutableStateOf<INav?>(null)
     var userPubKeyHex by mutableStateOf<String?>(null)
 
+    // The last shortcut run and when it last fired, to tell a held key's auto-repeat from a press.
+    internal var lastShortcut: Key? = null
+    internal var lastShortcutAtMillis = 0L
+
     fun go(route: Route) {
         nav?.nav(route)
     }
@@ -135,7 +139,14 @@ fun DesktopNavigator.handleShortcut(
     if (!event.isCtrlPressed || event.isAltPressed || event.isMetaPressed) return false
     val command = Command.entries.firstOrNull { it.key == event.key && it.shift == event.isShiftPressed } ?: return false
     if (command.needsLogin && nav == null) return false
-    run(command, onQuit)
+    // Holding the chord repeats its key-down every few tens of ms: one press, one command (one
+    // New Post, not a stack of them). Timed rather than tracked to the key-up, which a focus
+    // change can swallow.
+    val now = System.currentTimeMillis()
+    val repeat = event.key == lastShortcut && now - lastShortcutAtMillis < AUTO_REPEAT_WINDOW_MS
+    lastShortcut = event.key
+    lastShortcutAtMillis = now
+    if (!repeat) run(command, onQuit)
     return true
 }
 
@@ -182,5 +193,7 @@ fun FrameWindowScope.DesktopMenuBar(
         }
     }
 }
+
+private const val AUTO_REPEAT_WINDOW_MS = 700L
 
 private const val PROJECT_URL = "https://github.com/vitorpamplona/amethyst"

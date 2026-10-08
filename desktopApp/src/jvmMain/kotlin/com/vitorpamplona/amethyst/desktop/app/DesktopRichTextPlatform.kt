@@ -23,7 +23,6 @@ package com.vitorpamplona.amethyst.desktop.app
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.MutableState
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.LocalUriHandler
 import com.vitorpamplona.amethyst.commons.model.ImmutableListOfLists
 import com.vitorpamplona.amethyst.commons.richtext.RichTextViewerState
 import com.vitorpamplona.amethyst.commons.ui.markdown.RenderMarkdown
@@ -31,11 +30,12 @@ import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.richtext.DefaultRichTextSegmentRenderer
 import com.vitorpamplona.amethyst.commons.ui.richtext.RichTextPlatform
 import com.vitorpamplona.amethyst.commons.ui.richtext.RichTextSegmentRenderer
+import com.vitorpamplona.amethyst.commons.ui.uriToRoute
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 
 /**
  * Desktop rich text: the shared segment renderer, and the shared markdown renderer for long-form
- * content with links opened by the system.
+ * content.
  */
 object DesktopRichTextPlatform : RichTextPlatform {
     override fun segmentRenderer(
@@ -57,8 +57,15 @@ object DesktopRichTextPlatform : RichTextPlatform {
         accountViewModel: AccountViewModel,
         nav: INav,
     ) {
-        val uriHandler = LocalUriHandler.current
-        RenderMarkdown(content = content, onLinkClick = { uriHandler.openUri(it) })
+        // As on Android: a link the app can show (nostr:, njump and the like) opens in the app, the
+        // rest in the system's handler.
+        RenderMarkdown(
+            content = content,
+            onLinkClick = { uri ->
+                val route = uriToRoute(uri, accountViewModel.account)
+                if (route != null) nav.nav(route) else DesktopBrowser.open(uri)
+            },
+        )
     }
 
     @Composable

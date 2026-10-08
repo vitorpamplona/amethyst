@@ -57,13 +57,14 @@ class DesktopScheduledPostScheduler(
      * (Re)start the loop for [accountPubkey], publishing to that account's outbox via
      * [client]. [resolveRelays] returns the account's current NIP-65 write relays;
      * the shared publisher falls back to each post's stored relay URLs when it is
-     * empty. Calling this again (e.g. on account switch) cancels the prior loop.
+     * empty. Calling this again (e.g. on account switch) cancels the prior loop. Returns the new
+     * loop, for [stop] with it.
      */
     fun start(
         client: INostrClient,
         accountPubkey: String,
         resolveRelays: () -> Set<NormalizedRelayUrl>,
-    ) {
+    ): Job {
         stop()
         val publisher =
             ScheduledPostPublisher(
@@ -74,7 +75,7 @@ class DesktopScheduledPostScheduler(
                 onFailed = { post, error -> notifier.notifyFailed(post, error) },
             )
 
-        job =
+        val started =
             scope.launch(Dispatchers.IO) {
                 // Catch-up pass first, then steady-state ticking.
                 drainOnce(publisher, accountPubkey)
@@ -83,11 +84,23 @@ class DesktopScheduledPostScheduler(
                     drainOnce(publisher, accountPubkey)
                 }
             }
+        job = started
+        return started
     }
 
     fun stop() {
         job?.cancel()
         job = null
+    }
+
+    /**
+     * Stops [started], and the scheduler with it only if it is still the running loop. On an account
+     * switch the next account starts its loop before the last one's UI goes away, so a plain [stop]
+     * from the leaving account would end the new account's loop.
+     */
+    fun stop(started: Job) {
+        started.cancel()
+        if (job === started) job = null
     }
 
     private suspend fun drainOnce(

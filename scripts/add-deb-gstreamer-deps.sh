@@ -27,10 +27,16 @@ set -euo pipefail
 DEPENDS='gstreamer1.0-plugins-base, gstreamer1.0-plugins-good'
 RECOMMENDS='gstreamer1.0-libav'
 
+# An unmatched glob reaches us as the literal pattern: fail rather than ship a .deb without the deps.
+if [[ $# -eq 0 ]]; then
+    echo "error: no .deb given" >&2
+    exit 1
+fi
+
 for deb in "$@"; do
     if [[ ! -f "$deb" ]]; then
-        echo "skip: not a file: $deb" >&2
-        continue
+        echo "error: not a file: $deb" >&2
+        exit 1
     fi
 
     work="$(mktemp -d)"
@@ -52,7 +58,7 @@ for deb in "$@"; do
     # jpackage writes Depends as one physical line, possibly empty
     # ("Depends: " when it found nothing to depend on).
     if grep -qE '^Depends:[[:space:]]*[^[:space:]]' "$control"; then
-        sed -i -E "s/^(Depends: .*[^,[:space:]])[[:space:]]*\$/\\1, ${DEPENDS}/" "$control"
+        sed -i -E "s/^(Depends:.*[^,[:space:]])[[:space:]]*\$/\\1, ${DEPENDS}/" "$control"
     elif grep -qE '^Depends:' "$control"; then
         sed -i -E "s/^Depends:.*\$/Depends: ${DEPENDS}/" "$control"
     else
@@ -60,12 +66,14 @@ for deb in "$@"; do
     fi
 
     if grep -qE '^Recommends:' "$control"; then
-        sed -i -E "s/^(Recommends: .*[^,[:space:]])[[:space:]]*\$/\\1, ${RECOMMENDS}/" "$control"
+        sed -i -E "s/^(Recommends:.*[^,[:space:]])[[:space:]]*\$/\\1, ${RECOMMENDS}/" "$control"
     else
         echo "Recommends: ${RECOMMENDS}" >> "$control"
     fi
 
-    dpkg-deb --root-owner-group -Zxz -b "$work/pkg" "$deb" >/dev/null
+    # Built beside it and moved over it, so an interrupted run leaves the original intact.
+    dpkg-deb --root-owner-group -Zxz -b "$work/pkg" "$work/out.deb" >/dev/null
+    mv -f "$work/out.deb" "$deb"
     echo "Added GStreamer deps: $deb"
 
     rm -rf "$work"

@@ -78,6 +78,7 @@ import com.vitorpamplona.quartz.utils.Log
 import com.vitorpamplona.quartz.utils.LogLevel
 import java.awt.Taskbar
 import java.io.File
+import kotlin.concurrent.thread
 import kotlin.system.exitProcess
 
 /**
@@ -99,9 +100,10 @@ fun main(args: Array<String>) {
         System.setProperty("apple.awt.application.appearance", "system")
     }
     setDockIcon()
-    // Read ahead of the first frame, off the UI thread: the OS theme (a shell-out) and the OS fonts.
+    // Read ahead of the first frame, off the UI thread: the OS fonts (an enumeration of every
+    // installed family) alongside the OS theme (a shell-out), which the first frame needs.
+    thread(isDaemon = true, name = "font-warmup") { PlatformFonts.ui }
     PlatformAppearance.startupDark
-    PlatformFonts.ui
 
     val isDebug = System.getProperty("amethyst.debug") == "true"
     Log.minLevel = if (isDebug) LogLevel.DEBUG else LogLevel.INFO
@@ -133,6 +135,7 @@ fun main(args: Array<String>) {
         Thread {
             // Releases the native video and audio engines before the JVM goes.
             GlobalMediaPlayer.shutdown()
+            runCatching { modules.flushUiPrefs() }
             modules.torManager.stopSync()
         },
     )

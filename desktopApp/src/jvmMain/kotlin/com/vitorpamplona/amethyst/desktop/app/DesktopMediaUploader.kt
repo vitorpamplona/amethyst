@@ -215,14 +215,20 @@ class DesktopMediaUploader(
         val encrypted: Boolean,
     )
 
+    /**
+     * Null when the prepared file is over [maxBytes]: checked before it is read, so a video picked
+     * for a NIP-95 note is not loaded (and encrypted, a second copy) only to be refused.
+     */
     private suspend fun preparePayload(
         uri: MediaUri,
         compressionQuality: CompressorQuality,
         stripMetadata: Boolean,
         cipher: AESGCM?,
-    ): Payload =
+        maxBytes: Long = Long.MAX_VALUE,
+    ): Payload? =
         BlossomUploadPipeline.withPreparedFile(fileOf(uri), stripMetadata, compressionQuality.toPreset()) { file, metadata ->
-            val plain = file.readBytes()
+            if (file.length() > maxBytes) return@withPreparedFile null
+            val plain = withContext(Dispatchers.IO) { file.readBytes() }
             if (cipher == null) {
                 Payload(plain, metadata.mimeType, metadata, encrypted = false)
             } else {
@@ -240,8 +246,8 @@ class DesktopMediaUploader(
     ): UploadingState.UploadingFinalState =
         try {
             progress.updateState(0.4, UploadingState.Uploading)
-            val payload = preparePayload(uri, compressionQuality, stripMetadata, cipher)
-            if (payload.bytes.size > NIP95_MAX_BYTES) {
+            val payload = preparePayload(uri, compressionQuality, stripMetadata, cipher, maxBytes = NIP95_MAX_BYTES.toLong())
+            if (payload == null || payload.bytes.size > NIP95_MAX_BYTES) {
                 progress.error(UploadError.MEDIA_TOO_BIG_FOR_NIP95)
             } else {
                 progress.updateState(0.8, UploadingState.Hashing)
@@ -277,7 +283,7 @@ class DesktopMediaUploader(
         cipher: AESGCM?,
     ): UploadingState.UploadingFinalState =
         try {
-            val payload = preparePayload(uri, compressionQuality, stripMetadata, cipher)
+            val payload = preparePayload(uri, compressionQuality, stripMetadata, cipher)!!
             progress.updateState(0.2, UploadingState.Uploading)
             val httpAuth: suspend (String, String, ByteArray?) -> HTTPAuthorizationEvent? =
                 if (forcedSigner != null) {

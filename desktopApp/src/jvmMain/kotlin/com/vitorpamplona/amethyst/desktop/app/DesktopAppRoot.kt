@@ -113,12 +113,13 @@ class DesktopAppRoot(
         // Each account publishes only its own scheduled posts, to its outbox relays.
         DisposableEffect(accountViewModel.account) {
             val account = accountViewModel.account
-            modules.scheduledPostScheduler.start(
-                client = modules.client,
-                accountPubkey = account.signer.pubKey,
-                resolveRelays = { account.outboxRelays.flow.value },
-            )
-            onDispose { modules.scheduledPostScheduler.stop() }
+            val loop =
+                modules.scheduledPostScheduler.start(
+                    client = modules.client,
+                    accountPubkey = account.signer.pubKey,
+                    resolveRelays = { account.outboxRelays.flow.value },
+                )
+            onDispose { modules.scheduledPostScheduler.stop(loop) }
         }
     }
 

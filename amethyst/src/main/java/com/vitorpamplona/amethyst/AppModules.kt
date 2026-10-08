@@ -41,6 +41,7 @@ import com.vitorpamplona.amethyst.commons.model.Account
 import com.vitorpamplona.amethyst.commons.model.NoteState
 import com.vitorpamplona.amethyst.commons.model.UiSettings
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
+import com.vitorpamplona.amethyst.commons.model.cache.MemoryTrimmingService
 import com.vitorpamplona.amethyst.commons.model.nip03Timestamp.BitcoinExplorerEndpoint
 import com.vitorpamplona.amethyst.commons.model.nip03Timestamp.IncomingOtsEventVerifier
 import com.vitorpamplona.amethyst.commons.model.nip03Timestamp.TorAwareOkHttpOtsResolverBuilder
@@ -119,7 +120,6 @@ import com.vitorpamplona.amethyst.service.cast.CastRegistry
 import com.vitorpamplona.amethyst.service.connectivity.ConnectivityManager
 import com.vitorpamplona.amethyst.service.crashreports.CrashReportCache
 import com.vitorpamplona.amethyst.service.crashreports.UnexpectedCrashSaver
-import com.vitorpamplona.amethyst.service.eventCache.MemoryTrimmingService
 import com.vitorpamplona.amethyst.service.images.ImageCacheFactory
 import com.vitorpamplona.amethyst.service.images.ImageDiskCacheReconciler
 import com.vitorpamplona.amethyst.service.images.ImageLoaderSetup
@@ -1516,7 +1516,7 @@ class AppModules(
             // Backgrounding is a natural moment to flush the DNS cache.
             dnsStore.save()
             val loggedIn = accountsCache.accounts.value.values
-            trimmingService.run(loggedIn, LocalPreferences.allSavedAccounts(), level)
+            trimmingService.run(loggedIn, LocalPreferences.allSavedAccounts(), underPressure = level >= ComponentCallbacks2.TRIM_MEMORY_BACKGROUND)
             // Trim in-process caches proportional to OS memory pressure.
             //
             // Since API 34 the OS only ever delivers two trim levels (the foreground
