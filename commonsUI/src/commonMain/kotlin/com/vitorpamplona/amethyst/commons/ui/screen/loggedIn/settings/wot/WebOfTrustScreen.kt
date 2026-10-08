@@ -31,8 +31,10 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
@@ -56,7 +58,6 @@ import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SegmentedButton
 import androidx.compose.material3.SegmentedButtonDefaults
 import androidx.compose.material3.SingleChoiceSegmentedButtonRow
@@ -172,6 +173,7 @@ import com.vitorpamplona.amethyst.commons.resources.wot_use_provider
 import com.vitorpamplona.amethyst.commons.resources.wot_waiting_wifi_body
 import com.vitorpamplona.amethyst.commons.resources.wot_waiting_wifi_title
 import com.vitorpamplona.amethyst.commons.ui.components.rememberViewModel
+import com.vitorpamplona.amethyst.commons.ui.layouts.DisappearingScaffold
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.navigation.topbars.TopBarWithBackButton
 import com.vitorpamplona.amethyst.commons.ui.note.LoadUser
@@ -299,8 +301,12 @@ fun WebOfTrustScreen(
             )
         }
 
-    Scaffold(
+    // Lifts the screen above the keyboard (the hand-written form sits at the bottom) and slides the
+    // top bar away on scroll like the rest of the app; the content pads for it inside its scroll.
+    DisappearingScaffold(
+        isInvertedLayout = false,
         topBar = { TopBarWithBackButton(stringRes(Res.string.web_of_trust), nav) },
+        accountViewModel = accountViewModel,
     ) { padding ->
         WithProviderName(provider, accountViewModel) { providerName ->
             WebOfTrustContent(
@@ -321,7 +327,7 @@ fun WebOfTrustScreen(
                 providerAvatar = { UserPicture(it.pubkey, 40.dp, accountViewModel = accountViewModel, nav = nav) },
                 relayPicker = { onPicked -> RelayUrlEditField(onNewRelay = onPicked, modifier = Modifier.fillMaxWidth(), accountViewModel = accountViewModel, nav = nav) },
                 userPicker = { onPicked -> CopyFromUserField(accountViewModel, onPicked) },
-                modifier = Modifier.padding(padding),
+                contentPadding = padding,
             )
         }
     }
@@ -455,13 +461,20 @@ fun WebOfTrustContent(
     /** Whose view to copy: the app's user search; hands over a pubkey, npub or NIP-05. */
     userPicker: @Composable (onPicked: (String) -> Unit) -> Unit,
     modifier: Modifier = Modifier,
+    /**
+     * The scaffold's bars, padded inside the scroll: the first card starts below the top bar and
+     * the last one clears the bottom, while the content still scrolls under a bar sliding away.
+     */
+    contentPadding: PaddingValues = PaddingValues(0.dp),
     /** Opens "Set up by hand" from the start (previews and screenshots). */
     manualExpanded: Boolean = false,
 ) {
     Column(
         modifier =
             modifier
+                .fillMaxSize()
                 .verticalScroll(rememberScrollState())
+                .padding(contentPadding)
                 .padding(horizontal = 16.dp, vertical = 12.dp),
         verticalArrangement = Arrangement.spacedBy(20.dp),
     ) {
