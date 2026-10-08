@@ -254,6 +254,18 @@ class AdaptiveRelayLimiter(
     }
 
     companion object {
+        /** True when [message] complains about how many subscriptions are open at once. */
+        internal fun isSubscriptionLimitMessage(message: String): Boolean {
+            val t = message.lowercase()
+            return SUB_LIMIT_MARKERS.any { it in t }
+        }
+
+        /** True when [message] complains about how fast subscriptions are sent. */
+        internal fun isRateLimitMessage(message: String): Boolean {
+            val t = message.lowercase()
+            return RATE_LIMIT_MARKERS.any { it in t }
+        }
+
         // A cap on how many subscriptions may be OPEN at once. Fix: fewer
         // concurrent subs (demote the concurrency cap).
         private val SUB_LIMIT_MARKERS =

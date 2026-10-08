@@ -25,12 +25,14 @@ import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.PageRetryBackoff
 import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.PagedFetchResult
 import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.fetchAllPages
+import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.isThrottleMessage
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
 import kotlinx.coroutines.runBlocking
 import java.util.Collections
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
 /**
@@ -424,5 +426,47 @@ class NostrClientFetchAllPagesThrottleTest {
                 content = "+",
                 sig = "0".repeat(128),
             )
+        }
+
+    @Test
+    fun aCloseThatSaysItIsThrottlingIsReAskedEvenWithoutShrinkingPages() =
+        runBlocking {
+            // damus.bostr.online, measured: a proxy sharing damus's per-IP read budget closed a
+            // walk with `read bandwidth budget exhausted ... (retry in 30ms)` right after its
+            // largest page, so there was no shrinking to read it by, and the walk ended there.
+            val recorder = RecordingBackoff()
+            val client = FakePagingRelay(this, FakePagingRelay.corpus(1_500), maxLimit = 500, closeWith = { req -> budget.takeIf { req == 2 } })
+
+            val result = client.fetchAllPages(relay, listOf(Filter(kinds = listOf(1))), idleTimeoutMs = 2_000, throttleBackoff = recorder.backoff) { }
+
+            assertEquals(PagedFetchResult.End.DRAINED, result.end)
+            assertEquals(1_500, result.downloaded)
+            assertEquals(listOf(2_000L), recorder.waits)
+        }
+
+    @Test
+    fun aThrottleMessageIsToldApartFromARefusal() {
+        assertTrue(isThrottleMessage(budget))
+        assertTrue(isThrottleMessage("rate-limited: slow down"))
+        assertTrue(isThrottleMessage("error: too many requests"))
+        assertFalse(isThrottleMessage("blocked: limit too high: 5000 (max 500)"))
+        assertFalse(isThrottleMessage("blocked: too much"))
+        assertFalse(isThrottleMessage("auth-required: members only"))
+    }
+
+    @Test
+    fun aFirstPageSentTwiceDoesNotMakeHonestPagesLookShort() =
+        runBlocking {
+            // relay.jmoose.rocks, measured: 1002 events for a 500-event first page, then honest
+            // pages of 500. Counted with the repeats, the first page set a "largest page" of
+            // 1002 that every later page fell short of, and the walk paused seven times.
+            val recorder = RecordingBackoff()
+            val client = FakePagingRelay(this, FakePagingRelay.corpus(3_000), maxLimit = 500) { req, honest -> if (req == 1) honest + honest else honest }
+
+            val result = client.fetchAllPages(relay, listOf(Filter(kinds = listOf(1))), idleTimeoutMs = 2_000, throttleBackoff = recorder.backoff) { }
+
+            assertEquals(PagedFetchResult.End.DRAINED, result.end)
+            assertEquals(3_000, result.downloaded)
+            assertEquals(emptyList(), recorder.waits, "honest pages are not throttling")
         }
 }

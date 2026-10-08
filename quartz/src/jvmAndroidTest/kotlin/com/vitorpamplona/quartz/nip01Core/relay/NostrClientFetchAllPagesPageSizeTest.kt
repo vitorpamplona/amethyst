@@ -278,6 +278,21 @@ class NostrClientFetchAllPagesPageSizeTest {
     }
 
     @Test
+    fun onlyARefusalOfTheEventLimitLowersIt() {
+        // Seen in the 2026-10 survey of 743 production relays: relay.cxplay.org.
+        assertEquals(1_000, lowerLimitAfterRefusal("invalid: limitation.max_limit 1000", 5_000))
+        // "limit" about something else: halving the event limit would cost a REQ per halving
+        // and leave a needlessly small cap, and fix nothing.
+        assertNull(lowerLimitAfterRefusal("error: number of subscriptions exceeds limit", 5_000), "too many open subscriptions")
+        assertNull(lowerLimitAfterRefusal("blocked: subscription limit reached (20)", 5_000))
+        assertNull(lowerLimitAfterRefusal("error: max subscriptions limit of 10 reached", 5_000))
+        assertNull(lowerLimitAfterRefusal("error: too many filters, limit is 10", 5_000), "too many filters per REQ")
+        assertNull(lowerLimitAfterRefusal("blocked: REQ contains 12 filters, maximum is 10 (limit)", 5_000))
+        assertNull(lowerLimitAfterRefusal("ERROR: rate limit exceeded, slow down", 5_000))
+        assertNull(lowerLimitAfterRefusal("error: request limit exceeded, too many requests", 5_000))
+    }
+
+    @Test
     fun anEventARelayRepeatsOnAPageIsDeliveredAndCountedOnce() =
         runBlocking {
             // purplepag.es, measured: a 500-event page carried 59 to 84 repeats of events already
