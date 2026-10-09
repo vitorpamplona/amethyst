@@ -96,6 +96,8 @@ import com.vitorpamplona.amethyst.commons.richtext.MediaUrlPdf
 import com.vitorpamplona.amethyst.commons.richtext.MediaUrlVideo
 import com.vitorpamplona.amethyst.commons.richtext.localJavaFile
 import com.vitorpamplona.amethyst.commons.ui.components.SlidingCarousel
+import com.vitorpamplona.amethyst.commons.ui.components.ViewerBackButton
+import com.vitorpamplona.amethyst.commons.ui.components.ViewerControlsRow
 import com.vitorpamplona.amethyst.commons.ui.components.getActivityWindow
 import com.vitorpamplona.amethyst.commons.ui.components.getDialogWindow
 import com.vitorpamplona.amethyst.commons.ui.components.rememberViewerControlsVisibility

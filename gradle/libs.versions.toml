@@ -92,6 +92,7 @@ unifiedpush = "3.0.10"
 playServicesCast = "22.3.1"
 vico-charts-compose = "3.3.1"
 zelory = "3.0.1"
+pdfbox = "3.0.8"
 zoomable = "2.16.0"
 composemediaplayer = "0.11.4"
 jcodec = "0.2.5"
@@ -257,6 +258,7 @@ androidx-privacysandbox-ui-client = { group = "androidx.privacysandbox.ui", name
 androidx-privacysandbox-ui-provider = { group = "androidx.privacysandbox.ui", name = "ui-provider", version.ref = "privacysandboxUi" }
 vico-charts-m3 = { group = "com.patrykandpatrick.vico", name = "compose-m3", version.ref = "vico-charts-compose" }
 zelory-image-compressor = { group = "id.zelory", name = "compressor", version.ref = "zelory" }
+pdfbox = { group = "org.apache.pdfbox", name = "pdfbox", version.ref = "pdfbox" }
 zoomable = { group = "net.engawapg.lib", name = "zoomable", version.ref = "zoomable" }
 zxing = { group = "com.google.zxing", name = "core", version.ref = "zxing" }
 androidx-window-core-android = { group = "androidx.window", name = "window-core-android", version.ref = "windowCoreAndroid" }

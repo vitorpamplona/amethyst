@@ -112,6 +112,7 @@ import com.vitorpamplona.amethyst.commons.ui.components.M3ActionRow
 import com.vitorpamplona.amethyst.commons.ui.components.M3ActionSection
 import com.vitorpamplona.amethyst.commons.ui.components.WaitAndDisplay
 import com.vitorpamplona.amethyst.commons.ui.components.mediaSizingModifier
+import com.vitorpamplona.amethyst.commons.ui.components.pdf.PdfPreviewCard
 import com.vitorpamplona.amethyst.commons.ui.components.util.setText
 import com.vitorpamplona.amethyst.commons.ui.loadStringRes
 import com.vitorpamplona.amethyst.commons.ui.note.BlankNote
@@ -128,7 +129,6 @@ import com.vitorpamplona.amethyst.commons.ui.theme.imageModifier
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.amethyst.service.images.BlossomFetcher
 import com.vitorpamplona.amethyst.service.playback.composable.VideoView
-import com.vitorpamplona.amethyst.ui.components.pdf.PdfPreviewCard
 import com.vitorpamplona.amethyst.ui.components.pdf.PdfViewerDialog
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.saveMediaToGallery
 import com.vitorpamplona.quartz.nip01Core.core.toHexKey
@@ -371,10 +371,18 @@ fun ZoomableContentView(
 
         is MediaUrlPdf -> {
             Box(modifier = Modifier.fillMaxWidth().then(boundsTrackingModifier)) {
+                val sharePopupExpanded = remember { mutableStateOf(false) }
+                ShareMediaAction(
+                    accountViewModel = accountViewModel,
+                    popupExpanded = sharePopupExpanded,
+                    content = content,
+                    onDismiss = { sharePopupExpanded.value = false },
+                )
                 PdfPreviewCard(
                     content = content,
                     accountViewModel = accountViewModel,
                     onOpen = { dialogOpen = true },
+                    onLongPress = { sharePopupExpanded.value = true },
                 )
             }
         }

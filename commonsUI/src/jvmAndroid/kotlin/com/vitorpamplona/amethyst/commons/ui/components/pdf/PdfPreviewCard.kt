@@ -18,11 +18,8 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.ui.components.pdf
+package com.vitorpamplona.amethyst.commons.ui.components.pdf
 
-import android.graphics.Bitmap
-import android.graphics.pdf.PdfRenderer
-import android.os.ParcelFileDescriptor
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.combinedClickable
@@ -40,27 +37,34 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.FilterQuality
-import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalWindowInfo
-import androidx.core.graphics.createBitmap
-import com.vitorpamplona.amethyst.Amethyst
+import coil3.SingletonImageLoader
+import coil3.compose.LocalPlatformContext
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.MediaAspectRatioCache
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.pdf_loading
+import com.vitorpamplona.amethyst.commons.resources.pdf_page_count
+import com.vitorpamplona.amethyst.commons.resources.pdf_tap_to_load
 import com.vitorpamplona.amethyst.commons.richtext.MediaUrlPdf
 import com.vitorpamplona.amethyst.commons.service.pdf.PdfFetcher
+import com.vitorpamplona.amethyst.commons.service.pdf.PdfPageRenderer
 import com.vitorpamplona.amethyst.commons.ui.components.ClickableUrlOrBlossom
 import com.vitorpamplona.amethyst.commons.ui.components.FileAttachmentRow
 import com.vitorpamplona.amethyst.commons.ui.components.LoadingAnimation
+import com.vitorpamplona.amethyst.commons.ui.pluralStringRes
+import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.DoubleVertSpacer
 import com.vitorpamplona.amethyst.commons.ui.theme.Size40dp
 import com.vitorpamplona.amethyst.commons.ui.theme.Size6dp
 import com.vitorpamplona.amethyst.commons.ui.theme.innerPostModifier
 import com.vitorpamplona.amethyst.commons.util.extractFilename
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
-import com.vitorpamplona.amethyst.ui.components.ShareMediaAction
 import com.vitorpamplona.quartz.utils.Log
 import kotlinx.coroutines.CancellationException
+import java.io.File
 
 // Hard ceiling on the inline thumbnail bitmap, in pixels. Prevents OOM on very tall/large pages.
 private const val THUMBNAIL_MAX_DIM_PX = 1600
@@ -95,7 +99,7 @@ internal fun previewAspectRatio(pageAspectRatio: Float): Float =
     }
 
 data class PdfPreview(
-    val thumbnail: Bitmap,
+    val thumbnail: ImageBitmap,
     val pageCount: Int,
     val pageWidth: Int,
     val pageHeight: Int,
@@ -113,16 +117,21 @@ private sealed class PdfLoadState {
     data object Failed : PdfLoadState()
 }
 
+/**
+ * A PDF in a note: its first page, filename and page count. A tap calls [onOpen]; a long press
+ * calls [onLongPress] when the platform has something to offer there (Android's share sheet).
+ */
 @Composable
 fun PdfPreviewCard(
     content: MediaUrlPdf,
     accountViewModel: AccountViewModel,
     onOpen: () -> Unit,
+    onLongPress: (() -> Unit)? = null,
 ) {
     val showPdf = remember { mutableStateOf(accountViewModel.settings.showImages()) }
 
     if (showPdf.value) {
-        LoadedPdfPreviewCard(content, accountViewModel, onOpen)
+        LoadedPdfPreviewCard(content, accountViewModel, onOpen, onLongPress)
     } else {
         PlaceholderPdfCard(content) { showPdf.value = true }
     }
@@ -134,9 +143,9 @@ private fun LoadedPdfPreviewCard(
     content: MediaUrlPdf,
     accountViewModel: AccountViewModel,
     onOpen: () -> Unit,
+    onLongPress: (() -> Unit)?,
 ) {
-    val sharePopupExpanded = remember { mutableStateOf(false) }
-
+    val platformContext = LocalPlatformContext.current
     val containerWidthPx = LocalWindowInfo.current.containerSize.width
     val targetWidthPx =
         remember(containerWidthPx) {
@@ -158,7 +167,7 @@ private fun LoadedPdfPreviewCard(
                 PdfFetcher
                     .useSnapshot(
                         url = content.url,
-                        diskCache = { Amethyst.instance.diskCache },
+                        diskCache = { checkNotNull(SingletonImageLoader.get(platformContext).diskCache) },
                         okHttpClient = { url -> accountViewModel.httpClientBuilder.okHttpClientForPreview(url) },
                     ) { snapshot ->
                         renderFirstPage(snapshot.data.toFile(), targetWidthPx)
@@ -177,13 +186,6 @@ private fun LoadedPdfPreviewCard(
             }
     }
 
-    ShareMediaAction(
-        accountViewModel = accountViewModel,
-        popupExpanded = sharePopupExpanded,
-        content = content,
-        onDismiss = { sharePopupExpanded.value = false },
-    )
-
     val filename = remember(content.url) { extractFilename(content.url) }
 
     when (val current = state) {
@@ -201,16 +203,11 @@ private fun LoadedPdfPreviewCard(
                     MaterialTheme.colorScheme.innerPostModifier
                         .combinedClickable(
                             onClick = onOpen,
-                            onLongClick = { sharePopupExpanded.value = true },
+                            onLongClick = onLongPress,
                         ),
             ) {
-                // asImageBitmap() allocates a fresh wrapper on every call and the wrapper compares
-                // by identity, so calling it inline would defeat the remember(bitmap) that Image
-                // uses to hold its BitmapPainter — every recomposition would rebuild the painter.
-                val thumbnail = remember(current.preview.thumbnail) { current.preview.thumbnail.asImageBitmap() }
-
                 Image(
-                    bitmap = thumbnail,
+                    bitmap = current.preview.thumbnail,
                     contentDescription = content.description ?: filename,
                     contentScale = ContentScale.FillWidth,
                     filterQuality = FilterQuality.High,
@@ -220,7 +217,7 @@ private fun LoadedPdfPreviewCard(
                             .aspectRatio(previewAspectRatio(current.preview.aspectRatio)),
                 )
 
-                FilenameRow(filename = filename, subtitle = pageCountLabel(current.preview.pageCount))
+                FilenameRow(filename = filename, subtitle = pluralStringRes(Res.plurals.pdf_page_count, current.preview.pageCount, current.preview.pageCount))
 
                 Spacer(modifier = DoubleVertSpacer)
             }
@@ -240,7 +237,7 @@ private fun PlaceholderPdfCard(
                 .fillMaxWidth()
                 .combinedClickable(onClick = onLoad, onLongClick = onLoad),
     ) {
-        FilenameRow(filename = filename, subtitle = "Tap to load PDF")
+        FilenameRow(filename = filename, subtitle = stringRes(Res.string.pdf_tap_to_load))
         Spacer(modifier = DoubleVertSpacer)
     }
 }
@@ -266,7 +263,7 @@ private fun PdfSkeletonCard(
             }
         }
 
-        FilenameRow(filename = filename, subtitle = "Loading…")
+        FilenameRow(filename = filename, subtitle = stringRes(Res.string.pdf_loading))
         Spacer(modifier = DoubleVertSpacer)
     }
 }
@@ -282,50 +279,20 @@ private fun FilenameRow(
 )
 
 private fun renderFirstPage(
-    file: java.io.File,
+    file: File,
     targetWidthPx: Int,
 ): PdfLoadState =
-    ParcelFileDescriptor.open(file, ParcelFileDescriptor.MODE_READ_ONLY).use { pfd ->
-        PdfRenderer(pfd).use { renderer ->
-            val pageCount = renderer.pageCount
-            if (pageCount <= 0) return@use PdfLoadState.Failed
+    PdfPageRenderer(file).use { renderer ->
+        val pageCount = renderer.pageCount
+        if (pageCount <= 0) return@use PdfLoadState.Failed
 
-            renderer.openPage(0).use { page ->
-                val (renderW, renderH) = cappedRenderSize(page.width, page.height, targetWidthPx)
-                // PdfRenderer requires ARGB_8888; RGB_565 silently produces blank output.
-                val bitmap = createBitmap(renderW, renderH)
-                bitmap.eraseColor(android.graphics.Color.WHITE)
-                page.render(bitmap, null, null, PdfRenderer.Page.RENDER_MODE_FOR_DISPLAY)
-                PdfLoadState.Ready(
-                    PdfPreview(
-                        thumbnail = bitmap,
-                        pageCount = pageCount,
-                        pageWidth = page.width,
-                        pageHeight = page.height,
-                    ),
-                )
-            }
-        }
+        val page = renderer.renderPage(0, targetWidthPx)
+        PdfLoadState.Ready(
+            PdfPreview(
+                thumbnail = page.image,
+                pageCount = pageCount,
+                pageWidth = page.pageWidth,
+                pageHeight = page.pageHeight,
+            ),
+        )
     }
-
-/**
- * Returns the bitmap dimensions to render a PDF page at, scaled so the longest side equals
- * [targetDim] while preserving aspect ratio. Always scales, never returns native size: a PDF
- * page's native width/height are in PostScript points (1/72"), which is far below any useful
- * display resolution. Since PDFs are vector, rendering at a larger target is essentially free
- * and avoids a 72-DPI-blurry bitmap.
- */
-internal fun cappedRenderSize(
-    pageWidth: Int,
-    pageHeight: Int,
-    targetDim: Int,
-): Pair<Int, Int> {
-    if (pageWidth <= 0 || pageHeight <= 0) return 1 to 1
-    val longest = maxOf(pageWidth, pageHeight)
-    val scale = targetDim.toFloat() / longest
-    val w = (pageWidth * scale).toInt().coerceAtLeast(1)
-    val h = (pageHeight * scale).toInt().coerceAtLeast(1)
-    return w to h
-}
-
-internal fun pageCountLabel(pageCount: Int): String = if (pageCount == 1) "1 page" else "$pageCount pages"

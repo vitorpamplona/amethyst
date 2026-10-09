@@ -6771,4 +6771,11 @@
     </plurals>
     <string name="build_show_report">Show report</string>
     <string name="build_hide_report">Hide report</string>
+    <string name="pdf_tap_to_load">Tap to load PDF</string>
+    <string name="pdf_loading">Loading…</string>
+    <string name="pdf_unable_to_open">Unable to open PDF</string>
+    <plurals name="pdf_page_count">
+        <item quantity="one">%1$d page</item>
+        <item quantity="other">%1$d pages</item>
+    </plurals>
 </resources>
