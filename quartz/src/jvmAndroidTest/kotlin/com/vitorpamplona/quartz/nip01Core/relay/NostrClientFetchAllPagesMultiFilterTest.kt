@@ -78,21 +78,37 @@ class NostrClientFetchAllPagesMultiFilterTest {
     @Test
     fun aSearchFilterDoesNotPutTheOthersBackOnOneCursor() =
         runBlocking {
-            val client = FakePagingRelay(this, dense + sparse, maxLimit = 50)
+            // A hit only the search can find: no other filter asks for kind 3.
+            val hit = Event("3".repeat(64), "e".repeat(64), 999_999, 3, emptyArray(), "+", "0".repeat(128))
+            val client = FakePagingRelay(this, dense + sparse + hit, maxLimit = 50)
             val got = mutableListOf<HexKey>()
 
-            client.fetchAllPages(relay, listOf(Filter(kinds = listOf(1)), Filter(kinds = listOf(7)), Filter(kinds = listOf(7), search = "+")), idleTimeoutMs = 2_000) { got.add(it.id) }
+            val result =
+                client.fetchAllPages(relay, listOf(Filter(kinds = listOf(1)), Filter(kinds = listOf(7)), Filter(kinds = listOf(3), search = "+")), idleTimeoutMs = 2_000) { got.add(it.id) }
 
-            assertEquals(320, got.size, "every note and reaction once")
-            assertEquals(320, got.toSet().size)
+            assertTrue(hit.id in got, "the search walk's own hit")
+            assertEquals(321, got.size, "every note, reaction and hit once")
+            assertEquals(321, got.toSet().size)
+            assertEquals(PagedFetchResult.End.UNPAGEABLE, result.end)
+            assertEquals(1, client.requests.count { req -> req.any { it.search != null } }, "a search is asked once, not paged")
             assertEquals(
-                Filter(kinds = listOf(7), search = "+").search,
+                "+",
                 client.requests
-                    .last()
+                    .first()
                     .single()
                     .search,
-                "the search walk runs last, alone",
+                "the search walk runs first",
             )
+        }
+
+    @Test
+    fun aMetLimitBesideASearchStillReportsTheLimit() =
+        runBlocking {
+            val client = FakePagingRelay(this, dense + sparse, maxLimit = 50)
+
+            val result = client.fetchAllPages(relay, listOf(Filter(kinds = listOf(1), limit = 60), Filter(kinds = listOf(7), search = "+")), idleTimeoutMs = 2_000) { }
+
+            assertEquals(PagedFetchResult.End.LIMIT_REACHED, result.end)
         }
 
     @Test

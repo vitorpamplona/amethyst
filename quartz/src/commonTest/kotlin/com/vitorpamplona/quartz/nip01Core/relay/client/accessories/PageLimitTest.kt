@@ -44,6 +44,8 @@ class PageLimitTest {
     @Test
     fun aBoundarySecondThatFillsAPageAsksPastTheCap() {
         assertEquals(1_100, pageLimit(limit = 50_000, delivered = 600, boundaryRepeats = 600, cap = 500, topUpRefused = false))
+        // Exactly a page of repeats is already a full page of duplicates.
+        assertEquals(1_000, pageLimit(limit = 50_000, delivered = 600, boundaryRepeats = 500, cap = 500, topUpRefused = false))
         // A relay that refused the top-up gets the cap, and the second's tail is lost.
         assertEquals(500, pageLimit(limit = 50_000, delivered = 600, boundaryRepeats = 600, cap = 500, topUpRefused = true))
     }

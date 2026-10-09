@@ -234,8 +234,9 @@ class PageRetryBackoff(
  * [PagedFetchResult.end] is the most serious of the walks' (see [severity]), so the result
  * drains only if every filter did; a relay that cannot be reached, or stays silent through a
  * whole walk, is not asked for the remaining filters.
- * Filters with a `search` are walked together, after the others: NIP-50 hits are
- * relevance-ranked and never page, so they get their one page.
+ * Filters with a `search` are walked together, first: NIP-50 hits are relevance-ranked and
+ * never page, so they get their one page, and their ending (UNPAGEABLE) ranks below a met
+ * limit.
  *
  * **A throttled relay is re-asked before it is believed.** relay.damus.io, paged quickly
  * on one connection, shrinks its pages to a handful of events and then EOSEs an EMPTY page
@@ -339,9 +340,13 @@ suspend fun INostrClient.fetchAllPages(
     onEvent: suspend (Event) -> Unit,
 ): PagedFetchResult {
     require(pageSize == null || pageSize > 0) { "pageSize must be positive: $pageSize" }
-    // One walk per pageable filter, and one for the search filters together, last: NIP-50 hits
-    // are relevance-ranked, so those get their single page whatever else is asked.
-    val walks = filters.filter { it.search == null }.map { listOf(it) } + listOfNotNull(filters.filter { it.search != null }.ifEmpty { null })
+    // One walk per pageable filter, and one for the search filters together, first: NIP-50 hits
+    // are relevance-ranked, so those get their single page whatever else is asked. First, too,
+    // because the cross-walk dedup below remembers what a walk delivered that a later filter
+    // also matches, and a search filter matches on its other fields alone (often just kinds):
+    // after a full-history walk that would be most of it, before one page it is at most a page.
+    val searches = filters.filter { it.search != null }
+    val walks = listOfNotNull(searches.ifEmpty { null }) + filters.filter { it.search == null }.map { listOf(it) }
     if (walks.size < 2) {
         return walkPages(relay, filters, idleTimeoutMs, onNewPage, pageSize, throttleBackoff, onEvent)
     }
@@ -369,9 +374,10 @@ suspend fun INostrClient.fetchAllPages(
             }
         if (worst == null || result.end.severity() > worst.end.severity()) worst = result
         // Nothing to ask the next walk on: the relay is unreachable, or connected and silent
-        // (each further walk would wait out its own idle window for nothing).
+        // (each further walk would wait out its own idle window for nothing). A search walk
+        // that found nothing says nothing about the relay, so it never stops the rest.
         if (result.end == PagedFetchResult.End.CANNOT_CONNECT) break
-        if (result.end == PagedFetchResult.End.IDLE && result.downloaded == 0) break
+        if (result.end == PagedFetchResult.End.IDLE && result.downloaded == 0 && walk !== searches) break
     }
     return worst!!.copy(downloaded = downloaded)
 }
@@ -384,8 +390,10 @@ suspend fun INostrClient.fetchAllPages(
 private fun PagedFetchResult.End.severity(): Int =
     when (this) {
         PagedFetchResult.End.DRAINED -> 0
-        PagedFetchResult.End.LIMIT_REACHED -> 1
-        PagedFetchResult.End.UNPAGEABLE -> 2
+        // A search walk always ends here, so it ranks below a met limit, as it did when one walk
+        // carried them all: a limit-bounded walk beside a search still reports LIMIT_REACHED.
+        PagedFetchResult.End.UNPAGEABLE -> 1
+        PagedFetchResult.End.LIMIT_REACHED -> 2
         PagedFetchResult.End.IDLE -> 3
         PagedFetchResult.End.CLOSED -> 4
         PagedFetchResult.End.AUTH_REQUIRED -> 5

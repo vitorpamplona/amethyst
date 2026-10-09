@@ -28,8 +28,9 @@ import com.vitorpamplona.quartz.nip77Negentropy.NegErrMessage
  * What a relay's free-text CLOSED, NOTICE or NEG-ERR message means, in one place.
  *
  * Relays word refusals however their authors chose, so every reading here is a match on
- * wording seen from real relays. Each one is pinned by RelayMessagesTest, which holds the
- * strings as they were captured; a new wording goes there first. Keep the matchers narrow: a
+ * wording seen from real relays. Each one is pinned by RelayMessagesTest (the NIP-77 ones by
+ * NegentropyErrorClassificationTest), which hold the strings as they were captured; a new
+ * wording goes there first. Keep the matchers narrow: a
  * miss costs a timeout or a retry, while a false match can end a query a relay would answer.
  */
 
