@@ -24,6 +24,7 @@ import com.vitorpamplona.amethyst.commons.model.Account
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.navigation.Route
 import com.vitorpamplona.amethyst.commons.model.navigation.routeFor
+import com.vitorpamplona.amethyst.commons.notifications.NotificationRoutes
 import com.vitorpamplona.amethyst.commons.ui.chatroomRoute
 import com.vitorpamplona.amethyst.commons.ui.isChatroomRoute
 import com.vitorpamplona.amethyst.commons.ui.isPrivateNoteRoute

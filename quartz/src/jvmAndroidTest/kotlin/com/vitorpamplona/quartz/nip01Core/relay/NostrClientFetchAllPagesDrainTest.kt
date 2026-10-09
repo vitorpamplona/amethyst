@@ -23,6 +23,7 @@ package com.vitorpamplona.quartz.nip01Core.relay
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.relay.client.EmptyNostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
+import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.PageRetryBackoff
 import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.PagedFetchResult
 import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.fetchAllPages
 import com.vitorpamplona.quartz.nip01Core.relay.client.reqs.SubscriptionListener
@@ -166,8 +167,12 @@ class NostrClientFetchAllPagesDrainTest {
                     // Page two: the relay ends the subscription instead of serving
                     // it — a rate limit, a policy, an unsupported filter. It declined
                     // to answer, which is not the same as answering "nothing".
-                    client.awaitPage(2)
-                    client.listener!!.onClosed("rate-limited: slow down", relay, null)
+                    // A throttle CLOSED is re-asked after a backoff; this relay refuses every
+                    // re-ask too, so the walk must still end CLOSED, never DRAINED.
+                    for (page in 2..5) {
+                        client.awaitPage(page)
+                        client.listener!!.onClosed("rate-limited: slow down", relay, null)
+                    }
                 }
 
             val result =
@@ -175,6 +180,7 @@ class NostrClientFetchAllPagesDrainTest {
                     relay = relay,
                     filters = listOf(Filter(kinds = listOf(1))),
                     idleTimeoutMs = 2_000,
+                    throttleBackoff = PageRetryBackoff(listOf(1L, 1L, 1L)) { },
                 ) { }
             feeder.join()
 

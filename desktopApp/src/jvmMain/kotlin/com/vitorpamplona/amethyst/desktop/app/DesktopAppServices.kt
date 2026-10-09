@@ -85,6 +85,8 @@ class DesktopAppServices(
 
     override val nip46ClientStore: Nip46ClientStore get() = modules.nip46ClientStore
 
+    override suspend fun takeCrashReport(): String? = modules.crashReportCache.loadAndDelete()
+
     override fun blossomClient(serverBaseUrl: String): BlossomBlobClient = modules.blossomClient(serverBaseUrl)
 
     override val blossomMirrorQueue: BlossomMirrorQueue get() = modules.blossomMirrorQueue

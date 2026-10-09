@@ -117,6 +117,7 @@ fun main(args: Array<String>) {
             ?: DesktopAppModules::class.java.`package`?.implementationVersion
             ?: "dev"
 
+    installDesktopCrashReporter(filesDir, version)
     val modules = DesktopAppModules(filesDir, version, isDebug)
 
     // Images go through the role builder, so each URL follows the user's Tor choice for images.

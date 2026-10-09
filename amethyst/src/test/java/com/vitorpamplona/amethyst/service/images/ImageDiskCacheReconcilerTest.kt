@@ -22,6 +22,7 @@ package com.vitorpamplona.amethyst.service.images
 
 import coil3.disk.DiskCache
 import com.vitorpamplona.amethyst.commons.service.image.DeferredDeleteFileSystem
+import com.vitorpamplona.amethyst.commons.service.images.ImageDiskCacheReconciler
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob

@@ -277,45 +277,6 @@ fun RenderAudioWithWaveform(
 )
 
 @Composable
-fun RenderChessGame(
-    note: Note,
-    backgroundColor: MutableState<Color>,
-    accountViewModel: AccountViewModel,
-    nav: INav,
-) = LocalNotePlatform.current.RenderChessGame(
-    note = note,
-    backgroundColor = backgroundColor,
-    accountViewModel = accountViewModel,
-    nav = nav,
-)
-
-@Composable
-fun RenderLiveChessChallenge(
-    note: Note,
-    backgroundColor: MutableState<Color>,
-    accountViewModel: AccountViewModel,
-    nav: INav,
-) = LocalNotePlatform.current.RenderLiveChessChallenge(
-    note = note,
-    backgroundColor = backgroundColor,
-    accountViewModel = accountViewModel,
-    nav = nav,
-)
-
-@Composable
-fun RenderLiveChessGameEnd(
-    note: Note,
-    backgroundColor: MutableState<Color>,
-    accountViewModel: AccountViewModel,
-    nav: INav,
-) = LocalNotePlatform.current.RenderLiveChessGameEnd(
-    note = note,
-    backgroundColor = backgroundColor,
-    accountViewModel = accountViewModel,
-    nav = nav,
-)
-
-@Composable
 fun RenderGitRepositoryEvent(
     baseNote: Note,
     accountViewModel: AccountViewModel,
@@ -398,17 +359,6 @@ fun RenderGitPullRequestUpdateEvent(
     canPreview = canPreview,
     quotesLeft = quotesLeft,
     backgroundColor = backgroundColor,
-    accountViewModel = accountViewModel,
-    nav = nav,
-)
-
-@Composable
-fun RenderCalendarRSVPEvent(
-    baseNote: Note,
-    accountViewModel: AccountViewModel,
-    nav: INav,
-) = LocalNotePlatform.current.RenderCalendarRSVPEvent(
-    baseNote = baseNote,
     accountViewModel = accountViewModel,
     nav = nav,
 )
@@ -516,21 +466,6 @@ fun VoiceMessagePreview(
     isUploading: Boolean = false,
     modifier: Modifier = Modifier,
 ) = LocalNotePlatform.current.VoiceMessagePreview(voiceMetadata, localFile, onRemove, onReRecord, isUploading, modifier)
-
-@Composable
-fun EditPostView(
-    onClose: () -> Unit,
-    edit: Note,
-    versionLookingAt: Note?,
-    accountViewModel: AccountViewModel,
-    nav: INav,
-) = LocalNotePlatform.current.EditPostView(
-    onClose = onClose,
-    edit = edit,
-    versionLookingAt = versionLookingAt,
-    accountViewModel = accountViewModel,
-    nav = nav,
-)
 
 @Composable
 fun rememberUrlPreviewState(

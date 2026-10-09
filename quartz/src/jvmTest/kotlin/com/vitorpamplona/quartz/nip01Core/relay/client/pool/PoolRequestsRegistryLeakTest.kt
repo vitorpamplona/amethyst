@@ -22,7 +22,7 @@ package com.vitorpamplona.quartz.nip01Core.relay.client.pool
 
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.relay.client.reqs.SubscriptionListener
-import com.vitorpamplona.quartz.nip01Core.relay.client.single.IRelayClient
+import com.vitorpamplona.quartz.nip01Core.relay.client.testing.FakeRelayClient
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.ClosedMessage
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.EoseMessage
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.EventMessage
@@ -69,24 +69,6 @@ class PoolRequestsRegistryLeakTest {
             content = "hi",
             sig = "22".repeat(64),
         )
-
-    private class FakeRelayClient(
-        override val url: NormalizedRelayUrl,
-    ) : IRelayClient {
-        override fun connect() = Unit
-
-        override fun needsToReconnect() = false
-
-        override fun connectAndSyncFiltersIfDisconnected(ignoreRetryDelays: Boolean) = Unit
-
-        override fun isConnected() = true
-
-        override fun disconnect() = Unit
-
-        override fun sendIfConnected(cmd: Command) = Unit
-
-        override fun sendOrConnectAndSync(cmd: Command) = Unit
-    }
 
     /** Mimics NostrClient.unsubscribe: remove from BOTH registries, then flush. */
     private fun unsubscribe(

@@ -88,6 +88,7 @@ import com.vitorpamplona.amethyst.cli.commands.cashu.CashuCommands
 import com.vitorpamplona.amethyst.cli.commands.cashu.CashuMintCommands
 import com.vitorpamplona.amethyst.cli.commands.route
 import com.vitorpamplona.amethyst.cli.secrets.SecretStore
+import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.PagingDiagnostics
 import com.vitorpamplona.quartz.utils.Log
 import com.vitorpamplona.quartz.utils.LogLevel
 import kotlinx.coroutines.runBlocking
@@ -137,7 +138,10 @@ fun runCli(argv: Array<String>): Int {
     // rejection, throttle notices) by default so it doesn't drown a command's
     // own output; --verbose / -v restores full DEBUG. Set before dispatch so
     // even startup logging is gated.
-    Log.minLevel = if (argv.any { it == "--verbose" || it == "-v" }) LogLevel.DEBUG else LogLevel.WARN
+    val verbose = argv.any { it == "--verbose" || it == "-v" }
+    Log.minLevel = if (verbose) LogLevel.DEBUG else LogLevel.WARN
+    // --verbose also reports how each relay ordered and repeated a paged walk's events.
+    PagingDiagnostics.enabled = verbose
 
     // Set output mode before dispatch so even argument-parsing errors
     // honour --json.

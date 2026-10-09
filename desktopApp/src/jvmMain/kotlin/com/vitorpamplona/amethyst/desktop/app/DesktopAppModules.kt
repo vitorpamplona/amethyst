@@ -60,6 +60,9 @@ import com.vitorpamplona.amethyst.commons.relayClient.notify.NotifyCoordinator
 import com.vitorpamplona.amethyst.commons.relayClient.reqCommand.RelaySubscriptionsCoordinator
 import com.vitorpamplona.amethyst.commons.relays.nip11RelayInfo.Nip11CachedRetriever
 import com.vitorpamplona.amethyst.commons.service.connectivity.ConnectivityStatus
+import com.vitorpamplona.amethyst.commons.service.crashreports.CrashReportCache
+import com.vitorpamplona.amethyst.commons.service.crashreports.ReportAssembler
+import com.vitorpamplona.amethyst.commons.service.crashreports.UnexpectedCrashSaver
 import com.vitorpamplona.amethyst.commons.service.http.DualHttpClientManager
 import com.vitorpamplona.amethyst.commons.service.http.DualHttpClientManagerForRelays
 import com.vitorpamplona.amethyst.commons.service.http.EncryptionKeyCache
@@ -430,7 +433,9 @@ class DesktopAppModules(
     // the Tor policy can route each one.
     val accountsTorStateConnector = AccountsTorStateConnector(accountsCache, torEvaluatorFlow, applicationIOScope)
 
-    /** Starts the process-wide work: the saved account's session and the PoW jobs left on disk. */
+    /** The last crash's report, offered to the user on the next start as on Android. */
+    val crashReportCache = CrashReportCache(filesDir)
+
     private val trimmingService = MemoryTrimmingService(cache)
 
     private val memoryPressureEvents = MutableSharedFlow<Unit>(extraBufferCapacity = 1)
@@ -463,6 +468,7 @@ class DesktopAppModules(
         }
     }
 
+    /** Starts the process-wide work: the saved account's session and the PoW jobs left on disk. */
     fun initiate() {
         startHeapWatchdog()
 
@@ -497,4 +503,29 @@ class DesktopAppModules(
         /** What a NIP-46 remote signer shows when this app asks to connect. */
         val REMOTE_SIGNER_METADATA = BunkerClientMetadata(name = "Amethyst Desktop", url = "https://amethyst.social")
     }
+}
+
+/**
+ * Keeps a report of any uncaught exception in [filesDir], where [DesktopAppModules.crashReportCache]
+ * hands it to the user on the next start. Installed before the modules are built, so a crash
+ * while building them is kept too.
+ */
+fun installDesktopCrashReporter(
+    filesDir: File,
+    appVersion: String,
+) {
+    Thread.setDefaultUncaughtExceptionHandler(
+        UnexpectedCrashSaver(
+            CrashReportCache(filesDir),
+            ReportAssembler(
+                versionLine = "$appVersion-DESKTOP",
+                deviceRows =
+                    listOf(
+                        "OS" to "${System.getProperty("os.name")} ${System.getProperty("os.version")}",
+                        "Arch" to System.getProperty("os.arch").orEmpty(),
+                        "Java" to "${System.getProperty("java.vendor")} ${System.getProperty("java.version")}",
+                    ),
+            ),
+        ),
+    )
 }
