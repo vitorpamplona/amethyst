@@ -1,0 +1,12 @@
+[Desktop Entry]
+Type=Application
+Name=Amethyst
+GenericName=Nostr Client
+Comment=Join the social network you control
+Categories=Network;InstantMessaging;
+Keywords=nostr;social;decentralized;zaps;lightning;bitcoin;
+Exec=amethyst-desktop
+Icon=com.vitorpamplona.amethyst
+Terminal=false
+StartupWMClass=Amethyst
+X-Flatpak-RenamedFrom=com.vitorpamplona.amethyst.Desktop.desktop;

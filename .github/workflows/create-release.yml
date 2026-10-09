@@ -148,7 +148,7 @@ jobs:
             set -euo pipefail
             sudo apt-get update && sudo apt-get install -y flatpak flatpak-builder
             flatpak remote-add --user --if-not-exists flathub https://dl.flathub.org/repo/flathub.flatpakrepo
-            FDO_VER=$(grep -E "^runtime-version:" desktopApp/packaging/flatpak/com.vitorpamplona.amethyst.Desktop.yml | cut -d"'" -f2)
+            FDO_VER=$(grep -E "^runtime-version:" desktopApp/packaging/flatpak/com.vitorpamplona.amethyst.yml | cut -d"'" -f2)
             flatpak install --user --noninteractive flathub \
               "org.freedesktop.Platform//${FDO_VER}" \
               "org.freedesktop.Sdk//${FDO_VER}"
@@ -296,23 +296,24 @@ jobs:
           set -euo pipefail
           VER="${{ steps.ver.outputs.version }}"
           PKG="desktopApp/packaging/flatpak"
-          APP_ID="com.vitorpamplona.amethyst.Desktop"
+          APP_ID="com.vitorpamplona.amethyst"
           OUT="desktopApp/build/flatpak"
           # AppImage-style arch names for the bundle filename.
           case "${{ matrix.arch }}" in
-            x64)   BUNDLE_ARCH=x86_64  ; GST_TRIPLET=x86_64-linux-gnu   ;;
-            arm64) BUNDLE_ARCH=aarch64 ; GST_TRIPLET=aarch64-linux-gnu  ;;
+            x64)   BUNDLE_ARCH=x86_64  ;;
+            arm64) BUNDLE_ARCH=aarch64 ;;
             *)     echo "::error::unsupported arch for Flatpak: ${{ matrix.arch }}"; exit 1 ;;
           esac
-          # Rewrite the arch-specific GStreamer plugin path in the manifest
-          # (checked-in default is x86_64-linux-gnu). Idempotent — the sed only
-          # matches the original triplet.
-          sed -i "s|/usr/lib/x86_64-linux-gnu/gstreamer-1.0|/usr/lib/${GST_TRIPLET}/gstreamer-1.0|g" \
-            "${PKG}/${APP_ID}.yml"
-          # Inject the AppStream <release> entry for this build (the checked-in
-          # metainfo deliberately carries none — CI is the source of truth).
-          sed -i "s|<releases>|<releases>\n    <release version=\"${VER}\" date=\"$(date -u +%F)\" />|" \
-            "${PKG}/${APP_ID}.metainfo.xml"
+          # The checked-in metainfo carries the release history (Flathub reads
+          # it from the source tree). A tag missing from it gets a bare entry in
+          # this bundle only, plus a warning to fix the source tree. Dry runs
+          # (0.0.0-dryrun) inject nothing, so the history stays in order.
+          if [[ "${GITHUB_EVENT_NAME}" != "workflow_dispatch" ]] && \
+             ! grep -q "<release version=\"${VER}\"" "${PKG}/${APP_ID}.metainfo.xml"; then
+            echo "::warning file=${PKG}/${APP_ID}.metainfo.xml::no <release version=\"${VER}\"> entry; add it to the source tree (RELEASE_OPS.md pre-tag checklist)"
+            sed -i "s|<releases>|<releases>\n    <release version=\"${VER}\" date=\"$(date -u +%F)\" />|" \
+              "${PKG}/${APP_ID}.metainfo.xml"
+          fi
           mkdir -p "$OUT"
           flatpak-builder --user --force-clean --disable-rofiles-fuse \
             --state-dir="${OUT}/.flatpak-builder" \

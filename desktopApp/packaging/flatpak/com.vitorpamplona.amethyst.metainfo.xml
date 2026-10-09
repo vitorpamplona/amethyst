@@ -1,0 +1,127 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<component type="desktop-application">
+  <id>com.vitorpamplona.amethyst</id>
+  <metadata_license>CC0-1.0</metadata_license>
+  <!-- Amethyst is MIT. The Flatpak also ships the bundled JRE (OpenJDK,
+       GPL-2.0 with the Classpath exception) and the libraries listed with
+       rpmLicenseType in desktopApp/build.gradle.kts. -->
+  <project_license>MIT AND LGPL-2.1-or-later AND BSD-2-Clause AND Apache-2.0 AND GPL-2.0-only WITH Classpath-exception-2.0</project_license>
+  <name>Amethyst</name>
+  <summary>Join the social network you control</summary>
+
+  <!-- Up to v1.17.0 the Flatpak bundle shipped as com.vitorpamplona.amethyst.Desktop -->
+  <replaces>
+    <id>com.vitorpamplona.amethyst.Desktop</id>
+  </replaces>
+
+  <description>
+    <p>
+      Amethyst is a client for Nostr, an open protocol for a censorship-resistant
+      social network. There is no central server and no company account: your
+      identity is a cryptographic key, and your posts are signed and sent to the
+      relays you choose.
+    </p>
+    <p>With Amethyst you can:</p>
+    <ul>
+      <li>Read your home feed and post notes, replies, reposts, reactions and quotes</li>
+      <li>Upload photos and videos to the media servers you choose</li>
+      <li>Send end-to-end encrypted direct messages and join group chats</li>
+      <li>Browse articles, pictures, videos, live streams, communities and more</li>
+      <li>Send and receive Bitcoin Lightning zaps</li>
+      <li>Pick and manage the relays that store and deliver your data</li>
+    </ul>
+    <p>
+      Your private key stays in the system keyring. You can also log in with a
+      remote signer (NIP-46) or with a public key in read-only mode.
+    </p>
+  </description>
+
+  <launchable type="desktop-id">com.vitorpamplona.amethyst.desktop</launchable>
+
+  <url type="homepage">https://amethyst.social</url>
+  <url type="bugtracker">https://github.com/vitorpamplona/amethyst/issues</url>
+  <url type="vcs-browser">https://github.com/vitorpamplona/amethyst</url>
+  <url type="translate">https://crowdin.com/project/amethyst-social</url>
+
+  <developer id="com.vitorpamplona">
+    <name>Vitor Pamplona</name>
+  </developer>
+
+  <branding>
+    <color type="primary" scheme_preference="light">#d9c6f0</color>
+    <color type="primary" scheme_preference="dark">#652d80</color>
+  </branding>
+
+  <content_rating type="oars-1.1">
+    <!-- Public posts and DMs are unmoderated chat between users. -->
+    <content_attribute id="social-chat">intense</content_attribute>
+    <!-- Profiles and follow lists are public. -->
+    <content_attribute id="social-contacts">intense</content_attribute>
+    <!-- Talks to relays and media servers. -->
+    <content_attribute id="social-info">mild</content_attribute>
+    <!-- A post can carry an approximate location (geohash) when the user adds one. -->
+    <content_attribute id="social-location">intense</content_attribute>
+    <!-- Zaps send real money (Bitcoin Lightning) to other users. -->
+    <content_attribute id="money-purchasing">intense</content_attribute>
+  </content_rating>
+
+  <categories>
+    <category>Network</category>
+    <category>InstantMessaging</category>
+  </categories>
+
+  <keywords>
+    <keyword>nostr</keyword>
+    <keyword>social</keyword>
+    <keyword>decentralized</keyword>
+    <keyword>zaps</keyword>
+    <keyword>lightning</keyword>
+    <keyword>bitcoin</keyword>
+  </keywords>
+
+  <supports>
+    <control>pointing</control>
+    <control>keyboard</control>
+  </supports>
+
+  <!-- Flathub requires at least one screenshot of the Linux desktop app.
+       Capture the Linux app (ideally 1280x800 PNG), commit it under
+       docs/screenshots/, and list it from a tag- or commit-pinned
+       raw.githubusercontent.com URL:
+  <screenshots>
+    <screenshot type="default">
+      <image>https://raw.githubusercontent.com/vitorpamplona/amethyst/<tag>/docs/screenshots/desktop-home.png</image>
+      <caption>The home feed</caption>
+    </screenshot>
+  </screenshots>
+  -->
+
+  <!-- Newest first. Add the entry before tagging a release
+       (RELEASE_OPS.md); release CI warns when the tag is missing here. -->
+  <releases>
+    <release version="1.17.0" date="2026-10-05">
+      <url type="details">https://github.com/vitorpamplona/amethyst/releases/tag/v1.17.0</url>
+    </release>
+    <release version="1.16.0" date="2026-09-17">
+      <url type="details">https://github.com/vitorpamplona/amethyst/releases/tag/v1.16.0</url>
+    </release>
+    <release version="1.15.2" date="2026-09-12">
+      <url type="details">https://github.com/vitorpamplona/amethyst/releases/tag/v1.15.2</url>
+    </release>
+    <release version="1.15.1" date="2026-09-11">
+      <url type="details">https://github.com/vitorpamplona/amethyst/releases/tag/v1.15.1</url>
+    </release>
+    <release version="1.15.0" date="2026-09-11">
+      <url type="details">https://github.com/vitorpamplona/amethyst/releases/tag/v1.15.0</url>
+    </release>
+    <release version="1.14.0" date="2026-08-22">
+      <url type="details">https://github.com/vitorpamplona/amethyst/releases/tag/v1.14.0</url>
+    </release>
+    <release version="1.13.1" date="2026-07-29">
+      <url type="details">https://github.com/vitorpamplona/amethyst/releases/tag/v1.13.1</url>
+    </release>
+    <release version="1.13.0" date="2026-07-28">
+      <url type="details">https://github.com/vitorpamplona/amethyst/releases/tag/v1.13.0</url>
+    </release>
+  </releases>
+</component>
