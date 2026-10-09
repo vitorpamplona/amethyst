@@ -26,6 +26,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
+import com.vitorpamplona.amethyst.commons.geohash.dal.GeoHashFeedViewModel
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.navigation.Route
 import com.vitorpamplona.amethyst.commons.profile.ui.FollowButton
@@ -46,7 +47,6 @@ import com.vitorpamplona.amethyst.commons.ui.navigation.topbars.SearchTopBarActi
 import com.vitorpamplona.amethyst.commons.ui.navigation.topbars.TopBarExtensibleWithBackButton
 import com.vitorpamplona.amethyst.commons.ui.note.platform.LoadCityName
 import com.vitorpamplona.amethyst.commons.ui.screen.RefresheableFeedView
-import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.geohash.dal.GeoHashFeedViewModel
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.geohash.datasource.GeoHashFilterAssemblerSubscription
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel

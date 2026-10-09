@@ -48,6 +48,9 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.style.TextOverflow
 import coil3.compose.AsyncImage
+import com.vitorpamplona.amethyst.commons.followPacks.feed.dal.FollowPackFeedConversationsFeedViewModel
+import com.vitorpamplona.amethyst.commons.followPacks.feed.dal.FollowPackFeedNewThreadFeedViewModel
+import com.vitorpamplona.amethyst.commons.followPacks.feed.dal.FollowPackMembersUserFeedViewModel
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.AddressableNote
@@ -73,9 +76,6 @@ import com.vitorpamplona.amethyst.commons.ui.note.ReplyReaction
 import com.vitorpamplona.amethyst.commons.ui.note.ZapReaction
 import com.vitorpamplona.amethyst.commons.ui.screen.RefresheableFeedView
 import com.vitorpamplona.amethyst.commons.ui.screen.UserFeedView
-import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.followPacks.feed.dal.FollowPackFeedConversationsFeedViewModel
-import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.followPacks.feed.dal.FollowPackFeedNewThreadFeedViewModel
-import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.followPacks.feed.dal.FollowPackMembersUserFeedViewModel
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.followPacks.feed.datasource.FollowPackFeedFilterAssemblerSubscription
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.HalfHorzSpacer

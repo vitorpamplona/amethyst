@@ -38,6 +38,7 @@ import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.vitorpamplona.amethyst.commons.chats.privateDM.dal.ChatroomFeedViewModel
 import com.vitorpamplona.amethyst.commons.chats.privateDM.history.ChatHistoryGate
 import com.vitorpamplona.amethyst.commons.feeds.FeedContentState
 import com.vitorpamplona.amethyst.commons.feeds.FeedState
@@ -68,7 +69,6 @@ import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.note.LoadAddressableNote
 import com.vitorpamplona.amethyst.commons.ui.note.elements.ObserveRelayListForDMsAndDisplayIfNotFound
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.feed.RefreshingChatroomFeedView
-import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.privateDM.dal.ChatroomFeedViewModel
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.privateDM.datasource.ChatroomFilterAssemblerSubscription
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.privateDM.header.DmReportWarningCard
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.privateDM.send.ChatNewMessageViewModel

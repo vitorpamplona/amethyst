@@ -40,10 +40,10 @@ import com.vitorpamplona.amethyst.commons.ui.feeds.StickToTopOnPrepend
 import com.vitorpamplona.amethyst.commons.ui.layouts.rememberFeedContentPadding
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.note.UserCompose
-import com.vitorpamplona.amethyst.commons.ui.screen.UserFeedViewModel
 import com.vitorpamplona.amethyst.commons.ui.theme.DividerThickness
 import com.vitorpamplona.amethyst.commons.ui.theme.FeedPadding
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
+import com.vitorpamplona.amethyst.commons.viewmodels.UserFeedViewModel
 
 @Composable
 fun RefreshingFeedUserFeedView(

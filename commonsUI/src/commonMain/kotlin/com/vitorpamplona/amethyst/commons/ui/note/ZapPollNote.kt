@@ -77,6 +77,8 @@ import com.vitorpamplona.amethyst.commons.model.User
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
 import com.vitorpamplona.amethyst.commons.model.navigation.Route
 import com.vitorpamplona.amethyst.commons.model.toImmutableListOfLists
+import com.vitorpamplona.amethyst.commons.polls.PollNoteViewModel
+import com.vitorpamplona.amethyst.commons.polls.PollOption
 import com.vitorpamplona.amethyst.commons.relayClient.event.observeNoteZaps
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.error_dialog_zap_error

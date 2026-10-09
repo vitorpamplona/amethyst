@@ -59,6 +59,8 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.CreationExtras
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.commons.feeds.FeedState
+import com.vitorpamplona.amethyst.commons.gitRepo.dal.RepositoryIssuesFeedViewModel
+import com.vitorpamplona.amethyst.commons.gitRepo.dal.RepositoryPatchesFeedViewModel
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbol
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
@@ -105,8 +107,6 @@ import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.gitRepo.RepoTitleBa
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.gitRepo.code.GitCodeTab
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.gitRepo.code.GitReadmeSection
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.gitRepo.computeLanguageBreakdown
-import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.gitRepo.dal.RepositoryIssuesFeedViewModel
-import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.gitRepo.dal.RepositoryPatchesFeedViewModel
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.gitRepo.gitLabelsOf
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.gitRepo.repoHasFetchableClone
 import com.vitorpamplona.amethyst.commons.ui.stringRes

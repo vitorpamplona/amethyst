@@ -61,6 +61,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.vitorpamplona.amethyst.commons.buzz.BuzzDmListViewModel
 import com.vitorpamplona.amethyst.commons.buzz.ui.PresenceDot
 import com.vitorpamplona.amethyst.commons.chats.publicChannels.relayGroup.newestTimelineNote
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
@@ -111,7 +112,6 @@ import com.vitorpamplona.amethyst.commons.ui.platform.LocalAppServices
 import com.vitorpamplona.amethyst.commons.ui.pluralStringRes
 import com.vitorpamplona.amethyst.commons.ui.screen.LocalDisplaySettings
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.buzz.BuzzAddPeopleDialog
-import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.buzz.BuzzDmListViewModel
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.buzz.BuzzImportRow
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.buzz.BuzzWorkspaceOverflowMenu
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.buzz.HiddenDmHeader

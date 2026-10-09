@@ -71,6 +71,11 @@ import com.vitorpamplona.amethyst.commons.model.topNavFeeds.noteBased.author.Aut
 import com.vitorpamplona.amethyst.commons.model.topNavFeeds.noteBased.muted.MutedAuthorsTopNavPerRelayFilter
 import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.SubPurpose
 import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.SubPurposeGroup
+import com.vitorpamplona.amethyst.commons.relays.subscriptions.ActiveSubscriptionsState
+import com.vitorpamplona.amethyst.commons.relays.subscriptions.ActiveSubscriptionsViewModel
+import com.vitorpamplona.amethyst.commons.relays.subscriptions.SubscriptionAccountRow
+import com.vitorpamplona.amethyst.commons.relays.subscriptions.SubscriptionEntityRow
+import com.vitorpamplona.amethyst.commons.relays.subscriptions.SubscriptionPurposeRow
 import com.vitorpamplona.amethyst.commons.relays.ui.SubPurposeLabels
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.active_subs_filters
