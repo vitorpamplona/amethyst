@@ -47,6 +47,8 @@ import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
@@ -55,6 +57,7 @@ import androidx.compose.material3.FilterChip
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
+import androidx.compose.material3.ListItemDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
@@ -80,6 +83,7 @@ import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.text.LinkAnnotation
 import androidx.compose.ui.text.SpanStyle
@@ -190,6 +194,7 @@ import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.settings.SettingsCo
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.settings.SettingsDivider
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.settings.SettingsSection
 import com.vitorpamplona.amethyst.commons.ui.stringRes
+import com.vitorpamplona.amethyst.commons.ui.theme.PopupUpEffect
 import com.vitorpamplona.amethyst.commons.ui.theme.SuggestionListDefaultHeightPage
 import com.vitorpamplona.amethyst.commons.ui.theme.placeholderText
 import com.vitorpamplona.amethyst.commons.util.formatGrouped
@@ -372,16 +377,27 @@ private fun CopyFromUserField(
             modifier = Modifier.fillMaxWidth(),
         )
         if (text.length > 2) {
-            ShowUserSuggestionList(
-                userSuggestions = suggestions,
-                onSelect = { user ->
-                    text = ""
-                    suggestions.reset()
-                    onPicked(user.pubkeyHex)
-                },
-                accountViewModel = accountViewModel,
-                modifier = SuggestionListDefaultHeightPage,
-            )
+            // Hangs off the field like the relay picker's dropdown. The list's own defaults (page-
+            // coloured rows, a gap above) are for floating over a composer; on this card they drew
+            // a detached box with a band of card colour between it and the field.
+            Card(
+                modifier = Modifier.padding(horizontal = 1.dp),
+                elevation = CardDefaults.cardElevation(5.dp),
+                shape = PopupUpEffect,
+            ) {
+                ShowUserSuggestionList(
+                    userSuggestions = suggestions,
+                    onSelect = { user ->
+                        text = ""
+                        suggestions.reset()
+                        onPicked(user.pubkeyHex)
+                    },
+                    accountViewModel = accountViewModel,
+                    modifier = SuggestionListDefaultHeightPage,
+                    itemColors = ListItemDefaults.colors(containerColor = Color.Transparent),
+                    contentPadding = PaddingValues(0.dp),
+                )
+            }
         }
     }
 }
