@@ -21,10 +21,14 @@
 package com.vitorpamplona.amethyst.commons.ui.navigation.navs
 
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.saveable.Saver
+import androidx.compose.runtime.saveable.rememberSaveable
 import com.vitorpamplona.amethyst.commons.model.navigation.Route
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
+import kotlinx.serialization.json.Json
 
 /**
  * The list pane's nav of a list/detail screen: a route [isDetailRoute] accepts opens in the detail
@@ -34,9 +38,9 @@ class TwoPaneNav(
     private val nav: INav,
     override val navigationScope: CoroutineScope,
     private val isDetailRoute: (Route) -> Boolean,
+    /** The chat open in the detail pane; from [rememberDetailPaneSelection]. */
+    val innerNav: MutableState<Route?>,
 ) : INav by nav {
-    val innerNav = mutableStateOf<Route?>(null)
-
     override fun nav(route: Route) {
         if (isDetailRoute(route)) {
             innerNav.value = route
@@ -78,3 +82,20 @@ class DetailPaneNav(
         twoPane.innerNav.value = null
     }
 }
+
+private val selectionJson = Json { ignoreUnknownKeys = true }
+
+/** Saves the open chat as its route's JSON; restores nothing when it can't be read (an app update renamed a route). */
+private val DetailPaneSelectionSaver =
+    Saver<MutableState<Route?>, String>(
+        save = { state -> state.value?.let { selectionJson.encodeToString(Route.serializer(), it) } },
+        restore = { mutableStateOf(runCatching { selectionJson.decodeFromString(Route.serializer(), it) }.getOrNull()) },
+    )
+
+/**
+ * The chat open in a list/detail screen's detail pane. Saveable, not a plain `remember`: the nav host
+ * only keeps saved state for an entry that leaves the composition, so the open chat survives a push
+ * on top of the list (a profile, a member list) and the trip back, as well as configuration changes.
+ */
+@Composable
+fun rememberDetailPaneSelection(): MutableState<Route?> = rememberSaveable(saver = DetailPaneSelectionSaver) { mutableStateOf(null) }

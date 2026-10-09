@@ -26,7 +26,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.key
+import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
@@ -44,6 +44,7 @@ import com.vitorpamplona.amethyst.commons.ui.navigation.topbars.AmethystClickabl
 import com.vitorpamplona.amethyst.commons.ui.navigation.topbars.UserDrawerSearchTopBar
 import com.vitorpamplona.amethyst.commons.ui.platform.AppBottomBar
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.listDetail.ChatDetailPane
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.listDetail.PaneScopedChat
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.listDetail.isChatDetailRoute
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.listDetail.listDetailSplitFraction
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.privateDM.ChatroomView
@@ -57,6 +58,7 @@ fun MessagesTwoPane(
     knownFeedContentState: FeedContentState,
     newFeedContentState: FeedContentState,
     widthSizeClass: WidthClass,
+    selection: MutableState<Route?>,
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
@@ -65,7 +67,7 @@ fun MessagesTwoPane(
     // Every chat the list can open lands in the right pane, not just NIP-17 rooms and NIP-28
     // channels: the list also weaves in NIP-29/Buzz groups, Concord channels, Marmot and cordn
     // groups, geohash and ephemeral chats.
-    val twoPaneNav = remember { TwoPaneNav(nav, scope, ::isChatDetailRoute) }
+    val twoPaneNav = remember(nav, selection) { TwoPaneNav(nav, scope, ::isChatDetailRoute, selection) }
     val detailNav = remember(twoPaneNav) { DetailPaneNav(twoPaneNav) }
 
     // Read on every composition: the pane can cross the Medium/Expanded boundary while this
@@ -117,34 +119,34 @@ fun MessagesTwoPane(
             second = {
                 Box(Modifier.fillMaxSize().padding(padding)) {
                     twoPaneNav.innerNav.value?.let {
-                        when (it) {
-                            is Route.Room -> {
-                                ChatroomView(
-                                    room = it.toKey(),
-                                    accountViewModel = accountViewModel,
-                                    draftMessage = it.message,
-                                    replyToNote = it.replyId,
-                                    editFromDraft = it.draftId,
-                                    expiresDays = it.expiresDays,
-                                    nav = nav,
-                                )
-                            }
+                        PaneScopedChat(it) {
+                            when (it) {
+                                is Route.Room -> {
+                                    ChatroomView(
+                                        room = it.toKey(),
+                                        accountViewModel = accountViewModel,
+                                        draftMessage = it.message,
+                                        replyToNote = it.replyId,
+                                        editFromDraft = it.draftId,
+                                        expiresDays = it.expiresDays,
+                                        nav = nav,
+                                    )
+                                }
 
-                            is Route.PublicChatChannel -> {
-                                PublicChatChannelView(
-                                    channelId = it.id,
-                                    accountViewModel = accountViewModel,
-                                    nav = nav,
-                                )
-                            }
+                                is Route.PublicChatChannel -> {
+                                    PublicChatChannelView(
+                                        channelId = it.id,
+                                        accountViewModel = accountViewModel,
+                                        nav = nav,
+                                    )
+                                }
 
-                            else -> {
-                                // The other chats bring their own top bar (members, pins, join), so
-                                // they render as full screens. This pane already sits below the
-                                // Messages top bar: consume its insets so theirs don't add the status
-                                // bar again.
-                                Box(Modifier.fillMaxSize().consumeWindowInsets(padding)) {
-                                    key(it) {
+                                else -> {
+                                    // The other chats bring their own top bar (members, pins, join), so
+                                    // they render as full screens. This pane already sits below the
+                                    // Messages top bar: consume its insets so theirs don't add the status
+                                    // bar again.
+                                    Box(Modifier.fillMaxSize().consumeWindowInsets(padding)) {
                                         ChatDetailPane(it, accountViewModel, detailNav)
                                     }
                                 }
