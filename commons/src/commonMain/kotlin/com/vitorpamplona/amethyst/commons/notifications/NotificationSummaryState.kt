@@ -56,7 +56,7 @@ import kotlinx.coroutines.flow.map
  * series has one value per day. Headless, so `commonsUI` builds the chart's own model from it.
  */
 @Immutable
-class NotificationChart(
+data class NotificationChart(
     val days: List<Int>,
     val replies: List<Float>,
     val boosts: List<Float>,

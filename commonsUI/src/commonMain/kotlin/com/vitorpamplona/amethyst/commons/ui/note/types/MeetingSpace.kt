@@ -357,7 +357,7 @@ private fun ParentMeetingSpaceLink(
                     .fillMaxWidth()
                     .clickable {
                         nav.nav {
-                            com.vitorpamplona.amethyst.commons.model.navigation.routes.routeFor(
+                            routeFor(
                                 spaceNote,
                                 accountViewModel.account,
                             )

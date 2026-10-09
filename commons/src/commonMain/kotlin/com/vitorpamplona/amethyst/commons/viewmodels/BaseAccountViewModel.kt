@@ -66,6 +66,7 @@ import com.vitorpamplona.amethyst.commons.model.zapraiserStatus
 import com.vitorpamplona.amethyst.commons.notices.Bolt12OfferNotice
 import com.vitorpamplona.amethyst.commons.notices.CashuRedeemNotice
 import com.vitorpamplona.amethyst.commons.notices.ConcordNotice
+import com.vitorpamplona.amethyst.commons.notices.InvoiceNotice
 import com.vitorpamplona.amethyst.commons.notices.NoWalletFound
 import com.vitorpamplona.amethyst.commons.notices.NoteActionNotice
 import com.vitorpamplona.amethyst.commons.notices.NutzapNotice
@@ -74,6 +75,7 @@ import com.vitorpamplona.amethyst.commons.notices.SignerNotice
 import com.vitorpamplona.amethyst.commons.notices.UserNotice
 import com.vitorpamplona.amethyst.commons.notices.UserNoticeResolver
 import com.vitorpamplona.amethyst.commons.notices.UserNoticeSink
+import com.vitorpamplona.amethyst.commons.notices.report
 import com.vitorpamplona.amethyst.commons.relayClient.BlockedRelayFilteringClient
 import com.vitorpamplona.amethyst.commons.relayClient.reqCommand.RelaySubscriptionsCoordinator
 import com.vitorpamplona.amethyst.commons.relays.eventsync.EventSync
@@ -1308,17 +1310,17 @@ open class BaseAccountViewModel(
         // Nutzap events (kind 9321) are public and e-tag the zapped note —
         // on a private rumor that would leak the rumor id to public relays.
         if (baseNote.isPrivateRumor()) {
-            onError.report(NutzapNotice.PrivateNote, baseNote.author)
+            onError.report(noticeResolver, NutzapNotice.PrivateNote, baseNote.author)
             return@launchSigner
         }
         val recipient = baseNote.author?.pubkeyHex
         if (recipient == null) {
-            onError.report(NutzapNotice.NoRecipient, null)
+            onError.report(noticeResolver, NutzapNotice.NoRecipient, null)
             return@launchSigner
         }
         val zappedEvent = baseNote.toEventHint<Event>()
         if (zappedEvent == null) {
-            onError.report(NutzapNotice.NoEvent, baseNote.author)
+            onError.report(noticeResolver, NutzapNotice.NoEvent, baseNote.author)
             return@launchSigner
         }
         try {
@@ -1335,7 +1337,7 @@ open class BaseAccountViewModel(
             // light up automatically. A toast on top would be redundant
             // noise.
         } catch (e: Exception) {
-            onError.report(NutzapNotice.MintFailed(describeMintError(e)), baseNote.author)
+            onError.report(noticeResolver, NutzapNotice.MintFailed(describeMintError(e)), baseNote.author)
         }
     }
 
@@ -1363,7 +1365,7 @@ open class BaseAccountViewModel(
             onSuccess()
         } catch (e: Exception) {
             if (e is CancellationException) throw e
-            onError.report(NutzapNotice.MintFailed(describeMintError(e)), getUserIfExists(recipientPubKey))
+            onError.report(noticeResolver, NutzapNotice.MintFailed(describeMintError(e)), getUserIfExists(recipientPubKey))
         }
     }
 
@@ -1597,21 +1599,6 @@ open class BaseAccountViewModel(
      * backup guard's lock, which the backup collectors hold while diffing large lists.
      */
     fun acceptExternalBackupVersion(conflict: ReplaceableBackupConflict) = viewModelScope.launch(Dispatchers.IO) { account.acceptExternalVersion(conflict) }
-
-    /** Words [notice] for a caller that takes text, with the [user] it is about. */
-    private suspend fun ((String, String, User?) -> Unit).report(
-        notice: UserNotice,
-        user: User?,
-    ) {
-        val text = noticeResolver.resolve(notice)
-        this(text.title, text.message, user)
-    }
-
-    /** Words [notice] for a caller that takes a title and a message. */
-    private suspend fun ((String, String) -> Unit).report(notice: UserNotice) {
-        val text = noticeResolver.resolve(notice)
-        this(text.title, text.message)
-    }
 
     inline fun launchSigner(crossinline action: suspend () -> Unit) =
         viewModelScope.launch(Dispatchers.IO) {
@@ -2733,17 +2720,17 @@ open class BaseAccountViewModel(
                                 account.cashuWalletState.mints.value
                                     .toSet(),
                         )
-                    onDone.report(CashuRedeemNotice.Redeemed(token.totalAmount, meltResult.fees))
+                    onDone.report(noticeResolver, CashuRedeemNotice.Redeemed(token.totalAmount, meltResult.fees))
                 } catch (e: LightningInvoiceResolver.LightningAddressError) {
-                    onDone.report(e.notice)
+                    onDone.report(noticeResolver, e.notice)
                 } catch (e: Exception) {
                     if (e is kotlin.coroutines.cancellation.CancellationException) throw e
-                    onDone.report(CashuRedeemNotice.Failed(e.message))
+                    onDone.report(noticeResolver, CashuRedeemNotice.Failed(e.message))
                 }
             }
         } else {
             viewModelScope.launch {
-                onDone.report(CashuRedeemNotice.NoLightningAddress(account.userProfile().toBestDisplayName()))
+                onDone.report(noticeResolver, CashuRedeemNotice.NoLightningAddress(account.userProfile().toBestDisplayName()))
             }
         }
     }
@@ -2970,10 +2957,10 @@ open class BaseAccountViewModel(
                 // commons' `onUiThread`). This whole block runs on Dispatchers.IO.
                 withContext(Dispatchers.Main) { onNewInvoice(invoice) }
             } catch (e: LightningInvoiceResolver.LightningAddressError) {
-                onError.report(e.notice)
+                onError.report(noticeResolver, e.notice)
             } catch (e: Exception) {
                 if (e is CancellationException) throw e
-                onError("Error", e.message ?: "Unknown error")
+                onError.report(noticeResolver, InvoiceNotice.Unexpected(e.message))
             }
         }
     }

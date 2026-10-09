@@ -20,6 +20,8 @@
  */
 package com.vitorpamplona.amethyst.commons.notices
 
+import com.vitorpamplona.amethyst.commons.model.User
+
 /**
  * Something headless code needs to tell the user: a typed fact about what happened, never
  * text. The GUI apps turn each one into localized text in `commonsUI`
@@ -49,4 +51,23 @@ class ResolvedNotice(
  */
 fun interface UserNoticeResolver {
     suspend fun resolve(notice: UserNotice): ResolvedNotice
+}
+
+/** Words [notice] with [resolver] for a caller that takes a title, a message and the [user] it is about. */
+suspend fun ((String, String, User?) -> Unit).report(
+    resolver: UserNoticeResolver,
+    notice: UserNotice,
+    user: User?,
+) {
+    val text = resolver.resolve(notice)
+    this(text.title, text.message, user)
+}
+
+/** Words [notice] with [resolver] for a caller that takes a title and a message. */
+suspend fun ((String, String) -> Unit).report(
+    resolver: UserNoticeResolver,
+    notice: UserNotice,
+) {
+    val text = resolver.resolve(notice)
+    this(text.title, text.message)
 }

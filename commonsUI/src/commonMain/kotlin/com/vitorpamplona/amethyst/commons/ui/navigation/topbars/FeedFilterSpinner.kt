@@ -43,7 +43,6 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -107,7 +106,6 @@ import com.vitorpamplona.amethyst.commons.resources.read_only_user
 import com.vitorpamplona.amethyst.commons.resources.select_an_option
 import com.vitorpamplona.amethyst.commons.resources.unfollow_geohash
 import com.vitorpamplona.amethyst.commons.ui.components.LoadingAnimation
-import com.vitorpamplona.amethyst.commons.ui.loadStringRes
 import com.vitorpamplona.amethyst.commons.ui.note.platform.LoadCityName
 import com.vitorpamplona.amethyst.commons.ui.platform.AroundMeLocationLabel
 import com.vitorpamplona.amethyst.commons.ui.platform.GeohashLocationPickerDialog
@@ -145,7 +143,7 @@ fun FeedFilterSpinner(
             }
         }
 
-    val currentText = selected?.name?.let { rememberDisplayName(it) } ?: selectAnOption
+    val currentText = selected?.name?.let { displayName(it) } ?: selectAnOption
 
     val accessibilityDescription =
         if (selected != null) {
@@ -324,17 +322,11 @@ private fun FollowLocationToggle(
 }
 
 /**
- * A [Name]'s displayed title. A [LabelName] is a Compose string resource and
- * [Name.nameOrDefault] may be a suspend lookup, so the plain [Name.name] is shown
- * for the frame it takes to arrive.
+ * A [Name]'s displayed title, read on every composition: a [LabelName] is a string resource, and a
+ * note-backed name re-reads its note when the event arrives (the caller observes the note).
  */
 @Composable
-private fun rememberDisplayName(name: Name): String {
-    val fallback = remember(name) { name.name() }
-    return produceState(fallback, name) {
-        value = if (name is LabelName) loadStringRes(name.label.resource()) else name.nameOrDefault()
-    }.value
-}
+private fun displayName(name: Name): String = if (name is LabelName) stringRes(name.label.resource()) else name.name()
 
 private fun TopNavLabel.resource(): StringResource =
     when (this) {
@@ -368,7 +360,7 @@ fun RenderOption(
         is PeopleListName, is CommunityName, is FavoriteAlgoFeedName -> {
             val backed = option as NoteBackedName
             val noteState by observeNote(backed.note, accountViewModel)
-            val name = rememberDisplayName(option)
+            val name = displayName(option)
             val appDefAddress = (option as? FavoriteAlgoFeedName)?.note?.address
             val heartbeatFresh =
                 if (appDefAddress != null) {
@@ -402,7 +394,7 @@ fun RenderOption(
         is InterestSetName,
         -> {
             Text(
-                text = rememberDisplayName(option),
+                text = displayName(option),
                 fontSize = Font14SP,
                 color = MaterialTheme.colorScheme.onSurface,
             )
@@ -555,7 +547,7 @@ private fun GroupSection(
                             color = Color.Transparent,
                         ) {
                             Text(
-                                text = rememberDisplayName(entry.name),
+                                text = displayName(entry.name),
                                 fontSize = 13.sp,
                                 color = MaterialTheme.colorScheme.onSurface,
                                 modifier = Modifier.padding(horizontal = 14.dp, vertical = 7.dp),

@@ -174,7 +174,8 @@ private fun LnurlFailureDetail.txt(): NoticeTxt =
                 ?: raw(reason.ifBlank { null } ?: code.toString())
     }
 
-private fun NwcFailure.txt(): NoticeTxt =
+/** The sentence for a NIP-47 [NwcFailure], shared by every payment surface. */
+fun NwcFailure.txt(): NoticeTxt =
     when (this) {
         NwcFailure.Unreadable -> str(Res.string.wallet_connect_unreadable_response_error)
         is NwcFailure.Refused -> message?.let { raw(it) } ?: str(Res.string.error_parsing_error_message)

@@ -33,6 +33,7 @@ import com.vitorpamplona.amethyst.commons.notices.UserNotice
 import com.vitorpamplona.amethyst.commons.notices.UserNoticeResolver
 import com.vitorpamplona.amethyst.commons.notices.ZapNotice
 import com.vitorpamplona.amethyst.commons.notices.nwcFailure
+import com.vitorpamplona.amethyst.commons.notices.report
 import com.vitorpamplona.amethyst.commons.service.lnurl.LightningInvoiceResolver
 import com.vitorpamplona.amethyst.commons.service.lnurl.LnurlHttpTransport
 import com.vitorpamplona.amethyst.commons.tor.MoneyOpRelayRouting
@@ -67,15 +68,6 @@ class ZapPaymentHandler(
     private val moneyOpRelays: MoneyOpRelayRouting,
     private val notices: UserNoticeResolver,
 ) {
-    /** The rail's callers take text, so each [notice] is worded here, as the failure happens. */
-    private suspend fun ((String, String, User?) -> Unit).report(
-        notice: UserNotice,
-        user: User?,
-    ) {
-        val text = notices.resolve(notice)
-        this(text.title, text.message, user)
-    }
-
     @Immutable
     data class Payable(
         val info: MyZapSplitSetup,
@@ -224,7 +216,7 @@ class ZapPaymentHandler(
                     !routedBolt12 && it.lnAddress.isNullOrBlank()
                 }
             errors.forEach {
-                onError.report(ZapNotice.MissingLnAddress(it.user?.toBestDisplayName()), it.user)
+                onError.report(notices, ZapNotice.MissingLnAddress(it.user?.toBestDisplayName()), it.user)
             }
         }
 
@@ -420,11 +412,11 @@ class ZapPaymentHandler(
                     },
                 )
             } catch (e: LightningInvoiceResolver.LightningAddressError) {
-                onError.report(e.notice, splitZapRequestPair.inputSetup.user)
+                onError.report(notices, e.notice, splitZapRequestPair.inputSetup.user)
                 null
             } catch (e: Exception) {
                 if (e is CancellationException) throw e
-                onError.report(InvoiceNotice.ReceiverFailed(e.message), null)
+                onError.report(notices, InvoiceNotice.ReceiverFailed(e.message), null)
                 null
             }
         }
@@ -460,13 +452,13 @@ class ZapPaymentHandler(
                         account.scope.launch {
                             progress.step()
                             response.nwcFailure()?.let { failure ->
-                                onError.report(ZapNotice.PayInvoiceFailed(failure), payable.info.user)
+                                onError.report(notices, ZapNotice.PayInvoiceFailed(failure), payable.info.user)
                             }
                         }
                     },
                     onTimeout = {
                         account.scope.launch {
-                            onError.report(ZapNotice.PayInvoiceFailed(NwcFailure.TimedOut), payable.info.user)
+                            onError.report(notices, ZapNotice.PayInvoiceFailed(NwcFailure.TimedOut), payable.info.user)
                         }
                     },
                 )
@@ -510,7 +502,7 @@ class ZapPaymentHandler(
         val progress = PaymentProgress(recipients.size, onProgress)
 
         mapNotNullAsync(recipients) { recipient: Bolt12Recipient ->
-            suspend fun reportBolt12Error(notice: UserNotice) = onError.report(notice, recipient.user)
+            suspend fun reportBolt12Error(notice: UserNotice) = onError.report(notices, notice, recipient.user)
 
             account.zaps.sendBolt12Zap(
                 zappedEvent = note.event,
@@ -611,7 +603,7 @@ class ZapPaymentHandler(
                     val response = ClinkDebitPayer.payInvoice(account, moneyOpRelays, pointer, payable.invoice)
                     progress.step()
                     if (response?.isOk() != true) {
-                        onError.report(ClinkDebitFailed(response?.failureDetail()), payable.info.user)
+                        onError.report(notices, ClinkDebitFailed(response?.failureDetail()), payable.info.user)
                     }
                 }
 

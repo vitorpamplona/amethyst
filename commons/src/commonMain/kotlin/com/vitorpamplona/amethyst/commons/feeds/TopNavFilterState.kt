@@ -537,8 +537,6 @@ class TopNavFilterState(
 @Stable
 sealed class Name {
     abstract fun name(): String
-
-    open suspend fun nameOrDefault() = name()
 }
 
 /**
