@@ -65,8 +65,9 @@ import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
  * cards mark themselves read as they become visible here, exactly as they would on the
  * screen, so the new-item dot only lights for items the panel hasn't displayed). When the
  * user has split notifications enabled, the panel shows the Following feed to match the
- * screen's default tab. Tapping the header opens the full screen, which adds the summary
- * chart and the Following/Everyone tabs.
+ * screen's default tab. Under the header it shows today's counts, which expand into the
+ * 7-day chart when tapped. Tapping the header opens the full screen, which adds the
+ * Following/Everyone tabs.
  */
 @Composable
 fun NotificationSidePanel(
@@ -127,6 +128,9 @@ fun NotificationSidePanel(
                     style = MaterialTheme.typography.titleMedium,
                 )
             }
+
+            // Today's counts; tapping them expands the 7-day chart, as on the full screen.
+            SummaryBar(state = accountViewModel.feedStates.notificationSummary)
 
             HorizontalDivider(thickness = DividerThickness)
 
