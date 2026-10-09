@@ -112,7 +112,7 @@ class NewMusicTrackViewModel : ViewModel() {
     val selectedServer = mutableStateOf<ServerName?>(null)
 
     // 0 = Low, 1 = Medium, 2 = High, 3 = UNCOMPRESSED — matches Badge's slider semantics.
-    val mediaQualitySlider = mutableStateOf(1)
+    val mediaQualitySlider = mutableStateOf(CompressorQuality.defaultSliderPosition)
     val stripMetadata = mutableStateOf(true)
 
     /** Stable d-tag for the addressable: null = create-new, non-null = edit-existing. */

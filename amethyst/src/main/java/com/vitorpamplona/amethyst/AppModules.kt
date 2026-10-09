@@ -64,6 +64,7 @@ import com.vitorpamplona.amethyst.commons.model.preferences.TorSettingsStore
 import com.vitorpamplona.amethyst.commons.model.preferences.UiSettingsStore
 import com.vitorpamplona.amethyst.commons.napplet.permissions.NappletPermissionLedger
 import com.vitorpamplona.amethyst.commons.nests.room.activity.NestBridge
+import com.vitorpamplona.amethyst.commons.privacylock.DataStorePrivacyLockSettings
 import com.vitorpamplona.amethyst.commons.relayClient.BlockedRelayFilteringClient
 import com.vitorpamplona.amethyst.commons.relayClient.CacheClientConnector
 import com.vitorpamplona.amethyst.commons.relayClient.RelayProxyClientConnector
@@ -76,6 +77,8 @@ import com.vitorpamplona.amethyst.commons.relayClient.reqCommand.account.Account
 import com.vitorpamplona.amethyst.commons.relayClient.speedLogger.RelaySpeedLogger
 import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.UntaggedFilterWarningClient
 import com.vitorpamplona.amethyst.commons.relayClient.user.UserFinderQueryState
+import com.vitorpamplona.amethyst.commons.relays.health.FileRelayHealthPersistence
+import com.vitorpamplona.amethyst.commons.relays.health.RelayLatencyMonitor
 import com.vitorpamplona.amethyst.commons.relays.health.TorCircuitHealthTracker
 import com.vitorpamplona.amethyst.commons.relays.nip11RelayInfo.Nip11CachedRetriever
 import com.vitorpamplona.amethyst.commons.richtext.CachedAsciiDocToMarkdown
@@ -314,6 +317,16 @@ class AppModules(
     val uiPrefs by lazy {
         Log.d("AppModules", "UiSharedPreferences Init")
         runBlocking { uiPrefsDeferred.await() }
+    }
+
+    private val privacyLockDeferred =
+        applicationIOScope.async {
+            DataStorePrivacyLockSettings(DataStorePrivacyLockSettings.load(sharedSettingsStore), sharedSettingsStore, applicationIOScope)
+        }
+
+    // Blocking load, so a locked app never shows a frame of its content.
+    val privacyLockSettings by lazy {
+        runBlocking { privacyLockDeferred.await() }
     }
 
     // Blocking load of Tor Settings to avoid connection leaks
@@ -836,6 +849,23 @@ class AppModules(
 
     // Captures statistics about relays
     val relayStats = RelayStats(client)
+
+    // How fast each relay answers (a post's OK, a query's EOSE and first result) and which relays
+    // are slow next to the others, for the relay screens. Measured off the relay client's traffic
+    // and kept across restarts; built off the main thread, since it reads its file on creation.
+    val relayLatencyMonitor by lazy {
+        RelayLatencyMonitor(
+            client = client,
+            persistence = FileRelayHealthPersistence(File(appContext.filesDir, RELAY_HEALTH_FILE)),
+            scope = applicationIOScope,
+            isTorRouted = { torEvaluatorFlow.shouldUseTorForRelay(it) },
+            nip11 = { nip11Cache.getFromCache(it) },
+        )
+    }
+
+    init {
+        applicationIOScope.launch { relayLatencyMonitor }
+    }
 
     // Caches the latest LIMITS (rights + limits) each relay advertises.
     val relayLimits = RelayLimitsTracker(client)
@@ -1627,3 +1657,5 @@ private fun androidCrashReportAssembler() =
                 "User" to Build.USER,
             ),
     )
+
+private const val RELAY_HEALTH_FILE = "relay_health.json"

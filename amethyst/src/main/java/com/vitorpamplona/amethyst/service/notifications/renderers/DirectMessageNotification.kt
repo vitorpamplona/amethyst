@@ -28,6 +28,7 @@ import com.vitorpamplona.amethyst.commons.model.privateChats.isSubjectOnlyChatMe
 import com.vitorpamplona.amethyst.commons.notifications.NotificationContent
 import com.vitorpamplona.amethyst.commons.notifications.NotificationRoutes
 import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.app_notification_new_message
 import com.vitorpamplona.amethyst.commons.resources.chat_notification_renamed_conversation_to
 import com.vitorpamplona.amethyst.commons.ui.loadStringRes
 import com.vitorpamplona.amethyst.service.notifications.NotificationCategory
@@ -36,6 +37,7 @@ import com.vitorpamplona.amethyst.service.notifications.NotificationUtils.Conver
 import com.vitorpamplona.amethyst.service.notifications.NotificationUtils.ReplyAction
 import com.vitorpamplona.amethyst.service.notifications.NotificationUtils.postConversation
 import com.vitorpamplona.amethyst.service.notifications.notificationManager
+import com.vitorpamplona.amethyst.service.notifications.privateMessagesLocked
 import com.vitorpamplona.quartz.nip04Dm.messages.EncryptedDmEvent
 import com.vitorpamplona.quartz.nip14Subject.subject
 import com.vitorpamplona.quartz.nip17Dm.base.ChatroomKey
@@ -92,8 +94,11 @@ object DirectMessageNotification {
         if (!account.isKnownChatroom(chatRoom, author.pubkeyHex)) return
         // Decrypt (NIP-04) or read (NIP-17) the body once — never re-decrypt on
         // each enrichment tick, which could hammer a remote signer.
+        val locked = privateMessagesLocked()
         val body =
-            if (decrypt) {
+            if (locked) {
+                loadStringRes(Res.string.app_notification_new_message)
+            } else if (decrypt) {
                 NotificationContent.decryptContent(chatNote, account.signer) ?: return
             } else {
                 val event = chatNote.event ?: return
@@ -115,7 +120,7 @@ object DirectMessageNotification {
         // turned message content off, because publishing it puts the counterparty's name and
         // avatar in the launcher — see [ConversationShortcuts].
         val conversation =
-            if (account.settings.showMessagesInNotifications.value) {
+            if (account.settings.showMessagesInNotifications.value && !locked) {
                 Conversation(
                     id = NotificationRoutes.chatroomShortcutId(chatRoom, accountNpub),
                     label = roomLabel(chatRoom, author),
@@ -124,7 +129,7 @@ object DirectMessageNotification {
                 null
             }
         val replyAction =
-            if (decrypt) {
+            if (decrypt || locked) {
                 null // NIP-04 is read-only in the tray
             } else {
                 ReplyAction.Dm(accountNpub = accountNpub, chatroomMembers = chatRoom.users.joinToString(","))

@@ -52,7 +52,9 @@ import androidx.compose.ui.graphics.takeOrElse
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
+import com.vitorpamplona.amethyst.commons.ui.privacylock.LocalUserActivity
 import com.vitorpamplona.amethyst.commons.ui.theme.placeholderText
+import kotlinx.coroutines.flow.drop
 
 /**
  * Outlined sibling of [ThinPaddingTextField]. Wraps the new [TextFieldState] API
@@ -97,6 +99,14 @@ fun OutlinedThinPaddingTextField(
 ) {
     @Suppress("NAME_SHADOWING")
     val interactionSource = interactionSource ?: remember { MutableInteractionSource() }
+
+    // Typing counts as activity for the privacy lock's idle timer.
+    val onActivity = LocalUserActivity.current
+    LaunchedEffect(state, onActivity) {
+        snapshotFlow { state.text }
+            .drop(1)
+            .collect { onActivity() }
+    }
 
     if (onTextChanged != null) {
         val callback by rememberUpdatedState(onTextChanged)

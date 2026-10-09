@@ -45,8 +45,13 @@ import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.input.pointer.PointerEventPass
+import androidx.compose.ui.input.pointer.PointerEventType
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.layout.Layout
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalWindowInfo
+import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.commons.model.navigation.Route
@@ -61,6 +66,7 @@ import com.vitorpamplona.amethyst.commons.ui.layouts.NotificationPanelWidthRange
 import com.vitorpamplona.amethyst.commons.ui.layouts.PaneSplitter
 import com.vitorpamplona.amethyst.commons.ui.layouts.fitPaneWidths
 import com.vitorpamplona.amethyst.commons.ui.navigation.bottombars.AppNavigationRail
+import com.vitorpamplona.amethyst.commons.ui.navigation.deck.DeckFocus
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.Nav
 import com.vitorpamplona.amethyst.commons.ui.platform.LocalAppServices
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.notifications.NotificationSidePanel
@@ -88,6 +94,8 @@ fun AppShellLayout(
     permanentDrawerContent: @Composable (openAccountSwitcher: () -> Unit) -> Unit,
     accountSwitcherContent: @Composable () -> Unit,
     suspendEdgeSwipe: () -> Boolean = { false },
+    /** The deck's columns, beside the main screen in place of the notification panel; null when the deck is off. */
+    deck: (@Composable (Modifier) -> Unit)? = null,
     content: @Composable () -> Unit,
 ) {
     val scope = rememberCoroutineScope()
@@ -130,6 +138,12 @@ fun AppShellLayout(
             }
         }
 
+    // The deck moves between the same shells, and its columns' histories and ViewModels must move
+    // with it, not be rebuilt when the window crosses a tier.
+    val currentDeck by rememberUpdatedState(deck)
+    val movableDeck = remember { movableContentOf { modifier: Modifier -> currentDeck?.invoke(modifier) } }
+    val deckSlot: (@Composable (Modifier) -> Unit)? = if (deck != null) movableDeck else null
+
     val docked = LocalScreenLayout.current.navigationStyle == NavigationStyle.PERMANENT_DRAWER
 
     // Publish docked-ness on the Nav so drawer consumers (openDrawer, edge swipes, the
@@ -144,9 +158,9 @@ fun AppShellLayout(
     }
 
     if (docked) {
-        PermanentDrawerShell(accountViewModel, nav, { permanentDrawerContent(openSheetFunction) }, movableContent)
+        PermanentDrawerShell(accountViewModel, nav, { permanentDrawerContent(openSheetFunction) }, deckSlot, movableContent)
     } else {
-        ModalDrawerShell(accountViewModel, nav, { drawerContent(openSheetFunction) }, suspendEdgeSwipe, movableContent)
+        ModalDrawerShell(accountViewModel, nav, { drawerContent(openSheetFunction) }, suspendEdgeSwipe, deckSlot, movableContent)
     }
 
     // Sheet content
@@ -180,6 +194,7 @@ private fun ModalDrawerShell(
     nav: Nav,
     drawer: @Composable () -> Unit,
     suspendEdgeSwipe: () -> Boolean,
+    deck: (@Composable (Modifier) -> Unit)?,
     content: @Composable () -> Unit,
 ) {
     // Derived, so a window being resized (a desktop drag, a foldable mid-unfold) recomposes this shell
@@ -225,6 +240,7 @@ private fun ModalDrawerShell(
                     nav = nav,
                     resizableLeading = false,
                     leading = { AppNavigationRail(nav, accountViewModel) },
+                    deck = deck,
                     content = content,
                 )
             } else {
@@ -250,11 +266,13 @@ private fun MultiPaneShell(
     nav: Nav,
     resizableLeading: Boolean,
     leading: @Composable () -> Unit,
+    deck: (@Composable (Modifier) -> Unit)?,
     content: @Composable () -> Unit,
 ) {
     val paneWidthPrefs = LocalAppServices.current.paneWidthPrefs
     val widths by paneWidthPrefs.flow.collectAsStateWithLifecycle()
-    val showPanel = notificationPanelShown(nav)
+    // The deck takes the panel's place, so no room is kept for it.
+    val showPanel = deck == null && notificationPanelShown(nav)
     val windowWidth =
         with(LocalDensity.current) {
             LocalWindowInfo.current.containerSize.width
@@ -272,18 +290,66 @@ private fun MultiPaneShell(
             VerticalDivider(thickness = DividerThickness)
         }
 
-        // The content takes back the window-controls inset itself (see AppShellLayout).
-        CenterPane(Modifier.weight(1f), content)
+        if (deck != null) {
+            // The deck takes the notification panel's place. Like the panel, its columns take back
+            // the window-controls inset that only the leading pane sits under.
+            DeckSplit(
+                Modifier.weight(1f).fillMaxHeight(),
+                { CenterPane(Modifier.unfocusDeckOnPress(), content) },
+                { Box(Modifier.consumeWindowInsets(PaddingValues(top = LocalTitleBarOverlay.current))) { deck(Modifier) } },
+            )
+        } else {
+            // The content takes back the window-controls inset itself (see AppShellLayout).
+            CenterPane(Modifier.weight(1f), content)
 
-        // Only the leading pane sits under window controls drawn over the app (macOS's traffic
-        // lights): the panel to the right takes that inset back, so its header reaches the
-        // window's edge instead of growing a band under an empty title bar.
-        if (showPanel) {
-            Row(Modifier.consumeWindowInsets(PaddingValues(top = LocalTitleBarOverlay.current))) {
-                // Dragging the line left widens the panel.
-                PaneSplitter(onDrag = { delta -> paneWidthPrefs.setNotifications((fitted.notifications - delta).coerceIn(NotificationPanelWidthRange)) })
-                NotificationSidePanel(accountViewModel, nav, Modifier.width(fitted.notifications.dp))
+            // Only the leading pane sits under window controls drawn over the app (macOS's traffic
+            // lights): the panel to the right takes that inset back, so its header reaches the
+            // window's edge instead of growing a band under an empty title bar.
+            if (showPanel) {
+                Row(Modifier.consumeWindowInsets(PaddingValues(top = LocalTitleBarOverlay.current))) {
+                    // Dragging the line left widens the panel.
+                    PaneSplitter(onDrag = { delta -> paneWidthPrefs.setNotifications((fitted.notifications - delta).coerceIn(NotificationPanelWidthRange)) })
+                    NotificationSidePanel(accountViewModel, nav, Modifier.width(fitted.notifications.dp))
+                }
             }
+        }
+    }
+}
+
+/** A press in the main screen takes the focus back from the deck's columns (see [DeckFocus]). */
+private fun Modifier.unfocusDeckOnPress() =
+    pointerInput(Unit) {
+        awaitPointerEventScope {
+            while (true) {
+                val event = awaitPointerEvent(PointerEventPass.Initial)
+                if (event.type == PointerEventType.Press) DeckFocus.columnId = null
+            }
+        }
+    }
+
+/** How narrow the deck may squeeze the main screen; past this, the columns scroll. */
+private val DeckMainPaneMinWidth = 420.dp
+
+/**
+ * The main screen and the deck side by side: the deck takes what it needs up to all but
+ * [DeckMainPaneMinWidth], the main screen the rest. A plain layout rather than BoxWithConstraints,
+ * whose subcomposition the main screen's movable content would have to move into and out of.
+ */
+@Composable
+private fun DeckSplit(
+    modifier: Modifier,
+    center: @Composable () -> Unit,
+    deck: @Composable () -> Unit,
+) {
+    Layout(contents = listOf(center, deck), modifier = modifier) { (centerMeasurables, deckMeasurables), constraints ->
+        val height = constraints.maxHeight
+        val deckMax = (constraints.maxWidth - DeckMainPaneMinWidth.roundToPx()).coerceAtLeast(0)
+        val deckPlaceables = deckMeasurables.map { it.measure(Constraints(maxWidth = deckMax, minHeight = height, maxHeight = height)) }
+        val centerWidth = constraints.maxWidth - (deckPlaceables.maxOfOrNull { it.width } ?: 0)
+        val centerPlaceables = centerMeasurables.map { it.measure(Constraints.fixed(centerWidth, height)) }
+        layout(constraints.maxWidth, height) {
+            centerPlaceables.forEach { it.place(0, 0) }
+            deckPlaceables.forEach { it.place(centerWidth, 0) }
         }
     }
 }
@@ -312,6 +378,7 @@ private fun PermanentDrawerShell(
     accountViewModel: AccountViewModel,
     nav: Nav,
     drawer: @Composable () -> Unit,
+    deck: (@Composable (Modifier) -> Unit)?,
     content: @Composable () -> Unit,
 ) {
     MultiPaneShell(
@@ -319,6 +386,7 @@ private fun PermanentDrawerShell(
         nav = nav,
         resizableLeading = true,
         leading = drawer,
+        deck = deck,
         content = content,
     )
 }

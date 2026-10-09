@@ -21,10 +21,10 @@
 package com.vitorpamplona.amethyst.commons.privacylock
 
 /**
- * Routes gated by the privacy lock.
+ * What the privacy lock can guard: the whole app, the private messages, or the wallet.
  *
- * A single master `PrivacyLockSettings.lockEnabled` flag protects all scopes
- * together, but each scope keeps its own [PrivacyLockState] so that unlock,
- * idle-timer, and leave-route transitions apply independently per route.
+ * Each scope has its own switch ([PrivacyLockSettings.enabledFor]) and its own
+ * [PrivacyLockState], so unlock, idle-timer and leave-route transitions apply independently.
+ * [KeyBackup] guards revealing the secret key while any lock is on.
  */
-enum class LockScope { Messages, Wallet, KeyBackup }
+enum class LockScope { App, Messages, Wallet, KeyBackup }

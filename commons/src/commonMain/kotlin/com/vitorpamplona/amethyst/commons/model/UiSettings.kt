@@ -67,6 +67,8 @@ data class UiSettings(
     val showPayToZapChip: Boolean = true,
     // The browser omnibox's search engine, by [SearchEngines] id. Unknown ids fall back to the default.
     val searchEngine: String = SearchEngines.DEFAULT.id,
+    // Extra columns beside the main screen on wide windows (desktop, tablets, Chromebooks). Off by default.
+    val deckMode: Boolean = false,
 )
 
 enum class ThemeType(

@@ -29,6 +29,7 @@ import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.commons.account.AccountSessionManager
 import com.vitorpamplona.amethyst.commons.model.Account
 import com.vitorpamplona.amethyst.commons.model.navigation.favoriteIds
+import com.vitorpamplona.amethyst.commons.privacylock.PrivacyLockSettings
 import com.vitorpamplona.amethyst.commons.service.resourceusage.ScreenTimeIntegrator
 import com.vitorpamplona.amethyst.commons.ui.app.AppRoot
 import com.vitorpamplona.amethyst.commons.ui.layouts.ScreenLayoutSpec
@@ -131,4 +132,6 @@ object AndroidAppRoot : AppRoot {
 
     /** Feeds the resource-usage ledger with time-per-screen: the route's name only, never which profile. */
     override fun onScreen(serialName: String?) = Amethyst.instance.screenTime.onScreen(ScreenTimeIntegrator.screenNameOf(serialName))
+
+    override val privacyLockSettings: PrivacyLockSettings get() = Amethyst.instance.privacyLockSettings
 }

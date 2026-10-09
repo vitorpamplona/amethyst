@@ -22,6 +22,7 @@ package com.vitorpamplona.amethyst.commons.viewmodels
 
 import com.vitorpamplona.amethyst.commons.audio.AnonymizedResult
 import com.vitorpamplona.amethyst.commons.model.location.DeviceLocation
+import com.vitorpamplona.amethyst.commons.relays.health.RelayHealthStore
 import com.vitorpamplona.amethyst.commons.scheduledposts.ScheduledPostStore
 import com.vitorpamplona.amethyst.commons.service.ai.WritingAssistant
 import com.vitorpamplona.amethyst.commons.service.lnurl.LnurlHttpTransport
@@ -60,6 +61,9 @@ interface AccountViewModelHost {
 
     /** Per-relay connection statistics, which order the relays a crawl visits. */
     val relayStats: RelayStats
+
+    /** How fast each relay answers and which ones are slow, for the relay screens; null where not measured. */
+    val relayHealth: RelayHealthStore? get() = null
 
     /** Opens sockets for the throwaway clients crawls use (Event Sync, Cashu discovery). */
     val websocketBuilder: WebsocketBuilder

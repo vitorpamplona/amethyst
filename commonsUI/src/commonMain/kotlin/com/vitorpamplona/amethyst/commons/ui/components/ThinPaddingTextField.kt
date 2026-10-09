@@ -55,7 +55,9 @@ import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.commons.service.uploads.MediaUri
 import com.vitorpamplona.amethyst.commons.ui.components.imageContentReceiver
+import com.vitorpamplona.amethyst.commons.ui.privacylock.LocalUserActivity
 import com.vitorpamplona.amethyst.commons.ui.theme.placeholderText
+import kotlinx.coroutines.flow.drop
 
 // COPIED FROM TEXT FIELD
 // The only change is the contentPadding below
@@ -107,6 +109,14 @@ fun ThinPaddingTextField(
 ) {
     @Suppress("NAME_SHADOWING")
     val interactionSource = interactionSource ?: remember { MutableInteractionSource() }
+
+    // Typing counts as activity for the privacy lock's idle timer.
+    val onActivity = LocalUserActivity.current
+    LaunchedEffect(state, onActivity) {
+        snapshotFlow { state.text }
+            .drop(1)
+            .collect { onActivity() }
+    }
 
     if (onTextChanged != null) {
         val callback by rememberUpdatedState(onTextChanged)

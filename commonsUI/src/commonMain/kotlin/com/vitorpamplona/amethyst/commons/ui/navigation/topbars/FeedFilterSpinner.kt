@@ -60,6 +60,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import com.vitorpamplona.amethyst.commons.feeds.CommunityName
+import com.vitorpamplona.amethyst.commons.feeds.CustomFeedName
 import com.vitorpamplona.amethyst.commons.feeds.FavoriteAlgoFeedName
 import com.vitorpamplona.amethyst.commons.feeds.FeedDefinition
 import com.vitorpamplona.amethyst.commons.feeds.GeoHashName
@@ -77,10 +78,12 @@ import com.vitorpamplona.amethyst.commons.model.topNavFeeds.TopFilter
 import com.vitorpamplona.amethyst.commons.relayClient.event.observeNote
 import com.vitorpamplona.amethyst.commons.relayClient.user.observeUserIsFollowingGeohash
 import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.custom_feeds_manage
 import com.vitorpamplona.amethyst.commons.resources.dvm_offline
 import com.vitorpamplona.amethyst.commons.resources.feed_filter_select_an_option
 import com.vitorpamplona.amethyst.commons.resources.feed_filter_selected
 import com.vitorpamplona.amethyst.commons.resources.feed_group_communities
+import com.vitorpamplona.amethyst.commons.resources.feed_group_custom
 import com.vitorpamplona.amethyst.commons.resources.feed_group_dvms
 import com.vitorpamplona.amethyst.commons.resources.feed_group_feeds
 import com.vitorpamplona.amethyst.commons.resources.feed_group_hashtags
@@ -340,6 +343,7 @@ private fun TopNavLabel.resource(): StringResource =
         TopNavLabel.MUTE_LIST -> Res.string.follow_list_mute_list
         TopNavLabel.MINE -> Res.string.follow_list_mine
         TopNavLabel.ALL_FAVORITE_DVMS -> Res.string.follow_list_all_favorite_dvms
+        TopNavLabel.MANAGE_CUSTOM_FEEDS -> Res.string.custom_feeds_manage
     }
 
 @Composable
@@ -392,6 +396,7 @@ fun RenderOption(
         is LabelName,
         is RelayName,
         is InterestSetName,
+        is CustomFeedName,
         -> {
             Text(
                 text = displayName(option),
@@ -406,6 +411,7 @@ private enum class FeedGroup(
     val labelRes: StringResource,
 ) {
     FEEDS(Res.string.feed_group_feeds),
+    CUSTOM(Res.string.feed_group_custom),
     RELAYS(Res.string.feed_group_relays),
     HASHTAGS(Res.string.feed_group_hashtags),
     INTEREST_SETS(Res.string.feed_group_interest_sets),
@@ -445,6 +451,10 @@ private fun FeedDefinition.group(): FeedGroup =
             FeedGroup.INTEREST_SETS
         }
 
+        is CustomFeedName -> {
+            FeedGroup.CUSTOM
+        }
+
         is LabelName -> {
             when (code) {
                 is TopFilter.AroundMe -> FeedGroup.LOCATIONS
@@ -452,6 +462,7 @@ private fun FeedDefinition.group(): FeedGroup =
                 is TopFilter.Global -> FeedGroup.RELAYS
                 is TopFilter.Selected -> FeedGroup.RELAYS
                 is TopFilter.AllFavoriteAlgoFeeds -> FeedGroup.DVMS
+                is TopFilter.CustomFeed -> FeedGroup.CUSTOM
                 else -> FeedGroup.FEEDS
             }
         }
@@ -628,6 +639,10 @@ private fun FeedIcon(
 
             is TopFilter.AllFavoriteAlgoFeeds -> {
                 MaterialSymbols.AutoAwesome
+            }
+
+            is TopFilter.CustomFeed -> {
+                if (item.route != null) MaterialSymbols.Settings else MaterialSymbols.Tune
             }
 
             else -> {

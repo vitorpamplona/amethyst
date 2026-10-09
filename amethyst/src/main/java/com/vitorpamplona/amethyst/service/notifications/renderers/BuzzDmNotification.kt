@@ -34,6 +34,7 @@ import com.vitorpamplona.amethyst.service.notifications.NotificationEnricher
 import com.vitorpamplona.amethyst.service.notifications.NotificationUtils.Conversation
 import com.vitorpamplona.amethyst.service.notifications.NotificationUtils.postConversation
 import com.vitorpamplona.amethyst.service.notifications.notificationManager
+import com.vitorpamplona.amethyst.service.notifications.privateMessagesLocked
 import com.vitorpamplona.quartz.buzz.workspace.buzzParticipants
 import com.vitorpamplona.quartz.buzz.workspace.isBuzzDm
 import com.vitorpamplona.quartz.nip01Core.core.Event
@@ -79,7 +80,8 @@ object BuzzDmNotification {
         val channel = buzzDmChannelForMe(note, account.signer.pubKey) ?: return
 
         val sender = LocalCache.getOrCreateUser(event.pubKey)
-        val body = event.content.takeIf { it.isNotBlank() } ?: loadStringRes(Res.string.app_notification_new_message)
+        val locked = privateMessagesLocked()
+        val body = event.content.takeIf { it.isNotBlank() && !locked } ?: loadStringRes(Res.string.app_notification_new_message)
 
         val accountNpub = NotificationRoutes.accountNpub(account)
         // The channel's kind-39000 naddr routes straight to the chatroom via the

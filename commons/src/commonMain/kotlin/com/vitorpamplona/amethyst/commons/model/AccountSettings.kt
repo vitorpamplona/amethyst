@@ -26,6 +26,7 @@ import androidx.compose.runtime.Stable
 import com.vitorpamplona.amethyst.commons.audio.VisualizerStyle
 import com.vitorpamplona.amethyst.commons.cashu.CashuKeysetCounterStore
 import com.vitorpamplona.amethyst.commons.cashu.UnavailableCashuKeysetCounterStore
+import com.vitorpamplona.amethyst.commons.feeds.custom.FeedDefinition
 import com.vitorpamplona.amethyst.commons.model.HomeFeedType
 import com.vitorpamplona.amethyst.commons.model.backups.BackupConflictGuard
 import com.vitorpamplona.amethyst.commons.model.backups.backupSlotOf
@@ -34,6 +35,7 @@ import com.vitorpamplona.amethyst.commons.model.chats.ChatFeedType
 import com.vitorpamplona.amethyst.commons.model.clink.ClinkDebitWalletEntryNorm
 import com.vitorpamplona.amethyst.commons.model.concord.ConcordListRepository
 import com.vitorpamplona.amethyst.commons.model.concord.ConcordViewMode
+import com.vitorpamplona.amethyst.commons.model.deck.DeckLayout
 import com.vitorpamplona.amethyst.commons.model.emphChat.EphemeralChatRepository
 import com.vitorpamplona.amethyst.commons.model.mediaServers.DEFAULT_MEDIA_SERVERS
 import com.vitorpamplona.amethyst.commons.model.mediaServers.ServerName
@@ -264,6 +266,10 @@ class AccountSettings(
      */
     val mutedPublicChats: MutableStateFlow<Set<String>> = MutableStateFlow(setOf()),
     val viewedPollResultNoteIds: MutableStateFlow<Map<String, Long>> = MutableStateFlow(mapOf()),
+    /** The feeds this user built, offered in the Home feed picker as [TopFilter.CustomFeed]. */
+    val customFeeds: MutableStateFlow<List<FeedDefinition>> = MutableStateFlow(emptyList()),
+    /** The deck's workspaces and columns, shown beside the main screen on wide windows when the deck is on. */
+    val deck: MutableStateFlow<DeckLayout> = MutableStateFlow(DeckLayout()),
     val pendingAttestations: MutableStateFlow<Map<HexKey, String>> = MutableStateFlow(mapOf()),
     var backupNipA3PaymentTargets: PaymentTargetsEvent? = null,
     var backupBolt12Offers: Bolt12OfferListEvent? = null,
@@ -776,6 +782,40 @@ class AccountSettings(
         }
 
         if (changed) saveAccountSettings()
+    }
+
+    /** Applies [transform] to the deck layout and saves it when it changed. */
+    fun updateDeck(transform: (DeckLayout) -> DeckLayout) {
+        val before = deck.value
+        deck.update(transform)
+        if (deck.value != before) saveAccountSettings()
+    }
+
+    /**
+     * Adds [feed], or replaces the one with its id. A screen showing the feed gets a fresh
+     * [TopFilter.CustomFeed]: the feeds key their contents and relay EOSE times by that instance, so
+     * keeping the old one would leave the edited feed showing its old notes and asking relays only
+     * for what is newer than the old definition's last load.
+     */
+    fun saveCustomFeed(feed: FeedDefinition) {
+        customFeeds.update { feeds ->
+            if (feeds.any { it.id == feed.id }) feeds.map { if (it.id == feed.id) feed else it } else feeds + feed
+        }
+        feedFiltersWithDefaults.forEach { (flow, _) ->
+            val current = flow.value
+            if (current is TopFilter.CustomFeed && current.id == feed.id) flow.tryEmit(TopFilter.CustomFeed(feed.id))
+        }
+        saveAccountSettings()
+    }
+
+    /** Deletes the custom feed [id] and sends any screen that showed it back to its default feed. */
+    fun deleteCustomFeed(id: String) {
+        customFeeds.update { feeds -> feeds.filterNot { it.id == id } }
+        feedFiltersWithDefaults.forEach { (flow, default) ->
+            val current = flow.value
+            if (current is TopFilter.CustomFeed && current.id == id) flow.tryEmit(default)
+        }
+        saveAccountSettings()
     }
 
     fun changeDefaultHomeFollowList(name: TopFilter) {

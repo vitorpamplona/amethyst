@@ -459,6 +459,16 @@ sealed class Route {
 
     @Serializable object SecurityFilters : Route()
 
+    @Serializable object PrivacyLockSettings : Route()
+
+    /** The feeds the user built for Home: list, create, edit, delete. */
+    @Serializable object CustomFeeds : Route()
+
+    /** Creates a custom feed, or edits the one with [id]. */
+    @Serializable data class EditCustomFeed(
+        val id: String? = null,
+    ) : Route()
+
     @Serializable object WebOfTrust : Route()
 
     @Serializable object BlockedUsers : Route()

@@ -36,8 +36,7 @@ import java.util.prefs.Preferences
  * Backed by [java.util.prefs.Preferences] at a fixed node
  * `com/vitorpamplona/amethyst/relays/index` (JVM-user-scoped). The
  * shared node means Desktop and `amy` running as the same OS user
- * observe the same setting without extra plumbing — the same trick
- * `PreferencesHashtagSpamSettings` uses for the hashtag-spam filter.
+ * observe the same setting without extra plumbing.
  *
  * Not per-account: users typically have a single preferred set of
  * index relays regardless of which account is currently logged in.

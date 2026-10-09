@@ -47,6 +47,7 @@ import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.buzz.BuzzRelayDialect
 import com.vitorpamplona.amethyst.commons.model.buzz.BuzzTypingState
 import com.vitorpamplona.amethyst.commons.model.nip29RelayGroups.RelayGroupChannel
+import com.vitorpamplona.amethyst.commons.nip30CustomEmojis.ui.CustomEmojiPickerButton
 import com.vitorpamplona.amethyst.commons.nip30CustomEmojis.ui.ShowEmojiSuggestionList
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.buzz_editing_banner
@@ -214,12 +215,17 @@ fun EditFieldRow(
                 }
             },
             leadingIcon = {
-                SelectFromGallery(
-                    isUploading = channelScreenModel.isUploadingImage,
-                    tint = MaterialTheme.colorScheme.placeholderText,
-                    modifier = Modifier.height(32.dp).padding(start = 2.dp),
-                    onImageChosen = channelScreenModel::pickedMedia,
-                )
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    SelectFromGallery(
+                        isUploading = channelScreenModel.isUploadingImage,
+                        tint = MaterialTheme.colorScheme.placeholderText,
+                        modifier = Modifier.height(32.dp).padding(start = 2.dp),
+                        onImageChosen = channelScreenModel::pickedMedia,
+                    )
+                    channelScreenModel.emojiSuggestions?.let {
+                        CustomEmojiPickerButton(it.emojiPacks, channelScreenModel.message, tint = MaterialTheme.colorScheme.placeholderText)
+                    }
+                }
             },
             colors =
                 TextFieldDefaults.colors(

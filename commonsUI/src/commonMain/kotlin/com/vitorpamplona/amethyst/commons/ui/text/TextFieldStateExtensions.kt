@@ -70,6 +70,24 @@ fun TextFieldState.insertUrlAtCursor(url: String) {
     }
 }
 
+/**
+ * Inserts [word] at the cursor, replacing any selection, as a word of its own: a space before it
+ * when it would touch the previous word, a space after it, and the cursor past that space.
+ */
+fun TextFieldState.insertWordAtCursor(word: String) {
+    edit {
+        val text = asCharSequence()
+        val start = selection.start
+        val end = selection.end
+        val before = if (start > 0 && !text[start - 1].isWhitespace()) " " else ""
+        val hasSpaceAfter = end < length && text[end] == ' '
+        val toInsert = before + word + if (hasSpaceAfter) "" else " "
+        replace(start, end, toInsert)
+        val cursor = start + toInsert.length + if (hasSpaceAfter) 1 else 0
+        selection = TextRange(cursor, cursor)
+    }
+}
+
 fun TextFieldState.replaceCurrentWord(wordToInsert: String) {
     edit {
         val text = asCharSequence()

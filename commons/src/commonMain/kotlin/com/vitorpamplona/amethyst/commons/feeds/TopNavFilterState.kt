@@ -50,6 +50,7 @@ import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.transform
+import com.vitorpamplona.amethyst.commons.feeds.custom.FeedDefinition as CustomFeedDefinition
 
 @Stable
 class TopNavFilterState(
@@ -474,6 +475,21 @@ class TopNavFilterState(
             .flowOn(Dispatchers.IO)
             .stateIn(scope, SharingStarted.Eagerly, defaultLists)
 
+    /** Opens the screen that lists, creates, edits and deletes the user's own feeds. */
+    val manageCustomFeeds =
+        FeedDefinition(
+            code = TopFilter.CustomFeed(""),
+            name = LabelName(TopNavLabel.MANAGE_CUSTOM_FEEDS),
+            route = Route.CustomFeeds,
+        )
+
+    /** The Home picker: [kind3GlobalPeopleRoutes] plus the feeds the user built. Only Home runs custom feeds. */
+    val homeRoutes =
+        combine(kind3GlobalPeopleRoutes, account.settings.customFeeds) { base, custom ->
+            (base + custom.map { FeedDefinition(TopFilter.CustomFeed(it.id), CustomFeedName(it)) } + manageCustomFeeds).toImmutableList()
+        }.flowOn(Dispatchers.IO)
+            .stateIn(scope, SharingStarted.Eagerly, (defaultLists + manageCustomFeeds).toImmutableList())
+
     val kind3GlobalPeople =
         _kind3GlobalPeople
             .flowOn(Dispatchers.IO)
@@ -581,6 +597,7 @@ enum class TopNavLabel {
     MUTE_LIST,
     MINE,
     ALL_FAVORITE_DVMS,
+    MANAGE_CUSTOM_FEEDS,
 }
 
 @Stable
@@ -634,6 +651,13 @@ class InterestSetName(
     val set: InterestSet,
 ) : Name() {
     override fun name() = "⁂ ${set.title}"
+}
+
+@Stable
+class CustomFeedName(
+    val feed: CustomFeedDefinition,
+) : Name() {
+    override fun name() = "${feed.emoji} ${feed.name}".trim()
 }
 
 @Immutable

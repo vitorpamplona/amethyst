@@ -78,6 +78,18 @@ interface MediaUploader {
     ): MediaCompressorResult
 
     /**
+     * Compresses the still image at [uri] as [upload] would at [compressionQuality], for a preview
+     * before posting. Null when [uri] is not an image this platform re-encodes (GIF, SVG, AVIF,
+     * video), at [CompressorQuality.UNCOMPRESSED], or when compression fails. The caller owns the
+     * returned temp file; when the call is cancelled, the uploader deletes whatever it wrote.
+     */
+    suspend fun previewImageCompression(
+        uri: MediaUri,
+        mimeType: String?,
+        compressionQuality: CompressorQuality,
+    ): ImageCompressionPreview? = null
+
+    /**
      * Downloads the already-hosted file at [url] and computes its [FileHeader] (hash, size,
      * dimensions, preview hashes) for an `imeta` tag, guessing the MIME type from the URL's
      * extension. Null when it cannot be downloaded or decoded.
