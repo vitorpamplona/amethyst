@@ -45,8 +45,6 @@ import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Slider
-import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -259,7 +257,8 @@ fun VideoControls(
         FadingBox(visible, Modifier.align(Alignment.BottomCenter)) {
             Column(Modifier.fillMaxWidth()) {
                 if (!isLive) {
-                    ProgressBar(position = position, onSeek = onSeek)
+                    // Seeking is costly, so a drag seeks once, where it is let go.
+                    ThinSlider(position, onSeek, Modifier.fillMaxWidth().padding(horizontal = 10.dp))
                 }
                 Row(
                     modifier = Modifier.fillMaxWidth().padding(start = 10.dp, end = 10.dp, bottom = 5.dp),
@@ -285,16 +284,11 @@ fun VideoControls(
                     Spacer(Modifier.weight(1f))
 
                     if (onVolumeChange != null) {
-                        Slider(
+                        ThinSlider(
                             value = volume / 100f,
                             onValueChange = { onVolumeChange((it * 100).toInt()) },
-                            modifier = Modifier.width(96.dp),
-                            colors =
-                                SliderDefaults.colors(
-                                    thumbColor = Color.White,
-                                    activeTrackColor = Color.White.copy(alpha = 0.7f),
-                                    inactiveTrackColor = Color.White.copy(alpha = 0.3f),
-                                ),
+                            modifier = Modifier.width(80.dp),
+                            changesWhileDragging = true,
                         )
                     }
 
@@ -341,10 +335,13 @@ private fun PlayPauseButton(
     Box(Modifier.size(80.dp), contentAlignment = Alignment.Center) {
         Box(Modifier.clip(CircleShape).fillMaxSize(0.6f).background(MaterialTheme.colorScheme.background))
         IconButton(onClick = onClick, modifier = Modifier.size(80.dp)) {
+            // The circle is the theme's background, so the icon takes its matching color, not the
+            // surrounding content color.
+            val tint = MaterialTheme.colorScheme.onBackground
             if (isPlaying) {
-                Icon(MaterialSymbols.Pause, contentDescription = stringRes(Res.string.pause), modifier = Modifier.size(40.dp))
+                Icon(MaterialSymbols.Pause, contentDescription = stringRes(Res.string.pause), tint = tint, modifier = Modifier.size(40.dp))
             } else {
-                Icon(MaterialSymbols.PlayArrow, contentDescription = stringRes(Res.string.play), modifier = Modifier.size(40.dp))
+                Icon(MaterialSymbols.PlayArrow, contentDescription = stringRes(Res.string.play), tint = tint, modifier = Modifier.size(40.dp))
             }
         }
     }
@@ -361,23 +358,27 @@ private fun SkipButton(
     }
 }
 
-/** Android's thin white seek bar: click or drag anywhere on it to seek. */
+/**
+ * Android's thin white seek bar, used for the volume too: click or drag anywhere on it. A drag
+ * reports where it is let go, or every step of the way with [changesWhileDragging].
+ */
 @Composable
-private fun ProgressBar(
-    position: Float,
-    onSeek: (Float) -> Unit,
+private fun ThinSlider(
+    value: Float,
+    onValueChange: (Float) -> Unit,
+    modifier: Modifier = Modifier,
+    changesWhileDragging: Boolean = false,
 ) {
     var dragging by remember { mutableStateOf(false) }
     var dragPosition by remember { mutableFloatStateOf(0f) }
-    // The gestures below start once and outlive recompositions: they must call the latest onSeek.
-    val currentOnSeek by rememberUpdatedState(onSeek)
+    // The gestures below start once and outlive recompositions: they must call the latest values.
+    val currentOnValueChange by rememberUpdatedState(onValueChange)
+    val currentChangesWhileDragging by rememberUpdatedState(changesWhileDragging)
 
     Canvas(
-        Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 10.dp)
+        modifier
             .pointerInput(Unit) {
-                detectTapGestures { offset -> currentOnSeek((offset.x / size.width).coerceIn(0f, 1f)) }
+                detectTapGestures { offset -> currentOnValueChange((offset.x / size.width).coerceIn(0f, 1f)) }
             }.pointerInput(Unit) {
                 detectDragGestures(
                     onDragStart = { offset ->
@@ -387,9 +388,10 @@ private fun ProgressBar(
                     onDrag = { change, _ ->
                         change.consume()
                         dragPosition = (change.position.x / size.width).coerceIn(0f, 1f)
+                        if (currentChangesWhileDragging) currentOnValueChange(dragPosition)
                     },
                     onDragEnd = {
-                        currentOnSeek(dragPosition)
+                        currentOnValueChange(dragPosition)
                         dragging = false
                     },
                     onDragCancel = { dragging = false },
@@ -397,7 +399,7 @@ private fun ProgressBar(
             }.padding(vertical = 8.dp)
             .height(4.dp),
     ) {
-        val shown = if (dragging) dragPosition else position.coerceIn(0f, 1f)
+        val shown = if (dragging) dragPosition else value.coerceIn(0f, 1f)
         val x = shown * size.width
         drawRect(Color.White.copy(alpha = 0.3f), size = size)
         drawRect(Color.White, size = Size(x, size.height))
