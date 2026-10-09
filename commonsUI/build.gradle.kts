@@ -212,6 +212,10 @@ kotlin {
                 // Desktop-specific Compose
                 implementation(compose.desktop.currentOs)
                 implementation(libs.jetbrains.compose.ui.tooling)
+
+                // Renders PDF pages for the shared PDF card and viewer; Android uses the OS's
+                // PdfRenderer instead. Apache-2.0 (bundled fonts and CMaps: OFL, BSD, CC-BY-4.0).
+                implementation(libs.pdfbox)
             }
         }
 

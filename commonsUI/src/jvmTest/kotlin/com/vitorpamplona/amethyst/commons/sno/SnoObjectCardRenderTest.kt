@@ -32,6 +32,8 @@ import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.dp
 import coil3.ImageLoader
 import coil3.PlatformContext
+import coil3.SingletonImageLoader
+import coil3.annotation.DelicateCoilApi
 import coil3.compose.setSingletonImageLoaderFactory
 import com.vitorpamplona.amethyst.commons.sno.ui.SnoObjectViewer
 import com.vitorpamplona.amethyst.commons.ui.note.SnoObjectCard
@@ -40,6 +42,7 @@ import org.jetbrains.skia.EncodedImageFormat
 import org.jetbrains.skia.Image
 import java.io.ByteArrayInputStream
 import javax.imageio.ImageIO
+import kotlin.test.AfterTest
 import kotlin.test.Test
 import kotlin.test.assertTrue
 
@@ -54,7 +57,14 @@ import kotlin.test.assertTrue
  * through `ImageComposeScene` (no display, no device) and asserts the object
  * reached the screen through Coil, the fetcher and the platform image bridge.
  */
+@OptIn(DelicateCoilApi::class)
 class SnoObjectCardRenderTest {
+    /** Coil's singleton outlives the class; leave none behind for the next render test. */
+    @AfterTest
+    fun resetImageLoader() {
+        SingletonImageLoader.reset()
+    }
+
     /** A flat gold triangle: one colour, so it is unmistakable in the pixels. */
     private val gold =
         """{"v":2,"name":"Gold","unit":0,"mode":"solid","vertices":[[-4,-4,0],[4,-4,0],[0,4,0]],"colors":[249,249,249],"faces":[[0,1,2]]}"""

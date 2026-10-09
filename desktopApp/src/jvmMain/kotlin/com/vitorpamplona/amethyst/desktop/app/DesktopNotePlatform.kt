@@ -22,11 +22,16 @@ package com.vitorpamplona.amethyst.desktop.app
 
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.getValue
@@ -41,9 +46,14 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
+import androidx.lifecycle.viewModelScope
 import coil3.compose.AsyncImage
 import com.vitorpamplona.amethyst.commons.audio.WaveformData
+import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
+import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.Note
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.save
 import com.vitorpamplona.amethyst.commons.richtext.BaseMediaContent
 import com.vitorpamplona.amethyst.commons.richtext.MediaLocalImage
 import com.vitorpamplona.amethyst.commons.richtext.MediaLocalVideo
@@ -51,20 +61,27 @@ import com.vitorpamplona.amethyst.commons.richtext.MediaUrlContent
 import com.vitorpamplona.amethyst.commons.richtext.MediaUrlPdf
 import com.vitorpamplona.amethyst.commons.richtext.MediaUrlVideo
 import com.vitorpamplona.amethyst.commons.richtext.isAnimatedGifUrl
-import com.vitorpamplona.amethyst.commons.ui.components.ClickableUrlOrBlossom
 import com.vitorpamplona.amethyst.commons.ui.components.UrlCachedPreviewer
 import com.vitorpamplona.amethyst.commons.ui.components.UrlPreviewState
+import com.vitorpamplona.amethyst.commons.ui.components.pdf.PdfPreviewCard
+import com.vitorpamplona.amethyst.commons.ui.components.pdf.PdfViewerContent
 import com.vitorpamplona.amethyst.commons.ui.components.urlPreview
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.note.platform.NotePlatform
+import com.vitorpamplona.amethyst.commons.ui.stringRes
+import com.vitorpamplona.amethyst.commons.ui.theme.Size20Modifier
+import com.vitorpamplona.amethyst.commons.ui.theme.Size5dp
+import com.vitorpamplona.amethyst.commons.util.extractFilename
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.amethyst.desktop.service.media.GlobalMediaPlayer
 import com.vitorpamplona.amethyst.desktop.ui.media.AnimatedGifImage
 import com.vitorpamplona.amethyst.desktop.ui.media.AudioPlayer
 import com.vitorpamplona.amethyst.desktop.ui.media.DesktopVideoPlayer
 import com.vitorpamplona.amethyst.desktop.ui.media.LightboxOverlay
+import com.vitorpamplona.amethyst.desktop.ui.media.SaveMediaAction
 import com.vitorpamplona.quartz.nip94FileMetadata.tags.DimensionTag
 import kotlinx.collections.immutable.ImmutableList
+import kotlinx.coroutines.launch
 import com.vitorpamplona.amethyst.commons.ui.components.LoadUrlPreview as SharedLoadUrlPreview
 import com.vitorpamplona.amethyst.commons.ui.components.rememberUrlPreviewState as sharedRememberUrlPreviewState
 import com.vitorpamplona.amethyst.commons.ui.note.types.RenderGitIssueEvent as SharedRenderGitIssueEvent
@@ -134,7 +151,11 @@ object DesktopNotePlatform : NotePlatform {
             }
 
             is MediaUrlPdf -> {
-                ClickableUrlOrBlossom(content.description ?: url, url)
+                PdfPreviewCard(content = content, accountViewModel = accountViewModel, onOpen = { showViewer = true })
+                if (showViewer) {
+                    DesktopPdfViewer(content, accountViewModel) { showViewer = false }
+                }
+                return
             }
 
             else -> {
@@ -337,4 +358,39 @@ object DesktopNotePlatform : NotePlatform {
         accountViewModel: AccountViewModel,
         nav: INav,
     ) = SharedRenderGitPullRequestUpdateEvent(baseNote, makeItShort, canPreview, quotesLeft, backgroundColor, accountViewModel, nav)
+}
+
+/**
+ * The shared PDF reader in a full-window dialog, with page buttons for the mouse (it can't drag the
+ * pager) and a button that saves the file. Escape closes it; the arrow and page keys turn pages.
+ */
+@Composable
+private fun DesktopPdfViewer(
+    content: MediaUrlPdf,
+    accountViewModel: AccountViewModel,
+    onDismiss: () -> Unit,
+) {
+    Dialog(onDismissRequest = onDismiss, properties = DialogProperties(usePlatformDefaultWidth = false)) {
+        Surface(modifier = Modifier.fillMaxSize(), color = Color.Black) {
+            PdfViewerContent(content = content, accountViewModel = accountViewModel, onDismiss = onDismiss, showPageButtons = true) {
+                OutlinedButton(
+                    // The view model's scope, not the dialog's: closing the viewer must not cancel a
+                    // download the user started.
+                    onClick = {
+                        accountViewModel.viewModelScope.launch {
+                            SaveMediaAction.saveMedia(content.url, extractFilename(content.url))
+                        }
+                    },
+                    contentPadding = PaddingValues(horizontal = Size5dp),
+                    colors = ButtonDefaults.outlinedButtonColors().copy(containerColor = MaterialTheme.colorScheme.background),
+                ) {
+                    Icon(
+                        symbol = MaterialSymbols.Download,
+                        modifier = Size20Modifier,
+                        contentDescription = stringRes(Res.string.save),
+                    )
+                }
+            }
+        }
+    }
 }

@@ -18,11 +18,11 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.ui.components.pdf
+package com.vitorpamplona.amethyst.commons.ui.components.pdf
 
-import org.junit.Assert.assertEquals
-import org.junit.Assert.assertTrue
-import org.junit.Test
+import kotlin.test.Test
+import kotlin.test.assertEquals
+import kotlin.test.assertTrue
 
 /**
  * The placeholder shown while a previously-seen PDF re-renders reserves its box from the ratio
@@ -94,7 +94,7 @@ class PdfPreviewAspectRatioTest {
     ): Float = width.toFloat() / height.toFloat()
 
     private fun assertUsable(ratio: Float) {
-        assertTrue("$ratio is not finite", ratio.isFinite())
-        assertTrue("$ratio is not > 0", ratio > 0f)
+        assertTrue(ratio.isFinite(), "$ratio is not finite")
+        assertTrue(ratio > 0f, "$ratio is not > 0")
     }
 }

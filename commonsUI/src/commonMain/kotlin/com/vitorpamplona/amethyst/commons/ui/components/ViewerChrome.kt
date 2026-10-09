@@ -23,8 +23,24 @@ package com.vitorpamplona.amethyst.commons.ui.components
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.snap
 import androidx.compose.animation.core.tween
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Arrangement.spacedBy
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.WindowInsetsSides
+import androidx.compose.foundation.layout.displayCutout
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.only
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.systemBars
+import androidx.compose.foundation.layout.windowInsetsPadding
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.MutableState
@@ -33,9 +49,19 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
+import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.back
+import com.vitorpamplona.amethyst.commons.ui.stringRes
+import com.vitorpamplona.amethyst.commons.ui.theme.Size10dp
+import com.vitorpamplona.amethyst.commons.ui.theme.Size15dp
+import com.vitorpamplona.amethyst.commons.ui.theme.Size5dp
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.withTimeoutOrNull
@@ -127,4 +153,64 @@ fun animatedViewerChromeInset(atBottom: Boolean): Dp {
         label = "viewerChromeInset",
     )
     return animated
+}
+
+/**
+ * Lays a viewer control row along a screen edge -- the top by default, the bottom when [atBottom].
+ *
+ * The viewer hides the system bars, so the row would otherwise sit against the screen edge. It
+ * takes its distance from [animatedViewerChromeInset], which follows the bar on and off screen
+ * rather than permanently reserving room for it.
+ *
+ * Horizontal display-cutout insets are still applied outright: a landscape notch eats into the
+ * sides whatever the bars are doing. The top cutout is deliberately not applied, because on a
+ * punch-hole device it is a centred hole that the edge-anchored buttons are nowhere near -- and
+ * honouring it as a full-width top inset would push them down by the height of a camera they do
+ * not overlap.
+ *
+ * The row also holds a button's height whatever it carries, so content that outlives the buttons
+ * doesn't shift as they come and go.
+ */
+@Composable
+@OptIn(ExperimentalLayoutApi::class)
+fun ViewerControlsRow(
+    modifier: Modifier = Modifier,
+    horizontalArrangement: Arrangement.Horizontal = spacedBy(Size10dp),
+    atBottom: Boolean = false,
+    content: @Composable RowScope.() -> Unit,
+) {
+    // systemBars is visibility-aware under BEHAVIOR_DEFAULT: 0 while the bars are hidden, and the
+    // real bar size once the user swipes them in -- so the controls follow them instead of sitting
+    // under a bar or reserving space for one that is not there. The 16dp floor keeps them clear of
+    // the rounded corners while hidden. Animated so the row slides rather than jumps.
+    val animatedInset = animatedViewerChromeInset(atBottom)
+    Row(
+        modifier =
+            modifier
+                .windowInsetsPadding(WindowInsets.displayCutout.only(WindowInsetsSides.Horizontal))
+                .padding(
+                    top = if (atBottom) 0.dp else animatedInset,
+                    bottom = if (atBottom) animatedInset else 0.dp,
+                ).padding(horizontal = Size15dp, vertical = Size10dp)
+                .fillMaxWidth()
+                .heightIn(min = ButtonDefaults.MinHeight),
+        horizontalArrangement = horizontalArrangement,
+        verticalAlignment = Alignment.CenterVertically,
+        content = content,
+    )
+}
+
+/** Leaves the viewer. Always the first item in the control row. */
+@Composable
+fun ViewerBackButton(onDismiss: () -> Unit) {
+    OutlinedButton(
+        onClick = onDismiss,
+        contentPadding = PaddingValues(horizontal = Size5dp),
+        colors = ButtonDefaults.outlinedButtonColors().copy(containerColor = MaterialTheme.colorScheme.background),
+    ) {
+        Icon(
+            symbol = MaterialSymbols.AutoMirrored.ArrowBack,
+            contentDescription = stringRes(Res.string.back),
+        )
+    }
 }
