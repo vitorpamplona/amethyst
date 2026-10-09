@@ -35,8 +35,16 @@ fun Route.lockScope(): LockScope? =
         is Route.RoomByAuthor,
         is Route.NewGroupDM,
         is Route.ShareToDM,
+        is Route.MarmotGroupList,
         is Route.MarmotGroupChat,
+        is Route.MarmotGroupInfo,
+        is Route.MarmotGroupEditInfo,
+        is Route.CordnGroupList,
         is Route.CordnGroupChat,
+        is Route.CordnGroupInfo,
+        is Route.CordnInvitations,
+        // Drafts hold unsent private messages too.
+        is Route.Drafts,
         is Route.BuzzDmList,
         is Route.BuzzNewDm,
         -> LockScope.Messages
@@ -55,7 +63,15 @@ fun Route.lockScope(): LockScope? =
         is Route.CashuWalletCreated,
         is Route.CashuWalletSettings,
         is Route.CashuMintRecommendations,
+        is Route.SendPayment,
+        is Route.TopUpMint,
+        is Route.ReloadMint,
+        is Route.ManualZapSplitPayment,
         -> LockScope.Wallet
+
+        // Any lock on also guards the secret-key backup: on desktop the device prompt there approves
+        // at once, so without this the nsec would be one click from anyone at the keyboard.
+        is Route.AccountBackup -> LockScope.KeyBackup
 
         else -> null
     }

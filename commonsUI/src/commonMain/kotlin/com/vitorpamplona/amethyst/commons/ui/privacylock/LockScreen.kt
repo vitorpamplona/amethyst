@@ -180,10 +180,14 @@ private fun PasswordUnlock(
                         lockState.onCredentialUnavailable()
                     }
 
-                    else -> {
+                    // The prompter counted the miss and set any lockout; the countdown shows it.
+                    PromptResult.Failed -> {
                         wrong = true
                         password = ""
-                        lockState.onFailedUnlockAttempt(TimeUtils.nowMillis())
+                    }
+
+                    else -> {
+                        password = ""
                     }
                 }
                 typed.fill(' ')

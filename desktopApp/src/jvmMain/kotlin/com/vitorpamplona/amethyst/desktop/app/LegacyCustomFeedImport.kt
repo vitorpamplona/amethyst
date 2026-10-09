@@ -40,7 +40,8 @@ class LegacyCustomFeedImport(
 
     @Synchronized
     fun importInto(settings: AccountSettings) {
-        if (marker.exists()) return
+        // A temporary login saves nothing: importing into it would lose the legacy data for good.
+        if (settings.transientAccount || marker.exists()) return
         try {
             val root = Preferences.userRoot()
             val json = if (root.nodeExists(NODE)) root.node(NODE).get(KEY, null) else null

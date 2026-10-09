@@ -791,10 +791,19 @@ class AccountSettings(
         if (deck.value != before) saveAccountSettings()
     }
 
-    /** Adds [feed], or replaces the one with its id. */
+    /**
+     * Adds [feed], or replaces the one with its id. A screen showing the feed gets a fresh
+     * [TopFilter.CustomFeed]: the feeds key their contents and relay EOSE times by that instance, so
+     * keeping the old one would leave the edited feed showing its old notes and asking relays only
+     * for what is newer than the old definition's last load.
+     */
     fun saveCustomFeed(feed: FeedDefinition) {
         customFeeds.update { feeds ->
             if (feeds.any { it.id == feed.id }) feeds.map { if (it.id == feed.id) feed else it } else feeds + feed
+        }
+        feedFiltersWithDefaults.forEach { (flow, _) ->
+            val current = flow.value
+            if (current is TopFilter.CustomFeed && current.id == feed.id) flow.tryEmit(TopFilter.CustomFeed(feed.id))
         }
         saveAccountSettings()
     }

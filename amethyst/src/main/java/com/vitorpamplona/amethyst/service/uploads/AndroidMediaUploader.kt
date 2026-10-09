@@ -696,15 +696,25 @@ class AndroidMediaUploader(
         uri: MediaUri,
         mimeType: String?,
         compressionQuality: CompressorQuality,
-    ): ImageCompressionPreview? =
-        withContext(Dispatchers.IO) {
-            val type = mimeType ?: mimeType(uri)
-            if (compressionQuality.imageMaxDimension == null || !MediaCompressor.isReencodableImage(type)) return@withContext null
-            val result = MediaCompressor().compress(uri, type, compressionQuality, appContext)
-            // The compressor hands the original back when it fails.
-            if (result.uri == uri) return@withContext null
-            ImageCompressionPreview(imageStats(uri), imageStats(result.uri), result.uri)
+    ): ImageCompressionPreview? {
+        // The caller cancels a preview the slider moved past; its file must not outlive it, even
+        // when the cancellation lands as this returns.
+        var written: Uri? = null
+        return try {
+            withContext(Dispatchers.IO) {
+                val type = mimeType ?: mimeType(uri)
+                if (compressionQuality.imageMaxDimension == null || !MediaCompressor.isReencodableImage(type)) return@withContext null
+                val result = MediaCompressor().compress(uri, type, compressionQuality, appContext)
+                // The compressor hands the original back when it fails.
+                if (result.uri == uri) return@withContext null
+                written = result.uri
+                ImageCompressionPreview(imageStats(uri), imageStats(result.uri), result.uri)
+            }
+        } catch (e: CancellationException) {
+            written?.let { discardTempFile(it) }
+            throw e
         }
+    }
 
     /** Pixel size as displayed (EXIF rotation applied) and byte length, without decoding the pixels. */
     private fun imageStats(uri: Uri): ImageFileStats {

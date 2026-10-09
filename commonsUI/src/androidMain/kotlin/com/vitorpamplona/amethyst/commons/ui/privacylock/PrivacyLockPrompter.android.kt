@@ -20,8 +20,10 @@
  */
 package com.vitorpamplona.amethyst.commons.ui.privacylock
 
+import android.app.KeyguardManager
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
+import androidx.compose.ui.platform.LocalContext
 import com.vitorpamplona.amethyst.commons.privacylock.PrivacyLockSettings
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.privacy_lock_prompt_title
@@ -34,9 +36,13 @@ import kotlin.coroutines.resume
 actual fun rememberPrivacyLockPrompter(settings: PrivacyLockSettings): CredentialPrompter {
     val authenticator = rememberDeviceAuthenticator()
     val title = stringRes(Res.string.privacy_lock_prompt_title)
-    return remember(authenticator, title) {
+    val context = LocalContext.current
+    return remember(authenticator, title, context) {
         object : CredentialPrompter {
-            override val available: Boolean = true
+            // Without a screen lock the device authenticator approves at once: a lock would open
+            // for anyone, so it is not offered (and a lock already on is released).
+            override val available: Boolean
+                get() = context.getSystemService(KeyguardManager::class.java)?.isDeviceSecure == true
 
             override suspend fun prompt(): PromptResult =
                 suspendCancellableCoroutine { continuation ->

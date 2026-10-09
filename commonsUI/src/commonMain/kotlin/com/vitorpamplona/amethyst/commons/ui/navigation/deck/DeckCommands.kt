@@ -20,8 +20,19 @@
  */
 package com.vitorpamplona.amethyst.commons.ui.navigation.deck
 
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.SharedFlow
+
+/**
+ * The deck column the user last pressed in, or null once they press in the main screen. Back and
+ * Esc, and the column shortcuts, go to it. One window shows one deck, as with [DeckCommandBus].
+ */
+object DeckFocus {
+    var columnId: String? by mutableStateOf(null)
+}
 
 /** What a keyboard shortcut or menu item asks the deck to do. */
 sealed interface DeckCommand {
@@ -53,6 +64,9 @@ object DeckCommandBus {
     private val flow = MutableSharedFlow<DeckCommand>(extraBufferCapacity = 8)
 
     val commands: SharedFlow<DeckCommand> = flow
+
+    /** Whether a deck is on screen to take commands; while not, their keys stay with the text fields. */
+    val active: Boolean get() = flow.subscriptionCount.value > 0
 
     fun send(command: DeckCommand) {
         flow.tryEmit(command)

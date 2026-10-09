@@ -34,6 +34,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -59,6 +60,8 @@ import com.vitorpamplona.amethyst.commons.ui.theme.placeholderText
 import com.vitorpamplona.amethyst.commons.ui.theme.warningColor
 import com.vitorpamplona.amethyst.commons.util.formatDecimal
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.map
 import org.jetbrains.compose.resources.StringResource
 
 /** The three response times shown, in the order a user thinks about them. */
@@ -91,9 +94,12 @@ fun RelayLatencyLine(
     modifier: Modifier = Modifier,
 ) {
     if (store == null) return
-    val snapshots by store.latencySnapshots.collectAsState()
-    val slow by store.slowRelays.collectAsState()
-    val snapshot = snapshots[relay] ?: return
+    // Just this relay's entries: a list of relays must not recompose every row for each relay's update.
+    val relaySnapshot by remember(store, relay) { store.latencySnapshots.map { it[relay] }.distinctUntilChanged() }
+        .collectAsState(store.latencySnapshots.value[relay])
+    val slowReason by remember(store, relay) { store.slowRelays.map { it[relay] }.distinctUntilChanged() }
+        .collectAsState(store.slowRelays.value[relay])
+    val snapshot = relaySnapshot ?: return
     val shown = SHOWN_METRICS.mapNotNull { metric -> snapshot.p50Of(metric)?.let { metric to it } }
     if (shown.isEmpty()) return
 
@@ -111,7 +117,7 @@ fun RelayLatencyLine(
             color = MaterialTheme.colorScheme.placeholderText,
             modifier = Modifier.weight(1f, fill = false),
         )
-        slow[relay]?.let { SlowChip(it) }
+        slowReason?.let { SlowChip(it) }
     }
 }
 

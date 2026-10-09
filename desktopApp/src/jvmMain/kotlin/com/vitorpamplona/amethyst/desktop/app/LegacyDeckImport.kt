@@ -46,7 +46,8 @@ class LegacyDeckImport(
         settings: AccountSettings,
         myPubKey: String,
     ) {
-        if (marker.exists()) return
+        // A temporary login saves nothing: importing into it would lose the legacy data for good.
+        if (settings.transientAccount || marker.exists()) return
         try {
             val root = Preferences.userRoot()
             if (root.nodeExists(NODE)) {

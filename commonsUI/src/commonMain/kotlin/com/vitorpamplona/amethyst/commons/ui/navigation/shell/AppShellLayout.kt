@@ -42,6 +42,9 @@ import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.input.pointer.PointerEventPass
+import androidx.compose.ui.input.pointer.PointerEventType
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.Layout
 import androidx.compose.ui.platform.LocalWindowInfo
 import androidx.compose.ui.unit.Constraints
@@ -52,6 +55,7 @@ import com.vitorpamplona.amethyst.commons.ui.components.rememberModalSheetState
 import com.vitorpamplona.amethyst.commons.ui.layouts.LocalScreenLayout
 import com.vitorpamplona.amethyst.commons.ui.layouts.NavigationStyle
 import com.vitorpamplona.amethyst.commons.ui.navigation.bottombars.AppNavigationRail
+import com.vitorpamplona.amethyst.commons.ui.navigation.deck.DeckFocus
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.Nav
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.notifications.NotificationSidePanel
 import com.vitorpamplona.amethyst.commons.ui.theme.DividerThickness
@@ -109,6 +113,12 @@ fun AppShellLayout(
     val currentContent by rememberUpdatedState(content)
     val movableContent = remember { movableContentOf { currentContent() } }
 
+    // The deck moves between the same shells, and its columns' histories and ViewModels must move
+    // with it, not be rebuilt when the window crosses a tier.
+    val currentDeck by rememberUpdatedState(deck)
+    val movableDeck = remember { movableContentOf { modifier: Modifier -> currentDeck?.invoke(modifier) } }
+    val deckSlot: (@Composable (Modifier) -> Unit)? = if (deck != null) movableDeck else null
+
     val docked = LocalScreenLayout.current.navigationStyle == NavigationStyle.PERMANENT_DRAWER
 
     // Publish docked-ness on the Nav so drawer consumers (openDrawer, edge swipes, the
@@ -123,9 +133,9 @@ fun AppShellLayout(
     }
 
     if (docked) {
-        PermanentDrawerShell(accountViewModel, nav, { permanentDrawerContent(openSheetFunction) }, deck, movableContent)
+        PermanentDrawerShell(accountViewModel, nav, { permanentDrawerContent(openSheetFunction) }, deckSlot, movableContent)
     } else {
-        ModalDrawerShell(accountViewModel, nav, { drawerContent(openSheetFunction) }, suspendEdgeSwipe, deck, movableContent)
+        ModalDrawerShell(accountViewModel, nav, { drawerContent(openSheetFunction) }, suspendEdgeSwipe, deckSlot, movableContent)
     }
 
     // Sheet content
@@ -234,7 +244,7 @@ private fun MultiPaneShell(
         VerticalDivider(thickness = DividerThickness)
 
         if (deck != null) {
-            DeckSplit(Modifier.weight(1f).fillMaxHeight(), { CenterPane(Modifier, content) }, { deck(Modifier) })
+            DeckSplit(Modifier.weight(1f).fillMaxHeight(), { CenterPane(Modifier.unfocusDeckOnPress(), content) }, { deck(Modifier) })
         } else {
             CenterPane(Modifier.weight(1f), content)
 
@@ -242,6 +252,17 @@ private fun MultiPaneShell(
         }
     }
 }
+
+/** A press in the main screen takes the focus back from the deck's columns (see [DeckFocus]). */
+private fun Modifier.unfocusDeckOnPress() =
+    pointerInput(Unit) {
+        awaitPointerEventScope {
+            while (true) {
+                val event = awaitPointerEvent(PointerEventPass.Initial)
+                if (event.type == PointerEventType.Press) DeckFocus.columnId = null
+            }
+        }
+    }
 
 /** How narrow the deck may squeeze the main screen; past this, the columns scroll. */
 private val DeckMainPaneMinWidth = 420.dp

@@ -64,12 +64,17 @@ import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.input.pointer.PointerEventPass
+import androidx.compose.ui.input.pointer.PointerEventType
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.ViewModelStore
 import androidx.lifecycle.ViewModelStoreOwner
 import androidx.lifecycle.viewmodel.compose.LocalViewModelStoreOwner
+import androidx.navigationevent.compose.LocalNavigationEventDispatcherOwner
+import androidx.navigationevent.compose.rememberNavigationEventDispatcherOwner
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbol
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
@@ -144,22 +149,23 @@ fun DeckArea(
     val scroll = rememberScrollState()
     val density = LocalDensity.current
 
-    var focusedId by remember { mutableStateOf<String?>(null) }
     var picking by remember { mutableStateOf(false) }
     var naming by remember { mutableStateOf(false) }
 
     val currentColumns by rememberUpdatedState(columns)
     LaunchedEffect(settings) {
         DeckCommandBus.commands.collect { command ->
-            val focused = currentColumns.firstOrNull { it.id == focusedId } ?: currentColumns.lastOrNull()
+            // Closing and moving act on the column the user is in, never on a guess.
+            val focused = currentColumns.firstOrNull { it.id == DeckFocus.columnId }
             when (command) {
                 DeckCommand.AddColumn -> picking = true
                 DeckCommand.CloseColumn -> focused?.let { col -> settings.updateDeck { it.removeColumn(col.id) } }
                 is DeckCommand.MoveColumn -> focused?.let { col -> settings.updateDeck { it.moveColumn(col.id, command.delta) } }
                 is DeckCommand.FocusColumn -> {
                     currentColumns.getOrNull(command.index)?.let { col ->
-                        focusedId = col.id
-                        val before = currentColumns.take(command.index).sumOf { it.width.toDouble() }.toFloat()
+                        DeckFocus.columnId = col.id
+                        // Each column is preceded by its resize handle.
+                        val before = currentColumns.take(command.index).sumOf { it.width.toDouble() + ResizeHandleWidth.value }.toFloat()
                         scroll.animateScrollTo(with(density) { before.dp.roundToPx() })
                     }
                 }
@@ -178,8 +184,8 @@ fun DeckArea(
                     ResizeHandle(column, settings)
                     DeckColumnPane(
                         column = column,
-                        focused = column.id == focusedId,
-                        onFocus = { focusedId = column.id },
+                        focused = column.id == DeckFocus.columnId,
+                        onFocus = { DeckFocus.columnId = column.id },
                         settings = settings,
                         mainNav = mainNav,
                         destinationsFor = destinationsFor,
@@ -193,7 +199,7 @@ fun DeckArea(
         AddColumnDialog(
             myPubKey = accountViewModel.account.signer.pubKey,
             onPick = { route ->
-                settings.updateDeck { it.addColumn(route, afterId = focusedId) }
+                settings.updateDeck { it.addColumn(route, afterId = DeckFocus.columnId) }
                 picking = false
             },
             onDismiss = { picking = false },
@@ -291,7 +297,7 @@ private fun ResizeHandle(
     val id = column.id
     Box(
         Modifier
-            .width(6.dp)
+            .width(ResizeHandleWidth)
             .fillMaxHeight()
             .draggable(
                 orientation = Orientation.Horizontal,
@@ -333,12 +339,26 @@ private fun DeckColumnPane(
     val owner = remember(column.id) { DeckViewModelStoreOwner() }
     DisposableEffect(owner) { onDispose { owner.viewModelStore.clear() } }
 
+    // Back and Esc go to this column's own history only while it is the focused one; otherwise they
+    // reach the main screen, whose handler a column registered later would otherwise shadow.
+    val backOwner = rememberNavigationEventDispatcherOwner(enabled = focused)
+    val currentOnFocus by rememberUpdatedState(onFocus)
+
     val border = if (focused) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surface
     Column(
         Modifier
             .width(column.width.dp)
             .fillMaxHeight()
-            .border(1.dp, border),
+            .border(1.dp, border)
+            // Any press inside focuses the column, without taking the event from what was pressed.
+            .pointerInput(Unit) {
+                awaitPointerEventScope {
+                    while (true) {
+                        val event = awaitPointerEvent(PointerEventPass.Initial)
+                        if (event.type == PointerEventType.Press) currentOnFocus()
+                    }
+                }
+            },
     ) {
         Row(
             Modifier
@@ -362,12 +382,15 @@ private fun DeckColumnPane(
             CompositionLocalProvider(
                 LocalViewModelStoreOwner provides owner,
                 LocalScreenLayout provides ColumnScreenLayout,
+                LocalNavigationEventDispatcherOwner provides backOwner,
             ) {
                 NavigationHost(inner, destinations)
             }
         }
     }
 }
+
+private val ResizeHandleWidth = 6.dp
 
 private class DeckViewModelStoreOwner : ViewModelStoreOwner {
     override val viewModelStore = ViewModelStore()

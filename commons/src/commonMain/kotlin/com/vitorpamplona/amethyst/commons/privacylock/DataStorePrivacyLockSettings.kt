@@ -114,19 +114,21 @@ class DataStorePrivacyLockSettings(
 
     override fun setPasswordHashed(saltAndHash: String?) {
         mutablePassword.value = saltAndHash
-        write { if (saltAndHash != null) it[PASSWORD] = saltAndHash else it.remove(PASSWORD) }
+        write { prefs -> mutablePassword.value.let { if (it != null) prefs[PASSWORD] = it else prefs.remove(PASSWORD) } }
     }
 
     override fun setFailedUnlockAttempts(count: Int) {
         mutableFailed.value = count
-        write { it[FAILED] = count }
+        write { it[FAILED] = mutableFailed.value }
     }
 
     override fun setLockedUntilEpochMs(millis: Long?) {
         mutableLockedUntil.value = millis
-        write { if (millis != null) it[LOCKED_UNTIL] = millis else it.remove(LOCKED_UNTIL) }
+        write { prefs -> mutableLockedUntil.value.let { if (it != null) prefs[LOCKED_UNTIL] = it else prefs.remove(LOCKED_UNTIL) } }
     }
 
+    // Each write stores the value current when it runs, not when it was asked for: two quick
+    // changes (a failure, then the reset after a success) cannot land on disk in the wrong order.
     private fun write(block: (MutablePreferences) -> Unit) {
         scope.launch {
             try {

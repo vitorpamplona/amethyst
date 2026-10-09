@@ -51,6 +51,7 @@ import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.privacylock.InactivityTimer
+import com.vitorpamplona.amethyst.commons.privacylock.LocalPrivacyLockState
 import com.vitorpamplona.amethyst.commons.privacylock.LockScope
 import com.vitorpamplona.amethyst.commons.privacylock.PrivacyLockSettings
 import com.vitorpamplona.amethyst.commons.resources.Res
@@ -83,6 +84,7 @@ import com.vitorpamplona.amethyst.commons.resources.privacy_lock_timeout_1m
 import com.vitorpamplona.amethyst.commons.resources.privacy_lock_timeout_5m
 import com.vitorpamplona.amethyst.commons.resources.privacy_lock_timeout_never
 import com.vitorpamplona.amethyst.commons.resources.privacy_lock_title
+import com.vitorpamplona.amethyst.commons.resources.privacy_lock_too_many_attempts
 import com.vitorpamplona.amethyst.commons.resources.privacy_lock_wallet
 import com.vitorpamplona.amethyst.commons.resources.privacy_lock_wallet_description
 import com.vitorpamplona.amethyst.commons.resources.save
@@ -154,6 +156,13 @@ private fun PrivacyLockSettingsBody(
     // A lock to turn on once the first password is set.
     var enableAfterPassword by remember { mutableStateOf<LockScope?>(null) }
 
+    // Turning a lock on happens here, already past the lock: it should not lock this screen at once.
+    val lockStates = LocalPrivacyLockState.current
+    val enableLock = { lockScope: LockScope ->
+        settings.setScopeLocked(lockScope, true)
+        lockStates[lockScope]?.onUnlockSuccess()
+    }
+
     val confirmThen = { action: () -> Unit ->
         if (prompter.usesPassword) {
             pendingConfirmation = action
@@ -175,12 +184,12 @@ private fun PrivacyLockSettingsBody(
             }
 
             prompter.usesPassword -> {
-                settings.setScopeLocked(lockScope, true)
+                enableLock(lockScope)
             }
 
             else -> {
                 // Proves the device can unlock before anything is locked behind it.
-                scope.launch { if (prompter.prompt() == PromptResult.Success) settings.setScopeLocked(lockScope, true) }
+                scope.launch { if (prompter.prompt() == PromptResult.Success) enableLock(lockScope) }
             }
         }
         Unit
@@ -261,7 +270,7 @@ private fun PrivacyLockSettingsBody(
             },
             onDone = {
                 passwordDialog = null
-                enableAfterPassword?.let { settings.setScopeLocked(it, true) }
+                enableAfterPassword?.let { enableLock(it) }
                 enableAfterPassword = null
             },
         )
@@ -290,6 +299,7 @@ private fun PasswordDialog(
     val wrongStr = stringRes(Res.string.privacy_lock_password_wrong)
     val shortStr = stringRes(Res.string.privacy_lock_password_too_short, MIN_LOCK_PASSWORD_LENGTH)
     val mismatchStr = stringRes(Res.string.privacy_lock_password_mismatch)
+    val lockedOutStr = stringRes(Res.string.privacy_lock_too_many_attempts)
 
     val submit = submit@{
         if (working) return@submit
@@ -310,7 +320,11 @@ private fun PasswordDialog(
                     else -> prompter.changePassword(current.takeIf { asksCurrent }?.toCharArray(), new.toCharArray())
                 }
             working = false
-            if (result == PromptResult.Success) onDone() else error = wrongStr
+            when (result) {
+                PromptResult.Success -> onDone()
+                PromptResult.TemporaryLockout -> error = lockedOutStr
+                else -> error = wrongStr
+            }
         }
         Unit
     }

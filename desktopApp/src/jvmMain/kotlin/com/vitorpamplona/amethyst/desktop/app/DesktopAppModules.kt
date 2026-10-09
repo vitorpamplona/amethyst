@@ -84,7 +84,6 @@ import com.vitorpamplona.amethyst.commons.state.UiSettingsState
 import com.vitorpamplona.amethyst.commons.tor.AccountsTorStateConnector
 import com.vitorpamplona.amethyst.commons.tor.TorRelayState
 import com.vitorpamplona.amethyst.commons.tor.TorSettings
-import com.vitorpamplona.amethyst.commons.tor.TorType
 import com.vitorpamplona.amethyst.desktop.network.runSleepResumeMonitor
 import com.vitorpamplona.amethyst.desktop.service.media.GlobalMediaPlayer
 import com.vitorpamplona.amethyst.desktop.service.scheduledposts.DesktopScheduledPostScheduler
@@ -273,7 +272,8 @@ class DesktopAppModules(
             client = client,
             persistence = FileRelayHealthPersistence(File(filesDir, RELAY_HEALTH_FILE)),
             scope = applicationIOScope,
-            torEnabled = { torPrefs.torType.value != TorType.OFF },
+            isTorRouted = { torEvaluatorFlow.shouldUseTorForRelay(it) },
+            nip11 = { nip11Cache.getFromCache(it) },
         )
     }
 

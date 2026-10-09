@@ -42,6 +42,7 @@ import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.bookmarks
 import com.vitorpamplona.amethyst.commons.resources.deck_add_column
 import com.vitorpamplona.amethyst.commons.resources.deck_close_column
+import com.vitorpamplona.amethyst.commons.resources.deck_focus_column
 import com.vitorpamplona.amethyst.commons.resources.deck_mode
 import com.vitorpamplona.amethyst.commons.resources.deck_move_left
 import com.vitorpamplona.amethyst.commons.resources.deck_move_right
@@ -96,6 +97,7 @@ class DesktopNavigator {
 private enum class Command(
     val key: Key,
     val shift: Boolean = false,
+    val alt: Boolean = false,
     val needsLogin: Boolean = true,
     /** For the deck's focus commands, which column (0-based). */
     val column: Int = -1,
@@ -114,23 +116,30 @@ private enum class Command(
     // The deck's, when it is on: they do nothing otherwise.
     ADD_COLUMN(Key.T),
     CLOSE_COLUMN(Key.W),
-    MOVE_COLUMN_LEFT(Key.DirectionLeft, shift = true),
-    MOVE_COLUMN_RIGHT(Key.DirectionRight, shift = true),
+
+    // Page Up/Down as browsers move tabs: Shift+arrows select words in every text field.
+    MOVE_COLUMN_LEFT(Key.PageUp, shift = true),
+    MOVE_COLUMN_RIGHT(Key.PageDown, shift = true),
     SAVE_WORKSPACE(Key.S, shift = true),
-    FOCUS_COLUMN_1(Key.One, shift = true, column = 0),
-    FOCUS_COLUMN_2(Key.Two, shift = true, column = 1),
-    FOCUS_COLUMN_3(Key.Three, shift = true, column = 2),
-    FOCUS_COLUMN_4(Key.Four, shift = true, column = 3),
-    FOCUS_COLUMN_5(Key.Five, shift = true, column = 4),
-    FOCUS_COLUMN_6(Key.Six, shift = true, column = 5),
-    FOCUS_COLUMN_7(Key.Seven, shift = true, column = 6),
-    FOCUS_COLUMN_8(Key.Eight, shift = true, column = 7),
-    FOCUS_COLUMN_9(Key.Nine, shift = true, column = 8),
+    FOCUS_COLUMN_1(Key.One, alt = true, column = 0),
+    FOCUS_COLUMN_2(Key.Two, alt = true, column = 1),
+    FOCUS_COLUMN_3(Key.Three, alt = true, column = 2),
+    FOCUS_COLUMN_4(Key.Four, alt = true, column = 3),
+    FOCUS_COLUMN_5(Key.Five, alt = true, column = 4),
+    FOCUS_COLUMN_6(Key.Six, alt = true, column = 5),
+    FOCUS_COLUMN_7(Key.Seven, alt = true, column = 6),
+    FOCUS_COLUMN_8(Key.Eight, alt = true, column = 7),
+    FOCUS_COLUMN_9(Key.Nine, alt = true, column = 8),
     ;
 
     val shortcut: KeyShortcut
-        get() = if (isMac) KeyShortcut(key, meta = true, shift = shift) else KeyShortcut(key, ctrl = true, shift = shift)
+        get() = if (isMac) KeyShortcut(key, meta = true, shift = shift, alt = alt) else KeyShortcut(key, ctrl = true, shift = shift, alt = alt)
+
+    /** The deck's commands, which only apply while a deck is on screen. */
+    val forDeck: Boolean get() = column >= 0 || this in DECK_COMMANDS
 }
+
+private val DECK_COMMANDS = setOf(Command.ADD_COLUMN, Command.CLOSE_COLUMN, Command.MOVE_COLUMN_LEFT, Command.MOVE_COLUMN_RIGHT, Command.SAVE_WORKSPACE)
 
 // The real host, not the theming preview: the system menu bar and the Cmd key only exist on a Mac.
 private val isMac = PlatformInfo.host == Platform.MACOS
@@ -171,9 +180,11 @@ fun DesktopNavigator.handleShortcut(
     onQuit: () -> Unit,
 ): Boolean {
     if (isMac || event.type != KeyEventType.KeyDown) return false
-    if (!event.isCtrlPressed || event.isAltPressed || event.isMetaPressed) return false
-    val command = Command.entries.firstOrNull { it.key == event.key && it.shift == event.isShiftPressed } ?: return false
+    if (!event.isCtrlPressed || event.isMetaPressed) return false
+    val command = Command.entries.firstOrNull { it.key == event.key && it.shift == event.isShiftPressed && it.alt == event.isAltPressed } ?: return false
     if (command.needsLogin && nav == null) return false
+    // With no deck showing, the keys stay with whatever has focus (Ctrl+W in a text field, say).
+    if (command.forDeck && !DeckCommandBus.active) return false
     // Holding the chord repeats its key-down every few tens of ms: one press, one command (one
     // New Post, not a stack of them). Timed rather than tracked to the key-up, which a focus
     // change can swallow.
@@ -229,6 +240,10 @@ fun FrameWindowScope.DesktopMenuBar(
             CommandItem(stringRes(Res.string.deck_move_right), Command.MOVE_COLUMN_RIGHT)
             Separator()
             CommandItem(stringRes(Res.string.deck_save_workspace), Command.SAVE_WORKSPACE)
+            Separator()
+            Command.entries.filter { it.column >= 0 }.forEach { command ->
+                CommandItem(stringRes(Res.string.deck_focus_column, command.column + 1), command)
+            }
         }
         Menu(stringRes(Res.string.desktop_menu_help)) {
             Item(stringRes(Res.string.desktop_menu_about)) { DesktopBrowser.open(PROJECT_URL) }

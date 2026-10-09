@@ -100,10 +100,25 @@ import com.vitorpamplona.quartz.nip18Reposts.RepostEvent
 import com.vitorpamplona.quartz.nip22Comments.CommentEvent
 import com.vitorpamplona.quartz.nip23LongContent.LongFormContentEvent
 import com.vitorpamplona.quartz.nip68Picture.PictureEvent
+import com.vitorpamplona.quartz.nip71Video.AddressableNormalVideoEvent
+import com.vitorpamplona.quartz.nip71Video.AddressableShortVideoEvent
 import com.vitorpamplona.quartz.nip71Video.VideoNormalEvent
 import com.vitorpamplona.quartz.nip71Video.VideoShortEvent
 import com.vitorpamplona.quartz.nip84Highlights.HighlightEvent
 import org.jetbrains.compose.resources.StringResource
+
+// Room for a family or flag emoji (several code points joined), never half of a surrogate pair.
+private const val MAX_EMOJI_CODE_POINTS = 8
+
+private fun String.takeCodePoints(max: Int): String {
+    var end = 0
+    var count = 0
+    while (end < length && count < max) {
+        end += if (this[end].isHighSurrogate() && end + 1 < length && this[end + 1].isLowSurrogate()) 2 else 1
+        count++
+    }
+    return substring(0, end)
+}
 
 /** The kinds a feed can be narrowed to; each chip stands for one or more event kinds. */
 private val kindPresets: List<Pair<StringResource, List<Int>>> =
@@ -113,7 +128,7 @@ private val kindPresets: List<Pair<StringResource, List<Int>>> =
         Res.string.custom_feeds_kind_comments to listOf(CommentEvent.KIND),
         Res.string.custom_feeds_kind_long_form to listOf(LongFormContentEvent.KIND),
         Res.string.custom_feeds_kind_pictures to listOf(PictureEvent.KIND),
-        Res.string.custom_feeds_kind_videos to listOf(VideoNormalEvent.KIND, VideoShortEvent.KIND),
+        Res.string.custom_feeds_kind_videos to listOf(VideoNormalEvent.KIND, VideoShortEvent.KIND, AddressableNormalVideoEvent.KIND, AddressableShortVideoEvent.KIND),
         Res.string.custom_feeds_kind_highlights to listOf(HighlightEvent.KIND),
     )
 
@@ -162,7 +177,7 @@ fun EditCustomFeedScreen(
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 OutlinedTextField(
                     value = state.emoji,
-                    onValueChange = { state.emoji = it.take(4) },
+                    onValueChange = { state.emoji = it.takeCodePoints(MAX_EMOJI_CODE_POINTS) },
                     label = { Text(stringRes(Res.string.custom_feeds_emoji)) },
                     singleLine = true,
                     modifier = Modifier.width(96.dp),

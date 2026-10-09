@@ -26,6 +26,10 @@ import com.vitorpamplona.amethyst.commons.privacylock.LockScope
 import com.vitorpamplona.amethyst.commons.privacylock.PasswordHasher
 import com.vitorpamplona.amethyst.commons.privacylock.PrivacyLockSettings
 import com.vitorpamplona.amethyst.commons.privacylock.enabledFor
+import com.vitorpamplona.amethyst.commons.privacylock.isLockedOut
+import com.vitorpamplona.amethyst.commons.privacylock.recordFailedUnlock
+import com.vitorpamplona.amethyst.commons.privacylock.resetFailedUnlocks
+import com.vitorpamplona.quartz.utils.TimeUtils
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
@@ -48,14 +52,31 @@ private class PasswordPrompter(
     override suspend fun verifyPassword(password: CharArray): PromptResult =
         withContext(Dispatchers.Default) {
             val stored = settings.passwordHashed.value ?: return@withContext PromptResult.Unavailable
-            if (PasswordHasher.verify(password, stored)) {
+            checked(password, stored) {
                 // Brings a hash from before the 600k-iteration format up to date.
                 if (PasswordHasher.isLegacyFormat(stored)) settings.setPasswordHashed(PasswordHasher.hash(password))
-                PromptResult.Success
-            } else {
-                PromptResult.Failed
             }
         }
+
+    /**
+     * Checks [password] against [stored] under the shared backoff, so the settings screen is no
+     * faster a way to guess than the lock screen: refused while locked out, every miss counted.
+     */
+    private inline fun checked(
+        password: CharArray,
+        stored: String,
+        onSuccess: () -> Unit,
+    ): PromptResult {
+        if (settings.isLockedOut(TimeUtils.nowMillis())) return PromptResult.TemporaryLockout
+        return if (PasswordHasher.verify(password, stored)) {
+            settings.resetFailedUnlocks()
+            onSuccess()
+            PromptResult.Success
+        } else {
+            settings.recordFailedUnlock(TimeUtils.nowMillis())
+            PromptResult.Failed
+        }
+    }
 
     override suspend fun changePassword(
         current: CharArray?,
@@ -63,8 +84,9 @@ private class PasswordPrompter(
     ): PromptResult =
         withContext(Dispatchers.Default) {
             val stored = settings.passwordHashed.value
-            if (stored != null && (current == null || !PasswordHasher.verify(current, stored))) {
-                return@withContext PromptResult.Failed
+            if (stored != null) {
+                val result = if (current == null) PromptResult.Failed else checked(current, stored) {}
+                if (result != PromptResult.Success) return@withContext result
             }
             if (new == null) {
                 // Nothing could unlock them any more: every lock goes off with the password.

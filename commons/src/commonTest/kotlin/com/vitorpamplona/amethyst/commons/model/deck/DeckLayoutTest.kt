@@ -92,4 +92,17 @@ class DeckLayoutTest {
         val layout = DeckLayout().addColumn(Route.Hashtag("nostr")).addColumn(Route.Profile("a".repeat(64)))
         assertEquals(layout, assertNotNull(DeckLayout.fromJson(layout.toJson())))
     }
+
+    @Test
+    fun aColumnThisBuildCannotReadIsDroppedAlone() {
+        val layout = DeckLayout().addColumn(Route.Hashtag("nostr")).saveAsWorkspace("Second")
+        val json = layout.toJson()
+        // A route a newer version added, under a serial name this build does not know.
+        val broken = json.replaceFirst("\"type\":\"", "\"type\":\"com.example.FutureRoute\",\"was\":\"")
+        val read = assertNotNull(DeckLayout.fromJson(broken))
+
+        assertEquals(2, read.workspaces.size)
+        assertEquals(1, read.active)
+        assertEquals(layout.workspaces.sumOf { it.columns.size } - 1, read.workspaces.sumOf { it.columns.size })
+    }
 }

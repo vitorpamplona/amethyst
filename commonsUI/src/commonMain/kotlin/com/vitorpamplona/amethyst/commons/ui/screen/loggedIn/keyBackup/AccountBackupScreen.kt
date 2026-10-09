@@ -84,6 +84,9 @@ import androidx.lifecycle.viewModelScope
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbol
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
+import com.vitorpamplona.amethyst.commons.privacylock.LocalPrivacyLockState
+import com.vitorpamplona.amethyst.commons.privacylock.LockScope
+import com.vitorpamplona.amethyst.commons.privacylock.LockState
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.account_backup_encrypt
 import com.vitorpamplona.amethyst.commons.resources.account_backup_encrypt_again
@@ -706,14 +709,20 @@ private fun rememberKeyAccessGate(accountViewModel: AccountViewModel): KeyAccess
     val authenticator = rememberDeviceAuthenticator()
     val authTitle = stringRes(Res.string.backup_keys)
     val gate = remember { KeyAccessGate() }
+    val keyBackupLock = LocalPrivacyLockState.current[LockScope.KeyBackup]
 
     SideEffect {
         gate.prompt = { onApproved ->
-            authenticator.authenticate(
-                title = authTitle,
-                onApproved = onApproved,
-                onError = { title, message -> accountViewModel.toastManager.toast(title, message) },
-            )
+            // With a privacy lock on, this screen opened only after unlocking it: no second prompt.
+            if (keyBackupLock?.state?.value is LockState.Unlocked) {
+                onApproved()
+            } else {
+                authenticator.authenticate(
+                    title = authTitle,
+                    onApproved = onApproved,
+                    onError = { title, message -> accountViewModel.toastManager.toast(title, message) },
+                )
+            }
         }
     }
 

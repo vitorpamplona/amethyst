@@ -21,14 +21,21 @@
 package com.vitorpamplona.amethyst.commons.relayClient.home.nip01Core
 
 import com.vitorpamplona.amethyst.commons.model.topNavFeeds.custom.CustomFeedTopNavPerRelayFilterSet
+import com.vitorpamplona.amethyst.commons.relayClient.home.nip65Follows.HomePostsConversationKinds
+import com.vitorpamplona.amethyst.commons.relayClient.home.nip65Follows.HomePostsNewThreadKinds1
+import com.vitorpamplona.amethyst.commons.relayClient.home.nip65Follows.HomePostsNewThreadKinds2
 import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.ExplainedFilter
 import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.SubPurpose
 import com.vitorpamplona.amethyst.commons.relays.SincePerRelayMap
 import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
 import com.vitorpamplona.quartz.nip01Core.tags.hashtags.hashtagAlts
 
+/** What a feed with no kinds chosen asks for: everything Home shows for people and for hashtags. */
+private val CustomFeedDefaultKinds: List<Int> =
+    (HomePostsNewThreadKinds1 + HomePostsNewThreadKinds2 + HomePostsConversationKinds + HomePostsBuHashtagsKinds).distinct()
+
 /**
- * One REQ per relay for a custom feed: its kinds (or the hashtag feed's post kinds), its authors
+ * One REQ per relay for a custom feed: its kinds (or every kind Home shows), its authors
  * on that relay, and its hashtags, all in the same filter so the relay applies them together.
  */
 fun filterHomePostsByCustomFeed(
@@ -42,7 +49,7 @@ fun filterHomePostsByCustomFeed(
             filter =
                 ExplainedFilter(
                     purpose = SubPurpose.HOME_FEED,
-                    kinds = scope.kinds.ifEmpty { HomePostsBuHashtagsKinds }.sorted(),
+                    kinds = scope.kinds.ifEmpty { CustomFeedDefaultKinds }.sorted(),
                     authors = scope.authors.ifEmpty { null }?.sorted(),
                     tags = scope.hashtags.ifEmpty { null }?.let { mapOf("t" to hashtagAlts(it).sorted()) },
                     limit = 200,

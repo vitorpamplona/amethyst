@@ -46,12 +46,19 @@ import com.vitorpamplona.amethyst.commons.privacylock.PrivacyLockState
 /** The privacy lock's settings, for the settings screen; null where no lock is installed. */
 val LocalPrivacyLockSettings = compositionLocalOf<PrivacyLockSettings?> { null }
 
+/**
+ * Restarts the privacy lock's idle timers. The host already sees taps, clicks and hardware keys;
+ * text fields call this as they change, because the soft keyboard types from its own window.
+ */
+val LocalUserActivity = staticCompositionLocalOf<() -> Unit> { {} }
+
 /** Whether the wallet blurs while the window is not focused (desktop) once its lock is on. */
 private val LocalBlurWalletWhenUnfocused = staticCompositionLocalOf { false }
 
 /**
- * Installs the privacy lock around [content]: one [PrivacyLockState] per scope, the platform's way
- * to unlock, and the app-wide gate. Any touch or key press restarts the idle timers. Without
+ * Installs the privacy lock around [content]: one [PrivacyLockState] per scope and the platform's
+ * way to unlock. Any touch or key press restarts the idle timers. The app-wide gate is placed by
+ * the app inside the account's ViewModel store, so locking does not tear the account down. Without
  * [settings] the app runs unlocked.
  */
 @Composable
@@ -68,12 +75,14 @@ fun PrivacyLockHost(
     val coroutineScope = rememberCoroutineScope()
     val states = remember(settings) { LockScope.entries.associateWith { PrivacyLockState(it, settings, coroutineScope) } }
     val prompter = rememberPrivacyLockPrompter(settings)
+    val onActivity = remember(states) { { states.values.forEach { it.onUserInteraction() } } }
 
     CompositionLocalProvider(
         LocalPrivacyLockState provides states,
         LocalPrivacyLockSettings provides settings,
         LocalCredentialPrompter provides prompter,
         LocalBlurWalletWhenUnfocused provides blurWalletWhenUnfocused,
+        LocalUserActivity provides onActivity,
     ) {
         Box(
             Modifier
@@ -83,15 +92,15 @@ fun PrivacyLockHost(
                         while (true) {
                             // Observed on the Initial pass and never consumed: taps and scrolls behave as before.
                             awaitPointerEvent(PointerEventPass.Initial)
-                            states.values.forEach { it.onUserInteraction() }
+                            onActivity()
                         }
                     }
                 }.onPreviewKeyEvent {
-                    states.values.forEach { it.onUserInteraction() }
+                    onActivity()
                     false
                 },
         ) {
-            PrivacyLockGate(LockScope.App, content)
+            content()
         }
     }
 }

@@ -27,6 +27,7 @@ import kotlinx.collections.immutable.ImmutableMap
 import kotlinx.collections.immutable.PersistentList
 import kotlinx.collections.immutable.persistentListOf
 import kotlinx.collections.immutable.persistentMapOf
+import kotlinx.collections.immutable.toImmutableMap
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -77,6 +78,12 @@ class RelayHealthStore(
     // Per-relay auth-completed lookup. Used by the classifier alongside [nip11Provider] —
     // a NIP-11 auth-required relay only participates in the cohort once auth is complete.
     private val authProvider: (NormalizedRelayUrl) -> Boolean = { true },
+    // Per-relay NIP-11 lookup, when [nip11Provider] has no full map to give.
+    private val nip11ForRelay: (NormalizedRelayUrl) -> Nip11RelayInformation? = { null },
+    // Relays reached through Tor: their times measure the circuit, not the relay, so they stay out
+    // of the slow comparison. Per relay, unlike [torEnabledProvider], because with Tor on only some
+    // relays (onion, DM, money) go through it.
+    private val torRoutedProvider: (NormalizedRelayUrl) -> Boolean = { false },
 ) {
     companion object {
         const val PERSIST_DEBOUNCE_MS: Long = 5_000L
@@ -125,9 +132,10 @@ class RelayHealthStore(
                 if (latencyTracker == null || snaps.isEmpty()) {
                     persistentMapOf<NormalizedRelayUrl, SlowReason>()
                 } else {
+                    val compared = snaps.filterKeys { !torRoutedProvider(it) }.toImmutableMap()
                     classifySlowRelays(
-                        snapshots = snaps,
-                        nip11 = nip11Provider(),
+                        snapshots = compared,
+                        nip11 = nip11Provider().ifEmpty { compared.keys.associateWith { nip11ForRelay(it) }.toImmutableMap() },
                         torEnabled = torEnabledProvider(),
                         authStatus = authProvider,
                     )
@@ -248,11 +256,16 @@ class RelayHealthStore(
         reclassifyAsync()
     }
 
+    @Volatile private var reclassifyJob: Job? = null
+
+    // Called for every message a relay sends, so one pending run covers them all; the latency sweep
+    // and snapshot wait for the minute tick, the only thing that publishes them.
     private fun reclassifyAsync() {
-        scope.launch { reclassify() }
+        if (reclassifyJob?.isActive == true) return
+        reclassifyJob = scope.launch { reclassify(sweepLatency = false) }
     }
 
-    private suspend fun reclassify() {
+    private suspend fun reclassify(sweepLatency: Boolean = true) {
         val s = state.value
         val membership = listMembership.value
         val torEnabled = torEnabledProvider()
@@ -264,7 +277,7 @@ class RelayHealthStore(
         val flagged =
             withContext(ioDispatcher) {
                 // Sweep + snapshot the latency tracker inside the same tick (one timer, not two).
-                if (latencyTracker != null) {
+                if (latencyTracker != null && sweepLatency) {
                     latencyTracker.sweep(TimeUtils.nowMillis())
                     val snap = latencyTracker.snapshot()
                     // Only emit if anything changed structurally — keeps strong-skipping happy
@@ -286,9 +299,11 @@ class RelayHealthStore(
         _unhealthy.value = flagged
     }
 
+    // At most one write per PERSIST_DEBOUNCE_MS: a pending write is not pushed back by new traffic,
+    // which on a busy client would have postponed it until a quiet gap that might never come.
     private fun schedulePersist() {
         if (closed) return
-        persistJob?.cancel()
+        if (persistJob?.isActive == true) return
         persistJob =
             scope.launch {
                 delay(PERSIST_DEBOUNCE_MS)

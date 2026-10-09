@@ -69,10 +69,7 @@ import com.vitorpamplona.amethyst.commons.service.uploads.MultiOrchestrator
 import com.vitorpamplona.amethyst.commons.service.uploads.SelectedMedia
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.QuoteBorder
-import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.isActive
-import kotlinx.coroutines.withContext
 
 /**
  * The media-quality slider, one stop per [CompressorQuality.sliderSteps] level, labelled with the
@@ -101,7 +98,8 @@ fun MediaQualitySlider(
             steps = (steps.size - 2).coerceAtLeast(0),
         )
 
-        val image = remember(media) { media?.let { firstStillImage(it) } }
+        // Read each time: removing an image changes the same orchestrator, so a remembered pick goes stale.
+        val image = media?.let { firstStillImage(it) }
         if (image != null && quality.imageMaxDimension != null) {
             CompressionPreview(image, quality, uploader)
         }
@@ -153,13 +151,10 @@ private fun CompressionPreview(
     LaunchedEffect(image, quality) {
         if (results.containsKey(quality)) return@LaunchedEffect
         delay(300)
-        // Not cancelled half-way: a temp file written as the slider moves on is still discarded below.
-        val preview = withContext(NonCancellable) { uploader.previewImageCompression(image.uri, image.mimeType, quality) }
-        if (isActive) {
-            results[quality] = preview
-        } else {
-            preview?.let { uploader.discardTempFile(it.compressedUri) }
-        }
+        // Cancelled when the slider moves on or the composer closes, so an abandoned preview stops
+        // decoding (on desktop it would hold up the upload behind it); the uploader deletes what it
+        // wrote when cancelled.
+        results[quality] = uploader.previewImageCompression(image.uri, image.mimeType, quality)
     }
 
     if (!results.containsKey(quality)) {

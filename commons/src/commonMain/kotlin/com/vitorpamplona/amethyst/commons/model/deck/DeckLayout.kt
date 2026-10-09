@@ -24,6 +24,12 @@ import androidx.compose.runtime.Immutable
 import com.vitorpamplona.amethyst.commons.model.navigation.Route
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonArray
+import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.JsonPrimitive
+import kotlinx.serialization.json.contentOrNull
+import kotlinx.serialization.json.intOrNull
+import kotlinx.serialization.json.jsonObject
 import kotlin.uuid.ExperimentalUuidApi
 import kotlin.uuid.Uuid
 
@@ -138,10 +144,29 @@ data class DeckLayout(
         @OptIn(ExperimentalUuidApi::class)
         fun newId(): String = Uuid.random().toString()
 
-        /** What [toJson] wrote, or null when it can't be read (an update renamed a route): the caller starts over. */
+        /**
+         * What [toJson] wrote, or null when nothing can be read. Columns are read one by one: a
+         * column whose screen this build does not know (renamed, or added by a newer version) is
+         * dropped, not every workspace with it.
+         */
         fun fromJson(value: String): DeckLayout? =
-            runCatching { json.decodeFromString(serializer(), value) }
-                .getOrNull()
-                ?.takeIf { it.workspaces.isNotEmpty() }
+            runCatching {
+                val root = json.parseToJsonElement(value).jsonObject
+                val workspaces =
+                    (root["workspaces"] as? JsonArray).orEmpty().mapNotNull { element ->
+                        val workspace = element as? JsonObject ?: return@mapNotNull null
+                        val columns =
+                            (workspace["columns"] as? JsonArray).orEmpty().mapNotNull { column ->
+                                runCatching { json.decodeFromJsonElement(DeckColumn.serializer(), column) }.getOrNull()
+                            }
+                        DeckWorkspace(workspace.string("id") ?: newId(), workspace.string("name").orEmpty(), columns)
+                    }
+                if (workspaces.isEmpty()) return@runCatching null
+                val active = (root["active"] as? JsonPrimitive)?.intOrNull ?: 0
+                val notice = (root["importNotice"] as? JsonArray).orEmpty().mapNotNull { (it as? JsonPrimitive)?.contentOrNull }
+                DeckLayout(workspaces, active.coerceIn(0, workspaces.lastIndex), notice)
+            }.getOrNull()
+
+        private fun JsonObject.string(key: String): String? = (this[key] as? JsonPrimitive)?.takeIf { it.isString }?.content
     }
 }

@@ -81,7 +81,7 @@ interface MediaUploader {
      * Compresses the still image at [uri] as [upload] would at [compressionQuality], for a preview
      * before posting. Null when [uri] is not an image this platform re-encodes (GIF, SVG, AVIF,
      * video), at [CompressorQuality.UNCOMPRESSED], or when compression fails. The caller owns the
-     * returned temp file.
+     * returned temp file; when the call is cancelled, the uploader deletes whatever it wrote.
      */
     suspend fun previewImageCompression(
         uri: MediaUri,

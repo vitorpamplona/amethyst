@@ -31,7 +31,6 @@ import com.vitorpamplona.amethyst.commons.service.image.BlurhashWrapper
 import com.vitorpamplona.amethyst.commons.service.image.ThumbhashWrapper
 import com.vitorpamplona.amethyst.commons.service.upload.AmethystTempDir
 import com.vitorpamplona.amethyst.commons.service.upload.BlossomClient
-import com.vitorpamplona.amethyst.commons.service.upload.CompressionException
 import com.vitorpamplona.amethyst.commons.service.upload.FileHeader
 import com.vitorpamplona.amethyst.commons.service.upload.ImageCompressionTarget
 import com.vitorpamplona.amethyst.commons.service.upload.ImageReencoder
@@ -368,11 +367,20 @@ class DesktopMediaUploader(
         val result =
             try {
                 ImageReencoder.reencode(source, target)
-            } catch (e: CompressionException) {
+            } catch (e: Exception) {
+                // Not only CompressionException: ImageIO throws its own on a CMYK JPEG or a corrupt
+                // file, and an exception here would take the composer down with it.
+                if (e is CancellationException) throw e
                 return null
             }
         if (result !is ImageReencoder.ReencodeResult.Reencoded) return null
-        return ImageCompressionPreview(imageStats(source), imageStats(result.file), StringMediaUri(result.file.absolutePath))
+        // The caller cancels a preview the slider moved past; its file must not outlive it.
+        return try {
+            ImageCompressionPreview(imageStats(source), imageStats(result.file), StringMediaUri(result.file.absolutePath))
+        } catch (e: Throwable) {
+            result.file.delete()
+            throw e
+        }
     }
 
     private suspend fun imageStats(file: File): ImageFileStats =

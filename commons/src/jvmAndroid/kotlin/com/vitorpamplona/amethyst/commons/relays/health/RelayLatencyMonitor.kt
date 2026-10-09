@@ -21,6 +21,8 @@
 package com.vitorpamplona.amethyst.commons.relays.health
 
 import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
+import com.vitorpamplona.quartz.nip11RelayInfo.Nip11RelayInformation
 import kotlinx.coroutines.CoroutineScope
 
 /**
@@ -33,16 +35,23 @@ class RelayLatencyMonitor(
     private val client: INostrClient,
     persistence: RelayHealthPersistence,
     scope: CoroutineScope,
-    torEnabled: () -> Boolean,
+    /** Whether the client reaches this relay through Tor; those relays are not compared. */
+    isTorRouted: (NormalizedRelayUrl) -> Boolean,
+    /** The relay's cached NIP-11 document, if any: auth- or payment-required relays are not compared. */
+    nip11: (NormalizedRelayUrl) -> Nip11RelayInformation?,
 ) {
     private val tracker = RelayLatencyTracker()
 
     val store: RelayHealthStore =
         RelayHealthStore(
             persistence = persistence,
-            torEnabledProvider = torEnabled,
             parentScope = scope,
             latencyTracker = tracker,
+            nip11ForRelay = nip11,
+            // Anonymous queries to an auth- or payment-required relay mostly time out or close:
+            // counting them would mark those relays slow for no fault of theirs.
+            authProvider = { false },
+            torRoutedProvider = isTorRouted,
         )
 
     private val healthListener = RelayHealthListener(store)

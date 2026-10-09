@@ -84,6 +84,7 @@ import com.vitorpamplona.amethyst.commons.ui.navigation.navs.rememberNav
 import com.vitorpamplona.amethyst.commons.ui.navigation.routes.getRouteWithArguments
 import com.vitorpamplona.amethyst.commons.ui.navigation.shell.AppShellLayout
 import com.vitorpamplona.amethyst.commons.ui.platform.LocalAppServices
+import com.vitorpamplona.amethyst.commons.ui.privacylock.PrivacyLockGate
 import com.vitorpamplona.amethyst.commons.ui.privacylock.PrivacyLockHost
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.BottomBarFeedPreloaders
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.buzz.BuzzDmDiscoveryPreload
@@ -94,6 +95,8 @@ import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.publicChannel
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.quartz.utils.Log
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.distinctUntilChanged
 
 /**
@@ -162,7 +165,11 @@ private fun LoggedInSetup(
     // page re-composes after the window is recreated (rotation, dark-mode toggle, background).
     val initialRoute = remember(state) { state.route.also { state.route = null } }
     AccountScopedViewModelStore(state.account.signer.pubKey) {
-        LoggedInPage(state.account, initialRoute, sessionManager, root)
+        // Inside the store: the lock screen replaces the screens, not the account's ViewModels
+        // and subscriptions, which an unlock would otherwise rebuild from scratch.
+        PrivacyLockGate(LockScope.App) {
+            LoggedInPage(state.account, initialRoute, sessionManager, root)
+        }
     }
 }
 
@@ -375,13 +382,19 @@ private fun RelockOnLeave(nav: Nav) {
     LaunchedEffect(nav, states) {
         snapshotFlow { nav.currentRoute.lockScope() }
             .distinctUntilChanged()
-            .collect { onTop ->
+            .collectLatest { onTop ->
+                // After the screen that left has animated out: locking it mid-animation would turn
+                // it into a lock screen on its way out, and on Android pop a fingerprint prompt over
+                // the screen the user went to.
+                delay(RELOCK_AFTER_LEAVE_MS)
                 states.forEach { (scope, state) ->
                     if (scope != LockScope.App && scope != onTop) state.onLeaveRoute()
                 }
             }
     }
 }
+
+private const val RELOCK_AFTER_LEAVE_MS = 500L
 
 /** Tells [root] which screen is on top, by its route's name only: never which profile or note. */
 @Composable

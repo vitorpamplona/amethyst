@@ -129,7 +129,6 @@ import com.vitorpamplona.amethyst.commons.state.UiSettingsState
 import com.vitorpamplona.amethyst.commons.tor.AccountsTorStateConnector
 import com.vitorpamplona.amethyst.commons.tor.TorRelayState
 import com.vitorpamplona.amethyst.commons.tor.TorSettings
-import com.vitorpamplona.amethyst.commons.tor.TorType
 import com.vitorpamplona.amethyst.connectedApps.consent.Nip46ConsentBridge
 import com.vitorpamplona.amethyst.model.accountsCache.defaultMarmotStreamTransport
 import com.vitorpamplona.amethyst.model.nip60Cashu.CashuPreferences
@@ -855,7 +854,8 @@ class AppModules(
             client = client,
             persistence = FileRelayHealthPersistence(File(appContext.filesDir, RELAY_HEALTH_FILE)),
             scope = applicationIOScope,
-            torEnabled = { torPrefs.torType.value != TorType.OFF },
+            isTorRouted = { torEvaluatorFlow.shouldUseTorForRelay(it) },
+            nip11 = { nip11Cache.getFromCache(it) },
         )
     }
 

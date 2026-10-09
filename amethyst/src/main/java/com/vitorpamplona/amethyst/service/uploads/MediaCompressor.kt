@@ -22,6 +22,7 @@ package com.vitorpamplona.amethyst.service.uploads
 
 import android.content.Context
 import android.graphics.Bitmap
+import android.graphics.BitmapFactory
 import android.net.Uri
 import androidx.core.graphics.scale
 import androidx.core.net.toUri
@@ -34,7 +35,6 @@ import com.vitorpamplona.amethyst.ui.components.util.MediaCompressorFileUtils
 import com.vitorpamplona.quartz.utils.Log
 import id.zelory.compressor.Compressor
 import id.zelory.compressor.constraint.Constraint
-import id.zelory.compressor.decodeSampledBitmapFromFile
 import id.zelory.compressor.determineImageRotation
 import id.zelory.compressor.overWrite
 import kotlinx.coroutines.CancellationException
@@ -127,7 +127,7 @@ class MediaCompressor {
 }
 
 /**
- * Decodes at the coarsest power-of-two stride that stays above [maxDimension], applies the EXIF
+ * Decodes at the coarsest power-of-two stride that keeps the longer edge at or above [maxDimension], applies the EXIF
  * rotation, scales so the longer edge is at most [maxDimension] (never up), and writes one JPEG at
  * [quality]. Zelory's `default` constraint stops at the stride, so a 4032 x 3024 photo asked for
  * 640 px came out at 2016 x 1512.
@@ -141,8 +141,20 @@ private class FitWithinConstraint(
     override fun isSatisfied(imageFile: File): Boolean = done
 
     override fun satisfy(imageFile: File): File {
-        val sampled = decodeSampledBitmapFromFile(imageFile, maxDimension, maxDimension)
+        // Zelory's own sampler stops when the shorter edge would drop below the target, so a
+        // 4032 x 3024 photo asked for 1920 px decoded at full size; this one goes by the longer edge.
+        val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
+        BitmapFactory.decodeFile(imageFile.absolutePath, bounds)
+        val longerSource = maxOf(bounds.outWidth, bounds.outHeight)
+        var sample = 1
+        while (longerSource / (sample * 2) >= maxDimension) sample *= 2
+
+        val sampled =
+            BitmapFactory.decodeFile(imageFile.absolutePath, BitmapFactory.Options().apply { inSampleSize = sample })
+                ?: throw IllegalStateException("Could not decode ${imageFile.name}")
+        // Each step frees the one before it: a phone photo is tens of MB per copy.
         val rotated = determineImageRotation(imageFile, sampled)
+        if (rotated !== sampled) sampled.recycle()
         val longer = maxOf(rotated.width, rotated.height)
         val fitted =
             if (longer > maxDimension) {
@@ -151,7 +163,12 @@ private class FitWithinConstraint(
             } else {
                 rotated
             }
+        if (fitted !== rotated) rotated.recycle()
         done = true
-        return overWrite(imageFile, fitted, Bitmap.CompressFormat.JPEG, quality)
+        return try {
+            overWrite(imageFile, fitted, Bitmap.CompressFormat.JPEG, quality)
+        } finally {
+            fitted.recycle()
+        }
     }
 }
