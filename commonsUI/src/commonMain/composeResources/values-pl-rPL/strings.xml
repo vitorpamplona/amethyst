@@ -6942,6 +6942,10 @@
         <item quantity="other">+%1$d odpowiedzi więcej</item>
     </plurals>
     <!-- Web of Trust (NIP-85 trust network) -->
+    <string name="chat_outside_network_show">Pokaż</string>
+    <string name="wot_waiting_wifi_title">Oczekiwanie na Wi-Fi</string>
+    <string name="wot_download_now">Pobierz teraz</string>
+    <string name="wot_not_downloaded_title">Jeszcze nie pobrano</string>
     <string name="wot_retry">Spróbuj ponownie</string>
     <string name="wot_min_score_title">Minimalna ocena</string>
     <string name="wot_min_score_explainer">Osoby, które obserwujesz, zawsze przechodzą.</string>
@@ -6955,6 +6959,7 @@
     <string name="wot_more_actions">Więcej działań</string>
     <string name="wot_section_choose_provider">Wybierz dostawcę</string>
     <string name="wot_section_change_provider">Przełącz dostawcę</string>
+    <string name="wot_in_use">W użyciu</string>
     <string name="wot_manual_title">Ustaw ręcznie</string>
     <string name="wot_manual_explainer">Gdy konfiguracja dostawcy nie powiedzie się</string>
     <string name="wot_manual_mode_copy">Skopiuj widok</string>
@@ -6963,6 +6968,16 @@
     <string name="wot_copy_field">Szukaj osób, npub lub imię@domena</string>
     <string name="wot_copy_action">Kopiuj</string>
     <string name="wot_copy_house">Domyślny widok %1$s</string>
+    <string name="wot_copy_unknown_user">Nieprawidłowy npub lub adres.</string>
+    <string name="wot_manual_add_key">Inny klucz</string>
+    <string name="wot_manual_remove_key">Usuń ten klucz</string>
+    <string name="wot_manual_change_relay">Zmień transmiter</string>
+    <string name="wot_manual_key_label">Klucz serwisowy (npub lub hex)</string>
+    <string name="wot_manual_key_error">Niepoprawny klucz publiczny</string>
+    <string name="wot_use_provider">Użyj tego dostawcy</string>
+    <string name="wot_effect_messages_title">Wiadomości</string>
+    <string name="wot_effect_notifications_title">Powiadomienia</string>
+    <string name="wot_effect_replies_title">Odpowiedzi</string>
     <!-- Mostro instance terms (kind 38385) -->
     <string name="mostro_instance_unnamed">Instancja „Mostro” bez nazwy</string>
     <string name="mostro_version">Wersja %1$s</string>
@@ -7022,4 +7037,11 @@
     </plurals>
     <string name="build_show_report">Pokaż raport</string>
     <string name="build_hide_report">Ukryj raport</string>
+    <string name="pdf_loading">Wczytywanie…</string>
+    <string name="pdf_unable_to_open">Nie można otworzyć pliku PDF</string>
+    <string name="pdf_previous_page">Poprzednia strona</string>
+    <string name="pdf_next_page">Następna strona</string>
+    <string name="screen_unavailable_title">Niedostępne tutaj</string>
+    <string name="error_dialog_details">Szczegóły</string>
+    <string name="crash_window_send">Wyślij do deweloperów</string>
 </resources>
