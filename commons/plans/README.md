@@ -1,6 +1,6 @@
 # commons plans
 
-_Audited 2026-06-30 (+ 2026-09-12 split entry, 2026-09-27 migration and one-UI entries)._
+_Audited 2026-06-30 (+ 2026-09-12 split entry, 2026-09-27 migration and one-UI entries, 2026-10-09 iOS and web entries)._
 
 ## In progress
 | Plan | Summary |
@@ -15,6 +15,8 @@ _Audited 2026-06-30 (+ 2026-09-12 split entry, 2026-09-27 migration and one-UI e
 ## Queued
 | Plan | Summary |
 | ---- | ------- |
+| [2026-10-09-ios-app.md](2026-10-09-ios-app.md) | iOS as a third shim of the One-UI app, at feature parity with Android. Part A is groundwork shared with web: a `nonJvmMain` source set, Ktor transports, and the shim graph and last screens moved out of `jvmAndroid`. Part B is the iOS app: Keychain, AVPlayer, APNs + Notification Service Extension, WKWebView napplets, CallKit, nests, Tor. Supersedes `amethyst/plans/2026-05-24-ios-support.md`. Proposed. |
+| [2026-10-09-web-app.md](2026-10-09-web-app.md) | The same app in the browser via Compose for Web (wasmJs), reusing the iOS plan's Part A. Starts with a spike that measures whether one browser thread keeps up with event ingest, then the IO-dispatcher and sync-crypto fixes for wasm, a `:webApp` shim, NIP-07 login, and CORS/fonts/media. Smaller scope than Android, with a table of what ships. Proposed. |
 | [2026-10-07-wot-network-index.md](2026-10-07-wot-network-index.md) | Download every NIP-85 kind 30382 card from the user's trust provider (~300k) into a 6 MB on-disk sorted index (not LocalCache), kept current with small updates, to gate DM Known/New, Curated notifications and replies by a minimum trust score; includes Brainstorm onboarding. Implemented except public chats, `amy wot` and Desktop. |
 | [2026-08-03-poll-results-page.md](2026-08-03-poll-results-page.md) | Extended NIP-88 poll results page (per-option counts + who voted for what) for Android and Desktop; also specifies four tally-correctness fixes and the missing poll-relay subscription. Proposed, not started. |
 
