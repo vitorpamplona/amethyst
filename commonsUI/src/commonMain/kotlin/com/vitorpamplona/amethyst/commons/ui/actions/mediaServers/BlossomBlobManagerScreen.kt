@@ -92,6 +92,10 @@ import coil3.compose.SubcomposeAsyncImageContent
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbol
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
+import com.vitorpamplona.amethyst.commons.mediaServers.BlobRow
+import com.vitorpamplona.amethyst.commons.mediaServers.BlossomBlobManagerViewModel
+import com.vitorpamplona.amethyst.commons.mediaServers.PresenceState
+import com.vitorpamplona.amethyst.commons.mediaServers.ServerPresence
 import com.vitorpamplona.amethyst.commons.model.navigation.Route
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.back
@@ -715,8 +719,8 @@ private fun BlobActionsContent(
         }
 
         // Secondary actions.
-        if (row.url != null) {
-            val url = row.url
+        val url = row.url
+        if (url != null) {
             DetailAction(MaterialSymbols.ContentCopy, stringRes(Res.string.copy)) {
                 scope.launch { clipboard.setText(url) }
             }

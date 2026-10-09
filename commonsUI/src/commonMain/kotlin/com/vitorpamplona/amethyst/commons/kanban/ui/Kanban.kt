@@ -49,6 +49,7 @@ import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.kanban.KanbanBoardSummary
 import com.vitorpamplona.amethyst.commons.kanban.KanbanBoards
 import com.vitorpamplona.amethyst.commons.model.Note
+import com.vitorpamplona.amethyst.commons.model.navigation.routes.routeFor
 import com.vitorpamplona.amethyst.commons.relayClient.event.observeNote
 import com.vitorpamplona.amethyst.commons.relayClient.event.observeNoteReplies
 import com.vitorpamplona.amethyst.commons.resources.Res
@@ -62,7 +63,6 @@ import com.vitorpamplona.amethyst.commons.resources.kanban_open_board
 import com.vitorpamplona.amethyst.commons.resources.kanban_unplaced_cards
 import com.vitorpamplona.amethyst.commons.resources.kanban_untitled
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
-import com.vitorpamplona.amethyst.commons.ui.navigation.routes.routeFor
 import com.vitorpamplona.amethyst.commons.ui.note.LoadAddressableNote
 import com.vitorpamplona.amethyst.commons.ui.note.UserPicture
 import com.vitorpamplona.amethyst.commons.ui.pluralStringRes

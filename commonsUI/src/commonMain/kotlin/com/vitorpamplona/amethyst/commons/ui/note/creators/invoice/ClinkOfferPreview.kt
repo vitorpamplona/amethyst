@@ -46,6 +46,7 @@ import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.commons.hashtags.CustomHashTagIcons
 import com.vitorpamplona.amethyst.commons.hashtags.Lightning
 import com.vitorpamplona.amethyst.commons.model.navigation.routeFor
+import com.vitorpamplona.amethyst.commons.model.navigation.routes.routeFor
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.clink_lightning_offer
 import com.vitorpamplona.amethyst.commons.resources.clink_offer_amount_range
@@ -61,7 +62,6 @@ import com.vitorpamplona.amethyst.commons.ui.components.PaymentCard
 import com.vitorpamplona.amethyst.commons.ui.components.PaymentCardAmount
 import com.vitorpamplona.amethyst.commons.ui.loadStringRes
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
-import com.vitorpamplona.amethyst.commons.ui.navigation.routes.routeFor
 import com.vitorpamplona.amethyst.commons.ui.note.ClickableUserPicture
 import com.vitorpamplona.amethyst.commons.ui.note.ErrorMessageDialog
 import com.vitorpamplona.amethyst.commons.ui.note.LoadUser

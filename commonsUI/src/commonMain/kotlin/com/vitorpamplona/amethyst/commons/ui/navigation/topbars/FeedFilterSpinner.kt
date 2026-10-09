@@ -66,11 +66,12 @@ import com.vitorpamplona.amethyst.commons.feeds.FeedDefinition
 import com.vitorpamplona.amethyst.commons.feeds.GeoHashName
 import com.vitorpamplona.amethyst.commons.feeds.HashtagName
 import com.vitorpamplona.amethyst.commons.feeds.InterestSetName
+import com.vitorpamplona.amethyst.commons.feeds.LabelName
 import com.vitorpamplona.amethyst.commons.feeds.Name
 import com.vitorpamplona.amethyst.commons.feeds.NoteBackedName
 import com.vitorpamplona.amethyst.commons.feeds.PeopleListName
 import com.vitorpamplona.amethyst.commons.feeds.RelayName
-import com.vitorpamplona.amethyst.commons.feeds.ResourceName
+import com.vitorpamplona.amethyst.commons.feeds.TopNavLabel
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.topNavFeeds.TopFilter
@@ -89,6 +90,16 @@ import com.vitorpamplona.amethyst.commons.resources.feed_group_lists
 import com.vitorpamplona.amethyst.commons.resources.feed_group_locations
 import com.vitorpamplona.amethyst.commons.resources.feed_group_relays
 import com.vitorpamplona.amethyst.commons.resources.follow_geohash
+import com.vitorpamplona.amethyst.commons.resources.follow_list_all_favorite_dvms
+import com.vitorpamplona.amethyst.commons.resources.follow_list_aroundme
+import com.vitorpamplona.amethyst.commons.resources.follow_list_curated
+import com.vitorpamplona.amethyst.commons.resources.follow_list_global
+import com.vitorpamplona.amethyst.commons.resources.follow_list_kind3_follows_users_only
+import com.vitorpamplona.amethyst.commons.resources.follow_list_kind3follows
+import com.vitorpamplona.amethyst.commons.resources.follow_list_kind3follows_users_only
+import com.vitorpamplona.amethyst.commons.resources.follow_list_mine
+import com.vitorpamplona.amethyst.commons.resources.follow_list_mute_list
+import com.vitorpamplona.amethyst.commons.resources.follow_list_teleport
 import com.vitorpamplona.amethyst.commons.resources.login_with_a_private_key_to_be_able_to_follow
 import com.vitorpamplona.amethyst.commons.resources.login_with_a_private_key_to_be_able_to_unfollow
 import com.vitorpamplona.amethyst.commons.resources.open_dropdown_menu
@@ -96,6 +107,7 @@ import com.vitorpamplona.amethyst.commons.resources.read_only_user
 import com.vitorpamplona.amethyst.commons.resources.select_an_option
 import com.vitorpamplona.amethyst.commons.resources.unfollow_geohash
 import com.vitorpamplona.amethyst.commons.ui.components.LoadingAnimation
+import com.vitorpamplona.amethyst.commons.ui.loadStringRes
 import com.vitorpamplona.amethyst.commons.ui.note.platform.LoadCityName
 import com.vitorpamplona.amethyst.commons.ui.platform.AroundMeLocationLabel
 import com.vitorpamplona.amethyst.commons.ui.platform.GeohashLocationPickerDialog
@@ -312,15 +324,31 @@ private fun FollowLocationToggle(
 }
 
 /**
- * A [Name]'s displayed title. [Name.nameOrDefault] resolves a Compose string
- * resource for the fixed-name variants, which is a suspend call, so the plain
- * [Name.name] is shown for the frame it takes to arrive.
+ * A [Name]'s displayed title. A [LabelName] is a Compose string resource and
+ * [Name.nameOrDefault] may be a suspend lookup, so the plain [Name.name] is shown
+ * for the frame it takes to arrive.
  */
 @Composable
 private fun rememberDisplayName(name: Name): String {
     val fallback = remember(name) { name.name() }
-    return produceState(fallback, name) { value = name.nameOrDefault() }.value
+    return produceState(fallback, name) {
+        value = if (name is LabelName) loadStringRes(name.label.resource()) else name.nameOrDefault()
+    }.value
 }
+
+private fun TopNavLabel.resource(): StringResource =
+    when (this) {
+        TopNavLabel.ALL_FOLLOWS -> Res.string.follow_list_kind3follows
+        TopNavLabel.ALL_USER_FOLLOWS -> Res.string.follow_list_kind3follows_users_only
+        TopNavLabel.DEFAULT_FOLLOWS -> Res.string.follow_list_kind3_follows_users_only
+        TopNavLabel.GLOBAL -> Res.string.follow_list_global
+        TopNavLabel.CURATED -> Res.string.follow_list_curated
+        TopNavLabel.AROUND_ME -> Res.string.follow_list_aroundme
+        TopNavLabel.TELEPORT -> Res.string.follow_list_teleport
+        TopNavLabel.MUTE_LIST -> Res.string.follow_list_mute_list
+        TopNavLabel.MINE -> Res.string.follow_list_mine
+        TopNavLabel.ALL_FAVORITE_DVMS -> Res.string.follow_list_all_favorite_dvms
+    }
 
 @Composable
 fun RenderOption(
@@ -369,7 +397,7 @@ fun RenderOption(
 
         // Pure names: no relay subscription needed.
         is HashtagName,
-        is ResourceName,
+        is LabelName,
         is RelayName,
         is InterestSetName,
         -> {
@@ -425,7 +453,7 @@ private fun FeedDefinition.group(): FeedGroup =
             FeedGroup.INTEREST_SETS
         }
 
-        is ResourceName -> {
+        is LabelName -> {
             when (code) {
                 is TopFilter.AroundMe -> FeedGroup.LOCATIONS
                 is TopFilter.TeleportPicker -> FeedGroup.LOCATIONS

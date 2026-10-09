@@ -22,14 +22,21 @@ package com.vitorpamplona.amethyst.commons.ui.components.toasts
 
 import androidx.compose.runtime.Stable
 import com.vitorpamplona.amethyst.commons.model.User
+import com.vitorpamplona.amethyst.commons.notices.UserNotice
+import com.vitorpamplona.amethyst.commons.notices.UserNoticeSink
 import com.vitorpamplona.amethyst.commons.ui.components.toasts.multiline.MultiErrorToastMsg
 import com.vitorpamplona.amethyst.commons.ui.components.toasts.multiline.UserBasedErrorMessage
 import kotlinx.coroutines.flow.MutableStateFlow
 import org.jetbrains.compose.resources.StringResource
 
 @Stable
-class ToastManager {
+class ToastManager : UserNoticeSink {
     val toasts = MutableStateFlow<ToastMsg?>(null)
+
+    /** Headless code reports here through [UserNoticeSink]; the dialog words the notice. */
+    override fun notify(notice: UserNotice) {
+        toasts.tryEmit(NoticeToastMsg(notice))
+    }
 
     fun clearToasts() {
         toasts.tryEmit(null)

@@ -42,6 +42,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
+import com.vitorpamplona.amethyst.commons.paymentTargets.PaymentTargetsViewModel
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.delete_payment_target
 import com.vitorpamplona.amethyst.commons.resources.lightning_address
@@ -50,7 +51,6 @@ import com.vitorpamplona.amethyst.commons.resources.payment_targets
 import com.vitorpamplona.amethyst.commons.resources.payment_targets_section_explainer
 import com.vitorpamplona.amethyst.commons.resources.wallet_connect
 import com.vitorpamplona.amethyst.commons.ui.actions.paymentTargets.PaymentTargetAddField
-import com.vitorpamplona.amethyst.commons.ui.actions.paymentTargets.PaymentTargetsViewModel
 import com.vitorpamplona.amethyst.commons.ui.components.rememberViewModel
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.navigation.topbars.SavingTopBar

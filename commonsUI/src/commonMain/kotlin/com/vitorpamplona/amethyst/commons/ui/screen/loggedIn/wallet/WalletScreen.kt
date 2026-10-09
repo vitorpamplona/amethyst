@@ -105,12 +105,12 @@ import com.vitorpamplona.amethyst.commons.ui.components.rememberViewModel
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.platform.AppBottomBar
 import com.vitorpamplona.amethyst.commons.ui.pluralStringRes
-import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.wallet.CashuWalletViewModel
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.wallet.WalletInfo
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.wallet.WalletViewModel
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.util.formatGrouped
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
+import com.vitorpamplona.amethyst.commons.wallet.CashuWalletViewModel
 import com.vitorpamplona.quartz.experimental.clink.debits.DebitFrequency
 import kotlinx.coroutines.launch
 import androidx.compose.material3.Icon as Material3Icon

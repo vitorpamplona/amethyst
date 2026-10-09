@@ -34,13 +34,13 @@ import com.halilibo.richtext.ui.MediaRenderer
 import com.halilibo.richtext.ui.string.InlineContent
 import com.halilibo.richtext.ui.string.RichTextString
 import com.vitorpamplona.amethyst.commons.model.Note
+import com.vitorpamplona.amethyst.commons.model.navigation.uri.fragmentHashtagOrNull
 import com.vitorpamplona.amethyst.commons.relayClient.reqCommand.event.EventFinderFilterAssemblerSubscription
 import com.vitorpamplona.amethyst.commons.richtext.MediaUrlImage
 import com.vitorpamplona.amethyst.commons.richtext.RichTextParser
 import com.vitorpamplona.amethyst.commons.ui.components.DisplayFullNote
 import com.vitorpamplona.amethyst.commons.ui.components.DisplayUser
 import com.vitorpamplona.amethyst.commons.ui.components.LoadUrlPreview
-import com.vitorpamplona.amethyst.commons.ui.fragmentHashtagOrNull
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.note.platform.ZoomableContentView
 import com.vitorpamplona.amethyst.commons.ui.richtext.HashtagIcon

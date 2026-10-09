@@ -215,13 +215,17 @@ etc. instead of re-implementing them.
   (StateFlow/SharedFlow), so they belong in `commons`, **never under a `ui.*`
   package**. A ViewModel goes in `commonsUI` only when it can't compile
   headless: it holds Compose UI state (`TextFieldValue`, `LazyListState`),
-  reads `Res`, or takes an `AccountViewModel`. `AccountViewModel` itself is in
-  `commonsUI` (`commons.viewmodels`) because it resolves `Res` strings for its
-  toasts, and it reaches Android through `AccountViewModelHost`; so a ViewModel
-  that needs the account should take `Account` (in `commons`), not
-  `AccountViewModel`, if it should be shareable with `cli`. Anything that
-  imports `androidx.compose.ui`/`foundation`/`material3`, Coil, or `Res`
-  belongs in `commonsUI`.
+  reads `Res`, or needs `AccountViewModel.toastManager`. The account ViewModel
+  is split: `BaseAccountViewModel` (`commons`) holds every member the screens
+  call and reaches the platform through `AccountViewModelHost`;
+  `AccountViewModel` (`commonsUI`) only adds the `ToastManager` and the
+  platform bridges. A ViewModel takes `Account` when it only needs the account,
+  `BaseAccountViewModel` when it needs `launchSigner` and friends. To tell the
+  user something from headless code, report a typed `UserNotice`
+  (`commons.notices`) to `notices`, never a `Res` string; `commonsUI` words it
+  in `notices/ui/UserNoticeText.kt`. Anything that imports
+  `androidx.compose.ui`/`foundation`/`material3`, Coil, or `Res` belongs in
+  `commonsUI`.
   **Screens and navigation are shared too**: screen composables, the nav host,
   and the navigation chrome for every window size (bottom bar, rail, permanent
   drawer) belong in `commonsUI`, because Android runs on laptops and the new

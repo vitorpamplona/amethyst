@@ -49,6 +49,7 @@ import com.vitorpamplona.amethyst.commons.model.User
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
 import com.vitorpamplona.amethyst.commons.model.highlights.HighlightQuote
 import com.vitorpamplona.amethyst.commons.model.navigation.routeFor
+import com.vitorpamplona.amethyst.commons.model.navigation.routes.routeFor
 import com.vitorpamplona.amethyst.commons.model.toImmutableListOfLists
 import com.vitorpamplona.amethyst.commons.relayClient.event.observeNote
 import com.vitorpamplona.amethyst.commons.relayClient.user.observeUserInfo
@@ -61,7 +62,6 @@ import com.vitorpamplona.amethyst.commons.ui.components.measureSpaceWidth
 import com.vitorpamplona.amethyst.commons.ui.components.rememberTranslation
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.EmptyNav
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
-import com.vitorpamplona.amethyst.commons.ui.navigation.routes.routeFor
 import com.vitorpamplona.amethyst.commons.ui.note.HighlightQuoteIndent
 import com.vitorpamplona.amethyst.commons.ui.note.HighlightQuoteSpacing
 import com.vitorpamplona.amethyst.commons.ui.note.HighlightedQuote
