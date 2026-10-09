@@ -1,5 +1,9 @@
 # iOS Support for Amethyst
 
+> **Superseded 2026-10-09** by [commons/plans/2026-10-09-ios-app.md](../../commons/plans/2026-10-09-ios-app.md), which
+> plans iOS as a third shim of the One-UI app at feature parity with Android. Kept for its history
+> (Phase 1 and the Phase 2 audit).
+
 > **Status:** in-progress — `iosArm64`/`iosSimulatorArm64` targets are configured in `quartz` and `commons` (Phase 1), but no `iosApp` module exists yet — later phases not built.
 > _Audited 2026-06-30._
 
