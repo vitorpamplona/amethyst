@@ -46,7 +46,7 @@ import com.vitorpamplona.quartz.utils.Log
  *
  * It deliberately decides nothing about *which* accounts those are: it mounts exactly
  * the set it is handed, so the foreground/background rule lives in one place, in
- * [com.vitorpamplona.amethyst.service.notifications.AlwaysOnNotificationServiceManager],
+ * the Android app's `AlwaysOnNotificationServiceManager`,
  * which already watches the switches that define it and calls [sync] on every change.
  */
 class AccountSubscriptionRegistry(
