@@ -359,15 +359,17 @@ private fun SkipButton(
 }
 
 /**
- * Android's thin white seek bar, used for the volume too: click or drag anywhere on it. A drag
- * reports where it is let go, or every step of the way with [changesWhileDragging].
+ * Android's thin seek bar, white over video, used for the volume too: click or drag anywhere on it.
+ * A drag reports where it is let go, or every step of the way with [changesWhileDragging].
  */
 @Composable
-private fun ThinSlider(
+internal fun ThinSlider(
     value: Float,
     onValueChange: (Float) -> Unit,
     modifier: Modifier = Modifier,
     changesWhileDragging: Boolean = false,
+    color: Color = Color.White,
+    trackColor: Color = Color.White.copy(alpha = 0.3f),
 ) {
     var dragging by remember { mutableStateOf(false) }
     var dragPosition by remember { mutableFloatStateOf(0f) }
@@ -401,9 +403,9 @@ private fun ThinSlider(
     ) {
         val shown = if (dragging) dragPosition else value.coerceIn(0f, 1f)
         val x = shown * size.width
-        drawRect(Color.White.copy(alpha = 0.3f), size = size)
-        drawRect(Color.White, size = Size(x, size.height))
-        drawCircle(Color.White, radius = size.height * if (dragging) 3f else 2f, center = Offset(x, size.height / 2f))
+        drawRect(trackColor, size = size)
+        drawRect(color, size = Size(x, size.height))
+        drawCircle(color, radius = size.height * if (dragging) 3f else 2f, center = Offset(x, size.height / 2f))
     }
 }
 
@@ -439,9 +441,11 @@ private fun SpeedButton(
 /** 1.0x, 1.5x, 0.75x: one decimal unless the speed needs two. */
 private fun speedLabel(speed: Float): String = (if ((speed * 10f) % 1f == 0f) "%.1fx" else "%.2fx").format(speed)
 
+/** 3:44, or 1:03:32 past the hour. */
 internal fun formatTime(millis: Long): String {
     val totalSeconds = millis / 1000
-    val minutes = totalSeconds / 60
+    val hours = totalSeconds / 3600
+    val minutes = totalSeconds % 3600 / 60
     val seconds = totalSeconds % 60
-    return "%d:%02d".format(minutes, seconds)
+    return if (hours > 0) "%d:%02d:%02d".format(hours, minutes, seconds) else "%d:%02d".format(minutes, seconds)
 }
