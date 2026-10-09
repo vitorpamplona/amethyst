@@ -106,7 +106,7 @@ fun filterHomePostsByHashtags(
                 null
             } else {
                 val since = since?.get(it.key)?.time ?: defaultSince
-                return filterHomePostsByHashtags(
+                filterHomePostsByHashtags(
                     relay = it.key,
                     hashToLoad = it.value.hashtags,
                     since = since,

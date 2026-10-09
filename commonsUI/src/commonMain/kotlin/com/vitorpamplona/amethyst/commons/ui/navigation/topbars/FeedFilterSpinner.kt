@@ -61,6 +61,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import com.vitorpamplona.amethyst.commons.feeds.CommunityName
+import com.vitorpamplona.amethyst.commons.feeds.CustomFeedName
 import com.vitorpamplona.amethyst.commons.feeds.FavoriteAlgoFeedName
 import com.vitorpamplona.amethyst.commons.feeds.FeedDefinition
 import com.vitorpamplona.amethyst.commons.feeds.GeoHashName
@@ -81,6 +82,7 @@ import com.vitorpamplona.amethyst.commons.resources.dvm_offline
 import com.vitorpamplona.amethyst.commons.resources.feed_filter_select_an_option
 import com.vitorpamplona.amethyst.commons.resources.feed_filter_selected
 import com.vitorpamplona.amethyst.commons.resources.feed_group_communities
+import com.vitorpamplona.amethyst.commons.resources.feed_group_custom
 import com.vitorpamplona.amethyst.commons.resources.feed_group_dvms
 import com.vitorpamplona.amethyst.commons.resources.feed_group_feeds
 import com.vitorpamplona.amethyst.commons.resources.feed_group_hashtags
@@ -372,6 +374,7 @@ fun RenderOption(
         is ResourceName,
         is RelayName,
         is InterestSetName,
+        is CustomFeedName,
         -> {
             Text(
                 text = rememberDisplayName(option),
@@ -386,6 +389,7 @@ private enum class FeedGroup(
     val labelRes: StringResource,
 ) {
     FEEDS(Res.string.feed_group_feeds),
+    CUSTOM(Res.string.feed_group_custom),
     RELAYS(Res.string.feed_group_relays),
     HASHTAGS(Res.string.feed_group_hashtags),
     INTEREST_SETS(Res.string.feed_group_interest_sets),
@@ -425,6 +429,10 @@ private fun FeedDefinition.group(): FeedGroup =
             FeedGroup.INTEREST_SETS
         }
 
+        is CustomFeedName -> {
+            FeedGroup.CUSTOM
+        }
+
         is ResourceName -> {
             when (code) {
                 is TopFilter.AroundMe -> FeedGroup.LOCATIONS
@@ -432,6 +440,7 @@ private fun FeedDefinition.group(): FeedGroup =
                 is TopFilter.Global -> FeedGroup.RELAYS
                 is TopFilter.Selected -> FeedGroup.RELAYS
                 is TopFilter.AllFavoriteAlgoFeeds -> FeedGroup.DVMS
+                is TopFilter.CustomFeed -> FeedGroup.CUSTOM
                 else -> FeedGroup.FEEDS
             }
         }
@@ -608,6 +617,10 @@ private fun FeedIcon(
 
             is TopFilter.AllFavoriteAlgoFeeds -> {
                 MaterialSymbols.AutoAwesome
+            }
+
+            is TopFilter.CustomFeed -> {
+                if (item.route != null) MaterialSymbols.Settings else MaterialSymbols.Tune
             }
 
             else -> {

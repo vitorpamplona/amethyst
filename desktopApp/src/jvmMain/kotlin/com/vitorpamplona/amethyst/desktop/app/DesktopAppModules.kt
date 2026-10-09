@@ -394,6 +394,8 @@ class DesktopAppModules(
     // A desktop has no location provider yet: location chats and "around me" ask for a geohash.
     private val noLocation = MutableStateFlow<LocationResult>(LocationResult.LackPermission)
 
+    private val legacyCustomFeedImport = LegacyCustomFeedImport(filesDir)
+
     val accountsCache =
         AccountCacheState(
             geolocationFlow = { noLocation },
@@ -425,6 +427,8 @@ class DesktopAppModules(
                 BuzzAttestationStore(sharedSettingsStore, account.scope, account.pubKey, account.buzzAttestation)
                 ConcordDirectInviteDeclineStore(sharedSettingsStore, account.scope, account.pubKey, account.concord.directInviteInbox)
                 NowPlayingSettingsStore(sharedSettingsStore, account.scope, account.pubKey, account.nowPlayingSettings)
+                // Not Buzz, but this is where each account starts: the legacy app's feeds go to the first.
+                legacyCustomFeedImport.importInto(account.settings)
             },
         )
 

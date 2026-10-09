@@ -1267,6 +1267,7 @@ class Account(
             favoriteAlgoFeedsOrchestrator = favoriteAlgoFeedsOrchestrator,
             favoriteAlgoFeedAddresses = favoriteAlgoFeedsList.flow,
             interestSetHashtags = interestSets.hashtagsByIdentifier,
+            customFeeds = settings.customFeeds,
         ).flow
 
     // App-ready Feeds

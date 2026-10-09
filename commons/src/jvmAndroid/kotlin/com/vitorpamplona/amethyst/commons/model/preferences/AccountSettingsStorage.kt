@@ -21,6 +21,8 @@
 package com.vitorpamplona.amethyst.commons.model.preferences
 
 import com.vitorpamplona.amethyst.commons.cashu.CashuKeysetCounterStore
+import com.vitorpamplona.amethyst.commons.feeds.custom.FeedDefinition
+import com.vitorpamplona.amethyst.commons.feeds.custom.FeedDefinitionSerializer
 import com.vitorpamplona.amethyst.commons.model.AccountSettings
 import com.vitorpamplona.amethyst.commons.model.HomeFeedType
 import com.vitorpamplona.amethyst.commons.model.backups.BackupConflictStorage
@@ -176,6 +178,10 @@ class AccountSettingsStores(
                 relayGroupViewMode = settings.relayGroupViewMode.value.name,
                 concordViewMode = settings.concordViewMode.value.name,
                 callsEnabled = settings.callsEnabled.value,
+                customFeedsJson =
+                    settings.customFeeds.value
+                        .ifEmpty { null }
+                        ?.let { FeedDefinitionSerializer.serializeList(it) },
             ),
         )
         notificationPrefs(npub).save(
@@ -557,6 +563,7 @@ suspend fun AccountSettingsSource.toAccountSettings(): AccountSettings =
             alwaysOnNotificationService = MutableStateFlow(alwaysOnNotificationService),
             defaultRelayAuthPolicy = MutableStateFlow(inboxPrefs.defaultRelayAuthPolicy),
             relayGroupViewMode = MutableStateFlow(inboxPrefs.relayGroupViewMode),
+            customFeeds = MutableStateFlow(inboxPrefs.customFeeds),
             concordViewMode = MutableStateFlow(inboxPrefs.concordViewMode),
             enabledChatFeeds = MutableStateFlow(inboxPrefs.enabledChatFeeds),
             enabledHomeFeedTypes = MutableStateFlow(inboxPrefs.enabledHomeFeedTypes),
@@ -734,6 +741,7 @@ private class InboxPrefs(
     val relayAuthTrustReadFollows: Boolean,
     val relayAuthTrustMessageFollows: Boolean,
     val relayAuthTrustMessageStrangers: Boolean,
+    val customFeeds: List<FeedDefinition>,
 )
 
 private fun readInboxPrefs(
@@ -754,4 +762,5 @@ private fun readInboxPrefs(
     relayAuthTrustReadFollows = relayAuth.trustReadFollows,
     relayAuthTrustMessageFollows = relayAuth.trustMessageFollows,
     relayAuthTrustMessageStrangers = relayAuth.trustMessageStrangers,
+    customFeeds = feedVisibility.customFeedsJson?.let { FeedDefinitionSerializer.deserializeList(it) }.orEmpty(),
 )

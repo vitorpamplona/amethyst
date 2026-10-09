@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst.commons.model.topNavFeeds
 
+import com.vitorpamplona.amethyst.commons.feeds.custom.FeedDefinition
 import com.vitorpamplona.amethyst.commons.model.algoFeeds.FavoriteAlgoFeedsOrchestrator
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
 import com.vitorpamplona.amethyst.commons.model.location.LocationResult
@@ -34,6 +35,7 @@ import com.vitorpamplona.amethyst.commons.model.topNavFeeds.allUserFollows.AllUs
 import com.vitorpamplona.amethyst.commons.model.topNavFeeds.allUserFollows.Kind3UserFollowsFeedFlow
 import com.vitorpamplona.amethyst.commons.model.topNavFeeds.aroundMe.AroundMeFeedFlow
 import com.vitorpamplona.amethyst.commons.model.topNavFeeds.aroundMe.GeohashFeedFlow
+import com.vitorpamplona.amethyst.commons.model.topNavFeeds.custom.CustomFeedFlow
 import com.vitorpamplona.amethyst.commons.model.topNavFeeds.favoriteAlgoFeeds.AllFavoriteAlgoFeedsFlow
 import com.vitorpamplona.amethyst.commons.model.topNavFeeds.favoriteAlgoFeeds.FavoriteAlgoFeedFlow
 import com.vitorpamplona.amethyst.commons.model.topNavFeeds.global.GlobalFeedFlow
@@ -75,6 +77,7 @@ class FeedTopNavFilterState(
     val favoriteAlgoFeedsOrchestrator: FavoriteAlgoFeedsOrchestrator,
     val favoriteAlgoFeedAddresses: StateFlow<Set<Address>>,
     val interestSetHashtags: StateFlow<Map<String, Set<String>>> = MutableStateFlow(emptyMap()),
+    val customFeeds: StateFlow<List<FeedDefinition>> = MutableStateFlow(emptyList()),
 ) {
     fun loadFlowsFor(listName: TopFilter): IFeedFlowsType =
         when (listName) {
@@ -130,6 +133,10 @@ class FeedTopNavFilterState(
             is TopFilter.InterestSet -> {
                 val hashtags = interestSetHashtags.value[listName.address.dTag].orEmpty()
                 MultiHashtagFeedFlow(hashtags, followsRelays, proxyRelays)
+            }
+
+            is TopFilter.CustomFeed -> {
+                CustomFeedFlow(listName.id, customFeeds, followsRelays, blockedRelays, proxyRelays)
             }
 
             is TopFilter.Relay -> {

@@ -28,6 +28,7 @@ import com.vitorpamplona.amethyst.commons.model.navigation.Route
 import com.vitorpamplona.amethyst.commons.model.nip51Lists.interestSets.InterestSet
 import com.vitorpamplona.amethyst.commons.model.topNavFeeds.TopFilter
 import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.custom_feeds_manage
 import com.vitorpamplona.amethyst.commons.resources.follow_list_all_favorite_dvms
 import com.vitorpamplona.amethyst.commons.resources.follow_list_aroundme
 import com.vitorpamplona.amethyst.commons.resources.follow_list_curated
@@ -63,6 +64,7 @@ import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.transform
 import org.jetbrains.compose.resources.StringResource
+import com.vitorpamplona.amethyst.commons.feeds.custom.FeedDefinition as CustomFeedDefinition
 
 @Stable
 class TopNavFilterState(
@@ -487,6 +489,21 @@ class TopNavFilterState(
             .flowOn(Dispatchers.IO)
             .stateIn(scope, SharingStarted.Eagerly, defaultLists)
 
+    /** Opens the screen that lists, creates, edits and deletes the user's own feeds. */
+    val manageCustomFeeds =
+        FeedDefinition(
+            code = TopFilter.CustomFeed(""),
+            name = ResourceName(Res.string.custom_feeds_manage),
+            route = Route.CustomFeeds,
+        )
+
+    /** The Home picker: [kind3GlobalPeopleRoutes] plus the feeds the user built. Only Home runs custom feeds. */
+    val homeRoutes =
+        combine(kind3GlobalPeopleRoutes, account.settings.customFeeds) { base, custom ->
+            (base + custom.map { FeedDefinition(TopFilter.CustomFeed(it.id), CustomFeedName(it)) } + manageCustomFeeds).toImmutableList()
+        }.flowOn(Dispatchers.IO)
+            .stateIn(scope, SharingStarted.Eagerly, (defaultLists + manageCustomFeeds).toImmutableList())
+
     val kind3GlobalPeople =
         _kind3GlobalPeople
             .flowOn(Dispatchers.IO)
@@ -637,6 +654,13 @@ class InterestSetName(
     val set: InterestSet,
 ) : Name() {
     override fun name() = "⁂ ${set.title}"
+}
+
+@Stable
+class CustomFeedName(
+    val feed: CustomFeedDefinition,
+) : Name() {
+    override fun name() = "${feed.emoji} ${feed.name}".trim()
 }
 
 @Immutable

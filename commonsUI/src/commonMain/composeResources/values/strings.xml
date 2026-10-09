@@ -6930,4 +6930,44 @@
     <string name="custom_emoji_picker_search">Search emoji</string>
     <string name="custom_emoji_picker_empty">No custom emoji yet. Add emoji packs to your emoji list to use them here.</string>
     <string name="custom_emoji_picker_no_match">No emoji match that name</string>
+    <string name="custom_feeds_manage">Manage your feeds</string>
+    <string name="feed_group_custom">Your feeds</string>
+    <string name="custom_feeds_title">Your feeds</string>
+    <string name="custom_feeds_new">New feed</string>
+    <string name="custom_feeds_empty">You haven't built a feed yet. A feed collects posts from the people, hashtags and relays you choose, and appears in the Home feed picker.</string>
+    <string name="custom_feeds_edit">Edit</string>
+    <string name="custom_feeds_delete">Delete</string>
+    <string name="custom_feeds_delete_confirm">Delete %1$s?</string>
+    <plurals name="custom_feeds_summary_authors">
+        <item quantity="one">%1$d person</item>
+        <item quantity="other">%1$d people</item>
+    </plurals>
+    <plurals name="custom_feeds_summary_relays">
+        <item quantity="one">%1$d relay</item>
+        <item quantity="other">%1$d relays</item>
+    </plurals>
+    <string name="custom_feeds_new_title">New feed</string>
+    <string name="custom_feeds_edit_title">Edit feed</string>
+    <string name="custom_feeds_emoji">Emoji</string>
+    <string name="custom_feeds_name">Name</string>
+    <string name="custom_feeds_invalid">Give the feed a name and at least one person, hashtag or relay.</string>
+    <string name="custom_feeds_authors">People</string>
+    <string name="custom_feeds_authors_explainer">Only posts by these people.</string>
+    <string name="custom_feeds_hashtags">Hashtags</string>
+    <string name="custom_feeds_hashtags_explainer">Only posts with at least one of these hashtags.</string>
+    <string name="custom_feeds_kinds">Content</string>
+    <string name="custom_feeds_kinds_explainer">Leave all off to show every kind of post.</string>
+    <string name="custom_feeds_kind_notes">Notes</string>
+    <string name="custom_feeds_kind_reposts">Reposts</string>
+    <string name="custom_feeds_kind_comments">Comments</string>
+    <string name="custom_feeds_kind_long_form">Articles</string>
+    <string name="custom_feeds_kind_pictures">Pictures</string>
+    <string name="custom_feeds_kind_videos">Videos</string>
+    <string name="custom_feeds_kind_highlights">Highlights</string>
+    <string name="custom_feeds_relays">Relays</string>
+    <string name="custom_feeds_relays_explainer">Read only from these relays. Leave empty to read from each person's own relays, or from your usual relays for hashtags.</string>
+    <string name="custom_feeds_exclude_authors">Hide people</string>
+    <string name="custom_feeds_exclude_keywords">Hide posts containing</string>
+    <string name="custom_feeds_remove">Remove</string>
+    <string name="custom_feeds_search_people">Search by name, NIP-05 or npub</string>
 </resources>

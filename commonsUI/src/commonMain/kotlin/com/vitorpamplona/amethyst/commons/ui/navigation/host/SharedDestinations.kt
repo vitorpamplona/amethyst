@@ -116,6 +116,8 @@ import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.communities.list.Co
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.communities.newCommunity.EditCommunityScreen
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.communities.newCommunity.NewCommunityScreen
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.contactList.ContactListUsersScreen
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.customFeeds.CustomFeedsScreen
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.customFeeds.EditCustomFeedScreen
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.discover.DiscoverScreen
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.discover.nip23LongForm.LongFormPostScreen
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.discover.nip99Classifieds.NewProductScreen
@@ -410,6 +412,8 @@ fun NavDestinations.sharedDestinations(
     composableFromEnd<Route.AllSettings> { AllSettingsScreen(accountViewModel, nav) }
     composableFromEnd<Route.SecurityFilters> { SecurityFiltersScreen(accountViewModel, nav) }
     composableFromEnd<Route.PrivacyLockSettings> { PrivacyLockSettingsScreen(nav) }
+    composableFromEnd<Route.CustomFeeds> { CustomFeedsScreen(accountViewModel, nav) }
+    composableFromEndArgs<Route.EditCustomFeed> { EditCustomFeedScreen(it.id, accountViewModel, nav) }
     composableFromEnd<Route.WebOfTrust> { WebOfTrustScreen(accountViewModel, nav) }
     composableFromEnd<Route.BlockedUsers> { BlockedUsersScreen(accountViewModel, nav) }
     composableFromEnd<Route.SpammingUsers> { SpammingUsersScreen(accountViewModel, nav) }

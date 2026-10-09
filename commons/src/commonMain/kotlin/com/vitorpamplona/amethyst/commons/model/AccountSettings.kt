@@ -26,6 +26,7 @@ import androidx.compose.runtime.Stable
 import com.vitorpamplona.amethyst.commons.audio.VisualizerStyle
 import com.vitorpamplona.amethyst.commons.cashu.CashuKeysetCounterStore
 import com.vitorpamplona.amethyst.commons.cashu.UnavailableCashuKeysetCounterStore
+import com.vitorpamplona.amethyst.commons.feeds.custom.FeedDefinition
 import com.vitorpamplona.amethyst.commons.model.HomeFeedType
 import com.vitorpamplona.amethyst.commons.model.backups.BackupConflictGuard
 import com.vitorpamplona.amethyst.commons.model.backups.backupSlotOf
@@ -264,6 +265,8 @@ class AccountSettings(
      */
     val mutedPublicChats: MutableStateFlow<Set<String>> = MutableStateFlow(setOf()),
     val viewedPollResultNoteIds: MutableStateFlow<Map<String, Long>> = MutableStateFlow(mapOf()),
+    /** The feeds this user built, offered in the Home feed picker as [TopFilter.CustomFeed]. */
+    val customFeeds: MutableStateFlow<List<FeedDefinition>> = MutableStateFlow(emptyList()),
     val pendingAttestations: MutableStateFlow<Map<HexKey, String>> = MutableStateFlow(mapOf()),
     var backupNipA3PaymentTargets: PaymentTargetsEvent? = null,
     var backupBolt12Offers: Bolt12OfferListEvent? = null,
@@ -776,6 +779,24 @@ class AccountSettings(
         }
 
         if (changed) saveAccountSettings()
+    }
+
+    /** Adds [feed], or replaces the one with its id. */
+    fun saveCustomFeed(feed: FeedDefinition) {
+        customFeeds.update { feeds ->
+            if (feeds.any { it.id == feed.id }) feeds.map { if (it.id == feed.id) feed else it } else feeds + feed
+        }
+        saveAccountSettings()
+    }
+
+    /** Deletes the custom feed [id] and sends any screen that showed it back to its default feed. */
+    fun deleteCustomFeed(id: String) {
+        customFeeds.update { feeds -> feeds.filterNot { it.id == id } }
+        feedFiltersWithDefaults.forEach { (flow, default) ->
+            val current = flow.value
+            if (current is TopFilter.CustomFeed && current.id == id) flow.tryEmit(default)
+        }
+        saveAccountSettings()
     }
 
     fun changeDefaultHomeFollowList(name: TopFilter) {

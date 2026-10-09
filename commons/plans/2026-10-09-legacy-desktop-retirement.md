@@ -1,6 +1,6 @@
 # Retiring the legacy desktop app: what each legacy-only feature becomes
 
-> **Status:** decided 2026-10-09 (maintainer). Built: 3b (relay latency), 1 (privacy lock), 6a (compression preview and steps), 6b (custom-emoji picker). Supersedes the
+> **Status:** decided 2026-10-09 (maintainer). Built: 3b (relay latency), 1 (privacy lock), 6a (compression preview and steps), 6b (custom-emoji picker), 5 (custom feeds). Supersedes the
 > "Legacy-only feature" table in [2026-09-27-one-ui-android-desktop.md](2026-09-27-one-ui-android-desktop.md)
 > step 8d.
 
@@ -121,6 +121,23 @@ so unlocking starts from the first screen.
   ("New feed…") with edit and delete on each custom feed.
 - Migration: legacy desktop feeds are local JSON in java.util.prefs (`LocalFeedProvider`). On the
   first start of the new desktop, copy them into the new store for the account that made them.
+
+**Built.**
+- Stored per account in `AccountSettings.customFeeds` (the feed-visibility DataStore group,
+  `FeedDefinitionSerializer` JSON); `saveCustomFeed` / `deleteCustomFeed`, and deleting a feed sends
+  any screen showing it back to its default.
+- `TopFilter.CustomFeed(id)` runs through `CustomFeedFlow` and `CustomFeedTopNavFilter`: every set
+  condition must hold (kinds, authors, any hashtag), minus excluded authors and keywords. Relays:
+  the feed's own, else the proxy relays, else the authors' outboxes, else the follows relays. The
+  relay side is one combined REQ per relay (`filterHomePostsByCustomFeed`), so authors and hashtags
+  are ANDed on the relay too (the legacy app ORed them there).
+- Only Home offers them (`TopNavFilterState.homeRoutes`), under "Your feeds", with a "Manage your
+  feeds" entry that opens `CustomFeedsScreen`; `EditCustomFeedScreen` builds or edits one over
+  `FeedBuilderState`. The other screens' REQ builders do not know custom feeds.
+- The legacy prefs are global, not per login, so the first account to load on the new desktop
+  takes them (`LegacyCustomFeedImport`, filter feeds only).
+- Fixed on the way: `filterHomePostsByHashtags` returned from inside `mapNotNull`, so a hashtag
+  feed only asked its first relay.
 
 ### 6. Composer
 
