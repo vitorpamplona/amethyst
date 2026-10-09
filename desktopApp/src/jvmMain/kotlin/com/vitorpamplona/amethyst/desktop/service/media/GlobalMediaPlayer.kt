@@ -29,6 +29,7 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.desktop.ui.media.MediaType
 import com.vitorpamplona.quartz.utils.Log
+import io.github.kdroidfilter.composemediaplayer.InitialPlayerState
 import io.github.kdroidfilter.composemediaplayer.VideoPlayerError
 import io.github.kdroidfilter.composemediaplayer.VideoPlayerState
 import io.github.kdroidfilter.composemediaplayer.createVideoPlayerState
@@ -114,6 +115,16 @@ object GlobalMediaPlayer {
     private val retiring: MutableSet<VideoPlayerState> = Collections.synchronizedSet(mutableSetOf())
 
     @Volatile private var shutDown = false
+
+    // Engines opened ahead, paused and muted, on the videos the feeds are about to show, by URL
+    // (see warmVideos). Guarded by initLock. They have no surface: only videoPlayer is ever drawn.
+    private val warmEngines = LinkedHashMap<String, VideoPlayerState>()
+
+    // What each feed asked to warm, most recent last.
+    private val warmRequests = LinkedHashMap<Any, List<String>>()
+
+    // How many videos to keep warm across all feeds: each is a native engine buffering a stream.
+    private const val MAX_WARM_ENGINES = 2
 
     private const val CLOCK_POLL_MS = 250L
 
@@ -229,8 +240,18 @@ object GlobalMediaPlayer {
         // The video being replaced picks up where it was when it comes back.
         rememberPosition(current)
 
+        // Opened ahead while it was coming up the feed: it takes over, already buffered.
+        val warm = synchronized(initLock) { warmEngines.remove(url) }
+        if (warm != null) {
+            if (warm.error == null) {
+                startWarmVideo(warm, url, startAt)
+                return
+            }
+            retireVideoPlayer(warm)
+        }
+
         val player =
-            replaceVideoPlayer() ?: run {
+            replaceVideoPlayer(previousUrl = current.url.takeIf { current.errorReason == null }, nextUrl = url) ?: run {
                 startVideoSync(null, url)
                 _videoState.value =
                     MediaPlaybackState(
@@ -279,6 +300,148 @@ object GlobalMediaPlayer {
                     player.seekTo(startAt * 1000f)
                 }
             }
+    }
+
+    /**
+     * Makes [player], opened paused ahead of time on [url], the playing engine: the one it replaces
+     * retires, and it plays (from [startAt]) as soon as its open has the media, which it usually
+     * already has.
+     */
+    private fun startWarmVideo(
+        player: VideoPlayerState,
+        url: String,
+        startAt: Float,
+    ) {
+        Log.d(TAG) { "playVideo warm url=$url" }
+        val previousUrl = _videoState.value.url
+        val previous = synchronized(initLock) { videoPlayer.also { videoPlayer = player } }
+        if (previous != null) parkOrRetire(previous, previousUrl, url)
+
+        videoSeekWhilePaused = null
+        videoDownloading = false
+        val muted = defaultMuted
+        if (muted) preMuteVideoVolume = 100
+        player.volume = if (muted) 0f else 1f
+        player.playbackSpeed = 1f
+
+        _videoState.value =
+            MediaPlaybackState(
+                url = url,
+                type = MediaType.VIDEO,
+                isBuffering = !player.hasMedia,
+                volume = if (muted) 0 else 100,
+                isMuted = muted,
+            )
+        startVideoSync(player, url)
+
+        videoOpenJob?.cancel()
+        videoOpenJob =
+            scope.launch(Dispatchers.Main) {
+                snapshotFlow { player.hasMedia || player.error != null }.first { it }
+                if (player.error != null || _videoState.value.url != url) return@launch
+                if (startAt > 0f) player.seekTo(startAt * 1000f)
+                if (!videoPauseRequested) player.play()
+            }
+    }
+
+    /**
+     * Opens the videos a feed is about to show ([urls], most wanted first) ahead of time, paused and
+     * muted, so each starts at once when it scrolls into the middle of the window instead of only
+     * then starting to download. [owner] is the feed asking: every feed on screen keeps its own list,
+     * an empty one releases its videos, and the most recent request is served first. At most
+     * [MAX_WARM_ENGINES] stay open; the playing video and encrypted blobs (which must download
+     * whole before they open) are never warmed.
+     */
+    fun warmVideos(
+        owner: Any,
+        urls: List<String>,
+    ) {
+        if (shutDown) return
+        scope.launch(Dispatchers.Main) {
+            val playing = _videoState.value.url
+            val (stale, fresh) =
+                synchronized(initLock) {
+                    warmRequests.remove(owner)
+                    if (urls.isNotEmpty()) warmRequests[owner] = urls
+                    val wanted = wantedWarm(playing)
+                    val stale = warmEngines.filterKeys { it !in wanted }.values.toList()
+                    warmEngines.keys.retainAll(wanted.toSet())
+                    stale to wanted.filter { it !in warmEngines }
+                }
+            stale.forEach { retireVideoPlayer(it) }
+            fresh.forEach { url -> openWarm(url) }
+        }
+    }
+
+    /**
+     * The videos to keep warm while [playing] plays: from the most recent feed's list first, the
+     * ones nearest the playing video in it (the next, then the previous, and so on outward), since
+     * those are the ones a scroll reaches. Callers hold [initLock].
+     */
+    private fun wantedWarm(playing: String?): List<String> =
+        warmRequests.values
+            .reversed()
+            .flatMap { list -> list.nearest(playing) }
+            .filter { it != playing && !MediaHttp.isEncrypted(it) }
+            .distinct()
+            .take(MAX_WARM_ENGINES)
+
+    /** This list ordered by distance from [center] (after before before at a tie), or as is when [center] isn't in it. */
+    private fun List<String>.nearest(center: String?): List<String> {
+        val at = if (center == null) -1 else indexOf(center)
+        if (at < 0) return this
+        return indices.sortedBy { i -> if (i > at) (i - at) * 2 - 1 else (at - i) * 2 }.map { this[it] }
+    }
+
+    /**
+     * Keeps [player], which was playing [url] and just gave way to another video, open and paused
+     * when [url] is one of the videos to keep warm (the user scrolled just past it and may come
+     * back); retires it otherwise.
+     */
+    private fun parkOrRetire(
+        player: VideoPlayerState,
+        url: String?,
+        nowPlaying: String,
+    ) {
+        val parked =
+            url != null &&
+                player.error == null &&
+                synchronized(initLock) {
+                    if (url in wantedWarm(nowPlaying) && url !in warmEngines) {
+                        warmEngines[url] = player
+                        true
+                    } else {
+                        false
+                    }
+                }
+        if (parked) {
+            Log.d(TAG) { "park url=$url" }
+            runCatching {
+                player.volume = 0f
+                player.pause()
+            }
+        } else {
+            retireVideoPlayer(player)
+        }
+    }
+
+    private fun openWarm(url: String) {
+        if (shutDown) return
+        val streaming = MediaRelay.streamingUrl(url) ?: return
+        val engine =
+            runCatching { createVideoPlayerState() }
+                .onFailure { Log.w(TAG, "Warm video engine init failed", it) }
+                .getOrNull() ?: return
+        runCatching {
+            engine.volume = 0f
+            engine.playbackSpeed = 1f
+        }
+        synchronized(initLock) { warmEngines[url] = engine }
+        Log.d(TAG) { "warm open url=$url" }
+        scope.launch(Dispatchers.IO) {
+            runCatching { engine.openUri(streaming, InitialPlayerState.PAUSE) }
+                .onFailure { Log.w(TAG) { "Warm open failed for $url: ${it.message}" } }
+        }
     }
 
     fun playAudio(url: String) {
@@ -486,6 +649,12 @@ object GlobalMediaPlayer {
         runCatching { audioPlayer?.dispose() }
         // Their delayed release dies with the scope below.
         synchronized(retiring) { retiring.toList().also { retiring.clear() } }.forEach { runCatching { it.dispose() } }
+        synchronized(initLock) {
+            warmEngines.values.toList().also {
+                warmEngines.clear()
+                warmRequests.clear()
+            }
+        }.forEach { runCatching { it.dispose() } }
         videoPlayer = null
         audioPlayer = null
         _videoState.value = MediaPlaybackState()
@@ -551,14 +720,19 @@ object GlobalMediaPlayer {
      * `SkImages::RasterFromBitmap`) — routine once the feed switches videos as it scrolls. A fresh
      * engine has no previous frame to free.
      */
-    private fun replaceVideoPlayer(): VideoPlayerState? {
+    private fun replaceVideoPlayer(
+        previousUrl: String? = null,
+        nextUrl: String? = null,
+    ): VideoPlayerState? {
         if (shutDown) return null
         val fresh =
             runCatching { createVideoPlayerState() }
                 .onFailure { Log.w(TAG, "Video engine init failed", it) }
                 .getOrNull() ?: return null
         val previous = synchronized(initLock) { videoPlayer.also { videoPlayer = fresh } }
-        if (previous != null) retireVideoPlayer(previous)
+        if (previous != null) {
+            if (nextUrl != null) parkOrRetire(previous, previousUrl, nextUrl) else retireVideoPlayer(previous)
+        }
         return fresh
     }
 

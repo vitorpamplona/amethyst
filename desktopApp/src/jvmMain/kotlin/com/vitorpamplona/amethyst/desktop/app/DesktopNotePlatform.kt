@@ -327,6 +327,19 @@ object DesktopNotePlatform : NotePlatform {
         if (UrlCachedPreviewer.cache[url] == null) accountViewModel.urlPreview(url) {}
     }
 
+    /**
+     * The desktop plays every video on one engine, which opens a video only once its card is the
+     * one in the middle of the window, so each started downloading only then. These open ahead,
+     * paused, unless videos load only on a click.
+     */
+    override fun warmVideos(
+        owner: Any,
+        urls: List<String>,
+        accountViewModel: AccountViewModel,
+    ) {
+        GlobalMediaPlayer.warmVideos(owner, if (accountViewModel.settings.startVideoPlayback()) urls else emptyList())
+    }
+
     @Composable
     override fun RenderAudioPlayer(
         mediaUrl: String,
