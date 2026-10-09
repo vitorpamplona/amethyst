@@ -369,6 +369,10 @@
         <item quantity="one">%1$s darabot sikerült beolvasni a(z) %2$s darab közül, folytatás</item>
         <item quantity="other">%1$s darabot sikerült beolvasni a(z) %2$s darab közül, folytatás</item>
     </plurals>
+    <plurals name="qr_scanner_partial_sequence_note">
+        <item quantity="one">Ez a kép a(z) %2$s részből álló több részes kód %1$s. részét is tartalmazza. Csak akkor olvasható be, ha minden rész be lett olvasva.</item>
+        <item quantity="other">Ez a kép a(z) %2$s részből álló több részes kód %1$s részét is tartalmazza. Csak akkor olvasható be, ha minden részt beolvastak.</item>
+    </plurals>
     <string name="qr_scanner_zoom_reset">Nagyítás visszaállítása</string>
     <string name="qr_scanner_unsupported_title">Az Amethyst nem tudja megnyitni ezt a kódot</string>
     <string name="qr_scanner_unsupported_secret">Ez a kód egy titkos kulcsot vagy párosítási titkot tartalmaz, ezért a tartalma itt nem jelenik meg. Használja azt a képernyőt, ahol meg kell adni.</string>
@@ -380,6 +384,8 @@
     <string name="qr_scanner_kind_cashu">Ez egy Cashu-token.</string>
     <string name="qr_scanner_kind_web">Ez egy webhivatkozás.</string>
     <string name="qr_scanner_kind_text">Ez egy egyszerű szöveg, nem Nostr-kód.</string>
+    <string name="qr_scanner_kind_hex_key">Ez egy nyers, 64 karakteres kulcs. Lehet nyilvános vagy privát kulcs, és ha privát kulcsot profilként nyit meg, az elküldi az átjátszóira. Csak akkor nyissa meg, ha tudja, hogy nyilvános kulcs.</string>
+    <string name="qr_scanner_open_as_profile">Ez egy nyilvános kulcs – profil megnyitása</string>
     <string name="qr_scanner_kind_nostr_unsupported">Ez egy Nostr-kód, de ez a képernyő nem tudja megnyitni.</string>
     <string name="qr_scanner_label_profile">Profil</string>
     <string name="qr_scanner_label_note">Megjegyzés</string>
@@ -393,6 +399,7 @@
     <string name="qr_scanner_label_cashu">Cashu token</string>
     <string name="qr_scanner_label_web">Webes hivatkozás</string>
     <string name="qr_scanner_label_text">Egyszerű szöveg</string>
+    <string name="qr_scanner_label_hex_key">Nyers kulcs (nyilvános vagy privát)</string>
     <string name="qr_scanner_open_link">Hivatkozás megnyitása</string>
     <string name="qr_scanner_copy">Másolás</string>
     <string name="qr_scanner_copied">Másolva</string>
@@ -545,6 +552,7 @@
     <string name="stale_relay_hint_label">A forrásátjátszók elavultak lehetnek</string>
     <string name="stale_relay_hint_icon_description">Elavult átjátszóra vonatkozó figyelmeztetés</string>
     <string name="pinned_to_top">Kitűzve felülre</string>
+    <string name="pinned_chat_no_messages_loaded">Nincsenek betöltött friss üzenetek</string>
     <string name="upload_image">Kép feltöltése</string>
     <string name="upload_file">Fájl feltöltése</string>
     <string name="take_a_picture">Kép készítése</string>
@@ -1222,6 +1230,8 @@
     <string name="nip82_download">Letöltés</string>
     <string name="nip82_section_about">Névjegy</string>
     <string name="nip82_section_platforms">Platformok</string>
+    <string name="nip82_section_license">Licenc</string>
+    <string name="nip82_platform_with_cpus">%1$s · %2$s</string>
     <string name="nip82_section_topics">Témák</string>
     <string name="nip82_section_links">Hivatkozások</string>
     <string name="nip82_section_latest_release">Legújabb kiadás</string>
@@ -1229,6 +1239,33 @@
     <string name="nip82_by_author">általa</string>
     <string name="nip82_older_releases_show">Korábbi kiadások megjelenítése</string>
     <string name="nip82_older_releases_hide">Korábbi kiadások elrejtése</string>
+    <string name="nip82_prereleases_show">Korábbi előzetes kiadások megjelenítése</string>
+    <string name="nip82_prereleases_hide">Korábbi előzetes kiadások elrejtése</string>
+    <string name="nip82_new_release">Új kiadás</string>
+    <string name="nip82_commit_label">%1$s véglegesítése</string>
+    <string name="nip82_section_downloads">Letöltések</string>
+    <string name="nip82_for_this_device">Ehhez az eszközhöz</string>
+    <string name="nip82_not_from_developer">Nem az alkalmazás fejlesztője tette közzé</string>
+    <string name="nip82_min_android_api">%1$s+ API</string>
+    <string name="nip82_min_platform_version">%1$s %2$s+</string>
+    <string name="nip82_os_android">Android</string>
+    <string name="nip82_os_ios">iOS</string>
+    <string name="nip82_os_macos">macOS</string>
+    <string name="nip82_os_windows">Windows</string>
+    <string name="nip82_os_linux">Linux</string>
+    <string name="nip82_os_freebsd">FreeBSD</string>
+    <string name="nip82_os_wasm">WebAssembly</string>
+    <string name="nip82_os_other">Egyéb</string>
+    <string name="nip82_cpu_apple_silicon">Apple silicon</string>
+    <string name="nip82_cpu_intel_mac">Intel</string>
+    <string name="nip82_cpu_arm64">ARM64</string>
+    <string name="nip82_cpu_armv7">ARMv7</string>
+    <string name="nip82_cpu_x86_64">x86-64</string>
+    <string name="nip82_cpu_x86">x86</string>
+    <string name="nip82_cpu_riscv64">RISC-V 64</string>
+    <string name="nip82_cpu_wasm32">32 bites</string>
+    <string name="nip82_cpu_wasm64">64 bites</string>
+    <string name="nip82_section_prereleases">Előzetes kiadások</string>
     <string name="meeting_room_in_space">ebben: %1$s</string>
     <string name="meeting_room_in_space_unknown">egy hangszoba</string>
     <string name="nest_stage">Színpad</string>
@@ -4772,6 +4809,10 @@
     <string name="nip46_signer_remote_app">Távoli aláíró alkalmazás</string>
     <string name="nip46_signer_title">Távoli aláíró</string>
     <string name="nip51_list_has_private_members">Ennek a listának vannak privát tagjai, amelyeket csak a szerzője láthat</string>
+    <plurals name="nip82_downloads_count">
+        <item quantity="one">%1$d letöltése</item>
+        <item quantity="other">%1$d letöltés</item>
+    </plurals>
     <plurals name="nip82_assets_count">
         <item quantity="one">%1$d összetevő egybecsomagolva</item>
         <item quantity="other">%1$d asset egybecsomagolva</item>
@@ -6517,4 +6558,7 @@
         <item quantity="one">+%1$d további válasz</item>
         <item quantity="other">+%1$d további válasz</item>
     </plurals>
+    <!-- Mostro instance terms (kind 38385) -->
+    <!-- Kanban boards (kind 30301) and cards (kind 30302) -->
+    <!-- WalletScrutiny build verifications (kind 30301) -->
 </resources>

@@ -2305,10 +2305,6 @@
     
 
     <string name="always_on_notif_channel_description">Maintient les connexions à vos relais de boîte de réception actives pour les notifications en temps réel</string>
-    <plurals name="always_on_notif_connected">
-    <item quantity="one">Connecté à %1$d relais de boîte de réception</item>
-    <item quantity="other">Connecté à %1$d relais de boîte de réception</item>
-</plurals>
     <plurals name="always_on_notif_connected_foreground">
     <item quantity="one">Connecté à %1$d relais</item>
     <item quantity="other">Connecté à %1$d relais</item>

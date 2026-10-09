@@ -272,12 +272,6 @@
          NavBarItemDef labels are R.string ids. -->
     <!-- NIP-71 video credits: what a video says about the people and works it references. -->
     <string name="always_on_notif_channel_description">Udržuje připojení k vašim inbox relayím aktivní pro oznámení v reálném čase</string>
-    <plurals name="always_on_notif_connected">
-        <item quantity="one">Připojeno k %1$d příchozímu relay</item>
-        <item quantity="few">Připojeno k %1$d příchozím relays</item>
-        <item quantity="many">Připojeno k %1$d příchozímu relay</item>
-        <item quantity="other">Připojeno k %1$d příchozím relays</item>
-    </plurals>
     <plurals name="always_on_notif_connected_foreground">
         <item quantity="one">Připojeno k %1$d relay</item>
         <item quantity="few">Připojeno k %1$d relays</item>

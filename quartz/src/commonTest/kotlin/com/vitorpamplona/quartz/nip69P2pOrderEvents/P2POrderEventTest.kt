@@ -169,7 +169,11 @@ class P2POrderEventTest {
         assertNull(BondTag.parse(arrayOf("bond", "3%")))
         assertNull(BondTag.parse(arrayOf("bond", "")))
         assertNull(BondTag.parse(arrayOf("bond")))
-        assertContentEquals(arrayOf("bond", "2.50"), BondTag.assemble(BigDecimal("2.50")))
+        // The spelling is the platform's: the JVM keeps the scale ("2.50"), Apple's
+        // NSDecimalNumber drops trailing zeros ("2.5"). Both are the same bond, so check the value.
+        val assembled = BondTag.assemble(BigDecimal("2.50"))
+        assertEquals("bond", assembled[0])
+        assertEquals(0, BondTag.parse(assembled)?.compareToValue(BigDecimal("2.5")), "assembled ${assembled[1]}")
         assertContentEquals(arrayOf("bond", "0"), BondTag.assemble(0L))
     }
 

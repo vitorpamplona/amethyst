@@ -103,6 +103,12 @@ enum class SubPurpose(
     /** Nostr Wallet Connect notifications, on the wallet-connect relay. */
     NWC(SubPurposeGroup.ACCOUNT, runsInBackground = true),
 
+    /**
+     * The NIP-46 bunker this account hosts for other apps: kind 24133 requests addressed to its
+     * transport key, on the inbox relays plus each paired nostrconnect app's own relays.
+     */
+    SIGNER(SubPurposeGroup.ACCOUNT, runsInBackground = true),
+
     // ---- things addressed to me: always on ---------------------------------
 
     /** Mentions, reactions, reposts and zaps addressed to me (`#p` = me). Inbox relays. */
@@ -138,6 +144,12 @@ enum class SubPurpose(
 
     /** Marmot / MLS encrypted group messaging. */
     ENCRYPTED_GROUPS(SubPurposeGroup.MESSAGES, runsInBackground = true),
+
+    /**
+     * Cordn groups: MLS delivered by an MCP coordinator over ContextVM, on the coordinator's own
+     * relays. One short REQ per JSON-RPC call, opened again and again by the sync loop.
+     */
+    COORDINATOR_GROUPS(SubPurposeGroup.MESSAGES, runsInBackground = true),
 
     /** Live audio rooms (NIP-53 nests) and their presence. */
     LIVE_ROOMS(SubPurposeGroup.MESSAGES),

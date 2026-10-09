@@ -193,9 +193,10 @@ fun cashuOwnEventBackfillFilters(
     kinds: List<Int> = OWN_CASHU_KINDS,
 ): List<Filter> =
     listOf(
-        Filter(
+        ExplainedFilter(
             kinds = kinds,
             authors = listOf(pubkey),
+            purpose = SubPurpose.WALLET,
         ),
     )
 
@@ -206,8 +207,9 @@ fun cashuOwnEventBackfillFilters(
  */
 fun cashuInboundNutzapBackfillFilters(pubkey: HexKey): List<Filter> =
     listOf(
-        Filter(
+        ExplainedFilter(
             kinds = listOf(NutzapEvent.KIND),
             tags = mapOf("p" to listOf(pubkey)),
+            purpose = SubPurpose.NUTZAP_INBOX,
         ),
     )

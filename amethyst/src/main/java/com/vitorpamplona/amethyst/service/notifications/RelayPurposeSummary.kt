@@ -27,9 +27,12 @@ import com.vitorpamplona.amethyst.commons.relays.ui.SubPurposeLabels
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.relay_purpose_browsing
 import com.vitorpamplona.amethyst.commons.resources.relay_purpose_line
+import com.vitorpamplona.amethyst.commons.resources.relay_purpose_sending
 import com.vitorpamplona.amethyst.commons.ui.loadPluralStringRes
 import com.vitorpamplona.amethyst.commons.ui.loadStringRes
+import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
+import com.vitorpamplona.quartz.utils.Log
 
 /**
  * The per-job breakdown behind the always-on notification's relay count.
@@ -47,8 +50,16 @@ import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
  * Purposes with no label — feeds and whatever screen is open — collapse into one "browsing" line.
  * Those disappear on their own once the app is backgrounded, which is exactly when this notification
  * matters most, so spelling them out would add noise precisely when the user is least interested.
+ *
+ * A relay with no tagged REQ can still be connected for a real reason: an event of ours is waiting
+ * for its OK there. Those get their own "sending" line. Anything still left over is a subscription
+ * that never said why it exists — a plain `Filter` that should have been an `ExplainedFilter` — so
+ * it is logged with its subscription ids and kinds, which is what finds the producer, rather than shown as a vague
+ * "other" line that would hide it.
  */
 object RelayPurposeSummary {
+    private const val TAG = "RelayPurposeSummary"
+
     /**
      * Lines for the expanded notification, busiest first. Empty when nothing is attributed yet —
      * the caller must then fall back to the bare count rather than render an empty section.
@@ -57,20 +68,32 @@ object RelayPurposeSummary {
         val client = Amethyst.instance.client
         val named = mutableMapOf<SubPurpose, MutableSet<NormalizedRelayUrl>>()
         val browsing = mutableSetOf<NormalizedRelayUrl>()
+        val sending = mutableSetOf<NormalizedRelayUrl>()
 
         client.connectedRelaysFlow().value.forEach { relay ->
-            client
-                .activeRequests(relay)
-                .values
-                .flatten()
-                .purposes()
-                .forEach { purpose ->
-                    if (SubPurposeLabels.isWorthNamingInNotification(purpose)) {
-                        named.getOrPut(purpose) { mutableSetOf() }.add(relay)
-                    } else {
-                        browsing.add(relay)
+            // COUNTs hold a relay open just as REQs do, and are tagged the same way.
+            val requests = client.activeRequests(relay)
+            val counts = client.activeCounts(relay)
+            val purposes = requests.values.flatten().purposes() + counts.values.flatten().purposes()
+
+            purposes.forEach { purpose ->
+                if (SubPurposeLabels.isWorthNamingInNotification(purpose)) {
+                    named.getOrPut(purpose) { mutableSetOf() }.add(relay)
+                } else {
+                    browsing.add(relay)
+                }
+            }
+
+            if (purposes.isEmpty()) {
+                if (client.activeOutboxEvents(relay).isNotEmpty()) {
+                    sending.add(relay)
+                } else {
+                    // Sub ids and kinds name the producer; the filters themselves carry pubkeys.
+                    Log.d(TAG) {
+                        "$relay is connected with no purpose: reqs=${requests.describe()} counts=${counts.describe()}"
                     }
                 }
+            }
         }
 
         val lines =
@@ -83,6 +106,11 @@ object RelayPurposeSummary {
         if (browsing.isNotEmpty()) {
             lines.add(loadPluralStringRes(Res.plurals.relay_purpose_line, browsing.size, loadStringRes(Res.string.relay_purpose_browsing), browsing.size))
         }
+        if (sending.isNotEmpty()) {
+            lines.add(loadPluralStringRes(Res.plurals.relay_purpose_line, sending.size, loadStringRes(Res.string.relay_purpose_sending), sending.size))
+        }
         return lines
     }
+
+    private fun Map<String, List<Filter>>.describe(): String = entries.joinToString { (subId, filters) -> "$subId${filters.flatMap { it.kinds.orEmpty() }.toSet()}" }
 }

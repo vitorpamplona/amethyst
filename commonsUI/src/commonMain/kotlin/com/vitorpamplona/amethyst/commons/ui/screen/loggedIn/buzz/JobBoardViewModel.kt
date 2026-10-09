@@ -25,6 +25,8 @@ import androidx.lifecycle.viewModelScope
 import com.vitorpamplona.amethyst.commons.model.Account
 import com.vitorpamplona.amethyst.commons.model.buzz.BuzzJobAggregator
 import com.vitorpamplona.amethyst.commons.model.buzz.JobView
+import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.SubPurpose
+import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.taggedAs
 import com.vitorpamplona.quartz.nip01Core.relay.client.reqs.subscribeAsFlow
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
@@ -95,6 +97,7 @@ class JobBoardViewModel : ViewModel() {
                         _isLoading.value = false
                     }
                 account.client
+                    .taggedAs(SubPurpose.RELAY_GROUPS)
                     .subscribeAsFlow(relay, boardFilters(channelId))
                     .onStart { emit(emptyList()) }
                     .collect { events ->
