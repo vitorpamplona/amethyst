@@ -34,6 +34,11 @@ finish-args:
   - --talk-name=org.freedesktop.Notifications
   # java-keyring stores the account keys through the Secret Service API.
   - --talk-name=org.freedesktop.secrets
+  # The app keeps accounts, drafts and scheduled posts under ~/.amethyst and
+  # Java Preferences under ~/.java. Without home access those paths are
+  # throwaway, so map them into ~/.var/app/com.vitorpamplona.amethyst/.
+  - --persist=.amethyst
+  - --persist=.java
 
 # No openjdk module / sdk-extension: the jpackage tree copied below already
 # bundles its own trimmed JRE under Amethyst/lib/runtime/, so installing a

@@ -98,6 +98,15 @@ lists the codecs-extra plugin directory, and overriding it hides those plugins.
 - `--talk-name=org.freedesktop.Notifications`: `NucleusNotificationDispatcher`
   sends desktop notifications over D-Bus through `nucleus.notification-linux`
   (AWT's tray is only its fallback).
+- `--persist=.amethyst` and `--persist=.java`: the app writes accounts,
+  drafts, scheduled posts and the local relay under `~/.amethyst`, and Java
+  Preferences (relay lists, search history) under `~/.java`. Without home
+  access, writes there are lost when the sandbox exits; `--persist` keeps them
+  under `~/.var/app/com.vitorpamplona.amethyst/`. Tor state and the image
+  cache already follow `XDG_DATA_HOME`/`XDG_CACHE_HOME`.
+- Scheduled posts only publish while the app is open. `OsScheduler` registers
+  a systemd user timer (or crontab entry) to publish while the app is closed,
+  and neither can be reached from the sandbox.
 - The "now playing" reader (`MprisNowPlayingReader`) queries other players
   over the session bus with `dbus-send`. The sandbox grants no
   `org.mpris.MediaPlayer2.*` access, so it finds nothing in the Flatpak.

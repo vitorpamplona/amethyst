@@ -826,20 +826,19 @@ expose downgrade migration risks — **prefer a single install channel per
 machine**.
 
 **Exception: Flatpak.** The sandbox redirects XDG dirs into
-`~/.var/app/com.vitorpamplona.amethyst/`, so a Flatpak install keeps
+`~/.var/app/com.vitorpamplona.amethyst/` (the manifest persists `~/.amethyst`
+and `~/.java` there too), so a Flatpak install keeps
 its own separate state and does not see (or risk downgrading) state written
 by any other channel.
 
 **Flatpak app ID change.** Up to v1.17.0 the Flatpak bundle used the ID
 `com.vitorpamplona.amethyst.Desktop` (Flathub forbids IDs ending in
-`.desktop`). The renamed bundle installs as a separate app. To keep the old
-data, remove the old app without `--delete-data` and move its directory
-before the first launch of the new one:
-
-```bash
-flatpak uninstall com.vitorpamplona.amethyst.Desktop
-mv ~/.var/app/com.vitorpamplona.amethyst.Desktop ~/.var/app/com.vitorpamplona.amethyst
-```
+`.desktop`). The renamed bundle installs as a separate app. There is no data
+worth moving: that bundle did not persist `~/.amethyst` or `~/.java`, so it
+lost its accounts, drafts and settings on every restart, and what it did keep
+(Tor state, image cache) is rebuilt on demand. Remove it with
+`flatpak uninstall --delete-data com.vitorpamplona.amethyst.Desktop` and log
+in again in the new one.
 
 | OS | App location | State directories |
 |---|---|---|

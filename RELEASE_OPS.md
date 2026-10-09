@@ -81,9 +81,10 @@ own, so don't expect to find it in the run's job list.
 4. **Add the release to the Linux metainfo**: a new first entry in `<releases>`
    of `desktopApp/packaging/flatpak/com.vitorpamplona.amethyst.metainfo.xml`
    (`<release version="1.12.1" date="YYYY-MM-DD">` with a `details` URL to the
-   GitHub release, as the existing entries do). Release CI injects a bare entry
-   if you forget, but only into the bundle it builds: AppStream readers like
-   Flathub take the history from the source tree.
+   GitHub release, as the existing entries do). If you forget, release CI
+   prints a warning and injects a bare entry, but only into the bundle it
+   builds: AppStream readers like Flathub take the history from the source
+   tree.
 
 5. **Sanity-build locally** (optional but cheap): `./gradlew assembleRelease`
    and a desktop `packageDistributionForCurrentOS`, or run the workflow's

@@ -96,9 +96,8 @@
   </screenshots>
   -->
 
-  <!-- Newest first. Release CI adds an entry for the version it builds when
-       that version is not listed here yet, but Flathub reads this history
-       from the source tree, so add the entry when tagging a release. -->
+  <!-- Newest first. Add the entry before tagging a release
+       (RELEASE_OPS.md); release CI warns when the tag is missing here. -->
   <releases>
     <release version="1.17.0" date="2026-10-05">
       <url type="details">https://github.com/vitorpamplona/amethyst/releases/tag/v1.17.0</url>
@@ -108,6 +107,12 @@
     </release>
     <release version="1.15.2" date="2026-09-12">
       <url type="details">https://github.com/vitorpamplona/amethyst/releases/tag/v1.15.2</url>
+    </release>
+    <release version="1.15.1" date="2026-09-11">
+      <url type="details">https://github.com/vitorpamplona/amethyst/releases/tag/v1.15.1</url>
+    </release>
+    <release version="1.15.0" date="2026-09-11">
+      <url type="details">https://github.com/vitorpamplona/amethyst/releases/tag/v1.15.0</url>
     </release>
     <release version="1.14.0" date="2026-08-22">
       <url type="details">https://github.com/vitorpamplona/amethyst/releases/tag/v1.14.0</url>

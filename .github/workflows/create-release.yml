@@ -296,9 +296,12 @@ jobs:
             *)     echo "::error::unsupported arch for Flatpak: ${{ matrix.arch }}"; exit 1 ;;
           esac
           # The checked-in metainfo carries the release history (Flathub reads
-          # it from the source tree). If this version was not added when
-          # tagging, inject an entry so the bundle still names its version.
-          if ! grep -q "<release version=\"${VER}\"" "${PKG}/${APP_ID}.metainfo.xml"; then
+          # it from the source tree). A tag missing from it gets a bare entry in
+          # this bundle only, plus a warning to fix the source tree. Dry runs
+          # (0.0.0-dryrun) inject nothing, so the history stays in order.
+          if [[ "${GITHUB_EVENT_NAME}" != "workflow_dispatch" ]] && \
+             ! grep -q "<release version=\"${VER}\"" "${PKG}/${APP_ID}.metainfo.xml"; then
+            echo "::warning file=${PKG}/${APP_ID}.metainfo.xml::no <release version=\"${VER}\"> entry; add it to the source tree (RELEASE_OPS.md pre-tag checklist)"
             sed -i "s|<releases>|<releases>\n    <release version=\"${VER}\" date=\"$(date -u +%F)\" />|" \
               "${PKG}/${APP_ID}.metainfo.xml"
           fi
