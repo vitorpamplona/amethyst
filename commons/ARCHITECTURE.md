@@ -112,7 +112,7 @@ in `commonsUI`, under the same package.
 |----------------|-----|---------|
 | `state`        | no² | Small feature `StateFlow` machines (`FollowState`, `UserMetadataState`, `LoadingState`). |
 | `viewmodels`   | no² | Larger list/feed-backed ViewModels (`androidx.lifecycle.ViewModel`). Shared by all GUI front ends; `cli` usually drives the layers below instead. The few that hold Compose UI state (`ChatNewMessageState` — `TextFieldValue`; `thread/LevelFeedViewModel` — `LazyListState`) live in `commonsUI` under the same package. |
-| `feeds`        | no  | The feed data-access layer at the root (`FeedFilter`, `AdditiveFeedFilter`, `AdditiveComplexFeedFilter`, `ChangesFlowFilter`, `FeedContentState`, `FeedState`, `InvalidatableContent`, `DefaultFeedOrder`, `RepostRenderability`…) plus `feeds/custom` (`FeedDefinitionRepository` — custom-feed definitions & ordering) and `feeds/related`. See the `feed-patterns` skill. |
+| `feeds`        | no  | The feed data-access layer at the root (`FeedFilter`, `AdditiveFeedFilter`, `AdditiveComplexFeedFilter`, `ChangesFlowFilter`, `FeedContentState`, `FeedState`, `InvalidatableContent`, `DefaultFeedOrder`, `RepostRenderability`…) plus `feeds/custom` (`FeedDefinition`, `FeedBuilderState` — the feeds users build, run by `TopFilter.CustomFeed`) and `feeds/related`. See the `feed-patterns` skill. |
 | `profile`      | mixed | `ProfileBroadcastStatus` (state) + `EditProfileFields` at the root; the `ProfileBroadcastBanner` composable lives in `commonsUI` `profile/ui`. |
 | `privacylock`  | mixed | Lock state machine + settings here; `LocalPrivacyLockState`/`lockStateFor` (CompositionLocal accessor) in `commonsUI`. |
 

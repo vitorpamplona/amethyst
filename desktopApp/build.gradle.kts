@@ -116,19 +116,6 @@ dependencies {
     testImplementation(libs.jetbrains.compose.ui.test.junit4)
 }
 
-// The legacy desktop app (its own screens, deck and navigation), kept runnable until its
-// desktop-only features move to the shared UI. `run` and the packaged app start the shared one.
-tasks.register<JavaExec>("runLegacy") {
-    group = "application"
-    description = "Runs the legacy desktop app"
-    mainClass.set("com.vitorpamplona.amethyst.desktop.MainKt")
-    classpath = sourceSets["main"].runtimeClasspath
-    jvmArgs("--add-opens=java.base/java.nio=ALL-UNNAMED", "-Xmx2g")
-    listOf("amethyst.platform", "amethyst.appearance", "amethyst.accent").forEach { key ->
-        System.getProperty(key)?.let { jvmArgs("-D$key=$it") }
-    }
-}
-
 // Previews another OS's look on this machine: `./gradlew :desktopApp:run -Damethyst.platform=MACOS
 // -Damethyst.appearance=light`. Only the dev `run` gets them, never a packaged app.
 // Added at execution: the Compose plugin sets the task's jvmArgs after this script configures it.

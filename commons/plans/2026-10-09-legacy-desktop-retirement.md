@@ -1,13 +1,11 @@
 # Retiring the legacy desktop app: what each legacy-only feature becomes
 
-> **Status:** decided 2026-10-09 (maintainer). Built: 3b (relay latency), 1 (privacy lock), 6a (compression preview and steps), 6b (custom-emoji picker), 5 (custom feeds), 7 (deck and workspaces). Supersedes the
+> **Status:** done 2026-10-09. Every item below is built, and the legacy desktop app is deleted. Supersedes the
 > "Legacy-only feature" table in [2026-09-27-one-ui-android-desktop.md](2026-09-27-one-ui-android-desktop.md)
 > step 8d.
 
 The legacy desktop app (`./gradlew :desktopApp:runLegacy`, everything in `desktopApp` outside
-`desktop/app/`) stays runnable until its desktop-only features have a home in the shared UI. When
-this list is done, delete everything outside `desktop/app/` that `desktop/app/` does not reach, and
-the `runLegacy` task.
+`desktop/app/`) stayed runnable until its desktop-only features had a home in the shared UI.
 
 Android often has a better version of the same idea (its NIP-85 web of trust is far more than
 the legacy app's follows-of-follows count). So for each feature, the legacy implementation was
@@ -241,3 +239,21 @@ Small and independent first; the deck last, since it builds on item 5 (custom-fe
 4. Custom feeds (5).
 5. The deck and workspaces, with migration (7).
 6. Delete the legacy app: discarded features (2, 3a, 4, 6b's GIF search) go with it.
+
+## Deletion (done)
+
+- `desktopApp`: the 231 files outside `desktop/app/` that `desktop/app/` does not reach (a
+  reachability scan over imports and same-package names), their 32 tests and the legacy launch
+  benchmark, and the `runLegacy` task. What stays outside `desktop/app/` is what the new app uses:
+  the platform theme, the media players and lightbox, Tor, scheduled posts, the HTTP client and the
+  account storage the login import reads.
+- Shared code only the legacy app used: `LocalWoTService`, the hashtag-spam check and its settings,
+  `CollapsedSpamNote`, `LiveActivitySorting`, `AdvancedSearchBarState`, `FeedDefinitionRepository`,
+  `SearchQueryToFeed`, `UnhealthyRelayBanner`, and the java.util.prefs stores for the privacy lock,
+  sensitive content, notification read state and dismissed chess games. `WoTService` and
+  `OutboxDispatcher` stay: `amy fof` uses them.
+- Left in place, now unused by any app: some shared UI and models that only the legacy screens
+  called (`ArticleHeader`, `TableOfContents`, `MarkdownToolbar`, `MetadataPanel`, `NewPostsChip`,
+  `UserSearchCard`, `AuthApprovalBanner`, `ReadingTimeCalculator`, `EditProfileFields`, …). They
+  may be useful to the shared screens; delete them if not.
+
