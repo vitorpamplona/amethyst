@@ -28,7 +28,10 @@ import com.vitorpamplona.amethyst.commons.ui.navigation.host.composableFromBotto
 import com.vitorpamplona.amethyst.commons.ui.navigation.host.composableFromEndArgs
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
+import kotlin.test.assertFalse
 import kotlin.test.assertNull
+import kotlin.test.assertTrue
 
 class NavDestinationsTest {
     private val destinations =
@@ -52,5 +55,23 @@ class NavDestinationsTest {
         assertEquals(NavFamily.NONE, destinations.of(Route.Home).family)
         assertEquals(NavFamily.END, destinations.of(Route.Profile("p")).family)
         assertEquals(NavFamily.BOTTOM, destinations.of(Route.Message).family)
+    }
+
+    @Test
+    fun aRouteWithNoScreenIsAnErrorUnlessTheFrontEndHasAnUnavailableScreen() {
+        // Android registers every screen, so an unknown route stays a programming error there.
+        assertFailsWith<IllegalStateException> { destinations.of(Route.MyFitness) }
+        assertFalse(destinations.has(Route.MyFitness))
+        assertTrue(destinations.has(Route.Home))
+
+        // The desktop carries only part of the app: a route it lacks shows its notice instead.
+        val desktop =
+            NavDestinations().apply {
+                composable<Route.Home> { }
+                unavailable { }
+            }
+        assertEquals(NavFamily.END, desktop.of(Route.MyFitness).family)
+        assertFalse(desktop.has(Route.MyFitness), "the notice is not a screen of its own: entry points still hide")
+        assertEquals(NavFamily.NONE, desktop.of(Route.Home).family, "registered screens keep their own")
     }
 }

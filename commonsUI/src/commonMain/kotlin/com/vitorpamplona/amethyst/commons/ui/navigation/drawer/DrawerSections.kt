@@ -145,6 +145,12 @@ val DrawerSections: List<DrawerSection> =
     )
 
 /**
+ * [DrawerSections] with Navigate first, for windows without a bottom bar: there the menu is where
+ * the main destinations live, so they lead. Same instances, only reordered.
+ */
+val DrawerSectionsNavigateFirst: List<DrawerSection> = DrawerSections.sortedBy { it.id != DrawerSectionId.NAVIGATE }
+
+/**
  * Catalog ids deliberately absent from every [DrawerSections] list, with the reason. Only Favorite
  * Apps qualifies: [DrawerFeedsItems] gates it on API 30+ (its inline tabs need SurfaceControlViewHost),
  * so on older devices the row simply doesn't exist. DrawerSectionsTest allows exactly these to be

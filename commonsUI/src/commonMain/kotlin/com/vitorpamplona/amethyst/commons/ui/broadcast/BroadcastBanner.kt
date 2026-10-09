@@ -36,6 +36,7 @@ import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -77,6 +78,7 @@ import com.vitorpamplona.amethyst.commons.resources.bradcasting_result_success
 import com.vitorpamplona.amethyst.commons.resources.broadcasting
 import com.vitorpamplona.amethyst.commons.resources.broadcasting_name
 import com.vitorpamplona.amethyst.commons.resources.broadcasting_number_events
+import com.vitorpamplona.amethyst.commons.resources.dismiss
 import com.vitorpamplona.amethyst.commons.resources.event_sent
 import com.vitorpamplona.amethyst.commons.resources.post
 import com.vitorpamplona.amethyst.commons.resources.pow_cancel_dialog_discard
@@ -172,20 +174,31 @@ fun BroadcastBanner(
                 }
 
                 if (broadcasts.isNotEmpty()) {
-                    val isAllFinished = broadcasts.all { it.status != BroadcastStatus.IN_PROGRESS }
+                    // a failed outbox relay is shown at once, without waiting for the rest.
+                    val showResult = broadcasts.any { it.needsAttention } || broadcasts.all { it.status != BroadcastStatus.IN_PROGRESS }
 
-                    if (isAllFinished) {
-                        if (broadcasts.size == 1) {
-                            CompletedBroadcastContent(broadcasts.first(), onRetryAll, onDismiss)
-                        } else {
-                            MultipleCompletedBroadcastContent(broadcasts, onRetryAll, onDismiss)
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        modifier = Modifier.fillMaxWidth(),
+                    ) {
+                        Box(modifier = Modifier.weight(1f)) {
+                            if (showResult) {
+                                if (broadcasts.size == 1) {
+                                    CompletedBroadcastContent(broadcasts.first(), onRetryAll)
+                                } else {
+                                    MultipleCompletedBroadcastContent(broadcasts, onRetryAll)
+                                }
+                            } else {
+                                if (broadcasts.size == 1) {
+                                    SingleBroadcastContent(broadcasts.first())
+                                } else {
+                                    MultipleBroadcastsContent(broadcasts)
+                                }
+                            }
                         }
-                    } else {
-                        if (broadcasts.size == 1) {
-                            SingleBroadcastContent(broadcasts.first())
-                        } else {
-                            MultipleBroadcastsContent(broadcasts)
-                        }
+
+                        DismissX(onDismiss)
                     }
                 }
             }
@@ -528,7 +541,6 @@ private fun MultipleBroadcastsContent(broadcasts: ImmutableList<BroadcastEvent>)
 fun CompletedBroadcastContent(
     broadcast: BroadcastEvent,
     onRetryAll: () -> Unit,
-    onDismiss: () -> Unit,
 ) {
     Row(
         verticalAlignment = Alignment.CenterVertically,
@@ -544,7 +556,8 @@ fun CompletedBroadcastContent(
                 BroadcastStatus.SUCCESS -> MaterialSymbols.CheckCircle to successColor
                 BroadcastStatus.PARTIAL -> MaterialSymbols.Error to warningColor
                 BroadcastStatus.FAILED -> MaterialSymbols.Error to MaterialTheme.colorScheme.error
-                BroadcastStatus.IN_PROGRESS -> MaterialSymbols.CheckCircle to MaterialTheme.colorScheme.primary
+                // shown before every relay answered only when an outbox relay failed.
+                BroadcastStatus.IN_PROGRESS -> MaterialSymbols.Error to warningColor
             }
 
         // Small status icon (like BroadcastBanner)
@@ -600,17 +613,6 @@ fun CompletedBroadcastContent(
                 )
             }
         }
-
-        // Dismiss X
-        Text(
-            text = "×",
-            style = MaterialTheme.typography.titleMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier =
-                Modifier
-                    .clickable(onClick = onDismiss)
-                    .padding(start = 2.dp),
-        )
     }
 }
 
@@ -618,7 +620,6 @@ fun CompletedBroadcastContent(
 fun MultipleCompletedBroadcastContent(
     broadcasts: ImmutableList<BroadcastEvent>,
     onRetryAll: () -> Unit,
-    onDismiss: () -> Unit,
 ) {
     Row(
         verticalAlignment = Alignment.CenterVertically,
@@ -703,16 +704,21 @@ fun MultipleCompletedBroadcastContent(
                 )
             }
         }
+    }
+}
 
-        // Dismiss X
-        Text(
-            text = "×",
-            style = MaterialTheme.typography.titleMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier =
-                Modifier
-                    .clickable(onClick = onDismiss)
-                    .padding(start = 2.dp),
+/** Hides the banner at any stage; a send still in flight keeps going. */
+@Composable
+private fun DismissX(onDismiss: () -> Unit) {
+    IconButton(
+        onClick = onDismiss,
+        modifier = Modifier.size(22.dp),
+    ) {
+        Icon(
+            symbol = MaterialSymbols.Close,
+            contentDescription = stringRes(Res.string.dismiss),
+            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.size(14.dp),
         )
     }
 }
@@ -793,7 +799,6 @@ fun BroadcastBannerSingleEventPreview() {
                                 Constants.mom to RelayResult.Success,
                                 Constants.nos to RelayResult.Success,
                             ),
-                        status = BroadcastStatus.SUCCESS,
                     ),
                 ),
             )
@@ -809,7 +814,6 @@ fun BroadcastBannerSingleEventPreview() {
                                 Constants.mom to RelayResult.Success,
                                 Constants.nos to RelayResult.Success,
                             ),
-                        status = BroadcastStatus.PARTIAL,
                     ),
                 ),
             )
@@ -825,7 +829,6 @@ fun BroadcastBannerSingleEventPreview() {
                                 Constants.mom to RelayResult.Error("code"),
                                 Constants.nos to RelayResult.Error("code"),
                             ),
-                        status = BroadcastStatus.FAILED,
                     ),
                 ),
             )
@@ -914,7 +917,6 @@ fun BroadcastBannerDoubleEventPreview() {
                                 Constants.mom to RelayResult.Success,
                                 Constants.nos to RelayResult.Success,
                             ),
-                        status = BroadcastStatus.SUCCESS,
                     ),
                     BroadcastEvent(
                         id = Uuid.random().toString(),
@@ -925,7 +927,6 @@ fun BroadcastBannerDoubleEventPreview() {
                                 Constants.mom to RelayResult.Success,
                                 Constants.nos to RelayResult.Success,
                             ),
-                        status = BroadcastStatus.SUCCESS,
                     ),
                 ),
             )
@@ -942,7 +943,6 @@ fun BroadcastBannerDoubleEventPreview() {
                                 Constants.mom to RelayResult.Success,
                                 Constants.nos to RelayResult.Success,
                             ),
-                        status = BroadcastStatus.SUCCESS,
                     ),
                     BroadcastEvent(
                         id = Uuid.random().toString(),
@@ -953,7 +953,6 @@ fun BroadcastBannerDoubleEventPreview() {
                                 Constants.mom to RelayResult.Error("code"),
                                 Constants.nos to RelayResult.Success,
                             ),
-                        status = BroadcastStatus.PARTIAL,
                     ),
                 ),
             )
@@ -970,7 +969,6 @@ fun BroadcastBannerDoubleEventPreview() {
                                 Constants.mom to RelayResult.Error("code"),
                                 Constants.nos to RelayResult.Success,
                             ),
-                        status = BroadcastStatus.FAILED,
                     ),
                     BroadcastEvent(
                         id = Uuid.random().toString(),
@@ -981,7 +979,6 @@ fun BroadcastBannerDoubleEventPreview() {
                                 Constants.mom to RelayResult.Timeout,
                                 Constants.nos to RelayResult.Success,
                             ),
-                        status = BroadcastStatus.FAILED,
                     ),
                 ),
             )

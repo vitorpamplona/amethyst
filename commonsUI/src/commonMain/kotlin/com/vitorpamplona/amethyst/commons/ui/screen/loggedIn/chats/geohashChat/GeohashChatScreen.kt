@@ -55,6 +55,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.vitorpamplona.amethyst.commons.chats.publicChannels.dal.ChannelFeedViewModel
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.geohashChat.GeohashChatChannel
 import com.vitorpamplona.amethyst.commons.model.location.LocationResult
@@ -78,7 +79,6 @@ import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.feed.LocalCha
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.feed.LocalChatShowSelfAuthorName
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.feed.LocalChatSuppressGeohash
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.feed.RefreshingChatroomFeedView
-import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.publicChannels.dal.ChannelFeedViewModel
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.publicChannels.datasource.ChannelFilterAssemblerSubscription
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.publicChannels.send.ChannelNewMessageViewModel
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.publicChannels.send.EditFieldRow
@@ -453,6 +453,8 @@ private fun GeohashChatTopBar(
         },
         // Search this cell rather than everywhere: the box opens holding `geo:<geohash>`.
         actions = { SearchTopBarAction(SearchSeed.byGeohash(geohash), nav) },
+        // Hidden in a list/detail screen's detail pane, where there is nothing to go back to.
+        showBackButton = nav.canPop(),
         popBack = nav::popBack,
     )
 }

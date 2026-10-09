@@ -6942,6 +6942,27 @@
         <item quantity="other">+%1$d odpowiedzi więcej</item>
     </plurals>
     <!-- Web of Trust (NIP-85 trust network) -->
+    <string name="wot_retry">Spróbuj ponownie</string>
+    <string name="wot_min_score_title">Minimalna ocena</string>
+    <string name="wot_min_score_explainer">Osoby, które obserwujesz, zawsze przechodzą.</string>
+    <string name="wot_section_provider">Dostawca</string>
+    <string name="wot_sync_now">Synchronizuj</string>
+    <string name="wot_syncing">Synchronizuję…</string>
+    <string name="wot_last_updated">Zaktualizowano %1$s</string>
+    <string name="wot_open_website">Otwórz ich stronę internetową</string>
+    <string name="wot_redownload">Pobierz ponownie</string>
+    <string name="wot_remove_provider">Przestań używać</string>
+    <string name="wot_more_actions">Więcej działań</string>
+    <string name="wot_section_choose_provider">Wybierz dostawcę</string>
+    <string name="wot_section_change_provider">Przełącz dostawcę</string>
+    <string name="wot_manual_title">Ustaw ręcznie</string>
+    <string name="wot_manual_explainer">Gdy konfiguracja dostawcy nie powiedzie się</string>
+    <string name="wot_manual_mode_copy">Skopiuj widok</string>
+    <string name="wot_manual_mode_key">Wprowadź klucz</string>
+    <string name="wot_copy_explainer">Skorzystaj z listy usługodawców sporządzonej przez osobę, której ufasz, i spójrz na sieć jej oczami.</string>
+    <string name="wot_copy_field">Szukaj osób, npub lub imię@domena</string>
+    <string name="wot_copy_action">Kopiuj</string>
+    <string name="wot_copy_house">Domyślny widok %1$s</string>
     <!-- Mostro instance terms (kind 38385) -->
     <string name="mostro_instance_unnamed">Instancja „Mostro” bez nazwy</string>
     <string name="mostro_version">Wersja %1$s</string>

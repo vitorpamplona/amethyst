@@ -26,7 +26,9 @@ import androidx.compose.runtime.Immutable
 class StringToastMsg(
     val title: String,
     val msg: String,
-) : ToastMsg()
+) : ToastMsg() {
+    override val dedupeKey: Any get() = title to msg
+}
 
 class ActionableStringToastMsg(
     val title: String,

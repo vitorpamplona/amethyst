@@ -37,6 +37,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.vitorpamplona.amethyst.commons.buzz.AgentPersonaEditViewModel
 import com.vitorpamplona.amethyst.commons.buzz.ui.DropdownOption
 import com.vitorpamplona.amethyst.commons.buzz.ui.EditableSuggestDropdown
 import com.vitorpamplona.amethyst.commons.resources.Res

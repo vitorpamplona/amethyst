@@ -7001,4 +7001,10 @@
     <string name="deck_column_hashtag">Hashtag</string>
     <string name="privacy_lock_too_many_attempts">Too many wrong passwords. Try again in a few minutes.</string>
     <string name="deck_focus_column">Go to column %1$d</string>
+    <string name="screen_unavailable_title">Not available here</string>
+    <string name="screen_unavailable_here">This screen isn't in this version of Amethyst yet. It is available in the Android app.</string>
+    <string name="error_dialog_details">Details</string>
+    <string name="crash_window_title">Amethyst ran into a problem</string>
+    <string name="crash_window_body">Something went wrong and this window has to close. You can send the crash report to Amethyst's developers in a DM; no personal information is shared. If you close instead, Amethyst will offer to send it the next time it opens.</string>
+    <string name="crash_window_send">Send to developers</string>
 </resources>

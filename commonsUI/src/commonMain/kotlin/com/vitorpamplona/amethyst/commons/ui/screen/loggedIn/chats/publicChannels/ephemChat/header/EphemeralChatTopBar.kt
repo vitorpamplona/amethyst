@@ -40,6 +40,8 @@ fun EphemeralChatTopBar(
                 nav = nav,
             )
         },
+        // Hidden in a list/detail screen's detail pane, where there is nothing to go back to.
+        showBackButton = nav.canPop(),
         popBack = nav::popBack,
     )
 }

@@ -27,9 +27,9 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import com.vitorpamplona.amethyst.commons.profile.bookmarks.dal.UserProfileBookmarksFeedViewModel
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.screen.RefresheableFeedView
-import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.profile.bookmarks.dal.UserProfileBookmarksFeedViewModel
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 
 @Composable

@@ -31,6 +31,7 @@ import com.vitorpamplona.amethyst.commons.model.preferences.AppPreferenceStores
 import com.vitorpamplona.amethyst.commons.model.preferences.DrawerSectionCollapsePreferences
 import com.vitorpamplona.amethyst.commons.model.preferences.NamecoinSettingsStore
 import com.vitorpamplona.amethyst.commons.model.preferences.OtsSettingsStore
+import com.vitorpamplona.amethyst.commons.model.preferences.PaneWidthPreferences
 import com.vitorpamplona.amethyst.commons.napplet.permissions.NappletPermissionLedger
 import com.vitorpamplona.amethyst.commons.relayClient.auth.AuthCoordinator
 import com.vitorpamplona.amethyst.commons.relayManagement.Nip86Executor
@@ -46,6 +47,7 @@ import com.vitorpamplona.amethyst.commons.tor.TorSettingsFlow
 import com.vitorpamplona.quartz.nip05DnsIdentifiers.namecoin.NamecoinNameResolver
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
+import java.util.concurrent.atomic.AtomicReference
 
 /** The app-wide stores the shared screens read on desktop, all from [modules]. */
 class DesktopAppServices(
@@ -69,6 +71,8 @@ class DesktopAppServices(
 
     override val drawerSectionCollapsePrefs: DrawerSectionCollapsePreferences get() = modules.drawerSectionCollapsePrefs
 
+    override val paneWidthPrefs: PaneWidthPreferences get() = modules.paneWidthPrefs
+
     override val scheduledPostStore: ScheduledPostStore get() = modules.scheduledPostStore
 
     override val appStores: AppPreferenceStores get() = modules.appStores
@@ -86,6 +90,13 @@ class DesktopAppServices(
     override val nip46ClientStore: Nip46ClientStore get() = modules.nip46ClientStore
 
     override suspend fun takeCrashReport(): String? = modules.crashReportCache.loadAndDelete()
+
+    private val reportToSend = AtomicReference<String?>(null)
+
+    /** Hands the rebuilt window a report the user chose to send from the crash window. */
+    fun sendCrashReport(report: String) = reportToSend.set(report)
+
+    override fun takeCrashReportToSend(): String? = reportToSend.getAndSet(null)
 
     override fun blossomClient(serverBaseUrl: String): BlossomBlobClient = modules.blossomClient(serverBaseUrl)
 

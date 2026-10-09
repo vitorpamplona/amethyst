@@ -50,13 +50,13 @@ import com.vitorpamplona.amethyst.commons.resources.action_unmute
 import com.vitorpamplona.amethyst.commons.resources.settings_muted_threads_empty
 import com.vitorpamplona.amethyst.commons.resources.settings_muted_threads_title
 import com.vitorpamplona.amethyst.commons.resources.settings_muted_threads_unknown
+import com.vitorpamplona.amethyst.commons.settings.dal.MutedThreadsFeedViewModel
 import com.vitorpamplona.amethyst.commons.ui.components.rememberViewModel
 import com.vitorpamplona.amethyst.commons.ui.feeds.FeedError
 import com.vitorpamplona.amethyst.commons.ui.feeds.LoadingFeed
 import com.vitorpamplona.amethyst.commons.ui.layouts.rememberFeedContentPadding
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.navigation.topbars.TopBarWithBackButton
-import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.settings.dal.MutedThreadsFeedViewModel
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.ButtonBorder
 import com.vitorpamplona.amethyst.commons.ui.theme.ButtonPadding

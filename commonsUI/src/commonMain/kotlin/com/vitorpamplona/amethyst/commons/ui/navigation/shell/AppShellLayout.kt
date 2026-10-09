@@ -21,9 +21,12 @@
 package com.vitorpamplona.amethyst.commons.ui.navigation.shell
 
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.width
 import androidx.compose.material3.DrawerValue
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ModalBottomSheet
@@ -46,17 +49,26 @@ import androidx.compose.ui.input.pointer.PointerEventPass
 import androidx.compose.ui.input.pointer.PointerEventType
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.Layout
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalWindowInfo
 import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.commons.model.navigation.Route
+import com.vitorpamplona.amethyst.commons.model.preferences.PaneWidthPreferences
 import com.vitorpamplona.amethyst.commons.ui.components.PlatformBackHandler
 import com.vitorpamplona.amethyst.commons.ui.components.rememberModalSheetState
+import com.vitorpamplona.amethyst.commons.ui.layouts.DrawerWidthRange
 import com.vitorpamplona.amethyst.commons.ui.layouts.LocalScreenLayout
+import com.vitorpamplona.amethyst.commons.ui.layouts.LocalTitleBarOverlay
 import com.vitorpamplona.amethyst.commons.ui.layouts.NavigationStyle
+import com.vitorpamplona.amethyst.commons.ui.layouts.NotificationPanelWidthRange
+import com.vitorpamplona.amethyst.commons.ui.layouts.PaneSplitter
+import com.vitorpamplona.amethyst.commons.ui.layouts.fitPaneWidths
 import com.vitorpamplona.amethyst.commons.ui.navigation.bottombars.AppNavigationRail
 import com.vitorpamplona.amethyst.commons.ui.navigation.deck.DeckFocus
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.Nav
+import com.vitorpamplona.amethyst.commons.ui.platform.LocalAppServices
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.notifications.NotificationSidePanel
 import com.vitorpamplona.amethyst.commons.ui.theme.DividerThickness
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
@@ -111,7 +123,20 @@ fun AppShellLayout(
     // content lets the whole navigation subtree MOVE between those positions instead of being
     // disposed and rebuilt, preserving every screen's remember/rememberSaveable state.
     val currentContent by rememberUpdatedState(content)
-    val movableContent = remember { movableContentOf { currentContent() } }
+    // In a multi-pane window (docked drawer or rail) the content sits right of the leading pane, so
+    // it takes back the top inset of window controls drawn over the app (macOS's traffic lights;
+    // 0 on Android). Done inside the movable content: a consumption on the pane around it stayed
+    // applied after the content moved to a single-pane window, leaving its top bar under them.
+    val movableContent =
+        remember {
+            movableContentOf {
+                val multiPane = LocalScreenLayout.current.navigationStyle != NavigationStyle.BOTTOM_BAR
+                val overlay = if (multiPane) LocalTitleBarOverlay.current else 0.dp
+                Box(Modifier.consumeWindowInsets(PaddingValues(top = overlay))) {
+                    currentContent()
+                }
+            }
+        }
 
     // The deck moves between the same shells, and its columns' histories and ViewModels must move
     // with it, not be rebuilt when the window crosses a tier.
@@ -213,6 +238,7 @@ private fun ModalDrawerShell(
                 MultiPaneShell(
                     accountViewModel = accountViewModel,
                     nav = nav,
+                    resizableLeading = false,
                     leading = { AppNavigationRail(nav, accountViewModel) },
                     deck = deck,
                     content = content,
@@ -229,26 +255,63 @@ private fun ModalDrawerShell(
  * content, and the notification feed when the window has room. Shared because a wide portrait
  * window now rails rather than docks and is still wide enough for the panel — the two shells
  * differ only in which navigation pane leads.
+ *
+ * The docked drawer ([resizableLeading]) and the notification panel sit behind [PaneSplitter]s the
+ * user drags to resize them; the widths are kept per device ([PaneWidthPreferences]) and fitted to
+ * the window by [fitPaneWidths], so the centre pane keeps its room.
  */
 @Composable
 private fun MultiPaneShell(
     accountViewModel: AccountViewModel,
     nav: Nav,
+    resizableLeading: Boolean,
     leading: @Composable () -> Unit,
     deck: (@Composable (Modifier) -> Unit)?,
     content: @Composable () -> Unit,
 ) {
-    Row(Modifier.fillMaxSize()) {
-        leading()
+    val paneWidthPrefs = LocalAppServices.current.paneWidthPrefs
+    val widths by paneWidthPrefs.flow.collectAsStateWithLifecycle()
+    // The deck takes the panel's place, so no room is kept for it.
+    val showPanel = deck == null && notificationPanelShown(nav)
+    val windowWidth =
+        with(LocalDensity.current) {
+            LocalWindowInfo.current.containerSize.width
+                .toDp()
+                .value
+        }
+    val fitted = fitPaneWidths(windowWidth, widths.drawer, widths.notifications, resizableLeading, showPanel)
 
-        VerticalDivider(thickness = DividerThickness)
+    Row(Modifier.fillMaxSize()) {
+        if (resizableLeading) {
+            Box(Modifier.width(fitted.drawer.dp).fillMaxHeight()) { leading() }
+            PaneSplitter(onDrag = { delta -> paneWidthPrefs.setDrawer((fitted.drawer + delta).coerceIn(DrawerWidthRange)) })
+        } else {
+            leading()
+            VerticalDivider(thickness = DividerThickness)
+        }
 
         if (deck != null) {
-            DeckSplit(Modifier.weight(1f).fillMaxHeight(), { CenterPane(Modifier.unfocusDeckOnPress(), content) }, { deck(Modifier) })
+            // The deck takes the notification panel's place. Like the panel, its columns take back
+            // the window-controls inset that only the leading pane sits under.
+            DeckSplit(
+                Modifier.weight(1f).fillMaxHeight(),
+                { CenterPane(Modifier.unfocusDeckOnPress(), content) },
+                { Box(Modifier.consumeWindowInsets(PaddingValues(top = LocalTitleBarOverlay.current))) { deck(Modifier) } },
+            )
         } else {
+            // The content takes back the window-controls inset itself (see AppShellLayout).
             CenterPane(Modifier.weight(1f), content)
 
-            NotificationSidePanelSlot(accountViewModel, nav)
+            // Only the leading pane sits under window controls drawn over the app (macOS's traffic
+            // lights): the panel to the right takes that inset back, so its header reaches the
+            // window's edge instead of growing a band under an empty title bar.
+            if (showPanel) {
+                Row(Modifier.consumeWindowInsets(PaddingValues(top = LocalTitleBarOverlay.current))) {
+                    // Dragging the line left widens the panel.
+                    PaneSplitter(onDrag = { delta -> paneWidthPrefs.setNotifications((fitted.notifications - delta).coerceIn(NotificationPanelWidthRange)) })
+                    NotificationSidePanel(accountViewModel, nav, Modifier.width(fitted.notifications.dp))
+                }
+            }
         }
     }
 }
@@ -292,26 +355,18 @@ private fun DeckSplit(
 }
 
 /**
- * The docked notification feed, when there is room for it. The panel duplicates the
- * Notifications screen, so it steps aside while the user is there.
+ * Whether the docked notification feed shows: when there is room for it, and not while the user is
+ * on the Notifications screen, which it would duplicate.
  *
  * The current route is read here, through [derivedStateOf], rather than in the shells, so
- * windows too narrow for the panel never observe it and a navigation recomposes this slot only
- * when it enters or leaves Notifications.
+ * windows too narrow for the panel never observe it and a navigation recomposes only when it
+ * enters or leaves Notifications.
  */
 @Composable
-private fun NotificationSidePanelSlot(
-    accountViewModel: AccountViewModel,
-    nav: Nav,
-) {
-    if (!LocalScreenLayout.current.hasRoomForNotificationPanel) return
-
+private fun notificationPanelShown(nav: Nav): Boolean {
+    if (!LocalScreenLayout.current.hasRoomForNotificationPanel) return false
     val onNotifications by remember(nav) { derivedStateOf { nav.currentRoute is Route.Notification } }
-
-    if (!onNotifications) {
-        VerticalDivider(thickness = DividerThickness)
-        NotificationSidePanel(accountViewModel, nav)
-    }
+    return !onNotifications
 }
 
 /**
@@ -329,6 +384,7 @@ private fun PermanentDrawerShell(
     MultiPaneShell(
         accountViewModel = accountViewModel,
         nav = nav,
+        resizableLeading = true,
         leading = drawer,
         deck = deck,
         content = content,

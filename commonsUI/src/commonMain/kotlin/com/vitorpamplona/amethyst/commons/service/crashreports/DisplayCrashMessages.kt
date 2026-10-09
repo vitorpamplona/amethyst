@@ -62,6 +62,11 @@ fun DisplayCrashMessages(
     val services = LocalAppServices.current
 
     LaunchedEffect(accountViewModel) {
+        // Already chosen in the desktop's crash window: straight to the draft, no second question.
+        services.takeCrashReportToSend()?.let { stack ->
+            nav.nav { routeToDevReport(stack, accountViewModel) }
+            return@LaunchedEffect
+        }
         withContext(Dispatchers.IO) {
             stackTrace.value = services.takeCrashReport()
         }
@@ -84,14 +89,7 @@ fun DisplayCrashMessages(
             confirmButton = {
                 Button(
                     onClick = {
-                        nav.nav {
-                            routeToMessage(
-                                user = LocalCache.getOrCreateUser(DEV_REPORT_PUBKEY),
-                                draftMessage = stack,
-                                accountViewModel = accountViewModel,
-                                expiresDays = 30,
-                            )
-                        }
+                        nav.nav { routeToDevReport(stack, accountViewModel) }
                         stackTrace.value = null
                     },
                     contentPadding = PaddingValues(horizontal = Size16dp),
@@ -111,3 +109,14 @@ fun DisplayCrashMessages(
         )
     }
 }
+
+/** A DM draft to Amethyst's developers holding [stack], expiring in 30 days. */
+private fun routeToDevReport(
+    stack: String,
+    accountViewModel: AccountViewModel,
+) = routeToMessage(
+    user = LocalCache.getOrCreateUser(DEV_REPORT_PUBKEY),
+    draftMessage = stack,
+    accountViewModel = accountViewModel,
+    expiresDays = 30,
+)

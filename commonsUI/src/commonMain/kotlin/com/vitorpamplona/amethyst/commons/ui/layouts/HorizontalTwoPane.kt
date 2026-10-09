@@ -20,13 +20,17 @@
  */
 package com.vitorpamplona.amethyst.commons.ui.layouts
 
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 
 /**
  * Two panes side by side, [first] taking [splitFraction] of the width. On Android the split
  * follows a vertical fold or hinge when the device has one (Accompanist's fold-aware TwoPane);
- * elsewhere it is a plain proportional split.
+ * elsewhere it is a plain proportional split. With [onDividerDrag], the line between them is a
+ * [PaneSplitter] the user drags (in dp, positive to the right), except along a fold.
  */
 @Composable
 expect fun HorizontalTwoPane(
@@ -34,4 +38,21 @@ expect fun HorizontalTwoPane(
     second: @Composable () -> Unit,
     splitFraction: Float,
     modifier: Modifier = Modifier,
+    onDividerDrag: ((deltaDp: Float) -> Unit)? = null,
 )
+
+/** The plain proportional split, with a [PaneSplitter] between the panes when they can be resized. */
+@Composable
+internal fun ProportionalTwoPane(
+    first: @Composable () -> Unit,
+    second: @Composable () -> Unit,
+    splitFraction: Float,
+    modifier: Modifier,
+    onDividerDrag: ((deltaDp: Float) -> Unit)?,
+) {
+    Row(modifier) {
+        Box(Modifier.weight(splitFraction).fillMaxHeight()) { first() }
+        if (onDividerDrag != null) PaneSplitter(onDrag = onDividerDrag)
+        Box(Modifier.weight(1f - splitFraction).fillMaxHeight()) { second() }
+    }
+}

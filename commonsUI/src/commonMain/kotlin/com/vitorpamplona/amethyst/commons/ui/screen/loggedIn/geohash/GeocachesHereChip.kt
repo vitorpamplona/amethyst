@@ -38,6 +38,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.commons.feeds.FeedState
+import com.vitorpamplona.amethyst.commons.geocaches.dal.GeocachesHereFeedViewModel
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.navigation.GeocacheTab
@@ -49,7 +50,6 @@ import com.vitorpamplona.amethyst.commons.ui.feeds.WatchLifecycleAndUpdateModel
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.note.rememberGeocachePalette
 import com.vitorpamplona.amethyst.commons.ui.pluralStringRes
-import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.geocaches.dal.GeocachesHereFeedViewModel
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.geocaches.datasource.GeocachesFilterAssemblerSubscription
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 

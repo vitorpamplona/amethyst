@@ -48,6 +48,7 @@ import com.vitorpamplona.amethyst.commons.model.preferences.DrawerSectionCollaps
 import com.vitorpamplona.amethyst.commons.model.preferences.NamecoinSettingsStore
 import com.vitorpamplona.amethyst.commons.model.preferences.NowPlayingSettingsStore
 import com.vitorpamplona.amethyst.commons.model.preferences.OtsSettingsStore
+import com.vitorpamplona.amethyst.commons.model.preferences.PaneWidthPreferences
 import com.vitorpamplona.amethyst.commons.model.preferences.TorSettingsStore
 import com.vitorpamplona.amethyst.commons.model.preferences.UiSettingsStore
 import com.vitorpamplona.amethyst.commons.napplet.permissions.InMemoryNappletPermissionStore
@@ -193,6 +194,7 @@ class DesktopAppModules(
     val otsPrefs by lazy { OtsSettingsStore(sharedSettingsStore, runBlocking { OtsSettingsStore.load(sharedSettingsStore) }) }
 
     val drawerSectionCollapsePrefs = DrawerSectionCollapsePreferences(sharedSettingsStore, applicationIOScope)
+    val paneWidthPrefs = PaneWidthPreferences(sharedSettingsStore, applicationIOScope)
 
     // A desktop is never on a metered connection the app can see, and is always "connected":
     // relays find out about a lost network from their own sockets.

@@ -50,6 +50,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.vitorpamplona.amethyst.commons.chats.minichat.MinichatFeedViewModel
 import com.vitorpamplona.amethyst.commons.chats.publicChannels.concord.datasource.ConcordChannelHistorySubAssembler
 import com.vitorpamplona.amethyst.commons.chats.ui.ThinSendButton
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols

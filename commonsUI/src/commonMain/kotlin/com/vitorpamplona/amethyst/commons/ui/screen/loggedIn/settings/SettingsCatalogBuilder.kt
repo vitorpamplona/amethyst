@@ -122,7 +122,8 @@ import org.jetbrains.compose.resources.StringResource
 
 /**
  * Assembles the full settings catalog. Not composable: actions close over [nav],
- * [uriHandler], and [onResetMarmot]; conditional rows are included via [hasPrivateKey].
+ * [uriHandler], and [onResetMarmot]; conditional rows are included via [hasPrivateKey], and a row
+ * whose screen this front end doesn't have ([canOpen] false: Resource usage on desktop) is left out.
  * The blank-query render of this catalog must match the legacy hardcoded screen.
  */
 fun buildSettingsCatalog(
@@ -131,6 +132,7 @@ fun buildSettingsCatalog(
     hasPrivateKey: Boolean,
     legal: SettingsCategory?,
     onResetMarmot: () -> Unit,
+    canOpen: (Route) -> Boolean = { true },
 ): List<SettingsCategory> {
     // Most rows are a symbol icon + a keyword blob that navigates to a route. This local
     // helper collapses that shape to one line per row and makes a mismatched keyword/route
@@ -140,17 +142,21 @@ fun buildSettingsCatalog(
         symbol: MaterialSymbol,
         keywordsRes: StringResource,
         route: Route,
-    ) = SettingsEntry(
-        titleRes = titleRes,
-        icon = SettingsIcon.Symbol(symbol),
-        keywordsRes = keywordsRes,
-    ) { nav.nav(route) }
+    ) = if (!canOpen(route)) {
+        null
+    } else {
+        SettingsEntry(
+            titleRes = titleRes,
+            icon = SettingsIcon.Symbol(symbol),
+            keywordsRes = keywordsRes,
+        ) { nav.nav(route) }
+    }
 
     val account =
         SettingsCategory(
             titleRes = Res.string.account_settings,
             entries =
-                listOf(
+                listOfNotNull(
                     SettingsEntry(
                         titleRes = Res.string.relay_setup,
                         icon = SettingsIcon.Painter(Res.drawable.relays, 4),
@@ -195,7 +201,7 @@ fun buildSettingsCatalog(
         SettingsCategory(
             titleRes = Res.string.app_settings,
             entries =
-                listOf(
+                listOfNotNull(
                     SettingsEntry(
                         titleRes = Res.string.privacy_options,
                         icon = SettingsIcon.Painter(Res.drawable.ic_tor, 1),

@@ -33,6 +33,7 @@ import com.vitorpamplona.amethyst.commons.resources.share_as_image_url
 import com.vitorpamplona.amethyst.commons.resources.share_as_qr
 import com.vitorpamplona.amethyst.commons.ui.components.M3ActionRow
 import com.vitorpamplona.amethyst.commons.ui.components.rememberTextSharer
+import com.vitorpamplona.amethyst.commons.ui.navigation.host.canOpen
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.note.externalLinkForNote
 import com.vitorpamplona.amethyst.commons.ui.stringRes
@@ -67,13 +68,18 @@ fun ShareActionRows(
         sharer.share(externalLinkForNote(note), quickActionShareBrowserLinkStr, quickActionShareStr)
         onDismiss()
     }
-    M3ActionRow(icon = MaterialSymbols.Image, text = stringRes(Res.string.share_as_image)) {
-        nav.nav(Route.ShareNoteAsImageFile(shareId))
-        onDismiss()
+    // Rendering a note to an image is Android-only so far; the desktop leaves these rows out.
+    if (canOpen(Route.ShareNoteAsImageFile(shareId))) {
+        M3ActionRow(icon = MaterialSymbols.Image, text = stringRes(Res.string.share_as_image)) {
+            nav.nav(Route.ShareNoteAsImageFile(shareId))
+            onDismiss()
+        }
     }
-    M3ActionRow(icon = MaterialSymbols.Image, text = stringRes(Res.string.share_as_image_url)) {
-        nav.nav(Route.ShareNoteAsImage(shareId))
-        onDismiss()
+    if (canOpen(Route.ShareNoteAsImage(shareId))) {
+        M3ActionRow(icon = MaterialSymbols.Image, text = stringRes(Res.string.share_as_image_url)) {
+            nav.nav(Route.ShareNoteAsImage(shareId))
+            onDismiss()
+        }
     }
     M3ActionRow(icon = MaterialSymbols.QrCode2, text = stringRes(Res.string.share_as_qr)) {
         nav.nav(Route.ShareNoteAsQr(shareId))

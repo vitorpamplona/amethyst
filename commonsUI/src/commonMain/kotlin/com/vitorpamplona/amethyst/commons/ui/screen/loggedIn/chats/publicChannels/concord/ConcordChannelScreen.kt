@@ -52,6 +52,7 @@ import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.commons.chats.publicChannels.concord.datasource.ConcordChannelHistorySubAssembler
+import com.vitorpamplona.amethyst.commons.chats.publicChannels.dal.ChannelFeedViewModel
 import com.vitorpamplona.amethyst.commons.chats.ui.ReplyModeToggle
 import com.vitorpamplona.amethyst.commons.chats.ui.ThinSendButton
 import com.vitorpamplona.amethyst.commons.feeds.FeedContentState
@@ -103,7 +104,6 @@ import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.publicChannel
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.publicChannels.concord.datasource.ConcordChannelSubscription
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.publicChannels.concord.rememberConcordChannelPins
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.publicChannels.concord.send.ConcordNewMessageViewModel
-import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.publicChannels.dal.ChannelFeedViewModel
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.utils.ChatFileUploadDialog
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.utils.ChatFileUploadState
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.utils.DisplayReplyingToNote
@@ -222,8 +222,11 @@ fun ConcordChannelScreen(
                     }
                 },
                 navigationIcon = {
-                    IconButton(onClick = { nav.popBack() }) {
-                        SymbolIcon(symbol = MaterialSymbols.AutoMirrored.ArrowBack, contentDescription = stringRes(Res.string.back))
+                    // Hidden in a list/detail screen's detail pane, where there is nothing to go back to.
+                    if (nav.canPop()) {
+                        IconButton(onClick = { nav.popBack() }) {
+                            SymbolIcon(symbol = MaterialSymbols.AutoMirrored.ArrowBack, contentDescription = stringRes(Res.string.back))
+                        }
                     }
                 },
             )

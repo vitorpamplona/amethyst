@@ -44,7 +44,8 @@ Amethyst's "feed" abstraction is: a `FeedFilter` that decides which notes belong
 │                                                             │
 │   Concrete feeds: HomeNewThreadFeedFilter,                  │
 │   HashtagFeedFilter, NotificationFeedFilter, … live in      │
-│   feature folders under ui/screen/loggedIn/*/dal/           │
+│   commons feature packages: <feature>/dal/ (home/dal,       │
+│   hashtag/dal, notifications/dal, profile/*/dal, …)         │
 └─────────────────────────────────────────────────────────────┘
               ▲
               │ reads

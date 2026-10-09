@@ -24,9 +24,9 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.vitorpamplona.amethyst.commons.profile.follows.dal.UserProfileFollowsUserFeedViewModel
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.number_following
-import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.profile.follows.dal.UserProfileFollowsUserFeedViewModel
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 

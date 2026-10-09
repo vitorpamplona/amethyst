@@ -131,8 +131,9 @@ Application class (there is no per-process Application in the manifest) in **bot
   (`NappletHostActivity`, declared `android:process=":napplet"`). It holds **no**
   account or keys; `Amethyst.onCreate()` early-returns here so `Amethyst.instance`
   is **left unset** (touching it throws `UninitializedPropertyAccessException`).
-  The sandbox runtime lives in its own module **`:nappletHost`** (depends only on
-  `:commons` + `:quartz`, **never** `:amethyst`) so it *cannot* import
+  The sandbox runtime lives in its own module **`:nappletHost`** (depends on
+  `:commons`, `:commonsUI` — the shell's web contract and Compose resources — and
+  `:quartz`; **never** `:amethyst`) so it *cannot* import
   `Amethyst`/`LocalCache`/`Account` — the broker-side (signer, gateways, registry)
   stays in `:amethyst` and the two halves talk over Messenger IPC.
 
@@ -207,12 +208,20 @@ etc. instead of re-implementing them.
 **Share vs keep platform-native:**
 
 - **Share** → `quartz/commonMain/` (business logic, data models, protocol),
-  `commons/commonMain/` (**ViewModels** under `viewmodels/`, state holders,
-  relay client, services — headless) and `commonsUI/commonMain/` (major UI
+  `commons/commonMain/` (**ViewModels** — cross-feature ones under
+  `viewmodels/`, a feature's own in `<feature>/` — plus state holders, relay
+  client, services — headless) and `commonsUI/commonMain/` (major UI
   components, icons, theme). ViewModels are platform-agnostic state + logic
-  (StateFlow/SharedFlow), so they belong in `commons`; anything that imports
-  `androidx.compose.ui`/`foundation`/`material3`, Coil, or `Res` belongs in
-  `commonsUI`.
+  (StateFlow/SharedFlow), so they belong in `commons`, **never under a `ui.*`
+  package**. A ViewModel goes in `commonsUI` only when it can't compile
+  headless: it holds Compose UI state (`TextFieldValue`, `LazyListState`),
+  reads `Res`, or takes an `AccountViewModel`. `AccountViewModel` itself is in
+  `commonsUI` (`commons.viewmodels`) because it resolves `Res` strings for its
+  toasts, and it reaches Android through `AccountViewModelHost`; so a ViewModel
+  that needs the account should take `Account` (in `commons`), not
+  `AccountViewModel`, if it should be shareable with `cli`. Anything that
+  imports `androidx.compose.ui`/`foundation`/`material3`, Coil, or `Res`
+  belongs in `commonsUI`.
   **Screens and navigation are shared too**: screen composables, the nav host,
   and the navigation chrome for every window size (bottom bar, rail, permanent
   drawer) belong in `commonsUI`, because Android runs on laptops and the new
@@ -223,8 +232,7 @@ etc. instead of re-implementing them.
   system integrations (notifications, file pickers, share sheets, camera,
   media3, WebView, keyring/Keystore), and the platform `actual`s or port
   implementations the shared UI calls. A new screen goes in `commonsUI` when
-  its dependencies allow — `AccountViewModel` itself is in `commonsUI`
-  (`commons.viewmodels`), reaching Android through `AccountViewModelHost`. A
+  its dependencies allow. A
   screen that still needs an app-only helper may live in `amethyst/`, but keep
   Android APIs out of it (behind a port or slot) so it can move later.
 

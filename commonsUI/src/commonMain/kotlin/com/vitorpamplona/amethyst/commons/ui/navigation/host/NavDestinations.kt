@@ -36,6 +36,7 @@ import androidx.compose.animation.slideOutVertically
 import androidx.compose.animation.togetherWith
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.navigation3.runtime.NavEntry
 import androidx.navigation3.scene.Scene
 import com.vitorpamplona.amethyst.commons.model.navigation.NavStackEntry
@@ -115,11 +116,16 @@ class NavDestination(
 /**
  * Every screen the app can show, keyed by route class. Built once by the front end with the
  * builders below, then read by the entry provider (what to draw) and the transition specs (how to
- * move). Navigation 3 hands both the route itself, so there is no graph to declare up front: a
- * route the registry does not know is a programming error, surfaced the first time it is opened.
+ * move). Navigation 3 hands both the route itself, so there is no graph to declare up front.
+ *
+ * A route the registry does not know is a programming error, surfaced the first time it is opened,
+ * unless the front end set an [unavailable] screen: one that carries only part of the app (the
+ * desktop has no Health Connect or QR camera) shows that instead, since a synced bottom-bar item,
+ * a link or a shared menu can still lead to a screen it doesn't have.
  */
 class NavDestinations {
     private val destinations = HashMap<KClass<out Route>, NavDestination>()
+    private var unavailableScreen: NavDestination? = null
 
     fun register(
         klass: KClass<out Route>,
@@ -130,12 +136,20 @@ class NavDestinations {
         destinations[klass] = NavDestination(klass, family, capWidth, content)
     }
 
-    fun of(route: Route): NavDestination = destinations[route::class] ?: error("No destination registered for ${route::class.simpleName}")
+    /** What a route nothing registered draws, instead of failing. Front ends that register every screen leave it unset. */
+    fun unavailable(content: @Composable (Route) -> Unit) {
+        unavailableScreen = NavDestination(Route::class, NavFamily.END, capWidth = true, content)
+    }
+
+    /** Whether [route] has a screen of its own here, so entry points to it are worth showing. */
+    fun has(route: Route): Boolean = route::class in destinations
+
+    fun of(route: Route): NavDestination = destinations[route::class] ?: unavailableScreen ?: error("No destination registered for ${route::class.simpleName}")
 
     /** The [NavDestination.serialName] of [route], or null for a route nothing registered. */
     fun serialNameOf(route: Route): String? = destinations[route::class]?.serialName
 
-    fun familyOf(entry: NavStackEntry?): NavFamily = entry?.let { destinations[it.route::class]?.family } ?: NavFamily.NONE
+    fun familyOf(entry: NavStackEntry?): NavFamily = entry?.let { (destinations[it.route::class] ?: unavailableScreen)?.family } ?: NavFamily.NONE
 
     /**
      * The Navigation 3 entry for [entry]: its screen, capped as declared, with [LocalNavStackEntry]
@@ -304,3 +318,14 @@ internal fun NavDestinations.popTransition(scope: AnimatedContentTransitionScope
         }
     return enter togetherWith exit
 }
+
+/**
+ * The app's [NavDestinations], for shared UI that offers a way into a screen (a drawer row, a
+ * settings entry, a menu item) and should hide it where the front end has no such screen. Null
+ * outside the logged-in shell, where everything counts as available.
+ */
+val LocalNavDestinations = staticCompositionLocalOf<NavDestinations?> { null }
+
+/** Whether [route] has a screen in this front end; true when no table is in scope. */
+@Composable
+fun canOpen(route: Route): Boolean = LocalNavDestinations.current?.has(route) ?: true

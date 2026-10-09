@@ -63,6 +63,7 @@ import com.vitorpamplona.amethyst.commons.resources.settings_search_no_results
 import com.vitorpamplona.amethyst.commons.ui.components.rememberLongNotice
 import com.vitorpamplona.amethyst.commons.ui.components.rememberShortNotice
 import com.vitorpamplona.amethyst.commons.ui.loadStringRes
+import com.vitorpamplona.amethyst.commons.ui.navigation.host.LocalNavDestinations
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.EmptyNav
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.navigation.topbars.SettingsSearchTopBar
@@ -116,14 +117,16 @@ fun AllSettingsScreen(
     // `isResettingMarmot` through `rememberUpdatedState` so the memoized closure never goes stale.
     val onResetMarmot by rememberUpdatedState(newValue = { if (!isResettingMarmot) showResetMarmotDialog = true })
     val appPlatform = LocalAppPlatform.current
+    val destinations = LocalNavDestinations.current
     val catalog =
-        remember(hasPrivateKey, nav, uriHandler, appPlatform) {
+        remember(hasPrivateKey, nav, uriHandler, appPlatform, destinations) {
             buildSettingsCatalog(
                 nav = nav,
                 uriHandler = uriHandler,
                 hasPrivateKey = hasPrivateKey,
                 legal = appPlatform.legalSettingsCategory(uriHandler),
                 onResetMarmot = { onResetMarmot() },
+                canOpen = { route -> destinations?.has(route) ?: true },
             )
         }
 
