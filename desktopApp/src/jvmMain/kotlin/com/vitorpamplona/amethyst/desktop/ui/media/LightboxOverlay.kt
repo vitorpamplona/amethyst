@@ -62,9 +62,11 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.input.key.KeyEventType
 import androidx.compose.ui.input.key.isCtrlPressed
@@ -72,10 +74,14 @@ import androidx.compose.ui.input.key.isMetaPressed
 import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.onKeyEvent
 import androidx.compose.ui.input.key.type
+import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.richtext.RichTextParser
+import com.vitorpamplona.amethyst.commons.ui.components.ZoomTransition
+import com.vitorpamplona.amethyst.commons.ui.components.zoomTransitionContainer
+import com.vitorpamplona.amethyst.commons.ui.components.zoomTransitionLayer
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import java.awt.Desktop
@@ -118,6 +124,7 @@ fun LightboxOverlay(
     initialFullscreen: Boolean = false,
     onDismiss: () -> Unit,
     modifier: Modifier = Modifier,
+    transition: ZoomTransition? = null,
 ) {
     var currentIndex by remember { mutableIntStateOf(initialIndex.coerceIn(0, urls.lastIndex)) }
     val scope = rememberCoroutineScope()
@@ -212,11 +219,17 @@ fun LightboxOverlay(
             Modifier.fillMaxSize()
         }
 
+    // With a transition the media grows out of its thumbnail while the backdrop and the controls
+    // fade in alongside, and the reverse on the way out.
+    val backdrop = if (viewMode == ViewMode.FULLSCREEN) Color.Black else Color.Black.copy(alpha = 0.9f)
+    val fadeWithTransition = Modifier.graphicsLayer { alpha = transition?.progress ?: 1f }
+
     Box(
         modifier =
             modifier
                 .fillMaxSize()
-                .background(if (viewMode == ViewMode.FULLSCREEN) Color.Black else Color.Black.copy(alpha = 0.9f))
+                .then(if (transition != null) Modifier.zoomTransitionContainer(transition) else Modifier)
+                .drawBehind { drawRect(backdrop.copy(alpha = backdrop.alpha * (transition?.progress ?: 1f))) }
                 .focusRequester(focusRequester)
                 // A focus target, or requestFocus() finds none and Escape and the arrows never arrive.
                 .focusable()
@@ -267,67 +280,72 @@ fun LightboxOverlay(
                     if (viewMode != ViewMode.FULLSCREEN) onDismiss()
                 },
     ) {
-        // Main content — video or image
-        if (isVideo) {
-            Box(
-                modifier =
-                    contentModifier.clickable(
-                        interactionSource = remember { MutableInteractionSource() },
-                        indication = null,
-                    ) {
-                        // Consume clicks so backdrop dismiss doesn't fire
-                    },
-                contentAlignment = Alignment.Center,
-            ) {
-                DesktopVideoPlayer(
-                    url = currentUrl,
-                    autoPlay = true,
-                    initialSeekPosition = if (currentIndex == initialIndex) initialSeekPosition else 0f,
-                    viewMode = viewMode,
-                    onViewModeChange = { newMode ->
-                        viewMode = newMode
-                    },
+        // Main content — video or image, in the layer that grows out of the thumbnail
+        Box(Modifier.fillMaxSize().then(if (transition != null) Modifier.zoomTransitionLayer(transition) else Modifier)) {
+            if (isVideo) {
+                Box(
                     modifier =
-                        if (viewMode == ViewMode.DEFAULT) {
-                            Modifier.widthIn(max = 1200.dp)
-                        } else {
-                            Modifier
+                        contentModifier.clickable(
+                            interactionSource = remember { MutableInteractionSource() },
+                            indication = null,
+                        ) {
+                            // Consume clicks so backdrop dismiss doesn't fire
                         },
-                    trailingControls = {
-                        MoreOptionsMenu(
-                            menuExpanded = menuExpanded,
-                            onExpandMenu = { menuExpanded = true },
-                            onDismissMenu = { menuExpanded = false },
-                            onSave = { triggerSave() },
-                            onCopyUrl = { copyUrlToClipboard(urls[currentIndex]) },
-                            onOpenInBrowser = {
-                                Desktop.getDesktop().browse(URI(urls[currentIndex]))
-                            },
-                        )
+                    contentAlignment = Alignment.Center,
+                ) {
+                    DesktopVideoPlayer(
+                        url = currentUrl,
+                        autoPlay = true,
+                        initialSeekPosition = if (currentIndex == initialIndex) initialSeekPosition else 0f,
+                        viewMode = viewMode,
+                        onViewModeChange = { newMode ->
+                            viewMode = newMode
+                        },
+                        modifier =
+                            (
+                                if (viewMode == ViewMode.DEFAULT) {
+                                    Modifier.widthIn(max = 1200.dp)
+                                } else {
+                                    Modifier
+                                }
+                            ).onGloballyPositioned { transition?.onMediaPositioned(it, null) },
+                        trailingControls = {
+                            MoreOptionsMenu(
+                                menuExpanded = menuExpanded,
+                                onExpandMenu = { menuExpanded = true },
+                                onDismissMenu = { menuExpanded = false },
+                                onSave = { triggerSave() },
+                                onCopyUrl = { copyUrlToClipboard(urls[currentIndex]) },
+                                onOpenInBrowser = {
+                                    Desktop.getDesktop().browse(URI(urls[currentIndex]))
+                                },
+                            )
+                        },
+                    )
+                }
+            } else {
+                // Hover tooltip shows the full Blossom URL; single-click
+                // copies it to the clipboard + triggers the snackbar.
+                val tooltipState = rememberTooltipState(isPersistent = false)
+                TooltipBox(
+                    positionProvider = TooltipDefaults.rememberTooltipPositionProvider(TooltipAnchorPosition.Above, 8.dp),
+                    tooltip = {
+                        PlainTooltip {
+                            Text(
+                                currentUrl,
+                                style = MaterialTheme.typography.bodySmall,
+                            )
+                        }
                     },
-                )
-            }
-        } else {
-            // Hover tooltip shows the full Blossom URL; single-click
-            // copies it to the clipboard + triggers the snackbar.
-            val tooltipState = rememberTooltipState(isPersistent = false)
-            TooltipBox(
-                positionProvider = TooltipDefaults.rememberTooltipPositionProvider(TooltipAnchorPosition.Above, 8.dp),
-                tooltip = {
-                    PlainTooltip {
-                        Text(
-                            currentUrl,
-                            style = MaterialTheme.typography.bodySmall,
-                        )
-                    }
-                },
-                state = tooltipState,
-                modifier = contentModifier,
-            ) {
-                ZoomableImage(
-                    url = currentUrl,
-                    onTap = { copyUrlToClipboard(currentUrl) },
-                )
+                    state = tooltipState,
+                    modifier = contentModifier,
+                ) {
+                    ZoomableImage(
+                        url = currentUrl,
+                        onTap = { copyUrlToClipboard(currentUrl) },
+                        onMediaPositioned = transition?.let { it::onMediaPositioned },
+                    )
+                }
             }
         }
 
@@ -454,7 +472,7 @@ fun LightboxOverlay(
         // Hidden in fullscreen to keep the view immersive
         if (!isVideo && viewMode != ViewMode.FULLSCREEN) {
             Box(
-                modifier = Modifier.align(Alignment.BottomEnd).padding(16.dp),
+                modifier = Modifier.align(Alignment.BottomEnd).then(fadeWithTransition).padding(16.dp),
             ) {
                 MoreOptionsMenu(
                     menuExpanded = menuExpanded,
@@ -473,7 +491,7 @@ fun LightboxOverlay(
         if (viewMode != ViewMode.FULLSCREEN) {
             IconButton(
                 onClick = onDismiss,
-                modifier = Modifier.align(Alignment.TopStart).padding(8.dp),
+                modifier = Modifier.align(Alignment.TopStart).then(fadeWithTransition).padding(8.dp),
             ) {
                 Icon(
                     MaterialSymbols.Close,
@@ -493,6 +511,7 @@ fun LightboxOverlay(
                 modifier =
                     Modifier
                         .align(Alignment.BottomCenter)
+                        .then(fadeWithTransition)
                         .padding(16.dp)
                         .background(Color.Black.copy(alpha = 0.5f), MaterialTheme.shapes.large)
                         .padding(horizontal = 16.dp, vertical = 6.dp),
@@ -504,7 +523,7 @@ fun LightboxOverlay(
             if (currentIndex > 0) {
                 IconButton(
                     onClick = { currentIndex-- },
-                    modifier = Modifier.align(Alignment.CenterStart).padding(16.dp),
+                    modifier = Modifier.align(Alignment.CenterStart).then(fadeWithTransition).padding(16.dp),
                 ) {
                     Icon(
                         MaterialSymbols.AutoMirrored.ArrowBack,
@@ -518,7 +537,7 @@ fun LightboxOverlay(
             if (currentIndex < urls.lastIndex) {
                 IconButton(
                     onClick = { currentIndex++ },
-                    modifier = Modifier.align(Alignment.CenterEnd).padding(16.dp),
+                    modifier = Modifier.align(Alignment.CenterEnd).then(fadeWithTransition).padding(16.dp),
                 ) {
                     Icon(
                         MaterialSymbols.AutoMirrored.ArrowForward,
