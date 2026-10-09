@@ -31,7 +31,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -45,6 +45,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
@@ -66,11 +67,13 @@ import com.vitorpamplona.amethyst.commons.resources.muted_button
 import com.vitorpamplona.amethyst.commons.resources.pause
 import com.vitorpamplona.amethyst.commons.resources.play
 import com.vitorpamplona.amethyst.commons.resources.video_player_settings_action_fullscreen
+import com.vitorpamplona.amethyst.commons.service.http.BlossomReadAuthInterceptor
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.desktop.service.media.GlobalMediaPlayer
 import com.vitorpamplona.amethyst.desktop.service.media.MediaPlaybackState
 import com.vitorpamplona.amethyst.desktop.service.media.VideoThumbnailCache
 import kotlinx.coroutines.launch
+import java.net.URLDecoder
 
 enum class MediaType { AUDIO, VIDEO }
 
@@ -89,6 +92,7 @@ fun NowPlayingBar(modifier: Modifier = Modifier) {
     if (visible) lastShown[0] = if (hasVideo) videoState to MediaType.VIDEO else audioState to MediaType.AUDIO
     val (activeState, activeType) = lastShown[0] ?: (audioState to MediaType.AUDIO)
     val isVideo = activeType == MediaType.VIDEO
+    val url = activeState.url
 
     val scope = rememberCoroutineScope()
 
@@ -103,12 +107,13 @@ fun NowPlayingBar(modifier: Modifier = Modifier) {
             type = activeType,
             // A cached frame, not a live VideoPlayerSurface: two surfaces drawing one player's
             // frame bitmap hit a use-after-free in kdroidFilter 0.10.0's macOS surface.
-            thumbnail = activeState.url?.let { VideoThumbnailCache.getCached(it) },
+            thumbnail = url?.let { VideoThumbnailCache.getCached(it) },
             onPlayPause = { if (isVideo) GlobalMediaPlayer.toggleVideoPlayPause() else GlobalMediaPlayer.toggleAudioPlayPause() },
             onSeek = { if (isVideo) GlobalMediaPlayer.seekVideo(it) else GlobalMediaPlayer.seekAudio(it) },
             onToggleMute = { if (isVideo) GlobalMediaPlayer.toggleVideoMute() else GlobalMediaPlayer.toggleAudioMute() },
             onVolumeChange = { if (isVideo) GlobalMediaPlayer.setVideoVolume(it) else GlobalMediaPlayer.setAudioVolume(it) },
-            onSave = { activeState.url?.let { url -> scope.launch { SaveMediaAction.saveMedia(url = url) } } },
+            // Captures the url, not the state that changes every tick, so the button can skip.
+            onSave = { url?.let { scope.launch { SaveMediaAction.saveMedia(url = it) } } },
             onFullscreen = GlobalMediaPlayer::toggleFullscreen,
             onStop = { if (isVideo) GlobalMediaPlayer.stopVideo() else GlobalMediaPlayer.stopAudio() },
         )
@@ -136,16 +141,20 @@ internal fun NowPlayingBarContent(
     Column(modifier.fillMaxWidth().background(colors.surfaceContainer)) {
         HorizontalDivider(color = colors.outlineVariant)
         BoxWithConstraints {
-            // A narrow window keeps the seek bar usable by dropping the file name and volume slider.
+            // Narrower windows drop the file name and volume slider, then the artwork and the
+            // download and fullscreen buttons, so the seek bar and Stop always keep their room.
             val roomy = maxWidth >= 760.dp
+            val compact = maxWidth < 560.dp
 
             Row(
-                modifier = Modifier.fillMaxWidth().height(56.dp).padding(horizontal = 12.dp),
+                // Grows past 56dp when a large font scale makes the labels taller.
+                modifier = Modifier.fillMaxWidth().heightIn(min = 56.dp).padding(horizontal = 12.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                Artwork(type, thumbnail)
+                if (!compact) Artwork(type, thumbnail)
 
-                val fileName = if (roomy) state.url?.let(::readableFileName) else null
+                val readableName = remember(state.url) { state.url?.let(::readableFileName) }
+                val fileName = if (roomy) readableName else null
                 if (fileName != null) {
                     Text(
                         text = fileName,
@@ -157,7 +166,7 @@ internal fun NowPlayingBarContent(
                     )
                 }
 
-                Spacer(Modifier.width(12.dp))
+                if (!compact) Spacer(Modifier.width(12.dp))
 
                 FilledIconButton(onClick = onPlayPause, modifier = Modifier.size(36.dp)) {
                     Icon(
@@ -170,14 +179,17 @@ internal fun NowPlayingBarContent(
                 Spacer(Modifier.width(12.dp))
 
                 TimeLabel(formatTime(state.currentTime), secondary)
-                // Seeking is costly, so a drag seeks once, where it is let go.
-                ThinSlider(
-                    value = state.position,
-                    onValueChange = onSeek,
-                    modifier = Modifier.weight(1f).padding(horizontal = 12.dp),
-                    color = colors.primary,
-                    trackColor = colors.onSurface.copy(alpha = 0.15f),
-                )
+                // Seeking is costly, so a drag seeks once, where it is let go. Keyed on the url so a
+                // drag still held when the track changes is dropped instead of seeking the new one.
+                key(state.url) {
+                    ThinSlider(
+                        value = state.position,
+                        onValueChange = onSeek,
+                        modifier = Modifier.weight(1f).padding(horizontal = 12.dp),
+                        color = colors.primary,
+                        trackColor = colors.onSurface.copy(alpha = 0.15f),
+                    )
+                }
                 TimeLabel(formatTime(state.duration), secondary)
 
                 Spacer(Modifier.width(12.dp))
@@ -198,9 +210,11 @@ internal fun NowPlayingBarContent(
                     )
                 }
 
-                BarButton(MaterialSymbols.SaveAlt, stringRes(Res.string.accessibility_download_for_offline), onSave)
-                if (type == MediaType.VIDEO) {
-                    BarButton(MaterialSymbols.Fullscreen, stringRes(Res.string.video_player_settings_action_fullscreen), onFullscreen)
+                if (!compact) {
+                    BarButton(MaterialSymbols.SaveAlt, stringRes(Res.string.accessibility_download_for_offline), onSave)
+                    if (type == MediaType.VIDEO) {
+                        BarButton(MaterialSymbols.Fullscreen, stringRes(Res.string.video_player_settings_action_fullscreen), onFullscreen)
+                    }
                 }
                 BarButton(MaterialSymbols.Close, stringRes(Res.string.close), onStop)
             }
@@ -261,13 +275,13 @@ private fun BarButton(
     }
 }
 
-// Blossom names a file after the SHA-256 of its bytes, optionally with an extension.
-private val HASH_FILE_NAME = Regex("^[0-9a-fA-F]{64}(?:\\.[^./]+)?$")
-
-/** The URL's last path segment, or null when it is empty or just a content hash. */
-private fun readableFileName(url: String): String? =
-    url
-        .substringBefore('?')
-        .substringBefore('#')
-        .substringAfterLast('/')
-        .takeIf { it.isNotBlank() && !HASH_FILE_NAME.matches(it) }
+/**
+ * The URL's last path segment, decoded, or null when it is empty or a Blossom content hash
+ * (`<sha256>`, `<sha256>.mp4`, `<sha256>.thumb.jpg`), which reads as noise.
+ */
+internal fun readableFileName(url: String): String? {
+    val segment = url.substringBefore('?').substringBefore('#').substringAfterLast('/')
+    if (segment.isBlank() || BlossomReadAuthInterceptor.blossomHashOrNull(segment) != null) return null
+    // A path keeps '+' literal; only %XX escapes are decoded.
+    return runCatching { URLDecoder.decode(segment.replace("+", "%2B"), Charsets.UTF_8) }.getOrDefault(segment)
+}

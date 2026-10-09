@@ -43,7 +43,7 @@ import kotlin.test.Test
 import kotlin.test.assertTrue
 
 /**
- * Renders the now-playing bar headlessly in both themes and at two window widths. Like the other
+ * Renders the now-playing bar headlessly in both themes and at three window widths. Like the other
  * render tests it checks structure, not exact pixels. Set NOW_PLAYING_BAR_RENDER_DIR to also write
  * the PNGs for a human to look at.
  */
@@ -130,7 +130,7 @@ class NowPlayingBarRenderTest {
     @Test
     fun everyStateRendersInBothThemesAndWidths() {
         for (scenario in scenarios) {
-            for (width in listOf(1280, 720)) {
+            for (width in listOf(1280, 720, 420)) {
                 val light = render(scenario, dark = false, widthDp = width)
                 val dark = render(scenario, dark = true, widthDp = width)
 
