@@ -20,24 +20,26 @@
  */
 package com.vitorpamplona.amethyst.desktop.app
 
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalWindowInfo
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.window.LocalWindowExceptionHandlerFactory
 import androidx.compose.ui.window.Window
 import androidx.compose.ui.window.WindowPlacement
 import androidx.compose.ui.window.WindowPosition
@@ -58,12 +60,16 @@ import com.vitorpamplona.amethyst.commons.ui.richtext.LocalRichTextPlatform
 import com.vitorpamplona.amethyst.commons.ui.screen.collectDisplaySettings
 import com.vitorpamplona.amethyst.commons.ui.theme.AmethystMaterialTheme
 import com.vitorpamplona.amethyst.commons.ui.theme.isDarkTheme
+import com.vitorpamplona.amethyst.desktop.platform.AmethystWindowExceptionHandlerFactory
+import com.vitorpamplona.amethyst.desktop.platform.DesktopTypography
 import com.vitorpamplona.amethyst.desktop.platform.IconResources
 import com.vitorpamplona.amethyst.desktop.platform.PlatformAppearance
 import com.vitorpamplona.amethyst.desktop.platform.PlatformFonts
 import com.vitorpamplona.amethyst.desktop.platform.PlatformIconWeight
 import com.vitorpamplona.amethyst.desktop.platform.PlatformInfo
+import com.vitorpamplona.amethyst.desktop.platform.ProvideTitleBarInsets
 import com.vitorpamplona.amethyst.desktop.platform.applyNativeWindowChrome
+import com.vitorpamplona.amethyst.desktop.platform.clickToActivate
 import com.vitorpamplona.amethyst.desktop.platform.rememberSystemDark
 import com.vitorpamplona.amethyst.desktop.platform.titleBarInsetTop
 import com.vitorpamplona.amethyst.desktop.service.images.DesktopImageLoaderSetup
@@ -87,6 +93,7 @@ import kotlin.system.exitProcess
  * the legacy app's (`~/.amethyst/app`, or `-Damethyst.dataDir=...`); keys come from the same OS
  * keyring, and the legacy logins are imported on the first start.
  */
+@OptIn(ExperimentalComposeUiApi::class)
 fun main(args: Array<String>) {
     // The OS timer relaunches the app this way to publish scheduled posts while it is closed: no
     // window, no keyring, just the pre-signed posts that are due.
@@ -153,70 +160,83 @@ fun main(args: Array<String>) {
                 position = WindowPosition.Aligned(Alignment.Center),
             )
 
-        Window(
-            onCloseRequest = ::exitApplication,
-            state = windowState,
-            title = "Amethyst",
-            icon = IconResources.adaptedBitmapPainter,
-            onPreviewKeyEvent = { root.navigator.handleShortcut(it, onQuit = ::exitApplication) },
-        ) {
-            // macOS: the title bar turns transparent over the app, which draws its own strip there.
-            applyNativeWindowChrome()
-
-            DesktopMenuBar(root.navigator, onQuit = ::exitApplication)
-
-            // The window outlives every destination: screens that share state across destinations
-            // (the chess lobby and board, the Cordn group draft) keep it here.
-            val windowViewModels =
-                remember {
-                    object : ViewModelStoreOwner {
-                        override val viewModelStore = ViewModelStore()
-                    }
+        // Bumped to rebuild the window after a crash the user reports from the crash window: the
+        // crashed composition can't be reused, but the session, account and size carry over.
+        var windowGeneration by remember { mutableIntStateOf(0) }
+        val exceptionHandlerFactory =
+            remember {
+                AmethystWindowExceptionHandlerFactory { report ->
+                    services.sendCrashReport(report)
+                    windowGeneration++
                 }
+            }
 
-            // Set while a video plays in the OS full-screen overlay.
-            val immersiveFullscreen = remember { mutableStateOf(false) }
+        // A crash in the window's UI shows our crash window, not Compose's bare system "Error" box.
+        CompositionLocalProvider(LocalWindowExceptionHandlerFactory provides exceptionHandlerFactory) {
+            key(windowGeneration) {
+                Window(
+                    onCloseRequest = ::exitApplication,
+                    state = windowState,
+                    title = "Amethyst",
+                    icon = IconResources.adaptedBitmapPainter,
+                    onPreviewKeyEvent = { root.navigator.handleShortcut(it, onQuit = ::exitApplication) },
+                ) {
+                    // macOS: the title bar turns transparent over the app, which draws its own strip there.
+                    applyNativeWindowChrome()
 
-            val systemDark by rememberSystemDark(window)
+                    DesktopMenuBar(root.navigator, onQuit = ::exitApplication)
 
-            DesktopTheme(modules, systemDark) {
-                NowProvider {
-                    CompositionLocalProvider(
-                        LocalViewModelStoreOwner provides windowViewModels,
-                        LocalWindowViewModelStoreOwner provides windowViewModels,
-                        LocalAppServices provides services,
-                        LocalAppPlatform provides platform,
-                        LocalNotePlatform provides DesktopNotePlatform,
-                        LocalRichTextPlatform provides DesktopRichTextPlatform,
-                        LocalInlineQuoteRenderer provides DefaultInlineQuoteRenderer,
-                        // The lightbox and the video player go full screen through the AWT window.
-                        LocalAwtWindow provides window,
-                        LocalIsImmersiveFullscreen provides immersiveFullscreen,
-                    ) {
-                        Box(Modifier.fillMaxSize()) {
-                            Column(Modifier.fillMaxSize()) {
-                                // Under macOS's transparent title bar, a strip in the app's
-                                // background color: the traffic lights sit on the app itself, and the
-                                // window reads as one surface. Full screen has no title bar.
-                                if (PlatformInfo.isMacOS && windowState.placement != WindowPlacement.Fullscreen) {
-                                    Spacer(
-                                        Modifier
-                                            .fillMaxWidth()
-                                            .height(titleBarInsetTop)
-                                            .background(MaterialTheme.colorScheme.background),
-                                    )
-                                }
-                                Box(Modifier.weight(1f).fillMaxWidth()) {
-                                    AmethystApp(modules.sessionManager, root)
-                                    SnackbarHost(platform.snackbarHostState, Modifier.align(Alignment.BottomCenter))
-                                }
-                                // Whatever plays keeps playing across screens and after its card
-                                // scrolls away; this bar is where it is paused, seeked or stopped.
-                                NowPlayingBar()
+                    // The window outlives every destination: screens that share state across destinations
+                    // (the chess lobby and board, the Cordn group draft) keep it here.
+                    val windowViewModels =
+                        remember {
+                            object : ViewModelStoreOwner {
+                                override val viewModelStore = ViewModelStore()
                             }
-                            // The video player's full-screen button: the playing video over the
-                            // whole window, in OS full screen.
-                            GlobalFullscreenOverlay()
+                        }
+
+                    // Set while a video plays in the OS full-screen overlay.
+                    val immersiveFullscreen = remember { mutableStateOf(false) }
+
+                    val systemDark by rememberSystemDark(window)
+
+                    // Hover shows only while the window is in front, as in native apps.
+                    DesktopTheme(modules, systemDark, showHover = LocalWindowInfo.current.isWindowFocused) {
+                        NowProvider {
+                            CompositionLocalProvider(
+                                LocalViewModelStoreOwner provides windowViewModels,
+                                LocalWindowViewModelStoreOwner provides windowViewModels,
+                                LocalAppServices provides services,
+                                LocalAppPlatform provides platform,
+                                LocalNotePlatform provides DesktopNotePlatform,
+                                LocalRichTextPlatform provides DesktopRichTextPlatform,
+                                LocalInlineQuoteRenderer provides DefaultInlineQuoteRenderer,
+                                // The lightbox and the video player go full screen through the AWT window.
+                                LocalAwtWindow provides window,
+                                LocalIsImmersiveFullscreen provides immersiveFullscreen,
+                            ) {
+                                // A click on the window in the background only brings it forward.
+                                Box(Modifier.fillMaxSize().clickToActivate(window, LocalWindowInfo.current)) {
+                                    Column(Modifier.fillMaxSize()) {
+                                        // Under macOS's transparent title bar the screens draw their own top
+                                        // bars, padded past the traffic lights by the caption-bar inset, as on
+                                        // Android under the status bar. Full screen has no title bar.
+                                        val titleBar = if (windowState.placement == WindowPlacement.Fullscreen) 0.dp else titleBarInsetTop
+                                        ProvideTitleBarInsets(titleBar) {
+                                            Box(Modifier.weight(1f).fillMaxWidth()) {
+                                                AmethystApp(modules.sessionManager, root)
+                                                SnackbarHost(platform.snackbarHostState, Modifier.align(Alignment.BottomCenter))
+                                            }
+                                        }
+                                        // Whatever plays keeps playing across screens and after its card
+                                        // scrolls away; this bar is where it is paused, seeked or stopped.
+                                        NowPlayingBar()
+                                    }
+                                    // The video player's full-screen button: the playing video over the
+                                    // whole window, in OS full screen.
+                                    GlobalFullscreenOverlay()
+                                }
+                            }
                         }
                     }
                 }
@@ -234,6 +254,7 @@ fun main(args: Array<String>) {
 private fun DesktopTheme(
     modules: DesktopAppModules,
     systemDark: Boolean,
+    showHover: Boolean,
     content: @Composable () -> Unit,
 ) {
     val prefs = modules.uiPrefs
@@ -251,6 +272,8 @@ private fun DesktopTheme(
         displaySettings = displaySettings,
         systemFontFamily = PlatformFonts.ui,
         iconWeight = PlatformIconWeight.current,
+        typography = DesktopTypography,
+        showHover = showHover,
         content = content,
     )
 }

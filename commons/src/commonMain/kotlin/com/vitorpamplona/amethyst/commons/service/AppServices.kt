@@ -149,4 +149,11 @@ interface AppServices {
 
     /** The stack trace the last crash left behind, removed as it is read; null when there is none. */
     suspend fun takeCrashReport(): String? = null
+
+    /**
+     * A crash report the user already chose to send, removed as it is read; null when there is none.
+     * The desktop sets it when the user picks "Send to developers" in its crash window: the app opens
+     * the report's DM draft right away instead of asking again.
+     */
+    fun takeCrashReportToSend(): String? = null
 }

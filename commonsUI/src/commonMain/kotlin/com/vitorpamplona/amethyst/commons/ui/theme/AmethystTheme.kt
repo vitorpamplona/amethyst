@@ -21,9 +21,14 @@
 package com.vitorpamplona.amethyst.commons.ui.theme
 
 import androidx.compose.foundation.isSystemInDarkTheme
+import androidx.compose.material.ripple.RippleAlpha
 import androidx.compose.material3.ColorScheme
+import androidx.compose.material3.LocalRippleConfiguration
 import androidx.compose.material3.LocalTextStyle
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.RippleConfiguration
+import androidx.compose.material3.RippleDefaults
+import androidx.compose.material3.Typography
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.remember
@@ -107,7 +112,10 @@ fun isDarkTheme(
  * [profilePictureCache] is true where the image loader registers the avatar thumbnail cache.
  * [systemFontFamily] is what the "system" font choice draws with (null: Compose's default, which is
  * already the OS font on Android), and [iconWeight] the Material Symbols stroke weight: the desktop
- * passes the OS's own UI font and an icon weight that matches its icons.
+ * passes the OS's own UI font and an icon weight that matches its icons. [typography] is the type
+ * scale before the font family is applied: the desktop passes one sized for desktop reading.
+ * [showHover] false hides the hover layer: the desktop clears it while its window is in the
+ * background, as native apps do.
  */
 @Composable
 fun AmethystMaterialTheme(
@@ -119,6 +127,8 @@ fun AmethystMaterialTheme(
     profilePictureCache: Boolean = false,
     systemFontFamily: FontFamily? = null,
     iconWeight: Int = MaterialSymbolsDefaults.WEIGHT,
+    typography: Typography = DefaultTypography,
+    showHover: Boolean = true,
     colors: ColorScheme = remember(darkTheme, accentColor) { if (darkTheme) amethystDarkColors(accentColor) else amethystLightColors(accentColor) },
     content: @Composable () -> Unit,
 ) {
@@ -126,7 +136,7 @@ fun AmethystMaterialTheme(
         remember(fontFamily, systemFontFamily) {
             if (fontFamily == FontFamilyType.SYSTEM) systemFontFamily else fontFamily.toFontFamily()
         }
-    val typography = remember(resolvedFontFamily) { Typography.withFontFamily(resolvedFontFamily) }
+    val themedTypography = remember(resolvedFontFamily, typography) { typography.withFontFamily(resolvedFontFamily) }
 
     val density = LocalDensity.current
     val scaledDensity =
@@ -134,14 +144,17 @@ fun AmethystMaterialTheme(
             Density(density.density, density.fontScale * fontSize.scale)
         }
 
+    val rippleConfiguration = remember(darkTheme, showHover) { amethystRippleConfiguration(darkTheme, showHover) }
+
     MaterialTheme(
         colorScheme = colors,
-        typography = typography,
+        typography = themedTypography,
         shapes = Shapes,
         content = {
             ProvideAppIcons(weight = iconWeight) {
                 CompositionLocalProvider(
                     LocalDensity provides scaledDensity,
+                    LocalRippleConfiguration provides rippleConfiguration,
                     LocalProfilePictureCache provides profilePictureCache,
                     LocalDisplaySettings provides displaySettings,
                     // Performance mode turns decorative animations (crossfades) off app-wide.
@@ -163,3 +176,32 @@ fun FontFamilyType.toFontFamily(): FontFamily? =
         FontFamilyType.SERIF -> FontFamily.Serif
         FontFamilyType.MONOSPACE -> FontFamily.Monospace
     }
+
+/**
+ * Material's ripple, with a lighter hover layer in light mode. A note card is a whole clickable
+ * card, and Material's 8% black wash over it reads as a heavy gray block under a mouse; 4% still
+ * marks the card. Press, focus and drag keep Material's values (touch feedback is unchanged), and
+ * dark mode keeps its hover: a white wash over a dark card is already faint.
+ */
+fun amethystRippleConfiguration(
+    darkTheme: Boolean,
+    showHover: Boolean = true,
+): RippleConfiguration {
+    val defaults = RippleDefaults.RippleAlpha
+    return RippleConfiguration(
+        rippleAlpha =
+            RippleAlpha(
+                draggedAlpha = defaults.draggedAlpha,
+                focusedAlpha = defaults.focusedAlpha,
+                hoveredAlpha =
+                    when {
+                        !showHover -> 0f
+                        darkTheme -> defaults.hoveredAlpha
+                        else -> LIGHT_HOVER_ALPHA
+                    },
+                pressedAlpha = defaults.pressedAlpha,
+            ),
+    )
+}
+
+private const val LIGHT_HOVER_ALPHA = 0.04f

@@ -310,7 +310,8 @@ private fun CordnGroupChat(
                 title = name?.takeIf { it.isNotBlank() } ?: stringRes(Res.string.cordn_group_untitled, room.gid.take(8)),
                 members = members,
                 accountViewModel = accountViewModel,
-                onBack = { nav.popBack() },
+                // Hidden in a list/detail screen's detail pane, where there is nothing to go back to.
+                onBack = if (nav.canPop()) ({ nav.popBack() }) else null,
                 onInfo = { nav.nav(Route.CordnGroupInfo(room.coordinatorPubKey, room.gid)) },
             )
         },
@@ -942,7 +943,7 @@ private fun CordnChatTopBar(
     title: String,
     members: List<HexKey>,
     accountViewModel: AccountViewModel,
-    onBack: () -> Unit,
+    onBack: (() -> Unit)?,
     onInfo: () -> Unit,
 ) {
     TopAppBar(
@@ -973,11 +974,13 @@ private fun CordnChatTopBar(
             }
         },
         navigationIcon = {
-            IconButton(onClick = onBack) {
-                Icon(
-                    symbol = MaterialSymbols.AutoMirrored.ArrowBack,
-                    contentDescription = stringRes(Res.string.back),
-                )
+            if (onBack != null) {
+                IconButton(onClick = onBack) {
+                    Icon(
+                        symbol = MaterialSymbols.AutoMirrored.ArrowBack,
+                        contentDescription = stringRes(Res.string.back),
+                    )
+                }
             }
         },
         actions = {

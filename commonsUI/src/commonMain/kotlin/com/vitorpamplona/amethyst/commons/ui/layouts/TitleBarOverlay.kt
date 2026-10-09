@@ -18,30 +18,15 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.publicChannels.ephemChat.header
+package com.vitorpamplona.amethyst.commons.ui.layouts
 
-import androidx.compose.runtime.Composable
-import com.vitorpamplona.amethyst.commons.model.emphChat.EphemeralChatChannel
-import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
-import com.vitorpamplona.amethyst.commons.ui.navigation.topbars.TopBarExtensibleWithBackButton
-import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
+import androidx.compose.runtime.staticCompositionLocalOf
+import androidx.compose.ui.unit.dp
 
-@Composable
-fun EphemeralChatTopBar(
-    baseChannel: EphemeralChatChannel,
-    accountViewModel: AccountViewModel,
-    nav: INav,
-) {
-    TopBarExtensibleWithBackButton(
-        title = {
-            ShortEphemeralChatChannelHeader(
-                baseChannel = baseChannel,
-                accountViewModel = accountViewModel,
-                nav = nav,
-            )
-        },
-        // Hidden in a list/detail screen's detail pane, where there is nothing to go back to.
-        showBackButton = nav.canPop(),
-        popBack = nav::popBack,
-    )
-}
+/**
+ * Height of window controls the front end draws over the app's top-left corner, such as macOS's
+ * traffic lights over a transparent title bar. The front end also reports it as the top window
+ * inset; panes that don't sit under the controls take it back, so only the leading pane steps
+ * below them. 0 where the system bars don't overlap the app that way (Android).
+ */
+val LocalTitleBarOverlay = staticCompositionLocalOf { 0.dp }
