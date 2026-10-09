@@ -21,9 +21,11 @@
 package com.vitorpamplona.amethyst.service.uploads
 
 import android.content.Context
+import android.graphics.BitmapFactory
 import android.net.Uri
 import android.provider.OpenableColumns
 import android.webkit.MimeTypeMap
+import androidx.exifinterface.media.ExifInterface
 import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.commons.model.Account
 import com.vitorpamplona.amethyst.commons.model.mediaServers.ServerName
@@ -34,7 +36,9 @@ import com.vitorpamplona.amethyst.commons.service.upload.BlossomClient
 import com.vitorpamplona.amethyst.commons.service.upload.BlossomPaymentException
 import com.vitorpamplona.amethyst.commons.service.upload.FileHeader
 import com.vitorpamplona.amethyst.commons.service.uploads.CompressorQuality
+import com.vitorpamplona.amethyst.commons.service.uploads.ImageCompressionPreview
 import com.vitorpamplona.amethyst.commons.service.uploads.ImageDownloader
+import com.vitorpamplona.amethyst.commons.service.uploads.ImageFileStats
 import com.vitorpamplona.amethyst.commons.service.uploads.MediaCompressorResult
 import com.vitorpamplona.amethyst.commons.service.uploads.MediaUploadResult
 import com.vitorpamplona.amethyst.commons.service.uploads.MediaUploader
@@ -686,6 +690,39 @@ class AndroidMediaUploader(
                 deleteTempUri(encrypted.uri, uri)
             }
         }
+    }
+
+    override suspend fun previewImageCompression(
+        uri: MediaUri,
+        mimeType: String?,
+        compressionQuality: CompressorQuality,
+    ): ImageCompressionPreview? =
+        withContext(Dispatchers.IO) {
+            val type = mimeType ?: mimeType(uri)
+            if (compressionQuality.imageMaxDimension == null || !MediaCompressor.isReencodableImage(type)) return@withContext null
+            val result = MediaCompressor().compress(uri, type, compressionQuality, appContext)
+            // The compressor hands the original back when it fails.
+            if (result.uri == uri) return@withContext null
+            ImageCompressionPreview(imageStats(uri), imageStats(result.uri), result.uri)
+        }
+
+    /** Pixel size as displayed (EXIF rotation applied) and byte length, without decoding the pixels. */
+    private fun imageStats(uri: Uri): ImageFileStats {
+        val resolver = appContext.contentResolver
+        val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
+        runCatching { resolver.openInputStream(uri)?.use { BitmapFactory.decodeStream(it, null, bounds) } }
+        val width = bounds.outWidth.takeIf { it > 0 }
+        val height = bounds.outHeight.takeIf { it > 0 }
+        val sideways = runCatching { resolver.openInputStream(uri)?.use { ExifInterface(it).rotationDegrees % 180 != 0 } }.getOrNull() == true
+        val bytes =
+            runCatching {
+                if (uri.scheme == "file") {
+                    uri.path?.let { File(it).length() }
+                } else {
+                    resolver.query(uri, arrayOf(OpenableColumns.SIZE), null, null, null)?.use { if (it.moveToFirst() && !it.isNull(0)) it.getLong(0) else null }
+                }
+            }.getOrNull()
+        return if (sideways) ImageFileStats(height, width, bytes) else ImageFileStats(width, height, bytes)
     }
 
     override suspend fun remoteFileHeader(

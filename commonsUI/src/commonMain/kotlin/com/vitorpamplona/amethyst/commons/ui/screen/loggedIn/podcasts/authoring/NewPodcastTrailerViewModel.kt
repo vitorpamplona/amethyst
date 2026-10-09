@@ -61,7 +61,7 @@ class NewPodcastTrailerViewModel : ViewModel() {
 
     val strippingFailureConfirmation = SuspendableConfirmation()
     val selectedServer = mutableStateOf<ServerName?>(null)
-    val mediaQualitySlider = mutableStateOf(1)
+    val mediaQualitySlider = mutableStateOf(CompressorQuality.defaultSliderPosition)
     val stripMetadata = mutableStateOf(true)
 
     fun init(accountViewModel: AccountViewModel) {

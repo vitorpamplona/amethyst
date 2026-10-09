@@ -22,7 +22,6 @@ package com.vitorpamplona.amethyst.commons.ui.note.creators.uploads
 
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.WindowInsets
@@ -40,7 +39,6 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.Slider
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
@@ -80,15 +78,12 @@ import com.vitorpamplona.amethyst.commons.resources.convert_gif_to_mp4_descripti
 import com.vitorpamplona.amethyst.commons.resources.convert_gif_to_mp4_label
 import com.vitorpamplona.amethyst.commons.resources.file_server
 import com.vitorpamplona.amethyst.commons.resources.media_compression_quality_explainer
-import com.vitorpamplona.amethyst.commons.resources.media_compression_quality_high
 import com.vitorpamplona.amethyst.commons.resources.media_compression_quality_label
-import com.vitorpamplona.amethyst.commons.resources.media_compression_quality_low
-import com.vitorpamplona.amethyst.commons.resources.media_compression_quality_medium
-import com.vitorpamplona.amethyst.commons.resources.media_compression_quality_uncompressed
 import com.vitorpamplona.amethyst.commons.resources.strip_metadata_description
 import com.vitorpamplona.amethyst.commons.resources.strip_metadata_label
 import com.vitorpamplona.amethyst.commons.resources.video_codec_h265_description
 import com.vitorpamplona.amethyst.commons.resources.video_codec_h265_label
+import com.vitorpamplona.amethyst.commons.service.uploads.CompressorQuality
 import com.vitorpamplona.amethyst.commons.service.uploads.MultiOrchestrator
 import com.vitorpamplona.amethyst.commons.service.uploads.SelectedMediaProcessing
 import com.vitorpamplona.amethyst.commons.ui.actions.uploads.ShowImageUploadGallery
@@ -164,9 +159,8 @@ fun ImageVideoDescription(
         }
     }
 
-    // 0 = Low, 1 = Medium, 2 = High, 3=UNCOMPRESSED
     var mediaQualitySlider by remember {
-        mutableIntStateOf(if (uris.hasNonMedia()) 3 else 1)
+        mutableIntStateOf(if (uris.hasNonMedia()) CompressorQuality.uncompressedSliderPosition else CompressorQuality.defaultSliderPosition)
     }
 
     // Codec selection: false = H264, true = H265
@@ -360,7 +354,7 @@ fun ImageVideoDescription(
             }
 
             // Hide privacy toggle when any selected video will be compressed (compression already strips metadata)
-            val isVideoWithCompression = uris.hasVideo() && mediaQualitySlider != 3
+            val isVideoWithCompression = uris.hasVideo() && mediaQualitySlider != CompressorQuality.uncompressedSliderPosition
 
             if (!isVideoWithCompression) {
                 SettingSwitchItem(
@@ -402,31 +396,15 @@ fun ImageVideoDescription(
                         )
                     }
                 }
-                Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Box(modifier = Modifier.fillMaxWidth()) {
-                        Text(
-                            text =
-                                when (mediaQualitySlider) {
-                                    0 -> stringRes(Res.string.media_compression_quality_low)
-                                    1 -> stringRes(Res.string.media_compression_quality_medium)
-                                    2 -> stringRes(Res.string.media_compression_quality_high)
-                                    3 -> stringRes(Res.string.media_compression_quality_uncompressed)
-                                    else -> stringRes(Res.string.media_compression_quality_medium)
-                                },
-                            modifier = Modifier.align(Alignment.Center),
-                        )
-                    }
-
-                    Slider(
-                        value = mediaQualitySlider.toFloat(),
-                        onValueChange = { mediaQualitySlider = it.toInt() },
-                        valueRange = 0f..3f,
-                        steps = 2,
-                    )
-                }
+                MediaQualitySlider(
+                    position = mediaQualitySlider,
+                    onPositionChange = { mediaQualitySlider = it },
+                    media = uris,
+                    uploader = accountViewModel.host.mediaUploader,
+                )
             }
 
-            if (uris.hasVideo() && mediaQualitySlider != 3) {
+            if (uris.hasVideo() && mediaQualitySlider != CompressorQuality.uncompressedSliderPosition) {
                 SettingSwitchItem(
                     title = Res.string.video_codec_h265_label,
                     description = Res.string.video_codec_h265_description,

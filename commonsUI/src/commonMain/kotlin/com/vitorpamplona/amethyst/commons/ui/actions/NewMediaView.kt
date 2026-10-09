@@ -21,7 +21,6 @@
 package com.vitorpamplona.amethyst.commons.ui.actions
 
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
@@ -35,7 +34,6 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Slider
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -43,7 +41,6 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.input.KeyboardCapitalization
@@ -60,11 +57,7 @@ import com.vitorpamplona.amethyst.commons.resources.add_sensitive_content_label
 import com.vitorpamplona.amethyst.commons.resources.file_server
 import com.vitorpamplona.amethyst.commons.resources.file_server_description
 import com.vitorpamplona.amethyst.commons.resources.media_compression_quality_explainer
-import com.vitorpamplona.amethyst.commons.resources.media_compression_quality_high
 import com.vitorpamplona.amethyst.commons.resources.media_compression_quality_label
-import com.vitorpamplona.amethyst.commons.resources.media_compression_quality_low
-import com.vitorpamplona.amethyst.commons.resources.media_compression_quality_medium
-import com.vitorpamplona.amethyst.commons.resources.media_compression_quality_uncompressed
 import com.vitorpamplona.amethyst.commons.resources.strip_metadata_description
 import com.vitorpamplona.amethyst.commons.resources.strip_metadata_label
 import com.vitorpamplona.amethyst.commons.resources.video_codec_h265_description
@@ -80,6 +73,7 @@ import com.vitorpamplona.amethyst.commons.ui.insets.imePaddingSafe
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.navigation.topbars.PostingTopBar
 import com.vitorpamplona.amethyst.commons.ui.note.creators.contentWarning.SettingSwitchItem
+import com.vitorpamplona.amethyst.commons.ui.note.creators.uploads.MediaQualitySlider
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.settings.SettingsRow
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.Size5dp
@@ -249,28 +243,12 @@ fun ImageVideoPost(
         )
     }
 
-    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-        Box(modifier = Modifier.fillMaxWidth()) {
-            Text(
-                text =
-                    when (postViewModel.mediaQualitySlider) {
-                        0 -> stringRes(Res.string.media_compression_quality_low)
-                        1 -> stringRes(Res.string.media_compression_quality_medium)
-                        2 -> stringRes(Res.string.media_compression_quality_high)
-                        3 -> stringRes(Res.string.media_compression_quality_uncompressed)
-                        else -> stringRes(Res.string.media_compression_quality_medium)
-                    },
-                modifier = Modifier.align(Alignment.Center),
-            )
-        }
-
-        Slider(
-            value = postViewModel.mediaQualitySlider.toFloat(),
-            onValueChange = { postViewModel.mediaQualitySlider = it.toInt() },
-            valueRange = 0f..3f,
-            steps = 2,
-        )
-    }
+    MediaQualitySlider(
+        position = postViewModel.mediaQualitySlider,
+        onPositionChange = { postViewModel.mediaQualitySlider = it },
+        media = postViewModel.multiOrchestrator,
+        uploader = accountViewModel.host.mediaUploader,
+    )
 
     // Only show H.265 codec option if there are videos in the upload
     if (postViewModel.multiOrchestrator?.hasVideo() == true) {

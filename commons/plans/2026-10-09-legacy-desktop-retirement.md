@@ -1,6 +1,6 @@
 # Retiring the legacy desktop app: what each legacy-only feature becomes
 
-> **Status:** decided 2026-10-09 (maintainer). Built: 3b (relay latency), 1 (privacy lock). Supersedes the
+> **Status:** decided 2026-10-09 (maintainer). Built: 3b (relay latency), 1 (privacy lock), 6a (compression preview and steps). Supersedes the
 > "Legacy-only feature" table in [2026-09-27-one-ui-android-desktop.md](2026-09-27-one-ui-android-desktop.md)
 > step 8d.
 
@@ -133,14 +133,22 @@ Compression (images; video previews would take too long):
   - The libraries cannot estimate a result, so the preview really compresses the image in the
     background (Android: Zelory; desktop: `ImageReencoder`) and is cached per image and setting.
   - Both apps need a platform hook beside `MediaUploader` to produce it.
-- **The quality slider sets the resolution too.** Today Android shrinks every image to 640 px wide
-  whatever the setting (`MediaCompressor.compressImage`, `default(width = 640, …)`); the slider only
-  changes the JPEG quality. The new desktop copies that, while the legacy desktop uploaded at
-  1920 px.
+- **The quality slider sets the resolution too.** Today Android asks for 640 px whatever the
+  setting (`MediaCompressor.compressImage`, `default(width = 640, …)`); the slider only changes the
+  JPEG quality. Zelory's `default` only halves the image while it stays above 640 x 816, so a
+  4032 x 3024 photo actually went up at 2016 x 1512. The new desktop asked for 640 px, while the
+  legacy desktop uploaded at 1920 px.
   - Each step will set both the quality and a maximum size, for example 640 / 1280 / 1920 px.
   - Desktop gets extra steps for large screens, for example 2560 px and the original size.
 - **No remembered default.** Each post starts from the default, because each post has a different
   goal.
+
+**Built.** `CompressorQuality` carries each level's size limit and JPEG quality (640 / 1280 / 1920
+px; desktop adds 2560 px) and the platform's slider steps (`sliderSteps`, an expect: phones stop
+at 1920 px and start at 1280; desktop starts at 1920). Android resizes exactly with a Zelory
+`FitWithinConstraint`; desktop hands the level to `ImageReencoder` as an `ImageSizeTarget`. The
+four quality sliders are now one shared `MediaQualitySlider`, which previews the first still image
+through `MediaUploader.previewImageCompression`.
 - Shared `ImageVideoDescription` already has alt text, AI alt, the sensitive flag, the server choice,
   H.265 and GIF→MP4; those stay.
 

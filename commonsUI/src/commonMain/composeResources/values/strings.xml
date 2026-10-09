@@ -2120,6 +2120,13 @@
     <string name="media_compression_quality_medium">Medium</string>
     <string name="media_compression_quality_high">High</string>
     <string name="media_compression_quality_uncompressed">Uncompressed</string>
+    <string name="media_compression_quality_very_low">Very low</string>
+    <string name="media_compression_quality_very_high">Very high</string>
+    <string name="media_compression_image_max_size">%1$s · images up to %2$d px</string>
+    <string name="media_compression_preview_compressed">Compressed</string>
+    <string name="media_compression_preview_original">Original</string>
+    <string name="media_compression_preview_tap_original">Tap the image to see the original</string>
+    <string name="media_compression_preview_tap_compressed">Showing the original. Tap to see the compressed image</string>
     <string name="metadata_strip_failed_body">This file format does not support metadata stripping. Private information such as location and device info may be included. Upload anyway?</string>
     <string name="metadata_strip_failed_upload">Upload anyway</string>
     <string name="edit_draft">Edit draft</string>

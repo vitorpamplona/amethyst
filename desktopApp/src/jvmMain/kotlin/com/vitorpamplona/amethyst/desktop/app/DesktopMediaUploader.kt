@@ -31,12 +31,17 @@ import com.vitorpamplona.amethyst.commons.service.image.BlurhashWrapper
 import com.vitorpamplona.amethyst.commons.service.image.ThumbhashWrapper
 import com.vitorpamplona.amethyst.commons.service.upload.AmethystTempDir
 import com.vitorpamplona.amethyst.commons.service.upload.BlossomClient
-import com.vitorpamplona.amethyst.commons.service.upload.CompressionQuality
+import com.vitorpamplona.amethyst.commons.service.upload.CompressionException
 import com.vitorpamplona.amethyst.commons.service.upload.FileHeader
+import com.vitorpamplona.amethyst.commons.service.upload.ImageCompressionTarget
+import com.vitorpamplona.amethyst.commons.service.upload.ImageReencoder
+import com.vitorpamplona.amethyst.commons.service.upload.ImageSizeTarget
 import com.vitorpamplona.amethyst.commons.service.upload.MediaCompressor
 import com.vitorpamplona.amethyst.commons.service.upload.MediaMetadata
 import com.vitorpamplona.amethyst.commons.service.uploads.CompressorQuality
+import com.vitorpamplona.amethyst.commons.service.uploads.ImageCompressionPreview
 import com.vitorpamplona.amethyst.commons.service.uploads.ImageDownloader
+import com.vitorpamplona.amethyst.commons.service.uploads.ImageFileStats
 import com.vitorpamplona.amethyst.commons.service.uploads.MediaCompressorResult
 import com.vitorpamplona.amethyst.commons.service.uploads.MediaUploadResult
 import com.vitorpamplona.amethyst.commons.service.uploads.MediaUploader
@@ -62,6 +67,7 @@ import kotlinx.coroutines.withContext
 import java.io.File
 import java.net.URI
 import java.nio.file.Files
+import javax.imageio.ImageIO
 import com.vitorpamplona.amethyst.commons.service.upload.UploadOrchestrator as BlossomUploadPipeline
 
 /**
@@ -79,15 +85,8 @@ class DesktopMediaUploader(
         return if (value.startsWith("file:")) File(URI(value)) else File(value)
     }
 
-    /** The desktop pipeline's presets; null leaves the file as it is. */
-    private fun CompressorQuality.toPreset(): CompressionQuality? =
-        when (this) {
-            CompressorQuality.VERY_LOW, CompressorQuality.LOW -> CompressionQuality.LOW
-            CompressorQuality.MEDIUM -> CompressionQuality.MEDIUM
-            CompressorQuality.HIGH -> CompressionQuality.HIGH
-            CompressorQuality.VERY_HIGH -> CompressionQuality.DESKTOP_HIGH
-            CompressorQuality.UNCOMPRESSED -> null
-        }
+    /** The desktop pipeline's target for a quality step; null leaves the file as it is. */
+    private fun CompressorQuality.toTarget(): ImageCompressionTarget? = imageMaxDimension?.let { ImageSizeTarget(it, imageQuality / 100f) }
 
     private fun MediaMetadata.header(
         hash: String = sha256,
@@ -141,7 +140,7 @@ class DesktopMediaUploader(
                     serverBaseUrl = server.baseUrl,
                     signer = forcedSigner ?: account.signer,
                     stripExif = stripMetadata,
-                    quality = compressionQuality.toPreset(),
+                    quality = compressionQuality.toTarget(),
                 )
             val url = result.blossom.url ?: return progress.error(UploadError.SERVER_DID_NOT_PROVIDE_URL)
             progress.finish(
@@ -188,7 +187,7 @@ class DesktopMediaUploader(
                     serverBaseUrl = server.baseUrl,
                     signer = forcedSigner ?: account.signer,
                     stripExif = stripMetadata,
-                    quality = compressionQuality.toPreset(),
+                    quality = compressionQuality.toTarget(),
                 )
             val url = result.blossom.url ?: return progress.error(UploadError.SERVER_DID_NOT_PROVIDE_URL)
             progress.finish(
@@ -226,7 +225,7 @@ class DesktopMediaUploader(
         cipher: AESGCM?,
         maxBytes: Long = Long.MAX_VALUE,
     ): Payload? =
-        BlossomUploadPipeline.withPreparedFile(fileOf(uri), stripMetadata, compressionQuality.toPreset()) { file, metadata ->
+        BlossomUploadPipeline.withPreparedFile(fileOf(uri), stripMetadata, compressionQuality.toTarget()) { file, metadata ->
             if (file.length() > maxBytes) return@withPreparedFile null
             val plain = withContext(Dispatchers.IO) { file.readBytes() }
             if (cipher == null) {
@@ -358,6 +357,40 @@ class DesktopMediaUploader(
         useH265: Boolean,
         convertGifToMp4: Boolean,
     ): MediaCompressorResult = MediaCompressorResult(uri, mimeType, null)
+
+    override suspend fun previewImageCompression(
+        uri: MediaUri,
+        mimeType: String?,
+        compressionQuality: CompressorQuality,
+    ): ImageCompressionPreview? {
+        val target = compressionQuality.toTarget() ?: return null
+        val source = fileOf(uri)
+        val result =
+            try {
+                ImageReencoder.reencode(source, target)
+            } catch (e: CompressionException) {
+                return null
+            }
+        if (result !is ImageReencoder.ReencodeResult.Reencoded) return null
+        return ImageCompressionPreview(imageStats(source), imageStats(result.file), StringMediaUri(result.file.absolutePath))
+    }
+
+    private suspend fun imageStats(file: File): ImageFileStats =
+        withContext(Dispatchers.IO) {
+            val size =
+                runCatching {
+                    ImageIO.createImageInputStream(file)?.use { input ->
+                        val reader = ImageIO.getImageReaders(input).asSequence().firstOrNull() ?: return@use null
+                        try {
+                            reader.input = input
+                            reader.getWidth(0) to reader.getHeight(0)
+                        } finally {
+                            reader.dispose()
+                        }
+                    }
+                }.getOrNull()
+            ImageFileStats(size?.first, size?.second, file.length())
+        }
 
     override suspend fun remoteFileHeader(
         url: String,

@@ -23,6 +23,7 @@ package com.vitorpamplona.amethyst.service.uploads
 import android.content.Context
 import android.graphics.Bitmap
 import android.net.Uri
+import androidx.core.graphics.scale
 import androidx.core.net.toUri
 import androidx.media3.common.MimeTypes
 import com.davotoula.lightcompressor.video.GifToMp4Converter
@@ -32,9 +33,13 @@ import com.vitorpamplona.amethyst.commons.service.uploads.isAvif
 import com.vitorpamplona.amethyst.ui.components.util.MediaCompressorFileUtils
 import com.vitorpamplona.quartz.utils.Log
 import id.zelory.compressor.Compressor
-import id.zelory.compressor.constraint.default
+import id.zelory.compressor.constraint.Constraint
+import id.zelory.compressor.decodeSampledBitmapFromFile
+import id.zelory.compressor.determineImageRotation
+import id.zelory.compressor.overWrite
 import kotlinx.coroutines.CancellationException
 import java.io.File
+import kotlin.math.roundToInt
 
 class MediaCompressor {
     // ALL ERRORS ARE IGNORED. The original file is returned.
@@ -70,10 +75,7 @@ class MediaCompressor {
                 VideoCompressionHelper.compressVideo(uri, contentType, applicationContext, mediaQuality, useH265)
             }
 
-            contentType?.startsWith("image", ignoreCase = true) == true &&
-                !contentType.contains("gif") &&
-                !contentType.contains("svg") &&
-                !isAvif(contentType) -> {
+            isReencodableImage(contentType) -> {
                 compressImage(uri, contentType, applicationContext, mediaQuality)
             }
 
@@ -89,15 +91,7 @@ class MediaCompressor {
         context: Context,
         mediaQuality: CompressorQuality,
     ): MediaCompressorResult {
-        val imageQuality =
-            when (mediaQuality) {
-                CompressorQuality.VERY_LOW -> 40
-                CompressorQuality.LOW -> 50
-                CompressorQuality.MEDIUM -> 60
-                CompressorQuality.HIGH -> 80
-                CompressorQuality.VERY_HIGH -> 90
-                else -> 60
-            }
+        val maxDimension = mediaQuality.imageMaxDimension ?: return MediaCompressorResult(uri, contentType, null)
 
         var tempFile: File? = null
         return try {
@@ -105,7 +99,7 @@ class MediaCompressor {
             tempFile = MediaCompressorFileUtils.from(uri, context)
             val compressedImageFile =
                 Compressor.compress(context, tempFile) {
-                    default(width = 640, format = Bitmap.CompressFormat.JPEG, quality = imageQuality)
+                    constraint(FitWithinConstraint(maxDimension, mediaQuality.imageQuality))
                 }
             if (tempFile != compressedImageFile && !tempFile.delete()) {
                 Log.w("MediaCompressor") { "Failed to delete temp file: ${tempFile.absolutePath}" }
@@ -120,5 +114,44 @@ class MediaCompressor {
             }
             MediaCompressorResult(uri, contentType, null)
         }
+    }
+
+    companion object {
+        /** Still images this compressor re-encodes; animated GIFs, SVGs and AVIFs go up as they are. */
+        fun isReencodableImage(contentType: String?): Boolean =
+            contentType?.startsWith("image", ignoreCase = true) == true &&
+                !contentType.contains("gif") &&
+                !contentType.contains("svg") &&
+                !isAvif(contentType)
+    }
+}
+
+/**
+ * Decodes at the coarsest power-of-two stride that stays above [maxDimension], applies the EXIF
+ * rotation, scales so the longer edge is at most [maxDimension] (never up), and writes one JPEG at
+ * [quality]. Zelory's `default` constraint stops at the stride, so a 4032 x 3024 photo asked for
+ * 640 px came out at 2016 x 1512.
+ */
+private class FitWithinConstraint(
+    private val maxDimension: Int,
+    private val quality: Int,
+) : Constraint {
+    private var done = false
+
+    override fun isSatisfied(imageFile: File): Boolean = done
+
+    override fun satisfy(imageFile: File): File {
+        val sampled = decodeSampledBitmapFromFile(imageFile, maxDimension, maxDimension)
+        val rotated = determineImageRotation(imageFile, sampled)
+        val longer = maxOf(rotated.width, rotated.height)
+        val fitted =
+            if (longer > maxDimension) {
+                val ratio = maxDimension.toFloat() / longer
+                rotated.scale((rotated.width * ratio).roundToInt().coerceAtLeast(1), (rotated.height * ratio).roundToInt().coerceAtLeast(1))
+            } else {
+                rotated
+            }
+        done = true
+        return overWrite(imageFile, fitted, Bitmap.CompressFormat.JPEG, quality)
     }
 }
