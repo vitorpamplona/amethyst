@@ -40,6 +40,7 @@ import com.vitorpamplona.amethyst.commons.resources.dismiss
 import com.vitorpamplona.amethyst.commons.scheduledposts.ScheduledPostStatus
 import com.vitorpamplona.amethyst.commons.ui.app.AppRoot
 import com.vitorpamplona.amethyst.commons.ui.navigation.host.NavDestinations
+import com.vitorpamplona.amethyst.commons.ui.navigation.host.UnavailableScreen
 import com.vitorpamplona.amethyst.commons.ui.navigation.host.jvmDestinations
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.Nav
 import com.vitorpamplona.amethyst.commons.ui.stringRes
@@ -127,7 +128,12 @@ class DesktopAppRoot(
         destinations: NavDestinations,
         accountViewModel: AccountViewModel,
         nav: Nav,
-    ) = destinations.jvmDestinations(accountViewModel, nav)
+    ) {
+        destinations.jvmDestinations(accountViewModel, nav)
+        // Screens only Android has (Health Connect, the QR camera, share-as-image...) still have
+        // ways in here: synced bar items, links, shared menus. Show a notice, not a crash.
+        destinations.unavailable { UnavailableScreen(nav) }
+    }
 
     @Composable
     override fun NavigationEffects(

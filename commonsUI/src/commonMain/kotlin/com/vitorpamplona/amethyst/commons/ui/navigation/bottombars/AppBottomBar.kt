@@ -56,6 +56,7 @@ import com.vitorpamplona.amethyst.commons.ui.insets.KeyboardState
 import com.vitorpamplona.amethyst.commons.ui.insets.keyboardAsState
 import com.vitorpamplona.amethyst.commons.ui.layouts.LocalScreenLayout
 import com.vitorpamplona.amethyst.commons.ui.navigation.bottombars.LocalTabReselectCoordinator
+import com.vitorpamplona.amethyst.commons.ui.navigation.host.canOpen
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.platform.LocalAppServices
 import com.vitorpamplona.amethyst.commons.ui.platform.rememberNappletIconModel
@@ -229,9 +230,23 @@ class BottomBarSlot(
     val icon: @Composable (selected: Boolean) -> Unit,
 )
 
-/** Resolves an entry to its live [BottomBarSlot], or null if it no longer resolves (deleted favorite, etc.). */
+/**
+ * Resolves an entry to its live [BottomBarSlot], or null if it no longer resolves (deleted favorite,
+ * etc.) or leads to a screen this front end doesn't have: the bar items sync from every device the
+ * account uses, and the desktop has no Health Connect or app runtime.
+ */
 @Composable
 fun rememberBottomBarSlot(
+    entry: BottomBarEntry,
+    favoritesById: Map<String, FavoriteApp>,
+    accountViewModel: AccountViewModel,
+): BottomBarSlot? {
+    val slot = resolveBottomBarSlot(entry, favoritesById, accountViewModel) ?: return null
+    return if (canOpen(slot.route)) slot else null
+}
+
+@Composable
+private fun resolveBottomBarSlot(
     entry: BottomBarEntry,
     favoritesById: Map<String, FavoriteApp>,
     accountViewModel: AccountViewModel,

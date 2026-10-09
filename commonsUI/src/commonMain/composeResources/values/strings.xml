@@ -6871,4 +6871,6 @@
         <item quantity="one">%1$d page</item>
         <item quantity="other">%1$d pages</item>
     </plurals>
+    <string name="screen_unavailable_title">Not available here</string>
+    <string name="screen_unavailable_here">This screen isn't in this version of Amethyst yet. It is available in the Android app.</string>
 </resources>

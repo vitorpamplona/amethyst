@@ -70,6 +70,7 @@ import com.vitorpamplona.amethyst.commons.ui.navigation.bottombars.TabReselectCo
 import com.vitorpamplona.amethyst.commons.ui.navigation.drawer.AccountSwitchBottomSheet
 import com.vitorpamplona.amethyst.commons.ui.navigation.drawer.DrawerContent
 import com.vitorpamplona.amethyst.commons.ui.navigation.drawer.PermanentDrawerContent
+import com.vitorpamplona.amethyst.commons.ui.navigation.host.LocalNavDestinations
 import com.vitorpamplona.amethyst.commons.ui.navigation.host.NavDestinations
 import com.vitorpamplona.amethyst.commons.ui.navigation.host.NavTransitionTier
 import com.vitorpamplona.amethyst.commons.ui.navigation.host.NavigationHost
@@ -252,8 +253,19 @@ private fun AppNavigation(
     // can't read LocalScreenLayout (see NavTransitionTier).
     SideEffect { NavTransitionTier.isLargeScreen = screenLayout.isLargeScreen }
 
+    // Built here rather than inside the navigation host, so the drawer, bars and menus can ask it
+    // which screens exist before offering a way into one.
+    val destinations =
+        remember(accountViewModel, nav) {
+            NavDestinations().apply {
+                sharedDestinations(accountViewModel, nav)
+                root.registerDestinations(this, accountViewModel, nav)
+            }
+        }
+
     CompositionLocalProvider(
         LocalScreenLayout provides screenLayout,
+        LocalNavDestinations provides destinations,
         LocalTabReselectCoordinator provides tabReselectCoordinator,
         // The finders shared composables reach for through the no-arg observeUser* /
         // EventFinderFilterAssemblerSubscription(note) overloads; they error() when unprovided.
@@ -270,7 +282,7 @@ private fun AppNavigation(
             suspendEdgeSwipe = root::suspendEdgeSwipe,
         ) {
             Box(Modifier.fillMaxSize()) {
-                BuildNavigation(accountViewModel, nav, root)
+                BuildNavigation(nav, destinations, root)
                 root.ShellOverlay(accountViewModel)
             }
         }
@@ -304,18 +316,10 @@ private fun OpenFirstRoute(
 
 @Composable
 private fun BuildNavigation(
-    accountViewModel: AccountViewModel,
     nav: Nav,
+    destinations: NavDestinations,
     root: AppRoot,
 ) {
-    val destinations =
-        remember(accountViewModel, nav) {
-            NavDestinations().apply {
-                sharedDestinations(accountViewModel, nav)
-                root.registerDestinations(this, accountViewModel, nav)
-            }
-        }
-
     NavigationHost(nav, destinations)
 
     TrackScreen(nav, destinations, root)
