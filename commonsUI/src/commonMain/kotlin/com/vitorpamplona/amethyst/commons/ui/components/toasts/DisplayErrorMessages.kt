@@ -22,6 +22,7 @@ package com.vitorpamplona.amethyst.commons.ui.components.toasts
 
 import androidx.compose.runtime.Composable
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.vitorpamplona.amethyst.commons.notices.ui.NoticeDialog
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.error_dialog_button_ok
 import com.vitorpamplona.amethyst.commons.ui.components.InformationDialog
@@ -105,6 +106,12 @@ fun DisplayErrorMessages(
 
             is MultiErrorToastMsg -> {
                 MultiUserErrorMessageDialog(obj, accountViewModel, nav)
+            }
+
+            is NoticeToastMsg -> {
+                NoticeDialog(obj.notice, severity = obj.severity) {
+                    toastManager.clearToasts()
+                }
             }
         }
     }

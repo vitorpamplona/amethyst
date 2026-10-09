@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst.commons.ui.navigation
 
+import com.vitorpamplona.amethyst.commons.model.navigation.uri.findQueryParameterValue
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNull

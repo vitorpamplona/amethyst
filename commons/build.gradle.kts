@@ -196,6 +196,8 @@ kotlin {
         getByName("jvmTest") {
             dependencies {
                 implementation(libs.secp256k1.kmp.jni.jvm)
+                // RouteForPointerTest stubs an Account.
+                implementation(libs.mockk)
             }
         }
 

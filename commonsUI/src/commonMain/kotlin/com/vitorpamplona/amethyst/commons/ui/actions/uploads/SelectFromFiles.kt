@@ -35,6 +35,7 @@ import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.upload_file
 import com.vitorpamplona.amethyst.commons.service.uploads.SelectedMedia
+import com.vitorpamplona.amethyst.commons.ui.components.HoverTooltip
 import com.vitorpamplona.amethyst.commons.ui.components.LoadingAnimation
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import kotlinx.collections.immutable.ImmutableList
@@ -70,20 +71,22 @@ private fun FileSelectButton(
     modifier: Modifier,
     onClick: () -> Unit,
 ) {
-    IconButton(
-        modifier = modifier,
-        enabled = enabled && !isUploading,
-        onClick = { onClick() },
-    ) {
-        if (!isUploading) {
-            Icon(
-                symbol = MaterialSymbols.AttachFile,
-                contentDescription = stringRes(id = Res.string.upload_file),
-                modifier = Modifier.height(20.dp),
-                tint = tint,
-            )
-        } else {
-            LoadingAnimation()
+    HoverTooltip(stringRes(id = Res.string.upload_file)) {
+        IconButton(
+            modifier = modifier,
+            enabled = enabled && !isUploading,
+            onClick = { onClick() },
+        ) {
+            if (!isUploading) {
+                Icon(
+                    symbol = MaterialSymbols.AttachFile,
+                    contentDescription = stringRes(id = Res.string.upload_file),
+                    modifier = Modifier.height(20.dp),
+                    tint = tint,
+                )
+            } else {
+                LoadingAnimation()
+            }
         }
     }
 }

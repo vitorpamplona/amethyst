@@ -1,0 +1,83 @@
+# Flatpak manifest for the Amethyst Desktop bundle attached to GitHub Releases.
+#
+# It packages the prebuilt jpackage tree from
+# `./gradlew :desktopApp:createReleaseDistributable`, so it is NOT a Flathub
+# submission manifest: Flathub requires building from source. See
+# desktopApp/packaging/flatpak/README.md.
+
+app-id: com.vitorpamplona.amethyst
+runtime: org.freedesktop.Platform
+runtime-version: '26.08'
+sdk: org.freedesktop.Sdk
+command: amethyst-desktop
+
+# No codecs add-extension: since 25.08 the runtime itself declares
+# org.freedesktop.Platform.codecs-extra (the successor of ffmpeg-full) and
+# flatpak downloads it with the runtime.
+
+finish-args:
+  - --share=network
+  - --share=ipc
+  # Compose Desktop renders through AWT/skiko, which is X11-only on Linux
+  # (runs under XWayland on Wayland sessions). fallback-x11 + wayland would
+  # leave the app without a usable display socket on Wayland sessions, so
+  # grant x11 unconditionally.
+  - --socket=x11
+  - --socket=pulseaudio
+  - --device=dri
+  # AWT's FileDialog uses the GTK file chooser directly, not the file chooser
+  # portal, so it only sees what the sandbox can see.
+  - --filesystem=xdg-download
+  - --filesystem=xdg-pictures
+  # Desktop notifications: NucleusNotificationDispatcher calls
+  # org.freedesktop.Notifications over D-Bus (nucleus.notification-linux).
+  - --talk-name=org.freedesktop.Notifications
+  # java-keyring stores the account keys through the Secret Service API.
+  - --talk-name=org.freedesktop.secrets
+  # The app keeps accounts, drafts and scheduled posts under ~/.amethyst and
+  # Java Preferences under ~/.java. Without home access those paths are
+  # throwaway, so map them into ~/.var/app/com.vitorpamplona.amethyst/.
+  - --persist=.amethyst
+  - --persist=.java
+
+# No openjdk module / sdk-extension: the jpackage tree copied below already
+# bundles its own trimmed JRE under Amethyst/lib/runtime/, so installing a
+# second JRE at /app/jre would only bloat the bundle.
+modules:
+  - name: amethyst-desktop
+    buildsystem: simple
+    build-commands:
+      # Drop the jpackage-emitted self-contained tree into /app/lib/Amethyst.
+      # Wrapper at /app/bin/amethyst-desktop forwards args.
+      - mkdir -p /app/lib/Amethyst
+      - cp -r ./Amethyst/* /app/lib/Amethyst/
+      - install -Dm755 amethyst-desktop.sh /app/bin/amethyst-desktop
+      - install -Dm644 com.vitorpamplona.amethyst.metainfo.xml -t /app/share/metainfo/
+      - install -Dm644 com.vitorpamplona.amethyst.desktop -t /app/share/applications/
+      - install -Dm644 icons/512/com.vitorpamplona.amethyst.png -t /app/share/icons/hicolor/512x512/apps/
+      - install -Dm644 LICENSE -t /app/share/licenses/com.vitorpamplona.amethyst/
+    sources:
+      # Built artifact from `./gradlew :desktopApp:createReleaseDistributable`.
+      # Path matches Compose Multiplatform 1.11's output layout.
+      - type: dir
+        path: ../../build/compose/binaries/main-release/app
+        dest: ./
+
+      - type: script
+        dest-filename: amethyst-desktop.sh
+        commands:
+          - "#!/bin/sh"
+          - exec /app/lib/Amethyst/bin/Amethyst "$@"
+
+      - type: file
+        path: com.vitorpamplona.amethyst.metainfo.xml
+
+      - type: file
+        path: com.vitorpamplona.amethyst.desktop
+
+      - type: dir
+        path: icons
+        dest: icons
+
+      - type: file
+        path: ../../../LICENSE

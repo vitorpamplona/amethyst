@@ -35,6 +35,7 @@ import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.upload_image
 import com.vitorpamplona.amethyst.commons.service.uploads.SelectedMedia
+import com.vitorpamplona.amethyst.commons.ui.components.HoverTooltip
 import com.vitorpamplona.amethyst.commons.ui.components.LoadingAnimation
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import kotlinx.collections.immutable.ImmutableList
@@ -92,20 +93,22 @@ private fun GallerySelectButton(
     modifier: Modifier,
     onClick: () -> Unit,
 ) {
-    IconButton(
-        modifier = modifier,
-        enabled = enabled && !isUploading,
-        onClick = { onClick() },
-    ) {
-        if (!isUploading) {
-            Icon(
-                symbol = MaterialSymbols.AddPhotoAlternate,
-                contentDescription = stringRes(id = Res.string.upload_image),
-                modifier = Modifier.height(25.dp),
-                tint = tint,
-            )
-        } else {
-            LoadingAnimation()
+    HoverTooltip(stringRes(id = Res.string.upload_image)) {
+        IconButton(
+            modifier = modifier,
+            enabled = enabled && !isUploading,
+            onClick = { onClick() },
+        ) {
+            if (!isUploading) {
+                Icon(
+                    symbol = MaterialSymbols.AddPhotoAlternate,
+                    contentDescription = stringRes(id = Res.string.upload_image),
+                    modifier = Modifier.height(25.dp),
+                    tint = tint,
+                )
+            } else {
+                LoadingAnimation()
+            }
         }
     }
 }

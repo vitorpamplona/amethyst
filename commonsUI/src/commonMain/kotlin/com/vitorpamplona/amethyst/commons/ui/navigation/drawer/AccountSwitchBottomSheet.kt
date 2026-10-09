@@ -28,10 +28,13 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -48,6 +51,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -73,19 +77,25 @@ import com.vitorpamplona.amethyst.commons.resources.scheduled_posts_logout_toast
 import com.vitorpamplona.amethyst.commons.resources.scheduled_posts_logout_warning
 import com.vitorpamplona.amethyst.commons.scheduledposts.ScheduledPostStatus
 import com.vitorpamplona.amethyst.commons.ui.components.RobohashFallbackAsyncImage
+import com.vitorpamplona.amethyst.commons.ui.components.RoundedDropdownMenu
+import com.vitorpamplona.amethyst.commons.ui.components.RoundedMenuItemModifier
+import com.vitorpamplona.amethyst.commons.ui.components.RoundedMenuSection
 import com.vitorpamplona.amethyst.commons.ui.loadPluralStringRes
 import com.vitorpamplona.amethyst.commons.ui.platform.LocalAppPlatform
 import com.vitorpamplona.amethyst.commons.ui.platform.LocalAppServices
+import com.vitorpamplona.amethyst.commons.ui.platform.Toaster
 import com.vitorpamplona.amethyst.commons.ui.pluralStringRes
 import com.vitorpamplona.amethyst.commons.ui.richtext.CreateTextWithEmoji
 import com.vitorpamplona.amethyst.commons.ui.screen.LocalDisplaySettings
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.AccountPictureModifier
 import com.vitorpamplona.amethyst.commons.ui.theme.Size10dp
+import com.vitorpamplona.amethyst.commons.ui.theme.Size20Modifier
 import com.vitorpamplona.amethyst.commons.ui.theme.Size55dp
 import com.vitorpamplona.amethyst.commons.util.toShortDisplay
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.quartz.nip19Bech32.decodePublicKeyAsHexOrNull
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.IO
 import kotlinx.coroutines.launch
@@ -159,24 +169,7 @@ fun DisplayAccount(
     accountViewModel: AccountViewModel,
     accountSessionManager: AccountSessionManager,
 ) {
-    var baseUser by remember(acc) {
-        mutableStateOf(
-            decodePublicKeyAsHexOrNull(acc.npub)?.let {
-                LocalCache.getUserIfExists(it)
-            },
-        )
-    }
-
-    if (baseUser == null) {
-        LaunchedEffect(key1 = acc.npub) {
-            launch(Dispatchers.IO) {
-                baseUser =
-                    decodePublicKeyAsHexOrNull(acc.npub)?.let {
-                        LocalCache.getOrCreateUser(it)
-                    }
-            }
-        }
-    }
+    val baseUser = rememberAccountUser(acc)
 
     baseUser?.let {
         Row(
@@ -237,6 +230,7 @@ private fun ActiveMarker(
 private fun AccountPicture(
     user: User,
     accountViewModel: AccountViewModel,
+    modifier: Modifier = AccountPictureModifier,
 ) {
     val userInfo by observeUserInfo(user, accountViewModel)
 
@@ -244,7 +238,7 @@ private fun AccountPicture(
         robot = user.pubkeyHex,
         model = userInfo?.info?.profilePicture(),
         contentDescription = stringRes(Res.string.profile_image),
-        modifier = AccountPictureModifier,
+        modifier = modifier,
         loadProfilePicture = LocalDisplaySettings.current.showProfilePictures,
         loadRobohash = LocalDisplaySettings.current.loadRobohash,
         autoPlayGif =
@@ -283,88 +277,11 @@ private fun LogoutButton(
     acc: AccountInfo,
     accountSessionManager: AccountSessionManager,
 ) {
-    val scheduledPostsLogoutToastZeroStr = stringRes(Res.string.scheduled_posts_logout_toast_zero)
     var logoutDialog by remember { mutableStateOf(false) }
-    val toaster = LocalAppPlatform.current.rememberToaster()
     val scope = rememberCoroutineScope()
-    val scheduledPostStore = LocalAppServices.current.scheduledPostStore
+    val toaster = LocalAppPlatform.current.rememberToaster()
     if (logoutDialog) {
-        val accountHex = remember(acc) { decodePublicKeyAsHexOrNull(acc.npub) }
-        val allPosts by scheduledPostStore.flow
-            .collectAsStateWithLifecycle()
-        val unpublishedCount by remember(accountHex) {
-            derivedStateOf {
-                if (accountHex == null) {
-                    0
-                } else {
-                    allPosts.count {
-                        it.accountPubkey == accountHex &&
-                            (
-                                it.status == ScheduledPostStatus.PENDING ||
-                                    it.status == ScheduledPostStatus.PUBLISHING ||
-                                    it.status == ScheduledPostStatus.FAILED
-                            )
-                    }
-                }
-            }
-        }
-        AlertDialog(
-            title = { Text(text = stringRes(Res.string.log_out)) },
-            text = {
-                if (unpublishedCount > 0) {
-                    Text(
-                        text =
-                            pluralStringRes(
-                                id = Res.plurals.scheduled_posts_logout_warning,
-                                count = unpublishedCount,
-                                unpublishedCount,
-                            ),
-                    )
-                } else {
-                    Text(text = stringRes(Res.string.are_you_sure_you_want_to_log_out))
-                }
-            },
-            onDismissRequest = { logoutDialog = false },
-            confirmButton = {
-                TextButton(
-                    onClick = {
-                        // Snapshot the count *now* so the user-facing Toast matches what
-                        // the dialog displayed, even if the store mutates between this
-                        // tap and the cleanup completing.
-                        val confirmedCount = unpublishedCount
-                        logoutDialog = false
-                        // Guard against a malformed npub: skip the Toast so we don't
-                        // claim "Logged out" when logOff's coroutine bails early.
-                        if (accountHex == null) return@TextButton
-                        accountSessionManager.logOff(acc)
-                        // The plural depends on the snapshot taken above, so it cannot be
-                        // read in composition; this onClick borrows the screen's scope.
-                        scope.launch {
-                            val toastMessage =
-                                if (confirmedCount > 0) {
-                                    loadPluralStringRes(
-                                        Res.plurals.scheduled_posts_logout_toast,
-                                        confirmedCount,
-                                        confirmedCount,
-                                    )
-                                } else {
-                                    scheduledPostsLogoutToastZeroStr
-                                }
-                            toaster.show(toastMessage, long = false)
-                        }
-                    },
-                ) {
-                    Text(text = stringRes(Res.string.log_out))
-                }
-            },
-            dismissButton = {
-                TextButton(
-                    onClick = { logoutDialog = false },
-                ) {
-                    Text(text = stringRes(Res.string.cancel))
-                }
-            },
-        )
+        LogoutConfirmationDialog(acc, accountSessionManager, scope, toaster) { logoutDialog = false }
     }
 
     IconButton(
@@ -376,4 +293,228 @@ private fun LogoutButton(
             tint = MaterialTheme.colorScheme.onSurface,
         )
     }
+}
+
+/**
+ * Asks before logging [acc] out, warning about its unpublished scheduled posts. The toast after
+ * the log out runs in the caller's [scope] and [toaster], which outlive this dialog.
+ */
+@Composable
+private fun LogoutConfirmationDialog(
+    acc: AccountInfo,
+    accountSessionManager: AccountSessionManager,
+    scope: CoroutineScope,
+    toaster: Toaster,
+    onDismiss: () -> Unit,
+) {
+    val scheduledPostsLogoutToastZeroStr = stringRes(Res.string.scheduled_posts_logout_toast_zero)
+    val scheduledPostStore = LocalAppServices.current.scheduledPostStore
+    val accountHex = remember(acc) { decodePublicKeyAsHexOrNull(acc.npub) }
+    val allPosts by scheduledPostStore.flow
+        .collectAsStateWithLifecycle()
+    val unpublishedCount by remember(accountHex) {
+        derivedStateOf {
+            if (accountHex == null) {
+                0
+            } else {
+                allPosts.count {
+                    it.accountPubkey == accountHex &&
+                        (
+                            it.status == ScheduledPostStatus.PENDING ||
+                                it.status == ScheduledPostStatus.PUBLISHING ||
+                                it.status == ScheduledPostStatus.FAILED
+                        )
+                }
+            }
+        }
+    }
+    AlertDialog(
+        title = { Text(text = stringRes(Res.string.log_out)) },
+        text = {
+            if (unpublishedCount > 0) {
+                Text(
+                    text =
+                        pluralStringRes(
+                            id = Res.plurals.scheduled_posts_logout_warning,
+                            count = unpublishedCount,
+                            unpublishedCount,
+                        ),
+                )
+            } else {
+                Text(text = stringRes(Res.string.are_you_sure_you_want_to_log_out))
+            }
+        },
+        onDismissRequest = { onDismiss() },
+        confirmButton = {
+            TextButton(
+                onClick = {
+                    // Snapshot the count *now* so the user-facing Toast matches what
+                    // the dialog displayed, even if the store mutates between this
+                    // tap and the cleanup completing.
+                    val confirmedCount = unpublishedCount
+                    onDismiss()
+                    // Guard against a malformed npub: skip the Toast so we don't
+                    // claim "Logged out" when logOff's coroutine bails early.
+                    if (accountHex == null) return@TextButton
+                    accountSessionManager.logOff(acc)
+                    // The plural depends on the snapshot taken above, so it cannot be
+                    // read in composition; this onClick borrows the screen's scope.
+                    scope.launch {
+                        val toastMessage =
+                            if (confirmedCount > 0) {
+                                loadPluralStringRes(
+                                    Res.plurals.scheduled_posts_logout_toast,
+                                    confirmedCount,
+                                    confirmedCount,
+                                )
+                            } else {
+                                scheduledPostsLogoutToastZeroStr
+                            }
+                        toaster.show(toastMessage, long = false)
+                    }
+                },
+            ) {
+                Text(text = stringRes(Res.string.log_out))
+            }
+        },
+        dismissButton = {
+            TextButton(
+                onClick = { onDismiss() },
+            ) {
+                Text(text = stringRes(Res.string.cancel))
+            }
+        },
+    )
+}
+
+/**
+ * The account switcher as a dropdown, for the docked drawer: one row per saved account (a check
+ * on the active one), then Add account and Log out. Callers compose it whether or not it is
+ * [expanded], because the dialogs it opens outlive the menu.
+ */
+@Composable
+fun AccountSwitchMenu(
+    expanded: Boolean,
+    onDismiss: () -> Unit,
+    accountViewModel: AccountViewModel,
+    accountSessionManager: AccountSessionManager,
+) {
+    var addAccount by remember { mutableStateOf(false) }
+    var logoutAccount by remember { mutableStateOf<AccountInfo?>(null) }
+    val scope = rememberCoroutineScope()
+    val toaster = LocalAppPlatform.current.rememberToaster()
+    val currentNpub = remember(accountViewModel) { accountViewModel.account.userProfile().pubkeyNpub() }
+
+    RoundedDropdownMenu(expanded = expanded, onDismissRequest = onDismiss) {
+        // Collected only while the menu is open: the drawer composes this menu for its whole life.
+        val accounts by accountSessionManager.localPreferences
+            .accountsFlow()
+            .collectAsStateWithLifecycle()
+
+        // accountsFlow() stays null until allSavedAccounts() loads it, as in DisplayAllAccounts.
+        LaunchedEffect(Unit) {
+            if (accounts == null) {
+                accountSessionManager.localPreferences.allSavedAccounts()
+            }
+        }
+
+        RoundedMenuSection {
+            accounts?.forEach { acc ->
+                key(acc.npub) {
+                    AccountMenuItem(acc, isCurrent = acc.npub == currentNpub, accountViewModel) {
+                        onDismiss()
+                        if (acc.npub != currentNpub) accountSessionManager.switchUser(acc)
+                    }
+                }
+            }
+        }
+
+        RoundedMenuSection {
+            DropdownMenuItem(
+                text = { Text(stringRes(Res.string.account_switch_add_account_btn)) },
+                leadingIcon = { Icon(symbol = MaterialSymbols.PersonAdd, contentDescription = null, modifier = Size20Modifier) },
+                modifier = RoundedMenuItemModifier,
+                onClick = {
+                    onDismiss()
+                    addAccount = true
+                },
+            )
+
+            accounts?.firstOrNull { it.npub == currentNpub }?.let { current ->
+                DropdownMenuItem(
+                    text = { Text(stringRes(Res.string.log_out)) },
+                    leadingIcon = { Icon(symbol = MaterialSymbols.AutoMirrored.Logout, contentDescription = null, modifier = Size20Modifier) },
+                    modifier = RoundedMenuItemModifier,
+                    onClick = {
+                        onDismiss()
+                        logoutAccount = current
+                    },
+                )
+            }
+        }
+    }
+
+    if (addAccount) {
+        AddAccountDialog(null, accountSessionManager) { addAccount = false }
+    }
+
+    logoutAccount?.let {
+        LogoutConfirmationDialog(it, accountSessionManager, scope, toaster) { logoutAccount = null }
+    }
+}
+
+@Composable
+private fun AccountMenuItem(
+    acc: AccountInfo,
+    isCurrent: Boolean,
+    accountViewModel: AccountViewModel,
+    onClick: () -> Unit,
+) {
+    val user = rememberAccountUser(acc) ?: return
+
+    DropdownMenuItem(
+        text = { Column { AccountName(acc, user, accountViewModel) } },
+        leadingIcon = { AccountPicture(user, accountViewModel, AccountMenuPictureModifier) },
+        trailingIcon =
+            if (isCurrent) {
+                {
+                    Icon(
+                        symbol = MaterialSymbols.Check,
+                        contentDescription = stringRes(Res.string.account_switch_active_account),
+                        tint = MaterialTheme.colorScheme.primary,
+                    )
+                }
+            } else {
+                null
+            },
+        modifier = RoundedMenuItemModifier,
+        onClick = onClick,
+    )
+}
+
+private val AccountMenuPictureModifier = Modifier.size(32.dp).clip(CircleShape)
+
+/** The cached [User] behind a saved account, created off the main thread when it is not cached yet. */
+@Composable
+private fun rememberAccountUser(acc: AccountInfo): User? {
+    var baseUser by remember(acc) {
+        mutableStateOf(
+            decodePublicKeyAsHexOrNull(acc.npub)?.let {
+                LocalCache.getUserIfExists(it)
+            },
+        )
+    }
+
+    if (baseUser == null) {
+        LaunchedEffect(key1 = acc.npub) {
+            launch(Dispatchers.IO) {
+                baseUser =
+                    decodePublicKeyAsHexOrNull(acc.npub)?.let {
+                        LocalCache.getOrCreateUser(it)
+                    }
+            }
+        }
+    }
+
+    return baseUser
 }

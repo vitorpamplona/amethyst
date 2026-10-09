@@ -114,6 +114,7 @@ import com.vitorpamplona.amethyst.commons.model.ReactionRowAction
 import com.vitorpamplona.amethyst.commons.model.ReactionRowItem
 import com.vitorpamplona.amethyst.commons.model.User
 import com.vitorpamplona.amethyst.commons.model.navigation.Route
+import com.vitorpamplona.amethyst.commons.model.navigation.routes.routeReplyTo
 import com.vitorpamplona.amethyst.commons.model.nip29RelayGroups.RelayGroupChannel
 import com.vitorpamplona.amethyst.commons.model.payments.PaymentTargetTypes
 import com.vitorpamplona.amethyst.commons.model.zap.CashuRailStatus
@@ -163,7 +164,6 @@ import com.vitorpamplona.amethyst.commons.ui.components.rememberShortNotice
 import com.vitorpamplona.amethyst.commons.ui.components.toasts.multiline.UserBasedErrorMessage
 import com.vitorpamplona.amethyst.commons.ui.components.util.setText
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
-import com.vitorpamplona.amethyst.commons.ui.navigation.routes.routeReplyTo
 import com.vitorpamplona.amethyst.commons.ui.note.CASHU_PREFERRED_BELOW_SATS
 import com.vitorpamplona.amethyst.commons.ui.note.ChangeReactionIcon
 import com.vitorpamplona.amethyst.commons.ui.note.CommentIcon

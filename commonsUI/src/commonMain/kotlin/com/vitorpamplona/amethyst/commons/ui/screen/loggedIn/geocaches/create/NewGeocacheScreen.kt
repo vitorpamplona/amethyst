@@ -68,6 +68,7 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import com.vitorpamplona.amethyst.commons.geocaches.create.NewGeocacheViewModel
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.resources.Res
@@ -142,7 +143,7 @@ fun NewGeocacheScreen(
     val scope = rememberCoroutineScope()
 
     remember(editKind, editPubKeyHex, editDTag, prefillGeohash) {
-        model.init(accountViewModel)
+        model.init(accountViewModel.account)
         if (editKind != null && editPubKeyHex != null && editDTag != null) {
             model.loadForEdit(editKind, editPubKeyHex, editDTag)
         } else {

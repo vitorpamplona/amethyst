@@ -27,6 +27,7 @@ import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.wrapContentWidth
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.MaterialTheme
@@ -38,11 +39,16 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.layout.boundsInWindow
+import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
@@ -65,6 +71,7 @@ import com.vitorpamplona.amethyst.commons.ui.components.UrlCachedPreviewer
 import com.vitorpamplona.amethyst.commons.ui.components.UrlPreviewState
 import com.vitorpamplona.amethyst.commons.ui.components.pdf.PdfPreviewCard
 import com.vitorpamplona.amethyst.commons.ui.components.pdf.PdfViewerContent
+import com.vitorpamplona.amethyst.commons.ui.components.rememberZoomTransition
 import com.vitorpamplona.amethyst.commons.ui.components.urlPreview
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.note.platform.NotePlatform
@@ -120,11 +127,6 @@ object DesktopNotePlatform : NotePlatform {
         if (!GlobalMediaPlayer.isFullscreen.value) GlobalMediaPlayer.toggleFullscreen()
     }
 
-    private fun Modifier.declaredRatio(dim: DimensionTag?): Modifier {
-        val ratio = dim?.takeIf { it.width > 0 && it.height > 0 }?.let { it.width.toFloat() / it.height }
-        return if (ratio != null) this.aspectRatio(ratio, matchHeightConstraintsFirst = false) else this
-    }
-
     @Composable
     override fun ZoomableContentView(
         content: BaseMediaContent,
@@ -134,14 +136,17 @@ object DesktopNotePlatform : NotePlatform {
         accountViewModel: AccountViewModel,
     ) {
         var showViewer by remember { mutableStateOf(false) }
-        val shape = if (roundedCorner) RoundedCornerShape(12.dp) else RoundedCornerShape(0.dp)
+        var sourceBounds by remember { mutableStateOf<Rect?>(null) }
+        val cornerRadius = if (roundedCorner) 12.dp else 0.dp
+        val shape = RoundedCornerShape(cornerRadius)
         val url = content.mediaUrl() ?: return
 
         when (content) {
             is MediaUrlVideo, is MediaLocalVideo -> {
                 DesktopVideoPlayer(
                     url = url,
-                    modifier = Modifier.fillMaxWidth().heightIn(max = MaxInlineMediaHeight).clip(shape),
+                    modifier = Modifier.fillMaxWidth().heightIn(max = MaxInlineMediaHeight),
+                    shape = shape,
                     isLive = (content as? MediaUrlVideo)?.isLiveStream == true,
                     onFullscreen = { position -> playFullscreen(url, position) },
                     autoPlayWhenVisible = accountViewModel.settings.autoPlayVideos(),
@@ -161,9 +166,9 @@ object DesktopNotePlatform : NotePlatform {
             else -> {
                 val modifier =
                     Modifier
-                        .fillMaxWidth()
-                        .heightIn(max = MaxInlineMediaHeight)
-                        .declaredRatio(content.dim)
+                        .inlineImageSize(content.dim, MaxInlineMediaHeight)
+                        // Where the viewer grows the image out of, and shrinks it back into.
+                        .onGloballyPositioned { sourceBounds = it.boundsInWindow() }
                         .clip(shape)
                         .clickable { showViewer = true }
                 if (isAnimatedGifUrl(url)) {
@@ -175,7 +180,7 @@ object DesktopNotePlatform : NotePlatform {
         }
 
         if (showViewer) {
-            ZoomableImageDialog(content, images, null, { showViewer = false }, accountViewModel)
+            MediaViewerDialog(content, images, sourceBounds, cornerRadius) { showViewer = false }
         }
     }
 
@@ -186,14 +191,41 @@ object DesktopNotePlatform : NotePlatform {
         sourceBounds: Rect?,
         onDismiss: () -> Unit,
         accountViewModel: AccountViewModel,
+    ) = MediaViewerDialog(imageUrl, allImages, sourceBounds, 0.dp, onDismiss)
+
+    /**
+     * The full-size viewer over the window. The media grows out of [sourceBounds] (window
+     * coordinates, with [sourceCornerRadius]) and shrinks back into it on close, as on the phone.
+     * The dialog's own scrim, open animation and insets are off: the viewer fades its backdrop with
+     * the transition, and must sit exactly over the window for the bounds to line up.
+     */
+    @OptIn(ExperimentalComposeUiApi::class)
+    @Composable
+    private fun MediaViewerDialog(
+        imageUrl: BaseMediaContent,
+        allImages: ImmutableList<BaseMediaContent>,
+        sourceBounds: Rect?,
+        sourceCornerRadius: Dp,
+        onDismiss: () -> Unit,
     ) {
         val urls = remember(allImages) { allImages.mapNotNull { it.mediaUrl() } }
         val start = remember(urls, imageUrl) { urls.indexOf(imageUrl.mediaUrl()).coerceAtLeast(0) }
         if (urls.isEmpty()) return
 
-        Dialog(onDismissRequest = onDismiss, properties = DialogProperties(usePlatformDefaultWidth = false)) {
+        val transition = rememberZoomTransition(sourceBounds, sourceCornerRadius, onDismiss)
+
+        Dialog(
+            onDismissRequest = transition::dismiss,
+            properties =
+                DialogProperties(
+                    usePlatformDefaultWidth = false,
+                    usePlatformInsets = false,
+                    scrimColor = Color.Transparent,
+                    animateTransition = false,
+                ),
+        ) {
             Box(Modifier.fillMaxSize()) {
-                LightboxOverlay(urls = urls, initialIndex = start, onDismiss = onDismiss)
+                LightboxOverlay(urls = urls, initialIndex = start, onDismiss = transition::dismiss, transition = transition)
             }
         }
     }
@@ -213,7 +245,8 @@ object DesktopNotePlatform : NotePlatform {
         val shape = if (roundedCorner) RoundedCornerShape(12.dp) else RoundedCornerShape(0.dp)
         DesktopVideoPlayer(
             url = videoUri,
-            modifier = Modifier.fillMaxWidth().heightIn(max = MaxInlineMediaHeight).clip(shape),
+            modifier = Modifier.fillMaxWidth().heightIn(max = MaxInlineMediaHeight),
+            shape = shape,
             onFullscreen = onDialog?.let { open -> { _ -> open() } },
             autoPlayWhenVisible = accountViewModel.settings.autoPlayVideos(),
             pauseWhenHidden = true,
@@ -237,7 +270,8 @@ object DesktopNotePlatform : NotePlatform {
         val shape = if (roundedCorner) RoundedCornerShape(12.dp) else RoundedCornerShape(0.dp)
         DesktopVideoPlayer(
             url = videoUri,
-            modifier = Modifier.fillMaxWidth().heightIn(max = MaxInlineMediaHeight).clip(shape),
+            modifier = Modifier.fillMaxWidth().heightIn(max = MaxInlineMediaHeight),
+            shape = shape,
             isLive = isLiveStream,
             onFullscreen = { position -> playFullscreen(videoUri, position) },
             autoPlayWhenVisible = accountViewModel.settings.autoPlayVideos(),
@@ -392,5 +426,26 @@ private fun DesktopPdfViewer(
                 }
             }
         }
+    }
+}
+
+/**
+ * The size of an image shown in a note: as wide as the column and at most [maxHeight] tall, at the
+ * ratio [dim] declares. A photo too tall for the column's width at that height narrows instead,
+ * centered: forcing the full width left aspectRatio no size that fit, so it measured past the height
+ * cap and the slot centered the overflow over the text above and the reactions below.
+ */
+internal fun Modifier.inlineImageSize(
+    dim: DimensionTag?,
+    maxHeight: Dp,
+): Modifier {
+    val ratio = dim?.takeIf { it.width > 0 && it.height > 0 }?.let { it.width.toFloat() / it.height }
+    return if (ratio != null) {
+        fillMaxWidth()
+            .wrapContentWidth(Alignment.CenterHorizontally)
+            .heightIn(max = maxHeight)
+            .aspectRatio(ratio, matchHeightConstraintsFirst = false)
+    } else {
+        fillMaxWidth().heightIn(max = maxHeight)
     }
 }

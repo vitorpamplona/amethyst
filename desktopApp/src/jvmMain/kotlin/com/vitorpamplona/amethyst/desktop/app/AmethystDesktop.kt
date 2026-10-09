@@ -79,6 +79,7 @@ import com.vitorpamplona.amethyst.desktop.platform.clickToActivate
 import com.vitorpamplona.amethyst.desktop.platform.defaultWindowSize
 import com.vitorpamplona.amethyst.desktop.platform.rememberSystemDark
 import com.vitorpamplona.amethyst.desktop.platform.titleBarInsetTop
+import com.vitorpamplona.amethyst.desktop.platform.trackWheelScrolling
 import com.vitorpamplona.amethyst.desktop.service.images.DesktopImageLoaderSetup
 import com.vitorpamplona.amethyst.desktop.service.media.GlobalMediaPlayer
 import com.vitorpamplona.amethyst.desktop.service.media.MediaHttp
@@ -234,8 +235,11 @@ fun main(args: Array<String>) {
 
                     val systemDark by rememberSystemDark(window)
 
-                    // Hover shows only while the window is in front, as in native apps.
-                    DesktopTheme(modules, systemDark, showHover = LocalWindowInfo.current.isWindowFocused) {
+                    // Set while the wheel scrolls: hover hides then, so the feed doesn't blink under the pointer.
+                    val wheelScrolling = remember { mutableStateOf(false) }
+
+                    // Hover shows only while the window is in front, as in native apps, and not mid-scroll.
+                    DesktopTheme(modules, systemDark, showHover = LocalWindowInfo.current.isWindowFocused && !wheelScrolling.value) {
                         NowProvider {
                             CompositionLocalProvider(
                                 LocalViewModelStoreOwner provides windowViewModels,
@@ -251,7 +255,7 @@ fun main(args: Array<String>) {
                                 LocalDrawerMetrics provides DesktopDrawerMetrics,
                             ) {
                                 // A click on the window in the background only brings it forward.
-                                Box(Modifier.fillMaxSize().clickToActivate(window, LocalWindowInfo.current)) {
+                                Box(Modifier.fillMaxSize().clickToActivate(window, LocalWindowInfo.current).trackWheelScrolling(wheelScrolling)) {
                                     Column(Modifier.fillMaxSize()) {
                                         // Under macOS's transparent title bar the screens draw their own top
                                         // bars, padded past the traffic lights by the caption-bar inset, as on

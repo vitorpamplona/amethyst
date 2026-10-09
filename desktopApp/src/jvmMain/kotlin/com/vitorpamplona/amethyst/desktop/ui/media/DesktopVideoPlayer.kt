@@ -26,10 +26,10 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -47,7 +47,9 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ImageBitmap
+import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
@@ -89,6 +91,7 @@ fun DesktopVideoPlayer(
     autoPlayWhenVisible: Boolean = false,
     pauseWhenHidden: Boolean = false,
     loadOnDemand: Boolean = false,
+    shape: Shape = MaterialTheme.shapes.small,
 ) {
     // Only this video's state: every other card on screen would otherwise recompose on each tick
     // of whichever video is playing.
@@ -169,26 +172,45 @@ fun DesktopVideoPlayer(
     }
 
     videoState?.aspectRatio?.let { if (it != 16f / 9f) aspectRatio = it }
+    // Until the engine reports its shape, the thumbnail knows it: without it a portrait video would
+    // sit in a 16:9 box until it plays.
+    val ratio =
+        if (aspectRatio != 16f / 9f) {
+            aspectRatio
+        } else {
+            thumbnail?.takeIf { it.width > 0 && it.height > 0 }?.let { it.width.toFloat() / it.height } ?: aspectRatio
+        }
 
-    BoxWithConstraints(modifier = modifier.then(visibilityModifier)) {
-        val desiredHeight = maxWidth / aspectRatio
+    // In full screen the overlay draws the engine; a second surface would resize it too.
+    val drawsEngine = isActiveVideo && currentSurfaceOwner === surfaceOwner && !isFullscreen
+    val activePlayer = if (drawsEngine) GlobalMediaPlayer.activeVideoPlayerState else null
+
+    // Black behind a picture, as any player letterboxes; the theme's placeholder until there is one,
+    // and behind the error message, which is drawn in the theme's colors.
+    val backdrop =
+        if (loaded && errorReason == null && (activePlayer != null || thumbnail != null)) {
+            Color.Black
+        } else {
+            MaterialTheme.colorScheme.surfaceContainerHigh
+        }
+
+    BoxWithConstraints(modifier = modifier.then(visibilityModifier), contentAlignment = Alignment.TopCenter) {
+        val desiredHeight = maxWidth / ratio
         val constrainedHeight = if (constraints.hasBoundedHeight) minOf(desiredHeight, maxHeight) else desiredHeight
+        // Only as wide as the picture at that height, as an image is, so the controls and their
+        // gradients sit on the video instead of across empty pillars in the theme's color. Never so
+        // narrow that the controls stop fitting.
+        val width = (constrainedHeight * ratio).coerceIn(minOf(MinControlsWidth, maxWidth), maxWidth)
 
         Box(
             modifier =
                 Modifier
-                    .fillMaxWidth()
+                    .width(width)
                     .height(constrainedHeight)
-                    .background(
-                        MaterialTheme.colorScheme.surfaceContainerHigh,
-                        MaterialTheme.shapes.small,
-                    ),
+                    .clip(shape)
+                    .background(backdrop),
             contentAlignment = Alignment.Center,
         ) {
-            // In full screen the overlay draws the engine; a second surface would resize it too.
-            val drawsEngine = isActiveVideo && currentSurfaceOwner === surfaceOwner && !isFullscreen
-            val activePlayer = if (drawsEngine) GlobalMediaPlayer.activeVideoPlayerState else null
-
             if (!loaded) {
                 IconButton(
                     onClick = {
@@ -213,7 +235,7 @@ fun DesktopVideoPlayer(
             } else if (activePlayer != null) {
                 VideoPlayerSurface(
                     playerState = activePlayer,
-                    modifier = Modifier.fillMaxSize().clip(MaterialTheme.shapes.small),
+                    modifier = Modifier.fillMaxSize(),
                     contentScale = ContentScale.Fit,
                 )
             } else {
@@ -221,10 +243,7 @@ fun DesktopVideoPlayer(
                     Image(
                         bitmap = bitmap,
                         contentDescription = "Video thumbnail",
-                        modifier =
-                            Modifier
-                                .fillMaxSize()
-                                .clip(MaterialTheme.shapes.small),
+                        modifier = Modifier.fillMaxSize(),
                         contentScale = ContentScale.Fit,
                     )
                 }
@@ -283,6 +302,9 @@ fun DesktopVideoPlayer(
         }
     }
 }
+
+/** Below this the top, middle and bottom rows of [VideoControls] overflow. */
+private val MinControlsWidth = 280.dp
 
 @Composable
 private fun PlaybackErrorMessage(

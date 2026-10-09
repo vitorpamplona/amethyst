@@ -100,7 +100,7 @@ fun concordCommunityHasUnreadFlow(
 
 /**
  * True for a note the Concord channel *timeline* actually renders — the same predicate as
- * [com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.publicChannels.dal.ChannelFeedFilter]'s
+ * [com.vitorpamplona.amethyst.commons.chats.publicChannels.dal.ChannelFeedFilter]'s
  * `isTimelineMessage`: a loaded, acceptable message that is **not** a kind-1111 [CommentEvent].
  *
  * A [CommentEvent] is a *minichat thread reply* that lives inside its parent's thread, not on the

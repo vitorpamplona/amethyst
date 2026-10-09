@@ -83,6 +83,8 @@ import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.placeholderText
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.amethyst.commons.wallet.ReloadSource
+import com.vitorpamplona.amethyst.commons.wallet.TopUpMintViewModel
+import com.vitorpamplona.amethyst.commons.wallet.TopUpStatus
 import kotlinx.coroutines.launch
 import androidx.compose.material3.Icon as Material3Icon
 
