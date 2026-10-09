@@ -31,6 +31,7 @@ import com.vitorpamplona.amethyst.commons.model.preferences.AppPreferenceStores
 import com.vitorpamplona.amethyst.commons.model.preferences.DrawerSectionCollapsePreferences
 import com.vitorpamplona.amethyst.commons.model.preferences.NamecoinSettingsStore
 import com.vitorpamplona.amethyst.commons.model.preferences.OtsSettingsStore
+import com.vitorpamplona.amethyst.commons.model.preferences.PaneWidthPreferences
 import com.vitorpamplona.amethyst.commons.napplet.permissions.NappletPermissionLedger
 import com.vitorpamplona.amethyst.commons.relayClient.auth.AuthCoordinator
 import com.vitorpamplona.amethyst.commons.relayManagement.Nip86Executor
@@ -69,6 +70,8 @@ class DesktopAppServices(
     override val torStatus: Flow<TorServiceStatus> get() = modules.torManager.status
 
     override val drawerSectionCollapsePrefs: DrawerSectionCollapsePreferences get() = modules.drawerSectionCollapsePrefs
+
+    override val paneWidthPrefs: PaneWidthPreferences get() = modules.paneWidthPrefs
 
     override val scheduledPostStore: ScheduledPostStore get() = modules.scheduledPostStore
 

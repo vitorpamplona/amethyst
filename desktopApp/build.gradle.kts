@@ -134,8 +134,15 @@ tasks.register<JavaExec>("runLegacy") {
 // Added at execution: the Compose plugin sets the task's jvmArgs after this script configures it.
 tasks.withType<JavaExec>().matching { it.name == "run" }.configureEach {
     val overrides = listOf("amethyst.platform", "amethyst.appearance", "amethyst.accent")
+    val dockIcon = project.file("src/jvmMain/resources/icon.icns")
     doFirst {
         overrides.forEach { key -> System.getProperty(key)?.let { jvmArgs("-D$key=$it") } }
+        // macOS: names the Dock's entry for the plain JVM `run` starts (the packaged app takes its
+        // name from its Info.plist). The app switcher still says "java": it reads the name of the
+        // bundle the binary sits in, and the JDK's java is its own bundle.
+        if (System.getProperty("os.name").startsWith("Mac")) {
+            jvmArgs("-Xdock:name=Amethyst", "-Xdock:icon=${dockIcon.absolutePath}")
+        }
     }
 }
 
@@ -143,6 +150,9 @@ compose.desktop {
     application {
         mainClass = "com.vitorpamplona.amethyst.desktop.app.AmethystDesktopKt"
         jvmArgs += "--add-opens=java.base/java.nio=ALL-UNNAMED"
+        // Lets the app name its X11 windows "Amethyst" (WM_CLASS), which the Linux desktop entries
+        // declare as StartupWMClass. A no-op on macOS and Windows.
+        jvmArgs += "--add-opens=java.desktop/sun.awt.X11=ALL-UNNAMED"
 
         jvmArgs += "-Xmx2g"
 
@@ -278,7 +288,8 @@ compose.desktop {
 // repackaging the matching app image (createDistributable's, the same content) with the
 // task's own package options and a resource dir holding jpackage's template, read from the JDK it
 // packages with, plus these lines. The .deb gets the same packages from
-// scripts/add-deb-gstreamer-deps.sh in CI.
+// scripts/add-deb-gstreamer-deps.sh in CI. The same resource dir also adds StartupWMClass to the
+// desktop entry (scripts/add-deb-wm-class.sh does that for the .deb).
 //
 // base: playbin, appsink, volume; good: HTTP, MP4, HLS, audio output; libav/openh264: H.264 and
 // AAC decoding. The boolean forms take Fedora's or openSUSE's name; the decoders are weak
@@ -313,9 +324,11 @@ listOf("packageRpm" to "main", "packageReleaseRpm" to "main-release").forEach { 
         val skip = appImageOptions
         doLast {
             val jdk = packagingJdk.get()
-            val template =
+            val (template, desktopTemplate) =
                 FileSystems.newFileSystem(URI.create("jrt:/"), mapOf("java.home" to jdk)).use { jrt ->
-                    Files.readString(jrt.getPath("/modules/jdk.jpackage/jdk/jpackage/internal/resources/template.spec"))
+                    val resources = "/modules/jdk.jpackage/jdk/jpackage/internal/resources"
+                    Files.readString(jrt.getPath("$resources/template.spec")) to
+                        Files.readString(jrt.getPath("$resources/template.desktop"))
                 }
             val anchor = Regex("(?m)^Autoreq: 0$")
             check(anchor.containsMatchIn(template)) {
@@ -323,6 +336,10 @@ listOf("packageRpm" to "main", "packageReleaseRpm" to "main-release").forEach { 
             }
             val resources = specDir.get().asFile.apply { deleteRecursively(); mkdirs() }
             File(resources, "${rpmPackageName.get()}.spec").writeText(anchor.replaceFirst(template, "Autoreq: 0\n$deps"))
+            // Docks and app switchers match the window's WM_CLASS ("Amethyst", set in AmethystDesktop.kt)
+            // to the desktop entry's StartupWMClass, which jpackage's template lacks. jpackage takes
+            // <app name>.desktop from the resource dir in its place and still fills in its fields.
+            File(resources, "${appName.get()}.desktop").writeText(desktopTemplate.trimEnd() + "\nStartupWMClass=Amethyst\n")
 
             // The task's own options, one per line with quoted values, minus the app-image ones.
             val lines = composeArgs.get().asFile.readLines()

@@ -20,14 +20,11 @@
  */
 package com.vitorpamplona.amethyst.commons.ui.layouts
 
-import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.input.pointer.PointerIcon
+import androidx.compose.ui.input.pointer.pointerHoverIcon
+import android.view.PointerIcon as AndroidPointerIcon
 
-@Composable
-actual fun HorizontalTwoPane(
-    first: @Composable () -> Unit,
-    second: @Composable () -> Unit,
-    splitFraction: Float,
-    modifier: Modifier,
-    onDividerDrag: ((deltaDp: Float) -> Unit)?,
-) = ProportionalTwoPane(first, second, splitFraction, modifier, onDividerDrag)
+private val ResizeCursor = PointerIcon(AndroidPointerIcon.TYPE_HORIZONTAL_DOUBLE_ARROW)
+
+internal actual fun Modifier.horizontalResizeCursor(): Modifier = pointerHoverIcon(ResizeCursor)

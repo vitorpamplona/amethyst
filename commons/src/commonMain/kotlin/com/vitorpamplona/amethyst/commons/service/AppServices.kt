@@ -33,6 +33,7 @@ import com.vitorpamplona.amethyst.commons.model.preferences.CalendarReminderSett
 import com.vitorpamplona.amethyst.commons.model.preferences.DrawerSectionCollapsePreferences
 import com.vitorpamplona.amethyst.commons.model.preferences.NamecoinSettingsStore
 import com.vitorpamplona.amethyst.commons.model.preferences.OtsSettingsStore
+import com.vitorpamplona.amethyst.commons.model.preferences.PaneWidthPreferences
 import com.vitorpamplona.amethyst.commons.napplet.permissions.NappletPermissionLedger
 import com.vitorpamplona.amethyst.commons.relayClient.auth.AuthCoordinator
 import com.vitorpamplona.amethyst.commons.relayManagement.Nip86Executor
@@ -82,6 +83,9 @@ interface AppServices {
 
     /** Device-wide drawer state: which headings the user folded away. Never synced. */
     val drawerSectionCollapsePrefs: DrawerSectionCollapsePreferences
+
+    /** Device-wide widths the user dragged the panes of a wide window to. Never synced. */
+    val paneWidthPrefs: PaneWidthPreferences
 
     /** Posts scheduled for later, across every account on this device. */
     val scheduledPostStore: ScheduledPostStore

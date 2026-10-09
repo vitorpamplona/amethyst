@@ -21,13 +21,8 @@
 package com.vitorpamplona.amethyst.commons.ui.layouts
 
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.Modifier
+import androidx.compose.ui.input.pointer.PointerEvent
 
+/** Touch only: nothing to send again. */
 @Composable
-actual fun HorizontalTwoPane(
-    first: @Composable () -> Unit,
-    second: @Composable () -> Unit,
-    splitFraction: Float,
-    modifier: Modifier,
-    onDividerDrag: ((deltaDp: Float) -> Unit)?,
-) = ProportionalTwoPane(first, second, splitFraction, modifier, onDividerDrag)
+internal actual fun rememberWheelRedispatcher(): (event: PointerEvent, dxPx: Float) -> Unit = { _, _ -> }
