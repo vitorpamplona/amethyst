@@ -23,7 +23,10 @@ package com.vitorpamplona.amethyst.commons.ui.components
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
+import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.MaterialTheme
@@ -32,7 +35,12 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.unit.DpOffset
+import androidx.compose.ui.unit.IntOffset
+import androidx.compose.ui.unit.IntRect
+import androidx.compose.ui.unit.IntSize
+import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.window.PopupPositionProvider
 import androidx.compose.ui.window.PopupProperties
 
 private val MenuShape = RoundedCornerShape(20.dp)
@@ -100,3 +108,58 @@ fun RoundedMenuSection(content: @Composable ColumnScope.() -> Unit) {
 
 /** Rounds a menu row, so its hover and press highlight is a pill inside the section. */
 val RoundedMenuItemModifier = Modifier.clip(MenuItemShape)
+
+/**
+ * The container of a [RoundedDropdownMenu], for a menu placed by its own Popup: a submenu,
+ * which Material's DropdownMenu cannot place beside its row (its offset shifts both of the sides
+ * it tries, so it never flips to the left at the window's edge). Sized and padded as Material
+ * sizes its menus.
+ */
+@Composable
+fun RoundedMenuSurface(content: @Composable ColumnScope.() -> Unit) {
+    Surface(
+        shape = MenuShape,
+        color = MaterialTheme.colorScheme.surfaceContainerHigh,
+        shadowElevation = 3.dp,
+    ) {
+        Column(
+            modifier =
+                Modifier
+                    // Material's own 112–280dp item bounds, plus this container's side and section padding.
+                    .widthIn(min = 112.dp, max = 280.dp + (MenuSidePadding + MenuSectionPadding) * 2)
+                    .width(IntrinsicSize.Max)
+                    .padding(horizontal = MenuSidePadding, vertical = 8.dp),
+            verticalArrangement = Arrangement.spacedBy(MenuSectionGap),
+        ) {
+            content()
+        }
+    }
+}
+
+/**
+ * Places a submenu beside the row that opened it ([anchorBounds]): after it when it fits, else
+ * before it, its first row level with that row ([firstRowInsetPx] above it) and kept inside the
+ * window.
+ */
+class SubmenuPositionProvider(
+    private val firstRowInsetPx: Int,
+) : PopupPositionProvider {
+    override fun calculatePosition(
+        anchorBounds: IntRect,
+        windowSize: IntSize,
+        layoutDirection: LayoutDirection,
+        popupContentSize: IntSize,
+    ): IntOffset {
+        val width = popupContentSize.width
+        val after = if (layoutDirection == LayoutDirection.Ltr) anchorBounds.right else anchorBounds.left - width
+        val before = if (layoutDirection == LayoutDirection.Ltr) anchorBounds.left - width else anchorBounds.right
+        val x =
+            when {
+                after >= 0 && after + width <= windowSize.width -> after
+                before >= 0 && before + width <= windowSize.width -> before
+                else -> (windowSize.width - width).coerceAtLeast(0)
+            }
+        val y = (anchorBounds.top - firstRowInsetPx).coerceAtMost(windowSize.height - popupContentSize.height).coerceAtLeast(0)
+        return IntOffset(x, y)
+    }
+}

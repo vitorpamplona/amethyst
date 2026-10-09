@@ -57,8 +57,10 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.movableContentOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment.Companion.CenterVertically
 import androidx.compose.ui.Modifier
@@ -117,6 +119,7 @@ import com.vitorpamplona.amethyst.commons.ui.components.ThinPaddingTextField
 import com.vitorpamplona.amethyst.commons.ui.components.rememberViewModel
 import com.vitorpamplona.amethyst.commons.ui.insets.imePaddingSafe
 import com.vitorpamplona.amethyst.commons.ui.layouts.LocalScreenLayout
+import com.vitorpamplona.amethyst.commons.ui.layouts.NavigationStyle
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.navigation.topbars.PostingTopBar
 import com.vitorpamplona.amethyst.commons.ui.note.BaseUserPicture
@@ -350,9 +353,9 @@ private fun NewPostScreenBody(
             )
         }
 
-        // On large windows the text area takes only the height it needs, so the toolbar below
+        // Where the tools wrap, the text area takes only the height it needs, so the toolbar below
         // sits under the text rather than at the bottom of the window.
-        val isLargeScreen = LocalScreenLayout.current.isLargeScreen
+        val toolsWrap = composerToolsWrap()
         Row(
             modifier =
                 Modifier
@@ -360,7 +363,7 @@ private fun NewPostScreenBody(
                     .padding(
                         start = Size10dp,
                         end = Size10dp,
-                    ).weight(1f, fill = !isLargeScreen),
+                    ).weight(1f, fill = !toolsWrap),
         ) {
             Column(
                 modifier =
@@ -778,6 +781,14 @@ private fun NewPostScreenBody(
     }
 }
 
+/**
+ * Whether the composer's tools wrap under the text rather than scroll in a strip at the bottom:
+ * on the docked tier, a desktop-sized window. Not on the rail tier, which landscape phones reach,
+ * where the keyboard leaves no height for a second row of tools.
+ */
+@Composable
+private fun composerToolsWrap(): Boolean = LocalScreenLayout.current.navigationStyle == NavigationStyle.PERMANENT_DRAWER
+
 /** Lines the wrapped tools up with the text: past the 10dp side padding and the 35dp avatar. */
 private val ComposerToolsStartPadding = 45.dp
 
@@ -793,142 +804,155 @@ private fun BottomRowActions(
             }
     },
 ) {
-    // On large windows the tools wrap under the text instead of scrolling sideways in a strip
+    // On the docked tier the tools wrap under the text instead of scrolling sideways in a strip
     // pinned to the window's bottom: a mouse cannot drag that strip, so its last tools were out
-    // of reach.
-    val tools: @Composable () -> Unit = {
-        SelectFromGallery(
-            isUploading = postViewModel.isUploadingImage,
-            enabled = !postViewModel.isUploadingFile,
-            tint = MaterialTheme.colorScheme.onBackground,
-            modifier = Modifier,
-        ) {
-            postViewModel.selectImage(it)
-        }
+    // of reach. Movable, so a window crossing tiers moves the tools' state (a voice recording,
+    // an open picker) instead of disposing it.
+    val tools =
+        remember {
+            movableContentOf { vm: ShortNotePostViewModel, onSchedule: () -> Unit, wrapped: Boolean ->
+                SelectFromGallery(
+                    isUploading = vm.isUploadingImage,
+                    enabled = !vm.isUploadingFile,
+                    tint = MaterialTheme.colorScheme.onBackground,
+                    modifier = Modifier,
+                ) {
+                    vm.selectImage(it)
+                }
 
-        SelectFromFiles(
-            isUploading = postViewModel.isUploadingFile,
-            enabled = !postViewModel.isUploadingImage,
-            tint = MaterialTheme.colorScheme.onBackground,
-            modifier = Modifier,
-        ) {
-            postViewModel.selectImage(it)
-        }
+                SelectFromFiles(
+                    isUploading = vm.isUploadingFile,
+                    enabled = !vm.isUploadingImage,
+                    tint = MaterialTheme.colorScheme.onBackground,
+                    modifier = Modifier,
+                ) {
+                    vm.selectImage(it)
+                }
 
-        TakePictureButton(
-            onPictureTaken = {
-                postViewModel.selectImage(it)
-            },
-        )
-
-        TakeVideoButton(
-            onVideoTaken = {
-                postViewModel.selectImage(it)
-            },
-        )
-
-        RecordVoiceButton(
-            onVoiceTaken = { recording ->
-                postViewModel.selectVoiceRecording(recording)
-            },
-            maxDurationSeconds = MAX_VOICE_RECORD_SECONDS,
-        )
-
-        // Polls publish kinds that can't travel inside a private wrap, so the
-        // two toggles are mutually exclusive. Neither a private wrap nor a poll makes sense for a
-        // NIP-29 group thread (it publishes plainly to the host relay), so hide both there.
-        if (!postViewModel.wantsPoll && !postViewModel.wantsZapPoll && postViewModel.groupThreadTarget == null) {
-            val haptic = LocalHapticFeedback.current
-            AddPrivateNoteButton(
-                isActive = postViewModel.wantsPrivateNote,
-                isLocked = postViewModel.privateNoteLocked,
-            ) {
-                val nowPrivate = !postViewModel.wantsPrivateNote
-                postViewModel.togglePrivateNote()
-                // Sealing a note changes what Send is about to do, so the change
-                // is confirmed in the hand as well as on screen — and in the
-                // direction it actually moved.
-                haptic.performHapticFeedback(
-                    if (nowPrivate) HapticFeedbackType.ToggleOn else HapticFeedbackType.ToggleOff,
+                TakePictureButton(
+                    onPictureTaken = {
+                        vm.selectImage(it)
+                    },
                 )
-            }
-        }
 
-        if ((postViewModel.canUsePoll || postViewModel.canUseZapPoll) &&
-            !postViewModel.wantsPrivateNote &&
-            postViewModel.groupThreadTarget == null
-        ) {
-            AddPollButton(postViewModel.wantsPoll || postViewModel.wantsZapPoll) {
-                val isActive = postViewModel.wantsPoll || postViewModel.wantsZapPoll
-                if (isActive) {
-                    postViewModel.wantsPoll = false
-                    postViewModel.wantsZapPoll = false
-                } else {
-                    postViewModel.wantsPoll = true
+                TakeVideoButton(
+                    onVideoTaken = {
+                        vm.selectImage(it)
+                    },
+                )
+
+                // The recorder fills its parent. The strip bounds it to 50dp tall and lets it take only
+                // the width it needs; wrapped, a strip of its own does the same instead of letting it
+                // spread over the whole toolbar. One Row in both layouts, only its modifier changing,
+                // so a recording survives the switch.
+                val recorderScroll = rememberScrollState()
+                Row(if (wrapped) Modifier.height(50.dp).horizontalScroll(recorderScroll) else Modifier) {
+                    RecordVoiceButton(
+                        onVoiceTaken = { recording ->
+                            vm.selectVoiceRecording(recording)
+                        },
+                        maxDurationSeconds = MAX_VOICE_RECORD_SECONDS,
+                    )
+                }
+
+                // Polls publish kinds that can't travel inside a private wrap, so the
+                // two toggles are mutually exclusive. Neither a private wrap nor a poll makes sense for a
+                // NIP-29 group thread (it publishes plainly to the host relay), so hide both there.
+                if (!vm.wantsPoll && !vm.wantsZapPoll && vm.groupThreadTarget == null) {
+                    val haptic = LocalHapticFeedback.current
+                    AddPrivateNoteButton(
+                        isActive = vm.wantsPrivateNote,
+                        isLocked = vm.privateNoteLocked,
+                    ) {
+                        val nowPrivate = !vm.wantsPrivateNote
+                        vm.togglePrivateNote()
+                        // Sealing a note changes what Send is about to do, so the change
+                        // is confirmed in the hand as well as on screen — and in the
+                        // direction it actually moved.
+                        haptic.performHapticFeedback(
+                            if (nowPrivate) HapticFeedbackType.ToggleOn else HapticFeedbackType.ToggleOff,
+                        )
+                    }
+                }
+
+                if ((vm.canUsePoll || vm.canUseZapPoll) &&
+                    !vm.wantsPrivateNote &&
+                    vm.groupThreadTarget == null
+                ) {
+                    AddPollButton(vm.wantsPoll || vm.wantsZapPoll) {
+                        val isActive = vm.wantsPoll || vm.wantsZapPoll
+                        if (isActive) {
+                            vm.wantsPoll = false
+                            vm.wantsZapPoll = false
+                        } else {
+                            vm.wantsPoll = true
+                        }
+                    }
+                }
+
+                ForwardZapToButton(vm.wantsForwardZapTo) {
+                    vm.wantsForwardZapTo = !vm.wantsForwardZapTo
+                }
+
+                if (vm.canAddZapRaiser) {
+                    AddZapraiserButton(vm.wantsZapRaiser) {
+                        vm.wantsZapRaiser = !vm.wantsZapRaiser
+                    }
+                }
+
+                PowOverrideButton(
+                    effectiveDifficulty = vm.effectivePowDifficulty(),
+                    defaultDifficulty = vm.defaultPowDifficulty(),
+                    isOverridden = vm.powOverride != null,
+                    onSelect = { vm.powOverride = it },
+                )
+
+                // A group thread's title is required, so the field is always shown for it — no toggle.
+                if (vm.groupThreadTarget == null) {
+                    AddSubjectButton(vm.wantsSubject) {
+                        vm.toggleSubject()
+                    }
+                }
+
+                MarkAsSensitiveButton(vm.wantsToMarkAsSensitive) {
+                    vm.toggleMarkAsSensitive()
+                }
+
+                ExpirationDateButton(vm.wantsExpirationDate) {
+                    vm.toggleExpirationDate()
+                }
+
+                // Private wraps are built and sent immediately; scheduling them would
+                // require wrapping at publish time, so the option is hidden for now. Scheduling also
+                // bypasses the host-relay pin, so it's hidden for NIP-29 group threads too.
+                if (!vm.wantsPrivateNote && vm.groupThreadTarget == null) {
+                    ScheduleAtButton(vm.scheduledForSec != null, onSchedule)
+                }
+
+                AddGeoHashButton(vm.wantsToAddGeoHash) {
+                    vm.wantsToAddGeoHash = !vm.wantsToAddGeoHash
+                }
+
+                AddSecretEmojiButton(vm.wantsSecretEmoji) {
+                    vm.wantsSecretEmoji = !vm.wantsSecretEmoji
+                }
+
+                if (vm.canAddInvoice && vm.hasLnAddress()) {
+                    AddLnInvoiceButton(vm.wantsInvoice) {
+                        vm.wantsInvoice = !vm.wantsInvoice
+                    }
                 }
             }
         }
+    val currentOnScheduleClicked by rememberUpdatedState(onScheduleClicked)
+    val onSchedule = remember { { currentOnScheduleClicked() } }
 
-        ForwardZapToButton(postViewModel.wantsForwardZapTo) {
-            postViewModel.wantsForwardZapTo = !postViewModel.wantsForwardZapTo
-        }
-
-        if (postViewModel.canAddZapRaiser) {
-            AddZapraiserButton(postViewModel.wantsZapRaiser) {
-                postViewModel.wantsZapRaiser = !postViewModel.wantsZapRaiser
-            }
-        }
-
-        PowOverrideButton(
-            effectiveDifficulty = postViewModel.effectivePowDifficulty(),
-            defaultDifficulty = postViewModel.defaultPowDifficulty(),
-            isOverridden = postViewModel.powOverride != null,
-            onSelect = { postViewModel.powOverride = it },
-        )
-
-        // A group thread's title is required, so the field is always shown for it — no toggle.
-        if (postViewModel.groupThreadTarget == null) {
-            AddSubjectButton(postViewModel.wantsSubject) {
-                postViewModel.toggleSubject()
-            }
-        }
-
-        MarkAsSensitiveButton(postViewModel.wantsToMarkAsSensitive) {
-            postViewModel.toggleMarkAsSensitive()
-        }
-
-        ExpirationDateButton(postViewModel.wantsExpirationDate) {
-            postViewModel.toggleExpirationDate()
-        }
-
-        // Private wraps are built and sent immediately; scheduling them would
-        // require wrapping at publish time, so the option is hidden for now. Scheduling also
-        // bypasses the host-relay pin, so it's hidden for NIP-29 group threads too.
-        if (!postViewModel.wantsPrivateNote && postViewModel.groupThreadTarget == null) {
-            ScheduleAtButton(postViewModel.scheduledForSec != null, onScheduleClicked)
-        }
-
-        AddGeoHashButton(postViewModel.wantsToAddGeoHash) {
-            postViewModel.wantsToAddGeoHash = !postViewModel.wantsToAddGeoHash
-        }
-
-        AddSecretEmojiButton(postViewModel.wantsSecretEmoji) {
-            postViewModel.wantsSecretEmoji = !postViewModel.wantsSecretEmoji
-        }
-
-        if (postViewModel.canAddInvoice && postViewModel.hasLnAddress()) {
-            AddLnInvoiceButton(postViewModel.wantsInvoice) {
-                postViewModel.wantsInvoice = !postViewModel.wantsInvoice
-            }
-        }
-    }
-
-    if (LocalScreenLayout.current.isLargeScreen) {
+    if (composerToolsWrap()) {
         FlowRow(
             modifier = Modifier.fillMaxWidth().padding(start = ComposerToolsStartPadding, end = Size10dp),
             itemVerticalAlignment = CenterVertically,
         ) {
-            tools()
+            tools(postViewModel, onSchedule, true)
         }
     } else {
         val scrollState = rememberScrollState()
@@ -940,7 +964,7 @@ private fun BottomRowActions(
                     .height(50.dp),
             verticalAlignment = CenterVertically,
         ) {
-            tools()
+            tools(postViewModel, onSchedule, false)
         }
     }
 }

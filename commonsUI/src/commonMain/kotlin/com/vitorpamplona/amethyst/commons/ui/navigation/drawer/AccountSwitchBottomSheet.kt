@@ -169,24 +169,7 @@ fun DisplayAccount(
     accountViewModel: AccountViewModel,
     accountSessionManager: AccountSessionManager,
 ) {
-    var baseUser by remember(acc) {
-        mutableStateOf(
-            decodePublicKeyAsHexOrNull(acc.npub)?.let {
-                LocalCache.getUserIfExists(it)
-            },
-        )
-    }
-
-    if (baseUser == null) {
-        LaunchedEffect(key1 = acc.npub) {
-            launch(Dispatchers.IO) {
-                baseUser =
-                    decodePublicKeyAsHexOrNull(acc.npub)?.let {
-                        LocalCache.getOrCreateUser(it)
-                    }
-            }
-        }
-    }
+    val baseUser = rememberAccountUser(acc)
 
     baseUser?.let {
         Row(
@@ -416,17 +399,6 @@ fun AccountSwitchMenu(
     accountViewModel: AccountViewModel,
     accountSessionManager: AccountSessionManager,
 ) {
-    val accounts by accountSessionManager.localPreferences
-        .accountsFlow()
-        .collectAsStateWithLifecycle()
-
-    // accountsFlow() stays null until allSavedAccounts() loads it, as in DisplayAllAccounts.
-    LaunchedEffect(Unit) {
-        if (accounts == null) {
-            accountSessionManager.localPreferences.allSavedAccounts()
-        }
-    }
-
     var addAccount by remember { mutableStateOf(false) }
     var logoutAccount by remember { mutableStateOf<AccountInfo?>(null) }
     val scope = rememberCoroutineScope()
@@ -434,6 +406,18 @@ fun AccountSwitchMenu(
     val currentNpub = remember(accountViewModel) { accountViewModel.account.userProfile().pubkeyNpub() }
 
     RoundedDropdownMenu(expanded = expanded, onDismissRequest = onDismiss) {
+        // Collected only while the menu is open: the drawer composes this menu for its whole life.
+        val accounts by accountSessionManager.localPreferences
+            .accountsFlow()
+            .collectAsStateWithLifecycle()
+
+        // accountsFlow() stays null until allSavedAccounts() loads it, as in DisplayAllAccounts.
+        LaunchedEffect(Unit) {
+            if (accounts == null) {
+                accountSessionManager.localPreferences.allSavedAccounts()
+            }
+        }
+
         RoundedMenuSection {
             accounts?.forEach { acc ->
                 key(acc.npub) {
@@ -486,26 +470,7 @@ private fun AccountMenuItem(
     accountViewModel: AccountViewModel,
     onClick: () -> Unit,
 ) {
-    var baseUser by remember(acc) {
-        mutableStateOf(
-            decodePublicKeyAsHexOrNull(acc.npub)?.let {
-                LocalCache.getUserIfExists(it)
-            },
-        )
-    }
-
-    if (baseUser == null) {
-        LaunchedEffect(key1 = acc.npub) {
-            launch(Dispatchers.IO) {
-                baseUser =
-                    decodePublicKeyAsHexOrNull(acc.npub)?.let {
-                        LocalCache.getOrCreateUser(it)
-                    }
-            }
-        }
-    }
-
-    val user = baseUser ?: return
+    val user = rememberAccountUser(acc) ?: return
 
     DropdownMenuItem(
         text = { Column { AccountName(acc, user, accountViewModel) } },
@@ -528,3 +493,28 @@ private fun AccountMenuItem(
 }
 
 private val AccountMenuPictureModifier = Modifier.size(32.dp).clip(CircleShape)
+
+/** The cached [User] behind a saved account, created off the main thread when it is not cached yet. */
+@Composable
+private fun rememberAccountUser(acc: AccountInfo): User? {
+    var baseUser by remember(acc) {
+        mutableStateOf(
+            decodePublicKeyAsHexOrNull(acc.npub)?.let {
+                LocalCache.getUserIfExists(it)
+            },
+        )
+    }
+
+    if (baseUser == null) {
+        LaunchedEffect(key1 = acc.npub) {
+            launch(Dispatchers.IO) {
+                baseUser =
+                    decodePublicKeyAsHexOrNull(acc.npub)?.let {
+                        LocalCache.getOrCreateUser(it)
+                    }
+            }
+        }
+    }
+
+    return baseUser
+}

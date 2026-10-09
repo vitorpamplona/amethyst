@@ -32,8 +32,11 @@ import com.vitorpamplona.amethyst.commons.ui.layouts.LocalScreenLayout
 
 /**
  * Names an icon-only control in a tooltip when the pointer rests on it, on large windows (the rail
- * and docked-drawer tiers), where a mouse has no other way to learn what an icon does. Phones keep
- * their long press for the control itself, so there the tooltip never opens.
+ * and docked-drawer tiers), where a mouse has no other way to learn what an icon does. There a
+ * long press shows it too, as Material's icon tooltips do on touch; compact windows (portrait
+ * phones) never open it.
+ *
+ * The TooltipBox stays in place on every tier, so a window crossing tiers keeps [content]'s state.
  *
  * Pass the same text the icon gives as its content description.
  */
