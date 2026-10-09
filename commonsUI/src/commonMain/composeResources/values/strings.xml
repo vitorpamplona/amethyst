@@ -6926,4 +6926,8 @@
     <string name="privacy_lock_messages_locked_description">Unlock to read or send private messages.</string>
     <string name="privacy_lock_wallet_locked">Wallet is locked</string>
     <string name="privacy_lock_wallet_locked_description">Unlock to see your balance and send or receive sats.</string>
+    <string name="custom_emoji_picker_open">Insert custom emoji</string>
+    <string name="custom_emoji_picker_search">Search emoji</string>
+    <string name="custom_emoji_picker_empty">No custom emoji yet. Add emoji packs to your emoji list to use them here.</string>
+    <string name="custom_emoji_picker_no_match">No emoji match that name</string>
 </resources>

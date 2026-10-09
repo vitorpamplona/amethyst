@@ -51,6 +51,7 @@ import com.vitorpamplona.amethyst.commons.chats.ui.ThinSendButton
 import com.vitorpamplona.amethyst.commons.model.User
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
 import com.vitorpamplona.amethyst.commons.model.navigation.routeFor
+import com.vitorpamplona.amethyst.commons.nip30CustomEmojis.ui.CustomEmojiPickerButton
 import com.vitorpamplona.amethyst.commons.nip30CustomEmojis.ui.ShowEmojiSuggestionList
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.cancel
@@ -352,6 +353,9 @@ fun KeyboardLeadingIcon(
             modifier = Modifier,
             onImageChosen = channelScreenModel::pickedMedia,
         )
+        channelScreenModel.emojiSuggestions?.let {
+            CustomEmojiPickerButton(it.emojiPacks, channelScreenModel.message, tint = MaterialTheme.colorScheme.placeholderText)
+        }
     }
 }
 

@@ -1,6 +1,6 @@
 # Retiring the legacy desktop app: what each legacy-only feature becomes
 
-> **Status:** decided 2026-10-09 (maintainer). Built: 3b (relay latency), 1 (privacy lock), 6a (compression preview and steps). Supersedes the
+> **Status:** decided 2026-10-09 (maintainer). Built: 3b (relay latency), 1 (privacy lock), 6a (compression preview and steps), 6b (custom-emoji picker). Supersedes the
 > "Legacy-only feature" table in [2026-09-27-one-ui-android-desktop.md](2026-09-27-one-ui-android-desktop.md)
 > step 8d.
 
@@ -159,6 +159,12 @@ GIF picker:
 - Add a **custom-emoji picker** button to the shared composers (notes and DMs, both apps). It shows a
   grid of the user's NIP-30 emoji (their emoji list and saved emoji sets) and inserts
   `:shortcode:`. Today, typing `:word` suggests from the same data.
+
+**Built.** `CustomEmojiPickerButton` (commonsUI `nip30CustomEmojis/ui`) sits in the note and
+comment toolbars and beside the gallery button in DMs and public chats. It reads
+`EmojiPackState.myEmojis`, filters by name, and inserts `:shortcode: ` at the cursor
+(`insertWordAtCursor`); sending already turns shortcodes into `emoji` tags. The legacy GIF search
+goes with the legacy app.
 
 ### 7. Deck and workspaces
 

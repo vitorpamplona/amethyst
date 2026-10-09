@@ -74,6 +74,7 @@ import com.vitorpamplona.amethyst.commons.model.BooleanType
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
 import com.vitorpamplona.amethyst.commons.model.composer.AudienceSelection
 import com.vitorpamplona.amethyst.commons.model.navigation.Route
+import com.vitorpamplona.amethyst.commons.nip30CustomEmojis.ui.CustomEmojiPickerButton
 import com.vitorpamplona.amethyst.commons.nip30CustomEmojis.ui.ShowEmojiSuggestionList
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.audience_send_privately
@@ -829,6 +830,10 @@ private fun BottomRowActions(
             },
             maxDurationSeconds = MAX_VOICE_RECORD_SECONDS,
         )
+
+        postViewModel.emojiSuggestions?.let {
+            CustomEmojiPickerButton(it.emojiPacks, postViewModel.message)
+        }
 
         // Polls publish kinds that can't travel inside a private wrap, so the
         // two toggles are mutually exclusive. Neither a private wrap nor a poll makes sense for a
