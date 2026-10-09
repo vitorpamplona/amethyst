@@ -76,6 +76,7 @@ import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.LinkAnnotation
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
@@ -103,6 +104,7 @@ import com.vitorpamplona.amethyst.commons.relayClient.user.observeUserAssertions
 import com.vitorpamplona.amethyst.commons.relayClient.user.observeUserInfo
 import com.vitorpamplona.amethyst.commons.relayClient.user.observeUserStatuses
 import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.account_switch_select_account
 import com.vitorpamplona.amethyst.commons.resources.bookmarks
 import com.vitorpamplona.amethyst.commons.resources.drafts
 import com.vitorpamplona.amethyst.commons.resources.drawer_accounts
@@ -186,14 +188,22 @@ fun DrawerContent(
 }
 
 /**
+ * The account switcher as a menu: composed whether or not it is `expanded` (it owns the dialogs
+ * it opens), it drops down from wherever the caller places it.
+ */
+typealias AccountMenu = @Composable (expanded: Boolean, onDismiss: () -> Unit) -> Unit
+
+/**
  * Expanded windows: the same drawer content, permanently docked on the left of the shell
- * instead of sliding in as a modal sheet.
+ * instead of sliding in as a modal sheet. With an [accountMenu], the name in the header and the
+ * Accounts row open it in place of the switcher sheet, as a desktop sidebar does.
  */
 @Composable
 fun PermanentDrawerContent(
     nav: INav,
     openSheet: () -> Unit,
     accountViewModel: AccountViewModel,
+    accountMenu: AccountMenu? = null,
 ) {
     Surface(
         modifier = Modifier.width(PermanentDrawerWidth).fillMaxHeight(),
@@ -205,7 +215,7 @@ fun PermanentDrawerContent(
                 WindowInsets.systemBars.only(WindowInsetsSides.Bottom + WindowInsetsSides.Start),
             ),
         ) {
-            DrawerContentBody(nav, openSheet, accountViewModel)
+            DrawerContentBody(nav, openSheet, accountViewModel, accountMenu)
         }
     }
 }
@@ -215,6 +225,7 @@ private fun DrawerContentBody(
     nav: INav,
     openSheet: () -> Unit,
     accountViewModel: AccountViewModel,
+    accountMenu: AccountMenu? = null,
 ) {
     val onClickUser = {
         nav.navDrawer(routeFor(accountViewModel.userProfile()))
@@ -231,6 +242,7 @@ private fun DrawerContentBody(
             modifier = profileContentHeaderModifier,
             accountViewModel,
             onClickUser,
+            accountMenu,
         )
 
         Column(drawerSpacing) {
@@ -251,6 +263,7 @@ private fun DrawerContentBody(
             openSheet,
             accountViewModel,
             nav,
+            accountMenu,
         )
 
         Spacer(modifier = Modifier.weight(1f))
@@ -269,6 +282,7 @@ fun ProfileContent(
     modifier: Modifier = Modifier,
     accountViewModel: AccountViewModel,
     onClickUser: () -> Unit,
+    accountMenu: AccountMenu? = null,
 ) {
     val userInfo by observeUserInfo(baseAccountUser, accountViewModel)
 
@@ -281,6 +295,7 @@ fun ProfileContent(
         modifier = modifier,
         accountViewModel = accountViewModel,
         onClick = onClickUser,
+        accountMenu = accountMenu,
     )
 }
 
@@ -294,6 +309,7 @@ fun ProfileContentTemplate(
     modifier: Modifier,
     accountViewModel: AccountViewModel,
     onClick: () -> Unit,
+    accountMenu: AccountMenu? = null,
 ) {
     Box {
         if (profileBanner != null) {
@@ -333,20 +349,68 @@ fun ProfileContentTemplate(
             )
 
             if (bestDisplayName != null) {
-                CreateTextWithEmoji(
-                    text = bestDisplayName,
-                    tags = tags,
-                    modifier =
-                        Modifier
-                            .padding(top = 7.dp)
-                            .clickable(onClick = onClick),
-                    fontWeight = FontWeight.Bold,
-                    fontSize = 18.sp,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                )
+                if (accountMenu != null) {
+                    AccountMenuName(bestDisplayName, tags, accountMenu)
+                } else {
+                    CreateTextWithEmoji(
+                        text = bestDisplayName,
+                        tags = tags,
+                        modifier =
+                            Modifier
+                                .padding(top = 7.dp)
+                                .clickable(onClick = onClick),
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 18.sp,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                }
             }
         }
+    }
+}
+
+/**
+ * The account's name with a ▾, opening [accountMenu] below it: the docked drawer's account
+ * switcher. The avatar above it still opens the profile.
+ */
+@Composable
+private fun AccountMenuName(
+    name: String,
+    tags: ImmutableListOfLists<String>?,
+    accountMenu: AccountMenu,
+) {
+    var expanded by remember { mutableStateOf(false) }
+
+    Box(Modifier.padding(top = 3.dp)) {
+        Row(
+            modifier =
+                Modifier
+                    .clip(RoundedCornerShape(8.dp))
+                    .clickable(
+                        onClickLabel = stringRes(Res.string.account_switch_select_account),
+                        role = Role.Button,
+                    ) { expanded = true }
+                    .padding(vertical = 4.dp, horizontal = 4.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            CreateTextWithEmoji(
+                text = name,
+                tags = tags,
+                modifier = Modifier.weight(1f, fill = false),
+                fontWeight = FontWeight.Bold,
+                fontSize = 18.sp,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+            Icon(
+                symbol = MaterialSymbols.ExpandMore,
+                contentDescription = null,
+                modifier = Size20Modifier,
+            )
+        }
+
+        accountMenu(expanded) { expanded = false }
     }
 }
 
@@ -613,6 +677,7 @@ fun ListContent(
     openSheet: () -> Unit,
     accountViewModel: AccountViewModel,
     nav: INav,
+    accountMenu: AccountMenu? = null,
 ) {
     // Per-account, synced through the NIP-78 app-specific data event, and edited on the
     // Side Menu settings screen. Empty (the default) means the full stock drawer.
@@ -643,12 +708,25 @@ fun ListContent(
 
         Spacer(modifier = Modifier.weight(1f))
 
-        IconRow(
-            title = Res.string.drawer_accounts,
-            icon = MaterialSymbols.GroupAdd,
-            tint = MaterialTheme.colorScheme.onBackground,
-            onClick = openSheet,
-        )
+        if (accountMenu != null) {
+            var expanded by remember { mutableStateOf(false) }
+            Box {
+                IconRow(
+                    title = Res.string.drawer_accounts,
+                    icon = MaterialSymbols.GroupAdd,
+                    tint = MaterialTheme.colorScheme.onBackground,
+                    onClick = { expanded = true },
+                )
+                accountMenu(expanded) { expanded = false }
+            }
+        } else {
+            IconRow(
+                title = Res.string.drawer_accounts,
+                icon = MaterialSymbols.GroupAdd,
+                tint = MaterialTheme.colorScheme.onBackground,
+                onClick = openSheet,
+            )
+        }
     }
 }
 

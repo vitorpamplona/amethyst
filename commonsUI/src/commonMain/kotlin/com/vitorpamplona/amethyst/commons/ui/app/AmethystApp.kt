@@ -68,6 +68,7 @@ import com.vitorpamplona.amethyst.commons.ui.layouts.LocalScreenLayout
 import com.vitorpamplona.amethyst.commons.ui.navigation.bottombars.LocalTabReselectCoordinator
 import com.vitorpamplona.amethyst.commons.ui.navigation.bottombars.TabReselectCoordinator
 import com.vitorpamplona.amethyst.commons.ui.navigation.drawer.AccountSwitchBottomSheet
+import com.vitorpamplona.amethyst.commons.ui.navigation.drawer.AccountSwitchMenu
 import com.vitorpamplona.amethyst.commons.ui.navigation.drawer.DrawerContent
 import com.vitorpamplona.amethyst.commons.ui.navigation.drawer.PermanentDrawerContent
 import com.vitorpamplona.amethyst.commons.ui.navigation.host.LocalNavDestinations
@@ -277,7 +278,11 @@ private fun AppNavigation(
             accountViewModel = accountViewModel,
             nav = nav,
             drawerContent = { openAccountSwitcher -> DrawerContent(nav, openAccountSwitcher, accountViewModel) },
-            permanentDrawerContent = { openAccountSwitcher -> PermanentDrawerContent(nav, openAccountSwitcher, accountViewModel) },
+            permanentDrawerContent = { openAccountSwitcher ->
+                PermanentDrawerContent(nav, openAccountSwitcher, accountViewModel) { expanded, onDismiss ->
+                    AccountSwitchMenu(expanded, onDismiss, accountViewModel, sessionManager)
+                }
+            },
             accountSwitcherContent = { AccountSwitchBottomSheet(accountViewModel, sessionManager) },
             suspendEdgeSwipe = root::suspendEdgeSwipe,
         ) {
