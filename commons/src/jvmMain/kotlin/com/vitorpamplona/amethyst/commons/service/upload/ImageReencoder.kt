@@ -84,7 +84,7 @@ object ImageReencoder {
      */
     suspend fun reencode(
         source: File,
-        quality: CompressionQuality,
+        quality: ImageCompressionTarget,
     ): ReencodeResult =
         withContext(compressionDispatcher) {
             coroutineContext.ensureActive()

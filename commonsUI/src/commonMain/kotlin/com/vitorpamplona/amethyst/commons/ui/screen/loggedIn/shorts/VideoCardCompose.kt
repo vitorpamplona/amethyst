@@ -78,6 +78,9 @@ fun VideoCardCompose(
         // Image content
         VideoCardImage(baseNote, event, backgroundColor, accountViewModel)
 
+        // Title and content
+        VideoCardCaption(event)
+
         // Reactions row
         ReactionsRow(
             baseNote = baseNote,
@@ -87,9 +90,6 @@ fun VideoCardCompose(
             accountViewModel = accountViewModel,
             nav = nav,
         )
-
-        // Title and content
-        VideoCardCaption(event)
     }
 }
 

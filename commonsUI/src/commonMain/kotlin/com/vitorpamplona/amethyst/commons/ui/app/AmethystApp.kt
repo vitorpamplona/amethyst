@@ -34,6 +34,7 @@ import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.SideEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.snapshotFlow
@@ -48,6 +49,9 @@ import com.vitorpamplona.amethyst.commons.model.Account
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
 import com.vitorpamplona.amethyst.commons.model.navigation.Route
 import com.vitorpamplona.amethyst.commons.model.navigation.isSameRoute
+import com.vitorpamplona.amethyst.commons.model.navigation.lockScope
+import com.vitorpamplona.amethyst.commons.privacylock.LocalPrivacyLockState
+import com.vitorpamplona.amethyst.commons.privacylock.LockScope
 import com.vitorpamplona.amethyst.commons.relayClient.authCommand.compose.RelayAuthPromptHost
 import com.vitorpamplona.amethyst.commons.relayClient.authCommand.compose.RelayAuthSubscription
 import com.vitorpamplona.amethyst.commons.relayClient.event.LocalEventFinder
@@ -67,6 +71,7 @@ import com.vitorpamplona.amethyst.commons.ui.components.toasts.DisplayErrorMessa
 import com.vitorpamplona.amethyst.commons.ui.layouts.LocalScreenLayout
 import com.vitorpamplona.amethyst.commons.ui.navigation.bottombars.LocalTabReselectCoordinator
 import com.vitorpamplona.amethyst.commons.ui.navigation.bottombars.TabReselectCoordinator
+import com.vitorpamplona.amethyst.commons.ui.navigation.deck.DeckArea
 import com.vitorpamplona.amethyst.commons.ui.navigation.drawer.AccountSwitchBottomSheet
 import com.vitorpamplona.amethyst.commons.ui.navigation.drawer.AccountSwitchMenu
 import com.vitorpamplona.amethyst.commons.ui.navigation.drawer.DrawerContent
@@ -81,6 +86,8 @@ import com.vitorpamplona.amethyst.commons.ui.navigation.navs.rememberNav
 import com.vitorpamplona.amethyst.commons.ui.navigation.routes.getRouteWithArguments
 import com.vitorpamplona.amethyst.commons.ui.navigation.shell.AppShellLayout
 import com.vitorpamplona.amethyst.commons.ui.platform.LocalAppServices
+import com.vitorpamplona.amethyst.commons.ui.privacylock.PrivacyLockGate
+import com.vitorpamplona.amethyst.commons.ui.privacylock.PrivacyLockHost
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.BottomBarFeedPreloaders
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.buzz.BuzzDmDiscoveryPreload
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.publicChannels.concord.datasource.ConcordChannelPreload
@@ -90,6 +97,9 @@ import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.publicChannel
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.quartz.utils.Log
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.flow.distinctUntilChanged
 
 /**
  * The whole app below the platform's window: the login screens while logged off, and the logged-in
@@ -107,14 +117,16 @@ fun AmethystApp(
 
     Log.d("ActivityLifecycle") { "AmethystApp $accountState $sessionManager" }
 
-    Crossfade(
-        targetState = accountState,
-        animationSpec = tween(durationMillis = 100),
-    ) { state ->
-        when (state) {
-            is AccountState.Loading -> LoadingSetup()
-            is AccountState.LoggedOff -> LoggedOffSetup(sessionManager)
-            is AccountState.LoggedIn -> LoggedInSetup(state, sessionManager, root)
+    PrivacyLockHost(root.privacyLockSettings, root.blurWalletWhenUnfocused) {
+        Crossfade(
+            targetState = accountState,
+            animationSpec = tween(durationMillis = 100),
+        ) { state ->
+            when (state) {
+                is AccountState.Loading -> LoadingSetup()
+                is AccountState.LoggedOff -> LoggedOffSetup(sessionManager)
+                is AccountState.LoggedIn -> LoggedInSetup(state, sessionManager, root)
+            }
         }
     }
 }
@@ -155,7 +167,11 @@ private fun LoggedInSetup(
     // page re-composes after the window is recreated (rotation, dark-mode toggle, background).
     val initialRoute = remember(state) { state.route.also { state.route = null } }
     AccountScopedViewModelStore(state.account.signer.pubKey) {
-        LoggedInPage(state.account, initialRoute, sessionManager, root)
+        // Inside the store: the lock screen replaces the screens, not the account's ViewModels
+        // and subscriptions, which an unlock would otherwise rebuild from scratch.
+        PrivacyLockGate(LockScope.App) {
+            LoggedInPage(state.account, initialRoute, sessionManager, root)
+        }
     }
 }
 
@@ -285,6 +301,7 @@ private fun AppNavigation(
             },
             accountSwitcherContent = { AccountSwitchBottomSheet(accountViewModel, sessionManager) },
             suspendEdgeSwipe = root::suspendEdgeSwipe,
+            deck = rememberDeck(accountViewModel, nav, root),
         ) {
             Box(Modifier.fillMaxSize()) {
                 BuildNavigation(nav, destinations, root)
@@ -319,6 +336,37 @@ private fun OpenFirstRoute(
     }
 }
 
+/**
+ * The deck's columns when the user turned the deck on and the window is wide enough for the
+ * notification panel (about 1,200 dp); null otherwise. Each column gets the same screens as the
+ * main navigation, built against the column's own back stack.
+ */
+@Composable
+private fun rememberDeck(
+    accountViewModel: AccountViewModel,
+    nav: Nav,
+    root: AppRoot,
+): (@Composable (Modifier) -> Unit)? {
+    val deckMode by accountViewModel.settings.uiSettingsFlow.deckMode
+        .collectAsState()
+    if (!deckMode || !LocalScreenLayout.current.hasRoomForNotificationPanel) return null
+    return remember(accountViewModel, nav, root) {
+        { modifier ->
+            DeckArea(
+                accountViewModel = accountViewModel,
+                mainNav = nav,
+                destinationsFor = { columnNav, column ->
+                    NavDestinations().apply {
+                        sharedDestinations(accountViewModel, columnNav)
+                        root.registerDestinations(this, accountViewModel, column)
+                    }
+                },
+                modifier = modifier,
+            )
+        }
+    }
+}
+
 @Composable
 private fun BuildNavigation(
     nav: Nav,
@@ -328,7 +376,34 @@ private fun BuildNavigation(
     NavigationHost(nav, destinations)
 
     TrackScreen(nav, destinations, root)
+    RelockOnLeave(nav)
 }
+
+/**
+ * Closes the messages and wallet locks as soon as the screen on top leaves what they guard. Done
+ * here, by the route on top, rather than per screen: moving between two guarded screens (the
+ * conversation list into a chat) must not lock the user out.
+ */
+@Composable
+private fun RelockOnLeave(nav: Nav) {
+    val states = LocalPrivacyLockState.current
+    if (states.isEmpty()) return
+    LaunchedEffect(nav, states) {
+        snapshotFlow { nav.currentRoute.lockScope() }
+            .distinctUntilChanged()
+            .collectLatest { onTop ->
+                // After the screen that left has animated out: locking it mid-animation would turn
+                // it into a lock screen on its way out, and on Android pop a fingerprint prompt over
+                // the screen the user went to.
+                delay(RELOCK_AFTER_LEAVE_MS)
+                states.forEach { (scope, state) ->
+                    if (scope != LockScope.App && scope != onTop) state.onLeaveRoute()
+                }
+            }
+    }
+}
+
+private const val RELOCK_AFTER_LEAVE_MS = 500L
 
 /** Tells [root] which screen is on top, by its route's name only: never which profile or note. */
 @Composable

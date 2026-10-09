@@ -161,6 +161,12 @@ fun BasicRelaySetupInfoClickableRow(
                     modifier = ReactionRowHeightChatMaxWidth,
                     accountViewModel = accountViewModel,
                 )
+
+                RelayLatencyLine(
+                    relay = item.relay,
+                    store = accountViewModel.host.relayHealth,
+                    modifier = Modifier.fillMaxWidth(),
+                )
             }
         }
 

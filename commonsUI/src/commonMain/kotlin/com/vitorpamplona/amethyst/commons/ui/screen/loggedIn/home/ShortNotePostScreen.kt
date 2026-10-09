@@ -77,6 +77,7 @@ import com.vitorpamplona.amethyst.commons.model.BooleanType
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
 import com.vitorpamplona.amethyst.commons.model.composer.AudienceSelection
 import com.vitorpamplona.amethyst.commons.model.navigation.Route
+import com.vitorpamplona.amethyst.commons.nip30CustomEmojis.ui.CustomEmojiPickerButton
 import com.vitorpamplona.amethyst.commons.nip30CustomEmojis.ui.ShowEmojiSuggestionList
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.audience_send_privately
@@ -853,6 +854,10 @@ private fun BottomRowActions(
                         },
                         maxDurationSeconds = MAX_VOICE_RECORD_SECONDS,
                     )
+                }
+
+                vm.emojiSuggestions?.let {
+                    CustomEmojiPickerButton(it.emojiPacks, vm.message)
                 }
 
                 // Polls publish kinds that can't travel inside a private wrap, so the

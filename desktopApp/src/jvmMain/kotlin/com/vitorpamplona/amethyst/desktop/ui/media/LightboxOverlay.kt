@@ -82,6 +82,7 @@ import com.vitorpamplona.amethyst.commons.richtext.RichTextParser
 import com.vitorpamplona.amethyst.commons.ui.components.ZoomTransition
 import com.vitorpamplona.amethyst.commons.ui.components.zoomTransitionContainer
 import com.vitorpamplona.amethyst.commons.ui.components.zoomTransitionLayer
+import com.vitorpamplona.amethyst.desktop.platform.titleBarInsetTop
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import java.awt.Desktop
@@ -487,11 +488,16 @@ fun LightboxOverlay(
             }
         }
 
-        // Close button (top-left) — hidden in fullscreen
+        // Close button (top-left) — hidden in fullscreen. Below macOS's window buttons: the viewer
+        // covers the whole window, title bar included.
         if (viewMode != ViewMode.FULLSCREEN) {
             IconButton(
                 onClick = onDismiss,
-                modifier = Modifier.align(Alignment.TopStart).then(fadeWithTransition).padding(8.dp),
+                modifier =
+                    Modifier
+                        .align(Alignment.TopStart)
+                        .then(fadeWithTransition)
+                        .padding(start = 8.dp, top = titleBarInsetTop + 8.dp, end = 8.dp, bottom = 8.dp),
             ) {
                 Icon(
                     MaterialSymbols.Close,

@@ -188,9 +188,10 @@ private fun authenticate(
                     }
                 }
 
+                // One unrecognised finger: the prompt stays open and says so itself. Reporting it as
+                // an error would end the caller's wait, and the next good touch would go unheard.
                 override fun onAuthenticationFailed() {
                     super.onAuthenticationFailed()
-                    onError(labels.failedTitle, labels.failedExplainer)
                 }
 
                 override fun onAuthenticationSucceeded(result: BiometricPrompt.AuthenticationResult) {

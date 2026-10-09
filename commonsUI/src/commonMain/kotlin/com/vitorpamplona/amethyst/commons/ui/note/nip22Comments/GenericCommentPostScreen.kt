@@ -57,6 +57,7 @@ import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.AddressableNote
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
 import com.vitorpamplona.amethyst.commons.model.composer.AudienceSelection
+import com.vitorpamplona.amethyst.commons.nip30CustomEmojis.ui.CustomEmojiPickerButton
 import com.vitorpamplona.amethyst.commons.nip30CustomEmojis.ui.ShowEmojiSuggestionList
 import com.vitorpamplona.amethyst.commons.nip72ModCommunities.ui.CommunityRulesViolationBanner
 import com.vitorpamplona.amethyst.commons.relayClient.communities.CommunityFilterAssemblerSubscription
@@ -606,6 +607,10 @@ private fun BottomRowActions(postViewModel: CommentPostViewModel) {
                 postViewModel.selectImage(it)
             },
         )
+
+        postViewModel.emojiSuggestions?.let {
+            CustomEmojiPickerButton(it.emojiPacks, postViewModel.message)
+        }
 
         TakeVideoButton(
             onVideoTaken = {

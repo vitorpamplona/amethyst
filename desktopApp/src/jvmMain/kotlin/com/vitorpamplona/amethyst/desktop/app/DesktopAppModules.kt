@@ -53,12 +53,15 @@ import com.vitorpamplona.amethyst.commons.model.preferences.TorSettingsStore
 import com.vitorpamplona.amethyst.commons.model.preferences.UiSettingsStore
 import com.vitorpamplona.amethyst.commons.napplet.permissions.InMemoryNappletPermissionStore
 import com.vitorpamplona.amethyst.commons.napplet.permissions.NappletPermissionLedger
+import com.vitorpamplona.amethyst.commons.privacylock.DataStorePrivacyLockSettings
 import com.vitorpamplona.amethyst.commons.relayClient.BlockedRelayFilteringClient
 import com.vitorpamplona.amethyst.commons.relayClient.CacheClientConnector
 import com.vitorpamplona.amethyst.commons.relayClient.RelayProxyClientConnector
 import com.vitorpamplona.amethyst.commons.relayClient.auth.AuthCoordinator
 import com.vitorpamplona.amethyst.commons.relayClient.notify.NotifyCoordinator
 import com.vitorpamplona.amethyst.commons.relayClient.reqCommand.RelaySubscriptionsCoordinator
+import com.vitorpamplona.amethyst.commons.relays.health.FileRelayHealthPersistence
+import com.vitorpamplona.amethyst.commons.relays.health.RelayLatencyMonitor
 import com.vitorpamplona.amethyst.commons.relays.nip11RelayInfo.Nip11CachedRetriever
 import com.vitorpamplona.amethyst.commons.service.connectivity.ConnectivityStatus
 import com.vitorpamplona.amethyst.commons.service.crashreports.CrashReportCache
@@ -179,6 +182,15 @@ class DesktopAppModules(
 
     val namecoinPrefs by lazy { NamecoinSettingsStore(sharedSettingsStore, applicationIOScope) }
 
+    // Loaded before the window opens, so a locked app never shows a frame of its content.
+    val privacyLockSettings: DataStorePrivacyLockSettings =
+        runBlocking {
+            val settings =
+                DataStorePrivacyLockSettings(DataStorePrivacyLockSettings.load(sharedSettingsStore), sharedSettingsStore, applicationIOScope)
+            if (DataStorePrivacyLockSettings.isEmpty(sharedSettingsStore)) importLegacyPrivacyLock(settings)
+            settings
+        }
+
     val otsPrefs by lazy { OtsSettingsStore(sharedSettingsStore, runBlocking { OtsSettingsStore.load(sharedSettingsStore) }) }
 
     val drawerSectionCollapsePrefs = DrawerSectionCollapsePreferences(sharedSettingsStore, applicationIOScope)
@@ -253,6 +265,19 @@ class DesktopAppModules(
     val cache: LocalCache = LocalCache
 
     val relayStats by lazy { RelayStats(client) }
+
+    // How fast each relay answers (a post's OK, a query's EOSE and first result) and which relays
+    // are slow next to the others, for the relay screens. Measured off the relay client's traffic
+    // and kept across restarts.
+    val relayLatencyMonitor by lazy {
+        RelayLatencyMonitor(
+            client = client,
+            persistence = FileRelayHealthPersistence(File(filesDir, RELAY_HEALTH_FILE)),
+            scope = applicationIOScope,
+            isTorRouted = { torEvaluatorFlow.shouldUseTorForRelay(it) },
+            nip11 = { nip11Cache.getFromCache(it) },
+        )
+    }
 
     val nip11Cache by lazy { Nip11CachedRetriever(torEvaluatorFlow::okHttpClientForRelay) }
 
@@ -371,6 +396,11 @@ class DesktopAppModules(
     // A desktop has no location provider yet: location chats and "around me" ask for a geohash.
     private val noLocation = MutableStateFlow<LocationResult>(LocationResult.LackPermission)
 
+    private val legacyCustomFeedImport = LegacyCustomFeedImport(filesDir)
+
+    // A legacy user who ran the deck gets it on here too.
+    private val legacyDeckImport = LegacyDeckImport(filesDir) { uiPrefs.deckMode.tryEmit(true) }
+
     val accountsCache =
         AccountCacheState(
             geolocationFlow = { noLocation },
@@ -402,6 +432,9 @@ class DesktopAppModules(
                 BuzzAttestationStore(sharedSettingsStore, account.scope, account.pubKey, account.buzzAttestation)
                 ConcordDirectInviteDeclineStore(sharedSettingsStore, account.scope, account.pubKey, account.concord.directInviteInbox)
                 NowPlayingSettingsStore(sharedSettingsStore, account.scope, account.pubKey, account.nowPlayingSettings)
+                // Not Buzz, but this is where each account starts: the legacy app's feeds go to the first.
+                legacyCustomFeedImport.importInto(account.settings)
+                legacyDeckImport.importInto(account.settings, account.signer.pubKey)
             },
         )
 
@@ -474,6 +507,10 @@ class DesktopAppModules(
     fun initiate() {
         startHeapWatchdog()
 
+        // Starts measuring relay response times from the first connection; it reads its file on
+        // creation, so off the main thread.
+        applicationIOScope.launch { relayLatencyMonitor }
+
         // After the computer sleeps, the relay sockets are dead though OkHttp still reports them
         // open: re-dial every relay when a wake is detected.
         applicationIOScope.launch {
@@ -531,3 +568,5 @@ fun installDesktopCrashReporter(
         ),
     )
 }
+
+private const val RELAY_HEALTH_FILE = "relay_health.json"

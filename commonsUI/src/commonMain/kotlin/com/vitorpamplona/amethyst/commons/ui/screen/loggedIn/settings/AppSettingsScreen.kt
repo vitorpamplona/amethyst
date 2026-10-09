@@ -91,6 +91,8 @@ import com.vitorpamplona.amethyst.commons.resources.autoplay_videos_description
 import com.vitorpamplona.amethyst.commons.resources.connectivity_type_always
 import com.vitorpamplona.amethyst.commons.resources.connectivity_type_never
 import com.vitorpamplona.amethyst.commons.resources.connectivity_type_unmetered_wifi_only_short
+import com.vitorpamplona.amethyst.commons.resources.deck_mode
+import com.vitorpamplona.amethyst.commons.resources.deck_mode_description
 import com.vitorpamplona.amethyst.commons.resources.font_family
 import com.vitorpamplona.amethyst.commons.resources.font_family_description
 import com.vitorpamplona.amethyst.commons.resources.font_family_monospace_short
@@ -205,6 +207,8 @@ fun SettingsScreen(
             UiModeTile(sharedPrefs)
             SettingsDivider()
             ImmersiveScrollingTile(sharedPrefs)
+            SettingsDivider()
+            DeckModeTile(sharedPrefs)
         }
     }
 }
@@ -404,6 +408,18 @@ private fun ImmersiveScrollingTile(sharedPrefs: UiSettingsFlow) {
         icon = MaterialSymbols.Fullscreen,
         title = Res.string.automatically_hide_nav_bars,
         description = Res.string.automatically_hide_nav_bars_description,
+    )
+}
+
+@Composable
+private fun DeckModeTile(sharedPrefs: UiSettingsFlow) {
+    val deckMode by sharedPrefs.deckMode.collectAsState()
+    SettingsSwitchTile(
+        icon = MaterialSymbols.Dashboard,
+        title = Res.string.deck_mode,
+        description = Res.string.deck_mode_description,
+        checked = deckMode,
+        onCheckedChange = { sharedPrefs.deckMode.tryEmit(it) },
     )
 }
 

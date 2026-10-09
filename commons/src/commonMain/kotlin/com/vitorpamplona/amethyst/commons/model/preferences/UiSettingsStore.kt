@@ -131,6 +131,7 @@ class UiSettingsStore(
         val UI_SHOW_ONCHAIN_WALLET = booleanPreferencesKey("ui.show_onchain_wallet")
         val UI_SHOW_PAYTO_ZAP_CHIP = booleanPreferencesKey("ui.show_payto_zap_chip")
         val UI_SEARCH_ENGINE = stringPreferencesKey("ui.search_engine")
+        val UI_DECK_MODE = booleanPreferencesKey("ui.deck_mode")
 
         /**
          * Every setting's default matches what the old `getBoolean(key, default)`
@@ -176,6 +177,7 @@ class UiSettingsStore(
                 showOnchainWallet = preferences[UI_SHOW_ONCHAIN_WALLET] ?: true,
                 showPayToZapChip = preferences[UI_SHOW_PAYTO_ZAP_CHIP] ?: true,
                 searchEngine = preferences[UI_SEARCH_ENGINE] ?: SearchEngines.DEFAULT.id,
+                deckMode = preferences[UI_DECK_MODE] ?: false,
             )
         }
 
@@ -219,6 +221,7 @@ class UiSettingsStore(
             preferences[UI_SHOW_ONCHAIN_WALLET] = sharedSettings.showOnchainWallet
             preferences[UI_SHOW_PAYTO_ZAP_CHIP] = sharedSettings.showPayToZapChip
             preferences[UI_SEARCH_ENGINE] = sharedSettings.searchEngine
+            preferences[UI_DECK_MODE] = sharedSettings.deckMode
         }
 
         /**

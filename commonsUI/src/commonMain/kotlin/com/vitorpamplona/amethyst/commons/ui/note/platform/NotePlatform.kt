@@ -150,6 +150,19 @@ interface NotePlatform {
         accountViewModel: AccountViewModel,
     ) {}
 
+    /**
+     * The videos a feed is about to show, most wanted first: on screen or just below it. A platform
+     * whose player only opens a video once it is the one playing can open these ahead, so they start
+     * at once. [owner] is the feed asking (each keeps its own list); an empty list releases its
+     * videos. Not composable: feed prefetchers call it from a coroutine. Android needs none of this:
+     * every video card on its feed already prepares a player.
+     */
+    fun warmVideos(
+        owner: Any,
+        urls: List<String>,
+        accountViewModel: AccountViewModel,
+    ) {}
+
     // Places
 
     @Composable

@@ -72,6 +72,9 @@ fun FileMetadataCardCompose(
         // Image content
         FileMetadataCardImage(baseNote, event, backgroundColor, accountViewModel)
 
+        // Title and content
+        FileMetadataCardCaption(event)
+
         // Reactions row
         ReactionsRow(
             baseNote = baseNote,
@@ -81,9 +84,6 @@ fun FileMetadataCardCompose(
             accountViewModel = accountViewModel,
             nav = nav,
         )
-
-        // Title and content
-        FileMetadataCardCaption(event)
     }
 }
 

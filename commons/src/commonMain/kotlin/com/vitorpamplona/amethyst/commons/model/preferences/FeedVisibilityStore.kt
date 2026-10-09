@@ -47,6 +47,10 @@ data class FeedVisibility(
     val relayGroupViewMode: String? = null,
     val concordViewMode: String? = null,
     val callsEnabled: Boolean = true,
+    /** The feeds the user built, as [com.vitorpamplona.amethyst.commons.feeds.custom.FeedDefinitionSerializer] JSON. */
+    val customFeedsJson: String? = null,
+    /** The deck's workspaces and columns, as [com.vitorpamplona.amethyst.commons.model.deck.DeckLayout] JSON. */
+    val deckLayoutJson: String? = null,
 )
 
 /** Reads and writes [FeedVisibility] in the account's DataStore. */
@@ -59,6 +63,8 @@ class FeedVisibilityStore(
         val relayGroupViewMode = stringPreferencesKey("relay_group_view_mode")
         val concordViewMode = stringPreferencesKey("concord_view_mode")
         val callsEnabled = booleanPreferencesKey("calls_enabled")
+        val customFeedsJson = stringPreferencesKey("custom_feeds")
+        val deckLayoutJson = stringPreferencesKey("deck_layout")
 
         /** What the `secret_keeper_<npub>` file called these, for the one-shot copy. */
         val legacyTable =
@@ -86,6 +92,8 @@ class FeedVisibilityStore(
             relayGroupViewMode = prefs[relayGroupViewMode],
             concordViewMode = prefs[concordViewMode],
             callsEnabled = prefs[callsEnabled] ?: true,
+            customFeedsJson = prefs[customFeedsJson],
+            deckLayoutJson = prefs[deckLayoutJson],
         )
     }
 
@@ -97,6 +105,8 @@ class FeedVisibilityStore(
             value.relayGroupViewMode.let { if (it != null) prefs[relayGroupViewMode] = it else prefs.remove(relayGroupViewMode) }
             value.concordViewMode.let { if (it != null) prefs[concordViewMode] = it else prefs.remove(concordViewMode) }
             prefs[callsEnabled] = value.callsEnabled
+            value.customFeedsJson.let { if (it != null) prefs[customFeedsJson] = it else prefs.remove(customFeedsJson) }
+            value.deckLayoutJson.let { if (it != null) prefs[deckLayoutJson] = it else prefs.remove(deckLayoutJson) }
         }
     }
 }

@@ -76,7 +76,7 @@ class UploadOrchestrator(
         serverBaseUrl: String,
         signer: NostrSigner,
         stripExif: Boolean = true,
-        quality: CompressionQuality? = null,
+        quality: ImageCompressionTarget? = null,
         bypassReencode: Boolean = false,
         preCompressed: File? = null,
         // Tried in order after [serverBaseUrl] fails; see [uploadToFirstAccepting].
@@ -172,7 +172,7 @@ class UploadOrchestrator(
         // strip → encrypt raw bytes) for existing Android/CLI callers. Only
         // callers that opt in (e.g. Desktop DMs) change what leaves the machine.
         stripExif: Boolean = false,
-        quality: CompressionQuality? = null,
+        quality: ImageCompressionTarget? = null,
         // When false (default) the encrypted blob is uploaded as opaque
         // application/octet-stream so the server can't learn the media type.
         // When true it's uploaded with the real media type — less private, but
@@ -301,7 +301,7 @@ class UploadOrchestrator(
         suspend fun <T> withPreparedFile(
             file: File,
             stripExif: Boolean,
-            quality: CompressionQuality?,
+            quality: ImageCompressionTarget?,
             block: suspend (prepared: File, metadata: MediaMetadata) -> T,
         ): T {
             var reencodedTemp: File? = null

@@ -41,8 +41,10 @@ import androidx.navigation3.runtime.NavEntry
 import androidx.navigation3.scene.Scene
 import com.vitorpamplona.amethyst.commons.model.navigation.NavStackEntry
 import com.vitorpamplona.amethyst.commons.model.navigation.Route
+import com.vitorpamplona.amethyst.commons.model.navigation.lockScope
 import com.vitorpamplona.amethyst.commons.ui.layouts.CappedScreenContent
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.LocalNavStackEntry
+import com.vitorpamplona.amethyst.commons.ui.privacylock.PrivacyLockGate
 import kotlinx.serialization.InternalSerializationApi
 import kotlinx.serialization.serializerOrNull
 import kotlin.concurrent.Volatile
@@ -161,7 +163,10 @@ class NavDestinations {
             metadata = mapOf(NAV_STACK_ENTRY to entry),
         ) {
             CompositionLocalProvider(LocalNavStackEntry provides entry) {
-                MaybeCappedScreen(destination.capWidth) { destination.content(entry.route) }
+                // A screen behind a privacy lock is not composed until it is unlocked.
+                PrivacyLockGate(entry.route.lockScope()) {
+                    MaybeCappedScreen(destination.capWidth) { destination.content(entry.route) }
+                }
             }
         }
     }

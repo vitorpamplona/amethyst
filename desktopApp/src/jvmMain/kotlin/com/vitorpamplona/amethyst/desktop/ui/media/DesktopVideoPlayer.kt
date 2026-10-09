@@ -20,6 +20,8 @@
  */
 package com.vitorpamplona.amethyst.desktop.ui.media
 
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
@@ -47,10 +49,14 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.Shape
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.layout.boundsInWindow
+import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
@@ -92,6 +98,8 @@ fun DesktopVideoPlayer(
     pauseWhenHidden: Boolean = false,
     loadOnDemand: Boolean = false,
     shape: Shape = MaterialTheme.shapes.small,
+    // Where the picture itself sits in the window, for a full-screen view that grows out of it.
+    onPictureBounds: ((Rect) -> Unit)? = null,
 ) {
     // Only this video's state: every other card on screen would otherwise recompose on each tick
     // of whichever video is playing.
@@ -183,6 +191,11 @@ fun DesktopVideoPlayer(
 
     // In full screen the overlay draws the engine; a second surface would resize it too.
     val drawsEngine = isActiveVideo && currentSurfaceOwner === surfaceOwner && !isFullscreen
+
+    // Whether this video has shown a picture yet: its clock moves only once frames are coming. Kept
+    // per URL, so a video scrolled back to (whose engine still holds its frame) shows it at once.
+    var pictureShown by remember(url) { mutableStateOf(false) }
+    if (!pictureShown && isActiveVideo && (videoState?.currentTime ?: 0L) > 0L) pictureShown = true
     val activePlayer = if (drawsEngine) GlobalMediaPlayer.activeVideoPlayerState else null
 
     // Black behind a picture, as any player letterboxes; the theme's placeholder until there is one,
@@ -207,6 +220,7 @@ fun DesktopVideoPlayer(
                 Modifier
                     .width(width)
                     .height(constrainedHeight)
+                    .then(if (onPictureBounds != null) Modifier.onGloballyPositioned { onPictureBounds(it.boundsInWindow()) } else Modifier)
                     .clip(shape)
                     .background(backdrop),
             contentAlignment = Alignment.Center,
@@ -238,6 +252,24 @@ fun DesktopVideoPlayer(
                     modifier = Modifier.fillMaxSize(),
                     contentScale = ContentScale.Fit,
                 )
+                // The surface is black until the engine has decoded a frame: the thumbnail stays over
+                // it until the video is moving, then fades, instead of the card blinking to black as
+                // it starts.
+                val thumbnailAlpha by animateFloatAsState(
+                    targetValue = if (pictureShown) 0f else 1f,
+                    animationSpec = tween(durationMillis = 150),
+                    label = "thumbnailOverVideo",
+                )
+                if (thumbnailAlpha > 0f) {
+                    thumbnail?.let { bitmap: ImageBitmap ->
+                        Image(
+                            bitmap = bitmap,
+                            contentDescription = null,
+                            modifier = Modifier.fillMaxSize().graphicsLayer { alpha = thumbnailAlpha },
+                            contentScale = ContentScale.Fit,
+                        )
+                    }
+                }
             } else {
                 thumbnail?.let { bitmap: ImageBitmap ->
                     Image(

@@ -28,6 +28,7 @@ import androidx.compose.runtime.setValue
 import com.vitorpamplona.amethyst.commons.model.mediaServers.ServerName
 import com.vitorpamplona.amethyst.commons.richtext.RichTextParser
 import com.vitorpamplona.amethyst.commons.service.upload.MediaUploadTracker
+import com.vitorpamplona.amethyst.commons.service.uploads.CompressorQuality
 import com.vitorpamplona.amethyst.commons.service.uploads.MultiOrchestrator
 import com.vitorpamplona.amethyst.commons.service.uploads.SelectedMedia
 import com.vitorpamplona.amethyst.commons.service.uploads.SelectedMediaProcessing
@@ -68,7 +69,7 @@ class ChatFileUploadState(
     var multiOrchestrator by mutableStateOf<MultiOrchestrator?>(null)
 
     // 0 = Low, 1 = Medium, 2 = High, 3=UNCOMPRESSED
-    var mediaQualitySlider by mutableIntStateOf(1)
+    var mediaQualitySlider by mutableIntStateOf(CompressorQuality.defaultSliderPosition)
 
     var stripMetadata by mutableStateOf(defaultStripMetadata)
     var encryptFiles by mutableStateOf(true)

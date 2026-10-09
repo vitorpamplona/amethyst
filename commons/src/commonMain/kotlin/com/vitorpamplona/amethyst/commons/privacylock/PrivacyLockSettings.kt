@@ -21,6 +21,7 @@
 package com.vitorpamplona.amethyst.commons.privacylock
 
 import androidx.compose.runtime.Stable
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 
 /**
@@ -35,7 +36,24 @@ import kotlinx.coroutines.flow.StateFlow
  */
 @Stable
 interface PrivacyLockSettings {
+    /** True while any lock is on. */
     val lockEnabled: StateFlow<Boolean>
+
+    /** Locks the whole app on start and after the idle timeout. */
+    val lockApp: StateFlow<Boolean> get() = NEVER_LOCKED
+
+    /** Locks the private messages: the conversation list and every chat room. */
+    val lockMessages: StateFlow<Boolean> get() = lockEnabled
+
+    /** Locks the wallet screens. */
+    val lockWallet: StateFlow<Boolean> get() = lockEnabled
+
+    /** Turns the lock for [scope] on or off. */
+    fun setScopeLocked(
+        scope: LockScope,
+        locked: Boolean,
+    ) = setLockEnabled(locked)
+
     val inactivityTimer: StateFlow<InactivityTimer>
     val dmRedactionLevel: StateFlow<DmRedactionLevel>
     val firstRunCardSeen: StateFlow<Boolean>
@@ -80,6 +98,8 @@ interface PrivacyLockSettings {
     fun setLockedUntilEpochMs(millis: Long?)
 
     companion object {
+        private val NEVER_LOCKED: StateFlow<Boolean> = MutableStateFlow(false)
+
         const val DEFAULT_LOCK_ENABLED = false
         const val NODE_NAME = "com/vitorpamplona/amethyst/privacylock"
         const val KEY_LOCK_ENABLED = "lock_enabled"
@@ -100,3 +120,45 @@ interface PrivacyLockSettings {
         const val LOCKOUT_MAX_MS = 5L * 60_000L
     }
 }
+
+/** The switch that guards [scope]; revealing the key backup is guarded while any lock is on. */
+fun PrivacyLockSettings.enabledFor(scope: LockScope): StateFlow<Boolean> =
+    when (scope) {
+        LockScope.App -> lockApp
+        LockScope.Messages -> lockMessages
+        LockScope.Wallet -> lockWallet
+        LockScope.KeyBackup -> lockEnabled
+    }
+
+/**
+ * Counts a failed unlock and, from [PrivacyLockSettings.LOCKOUT_TRIP_AFTER_FAILURES] on, refuses
+ * unlocking for a while: [PrivacyLockSettings.LOCKOUT_BASE_MS], doubling with each further failure,
+ * at most [PrivacyLockSettings.LOCKOUT_MAX_MS]. Every path that checks a password goes through here
+ * (the lock screen and the settings screen alike), so none of them can be used to guess without it.
+ * Returns when the lockout ends, or null when there is none yet.
+ */
+fun PrivacyLockSettings.recordFailedUnlock(nowMs: Long): Long? {
+    val next = failedUnlockAttempts.value + 1
+    setFailedUnlockAttempts(next)
+    val overshoot = next - PrivacyLockSettings.LOCKOUT_TRIP_AFTER_FAILURES
+    if (overshoot < 0) {
+        setLockedUntilEpochMs(null)
+        return null
+    }
+    // Capped before shifting: a long run of failures would otherwise overflow back to no lockout.
+    val duration = (PrivacyLockSettings.LOCKOUT_BASE_MS shl overshoot.coerceAtMost(MAX_LOCKOUT_DOUBLINGS)).coerceAtMost(PrivacyLockSettings.LOCKOUT_MAX_MS)
+    val until = nowMs + duration
+    setLockedUntilEpochMs(until)
+    return until
+}
+
+private const val MAX_LOCKOUT_DOUBLINGS = 16
+
+/** Clears the failed-attempt counter and any lockout, after a successful unlock. */
+fun PrivacyLockSettings.resetFailedUnlocks() {
+    if (failedUnlockAttempts.value != 0) setFailedUnlockAttempts(0)
+    if (lockedUntilEpochMs.value != null) setLockedUntilEpochMs(null)
+}
+
+/** Whether unlocking is refused right now after too many failures. */
+fun PrivacyLockSettings.isLockedOut(nowMs: Long): Boolean = (lockedUntilEpochMs.value ?: 0L) > nowMs

@@ -75,7 +75,7 @@ class NewBadgeModel : ViewModel() {
     val strippingFailureConfirmation = SuspendableConfirmation()
 
     // 0 = Low, 1 = Medium, 2 = High, 3 = UNCOMPRESSED
-    var mediaQualitySlider by mutableIntStateOf(1)
+    var mediaQualitySlider by mutableIntStateOf(CompressorQuality.defaultSliderPosition)
 
     var stripMetadata by mutableStateOf(true)
 

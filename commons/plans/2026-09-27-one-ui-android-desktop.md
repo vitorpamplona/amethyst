@@ -661,6 +661,10 @@ assemblers, `EventSync`, …). Packages are renamed on the way:
      chose to keep the legacy app runnable (`./gradlew :desktopApp:runLegacy`) rather than delete
      it, until its desktop-only features move to `commonsUI`:
 
+     Each row was decided on 2026-10-09 in
+     [2026-10-09-legacy-desktop-retirement.md](2026-10-09-legacy-desktop-retirement.md); this table
+     is the original placement guess.
+
      | Legacy-only feature | Where it should land |
      |---|---|
      | Deck: multi-column layout and workspaces | A wide-window mode of the shared shell |

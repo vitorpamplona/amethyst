@@ -33,6 +33,7 @@ import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.platform.LocalWindowInfo
 import com.vitorpamplona.amethyst.commons.account.AccountSessionManager
 import com.vitorpamplona.amethyst.commons.model.Account
+import com.vitorpamplona.amethyst.commons.privacylock.PrivacyLockSettings
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.desktop_key_not_kept_description
 import com.vitorpamplona.amethyst.commons.resources.desktop_key_not_kept_title
@@ -57,6 +58,10 @@ import kotlinx.coroutines.withContext
 class DesktopAppRoot(
     private val modules: DesktopAppModules,
 ) : AppRoot {
+    override val privacyLockSettings: PrivacyLockSettings get() = modules.privacyLockSettings
+
+    override val blurWalletWhenUnfocused: Boolean = true
+
     private val host by lazy { DesktopAccountViewModelHost(modules) }
 
     /** Hands the logged-in shell's navigator to the menu bar, which lives outside the shared app. */
