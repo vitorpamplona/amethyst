@@ -18,7 +18,7 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.badges.award
+package com.vitorpamplona.amethyst.commons.badges.award
 
 import androidx.compose.runtime.Stable
 import androidx.compose.runtime.getValue
@@ -28,7 +28,6 @@ import androidx.lifecycle.ViewModel
 import com.vitorpamplona.amethyst.commons.model.Account
 import com.vitorpamplona.amethyst.commons.model.User
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
-import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.tags.people.PTag
@@ -36,19 +35,17 @@ import com.vitorpamplona.quartz.nip58Badges.definition.BadgeDefinitionEvent
 
 @Stable
 class AwardBadgeViewModel : ViewModel() {
-    lateinit var accountViewModel: AccountViewModel
     lateinit var account: Account
 
     var definition by mutableStateOf<BadgeDefinitionEvent?>(null)
 
     fun init(
-        accountVM: AccountViewModel,
+        account: Account,
         kind: Int,
         pubKeyHex: HexKey,
         dTag: String,
     ) {
-        this.accountViewModel = accountVM
-        this.account = accountVM.account
+        this.account = account
 
         val ev =
             LocalCache.getAddressableNoteIfExists(Address(kind, pubKeyHex, dTag))?.event as? BadgeDefinitionEvent

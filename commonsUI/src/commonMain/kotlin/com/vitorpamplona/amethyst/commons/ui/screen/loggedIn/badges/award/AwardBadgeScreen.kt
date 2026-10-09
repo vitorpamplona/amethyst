@@ -46,6 +46,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import com.vitorpamplona.amethyst.commons.badges.award.AwardBadgeViewModel
 import com.vitorpamplona.amethyst.commons.model.User
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.award_badge
@@ -78,7 +79,7 @@ fun AwardBadgeScreen(
     val vm: AwardBadgeViewModel = rememberViewModel { AwardBadgeViewModel() }
 
     LaunchedEffect(accountViewModel, kind, pubKeyHex, dTag) {
-        vm.init(accountViewModel, kind, pubKeyHex, dTag)
+        vm.init(accountViewModel.account, kind, pubKeyHex, dTag)
     }
 
     var searchInput by remember { mutableStateOf("") }

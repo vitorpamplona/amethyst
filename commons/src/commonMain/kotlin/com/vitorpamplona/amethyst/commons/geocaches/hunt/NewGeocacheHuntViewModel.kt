@@ -18,14 +18,13 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.geocaches.hunt
+package com.vitorpamplona.amethyst.commons.geocaches.hunt
 
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.lifecycle.ViewModel
 import com.vitorpamplona.amethyst.commons.model.Account
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
-import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.nipCCGeocaching.curation.GeocacheCurationListEvent
 import com.vitorpamplona.quartz.nipCCGeocaching.curation.tags.ListTheme
@@ -57,8 +56,8 @@ class NewGeocacheHuntViewModel : ViewModel() {
     val isEditing: Boolean
         get() = editAddress != null
 
-    fun init(accountViewModel: AccountViewModel) {
-        if (!::account.isInitialized) account = accountViewModel.account
+    fun init(account: Account) {
+        if (!::account.isInitialized) this.account = account
     }
 
     fun loadForEdit(

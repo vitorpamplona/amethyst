@@ -18,7 +18,7 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.music
+package com.vitorpamplona.amethyst.commons.music
 
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.mutableStateOf
@@ -27,7 +27,6 @@ import androidx.lifecycle.viewModelScope
 import com.vitorpamplona.amethyst.commons.model.Account
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
 import com.vitorpamplona.amethyst.commons.model.cache.filterIntoSet
-import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.quartz.experimental.music.playlist.MusicPlaylistEvent
 import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.nip01Core.core.AddressSerializer
@@ -71,7 +70,7 @@ class AddToMusicPlaylistViewModel : ViewModel() {
     private val mutationLock = Mutex()
 
     fun init(
-        accountViewModel: AccountViewModel,
+        account: Account,
         trackAddressTag: String,
     ) {
         // Always refresh the parsed track address. The previous guard (`if account already
@@ -80,11 +79,11 @@ class AddToMusicPlaylistViewModel : ViewModel() {
         // wrong track from playlists. ViewModels survive process recreation and can also be
         // reused by navigation in less common shapes, so the input has to drive the state.
         val parsed = AddressSerializer.parse(trackAddressTag)
-        if (parsed == trackAddress && ::account.isInitialized && account == accountViewModel.account) {
+        if (parsed == trackAddress && ::account.isInitialized && this.account == account) {
             // Same inputs — nothing to do. The live-scan job stays running.
             return
         }
-        this.account = accountViewModel.account
+        this.account = account
         this.trackAddress = parsed
 
         // (Re)start the scan against the new track so each playlist's `containsTrack` flag

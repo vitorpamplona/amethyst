@@ -46,6 +46,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.vitorpamplona.amethyst.commons.geocaches.hunt.NewGeocacheHuntViewModel
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.relayClient.event.observeNoteEvent
@@ -98,7 +99,7 @@ fun NewGeocacheHuntScreen(
     val scope = rememberCoroutineScope()
 
     remember(editKind, editPubKeyHex, editDTag, seedCache) {
-        model.init(accountViewModel)
+        model.init(accountViewModel.account)
         if (editKind != null && editPubKeyHex != null && editDTag != null) {
             model.loadForEdit(editKind, editPubKeyHex, editDTag)
         }

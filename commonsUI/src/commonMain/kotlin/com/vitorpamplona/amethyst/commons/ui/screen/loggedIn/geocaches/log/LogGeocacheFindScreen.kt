@@ -63,6 +63,8 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.vitorpamplona.amethyst.commons.geocaches.log.LogGeocacheFindViewModel
+import com.vitorpamplona.amethyst.commons.geocaches.log.ScanOutcome
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.resources.Res
@@ -124,7 +126,7 @@ fun LogGeocacheFindScreen(
     val scope = rememberCoroutineScope()
 
     remember(address) {
-        model.init(accountViewModel, address)
+        model.init(accountViewModel.account, address)
         true
     }
 

@@ -18,7 +18,7 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.calendars.create
+package com.vitorpamplona.amethyst.commons.calendars.create
 
 import androidx.compose.runtime.mutableStateOf
 import androidx.lifecycle.ViewModel
@@ -32,7 +32,6 @@ import com.vitorpamplona.amethyst.commons.service.uploads.MediaUploader
 import com.vitorpamplona.amethyst.commons.service.uploads.MediaUri
 import com.vitorpamplona.amethyst.commons.service.uploads.UploadOrchestrator
 import com.vitorpamplona.amethyst.commons.service.uploads.UploadingState
-import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.nip01Core.tags.hashtags.hashtags
 import com.vitorpamplona.quartz.nip01Core.tags.people.PTag
@@ -78,9 +77,9 @@ class NewCalendarEventViewModel : ViewModel() {
     val isEditing: Boolean
         get() = editAddress != null
 
-    fun init(accountViewModel: AccountViewModel) {
+    fun init(account: Account) {
         if (::account.isInitialized) return
-        this.account = accountViewModel.account
+        this.account = account
     }
 
     /**
@@ -90,12 +89,12 @@ class NewCalendarEventViewModel : ViewModel() {
      * the current account doesn't own the address.
      */
     fun loadForEdit(
-        accountViewModel: AccountViewModel,
+        account: Account,
         kind: Int,
         pubKeyHex: String,
         dTag: String,
     ) {
-        init(accountViewModel)
+        init(account)
         if (editAddress != null) return // already loaded
 
         val address = Address(kind, pubKeyHex, dTag)

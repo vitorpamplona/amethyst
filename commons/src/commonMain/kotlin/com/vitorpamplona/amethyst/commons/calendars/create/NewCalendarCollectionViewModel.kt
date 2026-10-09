@@ -18,7 +18,7 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.calendars.create
+package com.vitorpamplona.amethyst.commons.calendars.create
 
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.mutableStateListOf
@@ -27,7 +27,6 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.vitorpamplona.amethyst.commons.model.Account
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
-import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.nip01Core.tags.aTag.ATag
 import com.vitorpamplona.quartz.nip01Core.tags.aTag.aTags
@@ -74,11 +73,11 @@ class NewCalendarCollectionViewModel : ViewModel() {
         get() = dTag != null
 
     fun init(
-        accountViewModel: AccountViewModel,
+        account: Account,
         editDTag: String?,
     ) {
         if (::account.isInitialized) return // idempotent across recompositions
-        this.account = accountViewModel.account
+        this.account = account
         dTag = editDTag
 
         editDTag?.let { existingDTag ->
