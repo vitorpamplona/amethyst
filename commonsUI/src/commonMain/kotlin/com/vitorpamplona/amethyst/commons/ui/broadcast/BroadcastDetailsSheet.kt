@@ -534,7 +534,6 @@ fun BroadcastBannerSingleEventSheetSuccessPreview() {
                             Constants.mom to RelayResult.Success,
                             Constants.nos to RelayResult.Success,
                         ),
-                    status = BroadcastStatus.SUCCESS,
                 ),
             ),
         )
@@ -567,7 +566,6 @@ fun BroadcastBannerSingleEventSheetPartialPreview() {
                             Constants.mom to RelayResult.Success,
                             Constants.nos to RelayResult.Success,
                         ),
-                    status = BroadcastStatus.PARTIAL,
                 ),
             ),
         )
@@ -600,7 +598,6 @@ fun BroadcastBannerSingleEventSheetErrorsPreview() {
                             Constants.mom to RelayResult.Error("code"),
                             Constants.nos to RelayResult.Error("code"),
                         ),
-                    status = BroadcastStatus.FAILED,
                 ),
             ),
         )
@@ -739,7 +736,6 @@ fun BroadcastBannerDoubleEventSheetDoneAllGoodPreview() {
                             Constants.mom to RelayResult.Success,
                             Constants.nos to RelayResult.Success,
                         ),
-                    status = BroadcastStatus.SUCCESS,
                 ),
                 BroadcastEvent(
                     id = Uuid.random().toString(),
@@ -750,7 +746,6 @@ fun BroadcastBannerDoubleEventSheetDoneAllGoodPreview() {
                             Constants.mom to RelayResult.Success,
                             Constants.nos to RelayResult.Success,
                         ),
-                    status = BroadcastStatus.SUCCESS,
                 ),
             ),
         )
@@ -783,7 +778,6 @@ fun BroadcastBannerDoubleEventSheetDoneOneGoodPreview() {
                             Constants.mom to RelayResult.Success,
                             Constants.nos to RelayResult.Success,
                         ),
-                    status = BroadcastStatus.SUCCESS,
                 ),
                 BroadcastEvent(
                     id = Uuid.random().toString(),
@@ -794,7 +788,6 @@ fun BroadcastBannerDoubleEventSheetDoneOneGoodPreview() {
                             Constants.mom to RelayResult.Error("code"),
                             Constants.nos to RelayResult.Success,
                         ),
-                    status = BroadcastStatus.PARTIAL,
                 ),
             ),
         )
@@ -827,7 +820,6 @@ fun BroadcastBannerDoubleEventSheetDonePreview() {
                             Constants.mom to RelayResult.Error("code"),
                             Constants.nos to RelayResult.Success,
                         ),
-                    status = BroadcastStatus.PARTIAL,
                 ),
                 BroadcastEvent(
                     id = Uuid.random().toString(),
@@ -838,7 +830,6 @@ fun BroadcastBannerDoubleEventSheetDonePreview() {
                             Constants.mom to RelayResult.Timeout,
                             Constants.nos to RelayResult.Success,
                         ),
-                    status = BroadcastStatus.PARTIAL,
                 ),
             ),
         )
