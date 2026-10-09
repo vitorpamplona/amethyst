@@ -25,6 +25,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.awt.awtEventOrNull
 import androidx.compose.ui.input.pointer.PointerEvent
 import androidx.compose.ui.platform.LocalDensity
+import java.awt.event.MouseEvent
 import java.awt.event.MouseWheelEvent
 import javax.swing.SwingUtilities
 import kotlin.math.roundToInt
@@ -57,7 +58,26 @@ internal actual fun rememberWheelRedispatcher(): (event: PointerEvent, dxPx: Flo
                         wheel.wheelRotation,
                         wheel.preciseWheelRotation,
                     )
-                SwingUtilities.invokeLater { target.dispatchEvent(moved) }
+                // The pointer goes back where it really is right after: Compose takes a wheel event's
+                // position as the pointer's, and would otherwise hover what sits mid-column.
+                val back =
+                    MouseEvent(
+                        target,
+                        MouseEvent.MOUSE_MOVED,
+                        wheel.`when`,
+                        wheel.modifiersEx,
+                        wheel.x,
+                        wheel.y,
+                        wheel.xOnScreen,
+                        wheel.yOnScreen,
+                        0,
+                        false,
+                        MouseEvent.NOBUTTON,
+                    )
+                SwingUtilities.invokeLater {
+                    target.dispatchEvent(moved)
+                    target.dispatchEvent(back)
+                }
             }
         }
     }
