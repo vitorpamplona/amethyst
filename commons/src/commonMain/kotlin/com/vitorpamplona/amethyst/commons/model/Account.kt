@@ -969,6 +969,8 @@ class Account(
      */
     fun currentTrustVerdicts(): TrustVerdicts = trustNetwork.snapshot(signer.pubKey, followingKeySet())
 
+    override fun trustRankOf(pubkey: HexKey): Int? = trustNetwork.rankOf(pubkey)
+
     val followSetDecryptionCache = FollowSetDecryptionCache(signer)
     val blockPeopleList = BlockPeopleListState(signer, cache, followSetDecryptionCache, scope)
     val followSets = FollowSetsState(signer, cache, followSetDecryptionCache, scope)

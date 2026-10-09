@@ -57,8 +57,9 @@ class CacheSearch(
     /**
      * Users whose name, display name, NIP-05 or lightning address matches [username], best first.
      *
-     * [forAccount] is the reader: when given, their muted users and muted words are filtered out
-     * and the people they follow sort first. `null` searches everything and ranks on the name
+     * [forAccount] is the reader: when given, their muted users and muted words are filtered out,
+     * the people they follow sort first, and the people they don't follow sort by their Web of
+     * Trust score, highest first, ahead of the unscored. `null` searches everything and ranks on the name
      * match alone — what a caller with no account in hand (a mention autocomplete, a spotlight)
      * wants. [limit] caps the result *after* ranking, so the cap never costs the best matches.
      */
@@ -101,6 +102,9 @@ class CacheSearch(
 
         val following = forAccount?.followingKeySet() ?: emptySet()
         val findsFollowing = finds.associateWith { it.pubkeyHex in following }
+        // Follows keep the name order among themselves: a score shouldn't push a weaker name
+        // match above the friend being typed.
+        val scores = finds.associateWith { if (findsFollowing[it] == true) 0 else forAccount?.trustRankOf(it.pubkeyHex) ?: 0 }
         val anyNameStartsWith = finds.associateWith { it.metadataOrNull()?.anyNameStartsWith(dualCase) == true }
         val anyAddressStartsWith = finds.associateWith { it.metadataOrNull()?.anyAddressStartsWith(dualCase) == true }
         val displayNames = finds.associateWith { it.toBestDisplayName().lowercase() }
@@ -109,6 +113,7 @@ class CacheSearch(
             finds.sortedWith(
                 compareBy(
                     { findsFollowing[it] == false },
+                    { -(scores[it] ?: 0) },
                     { anyNameStartsWith[it] == false },
                     { anyAddressStartsWith[it] == false },
                     { displayNames[it] },

@@ -28,6 +28,7 @@ import androidx.lifecycle.viewmodel.CreationExtras
 import com.vitorpamplona.amethyst.commons.model.Account
 import com.vitorpamplona.amethyst.commons.model.User
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
+import com.vitorpamplona.amethyst.commons.wot.sortedByFollowsThenTrust
 import com.vitorpamplona.quartz.nip02FollowList.ContactListEvent
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.IO
@@ -47,15 +48,9 @@ class UserProfileFollowsUserFeedViewModel(
 ) : ViewModel() {
     val contactList = account.cache.getOrCreateAddressableNote(ContactListEvent.createAddress(user.pubkeyHex))
 
-    val sortingModel: Comparator<User> =
-        compareBy(
-            { !account.isFollowing(it) },
-            { it.pubkeyHex },
-        )
-
     fun ContactListEvent.convertNonHiddenToUsers(): List<User> {
         val nonHiddenFollows = verifiedFollowKeySet().filter { !account.isHidden(it) }
-        return LocalCache.load(nonHiddenFollows).sortedWith(sortingModel)
+        return LocalCache.load(nonHiddenFollows).sortedByFollowsThenTrust(account, then = compareBy { it.pubkeyHex })
     }
 
     @OptIn(kotlinx.coroutines.FlowPreview::class)

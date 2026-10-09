@@ -27,6 +27,7 @@ import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.CreationExtras
 import com.vitorpamplona.amethyst.commons.model.Account
 import com.vitorpamplona.amethyst.commons.model.User
+import com.vitorpamplona.amethyst.commons.wot.sortedByFollowsThenTrust
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip02FollowList.ContactListEvent
@@ -51,12 +52,6 @@ class UserProfileFollowersUserFeedViewModel(
             tags = mapOf("p" to listOf(user.pubkeyHex)),
         )
 
-    val sortingModel: Comparator<User> =
-        compareBy(
-            { !account.isFollowing(it) },
-            { it.pubkeyHex },
-        )
-
     fun List<Event>.toNonHiddenOwners(): Set<User> =
         mapNotNullTo(mutableSetOf()) { event ->
             if (!account.isHidden(event.pubKey)) {
@@ -72,7 +67,7 @@ class UserProfileFollowersUserFeedViewModel(
             .observeEvents<Event>(followerFilter)
             .sample(500)
             .map { followerContactLists ->
-                followerContactLists.toNonHiddenOwners().sortedWith(sortingModel)
+                followerContactLists.toNonHiddenOwners().toList().sortedByFollowsThenTrust(account, then = compareBy { it.pubkeyHex })
             }.flowOn(Dispatchers.IO)
             .stateIn(
                 viewModelScope,

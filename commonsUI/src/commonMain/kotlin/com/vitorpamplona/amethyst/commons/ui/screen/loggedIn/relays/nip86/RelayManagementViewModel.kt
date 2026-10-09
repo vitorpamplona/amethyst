@@ -27,6 +27,7 @@ import com.vitorpamplona.amethyst.commons.model.Account
 import com.vitorpamplona.amethyst.commons.model.User
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
 import com.vitorpamplona.amethyst.commons.relayManagement.Nip86Executor
+import com.vitorpamplona.amethyst.commons.wot.sortedByFollowsThenTrust
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip86RelayManagement.Nip86Client
 import com.vitorpamplona.quartz.nip86RelayManagement.rpc.AllowedEvent
@@ -91,7 +92,7 @@ class RelayManagementViewModel(
             list
                 .mapNotNull { entry ->
                     LocalCache.checkGetOrCreateUser(entry.pubkey)?.let { PubkeyUser(it, entry.reason) }
-                }.sortedByDescending { account.isKnown(it.user) }
+                }.sortedByFollowsThenTrust(account, { it.user.pubkeyHex })
         }
 
     val allowedPubkeyUsers: Flow<List<PubkeyUser>> =
@@ -99,7 +100,7 @@ class RelayManagementViewModel(
             list
                 .mapNotNull { entry ->
                     LocalCache.checkGetOrCreateUser(entry.pubkey)?.let { PubkeyUser(it, entry.reason) }
-                }.sortedByDescending { account.isKnown(it.user) }
+                }.sortedByFollowsThenTrust(account, { it.user.pubkeyHex })
         }
 
     private val _isLoading = MutableStateFlow(false)
