@@ -38,8 +38,15 @@ import androidx.compose.ui.input.nestedscroll.NestedScrollSource
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.onSizeChanged
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.unit.Velocity
+import androidx.compose.ui.unit.dp
 
 private const val PAGER_ZONE_FRACTION = 0.5f
+
+// About a third of Material3's 360dp drawer, and Material3's own drawer fling threshold.
+private val DRAWER_COMMIT_DISTANCE = 120.dp
+private val DRAWER_COMMIT_VELOCITY = 400.dp
 
 fun Modifier.zonedDrawerSwipe(
     pagerState: PagerState,
@@ -49,21 +56,35 @@ fun Modifier.zonedDrawerSwipe(
         var widthPx by remember { mutableFloatStateOf(1f) }
         var gestureStartX by remember { mutableFloatStateOf(0f) }
         var gestureStartPage by remember { mutableIntStateOf(0) }
-        var drawerOpened by remember { mutableStateOf(false) }
+        // The gesture belongs to the drawer: the pager sees none of it, and it opens the
+        // drawer only once [commit] says it has gone far or fast enough.
+        var drawerGesture by remember { mutableStateOf(false) }
+
+        val density = LocalDensity.current
+        val commit =
+            remember(density) {
+                with(density) { DrawerSwipeCommit(DRAWER_COMMIT_DISTANCE.toPx(), DRAWER_COMMIT_VELOCITY.toPx()) }
+            }
 
         // The connection is remembered for the pager's lifetime; read the
         // current lambda through rememberUpdatedState so a caller that
         // re-creates openDrawer (new drawer state, account switch) is honoured.
         val currentOpenDrawer by rememberUpdatedState(openDrawer)
         val connection =
-            remember(pagerState) {
+            remember(pagerState, commit) {
                 object : NestedScrollConnection {
+                    fun dragDrawer(dx: Float): Offset {
+                        drawerGesture = true
+                        if (commit.drag(dx)) currentOpenDrawer()
+                        return Offset(dx, 0f)
+                    }
+
                     override fun onPreScroll(
                         available: Offset,
                         source: NestedScrollSource,
                     ): Offset {
                         if (source != NestedScrollSource.UserInput) return Offset.Zero
-                        if (drawerOpened) return Offset(available.x, 0f)
+                        if (drawerGesture) return dragDrawer(available.x)
 
                         // Non-first pages in the drawer zone: intercept before the
                         // pager consumes the delta to page backwards.
@@ -71,11 +92,7 @@ fun Modifier.zonedDrawerSwipe(
                             val wasOnFirstPage = gestureStartPage == 0
                             val isInPagerZone = gestureStartX < widthPx * PAGER_ZONE_FRACTION
 
-                            if (!wasOnFirstPage && !isInPagerZone) {
-                                drawerOpened = true
-                                currentOpenDrawer()
-                                return Offset(available.x, 0f)
-                            }
+                            if (!wasOnFirstPage && !isInPagerZone) return dragDrawer(available.x)
                         }
                         return Offset.Zero
                     }
@@ -86,28 +103,33 @@ fun Modifier.zonedDrawerSwipe(
                         source: NestedScrollSource,
                     ): Offset {
                         if (source != NestedScrollSource.UserInput) return Offset.Zero
-                        if (drawerOpened) return Offset(available.x, 0f)
+                        if (drawerGesture) return dragDrawer(available.x)
 
-                        // First page: open drawer only with unconsumed right-swipe
+                        // First page: claim the gesture only with unconsumed right-swipe
                         // so child LazyRows can scroll first.
-                        if (available.x > 0f && gestureStartPage == 0) {
-                            drawerOpened = true
-                            currentOpenDrawer()
-                            return Offset(available.x, 0f)
-                        }
+                        if (available.x > 0f && gestureStartPage == 0) return dragDrawer(available.x)
                         return Offset.Zero
+                    }
+
+                    // Keep the release velocity from the pager too, so a flick that opens
+                    // the drawer (or falls short of it) doesn't also turn the page.
+                    override suspend fun onPreFling(available: Velocity): Velocity {
+                        if (!drawerGesture) return Velocity.Zero
+                        if (commit.release(available.x)) currentOpenDrawer()
+                        return Velocity(available.x, 0f)
                     }
                 }
             }
 
         this
             .onSizeChanged { widthPx = it.width.toFloat() }
-            .pointerInput(Unit) {
+            .pointerInput(pagerState, commit) {
                 awaitEachGesture {
                     val down = awaitFirstDown(requireUnconsumed = false)
                     gestureStartX = down.position.x
                     gestureStartPage = pagerState.currentPage
-                    drawerOpened = false
+                    drawerGesture = false
+                    commit.reset()
                 }
             }.nestedScroll(connection)
     }
