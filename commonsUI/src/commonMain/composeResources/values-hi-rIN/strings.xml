@@ -3322,7 +3322,7 @@
     <string name="buzz_workflow_trigger_desc">धावक श्रम करता है। तत्पश्चात एक मनुष्य की अनुमति तक विराम लेता है। तत्पश्चात कर्षण अनुरोध खोलता है। सम्पूर्ण प्रणाली आवर्तन को देखेंगे।</string>
     <string name="buzz_workflow_no_defs_hint">कोई कार्यप्रवाह नहीं अब तक। ऊपर विकल्पसूची खोलें तथा नया निरूपण… का चयन करें एक बनाने के लिए। तत्पश्चात उसका प्रवर्तन करें।</string>
     <string name="buzz_workflow_task_label">यह क्या करना चाहिए।</string>
-    <string name="buzz_workflow_trigger_run">आवर्तन प्रवर्तन</string>
+    <string name="buzz_workflow_trigger_run">आवर्तन को प्रवर्तित करें</string>
     <string name="buzz_workflow_picker_label">कार्यप्रवाह</string>
     <string name="buzz_workflow_picker_empty">कोई कार्यप्रवाह निरूपित नहीं अब तक</string>
     <string name="buzz_workflow_picker_choose">कार्यप्रवाह का चयन करें</string>
@@ -4438,7 +4438,7 @@
     <string name="desktop_notification_repost">%1$s ने उद्धरण किया</string>
     <string name="desktop_notification_reaction">%1$s ने प्रतिक्रिया दिया</string>
     <string name="desktop_notification_follow">%1$s ने आपका अनुगमन किया</string>
-    <string name="desktop_upload_server_not_supported">लेखनपीठ संगणक आरोहण जाते हैं ब्लोस्सम सेवासंगणक पर। एक का चयन करें अपने श्रव्यदृश्याभिलेख सेवासंगणक स्थापना विकल्पों में।</string>
+    <string name="desktop_upload_server_not_supported">लेखनपीठ संगणक से आरोहण जाते हैं ब्लोस्सम सेवासंगणक पर। एक का चयन करें अपने श्रव्यदृश्याभिलेख सेवासंगणक स्थापना विकल्पों में।</string>
     <string name="desktop_menu_file">अभिलेख</string>
     <string name="desktop_menu_go">जाएँ</string>
     <string name="desktop_menu_help">सहायता</string>
@@ -4446,7 +4446,7 @@
     <string name="desktop_menu_home">मुखपृष्ठ</string>
     <string name="desktop_menu_messages">सन्देश</string>
     <string name="desktop_menu_notifications">सूचनाएँ</string>
-    <string name="desktop_menu_about">आमेथिस्ट के प्रति जानकारी</string>
+    <string name="desktop_menu_about">आमेथिस्ट की जानकारी</string>
     <string name="desktop_menu_report_issue">समस्या का वृत्तान्त भेजें</string>
     <string name="login_with_remote_signer">दूरस्थ हस्ताक्षरकर्ता द्वारा प्रवेशांकन</string>
     <string name="remote_signer_scan_title">अपने हस्ताक्षरकर्ता को जोडें</string>
@@ -6666,7 +6666,7 @@
     <string name="kanban_on_board">फलक पर %1$s</string>
     <string name="kanban_open_board">फलक खोलें</string>
     <!-- WalletScrutiny build verifications (kind 30301) -->
-    <string name="build_verification_label">पुनरुत्पाद्य निरमाण जाँच</string>
+    <string name="build_verification_label">पुनरुत्पाद्य निर्माण जाँच</string>
     <string name="build_verdict_reproducible">पुनरुत्पाद्य</string>
     <string name="build_verdict_not_reproducible">पुनरुत्पाद्य नहीं</string>
     <string name="build_verdict_ftbfs">स्रोत से निर्माण असफल</string>
