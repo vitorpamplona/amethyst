@@ -6941,6 +6941,7 @@
         <item quantity="many">+%1$d więcej odpowiedzi</item>
         <item quantity="other">+%1$d odpowiedzi więcej</item>
     </plurals>
+    <!-- Web of Trust (NIP-85 trust network) -->
     <!-- Mostro instance terms (kind 38385) -->
     <string name="mostro_instance_unnamed">Instancja „Mostro” bez nazwy</string>
     <string name="mostro_version">Wersja %1$s</string>

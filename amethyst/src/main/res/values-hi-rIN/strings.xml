@@ -264,7 +264,7 @@
         <item quantity="one">संयोजित %1$d पुनःप्रसारक के साथ</item>
         <item quantity="other">संयोजित %1$d पुनःप्रसारकों के साथ</item>
     </plurals>
-    <string name="always_on_notif_connecting">आगतपेटिका पुनःप्रसारकों के साथ संयोजन किया जा रहा है \u2026</string>
+    <string name="always_on_notif_connecting">पुनःप्रसारकों के साथ संयोजन किया जा रहा है \u2026</string>
     <string name="always_on_notif_hide_details">विवरण छिपाएँ</string>
     <string name="always_on_notif_show_details">विवरण दिखाएँ</string>
     <string name="always_on_notif_tile_subtitle_off">निष्क्रिय</string>

@@ -264,7 +264,7 @@
         <item quantity="one">Kapcsolódva %1$d átjátszóhoz</item>
         <item quantity="other">Kapcsolódva %1$d átjátszóhoz</item>
     </plurals>
-    <string name="always_on_notif_connecting">Kapcsolódás a beérkező üzenetátjátszókhoz\u2026</string>
+    <string name="always_on_notif_connecting">Kapcsolódás az átjátszókhoz\u2026</string>
     <string name="always_on_notif_hide_details">Részletek elrejtése</string>
     <string name="always_on_notif_show_details">Részletek megjelenítése</string>
     <string name="always_on_notif_tile_subtitle_off">Ki</string>

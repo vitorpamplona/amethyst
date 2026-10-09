@@ -1708,6 +1708,9 @@
     <string name="call_permission_denied_cancel">Mégse</string>
     <string name="call_settings_enable_calls">Hang- és videóhívások engedélyezése</string>
     <string name="call_settings_enable_calls_description">Letiltott állapotban a hívásgombok rejtve maradnak a csevegési képernyőkön, a bejövő hívásokat pedig a rendszer értesítés küldése nélkül figyelmen kívűl hagyja.</string>
+    <string name="call_settings_off_with_nip17">A hívások ki vannak kapcsolva: ugyanazt a titkosított csatornát használják, mint a privát üzenetek (NIP-17), amelyek ki vannak kapcsolva az Üzenetek beállításaiban.</string>
+    <string name="open_messages_settings">Üzenetek beállításainak megnyitása</string>
+    <string name="chat_composer_off_with_nip17">A privát üzenetek (NIP-17) ki vannak kapcsolva az Üzenetek beállításaiban, így itt nem tud üzeneteket küldeni.</string>
     <string name="call_settings_video_quality">Videóminőség</string>
     <string name="call_settings_max_bitrate">Legmagasabb videó-bitsebesség</string>
     <string name="call_settings_turn_servers">TURN-/ STUN-kiszolgálók</string>
@@ -2425,6 +2428,7 @@
     <string name="video_player_settings_location_top_bar">Felső sáv</string>
     <string name="video_player_settings_location_overflow">Túlcsorduló menü</string>
     <string name="video_player_settings_action_fullscreen">Teljes képernyő</string>
+    <string name="video_player_exit_fullscreen">Kilépés a teljes képernyős módból</string>
     <string name="video_player_settings_action_fullscreen_description">Videó megnyitása teljes képernyős nézetben</string>
     <string name="video_player_settings_action_mute">Némítás</string>
     <string name="video_player_settings_action_mute_description">Hang be/ki</string>
@@ -2670,6 +2674,33 @@
     <string name="git_pr_no_changes">Nem találhatók fájlmódosítások.</string>
     <string name="git_pr_changes_retry">Módosítások betöltése újból</string>
     <string name="git_pr_revised">Felülvizsgált</string>
+    <string name="git_cover_note">Kísérő megjegyzés</string>
+    <string name="git_ci_success">CI sikeres</string>
+    <string name="git_ci_failure">CI sikertelen</string>
+    <string name="git_ci_pending">CI fut</string>
+    <string name="git_ci_cancelled">CI megszakítva</string>
+    <string name="git_ci_neutral">CI semleges</string>
+    <string name="git_ci_count">/%2$d / %1$d</string>
+    <string name="git_ci_runs_title">CI futások</string>
+    <string name="git_ci_runs_disclaimer">Bárki közzétehet CI-eredményeket bármelyik tárolóhoz. Ellenőrizze, ki írta alá az egyes futásokat, mielőtt megbízik bennük.</string>
+    <string name="git_ci_signed_by">Aláírta:</string>
+    <string name="git_ci_queued">Sorbaállítva</string>
+    <string name="git_ci_in_progress">Folyamatban</string>
+    <string name="git_ci_conclusion_success">Sikeres</string>
+    <string name="git_ci_conclusion_failure">Sikertelen</string>
+    <string name="git_ci_conclusion_neutral">Semleges</string>
+    <string name="git_ci_conclusion_cancelled">Megszakítva</string>
+    <string name="git_ci_conclusion_skipped">Kihagyva</string>
+    <string name="git_ci_conclusion_timed_out">Időtúllépés</string>
+    <string name="git_ci_conclusion_startup_failure">Indítási hiba</string>
+    <string name="git_ci_conclusion_unknown">Ismeretlen eredmény</string>
+    <string name="git_ci_no_jobs">Még nincsenek feladat-eredmények.</string>
+    <string name="git_ci_job_loading">Feladat-eredményének betöltése…</string>
+    <string name="git_ci_full_log">Teljes napló</string>
+    <plurals name="git_ci_earlier_attempts">
+        <item quantity="one">%1$d korábbi próbálkozás</item>
+        <item quantity="other">%1$d korábbi próbálkozás</item>
+    </plurals>
     <string name="git_repo_settings_title">Tároló szerkesztése</string>
     <string name="git_repo_settings_name">Név</string>
     <string name="git_repo_settings_description">Leírás</string>
@@ -3470,10 +3501,10 @@
     <string name="app_notification_reply_retry">Újra</string>
     <string name="app_notification_reply_sending">Küldés…</string>
     <string name="app_notification_reply_unconfirmed">Küldés…</string>
-    <string name="app_notification_reposts_channel_description">Értesítés ha valaki megosztja az Ön bejegyzését</string>
+    <string name="app_notification_reposts_channel_description">Értesíti Önt ha valaki megosztja az Ön bejegyzését</string>
     <string name="app_notification_reposts_channel_message">%1$s megosztotta az Ön bejegyzését</string>
-    <string name="app_notification_reposts_channel_name">Továbbosztások</string>
-    <string name="app_notification_reposts_summary">Új továbbosztások</string>
+    <string name="app_notification_reposts_channel_name">Megosztások</string>
+    <string name="app_notification_reposts_summary">Új megosztásaok</string>
     <string name="app_notification_scheduled_posts_channel_description">Értesítések, amikor egy ütemezett bejegyzés megjelenik vagy nem sikerül közzététenni.</string>
     <string name="app_notification_scheduled_posts_channel_name">Ütemezett bejegyzések</string>
     <string name="app_notification_shortcut_account_removed">Ezt a fiókot eltávolították az Amethystből.</string>
@@ -3748,7 +3779,7 @@
     <string name="chat_type_marmot_title">Titkosított csoportok</string>
     <string name="chat_type_nip04_desc">Régebbi, kevésbé privát titkosított közvetlen üzenetek (NIP-04).</string>
     <string name="chat_type_nip04_title">Régi típusú üzenetek</string>
-    <string name="chat_type_nip17_desc">Végpontok között titkosított, becsomagolt közvetlen üzenetek (NIP-17).</string>
+    <string name="chat_type_nip17_desc">Végpontok között titkosított, „ajándékcsomagolású” közvetlen üzenetek (NIP-17). A hang- és videóhívások ugyanazt a csatornát használják, így azokkal együtt kapcsolódnak ki.</string>
     <string name="chat_type_nip17_title">Privát üzenetek</string>
     <string name="chat_type_nip28_desc">Nyílt, nyilvános csevegőszobák, amelyeket bárki olvashat és csatlakozhat hozzájuk (NIP-28).</string>
     <string name="chat_type_nip28_title">Nyilvános csatornák</string>
@@ -4137,7 +4168,7 @@
     <string name="home_content_type_polls">Szavazások</string>
     <string name="home_content_type_ratings">Értékelések és megjegyzések</string>
     <string name="home_content_type_calendar_rsvps">Esemény-visszajelzések</string>
-    <string name="home_content_type_reposts">Továbbosztások</string>
+    <string name="home_content_type_reposts">Megosztások</string>
     <string name="home_content_type_shorts">Rövid videók</string>
     <string name="home_content_type_text_notes">Szöveges jegyzetek</string>
     <string name="home_content_type_torrents">Torrentek</string>
@@ -4391,6 +4422,37 @@
     <string name="location_pick_on_map">Válasszon egy helyet a térképen</string>
     <string name="login_bunker_not_supported">Az Amethyst Androidra nem tud bunker:// címmel bejelentkezni. Kiad ilyeneket, hogy más alkalmazások kérhessék tőle az aláírást, de ő maga nem tud ilyennel bejelentkezni. Használjon külső aláíró alkalmazást vagy az Amethyst Desktopot.</string>
     <string name="login_nostrconnect_not_supported">Ez egy alkalmazás, amely az aláírójához szeretne csatlakozni, nem bejelentkezési mód. Először jelentkezzen be, majd nyissa meg a NIP-46 aláíró képernyőről.</string>
+    <string name="desktop_key_not_kept_title">Az Ön kulcsa nem lett mentve</string>
+    <string name="desktop_key_not_kept_description">Ezen a számítógépen nincs olyan kulcstár, amelyet az Amethyst használhatna, így a privát kulcsa csak az Amethyst bezárásáig marad meg. Legközelebb újra be kell jelentkeznie.</string>
+    <string name="desktop_notifications">Asztali értesítések</string>
+    <string name="desktop_notifications_description">Az említések, válaszok, reakciók, zap-ek és üzenetek rendszerértesítésként való megjelenítése, amíg az Amethyst a háttérben fut.</string>
+    <string name="desktop_notifications_denied">A rendszer blokkolta az Amethyst értesítéseit. Engedélyezze őket a rendszerbeállításokban.</string>
+    <string name="desktop_notifications_preview">Üzenet szövegének megjelenítése</string>
+    <string name="desktop_notifications_preview_description">Az értesítés tartalmazza az üzenet szövegét és feladójának nevét</string>
+    <string name="desktop_notification_someone">Valaki</string>
+    <string name="desktop_notification_zap">⚡ %1$s satoshit küldött Önnek zapként</string>
+    <string name="desktop_notification_zap_amount">⚡ %1$s %2$s satoshit küldött Önnek zapként</string>
+    <string name="desktop_notification_dm">Új titkosított üzenet</string>
+    <string name="desktop_notification_reply">%1$s válaszolt</string>
+    <string name="desktop_notification_mention">%1$s megemlítette Önt</string>
+    <string name="desktop_notification_repost">%1$s megosztotta</string>
+    <string name="desktop_notification_reaction">%1$s reagált</string>
+    <string name="desktop_notification_follow">%1$s követi Önt</string>
+    <string name="desktop_upload_server_not_supported">Az asztali feltöltések Blossom kiszolgálókra töltődnek fel. Válasszon egyet a médiakiszolgáló-beállításaiban.</string>
+    <string name="desktop_menu_file">Fájl</string>
+    <string name="desktop_menu_go">Ugrás</string>
+    <string name="desktop_menu_help">Súgó</string>
+    <string name="desktop_menu_quit">Kilépés az Amethystből</string>
+    <string name="desktop_menu_home">Kezdőlap</string>
+    <string name="desktop_menu_messages">Üzenetek</string>
+    <string name="desktop_menu_notifications">Értesítések</string>
+    <string name="desktop_menu_about">Az Amethyst névjegye</string>
+    <string name="desktop_menu_report_issue">Hibajelentés</string>
+    <string name="login_with_remote_signer">Bejelentkezés távoli aláíróval</string>
+    <string name="remote_signer_scan_title">Összekapcsolás aláíróval</string>
+    <string name="remote_signer_scan_description">Olvassa be ezt a kódot egy NIP-46 aláíróval, vagy illessze be a címet abba. A saját aláírójától származó bunker:// cím helyette a kulcsmezőbe kerül.</string>
+    <string name="remote_signer_waiting">Várakozás az aláíró jóváhagyására…</string>
+    <string name="remote_signer_login_failed">Nem sikerült bejelentkezni a távoli aláíróval: %1$s</string>
     <string name="login_with_a_private_key_to_be_able_to_boost_posts">Ön nyilvános kulcsot használ, és a nyilvános kulccsal csak olvashatóak a bejegyzések. Jelentkezzen be a privát kulcsával, hogy meg tudja tolni a bejegyzéseket</string>
     <string name="login_with_a_private_key_to_be_able_to_follow">Ön nyilvános kulcsot használ, és a nyilvános kulccsal csak olvashatóak a bejegyzések. Jelentkezzen be a privát kulcsával, hogy követni tudjon embereket</string>
     <string name="login_with_a_private_key_to_be_able_to_hide_word">Ön nyilvános kulcsot használ, és a nyilvános kulccsal csak olvashatóak a bejegyzések. Jelentkezzen be a privát kulcsával, hogy egy szót vagy mondat el tudjon rejteni</string>
@@ -5019,7 +5081,7 @@
     <string name="pow_category_reactions_explainer">A legnagyobb mennyiségű típus; minden kedvelés bányászata meríti az akkumulátort</string>
     <string name="pow_category_reports">Jelentések</string>
     <string name="pow_category_reports_explainer">Az átjátszók a költségük alapján mérlegelik a jelentéseket</string>
-    <string name="pow_category_reposts">Újraközzétevések</string>
+    <string name="pow_category_reposts">Megosztások</string>
     <string name="pow_category_reposts_explainer">Nagyszámú aktív felhasználónál</string>
     <string name="pow_category_short_notes">Rövid jegyzetek és válaszok</string>
     <string name="pow_category_short_notes_explainer">Az elsődleges nyilvános kéretlen tartalmi felület</string>
@@ -5173,7 +5235,7 @@
     <string name="relay_explain_community_chats">Azok az átjátszók, amelyekre az egyes közösségek közzéteszik a terveiket.</string>
     <string name="relay_explain_direct_messages">A közvetlen üzenetek beérkező átjátszói, ahol a becsomagolt üzenetek kézbesítésre kerülnek.</string>
     <string name="relay_explain_encrypted_groups">Csoportüzenetek és kulcscsomagok az egyes csoportok átjátszóin.</string>
-    <string name="relay_explain_engagement">Figyeli a jelenleg megjelenített eseményeket új válaszok, reakciók, továbbosztások, zap-ek és jelentések szempontjából, így a számlálók frissülnek olvasás közben.</string>
+    <string name="relay_explain_engagement">Figyeli a jelenleg megjelenített eseményeket – az új válaszokat, reakciókat, megosztásokat, zap-eket és bejelentéseket –, így a számlálók olvasás közben folyamatosan frissülnek.</string>
     <string name="relay_explain_ephemeral_chats">Csevegőszobák, amelyek nem őriznek előzményeket – az üzenetek csak a kapcsolódás ideje alatt léteznek, ezért ezek folyamatosan előfizetve maradnak, hogy bármit is fogadni tudjanak.</string>
     <string name="relay_explain_follows">Követési listák, amelyek az Ön hírfolyama és a bizalmi hálójának felépítéséhez használatosak.</string>
     <string name="relay_explain_geohash_chats">Helyalapú szobák azokhoz a területekhez, amelyeket követ, lekérdezve az azokat hordozó átjátszóktól.</string>
@@ -5239,6 +5301,7 @@
     <string name="relay_purpose_relay_list_finder">Átjátszólista-kereső</string>
     <string name="relay_purpose_reports_from_follows">Jelentések követettektől</string>
     <string name="relay_purpose_search">Keresés</string>
+    <string name="relay_purpose_sending">Események küldése</string>
     <string name="relay_purpose_tags">Kulcsszavak</string>
     <string name="relay_purpose_thread">Beszélgetés</string>
     <string name="relay_purpose_topics">Témák</string>
@@ -6558,7 +6621,66 @@
         <item quantity="one">+%1$d további válasz</item>
         <item quantity="other">+%1$d további válasz</item>
     </plurals>
+    <!-- Web of Trust (NIP-85 trust network) -->
     <!-- Mostro instance terms (kind 38385) -->
+    <string name="mostro_instance_label">Mostro P2P csere</string>
+    <string name="mostro_instance_unnamed">Névtelen Mostro példány</string>
+    <string name="mostro_version">%1$s verzió</string>
+    <string name="mostro_fee">Díj</string>
+    <string name="mostro_order_size">Megbízás mérete</string>
+    <string name="mostro_order_size_range">%1$s – %2$s satoshi</string>
+    <string name="mostro_order_size_min">%1$s satoshitól</string>
+    <string name="mostro_order_size_max">Legfeljebb %1$s satoshi</string>
+    <string name="mostro_currencies">Pénznemek</string>
+    <string name="mostro_all_currencies">Összes pénznem</string>
+    <plurals name="mostro_more_currencies">
+        <item quantity="one">+%1$d további</item>
+        <item quantity="other">+%1$d további</item>
+    </plurals>
+    <string name="mostro_order_expiration">Megbízások várakozási ideje</string>
+    <plurals name="mostro_order_expiration_hours">
+        <item quantity="one">%1$d óra</item>
+        <item quantity="other">%1$d óra</item>
+    </plurals>
+    <string name="mostro_escrow">Letét</string>
+    <string name="mostro_escrow_lightning">Lightning várakozó számla</string>
+    <string name="mostro_escrow_cashu">Cashu ecash</string>
+    <string name="mostro_in_maintenance">Karbantartás alatt: nem fogad új megbízásokat</string>
     <!-- Kanban boards (kind 30301) and cards (kind 30302) -->
+    <string name="kanban_board_label">Kanban-tábla</string>
+    <string name="kanban_card_label">Kanban-kártya</string>
+    <string name="kanban_untitled">Névtelen</string>
+    <plurals name="kanban_column_card_count">
+        <item quantity="one">%1$d card</item>
+        <item quantity="other">%1$d card</item>
+    </plurals>
+    <plurals name="kanban_unplaced_cards">
+        <item quantity="one">A(z) %1$d kártya nincs egyetlen oszlopban sem</item>
+        <item quantity="other">%1$d kártya egyetlen oszlopban sem</item>
+    </plurals>
+    <string name="kanban_assigned_to">Hozzárendelve</string>
+    <plurals name="kanban_more_assignees">
+        <item quantity="one">+%1$d további</item>
+        <item quantity="other">+%1$d további</item>
+    </plurals>
+    <string name="kanban_on_board">A(z) %1$s táblán van</string>
+    <string name="kanban_open_board">Tábla megnyitása</string>
     <!-- WalletScrutiny build verifications (kind 30301) -->
+    <string name="build_verification_label">Reprodukálható összeállítási ellenőrzés</string>
+    <string name="build_verdict_reproducible">Reprodukálható</string>
+    <string name="build_verdict_not_reproducible">Nem reprodukálható</string>
+    <string name="build_verdict_ftbfs">Nem sikerült lefordítani a forrásból</string>
+    <string name="build_verdict_spam">Megjelölve kéretlen tartalomként</string>
+    <string name="build_verdict_notag">Ehhez a kiadáshoz nincs forrás-címke</string>
+    <string name="build_verdict_nosource">Nincs nyilvános forráskód</string>
+    <string name="build_verdict_warning">Figyelmeztetésekkel ellenőrizve</string>
+    <string name="build_verdict_obfuscated">Obfuszkált build</string>
+    <string name="build_verdict_unknown">Ítélet: %1$s</string>
+    <string name="build_verified_by">Ellenőrizte:</string>
+    <plurals name="build_files_checked">
+        <item quantity="one">%1$d fájl ellenőrizve</item>
+        <item quantity="other">%1$d fájl ellenőrizve</item>
+    </plurals>
+    <string name="build_show_report">Jelentés megjelenítése</string>
+    <string name="build_hide_report">Jelentés elrejtése</string>
 </resources>

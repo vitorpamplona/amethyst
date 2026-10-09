@@ -6390,6 +6390,7 @@
         <item quantity="one">+%1$d weitere Antwort</item>
         <item quantity="other">+%1$d weitere Antworten</item>
     </plurals>
+    <!-- Web of Trust (NIP-85 trust network) -->
     <!-- Mostro instance terms (kind 38385) -->
     <!-- Kanban boards (kind 30301) and cards (kind 30302) -->
     <!-- WalletScrutiny build verifications (kind 30301) -->
