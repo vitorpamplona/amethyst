@@ -79,6 +79,13 @@ interface AppPlatform {
      */
     val supportsRemoteSignerLogin: Boolean get() = false
 
+    /**
+     * Whether the platform tells metered and mobile connections from unmetered ones. Where it
+     * cannot (Desktop reports every connection as unmetered), the "Wi-Fi" choice of the media
+     * settings behaves exactly like "Always", so the settings leave it out.
+     */
+    val detectsMeteredConnections: Boolean get() = true
+
     /** The terms-of-use checkbox the login and sign-up forms show where [requiresTermsAcceptance]. */
     @Composable
     fun TermsGate(

@@ -64,6 +64,9 @@ class DesktopAppPlatform(
     // Desktop has no signer app to hand keys to; a NIP-46 remote signer plays that role.
     override val supportsRemoteSignerLogin: Boolean get() = true
 
+    // DesktopAppModules reports every connection as unmetered.
+    override val detectsMeteredConnections: Boolean get() = false
+
     // The shared bar, imported under another name: inside this override the bare name is the override.
     @Composable
     override fun AppBottomBar(
