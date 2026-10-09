@@ -24,7 +24,6 @@ import com.vitorpamplona.amethyst.cli.Args
 import com.vitorpamplona.amethyst.cli.Context
 import com.vitorpamplona.amethyst.cli.DataDir
 import com.vitorpamplona.amethyst.cli.Output
-import com.vitorpamplona.amethyst.commons.model.DefaultMinTrustScore
 import com.vitorpamplona.amethyst.commons.wot.network.TrustNetworkOutcome
 import com.vitorpamplona.amethyst.commons.wot.network.TrustNetworkSyncStatus
 import kotlinx.coroutines.coroutineScope
@@ -49,7 +48,7 @@ object TrustSync {
         val update = args.bool("update")
         val full = args.bool("full")
         val redownload = args.bool("redownload")
-        val minScore = args.intFlag("min-score", DefaultMinTrustScore)
+        val minScore = args.minScore()
         val observerArg = args.flag("observer")
         val timeoutMs = args.timeoutMs(8)
         args.rejectUnknown()
@@ -68,7 +67,14 @@ object TrustSync {
             ctx.prepare()
             val observer = observerArg?.let { ctx.requireUserHex(it) } ?: ctx.identity.pubKeyHex
             openTrustNetwork(ctx, observer, minScore, refresh = true, withClient = true, timeoutMs = timeoutMs).use { session ->
-                val provider = session.provider ?: return noProvider(observer.takeIf { it != ctx.identity.pubKeyHex })
+                val provider =
+                    session.provider
+                        ?: return if (session.undecryptable) {
+                            // Not "no provider": setting one up would replace the one it may hold.
+                            Output.error("undecryptable", "could not decrypt the private part of the account's kind 10040, which may name its provider; check the signer")
+                        } else {
+                            noProvider(observer.takeIf { it != ctx.identity.pubKeyHex })
+                        }
                 System.err.println("[amy] trust network: provider ${provider.pubkey} @ ${provider.relayUrl.url}")
 
                 val started = System.currentTimeMillis()

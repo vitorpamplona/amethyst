@@ -67,7 +67,7 @@ class AccountSyncedSettings(
             MutableStateFlow(internalSettings.security.maxHashtagLimit),
             MutableStateFlow(internalSettings.security.sendKind0EventsToLocalRelay),
             MutableStateFlow(internalSettings.security.addClientTag),
-            MutableStateFlow(internalSettings.security.minTrustScore),
+            MutableStateFlow(internalSettings.security.minTrustScore.coerceIn(0, 100)),
         )
     val videoPlayer =
         AccountVideoPlayerPreferences(
@@ -206,8 +206,10 @@ class AccountSyncedSettings(
             security.addClientTag.tryEmit(syncedSettingsInternal.security.addClientTag)
         }
 
-        if (security.minTrustScore.value != syncedSettingsInternal.security.minTrustScore) {
-            security.minTrustScore.tryEmit(syncedSettingsInternal.security.minTrustScore)
+        // Clamped like updateMinTrustScore: another client's 500 would hide every non-follow.
+        val minTrustScore = syncedSettingsInternal.security.minTrustScore.coerceIn(0, 100)
+        if (security.minTrustScore.value != minTrustScore) {
+            security.minTrustScore.tryEmit(minTrustScore)
         }
 
         val newVideoPlayerButtonItems =

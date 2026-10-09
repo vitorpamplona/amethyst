@@ -27,6 +27,7 @@ import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.RequestBody.Companion.toRequestBody
 import okhttp3.coroutines.executeAsync
+import java.io.IOException
 
 /** [TrustProviderHttp] over OkHttp. [okHttpClient] picks the client for each URL (Tor, proxies). */
 class OkHttpTrustProviderHttp(
@@ -52,12 +53,19 @@ class OkHttpTrustProviderHttp(
         builder.header("Accept", "application/json")
         return okHttpClient(url).newCall(builder.build()).executeAsync().use { response ->
             withContext(Dispatchers.IO) {
-                TrustProviderHttpResponse(response.code, response.body.string())
+                // Setup answers are a few KB; a misbehaving endpoint must not stream the app out of memory.
+                val source = response.body.source()
+                if (!source.request(MAX_BODY_BYTES + 1)) {
+                    TrustProviderHttpResponse(response.code, source.buffer.readUtf8())
+                } else {
+                    throw IOException("$url answered with more than $MAX_BODY_BYTES bytes")
+                }
             }
         }
     }
 
     companion object {
         private val JSON = "application/json; charset=utf-8".toMediaType()
+        private const val MAX_BODY_BYTES = 1_048_576L
     }
 }

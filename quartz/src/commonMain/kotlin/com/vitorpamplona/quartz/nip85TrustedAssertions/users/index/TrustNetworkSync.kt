@@ -59,7 +59,7 @@ class TrustNetworkPartial(
     val cards: Int get() = index.size + ids.tombstones
 }
 
-/** Receives a [TrustNetworkPartial] every [TRUST_NETWORK_CHECKPOINT_EVERY] cards of a cold download. */
+/** Receives a [TrustNetworkPartial] as a cold download grows: first at [TRUST_NETWORK_CHECKPOINT_EVERY] cards, then each time it grows by half. */
 fun interface TrustNetworkCheckpoint {
     fun save(partial: TrustNetworkPartial)
 }
@@ -133,8 +133,9 @@ private fun missingAllowed(need: Int) = maxOf(16, need / 200)
  * sync of a new trust network.
  *
  * Pages backwards with [fetchAllPages]. When one second holds more cards than the relay's
- * `max_limit` (providers publish in batches that share a `created_at`), paging cannot advance
- * and reports `UNPAGEABLE`; the sync then switches to NIP-77 negentropy, passing what it
+ * `max_limit` (providers publish in batches that share a `created_at`), paging steps past that
+ * second and loses its tail, or cannot page at all (`UNPAGEABLE`). Either way the relay's count
+ * comes out higher than what arrived, and the sync switches to NIP-77 negentropy, passing what it
  * already has so only the remainder is downloaded.
  *
  * Every signature is checked ([ParallelEventVerifier], all cores, bounded backlog so the socket
@@ -150,7 +151,7 @@ suspend fun INostrClient.downloadTrustNetwork(
     relay: NormalizedRelayUrl,
     /** What an earlier, cut-off download of this provider collected: only the rest is fetched. */
     resumeFrom: TrustNetworkPartial? = null,
-    /** Saves what has arrived every [checkpointEvery] cards. */
+    /** Saves what has arrived: first at [checkpointEvery] cards, then each time the download grows by half. */
     checkpoint: TrustNetworkCheckpoint? = null,
     checkpointEvery: Int = TRUST_NETWORK_CHECKPOINT_EVERY,
     // Last, so callers can pass it as a trailing lambda.
@@ -167,10 +168,15 @@ suspend fun INostrClient.downloadTrustNetwork(
     progress?.onProgress(builder.cardCount, expected)
     val invalid = AtomicInt(0)
 
+    // Each checkpoint sorts and writes everything so far, so they are spaced geometrically: at
+    // [checkpointEvery], then whenever the download has grown by half. A fixed step would cost
+    // O(n²) over a million cards, on the coroutine that drains the socket.
+    var lastCheckpoint = 0
     val save: ((Int) -> Unit)? =
         checkpoint?.let { sink ->
             { accepted ->
-                if (accepted % checkpointEvery == 0) {
+                if (accepted - lastCheckpoint >= maxOf(checkpointEvery, lastCheckpoint / 2)) {
+                    lastCheckpoint = accepted
                     val (index, ids) = builder.build()
                     sink.save(TrustNetworkPartial(TrustNetworkHeader(provider, relay.url, syncCursor = 0, lastFullCheck = 0, lastUpdate = 0), index, ids))
                 }
@@ -179,6 +185,29 @@ suspend fun INostrClient.downloadTrustNetwork(
 
     var complete: Boolean
     var detail: String
+    var triedNegentropy = false
+
+    // Fetches what the relay has and the builder lacks. Only a full count is complete: by-id
+    // batches that time out are dropped without an error.
+    suspend fun fillByNegentropy(): Boolean {
+        triedNegentropy = true
+        return try {
+            val local = builder.idsAndTimes()
+            val synced =
+                verifying(builder, invalid, expected, progress, seeded = 0, onAccepted = save) { submit ->
+                    negentropySync(relay, filter, localEntries = local, idleTimeoutMs = IDLE_MS) { submit(it) }
+                }
+            detail = "negentropy ${synced.downloaded} of ${synced.needCount}"
+            synced.downloaded >= synced.needCount
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            Log.w(TAG, "Negentropy fallback failed on ${relay.url}", e)
+            detail = "negentropy failed: ${e.message}"
+            false
+        }
+    }
+
     // Resuming: reconcile what the cut-off download had with the relay, so only the rest is
     // fetched and a card the relay replaced or dropped since then goes. A relay without NIP-77
     // gets the whole walk again; the builder merges the cards it already had.
@@ -188,46 +217,57 @@ suspend fun INostrClient.downloadTrustNetwork(
         val reconciled = applyDiff(builder, relay, resumed, invalid, progress, seeded = 0, seededIds = resume.ids, expected = expected, onAccepted = save)
         complete = reconciled.complete
         detail = "resumed from ${resume.cards}: need ${reconciled.need}, gone ${reconciled.gone}"
+        triedNegentropy = true
     } else {
         val paged = verifying(builder, invalid, expected, progress, seeded = 0, onAccepted = save) { submit -> fetchAllPages(relay, listOf(filter), IDLE_MS) { submit(it) } }
         complete = paged.drained
         detail = "${paged.end}${paged.message?.let { ": $it" } ?: ""}"
         if (!complete && paged.end == PagedFetchResult.End.UNPAGEABLE) {
             Log.d(TAG) { "Paging stalled on a shared timestamp at ${builder.cardCount} cards; switching to negentropy" }
-            try {
-                val local = builder.idsAndTimes()
-                val synced =
-                    verifying(builder, invalid, expected, progress, seeded = 0, onAccepted = save) { submit ->
-                        negentropySync(relay, filter, localEntries = local, idleTimeoutMs = IDLE_MS) { submit(it) }
-                    }
-                // By-id batches that time out are dropped without an error: only a full count is complete.
-                complete = synced.downloaded >= synced.needCount
-                detail = "negentropy ${synced.downloaded} of ${synced.needCount}"
-            } catch (e: CancellationException) {
-                throw e
-            } catch (e: Exception) {
-                Log.w(TAG, "Negentropy fallback failed on ${relay.url}", e)
-                detail = "negentropy failed: ${e.message}"
-            }
+            complete = fillByNegentropy()
         }
     }
 
-    // A provider still publishing its first run (right after sign-up) leaves the relay with more
-    // cards than the walk saw: everyone not yet published would count as outside the network.
-    // Recount, and call the download incomplete when clearly more arrived than it got; the next
-    // try reads the finished batch. A few cards (a re-rank landing mid-download) are left to the
-    // next update, whose counts will differ.
+    // The provider's kind 5s: a relay that keeps a card despite its deletion would otherwise
+    // count the person as a member for good, since updates only fetch deletions after the cursor.
+    // Few, so all of them, every download.
     if (complete) {
-        val after = countOrNull(relay, filter)
-        val got = builder.cardCount + invalid.load()
-        if (after != null && after - got > missingAllowed(after)) {
+        val deletions = verifying(builder, invalid, null, null, seeded = 0) { submit -> fetchAllPages(relay, listOf(trustNetworkDeletionFilter(provider, 0)), IDLE_MS) { submit(it) } }
+        if (!deletions.drained) {
             complete = false
-            detail = "the provider is still publishing: $got cards downloaded, $after on the relay now"
+            detail = "deletions: ${deletions.end}${deletions.message?.let { ": $it" } ?: ""}"
+        }
+    }
+
+    // What the relay holds against what arrived: distinct cards, counting the versions and
+    // removals kept as tombstones and the cards that failed verification. Not the builder's raw
+    // count, which holds a resume's seeded cards and cards delivered twice.
+    var built = builder.build()
+
+    fun held() = built.first.size + built.second.tombstones + invalid.load()
+
+    // Short of the relay's count: either a second denser than the relay's page (paging stepped
+    // past its tail and still drained) or a provider still publishing its first run (right after
+    // sign-up), whose unpublished people would count as outside the network. Negentropy fetches
+    // exactly what is missing; if the count is still short, the download is incomplete and the
+    // next try reads the finished batch. A few cards (a re-rank landing mid-download) are left to
+    // the next update, whose counts will differ.
+    if (complete) {
+        var after = countOrNull(relay, filter)
+        if (after != null && after - held() > missingAllowed(after) && !triedNegentropy) {
+            Log.d(TAG) { "The walk got ${held()} of $after cards; fetching the rest by negentropy" }
+            complete = fillByNegentropy()
+            built = builder.build()
+            after = countOrNull(relay, filter)
+        }
+        if (complete && after != null && after - held() > missingAllowed(after)) {
+            complete = false
+            detail = "the provider is still publishing: ${held()} cards downloaded, $after on the relay now"
         }
     }
 
     val now = TimeUtils.now()
-    val (index, ids) = builder.build()
+    val (index, ids) = built
     val cursor = cursorAfter(0, builder.newestCreatedAt, startedAt)
     return TrustNetworkSyncResult(
         header = TrustNetworkHeader(provider, relay.url, syncCursor = cursor, lastFullCheck = now, lastUpdate = now).withHeldCounts(ids),

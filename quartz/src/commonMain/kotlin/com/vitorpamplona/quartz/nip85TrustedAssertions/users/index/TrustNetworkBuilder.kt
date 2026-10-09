@@ -142,7 +142,8 @@ class TrustNetworkBuilder(
 
     /** A card's `d` tag names a pubkey: 64 lowercase hex characters, as NIP-01 writes them. */
     private fun isSubject(subject: String?): Boolean {
-        if (subject == null || !Hex.isHex64(subject)) return false
+        // isHex64 reads only the first 64 characters: "<pubkey>:v2" is another address.
+        if (subject == null || subject.length != 64 || !Hex.isHex64(subject)) return false
         for (c in subject) if (c in 'A'..'F') return false
         return true
     }
@@ -163,7 +164,7 @@ class TrustNetworkBuilder(
                 }
 
                 "e" -> {
-                    if (Hex.isHex64(tag[1])) {
+                    if (tag[1].length == 64 && Hex.isHex64(tag[1])) {
                         deletedByKind5.add(tag[1].lowercase())
                         any = true
                     }

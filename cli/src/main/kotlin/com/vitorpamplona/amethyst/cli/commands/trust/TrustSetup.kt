@@ -25,7 +25,6 @@ import com.vitorpamplona.amethyst.cli.Context
 import com.vitorpamplona.amethyst.cli.DataDir
 import com.vitorpamplona.amethyst.cli.Output
 import com.vitorpamplona.amethyst.cli.commands.RawEventSupport
-import com.vitorpamplona.amethyst.cli.commands.graperank.fetchLatestProviderList
 import com.vitorpamplona.amethyst.commons.model.trustedAssertions.rankProvider
 import com.vitorpamplona.amethyst.commons.model.trustedAssertions.withProviderRows
 import com.vitorpamplona.amethyst.commons.wot.onboarding.KnownTrustProviders
@@ -70,22 +69,24 @@ object TrustSetup {
                     return Output.error("provider_" + e.reason.name.lowercase(), e.message)
                 }
 
-            val me = ctx.identity.pubKeyHex
-            val outbox = ctx.outboxRelays()
-            val latest = fetchLatestProviderList(ctx, me, outbox, timeoutMs)
+            val latest = (readOwnProviderList(ctx, timeoutMs) ?: return ownListUnreachable()).event
+            // Read before the rewrite: each decrypt is a signer round trip (a bunker, a prompt).
+            val replaced = latest?.rankProvider(ctx.signer)?.pubkey?.takeIf { it != registration.serviceKey }
             val event = withProviderRows(latest, registration.rows, isPrivate, ctx.signer)
-            val ack = ctx.publish(event, outbox)
+            val ack = ctx.publish(event, ctx.outboxRelays())
             RawEventSupport.publishGuard(ack, event.id)?.let { return it }
 
             Output.emit(
                 mapOf(
-                    "provider" to onboarding.id,
+                    // Like every trust command, the key whose cards make the network.
+                    "provider" to registration.serviceKey,
+                    "onboarding" to onboarding.id,
                     "service_key" to registration.serviceKey,
                     "relay" to registration.relay.url,
                     "rows" to registration.rows.map { it.toTagArray().toList() },
                     "scores_ready" to registration.scoresReady,
                     "private" to isPrivate,
-                    "replaced" to latest?.rankProvider(ctx.signer)?.pubkey?.takeIf { it != registration.serviceKey },
+                    "replaced" to replaced,
                     "event_id" to event.id,
                 ) + RawEventSupport.ackFields(ack),
             )

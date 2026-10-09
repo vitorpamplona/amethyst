@@ -27,6 +27,8 @@ import com.vitorpamplona.quartz.nip01Core.crypto.KeyPair
 import com.vitorpamplona.quartz.nip01Core.relay.client.NostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.normalizeRelayUrl
+import com.vitorpamplona.quartz.nip01Core.relay.server.policies.LimitsPolicy
+import com.vitorpamplona.quartz.nip01Core.relay.server.policies.RelayLimits
 import com.vitorpamplona.quartz.nip01Core.relay.sockets.okhttp.BasicOkHttpWebSocket
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerInternal
 import com.vitorpamplona.quartz.utils.Hex
@@ -62,9 +64,16 @@ class TrustNetworkSyncRegressionTest {
 
     private suspend fun <T> withRelay(
         events: List<Event>,
+        // A relay's max_limit: every REQ page is cut to this many events.
+        pageCap: Int? = null,
         block: suspend (RelayEngine, NostrClient, NormalizedRelayUrl) -> T,
     ): T {
-        val engine = RelayEngine(url = "ws://127.0.0.1:7790/".normalizeRelayUrl())
+        val engine =
+            if (pageCap == null) {
+                RelayEngine(url = "ws://127.0.0.1:7790/".normalizeRelayUrl())
+            } else {
+                RelayEngine(url = "ws://127.0.0.1:7790/".normalizeRelayUrl(), policyBuilder = { LimitsPolicy(RelayLimits(defaultLimit = pageCap, maxLimit = pageCap)) })
+            }
         engine.store.batchInsert(events)
         val server = KtorRelay(engine, port = 0).start()
         val client = NostrClient(BasicOkHttpWebSocket.Builder { OkHttpClient() })
@@ -140,6 +149,32 @@ class TrustNetworkSyncRegressionTest {
             val first = List(3_000) { i -> card(hex(), 50, batchTime + i) }
             // The rest of the run lands after the walk has passed the newest second.
             val rest = List(2_000) { card(hex(), 50, batchTime + 10_000) }
+            // And more still while the download fetches what the walk missed.
+            val evenMore = List(2_000) { card(hex(), 50, batchTime + 20_000) }
+            var published = 0
+            val result =
+                withRelay(first) { engine, client, relay ->
+                    client.downloadTrustNetwork(provider.pubKey, relay) { verified, _ ->
+                        if (verified >= 1_000 && published == 0) {
+                            published = 1
+                            runBlocking { engine.store.batchInsert(rest) }
+                        } else if (verified >= 4_000 && published == 1) {
+                            published = 2
+                            runBlocking { engine.store.batchInsert(evenMore) }
+                        }
+                    }
+                }
+            assertEquals(2, published, "the test must publish during the walk and during the fill")
+            assertFalse(result.complete, "the last batch is missing: ${result.detail}")
+            assertTrue(result.detail!!.contains("still publishing"), result.detail)
+        }
+
+    @Test
+    fun cardsPublishedDuringTheWalkAreFetchedBeforeItEnds() =
+        runBlocking {
+            val first = List(3_000) { i -> card(hex(), 50, batchTime + i) }
+            // Published above the walk's cursor once it has passed the newest second.
+            val rest = List(2_000) { card(hex(), 50, batchTime + 10_000) }
             var published = false
             val result =
                 withRelay(first) { engine, client, relay ->
@@ -151,8 +186,8 @@ class TrustNetworkSyncRegressionTest {
                     }
                 }
             assertTrue(published, "the test must publish during the walk")
-            assertFalse(result.complete, "a third of the network is missing: ${result.detail}")
-            assertTrue(result.detail!!.contains("still publishing"), result.detail)
+            assertTrue(result.complete, result.detail)
+            assertEquals(5_000, result.index.size, "the cards the walk missed are fetched by negentropy: ${result.detail}")
         }
 
     @Test
@@ -206,14 +241,31 @@ class TrustNetworkSyncRegressionTest {
     @Test
     fun aDownloadSavesCheckpointsAsItGoes() =
         runBlocking {
-            val cards = List(3_000) { i -> card(hex(), 50, batchTime + i) }
+            val cards = List(6_000) { i -> card(hex(), 50, batchTime + i) }
             val saved = mutableListOf<Int>()
             val result =
                 withRelay(cards) { _, client, relay ->
                     client.downloadTrustNetwork(provider.pubKey, relay, checkpoint = { saved += it.cards }, checkpointEvery = 1_000)
                 }
             assertTrue(result.complete)
-            assertEquals(listOf(1_000, 2_000, 3_000), saved, "one checkpoint every 1,000 cards, each holding everything so far")
+            // Each holds everything so far; after the first few they come as the download grows by half.
+            assertEquals(listOf(1_000, 2_000, 3_000, 4_500), saved)
+        }
+
+    @Test
+    fun aSecondDenserThanTheRelaysPageIsFetchedByNegentropy() =
+        runBlocking {
+            // A provider publishing a batch: 1,200 cards in one second, on a relay that pages 500
+            // at a time (strfry's default). Paging steps past that second with only its first page
+            // and still drains.
+            val dense = List(1_200) { card(hex(), 50, batchTime) }
+            val older = List(150) { i -> card(hex(), 50, batchTime - 1 - i) }
+            val result =
+                withRelay(dense + older, pageCap = 500) { _, client, relay ->
+                    client.downloadTrustNetwork(provider.pubKey, relay)
+                }
+            assertTrue(result.complete, result.detail)
+            assertEquals(1_350, result.index.size, "every card of the dense second: ${result.detail}")
         }
 
     @Test

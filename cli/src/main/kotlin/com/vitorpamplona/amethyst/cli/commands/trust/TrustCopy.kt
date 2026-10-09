@@ -62,16 +62,15 @@ object TrustCopy {
                 return Output.error("no_rank", "$who's kind 10040 names no public 30382:rank provider")
             }
 
-            val me = ctx.identity.pubKeyHex
-            val outbox = ctx.outboxRelays()
-            val mine = fetchLatestProviderList(ctx, me, outbox, timeoutMs)
+            val mine = (readOwnProviderList(ctx, timeoutMs) ?: return ownListUnreachable()).event
             val event = withProviderRows(mine, rows, isPrivate, ctx.signer)
-            val ack = ctx.publish(event, outbox)
+            val ack = ctx.publish(event, ctx.outboxRelays())
             RawEventSupport.publishGuard(ack, event.id)?.let { return it }
 
             Output.emit(
                 mapOf(
                     "from" to them,
+                    "provider" to rows.first { it.name == ProviderTypes.rank.toValue() }.key,
                     "rows" to rows.map { it.toTagArray().toList() },
                     "private" to isPrivate,
                     "event_id" to event.id,

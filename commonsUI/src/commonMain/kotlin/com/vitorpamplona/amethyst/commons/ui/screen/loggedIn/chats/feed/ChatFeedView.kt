@@ -29,11 +29,14 @@ import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.State
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.saveable.Saver
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -242,7 +245,8 @@ fun ChatFeedLoaded(
     val items by loaded.feed.collectAsStateWithLifecycle()
 
     // Public chats collapse runs of messages from outside the Web of Trust network into one row.
-    var revealed by remember { mutableStateOf(emptySet<String>()) }
+    // Saveable: a run shown before opening a profile stays shown on the way back.
+    var revealed by rememberSaveable(saver = RevealedSaver) { mutableStateOf(emptySet<String>()) }
     val outsideNetwork = rememberOutsideNetworkRuns(items.list, revealed, collapseOutsideNetwork, accountViewModel)
     // What the list draws: a collapsed run is one row (its oldest message), not one empty item
     // per message, which a long run of them would compose all at once.
@@ -269,21 +273,25 @@ fun ChatFeedLoaded(
     // A target inside a collapsed run is not a row: reveal the run, then scroll once it is drawn.
     var pendingScrollId by remember { mutableStateOf<String?>(null) }
     val scrollToNote: (String) -> Unit = { id ->
-        val index = rows.indexOfFirst { it.idHex == id }
-        if (index >= 0) {
-            scope.launch {
-                listState.animateScrollToItem(index)
-                highlightedNoteId.value = id
-            }
+        // A run first: its head is one of the rows, but drawn as the collapsed run.
+        val run = outsideNetwork.byId[id]
+        if (run != null) {
+            revealed = revealed + run.members.map { it.idHex }
+            pendingScrollId = id
         } else {
-            outsideNetwork.byId[id]?.let { run ->
-                revealed = revealed + run.members.map { it.idHex }
-                pendingScrollId = id
+            val index = rows.indexOfFirst { it.idHex == id }
+            if (index >= 0) {
+                scope.launch {
+                    listState.animateScrollToItem(index)
+                    highlightedNoteId.value = id
+                }
             }
         }
     }
-    LaunchedEffect(rows, pendingScrollId) {
+    LaunchedEffect(rows, outsideNetwork, pendingScrollId) {
         val id = pendingScrollId ?: return@LaunchedEffect
+        // A run's head is a row even while collapsed: wait until the reveal has drawn it.
+        if (outsideNetwork.byId.containsKey(id)) return@LaunchedEffect
         val index = rows.indexOfFirst { it.idHex == id }
         if (index >= 0) {
             pendingScrollId = null
@@ -401,3 +409,10 @@ fun ChatFeedLoaded(
         }
     }
 }
+
+/** The revealed message ids, as a list a saved state can hold. */
+private val RevealedSaver =
+    Saver<MutableState<Set<String>>, List<String>>(
+        save = { it.value.toList() },
+        restore = { mutableStateOf(it.toSet()) },
+    )

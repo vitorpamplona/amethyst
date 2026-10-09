@@ -235,6 +235,20 @@ class TrustNetworkIndexTest {
     }
 
     @Test
+    fun aLongerAddressIsNotThePubkeyItStartsWith() {
+        val person = hex()
+        val builder = TrustNetworkBuilder(provider)
+        builder.add(card(person, rank = 30, createdAt = 1000))
+        // Another address of the provider's that starts with the pubkey: newer, but not their card.
+        builder.add(card("$person:v2", rank = 90, createdAt = 2000))
+        // Nor does deleting that address delete them.
+        builder.add(deletion(3000, "${person}xyz"))
+        val (index, _) = builder.build()
+        assertEquals(30, index.rankOf(person))
+        assertEquals(null, index.rankOf("${person}xyz"), "a lookup is by the whole key")
+    }
+
+    @Test
     fun updateMergesIntoAnExistingIndex() {
         val keep = hex()
         val change = hex()

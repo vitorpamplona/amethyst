@@ -21,17 +21,22 @@
 package com.vitorpamplona.amethyst.commons.model.trustedAssertions
 
 import androidx.compose.runtime.Immutable
+import com.vitorpamplona.amethyst.commons.wot.network.ResolvedProvider
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
+import com.vitorpamplona.quartz.nip01Core.core.TagArray
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip01Core.signers.SignerExceptions
 import com.vitorpamplona.quartz.nip85TrustedAssertions.list.TrustProviderListEvent
+import com.vitorpamplona.quartz.nip85TrustedAssertions.list.serviceProviderSet
 import com.vitorpamplona.quartz.nip85TrustedAssertions.list.serviceProviders
 import com.vitorpamplona.quartz.nip85TrustedAssertions.list.tags.ProviderTypes
 import com.vitorpamplona.quartz.nip85TrustedAssertions.list.tags.ServiceProviderTag
 import com.vitorpamplona.quartz.nip85TrustedAssertions.list.tags.ServiceType
 import com.vitorpamplona.quartz.utils.Hex
+import com.vitorpamplona.quartz.utils.Log
+import kotlinx.coroutines.CancellationException
 
 /** The kind 10040 entries that name a user-score provider (the ones Amethyst reads). */
 val SCORE_SERVICES = setOf(ProviderTypes.rank, ProviderTypes.followerCount)
@@ -61,7 +66,7 @@ data class TrustProviderRow(
         fun parse(row: List<String>): TrustProviderRow? {
             if (row.size < 3 || !isRowName(row[0])) return null
             val key = row[1].lowercase()
-            if (!Hex.isHex64(key)) return null
+            if (key.length != 64 || !Hex.isHex64(key)) return null
             val relay = RelayUrlNormalizer.normalizeOrNull(row[2]) ?: return null
             return TrustProviderRow(row[0], key, relay)
         }
@@ -92,6 +97,35 @@ suspend fun TrustProviderListEvent.rankProvider(signer: NostrSigner?): ServicePr
     if (signer == null || content.isBlank()) return null
     return privateTags(signer)?.serviceProviders()?.firstOrNull { it.service == ProviderTypes.rank }
 }
+
+/**
+ * The providers this list names, once known for sure: its public rows, plus the private rows
+ * [privateTags] reads. Null while the private part cannot be read (a signer that is not available,
+ * or content that does not decrypt or parse), so "not known yet" never reads as "no providers".
+ *
+ * A public rank row decides on its own (public rows come first), so a signer that cannot decrypt
+ * (a read-only login, a bunker without NIP-44, someone else's list) never holds it unresolved.
+ */
+suspend fun TrustProviderListEvent.knownProviders(privateTags: suspend (TrustProviderListEvent) -> TagArray?): Set<ServiceProviderTag>? {
+    val public = tags.serviceProviderSet()
+    if (content.isBlank()) return public
+    if (public.any { it.service == ProviderTypes.rank }) return public
+    val private =
+        try {
+            privateTags(this)
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            // Content another client wrote that does not parse: unknown, and retried, rather than
+            // an exception that ends the flow resolving it for the rest of the session.
+            Log.w("ScoreProviderEdits", "Could not read the private part of a kind 10040", e)
+            null
+        } ?: return null
+    return (tags + private).serviceProviderSet()
+}
+
+/** The rank provider among [this] providers, as the trust network takes it (null inside: none). */
+fun Set<ServiceProviderTag>.rankChoice() = ResolvedProvider(firstOrNull { it.service == ProviderTypes.rank })
 
 /**
  * A new kind 10040 built on [existing] with [rows] in it: every row of [existing] (public or

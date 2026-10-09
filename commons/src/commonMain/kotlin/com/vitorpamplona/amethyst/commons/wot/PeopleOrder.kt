@@ -25,9 +25,9 @@ import com.vitorpamplona.amethyst.commons.model.User
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 
 /**
- * The order lists of people take for [account]: the ones they follow first, then the Web of
- * Trust provider's highest scores, then everyone else. [then] breaks ties inside each group;
- * by default the sort is stable and keeps the list's own order there.
+ * The order lists of people take for [account]: the ones they follow ([follows]) first, then the
+ * Web of Trust provider's highest scores, then everyone else. [then] breaks ties inside each
+ * group; by default the sort is stable and keeps the list's own order there.
  *
  * Follows and scores are read once per person before the sort, so a long list doesn't look
  * anyone up on every comparison.
@@ -36,9 +36,10 @@ fun <T> List<T>.sortedByFollowsThenTrust(
     account: IAccount,
     pubkeyOf: (T) -> HexKey,
     then: Comparator<T> = Comparator { _, _ -> 0 },
+    /** The kind 3 by default; lists that put anyone the user knows first pass the wider set. */
+    follows: Set<HexKey> = account.followingKeySet(),
 ): List<T> {
     if (size < 2) return this
-    val follows = account.followingKeySet()
     val keys =
         associateWith {
             val pubkey = pubkeyOf(it)
@@ -51,9 +52,13 @@ fun <T> List<T>.sortedByFollowsThenTrust(
 fun List<User>.sortedByFollowsThenTrust(
     account: IAccount,
     then: Comparator<User> = Comparator { _, _ -> 0 },
-): List<User> = sortedByFollowsThenTrust(account, User::pubkeyHex, then)
+    follows: Set<HexKey> = account.followingKeySet(),
+): List<User> = sortedByFollowsThenTrust(account, User::pubkeyHex, then, follows)
 
-fun List<HexKey>.sortedKeysByFollowsThenTrust(account: IAccount): List<HexKey> = sortedByFollowsThenTrust(account, { it })
+fun List<HexKey>.sortedKeysByFollowsThenTrust(
+    account: IAccount,
+    follows: Set<HexKey> = account.followingKeySet(),
+): List<HexKey> = sortedByFollowsThenTrust(account, { it }, follows = follows)
 
 /** Below any score (scores are 1..100), so follows lead. */
 private const val FOLLOWED = Int.MIN_VALUE

@@ -123,7 +123,7 @@ class BrainstormOnboarding(
         onStep(TrustProviderOnboardingStep.FETCHING_SERVICE_KEY)
         val history = data(call { http.get("$api/user/history", auth) })
         val serviceKey = history.string("ta_pubkey")?.lowercase()
-        if (serviceKey == null || !Hex.isHex64(serviceKey)) throw unexpected("no service key")
+        if (serviceKey == null || serviceKey.length != 64 || !Hex.isHex64(serviceKey)) throw unexpected("no service key")
         val calculated = history["last_time_calculated_graperank"]
         val scoresReady = calculated != null && calculated !is JsonNull
 

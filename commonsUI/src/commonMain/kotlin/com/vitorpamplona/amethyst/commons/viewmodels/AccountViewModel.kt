@@ -2341,12 +2341,12 @@ class AccountViewModel(
         }
     }
 
-    fun sortUsersSync(hexList: List<HexKey>): List<HexKey> = hexList.sortedKeysByFollowsThenTrust(account)
+    fun sortUsersSync(hexList: List<HexKey>): List<HexKey> = hexList.sortedKeysByFollowsThenTrust(account, follows = account.allFollows.flow.value.authors)
 
     fun loadUsersSync(hexList: List<String>): List<User> =
         hexList
             .mapNotNull { hex -> checkGetOrCreateUser(hex) }
-            .sortedByFollowsThenTrust(account)
+            .sortedByFollowsThenTrust(account, follows = account.allFollows.flow.value.authors)
 
     fun loadAndMarkAsRead(
         routeForLastRead: String,

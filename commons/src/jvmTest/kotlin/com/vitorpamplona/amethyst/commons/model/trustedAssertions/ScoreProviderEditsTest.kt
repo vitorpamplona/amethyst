@@ -63,6 +63,34 @@ class ScoreProviderEditsTest {
         }
 
     @Test
+    fun aPrivateProviderIsKnownOnlyOnceItsPartIsRead() =
+        runBlocking {
+            val list = withScoreProvider(null, newProvider, relay, isPrivate = true, signer = signer)
+            assertEquals(
+                newProvider,
+                list
+                    .knownProviders { it.privateTags(signer) }
+                    ?.rankChoice()
+                    ?.provider
+                    ?.pubkey,
+            )
+            // A signer that is not there yet: unknown, not "no provider".
+            assertNull(list.knownProviders { null })
+            // Content that does not decrypt or parse: unknown too, never an exception that ends the
+            // flow resolving it.
+            assertNull(list.knownProviders { throw IllegalStateException("bad private content") })
+            // Someone else's list: only its public rows count, so it names no provider.
+            assertNull(list.knownProviders { emptyArray() }?.rankChoice()?.provider)
+        }
+
+    @Test
+    fun aPublicRankDecidesWithoutDecrypting() =
+        runBlocking {
+            val providers = existing().knownProviders { error("must not decrypt: the public rank row decides") }
+            assertEquals(oldProvider, providers?.rankChoice()?.provider?.pubkey)
+        }
+
+    @Test
     fun privateEntriesStayPrivate() =
         runBlocking {
             val updated = withScoreProvider(null, newProvider, relay, isPrivate = true, signer = signer)

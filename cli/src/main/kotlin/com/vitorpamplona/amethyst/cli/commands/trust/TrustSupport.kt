@@ -20,18 +20,22 @@
  */
 package com.vitorpamplona.amethyst.cli.commands.trust
 
+import com.vitorpamplona.amethyst.cli.Args
 import com.vitorpamplona.amethyst.cli.Context
+import com.vitorpamplona.amethyst.cli.Output
 import com.vitorpamplona.amethyst.cli.commands.graperank.fetchLatestProviderList
 import com.vitorpamplona.amethyst.cli.commands.graperank.providerListOf
 import com.vitorpamplona.amethyst.commons.defaults.Constants
 import com.vitorpamplona.amethyst.commons.model.DefaultMinTrustScore
+import com.vitorpamplona.amethyst.commons.model.trustedAssertions.knownProviders
+import com.vitorpamplona.amethyst.commons.model.trustedAssertions.rankChoice
 import com.vitorpamplona.amethyst.commons.model.trustedAssertions.rankProvider
 import com.vitorpamplona.amethyst.commons.wot.network.RelayTrustNetworkSource
-import com.vitorpamplona.amethyst.commons.wot.network.ResolvedProvider
 import com.vitorpamplona.amethyst.commons.wot.network.TrustNetworkState
 import com.vitorpamplona.amethyst.commons.wot.network.TrustNetworkStore
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.relay.client.NostrClient
+import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.sockets.okhttp.BasicOkHttpWebSocket
 import com.vitorpamplona.quartz.nip85TrustedAssertions.list.TrustProviderListEvent
 import com.vitorpamplona.quartz.nip85TrustedAssertions.list.tags.ServiceProviderTag
@@ -54,6 +58,8 @@ internal class TrustSession(
     val providerList: TrustProviderListEvent?,
     val dir: File,
     private val scope: CoroutineScope,
+    /** A list was found but its private part could not be read: it may hold the provider. */
+    val undecryptable: Boolean = false,
 ) : AutoCloseable {
     override fun close() = scope.cancel()
 
@@ -86,12 +92,16 @@ internal suspend fun openTrustNetwork(
         } else {
             providerListOf(ctx, observer)
         }
-    val provider = list?.rankProvider(if (isSelf) ctx.signer else null)
+    // The account's own list may name its provider only in the encrypted part, which a bunker
+    // can decrypt only once its response subscription is open.
+    if (isSelf && list != null && list.content.isNotBlank()) ctx.prepare()
+    // The apps' rule (knownProviders). Someone else's private rows are encrypted to them, so for
+    // an observer only the public ones count. A list not found stays unknown rather than absent,
+    // which would delete the files: a relay that did not answer is not a removed provider.
+    val resolved = MutableStateFlow(list?.knownProviders { if (isSelf) it.privateTags(ctx.signer) else emptyArray() }?.rankChoice())
+    val provider = resolved.value?.provider
     val dir = if (isSelf) File(ctx.dataDir.root, "wot") else File(ctx.dataDir.root, "wot/observers/$observer")
     val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
-    // Unknown, not absent (which would delete the files): no list found, or a private part that
-    // could not be decrypted and may hold the provider.
-    val resolved = MutableStateFlow(list?.takeIf { provider != null || it.content.isBlank() }?.let { ResolvedProvider(provider) })
     val state =
         TrustNetworkState(
             rankProvider = resolved,
@@ -103,8 +113,35 @@ internal suspend fun openTrustNetwork(
             autoSync = false,
         )
     if (resolved.value != null) state.awaitReady() else state.awaitLoaded()
-    return TrustSession(state, provider, list, dir, scope)
+    return TrustSession(state, provider, list, dir, scope, undecryptable = list != null && resolved.value == null)
 }
+
+/**
+ * The account's kind 10040 as it is before a rewrite, from its outbox and the bootstrap relays
+ * (then the local store). Null when no relay answered and nothing is stored: the list is then
+ * unknown, not absent, and a rewrite would drop every row the user keeps there.
+ */
+internal suspend fun readOwnProviderList(
+    ctx: Context,
+    timeoutMs: Long,
+): OwnProviderList? {
+    val me = ctx.identity.pubKeyHex
+    val relays = ctx.outboxRelays() + ctx.bootstrapRelays()
+    val filter = Filter(kinds = listOf(TrustProviderListEvent.KIND), authors = listOf(me), limit = 1)
+    val served = relays.isNotEmpty() && ctx.drainResult(relays.associateWith { listOf(filter) }, timeoutMs).anyRelayServed
+    val stored = providerListOf(ctx, me)
+    return if (stored != null || served) OwnProviderList(stored) else null
+}
+
+internal class OwnProviderList(
+    val event: TrustProviderListEvent?,
+)
+
+/** The error for a rewrite whose current list could not be read (see [readOwnProviderList]). */
+internal fun ownListUnreachable(): Int = Output.error("timeout", "no relay answered for the account's kind 10040; not rewriting a list that cannot be read")
+
+/** `--min-score`, 0..100 like the apps' setting (default [DefaultMinTrustScore]). */
+internal fun Args.minScore(): Int = intFlag("min-score", DefaultMinTrustScore).coerceIn(0, 100)
 
 /** "wss://scores.example.com/" for a provider, or null. */
 internal fun ServiceProviderTag?.relayOrNull(): String? = this?.relayUrl?.url

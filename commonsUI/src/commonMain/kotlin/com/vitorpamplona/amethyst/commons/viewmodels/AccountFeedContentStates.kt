@@ -420,8 +420,12 @@ class AccountFeedContentStates(
                     builtWith = it
                     dmKnown.invalidateData()
                     dmNew.invalidateData()
-                    notifications.clear()
-                    notifications.invalidateData()
+                    // Only Curated reads the verdicts; picking it later changes the feed key, and
+                    // that rebuilds it.
+                    if (account.settings.defaultNotificationFollowList.value is TopFilter.Selected) {
+                        notifications.clear()
+                        notifications.invalidateData()
+                    }
                 }
         }
 

@@ -169,6 +169,7 @@ import com.vitorpamplona.amethyst.commons.model.topNavFeeds.OutboxLoaderState
 import com.vitorpamplona.amethyst.commons.model.topNavFeeds.TopFilter
 import com.vitorpamplona.amethyst.commons.model.trustedAssertions.TrustProviderListState
 import com.vitorpamplona.amethyst.commons.model.trustedAssertions.TrustProviderRow
+import com.vitorpamplona.amethyst.commons.model.trustedAssertions.publicRows
 import com.vitorpamplona.amethyst.commons.nipACWebRtcCalls.CallManager
 import com.vitorpamplona.amethyst.commons.nipACWebRtcCalls.CallState
 import com.vitorpamplona.amethyst.commons.relayClient.auth.InMemoryRelayAuthPermissionStore
@@ -1454,6 +1455,7 @@ class Account(
     ) {
         // The user is waiting for it: its first download may start on mobile data.
         trustNetwork.expectNewProvider()
+        loadOwnTrustProviderListIfMissing()
         sendMyPublicAndPrivateOutbox(trustProviderList.withScoreProvider(providerKey, relay, isPrivate))
     }
 
@@ -1466,7 +1468,18 @@ class Account(
         isPrivate: Boolean,
     ) {
         trustNetwork.expectNewProvider()
+        loadOwnTrustProviderListIfMissing()
         sendMyPublicAndPrivateOutbox(trustProviderList.withProviderRows(rows, isPrivate))
+    }
+
+    /**
+     * Before a rewrite of the kind 10040: on a device that has not received the user's list yet
+     * (a fresh login), building on nothing would publish a list with only the new rows and drop
+     * every row other clients keep there (other providers, Trusted Lists).
+     */
+    private suspend fun loadOwnTrustProviderListIfMissing() {
+        if (trustProviderList.getTrustProviderList() != null || settings.backupTrustProviderList != null) return
+        newestTrustProviderList(signer.pubKey)?.let { cache.justConsumeMyOwnEvent(it) }
     }
 
     /**
@@ -1477,7 +1490,13 @@ class Account(
     suspend fun fetchTrustProviderRowsOf(
         pubkey: HexKey,
         hints: Set<NormalizedRelayUrl> = emptySet(),
-    ): List<TrustProviderRow>? {
+    ): List<TrustProviderRow>? = newestTrustProviderList(pubkey, hints)?.publicRows()
+
+    /** [pubkey]'s newest kind 10040 in the cache or on their outbox, the index relays and [hints]. */
+    private suspend fun newestTrustProviderList(
+        pubkey: HexKey,
+        hints: Set<NormalizedRelayUrl> = emptySet(),
+    ): TrustProviderListEvent? {
         val cached = cache.getAddressableNoteIfExists(TrustProviderListEvent.createAddress(pubkey))?.event as? TrustProviderListEvent
         val relays = cache.getUserIfExists(pubkey)?.outboxRelays().orEmpty() + indexRelays() + hints
         val filter = Filter(kinds = listOf(TrustProviderListEvent.KIND), authors = listOf(pubkey), limit = 1)
@@ -1489,12 +1508,12 @@ class Account(
                 .filter { it.kind == TrustProviderListEvent.KIND && it.pubKey == pubkey }
                 .sortedByDescending { it.createdAt }
                 .firstOrNull { it.verify() }
-        val newest = listOfNotNull(cached, fetched).maxByOrNull { it.createdAt } ?: return null
-        return newest.tags.mapNotNull { TrustProviderRow.parse(it.toList()) }.distinctBy { it.name }
+        return listOfNotNull(cached, fetched as? TrustProviderListEvent).maxByOrNull { it.createdAt }
     }
 
     /** Removes the user-score provider from the kind 10040, which turns Web of Trust filtering off. */
     suspend fun removeTrustScoreProvider() {
+        loadOwnTrustProviderListIfMissing()
         trustProviderList.withoutScoreProvider()?.let { sendMyPublicAndPrivateOutbox(it) }
     }
 

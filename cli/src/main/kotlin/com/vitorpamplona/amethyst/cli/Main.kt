@@ -741,6 +741,8 @@ private fun printUsage() {
         |                                              --observer: another user's network, read-only.
         |  trust setup brainstorm [--private]         Brainstorm sign-up + point your kind:10040 at it.
         |    [--timeout SECS]                          (Other providers: graperank register.)
+        |  trust copy USER [--private]                copy USER's public kind:10040 rows into yours:
+        |    [--timeout SECS]                          the network as USER sees it (_@brainstorm.world).
         |
         |Web of Trust (GrapeRank):
         |  graperank [OBSERVER]                       crawl + score: subjective trust (0..1) over the

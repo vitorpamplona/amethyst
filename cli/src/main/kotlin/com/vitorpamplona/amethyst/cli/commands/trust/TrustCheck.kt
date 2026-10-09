@@ -25,7 +25,6 @@ import com.vitorpamplona.amethyst.cli.Context
 import com.vitorpamplona.amethyst.cli.DataDir
 import com.vitorpamplona.amethyst.cli.Output
 import com.vitorpamplona.amethyst.commons.defaults.Constants
-import com.vitorpamplona.amethyst.commons.model.DefaultMinTrustScore
 import com.vitorpamplona.amethyst.commons.wot.network.TrustVerdict
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip02FollowList.ContactListEvent
@@ -45,7 +44,7 @@ object TrustCheck {
         rest: Array<String>,
     ): Int {
         val args = Args(rest)
-        val minScore = args.intFlag("min-score", DefaultMinTrustScore)
+        val minScore = args.minScore()
         val observerArg = args.flag("observer")
         val timeoutMs = args.timeoutMs(8)
         args.rejectUnknown()

@@ -47,7 +47,7 @@ class FollowPackMembersFeedFilter(
                 .followIdSet()
                 .mapNotNull { hex -> checkGetOrCreateUser(hex) }
                 .filter { !account.isHidden(it) }
-                .sortedByFollowsThenTrust(account)
+                .sortedByFollowsThenTrust(account, follows = account.allFollows.flow.value.authors)
 
         cache[followPackEvent] = follows
         return follows

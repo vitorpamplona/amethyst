@@ -81,7 +81,7 @@ fun ContactListUsersScreen(
                     ?.verifiedFollowKeySet()
                     ?.filter { !accountViewModel.account.isHidden(it) }
                     ?.mapNotNull { LocalCache.checkGetOrCreateUser(it) }
-                    ?.sortedByFollowsThenTrust(accountViewModel.account)
+                    ?.sortedByFollowsThenTrust(accountViewModel.account, follows = accountViewModel.account.allFollows.flow.value.authors)
                     ?.toPersistentList()
                     ?: persistentListOf()
             }

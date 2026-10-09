@@ -82,7 +82,7 @@ class TrustNetworkIndex(
 
     /** Entry position of [pubkey], or -1 when the provider asserts nothing about it. */
     fun indexOf(pubkey: HexKey): Int {
-        if (size == 0 || !Hex.isHex64(pubkey)) return -1
+        if (size == 0 || pubkey.length != 64 || !Hex.isHex64(pubkey)) return -1
         return indexOf(Hex.readLong(pubkey, 0), Hex.readLong(pubkey, 16))
     }
 

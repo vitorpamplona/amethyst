@@ -92,7 +92,7 @@ class RelayManagementViewModel(
             list
                 .mapNotNull { entry ->
                     LocalCache.checkGetOrCreateUser(entry.pubkey)?.let { PubkeyUser(it, entry.reason) }
-                }.sortedByFollowsThenTrust(account, { it.user.pubkeyHex })
+                }.sortedByFollowsThenTrust(account, { it.user.pubkeyHex }, follows = account.allFollows.flow.value.authors)
         }
 
     val allowedPubkeyUsers: Flow<List<PubkeyUser>> =
@@ -100,7 +100,7 @@ class RelayManagementViewModel(
             list
                 .mapNotNull { entry ->
                     LocalCache.checkGetOrCreateUser(entry.pubkey)?.let { PubkeyUser(it, entry.reason) }
-                }.sortedByFollowsThenTrust(account, { it.user.pubkeyHex })
+                }.sortedByFollowsThenTrust(account, { it.user.pubkeyHex }, follows = account.allFollows.flow.value.authors)
         }
 
     private val _isLoading = MutableStateFlow(false)

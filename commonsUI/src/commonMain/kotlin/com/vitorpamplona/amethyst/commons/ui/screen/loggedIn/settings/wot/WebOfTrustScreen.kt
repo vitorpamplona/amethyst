@@ -72,6 +72,7 @@ import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -1174,12 +1175,18 @@ private data class ManualKey(
     val keyText: String = "",
     val relayText: String = "",
     val tags: Set<String> = emptySet(),
+    /** Who this row is across edits (copy keeps it): its editor's own state, like a half-typed relay, follows it. */
+    val id: Long = nextManualKeyId(),
 ) {
     val key: HexKey? = keyText.trim().takeIf { it.isNotEmpty() }?.let { decodePublicKeyAsHexOrNull(it) }
     val relay: NormalizedRelayUrl? = relayText.trim().takeIf { it.isNotEmpty() }?.let { RelayUrlNormalizer.normalizeOrNull(it) }
 
     val isComplete: Boolean get() = key != null && relay != null && tags.isNotEmpty()
 }
+
+private var manualKeyIds = 0L
+
+private fun nextManualKeyId() = ++manualKeyIds
 
 /** A blank key serving the user scores, `30382:rank` and `30382:followers`. */
 private fun defaultKeys() = listOf(ManualKey(tags = setOf(ProviderTypes.rank.toValue(), ProviderTypes.followerCount.toValue())))
@@ -1243,15 +1250,18 @@ private fun ManualKeysForm(
         keys.forEachIndexed { index, manual ->
             if (index > 0) HorizontalDivider(color = scheme.outlineVariant)
             val takenElsewhere = keys.filterIndexed { other, _ -> other != index }.flatMapTo(HashSet()) { it.tags }
-            ManualKeyEditor(
-                manual = manual,
-                allTags = allTags,
-                takenElsewhere = takenElsewhere,
-                canRemove = keys.size > 1,
-                relayPicker = relayPicker,
-                onChange = { changed -> onKeysChange(keys.toMutableList().also { it[index] = changed }) },
-                onRemove = { onKeysChange(keys.toMutableList().also { it.removeAt(index) }) },
-            )
+            // Keyed: removing the key above must not hand this editor's state to another key.
+            key(manual.id) {
+                ManualKeyEditor(
+                    manual = manual,
+                    allTags = allTags,
+                    takenElsewhere = takenElsewhere,
+                    canRemove = keys.size > 1,
+                    relayPicker = relayPicker,
+                    onChange = { changed -> onKeysChange(keys.toMutableList().also { it[index] = changed }) },
+                    onRemove = { onKeysChange(keys.toMutableList().also { it.removeAt(index) }) },
+                )
+            }
         }
 
         // Rare: a tag left over can go to a key of its own.

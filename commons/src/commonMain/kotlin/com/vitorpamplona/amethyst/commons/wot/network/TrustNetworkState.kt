@@ -231,7 +231,7 @@ class TrustNetworkState(
             // At or before the cursor the index has it (or a deletion the sync saw removed it).
             if (event.createdAt <= loaded.header.syncCursor) continue
             val subject = event.aboutUser()
-            if (subject == null || !Hex.isHex64(subject)) continue
+            if (subject == null || subject.length != 64 || !Hex.isHex64(subject)) continue
             val held = (result ?: overlay)[subject]
             if (held != null && held.createdAt >= event.createdAt) continue
 
@@ -279,6 +279,8 @@ class TrustNetworkState(
 
     private suspend fun applyProvider(choice: ResolvedProvider) {
         val provider = choice.provider
+        // The previous provider's problem or wait is not the new one's.
+        if (provider == null || _network.value?.isFrom(provider) != true) _status.value = TrustNetworkSyncStatus()
         if (provider == null) {
             // The list says there is no provider (removed here or on another device): drop the
             // files too, or the next cold start would filter with them until the list is read.
@@ -362,7 +364,10 @@ class TrustNetworkState(
         requested: TrustNetworkSyncStatus.Kind?,
         force: Boolean,
     ): Deferred<TrustNetworkRun>? {
-        if (running?.isActive == true) return null
+        // Not isActive: a run cancelled for a replaced provider is no longer active while it still
+        // unwinds (a checkpoint write, its status reset). Starting the next one then would race it
+        // for the status and the partial file; its completion starts the next run instead.
+        if (running?.isCompleted == false) return null
         val choice = rankProvider.value ?: return null
         val provider = choice.provider ?: return null
         if (store == null || source == null) return null
@@ -480,7 +485,7 @@ class TrustNetworkState(
         // it missed), nor advance the cursor past what it skipped.
         if (!result.complete) {
             // Keep what the download got, so the next try only fetches the rest.
-            if (kind == TrustNetworkSyncStatus.Kind.DOWNLOAD && result.index.size + result.ids.tombstones > 0) {
+            if (kind == TrustNetworkSyncStatus.Kind.DOWNLOAD && currentProvider == provider && result.index.size + result.ids.tombstones > 0) {
                 withContext(Dispatchers.IO) { savePartial(store, TrustNetworkPartial(result.header, result.index, result.ids)) }
             }
             return TrustNetworkRun(kind, TrustNetworkOutcome.Incomplete(result.detail), result)
@@ -551,6 +556,8 @@ class TrustNetworkState(
                     null
                 }
             _network.value = TrustNetwork(saved ?: header.copy(generation = current.header.generation), current.index)
+            // Cards seen between syncs at or before the new cursor are the index's to answer now.
+            if (cursorMoved) pruneOverlay(header.syncCursor)
             TrustNetworkRun(kind, TrustNetworkOutcome.Unchanged(header), result)
         }
 
