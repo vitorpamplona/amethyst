@@ -436,24 +436,6 @@ class DesktopAppModules(
     /** The last crash's report, offered to the user on the next start as on Android. */
     val crashReportCache = CrashReportCache(filesDir)
 
-    /** Keeps a report of any crash for [crashReportCache]. */
-    fun installCrashReporter() {
-        Thread.setDefaultUncaughtExceptionHandler(
-            UnexpectedCrashSaver(
-                crashReportCache,
-                ReportAssembler(
-                    versionLine = "$appVersion-DESKTOP",
-                    deviceRows =
-                        listOf(
-                            "OS" to "${System.getProperty("os.name")} ${System.getProperty("os.version")}",
-                            "Arch" to System.getProperty("os.arch").orEmpty(),
-                            "Java" to "${System.getProperty("java.vendor")} ${System.getProperty("java.version")}",
-                        ),
-                ),
-            ),
-        )
-    }
-
     private val trimmingService = MemoryTrimmingService(cache)
 
     private val memoryPressureEvents = MutableSharedFlow<Unit>(extraBufferCapacity = 1)
@@ -521,4 +503,29 @@ class DesktopAppModules(
         /** What a NIP-46 remote signer shows when this app asks to connect. */
         val REMOTE_SIGNER_METADATA = BunkerClientMetadata(name = "Amethyst Desktop", url = "https://amethyst.social")
     }
+}
+
+/**
+ * Keeps a report of any uncaught exception in [filesDir], where [DesktopAppModules.crashReportCache]
+ * hands it to the user on the next start. Installed before the modules are built, so a crash
+ * while building them is kept too.
+ */
+fun installDesktopCrashReporter(
+    filesDir: File,
+    appVersion: String,
+) {
+    Thread.setDefaultUncaughtExceptionHandler(
+        UnexpectedCrashSaver(
+            CrashReportCache(filesDir),
+            ReportAssembler(
+                versionLine = "$appVersion-DESKTOP",
+                deviceRows =
+                    listOf(
+                        "OS" to "${System.getProperty("os.name")} ${System.getProperty("os.version")}",
+                        "Arch" to System.getProperty("os.arch").orEmpty(),
+                        "Java" to "${System.getProperty("java.vendor")} ${System.getProperty("java.version")}",
+                    ),
+            ),
+        ),
+    )
 }

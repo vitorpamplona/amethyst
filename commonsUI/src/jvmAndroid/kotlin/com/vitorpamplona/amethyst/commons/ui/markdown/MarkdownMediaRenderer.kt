@@ -52,6 +52,7 @@ import com.vitorpamplona.amethyst.commons.viewmodels.LoadedBechLink
 import com.vitorpamplona.quartz.nip19Bech32.entities.NAddress
 import com.vitorpamplona.quartz.nip19Bech32.entities.NEmbed
 import com.vitorpamplona.quartz.nip19Bech32.entities.NEvent
+import com.vitorpamplona.quartz.nip19Bech32.entities.NNote
 import com.vitorpamplona.quartz.nip19Bech32.entities.NProfile
 import com.vitorpamplona.quartz.nip19Bech32.entities.NPub
 import com.vitorpamplona.quartz.nip19Bech32.entities.NRelay
@@ -181,7 +182,7 @@ class MarkdownMediaRenderer(
             when (val entity = loadedLink.nip19.entity) {
                 is NPub -> renderObservableUser(entity.hex, loadedLink.nip19.nip19raw, richTextStringBuilder)
                 is NProfile -> renderObservableUser(entity.hex, loadedLink.nip19.nip19raw, richTextStringBuilder)
-                is com.vitorpamplona.quartz.nip19Bech32.entities.NNote -> renderObservableShortNoteUri(loadedLink, uri, richTextStringBuilder)
+                is NNote -> renderObservableShortNoteUri(loadedLink, uri, richTextStringBuilder)
                 is NEvent -> renderObservableShortNoteUri(loadedLink, uri, richTextStringBuilder)
                 is NEmbed -> renderObservableShortNoteUri(loadedLink, uri, richTextStringBuilder)
                 is NAddress -> renderObservableShortNoteUri(loadedLink, uri, richTextStringBuilder)

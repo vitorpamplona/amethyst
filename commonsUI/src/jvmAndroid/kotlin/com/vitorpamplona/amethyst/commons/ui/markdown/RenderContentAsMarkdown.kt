@@ -73,7 +73,7 @@ fun RenderContentAsMarkdown(
 ) {
     val uriHandler = LocalUriHandler.current
     val onClick =
-        remember(uriHandler) {
+        remember(uriHandler, accountViewModel, nav) {
             object : UriHandler {
                 override fun openUri(uri: String) {
                     val route = uriToRoute(uri, accountViewModel.account)
@@ -93,7 +93,7 @@ fun RenderContentAsMarkdown(
             }
 
         val renderer =
-            remember(content) {
+            remember(content, tags, canPreview, quotesLeft, callbackUri, accountViewModel, nav) {
                 MarkdownMediaRenderer(
                     startOfText = content.take(100),
                     imetaByUrl = tags?.lists?.imetasByUrl() ?: emptyMap(),

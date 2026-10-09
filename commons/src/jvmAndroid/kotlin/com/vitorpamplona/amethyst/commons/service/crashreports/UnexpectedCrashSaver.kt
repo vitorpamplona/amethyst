@@ -38,7 +38,13 @@ class UnexpectedCrashSaver(
         if (e !is OutOfMemoryError) {
             runCatching { cache.writeReport(assembler.buildReport(e, t.name)) }
         }
-        // Without a default handler (a desktop JVM) the JVM would have printed the trace.
-        defaultUEH?.uncaughtException(t, e) ?: e.printStackTrace()
+        val previous = defaultUEH
+        if (previous != null) {
+            previous.uncaughtException(t, e)
+        } else {
+            // Without a default handler (a desktop JVM) the JVM would have printed this.
+            System.err.print("Exception in thread \"${t.name}\" ")
+            e.printStackTrace()
+        }
     }
 }

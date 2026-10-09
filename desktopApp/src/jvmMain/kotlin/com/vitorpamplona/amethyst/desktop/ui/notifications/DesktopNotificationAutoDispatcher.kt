@@ -61,6 +61,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withTimeoutOrNull
 
 /**
  * Subscribes to [DesktopLocalCache]'s new-event stream and fires OS toasts
@@ -73,6 +74,9 @@ import kotlinx.coroutines.launch
  * the scope to stop.
  */
 private const val TAG = "AutoDispatch"
+
+/** How long a notification waits for its shared text before it goes out with the generic line. */
+private const val COMPOSE_TIMEOUT_MS = 5_000L
 
 class DesktopNotificationAutoDispatcher(
     private val dispatcher: NotificationDispatcher,
@@ -90,6 +94,8 @@ class DesktopNotificationAutoDispatcher(
      * passes none and keeps the generic lines.
      */
     private val compose: suspend (Event) -> NotificationMessage? = { null },
+    /** False for an event the user shouldn't hear about: its author is muted, blocked or reported. */
+    private val isAcceptable: (Event) -> Boolean = { true },
     private val isWindowFocused: StateFlow<Boolean>,
     private val sessionStartSec: Long,
     private val scope: CoroutineScope,
@@ -174,6 +180,10 @@ class DesktopNotificationAutoDispatcher(
             logSkip(eid, kind.name) { "not-tagged-for-user (author=${event.pubKey.take(8)})" }
             return
         }
+        if (!isAcceptable(event)) {
+            logSkip(eid, kind.name) { "not-acceptable (author=${event.pubKey.take(8)})" }
+            return
+        }
 
         val dedupeKey = kind.name + "|" + event.id
         val last = recentFires[dedupeKey]
@@ -196,6 +206,20 @@ class DesktopNotificationAutoDispatcher(
             }
         }
     }
+
+    /**
+     * The shared title and body, or null to fall back to the generic line. A composer may decrypt
+     * through a remote signer, so it gets [COMPOSE_TIMEOUT_MS] and any failure is just a fallback.
+     */
+    private suspend fun composeOrNull(event: Event): NotificationMessage? =
+        try {
+            withTimeoutOrNull(COMPOSE_TIMEOUT_MS) { compose(event) }
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            Log.w(TAG, "Could not compose a notification for ${event.id.take(8)}", e)
+            null
+        }
 
     private fun notifKindFor(event: Event): NotifKind? =
         when (event) {
@@ -228,7 +252,7 @@ class DesktopNotificationAutoDispatcher(
         // (the DM pipeline isn't decrypted here and the reply composer is Android's).
         val composed =
             if (settings.previewInToast.value && kind != NotifKind.DM && kind != NotifKind.REPLY) {
-                compose(event)
+                composeOrNull(event)
             } else {
                 null
             }

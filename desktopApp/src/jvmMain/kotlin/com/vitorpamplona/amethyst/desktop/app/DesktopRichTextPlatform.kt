@@ -87,9 +87,17 @@ object DesktopRichTextPlatform : RichTextPlatform {
     ) = RichTextPlatform.Plain.SecretMessage(content, callbackUri, quotesLeft, backgroundColor, accountViewModel, nav)
 }
 
-/** Opens a link in the system's browser, the way the rest of the desktop app does. */
+/** The links a note may hand to the operating system. Nostr links never get here: the app opens them. */
+private val EXTERNAL_LINK_SCHEMES = setOf("http", "https", "lightning")
+
+/**
+ * Opens a web or Lightning link in the system's handler. Any other scheme is dropped: a note
+ * must not be able to launch `file:`, `smb:` or another app's handler with one click.
+ */
 private object DesktopBrowserUriHandler : UriHandler {
     override fun openUri(uri: String) {
-        DesktopBrowser.open(uri)
+        if (uri.substringBefore(':').lowercase() in EXTERNAL_LINK_SCHEMES) {
+            DesktopBrowser.open(uri)
+        }
     }
 }

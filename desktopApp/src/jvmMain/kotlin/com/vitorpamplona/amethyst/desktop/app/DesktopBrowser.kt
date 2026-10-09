@@ -31,6 +31,8 @@ import java.net.URI
  */
 object DesktopBrowser {
     fun open(uri: String): Boolean {
+        // A URI never starts with a dash; something that does would reach xdg-open as an option.
+        if (uri.startsWith("-")) return false
         try {
             if (Desktop.isDesktopSupported() && Desktop.getDesktop().isSupported(Desktop.Action.BROWSE)) {
                 Desktop.getDesktop().browse(URI(uri))

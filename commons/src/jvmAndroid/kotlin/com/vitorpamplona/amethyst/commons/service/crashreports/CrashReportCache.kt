@@ -35,8 +35,23 @@ class CrashReportCache(
 ) {
     private val file get() = File(dir, STACK_TRACE_FILENAME)
 
+    /**
+     * Replaces the kept report. It goes to a temp file first and is renamed into place, so two
+     * threads failing at once, or a write cut short by the dying process, never leave a garbled
+     * report. Only the owner can read it: a stack trace can quote note or relay content.
+     */
+    @Synchronized
     fun writeReport(report: String) {
-        file.writeText(report)
+        val temp = File(dir, "$STACK_TRACE_FILENAME.tmp")
+        temp.writeText(report)
+        temp.setReadable(false, false)
+        temp.setReadable(true, true)
+        temp.setWritable(false, false)
+        temp.setWritable(true, true)
+        if (!temp.renameTo(file)) {
+            file.delete()
+            temp.renameTo(file)
+        }
     }
 
     suspend fun loadAndDelete(): String? =

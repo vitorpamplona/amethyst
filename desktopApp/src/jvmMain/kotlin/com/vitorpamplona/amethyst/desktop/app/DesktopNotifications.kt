@@ -101,6 +101,7 @@ class DesktopNotifications(
                         authorOf = { id -> cache.getNoteIfExists(id)?.event?.pubKey },
                         displayNameOf = { pubKey -> cache.getUserIfExists(pubKey)?.toBestDisplayName() },
                         compose = { event -> composeNotification(account, event) },
+                        isAcceptable = { event -> cache.getNoteIfExists(event.id)?.let { account.isAcceptable(it) } ?: true },
                         isWindowFocused = isWindowFocused,
                         sessionStartSec = sessionStartSec,
                         scope = this,
