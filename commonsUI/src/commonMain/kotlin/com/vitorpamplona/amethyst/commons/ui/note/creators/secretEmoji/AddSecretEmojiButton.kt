@@ -27,6 +27,7 @@ import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.secret_emoji_maker_explainer
+import com.vitorpamplona.amethyst.commons.ui.components.HoverTooltip
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.BitcoinOrange
 import com.vitorpamplona.amethyst.commons.ui.theme.Size20Modifier
@@ -36,23 +37,25 @@ fun AddSecretEmojiButton(
     isSecretEmojiActive: Boolean,
     onClick: () -> Unit,
 ) {
-    IconButton(
-        onClick = { onClick() },
-    ) {
-        if (!isSecretEmojiActive) {
-            Icon(
-                symbol = MaterialSymbols.Assistant,
-                contentDescription = stringRes(id = Res.string.secret_emoji_maker_explainer),
-                modifier = Size20Modifier,
-                tint = MaterialTheme.colorScheme.onBackground,
-            )
-        } else {
-            Icon(
-                symbol = MaterialSymbols.Assistant,
-                contentDescription = stringRes(id = Res.string.secret_emoji_maker_explainer),
-                modifier = Size20Modifier,
-                tint = BitcoinOrange,
-            )
+    HoverTooltip(stringRes(Res.string.secret_emoji_maker_explainer)) {
+        IconButton(
+            onClick = { onClick() },
+        ) {
+            if (!isSecretEmojiActive) {
+                Icon(
+                    symbol = MaterialSymbols.Assistant,
+                    contentDescription = stringRes(id = Res.string.secret_emoji_maker_explainer),
+                    modifier = Size20Modifier,
+                    tint = MaterialTheme.colorScheme.onBackground,
+                )
+            } else {
+                Icon(
+                    symbol = MaterialSymbols.Assistant,
+                    contentDescription = stringRes(id = Res.string.secret_emoji_maker_explainer),
+                    modifier = Size20Modifier,
+                    tint = BitcoinOrange,
+                )
+            }
         }
     }
 }

@@ -27,6 +27,7 @@ import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.consumeWindowInsets
@@ -110,10 +111,12 @@ import com.vitorpamplona.amethyst.commons.ui.actions.uploads.TakeVideoButton
 import com.vitorpamplona.amethyst.commons.ui.actions.uploads.UploadProgressIndicator
 import com.vitorpamplona.amethyst.commons.ui.actions.uploads.VoiceAnonymizationSection
 import com.vitorpamplona.amethyst.commons.ui.actions.uploads.rememberSharedMediaResolver
+import com.vitorpamplona.amethyst.commons.ui.components.HoverTooltip
 import com.vitorpamplona.amethyst.commons.ui.components.PlatformBackHandler
 import com.vitorpamplona.amethyst.commons.ui.components.ThinPaddingTextField
 import com.vitorpamplona.amethyst.commons.ui.components.rememberViewModel
 import com.vitorpamplona.amethyst.commons.ui.insets.imePaddingSafe
+import com.vitorpamplona.amethyst.commons.ui.layouts.LocalScreenLayout
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.navigation.topbars.PostingTopBar
 import com.vitorpamplona.amethyst.commons.ui.note.BaseUserPicture
@@ -347,6 +350,9 @@ private fun NewPostScreenBody(
             )
         }
 
+        // On large windows the text area takes only the height it needs, so the toolbar below
+        // sits under the text rather than at the bottom of the window.
+        val isLargeScreen = LocalScreenLayout.current.isLargeScreen
         Row(
             modifier =
                 Modifier
@@ -354,7 +360,7 @@ private fun NewPostScreenBody(
                     .padding(
                         start = Size10dp,
                         end = Size10dp,
-                    ).weight(1f),
+                    ).weight(1f, fill = !isLargeScreen),
         ) {
             Column(
                 modifier =
@@ -772,6 +778,9 @@ private fun NewPostScreenBody(
     }
 }
 
+/** Lines the wrapped tools up with the text: past the 10dp side padding and the 35dp avatar. */
+private val ComposerToolsStartPadding = 45.dp
+
 @Composable
 private fun BottomRowActions(
     postViewModel: ShortNotePostViewModel,
@@ -784,15 +793,10 @@ private fun BottomRowActions(
             }
     },
 ) {
-    val scrollState = rememberScrollState()
-    Row(
-        modifier =
-            Modifier
-                .horizontalScroll(scrollState)
-                .fillMaxWidth()
-                .height(50.dp),
-        verticalAlignment = CenterVertically,
-    ) {
+    // On large windows the tools wrap under the text instead of scrolling sideways in a strip
+    // pinned to the window's bottom: a mouse cannot drag that strip, so its last tools were out
+    // of reach.
+    val tools: @Composable () -> Unit = {
         SelectFromGallery(
             isUploading = postViewModel.isUploadingImage,
             enabled = !postViewModel.isUploadingFile,
@@ -918,6 +922,27 @@ private fun BottomRowActions(
             }
         }
     }
+
+    if (LocalScreenLayout.current.isLargeScreen) {
+        FlowRow(
+            modifier = Modifier.fillMaxWidth().padding(start = ComposerToolsStartPadding, end = Size10dp),
+            itemVerticalAlignment = CenterVertically,
+        ) {
+            tools()
+        }
+    } else {
+        val scrollState = rememberScrollState()
+        Row(
+            modifier =
+                Modifier
+                    .horizontalScroll(scrollState)
+                    .fillMaxWidth()
+                    .height(50.dp),
+            verticalAlignment = CenterVertically,
+        ) {
+            tools()
+        }
+    }
 }
 
 @Suppress("ViewModelConstructorInComposable")
@@ -953,35 +978,38 @@ private fun AddPrivateNoteButton(
         label = "privateNoteContent",
     )
 
-    IconButton(
-        onClick = { onClick() },
-        enabled = !isLocked,
-        // A reply to an unsealed rumor is locked private. The button is disabled
-        // there, and M3's default disabled colours would erase the filled pill in
-        // exactly the case where the note is most definitely private — so the
-        // disabled colours mirror the enabled ones, dimmed.
-        colors =
-            IconButtonDefaults.iconButtonColors(
-                containerColor = container,
-                contentColor = content,
-                disabledContainerColor = container.copy(alpha = container.alpha * 0.6f),
-                disabledContentColor = content.copy(alpha = 0.8f),
-            ),
-    ) {
-        Icon(
-            symbol = if (isActive) MaterialSymbols.Lock else MaterialSymbols.LockOpen,
-            contentDescription =
-                stringRes(
-                    id =
-                        when {
-                            isLocked -> Res.string.private_note_locked
-                            isActive -> Res.string.disable_private_note
-                            else -> Res.string.private_note
-                        },
-                ),
-            modifier = Modifier.height(22.dp),
-            tint = content,
+    val label =
+        stringRes(
+            when {
+                isLocked -> Res.string.private_note_locked
+                isActive -> Res.string.disable_private_note
+                else -> Res.string.private_note
+            },
         )
+
+    HoverTooltip(label) {
+        IconButton(
+            onClick = { onClick() },
+            enabled = !isLocked,
+            // A reply to an unsealed rumor is locked private. The button is disabled
+            // there, and M3's default disabled colours would erase the filled pill in
+            // exactly the case where the note is most definitely private — so the
+            // disabled colours mirror the enabled ones, dimmed.
+            colors =
+                IconButtonDefaults.iconButtonColors(
+                    containerColor = container,
+                    contentColor = content,
+                    disabledContainerColor = container.copy(alpha = container.alpha * 0.6f),
+                    disabledContentColor = content.copy(alpha = 0.8f),
+                ),
+        ) {
+            Icon(
+                symbol = if (isActive) MaterialSymbols.Lock else MaterialSymbols.LockOpen,
+                contentDescription = label,
+                modifier = Modifier.height(22.dp),
+                tint = content,
+            )
+        }
     }
 }
 
@@ -990,13 +1018,15 @@ private fun AddSubjectButton(
     isActive: Boolean,
     onClick: () -> Unit,
 ) {
-    IconButton(onClick = onClick) {
-        Icon(
-            symbol = MaterialSymbols.Topic,
-            contentDescription = stringRes(Res.string.messages_new_message_subject),
-            modifier = Modifier.height(22.dp),
-            tint = if (isActive) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onBackground,
-        )
+    HoverTooltip(stringRes(Res.string.messages_new_message_subject)) {
+        IconButton(onClick = onClick) {
+            Icon(
+                symbol = MaterialSymbols.Topic,
+                contentDescription = stringRes(Res.string.messages_new_message_subject),
+                modifier = Modifier.height(22.dp),
+                tint = if (isActive) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onBackground,
+            )
+        }
     }
 }
 
@@ -1005,23 +1035,25 @@ private fun AddPollButton(
     isPollActive: Boolean,
     onClick: () -> Unit,
 ) {
-    IconButton(
-        onClick = { onClick() },
-    ) {
-        if (!isPollActive) {
-            Icon(
-                symbol = MaterialSymbols.Poll,
-                contentDescription = stringRes(id = Res.string.poll),
-                modifier = Modifier.height(22.dp),
-                tint = MaterialTheme.colorScheme.onBackground,
-            )
-        } else {
-            Icon(
-                symbol = MaterialSymbols.Poll,
-                contentDescription = stringRes(id = Res.string.disable_poll),
-                modifier = Modifier.height(22.dp),
-                tint = MaterialTheme.colorScheme.primary,
-            )
+    HoverTooltip(stringRes(if (isPollActive) Res.string.disable_poll else Res.string.poll)) {
+        IconButton(
+            onClick = { onClick() },
+        ) {
+            if (!isPollActive) {
+                Icon(
+                    symbol = MaterialSymbols.Poll,
+                    contentDescription = stringRes(id = Res.string.poll),
+                    modifier = Modifier.height(22.dp),
+                    tint = MaterialTheme.colorScheme.onBackground,
+                )
+            } else {
+                Icon(
+                    symbol = MaterialSymbols.Poll,
+                    contentDescription = stringRes(id = Res.string.disable_poll),
+                    modifier = Modifier.height(22.dp),
+                    tint = MaterialTheme.colorScheme.primary,
+                )
+            }
         }
     }
 }

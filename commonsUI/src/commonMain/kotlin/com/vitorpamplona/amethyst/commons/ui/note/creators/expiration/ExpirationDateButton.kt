@@ -32,6 +32,7 @@ import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.add_expiration_date
 import com.vitorpamplona.amethyst.commons.resources.remove_expiration_date
+import com.vitorpamplona.amethyst.commons.ui.components.HoverTooltip
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 
 @Composable
@@ -39,23 +40,25 @@ fun ExpirationDateButton(
     isActive: Boolean,
     onClick: () -> Unit,
 ) {
-    IconButton(
-        onClick = { onClick() },
-    ) {
-        if (!isActive) {
-            Icon(
-                symbol = MaterialSymbols.Timer,
-                contentDescription = stringRes(Res.string.add_expiration_date),
-                modifier = Modifier.size(20.dp),
-                tint = MaterialTheme.colorScheme.onBackground,
-            )
-        } else {
-            Icon(
-                symbol = MaterialSymbols.TimerOff,
-                contentDescription = stringRes(Res.string.remove_expiration_date),
-                modifier = Modifier.size(20.dp),
-                tint = Color(0xFFFF6600),
-            )
+    HoverTooltip(stringRes(if (isActive) Res.string.remove_expiration_date else Res.string.add_expiration_date)) {
+        IconButton(
+            onClick = { onClick() },
+        ) {
+            if (!isActive) {
+                Icon(
+                    symbol = MaterialSymbols.Timer,
+                    contentDescription = stringRes(Res.string.add_expiration_date),
+                    modifier = Modifier.size(20.dp),
+                    tint = MaterialTheme.colorScheme.onBackground,
+                )
+            } else {
+                Icon(
+                    symbol = MaterialSymbols.TimerOff,
+                    contentDescription = stringRes(Res.string.remove_expiration_date),
+                    modifier = Modifier.size(20.dp),
+                    tint = Color(0xFFFF6600),
+                )
+            }
         }
     }
 }
