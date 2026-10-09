@@ -4438,6 +4438,7 @@
     <string name="desktop_notification_repost">%1$s ने उद्धरण किया</string>
     <string name="desktop_notification_reaction">%1$s ने प्रतिक्रिया दिया</string>
     <string name="desktop_notification_follow">%1$s ने आपका अनुगमन किया</string>
+    <string name="desktop_upload_server_not_supported">लेखनपीठ संगणक आरोहण जाते हैं ब्लोस्सम सेवासंगणक पर। एक का चयन करें अपने श्रव्यदृश्याभिलेख सेवासंगणक स्थापना विकल्पों में।</string>
     <string name="desktop_menu_file">अभिलेख</string>
     <string name="desktop_menu_go">जाएँ</string>
     <string name="desktop_menu_help">सहायता</string>
@@ -4449,6 +4450,7 @@
     <string name="desktop_menu_report_issue">समस्या का वृत्तान्त भेजें</string>
     <string name="login_with_remote_signer">दूरस्थ हस्ताक्षरकर्ता द्वारा प्रवेशांकन</string>
     <string name="remote_signer_scan_title">अपने हस्ताक्षरकर्ता को जोडें</string>
+    <string name="remote_signer_scan_description">इस अक्षरराशि को परखें एक निप॰छियालीस हस्ताक्षरकर्ता के साथ। अथवा पता इसमें छिपकाएँ। आपके हस्ताक्षरकर्ता से एक bunker:// पता जाता है कुंचिका प्रपत्रस्थान में।</string>
     <string name="remote_signer_waiting">आपके हस्ताक्षरकर्ता की अनुमति की प्रतीक्षा में…</string>
     <string name="remote_signer_login_failed">दूरस्थ हस्ताक्षरकर्ता द्वारा प्रवेशांकन असफल। %1$s</string>
     <string name="login_with_a_private_key_to_be_able_to_boost_posts">आप ख्याप्य कुंचिका का प्रयोग कर रहे हैं जिससे केवल पढ सकते हैं। प्रकाशित पत्रों को उद्धृत करने के लिए गुप्त कुंचिका के साथ प्रवेशांकन करें</string>
