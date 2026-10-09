@@ -31,6 +31,7 @@ import com.vitorpamplona.amethyst.commons.service.uploads.MediaUploader
 import com.vitorpamplona.amethyst.commons.service.uploads.MediaUri
 import com.vitorpamplona.amethyst.commons.tor.MoneyOpRelayRouting
 import com.vitorpamplona.amethyst.commons.tor.TorRelayEvaluation
+import com.vitorpamplona.amethyst.commons.wot.onboarding.TrustProviderHttp
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.relay.client.auth.RelayAuthSnapshot
 import com.vitorpamplona.quartz.nip01Core.relay.client.stats.RelayStats
@@ -65,6 +66,9 @@ interface AccountViewModelHost {
 
     /** HTTP for LNURL-pay (zaps, invoices, melts), over the clients the app routes payments through. */
     val lnurlTransport: LnurlHttpTransport
+
+    /** HTTP for Web of Trust provider sign-ups (Brainstorm's API). */
+    val trustProviderHttp: TrustProviderHttp get() = TrustProviderHttp.Unsupported
 
     /** Routes a payment's relays under the money-operations Tor preference while it runs. */
     val moneyOpRelays: MoneyOpRelayRouting

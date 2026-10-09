@@ -78,6 +78,7 @@ import com.vitorpamplona.amethyst.commons.softwareapps.dal.SoftwareAppsFeedFilte
 import com.vitorpamplona.amethyst.commons.video.dal.VideoFeedFilter
 import com.vitorpamplona.amethyst.commons.webBookmarks.dal.WebBookmarkFeedFilter
 import com.vitorpamplona.amethyst.commons.workouts.dal.WorkoutFeedFilter
+import com.vitorpamplona.amethyst.commons.wot.network.TrustVerdicts
 import com.vitorpamplona.quartz.nip90Dvms.dvmHeartbeat.DvmHeartbeatEvent
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -85,8 +86,10 @@ import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.IO
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.drop
+import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.sample
 import kotlinx.coroutines.isActive
@@ -396,6 +399,34 @@ class AccountFeedContentStates(
                 notificationsEveryone.clear()
                 notificationsEveryone.invalidateData()
             }
+        }
+
+        // A new Web of Trust answer (see Account.trustVerdicts) moves people between Known and
+        // New Requests and in or out of Curated notifications, with no event flowing through
+        // LocalCache. Rebuild those feeds; clear the card feeds first, since their refresh is
+        // additive-only and would keep cards that no longer pass.
+        scope.launch(Dispatchers.IO) {
+            // Not "skip the first value": the network can finish loading before this collector
+            // starts but after the feeds were first built. So the first active answers always
+            // rebuild once, and after that only answers that differ from the last rebuild.
+            // The first one at once (the feeds were built unfiltered moments ago, at start or
+            // while the download ran); later ones settle for a second, as follows change in bursts.
+            var builtWith: TrustVerdicts? = null
+            @OptIn(FlowPreview::class)
+            account.trustVerdicts
+                .debounce { if (builtWith == null) 0L else 1_000L }
+                .filter { verdicts -> builtWith?.let { !verdicts.sameAnswersAs(it) } ?: verdicts.isActive }
+                .collect {
+                    builtWith = it
+                    dmKnown.invalidateData()
+                    dmNew.invalidateData()
+                    // Only Curated reads the verdicts; picking it later changes the feed key, and
+                    // that rebuilds it.
+                    if (account.settings.defaultNotificationFollowList.value is TopFilter.Selected) {
+                        notifications.clear()
+                        notifications.invalidateData()
+                    }
+                }
         }
 
         // Heartbeat staleness produces no cache event (a beat just ages past 420s), so re-check

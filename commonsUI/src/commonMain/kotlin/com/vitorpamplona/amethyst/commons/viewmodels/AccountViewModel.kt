@@ -136,6 +136,8 @@ import com.vitorpamplona.amethyst.commons.util.showAmount
 import com.vitorpamplona.amethyst.commons.util.showAmountInteger
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModelHost
 import com.vitorpamplona.amethyst.commons.wallet.ReloadMintRequest
+import com.vitorpamplona.amethyst.commons.wot.sortedByFollowsThenTrust
+import com.vitorpamplona.amethyst.commons.wot.sortedKeysByFollowsThenTrust
 import com.vitorpamplona.quartz.experimental.clink.debits.DebitResponse
 import com.vitorpamplona.quartz.experimental.clink.pointers.NDebit
 import com.vitorpamplona.quartz.experimental.interactiveStories.InteractiveStoryBaseEvent
@@ -2060,6 +2062,17 @@ class AccountViewModel(
 
     fun updateMaxHashtagLimit(limit: Int) = launchSigner { account.updateMaxHashtagLimit(limit) }
 
+    fun updateMinTrustScore(score: Int) = launchSigner { account.updateMinTrustScore(score) }
+
+    /** Points the account's Web of Trust at [providerKey] on [relay] and starts its download. */
+    fun setTrustScoreProvider(
+        providerKey: HexKey,
+        relay: NormalizedRelayUrl,
+        isPrivate: Boolean,
+    ) = launchSigner { account.setTrustScoreProvider(providerKey, relay, isPrivate) }
+
+    fun removeTrustScoreProvider() = launchSigner { account.removeTrustScoreProvider() }
+
     fun changeReactionTypes(
         reactionSet: List<String>,
         onDone: () -> Unit,
@@ -2328,12 +2341,12 @@ class AccountViewModel(
         }
     }
 
-    fun sortUsersSync(hexList: List<HexKey>): List<HexKey> = hexList.sortedByDescending { account.isKnown(it) }
+    fun sortUsersSync(hexList: List<HexKey>): List<HexKey> = hexList.sortedKeysByFollowsThenTrust(account, follows = account.allFollows.flow.value.authors)
 
     fun loadUsersSync(hexList: List<String>): List<User> =
         hexList
             .mapNotNull { hex -> checkGetOrCreateUser(hex) }
-            .sortedByDescending { account.isKnown(it) }
+            .sortedByFollowsThenTrust(account, follows = account.allFollows.flow.value.authors)
 
     fun loadAndMarkAsRead(
         routeForLastRead: String,

@@ -25,8 +25,12 @@ import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.NoteState
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
 import com.vitorpamplona.amethyst.commons.model.nip85TrustedAssertions.TrustProviderListDecryptionCache
+import com.vitorpamplona.amethyst.commons.wot.network.ResolvedProvider
+import com.vitorpamplona.quartz.nip01Core.core.HexKey
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip85TrustedAssertions.list.TrustProviderListEvent
+import com.vitorpamplona.quartz.nip85TrustedAssertions.list.serviceProviderSet
 import com.vitorpamplona.quartz.nip85TrustedAssertions.list.tags.ProviderTypes
 import com.vitorpamplona.quartz.nip85TrustedAssertions.list.tags.ServiceProviderTag
 import com.vitorpamplona.quartz.utils.Log
@@ -35,6 +39,8 @@ import kotlinx.coroutines.DelicateCoroutinesApi
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.IO
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.FlowCollector
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.flowOn
@@ -61,6 +67,25 @@ class TrustProviderListState(
 
     fun getTrustProviderList(): TrustProviderListEvent? = trustProviderListNote.event as? TrustProviderListEvent
 
+    /**
+     * A new kind 10040 in which the user-score entries name [providerKey] on [relay]. See
+     * [withScoreProvider] (the free function), which this applies to the current list.
+     */
+    suspend fun withScoreProvider(
+        providerKey: HexKey,
+        relay: NormalizedRelayUrl,
+        isPrivate: Boolean,
+    ): TrustProviderListEvent = withScoreProvider(getTrustProviderList() ?: settings.backupTrustProviderList, providerKey, relay, isPrivate, signer)
+
+    /** A new kind 10040 with [rows] in it. See [withProviderRows] (the free function). */
+    suspend fun withProviderRows(
+        rows: List<TrustProviderRow>,
+        isPrivate: Boolean,
+    ): TrustProviderListEvent = withProviderRows(getTrustProviderList() ?: settings.backupTrustProviderList, rows, isPrivate, signer)
+
+    /** A new kind 10040 without the score provider's rows, or null when there is nothing to remove. */
+    suspend fun withoutScoreProvider(): TrustProviderListEvent? = withoutScoreProvider(getTrustProviderList() ?: settings.backupTrustProviderList, signer)
+
     suspend fun trustProviderListWithBackup(note: Note): Set<ServiceProviderTag> {
         val event = note.event as? TrustProviderListEvent ?: settings.backupTrustProviderList
         return event?.let { decryptionCache.serviceProviderSet(it) } ?: emptySet()
@@ -79,6 +104,47 @@ class TrustProviderListState(
                 SharingStarted.Eagerly,
                 emptySet(),
             )
+
+    /**
+     * The list once it is known for sure: read (or its backup), with its private part decrypted.
+     * Null until then, and while the private part cannot be decrypted (a signer that is not
+     * available), so "not known yet" never reads as "no providers".
+     */
+    @OptIn(ExperimentalCoroutinesApi::class)
+    private val resolvedTrustProviderList: StateFlow<Set<ServiceProviderTag>?> =
+        getTrustProviderListFlow()
+            // The note flow is a StateFlow, so its current note arrives first; no onStart, whose
+            // retries would hold off a newer 10040 until the next pause ended.
+            .transformLatest { noteState -> emitResolved(noteState.note) }
+            .flowOn(Dispatchers.IO)
+            .stateIn(scope, SharingStarted.Eagerly, null)
+
+    /**
+     * Emits [note]'s providers once known. When the private part cannot be decrypted yet (an
+     * external signer that refuses in the background), tries again with a growing pause, so a
+     * process woken by a push still resolves once the user opens the app.
+     */
+    private suspend fun FlowCollector<Set<ServiceProviderTag>?>.emitResolved(note: Note) {
+        var pauseMs = 15_000L
+        while (true) {
+            val resolved = resolvedProviders(note)
+            emit(resolved)
+            if (resolved != null) return
+            delay(pauseMs)
+            pauseMs = (pauseMs * 2).coerceAtMost(10 * 60_000L)
+        }
+    }
+
+    private suspend fun resolvedProviders(note: Note): Set<ServiceProviderTag>? {
+        val event = note.event as? TrustProviderListEvent ?: settings.backupTrustProviderList ?: return emptySet()
+        return event.knownProviders { decryptionCache.cachedPrivateLists.privateTags(it) }
+    }
+
+    /** The rank provider once the list is known for sure (see [resolvedTrustProviderList]). */
+    val resolvedRankProvider: StateFlow<ResolvedProvider?> =
+        resolvedTrustProviderList
+            .map { providers -> providers?.rankChoice() }
+            .stateIn(scope, SharingStarted.Eagerly, null)
 
     @OptIn(ExperimentalCoroutinesApi::class)
     override val liveUserRankProvider: StateFlow<ServiceProviderTag?> =

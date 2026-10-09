@@ -25,6 +25,7 @@ import com.vitorpamplona.amethyst.commons.model.Account
 import com.vitorpamplona.amethyst.commons.model.AddressableNote
 import com.vitorpamplona.amethyst.commons.model.User
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache.checkGetOrCreateUser
+import com.vitorpamplona.amethyst.commons.wot.sortedByFollowsThenTrust
 import com.vitorpamplona.quartz.nip51Lists.starterPack.StarterPackEvent
 
 class FollowPackMembersFeedFilter(
@@ -46,7 +47,7 @@ class FollowPackMembersFeedFilter(
                 .followIdSet()
                 .mapNotNull { hex -> checkGetOrCreateUser(hex) }
                 .filter { !account.isHidden(it) }
-                .sortedByDescending { account.isKnown(it) }
+                .sortedByFollowsThenTrust(account, follows = account.allFollows.flow.value.authors)
 
         cache[followPackEvent] = follows
         return follows

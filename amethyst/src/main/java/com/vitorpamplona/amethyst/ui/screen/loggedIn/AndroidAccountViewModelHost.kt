@@ -40,6 +40,8 @@ import com.vitorpamplona.amethyst.commons.service.uploads.MediaUri
 import com.vitorpamplona.amethyst.commons.tor.MoneyOpRelayRouting
 import com.vitorpamplona.amethyst.commons.tor.TorRelayEvaluation
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModelHost
+import com.vitorpamplona.amethyst.commons.wot.onboarding.OkHttpTrustProviderHttp
+import com.vitorpamplona.amethyst.commons.wot.onboarding.TrustProviderHttp
 import com.vitorpamplona.amethyst.service.ai.WritingAssistantFactory
 import com.vitorpamplona.amethyst.service.notifications.NotificationUtils.dismissNotificationForEvent
 import com.vitorpamplona.amethyst.service.scheduledposts.ScheduledPostWorker
@@ -78,6 +80,8 @@ class AndroidAccountViewModelHost(
     override val websocketBuilder: WebsocketBuilder get() = modules.websocketBuilder
 
     override val lnurlTransport: LnurlHttpTransport by lazy { OkHttpLnurlTransport(modules.roleBasedHttpClientBuilder::okHttpClientForMoney) }
+
+    override val trustProviderHttp: TrustProviderHttp by lazy { OkHttpTrustProviderHttp(modules.roleBasedHttpClientBuilder::okHttpClientForNip05) }
 
     override val moneyOpRelays: MoneyOpRelayRouting get() = modules.torEvaluatorFlow
 

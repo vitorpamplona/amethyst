@@ -498,6 +498,11 @@ events.
 │   ├── aliases.json                     # local name → npub map (init writes a self-entry)
 │   ├── cashu.json                       # NIP-60 NUT-13 counters: {"keyset_counters":{"<id>":<long>}}
 │   ├── concord.json                     # Concord community secrets (ConcordStore)
+│   ├── wot/                             # `amy trust`: the NIP-85 network index, the apps' format
+│   │   ├── network-v2.bin               #   the index (TrustNetworkStore)
+│   │   ├── network-ids-v2.bin           #   event ids + tombstones, read only by syncs
+│   │   ├── partial-network*-v2.bin      #   a cut-off first download, resumed by the next
+│   │   └── observers/<hex>/             #   `--observer` networks, same layout, read-only
 │   └── marmot/
 │       ├── keypackages.bundle           # MLS KeyPackage bundles (NostrSignerInternal)
 │       └── groups/

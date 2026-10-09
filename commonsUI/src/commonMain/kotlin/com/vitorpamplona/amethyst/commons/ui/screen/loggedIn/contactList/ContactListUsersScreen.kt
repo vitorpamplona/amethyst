@@ -46,6 +46,7 @@ import com.vitorpamplona.amethyst.commons.ui.note.UserCompose
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.DividerThickness
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
+import com.vitorpamplona.amethyst.commons.wot.sortedByFollowsThenTrust
 import com.vitorpamplona.quartz.nip02FollowList.ContactListEvent
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.persistentListOf
@@ -80,7 +81,7 @@ fun ContactListUsersScreen(
                     ?.verifiedFollowKeySet()
                     ?.filter { !accountViewModel.account.isHidden(it) }
                     ?.mapNotNull { LocalCache.checkGetOrCreateUser(it) }
-                    ?.sortedByDescending { accountViewModel.account.isKnown(it.pubkeyHex) }
+                    ?.sortedByFollowsThenTrust(accountViewModel.account, follows = accountViewModel.account.allFollows.flow.value.authors)
                     ?.toPersistentList()
                     ?: persistentListOf()
             }

@@ -31,6 +31,7 @@ import com.vitorpamplona.amethyst.commons.model.chats.ChatFeedToggles
 import com.vitorpamplona.amethyst.commons.model.chats.ChatFeedType
 import com.vitorpamplona.amethyst.commons.model.chats.PinnedChatroomNote
 import com.vitorpamplona.amethyst.commons.model.privateChats.ChatroomList
+import com.vitorpamplona.amethyst.commons.wot.network.TrustVerdicts
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip17Dm.base.ChatroomKey
 import com.vitorpamplona.quartz.nip17Dm.messages.ChatMessageEvent
@@ -84,6 +85,9 @@ class PinnedChatroomsFeedTest {
             every { it.settings } returns settings
             every { it.chatFeedToggles } returns toggles
             every { it.isAllHidden(any()) } answers { firstArg<Set<HexKey>>().all { key -> key == hidden } }
+            // The real Known rule (pins included), with no Web of Trust network.
+            every { it.isKnownChatroom(any(), any(), any()) } answers { callOriginal() }
+            every { it.currentTrustVerdicts() } returns TrustVerdicts.inactive(me)
         }
 
     private fun pin(vararg rooms: ChatroomKey) {

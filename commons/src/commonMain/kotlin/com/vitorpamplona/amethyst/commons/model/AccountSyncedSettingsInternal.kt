@@ -43,6 +43,9 @@ val DefaultZapAmounts = listOf(21L, 50L, 100L)
 val DefaultOnchainZapAmounts = listOf(5_000L)
 val DefaultReportWarningThreshold = 5
 
+/** Default lowest NIP-85 rank that admits a stranger into the user's network. */
+val DefaultMinTrustScore = 5
+
 /**
  * Product floor for the on-chain rail — stricter than the protocol-level
  * dust threshold (OnchainZapBuilder.DUST_THRESHOLD_SATS). The unified zap
@@ -216,6 +219,8 @@ class AccountSecurityPreferencesInternal(
     val maxHashtagLimit: Int = 8,
     var sendKind0EventsToLocalRelay: Boolean = false,
     var addClientTag: Boolean = true,
+    /** Lowest NIP-85 rank (0-100) a stranger needs to count as in the user's network. */
+    val minTrustScore: Int = DefaultMinTrustScore,
 )
 
 @Serializable

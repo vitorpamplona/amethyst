@@ -237,6 +237,7 @@ import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.settings.cordn.Cord
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.settings.cordn.CordnMigrateScreen
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.settings.nip46.Nip46ConnectedAppsScreen
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.settings.nip46.Nip46SignerScreen
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.settings.wot.WebOfTrustScreen
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.shorts.ShortsScreen
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.softwareapps.SoftwareAppDetailScreen
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.softwareapps.SoftwareAppsScreen
@@ -407,6 +408,7 @@ fun NavDestinations.sharedDestinations(
     composableCappedArgs<Route.Search> { SearchScreen(it.query, accountViewModel, nav) }
     composableFromEnd<Route.AllSettings> { AllSettingsScreen(accountViewModel, nav) }
     composableFromEnd<Route.SecurityFilters> { SecurityFiltersScreen(accountViewModel, nav) }
+    composableFromEnd<Route.WebOfTrust> { WebOfTrustScreen(accountViewModel, nav) }
     composableFromEnd<Route.BlockedUsers> { BlockedUsersScreen(accountViewModel, nav) }
     composableFromEnd<Route.SpammingUsers> { SpammingUsersScreen(accountViewModel, nav) }
     composableFromEnd<Route.HiddenWords> { HiddenWordsScreen(accountViewModel, nav) }

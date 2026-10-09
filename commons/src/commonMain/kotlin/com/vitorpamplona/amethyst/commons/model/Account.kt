@@ -154,6 +154,7 @@ import com.vitorpamplona.amethyst.commons.model.nipA3PaymentTargets.NipA3Payment
 import com.vitorpamplona.amethyst.commons.model.nipB7Blossom.BlossomServerListState
 import com.vitorpamplona.amethyst.commons.model.nipBCOnchainZaps.OnchainWalletState
 import com.vitorpamplona.amethyst.commons.model.privateChatLastReadRoute
+import com.vitorpamplona.amethyst.commons.model.privateChats.Chatroom
 import com.vitorpamplona.amethyst.commons.model.privateChats.hasEncryptedContent
 import com.vitorpamplona.amethyst.commons.model.serverList.AssumedRelayListsState
 import com.vitorpamplona.amethyst.commons.model.serverList.MergedFollowListsState
@@ -167,6 +168,8 @@ import com.vitorpamplona.amethyst.commons.model.topNavFeeds.IFeedTopNavFilter
 import com.vitorpamplona.amethyst.commons.model.topNavFeeds.OutboxLoaderState
 import com.vitorpamplona.amethyst.commons.model.topNavFeeds.TopFilter
 import com.vitorpamplona.amethyst.commons.model.trustedAssertions.TrustProviderListState
+import com.vitorpamplona.amethyst.commons.model.trustedAssertions.TrustProviderRow
+import com.vitorpamplona.amethyst.commons.model.trustedAssertions.publicRows
 import com.vitorpamplona.amethyst.commons.nipACWebRtcCalls.CallManager
 import com.vitorpamplona.amethyst.commons.nipACWebRtcCalls.CallState
 import com.vitorpamplona.amethyst.commons.relayClient.auth.InMemoryRelayAuthPermissionStore
@@ -193,6 +196,10 @@ import com.vitorpamplona.amethyst.commons.service.pow.PoWReplay
 import com.vitorpamplona.amethyst.commons.service.upload.FileHeader
 import com.vitorpamplona.amethyst.commons.util.logTime
 import com.vitorpamplona.amethyst.commons.viewmodels.ReplyMode
+import com.vitorpamplona.amethyst.commons.wot.network.RelayTrustNetworkSource
+import com.vitorpamplona.amethyst.commons.wot.network.TrustNetworkState
+import com.vitorpamplona.amethyst.commons.wot.network.TrustNetworkStore
+import com.vitorpamplona.amethyst.commons.wot.network.TrustVerdicts
 import com.vitorpamplona.quartz.buzz.media.BuzzImeta
 import com.vitorpamplona.quartz.buzz.threading.buzzThread
 import com.vitorpamplona.quartz.buzz.threading.buzzThreadRootForReplyTo
@@ -231,11 +238,14 @@ import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.crypto.KeyPair
+import com.vitorpamplona.quartz.nip01Core.crypto.verify
 import com.vitorpamplona.quartz.nip01Core.hints.EventHintBundle
 import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
+import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.fetchAll
 import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.fetchFirst
 import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.publishAndConfirm
 import com.vitorpamplona.quartz.nip01Core.relay.client.paging.RelayLoadingCursors
+import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.normalizeRelayUrlOrNull
@@ -331,7 +341,9 @@ import com.vitorpamplona.quartz.nip72ModCommunities.rules.CommunityRulesEvent
 import com.vitorpamplona.quartz.nip72ModCommunities.rules.tags.KindRuleTag
 import com.vitorpamplona.quartz.nip72ModCommunities.rules.tags.PubkeyRuleTag
 import com.vitorpamplona.quartz.nip72ModCommunities.rules.tags.WotTag
+import com.vitorpamplona.quartz.nip85TrustedAssertions.list.TrustProviderListEvent
 import com.vitorpamplona.quartz.nip85TrustedAssertions.list.tags.ServiceProviderTag
+import com.vitorpamplona.quartz.nip85TrustedAssertions.users.UserAssertionEvent
 import com.vitorpamplona.quartz.nip88Polls.poll.PollEvent
 import com.vitorpamplona.quartz.nip88Polls.poll.tags.PollType
 import com.vitorpamplona.quartz.nip88Polls.response.PollResponseEvent
@@ -476,6 +488,19 @@ class Account(
      */
     val marmotPushStateStore: com.vitorpamplona.quartz.marmot.mip05PushNotifications.MarmotPushStateStore? = null,
     val powQueue: () -> PoWPublishQueue? = { null },
+    /**
+     * Where the Web of Trust network index lives (the account's own directory), or null to
+     * run without one. See [TrustNetworkState].
+     */
+    trustNetworkDir: Path? = null,
+    /**
+     * Builds a relay client for the trust network sync, apart from [client]: the shared client
+     * files everything it receives into [cache], and a sync receives hundreds of thousands of
+     * cards. Null disables syncing (the index on disk is still used).
+     */
+    trustNetworkClientBuilder: (() -> INostrClient)? = null,
+    /** False on a metered network: background trust network downloads then wait. */
+    canDownloadLargeFiles: () -> Boolean = { true },
     relayAuthPermissionStore: RelayAuthPermissionStore = InMemoryRelayAuthPermissionStore(),
     signerPermissionStore: NostrSignerPermissionStore = InMemoryNostrSignerPermissionStore(),
     nip46ClientStore: Nip46ClientStore = InMemoryNip46ClientStore(),
@@ -518,6 +543,9 @@ class Account(
 
     override fun cardHomeRelays(): Set<NormalizedRelayUrl> = homeRelays.flow.value
 
+    // Profiles on screen ask the providers for their cards even when the trust network holds
+    // them: a card newer than the last sync updates the network until the next one
+    // (TrustNetworkState.offer).
     override fun trustProvider(): ServiceProviderTag? = trustProviderList.liveUserRankProvider.value
 
     override fun followerCountProvider(): ServiceProviderTag? = trustProviderList.liveUserFollowerCount.value
@@ -915,6 +943,36 @@ class Account(
 
     val trustProviderListDecryptionCache = TrustProviderListDecryptionCache(signer)
     val trustProviderList = TrustProviderListState(signer, cache, trustProviderListDecryptionCache, scope, settings)
+
+    /** The NIP-85 rank provider's network: who counts as known beyond follows. */
+    val trustNetwork =
+        TrustNetworkState(
+            rankProvider = trustProviderList.resolvedRankProvider,
+            minTrustScore = settings.syncedSettings.security.minTrustScore,
+            store = trustNetworkDir?.let { TrustNetworkStore(it) },
+            source = trustNetworkClientBuilder?.let { RelayTrustNetworkSource(it) },
+            scope = scope,
+            canDownloadLarge = canDownloadLargeFiles,
+        )
+
+    /**
+     * The Web of Trust decisions, published whenever an answer can change (network, minimum
+     * score, follows, a card seen between syncs). Key feeds and screens on it; see [TrustVerdicts].
+     */
+    val trustVerdicts: StateFlow<TrustVerdicts> =
+        trustNetwork.verdicts(
+            me = signer.pubKey,
+            follows = kind3FollowList.flow.map { it.authors }.stateIn(scope, SharingStarted.Eagerly, kind3FollowList.flow.value.authors),
+            scope = scope,
+        )
+
+    /**
+     * The Web of Trust decisions as of this instant. For one-off checks (a push, a room) that
+     * cannot wait for [trustVerdicts] to publish, e.g. right after [TrustNetworkState.awaitLoaded].
+     */
+    fun currentTrustVerdicts(): TrustVerdicts = trustNetwork.snapshot(signer.pubKey, followingKeySet())
+
+    override fun trustRankOf(pubkey: HexKey): Int? = trustNetwork.rankOf(pubkey)
 
     val followSetDecryptionCache = FollowSetDecryptionCache(signer)
     val blockPeopleList = BlockPeopleListState(signer, cache, followSetDecryptionCache, scope)
@@ -1381,6 +1439,86 @@ class Account(
 
     suspend fun updateMaxHashtagLimit(limit: Int) {
         if (settings.updateMaxHashtagLimit(limit)) {
+            sendNewAppSpecificData()
+        }
+    }
+
+    /**
+     * Points the account's kind 10040 user-score entries (`30382:rank`, `30382:followers`) at
+     * [providerKey] on [relay], replacing any previous provider and keeping every other entry.
+     * The trust network then downloads that provider's cards.
+     */
+    suspend fun setTrustScoreProvider(
+        providerKey: HexKey,
+        relay: NormalizedRelayUrl,
+        isPrivate: Boolean,
+    ) {
+        // The user is waiting for it: its first download may start on mobile data.
+        trustNetwork.expectNewProvider()
+        loadOwnTrustProviderListIfMissing()
+        sendMyPublicAndPrivateOutbox(trustProviderList.withScoreProvider(providerKey, relay, isPrivate))
+    }
+
+    /**
+     * Publishes the kind 10040 rows a provider set up for the user (see [TrustProviderRow]),
+     * replacing the previous score provider. [rows] must include a `30382:rank` row.
+     */
+    suspend fun setTrustProviderRows(
+        rows: List<TrustProviderRow>,
+        isPrivate: Boolean,
+    ) {
+        trustNetwork.expectNewProvider()
+        loadOwnTrustProviderListIfMissing()
+        sendMyPublicAndPrivateOutbox(trustProviderList.withProviderRows(rows, isPrivate))
+    }
+
+    /**
+     * Before a rewrite of the kind 10040: on a device that has not received the user's list yet
+     * (a fresh login), building on nothing would publish a list with only the new rows and drop
+     * every row other clients keep there (other providers, Trusted Lists).
+     */
+    private suspend fun loadOwnTrustProviderListIfMissing() {
+        if (trustProviderList.getTrustProviderList() != null || settings.backupTrustProviderList != null) return
+        newestTrustProviderList(signer.pubKey)?.let { cache.justConsumeMyOwnEvent(it) }
+    }
+
+    /**
+     * The public kind 10040 rows of [pubkey]'s list, from the newest version found on their
+     * outbox, the index relays and [hints]; null when no list was found. Copying them into the
+     * user's own list ([setTrustProviderRows]) shows the network as [pubkey] sees it.
+     */
+    suspend fun fetchTrustProviderRowsOf(
+        pubkey: HexKey,
+        hints: Set<NormalizedRelayUrl> = emptySet(),
+    ): List<TrustProviderRow>? = newestTrustProviderList(pubkey, hints)?.publicRows()
+
+    /** [pubkey]'s newest kind 10040 in the cache or on their outbox, the index relays and [hints]. */
+    private suspend fun newestTrustProviderList(
+        pubkey: HexKey,
+        hints: Set<NormalizedRelayUrl> = emptySet(),
+    ): TrustProviderListEvent? {
+        val cached = cache.getAddressableNoteIfExists(TrustProviderListEvent.createAddress(pubkey))?.event as? TrustProviderListEvent
+        val relays = cache.getUserIfExists(pubkey)?.outboxRelays().orEmpty() + indexRelays() + hints
+        val filter = Filter(kinds = listOf(TrustProviderListEvent.KIND), authors = listOf(pubkey), limit = 1)
+        // fetchAll neither verifies nor stores: any relay asked could forge a newer list and pick
+        // the provider the user is about to publish. Newest first, the first that verifies.
+        val fetched =
+            client
+                .fetchAll(filters = relays.associateWith { listOf(filter) }, idleTimeoutMs = 8_000)
+                .filter { it.kind == TrustProviderListEvent.KIND && it.pubKey == pubkey }
+                .sortedByDescending { it.createdAt }
+                .firstOrNull { it.verify() }
+        return listOfNotNull(cached, fetched as? TrustProviderListEvent).maxByOrNull { it.createdAt }
+    }
+
+    /** Removes the user-score provider from the kind 10040, which turns Web of Trust filtering off. */
+    suspend fun removeTrustScoreProvider() {
+        loadOwnTrustProviderListIfMissing()
+        trustProviderList.withoutScoreProvider()?.let { sendMyPublicAndPrivateOutbox(it) }
+    }
+
+    suspend fun updateMinTrustScore(score: Int) {
+        if (settings.updateMinTrustScore(score)) {
             sendNewAppSpecificData()
         }
     }
@@ -3750,6 +3888,63 @@ class Account(
 
     override fun followingKeySet(): Set<HexKey> = kind3FollowList.flow.value.authors
 
+    /**
+     * A note in a Concord community this account has joined. Notes keep a gatherer reference
+     * from every account and community that ever touched them, so membership is checked here.
+     */
+    fun isInJoinedConcordCommunity(note: Note?): Boolean =
+        note?.inGatherers?.any { g ->
+            g is ConcordChannel && concordSessions.sessionFor(g.channelId.communityId) != null
+        } == true
+
+    /**
+     * A Concord message in a joined community, or a reaction/repost to one (those are not
+     * attached to the channel themselves, so they are recognized through their target).
+     */
+    fun isConcordActivity(note: Note): Boolean {
+        if (isInJoinedConcordCommunity(note)) return true
+        val event = note.event
+        return (event is ReactionEvent || event is RepostEvent || event is GenericRepostEvent) && isInJoinedConcordCommunity(note.replyTo?.lastOrNull())
+    }
+
+    /** True only when a trust network is active and [pubkey] is not in it (see [TrustVerdicts]). */
+    fun isOutsideTrustNetwork(pubkey: HexKey): Boolean = currentTrustVerdicts().isOutside(pubkey)
+
+    /**
+     * [isKnownChatroom] for a room that may not be loaded yet (a push that beat it): then the
+     * same rule is applied to [sender], the only member the message vouches for. The room's
+     * other members are whoever the sender chose to tag, so a stranger tagging a follow (or a
+     * well-ranked key) must not make the room Known.
+     */
+    fun isKnownChatroom(
+        key: ChatroomKey,
+        sender: HexKey,
+    ): Boolean {
+        val room = chatroomList.rooms.get(key)
+        if (room != null) return isKnownChatroom(key, room)
+        if (chatroomList.hasSentMessagesTo(key) || key in settings.syncedSettings.chats.pinnedChatrooms.value) return true
+        if (sender in followingKeySet()) return true
+        val verdicts = currentTrustVerdicts()
+        return verdicts.isActive && verdicts.passes(sender)
+    }
+
+    /**
+     * Whether a private chat room belongs in Known rather than New Requests: a sender is
+     * followed or (when a trust network is active) in the network, this account has written to
+     * the room, or the user pinned it (an explicit "I know this conversation"). The single rule
+     * for the DM tabs and DM notifications, in-app and push.
+     */
+    fun isKnownChatroom(
+        key: ChatroomKey,
+        room: Chatroom,
+        followingKeySet: Set<HexKey> = followingKeySet(),
+    ): Boolean {
+        if (room.senderIntersects(followingKeySet) || chatroomList.hasSentMessagesTo(key)) return true
+        if (key in settings.syncedSettings.chats.pinnedChatrooms.value) return true
+        val verdicts = currentTrustVerdicts()
+        return verdicts.isActive && room.activeSenders.any { verdicts.passes(it.pubkeyHex) }
+    }
+
     fun isAcceptable(user: User): Boolean {
         if (userProfile().pubkeyHex == user.pubkeyHex) {
             return true
@@ -4316,6 +4511,8 @@ class Account(
             cache.live.newEventBundles.collect { newNotes ->
                 logTime("Account ${userProfile().toBestDisplayName()} newEventBundle Update with ${newNotes.size} new notes") {
                     upgradeAttestations()
+                    // Cards fetched for profiles on screen keep the trust network fresh between syncs.
+                    trustNetwork.offer(newNotes.mapNotNull { it.event as? UserAssertionEvent })
                     newNotesPreProcessor.runNew(newNotes)
                     followSets.newNotes(newNotes)
                     starterPacks.newNotes(newNotes)

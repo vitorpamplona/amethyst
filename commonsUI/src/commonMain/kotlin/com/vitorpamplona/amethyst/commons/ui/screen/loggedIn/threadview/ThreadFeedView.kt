@@ -77,6 +77,8 @@ import com.vitorpamplona.amethyst.commons.birdstar.ui.RenderBirdDetection
 import com.vitorpamplona.amethyst.commons.birdstar.ui.RenderBirdex
 import com.vitorpamplona.amethyst.commons.chats.ui.ThinSendButton
 import com.vitorpamplona.amethyst.commons.feeds.FeedState
+import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
+import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
 import com.vitorpamplona.amethyst.commons.model.navigation.routeFor
@@ -91,6 +93,7 @@ import com.vitorpamplona.amethyst.commons.resources.reply_here
 import com.vitorpamplona.amethyst.commons.resources.send_a_direct_message
 import com.vitorpamplona.amethyst.commons.resources.send_the_seller_a_message
 import com.vitorpamplona.amethyst.commons.resources.thread_collapsed_reply_count
+import com.vitorpamplona.amethyst.commons.resources.thread_reply_outside_network
 import com.vitorpamplona.amethyst.commons.richtext.MediaUrlImage
 import com.vitorpamplona.amethyst.commons.ui.components.AutoNonlazyGrid
 import com.vitorpamplona.amethyst.commons.ui.components.GenericLoadable
@@ -279,6 +282,7 @@ import com.vitorpamplona.amethyst.commons.util.showAmount
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.amethyst.commons.viewmodels.mockAccountViewModel
 import com.vitorpamplona.amethyst.commons.viewmodels.thread.LevelFeedViewModel
+import com.vitorpamplona.amethyst.commons.wot.network.TrustVerdicts
 import com.vitorpamplona.quartz.cyberspace.CyberspaceBagEvent
 import com.vitorpamplona.quartz.cyberspace.deck0003Sno.SnoAvatarEvent
 import com.vitorpamplona.quartz.cyberspace.deck0003Sno.SnoObjectEvent
@@ -448,14 +452,23 @@ fun RenderThreadFeed(
     val items by loaded.feed.collectAsStateWithLifecycle()
     val levels by viewModel.levelCacheFlow.collectAsStateWithLifecycle()
 
+    // Replies whose author is outside the Web of Trust network start collapsed. Empty while no
+    // network is active, so threads look exactly as before for users without one.
+    val verdicts by accountViewModel.account.trustVerdicts
+        .collectAsStateWithLifecycle()
+    val outsideNetwork =
+        remember(items, levels, verdicts, noteId) {
+            if (!verdicts.isActive) emptySet() else outOfNetworkReplies(items.list, levels, noteId, verdicts)
+        }
+
     // Hides every descendant of a collapsed reply and counts how many were hidden. The feed is
     // ordered depth-first, so a note's descendants are the contiguous items that follow it with a
     // strictly deeper reply level.
     val visible by
-        remember(items, levels) {
+        remember(items, levels, outsideNetwork) {
             derivedStateOf {
                 val full = items.list
-                if (viewModel.collapsedReplies.isEmpty()) {
+                if (viewModel.collapsedReplies.isEmpty() && outsideNetwork.isEmpty()) {
                     VisibleThread(full, emptyMap())
                 } else {
                     val result = ArrayList<Note>(full.size)
@@ -473,7 +486,7 @@ fun RenderThreadFeed(
                         collapsedAncestorId = null
                         result.add(note)
 
-                        if (viewModel.isCollapsed(note.idHex)) {
+                        if (viewModel.isCollapsed(note.idHex, outsideNetwork)) {
                             hideDeeperThan = level
                             collapsedAncestorId = note.idHex
                         }
@@ -524,7 +537,7 @@ fun RenderThreadFeed(
             contentType = { index, item ->
                 when {
                     index == 0 -> "master"
-                    viewModel.isCollapsed(item.idHex) -> "collapsed"
+                    viewModel.isCollapsed(item.idHex, outsideNetwork) -> "collapsed"
                     else -> "reply"
                 }
             },
@@ -553,12 +566,13 @@ fun RenderThreadFeed(
                         nav = nav,
                     )
                 }
-            } else if (viewModel.isCollapsed(item.idHex)) {
+            } else if (viewModel.isCollapsed(item.idHex, outsideNetwork)) {
                 CollapsedNoteCompose(
                     baseNote = item,
                     modifier = modifier,
                     hiddenReplyCount = visible.hiddenCounts[item.idHex] ?: 0,
-                    onExpand = { viewModel.toggleCollapsed(item.idHex) },
+                    outsideNetwork = item.idHex in outsideNetwork,
+                    onExpand = { viewModel.toggleCollapsed(item.idHex, outsideNetwork) },
                     accountViewModel = accountViewModel,
                     nav = nav,
                 )
@@ -573,7 +587,7 @@ fun RenderThreadFeed(
                 // drafts: those open the edit-draft screen so the post can be resumed, matching
                 // the behavior everywhere else a draft is tapped.
                 val onClick =
-                    remember(item) {
+                    remember(item, outsideNetwork) {
                         {
                             if (item.isDraft()) {
                                 nav.nav {
@@ -582,7 +596,7 @@ fun RenderThreadFeed(
                                     }
                                 }
                             } else {
-                                viewModel.toggleCollapsed(item.idHex)
+                                viewModel.toggleCollapsed(item.idHex, outsideNetwork)
                             }
                         }
                     }
@@ -608,6 +622,97 @@ fun RenderThreadFeed(
 }
 
 /**
+ * Replies (by id) whose author is outside the Web of Trust network: they start collapsed. The
+ * thread's root, its author, the focused note and the replies above it are never included (a
+ * collapsed reply hides everything under it, which would hide the note the user opened), nor
+ * is a reply that the root's author or someone in the network answered; neither are follows or
+ * the user (see [TrustVerdicts]).
+ */
+private fun outOfNetworkReplies(
+    thread: List<Note>,
+    levels: Map<Note, Int>,
+    focusedNoteId: String,
+    verdicts: TrustVerdicts,
+): Set<String> {
+    val root = thread.firstOrNull() ?: return emptySet()
+    val rootAuthor = root.author?.pubkeyHex
+    val keepOpen = focusedNoteAndAncestors(thread, levels, focusedNoteId)
+    val answered =
+        knownReplyBelow(thread, levels) { reply ->
+            val author = reply.author?.pubkeyHex
+            author != null && (author == rootAuthor || verdicts.explain(author).isKnown == true)
+        }
+    val result = HashSet<String>()
+    for (i in 1 until thread.size) {
+        val note = thread[i]
+        if (note.idHex in keepOpen) continue
+        // Levels are computed off the main thread and can trail the list: a reply with none yet
+        // cannot be placed (it may be above the focused note), so it is judged once it has one.
+        if (levels[note] == null) continue
+        val author = note.author?.pubkeyHex ?: continue
+        if (author == rootAuthor) continue
+        if (!answered[i] && verdicts.isOutside(author)) result.add(note.idHex)
+    }
+    return result
+}
+
+/**
+ * For each item of [thread], whether a [known] reply is anywhere under it. Collapsing a
+ * reply hides everything under it, which would hide their part of the conversation. The thread
+ * is depth-first: the replies under a note are the items after it at a deeper level. One
+ * backwards pass: the stack holds the subtrees already seen, nearest on top, each with whether
+ * a known author is in it; a note owns the ones deeper than itself.
+ */
+internal fun knownReplyBelow(
+    thread: List<Note>,
+    levels: Map<Note, Int>,
+    known: (Note) -> Boolean,
+): BooleanArray {
+    val result = BooleanArray(thread.size)
+    val stackLevels = IntArray(thread.size)
+    val stackKnown = BooleanArray(thread.size)
+    var top = 0
+    for (i in thread.indices.reversed()) {
+        val level = levels[thread[i]] ?: continue
+        var below = false
+        while (top > 0 && stackLevels[top - 1] > level) {
+            top--
+            below = below || stackKnown[top]
+        }
+        result[i] = below
+        stackLevels[top] = level
+        stackKnown[top] = below || known(thread[i])
+        top++
+    }
+    return result
+}
+
+/**
+ * The focused note and every reply above it. The thread is depth-first, so its ancestors are
+ * the earlier items each at a shallower level than the last one found.
+ */
+internal fun focusedNoteAndAncestors(
+    thread: List<Note>,
+    levels: Map<Note, Int>,
+    focusedNoteId: String,
+): Set<String> {
+    val focused = thread.indexOfFirst { it.idHex == focusedNoteId }
+    if (focused < 0) return setOf(focusedNoteId)
+    val result = HashSet<String>()
+    result.add(focusedNoteId)
+    var level = levels[thread[focused]] ?: return result
+    for (i in focused - 1 downTo 0) {
+        val candidate = levels[thread[i]] ?: continue
+        if (candidate < level) {
+            result.add(thread[i].idHex)
+            level = candidate
+            if (level <= 0) break
+        }
+    }
+    return result
+}
+
+/**
  * Holds the thread items currently visible after collapsing, plus, for each collapsed reply id,
  * the number of descendant replies that were hidden underneath it.
  */
@@ -627,6 +732,7 @@ private fun CollapsedNoteCompose(
     baseNote: Note,
     modifier: Modifier,
     hiddenReplyCount: Int,
+    outsideNetwork: Boolean = false,
     onExpand: () -> Unit,
     accountViewModel: AccountViewModel,
     nav: INav,
@@ -649,14 +755,34 @@ private fun CollapsedNoteCompose(
             Column(modifier = Modifier.weight(1f)) {
                 NoteUsernameDisplay(baseNote, accountViewModel = accountViewModel)
 
-                LoadDecryptedContent(baseNote, accountViewModel) { body ->
-                    Text(
-                        text = body,
-                        color = MaterialTheme.colorScheme.placeholderText,
-                        maxLines = 2,
-                        overflow = TextOverflow.Ellipsis,
-                        style = MaterialTheme.typography.bodyMedium,
-                    )
+                if (outsideNetwork) {
+                    // No preview: a reply collapsed for being outside the network is often spam.
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(
+                            symbol = MaterialSymbols.Shield,
+                            contentDescription = null,
+                            modifier = Modifier.size(14.dp),
+                            tint = MaterialTheme.colorScheme.placeholderText,
+                        )
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Text(
+                            text = stringRes(Res.string.thread_reply_outside_network),
+                            color = MaterialTheme.colorScheme.placeholderText,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                            style = MaterialTheme.typography.bodySmall,
+                        )
+                    }
+                } else {
+                    LoadDecryptedContent(baseNote, accountViewModel) { body ->
+                        Text(
+                            text = body,
+                            color = MaterialTheme.colorScheme.placeholderText,
+                            maxLines = 2,
+                            overflow = TextOverflow.Ellipsis,
+                            style = MaterialTheme.typography.bodyMedium,
+                        )
+                    }
                 }
             }
 

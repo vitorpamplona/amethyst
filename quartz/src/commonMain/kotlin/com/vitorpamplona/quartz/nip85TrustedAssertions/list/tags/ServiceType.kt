@@ -66,6 +66,12 @@ object ProviderTypes {
     val activeFrom = ServiceType(30382, "active_hours_start")
     val activeTo = ServiceType(30382, "active_hours_end")
 
+    // Kind 30382, as GrapeRank providers (Brainstorm) name them: the hop distance from the
+    // observer, and how many trusted users report or mute the subject.
+    val hops = ServiceType(30382, "hops")
+    val reporters = ServiceType(30382, "reporters")
+    val muters = ServiceType(30382, "muters")
+
     // Kind 30383: Event assertions
     val eventRank = ServiceType(30383, "rank")
     val eventCommentCount = ServiceType(30383, "comment_cnt")

@@ -172,6 +172,9 @@ fun DrawAdditionalInfo(
             )
         }
 
+        // In or out of the Web of Trust network; nothing when no network is active.
+        ProfileTrustBadge(baseUser, accountViewModel, nav)
+
         Row(verticalAlignment = Alignment.CenterVertically) {
             Text(
                 text = baseUser.pubkeyDisplayHex(),

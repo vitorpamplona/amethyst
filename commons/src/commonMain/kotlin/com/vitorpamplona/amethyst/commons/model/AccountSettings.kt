@@ -1697,6 +1697,14 @@ class AccountSettings(
             false
         }
 
+    fun updateMinTrustScore(score: Int): Boolean =
+        if (syncedSettings.security.updateMinTrustScore(score)) {
+            saveAccountSettings()
+            true
+        } else {
+            false
+        }
+
     // ---
     // Call settings
     // ---

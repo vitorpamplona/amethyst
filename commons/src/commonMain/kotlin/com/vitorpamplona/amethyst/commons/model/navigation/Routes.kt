@@ -459,6 +459,8 @@ sealed class Route {
 
     @Serializable object SecurityFilters : Route()
 
+    @Serializable object WebOfTrust : Route()
+
     @Serializable object BlockedUsers : Route()
 
     @Serializable object SpammingUsers : Route()

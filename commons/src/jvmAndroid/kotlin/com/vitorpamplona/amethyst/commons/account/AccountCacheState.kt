@@ -124,6 +124,13 @@ class AccountCacheState(
     val startBuzzPersistence: (Account) -> Unit = { },
     /** Who this app says it is when it asks a NIP-46 remote signer to sign (NIP-46 client metadata). */
     val remoteSignerMetadata: BunkerClientMetadata? = null,
+    /**
+     * Builds a throwaway relay client for each Web of Trust sync, apart from [client]: the shared
+     * client files everything into [cache], and a sync downloads hundreds of thousands of cards.
+     */
+    val trustNetworkClientBuilder: (() -> INostrClient)? = null,
+    /** False on a metered network: background Web of Trust downloads then wait. */
+    val canDownloadLargeFiles: () -> Boolean = { true },
 ) : AccountCache {
     val accounts = MutableStateFlow<Map<HexKey, Account>>(emptyMap())
 
@@ -425,6 +432,10 @@ class AccountCacheState(
             // scopes itself further by coordinator underneath it, because a
             // gid is unique only within one (spec/00.md §4).
             cordnFilesDir = accountDir.toOkioPath().takeIf { cordnBlobCipher != null },
+            // The Web of Trust index lives with the account, so deleting the account deletes it.
+            trustNetworkDir = accountDir.toOkioPath() / "wot",
+            trustNetworkClientBuilder = trustNetworkClientBuilder,
+            canDownloadLargeFiles = canDownloadLargeFiles,
             mlsGroupStateStore = mlsStore,
             marmotMessageStore = marmotMessageStore,
             marmotKeyPackageStore = marmotKeyPackageStore,

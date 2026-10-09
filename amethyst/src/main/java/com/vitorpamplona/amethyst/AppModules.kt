@@ -160,6 +160,7 @@ import com.vitorpamplona.amethyst.service.safeCacheDir
 import com.vitorpamplona.amethyst.service.scheduledposts.ScheduledPostWorker
 import com.vitorpamplona.amethyst.service.uploads.blossom.BlossomSyncForegroundService
 import com.vitorpamplona.amethyst.service.uploads.nip95.Nip95CacheFactory
+import com.vitorpamplona.amethyst.service.wot.TrustNetworkSyncWorker
 import com.vitorpamplona.amethyst.ui.resourceCacheInit
 import com.vitorpamplona.amethyst.ui.tor.TorManager
 import com.vitorpamplona.amethyst.ui.tor.TorService
@@ -960,6 +961,10 @@ class AppModules(
             meterSigner = { MeteringNostrSigner(it, resourceUsage) },
             signerPermissionStore = signerPermissionStore,
             nip46ClientStore = nip46ClientStore,
+            // Same sockets as the app (Tor, blocked relays), but never filed into LocalCache.
+            trustNetworkClientBuilder = { NostrClient(websocketBuilder) },
+            // Unknown (a cold start before the first callback) waits, like mobile data.
+            canDownloadLargeFiles = { connManager.isMobileOrNull.value == false },
             // Restore + persist the Buzz bookkeeping that has no Nostr event to rebuild from: the
             // joined workspace relays (so the app knows which relays to sync as workspaces on cold
             // start — Buzz membership is server-side) and the starred channels. Per account: the
@@ -986,6 +991,18 @@ class AppModules(
             scope = applicationIOScope,
             hooks = AndroidAccountSessionHooks(),
         )
+
+    // Web of Trust: whenever the app comes to the foreground, or the network changes under it (a
+    // first download waiting for Wi-Fi), bring the active account's network index up to date. A
+    // no-op unless an update, a full check or the first download is due.
+    init {
+        applicationIOScope.launch {
+            combine(foregroundTracker.isForeground, sessionManager.accountContent, connManager.isMobileOrNull) { foreground, state, _ ->
+                if (foreground) (state as? AccountState.LoggedIn)?.account else null
+            }.filterNotNull()
+                .collect { it.trustNetwork.syncIfStale() }
+        }
+    }
 
     private inner class AndroidAccountSessionHooks : AccountSessionHooks {
         override fun onSessionEnding() {
@@ -1319,6 +1336,9 @@ class AppModules(
             },
             onNoPendingWork = { ScheduledPostWorker.cancelPeriodic(appContext) },
         ).start()
+
+        // Daily Web of Trust upkeep (Wi-Fi only) for accounts that only get push notifications.
+        TrustNetworkSyncWorker.schedule(appContext)
 
         // "Starting soon" reminders for NIP-52 appointments the user RSVP'd to as
         // ACCEPTED. The 15-min periodic scanner is only scheduled while it can
