@@ -454,6 +454,8 @@ private fun GeohashChatTopBar(
         },
         // Search this cell rather than everywhere: the box opens holding `geo:<geohash>`.
         actions = { SearchTopBarAction(SearchSeed.byGeohash(geohash), nav) },
+        // Hidden in a list/detail screen's detail pane, where there is nothing to go back to.
+        showBackButton = nav.canPop(),
         popBack = nav::popBack,
     )
 }

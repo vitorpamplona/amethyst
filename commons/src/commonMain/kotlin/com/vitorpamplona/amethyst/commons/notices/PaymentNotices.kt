@@ -27,12 +27,12 @@ import com.vitorpamplona.quartz.nip47WalletConnect.rpc.Response
 /** What an LNURL server said when it refused a request. */
 sealed interface LnurlFailureDetail {
     /** The server's own `reason`/`message`. */
-    class ServerMessage(
+    data class ServerMessage(
         val text: String,
     ) : LnurlFailureDetail
 
     /** No message in the body: only the HTTP status (and its reason phrase, possibly blank). */
-    class HttpStatus(
+    data class HttpStatus(
         val code: Int,
         val reason: String,
     ) : LnurlFailureDetail
@@ -40,64 +40,64 @@ sealed interface LnurlFailureDetail {
 
 /** Why fetching a BOLT11 invoice from a lightning address (LUD-06/16) failed. */
 sealed interface InvoiceNotice : UserNotice {
-    class CannotAssembleLnurl(
+    data class CannotAssembleLnurl(
         val lnAddress: String,
     ) : InvoiceNotice
 
-    class ServiceUnavailable(
+    data class ServiceUnavailable(
         val url: String,
         val lnAddress: String,
         val detail: LnurlFailureDetail,
     ) : InvoiceNotice
 
-    class CannotResolve(
+    data class CannotResolve(
         val url: String,
         val lnAddress: String,
         val cause: String?,
     ) : InvoiceNotice
 
-    class CannotFetch(
+    data class CannotFetch(
         val callback: String,
         val detail: LnurlFailureDetail,
     ) : InvoiceNotice
 
-    class AddressJsonInvalid(
+    data class AddressJsonInvalid(
         val lnAddress: String,
     ) : InvoiceNotice
 
-    class CallbackNotFound(
+    data class CallbackNotFound(
         val lnAddress: String,
     ) : InvoiceNotice
 
-    class InvoiceJsonInvalid(
+    data class InvoiceJsonInvalid(
         val lnAddress: String,
     ) : InvoiceNotice
 
     /** The receiver's wallet answered with an error [reason] instead of an invoice. */
-    class WalletRefused(
+    data class WalletRefused(
         val lnAddress: String,
         val reason: String,
     ) : InvoiceNotice
 
     /** The receiver's wallet answered without a `pr` element. */
-    class InvoiceMissing(
+    data class InvoiceMissing(
         val lnAddress: String,
     ) : InvoiceNotice
 
     /** The invoice is for a different amount than requested. */
-    class WrongAmount(
+    data class WrongAmount(
         val invoiceSats: Long,
         val lnAddress: String,
         val expectedSats: Long,
     ) : InvoiceNotice
 
     /** An unexpected failure while creating a zap invoice. */
-    class ReceiverFailed(
+    data class ReceiverFailed(
         val message: String?,
     ) : InvoiceNotice
 
     /** An unexpected failure while creating an invoice, with whatever [message] it carried. */
-    class Unexpected(
+    data class Unexpected(
         val message: String?,
     ) : InvoiceNotice
 }
@@ -108,7 +108,7 @@ sealed interface NwcFailure {
     data object Unreadable : NwcFailure
 
     /** The wallet refused, and maybe said why. */
-    class Refused(
+    data class Refused(
         val message: String?,
     ) : NwcFailure
 
@@ -128,7 +128,7 @@ fun Response?.nwcFailure(): NwcFailure? =
     }
 
 /** A CLINK debit service (kind 21002) refused to pay, or never answered ([detail] null). */
-class ClinkDebitFailed(
+data class ClinkDebitFailed(
     val detail: String?,
 ) : UserNotice
 
@@ -137,28 +137,28 @@ data object NoWalletFound : UserNotice
 
 sealed interface ZapNotice : UserNotice {
     /** A recipient has neither a lightning address nor a BOLT12 route. */
-    class MissingLnAddress(
+    data class MissingLnAddress(
         val userName: String?,
     ) : ZapNotice
 
     /** The NWC wallet did not pay a zap invoice. */
-    class PayInvoiceFailed(
+    data class PayInvoiceFailed(
         val failure: NwcFailure,
     ) : ZapNotice
 
     /** The BOLT12 offer was paid but produced no valid zap receipt. */
-    class Bolt12ReceiptFailed(
+    data class Bolt12ReceiptFailed(
         val failure: Bolt12ZapFailure,
     ) : ZapNotice
 
-    class Bolt12PaymentFailed(
+    data class Bolt12PaymentFailed(
         val detail: String,
     ) : ZapNotice
 
     data object Bolt12PaymentTimedOut : ZapNotice
 
     /** The BOLT11 retry of a refused BOLT12 offer failed too. */
-    class FallbackFailed(
+    data class FallbackFailed(
         val message: String,
     ) : ZapNotice
 }
@@ -171,7 +171,7 @@ sealed interface V4VNotice : UserNotice {
 
     data object KeysendRequiresNwc : V4VNotice
 
-    class PaymentFailed(
+    data class PaymentFailed(
         val failure: NwcFailure,
     ) : V4VNotice
 }

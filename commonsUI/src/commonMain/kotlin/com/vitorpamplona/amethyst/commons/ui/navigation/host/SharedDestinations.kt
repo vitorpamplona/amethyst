@@ -77,6 +77,12 @@ import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.geohashChat.G
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.geohashChat.GeohashChatsScreen
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.geohashChat.GeohashTeleportScreen
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.geohashChat.NewGeohashChatScreen
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.listDetail.ChatListDetailScreen
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.listDetail.isConcordDetailRoute
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.listDetail.isGeohashDetailRoute
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.listDetail.isMarmotDetailRoute
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.listDetail.isPlatformChatDetailRoute
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.listDetail.isRelayGroupDetailRoute
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.marmotGroup.CreateGroupScreen
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.marmotGroup.EditGroupInfoScreen
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.marmotGroup.MarmotGroupChatScreen
@@ -342,7 +348,9 @@ fun NavDestinations.sharedDestinations(
     composableFromEndArgs<Route.Shorts> { ShortsScreen(accountViewModel, nav, it.attachments, it.message) }
     composableFromEnd<Route.PublicChats> { PublicChatsScreen(accountViewModel, nav) }
     composableFromEnd<Route.RelayGroups> { RelayGroupDiscoveryScreen(accountViewModel, nav) }
-    composableFromEndArgs<Route.BuzzDmList> { BuzzDmListScreen(it.relayUrl, accountViewModel, nav) }
+    composableFromEndArgs<Route.BuzzDmList> { route ->
+        ChatListDetailScreen(::isRelayGroupDetailRoute, accountViewModel, nav) { BuzzDmListScreen(route.relayUrl, accountViewModel, it) }
+    }
     composableFromEndArgs<Route.BuzzNewDm> { BuzzNewDmScreen(it.relayUrl, accountViewModel, nav) }
     composableFromEnd<Route.FollowPacks> { FollowPacksScreen(accountViewModel, nav) }
     composableFromEnd<Route.LiveStreams> { LiveStreamsScreen(accountViewModel, nav) }
@@ -480,7 +488,9 @@ fun NavDestinations.sharedDestinations(
     composableFromEndArgs<Route.FollowPack> { FollowPackFeedScreen(Address(it.kind, it.pubKeyHex, it.dTag), accountViewModel, nav) }
     composableFromEndArgs<Route.Room> { ChatroomScreen(it.toKey(), it.message, it.attachment, it.replyId, it.draftId, it.expiresDays, accountViewModel, nav) }
     composableFromEndArgs<Route.RoomByAuthor> { ChatroomByAuthorScreen(it.id, null, accountViewModel, nav) }
-    composableFromEnd<Route.MarmotGroupList> { MarmotGroupListScreen(accountViewModel, nav) }
+    composableFromEnd<Route.MarmotGroupList> {
+        ChatListDetailScreen(::isMarmotDetailRoute, accountViewModel, nav) { MarmotGroupListScreen(accountViewModel, it) }
+    }
     composableFromEndArgs<Route.MarmotGroupChat> {
         MarmotGroupChatScreen(
             nostrGroupId = it.nostrGroupId,
@@ -494,7 +504,9 @@ fun NavDestinations.sharedDestinations(
     composableFromEndArgs<Route.CordnGroupInfo> {
         CordnGroupInfoScreen(it.coordinatorPubKey, it.gid, accountViewModel, nav)
     }
-    composableFromEnd<Route.CordnGroupList> { CordnGroupListScreen(accountViewModel, nav) }
+    composableFromEnd<Route.CordnGroupList> {
+        ChatListDetailScreen(::isPlatformChatDetailRoute, accountViewModel, nav) { CordnGroupListScreen(accountViewModel, it) }
+    }
     composableFromBottom<Route.CordnCreateGroup> { CordnCreateGroupScreen(accountViewModel, nav) }
     composableFromBottom<Route.CordnCreateGroupMembers> { CordnCreateMembersScreen(accountViewModel, nav) }
     composableFromEnd<Route.CordnInvitations> { CordnInvitationsScreen(accountViewModel, nav) }
@@ -530,7 +542,9 @@ fun NavDestinations.sharedDestinations(
             nav = nav,
         )
     }
-    composableFromEnd<Route.GeohashChats> { GeohashChatsScreen(accountViewModel, nav) }
+    composableFromEnd<Route.GeohashChats> {
+        ChatListDetailScreen(::isGeohashDetailRoute, accountViewModel, nav) { GeohashChatsScreen(accountViewModel, it) }
+    }
     composableFromBottomArgs<Route.NewGeohashChat> { NewGeohashChatScreen(accountViewModel, nav) }
     composableFromBottomArgs<Route.GeohashTeleport> { GeohashTeleportScreen(accountViewModel, nav) }
     composableFromEndArgs<Route.RelayGroup> {
@@ -544,12 +558,14 @@ fun NavDestinations.sharedDestinations(
             nav = nav,
         )
     }
-    composableFromEndArgs<Route.RelayGroupServer> {
-        RelayGroupChannelListScreen(
-            relayUrl = it.relayUrl,
-            accountViewModel = accountViewModel,
-            nav = nav,
-        )
+    composableFromEndArgs<Route.RelayGroupServer> { route ->
+        ChatListDetailScreen(::isRelayGroupDetailRoute, accountViewModel, nav) {
+            RelayGroupChannelListScreen(
+                relayUrl = route.relayUrl,
+                accountViewModel = accountViewModel,
+                nav = it,
+            )
+        }
     }
     composableFromEndArgs<Route.Concord> {
         ConcordChannelScreen(
@@ -568,12 +584,14 @@ fun NavDestinations.sharedDestinations(
             nav = nav,
         )
     }
-    composableFromEndArgs<Route.ConcordServer> {
-        ConcordChannelListScreen(
-            communityId = it.communityId,
-            accountViewModel = accountViewModel,
-            nav = nav,
-        )
+    composableFromEndArgs<Route.ConcordServer> { route ->
+        ChatListDetailScreen(::isConcordDetailRoute, accountViewModel, nav) {
+            ConcordChannelListScreen(
+                communityId = route.communityId,
+                accountViewModel = accountViewModel,
+                nav = it,
+            )
+        }
     }
     composableFromEndArgs<Route.ConcordMembers> {
         ConcordMembersScreen(

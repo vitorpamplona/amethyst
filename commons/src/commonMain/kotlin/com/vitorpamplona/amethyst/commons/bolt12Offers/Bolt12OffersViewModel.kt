@@ -33,7 +33,7 @@ import kotlinx.coroutines.launch
 
 /**
  * Edits the logged-in user's NIP-B1 BOLT12 offer list (kind 10058). Mirrors
- * [com.vitorpamplona.amethyst.commons.ui.actions.paymentTargets.PaymentTargetsViewModel];
+ * [com.vitorpamplona.amethyst.commons.paymentTargets.PaymentTargetsViewModel];
  * each entry is a canonical raw `lno1...` offer string.
  */
 @Stable

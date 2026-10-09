@@ -121,6 +121,7 @@ import com.vitorpamplona.amethyst.commons.resources.wallet_connect_unreadable_re
 import com.vitorpamplona.amethyst.commons.service.HttpStatusMessages
 import com.vitorpamplona.amethyst.commons.service.pow.powKindLabelRes
 import com.vitorpamplona.amethyst.commons.ui.components.InformationDialog
+import com.vitorpamplona.amethyst.commons.ui.components.toasts.ToastSeverity
 import com.vitorpamplona.amethyst.commons.ui.loadPluralStringRes
 import com.vitorpamplona.amethyst.commons.ui.loadStringRes
 import com.vitorpamplona.amethyst.commons.ui.pluralStringRes
@@ -370,6 +371,7 @@ object ResUserNoticeResolver : UserNoticeResolver {
 @Composable
 fun NoticeDialog(
     notice: UserNotice,
+    severity: ToastSeverity = ToastSeverity.WARNING,
     onDismiss: () -> Unit,
 ) {
     val text = remember(notice) { notice.text() }
@@ -378,6 +380,7 @@ fun NoticeDialog(
         title = stringRes(text.title),
         textContent = text.message.renderText(),
         moreInfo = moreInfo,
+        severity = severity,
         onDismiss = onDismiss,
     )
 }

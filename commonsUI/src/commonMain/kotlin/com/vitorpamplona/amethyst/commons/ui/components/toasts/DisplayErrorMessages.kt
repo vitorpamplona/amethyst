@@ -23,6 +23,8 @@ package com.vitorpamplona.amethyst.commons.ui.components.toasts
 import androidx.compose.runtime.Composable
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.commons.notices.ui.NoticeDialog
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.error_dialog_button_ok
 import com.vitorpamplona.amethyst.commons.ui.components.InformationDialog
 import com.vitorpamplona.amethyst.commons.ui.components.toasts.ActionableStringToastMsg
 import com.vitorpamplona.amethyst.commons.ui.components.toasts.ResourceToastMsg
@@ -52,6 +54,7 @@ fun DisplayErrorMessages(
                     InformationDialog(
                         stringRes(obj.titleResId),
                         stringRes(obj.resourceId, *params),
+                        severity = obj.severity,
                     ) {
                         toastManager.clearToasts()
                     }
@@ -59,6 +62,7 @@ fun DisplayErrorMessages(
                     InformationDialog(
                         stringRes(obj.titleResId),
                         stringRes(obj.resourceId),
+                        severity = obj.severity,
                     ) {
                         toastManager.clearToasts()
                     }
@@ -69,15 +73,19 @@ fun DisplayErrorMessages(
                 InformationDialog(
                     obj.title,
                     obj.msg,
+                    severity = obj.severity,
                 ) {
                     toastManager.clearToasts()
                 }
             }
 
             is ActionableStringToastMsg -> {
+                // Closing runs the message's action, so the button says OK rather than Close.
                 InformationDialog(
                     obj.title,
                     obj.msg,
+                    severity = obj.severity,
+                    confirmLabel = stringRes(Res.string.error_dialog_button_ok),
                 ) {
                     obj.action()
                     toastManager.clearToasts()
@@ -101,7 +109,7 @@ fun DisplayErrorMessages(
             }
 
             is NoticeToastMsg -> {
-                NoticeDialog(obj.notice) {
+                NoticeDialog(obj.notice, severity = obj.severity) {
                     toastManager.clearToasts()
                 }
             }

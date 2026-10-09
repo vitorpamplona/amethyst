@@ -22,9 +22,13 @@ package com.vitorpamplona.amethyst.commons.ui.components.toasts
 
 import androidx.compose.runtime.Immutable
 import com.vitorpamplona.amethyst.commons.notices.UserNotice
+import com.vitorpamplona.amethyst.commons.notices.ui.text
 
 /** A typed [UserNotice] from headless code, worded by `NoticeDialog`. */
 @Immutable
 class NoticeToastMsg(
     val notice: UserNotice,
-) : ToastMsg()
+) : ToastMsg(if (notice.text().cause != null) ToastSeverity.ERROR else ToastSeverity.WARNING) {
+    /** Notices are value types, so the same notice twice is the same message. */
+    override val dedupeKey: Any get() = notice
+}

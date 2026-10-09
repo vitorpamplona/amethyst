@@ -132,6 +132,7 @@ import com.vitorpamplona.amethyst.commons.ui.components.RobohashFallbackAsyncIma
 import com.vitorpamplona.amethyst.commons.ui.layouts.PermanentDrawerWidth
 import com.vitorpamplona.amethyst.commons.ui.navigation.bottombars.NavBarCatalog
 import com.vitorpamplona.amethyst.commons.ui.navigation.bottombars.NavBarItemDef
+import com.vitorpamplona.amethyst.commons.ui.navigation.host.canOpen
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.EmptyNav
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.painterRes
@@ -658,15 +659,17 @@ fun ListContent(
  */
 @Composable
 private fun CreateRows(nav: INav) {
-    IconRow(
-        title = Res.string.share_hls_video,
-        icon = MaterialSymbols.SettingsInputAntenna,
-        tint = MaterialTheme.colorScheme.onBackground,
-        onClick = {
-            nav.closeDrawer()
-            nav.nav(Route.NewHlsVideo)
-        },
-    )
+    if (canOpen(Route.NewHlsVideo)) {
+        IconRow(
+            title = Res.string.share_hls_video,
+            icon = MaterialSymbols.SettingsInputAntenna,
+            tint = MaterialTheme.colorScheme.onBackground,
+            onClick = {
+                nav.closeDrawer()
+                nav.nav(Route.NewHlsVideo)
+            },
+        )
+    }
 
     if (LocalAppPlatform.current.isDebugBuild) {
         IconRow(
@@ -808,6 +811,10 @@ fun CatalogNavigationRow(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
+    // A row whose screen this front end doesn't have (My Fitness on desktop) is left out.
+    val route = remember(def, accountViewModel) { def.resolveRoute(accountViewModel) }
+    if (!canOpen(route)) return
+
     NavigationRow(
         title = def.labelRes,
         icon = def.icon,

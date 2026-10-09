@@ -33,7 +33,7 @@ sealed interface SignerNotice : UserNotice {
     data object SignerNotFound : SignerNotice
 
     /** The signer failed in a way it doesn't classify; [cause] is shown as details. */
-    class Failed(
+    data class Failed(
         val cause: Throwable,
     ) : SignerNotice
 }
@@ -46,7 +46,7 @@ sealed interface NoteActionNotice : UserNotice {
 }
 
 /** A proof-of-work mined post that failed to sign or broadcast after the composer closed. */
-class PowPublishFailed(
+data class PowPublishFailed(
     val kind: Int,
     val willRetryOnRestart: Boolean,
     val message: String?,
@@ -54,12 +54,12 @@ class PowPublishFailed(
 
 sealed interface ConcordNotice : UserNotice {
     /** An honored Kick removed us from a community (CORD-04 §6). */
-    class Kicked(
+    data class Kicked(
         val communityName: String?,
     ) : ConcordNotice
 
     /** A pin write that did not publish, for an [outcome] the user has to hear about. */
-    class PinFailed(
+    data class PinFailed(
         val outcome: ConcordPinOutcome,
     ) : ConcordNotice
 
@@ -78,7 +78,7 @@ sealed interface ConcordNotice : UserNotice {
 sealed interface Bolt12OfferNotice : UserNotice {
     data object PaymentSent : Bolt12OfferNotice
 
-    class PaymentFailed(
+    data class PaymentFailed(
         val detail: String,
     ) : Bolt12OfferNotice
 }
@@ -91,28 +91,28 @@ sealed interface NutzapNotice : UserNotice {
 
     data object NoEvent : NutzapNotice
 
-    class MintFailed(
+    data class MintFailed(
         val detail: String,
     ) : NutzapNotice
 }
 
 /** Redeeming a Cashu token to the account's own lightning address. */
 sealed interface CashuRedeemNotice : UserNotice {
-    class Redeemed(
+    data class Redeemed(
         val amountSats: Long,
         val feeSats: Int,
     ) : CashuRedeemNotice
 
-    class Failed(
+    data class Failed(
         val detail: String?,
     ) : CashuRedeemNotice
 
     /** The mint URL was refused before any request went out. */
-    class UnsafeMintUrl(
+    data class UnsafeMintUrl(
         val detail: String?,
     ) : CashuRedeemNotice
 
-    class NoLightningAddress(
+    data class NoLightningAddress(
         val userName: String,
     ) : CashuRedeemNotice
 }
