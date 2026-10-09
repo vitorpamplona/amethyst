@@ -247,6 +247,19 @@ private fun ThemeTile(sharedPrefs: UiSettingsFlow) {
     )
 }
 
+/**
+ * The connectivity choices this platform can honour. "Wi-Fi" only differs from "Always" where the
+ * platform detects metered connections; elsewhere it is left out, unless it is the saved choice,
+ * which the row must still show as selected.
+ */
+@Composable
+private fun connectivityOptions(selected: ConnectivityType): List<ConnectivityType> =
+    if (LocalAppPlatform.current.detectsMeteredConnections || selected == ConnectivityType.WIFI_ONLY) {
+        ConnectivityType.entries
+    } else {
+        ConnectivityType.entries.filter { it != ConnectivityType.WIFI_ONLY }
+    }
+
 // Compact labels for the connectivity segmented rows — "Unmetered WiFi" does not fit a 3-up
 // segment, so it collapses to "Wi-Fi"; the others are already short.
 private fun ConnectivityType.shortLabelRes(): StringResource =
@@ -325,7 +338,7 @@ private fun ImagePreviewTile(sharedPrefs: UiSettingsFlow) {
         icon = MaterialSymbols.Image,
         title = Res.string.automatically_load_images_gifs,
         description = Res.string.automatically_load_images_gifs_description,
-        options = ConnectivityType.entries,
+        options = connectivityOptions(value),
         labelRes = { it.shortLabelRes() },
         selected = value,
         onSelect = { sharedPrefs.automaticallyShowImages.tryEmit(it) },
@@ -339,7 +352,7 @@ private fun VideoPlaybackTile(sharedPrefs: UiSettingsFlow) {
         icon = MaterialSymbols.Videocam,
         title = Res.string.automatically_play_videos,
         description = Res.string.automatically_play_videos_description,
-        options = ConnectivityType.entries,
+        options = connectivityOptions(value),
         labelRes = { it.shortLabelRes() },
         selected = value,
         onSelect = { sharedPrefs.automaticallyStartPlayback.tryEmit(it) },
@@ -353,7 +366,7 @@ private fun UrlPreviewTile(sharedPrefs: UiSettingsFlow) {
         icon = MaterialSymbols.Link,
         title = Res.string.automatically_show_url_preview,
         description = Res.string.automatically_show_url_preview_description,
-        options = ConnectivityType.entries,
+        options = connectivityOptions(value),
         labelRes = { it.shortLabelRes() },
         selected = value,
         onSelect = { sharedPrefs.automaticallyShowUrlPreview.tryEmit(it) },
@@ -367,7 +380,7 @@ private fun ProfilePictureTile(sharedPrefs: UiSettingsFlow) {
         icon = MaterialSymbols.AccountCircle,
         title = Res.string.automatically_show_profile_picture,
         description = Res.string.automatically_show_profile_picture_description,
-        options = ConnectivityType.entries,
+        options = connectivityOptions(value),
         labelRes = { it.shortLabelRes() },
         selected = value,
         onSelect = { sharedPrefs.automaticallyShowProfilePictures.tryEmit(it) },

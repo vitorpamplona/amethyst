@@ -31,6 +31,7 @@ import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.add_location
 import com.vitorpamplona.amethyst.commons.resources.remove_location
+import com.vitorpamplona.amethyst.commons.ui.components.HoverTooltip
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 
 @Composable
@@ -38,23 +39,25 @@ fun AddGeoHashButton(
     isActive: Boolean,
     onClick: () -> Unit,
 ) {
-    IconButton(
-        onClick = { onClick() },
-    ) {
-        if (!isActive) {
-            Icon(
-                symbol = MaterialSymbols.LocationOff,
-                contentDescription = stringRes(id = Res.string.add_location),
-                modifier = Modifier.size(20.dp),
-                tint = MaterialTheme.colorScheme.onBackground,
-            )
-        } else {
-            Icon(
-                symbol = MaterialSymbols.LocationOn,
-                contentDescription = stringRes(id = Res.string.remove_location),
-                modifier = Modifier.size(20.dp),
-                tint = MaterialTheme.colorScheme.primary,
-            )
+    HoverTooltip(stringRes(if (isActive) Res.string.remove_location else Res.string.add_location)) {
+        IconButton(
+            onClick = { onClick() },
+        ) {
+            if (!isActive) {
+                Icon(
+                    symbol = MaterialSymbols.LocationOff,
+                    contentDescription = stringRes(id = Res.string.add_location),
+                    modifier = Modifier.size(20.dp),
+                    tint = MaterialTheme.colorScheme.onBackground,
+                )
+            } else {
+                Icon(
+                    symbol = MaterialSymbols.LocationOn,
+                    contentDescription = stringRes(id = Res.string.remove_location),
+                    modifier = Modifier.size(20.dp),
+                    tint = MaterialTheme.colorScheme.primary,
+                )
+            }
         }
     }
 }

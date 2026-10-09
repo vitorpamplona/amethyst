@@ -27,6 +27,7 @@ import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.consumeWindowInsets
@@ -56,8 +57,10 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.movableContentOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment.Companion.CenterVertically
 import androidx.compose.ui.Modifier
@@ -110,10 +113,13 @@ import com.vitorpamplona.amethyst.commons.ui.actions.uploads.TakeVideoButton
 import com.vitorpamplona.amethyst.commons.ui.actions.uploads.UploadProgressIndicator
 import com.vitorpamplona.amethyst.commons.ui.actions.uploads.VoiceAnonymizationSection
 import com.vitorpamplona.amethyst.commons.ui.actions.uploads.rememberSharedMediaResolver
+import com.vitorpamplona.amethyst.commons.ui.components.HoverTooltip
 import com.vitorpamplona.amethyst.commons.ui.components.PlatformBackHandler
 import com.vitorpamplona.amethyst.commons.ui.components.ThinPaddingTextField
 import com.vitorpamplona.amethyst.commons.ui.components.rememberViewModel
 import com.vitorpamplona.amethyst.commons.ui.insets.imePaddingSafe
+import com.vitorpamplona.amethyst.commons.ui.layouts.LocalScreenLayout
+import com.vitorpamplona.amethyst.commons.ui.layouts.NavigationStyle
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.navigation.topbars.PostingTopBar
 import com.vitorpamplona.amethyst.commons.ui.note.BaseUserPicture
@@ -347,6 +353,9 @@ private fun NewPostScreenBody(
             )
         }
 
+        // Where the tools wrap, the text area takes only the height it needs, so the toolbar below
+        // sits under the text rather than at the bottom of the window.
+        val toolsWrap = composerToolsWrap()
         Row(
             modifier =
                 Modifier
@@ -354,7 +363,7 @@ private fun NewPostScreenBody(
                     .padding(
                         start = Size10dp,
                         end = Size10dp,
-                    ).weight(1f),
+                    ).weight(1f, fill = !toolsWrap),
         ) {
             Column(
                 modifier =
@@ -772,6 +781,17 @@ private fun NewPostScreenBody(
     }
 }
 
+/**
+ * Whether the composer's tools wrap under the text rather than scroll in a strip at the bottom:
+ * on the docked tier, a desktop-sized window. Not on the rail tier, which landscape phones reach,
+ * where the keyboard leaves no height for a second row of tools.
+ */
+@Composable
+private fun composerToolsWrap(): Boolean = LocalScreenLayout.current.navigationStyle == NavigationStyle.PERMANENT_DRAWER
+
+/** Lines the wrapped tools up with the text: past the 10dp side padding and the 35dp avatar. */
+private val ComposerToolsStartPadding = 45.dp
+
 @Composable
 private fun BottomRowActions(
     postViewModel: ShortNotePostViewModel,
@@ -784,138 +804,167 @@ private fun BottomRowActions(
             }
     },
 ) {
-    val scrollState = rememberScrollState()
-    Row(
-        modifier =
-            Modifier
-                .horizontalScroll(scrollState)
-                .fillMaxWidth()
-                .height(50.dp),
-        verticalAlignment = CenterVertically,
-    ) {
-        SelectFromGallery(
-            isUploading = postViewModel.isUploadingImage,
-            enabled = !postViewModel.isUploadingFile,
-            tint = MaterialTheme.colorScheme.onBackground,
-            modifier = Modifier,
-        ) {
-            postViewModel.selectImage(it)
-        }
+    // On the docked tier the tools wrap under the text instead of scrolling sideways in a strip
+    // pinned to the window's bottom: a mouse cannot drag that strip, so its last tools were out
+    // of reach. Movable, so a window crossing tiers moves the tools' state (a voice recording,
+    // an open picker) instead of disposing it.
+    val tools =
+        remember {
+            movableContentOf { vm: ShortNotePostViewModel, onSchedule: () -> Unit, wrapped: Boolean ->
+                SelectFromGallery(
+                    isUploading = vm.isUploadingImage,
+                    enabled = !vm.isUploadingFile,
+                    tint = MaterialTheme.colorScheme.onBackground,
+                    modifier = Modifier,
+                ) {
+                    vm.selectImage(it)
+                }
 
-        SelectFromFiles(
-            isUploading = postViewModel.isUploadingFile,
-            enabled = !postViewModel.isUploadingImage,
-            tint = MaterialTheme.colorScheme.onBackground,
-            modifier = Modifier,
-        ) {
-            postViewModel.selectImage(it)
-        }
+                SelectFromFiles(
+                    isUploading = vm.isUploadingFile,
+                    enabled = !vm.isUploadingImage,
+                    tint = MaterialTheme.colorScheme.onBackground,
+                    modifier = Modifier,
+                ) {
+                    vm.selectImage(it)
+                }
 
-        TakePictureButton(
-            onPictureTaken = {
-                postViewModel.selectImage(it)
-            },
-        )
-
-        TakeVideoButton(
-            onVideoTaken = {
-                postViewModel.selectImage(it)
-            },
-        )
-
-        RecordVoiceButton(
-            onVoiceTaken = { recording ->
-                postViewModel.selectVoiceRecording(recording)
-            },
-            maxDurationSeconds = MAX_VOICE_RECORD_SECONDS,
-        )
-
-        // Polls publish kinds that can't travel inside a private wrap, so the
-        // two toggles are mutually exclusive. Neither a private wrap nor a poll makes sense for a
-        // NIP-29 group thread (it publishes plainly to the host relay), so hide both there.
-        if (!postViewModel.wantsPoll && !postViewModel.wantsZapPoll && postViewModel.groupThreadTarget == null) {
-            val haptic = LocalHapticFeedback.current
-            AddPrivateNoteButton(
-                isActive = postViewModel.wantsPrivateNote,
-                isLocked = postViewModel.privateNoteLocked,
-            ) {
-                val nowPrivate = !postViewModel.wantsPrivateNote
-                postViewModel.togglePrivateNote()
-                // Sealing a note changes what Send is about to do, so the change
-                // is confirmed in the hand as well as on screen — and in the
-                // direction it actually moved.
-                haptic.performHapticFeedback(
-                    if (nowPrivate) HapticFeedbackType.ToggleOn else HapticFeedbackType.ToggleOff,
+                TakePictureButton(
+                    onPictureTaken = {
+                        vm.selectImage(it)
+                    },
                 )
-            }
-        }
 
-        if ((postViewModel.canUsePoll || postViewModel.canUseZapPoll) &&
-            !postViewModel.wantsPrivateNote &&
-            postViewModel.groupThreadTarget == null
-        ) {
-            AddPollButton(postViewModel.wantsPoll || postViewModel.wantsZapPoll) {
-                val isActive = postViewModel.wantsPoll || postViewModel.wantsZapPoll
-                if (isActive) {
-                    postViewModel.wantsPoll = false
-                    postViewModel.wantsZapPoll = false
-                } else {
-                    postViewModel.wantsPoll = true
+                TakeVideoButton(
+                    onVideoTaken = {
+                        vm.selectImage(it)
+                    },
+                )
+
+                // The recorder fills its parent. The strip bounds it to 50dp tall and lets it take only
+                // the width it needs; wrapped, a strip of its own does the same instead of letting it
+                // spread over the whole toolbar. One Row in both layouts, only its modifier changing,
+                // so a recording survives the switch.
+                val recorderScroll = rememberScrollState()
+                Row(if (wrapped) Modifier.height(50.dp).horizontalScroll(recorderScroll) else Modifier) {
+                    RecordVoiceButton(
+                        onVoiceTaken = { recording ->
+                            vm.selectVoiceRecording(recording)
+                        },
+                        maxDurationSeconds = MAX_VOICE_RECORD_SECONDS,
+                    )
+                }
+
+                // Polls publish kinds that can't travel inside a private wrap, so the
+                // two toggles are mutually exclusive. Neither a private wrap nor a poll makes sense for a
+                // NIP-29 group thread (it publishes plainly to the host relay), so hide both there.
+                if (!vm.wantsPoll && !vm.wantsZapPoll && vm.groupThreadTarget == null) {
+                    val haptic = LocalHapticFeedback.current
+                    AddPrivateNoteButton(
+                        isActive = vm.wantsPrivateNote,
+                        isLocked = vm.privateNoteLocked,
+                    ) {
+                        val nowPrivate = !vm.wantsPrivateNote
+                        vm.togglePrivateNote()
+                        // Sealing a note changes what Send is about to do, so the change
+                        // is confirmed in the hand as well as on screen — and in the
+                        // direction it actually moved.
+                        haptic.performHapticFeedback(
+                            if (nowPrivate) HapticFeedbackType.ToggleOn else HapticFeedbackType.ToggleOff,
+                        )
+                    }
+                }
+
+                if ((vm.canUsePoll || vm.canUseZapPoll) &&
+                    !vm.wantsPrivateNote &&
+                    vm.groupThreadTarget == null
+                ) {
+                    AddPollButton(vm.wantsPoll || vm.wantsZapPoll) {
+                        val isActive = vm.wantsPoll || vm.wantsZapPoll
+                        if (isActive) {
+                            vm.wantsPoll = false
+                            vm.wantsZapPoll = false
+                        } else {
+                            vm.wantsPoll = true
+                        }
+                    }
+                }
+
+                ForwardZapToButton(vm.wantsForwardZapTo) {
+                    vm.wantsForwardZapTo = !vm.wantsForwardZapTo
+                }
+
+                if (vm.canAddZapRaiser) {
+                    AddZapraiserButton(vm.wantsZapRaiser) {
+                        vm.wantsZapRaiser = !vm.wantsZapRaiser
+                    }
+                }
+
+                PowOverrideButton(
+                    effectiveDifficulty = vm.effectivePowDifficulty(),
+                    defaultDifficulty = vm.defaultPowDifficulty(),
+                    isOverridden = vm.powOverride != null,
+                    onSelect = { vm.powOverride = it },
+                )
+
+                // A group thread's title is required, so the field is always shown for it — no toggle.
+                if (vm.groupThreadTarget == null) {
+                    AddSubjectButton(vm.wantsSubject) {
+                        vm.toggleSubject()
+                    }
+                }
+
+                MarkAsSensitiveButton(vm.wantsToMarkAsSensitive) {
+                    vm.toggleMarkAsSensitive()
+                }
+
+                ExpirationDateButton(vm.wantsExpirationDate) {
+                    vm.toggleExpirationDate()
+                }
+
+                // Private wraps are built and sent immediately; scheduling them would
+                // require wrapping at publish time, so the option is hidden for now. Scheduling also
+                // bypasses the host-relay pin, so it's hidden for NIP-29 group threads too.
+                if (!vm.wantsPrivateNote && vm.groupThreadTarget == null) {
+                    ScheduleAtButton(vm.scheduledForSec != null, onSchedule)
+                }
+
+                AddGeoHashButton(vm.wantsToAddGeoHash) {
+                    vm.wantsToAddGeoHash = !vm.wantsToAddGeoHash
+                }
+
+                AddSecretEmojiButton(vm.wantsSecretEmoji) {
+                    vm.wantsSecretEmoji = !vm.wantsSecretEmoji
+                }
+
+                if (vm.canAddInvoice && vm.hasLnAddress()) {
+                    AddLnInvoiceButton(vm.wantsInvoice) {
+                        vm.wantsInvoice = !vm.wantsInvoice
+                    }
                 }
             }
         }
+    val currentOnScheduleClicked by rememberUpdatedState(onScheduleClicked)
+    val onSchedule = remember { { currentOnScheduleClicked() } }
 
-        ForwardZapToButton(postViewModel.wantsForwardZapTo) {
-            postViewModel.wantsForwardZapTo = !postViewModel.wantsForwardZapTo
+    if (composerToolsWrap()) {
+        FlowRow(
+            modifier = Modifier.fillMaxWidth().padding(start = ComposerToolsStartPadding, end = Size10dp),
+            itemVerticalAlignment = CenterVertically,
+        ) {
+            tools(postViewModel, onSchedule, true)
         }
-
-        if (postViewModel.canAddZapRaiser) {
-            AddZapraiserButton(postViewModel.wantsZapRaiser) {
-                postViewModel.wantsZapRaiser = !postViewModel.wantsZapRaiser
-            }
-        }
-
-        PowOverrideButton(
-            effectiveDifficulty = postViewModel.effectivePowDifficulty(),
-            defaultDifficulty = postViewModel.defaultPowDifficulty(),
-            isOverridden = postViewModel.powOverride != null,
-            onSelect = { postViewModel.powOverride = it },
-        )
-
-        // A group thread's title is required, so the field is always shown for it — no toggle.
-        if (postViewModel.groupThreadTarget == null) {
-            AddSubjectButton(postViewModel.wantsSubject) {
-                postViewModel.toggleSubject()
-            }
-        }
-
-        MarkAsSensitiveButton(postViewModel.wantsToMarkAsSensitive) {
-            postViewModel.toggleMarkAsSensitive()
-        }
-
-        ExpirationDateButton(postViewModel.wantsExpirationDate) {
-            postViewModel.toggleExpirationDate()
-        }
-
-        // Private wraps are built and sent immediately; scheduling them would
-        // require wrapping at publish time, so the option is hidden for now. Scheduling also
-        // bypasses the host-relay pin, so it's hidden for NIP-29 group threads too.
-        if (!postViewModel.wantsPrivateNote && postViewModel.groupThreadTarget == null) {
-            ScheduleAtButton(postViewModel.scheduledForSec != null, onScheduleClicked)
-        }
-
-        AddGeoHashButton(postViewModel.wantsToAddGeoHash) {
-            postViewModel.wantsToAddGeoHash = !postViewModel.wantsToAddGeoHash
-        }
-
-        AddSecretEmojiButton(postViewModel.wantsSecretEmoji) {
-            postViewModel.wantsSecretEmoji = !postViewModel.wantsSecretEmoji
-        }
-
-        if (postViewModel.canAddInvoice && postViewModel.hasLnAddress()) {
-            AddLnInvoiceButton(postViewModel.wantsInvoice) {
-                postViewModel.wantsInvoice = !postViewModel.wantsInvoice
-            }
+    } else {
+        val scrollState = rememberScrollState()
+        Row(
+            modifier =
+                Modifier
+                    .horizontalScroll(scrollState)
+                    .fillMaxWidth()
+                    .height(50.dp),
+            verticalAlignment = CenterVertically,
+        ) {
+            tools(postViewModel, onSchedule, false)
         }
     }
 }
@@ -953,35 +1002,38 @@ private fun AddPrivateNoteButton(
         label = "privateNoteContent",
     )
 
-    IconButton(
-        onClick = { onClick() },
-        enabled = !isLocked,
-        // A reply to an unsealed rumor is locked private. The button is disabled
-        // there, and M3's default disabled colours would erase the filled pill in
-        // exactly the case where the note is most definitely private — so the
-        // disabled colours mirror the enabled ones, dimmed.
-        colors =
-            IconButtonDefaults.iconButtonColors(
-                containerColor = container,
-                contentColor = content,
-                disabledContainerColor = container.copy(alpha = container.alpha * 0.6f),
-                disabledContentColor = content.copy(alpha = 0.8f),
-            ),
-    ) {
-        Icon(
-            symbol = if (isActive) MaterialSymbols.Lock else MaterialSymbols.LockOpen,
-            contentDescription =
-                stringRes(
-                    id =
-                        when {
-                            isLocked -> Res.string.private_note_locked
-                            isActive -> Res.string.disable_private_note
-                            else -> Res.string.private_note
-                        },
-                ),
-            modifier = Modifier.height(22.dp),
-            tint = content,
+    val label =
+        stringRes(
+            when {
+                isLocked -> Res.string.private_note_locked
+                isActive -> Res.string.disable_private_note
+                else -> Res.string.private_note
+            },
         )
+
+    HoverTooltip(label) {
+        IconButton(
+            onClick = { onClick() },
+            enabled = !isLocked,
+            // A reply to an unsealed rumor is locked private. The button is disabled
+            // there, and M3's default disabled colours would erase the filled pill in
+            // exactly the case where the note is most definitely private — so the
+            // disabled colours mirror the enabled ones, dimmed.
+            colors =
+                IconButtonDefaults.iconButtonColors(
+                    containerColor = container,
+                    contentColor = content,
+                    disabledContainerColor = container.copy(alpha = container.alpha * 0.6f),
+                    disabledContentColor = content.copy(alpha = 0.8f),
+                ),
+        ) {
+            Icon(
+                symbol = if (isActive) MaterialSymbols.Lock else MaterialSymbols.LockOpen,
+                contentDescription = label,
+                modifier = Modifier.height(22.dp),
+                tint = content,
+            )
+        }
     }
 }
 
@@ -990,13 +1042,15 @@ private fun AddSubjectButton(
     isActive: Boolean,
     onClick: () -> Unit,
 ) {
-    IconButton(onClick = onClick) {
-        Icon(
-            symbol = MaterialSymbols.Topic,
-            contentDescription = stringRes(Res.string.messages_new_message_subject),
-            modifier = Modifier.height(22.dp),
-            tint = if (isActive) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onBackground,
-        )
+    HoverTooltip(stringRes(Res.string.messages_new_message_subject)) {
+        IconButton(onClick = onClick) {
+            Icon(
+                symbol = MaterialSymbols.Topic,
+                contentDescription = stringRes(Res.string.messages_new_message_subject),
+                modifier = Modifier.height(22.dp),
+                tint = if (isActive) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onBackground,
+            )
+        }
     }
 }
 
@@ -1005,23 +1059,25 @@ private fun AddPollButton(
     isPollActive: Boolean,
     onClick: () -> Unit,
 ) {
-    IconButton(
-        onClick = { onClick() },
-    ) {
-        if (!isPollActive) {
-            Icon(
-                symbol = MaterialSymbols.Poll,
-                contentDescription = stringRes(id = Res.string.poll),
-                modifier = Modifier.height(22.dp),
-                tint = MaterialTheme.colorScheme.onBackground,
-            )
-        } else {
-            Icon(
-                symbol = MaterialSymbols.Poll,
-                contentDescription = stringRes(id = Res.string.disable_poll),
-                modifier = Modifier.height(22.dp),
-                tint = MaterialTheme.colorScheme.primary,
-            )
+    HoverTooltip(stringRes(if (isPollActive) Res.string.disable_poll else Res.string.poll)) {
+        IconButton(
+            onClick = { onClick() },
+        ) {
+            if (!isPollActive) {
+                Icon(
+                    symbol = MaterialSymbols.Poll,
+                    contentDescription = stringRes(id = Res.string.poll),
+                    modifier = Modifier.height(22.dp),
+                    tint = MaterialTheme.colorScheme.onBackground,
+                )
+            } else {
+                Icon(
+                    symbol = MaterialSymbols.Poll,
+                    contentDescription = stringRes(id = Res.string.disable_poll),
+                    modifier = Modifier.height(22.dp),
+                    tint = MaterialTheme.colorScheme.primary,
+                )
+            }
         }
     }
 }
