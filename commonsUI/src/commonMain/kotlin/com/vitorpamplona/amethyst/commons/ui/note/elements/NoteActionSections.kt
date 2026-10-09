@@ -39,12 +39,14 @@ import com.vitorpamplona.amethyst.commons.resources.add_to_private_bookmarks
 import com.vitorpamplona.amethyst.commons.resources.add_to_public_bookmarks
 import com.vitorpamplona.amethyst.commons.resources.article
 import com.vitorpamplona.amethyst.commons.resources.block_report
+import com.vitorpamplona.amethyst.commons.resources.bookmarks
 import com.vitorpamplona.amethyst.commons.resources.broadcast
 import com.vitorpamplona.amethyst.commons.resources.concord_ban_user
 import com.vitorpamplona.amethyst.commons.resources.concord_ban_user_body
 import com.vitorpamplona.amethyst.commons.resources.concord_ban_user_title
 import com.vitorpamplona.amethyst.commons.resources.concord_make_admin
 import com.vitorpamplona.amethyst.commons.resources.concord_remove_admin
+import com.vitorpamplona.amethyst.commons.resources.copy
 import com.vitorpamplona.amethyst.commons.resources.copy_note_id
 import com.vitorpamplona.amethyst.commons.resources.copy_raw_json
 import com.vitorpamplona.amethyst.commons.resources.copy_text
@@ -87,6 +89,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.IO
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import org.jetbrains.compose.resources.StringResource
 
 /** One note action, rendered as a menu row or an action-sheet tile. */
 @Immutable
@@ -94,8 +97,19 @@ data class NoteAction(
     val symbol: MaterialSymbol,
     val label: String,
     val isDestructive: Boolean = false,
+    /** Sibling actions that share a group fold into one submenu in the dropdown menu; other surfaces ignore it. */
+    val group: NoteActionGroup? = null,
     val onClick: () -> Unit,
 )
+
+/** A submenu of related actions in the note dropdown menu: its label and icon. */
+enum class NoteActionGroup(
+    val label: StringResource,
+    val symbol: MaterialSymbol,
+) {
+    COPY(Res.string.copy, MaterialSymbols.ContentCopy),
+    BOOKMARK(Res.string.bookmarks, MaterialSymbols.Bookmark),
+}
 
 /**
  * Callbacks for actions whose UI is owned by the rendering surface (dialogs,
@@ -184,12 +198,12 @@ fun noteActionSections(
     val copyAndShare =
         buildList {
             add(
-                NoteAction(MaterialSymbols.ContentCopy, stringRes(Res.string.copy_text)) {
+                NoteAction(MaterialSymbols.ContentCopy, stringRes(Res.string.copy_text), group = NoteActionGroup.COPY) {
                     copyNoteText(note, noteVersionToCopy)
                 },
             )
             add(
-                NoteAction(MaterialSymbols.AlternateEmail, stringRes(Res.string.copy_user_pubkey)) {
+                NoteAction(MaterialSymbols.AlternateEmail, stringRes(Res.string.copy_user_pubkey), group = NoteActionGroup.COPY) {
                     note.author?.let {
                         scope.launch(Dispatchers.IO) {
                             clipboardManager.setText("nostr:${it.pubkeyNpub()}")
@@ -199,7 +213,7 @@ fun noteActionSections(
                 },
             )
             add(
-                NoteAction(MaterialSymbols.FormatQuote, stringRes(Res.string.copy_note_id)) {
+                NoteAction(MaterialSymbols.FormatQuote, stringRes(Res.string.copy_note_id), group = NoteActionGroup.COPY) {
                     scope.launch(Dispatchers.IO) {
                         clipboardManager.setText(note.toNostrUri())
                         handlers.onDismiss()
@@ -207,7 +221,7 @@ fun noteActionSections(
                 },
             )
             add(
-                NoteAction(MaterialSymbols.ContentCopy, stringRes(Res.string.copy_raw_json)) {
+                NoteAction(MaterialSymbols.ContentCopy, stringRes(Res.string.copy_raw_json), group = NoteActionGroup.COPY) {
                     val event = note.event
                     if (event != null) {
                         scope.launch {
@@ -347,7 +361,7 @@ fun noteActionSections(
                 else -> {
                     val noteBookmarkType = if (note.event is LongFormContentEvent) stringRes(Res.string.article) else stringRes(Res.string.post)
                     add(
-                        NoteAction(MaterialSymbols.BookmarkAdd, stringRes(Res.string.manage_bookmark_label, noteBookmarkType)) {
+                        NoteAction(MaterialSymbols.BookmarkAdd, stringRes(Res.string.manage_bookmark_label, noteBookmarkType), group = NoteActionGroup.BOOKMARK) {
                             if (note.event is LongFormContentEvent) {
                                 nav.nav(Route.ArticleBookmarkManagement((note as AddressableNote).address))
                             } else {
@@ -358,14 +372,14 @@ fun noteActionSections(
                     )
                     if (state.isPrivateBookmarkNote) {
                         add(
-                            NoteAction(MaterialSymbols.LockOpen, stringRes(Res.string.remove_from_private_bookmarks)) {
+                            NoteAction(MaterialSymbols.LockOpen, stringRes(Res.string.remove_from_private_bookmarks), group = NoteActionGroup.BOOKMARK) {
                                 accountViewModel.removePrivateBookmark(note)
                                 handlers.onDismiss()
                             },
                         )
                     } else {
                         add(
-                            NoteAction(MaterialSymbols.Lock, stringRes(Res.string.add_to_private_bookmarks)) {
+                            NoteAction(MaterialSymbols.Lock, stringRes(Res.string.add_to_private_bookmarks), group = NoteActionGroup.BOOKMARK) {
                                 accountViewModel.addPrivateBookmark(note)
                                 handlers.onDismiss()
                             },
@@ -373,14 +387,14 @@ fun noteActionSections(
                     }
                     if (state.isPublicBookmarkNote) {
                         add(
-                            NoteAction(MaterialSymbols.BookmarkRemove, stringRes(Res.string.remove_from_public_bookmarks)) {
+                            NoteAction(MaterialSymbols.BookmarkRemove, stringRes(Res.string.remove_from_public_bookmarks), group = NoteActionGroup.BOOKMARK) {
                                 accountViewModel.removePublicBookmark(note)
                                 handlers.onDismiss()
                             },
                         )
                     } else {
                         add(
-                            NoteAction(MaterialSymbols.Bookmark, stringRes(Res.string.add_to_public_bookmarks)) {
+                            NoteAction(MaterialSymbols.Bookmark, stringRes(Res.string.add_to_public_bookmarks), group = NoteActionGroup.BOOKMARK) {
                                 accountViewModel.addPublicBookmark(note)
                                 handlers.onDismiss()
                             },
