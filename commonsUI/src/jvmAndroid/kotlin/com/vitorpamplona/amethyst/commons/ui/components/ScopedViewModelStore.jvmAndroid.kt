@@ -18,30 +18,18 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.publicChannels.ephemChat.header
+package com.vitorpamplona.amethyst.commons.ui.components
 
 import androidx.compose.runtime.Composable
-import com.vitorpamplona.amethyst.commons.model.emphChat.EphemeralChatChannel
-import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
-import com.vitorpamplona.amethyst.commons.ui.navigation.topbars.TopBarExtensibleWithBackButton
-import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.lifecycle.viewmodel.compose.LocalViewModelStoreOwner
+import androidx.lifecycle.viewmodel.compose.rememberViewModelStoreOwner
 
+/** Parented to the enclosing owner, so it survives configuration changes like the screen around it. */
 @Composable
-fun EphemeralChatTopBar(
-    baseChannel: EphemeralChatChannel,
-    accountViewModel: AccountViewModel,
-    nav: INav,
-) {
-    TopBarExtensibleWithBackButton(
-        title = {
-            ShortEphemeralChatChannelHeader(
-                baseChannel = baseChannel,
-                accountViewModel = accountViewModel,
-                nav = nav,
-            )
-        },
-        // Hidden in a list/detail screen's detail pane, where there is nothing to go back to.
-        showBackButton = nav.canPop(),
-        popBack = nav::popBack,
+actual fun ScopedViewModelStore(content: @Composable () -> Unit) {
+    CompositionLocalProvider(
+        LocalViewModelStoreOwner provides rememberViewModelStoreOwner(),
+        content = content,
     )
 }

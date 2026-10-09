@@ -18,30 +18,15 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.publicChannels.ephemChat.header
+package com.vitorpamplona.amethyst.commons.ui.components
 
 import androidx.compose.runtime.Composable
-import com.vitorpamplona.amethyst.commons.model.emphChat.EphemeralChatChannel
-import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
-import com.vitorpamplona.amethyst.commons.ui.navigation.topbars.TopBarExtensibleWithBackButton
-import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 
+/**
+ * Gives the view models created under [content] their own store, cleared when [content] leaves the
+ * composition. For a screen that isn't a nav entry (a list/detail screen's detail pane): there,
+ * `rememberViewModel` would otherwise reach the host entry's store and keep every chat opened in the
+ * pane alive until the list itself is popped. Wrap it in `key()` to get a fresh store per subject.
+ */
 @Composable
-fun EphemeralChatTopBar(
-    baseChannel: EphemeralChatChannel,
-    accountViewModel: AccountViewModel,
-    nav: INav,
-) {
-    TopBarExtensibleWithBackButton(
-        title = {
-            ShortEphemeralChatChannelHeader(
-                baseChannel = baseChannel,
-                accountViewModel = accountViewModel,
-                nav = nav,
-            )
-        },
-        // Hidden in a list/detail screen's detail pane, where there is nothing to go back to.
-        showBackButton = nav.canPop(),
-        popBack = nav::popBack,
-    )
-}
+expect fun ScopedViewModelStore(content: @Composable () -> Unit)

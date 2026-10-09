@@ -21,10 +21,12 @@
 package com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.rooms.twopane
 
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
@@ -35,11 +37,16 @@ import com.vitorpamplona.amethyst.commons.model.navigation.Route
 import com.vitorpamplona.amethyst.commons.ui.insets.imePaddingSafe
 import com.vitorpamplona.amethyst.commons.ui.layouts.HorizontalTwoPane
 import com.vitorpamplona.amethyst.commons.ui.layouts.WidthClass
+import com.vitorpamplona.amethyst.commons.ui.navigation.navs.DetailPaneNav
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.TwoPaneNav
 import com.vitorpamplona.amethyst.commons.ui.navigation.topbars.AmethystClickableIcon
 import com.vitorpamplona.amethyst.commons.ui.navigation.topbars.UserDrawerSearchTopBar
 import com.vitorpamplona.amethyst.commons.ui.platform.AppBottomBar
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.listDetail.ChatDetailPane
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.listDetail.PaneScopedChat
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.listDetail.isChatDetailRoute
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.listDetail.listDetailSplitFraction
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.privateDM.ChatroomView
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.publicChannels.nip28PublicChat.PublicChatChannelView
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.publicChannels.relayGroup.WarmJoinedRelayGroupNip11
@@ -51,16 +58,21 @@ fun MessagesTwoPane(
     knownFeedContentState: FeedContentState,
     newFeedContentState: FeedContentState,
     widthSizeClass: WidthClass,
+    selection: MutableState<Route?>,
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
     /** The index of the currently selected word, or `null` if none is selected */
     val scope = rememberCoroutineScope()
-    val twoPaneNav = remember { TwoPaneNav(nav, scope) }
+    // Every chat the list can open lands in the right pane, not just NIP-17 rooms and NIP-28
+    // channels: the list also weaves in NIP-29/Buzz groups, Concord channels, Marmot and cordn
+    // groups, geohash and ephemeral chats.
+    val twoPaneNav = remember(nav, selection) { TwoPaneNav(nav, scope, ::isChatDetailRoute, selection) }
+    val detailNav = remember(twoPaneNav) { DetailPaneNav(twoPaneNav) }
 
     // Read on every composition: the pane can cross the Medium/Expanded boundary while this
     // screen stays composed (window resize, the notification panel docking/undocking).
-    val splitFraction = if (widthSizeClass == WidthClass.Expanded) 1f / 3f else 1f / 2.5f
+    val splitFraction = listDetailSplitFraction(widthSizeClass)
 
     Scaffold(
         modifier = Modifier.imePaddingSafe(),
@@ -107,24 +119,38 @@ fun MessagesTwoPane(
             second = {
                 Box(Modifier.fillMaxSize().padding(padding)) {
                     twoPaneNav.innerNav.value?.let {
-                        if (it is Route.Room) {
-                            ChatroomView(
-                                room = it.toKey(),
-                                accountViewModel = accountViewModel,
-                                draftMessage = it.message,
-                                replyToNote = it.replyId,
-                                editFromDraft = it.draftId,
-                                expiresDays = it.expiresDays,
-                                nav = nav,
-                            )
-                        }
+                        PaneScopedChat(it) {
+                            when (it) {
+                                is Route.Room -> {
+                                    ChatroomView(
+                                        room = it.toKey(),
+                                        accountViewModel = accountViewModel,
+                                        draftMessage = it.message,
+                                        replyToNote = it.replyId,
+                                        editFromDraft = it.draftId,
+                                        expiresDays = it.expiresDays,
+                                        nav = nav,
+                                    )
+                                }
 
-                        if (it is Route.PublicChatChannel) {
-                            PublicChatChannelView(
-                                channelId = it.id,
-                                accountViewModel = accountViewModel,
-                                nav = nav,
-                            )
+                                is Route.PublicChatChannel -> {
+                                    PublicChatChannelView(
+                                        channelId = it.id,
+                                        accountViewModel = accountViewModel,
+                                        nav = nav,
+                                    )
+                                }
+
+                                else -> {
+                                    // The other chats bring their own top bar (members, pins, join), so
+                                    // they render as full screens. This pane already sits below the
+                                    // Messages top bar: consume its insets so theirs don't add the status
+                                    // bar again.
+                                    Box(Modifier.fillMaxSize().consumeWindowInsets(padding)) {
+                                        ChatDetailPane(it, accountViewModel, detailNav)
+                                    }
+                                }
+                            }
                         }
                     }
                 }
