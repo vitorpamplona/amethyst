@@ -190,8 +190,11 @@ class NegentropySyncResult(
  * @param onHaveIds         optional: given the ids we hold that the relay lacks (to upload
  *   them, or count them), in batches of up to [fetchBatch]. Each id is given once, when the
  *   relay's reconcile is known to cover it: against a relay that reconciles only part of its
- *   set, a have at the edge of one pass is decided by the next. Without it haves are not
- *   collected at all.
+ *   set, a have at the edge of one pass is decided by the next. Best effort in two cases: a
+ *   sync stopped early ([maxEvents]) hands back only the haves already decided, and one whose
+ *   walk-back hits its pass cap with nothing left to download hands back the rest undecided
+ *   (an upload of them may offer the relay events it already holds). Without it haves are
+ *   not collected at all.
  * @param onProgress        optional `(needSoFar, downloaded)` ticks as work proceeds.
  * @param onEvent           called once per distinct event, serially, from the single
  *   delivery consumer coroutine (not the relay reader thread) — so it never overlaps
@@ -224,14 +227,15 @@ suspend fun INostrClient.negentropySync(
     var peerCap: Long? = null
 
     val local = localIndex ?: NegentropyLocalIndex.of(localEntries)
-    // A window handed to the caller is drained outside this function, so the
-    // events in it never reach the consumer below and the truncation probe would
-    // mistake them for ones the relay left out.
-    var handedOff = false
+    // A window handed to the caller is drained outside this function, so the events in
+    // it never reach the consumer below; the truncation probe skips those seconds rather
+    // than mistake them for ones the relay left out.
+    val drained = mutableListOf<LongRange>()
+    val drainedLock = Mutex()
     val handOff: (suspend (Filter) -> Unit)? =
         onUnreconcilableWindow?.let { drain ->
             { window ->
-                handedOff = true
+                drainedLock.withLock { drained.add((window.since ?: 0L)..(window.until ?: Long.MAX_VALUE)) }
                 drain(window)
             }
         }
@@ -323,19 +327,30 @@ suspend fun INostrClient.negentropySync(
                 }
 
             val reach = cursor.reach
-            val next = if (reachedCap || handedOff) null else cursor.endPass()
             // Haves above the second this pass reached are settled. The rest this pass never
-            // compared (the relay may have cut its set short above them), so they need another
-            // pass as surely as anything the relay holds below that we lack.
+            // compared, if the relay cut its set short above them.
             val (settled, unsettled) = passHaves.settledAbove(reach)
-            val more = next != null && (unsettled.isNotEmpty() || relayHoldsMore(relay, next.window, next.known, local, wantId, idleTimeoutMs))
-            if (!more || next == null) {
-                // No pass can go further back: every have left is as settled as it can be.
-                emitHaves(passHaves)
+            emitHaves(settled)
+            if (reachedCap) break
+            val next = cursor.endPass()
+            val verdict =
+                if (next == null) {
+                    ProbeVerdict.NOTHING
+                } else {
+                    probeBelow(relay, next.window, next.known, unsettled.mapTo(HashSet()) { it.id }, drainedLock.withLock { drained.toList() }, local, wantId, idleTimeoutMs)
+                }
+            if (verdict == ProbeVerdict.NOTHING || next == null) {
+                // The relay reconciled its whole set: what it did not match of ours, it lacks.
+                emitHaves(unsettled)
                 break
             }
-            emitHaves(settled)
             if (cursor.passes >= MAX_SYNC_PASSES) {
+                if (verdict == ProbeVerdict.HOLDS_OURS) {
+                    // Only our haves keep the walk going (nothing we lack is left below): hand
+                    // them back, at worst offering the relay events it already holds.
+                    emitHaves(unsettled)
+                    break
+                }
                 // Still more below after this many passes: the relay reconciles a sliver at
                 // a time. Say so rather than return a set we know is incomplete.
                 throw NegentropySyncException(
@@ -398,29 +413,50 @@ suspend fun INostrClient.negentropySync(
         onEvent = onEvent,
     )
 
+/** What one look below a pass's reach found. */
+private enum class ProbeVerdict {
+    /** Only what the pass already accounts for: the relay reconciled its whole set there. */
+    NOTHING,
+
+    /** An event we lack and want: the relay left it out of the reconcile. */
+    MISSING,
+
+    /** One of ours the pass took for a have: the relay holds it, it just did not reconcile it. */
+    HOLDS_OURS,
+}
+
 /**
- * Whether [relay] serves an event in [window] that a reconcile of it should have
- * named: one that is neither among [delivered] (what the pass delivered at the
- * window's top second), nor held in [local], nor declined by [wantId]. Asks for the
- * newest few only; a relay that reconciled its whole set answers with events we
- * hold, and one that cut the set short answers with the first events it left out.
+ * One `REQ` for the newest few events of [window], to tell whether the pass that reached its
+ * top reconciled the relay's whole set. An event that is neither among [delivered] (what the
+ * pass delivered at the window's top second), nor held in [local], nor declined by [wantId],
+ * nor in a window the caller drained itself ([drained]) means the relay left it out;
+ * one of [unsettledHaves] means it left out something of ours, which the pass would otherwise
+ * hand back as missing from the relay. A relay that reconciled everything answers with
+ * neither.
  */
-private suspend fun INostrClient.relayHoldsMore(
+private suspend fun INostrClient.probeBelow(
     relay: NormalizedRelayUrl,
     window: Filter,
     delivered: Set<HexKey>,
+    unsettledHaves: Set<HexKey>,
+    drained: List<LongRange>,
     local: NegentropyLocalIndex,
     wantId: ((HexKey) -> Boolean)?,
     idleTimeoutMs: Long,
-): Boolean {
+): ProbeVerdict {
     val probe = window.copy(limit = delivered.size + TRUNCATION_PROBE_DEPTH)
     val probeIdleMs = if (idleTimeoutMs > 0) minOf(idleTimeoutMs, DEFAULT_DOWNLOAD_IDLE_MS) else DEFAULT_DOWNLOAD_IDLE_MS
-    return fetchAll(relay, probe, probeIdleMs).any { event ->
-        event.id !in delivered &&
-            window.match(event) &&
-            wantId?.invoke(event.id) != false &&
-            local.entriesFor(window.copy(since = event.createdAt, until = event.createdAt)).none { it.id == event.id }
+    var verdict = ProbeVerdict.NOTHING
+    for (event in fetchAll(relay, probe, probeIdleMs)) {
+        if (event.id in delivered || drained.any { event.createdAt in it } || !window.match(event)) continue
+        if (event.id in unsettledHaves) {
+            verdict = ProbeVerdict.HOLDS_OURS
+            continue
+        }
+        if (wantId?.invoke(event.id) == false) continue
+        if (local.entriesFor(window.copy(since = event.createdAt, until = event.createdAt)).none { it.id == event.id }) return ProbeVerdict.MISSING
     }
+    return verdict
 }
 
 /**
@@ -712,6 +748,9 @@ private suspend fun INostrClient.syncPipeline(
                     for (event in fetchByIds(relay, batch, idleTimeoutMs, filter, pace)) {
                         deliver(event)
                     }
+                    // Fail now, not after the reconcile has named every id left: once the pace
+                    // gives up, each later batch would only be asked once and dropped.
+                    if (pace.gaveUp) throw downloadsGaveUp(relay, filter)
                 }
             }
         }
@@ -744,15 +783,18 @@ private suspend fun INostrClient.syncPipeline(
 
     // The relay named these ids and then would not serve them: a sync that returned
     // normally here would claim a set it never downloaded.
-    if (pace.gaveUp) {
-        throw NegentropySyncException(
-            relay = relay,
-            window = filter,
-            reason = NegentropySyncException.Reason.UNAVAILABLE,
-            detail = "by-id downloads kept failing (DownloadPace gave up: rounds in a row dropped or went silent)",
-        )
-    }
+    if (pace.gaveUp) throw downloadsGaveUp(relay, filter)
 }
+
+internal fun downloadsGaveUp(
+    relay: NormalizedRelayUrl,
+    filter: Filter,
+) = NegentropySyncException(
+    relay = relay,
+    window = filter,
+    reason = NegentropySyncException.Reason.UNAVAILABLE,
+    detail = "by-id downloads kept failing (DownloadPace gave up: rounds in a row dropped or went silent)",
+)
 
 /**
  * The shared window engine behind [negentropySync] and [negentropyReconcile]:

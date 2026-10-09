@@ -140,6 +140,10 @@ suspend fun negentropySyncFanOut(
                                 for (event in client.fetchByIds(relay, batch, idleTimeoutMs, filter, paces.getValue(client))) {
                                     events.send(event)
                                 }
+                                // Once a connection's pace gives up, every later batch it takes is
+                                // asked once and dropped: fail the fan-out rather than return a set
+                                // with silent holes.
+                                if (paces.getValue(client).gaveUp) throw downloadsGaveUp(relay, filter)
                             }
                         }
                     }

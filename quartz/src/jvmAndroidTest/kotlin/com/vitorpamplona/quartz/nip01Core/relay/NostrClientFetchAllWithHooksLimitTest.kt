@@ -20,9 +20,12 @@
  */
 package com.vitorpamplona.quartz.nip01Core.relay
 
+import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.DONE_REASON_EOSE
 import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.fetchAllWithHooks
+import com.vitorpamplona.quartz.nip01Core.relay.client.reqs.SubscriptionListener
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
 import kotlinx.coroutines.runBlocking
 import kotlin.test.Test
@@ -85,4 +88,43 @@ class NostrClientFetchAllWithHooksLimitTest {
             assertEquals("closed:blocked: kinds 1 not allowed", result.doneReasons[relay])
             assertEquals(1, client.requests.size)
         }
+
+    /**
+     * An AUTH or a reconnect re-sends the subscription the relay already refused, and the relay
+     * refuses it again while the re-ask is in flight. That replay must not lower the re-ask.
+     */
+    @Test
+    fun aReplayedRefusalDoesNotOpenAnotherReAsk() =
+        runBlocking {
+            val relayClient = FakePagingRelay(this, FakePagingRelay.corpus(2_000), maxLimit = 500, refuseAboveMax = true)
+            val client = ReplaysTheFirstRefusal(relayClient)
+
+            val result = client.fetchAllWithHooks(mapOf(relay to listOf(Filter(kinds = listOf(1), limit = 1_000))), idleTimeoutMs = 2_000) { _, _ -> true }
+
+            assertEquals(listOf<Int?>(1_000, 500), relayClient.requests.map { it.single().limit })
+            assertEquals(500, result.events.size)
+            assertEquals(DONE_REASON_EOSE, result.doneReasons[relay])
+        }
+
+    /** Refuses the first subscription a second time, as a replay would, just before serving the re-ask. */
+    private class ReplaysTheFirstRefusal(
+        private val inner: FakePagingRelay,
+    ) : INostrClient by inner {
+        private var first: Pair<SubscriptionListener?, List<Filter>>? = null
+
+        override fun subscribe(
+            subId: String,
+            filters: Map<NormalizedRelayUrl, List<Filter>>,
+            listener: SubscriptionListener?,
+        ) {
+            val (relay, relayFilters) = filters.entries.single()
+            val refused = first
+            if (refused == null) {
+                first = listener to relayFilters
+            } else {
+                refused.first?.onClosed("blocked: limit too high: 1000 (max 500)", relay, refused.second)
+            }
+            inner.subscribe(subId, filters, listener)
+        }
+    }
 }

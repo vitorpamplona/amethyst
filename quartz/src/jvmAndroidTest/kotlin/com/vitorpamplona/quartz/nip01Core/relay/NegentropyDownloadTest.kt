@@ -44,6 +44,7 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeout
+import java.util.concurrent.atomic.AtomicInteger
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
@@ -175,6 +176,45 @@ class NegentropyDownloadTest {
             }
         }
 
+    /**
+     * A relay that reconciled its whole set settles every have of ours in one pass: the look
+     * below it finds nothing, so nothing is reconciled a second time.
+     */
+    @Test
+    fun aRelayThatReconcilesEverythingIsReconciledOnce() =
+        runBlocking {
+            // Ours is older than anything the relay holds: below the reach of its one pass.
+            val events = List(30) { i -> SyntheticEvents.fakeEvent(idSeed = i + 1, pubKey = author, createdAt = 100L + i) }
+            val ours = SyntheticEvents.fakeEvent(idSeed = 999, pubKey = author, createdAt = 5)
+            val opens = AtomicInteger()
+            val haves = mutableListOf<String>()
+
+            val result = syncWithHaves(events, listOf(IdAndTime(ours.createdAt, ours.id)), haves) { CountsOpens(opens) }
+
+            assertEquals(listOf(ours.id), haves)
+            assertEquals(30, result.downloaded)
+            assertEquals(1, opens.get(), "one reconcile")
+        }
+
+    /**
+     * Uploading to a relay that reconciles a sliver at a time, when it lacks nothing we would
+     * download: only our haves keep the walk going, so the pass cap hands them back instead
+     * of failing the sync.
+     */
+    @Test
+    fun hitThePassCapWithOnlyHavesLeftHandsThemBack() =
+        runBlocking {
+            // More events than MAX_SYNC_PASSES (200), all held, reconciled two at a time.
+            val events = SyntheticEvents.batch(450, kind = 1) { author }
+            val haves = mutableListOf<String>()
+
+            val result = syncWithHaves(events, events.map { IdAndTime(it.createdAt, it.id) }, haves) { ReconcilesNewest(2) }
+
+            assertEquals(0, result.downloaded)
+            assertEquals(haves.size, haves.toSet().size, "no have handed back twice")
+            assertTrue(haves.isNotEmpty(), "the ones below the cap are handed back, best effort")
+        }
+
     /** A relay that ignores the window's `until` names the same newest events every pass. */
     @Test
     fun aRelayThatIgnoresTheWindowEndsWithoutDeliveringTwice() =
@@ -264,6 +304,43 @@ class NegentropyDownloadTest {
             client.disconnect()
             scope.cancel()
             hub.close()
+        }
+    }
+
+    private suspend fun syncWithHaves(
+        events: List<Event>,
+        local: List<IdAndTime>,
+        haves: MutableList<String>,
+        policy: () -> IRelayPolicy,
+    ): NegentropySyncResult {
+        val hub = InProcessRelays(defaultPolicy = policy)
+        val scope = CoroutineScope(Dispatchers.Default + SupervisorJob())
+        val client = NostrClient(hub, scope)
+        try {
+            hub.getOrCreate(InProcessRelays.DEFAULT_URL).preload(events)
+            return withTimeout(60_000) {
+                client.negentropySync(
+                    relay = InProcessRelays.DEFAULT_URL,
+                    filter = Filter(kinds = listOf(1)),
+                    localEntries = local,
+                    idleTimeoutMs = 5_000,
+                    onHaveIds = { haves.addAll(it) },
+                ) { }
+            }
+        } finally {
+            client.disconnect()
+            scope.cancel()
+            hub.close()
+        }
+    }
+
+    /** Serves everything, counting the reconciles it is asked for. */
+    private class CountsOpens(
+        private val opens: AtomicInteger,
+    ) : PassThroughPolicy() {
+        override fun accept(cmd: NegOpenCmd): PolicyResult<NegOpenCmd> {
+            opens.incrementAndGet()
+            return PolicyResult.Accepted(cmd)
         }
     }
 

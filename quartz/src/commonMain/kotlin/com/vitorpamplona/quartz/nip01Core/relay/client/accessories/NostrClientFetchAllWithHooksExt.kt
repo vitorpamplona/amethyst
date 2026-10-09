@@ -129,14 +129,16 @@ suspend fun INostrClient.fetchAllWithHooks(
     // listener cannot wait on the AUTH itself — it runs on the relay's reader thread and
     // must not block it — so it only reports, and the resolver does the waiting.
     val authRefusalChannel = Channel<Pair<NormalizedRelayUrl, String>>(UNLIMITED)
-    // Relays that refused a filter's `limit` (`blocked: limit too high: 1000 (max 500)`), handed
-    // to the resolver below to be re-asked at the limit they state.
-    val limitRefusalChannel = Channel<Pair<NormalizedRelayUrl, String>>(UNLIMITED)
+    // Relays that refused a filter's `limit` (`blocked: limit too high: 1000 (max 500)`), with the
+    // subscription that was refused, handed to the resolver below to be re-asked at the limit they state.
+    val limitRefusalChannel = Channel<LimitRefusal>(UNLIMITED)
     // Subscriptions opened to re-ask a relay at a lower limit; closed with the main one.
     val retrySubIds = mutableListOf<String>()
     val remaining = filters.keys.toMutableSet()
     val doneReasons = HashMap<NormalizedRelayUrl, String>()
-    val listener =
+
+    // One listener per subscription, so a refusal says which REQ it refused.
+    fun listenerFor(subId: String) =
         object : SubscriptionListener {
             override suspend fun onEvent(
                 event: Event,
@@ -181,7 +183,7 @@ suspend fun INostrClient.fetchAllWithHooks(
                 // rather than come back empty for what a relay clamping its pages would serve.
                 val sent = filters[relay]
                 if (sent != null && lowerLimitsAfterRefusal(message, sent.map { it.limit }) != null) {
-                    limitRefusalChannel.trySend(relay to message)
+                    limitRefusalChannel.trySend(LimitRefusal(relay, subId, message))
                     return
                 }
                 doneChannel.trySend(relay to "closed:$message")
@@ -203,7 +205,7 @@ suspend fun INostrClient.fetchAllWithHooks(
     val collected = mutableListOf<Pair<NormalizedRelayUrl, Event>>()
     try {
         coroutineScope {
-            subscribe(subscriptionId, filters, listener)
+            subscribe(subscriptionId, filters, listenerFor(subscriptionId))
             // Turns each `auth-required:` refusal into a terminal reason as soon as the
             // AUTH resolves against us, so an auth wall costs a grace window instead of a
             // full idle window — and, unlike the timeout, says what it hit.
@@ -241,8 +243,11 @@ suspend fun INostrClient.fetchAllWithHooks(
                     // Relays this resolver already ended: a refusal re-sent after that (an AUTH or
                     // a reconnect replays the refused subscription) must not open another re-ask.
                     val finished = HashSet<NormalizedRelayUrl>()
-                    for ((relay, message) in limitRefusalChannel) {
+                    for ((relay, subId, message) in limitRefusalChannel) {
                         if (relay in finished) continue
+                        // Only the REQ open for this relay counts: an AUTH or a reconnect replays the
+                        // ones already refused, and their refusals say nothing about the re-ask in flight.
+                        if (subId != (retryOf[relay] ?: subscriptionId)) continue
                         val base = current[relay] ?: filters[relay] ?: continue
                         val limits = lowerLimitsAfterRefusal(message, base.map { it.limit })
                         val attempt = (attempts[relay] ?: 0) + 1
@@ -260,7 +265,7 @@ suspend fun INostrClient.fetchAllWithHooks(
                         val retryId = newSubId()
                         retryOf[relay] = retryId
                         retrySubIds.add(retryId)
-                        subscribe(retryId, mapOf(relay to lowered), listener)
+                        subscribe(retryId, mapOf(relay to lowered), listenerFor(retryId))
                     }
                 }
             // Idle-window wait. Two structural rules:
@@ -342,6 +347,13 @@ suspend fun INostrClient.fetchAllWithHooks(
     // it IS the stalled set — the loop only leaves entries behind when it gives up on them.
     return FetchAllResult(collected, doneReasons, remaining.toSet())
 }
+
+/** A relay's refusal of the `limit` on subscription [subId]. */
+private data class LimitRefusal(
+    val relay: NormalizedRelayUrl,
+    val subId: String,
+    val message: String,
+)
 
 /** How many times [fetchAllWithHooks] re-asks one relay at a lower limit before taking the refusal. */
 private const val MAX_LIMIT_RETRIES = 6
