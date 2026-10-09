@@ -37,6 +37,10 @@ class RelayStat(
 ) {
     val messages = LruCache<IRelayDebugMessage, IRelayDebugMessage>(100)
 
+    /** Tried this session and never got through: the relay looks dead. An untried relay is not. */
+    val hasNeverConnected: Boolean
+        get() = connectionTentatives > 0 && connectionCompleted == 0
+
     fun newNotice(notice: String?) {
         val debugMessage =
             NoticeDebugMessage(

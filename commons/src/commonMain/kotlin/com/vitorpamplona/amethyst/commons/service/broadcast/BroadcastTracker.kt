@@ -52,7 +52,10 @@ import kotlinx.coroutines.withTimeoutOrNull
  * - Retry functionality for failed relays
  */
 class BroadcastTracker(
-    /** The author's NIP-65 outbox relays, read when a broadcast starts; see [BroadcastEvent.isOut]. */
+    /**
+     * The author's NIP-65 outbox relays the event must reach to be out ([BroadcastEvent.isOut]),
+     * read when a broadcast starts. Callers leave out relays known to be unreachable.
+     */
     private val outboxRelays: () -> Set<NormalizedRelayUrl>,
 ) {
     companion object {
