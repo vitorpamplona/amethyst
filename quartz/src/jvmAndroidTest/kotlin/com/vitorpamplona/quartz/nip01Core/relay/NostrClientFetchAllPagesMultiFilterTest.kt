@@ -74,6 +74,27 @@ class NostrClientFetchAllPagesMultiFilterTest {
             assertEquals(320, result.downloaded)
         }
 
+    /** A search filter beside the others used to put them all back on one shared cursor. */
+    @Test
+    fun aSearchFilterDoesNotPutTheOthersBackOnOneCursor() =
+        runBlocking {
+            val client = FakePagingRelay(this, dense + sparse, maxLimit = 50)
+            val got = mutableListOf<HexKey>()
+
+            client.fetchAllPages(relay, listOf(Filter(kinds = listOf(1)), Filter(kinds = listOf(7)), Filter(kinds = listOf(7), search = "+")), idleTimeoutMs = 2_000) { got.add(it.id) }
+
+            assertEquals(320, got.size, "every note and reaction once")
+            assertEquals(320, got.toSet().size)
+            assertEquals(
+                Filter(kinds = listOf(7), search = "+").search,
+                client.requests
+                    .last()
+                    .single()
+                    .search,
+                "the search walk runs last, alone",
+            )
+        }
+
     @Test
     fun anEventBothFiltersMatchIsDeliveredOnce() =
         runBlocking {

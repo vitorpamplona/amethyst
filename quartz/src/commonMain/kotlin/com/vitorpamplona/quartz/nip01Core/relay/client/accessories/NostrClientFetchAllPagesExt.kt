@@ -234,7 +234,8 @@ class PageRetryBackoff(
  * [PagedFetchResult.end] is the most serious of the walks' (see [severity]), so the result
  * drains only if every filter did; a relay that cannot be reached, or stays silent through a
  * whole walk, is not asked for the remaining filters.
- * Filters with a `search` share one walk as before, since NIP-50 hits never page.
+ * Filters with a `search` are walked together, after the others: NIP-50 hits are
+ * relevance-ranked and never page, so they get their one page.
  *
  * **A throttled relay is re-asked before it is believed.** relay.damus.io, paged quickly
  * on one connection, shrinks its pages to a handful of events and then EOSEs an EMPTY page
@@ -338,25 +339,28 @@ suspend fun INostrClient.fetchAllPages(
     onEvent: suspend (Event) -> Unit,
 ): PagedFetchResult {
     require(pageSize == null || pageSize > 0) { "pageSize must be positive: $pageSize" }
-    if (filters.size < 2 || filters.any { it.search != null }) {
+    // One walk per pageable filter, and one for the search filters together, last: NIP-50 hits
+    // are relevance-ranked, so those get their single page whatever else is asked.
+    val walks = filters.filter { it.search == null }.map { listOf(it) } + listOfNotNull(filters.filter { it.search != null }.ifEmpty { null })
+    if (walks.size < 2) {
         return walkPages(relay, filters, idleTimeoutMs, onNewPage, pageSize, throttleBackoff, onEvent)
     }
 
-    // One walk per filter (see the KDoc). An event a walk delivers that a LATER filter also
-    // matches is remembered by id, and a later walk skips exactly those: right whatever the
-    // relay served out of order, skipped inside a walk, or stored after a walk drained, and
-    // O(overlap) memory. Filters that cannot share an event are never compared.
+    // An event a walk delivers that a LATER walk's filter also matches is remembered by id, and
+    // that walk skips exactly those: right whatever the relay served out of order, skipped
+    // inside a walk, or stored after a walk drained, and O(overlap) memory. Filters that cannot
+    // share an event are never compared.
     val sharedIds = HashSet<HexKey>()
     val laterOverlapping =
-        filters.indices.map { i ->
-            (i + 1 until filters.size).map { filters[it] }.filter { canShareAnEvent(filters[i], it) }
+        walks.indices.map { i ->
+            walks.drop(i + 1).flatten().filter { later -> walks[i].any { canShareAnEvent(it, later) } }
         }
     var downloaded = 0
     var worst: PagedFetchResult? = null
-    for ((index, filter) in filters.withIndex()) {
+    for ((index, walk) in walks.withIndex()) {
         val later = laterOverlapping[index]
         val result =
-            walkPages(relay, listOf(filter), idleTimeoutMs, onNewPage, pageSize, throttleBackoff) { event ->
+            walkPages(relay, walk, idleTimeoutMs, onNewPage, pageSize, throttleBackoff) { event ->
                 if (event.id !in sharedIds) {
                     if (later.isNotEmpty() && later.any { it.match(event) }) sharedIds.add(event.id)
                     downloaded++
@@ -364,8 +368,8 @@ suspend fun INostrClient.fetchAllPages(
                 }
             }
         if (worst == null || result.end.severity() > worst.end.severity()) worst = result
-        // Nothing to ask the next filter on: the relay is unreachable, or connected and
-        // silent (each further filter would wait out its own idle window for nothing).
+        // Nothing to ask the next walk on: the relay is unreachable, or connected and silent
+        // (each further walk would wait out its own idle window for nothing).
         if (result.end == PagedFetchResult.End.CANNOT_CONNECT) break
         if (result.end == PagedFetchResult.End.IDLE && result.downloaded == 0) break
     }
@@ -418,6 +422,35 @@ internal fun canShareAnEvent(
     val aUntil = a.until ?: Long.MAX_VALUE
     val bUntil = b.until ?: Long.MAX_VALUE
     return aSince <= bUntil && bSince <= aUntil
+}
+
+/**
+ * The `limit` one page of a walk asks for: what a filter's [limit] still needs after
+ * [delivered], topped up by the [boundaryRepeats] events of the boundary second that the
+ * inclusive re-fetch sends again (without them, a walk one event short would be answered with
+ * nothing but a duplicate, step past the boundary, and lose the rest of that second). Null for
+ * an unbounded filter: the relay's own default page.
+ *
+ * With a known [cap] the page asks for at most that, so a relay that refuses anything above its
+ * max is never asked for more again; except when the boundary second alone fills a page, where
+ * capping would bring back only duplicates and drop the second's tail. Then it asks past the
+ * cap: a relay that can serve it will, and one that refuses sets [topUpRefused], after which
+ * that tail is lost, as it had to be.
+ */
+internal fun pageLimit(
+    limit: Int?,
+    delivered: Int,
+    boundaryRepeats: Int,
+    cap: Int?,
+    topUpRefused: Boolean,
+): Int? {
+    if (limit == null) return null
+    val remainder = limit - delivered
+    return when {
+        cap == null -> remainder + boundaryRepeats
+        boundaryRepeats < cap || topUpRefused -> minOf(remainder + boundaryRepeats, cap)
+        else -> minOf(remainder, cap) + boundaryRepeats
+    }
 }
 
 private suspend fun INostrClient.walkPages(
@@ -528,12 +561,9 @@ private suspend fun INostrClient.walkPages(
             // nothing but a duplicate, step past the boundary, and lose the rest of that second).
             //
             // A lone bounded filter asks for at most [limitCap] once one is known (passed in, or
-            // learned from a relay that refused a larger limit). That is safe only for ONE
-            // filter: the cursor is shared, so with several, a filter cut short whose page ends
-            // newer than another's would have the gap between the two skipped when the cursor
-            // moves to the oldest event of the page. So a multi-filter page keeps asking for each
-            // filter's full remainder. An unbounded filter is sent without a `limit`: the relay's
-            // own default page.
+            // learned from a relay that refused a larger limit) — see [pageLimit]. Several filters
+            // share a walk only as search filters, which never page past the first. An unbounded
+            // filter is sent without a `limit`: the relay's own default page.
             val pageable =
                 filters.indices.filter { index ->
                     val limit = filters[index].limit
@@ -554,22 +584,13 @@ private suspend fun INostrClient.walkPages(
                 pageable.map { index ->
                     val filter = filters[index]
                     val pageLimit =
-                        filter.limit?.let {
-                            val remainder = it - matchCountPerFilter[index]
-                            val seen = seenAtBoundary.size
-                            val cap = limitCap
-                            when {
-                                !capToPageSize || cap == null -> remainder + seen
-                                // A normal page: at most the cap, so a relay that refuses anything
-                                // above its max (purplepag.es) is never asked for more again.
-                                seen < cap || topUpRefused -> minOf(remainder + seen, cap)
-                                // The boundary second alone fills a page: capping here would bring
-                                // back only duplicates, step past the second and drop its tail. Ask
-                                // past the cap; a relay that can serve it will, and one that refuses
-                                // sets [topUpRefused] and loses that tail, as it had to.
-                                else -> minOf(remainder, cap) + seen
-                            }
-                        }
+                        pageLimit(
+                            limit = filter.limit,
+                            delivered = matchCountPerFilter[index],
+                            boundaryRepeats = seenAtBoundary.size,
+                            cap = limitCap.takeIf { capToPageSize },
+                            topUpRefused = topUpRefused,
+                        )
                     IndexedValue(index, filter.copy(until = until ?: filter.until, limit = pageLimit))
                 }
             // To tell, after the page, which filters it delivered for.
