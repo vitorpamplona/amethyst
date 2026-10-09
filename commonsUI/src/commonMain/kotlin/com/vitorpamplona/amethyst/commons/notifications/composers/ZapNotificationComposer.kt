@@ -18,14 +18,17 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.service.notifications.renderers
+package com.vitorpamplona.amethyst.commons.notifications.composers
 
-import android.content.Context
 import com.vitorpamplona.amethyst.commons.model.Account
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.User
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
 import com.vitorpamplona.amethyst.commons.notifications.NotificationContent
+import com.vitorpamplona.amethyst.commons.notifications.NotificationDraft
+import com.vitorpamplona.amethyst.commons.notifications.NotificationMessage
+import com.vitorpamplona.amethyst.commons.notifications.NotificationRoutes
+import com.vitorpamplona.amethyst.commons.notifications.NotificationTopic
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.app_notification_nutzap_channel_message_from
 import com.vitorpamplona.amethyst.commons.resources.app_notification_onchain_channel_message_from
@@ -34,69 +37,60 @@ import com.vitorpamplona.amethyst.commons.resources.app_notification_zaps_channe
 import com.vitorpamplona.amethyst.commons.resources.app_notification_zaps_channel_message_from
 import com.vitorpamplona.amethyst.commons.ui.loadStringRes
 import com.vitorpamplona.amethyst.commons.util.showAmount
-import com.vitorpamplona.amethyst.service.notifications.NotificationCategory
-import com.vitorpamplona.amethyst.service.notifications.NotificationEnricher
-import com.vitorpamplona.amethyst.service.notifications.NotificationRoutes
-import com.vitorpamplona.amethyst.service.notifications.NotificationUtils.postStandard
-import com.vitorpamplona.amethyst.service.notifications.notificationManager
 import com.vitorpamplona.quartz.nip57Zaps.ZapReceiptEvent
 import com.vitorpamplona.quartz.nip57Zaps.ZapRequestEvent
 import com.vitorpamplona.quartz.nip61Nutzaps.nutzap.NutzapEvent
 import com.vitorpamplona.quartz.nipBCOnchainZaps.zap.OnchainZapEvent
+import com.vitorpamplona.quartz.utils.BigDecimal
+import com.vitorpamplona.quartz.utils.compareToValue
 import org.jetbrains.compose.resources.StringResource
-import java.math.BigDecimal
 
 /**
- * Zap notifications — Lightning (NIP-57, kind 9735), Cashu nutzaps (NIP-61, kind
- * 9321), and onchain zaps (kind 8333). All render on the gold Zaps channel with a
- * bolt icon; the title leads with the amount, the body names the sender and the
- * zapped-post excerpt. The sender's name + avatar are enriched observably; for
- * private Lightning zaps the sender is decrypted once up front.
+ * Zap notifications: Lightning (NIP-57, kind 9735), Cashu nutzaps (NIP-61, kind 9321) and
+ * onchain zaps (kind 8333). The title leads with the amount; the body names the sender and
+ * the zapped post's excerpt. A private Lightning zap's sender is decrypted once, up front.
  */
-object ZapNotification {
-    private val MIN_ZAP_AMOUNT = BigDecimal.TEN
+object ZapNotificationComposer {
+    private val MIN_ZAP_AMOUNT = BigDecimal(10)
 
-    suspend fun notify(
-        context: Context,
+    suspend fun compose(
         account: Account,
         event: ZapReceiptEvent,
-    ) {
-        LocalCache.getNoteIfExists(event.id) ?: return
-        val zapRequestNote = event.zapRequest?.id?.let { LocalCache.checkGetOrCreateNote(it) } ?: return
-        val zappedNote = event.zappedPost().firstOrNull()?.let { LocalCache.checkGetOrCreateNote(it) } ?: return
-        if (!account.isAcceptable(zappedNote)) return
-        if ((event.amount ?: BigDecimal.ZERO) < MIN_ZAP_AMOUNT) return
+    ): NotificationDraft? {
+        LocalCache.getNoteIfExists(event.id) ?: return null
+        val zapRequestNote = event.zapRequest?.id?.let { LocalCache.checkGetOrCreateNote(it) } ?: return null
+        val zappedNote = event.zappedPost().firstOrNull()?.let { LocalCache.checkGetOrCreateNote(it) } ?: return null
+        if (!account.isAcceptable(zappedNote)) return null
+        val zapAmount = event.amount ?: return null
+        if (zapAmount.compareToValue(MIN_ZAP_AMOUNT) < 0) return null
 
-        val zapRequestEvent = zapRequestNote.event as? ZapRequestEvent ?: return
-        // Resolve the (possibly private) zapper once — never re-decrypt per tick.
-        val decrypted = NotificationContent.decryptZapContentAuthor(zapRequestEvent, account.signer) ?: return
+        val zapRequestEvent = zapRequestNote.event as? ZapRequestEvent ?: return null
+        // Resolve the (possibly private) zapper once; never decrypt again on each render.
+        val decrypted = NotificationContent.decryptZapContentAuthor(zapRequestEvent, account.signer) ?: return null
         val sender = LocalCache.getOrCreateUser(decrypted.pubKey)
         val comment = decrypted.content.ifBlank { null }
-        val amount = showAmount(event.amount)
+        val amount = showAmount(zapAmount)
 
-        post(
-            context = context,
+        return draft(
             account = account,
             id = event.id,
             createdAt = event.createdAt,
             sender = sender,
             zappedNote = zappedNote,
-            title = { _ -> zapTitle(context, amount, comment) },
-            body = { user, excerpt -> fromLine(context, Res.string.app_notification_zaps_channel_message_from, user, excerpt) },
+            title = { _ -> zapTitle(amount, comment) },
+            body = { user, excerpt -> fromLine(Res.string.app_notification_zaps_channel_message_from, user, excerpt) },
         )
     }
 
-    suspend fun notify(
-        context: Context,
+    fun compose(
         account: Account,
         event: NutzapEvent,
-    ) {
+    ): NotificationDraft? {
         val zappedNote = event.linkedEventIds().lastOrNull()?.let { LocalCache.checkGetOrCreateNote(it) }
-        if (zappedNote != null && !account.isAcceptable(zappedNote)) return
+        if (zappedNote != null && !account.isAcceptable(zappedNote)) return null
         val sender = LocalCache.getOrCreateUser(event.pubKey)
 
-        post(
-            context = context,
+        return draft(
             account = account,
             id = event.id,
             createdAt = event.createdAt,
@@ -107,18 +101,16 @@ object ZapNotification {
         )
     }
 
-    suspend fun notify(
-        context: Context,
+    fun compose(
         account: Account,
         event: OnchainZapEvent,
-    ) {
+    ): NotificationDraft? {
         val zappedNote = event.zappedEvent()?.let { LocalCache.checkGetOrCreateNote(it) }
-        if (zappedNote != null && !account.isAcceptable(zappedNote)) return
+        if (zappedNote != null && !account.isAcceptable(zappedNote)) return null
         val sender = LocalCache.getOrCreateUser(event.pubKey)
         val sats = event.claimedAmountInSats()
 
-        post(
-            context = context,
+        return draft(
             account = account,
             id = event.id,
             createdAt = event.createdAt,
@@ -126,17 +118,16 @@ object ZapNotification {
             zappedNote = zappedNote,
             title = { user ->
                 if (sats != null) {
-                    loadStringRes(Res.string.app_notification_zaps_channel_message, showAmount(sats.toBigDecimal()))
+                    loadStringRes(Res.string.app_notification_zaps_channel_message, showAmount(BigDecimal(sats)))
                 } else {
                     loadStringRes(Res.string.app_notification_onchain_channel_message_from, user)
                 }
             },
-            body = { user, excerpt -> fromLine(context, Res.string.app_notification_onchain_channel_message_from, user, excerpt) },
+            body = { user, excerpt -> fromLine(Res.string.app_notification_onchain_channel_message_from, user, excerpt) },
         )
     }
 
-    private suspend fun post(
-        context: Context,
+    private fun draft(
         account: Account,
         id: String,
         createdAt: Long,
@@ -144,15 +135,11 @@ object ZapNotification {
         zappedNote: Note?,
         title: suspend (String) -> String,
         body: suspend (String, String) -> String,
-    ) {
-        val accountNpub = NotificationRoutes.accountNpub(account)
-        val uri = NotificationRoutes.notificationsUri(accountNpub, id)
-        val nm = context.notificationManager()
+    ): NotificationDraft {
+        val uri = NotificationRoutes.notificationsUri(NotificationRoutes.accountNpub(account), id)
 
-        NotificationEnricher.enrichAndPost(
-            context = context,
-            account = account,
-            notificationId = id,
+        return NotificationDraft(
+            id = id,
             users = listOf(sender),
             notes = listOfNotNull(zappedNote),
             isComplete = { sender.metadataOrNull()?.bestName() != null },
@@ -160,21 +147,19 @@ object ZapNotification {
             val user = sender.toBestDisplayName()
             val excerpt =
                 zappedNote?.let { NotificationContent.excerpt(NotificationContent.decryptContent(it, account.signer), 140) } ?: ""
-            nm.postStandard(
-                category = NotificationCategory.ZAP,
+            NotificationMessage(
+                topic = NotificationTopic.ZAP,
                 id = id,
-                messageTitle = title(user),
-                messageBody = body(user, excerpt),
+                title = title(user),
+                body = body(user, excerpt),
                 time = createdAt,
                 pictureUrl = sender.profilePicture(),
                 uri = uri,
-                applicationContext = context,
             )
         }
     }
 
     private suspend fun zapTitle(
-        context: Context,
         amount: String,
         comment: String?,
     ): String {
@@ -183,7 +168,6 @@ object ZapNotification {
     }
 
     private suspend fun fromLine(
-        context: Context,
         fromRes: StringResource,
         user: String,
         excerpt: String,

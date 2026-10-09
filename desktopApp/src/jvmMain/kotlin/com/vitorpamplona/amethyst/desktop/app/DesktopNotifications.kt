@@ -37,6 +37,9 @@ import com.vitorpamplona.amethyst.commons.moderation.notifications.NucleusNotifi
 import com.vitorpamplona.amethyst.commons.moderation.notifications.PermissionState
 import com.vitorpamplona.amethyst.commons.moderation.notifications.PreferencesNotificationSettings
 import com.vitorpamplona.amethyst.commons.moderation.notifications.nowEpochSeconds
+import com.vitorpamplona.amethyst.commons.notifications.NotificationMessage
+import com.vitorpamplona.amethyst.commons.notifications.composers.MentionNotificationComposer
+import com.vitorpamplona.amethyst.commons.notifications.composers.StandardNotificationComposer
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.desktop_notifications
 import com.vitorpamplona.amethyst.commons.resources.desktop_notifications_denied
@@ -46,6 +49,8 @@ import com.vitorpamplona.amethyst.commons.resources.desktop_notifications_previe
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.settings.SettingsRow
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.desktop.ui.notifications.DesktopNotificationAutoDispatcher
+import com.vitorpamplona.quartz.nip01Core.core.Event
+import com.vitorpamplona.quartz.nip10Notes.TextNoteEvent
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -95,6 +100,7 @@ class DesktopNotifications(
                         eventStream = cache.getEventStream(),
                         authorOf = { id -> cache.getNoteIfExists(id)?.event?.pubKey },
                         displayNameOf = { pubKey -> cache.getUserIfExists(pubKey)?.toBestDisplayName() },
+                        compose = { event -> composeNotification(account, event) },
                         isWindowFocused = isWindowFocused,
                         sessionStartSec = sessionStartSec,
                         scope = this,
@@ -102,6 +108,20 @@ class DesktopNotifications(
                 }
             }
         }
+
+    /** A new top-level note that tags the user is a mention; every other kind goes to its shared composer. */
+    private suspend fun composeNotification(
+        account: Account,
+        event: Event,
+    ): NotificationMessage? {
+        val draft =
+            if (event is TextNoteEvent) {
+                MentionNotificationComposer.compose(account, event)
+            } else {
+                StandardNotificationComposer.compose(account, event)
+            }
+        return draft?.render()
+    }
 
     companion object {
         private const val BUNDLE_ID = "com.vitorpamplona.amethyst.desktop"

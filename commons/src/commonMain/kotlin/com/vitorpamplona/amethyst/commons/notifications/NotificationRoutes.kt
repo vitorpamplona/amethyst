@@ -18,18 +18,15 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.service.notifications
+package com.vitorpamplona.amethyst.commons.notifications
 
-import android.app.NotificationManager
-import android.content.Context
-import androidx.core.content.ContextCompat
 import com.vitorpamplona.amethyst.commons.model.Account
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.quartz.nip01Core.core.hexToByteArray
 import com.vitorpamplona.quartz.nip17Dm.base.ChatroomKey
 import com.vitorpamplona.quartz.nip19Bech32.toNpub
 
-/** Deep-link URIs consumed by `MainActivity.uriToRoute` when a notification is tapped. */
+/** Deep-link URIs consumed by the app's `uriToRoute` when a notification is tapped. */
 object NotificationRoutes {
     private const val ACCOUNT = "?account="
     private const val SCROLL_TO = "&scrollTo="
@@ -150,5 +147,3 @@ object NotificationRoutes {
         accountNpub: String,
     ): String = "$channelNAddr$ACCOUNT$accountNpub"
 }
-
-internal fun Context.notificationManager(): NotificationManager = ContextCompat.getSystemService(this, NotificationManager::class.java) as NotificationManager

@@ -18,46 +18,40 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.service.notifications.renderers
+package com.vitorpamplona.amethyst.commons.notifications.composers
 
-import android.content.Context
 import com.vitorpamplona.amethyst.commons.model.Account
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
 import com.vitorpamplona.amethyst.commons.notifications.NotificationContent
+import com.vitorpamplona.amethyst.commons.notifications.NotificationDraft
+import com.vitorpamplona.amethyst.commons.notifications.NotificationMessage
+import com.vitorpamplona.amethyst.commons.notifications.NotificationRoutes
+import com.vitorpamplona.amethyst.commons.notifications.NotificationTopic
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.app_notification_articles_channel_message
 import com.vitorpamplona.amethyst.commons.resources.app_notification_articles_channel_message_highlight
 import com.vitorpamplona.amethyst.commons.ui.loadStringRes
-import com.vitorpamplona.amethyst.service.notifications.NotificationCategory
-import com.vitorpamplona.amethyst.service.notifications.NotificationEnricher
-import com.vitorpamplona.amethyst.service.notifications.NotificationRoutes
-import com.vitorpamplona.amethyst.service.notifications.NotificationUtils.postStandard
-import com.vitorpamplona.amethyst.service.notifications.notificationManager
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip84Highlights.HighlightEvent
 
 /**
- * Article & highlight notifications — long-form (kind 30023), wiki (30818), and
- * NIP-84 highlights (9802) that mention or highlight your writing. Rendered as an
- * indigo card. Highlights show the highlighted passage; long-form/wiki mentions
- * show the excerpt. Author name + avatar enriched observably.
+ * Article and highlight notifications: long-form (kind 30023), wiki (30818) and NIP-84
+ * highlights (9802) that mention or highlight your writing. A highlight shows the highlighted
+ * passage; an article shows its excerpt.
  */
-object ArticleNotification {
-    suspend fun notify(
-        context: Context,
+object ArticleNotificationComposer {
+    fun compose(
         account: Account,
         event: Event,
-    ) {
-        val note = LocalCache.getNoteIfExists(event.id) ?: return
-        if (!account.isAcceptable(note)) return
+    ): NotificationDraft? {
+        val note = LocalCache.getNoteIfExists(event.id) ?: return null
+        if (!account.isAcceptable(note)) return null
 
         val author = LocalCache.getOrCreateUser(event.pubKey)
-        val accountNpub = NotificationRoutes.accountNpub(account)
-        val uri = NotificationRoutes.noteUri(note, accountNpub)
+        val uri = NotificationRoutes.noteUri(note, NotificationRoutes.accountNpub(account))
 
-        val isHighlight = event is HighlightEvent
         val titleRes =
-            if (isHighlight) {
+            if (event is HighlightEvent) {
                 Res.string.app_notification_articles_channel_message_highlight
             } else {
                 Res.string.app_notification_articles_channel_message
@@ -65,12 +59,8 @@ object ArticleNotification {
         val bodySource = if (event is HighlightEvent) event.quote() else event.content
         val rendered = NotificationContent.renderNoteText(bodySource)
 
-        val nm = context.notificationManager()
-
-        NotificationEnricher.enrichAndPost(
-            context = context,
-            account = account,
-            notificationId = event.id,
+        return NotificationDraft(
+            id = event.id,
             users = listOf(author) + rendered.citedUsers,
             notes = listOf(note),
             isComplete = {
@@ -79,15 +69,14 @@ object ArticleNotification {
             },
         ) {
             val body = NotificationContent.renderNoteText(bodySource)
-            nm.postStandard(
-                category = NotificationCategory.ARTICLE,
+            NotificationMessage(
+                topic = NotificationTopic.ARTICLE,
                 id = event.id,
-                messageTitle = loadStringRes(titleRes, author.toBestDisplayName()),
-                messageBody = body.text,
+                title = loadStringRes(titleRes, author.toBestDisplayName()),
+                body = body.text,
                 time = event.createdAt,
                 pictureUrl = author.profilePicture(),
                 uri = uri,
-                applicationContext = context,
                 bigPictureUrl = body.imageUrl,
             )
         }

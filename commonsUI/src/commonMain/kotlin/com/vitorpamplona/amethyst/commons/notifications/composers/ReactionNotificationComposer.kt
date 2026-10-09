@@ -18,57 +18,47 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.service.notifications.renderers
+package com.vitorpamplona.amethyst.commons.notifications.composers
 
-import android.content.Context
 import com.vitorpamplona.amethyst.commons.model.Account
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
 import com.vitorpamplona.amethyst.commons.notifications.NotificationContent
+import com.vitorpamplona.amethyst.commons.notifications.NotificationDraft
+import com.vitorpamplona.amethyst.commons.notifications.NotificationMessage
+import com.vitorpamplona.amethyst.commons.notifications.NotificationRoutes
+import com.vitorpamplona.amethyst.commons.notifications.NotificationTopic
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.app_notification_reactions_channel_message
 import com.vitorpamplona.amethyst.commons.resources.app_notification_reactions_channel_message_for
 import com.vitorpamplona.amethyst.commons.ui.loadStringRes
-import com.vitorpamplona.amethyst.service.notifications.NotificationCategory
-import com.vitorpamplona.amethyst.service.notifications.NotificationEnricher
-import com.vitorpamplona.amethyst.service.notifications.NotificationRoutes
-import com.vitorpamplona.amethyst.service.notifications.NotificationUtils.postStandard
-import com.vitorpamplona.amethyst.service.notifications.notificationManager
 import com.vitorpamplona.quartz.nip25Reactions.ReactionEvent
 import com.vitorpamplona.quartz.nip30CustomEmoji.CustomEmoji
 
 /**
- * Reaction (like) notifications — kind 7. Rendered as a heart-accented card
- * titled with the reactor's chosen emoji + name; the reacted-post excerpt is the
- * body. NIP-30 custom emoji, which can't render as text, are shown as a badge
- * overlaid on the reactor's avatar. The reactor's name + avatar and the reacted
- * post's content are enriched observably.
+ * Reaction (like) notifications, kind 7: titled with the reactor's emoji and name, with the
+ * reacted post's excerpt as the body. A NIP-30 custom emoji can't render as text, so it comes
+ * back as a badge over the reactor's avatar.
  */
-object ReactionNotification {
+object ReactionNotificationComposer {
     private const val LIKE_EMOJI = "🤙" // 🤙
     private const val DISLIKE_EMOJI = "👎" // 👎
 
-    suspend fun notify(
-        context: Context,
+    fun compose(
         account: Account,
         event: ReactionEvent,
-    ) {
+    ): NotificationDraft? {
         // NIP-25: the LAST `e` tag is the note actually reacted to.
-        val reactedPostId = event.originalPost().lastOrNull() ?: return
+        val reactedPostId = event.originalPost().lastOrNull() ?: return null
         val reactedNote = LocalCache.checkGetOrCreateNote(reactedPostId)
-        if (reactedNote != null && !account.isAcceptable(reactedNote)) return
+        if (reactedNote != null && !account.isAcceptable(reactedNote)) return null
 
         val author = LocalCache.getOrCreateUser(event.pubKey)
         val reactionContent = event.content
         val customEmojiUrl = CustomEmoji.createEmojiMap(event.tags)[reactionContent]
+        val uri = NotificationRoutes.notificationsUri(NotificationRoutes.accountNpub(account), event.id)
 
-        val accountNpub = NotificationRoutes.accountNpub(account)
-        val uri = NotificationRoutes.notificationsUri(accountNpub, event.id)
-        val nm = context.notificationManager()
-
-        NotificationEnricher.enrichAndPost(
-            context = context,
-            account = account,
-            notificationId = event.id,
+        return NotificationDraft(
+            id = event.id,
             users = listOf(author),
             notes = listOfNotNull(reactedNote),
             isComplete = { author.metadataOrNull()?.bestName() != null },
@@ -87,15 +77,14 @@ object ReactionNotification {
                 } else {
                     loadStringRes(Res.string.app_notification_reactions_channel_message, user)
                 }
-            nm.postStandard(
-                category = NotificationCategory.REACTION,
+            NotificationMessage(
+                topic = NotificationTopic.REACTION,
                 id = event.id,
-                messageTitle = title,
-                messageBody = body,
+                title = title,
+                body = body,
                 time = event.createdAt,
                 pictureUrl = author.profilePicture(),
                 uri = uri,
-                applicationContext = context,
                 badgeUrl = customEmojiUrl,
             )
         }

@@ -18,60 +18,44 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.service.notifications.renderers
+package com.vitorpamplona.amethyst.commons.notifications.composers
 
-import android.content.Context
 import com.vitorpamplona.amethyst.commons.model.Account
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
+import com.vitorpamplona.amethyst.commons.notifications.NotificationDraft
+import com.vitorpamplona.amethyst.commons.notifications.NotificationMessage
+import com.vitorpamplona.amethyst.commons.notifications.NotificationRoutes
+import com.vitorpamplona.amethyst.commons.notifications.NotificationTopic
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.app_notification_chess_channel_name
 import com.vitorpamplona.amethyst.commons.ui.loadStringRes
-import com.vitorpamplona.amethyst.isDebug
-import com.vitorpamplona.amethyst.service.notifications.NotificationCategory
-import com.vitorpamplona.amethyst.service.notifications.NotificationEnricher
-import com.vitorpamplona.amethyst.service.notifications.NotificationRoutes
-import com.vitorpamplona.amethyst.service.notifications.NotificationUtils.postStandard
-import com.vitorpamplona.amethyst.service.notifications.notificationManager
 import com.vitorpamplona.quartz.nip64Chess.baseEvent.BaseChessEvent
 import org.jetbrains.compose.resources.StringResource
 
-/**
- * Chess game notifications — NIP-64 challenge-accepted and move events. Rendered
- * as a brown card ("Chess" title, "X accepted your challenge" / "X moved — your
- * turn"). Opponent name + avatar enriched observably.
- */
-object ChessNotification {
-    suspend fun notify(
-        context: Context,
+/** Chess notifications, NIP-64 challenge-accepted and move events: "X accepted your challenge", "X moved, your turn". */
+object ChessNotificationComposer {
+    fun compose(
         account: Account,
         event: BaseChessEvent,
         contentRes: StringResource,
-    ) {
-        // NIP-64 chess is a debug-only feature for now; don't notify in release.
-        if (!isDebug) return
-
+    ): NotificationDraft {
         val author = LocalCache.getOrCreateUser(event.pubKey)
-        val accountNpub = NotificationRoutes.accountNpub(account)
-        val uri = NotificationRoutes.notificationsUri(accountNpub, event.id)
-        val nm = context.notificationManager()
+        val uri = NotificationRoutes.notificationsUri(NotificationRoutes.accountNpub(account), event.id)
 
-        NotificationEnricher.enrichAndPost(
-            context = context,
-            account = account,
-            notificationId = event.id,
+        return NotificationDraft(
+            id = event.id,
             users = listOf(author),
             notes = emptyList(),
             isComplete = { author.metadataOrNull()?.bestName() != null },
         ) {
-            nm.postStandard(
-                category = NotificationCategory.CHESS,
+            NotificationMessage(
+                topic = NotificationTopic.CHESS,
                 id = event.id,
-                messageTitle = loadStringRes(Res.string.app_notification_chess_channel_name),
-                messageBody = loadStringRes(contentRes, author.toBestDisplayName()),
+                title = loadStringRes(Res.string.app_notification_chess_channel_name),
+                body = loadStringRes(contentRes, author.toBestDisplayName()),
                 time = event.createdAt,
                 pictureUrl = author.profilePicture(),
                 uri = uri,
-                applicationContext = context,
             )
         }
     }

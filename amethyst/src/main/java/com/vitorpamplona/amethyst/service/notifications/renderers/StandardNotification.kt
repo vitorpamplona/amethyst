@@ -22,30 +22,34 @@ package com.vitorpamplona.amethyst.service.notifications.renderers
 
 import android.content.Context
 import com.vitorpamplona.amethyst.commons.model.Account
-import com.vitorpamplona.amethyst.commons.notifications.composers.PaymentNotificationComposer
+import com.vitorpamplona.amethyst.commons.notifications.NotificationDraft
+import com.vitorpamplona.amethyst.service.notifications.NotificationEnricher
 import com.vitorpamplona.amethyst.service.notifications.NotificationUtils.postStandard
 import com.vitorpamplona.amethyst.service.notifications.notificationManager
-import com.vitorpamplona.quartz.nip47WalletConnect.rpc.NwcTransaction
 
 /**
- * Posts a tray notification for an incoming Lightning payment reported by the
- * connected NWC wallet (NIP-47 `payment_received`), on the green Payments channel.
- *
- * Zaps are intentionally NOT routed here — a `payment_received` whose transaction
- * metadata carries a NIP-57 zap request is filtered out upstream by
- * [com.vitorpamplona.amethyst.service.notifications.NwcPaymentNotificationWatcher],
- * because those already surface through the kind-9735 zap notification.
+ * Posts a notification whose content a shared composer built (zaps, reactions, reposts,
+ * mentions, badges, media, articles, git, chess). It is posted from the cache right away and
+ * posted again as the profiles and notes the draft names arrive.
  */
-object NwcPaymentNotifier {
-    suspend fun notify(
+object StandardNotification {
+    fun post(
         context: Context,
         account: Account,
-        tx: NwcTransaction,
+        draft: NotificationDraft?,
     ) {
+        if (draft == null) return
         val nm = context.notificationManager()
-        if (!nm.areNotificationsEnabled()) return
 
-        val message = PaymentNotificationComposer.compose(account, tx) ?: return
-        nm.postStandard(message, context)
+        NotificationEnricher.enrichAndPost(
+            context = context,
+            account = account,
+            notificationId = draft.id,
+            users = draft.users,
+            notes = draft.notes,
+            isComplete = draft.isComplete,
+        ) {
+            nm.postStandard(draft.render(), context)
+        }
     }
 }

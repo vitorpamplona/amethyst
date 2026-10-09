@@ -18,12 +18,15 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.service.notifications.renderers
+package com.vitorpamplona.amethyst.commons.notifications.composers
 
-import android.content.Context
 import com.vitorpamplona.amethyst.commons.model.Account
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
 import com.vitorpamplona.amethyst.commons.notifications.NotificationContent
+import com.vitorpamplona.amethyst.commons.notifications.NotificationDraft
+import com.vitorpamplona.amethyst.commons.notifications.NotificationMessage
+import com.vitorpamplona.amethyst.commons.notifications.NotificationRoutes
+import com.vitorpamplona.amethyst.commons.notifications.NotificationTopic
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.app_notification_code_channel_message_issue
 import com.vitorpamplona.amethyst.commons.resources.app_notification_code_channel_message_patch
@@ -41,11 +44,6 @@ import com.vitorpamplona.amethyst.commons.resources.app_notification_code_channe
 import com.vitorpamplona.amethyst.commons.resources.app_notification_code_channel_message_status_draft
 import com.vitorpamplona.amethyst.commons.resources.app_notification_code_channel_message_status_open
 import com.vitorpamplona.amethyst.commons.ui.loadStringRes
-import com.vitorpamplona.amethyst.service.notifications.NotificationCategory
-import com.vitorpamplona.amethyst.service.notifications.NotificationEnricher
-import com.vitorpamplona.amethyst.service.notifications.NotificationRoutes
-import com.vitorpamplona.amethyst.service.notifications.NotificationUtils.postStandard
-import com.vitorpamplona.amethyst.service.notifications.notificationManager
 import com.vitorpamplona.quartz.nip34Git.issue.GitIssueEvent
 import com.vitorpamplona.quartz.nip34Git.patch.GitPatchEvent
 import com.vitorpamplona.quartz.nip34Git.pr.GitPullRequestEvent
@@ -63,7 +61,6 @@ import org.jetbrains.compose.resources.StringResource
  * (1630 open, 1631 applied/merged, 1632 closed, 1633 draft) on repos or threads
  * you're p-tagged into. Rendered as a slate card titled by the action ("X opened
  * an issue", "X merged a pull request", …) with the subject as the body.
- * Author name + avatar enriched observably.
  *
  * Status kinds resolve their title from the *target* event's kind (patch/PR/issue)
  * when it's in cache, so a merge on a PR reads "merged a pull request" but the
@@ -72,52 +69,44 @@ import org.jetbrains.compose.resources.StringResource
  * notification lands after the target because the p-tag subscription pulls
  * status events regardless of whether the target has been seen).
  */
-object CodeNotification {
-    suspend fun notify(
-        context: Context,
+object CodeNotificationComposer {
+    fun compose(
         account: Account,
         event: GitIssueEvent,
-    ) = post(context, account, event.id, event.createdAt, event.pubKey, Res.string.app_notification_code_channel_message_issue, event.subject() ?: event.content)
+    ) = draft(account, event.id, event.createdAt, event.pubKey, Res.string.app_notification_code_channel_message_issue, event.subject() ?: event.content)
 
-    suspend fun notify(
-        context: Context,
+    fun compose(
         account: Account,
         event: GitPatchEvent,
-    ) = post(context, account, event.id, event.createdAt, event.pubKey, Res.string.app_notification_code_channel_message_patch, event.subject() ?: event.content)
+    ) = draft(account, event.id, event.createdAt, event.pubKey, Res.string.app_notification_code_channel_message_patch, event.subject() ?: event.content)
 
-    suspend fun notify(
-        context: Context,
+    fun compose(
         account: Account,
         event: GitPullRequestEvent,
-    ) = post(context, account, event.id, event.createdAt, event.pubKey, Res.string.app_notification_code_channel_message_pr, event.subject() ?: event.content)
+    ) = draft(account, event.id, event.createdAt, event.pubKey, Res.string.app_notification_code_channel_message_pr, event.subject() ?: event.content)
 
-    suspend fun notify(
-        context: Context,
+    fun compose(
         account: Account,
         event: GitPullRequestUpdateEvent,
-    ) = post(context, account, event.id, event.createdAt, event.pubKey, Res.string.app_notification_code_channel_message_pr_update, event.content)
+    ) = draft(account, event.id, event.createdAt, event.pubKey, Res.string.app_notification_code_channel_message_pr_update, event.content)
 
     // GitReplyEvent (kind 1622) is deprecated in favour of NIP-22 comments, but
     // events already on relays still arrive and still have to be rendered.
     @Suppress("DEPRECATION")
-    suspend fun notify(
-        context: Context,
+    fun compose(
         account: Account,
         event: GitReplyEvent,
-    ) = post(context, account, event.id, event.createdAt, event.pubKey, Res.string.app_notification_code_channel_message_reply, event.content)
+    ) = draft(account, event.id, event.createdAt, event.pubKey, Res.string.app_notification_code_channel_message_reply, event.content)
 
-    suspend fun notify(
-        context: Context,
+    fun compose(
         account: Account,
         event: GitStatusOpenEvent,
-    ) = post(context, account, event.id, event.createdAt, event.pubKey, Res.string.app_notification_code_channel_message_status_open, event.content)
+    ) = draft(account, event.id, event.createdAt, event.pubKey, Res.string.app_notification_code_channel_message_status_open, event.content)
 
-    suspend fun notify(
-        context: Context,
+    fun compose(
         account: Account,
         event: GitStatusAppliedEvent,
-    ) = post(
-        context,
+    ) = draft(
         account,
         event.id,
         event.createdAt,
@@ -133,12 +122,10 @@ object CodeNotification {
         subject = event.content,
     )
 
-    suspend fun notify(
-        context: Context,
+    fun compose(
         account: Account,
         event: GitStatusClosedEvent,
-    ) = post(
-        context,
+    ) = draft(
         account,
         event.id,
         event.createdAt,
@@ -154,11 +141,10 @@ object CodeNotification {
         subject = event.content,
     )
 
-    suspend fun notify(
-        context: Context,
+    fun compose(
         account: Account,
         event: GitStatusDraftEvent,
-    ) = post(context, account, event.id, event.createdAt, event.pubKey, Res.string.app_notification_code_channel_message_status_draft, event.content)
+    ) = draft(account, event.id, event.createdAt, event.pubKey, Res.string.app_notification_code_channel_message_status_draft, event.content)
 
     /**
      * Pick a title string for a status event based on the *target*'s kind, so
@@ -183,41 +169,35 @@ object CodeNotification {
         }
     }
 
-    private suspend fun post(
-        context: Context,
+    private fun draft(
         account: Account,
         id: String,
         createdAt: Long,
         authorPubkey: String,
         titleRes: StringResource,
         subject: String?,
-    ) {
-        val note = LocalCache.getNoteIfExists(id) ?: return
-        if (!account.isAcceptable(note)) return
+    ): NotificationDraft? {
+        val note = LocalCache.getNoteIfExists(id) ?: return null
+        if (!account.isAcceptable(note)) return null
 
         val author = LocalCache.getOrCreateUser(authorPubkey)
-        val accountNpub = NotificationRoutes.accountNpub(account)
-        val uri = NotificationRoutes.noteUri(note, accountNpub)
+        val uri = NotificationRoutes.noteUri(note, NotificationRoutes.accountNpub(account))
         val body = NotificationContent.excerpt(subject, 140)
-        val nm = context.notificationManager()
 
-        NotificationEnricher.enrichAndPost(
-            context = context,
-            account = account,
-            notificationId = id,
+        return NotificationDraft(
+            id = id,
             users = listOf(author),
             notes = listOf(note),
             isComplete = { author.metadataOrNull()?.bestName() != null },
         ) {
-            nm.postStandard(
-                category = NotificationCategory.CODE,
+            NotificationMessage(
+                topic = NotificationTopic.CODE,
                 id = id,
-                messageTitle = loadStringRes(titleRes, author.toBestDisplayName()),
-                messageBody = body,
+                title = loadStringRes(titleRes, author.toBestDisplayName()),
+                body = body,
                 time = createdAt,
                 pictureUrl = author.profilePicture(),
                 uri = uri,
-                applicationContext = context,
             )
         }
     }

@@ -18,58 +18,46 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.service.notifications.renderers
+package com.vitorpamplona.amethyst.commons.notifications.composers
 
-import android.content.Context
 import com.vitorpamplona.amethyst.commons.model.Account
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
 import com.vitorpamplona.amethyst.commons.notifications.NotificationContent
+import com.vitorpamplona.amethyst.commons.notifications.NotificationDraft
+import com.vitorpamplona.amethyst.commons.notifications.NotificationMessage
+import com.vitorpamplona.amethyst.commons.notifications.NotificationRoutes
+import com.vitorpamplona.amethyst.commons.notifications.NotificationTopic
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.app_notification_mentions_channel_message
 import com.vitorpamplona.amethyst.commons.ui.loadStringRes
-import com.vitorpamplona.amethyst.service.notifications.NotificationCategory
-import com.vitorpamplona.amethyst.service.notifications.NotificationEnricher
-import com.vitorpamplona.amethyst.service.notifications.NotificationRoutes
-import com.vitorpamplona.amethyst.service.notifications.NotificationUtils.postStandard
-import com.vitorpamplona.amethyst.service.notifications.notificationManager
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import org.jetbrains.compose.resources.StringResource
 
 /**
- * Text-mention notifications — someone mentioned, quoted, or cited you in a note
- * (kind 1), or asked a poll that tags you. Rendered as an accented BigText card
- * titled "X mentioned you" with the post excerpt. The author's name + avatar and
- * the post body are enriched observably.
+ * Text-mention notifications: someone mentioned, quoted or cited you in a note (kind 1), or
+ * asked a poll that tags you. Titled "X mentioned you", with the post as the body.
  *
- * Media (picture/video), articles/highlights, and git events are richer and live
- * in their own renderers; this covers plain text mentions and polls.
+ * Media, articles and git events have their own composers; this covers plain text and polls.
  */
-object MentionNotification {
-    suspend fun notify(
-        context: Context,
+object MentionNotificationComposer {
+    fun compose(
         account: Account,
         event: Event,
-        category: NotificationCategory = NotificationCategory.MENTION,
         titleRes: StringResource = Res.string.app_notification_mentions_channel_message,
-    ) {
-        val note = LocalCache.getNoteIfExists(event.id) ?: return
-        if (!account.isAcceptable(note)) return
+    ): NotificationDraft? {
+        val note = LocalCache.getNoteIfExists(event.id) ?: return null
+        if (!account.isAcceptable(note)) return null
 
         val author = LocalCache.getOrCreateUser(event.pubKey)
-        val accountNpub = NotificationRoutes.accountNpub(account)
-        val uri = NotificationRoutes.noteUri(note, accountNpub)
+        val uri = NotificationRoutes.noteUri(note, NotificationRoutes.accountNpub(account))
 
-        // Users cited inline in the text (nostr:npub/nprofile) are observed too, so
-        // their names fill in as their kind:0 metadata arrives. An inline image link
-        // is rendered as the big picture instead of shown as a raw URL.
+        // Users cited inline in the text (nostr:npub/nprofile) are loaded too, so their
+        // names fill in as their kind:0 metadata arrives. An inline image link becomes the
+        // big picture instead of a raw URL.
         val rendered = NotificationContent.renderNoteText(event.content)
 
-        val nm = context.notificationManager()
-
-        NotificationEnricher.enrichAndPost(
-            context = context,
-            account = account,
-            notificationId = event.id,
+        return NotificationDraft(
+            id = event.id,
             users = listOf(author) + rendered.citedUsers,
             notes = listOf(note),
             isComplete = {
@@ -78,15 +66,14 @@ object MentionNotification {
             },
         ) {
             val body = NotificationContent.renderNoteText(event.content)
-            nm.postStandard(
-                category = category,
+            NotificationMessage(
+                topic = NotificationTopic.MENTION,
                 id = event.id,
-                messageTitle = loadStringRes(titleRes, author.toBestDisplayName()),
-                messageBody = body.text,
+                title = loadStringRes(titleRes, author.toBestDisplayName()),
+                body = body.text,
                 time = event.createdAt,
                 pictureUrl = author.profilePicture(),
                 uri = uri,
-                applicationContext = context,
                 bigPictureUrl = body.imageUrl,
             )
         }

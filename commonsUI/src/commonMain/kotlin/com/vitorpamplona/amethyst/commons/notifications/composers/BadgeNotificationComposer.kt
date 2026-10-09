@@ -18,57 +18,46 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.service.notifications.renderers
+package com.vitorpamplona.amethyst.commons.notifications.composers
 
-import android.content.Context
 import com.vitorpamplona.amethyst.commons.model.Account
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
+import com.vitorpamplona.amethyst.commons.notifications.NotificationDraft
+import com.vitorpamplona.amethyst.commons.notifications.NotificationMessage
+import com.vitorpamplona.amethyst.commons.notifications.NotificationRoutes
+import com.vitorpamplona.amethyst.commons.notifications.NotificationTopic
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.app_notification_badges_channel_message
 import com.vitorpamplona.amethyst.commons.resources.app_notification_badges_channel_message_from
 import com.vitorpamplona.amethyst.commons.ui.loadStringRes
-import com.vitorpamplona.amethyst.service.notifications.NotificationCategory
-import com.vitorpamplona.amethyst.service.notifications.NotificationEnricher
-import com.vitorpamplona.amethyst.service.notifications.NotificationRoutes
-import com.vitorpamplona.amethyst.service.notifications.NotificationUtils.postStandard
-import com.vitorpamplona.amethyst.service.notifications.notificationManager
 import com.vitorpamplona.quartz.nip58Badges.award.BadgeAwardEvent
 
-/**
- * Badge-award notifications — NIP-58 kind 8. Rendered as a gold card
- * ("You earned a badge", awarded by X). Issuer name + avatar enriched observably.
- */
-object BadgeNotification {
-    suspend fun notify(
-        context: Context,
+/** Badge-award notifications, NIP-58 kind 8: "You earned a badge", awarded by X. */
+object BadgeNotificationComposer {
+    fun compose(
         account: Account,
         event: BadgeAwardEvent,
-    ) {
-        val note = LocalCache.getNoteIfExists(event.id) ?: return
-        if (!account.isAcceptable(note)) return
+    ): NotificationDraft? {
+        val note = LocalCache.getNoteIfExists(event.id) ?: return null
+        if (!account.isAcceptable(note)) return null
 
         val issuer = LocalCache.getOrCreateUser(event.pubKey)
-        val accountNpub = NotificationRoutes.accountNpub(account)
-        val uri = NotificationRoutes.notificationsUri(accountNpub, event.id)
-        val nm = context.notificationManager()
+        val uri = NotificationRoutes.notificationsUri(NotificationRoutes.accountNpub(account), event.id)
 
-        NotificationEnricher.enrichAndPost(
-            context = context,
-            account = account,
-            notificationId = event.id,
+        return NotificationDraft(
+            id = event.id,
             users = listOf(issuer),
             notes = listOf(note),
             isComplete = { issuer.metadataOrNull()?.bestName() != null },
         ) {
-            nm.postStandard(
-                category = NotificationCategory.BADGE,
+            NotificationMessage(
+                topic = NotificationTopic.BADGE,
                 id = event.id,
-                messageTitle = loadStringRes(Res.string.app_notification_badges_channel_message),
-                messageBody = loadStringRes(Res.string.app_notification_badges_channel_message_from, issuer.toBestDisplayName()),
+                title = loadStringRes(Res.string.app_notification_badges_channel_message),
+                body = loadStringRes(Res.string.app_notification_badges_channel_message_from, issuer.toBestDisplayName()),
                 time = event.createdAt,
                 pictureUrl = issuer.profilePicture(),
                 uri = uri,
-                applicationContext = context,
             )
         }
     }

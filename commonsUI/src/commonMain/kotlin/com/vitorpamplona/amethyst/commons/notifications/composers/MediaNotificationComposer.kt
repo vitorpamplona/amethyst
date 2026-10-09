@@ -18,52 +18,47 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.service.notifications.renderers
+package com.vitorpamplona.amethyst.commons.notifications.composers
 
-import android.content.Context
 import com.vitorpamplona.amethyst.commons.model.Account
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
 import com.vitorpamplona.amethyst.commons.notifications.NotificationContent
+import com.vitorpamplona.amethyst.commons.notifications.NotificationDraft
+import com.vitorpamplona.amethyst.commons.notifications.NotificationMessage
+import com.vitorpamplona.amethyst.commons.notifications.NotificationRoutes
+import com.vitorpamplona.amethyst.commons.notifications.NotificationTopic
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.app_notification_media_channel_message_photo
 import com.vitorpamplona.amethyst.commons.resources.app_notification_media_channel_message_video
 import com.vitorpamplona.amethyst.commons.ui.loadStringRes
-import com.vitorpamplona.amethyst.service.notifications.NotificationCategory
-import com.vitorpamplona.amethyst.service.notifications.NotificationEnricher
-import com.vitorpamplona.amethyst.service.notifications.NotificationRoutes
-import com.vitorpamplona.amethyst.service.notifications.NotificationUtils.postStandard
-import com.vitorpamplona.amethyst.service.notifications.notificationManager
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip71Video.VideoEvent
 
 /**
- * Media notifications — a picture (kind 20) or video (kinds 21/22/34235/34236)
- * that mentions you. Rendered with BigPictureStyle so the shade shows the actual
- * image (video poster frame) inline. The author's name + avatar are enriched
- * observably; the media URL comes straight off the (already present) event.
+ * Media notifications: a picture (kind 20) or video (kinds 21/22/34235/34236) that mentions
+ * you. The image, or the video's poster frame, is the big picture.
  */
-object MediaNotification {
-    suspend fun notify(
-        context: Context,
+object MediaNotificationComposer {
+    fun compose(
         account: Account,
         event: Event,
-    ) {
-        val note = LocalCache.getNoteIfExists(event.id) ?: return
-        if (!account.isAcceptable(note)) return
+    ): NotificationDraft? {
+        val note = LocalCache.getNoteIfExists(event.id) ?: return null
+        if (!account.isAcceptable(note)) return null
 
         val author = LocalCache.getOrCreateUser(event.pubKey)
-        val accountNpub = NotificationRoutes.accountNpub(account)
-        val uri = NotificationRoutes.noteUri(note, accountNpub)
-        val isVideo = event is VideoEvent
+        val uri = NotificationRoutes.noteUri(note, NotificationRoutes.accountNpub(account))
+        val titleRes =
+            if (event is VideoEvent) {
+                Res.string.app_notification_media_channel_message_video
+            } else {
+                Res.string.app_notification_media_channel_message_photo
+            }
         val bigPictureUrl = NotificationContent.mediaImageUrl(event)
         val citedUsers = NotificationContent.resolveMentions(event.content, 140).citedUsers
 
-        val nm = context.notificationManager()
-
-        NotificationEnricher.enrichAndPost(
-            context = context,
-            account = account,
-            notificationId = event.id,
+        return NotificationDraft(
+            id = event.id,
             users = listOf(author) + citedUsers,
             notes = listOf(note),
             isComplete = {
@@ -71,22 +66,14 @@ object MediaNotification {
                     citedUsers.all { it.metadataOrNull()?.bestName() != null }
             },
         ) {
-            val user = author.toBestDisplayName()
-            val titleRes =
-                if (isVideo) {
-                    Res.string.app_notification_media_channel_message_video
-                } else {
-                    Res.string.app_notification_media_channel_message_photo
-                }
-            nm.postStandard(
-                category = NotificationCategory.MEDIA,
+            NotificationMessage(
+                topic = NotificationTopic.MEDIA,
                 id = event.id,
-                messageTitle = loadStringRes(titleRes, user),
-                messageBody = NotificationContent.resolveMentions(event.content, 140).text,
+                title = loadStringRes(titleRes, author.toBestDisplayName()),
+                body = NotificationContent.resolveMentions(event.content, 140).text,
                 time = event.createdAt,
                 pictureUrl = author.profilePicture(),
                 uri = uri,
-                applicationContext = context,
                 bigPictureUrl = bigPictureUrl,
             )
         }
