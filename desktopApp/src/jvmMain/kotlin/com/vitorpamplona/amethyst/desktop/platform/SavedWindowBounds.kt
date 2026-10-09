@@ -104,7 +104,7 @@ class SavedWindowBounds(
         private const val WIDTH = "width"
         private const val HEIGHT = "height"
         private const val MAXIMIZED = "maximized"
-        private const val MIN_SIZE = 200f
+        private const val MIN_SIZE = MIN_SAVED_SIZE
 
         /** How much of the title bar must be on a screen to grab and move the window. */
         private const val GRAB_WIDTH = 100
@@ -124,6 +124,9 @@ class SavedWindowBounds(
     }
 }
 
+/** The smallest window, in dp each way, worth saving and reopening at. */
+private const val MIN_SAVED_SIZE = 200f
+
 /**
  * The window's bounds to save, or null while it has none worth keeping: before it has a position,
  * or in full screen, which it should not reopen in. A maximized window keeps the floating bounds it
@@ -135,7 +138,8 @@ fun WindowState.boundsToSave(lastFloating: WindowBounds?): WindowBounds? {
         WindowPlacement.Fullscreen -> null
         WindowPlacement.Maximized -> lastFloating?.copy(maximized = true)
         WindowPlacement.Floating ->
-            if (position is WindowPosition.Absolute && size.isSpecified) {
+            // A window collapsed to a sliver is no place to reopen at; load() refuses it too.
+            if (position is WindowPosition.Absolute && size.isSpecified && size.width.value >= MIN_SAVED_SIZE && size.height.value >= MIN_SAVED_SIZE) {
                 WindowBounds(position.x.value, position.y.value, size.width.value, size.height.value, maximized = false)
             } else {
                 null

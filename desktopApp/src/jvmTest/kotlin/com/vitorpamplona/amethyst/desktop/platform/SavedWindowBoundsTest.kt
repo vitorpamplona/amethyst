@@ -102,4 +102,11 @@ class SavedWindowBoundsTest {
         val state = WindowState(position = WindowPosition.Aligned(Alignment.Center), size = DpSize(800.dp, 600.dp))
         assertNull(state.boundsToSave(lastFloating = null))
     }
+
+    @Test
+    fun aCollapsedWindowIsNotSaved() {
+        // The window once came back as a sliver showing only the traffic lights.
+        val state = WindowState(position = WindowPosition(423.dp, 136.dp), size = DpSize(80.dp, 32.dp))
+        assertNull(state.boundsToSave(lastFloating = null))
+    }
 }
