@@ -48,6 +48,7 @@ import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.fetchAllPages
 import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.fetchAllWithHooks
 import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.publishAndCollectResults
 import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.publishAndConfirm
+import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.streamAllPagesFromPoolWithHooks
 import com.vitorpamplona.quartz.nip01Core.relay.client.auth.RelayAuthenticator
 import com.vitorpamplona.quartz.nip01Core.relay.client.reqs.SubscriptionListener
 import com.vitorpamplona.quartz.nip01Core.relay.client.single.newSubId
@@ -610,14 +611,16 @@ class Context(
      * `auth-required` CLOSED is kept pending rather than treated as terminal: the
      * NIP-42 responder answers the challenge and the client re-fires this same
      * subscription (`syncFilters`), so the post-auth events are collected instead of
-     * returning empty. If auth never satisfies it, the relay simply falls through to
-     * the [idleTimeoutMs]. Needed for Concord planes, whose kind-1059 wraps are served
+     * returning empty. On by default, as in quartz: a relay.nostr.build REQ (`auth-required:
+     * authenticate with AUTH before subscribing`) otherwise came back empty in ~4 s even with
+     * an account to answer the challenge, while a challenge nobody can answer still ends in
+     * the short AUTH grace. Needed too for Concord planes, whose kind-1059 wraps are served
      * only to a connection authenticated as the derived stream key.
      */
     suspend fun drain(
         filters: Map<NormalizedRelayUrl, List<Filter>>,
         idleTimeoutMs: Long = 8_000,
-        pendingOnAuthRequired: Boolean = false,
+        pendingOnAuthRequired: Boolean = true,
     ): List<Pair<NormalizedRelayUrl, Event>> = drainResult(filters, idleTimeoutMs, pendingOnAuthRequired).events
 
     /**
@@ -635,7 +638,7 @@ class Context(
     suspend fun drainResult(
         filters: Map<NormalizedRelayUrl, List<Filter>>,
         idleTimeoutMs: Long = 8_000,
-        pendingOnAuthRequired: Boolean = false,
+        pendingOnAuthRequired: Boolean = true,
     ): FetchAllResult =
         client.fetchAllWithHooks(
             filters = filters,
@@ -675,6 +678,27 @@ class Context(
             maxConcurrentRelays = maxConcurrentRelays,
             onRelayResult = onRelayResult,
         ) { _, event -> verifyAndStore(event) }
+
+    /**
+     * [drainAllPages] for a walk too large to hold: the same paging, verify+store and
+     * cross-relay dedup, but each accepted event is handed to [onEvent] as it arrives and
+     * then dropped — only the dedup set's ids stay in memory. Events come in arrival order
+     * (several relays page at once, so their events interleave), not sorted. A slow [onEvent]
+     * holds the walks back. Returns how many were accepted.
+     */
+    suspend fun streamAllPages(
+        filters: Map<NormalizedRelayUrl, List<Filter>>,
+        idleTimeoutMs: Long = 30_000,
+        maxConcurrentRelays: Int = 8,
+        onRelayResult: ((relay: NormalizedRelayUrl, result: PagedFetchResult) -> Unit)? = null,
+        onEvent: (relay: NormalizedRelayUrl, event: Event) -> Unit,
+    ): Int =
+        client.streamAllPagesFromPoolWithHooks(
+            filters = filters,
+            idleTimeoutMs = idleTimeoutMs,
+            maxConcurrentRelays = maxConcurrentRelays,
+            onRelayResult = onRelayResult,
+        ) { relay, event -> verifyAndStore(event).also { if (it) onEvent(relay, event) } }
 
     /**
      * Publish [request] to [relays], then wait for the FIRST event matching [responseFilter]

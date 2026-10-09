@@ -20,7 +20,7 @@
  */
 package com.vitorpamplona.quartz.nip01Core.relay.client.pool
 
-import com.vitorpamplona.quartz.nip01Core.relay.client.single.IRelayClient
+import com.vitorpamplona.quartz.nip01Core.relay.client.testing.FakeRelayClient
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.ClosedMessage
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.MachineReadablePrefix
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toRelay.Command
@@ -46,24 +46,6 @@ import kotlin.test.assertTrue
  */
 class PoolRequestsRefusalTest {
     private val relay = NormalizedRelayUrl("wss://search.example/")
-
-    private class FakeRelayClient(
-        override val url: NormalizedRelayUrl,
-    ) : IRelayClient {
-        override fun connect() = Unit
-
-        override fun needsToReconnect() = false
-
-        override fun connectAndSyncFiltersIfDisconnected(ignoreRetryDelays: Boolean) = Unit
-
-        override fun isConnected() = true
-
-        override fun sendOrConnectAndSync(cmd: Command) = Unit
-
-        override fun sendIfConnected(cmd: Command) = Unit
-
-        override fun disconnect() = Unit
-    }
 
     private fun plainFilter(kind: Int = 1) = listOf(Filter(kinds = listOf(kind), limit = 10))
 

@@ -23,7 +23,6 @@ package com.vitorpamplona.quartz.nip01Core.relay.client.accessories
 import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.auth.AuthOutcome
 import com.vitorpamplona.quartz.nip01Core.relay.client.auth.DEFAULT_AUTH_GRACE_MS
-import com.vitorpamplona.quartz.nip01Core.relay.client.auth.authSuccessMark
 import com.vitorpamplona.quartz.nip01Core.relay.client.auth.authSuccessMarks
 import com.vitorpamplona.quartz.nip01Core.relay.client.auth.awaitAuthOutcome
 import com.vitorpamplona.quartz.nip01Core.relay.client.auth.hasAuthResponder
@@ -35,6 +34,7 @@ import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.CountMessage
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.CountResult
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.MachineReadablePrefix
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.Message
+import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.NoticeMessage
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip45Count.mergeCountResults
@@ -48,101 +48,19 @@ import kotlinx.coroutines.withTimeoutOrNull
 import kotlin.coroutines.coroutineContext
 
 /**
- * Sends a NIP-45 COUNT query to a single relay and suspends until
- * the result arrives or the timeout expires.
+ * NIP-45 COUNT against one [relay]: the fan-out [count] over a single relay, so it behaves the
+ * same way. An `auth-required:` refusal waits for this client's NIP-42 responder, and the
+ * AUTH's `OK` re-fires the COUNT. A relay that refuses the COUNT (a `CLOSED`, a NOTICE refusing
+ * the verb, see [isCountRejectionNotice]) or cannot be reached returns `null` at once; one that
+ * stays silent, after [idleTimeoutMs].
  *
- * A COUNT exchange is a single response message, so [idleTimeoutMs] here is
- * trivially the package-wide idle-window convention (time since the most
- * recent message): no message can arrive before the one that completes it.
- *
- * A COUNT is gated by NIP-42 exactly like a REQ, and the relay refuses it the same
- * way — `CLOSED auth-required:`. That used to be invisible here (only [CountMessage]
- * was watched), so an auth-gated relay cost the full [idleTimeoutMs] and then returned
- * the same `null` a dead one does. With [pendingOnAuthRequired] the AUTH's `OK` re-fires
- * the COUNT through [INostrClient.syncFilters] and the answer arrives; without a usable
- * AUTH the call gives up as soon as the challenge resolves against us.
- *
- * @param relay Target relay to query.
- * @param filter The filter to count against.
- * @param idleTimeoutMs How long to wait for the response (default 15 s).
- * @return The [CountResult], or `null` on timeout or an unsatisfied auth wall.
+ * @return The [CountResult], or `null` when the relay did not answer one.
  */
 suspend fun INostrClient.count(
     relay: NormalizedRelayUrl,
     filter: Filter,
     idleTimeoutMs: Long = 15_000,
-): CountResult? {
-    val pendingOnAuthRequired = hasAuthResponder()
-    val subId = newSubId()
-    val resultChannel = Channel<CountResult>(UNLIMITED)
-    val authRefusalChannel = Channel<Unit>(UNLIMITED)
-    // Signals "stop waiting, this relay will not answer" — kept apart from
-    // [resultChannel] so an auth wall stays distinguishable from a zero count.
-    val gaveUpChannel = Channel<Unit>(UNLIMITED)
-
-    val listener =
-        object : RelayConnectionListener {
-            override suspend fun onIncomingMessage(
-                relay: IRelayClient,
-                msgStr: String,
-                msg: Message,
-            ) {
-                if (msg is CountMessage && msg.queryId == subId) {
-                    resultChannel.trySend(msg.result)
-                }
-                if (pendingOnAuthRequired &&
-                    msg is ClosedMessage &&
-                    msg.subId == subId &&
-                    MachineReadablePrefix.parse(msg.message) == MachineReadablePrefix.AUTH_REQUIRED
-                ) {
-                    authRefusalChannel.trySend(Unit)
-                }
-            }
-        }
-
-    return try {
-        addConnectionListener(listener)
-
-        val authMark = if (pendingOnAuthRequired) authSuccessMark(relay) else 0
-        count(subId = subId, filters = mapOf(relay to listOf(filter)))
-
-        coroutineScope {
-            val authResolver =
-                launch {
-                    for (ignored in authRefusalChannel) {
-                        if (awaitAuthOutcome(relay, authMark, DEFAULT_AUTH_GRACE_MS, idleTimeoutMs) != AuthOutcome.AUTHENTICATED) {
-                            gaveUpChannel.trySend(Unit)
-                        }
-                        // One resolution is enough: a second refusal after a successful AUTH
-                        // means the relay wants an identity we do not hold, and the idle
-                        // window is then the honest bound.
-                        break
-                    }
-                }
-            val result =
-                withTimeoutOrNull(idleTimeoutMs) {
-                    select<CountResult?> {
-                        resultChannel.onReceive { it }
-                        // select() picks a ready clause at random, so a COUNT that landed
-                        // alongside the give-up could otherwise be thrown away in favour of
-                        // `null`. An answer always beats a verdict about not getting one.
-                        gaveUpChannel.onReceive { resultChannel.tryReceive().getOrNull() }
-                    }
-                }
-            authResolver.cancel()
-            result
-        }
-    } finally {
-        // Every cleanup step belongs in the finally: closing the channel used to
-        // sit after it, so a throw (or cancellation) mid-wait skipped it while the
-        // sibling accessories all cleaned up fully.
-        unsubscribe(subId)
-        removeConnectionListener(listener)
-        resultChannel.close()
-        authRefusalChannel.close()
-        gaveUpChannel.close()
-    }
-}
+): CountResult? = count(mapOf(relay to listOf(filter)), idleTimeoutMs)[relay]
 
 /**
  * Sends NIP-45 COUNT queries to multiple relays in parallel
@@ -158,6 +76,12 @@ suspend fun INostrClient.count(
  * wall-clock bound has `withTimeoutOrNull(ms) { count(...) }` — at the cost of
  * discarding the partial map, which is why this returns whatever arrived instead.
  *
+ * A relay that will not answer stops being waited for at once: a `CLOSED` for its COUNT (an
+ * `auth-required:` one only once this client's NIP-42 responder has failed to satisfy it), a
+ * NOTICE refusing the verb ([isCountRejectionNotice]), or a failed connection. Its key is
+ * absent from the result; an answer it sends later anyway (a reconnect re-fires the COUNT) is
+ * still kept.
+ *
  * @param filters Map of relay -> filter to count.
  * @param idleTimeoutMs Idle window between new responses (default 15 s).
  * @return Map of relay -> [CountResult] for every relay that responded in time.
@@ -169,7 +93,9 @@ suspend fun INostrClient.count(
     if (filters.isEmpty()) return emptyMap()
     val pendingOnAuthRequired = hasAuthResponder()
 
-    val subIdToRelay = mutableMapOf<String, NormalizedRelayUrl>()
+    // Filled before the listener is registered: it reads this map on every CLOSED and COUNT
+    // the shared client receives, from the relays' reader threads.
+    val subIdToRelay = filters.keys.associateBy { newSubId() }
     val resultChannel = Channel<Pair<NormalizedRelayUrl, CountResult>>(UNLIMITED)
     val authRefusalChannel = Channel<NormalizedRelayUrl>(UNLIMITED)
     // Relays that met a NIP-42 wall we could not get over. They are counted as
@@ -189,10 +115,24 @@ suspend fun INostrClient.count(
                     val relayUrl = subIdToRelay[msg.queryId] ?: return
                     resultChannel.trySend(relayUrl to msg.result)
                 }
-                if (pendingOnAuthRequired && msg is ClosedMessage && MachineReadablePrefix.parse(msg.message) == MachineReadablePrefix.AUTH_REQUIRED) {
+                if (msg is ClosedMessage) {
                     val relayUrl = subIdToRelay[msg.subId] ?: return
-                    authRefusalChannel.trySend(relayUrl)
+                    if (pendingOnAuthRequired && MachineReadablePrefix.parse(msg.message) == MachineReadablePrefix.AUTH_REQUIRED) {
+                        authRefusalChannel.trySend(relayUrl)
+                    } else {
+                        gaveUpChannel.trySend(relayUrl)
+                    }
                 }
+                if (msg is NoticeMessage && relay.url in filters && isCountRejectionNotice(msg.message)) {
+                    gaveUpChannel.trySend(relay.url)
+                }
+            }
+
+            override fun onCannotConnect(
+                relay: IRelayClient,
+                errorMessage: String,
+            ) {
+                if (relay.url in filters) gaveUpChannel.trySend(relay.url)
             }
         }
 
@@ -202,10 +142,8 @@ suspend fun INostrClient.count(
         addConnectionListener(listener)
 
         val authMarks = if (pendingOnAuthRequired) authSuccessMarks(filters.keys) else emptyMap()
-        filters.forEach { (relay, filterList) ->
-            val subId = newSubId()
-            subIdToRelay[subId] = relay
-            count(subId = subId, filters = mapOf(relay to filterList))
+        subIdToRelay.forEach { (subId, relay) ->
+            count(subId = subId, filters = mapOf(relay to filters.getValue(relay)))
         }
 
         coroutineScope {
@@ -241,8 +179,12 @@ suspend fun INostrClient.count(
                                 select<Boolean> {
                                     resultChannel.onReceive { (relay, result) ->
                                         // put() returns the previous value: null means this relay
-                                        // had not answered yet, i.e. real progress.
-                                        results.put(relay, result) == null
+                                        // had not answered yet, i.e. real progress — unless it
+                                        // already counted as given up (a CLOSED, a NOTICE or a
+                                        // failed connection, then the answer after a reconnect):
+                                        // keep the answer, but count the relay once, or the loop
+                                        // ends before the last relay answers.
+                                        results.put(relay, result) == null && !gaveUp.remove(relay)
                                     }
                                     gaveUpChannel.onReceive { relay ->
                                         relay !in results && gaveUp.add(relay)

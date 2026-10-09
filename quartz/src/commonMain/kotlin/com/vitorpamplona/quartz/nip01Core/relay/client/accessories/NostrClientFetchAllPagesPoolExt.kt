@@ -62,7 +62,12 @@ import kotlinx.coroutines.sync.Semaphore
  * @param onRelayResult optional `(relay, result)` hook with each relay's full
  *                     [PagedFetchResult]: why its walk ended and, for a refusal, the
  *                     relay's own [PagedFetchResult.message].
- * @param onEvent      called once per delivered event with its source relay.
+ * @param pageSize     a per-`REQ` cap every relay is known to enforce, or null to learn each
+ *                     relay's from its refusals — see [fetchAllPages].
+ * @param throttleBackoff how each relay's walk re-asks a page its relay throttled empty —
+ *                     see [fetchAllPages] and [PageRetryBackoff].
+ * @param onEvent      called once per delivered event with its source relay. It may suspend:
+ *                     a relay's walk waits for it before taking its next page.
  */
 suspend fun INostrClient.fetchAllPagesFromPool(
     filters: Map<NormalizedRelayUrl, List<Filter>>,
@@ -72,7 +77,9 @@ suspend fun INostrClient.fetchAllPagesFromPool(
     onRelayStart: ((relay: NormalizedRelayUrl) -> Unit)? = null,
     onRelayComplete: ((relay: NormalizedRelayUrl, totalEvents: Int) -> Unit)? = null,
     onRelayResult: ((relay: NormalizedRelayUrl, result: PagedFetchResult) -> Unit)? = null,
-    onEvent: (event: Event, relay: NormalizedRelayUrl) -> Unit,
+    pageSize: Int? = null,
+    throttleBackoff: PageRetryBackoff = PageRetryBackoff.DEFAULT,
+    onEvent: suspend (event: Event, relay: NormalizedRelayUrl) -> Unit,
 ) {
     if (filters.isEmpty()) return
     val semaphore = Semaphore(maxConcurrentRelays.coerceAtLeast(1))
@@ -89,6 +96,8 @@ suspend fun INostrClient.fetchAllPagesFromPool(
                             filters = filtersForRelay,
                             idleTimeoutMs = idleTimeoutMs,
                             onNewPage = onNewPage?.let { cb -> { until -> cb(until, relay) } },
+                            pageSize = pageSize,
+                            throttleBackoff = throttleBackoff,
                         ) { event -> onEvent(event, relay) }
                     onRelayComplete?.invoke(relay, result.downloaded)
                     onRelayResult?.invoke(relay, result)

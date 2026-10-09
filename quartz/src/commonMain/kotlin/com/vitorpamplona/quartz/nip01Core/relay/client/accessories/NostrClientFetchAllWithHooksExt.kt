@@ -129,9 +129,16 @@ suspend fun INostrClient.fetchAllWithHooks(
     // listener cannot wait on the AUTH itself — it runs on the relay's reader thread and
     // must not block it — so it only reports, and the resolver does the waiting.
     val authRefusalChannel = Channel<Pair<NormalizedRelayUrl, String>>(UNLIMITED)
+    // Relays that refused a filter's `limit` (`blocked: limit too high: 1000 (max 500)`), with the
+    // subscription that was refused, handed to the resolver below to be re-asked at the limit they state.
+    val limitRefusalChannel = Channel<LimitRefusal>(UNLIMITED)
+    // Subscriptions opened to re-ask a relay at a lower limit; closed with the main one.
+    val retrySubIds = mutableListOf<String>()
     val remaining = filters.keys.toMutableSet()
     val doneReasons = HashMap<NormalizedRelayUrl, String>()
-    val listener =
+
+    // One listener per subscription, so a refusal says which REQ it refused.
+    fun listenerFor(subId: String) =
         object : SubscriptionListener {
             override suspend fun onEvent(
                 event: Event,
@@ -172,6 +179,13 @@ suspend fun INostrClient.fetchAllWithHooks(
                     doneChannel.trySend(relay to "$DONE_REASON_AUTH_REFUSED:$message")
                     return
                 }
+                // A refusal of a filter's `limit`, not of the query: re-ask that relay lower
+                // rather than come back empty for what a relay clamping its pages would serve.
+                val sent = filters[relay]
+                if (sent != null && lowerLimitsAfterRefusal(message, sent.map { it.limit }) != null) {
+                    limitRefusalChannel.trySend(LimitRefusal(relay, subId, message))
+                    return
+                }
                 doneChannel.trySend(relay to "closed:$message")
             }
 
@@ -191,7 +205,7 @@ suspend fun INostrClient.fetchAllWithHooks(
     val collected = mutableListOf<Pair<NormalizedRelayUrl, Event>>()
     try {
         coroutineScope {
-            subscribe(subscriptionId, filters, listener)
+            subscribe(subscriptionId, filters, listenerFor(subscriptionId))
             // Turns each `auth-required:` refusal into a terminal reason as soon as the
             // AUTH resolves against us, so an auth wall costs a grace window instead of a
             // full idle window — and, unlike the timeout, says what it hit.
@@ -215,6 +229,44 @@ suspend fun INostrClient.fetchAllWithHooks(
                     }
                 } else {
                     null
+                }
+            // Re-asks a relay that refused a filter's `limit`, on its own subscription, with the
+            // filters above the limit its message states brought down to it (else the largest
+            // halved) — see [lowerLimitsAfterRefusal]. Each refusal comes back
+            // at once, and each re-ask lowers the limit, so it ends; a refusal that lowers nothing
+            // more ends the relay as `closed:`, as any other refusal does.
+            val limitResolver =
+                launch {
+                    val current = HashMap<NormalizedRelayUrl, List<Filter>>()
+                    val attempts = HashMap<NormalizedRelayUrl, Int>()
+                    val retryOf = HashMap<NormalizedRelayUrl, String>()
+                    // Relays this resolver already ended: a refusal re-sent after that (an AUTH or
+                    // a reconnect replays the refused subscription) must not open another re-ask.
+                    val finished = HashSet<NormalizedRelayUrl>()
+                    for ((relay, subId, message) in limitRefusalChannel) {
+                        if (relay in finished) continue
+                        // Only the REQ open for this relay counts: an AUTH or a reconnect replays the
+                        // ones already refused, and their refusals say nothing about the re-ask in flight.
+                        if (subId != (retryOf[relay] ?: subscriptionId)) continue
+                        val base = current[relay] ?: filters[relay] ?: continue
+                        val limits = lowerLimitsAfterRefusal(message, base.map { it.limit })
+                        val attempt = (attempts[relay] ?: 0) + 1
+                        attempts[relay] = attempt
+                        if (limits == null || attempt > MAX_LIMIT_RETRIES) {
+                            finished.add(relay)
+                            doneChannel.trySend(relay to "closed:$message")
+                            continue
+                        }
+                        val lowered = base.mapIndexed { i, f -> if (limits[i] == f.limit) f else f.copy(limit = limits[i]) }
+                        current[relay] = lowered
+                        // One re-ask open per relay: the one it refused is closed first, so a replay
+                        // of it cannot serve the same events a second time.
+                        retryOf[relay]?.let { unsubscribe(it) }
+                        val retryId = newSubId()
+                        retryOf[relay] = retryId
+                        retrySubIds.add(retryId)
+                        subscribe(retryId, mapOf(relay to lowered), listenerFor(retryId))
+                    }
                 }
             // Idle-window wait. Two structural rules:
             //
@@ -281,17 +333,30 @@ suspend fun INostrClient.fetchAllWithHooks(
             // Outlives the loop by design (it parks on an AUTH that may never settle), so
             // the scope only completes if we end it.
             authResolver?.cancel()
+            limitResolver.cancel()
         }
     } finally {
         unsubscribe(subscriptionId)
+        retrySubIds.forEach { unsubscribe(it) }
         eventChannel.close()
         doneChannel.close()
         authRefusalChannel.close()
+        limitRefusalChannel.close()
     }
     // `remaining` is empty unless the idle window elapsed with relays still pending, so
     // it IS the stalled set — the loop only leaves entries behind when it gives up on them.
     return FetchAllResult(collected, doneReasons, remaining.toSet())
 }
+
+/** A relay's refusal of the `limit` on subscription [subId]. */
+private data class LimitRefusal(
+    val relay: NormalizedRelayUrl,
+    val subId: String,
+    val message: String,
+)
+
+/** How many times [fetchAllWithHooks] re-asks one relay at a lower limit before taking the refusal. */
+private const val MAX_LIMIT_RETRIES = 6
 
 /** The terminal reason recorded when a relay finished serving a subscription normally. */
 const val DONE_REASON_EOSE = "eose"
@@ -349,14 +414,47 @@ suspend fun INostrClient.fetchAllPagesFromPoolWithHooks(
     idleTimeoutMs: Long = 30_000L,
     maxConcurrentRelays: Int = 8,
     onRelayResult: ((relay: NormalizedRelayUrl, result: PagedFetchResult) -> Unit)? = null,
+    pageSize: Int? = null,
+    throttleBackoff: PageRetryBackoff = PageRetryBackoff.DEFAULT,
     onEvent: suspend (relay: NormalizedRelayUrl, event: Event) -> Boolean,
 ): List<Pair<NormalizedRelayUrl, Event>> {
-    if (filters.isEmpty()) return emptyList()
     val collected = mutableListOf<Pair<NormalizedRelayUrl, Event>>()
-    // fetchAllPagesFromPool's onEvent can't suspend, but the hook does — bridge
-    // through a channel and run the hook single-threaded in one consumer so its
-    // side effects (e.g. store writes) stay serialized.
-    val eventChannel = Channel<Pair<NormalizedRelayUrl, Event>>(UNLIMITED)
+    streamAllPagesFromPoolWithHooks(filters, idleTimeoutMs, maxConcurrentRelays, onRelayResult, pageSize, throttleBackoff) { relay, event ->
+        onEvent(relay, event).also { accepted -> if (accepted) collected.add(relay to event) }
+    }
+    return collected
+}
+
+/**
+ * [fetchAllPagesFromPoolWithHooks] without the result list: the same paging, the same
+ * single-consumer hook and the same cross-relay dedup, but nothing is kept beyond the
+ * dedup set's ids — an accepted event is the hook's to keep, write out or drop. Use it
+ * for a walk too large to hold (a relay's whole history for a broad filter): memory is
+ * O(distinct ids), not O(events). Events reach [onEvent] in arrival order, NOT sorted:
+ * up to [maxConcurrentRelays] relays page at once, so their events interleave.
+ *
+ * A slow [onEvent] holds the walk back: events reach it through a small bounded buffer, and a
+ * relay whose events are waiting does not take its next page. Without that, a consumer slower
+ * than the network (signature checks, store writes, a slow stdout pipe) let every page of every
+ * relay pile up on the heap, which is the out-of-memory a streamed walk exists to avoid.
+ *
+ * @return how many distinct events [onEvent] accepted.
+ */
+suspend fun INostrClient.streamAllPagesFromPoolWithHooks(
+    filters: Map<NormalizedRelayUrl, List<Filter>>,
+    idleTimeoutMs: Long = 30_000L,
+    maxConcurrentRelays: Int = 8,
+    onRelayResult: ((relay: NormalizedRelayUrl, result: PagedFetchResult) -> Unit)? = null,
+    pageSize: Int? = null,
+    throttleBackoff: PageRetryBackoff = PageRetryBackoff.DEFAULT,
+    onEvent: suspend (relay: NormalizedRelayUrl, event: Event) -> Boolean,
+): Int {
+    if (filters.isEmpty()) return 0
+    var accepted = 0
+    // Bridge through a channel and run the hook single-threaded in one consumer so its side
+    // effects (e.g. store writes) stay serialized. Bounded, and sent to with a suspending send,
+    // so a consumer that falls behind stalls the walks feeding it (see above).
+    val eventChannel = Channel<Pair<NormalizedRelayUrl, Event>>(STREAM_BUFFER)
     coroutineScope {
         val consumer =
             launch {
@@ -371,7 +469,7 @@ suspend fun INostrClient.fetchAllPagesFromPoolWithHooks(
                     if (seen.contains(event.id)) continue
                     if (onEvent(relay, event)) {
                         seen.add(event.id)
-                        collected.add(relay to event)
+                        accepted++
                     }
                 }
             }
@@ -381,11 +479,19 @@ suspend fun INostrClient.fetchAllPagesFromPoolWithHooks(
                 idleTimeoutMs = idleTimeoutMs,
                 maxConcurrentRelays = maxConcurrentRelays,
                 onRelayResult = onRelayResult,
-            ) { event, relay -> eventChannel.trySend(relay to event) }
+                pageSize = pageSize,
+                throttleBackoff = throttleBackoff,
+            ) { event, relay -> eventChannel.send(relay to event) }
         } finally {
             eventChannel.close()
         }
         consumer.join()
     }
-    return collected
+    return accepted
 }
+
+/**
+ * How many accepted-but-unconsumed events [streamAllPagesFromPoolWithHooks] holds before the
+ * walks feeding it wait for its consumer: enough to smooth over a burst, a page's worth at most.
+ */
+private const val STREAM_BUFFER = 256

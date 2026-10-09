@@ -20,14 +20,13 @@
  */
 package com.vitorpamplona.quartz.nip66RelayMonitor.reachability
 
-import com.vitorpamplona.quartz.nip01Core.relay.client.single.IRelayClient
+import com.vitorpamplona.quartz.nip01Core.relay.client.testing.FakeRelayClient
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.AuthMessage
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.ClosedMessage
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.EoseMessage
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.NoticeMessage
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.OkMessage
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toRelay.CloseCmd
-import com.vitorpamplona.quartz.nip01Core.relay.commands.toRelay.Command
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toRelay.ReqCmd
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
@@ -47,24 +46,6 @@ import kotlin.test.assertTrue
 class RelayObserverTest {
     private val url = RelayUrlNormalizer.normalize("wss://relay.example")
     private val other = RelayUrlNormalizer.normalize("wss://other.example")
-
-    private class FakeRelayClient(
-        override val url: NormalizedRelayUrl,
-    ) : IRelayClient {
-        override fun connect() = Unit
-
-        override fun needsToReconnect() = false
-
-        override fun connectAndSyncFiltersIfDisconnected(ignoreRetryDelays: Boolean) = Unit
-
-        override fun isConnected() = true
-
-        override fun sendOrConnectAndSync(cmd: Command) = Unit
-
-        override fun sendIfConnected(cmd: Command) = Unit
-
-        override fun disconnect() = Unit
-    }
 
     private fun client(u: NormalizedRelayUrl) = FakeRelayClient(u)
 
