@@ -24,13 +24,12 @@ import com.vitorpamplona.quartz.nip01Core.crypto.KeyPair
 import com.vitorpamplona.quartz.nip01Core.relay.client.EmptyNostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.listeners.RelayConnectionListener
-import com.vitorpamplona.quartz.nip01Core.relay.client.single.IRelayClient
+import com.vitorpamplona.quartz.nip01Core.relay.client.testing.FakeRelayClient
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.AuthMessage
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.ClosedMessage
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.MachineReadablePrefix
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.OkMessage
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toRelay.AuthCmd
-import com.vitorpamplona.quartz.nip01Core.relay.commands.toRelay.Command
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerInternal
 import kotlinx.coroutines.CoroutineScope
@@ -63,30 +62,6 @@ class RelayAuthenticatorReauthOnClosedTest {
         override fun addConnectionListener(listener: RelayConnectionListener) {
             captured = listener
         }
-    }
-
-    private class FakeRelayClient(
-        override val url: NormalizedRelayUrl,
-    ) : IRelayClient {
-        val sent = mutableListOf<Command>()
-
-        override fun connect() = Unit
-
-        override fun needsToReconnect() = false
-
-        override fun connectAndSyncFiltersIfDisconnected(ignoreRetryDelays: Boolean) = Unit
-
-        override fun isConnected() = true
-
-        override fun sendOrConnectAndSync(cmd: Command) {
-            sent.add(cmd)
-        }
-
-        override fun sendIfConnected(cmd: Command) {
-            sent.add(cmd)
-        }
-
-        override fun disconnect() = Unit
     }
 
     private fun authedPubKeys(relay: FakeRelayClient) = relay.sent.filterIsInstance<AuthCmd>().map { it.event.pubKey }

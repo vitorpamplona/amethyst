@@ -26,9 +26,8 @@ import com.vitorpamplona.quartz.nip01Core.relay.client.EmptyNostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.listeners.RelayConnectionListener
 import com.vitorpamplona.quartz.nip01Core.relay.client.reqs.SubscriptionListener
-import com.vitorpamplona.quartz.nip01Core.relay.client.single.IRelayClient
+import com.vitorpamplona.quartz.nip01Core.relay.client.testing.FakeRelayClient
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.OkMessage
-import com.vitorpamplona.quartz.nip01Core.relay.commands.toRelay.Command
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
@@ -94,24 +93,6 @@ class RelayProberFlowTest {
             val ok = OkMessage(published!!.id, success, message)
             connListeners.toList().forEach { it.onIncomingMessage(FakeRelayClient(relay), "", ok) }
         }
-    }
-
-    private class FakeRelayClient(
-        override val url: NormalizedRelayUrl,
-    ) : IRelayClient {
-        override fun connect() = Unit
-
-        override fun needsToReconnect() = false
-
-        override fun connectAndSyncFiltersIfDisconnected(ignoreRetryDelays: Boolean) = Unit
-
-        override fun isConnected() = true
-
-        override fun sendOrConnectAndSync(cmd: Command) = Unit
-
-        override fun sendIfConnected(cmd: Command) = Unit
-
-        override fun disconnect() = Unit
     }
 
     private val fast = RelayUrlNormalizer.normalize("wss://fast.example.com")

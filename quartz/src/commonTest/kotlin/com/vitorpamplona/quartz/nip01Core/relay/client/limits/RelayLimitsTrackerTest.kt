@@ -23,10 +23,9 @@ package com.vitorpamplona.quartz.nip01Core.relay.client.limits
 import com.vitorpamplona.quartz.nip01Core.relay.client.EmptyNostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.listeners.RelayConnectionListener
-import com.vitorpamplona.quartz.nip01Core.relay.client.single.IRelayClient
+import com.vitorpamplona.quartz.nip01Core.relay.client.testing.FakeRelayClient
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.EoseMessage
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.LimitsMessage
-import com.vitorpamplona.quartz.nip01Core.relay.commands.toRelay.Command
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -42,24 +41,6 @@ class RelayLimitsTrackerTest {
         override fun addConnectionListener(listener: RelayConnectionListener) {
             captured = listener
         }
-    }
-
-    private class FakeRelayClient(
-        override val url: NormalizedRelayUrl,
-    ) : IRelayClient {
-        override fun connect() = Unit
-
-        override fun needsToReconnect() = false
-
-        override fun connectAndSyncFiltersIfDisconnected(ignoreRetryDelays: Boolean) = Unit
-
-        override fun isConnected() = true
-
-        override fun sendOrConnectAndSync(cmd: Command) = Unit
-
-        override fun sendIfConnected(cmd: Command) = Unit
-
-        override fun disconnect() = Unit
     }
 
     private fun setup(): Pair<RelayLimitsTracker, RelayConnectionListener> {

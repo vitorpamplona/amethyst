@@ -23,8 +23,7 @@ package com.vitorpamplona.quartz.nip01Core.relay.client.auth
 import com.vitorpamplona.quartz.nip01Core.relay.client.EmptyNostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.listeners.RelayConnectionListener
-import com.vitorpamplona.quartz.nip01Core.relay.client.single.IRelayClient
-import com.vitorpamplona.quartz.nip01Core.relay.commands.toRelay.Command
+import com.vitorpamplona.quartz.nip01Core.relay.client.testing.FakeRelayClient
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
@@ -58,24 +57,6 @@ class RelayAuthenticatorConcurrencyTest {
         }
     }
 
-    private class FakeRelayClient(
-        override val url: NormalizedRelayUrl,
-    ) : IRelayClient {
-        override fun connect() = Unit
-
-        override fun needsToReconnect() = false
-
-        override fun connectAndSyncFiltersIfDisconnected(ignoreRetryDelays: Boolean) = Unit
-
-        override fun isConnected() = false
-
-        override fun sendOrConnectAndSync(cmd: Command) = Unit
-
-        override fun sendIfConnected(cmd: Command) = Unit
-
-        override fun disconnect() = Unit
-    }
-
     @Test
     fun concurrentConnectingAndDisconnecting_doesNotCorruptInternalState() {
         runBlocking {
@@ -98,7 +79,7 @@ class RelayAuthenticatorConcurrencyTest {
 
                 val relays =
                     (0 until 256).map {
-                        FakeRelayClient(NormalizedRelayUrl("wss://relay-$burst-$it.example/"))
+                        FakeRelayClient(NormalizedRelayUrl("wss://relay-$burst-$it.example/"), connected = false)
                     }
 
                 withContext(Dispatchers.IO) {
