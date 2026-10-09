@@ -26,6 +26,7 @@ import androidx.compose.foundation.pager.PagerState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
@@ -35,6 +36,8 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
 import androidx.compose.ui.input.nestedscroll.NestedScrollSource
 import androidx.compose.ui.input.nestedscroll.nestedScroll
+import androidx.compose.ui.input.pointer.PointerEventPass
+import androidx.compose.ui.input.pointer.PointerEventType
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalDensity
@@ -55,6 +58,10 @@ fun Modifier.zonedDrawerSwipe(
         var widthPx by remember { mutableFloatStateOf(1f) }
         var gestureStartX by remember { mutableFloatStateOf(0f) }
         var gestureStartPage by remember { mutableIntStateOf(0) }
+
+        // Wheel and trackpad scrolls reach the connection as UserInput too, but with no press
+        // behind them; they belong to the pager, until the next press starts a swipe.
+        var wheelScrolling by remember { mutableStateOf(false) }
 
         val density = LocalDensity.current
         val commit =
@@ -78,7 +85,7 @@ fun Modifier.zonedDrawerSwipe(
                         available: Offset,
                         source: NestedScrollSource,
                     ): Offset {
-                        if (source != NestedScrollSource.UserInput) return Offset.Zero
+                        if (source != NestedScrollSource.UserInput || wheelScrolling) return Offset.Zero
                         if (commit.claimed) return dragDrawer(available.x)
 
                         // Non-first pages in the drawer zone: intercept before the
@@ -94,7 +101,7 @@ fun Modifier.zonedDrawerSwipe(
                         available: Offset,
                         source: NestedScrollSource,
                     ): Offset {
-                        if (source != NestedScrollSource.UserInput) return Offset.Zero
+                        if (source != NestedScrollSource.UserInput || wheelScrolling) return Offset.Zero
 
                         // First page: claim the gesture only with unconsumed right-swipe
                         // so child LazyRows can scroll first.
@@ -119,7 +126,18 @@ fun Modifier.zonedDrawerSwipe(
                     val down = awaitFirstDown(requireUnconsumed = false)
                     gestureStartX = down.position.x
                     gestureStartPage = pagerState.currentPage
+                    wheelScrolling = false
                     commit.reset()
+                }
+            }.pointerInput(commit) {
+                // Initial pass: flag the scroll before the pager acts on it.
+                awaitPointerEventScope {
+                    while (true) {
+                        if (awaitPointerEvent(PointerEventPass.Initial).type == PointerEventType.Scroll) {
+                            wheelScrolling = true
+                            commit.reset()
+                        }
+                    }
                 }
             }.nestedScroll(connection)
     }
