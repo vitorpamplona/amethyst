@@ -146,8 +146,7 @@ class NostrClientFetchAllPagesMultiFilterTest {
     fun aRefusedFilterIsNotHiddenBehindAMetLimit() =
         runBlocking {
             // Every REQ for the reactions is refused outright.
-            lateinit var client: FakePagingRelay
-            client = FakePagingRelay(this, dense + sparse, maxLimit = 50, closeWith = { req -> if (client.requests[req - 1].single().kinds == listOf(7)) "blocked: no reactions here" else null })
+            val client = FakePagingRelay(this, dense + sparse, maxLimit = 50, closeWhen = { filters -> if (filters.single().kinds == listOf(7)) "blocked: no reactions here" else null })
 
             val result = client.fetchAllPages(relay, listOf(Filter(kinds = listOf(1), limit = 60), Filter(kinds = listOf(7))), idleTimeoutMs = 2_000) { }
 

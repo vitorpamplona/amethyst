@@ -38,10 +38,12 @@ import java.util.Collections
  * Two knobs make it misbehave the ways real relays do:
  *  - [refuseAboveMax]: answer a `limit` above [maxLimit] with purplepag.es's CLOSED instead
  *    of clamping it.
- *  - [closeWith]: given the 1-based REQ number, a CLOSED reason to answer it with instead.
+ *  - [closeWith]: given the 1-based REQ number, a CLOSED reason to answer it with instead;
+ *    [closeWhen] does the same given what the REQ asked for.
  *  - [silentOn]: given the 1-based REQ number, whether to leave it unanswered entirely.
  *  - [answer]: given the 1-based REQ number and the honest page, return what the relay
- *    actually sends — e.g. a throttled relay's shrunken or empty page.
+ *    actually sends — e.g. a throttled relay's shrunken or empty page. [answerFor] does the
+ *    same and also sees the REQ's filters.
  *
  * Every REQ's filters are recorded in [requests], so a test can assert what went on the wire.
  */
@@ -53,7 +55,9 @@ class FakePagingRelay(
     private val refuseAboveMax: Boolean = false,
     private val statesMaxInRefusal: Boolean = true,
     private val closeWith: (req: Int) -> String? = { null },
+    private val closeWhen: (filters: List<Filter>) -> String? = { null },
     private val silentOn: (req: Int) -> Boolean = { false },
+    private val answerFor: ((req: Int, filters: List<Filter>, honest: List<Event>) -> List<Event>)? = null,
     private val answer: (req: Int, honest: List<Event>) -> List<Event> = { _, honest -> honest },
 ) : INostrClient by EmptyNostrClient() {
     val requests: MutableList<List<Filter>> = Collections.synchronizedList(mutableListOf())
@@ -75,7 +79,7 @@ class FakePagingRelay(
             }
             // A relay that takes the REQ and never answers it: no event, no EOSE, no CLOSED.
             if (silentOn(req)) return@launch
-            closeWith(req)?.let { reason ->
+            (closeWith(req) ?: closeWhen(relayFilters))?.let { reason ->
                 listener?.onClosed(reason, relay, relayFilters)
                 return@launch
             }
@@ -88,7 +92,8 @@ class FakePagingRelay(
                             .take(minOf(f.limit ?: defaultLimit, maxLimit))
                     }.distinctBy { it.id }
                     .sortedByDescending { it.createdAt }
-            answer(req, honest).forEach { listener?.onEvent(it, false, relay, relayFilters) }
+            val sent = answerFor?.invoke(req, relayFilters, honest) ?: answer(req, honest)
+            sent.forEach { listener?.onEvent(it, false, relay, relayFilters) }
             listener?.onEose(relay, relayFilters)
         }
     }

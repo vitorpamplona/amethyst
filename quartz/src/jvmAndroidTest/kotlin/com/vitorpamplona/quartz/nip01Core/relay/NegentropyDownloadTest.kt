@@ -24,17 +24,13 @@ import com.vitorpamplona.geode.InProcessRelays
 import com.vitorpamplona.geode.fixtures.SyntheticEvents
 import com.vitorpamplona.geode.testing.preload
 import com.vitorpamplona.quartz.nip01Core.core.Event
-import com.vitorpamplona.quartz.nip01Core.relay.client.EmptyNostrClient
-import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.NostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.DownloadPace
 import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.NegentropySyncResult
 import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.fetchByIds
 import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.negentropySync
-import com.vitorpamplona.quartz.nip01Core.relay.client.reqs.SubscriptionListener
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toRelay.ReqCmd
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
-import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.relay.server.policies.IRelayPolicy
 import com.vitorpamplona.quartz.nip01Core.relay.server.policies.LimitsPolicy
 import com.vitorpamplona.quartz.nip01Core.relay.server.policies.PassThroughPolicy
@@ -46,7 +42,6 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
-import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeout
 import kotlin.test.Test
@@ -242,33 +237,6 @@ class NegentropyDownloadTest {
             assertEquals(0, got.size)
             assertEquals(4, client.requests, "the first ask and three re-asks")
         }
-
-    /** Drops the connection under its first [drops] `REQ`s, then serves [corpus] by id. */
-    private class DropsFirst(
-        private val scope: CoroutineScope,
-        private val corpus: List<Event>,
-        private val drops: Int,
-        private val extra: List<Event> = emptyList(),
-    ) : INostrClient by EmptyNostrClient() {
-        @Volatile var requests = 0
-
-        override fun subscribe(
-            subId: String,
-            filters: Map<NormalizedRelayUrl, List<Filter>>,
-            listener: SubscriptionListener?,
-        ) {
-            val (relay, relayFilters) = filters.entries.single()
-            val req = ++requests
-            scope.launch {
-                if (req <= drops) {
-                    listener?.onCannotConnect(relay, "WebSocket Failure: EOFException", relayFilters)
-                } else {
-                    (corpus.filter { e -> relayFilters.any { it.match(e) } } + extra).forEach { listener?.onEvent(it, false, relay, relayFilters) }
-                    listener?.onEose(relay, relayFilters)
-                }
-            }
-        }
-    }
 
     private suspend fun sync(
         count: Int,

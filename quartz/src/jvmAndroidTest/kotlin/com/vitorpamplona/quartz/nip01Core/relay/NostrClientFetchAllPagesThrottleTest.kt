@@ -376,17 +376,16 @@ class NostrClientFetchAllPagesThrottleTest {
             // the damus trickle with a second filter. The same filters stay productive, so the
             // evidence holds and the walk pauses instead of hammering the relay.
             val notes = FakePagingRelay.corpus(1_000)
-            lateinit var client: FakePagingRelay
-            client =
-                FakePagingRelay(this, notes + reactions(1_000, everySeconds = 1), maxLimit = 500) { req, honest ->
+            val client =
+                FakePagingRelay(this, notes + reactions(1_000, everySeconds = 1), maxLimit = 500, answerFor = { req, filters, honest ->
                     if (req <= 2) {
                         honest
                     } else {
                         // Past the boundary second (its events were delivered already): four events.
-                        val until = client.requests[req - 1].first().until
+                        val until = filters.first().until
                         honest.filter { until == null || it.createdAt < until }.take(4)
                     }
-                }
+                })
             val recorder = RecordingBackoff()
 
             val result =
@@ -458,12 +457,11 @@ class NostrClientFetchAllPagesThrottleTest {
             // 401 events: a page of 300, a short one of 101 down to `since`, then the floor.
             val since = 999_600L
             val recorder = RecordingBackoff()
-            lateinit var client: FakePagingRelay
-            client =
-                FakePagingRelay(this, FakePagingRelay.corpus(1_000), maxLimit = 300) { req, honest ->
-                    val filter = client.requests[req - 1].single()
+            val client =
+                FakePagingRelay(this, FakePagingRelay.corpus(1_000), maxLimit = 300, answerFor = { _, filters, honest ->
+                    val filter = filters.single()
                     if (filter.until != null && filter.until == filter.since) emptyList() else honest
-                }
+                })
 
             val result = client.fetchAllPages(relay, listOf(Filter(kinds = listOf(1), since = since)), idleTimeoutMs = 2_000, throttleBackoff = recorder.backoff) { }
 
