@@ -53,6 +53,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import com.vitorpamplona.amethyst.commons.calendars.create.NewCalendarCollectionViewModel
+import com.vitorpamplona.amethyst.commons.calendars.create.OwnedAppointmentSummary
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.calendar_all_day
 import com.vitorpamplona.amethyst.commons.resources.calendar_collection_delete
@@ -83,7 +85,7 @@ fun NewCalendarCollectionScreen(
     editDTag: String? = null,
 ) {
     val vm: NewCalendarCollectionViewModel = rememberViewModel { NewCalendarCollectionViewModel() }
-    vm.init(accountViewModel, editDTag)
+    vm.init(accountViewModel.account, editDTag)
 
     Scaffold(
         topBar = {
@@ -239,9 +241,10 @@ private fun AppointmentPickerRow(
     val allDayLabel = stringRes(Res.string.calendar_all_day)
     val whenLabel =
         remember(summary.address, summary.startSeconds, summary.isAllDay, allDayLabel) {
+            val startSeconds = summary.startSeconds
             when {
                 summary.isAllDay -> allDayLabel
-                summary.startSeconds != null -> formatLongDate(summary.startSeconds)
+                startSeconds != null -> formatLongDate(startSeconds)
                 else -> "—"
             }
         }

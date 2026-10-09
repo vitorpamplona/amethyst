@@ -103,6 +103,11 @@ import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.util.formatGrouped
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
+import com.vitorpamplona.amethyst.commons.wallet.wizard.AdoptState
+import com.vitorpamplona.amethyst.commons.wallet.wizard.CashuWalletWizardViewModel
+import com.vitorpamplona.amethyst.commons.wallet.wizard.FoundWallet
+import com.vitorpamplona.amethyst.commons.wallet.wizard.RecoveryState
+import com.vitorpamplona.amethyst.commons.wallet.wizard.WizardState
 
 /**
  * Find-or-create wizard for the Cashu wallet. Reached from the wallet screen's

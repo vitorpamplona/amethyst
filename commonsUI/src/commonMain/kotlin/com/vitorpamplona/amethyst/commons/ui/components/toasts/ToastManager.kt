@@ -22,6 +22,8 @@ package com.vitorpamplona.amethyst.commons.ui.components.toasts
 
 import androidx.compose.runtime.Stable
 import com.vitorpamplona.amethyst.commons.model.User
+import com.vitorpamplona.amethyst.commons.notices.UserNotice
+import com.vitorpamplona.amethyst.commons.notices.UserNoticeSink
 import com.vitorpamplona.amethyst.commons.ui.components.toasts.multiline.MultiErrorToastMsg
 import com.vitorpamplona.amethyst.commons.ui.components.toasts.multiline.UserBasedErrorMessage
 import com.vitorpamplona.amethyst.commons.util.KmpLock
@@ -36,7 +38,7 @@ import org.jetbrains.compose.resources.StringResource
  * is dropped, and the queue is capped so a burst of failures can't stack up dialogs.
  */
 @Stable
-class ToastManager {
+class ToastManager : UserNoticeSink {
     /** The message on screen, or null. */
     val toasts = MutableStateFlow<ToastMsg?>(null)
 
@@ -57,6 +59,11 @@ class ToastManager {
                 pending.size < MAX_PENDING -> pending.addLast(msg)
             }
         }
+    }
+
+    /** Headless code reports here through [UserNoticeSink]; the dialog words the notice. */
+    override fun notify(notice: UserNotice) {
+        show(NoticeToastMsg(notice))
     }
 
     fun toast(

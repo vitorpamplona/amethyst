@@ -53,6 +53,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.unit.dp
+import com.vitorpamplona.amethyst.commons.calendars.create.NewCalendarEventViewModel
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.resources.Res
@@ -87,7 +88,6 @@ import com.vitorpamplona.amethyst.commons.ui.note.UsernameDisplay
 import com.vitorpamplona.amethyst.commons.ui.note.creators.userSuggestions.ShowUserSuggestionList
 import com.vitorpamplona.amethyst.commons.ui.note.creators.userSuggestions.UserSuggestionState
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.calendars.create.CalendarDateTimePickerButton
-import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.calendars.create.NewCalendarEventViewModel
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.Size30dp
 import com.vitorpamplona.amethyst.commons.ui.theme.SuggestionListDefaultHeightChat
@@ -104,10 +104,10 @@ fun NewCalendarEventScreen(
     editDTag: String? = null,
 ) {
     val vm: NewCalendarEventViewModel = rememberViewModel { NewCalendarEventViewModel() }
-    vm.init(accountViewModel)
+    vm.init(accountViewModel.account)
     if (editKind != null && editPubKeyHex != null && editDTag != null) {
         // loadForEdit is idempotent across recompositions; safe to call from the composable body.
-        vm.loadForEdit(accountViewModel, editKind, editPubKeyHex, editDTag)
+        vm.loadForEdit(accountViewModel.account, editKind, editPubKeyHex, editDTag)
     }
 
     Scaffold(

@@ -20,14 +20,10 @@
  */
 package com.vitorpamplona.amethyst.commons.service.nwc
 
-import com.vitorpamplona.amethyst.commons.model.nip47WalletConnect.NwcSignerState
-import com.vitorpamplona.amethyst.commons.resources.Res
-import com.vitorpamplona.amethyst.commons.resources.error_parsing_error_message
-import com.vitorpamplona.amethyst.commons.resources.wallet_connect_no_response_error
-import com.vitorpamplona.amethyst.commons.resources.wallet_connect_unreadable_response_error
-import com.vitorpamplona.amethyst.commons.ui.loadPluralStringRes
-import com.vitorpamplona.amethyst.commons.ui.loadStringRes
-import com.vitorpamplona.quartz.nip47WalletConnect.rpc.IErrorResponseLike
+import com.vitorpamplona.amethyst.commons.notices.NwcFailure
+import com.vitorpamplona.amethyst.commons.notices.nwcFailure
+import com.vitorpamplona.amethyst.commons.notices.ui.loadText
+import com.vitorpamplona.amethyst.commons.notices.ui.txt
 import com.vitorpamplona.quartz.nip47WalletConnect.rpc.Response
 
 // User-facing text for the ways a NIP-47 request can fail to settle. Every payment
@@ -35,32 +31,11 @@ import com.vitorpamplona.quartz.nip47WalletConnect.rpc.Response
 // nothing at all — which is the failure mode these exist to prevent.
 
 /** Shown when no kind-23195 reply arrived before the client gave up waiting. */
-suspend fun nwcTimeoutMessage(): String =
-    loadPluralStringRes(
-        Res.plurals.wallet_connect_no_response_error,
-        NwcSignerState.NWC_RESPONSE_TIMEOUT_SECONDS,
-        NwcSignerState.NWC_RESPONSE_TIMEOUT_SECONDS,
-    )
+suspend fun nwcTimeoutMessage(): String = NwcFailure.TimedOut.txt().loadText()
 
 /**
- * Why a NIP-47 request did not go through, or null when the wallet settled it.
- *
- * The three cases a payment surface has to tell apart:
- * - **null receiver** — the reply could not be decrypted or parsed. `DecryptCache` swallows
- *   both failures into null, so this is the only shape an unreadable reply ever takes, and
- *   it needs a sentence: silence would leave a failed payment looking like one that worked.
- * - **[IErrorResponseLike]** — the wallet refused, and said why. Matched on the interface
- *   rather than the narrower `PayInvoiceErrorResponse` because NIP-47 does not require a
- *   wallet to echo `result_type` on an error; those refusals deserialize to the generic
- *   `NwcErrorResponse`, and checking the concrete type dropped them without a word.
- * - **anything else** — a success shape, whichever method it belongs to. Deliberately not
- *   matched against the *expected* success type: a wallet that omits `result_type` on a
- *   settled payment is guessed into `PayInvoiceSuccessResponse` by the deserializer, so
- *   demanding (say) `PayKeysendSuccessResponse` would report a real payment as unreadable.
+ * Why a NIP-47 request did not go through, or null when the wallet settled it. The
+ * classification is [nwcFailure]'s and the wording [NwcFailure.txt]'s, so this matches the
+ * zap and V4V rails, which report the same failures as notices.
  */
-suspend fun Response?.nwcFailureDetail(): String? =
-    when (this) {
-        null -> loadStringRes(Res.string.wallet_connect_unreadable_response_error)
-        is IErrorResponseLike -> errorMessage() ?: loadStringRes(Res.string.error_parsing_error_message)
-        else -> null
-    }
+suspend fun Response?.nwcFailureDetail(): String? = nwcFailure()?.txt()?.loadText()

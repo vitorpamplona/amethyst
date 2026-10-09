@@ -43,7 +43,6 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -66,11 +65,12 @@ import com.vitorpamplona.amethyst.commons.feeds.FeedDefinition
 import com.vitorpamplona.amethyst.commons.feeds.GeoHashName
 import com.vitorpamplona.amethyst.commons.feeds.HashtagName
 import com.vitorpamplona.amethyst.commons.feeds.InterestSetName
+import com.vitorpamplona.amethyst.commons.feeds.LabelName
 import com.vitorpamplona.amethyst.commons.feeds.Name
 import com.vitorpamplona.amethyst.commons.feeds.NoteBackedName
 import com.vitorpamplona.amethyst.commons.feeds.PeopleListName
 import com.vitorpamplona.amethyst.commons.feeds.RelayName
-import com.vitorpamplona.amethyst.commons.feeds.ResourceName
+import com.vitorpamplona.amethyst.commons.feeds.TopNavLabel
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.topNavFeeds.TopFilter
@@ -89,6 +89,16 @@ import com.vitorpamplona.amethyst.commons.resources.feed_group_lists
 import com.vitorpamplona.amethyst.commons.resources.feed_group_locations
 import com.vitorpamplona.amethyst.commons.resources.feed_group_relays
 import com.vitorpamplona.amethyst.commons.resources.follow_geohash
+import com.vitorpamplona.amethyst.commons.resources.follow_list_all_favorite_dvms
+import com.vitorpamplona.amethyst.commons.resources.follow_list_aroundme
+import com.vitorpamplona.amethyst.commons.resources.follow_list_curated
+import com.vitorpamplona.amethyst.commons.resources.follow_list_global
+import com.vitorpamplona.amethyst.commons.resources.follow_list_kind3_follows_users_only
+import com.vitorpamplona.amethyst.commons.resources.follow_list_kind3follows
+import com.vitorpamplona.amethyst.commons.resources.follow_list_kind3follows_users_only
+import com.vitorpamplona.amethyst.commons.resources.follow_list_mine
+import com.vitorpamplona.amethyst.commons.resources.follow_list_mute_list
+import com.vitorpamplona.amethyst.commons.resources.follow_list_teleport
 import com.vitorpamplona.amethyst.commons.resources.login_with_a_private_key_to_be_able_to_follow
 import com.vitorpamplona.amethyst.commons.resources.login_with_a_private_key_to_be_able_to_unfollow
 import com.vitorpamplona.amethyst.commons.resources.open_dropdown_menu
@@ -133,7 +143,7 @@ fun FeedFilterSpinner(
             }
         }
 
-    val currentText = selected?.name?.let { rememberDisplayName(it) } ?: selectAnOption
+    val currentText = selected?.name?.let { displayName(it) } ?: selectAnOption
 
     val accessibilityDescription =
         if (selected != null) {
@@ -312,15 +322,25 @@ private fun FollowLocationToggle(
 }
 
 /**
- * A [Name]'s displayed title. [Name.nameOrDefault] resolves a Compose string
- * resource for the fixed-name variants, which is a suspend call, so the plain
- * [Name.name] is shown for the frame it takes to arrive.
+ * A [Name]'s displayed title, read on every composition: a [LabelName] is a string resource, and a
+ * note-backed name re-reads its note when the event arrives (the caller observes the note).
  */
 @Composable
-private fun rememberDisplayName(name: Name): String {
-    val fallback = remember(name) { name.name() }
-    return produceState(fallback, name) { value = name.nameOrDefault() }.value
-}
+private fun displayName(name: Name): String = if (name is LabelName) stringRes(name.label.resource()) else name.name()
+
+private fun TopNavLabel.resource(): StringResource =
+    when (this) {
+        TopNavLabel.ALL_FOLLOWS -> Res.string.follow_list_kind3follows
+        TopNavLabel.ALL_USER_FOLLOWS -> Res.string.follow_list_kind3follows_users_only
+        TopNavLabel.DEFAULT_FOLLOWS -> Res.string.follow_list_kind3_follows_users_only
+        TopNavLabel.GLOBAL -> Res.string.follow_list_global
+        TopNavLabel.CURATED -> Res.string.follow_list_curated
+        TopNavLabel.AROUND_ME -> Res.string.follow_list_aroundme
+        TopNavLabel.TELEPORT -> Res.string.follow_list_teleport
+        TopNavLabel.MUTE_LIST -> Res.string.follow_list_mute_list
+        TopNavLabel.MINE -> Res.string.follow_list_mine
+        TopNavLabel.ALL_FAVORITE_DVMS -> Res.string.follow_list_all_favorite_dvms
+    }
 
 @Composable
 fun RenderOption(
@@ -340,7 +360,7 @@ fun RenderOption(
         is PeopleListName, is CommunityName, is FavoriteAlgoFeedName -> {
             val backed = option as NoteBackedName
             val noteState by observeNote(backed.note, accountViewModel)
-            val name = rememberDisplayName(option)
+            val name = displayName(option)
             val appDefAddress = (option as? FavoriteAlgoFeedName)?.note?.address
             val heartbeatFresh =
                 if (appDefAddress != null) {
@@ -369,12 +389,12 @@ fun RenderOption(
 
         // Pure names: no relay subscription needed.
         is HashtagName,
-        is ResourceName,
+        is LabelName,
         is RelayName,
         is InterestSetName,
         -> {
             Text(
-                text = rememberDisplayName(option),
+                text = displayName(option),
                 fontSize = Font14SP,
                 color = MaterialTheme.colorScheme.onSurface,
             )
@@ -425,7 +445,7 @@ private fun FeedDefinition.group(): FeedGroup =
             FeedGroup.INTEREST_SETS
         }
 
-        is ResourceName -> {
+        is LabelName -> {
             when (code) {
                 is TopFilter.AroundMe -> FeedGroup.LOCATIONS
                 is TopFilter.TeleportPicker -> FeedGroup.LOCATIONS
@@ -527,7 +547,7 @@ private fun GroupSection(
                             color = Color.Transparent,
                         ) {
                             Text(
-                                text = rememberDisplayName(entry.name),
+                                text = displayName(entry.name),
                                 fontSize = 13.sp,
                                 color = MaterialTheme.colorScheme.onSurface,
                                 modifier = Modifier.padding(horizontal = 14.dp, vertical = 7.dp),

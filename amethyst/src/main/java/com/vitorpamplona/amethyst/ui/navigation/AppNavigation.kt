@@ -41,13 +41,14 @@ import com.vitorpamplona.amethyst.commons.model.navigation.MediaFeedRoute
 import com.vitorpamplona.amethyst.commons.model.navigation.Route
 import com.vitorpamplona.amethyst.commons.model.navigation.isSameRoute
 import com.vitorpamplona.amethyst.commons.model.navigation.limitToRouteTextArg
+import com.vitorpamplona.amethyst.commons.model.navigation.uri.findQueryParameterValue
+import com.vitorpamplona.amethyst.commons.model.navigation.uri.uriToRoute
 import com.vitorpamplona.amethyst.commons.nipACWebRtcCalls.CallState
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.invalid_nip19_uri
 import com.vitorpamplona.amethyst.commons.resources.invalid_nip19_uri_description
 import com.vitorpamplona.amethyst.commons.ui.navigation.ShareIntentRouting
 import com.vitorpamplona.amethyst.commons.ui.navigation.ShareTarget
-import com.vitorpamplona.amethyst.commons.ui.navigation.findQueryParameterValue
 import com.vitorpamplona.amethyst.commons.ui.navigation.host.NavDestinations
 import com.vitorpamplona.amethyst.commons.ui.navigation.host.composableFromBottomArgs
 import com.vitorpamplona.amethyst.commons.ui.navigation.host.composableFromEnd
@@ -59,7 +60,6 @@ import com.vitorpamplona.amethyst.commons.ui.navigation.routes.getRouteWithArgum
 import com.vitorpamplona.amethyst.commons.ui.navigation.routes.isBaseRoute
 import com.vitorpamplona.amethyst.commons.ui.note.UpdateReactionTypeScreen
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.settings.NowPlayingSettingsScreen
-import com.vitorpamplona.amethyst.commons.ui.uriToRoute
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.amethyst.service.nowPlaying.AndroidAppIcon
 import com.vitorpamplona.amethyst.service.nowPlaying.AndroidNowPlayingAccess

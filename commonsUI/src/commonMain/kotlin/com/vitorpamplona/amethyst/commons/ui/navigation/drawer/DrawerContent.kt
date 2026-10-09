@@ -99,6 +99,7 @@ import com.vitorpamplona.amethyst.commons.model.navigation.DrawerSectionId
 import com.vitorpamplona.amethyst.commons.model.navigation.NavBarItem
 import com.vitorpamplona.amethyst.commons.model.navigation.Route
 import com.vitorpamplona.amethyst.commons.model.navigation.routeFor
+import com.vitorpamplona.amethyst.commons.model.navigation.routes.routeFor
 import com.vitorpamplona.amethyst.commons.relayClient.event.observeNote
 import com.vitorpamplona.amethyst.commons.relayClient.user.observeUserAssertionsFollowerCount
 import com.vitorpamplona.amethyst.commons.relayClient.user.observeUserInfo
@@ -136,7 +137,6 @@ import com.vitorpamplona.amethyst.commons.ui.navigation.bottombars.NavBarItemDef
 import com.vitorpamplona.amethyst.commons.ui.navigation.host.canOpen
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.EmptyNav
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
-import com.vitorpamplona.amethyst.commons.ui.navigation.routes.routeFor
 import com.vitorpamplona.amethyst.commons.ui.painterRes
 import com.vitorpamplona.amethyst.commons.ui.platform.LocalAppPlatform
 import com.vitorpamplona.amethyst.commons.ui.platform.LocalAppServices

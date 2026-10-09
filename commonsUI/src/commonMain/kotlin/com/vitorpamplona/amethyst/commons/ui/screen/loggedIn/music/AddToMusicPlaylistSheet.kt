@@ -60,6 +60,8 @@ import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.navigation.Route
+import com.vitorpamplona.amethyst.commons.music.AddToMusicPlaylistViewModel
+import com.vitorpamplona.amethyst.commons.music.OwnedPlaylistSummary
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.add_to_music_playlist_empty
 import com.vitorpamplona.amethyst.commons.resources.add_to_music_playlist_manage_all
@@ -99,7 +101,7 @@ fun AddToMusicPlaylistSheet(
     nav: INav,
 ) {
     val vm: AddToMusicPlaylistViewModel = rememberViewModel { AddToMusicPlaylistViewModel() }
-    vm.init(accountViewModel, trackAddress)
+    vm.init(accountViewModel.account, trackAddress)
 
     Scaffold(
         modifier = Modifier.fillMaxSize().recalculateWindowInsets(),

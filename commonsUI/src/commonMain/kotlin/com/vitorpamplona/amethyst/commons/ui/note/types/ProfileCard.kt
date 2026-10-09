@@ -62,6 +62,7 @@ import com.vitorpamplona.amethyst.commons.model.ImmutableListOfLists
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.User
 import com.vitorpamplona.amethyst.commons.model.navigation.routeFor
+import com.vitorpamplona.amethyst.commons.model.navigation.routes.routeFor
 import com.vitorpamplona.amethyst.commons.relayClient.reqCommand.account.observeAccountIsHiddenUser
 import com.vitorpamplona.amethyst.commons.relayClient.user.observeUserAssertionsFollowerCount
 import com.vitorpamplona.amethyst.commons.relayClient.user.observeUserInfo
@@ -72,7 +73,6 @@ import com.vitorpamplona.amethyst.commons.resources.profile_card_bot
 import com.vitorpamplona.amethyst.commons.resources.profile_card_follows_you
 import com.vitorpamplona.amethyst.commons.ui.components.LocalReadOnlyPreview
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
-import com.vitorpamplona.amethyst.commons.ui.navigation.routes.routeFor
 import com.vitorpamplona.amethyst.commons.ui.note.BaseUserPicture
 import com.vitorpamplona.amethyst.commons.ui.note.InnerUserPicture
 import com.vitorpamplona.amethyst.commons.ui.note.ObserveDisplayNip05Status
