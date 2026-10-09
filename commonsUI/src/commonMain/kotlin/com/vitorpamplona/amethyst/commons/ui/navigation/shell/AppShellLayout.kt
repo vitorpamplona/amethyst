@@ -21,7 +21,9 @@
 package com.vitorpamplona.amethyst.commons.ui.navigation.shell
 
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.DrawerValue
@@ -43,10 +45,12 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalWindowInfo
+import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.commons.model.navigation.Route
 import com.vitorpamplona.amethyst.commons.ui.components.PlatformBackHandler
 import com.vitorpamplona.amethyst.commons.ui.components.rememberModalSheetState
 import com.vitorpamplona.amethyst.commons.ui.layouts.LocalScreenLayout
+import com.vitorpamplona.amethyst.commons.ui.layouts.LocalTitleBarOverlay
 import com.vitorpamplona.amethyst.commons.ui.layouts.NavigationStyle
 import com.vitorpamplona.amethyst.commons.ui.navigation.bottombars.AppNavigationRail
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.Nav
@@ -102,7 +106,20 @@ fun AppShellLayout(
     // content lets the whole navigation subtree MOVE between those positions instead of being
     // disposed and rebuilt, preserving every screen's remember/rememberSaveable state.
     val currentContent by rememberUpdatedState(content)
-    val movableContent = remember { movableContentOf { currentContent() } }
+    // In a multi-pane window (docked drawer or rail) the content sits right of the leading pane, so
+    // it takes back the top inset of window controls drawn over the app (macOS's traffic lights;
+    // 0 on Android). Done inside the movable content: a consumption on the pane around it stayed
+    // applied after the content moved to a single-pane window, leaving its top bar under them.
+    val movableContent =
+        remember {
+            movableContentOf {
+                val multiPane = LocalScreenLayout.current.navigationStyle != NavigationStyle.BOTTOM_BAR
+                val overlay = if (multiPane) LocalTitleBarOverlay.current else 0.dp
+                Box(Modifier.consumeWindowInsets(PaddingValues(top = overlay))) {
+                    currentContent()
+                }
+            }
+        }
 
     val docked = LocalScreenLayout.current.navigationStyle == NavigationStyle.PERMANENT_DRAWER
 
@@ -225,9 +242,15 @@ private fun MultiPaneShell(
 
         VerticalDivider(thickness = DividerThickness)
 
+        // The content takes back the window-controls inset itself (see AppShellLayout).
         CenterPane(Modifier.weight(1f), content)
 
-        NotificationSidePanelSlot(accountViewModel, nav)
+        // Only the leading pane sits under window controls drawn over the app (macOS's traffic
+        // lights): the panel to the right takes that inset back, so its header reaches the
+        // window's edge instead of growing a band under an empty title bar.
+        Box(Modifier.consumeWindowInsets(PaddingValues(top = LocalTitleBarOverlay.current))) {
+            NotificationSidePanelSlot(accountViewModel, nav)
+        }
     }
 }
 
