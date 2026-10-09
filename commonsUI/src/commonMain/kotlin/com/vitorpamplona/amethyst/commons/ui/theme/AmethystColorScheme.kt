@@ -193,9 +193,10 @@ internal val DarkChatBackground = DarkColorPalette.onSurface.copy(alpha = 0.12f)
 internal val LightChatBackground = LightColorPalette.onSurface.copy(alpha = 0.08f)
 
 // Bubble fill for other users' chat messages. Stronger than chatBackground so the
-// bubble clearly separates from the screen background in both themes.
+// bubble clearly separates from the screen background in both themes. Light lands on
+// RGB 234 over the #FDFDFD background (0.11 gave 228, which read too dark).
 internal val DarkChatBubbleThem = DarkColorPalette.onSurface.copy(alpha = 0.18f)
-internal val LightChatBubbleThem = LightColorPalette.onSurface.copy(alpha = 0.11f)
+internal val LightChatBubbleThem = LightColorPalette.onSurface.copy(alpha = 0.084f)
 
 internal val DarkChatDraftBackground = DarkColorPalette.onSurface.copy(alpha = 0.15f)
 internal val LightChatDraftBackground = LightColorPalette.onSurface.copy(alpha = 0.15f)
