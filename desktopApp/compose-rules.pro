@@ -202,6 +202,25 @@
 -dontwarn org.slf4j.**
 
 # ============================================================================
+# Desktop-only: PDFBox (PDF rendering) and its commons-logging
+# ============================================================================
+# PDFBox logs through Apache commons-logging, which ships adapters for log4j 1/2, Avalon,
+# LogKit and servlet containers. None of those are on our classpath; commons-logging only
+# uses an adapter whose backend it finds at runtime, and otherwise falls back to
+# java.util.logging. It discovers the implementation by class name, so keep it whole.
+-keep class org.apache.commons.logging.** { *; }
+-dontwarn org.apache.commons.logging.**
+-dontwarn org.apache.avalon.**
+-dontwarn org.apache.log.**
+-dontwarn org.apache.log4j.**
+-dontwarn org.apache.logging.log4j.**
+-dontwarn javax.servlet.**
+-dontwarn jakarta.servlet.**
+# IOUtils unmaps buffers through MethodHandle.invokeExact, a signature-polymorphic call
+# ProGuard cannot resolve against the library class.
+-dontwarn org.apache.pdfbox.io.IOUtils
+
+# ============================================================================
 # Kotlin 2.3 stdlib stubs — compile-time classes with no JVM runtime class
 # ============================================================================
 -dontwarn kotlin.concurrent.atomics.**
