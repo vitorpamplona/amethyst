@@ -78,6 +78,8 @@ import com.vitorpamplona.amethyst.commons.model.User
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
 import com.vitorpamplona.amethyst.commons.model.nip05DnsIdentifiers.Nip05State
 import com.vitorpamplona.amethyst.commons.relayClient.searchCommand.UserSearchDataSourceSubscription
+import com.vitorpamplona.amethyst.commons.relays.nip86.PubkeyUser
+import com.vitorpamplona.amethyst.commons.relays.nip86.RelayManagementViewModel
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.relay_management_add
 import com.vitorpamplona.amethyst.commons.resources.relay_management_allow

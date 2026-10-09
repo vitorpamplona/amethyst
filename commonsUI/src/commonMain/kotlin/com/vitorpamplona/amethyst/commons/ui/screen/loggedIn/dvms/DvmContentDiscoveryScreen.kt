@@ -47,6 +47,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.vitorpamplona.amethyst.commons.dvms.dal.DvmContentDiscoveryFeedViewModel
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.User
 import com.vitorpamplona.amethyst.commons.model.payments.PaymentSource
@@ -81,7 +82,6 @@ import com.vitorpamplona.amethyst.commons.ui.screen.RenderFeedState
 import com.vitorpamplona.amethyst.commons.ui.screen.SaveableFeedState
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.discover.nip90DVMs.DVMCard
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.dvms.DvmOfflineBanner
-import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.dvms.dal.DvmContentDiscoveryFeedViewModel
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.dvms.rememberDvmHeartbeatFresh
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.DoubleVertSpacer
