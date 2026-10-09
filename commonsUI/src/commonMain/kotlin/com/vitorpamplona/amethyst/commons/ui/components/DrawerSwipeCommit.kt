@@ -21,28 +21,31 @@
 package com.vitorpamplona.amethyst.commons.ui.components
 
 /**
- * Decides when a drawer-opening swipe on a tab pager has gone far enough to open the drawer.
- *
- * Material3's `DrawerState` can't be dragged from outside (its draggable state is internal), so
- * [zonedDrawerSwipe] can only call `open()`. Calling it on the first pixel of drag made the
- * drawer fly open at a touch. This stands in for the drawer's own drag: the distance dragged
- * towards the drawer adds up (dragging back takes it away again), and the drawer opens once it
- * passes [distanceThresholdPx], or on release after a flick of at least [velocityThresholdPx].
+ * One drawer-opening swipe on a tab pager, standing in for the drawer's own drag: Material3's
+ * `DrawerState` can't be dragged from outside, so [zonedDrawerSwipe] can only call `open()`.
+ * The distance dragged towards the drawer adds up (dragging back takes it away again), and the
+ * drawer opens once it passes [distanceThresholdPx], or on release after a flick of at least
+ * [velocityThresholdPx].
  */
 internal class DrawerSwipeCommit(
     private val distanceThresholdPx: Float,
     private val velocityThresholdPx: Float,
 ) {
+    /** The gesture belongs to the drawer: the pager should see none of it. */
+    var claimed = false
+        private set
     private var dragged = 0f
     private var committed = false
 
     fun reset() {
+        claimed = false
         dragged = 0f
         committed = false
     }
 
-    /** Adds [dx] (positive towards the drawer); true exactly once, when the drag commits. */
+    /** Claims the gesture and adds [dx] (positive towards the drawer); true exactly once, when the drag commits. */
     fun drag(dx: Float): Boolean {
+        claimed = true
         if (committed) return false
         dragged = (dragged + dx).coerceAtLeast(0f)
         committed = dragged >= distanceThresholdPx

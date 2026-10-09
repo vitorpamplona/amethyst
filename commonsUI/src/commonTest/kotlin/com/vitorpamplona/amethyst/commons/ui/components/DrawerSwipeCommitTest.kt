@@ -61,6 +61,16 @@ class DrawerSwipeCommitTest {
     }
 
     @Test
+    fun anyDragClaimsTheGestureUntilReset() {
+        val c = commit()
+        assertFalse(c.claimed)
+        c.drag(0f)
+        assertTrue(c.claimed)
+        c.reset()
+        assertFalse(c.claimed)
+    }
+
+    @Test
     fun aFastFlickOpensOnRelease() {
         val c = commit()
         c.drag(10f)
