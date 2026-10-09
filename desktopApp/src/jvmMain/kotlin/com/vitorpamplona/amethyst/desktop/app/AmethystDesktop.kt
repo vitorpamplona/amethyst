@@ -33,6 +33,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalWindowInfo
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Window
 import androidx.compose.ui.window.WindowPlacement
@@ -62,6 +63,7 @@ import com.vitorpamplona.amethyst.desktop.platform.PlatformIconWeight
 import com.vitorpamplona.amethyst.desktop.platform.PlatformInfo
 import com.vitorpamplona.amethyst.desktop.platform.ProvideTitleBarInsets
 import com.vitorpamplona.amethyst.desktop.platform.applyNativeWindowChrome
+import com.vitorpamplona.amethyst.desktop.platform.clickToActivate
 import com.vitorpamplona.amethyst.desktop.platform.rememberSystemDark
 import com.vitorpamplona.amethyst.desktop.platform.titleBarInsetTop
 import com.vitorpamplona.amethyst.desktop.service.images.DesktopImageLoaderSetup
@@ -177,7 +179,8 @@ fun main(args: Array<String>) {
 
             val systemDark by rememberSystemDark(window)
 
-            DesktopTheme(modules, systemDark) {
+            // Hover shows only while the window is in front, as in native apps.
+            DesktopTheme(modules, systemDark, showHover = LocalWindowInfo.current.isWindowFocused) {
                 NowProvider {
                     CompositionLocalProvider(
                         LocalViewModelStoreOwner provides windowViewModels,
@@ -191,7 +194,8 @@ fun main(args: Array<String>) {
                         LocalAwtWindow provides window,
                         LocalIsImmersiveFullscreen provides immersiveFullscreen,
                     ) {
-                        Box(Modifier.fillMaxSize()) {
+                        // A click on the window in the background only brings it forward.
+                        Box(Modifier.fillMaxSize().clickToActivate(window, LocalWindowInfo.current)) {
                             Column(Modifier.fillMaxSize()) {
                                 // Under macOS's transparent title bar the screens draw their own top
                                 // bars, padded past the traffic lights by the caption-bar inset, as on
@@ -227,6 +231,7 @@ fun main(args: Array<String>) {
 private fun DesktopTheme(
     modules: DesktopAppModules,
     systemDark: Boolean,
+    showHover: Boolean,
     content: @Composable () -> Unit,
 ) {
     val prefs = modules.uiPrefs
@@ -245,6 +250,7 @@ private fun DesktopTheme(
         systemFontFamily = PlatformFonts.ui,
         iconWeight = PlatformIconWeight.current,
         typography = DesktopTypography,
+        showHover = showHover,
         content = content,
     )
 }
