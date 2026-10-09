@@ -75,6 +75,8 @@ import com.vitorpamplona.amethyst.commons.relayClient.reqCommand.account.Account
 import com.vitorpamplona.amethyst.commons.relayClient.speedLogger.RelaySpeedLogger
 import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.UntaggedFilterWarningClient
 import com.vitorpamplona.amethyst.commons.relayClient.user.UserFinderQueryState
+import com.vitorpamplona.amethyst.commons.relays.health.FileRelayHealthPersistence
+import com.vitorpamplona.amethyst.commons.relays.health.RelayLatencyMonitor
 import com.vitorpamplona.amethyst.commons.relays.health.TorCircuitHealthTracker
 import com.vitorpamplona.amethyst.commons.relays.nip11RelayInfo.Nip11CachedRetriever
 import com.vitorpamplona.amethyst.commons.richtext.CachedAsciiDocToMarkdown
@@ -126,6 +128,7 @@ import com.vitorpamplona.amethyst.commons.state.UiSettingsState
 import com.vitorpamplona.amethyst.commons.tor.AccountsTorStateConnector
 import com.vitorpamplona.amethyst.commons.tor.TorRelayState
 import com.vitorpamplona.amethyst.commons.tor.TorSettings
+import com.vitorpamplona.amethyst.commons.tor.TorType
 import com.vitorpamplona.amethyst.connectedApps.consent.Nip46ConsentBridge
 import com.vitorpamplona.amethyst.model.accountsCache.defaultMarmotStreamTransport
 import com.vitorpamplona.amethyst.model.nip60Cashu.CashuPreferences
@@ -832,6 +835,22 @@ class AppModules(
 
     // Captures statistics about relays
     val relayStats = RelayStats(client)
+
+    // How fast each relay answers (a post's OK, a query's EOSE and first result) and which relays
+    // are slow next to the others, for the relay screens. Measured off the relay client's traffic
+    // and kept across restarts; built off the main thread, since it reads its file on creation.
+    val relayLatencyMonitor by lazy {
+        RelayLatencyMonitor(
+            client = client,
+            persistence = FileRelayHealthPersistence(File(appContext.filesDir, RELAY_HEALTH_FILE)),
+            scope = applicationIOScope,
+            torEnabled = { torPrefs.torType.value != TorType.OFF },
+        )
+    }
+
+    init {
+        applicationIOScope.launch { relayLatencyMonitor }
+    }
 
     // Caches the latest LIMITS (rights + limits) each relay advertises.
     val relayLimits = RelayLimitsTracker(client)
@@ -1623,3 +1642,5 @@ private fun androidCrashReportAssembler() =
                 "User" to Build.USER,
             ),
     )
+
+private const val RELAY_HEALTH_FILE = "relay_health.json"

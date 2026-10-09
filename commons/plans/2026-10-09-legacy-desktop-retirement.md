@@ -24,7 +24,7 @@ as-is: the legacy screens are not shared screens and cannot be reused.
 | 3a | Live-now bar | **Discard.** The shared Home live bubbles are a superset. |
 | 3b | Relay metrics dashboard | **Discard the dashboard; port the latency engine and its display.** |
 | 4 | Spotlight and advanced search | **Discard.** The shared search screen is a superset; the Spotlight was never wired. |
-| 5 | Custom feed builder | **Rebuild in shared code, for Android too.** Feeds appear in the top-bar feed picker. |
+| 5 | Custom feed builder | **Rebuild in shared code, for Android too.** Feeds appear in the top-bar feed picker; stored in our own per-account structure. |
 | 6a | Upload compression preview | **Rebuild in the shared composer:** image preview before posting; the quality slider sets resolution. |
 | 6b | GIF picker (NIP-94 search) | **Discard.** Replace with a NIP-30 custom-emoji picker button. |
 | 7 | Deck and workspaces | **Rebuild on the shared shell, with workspaces, and migrate legacy users' decks.** |
@@ -101,10 +101,9 @@ screen), and the new desktop does not wire them.
 - Model and storage:
   - Reuse the commons model in `feeds/custom/` (`FeedDefinition`, `FeedBuilderState`, the
     serializer), which today only the legacy app uses.
-  - Each feed is stored as a **kind 31890** `FeedDefinitionEvent` (already in quartz), signed by the
-    user, so feeds sync across devices and accounts. The picker lists the user's own 31890 feeds.
-    Kind 10090 (favourite algo feeds) can pin feeds, as
-    [2026-05-04-custom-feeds-plan.md](2026-05-04-custom-feeds-plan.md) intended.
+  - Store the feeds in **our own per-account data structure**, not as kind 31890 events
+    (maintainer, 2026-10-09). Whether other clients' 31890 definitions would help or hinder is an
+    open question; publishing and importing them can come later.
 - Filters:
   - A new top-nav filter type (`IFeedTopNavFilter` under `commons/model/topNavFeeds/`) runs a
     custom feed. Relay REQ filters and client-side excludes go through the shared relay client and
@@ -114,7 +113,7 @@ screen), and the new desktop does not wire them.
 - Editor: a shared create/edit sheet over `FeedBuilderState`, reached from the feed picker
   ("New feed…") with edit and delete on each custom feed.
 - Migration: legacy desktop feeds are local JSON in java.util.prefs (`LocalFeedProvider`). On the
-  first start of the new desktop, publish each one as a 31890 for the account that made it.
+  first start of the new desktop, copy them into the new store for the account that made them.
 
 ### 6. Composer
 
@@ -169,7 +168,7 @@ not port.
   - +Shift+S to save a workspace.
 - **Migration:** `LegacyDesktopAccountImport` also imports `deckColumns` and the workspaces. Each
   legacy `DeckColumnType` maps to a `Route`:
-  - A custom-feed column maps to the migrated 31890 feed (item 5).
+  - A custom-feed column maps to the migrated custom feed (item 5).
   - A type with no shared screen is dropped, and the user is told.
 
 ## Order

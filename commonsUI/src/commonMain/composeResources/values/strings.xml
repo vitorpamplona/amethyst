@@ -6871,4 +6871,12 @@
         <item quantity="one">%1$d page</item>
         <item quantity="other">%1$d pages</item>
     </plurals>
+    <string name="relay_latency_title">Response times</string>
+    <string name="relay_latency_post">Post</string>
+    <string name="relay_latency_query">Query</string>
+    <string name="relay_latency_first_result">First result</string>
+    <string name="relay_latency_ping">Ping</string>
+    <string name="relay_latency_median_of">median of %1$d</string>
+    <string name="relay_latency_slow">Slow %1$s×</string>
+    <string name="relay_latency_slow_detail">%1$s takes %2$s× as long as on your other relays (%3$d ms against %4$d ms).</string>
 </resources>

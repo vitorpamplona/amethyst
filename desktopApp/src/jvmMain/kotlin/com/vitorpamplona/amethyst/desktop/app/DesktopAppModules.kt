@@ -58,6 +58,8 @@ import com.vitorpamplona.amethyst.commons.relayClient.RelayProxyClientConnector
 import com.vitorpamplona.amethyst.commons.relayClient.auth.AuthCoordinator
 import com.vitorpamplona.amethyst.commons.relayClient.notify.NotifyCoordinator
 import com.vitorpamplona.amethyst.commons.relayClient.reqCommand.RelaySubscriptionsCoordinator
+import com.vitorpamplona.amethyst.commons.relays.health.FileRelayHealthPersistence
+import com.vitorpamplona.amethyst.commons.relays.health.RelayLatencyMonitor
 import com.vitorpamplona.amethyst.commons.relays.nip11RelayInfo.Nip11CachedRetriever
 import com.vitorpamplona.amethyst.commons.service.connectivity.ConnectivityStatus
 import com.vitorpamplona.amethyst.commons.service.crashreports.CrashReportCache
@@ -81,6 +83,7 @@ import com.vitorpamplona.amethyst.commons.state.UiSettingsState
 import com.vitorpamplona.amethyst.commons.tor.AccountsTorStateConnector
 import com.vitorpamplona.amethyst.commons.tor.TorRelayState
 import com.vitorpamplona.amethyst.commons.tor.TorSettings
+import com.vitorpamplona.amethyst.commons.tor.TorType
 import com.vitorpamplona.amethyst.desktop.network.runSleepResumeMonitor
 import com.vitorpamplona.amethyst.desktop.service.media.GlobalMediaPlayer
 import com.vitorpamplona.amethyst.desktop.service.scheduledposts.DesktopScheduledPostScheduler
@@ -251,6 +254,18 @@ class DesktopAppModules(
     val cache: LocalCache = LocalCache
 
     val relayStats by lazy { RelayStats(client) }
+
+    // How fast each relay answers (a post's OK, a query's EOSE and first result) and which relays
+    // are slow next to the others, for the relay screens. Measured off the relay client's traffic
+    // and kept across restarts.
+    val relayLatencyMonitor by lazy {
+        RelayLatencyMonitor(
+            client = client,
+            persistence = FileRelayHealthPersistence(File(filesDir, RELAY_HEALTH_FILE)),
+            scope = applicationIOScope,
+            torEnabled = { torPrefs.torType.value != TorType.OFF },
+        )
+    }
 
     val nip11Cache by lazy { Nip11CachedRetriever(torEvaluatorFlow::okHttpClientForRelay) }
 
@@ -472,6 +487,10 @@ class DesktopAppModules(
     fun initiate() {
         startHeapWatchdog()
 
+        // Starts measuring relay response times from the first connection; it reads its file on
+        // creation, so off the main thread.
+        applicationIOScope.launch { relayLatencyMonitor }
+
         // After the computer sleeps, the relay sockets are dead though OkHttp still reports them
         // open: re-dial every relay when a wake is detected.
         applicationIOScope.launch {
@@ -529,3 +548,5 @@ fun installDesktopCrashReporter(
         ),
     )
 }
+
+private const val RELAY_HEALTH_FILE = "relay_health.json"

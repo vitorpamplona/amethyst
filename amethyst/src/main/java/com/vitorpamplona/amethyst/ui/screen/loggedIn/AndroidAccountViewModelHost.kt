@@ -29,6 +29,7 @@ import com.vitorpamplona.amethyst.commons.account.AccountInfo
 import com.vitorpamplona.amethyst.commons.audio.AnonymizedResult
 import com.vitorpamplona.amethyst.commons.audio.VoicePreset
 import com.vitorpamplona.amethyst.commons.model.location.DeviceLocation
+import com.vitorpamplona.amethyst.commons.relays.health.RelayHealthStore
 import com.vitorpamplona.amethyst.commons.scheduledposts.ScheduledPostStore
 import com.vitorpamplona.amethyst.commons.service.ai.WritingAssistant
 import com.vitorpamplona.amethyst.commons.service.lnurl.LnurlHttpTransport
@@ -76,6 +77,8 @@ class AndroidAccountViewModelHost(
     override val powPublishFailures: Flow<PoWJobFailure> get() = modules.powPublishQueue.failures
 
     override val relayStats: RelayStats get() = modules.relayStats
+
+    override val relayHealth: RelayHealthStore get() = modules.relayLatencyMonitor.store
 
     override val websocketBuilder: WebsocketBuilder get() = modules.websocketBuilder
 
