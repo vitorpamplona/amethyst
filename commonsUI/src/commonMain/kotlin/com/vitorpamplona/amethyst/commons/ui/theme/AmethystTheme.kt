@@ -114,6 +114,8 @@ fun isDarkTheme(
  * already the OS font on Android), and [iconWeight] the Material Symbols stroke weight: the desktop
  * passes the OS's own UI font and an icon weight that matches its icons. [typography] is the type
  * scale before the font family is applied: the desktop passes one sized for desktop reading.
+ * [showHover] false hides the hover layer: the desktop clears it while its window is in the
+ * background, as native apps do.
  */
 @Composable
 fun AmethystMaterialTheme(
@@ -126,6 +128,7 @@ fun AmethystMaterialTheme(
     systemFontFamily: FontFamily? = null,
     iconWeight: Int = MaterialSymbolsDefaults.WEIGHT,
     typography: Typography = DefaultTypography,
+    showHover: Boolean = true,
     colors: ColorScheme = remember(darkTheme, accentColor) { if (darkTheme) amethystDarkColors(accentColor) else amethystLightColors(accentColor) },
     content: @Composable () -> Unit,
 ) {
@@ -141,7 +144,7 @@ fun AmethystMaterialTheme(
             Density(density.density, density.fontScale * fontSize.scale)
         }
 
-    val rippleConfiguration = remember(darkTheme) { amethystRippleConfiguration(darkTheme) }
+    val rippleConfiguration = remember(darkTheme, showHover) { amethystRippleConfiguration(darkTheme, showHover) }
 
     MaterialTheme(
         colorScheme = colors,
@@ -180,14 +183,22 @@ fun FontFamilyType.toFontFamily(): FontFamily? =
  * marks the card. Press, focus and drag keep Material's values (touch feedback is unchanged), and
  * dark mode keeps its hover: a white wash over a dark card is already faint.
  */
-fun amethystRippleConfiguration(darkTheme: Boolean): RippleConfiguration {
+fun amethystRippleConfiguration(
+    darkTheme: Boolean,
+    showHover: Boolean = true,
+): RippleConfiguration {
     val defaults = RippleDefaults.RippleAlpha
     return RippleConfiguration(
         rippleAlpha =
             RippleAlpha(
                 draggedAlpha = defaults.draggedAlpha,
                 focusedAlpha = defaults.focusedAlpha,
-                hoveredAlpha = if (darkTheme) defaults.hoveredAlpha else LIGHT_HOVER_ALPHA,
+                hoveredAlpha =
+                    when {
+                        !showHover -> 0f
+                        darkTheme -> defaults.hoveredAlpha
+                        else -> LIGHT_HOVER_ALPHA
+                    },
                 pressedAlpha = defaults.pressedAlpha,
             ),
     )
