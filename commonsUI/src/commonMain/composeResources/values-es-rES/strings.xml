@@ -2971,6 +2971,7 @@
          what leaves the device; the fork strings say why the old phone stops. -->
     <!-- Browser pill (redesign prototypes, see amethyst/plans/2026-09-26-browser-ui-review.md) -->
     <!-- Inline download consent (browser.* bridge downloads into the shared Downloads collection) -->
+    <!-- Web of Trust (NIP-85 trust network) -->
     <!-- Mostro instance terms (kind 38385) -->
     <!-- Kanban boards (kind 30301) and cards (kind 30302) -->
     <!-- WalletScrutiny build verifications (kind 30301) -->
