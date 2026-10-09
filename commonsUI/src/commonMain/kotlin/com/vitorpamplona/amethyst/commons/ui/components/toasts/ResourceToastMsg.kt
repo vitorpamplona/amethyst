@@ -28,4 +28,6 @@ class ResourceToastMsg(
     val titleResId: StringResource,
     val resourceId: StringResource,
     val params: Array<out String>? = null,
-) : ToastMsg()
+) : ToastMsg() {
+    override val dedupeKey: Any get() = Triple(titleResId, resourceId, params?.toList())
+}
