@@ -35,6 +35,7 @@ import androidx.compose.foundation.layout.systemBars
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -47,6 +48,7 @@ import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.navigation.Route
 import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.refresh
 import com.vitorpamplona.amethyst.commons.resources.route_notifications
 import com.vitorpamplona.amethyst.commons.ui.feeds.ScrollStateKeys
 import com.vitorpamplona.amethyst.commons.ui.layouts.NotificationPanelWidth
@@ -55,7 +57,9 @@ import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.DividerThickness
 import com.vitorpamplona.amethyst.commons.ui.theme.Size12dp
 import com.vitorpamplona.amethyst.commons.ui.theme.Size16dp
+import com.vitorpamplona.amethyst.commons.ui.theme.Size20Modifier
 import com.vitorpamplona.amethyst.commons.ui.theme.Size22Modifier
+import com.vitorpamplona.amethyst.commons.ui.theme.Size24Modifier
 import com.vitorpamplona.amethyst.commons.ui.theme.StdHorzSpacer
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 
@@ -67,7 +71,7 @@ import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
  * user has split notifications enabled, the panel shows the Following feed to match the
  * screen's default tab. Under the header it shows today's counts, which expand into the
  * 7-day chart when tapped. Tapping the header opens the full screen, which adds the
- * Following/Everyone tabs.
+ * Following/Everyone tabs; its refresh button reloads and regroups the cards.
  */
 @Composable
 fun NotificationSidePanel(
@@ -127,6 +131,20 @@ fun NotificationSidePanel(
                     text = stringRes(Res.string.route_notifications),
                     style = MaterialTheme.typography.titleMedium,
                 )
+                Spacer(modifier = Modifier.weight(1f))
+                // What tapping Notifications in the bottom bar does on a phone that is already
+                // there: reload and regroup the cards, back at the top.
+                IconButton(
+                    onClick = { notifFeedContentState.invalidateDataAndSendToTop(true) },
+                    modifier = Size24Modifier,
+                ) {
+                    Icon(
+                        symbol = MaterialSymbols.Refresh,
+                        contentDescription = stringRes(Res.string.refresh),
+                        modifier = Size20Modifier,
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
             }
 
             // Today's counts; tapping them expands the 7-day chart, as on the full screen.
