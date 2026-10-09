@@ -34,9 +34,7 @@ import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.richtext.BaseMediaContent
 import com.vitorpamplona.amethyst.commons.ui.components.UrlPreviewState
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
-import com.vitorpamplona.amethyst.commons.ui.note.CalendarRsvpCard
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
-import com.vitorpamplona.quartz.nip52Calendar.rsvp.CalendarRSVPEvent
 import com.vitorpamplona.quartz.nip94FileMetadata.tags.DimensionTag
 import com.vitorpamplona.quartz.nipA0VoiceMessages.AudioMeta
 import com.vitorpamplona.quartz.podcasts.PodcastAudio
@@ -250,32 +248,6 @@ interface NotePlatform {
         accountViewModel: AccountViewModel,
     ) {}
 
-    // Chess
-
-    @Composable
-    fun RenderChessGame(
-        note: Note,
-        backgroundColor: MutableState<Color>,
-        accountViewModel: AccountViewModel,
-        nav: INav,
-    ) {}
-
-    @Composable
-    fun RenderLiveChessChallenge(
-        note: Note,
-        backgroundColor: MutableState<Color>,
-        accountViewModel: AccountViewModel,
-        nav: INav,
-    ) {}
-
-    @Composable
-    fun RenderLiveChessGameEnd(
-        note: Note,
-        backgroundColor: MutableState<Color>,
-        accountViewModel: AccountViewModel,
-        nav: INav,
-    ) {}
-
     // Git
 
     @Composable
@@ -328,23 +300,6 @@ interface NotePlatform {
         accountViewModel: AccountViewModel,
         nav: INav,
     ) {}
-
-    // Calendar
-
-    /**
-     * A NIP-52 RSVP with the appointment it answers merged into its frame. Draws the bare
-     * [com.vitorpamplona.amethyst.commons.ui.note.CalendarRsvpCard] by default: the appointment
-     * half still uses the platform's calendar formatting.
-     */
-    @Composable
-    fun RenderCalendarRSVPEvent(
-        baseNote: Note,
-        accountViewModel: AccountViewModel,
-        nav: INav,
-    ) {
-        val event = baseNote.event as? CalendarRSVPEvent ?: return
-        CalendarRsvpCard(event)
-    }
 
     // Meeting rooms (audio spaces)
 
@@ -439,16 +394,6 @@ interface NotePlatform {
         onReRecord: ((RecordingResult) -> Unit)?,
         isUploading: Boolean,
         modifier: Modifier,
-    ) {}
-
-    /** The editor for a new version of [edit], shown while [versionLookingAt] is on screen. */
-    @Composable
-    fun EditPostView(
-        onClose: () -> Unit,
-        edit: Note,
-        versionLookingAt: Note?,
-        accountViewModel: AccountViewModel,
-        nav: INav,
     ) {}
 
     /** Draws nothing: previews, and front ends still wiring their pieces. */

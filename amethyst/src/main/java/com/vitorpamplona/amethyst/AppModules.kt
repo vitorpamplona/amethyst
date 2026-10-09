@@ -23,6 +23,7 @@ package com.vitorpamplona.amethyst
 import android.content.ComponentCallbacks2
 import android.content.Context
 import android.os.BatteryManager
+import android.os.Build
 import android.os.SystemClock
 import androidx.security.crypto.EncryptedSharedPreferences
 import coil3.disk.DiskCache
@@ -70,6 +71,7 @@ import com.vitorpamplona.amethyst.commons.relayClient.diagnostics.BootRelayDiagn
 import com.vitorpamplona.amethyst.commons.relayClient.event.EventFinderQueryState
 import com.vitorpamplona.amethyst.commons.relayClient.notify.NotifyCoordinator
 import com.vitorpamplona.amethyst.commons.relayClient.reqCommand.RelaySubscriptionsCoordinator
+import com.vitorpamplona.amethyst.commons.relayClient.reqCommand.account.AccountSubscriptionRegistry
 import com.vitorpamplona.amethyst.commons.relayClient.speedLogger.RelaySpeedLogger
 import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.UntaggedFilterWarningClient
 import com.vitorpamplona.amethyst.commons.relayClient.user.UserFinderQueryState
@@ -82,6 +84,9 @@ import com.vitorpamplona.amethyst.commons.scheduledposts.ScheduledPostStore
 import com.vitorpamplona.amethyst.commons.scheduledposts.ScheduledPostWorkGate
 import com.vitorpamplona.amethyst.commons.service.call.CallSessionBridge
 import com.vitorpamplona.amethyst.commons.service.connectivity.ConnectivityStatus
+import com.vitorpamplona.amethyst.commons.service.crashreports.CrashReportCache
+import com.vitorpamplona.amethyst.commons.service.crashreports.ReportAssembler
+import com.vitorpamplona.amethyst.commons.service.crashreports.UnexpectedCrashSaver
 import com.vitorpamplona.amethyst.commons.service.georelay.GeoRelayCsvLoader
 import com.vitorpamplona.amethyst.commons.service.georelay.GeohashRelays
 import com.vitorpamplona.amethyst.commons.service.http.BlossomReadAuthInterceptor
@@ -93,12 +98,25 @@ import com.vitorpamplona.amethyst.commons.service.http.LocalBlossomMediaCallFact
 import com.vitorpamplona.amethyst.commons.service.http.OkHttpWebSocket
 import com.vitorpamplona.amethyst.commons.service.http.OnionLocationCache
 import com.vitorpamplona.amethyst.commons.service.http.RoleBasedHttpClientBuilder
+import com.vitorpamplona.amethyst.commons.service.images.ImageDiskCacheReconciler
 import com.vitorpamplona.amethyst.commons.service.lnurl.OkHttpLnurlEndpointResolver
 import com.vitorpamplona.amethyst.commons.service.namecoin.NamecoinServices
 import com.vitorpamplona.amethyst.commons.service.pow.PoWJobStore
 import com.vitorpamplona.amethyst.commons.service.pow.PoWPolicy
 import com.vitorpamplona.amethyst.commons.service.pow.PoWPublishQueue
 import com.vitorpamplona.amethyst.commons.service.pow.PowJobRestorer
+import com.vitorpamplona.amethyst.commons.service.resourceusage.BatteryDrainSampler
+import com.vitorpamplona.amethyst.commons.service.resourceusage.ForegroundTimeIntegrator
+import com.vitorpamplona.amethyst.commons.service.resourceusage.HttpUsageMeter
+import com.vitorpamplona.amethyst.commons.service.resourceusage.RadioBurstEstimator
+import com.vitorpamplona.amethyst.commons.service.resourceusage.RefCountedSession
+import com.vitorpamplona.amethyst.commons.service.resourceusage.RelayConnectionTimeIntegrator
+import com.vitorpamplona.amethyst.commons.service.resourceusage.RelayUsageListener
+import com.vitorpamplona.amethyst.commons.service.resourceusage.ResourceUsageAccountant
+import com.vitorpamplona.amethyst.commons.service.resourceusage.ResourceUsageStore
+import com.vitorpamplona.amethyst.commons.service.resourceusage.ScreenTimeIntegrator
+import com.vitorpamplona.amethyst.commons.service.resourceusage.SessionTimeIntegrator
+import com.vitorpamplona.amethyst.commons.service.resourceusage.UsageCountingInterceptor
 import com.vitorpamplona.amethyst.commons.service.resourceusage.UsageKeys
 import com.vitorpamplona.amethyst.commons.service.upload.BlossomClient
 import com.vitorpamplona.amethyst.commons.service.upload.blossom.BlossomMirrorQueue
@@ -119,10 +137,7 @@ import com.vitorpamplona.amethyst.service.calendar.calendarReminderSettings
 import com.vitorpamplona.amethyst.service.calendar.calendarReminderSettingsMigrations
 import com.vitorpamplona.amethyst.service.cast.CastRegistry
 import com.vitorpamplona.amethyst.service.connectivity.ConnectivityManager
-import com.vitorpamplona.amethyst.service.crashreports.CrashReportCache
-import com.vitorpamplona.amethyst.service.crashreports.UnexpectedCrashSaver
 import com.vitorpamplona.amethyst.service.images.ImageCacheFactory
-import com.vitorpamplona.amethyst.service.images.ImageDiskCacheReconciler
 import com.vitorpamplona.amethyst.service.images.ImageLoaderSetup
 import com.vitorpamplona.amethyst.service.images.ThumbnailDiskCache
 import com.vitorpamplona.amethyst.service.location.LocationState
@@ -138,22 +153,9 @@ import com.vitorpamplona.amethyst.service.playback.diskCache.VideoCacheFactory
 import com.vitorpamplona.amethyst.service.playback.pip.BackgroundMedia
 import com.vitorpamplona.amethyst.service.playback.service.PlaybackServiceClient
 import com.vitorpamplona.amethyst.service.pow.PowMiningForegroundService
-import com.vitorpamplona.amethyst.service.relayClient.reqCommand.account.AccountSubscriptionRegistry
-import com.vitorpamplona.amethyst.service.resourceusage.BatteryDrainSampler
-import com.vitorpamplona.amethyst.service.resourceusage.ForegroundTimeIntegrator
 import com.vitorpamplona.amethyst.service.resourceusage.ForegroundTracker
-import com.vitorpamplona.amethyst.service.resourceusage.HttpUsageMeter
 import com.vitorpamplona.amethyst.service.resourceusage.MeteringNostrSigner
 import com.vitorpamplona.amethyst.service.resourceusage.ProcessCpuSampler
-import com.vitorpamplona.amethyst.service.resourceusage.RadioBurstEstimator
-import com.vitorpamplona.amethyst.service.resourceusage.RefCountedSession
-import com.vitorpamplona.amethyst.service.resourceusage.RelayConnectionTimeIntegrator
-import com.vitorpamplona.amethyst.service.resourceusage.RelayUsageListener
-import com.vitorpamplona.amethyst.service.resourceusage.ResourceUsageAccountant
-import com.vitorpamplona.amethyst.service.resourceusage.ResourceUsageStore
-import com.vitorpamplona.amethyst.service.resourceusage.ScreenTimeIntegrator
-import com.vitorpamplona.amethyst.service.resourceusage.SessionTimeIntegrator
-import com.vitorpamplona.amethyst.service.resourceusage.UsageCountingInterceptor
 import com.vitorpamplona.amethyst.service.safeCacheDir
 import com.vitorpamplona.amethyst.service.scheduledposts.ScheduledPostWorker
 import com.vitorpamplona.amethyst.service.uploads.blossom.BlossomSyncForegroundService
@@ -1181,7 +1183,7 @@ class AppModules(
     }
 
     // crash report storage
-    val crashReportCache = CrashReportCache(appContext)
+    val crashReportCache = CrashReportCache(appContext.filesDir)
 
     // cache for NIP-11 documents
     val nip11Cache: Nip11CachedRetriever by lazy {
@@ -1211,7 +1213,7 @@ class AppModules(
     fun encryptedStorage(npub: String? = null): EncryptedSharedPreferences = EncryptedStorage.preferences(appContext, npub)
 
     fun initiate(appContext: Context) {
-        Thread.setDefaultUncaughtExceptionHandler(UnexpectedCrashSaver(crashReportCache, applicationIOScope))
+        Thread.setDefaultUncaughtExceptionHandler(UnexpectedCrashSaver(crashReportCache, androidCrashReportAssembler()))
 
         // Ledger: count process starts — high counts reveal WorkManager/restart
         // churn that cold-starts the whole app graph repeatedly.
@@ -1582,3 +1584,22 @@ class AppModules(
         private const val LOCAL_BLOSSOM_CACHE_RECHECK_MS = 60_000L
     }
 }
+
+/** Crash reports name the build and the device: what a maintainer needs to reproduce one. */
+private fun androidCrashReportAssembler() =
+    ReportAssembler(
+        versionLine = BuildConfig.VERSION_NAME + "-" + BuildConfig.FLAVOR.uppercase(),
+        deviceRows =
+            listOf(
+                "Manuf" to Build.MANUFACTURER,
+                "Model" to Build.MODEL,
+                "Prod" to Build.PRODUCT,
+                "Android" to Build.VERSION.RELEASE,
+                "SDK Int" to Build.VERSION.SDK_INT.toString(),
+                "Brand" to Build.BRAND,
+                "Hardware" to Build.HARDWARE,
+                "Device" to Build.DEVICE,
+                "Host" to Build.HOST,
+                "User" to Build.USER,
+            ),
+    )

@@ -28,6 +28,7 @@ import androidx.annotation.DrawableRes
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbol
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
+import com.vitorpamplona.amethyst.commons.notifications.NotificationTopic
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.app_notification_articles_channel_description
 import com.vitorpamplona.amethyst.commons.resources.app_notification_articles_channel_id
@@ -333,3 +334,20 @@ enum class NotificationCategory(
         return id
     }
 }
+
+/** The channel a shared [NotificationTopic] posts on. */
+fun NotificationTopic.category(): NotificationCategory =
+    when (this) {
+        NotificationTopic.DIRECT_MESSAGE -> NotificationCategory.DIRECT_MESSAGE
+        NotificationTopic.REPLY -> NotificationCategory.REPLY
+        NotificationTopic.MENTION -> NotificationCategory.MENTION
+        NotificationTopic.REACTION -> NotificationCategory.REACTION
+        NotificationTopic.REPOST -> NotificationCategory.REPOST
+        NotificationTopic.ZAP -> NotificationCategory.ZAP
+        NotificationTopic.MEDIA -> NotificationCategory.MEDIA
+        NotificationTopic.ARTICLE -> NotificationCategory.ARTICLE
+        NotificationTopic.CODE -> NotificationCategory.CODE
+        NotificationTopic.BADGE -> NotificationCategory.BADGE
+        NotificationTopic.CHESS -> NotificationCategory.CHESS
+        NotificationTopic.PAYMENT_RECEIVED -> NotificationCategory.PAYMENT_RECEIVED
+    }

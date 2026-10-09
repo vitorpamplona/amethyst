@@ -105,6 +105,7 @@ import com.vitorpamplona.amethyst.commons.ui.components.LocalReadOnlyPreview
 import com.vitorpamplona.amethyst.commons.ui.components.RobohashFallbackAsyncImage
 import com.vitorpamplona.amethyst.commons.ui.components.ShowFullTextCache
 import com.vitorpamplona.amethyst.commons.ui.components.blockInteractions
+import com.vitorpamplona.amethyst.commons.ui.connectedApps.consent.ConnectedAccountRow
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.EmptyNav
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.note.NoteBody

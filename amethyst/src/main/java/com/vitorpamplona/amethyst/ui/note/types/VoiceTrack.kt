@@ -56,6 +56,8 @@ import com.vitorpamplona.amethyst.commons.richtext.MediaUrlVideo
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.note.elements.DisplayUncitedHashtags
 import com.vitorpamplona.amethyst.commons.ui.note.types.getAudioMetaWithWaveform
+import com.vitorpamplona.amethyst.commons.ui.playback.controls.AnimatedShareButton
+import com.vitorpamplona.amethyst.commons.ui.playback.controls.MuteButton
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.MaxWidthPaddingTop5dp
 import com.vitorpamplona.amethyst.commons.ui.theme.Size50Modifier
@@ -69,8 +71,6 @@ import com.vitorpamplona.amethyst.service.playback.composable.GetVideoController
 import com.vitorpamplona.amethyst.service.playback.composable.MediaControllerState
 import com.vitorpamplona.amethyst.service.playback.composable.PauseControllerWhenInBackground
 import com.vitorpamplona.amethyst.service.playback.composable.controls.AnimatedSaveButton
-import com.vitorpamplona.amethyst.service.playback.composable.controls.AnimatedShareButton
-import com.vitorpamplona.amethyst.service.playback.composable.controls.MuteButton
 import com.vitorpamplona.amethyst.service.playback.composable.controls.PictureInPictureButton
 import com.vitorpamplona.amethyst.service.playback.composable.mediaitem.GetMediaItem
 import com.vitorpamplona.amethyst.service.playback.composable.mediaitem.LoadedMediaItem

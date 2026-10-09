@@ -29,6 +29,7 @@ import com.vitorpamplona.amethyst.commons.moderation.notifications.NotificationS
 import com.vitorpamplona.amethyst.commons.moderation.notifications.PermissionState
 import com.vitorpamplona.amethyst.commons.moderation.notifications.nowEpochSeconds
 import com.vitorpamplona.amethyst.commons.moderation.notifications.sanitizeForToast
+import com.vitorpamplona.amethyst.commons.notifications.NotificationMessage
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.desktop_notification_dm
 import com.vitorpamplona.amethyst.commons.resources.desktop_notification_follow
@@ -60,6 +61,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withTimeoutOrNull
 
 /**
  * Subscribes to [DesktopLocalCache]'s new-event stream and fires OS toasts
@@ -73,6 +75,9 @@ import kotlinx.coroutines.launch
  */
 private const val TAG = "AutoDispatch"
 
+/** How long a notification waits for its shared text before it goes out with the generic line. */
+private const val COMPOSE_TIMEOUT_MS = 5_000L
+
 class DesktopNotificationAutoDispatcher(
     private val dispatcher: NotificationDispatcher,
     private val settings: NotificationSettings,
@@ -83,6 +88,14 @@ class DesktopNotificationAutoDispatcher(
     private val authorOf: (eventId: String) -> String?,
     /** The name to show for a pubkey, when its profile is cached. */
     private val displayNameOf: (pubKey: String) -> String?,
+    /**
+     * The title and body Android would show for [Event], from the shared composers, or null for
+     * a kind they don't cover. Used only when the user allows content previews. The legacy app
+     * passes none and keeps the generic lines.
+     */
+    private val compose: suspend (Event) -> NotificationMessage? = { null },
+    /** False for an event the user shouldn't hear about: its author is muted, blocked or reported. */
+    private val isAcceptable: (Event) -> Boolean = { true },
     private val isWindowFocused: StateFlow<Boolean>,
     private val sessionStartSec: Long,
     private val scope: CoroutineScope,
@@ -167,6 +180,10 @@ class DesktopNotificationAutoDispatcher(
             logSkip(eid, kind.name) { "not-tagged-for-user (author=${event.pubKey.take(8)})" }
             return
         }
+        if (!isAcceptable(event)) {
+            logSkip(eid, kind.name) { "not-acceptable (author=${event.pubKey.take(8)})" }
+            return
+        }
 
         val dedupeKey = kind.name + "|" + event.id
         val last = recentFires[dedupeKey]
@@ -189,6 +206,20 @@ class DesktopNotificationAutoDispatcher(
             }
         }
     }
+
+    /**
+     * The shared title and body, or null to fall back to the generic line. A composer may decrypt
+     * through a remote signer, so it gets [COMPOSE_TIMEOUT_MS] and any failure is just a fallback.
+     */
+    private suspend fun composeOrNull(event: Event): NotificationMessage? =
+        try {
+            withTimeoutOrNull(COMPOSE_TIMEOUT_MS) { compose(event) }
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            Log.w(TAG, "Could not compose a notification for ${event.id.take(8)}", e)
+            null
+        }
 
     private fun notifKindFor(event: Event): NotifKind? =
         when (event) {
@@ -217,8 +248,17 @@ class DesktopNotificationAutoDispatcher(
             }
         val displayName = displayNameOf(effectivePubKey) ?: loadStringRes(Res.string.desktop_notification_someone)
 
+        // With previews on, show what Android shows; DMs and replies keep the generic line
+        // (the DM pipeline isn't decrypted here and the reply composer is Android's).
+        val composed =
+            if (settings.previewInToast.value && kind != NotifKind.DM && kind != NotifKind.REPLY) {
+                composeOrNull(event)
+            } else {
+                null
+            }
+
         val title =
-            when (kind) {
+            composed?.let { sanitizeForToast(it.title, maxLen = 120) } ?: when (kind) {
                 NotifKind.ZAP -> {
                     val sats = (event as? ZapReceiptEvent)?.amount?.let { (it.toLong() / 1000).toString() }
                     if (sats != null) {
@@ -242,6 +282,7 @@ class DesktopNotificationAutoDispatcher(
             when {
                 kind == NotifKind.DM -> ""
                 !settings.previewInToast.value -> ""
+                composed != null -> sanitizeForToast(composed.body, maxLen = 120)
                 else -> sanitizeForToast(event.content, maxLen = 120)
             }
 

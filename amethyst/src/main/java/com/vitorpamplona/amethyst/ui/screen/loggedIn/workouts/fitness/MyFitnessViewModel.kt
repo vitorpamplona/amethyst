@@ -31,8 +31,8 @@ import com.vitorpamplona.amethyst.commons.fitness.FitnessGoals
 import com.vitorpamplona.amethyst.commons.fitness.FitnessInsights
 import com.vitorpamplona.amethyst.commons.fitness.TrainingLog
 import com.vitorpamplona.amethyst.commons.fitness.WorkoutStats
+import com.vitorpamplona.amethyst.commons.fitness.health.publishedWorkoutsOf
 import com.vitorpamplona.amethyst.service.workouts.health.HealthConnectManager
-import com.vitorpamplona.amethyst.service.workouts.health.publishedWorkoutsOf
 import com.vitorpamplona.quartz.nip01Core.core.hexToByteArray
 import com.vitorpamplona.quartz.nip19Bech32.toNpub
 import kotlinx.coroutines.Dispatchers

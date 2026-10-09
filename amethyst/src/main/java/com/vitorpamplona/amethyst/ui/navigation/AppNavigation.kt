@@ -45,6 +45,8 @@ import com.vitorpamplona.amethyst.commons.nipACWebRtcCalls.CallState
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.invalid_nip19_uri
 import com.vitorpamplona.amethyst.commons.resources.invalid_nip19_uri_description
+import com.vitorpamplona.amethyst.commons.ui.navigation.ShareIntentRouting
+import com.vitorpamplona.amethyst.commons.ui.navigation.ShareTarget
 import com.vitorpamplona.amethyst.commons.ui.navigation.findQueryParameterValue
 import com.vitorpamplona.amethyst.commons.ui.navigation.host.NavDestinations
 import com.vitorpamplona.amethyst.commons.ui.navigation.host.composableFromBottomArgs
@@ -55,6 +57,7 @@ import com.vitorpamplona.amethyst.commons.ui.navigation.navs.Nav
 import com.vitorpamplona.amethyst.commons.ui.navigation.routes.consumesSharesInPlace
 import com.vitorpamplona.amethyst.commons.ui.navigation.routes.getRouteWithArguments
 import com.vitorpamplona.amethyst.commons.ui.navigation.routes.isBaseRoute
+import com.vitorpamplona.amethyst.commons.ui.note.UpdateReactionTypeScreen
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.settings.NowPlayingSettingsScreen
 import com.vitorpamplona.amethyst.commons.ui.uriToRoute
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
@@ -62,7 +65,6 @@ import com.vitorpamplona.amethyst.service.nowPlaying.AndroidAppIcon
 import com.vitorpamplona.amethyst.service.nowPlaying.AndroidNowPlayingAccess
 import com.vitorpamplona.amethyst.ui.call.CallActivity
 import com.vitorpamplona.amethyst.ui.components.getActivity
-import com.vitorpamplona.amethyst.ui.note.UpdateReactionTypeScreen
 import com.vitorpamplona.amethyst.ui.note.share.ShareNoteAsImageFileScreen
 import com.vitorpamplona.amethyst.ui.note.share.ShareNoteAsImageScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.browser.WebAppScreen

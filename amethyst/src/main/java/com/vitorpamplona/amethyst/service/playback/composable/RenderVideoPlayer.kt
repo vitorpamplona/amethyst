@@ -46,9 +46,12 @@ import androidx.media3.common.util.UnstableApi
 import androidx.media3.ui.compose.ContentFrame
 import androidx.media3.ui.compose.SURFACE_TYPE_TEXTURE_VIEW
 import com.vitorpamplona.amethyst.commons.ui.components.getDialogWindow
+import com.vitorpamplona.amethyst.commons.ui.playback.audioSquare
+import com.vitorpamplona.amethyst.commons.ui.playback.controls.BottomGradientOverlay
+import com.vitorpamplona.amethyst.commons.ui.playback.controls.TopGradientOverlay
+import com.vitorpamplona.amethyst.commons.ui.playback.shouldSquareAudioPlayer
 import com.vitorpamplona.amethyst.commons.video.isHlsMedia
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
-import com.vitorpamplona.amethyst.service.playback.composable.controls.BottomGradientOverlay
 import com.vitorpamplona.amethyst.service.playback.composable.controls.FullscreenSwipeControlsState
 import com.vitorpamplona.amethyst.service.playback.composable.controls.FullscreenSwipeLevelIndicator
 import com.vitorpamplona.amethyst.service.playback.composable.controls.LogVideoQualitySelection
@@ -57,7 +60,6 @@ import com.vitorpamplona.amethyst.service.playback.composable.controls.RenderAni
 import com.vitorpamplona.amethyst.service.playback.composable.controls.RenderCaptions
 import com.vitorpamplona.amethyst.service.playback.composable.controls.RenderCenterButtons
 import com.vitorpamplona.amethyst.service.playback.composable.controls.RenderTopButtons
-import com.vitorpamplona.amethyst.service.playback.composable.controls.TopGradientOverlay
 import com.vitorpamplona.amethyst.service.playback.composable.controls.applyViewportConstraint
 import com.vitorpamplona.amethyst.service.playback.composable.controls.clampViewportShortSide
 import com.vitorpamplona.amethyst.service.playback.composable.controls.fullscreenSwipeControls

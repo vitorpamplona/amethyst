@@ -54,6 +54,10 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
+import com.vitorpamplona.amethyst.commons.ui.playback.controls.MuteAction
+import com.vitorpamplona.amethyst.commons.ui.playback.controls.computeLevel
+import com.vitorpamplona.amethyst.commons.ui.playback.controls.levelToVolumeIndex
+import com.vitorpamplona.amethyst.commons.ui.playback.controls.muteActionFor
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.collectLatest
 import kotlin.math.roundToInt

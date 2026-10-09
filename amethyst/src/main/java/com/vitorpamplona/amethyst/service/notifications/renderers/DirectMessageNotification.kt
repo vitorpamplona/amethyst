@@ -26,12 +26,12 @@ import com.vitorpamplona.amethyst.commons.model.User
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
 import com.vitorpamplona.amethyst.commons.model.privateChats.isSubjectOnlyChatMessage
 import com.vitorpamplona.amethyst.commons.notifications.NotificationContent
+import com.vitorpamplona.amethyst.commons.notifications.NotificationRoutes
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.chat_notification_renamed_conversation_to
 import com.vitorpamplona.amethyst.commons.ui.loadStringRes
 import com.vitorpamplona.amethyst.service.notifications.NotificationCategory
 import com.vitorpamplona.amethyst.service.notifications.NotificationEnricher
-import com.vitorpamplona.amethyst.service.notifications.NotificationRoutes
 import com.vitorpamplona.amethyst.service.notifications.NotificationUtils.Conversation
 import com.vitorpamplona.amethyst.service.notifications.NotificationUtils.ReplyAction
 import com.vitorpamplona.amethyst.service.notifications.NotificationUtils.postConversation

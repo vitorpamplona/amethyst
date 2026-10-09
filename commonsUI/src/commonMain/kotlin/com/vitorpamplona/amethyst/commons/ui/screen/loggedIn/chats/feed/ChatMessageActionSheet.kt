@@ -76,6 +76,7 @@ import com.vitorpamplona.amethyst.commons.resources.relay_group_pin_message
 import com.vitorpamplona.amethyst.commons.resources.relay_group_unpin_message
 import com.vitorpamplona.amethyst.commons.resources.reply_description
 import com.vitorpamplona.amethyst.commons.resources.show_less
+import com.vitorpamplona.amethyst.commons.ui.actions.EditPostView
 import com.vitorpamplona.amethyst.commons.ui.components.ClickableBox
 import com.vitorpamplona.amethyst.commons.ui.components.rememberModalSheetState
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
@@ -90,7 +91,6 @@ import com.vitorpamplona.amethyst.commons.ui.note.elements.NoteActionHandlers
 import com.vitorpamplona.amethyst.commons.ui.note.elements.ShareOptionsBottomSheet
 import com.vitorpamplona.amethyst.commons.ui.note.elements.noteActionSections
 import com.vitorpamplona.amethyst.commons.ui.note.elements.observeBookmarksFollowsAndAccount
-import com.vitorpamplona.amethyst.commons.ui.note.platform.EditPostView
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.feed.QuickZapAmountRow
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.publicChannels.concord.ConcordExpiringPinDialog
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.report.ReportNoteDialog

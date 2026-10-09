@@ -28,6 +28,7 @@ import androidx.core.content.pm.ShortcutInfoCompat
 import androidx.core.content.pm.ShortcutManagerCompat
 import androidx.core.graphics.drawable.IconCompat
 import androidx.core.net.toUri
+import com.vitorpamplona.amethyst.commons.notifications.NotificationRoutes
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.app_notification_shortcut_account_removed
 import com.vitorpamplona.amethyst.commons.ui.loadStringRes

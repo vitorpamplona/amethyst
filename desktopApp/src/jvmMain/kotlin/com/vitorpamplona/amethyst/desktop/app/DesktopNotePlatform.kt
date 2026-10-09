@@ -36,6 +36,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Rect
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
@@ -66,6 +67,11 @@ import com.vitorpamplona.quartz.nip94FileMetadata.tags.DimensionTag
 import kotlinx.collections.immutable.ImmutableList
 import com.vitorpamplona.amethyst.commons.ui.components.LoadUrlPreview as SharedLoadUrlPreview
 import com.vitorpamplona.amethyst.commons.ui.components.rememberUrlPreviewState as sharedRememberUrlPreviewState
+import com.vitorpamplona.amethyst.commons.ui.note.types.RenderGitIssueEvent as SharedRenderGitIssueEvent
+import com.vitorpamplona.amethyst.commons.ui.note.types.RenderGitPatchEvent as SharedRenderGitPatchEvent
+import com.vitorpamplona.amethyst.commons.ui.note.types.RenderGitPullRequestEvent as SharedRenderGitPullRequestEvent
+import com.vitorpamplona.amethyst.commons.ui.note.types.RenderGitPullRequestUpdateEvent as SharedRenderGitPullRequestUpdateEvent
+import com.vitorpamplona.amethyst.commons.ui.note.types.RenderGitRepositoryEvent as SharedRenderGitRepositoryEvent
 
 /**
  * The desktop halves of the shared note renderer: images and GIFs through Coil, video and audio
@@ -278,4 +284,57 @@ object DesktopNotePlatform : NotePlatform {
         accountViewModel: AccountViewModel,
         nav: INav,
     ) = AudioPlayer(url = mediaUrl, modifier = Modifier.fillMaxWidth())
+
+    // Git events: the same renderers Android uses (shared, JVM-only for the repository browser).
+
+    @Composable
+    override fun RenderGitRepositoryEvent(
+        baseNote: Note,
+        accountViewModel: AccountViewModel,
+        nav: INav,
+    ) = SharedRenderGitRepositoryEvent(baseNote, accountViewModel, nav)
+
+    @Composable
+    override fun RenderGitPatchEvent(
+        baseNote: Note,
+        makeItShort: Boolean,
+        canPreview: Boolean,
+        quotesLeft: Int,
+        backgroundColor: MutableState<Color>,
+        accountViewModel: AccountViewModel,
+        nav: INav,
+    ) = SharedRenderGitPatchEvent(baseNote, makeItShort, canPreview, quotesLeft, backgroundColor, accountViewModel, nav)
+
+    @Composable
+    override fun RenderGitIssueEvent(
+        baseNote: Note,
+        makeItShort: Boolean,
+        canPreview: Boolean,
+        quotesLeft: Int,
+        backgroundColor: MutableState<Color>,
+        accountViewModel: AccountViewModel,
+        nav: INav,
+    ) = SharedRenderGitIssueEvent(baseNote, makeItShort, canPreview, quotesLeft, backgroundColor, accountViewModel, nav)
+
+    @Composable
+    override fun RenderGitPullRequestEvent(
+        baseNote: Note,
+        makeItShort: Boolean,
+        canPreview: Boolean,
+        quotesLeft: Int,
+        backgroundColor: MutableState<Color>,
+        accountViewModel: AccountViewModel,
+        nav: INav,
+    ) = SharedRenderGitPullRequestEvent(baseNote, makeItShort, canPreview, quotesLeft, backgroundColor, accountViewModel, nav)
+
+    @Composable
+    override fun RenderGitPullRequestUpdateEvent(
+        baseNote: Note,
+        makeItShort: Boolean,
+        canPreview: Boolean,
+        quotesLeft: Int,
+        backgroundColor: MutableState<Color>,
+        accountViewModel: AccountViewModel,
+        nav: INav,
+    ) = SharedRenderGitPullRequestUpdateEvent(baseNote, makeItShort, canPreview, quotesLeft, backgroundColor, accountViewModel, nav)
 }
