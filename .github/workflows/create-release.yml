@@ -261,6 +261,15 @@ jobs:
           chmod +x scripts/add-deb-gstreamer-deps.sh
           scripts/add-deb-gstreamer-deps.sh desktopApp/build/compose/binaries/main-release/deb/*.deb
 
+      # Docks and app switchers match the window's WM_CLASS ("Amethyst") to the desktop
+      # entry's StartupWMClass, which jpackage's entry lacks.
+      - name: Add StartupWMClass to .deb
+        if: matrix.family == 'linux'
+        run: |
+          set -euo pipefail
+          chmod +x scripts/add-deb-wm-class.sh
+          scripts/add-deb-wm-class.sh desktopApp/build/compose/binaries/main-release/deb/*.deb
+
       - name: Build portable archives (windows + linux-portable)
         if: matrix.family == 'windows' || matrix.family == 'linux-portable'
         run: |

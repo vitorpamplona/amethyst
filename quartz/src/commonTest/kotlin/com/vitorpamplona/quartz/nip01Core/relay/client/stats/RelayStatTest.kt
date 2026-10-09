@@ -18,16 +18,30 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.commons.ui.layouts
+package com.vitorpamplona.quartz.nip01Core.relay.client.stats
 
-import androidx.compose.runtime.Composable
-import androidx.compose.ui.Modifier
+import kotlin.test.Test
+import kotlin.test.assertFalse
+import kotlin.test.assertTrue
 
-@Composable
-actual fun HorizontalTwoPane(
-    first: @Composable () -> Unit,
-    second: @Composable () -> Unit,
-    splitFraction: Float,
-    modifier: Modifier,
-    onDividerDrag: ((deltaDp: Float) -> Unit)?,
-) = ProportionalTwoPane(first, second, splitFraction, modifier, onDividerDrag)
+class RelayStatTest {
+    @Test
+    fun aRelayThatWasTriedButNeverConnectedHasNeverConnected() {
+        val dead = RelayStat().apply { repeat(5) { newConnection() } }
+
+        assertTrue(dead.hasNeverConnected)
+    }
+
+    @Test
+    fun anUntriedOrOnceConnectedRelayHasNot() {
+        val untried = RelayStat()
+        val flaky =
+            RelayStat().apply {
+                repeat(5) { newConnection() }
+                connectionCompleted()
+            }
+
+        assertFalse(untried.hasNeverConnected, "never tried is not evidence of anything")
+        assertFalse(flaky.hasNeverConnected)
+    }
+}

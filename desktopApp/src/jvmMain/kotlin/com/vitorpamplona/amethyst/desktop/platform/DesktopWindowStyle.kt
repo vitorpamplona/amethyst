@@ -31,9 +31,11 @@ import androidx.compose.ui.platform.PlatformInsets
 import androidx.compose.ui.platform.PlatformWindowInsets
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.isSpecified
 import androidx.compose.ui.unit.sp
 import com.vitorpamplona.amethyst.commons.ui.layouts.LocalTitleBarOverlay
+import com.vitorpamplona.amethyst.commons.ui.navigation.drawer.DrawerMetrics
 import com.vitorpamplona.amethyst.commons.ui.theme.DefaultTypography
 
 /**
@@ -57,6 +59,13 @@ val DesktopTypography: Typography =
             bodyMedium = bodyMedium.resized(13),
         )
     }
+
+/**
+ * The side menu at the size of the OS's own sidebars (Finder, Mail and Explorer list their places
+ * at 13-15pt under ~11-12pt headings, in rows ~28-40pt tall). The phone's 18sp rows read as
+ * headlines on a desktop, and its finger-sized rows spread the menu out under a mouse.
+ */
+val DesktopDrawerMetrics = DrawerMetrics(itemText = 15.sp, headerText = 12.sp, itemVerticalPadding = 5.dp)
 
 /** [size] in sp, with the line height scaled along when the style sets one. */
 private fun TextStyle.resized(size: Int): TextStyle {

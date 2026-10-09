@@ -229,7 +229,15 @@ open class BaseAccountViewModel(
 ) : ViewModel(),
     Dao {
     var firstRoute: Route? = null
-    val broadcastTracker = BroadcastTracker()
+
+    // A dead outbox relay would hold every post's banner until it times out, then flag it.
+    val broadcastTracker =
+        BroadcastTracker(
+            outboxRelays = {
+                account.nip65RelayList.outboxFlow.value
+                    .filterNotTo(HashSet()) { host.relayStats.get(it).hasNeverConnected }
+            },
+        )
     val feedStates = AccountFeedContentStates(account, viewModelScope, host.memoryPressure)
 
     /**
@@ -281,13 +289,7 @@ open class BaseAccountViewModel(
             account.cache.relayHints.relayDB
                 .keys()
                 .filter { url ->
-                    val relayStat = stats[url]
-                    // has connected at least once OR never tried.
-                    if (relayStat != null) {
-                        relayStat.connectionCompleted > 0 || relayStat.connectionTentatives == 0
-                    } else {
-                        true
-                    }
+                    stats[url]?.hasNeverConnected != true
                 }
 
         val sortMap = relays.associateWith { stats.get(it)?.receivedBytes }
