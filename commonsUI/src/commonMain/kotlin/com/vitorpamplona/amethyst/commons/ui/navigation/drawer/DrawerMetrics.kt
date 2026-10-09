@@ -18,16 +18,26 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.commons.ui.layouts
+package com.vitorpamplona.amethyst.commons.ui.navigation.drawer
 
-import androidx.compose.runtime.Composable
-import androidx.compose.ui.Modifier
+import androidx.compose.runtime.Immutable
+import androidx.compose.runtime.staticCompositionLocalOf
+import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.TextUnit
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 
-@Composable
-actual fun HorizontalTwoPane(
-    first: @Composable () -> Unit,
-    second: @Composable () -> Unit,
-    splitFraction: Float,
-    modifier: Modifier,
-    onDividerDrag: ((deltaDp: Float) -> Unit)?,
-) = ProportionalTwoPane(first, second, splitFraction, modifier, onDividerDrag)
+/**
+ * The side menu's sizes: [itemText] for its rows, [headerText] for its section headings, and
+ * [itemVerticalPadding] above and below each row. The defaults are the phone's: large text and
+ * finger-sized rows. No Material type style has these sizes, so a front end with its own scale (the
+ * desktop, sized like the OS's sidebars for a mouse) provides its own through [LocalDrawerMetrics].
+ */
+@Immutable
+data class DrawerMetrics(
+    val itemText: TextUnit = 18.sp,
+    val headerText: TextUnit = 14.sp,
+    val itemVerticalPadding: Dp = 15.dp,
+)
+
+val LocalDrawerMetrics = staticCompositionLocalOf { DrawerMetrics() }

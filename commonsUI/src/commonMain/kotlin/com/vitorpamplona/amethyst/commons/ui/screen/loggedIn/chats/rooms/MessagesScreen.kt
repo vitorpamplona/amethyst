@@ -63,6 +63,7 @@ fun MessagesScreen(
                 newFeedContentState = accountViewModel.feedStates.dmNew,
                 widthSizeClass = paneWidthClass,
                 selection = selection,
+                paneWidth = maxWidth.value,
                 accountViewModel = accountViewModel,
                 nav = nav,
             )

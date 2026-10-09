@@ -20,14 +20,27 @@
  */
 package com.vitorpamplona.amethyst.commons.ui.layouts
 
+import android.view.MotionEvent
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.Modifier
+import androidx.compose.runtime.remember
+import androidx.compose.ui.input.pointer.PointerEvent
+import androidx.compose.ui.platform.LocalView
 
+/** Posts a moved copy of the mouse-wheel MotionEvent to the Compose view it came from. */
 @Composable
-actual fun HorizontalTwoPane(
-    first: @Composable () -> Unit,
-    second: @Composable () -> Unit,
-    splitFraction: Float,
-    modifier: Modifier,
-    onDividerDrag: ((deltaDp: Float) -> Unit)?,
-) = ProportionalTwoPane(first, second, splitFraction, modifier, onDividerDrag)
+internal actual fun rememberWheelRedispatcher(): (event: PointerEvent, dxPx: Float) -> Unit {
+    val view = LocalView.current
+    return remember(view) {
+        { event, dxPx ->
+            val motion = event.motionEvent
+            if (motion != null && motion.actionMasked == MotionEvent.ACTION_SCROLL) {
+                // Copied now: Android recycles the original once this dispatch returns.
+                val moved = MotionEvent.obtain(motion).apply { offsetLocation(dxPx, 0f) }
+                view.post {
+                    view.dispatchGenericMotionEvent(moved)
+                    moved.recycle()
+                }
+            }
+        }
+    }
+}

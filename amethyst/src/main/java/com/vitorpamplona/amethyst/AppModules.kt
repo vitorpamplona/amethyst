@@ -57,6 +57,7 @@ import com.vitorpamplona.amethyst.commons.model.preferences.DrawerSectionCollaps
 import com.vitorpamplona.amethyst.commons.model.preferences.NamecoinSettingsStore
 import com.vitorpamplona.amethyst.commons.model.preferences.NowPlayingSettingsStore
 import com.vitorpamplona.amethyst.commons.model.preferences.OtsSettingsStore
+import com.vitorpamplona.amethyst.commons.model.preferences.PaneWidthPreferences
 import com.vitorpamplona.amethyst.commons.model.preferences.RelayGroupAdminCacheStore
 import com.vitorpamplona.amethyst.commons.model.preferences.RelayGroupDeletionStore
 import com.vitorpamplona.amethyst.commons.model.preferences.TorSettingsStore
@@ -390,6 +391,9 @@ class AppModules(
     // opens the way they left it (device-global: a collapsed heading is a per-device view choice,
     // not an account setting worth syncing, unlike the hidden rows beside it in the drawer).
     val drawerSectionCollapsePrefs = DrawerSectionCollapsePreferences(sharedSettingsStore, applicationIOScope)
+
+    // Device-global: the widths the user dragged the panes of a wide window to.
+    val paneWidthPrefs = PaneWidthPreferences(sharedSettingsStore, applicationIOScope)
 
     // Service that will run at all times to receive events from Pokey
     val pokeyReceiver = PokeyReceiver()

@@ -18,16 +18,22 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.commons.ui.layouts
+package com.vitorpamplona.amethyst.desktop.platform
 
-import androidx.compose.runtime.Composable
-import androidx.compose.ui.Modifier
+import androidx.compose.ui.unit.DpSize
+import androidx.compose.ui.unit.dp
+import kotlin.test.Test
+import kotlin.test.assertEquals
 
-@Composable
-actual fun HorizontalTwoPane(
-    first: @Composable () -> Unit,
-    second: @Composable () -> Unit,
-    splitFraction: Float,
-    modifier: Modifier,
-    onDividerDrag: ((deltaDp: Float) -> Unit)?,
-) = ProportionalTwoPane(first, second, splitFraction, modifier, onDividerDrag)
+class DefaultWindowSizeTest {
+    @Test
+    fun aLargeScreenGetsThePreferredSize() {
+        assertEquals(DpSize(1380.dp, 920.dp), fitWindowSize(2560f, 1415f))
+    }
+
+    @Test
+    fun aSmallLaptopScreenKeepsRoomAroundTheWindow() {
+        // A 13" MacBook Air at its default 1440 x 900 pt, minus the menu bar and the Dock.
+        assertEquals(DpSize(1296.dp, 774.dp), fitWindowSize(1440f, 860f))
+    }
+}

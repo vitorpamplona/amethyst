@@ -163,6 +163,15 @@ jobs:
           chmod +x scripts/add-deb-gstreamer-deps.sh
           scripts/add-deb-gstreamer-deps.sh desktopApp/build/compose/binaries/main/deb/*.deb
 
+      # Docks and app switchers match the window's WM_CLASS ("Amethyst") to the desktop
+      # entry's StartupWMClass, which jpackage's entry lacks.
+      - name: Add StartupWMClass to .deb
+        if: matrix.desktop-task == 'packageDeb'
+        run: |
+          set -euo pipefail
+          chmod +x scripts/add-deb-wm-class.sh
+          scripts/add-deb-wm-class.sh desktopApp/build/compose/binaries/main/deb/*.deb
+
       - name: Upload Desktop Distribution
         uses: actions/upload-artifact@v7
         with:

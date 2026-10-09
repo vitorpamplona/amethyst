@@ -107,6 +107,49 @@ val PermanentDrawerWidth = 300.dp
 
 val NotificationPanelWidth = 360.dp
 
+/** How far the user can drag the docked drawer, in dp. */
+val DrawerWidthRange = 220f..480f
+
+/** How far the user can drag the docked notification panel, in dp. */
+val NotificationPanelWidthRange = 280f..640f
+
+/** The least the center pane keeps when the side panes are dragged wide, in dp. */
+const val MIN_CENTER_PANE_DP = 480f
+
+/** The side panes' widths as drawn, in dp; 0 for a pane that is not shown. */
+data class FittedPaneWidths(
+    val drawer: Float,
+    val notifications: Float,
+)
+
+/**
+ * The widths the docked drawer and notification panel are drawn at in a window [windowWidth] dp
+ * wide: what the user dragged them to ([drawer], [notifications], null for the default), within
+ * their ranges, and narrowed (the panel first) when together they would leave the center pane
+ * under [MIN_CENTER_PANE_DP]. The user's choice is kept as is, so a wider window gives it back.
+ */
+fun fitPaneWidths(
+    windowWidth: Float,
+    drawer: Float?,
+    notifications: Float?,
+    showDrawer: Boolean,
+    showNotifications: Boolean,
+): FittedPaneWidths {
+    var drawerWidth = if (showDrawer) (drawer ?: PermanentDrawerWidth.value).coerceIn(DrawerWidthRange) else 0f
+    var panelWidth = if (showNotifications) (notifications ?: NotificationPanelWidth.value).coerceIn(NotificationPanelWidthRange) else 0f
+
+    var excess = drawerWidth + panelWidth + MIN_CENTER_PANE_DP - windowWidth
+    if (excess > 0 && showNotifications) {
+        val narrowed = maxOf(NotificationPanelWidthRange.start, panelWidth - excess)
+        excess -= panelWidth - narrowed
+        panelWidth = narrowed
+    }
+    if (excess > 0 && showDrawer) {
+        drawerWidth = maxOf(DrawerWidthRange.start, drawerWidth - excess)
+    }
+    return FittedPaneWidths(drawerWidth, panelWidth)
+}
+
 /**
  * Maximum width of a screen's content column inside a wide center pane. Every NavHost
  * destination is wrapped in [CappedScreenContent] (via the builders in NavigationEffects),
@@ -159,7 +202,7 @@ fun hasRoomForNotificationPanel(windowWidthDp: Int): Boolean = windowWidthDp >= 
 /**
  * Centers a destination's content at [FeedContentMaxWidth]. The outer box paints the theme
  * background so the gutters match the screens' own surfaces; on Compact windows the cap is
- * wider than the pane and this is a visual no-op.
+ * wider than the pane and this is a visual no-op. A wheel over the gutters scrolls the column.
  */
 @Composable
 fun CappedScreenContent(content: @Composable () -> Unit) {
@@ -167,7 +210,8 @@ fun CappedScreenContent(content: @Composable () -> Unit) {
         modifier =
             Modifier
                 .fillMaxSize()
-                .background(MaterialTheme.colorScheme.background),
+                .background(MaterialTheme.colorScheme.background)
+                .gutterWheelScrollsColumn(FeedContentMaxWidth),
         contentAlignment = Alignment.TopCenter,
     ) {
         Box(

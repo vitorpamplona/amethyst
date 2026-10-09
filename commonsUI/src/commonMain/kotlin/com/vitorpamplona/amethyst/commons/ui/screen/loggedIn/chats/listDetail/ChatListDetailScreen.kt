@@ -25,10 +25,12 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.MutableState
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.commons.model.navigation.Route
 import com.vitorpamplona.amethyst.commons.ui.components.ScopedViewModelStore
 import com.vitorpamplona.amethyst.commons.ui.layouts.HorizontalTwoPane
@@ -38,6 +40,7 @@ import com.vitorpamplona.amethyst.commons.ui.navigation.navs.DetailPaneNav
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.TwoPaneNav
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.rememberDetailPaneSelection
+import com.vitorpamplona.amethyst.commons.ui.platform.LocalAppServices
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 
 /**
@@ -70,6 +73,7 @@ fun ChatListDetailScreen(
             val scope = rememberCoroutineScope()
             val twoPaneNav = remember(nav, selection) { TwoPaneNav(nav, scope, isDetailRoute, selection) }
             val detailNav = remember(twoPaneNav) { DetailPaneNav(twoPaneNav) }
+            val split = listDetailSplit(paneWidthClass, maxWidth.value)
 
             HorizontalTwoPane(
                 first = { list(twoPaneNav) },
@@ -80,8 +84,9 @@ fun ChatListDetailScreen(
                         }
                     }
                 },
-                splitFraction = listDetailSplitFraction(paneWidthClass),
+                splitFraction = split.fraction,
                 modifier = Modifier.fillMaxSize(),
+                onDividerDrag = split.onDrag,
             )
         }
     }
@@ -120,5 +125,36 @@ fun CollapseOpenChatToFullScreen(
     }
 }
 
-/** The list pane's share of the width: a third when Expanded, a little more when Medium. */
+/** The list pane's share of the width by default: a third when Expanded, a little more when Medium. */
 fun listDetailSplitFraction(widthClass: WidthClass): Float = if (widthClass == WidthClass.Expanded) 1f / 3f else 1f / 2.5f
+
+/** Where a list/detail split falls ([fraction] of the width for the list) and what a drag of its divider does. */
+class ListDetailSplit(
+    val fraction: Float,
+    val onDrag: (deltaDp: Float) -> Unit,
+)
+
+/**
+ * The split of a list/detail pane [paneWidth] dp wide: the list at the width the user dragged it to
+ * (kept per device, shared by Messages and every chat list), or by default
+ * [listDetailSplitFraction]; the list and the chat each keep at least [MIN_LIST_DETAIL_PANE_DP].
+ */
+@Composable
+fun listDetailSplit(
+    widthClass: WidthClass,
+    paneWidth: Float,
+): ListDetailSplit {
+    val prefs = LocalAppServices.current.paneWidthPrefs
+    val saved by prefs.flow.collectAsStateWithLifecycle()
+    val listWidth = fitListWidth(paneWidth, saved.chatList ?: (paneWidth * listDetailSplitFraction(widthClass)))
+    return ListDetailSplit(listWidth / paneWidth) { delta -> prefs.setChatList(fitListWidth(paneWidth, listWidth + delta)) }
+}
+
+/** The list keeps at least this much, in dp, and so does the chat beside it. */
+const val MIN_LIST_DETAIL_PANE_DP = 260f
+
+/** [width] for the list in a pane [paneWidth] dp wide, leaving the chat its room. */
+fun fitListWidth(
+    paneWidth: Float,
+    width: Float,
+): Float = width.coerceIn(MIN_LIST_DETAIL_PANE_DP, maxOf(MIN_LIST_DETAIL_PANE_DP, paneWidth - MIN_LIST_DETAIL_PANE_DP))

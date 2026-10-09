@@ -46,7 +46,7 @@ import com.vitorpamplona.amethyst.commons.ui.platform.AppBottomBar
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.listDetail.ChatDetailPane
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.listDetail.PaneScopedChat
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.listDetail.isChatDetailRoute
-import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.listDetail.listDetailSplitFraction
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.listDetail.listDetailSplit
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.privateDM.ChatroomView
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.publicChannels.nip28PublicChat.PublicChatChannelView
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.publicChannels.relayGroup.WarmJoinedRelayGroupNip11
@@ -59,6 +59,7 @@ fun MessagesTwoPane(
     newFeedContentState: FeedContentState,
     widthSizeClass: WidthClass,
     selection: MutableState<Route?>,
+    paneWidth: Float,
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
@@ -72,7 +73,7 @@ fun MessagesTwoPane(
 
     // Read on every composition: the pane can cross the Medium/Expanded boundary while this
     // screen stays composed (window resize, the notification panel docking/undocking).
-    val splitFraction = listDetailSplitFraction(widthSizeClass)
+    val split = listDetailSplit(widthSizeClass, paneWidth)
 
     Scaffold(
         modifier = Modifier.imePaddingSafe(),
@@ -155,8 +156,9 @@ fun MessagesTwoPane(
                     }
                 }
             },
-            splitFraction = splitFraction,
+            splitFraction = split.fraction,
             modifier = Modifier.fillMaxSize(),
+            onDividerDrag = split.onDrag,
         )
     }
 }

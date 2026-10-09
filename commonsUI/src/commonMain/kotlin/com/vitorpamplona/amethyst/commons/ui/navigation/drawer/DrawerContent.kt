@@ -37,6 +37,7 @@ import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.WindowInsetsSides
 import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.offset
@@ -128,7 +129,8 @@ import com.vitorpamplona.amethyst.commons.resources.tor_status_connected
 import com.vitorpamplona.amethyst.commons.scheduledposts.ScheduledPostStatus
 import com.vitorpamplona.amethyst.commons.tor.TorServiceStatus
 import com.vitorpamplona.amethyst.commons.ui.components.RobohashFallbackAsyncImage
-import com.vitorpamplona.amethyst.commons.ui.layouts.PermanentDrawerWidth
+import com.vitorpamplona.amethyst.commons.ui.layouts.LocalScreenLayout
+import com.vitorpamplona.amethyst.commons.ui.layouts.NavigationStyle
 import com.vitorpamplona.amethyst.commons.ui.navigation.bottombars.NavBarCatalog
 import com.vitorpamplona.amethyst.commons.ui.navigation.bottombars.NavBarItemDef
 import com.vitorpamplona.amethyst.commons.ui.navigation.host.canOpen
@@ -144,8 +146,6 @@ import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.DividerThickness
 import com.vitorpamplona.amethyst.commons.ui.theme.DoubleHorzSpacer
 import com.vitorpamplona.amethyst.commons.ui.theme.DrawerSectionHeaderModifier
-import com.vitorpamplona.amethyst.commons.ui.theme.Font14SP
-import com.vitorpamplona.amethyst.commons.ui.theme.Font18SP
 import com.vitorpamplona.amethyst.commons.ui.theme.IconRowTextModifier
 import com.vitorpamplona.amethyst.commons.ui.theme.Size20Modifier
 import com.vitorpamplona.amethyst.commons.ui.theme.Size22Modifier
@@ -195,8 +195,9 @@ fun PermanentDrawerContent(
     openSheet: () -> Unit,
     accountViewModel: AccountViewModel,
 ) {
+    // As wide as the shell makes it: the user can drag its edge (see MultiPaneShell).
     Surface(
-        modifier = Modifier.width(PermanentDrawerWidth).fillMaxHeight(),
+        modifier = Modifier.fillMaxSize(),
         color = MaterialTheme.colorScheme.background,
         contentColor = MaterialTheme.colorScheme.onBackground,
     ) {
@@ -624,8 +625,12 @@ fun ListContent(
     val collapsePrefs = LocalAppServices.current.drawerSectionCollapsePrefs
     val collapsed by collapsePrefs.flow.collectAsStateWithLifecycle()
 
+    // The bottom bar already holds the main destinations; without it, they lead the menu.
+    val sections =
+        if (LocalScreenLayout.current.navigationStyle == NavigationStyle.BOTTOM_BAR) DrawerSections else DrawerSectionsNavigateFirst
+
     Column(modifier) {
-        DrawerSections.forEach { section ->
+        sections.forEach { section ->
             // Keyed by section: hiding the last row of a section removes it from the drawer
             // entirely, and without a key the sections below would slide up into its slots and
             // inherit its animateContentSize state, animating a height they never had.
@@ -784,7 +789,7 @@ private fun IconRowWithBadge(
                 .clickable(
                     onClick = onClick,
                     onClickLabel = titleStr,
-                ).padding(vertical = 15.dp, horizontal = 25.dp),
+                ).padding(vertical = LocalDrawerMetrics.current.itemVerticalPadding, horizontal = 25.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Icon(
@@ -796,7 +801,7 @@ private fun IconRowWithBadge(
         Text(
             modifier = IconRowTextModifier,
             text = titleStr,
-            fontSize = Font18SP,
+            fontSize = LocalDrawerMetrics.current.itemText,
         )
         if (badgeCount > 0) {
             Badge { Text(badgeCount.toString()) }
@@ -841,7 +846,7 @@ private fun CollapsibleSection(
             Text(
                 modifier = Modifier.weight(1f),
                 text = sectionTitle,
-                fontSize = Font14SP,
+                fontSize = LocalDrawerMetrics.current.headerText,
                 fontWeight = FontWeight.SemiBold,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
@@ -913,7 +918,7 @@ fun IconRow(
                 .clickable(
                     onClick = onClick,
                     onClickLabel = title,
-                ).padding(vertical = 15.dp, horizontal = 25.dp),
+                ).padding(vertical = LocalDrawerMetrics.current.itemVerticalPadding, horizontal = 25.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Icon(
@@ -926,7 +931,7 @@ fun IconRow(
         Text(
             modifier = IconRowTextModifier,
             text = title,
-            fontSize = Font18SP,
+            fontSize = LocalDrawerMetrics.current.itemText,
         )
     }
 }
@@ -941,7 +946,7 @@ fun IconRowRelays(
             Modifier
                 .fillMaxWidth()
                 .clickable(onClick = onClick)
-                .padding(vertical = 15.dp, horizontal = 25.dp),
+                .padding(vertical = LocalDrawerMetrics.current.itemVerticalPadding, horizontal = 25.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Icon(
@@ -954,7 +959,7 @@ fun IconRowRelays(
         Text(
             modifier = IconRowTextModifier,
             text = stringRes(id = Res.string.relay_setup),
-            fontSize = Font18SP,
+            fontSize = LocalDrawerMetrics.current.itemText,
         )
 
         Spacer(modifier = Width16Space)
