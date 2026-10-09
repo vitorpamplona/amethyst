@@ -40,6 +40,12 @@ import androidx.compose.ui.window.MenuScope
 import com.vitorpamplona.amethyst.commons.model.navigation.Route
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.bookmarks
+import com.vitorpamplona.amethyst.commons.resources.deck_add_column
+import com.vitorpamplona.amethyst.commons.resources.deck_close_column
+import com.vitorpamplona.amethyst.commons.resources.deck_mode
+import com.vitorpamplona.amethyst.commons.resources.deck_move_left
+import com.vitorpamplona.amethyst.commons.resources.deck_move_right
+import com.vitorpamplona.amethyst.commons.resources.deck_save_workspace
 import com.vitorpamplona.amethyst.commons.resources.desktop_menu_about
 import com.vitorpamplona.amethyst.commons.resources.desktop_menu_file
 import com.vitorpamplona.amethyst.commons.resources.desktop_menu_go
@@ -54,6 +60,8 @@ import com.vitorpamplona.amethyst.commons.resources.new_post
 import com.vitorpamplona.amethyst.commons.resources.profile
 import com.vitorpamplona.amethyst.commons.resources.screen_search_title
 import com.vitorpamplona.amethyst.commons.resources.settings
+import com.vitorpamplona.amethyst.commons.ui.navigation.deck.DeckCommand
+import com.vitorpamplona.amethyst.commons.ui.navigation.deck.DeckCommandBus
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.desktop.platform.Platform
@@ -89,6 +97,8 @@ private enum class Command(
     val key: Key,
     val shift: Boolean = false,
     val needsLogin: Boolean = true,
+    /** For the deck's focus commands, which column (0-based). */
+    val column: Int = -1,
 ) {
     NEW_POST(Key.N),
     SETTINGS(Key.Comma),
@@ -100,6 +110,22 @@ private enum class Command(
     PROFILE(Key.P, shift = true),
     BOOKMARKS(Key.B, shift = true),
     DRAFTS(Key.D, shift = true),
+
+    // The deck's, when it is on: they do nothing otherwise.
+    ADD_COLUMN(Key.T),
+    CLOSE_COLUMN(Key.W),
+    MOVE_COLUMN_LEFT(Key.DirectionLeft, shift = true),
+    MOVE_COLUMN_RIGHT(Key.DirectionRight, shift = true),
+    SAVE_WORKSPACE(Key.S, shift = true),
+    FOCUS_COLUMN_1(Key.One, shift = true, column = 0),
+    FOCUS_COLUMN_2(Key.Two, shift = true, column = 1),
+    FOCUS_COLUMN_3(Key.Three, shift = true, column = 2),
+    FOCUS_COLUMN_4(Key.Four, shift = true, column = 3),
+    FOCUS_COLUMN_5(Key.Five, shift = true, column = 4),
+    FOCUS_COLUMN_6(Key.Six, shift = true, column = 5),
+    FOCUS_COLUMN_7(Key.Seven, shift = true, column = 6),
+    FOCUS_COLUMN_8(Key.Eight, shift = true, column = 7),
+    FOCUS_COLUMN_9(Key.Nine, shift = true, column = 8),
     ;
 
     val shortcut: KeyShortcut
@@ -124,6 +150,15 @@ private fun DesktopNavigator.run(
         Command.PROFILE -> userPubKeyHex?.let { go(Route.Profile(it)) }
         Command.BOOKMARKS -> go(Route.Bookmarks)
         Command.DRAFTS -> go(Route.Drafts)
+        Command.ADD_COLUMN -> DeckCommandBus.send(DeckCommand.AddColumn)
+        Command.CLOSE_COLUMN -> DeckCommandBus.send(DeckCommand.CloseColumn)
+        Command.MOVE_COLUMN_LEFT -> DeckCommandBus.send(DeckCommand.MoveColumn(-1))
+        Command.MOVE_COLUMN_RIGHT -> DeckCommandBus.send(DeckCommand.MoveColumn(1))
+        Command.SAVE_WORKSPACE -> DeckCommandBus.send(DeckCommand.SaveWorkspace)
+        Command.FOCUS_COLUMN_1, Command.FOCUS_COLUMN_2, Command.FOCUS_COLUMN_3,
+        Command.FOCUS_COLUMN_4, Command.FOCUS_COLUMN_5, Command.FOCUS_COLUMN_6,
+        Command.FOCUS_COLUMN_7, Command.FOCUS_COLUMN_8, Command.FOCUS_COLUMN_9,
+        -> DeckCommandBus.send(DeckCommand.FocusColumn(command.column))
     }
 }
 
@@ -186,6 +221,14 @@ fun FrameWindowScope.DesktopMenuBar(
             CommandItem(stringRes(Res.string.profile), Command.PROFILE)
             CommandItem(stringRes(Res.string.bookmarks), Command.BOOKMARKS)
             CommandItem(stringRes(Res.string.drafts), Command.DRAFTS)
+        }
+        Menu(stringRes(Res.string.deck_mode)) {
+            CommandItem(stringRes(Res.string.deck_add_column), Command.ADD_COLUMN)
+            CommandItem(stringRes(Res.string.deck_close_column), Command.CLOSE_COLUMN)
+            CommandItem(stringRes(Res.string.deck_move_left), Command.MOVE_COLUMN_LEFT)
+            CommandItem(stringRes(Res.string.deck_move_right), Command.MOVE_COLUMN_RIGHT)
+            Separator()
+            CommandItem(stringRes(Res.string.deck_save_workspace), Command.SAVE_WORKSPACE)
         }
         Menu(stringRes(Res.string.desktop_menu_help)) {
             Item(stringRes(Res.string.desktop_menu_about)) { DesktopBrowser.open(PROJECT_URL) }

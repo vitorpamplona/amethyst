@@ -29,6 +29,7 @@ import com.vitorpamplona.amethyst.commons.model.backups.BackupConflictStorage
 import com.vitorpamplona.amethyst.commons.model.chats.ChatFeedType
 import com.vitorpamplona.amethyst.commons.model.clink.ClinkDebitWalletEntry
 import com.vitorpamplona.amethyst.commons.model.concord.ConcordViewMode
+import com.vitorpamplona.amethyst.commons.model.deck.DeckLayout
 import com.vitorpamplona.amethyst.commons.model.mediaServers.DEFAULT_MEDIA_SERVERS
 import com.vitorpamplona.amethyst.commons.model.mediaServers.ServerName
 import com.vitorpamplona.amethyst.commons.model.nip29RelayGroups.RelayGroupViewMode
@@ -182,6 +183,7 @@ class AccountSettingsStores(
                     settings.customFeeds.value
                         .ifEmpty { null }
                         ?.let { FeedDefinitionSerializer.serializeList(it) },
+                deckLayoutJson = settings.deck.value.toJson(),
             ),
         )
         notificationPrefs(npub).save(
@@ -564,6 +566,7 @@ suspend fun AccountSettingsSource.toAccountSettings(): AccountSettings =
             defaultRelayAuthPolicy = MutableStateFlow(inboxPrefs.defaultRelayAuthPolicy),
             relayGroupViewMode = MutableStateFlow(inboxPrefs.relayGroupViewMode),
             customFeeds = MutableStateFlow(inboxPrefs.customFeeds),
+            deck = MutableStateFlow(inboxPrefs.deck),
             concordViewMode = MutableStateFlow(inboxPrefs.concordViewMode),
             enabledChatFeeds = MutableStateFlow(inboxPrefs.enabledChatFeeds),
             enabledHomeFeedTypes = MutableStateFlow(inboxPrefs.enabledHomeFeedTypes),
@@ -742,6 +745,7 @@ private class InboxPrefs(
     val relayAuthTrustMessageFollows: Boolean,
     val relayAuthTrustMessageStrangers: Boolean,
     val customFeeds: List<FeedDefinition>,
+    val deck: DeckLayout,
 )
 
 private fun readInboxPrefs(
@@ -763,4 +767,5 @@ private fun readInboxPrefs(
     relayAuthTrustMessageFollows = relayAuth.trustMessageFollows,
     relayAuthTrustMessageStrangers = relayAuth.trustMessageStrangers,
     customFeeds = feedVisibility.customFeedsJson?.let { FeedDefinitionSerializer.deserializeList(it) }.orEmpty(),
+    deck = feedVisibility.deckLayoutJson?.let { DeckLayout.fromJson(it) } ?: DeckLayout(),
 )

@@ -34,6 +34,7 @@ import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.SideEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.snapshotFlow
@@ -70,6 +71,7 @@ import com.vitorpamplona.amethyst.commons.ui.components.toasts.DisplayErrorMessa
 import com.vitorpamplona.amethyst.commons.ui.layouts.LocalScreenLayout
 import com.vitorpamplona.amethyst.commons.ui.navigation.bottombars.LocalTabReselectCoordinator
 import com.vitorpamplona.amethyst.commons.ui.navigation.bottombars.TabReselectCoordinator
+import com.vitorpamplona.amethyst.commons.ui.navigation.deck.DeckArea
 import com.vitorpamplona.amethyst.commons.ui.navigation.drawer.AccountSwitchBottomSheet
 import com.vitorpamplona.amethyst.commons.ui.navigation.drawer.DrawerContent
 import com.vitorpamplona.amethyst.commons.ui.navigation.drawer.PermanentDrawerContent
@@ -275,6 +277,7 @@ private fun AppNavigation(
             permanentDrawerContent = { openAccountSwitcher -> PermanentDrawerContent(nav, openAccountSwitcher, accountViewModel) },
             accountSwitcherContent = { AccountSwitchBottomSheet(accountViewModel, sessionManager) },
             suspendEdgeSwipe = root::suspendEdgeSwipe,
+            deck = rememberDeck(accountViewModel, nav, root),
         ) {
             Box(Modifier.fillMaxSize()) {
                 BuildNavigation(accountViewModel, nav, root)
@@ -305,6 +308,37 @@ private fun OpenFirstRoute(
         val currentRoute = Snapshot.withoutReadObservation { getRouteWithArguments(newRoute::class, nav) }
         if (!isSameRoute(currentRoute, newRoute)) {
             nav.newStack(newRoute)
+        }
+    }
+}
+
+/**
+ * The deck's columns when the user turned the deck on and the window is wide enough for the
+ * notification panel (about 1,200 dp); null otherwise. Each column gets the same screens as the
+ * main navigation, built against the column's own back stack.
+ */
+@Composable
+private fun rememberDeck(
+    accountViewModel: AccountViewModel,
+    nav: Nav,
+    root: AppRoot,
+): (@Composable (Modifier) -> Unit)? {
+    val deckMode by accountViewModel.settings.uiSettingsFlow.deckMode
+        .collectAsState()
+    if (!deckMode || !LocalScreenLayout.current.hasRoomForNotificationPanel) return null
+    return remember(accountViewModel, nav, root) {
+        { modifier ->
+            DeckArea(
+                accountViewModel = accountViewModel,
+                mainNav = nav,
+                destinationsFor = { columnNav, column ->
+                    NavDestinations().apply {
+                        sharedDestinations(accountViewModel, columnNav)
+                        root.registerDestinations(this, accountViewModel, column)
+                    }
+                },
+                modifier = modifier,
+            )
         }
     }
 }

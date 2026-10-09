@@ -42,7 +42,10 @@ import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.layout.Layout
 import androidx.compose.ui.platform.LocalWindowInfo
+import androidx.compose.ui.unit.Constraints
+import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.commons.model.navigation.Route
 import com.vitorpamplona.amethyst.commons.ui.components.PlatformBackHandler
 import com.vitorpamplona.amethyst.commons.ui.components.rememberModalSheetState
@@ -75,6 +78,8 @@ fun AppShellLayout(
     permanentDrawerContent: @Composable (openAccountSwitcher: () -> Unit) -> Unit,
     accountSwitcherContent: @Composable () -> Unit,
     suspendEdgeSwipe: () -> Boolean = { false },
+    /** The deck's columns, beside the main screen in place of the notification panel; null when the deck is off. */
+    deck: (@Composable (Modifier) -> Unit)? = null,
     content: @Composable () -> Unit,
 ) {
     val scope = rememberCoroutineScope()
@@ -118,9 +123,9 @@ fun AppShellLayout(
     }
 
     if (docked) {
-        PermanentDrawerShell(accountViewModel, nav, { permanentDrawerContent(openSheetFunction) }, movableContent)
+        PermanentDrawerShell(accountViewModel, nav, { permanentDrawerContent(openSheetFunction) }, deck, movableContent)
     } else {
-        ModalDrawerShell(accountViewModel, nav, { drawerContent(openSheetFunction) }, suspendEdgeSwipe, movableContent)
+        ModalDrawerShell(accountViewModel, nav, { drawerContent(openSheetFunction) }, suspendEdgeSwipe, deck, movableContent)
     }
 
     // Sheet content
@@ -154,6 +159,7 @@ private fun ModalDrawerShell(
     nav: Nav,
     drawer: @Composable () -> Unit,
     suspendEdgeSwipe: () -> Boolean,
+    deck: (@Composable (Modifier) -> Unit)?,
     content: @Composable () -> Unit,
 ) {
     // Derived, so a window being resized (a desktop drag, a foldable mid-unfold) recomposes this shell
@@ -198,6 +204,7 @@ private fun ModalDrawerShell(
                     accountViewModel = accountViewModel,
                     nav = nav,
                     leading = { AppNavigationRail(nav, accountViewModel) },
+                    deck = deck,
                     content = content,
                 )
             } else {
@@ -218,6 +225,7 @@ private fun MultiPaneShell(
     accountViewModel: AccountViewModel,
     nav: Nav,
     leading: @Composable () -> Unit,
+    deck: (@Composable (Modifier) -> Unit)?,
     content: @Composable () -> Unit,
 ) {
     Row(Modifier.fillMaxSize()) {
@@ -225,9 +233,40 @@ private fun MultiPaneShell(
 
         VerticalDivider(thickness = DividerThickness)
 
-        CenterPane(Modifier.weight(1f), content)
+        if (deck != null) {
+            DeckSplit(Modifier.weight(1f).fillMaxHeight(), { CenterPane(Modifier, content) }, { deck(Modifier) })
+        } else {
+            CenterPane(Modifier.weight(1f), content)
 
-        NotificationSidePanelSlot(accountViewModel, nav)
+            NotificationSidePanelSlot(accountViewModel, nav)
+        }
+    }
+}
+
+/** How narrow the deck may squeeze the main screen; past this, the columns scroll. */
+private val DeckMainPaneMinWidth = 420.dp
+
+/**
+ * The main screen and the deck side by side: the deck takes what it needs up to all but
+ * [DeckMainPaneMinWidth], the main screen the rest. A plain layout rather than BoxWithConstraints,
+ * whose subcomposition the main screen's movable content would have to move into and out of.
+ */
+@Composable
+private fun DeckSplit(
+    modifier: Modifier,
+    center: @Composable () -> Unit,
+    deck: @Composable () -> Unit,
+) {
+    Layout(contents = listOf(center, deck), modifier = modifier) { (centerMeasurables, deckMeasurables), constraints ->
+        val height = constraints.maxHeight
+        val deckMax = (constraints.maxWidth - DeckMainPaneMinWidth.roundToPx()).coerceAtLeast(0)
+        val deckPlaceables = deckMeasurables.map { it.measure(Constraints(maxWidth = deckMax, minHeight = height, maxHeight = height)) }
+        val centerWidth = constraints.maxWidth - (deckPlaceables.maxOfOrNull { it.width } ?: 0)
+        val centerPlaceables = centerMeasurables.map { it.measure(Constraints.fixed(centerWidth, height)) }
+        layout(constraints.maxWidth, height) {
+            centerPlaceables.forEach { it.place(0, 0) }
+            deckPlaceables.forEach { it.place(centerWidth, 0) }
+        }
     }
 }
 
@@ -263,12 +302,14 @@ private fun PermanentDrawerShell(
     accountViewModel: AccountViewModel,
     nav: Nav,
     drawer: @Composable () -> Unit,
+    deck: (@Composable (Modifier) -> Unit)?,
     content: @Composable () -> Unit,
 ) {
     MultiPaneShell(
         accountViewModel = accountViewModel,
         nav = nav,
         leading = drawer,
+        deck = deck,
         content = content,
     )
 }

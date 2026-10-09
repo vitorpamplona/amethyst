@@ -396,6 +396,9 @@ class DesktopAppModules(
 
     private val legacyCustomFeedImport = LegacyCustomFeedImport(filesDir)
 
+    // A legacy user who ran the deck gets it on here too.
+    private val legacyDeckImport = LegacyDeckImport(filesDir) { uiPrefs.deckMode.tryEmit(true) }
+
     val accountsCache =
         AccountCacheState(
             geolocationFlow = { noLocation },
@@ -429,6 +432,7 @@ class DesktopAppModules(
                 NowPlayingSettingsStore(sharedSettingsStore, account.scope, account.pubKey, account.nowPlayingSettings)
                 // Not Buzz, but this is where each account starts: the legacy app's feeds go to the first.
                 legacyCustomFeedImport.importInto(account.settings)
+                legacyDeckImport.importInto(account.settings, account.signer.pubKey)
             },
         )
 

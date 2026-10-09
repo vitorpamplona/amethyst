@@ -1,6 +1,6 @@
 # Retiring the legacy desktop app: what each legacy-only feature becomes
 
-> **Status:** decided 2026-10-09 (maintainer). Built: 3b (relay latency), 1 (privacy lock), 6a (compression preview and steps), 6b (custom-emoji picker), 5 (custom feeds). Supersedes the
+> **Status:** decided 2026-10-09 (maintainer). Built: 3b (relay latency), 1 (privacy lock), 6a (compression preview and steps), 6b (custom-emoji picker), 5 (custom feeds), 7 (deck and workspaces). Supersedes the
 > "Legacy-only feature" table in [2026-09-27-one-ui-android-desktop.md](2026-09-27-one-ui-android-desktop.md)
 > step 8d.
 
@@ -208,6 +208,28 @@ not port.
   legacy `DeckColumnType` maps to a `Route`:
   - A custom-feed column maps to the migrated custom feed (item 5).
   - A type with no shared screen is dropped, and the user is told.
+
+**Built.**
+- `UiSettings.deckMode` (Settings › App › Deck, off by default) turns it on; it shows when the window
+  has room for the notification panel (1,200 dp), in place of that panel.
+- `DeckLayout` (commons `model/deck`) holds the workspaces and columns with their routes and
+  widths, kept in `AccountSettings.deck` (feed-visibility DataStore group, JSON). Operations are
+  pure and tested.
+- `DeckArea` (commonsUI `navigation/deck`) draws the columns after the main screen, each a
+  `NavigationHost` over its own `Nav` and destinations (`DeckColumnNav` keeps the drawer the
+  app's), with its own ViewModelStore (entry keys restart at nav-0 per stack) and a rail-tier
+  `LocalScreenLayout`. A strip switches, saves and deletes workspaces and adds columns; each column
+  header resets, moves and closes it; its left edge resizes it. `DeckSplit` keeps the main screen
+  at least 420 dp wide.
+- Desktop: Ctrl/Cmd+T add, +W close, +Shift+←/→ move, +Shift+1…9 focus (Ctrl+1…3 were already
+  Home/Messages/Notifications), +Shift+S save a workspace, and a Deck menu on macOS, through
+  `DeckCommandBus`.
+- Migration: `LegacyDeckImport` reads the legacy prefs once into the first account to load and
+  turns the deck on if the legacy app was in deck mode; `LegacyDeckParser` maps the column types.
+  Dropped: the global and custom-feed columns (no per-column feed screen yet: Home's feed state is
+  account-wide), the local highlights and the editor. The user is told which.
+- Known limits: two columns on the same screen share its account-wide feed state (not their scroll
+  positions); `RelockOnLeave` follows only the main navigation.
 
 ## Order
 

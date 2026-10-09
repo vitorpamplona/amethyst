@@ -59,6 +59,7 @@ class UiSettingsFlow(
     val showOnchainWallet: MutableStateFlow<Boolean> = MutableStateFlow(true),
     val showPayToZapChip: MutableStateFlow<Boolean> = MutableStateFlow(true),
     val searchEngine: MutableStateFlow<String> = MutableStateFlow(SearchEngines.DEFAULT.id),
+    val deckMode: MutableStateFlow<Boolean> = MutableStateFlow(false),
 ) {
     val listOfFlows: List<Flow<Any?>> =
         listOf<Flow<Any?>>(
@@ -93,6 +94,7 @@ class UiSettingsFlow(
             showOnchainWallet,
             showPayToZapChip,
             searchEngine,
+            deckMode,
         )
 
     // emits at every change in any of the propertyes.
@@ -131,6 +133,7 @@ class UiSettingsFlow(
                 flows[28] as Boolean,
                 flows[29] as Boolean,
                 flows[30] as String,
+                flows[31] as Boolean,
             )
         }
 
@@ -167,6 +170,7 @@ class UiSettingsFlow(
             showOnchainWallet.value,
             showPayToZapChip.value,
             searchEngine.value,
+            deckMode.value,
         )
 
     fun update(torSettings: UiSettings): Boolean {
@@ -296,6 +300,10 @@ class UiSettingsFlow(
             searchEngine.tryEmit(torSettings.searchEngine)
             any = true
         }
+        if (deckMode.value != torSettings.deckMode) {
+            deckMode.tryEmit(torSettings.deckMode)
+            any = true
+        }
 
         return any
     }
@@ -352,6 +360,7 @@ class UiSettingsFlow(
                 MutableStateFlow(uiSettings.showOnchainWallet),
                 MutableStateFlow(uiSettings.showPayToZapChip),
                 MutableStateFlow(uiSettings.searchEngine),
+                MutableStateFlow(uiSettings.deckMode),
             )
     }
 }

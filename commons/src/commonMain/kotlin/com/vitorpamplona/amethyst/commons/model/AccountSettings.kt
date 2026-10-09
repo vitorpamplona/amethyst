@@ -35,6 +35,7 @@ import com.vitorpamplona.amethyst.commons.model.chats.ChatFeedType
 import com.vitorpamplona.amethyst.commons.model.clink.ClinkDebitWalletEntryNorm
 import com.vitorpamplona.amethyst.commons.model.concord.ConcordListRepository
 import com.vitorpamplona.amethyst.commons.model.concord.ConcordViewMode
+import com.vitorpamplona.amethyst.commons.model.deck.DeckLayout
 import com.vitorpamplona.amethyst.commons.model.emphChat.EphemeralChatRepository
 import com.vitorpamplona.amethyst.commons.model.mediaServers.DEFAULT_MEDIA_SERVERS
 import com.vitorpamplona.amethyst.commons.model.mediaServers.ServerName
@@ -267,6 +268,8 @@ class AccountSettings(
     val viewedPollResultNoteIds: MutableStateFlow<Map<String, Long>> = MutableStateFlow(mapOf()),
     /** The feeds this user built, offered in the Home feed picker as [TopFilter.CustomFeed]. */
     val customFeeds: MutableStateFlow<List<FeedDefinition>> = MutableStateFlow(emptyList()),
+    /** The deck's workspaces and columns, shown beside the main screen on wide windows when the deck is on. */
+    val deck: MutableStateFlow<DeckLayout> = MutableStateFlow(DeckLayout()),
     val pendingAttestations: MutableStateFlow<Map<HexKey, String>> = MutableStateFlow(mapOf()),
     var backupNipA3PaymentTargets: PaymentTargetsEvent? = null,
     var backupBolt12Offers: Bolt12OfferListEvent? = null,
@@ -779,6 +782,13 @@ class AccountSettings(
         }
 
         if (changed) saveAccountSettings()
+    }
+
+    /** Applies [transform] to the deck layout and saves it when it changed. */
+    fun updateDeck(transform: (DeckLayout) -> DeckLayout) {
+        val before = deck.value
+        deck.update(transform)
+        if (deck.value != before) saveAccountSettings()
     }
 
     /** Adds [feed], or replaces the one with its id. */
