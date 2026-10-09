@@ -20,19 +20,25 @@
  */
 package com.vitorpamplona.amethyst.commons.ui.navigation.navs
 
+import androidx.compose.runtime.Composable
 import androidx.compose.runtime.mutableStateOf
 import com.vitorpamplona.amethyst.commons.model.navigation.Route
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
 
+/**
+ * The list pane's nav of a list/detail screen: a route [isDetailRoute] accepts opens in the detail
+ * pane ([innerNav]) instead of pushing a full screen; everything else goes to [nav] unchanged.
+ */
 class TwoPaneNav(
     private val nav: INav,
     override val navigationScope: CoroutineScope,
+    private val isDetailRoute: (Route) -> Boolean,
 ) : INav by nav {
     val innerNav = mutableStateOf<Route?>(null)
 
     override fun nav(route: Route) {
-        if (route is Route.Room || route is Route.PublicChatChannel) {
+        if (isDetailRoute(route)) {
             innerNav.value = route
         } else {
             nav.nav(route)
@@ -43,12 +49,32 @@ class TwoPaneNav(
         navigationScope.launch {
             val route = computeRoute()
             if (route != null) {
-                if (route is Route.Room || route is Route.PublicChatChannel) {
+                if (isDetailRoute(route)) {
                     innerNav.value = route
                 } else {
                     nav.nav(route)
                 }
             }
         }
+    }
+}
+
+/**
+ * The detail pane's nav of a list/detail screen. The screen in the pane is not on the back stack:
+ * it shows no back arrow and no bottom bar, and a pop (leaving a group, deleting it) closes the
+ * pane instead of popping the list underneath it. Other navigation goes through [twoPane], so a
+ * link to a sibling chat swaps the pane and anything else pushes a full screen.
+ */
+class DetailPaneNav(
+    private val twoPane: TwoPaneNav,
+) : INav by twoPane {
+    @Composable
+    override fun canPop(): Boolean = false
+
+    @Composable
+    override fun showsBottomBar(): Boolean = false
+
+    override fun popBack() {
+        twoPane.innerNav.value = null
     }
 }
