@@ -24,6 +24,9 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
+import androidx.compose.ui.geometry.Rect
+import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.desktop.ui.media.MediaType
 import com.vitorpamplona.quartz.utils.Log
 import io.github.kdroidfilter.composemediaplayer.VideoPlayerError
@@ -442,8 +445,32 @@ object GlobalMediaPlayer {
         _audioState.value = MediaPlaybackState(type = MediaType.AUDIO)
     }
 
+    /**
+     * Where, in the window, the video that went full screen was shown: the full-screen view grows
+     * out of it and shrinks back into it. Null when full screen started elsewhere (a plain fade).
+     */
+    @Volatile
+    var fullscreenSourceBounds: Rect? = null
+        private set
+
+    /** The corner radius of [fullscreenSourceBounds]'s card. */
+    @Volatile
+    var fullscreenSourceCornerRadius: Dp = 0.dp
+        private set
+
     fun toggleFullscreen() {
+        if (!_isFullscreen.value) fullscreenSourceBounds = null
         _isFullscreen.value = !_isFullscreen.value
+    }
+
+    /** Full screen, growing out of [sourceBounds] (window coordinates, [cornerRadius]) when given. */
+    fun enterFullscreen(
+        sourceBounds: Rect?,
+        cornerRadius: Dp = 0.dp,
+    ) {
+        fullscreenSourceBounds = sourceBounds
+        fullscreenSourceCornerRadius = cornerRadius
+        _isFullscreen.value = true
     }
 
     fun exitFullscreen() {

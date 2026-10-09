@@ -117,14 +117,17 @@ object DesktopNotePlatform : NotePlatform {
     /**
      * Shows [url] in the window's OS full-screen overlay, starting it at [position] (0..1) unless
      * it is already the playing video: that one carries on where it is, with no seek to stutter it.
+     * The overlay grows out of [sourceBounds], where the video sat in the window.
      */
     private fun playFullscreen(
         url: String,
         position: Float,
+        sourceBounds: Rect?,
+        cornerRadius: Dp,
     ) {
         val current = GlobalMediaPlayer.videoState.value
         if (current.url != url || current.errorReason != null) GlobalMediaPlayer.playVideo(url, position)
-        if (!GlobalMediaPlayer.isFullscreen.value) GlobalMediaPlayer.toggleFullscreen()
+        if (!GlobalMediaPlayer.isFullscreen.value) GlobalMediaPlayer.enterFullscreen(sourceBounds, cornerRadius)
     }
 
     @Composable
@@ -147,8 +150,9 @@ object DesktopNotePlatform : NotePlatform {
                     url = url,
                     modifier = Modifier.fillMaxWidth().heightIn(max = MaxInlineMediaHeight),
                     shape = shape,
+                    onPictureBounds = { sourceBounds = it },
                     isLive = (content as? MediaUrlVideo)?.isLiveStream == true,
-                    onFullscreen = { position -> playFullscreen(url, position) },
+                    onFullscreen = { position -> playFullscreen(url, position, sourceBounds, cornerRadius) },
                     autoPlayWhenVisible = accountViewModel.settings.autoPlayVideos(),
                     pauseWhenHidden = true,
                     loadOnDemand = !accountViewModel.settings.startVideoPlayback(),
@@ -267,13 +271,16 @@ object DesktopNotePlatform : NotePlatform {
         isLiveStream: Boolean,
         accountViewModel: AccountViewModel,
     ) {
-        val shape = if (roundedCorner) RoundedCornerShape(12.dp) else RoundedCornerShape(0.dp)
+        val cornerRadius = if (roundedCorner) 12.dp else 0.dp
+        val shape = RoundedCornerShape(cornerRadius)
+        var sourceBounds by remember { mutableStateOf<Rect?>(null) }
         DesktopVideoPlayer(
             url = videoUri,
             modifier = Modifier.fillMaxWidth().heightIn(max = MaxInlineMediaHeight),
             shape = shape,
+            onPictureBounds = { sourceBounds = it },
             isLive = isLiveStream,
-            onFullscreen = { position -> playFullscreen(videoUri, position) },
+            onFullscreen = { position -> playFullscreen(videoUri, position, sourceBounds, cornerRadius) },
             autoPlayWhenVisible = accountViewModel.settings.autoPlayVideos(),
             pauseWhenHidden = true,
             loadOnDemand = !accountViewModel.settings.startVideoPlayback(),
