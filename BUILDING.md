@@ -826,9 +826,20 @@ expose downgrade migration risks — **prefer a single install channel per
 machine**.
 
 **Exception: Flatpak.** The sandbox redirects XDG dirs into
-`~/.var/app/com.vitorpamplona.amethyst.Desktop/`, so a Flatpak install keeps
+`~/.var/app/com.vitorpamplona.amethyst/`, so a Flatpak install keeps
 its own separate state and does not see (or risk downgrading) state written
 by any other channel.
+
+**Flatpak app ID change.** Up to v1.17.0 the Flatpak bundle used the ID
+`com.vitorpamplona.amethyst.Desktop` (Flathub forbids IDs ending in
+`.desktop`). The renamed bundle installs as a separate app. To keep the old
+data, remove the old app without `--delete-data` and move its directory
+before the first launch of the new one:
+
+```bash
+flatpak uninstall com.vitorpamplona.amethyst.Desktop
+mv ~/.var/app/com.vitorpamplona.amethyst.Desktop ~/.var/app/com.vitorpamplona.amethyst
+```
 
 | OS | App location | State directories |
 |---|---|---|
@@ -836,7 +847,7 @@ by any other channel.
 | Windows | `%LOCALAPPDATA%\Amethyst` or `C:\Program Files\Amethyst` | `%APPDATA%\Amethyst`<br>`%LOCALAPPDATA%\Amethyst` |
 | Linux (deb/rpm) | `/opt/amethyst` | `~/.config/amethyst`<br>`~/.local/share/amethyst`<br>`~/.cache/amethyst` |
 | Linux (AppImage/tar.gz) | user-chosen | Same as above |
-| Linux (Flatpak) | `/var/lib/flatpak` or `~/.local/share/flatpak` | `~/.var/app/com.vitorpamplona.amethyst.Desktop/` |
+| Linux (Flatpak) | `/var/lib/flatpak` or `~/.local/share/flatpak` | `~/.var/app/com.vitorpamplona.amethyst/` |
 
 **macOS preferences are in a SHARED file.** `DesktopPreferences` uses the Java
 Preferences API, which on macOS writes into
@@ -852,7 +863,7 @@ Uninstall:
 - .deb: `sudo apt remove amethyst`
 - .rpm: `sudo dnf remove amethyst`
 - AppImage / tar.gz: delete the file / extracted directory
-- Flatpak: `flatpak uninstall com.vitorpamplona.amethyst.Desktop` (add
+- Flatpak: `flatpak uninstall com.vitorpamplona.amethyst` (add
   `--delete-data` to also remove `~/.var/app/…`)
 - macOS `.dmg`: drag from `/Applications` to Trash, then delete state dirs manually
 
