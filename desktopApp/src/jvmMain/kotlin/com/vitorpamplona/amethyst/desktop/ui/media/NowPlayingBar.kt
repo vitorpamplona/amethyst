@@ -172,15 +172,18 @@ fun NowPlayingBar(modifier: Modifier = Modifier) {
                 style = MaterialTheme.typography.labelSmall,
             )
 
-            // URL label (truncated)
-            Text(
-                text = activeState.url?.substringAfterLast('/')?.substringBefore('?') ?: "",
-                style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-                modifier = Modifier.width(120.dp),
-            )
+            // File name label (truncated), only when the name is readable.
+            val fileName = activeState.url?.let(::readableFileName)
+            if (fileName != null) {
+                Text(
+                    text = fileName,
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.width(120.dp),
+                )
+            }
 
             // Volume / Mute
             IconButton(
@@ -277,3 +280,14 @@ fun NowPlayingBar(modifier: Modifier = Modifier) {
         }
     }
 }
+
+// Blossom names a file after the SHA-256 of its bytes, optionally with an extension.
+private val HASH_FILE_NAME = Regex("^[0-9a-fA-F]{64}(?:\\.[^./]+)?$")
+
+/** The URL's last path segment, or null when it is empty or just a content hash. */
+private fun readableFileName(url: String): String? =
+    url
+        .substringBefore('?')
+        .substringBefore('#')
+        .substringAfterLast('/')
+        .takeIf { it.isNotBlank() && !HASH_FILE_NAME.matches(it) }
