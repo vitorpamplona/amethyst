@@ -145,7 +145,8 @@ object DesktopNotePlatform : NotePlatform {
             is MediaUrlVideo, is MediaLocalVideo -> {
                 DesktopVideoPlayer(
                     url = url,
-                    modifier = Modifier.fillMaxWidth().heightIn(max = MaxInlineMediaHeight).clip(shape),
+                    modifier = Modifier.fillMaxWidth().heightIn(max = MaxInlineMediaHeight),
+                    shape = shape,
                     isLive = (content as? MediaUrlVideo)?.isLiveStream == true,
                     onFullscreen = { position -> playFullscreen(url, position) },
                     autoPlayWhenVisible = accountViewModel.settings.autoPlayVideos(),
@@ -244,7 +245,8 @@ object DesktopNotePlatform : NotePlatform {
         val shape = if (roundedCorner) RoundedCornerShape(12.dp) else RoundedCornerShape(0.dp)
         DesktopVideoPlayer(
             url = videoUri,
-            modifier = Modifier.fillMaxWidth().heightIn(max = MaxInlineMediaHeight).clip(shape),
+            modifier = Modifier.fillMaxWidth().heightIn(max = MaxInlineMediaHeight),
+            shape = shape,
             onFullscreen = onDialog?.let { open -> { _ -> open() } },
             autoPlayWhenVisible = accountViewModel.settings.autoPlayVideos(),
             pauseWhenHidden = true,
@@ -268,7 +270,8 @@ object DesktopNotePlatform : NotePlatform {
         val shape = if (roundedCorner) RoundedCornerShape(12.dp) else RoundedCornerShape(0.dp)
         DesktopVideoPlayer(
             url = videoUri,
-            modifier = Modifier.fillMaxWidth().heightIn(max = MaxInlineMediaHeight).clip(shape),
+            modifier = Modifier.fillMaxWidth().heightIn(max = MaxInlineMediaHeight),
+            shape = shape,
             isLive = isLiveStream,
             onFullscreen = { position -> playFullscreen(videoUri, position) },
             autoPlayWhenVisible = accountViewModel.settings.autoPlayVideos(),
