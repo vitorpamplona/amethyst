@@ -20,14 +20,10 @@
  */
 package com.vitorpamplona.amethyst.desktop.app
 
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
@@ -58,11 +54,13 @@ import com.vitorpamplona.amethyst.commons.ui.richtext.LocalRichTextPlatform
 import com.vitorpamplona.amethyst.commons.ui.screen.collectDisplaySettings
 import com.vitorpamplona.amethyst.commons.ui.theme.AmethystMaterialTheme
 import com.vitorpamplona.amethyst.commons.ui.theme.isDarkTheme
+import com.vitorpamplona.amethyst.desktop.platform.DesktopTypography
 import com.vitorpamplona.amethyst.desktop.platform.IconResources
 import com.vitorpamplona.amethyst.desktop.platform.PlatformAppearance
 import com.vitorpamplona.amethyst.desktop.platform.PlatformFonts
 import com.vitorpamplona.amethyst.desktop.platform.PlatformIconWeight
 import com.vitorpamplona.amethyst.desktop.platform.PlatformInfo
+import com.vitorpamplona.amethyst.desktop.platform.ProvideTitleBarInsets
 import com.vitorpamplona.amethyst.desktop.platform.applyNativeWindowChrome
 import com.vitorpamplona.amethyst.desktop.platform.rememberSystemDark
 import com.vitorpamplona.amethyst.desktop.platform.titleBarInsetTop
@@ -195,20 +193,15 @@ fun main(args: Array<String>) {
                     ) {
                         Box(Modifier.fillMaxSize()) {
                             Column(Modifier.fillMaxSize()) {
-                                // Under macOS's transparent title bar, a strip in the app's
-                                // background color: the traffic lights sit on the app itself, and the
-                                // window reads as one surface. Full screen has no title bar.
-                                if (PlatformInfo.isMacOS && windowState.placement != WindowPlacement.Fullscreen) {
-                                    Spacer(
-                                        Modifier
-                                            .fillMaxWidth()
-                                            .height(titleBarInsetTop)
-                                            .background(MaterialTheme.colorScheme.background),
-                                    )
-                                }
-                                Box(Modifier.weight(1f).fillMaxWidth()) {
-                                    AmethystApp(modules.sessionManager, root)
-                                    SnackbarHost(platform.snackbarHostState, Modifier.align(Alignment.BottomCenter))
+                                // Under macOS's transparent title bar the screens draw their own top
+                                // bars, padded past the traffic lights by the caption-bar inset, as on
+                                // Android under the status bar. Full screen has no title bar.
+                                val titleBar = if (windowState.placement == WindowPlacement.Fullscreen) 0.dp else titleBarInsetTop
+                                ProvideTitleBarInsets(titleBar) {
+                                    Box(Modifier.weight(1f).fillMaxWidth()) {
+                                        AmethystApp(modules.sessionManager, root)
+                                        SnackbarHost(platform.snackbarHostState, Modifier.align(Alignment.BottomCenter))
+                                    }
                                 }
                                 // Whatever plays keeps playing across screens and after its card
                                 // scrolls away; this bar is where it is paused, seeked or stopped.
@@ -251,6 +244,7 @@ private fun DesktopTheme(
         displaySettings = displaySettings,
         systemFontFamily = PlatformFonts.ui,
         iconWeight = PlatformIconWeight.current,
+        typography = DesktopTypography,
         content = content,
     )
 }
