@@ -24,22 +24,46 @@ import androidx.compose.runtime.Stable
 import com.vitorpamplona.amethyst.commons.model.User
 import com.vitorpamplona.amethyst.commons.ui.components.toasts.multiline.MultiErrorToastMsg
 import com.vitorpamplona.amethyst.commons.ui.components.toasts.multiline.UserBasedErrorMessage
+import com.vitorpamplona.amethyst.commons.util.KmpLock
+import com.vitorpamplona.amethyst.commons.util.withLock
 import kotlinx.coroutines.flow.MutableStateFlow
 import org.jetbrains.compose.resources.StringResource
 
+/**
+ * The messages the app shows the user: one dialog at a time ([toasts] is the one on screen), the
+ * rest queued behind it, so a second message never silently replaces the first. Closing one
+ * ([clearToasts]) shows the next. A message saying the same thing as one already shown or queued
+ * is dropped, and the queue is capped so a burst of failures can't stack up dialogs.
+ */
 @Stable
 class ToastManager {
+    /** The message on screen, or null. */
     val toasts = MutableStateFlow<ToastMsg?>(null)
 
+    private val lock = KmpLock()
+    private val pending = ArrayDeque<ToastMsg>()
+
+    /** Closes the message on screen and shows the next one, if any. */
     fun clearToasts() {
-        toasts.tryEmit(null)
+        lock.withLock { toasts.value = pending.removeFirstOrNull() }
+    }
+
+    private fun show(msg: ToastMsg) {
+        lock.withLock {
+            val current = toasts.value
+            when {
+                current == null -> toasts.value = msg
+                msg.dedupeKey != null && (current.dedupeKey == msg.dedupeKey || pending.any { it.dedupeKey == msg.dedupeKey }) -> Unit
+                pending.size < MAX_PENDING -> pending.addLast(msg)
+            }
+        }
     }
 
     fun toast(
         title: String,
         message: String,
     ) {
-        toasts.tryEmit(StringToastMsg(title, message))
+        show(StringToastMsg(title, message))
     }
 
     fun toast(
@@ -47,14 +71,14 @@ class ToastManager {
         message: String,
         action: () -> Unit,
     ) {
-        toasts.tryEmit(ActionableStringToastMsg(title, message, action))
+        show(ActionableStringToastMsg(title, message, action))
     }
 
     fun toast(
         titleResId: StringResource,
         resourceId: StringResource,
     ) {
-        toasts.tryEmit(ResourceToastMsg(titleResId, resourceId))
+        show(ResourceToastMsg(titleResId, resourceId))
     }
 
     fun toast(
@@ -62,7 +86,7 @@ class ToastManager {
         message: String?,
         throwable: Throwable,
     ) {
-        toasts.tryEmit(ThrowableToastMsg(titleResId, message, throwable))
+        show(ThrowableToastMsg(titleResId, message, throwable))
     }
 
     fun toast(
@@ -70,7 +94,7 @@ class ToastManager {
         description: StringResource,
         throwable: Throwable,
     ) {
-        toasts.tryEmit(ThrowableToastMsg2(titleResId, description, throwable))
+        show(ThrowableToastMsg2(titleResId, description, throwable))
     }
 
     fun toast(
@@ -78,7 +102,7 @@ class ToastManager {
         resourceId: StringResource,
         vararg params: String,
     ) {
-        toasts.tryEmit(ResourceToastMsg(titleResId, resourceId, params))
+        show(ResourceToastMsg(titleResId, resourceId, params))
     }
 
     fun toast(
@@ -86,23 +110,26 @@ class ToastManager {
         message: String,
         user: User?,
     ) {
-        val current = toasts.value
-        if (current is MultiErrorToastMsg && current.titleResId == titleResId) {
-            current.add(message, user)
-        } else {
-            toasts.tryEmit(MultiErrorToastMsg(titleResId).also { it.add(message, user) })
-        }
+        toast(titleResId, UserBasedErrorMessage(message, user))
     }
 
+    /** Errors with the same title gather in one list dialog, whether it is on screen or still queued. */
     fun toast(
         titleResId: StringResource,
         data: UserBasedErrorMessage,
     ) {
-        val current = toasts.value
-        if (current is MultiErrorToastMsg && current.titleResId == titleResId) {
-            current.add(data)
-        } else {
-            toasts.tryEmit(MultiErrorToastMsg(titleResId).also { it.add(data) })
+        lock.withLock {
+            val open = (listOfNotNull(toasts.value) + pending).firstOrNull { it is MultiErrorToastMsg && it.titleResId == titleResId } as MultiErrorToastMsg?
+            if (open != null) {
+                open.add(data)
+                return
+            }
         }
+        show(MultiErrorToastMsg(titleResId).also { it.add(data) })
+    }
+
+    private companion object {
+        /** Messages waiting behind the one on screen; beyond this, new ones are dropped. */
+        const val MAX_PENDING = 10
     }
 }
