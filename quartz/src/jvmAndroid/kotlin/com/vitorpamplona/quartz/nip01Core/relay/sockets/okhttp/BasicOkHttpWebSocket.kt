@@ -120,6 +120,11 @@ class BasicOkHttpWebSocket(
                     response: Response,
                 ) {
                     if (ended.get()) return
+                    // OkHttp dials on its own thread, so this can run before newWebSocket()
+                    // returns to connect() and stores the socket. The relay client sends its
+                    // REQs from onOpen: without this they went to a null socket and were
+                    // dropped, and the relay, never asked, never answered.
+                    socket = webSocket
                     out.onOpen(
                         (response.receivedResponseAtMillis - response.sentRequestAtMillis).toInt(),
                         response.headers["Sec-WebSocket-Extensions"]?.contains("permessage-deflate") ?: false,

@@ -23,6 +23,7 @@ package com.vitorpamplona.quartz.nip01Core.relay.sockets.okhttp
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.relay.sockets.WebSocketListener
 import okhttp3.OkHttpClient
+import okhttp3.Request
 import java.io.InputStream
 import java.io.OutputStream
 import java.net.ServerSocket
@@ -31,12 +32,15 @@ import java.util.Base64
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicInteger
+import java.util.concurrent.atomic.AtomicReference
 import kotlin.concurrent.thread
 import kotlin.test.AfterTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertTrue
+import okhttp3.WebSocket as OkHttpWebSocket
+import okhttp3.WebSocketListener as OkHttpWebSocketListener
 
 /**
  * A [BasicOkHttpWebSocket.disconnect] that lands while [BasicOkHttpWebSocket.connect] is still
@@ -174,6 +178,64 @@ class BasicOkHttpWebSocketDialRaceTest {
         assertTrue(socket.needsReconnect(), "an ended session needs a fresh dial")
         if (server.accepted.get() > 0) {
             assertTrue(server.closedByClient.await(5, TimeUnit.SECONDS), "and its connection must not stay open on the relay")
+        }
+    }
+
+    /**
+     * OkHttp dials on its own thread, so the socket can open before [OkHttpClient.newWebSocket]
+     * returns to [BasicOkHttpWebSocket.connect]. The relay client sends its REQs from `onOpen`;
+     * they used to go to a socket not stored yet and were dropped, and the relay, never asked,
+     * never answered. Seen on macOS CI as a refusing relay that sent nothing at all.
+     */
+    @Test
+    fun whatIsSentFromOnOpenGoesOutWhenTheSocketOpensBeforeTheDialReturns() {
+        val sentFromOpen = AtomicReference<Boolean?>(null)
+        val opened = CountDownLatch(1)
+        lateinit var socket: BasicOkHttpWebSocket
+        val listener =
+            object : WebSocketListener {
+                override fun onOpen(
+                    pingMillis: Int,
+                    compression: Boolean,
+                ) {
+                    sentFromOpen.set(socket.send("[\"REQ\",\"sub\",{}]"))
+                    opened.countDown()
+                }
+
+                override suspend fun onMessage(text: String) {}
+
+                override fun onClosed(
+                    code: Int,
+                    reason: String,
+                ) {}
+
+                override fun onFailure(
+                    t: Throwable,
+                    code: Int?,
+                    response: String?,
+                ) {}
+            }
+        // Returns the socket only once it has opened: the caller thread losing the race.
+        val opensBeforeReturning =
+            object : OkHttpClient() {
+                override fun newWebSocket(
+                    request: Request,
+                    listener: OkHttpWebSocketListener,
+                ): OkHttpWebSocket {
+                    val dialed = super.newWebSocket(request, listener)
+                    opened.await(5, TimeUnit.SECONDS)
+                    return dialed
+                }
+            }
+        try {
+            socket = BasicOkHttpWebSocket(server.url, { _ -> opensBeforeReturning }, listener)
+            socket.connect()
+
+            assertTrue(opened.await(5, TimeUnit.SECONDS))
+            assertEquals(true, sentFromOpen.get(), "the REQ sent from onOpen must reach the socket")
+            socket.disconnect()
+        } finally {
+            opensBeforeReturning.dispatcher.executorService.shutdownNow()
         }
     }
 }
