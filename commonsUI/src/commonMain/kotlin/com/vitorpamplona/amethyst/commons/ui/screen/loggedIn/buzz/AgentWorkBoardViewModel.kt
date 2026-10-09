@@ -27,6 +27,8 @@ import com.vitorpamplona.amethyst.commons.model.buzz.AgentWorkBoard
 import com.vitorpamplona.amethyst.commons.model.buzz.AgentWorkItem
 import com.vitorpamplona.amethyst.commons.model.buzz.BuzzJobAggregator
 import com.vitorpamplona.amethyst.commons.model.buzz.WorkflowRunAggregator
+import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.SubPurpose
+import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.taggedAs
 import com.vitorpamplona.quartz.buzz.workflow.ApprovalDenyEvent
 import com.vitorpamplona.quartz.buzz.workflow.ApprovalGrantEvent
 import com.vitorpamplona.quartz.buzz.workflow.WorkflowApprovalRequestedEvent
@@ -119,6 +121,7 @@ class AgentWorkBoardViewModel : ViewModel() {
                 // Jobs (43xxx) + their upvotes, one #h subscription.
                 val jobsFlow =
                     account.client
+                        .taggedAs(SubPurpose.RELAY_GROUPS)
                         .subscribeAsFlow(relay, listOf(Filter(kinds = JOB_KINDS + ReactionEvent.KIND, tags = mapOf("h" to listOf(channelId)))))
                         .onStart { emit(emptyList()) }
                         .map { BuzzJobAggregator.aggregate(it) }
@@ -126,6 +129,7 @@ class AgentWorkBoardViewModel : ViewModel() {
                 // Workflow base (#h) + a by-author decisions sub rebuilt only when the approver set changes.
                 val wfBaseFlow =
                     account.client
+                        .taggedAs(SubPurpose.RELAY_GROUPS)
                         .subscribeAsFlow(relay, listOf(Filter(kinds = WORKFLOW_H_KINDS + WorkflowDefEvent.KIND, tags = mapOf("h" to listOf(channelId)))))
                         .onStart { emit(emptyList()) }
                 val wfDecisionFlow =
@@ -141,7 +145,10 @@ class AgentWorkBoardViewModel : ViewModel() {
                             if (approvers.isEmpty()) {
                                 flowOf(emptyList())
                             } else {
-                                account.client.subscribeAsFlow(relay, listOf(Filter(kinds = DECISION_KINDS, authors = approvers))).onStart { emit(emptyList()) }
+                                account.client
+                                    .taggedAs(SubPurpose.RELAY_GROUPS)
+                                    .subscribeAsFlow(relay, listOf(Filter(kinds = DECISION_KINDS, authors = approvers)))
+                                    .onStart { emit(emptyList()) }
                             }
                         }
                 val wfFlow = combine(wfBaseFlow, wfDecisionFlow) { base, decisions -> WorkflowRunAggregator.aggregate(base + decisions) }

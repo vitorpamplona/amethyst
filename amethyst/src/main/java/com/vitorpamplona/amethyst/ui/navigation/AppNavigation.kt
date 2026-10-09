@@ -22,102 +22,56 @@ package com.vitorpamplona.amethyst.ui.navigation
 
 import android.content.Intent
 import android.net.Uri
-import android.os.Build
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
-import androidx.compose.runtime.snapshotFlow
 import androidx.compose.runtime.snapshots.Snapshot
-import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.core.content.IntentCompat
 import androidx.core.util.Consumer
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.vitorpamplona.amethyst.Amethyst
+import com.vitorpamplona.amethyst.commons.account.AccountSessionManager
+import com.vitorpamplona.amethyst.commons.account.ui.AddAccountDialog
 import com.vitorpamplona.amethyst.commons.model.navigation.MediaFeedRoute
 import com.vitorpamplona.amethyst.commons.model.navigation.Route
-import com.vitorpamplona.amethyst.commons.model.navigation.favoriteIds
 import com.vitorpamplona.amethyst.commons.model.navigation.isSameRoute
 import com.vitorpamplona.amethyst.commons.model.navigation.limitToRouteTextArg
 import com.vitorpamplona.amethyst.commons.nipACWebRtcCalls.CallState
-import com.vitorpamplona.amethyst.commons.relayClient.event.LocalEventFinder
-import com.vitorpamplona.amethyst.commons.relayClient.user.LocalUserFinder
-import com.vitorpamplona.amethyst.commons.relayClient.user.LocalUserFinderAccount
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.invalid_nip19_uri
 import com.vitorpamplona.amethyst.commons.resources.invalid_nip19_uri_description
-import com.vitorpamplona.amethyst.commons.ui.layouts.LocalScreenLayout
-import com.vitorpamplona.amethyst.commons.ui.navigation.bottombars.LocalTabReselectCoordinator
-import com.vitorpamplona.amethyst.commons.ui.navigation.bottombars.TabReselectCoordinator
 import com.vitorpamplona.amethyst.commons.ui.navigation.findQueryParameterValue
 import com.vitorpamplona.amethyst.commons.ui.navigation.host.NavDestinations
-import com.vitorpamplona.amethyst.commons.ui.navigation.host.NavTransitionTier
-import com.vitorpamplona.amethyst.commons.ui.navigation.host.NavigationHost
 import com.vitorpamplona.amethyst.commons.ui.navigation.host.composableFromBottomArgs
 import com.vitorpamplona.amethyst.commons.ui.navigation.host.composableFromEnd
 import com.vitorpamplona.amethyst.commons.ui.navigation.host.composableFromEndArgs
-import com.vitorpamplona.amethyst.commons.ui.navigation.host.sharedDestinations
+import com.vitorpamplona.amethyst.commons.ui.navigation.host.jvmDestinations
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.Nav
-import com.vitorpamplona.amethyst.commons.ui.navigation.navs.rememberNav
 import com.vitorpamplona.amethyst.commons.ui.navigation.routes.consumesSharesInPlace
 import com.vitorpamplona.amethyst.commons.ui.navigation.routes.getRouteWithArguments
 import com.vitorpamplona.amethyst.commons.ui.navigation.routes.isBaseRoute
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.settings.NowPlayingSettingsScreen
 import com.vitorpamplona.amethyst.commons.ui.uriToRoute
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
-import com.vitorpamplona.amethyst.service.crashreports.DisplayCrashMessages
 import com.vitorpamplona.amethyst.service.nowPlaying.AndroidAppIcon
 import com.vitorpamplona.amethyst.service.nowPlaying.AndroidNowPlayingAccess
-import com.vitorpamplona.amethyst.service.relayClient.authCommand.compose.RelayAuthPromptHost
-import com.vitorpamplona.amethyst.service.relayClient.notifyCommand.compose.DisplayNotifyMessages
-import com.vitorpamplona.amethyst.service.resourceusage.DisplayResourceUsageAlert
-import com.vitorpamplona.amethyst.service.resourceusage.ScreenTimeIntegrator
-import com.vitorpamplona.amethyst.ui.actions.mediaServers.DisplayBlossomSyncProgress
-import com.vitorpamplona.amethyst.ui.broadcast.DisplayBroadcastProgress
 import com.vitorpamplona.amethyst.ui.call.CallActivity
 import com.vitorpamplona.amethyst.ui.components.getActivity
-import com.vitorpamplona.amethyst.ui.components.toasts.DisplayErrorMessages
-import com.vitorpamplona.amethyst.ui.layouts.rememberScreenLayoutSpec
 import com.vitorpamplona.amethyst.ui.note.UpdateReactionTypeScreen
 import com.vitorpamplona.amethyst.ui.note.share.ShareNoteAsImageFileScreen
 import com.vitorpamplona.amethyst.ui.note.share.ShareNoteAsImageScreen
-import com.vitorpamplona.amethyst.ui.screen.AccountSessionManager
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountSwitcherAndLeftDrawerLayout
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.browser.WebAppScreen
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.calendars.create.NewCalendarEventScreen
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.cordnGroup.CordnGroupChatScreen
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.embed.EmbeddedTabAccountWatcher
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.embed.EmbeddedTabLayer
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.embed.EmbeddedTabPreloader
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.embed.EmbeddedTabThemeWatcher
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.embed.FavoriteAppManifestPreloader
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.favorites.NostrAppScreen
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.gitRepo.GitNewIssueScreen
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.gitRepo.GitRepositoryCodeScreen
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.gitRepo.GitRepositoryIssuesScreen
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.gitRepo.GitRepositoryPullsScreen
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.gitRepo.GitRepositoryScreen
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.keyBackup.AccountBackupScreen
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.music.AddToMusicPlaylistSheet
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.napplets.ConnectedAppDetailScreen
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.nests.NestsScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.qrcode.ScanQrImageScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.settings.ResourceUsageScreen
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.settings.cordn.CordnBackupScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.video.hls.NewHlsVideoScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.workouts.fitness.MyFitnessScreen
-import com.vitorpamplona.amethyst.ui.screen.loggedOff.AddAccountDialog
-import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.nip19Bech32.Nip19Parser
 import com.vitorpamplona.quartz.nip84Highlights.parse.SharedHighlightParser
 import kotlinx.coroutines.delay
@@ -125,84 +79,7 @@ import kotlinx.coroutines.launch
 import java.net.URI
 
 @Composable
-fun AppNavigation(
-    accountViewModel: AccountViewModel,
-    accountSessionManager: AccountSessionManager,
-) {
-    val nav = rememberNav()
-
-    // Shows the "log in to this relay?" dialog when a NIP-42 challenge needs the user to decide.
-    // Hosted here rather than in LoggedInPage so one dialog serves the whole shell: challenges
-    // arrive off the shared relay socket, not from whatever screen happens to be on top.
-    RelayAuthPromptHost(accountViewModel)
-
-    // One layout decision per window size for the whole shell: bottom bar vs rail vs
-    // permanent drawer, plus the docked notification panel. Every screen, bar and panel
-    // below reads the same spec through LocalScreenLayout. The provider wraps this whole
-    // function body so anything added to AppNavigation later is inside it by construction.
-    val screenLayout = rememberScreenLayoutSpec()
-    val tabReselectCoordinator = remember { TabReselectCoordinator() }
-
-    // Mirror the tier for the nav-transition specs, which run outside composition and so
-    // can't read LocalScreenLayout (see NavTransitionTier).
-    SideEffect { NavTransitionTier.isLargeScreen = screenLayout.isLargeScreen }
-
-    CompositionLocalProvider(
-        LocalScreenLayout provides screenLayout,
-        LocalTabReselectCoordinator provides tabReselectCoordinator,
-        // Provide the shared finder CompositionLocals so any commons composable that
-        // uses the no-arg observeUser*/EventFinderFilterAssemblerSubscription(note)
-        // overloads works when rendered on Android (they error() if unprovided). Android's
-        // own UI uses the AccountViewModel overloads and doesn't strictly need these, but
-        // providing them removes the runtime trap for shared composables reaching the
-        // logged-in tree. (The :napplet process never renders these composables.)
-        LocalUserFinder provides accountViewModel.dataSources().userFinder,
-        LocalUserFinderAccount provides accountViewModel.account,
-        LocalEventFinder provides accountViewModel.dataSources().eventFinder,
-    ) {
-        AccountSwitcherAndLeftDrawerLayout(accountViewModel, accountSessionManager, nav) {
-            Box(Modifier.fillMaxSize()) {
-                BuildNavigation(accountViewModel, nav)
-                // Pull each pinned nsite/napplet's manifest into LocalCache (and keep a device-local copy)
-                // so its favorite resolves as reliably as a pinned web app's URL — the data the embedded
-                // preloader below and the full-screen launcher both need. Not API-gated: every device's
-                // launcher benefits, and it's the only preload step that runs below API 30.
-                FavoriteAppManifestPreloader(accountViewModel)
-                // Persistent layer that keeps pinned embedded tabs (browser / nsite / napplet) warm by
-                // holding their surfaces attached. Below the drawer (drawn by the layout above) and below
-                // dialogs (separate windows). API 30+ only, matching the embedded-surface feature.
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-                    val bottomBarItems by accountViewModel.account.settings.syncedSettings.navigation.bottomBarItems
-                        .collectAsStateWithLifecycle()
-                    // Move every embedded app to the new account on a switch. Mounted before the layer and
-                    // the preloader so the previous account's sessions are dropped ahead of the first sweep
-                    // (an embed WebView's storage profile is fixed at construction, so it must be rebuilt).
-                    EmbeddedTabAccountWatcher()
-                    EmbeddedTabLayer(bottomBarItems.favoriteIds())
-                    // Warm every pinned tab at startup so the first tap is instant (content already local).
-                    EmbeddedTabPreloader(accountViewModel)
-                    // Rebuild the warm surfaces in the new theme when the app's DARK/LIGHT preference flips
-                    // (an embed WebView's theme is fixed at construction, so it can't follow a live switch).
-                    EmbeddedTabThemeWatcher()
-                }
-            }
-        }
-
-        NavigateIfIntentRequested(nav, accountViewModel, accountSessionManager)
-
-        DisplayErrorMessages(accountViewModel.toastManager, accountViewModel, nav)
-        DisplayNotifyMessages(accountViewModel, nav)
-        DisplayCrashMessages(accountViewModel, nav)
-        DisplayResourceUsageAlert(accountViewModel, nav)
-        DisplayBroadcastProgress(accountViewModel)
-        DisplayBlossomSyncProgress()
-
-        ObserveIncomingCalls(accountViewModel)
-    }
-}
-
-@Composable
-private fun ObserveIncomingCalls(accountViewModel: AccountViewModel) {
+internal fun ObserveIncomingCalls(accountViewModel: AccountViewModel) {
     val context = LocalContext.current
     val callState by accountViewModel.callManager.state.collectAsState()
 
@@ -214,75 +91,27 @@ private fun ObserveIncomingCalls(accountViewModel: AccountViewModel) {
     }
 }
 
-/**
- * Feeds the resource-usage ledger with time-per-screen. Only the route's
- * base name crosses this boundary — [ScreenTimeIntegrator.screenNameOf]
- * strips every navigation argument first, so the ledger can say "Profile"
- * but never which profile.
- */
-@Composable
-private fun TrackScreenTime(
-    nav: Nav,
-    destinations: NavDestinations,
-) {
-    LaunchedEffect(nav, destinations) {
-        snapshotFlow { ScreenTimeIntegrator.screenNameOf(destinations.serialNameOf(nav.currentRoute)) }
-            .collect { Amethyst.instance.screenTime.onScreen(it) }
-    }
-    DisposableEffect(nav) {
-        onDispose { Amethyst.instance.screenTime.onScreen(null) }
-    }
-}
-
-@Composable
-fun BuildNavigation(
+/** The destinations whose screens only the Android app has; the shared ones register in commonsUI. */
+internal fun NavDestinations.androidDestinations(
     accountViewModel: AccountViewModel,
     nav: Nav,
 ) {
-    val destinations = remember(accountViewModel, nav) { NavDestinations().apply { appDestinations(accountViewModel, nav) } }
-
-    NavigationHost(nav, destinations)
-
-    TrackScreenTime(nav, destinations)
-}
-
-private fun NavDestinations.appDestinations(
-    accountViewModel: AccountViewModel,
-    nav: Nav,
-) {
-    sharedDestinations(accountViewModel, nav)
-
+    jvmDestinations(accountViewModel, nav)
     composableFromEnd<Route.MyFitness> { MyFitnessScreen(accountViewModel, nav) }
     composableFromEndArgs<Route.WebApp>(capWidth = false) { WebAppScreen(it.url, accountViewModel, nav) }
     composableFromEndArgs<Route.NostrApp>(capWidth = false) { NostrAppScreen(it.coordinate, accountViewModel, nav) }
     composableFromEndArgs<Route.ConnectedAppDetail> { ConnectedAppDetailScreen(it.coordinate, accountViewModel, nav) }
-    composableFromBottomArgs<Route.NewCalendarEvent> { NewCalendarEventScreen(nav, accountViewModel) }
-    composableFromBottomArgs<Route.EditCalendarEvent> {
-        NewCalendarEventScreen(nav, accountViewModel, editKind = it.kind, editPubKeyHex = it.pubKeyHex, editDTag = it.dTag)
-    }
-    composableFromEnd<Route.Nests> { NestsScreen(accountViewModel, nav) }
-    composableFromEndArgs<Route.AddToMusicPlaylist> { AddToMusicPlaylistSheet(trackAddress = it.trackAddress, accountViewModel = accountViewModel, nav = nav) }
     composableFromEnd<Route.NewHlsVideo> { NewHlsVideoScreen(accountViewModel, nav) }
     composableFromBottomArgs<Route.ScanQrImage> { ScanQrImageScreen(it.uri, accountViewModel, nav) }
-    composableFromEnd<Route.AccountBackup> { AccountBackupScreen(accountViewModel, nav) }
     composableFromEnd<Route.NowPlayingSettings> {
         val context = LocalContext.current
         val access = remember(context) { AndroidNowPlayingAccess(context.applicationContext) }
         NowPlayingSettingsScreen(accountViewModel, nav, access) { appId, label -> AndroidAppIcon(appId, label) }
     }
     composableFromEnd<Route.ResourceUsage> { ResourceUsageScreen(accountViewModel, nav) }
-    composableFromEnd<Route.CordnBackup> { CordnBackupScreen(accountViewModel, nav) }
     composableFromEndArgs<Route.UpdateReactionType> { UpdateReactionTypeScreen(accountViewModel, nav) }
     composableFromEndArgs<Route.ShareNoteAsImage> { ShareNoteAsImageScreen(it.id, accountViewModel, nav) }
     composableFromEndArgs<Route.ShareNoteAsImageFile> { ShareNoteAsImageFileScreen(it.id, accountViewModel, nav) }
-    composableFromEndArgs<Route.GitRepository> { GitRepositoryScreen(Address(it.kind, it.pubKeyHex, it.dTag), accountViewModel, nav) }
-    composableFromEndArgs<Route.GitRepositoryCode> { GitRepositoryCodeScreen(Address(it.kind, it.pubKeyHex, it.dTag), accountViewModel, nav) }
-    composableFromEndArgs<Route.GitRepositoryIssues> { GitRepositoryIssuesScreen(Address(it.kind, it.pubKeyHex, it.dTag), accountViewModel, nav) }
-    composableFromEndArgs<Route.GitRepositoryPulls> { GitRepositoryPullsScreen(Address(it.kind, it.pubKeyHex, it.dTag), accountViewModel, nav) }
-    composableFromEndArgs<Route.GitRepositoryNewIssue> { GitNewIssueScreen(Address(it.kind, it.pubKeyHex, it.dTag), accountViewModel, nav) }
-    composableFromEndArgs<Route.CordnGroupChat> {
-        CordnGroupChatScreen(it.coordinatorPubKey, it.gid, accountViewModel, nav)
-    }
 }
 
 /** True for both share flavors: a single file/text (SEND) and a multi-file selection (SEND_MULTIPLE). */
@@ -327,19 +156,11 @@ private inline fun <reified T> Nav.navToSharedFeed(route: T) where T : Route, T 
 }
 
 @Composable
-private fun NavigateIfIntentRequested(
+internal fun NavigateIfIntentRequested(
     nav: Nav,
     accountViewModel: AccountViewModel,
     accountSessionManager: AccountSessionManager,
 ) {
-    accountViewModel.firstRoute?.let { newRoute ->
-        accountViewModel.firstRoute = null
-        val currentRoute = Snapshot.withoutReadObservation { getRouteWithArguments(newRoute::class, nav) }
-        if (!isSameRoute(currentRoute, newRoute)) {
-            nav.newStack(newRoute)
-        }
-    }
-
     val activity = LocalContext.current.getActivity()
 
     if (activity.intent.isShareAction()) {

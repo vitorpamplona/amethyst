@@ -1329,7 +1329,14 @@ private fun AppInner(
                                     dispatcher = notifDispatcher,
                                     settings = notifSettings,
                                     myPubKeyHex = myPk,
-                                    localCache = localCache,
+                                    eventStream = localCache.eventStream,
+                                    authorOf = { id ->
+                                        localCache.notes
+                                            .get(id)
+                                            ?.event
+                                            ?.pubKey
+                                    },
+                                    displayNameOf = { pk -> localCache.getUserIfExists(pk)?.toBestDisplayName() },
                                     isWindowFocused = isWindowFocusedFlow,
                                     sessionStartSec = notifSessionStartSec,
                                     scope = notifDispatcherScope,

@@ -50,7 +50,7 @@ class IsLightTest {
 
     @Test
     fun themedRoomBackgroundsAreJudgedByTheirOwnLuminance() {
-        // NestThemedScope copies the scheme with the room's background: a dark room reads dark
+        // A themed room copies the scheme with the room's background: a dark room reads dark
         // even when it came from the light scheme, and a pale room reads light.
         assertFalse(LightColorPalette.copy(background = Color(0xFF1A2B3C)).isLight)
         assertTrue(DarkColorPalette.copy(background = Color(0xFFF5E6D3)).isLight)

@@ -542,7 +542,7 @@ assemblers, `EventSync`, …). Packages are renamed on the way:
      - The git repository browser, the QR image scan, the new-calendar-event form and the
        Nests list (two to four blockers each).
      - Share-as-image (bitmaps).
-     - `AccountSessionManager` (login and sign-up).
+     - ~~`AccountSessionManager` (login and sign-up)~~: done in 7c.
      - The HLS video uploader (LightCompressor).
      Each needs a slot or a port of its own, so step 7 started alongside them.
 7. **Navigation**:
@@ -579,13 +579,125 @@ assemblers, `EventSync`, …). Packages are renamed on the way:
          `AppServices`: section-collapse prefs, scheduled posts and a display-only Tor status.
          The debug flag and the flavour come through `AppPlatform`.
      - Still in the app, waiting on other work:
-       - The account-switcher sheet's contents wait on the `AccountSessionManager` port
-         (login and sign-up), already listed under step 6.
        - The 23 destinations whose screens are app-only move with their screens.
        - The `AppNavigation` root (intents, screen time, the overlay hosts and the embedded-tab
          layer) is step 8's Android shim.
+   - **7c, the login session (2026-10-07).**
+     - `AccountSessionManager` and `AccountInfo` are in commons `account/`. The manager reaches
+       the platform through three ports:
+       - `AccountSessionStore`: the saved-login roster (`LocalPreferences`).
+       - `AccountCache`: the live `Account`s (`AccountCacheState`).
+       - `AccountSessionHooks`: the call and audio-room teardown, launcher shortcuts, the
+         publish-pipeline purge and the Cashu counters.
+     - The login and sign-up screens, their view models, the key field, the Tor setup and its
+       dialog, the add-account dialog and the account-switcher sheet are in commonsUI.
+     - Android fills five `AppPlatform` slots for them:
+       - whether the build asks for the terms of use (Play does);
+       - the terms checkbox;
+       - the NIP-55 signer-app button;
+       - keys from `nostr:` links while logged off;
+       - toasts.
+     - `AccountScreen` and `LoggedInPage` followed in 8a.
 8. **The app root port** and the new JVM shim. Then the Desktop feature inventory, and
    retiring the old `desktopApp`.
+   - **8a, the shared app root (2026-10-07).** `AmethystApp(sessionManager, root)` in commonsUI
+     `ui/app` is the whole app below the window:
+     - the login, loading and logged-in crossfade;
+     - the per-account ViewModel store (`AccountScopedViewModelStore`, expect/actual);
+     - the account's `AccountViewModel` and its always-on subscriptions and preloads;
+     - the navigation shell with `sharedDestinations`, the first-route hand-off and the root
+       dialogs (errors, notify requests, crash reports, broadcast and Blossom progress, relay AUTH).
+     - Platforms fill an `AppRoot`: how to build the `AccountViewModel`, their own destinations,
+       app and logged-in effects, a shell overlay, the edge-swipe guard, navigation effects and
+       a screen-time hook. Android's is `AndroidAppRoot`: intents and shares, call screens, the
+       resource-usage alert, embedded tabs, push registration and the NIP-55 launcher.
+     - `AuthCoordinator` moved to commons; `AppServices` gained `authCoordinator`,
+       `powPublishQueue` and `takeCrashReport()`.
+   - **8b, the desktop shim (2026-10-07).** `desktopApp/…/desktop/app/` renders `AmethystApp` in
+     a desktop window (then `runOneUi`; `run` since 8d).
+     - Account storage is shared: `AccountSettingsStores`/`AccountSettingsSource` (the settings
+       records) and `StoreAccountSessionStore` (roster, records, secrets, keys in the OS keyring
+       through `PrivateKeyVault`) are in commons; Android keeps only its legacy fallback on top.
+       `AccountCacheState` moved too, with the signer app, Marmot QUIC, Keystore and Buzz stores
+       injected.
+     - The graph classes moved from `amethyst` to commons: the relay and cache connectors, the
+       NOTIFY coordinator, `RoleBasedHttpClientBuilder` (usage meter injected), the Tor-state
+       connector, the PoW restorer, the BUD-10 resolver/probe/HEAD cache, and the Namecoin
+       clients and resolver (`NamecoinServices`). `BlossomCordnBlobStore` is the platform-free
+       Cordn transport.
+     - `DesktopAppModules` mirrors Android's `AppModules` minus what only a phone has
+       (connectivity callbacks, the battery ledger, foreground services, push). `DesktopAppRoot`,
+       `DesktopAppServices`, `DesktopAppPlatform` and `DesktopAccountViewModelHost` fill the ports.
+     - Its files live in `~/.amethyst/app` (or `-Damethyst.dataDir`); keys share the legacy app's
+       keyring entries, which are keyed by npub the same way.
+     - Verified under Xvfb: the shared login screen, a read-only login, the permanent drawer with
+       the home feed from live relays and the docked notifications, and the login surviving a restart.
+     - Left for 8c (see below): note media and link previews (`NotePlatform` is `None`), uploads,
+       NIP-46 bunker login, OS notifications, menu bar and shortcuts, file pickers, toasts,
+       language list, location, the local Blossom cache probe, and moving the legacy app's
+       accounts (`accounts.json.enc`) over.
+   - **8c, the platform pieces (2026-10-08).**
+     - Note media: `DesktopNotePlatform` (Coil images and GIFs, the legacy media player for video
+       and audio, the lightbox) and `DesktopRichTextPlatform`. The rich-text segment renderer is
+       shared now (`DefaultRichTextSegmentRenderer`; Android subclasses it for LaTeX, payment
+       cards, Blossom previews and secret emoji), and so are `ImageGallery`, `RelayGroupCard` and
+       the link-preview loader.
+     - NIP-46 login (`bunker://` in the key field, a `nostrconnect://` code to scan), kept in the
+       account's encrypted secrets and built into a `NostrSignerRemote` by `AccountCacheState`.
+       Offered where `AppPlatform.supportsRemoteSignerLogin`: desktop yes, Android no (it is a
+       bunker, never a bunker's client).
+     - `LegacyDesktopAccountImport`: the legacy app's logins move over on the first start; every
+       start opens the consolidated keyring vault the legacy app created. Verified with a real
+       Secret Service keyring: an nsec saved by the legacy app logs the new app in.
+     - A key the keyring refuses no longer fails the login; the window says it was not kept.
+     - Uploads through the JVM Blossom pipeline (`DesktopMediaUploader`), the system file dialog
+       for `GallerySelect`, OS notifications (`DesktopNotifications` over the legacy
+       auto-dispatcher, now cache-agnostic) with their settings in the shared notification
+       screen, snackbar toasts, the File/Go/Help menu bar, relays re-dialled after sleep, and
+       scheduled posts (legacy store, in-app scheduler, OS timer).
+   - **8d, the switch (2026-10-08).** `./gradlew :desktopApp:run` and the packaged app start the
+     shared UI (`AmethystDesktopKt`, which also takes over `--publish-scheduled`, the macOS menu
+     bar settings and the dock icon); `jdk.localedata` joined the packaged runtime. The maintainer
+     chose to keep the legacy app runnable (`./gradlew :desktopApp:runLegacy`) rather than delete
+     it, until its desktop-only features move to `commonsUI`:
+
+     | Legacy-only feature | Where it should land |
+     |---|---|
+     | Deck: multi-column layout and workspaces | A wide-window mode of the shared shell |
+     | Custom feed builder | `commonsUI` feeds (Android gets it too) |
+     | Spotlight and advanced search | The shared search screen |
+     | Messages privacy lock | Shared settings over `commons/privacylock` |
+     | Hashtag-spam filters, WoT badge | Shared moderation settings, note header |
+     | Live-now bar, relay metrics | Shared live and relay screens |
+     | Upload compression preview, GIF picker | The shared composer |
+
+     Platform gaps still open on the new desktop: napplets and nsites (no
+     sandboxed web view), location, the local Blossom cache probe, the language list, Tor's
+     first-run splash. When the table is empty, delete everything outside `desktop/app/` that
+     `desktop/app/` does not reach, and the `runLegacy` task.
+
+9. **What was left in `amethyst/`** (2026-10-08: 476 files, 102k lines, then 418 files, 89k
+   lines). Dead copies left behind by earlier moves went, and so did the screens that only a
+   few Android calls kept in the app:
+
+   - Git repository browser, music playlist sheet, calendar event editor, the audio-room list,
+     create/edit sheets and room panels, key backup, Cordn backup, the Cordn group chat.
+   - New ports for them: `jvmDestinations()` (shared screens that need the JVM, registered by
+     Android and Desktop), `LocalClock.zoneId/atTime/secondOfDay`, `HideFromScreenshots()`,
+     `Clipboard.setSensitiveText()`, `rememberFileBytesAccess()`, `NotePlatform.RenderAudioPlayer`
+     (audio that belongs to no `Note`), and `MediaUploader.mimeType/stripMetadata/readBytes` for
+     callers that encrypt and upload the bytes themselves. `CordnMediaService` moved to
+     `commons/jvmAndroid` on the shared `BlossomClient`.
+   - The NIP-96 client is shared (`commonsUI/jvmAndroid`), and Desktop uploads to NIP-96 and
+     NIP-95 servers.
+   - Desktop's date-skeleton formatter now puts the letters in the JDK's canonical order:
+     Android's `getBestDateTimePattern` takes "EEEMMMd", `ofLocalizedPattern` threw on it, which
+     broke the calendar cards on Desktop.
+
+   What stays, and why: notification system settings (push provider, battery optimisation, channels) and
+   resource usage (Android process stats), the audio room's own activity, full screen, action
+   bar and foreground-service lifecycle, and the Android platform itself (services, media3,
+   CameraX, WebView napplet host, osmdroid maps, Tor, notifications).
 
 Steps 2–5 can interleave. Step 5's helpers can start before 3–4 if they take `Account` /
 `AccountViewModel` unchanged and only move later.

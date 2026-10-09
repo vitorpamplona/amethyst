@@ -48,18 +48,19 @@ import java.io.File
 
 object DesktopImageLoaderSetup {
     @OptIn(DelicateCoilApi::class)
-    fun setup() {
-        SingletonImageLoader.setUnsafe(createImageLoader())
+    fun setup(clientForUrl: (String) -> Call.Factory = { DesktopHttpClient.currentClient() }) {
+        SingletonImageLoader.setUnsafe(createImageLoader(clientForUrl))
     }
 
-    fun createImageLoader(): ImageLoader =
+    /** [clientForUrl] picks the HTTP client per image, so each URL gets its own Tor decision. */
+    fun createImageLoader(clientForUrl: (String) -> Call.Factory = { DesktopHttpClient.currentClient() }): ImageLoader =
         ImageLoader
             .Builder(PlatformContext.INSTANCE)
             .memoryCache { newMemoryCache() }
             .diskCache { newDiskCache() }
             .precision(Precision.INEXACT)
             .components {
-                add(TorAwareOkHttpFactory { DesktopHttpClient.currentClient() })
+                add(TorAwareOkHttpFactory(clientForUrl))
                 add(SvgDecoder.Factory())
                 add(SkiaGifDecoder.Factory())
                 add(Base64Fetcher.Factory)
@@ -122,7 +123,7 @@ object DesktopImageLoaderSetup {
  */
 @OptIn(ExperimentalCoilApi::class)
 private class TorAwareOkHttpFactory(
-    val clientProvider: () -> Call.Factory,
+    val clientProvider: (url: String) -> Call.Factory,
 ) : Fetcher.Factory<Uri> {
     private val cacheStrategyLazy = lazy { CacheStrategy.DEFAULT }
 
@@ -133,10 +134,11 @@ private class TorAwareOkHttpFactory(
     ): Fetcher? {
         if (data.scheme != "http" && data.scheme != "https") return null
 
+        val url = data.toString()
         return NetworkFetcher(
-            url = data.toString(),
+            url = url,
             options = options,
-            networkClient = lazy { clientProvider().asNetworkClient() },
+            networkClient = lazy { clientProvider(url).asNetworkClient() },
             diskCache = lazy { imageLoader.diskCache },
             cacheStrategy = cacheStrategyLazy,
             connectivityChecker = lazy { ConnectivityChecker(options.context) },

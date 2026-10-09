@@ -260,10 +260,6 @@
          NavBarItemDef labels are R.string ids. -->
     <!-- NIP-71 video credits: what a video says about the people and works it references. -->
     <string name="always_on_notif_channel_description">Håller anslutningarna till dina inbox-relän aktiva för realtidsnotifieringar</string>
-    <plurals name="always_on_notif_connected">
-        <item quantity="one">Ansluten till %1$d inkorgsrelä</item>
-        <item quantity="other">Ansluten till %1$d inkorgsreläer</item>
-    </plurals>
     <plurals name="always_on_notif_connected_foreground">
         <item quantity="one">Ansluten till %1$d relä</item>
         <item quantity="other">Ansluten till %1$d reläer</item>

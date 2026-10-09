@@ -250,6 +250,17 @@ jobs:
           chmod +x scripts/add-deb-libegl-dep.sh
           scripts/add-deb-libegl-dep.sh desktopApp/build/compose/binaries/main-release/deb/*.deb
 
+      # The media player (kdroidFilter) drives the system GStreamer from a native library
+      # it unpacks at runtime, which jpackage's dependency scan never sees. Without the
+      # plugins every video fails with "Failed to create native player". The .rpm gets the
+      # same from desktopApp/build.gradle.kts.
+      - name: Add GStreamer deps to .deb
+        if: matrix.family == 'linux'
+        run: |
+          set -euo pipefail
+          chmod +x scripts/add-deb-gstreamer-deps.sh
+          scripts/add-deb-gstreamer-deps.sh desktopApp/build/compose/binaries/main-release/deb/*.deb
+
       - name: Build portable archives (windows + linux-portable)
         if: matrix.family == 'windows' || matrix.family == 'linux-portable'
         run: |

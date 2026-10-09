@@ -55,6 +55,7 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.core.graphics.drawable.toBitmap
 import coil3.compose.rememberAsyncImagePainter
+import com.vitorpamplona.amethyst.commons.account.ui.login.LoginViewModel
 import com.vitorpamplona.amethyst.commons.account.ui.login.LoginWithAmberButton
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.error_opening_external_signer

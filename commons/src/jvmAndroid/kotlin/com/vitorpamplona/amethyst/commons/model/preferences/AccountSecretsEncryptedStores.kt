@@ -147,6 +147,8 @@ class AccountSecretsEncryptedStores(
             defaultPaymentSourceId = stored[AccountSecretKeys.defaultPaymentSourceId],
             legacyDefaultNwcWalletId = stored[AccountSecretKeys.legacyDefaultNwcWalletId],
             legacyZapPaymentRequestServer = stored[AccountSecretKeys.legacyZapPaymentRequestServer],
+            remoteSignerBunkerUri = stored[AccountSecretKeys.remoteSignerBunkerUri],
+            remoteSignerTransportKey = stored[AccountSecretKeys.remoteSignerTransportKey],
         )
     }
 
@@ -177,6 +179,8 @@ class AccountSecretsEncryptedStores(
             putOrRemove(AccountSecretKeys.defaultPaymentSourceId, value.defaultPaymentSourceId)
             putOrRemove(AccountSecretKeys.legacyDefaultNwcWalletId, value.legacyDefaultNwcWalletId)
             putOrRemove(AccountSecretKeys.legacyZapPaymentRequestServer, value.legacyZapPaymentRequestServer)
+            putOrRemove(AccountSecretKeys.remoteSignerBunkerUri, value.remoteSignerBunkerUri)
+            putOrRemove(AccountSecretKeys.remoteSignerTransportKey, value.remoteSignerTransportKey)
 
             put(AccountSecretKeys.migrated, "true")
         }

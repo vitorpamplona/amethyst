@@ -70,6 +70,8 @@ actual object LocalClock {
     // WeekFields counts DayOfWeek 1..7 from Monday; this API counts 0..6 from Sunday.
     actual fun firstDayOfWeek(): Int = WeekFields.of(Locale.getDefault()).firstDayOfWeek.value % 7
 
+    actual fun zoneId(): String = ZoneId.systemDefault().id
+
     actual fun monthLabel(date: SearchDate): String = date.firstOfMonth().toJava().format(monthFormatter)
 
     actual fun dayLabel(date: SearchDate): String = date.toJava().format(dayFormatter)

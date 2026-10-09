@@ -31,26 +31,12 @@ import androidx.annotation.RequiresApi
 import com.vitorpamplona.amethyst.commons.blurhash.toBlurhash
 import com.vitorpamplona.amethyst.commons.service.image.BlurhashWrapper
 import com.vitorpamplona.amethyst.commons.service.image.ThumbhashWrapper
+import com.vitorpamplona.amethyst.commons.service.uploads.PreviewHashes
 import com.vitorpamplona.amethyst.commons.service.uploads.isAvif
 import com.vitorpamplona.amethyst.commons.thumbhash.toThumbhash
 import com.vitorpamplona.quartz.nip94FileMetadata.tags.DimensionTag
 import com.vitorpamplona.quartz.utils.Log
 import java.nio.ByteBuffer
-
-/**
- * Result of precomputing placeholder metadata during an upload. The bitmap or video thumbnail is
- * decoded exactly once and both hashes are computed from the same pixels to keep the hot upload
- * path cheap.
- */
-data class PreviewHashes(
-    val blurhash: BlurhashWrapper? = null,
-    val thumbhash: ThumbhashWrapper? = null,
-    val dim: DimensionTag? = null,
-) {
-    companion object {
-        val EMPTY = PreviewHashes()
-    }
-}
 
 object PreviewMetadataCalculator {
     private const val LOG_TAG = "PreviewMetadataCalc"

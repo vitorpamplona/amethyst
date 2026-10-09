@@ -99,6 +99,14 @@ class AccountSettings(
     val keyPair: KeyPair,
     val transientAccount: Boolean = false,
     var externalSignerPackageName: String? = null,
+    /**
+     * NIP-46 login: the `bunker://` address (secret stripped) of the remote signer that holds this
+     * account's key. Set together with [remoteSignerTransportKey]; desktop logs in this way, Android
+     * does not (it is a bunker, never a bunker's client).
+     */
+    var remoteSignerBunkerUri: String? = null,
+    /** NIP-46 login: this client's transport private key (hex) for [remoteSignerBunkerUri]. */
+    var remoteSignerTransportKey: String? = null,
     var localRelayServers: MutableStateFlow<Set<String>> = MutableStateFlow(setOf()),
     var defaultFileServer: ServerName = DEFAULT_MEDIA_SERVERS[0],
     var stripLocationOnUpload: Boolean = true,
@@ -294,7 +302,10 @@ class AccountSettings(
         saveable.update { AccountSettingsUpdater(this) }
     }
 
-    fun isWriteable(): Boolean = keyPair.privKey != null || externalSignerPackageName != null
+    fun isWriteable(): Boolean = keyPair.privKey != null || externalSignerPackageName != null || usesRemoteSigner()
+
+    /** Whether this account signs through a NIP-46 remote signer it logged in with. */
+    fun usesRemoteSigner(): Boolean = remoteSignerBunkerUri != null && remoteSignerTransportKey != null
 
     fun updateRelayGroupViewMode(mode: RelayGroupViewMode) {
         if (relayGroupViewMode.value != mode) {

@@ -3032,10 +3032,6 @@
     
 
     <string name="always_on_notif_channel_description">Houdt verbindingen met je inbox-relays actief voor realtime meldingen</string>
-    <plurals name="always_on_notif_connected">
-    <item quantity="one">Verbonden met %1$d inbox-relay</item>
-    <item quantity="other">Verbonden met %1$d inbox-relays</item>
-</plurals>
     <plurals name="always_on_notif_connected_foreground">
     <item quantity="one">Verbonden met %1$d relay</item>
     <item quantity="other">Verbonden met %1$d relays</item>

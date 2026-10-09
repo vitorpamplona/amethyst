@@ -24,6 +24,8 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.SubPurpose
+import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.taggedAs
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.quartz.concord.envelope.ConcordStreamEnvelope
 import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.fetchAllPagesFromPool
@@ -89,7 +91,7 @@ fun ConcordMemberHarvest(
         withContext(Dispatchers.IO) {
             runCatching {
                 // Events land via the global ingest path, so onEvent is a no-op — we only drive the paging.
-                account.client.fetchAllPagesFromPool(relays.associateWith { listOf(filter) }) { _, _ -> }
+                account.client.taggedAs(SubPurpose.COMMUNITY_CHATS, "Members").fetchAllPagesFromPool(relays.associateWith { listOf(filter) }) { _, _ -> }
             }
         }
     }

@@ -372,15 +372,13 @@ class NotificationRelayService : Service() {
 
     private fun buildNotification(connectedRelays: Int): Notification {
         val contentText =
-            when {
-                connectedRelays <= 0 -> getString(R.string.always_on_notif_connecting)
-                // Foreground: the pool also holds the feed/finder outbox relays, so the
-                // count reflects all connections, not just the inbox. Backgrounded, the
-                // feeds tear down and only inbox + DM relays remain.
-                MainActivity.isResumed ->
-                    pluralStringRes(this, R.plurals.always_on_notif_connected_foreground, connectedRelays, connectedRelays)
-                else ->
-                    pluralStringRes(this, R.plurals.always_on_notif_connected, connectedRelays, connectedRelays)
+            if (connectedRelays <= 0) {
+                getString(R.string.always_on_notif_connecting)
+            } else {
+                // Every connected relay, in both states. Backgrounded used to say "inbox relays",
+                // but the count never was just the inbox: DM, wallet, nutzap, group, signer and
+                // account relays all stay connected too, so it contradicted its own breakdown.
+                pluralStringRes(this, R.plurals.always_on_notif_connected_foreground, connectedRelays, connectedRelays)
             }
 
         // Tapping goes to the screen that answers the question the notification raises — "why is it

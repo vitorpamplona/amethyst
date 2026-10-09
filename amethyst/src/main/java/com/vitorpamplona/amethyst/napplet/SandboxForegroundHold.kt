@@ -99,7 +99,7 @@ object SandboxForegroundHold {
         Log.d("SandboxForegroundHold", "Holding main-process resources up for a foreground sandbox surface")
         holdJob =
             app.applicationIOScope.launch {
-                // Mirror exactly what the resumed UI collects (AccountScreen's ManageRelayServices +
+                // Mirror exactly what the resumed UI collects (AndroidAppRoot's ManageRelayServices +
                 // ManageWebOkHttp): keeping these subscribed keeps the relay pool connected (and so the
                 // relay AUTH sessions), and — transitively, via the relay connector's combine and the
                 // okHttp proxy-port provider — keeps Tor up too.

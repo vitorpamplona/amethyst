@@ -53,6 +53,9 @@ import com.vitorpamplona.amethyst.commons.resources.nest_unjoinable_body
 import com.vitorpamplona.amethyst.commons.resources.nest_unjoinable_title
 import com.vitorpamplona.amethyst.commons.ui.components.PlatformBackHandler
 import com.vitorpamplona.amethyst.commons.ui.note.LoadAddressableNote
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.nests.room.lifecycle.NestPresencePublisher
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.nests.room.lifecycle.NestRoomEventCollectors
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.nests.room.screen.NestPipScreen
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.amethyst.commons.viewmodels.BroadcastUiState
@@ -64,12 +67,9 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.nests.room.lifecycle.AutoCo
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.nests.room.lifecycle.LeaveOnKick
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.nests.room.lifecycle.LeaveOnRoomClosed
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.nests.room.lifecycle.NestForegroundServiceLifecycle
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.nests.room.lifecycle.NestPresencePublisher
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.nests.room.lifecycle.NestRoomEventCollectors
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.nests.room.lifecycle.PipBridge
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.nests.room.lifecycle.rememberNestViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.nests.room.screen.NestFullScreen
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.nests.room.screen.NestPipScreen
 import com.vitorpamplona.nestsclient.NestsRoomConfig
 import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.nip53LiveActivities.meetingSpaces.MeetingSpaceEvent

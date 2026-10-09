@@ -2873,10 +2873,6 @@
     
 
     <string name="always_on_notif_channel_description">Mantiene las conexiones a tus relays de bandeja de entrada activas para notificaciones en tiempo real</string>
-    <plurals name="always_on_notif_connected">
-    <item quantity="one">Conectado a %1$d relay de bandeja de entrada</item>
-    <item quantity="other">Conectado a %1$d relays de bandeja de entrada</item>
-</plurals>
     <plurals name="always_on_notif_connected_foreground">
     <item quantity="one">Conectado a %1$d relay</item>
     <item quantity="other">Conectado a %1$d relays</item>

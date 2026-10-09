@@ -20,7 +20,7 @@
  */
 package com.vitorpamplona.amethyst.service.notifications
 
-import com.vitorpamplona.amethyst.AccountInfo
+import com.vitorpamplona.amethyst.commons.account.AccountInfo
 import com.vitorpamplona.amethyst.commons.util.retryIfException
 import kotlinx.coroutines.Dispatchers
 import okhttp3.OkHttpClient

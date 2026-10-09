@@ -66,6 +66,7 @@ import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.calendars.CalendarC
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.calendars.CalendarReminderSettingsScreen
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.calendars.CalendarsScreen
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.calendars.create.NewCalendarCollectionScreen
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.calendars.create.NewCalendarEventScreen
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.calendars.detail.CalendarEventDetailScreen
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.cordnGroup.CordnCreateGroupScreen
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.cordnGroup.CordnCreateMembersScreen
@@ -150,6 +151,7 @@ import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.home.nip75Goals.New
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.interestSets.display.InterestSetScreen
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.interestSets.list.ListOfInterestSetsScreen
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.interestSets.list.metadata.InterestSetMetadataScreen
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.keyBackup.AccountBackupScreen
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.lists.display.lists.PeopleListScreen
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.lists.display.packs.FollowPackScreen
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.lists.list.ListOfPeopleListsScreen
@@ -158,12 +160,14 @@ import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.lists.list.metadata
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.lists.memberEdit.FollowListAndPackAndUserScreen
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.livestreams.LiveStreamsScreen
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.longs.LongsScreen
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.music.AddToMusicPlaylistSheet
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.music.MusicPlaylistsScreen
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.music.MusicTracksScreen
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.music.NewMusicPlaylistScreen
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.music.NewMusicTrackScreen
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.napplets.ConnectedAppsScreen
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.napplets.NappletsScreen
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.nests.NestsScreen
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.nests.room.lobby.NestLobbyScreen
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.newUser.ImportFollowListPickFollowsScreen
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.newUser.ImportFollowListSelectUserScreen
@@ -225,6 +229,7 @@ import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.settings.SpammingUs
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.settings.UpdateZapAmountScreen
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.settings.UserSettingsScreen
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.settings.VideoPlayerSettingsScreen
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.settings.cordn.CordnBackupScreen
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.settings.cordn.CordnCoordinatorsScreen
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.settings.cordn.CordnHubScreen
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.settings.cordn.CordnKeyPackagesScreen
@@ -280,6 +285,14 @@ fun NavDestinations.sharedDestinations(
     composableFromEnd<Route.Communities> { CommunitiesScreen(accountViewModel, nav) }
     composableFromEnd<Route.NewCommunity> { NewCommunityScreen(accountViewModel, nav) }
     composableFromEndArgs<Route.EditCommunity> { EditCommunityScreen(Address(it.kind, it.pubKeyHex, it.dTag), accountViewModel, nav) }
+    composableFromBottomArgs<Route.NewCalendarEvent> { NewCalendarEventScreen(nav, accountViewModel) }
+    composableFromBottomArgs<Route.EditCalendarEvent> {
+        NewCalendarEventScreen(nav, accountViewModel, editKind = it.kind, editPubKeyHex = it.pubKeyHex, editDTag = it.dTag)
+    }
+    composableFromEnd<Route.Nests> { NestsScreen(accountViewModel, nav) }
+    composableFromEnd<Route.AccountBackup> { AccountBackupScreen(accountViewModel, nav) }
+    composableFromEnd<Route.CordnBackup> { CordnBackupScreen(accountViewModel, nav) }
+    composableFromEndArgs<Route.AddToMusicPlaylist> { AddToMusicPlaylistSheet(trackAddress = it.trackAddress, accountViewModel = accountViewModel, nav = nav) }
     composableFromEnd<Route.Badges> { BadgesScreen(accountViewModel, nav) }
     composableFromEnd<Route.ProfileBadges> { ProfileBadgesScreen(accountViewModel, nav) }
     composableFromEnd<Route.ProfileAppRecommendations> { ProfileAppRecommendationsScreen(accountViewModel, nav) }

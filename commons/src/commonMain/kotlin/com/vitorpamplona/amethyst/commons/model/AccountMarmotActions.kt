@@ -22,6 +22,8 @@ package com.vitorpamplona.amethyst.commons.model
 
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.mediaServers.ServerType
+import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.SubPurpose
+import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.taggedAs
 import com.vitorpamplona.amethyst.commons.util.KmpLock
 import com.vitorpamplona.amethyst.commons.util.withLock
 import com.vitorpamplona.quartz.marmot.appComponents.BlobStoreEndpointV2
@@ -433,7 +435,7 @@ class AccountMarmotActions(
         // Both kinds: White Noise's MDK still publishes legacy kind:443, some
         // of its users nothing else. The newest valid 30443 wins; a valid 443
         // is the fallback (MIP-00 migration rules).
-        val event = KeyPackageFetcher.fetchKeyPackageForInvite(account.client, memberPubKey, fetchRelays)
+        val event = KeyPackageFetcher.fetchKeyPackageForInvite(account.client.taggedAs(SubPurpose.ENCRYPTED_GROUPS), memberPubKey, fetchRelays)
 
         if (event == null) {
             Log.w("MarmotDbg") {
@@ -733,7 +735,7 @@ class AccountMarmotActions(
             if (TimeUtils.now() - cached.first <= maxAge) return cached.second
         }
 
-        val latest = KeyPackageFetcher.fetchKeyPackage(account.client, account.signer.pubKey, relays)
+        val latest = KeyPackageFetcher.fetchKeyPackage(account.client.taggedAs(SubPurpose.ENCRYPTED_GROUPS), account.signer.pubKey, relays)
 
         val owner =
             when {

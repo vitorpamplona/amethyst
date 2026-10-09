@@ -21,13 +21,16 @@
 package com.vitorpamplona.amethyst.ui.platform
 
 import android.content.Context
+import android.widget.Toast
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.UriHandler
 import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.BuildConfig
+import com.vitorpamplona.amethyst.commons.account.ui.login.LoginViewModel
 import com.vitorpamplona.amethyst.commons.favorites.FavoriteApp
 import com.vitorpamplona.amethyst.commons.feeds.FeedContentState
 import com.vitorpamplona.amethyst.commons.model.UiSettingsFlow
@@ -36,6 +39,7 @@ import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.payments.PayToAppProbe
 import com.vitorpamplona.amethyst.commons.ui.platform.AppLauncher
 import com.vitorpamplona.amethyst.commons.ui.platform.AppPlatform
+import com.vitorpamplona.amethyst.commons.ui.platform.Toaster
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.qrcode.ScanOutcome
 import com.vitorpamplona.amethyst.commons.ui.settings.SettingsCategory
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
@@ -50,10 +54,14 @@ import com.vitorpamplona.amethyst.ui.note.DrawPlayName
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.nests.room.activity.NestActivity
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.settings.AndroidNotificationCategorySettings
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.settings.AndroidNotificationDeliverySettings
+import com.vitorpamplona.amethyst.ui.screen.loggedOff.login.ExternalSignerButton
+import com.vitorpamplona.amethyst.ui.screen.loggedOff.login.OpenURIIfNotLoggedIn
 import com.vitorpamplona.quartz.concord.cord02Community.ImagePointer
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
+import com.vitorpamplona.quartz.nip55AndroidSigner.client.isExternalSignerInstalled
 import com.vitorpamplona.quartz.nipACWebRtcCalls.tags.CallType
 import kotlinx.collections.immutable.ImmutableMap
+import kotlinx.coroutines.launch
 import com.vitorpamplona.amethyst.commons.ui.navigation.bottombars.AppBottomBar as AppBottomBarImpl
 import com.vitorpamplona.amethyst.favorites.rememberManifestIconModel as AppRememberManifestIconModel
 import com.vitorpamplona.amethyst.favorites.rememberNappletIconModel as AppRememberNappletIconModel
@@ -65,6 +73,7 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.geocaches.map.GeocacheMapTa
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.qrcode.scanner.QrCodeScannerDialog as AppQrCodeScannerDialog
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.settings.legalSettingsCategory as flavorLegalSettingsCategory
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.workouts.suggestion.DetectedWorkoutCarousel as AndroidDetectedWorkoutCarousel
+import com.vitorpamplona.amethyst.ui.screen.loggedOff.legal.TermsGate as FlavorTermsGate
 
 /** Android's [AppPlatform]: the app's own shell pieces, camera scanner, app launcher and icon caches. */
 object AndroidAppPlatform : AppPlatform {
@@ -85,6 +94,43 @@ object AndroidAppPlatform : AppPlatform {
     override val releaseNotesId: String get() = BuildConfig.RELEASE_NOTES_ID
 
     override fun logDebugState() = debugState(Amethyst.instance.appContext)
+
+    // The Play Store build asks a first login to accept the terms of use; F-Droid ships none.
+    override val requiresTermsAcceptance: Boolean get() = BuildConfig.FLAVOR == "play"
+
+    @Composable
+    override fun TermsGate(
+        checked: Boolean,
+        onCheckedChange: (Boolean) -> Unit,
+        showError: Boolean,
+    ) = FlavorTermsGate(checked, onCheckedChange, showError)
+
+    @Composable
+    override fun ExternalSignerLoginButton(loginViewModel: LoginViewModel) {
+        // A PackageManager query: once per screen, not on every keystroke of the key field.
+        val context = LocalContext.current
+        val installed = remember(context) { isExternalSignerInstalled(context) }
+        if (installed) {
+            ExternalSignerButton(loginViewModel)
+        }
+    }
+
+    @Composable
+    override fun IncomingLoginKeys(onKey: suspend (String) -> Unit) = OpenURIIfNotLoggedIn(onKey)
+
+    @Composable
+    override fun rememberToaster(): Toaster {
+        val context = LocalContext.current
+        // Callers may report from any thread; a toast needs the main one.
+        val scope = rememberCoroutineScope()
+        return remember(context, scope) {
+            Toaster { message, long ->
+                scope.launch {
+                    Toast.makeText(context, message, if (long) Toast.LENGTH_LONG else Toast.LENGTH_SHORT).show()
+                }
+            }
+        }
+    }
 
     override fun legalSettingsCategory(uriHandler: UriHandler): SettingsCategory? = flavorLegalSettingsCategory(uriHandler)
 

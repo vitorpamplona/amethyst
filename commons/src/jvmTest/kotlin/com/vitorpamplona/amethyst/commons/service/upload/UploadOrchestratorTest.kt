@@ -167,6 +167,38 @@ class UploadOrchestratorTest {
             )
         }
 
+    @Test
+    fun preparedFileIsTheReencodedOneAndIsDeletedAfterwards() =
+        runTest {
+            val src = makeJpeg(2000, 1500)
+
+            var preparedPath: String? = null
+            val hash =
+                UploadOrchestrator.withPreparedFile(src, stripExif = true, quality = CompressionQuality.MEDIUM) { prepared, metadata ->
+                    preparedPath = prepared.canonicalPath
+                    assertTrue(prepared.canonicalPath != src.canonicalPath, "MEDIUM must hand over a re-encoded copy")
+                    assertEquals(sha256Hex(prepared.readBytes()), metadata.sha256, "metadata must describe the prepared bytes")
+                    metadata.sha256
+                }
+
+            assertTrue(hash.isNotEmpty())
+            assertFalse(File(preparedPath!!).exists(), "the prepared temp must be deleted once the block returns")
+            assertTrue(src.exists(), "the source file is never deleted")
+        }
+
+    @Test
+    fun preparedFileWithoutQualityIsTheSourceItself() =
+        runTest {
+            val src = writeBytes("bin", byteArrayOf(1, 2, 3, 4))
+
+            UploadOrchestrator.withPreparedFile(src, stripExif = false, quality = null) { prepared, metadata ->
+                assertEquals(src.canonicalPath, prepared.canonicalPath)
+                assertEquals(sha256Hex(byteArrayOf(1, 2, 3, 4)), metadata.sha256)
+            }
+
+            assertTrue(src.exists())
+        }
+
     // ---------- helpers ----------
 
     private fun makeJpeg(

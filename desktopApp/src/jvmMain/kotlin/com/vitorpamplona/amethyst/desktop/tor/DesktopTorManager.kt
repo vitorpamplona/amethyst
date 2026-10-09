@@ -39,6 +39,7 @@ import io.matthewnelson.kmp.tor.runtime.core.TorEvent
 import io.matthewnelson.kmp.tor.runtime.core.config.TorOption
 import io.matthewnelson.kmp.tor.runtime.core.ctrl.TorCmd
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -132,7 +133,7 @@ class DesktopTorManager(
                             } catch (e: Exception) {
                                 if (attempt < 3) {
                                     Log.d("DesktopTorManager") { "Start attempt $attempt failed, retrying..." }
-                                    kotlinx.coroutines.delay(1000L * attempt)
+                                    delay(1000L * attempt)
                                 } else {
                                     Log.e("DesktopTorManager", "Failed to start Tor after 3 attempts", e)
                                     _status.value = TorServiceStatus.Error(e.message ?: "Unknown error")
@@ -178,6 +179,8 @@ class DesktopTorManager(
 
     /** Call from shutdown hook to stop Tor synchronously. Waits for daemon exit. */
     fun stopSync() {
+        // Never started (Tor off, the default): nothing to wait a second for on every quit.
+        if (_status.value == TorServiceStatus.Off) return
         try {
             runtime.stopDaemonSync()
             // Wait for daemon process to fully exit

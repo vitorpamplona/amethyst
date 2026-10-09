@@ -37,6 +37,7 @@ import com.vitorpamplona.amethyst.commons.model.isMutedPublicChatMessage
 import com.vitorpamplona.amethyst.commons.model.topNavFeeds.TopFilter
 import com.vitorpamplona.amethyst.commons.nipACWebRtcCalls.CallManager
 import com.vitorpamplona.amethyst.commons.notifications.dal.NotificationFeedFilter
+import com.vitorpamplona.amethyst.commons.relayClient.auth.ScreenAuthAccount
 import com.vitorpamplona.amethyst.commons.relayClient.event.EventFinderQueryState
 import com.vitorpamplona.amethyst.commons.relayClient.user.UserFinderQueryState
 import com.vitorpamplona.amethyst.commons.resources.Res
@@ -58,7 +59,6 @@ import com.vitorpamplona.amethyst.service.notifications.renderers.ReactionNotifi
 import com.vitorpamplona.amethyst.service.notifications.renderers.ReplyNotification
 import com.vitorpamplona.amethyst.service.notifications.renderers.RepostNotification
 import com.vitorpamplona.amethyst.service.notifications.renderers.ZapNotification
-import com.vitorpamplona.amethyst.service.relayClient.authCommand.model.ScreenAuthAccount
 import com.vitorpamplona.amethyst.ui.MainActivity
 import com.vitorpamplona.quartz.buzz.stream.StreamMessageV2Event
 import com.vitorpamplona.quartz.experimental.notifications.wake.WakeUpEvent

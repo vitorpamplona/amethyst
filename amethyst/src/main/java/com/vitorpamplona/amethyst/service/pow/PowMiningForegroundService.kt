@@ -123,7 +123,7 @@ class PowMiningForegroundService : FlowProgressForegroundService<ImmutableList<P
             }
         }
 
-        // Mirrors what the resumed UI collects (AccountScreen's ManageRelayServices +
+        // Mirrors what the resumed UI collects (AndroidAppRoot's ManageRelayServices +
         // ManageWebOkHttp): subscribed, they keep the relay pool connected and, through
         // the connector's combine and the proxy-port provider, Tor up.
         val app = Amethyst.instance

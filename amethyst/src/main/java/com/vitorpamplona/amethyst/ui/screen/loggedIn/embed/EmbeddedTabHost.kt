@@ -361,7 +361,7 @@ object EmbeddedTabHost {
     /**
      * Account the warm sessions were built for, as the opaque WebView storage-profile name (null while
      * logged out). Kept HERE, next to the sessions it describes, rather than in a composable's `remember`:
-     * the whole logged-in subtree is rebuilt per account (`key(pubKey)` in `SetAccountCentricViewModelStore`),
+     * the whole logged-in subtree is rebuilt per account (`key(pubKey)` in `AccountScopedViewModelStore`),
      * so a remembered "last applied" value would be re-seeded to the NEW account on the very first
      * composition after a switch and the change would never be detected.
      */
