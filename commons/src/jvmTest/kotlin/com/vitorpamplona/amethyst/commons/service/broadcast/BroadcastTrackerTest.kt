@@ -22,8 +22,21 @@ package com.vitorpamplona.amethyst.commons.service.broadcast
 
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.relay.client.EmptyNostrClient
+import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
+import com.vitorpamplona.quartz.nip01Core.relay.client.listeners.RelayConnectionListener
+import com.vitorpamplona.quartz.nip01Core.relay.client.single.IRelayClient
+import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.OkMessage
+import com.vitorpamplona.quartz.nip01Core.relay.commands.toRelay.Command
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.test.advanceTimeBy
+import kotlinx.coroutines.test.advanceUntilIdle
+import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
 import org.junit.Test
+import kotlin.test.assertEquals
+import kotlin.test.assertFalse
+import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 class BroadcastTrackerTest {
@@ -47,4 +60,102 @@ class BroadcastTrackerTest {
 
             assertTrue(tracker.activeBroadcasts.value.isEmpty(), "nothing was sent, so there is nothing to report")
         }
+
+    @Test
+    fun aDroppedConnectionIsNotAFailureIfTheRelayLaterAccepts() =
+        runTest {
+            val client = ScriptedClient()
+            val tracker = BroadcastTracker(outboxRelays = { setOf(outbox) })
+
+            launch { tracker.trackBroadcast(event = event, relays = setOf(outbox), client = client) }
+            runCurrent()
+
+            // the connection drops right after publishing; the client resends on reconnect.
+            client.listener!!.onDisconnected(FakeRelay(outbox))
+            runCurrent()
+
+            val afterDrop = tracker.activeBroadcasts.value.single()
+            assertNull(afterDrop.results[outbox], "a dropped connection is not the relay's answer")
+            assertFalse(afterDrop.needsAttention)
+
+            advanceTimeBy(2_700)
+            client.listener!!.onIncomingMessage(FakeRelay(outbox), "", OkMessage(event.id, true, ""))
+            advanceUntilIdle()
+
+            val done = tracker.activeBroadcasts.value.single()
+            assertEquals(RelayResult.Success, done.results[outbox])
+            assertTrue(done.isOut)
+            assertFalse(done.needsAttention)
+        }
+
+    @Test
+    fun aRelayThatNeverAnswersKeepsItsConnectionError() =
+        runTest {
+            val client = ScriptedClient()
+            val tracker = BroadcastTracker(outboxRelays = { setOf(outbox) })
+
+            launch { tracker.trackBroadcast(event = event, relays = setOf(outbox), client = client) }
+            runCurrent()
+            client.listener!!.onCannotConnect(FakeRelay(outbox), "HTTP 530")
+            advanceUntilIdle()
+
+            val done = tracker.activeBroadcasts.value.single()
+            assertEquals(RelayResult.Error("HTTP 530"), done.results[outbox], "the details sheet still says why")
+            assertTrue(done.needsAttention)
+        }
+
+    @Test
+    fun aRetryAlsoWaitsPastADroppedConnection() =
+        runTest {
+            val client = ScriptedClient()
+            val tracker = BroadcastTracker(outboxRelays = { setOf(outbox) })
+
+            launch { tracker.trackBroadcast(event = event, relays = setOf(outbox), client = client) }
+            runCurrent()
+            client.listener!!.onCannotConnect(FakeRelay(outbox), "HTTP 530")
+            advanceUntilIdle()
+
+            launch { tracker.retry(tracker.activeBroadcasts.value.single(), client) }
+            runCurrent()
+            client.listener!!.onDisconnected(FakeRelay(outbox))
+            advanceTimeBy(2_000)
+            client.listener!!.onIncomingMessage(FakeRelay(outbox), "", OkMessage(event.id, true, ""))
+            advanceUntilIdle()
+
+            val done = tracker.activeBroadcasts.value.single()
+            assertEquals(RelayResult.Success, done.results[outbox])
+            assertFalse(done.needsAttention)
+        }
+
+    private val outbox = NormalizedRelayUrl("wss://outbox.test/")
+
+    private class ScriptedClient : INostrClient by EmptyNostrClient() {
+        var listener: RelayConnectionListener? = null
+
+        override fun addConnectionListener(listener: RelayConnectionListener) {
+            this.listener = listener
+        }
+
+        override fun removeConnectionListener(listener: RelayConnectionListener) {
+            if (this.listener == listener) this.listener = null
+        }
+    }
+
+    private class FakeRelay(
+        override val url: NormalizedRelayUrl,
+    ) : IRelayClient {
+        override fun connect() {}
+
+        override fun needsToReconnect() = false
+
+        override fun connectAndSyncFiltersIfDisconnected(ignoreRetryDelays: Boolean) {}
+
+        override fun isConnected() = true
+
+        override fun sendOrConnectAndSync(cmd: Command) {}
+
+        override fun sendIfConnected(cmd: Command) {}
+
+        override fun disconnect() {}
+    }
 }

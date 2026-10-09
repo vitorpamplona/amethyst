@@ -107,6 +107,7 @@ class BroadcastTracker(
                             RelayResponse(
                                 relay = relay.url,
                                 result = RelayResult.Error(errorMessage),
+                                connectionError = true,
                             ),
                         )
                         Log.d(TAG) { "[$trackingId] Cannot connect to ${relay.url}: $errorMessage" }
@@ -119,6 +120,7 @@ class BroadcastTracker(
                             RelayResponse(
                                 relay = relay.url,
                                 result = RelayResult.Error("Relay disconnected before completion"),
+                                connectionError = true,
                             ),
                         )
                         Log.d(TAG) { "[$trackingId] Disconnected from ${relay.url}" }
@@ -157,6 +159,7 @@ class BroadcastTracker(
                     val resultCollector =
                         async {
                             val receivedRelays = mutableSetOf<NormalizedRelayUrl>()
+                            val connectionErrors = mutableMapOf<NormalizedRelayUrl, RelayResult>()
                             var currentBroadcast = broadcast
 
                             withTimeoutOrNull(TIMEOUT_SECONDS * 1000) {
@@ -165,6 +168,13 @@ class BroadcastTracker(
 
                                     // Skip if already received (don't override success)
                                     if (response.relay in receivedRelays) continue
+
+                                    // The client resends once it reconnects, so a dropped or failed
+                                    // connection is not the relay's answer: keep waiting for its OK.
+                                    if (response.connectionError) {
+                                        connectionErrors[response.relay] = response.result
+                                        continue
+                                    }
 
                                     receivedRelays.add(response.relay)
                                     currentBroadcast = currentBroadcast.withResult(response.relay, response.result)
@@ -176,9 +186,9 @@ class BroadcastTracker(
                                 }
                             }
 
-                            // Mark remaining relays as timeout
+                            // Relays that never answered: the connection error if there was one, else a timeout
                             relays.filter { it !in receivedRelays }.forEach { relay ->
-                                currentBroadcast = currentBroadcast.withResult(relay, RelayResult.Timeout)
+                                currentBroadcast = currentBroadcast.withResult(relay, connectionErrors[relay] ?: RelayResult.Timeout)
                             }
 
                             currentBroadcast
@@ -283,6 +293,7 @@ class BroadcastTracker(
                             RelayResponse(
                                 relay = relay.url,
                                 result = RelayResult.Error(errorMessage),
+                                connectionError = true,
                             ),
                         )
                         Log.d(TAG) { "[${broadcast.id}] Retry cannot connect to ${relay.url}: $errorMessage" }
@@ -295,6 +306,7 @@ class BroadcastTracker(
                             RelayResponse(
                                 relay = relay.url,
                                 result = RelayResult.Error("Relay disconnected before completion"),
+                                connectionError = true,
                             ),
                         )
                         Log.d(TAG) { "[${broadcast.id}] Retry disconnected from ${relay.url}" }
@@ -332,6 +344,7 @@ class BroadcastTracker(
                 val resultCollector =
                     async {
                         val receivedRelays = mutableSetOf<NormalizedRelayUrl>()
+                        val connectionErrors = mutableMapOf<NormalizedRelayUrl, RelayResult>()
                         var currentBroadcast = _activeBroadcasts.value.find { it.id == broadcast.id } ?: broadcast
 
                         withTimeoutOrNull(TIMEOUT_SECONDS * 1000) {
@@ -340,6 +353,10 @@ class BroadcastTracker(
 
                                 if (response.relay !in relaysToRetry) continue
                                 if (response.relay in receivedRelays) continue
+                                if (response.connectionError) {
+                                    connectionErrors[response.relay] = response.result
+                                    continue
+                                }
 
                                 receivedRelays.add(response.relay)
                                 currentBroadcast = currentBroadcast.withResult(response.relay, response.result)
@@ -350,9 +367,9 @@ class BroadcastTracker(
                             }
                         }
 
-                        // Mark remaining as timeout
+                        // Relays that never answered: the connection error if there was one, else a timeout
                         relaysToRetry.filter { it !in receivedRelays }.forEach { relay ->
-                            currentBroadcast = currentBroadcast.withResult(relay, RelayResult.Timeout)
+                            currentBroadcast = currentBroadcast.withResult(relay, connectionErrors[relay] ?: RelayResult.Timeout)
                         }
 
                         currentBroadcast
@@ -384,5 +401,7 @@ class BroadcastTracker(
     private data class RelayResponse(
         val relay: NormalizedRelayUrl,
         val result: RelayResult,
+        /** From the connection, not the relay: provisional until the relay sends its OK. */
+        val connectionError: Boolean = false,
     )
 }
