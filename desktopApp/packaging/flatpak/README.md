@@ -120,13 +120,28 @@ checked 2026-10-09:
 2. **Build from source.** "All source available submissions must be built
    entirely from source code", offline, with every dependency listed as a
    manifest source. Repackaging the GitHub Release tarball, as the manifest
-   here does, is not accepted. A source build needs:
-   - the Gradle build to configure and run for `:desktopApp` without the
-     Android SDK (see the note below);
-   - every Maven artifact the build resolves, as manifest sources (generated
-     with Flatpak's Gradle tooling, which Flathub allows as generated files);
-   - a JDK from `org.freedesktop.Sdk.Extension.openjdk21` instead of the
-     trimmed JRE that jpackage bundles.
+   here does, is not accepted.
+
+   The Gradle side already holds up. On 2026-10-09,
+   `./gradlew :desktopApp:createReleaseDistributable` built from scratch
+   (`--rerun-tasks --no-build-cache`) with no Android SDK (no `local.properties`,
+   no `ANDROID_HOME`). It then ran again with `--offline` and an empty
+   `KONAN_DATA_DIR`, and fetched no Kotlin/Native toolchain. The AGP
+   multiplatform plugin and the iOS/Linux native targets don't get in the way
+   of JVM-only tasks. What a source manifest still has to provide:
+   - every Maven artifact the build resolves, plugins included, as manifest
+     sources (generated with Flatpak's Gradle tooling, which Flathub allows as
+     generated files), plus an init script that points the repositories in
+     `settings.gradle.kts` at that local copy;
+   - the Gradle distribution itself, since the wrapper downloads it;
+   - a JDK from `org.freedesktop.Sdk.Extension.openjdk21` to run Gradle and
+     jpackage. The jpackage tree then bundles a trimmed JRE as it does today.
+
+   Some Maven dependencies ship prebuilt Linux binaries inside their jars,
+   and a reviewer may ask for those to be built from source too. In the
+   v1.17 desktop distributable: `resource-exec-tor` (a `tor` executable),
+   `secp256k1-kmp-jni-jvm-linux`, `jna`, `sqlite-bundled-jvm`,
+   `mediaplayer-jvm`, `nucleus.notification-linux` and Skiko's runtime.
 3. **Screenshot.** The metainfo needs at least one screenshot of the Linux
    app (see the commented-out `<screenshots>` block).
 4. **Domain verification.** `com.vitorpamplona.amethyst` is verified by
