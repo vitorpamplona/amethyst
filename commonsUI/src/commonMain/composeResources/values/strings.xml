@@ -6774,6 +6774,8 @@
     <string name="pdf_tap_to_load">Tap to load PDF</string>
     <string name="pdf_loading">Loading…</string>
     <string name="pdf_unable_to_open">Unable to open PDF</string>
+    <string name="pdf_previous_page">Previous page</string>
+    <string name="pdf_next_page">Next page</string>
     <plurals name="pdf_page_count">
         <item quantity="one">%1$d page</item>
         <item quantity="other">%1$d pages</item>

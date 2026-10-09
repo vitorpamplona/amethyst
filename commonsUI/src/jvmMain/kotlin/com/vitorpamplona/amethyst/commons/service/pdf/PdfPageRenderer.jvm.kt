@@ -26,12 +26,20 @@ import org.apache.pdfbox.pdmodel.PDDocument
 import org.apache.pdfbox.rendering.ImageType
 import org.apache.pdfbox.rendering.PDFRenderer
 import java.io.File
+import java.io.IOException
 
+/**
+ * PDFBox runs in the app's heap, unlike Android's renderer, so a hostile file must not be able to
+ * take the app down. Embedded images are subsampled to the size being drawn instead of decoded
+ * whole (a tiny compressed 25000x25000 image would otherwise need about 2 GB), and an
+ * [OutOfMemoryError] or [StackOverflowError] from a file built to cause one becomes an
+ * [IOException], so the card falls back to a link.
+ */
 actual class PdfPageRenderer actual constructor(
     file: File,
 ) : AutoCloseable {
-    private val document: PDDocument = Loader.loadPDF(file)
-    private val renderer = PDFRenderer(document)
+    private val document: PDDocument = guarded { Loader.loadPDF(file) }
+    private val renderer = PDFRenderer(document).apply { isSubsamplingAllowed = true }
 
     actual val pageCount: Int = document.numberOfPages
 
@@ -48,11 +56,20 @@ actual class PdfPageRenderer actual constructor(
 
         val longest = maxOf(pageWidth, pageHeight).coerceAtLeast(1)
         // RGB draws on white, as Android's renderer does after eraseColor(WHITE).
-        val image = renderer.renderImage(pageIndex, maxDim.toFloat() / longest, ImageType.RGB)
-        return RenderedPdfPage(image.toComposeImageBitmap(), pageWidth, pageHeight)
+        val image = guarded { renderer.renderImage(pageIndex, maxDim.toFloat() / longest, ImageType.RGB).toComposeImageBitmap() }
+        return RenderedPdfPage(image, pageWidth, pageHeight)
     }
 
     actual override fun close() {
         document.close()
     }
 }
+
+private inline fun <T> guarded(block: () -> T): T =
+    try {
+        block()
+    } catch (e: OutOfMemoryError) {
+        throw IOException("PDF too large to draw", e)
+    } catch (e: StackOverflowError) {
+        throw IOException("PDF nested too deeply to draw", e)
+    }

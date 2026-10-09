@@ -29,6 +29,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Arrangement.spacedBy
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.Spacer
@@ -36,8 +37,10 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
@@ -46,18 +49,31 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.FilterQuality
 import androidx.compose.ui.graphics.ImageBitmap
+import androidx.compose.ui.input.key.Key
+import androidx.compose.ui.input.key.KeyEventType
+import androidx.compose.ui.input.key.key
+import androidx.compose.ui.input.key.onPreviewKeyEvent
+import androidx.compose.ui.input.key.type
 import androidx.compose.ui.layout.ContentScale
 import coil3.SingletonImageLoader
 import coil3.compose.LocalPlatformContext
 import coil3.disk.DiskCache
+import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
+import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbol
+import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.pdf_next_page
+import com.vitorpamplona.amethyst.commons.resources.pdf_previous_page
 import com.vitorpamplona.amethyst.commons.resources.pdf_unable_to_open
 import com.vitorpamplona.amethyst.commons.richtext.MediaUrlPdf
 import com.vitorpamplona.amethyst.commons.service.pdf.PdfFetcher
@@ -161,6 +177,9 @@ private val closeScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
  * page counter that hide on a tap. The platform puts it in its own window or dialog and adds its
  * buttons through [actions] (Android: share and save to gallery). While [holdControlsOpen] is
  * true, as with a share sheet open, the controls stay up.
+ *
+ * The arrow and page keys turn pages, for a keyboard on any platform. A mouse can't drag the pager,
+ * so a platform without touch passes [showPageButtons] for previous/next buttons beside the counter.
  */
 @Composable
 fun PdfViewerContent(
@@ -168,6 +187,7 @@ fun PdfViewerContent(
     accountViewModel: AccountViewModel,
     onDismiss: () -> Unit,
     holdControlsOpen: Boolean = false,
+    showPageButtons: Boolean = false,
     actions: @Composable RowScope.() -> Unit = {},
 ) {
     val platformContext = LocalPlatformContext.current
@@ -239,7 +259,41 @@ fun PdfViewerContent(
 
     val toggleControls = { if (!holdControlsOpen) controlsVisible.value = !controlsVisible.value }
 
-    Box(modifier = Modifier.fillMaxSize().clickable(onClick = toggleControls)) {
+    val pageScope = rememberCoroutineScope()
+    val turnPage = { delta: Int ->
+        val target = (pagerState.currentPage + delta).coerceIn(0, (pagerState.pageCount - 1).coerceAtLeast(0))
+        pageScope.launch { pagerState.animateScrollToPage(target) }
+        Unit
+    }
+
+    // The reader takes focus so the page keys reach it without a click first.
+    val focusRequester = remember { FocusRequester() }
+    LaunchedEffect(handle) { runCatching { focusRequester.requestFocus() } }
+
+    Box(
+        modifier =
+            Modifier
+                .fillMaxSize()
+                .onPreviewKeyEvent { event ->
+                    if (event.type != KeyEventType.KeyDown) return@onPreviewKeyEvent false
+                    when (event.key) {
+                        Key.DirectionLeft, Key.PageUp -> {
+                            turnPage(-1)
+                            true
+                        }
+
+                        Key.DirectionRight, Key.PageDown -> {
+                            turnPage(1)
+                            true
+                        }
+
+                        else -> {
+                            false
+                        }
+                    }
+                }.focusRequester(focusRequester)
+                .clickable(onClick = toggleControls),
+    ) {
         if (handle == null) {
             Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                 CircularProgressIndicator(color = Color.White)
@@ -292,6 +346,12 @@ fun PdfViewerContent(
                 horizontalArrangement = Arrangement.Center,
                 atBottom = true,
             ) {
+                if (showPageButtons) {
+                    AnimatedVisibility(visible = controlsVisible.value, enter = fadeIn(), exit = fadeOut()) {
+                        PageButton(MaterialSymbols.AutoMirrored.KeyboardArrowLeft, stringRes(Res.string.pdf_previous_page)) { turnPage(-1) }
+                    }
+                }
+
                 AnimatedVisibility(
                     visible = controlsVisible.value || pageJustChanged,
                     enter = fadeIn(),
@@ -302,12 +362,34 @@ fun PdfViewerContent(
                         color = Color.White,
                         modifier =
                             Modifier
+                                .padding(horizontal = Size10dp)
                                 .background(Color.Black.copy(alpha = 0.4f), shape = MaterialTheme.shapes.small)
                                 .padding(horizontal = Size10dp, vertical = Size5dp),
                     )
                 }
+
+                if (showPageButtons) {
+                    AnimatedVisibility(visible = controlsVisible.value, enter = fadeIn(), exit = fadeOut()) {
+                        PageButton(MaterialSymbols.AutoMirrored.KeyboardArrowRight, stringRes(Res.string.pdf_next_page)) { turnPage(1) }
+                    }
+                }
             }
         }
+    }
+}
+
+@Composable
+private fun PageButton(
+    symbol: MaterialSymbol,
+    description: String,
+    onClick: () -> Unit,
+) {
+    OutlinedButton(
+        onClick = onClick,
+        contentPadding = PaddingValues(horizontal = Size5dp),
+        colors = ButtonDefaults.outlinedButtonColors().copy(containerColor = MaterialTheme.colorScheme.background),
+    ) {
+        Icon(symbol = symbol, contentDescription = description)
     }
 }
 

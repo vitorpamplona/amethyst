@@ -360,7 +360,10 @@ object DesktopNotePlatform : NotePlatform {
     ) = SharedRenderGitPullRequestUpdateEvent(baseNote, makeItShort, canPreview, quotesLeft, backgroundColor, accountViewModel, nav)
 }
 
-/** The shared PDF reader in a full-window dialog, with a button that saves the file. Escape closes it. */
+/**
+ * The shared PDF reader in a full-window dialog, with page buttons for the mouse (it can't drag the
+ * pager) and a button that saves the file. Escape closes it; the arrow and page keys turn pages.
+ */
 @Composable
 private fun DesktopPdfViewer(
     content: MediaUrlPdf,
@@ -369,7 +372,7 @@ private fun DesktopPdfViewer(
 ) {
     Dialog(onDismissRequest = onDismiss, properties = DialogProperties(usePlatformDefaultWidth = false)) {
         Surface(modifier = Modifier.fillMaxSize(), color = Color.Black) {
-            PdfViewerContent(content = content, accountViewModel = accountViewModel, onDismiss = onDismiss) {
+            PdfViewerContent(content = content, accountViewModel = accountViewModel, onDismiss = onDismiss, showPageButtons = true) {
                 OutlinedButton(
                     // The view model's scope, not the dialog's: closing the viewer must not cancel a
                     // download the user started.
