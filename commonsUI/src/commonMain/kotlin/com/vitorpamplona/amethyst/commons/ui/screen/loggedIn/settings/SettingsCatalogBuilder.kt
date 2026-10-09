@@ -73,6 +73,8 @@ import com.vitorpamplona.amethyst.commons.resources.ots_explorer_search_keywords
 import com.vitorpamplona.amethyst.commons.resources.ots_explorer_settings
 import com.vitorpamplona.amethyst.commons.resources.payment_targets
 import com.vitorpamplona.amethyst.commons.resources.payment_targets_search_keywords
+import com.vitorpamplona.amethyst.commons.resources.privacy_lock_search_keywords
+import com.vitorpamplona.amethyst.commons.resources.privacy_lock_title
 import com.vitorpamplona.amethyst.commons.resources.privacy_options
 import com.vitorpamplona.amethyst.commons.resources.privacy_options_search_keywords
 import com.vitorpamplona.amethyst.commons.resources.profile_badges_search_keywords
@@ -172,6 +174,7 @@ fun buildSettingsCatalog(
                     symEntry(Res.string.payment_targets, MaterialSymbols.Payment, Res.string.payment_targets_search_keywords, Route.EditPaymentTargets),
                     symEntry(Res.string.bolt12_offers, MaterialSymbols.Payment, Res.string.bolt12_offers_search_keywords, Route.EditBolt12Offers),
                     symEntry(Res.string.security_filters, MaterialSymbols.Security, Res.string.security_filters_search_keywords, Route.SecurityFilters),
+                    symEntry(Res.string.privacy_lock_title, MaterialSymbols.Lock, Res.string.privacy_lock_search_keywords, Route.PrivacyLockSettings),
                     symEntry(Res.string.web_of_trust, MaterialSymbols.Shield, Res.string.web_of_trust_search_keywords, Route.WebOfTrust),
                     symEntry(Res.string.translations, MaterialSymbols.Translate, Res.string.translations_search_keywords, Route.UserSettings),
                     symEntry(Res.string.napplet_permissions_title, MaterialSymbols.Apps, Res.string.napplet_connected_apps_search_keywords, Route.ConnectedApps),

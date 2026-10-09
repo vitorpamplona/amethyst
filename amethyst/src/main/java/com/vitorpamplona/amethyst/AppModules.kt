@@ -63,6 +63,7 @@ import com.vitorpamplona.amethyst.commons.model.preferences.TorSettingsStore
 import com.vitorpamplona.amethyst.commons.model.preferences.UiSettingsStore
 import com.vitorpamplona.amethyst.commons.napplet.permissions.NappletPermissionLedger
 import com.vitorpamplona.amethyst.commons.nests.room.activity.NestBridge
+import com.vitorpamplona.amethyst.commons.privacylock.DataStorePrivacyLockSettings
 import com.vitorpamplona.amethyst.commons.relayClient.BlockedRelayFilteringClient
 import com.vitorpamplona.amethyst.commons.relayClient.CacheClientConnector
 import com.vitorpamplona.amethyst.commons.relayClient.RelayProxyClientConnector
@@ -316,6 +317,16 @@ class AppModules(
     val uiPrefs by lazy {
         Log.d("AppModules", "UiSharedPreferences Init")
         runBlocking { uiPrefsDeferred.await() }
+    }
+
+    private val privacyLockDeferred =
+        applicationIOScope.async {
+            DataStorePrivacyLockSettings(DataStorePrivacyLockSettings.load(sharedSettingsStore), sharedSettingsStore, applicationIOScope)
+        }
+
+    // Blocking load, so a locked app never shows a frame of its content.
+    val privacyLockSettings by lazy {
+        runBlocking { privacyLockDeferred.await() }
     }
 
     // Blocking load of Tor Settings to avoid connection leaks

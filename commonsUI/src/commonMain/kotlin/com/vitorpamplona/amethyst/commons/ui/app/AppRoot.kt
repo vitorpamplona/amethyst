@@ -27,6 +27,7 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalWindowInfo
 import com.vitorpamplona.amethyst.commons.account.AccountSessionManager
 import com.vitorpamplona.amethyst.commons.model.Account
+import com.vitorpamplona.amethyst.commons.privacylock.PrivacyLockSettings
 import com.vitorpamplona.amethyst.commons.ui.layouts.ScreenLayoutSpec
 import com.vitorpamplona.amethyst.commons.ui.layouts.rememberScreenLayoutSpec
 import com.vitorpamplona.amethyst.commons.ui.navigation.host.NavDestinations
@@ -104,4 +105,10 @@ interface AppRoot {
 
     /** The destination on top, by its route's serial name without arguments; null once none is. */
     fun onScreen(serialName: String?) {}
+
+    /** The privacy lock's settings, loaded before the first frame; null runs the app without a lock. */
+    val privacyLockSettings: PrivacyLockSettings? get() = null
+
+    /** Whether the wallet blurs while the window is not focused, once its lock is on (the desktop). */
+    val blurWalletWhenUnfocused: Boolean get() = false
 }

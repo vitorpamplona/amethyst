@@ -52,6 +52,7 @@ import com.vitorpamplona.amethyst.commons.model.preferences.TorSettingsStore
 import com.vitorpamplona.amethyst.commons.model.preferences.UiSettingsStore
 import com.vitorpamplona.amethyst.commons.napplet.permissions.InMemoryNappletPermissionStore
 import com.vitorpamplona.amethyst.commons.napplet.permissions.NappletPermissionLedger
+import com.vitorpamplona.amethyst.commons.privacylock.DataStorePrivacyLockSettings
 import com.vitorpamplona.amethyst.commons.relayClient.BlockedRelayFilteringClient
 import com.vitorpamplona.amethyst.commons.relayClient.CacheClientConnector
 import com.vitorpamplona.amethyst.commons.relayClient.RelayProxyClientConnector
@@ -180,6 +181,15 @@ class DesktopAppModules(
         )
 
     val namecoinPrefs by lazy { NamecoinSettingsStore(sharedSettingsStore, applicationIOScope) }
+
+    // Loaded before the window opens, so a locked app never shows a frame of its content.
+    val privacyLockSettings: DataStorePrivacyLockSettings =
+        runBlocking {
+            val settings =
+                DataStorePrivacyLockSettings(DataStorePrivacyLockSettings.load(sharedSettingsStore), sharedSettingsStore, applicationIOScope)
+            if (DataStorePrivacyLockSettings.isEmpty(sharedSettingsStore)) importLegacyPrivacyLock(settings)
+            settings
+        }
 
     val otsPrefs by lazy { OtsSettingsStore(sharedSettingsStore, runBlocking { OtsSettingsStore.load(sharedSettingsStore) }) }
 

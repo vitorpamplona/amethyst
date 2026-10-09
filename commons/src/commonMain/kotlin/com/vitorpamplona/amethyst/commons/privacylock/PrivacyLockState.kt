@@ -36,12 +36,12 @@ import kotlinx.coroutines.launch
  *
  * One instance per gated route (Messages, Wallet, …) is provided via
  * [LocalPrivacyLockState] at the App composition root. All instances share
- * the same [PrivacyLockSettings] — one master `lockEnabled` flag enables
- * every scope together — but each scope keeps its own [LockState] and its
+ * the same [PrivacyLockSettings], but each scope has its own switch
+ * ([enabledFor]), its own [LockState] and its
  * own idle-timer [Job] so unlock, leave-route, and inactivity transitions
  * apply independently per route.
  *
- * - Initial value is seeded synchronously from [settings.lockEnabled.value]
+ * - Initial value is seeded synchronously from the scope's switch
  *   so the first composition sees [LockState.Locked] without flashing
  *   content (deep-link race fix, plan §Security Hardening H1).
  * - The underlying StateFlow is hot (`MutableStateFlow`); notification path
@@ -52,16 +52,21 @@ class PrivacyLockState(
     private val settings: PrivacyLockSettings,
     private val coroutineScope: CoroutineScope,
 ) {
+    private val enabled = settings.enabledFor(scope)
+
     private val seed: LockState =
-        if (settings.lockEnabled.value) LockState.Locked else LockState.Disabled
+        if (enabled.value) LockState.Locked else LockState.Disabled
 
     private val mutableState = MutableStateFlow(seed)
     val state: StateFlow<LockState> = mutableState.asStateFlow()
 
+    /** Until when unlocking is refused after too many failures; shared by every scope. */
+    val lockedUntilEpochMs: StateFlow<Long?> get() = settings.lockedUntilEpochMs
+
     private var idleTimerJob: Job? = null
 
     init {
-        settings.lockEnabled
+        enabled
             .onEach { enabled ->
                 if (!enabled) {
                     cancelIdleTimer()
@@ -71,7 +76,7 @@ class PrivacyLockState(
                 }
             }.launchIn(coroutineScope)
 
-        combine(settings.lockEnabled, settings.inactivityTimer) { enabled, timer -> enabled to timer }
+        combine(enabled, settings.inactivityTimer) { enabled, timer -> enabled to timer }
             .onEach { _ ->
                 if (mutableState.value is LockState.Unlocked) restartIdleTimer()
             }.launchIn(coroutineScope)

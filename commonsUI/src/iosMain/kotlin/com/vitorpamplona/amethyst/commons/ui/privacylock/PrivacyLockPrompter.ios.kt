@@ -20,27 +20,16 @@
  */
 package com.vitorpamplona.amethyst.commons.ui.privacylock
 
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.input.pointer.PointerEventPass
-import androidx.compose.ui.input.pointer.pointerInput
-import com.vitorpamplona.amethyst.commons.privacylock.PrivacyLockState
+import androidx.compose.runtime.Composable
+import com.vitorpamplona.amethyst.commons.privacylock.PrivacyLockSettings
 
-/**
- * Observes pointer events on the Initial pass — does NOT consume them, so
- * underlying scroll / click handlers behave normally. Every gesture resets
- * the idle timer in [state]. Apply ONCE at the route root to avoid scattering
- * reset calls across every child composable (per architecture review).
- *
- * Incoming DM events (background flow updates) DO NOT trigger this modifier
- * since they're not user input — preserves the "walked-away-from-desk"
- * protection per brainstorm resolved Q.
- */
-fun Modifier.resetIdleOnInteraction(state: PrivacyLockState): Modifier =
-    this.pointerInput(state) {
-        awaitPointerEventScope {
-            while (true) {
-                awaitPointerEvent(PointerEventPass.Initial)
-                state.onUserInteraction()
-            }
-        }
+/** No device-credential prompt wired on iOS yet: it approves, like [rememberDeviceAuthenticator] there. */
+private val ApproveAtOnce =
+    object : CredentialPrompter {
+        override val available: Boolean = true
+
+        override suspend fun prompt(): PromptResult = PromptResult.Success
     }
+
+@Composable
+actual fun rememberPrivacyLockPrompter(settings: PrivacyLockSettings): CredentialPrompter = ApproveAtOnce

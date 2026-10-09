@@ -48,6 +48,9 @@ import com.vitorpamplona.amethyst.commons.model.Account
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
 import com.vitorpamplona.amethyst.commons.model.navigation.Route
 import com.vitorpamplona.amethyst.commons.model.navigation.isSameRoute
+import com.vitorpamplona.amethyst.commons.model.navigation.lockScope
+import com.vitorpamplona.amethyst.commons.privacylock.LocalPrivacyLockState
+import com.vitorpamplona.amethyst.commons.privacylock.LockScope
 import com.vitorpamplona.amethyst.commons.relayClient.authCommand.compose.RelayAuthPromptHost
 import com.vitorpamplona.amethyst.commons.relayClient.authCommand.compose.RelayAuthSubscription
 import com.vitorpamplona.amethyst.commons.relayClient.event.LocalEventFinder
@@ -79,6 +82,7 @@ import com.vitorpamplona.amethyst.commons.ui.navigation.navs.rememberNav
 import com.vitorpamplona.amethyst.commons.ui.navigation.routes.getRouteWithArguments
 import com.vitorpamplona.amethyst.commons.ui.navigation.shell.AppShellLayout
 import com.vitorpamplona.amethyst.commons.ui.platform.LocalAppServices
+import com.vitorpamplona.amethyst.commons.ui.privacylock.PrivacyLockHost
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.BottomBarFeedPreloaders
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.buzz.BuzzDmDiscoveryPreload
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.publicChannels.concord.datasource.ConcordChannelPreload
@@ -88,6 +92,7 @@ import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.publicChannel
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.quartz.utils.Log
+import kotlinx.coroutines.flow.distinctUntilChanged
 
 /**
  * The whole app below the platform's window: the login screens while logged off, and the logged-in
@@ -105,14 +110,16 @@ fun AmethystApp(
 
     Log.d("ActivityLifecycle") { "AmethystApp $accountState $sessionManager" }
 
-    Crossfade(
-        targetState = accountState,
-        animationSpec = tween(durationMillis = 100),
-    ) { state ->
-        when (state) {
-            is AccountState.Loading -> LoadingSetup()
-            is AccountState.LoggedOff -> LoggedOffSetup(sessionManager)
-            is AccountState.LoggedIn -> LoggedInSetup(state, sessionManager, root)
+    PrivacyLockHost(root.privacyLockSettings, root.blurWalletWhenUnfocused) {
+        Crossfade(
+            targetState = accountState,
+            animationSpec = tween(durationMillis = 100),
+        ) { state ->
+            when (state) {
+                is AccountState.Loading -> LoadingSetup()
+                is AccountState.LoggedOff -> LoggedOffSetup(sessionManager)
+                is AccountState.LoggedIn -> LoggedInSetup(state, sessionManager, root)
+            }
         }
     }
 }
@@ -319,6 +326,27 @@ private fun BuildNavigation(
     NavigationHost(nav, destinations)
 
     TrackScreen(nav, destinations, root)
+    RelockOnLeave(nav)
+}
+
+/**
+ * Closes the messages and wallet locks as soon as the screen on top leaves what they guard. Done
+ * here, by the route on top, rather than per screen: moving between two guarded screens (the
+ * conversation list into a chat) must not lock the user out.
+ */
+@Composable
+private fun RelockOnLeave(nav: Nav) {
+    val states = LocalPrivacyLockState.current
+    if (states.isEmpty()) return
+    LaunchedEffect(nav, states) {
+        snapshotFlow { nav.currentRoute.lockScope() }
+            .distinctUntilChanged()
+            .collect { onTop ->
+                states.forEach { (scope, state) ->
+                    if (scope != LockScope.App && scope != onTop) state.onLeaveRoute()
+                }
+            }
+    }
 }
 
 /** Tells [root] which screen is on top, by its route's name only: never which profile or note. */

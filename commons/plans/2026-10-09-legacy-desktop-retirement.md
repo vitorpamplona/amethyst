@@ -1,6 +1,6 @@
 # Retiring the legacy desktop app: what each legacy-only feature becomes
 
-> **Status:** decided 2026-10-09 (maintainer), nothing built yet. Supersedes the
+> **Status:** decided 2026-10-09 (maintainer). Built: 3b (relay latency), 1 (privacy lock). Supersedes the
 > "Legacy-only feature" table in [2026-09-27-one-ui-android-desktop.md](2026-09-27-one-ui-android-desktop.md)
 > step 8d.
 
@@ -36,6 +36,13 @@ The state machine is already shared and tested (`commons/privacylock`: `PrivacyL
 `MessagesLockGate`, `WalletLockGate`, `LockScreen`, `DeviceAuthenticator`). Nothing calls them:
 Android has no app lock at all (the only authentication is revealing the nsec on the key-backup
 screen), and the new desktop does not wire them.
+
+**Built.** `PrivacyLockHost` (around the shell in `AmethystApp`) installs one state per scope and
+the app gate; `NavDestinations` gates each route by `Route.lockScope()`; `RelockOnLeave` re-locks
+a scope when navigation leaves its route group, so going from the message list into a chat does
+not ask again. Settings live in the shared DataStore (`DataStorePrivacyLockSettings`); the desktop
+imports the legacy java.util.prefs lock once. Engaging the app lock drops the screens behind it,
+so unlocking starts from the first screen.
 
 - A new **Privacy lock** settings screen in `commonsUI` with three independent switches, **all off
   by default**:

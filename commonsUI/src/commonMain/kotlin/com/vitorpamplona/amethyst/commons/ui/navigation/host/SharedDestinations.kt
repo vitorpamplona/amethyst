@@ -220,6 +220,7 @@ import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.settings.NIP47Setup
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.settings.NamecoinSettingsScreen
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.settings.NotificationSettingsScreen
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.settings.OtsSettingsScreen
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.settings.PrivacyLockSettingsScreen
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.settings.ProfileUiSettingsScreen
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.settings.ReactionsSettingsScreen
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.settings.SearchEngineSettingsScreen
@@ -408,6 +409,7 @@ fun NavDestinations.sharedDestinations(
     composableCappedArgs<Route.Search> { SearchScreen(it.query, accountViewModel, nav) }
     composableFromEnd<Route.AllSettings> { AllSettingsScreen(accountViewModel, nav) }
     composableFromEnd<Route.SecurityFilters> { SecurityFiltersScreen(accountViewModel, nav) }
+    composableFromEnd<Route.PrivacyLockSettings> { PrivacyLockSettingsScreen(nav) }
     composableFromEnd<Route.WebOfTrust> { WebOfTrustScreen(accountViewModel, nav) }
     composableFromEnd<Route.BlockedUsers> { BlockedUsersScreen(accountViewModel, nav) }
     composableFromEnd<Route.SpammingUsers> { SpammingUsersScreen(accountViewModel, nav) }
