@@ -6655,7 +6655,7 @@
     <string name="wot_waiting_wifi_title">वैफै की प्रतीक्षा में</string>
     <string name="wot_waiting_wifi_body">एक बृहदाकार अवरोहण। वैफै पर आरम्भ होगा।</string>
     <string name="wot_download_now">अवरोहण अभी करें</string>
-    <string name="wot_no_scores_title">आपके प्राप्तांकों का परिकलन</string>
+    <string name="wot_no_scores_title">आपके प्राप्तांकों का परिकलन चालू</string>
     <string name="wot_no_scores_body">सामान्यतः कुछ मिनुट। अमेथिस्ट आगे पुनःजाँच करेगा।</string>
     <string name="wot_error_title">आपके जाल का अद्यतन असफल</string>
     <string name="wot_not_downloaded_title">अवरोहण अभी नहीं हुआ</string>
@@ -6689,7 +6689,7 @@
     <string name="wot_manual_explainer">जब प्रदाता स्थापना असफल</string>
     <string name="wot_manual_mode_copy">एक दृश्य की अनुकृति करें</string>
     <string name="wot_manual_mode_key">कुंचिका प्रविष्ट करें</string>
-    <string name="wot_copy_explainer">किसी विश्वसनीय की प्रदाता सूची का उपयोग करें। जाल को देखें जैसे वे देखते हैं।</string>
+    <string name="wot_copy_explainer">किसी विश्वसनीय व्यक्ति की प्रदाता सूची का उपयोग करें। जाल को देखें जैसे वे देखते हैं।</string>
     <string name="wot_copy_field">लोग एनपुब अथवा नाम@जालक्षेत्र खोजें</string>
     <string name="wot_copy_action">अनुकृति</string>
     <string name="wot_copy_house">%1$s का मूलविकल्प दृश्य</string>
@@ -6713,7 +6713,7 @@
     <string name="wot_use_provider">इस प्रदाता का उपयोग करें</string>
     <string name="wot_section_effects">यह क्या छालन करता है</string>
     <string name="wot_effect_messages_title">सन्देश</string>
-    <string name="wot_effect_messages_body">अपरिचित लोग अनुरोध में जाते हैं</string>
+    <string name="wot_effect_messages_body">अपरिचित लोग अनुरोधों में जाते हैं</string>
     <string name="wot_effect_notifications_title">सूचनाएँ</string>
     <string name="wot_effect_notifications_body">संग्रहविशेष में अपरिचित लोग छिपाए जाते हैं</string>
     <string name="wot_effect_replies_title">प्रतिवचन</string>
@@ -6798,11 +6798,13 @@
     <string name="relay_latency_slow_detail">%1$s लेता है %2$s गुना समय आपके अन्य पुनःप्रसारकों की तुलना में। %4$d सहस्रतमसेकण्ड के प्रति %3$d सहस्रतमसेकण्ड।</string>
     <string name="privacy_lock_title">गोपनीयता ताला</string>
     <string name="privacy_lock_search_keywords">ताला गोपनीयता पारणसंख्या पारणशब्द जीवमात्रा अंगुलीमुद्रा क्रमकताला सन्देशताला धनकोषताला</string>
-    <string name="privacy_lock_explanation">अमेथिस्ट के कुछ भाग छिपाएँ आपकी अंगुलीमुद्रा के पीछे। अथवा मुख चित्र अथवा यन्त्र पारणसंख्या। ताला पुनः बद्ध हो जाता जब आप उस भाग को छोडकर चले जाते हैं तथा क्रमक नीचे दिए गए समय तक निष्कर्म रहता है।</string>
-    <string name="privacy_lock_explanation_password">अमेथिस्ट के कुछ भाग छिपाएँ एक क्रमक पारणशब्द के पीछे। ताला पुनः बद्ध हो जाता जब आप उस भाग को छोडकर चले जाते हैं तथा क्रमक नीचे दिए गए समय तक निष्कर्म रहता है।</string>
+    <string name="privacy_lock_explanation">अमेथिस्ट के कुछ भाग छिपाएँ आपकी अंगुलीमुद्रा के पीछे। अथवा मुख चित्र अथवा यन्त्र पारणसंख्या। ताला पुनः बद्ध हो जाता है जब आप उस भाग को छोडकर चले जाते हैं तथा क्रमक नीचे दिए गए समय तक निष्कर्म रहता है।</string>
+    <string name="privacy_lock_explanation_password">अमेथिस्ट के कुछ भाग छिपाएँ एक क्रमक पारणशब्द के पीछे। ताला पुनः बद्ध हो जाता है जब आप उस भाग को छोडकर चले जाते हैं तथा क्रमक नीचे दिए गए समय तक निष्कर्म रहता है।</string>
     <string name="privacy_lock_locks">तालाबद्ध करता है</string>
     <string name="privacy_lock_app">पूर्ण क्रमक को तालाबद्ध करें</string>
+    <string name="privacy_lock_app_description">ताला खोलने के लिए पूछें जब अमेथिस्ट आरम्भ करता है तथा निष्कर्म रहने के पश्चात।</string>
     <string name="privacy_lock_messages">सन्देशों को तालाबद्ध करें</string>
+    <string name="privacy_lock_messages_description">निजी सन्देश तथा समूह चर्चा के लिए ताला खोलना आवश्यक। सार्वजनिक चर्चाएँ खुले रहते हैं।</string>
     <string name="privacy_lock_wallet">धनकोष तालाबद्ध करें</string>
     <string name="privacy_lock_wallet_description">धनकोष पटलों के लिए ताला खोलना आवश्यक।</string>
     <string name="privacy_lock_timeout">पुनःतालाबद्ध करें तत्पश्चात</string>
@@ -6813,6 +6815,7 @@
     <string name="privacy_lock_timeout_never">केवल मेरे चले जाने पर अथवा पुनःआरम्भ करने पर</string>
     <string name="privacy_lock_password">क्रमक पारणशब्द</string>
     <string name="privacy_lock_password_set">पारणशब्द स्थापना</string>
+    <string name="privacy_lock_password_set_description">ताला खोलने के लिए आप इसका टंकण करते हैं। यह केवल एक विभेदक अक्षरराशि के रूप में इस संगणक में रखा जाता है। यदि आप इसे भूल जाते हैं तो इसे हटाने से ताले निष्क्रिय हो जाएँगे।</string>
     <string name="privacy_lock_password_change">पारणशब्द परिवर्तन</string>
     <string name="privacy_lock_password_remove">पारणशब्द हटाएँ</string>
     <string name="privacy_lock_password_remove_description">प्रत्येक ताला इससे निष्क्रिय हो जाता है।</string>
@@ -6835,11 +6838,13 @@
     <string name="privacy_lock_wallet_locked_description">ताला खोलें अपना शेष देखने के लिए अथवा साट्स भेजने अथवा प्राप्त करने के लिए।</string>
     <string name="custom_emoji_picker_open">अनुकूल भावचिह्न भीतर प्रविष्ट करें</string>
     <string name="custom_emoji_picker_search">भावचिह्न खोजें</string>
+    <string name="custom_emoji_picker_empty">कोई अनुकूल भावचिह्न नहीं अब तक। भावचिह्न पोटलियाँ जोडें अपने भावचिह्न सूची में यहाँ उनका उपयोग करने के लिए।</string>
     <string name="custom_emoji_picker_no_match">कोई भावचिह्न नहीं उस नाम का</string>
     <string name="custom_feeds_manage">अपने सूचनावलियों का प्रबन्धन करें</string>
     <string name="feed_group_custom">आपके सूचनावलियाँ</string>
     <string name="custom_feeds_title">आपके सूचनावलियाँ</string>
     <string name="custom_feeds_new">नई सूचनावली</string>
+    <string name="custom_feeds_empty">आपने किसी सूचनावली का निर्माण नहीं किया अब तक। सूचनावली संग्रह करता है प्रकाशित पत्रों को आपके द्वारा चयनित लोग विषयसूचक तथा पुनःप्रसारकों से। तथा मुखपृष्ठ सूचनावली चयन सूची में विद्यमान होता है।</string>
     <string name="custom_feeds_edit">सम्पादन</string>
     <string name="custom_feeds_delete">मिटाएँ</string>
     <string name="custom_feeds_delete_confirm">क्या %1$s को मिटाएँ।</string>
@@ -6855,10 +6860,13 @@
     <string name="custom_feeds_edit_title">सूचनावली सम्पादन</string>
     <string name="custom_feeds_emoji">भावचिह्न</string>
     <string name="custom_feeds_name">नाम</string>
+    <string name="custom_feeds_invalid">सूचनावली को एक नाम दें तथा न्यूनतम एक व्यक्ति विषयसूचक अथवा पुनःप्रसारक।</string>
     <string name="custom_feeds_authors">लोग</string>
     <string name="custom_feeds_authors_explainer">केवल इन लोगों के प्रकाशित पत्र।</string>
     <string name="custom_feeds_hashtags">विषयसूचक</string>
+    <string name="custom_feeds_hashtags_explainer">केवल पत्र जिनमें इन विषयसूचकों में से न्यूनतम एक उल्लेखित।</string>
     <string name="custom_feeds_kinds">विषयवस्तु</string>
+    <string name="custom_feeds_kinds_explainer">सभी को निष्क्रिय रखें सब प्रकार के पत्र दिखाने के लिए।</string>
     <string name="custom_feeds_kind_notes">टीकाएँ</string>
     <string name="custom_feeds_kind_reposts">पुनःप्रकाशन</string>
     <string name="custom_feeds_kind_comments">टिप्पणियाँ</string>
@@ -6867,11 +6875,13 @@
     <string name="custom_feeds_kind_videos">चलचित्र</string>
     <string name="custom_feeds_kind_highlights">उद्दीप्तव्य</string>
     <string name="custom_feeds_relays">पुनःप्रसारक</string>
+    <string name="custom_feeds_relays_explainer">केवल इन पुनःप्रसारकों से पढें। रिक्त छोड दें प्रत्येक व्यक्ति के अपने पुनःप्रसारकों से पढने के लिए। अथवा आपके सामान्य पुनःप्रसारकों से विषयसूचकों के लिए।</string>
     <string name="custom_feeds_exclude_authors">लोगों को छिपाएँ</string>
     <string name="custom_feeds_exclude_keywords">पत्र छिपाएँ जिनमें ये हैं</string>
     <string name="custom_feeds_remove">हटाएँ</string>
     <string name="custom_feeds_search_people">नाम अथवा निप॰पाँच अथवा एनपुब से खोजें</string>
-    <string name="deck_mode">बहुस्तम्भ</string>
+    <string name="deck_mode">बहुस्तम्भरूप</string>
+    <string name="deck_mode_description">विस्तृत गवाक्षों में मुख्य पटल के पार्श्व में अतिरिक्त स्तम्भों को दिखाएँ। प्रत्येक को अपने ही पटल तथा इतिहास के साथ। स्तम्भों के समुच्चयों को कार्यशालाओं के रूप में अभिलेखन करें।</string>
     <string name="deck_workspaces">कार्यशालाएँ</string>
     <string name="deck_workspace_number">कार्यशाला %1$d</string>
     <string name="deck_save_workspace">नई कार्यशाला के रूप में अभिलेखन</string>
@@ -6881,6 +6891,8 @@
     <string name="deck_close_column">स्तम्भ आवृत करें</string>
     <string name="deck_move_left">बाएँ विस्थापन</string>
     <string name="deck_move_right">दाएँ विस्थापन</string>
+    <string name="deck_reset_column">स्तम्भ के प्रथम पटल तक पीछे जाएँ</string>
+    <string name="deck_import_notice">ये स्तम्भ जो पुराने लेखनपीठ संगणक क्रमक से हैं इनका कोई पटल नहीं यहाँ अब तक। तथा नहीं लाए गए। %1$s</string>
     <string name="deck_column_home">मुखपृष्ठ</string>
     <string name="deck_column_notifications">सूचनाएँ</string>
     <string name="deck_column_messages">सन्देश</string>
@@ -6897,9 +6909,12 @@
     <string name="deck_column_relays">पुनःप्रसारक</string>
     <string name="deck_column_settings">स्थापना विकल्प</string>
     <string name="deck_column_hashtag">विषयसूचक</string>
+    <string name="privacy_lock_too_many_attempts">अत्याधिक दोषपूर्ण पारणशब्द। कुछ क्षण पश्चात पुनःप्रयास करें।</string>
     <string name="deck_focus_column">स्तम्भ %1$d तक जाएँ</string>
     <string name="screen_unavailable_title">यहाँ उपलब्ध नहीं</string>
+    <string name="screen_unavailable_here">यह पटल इस अमेथिस्ट संस्करण में उपलब्ध नहीं अब तक। यह उपलब्ध है आण्ड्रोइड क्रमक में।</string>
     <string name="error_dialog_details">विवरण</string>
     <string name="crash_window_title">अमेथिस्ट में एक समस्या आ गई</string>
+    <string name="crash_window_body">कुछ अपक्रम हुआ तथा यह पटल आवृत होगा। आप क्रमदोष वृत्तान्त को अमेथिस्ट के विकासकों को भेज सकते हैं एक सीधेसन्देश में। कोई व्यक्तिगत जानकारी बाँटा नहीं जाएगा। यदि आप इसके स्थान पर उसे आवृत करते हैं तो अमेथिस्ट उसे भेजने का प्रस्ताव करेगा अगली बार जब वह खुलता है।</string>
     <string name="crash_window_send">विकासकों को भेजें</string>
 </resources>
