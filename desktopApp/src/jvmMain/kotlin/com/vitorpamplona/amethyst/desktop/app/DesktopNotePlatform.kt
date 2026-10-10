@@ -57,6 +57,7 @@ import coil3.compose.AsyncImage
 import com.vitorpamplona.amethyst.commons.audio.WaveformData
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
+import com.vitorpamplona.amethyst.commons.model.MediaAspectRatioCache
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.save
@@ -168,9 +169,12 @@ object DesktopNotePlatform : NotePlatform {
             }
 
             else -> {
+                // The declared size, else the one this image had last time (or that the feed's
+                // prefetch read), so the card keeps its shape while it loads instead of jumping.
+                val ratio = content.dim.ratioOrNull() ?: MediaAspectRatioCache.get(url)
                 val modifier =
                     Modifier
-                        .inlineImageSize(content.dim, MaxInlineMediaHeight)
+                        .inlineImageSize(ratio, MaxInlineMediaHeight)
                         // Where the viewer grows the image out of, and shrinks it back into.
                         .onGloballyPositioned { sourceBounds = it.boundsInWindow() }
                         .clip(shape)
@@ -178,7 +182,16 @@ object DesktopNotePlatform : NotePlatform {
                 if (isAnimatedGifUrl(url)) {
                     AnimatedGifImage(url = url, contentDescription = content.description, modifier = modifier, contentScale = contentScale)
                 } else {
-                    AsyncImage(model = url, contentDescription = content.description, modifier = modifier, contentScale = contentScale)
+                    AsyncImage(
+                        model = url,
+                        contentDescription = content.description,
+                        modifier = modifier,
+                        contentScale = contentScale,
+                        onSuccess = { state ->
+                            val image = state.result.image
+                            MediaAspectRatioCache.add(url, image.width, image.height)
+                        },
+                    )
                 }
             }
         }
@@ -458,14 +471,22 @@ private fun DesktopPdfViewer(
 internal fun Modifier.inlineImageSize(
     dim: DimensionTag?,
     maxHeight: Dp,
+): Modifier = inlineImageSize(dim.ratioOrNull(), maxHeight)
+
+/** [inlineImageSize] for a width-to-height [ratio], or null when the shape is unknown. */
+internal fun Modifier.inlineImageSize(
+    ratio: Float?,
+    maxHeight: Dp,
 ): Modifier {
-    val ratio = dim?.takeIf { it.width > 0 && it.height > 0 }?.let { it.width.toFloat() / it.height }
-    return if (ratio != null) {
+    val known = ratio?.takeIf { it > 0f && it.isFinite() }
+    return if (known != null) {
         fillMaxWidth()
             .wrapContentWidth(Alignment.CenterHorizontally)
             .heightIn(max = maxHeight)
-            .aspectRatio(ratio, matchHeightConstraintsFirst = false)
+            .aspectRatio(known, matchHeightConstraintsFirst = false)
     } else {
         fillMaxWidth().heightIn(max = maxHeight)
     }
 }
+
+private fun DimensionTag?.ratioOrNull(): Float? = this?.takeIf { it.width > 0 && it.height > 0 }?.let { it.width.toFloat() / it.height }

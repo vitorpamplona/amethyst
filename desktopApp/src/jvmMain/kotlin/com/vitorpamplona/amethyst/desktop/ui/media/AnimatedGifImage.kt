@@ -35,6 +35,7 @@ import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.asComposeImageBitmap
 import androidx.compose.ui.layout.ContentScale
 import coil3.compose.AsyncImage
+import com.vitorpamplona.amethyst.commons.model.MediaAspectRatioCache
 import com.vitorpamplona.amethyst.desktop.network.DesktopHttpClient
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
@@ -54,7 +55,37 @@ private val gifHttpClient get() = DesktopHttpClient.currentClient()
 private class GifFrames(
     val frames: List<ImageBitmap>,
     val durations: List<Int>,
+    val bytes: Long,
 )
+
+// Decoded GIFs kept for the next time they show (scrolling back, reopening a thread), so they
+// neither download nor decode again. Bounded by the frames' pixel memory.
+private const val FRAME_CACHE_BYTES = 128L * 1024 * 1024
+
+private object GifFrameCache {
+    private val entries = LinkedHashMap<String, GifFrames>(16, 0.75f, true)
+    private var total = 0L
+
+    @Synchronized
+    fun get(url: String): GifFrames? = entries[url]
+
+    @Synchronized
+    fun put(
+        url: String,
+        frames: GifFrames,
+    ) {
+        if (frames.bytes > FRAME_CACHE_BYTES) return
+        entries.put(url, frames)?.let { total -= it.bytes }
+        total += frames.bytes
+        val oldest = entries.entries.iterator()
+        while (total > FRAME_CACHE_BYTES && oldest.hasNext()) {
+            val evicted = oldest.next()
+            if (evicted.key == url) continue
+            total -= evicted.value.bytes
+            oldest.remove()
+        }
+    }
+}
 
 @Composable
 fun AnimatedGifImage(
@@ -63,14 +94,15 @@ fun AnimatedGifImage(
     contentDescription: String? = null,
     contentScale: ContentScale = ContentScale.Fit,
 ) {
-    var gifFrames by remember(url) { mutableStateOf<GifFrames?>(null) }
+    var gifFrames by remember(url) { mutableStateOf(GifFrameCache.get(url)) }
     var currentFrame by remember(url) { mutableIntStateOf(0) }
     var loadFailed by remember(url) { mutableStateOf(false) }
 
     LaunchedEffect(url) {
         currentFrame = 0
         loadFailed = false
-        gifFrames = withContext(Dispatchers.IO) { decodeGifFrames(url) }
+        if (gifFrames != null) return@LaunchedEffect
+        gifFrames = withContext(Dispatchers.IO) { decodeGifFrames(url)?.also { GifFrameCache.put(url, it) } }
         if (gifFrames == null) loadFailed = true
     }
 
@@ -135,6 +167,8 @@ private suspend fun decodeGifFrames(url: String): GifFrames? =
         val codec = Codec.makeFromData(skData)
         val frameCount = codec.frameCount
         if (frameCount <= 0) return null
+        // So the card reserves the GIF's shape the next time, before it decodes again.
+        MediaAspectRatioCache.add(url, codec.width, codec.height)
 
         val frameBitmapSize = codec.width.toLong() * codec.height * 4
         val totalMemory = frameBitmapSize * frameCount
@@ -159,7 +193,7 @@ private suspend fun decodeGifFrames(url: String): GifFrames? =
             durations.add(if (frameInfos.size > i) frameInfos[i].duration else 100)
         }
 
-        GifFrames(frames, durations)
+        GifFrames(frames, durations, frameBitmapSize * decodableFrames)
     } catch (e: Exception) {
         println("AnimatedGif: failed to load $url — ${e.message}")
         null
