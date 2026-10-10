@@ -44,17 +44,21 @@ class InlineImageSizeTest {
     val compose = createComposeRule()
 
     /** The size the image is drawn at, in dp, in a 490dp column. */
-    private fun measure(dim: DimensionTag?): Pair<Float, Float> {
-        var size = IntSize.Zero
+    private fun measure(dim: DimensionTag?): Pair<Float, Float> = measureWith { inlineImageSize(dim, 600.dp) }
+
+    private fun measureRatio(ratio: Float?): Pair<Float, Float> = measureWith { inlineImageSize(ratio, 600.dp) }
+
+    private fun measureWith(sizing: Modifier.() -> Modifier): Pair<Float, Float> {
+        var measured = IntSize.Zero
         var density = 1f
         compose.setContent {
             density = LocalDensity.current.density
             Column(Modifier.width(490.dp)) {
-                Box(Modifier.inlineImageSize(dim, 600.dp).onSizeChanged { size = it })
+                Box(Modifier.sizing().onSizeChanged { measured = it })
             }
         }
         compose.waitForIdle()
-        return size.width / density to size.height / density
+        return measured.width / density to measured.height / density
     }
 
     @Test
@@ -76,5 +80,15 @@ class InlineImageSizeTest {
     fun withoutADeclaredSizeTheSlotIsTheColumnUpToTheCap() {
         val (width, _) = measure(null)
         assertEquals(490f, width, 0.5f)
+    }
+
+    @Test
+    fun aRatioRememberedFromAnEarlierLoadReservesTheHeightBeforeTheImageArrives() {
+        // A GIF posted as a bare link declares no size: the slot used to be 0dp tall until it
+        // decoded, so the card jumped open on every load.
+        assertEquals(0f, measureRatio(null).second, 0.5f)
+        val (width, height) = measureRatio(500f / 280f)
+        assertEquals(490f, width, 0.5f)
+        assertEquals(274.4f, height, 0.5f)
     }
 }
