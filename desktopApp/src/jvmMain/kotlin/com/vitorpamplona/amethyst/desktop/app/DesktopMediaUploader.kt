@@ -20,6 +20,8 @@
  */
 package com.vitorpamplona.amethyst.desktop.app
 
+import androidx.compose.ui.graphics.toAwtImage
+import androidx.compose.ui.graphics.toComposeImageBitmap
 import com.vitorpamplona.amethyst.commons.model.Account
 import com.vitorpamplona.amethyst.commons.model.mediaServers.ServerName
 import com.vitorpamplona.amethyst.commons.model.mediaServers.ServerType
@@ -64,11 +66,13 @@ import com.vitorpamplona.quartz.utils.sha256.sha256
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import java.awt.image.BufferedImage
 import java.io.File
 import java.net.URI
 import java.nio.file.Files
 import javax.imageio.ImageIO
 import com.vitorpamplona.amethyst.commons.service.upload.UploadOrchestrator as BlossomUploadPipeline
+import org.jetbrains.skia.Image as SkiaImage
 
 /**
  * The shared app's upload port on desktop. Every server type starts from the bytes the JVM
@@ -408,7 +412,7 @@ class DesktopMediaUploader(
     ): FileHeader? =
         withContext(Dispatchers.IO) {
             try {
-                val blob = ImageDownloader().waitAndGetImage(url, httpClients::okHttpClientForImage) ?: return@withContext null
+                val blob = ImageDownloader().fetch(url, httpClients.okHttpClientForImage(url)) ?: return@withContext null
                 val extension =
                     runCatching { URI(url).path }
                         .getOrNull()
@@ -424,7 +428,7 @@ class DesktopMediaUploader(
                             ?.trim()
                             ?.ifEmpty { null }
                         ?: OCTET_STREAM
-                MediaMetadataReader.compute(blob.bytes, mimeType).header()
+                MediaMetadataReader.compute(blob.bytes, mimeType, ::decodeImageWithSkia).header()
             } catch (e: Exception) {
                 if (e is CancellationException) throw e
                 null
@@ -461,3 +465,6 @@ class DesktopMediaUploader(
         const val OCTET_STREAM = "application/octet-stream"
     }
 }
+
+/** Skia decodes what ImageIO cannot, WebP above all: the same decoder the previews draw with. */
+internal fun decodeImageWithSkia(bytes: ByteArray): BufferedImage? = runCatching { SkiaImage.makeFromEncoded(bytes).use { it.toComposeImageBitmap().toAwtImage() } }.getOrNull()

@@ -25,6 +25,7 @@ import com.vitorpamplona.amethyst.commons.blurhash.toPlatformImage
 import com.vitorpamplona.amethyst.commons.thumbhash.toThumbhash
 import com.vitorpamplona.quartz.nip01Core.core.toHexKey
 import com.vitorpamplona.quartz.utils.sha256.sha256
+import java.awt.image.BufferedImage
 import java.io.ByteArrayInputStream
 import java.io.File
 import javax.imageio.ImageIO
@@ -47,10 +48,14 @@ data class MediaMetadata(
 object MediaMetadataReader {
     fun compute(file: File): MediaMetadata = compute(file.readBytes(), guessMimeType(file))
 
-    /** Same as [compute] for a file already in memory, such as one downloaded from a link. */
+    /**
+     * Same as [compute] for a file already in memory, such as one downloaded from a link.
+     * [fallbackDecoder] reads the images ImageIO cannot (WebP, through Skia on desktop).
+     */
     fun compute(
         bytes: ByteArray,
         mimeType: String,
+        fallbackDecoder: ((ByteArray) -> BufferedImage?)? = null,
     ): MediaMetadata {
         val hash = sha256(bytes).toHexKey()
         var width: Int? = null
@@ -60,7 +65,7 @@ object MediaMetadataReader {
 
         if (mimeType.startsWith("image/")) {
             try {
-                val image = ImageIO.read(ByteArrayInputStream(bytes))
+                val image = ImageIO.read(ByteArrayInputStream(bytes)) ?: fallbackDecoder?.invoke(bytes)
                 if (image != null) {
                     width = image.width
                     height = image.height
