@@ -37,6 +37,7 @@ import com.vitorpamplona.amethyst.commons.service.upload.ImageReencoder
 import com.vitorpamplona.amethyst.commons.service.upload.ImageSizeTarget
 import com.vitorpamplona.amethyst.commons.service.upload.MediaCompressor
 import com.vitorpamplona.amethyst.commons.service.upload.MediaMetadata
+import com.vitorpamplona.amethyst.commons.service.upload.MediaMetadataReader
 import com.vitorpamplona.amethyst.commons.service.uploads.CompressorQuality
 import com.vitorpamplona.amethyst.commons.service.uploads.ImageCompressionPreview
 import com.vitorpamplona.amethyst.commons.service.uploads.ImageDownloader
@@ -400,10 +401,35 @@ class DesktopMediaUploader(
             ImageFileStats(size?.first, size?.second, file.length())
         }
 
+    // Like Android: the URL's extension names the type, the server's Content-Type when it has none.
     override suspend fun remoteFileHeader(
         url: String,
         httpClients: IRoleBasedHttpClientBuilder,
-    ): FileHeader? = null
+    ): FileHeader? =
+        withContext(Dispatchers.IO) {
+            try {
+                val blob = ImageDownloader().waitAndGetImage(url, httpClients::okHttpClientForImage) ?: return@withContext null
+                val extension =
+                    runCatching { URI(url).path }
+                        .getOrNull()
+                        ?.substringAfterLast('/')
+                        ?.substringAfterLast('.', "")
+                        .orEmpty()
+                val mimeType =
+                    MediaMetadataReader
+                        .guessMimeTypeFromExtension(extension)
+                        .takeIf { it != OCTET_STREAM }
+                        ?: blob.contentType
+                            ?.substringBefore(';')
+                            ?.trim()
+                            ?.ifEmpty { null }
+                        ?: OCTET_STREAM
+                MediaMetadataReader.compute(blob.bytes, mimeType).header()
+            } catch (e: Exception) {
+                if (e is CancellationException) throw e
+                null
+            }
+        }
 
     override fun displayName(uri: MediaUri): String? = fileOf(uri).name
 
@@ -432,5 +458,6 @@ class DesktopMediaUploader(
         // What Android allows in a NIP-95 event: larger files make relay events too heavy.
         const val NIP95_MAX_BYTES = 80_000
         const val ENCRYPTED_CONTENT_TYPE = "application/octet-stream"
+        const val OCTET_STREAM = "application/octet-stream"
     }
 }

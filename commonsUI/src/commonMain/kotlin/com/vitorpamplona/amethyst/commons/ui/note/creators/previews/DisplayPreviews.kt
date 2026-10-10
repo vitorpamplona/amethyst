@@ -26,23 +26,33 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.commons.model.composer.PreviewState
+import com.vitorpamplona.amethyst.commons.ui.components.UrlPreviewState
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
+import com.vitorpamplona.amethyst.commons.ui.note.platform.LocalNotePlatform
+import com.vitorpamplona.amethyst.commons.ui.note.platform.NotePlatform
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.privateDM.send.IMetaAttachments
 import com.vitorpamplona.amethyst.commons.ui.theme.FillWidthQuoteBorderModifier
 import com.vitorpamplona.amethyst.commons.ui.theme.HalfHorzPadding
 import com.vitorpamplona.amethyst.commons.ui.theme.Height100Modifier
 import com.vitorpamplona.amethyst.commons.ui.theme.Size5dp
 import com.vitorpamplona.amethyst.commons.ui.theme.SquaredQuoteBorderModifier
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
+import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.withTimeoutOrNull
 
 @Composable
 fun DisplayPreviews(
     state: PreviewState,
+    attachments: IMetaAttachments,
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
+    PrepareLinkedImageMetadata(state, attachments, accountViewModel)
+
     val urlPreviews by state.results.collectAsStateWithLifecycle(emptyList())
 
     if (urlPreviews.isNotEmpty()) {
@@ -63,3 +73,38 @@ fun DisplayPreviews(
         }
     }
 }
+
+/**
+ * An image the composer previews from a pasted link gets the same imeta an upload does (hash, size,
+ * dimensions, blurhash), so readers can lay it out before it loads. Links without an image
+ * extension are classified by the same URL preview that renders them.
+ */
+@Composable
+fun PrepareLinkedImageMetadata(
+    state: PreviewState,
+    attachments: IMetaAttachments,
+    accountViewModel: AccountViewModel,
+) {
+    val notePlatform = LocalNotePlatform.current
+    LaunchedEffect(state, attachments, accountViewModel) {
+        val scope = this
+        state.results.collect { urls ->
+            attachments.prepareLinkedImages(urls, scope, accountViewModel.host.mediaUploader, accountViewModel.httpClientBuilder) { url ->
+                notePlatform.previewMimeType(url, accountViewModel)
+            }
+        }
+    }
+}
+
+private suspend fun NotePlatform.previewMimeType(
+    url: String,
+    accountViewModel: AccountViewModel,
+): String? =
+    // A platform without a URL previewer never answers.
+    withTimeoutOrNull(PREVIEW_TIMEOUT_MS) {
+        val result = CompletableDeferred<UrlPreviewState>()
+        loadUrlPreview(url, accountViewModel) { result.complete(it) }
+        (result.await() as? UrlPreviewState.Loaded)?.previewInfo?.mimeType
+    }
+
+private const val PREVIEW_TIMEOUT_MS = 30_000L
