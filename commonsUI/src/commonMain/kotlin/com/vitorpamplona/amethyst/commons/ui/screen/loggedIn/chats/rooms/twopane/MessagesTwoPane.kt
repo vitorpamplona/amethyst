@@ -25,22 +25,25 @@ import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.font.FontWeight
 import com.vitorpamplona.amethyst.commons.chats.ui.ChannelFabColumn
 import com.vitorpamplona.amethyst.commons.feeds.FeedContentState
 import com.vitorpamplona.amethyst.commons.model.navigation.Route
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.route_messages
 import com.vitorpamplona.amethyst.commons.ui.insets.imePaddingSafe
 import com.vitorpamplona.amethyst.commons.ui.layouts.HorizontalTwoPane
 import com.vitorpamplona.amethyst.commons.ui.layouts.WidthClass
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.DetailPaneNav
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.TwoPaneNav
-import com.vitorpamplona.amethyst.commons.ui.navigation.topbars.AmethystClickableIcon
 import com.vitorpamplona.amethyst.commons.ui.navigation.topbars.UserDrawerSearchTopBar
 import com.vitorpamplona.amethyst.commons.ui.platform.AppBottomBar
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.listDetail.ChatDetailPane
@@ -50,6 +53,7 @@ import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.listDetail.li
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.privateDM.ChatroomView
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.publicChannels.nip28PublicChat.PublicChatChannelView
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.publicChannels.relayGroup.WarmJoinedRelayGroupNip11
+import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.Size20dp
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 
@@ -80,7 +84,9 @@ fun MessagesTwoPane(
         topBar = {
             // No seed: NIP-17 messages are encrypted, so no relay can search them and no kind
             // window would return anything the reader could read.
-            UserDrawerSearchTopBar(accountViewModel, nav, null) { AmethystClickableIcon() }
+            UserDrawerSearchTopBar(accountViewModel, nav, null) {
+                Text(stringRes(Res.string.route_messages), fontWeight = FontWeight.Bold)
+            }
         },
         bottomBar = {
             AppBottomBar(Route.Message, nav, accountViewModel) { route ->
