@@ -25,38 +25,55 @@ import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.FilledIconButton
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Slider
-import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.key
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
+import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbol
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.accessibility_download_for_offline
+import com.vitorpamplona.amethyst.commons.resources.close
+import com.vitorpamplona.amethyst.commons.resources.mute_button
+import com.vitorpamplona.amethyst.commons.resources.muted_button
+import com.vitorpamplona.amethyst.commons.resources.pause
+import com.vitorpamplona.amethyst.commons.resources.play
+import com.vitorpamplona.amethyst.commons.resources.video_player_settings_action_fullscreen
+import com.vitorpamplona.amethyst.commons.service.http.BlossomReadAuthInterceptor
+import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.desktop.service.media.GlobalMediaPlayer
 import com.vitorpamplona.amethyst.desktop.service.media.MediaPlaybackState
 import com.vitorpamplona.amethyst.desktop.service.media.VideoThumbnailCache
 import kotlinx.coroutines.launch
+import java.net.URLDecoder
 
 enum class MediaType { AUDIO, VIDEO }
 
@@ -74,8 +91,10 @@ fun NowPlayingBar(modifier: Modifier = Modifier) {
     val lastShown = remember { arrayOfNulls<Pair<MediaPlaybackState, MediaType>>(1) }
     if (visible) lastShown[0] = if (hasVideo) videoState to MediaType.VIDEO else audioState to MediaType.AUDIO
     val (activeState, activeType) = lastShown[0] ?: (audioState to MediaType.AUDIO)
+    val isVideo = activeType == MediaType.VIDEO
+    val url = activeState.url
 
-    var dragged by remember(activeState.url) { mutableStateOf<Float?>(null) }
+    val scope = rememberCoroutineScope()
 
     AnimatedVisibility(
         visible = visible,
@@ -83,197 +102,186 @@ fun NowPlayingBar(modifier: Modifier = Modifier) {
         exit = slideOutVertically { it },
         modifier = modifier,
     ) {
-        Row(
-            modifier =
-                Modifier
-                    .fillMaxWidth()
-                    .background(MaterialTheme.colorScheme.surfaceContainerHigh)
-                    .padding(horizontal = 12.dp, vertical = 6.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-        ) {
-            // Mini thumbnail (cached frame, not a live VideoPlayerSurface).
-            // We deliberately render the cached thumbnail rather than mounting a
-            // second VideoPlayerSurface to avoid driving two simultaneous Skia
-            // draws against the same player's frame bitmap — kdroidFilter
-            // 0.10.0's macOS surface has a use-after-free race in that path
-            // (see PR review). The mini-preview UX is preserved via the
-            // poster frame extracted by VideoThumbnailCache.
-            val miniThumb = activeState.url?.let { VideoThumbnailCache.getCached(it) }
-            if (activeType == MediaType.VIDEO && miniThumb != null) {
-                Image(
-                    bitmap = miniThumb,
-                    contentDescription = "Now playing",
-                    modifier =
-                        Modifier
-                            .size(width = 48.dp, height = 36.dp)
-                            .clip(RoundedCornerShape(4.dp)),
-                    contentScale = ContentScale.Crop,
-                )
-            } else {
-                Icon(
-                    MaterialSymbols.MusicNote,
-                    contentDescription = null,
-                    modifier = Modifier.size(20.dp),
-                    tint = MaterialTheme.colorScheme.primary,
-                )
-            }
+        NowPlayingBarContent(
+            state = activeState,
+            type = activeType,
+            // A cached frame, not a live VideoPlayerSurface: two surfaces drawing one player's
+            // frame bitmap hit a use-after-free in kdroidFilter 0.10.0's macOS surface.
+            thumbnail = url?.let { VideoThumbnailCache.getCached(it) },
+            onPlayPause = { if (isVideo) GlobalMediaPlayer.toggleVideoPlayPause() else GlobalMediaPlayer.toggleAudioPlayPause() },
+            onSeek = { if (isVideo) GlobalMediaPlayer.seekVideo(it) else GlobalMediaPlayer.seekAudio(it) },
+            onToggleMute = { if (isVideo) GlobalMediaPlayer.toggleVideoMute() else GlobalMediaPlayer.toggleAudioMute() },
+            onVolumeChange = { if (isVideo) GlobalMediaPlayer.setVideoVolume(it) else GlobalMediaPlayer.setAudioVolume(it) },
+            // Captures the url, not the state that changes every tick, so the button can skip.
+            onSave = { url?.let { scope.launch { SaveMediaAction.saveMedia(url = it) } } },
+            onFullscreen = GlobalMediaPlayer::toggleFullscreen,
+            onStop = { if (isVideo) GlobalMediaPlayer.stopVideo() else GlobalMediaPlayer.stopAudio() },
+        )
+    }
+}
 
-            // Play/pause
-            IconButton(
-                onClick = {
-                    if (activeType == MediaType.VIDEO) {
-                        GlobalMediaPlayer.toggleVideoPlayPause()
-                    } else {
-                        GlobalMediaPlayer.toggleAudioPlayPause()
-                    }
-                },
-                modifier = Modifier.size(32.dp),
+/** The bar itself, driven only by its arguments so it renders without a player. */
+@Composable
+internal fun NowPlayingBarContent(
+    state: MediaPlaybackState,
+    type: MediaType,
+    thumbnail: ImageBitmap?,
+    onPlayPause: () -> Unit,
+    onSeek: (Float) -> Unit,
+    onToggleMute: () -> Unit,
+    onVolumeChange: (Int) -> Unit,
+    onSave: () -> Unit,
+    onFullscreen: () -> Unit,
+    onStop: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val colors = MaterialTheme.colorScheme
+    val secondary = colors.onSurfaceVariant
+
+    Column(modifier.fillMaxWidth().background(colors.surfaceContainer)) {
+        HorizontalDivider(color = colors.outlineVariant)
+        BoxWithConstraints {
+            // Narrower windows drop the file name and volume slider, then the artwork and the
+            // download and fullscreen buttons, so the seek bar and Stop always keep their room.
+            val roomy = maxWidth >= 760.dp
+            val compact = maxWidth < 560.dp
+
+            Row(
+                // Grows past 56dp when a large font scale makes the labels taller.
+                modifier = Modifier.fillMaxWidth().heightIn(min = 56.dp).padding(horizontal = 12.dp),
+                verticalAlignment = Alignment.CenterVertically,
             ) {
-                Icon(
-                    if (activeState.isPlaying) MaterialSymbols.Pause else MaterialSymbols.PlayArrow,
-                    contentDescription = if (activeState.isPlaying) "Pause" else "Play",
-                    modifier = Modifier.size(20.dp),
-                )
-            }
+                if (!compact) Artwork(type, thumbnail)
 
-            // Current time
-            Text(
-                text = formatTime(activeState.currentTime),
-                style = MaterialTheme.typography.labelSmall,
-            )
-
-            // Seek bar
-            // Seeks once the drag ends, not with a native seek per drag event.
-            Slider(
-                value = dragged ?: activeState.position,
-                onValueChange = { dragged = it },
-                onValueChangeFinished = {
-                    dragged?.let {
-                        if (activeType == MediaType.VIDEO) {
-                            GlobalMediaPlayer.seekVideo(it)
-                        } else {
-                            GlobalMediaPlayer.seekAudio(it)
-                        }
-                    }
-                    dragged = null
-                },
-                modifier = Modifier.weight(1f),
-                colors =
-                    SliderDefaults.colors(
-                        thumbColor = MaterialTheme.colorScheme.primary,
-                        activeTrackColor = MaterialTheme.colorScheme.primary,
-                    ),
-            )
-
-            // Duration
-            Text(
-                text = formatTime(activeState.duration),
-                style = MaterialTheme.typography.labelSmall,
-            )
-
-            // URL label (truncated)
-            Text(
-                text = activeState.url?.substringAfterLast('/')?.substringBefore('?') ?: "",
-                style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-                modifier = Modifier.width(120.dp),
-            )
-
-            // Volume / Mute
-            IconButton(
-                onClick = {
-                    if (activeType == MediaType.VIDEO) {
-                        GlobalMediaPlayer.toggleVideoMute()
-                    } else {
-                        GlobalMediaPlayer.toggleAudioMute()
-                    }
-                },
-                modifier = Modifier.size(24.dp),
-            ) {
-                Icon(
-                    if (activeState.isMuted) {
-                        MaterialSymbols.AutoMirrored.VolumeOff
-                    } else {
-                        MaterialSymbols.AutoMirrored.VolumeUp
-                    },
-                    contentDescription = if (activeState.isMuted) "Unmute" else "Mute",
-                    modifier = Modifier.size(16.dp),
-                )
-            }
-
-            Slider(
-                value = activeState.volume / 100f,
-                onValueChange = {
-                    val vol = (it * 100).toInt()
-                    if (activeType == MediaType.VIDEO) {
-                        GlobalMediaPlayer.setVideoVolume(vol)
-                    } else {
-                        GlobalMediaPlayer.setAudioVolume(vol)
-                    }
-                },
-                modifier = Modifier.width(80.dp),
-                colors =
-                    SliderDefaults.colors(
-                        thumbColor = MaterialTheme.colorScheme.primary,
-                        activeTrackColor = MaterialTheme.colorScheme.primary,
-                    ),
-            )
-
-            // Save button
-            val scope = rememberCoroutineScope()
-            IconButton(
-                onClick = {
-                    activeState.url?.let { url ->
-                        scope.launch {
-                            SaveMediaAction.saveMedia(url = url)
-                        }
-                    }
-                },
-                modifier = Modifier.size(24.dp),
-            ) {
-                Icon(
-                    MaterialSymbols.Save,
-                    contentDescription = "Save",
-                    modifier = Modifier.size(16.dp),
-                )
-            }
-
-            // Fullscreen (video only)
-            if (activeType == MediaType.VIDEO) {
-                IconButton(
-                    onClick = { GlobalMediaPlayer.toggleFullscreen() },
-                    modifier = Modifier.size(24.dp),
-                ) {
-                    Icon(
-                        MaterialSymbols.Fullscreen,
-                        contentDescription = "Fullscreen",
-                        modifier = Modifier.size(16.dp),
+                val readableName = remember(state.url) { state.url?.let(::readableFileName) }
+                val fileName = if (roomy) readableName else null
+                if (fileName != null) {
+                    Text(
+                        text = fileName,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = secondary,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.padding(start = 12.dp).widthIn(max = 160.dp),
                     )
                 }
-            }
 
-            Spacer(Modifier.width(4.dp))
+                if (!compact) Spacer(Modifier.width(12.dp))
 
-            // Close/stop
-            IconButton(
-                onClick = {
-                    if (activeType == MediaType.VIDEO) {
-                        GlobalMediaPlayer.stopVideo()
-                    } else {
-                        GlobalMediaPlayer.stopAudio()
-                    }
-                },
-                modifier = Modifier.size(24.dp),
-            ) {
-                Icon(
-                    MaterialSymbols.Close,
-                    contentDescription = "Stop",
-                    modifier = Modifier.size(16.dp),
+                FilledIconButton(onClick = onPlayPause, modifier = Modifier.size(36.dp)) {
+                    Icon(
+                        if (state.isPlaying) MaterialSymbols.Pause else MaterialSymbols.PlayArrow,
+                        contentDescription = stringRes(if (state.isPlaying) Res.string.pause else Res.string.play),
+                        modifier = Modifier.size(22.dp),
+                    )
+                }
+
+                Spacer(Modifier.width(12.dp))
+
+                TimeLabel(formatTime(state.currentTime), secondary)
+                // Seeking is costly, so a drag seeks once, where it is let go. Keyed on the url so a
+                // drag still held when the track changes is dropped instead of seeking the new one.
+                key(state.url) {
+                    ThinSlider(
+                        value = state.position,
+                        onValueChange = onSeek,
+                        modifier = Modifier.weight(1f).padding(horizontal = 12.dp),
+                        color = colors.primary,
+                        trackColor = colors.onSurface.copy(alpha = 0.15f),
+                    )
+                }
+                TimeLabel(formatTime(state.duration), secondary)
+
+                Spacer(Modifier.width(12.dp))
+
+                BarButton(
+                    if (state.isMuted) MaterialSymbols.AutoMirrored.VolumeOff else MaterialSymbols.AutoMirrored.VolumeUp,
+                    stringRes(if (state.isMuted) Res.string.muted_button else Res.string.mute_button),
+                    onToggleMute,
                 )
+                if (roomy) {
+                    ThinSlider(
+                        value = state.volume / 100f,
+                        onValueChange = { onVolumeChange((it * 100).toInt()) },
+                        modifier = Modifier.width(96.dp).padding(start = 8.dp, end = 8.dp),
+                        changesWhileDragging = true,
+                        color = secondary,
+                        trackColor = colors.onSurface.copy(alpha = 0.15f),
+                    )
+                }
+
+                if (!compact) {
+                    BarButton(MaterialSymbols.SaveAlt, stringRes(Res.string.accessibility_download_for_offline), onSave)
+                    if (type == MediaType.VIDEO) {
+                        BarButton(MaterialSymbols.Fullscreen, stringRes(Res.string.video_player_settings_action_fullscreen), onFullscreen)
+                    }
+                }
+                BarButton(MaterialSymbols.Close, stringRes(Res.string.close), onStop)
             }
         }
     }
+}
+
+/** The video's poster, or a music note for audio, in a 40dp tile. */
+@Composable
+private fun Artwork(
+    type: MediaType,
+    thumbnail: ImageBitmap?,
+) {
+    val shape = RoundedCornerShape(6.dp)
+    if (type == MediaType.VIDEO && thumbnail != null) {
+        Image(
+            bitmap = thumbnail,
+            contentDescription = null,
+            modifier = Modifier.size(width = 64.dp, height = 40.dp).clip(shape),
+            contentScale = ContentScale.Crop,
+        )
+    } else {
+        Box(
+            Modifier.size(40.dp).clip(shape).background(MaterialTheme.colorScheme.secondaryContainer),
+            contentAlignment = Alignment.Center,
+        ) {
+            Icon(
+                MaterialSymbols.MusicNote,
+                contentDescription = null,
+                modifier = Modifier.size(22.dp),
+                tint = MaterialTheme.colorScheme.onSecondaryContainer,
+            )
+        }
+    }
+}
+
+@Composable
+private fun TimeLabel(
+    text: String,
+    color: Color,
+) {
+    Text(
+        text = text,
+        style = MaterialTheme.typography.labelMedium.copy(fontFeatureSettings = "tnum"),
+        color = color,
+        maxLines = 1,
+    )
+}
+
+@Composable
+private fun BarButton(
+    symbol: MaterialSymbol,
+    contentDescription: String,
+    onClick: () -> Unit,
+) {
+    IconButton(onClick = onClick, modifier = Modifier.size(36.dp)) {
+        Icon(symbol, contentDescription = contentDescription, tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(20.dp))
+    }
+}
+
+/**
+ * The URL's last path segment, decoded, or null when it is empty or a Blossom content hash
+ * (`<sha256>`, `<sha256>.mp4`, `<sha256>.thumb.jpg`), which reads as noise.
+ */
+internal fun readableFileName(url: String): String? {
+    val segment = url.substringBefore('?').substringBefore('#').substringAfterLast('/')
+    if (segment.isBlank() || BlossomReadAuthInterceptor.blossomHashOrNull(segment) != null) return null
+    // A path keeps '+' literal; only %XX escapes are decoded.
+    return runCatching { URLDecoder.decode(segment.replace("+", "%2B"), Charsets.UTF_8) }.getOrDefault(segment)
 }
