@@ -110,6 +110,7 @@ import com.vitorpamplona.amethyst.commons.ui.note.creators.location.AddGeoHashBu
 import com.vitorpamplona.amethyst.commons.ui.note.creators.location.GeoHashPostSection
 import com.vitorpamplona.amethyst.commons.ui.note.creators.messagefield.IMessageField
 import com.vitorpamplona.amethyst.commons.ui.note.creators.messagefield.MessageField
+import com.vitorpamplona.amethyst.commons.ui.note.creators.previews.PrepareLinkedImageMetadata
 import com.vitorpamplona.amethyst.commons.ui.note.creators.previews.PreviewUrl
 import com.vitorpamplona.amethyst.commons.ui.note.creators.secretEmoji.AddSecretEmojiButton
 import com.vitorpamplona.amethyst.commons.ui.note.creators.secretEmoji.SecretEmojiRequest
@@ -365,6 +366,8 @@ fun DisplayPreviews(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
+    PrepareLinkedImageMetadata(postViewModel.urlPreviews, postViewModel.iMetaAttachments, accountViewModel)
+
     val urlPreviews by postViewModel.urlPreviews.results.collectAsStateWithLifecycle(emptyList())
 
     if (postViewModel.uploadsWaitingToBeSent.isNotEmpty() || urlPreviews.isNotEmpty()) {

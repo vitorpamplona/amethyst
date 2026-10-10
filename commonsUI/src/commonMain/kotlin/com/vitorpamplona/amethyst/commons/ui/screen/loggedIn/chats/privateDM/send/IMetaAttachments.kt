@@ -23,11 +23,12 @@ package com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.privateDM.se
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
+import com.vitorpamplona.amethyst.commons.richtext.RichTextParser
 import com.vitorpamplona.amethyst.commons.service.http.IRoleBasedHttpClientBuilder
+import com.vitorpamplona.amethyst.commons.service.upload.FileHeader
 import com.vitorpamplona.amethyst.commons.service.uploads.MediaUploader
 import com.vitorpamplona.amethyst.commons.service.uploads.UploadOrchestrator
 import com.vitorpamplona.quartz.nip92IMeta.IMetaTag
-import com.vitorpamplona.quartz.nip92IMeta.IMetaTagBuilder
 import com.vitorpamplona.quartz.nip92IMeta.imetaTagBuilder
 import com.vitorpamplona.quartz.nip94FileMetadata.alt
 import com.vitorpamplona.quartz.nip94FileMetadata.blurhash
@@ -39,32 +40,91 @@ import com.vitorpamplona.quartz.nip94FileMetadata.originalHash
 import com.vitorpamplona.quartz.nip94FileMetadata.sensitiveContent
 import com.vitorpamplona.quartz.nip94FileMetadata.size
 import com.vitorpamplona.quartz.nip94FileMetadata.thumbhash
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.IO
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 class IMetaAttachments {
     var iMetaAttachments by mutableStateOf<List<IMetaTag>>(emptyList())
+
+    // Links prepareLinkedImages already took on, so each one is downloaded once.
+    private val linkedImages = MutableStateFlow<Set<String>>(emptySet())
 
     suspend fun downloadAndPrepare(
         url: String,
         uploader: MediaUploader,
         httpClients: IRoleBasedHttpClientBuilder,
     ) {
-        val imeta =
-            uploader.remoteFileHeader(url, httpClients)?.let {
-                IMetaTagBuilder(url)
-                    .apply {
-                        hash(it.hash)
-                        size(it.size)
-                        it.mimeType?.let { mimeType(it) }
-                        it.dim?.let { dims(it) }
-                        it.blurHash?.let { blurhash(it.blurhash) }
-                        it.thumbHash?.let { thumbhash(it.thumbhash) }
-                    }.build()
-            }
+        val imeta = uploader.remoteFileHeader(url, httpClients)?.toIMeta(url)
 
         if (imeta != null) {
             iMetaAttachments += imeta
         }
     }
+
+    /**
+     * Gives the images linked in a message the same imeta an upload gets: each one is downloaded,
+     * hashed and measured off [scope]'s thread, and added back on it. A link is an image when its extension says so or, without one,
+     * when [mimeTypeOf] (the composer's URL preview) does. Each link is tried once, and an imeta
+     * already there (from an upload or a draft) is never replaced.
+     */
+    fun prepareLinkedImages(
+        urls: List<String>,
+        scope: CoroutineScope,
+        uploader: MediaUploader,
+        httpClients: IRoleBasedHttpClientBuilder,
+        mimeTypeOf: suspend (url: String) -> String?,
+    ) {
+        urls.forEach { url ->
+            if (!RichTextParser.isValidURL(url) || RichTextParser.isVideoUrl(url) || RichTextParser.isAudioUrl(url)) return@forEach
+            if (hasIMeta(url) || !claimLinkedImage(url)) return@forEach
+
+            scope.launch {
+                var finished = false
+                try {
+                    val header =
+                        withContext(Dispatchers.IO) {
+                            val isImage = RichTextParser.isImageUrl(url) || mimeTypeOf(url)?.startsWith("image/") == true
+                            // No dimensions means the bytes did not decode as an image: no imeta for them.
+                            if (isImage) uploader.remoteFileHeader(url, httpClients)?.takeIf { it.dim != null } else null
+                        }
+                    // Back on the caller's thread, so two downloads finishing together both land.
+                    if (header != null && !hasIMeta(url)) {
+                        iMetaAttachments += header.toIMeta(url)
+                    }
+                    finished = true
+                } finally {
+                    // Cancelled (the composer left the screen): try again next time it is shown.
+                    if (!finished) linkedImages.update { it - url }
+                }
+            }
+        }
+    }
+
+    private fun hasIMeta(url: String) = iMetaAttachments.any { it.url == url }
+
+    private fun claimLinkedImage(url: String): Boolean {
+        var claimed = false
+        linkedImages.update {
+            claimed = url !in it
+            it + url
+        }
+        return claimed
+    }
+
+    private fun FileHeader.toIMeta(url: String) =
+        imetaTagBuilder(url) {
+            hash(this@toIMeta.hash)
+            size(this@toIMeta.size)
+            this@toIMeta.mimeType?.let { mimeType(it) }
+            dim?.let { dims(it) }
+            blurHash?.let { blurhash(it.blurhash) }
+            thumbHash?.let { thumbhash(it.thumbhash) }
+        }
 
     fun add(imeta: IMetaTag) {
         replace(imeta.url, imeta)
@@ -114,5 +174,6 @@ class IMetaAttachments {
 
     fun reset() {
         iMetaAttachments = emptyList()
+        linkedImages.value = emptySet()
     }
 }

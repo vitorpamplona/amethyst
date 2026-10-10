@@ -25,6 +25,8 @@ import com.vitorpamplona.amethyst.commons.blurhash.toPlatformImage
 import com.vitorpamplona.amethyst.commons.thumbhash.toThumbhash
 import com.vitorpamplona.quartz.nip01Core.core.toHexKey
 import com.vitorpamplona.quartz.utils.sha256.sha256
+import java.awt.image.BufferedImage
+import java.io.ByteArrayInputStream
 import java.io.File
 import javax.imageio.ImageIO
 
@@ -44,10 +46,18 @@ data class MediaMetadata(
  * in the same package.
  */
 object MediaMetadataReader {
-    fun compute(file: File): MediaMetadata {
-        val bytes = file.readBytes()
+    fun compute(file: File): MediaMetadata = compute(file.readBytes(), guessMimeType(file))
+
+    /**
+     * Same as [compute] for a file already in memory, such as one downloaded from a link.
+     * [fallbackDecoder] reads the images ImageIO cannot (WebP, through Skia on desktop).
+     */
+    fun compute(
+        bytes: ByteArray,
+        mimeType: String,
+        fallbackDecoder: ((ByteArray) -> BufferedImage?)? = null,
+    ): MediaMetadata {
         val hash = sha256(bytes).toHexKey()
-        val mimeType = guessMimeType(file)
         var width: Int? = null
         var height: Int? = null
         var blurhash: String? = null
@@ -55,7 +65,7 @@ object MediaMetadataReader {
 
         if (mimeType.startsWith("image/")) {
             try {
-                val image = ImageIO.read(file)
+                val image = ImageIO.read(ByteArrayInputStream(bytes)) ?: fallbackDecoder?.invoke(bytes)
                 if (image != null) {
                     width = image.width
                     height = image.height
@@ -78,9 +88,10 @@ object MediaMetadataReader {
         )
     }
 
-    fun guessMimeType(file: File): String {
-        val ext = file.extension.lowercase()
-        return when (ext) {
+    fun guessMimeType(file: File): String = guessMimeTypeFromExtension(file.extension)
+
+    fun guessMimeTypeFromExtension(extension: String): String =
+        when (extension.lowercase()) {
             "jpg", "jpeg" -> "image/jpeg"
             "png" -> "image/png"
             "gif" -> "image/gif"
@@ -96,5 +107,4 @@ object MediaMetadataReader {
             "flac" -> "audio/flac"
             else -> "application/octet-stream"
         }
-    }
 }

@@ -28,6 +28,8 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
 import okhttp3.OkHttpClient
+import okhttp3.Request
+import okhttp3.coroutines.executeAsync
 import java.net.HttpURLConnection
 import java.net.URL
 
@@ -87,6 +89,33 @@ class ImageDownloader {
         imageUrl: String,
         okHttpClient: (url: String) -> OkHttpClient,
     ): Blob? = retryWithDelay { tryGetTheImage(imageUrl, okHttpClient) }
+
+    /**
+     * One GET of a link someone pasted, through [client] so it carries the app's user agent, DNS
+     * and Tor routing. Unlike [waitAndGetImage], which waits for a server still publishing a file
+     * we just uploaded, it does not retry: a dead link fails at once. Null on any failure, or when
+     * the body is larger than [maxBytes].
+     */
+    suspend fun fetch(
+        url: String,
+        client: OkHttpClient,
+        maxBytes: Long = MAX_LINKED_FILE_BYTES,
+    ): Blob? =
+        withContext(Dispatchers.IO) {
+            try {
+                client.newCall(Request.Builder().url(url).build()).executeAsync().use { response ->
+                    val body = response.body
+                    if (!response.isSuccessful || body.contentLength() > maxBytes) return@use null
+                    val source = body.source()
+                    // Fills the buffer up to one byte past the limit: true means the file is too big.
+                    if (source.request(maxBytes + 1)) return@use null
+                    Blob(source.buffer.readByteArray(), response.header("Content-Type"))
+                }
+            } catch (e: Exception) {
+                if (e is CancellationException) throw e
+                null
+            }
+        }
 
     private data class HttpConnection(
         val connection: HttpURLConnection,
@@ -183,4 +212,8 @@ class ImageDownloader {
                 httpConn.connection.disconnect()
             }
         }
+
+    companion object {
+        const val MAX_LINKED_FILE_BYTES = 20L * 1024 * 1024
+    }
 }

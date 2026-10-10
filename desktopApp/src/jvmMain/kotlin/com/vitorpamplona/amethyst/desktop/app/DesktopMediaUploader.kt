@@ -20,6 +20,8 @@
  */
 package com.vitorpamplona.amethyst.desktop.app
 
+import androidx.compose.ui.graphics.toAwtImage
+import androidx.compose.ui.graphics.toComposeImageBitmap
 import com.vitorpamplona.amethyst.commons.model.Account
 import com.vitorpamplona.amethyst.commons.model.mediaServers.ServerName
 import com.vitorpamplona.amethyst.commons.model.mediaServers.ServerType
@@ -37,6 +39,7 @@ import com.vitorpamplona.amethyst.commons.service.upload.ImageReencoder
 import com.vitorpamplona.amethyst.commons.service.upload.ImageSizeTarget
 import com.vitorpamplona.amethyst.commons.service.upload.MediaCompressor
 import com.vitorpamplona.amethyst.commons.service.upload.MediaMetadata
+import com.vitorpamplona.amethyst.commons.service.upload.MediaMetadataReader
 import com.vitorpamplona.amethyst.commons.service.uploads.CompressorQuality
 import com.vitorpamplona.amethyst.commons.service.uploads.ImageCompressionPreview
 import com.vitorpamplona.amethyst.commons.service.uploads.ImageDownloader
@@ -63,11 +66,13 @@ import com.vitorpamplona.quartz.utils.sha256.sha256
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import java.awt.image.BufferedImage
 import java.io.File
 import java.net.URI
 import java.nio.file.Files
 import javax.imageio.ImageIO
 import com.vitorpamplona.amethyst.commons.service.upload.UploadOrchestrator as BlossomUploadPipeline
+import org.jetbrains.skia.Image as SkiaImage
 
 /**
  * The shared app's upload port on desktop. Every server type starts from the bytes the JVM
@@ -400,10 +405,35 @@ class DesktopMediaUploader(
             ImageFileStats(size?.first, size?.second, file.length())
         }
 
+    // Like Android: the URL's extension names the type, the server's Content-Type when it has none.
     override suspend fun remoteFileHeader(
         url: String,
         httpClients: IRoleBasedHttpClientBuilder,
-    ): FileHeader? = null
+    ): FileHeader? =
+        withContext(Dispatchers.IO) {
+            try {
+                val blob = ImageDownloader().fetch(url, httpClients.okHttpClientForImage(url)) ?: return@withContext null
+                val extension =
+                    runCatching { URI(url).path }
+                        .getOrNull()
+                        ?.substringAfterLast('/')
+                        ?.substringAfterLast('.', "")
+                        .orEmpty()
+                val mimeType =
+                    MediaMetadataReader
+                        .guessMimeTypeFromExtension(extension)
+                        .takeIf { it != OCTET_STREAM }
+                        ?: blob.contentType
+                            ?.substringBefore(';')
+                            ?.trim()
+                            ?.ifEmpty { null }
+                        ?: OCTET_STREAM
+                MediaMetadataReader.compute(blob.bytes, mimeType, ::decodeImageWithSkia).header()
+            } catch (e: Exception) {
+                if (e is CancellationException) throw e
+                null
+            }
+        }
 
     override fun displayName(uri: MediaUri): String? = fileOf(uri).name
 
@@ -432,5 +462,9 @@ class DesktopMediaUploader(
         // What Android allows in a NIP-95 event: larger files make relay events too heavy.
         const val NIP95_MAX_BYTES = 80_000
         const val ENCRYPTED_CONTENT_TYPE = "application/octet-stream"
+        const val OCTET_STREAM = "application/octet-stream"
     }
 }
+
+/** Skia decodes what ImageIO cannot, WebP above all: the same decoder the previews draw with. */
+internal fun decodeImageWithSkia(bytes: ByteArray): BufferedImage? = runCatching { SkiaImage.makeFromEncoded(bytes).use { it.toComposeImageBitmap().toAwtImage() } }.getOrNull()
