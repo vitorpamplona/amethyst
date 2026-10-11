@@ -5,7 +5,7 @@ _Audited 2026-06-30. 13 plans: 10 shipped (archived), 2 in-progress, 1 queued, 0
 ## In progress
 | Plan | Summary |
 | ---- | ------- |
-| [2026-10-11-desktop-video-compression.md](2026-10-11-desktop-video-compression.md) | Real video compression on the JVM desktop via a system `ffmpeg` (Android's rules table shared through `commons`, encoder preference list, content-aware slider, hidden controls without ffmpeg); phase 2 bundles an LGPL binary. |
+| [2026-10-11-desktop-video-compression.md](2026-10-11-desktop-video-compression.md) | Real video compression on the JVM desktop via a system `ffmpeg` (Android's rules table shared through `commons`, encoder preference list, content-aware slider, hidden controls without ffmpeg); phase 1 built on the branch, see the [manual sheet](2026-10-11-desktop-video-compression-manual-testing.md); phase 2 bundles an LGPL binary. |
 | [2026-05-12-feat-desktop-wallet-zapping-test-coverage-plan.md](2026-05-12-feat-desktop-wallet-zapping-test-coverage-plan.md) | Desktop wallet/zap test coverage; NWC handler + RPC round-trip tests shipped, wallet-column-state and zap-dialog-logic tests still missing. |
 | [2026-06-21-napplet-desktop-host.md](2026-06-21-napplet-desktop-host.md) | Desktop NIP-5A/5D host; shared core extractions done, desktop engine/scheme-handler/transport/UI edge not yet built. |
 
