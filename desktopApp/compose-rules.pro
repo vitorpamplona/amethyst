@@ -101,6 +101,18 @@
     native <methods>;
 }
 
+# Linux / KDE keyring: java-keyring -> secret-service -> dbus-java (Secret Service over
+# D-Bus). Nothing references dbus-java's unix-socket transport but its
+# META-INF/services entry, so the shrink pass deleted the whole jar's classes and
+# every Linux release fell back from the OS keyring to the password-encrypted
+# file ("No available keyring backend found"). dbus-java also builds the D-Bus
+# interfaces, structs and signals by reflection, so keep the stack whole.
+# `verifyProguardedJarsLoad` (build.gradle.kts) fails the build if a provider goes again.
+-keep class org.freedesktop.dbus.** { *; }
+-keep class org.freedesktop.secret.** { *; }
+-keep class org.gnome.keyring.** { *; }
+-keep class com.github.javakeyring.** { *; }
+
 # kmp-tor — loads native Tor daemon via JNI reflection
 -keep class io.matthewnelson.** { *; }
 
