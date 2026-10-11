@@ -743,7 +743,7 @@ class AndroidMediaUploader(
             val fileExtension: String = MimeTypeMap.getFileExtensionFromUrl(url)
             val mimeType = MimeTypeMap.getSingleton().getMimeTypeFromExtension(fileExtension.lowercase(Locale.getDefault()))
             val blob = ImageDownloader().fetch(url, httpClients.okHttpClientForImage(url)) ?: return@withContext null
-            FileHeader.prepare(blob.bytes, mimeType ?: blob.contentType, null).getOrNull()
+            FileHeader.prepare(blob.bytes, blob.imageMimeType() ?: mimeType ?: blob.mimeType(), null).getOrNull()
         }
 
     override fun displayName(uri: MediaUri): String? =

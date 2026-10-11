@@ -65,10 +65,11 @@ object MediaMetadataReader {
 
         if (mimeType.startsWith("image/")) {
             try {
-                val image = ImageIO.read(ByteArrayInputStream(bytes)) ?: fallbackDecoder?.invoke(bytes)
+                val decoded = runCatching { readForHashes(bytes) }.getOrNull()
+                val image = decoded?.image ?: fallbackDecoder?.invoke(bytes)
                 if (image != null) {
-                    width = image.width
-                    height = image.height
+                    width = decoded?.width ?: image.width
+                    height = decoded?.height ?: image.height
                     val platformImage = image.toPlatformImage()
                     blurhash = runCatching { platformImage.toBlurhash() }.getOrNull()
                     thumbhash = runCatching { platformImage.toThumbhash() }.getOrNull()
@@ -87,6 +88,34 @@ object MediaMetadataReader {
             thumbhash = thumbhash,
         )
     }
+
+    private class Decoded(
+        val width: Int,
+        val height: Int,
+        val image: BufferedImage,
+    )
+
+    /**
+     * The image's real size from its header, plus a copy decoded at a fraction of it: the preview
+     * hashes only look at about 100 pixels, so a 5000x3333 photo need not fill 66 MB to make them.
+     */
+    private fun readForHashes(bytes: ByteArray): Decoded? =
+        ImageIO.createImageInputStream(ByteArrayInputStream(bytes))?.use { input ->
+            val reader = ImageIO.getImageReaders(input).asSequence().firstOrNull() ?: return null
+            try {
+                reader.input = input
+                val width = reader.getWidth(0)
+                val height = reader.getHeight(0)
+                val step = (minOf(width, height) / HASH_SOURCE_MIN_SIDE).coerceAtLeast(1)
+                val param = reader.defaultReadParam.apply { if (step > 1) setSourceSubsampling(step, step, 0, 0) }
+                Decoded(width, height, reader.read(0, param))
+            } finally {
+                reader.dispose()
+            }
+        }
+
+    // Twice the 100 pixels blurhash and thumbhash scale down to.
+    private const val HASH_SOURCE_MIN_SIDE = 200
 
     fun guessMimeType(file: File): String = guessMimeTypeFromExtension(file.extension)
 

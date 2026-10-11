@@ -37,7 +37,21 @@ class ImageDownloader {
     class Blob(
         val bytes: ByteArray,
         val contentType: String?,
-    )
+    ) {
+        /** The server's Content-Type without parameters (`image/jpeg; charset=…` → `image/jpeg`). */
+        fun mimeType(): String? =
+            contentType
+                ?.substringBefore(';')
+                ?.trim()
+                ?.lowercase()
+                ?.ifEmpty { null }
+
+        /**
+         * The type of the bytes the server sent when it names an image: what an imeta's `m` should
+         * say, even when a CDN serves WebP behind a `.jpg` URL.
+         */
+        fun imageMimeType(): String? = mimeType()?.takeIf { it.startsWith("image/") }
+    }
 
     /**
      * Result of streaming verification - hash and metadata without storing full file

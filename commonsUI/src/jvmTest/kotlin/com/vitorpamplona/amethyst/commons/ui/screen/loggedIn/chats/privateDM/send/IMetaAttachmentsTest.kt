@@ -31,11 +31,14 @@ import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import okhttp3.OkHttpClient
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
+import kotlin.time.measureTime
 
 /**
  * A pasted link to an image gets the same imeta an upload does, computed from the downloaded bytes;
@@ -197,5 +200,73 @@ class IMetaAttachmentsTest {
                 .properties["x"]
                 ?.first(),
         )
+    }
+
+    @Test
+    fun concurrentWritersKeepEveryImeta() {
+        val attachments = IMetaAttachments()
+        val threads =
+            (0 until 8).map { t ->
+                Thread {
+                    repeat(250) { i -> attachments.add(imetaTagBuilder("https://example.com/$t-$i.jpg") { alt("x") }) }
+                }
+            }
+        threads.forEach { it.start() }
+        threads.forEach { it.join() }
+
+        assertEquals(2000, attachments.iMetaAttachments.size)
+    }
+
+    @Test
+    fun aPostWaitsForAnImageStillBeingMeasured() {
+        val url = "https://example.com/slow.jpg"
+        val release = CompletableDeferred<Unit>()
+        val slow =
+            object : MediaUploader by UnavailableMediaUploader {
+                override suspend fun remoteFileHeader(
+                    url: String,
+                    httpClients: IRoleBasedHttpClientBuilder,
+                ): FileHeader? {
+                    release.await()
+                    return image("ff")
+                }
+            }
+        val attachments = IMetaAttachments()
+
+        runBlocking {
+            attachments.prepareLinkedImages(listOf(url), this, slow, httpClients) { null }
+            launch {
+                delay(200)
+                release.complete(Unit)
+            }
+            attachments.awaitLinkedImages(timeoutMs = 5_000)
+
+            assertEquals(listOf(url), attachments.filterIsIn(setOf(url)).map { it.url })
+        }
+    }
+
+    @Test
+    fun aPostDoesNotWaitPastTheLimit() {
+        val stuck =
+            object : MediaUploader by UnavailableMediaUploader {
+                override suspend fun remoteFileHeader(
+                    url: String,
+                    httpClients: IRoleBasedHttpClientBuilder,
+                ): FileHeader? {
+                    CompletableDeferred<Unit>().await()
+                    return null
+                }
+            }
+        val attachments = IMetaAttachments()
+
+        runBlocking {
+            val job = Job()
+            attachments.prepareLinkedImages(listOf("https://example.com/stuck.jpg"), CoroutineScope(coroutineContext + job), stuck, httpClients) { null }
+            val waited = measureTime { attachments.awaitLinkedImages(timeoutMs = 300) }
+            job.cancel()
+
+            assertTrue(waited.inWholeMilliseconds in 250..2_000, "waited $waited")
+            assertTrue(attachments.iMetaAttachments.isEmpty())
+        }
     }
 }

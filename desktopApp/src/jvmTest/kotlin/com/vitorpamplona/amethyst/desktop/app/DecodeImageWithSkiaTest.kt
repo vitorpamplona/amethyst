@@ -24,6 +24,10 @@ import com.vitorpamplona.amethyst.commons.service.upload.MediaMetadataReader
 import org.jetbrains.skia.Bitmap
 import org.jetbrains.skia.EncodedImageFormat
 import org.jetbrains.skia.Image
+import java.awt.Color
+import java.awt.image.BufferedImage
+import java.io.ByteArrayOutputStream
+import javax.imageio.ImageIO
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
@@ -59,5 +63,23 @@ class DecodeImageWithSkiaTest {
 
         assertNull(decodeImageWithSkia(html))
         assertNull(MediaMetadataReader.compute(html, "image/jpeg", ::decodeImageWithSkia).width)
+    }
+
+    @Test
+    fun aLargeJpegKeepsItsRealSizeWhileHashingAFraction() {
+        val image = BufferedImage(4000, 2000, BufferedImage.TYPE_INT_RGB)
+        image.createGraphics().apply {
+            color = Color.ORANGE
+            fillRect(0, 0, 4000, 2000)
+            dispose()
+        }
+        val bytes = ByteArrayOutputStream().also { ImageIO.write(image, "jpg", it) }.toByteArray()
+
+        val meta = MediaMetadataReader.compute(bytes, "image/jpeg")
+
+        assertEquals(4000, meta.width)
+        assertEquals(2000, meta.height)
+        assertNotNull(meta.blurhash)
+        assertNotNull(meta.thumbhash)
     }
 }

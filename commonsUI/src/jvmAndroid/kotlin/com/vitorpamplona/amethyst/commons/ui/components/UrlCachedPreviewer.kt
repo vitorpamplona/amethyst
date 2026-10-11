@@ -25,14 +25,23 @@ import androidx.compose.runtime.Stable
 import androidx.lifecycle.viewModelScope
 import com.vitorpamplona.amethyst.commons.preview.UrlPreview
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.launch
 import okhttp3.OkHttpClient
+import java.util.concurrent.ConcurrentHashMap
 
 @Stable
 object UrlCachedPreviewer {
     var cache = LruCache<String, UrlPreviewState>(100)
         private set
+
+    // Fetches under way: callers asking for the same link at once (a card and the composer's
+    // imeta pass, or one link in several notes) share a single request.
+    private val inFlight = ConcurrentHashMap<String, CompletableDeferred<UrlPreviewState>>()
 
     suspend fun previewInfo(
         url: String,
@@ -44,38 +53,62 @@ object UrlCachedPreviewer {
             return
         }
 
+        val mine = CompletableDeferred<UrlPreviewState>()
+        val running = inFlight.putIfAbsent(url, mine)
+        if (running != null) {
+            val state =
+                try {
+                    running.await()
+                } catch (e: CancellationException) {
+                    // The caller that started the fetch was cancelled first: fetch it here instead.
+                    currentCoroutineContext().ensureActive()
+                    return previewInfo(url, okHttpClient, onReady)
+                }
+            onReady(state)
+            return
+        }
+
+        try {
+            // A fetch may have finished between the cache check and the claim.
+            val state = cache[url] ?: load(url, okHttpClient)
+            mine.complete(state)
+            onReady(state)
+        } finally {
+            mine.cancel()
+            inFlight.remove(url, mine)
+        }
+    }
+
+    private suspend fun load(
+        url: String,
+        okHttpClient: (String) -> OkHttpClient,
+    ): UrlPreviewState {
+        var result: UrlPreviewState = UrlPreviewState.Empty
         UrlPreview().fetch(
             url,
             okHttpClient,
             onComplete = { urlInfo ->
-                cache[url]?.let {
-                    if (it is UrlPreviewState.Loaded || it is UrlPreviewState.Empty) {
-                        onReady(it)
-                        return@fetch
-                    }
-                }
-
-                val state =
-                    if (urlInfo.fetchComplete() && urlInfo.url == url) {
-                        UrlPreviewState.Loaded(urlInfo)
+                val cached = cache[url]
+                result =
+                    if (cached is UrlPreviewState.Loaded || cached is UrlPreviewState.Empty) {
+                        cached
                     } else {
-                        UrlPreviewState.Empty
+                        val state =
+                            if (urlInfo.fetchComplete() && urlInfo.url == url) {
+                                UrlPreviewState.Loaded(urlInfo)
+                            } else {
+                                UrlPreviewState.Empty
+                            }
+                        cache.put(url, state)
+                        state
                     }
-
-                cache.put(url, state)
-                onReady(state)
             },
             onFailed = { throwable ->
-                cache[url]?.let {
-                    onReady(it)
-                    return@fetch
-                }
-
-                val state = UrlPreviewState.Error(throwable.message ?: "Error Loading url preview")
-                cache.put(url, state)
-                onReady(state)
+                result =
+                    cache[url] ?: UrlPreviewState.Error(throwable.message ?: "Error Loading url preview").also { cache.put(url, it) }
             },
         )
+        return result
     }
 }
 

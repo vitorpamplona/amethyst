@@ -692,6 +692,7 @@ open class CommentPostViewModel :
 
         val emojis = account.emoji.findEmojiTags(tagger.message)
         val urls = findURLs(tagger.message)
+        iMetaAttachments.awaitLinkedImages()
         val usedAttachments = iMetaAttachments.filterIsIn(urls.toSet())
 
         val zapReceiver = if (wantsForwardZapTo) forwardZapTo.value.toZapSplitSetup() else null

@@ -405,7 +405,7 @@ class DesktopMediaUploader(
             ImageFileStats(size?.first, size?.second, file.length())
         }
 
-    // Like Android: the URL's extension names the type, the server's Content-Type when it has none.
+    // Like Android: the server's image type when it sends one, else the URL's extension.
     override suspend fun remoteFileHeader(
         url: String,
         httpClients: IRoleBasedHttpClientBuilder,
@@ -420,13 +420,9 @@ class DesktopMediaUploader(
                         ?.substringAfterLast('.', "")
                         .orEmpty()
                 val mimeType =
-                    MediaMetadataReader
-                        .guessMimeTypeFromExtension(extension)
-                        .takeIf { it != OCTET_STREAM }
-                        ?: blob.contentType
-                            ?.substringBefore(';')
-                            ?.trim()
-                            ?.ifEmpty { null }
+                    blob.imageMimeType()
+                        ?: MediaMetadataReader.guessMimeTypeFromExtension(extension).takeIf { it != OCTET_STREAM }
+                        ?: blob.mimeType()
                         ?: OCTET_STREAM
                 MediaMetadataReader.compute(blob.bytes, mimeType, ::decodeImageWithSkia).header()
             } catch (e: Exception) {

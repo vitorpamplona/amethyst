@@ -41,6 +41,9 @@ import java.nio.ByteBuffer
 object PreviewMetadataCalculator {
     private const val LOG_TAG = "PreviewMetadataCalc"
 
+    // Twice the 100 pixels blurhash and thumbhash scale down to.
+    private const val HASH_SOURCE_MIN_SIDE = 200
+
     private fun isImage(mimeType: String?) = mimeType?.startsWith("image/", ignoreCase = true) == true
 
     private fun isVideo(mimeType: String?) = mimeType?.startsWith("video/", ignoreCase = true) == true
@@ -51,6 +54,16 @@ object PreviewMetadataCalculator {
         BitmapFactory.Options().apply {
             inPreferredConfig = Bitmap.Config.ARGB_8888
         }
+
+    /** The largest power-of-two step that keeps the short side at [HASH_SOURCE_MIN_SIDE] or more. */
+    private fun sampleSizeForHashes(
+        width: Int,
+        height: Int,
+    ): Int {
+        var sample = 1
+        while (minOf(width, height) / (sample * 2) >= HASH_SOURCE_MIN_SIDE) sample *= 2
+        return sample
+    }
 
     fun computeFromBytes(
         data: ByteArray,
@@ -64,8 +77,15 @@ object PreviewMetadataCalculator {
             }
 
             isImage(mimeType) -> {
-                val bitmap = BitmapFactory.decodeByteArray(data, 0, data.size, createBitmapOptions())
-                processImage(bitmap, dimPrecomputed)
+                // The real size comes from the header; the pixels are decoded at a fraction of it,
+                // since the preview hashes only look at about 100 of them.
+                val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
+                BitmapFactory.decodeByteArray(data, 0, data.size, bounds)
+                val options = createBitmapOptions().apply { inSampleSize = sampleSizeForHashes(bounds.outWidth, bounds.outHeight) }
+                val bitmap = BitmapFactory.decodeByteArray(data, 0, data.size, options)
+                val hashes = processBitmap(bitmap)
+                val realDim = if (bitmap != null && bounds.outWidth > 0 && bounds.outHeight > 0) DimensionTag(bounds.outWidth, bounds.outHeight) else null
+                hashes.copy(dim = realDim ?: hashes.dim ?: dimPrecomputed)
             }
 
             isVideo(mimeType) -> {

@@ -357,6 +357,7 @@ open class NewProductViewModel :
 
         val emojis = account.emoji.findEmojiTags(tagger.message)
         val urls = findURLs(tagger.message)
+        iMetaDescription.awaitLinkedImages()
         val usedAttachments = iMetaDescription.filterIsIn(urls.toSet()) + productImages.map { it.toIMeta() }
 
         val geoHash = if (wantsToAddGeoHash) (pickedGeoHash ?: (location?.value as? LocationResult.Success)?.geoHash?.toString()) else null

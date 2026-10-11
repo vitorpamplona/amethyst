@@ -611,6 +611,7 @@ class ChatNewMessageViewModel :
 
         val messageText = tagger.message
         val urls = findURLs(messageText)
+        iMetaAttachments.awaitLinkedImages()
         val usedAttachments = iMetaAttachments.filterIsIn(urls.toSet())
         val emojis = accountViewModel.account.emoji.findEmojiTags(messageText)
         val geoHash = if (wantsToAddGeoHash) (pickedGeoHash ?: (location?.value as? LocationResult.Success)?.geoHash?.toString()) else null
