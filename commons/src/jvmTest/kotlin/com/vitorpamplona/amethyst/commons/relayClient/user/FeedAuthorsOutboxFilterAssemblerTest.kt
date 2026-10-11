@@ -20,12 +20,16 @@
  */
 package com.vitorpamplona.amethyst.commons.relayClient.user
 
+import com.vitorpamplona.amethyst.commons.feeds.custom.FeedSource
 import com.vitorpamplona.amethyst.commons.model.cache.EventCache
 import com.vitorpamplona.amethyst.commons.model.topNavFeeds.allFollows.AllFollowsByOutboxTopNavFilter
 import com.vitorpamplona.amethyst.commons.model.topNavFeeds.allUserFollows.AllUserFollowsByOutboxTopNavFilter
+import com.vitorpamplona.amethyst.commons.model.topNavFeeds.custom.CustomFeedTopNavFilter
 import com.vitorpamplona.amethyst.commons.model.topNavFeeds.noteBased.author.AuthorsByOutboxTopNavFilter
 import com.vitorpamplona.amethyst.commons.model.topNavFeeds.noteBased.author.AuthorsByProxyTopNavFilter
+import com.vitorpamplona.amethyst.commons.model.topNavFeeds.noteBased.community.SingleCommunityTopNavFilter
 import com.vitorpamplona.amethyst.commons.model.topNavFeeds.noteBased.muted.MutedAuthorsByOutboxTopNavFilter
+import com.vitorpamplona.amethyst.commons.relayClient.user.loaders.UserOutboxFinderSubAssembler
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.crypto.KeyPair
 import com.vitorpamplona.quartz.nip01Core.metadata.MetadataEvent
@@ -37,6 +41,9 @@ import com.vitorpamplona.quartz.nip65RelayList.AdvertisedRelayListEvent
 import com.vitorpamplona.quartz.nip65RelayList.tags.AdvertisedRelayInfo
 import com.vitorpamplona.quartz.nip65RelayList.tags.AdvertisedRelayType
 import com.vitorpamplona.quartz.nip85TrustedAssertions.list.tags.ServiceProviderTag
+import com.vitorpamplona.quartz.utils.TimeUtils
+import kotlinx.collections.immutable.persistentListOf
+import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlin.test.AfterTest
 import kotlin.test.Test
@@ -96,10 +103,46 @@ class FeedAuthorsOutboxFilterAssemblerTest {
         // A proxy feed reads from the proxy relays, never from the authors' own.
         assertEquals(emptySet(), AuthorsByProxyTopNavFilter(authors, relays.value).outboxAuthors())
 
-        // The follows feeds stay out: their kind:3 part already loads at startup, and handing every
-        // follow to the finder would keep a standing REQ for the ones that never published a list.
+        // The follows feeds stay out: AccountFollowsLoaderSubAssembler loads their whole author set
+        // (kind:3 plus the user's own lists and follow packs) at startup.
         assertEquals(emptySet(), AllUserFollowsByOutboxTopNavFilter(authors, relays, blocked).outboxAuthors())
         assertEquals(emptySet(), AllFollowsByOutboxTopNavFilter(authors, defaultRelays = relays, blockedRelays = blocked).outboxAuthors())
+    }
+
+    @Test
+    fun customAndCommunityFeedsExposeAuthorsOnlyWhenTheyReadTheirRelays() {
+        val authors = setOf("aa".repeat(32), "bb".repeat(32))
+        val follows = MutableStateFlow(emptySet<NormalizedRelayUrl>())
+        val byAuthors = FeedSource.Filter(authors = authors.toImmutableList())
+
+        assertEquals(authors, CustomFeedTopNavFilter(byAuthors, follows, blocked, emptySet()).outboxAuthors())
+        // A feed pinned to its own relays, or read through a proxy, never asks the authors' relays.
+        val pinned = byAuthors.copy(relays = persistentListOf("wss://pinned.test"))
+        assertEquals(emptySet(), CustomFeedTopNavFilter(pinned, follows, blocked, emptySet()).outboxAuthors())
+        assertEquals(emptySet(), CustomFeedTopNavFilter(byAuthors, follows, blocked, setOf(outboxRelay)).outboxAuthors())
+
+        assertEquals(authors, SingleCommunityTopNavFilter("34550:${"cc".repeat(32)}:x", authors, emptySet(), blocked).outboxAuthors())
+        assertEquals(emptySet(), SingleCommunityTopNavFilter("34550:${"cc".repeat(32)}:x", authors, setOf(outboxRelay), blocked).outboxAuthors())
+    }
+
+    @Test
+    fun membersNoRelayHasAListForAreDroppedNotKeptInAStandingReq() {
+        val noList = NostrSignerSync(KeyPair())
+        val user = cache.getOrCreateUser(noList.pubKey)
+        val keys = listOf(UserFinderQueryState(user, account))
+
+        // Every relay this account would ask already answered without a kind:10002.
+        assembler.outboxFinder.hasTried.newEose(user, indexRelay, TimeUtils.now())
+        assertEquals(emptyList(), assembler.outboxFinder.updateFilter(keys).orEmpty())
+
+        // The on-screen user finder keeps asking the default index relays for them instead.
+        val onScreen = UserOutboxFinderSubAssembler(client, cache, RelayOfflineTracker(client), { emptySet() })
+        try {
+            onScreen.hasTried.newEose(user, indexRelay, TimeUtils.now())
+            assertTrue(onScreen.updateFilter(keys).orEmpty().isNotEmpty())
+        } finally {
+            onScreen.destroy()
+        }
     }
 
     @Test
@@ -115,11 +158,7 @@ class FeedAuthorsOutboxFilterAssemblerTest {
                 UserFinderQueryState(cache.getOrCreateUser(it.pubKey), account)
             }
 
-        val filters =
-            assembler.group
-                .single()
-                .updateFilter(keys)
-                .orEmpty()
+        val filters = assembler.outboxFinder.updateFilter(keys).orEmpty()
 
         val requested = filters.flatMap { it.filter.authors.orEmpty() }.toSet()
         assertEquals(setOf(listOnly.pubKey), requested)

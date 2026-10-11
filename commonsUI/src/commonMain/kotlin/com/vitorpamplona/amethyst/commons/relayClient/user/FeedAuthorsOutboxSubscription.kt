@@ -21,13 +21,16 @@
 package com.vitorpamplona.amethyst.commons.relayClient.user
 
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.produceState
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.commons.model.Account
 import com.vitorpamplona.amethyst.commons.model.topNavFeeds.IFeedTopNavFilter
+import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.LifecycleAwareKeyDataSourceSubscription
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.withContext
 
 /**
  * Loads the relay lists (and profiles) of the authors the selected top-nav feed reads by the
@@ -44,12 +47,19 @@ fun FeedAuthorsOutboxSubscription(
     val authors = filter.outboxAuthors()
 
     // Keyed on the author set, not the filter: the filter is rebuilt whenever the list event
-    // updates, and resubscribing the same members would only churn the finder.
-    DisposableEffect(authors, account, dataSource) {
-        val states = authors.map { UserFinderQueryState(account.cache.getOrCreateUser(it), account) }
-        dataSource.subscribe(states)
-        onDispose { dataSource.unsubscribe(states) }
+    // updates, and resubscribing the same members would only churn the finder. A list can hold
+    // thousands of members, so their users are looked up (and created) off the main thread.
+    val states by produceState(emptyList<UserFinderQueryState>(), authors, account) {
+        value =
+            withContext(Dispatchers.Default) {
+                authors.mapNotNull { pubkey ->
+                    account.cache.checkGetOrCreateUser(pubkey)?.let { UserFinderQueryState(it, account) }
+                }
+            }
     }
+
+    // Stops asking 30s after the app leaves the foreground, like the feed's own subscription.
+    LifecycleAwareKeyDataSourceSubscription(states, dataSource)
 }
 
 @Composable

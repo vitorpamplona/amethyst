@@ -75,6 +75,9 @@ class CustomFeedTopNavFilter(
 
     private fun byOutbox(authorsPerRelay: Map<NormalizedRelayUrl, Set<HexKey>>) = CustomFeedTopNavPerRelayFilterSet(authorsPerRelay.mapValues { scope(it.value) })
 
+    // Mirrors toPerRelayFlow: the authors' own relays are read only when the feed pins no relays.
+    override fun outboxAuthors(): Set<HexKey> = if (source != null && ownRelays.isEmpty() && proxyRelays.isEmpty()) authors else emptySet()
+
     override fun toPerRelayFlow(cache: ICacheProvider): Flow<CustomFeedTopNavPerRelayFilterSet> =
         when {
             source == null -> MutableStateFlow(CustomFeedTopNavPerRelayFilterSet(emptyMap()))

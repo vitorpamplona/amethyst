@@ -74,8 +74,11 @@ class AccountFollowsLoaderSubAssembler(
     /**
      * This assembler saves the EOSE per user key. That EOSE includes their metadata, etc
      * and reports, but only from trusted accounts (follows of all logged in users).
+     *
+     * Sized above any realistic follow set: everyone still missing a relay list must fit, or an
+     * evicted user is asked for again on the next pass and each answer evicts another.
      */
-    val hasTried: EOSEAccountFast<User> = EOSEAccountFast(2000)
+    val hasTried: EOSEAccountFast<User> = EOSEAccountFast(10_000)
 
     // updates all filters
     override fun invalidateFilters(ignoreIfDoing: Boolean) {
@@ -146,8 +149,12 @@ class AccountFollowsLoaderSubAssembler(
     fun updateFilterForAllAccounts(accounts: Collection<Account>): List<RelayBasedFilter>? {
         val users = mutableSetOf<User>()
         accounts.forEach { key ->
-            key.kind3FollowList.userList.value.forEach { user ->
-                if (user.authorRelayList() == null) {
+            // Every author the "All Follows" feed reads by the outbox model: the kind:3 follows plus
+            // the members of the user's own people lists and follow packs. A member nobody follows
+            // has no other loader asking for their kind:10002, so the feed could not find their notes.
+            key.allFollows.flow.value.authors.forEach { pubkey ->
+                val user = cache.checkGetOrCreateUser(pubkey)
+                if (user != null && user.authorRelayList() == null) {
                     users.add(user)
                 }
             }
@@ -200,7 +207,7 @@ class AccountFollowsLoaderSubAssembler(
         // adds new subscriptions
         uniqueSubscribedAccounts.forEach {
             if (it.value.userProfile() !in accountUpdatesJobMap.keys) {
-                newWatcher(it.value.userProfile(), it.value.kind3FollowList.userList)
+                newWatcher(it.value.userProfile(), it.value.allFollows.flow)
             }
         }
 
@@ -217,7 +224,7 @@ class AccountFollowsLoaderSubAssembler(
     @OptIn(FlowPreview::class)
     fun newWatcher(
         user: User,
-        followList: Flow<List<User>>,
+        followList: Flow<*>,
     ) {
         accountUpdatesJobMap[user]?.cancel()
         accountUpdatesJobMap[user] =

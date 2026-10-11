@@ -43,6 +43,9 @@ class SingleCommunityTopNavFilter(
 ) : IFeedTopNavFilter {
     override fun matchAuthor(pubkey: HexKey) = authors == null || pubkey in authors
 
+    // The moderators' own relays are only read when the community names no relays of its own.
+    override fun outboxAuthors(): Set<HexKey> = if (relays.isEmpty()) authors.orEmpty() else emptySet()
+
     override fun match(noteEvent: Event): Boolean =
         if (noteEvent is LiveActivitiesEvent) {
             (authors != null && noteEvent.participantsIntersect(authors)) || noteEvent.isForCommunity(community)

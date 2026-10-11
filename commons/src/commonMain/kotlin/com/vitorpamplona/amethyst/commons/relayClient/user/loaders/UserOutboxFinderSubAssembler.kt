@@ -48,6 +48,10 @@ class UserOutboxFinderSubAssembler(
     val failureTracker: RelayOfflineTracker,
     allKeys: () -> Set<UserFinderQueryState>,
     triedCacheSize: Int = 200,
+    // Keeps a live REQ on the default index and search relays for users every relay already
+    // answered without a kind:10002, so one published later still arrives. Worth it for the few
+    // users on screen; not for a feed's whole author list, where most of them may never have one.
+    val keepAskingForMissingRelayLists: Boolean = true,
 ) : BaseEoseManager<UserFinderQueryState>(client, allKeys) {
     val relayListKinds = listOf(MetadataEvent.KIND, AdvertisedRelayListEvent.KIND)
 
@@ -176,7 +180,7 @@ class UserOutboxFinderSubAssembler(
                 user.pubkeyHex.takeIf { it !in placedPubkeys }
             }
 
-        if (abandonedPubkeys.isEmpty()) return activeFilters
+        if (abandonedPubkeys.isEmpty() || !keepAskingForMissingRelayLists) return activeFilters
 
         val sortedAbandoned = abandonedPubkeys.sorted()
         val fallbackRelays =
