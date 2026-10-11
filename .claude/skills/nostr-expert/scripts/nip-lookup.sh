@@ -11,6 +11,7 @@ if [ $# -eq 0 ]; then
     echo "Examples:"
     echo "  $0 01              # Find NIP-01 files"
     echo "  $0 44              # Find NIP-44 files"
+    echo "  $0 B7              # Hex-id NIPs (5A, 7D, B7, ...)"
     echo "  $0 encryption      # Search for 'encryption' in NIP packages"
     echo ""
     echo "Set QUARTZ_PATH to override default quartz location"
@@ -19,16 +20,19 @@ fi
 
 SEARCH_TERM="$1"
 
-# Check if it's a number (NIP number)
-if [[ "$SEARCH_TERM" =~ ^[0-9]+$ ]]; then
-    # Pad to 2 digits
-    NIP_NUM=$(printf "%02d" "$SEARCH_TERM")
+# A NIP id: decimal (44, 1 -> 01) or a two-char hex id (5A, B7, 7D)
+if [[ "$SEARCH_TERM" =~ ^[0-9]+$ || "$SEARCH_TERM" =~ ^[0-9A-Fa-f]{2}$ ]]; then
+    if [[ "$SEARCH_TERM" =~ ^[0-9]+$ ]]; then
+        NIP_NUM=$(printf "%02d" "$((10#$SEARCH_TERM))")
+    else
+        NIP_NUM="$SEARCH_TERM"
+    fi
     echo "Searching for NIP-$NIP_NUM implementation..."
     echo "================================================"
     echo ""
 
     # Find directories matching nip##*
-    find "$QUARTZ_PATH" -type d -name "nip${NIP_NUM}*" | while read -r dir; do
+    find "$QUARTZ_PATH" -type d -iname "nip${NIP_NUM}*" | while read -r dir; do
         echo "📁 $(basename "$dir")/"
         find "$dir" -name "*.kt" -type f | while read -r file; do
             rel_path="${file#$QUARTZ_PATH/}"

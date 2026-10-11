@@ -1,100 +1,111 @@
 ---
 name: account-state
-description: Account state and in-memory event store patterns in Amethyst. Use when working with `Account.kt` (per-user state objects — `kind3FollowList`, `nip65RelayList`, `muteList`, `bookmarkState`, each exposing a `.flow` StateFlow), `LocalCache` (the object-level event store backed by `LargeCache`), `User`/`Note` model classes, or any ViewModel that reads user-specific state. Covers how account events cascade from relay arrival to UI state, how to add a new account-scoped setting, and when to read from `LocalCache` vs subscribe to a StateFlow.
+description: Account, LocalCache, User/Note and feeds in commons/model + commons/feeds: per-user XState objects (.flow), FeedFilter/AdditiveFeedFilter, FeedViewModel. Use when adding an account setting or list, a feed, or choosing LocalCache vs account flows.
 ---
 
-# Account & Local Cache State
+# Account, LocalCache and Feeds
 
-The backbone of Amethyst's client state: one `Account` per signed-in user, plus the singleton `LocalCache` that holds every `Note` and `User` the client has seen.
+The client state backbone, all headless in `commons/src/commonMain/kotlin/com/vitorpamplona/amethyst/commons/`
+(abbreviated `commons/…/` below):
 
-## When to Use This Skill
-
-- Working on `amethyst/src/main/java/com/vitorpamplona/amethyst/model/Account.kt`
-- Working on `amethyst/src/main/java/com/vitorpamplona/amethyst/model/LocalCache.kt`
-- Adding a new account-scoped setting (mutes, bookmarks, custom relay lists, private lists)
-- Reading/writing user metadata (`User`) or note state (`Note`)
-- Deciding whether to query `LocalCache` vs subscribe to an `Account` StateFlow
-
-## Mental Model
+- `model/cache/LocalCache.kt` — `object LocalCache : EventCache()`. Every `Note` / `User` the client has
+  seen. All logic is in `model/cache/EventCache.kt` (an open class so tests can build their own);
+  Android and Desktop both use the `LocalCache` singleton (`AppModules.kt`, `DesktopAppModules.kt`).
+- `model/Account.kt` — one `Account` per signed-in user: ~50 per-feature **state objects**
+  (`kind3FollowList`, `nip65RelayList`, `muteList`, `bookmarkState`, …), each exposing `.flow`.
+- `feeds/` + `viewmodels/` + `<feature>/dal/` — feeds: a `FeedFilter` scans `LocalCache`, a
+  `FeedContentState` / `FeedViewModel` keeps the result live.
 
 ```
-Relay frame ──► LocalCache.insertOrUpdateNote() ──► LocalCacheFlow emits change
-                                                            │
-                                                            ▼
-                                Account state objects pin the relevant addressable notes
-                                                            │
-                                                            ▼
-                            State-object `.flow` updates (kind3FollowList, nip65RelayList, muteList, …)
-                                                            │
-                                                            ▼
-                                                    ViewModels collect
-                                                            │
-                                                            ▼
-                                                 Composables render
+relay EVENT ─► EventCache.justConsume ─► Note/User updated, indexes, live.newNote(...)
+                     │                                   │
+                     ▼                                   ▼
+   XState pins its addressable note,            LocalCacheFlow.newEventBundles
+   note.flow().metadata → XState.flow           → FeedViewModel → FeedFilter.applyFilter
+                     │                                   │
+                     └────────► ViewModels / composables ◄┘
 ```
 
-`LocalCache` is the event store. `Account` is the *derived* per-user view (follow list, relays, mutes, emojis, bookmarks, etc.). UI listens to the `.flow` of `Account`'s state objects, not directly to `LocalCache`, except for note-level rendering.
+## Account state objects
 
-## Key Files
+Pattern, copied from `model/nip51Lists/muteList/MuteListState.kt`:
 
-### `Account.kt` (singleton-per-session)
+- **Pin the note.** `val muteListNote = cache.getOrCreateAddressableNote(MuteListEvent.createAddress(signer.pubKey))`.
+  `LocalCache`'s `notes` / `addressables` are `LargeSoftCache` (weak references), so the state
+  object's field is what keeps its note from being collected.
+- **Expose one `StateFlow`.** Map `muteListNote.flow().metadata.stateFlow` → decrypt (private lists go
+  through a per-feature `…DecryptionCache` such as `MuteListDecryptionCache`, held next to it in
+  `Account` as `muteListDecryptionCache`) → fall back to the `AccountSettings` backup
+  (`settings.backupMuteList`) when the event is absent → `stateIn(scope, SharingStarted.Eagerly, …)`.
+- **Mutation helpers return a signed event — publishing it is the caller's job.**
+  `MuteListState.hideUser(pubkey)` returns a `MuteListEvent`; `Account.hideUser` does
+  `sendMyPublicAndPrivateOutbox(muteList.hideUser(pubkeyHex))`. A state change you never send is
+  invisible to every other client and is lost when the next relay copy arrives.
+- Consumers read `account.<feature>.flow`, never a `MutableStateFlow` on `Account`.
 
-- `class Account(...)` — holds 50+ **state objects**, one per feature, each wired to a specific Nostr kind:
-  - `kind3FollowList = Kind3FollowListState(...)` ← NIP-02 ContactList (kind 3)
-  - `nip65RelayList = Nip65RelayListState(...)` ← NIP-65 RelayList (kind 10002), plus siblings `dmRelayList`, `searchRelayList`, `blockedRelayList`, `trustedRelayList`, `proxyRelayList`, `broadcastRelayList`, `indexerRelayList`, …
-  - `muteList = MuteListState(...)` ← NIP-51 MuteList (kind 10000)
-  - `bookmarkState = BookmarkListState(...)` ← NIP-51 Bookmarks (kind 10003), plus `bookmarkSets`, `pinState`, `interestSets`, `peopleLists`, `followLists`, `hashtagList`, `geohashList`, `communityList`, `emoji`, `blossomServers`, …
-  - Derived/merged views: `hiddenUsers`, `allFollows`, `homeRelays`, `outboxRelays`, `dmRelays`, `notificationRelays`, `trustedRelays`, and the `live*FollowListsPerRelay` outbox loaders.
-- **The pattern:** each `XState` class pins its addressable note via `cache.getOrCreateAddressableNote(address)` (a long-term reference so GC/eviction can't drop it), exposes `val flow: StateFlow<…>` derived from the note's metadata flow (decrypted through a per-feature `DecryptionCache`, with backup fallback from `AccountSettings`, `stateIn(scope, Eagerly, …)`), and offers suspend mutation helpers (e.g. `MuteListState.hideUser(pubkey)`) that build the updated signed event. Consumers read `account.muteList.flow`, never a raw `MutableStateFlow` on `Account`.
-- Encrypted lists pair the state object with a `DecryptionCache` sibling (`muteListDecryptionCache`, `followSetDecryptionCache`, …) so NIP-44 decryption results are cached per event.
-- UI reads via `collectAsStateWithLifecycle` on Android and `collectAsState` on Desktop.
-- Sibling files per feature live alongside: `AccountSettings.kt`, `AccountSyncedSettings.kt`, plus per-NIP state classes under `model/nip02FollowLists/`, `model/nip51Lists/`, `model/nip65RelayList/`, etc.
+Full catalog of properties, classes, kinds and packages: `references/account-state-flow.md`.
 
-### `LocalCache.kt`
+### Adding an account-scoped setting or list
 
-- `object LocalCache : ILocalCache, ICacheProvider` — the singleton event store.
-- Primary structures (all `LargeCache` — see `nostr-expert/references/large-cache.md`):
-  - `notes: LargeCache<HexKey, Note>` — every seen event (regular + addressable + replaceable) keyed by id or d-address.
-  - `users: LargeCache<HexKey, User>` — every seen pubkey, lazily populated.
-  - `addressables: LargeCache<Address, Note>` — secondary index for `kind:pubkey:d-tag` lookups.
-  - `channels`, `deletionIndex`, `hashtagIndex`, …
-- `LocalCacheFlow` emits coarse-grained "something changed, recheck" signals. Fine-grained reactivity lives in `Account`'s per-kind StateFlows.
-- Eviction is driven by `MemoryTrimmingService` (android service) under pressure.
+1. Persisted as a Nostr event? Pick the kind (NIP-51 list, NIP-78 app data, a relay list) and make
+   sure quartz has the event class (see `nostr-expert`).
+2. Add `commons/…/model/nipXX…/XState.kt` modeled on `MuteListState` (encrypted) or
+   `nip51Lists/BookmarkListState.kt` (plain): pin, flow, suspend mutation helpers that build the
+   event with the quartz class and sign it.
+3. Instantiate it as a `val` in `Account.kt` (plus its `DecryptionCache` if private) and add an
+   `Account` method that sends the returned event (`sendMyPublicAndPrivateOutbox`, `sendAutomatic`, …).
+   If the list must survive relay loss, add a `backupX` field to `AccountSettings`.
+4. Make sure `EventCache.justConsumeInnerInner` lists the event class — a kind that is not listed
+   falls into the `else` branch and is **rejected**, so the state object never sees it, even though
+   `EventFactory` parses it. Replaceable kinds without custom logic go in the
+   `consumeBaseReplaceable` group.
+5. Relay subscription: `relay-client`. UI: settings screens are shared in
+   `commonsUI/…/commons/ui/screen/loggedIn/settings/`; strings follow the AGENTS.md *Strings* rules.
 
-### Model classes
+## LocalCache vs Account flow vs feed
 
-- `User.kt` — mutable profile holder. Contains metadata, follow/follower counts, relay lists, liveset of notes authored.
-- `Note.kt` — mutable note holder. Contains the underlying `Event`, replies, reactions, zaps. Mutation via `addReply`, `addReaction`, `addZap`, emitted on `Note.flowSet` flows.
-- `Constants.kt` — DEFAULT_RELAYS, magic kinds/limits not covered by quartz.
+| You render… | Read |
+|---|---|
+| one note / user you have an id for | `LocalCache.getOrCreateNote(id)` / `getOrCreateUser(pubkey)`, then `note.flow().metadata` (or `replies`, `reactions`, `zaps`, …) |
+| "my follows / mutes / relays / bookmarks" | `account.kind3FollowList.flow`, `account.muteList.flow`, `account.nip65RelayList.flow`, `account.hiddenUsers.flow`, … |
+| a list of notes | a `FeedFilter` + `FeedContentState` / `FeedViewModel` — `references/feeds.md` |
+| ad-hoc filter results | `LocalCache.observeNotes(filter: Filter): Flow<List<Note>>` |
 
-## Adding a New Account-Scoped Setting
+Never scan `LocalCache.notes` inside a composable.
 
-Typical recipe:
+## Feeds in one paragraph
 
-1. If the setting is persisted as a Nostr event, pick the right kind (e.g. NIP-51 list, NIP-78 app-specific data, NIP-65 relay list).
-2. Add a model folder under `amethyst/.../model/nipXX…/` with an `XState` class modeled on an existing one (`MuteListState` for an encrypted list, `BookmarkListState` for a plain one):
-   - Pin the addressable note: `val xNote = cache.getOrCreateAddressableNote(XEvent.createAddress(signer.pubKey))`.
-   - Expose `val flow: StateFlow<…>` mapped from `xNote.flow().metadata.stateFlow`, decrypting through a per-feature `DecryptionCache` if the list is private, with backup fallback from `AccountSettings`, then `stateIn(scope, Eagerly, default)`.
-   - Add suspend mutation helpers that build the updated event via the quartz event class (`XEvent.add/remove/create`) and return it signed.
-3. In `Account.kt`, instantiate the state object (and its `DecryptionCache` sibling if encrypted) as a `val`. Publishing the returned event goes through `Account`'s send path; the relay subscription side is the relayClient pattern (see `relay-client` skill).
-4. Add UI that `collect`s `account.x.flow`. Settings screens live in `amethyst/.../ui/screen/loggedIn/settings/`.
-
-## `LocalCache` vs `Account` Flow — Which to Read?
-
-- **Are you rendering a specific note / user you hold an id for?** → `LocalCache.getOrCreateNote(id)` + collect `note.flowSet.metadata`.
-- **Are you rendering "my follows", "my mutes", "my relays"?** → `account.<feature>.flow` (e.g. `account.kind3FollowList.flow`, `account.muteList.flow`, `account.nip65RelayList.flow`).
-- **Are you rendering a feed?** → Use a `FeedFilter` + `FeedViewModel` (see `feed-patterns` skill). Don't scan `LocalCache` in a composable.
+Bases are in `commons/…/feeds/`: `IFeedFilter` / `FeedFilter<T>` (`feed()`, `feedKey()`, `limit()`
+default 500, `showHiddenKey()`), `AdditiveFeedFilter<T>` (adds `applyFilter` + `sort` for
+incremental merges), `AdditiveComplexFeedFilter<T, U>` (incoming type differs from row type, e.g.
+`home/dal/HomeLiveFilter.kt`), `ChangesFlowFilter<T>`, `FilterByListParams`, `DefaultFeedOrder` /
+`sortedByDefaultFeedOrder()`, `FeedContentState`, `FeedState`. Concrete filters are **shared**, in
+`commons/…/<feature>/dal/` (`home/dal/`, `hashtag/dal/`, `notifications/dal/`, ~55 of them). The
+account's main-tab feeds are long-lived `FeedContentState`s in `viewmodels/AccountFeedContentStates.kt`
+(owned by `BaseAccountViewModel.feedStates`); per-screen feeds use a `FeedViewModel` subclass. Recipe,
+real code and traps: `references/feeds.md`.
 
 ## Gotchas
 
-- **`LocalCache` is a singleton across accounts.** Switching accounts doesn't wipe it — `Account` re-derives its flows from the same cache.
-- **Don't store Flows inside `Note` / `User`** expecting them to survive eviction. Eviction drops the whole object.
-- **State-object mutation helpers return a signed event — publishing it is the caller's job.** A locally updated list without a publish means other clients won't see it.
-- **`Note` is mutable** — treat instances as identity-based (same id → same Note). Use `.flowSet` when you need reactive state.
-- **`MemoryTrimmingService` can evict aggressively** on Android under pressure. Don't assume a previously-seen note is still resident.
+- **`LocalCache` is shared across accounts.** Switching accounts doesn't wipe it; every `Account`
+  derives its flows from the same cache. Filters that depend on the account must put the account
+  pubkey in `feedKey()`.
+- **Hold the `Note`, not the `Event`.** `getOrCreate*` returns the same wrapper per id; for
+  replaceable/addressable notes `note.event` is swapped in place when a newer version arrives.
+- **Flows on a `Note` are not durable.** `CachePruner` (`model/cache/CachePruner.kt`) calls
+  `clearFlow()` on notes during cleanup, and anything not strongly held can be collected. Re-fetch
+  via `note.flow()`; don't stash flow references.
+- **Observers can fire before derived state exists.** `EventCache` notifies observers
+  (`refreshNewNoteObservers`) as part of consuming an event, before some of what it derives from it
+  (channels, indexes) is filled in. Re-read state in the collector rather than trusting it is complete.
+- **Memory pressure trims.** `MemoryTrimmingService` (`model/cache/`) is run by both app modules,
+  and `AccountFeedContentStates` trims every feed to 200 items on `memoryPressure`. Never assume a
+  previously seen note is still resident.
 
 ## References
 
-- `references/account-state-flow.md` — catalog of major `Account` state objects and their source kinds.
-- `references/local-cache.md` — `LocalCache` internals, insertion path, indexes.
-- Complements: `nostr-expert` (event parsing), `relay-client` (subscription wiring), `feed-patterns` (how feeds consume this state), `auth-signers` (how mutation signs events).
+- `references/account-state-flow.md` — catalog of `Account` state objects, kinds and packages.
+- `references/local-cache.md` — `EventCache` structures, insertion path, lookups, pruning.
+- `references/feeds.md` — adding a feed: filter, state holder, invalidation, rendering, tests.
+- Related skills: `nostr-expert` (event classes, `EventFactory`), `relay-client` (subscriptions),
+  `auth-signers` (how mutations sign), `compose-expert` (rendering).

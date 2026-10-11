@@ -2,7 +2,7 @@
 
 Every concrete `SearchableEvent` implementor in Quartz, with the exact `indexableContent()`
 expression. **Update this file in the same PR as any change to the searchable set or to an
-`indexableContent()` body** (see SKILL.md). Verified against the code 2026-10-08.
+`indexableContent()` body** (see the maintenance list in this skill's SKILL.md). Verified against the code 2026-10-08.
 
 Counts: 201 concrete classes covering 201 kind values (`GitStatusEvent` spans 4 kinds;
 kind 30063 is shared by two NIPs, kind 38000 by three classes, kind 30301 by two and kind 38385 with other apps — see the footnotes). The kind

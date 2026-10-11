@@ -1,17 +1,6 @@
-# Proguard Rules for Amethyst
+# R8 rules for Amethyst
 
-Proguard configuration for optimizing and obfuscating Android APK while preserving necessary code.
-
-## What is Proguard/R8?
-
-**R8** is Android's default code shrinker and obfuscator (replaced Proguard in AGP 3.4.0+). It:
-- **Shrinks** code by removing unused classes/methods
-- **Obfuscates** code by renaming classes/methods to short names
-- **Optimizes** code by inlining methods and removing dead code
-
-## Amethyst Proguard Configuration
-
-**Files:**
+## Files
 
 - `amethyst/proguard-rules.pro` — the app's rules. Read it before adding
   anything: it is commented rule by rule.
@@ -22,9 +11,10 @@ Proguard configuration for optimizing and obfuscating Android APK while preservi
 - The AGP default `proguard-android-optimize.txt`, which already contributes the
   Android-wide basics (Parcelable CREATOR fields, `native <methods>`, the enum
   `values()`/`valueOf()` pair, …). Don't restate its rules.
-- `commons/`, `commonsUI/` and the other library modules deliberately have **no**
-  rules files. They are not minified and they wire no consumer rules, so a file
-  there would be dead configuration.
+- `commons/consumer-rules.pro` and `commonsUI/consumer-rules.pro` exist but are
+  empty, and neither module's `build.gradle.kts` wires them. These modules are not
+  minified on their own, so a rule written there is dead configuration. Put it in
+  `amethyst/proguard-rules.pro`.
 
 ### The policy: keep only what is reached BY NAME
 
@@ -47,9 +37,9 @@ name.** In this app those are, exhaustively:
 | JNI symbol `Java_<class>_<method>` | `ArtiNative`, secp256k1 | covered by the default `native <methods>` rule |
 | Native code calling *back* by name | `ArtiLogCallback.onLogLine`, looked up with `GetMethodID` in `tools/arti-build/src/lib.rs` | `-keep class …ArtiLogCallback { *; }` |
 | Generated code reflected over by a library | the AppFunctions bridge (`appfunctions.**`, play flavor only) | `-keep class <pkg>.** { *; }` |
-| Enum constant persisted as a string | `UISharedPreferences` writes `enum.name`, reads `Type.valueOf(s)` | `-keepclassmembers enum * { <fields>; … }` |
+| Enum constant persisted as a string | `model/preferences/UiSharedPreferences.kt` writes `enum.name`, reads `Type.valueOf(s)` | `-keepclassmembers enum * { <fields>; … }` |
 | Class name in a manifest `<meta-data android:value>` | `AmethystCastOptionsProvider` | explicit `-keep` — AGP generates keeps from component `android:name`, **not** from meta-data |
-| Class name in WorkManager's database | the three `CoroutineWorker`s | `-keep class * extends androidx.work.ListenableWorker { <init>(...); }` |
+| Class name in WorkManager's database | the three `CoroutineWorker`s | none of ours: androidx.work's own consumer rules keep it; the contract still checks the names |
 
 What does **not** need a keep, and where the temptation usually comes from:
 
@@ -182,237 +172,3 @@ rollout (the crash reporter retraces itself, so breaks are legible within
 hours), and exercising NIP-47 wallet connect, NIP-46 bunker login, Tor,
 scheduled posts and a settings round-trip (change theme/font, kill, relaunch) on
 a minified build — those are the paths the keeps above exist for.
-
-## Build Configuration
-
-### Enable R8 in build.gradle
-
-```gradle
-android {
-    buildTypes {
-        release {
-            minifyEnabled = true
-            shrinkResources = true
-            proguardFiles(
-                getDefaultProguardFile("proguard-android-optimize.txt"),
-                "proguard-rules.pro"
-            )
-        }
-
-        debug {
-            minifyEnabled = false
-        }
-    }
-}
-```
-
-### Multiple Proguard Files
-
-```gradle
-android {
-    buildTypes {
-        release {
-            proguardFiles(
-                getDefaultProguardFile("proguard-android-optimize.txt"),
-                "proguard-rules.pro",
-                "proguard-quartz.pro",  // Library-specific rules
-                "proguard-compose.pro"  // Compose-specific rules
-            )
-        }
-    }
-}
-```
-
-## Debugging Proguard Issues
-
-### Generate Mapping File
-
-R8 generates `mapping.txt` in `app/build/outputs/mapping/release/`:
-
-```
-# Original class name -> Obfuscated name
-com.vitorpamplona.amethyst.ui.MainActivity -> a.b.c:
-    void onCreate(Bundle) -> a
-```
-
-### Deobfuscate Stack Traces
-
-```bash
-# Using retrace (part of Android SDK)
-retrace.sh mapping.txt stacktrace.txt
-```
-
-### Enable Proguard Output
-
-```gradle
-android {
-    buildTypes {
-        release {
-            proguardFiles(...)
-
-            // Generate reports
-            postprocessing {
-                proguardFiles = [...]
-                obfuscate = true
-                optimizeCode = true
-                removeUnusedCode = true
-            }
-        }
-    }
-}
-```
-
-**Output files:**
-- `build/outputs/mapping/release/configuration.txt` - All Proguard rules applied
-- `build/outputs/mapping/release/mapping.txt` - Obfuscation mappings
-- `build/outputs/mapping/release/seeds.txt` - Classes kept by `-keep` rules
-- `build/outputs/mapping/release/usage.txt` - Code removed by R8
-
-### Test Release Build
-
-```bash
-./gradlew assembleRelease
-
-# Install and test
-adb install app/build/outputs/apk/release/app-release.apk
-```
-
-## Common Issues
-
-### Issue: NoSuchMethodException at Runtime
-
-**Cause:** Proguard removed or renamed a method used via reflection.
-
-**Solution:**
-```proguard
--keep class com.example.YourClass {
-    public <methods>;
-}
-```
-
-### Issue: Serialization Fails
-
-**Cause:** Data class fields were renamed.
-
-**Solution:**
-```proguard
--keep @kotlinx.serialization.Serializable class * { *; }
--keepclassmembers class * {
-    @kotlinx.serialization.SerialName <fields>;
-}
-```
-
-### Issue: Compose Navigation Crashes
-
-**Not** the route classes being obfuscated — that cannot happen. A type-safe
-route's pattern comes from its kotlinx-serialization descriptor, and the compiler
-plugin bakes the serial name and every property name in as string literals, so
-renaming the class leaves the route string untouched. Adding
-`-keep @kotlinx.serialization.Serializable class …routes.** { *; }` pins a large
-tree for no reason and hides the real cause.
-
-Look instead at whether `navigation-common`'s own consumer rules made it into
-`configuration.txt`, and at the stack trace retraced through `mapping.txt`.
-
-### Issue: Native Library Crashes
-
-**Cause:** Native method signatures were changed.
-
-**Solution:**
-```proguard
--keepclasseswithmembernames class * {
-    native <methods>;
-}
-```
-
-## Optimization Tips
-
-### 1. Keep Only What's Necessary
-
-Don't use broad wildcards:
-```proguard
-# Bad - keeps everything
--keep class com.vitorpamplona.** { *; }
-
-# Good - keeps only specific packages
--keep class com.vitorpamplona.quartz.events.** { *; }
-```
-
-### 2. Test Thoroughly
-
-- Test all app features after enabling Proguard
-- Test deep links and navigation
-- Test serialization/deserialization
-- Test external library integrations
-
-### 3. Use AGP's Proguard Analysis
-
-```gradle
-android {
-    buildTypes {
-        release {
-            // Generate R8 configuration
-            android.debug.obsoleteApi = true
-        }
-    }
-}
-```
-
-### 4. Analyze APK Size
-
-```bash
-# Build release APK
-./gradlew assembleRelease
-
-# Analyze APK with Android Studio
-# Build > Analyze APK > Select app-release.apk
-```
-
-See `scripts/analyze-apk-size.sh` for automated analysis.
-
-## Product Flavor Specific Rules
-
-### Play Flavor (Firebase)
-
-```proguard
-# proguard-play.pro
--keep class com.google.firebase.** { *; }
--keep class com.google.android.gms.** { *; }
-```
-
-### F-Droid Flavor (No Google Services)
-
-```proguard
-# proguard-fdroid.pro
-# UnifiedPush
--keep class org.unifiedpush.** { *; }
-```
-
-**Configure in build.gradle:**
-```gradle
-android {
-    flavorDimensions = ["channel"]
-    productFlavors {
-        create("play") {
-            dimension = "channel"
-            proguardFiles("proguard-play.pro")
-        }
-        create("fdroid") {
-            dimension = "channel"
-            proguardFiles("proguard-fdroid.pro")
-        }
-    }
-}
-```
-
-## File Locations
-
-- `amethyst/proguard-rules.pro` - Main Proguard rules
-- `amethyst/build/outputs/mapping/release/` - Proguard output files
-- `amethyst/build.gradle` - Proguard configuration
-
-## Resources
-
-- [Android R8 Documentation](https://developer.android.com/build/shrink-code)
-- [Proguard Manual](https://www.guardsquare.com/manual/configuration)
-- [Kotlinx Serialization Proguard](https://github.com/Kotlin/kotlinx.serialization#android)

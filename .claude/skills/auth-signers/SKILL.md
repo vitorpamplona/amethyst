@@ -1,104 +1,104 @@
 ---
 name: auth-signers
-description: Signer abstraction patterns in Amethyst. Use when working with event signing, choosing between a local keypair (`NostrSignerInternal`), a remote NIP-46 bunker signer (`NostrSignerRemote`), or a NIP-55 Android external-app signer (`NostrSignerExternal`). Covers the abstract `NostrSigner` base class, `SignerResult` contract, how to wire a new flow that needs to sign events, and the security/UX trade-offs between signer kinds.
+description: NostrSigner in Amethyst: NostrSignerInternal (local key), NostrSignerRemote (NIP-46 bunker), NostrSignerExternal (NIP-55 Android app). Use when signing/encrypting, adding a signer kind, login flows, or debugging sign timeouts.
 ---
 
-# Auth & Signers
+# Signers
 
-Any time Amethyst produces a signed Nostr event, it goes through a `NostrSigner`. There are three kinds; all three implement the same abstract contract so feature code doesn't care which one the user has configured.
+Every signed event and every NIP-04/NIP-44 operation goes through a `NostrSigner`. Feature
+code never knows which of the three kinds the user has.
 
-## When to Use This Skill
-
-- Adding a new flow that publishes an event (follow, post, react, zap, profile edit).
-- Reviewing whether a feature works when the user has a remote bunker signer or an external Android signer.
-- Debugging "Sign request approved but nothing happens" / timeouts on sign operations.
-- Onboarding a new signer kind (hardware signer, browser extension, etc.).
-- Understanding the NIP-46 bunker request/response taxonomy.
-
-## The Abstract Contract
+## The contract (all `suspend`)
 
 `quartz/src/commonMain/kotlin/com/vitorpamplona/quartz/nip01Core/signers/NostrSigner.kt`:
 
 ```kotlin
-abstract class NostrSigner(val pubKey: HexKey) {
-    abstract fun <T : Event> sign(
-        template: EventTemplate<T>,
-        onReady: (T) -> Unit,
-    )
-    abstract fun nip04Encrypt(plaintext: String, toPubKey: HexKey, onReady: (String) -> Unit)
-    abstract fun nip04Decrypt(ciphertext: String, fromPubKey: HexKey, onReady: (String) -> Unit)
-    abstract fun nip44Encrypt(...)
-    abstract fun nip44Decrypt(...)
-    abstract fun decryptZapEvent(event: ZapRequestEvent, onReady: (ZapRequestEvent) -> Unit)
+abstract class NostrSigner(pubKey: HexKey) {
+    open val pubKey: HexKey                       // open: NIP-46 resolves it from the bunker
+    abstract fun isWriteable(): Boolean
+    suspend fun <T : Event> sign(ev: EventTemplate<T>): T
+    abstract suspend fun <T : Event> sign(createdAt: Long, kind: Int, tags: Array<Array<String>>, content: String): T
+    abstract suspend fun nip04Encrypt(plaintext: String, toPublicKey: HexKey): String
+    abstract suspend fun nip04Decrypt(ciphertext: String, fromPublicKey: HexKey): String
+    abstract suspend fun nip44Encrypt(plaintext: String, toPublicKey: HexKey): String
+    abstract suspend fun nip44Decrypt(ciphertext: String, fromPublicKey: HexKey): String
+    abstract suspend fun decryptZapEvent(event: ZapRequestEvent): PrivateZapEvent
+    abstract suspend fun deriveKey(nonce: HexKey): HexKey
+    abstract suspend fun signPsbt(psbtHex: String): String   // NIP-BC; may throw UnsupportedMethodException
+    abstract fun hasForegroundSupport(): Boolean
+    suspend fun decrypt(encryptedContent: String, fromPublicKey: HexKey): String   // picks NIP-04 vs NIP-44
 }
 ```
 
-Sibling files in the same folder:
+Failures are thrown as `SignerExceptions` (`nip01Core/signers/SignerExceptions.kt`):
+`ReadOnlyException`, `UnauthorizedDecryptionException`, `NothingToDecrypt`,
+`AutomaticallyUnauthorizedException`, `ManuallyUnauthorizedException`, `TimedOutException`,
+`CouldNotPerformException`, `RunningOnBackgroundWithoutAutomaticPermissionException`,
+`SignerNotFoundException`, `UnsupportedMethodException`. Same folder: `NostrSignerSync`
+(blocking, for tests/scripts), `EventTemplate.kt`, `caches/` (`DecryptCache`).
 
-- **`NostrSignerInternal.kt`** — in-process signer with the user's seckey in memory. Fastest; used for locally-stored accounts.
-- **`NostrSignerSync.kt`** — blocking wrapper for scripts / migrations / tests where callbacks are inconvenient.
-- **`EventTemplate.kt`** — the unsigned holder passed to `sign()`.
-- **`SignerExceptions.kt`** — the error taxonomy (user denied, timeout, unsupported method, etc.).
-- **`caches/`** — request cache so duplicate sign/encrypt requests coalesce.
+## The three signers
 
-### Concrete implementations
+| Signer | File | Notes |
+|---|---|---|
+| `NostrSignerInternal` | `quartz/.../nip01Core/signers/NostrSignerInternal.kt` | key in process memory; created/imported accounts |
+| `NostrSignerRemote` | `quartz/.../nip46RemoteSigner/signer/NostrSignerRemote.kt` | NIP-46 bunker over kind 24133; `references/nip46-remote-signer.md` |
+| `NostrSignerExternal` | `quartz/src/androidMain/.../nip55AndroidSigner/client/NostrSignerExternal.kt` | NIP-55 app (Amber…) via intents + content provider; Android only; `references/nip55-android-signer.md` |
 
-- **Local (in-process)**: `NostrSignerInternal` — direct `Secp256k1Instance.signSchnorr` + NIP-44 inline. Used by accounts created/imported into Amethyst.
-- **Remote (NIP-46 bunker)**: `quartz/.../nip46RemoteSigner/signer/NostrSignerRemote.kt`. Talks to a bunker service over Nostr DMs using the `BunkerRequest*` / `BunkerResponse*` event taxonomy (`BunkerRequestConnect`, `BunkerRequestSign`, `BunkerRequestNip44Encrypt`, …).
-- **Android external (NIP-55)**: `quartz/src/androidMain/.../nip55AndroidSigner/client/NostrSignerExternal.kt`. Uses Android intents + content provider to delegate to another app on the same device. Launcher: `ExternalSignerLogin.kt`, `IActivityLauncher.kt`. Install-check: `IsExternalSignerInstalled.kt`.
+## Calling it from feature code
 
-## The `SignerResult` Contract
+Prefer an `Account` method (`commons/.../commons/model/Account.kt`) — e.g. `reactTo(...)`,
+`follow(user)` — which builds the template, signs with `account.signer`, updates local
+state and broadcasts (`sendMyPublicAndPrivateOutbox`, `sendAutomatic`). If none fits, build
+the template from the event class's `build(...)` and `account.signer.sign(template)`.
 
-Signers return via callback (and internally track via `SignerResult` sealed types in `nip46RemoteSigner/signer/SignerResult.kt` and `nip55AndroidSigner/api/SignerResult.kt`). Result variants cover success, user-denied, timeout, remote-disconnected, unsupported. Feature code should:
+From a ViewModel, run signer work through `BaseAccountViewModel.launchSigner { … }`
+(`commons/.../commons/viewmodels/BaseAccountViewModel.kt`): it runs on IO and turns
+`SignerExceptions` into user notices, so don't add your own catch-and-toast. Never retry a
+sign yourself: a timeout usually means the user didn't answer in time.
 
-1. Pass a callback that handles success.
-2. Trust the cache/timeout behavior — don't roll your own retry.
-3. Surface `SignerExceptions` to the user with actionable messaging (e.g. "Bunker disconnected — reconnect?").
+## Login / choosing a signer
 
-## Typical Flow (Feature Code)
+- **nsec / hex / ncryptsec** → `NostrSignerInternal`.
+- **`bunker://…`** → `NostrSignerRemote.fromBunkerUri(bunkerUri, signer, client)` (`signer`
+  is a fresh `NostrSignerInternal` transport key), then `suspend fun connect()`.
+- **NIP-55 app** → `ExternalSignerLogin.createIntent(...)`, launch it, then
+  `ExternalSignerLogin.parseResult(data)` for the pubkey and package; build
+  `NostrSignerExternal(pubKey, packageName, contentResolver)`.
 
-```kotlin
-// High-level: Account methods already do this internally.
-val signer: NostrSigner = account.signer     // whichever kind the user configured
-
-val template = reactionEventTemplate(noteId, authorPubKey, "+")
-
-signer.sign(template) { signed ->
-    account.sendToRelays(signed)             // or similar pipeline
-}
-```
-
-Most feature code should go through `Account`'s mutation methods (`account.sendReaction`, `account.follow`) rather than touching the signer directly — the account layer handles signing + publishing + local state update atomically. Reach for the signer directly only when `Account` doesn't have a helper.
-
-## Choosing a Signer at Sign-Up
-
-Entry points:
-
-- **Existing private key** (`nsec`, 32-byte hex, file) → `NostrSignerInternal`.
-- **Bunker URL** (`bunker://...`) → `NostrSignerRemote.fromBunkerUri(bunkerUri, localSigner, client)` in `nip46RemoteSigner/signer/NostrSignerRemote.kt` parses the URI and returns a `NostrSignerRemote`; then call its `suspend fun connect()` to perform the NIP-46 handshake.
-- **Installed external signer app** (Amber, nos2x, etc. on Android) → `ExternalSignerLogin.launch(...)` opens the signer app; approval yields a `NostrSignerExternal`.
-
-The login form (key field, `LoginViewModel`, `AccountSessionManager` calls) is shared in commonsUI `commons/account/ui/login/`; the Android signer-app button, `ExternalSignerButton.kt`, stays in `amethyst/.../ui/screen/loggedOff/login/` and reaches the form through `AppPlatform.ExternalSignerLoginButton`.
+The login form is shared: `commonsUI/.../commons/account/ui/login/` (`LoginScreen`,
+`LoginViewModel`, `RemoteSignerLogin`, `KeyTextField`, …) driving
+`commons/.../commons/account/AccountSessionManager.kt`. The Android signer-app button,
+`amethyst/.../ui/screen/loggedOff/login/ExternalSignerButton.kt`, reaches the form through
+`AppPlatform.ExternalSignerLoginButton` (`commonsUI/.../commons/ui/platform/AppPlatform.kt`,
+implemented in `amethyst/.../ui/platform/AndroidAppPlatform.kt`).
 
 ## Trade-offs
 
-| Signer | Latency | Offline OK? | Security | UX |
-|--------|---------|-------------|----------|-----|
-| Internal | µs | Yes | Key in app memory | No confirmation prompts |
-| Remote (NIP-46) | 100ms–seconds | No (needs bunker reachable) | Key never touches Amethyst | Occasional approval prompts |
-| External (NIP-55) | 100–500ms | Yes | Key in separate app | Prompt on every sign by default (configurable) |
+| Signer | Latency | Offline | Key location | UX |
+|---|---|---|---|---|
+| Internal | µs | yes | app memory | no prompts |
+| Remote (NIP-46) | 100 ms – seconds | no (bunker relay must be reachable) | bunker | occasional approvals |
+| External (NIP-55) | 100–500 ms | yes | other app | prompt per sign unless pre-approved |
 
 ## Gotchas
 
-- **Callbacks may never fire.** External signers can be dismissed without result; remote signers can time out. Use `SignerExceptions` / timeout handling at every call site or rely on the `Account` layer's wrapping.
-- **`nip04Encrypt` is legacy** for NIP-04 DMs. New DM code should use NIP-17 gift-wrap → `nip44Encrypt` path.
-- **Don't cache signer output** beyond the `caches/` that quartz already maintains. Stale cache entries lead to duplicate publishes.
-- **Remote signer disconnects** need explicit reconnection UX — `RemoteSignerManager` exposes state; hook into it for an account-switching warning.
-- **External signer launch requires an Activity context** — it can't happen from a background service. Structure flows so signing is on the main dispatcher through an activity-scoped launcher.
-- **`NostrSignerSync`** is rare. If you reach for it, you're probably in a test or migration — production code uses the async API.
+- **Timeouts are real and long**: `RemoteSignerManager` waits 65 s per request (one retry);
+  the NIP-55 foreground path waits 30 s (`IntentRequestManager.foregroundApprovalTimeout`).
+  Anything that stamps a time before asking to sign (NIP-98, NIP-42) can expire during the
+  prompt — sign right before use.
+- **Bunker identity ≠ transport key.** `NostrSignerRemote.pubKey` is the bunker's
+  `get_public_key` answer (or `bindUserPubkey(...)` from a saved account); until bound it is the
+  transport key. Self-encryption keyed off the wrong one breaks private lists and drafts.
+- **External signer needs a foreground Activity** (`IActivityLauncher`); a background caller
+  without pre-approved permissions gets `RunningOnBackgroundWithoutAutomaticPermissionException`.
+- **NIP-04 is legacy** — new DM code is NIP-17 → `nip44Encrypt`.
+- `signPsbt` is unsupported on remote bunkers and older NIP-55 apps; catch
+  `UnsupportedMethodException`.
 
 ## References
 
-- `references/nip46-remote-signer.md` — the NIP-46 bunker message taxonomy and connection lifecycle.
-- `references/nip55-android-signer.md` — Android intent-based external signer flow.
-- Complements: `nostr-expert/references/crypto-and-encryption.md` (the crypto under all signers), `account-state` (which wraps signer calls), `android-expert` (intent launcher patterns).
+- `references/nip46-remote-signer.md` — bunker request/response taxonomy, connection flow.
+- `references/nip55-android-signer.md` — foreground/background transports, command types.
+- Related skills: `nostr-expert` (crypto under the signers), `account-state` (`Account`),
+  `android-expert` (activity/intent plumbing).

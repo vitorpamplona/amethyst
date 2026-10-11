@@ -1,407 +1,98 @@
 ---
 name: kotlin-multiplatform
-description: |
-  Platform abstraction decision-making for Amethyst KMP project. Guides when to abstract vs keep platform-specific,
-  source set placement (commonMain, jvmAndroid, platform-specific), expect/actual patterns. Covers primary targets
-  (Android, JVM/Desktop, iOS — all mature) with web/wasm as possible future targets. Integrates with gradle-expert for dependency issues.
-  Triggers on: abstraction decisions ("should I share this?"), source set placement questions, expect/actual creation,
-  build.gradle.kts work, incorrect placement detection, KMP dependency suggestions.
+description: KMP placement and Gradle in Amethyst: which module or source set, expect/actual vs ports, verifyKmpPurity, extracting Android composables to commonsUI, build.gradle.kts/libs.versions.toml edits, secp256k1 JNI variants, R8.
 ---
 
-# Kotlin Multiplatform: Platform Abstraction Decisions
-
-Expert guidance for KMP architecture in Amethyst - deciding what to share vs keep platform-specific.
-
-## When to Use This Skill
-
-Making platform abstraction decisions:
-- "Should I create expect/actual or keep Android-only?"
-- "Can I share this ViewModel logic?"
-- "Where does this crypto/JSON/network implementation belong?"
-- "This uses Android Context - can it be abstracted?"
-- "Is this code in the wrong module?"
-- Preparing for iOS/web/wasm targets
-- Detecting incorrect placements
-
-## Abstraction Decision Tree
-
-**Central question:** "Should this code be reused across platforms?"
-
-Follow this decision path (< 1 minute):
-
-```
-Q: Is it used by 2+ platforms?
-├─ NO  → Keep platform-specific
-│         Example: Android-only permission handling
-│
-└─ YES → Continue ↓
-
-Q: Is it pure Kotlin (no platform APIs)?
-├─ YES → commonMain
-│         Example: Nostr event parsing, business rules
-│
-└─ NO  → Continue ↓
-
-Q: Does it vary by platform or by JVM vs non-JVM?
-├─ By platform (Android ≠ iOS ≠ Desktop)
-│  → expect/actual
-│  Example: Secp256k1Instance (uses different security APIs)
-│
-├─ By JVM (Android = Desktop ≠ iOS/web)
-│  → jvmAndroid
-│  Example: Jackson JSON parsing (JVM library)
-│
-└─ Complex/UI-related
-   → Share it in commonsUI; expect/actual or a slot only for the platform leaf
-   Example: Navigation. One shell in commonsUI, picked by window size
-   (ScreenLayoutSpec); only the Activity / Window entry point is native
-
-Final check:
-Q: Maintenance cost of abstraction < duplication cost?
-├─ YES → Proceed with abstraction
-└─ NO  → Duplicate (simpler)
-```
-
-### Real Examples from Codebase
-
-**Crypto → expect/actual:**
-```kotlin
-// commonMain - expect declaration
-expect object Secp256k1Instance {
-    fun signSchnorr(data: ByteArray, privKey: ByteArray): ByteArray
-}
-
-// androidMain - uses Android Keystore
-// jvmMain - uses Desktop JVM crypto
-// iosMain - uses iOS Security framework
-```
-**Why:** Each platform has different security APIs.
-
-**JSON parsing → jvmAndroid:**
-```kotlin
-// quartz/build.gradle.kts
-val jvmAndroid = create("jvmAndroid") {
-    api(libs.jackson.module.kotlin)
-}
-```
-**Why:** Jackson is JVM-only, works on Android + Desktop, not iOS/web.
-
-**Navigation → shared, entry points → platform-specific:**
-- Shared (`commonsUI`, moving there): the nav host, bottom bar / rail /
-  permanent drawer, chosen by window size via `ScreenLayoutSpec`
-- Android: `MainActivity` hosts it; Desktop: a `Window` (+ MenuBar, tray) hosts it
-**Why:** Android runs on laptops too, and the new Desktop app renders the same
-UI. See `commons/plans/2026-09-27-one-ui-android-desktop.md`. Today's
-`desktopApp` sidebar shell is legacy.
-
-## Mental Model: Source Sets as Dependency Graph
-
-Think of source sets as a dependency graph, not folders.
-
-```
-┌─────────────────────────────────────────────┐
-│ commonMain = Contract (pure Kotlin)         │
-│ - Business logic, protocol, data models     │
-│ - No platform APIs                          │
-└────────────┬────────────────────────────────┘
-             │
-             ├──────────────────────┬────────────────────
-             │                      │
-             ▼                      ▼
-   ┌───────────────────┐  ┌──────────────────┐
-   │ jvmAndroid        │  │ iosMain          │
-   │ JVM libs shared   │  │ iOS common       │
-   │ - Jackson         │  │                  │
-   │ - OkHttp          │  └────┬─────────────┘
-   └───┬───────────┬───┘       │
-       │           │           │
-       ▼           ▼           ├─→ iosArm64Main
-  ┌─────────┐ ┌──────────┐     └─→ iosSimulatorArm64Main
-  │android  │ │jvmMain   │
-  │Main     │ │(Desktop) │
-  └─────────┘ └──────────┘
-
-Future: jsMain, wasmMain
-```
-
-**Key insight:** jvmAndroid is NOT a platform - it's a shared JVM layer.
-
-## The jvmAndroid Pattern
-
-**Unique to Amethyst.** Shares JVM libraries between Android + Desktop.
-
-### When to Use jvmAndroid
-
-Use jvmAndroid when:
-- ✅ JVM-specific libraries (Jackson, OkHttp, url-detector)
-- ✅ Android implementation = Desktop implementation (same JVM)
-- ✅ Library doesn't work on iOS/web
-
-Do NOT use jvmAndroid for:
-- ❌ Pure Kotlin code (use commonMain)
-- ❌ Platform-specific APIs (use androidMain/jvmMain)
-- ❌ Code that should work on all platforms
-
-### Example from quartz/build.gradle.kts
-
-```kotlin
-// Must be defined BEFORE androidMain and jvmMain
-val jvmAndroid = create("jvmAndroid") {
-    dependsOn(commonMain.get())
-
-    dependencies {
-        api(libs.jackson.module.kotlin)  // JSON parsing - JVM only
-        api(libs.url.detector)            // URL extraction - JVM only
-        implementation(libs.okhttp)       // HTTP client - JVM only
-    }
-}
-
-// Both depend on jvmAndroid
-jvmMain { dependsOn(jvmAndroid) }
-androidMain { dependsOn(jvmAndroid) }
-```
-
-**Why Jackson in jvmAndroid, not commonMain?**
-- Jackson is JVM-specific library
-- Works on Android (runs on JVM)
-- Works on Desktop (runs on JVM)
-- Does NOT work on iOS (not JVM) or web (not JVM)
-
-**Web/wasm consideration:** For future web support, consider migrating from Jackson → kotlinx.serialization (see Target-Specific Guidance).
-
-## What to Abstract vs Keep Platform-Specific
-
-Quick decision guidelines based on codebase patterns:
-
-### Always Abstract
-- **Crypto** (Secp256k1, encryption, signing)
-- **Core protocol logic** (Nostr events, NIPs)
-- **Why:** Needed everywhere, platform security APIs vary
-
-### Often Abstract
-- **I/O operations** (file reading, caching)
-- **Logging** (platform logging systems differ)
-- **Serialization** (if using kotlinx.serialization)
-- **Why:** Commonly reused, platform implementations available
-
-### Sometimes Abstract
-- **Business logic:** YES - state machines, data processing
-- **ViewModels:** YES - state + business logic shareable (StateFlow/SharedFlow)
-- **Screen layouts:** YES - shared in `commonsUI`; they adapt to window size, not platform
-- **Why:** One UI for Android (phones to laptops) and Desktop; only entry points differ
-
-### Rarely Abstract
-- **Complex UI components** (composables with heavy platform dependencies)
-- **Why:** Platform paradigms can differ significantly
-
-### Never Abstract
-- **Process / window entry points** (Activity, Service, Window, tray)
-- **Permissions** (Android vs iOS APIs incompatible)
-- **Platform UX patterns**
-- **Why:** Too platform-specific, abstraction creates leaky APIs
-
-### Evidence from shared-ui-analysis.md
-
-| Component | Shared? | Rationale |
-|-----------|---------|-----------|
-| PubKeyFormatter, ZapFormatter | ✅ YES | Pure Kotlin, no platform APIs |
-| TimeAgoFormatter | ⚠️ ABSTRACTED | Needs StringProvider for localized strings |
-| ViewModels (state + logic) | ✅ YES | StateFlow/SharedFlow platform-agnostic, Compose Multiplatform lifecycle compatible |
-| Screen layouts (Scaffold, nav) | ✅ YES (moving) | One UI; `ScreenLayoutSpec` picks bottom bar / rail / drawer by window size |
-| Image loading (Coil) | ⚠️ ABSTRACTED | Coil 3.x supports KMP, needs expect/actual wrapper |
-
-## expect/actual Mechanics
-
-**When to use:** Code needed by 2+ platforms, varies by platform.
-
-### Pattern Categories from Codebase
-
-**Objects (singletons):**
-```kotlin
-// 24 expect declarations found, common pattern:
-expect object Secp256k1Instance { ... }
-expect object Log { ... }
-expect object LibSodiumInstance { ... }
-```
-
-**Classes (instantiable):**
-```kotlin
-expect class AESCBC { ... }
-expect class DigestInstance { ... }
-```
-
-**Functions (utilities):**
-```kotlin
-expect fun platform(): String
-expect fun currentTimeSeconds(): Long
-```
-
-**See** [references/expect-actual-catalog.md](references/expect-actual-catalog.md) for complete catalog with rationale.
-
-## Target-Specific Guidance
-
-### Android, JVM (Desktop), iOS - Current Primary Targets
-
-**Status:** Mature patterns, stable APIs
-
-**Android (androidMain):**
-- Uses Android framework (Activity, Context, etc.)
-- secp256k1-kmp-jni-android (`0.23.0` in `libs.versions.toml`) for crypto
-- AndroidX libraries
-
-**Desktop JVM (jvmMain):**
-- Uses Compose Desktop (Window, MenuBar, etc.)
-- secp256k1-kmp-jni-jvm (same `0.23.0` line) for crypto
-- Pure JVM libraries
-
-**iOS (iosMain):**
-- Mature target — actively built and tested
-- Architecture targets: iosArm64, iosSimulatorArm64, iosX64 (plus macosArm64 for host tooling)
-- Platform APIs via platform.posix, Security framework
-
-### Web, wasm - Future Targets
-
-**Status:** Not yet implemented, consider for future-proofing
-
-**Constraints to know:**
-- ❌ No platform.posix (file I/O different)
-- ❌ No JVM libraries (Jackson, OkHttp won't work)
-- ❌ Different async model (JS event loop vs threads)
-
-**Future-proofing tips:**
-1. Prefer pure Kotlin in commonMain
-2. Use kotlinx.* libraries:
-   - kotlinx.serialization instead of Jackson
-   - ktor instead of OkHttp (ktor supports web)
-   - kotlinx.datetime instead of custom date handling
-3. Avoid platform.posix for file operations
-4. Test abstractions work without JVM assumptions
-
-**Example migration path:**
-```kotlin
-// Current: jvmAndroid (JVM-only)
-api(libs.jackson.module.kotlin)
-
-// Future: commonMain (all platforms)
-api(libs.kotlinx.serialization.json)
-```
-
-## Integration: When to Invoke Other Skills
-
-### Invoke gradle-expert
-
-Trigger gradle-expert skill when encountering:
-- Dependency conflicts (e.g., secp256k1-android vs secp256k1-jvm version mismatch)
-- Build errors related to source sets
-- Version catalog issues (libs.versions.toml)
-- "Duplicate class" errors
-- Performance/build time issues
-
-**Example trigger:**
-```
-Error: Duplicate class found: fr.acinq.secp256k1.Secp256k1
-```
-→ Invoke gradle-expert for dependency conflict resolution.
-
-### Flags to Raise
-
-**Platform code in commonMain:**
-```kotlin
-// ❌ INCORRECT - Android API in commonMain
-expect fun getContext(): Context  // Context is Android-only!
-```
-→ Flag: "Android API in commonMain won't compile on other platforms"
-
-**Duplicated business logic:**
-```kotlin
-// ❌ INCORRECT - Same logic in both
-// androidMain/.../CryptoUtils.kt
-fun validateSignature(...) { ... }
-
-// jvmMain/.../CryptoUtils.kt
-fun validateSignature(...) { ... }  // Duplicated!
-```
-→ Flag: "Business logic duplicated, should be in commonMain or expect/actual"
-
-**Reinventing wheel - suggest KMP alternatives:**
-- Custom date/time → kotlinx.datetime
-- OkHttp → ktor (supports web)
-- Jackson → kotlinx.serialization
-- Custom UUID → kotlinx.uuid (when stable)
-
-## Common Pitfalls
-
-### 1. Over-Abstraction
-**Problem:** Creating expect/actual for UI components
-```kotlin
-// ❌ BAD
-expect fun NavigationComponent(...)
-```
-**Why:** It forks the whole navigation UI per platform.
-**Fix:** Write the navigation once in `commonsUI`; put only the platform leaf
-(an Activity result, a file picker) behind expect/actual or a slot
-
-### 2. Under-Sharing
-**Problem:** Duplicating business logic across platforms
-```kotlin
-// ❌ BAD - duplicated in androidMain and jvmMain
-fun parseNostrEvent(json: String): Event { ... }
-```
-**Why:** Bug fixes need to be applied twice, tests duplicated
-**Fix:** Move to commonMain (pure Kotlin) or create expect/actual
-
-### 3. Leaky Abstractions
-**Problem:** Platform code in commonMain
-```kotlin
-// commonMain - ❌ BAD
-import android.content.Context  // Won't compile on iOS!
-```
-**Fix:** Use expect/actual or dependency injection
-
-### 4. Premature Abstraction
-**Problem:** Creating expect/actual before second platform needs it
-```kotlin
-// ❌ BAD - only used on Android currently
-expect fun showNotification(...)
-```
-**Why:** Wrong abstraction boundaries, wasted effort
-**Fix:** Wait until iOS actually needs it, then abstract
-
-### 5. Wrong Source Set
-**Problem:** JVM libraries in commonMain
-```kotlin
-// commonMain - ❌ BAD
-import com.fasterxml.jackson.databind.ObjectMapper
-```
-**Why:** Jackson won't compile on iOS/web
-**Fix:** Move to jvmAndroid or migrate to kotlinx.serialization
-
-## Quick Reference
-
-| Code Type | Recommended Location | Reason |
-|-----------|---------------------|--------|
-| Pure Kotlin business logic | commonMain | Works everywhere |
-| Nostr protocol, NIPs | commonMain | Core logic, no platform APIs |
-| JVM libs (Jackson, OkHttp) | jvmAndroid | Android + Desktop only |
-| Crypto (varies by platform) | expect in commonMain, actual in platforms | Different security APIs per platform |
-| I/O, logging | expect in commonMain, actual in platforms | Platform implementations differ |
-| State (business logic) | commonMain or commons/jvmAndroid | Reusable StateFlow patterns |
-| **ViewModels** | **commons/commonMain/viewmodels/** | **StateFlow/SharedFlow + logic shareable, Compose MP lifecycle compatible** |
-| UI formatters (pure) | commons/commonMain | Reusable, no dependencies |
-| UI components (simple) | commonsUI/commonMain | Cards, buttons, dialogs (Compose UI never goes in `commons`) |
-| **Screen layouts** | **commonsUI** | **One UI; adapt to window size with `ScreenLayoutSpec`** |
-| Navigation | commonsUI (entry point native) | Nav host + chrome shared; Activity / Window hosts it |
-| Permissions | Platform-specific only | APIs incompatible |
-| Platform UX (menus, etc.) | Platform-specific only | Native feel required |
-
-## See Also
-
-- [references/abstraction-examples.md](references/abstraction-examples.md) - Good/bad abstraction examples with rationale
-- [references/source-set-hierarchy.md](references/source-set-hierarchy.md) - Visual hierarchy with Amethyst examples
-- [references/expect-actual-catalog.md](references/expect-actual-catalog.md) - All 24 expect/actual pairs with "why abstracted"
-- [references/target-compatibility.md](references/target-compatibility.md) - Platform constraints and future-proofing
-
-## Scripts
-
-- `scripts/validate-kmp-structure.sh` - Detect incorrect placements, validate source sets
-- `scripts/suggest-kmp-dependency.sh` - Suggest KMP library alternatives (ktor, kotlinx.serialization, etc.)
+# Kotlin Multiplatform and Gradle in Amethyst
+
+Module roles, the "share vs keep native" rule and the CLI-safe boundary are in
+`AGENTS.md` (Architecture, Feature Workflow). Package placement inside `commons` /
+`commonsUI` is in `commons/ARCHITECTURE.md` ("Where does my code go?", "Source sets")
+and `commonsUI/ARCHITECTURE.md` ("Platform slots"). Read those first; this skill
+adds the source-set mechanics and the build traps.
+
+## Modules
+
+`settings.gradle.kts` includes 16: `amethyst`, `nappletHost`, `benchmark`,
+`baselineprofile`, `quartz`, `geode`, `commons`, `commonsUI`, `quic`, `nestsClient`,
+`marmotQuic`, `desktopApp`, `cli`, `relayBench`, `marmotBench`, `quic-interop`
+(project dir `quic/interop`).
+
+## Source sets
+
+| Source set | Holds | Targets |
+|---|---|---|
+| `commonMain` | Pure Kotlin. Compiled for iOS/native too, so no JVM APIs | all |
+| `jvmAndroid` | JVM libraries shared by Android + Desktop: Jackson (`jackson.databind`), OkHttp | android, jvm |
+| `androidMain` / `jvmMain` | Platform actuals (Keystore/DataStore vs keyring, Coil bridges) | one each |
+| `iosMain`, `appleMain`, `nativeMain`, `linuxMain`, `macosMain` | quartz only (plus `iosMain` in commons/commonsUI) | Apple / native |
+| `skikoMain` | commonsUI code shared by Desktop and iOS | jvm, ios |
+
+Targets: `quartz` builds android, jvm, iosArm64, iosSimulatorArm64, linuxX64,
+macosArm64. `commons` and `commonsUI` build android, jvm, iosArm64,
+iosSimulatorArm64. `quic`, `nestsClient`, `marmotQuic` are android + jvm. There is
+no `iosX64`.
+
+`jvmAndroid` is a custom intermediate set created with `create("jvmAndroid")`
+before `androidMain`/`jvmMain` depend on it (see `quartz/build.gradle.kts`).
+Prefer the most common set that compiles: `commonMain` → `jvmAndroid` → platform.
+
+Jackson and OkHttp are the house JSON and HTTP stack (`AGENTS.md` › Tech Stack).
+Don't migrate JVM code to kotlinx.serialization or Ktor. They are only banned in
+iOS-compiled sets, which the purity gate enforces.
+
+## expect/actual vs ports and slots
+
+- **expect/actual** for a small platform verb or value with no app state:
+  `KmpLock`, `ConcurrentSet`, `SecureKeyStorage`, `isDebug`, `formattedDateTime`
+  (commons), `rememberTextSharer`, `rememberShortNotice` (commonsUI). Put the actual
+  in `jvmAndroid` when Android and Desktop share it.
+- **A port** (interface the shell implements) when the platform side needs app
+  state or services: `AccountViewModelHost`, `UserNoticeSink`, `LocalCacheHost`.
+- **A slot** (CompositionLocal the front end installs) for things only a front end
+  can draw: `LocalNotePlatform`, `LocalRichTextPlatform`.
+- Not every quartz singleton is expect: `Secp256k1Instance`, `Log` and
+  `LibSodiumInstance` are plain `object`s in `quartz/.../utils/`.
+- Don't `expect` a whole screen or navigation; share it and put only the leaf
+  behind a port or slot.
+
+## Purity gate: `verifyKmpPurity`
+
+`gradle/kmp-purity.gradle.kts`, applied by `quartz`, `commons` and `commonsUI` and
+wired into `check`, scans every iOS/native-compiled source set (`commonMain`,
+`iosMain`, `skikoMain`, …, and their tests) and fails on `com.fasterxml.jackson`,
+`okhttp3`, `System.currentTimeMillis` (use `TimeUtils.now()`), `Thread.sleep`,
+`java.util.UUID` (use `kotlin.uuid.Uuid`), `kotlin.jvm.Synchronized` or bare
+`synchronized(` (use `KmpLock`), `kotlin.jvm.Volatile` (use
+`kotlin.concurrent.Volatile`). CI runs it on Linux in the lint job; the macOS
+`test-quartz-ios` job (`:quartz:iosSimulatorArm64Test`,
+`:quartz:compileTestKotlinIosArm64`) is authoritative. Run
+`./gradlew :quartz:verifyKmpPurity :commons:verifyKmpPurity :commonsUI:verifyKmpPurity`
+after touching `commonMain`.
+
+## Gradle traps
+
+- **Versions live only in `gradle/libs.versions.toml`.** Add the library there and
+  reference `libs.*`; never hardcode a version or copy one into docs. Check the
+  license first (`AGENTS.md` › Dependency Licensing).
+- **`test` is an alias for each KMP module's `jvmTest`.** `:quartz:testAndroidHostTest`
+  is a separate suite that nothing runs; see `AGENTS.md` › Build Commands.
+- **testFixtures in KMP:** the source-set `dependencies { }` block
+  (`KotlinDependencyHandler`) has no `testFixtures(...)`. Use a top-level block with
+  the configuration name as a string, as `quartz/build.gradle.kts` does:
+  `dependencies { "jvmAndroidTestImplementation"(testFixtures(project(":geode"))) }`.
+- **secp256k1 variants:** `secp256k1-kmp-common` in `commonMain`,
+  `secp256k1-kmp-jni-android` in `androidMain`, `secp256k1-kmp-jni-jvm` in `jvmMain`
+  and JVM tests. All three share one `version.ref`. A JVM classpath with the
+  android variant fails at load with `UnsatisfiedLinkError`.
+- **R8:** library keep rules ship in `quartz/consumer-rules.pro`. Never add a blanket
+  `-keep class com.vitorpamplona.quartz.** { *; }`. R8 can't see reflection, so a
+  moved/renamed reflective class is a silent release break: before tagging, run
+  `python3 tools/r8-verify/verify_reflection_contract.py amethyst/build/outputs/mapping/<variant>/`
+  (the release workflow checks `playRelease` and `fdroidRelease`) and update
+  `tools/r8-verify/reflection-contract.txt` when you move a listed class.
+
+## Extracting Android code to shared modules
+
+Steps and the Android → multiplatform replacement table:
+[references/extract-composable.md](references/extract-composable.md).

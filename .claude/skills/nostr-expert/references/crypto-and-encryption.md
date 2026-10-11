@@ -1,79 +1,42 @@
-# Crypto & Encryption in Quartz
+# Crypto and encryption in Quartz
 
-Event signing, hashing, and NIP-44 payload encryption.
+## Signing and ids (`nip01Core/crypto/`)
 
-## Layout
+| File | Holds |
+|---|---|
+| `EventHasher.kt` | `hashId(pubKey, createdAt, kind, tags, content)`, `hashIdCheck(id, …)` — canonical NIP-01 serialization + SHA-256 |
+| `EventHasherSerializer.kt` | the exact byte layout the hash needs |
+| `Nip01Crypto.kt` | `object Nip01Crypto`: `privKeyCreate()`, `pubKeyCreate(privKey)`, `sign(...)`, `signWithPubKey(...)`, `verify(...)` |
+| `KeyPair.kt` | private/public key holder; `toString()` redacts the private key |
+| `EventAssembler.kt` | `EventAssembler.hashAndSign(...)` — id + Schnorr signature into a typed event |
+| `EventExt.kt` | `Event.generateId()`, `verifyId()`, `verifySignature()`, `verify()`, `checkSignature()` |
 
-### Core crypto (`quartz/src/commonMain/kotlin/com/vitorpamplona/quartz/nip01Core/crypto/`)
+App code signs through a `NostrSigner` (`signer.sign(template)`), never `Nip01Crypto`
+directly, so NIP-46 and NIP-55 signers keep working — see the `auth-signers` skill.
 
-- `EventHasher.kt` — canonical JSON serialization + SHA-256 → event id. NIP-01 §1.
-- `EventHasherSerializer.kt` — Jackson serializer that emits the exact byte layout NIP-01 hashing requires.
-- `KeyPair.kt` — holder for `privateKey: ByteArray` + derived `pubKey: ByteArray`. Generates fresh key pairs via `secureRandom`.
-- `Nip01Crypto.kt` — one-stop helper: sign an event, verify a signature, derive pubkey from seckey.
-- `EventAssembler.kt` — takes an unsigned template + signer and produces a fully populated `Event`.
-- `EventExt.kt` — `Event.verify()` / `Event.hasValidSignature()` extensions.
+`utils/Secp256k1Instance.kt` is a plain common `object` over secp256k1-kmp
+(`signSchnorr`, `verifySchnorr`, `compressedPubKeyFor`, tweaks); the platform binding
+comes from the `secp256k1-kmp-jni-android` / `-jni-jvm` dependency.
 
-### secp256k1 abstraction (`quartz/src/commonMain/kotlin/com/vitorpamplona/quartz/utils/`)
+## NIP-44 (`nip44Encryption/`)
 
-- `Secp256k1Instance.kt` — plain common `object` (no expect/actual) wrapping secp256k1-kmp's `Secp256k1.get()`: `signSchnorr`, `verifySchnorr`, `compressedPubKeyFor`, tweaks.
-- The platform binding comes from the dependency, not from Quartz code: `secp256k1-kmp-jni-android` on Android, `secp256k1-kmp-jni-jvm` on JVM, the cinterop build on Native.
-- Tests/benchmarks pull in `com.vitorpamplona:schnorr256k1-kmp` (libschnorr256k1) for the in-house C JNI baseline used in `Secp256k1CrossValidationTest` and the 3-way benchmarks; production never ships it.
+`Nip44.kt` is the facade: `encrypt(msg, privateKey, pubKey): Nip44v2.EncryptedInfo`
+(always the current version; call `.encodePayload()` for the base64 content) and
+`decrypt(payload, privateKey, pubKey)` (any version, base64 or the legacy JSON form).
+`Nip44v1.kt`/`Nip44v2.kt` are the versions; `crypto/` holds the ChaCha20/HKDF/HMAC
+primitives; `SharedKeyCache` (one private instance per `Nip44v1`/`Nip44v2`/`Nip04`)
+caches ECDH secrets, so don't compute conversation keys yourself.
 
-### NIP-44 encryption (`quartz/src/commonMain/kotlin/com/vitorpamplona/quartz/nip44Encryption/`)
-
-- `Nip44.kt` — dispatcher that handles both v1 (ChaCha20 w/o Poly1305, legacy) and v2 (XChaCha20-Poly1305).
-- `Nip44v2.kt` — current spec: HKDF key derivation → XChaCha20-Poly1305 → padded plaintext → Base64.
-- `Nip44v1.kt` — legacy path (decrypt-only for backward compat; do not encrypt with v1).
-- `crypto/` — `ChaCha20Poly1305`, `HKDF`, `Hmac`, etc. (pure Kotlin, MPP-friendly).
-- `SharedKeyCache.kt` — in-process LRU for ECDH shared secrets. Critical for performance in chat/list screens that decrypt many messages with the same counterparty.
-- `EncryptedInfoString.kt` — versioned payload envelope that the parser reads to pick v1 vs v2.
-
-## Typical Flows
-
-### Sign an event
-
-```kotlin
-// Direct (when you have the privkey in memory)
-val signed = Nip01Crypto.sign(unsignedEvent, keyPair.privateKey)
-
-// Via signer (preferred — honors external/remote signers)
-val signer: NostrSigner = ...     // NostrSignerInternal, Nip46RemoteSigner, NostrSignerExternal
-signer.sign(template) { signed -> /* emit signed event */ }
-```
-
-Use `NostrSigner` whenever the key might not live in the current process (NIP-46 bunker, NIP-55 Android external signer). See the `auth-signers` skill.
-
-### Verify an event
-
-```kotlin
-event.verify()               // throws on failure
-event.hasValidSignature()    // returns Boolean
-```
-
-Both recompute `sha256(canonicalJson(event))` and call Schnorr `verifySchnorr(sig, hash, pubKey)`.
-
-### NIP-44 encrypt / decrypt
-
-```kotlin
-// Always compute shared secret through the cache — direct ECDH is expensive
-val sharedSecret = SharedKeyCache.getOrComputeShared(mySeckey, theirPubkey)
-
-val cipherText = Nip44.encrypt(plaintext, sharedSecret)   // v2 by default
-val plain      = Nip44.decrypt(cipherText, sharedSecret)  // dispatches on version byte
-```
-
-Callers rarely touch `Nip44v2` directly; go through `Nip44`.
+As with signing, app code goes through `signer.nip44Encrypt(plaintext, toPublicKey)` /
+`signer.nip44Decrypt(ciphertext, fromPublicKey)`, or `signer.decrypt(...)` which picks
+NIP-04 vs NIP-44 from the payload. NIP-04 (`nip04Dm/crypto/Nip04.kt`) is legacy: decrypt
+old DMs, don't encrypt new content with it.
 
 ## Gotchas
 
-- **Never log private keys, shared secrets, or raw plaintext.** `KeyPair.privateKey` is a `ByteArray` on purpose so it doesn't get interned as a String.
-- **Don't recompute ECDH per message.** `SharedKeyCache` exists because the same counterparty appears in many messages; bypassing the cache produces noticeable UI lag.
-- **`EventHasher` ordering is canonical.** Serialize tags / content exactly as `EventHasherSerializer` emits, or ids won't match relays.
-- **secp256k1 JNI is platform-specific**: if you add crypto that must run in `commonTest`, wrap it in `expect/actual` or you'll get `UnsatisfiedLinkError` in JVM unit tests.
-- **NIP-44 pads messages**. Don't assert exact ciphertext length; assert decrypt round-trips.
+- Private keys stay `ByteArray`; never log keys, shared secrets or plaintext.
+- NIP-44 pads plaintext — assert round-trips, not ciphertext lengths.
+- Hashing your own JSON instead of `EventHasher` produces ids relays reject.
 
-## Tests
-
-- `quartz/src/commonTest/kotlin/com/vitorpamplona/quartz/nip01Core/crypto/` — sign/verify/hash round-trips.
-- `quartz/src/commonTest/kotlin/com/vitorpamplona/quartz/nip44Encryption/` — NIP-44 vectors (encryption parity with reference vectors).
-- JNI crypto is exercised in `androidUnitTest` / JVM integration tests.
+Tests: `quartz/src/commonTest/kotlin/com/vitorpamplona/quartz/nip44Encryption/`
+(`Nip44v2Test`, padding, `SharedKeyCacheTest`).

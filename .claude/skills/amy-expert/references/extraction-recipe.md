@@ -28,7 +28,7 @@ CLI command.
 ### Step 1 — Find the class
 
 ```bash
-grep -rn "fun followUser\|class FollowListManager" amethyst/src/main/java/
+grep -rn "class <ClassName>" amethyst/src/main/java/
 ```
 
 Identify the minimum unit to move. Sometimes it's a whole file,
@@ -44,7 +44,7 @@ Walk the imports. The usual offenders:
 | `android.content.Context` | Often accidental — inline if only used for logging or preferences. Otherwise, invert as constructor arg. |
 | `android.content.SharedPreferences` | Abstract behind an interface in `commons/`; Android actual uses SharedPreferences, JVM actual uses a JSON file. |
 | `androidx.work.WorkManager` | Rarely shareable — if the CLI needs it, simplify the flow to not require background scheduling. |
-| `android.util.Log` | Replace with `quartz` `PlatformLog` (already multiplatform). |
+| `android.util.Log` | Replace with Quartz `Log` (`quartz/…/utils/Log.kt`), lambda overload for interpolated messages. |
 | `android.graphics.Bitmap` | Almost never needed by Amy. Keep in Android and split the function. |
 | `android.net.Uri` | Replace with `kotlinx.io` path types or a plain `String`. |
 | `androidx.compose.*` | Compose UI (`ui`/`foundation`/`material3`), Coil and `Res` must stay out of `commons` entirely — they belong in `:commonsUI`, which Amy never depends on. Only the Compose *runtime* (`@Stable`, snapshot state) is allowed in `commons`. |
@@ -54,7 +54,7 @@ Walk the imports. The usual offenders:
 - **Inline-able.** One call, trivial. Delete it.
 - **Platform-abstractable.** Add `expect` in `commons/commonMain/` +
   `actual` in `commons/androidMain/` + `actual` in `commons/jvmMain/`.
-  See `kotlin-multiplatform` skill for the mechanics and for the
+  See the `kotlin-multiplatform` skill for the mechanics and for the
   `jvmAndroid` source-set pattern used throughout this repo.
 - **Inversion-of-control.** Take the Android dependency as a
   constructor arg with an interface type. Amy supplies a JVM flavour;
@@ -67,8 +67,8 @@ Walk the imports. The usual offenders:
 # - Protocol → quartz/src/commonMain/kotlin/…
 # - Business logic → commons/src/commonMain/kotlin/…
 # - UI → commonsUI/src/commonMain/… (needs Compose Multiplatform; never used by amy)
-git mv amethyst/src/main/java/com/.../FollowListManager.kt \
-       commons/src/commonMain/kotlin/com/.../FollowListManager.kt
+git mv amethyst/src/main/java/com/.../<ClassName>.kt \
+       commons/src/commonMain/kotlin/com/.../<ClassName>.kt
 ```
 
 Update package declarations. Run `./gradlew spotlessApply`.
@@ -92,17 +92,14 @@ the only way to be sure Amy can now call the code.
 
 Single commit, descriptive:
 
-> refactor(follow): extract FollowListManager to commons for CLI reuse
->
-> Move FollowListManager from amethyst/model/nip02FollowLists/ to
-> commons/commonMain/.../followLists/. Android's SharedPreferences
-> dependency is inverted behind FollowListStore (interface); Android
-> keeps the SharedPreferences-backed actual, new JvmFollowListStore
-> writes JSON to disk. No behaviour change on Android.
+`refactor(<area>): extract <ClassName> to commons for CLI reuse`, with a
+body naming the old and new location, how each Android dependency was
+handled (inlined, expect/actual, or inverted behind an interface), and
+"No behaviour change on Android."
 
 ### Step 8 — Now add the CLI command
 
-Separate commit. Follows the pattern in `command-template.md`.
+Separate commit. Follows "How to add a command" in `cli/DEVELOPMENT.md`.
 
 ## Cautionary notes
 
