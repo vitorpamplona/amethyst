@@ -559,7 +559,23 @@ class PoolRequests(
             newFilters.isNullOrEmpty() -> {
                 // some relays are not in this sub anymore. Stop their subscriptions
                 // only if the old filters are not already closed.
-                if (!oldFilters.isNullOrEmpty()) CloseCmd(subId) else null
+                when {
+                    oldFilters.isNullOrEmpty() -> {
+                        null
+                    }
+
+                    state.currentState(relay) == ReqSubStatus.CLOSED -> {
+                        // The relay already ended it (or, parked behind a back-off, never saw
+                        // it): a CLOSE would only earn `error: no such subscription`. Forget the
+                        // filters the CLOSED kept, so wanting them again sends a REQ.
+                        state.onSubscriptionClosed(relay)
+                        null
+                    }
+
+                    else -> {
+                        CloseCmd(subId)
+                    }
+                }
             }
 
             oldFilters.isNullOrEmpty() || FiltersChanged.needsToResendRequest(oldFilters, newFilters) -> {

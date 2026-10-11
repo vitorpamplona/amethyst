@@ -51,6 +51,7 @@ import kotlinx.coroutines.withTimeout
 internal class NipFEHttpRoute(
     private val handler: HttpRelayHandler,
     private val settings: HttpCommandSettings,
+    private val clients: ClientAddresses = ClientAddresses(settings.trustedProxies, settings.clientAddressHeader),
 ) {
     private val admission = HttpAdmission(settings.maxConcurrent, settings.maxPerClient)
 
@@ -86,8 +87,9 @@ internal class NipFEHttpRoute(
         // nginx and friends buffer responses by default, which holds back the lines streaming delivers.
         call.response.header(ACCEL_BUFFERING, "no")
 
+        val client = clients.of(call)
         val verdict =
-            admission.admit(clientOf(call)) {
+            admission.admit(client) {
                 // Bounded in time too: a body trickled in forever would hold this admission slot forever.
                 val body =
                     try {
@@ -104,7 +106,7 @@ internal class NipFEHttpRoute(
                         HttpRelayStatus.PAYLOAD_TOO_LARGE,
                         HttpRelayHandler.notice(MachineReadablePrefix.INVALID.format("the command exceeds $bodyCap bytes")),
                     )
-                handler.handle(HttpRelayRequest(call.request.header(HttpHeaders.Authorization), body), Answer(call))
+                handler.handle(HttpRelayRequest(call.request.header(HttpHeaders.Authorization), body, client), Answer(call))
             }
         when (verdict) {
             HttpAdmission.Verdict.ADMITTED -> {}
@@ -125,21 +127,6 @@ internal class NipFEHttpRoute(
                 )
             }
         }
-    }
-
-    /**
-     * Who the request counts against: the peer's address, or, when the peer is a trusted proxy, the
-     * last address in its [HttpCommandSettings.clientAddressHeader] — the one that proxy saw. Earlier
-     * entries are whatever the client claimed and are never believed.
-     */
-    private fun clientOf(call: ApplicationCall): String {
-        val peer = call.request.local.remoteAddress
-        if (peer !in settings.trustedProxies) return peer
-        return call.request
-            .header(settings.clientAddressHeader)
-            ?.substringAfterLast(',')
-            ?.trim()
-            ?.ifEmpty { null } ?: peer
     }
 
     /**
@@ -168,10 +155,19 @@ internal class NipFEHttpRoute(
         call: ApplicationCall,
         status: Int,
         frame: String,
+        retryAfterMs: Long? = null,
     ) {
         when (status) {
-            HttpRelayStatus.UNAUTHORIZED -> call.response.header(HttpHeaders.WWWAuthenticate, WWW_AUTHENTICATE)
-            HttpRelayStatus.TOO_MANY_REQUESTS, HttpRelayStatus.UNAVAILABLE -> call.response.header(HttpHeaders.RetryAfter, settings.retryAfterSeconds.toString())
+            HttpRelayStatus.UNAUTHORIZED -> {
+                call.response.header(HttpHeaders.WWWAuthenticate, WWW_AUTHENTICATE)
+            }
+
+            // A refusal that states its NIP-01 back-off sends that, rounded up to whole seconds
+            // (the header's unit); the relay's own admission refusals send the configured one.
+            HttpRelayStatus.TOO_MANY_REQUESTS, HttpRelayStatus.UNAVAILABLE -> {
+                val seconds = retryAfterMs?.let { (it + 999) / 1000 } ?: settings.retryAfterSeconds.toLong()
+                call.response.header(HttpHeaders.RetryAfter, seconds.toString())
+            }
         }
         call.respondText(frame + "\n", NDJSON, HttpStatusCode.fromValue(status))
     }
@@ -183,6 +179,12 @@ internal class NipFEHttpRoute(
             status: Int,
             frame: String,
         ) = respondLine(call, status, frame)
+
+        override suspend fun single(
+            status: Int,
+            frame: String,
+            retryAfterMs: Long?,
+        ) = respondLine(call, status, frame, retryAfterMs)
 
         /**
          * Chunked: each flush puts what the handler wrote on the wire, and a full socket suspends the

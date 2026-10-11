@@ -38,6 +38,7 @@ import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.OkMessage
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toRelay.AuthCmd
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toRelay.CloseCmd
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toRelay.Command
+import com.vitorpamplona.quartz.nip01Core.relay.commands.toRelay.EventCmd
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toRelay.ReqCmd
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
@@ -315,15 +316,8 @@ class NostrClient(
             activeRequests.sendToRelayIfChanged(subId, relaysToUpdate) { relay, cmd ->
                 if (cmd is CloseCmd || cmd is AuthCmd) {
                     relayPool.sendIfConnected(relay, cmd)
-                } else if (cmd is ReqCmd && reqRetries.isPending(relay)) {
-                    // The relay asked for no REQ before its back-off passes: queue this one with
-                    // the refused ones. Parked first, so a batch firing in between still finds it.
-                    activeRequests.parkRateLimited(relay, cmd.subId)
-                    if (!reqRetries.defer(relay, cmd.subId)) {
-                        activeRequests.retryRateLimited(relay, setOf(cmd.subId)) { relayPool.sendOrConnectAndSync(relay, it) }
-                    }
                 } else {
-                    relayPool.sendOrConnectAndSync(relay, cmd)
+                    sendHonoringBackOff(relay, cmd) { relayPool.sendOrConnectAndSync(relay, it) }
                 }
             }
 
@@ -363,8 +357,7 @@ class NostrClient(
 
         if (isActive()) {
             eventOutbox.sendToRelayIfChanged(event, relaysToUpdate) { relay, cmd ->
-                // Mid-back-off, the event waits with the ones the relay already refused.
-                if (!eventRetries.defer(relay, event.id)) relayPool.sendOrConnectAndSync(relay, cmd)
+                sendHonoringBackOff(relay, cmd) { relayPool.sendOrConnectAndSync(relay, it) }
             }
 
             // wakes up all the other relays
@@ -396,9 +389,43 @@ class NostrClient(
     override fun syncFilters(relay: IRelayClient) {
         if (isActive()) {
             scope.launch {
-                activeRequests.syncState(relay.url, relay::sendOrConnectAndSync)
+                // A back-off a relay stated outlives the socket it was stated on: a reconnect
+                // replays everything, so the replay goes through the same gate.
+                activeRequests.syncState(relay.url) { sendHonoringBackOff(relay.url, it, relay::sendOrConnectAndSync) }
                 activeCounts.syncState(relay.url, relay::sendOrConnectAndSync)
-                eventOutbox.syncState(relay.url, relay::sendOrConnectAndSync)
+                eventOutbox.syncState(relay.url) { sendHonoringBackOff(relay.url, it, relay::sendOrConnectAndSync) }
+            }
+        }
+    }
+
+    /**
+     * Sends [cmd] to [relay] unless the relay is waiting out a back-off it stated for that
+     * command type (NIP-01 `rate-limited:` params). Then the REQ or EVENT joins the pending
+     * batch and goes out with the refused ones when the back-off passes. A REQ is parked first
+     * (in flight -> CLOSED), so a batch that fires in between still finds it; if the batch
+     * already fired, it is sent now.
+     */
+    private fun sendHonoringBackOff(
+        relay: NormalizedRelayUrl,
+        cmd: Command,
+        send: (Command) -> Unit,
+    ) {
+        when (cmd) {
+            is ReqCmd -> {
+                if (reqRetries.isPending(relay)) {
+                    activeRequests.parkRateLimited(relay, cmd.subId)
+                    if (!reqRetries.defer(relay, cmd.subId)) activeRequests.retryRateLimited(relay, setOf(cmd.subId), send)
+                } else {
+                    send(cmd)
+                }
+            }
+
+            is EventCmd -> {
+                if (!eventRetries.defer(relay, cmd.event.id)) send(cmd)
+            }
+
+            else -> {
+                send(cmd)
             }
         }
     }

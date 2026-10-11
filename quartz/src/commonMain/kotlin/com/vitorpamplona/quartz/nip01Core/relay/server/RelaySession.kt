@@ -92,6 +92,8 @@ class RelaySession(
      * Null (the default) sends every EVENT down the normal path.
      */
     private val commandHandler: EventCommandHandler? = null,
+    /** The client's address as the transport saw it; see [RequestContext.clientAddress]. */
+    val clientAddress: String? = null,
 ) : AutoCloseable {
     /** The original, string-only constructor; every frame goes to [onSend] as wire JSON. */
     constructor(
@@ -135,6 +137,7 @@ class RelaySession(
             override val connectionId = id
             override val policy = this@RelaySession.policy
             override val authenticatedUsers: Set<HexKey> get() = this@RelaySession.authenticatedUsers
+            override val clientAddress: String? get() = this@RelaySession.clientAddress
         }
 
     /** NIP-77 negentropy state for this connection. */

@@ -103,9 +103,11 @@ const val TRANSPORT_RETRY_GRACE_MS = 5_000L
 /**
  * How many `rate-limited:` refusals with a stated back-off a publish waits through per relay
  * before taking the refusal as the relay's answer. Each wait must also fit inside the caller's
- * timeout; the pool does the re-sending.
+ * timeout; the pool does the re-sending, and keeps the event for as many
+ * ([com.vitorpamplona.quartz.nip01Core.relay.client.pool.PoolEventOutboxState.MAX_BACK_OFFS]).
+ * A busy relay pacing a burst refuses an event more than once, so this is not 1 or 2.
  */
-const val RATE_LIMIT_WAITS = 2
+const val RATE_LIMIT_WAITS = 10
 
 /**
  * Internal channel marker for "this relay is back up", so the wait loop — the

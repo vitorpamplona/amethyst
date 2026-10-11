@@ -22,6 +22,7 @@ package com.vitorpamplona.geode.server
 
 import com.vitorpamplona.quartz.nip01Core.relay.server.NostrServer
 import com.vitorpamplona.quartz.nip01Core.relay.server.RelaySession
+import com.vitorpamplona.quartz.nip01Core.relay.server.SessionSink
 import io.ktor.server.websocket.DefaultWebSocketServerSession
 import io.ktor.websocket.Frame
 import io.ktor.websocket.readText
@@ -84,6 +85,8 @@ internal class WebSocketSessionPump(
         server: NostrServer,
         registerSession: (RelaySession) -> Unit,
         unregisterSession: (RelaySession) -> Unit,
+        /** Who this socket counts against for per-client limits; see [ClientAddresses]. */
+        clientAddress: String? = null,
     ) {
         val writerJob =
             ws.launch {
@@ -97,42 +100,45 @@ internal class WebSocketSessionPump(
                 }
             }
         val session =
-            server.connect { json ->
-                // Backpressure, not instant drop. A full backlog usually
-                // means a REQ replay is producing faster than the socket
-                // writer ships — normal for bulk downloads to a HEALTHY
-                // client — so pace the producer (this blocks the replay
-                // coroutine's thread; the live-fanout path already
-                // documents that a slow sub blocks the ingest writer).
-                // Only a client that stays behind for the whole deadline
-                // is genuinely slow; then close FOR REAL. The previous
-                // code dropped at the cap immediately — killing healthy
-                // bulk clients the moment the O(n²)-replay throttle was
-                // fixed — and only closed outQueue, leaving the socket
-                // half-dead (no EOSE, no close frame; the client hung).
-                var waitedMs = 0L
-                while (outstanding.get() >= MAX_OUTGOING_BUFFER && !droppedForBackpressure) {
-                    if (waitedMs >= SLOW_CLIENT_DEADLINE_MS) {
-                        droppedForBackpressure = true
-                        outQueue.close()
-                        // Actually terminate the connection so the client
-                        // sees the failure instead of waiting forever.
-                        ws.cancel()
-                        return@connect
+            server.connect(
+                SessionSink.of { json ->
+                    // Backpressure, not instant drop. A full backlog usually
+                    // means a REQ replay is producing faster than the socket
+                    // writer ships — normal for bulk downloads to a HEALTHY
+                    // client — so pace the producer (this blocks the replay
+                    // coroutine's thread; the live-fanout path already
+                    // documents that a slow sub blocks the ingest writer).
+                    // Only a client that stays behind for the whole deadline
+                    // is genuinely slow; then close FOR REAL. The previous
+                    // code dropped at the cap immediately — killing healthy
+                    // bulk clients the moment the O(n²)-replay throttle was
+                    // fixed — and only closed outQueue, leaving the socket
+                    // half-dead (no EOSE, no close frame; the client hung).
+                    var waitedMs = 0L
+                    while (outstanding.get() >= MAX_OUTGOING_BUFFER && !droppedForBackpressure) {
+                        if (waitedMs >= SLOW_CLIENT_DEADLINE_MS) {
+                            droppedForBackpressure = true
+                            outQueue.close()
+                            // Actually terminate the connection so the client
+                            // sees the failure instead of waiting forever.
+                            ws.cancel()
+                            return@of
+                        }
+                        Thread.sleep(BACKPRESSURE_POLL_MS)
+                        waitedMs += BACKPRESSURE_POLL_MS
                     }
-                    Thread.sleep(BACKPRESSURE_POLL_MS)
-                    waitedMs += BACKPRESSURE_POLL_MS
-                }
-                if (droppedForBackpressure) return@connect
+                    if (droppedForBackpressure) return@of
 
-                outstanding.incrementAndGet()
-                val res = outQueue.trySend(json)
-                if (!res.isSuccess) {
-                    // Channel was closed concurrently (e.g. teardown).
-                    // Roll back the counter; nothing more to do.
-                    outstanding.decrementAndGet()
-                }
-            }
+                    outstanding.incrementAndGet()
+                    val res = outQueue.trySend(json)
+                    if (!res.isSuccess) {
+                        // Channel was closed concurrently (e.g. teardown).
+                        // Roll back the counter; nothing more to do.
+                        outstanding.decrementAndGet()
+                    }
+                },
+                clientAddress,
+            )
         registerSession(session)
         try {
             ws.incoming.consumeEach { frame ->

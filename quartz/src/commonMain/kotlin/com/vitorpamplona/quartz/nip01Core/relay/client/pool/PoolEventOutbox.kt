@@ -203,10 +203,11 @@ class PoolEventOutbox {
         url: NormalizedRelayUrl,
         success: Boolean,
         message: String,
+        retryAfterMs: Long? = null,
     ) {
         val waiting = eventOutbox.get(id)
         if (waiting != null) {
-            waiting.newResponse(url, success, message)
+            waiting.newResponse(url, success, message, retryAfterMs)
             if (waiting.isDone()) {
                 eventOutbox.remove(waiting.event.id)
                 onRemoved()
@@ -233,7 +234,7 @@ class PoolEventOutbox {
         msg: Message,
     ) {
         if (msg is OkMessage) {
-            newResponse(msg.eventId, relay, msg.success, msg.message)
+            newResponse(msg.eventId, relay, msg.success, msg.message, msg.retryAfterMs)
         }
     }
 

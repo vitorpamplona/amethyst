@@ -68,6 +68,27 @@ class PoolRequestsBackOffTest {
         }
 
     @Test
+    fun aSubTheRelayAlreadyClosedIsNotClosedAgainButCanComeBack() =
+        runTest {
+            val pool = PoolRequests()
+            pool.addOrUpdate("sub", mapOf(relay to filter(1)), null)
+            sync(pool)
+            pool.onIncomingMessage(FakeRelayClient(relay), ClosedMessage("sub", "rate-limited: slow down"))
+
+            // Dropped while CLOSED: no CLOSE, the relay has nothing to close.
+            val dropped = mutableListOf<Command>()
+            pool.addOrUpdate("sub", emptyMap(), null)
+            pool.sendToRelayIfChanged("sub", setOf(relay)) { _, cmd -> dropped.add(cmd) }
+            assertTrue(dropped.isEmpty(), "sent $dropped")
+
+            // Wanted again with the very same filters: that is a new REQ.
+            val back = mutableListOf<Command>()
+            pool.addOrUpdate("sub", mapOf(relay to filter(1)), null)
+            pool.sendToRelayIfChanged("sub", setOf(relay)) { _, cmd -> back.add(cmd) }
+            assertEquals(listOf(1), (back.single() as ReqCmd).filters.single().kinds)
+        }
+
+    @Test
     fun withoutABackOffAChangedSubIsStillResentAtOnce() =
         runTest {
             val pool = PoolRequests()

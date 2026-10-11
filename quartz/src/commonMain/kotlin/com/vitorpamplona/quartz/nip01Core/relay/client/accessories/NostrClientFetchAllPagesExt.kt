@@ -166,12 +166,6 @@ object PagingDiagnostics {
 }
 
 /**
- * The longest back-off a relay may state in a `rate-limited:` CLOSED for [fetchAllPages] to wait
- * it out and re-ask the page. Beyond it the walk ends as CLOSED instead of sleeping.
- */
-const val MAX_STATED_BACKOFF_MS = 60_000L
-
-/**
  * How long [fetchAllPages] waits before re-asking a page a relay answered empty (or CLOSED)
  * when its own earlier answers say it is throttling, not done — see [fetchAllPages]:
  * one entry per re-ask, so the list's size is the bound. Once it is used up the page's
@@ -522,10 +516,10 @@ private suspend fun INostrClient.walkPages(
     // EOSE hints below.
     var refusal: String? = null
 
-    // The back-off the last refusal stated, when it was a `rate-limited:` CLOSED carrying one
-    // (NIP-01's `params`). A throttled page is re-asked after this instead of the walk's own
-    // guess from [PageRetryBackoff], within [MAX_STATED_BACKOFF_MS].
-    var refusalRetryAfterMs: Long? = null
+    // Whether the last refusal was a `rate-limited:` CLOSED that stated a back-off (NIP-01's
+    // `params`) too long for the page to wait out. The walk ends there: re-asking on its own
+    // schedule would send a REQ the relay said not to send yet.
+    var refusalBackedOff = false
 
     // Throttle evidence for the empty-page re-ask (see [PageRetryBackoff]):
     //  - the filter indices active on the page that set the current boundary. Only while
@@ -852,8 +846,19 @@ private suspend fun INostrClient.walkPages(
                         ) {
                             // A refusal of a finished page must not overwrite the current one's.
                             if (gate.over) return
+                            // NIP-01 `rate-limited:` with a back-off: the pool re-sends this very
+                            // REQ once it passes (NostrClient), and the answer lands on this page,
+                            // as after an AUTH. So the page keeps waiting, its idle window starting
+                            // over now; re-asking with a new subscription as well would spend the
+                            // relay's next token twice. A back-off the page cannot sit through
+                            // ends the walk as CLOSED.
+                            val backOff = RetryAfter.parse(message, params)
+                            if (backOff != null && backOff < idleTimeoutMs) {
+                                clock.bump()
+                                return
+                            }
                             refusal = message
-                            refusalRetryAfterMs = RetryAfter.parse(message, params)
+                            refusalBackedOff = backOff != null
                             if (MachineReadablePrefix.parse(message) == MachineReadablePrefix.AUTH_REQUIRED) {
                                 doneChannel.trySend(PageSignal.AUTH_REQUIRED)
                             } else {
@@ -868,7 +873,7 @@ private suspend fun INostrClient.walkPages(
                         ) {
                             if (gate.over) return
                             refusal = message
-                            refusalRetryAfterMs = null
+                            refusalBackedOff = false
                             doneChannel.trySend(PageSignal.CANNOT_CONNECT)
                         }
                     }
@@ -1001,13 +1006,10 @@ private suspend fun INostrClient.walkPages(
                         // pages, and went away with that (0 in 300+ walks since).
                         else -> false
                     }
-                // A relay that said how long to back off is taken at its word, unless the wait
-                // is too long for a walk to sit through; then the page ends as CLOSED like any
-                // other refusal and the caller retries the walk later.
-                val statedBackOff = if (pageEnd == PageSignal.CLOSED) refusalRetryAfterMs else null
-                if (throttled && (statedBackOff == null || statedBackOff <= MAX_STATED_BACKOFF_MS)) {
-                    val waitMs = statedBackOff ?: throttleBackoff.delaysMs[reAsks]
-                    reAsks++
+                // A CLOSED that stated a back-off longer than the page could wait is not re-asked
+                // on the walk's own schedule: the relay said when, and the caller retries later.
+                if (throttled && !(pageEnd == PageSignal.CLOSED && refusalBackedOff)) {
+                    val waitMs = throttleBackoff.delaysMs[reAsks++]
                     Log.d("fetchAllPages") { "${relay.url} ${if (pageEnd == PageSignal.CLOSED) "CLOSED ($refusal)" else "empty page"} at until=$until looks throttled; re-asking in ${waitMs}ms (#$reAsks)" }
                     throttleBackoff.sleep(waitMs)
                     continue

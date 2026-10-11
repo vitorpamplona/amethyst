@@ -190,11 +190,13 @@ class NostrClientFetchAllPagesDrainTest {
         }
 
     /**
-     * A `rate-limited:` CLOSED that states its NIP-01 back-off is re-asked after that back-off,
-     * not after the walk's own guess; one too long to sit through ends the walk as CLOSED.
+     * A `rate-limited:` CLOSED that states its NIP-01 back-off is not the end of the page: the
+     * pool re-sends that very REQ once the back-off passes, and its answer lands on the same page.
+     * The walk waits for it instead of re-asking with a new subscription, which would spend the
+     * relay's next token twice.
      */
     @Test
-    fun aStatedBackOffReplacesTheWalksOwnDelay() =
+    fun aStatedBackOffWaitsOnTheSamePageForThePoolsRetry() =
         runBlocking {
             val client = ScriptedClient()
             val slept = mutableListOf<Long>()
@@ -204,8 +206,43 @@ class NostrClientFetchAllPagesDrainTest {
                     client.listener!!.onEvent(event(2000), false, relay, null)
                     client.listener!!.onEose(relay, null)
                     client.awaitPage(2)
-                    client.listener!!.onClosed("rate-limited: slow down", relay, null, "750")
+                    val page = client.listener!!
+                    page.onClosed("rate-limited: slow down", relay, null, "300")
+                    // The pool's retry, answered on the same subscription.
+                    delay(300)
+                    page.onEvent(event(1000), false, relay, null)
+                    page.onEose(relay, null)
                     client.awaitPage(3)
+                    client.listener!!.onEose(relay, null)
+                }
+
+            val result =
+                client.fetchAllPages(
+                    relay = relay,
+                    filters = listOf(Filter(kinds = listOf(1))),
+                    idleTimeoutMs = 2_000,
+                    throttleBackoff = PageRetryBackoff(listOf(1L, 1L, 1L)) { slept.add(it) },
+                ) { }
+            feeder.join()
+
+            assertEquals(PagedFetchResult.End.DRAINED, result.end)
+            assertEquals(2, result.downloaded)
+            assertEquals(3, client.subscribeCount, "one subscription per page: the back-off opened none")
+            assertTrue(slept.isEmpty(), "the walk slept on its own schedule: $slept")
+        }
+
+    /** A stated back-off longer than the page can sit through ends the walk, without a re-ask of its own. */
+    @Test
+    fun aBackOffLongerThanTheIdleWindowEndsTheWalk() =
+        runBlocking {
+            val client = ScriptedClient()
+            val slept = mutableListOf<Long>()
+            val feeder =
+                launch {
+                    client.awaitPage(1)
+                    client.listener!!.onEvent(event(2000), false, relay, null)
+                    client.listener!!.onEose(relay, null)
+                    client.awaitPage(2)
                     client.listener!!.onClosed("rate-limited: slow down", relay, null, "3600000")
                 }
 
@@ -218,9 +255,9 @@ class NostrClientFetchAllPagesDrainTest {
                 ) { }
             feeder.join()
 
-            assertEquals(listOf(750L), slept, "the relay's back-off, then no wait for one an hour long")
             assertEquals(PagedFetchResult.End.CLOSED, result.end)
-            assertEquals(3, client.subscribeCount)
+            assertEquals(2, client.subscribeCount)
+            assertTrue(slept.isEmpty(), "re-asked inside an hour-long back-off: $slept")
         }
 
     /**

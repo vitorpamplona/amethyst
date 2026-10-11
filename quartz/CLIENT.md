@@ -306,15 +306,24 @@ results.forEach { (relay, success) ->
 
 A relay may refuse an `EVENT` or a `REQ` as `rate-limited:` and say how long to back off, in
 the optional trailing `params` of NIP-01's `OK` / `CLOSED` (milliseconds, e.g.
-`["OK", id, false, "rate-limited: slow down", "1000"]`). `NostrClient` honors it: the refused
-`EVENT` or `REQ` is sent again once the back-off passes, never before. A `rate-limited:`
-refusal without a back-off is left parked until the next reconnect or filter change.
+`["OK", id, false, "rate-limited: slow down", "1000"]`). `NostrClient` honors it: nothing of the
+refused type goes to that relay until the back-off passes — new subscriptions and publishes
+included, and the replay after a reconnect too. Then the held REQs/EVENTs go out one per
+back-off, so they meet the relay's refilled tokens one at a time instead of being refused
+again together. A `rate-limited:` refusal without a back-off is left parked until the next
+reconnect or filter change.
 
 `publishAndCollectResults` waits for that retry when it fits inside the timeout; otherwise
-the relay's refusal is reported with `PublishResult.retryAfterMs` set. A
-`SubscriptionListener` reads the raw value by overriding the `onClosed` overload that takes
-`params`, and `RetryAfter.parse(message, params)` turns it into milliseconds. On the relay
-side, a policy refuses with `PolicyResult.Rejected.rateLimited(message, retryAfterMs)`.
+the relay's refusal is reported with `PublishResult.retryAfterMs` set. `fetchAllPages` keeps
+waiting on the same page while the pool re-sends it. A `SubscriptionListener` reads the raw
+value by overriding the `onClosed` overload that takes `params` (forward the three-argument
+one to it too), and `RetryAfter.parse(message, params)` turns it into milliseconds.
+
+On the relay side, `RateLimitPolicy` refuses with exactly the wait a client's token bucket
+needs: build one `RateLimiter` per command type once, and a `RateLimitPolicy(events, reqs)`
+per connection around them. It counts per `RequestContext.clientAddress` (pass it to
+`RelayServerBase.connect(sink, clientAddress)`), or per connection when there is none. A
+custom policy can state a back-off itself with `PolicyResult.Rejected.rateLimited(message, retryAfterMs)`.
 
 ### 6. One-shot Reads (fetch, page, count)
 

@@ -27,6 +27,7 @@ import com.vitorpamplona.geode.RelayInfo
 import com.vitorpamplona.geode.server.HttpCommandSettings
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.normalizeRelayUrl
+import com.vitorpamplona.quartz.nip01Core.relay.server.policies.RateLimiter
 import com.vitorpamplona.quartz.nip11RelayInfo.Nip11RelayInformation
 import java.io.File
 import kotlin.time.Duration.Companion.seconds
@@ -51,6 +52,7 @@ data class StaticConfig(
     val membership: MembershipSection = MembershipSection(),
     val negentropy: NegentropySection = NegentropySection(),
     val http: HttpSection = HttpSection(),
+    val rate_limits: RateLimitsSection = RateLimitsSection(),
     /** `[[mirror]]` entries — upstream relays this relay streams from. */
     val mirror: List<MirrorSection> = emptyList(),
 ) {
@@ -286,6 +288,38 @@ data class StaticConfig(
             }
     }
 
+    /**
+     * Per-client command rates, counted across all of a client's websockets and NIP-FE requests
+     * (the client is its address, or what a trusted proxy reports; see `[http].trusted_proxies`).
+     * Over a rate, the command is refused as NIP-01 `rate-limited:` with the back-off in
+     * milliseconds as the frame's `params` — `["OK", id, false, "rate-limited: …", "1500"]` —
+     * so a client that waits it out gets through. 0 turns a rate off (the default).
+     *
+     *  - [events_per_minute] / [event_burst]: EVENTs. AUTH is never limited.
+     *  - [reqs_per_minute] / [req_burst]: REQs, COUNTs and NEG-OPENs. CLOSE is never limited.
+     *
+     * A burst of 0 means "the per-minute rate", so a quiet client may spend a minute's worth at
+     * once and then one every `60 / rate` seconds.
+     */
+    data class RateLimitsSection(
+        val events_per_minute: Int = 0,
+        val event_burst: Int = 0,
+        val reqs_per_minute: Int = 0,
+        val req_burst: Int = 0,
+    ) {
+        /** The limiters, built once and shared by every connection; null when every rate is off. */
+        fun toRateLimits(): RateLimits? {
+            val events = limiter(events_per_minute, event_burst)
+            val reqs = limiter(reqs_per_minute, req_burst)
+            return if (events == null && reqs == null) null else RateLimits(events, reqs)
+        }
+
+        private fun limiter(
+            perMinute: Int,
+            burst: Int,
+        ): RateLimiter? = if (perMinute <= 0) null else RateLimiter(perMinute, if (burst > 0) burst else perMinute)
+    }
+
     data class AuthorizationSection(
         val pubkey_whitelist: List<String> = emptyList(),
         val pubkey_blacklist: List<String> = emptyList(),
@@ -401,6 +435,10 @@ data class StaticConfig(
         require(http.body_timeout_seconds > 0) { "[http].body_timeout_seconds must be > 0, got ${http.body_timeout_seconds}" }
         require(http.deadline_seconds > 0) { "[http].deadline_seconds must be > 0, got ${http.deadline_seconds}" }
         require(http.max_body_bytes > 0) { "[http].max_body_bytes must be > 0, got ${http.max_body_bytes}" }
+        require(rate_limits.events_per_minute >= 0) { "[rate_limits].events_per_minute must be >= 0 (0 = no limit), got ${rate_limits.events_per_minute}" }
+        require(rate_limits.event_burst >= 0) { "[rate_limits].event_burst must be >= 0 (0 = events_per_minute), got ${rate_limits.event_burst}" }
+        require(rate_limits.reqs_per_minute >= 0) { "[rate_limits].reqs_per_minute must be >= 0 (0 = no limit), got ${rate_limits.reqs_per_minute}" }
+        require(rate_limits.req_burst >= 0) { "[rate_limits].req_burst must be >= 0 (0 = reqs_per_minute), got ${rate_limits.req_burst}" }
         require(http.retry_after_seconds >= 0) { "[http].retry_after_seconds must be >= 0, got ${http.retry_after_seconds}" }
         database.readers?.let {
             require(it >= 1) { "[database].readers must be >= 1 (got $it); a 0/negative pool can never answer a query" }
