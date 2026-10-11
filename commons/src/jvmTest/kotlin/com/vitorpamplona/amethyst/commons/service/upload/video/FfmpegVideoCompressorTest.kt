@@ -258,4 +258,22 @@ class FfmpegVideoCompressorTest {
             val none = FfmpegVideoCompressor(locator = FfmpegLocator({ false }, { emptyList() }, { null }, disabled = false))
             assertEquals(VideoCompressionResult.Original(null), none.compress(source(1), CompressorQuality.HIGH, false) {})
         }
+
+    @Test
+    fun failedProbeIsNotCached() =
+        runTest {
+            var calls = 0
+            val c =
+                FfmpegVideoCompressor(
+                    locator = FfmpegLocator({ true }, { emptyList() }, { null }, disabled = false),
+                    encoders = { setOf("libx264") },
+                    probe = { if (calls++ == 0) null else ProbeResult(VideoInfo(VideoResolution(1920, 1080), 30f), 30.0, false) },
+                    runner = FakeRunner(listOf(0)),
+                    gate = Semaphore(1),
+                    tempFile = { File.createTempFile("amethyst_video_", ".mp4", tempDir) },
+                )
+            val src = source(1000)
+            assertNull(c.probe(src))
+            assertEquals(VideoResolution(1920, 1080), c.probe(src)?.resolution)
+        }
 }

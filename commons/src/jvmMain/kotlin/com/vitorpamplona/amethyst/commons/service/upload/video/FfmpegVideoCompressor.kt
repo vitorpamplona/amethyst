@@ -122,11 +122,12 @@ class FfmpegVideoCompressor(
     private suspend fun probed(source: File): ProbeResult? {
         val key = Triple(source.absolutePath, source.length(), source.lastModified())
         lastProbe?.let { (k, v) -> if (k == key) return v }
-        return probe.invoke(source).also { lastProbe = key to it }
+        // A failed probe (stalled or exited non-zero) is not remembered: the next ask tries again.
+        return probe.invoke(source)?.also { lastProbe = key to it }
     }
 
     @Volatile
-    private var lastProbe: Pair<Triple<String, Long, Long>, ProbeResult?>? = null
+    private var lastProbe: Pair<Triple<String, Long, Long>, ProbeResult>? = null
 
     /** The table row, frame rate, duration and notices one encode of [source] at [quality] works from. */
     private class EncodePlan(
