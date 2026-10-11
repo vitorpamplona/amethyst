@@ -86,8 +86,10 @@ import com.vitorpamplona.amethyst.desktop.ui.media.AnimatedGifImage
 import com.vitorpamplona.amethyst.desktop.ui.media.AudioPlayer
 import com.vitorpamplona.amethyst.desktop.ui.media.DesktopVideoPlayer
 import com.vitorpamplona.amethyst.desktop.ui.media.LightboxOverlay
+import com.vitorpamplona.amethyst.desktop.ui.media.PodcastEpisodePlayer
 import com.vitorpamplona.amethyst.desktop.ui.media.SaveMediaAction
 import com.vitorpamplona.quartz.nip94FileMetadata.tags.DimensionTag
+import com.vitorpamplona.quartz.podcasts.PodcastAudio
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.coroutines.launch
 import com.vitorpamplona.amethyst.commons.ui.components.LoadUrlPreview as SharedLoadUrlPreview
@@ -400,6 +402,21 @@ object DesktopNotePlatform : NotePlatform {
         contentScale = ContentScale.FillWidth,
         nostrUriCallback = note.toNostrUri(),
         isLiveStream = false,
+        accountViewModel = accountViewModel,
+    )
+
+    @Composable
+    override fun PodcastEpisodeAudioPlayer(
+        audio: PodcastAudio,
+        note: Note,
+        title: String?,
+        image: String?,
+        borderModifier: Modifier,
+        accountViewModel: AccountViewModel,
+    ) = PodcastEpisodePlayer(
+        audio = audio,
+        note = note,
+        borderModifier = borderModifier,
         accountViewModel = accountViewModel,
     )
 
