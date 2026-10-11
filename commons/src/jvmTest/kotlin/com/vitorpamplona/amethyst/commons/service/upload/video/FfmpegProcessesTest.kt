@@ -34,7 +34,8 @@ import kotlin.test.assertTrue
 class FfmpegProcessesTest {
     private val isWindows = FfmpegTestSupport.isWindows
 
-    private fun sleep30(): List<String> = if (isWindows) listOf("timeout", "/t", "30", "/nobreak") else listOf("sleep", "30")
+    // Not `timeout /t`: it exits at once when stdin is redirected, which the runner always does.
+    private fun sleep30(): List<String> = if (isWindows) listOf("powershell", "-NoProfile", "-Command", "Start-Sleep", "-Seconds", "30") else listOf("sleep", "30")
 
     private fun shell(script: String): List<String> = if (isWindows) listOf("cmd", "/c", script.replace(";", " &")) else listOf("sh", "-c", script)
 

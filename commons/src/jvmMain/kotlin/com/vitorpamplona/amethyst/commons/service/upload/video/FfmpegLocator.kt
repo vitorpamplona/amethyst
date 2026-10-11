@@ -43,6 +43,7 @@ class FfmpegLocator(
     private val packageDirs: () -> List<File> = ::defaultPackageDirs,
     private val resourcesDir: () -> File? = { System.getProperty("compose.application.resources.dir")?.let(::File) },
     private val disabled: Boolean = System.getenv("AMETHYST_FFMPEG_DISABLED") != null,
+    private val windows: Boolean = isWindows,
 ) {
     val ffmpeg: String? by lazy { resolve("ffmpeg") }
     val ffprobe: String? by lazy { resolve("ffprobe") }
@@ -60,7 +61,7 @@ class FfmpegLocator(
             Log.i(TAG) { "$name disabled by AMETHYST_FFMPEG_DISABLED" }
             return null
         }
-        val binary = if (isWindows) "$name.exe" else name
+        val binary = if (windows) "$name.exe" else name
         if (runsOnPath(binary)) return binary
         val candidates = packageDirs().map { File(it, binary) } + listOfNotNull(resourcesDir()?.let { File(it, "ffmpeg/$binary") })
         val found = candidates.firstOrNull { it.isFile && it.canExecute() }

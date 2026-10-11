@@ -53,13 +53,18 @@ class FfmpegLocatorTest {
             setExecutable(true)
         }
 
-    /** Every locator under test ignores the environment, so the suite passes under AMETHYST_FFMPEG_DISABLED=1 too. */
+    /**
+     * Every locator under test ignores the environment, so the suite passes under
+     * AMETHYST_FFMPEG_DISABLED=1 too, and resolves Unix names whatever the host, so the same
+     * fake binaries serve on a Windows runner.
+     */
     private fun locator(
         runsOnPath: (String) -> Boolean,
         packageDirs: () -> List<File>,
         resourcesDir: () -> File?,
         disabled: Boolean = false,
-    ) = FfmpegLocator(runsOnPath, packageDirs, resourcesDir, disabled)
+        windows: Boolean = false,
+    ) = FfmpegLocator(runsOnPath, packageDirs, resourcesDir, disabled, windows)
 
     @Test
     fun prefersPath() {
@@ -79,7 +84,17 @@ class FfmpegLocatorTest {
     }
 
     @Test
+    fun windowsLooksForTheExe() {
+        val bin = executable(File(pkgDir, "ffmpeg.exe"))
+        executable(File(pkgDir, "ffmpeg"))
+        assertEquals(bin.absolutePath, locator({ false }, { listOf(pkgDir) }, { null }, windows = true).ffmpeg)
+        assertEquals("ffmpeg.exe", locator({ it == "ffmpeg.exe" }, { emptyList() }, { null }, windows = true).ffmpeg)
+    }
+
+    @Test
     fun nonExecutableFilesAreIgnored() {
+        // Windows has no execute bit: every existing file is executable there.
+        if (FfmpegTestSupport.isWindows) return
         File(resDir, "ffmpeg/ffprobe").apply {
             parentFile.mkdirs()
             writeText("")
