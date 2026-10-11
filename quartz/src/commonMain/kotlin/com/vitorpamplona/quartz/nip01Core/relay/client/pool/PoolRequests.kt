@@ -358,6 +358,7 @@ class PoolRequests(
                     message = msg.message,
                     relay = relay.url,
                     forFilters = forFilters,
+                    params = msg.params,
                 )
 
                 // send a newer version when done, but don't send a close if just closed
@@ -365,6 +366,34 @@ class PoolRequests(
                     relay.sendOrConnectAndSync(cmd)
                 }
             }
+        }
+    }
+
+    /**
+     * Re-sends the REQs of [subIds] that [relay] CLOSED as `rate-limited:` with a back-off, now
+     * that the back-off has passed. A CLOSED sub keeps its filters so it is not re-sent on its
+     * own (see [RequestSubscriptionState.onClosed]); this forgets them so the current desired
+     * filters go out again. A sub that moved on in the meantime — re-sent after a filter change,
+     * a reconnect, or dropped from this relay — is left alone.
+     */
+    fun retryRateLimited(
+        relay: NormalizedRelayUrl,
+        subIds: Set<String>,
+        sync: (Command) -> Unit,
+    ) {
+        subIds.forEach { subId ->
+            val cmd =
+                relayState.get(subId)?.let { state ->
+                    state.withLock(relay) {
+                        if (state.currentState(relay) == ReqSubStatus.CLOSED) {
+                            state.onSubscriptionClosed(relay)
+                            decideCommandLocked(state, subId, relay)
+                        } else {
+                            null
+                        }
+                    }
+                }
+            if (cmd is ReqCmd) sync(cmd)
         }
     }
 

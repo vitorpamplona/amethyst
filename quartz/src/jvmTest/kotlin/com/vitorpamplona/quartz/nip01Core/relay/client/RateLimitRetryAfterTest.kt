@@ -1,0 +1,195 @@
+/*
+ * Copyright (c) 2025 Vitor Pamplona
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy of
+ * this software and associated documentation files (the "Software"), to deal in
+ * the Software without restriction, including without limitation the rights to use,
+ * copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the
+ * Software, and to permit persons to whom the Software is furnished to do so,
+ * subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in all
+ * copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS
+ * FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR
+ * COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN
+ * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
+ * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+ */
+package com.vitorpamplona.quartz.nip01Core.relay.client
+
+import com.vitorpamplona.quartz.nip01Core.core.Event
+import com.vitorpamplona.quartz.nip01Core.crypto.KeyPair
+import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.publishAndCollectResults
+import com.vitorpamplona.quartz.nip01Core.relay.client.reqs.SubscriptionListener
+import com.vitorpamplona.quartz.nip01Core.relay.commands.toRelay.EventCmd
+import com.vitorpamplona.quartz.nip01Core.relay.commands.toRelay.ReqCmd
+import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
+import com.vitorpamplona.quartz.nip01Core.relay.server.NostrServer
+import com.vitorpamplona.quartz.nip01Core.relay.server.inprocess.InProcessWebSocket
+import com.vitorpamplona.quartz.nip01Core.relay.server.policies.PassThroughPolicy
+import com.vitorpamplona.quartz.nip01Core.relay.server.policies.PolicyResult
+import com.vitorpamplona.quartz.nip01Core.relay.sockets.WebSocket
+import com.vitorpamplona.quartz.nip01Core.relay.sockets.WebSocketListener
+import com.vitorpamplona.quartz.nip01Core.relay.sockets.WebsocketBuilder
+import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerInternal
+import com.vitorpamplona.quartz.nip01Core.store.sqlite.EventStore
+import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.withTimeout
+import kotlinx.coroutines.withTimeoutOrNull
+import java.util.concurrent.atomic.AtomicInteger
+import kotlin.test.Test
+import kotlin.test.assertEquals
+import kotlin.test.assertNull
+import kotlin.test.assertTrue
+import kotlin.time.TimeSource
+
+/**
+ * A relay that refuses the first [refuseFirst] REQs and EVENTs as `rate-limited:` — with a
+ * NIP-01 back-off of [backOffMs] when it is not null — wired to a real [NostrClient] over the
+ * in-process socket. Pins that the pool honors the back-off (asks again once it passes, not
+ * before) and that a refusal without one is not read as "retry now".
+ */
+class RateLimitRetryAfterTest {
+    private class Relay(
+        val backOffMs: Long?,
+        val refuseFirst: Int = 1,
+    ) : AutoCloseable {
+        val reqs = AtomicInteger(0)
+        val events = AtomicInteger(0)
+
+        private val server =
+            NostrServer(
+                store = EventStore(null),
+                policyBuilder = {
+                    object : PassThroughPolicy() {
+                        override fun accept(cmd: ReqCmd): PolicyResult<ReqCmd> =
+                            if (reqs.incrementAndGet() <= refuseFirst) {
+                                PolicyResult.Rejected.rateLimited("slow down there chief", backOffMs)
+                            } else {
+                                PolicyResult.Accepted(cmd)
+                            }
+
+                        override fun accept(cmd: EventCmd): PolicyResult<EventCmd> =
+                            if (events.incrementAndGet() <= refuseFirst) {
+                                PolicyResult.Rejected.rateLimited("slow down there chief", backOffMs)
+                            } else {
+                                PolicyResult.Accepted(cmd)
+                            }
+                    }
+                },
+            )
+
+        private val scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
+
+        val client =
+            NostrClient(
+                object : WebsocketBuilder {
+                    override fun build(
+                        url: NormalizedRelayUrl,
+                        out: WebSocketListener,
+                    ): WebSocket = InProcessWebSocket(server, out)
+                },
+                scope,
+            )
+
+        override fun close() {
+            client.close()
+            server.close()
+            scope.cancel()
+        }
+    }
+
+    private val url = RelayUrlNormalizer.normalizeOrNull("wss://ratelimited.example.com/")!!
+
+    private class Listener : SubscriptionListener {
+        val closedParams = CompletableDeferred<String?>()
+        val eose = CompletableDeferred<Unit>()
+
+        override fun onClosed(
+            message: String,
+            relay: NormalizedRelayUrl,
+            forFilters: List<Filter>?,
+            params: String?,
+        ) {
+            closedParams.complete(params)
+        }
+
+        override fun onEose(
+            relay: NormalizedRelayUrl,
+            forFilters: List<Filter>?,
+        ) {
+            eose.complete(Unit)
+        }
+    }
+
+    private suspend fun note(): Event = NostrSignerInternal(KeyPair()).sign(Event.build(kind = 1, content = "hi") {})
+
+    @Test
+    fun aClosedReqIsAskedAgainOnceTheBackOffPasses() =
+        runBlocking {
+            Relay(backOffMs = 400).use { relay ->
+                val listener = Listener()
+                val start = TimeSource.Monotonic.markNow()
+                relay.client.subscribe("sub", mapOf(url to listOf(Filter(kinds = listOf(1)))), listener)
+
+                assertEquals("400", withTimeout(5_000) { listener.closedParams.await() })
+                withTimeout(5_000) { listener.eose.await() }
+
+                assertTrue(start.elapsedNow().inWholeMilliseconds >= 400, "re-sent before the back-off passed")
+                assertEquals(2, relay.reqs.get())
+            }
+        }
+
+    @Test
+    fun aClosedReqWithoutABackOffIsNotRetriedAtOnce() =
+        runBlocking {
+            Relay(backOffMs = null).use { relay ->
+                val listener = Listener()
+                relay.client.subscribe("sub", mapOf(url to listOf(Filter(kinds = listOf(1)))), listener)
+
+                assertNull(withTimeout(5_000) { listener.closedParams.await() })
+                assertNull(withTimeoutOrNull(1_000) { listener.eose.await() })
+                assertEquals(1, relay.reqs.get())
+            }
+        }
+
+    @Test
+    fun aPublishWaitsOutTheBackOffAndReportsTheRetry() =
+        runBlocking {
+            Relay(backOffMs = 300).use { relay ->
+                val event = note()
+                val start = TimeSource.Monotonic.markNow()
+                val result = relay.client.publishAndCollectResults(event, setOf(url), timeoutInSeconds = 5).getValue(url)
+
+                assertTrue(result.accepted, "the retry after the back-off was not reported: ${result.message}")
+                assertTrue(start.elapsedNow().inWholeMilliseconds >= 300, "re-sent before the back-off passed")
+                assertEquals(2, relay.events.get())
+            }
+        }
+
+    @Test
+    fun aBackOffPastTheTimeoutIsReportedAsTheRefusal() =
+        runBlocking {
+            Relay(backOffMs = 60_000).use { relay ->
+                val result = relay.client.publishAndCollectResults(note(), setOf(url), timeoutInSeconds = 2).getValue(url)
+
+                assertEquals(false, result.accepted)
+                assertEquals("rate-limited: slow down there chief", result.message)
+                assertEquals(60_000L, result.retryAfterMs)
+                // Not re-sent: a minute is still ahead.
+                delay(200)
+                assertEquals(1, relay.events.get())
+            }
+        }
+}

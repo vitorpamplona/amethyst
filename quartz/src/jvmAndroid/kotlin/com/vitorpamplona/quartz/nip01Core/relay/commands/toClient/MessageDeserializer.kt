@@ -87,6 +87,7 @@ class MessageDeserializer : StdDeserializer<Message>(Message::class.java) {
                         eventId = jp.nextTextValue(),
                         success = jp.nextBooleanValue(),
                         message = jp.nextTextValue() ?: "",
+                        params = nextParams(jp),
                     )
                 }
 
@@ -106,6 +107,7 @@ class MessageDeserializer : StdDeserializer<Message>(Message::class.java) {
                     ClosedMessage(
                         subId = jp.nextTextValue(),
                         message = jp.nextTextValue() ?: "",
+                        params = nextParams(jp),
                     )
                 }
 
@@ -166,4 +168,26 @@ class MessageDeserializer : StdDeserializer<Message>(Message::class.java) {
 
         return message
     }
+
+    /**
+     * The optional trailing `params` of an OK or CLOSED (NIP-01). The spec sends it as a string;
+     * a bare number is taken by its text too. Any other value is stepped over (an object or
+     * array whole, so the drain loop above only ever sees the outer frame's tokens) and read as
+     * absent.
+     */
+    private fun nextParams(jp: JsonParser): String? =
+        when (jp.nextToken()) {
+            JsonToken.VALUE_STRING, JsonToken.VALUE_NUMBER_INT -> {
+                jp.text
+            }
+
+            JsonToken.START_OBJECT, JsonToken.START_ARRAY -> {
+                jp.skipChildren()
+                null
+            }
+
+            else -> {
+                null
+            }
+        }
 }

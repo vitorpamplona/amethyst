@@ -32,6 +32,7 @@ import com.vitorpamplona.quartz.nip01Core.relay.client.reqs.SubscriptionListener
 import com.vitorpamplona.quartz.nip01Core.relay.client.single.newSubId
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.EoseMessage
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.MachineReadablePrefix
+import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.RetryAfter
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
@@ -163,6 +164,12 @@ object PagingDiagnostics {
     @Volatile
     var enabled: Boolean = false
 }
+
+/**
+ * The longest back-off a relay may state in a `rate-limited:` CLOSED for [fetchAllPages] to wait
+ * it out and re-ask the page. Beyond it the walk ends as CLOSED instead of sleeping.
+ */
+const val MAX_STATED_BACKOFF_MS = 60_000L
 
 /**
  * How long [fetchAllPages] waits before re-asking a page a relay answered empty (or CLOSED)
@@ -515,6 +522,11 @@ private suspend fun INostrClient.walkPages(
     // EOSE hints below.
     var refusal: String? = null
 
+    // The back-off the last refusal stated, when it was a `rate-limited:` CLOSED carrying one
+    // (NIP-01's `params`). A throttled page is re-asked after this instead of the walk's own
+    // guess from [PageRetryBackoff], within [MAX_STATED_BACKOFF_MS].
+    var refusalRetryAfterMs: Long? = null
+
     // Throttle evidence for the empty-page re-ask (see [PageRetryBackoff]):
     //  - the filter indices active on the page that set the current boundary. Only while
     //    the SAME filters are asked again does an empty inclusive re-fetch contradict what
@@ -824,14 +836,24 @@ private suspend fun INostrClient.walkPages(
                             doneChannel.trySend(PageSignal.EOSE)
                         }
 
+                        // Both overloads: the pool calls the one with params, but a client that
+                        // wraps or stands in for it may still call the three-argument one.
                         override fun onClosed(
                             message: String,
                             relay: NormalizedRelayUrl,
                             forFilters: List<Filter>?,
+                        ) = onClosed(message, relay, forFilters, null)
+
+                        override fun onClosed(
+                            message: String,
+                            relay: NormalizedRelayUrl,
+                            forFilters: List<Filter>?,
+                            params: String?,
                         ) {
                             // A refusal of a finished page must not overwrite the current one's.
                             if (gate.over) return
                             refusal = message
+                            refusalRetryAfterMs = RetryAfter.parse(message, params)
                             if (MachineReadablePrefix.parse(message) == MachineReadablePrefix.AUTH_REQUIRED) {
                                 doneChannel.trySend(PageSignal.AUTH_REQUIRED)
                             } else {
@@ -846,6 +868,7 @@ private suspend fun INostrClient.walkPages(
                         ) {
                             if (gate.over) return
                             refusal = message
+                            refusalRetryAfterMs = null
                             doneChannel.trySend(PageSignal.CANNOT_CONNECT)
                         }
                     }
@@ -978,8 +1001,13 @@ private suspend fun INostrClient.walkPages(
                         // pages, and went away with that (0 in 300+ walks since).
                         else -> false
                     }
-                if (throttled) {
-                    val waitMs = throttleBackoff.delaysMs[reAsks++]
+                // A relay that said how long to back off is taken at its word, unless the wait
+                // is too long for a walk to sit through; then the page ends as CLOSED like any
+                // other refusal and the caller retries the walk later.
+                val statedBackOff = if (pageEnd == PageSignal.CLOSED) refusalRetryAfterMs else null
+                if (throttled && (statedBackOff == null || statedBackOff <= MAX_STATED_BACKOFF_MS)) {
+                    val waitMs = statedBackOff ?: throttleBackoff.delaysMs[reAsks]
+                    reAsks++
                     Log.d("fetchAllPages") { "${relay.url} ${if (pageEnd == PageSignal.CLOSED) "CLOSED ($refusal)" else "empty page"} at until=$until looks throttled; re-asking in ${waitMs}ms (#$reAsks)" }
                     throttleBackoff.sleep(waitMs)
                     continue

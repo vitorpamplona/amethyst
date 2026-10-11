@@ -55,6 +55,20 @@ interface SubscriptionListener {
         forFilters: List<Filter>?,
     ) {}
 
+    /**
+     * CLOSED together with its optional NIP-01 [params] (null when the relay sent the plain
+     * three-element CLOSED). For a `rate-limited:` [message] it is the back-off in milliseconds;
+     * read it with [com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.RetryAfter.parse].
+     * The pool calls this one; the default forwards to the three-argument [onClosed], so
+     * listeners that don't care about params keep overriding that.
+     */
+    fun onClosed(
+        message: String,
+        relay: NormalizedRelayUrl,
+        forFilters: List<Filter>?,
+        params: String?,
+    ) = onClosed(message, relay, forFilters)
+
     fun onCannotConnect(
         relay: NormalizedRelayUrl,
         message: String,

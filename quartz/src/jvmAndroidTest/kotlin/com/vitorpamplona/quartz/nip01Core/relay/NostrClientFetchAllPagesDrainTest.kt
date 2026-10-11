@@ -190,6 +190,40 @@ class NostrClientFetchAllPagesDrainTest {
         }
 
     /**
+     * A `rate-limited:` CLOSED that states its NIP-01 back-off is re-asked after that back-off,
+     * not after the walk's own guess; one too long to sit through ends the walk as CLOSED.
+     */
+    @Test
+    fun aStatedBackOffReplacesTheWalksOwnDelay() =
+        runBlocking {
+            val client = ScriptedClient()
+            val slept = mutableListOf<Long>()
+            val feeder =
+                launch {
+                    client.awaitPage(1)
+                    client.listener!!.onEvent(event(2000), false, relay, null)
+                    client.listener!!.onEose(relay, null)
+                    client.awaitPage(2)
+                    client.listener!!.onClosed("rate-limited: slow down", relay, null, "750")
+                    client.awaitPage(3)
+                    client.listener!!.onClosed("rate-limited: slow down", relay, null, "3600000")
+                }
+
+            val result =
+                client.fetchAllPages(
+                    relay = relay,
+                    filters = listOf(Filter(kinds = listOf(1))),
+                    idleTimeoutMs = 2_000,
+                    throttleBackoff = PageRetryBackoff(listOf(1L, 1L, 1L)) { slept.add(it) },
+                ) { }
+            feeder.join()
+
+            assertEquals(listOf(750L), slept, "the relay's back-off, then no wait for one an hour long")
+            assertEquals(PagedFetchResult.End.CLOSED, result.end)
+            assertEquals(3, client.subscribeCount)
+        }
+
+    /**
      * An `auth-required:` CLOSED is a refusal too, but its own kind: the caller can fix it
      * with a signer the relay accepts, which is true of none of the others [End.CLOSED]
      * covers. It is reported separately even here, where the client has no NIP-42 responder

@@ -27,11 +27,14 @@ import com.vitorpamplona.quartz.nip01Core.relay.client.listeners.RelayConnection
 import com.vitorpamplona.quartz.nip01Core.relay.client.pool.PoolCounts
 import com.vitorpamplona.quartz.nip01Core.relay.client.pool.PoolEventOutbox
 import com.vitorpamplona.quartz.nip01Core.relay.client.pool.PoolRequests
+import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RateLimitRetries
 import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayPool
 import com.vitorpamplona.quartz.nip01Core.relay.client.reqs.SubscriptionListener
 import com.vitorpamplona.quartz.nip01Core.relay.client.single.IRelayClient
+import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.ClosedMessage
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.Message
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.MessageDecoder
+import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.OkMessage
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toRelay.AuthCmd
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toRelay.CloseCmd
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toRelay.Command
@@ -103,6 +106,26 @@ class NostrClient(
     private val activeRequests: PoolRequests = PoolRequests()
     private val activeCounts: PoolCounts = PoolCounts()
     private val eventOutbox: PoolEventOutbox = PoolEventOutbox()
+
+    /**
+     * REQs a relay CLOSED as `rate-limited:` with a NIP-01 back-off, re-sent once it passes.
+     * Only while active: an inactive pool is disconnected, and reconnecting re-syncs every
+     * subscription anyway.
+     */
+    private val reqRetries =
+        RateLimitRetries(scope) { relay, subIds ->
+            if (isActive()) {
+                activeRequests.retryRateLimited(relay, subIds) { cmd -> relayPool.sendOrConnectAndSync(relay, cmd) }
+            }
+        }
+
+    /** EVENTs a relay refused as `rate-limited:` with a NIP-01 back-off, re-sent once it passes. */
+    private val eventRetries =
+        RateLimitRetries(scope) { relay, eventIds ->
+            if (isActive()) {
+                eventOutbox.retryRateLimited(relay, eventIds) { cmd -> relayPool.sendOrConnectAndSync(relay, cmd) }
+            }
+        }
 
     private var listeners = setOf<RelayConnectionListener>()
 
@@ -415,6 +438,14 @@ class NostrClient(
         activeCounts.onIncomingMessage(relay, msg)
         eventOutbox.onIncomingMessage(relay.url, msg)
 
+        // NIP-01: a `rate-limited:` refusal may say how long to back off. Ask again once it
+        // passes; without one, the refused REQ or EVENT stays parked as before.
+        when (msg) {
+            is ClosedMessage -> msg.retryAfterMs?.let { reqRetries.schedule(relay.url, msg.subId, it) }
+            is OkMessage -> if (!msg.success) msg.retryAfterMs?.let { eventRetries.schedule(relay.url, msg.eventId, it) }
+            else -> {}
+        }
+
         listeners.forEach { it.onIncomingMessage(relay, msgStr, msg) }
     }
 
@@ -501,6 +532,8 @@ class NostrClient(
         activeCounts.destroy()
         activeRequests.destroy()
         eventOutbox.destroy()
+        reqRetries.clear()
+        eventRetries.clear()
         scope.cancel()
     }
 }

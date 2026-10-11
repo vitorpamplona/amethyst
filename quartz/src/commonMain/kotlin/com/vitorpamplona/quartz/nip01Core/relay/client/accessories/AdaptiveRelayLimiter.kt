@@ -52,6 +52,10 @@ import kotlin.concurrent.atomics.ExperimentalAtomicApi
  *     minimum interval between opens to that relay, growing it up [rateLadder]
  *     (250ms → 500ms → 1s → 2s).
  *
+ * A `rate-limited:` CLOSED that states its back-off (NIP-01's `params`) also holds the
+ * relay's next open until that back-off has passed, on top of the ladder step: the relay
+ * said when it will take the next REQ, so nothing is sent before then.
+ *
  * Mixing the two mishandles the relay: capping concurrency does nothing for a
  * rate limit, and slowing the rate does nothing for a subscription-count cap. So
  * each complaint is routed to its own actuator by matching the notice text.
@@ -150,8 +154,27 @@ class AdaptiveRelayLimiter(
             }
         // Route each complaint to the matching actuator. Not mutually exclusive:
         // if a relay somehow reports both, we act on both (they don't conflict).
+        val retryAfterMs = (msg as? ClosedMessage)?.retryAfterMs
         if (isRateLimitMessage(text)) throttleRate(relay.url)
         if (isSubscriptionLimitMessage(text)) demoteConcurrency(relay.url)
+        if (retryAfterMs != null) holdOpens(relay.url, retryAfterMs)
+    }
+
+    /**
+     * Pushes [relay]'s next open slot at least [retryAfterMs] into the future, the back-off
+     * its `rate-limited:` CLOSED stated. Slots already claimed later than that keep theirs.
+     */
+    private fun holdOpens(
+        relay: NormalizedRelayUrl,
+        retryAfterMs: Long,
+    ) {
+        val until = TimeUtils.nowMillis() + retryAfterMs
+        val slot = nextAllowedAtMs.getOrPut(relay) { AtomicLong(until) }
+        while (true) {
+            val prev = slot.load()
+            if (prev >= until || slot.compareAndSet(prev, until)) break
+        }
+        Log.d("AdaptiveRelayLimiter") { "${relay.url} asked for a ${retryAfterMs}ms back-off; holding its next REQ" }
     }
 
     /** Step [relay] one rung down the concurrency-cap ladder, unless already at the floor. */

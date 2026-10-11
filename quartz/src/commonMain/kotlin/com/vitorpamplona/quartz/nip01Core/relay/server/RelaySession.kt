@@ -259,7 +259,7 @@ class RelaySession(
 
         val result = policy.accept(cmd)
         if (result is PolicyResult.Rejected) {
-            send(OkMessage(cmd.event.id, false, result.reason))
+            send(OkMessage(cmd.event.id, false, result.reason, result.params))
             return
         }
 
@@ -305,7 +305,7 @@ class RelaySession(
     private suspend fun handleCount(cmd: CountCmd) {
         val result = policy.accept(cmd)
         if (result is PolicyResult.Rejected) {
-            send(ClosedMessage(cmd.queryId, result.reason))
+            send(ClosedMessage(cmd.queryId, result.reason, result.params))
             return
         }
 
@@ -347,7 +347,7 @@ class RelaySession(
     private suspend fun handleAuth(cmd: AuthCmd) {
         val result = policy.accept(cmd)
         if (result is PolicyResult.Rejected) {
-            send(OkMessage(cmd.event.id, false, result.reason))
+            send(OkMessage(cmd.event.id, false, result.reason, result.params))
             return
         }
 
@@ -391,7 +391,7 @@ class RelaySession(
 
         val result = policy.accept(cmd)
         if (result is PolicyResult.Rejected) {
-            send(ClosedMessage(cmd.subId, result.reason))
+            send(ClosedMessage(cmd.subId, result.reason, result.params))
             return
         }
 

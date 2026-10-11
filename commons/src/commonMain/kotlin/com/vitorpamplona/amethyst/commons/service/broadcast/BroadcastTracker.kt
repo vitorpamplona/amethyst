@@ -42,6 +42,8 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.withTimeoutOrNull
+import kotlin.time.TimeMark
+import kotlin.time.TimeSource
 
 /**
  * Tracks event broadcasts to relays with live progress updates.
@@ -140,13 +142,7 @@ class BroadcastTracker(
                     when (msg) {
                         is OkMessage -> {
                             if (msg.eventId == event.id) {
-                                val result =
-                                    if (msg.success) {
-                                        RelayResult.Success
-                                    } else {
-                                        RelayResult.Error(msg.message)
-                                    }
-                                resultChannel.trySend(RelayResponse(relay.url, result))
+                                resultChannel.trySend(RelayResponse.of(relay.url, msg))
                                 Log.d(TAG) { "[$trackingId] Response from ${relay.url}: success=${msg.success} message=${msg.message}" }
                             }
                         }
@@ -164,6 +160,7 @@ class BroadcastTracker(
                             val receivedRelays = mutableSetOf<NormalizedRelayUrl>()
                             val connectionErrors = mutableMapOf<NormalizedRelayUrl, RelayResult>()
                             var currentBroadcast = broadcast
+                            val started = TimeSource.Monotonic.markNow()
 
                             withTimeoutOrNull(TIMEOUT_SECONDS * 1000) {
                                 while (receivedRelays.size < relays.size) {
@@ -179,6 +176,15 @@ class BroadcastTracker(
                                         continue
                                     }
 
+                                    // Rate-limited with a back-off the client waits out and then resends:
+                                    // shown as retrying, its refusal kept in case no later OK lands.
+                                    if (response.backsOffWithin(started)) {
+                                        connectionErrors[response.relay] = response.result
+                                        currentBroadcast = currentBroadcast.withResult(response.relay, RelayResult.Retrying)
+                                        _activeBroadcasts.update { list -> list.replacing(currentBroadcast) }
+                                        continue
+                                    }
+
                                     receivedRelays.add(response.relay)
                                     currentBroadcast = currentBroadcast.withResult(response.relay, response.result)
 
@@ -189,7 +195,7 @@ class BroadcastTracker(
                                 }
                             }
 
-                            // Relays that never answered: the connection error if there was one, else a timeout
+                            // Relays that never answered: the connection error or held refusal if there was one, else a timeout
                             relays.filter { it !in receivedRelays }.forEach { relay ->
                                 currentBroadcast = currentBroadcast.withResult(relay, connectionErrors[relay] ?: RelayResult.Timeout)
                             }
@@ -326,13 +332,7 @@ class BroadcastTracker(
                     when (msg) {
                         is OkMessage -> {
                             if (msg.eventId == event.id) {
-                                val result =
-                                    if (msg.success) {
-                                        RelayResult.Success
-                                    } else {
-                                        RelayResult.Error(msg.message)
-                                    }
-                                resultChannel.trySend(RelayResponse(relay.url, result))
+                                resultChannel.trySend(RelayResponse.of(relay.url, msg))
                                 Log.d(TAG) { "[${broadcast.id}] Retry response from ${relay.url}: success=${msg.success}" }
                             }
                         }
@@ -349,6 +349,7 @@ class BroadcastTracker(
                         val receivedRelays = mutableSetOf<NormalizedRelayUrl>()
                         val connectionErrors = mutableMapOf<NormalizedRelayUrl, RelayResult>()
                         var currentBroadcast = _activeBroadcasts.value.find { it.id == broadcast.id } ?: broadcast
+                        val started = TimeSource.Monotonic.markNow()
 
                         withTimeoutOrNull(TIMEOUT_SECONDS * 1000) {
                             while (receivedRelays.size < relaysToRetry.size) {
@@ -357,6 +358,12 @@ class BroadcastTracker(
                                 if (response.relay !in relaysToRetry) continue
                                 if (response.relay in receivedRelays) continue
                                 if (response.connectionError) {
+                                    connectionErrors[response.relay] = response.result
+                                    continue
+                                }
+
+                                // Already shown as retrying; keep the refusal in case no later OK lands.
+                                if (response.backsOffWithin(started)) {
                                     connectionErrors[response.relay] = response.result
                                     continue
                                 }
@@ -370,7 +377,7 @@ class BroadcastTracker(
                             }
                         }
 
-                        // Relays that never answered: the connection error if there was one, else a timeout
+                        // Relays that never answered: the connection error or held refusal if there was one, else a timeout
                         relaysToRetry.filter { it !in receivedRelays }.forEach { relay ->
                             currentBroadcast = currentBroadcast.withResult(relay, connectionErrors[relay] ?: RelayResult.Timeout)
                         }
@@ -406,5 +413,27 @@ class BroadcastTracker(
         val result: RelayResult,
         /** From the connection, not the relay: provisional until the relay sends its OK. */
         val connectionError: Boolean = false,
-    )
+        /**
+         * A `rate-limited:` refusal's NIP-01 back-off. The client resends the event once it
+         * passes, so the refusal is provisional too, while that retry can still land in time.
+         */
+        val retryAfterMs: Long? = null,
+    ) {
+        /** True when this is a back-off that ends before the broadcast [started] times out. */
+        fun backsOffWithin(started: TimeMark): Boolean {
+            val backOff = retryAfterMs ?: return false
+            return started.elapsedNow().inWholeMilliseconds + backOff < TIMEOUT_SECONDS * 1000
+        }
+
+        companion object {
+            fun of(
+                relay: NormalizedRelayUrl,
+                msg: OkMessage,
+            ) = if (msg.success) {
+                RelayResponse(relay, RelayResult.Success)
+            } else {
+                RelayResponse(relay, RelayResult.Error(msg.message), retryAfterMs = msg.retryAfterMs)
+            }
+        }
+    }
 }

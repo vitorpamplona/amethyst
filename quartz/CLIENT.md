@@ -302,6 +302,20 @@ results.forEach { (relay, success) ->
 }
 ```
 
+#### Rate limits
+
+A relay may refuse an `EVENT` or a `REQ` as `rate-limited:` and say how long to back off, in
+the optional trailing `params` of NIP-01's `OK` / `CLOSED` (milliseconds, e.g.
+`["OK", id, false, "rate-limited: slow down", "1000"]`). `NostrClient` honors it: the refused
+`EVENT` or `REQ` is sent again once the back-off passes, never before. A `rate-limited:`
+refusal without a back-off is left parked until the next reconnect or filter change.
+
+`publishAndCollectResults` waits for that retry when it fits inside the timeout; otherwise
+the relay's refusal is reported with `PublishResult.retryAfterMs` set. A
+`SubscriptionListener` reads the raw value by overriding the `onClosed` overload that takes
+`params`, and `RetryAfter.parse(message, params)` turns it into milliseconds. On the relay
+side, a policy refuses with `PolicyResult.Rejected.rateLimited(message, retryAfterMs)`.
+
 ### 6. One-shot Reads (fetch, page, count)
 
 Most code doesn't need a live subscription: it needs "the events matching this

@@ -52,6 +52,11 @@ class PublishResult(
      * OK. On an already-open socket this is an honest NIP-66 `rtt-write`.
      */
     val elapsedMs: Long = -1,
+    /**
+     * For a `rate-limited:` refusal that stated its back-off (NIP-01's `params`), how many
+     * milliseconds the relay asked us to wait before publishing to it again; null otherwise.
+     */
+    val retryAfterMs: Long? = null,
 ) {
     /**
      * True when this failure came from the transport (never connected,
@@ -94,6 +99,13 @@ const val DEFAULT_TRANSPORT_RETRIES = 1
  * open-ended wait on something unreachable.
  */
 const val TRANSPORT_RETRY_GRACE_MS = 5_000L
+
+/**
+ * How many `rate-limited:` refusals with a stated back-off a publish waits through per relay
+ * before taking the refusal as the relay's answer. Each wait must also fit inside the caller's
+ * timeout; the pool does the re-sending.
+ */
+const val RATE_LIMIT_WAITS = 2
 
 /**
  * Internal channel marker for "this relay is back up", so the wait loop — the
@@ -211,7 +223,7 @@ suspend fun INostrClient.publishAndCollectResults(
                         // receivedResults and end the wait loop before every listed relay
                         // answered — misreporting the missing ones as NO_RESPONSE.
                         if (msg.eventId == event.id && relay.url in relayList) {
-                            resultChannel.trySend(DetailedResult(relay.url, msg.success, msg.message, mark.elapsedNow().inWholeMilliseconds))
+                            resultChannel.trySend(DetailedResult(relay.url, msg.success, msg.message, mark.elapsedNow().inWholeMilliseconds, msg.retryAfterMs))
                             Log.d("publishAndConfirm") { "onSendResponse Received response for ${msg.eventId} from relay ${relay.url} message ${msg.message} success ${msg.success}" }
                         }
                     }
@@ -237,6 +249,14 @@ suspend fun INostrClient.publishAndCollectResults(
                             // that is healthy a moment later. The retries live inside the
                             // caller's existing timeout, so nothing waits longer than before.
                             val retriesLeft = relayList.associateWith { transportRetries }.toMutableMap()
+                            // A `rate-limited:` OK that names its back-off is not the relay's last
+                            // word: the pool re-sends the event once the back-off passes (see
+                            // NostrClient). When that fits inside the deadline, its OK is held here
+                            // as provisional and the loop keeps waiting for the retry's verdict, a
+                            // bounded number of times per relay. If no later verdict lands, the
+                            // held refusal is what gets reported.
+                            val rateLimitWaitsLeft = relayList.associateWith { RATE_LIMIT_WAITS }.toMutableMap()
+                            val heldRefusals = mutableMapOf<NormalizedRelayUrl, PublishResult>()
                             // The deadline is a moving target rather than one
                             // `withTimeout` around the whole loop: issuing a retry extends it by
                             // [TRANSPORT_RETRY_GRACE_MS], because the retry needs time the
@@ -268,7 +288,22 @@ suspend fun INostrClient.publishAndCollectResults(
                                     val currentResult = receivedResults[result.relay]
                                     // do not override a successful result.
                                     if (currentResult == null || !currentResult.accepted) {
-                                        receivedResults[result.relay] = PublishResult(result.success, result.message, result.elapsedMs)
+                                        receivedResults[result.relay] = PublishResult(result.success, result.message, result.elapsedMs, result.retryAfterMs)
+                                    }
+
+                                    val backOff = result.retryAfterMs
+                                    if (!result.success &&
+                                        backOff != null &&
+                                        receivedResults[result.relay]?.accepted == false &&
+                                        (rateLimitWaitsLeft[result.relay] ?: 0) > 0 &&
+                                        mark.elapsedNow().inWholeMilliseconds + backOff < deadlineMs
+                                    ) {
+                                        rateLimitWaitsLeft[result.relay] = rateLimitWaitsLeft.getValue(result.relay) - 1
+                                        heldRefusals[result.relay] = receivedResults.remove(result.relay)!!
+                                        Log.d("publishAndConfirm") {
+                                            "${result.relay} rate-limited ${event.id} for ${backOff}ms; waiting for the pool's retry"
+                                        }
+                                        continue
                                     }
 
                                     val recorded = receivedResults[result.relay]
@@ -316,6 +351,11 @@ suspend fun INostrClient.publishAndCollectResults(
                                     receivedResults[relay] = PublishResult(false, PublishResult.DISCONNECTED)
                                 }
                             }
+                            // A relay held on a rate-limit back-off whose retry never answered:
+                            // its refusal is the verdict we have.
+                            heldRefusals.forEach { (relay, refusal) ->
+                                if (relay !in receivedResults) receivedResults[relay] = refusal
+                            }
 
                             receivedResults
                         }
@@ -345,4 +385,5 @@ private class DetailedResult(
     val success: Boolean,
     val message: String,
     val elapsedMs: Long = -1,
+    val retryAfterMs: Long? = null,
 )
