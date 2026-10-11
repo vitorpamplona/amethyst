@@ -1022,7 +1022,10 @@
     <string name="my_fitness_week_trend">Weekly active time</string>
     <string name="my_fitness_week_of">Week of %1$s</string>
     <string name="my_fitness_goal_line">Goal</string>
-    <string name="my_fitness_weeks_met">Goal met %1$d of the last %2$d weeks</string>
+    <plurals name="my_fitness_weeks_met">
+        <item quantity="one">Goal met %1$d of the last %2$d week</item>
+        <item quantity="other">Goal met %1$d of the last %2$d weeks</item>
+    </plurals>
     <string name="my_fitness_average_change">Averaging %1$s a week lately, %2$s vs the 4 weeks before</string>
     <string name="my_fitness_average">Averaging %1$s a week lately</string>
     <string name="my_fitness_consistency">Consistency</string>
@@ -6914,7 +6917,10 @@
     <string name="privacy_lock_password_new">New password</string>
     <string name="privacy_lock_password_confirm">Confirm new password</string>
     <string name="privacy_lock_password_mismatch">The passwords don't match.</string>
-    <string name="privacy_lock_password_too_short">Use at least %1$d characters.</string>
+    <plurals name="privacy_lock_password_too_short">
+        <item quantity="one">Use at least %1$d character.</item>
+        <item quantity="other">Use at least %1$d characters.</item>
+    </plurals>
     <string name="privacy_lock_password_wrong">Wrong password.</string>
     <string name="privacy_lock_not_available">The privacy lock isn't available here.</string>
     <string name="privacy_lock_unlock">Unlock</string>

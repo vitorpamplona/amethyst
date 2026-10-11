@@ -1027,7 +1027,12 @@
     <string name="my_fitness_week_trend">Cotygodniowy czas aktywności</string>
     <string name="my_fitness_week_of">Tydzień %1$s</string>
     <string name="my_fitness_goal_line">Cel</string>
-    <string name="my_fitness_weeks_met">Cel osiągnięty w %1$d z ostatnich %2$d tygodni</string>
+    <plurals name="my_fitness_weeks_met">
+        <item quantity="one">Cel osiągnięty w %1$d z ostatniego %2$d tygodnia</item>
+        <item quantity="few">Cel osiągnięty w %1$d z ostatnich %2$d tygodni</item>
+        <item quantity="many">Cel osiągnięty w %1$d z ostatnich %2$d tygodni</item>
+        <item quantity="other">Cel osiągnięty w %1$d z ostatnich %2$d tygodnia</item>
+    </plurals>
     <string name="my_fitness_average_change">Ostatnio średnio %1$s tygodniowo, %2$s w porównaniu z poprzednimi 4 tygodniami</string>
     <string name="my_fitness_average">Ostatnio średnio %1$s tygodniowo</string>
     <string name="my_fitness_consistency">Konsekwentność</string>
@@ -7190,7 +7195,12 @@
     <string name="privacy_lock_password_new">Nowe hasło</string>
     <string name="privacy_lock_password_confirm">Potwierdź nowe hasło</string>
     <string name="privacy_lock_password_mismatch">Hasła nie są identyczne.</string>
-    <string name="privacy_lock_password_too_short">Użyj co najmniej %1$d znaków.</string>
+    <plurals name="privacy_lock_password_too_short">
+        <item quantity="one">Użyj co najmniej %1$d znaku.</item>
+        <item quantity="few">Użyj co najmniej %1$d znaków.</item>
+        <item quantity="many">Użyj co najmniej %1$d znaków.</item>
+        <item quantity="other">Użyj co najmniej %1$d znaku.</item>
+    </plurals>
     <string name="privacy_lock_password_wrong">Nieprawidłowe hasło.</string>
     <string name="privacy_lock_not_available">Blokada prywatności nie jest tutaj dostępna.</string>
     <string name="privacy_lock_unlock">Odblokuj</string>

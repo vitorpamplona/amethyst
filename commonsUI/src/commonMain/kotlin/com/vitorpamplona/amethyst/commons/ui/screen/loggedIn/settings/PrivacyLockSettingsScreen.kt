@@ -90,6 +90,7 @@ import com.vitorpamplona.amethyst.commons.resources.privacy_lock_wallet_descript
 import com.vitorpamplona.amethyst.commons.resources.save
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.navigation.topbars.TopBarWithBackButton
+import com.vitorpamplona.amethyst.commons.ui.pluralStringRes
 import com.vitorpamplona.amethyst.commons.ui.privacylock.CredentialPrompter
 import com.vitorpamplona.amethyst.commons.ui.privacylock.LocalCredentialPrompter
 import com.vitorpamplona.amethyst.commons.ui.privacylock.LocalPrivacyLockSettings
@@ -297,7 +298,7 @@ private fun PasswordDialog(
     val asksCurrent = mode != PasswordDialogMode.Set
     val asksNew = mode == PasswordDialogMode.Set || mode == PasswordDialogMode.Change
     val wrongStr = stringRes(Res.string.privacy_lock_password_wrong)
-    val shortStr = stringRes(Res.string.privacy_lock_password_too_short, MIN_LOCK_PASSWORD_LENGTH)
+    val shortStr = pluralStringRes(Res.plurals.privacy_lock_password_too_short, MIN_LOCK_PASSWORD_LENGTH, MIN_LOCK_PASSWORD_LENGTH)
     val mismatchStr = stringRes(Res.string.privacy_lock_password_mismatch)
     val lockedOutStr = stringRes(Res.string.privacy_lock_too_many_attempts)
 
