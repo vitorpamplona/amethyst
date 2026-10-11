@@ -38,7 +38,7 @@ import com.vitorpamplona.amethyst.commons.ui.components.SensitivityWarning
 import com.vitorpamplona.amethyst.commons.ui.components.TranslatableRichTextViewer
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.note.LoadDecryptedContentOrNull
-import com.vitorpamplona.amethyst.commons.ui.note.platform.RenderAudioFromIMeta
+import com.vitorpamplona.amethyst.commons.ui.note.types.RenderAudioFromIMeta
 import com.vitorpamplona.amethyst.commons.ui.note.types.getAudioMetaWithWaveform
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel

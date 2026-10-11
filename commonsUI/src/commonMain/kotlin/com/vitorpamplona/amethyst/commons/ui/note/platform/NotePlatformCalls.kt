@@ -180,33 +180,41 @@ fun LoadCityName(
 )
 
 @Composable
-fun RenderAudioTrack(
+fun MusicTrackAudioPlayer(
+    audioUrl: String,
+    mimeType: String?,
+    title: String?,
     note: Note,
-    contentScale: ContentScale,
+    borderModifier: Modifier,
     accountViewModel: AccountViewModel,
-    nav: INav,
-) = LocalNotePlatform.current.RenderAudioTrack(
+) = LocalNotePlatform.current.MusicTrackAudioPlayer(
+    audioUrl = audioUrl,
+    mimeType = mimeType,
+    title = title,
     note = note,
-    contentScale = contentScale,
+    borderModifier = borderModifier,
     accountViewModel = accountViewModel,
-    nav = nav,
 )
 
 @Composable
-fun RenderMusicTrack(
+fun NoteMediaView(
+    mediaUri: String,
+    isAudio: Boolean?,
+    title: String?,
+    coverUri: String?,
+    waveform: WaveformData?,
+    contentScale: ContentScale,
     note: Note,
-    makeItShort: Boolean,
-    canPreview: Boolean,
-    backgroundColor: MutableState<Color>,
     accountViewModel: AccountViewModel,
-    nav: INav,
-) = LocalNotePlatform.current.RenderMusicTrack(
+) = LocalNotePlatform.current.NoteMediaView(
+    mediaUri = mediaUri,
+    isAudio = isAudio,
+    title = title,
+    coverUri = coverUri,
+    waveform = waveform,
+    contentScale = contentScale,
     note = note,
-    makeItShort = makeItShort,
-    canPreview = canPreview,
-    backgroundColor = backgroundColor,
     accountViewModel = accountViewModel,
-    nav = nav,
 )
 
 @Composable
@@ -224,28 +232,6 @@ fun PodcastEpisodeAudioPlayer(
     image = image,
     borderModifier = borderModifier,
     accountViewModel = accountViewModel,
-)
-
-@Composable
-fun RenderVoiceTrack(
-    note: Note,
-    accountViewModel: AccountViewModel,
-    nav: INav,
-) = LocalNotePlatform.current.RenderVoiceTrack(
-    note = note,
-    accountViewModel = accountViewModel,
-    nav = nav,
-)
-
-@Composable
-fun RenderAudioFromIMeta(
-    note: Note,
-    accountViewModel: AccountViewModel,
-    nav: INav,
-) = LocalNotePlatform.current.RenderAudioFromIMeta(
-    note = note,
-    accountViewModel = accountViewModel,
-    nav = nav,
 )
 
 @Composable
@@ -472,11 +458,3 @@ fun rememberUrlPreviewState(
     url: String,
     accountViewModel: AccountViewModel,
 ): UrlPreviewState = LocalNotePlatform.current.rememberUrlPreviewState(url, accountViewModel)
-
-@Composable
-fun RenderAudioHeader(
-    note: Note,
-    contentScale: ContentScale,
-    accountViewModel: AccountViewModel,
-    nav: INav,
-) = LocalNotePlatform.current.RenderAudioHeader(note, contentScale, accountViewModel, nav)

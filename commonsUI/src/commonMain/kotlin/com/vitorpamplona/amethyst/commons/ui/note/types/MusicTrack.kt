@@ -18,7 +18,7 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.ui.note.types
+package com.vitorpamplona.amethyst.commons.ui.note.types
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -32,7 +32,6 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
@@ -52,14 +51,15 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import com.vitorpamplona.amethyst.commons.audio.syntheticWaveformFor
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
 import com.vitorpamplona.amethyst.commons.model.navigation.Route
 import com.vitorpamplona.amethyst.commons.model.toImmutableListOfLists
+import com.vitorpamplona.amethyst.commons.music.MusicTrackMedia
 import com.vitorpamplona.amethyst.commons.music.formatTrackDuration
+import com.vitorpamplona.amethyst.commons.music.media
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.preview_card_image_for
 import com.vitorpamplona.amethyst.commons.ui.components.LoadNote
@@ -69,6 +69,7 @@ import com.vitorpamplona.amethyst.commons.ui.navigation.navs.EmptyNav
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.note.elements.DefaultImageHeader
 import com.vitorpamplona.amethyst.commons.ui.note.elements.DefaultImageHeaderBackground
+import com.vitorpamplona.amethyst.commons.ui.note.platform.NoteMediaView
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.Font10SP
 import com.vitorpamplona.amethyst.commons.ui.theme.Size5dp
@@ -77,14 +78,10 @@ import com.vitorpamplona.amethyst.commons.ui.theme.grayText
 import com.vitorpamplona.amethyst.commons.ui.theme.replyModifier
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.amethyst.commons.viewmodels.mockAccountViewModel
-import com.vitorpamplona.amethyst.service.playback.composable.GetVideoController
-import com.vitorpamplona.amethyst.service.playback.composable.LoadThumbAndThenVideoView
-import com.vitorpamplona.amethyst.service.playback.composable.PauseControllerWhenInBackground
-import com.vitorpamplona.amethyst.service.playback.composable.VideoView
-import com.vitorpamplona.amethyst.service.playback.composable.mediaitem.GetMediaItem
 import com.vitorpamplona.quartz.experimental.music.track.MusicTrackEvent
 import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.IO
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withContext
 
@@ -133,14 +130,12 @@ fun MusicTrackHeader(
 ) {
     val title = remember(noteEvent) { noteEvent.title() }
     val artist = remember(noteEvent) { noteEvent.artist() }
-    val url = remember(noteEvent) { noteEvent.url() }
-    val videoUrl = remember(noteEvent) { noteEvent.videoUrl() }
+    val media = remember(noteEvent) { noteEvent.media() }
     val image = remember(noteEvent) { noteEvent.image() }
     val album = remember(noteEvent) { noteEvent.album() }
     val trackNumber = remember(noteEvent) { noteEvent.trackNumber() }
     val released = remember(noteEvent) { noteEvent.released() }
     val duration = remember(noteEvent) { noteEvent.duration() }
-    val format = remember(noteEvent) { noteEvent.format() }
     val isExplicit = remember(noteEvent) { noteEvent.isExplicit() }
     // Suppress publishing-tool boilerplate that just restates the title/artist already shown
     // above. Today the only known offender is "Listen to my song ..." (emitted by some Blossom
@@ -160,98 +155,43 @@ fun MusicTrackHeader(
                 .take(4)
                 .toImmutableList()
         }
-    // Per spec, `format` is the AUDIO format (mp3/flac/m4a/ogg) — only meaningful on the
-    // audio path. The video path lets ExoPlayer sniff the container.
-    val audioMimeType = remember(format) { format?.let { "audio/$it" } }
 
     Column(MaterialTheme.colorScheme.replyModifier) {
-        if (videoUrl != null) {
-            // A track with a `video` tag is an actual music-video file — show it through the
-            // full video player (with the album cover as thumb when we have one).
-            if (image != null) {
-                LoadThumbAndThenVideoView(
-                    videoUri = videoUrl,
-                    mimeType = null,
+        when (media) {
+            // A music video — from the `video` tag, or a video file published as `url` — plays
+            // through the full video player, with the album cover as its thumb when there is one.
+            is MusicTrackMedia.Video -> {
+                NoteMediaView(
+                    mediaUri = media.url,
+                    isAudio = false,
                     title = title,
-                    thumbUri = image,
-                    authorName = note.author?.toBestDisplayName(),
-                    roundedCorner = true,
+                    coverUri = image,
+                    waveform = null,
                     contentScale = ContentScale.FillWidth,
-                    nostrUriCallback = "nostr:${note.toNEvent()}",
-                    accountViewModel = accountViewModel,
-                )
-            } else {
-                VideoView(
-                    videoUri = videoUrl,
-                    mimeType = null,
-                    title = title,
-                    authorName = note.author?.toBestDisplayName(),
-                    roundedCorner = true,
-                    contentScale = ContentScale.FillWidth,
-                    nostrUriCallback = "nostr:${note.toNEvent()}",
+                    note = note,
                     accountViewModel = accountViewModel,
                 )
             }
-        } else {
-            // Audio-only path. We *don't* call RenderAudioWithWaveform here for two reasons:
-            //   1. It wraps the player in `MaxWidthPaddingTop5dp` and renders its own
-            //      DisplayUncitedHashtags row. We need the player to butt directly against
-            //      the cover (no gap) and we already render hashtags as TopicChips below,
-            //      so the inner ones would duplicate.
-            //   2. It hard-codes the all-rounded `imageModifier` as the player border. The
-            //      music card wants the cover's top corners + the player's bottom corners
-            //      to read as one continuous unit.
-            // So we inline the GetMediaItem → GetVideoController → RenderVoicePlayer chain
-            // and supply a bottom-rounded border. ExoPlayer logic, controls, and PiP all
-            // come from the shared composables — only the chrome differs.
-            MusicTrackCover(image, note, accountViewModel)
-            if (url != null) {
-                // Spec doesn't carry a waveform for kind 36787, so we synthesize one keyed
-                // off the track address. The bars are purely decorative — ExoPlayer owns
-                // actual playback progress.
-                val syntheticWaveform = remember(note.idHex) { syntheticWaveformFor(note.idHex) }
-                val callbackUri = remember(note) { note.toNostrUri() }
-                val playerBorder =
-                    remember {
-                        Modifier.clip(RoundedCornerShape(bottomStart = 15.dp, bottomEnd = 15.dp))
-                    }
 
-                Row(
-                    // 80dp shrinks the visible top/bottom border around the 75dp play
-                    // button to ~2.5dp on each side — the default 100dp inherited from
-                    // VoiceHeightModifier left a 12.5dp empty band that the user flagged
-                    // as too tall on a music card (where the player butts up against
-                    // the cover and there's no breathing room needed).
-                    Modifier.fillMaxWidth().height(80.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    GetMediaItem(
-                        videoUri = url,
-                        title = title,
-                        artworkUri = null,
-                        authorName = note.author?.toBestDisplayName(),
-                        callbackUri = callbackUri,
-                        mimeType = audioMimeType,
-                        aspectRatio = null,
-                        proxyPort = accountViewModel.httpClientBuilder.proxyPortForVideo(url),
-                        keepPlaying = false,
-                        waveformData = syntheticWaveform,
-                    ) { mediaItem ->
-                        GetVideoController(
-                            mediaItem = mediaItem,
-                            muted = false,
-                        ) { controller ->
-                            PauseControllerWhenInBackground(controller)
-                            RenderVoicePlayer(
-                                mediaItem = mediaItem,
-                                controllerState = controller,
-                                waveform = syntheticWaveform,
-                                borderModifier = playerBorder,
-                                accountViewModel = accountViewModel,
-                            )
-                        }
-                    }
-                }
+            // Audio: the cover, with the player strip butting directly against it so the cover's
+            // top corners and the strip's bottom corners read as one continuous unit — unless an
+            // `.mp4` `url` turns out to be a music video, which then plays as one.
+            is MusicTrackMedia.Audio -> {
+                AudioFirstMedia(
+                    url = media.url,
+                    mimeType = media.mimeType,
+                    title = title,
+                    cover = image,
+                    showCover = true,
+                    waveform = null,
+                    note = note,
+                    accountViewModel = accountViewModel,
+                    nav = nav,
+                )
+            }
+
+            null -> {
+                MusicTrackCover(image, note, accountViewModel)
             }
         }
 
@@ -349,7 +289,7 @@ fun MusicTrackHeader(
 }
 
 @Composable
-private fun MusicTrackCover(
+internal fun MusicTrackCover(
     image: String?,
     note: Note,
     accountViewModel: AccountViewModel,

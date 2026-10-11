@@ -22,6 +22,7 @@ package com.vitorpamplona.amethyst.desktop.app
 
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
@@ -45,6 +46,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.boundsInWindow
 import androidx.compose.ui.layout.onGloballyPositioned
@@ -54,7 +56,9 @@ import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import androidx.lifecycle.viewModelScope
 import coil3.compose.AsyncImage
+import com.vitorpamplona.amethyst.commons.audio.MediaTracks
 import com.vitorpamplona.amethyst.commons.audio.WaveformData
+import com.vitorpamplona.amethyst.commons.audio.declaredAsAudio
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.MediaAspectRatioCache
@@ -75,7 +79,9 @@ import com.vitorpamplona.amethyst.commons.ui.components.pdf.PdfViewerContent
 import com.vitorpamplona.amethyst.commons.ui.components.rememberZoomTransition
 import com.vitorpamplona.amethyst.commons.ui.components.urlPreview
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
+import com.vitorpamplona.amethyst.commons.ui.note.elements.DisplayUncitedHashtags
 import com.vitorpamplona.amethyst.commons.ui.note.platform.NotePlatform
+import com.vitorpamplona.amethyst.commons.ui.note.types.rememberMediaTracks
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.Size20Modifier
 import com.vitorpamplona.amethyst.commons.ui.theme.Size5dp
@@ -86,8 +92,11 @@ import com.vitorpamplona.amethyst.desktop.ui.media.AnimatedGifImage
 import com.vitorpamplona.amethyst.desktop.ui.media.AudioPlayer
 import com.vitorpamplona.amethyst.desktop.ui.media.DesktopVideoPlayer
 import com.vitorpamplona.amethyst.desktop.ui.media.LightboxOverlay
+import com.vitorpamplona.amethyst.desktop.ui.media.PodcastEpisodePlayer
 import com.vitorpamplona.amethyst.desktop.ui.media.SaveMediaAction
+import com.vitorpamplona.quartz.nip01Core.tags.hashtags.hasHashtags
 import com.vitorpamplona.quartz.nip94FileMetadata.tags.DimensionTag
+import com.vitorpamplona.quartz.podcasts.PodcastAudio
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.coroutines.launch
 import com.vitorpamplona.amethyst.commons.ui.components.LoadUrlPreview as SharedLoadUrlPreview
@@ -147,6 +156,28 @@ object DesktopNotePlatform : NotePlatform {
 
         when (content) {
             is MediaUrlVideo, is MediaLocalVideo -> {
+                val video = content as? MediaUrlVideo
+                val isLive = video?.isLiveStream == true
+                // Audio links share this content type. A declared audio file plays in the audio card;
+                // an MP4-family one that doesn't say (`.mp4`, `video/mp4`) has its track list read,
+                // because Blossom serves AAC uploads that way and the video engine can't open them
+                // ("Failed to retrieve video size").
+                val tracks = if (video != null && !isLive) rememberMediaTracks(url, video.mimeType, accountViewModel) else MediaTracks.UNKNOWN
+                val isAudio =
+                    video != null && !isLive &&
+                        (tracks == MediaTracks.AUDIO_ONLY || (tracks != MediaTracks.HAS_VIDEO && declaredAsAudio(video.mimeType, url) == true))
+                if (isAudio) {
+                    AudioPlayer(
+                        url = url,
+                        modifier = Modifier.fillMaxWidth(),
+                        title = video.description,
+                        artist = video.authorName,
+                        mimeType = if (tracks == MediaTracks.AUDIO_ONLY && video.mimeType?.startsWith("audio/") != true) "audio/mp4" else video.mimeType,
+                        waveform = video.waveform?.let { WaveformData(it) },
+                        artworkUrl = video.artworkUri,
+                    )
+                    return
+                }
                 DesktopVideoPlayer(
                     url = url,
                     modifier = Modifier.fillMaxWidth().heightIn(max = MaxInlineMediaHeight),
@@ -360,7 +391,7 @@ object DesktopNotePlatform : NotePlatform {
         mimeType: String?,
         waveform: WaveformData?,
         accountViewModel: AccountViewModel,
-    ) = AudioPlayer(url = mediaUrl, modifier = Modifier.fillMaxWidth())
+    ) = AudioPlayer(url = mediaUrl, modifier = Modifier.fillMaxWidth(), title = title, mimeType = mimeType, waveform = waveform)
 
     @Composable
     override fun RenderAudioWithWaveform(
@@ -371,7 +402,107 @@ object DesktopNotePlatform : NotePlatform {
         note: Note,
         accountViewModel: AccountViewModel,
         nav: INav,
-    ) = AudioPlayer(url = mediaUrl, modifier = Modifier.fillMaxWidth())
+    ) {
+        val event = note.event
+        val callbackUri = remember(note) { note.toNostrUri() }
+        val hasHashtags = remember(event) { event?.hasHashtags() == true }
+        Column(Modifier.fillMaxWidth()) {
+            AudioPlayer(
+                url = mediaUrl,
+                modifier = Modifier.fillMaxWidth(),
+                title = title,
+                artist = note.author?.toBestDisplayName(),
+                mimeType = mimeType,
+                waveform = waveform,
+            )
+            if (event != null && hasHashtags) DisplayUncitedHashtags(event, callbackUri, accountViewModel, nav)
+        }
+    }
+
+    @Composable
+    override fun MusicTrackAudioPlayer(
+        audioUrl: String,
+        mimeType: String?,
+        title: String?,
+        note: Note,
+        borderModifier: Modifier,
+        accountViewModel: AccountViewModel,
+    ) = AudioPlayer(
+        url = audioUrl,
+        modifier = borderModifier.fillMaxWidth(),
+        title = title,
+        mimeType = mimeType,
+        // Kind 36787 carries no waveform: the same synthetic bars Android draws, keyed by the track.
+        seed = note.idHex,
+        // borderModifier shapes the strip to join the cover above it.
+        shape = RectangleShape,
+    )
+
+    /**
+     * Audio has no picture for the video frame to show, so it plays in the audio card: its cover
+     * with the waveform scrubber over its foot, or just the waveform when it has no cover.
+     * Anything else is a video.
+     */
+    @Composable
+    override fun NoteMediaView(
+        mediaUri: String,
+        isAudio: Boolean?,
+        title: String?,
+        coverUri: String?,
+        waveform: WaveformData?,
+        contentScale: ContentScale,
+        note: Note,
+        accountViewModel: AccountViewModel,
+    ) {
+        // The URL decides when it can (an audio kind may still carry a video file); HLS and a bare
+        // Blossom hash can't say, so the event kind does. An `.mp4` is read first: it may be audio only.
+        val tracks = rememberMediaTracks(mediaUri, null, accountViewModel)
+        val audio =
+            when (tracks) {
+                MediaTracks.AUDIO_ONLY -> true
+                MediaTracks.HAS_VIDEO -> false
+                else -> declaredAsAudio(null, mediaUri) ?: isAudio ?: false
+            }
+        if (audio) {
+            AudioPlayer(
+                url = mediaUri,
+                modifier = Modifier.fillMaxWidth(),
+                title = title,
+                artist = note.author?.toBestDisplayName(),
+                waveform = waveform,
+                artworkUrl = coverUri,
+            )
+        } else {
+            VideoView(
+                videoUri = mediaUri,
+                mimeType = null,
+                title = title,
+                artworkUri = coverUri,
+                authorName = note.author?.toBestDisplayName(),
+                roundedCorner = true,
+                contentScale = contentScale,
+                nostrUriCallback = note.toNostrUri(),
+                isLiveStream = false,
+                accountViewModel = accountViewModel,
+            )
+        }
+    }
+
+    @Composable
+    override fun PodcastEpisodeAudioPlayer(
+        audio: PodcastAudio,
+        note: Note,
+        title: String?,
+        image: String?,
+        borderModifier: Modifier,
+        accountViewModel: AccountViewModel,
+    ) = PodcastEpisodePlayer(
+        audio = audio,
+        note = note,
+        title = title,
+        borderModifier = borderModifier,
+        accountViewModel = accountViewModel,
+    )
 
     // Git events: the same renderers Android uses (shared, JVM-only for the repository browser).
 

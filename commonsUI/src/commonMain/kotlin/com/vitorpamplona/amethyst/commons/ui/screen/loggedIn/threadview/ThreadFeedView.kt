@@ -147,17 +147,13 @@ import com.vitorpamplona.amethyst.commons.ui.note.elements.TimeAgo
 import com.vitorpamplona.amethyst.commons.ui.note.elements.TimeAgoStyle
 import com.vitorpamplona.amethyst.commons.ui.note.nip22Comments.DisplayCommentScope
 import com.vitorpamplona.amethyst.commons.ui.note.observeEdits
-import com.vitorpamplona.amethyst.commons.ui.note.platform.RenderAudioHeader
-import com.vitorpamplona.amethyst.commons.ui.note.platform.RenderAudioTrack
 import com.vitorpamplona.amethyst.commons.ui.note.platform.RenderGitIssueEvent
 import com.vitorpamplona.amethyst.commons.ui.note.platform.RenderGitPatchEvent
 import com.vitorpamplona.amethyst.commons.ui.note.platform.RenderGitPullRequestEvent
 import com.vitorpamplona.amethyst.commons.ui.note.platform.RenderGitPullRequestUpdateEvent
 import com.vitorpamplona.amethyst.commons.ui.note.platform.RenderGitRepositoryEvent
-import com.vitorpamplona.amethyst.commons.ui.note.platform.RenderMusicTrack
 import com.vitorpamplona.amethyst.commons.ui.note.platform.RenderNamedSiteEvent
 import com.vitorpamplona.amethyst.commons.ui.note.platform.RenderRootSiteEvent
-import com.vitorpamplona.amethyst.commons.ui.note.platform.RenderVoiceTrack
 import com.vitorpamplona.amethyst.commons.ui.note.platform.ZoomableContentView
 import com.vitorpamplona.amethyst.commons.ui.note.types.BadgeDisplay
 import com.vitorpamplona.amethyst.commons.ui.note.types.DisplayBlockedRelayList
@@ -185,6 +181,8 @@ import com.vitorpamplona.amethyst.commons.ui.note.types.RenderAttestation
 import com.vitorpamplona.amethyst.commons.ui.note.types.RenderAttestationRequest
 import com.vitorpamplona.amethyst.commons.ui.note.types.RenderAttestorProficiency
 import com.vitorpamplona.amethyst.commons.ui.note.types.RenderAttestorRecommendation
+import com.vitorpamplona.amethyst.commons.ui.note.types.RenderAudioHeader
+import com.vitorpamplona.amethyst.commons.ui.note.types.RenderAudioTrack
 import com.vitorpamplona.amethyst.commons.ui.note.types.RenderBallot
 import com.vitorpamplona.amethyst.commons.ui.note.types.RenderBlossomAuth
 import com.vitorpamplona.amethyst.commons.ui.note.types.RenderBlossomPieceIndex
@@ -213,6 +211,7 @@ import com.vitorpamplona.amethyst.commons.ui.note.types.RenderLiveActivityChatMe
 import com.vitorpamplona.amethyst.commons.ui.note.types.RenderMeetingRoomEvent
 import com.vitorpamplona.amethyst.commons.ui.note.types.RenderMeetingSpaceEvent
 import com.vitorpamplona.amethyst.commons.ui.note.types.RenderMusicPlaylist
+import com.vitorpamplona.amethyst.commons.ui.note.types.RenderMusicTrack
 import com.vitorpamplona.amethyst.commons.ui.note.types.RenderNutzap
 import com.vitorpamplona.amethyst.commons.ui.note.types.RenderOnchainZap
 import com.vitorpamplona.amethyst.commons.ui.note.types.RenderPinListEvent
@@ -247,6 +246,7 @@ import com.vitorpamplona.amethyst.commons.ui.note.types.RenderTextEvent
 import com.vitorpamplona.amethyst.commons.ui.note.types.RenderTextModificationEvent
 import com.vitorpamplona.amethyst.commons.ui.note.types.RenderTorrent
 import com.vitorpamplona.amethyst.commons.ui.note.types.RenderTorrentComment
+import com.vitorpamplona.amethyst.commons.ui.note.types.RenderVoiceTrack
 import com.vitorpamplona.amethyst.commons.ui.note.types.RenderZapPoll
 import com.vitorpamplona.amethyst.commons.ui.note.types.RenderZapReceipt
 import com.vitorpamplona.amethyst.commons.ui.note.types.ReplyRenderType
