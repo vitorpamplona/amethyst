@@ -25,6 +25,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -58,6 +59,9 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import coil3.compose.AsyncImage
+import coil3.compose.LocalPlatformContext
+import coil3.request.ImageRequest
+import coil3.size.Precision
 import com.vitorpamplona.amethyst.commons.audio.player.formatFileSize
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
@@ -68,8 +72,8 @@ import com.vitorpamplona.amethyst.commons.resources.media_compression_preview_co
 import com.vitorpamplona.amethyst.commons.resources.media_compression_preview_original
 import com.vitorpamplona.amethyst.commons.resources.media_compression_preview_tap_compressed
 import com.vitorpamplona.amethyst.commons.resources.media_compression_preview_tap_original
+import com.vitorpamplona.amethyst.commons.resources.media_compression_preview_tap_zoom
 import com.vitorpamplona.amethyst.commons.resources.media_compression_preview_uncompressed
-import com.vitorpamplona.amethyst.commons.resources.media_compression_preview_zoom
 import com.vitorpamplona.amethyst.commons.resources.media_compression_preview_zoom_hint
 import com.vitorpamplona.amethyst.commons.resources.media_compression_quality_high
 import com.vitorpamplona.amethyst.commons.resources.media_compression_quality_low
@@ -90,13 +94,16 @@ import kotlinx.coroutines.delay
 import net.engawapg.lib.zoomable.MouseWheelZoom
 import net.engawapg.lib.zoomable.rememberZoomState
 import net.engawapg.lib.zoomable.zoomable
+import kotlin.math.max
+import kotlin.math.min
+import coil3.size.Size as CoilSize
 
 /**
  * The media-quality slider, one stop per [CompressorQuality.sliderSteps] level, labelled with the
  * level and the size images shrink to. When [media] holds a still image the platform re-encodes,
  * the slider also shows that image compressed at the chosen level, with its size and pixel
- * dimensions beside the original's; tapping the preview flips between the two, and its zoom button
- * opens both full screen to compare the detail.
+ * dimensions beside the original's; tapping the preview opens both full screen, zoomable, to
+ * compare the detail.
  */
 @Composable
 fun MediaQualitySlider(
@@ -151,6 +158,21 @@ private fun firstStillImage(media: MultiOrchestrator): SelectedMedia? =
 
 private val PreviewHeight = 260.dp
 
+/** The longest edge the zoomed original decodes to: enough to judge compression, bounded in memory. */
+private const val MAX_ZOOM_DECODE_EDGE = 4096
+
+private fun ImageFileStats.aspectRatio(): Float? {
+    val w = width ?: return null
+    val h = height ?: return null
+    return if (w > 0 && h > 0) w.toFloat() / h else null
+}
+
+private fun ImageFileStats.longEdge(): Int? {
+    val w = width ?: return null
+    val h = height ?: return null
+    return max(w, h)
+}
+
 /**
  * Compresses [image] at [quality] in the background, after the slider has rested for a moment, and
  * keeps each result for as long as the composer shows this image, so moving back to a level shows
@@ -158,8 +180,8 @@ private val PreviewHeight = 260.dp
  *
  * Once a first preview is on screen the block keeps its size: the image box has a fixed height, the
  * last result stays up (under a spinner) while the next level compresses, and the uncompressed level
- * shows the original in the same box instead of removing it. The zoom button opens the comparison
- * full screen.
+ * shows the original in the same box instead of removing it. Tapping the picture opens the
+ * comparison full screen.
  */
 @Composable
 private fun CompressionPreview(
@@ -170,7 +192,6 @@ private fun CompressionPreview(
     // A level maps to null when the platform could not compress the image.
     val results = remember(image) { mutableStateMapOf<CompressorQuality, ImageCompressionPreview?>() }
     var lastPreview by remember(image) { mutableStateOf<ImageCompressionPreview?>(null) }
-    var showOriginal by remember(image) { mutableStateOf(false) }
     var zoomed by remember(image) { mutableStateOf(false) }
 
     DisposableEffect(image) {
@@ -205,53 +226,48 @@ private fun CompressionPreview(
     // While a level compresses, the previous level's result stays up so the box doesn't empty.
     val compressedUri = if (compresses) stats?.compressedUri?.toString() else null
     val originalUri = image.uri.toString()
-    val seeOriginal = showOriginal || compressedUri == null
-    val toggle: (() -> Unit)? = if (compressedUri != null) ({ showOriginal = !showOriginal }) else null
 
     Column(
         modifier = Modifier.fillMaxWidth().padding(top = 4.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(4.dp),
     ) {
-        Box(
-            modifier =
-                Modifier
-                    .fillMaxWidth()
-                    .height(PreviewHeight)
-                    .clip(QuoteBorder)
-                    .clickable(enabled = toggle != null) { toggle?.invoke() },
-            contentAlignment = Alignment.Center,
-        ) {
-            ComparisonImages(originalUri, compressedUri, seeOriginal, Modifier.fillMaxSize())
-
-            if (loading) {
-                CircularProgressIndicator(Modifier.size(24.dp), strokeWidth = 2.dp)
-            }
-
-            IconButton(
-                onClick = { zoomed = true },
+        // A fixed height, so the levels never change the layout; the inner box hugs the picture so
+        // its rounded corners and tap target are the picture's, not the letterboxing's.
+        Box(Modifier.fillMaxWidth().height(PreviewHeight), contentAlignment = Alignment.Center) {
+            val ratio = stats?.original?.aspectRatio()
+            Box(
                 modifier =
                     Modifier
-                        .align(Alignment.TopEnd)
-                        .padding(6.dp)
-                        .size(36.dp)
-                        .clip(CircleShape)
-                        .background(Color.Black.copy(alpha = 0.4f)),
+                        .then(if (ratio != null) Modifier.aspectRatio(ratio, matchHeightConstraintsFirst = true) else Modifier.fillMaxSize())
+                        .clip(QuoteBorder)
+                        .clickable(enabled = stats != null) { zoomed = true },
+                contentAlignment = Alignment.Center,
             ) {
-                Icon(
-                    symbol = MaterialSymbols.OpenInFull,
-                    contentDescription = stringRes(Res.string.media_compression_preview_zoom),
-                    tint = Color.White,
-                    modifier = Modifier.size(20.dp),
-                )
+                ComparisonImages(originalUri, compressedUri, showOriginal = compressedUri == null, modifier = Modifier.fillMaxSize())
+
+                if (loading) {
+                    Box(
+                        modifier = Modifier.size(36.dp).clip(CircleShape).background(Color.Black.copy(alpha = 0.5f)),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        CircularProgressIndicator(Modifier.size(20.dp), strokeWidth = 2.dp, color = Color.White)
+                    }
+                }
             }
         }
 
         ComparisonLegend(
-            hint = hintText(compresses, compressedUri != null, seeOriginal),
+            hint =
+                when {
+                    !compresses -> stringRes(Res.string.media_compression_preview_uncompressed)
+                    // The first level is still compressing: keep the line so the layout doesn't grow when it lands.
+                    stats == null -> ""
+                    else -> stringRes(Res.string.media_compression_preview_tap_zoom)
+                },
             original = stats?.original,
             compressed = if (compresses) stats?.compressed else null,
-            showOriginal = seeOriginal,
+            showOriginal = compressedUri == null,
             stale = loading,
             hintColor = MaterialTheme.colorScheme.primary,
             highlightColor = MaterialTheme.colorScheme.onSurface,
@@ -264,27 +280,11 @@ private fun CompressionPreview(
             compressedUri = compressedUri,
             original = stats?.original,
             compressed = if (compresses) stats?.compressed else null,
-            showOriginal = seeOriginal,
             stale = loading,
-            onToggle = toggle,
             onDismiss = { zoomed = false },
         )
     }
 }
-
-@Composable
-private fun hintText(
-    compresses: Boolean,
-    hasCompressed: Boolean,
-    showOriginal: Boolean,
-): String =
-    when {
-        !compresses -> stringRes(Res.string.media_compression_preview_uncompressed)
-        // The first level is still compressing: keep the line so the layout doesn't grow when it lands.
-        !hasCompressed -> ""
-        showOriginal -> stringRes(Res.string.media_compression_preview_tap_compressed)
-        else -> stringRes(Res.string.media_compression_preview_tap_original)
-    }
 
 /**
  * The original and the compressed image stacked in one box, so flipping between them is instant and
@@ -297,19 +297,52 @@ private fun ComparisonImages(
     compressedUri: String?,
     showOriginal: Boolean,
     modifier: Modifier = Modifier,
+    fullResolution: Boolean = false,
+    originalLongEdge: Int? = null,
 ) {
     var compressedReady by remember(compressedUri) { mutableStateOf(false) }
 
+    // Coil decodes to the size on screen, so zooming would only magnify that resampled bitmap and
+    // hide the very detail being compared. Zoomed, both decode at their real pixels: the compressed
+    // file is small by construction, the original is capped so a huge photo can't run out of memory.
+    val context = LocalPlatformContext.current
+    val originalModel: Any =
+        if (!fullResolution) {
+            originalUri
+        } else {
+            remember(originalUri, originalLongEdge) {
+                val edge = min(originalLongEdge ?: MAX_ZOOM_DECODE_EDGE, MAX_ZOOM_DECODE_EDGE)
+                ImageRequest
+                    .Builder(context)
+                    .data(originalUri)
+                    .size(edge, edge)
+                    .precision(Precision.EXACT)
+                    .build()
+            }
+        }
+    val compressedModel: Any? =
+        if (!fullResolution || compressedUri == null) {
+            compressedUri
+        } else {
+            remember(compressedUri) {
+                ImageRequest
+                    .Builder(context)
+                    .data(compressedUri)
+                    .size(CoilSize.ORIGINAL)
+                    .build()
+            }
+        }
+
     Box(modifier) {
         AsyncImage(
-            model = originalUri,
+            model = originalModel,
             contentDescription = null,
             contentScale = ContentScale.Fit,
             modifier = Modifier.fillMaxSize().alpha(if (showOriginal || !compressedReady) 1f else 0f),
         )
-        if (compressedUri != null) {
+        if (compressedModel != null) {
             AsyncImage(
-                model = compressedUri,
+                model = compressedModel,
                 contentDescription = null,
                 contentScale = ContentScale.Fit,
                 onSuccess = { compressedReady = true },
@@ -388,11 +421,13 @@ private fun CompressionZoomDialog(
     compressedUri: String?,
     original: ImageFileStats?,
     compressed: ImageFileStats?,
-    showOriginal: Boolean,
     stale: Boolean,
-    onToggle: (() -> Unit)?,
     onDismiss: () -> Unit,
 ) {
+    var flipped by remember { mutableStateOf(false) }
+    // Uncompressed uploads the original as is: there is nothing to flip to.
+    val showOriginal = flipped || compressedUri == null
+
     Dialog(
         onDismissRequest = onDismiss,
         properties = edgeToEdgeDialogProperties(),
@@ -413,13 +448,15 @@ private fun CompressionZoomDialog(
                 originalUri = originalUri,
                 compressedUri = compressedUri,
                 showOriginal = showOriginal,
+                fullResolution = true,
+                originalLongEdge = original?.longEdge(),
                 modifier =
                     Modifier
                         .fillMaxSize()
                         .zoomable(
                             zoomState = zoomState,
                             mouseWheelZoom = MouseWheelZoom.Enabled,
-                            onTap = { onToggle?.invoke() },
+                            onTap = { if (compressedUri != null) flipped = !flipped },
                         ),
             )
 
@@ -450,7 +487,15 @@ private fun CompressionZoomDialog(
             }
 
             ComparisonLegend(
-                hint = stringRes(Res.string.media_compression_preview_zoom_hint),
+                hint =
+                    listOfNotNull(
+                        stringRes(Res.string.media_compression_preview_zoom_hint),
+                        when {
+                            compressedUri == null -> null
+                            showOriginal -> stringRes(Res.string.media_compression_preview_tap_compressed)
+                            else -> stringRes(Res.string.media_compression_preview_tap_original)
+                        },
+                    ).joinToString("\n"),
                 original = original,
                 compressed = compressed,
                 showOriginal = showOriginal,
