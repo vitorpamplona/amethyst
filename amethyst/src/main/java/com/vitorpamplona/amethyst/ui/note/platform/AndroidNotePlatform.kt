@@ -63,12 +63,13 @@ import com.vitorpamplona.amethyst.ui.components.ZoomableContentView as AppZoomab
 import com.vitorpamplona.amethyst.ui.components.ZoomableImageDialog as AppZoomableImageDialog
 import com.vitorpamplona.amethyst.ui.note.creators.location.LoadCityName as AppLoadCityName
 import com.vitorpamplona.amethyst.ui.note.creators.location.LocationPreviewMap as AppLocationPreviewMap
+import com.vitorpamplona.amethyst.ui.note.types.MusicTrackAudioPlayer as AppMusicTrackAudioPlayer
+import com.vitorpamplona.amethyst.ui.note.types.MusicTrackVideoPlayer as AppMusicTrackVideoPlayer
 import com.vitorpamplona.amethyst.ui.note.types.PodcastEpisodeAudioPlayer as AppPodcastEpisodeAudioPlayer
 import com.vitorpamplona.amethyst.ui.note.types.RenderAudioFromIMeta as AppRenderAudioFromIMeta
 import com.vitorpamplona.amethyst.ui.note.types.RenderAudioHeader as AppRenderAudioHeader
 import com.vitorpamplona.amethyst.ui.note.types.RenderAudioTrack as AppRenderAudioTrack
 import com.vitorpamplona.amethyst.ui.note.types.RenderAudioWithWaveform as AppRenderAudioWithWaveform
-import com.vitorpamplona.amethyst.ui.note.types.RenderMusicTrack as AppRenderMusicTrack
 import com.vitorpamplona.amethyst.ui.note.types.RenderNamedNappletEvent as AppRenderNamedNappletEvent
 import com.vitorpamplona.amethyst.ui.note.types.RenderNamedSiteEvent as AppRenderNamedSiteEvent
 import com.vitorpamplona.amethyst.ui.note.types.RenderRootNappletEvent as AppRenderRootNappletEvent
@@ -243,20 +244,35 @@ object AndroidNotePlatform : NotePlatform {
     )
 
     @Composable
-    override fun RenderMusicTrack(
+    override fun MusicTrackAudioPlayer(
+        audioUrl: String,
+        mimeType: String?,
+        title: String?,
         note: Note,
-        makeItShort: Boolean,
-        canPreview: Boolean,
-        backgroundColor: MutableState<Color>,
+        borderModifier: Modifier,
         accountViewModel: AccountViewModel,
-        nav: INav,
-    ) = AppRenderMusicTrack(
+    ) = AppMusicTrackAudioPlayer(
+        audioUrl = audioUrl,
+        mimeType = mimeType,
+        title = title,
         note = note,
-        makeItShort = makeItShort,
-        canPreview = canPreview,
-        backgroundColor = backgroundColor,
+        borderModifier = borderModifier,
         accountViewModel = accountViewModel,
-        nav = nav,
+    )
+
+    @Composable
+    override fun MusicTrackVideoPlayer(
+        videoUrl: String,
+        title: String?,
+        image: String?,
+        note: Note,
+        accountViewModel: AccountViewModel,
+    ) = AppMusicTrackVideoPlayer(
+        videoUrl = videoUrl,
+        title = title,
+        image = image,
+        note = note,
+        accountViewModel = accountViewModel,
     )
 
     @Composable

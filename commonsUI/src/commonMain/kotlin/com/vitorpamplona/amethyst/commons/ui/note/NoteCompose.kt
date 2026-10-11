@@ -136,7 +136,6 @@ import com.vitorpamplona.amethyst.commons.ui.note.platform.RenderGitRepositoryEv
 import com.vitorpamplona.amethyst.commons.ui.note.platform.RenderMeetingRoomEvent
 import com.vitorpamplona.amethyst.commons.ui.note.platform.RenderMeetingRoomPresence
 import com.vitorpamplona.amethyst.commons.ui.note.platform.RenderMeetingSpaceEvent
-import com.vitorpamplona.amethyst.commons.ui.note.platform.RenderMusicTrack
 import com.vitorpamplona.amethyst.commons.ui.note.platform.RenderNamedNappletEvent
 import com.vitorpamplona.amethyst.commons.ui.note.platform.RenderNamedSiteEvent
 import com.vitorpamplona.amethyst.commons.ui.note.platform.RenderRootNappletEvent
@@ -210,6 +209,7 @@ import com.vitorpamplona.amethyst.commons.ui.note.types.RenderLiveChessChallenge
 import com.vitorpamplona.amethyst.commons.ui.note.types.RenderLiveChessGameEnd
 import com.vitorpamplona.amethyst.commons.ui.note.types.RenderLongFormContent
 import com.vitorpamplona.amethyst.commons.ui.note.types.RenderMusicPlaylist
+import com.vitorpamplona.amethyst.commons.ui.note.types.RenderMusicTrack
 import com.vitorpamplona.amethyst.commons.ui.note.types.RenderNipContent
 import com.vitorpamplona.amethyst.commons.ui.note.types.RenderNutzap
 import com.vitorpamplona.amethyst.commons.ui.note.types.RenderOnchainZap

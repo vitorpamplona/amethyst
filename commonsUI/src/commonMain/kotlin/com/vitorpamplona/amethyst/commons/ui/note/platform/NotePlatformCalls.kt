@@ -193,20 +193,35 @@ fun RenderAudioTrack(
 )
 
 @Composable
-fun RenderMusicTrack(
+fun MusicTrackAudioPlayer(
+    audioUrl: String,
+    mimeType: String?,
+    title: String?,
     note: Note,
-    makeItShort: Boolean,
-    canPreview: Boolean,
-    backgroundColor: MutableState<Color>,
+    borderModifier: Modifier,
     accountViewModel: AccountViewModel,
-    nav: INav,
-) = LocalNotePlatform.current.RenderMusicTrack(
+) = LocalNotePlatform.current.MusicTrackAudioPlayer(
+    audioUrl = audioUrl,
+    mimeType = mimeType,
+    title = title,
     note = note,
-    makeItShort = makeItShort,
-    canPreview = canPreview,
-    backgroundColor = backgroundColor,
+    borderModifier = borderModifier,
     accountViewModel = accountViewModel,
-    nav = nav,
+)
+
+@Composable
+fun MusicTrackVideoPlayer(
+    videoUrl: String,
+    title: String?,
+    image: String?,
+    note: Note,
+    accountViewModel: AccountViewModel,
+) = LocalNotePlatform.current.MusicTrackVideoPlayer(
+    videoUrl = videoUrl,
+    title = title,
+    image = image,
+    note = note,
+    accountViewModel = accountViewModel,
 )
 
 @Composable

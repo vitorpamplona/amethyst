@@ -203,14 +203,29 @@ interface NotePlatform {
         nav: INav,
     ) {}
 
+    /**
+     * The inline audio strip of a music track (kind 36787), drawn right under its cover:
+     * [audioUrl] plays here, and [borderModifier] shapes the strip so it reads as one unit
+     * with the cover above it.
+     */
     @Composable
-    fun RenderMusicTrack(
+    fun MusicTrackAudioPlayer(
+        audioUrl: String,
+        mimeType: String?,
+        title: String?,
         note: Note,
-        makeItShort: Boolean,
-        canPreview: Boolean,
-        backgroundColor: MutableState<Color>,
+        borderModifier: Modifier,
         accountViewModel: AccountViewModel,
-        nav: INav,
+    ) {}
+
+    /** A music track's video (kind 36787), shown in place of its cover, with [image] as the thumb. */
+    @Composable
+    fun MusicTrackVideoPlayer(
+        videoUrl: String,
+        title: String?,
+        image: String?,
+        note: Note,
+        accountViewModel: AccountViewModel,
     ) {}
 
     @Composable

@@ -154,7 +154,6 @@ import com.vitorpamplona.amethyst.commons.ui.note.platform.RenderGitPatchEvent
 import com.vitorpamplona.amethyst.commons.ui.note.platform.RenderGitPullRequestEvent
 import com.vitorpamplona.amethyst.commons.ui.note.platform.RenderGitPullRequestUpdateEvent
 import com.vitorpamplona.amethyst.commons.ui.note.platform.RenderGitRepositoryEvent
-import com.vitorpamplona.amethyst.commons.ui.note.platform.RenderMusicTrack
 import com.vitorpamplona.amethyst.commons.ui.note.platform.RenderNamedSiteEvent
 import com.vitorpamplona.amethyst.commons.ui.note.platform.RenderRootSiteEvent
 import com.vitorpamplona.amethyst.commons.ui.note.platform.RenderVoiceTrack
@@ -213,6 +212,7 @@ import com.vitorpamplona.amethyst.commons.ui.note.types.RenderLiveActivityChatMe
 import com.vitorpamplona.amethyst.commons.ui.note.types.RenderMeetingRoomEvent
 import com.vitorpamplona.amethyst.commons.ui.note.types.RenderMeetingSpaceEvent
 import com.vitorpamplona.amethyst.commons.ui.note.types.RenderMusicPlaylist
+import com.vitorpamplona.amethyst.commons.ui.note.types.RenderMusicTrack
 import com.vitorpamplona.amethyst.commons.ui.note.types.RenderNutzap
 import com.vitorpamplona.amethyst.commons.ui.note.types.RenderOnchainZap
 import com.vitorpamplona.amethyst.commons.ui.note.types.RenderPinListEvent

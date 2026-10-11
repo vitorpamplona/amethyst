@@ -373,6 +373,36 @@ object DesktopNotePlatform : NotePlatform {
         nav: INav,
     ) = AudioPlayer(url = mediaUrl, modifier = Modifier.fillMaxWidth())
 
+    @Composable
+    override fun MusicTrackAudioPlayer(
+        audioUrl: String,
+        mimeType: String?,
+        title: String?,
+        note: Note,
+        borderModifier: Modifier,
+        accountViewModel: AccountViewModel,
+    ) = AudioPlayer(url = audioUrl, modifier = borderModifier.fillMaxWidth())
+
+    @Composable
+    override fun MusicTrackVideoPlayer(
+        videoUrl: String,
+        title: String?,
+        image: String?,
+        note: Note,
+        accountViewModel: AccountViewModel,
+    ) = VideoView(
+        videoUri = videoUrl,
+        mimeType = null,
+        title = title,
+        artworkUri = image,
+        authorName = note.author?.toBestDisplayName(),
+        roundedCorner = true,
+        contentScale = ContentScale.FillWidth,
+        nostrUriCallback = note.toNostrUri(),
+        isLiveStream = false,
+        accountViewModel = accountViewModel,
+    )
+
     // Git events: the same renderers Android uses (shared, JVM-only for the repository browser).
 
     @Composable
