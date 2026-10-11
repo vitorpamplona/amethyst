@@ -79,5 +79,5 @@ object FfmpegCommandBuilder {
     private fun prefix(
         ffmpeg: String,
         input: File,
-    ) = listOf(ffmpeg, "-hide_banner", "-loglevel", "error", "-nostdin", "-y", "-i", input.path)
+    ) = listOf(ffmpeg, "-hide_banner", "-loglevel", "error", "-nostdin", "-y", "-i", input.absolutePath)
 }

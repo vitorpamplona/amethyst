@@ -66,4 +66,14 @@ class FfmpegCommandBuilderTest {
         assertFalse("-c:v" in cmd)
         assertFalse("0" in cmd) // never `-map 0`
     }
+
+    @Test
+    fun inputIsPassedAsAnAbsolutePath() {
+        // ffmpeg reads -i as a URL, so a relative name could name a protocol; the absolute path cannot.
+        val relative = File("clip.mov")
+        val encode = FfmpegCommandBuilder.encode("ffmpeg", relative, File("out.mp4"), "libx264", 1_000_000, null)
+        val remux = FfmpegCommandBuilder.remux("ffmpeg", relative, File("out.mp4"))
+        assertEquals(relative.absolutePath, encode[encode.indexOf("-i") + 1])
+        assertEquals(relative.absolutePath, remux[remux.indexOf("-i") + 1])
+    }
 }
