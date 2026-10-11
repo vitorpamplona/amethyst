@@ -27,6 +27,7 @@ import kotlinx.coroutines.runBlocking
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
+import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
 /** The real runner against a real child process; no ffmpeg involved. Real time, so no `runTest`. */
@@ -92,6 +93,31 @@ class FfmpegProcessesTest {
             delay(100)
             job.cancel()
             job.join()
+            assertTrue(FfmpegProcesses.live.isEmpty())
+        }
+
+    @Test
+    fun aFailureWhileWaitingStillKillsTheChild() =
+        runBlocking {
+            if (isWindows) return@runBlocking
+            val job = launch { runCatching { FfmpegProcesses.run(sleep30(), {}, 60_000) } }
+            while (FfmpegProcesses.live.isEmpty()) delay(10)
+            val child = FfmpegProcesses.live.single()
+            // Interrupt the thread blocked in waitFor: an InterruptedException, a failure that is no cancellation.
+            var waiter: Thread? = null
+            while (waiter == null) {
+                waiter =
+                    Thread
+                        .getAllStackTraces()
+                        .entries
+                        .firstOrNull { (_, stack) ->
+                            stack.any { it.methodName == "waitFor" } && stack.any { it.className.startsWith(FfmpegProcesses::class.java.name) }
+                        }?.key
+                if (waiter == null) delay(10)
+            }
+            waiter.interrupt()
+            job.join()
+            assertFalse(child.isAlive, "the child must not outlive a failed wait")
             assertTrue(FfmpegProcesses.live.isEmpty())
         }
 }

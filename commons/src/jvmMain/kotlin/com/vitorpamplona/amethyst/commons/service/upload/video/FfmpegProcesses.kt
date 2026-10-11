@@ -139,7 +139,8 @@ object FfmpegProcesses : ProcessRunner {
                         break
                     }
                 }
-            } catch (e: CancellationException) {
+            } catch (e: Throwable) {
+                // Cancellation, an interrupt or a failed stdin close: whatever ended the wait, the child must not outlive it.
                 process.destroyForcibly().waitFor(2, TimeUnit.SECONDS)
                 throw e
             } finally {
