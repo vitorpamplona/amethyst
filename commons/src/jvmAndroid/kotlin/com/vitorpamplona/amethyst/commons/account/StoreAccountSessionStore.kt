@@ -53,6 +53,7 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import okio.Path
+import java.util.concurrent.ConcurrentHashMap
 
 /**
  * The saved logins of a front end with no legacy storage to migrate from: the encrypted roster, each
@@ -77,6 +78,11 @@ class StoreAccountSessionStore(
 
     private val loadMutex = Mutex()
     private val cachedAccounts = mutableMapOf<String, AccountSettings>()
+
+    // The key each npub holds in [keyVault], as last read or written. Every settings save carries
+    // the key, and settings are saved on each last-read marker, so without this every post that
+    // loads rewrites the OS keychain item, and macOS asks for the keychain password each time.
+    private val keysInVault = ConcurrentHashMap<String, String>()
 
     @Volatile
     private var currentAccount: String? = null
@@ -183,8 +189,10 @@ class StoreAccountSessionStore(
         npub: String,
         privKeyHex: String,
     ) {
+        if (keysInVault[npub] == privKeyHex) return
         try {
             keyVault.save(npub, privKeyHex)
+            keysInVault[npub] = privKeyHex
         } catch (e: Exception) {
             if (e is CancellationException) throw e
             Log.w(TAG, "Could not keep the private key of $npub", e)
@@ -202,7 +210,7 @@ class StoreAccountSessionStore(
     private suspend fun load(npub: String): AccountSettings? {
         val records = settingsStores.load(npub)
         val pubKey = records.identity.pubKeyHex ?: return null
-        val privKey = keyVault.get(npub)
+        val privKey = keyVault.get(npub)?.also { keysInVault[npub] = it }
         val keyPair = KeyPair(privKey = privKey?.hexToByteArray(), pubKey = pubKey.hexToByteArray())
         val state = accountStores.getDataStore(npub).data.first()
         return AccountSettingsSource(
@@ -232,6 +240,7 @@ class StoreAccountSessionStore(
     override suspend fun deleteAccount(accountInfo: AccountInfo) {
         val npub = accountInfo.npub
         loadMutex.withLock { cachedAccounts.remove(npub) }
+        keysInVault.remove(npub)
         keyVault.delete(npub)
         secretsStores.removeAccount(npub)
         accountStores.removeAccount(npub)

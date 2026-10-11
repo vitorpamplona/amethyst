@@ -418,6 +418,8 @@ actual class SecureKeyStorage private actual constructor() {
         value: String,
     ) {
         val contents = vaultContents ?: LinkedHashMap<String, String>().also { vaultContents = it }
+        // Rewriting the item is a keychain access, and macOS may prompt for each one.
+        if (contents[alias] == value) return
         contents[alias] = value
         keyring().setPassword(SERVICE_NAME, vaultAlias, encodeVault(contents))
     }

@@ -48,6 +48,7 @@ class StoreAccountSessionStoreTest {
 
     private class MemoryVault : PrivateKeyVault {
         val keys = mutableMapOf<String, String>()
+        var saves = 0
 
         override suspend fun get(npub: String): String? = keys[npub]
 
@@ -55,6 +56,7 @@ class StoreAccountSessionStoreTest {
             npub: String,
             privKeyHex: String,
         ) {
+            saves++
             keys[npub] = privKeyHex
         }
 
@@ -174,5 +176,23 @@ class StoreAccountSessionStoreTest {
 
             assertNull(store.loadAccountConfigFromEncryptedStorage(keyPair.pubKey.toNpub()))
             assertTrue(vault.keys.isEmpty())
+        }
+
+    @Test
+    fun savingSettingsAgainDoesNotRewriteAnUnchangedKey() =
+        runTest {
+            val store = newStore()
+            val settings = AccountSettings(keyPair = KeyPair())
+
+            store.setDefaultAccount(settings)
+            assertEquals(1, vault.saves)
+
+            // Every last-read marker saves the settings; none of them may reach the OS keychain.
+            repeat(5) { store.saveAccountSettings(settings) }
+            assertEquals(1, vault.saves)
+
+            // A changed key is still written.
+            store.saveAccountSettings(AccountSettings(keyPair = KeyPair(privKey = KeyPair().privKey, pubKey = settings.keyPair.pubKey, forceReplacePubkey = false)))
+            assertEquals(2, vault.saves)
         }
 }

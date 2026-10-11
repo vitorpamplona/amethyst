@@ -237,6 +237,24 @@ class SecureKeyStorageVaultTest {
         }
 
     @Test
+    fun `saving the same key again does not touch the keychain`() =
+        runBlocking {
+            val (storage, backend) = newStorageWith()
+            storage.enableConsolidatedVault(emptyList())
+            storage.savePrivateKey("npub1new", "1111")
+            val reads = backend.reads("vault-v1")
+
+            repeat(5) { storage.savePrivateKey("npub1new", "1111") }
+
+            // Empty-vault seed (1) plus the first save; the repeats are no-ops.
+            assertEquals(2, backend.writes("vault-v1"))
+            assertEquals(reads, backend.reads("vault-v1"))
+
+            storage.savePrivateKey("npub1new", "2222")
+            assertEquals(3, backend.writes("vault-v1"))
+        }
+
+    @Test
     fun `getPrivateKey after vault enabled reads from vault contents in memory`() =
         runBlocking {
             val (storage, backend) =
