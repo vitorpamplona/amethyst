@@ -73,7 +73,9 @@ class VideoCompressionRulesTest {
         assertEquals(5_200_000, rule.getBitrateBps(60f, useH265 = false))
         assertEquals(3_000_000, rule.getBitrateBps(30f, useH265 = true))
         assertEquals(3_900_000, rule.getBitrateBps(60f, useH265 = true))
-        assertEquals(4_000_000, rule.getBitrateBps(59.94f, useH265 = false)) // Review Focus 2
+        // Broadcast 59.94 fps is 60 fps in all but name, so it earns the high-frame-rate bitrate; 50 fps does not.
+        assertEquals(5_200_000, rule.getBitrateBps(59.94f, useH265 = false))
+        assertEquals(4_000_000, rule.getBitrateBps(50f, useH265 = false))
     }
 
     @Test

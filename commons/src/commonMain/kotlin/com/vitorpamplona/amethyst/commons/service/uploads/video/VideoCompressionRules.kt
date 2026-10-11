@@ -71,6 +71,9 @@ enum class VideoStandard(
 
 private const val MBPS_TO_BPS_MULTIPLIER = 1_000_000
 
+/** Frame rates at or above this get the high-frame-rate bitrate; 59 admits broadcast 59.94 fps. */
+private const val HIGH_FRAMERATE_FLOOR = 59f
+
 /** The target for one (level, source standard) pair: the short side in pixels and the bitrate in Mbps. */
 data class CompressionRule(
     val shortSide: Int,
@@ -81,8 +84,9 @@ data class CompressionRule(
         framerate: Float,
         useH265: Boolean,
     ): Int {
-        // Apply 1.3x multiplier for 60fps+ videos, 0.75x multiplier for H265
-        val framerateMultiplier = if (framerate >= 60f) 1.3f else 1.0f
+        // 1.3x for high-frame-rate video, 0.75x for H265. The frame-rate floor is 59 so that
+        // broadcast 59.94 fps (60000/1001) counts as 60 while 50 fps does not.
+        val framerateMultiplier = if (framerate >= HIGH_FRAMERATE_FLOOR) 1.3f else 1.0f
         val codecMultiplier = if (useH265) 0.75f else 1.0f
         val finalMultiplier = framerateMultiplier * codecMultiplier
 

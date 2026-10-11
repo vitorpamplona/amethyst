@@ -98,7 +98,7 @@ Android imports them from there and its copies are deleted. Unchanged semantics:
 - the table (short side keyed by source standard, bitrate in Mbps), **including its UNKNOWN rows**
   (LOW 480p/0.75, MEDIUM 720p/2, HIGH 1080p/4), which apply when the probe succeeds but the
   resolution is below 240p;
-- ×1.3 at ≥ 60 fps, ×0.75 for H.265;
+- ×1.3 at ≥ 59 fps (so broadcast 59.94 fps counts as 60), ×0.75 for H.265;
 - the **probe-failure fallback**, which is not a table row: when the video cannot be probed at all,
   2 Mbps and no resize (`VideoCompressionRules.PROBE_FAILED_BITRATE_BPS = 2_000_000`).
 
@@ -318,7 +318,7 @@ All new strings go in `commonsUI/src/commonMain/composeResources/values/strings.
 `commons/jvmTest`
 
 - Rules table: every (level, standard) row including UNKNOWN; `getStandard()` boundaries; fps and
-  H.265 multipliers (59.94 fps gets no ×1.3); `videoLevel` / `hasVideoRule`; the probe-failure
+  H.265 multipliers (59.94 fps gets the ×1.3, 50 fps does not); `videoLevel` / `hasVideoRule`; the probe-failure
   constant. (No such tests exist on Android today.)
 - Slider mapping: displayed index ↔ platform position, snap on adding a video, UNCOMPRESSED
   position stable — written against an explicit step list passed in as a parameter, because

@@ -13,7 +13,7 @@
 ## Global Constraints
 
 - No new third-party dependency. `ffmpeg`/`ffprobe` are external processes found on `$PATH`, in the package-manager directories listed in spec §2, or at `${compose.application.resources.dir}/ffmpeg/<name>(.exe)`; never a working-directory-relative path. The environment variable `AMETHYST_FFMPEG_DISABLED` (any value) makes the locator report nothing — the test gate and the manual "no ffmpeg" run.
-- The LOW/MEDIUM/HIGH table **including its UNKNOWN rows**, ×1.3 at ≥ 60 fps, ×0.75 for H.265, are copied **verbatim** from `amethyst/src/main/java/com/vitorpamplona/amethyst/service/uploads/VideoCompressionHelper.kt:112-147`. The probe-failure fallback (`:177-179`) is a separate constant: 2 000 000 bps, no resize.
+- The LOW/MEDIUM/HIGH table **including its UNKNOWN rows**, ×1.3 at ≥ 59 fps (the one deliberate change from Android, which used ≥ 60 and so missed broadcast 59.94 fps; the shared rule now moves Android too), ×0.75 for H.265, are copied **verbatim** from `amethyst/src/main/java/com/vitorpamplona/amethyst/service/uploads/VideoCompressionHelper.kt:112-147`. The probe-failure fallback (`:177-179`) is a separate constant: 2 000 000 bps, no resize.
 - Encoder preference, exact order — H.264: `libx264, h264_videotoolbox, h264_nvenc, h264_qsv, h264_amf, h264_mf, libopenh264`; H.265: `libx265, hevc_videotoolbox, hevc_nvenc, hevc_qsv, hevc_amf, hevc_mf`. No `*_vaapi`. Candidates = available HEVC (if asked) **then** available H.264.
 - Encode command (spec §2): `-map 0:v:0 -map 0:a:0? -sn -dn -map_chapters -1`, `-pix_fmt yuv420p`, `-maxrate`=`-b:v`, `-bufsize`=2×, `-c:a aac -b:a 128k`, `-map_metadata -1 -map_metadata:s -1`, `-movflags +faststart`, `-tag:v hvc1` for HEVC, `-progress pipe:1`. Remux command: `-map 0:v -map 0:a? -dn -sn -c copy -map_metadata -1 -map_metadata:s -1 -map_chapters -1 -movflags +faststart -progress pipe:1` (never `-map 0`: a MOV with a timecode data track then fails with exit 234).
 - Compression progress maps to `UploadingState.Compressing` from 0.02 up to a per-path ceiling (0.20 Blossom/NIP-96, 0.40 NIP-95). No overall timeout; a stall (no progress line for 60 s) kills the process — the remux prints progress too, so it is covered the same way. A process-wide `Semaphore(1)` serialises encodes. Every live process is registered and killed by a JVM shutdown hook. Only `FfmpegProcesses` and `FfmpegProbe` switch to `Dispatchers.IO`; `FfmpegVideoCompressor` and `DesktopMediaUploader` never change dispatcher (their cancellation tests rely on `runTest` virtual time).
@@ -28,7 +28,7 @@
 Inputs the spec implies that a user will hit; each has a test in the owning task:
 
 1. A portrait phone video (height > width): the short side is the width, never upscaled, dimensions even — Task 5 `scaleFilter` test, Task 6 gated rotated-source test.
-2. A 59.94 fps clip (`avg_frame_rate = 60000/1001`): no ×1.3 multiplier — Task 4 parser test + Task 1 multiplier test.
+2. A 59.94 fps clip (`avg_frame_rate = 60000/1001`): gets the ×1.3 multiplier, 50 fps does not — Task 4 parser test + Task 1 multiplier test.
 3. `ffprobe` missing while `ffmpeg` is present: the probe-failure constant, not a crash and not the UNKNOWN row — Task 6 test.
 4. A hardware HEVC encoder listed by `-encoders` but failing at run time: the H.264 tail is reached, the bitrate recomputed without the ×0.75, and the first temp deleted — Task 3 candidate test + Task 6 retry test.
 5. A packaged app launched from Finder (empty launchd PATH) with Homebrew ffmpeg: found through `/opt/homebrew/bin` — Task 2 locator test + manual sheet.
@@ -85,7 +85,8 @@ class VideoCompressionRulesTest {
         assertEquals(5_200_000, rule.getBitrateBps(60f, useH265 = false))
         assertEquals(3_000_000, rule.getBitrateBps(30f, useH265 = true))
         assertEquals(3_900_000, rule.getBitrateBps(60f, useH265 = true))
-        assertEquals(4_000_000, rule.getBitrateBps(59.94f, useH265 = false))   // Review Focus 2
+        assertEquals(5_200_000, rule.getBitrateBps(59.94f, useH265 = false))   // Review Focus 2
+        assertEquals(4_000_000, rule.getBitrateBps(50f, useH265 = false))
     }
     @Test fun probeFailureConstant() { assertEquals(2_000_000, VideoCompressionRules.PROBE_FAILED_BITRATE_BPS) }
 }
