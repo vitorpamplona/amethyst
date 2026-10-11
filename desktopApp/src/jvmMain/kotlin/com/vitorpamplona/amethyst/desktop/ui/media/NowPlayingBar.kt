@@ -35,7 +35,6 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.FilledIconButton
 import androidx.compose.material3.HorizontalDivider
@@ -54,7 +53,6 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbol
@@ -152,19 +150,6 @@ internal fun NowPlayingBarContent(
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 if (!compact) Artwork(type, thumbnail)
-
-                val readableName = remember(state.url) { state.url?.let(::readableFileName) }
-                val fileName = if (roomy) readableName else null
-                if (fileName != null) {
-                    Text(
-                        text = fileName,
-                        style = MaterialTheme.typography.bodySmall,
-                        color = secondary,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                        modifier = Modifier.padding(start = 12.dp).widthIn(max = 160.dp),
-                    )
-                }
 
                 if (!compact) Spacer(Modifier.width(12.dp))
 
