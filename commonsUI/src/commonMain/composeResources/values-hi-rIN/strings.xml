@@ -415,7 +415,7 @@
     <string name="post_not_found_short">देखें</string>
     <string name="channel_image">प्रणाली चित्र</string>
     <string name="referenced_event_not_found">उद्धृत घटना अप्राप्त</string>
-    <string name="could_not_decrypt_the_message">सन्देश का अरहस्यीकरण असफल</string>
+    <string name="could_not_decrypt_the_message">सन्देश का रहस्योद्घाटन असफल</string>
     <string name="chat_preview_decrypting">अरसहस्यीकरण…</string>
     <string name="chat_preview_you_prefix">आप : %1$s</string>
     <string name="chat_subject_changed_by">%1$s ने चर्चा का नया नाम %2$s रखा</string>
@@ -1155,7 +1155,7 @@
     <string name="nip46_signer_activity_denied">अस्वीकृत</string>
     <string name="nip46_signer_act_signed_kind">घटना हस्ताक्षरित (प्रकार %1$d)</string>
     <string name="nip46_signer_act_encrypted">सन्देश रहस्यीकृत</string>
-    <string name="nip46_signer_act_decrypted">सन्देश अरहस्यीकृत</string>
+    <string name="nip46_signer_act_decrypted">सन्देश रहस्योद्घाटित</string>
     <string name="nip46_signer_act_shared_pubkey">आपकी ख्याप्यकुंचिका बाँटी गयी</string>
     <string name="nip46_signer_act_connected">संयोजित</string>
     <string name="nip46_signer_act_ping">संयोजन अवस्था जाँच</string>
@@ -3891,7 +3891,7 @@
     <string name="concord_invite_revoked_ok">आमन्त्रण योजक निराकृत।</string>
     <string name="concord_invite_title">आमन्त्रण योजक</string>
     <string name="concord_leave_community">समुदाय छोडें</string>
-    <string name="concord_leave_message">क्या %1$s छोडें। इसे हटाया जाएगा इस लेखा की सूची से। तथा आपके यन्त्रों पर समचरणीकरण रुक जाएगा। तथा सदस्य देखेंगे की आप चले गए। सन्देश जिनका आप आगे अरहस्यीकरण नहीं कर सकते सम्भाव्यतः पुनःप्राप्तव्य नहीं होंगे। तथा आप केवल नए आमन्त्रण के साथ लौट सकेंगे।</string>
+    <string name="concord_leave_message">क्या %1$s छोडें। इसे हटाया जाएगा इस लेखा की सूची से। तथा आपके यन्त्रों पर समचरणीकरण रुक जाएगा। तथा सदस्य देखेंगे की आप चले गए। सन्देश जिनका आप आगे रहस्योद्घाटन नहीं कर सकते सम्भाव्यतः पुनःप्राप्तव्य नहीं होंगे। तथा आप केवल नए आमन्त्रण के साथ लौट सकेंगे।</string>
     <string name="concord_leave_owner_warning">आपने इस समुदाय को बनाया। छोड जाने से यह मिटेगा नहीं। किसी अन्य के हाथ सौंपा नहीं जाएगा। परन्तु स्वत्वधारी कुंचिका जो आपकी सूची में हैं वह हटाया जाएगा। आप आगे से इसका प्रबन्धन नहीं कर पाएँगे।</string>
     <string name="concord_leave_title">क्या समुदाय छोडें।</string>
     <string name="concord_make_admin">प्रशासक बनाएँ</string>
@@ -4577,7 +4577,7 @@
     <string name="napplet_cap_resource">जाल</string>
     <string name="napplet_cap_resource_desc">जाल तथा ब्लोस्सम संसाधन ले आएँ</string>
     <string name="napplet_cap_signer">रहस्यीकरण</string>
-    <string name="napplet_cap_signer_desc">निजी सन्देशों का रहस्यीकरण तथा अरहस्यीकरण करें अपनी कुंचिका से</string>
+    <string name="napplet_cap_signer_desc">निजी सन्देशों का रहस्यीकरण तथा रहस्योद्घाटन करें अपनी कुंचिका से</string>
     <string name="napplet_cap_storage">भण्डार</string>
     <string name="napplet_cap_storage_desc">उसका अपना निजी भण्डार</string>
     <string name="napplet_cap_theme">प्रदर्शनशैली</string>
@@ -4630,7 +4630,7 @@
     </plurals>
     <string name="napplet_consent_get_pubkey">यह नोस्टर संलग्नक्रमक आपकी ख्याप्यकुंचिका पढना चाहता है।</string>
     <string name="napplet_consent_identity_read">यह नोस्टर संलग्नक्रमक आपका परिचय तथा लेखा जानकारी पढना चाहता है।</string>
-    <string name="napplet_consent_nip44_decrypt">यह स्थान आपके नोस्टर कुंचिका से %1$s को एक सन्देश का अरहस्यीकरण करना चाहता है।</string>
+    <string name="napplet_consent_nip44_decrypt">यह स्थान आपके नोस्टर कुंचिका से %1$s को एक सन्देश का रहस्योद्घाटन करना चाहता है।</string>
     <string name="napplet_consent_nip44_encrypt">यह स्थान आपके नोस्टर कुंचिका से %1$s को एक सन्देश का रहस्यीकरण करना चाहता है।</string>
     <string name="napplet_consent_notify">यह नोस्टर संलग्नक्रमक आपको सूचनाएँ दिखाना चाहता है।</string>
     <plurals name="napplet_consent_pay_amount">
@@ -4862,8 +4862,8 @@
     <string name="nip46_signer_connected_named">%1$s संयोजित। अमेथिस्ट अब इस के लिए हस्ताक्षर करता है पृष्ठभूततः।</string>
     <string name="nip46_signer_connected_ok">क्रमक संयोजित। अमेथिस्ट अब इस के लिए हस्ताक्षर करता है पृष्ठभूततः।</string>
     <string name="nip46_signer_copied">कोष्ठागार पता अनुकृत</string>
-    <string name="nip46_signer_decrypt_failed">अमेथिस्ट द्वारा इस सन्देश का अरहस्यीकरण असफल। सम्भावना है कि यह इस लेखा के प्रति सम्बोधित नहीं।</string>
-    <string name="nip46_signer_notif_channel_desc">पूर्णपटल प्रेरण एक क्रमक को अनुमति देने के लिए जो चाहता है अमेथिस्ट हस्ताक्षरण रहस्यीकरण अथवा अरहस्यीकरण करें आपकी कुंचिका के साथ।</string>
+    <string name="nip46_signer_decrypt_failed">अमेथिस्ट द्वारा इस सन्देश का रहस्योद्घाटन असफल। सम्भावना है कि यह इस लेखा के प्रति सम्बोधित नहीं।</string>
+    <string name="nip46_signer_notif_channel_desc">पूर्णपटल प्रेरण एक क्रमक को अनुमति देने के लिए जो चाहता है अमेथिस्ट हस्ताक्षरण रहस्यीकरण अथवा रहस्योद्घाटन करें आपकी कुंचिका के साथ।</string>
     <string name="nip46_signer_notif_channel_name">हस्ताक्षरण अनुरोध</string>
     <string name="nip46_signer_notif_connect_title">एक क्रमक संयोजन करना चाहता है</string>
     <string name="nip46_signer_notif_sign_title">क्या एक हस्ताक्षरण अनुरोध को अनुमति दें।</string>
@@ -5144,7 +5144,7 @@
     <string name="preview_card_image_for">%1$s के लिए पूर्वीक्षण पत्ता चित्र</string>
     <string name="privacy_options">गोपनीयता विकल्प</string>
     <string name="privacy_policy">गोपनीयता नीति</string>
-    <string name="private_conversation_notification">&lt;निजी संदेश का अरहस्यीकरण असफल&gt;\n\nआप का उल्लेख किया गया एक निजी अथवा रहस्यीकृत संवाद में %1$s तथा %2$s के बीच।</string>
+    <string name="private_conversation_notification">&lt;निजी संदेश का रहस्योद्घाटन असफल&gt;\n\nआप का उल्लेख किया गया एक निजी अथवा रहस्यीकृत संवाद में %1$s तथा %2$s के बीच।</string>
     <string name="private_inbox_section">सीधा संदेश आगतपेटिका पुनःप्रसारक</string>
     <string name="private_inbox_section_explainer">आपके निजी आगतपेटिका के रूप में १ - ३ पुनःप्रसारकों को जोडें। अन्य लोग इनका उपयोग करेंगे आपको सी॰सं॰ भेजने के लिए। सी॰सं॰ आगतपेटिका पुनःप्रसारकों को किसी से भी सन्देश स्वीकारना चाहिए पर उनका अवरोहण अनुमति केवल आपको देना चाहिए। ये अच्छे विकल्प हैं :\n - inbox.nostr.wine (सशुल्क)\n - auth.nostr1.com (शुल्करहित)\n - you.nostr1.com (व्यक्तिगत पुनःप्रसारक - सशुल्क)</string>
     <string name="private_inbox_section_explainer_profile">प्रयोक्ता इन पुनःप्रसारकों पर सीधा सन्देश प्राप्त कर रहा है</string>
@@ -5347,7 +5347,7 @@
     <string name="resource_usage_by_subsystem_cellular">चलनशील संचारमात्रा सुविधा अनुसार (सात दिन)</string>
     <string name="resource_usage_calls">आह्वानाभ्यन्तर समय</string>
     <string name="resource_usage_cpu">क्रमवर्तक समय उपयुक्त</string>
-    <string name="resource_usage_decrypts">सन्देश अरहस्यीकृत</string>
+    <string name="resource_usage_decrypts">सन्देश रहस्योद्घाटित</string>
     <string name="resource_usage_http_active">सक्रिय स्थानान्तरण समय</string>
     <string name="resource_usage_http_requests">जाल अनुरोध</string>
     <string name="resource_usage_legend_cellular">चलनशील (दशलक्षाष्टक)</string>
@@ -5641,7 +5641,7 @@
     <string name="wallet_add_cashu_title">काशयू॰ धनकोष (निप॰६०)</string>
     <string name="wallet_balance_request_failed">आपका लेखाशेष का आवहन असफल</string>
     <string name="wallet_connect">धनकोष संयोजन</string>
-    <string name="wallet_connect_decrypt_failed">अमेथिस्ट द्वारा आपके धनकोष के उत्तर का अरहस्यीकरण असफल। सम्भाव्यतः धनकोष एक अन्य कुंचिका का उपयोग कर रहा है</string>
+    <string name="wallet_connect_decrypt_failed">अमेथिस्ट द्वारा आपके धनकोष के उत्तर का रहस्योद्घाटन असफल। सम्भाव्यतः धनकोष एक अन्य कुंचिका का उपयोग कर रहा है</string>
     <plurals name="wallet_connect_no_response_error">
         <item quantity="one">आपके धनकोष ने %1$d सेकण्ड के भीतर उत्तर नहीं दिया। भुगतान हो गया अथवा नहीं हुआ दोनो सम्भाव्य। धनकोष जाँचें पुनःप्रयास पूर्व।</item>
         <item quantity="other">आपके धनकोष ने %1$d सेकण्ड के भीतर उत्तर नहीं दिया। भुगतान हो गया अथवा नहीं हुआ दोनो सम्भाव्य। धनकोष जाँचें पुनःप्रयास पूर्व।</item>
@@ -5961,7 +5961,7 @@
     <string name="browser_pill_info_connection">संयोजन</string>
     <string name="browser_pill_info_https">संयोजन रहस्यीकृत</string>
     <string name="browser_pill_info_https_desc">जानकारी जो आप भेजते हैं मार्गमध्य पठन असाध्य।</string>
-    <string name="browser_pill_info_http">संयोजन अरहस्यीकृत</string>
+    <string name="browser_pill_info_http">संयोजन रहस्यीकृत नहीं</string>
     <string name="browser_pill_info_http_desc">पारणशब्द अथवा भुगतान विवरणों को प्रविष्ट ना करें।</string>
     <string name="browser_pill_info_tor">टोर पर बहुरहस्यावृत संचार द्वारा</string>
     <string name="browser_pill_info_open">खुला जाल</string>
