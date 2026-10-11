@@ -79,7 +79,7 @@ in `commonsUI`, under the same package.
 ### Domain models & data
 | Package        | UI? | Purpose |
 |----------------|-----|---------|
-| `model`        | no¹ | Core domain types (`Note`, `User`, `Channel`), thread assembly (`ThreadAssembler`, `ThreadLevelCalculator`, `ReplyContext`, `replyingDirectlyTo`), publish routing (`BroadcastRelayPlanner`, behind `EventBroadcaster`; runs over any `EventCache`, which is how amy shares it), and per-NIP event model extensions in `model/nipNN…` subpackages. `model/cache` holds the in-memory event store: the `ICacheProvider` / `ILocalCache` ports and `UserMetadataCache` in commonMain, and the concrete `LocalCache` (plus `AntiSpamFilter`, `CachePruner`, `CacheSearch` and the `LocalCacheHost` app-shell port) in jvmAndroid. `model/account`, `model/observables`. The largest package; keep it organized by NIP. |
+| `model`        | no¹ | Core domain types (`Note`, `User`, `Channel`), thread assembly (`ThreadAssembler`, `ThreadLevelCalculator`, `ReplyContext`, `replyingDirectlyTo`), publish routing (`BroadcastRelayPlanner`, behind `EventBroadcaster`; runs over any `EventCache`, which is how amy shares it), and per-NIP event model extensions in `model/nipNN…` subpackages. `model/cache` holds the in-memory event store, all in commonMain: the `ICacheProvider` / `ILocalCache` ports, `EventCache` (the store and its `justConsume` dispatch) and its `object LocalCache` singleton, `UserMetadataCache`, `AntiSpamFilter`, `CachePruner`, `CacheSearch` and the `LocalCacheHost` app-shell port. `model/account`, `model/observables`. The largest package; keep it organized by NIP. |
 | `defaults`     | no  | Static bootstrap data (default relays, channels). |
 
 `model/navigation` also holds the headless navigation identifiers: `NavBarItem`, `BottomBarEntry` and the app's `@Serializable` `Route` catalog (`Routes.kt`). `model/composer` holds post-composer state that is not UI (`AudienceSelection`, `SplitBuilder`, `IZapRaiser`).
@@ -114,7 +114,7 @@ in `commonsUI`, under the same package.
 | `viewmodels`   | no² | Larger list/feed-backed ViewModels (`androidx.lifecycle.ViewModel`). Shared by all GUI front ends; `cli` usually drives the layers below instead. A ViewModel lives in `commonsUI` only when it cannot compile headless: it holds Compose UI state (`ChatNewMessageState` — `TextFieldValue`; `thread/LevelFeedViewModel` — `LazyListState`), reads `Res`, or needs `AccountViewModel.toastManager`. `BaseAccountViewModel` (the account ViewModel minus its toast manager and platform bridges) is here; take it, or just `Account`, to keep a new ViewModel here. |
 | `notices`      | no  | `UserNotice`: everything headless code tells the user, as typed facts (`SignerNotice.ReadOnly`, `InvoiceNotice.CallbackNotFound(lnAddress)`, …), reported to a `UserNoticeSink` or worded through a `UserNoticeResolver`. A sealed hierarchy, so `commonsUI`'s `notices/ui` rendering is exhaustive. Never put a `Res` key or English text here. |
 | feature screens' logic: `badges`, `bolt12Offers`, `bookmarkgroups`, `buzz`, `calendars`, `chats`, `communities`, `dvms`, `followPacks`, `geocaches`, `geohash`, `gitRepo`, `hashtag`, `lists`, `mediaServers`, `music`, `paymentTargets`, `pinnednotes`, `podcasts`, `polls`, `profile`, `relay`, `relays`, `scheduledposts`, `settings`, `url`, `wallet` | no² | The ViewModels and concrete `FeedFilter`s behind one feature's screens, usually in a `dal/` subpackage (`hashtag/dal/HashtagFeedFilter` + `HashtagFeedViewModel`). Named after the `commonsUI` folder that holds the screens (`ui/screen/loggedIn/<feature>/`), so the two halves pair up. Never under `ui.*` here. |
-| `feeds`        | no  | The feed data-access layer at the root (`FeedFilter`, `AdditiveFeedFilter`, `AdditiveComplexFeedFilter`, `ChangesFlowFilter`, `FeedContentState`, `FeedState`, `InvalidatableContent`, `DefaultFeedOrder`, `RepostRenderability`…) plus `feeds/custom` (`FeedDefinition`, `FeedBuilderState` — the feeds users build, run by `TopFilter.CustomFeed`) and `feeds/related`. See the `feed-patterns` skill. |
+| `feeds`        | no  | The feed data-access layer at the root (`FeedFilter`, `AdditiveFeedFilter`, `AdditiveComplexFeedFilter`, `ChangesFlowFilter`, `FeedContentState`, `FeedState`, `InvalidatableContent`, `DefaultFeedOrder`, `RepostRenderability`…) plus `feeds/custom` (`FeedDefinition`, `FeedBuilderState` — the feeds users build, run by `TopFilter.CustomFeed`) and `feeds/related`. See the `account-state` skill (`references/feeds.md`). |
 | `profile`      | mixed | `ProfileBroadcastStatus` (state) + `EditProfileFields` at the root; the `ProfileBroadcastBanner` composable lives in `commonsUI` `profile/ui`. |
 | `privacylock`  | mixed | Lock state machine + settings here; `LocalPrivacyLockState`/`lockStateFor` (CompositionLocal accessor) in `commonsUI`. |
 
@@ -320,6 +320,6 @@ These are intentionally *documented*, not silently tolerated. Fix opportunistica
 
 ## 5. See also
 - `nipACWebRtcCalls/ARCHITECTURE.md` — WebRTC call state machine deep-dive.
-- Root `.claude/CLAUDE.md` — module overview, sharing philosophy, build commands.
-- `/kotlin-multiplatform`, `/compose-expert`, `/feed-patterns`, `/relay-client`,
-  `/account-state` skills for the patterns referenced above.
+- Root `AGENTS.md` — module overview, sharing philosophy, build commands.
+- `kotlin-multiplatform`, `compose-expert`, `relay-client`,
+  `account-state` (feeds included) skills for the patterns referenced above.

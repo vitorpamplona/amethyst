@@ -104,9 +104,9 @@ import kotlin.system.exitProcess
 
 /**
  * The desktop window of the shared app: the same [AmethystApp] Android renders, on the desktop graph.
- * Run it with `./gradlew :desktopApp:run` (the legacy app: `runLegacy`). Its files live apart from
- * the legacy app's (`~/.amethyst/app`, or `-Damethyst.dataDir=...`); keys come from the same OS
- * keyring, and the legacy logins are imported on the first start.
+ * Run it with `./gradlew :desktopApp:run`. Its files live apart from the retired legacy app's
+ * (`~/.amethyst/app`, or `-Damethyst.dataDir=...`); keys come from the same OS keyring, and the
+ * legacy logins are imported on the first start.
  */
 @OptIn(ExperimentalComposeUiApi::class, FlowPreview::class)
 fun main(args: Array<String>) {

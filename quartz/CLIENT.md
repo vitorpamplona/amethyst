@@ -1,6 +1,8 @@
 # Building a Nostr Client with Quartz
 
-This guide walks you through building a Nostr client using Quartz's `NostrClient` and [Ktor](https://ktor.io/) as the WebSocket transport layer.
+This guide walks you through building a Nostr client using Quartz's `NostrClient` and [Ktor](https://ktor.io/) as the WebSocket transport layer. On JVM and Android you can skip the transport and use the bundled OkHttp one: `NostrClient(BasicOkHttpWebSocket.Builder { okHttpClient })` (`nip01Core.relay.sockets.okhttp`).
+
+Using a coding agent (Claude Code, Codex, Cursor, …)? Install the [Quartz agent skill](agent-skill/README.md) so it reaches for Quartz's helpers instead of re-implementing them.
 
 ## Overview
 
@@ -29,8 +31,8 @@ dependencies {
     implementation("io.ktor:ktor-client-cio:3.1.1")
     implementation("io.ktor:ktor-client-websockets:3.1.1")
 
-    // Quartz (use your local module or published artifact)
-    implementation(project(":quartz"))
+    // Quartz from Maven Central (check the latest version there)
+    implementation("com.vitorpamplona.quartz:quartz:1.17.0")
 }
 ```
 
@@ -299,6 +301,59 @@ results.forEach { (relay, success) ->
     println("  $relay: ${if (success) "accepted" else "rejected"}")
 }
 ```
+
+### 6. One-shot Reads (fetch, page, count)
+
+Most code doesn't need a live subscription: it needs "the events matching this
+filter" and then to move on. Quartz ships these as **suspending extension functions
+on `INostrClient`** in `com.vitorpamplona.quartz.nip01Core.relay.client.accessories`.
+Because they are extensions, they don't appear in `NostrClient`'s method completion —
+import them by name:
+
+```kotlin
+import com.vitorpamplona.quartz.nip01Core.metadata.MetadataEvent
+import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.PagedFetchResult
+import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.count
+import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.fetchAll
+import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.fetchAllPages
+import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.fetchFirst
+import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.normalizeRelayUrl
+
+suspend fun readExamples(client: NostrClient, pubkey: String) {
+    // Every event matching the filter, deduped by id, until EOSE.
+    val notes = client.fetchAll("wss://nos.lol", Filter(kinds = listOf(1), authors = listOf(pubkey), limit = 50))
+
+    // The first match only; null when nothing arrives.
+    val profile = client.fetchFirst("wss://nos.lol", Filter(kinds = listOf(MetadataEvent.KIND), authors = listOf(pubkey)))
+
+    // More than the relay's per-REQ cap (often ~500): walks a created_at cursor page by page.
+    val result =
+        client.fetchAllPages("wss://nos.lol", listOf(Filter(kinds = listOf(1), authors = listOf(pubkey)))) { event ->
+            println(event.id)
+        }
+    if (result.end != PagedFetchResult.End.DRAINED) println("Stopped early: ${result.end} ${result.message}")
+
+    // NIP-45 COUNT; null when the relay doesn't support it.
+    val followers = client.count("wss://nos.lol".normalizeRelayUrl(), Filter(kinds = listOf(3), tags = mapOf("p" to listOf(pubkey))))
+    println("${notes.size} notes, profile: ${profile != null}, followers: ${followers?.count}")
+}
+```
+
+Things worth knowing:
+
+- Every wait is an **idle window** (`idleTimeoutMs`), reset by real progress, never a
+  wall-clock deadline: a relay streaming a large backlog is never cut off mid-delivery.
+  Wrap a call in `withTimeoutOrNull` when you need a hard bound.
+- Only `PagedFetchResult.End.DRAINED` proves the relay has nothing more; the other
+  endings (`IDLE`, `CLOSED`, `AUTH_REQUIRED`, …) say why the walk stopped, and
+  `message` carries the relay's own words.
+- A relay that requires NIP-42 AUTH is waited on while a `RelayAuthenticator` attached
+  to the client answers the challenge, instead of being reported as empty.
+- There are more: `fetchAllWithHooks` (verify/store each event as it arrives, with
+  per-relay results), multi-relay paging (`fetchAllPagesFromPool`), `countMerged`, and
+  NIP-77 negentropy sync (`negentropySync`, `negentropySyncOrFetch`). The full catalog is
+  the [accessories README](src/commonMain/kotlin/com/vitorpamplona/quartz/nip01Core/relay/client/accessories/README.md).
 
 ## How It Works
 

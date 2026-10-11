@@ -1,6 +1,9 @@
 # Quartz Guide for Clients
 
-Here's how to structure a new Twitter-like client.
+Here's how to structure a new Twitter-like client. For the API itself (transports,
+fetching, publishing), see [CLIENT.md](CLIENT.md); for running a relay, [RELAY.md](RELAY.md).
+
+Using a coding agent (Claude Code, Codex, Cursor, …)? Install the [Quartz agent skill](agent-skill/README.md) so it reaches for Quartz's helpers instead of re-implementing them.
 
 ## Architecture
 
