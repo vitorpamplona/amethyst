@@ -20,10 +20,6 @@
  */
 package com.vitorpamplona.amethyst.commons.service.upload
 
-import org.apache.commons.imaging.Imaging
-import org.apache.commons.imaging.common.ImageMetadata
-import org.apache.commons.imaging.formats.jpeg.JpegImageMetadata
-import org.apache.commons.imaging.formats.tiff.constants.TiffTagConstants
 import java.awt.geom.AffineTransform
 import java.awt.image.BufferedImage
 import java.io.File
@@ -37,17 +33,67 @@ object ExifOrientation {
     const val NORMAL = 1
 
     /** The JPEG's orientation, 1 to 8, or [NORMAL] when it has none or is not a JPEG. */
-    fun read(file: File): Int = fromMetadata { Imaging.getMetadata(file) }
+    fun read(file: File): Int = runCatching { file.inputStream().use { read(it.readNBytes(SCAN_LIMIT)) } }.getOrDefault(NORMAL)
 
-    /** [read] for a file already in memory. */
-    fun read(bytes: ByteArray): Int = fromMetadata { Imaging.getMetadata(bytes) }
+    /**
+     * [read] for a file already in memory.
+     *
+     * Walks the segments itself instead of asking Commons Imaging: a file edited by more than one
+     * tool can carry two Exif blocks, and Commons Imaging reports the tags of a later one, so a
+     * phone photo re-saved by an editor came out sideways. Viewers take the tag from the first
+     * block that has it, and so does this.
+     */
+    fun read(bytes: ByteArray): Int = runCatching { firstOrientation(bytes) }.getOrNull()?.takeIf { it in 1..8 } ?: NORMAL
 
-    private fun fromMetadata(metadata: () -> ImageMetadata?): Int =
-        runCatching {
-            (metadata() as? JpegImageMetadata)
-                ?.findExifValueWithExactMatch(TiffTagConstants.TIFF_TAG_ORIENTATION)
-                ?.intValue
-        }.getOrNull()?.takeIf { it in 1..8 } ?: NORMAL
+    /** Metadata segments precede the scan, and one is at most 64 KiB. */
+    private const val SCAN_LIMIT = 1 shl 20
+
+    private fun firstOrientation(b: ByteArray): Int? =
+        JpegSegments.leadingSegments(b).firstNotNullOfOrNull { segment ->
+            if (JpegSegments.isExif(b, segment)) orientationInTiff(b, JpegSegments.tiffStart(segment), segment.end) else null
+        }
+
+    /** The Orientation tag of IFD0 in the TIFF structure at [start] until [end]. */
+    private fun orientationInTiff(
+        b: ByteArray,
+        start: Int,
+        end: Int,
+    ): Int? {
+        if (end - start < 8) return null
+        val littleEndian =
+            when {
+                b[start] == 'I'.code.toByte() && b[start + 1] == 'I'.code.toByte() -> true
+                b[start] == 'M'.code.toByte() && b[start + 1] == 'M'.code.toByte() -> false
+                else -> return null
+            }
+
+        fun u16(at: Int): Int {
+            val a = b[at].toInt() and 0xFF
+            val c = b[at + 1].toInt() and 0xFF
+            return if (littleEndian) a or (c shl 8) else (a shl 8) or c
+        }
+
+        fun u32(at: Int): Long = if (littleEndian) u16(at).toLong() or (u16(at + 2).toLong() shl 16) else (u16(at).toLong() shl 16) or u16(at + 2).toLong()
+
+        if (u16(start + 2) != 42) return null
+        val ifdOffset = u32(start + 4)
+        if (ifdOffset > end - start - 2) return null
+        val ifd = start + ifdOffset.toInt()
+
+        val entries = u16(ifd)
+        for (k in 0 until entries) {
+            val entry = ifd + 2 + 12 * k
+            if (entry + 12 > end) return null
+            if (u16(entry) == ORIENTATION_TAG) {
+                // A SHORT holding one value, stored in the entry itself.
+                return if (u16(entry + 2) == TYPE_SHORT && u32(entry + 4) >= 1) u16(entry + 8) else null
+            }
+        }
+        return null
+    }
+
+    private const val ORIENTATION_TAG = 0x0112
+    private const val TYPE_SHORT = 3
 
     /** Orientations 5 to 8 turn the picture a quarter: displayed width is the stored height. */
     fun swapsAxes(orientation: Int): Boolean = orientation in 5..8
