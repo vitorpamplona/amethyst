@@ -2108,7 +2108,6 @@
     <string name="media_compression_quality_uncompressed">Sem compressão</string>
     <string name="media_compression_quality_very_low">Muito baixa</string>
     <string name="media_compression_quality_very_high">Muito alta</string>
-    <string name="media_compression_image_max_size">%1$s · imagens de até %2$d px</string>
     <string name="media_compression_preview_compressed">Comprimida</string>
     <string name="media_compression_preview_original">Original</string>
     <string name="media_compression_preview_tap_original">Toque na imagem para ver a original</string>

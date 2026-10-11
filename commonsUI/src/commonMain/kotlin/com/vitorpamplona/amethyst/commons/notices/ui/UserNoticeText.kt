@@ -38,6 +38,7 @@ import com.vitorpamplona.amethyst.commons.notices.NwcFailure
 import com.vitorpamplona.amethyst.commons.notices.PowPublishFailed
 import com.vitorpamplona.amethyst.commons.notices.ResolvedNotice
 import com.vitorpamplona.amethyst.commons.notices.SignerNotice
+import com.vitorpamplona.amethyst.commons.notices.UploadNotice
 import com.vitorpamplona.amethyst.commons.notices.UserNotice
 import com.vitorpamplona.amethyst.commons.notices.UserNoticeResolver
 import com.vitorpamplona.amethyst.commons.notices.V4VNotice
@@ -115,6 +116,15 @@ import com.vitorpamplona.amethyst.commons.resources.unauthorized_exception
 import com.vitorpamplona.amethyst.commons.resources.unauthorized_exception_description
 import com.vitorpamplona.amethyst.commons.resources.user_does_not_have_a_lightning_address_setup_to_receive_sats
 import com.vitorpamplona.amethyst.commons.resources.user_x_does_not_have_a_lightning_address_setup_to_receive_sats
+import com.vitorpamplona.amethyst.commons.resources.video_compression_failed_message
+import com.vitorpamplona.amethyst.commons.resources.video_compression_failed_message_with_reason
+import com.vitorpamplona.amethyst.commons.resources.video_compression_failed_title
+import com.vitorpamplona.amethyst.commons.resources.video_compression_hdr_message
+import com.vitorpamplona.amethyst.commons.resources.video_compression_hdr_title
+import com.vitorpamplona.amethyst.commons.resources.video_compression_hevc_unavailable_message
+import com.vitorpamplona.amethyst.commons.resources.video_compression_hevc_unavailable_title
+import com.vitorpamplona.amethyst.commons.resources.video_compression_not_smaller_message
+import com.vitorpamplona.amethyst.commons.resources.video_compression_not_smaller_title
 import com.vitorpamplona.amethyst.commons.resources.wallet_connect_no_response_error
 import com.vitorpamplona.amethyst.commons.resources.wallet_connect_pay_invoice_error_error
 import com.vitorpamplona.amethyst.commons.resources.wallet_connect_unreadable_response_error
@@ -198,6 +208,15 @@ fun UserNotice.text(): NoticeText =
 
         NoteActionNotice.CannotQuoteDraft -> text(Res.string.draft_note, Res.string.it_s_not_possible_to_quote_to_a_draft_note)
         NoteActionNotice.ReadOnlyCannotBoost -> text(Res.string.read_only_user, Res.string.login_with_a_private_key_to_be_able_to_boost_posts)
+
+        is UploadNotice.VideoCompressionFailed ->
+            NoticeText(
+                Res.string.video_compression_failed_title,
+                reason?.let { str(Res.string.video_compression_failed_message_with_reason, raw(it)) } ?: str(Res.string.video_compression_failed_message),
+            )
+        UploadNotice.HevcUnavailable -> text(Res.string.video_compression_hevc_unavailable_title, Res.string.video_compression_hevc_unavailable_message)
+        UploadNotice.HdrSource -> text(Res.string.video_compression_hdr_title, Res.string.video_compression_hdr_message)
+        UploadNotice.CompressionNotSmaller -> text(Res.string.video_compression_not_smaller_title, Res.string.video_compression_not_smaller_message)
 
         is PowPublishFailed -> {
             val kindLabel = str(powKindLabelRes(kind))

@@ -47,6 +47,7 @@ import com.vitorpamplona.amethyst.commons.service.uploads.UploadError
 import com.vitorpamplona.amethyst.commons.service.uploads.UploadOrchestrator
 import com.vitorpamplona.amethyst.commons.service.uploads.UploadingState
 import com.vitorpamplona.amethyst.commons.service.uploads.UploadingState.UploadingFinalState
+import com.vitorpamplona.amethyst.commons.service.uploads.VideoCompressionSupport
 import com.vitorpamplona.amethyst.commons.service.uploads.nip96.Nip96Uploader
 import com.vitorpamplona.amethyst.service.uploads.blossom.BlossomUploader
 import com.vitorpamplona.amethyst.service.uploads.nip96.upload
@@ -77,6 +78,8 @@ import kotlin.coroutines.cancellation.CancellationException
 class AndroidMediaUploader(
     private val appContext: Context,
 ) : MediaUploader {
+    override val videoCompression: VideoCompressionSupport get() = VideoCompressionSupport.Supported
+
     override suspend fun upload(
         progress: UploadOrchestrator,
         uri: MediaUri,

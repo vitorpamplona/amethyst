@@ -75,7 +75,7 @@ import com.vitorpamplona.amethyst.commons.resources.messages_new_message_to_capt
 import com.vitorpamplona.amethyst.commons.resources.private_message
 import com.vitorpamplona.amethyst.commons.resources.record_a_video
 import com.vitorpamplona.amethyst.commons.resources.take_a_picture
-import com.vitorpamplona.amethyst.commons.resources.upload_image
+import com.vitorpamplona.amethyst.commons.resources.upload_media
 import com.vitorpamplona.amethyst.commons.resources.write_a_message
 import com.vitorpamplona.amethyst.commons.resources.zapraiser
 import com.vitorpamplona.amethyst.commons.richtext.BaseMediaContent
@@ -429,7 +429,7 @@ private fun BottomRowActions(
             ) {
                 Icon(
                     symbol = MaterialSymbols.AddPhotoAlternate,
-                    contentDescription = stringRes(id = Res.string.upload_image),
+                    contentDescription = stringRes(id = Res.string.upload_media),
                     modifier = Modifier.height(25.dp),
                     tint = MaterialTheme.colorScheme.placeholderText,
                 )

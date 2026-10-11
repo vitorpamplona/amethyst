@@ -81,6 +81,8 @@ import com.vitorpamplona.amethyst.commons.service.pow.PoWPublishQueue
 import com.vitorpamplona.amethyst.commons.service.pow.PowJobRestorer
 import com.vitorpamplona.amethyst.commons.service.upload.BlossomClient
 import com.vitorpamplona.amethyst.commons.service.upload.blossom.BlossomMirrorQueue
+import com.vitorpamplona.amethyst.commons.service.upload.video.FfmpegEncoders
+import com.vitorpamplona.amethyst.commons.service.upload.video.FfmpegLocator
 import com.vitorpamplona.amethyst.commons.state.UiSettingsState
 import com.vitorpamplona.amethyst.commons.tor.AccountsTorStateConnector
 import com.vitorpamplona.amethyst.commons.tor.TorRelayState
@@ -297,6 +299,11 @@ class DesktopAppModules(
                 ),
             )
         cache.lnurlEndpointResolver = OkHttpLnurlEndpointResolver(roleBasedHttpClientBuilder::okHttpClientForMoney)
+        // Resolve ffmpeg/ffprobe off the UI thread now, so the composer reads availability without probing.
+        applicationIOScope.launch {
+            FfmpegLocator.default.warmUp()
+            FfmpegLocator.default.ffmpeg?.let { FfmpegEncoders.listAvailable(it) }
+        }
     }
 
     // The relay pool. The active account's blocked relays (kind 10006) are subtracted from every

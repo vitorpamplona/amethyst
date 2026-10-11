@@ -567,6 +567,8 @@
     <string name="pinned_to_top">Pinned to top</string>
     <string name="pinned_chat_no_messages_loaded">No recent messages loaded</string>
     <string name="upload_image">Upload Image</string>
+    <string name="upload_media">Upload Media</string>
+    <string name="video_compression_needs_ffmpeg">Install ffmpeg to compress videos. Until then videos are uploaded as they are.</string>
     <string name="upload_file">Upload File</string>
     <string name="take_a_picture">Take a picture</string>
     <string name="record_a_video">Record a video</string>
@@ -2125,7 +2127,9 @@
     <string name="media_compression_quality_uncompressed">Uncompressed</string>
     <string name="media_compression_quality_very_low">Very low</string>
     <string name="media_compression_quality_very_high">Very high</string>
-    <string name="media_compression_image_max_size">%1$s · images up to %2$d px</string>
+    <string name="media_compression_images_up_to">images up to %1$d px</string>
+    <string name="media_compression_video_target">%1$s video → %2$dp, %3$s Mbps</string>
+    <string name="media_compression_video_target_example">1080p video → %1$dp, %2$s Mbps</string>
     <string name="media_compression_preview_compressed">Compressed</string>
     <string name="media_compression_preview_original">Original</string>
     <string name="media_compression_preview_tap_original">Tap the image to see the original</string>
@@ -2133,6 +2137,15 @@
     <string name="media_compression_preview_uncompressed">Uploading the original file, without compression</string>
     <string name="media_compression_preview_tap_zoom">Tap the image to zoom in and compare it with the original</string>
     <string name="media_compression_preview_zoom_hint">Pinch, scroll or double-tap to zoom</string>
+    <string name="video_compression_failed_title">Video compression failed</string>
+    <string name="video_compression_failed_message">The original file is being uploaded instead.</string>
+    <string name="video_compression_failed_message_with_reason">The original file is being uploaded instead. ffmpeg said: %1$s</string>
+    <string name="video_compression_hevc_unavailable_title">H.265 not available</string>
+    <string name="video_compression_hevc_unavailable_message">ffmpeg has no working HEVC encoder on this computer, so the video was encoded as H.264.</string>
+    <string name="video_compression_hdr_title">HDR video</string>
+    <string name="video_compression_hdr_message">Compressed HDR video looks flat. Choose Uncompressed to keep the original colours.</string>
+    <string name="video_compression_not_smaller_title">Original video kept</string>
+    <string name="video_compression_not_smaller_message">Compressing did not make the video smaller, so the original is uploaded with its metadata removed. It is already compact for its size.</string>
     <string name="metadata_strip_failed_body">This file format does not support metadata stripping. Private information such as location and device info may be included. Upload anyway?</string>
     <string name="metadata_strip_failed_upload">Upload anyway</string>
     <string name="edit_draft">Edit draft</string>
