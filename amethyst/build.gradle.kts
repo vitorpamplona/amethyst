@@ -135,7 +135,7 @@ android {
                 .get()
                 .toInt()
         versionName = generateVersionName(libs.versions.app.get(), rootDir)
-        buildConfigField("String", "RELEASE_NOTES_ID", "\"6c9081869be345f39bb73f91b0890fa603f55fccf32d9bccc34c4b01c292952d\"")
+        buildConfigField("String", "RELEASE_NOTES_ID", "\"17f421baf1af6e3f5a1b937503f980a731578f5d3edc342098e47f9c3819b251\"")
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 

@@ -59,6 +59,7 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
@@ -135,7 +136,14 @@ data class AudioPlaybackUi(
     }
 }
 
-/** Renders whichever card [layout] names. [PlayableLayout.VIDEO] is the video player's job and draws nothing here. */
+/** The corners every card is drawn with, unless a host that already shapes it asks for others. */
+private val CardShape = RoundedCornerShape(16.dp)
+
+/**
+ * Renders whichever card [layout] names. [PlayableLayout.VIDEO] is the video player's job and draws nothing here.
+ * [shape] is the card's outline: a host that clips the card itself (a strip joined to a cover above it) passes
+ * `RectangleShape` so the card's own corners don't show inside its clip.
+ */
 @Composable
 fun PlayableMediaCard(
     layout: PlayableLayout,
@@ -146,11 +154,12 @@ fun PlayableMediaCard(
     modifier: Modifier = Modifier,
     onClick: (() -> Unit)? = null,
     onPictureInPicture: (() -> Unit)? = null,
+    shape: Shape = CardShape,
     overlay: @Composable BoxScope.() -> Unit = {},
 ) {
     when (layout) {
-        PlayableLayout.AUDIO_WAVEFORM -> AudioWaveformCard(info, playback, onPlayPause, onSeek, modifier, onClick, onPictureInPicture, overlay)
-        PlayableLayout.AUDIO_COVER -> AudioCoverCard(info, playback, onPlayPause, onSeek, modifier, onClick, onPictureInPicture, overlay)
+        PlayableLayout.AUDIO_WAVEFORM -> AudioWaveformCard(info, playback, onPlayPause, onSeek, modifier, onClick, onPictureInPicture, shape, overlay)
+        PlayableLayout.AUDIO_COVER -> AudioCoverCard(info, playback, onPlayPause, onSeek, modifier, onClick, onPictureInPicture, shape, overlay)
         PlayableLayout.UNDECIDED -> UndecidedMediaCard(info, playback, onPlayPause, modifier, onClick, overlay)
         PlayableLayout.VIDEO -> Unit
     }
@@ -170,13 +179,14 @@ fun AudioWaveformCard(
     onClick: (() -> Unit)? = null,
     /** Non-null shows the picture-in-picture button: meant for long audio, where the post will scroll away. */
     onPictureInPicture: (() -> Unit)? = null,
+    shape: Shape = CardShape,
     overlay: @Composable BoxScope.() -> Unit = {},
 ) {
     val bars = rememberBars(info)
     Box(
         modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(16.dp))
+            .clip(shape)
             .background(MaterialTheme.colorScheme.surfaceContainerHigh)
             .clickableWithoutRipple(onClick),
     ) {
@@ -237,6 +247,7 @@ fun AudioCoverCard(
     onClick: (() -> Unit)? = null,
     /** Non-null shows the picture-in-picture button: meant for long audio, where the post will scroll away. */
     onPictureInPicture: (() -> Unit)? = null,
+    shape: Shape = CardShape,
     overlay: @Composable BoxScope.() -> Unit = {},
 ) {
     val bars = rememberBars(info)
@@ -249,7 +260,7 @@ fun AudioCoverCard(
                 .widthIn(max = 400.dp)
                 .fillMaxWidth()
                 .aspectRatio(1f)
-                .clip(RoundedCornerShape(16.dp))
+                .clip(shape)
                 .clickableWithoutRipple(onClick),
     ) {
         // The generated cover sits under the artwork, so a slow or failed load still reads as a cover.

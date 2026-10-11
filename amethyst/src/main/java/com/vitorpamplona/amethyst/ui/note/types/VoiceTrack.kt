@@ -55,7 +55,6 @@ import com.vitorpamplona.amethyst.commons.resources.play
 import com.vitorpamplona.amethyst.commons.richtext.MediaUrlVideo
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.note.elements.DisplayUncitedHashtags
-import com.vitorpamplona.amethyst.commons.ui.note.types.getAudioMetaWithWaveform
 import com.vitorpamplona.amethyst.commons.ui.playback.controls.AnimatedShareButton
 import com.vitorpamplona.amethyst.commons.ui.playback.controls.MuteButton
 import com.vitorpamplona.amethyst.commons.ui.stringRes
@@ -81,57 +80,11 @@ import com.vitorpamplona.amethyst.ui.components.ShareMediaAction
 import com.vitorpamplona.amethyst.ui.components.getActivity
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.saveMediaToGallery
 import com.vitorpamplona.quartz.nip01Core.tags.hashtags.hasHashtags
-import com.vitorpamplona.quartz.nip14Subject.subject
-import com.vitorpamplona.quartz.nipA0VoiceMessages.BaseVoiceEvent
-
-@Composable
-fun RenderVoiceTrack(
-    note: Note,
-    accountViewModel: AccountViewModel,
-    nav: INav,
-) {
-    val noteEvent = note.event as? BaseVoiceEvent ?: return
-
-    VoiceHeader(noteEvent, note, accountViewModel, nav)
-}
-
-@Composable
-fun VoiceHeader(
-    noteEvent: BaseVoiceEvent,
-    note: Note,
-    accountViewModel: AccountViewModel,
-    nav: INav,
-) {
-    val media =
-        remember(noteEvent) {
-            noteEvent.content.ifBlank { null } ?: noteEvent.iMetaTags().firstOrNull()?.url
-        }
-
-    if (media == null) return
-
-    val waveform =
-        remember(noteEvent) {
-            noteEvent
-                .iMetaTags()
-                .firstOrNull()
-                ?.waveform
-                ?.let { WaveformData(it) }
-        }
-
-    RenderAudioWithWaveform(
-        mediaUrl = media,
-        title = noteEvent.subject(),
-        mimeType = null,
-        waveform = waveform,
-        note = note,
-        accountViewModel = accountViewModel,
-        nav = nav,
-    )
-}
 
 /**
  * Shared composable for rendering audio with waveform visualization.
- * Used by both VoiceHeader (for BaseVoiceEvent) and RenderAudioFromIMeta (for other events with audio IMeta).
+ * Android's NotePlatform.RenderAudioWithWaveform: the shared VoiceHeader (for BaseVoiceEvent) and
+ * RenderAudioFromIMeta (for other events with audio IMeta) both draw through it.
  */
 @Composable
 fun RenderAudioWithWaveform(
@@ -317,37 +270,6 @@ fun PlayPauseButton(controllerState: MediaControllerState) {
             tint = Color.White,
         )
     }
-}
-
-/**
- * Renders audio with waveform for any event type that has audio IMeta attachment.
- * This allows KIND 1 (TextNoteEvent) and KIND 1111 (CommentEvent) with voice
- * attachments to display the same waveform UI as VoiceEvent.
- */
-@Composable
-fun RenderAudioFromIMeta(
-    note: Note,
-    accountViewModel: AccountViewModel,
-    nav: INav,
-) {
-    val noteEvent = note.event ?: return
-
-    val audioMeta = remember(noteEvent) { noteEvent.getAudioMetaWithWaveform() } ?: return
-
-    val waveform =
-        remember(audioMeta) {
-            audioMeta.waveform?.let { WaveformData(it) }
-        }
-
-    RenderAudioWithWaveform(
-        mediaUrl = audioMeta.url,
-        title = null,
-        mimeType = audioMeta.mimeType,
-        waveform = waveform,
-        note = note,
-        accountViewModel = accountViewModel,
-        nav = nav,
-    )
 }
 
 @Composable

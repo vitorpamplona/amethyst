@@ -79,12 +79,9 @@ fun MessageSetCompose(
     val columnModifier =
         remember(backgroundColor.value) {
             Modifier
+                .fillMaxWidth()
                 .background(backgroundColor.value)
-                .padding(
-                    start = 12.dp,
-                    end = 12.dp,
-                    top = 10.dp,
-                ).combinedClickable(
+                .combinedClickable(
                     onClick = {
                         scope.launch {
                             routeFor(
@@ -94,7 +91,11 @@ fun MessageSetCompose(
                         }
                     },
                     onLongClick = enablePopup,
-                ).fillMaxWidth()
+                ).padding(
+                    start = 12.dp,
+                    end = 12.dp,
+                    top = 10.dp,
+                )
         }
 
     Column(columnModifier) {

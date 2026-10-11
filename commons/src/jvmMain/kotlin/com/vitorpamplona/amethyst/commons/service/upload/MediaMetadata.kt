@@ -66,10 +66,15 @@ object MediaMetadataReader {
         if (mimeType.startsWith("image/")) {
             try {
                 val decoded = runCatching { readForHashes(bytes) }.getOrNull()
-                val image = decoded?.image ?: fallbackDecoder?.invoke(bytes)
+                // ImageIO reads the pixels as stored; a camera's orientation tag says how they
+                // display, which is what the dimensions and the hashes must describe. The fallback
+                // (Skia) applies the tag itself.
+                val orientation = if (decoded != null) ExifOrientation.read(bytes) else ExifOrientation.NORMAL
+                val swap = ExifOrientation.swapsAxes(orientation)
+                val image = decoded?.image?.let { ExifOrientation.apply(it, orientation) } ?: fallbackDecoder?.invoke(bytes)
                 if (image != null) {
-                    width = decoded?.width ?: image.width
-                    height = decoded?.height ?: image.height
+                    width = decoded?.let { if (swap) it.height else it.width } ?: image.width
+                    height = decoded?.let { if (swap) it.width else it.height } ?: image.height
                     val platformImage = image.toPlatformImage()
                     blurhash = runCatching { platformImage.toBlurhash() }.getOrNull()
                     thumbhash = runCatching { platformImage.toThumbhash() }.getOrNull()

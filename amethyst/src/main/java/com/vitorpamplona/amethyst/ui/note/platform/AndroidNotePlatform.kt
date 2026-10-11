@@ -63,17 +63,14 @@ import com.vitorpamplona.amethyst.ui.components.ZoomableContentView as AppZoomab
 import com.vitorpamplona.amethyst.ui.components.ZoomableImageDialog as AppZoomableImageDialog
 import com.vitorpamplona.amethyst.ui.note.creators.location.LoadCityName as AppLoadCityName
 import com.vitorpamplona.amethyst.ui.note.creators.location.LocationPreviewMap as AppLocationPreviewMap
+import com.vitorpamplona.amethyst.ui.note.types.MusicTrackAudioPlayer as AppMusicTrackAudioPlayer
+import com.vitorpamplona.amethyst.ui.note.types.NoteMediaView as AppNoteMediaView
 import com.vitorpamplona.amethyst.ui.note.types.PodcastEpisodeAudioPlayer as AppPodcastEpisodeAudioPlayer
-import com.vitorpamplona.amethyst.ui.note.types.RenderAudioFromIMeta as AppRenderAudioFromIMeta
-import com.vitorpamplona.amethyst.ui.note.types.RenderAudioHeader as AppRenderAudioHeader
-import com.vitorpamplona.amethyst.ui.note.types.RenderAudioTrack as AppRenderAudioTrack
 import com.vitorpamplona.amethyst.ui.note.types.RenderAudioWithWaveform as AppRenderAudioWithWaveform
-import com.vitorpamplona.amethyst.ui.note.types.RenderMusicTrack as AppRenderMusicTrack
 import com.vitorpamplona.amethyst.ui.note.types.RenderNamedNappletEvent as AppRenderNamedNappletEvent
 import com.vitorpamplona.amethyst.ui.note.types.RenderNamedSiteEvent as AppRenderNamedSiteEvent
 import com.vitorpamplona.amethyst.ui.note.types.RenderRootNappletEvent as AppRenderRootNappletEvent
 import com.vitorpamplona.amethyst.ui.note.types.RenderRootSiteEvent as AppRenderRootSiteEvent
-import com.vitorpamplona.amethyst.ui.note.types.RenderVoiceTrack as AppRenderVoiceTrack
 
 /** Android's [NotePlatform]: the app's own media, map, audio, chess, git, napplet and zap composables. */
 object AndroidNotePlatform : NotePlatform {
@@ -95,14 +92,6 @@ object AndroidNotePlatform : NotePlatform {
         url: String,
         accountViewModel: AccountViewModel,
     ): UrlPreviewState = AppRememberUrlPreviewState(url, accountViewModel)
-
-    @Composable
-    override fun RenderAudioHeader(
-        note: Note,
-        contentScale: ContentScale,
-        accountViewModel: AccountViewModel,
-        nav: INav,
-    ) = AppRenderAudioHeader(note, contentScale, accountViewModel, nav)
 
     @Composable
     override fun ZoomableContentView(
@@ -230,33 +219,40 @@ object AndroidNotePlatform : NotePlatform {
     )
 
     @Composable
-    override fun RenderAudioTrack(
-        note: Note,
+    override fun NoteMediaView(
+        mediaUri: String,
+        isAudio: Boolean?,
+        title: String?,
+        coverUri: String?,
+        waveform: WaveformData?,
         contentScale: ContentScale,
+        note: Note,
         accountViewModel: AccountViewModel,
-        nav: INav,
-    ) = AppRenderAudioTrack(
-        note = note,
+    ) = AppNoteMediaView(
+        mediaUri = mediaUri,
+        title = title,
+        coverUri = coverUri,
+        waveform = waveform,
         contentScale = contentScale,
+        note = note,
         accountViewModel = accountViewModel,
-        nav = nav,
     )
 
     @Composable
-    override fun RenderMusicTrack(
+    override fun MusicTrackAudioPlayer(
+        audioUrl: String,
+        mimeType: String?,
+        title: String?,
         note: Note,
-        makeItShort: Boolean,
-        canPreview: Boolean,
-        backgroundColor: MutableState<Color>,
+        borderModifier: Modifier,
         accountViewModel: AccountViewModel,
-        nav: INav,
-    ) = AppRenderMusicTrack(
+    ) = AppMusicTrackAudioPlayer(
+        audioUrl = audioUrl,
+        mimeType = mimeType,
+        title = title,
         note = note,
-        makeItShort = makeItShort,
-        canPreview = canPreview,
-        backgroundColor = backgroundColor,
+        borderModifier = borderModifier,
         accountViewModel = accountViewModel,
-        nav = nav,
     )
 
     @Composable
@@ -274,28 +270,6 @@ object AndroidNotePlatform : NotePlatform {
         image = image,
         borderModifier = borderModifier,
         accountViewModel = accountViewModel,
-    )
-
-    @Composable
-    override fun RenderVoiceTrack(
-        note: Note,
-        accountViewModel: AccountViewModel,
-        nav: INav,
-    ) = AppRenderVoiceTrack(
-        note = note,
-        accountViewModel = accountViewModel,
-        nav = nav,
-    )
-
-    @Composable
-    override fun RenderAudioFromIMeta(
-        note: Note,
-        accountViewModel: AccountViewModel,
-        nav: INav,
-    ) = AppRenderAudioFromIMeta(
-        note = note,
-        accountViewModel = accountViewModel,
-        nav = nav,
     )
 
     @Composable

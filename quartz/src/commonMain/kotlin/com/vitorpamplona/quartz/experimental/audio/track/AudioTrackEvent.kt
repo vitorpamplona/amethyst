@@ -26,6 +26,9 @@ import com.vitorpamplona.quartz.experimental.audio.track.tags.MediaTag
 import com.vitorpamplona.quartz.experimental.audio.track.tags.ParticipantTag
 import com.vitorpamplona.quartz.experimental.audio.track.tags.PriceTag
 import com.vitorpamplona.quartz.experimental.audio.track.tags.TypeTag
+import com.vitorpamplona.quartz.experimental.music.track.tags.ImageTag
+import com.vitorpamplona.quartz.experimental.music.track.tags.TitleTag
+import com.vitorpamplona.quartz.experimental.music.track.tags.UrlTag
 import com.vitorpamplona.quartz.nip01Core.core.BaseAddressableEvent
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
@@ -80,6 +83,24 @@ class AudioTrackEvent(
     fun cover() = tags.firstNotNullOfOrNull(CoverTag::parse)
 
     fun media() = tags.firstNotNullOfOrNull(MediaTag::parse)
+
+    /** The `title` tag some publishers write instead of (or beside) `subject`. */
+    fun title() = tags.firstNotNullOfOrNull(TitleTag::parse)
+
+    /** The `url` tag some publishers write instead of (or beside) `media`. */
+    fun url() = tags.firstNotNullOfOrNull(UrlTag::parse)
+
+    /** The `image` tag some publishers write instead of (or beside) `cover`. */
+    fun image() = tags.firstNotNullOfOrNull(ImageTag::parse)
+
+    /** What to play: `media`, else `url`. */
+    fun mediaUrl() = media() ?: url()
+
+    /** What to show as the cover: `cover`, else `image`. */
+    fun coverUrl() = cover() ?: image()
+
+    /** What to call it: `subject`, else `title`. */
+    fun displayTitle() = subject() ?: title()
 
     companion object {
         const val KIND = 31337

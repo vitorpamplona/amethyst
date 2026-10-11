@@ -207,19 +207,7 @@ class CacheSearch(
         val key = decodeEventIdAsHexOrNull(text)
 
         if (key != null) {
-            val note = cache.getNoteIfExists(key)
-            val noteEvent = note?.event
-            val newNote =
-                if (noteEvent is AddressableEvent) {
-                    val addressableNote = cache.getAddressableNoteIfExists(noteEvent.address())
-                    if (addressableNote?.event?.id == note.idHex) {
-                        addressableNote
-                    } else {
-                        note
-                    }
-                } else {
-                    note
-                }
+            val newNote = cache.getNoteShowingEventIfExists(key)
 
             if ((newNote != null) && !excludeNoteEventFromSearchResults(newNote)) {
                 return listOfNotNull(newNote)

@@ -187,30 +187,38 @@ interface NotePlatform {
 
     // Audio
 
+    /**
+     * A note's own media through the full player: a video, or an audio file that plays in the
+     * video frame. [coverUri] shows as the thumb until it plays; [waveform] draws the bars of an
+     * audio file that has them. The player links back to [note]. [isAudio] is what the event says
+     * the media is (true for an audio kind, false for a music video, null when it doesn't say), for
+     * a platform that draws audio and video differently and can't tell from the URL.
+     */
     @Composable
-    fun RenderAudioHeader(
-        note: Note,
+    fun NoteMediaView(
+        mediaUri: String,
+        isAudio: Boolean?,
+        title: String?,
+        coverUri: String?,
+        waveform: WaveformData?,
         contentScale: ContentScale,
+        note: Note,
         accountViewModel: AccountViewModel,
-        nav: INav,
     ) {}
 
+    /**
+     * The inline audio strip of a music track (kind 36787), drawn right under its cover:
+     * [audioUrl] plays here, and [borderModifier] shapes the strip so it reads as one unit
+     * with the cover above it.
+     */
     @Composable
-    fun RenderAudioTrack(
+    fun MusicTrackAudioPlayer(
+        audioUrl: String,
+        mimeType: String?,
+        title: String?,
         note: Note,
-        contentScale: ContentScale,
+        borderModifier: Modifier,
         accountViewModel: AccountViewModel,
-        nav: INav,
-    ) {}
-
-    @Composable
-    fun RenderMusicTrack(
-        note: Note,
-        makeItShort: Boolean,
-        canPreview: Boolean,
-        backgroundColor: MutableState<Color>,
-        accountViewModel: AccountViewModel,
-        nav: INav,
     ) {}
 
     @Composable
@@ -221,20 +229,6 @@ interface NotePlatform {
         image: String?,
         borderModifier: Modifier,
         accountViewModel: AccountViewModel,
-    ) {}
-
-    @Composable
-    fun RenderVoiceTrack(
-        note: Note,
-        accountViewModel: AccountViewModel,
-        nav: INav,
-    ) {}
-
-    @Composable
-    fun RenderAudioFromIMeta(
-        note: Note,
-        accountViewModel: AccountViewModel,
-        nav: INav,
     ) {}
 
     @Composable

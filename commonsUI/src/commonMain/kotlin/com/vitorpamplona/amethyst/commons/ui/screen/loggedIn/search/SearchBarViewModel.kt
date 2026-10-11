@@ -428,11 +428,13 @@ class SearchBarViewModel(
             // path through findNotesStartingWith.
             val parsed = input.query
             // A pasted note/nevent/naddr resolves even when the cache has never seen it —
-            // what the auto-navigation used to do, minus the navigation.
+            // what the auto-navigation used to do, minus the navigation. An id resolves to the note
+            // that shows that event: the addressable note when it is a track's (or any addressable
+            // event's) current version, as the cache scan below returns it, not a second copy.
             val direct =
                 when (val entity = directEntity(input.text)) {
-                    is NNote -> LocalCache.consume(entity).let { LocalCache.getOrCreateNote(entity.hex) }
-                    is NEvent -> LocalCache.consume(entity).let { LocalCache.getOrCreateNote(entity.hex) }
+                    is NNote -> LocalCache.consume(entity).let { LocalCache.getNoteShowingEventIfExists(entity.hex) ?: LocalCache.getOrCreateNote(entity.hex) }
+                    is NEvent -> LocalCache.consume(entity).let { LocalCache.getNoteShowingEventIfExists(entity.hex) ?: LocalCache.getOrCreateNote(entity.hex) }
                     is NAddress -> LocalCache.consume(entity).let { LocalCache.getOrCreateAddressableNote(entity.address()) }
                     else -> null
                 }

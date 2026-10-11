@@ -53,7 +53,6 @@ import com.vitorpamplona.amethyst.commons.ui.note.ReplyNoteComposition
 import com.vitorpamplona.amethyst.commons.ui.note.ReplyToLabel
 import com.vitorpamplona.amethyst.commons.ui.note.elements.DisplayUncitedHashtags
 import com.vitorpamplona.amethyst.commons.ui.note.nip22Comments.DisplayCommentScope
-import com.vitorpamplona.amethyst.commons.ui.note.platform.RenderAudioFromIMeta
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.threadview.datasources.PreloadThreadForReply
 import com.vitorpamplona.amethyst.commons.ui.theme.HalfVertSpacer
 import com.vitorpamplona.amethyst.commons.ui.theme.StdVertSpacer
