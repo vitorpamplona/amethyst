@@ -2108,7 +2108,6 @@
     <string name="media_compression_quality_uncompressed">Tömörítetlen</string>
     <string name="media_compression_quality_very_low">Nagyon alacsony</string>
     <string name="media_compression_quality_very_high">Nagyon magas</string>
-    <string name="media_compression_image_max_size">%1$s · képek legfeljebb %2$d px</string>
     <string name="media_compression_preview_compressed">Tömörített</string>
     <string name="media_compression_preview_original">Eredeti</string>
     <string name="media_compression_preview_tap_original">Koppintson a képre az eredeti megtekintéséhez</string>

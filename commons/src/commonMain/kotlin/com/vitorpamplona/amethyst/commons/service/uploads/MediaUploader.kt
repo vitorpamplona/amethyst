@@ -24,6 +24,7 @@ import com.vitorpamplona.amethyst.commons.model.Account
 import com.vitorpamplona.amethyst.commons.model.mediaServers.ServerName
 import com.vitorpamplona.amethyst.commons.service.http.IRoleBasedHttpClientBuilder
 import com.vitorpamplona.amethyst.commons.service.upload.FileHeader
+import com.vitorpamplona.amethyst.commons.service.uploads.video.VideoInfo
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.utils.ciphers.NostrCipher
 
@@ -98,6 +99,17 @@ interface MediaUploader {
         url: String,
         httpClients: IRoleBasedHttpClientBuilder,
     ): FileHeader?
+
+    /**
+     * Whether [upload] and [compressIfNeeded] transcode a video MIME type below
+     * [CompressorQuality.UNCOMPRESSED]. The composer hides the video controls unless
+     * [VideoCompressionSupport.Supported] and shows the install hint for
+     * [VideoCompressionSupport.NeedsFfmpeg].
+     */
+    val videoCompression: VideoCompressionSupport get() = VideoCompressionSupport.Unsupported
+
+    /** The dimensions and frame rate of the video at [uri], for the slider label; null when unknown. */
+    suspend fun probeVideo(uri: MediaUri): VideoInfo? = null
 
     /** The file name the picker reported for [uri] (Android's `DISPLAY_NAME`), if any. */
     fun displayName(uri: MediaUri): String? = uri.lastPathSegmentOrNull()

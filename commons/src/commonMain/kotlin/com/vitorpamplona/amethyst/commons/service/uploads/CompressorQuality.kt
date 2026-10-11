@@ -39,6 +39,21 @@ enum class CompressorQuality(
     UNCOMPRESSED(null, 100),
     ;
 
+    /** Whether the video table has a row for this level; the slider offers only these when a video is selected. */
+    val hasVideoRule: Boolean get() = videoLevel == this
+
+    /**
+     * The level the video encoder uses: VERY_HIGH → HIGH, VERY_LOW → LOW, everything else itself.
+     * A getter rather than a constructor argument because VERY_LOW is declared before LOW.
+     */
+    val videoLevel: CompressorQuality
+        get() =
+            when (this) {
+                VERY_HIGH -> HIGH
+                VERY_LOW -> LOW
+                else -> this
+            }
+
     companion object {
         /** The levels the media-quality slider offers on this platform, lowest first, ending with [UNCOMPRESSED]. */
         val sliderSteps: List<CompressorQuality> get() = platformSliderSteps
@@ -52,6 +67,39 @@ enum class CompressorQuality(
         /** The media-quality slider's position as a level. */
         fun fromSlider(position: Int): CompressorQuality = platformSliderSteps.getOrElse(position) { platformDefaultQuality }
     }
+}
+
+/**
+ * The slider's video mode as pure functions of an explicit step list, so both the 5-stop desktop
+ * list and the 4-stop phone list are testable. The dialog state stays a platform position; only
+ * the displayed stops change.
+ */
+object VideoAwareSliderSteps {
+    /** The stops the slider shows: [steps] as they are, or only the levels with a video rule when [hasVideo]. */
+    fun stepsFor(
+        steps: List<CompressorQuality>,
+        hasVideo: Boolean,
+    ): List<CompressorQuality> = steps.filter { !hasVideo || it.hasVideoRule }
+
+    /** The position a video-mode slider lands on from [position]: VERY_HIGH → HIGH, VERY_LOW → LOW. */
+    fun snapForVideo(
+        steps: List<CompressorQuality>,
+        position: Int,
+    ): Int = steps.indexOf(steps[position].videoLevel)
+
+    /** The index of platform [position] among [stepsFor]. */
+    fun toDisplayedIndex(
+        steps: List<CompressorQuality>,
+        position: Int,
+        hasVideo: Boolean,
+    ): Int = stepsFor(steps, hasVideo).indexOf(steps[position].let { if (hasVideo) it.videoLevel else it })
+
+    /** The platform position of displayed [index] among [stepsFor]. */
+    fun fromDisplayedIndex(
+        steps: List<CompressorQuality>,
+        index: Int,
+        hasVideo: Boolean,
+    ): Int = steps.indexOf(stepsFor(steps, hasVideo)[index])
 }
 
 /** Phones get 640, 1280 and 1920 px; large screens add 2560 px. */
