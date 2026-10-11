@@ -20,6 +20,8 @@
  */
 package com.vitorpamplona.amethyst.commons.service.upload.video
 
+import kotlinx.coroutines.runBlocking
+import java.io.File
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
@@ -69,6 +71,22 @@ class FfmpegEncodersTest {
         assertEquals(listOf("libx265", "hevc_nvenc", "libx264", "h264_videotoolbox"), FfmpegEncoders.candidates(FfmpegEncoders.parseAvailable(gpl), useH265 = true))
         assertEquals(listOf("hevc_nvenc", "h264_videotoolbox", "libopenh264"), FfmpegEncoders.candidates(FfmpegEncoders.parseAvailable(lgpl), useH265 = true))
     }
+
+    @Test
+    fun hungListingIsKilledAndNotCached() =
+        runBlocking {
+            if ("win" in System.getProperty("os.name").lowercase()) return@runBlocking
+            val script =
+                File.createTempFile("hung-ffmpeg", ".sh").apply {
+                    writeText("#!/bin/sh\nsleep 30\n")
+                    setExecutable(true)
+                    deleteOnExit()
+                }
+            val started = System.currentTimeMillis()
+            assertEquals(emptySet(), FfmpegEncoders.listAvailable(script.absolutePath, stallTimeoutMs = 200))
+            assertTrue(System.currentTimeMillis() - started < 5_000, "killed by the stall watchdog")
+            assertTrue(FfmpegProcesses.live.isEmpty())
+        }
 
     @Test
     fun isHevc() {

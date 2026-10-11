@@ -24,10 +24,8 @@ import com.fasterxml.jackson.databind.ObjectMapper
 import com.vitorpamplona.amethyst.commons.service.uploads.video.VideoInfo
 import com.vitorpamplona.amethyst.commons.service.uploads.video.VideoResolution
 import com.vitorpamplona.quartz.utils.Log
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.withContext
+import kotlinx.coroutines.CancellationException
 import java.io.File
-import java.util.concurrent.TimeUnit
 
 /** What `ffprobe` tells about a video: the table key, the duration for progress and the HDR flag. */
 data class ProbeResult(
@@ -69,50 +67,48 @@ object FfprobeOutputParser {
 }
 
 /**
- * Runs `ffprobe` on a file. Open so tests can fake it. Null when [ffprobe] is null, the process
- * fails or overruns, or the output has no video stream; the caller then uses the probe-failure
- * fallback (2 Mbps, no resize).
+ * Runs `ffprobe` on a file through the shared process runner, so a hung probe is killed by the
+ * stall watchdog, dies with the JVM and follows cancellation. Open so tests can fake it. Null
+ * when [ffprobe] is null, the process fails or stalls, or the output has no video stream; the
+ * caller then uses the probe-failure fallback (2 Mbps, no resize).
  */
 open class FfmpegProbe(
     private val ffprobe: String?,
+    private val runner: ProcessRunner = FfmpegProcesses,
+    private val stallTimeoutMs: Long = 10_000,
 ) {
     open suspend fun probe(file: File): ProbeResult? {
         val binary = ffprobe ?: return null
-        return withContext(Dispatchers.IO) {
-            runCatching {
-                val process =
-                    ProcessBuilder(
-                        binary,
-                        "-v",
-                        "error",
-                        "-select_streams",
-                        "V:0",
-                        "-show_entries",
-                        "stream=width,height,avg_frame_rate,color_transfer",
-                        "-show_entries",
-                        "format=duration",
-                        "-of",
-                        "json",
-                        file.absolutePath,
-                    ).redirectError(ProcessBuilder.Redirect.DISCARD)
-                        .start()
-                val output = process.inputStream.bufferedReader().use { it.readText() }
-                if (!process.waitFor(10, TimeUnit.SECONDS)) {
-                    process.destroyForcibly()
-                    Log.w(TAG) { "ffprobe overran on ${file.name}" }
-                    return@runCatching null
-                }
-                if (process.exitValue() != 0) {
-                    Log.w(TAG) { "ffprobe exited ${process.exitValue()} on ${file.name}" }
-                    null
-                } else {
-                    FfprobeOutputParser.parse(output)
-                }
-            }.getOrElse {
-                Log.w(TAG, "ffprobe failed on ${file.name}", it)
-                null
+        val command =
+            listOf(
+                binary,
+                "-v",
+                "error",
+                "-select_streams",
+                "V:0",
+                "-show_entries",
+                "stream=width,height,avg_frame_rate,color_transfer",
+                "-show_entries",
+                "format=duration",
+                "-of",
+                "json",
+                file.absolutePath,
+            )
+        val output = StringBuilder()
+        val outcome =
+            try {
+                runner.run(command, { line -> output.append(line).append('\n') }, stallTimeoutMs)
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                Log.w(TAG, "ffprobe failed on ${file.name}", e)
+                return null
             }
+        if (outcome.exitCode != 0) {
+            Log.w(TAG) { "ffprobe exited ${outcome.exitCode} on ${file.name}: ${outcome.stderrTail.trim()}" }
+            return null
         }
+        return FfprobeOutputParser.parse(output.toString())
     }
 
     private companion object {

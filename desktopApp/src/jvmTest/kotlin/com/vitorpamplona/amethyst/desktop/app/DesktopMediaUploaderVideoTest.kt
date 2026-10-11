@@ -284,6 +284,42 @@ class DesktopMediaUploaderVideoTest {
         }
 
     @Test
+    fun strippingOwedButImpossibleAsksTheUser() =
+        runTest {
+            // Uncompressed + strip on, remux failed: the user decides, as on Android.
+            val declined = uploader(stripResult = { null })
+            assertFailsWith<DesktopMediaUploader.StrippingDeclined> {
+                declined.withVideoPrepared(UploadOrchestrator(), uri(src), "video/mp4", CompressorQuality.UNCOMPRESSED, false, stripMetadata = true, convertGifToMp4 = false, progressCeiling = 0.2, onStrippingFailed = { false }) { _, _ -> Unit }
+            }
+            var ran = false
+            uploader(stripResult = { null }).withVideoPrepared(UploadOrchestrator(), uri(src), "video/mp4", CompressorQuality.UNCOMPRESSED, false, stripMetadata = true, convertGifToMp4 = false, progressCeiling = 0.2, onStrippingFailed = { true }) { f, prepared ->
+                assertEquals(src, f)
+                assertFalse(prepared)
+                ran = true
+            }
+            assertTrue(ran)
+            // Every encoder failed and the remux too, with the toggle hidden on the promise of a strip: ask as well.
+            assertFailsWith<DesktopMediaUploader.StrippingDeclined> {
+                uploader(result = { VideoCompressionResult.Original(null) }).withVideoPrepared(UploadOrchestrator(), uri(src), "video/mp4", CompressorQuality.HIGH, false, stripMetadata = true, convertGifToMp4 = false, progressCeiling = 0.2, onStrippingFailed = { false }) { _, _ -> Unit }
+            }
+        }
+
+    @Test
+    fun stripNotOwedNeverAsks() =
+        runTest {
+            var asked = false
+            uploader(result = { VideoCompressionResult.Original(null) }).withVideoPrepared(UploadOrchestrator(), uri(src), "video/mp4", CompressorQuality.HIGH, false, stripMetadata = false, convertGifToMp4 = false, progressCeiling = 0.2, onStrippingFailed = {
+                asked = true
+                false
+            }) { _, _ -> Unit }
+            uploader(available = false).withVideoPrepared(UploadOrchestrator(), uri(src), "video/mp4", CompressorQuality.HIGH, false, stripMetadata = true, convertGifToMp4 = false, progressCeiling = 0.2, onStrippingFailed = {
+                asked = true
+                false
+            }) { _, _ -> Unit }
+            assertFalse(asked)
+        }
+
+    @Test
     fun tooBigReturnsNull() =
         runTest {
             assertNull(uploader(result = { VideoCompressionResult.TooBig }).withVideoPrepared(UploadOrchestrator(), uri(src), "video/mp4", CompressorQuality.HIGH, false, true, false, 0.4, maxBytes = 80_000) { _, _ -> Unit })

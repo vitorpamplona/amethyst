@@ -66,12 +66,22 @@ object FfmpegProcesses : ProcessRunner {
     /** One encode at a time: N videos in a post must not start N ffmpeg processes on every core. */
     val encodeGate = Semaphore(1)
 
+    /**
+     * Set by the shutdown hook. A child killed by the hook must read as a cancellation, never as
+     * an encoder failure: the fallback loop would otherwise start the next candidate (or the
+     * remux) after the hook has run, and nothing would kill that one.
+     */
+    @Volatile
+    internal var shuttingDown = false
+
+    /** What the JVM shutdown hook does; callable by tests. */
+    internal fun shutdownNow() {
+        shuttingDown = true
+        live.forEach { it.destroyForcibly() }
+    }
+
     init {
-        Runtime.getRuntime().addShutdownHook(
-            Thread {
-                live.forEach { it.destroyForcibly() }
-            },
-        )
+        Runtime.getRuntime().addShutdownHook(Thread(::shutdownNow))
     }
 
     override suspend fun run(
@@ -80,8 +90,15 @@ object FfmpegProcesses : ProcessRunner {
         stallTimeoutMs: Long,
     ): ProcessOutcome =
         withContext(Dispatchers.IO) {
+            if (shuttingDown) throw CancellationException("JVM is shutting down")
             val process = ProcessBuilder(command).start()
             live += process
+            if (shuttingDown) {
+                // The hook ran between the check and the registration; it never saw this child.
+                process.destroyForcibly()
+                live -= process
+                throw CancellationException("JVM is shutting down")
+            }
             val lastOutputAt = AtomicLong(System.nanoTime())
             val stderrTail = StringBuilder()
             val stdoutReader =
@@ -132,6 +149,7 @@ object FfmpegProcesses : ProcessRunner {
                 stdoutReader.join(1_000)
                 stderrReader.join(1_000)
             }
+            if (shuttingDown) throw CancellationException("JVM is shutting down")
             ProcessOutcome(if (stalled) -1 else process.exitValue(), synchronized(stderrTail) { stderrTail.toString() })
         }
 }

@@ -43,8 +43,8 @@ import java.io.File
  */
 class FfmpegVideoCompressor(
     private val locator: FfmpegLocator = FfmpegLocator.default,
-    private val encoders: suspend (ffmpeg: String) -> Set<String> = FfmpegEncoders::listAvailable,
-    private val probe: (ffprobe: String?) -> FfmpegProbe = ::FfmpegProbe,
+    private val encoders: suspend (ffmpeg: String) -> Set<String> = { FfmpegEncoders.listAvailable(it) },
+    private val probe: (ffprobe: String?) -> FfmpegProbe = { FfmpegProbe(it) },
     private val stallTimeoutMs: Long = 60_000,
     private val runner: ProcessRunner = FfmpegProcesses,
     private val gate: Semaphore = FfmpegProcesses.encodeGate,

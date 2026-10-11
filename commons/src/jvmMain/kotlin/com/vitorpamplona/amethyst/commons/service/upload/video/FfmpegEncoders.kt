@@ -21,10 +21,8 @@
 package com.vitorpamplona.amethyst.commons.service.upload.video
 
 import com.vitorpamplona.quartz.utils.Log
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.withContext
+import kotlinx.coroutines.CancellationException
 import java.util.concurrent.ConcurrentHashMap
-import java.util.concurrent.TimeUnit
 
 /**
  * Which video encoders an `ffmpeg` build offers and which to try, in order.
@@ -65,33 +63,28 @@ object FfmpegEncoders {
 
     /**
      * Runs `ffmpeg -hide_banner -encoders` once per [ffmpeg] path and remembers the answer. A run
-     * that fails is not remembered: an empty set comes back and the next call tries again.
+     * that fails or stalls is not remembered: an empty set comes back and the next call tries again.
      */
-    suspend fun listAvailable(ffmpeg: String): Set<String> {
+    suspend fun listAvailable(
+        ffmpeg: String,
+        runner: ProcessRunner = FfmpegProcesses,
+        stallTimeoutMs: Long = 5_000,
+    ): Set<String> {
         cache[ffmpeg]?.let { return it }
-        val parsed =
-            withContext(Dispatchers.IO) {
-                runCatching {
-                    val process =
-                        ProcessBuilder(ffmpeg, "-hide_banner", "-encoders")
-                            .redirectError(ProcessBuilder.Redirect.DISCARD)
-                            .start()
-                    val output = process.inputStream.bufferedReader().use { it.readText() }
-                    if (!process.waitFor(5, TimeUnit.SECONDS)) {
-                        process.destroyForcibly()
-                        return@runCatching null
-                    }
-                    if (process.exitValue() != 0) null else parseAvailable(output)
-                }.getOrElse {
-                    Log.w(TAG, "Could not list encoders of $ffmpeg", it)
-                    null
-                }
+        val output = StringBuilder()
+        val outcome =
+            try {
+                runner.run(listOf(ffmpeg, "-hide_banner", "-encoders"), { line -> output.append(line).append('\n') }, stallTimeoutMs)
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                Log.w(TAG, "Could not list encoders of $ffmpeg", e)
+                return emptySet()
             }
-        if (parsed == null) {
-            Log.w(TAG) { "Listing encoders of $ffmpeg failed; will retry on the next upload" }
+        if (outcome.exitCode != 0) {
+            Log.w(TAG) { "Listing encoders of $ffmpeg exited ${outcome.exitCode}; will retry on the next upload" }
             return emptySet()
         }
-        cache[ffmpeg] = parsed
-        return parsed
+        return parseAvailable(output.toString()).also { cache[ffmpeg] = it }
     }
 }

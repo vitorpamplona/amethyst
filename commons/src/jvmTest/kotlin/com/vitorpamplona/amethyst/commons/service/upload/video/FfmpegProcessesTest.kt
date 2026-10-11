@@ -20,11 +20,13 @@
  */
 package com.vitorpamplona.amethyst.commons.service.upload.video
 
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
 import kotlin.test.assertTrue
 
 /** The real runner against a real child process; no ffmpeg involved. Real time, so no `runTest`. */
@@ -53,6 +55,34 @@ class FfmpegProcessesTest {
             assertEquals(3, outcome.exitCode)
             assertEquals("err", outcome.stderrTail.trim())
             assertEquals(listOf("out"), out.map { it.trim() })
+        }
+
+    @Test
+    fun shutdownRefusesNewProcessesAsCancellation() =
+        runBlocking {
+            try {
+                FfmpegProcesses.shutdownNow()
+                assertFailsWith<CancellationException> { FfmpegProcesses.run(sleep30(), {}, 60_000) }
+                assertTrue(FfmpegProcesses.live.isEmpty())
+            } finally {
+                FfmpegProcesses.shuttingDown = false
+            }
+        }
+
+    @Test
+    fun shutdownKillsARunningChildAsCancellationNotFailure() =
+        runBlocking {
+            try {
+                var outcome: Result<ProcessOutcome>? = null
+                val job = launch { outcome = runCatching { FfmpegProcesses.run(sleep30(), {}, 60_000) } }
+                delay(300)
+                FfmpegProcesses.shutdownNow()
+                job.join()
+                assertTrue(outcome!!.exceptionOrNull() is CancellationException, "a shutdown kill must not read as an encoder failure: $outcome")
+                assertTrue(FfmpegProcesses.live.isEmpty())
+            } finally {
+                FfmpegProcesses.shuttingDown = false
+            }
         }
 
     @Test
