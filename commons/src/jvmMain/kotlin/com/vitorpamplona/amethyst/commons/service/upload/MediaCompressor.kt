@@ -23,6 +23,8 @@ package com.vitorpamplona.amethyst.commons.service.upload
 import com.vitorpamplona.quartz.utils.Log
 import org.apache.commons.imaging.Imaging
 import org.apache.commons.imaging.formats.jpeg.exif.ExifRewriter
+import org.apache.commons.imaging.formats.tiff.constants.TiffTagConstants
+import org.apache.commons.imaging.formats.tiff.write.TiffOutputSet
 import java.io.ByteArrayOutputStream
 import java.io.File
 
@@ -52,8 +54,19 @@ object MediaCompressor {
 
             val baos = ByteArrayOutputStream()
             ExifRewriter().removeExifMetadata(bytes, baos)
+            // The orientation tag is the one EXIF field viewers need: without it a phone photo,
+            // stored sideways, displays on its side. It says nothing about the person.
+            val orientation = ExifOrientation.read(file)
+            val result =
+                if (orientation == ExifOrientation.NORMAL) {
+                    baos.toByteArray()
+                } else {
+                    val onlyOrientation = TiffOutputSet()
+                    onlyOrientation.orCreateRootDirectory.add(TiffTagConstants.TIFF_TAG_ORIENTATION, orientation.toShort())
+                    ByteArrayOutputStream().also { ExifRewriter().updateExifMetadataLossless(baos.toByteArray(), it, onlyOrientation) }.toByteArray()
+                }
             val stripped = AmethystTempDir.createTempFile("amethyst_stripped_", ".jpg")
-            stripped.writeBytes(baos.toByteArray())
+            stripped.writeBytes(result)
             stripped
         } catch (e: Exception) {
             // Never silent: the UI promises the original is stripped before upload.

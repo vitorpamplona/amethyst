@@ -158,8 +158,12 @@ private fun firstStillImage(media: MultiOrchestrator): SelectedMedia? =
 
 private val PreviewHeight = 260.dp
 
-/** The longest edge the zoomed original decodes to: enough to judge compression, bounded in memory. */
-private const val MAX_ZOOM_DECODE_EDGE = 4096
+/**
+ * The longest edge the zoomed original decodes to: above the largest compressed size (2560), so
+ * the original always shows the detail the compression loses, and small enough that even a 16-bit
+ * PNG (8 bytes a pixel, 75 MB at this size) stays under Android's 100 MB limit on a drawn bitmap.
+ */
+private const val MAX_ZOOM_DECODE_EDGE = 3072
 
 private fun ImageFileStats.aspectRatio(): Float? {
     val w = width ?: return null
@@ -226,6 +230,7 @@ private fun CompressionPreview(
     // While a level compresses, the previous level's result stays up so the box doesn't empty.
     val compressedUri = if (compresses) stats?.compressedUri?.toString() else null
     val originalUri = image.uri.toString()
+    val zoomLabel = stringRes(Res.string.media_compression_preview_tap_zoom)
 
     Column(
         modifier = Modifier.fillMaxWidth().padding(top = 4.dp),
@@ -241,7 +246,7 @@ private fun CompressionPreview(
                     Modifier
                         .then(if (ratio != null) Modifier.aspectRatio(ratio, matchHeightConstraintsFirst = true) else Modifier.fillMaxSize())
                         .clip(QuoteBorder)
-                        .clickable(enabled = stats != null) { zoomed = true },
+                        .clickable(enabled = stats != null, onClickLabel = zoomLabel) { zoomed = true },
                 contentAlignment = Alignment.Center,
             ) {
                 ComparisonImages(originalUri, compressedUri, showOriginal = compressedUri == null, modifier = Modifier.fillMaxSize())
@@ -263,7 +268,7 @@ private fun CompressionPreview(
                     !compresses -> stringRes(Res.string.media_compression_preview_uncompressed)
                     // The first level is still compressing: keep the line so the layout doesn't grow when it lands.
                     stats == null -> ""
-                    else -> stringRes(Res.string.media_compression_preview_tap_zoom)
+                    else -> zoomLabel
                 },
             original = stats?.original,
             compressed = if (compresses) stats?.compressed else null,

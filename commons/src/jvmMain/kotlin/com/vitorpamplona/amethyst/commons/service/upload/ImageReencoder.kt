@@ -23,6 +23,7 @@ package com.vitorpamplona.amethyst.commons.service.upload
 import com.vitorpamplona.amethyst.commons.service.upload.CompressionException.EncodeFailed
 import com.vitorpamplona.amethyst.commons.service.upload.CompressionException.InputTooLarge
 import com.vitorpamplona.amethyst.commons.service.upload.CompressionException.UnsupportedFormat
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.ensureActive
@@ -85,6 +86,23 @@ object ImageReencoder {
     suspend fun reencode(
         source: File,
         quality: ImageCompressionTarget,
+    ): ReencodeResult {
+        // withContext hands its result back cancellably: a cancellation that lands during the
+        // (uncancellable) encode drops the finished file along with the result, so its path is
+        // kept out here to delete it.
+        var written: File? = null
+        return try {
+            reencodeOnDispatcher(source, quality) { written = it }
+        } catch (e: CancellationException) {
+            written?.delete()
+            throw e
+        }
+    }
+
+    private suspend fun reencodeOnDispatcher(
+        source: File,
+        quality: ImageCompressionTarget,
+        onWritten: (File) -> Unit,
     ): ReencodeResult =
         withContext(compressionDispatcher) {
             coroutineContext.ensureActive()
@@ -101,7 +119,10 @@ object ImageReencoder {
             }
             // 2) Decode with the pre-decode pixel guard + subsampling.
             coroutineContext.ensureActive()
-            val img = decodeWithGuard(source, quality.maxDim)
+            // The output carries no EXIF, so a camera's orientation tag is applied to the pixels;
+            // without it a phone photo would upload on its side.
+            val orientation = if (format is ImageFormat.Jpeg) ExifOrientation.read(source) else ExifOrientation.NORMAL
+            val img = ExifOrientation.apply(decodeWithGuard(source, quality.maxDim), orientation)
             // 3) Resize only when source exceeds the target box —
             //    Thumbnailator otherwise upscales by default.
             coroutineContext.ensureActive()
@@ -119,6 +140,7 @@ object ImageReencoder {
             val temp = AmethystTempDir.createTempFile("amethyst_compress_", ".jpg")
             try {
                 encodeJpeg(finalImage, temp, quality.jpegQuality)
+                onWritten(temp)
                 ReencodeResult.Reencoded(temp)
             } catch (t: Throwable) {
                 withContext(NonCancellable) { temp.delete() }

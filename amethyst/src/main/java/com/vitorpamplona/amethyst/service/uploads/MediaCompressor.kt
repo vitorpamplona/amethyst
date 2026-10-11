@@ -38,6 +38,10 @@ import id.zelory.compressor.constraint.Constraint
 import id.zelory.compressor.determineImageRotation
 import id.zelory.compressor.overWrite
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.NonCancellable
+import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.ensureActive
 import java.io.File
 import kotlin.math.roundToInt
 
@@ -97,8 +101,13 @@ class MediaCompressor {
         return try {
             Log.d("MediaCompressor") { "Using image compression $mediaQuality" }
             tempFile = MediaCompressorFileUtils.from(uri, context)
+            // Zelory hands its output back through a cancellable withContext: cancelled during the
+            // encode (the composer's preview is, every time the slider moves on), it drops a
+            // finished file no one can then delete. So cancellation is checked before the work and
+            // the work runs to its end; a caller cancelled after that holds the file to clean up.
+            currentCoroutineContext().ensureActive()
             val compressedImageFile =
-                Compressor.compress(context, tempFile) {
+                Compressor.compress(context, tempFile, Dispatchers.IO + NonCancellable) {
                     constraint(FitWithinConstraint(maxDimension, mediaQuality.imageQuality))
                 }
             if (tempFile != compressedImageFile && !tempFile.delete()) {
@@ -107,7 +116,11 @@ class MediaCompressor {
             Log.d("MediaCompressor") { "Image compression success. New size [${compressedImageFile.length()}]" }
             MediaCompressorResult(compressedImageFile.toUri(), MimeTypes.IMAGE_JPEG, compressedImageFile.length())
         } catch (e: Exception) {
-            if (e is CancellationException) throw e
+            if (e is CancellationException) {
+                // The copy of the original is a full-size file in the cache.
+                tempFile?.delete()
+                throw e
+            }
             Log.d("MediaCompressor") { "Image compression failed: ${e.message}" }
             if (tempFile?.delete() == false) {
                 Log.w("MediaCompressor") { "Failed to delete temp file: ${tempFile.absolutePath}" }

@@ -33,6 +33,7 @@ import com.vitorpamplona.amethyst.commons.service.image.BlurhashWrapper
 import com.vitorpamplona.amethyst.commons.service.image.ThumbhashWrapper
 import com.vitorpamplona.amethyst.commons.service.upload.AmethystTempDir
 import com.vitorpamplona.amethyst.commons.service.upload.BlossomClient
+import com.vitorpamplona.amethyst.commons.service.upload.ExifOrientation
 import com.vitorpamplona.amethyst.commons.service.upload.FileHeader
 import com.vitorpamplona.amethyst.commons.service.upload.ImageCompressionTarget
 import com.vitorpamplona.amethyst.commons.service.upload.ImageReencoder
@@ -402,7 +403,12 @@ class DesktopMediaUploader(
                         }
                     }
                 }.getOrNull()
-            ImageFileStats(size?.first, size?.second, file.length())
+            // As it displays: a camera's quarter turn swaps the stored width and height.
+            if (ExifOrientation.swapsAxes(ExifOrientation.read(file))) {
+                ImageFileStats(size?.second, size?.first, file.length())
+            } else {
+                ImageFileStats(size?.first, size?.second, file.length())
+            }
         }
 
     // Like Android: the server's image type when it sends one, else the URL's extension.
