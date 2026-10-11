@@ -25,10 +25,11 @@ import androidx.compose.ui.graphics.toComposeImageBitmap
 import com.vitorpamplona.amethyst.commons.model.Account
 import com.vitorpamplona.amethyst.commons.model.mediaServers.ServerName
 import com.vitorpamplona.amethyst.commons.model.mediaServers.ServerType
+import com.vitorpamplona.amethyst.commons.notices.UserNotice
+import com.vitorpamplona.amethyst.commons.notices.UserNoticeSink
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.desktop_upload_server_not_supported
 import com.vitorpamplona.amethyst.commons.service.http.IRoleBasedHttpClientBuilder
-import com.vitorpamplona.amethyst.commons.service.http.RoleBasedHttpClientBuilder
 import com.vitorpamplona.amethyst.commons.service.image.BlurhashWrapper
 import com.vitorpamplona.amethyst.commons.service.image.ThumbhashWrapper
 import com.vitorpamplona.amethyst.commons.service.upload.AmethystTempDir
@@ -41,6 +42,9 @@ import com.vitorpamplona.amethyst.commons.service.upload.ImageSizeTarget
 import com.vitorpamplona.amethyst.commons.service.upload.MediaCompressor
 import com.vitorpamplona.amethyst.commons.service.upload.MediaMetadata
 import com.vitorpamplona.amethyst.commons.service.upload.MediaMetadataReader
+import com.vitorpamplona.amethyst.commons.service.upload.video.FfmpegVideoCompressor
+import com.vitorpamplona.amethyst.commons.service.upload.video.VideoCompressionResult
+import com.vitorpamplona.amethyst.commons.service.upload.video.VideoCompressor
 import com.vitorpamplona.amethyst.commons.service.uploads.CompressorQuality
 import com.vitorpamplona.amethyst.commons.service.uploads.ImageCompressionPreview
 import com.vitorpamplona.amethyst.commons.service.uploads.ImageDownloader
@@ -53,9 +57,12 @@ import com.vitorpamplona.amethyst.commons.service.uploads.StringMediaUri
 import com.vitorpamplona.amethyst.commons.service.uploads.UploadError
 import com.vitorpamplona.amethyst.commons.service.uploads.UploadOrchestrator
 import com.vitorpamplona.amethyst.commons.service.uploads.UploadingState
+import com.vitorpamplona.amethyst.commons.service.uploads.VideoCompressionSupport
 import com.vitorpamplona.amethyst.commons.service.uploads.nip96.Nip96Uploader
 import com.vitorpamplona.amethyst.commons.service.uploads.nip96.ServerInfoRetriever
+import com.vitorpamplona.amethyst.commons.service.uploads.video.VideoInfo
 import com.vitorpamplona.amethyst.commons.ui.loadStringRes
+import com.vitorpamplona.amethyst.commons.util.deleteOrWarn
 import com.vitorpamplona.quartz.nip01Core.core.toHexKey
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip01Core.signers.SignerExceptions
@@ -66,6 +73,7 @@ import com.vitorpamplona.quartz.utils.ciphers.NostrCipher
 import com.vitorpamplona.quartz.utils.sha256.sha256
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.withContext
 import java.awt.image.BufferedImage
 import java.io.File
@@ -76,15 +84,24 @@ import com.vitorpamplona.amethyst.commons.service.upload.UploadOrchestrator as B
 import org.jetbrains.skia.Image as SkiaImage
 
 /**
- * The shared app's upload port on desktop. Every server type starts from the bytes the JVM
- * pipeline prepares (re-encoded, or stripped of metadata); Blossom and Buzz workspaces then go
- * through its BUD-02 upload with fallbacks, NIP-96 through the shared [Nip96Uploader], and NIP-95
- * hands the bytes back to be published as events.
+ * The shared app's upload port on desktop. A video (or a GIF to convert) is first handed to the
+ * [videoCompressor], which transcodes it with the composer's quality level or remuxes the original
+ * without metadata; every server type then starts from the bytes the JVM pipeline prepares
+ * (re-encoded, or stripped of metadata). Blossom and Buzz workspaces go through its BUD-02 upload
+ * with fallbacks, NIP-96 through the shared [Nip96Uploader], and NIP-95 hands the bytes back to be
+ * published as events.
  */
 class DesktopMediaUploader(
     private val clientFor: (serverBaseUrl: String) -> BlossomClient,
-    private val httpClients: RoleBasedHttpClientBuilder,
+    private val httpClients: IRoleBasedHttpClientBuilder,
+    private val notices: UserNoticeSink = UserNoticeSink {},
+    private val videoCompressor: VideoCompressor = FfmpegVideoCompressor(),
 ) : MediaUploader {
+    override val videoCompression: VideoCompressionSupport
+        get() = if (videoCompressor.available) VideoCompressionSupport.Supported else VideoCompressionSupport.NeedsFfmpeg
+
+    override suspend fun probeVideo(uri: MediaUri): VideoInfo? = videoCompressor.probe(fileOf(uri))
+
     private fun fileOf(uri: MediaUri): File {
         val value = uri.toString()
         return if (value.startsWith("file:")) File(URI(value)) else File(value)
@@ -110,6 +127,8 @@ class DesktopMediaUploader(
 
     private suspend fun notSupported(progress: UploadOrchestrator) = progress.error(UploadError.FAILED_TO_UPLOAD_MEDIA, loadStringRes(Res.string.desktop_upload_server_not_supported))
 
+    private fun tooBig(progress: UploadOrchestrator) = progress.error(UploadError.MEDIA_TOO_BIG_FOR_NIP95)
+
     private fun failed(
         progress: UploadOrchestrator,
         e: Exception,
@@ -133,31 +152,33 @@ class DesktopMediaUploader(
         convertGifToMp4: Boolean,
         forcedSigner: NostrSigner?,
     ): UploadingState.UploadingFinalState {
-        if (server.type == ServerType.NIP95) return nip95(progress, uri, compressionQuality, stripMetadata, null)
-        if (server.type == ServerType.NIP96) return nip96(progress, uri, alt, contentWarningReason, compressionQuality, stripMetadata, server, account, forcedSigner, null)
+        if (server.type == ServerType.NIP95) return nip95(progress, uri, mimeType, compressionQuality, useH265, stripMetadata, convertGifToMp4, null)
+        if (server.type == ServerType.NIP96) return nip96(progress, uri, mimeType, alt, contentWarningReason, compressionQuality, useH265, stripMetadata, convertGifToMp4, server, account, forcedSigner, null)
         if (!isBlossom(server)) return notSupported(progress)
         return try {
-            progress.updateState(0.2, UploadingState.Uploading)
-            val result =
-                BlossomUploadPipeline(clientFor(server.baseUrl)).upload(
-                    file = fileOf(uri),
-                    alt = alt,
-                    serverBaseUrl = server.baseUrl,
-                    signer = forcedSigner ?: account.signer,
-                    stripExif = stripMetadata,
-                    quality = compressionQuality.toTarget(),
+            withVideoPrepared(progress, uri, mimeType, compressionQuality, useH265, stripMetadata, convertGifToMp4, BLOSSOM_COMPRESSING_CEILING) { file, prepared ->
+                progress.updateState(BLOSSOM_COMPRESSING_CEILING, UploadingState.Uploading)
+                val result =
+                    BlossomUploadPipeline(clientFor(server.baseUrl)).upload(
+                        file = file,
+                        alt = alt,
+                        serverBaseUrl = server.baseUrl,
+                        signer = forcedSigner ?: account.signer,
+                        stripExif = stripMetadata && !prepared,
+                        quality = if (prepared) null else compressionQuality.toTarget(),
+                    )
+                val url = result.blossom.url ?: return@withVideoPrepared progress.error(UploadError.SERVER_DID_NOT_PROVIDE_URL)
+                progress.finish(
+                    UploadOrchestrator.OrchestratorResult.ServerResult(
+                        fileHeader = result.metadata.header(),
+                        url = url,
+                        magnet = null,
+                        uploadedHash = result.blossom.sha256 ?: result.metadata.sha256,
+                        mimeTypeBeforeEncryption = null,
+                        hashBeforeEncryption = null,
+                    ),
                 )
-            val url = result.blossom.url ?: return progress.error(UploadError.SERVER_DID_NOT_PROVIDE_URL)
-            progress.finish(
-                UploadOrchestrator.OrchestratorResult.ServerResult(
-                    fileHeader = result.metadata.header(),
-                    url = url,
-                    magnet = null,
-                    uploadedHash = result.blossom.sha256 ?: result.metadata.sha256,
-                    mimeTypeBeforeEncryption = null,
-                    hashBeforeEncryption = null,
-                ),
-            )
+            } ?: tooBig(progress)
         } catch (e: Exception) {
             failed(progress, e)
         }
@@ -180,32 +201,35 @@ class DesktopMediaUploader(
         forcedSigner: NostrSigner?,
     ): UploadingState.UploadingFinalState {
         val cipher = encrypt as? AESGCM ?: return notSupported(progress)
-        if (server.type == ServerType.NIP95) return nip95(progress, uri, compressionQuality, stripMetadata, cipher)
-        if (server.type == ServerType.NIP96) return nip96(progress, uri, alt, contentWarningReason, compressionQuality, stripMetadata, server, account, forcedSigner, cipher)
+        if (server.type == ServerType.NIP95) return nip95(progress, uri, mimeType, compressionQuality, useH265, stripMetadata, convertGifToMp4, cipher)
+        if (server.type == ServerType.NIP96) return nip96(progress, uri, mimeType, alt, contentWarningReason, compressionQuality, useH265, stripMetadata, convertGifToMp4, server, account, forcedSigner, cipher)
         if (!isBlossom(server)) return notSupported(progress)
         return try {
-            progress.updateState(0.2, UploadingState.Uploading)
-            val result =
-                BlossomUploadPipeline(clientFor(server.baseUrl)).uploadEncrypted(
-                    file = fileOf(uri),
-                    cipher = cipher,
-                    serverBaseUrl = server.baseUrl,
-                    signer = forcedSigner ?: account.signer,
-                    stripExif = stripMetadata,
-                    quality = compressionQuality.toTarget(),
+            // The plaintext is compressed first, then encrypted, like any other upload.
+            withVideoPrepared(progress, uri, mimeType, compressionQuality, useH265, stripMetadata, convertGifToMp4, BLOSSOM_COMPRESSING_CEILING) { file, prepared ->
+                progress.updateState(BLOSSOM_COMPRESSING_CEILING, UploadingState.Uploading)
+                val result =
+                    BlossomUploadPipeline(clientFor(server.baseUrl)).uploadEncrypted(
+                        file = file,
+                        cipher = cipher,
+                        serverBaseUrl = server.baseUrl,
+                        signer = forcedSigner ?: account.signer,
+                        stripExif = stripMetadata && !prepared,
+                        quality = if (prepared) null else compressionQuality.toTarget(),
+                    )
+                val url = result.blossom.url ?: return@withVideoPrepared progress.error(UploadError.SERVER_DID_NOT_PROVIDE_URL)
+                progress.finish(
+                    UploadOrchestrator.OrchestratorResult.ServerResult(
+                        // What the server holds is the ciphertext; the original's type and hash ride along.
+                        fileHeader = result.metadata.header(hash = result.encryptedHash, size = result.encryptedSize),
+                        url = url,
+                        magnet = null,
+                        uploadedHash = result.encryptedHash,
+                        mimeTypeBeforeEncryption = result.metadata.mimeType,
+                        hashBeforeEncryption = result.metadata.sha256,
+                    ),
                 )
-            val url = result.blossom.url ?: return progress.error(UploadError.SERVER_DID_NOT_PROVIDE_URL)
-            progress.finish(
-                UploadOrchestrator.OrchestratorResult.ServerResult(
-                    // What the server holds is the ciphertext; the original's type and hash ride along.
-                    fileHeader = result.metadata.header(hash = result.encryptedHash, size = result.encryptedSize),
-                    url = url,
-                    magnet = null,
-                    uploadedHash = result.encryptedHash,
-                    mimeTypeBeforeEncryption = result.metadata.mimeType,
-                    hashBeforeEncryption = result.metadata.sha256,
-                ),
-            )
+            } ?: tooBig(progress)
         } catch (e: Exception) {
             failed(progress, e)
         }
@@ -221,18 +245,20 @@ class DesktopMediaUploader(
 
     /**
      * Null when the prepared file is over [maxBytes]: checked before it is read, so a video picked
-     * for a NIP-95 note is not loaded (and encrypted, a second copy) only to be refused.
+     * for a NIP-95 note is not loaded (and encrypted, a second copy) only to be refused. A file the
+     * video compressor already [prepared] skips the image pipeline's re-encode and strip.
      */
     private suspend fun preparePayload(
-        uri: MediaUri,
+        file: File,
+        prepared: Boolean,
         compressionQuality: CompressorQuality,
         stripMetadata: Boolean,
         cipher: AESGCM?,
         maxBytes: Long = Long.MAX_VALUE,
     ): Payload? =
-        BlossomUploadPipeline.withPreparedFile(fileOf(uri), stripMetadata, compressionQuality.toTarget()) { file, metadata ->
-            if (file.length() > maxBytes) return@withPreparedFile null
-            val plain = withContext(Dispatchers.IO) { file.readBytes() }
+        BlossomUploadPipeline.withPreparedFile(file, stripMetadata && !prepared, if (prepared) null else compressionQuality.toTarget()) { ready, metadata ->
+            if (ready.length() > maxBytes) return@withPreparedFile null
+            val plain = withContext(Dispatchers.IO) { ready.readBytes() }
             if (cipher == null) {
                 Payload(plain, metadata.mimeType, metadata, encrypted = false)
             } else {
@@ -244,32 +270,37 @@ class DesktopMediaUploader(
     private suspend fun nip95(
         progress: UploadOrchestrator,
         uri: MediaUri,
+        mimeType: String?,
         compressionQuality: CompressorQuality,
+        useH265: Boolean,
         stripMetadata: Boolean,
+        convertGifToMp4: Boolean,
         cipher: AESGCM?,
     ): UploadingState.UploadingFinalState =
         try {
-            progress.updateState(0.4, UploadingState.Uploading)
-            val payload = preparePayload(uri, compressionQuality, stripMetadata, cipher, maxBytes = NIP95_MAX_BYTES.toLong())
-            if (payload == null || payload.bytes.size > NIP95_MAX_BYTES) {
-                progress.error(UploadError.MEDIA_TOO_BIG_FOR_NIP95)
-            } else {
-                progress.updateState(0.8, UploadingState.Hashing)
-                val header =
-                    if (payload.encrypted) {
-                        payload.metadata.header(hash = sha256(payload.bytes).toHexKey(), size = payload.bytes.size).withMimeType(payload.contentType)
-                    } else {
-                        payload.metadata.header()
-                    }
-                progress.finish(
-                    UploadOrchestrator.OrchestratorResult.NIP95Result(
-                        fileHeader = header,
-                        bytes = payload.bytes,
-                        mimeTypeBeforeEncryption = if (payload.encrypted) payload.metadata.mimeType else null,
-                        hashBeforeEncryption = if (payload.encrypted) payload.metadata.sha256 else null,
-                    ),
-                )
-            }
+            withVideoPrepared(progress, uri, mimeType, compressionQuality, useH265, stripMetadata, convertGifToMp4, NIP95_COMPRESSING_CEILING, maxBytes = NIP95_MAX_BYTES.toLong()) { file, prepared ->
+                progress.updateState(NIP95_COMPRESSING_CEILING, UploadingState.Uploading)
+                val payload = preparePayload(file, prepared, compressionQuality, stripMetadata, cipher, maxBytes = NIP95_MAX_BYTES.toLong())
+                if (payload == null || payload.bytes.size > NIP95_MAX_BYTES) {
+                    tooBig(progress)
+                } else {
+                    progress.updateState(0.8, UploadingState.Hashing)
+                    val header =
+                        if (payload.encrypted) {
+                            payload.metadata.header(hash = sha256(payload.bytes).toHexKey(), size = payload.bytes.size).withMimeType(payload.contentType)
+                        } else {
+                            payload.metadata.header()
+                        }
+                    progress.finish(
+                        UploadOrchestrator.OrchestratorResult.NIP95Result(
+                            fileHeader = header,
+                            bytes = payload.bytes,
+                            mimeTypeBeforeEncryption = if (payload.encrypted) payload.metadata.mimeType else null,
+                            hashBeforeEncryption = if (payload.encrypted) payload.metadata.sha256 else null,
+                        ),
+                    )
+                }
+            } ?: tooBig(progress)
         } catch (e: Exception) {
             failed(progress, e)
         }
@@ -277,37 +308,42 @@ class DesktopMediaUploader(
     private suspend fun nip96(
         progress: UploadOrchestrator,
         uri: MediaUri,
+        mimeType: String?,
         alt: String?,
         contentWarningReason: String?,
         compressionQuality: CompressorQuality,
+        useH265: Boolean,
         stripMetadata: Boolean,
+        convertGifToMp4: Boolean,
         server: ServerName,
         account: Account,
         forcedSigner: NostrSigner?,
         cipher: AESGCM?,
     ): UploadingState.UploadingFinalState =
         try {
-            val payload = preparePayload(uri, compressionQuality, stripMetadata, cipher)!!
-            progress.updateState(0.2, UploadingState.Uploading)
-            val httpAuth: suspend (String, String, ByteArray?) -> HTTPAuthorizationEvent? =
-                if (forcedSigner != null) {
-                    { url, method, body -> forcedSigner.sign(HTTPAuthorizationEvent.build(url, method, body)) }
-                } else {
-                    account::createHTTPAuthorization
-                }
-            val result =
-                Nip96Uploader().upload(
-                    inputStream = payload.bytes.inputStream(),
-                    length = payload.bytes.size.toLong(),
-                    contentType = payload.contentType,
-                    alt = alt,
-                    sensitiveContent = contentWarningReason,
-                    server = ServerInfoRetriever().loadInfo(server.baseUrl, httpClients::okHttpClientForUploads),
-                    okHttpClient = httpClients::okHttpClientForUploads,
-                    onProgress = { percent -> progress.updateState(0.2 + (0.2 * percent), UploadingState.Uploading) },
-                    httpAuth = httpAuth,
-                )
-            verifyNip96(progress, result, payload)
+            withVideoPrepared(progress, uri, mimeType, compressionQuality, useH265, stripMetadata, convertGifToMp4, BLOSSOM_COMPRESSING_CEILING) { file, prepared ->
+                val payload = preparePayload(file, prepared, compressionQuality, stripMetadata, cipher)!!
+                progress.updateState(BLOSSOM_COMPRESSING_CEILING, UploadingState.Uploading)
+                val httpAuth: suspend (String, String, ByteArray?) -> HTTPAuthorizationEvent? =
+                    if (forcedSigner != null) {
+                        { url, method, body -> forcedSigner.sign(HTTPAuthorizationEvent.build(url, method, body)) }
+                    } else {
+                        account::createHTTPAuthorization
+                    }
+                val result =
+                    Nip96Uploader().upload(
+                        inputStream = payload.bytes.inputStream(),
+                        length = payload.bytes.size.toLong(),
+                        contentType = payload.contentType,
+                        alt = alt,
+                        sensitiveContent = contentWarningReason,
+                        server = ServerInfoRetriever().loadInfo(server.baseUrl, httpClients::okHttpClientForUploads),
+                        okHttpClient = httpClients::okHttpClientForUploads,
+                        onProgress = { percent -> progress.updateState(0.2 + (0.2 * percent), UploadingState.Uploading) },
+                        httpAuth = httpAuth,
+                    )
+                verifyNip96(progress, result, payload)
+            } ?: tooBig(progress)
         } catch (_: SignerExceptions.ReadOnlyException) {
             progress.error(UploadError.LOGIN_WITH_PRIVATE_KEY)
         } catch (e: Exception) {
@@ -353,7 +389,87 @@ class DesktopMediaUploader(
 
     private fun FileHeader.withMimeType(type: String) = FileHeader(type, hash, size, dim, blurHash, thumbHash)
 
-    // The pipeline compresses as part of the upload, so there is nothing to do ahead of it.
+    /**
+     * What the video compressor does with [source], or null when it has nothing to do (not a
+     * video, no ffmpeg, UNCOMPRESSED without a strip owed) and the file goes on as it is.
+     */
+    private suspend fun prepareVideo(
+        source: File,
+        mime: String?,
+        quality: CompressorQuality,
+        useH265: Boolean,
+        stripMetadata: Boolean,
+        convertGifToMp4: Boolean,
+        maxBytes: Long?,
+        onProgress: (Double) -> Unit,
+    ): VideoCompressionResult? {
+        if (!videoCompressor.available) return null
+        val isVideo = mime?.startsWith("video/") == true
+        val isGif = mime == "image/gif"
+        return when {
+            isGif && convertGifToMp4 -> videoCompressor.convertGif(source, onProgress)
+            isVideo && quality != CompressorQuality.UNCOMPRESSED -> videoCompressor.compress(source, quality, useH265, maxBytes, onProgress)
+            // The dialog promised a strip; without an encode only the remux can keep it.
+            isVideo && stripMetadata -> VideoCompressionResult.Original(videoCompressor.strip(source))
+            else -> null
+        }
+    }
+
+    private fun report(notices: List<UserNotice>) = notices.forEach(this.notices::notify)
+
+    /**
+     * Runs [block] with the file to upload: the picked file as it is (`prepared = false`), or a
+     * compressed or remuxed temp the compressor wrote (`prepared = true`), deleted when [block]
+     * returns, throws or is cancelled. Progress during the encode climbs from 0.02 to
+     * [progressCeiling] as [UploadingState.Compressing]. Null when the estimated output is over
+     * [maxBytes]; the caller reports the NIP-95 limit.
+     */
+    internal suspend fun <T> withVideoPrepared(
+        progress: UploadOrchestrator,
+        uri: MediaUri,
+        mimeType: String?,
+        quality: CompressorQuality,
+        useH265: Boolean,
+        stripMetadata: Boolean,
+        convertGifToMp4: Boolean,
+        progressCeiling: Double,
+        maxBytes: Long? = null,
+        block: suspend (file: File, prepared: Boolean) -> T,
+    ): T? {
+        val source = fileOf(uri)
+        val result =
+            prepareVideo(source, mimeType ?: mimeType(uri), quality, useH265, stripMetadata, convertGifToMp4, maxBytes) { fraction ->
+                progress.updateState(COMPRESSING_FLOOR + (progressCeiling - COMPRESSING_FLOOR) * fraction, UploadingState.Compressing)
+            } ?: return block(source, false)
+        return when (result) {
+            VideoCompressionResult.TooBig -> null
+            is VideoCompressionResult.Compressed -> {
+                report(result.notices)
+                usingTemp(result.file) { block(it, true) }
+            }
+            is VideoCompressionResult.Original -> {
+                report(result.notices)
+                val stripped = result.stripped ?: return block(source, false)
+                usingTemp(stripped) { block(it, true) }
+            }
+        }
+    }
+
+    private suspend fun <T> usingTemp(
+        file: File,
+        block: suspend (File) -> T,
+    ): T =
+        try {
+            block(file)
+        } finally {
+            withContext(NonCancellable) { file.deleteOrWarn(TAG, "prepared video") }
+        }
+
+    /**
+     * For callers that upload the bytes themselves: a video comes back as an MP4 temp under
+     * [AmethystTempDir] (compressed, or the remuxed original) for [discardTempFile]; anything the
+     * video compressor leaves alone comes back as it was.
+     */
     override suspend fun compressIfNeeded(
         progress: UploadOrchestrator,
         uri: MediaUri,
@@ -361,7 +477,26 @@ class DesktopMediaUploader(
         compressionQuality: CompressorQuality,
         useH265: Boolean,
         convertGifToMp4: Boolean,
-    ): MediaCompressorResult = MediaCompressorResult(uri, mimeType, null)
+    ): MediaCompressorResult {
+        val unchanged = MediaCompressorResult(uri, mimeType, null)
+        val result =
+            prepareVideo(fileOf(uri), mimeType ?: mimeType(uri), compressionQuality, useH265, stripMetadata = false, convertGifToMp4, maxBytes = null) { fraction ->
+                progress.updateState(COMPRESSING_FLOOR + (BLOSSOM_COMPRESSING_CEILING - COMPRESSING_FLOOR) * fraction, UploadingState.Compressing)
+            } ?: return unchanged
+        return when (result) {
+            VideoCompressionResult.TooBig -> unchanged
+            is VideoCompressionResult.Compressed -> {
+                report(result.notices)
+                mp4Result(result.file)
+            }
+            is VideoCompressionResult.Original -> {
+                report(result.notices)
+                result.stripped?.let(::mp4Result) ?: unchanged
+            }
+        }
+    }
+
+    private fun mp4Result(file: File) = MediaCompressorResult(StringMediaUri(file.absolutePath), MP4_CONTENT_TYPE, file.length())
 
     override suspend fun previewImageCompression(
         uri: MediaUri,
@@ -441,12 +576,17 @@ class DesktopMediaUploader(
 
     override fun mimeType(uri: MediaUri): String? = runCatching { Files.probeContentType(fileOf(uri).toPath()) }.getOrNull()
 
-    // The JVM pipeline's EXIF strip: JPEGs lose their tags, other formats come back as they were.
+    // A video is remuxed without its tags when ffmpeg is at hand; otherwise the JVM pipeline's
+    // EXIF strip: JPEGs lose their tags, other formats come back as they were.
     override suspend fun stripMetadata(
         uri: MediaUri,
         mimeType: String?,
     ): MediaUri {
         val source = fileOf(uri)
+        val mime = mimeType ?: mimeType(uri)
+        if (mime?.startsWith("video/") == true && videoCompressor.available) {
+            return videoCompressor.strip(source)?.let { StringMediaUri(it.absolutePath) } ?: uri
+        }
         val stripped = withContext(Dispatchers.IO) { MediaCompressor.stripExif(source) }
         return if (stripped == source) uri else StringMediaUri(stripped.absolutePath)
     }
@@ -461,10 +601,19 @@ class DesktopMediaUploader(
     }
 
     private companion object {
+        const val TAG = "DesktopMediaUploader"
+
         // What Android allows in a NIP-95 event: larger files make relay events too heavy.
         const val NIP95_MAX_BYTES = 80_000
         const val ENCRYPTED_CONTENT_TYPE = "application/octet-stream"
         const val OCTET_STREAM = "application/octet-stream"
+        const val MP4_CONTENT_TYPE = "video/mp4"
+
+        // Compression progress climbs from the floor to the level where the upload stage starts,
+        // so the bar never jumps backwards.
+        const val COMPRESSING_FLOOR = 0.02
+        const val BLOSSOM_COMPRESSING_CEILING = 0.2
+        const val NIP95_COMPRESSING_CEILING = 0.4
     }
 }
 
