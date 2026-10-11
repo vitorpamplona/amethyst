@@ -2133,6 +2133,13 @@
     <string name="media_compression_preview_uncompressed">Uploading the original file, without compression</string>
     <string name="media_compression_preview_tap_zoom">Tap the image to zoom in and compare it with the original</string>
     <string name="media_compression_preview_zoom_hint">Pinch, scroll or double-tap to zoom</string>
+    <string name="video_compression_failed_title">Video compression failed</string>
+    <string name="video_compression_failed_message">The original file is being uploaded instead.</string>
+    <string name="video_compression_failed_message_with_reason">The original file is being uploaded instead. ffmpeg said: %1$s</string>
+    <string name="video_compression_hevc_unavailable_title">H.265 not available</string>
+    <string name="video_compression_hevc_unavailable_message">ffmpeg has no working HEVC encoder on this computer, so the video was encoded as H.264.</string>
+    <string name="video_compression_hdr_title">HDR video</string>
+    <string name="video_compression_hdr_message">Compressed HDR video looks flat. Choose Uncompressed to keep the original colours.</string>
     <string name="metadata_strip_failed_body">This file format does not support metadata stripping. Private information such as location and device info may be included. Upload anyway?</string>
     <string name="metadata_strip_failed_upload">Upload anyway</string>
     <string name="edit_draft">Edit draft</string>

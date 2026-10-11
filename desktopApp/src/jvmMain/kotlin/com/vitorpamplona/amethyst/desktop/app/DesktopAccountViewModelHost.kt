@@ -74,6 +74,9 @@ class DesktopAccountViewModelHost(
     override val relayAuthState: StateFlow<PersistentMap<NormalizedRelayUrl, RelayAuthSnapshot>>
         get() = modules.authCoordinator.receiver.authStateFlow
 
+    /** Where the process-wide uploader reports; pointed at each account view model's toast manager by the app root. */
+    val notices = ForwardingNoticeSink()
+
     override val mediaUploader: MediaUploader by lazy { DesktopMediaUploader(modules::blossomClient, modules.roleBasedHttpClientBuilder) }
 
     override val scheduledPostStore: ScheduledPostStore get() = modules.scheduledPostStore

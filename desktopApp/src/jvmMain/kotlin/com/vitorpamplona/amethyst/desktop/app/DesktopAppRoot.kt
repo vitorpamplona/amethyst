@@ -76,7 +76,7 @@ class DesktopAppRoot(
             httpClientBuilder = modules.roleBasedHttpClientBuilder,
             nip05ClientBuilder = { modules.nip05Client },
             host = host,
-        )
+        ).also { host.notices.target = it.toastManager }
 
     /** Keeps the relay pool and the HTTP clients alive while the window is open. */
     @Composable
