@@ -31,7 +31,9 @@ enum class CompressorQuality(
 ) {
     VERY_LOW(640, 50),
     LOW(640, 65),
-    MEDIUM(1280, 75),
+
+    // Keep JPEG detail while retaining Medium's original 1280 px size limit.
+    MEDIUM(1280, 85),
     HIGH(1920, 85),
     VERY_HIGH(2560, 90),
     UNCOMPRESSED(null, 100),
