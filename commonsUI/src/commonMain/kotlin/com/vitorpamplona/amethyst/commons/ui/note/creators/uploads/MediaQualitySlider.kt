@@ -46,6 +46,7 @@ import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -67,7 +68,7 @@ import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.close
-import com.vitorpamplona.amethyst.commons.resources.media_compression_image_max_size
+import com.vitorpamplona.amethyst.commons.resources.media_compression_images_up_to
 import com.vitorpamplona.amethyst.commons.resources.media_compression_preview_compressed
 import com.vitorpamplona.amethyst.commons.resources.media_compression_preview_original
 import com.vitorpamplona.amethyst.commons.resources.media_compression_preview_tap_compressed
@@ -81,6 +82,8 @@ import com.vitorpamplona.amethyst.commons.resources.media_compression_quality_me
 import com.vitorpamplona.amethyst.commons.resources.media_compression_quality_uncompressed
 import com.vitorpamplona.amethyst.commons.resources.media_compression_quality_very_high
 import com.vitorpamplona.amethyst.commons.resources.media_compression_quality_very_low
+import com.vitorpamplona.amethyst.commons.resources.media_compression_video_target
+import com.vitorpamplona.amethyst.commons.resources.media_compression_video_target_example
 import com.vitorpamplona.amethyst.commons.service.uploads.CompressorQuality
 import com.vitorpamplona.amethyst.commons.service.uploads.ImageCompressionPreview
 import com.vitorpamplona.amethyst.commons.service.uploads.ImageFileStats
@@ -88,6 +91,10 @@ import com.vitorpamplona.amethyst.commons.service.uploads.MediaUploader
 import com.vitorpamplona.amethyst.commons.service.uploads.MultiOrchestrator
 import com.vitorpamplona.amethyst.commons.service.uploads.SelectedMedia
 import com.vitorpamplona.amethyst.commons.ui.components.edgeToEdgeDialogProperties
+import com.vitorpamplona.amethyst.commons.service.uploads.VideoCompressionSupport
+import com.vitorpamplona.amethyst.commons.service.uploads.video.VideoCompressionRules
+import com.vitorpamplona.amethyst.commons.service.uploads.video.VideoInfo
+import com.vitorpamplona.amethyst.commons.service.uploads.video.VideoStandard
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.QuoteBorder
 import kotlinx.coroutines.delay
@@ -99,11 +106,12 @@ import kotlin.math.min
 import coil3.size.Size as CoilSize
 
 /**
- * The media-quality slider, one stop per [CompressorQuality.sliderSteps] level, labelled with the
- * level and the size images shrink to. When [media] holds a still image the platform re-encodes,
- * the slider also shows that image compressed at the chosen level, with its size and pixel
- * dimensions beside the original's; tapping the preview opens both full screen, zoomable, to
- * compare the detail.
+ * The media-quality slider, one stop per [CompressorQuality.sliderSteps] level. With a video in
+ * [media] on a platform that compresses video, only the levels with a video rule are offered (the
+ * phone layout) and the label describes what the picked video becomes; a still image adds the
+ * size images shrink to. When [media] holds a still image the platform re-encodes, the slider also
+ * shows that image compressed at the chosen level, with its size and pixel dimensions beside the
+ * original's; tapping the preview opens both full screen, zoomable, to compare the detail.
  */
 @Composable
 fun MediaQualitySlider(
@@ -113,15 +121,31 @@ fun MediaQualitySlider(
     uploader: MediaUploader,
     modifier: Modifier = Modifier,
 ) {
-    val steps = CompressorQuality.sliderSteps
-    val quality = CompressorQuality.fromSlider(position)
+    // Not hasVideo() alone: where the platform will not compress the video, the slider governs
+    // only the images, keeps their stops and promises nothing about the video.
+    val videoMode = media?.hasVideo() == true && uploader.videoCompression == VideoCompressionSupport.Supported
+    val steps = CompressorQuality.stepsFor(videoMode)
+    val platformPosition = position.coerceIn(0, CompressorQuality.sliderSteps.lastIndex)
+    val quality = CompressorQuality.fromSlider(platformPosition)
+
+    // Entering video mode on a level without a video rule moves to the one the encoder would use.
+    LaunchedEffect(videoMode) {
+        if (videoMode) CompressorQuality.snapForVideo(platformPosition).let { if (it != platformPosition) onPositionChange(it) }
+    }
+
+    val video = if (videoMode) media?.firstVideo() else null
+    val info by produceState<VideoInfo?>(null, video) { value = video?.let { uploader.probeVideo(it.uri) } }
 
     Column(modifier, horizontalAlignment = Alignment.CenterHorizontally) {
-        Text(text = qualityLabel(quality), textAlign = TextAlign.Center, modifier = Modifier.fillMaxWidth())
+        Text(
+            text = qualityLabel(quality, hasCompressibleImage = media?.hasCompressibleImage() == true, videoMode = videoMode, info = info),
+            textAlign = TextAlign.Center,
+            modifier = Modifier.fillMaxWidth(),
+        )
 
         Slider(
-            value = position.coerceIn(0, steps.lastIndex).toFloat(),
-            onValueChange = { onPositionChange(it.toInt()) },
+            value = CompressorQuality.toDisplayedIndex(platformPosition, videoMode).toFloat(),
+            onValueChange = { onPositionChange(CompressorQuality.fromDisplayedIndex(it.toInt().coerceIn(0, steps.lastIndex), videoMode)) },
             valueRange = 0f..steps.lastIndex.toFloat(),
             steps = (steps.size - 2).coerceAtLeast(0),
         )
@@ -135,8 +159,14 @@ fun MediaQualitySlider(
     }
 }
 
+/** `High`, `High · images up to 1920 px`, `High · 4K video → 2160p, 8 Mbps`, or all three for a mixed post. */
 @Composable
-private fun qualityLabel(quality: CompressorQuality): String {
+private fun qualityLabel(
+    quality: CompressorQuality,
+    hasCompressibleImage: Boolean,
+    videoMode: Boolean,
+    info: VideoInfo?,
+): String {
     val name =
         when (quality) {
             CompressorQuality.VERY_LOW -> stringRes(Res.string.media_compression_quality_very_low)
@@ -146,9 +176,29 @@ private fun qualityLabel(quality: CompressorQuality): String {
             CompressorQuality.VERY_HIGH -> stringRes(Res.string.media_compression_quality_very_high)
             CompressorQuality.UNCOMPRESSED -> stringRes(Res.string.media_compression_quality_uncompressed)
         }
-    val maxDimension = quality.imageMaxDimension ?: return name
-    return stringRes(Res.string.media_compression_image_max_size, name, maxDimension)
+    val imagePart = quality.imageMaxDimension?.takeIf { hasCompressibleImage }?.let { stringRes(Res.string.media_compression_images_up_to, it) }
+    val videoPart = if (videoMode && quality != CompressorQuality.UNCOMPRESSED) videoPhrase(quality, info) else null
+    return listOfNotNull(name, imagePart, videoPart).joinToString(" · ")
 }
+
+/** The picked video's own standard and target; the 1080p row, named as an example, when it could not be probed. */
+@Composable
+private fun videoPhrase(
+    quality: CompressorQuality,
+    info: VideoInfo?,
+): String? {
+    val standard = info?.resolution?.getStandard()
+    if (standard != null) {
+        VideoCompressionRules.ruleFor(quality, standard)?.let { rule ->
+            return stringRes(Res.string.media_compression_video_target, standard.label, rule.shortSide, mbps(rule.bitrateMbps))
+        }
+    }
+    val rule = VideoCompressionRules.ruleFor(quality, VideoStandard.FHD_1080P) ?: return null
+    return stringRes(Res.string.media_compression_video_target_example, rule.shortSide, mbps(rule.bitrateMbps))
+}
+
+/** `2`, `0.75`, `8`: no trailing `.0`. */
+private fun mbps(value: Float): String = value.toString().removeSuffix(".0")
 
 private fun firstStillImage(media: MultiOrchestrator): SelectedMedia? =
     (0 until media.size())

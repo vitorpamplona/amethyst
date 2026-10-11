@@ -57,6 +57,12 @@ class MultiOrchestrator(
 
     fun hasCompressible() = list.any { it.media.isCompressible() }
 
+    /** A still image the platform re-encodes; [hasCompressible] also counts videos. */
+    fun hasCompressibleImage() = list.any { it.media.isImage() == true && it.media.isCompressible() }
+
+    /** The video the slider label describes. */
+    fun firstVideo(): SelectedMedia? = list.firstOrNull { it.media.isVideo() == true }?.media
+
     fun hasNonMedia() = list.any { it.media.isNotMedia() }
 
     suspend fun upload(

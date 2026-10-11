@@ -2108,7 +2108,6 @@
     <string name="media_compression_quality_uncompressed">Okomprimerad</string>
     <string name="media_compression_quality_very_low">Mycket låg</string>
     <string name="media_compression_quality_very_high">Mycket hög</string>
-    <string name="media_compression_image_max_size">%1$s · bilder upp till %2$d px</string>
     <string name="media_compression_preview_compressed">Komprimerad</string>
     <string name="media_compression_preview_original">Original</string>
     <string name="media_compression_preview_tap_original">Tryck på bilden för att se originalet</string>

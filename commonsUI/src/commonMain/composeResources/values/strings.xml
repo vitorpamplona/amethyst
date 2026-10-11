@@ -2125,7 +2125,9 @@
     <string name="media_compression_quality_uncompressed">Uncompressed</string>
     <string name="media_compression_quality_very_low">Very low</string>
     <string name="media_compression_quality_very_high">Very high</string>
-    <string name="media_compression_image_max_size">%1$s · images up to %2$d px</string>
+    <string name="media_compression_images_up_to">images up to %1$d px</string>
+    <string name="media_compression_video_target">%1$s video → %2$dp, %3$s Mbps</string>
+    <string name="media_compression_video_target_example">1080p video → %1$dp, %2$s Mbps</string>
     <string name="media_compression_preview_compressed">Compressed</string>
     <string name="media_compression_preview_original">Original</string>
     <string name="media_compression_preview_tap_original">Tap the image to see the original</string>
