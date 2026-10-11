@@ -46,6 +46,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.boundsInWindow
 import androidx.compose.ui.layout.onGloballyPositioned
@@ -56,6 +57,7 @@ import androidx.compose.ui.window.DialogProperties
 import androidx.lifecycle.viewModelScope
 import coil3.compose.AsyncImage
 import com.vitorpamplona.amethyst.commons.audio.WaveformData
+import com.vitorpamplona.amethyst.commons.audio.declaredAsAudio
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.MediaAspectRatioCache
@@ -68,7 +70,6 @@ import com.vitorpamplona.amethyst.commons.richtext.MediaLocalVideo
 import com.vitorpamplona.amethyst.commons.richtext.MediaUrlContent
 import com.vitorpamplona.amethyst.commons.richtext.MediaUrlPdf
 import com.vitorpamplona.amethyst.commons.richtext.MediaUrlVideo
-import com.vitorpamplona.amethyst.commons.richtext.RichTextParser
 import com.vitorpamplona.amethyst.commons.richtext.isAnimatedGifUrl
 import com.vitorpamplona.amethyst.commons.ui.components.UrlCachedPreviewer
 import com.vitorpamplona.amethyst.commons.ui.components.UrlPreviewState
@@ -378,6 +379,9 @@ object DesktopNotePlatform : NotePlatform {
         accountViewModel: AccountViewModel,
         nav: INav,
     ) {
+        val event = note.event
+        val callbackUri = remember(note) { note.toNostrUri() }
+        val hasHashtags = remember(event) { event?.hasHashtags() == true }
         Column(Modifier.fillMaxWidth()) {
             AudioPlayer(
                 url = mediaUrl,
@@ -387,9 +391,7 @@ object DesktopNotePlatform : NotePlatform {
                 mimeType = mimeType,
                 waveform = waveform,
             )
-            note.event?.let { event ->
-                if (event.hasHashtags()) DisplayUncitedHashtags(event, note.toNostrUri(), accountViewModel, nav)
-            }
+            if (event != null && hasHashtags) DisplayUncitedHashtags(event, callbackUri, accountViewModel, nav)
         }
     }
 
@@ -408,16 +410,19 @@ object DesktopNotePlatform : NotePlatform {
         mimeType = mimeType,
         // Kind 36787 carries no waveform: the same synthetic bars Android draws, keyed by the track.
         seed = note.idHex,
+        // borderModifier shapes the strip to join the cover above it.
+        shape = RectangleShape,
     )
 
     /**
-     * An audio file has no picture for the video frame to show, so it plays in the audio card:
-     * its cover with the waveform scrubber over its foot, or just the waveform when it has no
-     * cover. Anything else is a video.
+     * Audio has no picture for the video frame to show, so it plays in the audio card: its cover
+     * with the waveform scrubber over its foot, or just the waveform when it has no cover.
+     * Anything else is a video.
      */
     @Composable
     override fun NoteMediaView(
         mediaUri: String,
+        isAudio: Boolean?,
         title: String?,
         coverUri: String?,
         waveform: WaveformData?,
@@ -425,7 +430,9 @@ object DesktopNotePlatform : NotePlatform {
         note: Note,
         accountViewModel: AccountViewModel,
     ) {
-        if (RichTextParser.isAudioUrl(mediaUri)) {
+        // The URL decides when it can (an audio kind may still carry a video file); HLS and a bare
+        // Blossom hash can't say, so the event kind does.
+        if (declaredAsAudio(null, mediaUri) ?: isAudio ?: false) {
             AudioPlayer(
                 url = mediaUri,
                 modifier = Modifier.fillMaxWidth(),

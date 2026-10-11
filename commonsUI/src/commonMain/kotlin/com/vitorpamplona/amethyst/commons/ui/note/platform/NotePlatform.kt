@@ -190,11 +190,14 @@ interface NotePlatform {
     /**
      * A note's own media through the full player: a video, or an audio file that plays in the
      * video frame. [coverUri] shows as the thumb until it plays; [waveform] draws the bars of an
-     * audio file that has them. The player links back to [note].
+     * audio file that has them. The player links back to [note]. [isAudio] is what the event says
+     * the media is (true for an audio kind, false for a music video, null when it doesn't say), for
+     * a platform that draws audio and video differently and can't tell from the URL.
      */
     @Composable
     fun NoteMediaView(
         mediaUri: String,
+        isAudio: Boolean?,
         title: String?,
         coverUri: String?,
         waveform: WaveformData?,

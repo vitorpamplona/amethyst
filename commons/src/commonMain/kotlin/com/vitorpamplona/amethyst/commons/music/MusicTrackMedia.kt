@@ -21,7 +21,7 @@
 package com.vitorpamplona.amethyst.commons.music
 
 import androidx.compose.runtime.Immutable
-import com.vitorpamplona.amethyst.commons.richtext.RichTextParser
+import com.vitorpamplona.amethyst.commons.audio.declaredAsAudio
 import com.vitorpamplona.quartz.experimental.music.track.MusicTrackEvent
 
 /**
@@ -47,15 +47,16 @@ sealed interface MusicTrackMedia {
  *
  * The `video` tag wins. Without one, `url` is audio by spec, but some publishers put the music
  * video itself there (Nostria uploads a 1080p `.mp4` as `url`). Drawn as audio, that video renders
- * inside the waveform strip, so a `url` whose extension is video-only (`.mp4`, `.webm`, `.mov`, …,
- * not an audio one like `.m4a`) plays as a video. A `format` tag declares `url` audio, so such a
- * track keeps the audio path whatever the extension.
+ * inside the waveform strip, so a `url` the shared classifier ([declaredAsAudio]) calls video
+ * (`.mp4`, `.webm`, `.mov`, …) plays as a video. One it can't place stays audio: an HLS playlist
+ * carries either, and a bare Blossom hash names nothing. A `format` tag declares `url` audio, so
+ * such a track keeps the audio path whatever the extension.
  */
 fun MusicTrackEvent.media(): MusicTrackMedia? {
     videoUrl()?.let { return MusicTrackMedia.Video(it) }
     val url = url() ?: return null
     val format = format()
-    if (format == null && RichTextParser.isVideoUrl(url) && !RichTextParser.isAudioUrl(url)) {
+    if (format == null && declaredAsAudio(null, url) == false) {
         return MusicTrackMedia.Video(url)
     }
     // Per spec, `format` is the audio format (mp3/flac/m4a/ogg).

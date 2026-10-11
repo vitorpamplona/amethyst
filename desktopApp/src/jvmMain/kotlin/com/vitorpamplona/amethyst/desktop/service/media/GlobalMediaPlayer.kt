@@ -35,10 +35,13 @@ import io.github.kdroidfilter.composemediaplayer.VideoPlayerState
 import io.github.kdroidfilter.composemediaplayer.createVideoPlayerState
 import io.github.vinceglb.filekit.PlatformFile
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.CoroutineStart
+import kotlinx.coroutines.Deferred
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.async
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
@@ -46,6 +49,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.flow.emptyFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flatMapLatest
@@ -128,8 +132,8 @@ object GlobalMediaPlayer {
 
     private const val CLOCK_POLL_MS = 250L
 
-    // How long a seek requested before the audio has loaded waits for its open to start, and then
-    // to finish; past either it is dropped rather than jumping some later track.
+    // How long an audio open is watched for its load to start, and then to finish, before a seek
+    // waiting on it gives up.
     private const val AUDIO_OPEN_START_TIMEOUT_MS = 2_000L
     private const val AUDIO_OPEN_TIMEOUT_MS = 30_000L
 
@@ -206,6 +210,14 @@ object GlobalMediaPlayer {
     @Volatile private var videoSeekWhilePaused: Long? = null
 
     @Volatile private var audioSeekWhilePaused: Long? = null
+
+    // The open running on the audio engine. It applies [pendingAudioStartMillis] once the track has
+    // loaded, and the next track cancels it, so a seek meant for one never lands on another.
+    @Volatile private var audioOpenJob: Job? = null
+
+    // Where the opening track should start, in ms: set by the soundbite or chapter that opened it, or
+    // by one tapped while it was still loading.
+    @Volatile private var pendingAudioStartMillis: Long? = null
 
     // While an encrypted file downloads the engine has not started, so it reports not loading.
     @Volatile private var videoDownloading = false
@@ -450,12 +462,12 @@ object GlobalMediaPlayer {
     }
 
     /**
-     * Plays [url], from [startMillis] in when it is above zero: a podcast soundbite or chapter
-     * tapped before or during playback.
+     * Plays [url], from [startMillis] in when given: a podcast soundbite or chapter tapped before
+     * or during playback (0 jumps back to the start).
      */
     fun playAudio(
         url: String,
-        startMillis: Long = 0L,
+        startMillis: Long? = null,
     ) {
         val current = _audioState.value
         val player =
@@ -471,12 +483,12 @@ object GlobalMediaPlayer {
             }
 
         if (current.url == url && current.errorReason == null) {
-            if (startMillis > 0L) {
-                if (current.duration > 0L) {
-                    seekAudio(startMillis.toFloat() / current.duration)
+            if (startMillis != null) {
+                if (audioOpenJob?.isActive == true) {
+                    // Still opening: the open seeks there once the track has loaded.
+                    pendingAudioStartMillis = startMillis
                 } else {
-                    // Still opening: jump once it has loaded.
-                    scope.launch { seekAudioOnceLoaded(player, url, startMillis) }
+                    scope.launch { seekAudioTo(player, startMillis) }
                 }
             }
             if (!current.isPlaying) player.play()
@@ -490,33 +502,56 @@ object GlobalMediaPlayer {
         audioDownloading = MediaHttp.isEncrypted(url)
         _audioState.value = MediaPlaybackState(url = url, type = MediaType.AUDIO, isBuffering = true)
 
-        scope.launch(Dispatchers.IO) {
-            if (!openSource(player, url, _audioState) { audioDownloading = it }) return@launch
-            if (startMillis > 0L) seekAudioOnceLoaded(player, url, startMillis)
-        }
+        // A seek waiting on the previous track's open must not land on this one.
+        audioOpenJob?.cancel()
+        pendingAudioStartMillis = startMillis
+        audioOpenJob =
+            scope.launch(Dispatchers.IO) {
+                // Watch for the load to start before opening: the engine flips isLoading on its own
+                // thread, so a fast open could otherwise start and finish unseen. The first value is
+                // the engine's state before this open, and says nothing about it.
+                val loadStarted = async(start = CoroutineStart.UNDISPATCHED) { snapshotFlow { player.isLoading }.drop(1).first { it } }
+                if (!openSource(player, url, _audioState) { audioDownloading = it }) {
+                    loadStarted.cancel()
+                    return@launch
+                }
+                awaitAudioLoaded(player, loadStarted)
+                pendingAudioStartMillis?.let { start ->
+                    pendingAudioStartMillis = null
+                    seekAudioTo(player, start)
+                }
+            }
     }
 
     /**
-     * Seeks [player] to [startMillis] once the open of [url] it is running has loaded. The audio
-     * engine is reused across tracks, so `hasMedia` alone proves nothing (Linux keeps it true from
-     * the last track): the open is done once loading has started and then stopped. The length is
-     * not Compose state on every engine (Linux asks GStreamer on each read), so it is polled.
+     * Waits for the open just handed to [player] to load. The audio engine is reused across tracks,
+     * so `hasMedia` alone proves nothing (Linux keeps it true from the last track): the open is done
+     * once its load has started ([loadStarted]) and then stopped. A load that came and went before
+     * it was seen leaves [loadStarted] waiting, so that wait is bounded.
      */
-    private suspend fun seekAudioOnceLoaded(
+    private suspend fun awaitAudioLoaded(
         player: VideoPlayerState,
-        url: String,
+        loadStarted: Deferred<Boolean>,
+    ) {
+        withTimeoutOrNull(AUDIO_OPEN_START_TIMEOUT_MS) { loadStarted.await() } ?: loadStarted.cancel()
+        withTimeoutOrNull(AUDIO_OPEN_TIMEOUT_MS) { snapshotFlow { !player.isLoading && player.hasMedia }.first { it } }
+    }
+
+    /**
+     * Seeks the loaded audio to [startMillis]. The length is not Compose state on every engine
+     * (Linux asks GStreamer on each read), so it is polled until the engine knows it.
+     */
+    private suspend fun seekAudioTo(
+        player: VideoPlayerState,
         startMillis: Long,
     ) {
-        // A fast open may have started and finished already; then there is nothing to wait for.
-        withTimeoutOrNull(AUDIO_OPEN_START_TIMEOUT_MS) { snapshotFlow { player.isLoading }.first { it } }
         val durationSeconds =
             withTimeoutOrNull(AUDIO_OPEN_TIMEOUT_MS) {
-                snapshotFlow { !player.isLoading && player.hasMedia }.first { it }
                 while (player.duration <= 0.0) delay(CLOCK_POLL_MS)
                 player.duration
             } ?: return
-        if (player !== audioPlayer || _audioState.value.url != url) return
-        player.seekTo((startMillis / 1000.0 / durationSeconds).toFloat().coerceIn(0f, 1f) * 1000f)
+        if (player !== audioPlayer) return
+        seekAudio((startMillis / 1000.0 / durationSeconds).toFloat())
     }
 
     fun toggleVideoPlayPause() {
@@ -648,6 +683,8 @@ object GlobalMediaPlayer {
     }
 
     fun stopAudio() {
+        audioOpenJob?.cancel()
+        pendingAudioStartMillis = null
         audioPlayer?.stop()
         _audioState.value = MediaPlaybackState(type = MediaType.AUDIO)
     }

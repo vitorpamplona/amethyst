@@ -221,6 +221,7 @@ object AndroidNotePlatform : NotePlatform {
     @Composable
     override fun NoteMediaView(
         mediaUri: String,
+        isAudio: Boolean?,
         title: String?,
         coverUri: String?,
         waveform: WaveformData?,

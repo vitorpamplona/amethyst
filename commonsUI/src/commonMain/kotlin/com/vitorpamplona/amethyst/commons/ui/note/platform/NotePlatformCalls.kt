@@ -199,6 +199,7 @@ fun MusicTrackAudioPlayer(
 @Composable
 fun NoteMediaView(
     mediaUri: String,
+    isAudio: Boolean?,
     title: String?,
     coverUri: String?,
     waveform: WaveformData?,
@@ -207,6 +208,7 @@ fun NoteMediaView(
     accountViewModel: AccountViewModel,
 ) = LocalNotePlatform.current.NoteMediaView(
     mediaUri = mediaUri,
+    isAudio = isAudio,
     title = title,
     coverUri = coverUri,
     waveform = waveform,

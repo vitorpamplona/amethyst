@@ -25,6 +25,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.RectangleShape
 import com.vitorpamplona.amethyst.commons.audio.WaveformData
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.ui.note.PodcastSoundbites
@@ -51,15 +52,17 @@ fun PodcastEpisodePlayer(
 ) {
     // The episode's own waveform when its imeta ships one; NIP-F4 usually doesn't, so the card
     // falls back to the synthetic bars seeded by the note, as on Android.
+    // Keyed on the event, not the note: an addressable 30054 episode keeps its Note across edits.
+    val event = note.event
     val waveform =
-        remember(note) {
-            note.event
+        remember(event) {
+            event
                 ?.getAudioMetaWithWaveform()
                 ?.waveform
                 ?.let { WaveformData(it) }
         }
-    val soundbites = remember(note) { (note.event as? PodcastEpisode)?.episodeSoundbites().orEmpty() }
-    val chaptersUrl = remember(note) { (note.event as? PodcastEpisode)?.episodeChaptersUrl() }
+    val soundbites = remember(event) { (event as? PodcastEpisode)?.episodeSoundbites().orEmpty() }
+    val chaptersUrl = remember(event) { (event as? PodcastEpisode)?.episodeChaptersUrl() }
     val playFrom: (Long) -> Unit = remember(audio.url) { { startMillis -> GlobalMediaPlayer.playAudio(audio.url, startMillis) } }
 
     Column(Modifier.fillMaxWidth()) {
@@ -70,6 +73,8 @@ fun PodcastEpisodePlayer(
             mimeType = audio.mediaType,
             waveform = waveform,
             seed = note.idHex,
+            // borderModifier already gives the strip its outline.
+            shape = RectangleShape,
         )
 
         PodcastSoundbites(soundbites, playFrom)

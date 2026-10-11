@@ -136,6 +136,7 @@ fun AudioTrackHeader(
                 ) {
                     NoteMediaView(
                         mediaUri = media,
+                        isAudio = true,
                         title = subject,
                         coverUri = cover,
                         waveform = null,
@@ -185,6 +186,7 @@ fun AudioHeader(
                 ) {
                     NoteMediaView(
                         mediaUri = media,
+                        isAudio = true,
                         title = noteEvent.subject(),
                         coverUri = null,
                         waveform = waveform,

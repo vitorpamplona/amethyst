@@ -165,6 +165,7 @@ fun MusicTrackHeader(
             is MusicTrackMedia.Video -> {
                 NoteMediaView(
                     mediaUri = media.url,
+                    isAudio = false,
                     title = title,
                     coverUri = image,
                     waveform = null,

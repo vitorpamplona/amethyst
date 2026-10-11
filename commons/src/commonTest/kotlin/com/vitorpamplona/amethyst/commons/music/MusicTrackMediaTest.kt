@@ -60,6 +60,19 @@ class MusicTrackMediaTest {
     }
 
     @Test
+    fun hlsPlaylistStaysAudio() {
+        // A playlist carries audio or video; a music track's `url` is audio unless proven otherwise.
+        val url = "https://example.com/stream/track.m3u8"
+        assertEquals(MusicTrackMedia.Audio(url, null), track(arrayOf("url", url)).media())
+    }
+
+    @Test
+    fun webmPlaysAsVideo() {
+        val url = "https://example.com/clip.webm"
+        assertEquals(MusicTrackMedia.Video(url), track(arrayOf("url", url)).media())
+    }
+
+    @Test
     fun formatTagKeepsAnMp4UrlOnTheAudioPath() {
         val url = "https://example.com/song.mp4"
         assertEquals(MusicTrackMedia.Audio(url, "audio/mp4"), track(arrayOf("url", url), arrayOf("format", "mp4")).media())
