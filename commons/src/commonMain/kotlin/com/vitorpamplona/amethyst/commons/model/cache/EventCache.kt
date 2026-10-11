@@ -868,6 +868,22 @@ open class EventCache :
 
     fun getLiveActivityChannelIfExists(key: Address): LiveActivitiesChannel? = liveChatChannels.get(key)
 
+    /**
+     * The note that shows event [id], the way every filter and observer hands it out: for the current
+     * version of an addressable or replaceable event, its [AddressableNote] (which carries the replies,
+     * reactions and zaps); for a regular event, or a superseded version, the event's own note. Null when
+     * the event isn't cached.
+     *
+     * An id names a version, so `getNoteIfExists(id)` returns the version note even for the latest one,
+     * and a screen showing that beside the addressable note draws the same event twice.
+     */
+    fun getNoteShowingEventIfExists(id: HexKey): Note? {
+        val note = getNoteIfExists(id) ?: return null
+        val event = note.event as? AddressableEvent ?: return note
+        val addressable = getAddressableNoteIfExists(event.address())
+        return if (addressable?.event?.id == id) addressable else note
+    }
+
     fun getNoteIfExists(event: Event): Note? =
         if (event is AddressableEvent) {
             getAddressableNoteIfExists(event.addressTag())
