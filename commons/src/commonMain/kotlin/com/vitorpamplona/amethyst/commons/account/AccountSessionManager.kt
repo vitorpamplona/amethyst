@@ -109,7 +109,16 @@ class AccountSessionManager(
     }
 
     private suspend fun loginWithDefaultAccount(routeBuilder: ((account: Account) -> Route?)? = null) {
-        val accountSettings = localPreferences.loadAccountConfigFromEncryptedStorage()
+        val accountSettings =
+            try {
+                localPreferences.loadAccountConfigFromEncryptedStorage()
+            } catch (e: Exception) {
+                if (e is CancellationException) throw e
+                // A keystore that cannot be read (locked, or access denied) would otherwise leave
+                // the app on its loading screen; the saved account stays for the next attempt.
+                Log.w("AccountSessionManager", "Could not load the default account", e)
+                null
+            }
 
         if (accountSettings != null) {
             startUI(accountSettings, routeBuilder)
@@ -460,15 +469,19 @@ class AccountSessionManager(
                 // End what the account had running before its state is torn down.
                 hooks.onSessionEnding()
                 // log off and relogin with the 0 account
-                localPreferences.deleteAccount(accountInfo)
+                // Cancels the account's scope first: its debounced settings save, landing after the
+                // delete, would write the account (and its key) back.
                 accountsCache.removeAccount(hex)
+                localPreferences.deleteAccount(accountInfo)
                 accountsCache.deleteAccountFiles(hex)
                 hooks.onAccountRemoved(hex)
                 loginWithDefaultAccount()
             } else {
                 // delete without switching logins
-                localPreferences.deleteAccount(accountInfo)
+                // Cancels the account's scope first: its debounced settings save, landing after the
+                // delete, would write the account (and its key) back.
                 accountsCache.removeAccount(hex)
+                localPreferences.deleteAccount(accountInfo)
                 accountsCache.deleteAccountFiles(hex)
                 hooks.onAccountRemoved(hex)
             }

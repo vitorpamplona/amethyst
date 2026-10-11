@@ -127,6 +127,7 @@ import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.withTimeoutOrNull
 import okio.Path
 import okio.Path.Companion.toOkioPath
 import java.io.File
@@ -456,6 +457,20 @@ class DesktopAppModules(
             remoteSignerMetadata = REMOTE_SIGNER_METADATA,
         )
 
+    /**
+     * Saves every loaded account's settings now, as [flushUiPrefs] does the UI's: a last-read marker
+     * or a setting changed in the last second before quitting is still in the account's debounce.
+     * Bounded, so a stuck keychain cannot hold up the exit.
+     */
+    fun flushAccountSettings() {
+        runBlocking {
+            withTimeoutOrNull(FLUSH_TIMEOUT_MS) {
+                accountsCache.accounts.value.values
+                    .forEach { sessionStore.saveAccountSettings(it.settings) }
+            }
+        }
+    }
+
     private inner class DesktopAccountSessionHooks : AccountSessionHooks {
         // What one account played must not keep playing, or show in the bar, for the next.
         override fun onSessionEnding() {
@@ -545,6 +560,7 @@ class DesktopAppModules(
         private const val HEAP_HIGH_WATER = 0.70
         private const val HEAP_CHECK_INTERVAL_MS = 60_000L
         private const val MIN_RECLAIM_INTERVAL_MS = 120_000L
+        private const val FLUSH_TIMEOUT_MS = 3_000L
 
         /** What a NIP-46 remote signer shows when this app asks to connect. */
         val REMOTE_SIGNER_METADATA = BunkerClientMetadata(name = "Amethyst Desktop", url = "https://amethyst.social")

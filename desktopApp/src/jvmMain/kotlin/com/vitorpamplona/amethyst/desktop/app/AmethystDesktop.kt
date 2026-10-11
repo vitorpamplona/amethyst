@@ -160,6 +160,7 @@ fun main(args: Array<String>) {
             // Releases the native video and audio engines before the JVM goes.
             GlobalMediaPlayer.shutdown()
             runCatching { modules.flushUiPrefs() }
+            runCatching { modules.flushAccountSettings() }
             modules.torManager.stopSync()
         },
     )

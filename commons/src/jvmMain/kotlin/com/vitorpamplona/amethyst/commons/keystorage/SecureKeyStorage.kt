@@ -87,6 +87,7 @@ actual class SecureKeyStorage private actual constructor() {
         private const val IV_LENGTH = 12 // GCM standard
     }
 
+    @Volatile
     private var keyringAvailable: Boolean = true
     private var fallbackPassword: String? = null
     private val fallbackMutex = Mutex() // Protects concurrent access to fallback file
@@ -144,7 +145,7 @@ actual class SecureKeyStorage private actual constructor() {
         withContext(Dispatchers.IO) {
             try {
                 if (vaultActive) {
-                    vaultPut(npub, privKeyHex)
+                    vaultMutex.withLock { vaultPut(npub, privKeyHex) }
                 } else if (keyringAvailable) {
                     saveToKeyring(npub, privKeyHex)
                 } else {
@@ -266,7 +267,7 @@ actual class SecureKeyStorage private actual constructor() {
         withContext(Dispatchers.IO) {
             try {
                 when {
-                    vaultActive -> vaultDelete(npub)
+                    vaultActive -> vaultMutex.withLock { vaultDelete(npub) }
                     keyringAvailable -> deleteFromKeyring(npub)
                     else -> deleteFromFallback(npub)
                 }
@@ -413,15 +414,23 @@ actual class SecureKeyStorage private actual constructor() {
 
     private fun vaultGet(alias: String): String? = vaultContents?.get(alias)
 
+    /**
+     * Writes the vault with [alias] set to [value]. The in-memory copy changes only after the
+     * keychain write succeeds: changed first, a denied or failed write would leave memory claiming
+     * a key the keychain never got, and the next save of that key would skip it as unchanged.
+     *
+     * Callers hold [vaultMutex], so two writes cannot each encode a snapshot missing the other.
+     */
     private fun vaultPut(
         alias: String,
         value: String,
     ) {
-        val contents = vaultContents ?: LinkedHashMap<String, String>().also { vaultContents = it }
+        val current = vaultContents ?: emptyMap()
         // Rewriting the item is a keychain access, and macOS may prompt for each one.
-        if (contents[alias] == value) return
-        contents[alias] = value
-        keyring().setPassword(SERVICE_NAME, vaultAlias, encodeVault(contents))
+        if (current[alias] == value) return
+        val updated = LinkedHashMap(current).also { it[alias] = value }
+        keyring().setPassword(SERVICE_NAME, vaultAlias, encodeVault(updated))
+        vaultContents = updated
     }
 
     /**
@@ -429,10 +438,11 @@ actual class SecureKeyStorage private actual constructor() {
      * holding it. An alias the vault does not cover (a partial migration, or a
      * phase 2 that failed) would otherwise survive a logout as an orphaned secret
      * in the OS keychain, since [getPrivateKey] can still read it.
+     *
+     * Like [vaultPut], memory follows the keychain, never leads it. Callers hold [vaultMutex].
      */
     private fun vaultDelete(alias: String): Boolean {
         val contents = vaultContents
-        val removedFromVault = contents != null && contents.remove(alias) != null
 
         val removedLegacy =
             try {
@@ -442,19 +452,20 @@ actual class SecureKeyStorage private actual constructor() {
                 false // no legacy item, fine
             }
 
-        if (removedFromVault) {
-            if (contents.isEmpty()) {
-                try {
-                    keyring().deletePassword(SERVICE_NAME, vaultAlias)
-                } catch (_: PasswordAccessException) {
-                    // already gone, still removed from our POV
-                }
-            } else {
-                keyring().setPassword(SERVICE_NAME, vaultAlias, encodeVault(contents))
-            }
-        }
+        if (contents == null || alias !in contents) return removedLegacy
 
-        return removedFromVault || removedLegacy
+        val updated = LinkedHashMap(contents).also { it.remove(alias) }
+        if (updated.isEmpty()) {
+            try {
+                keyring().deletePassword(SERVICE_NAME, vaultAlias)
+            } catch (_: PasswordAccessException) {
+                // already gone, still removed from our POV
+            }
+        } else {
+            keyring().setPassword(SERVICE_NAME, vaultAlias, encodeVault(updated))
+        }
+        vaultContents = updated
+        return true
     }
 
     /**

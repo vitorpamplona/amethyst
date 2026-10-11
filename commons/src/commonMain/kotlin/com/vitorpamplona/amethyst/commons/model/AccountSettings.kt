@@ -92,6 +92,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.flow.updateAndGet
 import kotlinx.serialization.Serializable
 import kotlin.uuid.ExperimentalUuidApi
 import kotlin.uuid.Uuid
@@ -1642,32 +1643,34 @@ class AccountSettings(
     // last read flows
     // ----
 
-    fun getLastReadFlow(route: String): StateFlow<Long> = lastReadPerRoute.value[route] ?: addLastRead(route, 0)
+    fun getLastReadFlow(route: String): StateFlow<Long> = lastReadPerRoute.value[route] ?: lastReadFlowFor(route)
 
-    private fun addLastRead(
-        route: String,
-        timestampInSecs: Long,
-    ): MutableStateFlow<Long> =
-        MutableStateFlow(timestampInSecs).also { newFlow ->
-            lastReadPerRoute.update { it + Pair(route, newFlow) }
-            saveAccountSettings()
-        }
+    /**
+     * The route's flow, created at 0 when absent. Created inside the map's atomic update so two threads meeting a new
+     * route share one flow: the loser of a plain check-then-put would replace the winner's,
+     * dropping its timestamp or leaving a row observing a flow nothing updates.
+     *
+     * Nothing is saved here: a route at 0 reads back the same as no route at all.
+     */
+    private fun lastReadFlowFor(route: String): MutableStateFlow<Long> =
+        lastReadPerRoute
+            .updateAndGet { if (route in it) it else it + Pair(route, MutableStateFlow(0L)) }
+            .getValue(route)
 
     fun markAsRead(
         route: String,
         timestampInSecs: Long,
     ): Boolean {
-        val lastTime = lastReadPerRoute.value[route]
-        return if (lastTime == null) {
-            addLastRead(route, timestampInSecs)
-            true
-        } else if (timestampInSecs > lastTime.value) {
-            lastTime.tryEmit(timestampInSecs)
-            saveAccountSettings()
-            true
-        } else {
-            false
+        val lastTime = lastReadPerRoute.value[route] ?: lastReadFlowFor(route)
+        // Compare-and-set: rows mark themselves read from parallel coroutines, and a plain
+        // check-then-emit lets an older timestamp land after a newer one.
+        while (true) {
+            val current = lastTime.value
+            if (timestampInSecs <= current) return false
+            if (lastTime.compareAndSet(current, timestampInSecs)) break
         }
+        saveAccountSettings()
+        return true
     }
 
     // ---

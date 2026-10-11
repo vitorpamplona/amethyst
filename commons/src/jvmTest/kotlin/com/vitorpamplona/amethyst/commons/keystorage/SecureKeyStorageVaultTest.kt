@@ -49,6 +49,9 @@ class SecureKeyStorageVaultTest {
         val readsBySlot: ConcurrentHashMap<Pair<String, String>, AtomicInteger> = ConcurrentHashMap()
         val writesBySlot: ConcurrentHashMap<Pair<String, String>, AtomicInteger> = ConcurrentHashMap()
 
+        @Volatile
+        var failWrites = false
+
         override fun getPassword(
             service: String,
             account: String,
@@ -63,6 +66,7 @@ class SecureKeyStorageVaultTest {
             password: String,
         ) {
             writesBySlot.computeIfAbsent(service to account) { AtomicInteger(0) }.incrementAndGet()
+            if (failWrites) throw PasswordAccessException("denied")
             store[service to account] = password
         }
 
@@ -252,6 +256,22 @@ class SecureKeyStorageVaultTest {
 
             storage.savePrivateKey("npub1new", "2222")
             assertEquals(3, backend.writes("vault-v1"))
+        }
+
+    @Test
+    fun `a denied vault write is retried by the next save`() =
+        runBlocking {
+            val (storage, backend) = newStorageWith()
+            storage.enableConsolidatedVault(emptyList())
+
+            backend.failWrites = true
+            assertTrue(runCatching { storage.savePrivateKey("npub1new", "1111") }.isFailure)
+            assertNull(storage.getPrivateKey("npub1new"))
+
+            backend.failWrites = false
+            storage.savePrivateKey("npub1new", "1111")
+            assertEquals("1111", storage.getPrivateKey("npub1new"))
+            assertTrue(backend.store.values.any { it.contains(Base64.getEncoder().encodeToString("1111".toByteArray())) })
         }
 
     @Test

@@ -50,7 +50,10 @@ class StoreAccountSessionStoreTest {
         val keys = mutableMapOf<String, String>()
         var saves = 0
 
-        override suspend fun get(npub: String): String? = keys[npub]
+        // Windows and Linux backends report a missing item as an error, which the strict lookup rethrows.
+        var throwOnMissing = false
+
+        override suspend fun get(npub: String): String? = keys[npub] ?: if (throwOnMissing) throw IllegalStateException("no item") else null
 
         override suspend fun save(
             npub: String,
@@ -194,5 +197,18 @@ class StoreAccountSessionStoreTest {
             // A changed key is still written.
             store.saveAccountSettings(AccountSettings(keyPair = KeyPair(privKey = KeyPair().privKey, pubKey = settings.keyPair.pubKey, forceReplacePubkey = false)))
             assertEquals(2, vault.saves)
+        }
+
+    @Test
+    fun aViewOnlyLoginLoadsWhenTheKeychainThrowsOnAMissingKey() =
+        runTest {
+            val store = newStore()
+            val pubKey = KeyPair().pubKey
+            store.setDefaultAccount(AccountSettings(keyPair = KeyPair(pubKey = pubKey)))
+            store.forgetLoadedSettings()
+            vault.throwOnMissing = true
+
+            val loaded = assertNotNull(store.loadAccountConfigFromEncryptedStorage(pubKey.toNpub()))
+            assertNull(loaded.keyPair.privKey)
         }
 }

@@ -84,6 +84,10 @@ class StoreAccountSessionStore(
     // loads rewrites the OS keychain item, and macOS asks for the keychain password each time.
     private val keysInVault = ConcurrentHashMap<String, String>()
 
+    // Same for the secrets: AES-GCM re-randomises the IV, so DataStore can never skip an
+    // unchanged group by itself and every save would rewrite and fsync the file.
+    private val savedSecrets = ConcurrentHashMap<String, AccountSecrets>()
+
     @Volatile
     private var currentAccount: String? = null
 
@@ -164,7 +168,11 @@ class StoreAccountSessionStore(
         if (settings.transientAccount) return
         val npub = settings.keyPair.pubKey.toNpub()
         settingsStores.save(settings)
-        secretsStores.saveSecrets(npub, settings.toAccountSecrets())
+        val secrets = settings.toAccountSecrets()
+        if (savedSecrets[npub] != secrets) {
+            secretsStores.saveSecrets(npub, secrets)
+            savedSecrets[npub] = secrets
+        }
         settings.keyPair.privKey?.let { saveKey(npub, it.toHexKey()) }
         accountStores.getDataStore(npub).edit {
             it[lastReadPerRouteKey] = JsonMapper.toJson(settings.lastReadPerRoute.value.mapValues { entry -> entry.value.value })
@@ -210,14 +218,23 @@ class StoreAccountSessionStore(
     private suspend fun load(npub: String): AccountSettings? {
         val records = settingsStores.load(npub)
         val pubKey = records.identity.pubKeyHex ?: return null
-        val privKey = keyVault.get(npub)?.also { keysInVault[npub] = it }
+        // Only a login holding its own key has one in the vault. Asking the keychain for the others
+        // costs a keychain access on macOS and, on Windows and Linux, throws: their backends report a
+        // missing item as an error, which the strict lookup must not read as absent.
+        val info = allSavedAccounts().firstOrNull { it.npub == npub }
+        val privKey =
+            if (info != null && !info.holdsOwnKey()) {
+                null
+            } else {
+                keyVault.get(npub)?.also { keysInVault[npub] = it }
+            }
         val keyPair = KeyPair(privKey = privKey?.hexToByteArray(), pubKey = pubKey.hexToByteArray())
         val state = accountStores.getDataStore(npub).data.first()
         return AccountSettingsSource(
             keyPair = keyPair,
             externalSignerPackageName = records.identity.externalSignerPackageName,
             stores = records,
-            secrets = secretsStores.loadSecrets(npub) ?: AccountSecrets(),
+            secrets = (secretsStores.loadSecrets(npub)?.also { savedSecrets[npub] = it }) ?: AccountSecrets(),
             pendingAttestationsJson = state[pendingAttestationsKey],
             lastReadPerRouteJson = state[lastReadPerRouteKey],
             cashuCounters = cashuCounters(npub),
@@ -241,6 +258,7 @@ class StoreAccountSessionStore(
         val npub = accountInfo.npub
         loadMutex.withLock { cachedAccounts.remove(npub) }
         keysInVault.remove(npub)
+        savedSecrets.remove(npub)
         keyVault.delete(npub)
         secretsStores.removeAccount(npub)
         accountStores.removeAccount(npub)
@@ -273,3 +291,5 @@ class StoreAccountSessionStore(
         private val pendingAttestationsKey = stringPreferencesKey("pending_attestations")
     }
 }
+
+private fun AccountInfo.holdsOwnKey() = hasPrivKey && !loggedInWithExternalSigner && !loggedInWithRemoteSigner
