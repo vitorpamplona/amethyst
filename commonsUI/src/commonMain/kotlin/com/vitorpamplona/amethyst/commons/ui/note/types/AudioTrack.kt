@@ -18,7 +18,7 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.ui.note.types
+package com.vitorpamplona.amethyst.commons.ui.note.types
 
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
@@ -52,9 +52,8 @@ import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.note.ClickableUserPicture
 import com.vitorpamplona.amethyst.commons.ui.note.UsernameDisplay
 import com.vitorpamplona.amethyst.commons.ui.note.elements.DisplayUncitedHashtags
+import com.vitorpamplona.amethyst.commons.ui.note.platform.NoteMediaView
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
-import com.vitorpamplona.amethyst.service.playback.composable.LoadThumbAndThenVideoView
-import com.vitorpamplona.amethyst.service.playback.composable.VideoView
 import com.vitorpamplona.quartz.experimental.audio.header.AudioHeaderEvent
 import com.vitorpamplona.quartz.experimental.audio.track.AudioTrackEvent
 import com.vitorpamplona.quartz.experimental.audio.track.tags.ParticipantTag
@@ -135,29 +134,15 @@ fun AudioTrackHeader(
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    cover?.let { cover ->
-                        LoadThumbAndThenVideoView(
-                            videoUri = media,
-                            mimeType = null,
-                            title = noteEvent.subject(),
-                            thumbUri = cover,
-                            authorName = note.author?.toBestDisplayName(),
-                            roundedCorner = true,
-                            contentScale = contentScale,
-                            nostrUriCallback = "nostr:${note.toNEvent()}",
-                            accountViewModel = accountViewModel,
-                        )
-                    } ?: run {
-                        VideoView(
-                            videoUri = media,
-                            mimeType = null,
-                            title = noteEvent.subject(),
-                            authorName = note.author?.toBestDisplayName(),
-                            roundedCorner = true,
-                            contentScale = contentScale,
-                            accountViewModel = accountViewModel,
-                        )
-                    }
+                    NoteMediaView(
+                        mediaUri = media,
+                        title = subject,
+                        coverUri = cover,
+                        waveform = null,
+                        contentScale = contentScale,
+                        note = note,
+                        accountViewModel = accountViewModel,
+                    )
                 }
             }
         }
@@ -198,16 +183,14 @@ fun AudioHeader(
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    VideoView(
-                        videoUri = media,
-                        mimeType = null,
-                        waveform = waveform,
+                    NoteMediaView(
+                        mediaUri = media,
                         title = noteEvent.subject(),
-                        authorName = note.author?.toBestDisplayName(),
-                        roundedCorner = true,
+                        coverUri = null,
+                        waveform = waveform,
                         contentScale = contentScale,
+                        note = note,
                         accountViewModel = accountViewModel,
-                        nostrUriCallback = note.toNostrUri(),
                     )
                 }
             }

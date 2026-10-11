@@ -70,7 +70,7 @@ import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.note.elements.DefaultImageHeader
 import com.vitorpamplona.amethyst.commons.ui.note.elements.DefaultImageHeaderBackground
 import com.vitorpamplona.amethyst.commons.ui.note.platform.MusicTrackAudioPlayer
-import com.vitorpamplona.amethyst.commons.ui.note.platform.MusicTrackVideoPlayer
+import com.vitorpamplona.amethyst.commons.ui.note.platform.NoteMediaView
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.Font10SP
 import com.vitorpamplona.amethyst.commons.ui.theme.Size5dp
@@ -163,10 +163,12 @@ fun MusicTrackHeader(
             // A music video — from the `video` tag, or a video file published as `url` — plays
             // through the full video player, with the album cover as its thumb when there is one.
             is MusicTrackMedia.Video -> {
-                MusicTrackVideoPlayer(
-                    videoUrl = media.url,
+                NoteMediaView(
+                    mediaUri = media.url,
                     title = title,
-                    image = image,
+                    coverUri = image,
+                    waveform = null,
+                    contentScale = ContentScale.FillWidth,
                     note = note,
                     accountViewModel = accountViewModel,
                 )

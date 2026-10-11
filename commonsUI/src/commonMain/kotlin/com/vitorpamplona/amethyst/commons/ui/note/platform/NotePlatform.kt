@@ -187,20 +187,20 @@ interface NotePlatform {
 
     // Audio
 
+    /**
+     * A note's own media through the full player: a video, or an audio file that plays in the
+     * video frame. [coverUri] shows as the thumb until it plays; [waveform] draws the bars of an
+     * audio file that has them. The player links back to [note].
+     */
     @Composable
-    fun RenderAudioHeader(
-        note: Note,
+    fun NoteMediaView(
+        mediaUri: String,
+        title: String?,
+        coverUri: String?,
+        waveform: WaveformData?,
         contentScale: ContentScale,
-        accountViewModel: AccountViewModel,
-        nav: INav,
-    ) {}
-
-    @Composable
-    fun RenderAudioTrack(
         note: Note,
-        contentScale: ContentScale,
         accountViewModel: AccountViewModel,
-        nav: INav,
     ) {}
 
     /**
@@ -218,16 +218,6 @@ interface NotePlatform {
         accountViewModel: AccountViewModel,
     ) {}
 
-    /** A music track's video (kind 36787), shown in place of its cover, with [image] as the thumb. */
-    @Composable
-    fun MusicTrackVideoPlayer(
-        videoUrl: String,
-        title: String?,
-        image: String?,
-        note: Note,
-        accountViewModel: AccountViewModel,
-    ) {}
-
     @Composable
     fun PodcastEpisodeAudioPlayer(
         audio: PodcastAudio,
@@ -236,20 +226,6 @@ interface NotePlatform {
         image: String?,
         borderModifier: Modifier,
         accountViewModel: AccountViewModel,
-    ) {}
-
-    @Composable
-    fun RenderVoiceTrack(
-        note: Note,
-        accountViewModel: AccountViewModel,
-        nav: INav,
-    ) {}
-
-    @Composable
-    fun RenderAudioFromIMeta(
-        note: Note,
-        accountViewModel: AccountViewModel,
-        nav: INav,
     ) {}
 
     @Composable

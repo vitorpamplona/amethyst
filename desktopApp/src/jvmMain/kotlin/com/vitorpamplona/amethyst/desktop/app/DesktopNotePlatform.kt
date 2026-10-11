@@ -21,7 +21,9 @@
 package com.vitorpamplona.amethyst.desktop.app
 
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
@@ -67,6 +69,7 @@ import com.vitorpamplona.amethyst.commons.richtext.MediaLocalVideo
 import com.vitorpamplona.amethyst.commons.richtext.MediaUrlContent
 import com.vitorpamplona.amethyst.commons.richtext.MediaUrlPdf
 import com.vitorpamplona.amethyst.commons.richtext.MediaUrlVideo
+import com.vitorpamplona.amethyst.commons.richtext.RichTextParser
 import com.vitorpamplona.amethyst.commons.richtext.isAnimatedGifUrl
 import com.vitorpamplona.amethyst.commons.ui.components.UrlCachedPreviewer
 import com.vitorpamplona.amethyst.commons.ui.components.UrlPreviewState
@@ -75,6 +78,7 @@ import com.vitorpamplona.amethyst.commons.ui.components.pdf.PdfViewerContent
 import com.vitorpamplona.amethyst.commons.ui.components.rememberZoomTransition
 import com.vitorpamplona.amethyst.commons.ui.components.urlPreview
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
+import com.vitorpamplona.amethyst.commons.ui.note.elements.DisplayUncitedHashtags
 import com.vitorpamplona.amethyst.commons.ui.note.platform.NotePlatform
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.Size20Modifier
@@ -88,6 +92,7 @@ import com.vitorpamplona.amethyst.desktop.ui.media.DesktopVideoPlayer
 import com.vitorpamplona.amethyst.desktop.ui.media.LightboxOverlay
 import com.vitorpamplona.amethyst.desktop.ui.media.PodcastEpisodePlayer
 import com.vitorpamplona.amethyst.desktop.ui.media.SaveMediaAction
+import com.vitorpamplona.quartz.nip01Core.tags.hashtags.hasHashtags
 import com.vitorpamplona.quartz.nip94FileMetadata.tags.DimensionTag
 import com.vitorpamplona.quartz.podcasts.PodcastAudio
 import kotlinx.collections.immutable.ImmutableList
@@ -373,7 +378,14 @@ object DesktopNotePlatform : NotePlatform {
         note: Note,
         accountViewModel: AccountViewModel,
         nav: INav,
-    ) = AudioPlayer(url = mediaUrl, modifier = Modifier.fillMaxWidth())
+    ) {
+        Column(Modifier.fillMaxWidth()) {
+            AudioPlayer(url = mediaUrl, modifier = Modifier.fillMaxWidth())
+            note.event?.let { event ->
+                if (event.hasHashtags()) DisplayUncitedHashtags(event, note.toNostrUri(), accountViewModel, nav)
+            }
+        }
+    }
 
     @Composable
     override fun MusicTrackAudioPlayer(
@@ -385,25 +397,52 @@ object DesktopNotePlatform : NotePlatform {
         accountViewModel: AccountViewModel,
     ) = AudioPlayer(url = audioUrl, modifier = borderModifier.fillMaxWidth())
 
+    /**
+     * An audio file has no picture for the video frame to show, so it is its cover (when it has
+     * one) over the audio player; anything else is a video. [waveform] has no desktop drawing:
+     * the audio player's own progress bar stands in for it.
+     */
     @Composable
-    override fun MusicTrackVideoPlayer(
-        videoUrl: String,
+    override fun NoteMediaView(
+        mediaUri: String,
         title: String?,
-        image: String?,
+        coverUri: String?,
+        waveform: WaveformData?,
+        contentScale: ContentScale,
         note: Note,
         accountViewModel: AccountViewModel,
-    ) = VideoView(
-        videoUri = videoUrl,
-        mimeType = null,
-        title = title,
-        artworkUri = image,
-        authorName = note.author?.toBestDisplayName(),
-        roundedCorner = true,
-        contentScale = ContentScale.FillWidth,
-        nostrUriCallback = note.toNostrUri(),
-        isLiveStream = false,
-        accountViewModel = accountViewModel,
-    )
+    ) {
+        if (RichTextParser.isAudioUrl(mediaUri)) {
+            Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(Size5dp)) {
+                coverUri?.let {
+                    AsyncImage(
+                        model = it,
+                        contentDescription = title,
+                        contentScale = contentScale,
+                        modifier =
+                            Modifier
+                                .fillMaxWidth()
+                                .heightIn(max = MaxInlineMediaHeight)
+                                .clip(RoundedCornerShape(12.dp)),
+                    )
+                }
+                AudioPlayer(url = mediaUri, modifier = Modifier.fillMaxWidth())
+            }
+        } else {
+            VideoView(
+                videoUri = mediaUri,
+                mimeType = null,
+                title = title,
+                artworkUri = coverUri,
+                authorName = note.author?.toBestDisplayName(),
+                roundedCorner = true,
+                contentScale = contentScale,
+                nostrUriCallback = note.toNostrUri(),
+                isLiveStream = false,
+                accountViewModel = accountViewModel,
+            )
+        }
+    }
 
     @Composable
     override fun PodcastEpisodeAudioPlayer(

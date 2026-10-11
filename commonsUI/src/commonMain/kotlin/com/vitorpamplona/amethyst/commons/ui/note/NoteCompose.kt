@@ -126,8 +126,6 @@ import com.vitorpamplona.amethyst.commons.ui.note.elements.StaleRelayHint
 import com.vitorpamplona.amethyst.commons.ui.note.elements.TimeAgo
 import com.vitorpamplona.amethyst.commons.ui.note.elements.TimeAgoStyle
 import com.vitorpamplona.amethyst.commons.ui.note.formatDateTime
-import com.vitorpamplona.amethyst.commons.ui.note.platform.RenderAudioHeader
-import com.vitorpamplona.amethyst.commons.ui.note.platform.RenderAudioTrack
 import com.vitorpamplona.amethyst.commons.ui.note.platform.RenderGitIssueEvent
 import com.vitorpamplona.amethyst.commons.ui.note.platform.RenderGitPatchEvent
 import com.vitorpamplona.amethyst.commons.ui.note.platform.RenderGitPullRequestEvent
@@ -140,7 +138,6 @@ import com.vitorpamplona.amethyst.commons.ui.note.platform.RenderNamedNappletEve
 import com.vitorpamplona.amethyst.commons.ui.note.platform.RenderNamedSiteEvent
 import com.vitorpamplona.amethyst.commons.ui.note.platform.RenderRootNappletEvent
 import com.vitorpamplona.amethyst.commons.ui.note.platform.RenderRootSiteEvent
-import com.vitorpamplona.amethyst.commons.ui.note.platform.RenderVoiceTrack
 import com.vitorpamplona.amethyst.commons.ui.note.timeAheadNoDot
 import com.vitorpamplona.amethyst.commons.ui.note.types.BadgeDisplay
 import com.vitorpamplona.amethyst.commons.ui.note.types.DisplayBlockedRelayList
@@ -167,6 +164,8 @@ import com.vitorpamplona.amethyst.commons.ui.note.types.RenderAttestation
 import com.vitorpamplona.amethyst.commons.ui.note.types.RenderAttestationRequest
 import com.vitorpamplona.amethyst.commons.ui.note.types.RenderAttestorProficiency
 import com.vitorpamplona.amethyst.commons.ui.note.types.RenderAttestorRecommendation
+import com.vitorpamplona.amethyst.commons.ui.note.types.RenderAudioHeader
+import com.vitorpamplona.amethyst.commons.ui.note.types.RenderAudioTrack
 import com.vitorpamplona.amethyst.commons.ui.note.types.RenderBadgeAward
 import com.vitorpamplona.amethyst.commons.ui.note.types.RenderBallot
 import com.vitorpamplona.amethyst.commons.ui.note.types.RenderBlossomAuth
@@ -251,6 +250,7 @@ import com.vitorpamplona.amethyst.commons.ui.note.types.RenderTorrent
 import com.vitorpamplona.amethyst.commons.ui.note.types.RenderTorrentComment
 import com.vitorpamplona.amethyst.commons.ui.note.types.RenderVideoCollaboration
 import com.vitorpamplona.amethyst.commons.ui.note.types.RenderVideoCurationSet
+import com.vitorpamplona.amethyst.commons.ui.note.types.RenderVoiceTrack
 import com.vitorpamplona.amethyst.commons.ui.note.types.RenderWikiContent
 import com.vitorpamplona.amethyst.commons.ui.note.types.RenderWikiMergeAcceptance
 import com.vitorpamplona.amethyst.commons.ui.note.types.RenderWikiMergeRequest

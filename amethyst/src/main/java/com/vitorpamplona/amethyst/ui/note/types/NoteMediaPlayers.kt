@@ -29,6 +29,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.unit.dp
+import com.vitorpamplona.amethyst.commons.audio.WaveformData
 import com.vitorpamplona.amethyst.commons.audio.syntheticWaveformFor
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
@@ -94,36 +95,43 @@ fun MusicTrackAudioPlayer(
     }
 }
 
-/** Android's music video: the full video player, with the album cover as its thumb when there is one. */
+/**
+ * Android's NoteMediaView: the full video player, with [coverUri] as its thumb when there is one,
+ * and [waveform]'s bars over an audio file that has them.
+ */
 @Composable
-fun MusicTrackVideoPlayer(
-    videoUrl: String,
+fun NoteMediaView(
+    mediaUri: String,
     title: String?,
-    image: String?,
+    coverUri: String?,
+    waveform: WaveformData?,
+    contentScale: ContentScale,
     note: Note,
     accountViewModel: AccountViewModel,
 ) {
-    if (image != null) {
+    val callbackUri = remember(note) { note.toNostrUri() }
+    if (coverUri != null) {
         LoadThumbAndThenVideoView(
-            videoUri = videoUrl,
+            videoUri = mediaUri,
             mimeType = null,
             title = title,
-            thumbUri = image,
+            thumbUri = coverUri,
             authorName = note.author?.toBestDisplayName(),
             roundedCorner = true,
-            contentScale = ContentScale.FillWidth,
-            nostrUriCallback = "nostr:${note.toNEvent()}",
+            contentScale = contentScale,
+            nostrUriCallback = callbackUri,
             accountViewModel = accountViewModel,
         )
     } else {
         VideoView(
-            videoUri = videoUrl,
+            videoUri = mediaUri,
             mimeType = null,
             title = title,
+            waveform = waveform,
             authorName = note.author?.toBestDisplayName(),
             roundedCorner = true,
-            contentScale = ContentScale.FillWidth,
-            nostrUriCallback = "nostr:${note.toNEvent()}",
+            contentScale = contentScale,
+            nostrUriCallback = callbackUri,
             accountViewModel = accountViewModel,
         )
     }

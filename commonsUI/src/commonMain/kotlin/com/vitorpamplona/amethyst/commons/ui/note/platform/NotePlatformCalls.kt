@@ -180,19 +180,6 @@ fun LoadCityName(
 )
 
 @Composable
-fun RenderAudioTrack(
-    note: Note,
-    contentScale: ContentScale,
-    accountViewModel: AccountViewModel,
-    nav: INav,
-) = LocalNotePlatform.current.RenderAudioTrack(
-    note = note,
-    contentScale = contentScale,
-    accountViewModel = accountViewModel,
-    nav = nav,
-)
-
-@Composable
 fun MusicTrackAudioPlayer(
     audioUrl: String,
     mimeType: String?,
@@ -210,16 +197,20 @@ fun MusicTrackAudioPlayer(
 )
 
 @Composable
-fun MusicTrackVideoPlayer(
-    videoUrl: String,
+fun NoteMediaView(
+    mediaUri: String,
     title: String?,
-    image: String?,
+    coverUri: String?,
+    waveform: WaveformData?,
+    contentScale: ContentScale,
     note: Note,
     accountViewModel: AccountViewModel,
-) = LocalNotePlatform.current.MusicTrackVideoPlayer(
-    videoUrl = videoUrl,
+) = LocalNotePlatform.current.NoteMediaView(
+    mediaUri = mediaUri,
     title = title,
-    image = image,
+    coverUri = coverUri,
+    waveform = waveform,
+    contentScale = contentScale,
     note = note,
     accountViewModel = accountViewModel,
 )
@@ -239,28 +230,6 @@ fun PodcastEpisodeAudioPlayer(
     image = image,
     borderModifier = borderModifier,
     accountViewModel = accountViewModel,
-)
-
-@Composable
-fun RenderVoiceTrack(
-    note: Note,
-    accountViewModel: AccountViewModel,
-    nav: INav,
-) = LocalNotePlatform.current.RenderVoiceTrack(
-    note = note,
-    accountViewModel = accountViewModel,
-    nav = nav,
-)
-
-@Composable
-fun RenderAudioFromIMeta(
-    note: Note,
-    accountViewModel: AccountViewModel,
-    nav: INav,
-) = LocalNotePlatform.current.RenderAudioFromIMeta(
-    note = note,
-    accountViewModel = accountViewModel,
-    nav = nav,
 )
 
 @Composable
@@ -487,11 +456,3 @@ fun rememberUrlPreviewState(
     url: String,
     accountViewModel: AccountViewModel,
 ): UrlPreviewState = LocalNotePlatform.current.rememberUrlPreviewState(url, accountViewModel)
-
-@Composable
-fun RenderAudioHeader(
-    note: Note,
-    contentScale: ContentScale,
-    accountViewModel: AccountViewModel,
-    nav: INav,
-) = LocalNotePlatform.current.RenderAudioHeader(note, contentScale, accountViewModel, nav)
