@@ -22,6 +22,7 @@ package com.vitorpamplona.quartz.nip01Core.relay.client.pool
 
 import com.vitorpamplona.quartz.nip01Core.relay.client.testing.FakeRelayClient
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.ClosedMessage
+import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.EoseMessage
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toRelay.Command
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toRelay.ReqCmd
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
@@ -86,6 +87,40 @@ class PoolRequestsBackOffTest {
             pool.addOrUpdate("sub", mapOf(relay to filter(1)), null)
             pool.sendToRelayIfChanged("sub", setOf(relay)) { _, cmd -> back.add(cmd) }
             assertEquals(listOf(1), (back.single() as ReqCmd).filters.single().kinds)
+        }
+
+    @Test
+    fun aClosedThatBeatsTheSendReportIsNotErased() =
+        runTest {
+            // A fast relay answers before the transport reports the send: the CLOSED is handled
+            // first, then onSent. The retry its back-off scheduled must still find it CLOSED.
+            val pool = PoolRequests()
+            pool.addOrUpdate("sub", mapOf(relay to filter(1)), null)
+            val req = sync(pool).single()
+            pool.onIncomingMessage(FakeRelayClient(relay), ClosedMessage("sub", "rate-limited: slow down", "500"))
+            pool.onSent(relay, req)
+
+            val retried = mutableListOf<Command>()
+            assertTrue(pool.retryRateLimited(relay, setOf("sub")) { retried.add(it) })
+            assertEquals(1, retried.size)
+        }
+
+    @Test
+    fun anEoseThatBeatsTheSendReportKeepsTheSubLive() =
+        runTest {
+            val pool = PoolRequests()
+            pool.addOrUpdate("sub", mapOf(relay to filter(1)), null)
+            val req = sync(pool).single()
+            val socket = FakeRelayClient(relay)
+            pool.onIncomingMessage(socket, EoseMessage("sub"))
+            pool.onSent(relay, req)
+
+            // Still LIVE, so a filter change goes out at once instead of waiting on an EOSE
+            // that already came.
+            pool.addOrUpdate("sub", mapOf(relay to filter(7)), null)
+            val sent = mutableListOf<Command>()
+            pool.sendToRelayIfChanged("sub", setOf(relay)) { _, cmd -> sent.add(cmd) }
+            assertEquals(listOf(7), (sent.single() as ReqCmd).filters.single().kinds)
         }
 
     @Test

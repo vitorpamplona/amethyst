@@ -201,6 +201,24 @@ class RequestSubscriptionState<T : Any> {
         state.lastKnownFilters = filters
     }
 
+    /**
+     * The REQ for [filters] left the socket. Both send paths pre-mark the row with [onOpenReq]
+     * before the frame goes, so this only records the filters: a fast relay's EOSE or CLOSED
+     * can be handled before the transport reports the send, and re-marking SENT here would
+     * erase it — leaving a LIVE sub looking in flight forever, or a CLOSED one invisible to
+     * the retry its back-off scheduled. The status is set only when nothing marked it (a
+     * reconnect wiped the row between the pre-mark and the send).
+     */
+    fun onReqSent(
+        reference: T,
+        filters: List<Filter>,
+    ) {
+        val state = mutable(reference)
+        if (state.status == null) state.status = ReqSubStatus.SENT
+        state.filters = filters
+        state.lastKnownFilters = filters
+    }
+
     fun onSubscriptionClosed(reference: T) {
         val state = mutable(reference)
         state.status = ReqSubStatus.CLOSED

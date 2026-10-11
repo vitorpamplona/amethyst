@@ -242,7 +242,7 @@ class PoolRequests(
                 // the sub was unsubscribed while the frame was in flight -- recreating
                 // the row would resurrect a dead subscription in the registry.
                 relayState.get(cmd.subId)?.let { state ->
-                    state.withLock(relay) { state.onOpenReq(relay, cmd.filters) }
+                    state.withLock(relay) { state.onReqSent(relay, cmd.filters) }
                 }
                 desiredSubListeners.get(cmd.subId)?.onSubscriptionStarted(
                     relay = relay.url,
