@@ -231,7 +231,7 @@ private fun NewProductBody(
                 )
             }
 
-            DisplayPreviews(postViewModel.urlPreviews, accountViewModel, nav)
+            DisplayPreviews(postViewModel.urlPreviews, postViewModel.iMetaDescription, accountViewModel, nav)
 
             if (postViewModel.wantsToMarkAsSensitive) {
                 Row(

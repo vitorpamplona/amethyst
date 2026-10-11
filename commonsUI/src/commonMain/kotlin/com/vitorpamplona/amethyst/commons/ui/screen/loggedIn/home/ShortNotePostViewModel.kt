@@ -1388,6 +1388,7 @@ open class ShortNotePostViewModel :
 
         val emojis = account.emoji.findEmojiTags(tagger.message)
         val urls = findURLs(tagger.message)
+        iMetaAttachments.awaitLinkedImages()
         val usedAttachments = iMetaAttachments.filterIsIn(urls.toSet())
 
         val contentWarningReason = if (wantsToMarkAsSensitive) contentWarningDescription else null

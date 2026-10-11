@@ -228,7 +228,7 @@ fun PublicMessageScreenContent(
                     },
                 )
 
-                DisplayPreviews(postViewModel.urlPreviews, accountViewModel, nav)
+                DisplayPreviews(postViewModel.urlPreviews, postViewModel.iMetaAttachments, accountViewModel, nav)
 
                 if (postViewModel.wantsToMarkAsSensitive) {
                     ContentSensitivityExplainer(
