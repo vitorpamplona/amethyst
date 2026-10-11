@@ -65,7 +65,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import kotlinx.coroutines.withTimeout
+import kotlinx.coroutines.withTimeoutOrNull
 
 val EMAIL_PATTERN = Regex(".+@.+\\.[a-z]+")
 
@@ -226,10 +226,12 @@ class AccountSessionManager(
         val uriData = NostrConnectLoginUseCase.generateUri(transport, relays, appName)
         onUri(uriData.uri)
 
+        // Not withTimeout: its TimeoutCancellationException reads as a cancellation, so the
+        // login screen would close the address without saying why.
         val result =
-            withTimeout(NostrConnectLoginUseCase.NOSTRCONNECT_TIMEOUT_MS) {
+            withTimeoutOrNull(NostrConnectLoginUseCase.NOSTRCONNECT_TIMEOUT_MS) {
                 NostrConnectLoginUseCase.awaitAndLogin(uriData, clientBuilder())
-            }
+            } ?: throw Exception("No signer answered the connection request in time")
         result.signer.closeSubscription()
 
         val bunkerUri = BUNKER_URI_PREFIX + result.signer.remotePubkey + "?" + uriData.relays.joinToString("&") { "relay=${it.url}" }

@@ -25,7 +25,7 @@ import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerInternal
 import com.vitorpamplona.quartz.nip46RemoteSigner.BunkerClientMetadata
 import com.vitorpamplona.quartz.nip46RemoteSigner.signer.NostrSignerRemote
 import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.withTimeout
+import kotlinx.coroutines.withTimeoutOrNull
 
 object BunkerLoginUseCase {
     const val RELAY_CONNECT_TIMEOUT_MS = 15_000L
@@ -39,15 +39,25 @@ object BunkerLoginUseCase {
         val remoteSigner = NostrSignerRemote.fromBunkerUri(bunkerUri, ephemeralSigner, client, clientMetadata = clientMetadata)
         remoteSigner.openSubscription()
 
-        // Wait for websocket to be ready before sending connect request
-        withTimeout(RELAY_CONNECT_TIMEOUT_MS) {
+        // Wait for websocket to be ready before sending connect request. Not withTimeout: its
+        // TimeoutCancellationException reads as a cancellation to callers, who rethrow it, so
+        // the login screen never learns the attempt is over and keeps spinning.
+        withTimeoutOrNull(RELAY_CONNECT_TIMEOUT_MS) {
             client.connectedRelaysFlow().first { connected ->
                 remoteSigner.relays.any { it in connected }
             }
+        } ?: run {
+            remoteSigner.closeSubscription()
+            throw Exception("Could not reach the signer's relays: ${remoteSigner.relays.joinToString { it.url }}")
         }
 
-        remoteSigner.connect()
-        val pubkey = remoteSigner.getPublicKey()
-        return BunkerLoginResult(remoteSigner, pubkey)
+        try {
+            remoteSigner.connect()
+            val pubkey = remoteSigner.getPublicKey()
+            return BunkerLoginResult(remoteSigner, pubkey)
+        } catch (e: Exception) {
+            remoteSigner.closeSubscription()
+            throw e
+        }
     }
 }

@@ -40,7 +40,7 @@ import com.vitorpamplona.quartz.utils.Hex
 import com.vitorpamplona.quartz.utils.SecureRandom
 import com.vitorpamplona.quartz.utils.TimeUtils
 import kotlinx.coroutines.CompletableDeferred
-import kotlinx.coroutines.withTimeout
+import kotlinx.coroutines.withTimeoutOrNull
 
 object NostrConnectLoginUseCase {
     const val NOSTRCONNECT_TIMEOUT_MS = 120_000L
@@ -140,10 +140,12 @@ object NostrConnectLoginUseCase {
             }
 
         try {
+            // Not withTimeout: its TimeoutCancellationException reads as a cancellation to
+            // callers, so the login screen would never show that the wait ended.
             val event =
-                withTimeout(NOSTRCONNECT_TIMEOUT_MS) {
+                withTimeoutOrNull(NOSTRCONNECT_TIMEOUT_MS) {
                     deferred.await()
-                }
+                } ?: throw Exception("No signer answered the connection request in time")
 
             val signerPubkey = event.talkingWith(ephemeralSigner.pubKey)
             val decryptedJson = ephemeralSigner.decrypt(event.content, signerPubkey)

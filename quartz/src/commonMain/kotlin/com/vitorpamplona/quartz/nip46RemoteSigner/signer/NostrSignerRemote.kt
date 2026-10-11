@@ -40,10 +40,10 @@ import com.vitorpamplona.quartz.nip46RemoteSigner.BunkerRequestNip44Encrypt
 import com.vitorpamplona.quartz.nip46RemoteSigner.BunkerRequestPing
 import com.vitorpamplona.quartz.nip46RemoteSigner.BunkerRequestSign
 import com.vitorpamplona.quartz.nip46RemoteSigner.NostrConnectEvent
+import com.vitorpamplona.quartz.nip46RemoteSigner.NostrConnectURI
 import com.vitorpamplona.quartz.nip57Zaps.PrivateZapEvent
 import com.vitorpamplona.quartz.nip57Zaps.PrivateZapRequestBuilder
 import com.vitorpamplona.quartz.nip57Zaps.ZapRequestEvent
-import com.vitorpamplona.quartz.utils.Hex
 import com.vitorpamplona.quartz.utils.Log
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -386,30 +386,18 @@ class NostrSignerRemote(
             permissions: String? = null,
             clientMetadata: BunkerClientMetadata? = null,
         ): NostrSignerRemote {
-            if (!bunkerUri.startsWith("bunker://")) throw Exception("Invalid bunker uri")
-            val splitData = bunkerUri.split("?")
-            val remotePubkey = splitData[0].removePrefix("bunker://")
-            if (!Hex.isHex(remotePubkey)) throw Exception("Invalid pubkey in bunker uri")
-            val params = splitData[1].split("&")
-            val relays = mutableSetOf<NormalizedRelayUrl>()
-            var secret: String? = null
-            for (param in params) {
-                val splitParam = param.split("=")
-                if (splitParam.size < 2) continue
-                if (splitParam.first() == "relay") {
-                    relays.add(NormalizedRelayUrl(splitParam[1]))
-                }
-                if (splitParam.first() == "secret") {
-                    secret = splitParam[1]
-                }
-            }
+            if (!bunkerUri.startsWith(NostrConnectURI.BUNKER_SCHEME)) throw Exception("Invalid bunker uri")
+            // Percent-decodes the values: signers built on the `url` crate (Opal, nak) send
+            // `relay=wss%3A%2F%2F…`, which read raw is no relay at all.
+            val parsed = NostrConnectURI.parseBunker(bunkerUri) ?: throw Exception("Invalid pubkey in bunker uri")
+            if (parsed.relays.isEmpty()) throw Exception("No relay in bunker uri")
             return NostrSignerRemote(
                 signer = signer,
-                remotePubkey = remotePubkey,
-                relays = relays,
+                remotePubkey = parsed.remoteSignerPubKey.lowercase(),
+                relays = parsed.relays,
                 client = client,
                 permissions = permissions,
-                secret = secret,
+                secret = parsed.secret,
                 clientMetadata = clientMetadata,
             )
         }
