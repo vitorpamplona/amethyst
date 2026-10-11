@@ -215,6 +215,25 @@ class RateLimitWireTest {
     }
 
     @Test
+    fun ipv6ClientsShareTheAllowanceOfTheirSlash64() {
+        val relay =
+            geode(
+                rateLimitsToml(
+                    eventsPerMinute = 60,
+                    eventBurst = 1,
+                    extra = "[http]\ntrusted_proxies = [\"127.0.0.1\"]",
+                ),
+            )
+        val first = socket(relay, mapOf("X-Forwarded-For" to "2001:db8:0:1::10"))
+        assertTrue(first.publish().success)
+        // Another address in the same /64: the same host, rotating.
+        val rotated = socket(relay, mapOf("X-Forwarded-For" to "2001:db8:0:1:dead:beef:0:1"))
+        assertEquals(false, rotated.publish().success)
+        val neighbour = socket(relay, mapOf("X-Forwarded-For" to "2001:db8:0:2::10"))
+        assertTrue(neighbour.publish().success)
+    }
+
+    @Test
     fun anUntrustedPeersForwardingHeaderIsIgnored() {
         val relay = geode(rateLimitsToml(eventsPerMinute = 60, eventBurst = 1))
         val first = socket(relay, mapOf("X-Forwarded-For" to "203.0.113.7"))

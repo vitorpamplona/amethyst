@@ -193,6 +193,26 @@ class RateLimitPolicyTest {
     }
 
     @Test
+    fun ipv6ClientsAreCountedByTheirSlash64() {
+        assertIs<PolicyResult.Accepted<*>>(connect("2001:db8:0:1::1", 1).accept(EventCmd(event)))
+        assertRateLimited(connect("2001:db8:0:1:ffff:ffff:ffff:fffe", 2).accept(EventCmd(event)), 1_000)
+        assertIs<PolicyResult.Accepted<*>>(connect("2001:db8:0:2::1", 3).accept(EventCmd(event)))
+    }
+
+    @Test
+    fun clientKeys() {
+        assertEquals("203.0.113.7", RateLimitPolicy.clientKeyOf("203.0.113.7"))
+        assertEquals("2001:db8:0:1::/64", RateLimitPolicy.clientKeyOf("2001:0DB8:0000:0001:0:0:0:1"))
+        assertEquals("2001:db8:0:1::/64", RateLimitPolicy.clientKeyOf("[2001:db8:0:1::42]"))
+        assertEquals("fe80:0:0:0::/64", RateLimitPolicy.clientKeyOf("fe80::1%eth0"))
+        assertEquals("0:0:0:0::/64", RateLimitPolicy.clientKeyOf("::1"))
+        assertEquals("203.0.113.7", RateLimitPolicy.clientKeyOf("::ffff:203.0.113.7"))
+        // Not an address we can read: counted as written, never dropped.
+        assertEquals("2001:db8::1::2", RateLimitPolicy.clientKeyOf("2001:db8::1::2"))
+        assertEquals("1:2:3:4:5:6:7", RateLimitPolicy.clientKeyOf("1:2:3:4:5:6:7"))
+    }
+
+    @Test
     fun aNullLimiterLeavesThatTypeOpen() {
         val policy = RateLimitPolicy(events = null, reqs = reqs)
         repeat(5) { assertIs<PolicyResult.Accepted<*>>(policy.accept(EventCmd(event))) }

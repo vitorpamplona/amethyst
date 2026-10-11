@@ -21,9 +21,11 @@
 package com.vitorpamplona.quartz.nip01Core.relay.client.pool
 
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
+import com.vitorpamplona.quartz.utils.Log
 import com.vitorpamplona.quartz.utils.TimeUtils
 import com.vitorpamplona.quartz.utils.concurrent.PlatformLock
 import com.vitorpamplona.quartz.utils.concurrent.withLock
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -56,7 +58,13 @@ import kotlinx.coroutines.launch
 class RateLimitRetries(
     private val scope: CoroutineScope,
     private val maxDelayMs: Long = MAX_DELAY_MS,
-    private val onDue: (relay: NormalizedRelayUrl, keys: Set<String>) -> Unit,
+    private val clock: () -> Long = TimeUtils::nowMillis,
+    /**
+     * Sends [key] to [relay] now that its turn came, and says whether anything went out. A key
+     * whose command moved on meanwhile (unsubscribed, delivered, already re-sent) sends nothing,
+     * and then the next key goes at once instead of waiting out a slot nobody used.
+     */
+    private val onDue: (relay: NormalizedRelayUrl, key: String) -> Boolean,
 ) {
     private class Batch(
         var dueAtMs: Long,
@@ -102,7 +110,7 @@ class RateLimitRetries(
         delayMs: Long,
     ): Boolean {
         if (delayMs <= 0 || delayMs > maxDelayMs) return false
-        val dueAt = TimeUtils.nowMillis() + delayMs
+        val dueAt = clock() + delayMs
         val newBatch =
             lock.withLock {
                 val batch = batches[relay]
@@ -153,10 +161,11 @@ class RateLimitRetries(
             // The deadline can move later while we sleep (a newer refusal named a longer
             // back-off), so re-read it after every wait and only release once it truly passed.
             var due: String? = null
+            var nextAt = 0L
             val waitMs =
                 lock.withLock {
                     if (batches[relay] !== batch) return
-                    val now = TimeUtils.nowMillis()
+                    val now = clock()
                     val left = batch.dueAtMs - now
                     if (left <= 0) {
                         due = batch.removeFirst()
@@ -164,14 +173,31 @@ class RateLimitRetries(
                         if (batch.isEmpty()) {
                             batches.remove(relay)
                         } else {
-                            batch.dueAtMs = now + batch.spacing()
+                            nextAt = now + batch.spacing()
+                            batch.dueAtMs = nextAt
                         }
                     }
                     left
                 }
             val key = due
             if (key != null) {
-                onDue(relay, setOf(key))
+                // A failure here must not end the loop: the batch would stay registered with
+                // nobody draining it, and every later command to this relay would be deferred
+                // into it forever.
+                val sent =
+                    try {
+                        onDue(relay, key)
+                    } catch (e: CancellationException) {
+                        throw e
+                    } catch (e: Exception) {
+                        Log.w("RateLimitRetries", "Failed to re-send $key to ${relay.url}", e)
+                        false
+                    }
+                if (!sent) {
+                    // Nothing used this slot: release the next key now, unless a refusal that
+                    // landed meanwhile moved the deadline.
+                    lock.withLock { if (batches[relay] === batch && batch.dueAtMs == nextAt) batch.dueAtMs = clock() }
+                }
             } else {
                 delay(waitMs)
             }

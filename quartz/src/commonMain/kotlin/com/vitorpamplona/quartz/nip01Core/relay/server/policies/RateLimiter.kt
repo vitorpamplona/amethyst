@@ -74,7 +74,9 @@ class RateLimiter(
      * returns the milliseconds until it will have one (always at least 1).
      */
     fun acquire(client: String): Long {
-        if (sinceSweep.incrementAndFetch() >= SWEEP_EVERY) sweep()
+        // One sweeper at a time: whoever resets the counter does it.
+        val count = sinceSweep.incrementAndFetch()
+        if (count >= SWEEP_EVERY && sinceSweep.compareAndSet(count, 0)) sweep()
         val now = clock()
         val bucket = buckets.getOrPut(client) { Bucket(burst.toDouble(), now) }
         return bucket.lock.withLock {
@@ -97,7 +99,6 @@ class RateLimiter(
 
     /** Drops every bucket that has been idle long enough to be full again. */
     fun sweep() {
-        sinceSweep.store(0)
         val now = clock()
         buckets.snapshot().forEach { (client, bucket) ->
             val idle = bucket.lock.withLock { now - bucket.updatedAtMs >= fullAfterMs }

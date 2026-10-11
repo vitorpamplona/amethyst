@@ -241,18 +241,21 @@ class PoolEventOutbox {
     /**
      * Re-sends the events of [eventIds] that [relay] refused as `rate-limited:` with a back-off,
      * now that the back-off has passed. Events already delivered, given up on, or no longer
-     * meant for [relay] are skipped.
+     * meant for [relay] are skipped. Returns whether any EVENT went out.
      */
     fun retryRateLimited(
         relay: NormalizedRelayUrl,
         eventIds: Set<HexKey>,
         sync: (Command) -> Unit,
-    ) {
+    ): Boolean {
+        var sent = false
         eventIds.forEach { id ->
             eventOutbox.get(id)?.forEachUnsentEvent(relay) {
                 sync(EventCmd(it))
+                sent = true
             }
         }
+        return sent
     }
 
     /** Returns the event if this send attempt made us give up delivering it to [relay]. */

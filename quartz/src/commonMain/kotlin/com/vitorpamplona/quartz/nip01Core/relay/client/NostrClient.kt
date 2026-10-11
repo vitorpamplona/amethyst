@@ -115,18 +115,14 @@ class NostrClient(
      * subscription anyway.
      */
     private val reqRetries =
-        RateLimitRetries(scope) { relay, subIds ->
-            if (isActive()) {
-                activeRequests.retryRateLimited(relay, subIds) { cmd -> relayPool.sendOrConnectAndSync(relay, cmd) }
-            }
+        RateLimitRetries(scope) { relay, subId ->
+            isActive() && activeRequests.retryRateLimited(relay, setOf(subId)) { cmd -> relayPool.sendOrConnectAndSync(relay, cmd) }
         }
 
     /** EVENTs a relay refused as `rate-limited:` with a NIP-01 back-off, re-sent once it passes. */
     private val eventRetries =
-        RateLimitRetries(scope) { relay, eventIds ->
-            if (isActive()) {
-                eventOutbox.retryRateLimited(relay, eventIds) { cmd -> relayPool.sendOrConnectAndSync(relay, cmd) }
-            }
+        RateLimitRetries(scope) { relay, eventId ->
+            isActive() && eventOutbox.retryRateLimited(relay, setOf(eventId)) { cmd -> relayPool.sendOrConnectAndSync(relay, cmd) }
         }
 
     private var listeners = setOf<RelayConnectionListener>()
@@ -479,7 +475,15 @@ class NostrClient(
         // NIP-01: a `rate-limited:` refusal may say how long to back off. Ask again once it
         // passes; without one, the refused REQ or EVENT stays parked as before.
         when (msg) {
-            is ClosedMessage -> msg.retryAfterMs?.let { reqRetries.schedule(relay.url, msg.subId, it) }
+            // A CLOSED answers a REQ or a COUNT, and the back-off covers the type it answered.
+            // COUNTs are one-shot and not re-sent, so theirs must not hold back the REQs.
+            is ClosedMessage -> {
+                val backOff = msg.retryAfterMs
+                if (backOff != null && activeCounts.getSubscriptionFiltersOrNull(msg.subId) == null) {
+                    reqRetries.schedule(relay.url, msg.subId, backOff)
+                }
+            }
+
             is OkMessage -> if (!msg.success) msg.retryAfterMs?.let { eventRetries.schedule(relay.url, msg.eventId, it) }
             else -> {}
         }

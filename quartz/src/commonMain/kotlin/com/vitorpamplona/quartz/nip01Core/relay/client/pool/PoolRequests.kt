@@ -394,13 +394,14 @@ class PoolRequests(
      * that the back-off has passed. A CLOSED sub keeps its filters so it is not re-sent on its
      * own (see [RequestSubscriptionState.onClosed]); this forgets them so the current desired
      * filters go out again. A sub that moved on in the meantime — re-sent after a filter change,
-     * a reconnect, or dropped from this relay — is left alone.
+     * a reconnect, or dropped from this relay — is left alone. Returns whether any REQ went out.
      */
     fun retryRateLimited(
         relay: NormalizedRelayUrl,
         subIds: Set<String>,
         sync: (Command) -> Unit,
-    ) {
+    ): Boolean {
+        var sent = false
         subIds.forEach { subId ->
             val cmd =
                 relayState.get(subId)?.let { state ->
@@ -413,8 +414,12 @@ class PoolRequests(
                         }
                     }
                 }
-            if (cmd is ReqCmd) sync(cmd)
+            if (cmd is ReqCmd) {
+                sync(cmd)
+                sent = true
+            }
         }
+        return sent
     }
 
     /**

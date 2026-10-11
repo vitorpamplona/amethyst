@@ -24,6 +24,7 @@ import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.crypto.KeyPair
 import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.publishAndCollectResults
 import com.vitorpamplona.quartz.nip01Core.relay.client.reqs.SubscriptionListener
+import com.vitorpamplona.quartz.nip01Core.relay.commands.toRelay.CountCmd
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toRelay.EventCmd
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toRelay.ReqCmd
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
@@ -65,9 +66,12 @@ class RateLimitRetryAfterTest {
     private class Relay(
         val backOffMs: Long?,
         val refuseFirst: Int = 1,
+        /** COUNTs refused before one is answered; REQs and EVENTs then go by [refuseFirst]. */
+        val refuseCounts: Int = 0,
     ) : AutoCloseable {
         val reqs = AtomicInteger(0)
         val events = AtomicInteger(0)
+        val counts = AtomicInteger(0)
 
         private val server =
             NostrServer(
@@ -76,6 +80,13 @@ class RateLimitRetryAfterTest {
                     object : PassThroughPolicy() {
                         override fun accept(cmd: ReqCmd): PolicyResult<ReqCmd> =
                             if (reqs.incrementAndGet() <= refuseFirst) {
+                                PolicyResult.Rejected.rateLimited("slow down there chief", backOffMs)
+                            } else {
+                                PolicyResult.Accepted(cmd)
+                            }
+
+                        override fun accept(cmd: CountCmd): PolicyResult<CountCmd> =
+                            if (counts.incrementAndGet() <= refuseCounts) {
                                 PolicyResult.Rejected.rateLimited("slow down there chief", backOffMs)
                             } else {
                                 PolicyResult.Accepted(cmd)
@@ -187,6 +198,20 @@ class RateLimitRetryAfterTest {
                 assertTrue(first.await().accepted)
                 assertTrue(second.await().accepted)
                 assertEquals(3, relay.events.get())
+            }
+        }
+
+    @Test
+    fun aCountsBackOffDoesNotHoldBackReqs() =
+        runBlocking {
+            Relay(backOffMs = 5_000, refuseFirst = 0, refuseCounts = 1).use { relay ->
+                relay.client.count("c", mapOf(url to listOf(Filter(kinds = listOf(1)))))
+                withTimeout(5_000) { while (relay.counts.get() < 1) delay(10) }
+                delay(100)
+
+                val listener = Listener()
+                relay.client.subscribe("sub", mapOf(url to listOf(Filter(kinds = listOf(1)))), listener)
+                withTimeout(1_000) { listener.eose.await() }
             }
         }
 

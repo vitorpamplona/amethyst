@@ -21,6 +21,7 @@
 package com.vitorpamplona.geode.server
 
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.MachineReadablePrefix
+import com.vitorpamplona.quartz.nip01Core.relay.server.policies.RateLimitPolicy
 import com.vitorpamplona.quartz.nip86RelayManagement.server.Nip86HttpHandler
 import com.vitorpamplona.quartz.nipFERelayOverHttp.HttpRelayHandler
 import com.vitorpamplona.quartz.nipFERelayOverHttp.HttpRelayLines
@@ -88,8 +89,10 @@ internal class NipFEHttpRoute(
         call.response.header(ACCEL_BUFFERING, "no")
 
         val client = clients.of(call)
+        // Counted like the rate limits count: an IPv6 client by its /64, so rotating through the
+        // addresses one host holds does not buy more concurrent requests.
         val verdict =
-            admission.admit(client) {
+            admission.admit(RateLimitPolicy.clientKeyOf(client)) {
                 // Bounded in time too: a body trickled in forever would hold this admission slot forever.
                 val body =
                     try {
