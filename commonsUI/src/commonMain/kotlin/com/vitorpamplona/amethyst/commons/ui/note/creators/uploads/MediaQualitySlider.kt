@@ -105,6 +105,7 @@ import net.engawapg.lib.zoomable.rememberZoomState
 import net.engawapg.lib.zoomable.zoomable
 import kotlin.math.max
 import kotlin.math.min
+import kotlin.math.roundToInt
 import coil3.size.Size as CoilSize
 
 /**
@@ -148,7 +149,9 @@ fun MediaQualitySlider(
 
         Slider(
             value = VideoAwareSliderSteps.toDisplayedIndex(allSteps, platformPosition, videoMode).toFloat(),
-            onValueChange = { onPositionChange(VideoAwareSliderSteps.fromDisplayedIndex(allSteps, it.toInt().coerceIn(0, steps.lastIndex), videoMode)) },
+            // Rounded, not truncated: a tick's value comes from the track geometry, and with four stops
+            // the thirds land a hair under their integer, so truncation skipped a stop.
+            onValueChange = { onPositionChange(VideoAwareSliderSteps.fromDisplayedIndex(allSteps, it.roundToInt().coerceIn(0, steps.lastIndex), videoMode)) },
             valueRange = 0f..steps.lastIndex.toFloat(),
             steps = (steps.size - 2).coerceAtLeast(0),
         )
