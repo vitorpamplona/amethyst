@@ -25,9 +25,11 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
+import com.vitorpamplona.amethyst.commons.audio.WaveformData
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.ui.note.PodcastSoundbites
 import com.vitorpamplona.amethyst.commons.ui.note.types.PodcastChaptersView
+import com.vitorpamplona.amethyst.commons.ui.note.types.getAudioMetaWithWaveform
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.amethyst.desktop.service.media.GlobalMediaPlayer
 import com.vitorpamplona.quartz.podcasts.PodcastAudio
@@ -43,15 +45,32 @@ import com.vitorpamplona.quartz.podcasts.PodcastEpisode
 fun PodcastEpisodePlayer(
     audio: PodcastAudio,
     note: Note,
+    title: String?,
     borderModifier: Modifier,
     accountViewModel: AccountViewModel,
 ) {
+    // The episode's own waveform when its imeta ships one; NIP-F4 usually doesn't, so the card
+    // falls back to the synthetic bars seeded by the note, as on Android.
+    val waveform =
+        remember(note) {
+            note.event
+                ?.getAudioMetaWithWaveform()
+                ?.waveform
+                ?.let { WaveformData(it) }
+        }
     val soundbites = remember(note) { (note.event as? PodcastEpisode)?.episodeSoundbites().orEmpty() }
     val chaptersUrl = remember(note) { (note.event as? PodcastEpisode)?.episodeChaptersUrl() }
     val playFrom: (Long) -> Unit = remember(audio.url) { { startMillis -> GlobalMediaPlayer.playAudio(audio.url, startMillis) } }
 
     Column(Modifier.fillMaxWidth()) {
-        AudioPlayer(url = audio.url, modifier = borderModifier.fillMaxWidth())
+        AudioPlayer(
+            url = audio.url,
+            modifier = borderModifier.fillMaxWidth(),
+            title = title,
+            mimeType = audio.mediaType,
+            waveform = waveform,
+            seed = note.idHex,
+        )
 
         PodcastSoundbites(soundbites, playFrom)
 

@@ -21,7 +21,6 @@
 package com.vitorpamplona.amethyst.desktop.app
 
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -367,7 +366,7 @@ object DesktopNotePlatform : NotePlatform {
         mimeType: String?,
         waveform: WaveformData?,
         accountViewModel: AccountViewModel,
-    ) = AudioPlayer(url = mediaUrl, modifier = Modifier.fillMaxWidth())
+    ) = AudioPlayer(url = mediaUrl, modifier = Modifier.fillMaxWidth(), title = title, mimeType = mimeType, waveform = waveform)
 
     @Composable
     override fun RenderAudioWithWaveform(
@@ -380,7 +379,14 @@ object DesktopNotePlatform : NotePlatform {
         nav: INav,
     ) {
         Column(Modifier.fillMaxWidth()) {
-            AudioPlayer(url = mediaUrl, modifier = Modifier.fillMaxWidth())
+            AudioPlayer(
+                url = mediaUrl,
+                modifier = Modifier.fillMaxWidth(),
+                title = title,
+                artist = note.author?.toBestDisplayName(),
+                mimeType = mimeType,
+                waveform = waveform,
+            )
             note.event?.let { event ->
                 if (event.hasHashtags()) DisplayUncitedHashtags(event, note.toNostrUri(), accountViewModel, nav)
             }
@@ -395,12 +401,19 @@ object DesktopNotePlatform : NotePlatform {
         note: Note,
         borderModifier: Modifier,
         accountViewModel: AccountViewModel,
-    ) = AudioPlayer(url = audioUrl, modifier = borderModifier.fillMaxWidth())
+    ) = AudioPlayer(
+        url = audioUrl,
+        modifier = borderModifier.fillMaxWidth(),
+        title = title,
+        mimeType = mimeType,
+        // Kind 36787 carries no waveform: the same synthetic bars Android draws, keyed by the track.
+        seed = note.idHex,
+    )
 
     /**
-     * An audio file has no picture for the video frame to show, so it is its cover (when it has
-     * one) over the audio player; anything else is a video. [waveform] has no desktop drawing:
-     * the audio player's own progress bar stands in for it.
+     * An audio file has no picture for the video frame to show, so it plays in the audio card:
+     * its cover with the waveform scrubber over its foot, or just the waveform when it has no
+     * cover. Anything else is a video.
      */
     @Composable
     override fun NoteMediaView(
@@ -413,21 +426,14 @@ object DesktopNotePlatform : NotePlatform {
         accountViewModel: AccountViewModel,
     ) {
         if (RichTextParser.isAudioUrl(mediaUri)) {
-            Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(Size5dp)) {
-                coverUri?.let {
-                    AsyncImage(
-                        model = it,
-                        contentDescription = title,
-                        contentScale = contentScale,
-                        modifier =
-                            Modifier
-                                .fillMaxWidth()
-                                .heightIn(max = MaxInlineMediaHeight)
-                                .clip(RoundedCornerShape(12.dp)),
-                    )
-                }
-                AudioPlayer(url = mediaUri, modifier = Modifier.fillMaxWidth())
-            }
+            AudioPlayer(
+                url = mediaUri,
+                modifier = Modifier.fillMaxWidth(),
+                title = title,
+                artist = note.author?.toBestDisplayName(),
+                waveform = waveform,
+                artworkUrl = coverUri,
+            )
         } else {
             VideoView(
                 videoUri = mediaUri,
@@ -455,6 +461,7 @@ object DesktopNotePlatform : NotePlatform {
     ) = PodcastEpisodePlayer(
         audio = audio,
         note = note,
+        title = title,
         borderModifier = borderModifier,
         accountViewModel = accountViewModel,
     )
