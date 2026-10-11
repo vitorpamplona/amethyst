@@ -14,11 +14,13 @@
 # fails on it -- the strings simply ship wrong -- so there is no slow gate this
 # stands in for; it is the only gate.
 #
-# Run the scan by hand any time with:  .claude/hooks/compose_escaping_check.py
+# Run the scan by hand any time with:  tools/agent-hooks/compose_escaping_check.py
 set -uo pipefail
 
 hook_dir="$(cd "$(dirname "$0")" && pwd)"
-cd "${CLAUDE_PROJECT_DIR:-.}" || exit 0
+# Shared by Claude Code (.claude/settings.json) and Codex (.codex/hooks.json):
+# resolve the repo from this script, not from either tool's env vars.
+cd "$hook_dir/../.." || exit 0
 
 payload="$(cat)"
 
@@ -31,4 +33,6 @@ esac
 
 printf '%s' "$payload" | python3 "$hook_dir/lib/git_push_gate.py" || exit 0
 
-exec python3 "$hook_dir/compose_escaping_check.py"
+# The scan exits 1 on a hit (CI reads that), but a PreToolUse hook only blocks the
+# call on exit 2 (the Claude Code contract that Codex hooks follow), so map any failure to 2.
+python3 "$hook_dir/compose_escaping_check.py" || exit 2

@@ -114,7 +114,7 @@ subprojects {
         // The flip side: a KMP module's non-JVM targets stay outside `test`. :quartz's
         // androidHostTest source set (~3.9k tests) is the big one - nothing runs it today and it
         // is red on main, so aliasing onto allTests would have turned `test` red for everyone
-        // rather than fixing anything. Tracked in CLAUDE.md's Build Commands section.
+        // rather than fixing anything. Tracked in AGENTS.md's Build Commands section.
         if (plugins.hasPlugin("org.jetbrains.kotlin.multiplatform") &&
             tasks.findByName("test") == null &&
             tasks.findByName("jvmTest") != null

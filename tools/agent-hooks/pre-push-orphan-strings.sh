@@ -13,11 +13,13 @@
 # takes ~19 minutes on a warm daemon, so nobody runs it per-commit. This check is
 # a directory scan and finishes in well under a second.
 #
-# Run the scan by hand any time with:  .claude/hooks/orphan_strings_check.py
+# Run the scan by hand any time with:  tools/agent-hooks/orphan_strings_check.py
 set -uo pipefail
 
 hook_dir="$(cd "$(dirname "$0")" && pwd)"
-cd "${CLAUDE_PROJECT_DIR:-.}" || exit 0
+# Shared by Claude Code (.claude/settings.json) and Codex (.codex/hooks.json):
+# resolve the repo from this script, not from either tool's env vars.
+cd "$hook_dir/../.." || exit 0
 
 # --- Is this call a push/PR boundary? ---
 payload="$(cat)"

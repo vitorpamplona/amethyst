@@ -6,6 +6,10 @@ pre-push-orphan-strings.sh) so the gate condition is defined once. Each hook is
 a separate process with its own stdin, so this is exec'd per hook rather than
 run once and shared.
 
+Claude Code and Codex send the same PreToolUse payload: Codex reports its shell
+tool as `Bash` too, with the command in `tool_input.command`. Older Codex tool
+names and an argv-list command are still accepted, as a fallback.
+
 Exit 0 = this call publishes code (gate it). Exit 1 = let it through.
 """
 
@@ -16,15 +20,26 @@ import sys
 # Reaching the push subcommand means stepping over git's global options first.
 GLOBAL_WITH_ARG = {"-c", "-C", "--namespace", "--git-dir", "--work-tree", "--exec-path"}
 
+# `Bash` for both agents; the rest are older Codex names, kept as a fallback.
+SHELL_TOOLS = {"Bash", "exec_command", "shell", "shell_command", "local_shell"}
+
+
+def command_of(tool_input):
+    cmd = tool_input.get("command", tool_input.get("cmd", ""))
+    if isinstance(cmd, list):
+        # An argv list like ["bash", "-lc", "git push"]: the script is its last element.
+        return cmd[-1] if len(cmd) >= 3 and cmd[1] in ("-c", "-lc") else shlex.join(cmd)
+    return cmd if isinstance(cmd, str) else ""
+
 
 def is_boundary(data):
     tool = data.get("tool_name", "")
     if tool.endswith("create_pull_request"):
         return True
-    if tool != "Bash":
+    if tool not in SHELL_TOOLS:
         return False
 
-    cmd = (data.get("tool_input") or {}).get("command", "")
+    cmd = command_of(data.get("tool_input") or {})
     # Tokenize like a shell so `push` inside a quoted commit message or heredoc
     # stays one token and is NOT mistaken for the push subcommand.
     try:

@@ -77,7 +77,7 @@ def main():
         "A key removed or renamed in a default values/strings.xml must be deleted\n"
         "from every values-*/strings.xml in the SAME commit. Crowdin's next sync is\n"
         "not a cleanup step CI waits for — lint runs on the tree you push.\n"
-        "See amethyst/src/main/res/CLAUDE.md, 'Renaming or removing a string key'.",
+        "See amethyst/src/main/res/AGENTS.md, 'Renaming or removing a string key'.",
         file=out,
     )
     return 2

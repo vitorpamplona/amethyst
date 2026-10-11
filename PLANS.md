@@ -3,7 +3,7 @@
 _Cross-module roll-up of every `plans/` folder. Surveyed 2026-06-30._
 
 Plans in this repo are **decentralized**: each module keeps its own design docs
-in `<module>/plans/YYYY-MM-DD-<slug>.md` (see `.claude/CLAUDE.md` →
+in `<module>/plans/YYYY-MM-DD-<slug>.md` (see `AGENTS.md` →
 "Plans per module"). There is no single plans directory — **this file is the
 master index** that stitches the per-folder indexes together.
 
