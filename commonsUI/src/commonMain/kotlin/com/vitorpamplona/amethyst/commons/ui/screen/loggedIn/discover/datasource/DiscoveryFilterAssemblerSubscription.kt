@@ -26,6 +26,7 @@ import androidx.lifecycle.viewModelScope
 import com.vitorpamplona.amethyst.commons.relayClient.discover.DiscoveryFilterAssembler
 import com.vitorpamplona.amethyst.commons.relayClient.discover.DiscoveryQueryState
 import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.LifecycleAwareKeyDataSourceSubscription
+import com.vitorpamplona.amethyst.commons.relayClient.user.FeedAuthorsOutboxSubscription
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 
 @Composable
@@ -63,4 +64,7 @@ fun DiscoveryFilterAssemblerSubscription(
         }
 
     LifecycleAwareKeyDataSourceSubscription(state, dataSource)
+
+    // The selected list's members need their relay lists before the feed can ask their relays.
+    FeedAuthorsOutboxSubscription(accountViewModel.account.liveDiscoveryFollowLists, accountViewModel)
 }

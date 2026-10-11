@@ -65,6 +65,7 @@ import com.vitorpamplona.amethyst.commons.model.nip11RelayInfo.WarmNip11
 import com.vitorpamplona.amethyst.commons.model.nip11RelayInfo.loadRelayInfo
 import com.vitorpamplona.amethyst.commons.model.nip29RelayGroups.RelayGroupChannel
 import com.vitorpamplona.amethyst.commons.model.nip29RelayGroups.toGroupConstraints
+import com.vitorpamplona.amethyst.commons.relayClient.user.FeedAuthorsOutboxSubscription
 import com.vitorpamplona.amethyst.commons.relayClient.user.observeUserName
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.relay_group_badge_invite_only
@@ -244,6 +245,10 @@ private fun WatchAccountForRelayGroupDiscovery(
         .collectAsStateWithLifecycle()
     val perRelay by accountViewModel.account.liveRelayGroupsDiscoveryFollowListsPerRelay
         .collectAsStateWithLifecycle()
+
+    // The selected list's members need their relay lists before the feed can ask their relays.
+    FeedAuthorsOutboxSubscription(accountViewModel.account.liveRelayGroupsDiscoveryFollowLists, accountViewModel)
+
     // The "My Groups" filter reads the kind-10009 joined list, so re-scan when it changes
     // (join/leave) — otherwise a newly-joined group wouldn't appear until another refresh.
     val joinedGroups by accountViewModel.account.relayGroupList.liveRelayGroupList

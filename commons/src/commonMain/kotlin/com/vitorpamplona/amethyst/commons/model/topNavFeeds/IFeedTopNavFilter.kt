@@ -33,4 +33,15 @@ interface IFeedTopNavFilter {
     fun toPerRelayFlow(cache: ICacheProvider): Flow<IFeedTopNavPerRelayFilterSet>
 
     fun startValue(cache: ICacheProvider): IFeedTopNavPerRelayFilterSet
+
+    /**
+     * The members of a selected list that this feed reads from their own outbox relays (their
+     * kind:10002). A screen showing the feed loads the relay lists of these authors: someone who is
+     * only in a people list, and not followed, has no other loader asking for it, so the feed would
+     * only look on fallback relays.
+     *
+     * The follows feeds return nothing: their kind:3 part is already loaded at startup, and handing
+     * every follow to the finder would hold a standing REQ for the ones that never published a list.
+     */
+    fun outboxAuthors(): Set<HexKey> = emptySet()
 }

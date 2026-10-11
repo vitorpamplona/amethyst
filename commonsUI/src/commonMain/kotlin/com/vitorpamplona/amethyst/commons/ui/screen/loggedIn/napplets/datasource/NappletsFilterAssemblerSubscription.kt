@@ -23,6 +23,7 @@ package com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.napplets.datasourc
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.LifecycleAwareKeyDataSourceSubscription
+import com.vitorpamplona.amethyst.commons.relayClient.user.FeedAuthorsOutboxSubscription
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.topNavFeedQueryState
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 
@@ -38,4 +39,7 @@ fun NappletsFilterAssemblerSubscription(accountViewModel: AccountViewModel) {
         }
 
     LifecycleAwareKeyDataSourceSubscription(state, accountViewModel.dataSources().napplets)
+
+    // The selected list's members need their relay lists before the feed can ask their relays.
+    FeedAuthorsOutboxSubscription(accountViewModel.account.liveNappletsFollowLists, accountViewModel)
 }

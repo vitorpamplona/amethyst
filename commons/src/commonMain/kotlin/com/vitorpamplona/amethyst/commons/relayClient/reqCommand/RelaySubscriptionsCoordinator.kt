@@ -91,6 +91,7 @@ import com.vitorpamplona.amethyst.commons.relayClient.softwareapps.SoftwareAppsF
 import com.vitorpamplona.amethyst.commons.relayClient.softwareapps.SoftwareReleasesFilterAssembler
 import com.vitorpamplona.amethyst.commons.relayClient.thread.ThreadFilterAssembler
 import com.vitorpamplona.amethyst.commons.relayClient.url.UrlFilterAssembler
+import com.vitorpamplona.amethyst.commons.relayClient.user.FeedAuthorsOutboxFilterAssembler
 import com.vitorpamplona.amethyst.commons.relayClient.user.UserFinderFilterAssembler
 import com.vitorpamplona.amethyst.commons.relayClient.video.VideoFilterAssembler
 import com.vitorpamplona.amethyst.commons.relayClient.wallet.OnchainZapsFilterAssembler
@@ -144,6 +145,10 @@ class RelaySubscriptionsCoordinator(
     // they are active when looking at events, users, channels.
     val channelFinder = ChannelFinderFilterAssemblyGroup(client)
     val userFinder = UserFinderFilterAssembler(client, cache, failureTracker)
+
+    // relay lists of the authors a visible feed reads by the outbox model (e.g. a people list's
+    // members), which nothing else loads when they are not followed.
+    val feedAuthorsOutbox = FeedAuthorsOutboxFilterAssembler(client, cache, failureTracker)
     val eventFinder = EventFinderFilterAssembler(client, cache, userFinder)
 
     // active when searching or tagging users.
@@ -292,6 +297,7 @@ class RelaySubscriptionsCoordinator(
             channelFinder,
             eventFinder,
             userFinder,
+            feedAuthorsOutbox,
             search,
             channel,
             chatroom,
