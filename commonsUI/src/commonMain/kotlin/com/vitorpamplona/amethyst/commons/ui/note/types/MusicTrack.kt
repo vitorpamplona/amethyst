@@ -69,7 +69,6 @@ import com.vitorpamplona.amethyst.commons.ui.navigation.navs.EmptyNav
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.note.elements.DefaultImageHeader
 import com.vitorpamplona.amethyst.commons.ui.note.elements.DefaultImageHeaderBackground
-import com.vitorpamplona.amethyst.commons.ui.note.platform.MusicTrackAudioPlayer
 import com.vitorpamplona.amethyst.commons.ui.note.platform.NoteMediaView
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.Font10SP
@@ -87,8 +86,6 @@ import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withContext
 
 private val COVER_ASPECT_RATIO = 1f
-
-private val PLAYER_BORDER_MODIFIER = Modifier.clip(RoundedCornerShape(bottomStart = 15.dp, bottomEnd = 15.dp))
 
 // Content text prefixes that some music-publishing tools auto-fill — purely restate the
 // title/artist that the card already shows above. Suppress the description block in that case
@@ -177,16 +174,19 @@ fun MusicTrackHeader(
             }
 
             // Audio: the cover, with the player strip butting directly against it so the cover's
-            // top corners and the strip's bottom corners read as one continuous unit.
+            // top corners and the strip's bottom corners read as one continuous unit — unless an
+            // `.mp4` `url` turns out to be a music video, which then plays as one.
             is MusicTrackMedia.Audio -> {
-                MusicTrackCover(image, note, accountViewModel)
-                MusicTrackAudioPlayer(
-                    audioUrl = media.url,
+                AudioFirstMedia(
+                    url = media.url,
                     mimeType = media.mimeType,
                     title = title,
+                    cover = image,
+                    showCover = true,
+                    waveform = null,
                     note = note,
-                    borderModifier = PLAYER_BORDER_MODIFIER,
                     accountViewModel = accountViewModel,
+                    nav = nav,
                 )
             }
 
@@ -289,7 +289,7 @@ fun MusicTrackHeader(
 }
 
 @Composable
-private fun MusicTrackCover(
+internal fun MusicTrackCover(
     image: String?,
     note: Note,
     accountViewModel: AccountViewModel,

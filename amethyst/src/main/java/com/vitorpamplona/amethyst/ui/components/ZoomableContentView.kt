@@ -64,6 +64,7 @@ import coil3.request.ImageRequest
 import coil3.size.Size
 import com.google.accompanist.permissions.ExperimentalPermissionsApi
 import com.vitorpamplona.amethyst.Amethyst
+import com.vitorpamplona.amethyst.commons.audio.MediaTracks
 import com.vitorpamplona.amethyst.commons.audio.PlayableLayout
 import com.vitorpamplona.amethyst.commons.audio.playableLayout
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
@@ -117,6 +118,7 @@ import com.vitorpamplona.amethyst.commons.ui.components.util.setText
 import com.vitorpamplona.amethyst.commons.ui.loadStringRes
 import com.vitorpamplona.amethyst.commons.ui.note.BlankNote
 import com.vitorpamplona.amethyst.commons.ui.note.DownloadForOfflineIcon
+import com.vitorpamplona.amethyst.commons.ui.note.types.rememberMediaTracks
 import com.vitorpamplona.amethyst.commons.ui.painterRes
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.ImageCornerRadius
@@ -239,13 +241,22 @@ fun ZoomableContentView(
             // declaration says audio, A while it can't tell. The player's probe, once in, overrides the
             // declaration — undecided files find their real card, mislabelled videos come back here.
             var probedAudioOnly by remember(content.url) { mutableStateOf(PlayableMediaProbeCache.get(content.url)) }
+            // An `.mp4` / `video/mp4` that doesn't say whether it holds video has its track list read
+            // before playback: Blossom serves AAC uploads that way, and they belong in the audio card.
+            val tracks = if (content.isLiveStream) MediaTracks.UNKNOWN else rememberMediaTracks(content.url, content.mimeType, accountViewModel)
+            val audioOnly =
+                probedAudioOnly ?: when (tracks) {
+                    MediaTracks.AUDIO_ONLY -> true
+                    MediaTracks.HAS_VIDEO -> false
+                    else -> null
+                }
             val layout =
-                remember(content.url, content.mimeType, content.artworkUri, content.isLiveStream, probedAudioOnly) {
+                remember(content.url, content.mimeType, content.artworkUri, content.isLiveStream, audioOnly) {
                     // A live stream is the one stream we know is video-first; it keeps the video player.
                     if (content.isLiveStream) {
                         PlayableLayout.VIDEO
                     } else {
-                        playableLayout(content.mimeType, content.url, hasArtwork = content.artworkUri != null, probedAudioOnly = probedAudioOnly)
+                        playableLayout(content.mimeType, content.url, hasArtwork = content.artworkUri != null, probedAudioOnly = audioOnly)
                     }
                 }
 

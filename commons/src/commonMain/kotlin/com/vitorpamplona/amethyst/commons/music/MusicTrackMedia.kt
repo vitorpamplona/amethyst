@@ -22,6 +22,8 @@ package com.vitorpamplona.amethyst.commons.music
 
 import androidx.compose.runtime.Immutable
 import com.vitorpamplona.amethyst.commons.audio.declaredAsAudio
+import com.vitorpamplona.amethyst.commons.audio.isMp4FamilyMedia
+import com.vitorpamplona.amethyst.commons.richtext.normalizeMimeType
 import com.vitorpamplona.quartz.experimental.music.track.MusicTrackEvent
 
 /**
@@ -46,19 +48,43 @@ sealed interface MusicTrackMedia {
  * Picks the media a music track card plays, or null when the track names none.
  *
  * The `video` tag wins. Without one, `url` is audio by spec, but some publishers put the music
- * video itself there (Nostria uploads a 1080p `.mp4` as `url`). Drawn as audio, that video renders
- * inside the waveform strip, so a `url` the shared classifier ([declaredAsAudio]) calls video
- * (`.mp4`, `.webm`, `.mov`, …) plays as a video. One it can't place stays audio: an HLS playlist
- * carries either, and a bare Blossom hash names nothing. A `format` tag declares `url` audio, so
- * such a track keeps the audio path whatever the extension.
+ * video itself there (Nostria uploads a 1080p `.mp4` as `url`). A `url` the shared classifier
+ * ([declaredAsAudio]) calls video plays as a video, except an MP4-family one (`.mp4`, `.mov`): that
+ * container is as often a plain AAC upload (Blossom names every M4A `.mp4`, Amethyst's own uploads
+ * included), so it stays audio here and the card reads the file's track list to find out
+ * (`mayHoldVideo`). One the classifier can't place stays audio too: an HLS playlist carries either,
+ * and a bare Blossom hash names nothing. A `format` tag declares `url` audio, so such a track keeps the
+ * audio path whatever the extension.
  */
 fun MusicTrackEvent.media(): MusicTrackMedia? {
     videoUrl()?.let { return MusicTrackMedia.Video(it) }
     val url = url() ?: return null
     val format = format()
-    if (format == null && declaredAsAudio(null, url) == false) {
+    if (format == null && declaredAsAudio(null, url) == false && !isMp4FamilyMedia(null, url)) {
         return MusicTrackMedia.Video(url)
     }
-    // Per spec, `format` is the audio format (mp3/flac/m4a/ogg).
-    return MusicTrackMedia.Audio(url, format?.let { "audio/$it" })
+    // Per spec, `format` is the audio format (mp3/flac/m4a/ogg): the MIME type it names, read as audio
+    // (`m4a` is `audio/mp4`, `mp3` is `audio/mpeg`; a bare `mp4` would read as video, so it is `audio/mp4`).
+    return MusicTrackMedia.Audio(url, format?.let { audioMimeTypeForFormat(it) })
 }
+
+private fun audioMimeTypeForFormat(format: String): String = normalizeMimeType(format)?.takeIf { it.startsWith("audio/") } ?: "audio/${format.lowercase()}"
+
+/**
+ * The `format` tag (mp3/flac/m4a/ogg) for an uploaded music file of [mimeType], so readers can tell the
+ * file is audio without opening it: an M4A upload otherwise comes back from Blossom as `.mp4`. A
+ * `video/mp4` is the same M4A as Blossom labels it (the music composer only uploads audio). Null for a
+ * type it doesn't recognise.
+ */
+fun musicFormatTagFor(mimeType: String?): String? =
+    when (mimeType?.substringBefore(';')?.trim()?.lowercase()) {
+        "audio/mpeg", "audio/mp3" -> "mp3"
+        "audio/mp4", "audio/x-m4a", "audio/m4a", "video/mp4" -> "m4a"
+        "audio/aac", "audio/aacp" -> "aac"
+        "audio/flac", "audio/x-flac" -> "flac"
+        "audio/ogg" -> "ogg"
+        "audio/opus" -> "opus"
+        "audio/wav", "audio/x-wav", "audio/wave" -> "wav"
+        "audio/webm" -> "webm"
+        else -> null
+    }

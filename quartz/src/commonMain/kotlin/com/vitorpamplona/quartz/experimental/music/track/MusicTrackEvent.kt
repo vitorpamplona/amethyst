@@ -165,7 +165,8 @@ class MusicTrackEvent(
          * is authoritative for the fields it owns, so a user clearing the album field means
          * "remove the album tag", not "leave whatever was there". The new event keeps the
          * same `d` tag as `earlierVersion`, so relays treat the publish as the next version of
-         * the same addressable. Always re-derives `alt` from the new title+artist.
+         * the same addressable. Always re-derives `alt` from the new title+artist. A non-null
+         * [format] (the audio file was replaced) overwrites the `format` tag; null keeps the old one.
          */
         fun edit(
             earlierVersion: MusicTrackEvent,
@@ -176,6 +177,7 @@ class MusicTrackEvent(
             image: String?,
             album: String?,
             duration: Int?,
+            format: String? = null,
             createdAt: Long = TimeUtils.now(),
         ): EventTemplate<MusicTrackEvent> {
             val newTags =
@@ -186,6 +188,7 @@ class MusicTrackEvent(
                     setOrRemove(image, ImageTag.TAG_NAME, ::image)
                     setOrRemove(album, AlbumTag.TAG_NAME, ::album)
                     if (duration != null) duration(duration) else remove(DurationTag.TAG_NAME)
+                    format?.let { format(it) }
                 }
             return EventTemplate(createdAt, KIND, newTags, description)
         }

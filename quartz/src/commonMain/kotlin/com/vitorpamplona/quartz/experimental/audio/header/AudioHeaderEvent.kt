@@ -24,6 +24,7 @@ import androidx.compose.runtime.Immutable
 import com.vitorpamplona.quartz.experimental.audio.header.tags.DownloadUrlTag
 import com.vitorpamplona.quartz.experimental.audio.header.tags.StreamUrlTag
 import com.vitorpamplona.quartz.experimental.audio.header.tags.WaveformTag
+import com.vitorpamplona.quartz.experimental.music.track.tags.UrlTag
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
@@ -53,6 +54,15 @@ class AudioHeaderEvent(
     fun download() = tags.firstNotNullOfOrNull(DownloadUrlTag::parse)
 
     fun stream() = tags.firstNotNullOfOrNull(StreamUrlTag::parse)
+
+    /** The plain `url` tag, which most publishers write instead of `stream`/`download`. */
+    fun url() = tags.firstNotNullOfOrNull(UrlTag::parse)
+
+    /** What to play: `stream`, else `download`, else `url`. */
+    fun mediaUrl() = stream() ?: download() ?: url()
+
+    /** The MIME type a `blossom` tag declares for the file (`["blossom", hash, mime]`), if any. */
+    fun blossomMimeType(): String? = tags.firstOrNull { it.size > 2 && it[0] == "blossom" }?.get(2)?.ifBlank { null }
 
     fun wavefrom() = tags.firstNotNullOfOrNull(WaveformTag::parse)
 

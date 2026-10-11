@@ -37,12 +37,16 @@ class MusicTrackMediaTest {
         )
 
     @Test
-    fun mp4InUrlWithoutVideoTagPlaysAsVideo() {
-        // The Nostria track that rendered its 1080p video inside the waveform strip.
-        val url = "https://nostr.download/21535ca606b945416afe4e39e46d578290413b393483f0e67be8ec3e3bf78998.mp4"
-        val event = track(arrayOf("title", "Aza Song   Podcast 39"), arrayOf("url", url), arrayOf("duration", "204"))
+    fun mp4InUrlWithoutVideoTagStaysAudioForTheCardToProbe() {
+        // Both of these are `.mp4` in `url` with no `format`: Nostria's 1080p music video, and an AAC
+        // track Amethyst uploaded to Blossom. Only the file's track list tells them apart, so the event
+        // keeps both on the audio path and the card probes the file (see AudioFirstMedia).
+        val video = "https://nostr.download/21535ca606b945416afe4e39e46d578290413b393483f0e67be8ec3e3bf78998.mp4"
+        val aac = "https://blossom.band/727dbd3c23b2f6c1de63fd87083ecadae5782963bb94cefe81c9f3de361bbee0.mp4"
 
-        assertEquals(MusicTrackMedia.Video(url), event.media())
+        assertEquals(MusicTrackMedia.Audio(video, null), track(arrayOf("title", "Aza Song   Podcast 39"), arrayOf("url", video)).media())
+        assertEquals(MusicTrackMedia.Audio(aac, null), track(arrayOf("url", aac)).media())
+        assertEquals(MusicTrackMedia.Audio("https://x.com/clip.mov", null), track(arrayOf("url", "https://x.com/clip.mov")).media())
     }
 
     @Test
@@ -76,6 +80,25 @@ class MusicTrackMediaTest {
     fun formatTagKeepsAnMp4UrlOnTheAudioPath() {
         val url = "https://example.com/song.mp4"
         assertEquals(MusicTrackMedia.Audio(url, "audio/mp4"), track(arrayOf("url", url), arrayOf("format", "mp4")).media())
+    }
+
+    @Test
+    fun formatTagNamesARealAudioMimeType() {
+        val url = "https://blossom.band/abc"
+        assertEquals(MusicTrackMedia.Audio(url, "audio/mp4"), track(arrayOf("url", url), arrayOf("format", "m4a")).media())
+        assertEquals(MusicTrackMedia.Audio(url, "audio/mpeg"), track(arrayOf("url", url), arrayOf("format", "mp3")).media())
+        assertEquals(MusicTrackMedia.Audio(url, "audio/flac"), track(arrayOf("url", url), arrayOf("format", "FLAC")).media())
+    }
+
+    @Test
+    fun uploadsGetTheFormatTheirMimeTypeNames() {
+        assertEquals("m4a", musicFormatTagFor("audio/mp4"))
+        assertEquals("m4a", musicFormatTagFor("video/mp4"))
+        assertEquals("m4a", musicFormatTagFor("audio/x-m4a"))
+        assertEquals("mp3", musicFormatTagFor("audio/mpeg"))
+        assertEquals("flac", musicFormatTagFor("audio/flac; charset=binary"))
+        assertEquals(null, musicFormatTagFor("image/png"))
+        assertEquals(null, musicFormatTagFor(null))
     }
 
     @Test

@@ -52,7 +52,6 @@ import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.note.ClickableUserPicture
 import com.vitorpamplona.amethyst.commons.ui.note.UsernameDisplay
 import com.vitorpamplona.amethyst.commons.ui.note.elements.DisplayUncitedHashtags
-import com.vitorpamplona.amethyst.commons.ui.note.platform.NoteMediaView
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.quartz.experimental.audio.header.AudioHeaderEvent
 import com.vitorpamplona.quartz.experimental.audio.track.AudioTrackEvent
@@ -80,9 +79,9 @@ fun AudioTrackHeader(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    val media = remember(noteEvent) { noteEvent.media() }
-    val cover = remember(noteEvent) { noteEvent.cover() }
-    val subject = remember(noteEvent) { noteEvent.subject() }
+    val media = remember(noteEvent) { noteEvent.mediaUrl() }
+    val cover = remember(noteEvent) { noteEvent.coverUrl() }
+    val subject = remember(noteEvent) { noteEvent.displayTitle() }
     val participants = remember(noteEvent) { noteEvent.participants() }
 
     var participantUsers by remember { mutableStateOf<List<Pair<ParticipantTag, User>>>(emptyList()) }
@@ -131,18 +130,17 @@ fun AudioTrackHeader(
             }
 
             media?.let { media ->
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    NoteMediaView(
-                        mediaUri = media,
-                        isAudio = true,
+                Column(Modifier.fillMaxWidth()) {
+                    AudioFirstMedia(
+                        url = media,
+                        mimeType = null,
                         title = subject,
-                        coverUri = cover,
+                        cover = cover,
+                        showCover = true,
                         waveform = null,
-                        contentScale = contentScale,
                         note = note,
                         accountViewModel = accountViewModel,
+                        nav = nav,
                     )
                 }
             }
@@ -170,7 +168,8 @@ fun AudioHeader(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    val media = remember(noteEvent) { noteEvent.stream() ?: noteEvent.download() }
+    val media = remember(noteEvent) { noteEvent.mediaUrl() }
+    val mimeType = remember(noteEvent) { noteEvent.blossomMimeType() }
     val waveform = remember(noteEvent) { noteEvent.wavefrom()?.let { WaveformData(it.wave) } }
     val content = remember(noteEvent) { noteEvent.content.ifBlank { null } }
 
@@ -181,18 +180,17 @@ fun AudioHeader(
     Row(modifier = Modifier.padding(top = 5.dp)) {
         Column(modifier = Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
             media?.let { media ->
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    NoteMediaView(
-                        mediaUri = media,
-                        isAudio = true,
+                Column(Modifier.fillMaxWidth()) {
+                    AudioFirstMedia(
+                        url = media,
+                        mimeType = mimeType,
                         title = noteEvent.subject(),
-                        coverUri = null,
+                        cover = null,
+                        showCover = false,
                         waveform = waveform,
-                        contentScale = contentScale,
                         note = note,
                         accountViewModel = accountViewModel,
+                        nav = nav,
                     )
                 }
             }

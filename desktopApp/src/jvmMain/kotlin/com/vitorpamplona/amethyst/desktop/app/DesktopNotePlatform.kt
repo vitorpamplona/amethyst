@@ -56,6 +56,7 @@ import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import androidx.lifecycle.viewModelScope
 import coil3.compose.AsyncImage
+import com.vitorpamplona.amethyst.commons.audio.MediaTracks
 import com.vitorpamplona.amethyst.commons.audio.WaveformData
 import com.vitorpamplona.amethyst.commons.audio.declaredAsAudio
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
@@ -80,6 +81,7 @@ import com.vitorpamplona.amethyst.commons.ui.components.urlPreview
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.note.elements.DisplayUncitedHashtags
 import com.vitorpamplona.amethyst.commons.ui.note.platform.NotePlatform
+import com.vitorpamplona.amethyst.commons.ui.note.types.rememberMediaTracks
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.Size20Modifier
 import com.vitorpamplona.amethyst.commons.ui.theme.Size5dp
@@ -154,6 +156,28 @@ object DesktopNotePlatform : NotePlatform {
 
         when (content) {
             is MediaUrlVideo, is MediaLocalVideo -> {
+                val video = content as? MediaUrlVideo
+                val isLive = video?.isLiveStream == true
+                // Audio links share this content type. A declared audio file plays in the audio card;
+                // an MP4-family one that doesn't say (`.mp4`, `video/mp4`) has its track list read,
+                // because Blossom serves AAC uploads that way and the video engine can't open them
+                // ("Failed to retrieve video size").
+                val tracks = if (video != null && !isLive) rememberMediaTracks(url, video.mimeType, accountViewModel) else MediaTracks.UNKNOWN
+                val isAudio =
+                    video != null && !isLive &&
+                        (tracks == MediaTracks.AUDIO_ONLY || (tracks != MediaTracks.HAS_VIDEO && declaredAsAudio(video.mimeType, url) == true))
+                if (isAudio) {
+                    AudioPlayer(
+                        url = url,
+                        modifier = Modifier.fillMaxWidth(),
+                        title = video.description,
+                        artist = video.authorName,
+                        mimeType = if (tracks == MediaTracks.AUDIO_ONLY && video.mimeType?.startsWith("audio/") != true) "audio/mp4" else video.mimeType,
+                        waveform = video.waveform?.let { WaveformData(it) },
+                        artworkUrl = video.artworkUri,
+                    )
+                    return
+                }
                 DesktopVideoPlayer(
                     url = url,
                     modifier = Modifier.fillMaxWidth().heightIn(max = MaxInlineMediaHeight),
@@ -431,8 +455,15 @@ object DesktopNotePlatform : NotePlatform {
         accountViewModel: AccountViewModel,
     ) {
         // The URL decides when it can (an audio kind may still carry a video file); HLS and a bare
-        // Blossom hash can't say, so the event kind does.
-        if (declaredAsAudio(null, mediaUri) ?: isAudio ?: false) {
+        // Blossom hash can't say, so the event kind does. An `.mp4` is read first: it may be audio only.
+        val tracks = rememberMediaTracks(mediaUri, null, accountViewModel)
+        val audio =
+            when (tracks) {
+                MediaTracks.AUDIO_ONLY -> true
+                MediaTracks.HAS_VIDEO -> false
+                else -> declaredAsAudio(null, mediaUri) ?: isAudio ?: false
+            }
+        if (audio) {
             AudioPlayer(
                 url = mediaUri,
                 modifier = Modifier.fillMaxWidth(),
