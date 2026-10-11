@@ -2130,6 +2130,9 @@
     <string name="media_compression_preview_original">Original</string>
     <string name="media_compression_preview_tap_original">Tap the image to see the original</string>
     <string name="media_compression_preview_tap_compressed">Showing the original. Tap to see the compressed image</string>
+    <string name="media_compression_preview_uncompressed">Uploading the original file, without compression</string>
+    <string name="media_compression_preview_zoom">Zoom in to compare</string>
+    <string name="media_compression_preview_zoom_hint">Pinch, scroll or double-tap to zoom. Tap the image to switch between compressed and original</string>
     <string name="metadata_strip_failed_body">This file format does not support metadata stripping. Private information such as location and device info may be included. Upload anyway?</string>
     <string name="metadata_strip_failed_upload">Upload anyway</string>
     <string name="edit_draft">Edit draft</string>
