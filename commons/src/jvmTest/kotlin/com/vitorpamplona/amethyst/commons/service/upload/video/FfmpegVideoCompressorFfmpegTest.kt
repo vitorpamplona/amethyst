@@ -178,12 +178,7 @@ class FfmpegVideoCompressorFfmpegTest {
         /** High entropy, ~90 MB, with a title tag: every encode is smaller, so the size rule keeps it. */
         val noisy: File by lazy {
             File(dir, "noisy.mp4").also {
-                run(
-                    ffmpeg,
-                    "-hide_banner",
-                    "-loglevel",
-                    "error",
-                    "-y",
+                ffmpeg(
                     "-f",
                     "lavfi",
                     "-i",
@@ -213,12 +208,7 @@ class FfmpegVideoCompressorFfmpegTest {
         /** Low entropy, ~55 KB, with a title tag: every encode is larger, so the original is remuxed. */
         val easy: File by lazy {
             File(dir, "easy.mp4").also {
-                run(
-                    ffmpeg,
-                    "-hide_banner",
-                    "-loglevel",
-                    "error",
-                    "-y",
+                ffmpeg(
                     "-f",
                     "lavfi",
                     "-i",
@@ -237,19 +227,14 @@ class FfmpegVideoCompressorFfmpegTest {
         /** `noisy` with a 90° display rotation, as a phone writes it. */
         val rotated: File by lazy {
             File(dir, "rotated.mp4").also {
-                run(ffmpeg, "-hide_banner", "-loglevel", "error", "-y", "-display_rotation", "90", "-i", noisy.absolutePath, "-c", "copy", it.absolutePath)
+                ffmpeg("-display_rotation", "90", "-i", noisy.absolutePath, "-c", "copy", it.absolutePath)
             }
         }
 
         /** A MOV with a timecode data track plus location and title tags: `-map 0 -c copy` fails on it. */
         val tc: File by lazy {
             File(dir, "tc.mov").also {
-                run(
-                    ffmpeg,
-                    "-hide_banner",
-                    "-loglevel",
-                    "error",
-                    "-y",
+                ffmpeg(
                     "-f",
                     "lavfi",
                     "-i",
@@ -269,9 +254,11 @@ class FfmpegVideoCompressorFfmpegTest {
             }
         }
 
-        private fun run(vararg command: String) {
-            val exit = ProcessBuilder(*command).inheritIO().start().waitFor()
-            check(exit == 0) { "${command.first()} exited $exit building ${command.last()}" }
+        /** Runs the real ffmpeg quietly and fails the fixture build on a non-zero exit. */
+        private fun ffmpeg(vararg args: String) {
+            val command = listOf(ffmpeg, "-hide_banner", "-loglevel", "error", "-y") + args
+            val exit = ProcessBuilder(command).inheritIO().start().waitFor()
+            check(exit == 0) { "ffmpeg exited $exit building ${command.last()}" }
         }
 
         fun capture(vararg command: String): String {

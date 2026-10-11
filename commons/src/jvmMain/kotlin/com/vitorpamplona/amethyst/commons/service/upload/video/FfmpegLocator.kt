@@ -20,6 +20,8 @@
  */
 package com.vitorpamplona.amethyst.commons.service.upload.video
 
+import com.vitorpamplona.amethyst.commons.moderation.notifications.HostOs
+import com.vitorpamplona.amethyst.commons.moderation.notifications.detectHostOs
 import com.vitorpamplona.quartz.utils.Log
 import java.io.File
 import java.util.concurrent.TimeUnit
@@ -40,7 +42,7 @@ class FfmpegLocator(
     private val runsOnPath: (binary: String) -> Boolean = ::probeOnPath,
     private val packageDirs: () -> List<File> = ::defaultPackageDirs,
     private val resourcesDir: () -> File? = { System.getProperty("compose.application.resources.dir")?.let(::File) },
-    private val disabled: () -> Boolean = { System.getenv("AMETHYST_FFMPEG_DISABLED") != null },
+    private val disabled: Boolean = System.getenv("AMETHYST_FFMPEG_DISABLED") != null,
 ) {
     val ffmpeg: String? by lazy { resolve("ffmpeg") }
     val ffprobe: String? by lazy { resolve("ffprobe") }
@@ -54,18 +56,14 @@ class FfmpegLocator(
     }
 
     private fun resolve(name: String): String? {
-        if (disabled()) {
+        if (disabled) {
             Log.i(TAG) { "$name disabled by AMETHYST_FFMPEG_DISABLED" }
             return null
         }
         val binary = if (isWindows) "$name.exe" else name
         if (runsOnPath(binary)) return binary
-        val found =
-            packageDirs()
-                .asSequence()
-                .map { File(it, binary) }
-                .plus(sequence { resourcesDir()?.let { yield(File(it, "ffmpeg/$binary")) } })
-                .firstOrNull { it.isFile && it.canExecute() }
+        val candidates = packageDirs().map { File(it, binary) } + listOfNotNull(resourcesDir()?.let { File(it, "ffmpeg/$binary") })
+        val found = candidates.firstOrNull { it.isFile && it.canExecute() }
         Log.i(TAG) { "$name: ${found?.absolutePath ?: "not found"}" }
         return found?.absolutePath
     }
@@ -75,7 +73,7 @@ class FfmpegLocator(
 
         val default = FfmpegLocator()
 
-        private val isWindows: Boolean get() = "win" in System.getProperty("os.name").lowercase()
+        private val isWindows: Boolean get() = detectHostOs() == HostOs.WINDOWS
 
         /** True when `binary -version` runs and exits 0 within 2 s; the process is killed on overrun. */
         fun probeOnPath(binary: String): Boolean =

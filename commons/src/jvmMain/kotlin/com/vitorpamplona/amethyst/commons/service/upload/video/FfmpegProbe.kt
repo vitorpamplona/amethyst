@@ -23,8 +23,6 @@ package com.vitorpamplona.amethyst.commons.service.upload.video
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.vitorpamplona.amethyst.commons.service.uploads.video.VideoInfo
 import com.vitorpamplona.amethyst.commons.service.uploads.video.VideoResolution
-import com.vitorpamplona.quartz.utils.Log
-import kotlinx.coroutines.CancellationException
 import java.io.File
 
 /** What `ffprobe` tells about a video: the table key, the duration for progress and the HDR flag. */
@@ -68,16 +66,15 @@ object FfprobeOutputParser {
 
 /**
  * Runs `ffprobe` on a file through the shared process runner, so a hung probe is killed by the
- * stall watchdog, dies with the JVM and follows cancellation. Open so tests can fake it. Null
- * when [ffprobe] is null, the process fails or stalls, or the output has no video stream; the
- * caller then uses the probe-failure fallback (2 Mbps, no resize).
+ * stall watchdog, dies with the JVM and follows cancellation. Null when [ffprobe] is null, the
+ * process fails or stalls, or the output has no video stream; the caller then uses the
+ * probe-failure fallback (2 Mbps, no resize).
  */
-open class FfmpegProbe(
+class FfmpegProbe(
     private val ffprobe: String?,
-    private val runner: ProcessRunner = FfmpegProcesses,
     private val stallTimeoutMs: Long = 10_000,
 ) {
-    open suspend fun probe(file: File): ProbeResult? {
+    suspend fun probe(file: File): ProbeResult? {
         val binary = ffprobe ?: return null
         val command =
             listOf(
@@ -94,21 +91,8 @@ open class FfmpegProbe(
                 "json",
                 file.absolutePath,
             )
-        val output = StringBuilder()
-        val outcome =
-            try {
-                runner.run(command, { line -> output.append(line).append('\n') }, stallTimeoutMs)
-            } catch (e: CancellationException) {
-                throw e
-            } catch (e: Exception) {
-                Log.w(TAG, "ffprobe failed on ${file.name}", e)
-                return null
-            }
-        if (outcome.exitCode != 0) {
-            Log.w(TAG) { "ffprobe exited ${outcome.exitCode} on ${file.name}: ${outcome.stderrTail.trim()}" }
-            return null
-        }
-        return FfprobeOutputParser.parse(output.toString())
+        val json = FfmpegProcesses.captureStdout(command, stallTimeoutMs, TAG, "ffprobe on ${file.name}") ?: return null
+        return FfprobeOutputParser.parse(json)
     }
 
     private companion object {

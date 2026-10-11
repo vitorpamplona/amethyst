@@ -63,9 +63,8 @@ import com.vitorpamplona.amethyst.commons.resources.strip_metadata_label
 import com.vitorpamplona.amethyst.commons.resources.video_codec_h265_description
 import com.vitorpamplona.amethyst.commons.resources.video_codec_h265_label
 import com.vitorpamplona.amethyst.commons.service.upload.ui.StrippingFailureDialog
-import com.vitorpamplona.amethyst.commons.service.uploads.CompressorQuality
 import com.vitorpamplona.amethyst.commons.service.uploads.SelectedMedia
-import com.vitorpamplona.amethyst.commons.service.uploads.VideoCompressionSupport
+import com.vitorpamplona.amethyst.commons.service.uploads.VideoUploadControls
 import com.vitorpamplona.amethyst.commons.ui.actions.uploads.ShowImageUploadGallery
 import com.vitorpamplona.amethyst.commons.ui.components.SetDialogToEdgeToEdge
 import com.vitorpamplona.amethyst.commons.ui.components.TextSpinner
@@ -254,13 +253,9 @@ fun ImageVideoPost(
     )
 
     // The H.265 switch only where the platform will compress the video; a hint where it needs ffmpeg.
-    val support = accountViewModel.host.mediaUploader.videoCompression
-    val hasVideo = postViewModel.multiOrchestrator?.hasVideo() == true
-    val isVideoWithCompression = hasVideo && support == VideoCompressionSupport.Supported && postViewModel.mediaQualitySlider != CompressorQuality.uncompressedSliderPosition
-    if (hasVideo && support == VideoCompressionSupport.NeedsFfmpeg) {
-        VideoCompressionNeedsFfmpegHint(Modifier.fillMaxWidth().padding(top = 8.dp))
-    }
-    if (isVideoWithCompression) {
+    val controls = VideoUploadControls(postViewModel.multiOrchestrator, accountViewModel.host.mediaUploader.videoCompression, postViewModel.mediaQualitySlider)
+    VideoCompressionNeedsFfmpegHint(controls)
+    if (controls.videoWillBeCompressed) {
         SettingSwitchItem(
             title = Res.string.video_codec_h265_label,
             description = Res.string.video_codec_h265_description,

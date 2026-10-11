@@ -90,11 +90,10 @@ object FfmpegProcesses : ProcessRunner {
         stallTimeoutMs: Long,
     ): ProcessOutcome =
         withContext(Dispatchers.IO) {
-            if (shuttingDown) throw CancellationException("JVM is shutting down")
             val process = ProcessBuilder(command).start()
             live += process
             if (shuttingDown) {
-                // The hook ran between the check and the registration; it never saw this child.
+                // The hook may have run before the registration and never seen this child.
                 process.destroyForcibly()
                 live -= process
                 throw CancellationException("JVM is shutting down")
@@ -152,4 +151,31 @@ object FfmpegProcesses : ProcessRunner {
             if (shuttingDown) throw CancellationException("JVM is shutting down")
             ProcessOutcome(if (stalled) -1 else process.exitValue(), synchronized(stderrTail) { stderrTail.toString() })
         }
+
+    /**
+     * Runs [command] and returns its stdout, or null when it could not start, exited non-zero or
+     * stalled, logged under [tag] as [what]. Cancellation propagates.
+     */
+    suspend fun captureStdout(
+        command: List<String>,
+        stallTimeoutMs: Long,
+        tag: String,
+        what: String,
+    ): String? {
+        val output = StringBuilder()
+        val outcome =
+            try {
+                run(command, { output.append(it).append('\n') }, stallTimeoutMs)
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                Log.w(tag, "$what failed", e)
+                return null
+            }
+        if (outcome.exitCode != 0) {
+            Log.w(tag) { "$what exited ${outcome.exitCode}: ${outcome.stderrTail.trim()}" }
+            return null
+        }
+        return output.toString()
+    }
 }

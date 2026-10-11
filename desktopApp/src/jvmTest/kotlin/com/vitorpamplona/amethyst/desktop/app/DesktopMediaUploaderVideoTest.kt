@@ -24,11 +24,13 @@ import com.vitorpamplona.amethyst.commons.notices.UploadNotice
 import com.vitorpamplona.amethyst.commons.notices.UserNotice
 import com.vitorpamplona.amethyst.commons.notices.UserNoticeSink
 import com.vitorpamplona.amethyst.commons.service.http.IRoleBasedHttpClientBuilder
+import com.vitorpamplona.amethyst.commons.service.upload.FileHeader
 import com.vitorpamplona.amethyst.commons.service.upload.video.VideoCompressionResult
 import com.vitorpamplona.amethyst.commons.service.upload.video.VideoCompressor
 import com.vitorpamplona.amethyst.commons.service.uploads.CompressorQuality
 import com.vitorpamplona.amethyst.commons.service.uploads.MediaUri
 import com.vitorpamplona.amethyst.commons.service.uploads.StringMediaUri
+import com.vitorpamplona.amethyst.commons.service.uploads.UploadError
 import com.vitorpamplona.amethyst.commons.service.uploads.UploadOrchestrator
 import com.vitorpamplona.amethyst.commons.service.uploads.UploadingState
 import com.vitorpamplona.amethyst.commons.service.uploads.VideoCompressionSupport
@@ -48,7 +50,7 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertFalse
-import kotlin.test.assertNull
+import kotlin.test.assertIs
 import kotlin.test.assertTrue
 
 class DesktopMediaUploaderVideoTest {
@@ -148,6 +150,11 @@ class DesktopMediaUploaderVideoTest {
 
     private fun tempVideo(bytes: Int): File = File.createTempFile("amethyst_video_", ".mp4", tempDir).apply { writeBytes(ByteArray(bytes)) }
 
+    /** What a block hands back once it has "uploaded". */
+    private fun finished(): UploadingState.UploadingFinalState = UploadingState.Finished(UploadOrchestrator.OrchestratorResult.NIP95Result(FileHeader("video/mp4", "0", 0, null, null), ByteArray(0), null, null))
+
+    private fun errorOf(state: UploadingState.UploadingFinalState): UploadError = (state as UploadingState.Error).error
+
     @Test
     fun supportMirrorsTheCompressor() {
         assertEquals(VideoCompressionSupport.Supported, uploader(available = true).videoCompression)
@@ -218,9 +225,9 @@ class DesktopMediaUploaderVideoTest {
                 uploader(result = { VideoCompressionResult.Compressed(out) }).withVideoPrepared(UploadOrchestrator(), uri(src), "video/mp4", CompressorQuality.HIGH, false, true, false, 0.2) { f, prepared ->
                     assertEquals(out, f)
                     assertTrue(prepared)
-                    "ok"
+                    finished()
                 }
-            assertEquals("ok", r)
+            assertIs<UploadingState.Finished>(r)
             assertFalse(out.exists())
             assertTrue(src.exists())
         }
@@ -241,7 +248,10 @@ class DesktopMediaUploaderVideoTest {
             val out = tempVideo(10)
             val job =
                 launch {
-                    uploader(result = { VideoCompressionResult.Compressed(out) }).withVideoPrepared(UploadOrchestrator(), uri(src), "video/mp4", CompressorQuality.HIGH, false, true, false, 0.2) { _, _ -> delay(10_000) }
+                    uploader(result = { VideoCompressionResult.Compressed(out) }).withVideoPrepared(UploadOrchestrator(), uri(src), "video/mp4", CompressorQuality.HIGH, false, true, false, 0.2) { _, _ ->
+                        delay(10_000)
+                        finished()
+                    }
                 }
             advanceTimeBy(100)
             job.cancelAndJoin()
@@ -255,7 +265,10 @@ class DesktopMediaUploaderVideoTest {
             val job =
                 launch {
                     uploader(result = { VideoCompressionResult.Compressed(tempVideo(10)) }, compressDelayMs = 10_000)
-                        .withVideoPrepared(UploadOrchestrator(), uri(src), "video/mp4", CompressorQuality.HIGH, false, true, false, 0.2) { _, _ -> blockRan = true }
+                        .withVideoPrepared(UploadOrchestrator(), uri(src), "video/mp4", CompressorQuality.HIGH, false, true, false, 0.2) { _, _ ->
+                            blockRan = true
+                            finished()
+                        }
                 }
             advanceTimeBy(100)
             job.cancelAndJoin()
@@ -268,7 +281,10 @@ class DesktopMediaUploaderVideoTest {
         runTest {
             val progress = UploadOrchestrator()
             uploader(result = { VideoCompressionResult.Compressed(tempVideo(10)) }, progressEmits = listOf(0.5))
-                .withVideoPrepared(progress, uri(src), "video/mp4", CompressorQuality.HIGH, false, true, false, progressCeiling = 0.4) { _, prepared -> assertTrue(prepared) }
+                .withVideoPrepared(progress, uri(src), "video/mp4", CompressorQuality.HIGH, false, true, false, progressCeiling = 0.4) { _, prepared ->
+                    assertTrue(prepared)
+                    finished()
+                }
             assertEquals(0.21, progress.progress.value, 1e-9) // 0.02 + 0.38 * 0.5
             assertEquals(UploadingState.Compressing, progress.progressState.value)
         }
@@ -280,6 +296,7 @@ class DesktopMediaUploaderVideoTest {
             uploader(stripResult = { s }).withVideoPrepared(UploadOrchestrator(), uri(src), "video/mp4", CompressorQuality.UNCOMPRESSED, false, stripMetadata = true, convertGifToMp4 = false, progressCeiling = 0.2) { f, prepared ->
                 assertEquals(s, f)
                 assertTrue(prepared)
+                finished()
             }
         }
 
@@ -287,21 +304,19 @@ class DesktopMediaUploaderVideoTest {
     fun strippingOwedButImpossibleAsksTheUser() =
         runTest {
             // Uncompressed + strip on, remux failed: the user decides, as on Android.
-            val declined = uploader(stripResult = { null })
-            assertFailsWith<DesktopMediaUploader.StrippingDeclined> {
-                declined.withVideoPrepared(UploadOrchestrator(), uri(src), "video/mp4", CompressorQuality.UNCOMPRESSED, false, stripMetadata = true, convertGifToMp4 = false, progressCeiling = 0.2, onStrippingFailed = { false }) { _, _ -> Unit }
-            }
+            val declined = uploader(stripResult = { null }).withVideoPrepared(UploadOrchestrator(), uri(src), "video/mp4", CompressorQuality.UNCOMPRESSED, false, stripMetadata = true, convertGifToMp4 = false, progressCeiling = 0.2, onStrippingFailed = { false }) { _, _ -> finished() }
+            assertEquals(UploadError.UPLOAD_CANCELLED, errorOf(declined))
             var ran = false
             uploader(stripResult = { null }).withVideoPrepared(UploadOrchestrator(), uri(src), "video/mp4", CompressorQuality.UNCOMPRESSED, false, stripMetadata = true, convertGifToMp4 = false, progressCeiling = 0.2, onStrippingFailed = { true }) { f, prepared ->
                 assertEquals(src, f)
                 assertFalse(prepared)
                 ran = true
+                finished()
             }
             assertTrue(ran)
             // Every encoder failed and the remux too, with the toggle hidden on the promise of a strip: ask as well.
-            assertFailsWith<DesktopMediaUploader.StrippingDeclined> {
-                uploader(result = { VideoCompressionResult.Original(null) }).withVideoPrepared(UploadOrchestrator(), uri(src), "video/mp4", CompressorQuality.HIGH, false, stripMetadata = true, convertGifToMp4 = false, progressCeiling = 0.2, onStrippingFailed = { false }) { _, _ -> Unit }
-            }
+            val allFailed = uploader(result = { VideoCompressionResult.Original(null) }).withVideoPrepared(UploadOrchestrator(), uri(src), "video/mp4", CompressorQuality.HIGH, false, stripMetadata = true, convertGifToMp4 = false, progressCeiling = 0.2, onStrippingFailed = { false }) { _, _ -> finished() }
+            assertEquals(UploadError.UPLOAD_CANCELLED, errorOf(allFailed))
         }
 
     @Test
@@ -311,18 +326,19 @@ class DesktopMediaUploaderVideoTest {
             uploader(result = { VideoCompressionResult.Original(null) }).withVideoPrepared(UploadOrchestrator(), uri(src), "video/mp4", CompressorQuality.HIGH, false, stripMetadata = false, convertGifToMp4 = false, progressCeiling = 0.2, onStrippingFailed = {
                 asked = true
                 false
-            }) { _, _ -> Unit }
+            }) { _, _ -> finished() }
             uploader(available = false).withVideoPrepared(UploadOrchestrator(), uri(src), "video/mp4", CompressorQuality.HIGH, false, stripMetadata = true, convertGifToMp4 = false, progressCeiling = 0.2, onStrippingFailed = {
                 asked = true
                 false
-            }) { _, _ -> Unit }
+            }) { _, _ -> finished() }
             assertFalse(asked)
         }
 
     @Test
-    fun tooBigReturnsNull() =
+    fun tooBigIsTheNip95SizeError() =
         runTest {
-            assertNull(uploader(result = { VideoCompressionResult.TooBig }).withVideoPrepared(UploadOrchestrator(), uri(src), "video/mp4", CompressorQuality.HIGH, false, true, false, 0.4, maxBytes = 80_000) { _, _ -> Unit })
+            val r = uploader(result = { VideoCompressionResult.TooBig }).withVideoPrepared(UploadOrchestrator(), uri(src), "video/mp4", CompressorQuality.HIGH, false, true, false, 0.4, maxBytes = 80_000) { _, _ -> finished() }
+            assertEquals(UploadError.MEDIA_TOO_BIG_FOR_NIP95, errorOf(r))
         }
 
     @Test

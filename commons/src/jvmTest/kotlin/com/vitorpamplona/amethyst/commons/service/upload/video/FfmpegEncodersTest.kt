@@ -21,7 +21,6 @@
 package com.vitorpamplona.amethyst.commons.service.upload.video
 
 import kotlinx.coroutines.runBlocking
-import java.io.File
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
@@ -75,13 +74,8 @@ class FfmpegEncodersTest {
     @Test
     fun hungListingIsKilledAndNotCached() =
         runBlocking {
-            if ("win" in System.getProperty("os.name").lowercase()) return@runBlocking
-            val script =
-                File.createTempFile("hung-ffmpeg", ".sh").apply {
-                    writeText("#!/bin/sh\nsleep 30\n")
-                    setExecutable(true)
-                    deleteOnExit()
-                }
+            if (FfmpegTestSupport.isWindows) return@runBlocking
+            val script = FfmpegTestSupport.fakeBinary("sleep 30")
             val started = System.currentTimeMillis()
             assertEquals(emptySet(), FfmpegEncoders.listAvailable(script.absolutePath, stallTimeoutMs = 200))
             assertTrue(System.currentTimeMillis() - started < 5_000, "killed by the stall watchdog")

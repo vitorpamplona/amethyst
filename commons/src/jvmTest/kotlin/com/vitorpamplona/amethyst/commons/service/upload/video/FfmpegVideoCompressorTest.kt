@@ -92,16 +92,6 @@ class FfmpegVideoCompressorTest {
         }
     }
 
-    private class FakeProbe(
-        ffprobe: String?,
-        private val duration: Double?,
-        private val hdr: Boolean,
-    ) : FfmpegProbe(ffprobe) {
-        private val answer = if (ffprobe == null) null else ProbeResult(VideoInfo(VideoResolution(1920, 1080), 30f), duration, hdr)
-
-        override suspend fun probe(file: File): ProbeResult? = answer
-    }
-
     private fun compressor(
         runner: ProcessRunner,
         encoders: Set<String>,
@@ -109,9 +99,10 @@ class FfmpegVideoCompressorTest {
         duration: Double? = 30.0,
         hdr: Boolean = false,
     ) = FfmpegVideoCompressor(
-        locator = FfmpegLocator({ true }, { emptyList() }, { null }, disabled = { false }),
+        locator = FfmpegLocator({ true }, { emptyList() }, { null }, disabled = false),
         encoders = { encoders },
-        probe = { FakeProbe(ffprobe, duration, hdr) },
+        // A 1080p30 source unless `ffprobe` is "missing".
+        probe = { if (ffprobe == null) null else ProbeResult(VideoInfo(VideoResolution(1920, 1080), 30f), duration, hdr) },
         runner = runner,
         gate = Semaphore(1),
         tempFile = { File.createTempFile("amethyst_video_", ".mp4", tempDir) },
@@ -263,7 +254,7 @@ class FfmpegVideoCompressorTest {
     @Test
     fun noFfmpegIsOriginalUnstripped() =
         runTest {
-            val none = FfmpegVideoCompressor(locator = FfmpegLocator({ false }, { emptyList() }, { null }, disabled = { false }))
+            val none = FfmpegVideoCompressor(locator = FfmpegLocator({ false }, { emptyList() }, { null }, disabled = false))
             assertEquals(VideoCompressionResult.Original(null), none.compress(source(1), CompressorQuality.HIGH, false) {})
         }
 }

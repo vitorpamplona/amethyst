@@ -28,18 +28,19 @@ package com.vitorpamplona.amethyst.commons.service.uploads
 enum class CompressorQuality(
     val imageMaxDimension: Int?,
     val imageQuality: Int,
-    /** Whether the video table has a row for this level; the slider offers only these when a video is selected. */
-    val hasVideoRule: Boolean,
 ) {
-    VERY_LOW(640, 50, false),
-    LOW(640, 65, true),
+    VERY_LOW(640, 50),
+    LOW(640, 65),
 
     // Keep JPEG detail while retaining Medium's original 1280 px size limit.
-    MEDIUM(1280, 85, true),
-    HIGH(1920, 85, true),
-    VERY_HIGH(2560, 90, false),
-    UNCOMPRESSED(null, 100, true),
+    MEDIUM(1280, 85),
+    HIGH(1920, 85),
+    VERY_HIGH(2560, 90),
+    UNCOMPRESSED(null, 100),
     ;
+
+    /** Whether the video table has a row for this level; the slider offers only these when a video is selected. */
+    val hasVideoRule: Boolean get() = videoLevel == this
 
     /**
      * The level the video encoder uses: VERY_HIGH → HIGH, VERY_LOW → LOW, everything else itself.
@@ -65,24 +66,6 @@ enum class CompressorQuality(
 
         /** The media-quality slider's position as a level. */
         fun fromSlider(position: Int): CompressorQuality = platformSliderSteps.getOrElse(position) { platformDefaultQuality }
-
-        /** The stops the slider shows: the platform list, or only the levels with a video rule when [hasVideo]. */
-        fun stepsFor(hasVideo: Boolean): List<CompressorQuality> = VideoAwareSliderSteps.stepsFor(platformSliderSteps, hasVideo)
-
-        /** The platform position a video-mode slider lands on from [position]: VERY_HIGH → HIGH, VERY_LOW → LOW. */
-        fun snapForVideo(position: Int): Int = VideoAwareSliderSteps.snapForVideo(platformSliderSteps, position)
-
-        /** The index of platform [position] among [stepsFor]. */
-        fun toDisplayedIndex(
-            position: Int,
-            hasVideo: Boolean,
-        ): Int = VideoAwareSliderSteps.toDisplayedIndex(platformSliderSteps, position, hasVideo)
-
-        /** The platform position of displayed [index] among [stepsFor]. */
-        fun fromDisplayedIndex(
-            index: Int,
-            hasVideo: Boolean,
-        ): Int = VideoAwareSliderSteps.fromDisplayedIndex(platformSliderSteps, index, hasVideo)
     }
 }
 
@@ -92,22 +75,26 @@ enum class CompressorQuality(
  * the displayed stops change.
  */
 object VideoAwareSliderSteps {
+    /** The stops the slider shows: [steps] as they are, or only the levels with a video rule when [hasVideo]. */
     fun stepsFor(
         steps: List<CompressorQuality>,
         hasVideo: Boolean,
     ): List<CompressorQuality> = steps.filter { !hasVideo || it.hasVideoRule }
 
+    /** The position a video-mode slider lands on from [position]: VERY_HIGH → HIGH, VERY_LOW → LOW. */
     fun snapForVideo(
         steps: List<CompressorQuality>,
         position: Int,
     ): Int = steps.indexOf(steps[position].videoLevel)
 
+    /** The index of platform [position] among [stepsFor]. */
     fun toDisplayedIndex(
         steps: List<CompressorQuality>,
         position: Int,
         hasVideo: Boolean,
-    ): Int = stepsFor(steps, hasVideo).indexOf(steps[if (hasVideo) snapForVideo(steps, position) else position])
+    ): Int = stepsFor(steps, hasVideo).indexOf(steps[position].let { if (hasVideo) it.videoLevel else it })
 
+    /** The platform position of displayed [index] among [stepsFor]. */
     fun fromDisplayedIndex(
         steps: List<CompressorQuality>,
         index: Int,

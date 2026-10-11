@@ -31,7 +31,7 @@ import kotlin.test.assertTrue
 
 /** The real runner against a real child process; no ffmpeg involved. Real time, so no `runTest`. */
 class FfmpegProcessesTest {
-    private val isWindows = "win" in System.getProperty("os.name").lowercase()
+    private val isWindows = FfmpegTestSupport.isWindows
 
     private fun sleep30(): List<String> = if (isWindows) listOf("timeout", "/t", "30", "/nobreak") else listOf("sleep", "30")
 

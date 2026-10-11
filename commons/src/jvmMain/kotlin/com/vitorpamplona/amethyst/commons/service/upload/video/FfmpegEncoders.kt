@@ -20,8 +20,6 @@
  */
 package com.vitorpamplona.amethyst.commons.service.upload.video
 
-import com.vitorpamplona.quartz.utils.Log
-import kotlinx.coroutines.CancellationException
 import java.util.concurrent.ConcurrentHashMap
 
 /**
@@ -67,24 +65,10 @@ object FfmpegEncoders {
      */
     suspend fun listAvailable(
         ffmpeg: String,
-        runner: ProcessRunner = FfmpegProcesses,
         stallTimeoutMs: Long = 5_000,
     ): Set<String> {
         cache[ffmpeg]?.let { return it }
-        val output = StringBuilder()
-        val outcome =
-            try {
-                runner.run(listOf(ffmpeg, "-hide_banner", "-encoders"), { line -> output.append(line).append('\n') }, stallTimeoutMs)
-            } catch (e: CancellationException) {
-                throw e
-            } catch (e: Exception) {
-                Log.w(TAG, "Could not list encoders of $ffmpeg", e)
-                return emptySet()
-            }
-        if (outcome.exitCode != 0) {
-            Log.w(TAG) { "Listing encoders of $ffmpeg exited ${outcome.exitCode}; will retry on the next upload" }
-            return emptySet()
-        }
-        return parseAvailable(output.toString()).also { cache[ffmpeg] = it }
+        val listing = FfmpegProcesses.captureStdout(listOf(ffmpeg, "-hide_banner", "-encoders"), stallTimeoutMs, TAG, "Listing encoders of $ffmpeg") ?: return emptySet()
+        return parseAvailable(listing).also { cache[ffmpeg] = it }
     }
 }

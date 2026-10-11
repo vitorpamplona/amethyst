@@ -91,11 +91,12 @@ import com.vitorpamplona.amethyst.commons.service.uploads.ImageFileStats
 import com.vitorpamplona.amethyst.commons.service.uploads.MediaUploader
 import com.vitorpamplona.amethyst.commons.service.uploads.MultiOrchestrator
 import com.vitorpamplona.amethyst.commons.service.uploads.SelectedMedia
-import com.vitorpamplona.amethyst.commons.ui.components.edgeToEdgeDialogProperties
-import com.vitorpamplona.amethyst.commons.service.uploads.VideoCompressionSupport
+import com.vitorpamplona.amethyst.commons.service.uploads.VideoAwareSliderSteps
+import com.vitorpamplona.amethyst.commons.service.uploads.VideoUploadControls
 import com.vitorpamplona.amethyst.commons.service.uploads.video.VideoCompressionRules
 import com.vitorpamplona.amethyst.commons.service.uploads.video.VideoInfo
 import com.vitorpamplona.amethyst.commons.service.uploads.video.VideoStandard
+import com.vitorpamplona.amethyst.commons.ui.components.edgeToEdgeDialogProperties
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.QuoteBorder
 import kotlinx.coroutines.delay
@@ -124,14 +125,15 @@ fun MediaQualitySlider(
 ) {
     // Not hasVideo() alone: where the platform will not compress the video, the slider governs
     // only the images, keeps their stops and promises nothing about the video.
-    val videoMode = media?.hasVideo() == true && uploader.videoCompression == VideoCompressionSupport.Supported
-    val steps = CompressorQuality.stepsFor(videoMode)
-    val platformPosition = position.coerceIn(0, CompressorQuality.sliderSteps.lastIndex)
+    val videoMode = VideoUploadControls(media, uploader.videoCompression, position).compressesVideo
+    val allSteps = CompressorQuality.sliderSteps
+    val steps = remember(videoMode) { VideoAwareSliderSteps.stepsFor(allSteps, videoMode) }
+    val platformPosition = position.coerceIn(0, allSteps.lastIndex)
     val quality = CompressorQuality.fromSlider(platformPosition)
 
     // Entering video mode on a level without a video rule moves to the one the encoder would use.
     LaunchedEffect(videoMode) {
-        if (videoMode) CompressorQuality.snapForVideo(platformPosition).let { if (it != platformPosition) onPositionChange(it) }
+        if (videoMode) VideoAwareSliderSteps.snapForVideo(allSteps, platformPosition).let { if (it != platformPosition) onPositionChange(it) }
     }
 
     val video = if (videoMode) media?.firstVideo() else null
@@ -145,8 +147,8 @@ fun MediaQualitySlider(
         )
 
         Slider(
-            value = CompressorQuality.toDisplayedIndex(platformPosition, videoMode).toFloat(),
-            onValueChange = { onPositionChange(CompressorQuality.fromDisplayedIndex(it.toInt().coerceIn(0, steps.lastIndex), videoMode)) },
+            value = VideoAwareSliderSteps.toDisplayedIndex(allSteps, platformPosition, videoMode).toFloat(),
+            onValueChange = { onPositionChange(VideoAwareSliderSteps.fromDisplayedIndex(allSteps, it.toInt().coerceIn(0, steps.lastIndex), videoMode)) },
             valueRange = 0f..steps.lastIndex.toFloat(),
             steps = (steps.size - 2).coerceAtLeast(0),
         )
@@ -198,9 +200,13 @@ private fun videoPhrase(
     return stringRes(Res.string.media_compression_video_target_example, rule.shortSide, mbps(rule.bitrateMbps))
 }
 
-/** The one line a dialog shows in place of the video controls when the platform needs ffmpeg to compress. */
+/** The one line a dialog shows in place of the video controls when the platform needs ffmpeg to compress; nothing otherwise. */
 @Composable
-fun VideoCompressionNeedsFfmpegHint(modifier: Modifier = Modifier) {
+fun VideoCompressionNeedsFfmpegHint(
+    controls: VideoUploadControls,
+    modifier: Modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
+) {
+    if (!controls.needsFfmpeg) return
     Text(
         text = stringRes(Res.string.video_compression_needs_ffmpeg),
         style = MaterialTheme.typography.bodySmall,

@@ -58,7 +58,7 @@ class FfmpegLocatorTest {
         runsOnPath: (String) -> Boolean,
         packageDirs: () -> List<File>,
         resourcesDir: () -> File?,
-        disabled: () -> Boolean = { false },
+        disabled: Boolean = false,
     ) = FfmpegLocator(runsOnPath, packageDirs, resourcesDir, disabled)
 
     @Test
@@ -100,7 +100,7 @@ class FfmpegLocatorTest {
             locator({
                 probes++
                 true
-            }, { emptyList() }, { null }, disabled = { true })
+            }, { emptyList() }, { null }, disabled = true)
         assertNull(l.ffmpeg)
         assertNull(l.ffprobe)
         assertEquals(0, probes)

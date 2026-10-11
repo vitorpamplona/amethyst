@@ -51,7 +51,7 @@ class MultiOrchestrator(
 
     fun first() = list.first()
 
-    fun hasVideo() = list.any { it.media.mimeType?.startsWith("video", ignoreCase = true) == true }
+    fun hasVideo() = list.any { it.isVideo() }
 
     fun hasGif() = list.any { it.media.isGif() }
 
@@ -61,7 +61,9 @@ class MultiOrchestrator(
     fun hasCompressibleImage() = list.any { it.media.isImage() == true && it.media.isCompressible() }
 
     /** The video the slider label describes. */
-    fun firstVideo(): SelectedMedia? = list.firstOrNull { it.media.isVideo() == true }?.media
+    fun firstVideo(): SelectedMedia? = list.firstOrNull { it.isVideo() }?.media
+
+    private fun SelectedMediaProcessing.isVideo() = media.mimeType?.startsWith("video", ignoreCase = true) == true
 
     fun hasNonMedia() = list.any { it.media.isNotMedia() }
 

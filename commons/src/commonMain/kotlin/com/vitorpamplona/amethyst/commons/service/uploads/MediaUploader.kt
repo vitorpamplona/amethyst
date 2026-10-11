@@ -138,8 +138,6 @@ interface MediaUploader {
 object UnavailableMediaUploader : MediaUploader {
     private const val REASON = "Uploads are not available on this platform yet"
 
-    override val videoCompression: VideoCompressionSupport get() = VideoCompressionSupport.Unsupported
-
     override suspend fun upload(
         progress: UploadOrchestrator,
         uri: MediaUri,

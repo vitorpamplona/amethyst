@@ -30,14 +30,9 @@ import kotlin.test.assertTrue
 
 /** The probe against stand-in `ffprobe` scripts, so a hung or failing binary is covered without a real one. */
 class FfmpegProbeTest {
-    private val isWindows = "win" in System.getProperty("os.name").lowercase()
+    private val isWindows = FfmpegTestSupport.isWindows
 
-    private fun script(body: String): File =
-        File.createTempFile("fake-ffprobe", ".sh").apply {
-            writeText("#!/bin/sh\n$body\n")
-            setExecutable(true)
-            deleteOnExit()
-        }
+    private fun script(body: String): File = FfmpegTestSupport.fakeBinary(body)
 
     @Test
     fun hungProbeIsKilledAndNull() =

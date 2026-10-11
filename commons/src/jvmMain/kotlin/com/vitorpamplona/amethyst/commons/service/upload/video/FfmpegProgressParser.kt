@@ -29,10 +29,15 @@ class FfmpegProgressParser(
     private val durationSeconds: Double?,
 ) {
     fun onLine(line: String): Double? {
-        if (line.trim() == "progress=end") return 1.0
-        val value = line.trim().removePrefix("out_time_us=").takeIf { it != line.trim() } ?: return null
+        val trimmed = line.trim()
+        if (trimmed == "progress=end") return 1.0
+        if (!trimmed.startsWith(OUT_TIME_KEY)) return null
         val duration = durationSeconds?.takeIf { it > 0 } ?: return null
-        val micros = value.toLongOrNull() ?: return null
+        val micros = trimmed.substring(OUT_TIME_KEY.length).toLongOrNull() ?: return null
         return (micros / 1e6 / duration).coerceIn(0.0, 1.0)
+    }
+
+    private companion object {
+        const val OUT_TIME_KEY = "out_time_us="
     }
 }

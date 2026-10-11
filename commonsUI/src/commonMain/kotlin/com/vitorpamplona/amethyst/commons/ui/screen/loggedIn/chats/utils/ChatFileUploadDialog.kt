@@ -64,7 +64,7 @@ import com.vitorpamplona.amethyst.commons.resources.media_compression_quality_ex
 import com.vitorpamplona.amethyst.commons.resources.media_compression_quality_label
 import com.vitorpamplona.amethyst.commons.resources.strip_metadata_description
 import com.vitorpamplona.amethyst.commons.resources.strip_metadata_label
-import com.vitorpamplona.amethyst.commons.service.uploads.VideoCompressionSupport
+import com.vitorpamplona.amethyst.commons.service.uploads.VideoUploadControls
 import com.vitorpamplona.amethyst.commons.ui.actions.uploads.ShowImageUploadGallery
 import com.vitorpamplona.amethyst.commons.ui.components.SetDialogToEdgeToEdge
 import com.vitorpamplona.amethyst.commons.ui.components.TextSpinner
@@ -237,10 +237,8 @@ private fun ImageVideoPostChat(
         }
     }
 
-    val support = accountViewModel.host.mediaUploader.videoCompression
-    val hasVideo = fileUploadState.multiOrchestrator?.hasVideo() == true
-    val canCompressVideo = support == VideoCompressionSupport.Supported
-    if (fileUploadState.multiOrchestrator?.hasCompressibleImage() == true || (hasVideo && canCompressVideo)) {
+    val controls = VideoUploadControls(fileUploadState.multiOrchestrator, accountViewModel.host.mediaUploader.videoCompression, fileUploadState.mediaQualitySlider)
+    if (controls.showsSlider) {
         Column(
             modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
             verticalArrangement = Arrangement.spacedBy(Size5dp),
@@ -267,9 +265,7 @@ private fun ImageVideoPostChat(
         )
     }
 
-    if (hasVideo && support == VideoCompressionSupport.NeedsFfmpeg) {
-        VideoCompressionNeedsFfmpegHint(Modifier.fillMaxWidth().padding(top = 8.dp))
-    }
+    VideoCompressionNeedsFfmpegHint(controls)
 
     SettingSwitchItem(
         title = Res.string.strip_metadata_label,

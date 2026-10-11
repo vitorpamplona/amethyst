@@ -25,7 +25,6 @@ import androidx.compose.ui.graphics.toComposeImageBitmap
 import com.vitorpamplona.amethyst.commons.model.Account
 import com.vitorpamplona.amethyst.commons.model.mediaServers.ServerName
 import com.vitorpamplona.amethyst.commons.model.mediaServers.ServerType
-import com.vitorpamplona.amethyst.commons.notices.UserNotice
 import com.vitorpamplona.amethyst.commons.notices.UserNoticeSink
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.desktop_upload_server_not_supported
@@ -127,14 +126,11 @@ class DesktopMediaUploader(
 
     private suspend fun notSupported(progress: UploadOrchestrator) = progress.error(UploadError.FAILED_TO_UPLOAD_MEDIA, loadStringRes(Res.string.desktop_upload_server_not_supported))
 
-    private fun tooBig(progress: UploadOrchestrator) = progress.error(UploadError.MEDIA_TOO_BIG_FOR_NIP95)
-
     private fun failed(
         progress: UploadOrchestrator,
         e: Exception,
     ): UploadingState.UploadingFinalState {
         if (e is CancellationException) throw e
-        if (e is StrippingDeclined) return progress.error(UploadError.UPLOAD_CANCELLED)
         return progress.error(UploadError.FAILED_TO_UPLOAD_MEDIA, e.message ?: e::class.simpleName.orEmpty())
     }
 
@@ -179,7 +175,7 @@ class DesktopMediaUploader(
                         hashBeforeEncryption = null,
                     ),
                 )
-            } ?: tooBig(progress)
+            }
         } catch (e: Exception) {
             failed(progress, e)
         }
@@ -230,7 +226,7 @@ class DesktopMediaUploader(
                         hashBeforeEncryption = result.metadata.sha256,
                     ),
                 )
-            } ?: tooBig(progress)
+            }
         } catch (e: Exception) {
             failed(progress, e)
         }
@@ -284,7 +280,7 @@ class DesktopMediaUploader(
                 progress.updateState(NIP95_COMPRESSING_CEILING, UploadingState.Uploading)
                 val payload = preparePayload(file, prepared, compressionQuality, stripMetadata, cipher, maxBytes = NIP95_MAX_BYTES.toLong())
                 if (payload == null || payload.bytes.size > NIP95_MAX_BYTES) {
-                    tooBig(progress)
+                    progress.error(UploadError.MEDIA_TOO_BIG_FOR_NIP95)
                 } else {
                     progress.updateState(0.8, UploadingState.Hashing)
                     val header =
@@ -302,7 +298,7 @@ class DesktopMediaUploader(
                         ),
                     )
                 }
-            } ?: tooBig(progress)
+            }
         } catch (e: Exception) {
             failed(progress, e)
         }
@@ -346,7 +342,7 @@ class DesktopMediaUploader(
                         httpAuth = httpAuth,
                     )
                 verifyNip96(progress, result, payload)
-            } ?: tooBig(progress)
+            }
         } catch (_: SignerExceptions.ReadOnlyException) {
             progress.error(UploadError.LOGIN_WITH_PRIVATE_KEY)
         } catch (e: Exception) {
@@ -407,29 +403,42 @@ class DesktopMediaUploader(
         onProgress: (Double) -> Unit,
     ): VideoCompressionResult? {
         if (!videoCompressor.available) return null
-        val isVideo = mime?.startsWith("video/") == true
+        val isVideo = isVideo(mime)
         val isGif = mime == "image/gif"
-        return when {
-            isGif && convertGifToMp4 -> videoCompressor.convertGif(source, onProgress)
-            isVideo && quality != CompressorQuality.UNCOMPRESSED -> videoCompressor.compress(source, quality, useH265, maxBytes, onProgress)
-            // The dialog promised a strip; without an encode only the remux can keep it.
-            isVideo && stripMetadata -> VideoCompressionResult.Original(videoCompressor.strip(source))
-            else -> null
+        val result =
+            when {
+                isGif && convertGifToMp4 -> videoCompressor.convertGif(source, onProgress)
+                isVideo && quality != CompressorQuality.UNCOMPRESSED -> videoCompressor.compress(source, quality, useH265, maxBytes, onProgress)
+                // The dialog promised a strip; without an encode only the remux can keep it.
+                isVideo && stripMetadata -> VideoCompressionResult.Original(videoCompressor.strip(source))
+                else -> return null
+            }
+        when (result) {
+            is VideoCompressionResult.Compressed -> result.notices.forEach(notices::notify)
+            is VideoCompressionResult.Original -> result.notices.forEach(notices::notify)
+            VideoCompressionResult.TooBig -> Unit
         }
+        return result
     }
 
-    private fun report(notices: List<UserNotice>) = notices.forEach(this.notices::notify)
+    private fun isVideo(mime: String?) = mime?.startsWith("video/") == true
+
+    /** Maps the encoder's 0..1 into the Compressing band of the bar, which ends where the upload stage starts. */
+    private fun compressingProgress(
+        progress: UploadOrchestrator,
+        ceiling: Double,
+    ): (Double) -> Unit = { fraction -> progress.updateState(COMPRESSING_FLOOR + (ceiling - COMPRESSING_FLOOR) * fraction, UploadingState.Compressing) }
 
     /**
      * Runs [block] with the file to upload: the picked file as it is (`prepared = false`), or a
      * compressed or remuxed temp the compressor wrote (`prepared = true`), deleted when [block]
      * returns, throws or is cancelled. Progress during the encode climbs from 0.02 to
-     * [progressCeiling] as [UploadingState.Compressing]. Null when the estimated output is over
-     * [maxBytes]; the caller reports the NIP-95 limit. When a strip was owed (a video with
-     * [stripMetadata] on and ffmpeg at hand) but neither an encode nor a remux could deliver it,
-     * [onStrippingFailed] asks the user, as on Android; a `false` throws [StrippingDeclined].
+     * [progressCeiling] as [UploadingState.Compressing]. An estimated output over [maxBytes] ends
+     * as the NIP-95 size error. When a strip was owed (a video with [stripMetadata] on and ffmpeg
+     * at hand) but neither an encode nor a remux could deliver it, [onStrippingFailed] asks the
+     * user, as on Android; a `false` ends as a cancelled upload.
      */
-    internal suspend fun <T> withVideoPrepared(
+    internal suspend fun withVideoPrepared(
         progress: UploadOrchestrator,
         uri: MediaUri,
         mimeType: String?,
@@ -440,26 +449,21 @@ class DesktopMediaUploader(
         progressCeiling: Double,
         maxBytes: Long? = null,
         onStrippingFailed: suspend () -> Boolean = { true },
-        block: suspend (file: File, prepared: Boolean) -> T,
-    ): T? {
+        block: suspend (file: File, prepared: Boolean) -> UploadingState.UploadingFinalState,
+    ): UploadingState.UploadingFinalState {
         val source = fileOf(uri)
         val mime = mimeType ?: mimeType(uri)
         val result =
-            prepareVideo(source, mime, quality, useH265, stripMetadata, convertGifToMp4, maxBytes) { fraction ->
-                progress.updateState(COMPRESSING_FLOOR + (progressCeiling - COMPRESSING_FLOOR) * fraction, UploadingState.Compressing)
-            } ?: return block(source, false)
+            prepareVideo(source, mime, quality, useH265, stripMetadata, convertGifToMp4, maxBytes, compressingProgress(progress, progressCeiling))
+                ?: return block(source, false)
         return when (result) {
-            VideoCompressionResult.TooBig -> null
-            is VideoCompressionResult.Compressed -> {
-                report(result.notices)
-                usingTemp(result.file) { block(it, true) }
-            }
+            VideoCompressionResult.TooBig -> progress.error(UploadError.MEDIA_TOO_BIG_FOR_NIP95)
+            is VideoCompressionResult.Compressed -> usingTemp(result.file) { block(it, true) }
             is VideoCompressionResult.Original -> {
-                report(result.notices)
                 val stripped = result.stripped
                 if (stripped == null) {
-                    val stripOwed = stripMetadata && mime?.startsWith("video/") == true
-                    if (stripOwed && !onStrippingFailed()) throw StrippingDeclined()
+                    val stripOwed = stripMetadata && isVideo(mime)
+                    if (stripOwed && !onStrippingFailed()) return progress.error(UploadError.UPLOAD_CANCELLED)
                     return block(source, false)
                 }
                 usingTemp(stripped) { block(it, true) }
@@ -492,19 +496,12 @@ class DesktopMediaUploader(
     ): MediaCompressorResult {
         val unchanged = MediaCompressorResult(uri, mimeType, null)
         val result =
-            prepareVideo(fileOf(uri), mimeType ?: mimeType(uri), compressionQuality, useH265, stripMetadata = false, convertGifToMp4, maxBytes = null) { fraction ->
-                progress.updateState(COMPRESSING_FLOOR + (BLOSSOM_COMPRESSING_CEILING - COMPRESSING_FLOOR) * fraction, UploadingState.Compressing)
-            } ?: return unchanged
+            prepareVideo(fileOf(uri), mimeType ?: mimeType(uri), compressionQuality, useH265, stripMetadata = false, convertGifToMp4, maxBytes = null, compressingProgress(progress, BLOSSOM_COMPRESSING_CEILING))
+                ?: return unchanged
         return when (result) {
-            VideoCompressionResult.TooBig -> unchanged
-            is VideoCompressionResult.Compressed -> {
-                report(result.notices)
-                mp4Result(result.file)
-            }
-            is VideoCompressionResult.Original -> {
-                report(result.notices)
-                result.stripped?.let(::mp4Result) ?: unchanged
-            }
+            VideoCompressionResult.TooBig -> unchanged // cannot occur without maxBytes
+            is VideoCompressionResult.Compressed -> mp4Result(result.file)
+            is VideoCompressionResult.Original -> result.stripped?.let(::mp4Result) ?: unchanged
         }
     }
 
@@ -596,7 +593,7 @@ class DesktopMediaUploader(
     ): MediaUri {
         val source = fileOf(uri)
         val mime = mimeType ?: mimeType(uri)
-        if (mime?.startsWith("video/") == true && videoCompressor.available) {
+        if (isVideo(mime) && videoCompressor.available) {
             return videoCompressor.strip(source)?.let { StringMediaUri(it.absolutePath) } ?: uri
         }
         val stripped = withContext(Dispatchers.IO) { MediaCompressor.stripExif(source) }
@@ -611,9 +608,6 @@ class DesktopMediaUploader(
         val file = fileOf(uri).canonicalFile
         if (file.isFile && file.startsWith(AmethystTempDir.rootDir().canonicalFile)) file.delete()
     }
-
-    /** The user declined to upload a video whose metadata could not be stripped. */
-    internal class StrippingDeclined : RuntimeException("Upload declined: metadata could not be stripped")
 
     private companion object {
         const val TAG = "DesktopMediaUploader"

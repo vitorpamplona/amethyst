@@ -86,7 +86,7 @@ import com.vitorpamplona.amethyst.commons.resources.video_codec_h265_label
 import com.vitorpamplona.amethyst.commons.service.uploads.CompressorQuality
 import com.vitorpamplona.amethyst.commons.service.uploads.MultiOrchestrator
 import com.vitorpamplona.amethyst.commons.service.uploads.SelectedMediaProcessing
-import com.vitorpamplona.amethyst.commons.service.uploads.VideoCompressionSupport
+import com.vitorpamplona.amethyst.commons.service.uploads.VideoUploadControls
 import com.vitorpamplona.amethyst.commons.ui.actions.uploads.ShowImageUploadGallery
 import com.vitorpamplona.amethyst.commons.ui.components.TextSpinner
 import com.vitorpamplona.amethyst.commons.ui.components.TitleExplainer
@@ -356,10 +356,8 @@ fun ImageVideoDescription(
 
             // Hide the privacy toggle only when a selected video will really be compressed on this
             // platform (compression strips metadata); without ffmpeg the toggle is the only strip.
-            val support = accountViewModel.host.mediaUploader.videoCompression
-            val canCompressVideo = support == VideoCompressionSupport.Supported
-            val hasVideo = uris.hasVideo()
-            val isVideoWithCompression = hasVideo && canCompressVideo && mediaQualitySlider != CompressorQuality.uncompressedSliderPosition
+            val controls = VideoUploadControls(uris, accountViewModel.host.mediaUploader.videoCompression, mediaQualitySlider)
+            val isVideoWithCompression = controls.videoWillBeCompressed
 
             if (!isVideoWithCompression) {
                 SettingSwitchItem(
@@ -374,7 +372,7 @@ fun ImageVideoDescription(
                 )
             }
 
-            if ((uris.hasCompressibleImage() || (hasVideo && canCompressVideo)) && !convertGifToMp4) {
+            if (controls.showsSlider && !convertGifToMp4) {
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
                     modifier =
@@ -409,9 +407,7 @@ fun ImageVideoDescription(
                 )
             }
 
-            if (hasVideo && support == VideoCompressionSupport.NeedsFfmpeg) {
-                VideoCompressionNeedsFfmpegHint(Modifier.fillMaxWidth().padding(top = 8.dp))
-            }
+            VideoCompressionNeedsFfmpegHint(controls)
 
             if (isVideoWithCompression) {
                 SettingSwitchItem(
@@ -426,7 +422,7 @@ fun ImageVideoDescription(
                 )
             }
 
-            if (uris.hasGif() && canCompressVideo) {
+            if (controls.showsGifSwitch) {
                 SettingSwitchItem(
                     title = Res.string.convert_gif_to_mp4_label,
                     description = Res.string.convert_gif_to_mp4_description,
