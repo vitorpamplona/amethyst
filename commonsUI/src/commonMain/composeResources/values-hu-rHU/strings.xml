@@ -1005,7 +1005,10 @@
     <string name="my_fitness_week_trend">Heti aktivitási idő</string>
     <string name="my_fitness_week_of">%1$s hete</string>
     <string name="my_fitness_goal_line">Cél</string>
-    <string name="my_fitness_weeks_met">A cél teljesítve az utolsó %2$d hétből %1$d alkalommal</string>
+    <plurals name="my_fitness_weeks_met">
+        <item quantity="one">A cél teljesítve az utolsó %2$d hétből %1$d alkalommal</item>
+        <item quantity="other">A cél teljesítve az utolsó %2$d hétből %1$d alkalommal</item>
+    </plurals>
     <string name="my_fitness_average_change">Az utóbbi időszak heti átlaga: %1$s, %2$s az azt megelőző 4 héthez képest</string>
     <string name="my_fitness_average">Az utóbbi időszak heti átlaga: %1$s</string>
     <string name="my_fitness_consistency">Következetesség</string>
@@ -6824,7 +6827,10 @@
     <string name="privacy_lock_password_new">Új jelszó</string>
     <string name="privacy_lock_password_confirm">Új jelszó megerősítése</string>
     <string name="privacy_lock_password_mismatch">A jelszavak nem egyeznek.</string>
-    <string name="privacy_lock_password_too_short">Használjon legalább %1$d karaktert.</string>
+    <plurals name="privacy_lock_password_too_short">
+        <item quantity="one">Használjon legalább %1$d karaktert.</item>
+        <item quantity="other">Használjon legalább %1$d karaktert.</item>
+    </plurals>
     <string name="privacy_lock_password_wrong">Hibás jelszó.</string>
     <string name="privacy_lock_not_available">Az adatvédelmi zár itt nem érhető el.</string>
     <string name="privacy_lock_unlock">Feloldás</string>

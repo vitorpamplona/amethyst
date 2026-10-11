@@ -1005,7 +1005,10 @@
     <string name="my_fitness_week_trend">साप्ताहिक सक्रिय समय</string>
     <string name="my_fitness_week_of">%1$s के सप्ताह</string>
     <string name="my_fitness_goal_line">लक्ष्य</string>
-    <string name="my_fitness_weeks_met">लक्ष्य प्राप्त पिछले %2$d सप्ताहों में से %1$d</string>
+    <plurals name="my_fitness_weeks_met">
+        <item quantity="one">लक्ष्य प्राप्त पिछले %2$d सप्ताह में से %1$d</item>
+        <item quantity="other">लक्ष्य प्राप्त पिछले %2$d सप्ताहों में से %1$d</item>
+    </plurals>
     <string name="my_fitness_average_change">मध्यमान %1$s प्रतिसप्ताह निकटकालतः। %2$s पिछले चार सप्ताहों की तुलना में</string>
     <string name="my_fitness_average">मध्यमान %1$s प्रतिसप्ताह निकटकालतः</string>
     <string name="my_fitness_consistency">सुसंगति</string>
@@ -6824,7 +6827,10 @@
     <string name="privacy_lock_password_new">नया पारणशब्द</string>
     <string name="privacy_lock_password_confirm">नए पारणशब्द की पुष्टि करें</string>
     <string name="privacy_lock_password_mismatch">पारणशब्दों में मेल नहीं।</string>
-    <string name="privacy_lock_password_too_short">न्यूनतम %1$d अक्षरों का प्रयोग करें।</string>
+    <plurals name="privacy_lock_password_too_short">
+        <item quantity="one">न्यूनतम %1$d अक्षर का प्रयोग करें।</item>
+        <item quantity="other">न्यूनतम %1$d अक्षरों का प्रयोग करें।</item>
+    </plurals>
     <string name="privacy_lock_password_wrong">पारणशब्द दोषपूर्ण।</string>
     <string name="privacy_lock_not_available">गोपनीयता ताला यहाँ उपलब्ध नहीं।</string>
     <string name="privacy_lock_unlock">ताला खोलें</string>

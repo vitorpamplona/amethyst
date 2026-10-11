@@ -407,7 +407,7 @@ private fun WeeklyTrendCard(
                         .sum() / 60f
                 StackedBar(colored + (other to colors.other), w.start.shortDate())
             }
-        val description = stringRes(Res.string.my_fitness_weeks_met, insights.weeksGoalMet, insights.weeksTracked)
+        val description = pluralStringRes(Res.plurals.my_fitness_weeks_met, insights.weeksTracked, insights.weeksGoalMet, insights.weeksTracked)
 
         WeeklyBarChart(
             bars = bars,
