@@ -328,21 +328,23 @@ repositories {
 Add the following line to your `commonMain` dependencies:
 
 ```gradle
-implementation('com.vitorpamplona.quartz:quartz:1.16.0')
+implementation('com.vitorpamplona.quartz:quartz:1.17.0')
 ```
 
 Variations to each platform are also available:
 
 ```gradle
-implementation('com.vitorpamplona.quartz:quartz-android:1.16.0')
-implementation('com.vitorpamplona.quartz:quartz-jvm:1.16.0')
-implementation('com.vitorpamplona.quartz:quartz-iosarm64:1.16.0')
-implementation('com.vitorpamplona.quartz:quartz-iossimulatorarm64:1.16.0')
-implementation('com.vitorpamplona.quartz:quartz-macosarm64:1.16.0')
-implementation('com.vitorpamplona.quartz:quartz-linuxx64:1.16.0')
+implementation('com.vitorpamplona.quartz:quartz-android:1.17.0')
+implementation('com.vitorpamplona.quartz:quartz-jvm:1.17.0')
+implementation('com.vitorpamplona.quartz:quartz-iosarm64:1.17.0')
+implementation('com.vitorpamplona.quartz:quartz-iossimulatorarm64:1.17.0')
+implementation('com.vitorpamplona.quartz:quartz-macosarm64:1.17.0')
+implementation('com.vitorpamplona.quartz:quartz-linuxx64:1.17.0')
 ```
 
 Check versions on [MavenCentral](https://central.sonatype.com/search?q=com.vitorpamplona.quartz)
+
+Using a coding agent (Claude Code, Codex, Cursor, …)? Install the [Quartz agent skill](quartz/agent-skill/README.md) so it reaches for Quartz's helpers instead of re-implementing them.
 
 #### Snapshots (JitPack)
 

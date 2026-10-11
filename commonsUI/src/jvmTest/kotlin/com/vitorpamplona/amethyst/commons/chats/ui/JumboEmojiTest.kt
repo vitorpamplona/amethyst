@@ -28,7 +28,7 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertSame
 import org.junit.Test
 
-// Emoji are written as escapes so the file stays unambiguous on disk (see CLAUDE.md).
+// Emoji are written as escapes so the file stays unambiguous on disk (see AGENTS.md).
 class JumboEmojiTest {
     private val grin = "\uD83D\uDE00" // U+1F600
     private val thumbsUpMedium = "\uD83D\uDC4D\uD83C\uDFFD" // U+1F44D + skin tone U+1F3FD

@@ -197,7 +197,7 @@ Hard rules:
 ## Workflow
 
 1. **Survey first.** Search the codebase for existing implementations before
-   writing new code. The `.claude/CLAUDE.md` file has a recommended set of
+   writing new code. The `AGENTS.md` file has a recommended set of
    `grep` queries; running them routinely turns up the exact class you were
    about to re-invent.
 2. **Open a small PR.** One feature or one fix per PR. Refactors that

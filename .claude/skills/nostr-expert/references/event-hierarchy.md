@@ -1,301 +1,65 @@
-# Event Hierarchy & Structure
+# Event hierarchy
 
-## Core Hierarchy
+All in `quartz/src/commonMain/kotlin/com/vitorpamplona/quartz/nip01Core/core/` unless noted.
 
 ```
-IEvent (empty interface)
-  └── Event (@Immutable base class)
-      ├── BaseAddressableEvent (replaceable + addressable, has d-tag)
-      │   ├── BaseReplaceableEvent (kinds 10000-20000, FIXED_D_TAG = "")
-      │   └── [Specific addressable events - 30000-40000]
-      └── [Specific event implementations - all other kinds]
+IEvent (marker interface)
+└── Event(id, pubKey, createdAt, kind, tags, content, sig)      Event.kt, @Immutable, open
+    ├── BaseReplaceableEvent   kinds 0, 3, 10000–19999; dTag() = FIXED_D_TAG ("")
+    ├── BaseAddressableEvent   kinds 30000–39999; dTag() from tags, address() = Address(kind, pubKey, dTag)
+    └── every other typed event class (subclasses Event directly)
 ```
 
-## Event Base Class
+Both bases implement `AddressableEvent` (`dTag()`, `address()`), so a replaceable event
+also has an `Address` — with an empty d-tag. `BaseReplaceableEvent` does **not** extend
+`BaseAddressableEvent`.
 
-**Location**: `/quartz/src/commonMain/kotlin/com/vitorpamplona/quartz/nip01Core/core/Event.kt`
+## Kind ranges (`Kind.kt`, verbatim)
 
 ```kotlin
-@Immutable
-open class Event(
-    val id: HexKey,              // SHA-256 hash of serialized event
-    val pubKey: HexKey,          // Author's public key (32 bytes hex)
-    val createdAt: Long,         // Unix timestamp
-    val kind: Kind,              // Event kind (Int typealias)
-    val tags: TagArray,          // Array of tag arrays
-    val content: String,         // Event content
-    val sig: HexKey,             // schnorr signature (64 bytes hex)
-) : IEvent, OptimizedSerializable
+fun Kind.isRegular() = this > 0 && this < 10_000 && this != ContactListEvent.KIND
+fun Kind.isEphemeral() = this >= 20_000 && this < 30_000
+fun Kind.isReplaceable() = this == MetadataEvent.KIND || this == ContactListEvent.KIND || (this >= 10_000 && this < 20_000)
+fun Kind.isAddressable() = this >= 30_000 && this < 40_000
 ```
 
-## Kind Classification
+Note `isRegular()` excludes kind 0 and kind 3 and starts at 1, not 1000.
+
+## Shape of a typed event
+
+Copy an existing class in the same NIP. `TextNoteEvent` (`nip10Notes/TextNoteEvent.kt`):
 
 ```kotlin
-typealias Kind = Int
-
-fun Kind.isEphemeral() = this in 20000..29999
-fun Kind.isReplaceable() = this == 0 || this == 3 || this in 10000..19999
-fun Kind.isAddressable() = this in 30000..39999
-fun Kind.isRegular() = this in 1000..9999
-```
-
-## Common Event Types
-
-### Text Note (kind 1)
-```kotlin
-class TextNoteEvent(...) : BaseThreadedEvent(...),
-    EventHintProvider, AddressHintProvider, PubKeyHintProvider, SearchableEvent
-
-// Threading support via markers: reply, root, mention
-fun replyTo(): List<Note>  // Direct reply targets
-fun root(): Note?          // Root of thread
-```
-
-### Metadata (kind 0)
-```kotlin
-class MetadataEvent(...) : BaseAddressableEvent(...)
-
-// Replaceable: newest version overwrites old
-// d-tag automatically set to "" for kind 0
-fun name(): String?
-fun displayName(): String?
-fun picture(): String?
-fun about(): String?
-fun lnAddress(): String?
-```
-
-### Reaction (kind 7)
-```kotlin
-class ReactionEvent(...) : Event(...)
-
-companion object {
-    const val LIKE = "+"
-    const val DISLIKE = "-"
-
-    fun like(reactedTo: EventHintBundle<Event>, ...)
-    fun dislike(reactedTo: EventHintBundle<Event>, ...)
+class TextNoteEvent(id: HexKey, pubKey: HexKey, createdAt: Long, tags: Array<Array<String>>, content: String, sig: HexKey) :
+    BaseThreadedEvent(id, pubKey, createdAt, KIND, tags, content, sig),
+    EventHintProvider, AddressHintProvider, PubKeyHintProvider, IForkableEvent, SearchableEvent {
+    companion object {
+        const val KIND = 1
+        fun build(note: String, replyingTo: EventHintBundle<TextNoteEvent>? = null, …,
+                  initializer: TagArrayBuilder<TextNoteEvent>.() -> Unit = {}) =
+            eventTemplate(KIND, note, createdAt) { … initializer() }
+    }
 }
 ```
 
-### Zap Request/Receipt (kinds 9734, 9735)
-```kotlin
-class ZapRequestEvent(...) : Event(...)
-    // Created by client, sent to Lightning Address
+House rules visible there:
 
-class ZapReceiptEvent(...) : Event(...)
-    // Receipt from LSP, contains bolt11 + embedded zap request
-    val zapRequest: ZapRequestEvent? by lazy { containedPost() }
-    val amount: BigDecimal? by lazy { /* parse from bolt11 */ }
-```
+- The constructor takes no `kind`; it passes its `KIND` constant up.
+- Construction goes through a `companion` `build(...)` that returns an `EventTemplate<T>`
+  (unsigned); a `NostrSigner` signs it (`signer.sign(template)`, see `auth-signers`).
+- References to other events come in as `EventHintBundle<T>` (`nip01Core/hints/`), which
+  carries the relay hint along with the event.
 
-### Long-Form Content (kind 30023)
-```kotlin
-class LongFormContentEvent(...) : BaseAddressableEvent(...)
-    // Blog posts, articles
-    // Addressable via kind:pubkey:d-tag
-```
+## Optional interfaces
 
-### Lists (NIP-51)
-Each list kind is its own class under `nip51Lists/`, not a subtype of a shared list event.
-Lists with private (NIP-44 encrypted) items extend one of two bases:
-```kotlin
-// Base for sets (kind 30000-39999); some replaceable lists use it too (MuteListEvent, InterestListEvent)
-abstract class PrivateTagArrayEvent(...) : BaseAddressableEvent(...)
-// Replaceable lists (kind 10000-19999)
-abstract class PrivateReplaceableTagArrayEvent(...) : BaseReplaceableEvent(...)
+| Interface | File | Purpose |
+|---|---|---|
+| `EventHintProvider` / `AddressHintProvider` / `PubKeyHintProvider` | `nip01Core/hints/HintProviders.kt` | `eventHints()`/`linkedEventIds()` etc. — feed the relay-hint indexes and `LocalCache` gatherers |
+| `SearchableEvent` | `nip50Search/SearchableEvent.kt` | NIP-50 full-text indexing — see the `event-store-semantics` skill |
+| `PrivateTagArrayEvent` / `PrivateReplaceableTagArrayEvent` | `nip51Lists/` | lists with NIP-44-encrypted private tags in `content` |
 
-class MuteListEvent(...) : PrivateTagArrayEvent(...)            // kind 10000
-class PinListEvent(...) : BaseReplaceableEvent(...)             // kind 10001, public only
-class BookmarkListEvent(...) : PrivateReplaceableTagArrayEvent(...) // kind 10003
-class InterestListEvent(...) : PrivateTagArrayEvent(...)        // kind 10015
-class FollowSetEvent(...) : PrivateTagArrayEvent(...)           // kind 30000 follow sets
-class BookmarkSetEvent(...) : PrivateTagArrayEvent(...)         // kind 30003 bookmark sets
-class StarterPackEvent(...) : BaseAddressableEvent(...)         // kind 39089 starter packs
-```
+## Validation (`nip01Core/crypto/EventExt.kt`)
 
-## Event Interfaces
-
-### Hint Providers
-Events can implement interfaces to optimize relay queries:
-
-```kotlin
-interface EventHintProvider {
-    fun taggedEventIds(): Set<HexKey>
-    fun taggedEventRelays(): Map<HexKey, Set<NormalizedRelayUrl>>
-}
-
-interface PubKeyHintProvider {
-    fun taggedPubKeys(): Set<HexKey>
-    fun taggedPubKeyRelays(): Map<HexKey, Set<NormalizedRelayUrl>>
-}
-
-interface AddressHintProvider {
-    fun taggedAddresses(): Set<Address>
-    fun taggedAddressRelays(): Map<Address, Set<NormalizedRelayUrl>>
-}
-
-interface SearchableEvent {
-    fun subject(): String?
-    fun isContentEncoded(): Boolean
-}
-```
-
-## Event Building Pattern
-
-### DSL Builder
-```kotlin
-TextNoteEvent.build(
-    note = "Hello Nostr",
-    replyingTo = eventBundle,
-    createdAt = TimeUtils.now()
-) {
-    pTag(pubKey, relayHint)              // Tag person
-    eTag(eventId, relayHint, "reply")    // Tag event with marker
-    hashtag("nostr")                     // Add hashtag
-    alt("A short note")                  // Alt text
-}
-```
-
-### Event Template (Low-level)
-```kotlin
-suspend fun eventTemplate(
-    kind: Kind,
-    content: String,
-    createdAt: Long,
-    initializer: TagArrayBuilder.() -> Unit
-): EventTemplate {
-    val tags = TagArrayBuilder().apply(initializer).build()
-    return EventTemplate(kind, tags, content, createdAt)
-}
-
-// Sign with signer
-val template = eventTemplate(1, "Hello", now()) { pTag(pubkey) }
-val signedEvent = signer.sign(template)
-```
-
-## Addressable vs Regular Events
-
-| Feature | Regular Event | Addressable Event |
-|---------|---------------|-------------------|
-| **Identifier** | Event ID (SHA-256 hash) | Address (kind:pubkey:d-tag) |
-| **Replaceability** | Immutable | Newest replaces old |
-| **d-tag** | Optional | Required |
-| **Lookup** | By event ID | By address |
-| **Example** | Text note (kind 1) | Metadata (kind 0), Long-form (kind 30023) |
-
-```kotlin
-// Regular event address
-note = LocalCache.getNoteIfExists(eventId)
-
-// Addressable event address
-address = Address(kind = 30023, pubkey = authorHex, dTag = "my-article")
-note = LocalCache.getAddressableNoteIfExists(address)
-```
-
-## Event Validation
-
-```kotlin
-// Verify event ID matches computed hash
-fun Event.verifyId(): Boolean =
-    EventHasher.hashIdCheck(id, pubKey, createdAt, kind, tags, content)
-
-// Verify signature
-fun Event.verifySignature(): Boolean =
-    Nip01.verify(Hex.decode(sig), Hex.decode(id), Hex.decode(pubKey))
-
-// Complete verification
-fun Event.checkSignature() {
-    if (!verifyId()) throw Exception("ID mismatch")
-    if (!verifySignature()) throw Exception("Bad signature!")
-}
-```
-
-## Event Serialization
-
-```kotlin
-// To JSON (for transmission/signing)
-fun Event.toJson(): String = OptimizedJsonMapper.toJson(this)
-
-// From JSON
-fun Event.fromJson(json: String): Event = OptimizedJsonMapper.fromJson(json)
-
-// Event ID generation (SHA-256 of canonical JSON)
-fun EventHasher.hashId(
-    pubKey: HexKey,
-    createdAt: Long,
-    kind: Kind,
-    tags: TagArray,
-    content: String
-): HexKey {
-    val serialized = """[0,"$pubKey",$createdAt,$kind,${tags.toJson()},"$content"]"""
-    return sha256(serialized.encodeToByteArray()).toHexKey()
-}
-```
-
-## Event Lifecycle in LocalCache
-
-```
-Event received from relay
-    ↓
-LocalCache.consume(event, relay, wasVerified)
-    ↓
-getOrCreateNote(event.id) or getOrCreateAddressableNote(address)
-    ↓
-justVerify(event) → checkSignature()
-    ↓
-note.loadEvent(event, author, replyTo)
-    ↓
-Update indices (replies, reactions, boosts)
-    ↓
-refreshNewNoteObservers(note) → emit to SharedFlow
-    ↓
-UI updates
-```
-
-## Common Event Patterns
-
-### Reply Threading
-```kotlin
-// Root event (top of thread)
-val rootEvent = TextNoteEvent.build("Thread root") { }
-
-// Reply to root
-val reply1 = TextNoteEvent.build("First reply", replyingTo = rootEvent) {
-    // Automatically adds:
-    // ["e", <root_id>, <relay>, "root"]
-    // ["e", <root_id>, <relay>, "reply"]
-}
-
-// Reply to reply (nested)
-val reply2 = TextNoteEvent.build("Nested reply", replyingTo = reply1) {
-    // Automatically adds:
-    // ["e", <root_id>, <relay>, "root"]
-    // ["e", <reply1_id>, <relay>, "reply"]
-}
-```
-
-### Replaceable Events
-```kotlin
-// Metadata update (kind 0) - newest wins
-val metadata1 = MetadataEvent.createNew(name = "Alice", picture = "url1")
-Thread.sleep(1000)
-val metadata2 = MetadataEvent.createNew(name = "Alice Updated", picture = "url2")
-
-// LocalCache keeps only metadata2 (higher createdAt)
-```
-
-### Event Deletion
-```kotlin
-// Delete events
-val deletion = DeletionRequestEvent.create(
-    deleteEvents = listOf(eventId1, eventId2),
-    reason = "Spam",
-    signer = signer
-)
-
-// LocalCache marks events as deleted, but doesn't remove (for verification)
-```
-
-## 63+ Event Classes
-
-Full list at `/quartz/src/commonMain/kotlin/com/vitorpamplona/quartz/nip*/` - one class per event type across 60+ NIP implementations.
+`generateId()`, `verifyId()`, `verifySignature()`, `verify(): Boolean`, and
+`checkSignature()` (throws). JSON: `Event.fromJson(json)` / `Event.fromJsonOrNull(json)` /
+`event.toJson()` via `OptimizedJsonMapper`.

@@ -85,7 +85,7 @@ jobs:
       # XML comment (comments do propagate into the locale files) has to be fixed at the
       # source string in commonsUI/.../composeResources/values/strings.xml by hand.
       - name: Verify the shared catalog is free of Android-only escaping
-        run: .claude/hooks/compose_escaping_check.py
+        run: tools/agent-hooks/compose_escaping_check.py
 
       # Keep docs/changelog/translators.json seeded with everyone who has translated
       # recently, so the per-release `## Translations` credits (scripts/translators.sh)

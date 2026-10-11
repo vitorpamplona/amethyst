@@ -1,56 +1,57 @@
-# Filter Assemblers
+# Filter assemblers and EOSE managers
 
-An assembler takes a plain input (a set of pubkeys, a set of note ids, a hashtag, a time range) and produces a relay `Filter`. Assemblers are pure, test-friendly, and composable.
+Paths are under `commons/src/commonMain/kotlin/com/vitorpamplona/amethyst/commons/relayClient/`
+unless they start with `commonsUI/`.
 
-## Concrete Assemblers
+## The layers of one feature (chess as the example)
 
-Under `commons/src/commonMain/kotlin/com/vitorpamplona/amethyst/commons/relayClient/assemblers/`:
+| Layer | File | Role |
+|---|---|---|
+| Query state | `chess/ChessFeedFilterSubAssembler.kt` — `data class ChessQueryState(userPubkey, inboxRelays, globalRelays, isGlobal, …)` | what one on-screen consumer needs; equality decides dedup |
+| Filter builder | `chess/FilterChessEvent.kt` — `fun filterChessEvents(key, since): List<RelayBasedFilter>` | pure: state + per-relay `since` → filters |
+| Sub-assembler | `ChessFeedFilterSubAssembler(client, allKeys) : PerUniqueIdEoseManager<ChessQueryState, String>` | owns the REQ, overrides `updateFilter(key, since)`, `id(key)`, optionally `newSub(key)` to hook events/EOSE |
+| Filter assembler | `chess/ChessFilterAssembler.kt` — `: ComposeSubscriptionManager<ChessQueryState>()` | holds the live states, fans `invalidateFilters`/`destroy` to its `group` of sub-assemblers |
+| Registration | `reqCommand/RelaySubscriptionsCoordinator.kt` — `val chess = ChessFilterAssembler(client)` | one instance per account session |
+| Composable | `commonsUI/.../ui/screen/loggedIn/chess/datasource/ChessSubscription.kt` | builds the state, subscribes via `accountViewModel.dataSources().chess` |
 
-- **`MetadataFilterAssembler.kt`** — `class MetadataFilterAssembler(pubKeys: Set<HexKey>)`. Emits a `Filter` for kind 0 over those authors, respecting relay `limit` conventions.
-- **`ReactionsFilterAssembler.kt`** — builds a kind 7 filter with `#e` tag set to the note ids you want reactions for.
-- **`FeedMetadataCoordinator.kt`** — higher-order coordinator: given a list of currently-visible notes, figure out which pubkeys and note ids still need metadata and reactions, and produce one (or two) consolidated filters.
+## Recipe for a new screen
 
-## Subscription Helper
+1. Query state: a `data class` with exactly the inputs (ids, pubkeys, relays, account) the
+   filters need. Remember it per screen (`remember(key) { State(...) }`).
+2. Filter function: `filterXxx(key, since: SincePerRelayMap?): List<RelayBasedFilter>` —
+   one `RelayBasedFilter(relay, ExplainedFilter(..., purpose = SubPurpose.X))` per relay, with
+   `since = since?.get(relay)?.time`. Pick or add a `SubPurpose` (`subscriptions/SubPurpose.kt`).
+3. Sub-assembler: extend the EOSE manager that matches how cursors should be shared (below).
+4. Assembler: `class XxxFilterAssembler(client) : ComposeSubscriptionManager<XxxQueryState>()`
+   grouping the sub-assemblers (copy `ChessFilterAssembler`).
+5. Add it to `RelaySubscriptionsCoordinator`.
+6. In `commonsUI/.../relayClient/<feature>/`, a `@Composable XxxFilterAssemblerSubscription`
+   that calls `LifecycleAwareKeyDataSourceSubscription(state, assembler)` (or
+   `KeyDataSourceSubscription` for light, always-on data).
 
-`commons/.../relayClient/subscriptions/KeyDataSourceSubscription.kt` — wraps an assembler plus a "data source" that keeps the assembler's input set up to date. E.g. "the set of pubkeys visible in the current feed" is a data source; when the feed scrolls, the set changes, and the subscription re-emits a new filter.
+## Choosing the EOSE manager (`eoseManagers/`)
 
-## RelayFilter DSL (quartz)
+All extend `BaseEoseManager(client, allKeys, sampleTime = 500)`, which coalesces
+invalidations through a `BundledUpdate` and drives a `SubscriptionController`.
 
-The `Filter` type the assemblers produce is defined in `quartz/src/commonMain/kotlin/com/vitorpamplona/quartz/nip01Core/relay/RelayFilters.kt`. The DSL roughly looks like:
+| Manager | Subscriptions | EOSE cursor | Used by |
+|---|---|---|---|
+| `SingleSubEoseManager<T>(client, allKeys, invalidateAfterEose)` | one REQ for every key; `updateFilter(keys, since)`, `distinct(key)` | one per relay, shared by all keys; `clearEoseFor(relay)` when the key set grows | `MetadataFilterAssembler`, `UserCardsSubAssembler` |
+| `PerUniqueIdEoseManager<T, U>` | one REQ per `id(key)` | per id | `ChessFeedFilterSubAssembler`, `url/UrlFeedFilterSubAssembler` |
+| `PerUserEoseManager<T>` | one REQ per `user(key)` | per user | `podcasts/MyPodcastFeedSubAssembler`, `napplets/ConnectedAppsSubAssembler` |
+| `PerKeyEoseManager<T, K>` | one REQ per `extractKey(state)` | per key | (no subclass today) |
+| `PerUserAndFollowListEoseManager` | one REQ per logged-in user and selected top-nav list | per user + list | `topNavFeeds/TopNavFeedSubAssembler` (home, video, discovery, notifications) |
+| `SingleSubNoEoseCacheEoseManager`, `AccountScopedSingleSubNoEoseCacheEoseManager` | one REQ | not cached | `event/loaders/NoteEventLoaderSubAssembler`, `reqCommand/channel/nip28PublicChats/ChannelLoaderSubAssembler` |
 
-```kotlin
-filter {
-    kinds(MetadataEvent.KIND)
-    authors(pubKeys)
-    since(TimeUtils.oneHourAgo())
-    until(TimeUtils.now())
-    limit(200)
-    // tag filters
-    tag("e", noteIds)
-    tag("p", pubKeys)
-    tag("t", hashtags)
-}
-```
-
-Builders for individual tag types match the `TagArrayBuilder` conventions (see `nostr-expert/references/tag-patterns.md`).
-
-## Writing a New Assembler
-
-Recipe for `FooFilterAssembler`:
-
-1. Create the file under `assemblers/`.
-2. Define a small immutable `data class FooQuery(...)` holding the inputs — or take constructor parameters directly if simple.
-3. Expose one method: `fun toFilter(): Filter` (or `toFilters()` if you need multiple).
-4. Keep the class deterministic and side-effect-free. No cache reads, no coroutines.
-5. Add a unit test that asserts the `Filter`'s JSON serialization — `quartz`'s filter serialization is stable, so golden tests work.
-
-## Coordinator Pattern
-
-When a feature needs several related filters (content + reactions + zaps + metadata), write a **coordinator** (see `FeedMetadataCoordinator.kt`) that takes higher-level inputs and fans out to several single-purpose assemblers. Coordinators compose; they don't talk to relays themselves.
+`ReactionsFilterAssembler` and `MetadataFilterAssembler` (`assemblers/`) are the smallest
+complete `SingleSubEoseManager` examples.
 
 ## Gotchas
 
-- **`limit` matters** on large author sets. Without it, relays may rate-limit or truncate.
-- **Use `since` liberally** to avoid pulling years of history; a feed usually only needs `TimeUtils.oneHourAgo()` or similar.
-- **Don't put filter logic inline in composables** — it ends up duplicated and desynced across screens.
-- **`toFilter()` should be cheap** — assemblers may be called on every recomposition until you wrap them in a subscription.
+- A merged single-sub filter that gains a key inherits a cursor earned by the older keys —
+  call `clearEoseFor(relay)` (see the KDoc on `SingleSubEoseManager`).
+- `limit` large author sets, and set `since` from the EOSE map so reconnects don't refetch
+  history.
+- `ExplainedFilter.copy(since = …)` keeps the purpose; constructing a plain `Filter` loses it.
+- Tests: `commons/src/jvmTest/.../relayClient/` (`eoseManagers/MergedAuthorTrackerTest`,
+  `assemblers/FeedMetadataCoordinatorTest`, …).

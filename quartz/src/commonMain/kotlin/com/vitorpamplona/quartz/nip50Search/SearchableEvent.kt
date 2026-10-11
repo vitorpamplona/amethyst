@@ -46,7 +46,7 @@ fun interface IndexableFieldVisitor {
  * - [indexableContent] is the **write path**. The stores call it once per event on insert, so it
  *   is free to build a joined string; the SQLite store hands the result to FTS5 and the
  *   filesystem store tokenizes it. Its exact output per kind is mirrored by external search
- *   engines — see `references/searchable-kinds.md` in the `searchable-events` skill — so changing
+ *   engines — see `references/searchable-kinds.md` in the `event-store-semantics` skill — so changing
  *   what it returns is a breaking change that needs a reindex.
  *
  * - [forEachIndexableField] is the **read path**. Matching a query against the whole cache calls

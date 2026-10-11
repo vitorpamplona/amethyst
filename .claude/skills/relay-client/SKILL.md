@@ -1,161 +1,125 @@
 ---
 name: relay-client
-description: Subscription and filter-assembly patterns for the Amethyst relay client layer in `commons/.../relayClient/`. Use when working with compose-scoped subscriptions (`ComposeSubscriptionManager`, `Subscribable`), filter assemblers (`MetadataFilterAssembler`, `ReactionsFilterAssembler`, `FeedMetadataCoordinator`), preloaders (`MetadataPreloader`, `MetadataRateLimiter`), EOSE managers, or any feature that needs to talk to relays lifecycle-aware from a composable. Complements `nostr-expert` (protocol filter syntax) and `kotlin-coroutines` (callbackFlow patterns).
+description: Compose-scoped relay subscriptions in commons/relayClient: observeUser*/EventFinder, FilterAssemblers, EOSE managers, ComposeSubscriptionManager. Use when a screen must load events from relays while visible.
 ---
 
-# Relay Client & Subscriptions
+# Relay client: screen-scoped subscriptions
 
-The layer between `LocalCache`/`Account` and the raw relay connection. Ensures composables only subscribe to what is visible, deduplicates filters across screens, and rate-limits bulk queries like "fetch metadata for these 200 pubkeys".
+How a composable gets events from relays only while it is on screen. Headless code (amy,
+geode, tests, one-shot fetches) does not use this layer: it uses the `INostrClient`
+extensions — see AGENTS.md › Feature Workflow ("Relay client ops already exist").
 
-## When to Use This Skill
+## Where it lives
 
-- Adding a new screen that needs events it doesn't already have (write a `FilterAssembler`).
-- Wiring a composable to subscribe on enter / unsubscribe on leave (`ComposeSubscriptionManager`).
-- Preloading metadata / profile pictures for a set of pubkeys (`MetadataPreloader`).
-- Deduplicating identical filters across concurrent screens.
-- Handling EOSE → "we have historical data, stop showing loading" transitions.
+- `commons/src/commonMain/kotlin/com/vitorpamplona/amethyst/commons/relayClient/` — the
+  headless half: one package per feature (`chess/`, `communities/`, `home/`, `thread/`,
+  `user/`, `event/`, …) holding query states, filter assemblers and sub-assemblers;
+  `composeSubscriptionManagers/`, `eoseManagers/`, `subscriptions/` (`ExplainedFilter`,
+  `SubPurpose`), `assemblers/` (shared ones: `MetadataFilterAssembler`,
+  `ReactionsFilterAssembler`, `ContactCardFilters.kt`), `oneshot/`, `paging/`, `preload/`.
+- `reqCommand/RelaySubscriptionsCoordinator.kt` — owns one instance of every assembler
+  (`account`, `home`, `userFinder`, `eventFinder`, `chess`, `community`, …). Screens reach it
+  as `accountViewModel.dataSources()` (`BaseAccountViewModel.dataSources`).
+- `commonsUI/src/commonMain/kotlin/com/vitorpamplona/amethyst/commons/relayClient/` — the
+  `@Composable` entry points, same package names: `observeUser*`,
+  `EventFinderFilterAssemblerSubscription`, `KeyDataSourceSubscription`,
+  `LifecycleAwareKeyDataSourceSubscription`, and per-feature `*FilterAssemblerSubscription`s.
 
-## Layout
+## First choice: `observeUser*` and `EventFinder`
 
-All under `commons/src/commonMain/kotlin/com/vitorpamplona/amethyst/commons/relayClient/` (the `@Composable` entry points — `observeUser*`, `*FilterAssemblerSubscription`, `KeyDataSourceSubscription` — sit in the same package but in `commonsUI/src/commonMain/…`, the Compose half of the shared layer):
+Before writing any assembler, check whether these already load what you need:
 
-```
-relayClient/
-├── assemblers/              # "Given these inputs, build this relay Filter"
-│   ├── MetadataFilterAssembler.kt      # kind 0 for N pubkeys
-│   ├── ReactionsFilterAssembler.kt     # kind 7 for N note ids
-│   ├── FeedMetadataCoordinator.kt      # coordinates metadata loads for a feed
-│   └── CashuMintDirectoryFilterAssembler.kt / CashuWalletFilterAssembler.kt
-├── composeSubscriptionManagers/
-│   ├── ComposeSubscriptionManager.kt              # interface Subscribable<T>
-│   ├── MutableComposeSubscriptionManager.kt       # reference impl
-│   └── ComposeSubscriptionManagerControls.kt      # DisposableEffect-style controls
-├── eoseManagers/            # EOSE tracking per subscription
-│   └── IEoseManager / BaseEoseManager / PerKeyEoseManager / SingleSubEoseManager
-├── nip17Dm/                 # gift-wrap DM plumbing
-│   └── FilterGiftWrapsToPubkey.kt / GiftWrapDecryptor.kt
-├── preload/
-│   ├── MetadataPreloader.kt            # bulk-fetch metadata with rate limiting
-│   └── MetadataRateLimiter.kt          # token-bucket-ish limiter
-└── subscriptions/
-    ├── KeyDataSourceSubscription.kt    # "this set of keys drives this filter"
-    ├── LifecycleAwareKeyDataSourceSubscription.kt
-    └── PrioritizedSubscriptionQueue.kt / SubscriptionPriority.kt
-```
+- **Users** (`commonsUI/.../relayClient/user/UserMetadataObservers.kt`):
+  `observeUserInfo`, `observeUserPicture`, `observeUserBanner`, `observeUserAboutMe`,
+  `observeUserName(user)` each open `UserFinderFilterAssemblerSubscription(user)` and return
+  a `State`. Metadata, relay lists, reports and contact cards load for on-screen users only,
+  batched into one REQ per relay for the whole visible set. A `LazyColumn` composes only the
+  visible window, so this is "load what's on screen" for free.
+- **Notes** (`commonsUI/.../relayClient/event/EventFinderFilterAssemblerSubscription.kt`):
+  `EventFinderFilterAssemblerSubscription(note)` loads the note's reactions, zaps, reposts and
+  replies while composed; the observers in `event/EventObservers.kt` /
+  `AccountEventObservers.kt` sit on top of it.
+- Both read `LocalUserFinder`, `LocalUserFinderAccount` and `LocalEventFinder`, provided
+  once in `commonsUI/.../ui/app/AmethystApp.kt` from `dataSources()`. Their defaults are
+  `error(...)`, so they must never be reached from a composition with no relay client (e.g.
+  the Android `:napplet` process).
 
-## Core Concept: `Subscribable<T>`
+Don't hand-roll "load metadata for this list". `FeedMetadataCoordinator` and
+`MetadataPreloader` (`assemblers/`, `preload/`) still exist but have no production caller;
+prefer the observers.
+
+## The building blocks
 
 ```kotlin
 // composeSubscriptionManagers/ComposeSubscriptionManager.kt
 interface Subscribable<T> {
-    val state: StateFlow<T>
-    fun subscribe()
-    fun unsubscribe()
+    fun subscribe(query: T?)          // called on main: keep it fast
+    fun unsubscribe(query: T?)
+    fun subscribe(query: List<T>)
+    fun unsubscribe(query: List<T>)
+}
+abstract class ComposeSubscriptionManager<T> : ComposeSubscriptionManagerControls, Subscribable<T>
+//   keeps the live query states; allKeys() snapshots them; each change calls invalidateKeys()
+interface ComposeSubscriptionManagerControls { fun invalidateKeys(); fun invalidateFilters(); fun destroy() }
+```
+
+`MutableComposeSubscriptionManager<T : MutableQueryState>` is the variant for query states
+that change over time (it collects their flow).
+
+A **filter assembler** is a `ComposeSubscriptionManager` that groups **sub-assemblers**; each
+sub-assembler is an EOSE manager that turns the current keys into relay filters. They are
+not pure: they own subscriptions on the `INostrClient` and per-relay EOSE cursors. Real shape
+(`chess/ChessFilterAssembler.kt`):
+
+```kotlin
+class ChessFilterAssembler(client: INostrClient) : ComposeSubscriptionManager<ChessQueryState>() {
+    private val subAssembler = ChessFeedFilterSubAssembler(client, ::allKeys)
+    val group = listOf(subAssembler)
+    override fun invalidateKeys() = invalidateFilters()
+    override fun invalidateFilters() = group.forEach { it.invalidateFilters() }
+    override fun destroy() = group.forEach { it.destroy() }
 }
 ```
 
-Every feature-level manager implements or embeds a `Subscribable`. The `MutableComposeSubscriptionManager` reference implementation uses reference-counting so that two screens asking for the same feed share one subscription, and only the last leaver actually closes it.
+EOSE managers (`eoseManagers/`, all on `BaseEoseManager(client, allKeys, sampleTime = 500)`,
+which batches invalidations): `SingleSubEoseManager` (one REQ for all keys, one shared EOSE
+cursor per relay — `MetadataFilterAssembler` uses it), `PerUserEoseManager`,
+`PerKeyEoseManager`, `PerUniqueIdEoseManager`, `PerUserAndFollowListEoseManager`,
+`SingleSubNoEoseCacheEoseManager`, `AccountScopedSingleSubNoEoseCacheEoseManager`. Pick by how
+the EOSE cursor must be shared. Details and the new-screen recipe:
+`references/filter-assemblers.md`.
 
-`ComposeSubscriptionManagerControls.kt` provides `DisposableEffect`-style helpers so composables don't leak subscriptions when the user navigates away or the process backgrounds.
-
-## Typical Flow
+## Wiring a composable
 
 ```kotlin
+// commonsUI/.../relayClient/communities/CommunityFilterAssemblerSubscription.kt
 @Composable
-fun ProfileHeader(pubKey: HexKey) {
-    val subscription = rememberSubscribable(pubKey) {
-        MetadataFilterAssembler(setOf(pubKey)).toSubscribable()
-    }
-    LaunchedEffect(pubKey) { subscription.subscribe() }
-    DisposableEffect(pubKey) { onDispose { subscription.unsubscribe() } }
-
-    val metadata by subscription.state.collectAsStateWithLifecycle()
-    // render metadata…
+fun CommunityFilterAssemblerSubscription(channel: AddressableNote, filterAssembler: CommunityFilterAssembler) {
+    val state = remember(channel) { CommunityQueryState(channel) }   // different screens get different states
+    LifecycleAwareKeyDataSourceSubscription(state, filterAssembler)
 }
+// call site: CommunityFilterAssemblerSubscription(note, accountViewModel.dataSources().community)
 ```
 
-The assembler produces a `Filter` (see `quartz/.../nip01Core/relay/RelayFilters.kt` in the quartz module). The `RelayPool` below dedups, opens subs, emits events to `LocalCache.consume`, and emits EOSE through the eose manager.
+- `KeyDataSourceSubscription(state, dataSource)` — `DisposableEffect`: subscribe on enter,
+  unsubscribe on dispose. For light, always-needed subscriptions.
+- `LifecycleAwareKeyDataSourceSubscription(state, dataSource)` — also unsubscribes 30 s after
+  the lifecycle stops (cancelled if it restarts), and immediately on dispose. Use it for feeds
+  and anything heavy.
 
-## Assemblers
+Events arrive in `LocalCache`; the screen renders from `LocalCache`/`Account` flows (see
+`account-state`), not from the subscription.
 
-An assembler is a plain class:
+## Rules
 
-```kotlin
-class MetadataFilterAssembler(
-    private val pubKeys: Set<HexKey>,
-) {
-    fun toFilter(): Filter = filter {
-        kinds(MetadataEvent.KIND)
-        authors(pubKeys)
-        limit(pubKeys.size)
-    }
-}
-```
+- Build filters as `ExplainedFilter(..., purpose = SubPurpose.X)`. The purpose never reaches the
+  relay but drives the relay screens; Android debug builds wrap the client in
+  `UntaggedFilterWarningClient`, which logs any untagged REQ.
+- No raw `client.subscribe` or `Filter` in a composable — put it in a sub-assembler.
+- A one-shot read (fetch once, page back, count) is not a compose subscription: use the
+  `INostrClient` accessories or `relayClient/oneshot/` (`ProfileLoader`, `ThreadLoader`, …).
+- New kinds a screen subscribes to also need `LocalCache` dispatch (see `nostr-expert`
+  › `references/event-factory.md`), or they arrive and are dropped.
 
-Assemblers stay pure — no state, no I/O. They're the composition seam: `FeedMetadataCoordinator` takes a list of visible notes and assembles a single metadata filter covering every referenced pubkey.
-
-## Per-visible loading — the canonical entry points (`observeUser*` / `observeNote*`)
-
-Prefer these over hand-rolled "load metadata for this list" calls. They are the shared,
-KMP way to load data **only for what's on screen** — a composable subscribes while it is in
-composition and unsubscribes ~30s after it leaves (or the app backgrounds). Both live in
-`commons/relayClient/`:
-
-- **Per user** (`relayClient/user/`): `observeUserInfo/Picture/Banner/AboutMe/Name(user)`
-  each open a composition-scoped `UserFinderFilterAssemblerSubscription(user)` **and** return
-  reactive `State`. Metadata (kind 0 + relay lists) loads for on-screen users only, coalesced
-  into one batched REQ per relay for the whole visible set.
-- **Per note** (`relayClient/event/`): `EventFinderFilterAssemblerSubscription(note)` loads a
-  note's interactions (reactions / zaps / reposts / replies) while it is composed. Android's
-  `observeNote*` display observers layer on top of the same subscription.
-
-Both read front-end-provided CompositionLocals — `LocalUserFinder` / `LocalUserFinderAccount`
-(reused by the event finder) / `LocalEventFinder` — provided once near the composition root
-(Android `AppModules`, Desktop `Main.kt` via its subscriptions coordinator). The account seam
-is the narrow `UserFinderAccount` (snapshot relay-hint getters), NOT the fat `IAccount`.
-`error()` defaults mean these must never be reached from a composition without a relay client
-(e.g. the Android `:napplet` sandbox).
-
-The load-once, viewport-batch path (`FeedMetadataCoordinator.loadMetadataForNotes` /
-`loadMetadataBatched`) is superseded for foreground loading; `MetadataPreloader` remains only
-as an optional off-screen background warmer.
-
-## Preloaders
-
-`MetadataPreloader` is the "I need metadata for 200 pubkeys, but don't melt my CPU or the relay" path. It uses `MetadataRateLimiter` (token bucket) to throttle bulk fetches and group them into relay-friendly chunks.
-
-Related: `amethyst/.../service/images/ImageLoaderSetup.kt` also uses preloaders for blurhash hydration — they're a general pattern, not metadata-specific.
-
-## EOSE Handling
-
-Each subscription tracks "End of Stored Events" per relay. The eose manager in `eoseManagers/` aggregates per-relay EOSE into a single "loading done" boolean that the UI uses to hide spinners. Without aggregation, composables would flicker as individual relays ack.
-
-## Patterns
-
-### DO
-
-- Build one `Subscribable` per feature scope (screen / dialog / card).
-- Dedupe via reference counting — multiple identical subscriptions should share.
-- Use `DisposableEffect` / `LaunchedEffect` to tie sub/unsub to lifecycle.
-- Put the relay `Filter` building in an assembler so the test is trivial.
-- Route bulk metadata through `MetadataPreloader`; don't fire N subscriptions.
-
-### DON'T
-
-- Don't call `RelayPool` / `NostrClient` directly from composables — always through a `Subscribable`.
-- Don't hold a subscription past the composable's lifetime — memory & socket leaks.
-- Don't build ad-hoc filters inline in composables — assemblers only.
-- Don't preload metadata for everything — it's a rate-limited resource and competes with user-visible loads.
-
-## Related
-
-- **Headless / one-shot client ops** (CLI, geode, tests, non-compose code): don't go
-  through `Subscribable` — use the `INostrClient` extension functions in
-  `quartz/…/nip01Core/relay/client/accessories/` (`fetchAll`, `fetchFirst`,
-  `fetchAllPages`, `publishAndConfirm`, `count`, `negentropyReconcile`/`negentropySync`,
-  …). They're extensions, so they don't show up under "usages of `NostrClient`" — see
-  that package's `README.md` for the catalog before writing a raw subscribe/collect loop.
-- `nostr-expert/references/tag-patterns.md` — how tags inform what a filter needs to look for.
-- `kotlin-coroutines/references/relay-patterns.md` — relay pool internals (sibling layer beneath assemblers).
-- `feed-patterns` skill — feeds compose several Subscribables (content + metadata + reactions).
-- `account-state` skill — `Account`'s per-kind flows are themselves consumers of the relay-client layer.
+Related skills: `account-state` (`LocalCache`, feeds), `nostr-expert` (filters, kinds),
+`kotlin-coroutines` (flows, dispatchers).

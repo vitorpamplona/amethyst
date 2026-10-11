@@ -166,11 +166,12 @@ Before writing anything, answer three questions:
 
 ### 2. Extract from Android
 
-The single most important recurring task for Amy's growth. Most
-Amethyst features today live in `amethyst/src/main/java/…/model/` or
-`…/service/` with Android-only imports (`Context`, `SharedPreferences`,
-`WorkManager`, `Log`, `Bitmap`). Amy cannot call those directly — they
-have to move.
+The single most important recurring task for Amy's growth. Most domain
+logic already lives in `commons/` (`Account`, `LocalCache`, the feeds and
+ViewModels), but some still sits in `amethyst/src/main/java/…/service/` or
+`…/model/` with Android-only imports (`Context`, `SharedPreferences`,
+`WorkManager`, `android.util.Log`, `Bitmap`). Amy cannot call those
+directly — they have to move.
 
 1. Identify the class in `amethyst/` (e.g. `ReactionPost.kt`).
 2. List its Android dependencies.
@@ -185,9 +186,10 @@ have to move.
 5. Update the Android caller to use the new location. Add a JVM test.
 6. Only now, add the `cli/commands/…` file that calls it.
 
-**What to keep in `amethyst/`:** screens, navigation, Android-specific
-side-effects (notifications, background services, camera, Intents).
-Everything else is a candidate to move.
+**What to keep in `amethyst/`:** Android-specific side-effects
+(notifications, background services, camera, Intents) and the actuals of
+shared ports. Screens and navigation are shared UI in `commonsUI/`, which
+amy never depends on. Everything else is a candidate to move to `commons/`.
 
 ### 3. Command file template
 
@@ -198,6 +200,7 @@ import com.vitorpamplona.amethyst.cli.Args
 import com.vitorpamplona.amethyst.cli.Context
 import com.vitorpamplona.amethyst.cli.DataDir
 import com.vitorpamplona.amethyst.cli.Output
+import com.vitorpamplona.quartz.nip10Notes.TextNoteEvent
 
 object NoteCommands {
     // The per-group usage text. `amy note --help` prints it; keep it in
@@ -220,7 +223,7 @@ object NoteCommands {
         args.rejectUnknown()                           // --typo → bad_args, exit 2
         Context.open(dataDir).use { ctx ->
             ctx.prepare()
-            val event = com.vitorpamplona.amethyst.commons.note.buildTextNote(ctx.signer, text)
+            val event = ctx.signer.sign(TextNoteEvent.build(text))
             val ack = ctx.publish(event, relays.ifEmpty { ctx.outboxRelays() })
             RawEventSupport.publishGuard(ack, event.id)?.let { return it }  // all-rejected → `rejected`, exit 1
             Output.emit(

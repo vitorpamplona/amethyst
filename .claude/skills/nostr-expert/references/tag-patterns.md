@@ -1,336 +1,62 @@
-# Tag Patterns in Quartz
+# Tag patterns in Quartz
 
-Tags are the primary way events reference other events, users, and metadata in Nostr.
+`TagArray = Array<Array<String>>` (raw JVM arrays on purpose — see AGENTS.md › Kotlin
+Style on the `fast*` operators). Quartz never passes tags around as `List`s of objects;
+each tag type is a small codec class plus extension files.
 
-## Tag Structure
+## The per-tag file layout
 
-```kotlin
-typealias Tag = Array<String>  // ["tag_name", "value", "optional_param", ...]
-typealias TagArray = Array<Tag>
-```
+Every tag lives in its NIP package as a quartet. `nip14Subject/` is the smallest
+complete example:
 
-**Pattern**: `[name, value, ...optionalParams]`
+| File | Holds | Example (`nip14Subject/`) |
+|---|---|---|
+| `XxxTag.kt` | `TAG_NAME`, `parse(tag)`, `assemble(...)`, `isTagged`/`hasTagWithContent` | `SubjectTag.parse`, `SubjectTag.assemble(subject)` |
+| `TagArrayBuilderExt.kt` | writer: `fun TagArrayBuilder<T>.xxx(...)` | `fun TagArrayBuilder<TextNoteEvent>.subject(s) = addUnique(SubjectTag.assemble(s))` |
+| `TagArrayExt.kt` | readers on `TagArray` | `fun TagArray.subject() = firstNotNullOfOrNull(SubjectTag::parse)` |
+| `EventExt.kt` | the same readers on `Event` | `fun Event.subject() = tags.subject()` |
 
-## TagArrayBuilder DSL
+Follow this shape for a new tag. Typing the builder receiver
+(`TagArrayBuilder<TextNoteEvent>` rather than `<T : Event>`) is how Quartz restricts a
+tag to the kinds that may carry it; generic tags (`pTag`, `eTag`, `aTag`, `hashtag`,
+`alt`) use `fun <T : Event> TagArrayBuilder<T>.…`.
 
-```kotlin
-fun tagArray(initializer: TagArrayBuilder<T>.() -> Unit): TagArray
-```
+There are ~230 `TagArrayBuilderExt.kt` and ~160 `TagArrayExt.kt` files — grep for an
+existing builder before writing `add(arrayOf(...))` by hand.
 
-**Methods**:
-- `add(tag)` - Append tag
-- `addFirst(tag)` - Prepend tag
-- `addUnique(tag)` - Replace all tags with this name
-- `remove(tagName)` - Remove all tags with name
-- `removeIf(predicate, toCompare)` - Conditional removal
+## Core tags (`nip01Core/tags/`)
 
-**Example**:
-```kotlin
-val tags = tagArray<TextNoteEvent> {
-    add(arrayOf("e", eventId, relayHint, "reply"))
-    add(arrayOf("p", pubkey))
-    addUnique(arrayOf("subject", "Hello"))
-}
-```
+| Dir | Codec | Builder / reader examples |
+|---|---|---|
+| `people/` | `PTag` (`parse`, `parseKey`, `assemble(pubkey, relayHint)`) | `pTag(pubkey, relayHint)`, `pTags(list)`, `TagArray.taggedUserIds()`, `isTaggedUser(hex)` |
+| `events/` | `ETag` (`parse`, `parseId`, `assemble(id, relay, author)`) | `eTag(ETag)` |
+| `aTag/` | `ATag` (`parse`, `parseAddress`, `parseAddressId`) | `aTag(ATag)` |
+| `hashtags/` | `HashtagTag` | `hashtag(tag)` writes **two** tags (`assembleDualCase`: original + lowercase) |
+| `dTag/`, `kinds/`, `geohash/`, `publishedAt/`, `references/` | one codec each | |
 
-## Core Tag Types (NIP-01)
+NIP-10 reply markers are `MarkedETag` in `nip10Notes/tags/`, not `ETag`. Relay hints are
+`NormalizedRelayUrl`, never raw strings.
 
-### e-tag (Event Reference)
-```kotlin
-// ["e", <event-id>, <relay-hint>, <marker>]
-arrayOf("e", eventId, "wss://relay.damus.io", "reply")
-```
+## TagArrayBuilder (`nip01Core/core/TagArrayBuilder.kt`)
 
-**Markers** (NIP-10):
-- `root` - Root of thread
-- `reply` - Direct reply target
-- `mention` - Mentioned event (not reply)
-
-**Extensions**:
-```kotlin
-// nip01Core/tags/
-fun TagArrayBuilder.eTag(eventId: HexKey, relay: String? = null, marker: String? = null)
-```
-
-### p-tag (Pubkey Reference)
-```kotlin
-// ["p", <pubkey>, <relay-hint>]
-arrayOf("p", pubkey, "wss://relay.damus.io")
-```
-
-**Usage**: Tag users, indicate recipients
-
-**Extensions**:
-```kotlin
-fun TagArrayBuilder.pTag(pubkey: HexKey, relay: String? = null)
-```
-
-### a-tag (Addressable Event Reference)
-```kotlin
-// ["a", <kind>:<pubkey>:<d-tag>, <relay-hint>]
-arrayOf("a", "30023:${authorPubkey}:${dtag}", "wss://relay.damus.io")
-```
-
-**Usage**: Reference replaceable/addressable events (kinds 10000-20000, 30000-40000)
-
-**Extensions**:
-```kotlin
-fun TagArrayBuilder.aTag(kind: Int, pubkey: HexKey, dTag: String, relay: String? = null)
-```
-
-### d-tag (Identifier)
-```kotlin
-// ["d", <identifier>]
-arrayOf("d", "my-article-slug")
-```
-
-**Usage**: Unique identifier for addressable events
-
-## Common Tag Extensions
-
-### Subject (NIP-14)
-```kotlin
-// nip14Subject/
-fun Event.subject(): String?
-fun TagArrayBuilder.subject(text: String)
-```
-
-### Content Warning (NIP-36)
-```kotlin
-// nip36SensitiveContent/
-fun Event.contentWarning(): String?
-fun TagArrayBuilder.contentWarning(reason: String = "")
-```
-
-### Expiration (NIP-40)
-```kotlin
-// nip40Expiration/
-fun Event.expiration(): Long?
-fun TagArrayBuilder.expiration(unixTimestamp: Long)
-```
-
-### Alt Description (NIP-31)
-```kotlin
-// nip31Alts/
-fun Event.alt(): String?
-fun TagArrayBuilder.alt(description: String)
-```
-
-## Specialized Tags
-
-### Zap Tags (NIP-57)
-```kotlin
-// nip57Zaps/tags/
-class BoltTag(val bolt11: String, val preimage: String?)
-class DescriptionTag(val zapRequestJson: String)
-```
-
-### Imeta Tags (NIP-92)
-```kotlin
-// nip92IMeta/
-class IMetaTag(val url: String, val metadata: Map<String, String>)
-
-// Usage: Image metadata
-IMetaTag("https://example.com/image.jpg", mapOf(
-    "m" to "image/jpeg",
-    "dim" to "1920x1080",
-    "blurhash" to "..."
-))
-```
-
-### Relay Tags (NIP-65)
-```kotlin
-// nip65RelayList/
-class RelayTag(val url: String, val type: RelayType)
-enum class RelayType { READ, WRITE, BOTH }
-```
-
-## Tag Query Patterns
-
-### Finding Tags
-```kotlin
-// Extension functions on TagArray
-fun TagArray.firstTag(name: String): Tag?
-fun TagArray.allTags(name: String): List<Tag>
-fun TagArray.tagValue(name: String): String?
-fun TagArray.tagValues(name: String): List<String>
-```
-
-**Example**:
-```kotlin
-val event: TextNoteEvent = ...
-val subject = event.tags.tagValue("subject")
-val mentions = event.tags.allTags("p").mapNotNull { it.getOrNull(1) }
-```
-
-### Parsing Tags
-```kotlin
-// Pattern: Companion object with parse methods
-object ETag {
-    fun parse(tag: Tag): ETag? {
-        if (tag.getOrNull(0) != "e") return null
-        return ETag(
-            eventId = tag.getOrNull(1) ?: return null,
-            relay = tag.getOrNull(2),
-            marker = tag.getOrNull(3)
-        )
-    }
-}
-
-// Usage
-val eTags = event.tags.mapNotNull(ETag::parse)
-```
-
-## Event Builder Pattern
-
-Combining TagArrayBuilder with event creation:
+Builder methods: `add`, `addFirst`, `addUnique` (replaces every tag with that name),
+`addUniqueValueIfNew`, `addAll`, `addAllUnique`, `remove(name)`, `remove(name, value)`,
+`removeIf`. Entry points:
 
 ```kotlin
-fun createTextNote(content: String, replyTo: Event?): EventTemplate {
-    return eventTemplate(
-        kind = 1,
-        content = content,
-        tags = tagArray {
-            replyTo?.let {
-                eTag(it.id, marker = "reply")
-                pTag(it.pubKey)
-                it.rootEvent()?.let { root ->
-                    eTag(root.id, marker = "root")
-                }
-            }
-        }
-    )
-}
+// nip01Core/core/TagArrayBuilder.kt
+inline fun <T : Event> tagArray(initializer: TagArrayBuilder<T>.() -> Unit = {}): TagArray
+
+// nip01Core/core/TagArray.kt — copy existing tags into a builder and edit them
+fun <T : Event> TagArray.builder(initializer: TagArrayBuilder<T>.() -> Unit = {})
 ```
 
-## Hint System
+To edit a signed event's tags, use `eventUpdate(base) { … }` / `event.update { … }` from
+`nip01Core/signers/EventTemplate.kt`, not a hand-copied array.
 
-Tags can provide "hints" - optional relay URLs for fetching referenced content:
+## Generic readers (`nip01Core/core/TagArray.kt`)
 
-```kotlin
-// Event references
-["e", eventId, "wss://relay.example.com"]  // relay hint
-
-// Pubkey references
-["p", pubkey, "wss://relay.example.com"]  // relay hint
-
-// Addressable references
-["a", "30023:pubkey:dtag", "wss://relay.example.com"]  // relay hint
-```
-
-**Pattern**: Third parameter (index 2) is always the relay hint
-
-## Tag Validation
-
-```kotlin
-// Common validations
-fun validateETag(tag: Tag): Boolean {
-    return tag.getOrNull(0) == "e" && tag.getOrNull(1)?.isValidHex() == true
-}
-
-fun validatePTag(tag: Tag): Boolean {
-    return tag.getOrNull(0) == "p" && tag.getOrNull(1)?.isValidHex() == true
-}
-```
-
-## Performance Patterns
-
-### Tag Indexing
-```kotlin
-// TagArrayBuilder keeps an index by tag name
-private val tagList = mutableMapOf<String, MutableList<Tag>>()
-
-// Fast lookup by name
-fun remove(tagName: String) {
-    tagList.remove(tagName)
-}
-```
-
-### Lazy Parsing
-```kotlin
-// Don't parse all tags upfront
-class TextNoteEvent(...) {
-    private val _mentions by lazy {
-        tags.mapNotNull(PTag::parse)
-    }
-
-    fun mentions() = _mentions
-}
-```
-
-## Common Workflows
-
-### Creating a Reply
-```kotlin
-fun replyTo(original: TextNoteEvent, content: String): EventTemplate {
-    return eventTemplate(
-        kind = 1,
-        content = content,
-        tags = tagArray {
-            // Reply to this event
-            eTag(original.id, marker = "reply")
-
-            // Copy root marker if exists, or mark original as root
-            original.rootEvent()?.let {
-                eTag(it.id, marker = "root")
-            } ?: eTag(original.id, marker = "root")
-
-            // Tag author
-            pTag(original.pubKey)
-
-            // Tag all mentioned users
-            original.mentions().forEach { pTag(it) }
-        }
-    )
-}
-```
-
-### Creating a Reaction
-```kotlin
-fun createReaction(targetEvent: Event, emoji: String): EventTemplate {
-    return eventTemplate(
-        kind = 7,
-        content = emoji,
-        tags = tagArray {
-            eTag(targetEvent.id)
-            pTag(targetEvent.pubKey)
-        }
-    )
-}
-```
-
-### Creating an Addressable Event
-```kotlin
-fun createArticle(title: String, content: String, slug: String): EventTemplate {
-    return eventTemplate(
-        kind = 30023,
-        content = content,
-        tags = tagArray {
-            addUnique(arrayOf("d", slug))  // Unique identifier
-            add(arrayOf("title", title))
-            add(arrayOf("published_at", "${TimeUtils.now()}"))
-        }
-    )
-}
-```
-
-## Quick Reference
-
-| Tag | NIP | Usage | Example |
-|-----|-----|-------|---------|
-| e | 01 | Event reference | `["e", eventId, relay, marker]` |
-| p | 01 | Pubkey reference | `["p", pubkey, relay]` |
-| a | 01 | Addressable event | `["a", "kind:pubkey:d"]` |
-| d | 01 | Identifier | `["d", "unique-id"]` |
-| subject | 14 | Subject line | `["subject", "Hello"]` |
-| content-warning | 36 | Content warning | `["content-warning", "nsfw"]` |
-| expiration | 40 | Expiration time | `["expiration", "1234567890"]` |
-| bolt11 | 57 | Lightning invoice | `["bolt11", "lnbc..."]` |
-| imeta | 92 | Media metadata | `["imeta", "url", "m", "image/jpeg"]` |
-| relay | 65 | User relays | `["relay", "wss://...", "read"]` |
-
-## Resources
-
-- Tag builders: `quartz/src/commonMain/.../nip01Core/tags/`
-- Tag extensions: Look for `TagArrayExt.kt`, `TagArrayBuilderExt.kt` in each NIP package
-- Event parsing: Each event class has tag parsing methods
+`firstTagValue(name)`, `firstTagValueAsLong`, `firstTagValueFor(vararg names)`,
+`hasTagWithContent(name)`, `hasTagName`, `isTagged(name, value)`, `isAnyTagged`,
+`anyTagged`, `forEachTagged`, `mapValueTagged`, `tagValueContains`. Prefer the typed
+reader from the tag's `TagArrayExt.kt` when one exists. There is no `allTags`/`tagValue`.

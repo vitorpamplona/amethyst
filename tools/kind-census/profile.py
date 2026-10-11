@@ -19,7 +19,7 @@ os.makedirs(os.path.join(out, "samples"), exist_ok=True)
 
 
 # Invisible / bidi codepoints are written as \\uXXXX escapes (identical once parsed) so the
-# sample files stay visually unambiguous on disk (repo rule; see CLAUDE.md, Kotlin Style).
+# sample files stay visually unambiguous on disk (repo rule; see AGENTS.md, Kotlin Style).
 INVISIBLE = re.compile("[\u200b-\u200f\u202a-\u202e\u2060\u2066-\u2069\u061c\ufeff]")
 
 

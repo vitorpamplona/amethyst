@@ -10,17 +10,22 @@
         "hooks": [
           {
             "type": "command",
-            "command": "$CLAUDE_PROJECT_DIR/.claude/hooks/pre-push-spotless.sh",
+            "command": "$CLAUDE_PROJECT_DIR/tools/agent-hooks/pre-push-spotless.sh",
             "timeout": 180
           },
           {
             "type": "command",
-            "command": "$CLAUDE_PROJECT_DIR/.claude/hooks/pre-push-orphan-strings.sh",
+            "command": "$CLAUDE_PROJECT_DIR/tools/agent-hooks/pre-push-orphan-strings.sh",
             "timeout": 30
           },
           {
             "type": "command",
-            "command": "$CLAUDE_PROJECT_DIR/.claude/hooks/pre-push-compose-escaping.sh",
+            "command": "$CLAUDE_PROJECT_DIR/tools/agent-hooks/pre-push-compose-escaping.sh",
+            "timeout": 30
+          },
+          {
+            "type": "command",
+            "command": "$CLAUDE_PROJECT_DIR/tools/agent-hooks/pre-push-agent-config.sh",
             "timeout": 30
           }
         ]

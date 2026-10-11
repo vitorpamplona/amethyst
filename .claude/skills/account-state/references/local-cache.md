@@ -1,101 +1,98 @@
-# LocalCache: The Singleton Event Store
+# LocalCache: the in-memory event store
 
-`amethyst/src/main/java/com/vitorpamplona/amethyst/model/LocalCache.kt` is the singleton (`object LocalCache`) that holds every event the client has received during the session. All rendering, all feed building, all search goes through it.
+`commons/src/commonMain/kotlin/com/vitorpamplona/amethyst/commons/model/cache/`:
 
-## Shape
+- `LocalCache.kt` — `object LocalCache : EventCache()`, the process-wide instance both app modules use.
+- `EventCache.kt` — all the logic (`open class EventCache : ILocalCache, ICacheProvider, Dao`).
+  It is a class so a test can build a cache of its own instead of sharing the singleton.
 
-```kotlin
-object LocalCache : ILocalCache, ICacheProvider {
-    val notes:        LargeCache<HexKey, Note>
-    val users:        LargeCache<HexKey, User>
-    val addressables: LargeCache<Address, Note>
-    val channels, deletionIndex, hashtagIndex, …
-}
-```
-
-All `LargeCache<K,V>` — see `nostr-expert/references/large-cache.md`. Thread-safe `getOrCreate`, functional scan with `forEach` / `filter` / `map`.
-
-## Insertion Path
-
-```
-Relay frame (EVENT "sub-id" {...})
-   │
-   ▼
-RelayPool / subscription manager calls parseNostrEvent(json)
-   │
-   ▼
-EventFactory.create(kind, ...) → typed Event subclass
-   │
-   ▼
-LocalCache.consume(event) / insertOrUpdateNote(event)
-   │
-   ├─ notes.getOrCreate(id) { Note(id) } — finds/creates the Note wrapper
-   ├─ updates note.event if this is a newer replaceable / first time for regular
-   ├─ reindex: hashtag tags → hashtagIndex, addressable → addressables, deletions → deletionIndex
-   ├─ for metadata: user.latestMetadata = event; user.liveMetadata.tryEmit(user)
-   └─ LocalCacheFlow signals listeners that something changed
-```
-
-`Note` and `User` are mutable wrappers — `getOrCreate` returns the same object across subsequent inserts for the same id/pubkey, which is why other code can `remember(noteId)` a `Note` reference and have it stay fresh.
-
-## Lookup
+## Structures (fields of `EventCache`)
 
 ```kotlin
-// By id (regular or replaceable)
-val note: Note = LocalCache.getOrCreateNote(id)
+val users = LargeSoftCache<HexKey, User>()
+val notes = LargeSoftCache<HexKey, Note>()
+val addressables = LargeSoftCache<Address, AddressableNote>()
 
-// By `kind:pubkey:d-tag`
-val addressable: Note? = LocalCache.getAddressableNoteIfExists(address)
-
-// By pubkey
-val user: User = LocalCache.getOrCreateUser(pubKey)
-
-// By hashtag
-LocalCache.hashtagIndex.filter { _, notes -> ... }
+val chatroomList = LargeCache<HexKey, ChatroomList>()
+val publicChatChannels = LargeCache<HexKey, PublicChatChannel>()
+val liveChatChannels = LargeCache<Address, LiveActivitiesChannel>()
+// … ephemeralChannels, geohashChannels, relayGroupChannels, concordChannels
+val deletionIndex = DeletionIndex()
+val observables = FilterIndex<Observable>()
+val pruner = CachePruner(this)
+val search = CacheSearch(this)
+val live: LocalCacheFlow = LocalCacheFlow()
 ```
 
-All `getOrCreate*` functions are safe to call from any thread. They return immediately; they do NOT trigger network I/O.
+`LargeSoftCache` (`LargeSoftCache.kt`) holds **weak references** (a `ConcurrentSkipListMap` of weak
+refs on JVM/Android). A `Note` or `User` nobody holds strongly can be collected, which is why every
+account state object keeps its note in a field. Channel maps are plain `LargeCache` (quartz `utils/cache/LargeCache.kt`; see
+`nostr-expert`).
 
-## Eviction
+## Insertion path
 
-Android-only. `amethyst/.../service/eventCache/MemoryTrimmingService.kt` listens for `ComponentCallbacks2.onTrimMemory` levels and drops least-recently-used entries from `notes` and `users`. On aggressive eviction, previously-returned `Note` / `User` references remain usable (they're just detached from the cache) but any new ids will produce new objects.
-
-## Reactive Consumption
-
-### Note-level
-
-```kotlin
-val note = LocalCache.getOrCreateNote(id)
-val metadata by note.flowSet.metadata.collectAsState()
-// `flowSet` has flows for: metadata, replies, reactions, zaps, reports, …
+```
+relay EVENT
+  └─ CacheClientConnector (commons/src/jvmAndroid/.../relayClient/) → cache.justConsume(event, relay, false)
+       ├─ already deleted? → re-send the deletion to that relay, drop the event
+       ├─ addressable and we hold a newer version? → re-send ours to that relay
+       └─ justConsumeAndUpdateIndexes
+            ├─ getOrCreateAddressableNote(address) / getOrCreateNote(id)
+            ├─ justConsumeInnerInner(event, …)   ← per-class `when`: a typed consume(...) overload,
+            │                                       consumeBaseReplaceable, … ; unlisted class → rejected
+            └─ if new: hint / mint / gatherer indexes
+       consume(...) → refreshNewNoteObservers(note): matching `observables`, then live.newNote(note)
 ```
 
-### Global
+Locally signed events enter through `justConsumeMyOwnEvent(event)`; embedded events through
+`consumeEmbedded(event)`.
 
-```kotlin
-LocalCacheFlow.live.collectLatest {
-    // coarse "something changed" ping — used by feeds to re-run filters
-}
-```
+## Lookups
 
-For per-feature reactivity (follow list changed, relays changed), prefer `Account.<featureFlow>` over `LocalCacheFlow`.
+| Need | Call |
+|---|---|
+| note by id or address string | `getOrCreateNote(hex)`, `getNoteIfExists(hex)`, `checkGetOrCreateNote(hex)` (null for bad input) |
+| addressable | `getOrCreateAddressableNote(address)`, `getAddressableNoteIfExists(address)` |
+| user | `getOrCreateUser(pubkey)`, `getUserIfExists(pubkey)`, `checkGetOrCreateUser(key)` |
+| live filter results | `observeNotes(filter: Filter): Flow<List<Note>>` |
+| text search | `search` (`CacheSearch.kt`) |
 
-## Deletion / Replacement
+`getOrCreate*` never does network I/O and returns the same wrapper for the same id while it is alive.
 
-- **Regular events**: once inserted, the first event wins unless explicitly deleted via a kind-5 deletion. `deletionIndex` tracks ids to hide.
-- **Replaceable** (kinds 0, 3, 10000-19999): a newer `created_at` replaces the older event in-place on the same `Note` wrapper.
-- **Addressable** (kinds 30000-39999): same as replaceable but keyed by `kind:pubkey:d-tag` in the `addressables` index.
+## Reactive consumption
+
+- One note: `note.flow()` returns its `NoteFlowSet` (`metadata`, `replies`, `reactions`, `boosts`,
+  `zaps`, `reports`, `relays`, `ots`, `edits`, `labels`). `flowSet` is null until someone calls `flow()`.
+- One user's profile: `user.metadata().flow`.
+- Everything: `LocalCache.live.newEventBundles` / `deletedEventBundles` — `SharedFlow<Set<Note>>`
+  batched by `BundledInsert` (1 s windows), `DROP_OLDEST` with a 100-bundle buffer. Feeds consume
+  it through `ICacheProvider.getEventStream()`.
+
+## Replacement and deletion
+
+- Regular events: first copy wins; kind-5 deletions go to `deletionIndex`, and a later copy of a
+  deleted event is refused (`deletionIndex.hasBeenDeleted`).
+- Replaceable and addressable events: the newest `created_at` replaces `note.event` in place on the
+  same wrapper (addressables are keyed by `Address`). Hold the `Note`, never the `Event`.
+
+## Pruning and memory
+
+- `CachePruner` (`pruner`): `pruneOldMessages`, `pruneHiddenMessages`, `pruneExpiredEvents`,
+  `prunePastVersionsOfReplaceables`, `pruneRepliesAndReactions`, `cleanObservers` (calls
+  `clearFlow()` on every note).
+- `MemoryTrimmingService` (`model/cache/MemoryTrimmingService.kt`) drives it; `AppModules.kt` and
+  `DesktopAppModules.kt` each create one.
+- No TTL beyond that. A long session accumulates; bound retention in the feed (`limit()`), not by
+  hoping the cache drops things.
 
 ## Gotchas
 
-- **Don't hold a direct `Event` reference** — hold the `Note` wrapper. The `Note.event` field can be replaced by newer replaceable/addressable events behind your back.
-- **`LocalCache` is process-global**. Tests must either use a dedicated test fixture or reset it between cases.
-- **No TTL beyond memory pressure.** A long-running session accumulates. If you need bounded retention, do it at the feed / filter layer.
-- **Scanning the full cache is expensive** in hot paths. Always prefer an index (hashtag, addressable) or a pre-built feed filter.
-- **Eviction is not atomic with in-flight coroutines**. If you `forEach` during low-memory, you may see concurrent removals — that's fine, the snapshot semantics in `LargeCache` keep it safe, but your result set shrinks.
-
-## Related
-
-- `nostr-expert/references/large-cache.md` — the underlying cache primitive.
-- `nostr-expert/references/event-factory.md` — how raw JSON becomes the typed `Event` that `LocalCache` stores.
-- `feed-patterns` skill — how feeds scan and observe `LocalCache` efficiently.
+- **A new event class must be routed in `justConsumeInnerInner`.** `EventFactory` parsing it is not
+  enough; an unlisted class hits the `else` branch and is rejected.
+- **Observers fire inside consume.** `refreshNewNoteObservers` runs as part of `consume(...)`, so
+  state the cache derives from that event (channels and similar) may not be filled in yet when a
+  collector wakes. Re-read in the collector.
+- **Full scans are expensive.** `notes.filterIntoSet { … }` over the whole cache is what a feed's
+  `feed()` does on refresh; never do it per frame or in composition.
+- **Processes**: `LocalCache` lives only in the Android main process — see AGENTS.md *Android Runtime
+  Processes*.

@@ -1,585 +1,137 @@
 ---
 name: compose-expert
-description: Advanced Compose Multiplatform UI patterns for shared composables. Use when working with visual UI components, state management patterns (remember, derivedStateOf, produceState), recomposition optimization (@Stable/@Immutable visual usage), Material3 theming, custom ImageVector icons, or determining whether to share UI in commonMain vs keep platform-specific. Delegates platform entry points (Activity, Window, tray) to android-expert/desktop-expert; the navigation shell itself is shared UI. Complements kotlin-expert (handles Kotlin language aspects of state/annotations).
+description: Shared Compose UI in `commonsUI/`: screens, components, the nav shell (`ScreenLayoutSpec`, `AppShellLayout`, Navigation 3 back stacks), component catalog, `RichTextParser`, Compose API/perf review. Use when writing or reviewing shared UI.
 ---
 
-# Compose Multiplatform Expert
+# compose-expert
 
-Visual UI patterns for sharing composables across Android and Desktop.
+Where shared Compose UI lives in Amethyst and the house rules for it. What goes in
+`commons` vs `commonsUI` vs a platform shim is in `AGENTS.md` ("Sharing Philosophy",
+"Feature Workflow") and `commonsUI/ARCHITECTURE.md`; this skill does not repeat it.
 
-## When to Use This Skill
+Delegate: Activity / manifest / flavors -> `android-expert`; Window, tray, menu bar ->
+`desktop-expert`; source-set placement, expect/actual, extracting an Android composable ->
+`kotlin-multiplatform`; feeds and `Account` state -> `account-state`; Flow and coroutine
+scopes -> `kotlin-coroutines`.
 
-- Creating or refactoring shared UI components
-- Deciding whether to share UI in `commonMain` or keep platform-specific
-- Building custom ImageVector icons (robohash pattern)
-- State management: remember, derivedStateOf, produceState
-- Recomposition optimization: visual usage of @Stable/@Immutable
-- Material3 theming and styling
-- Performance: lazy lists, image loading
+## Where things live
 
-**Delegate to other skills:**
-- Navigation structure → `android-expert`, `desktop-expert`
-- Kotlin state patterns (StateFlow, sealed classes) → `kotlin-expert`
-- Build configuration → `gradle-expert`
+All paths below are under
+`commonsUI/src/commonMain/kotlin/com/vitorpamplona/amethyst/commons/`.
 
-## Philosophy: Share by Default
+| What | Where |
+|------|-------|
+| Screens | `ui/screen/loggedIn/<feature>/` (and `ui/screen/` for shared feed views) |
+| Reusable components | `ui/components/` (catalog: `references/shared-composables-catalog.md`) |
+| Feed scaffolding | `ui/feeds/` (`RenderFeedContentState`, `RefresheableBox`, `FeedEmpty`, `LoadingFeed`) |
+| Note rendering | `ui/note/` (`NoteCompose`), rich text in `ui/richtext/` + `ui/components/RichTextViewer.kt` |
+| Theme | `ui/theme/` (`AmethystColorScheme.kt` palettes + `ColorScheme.*` tokens, `ColorScheme.isLight`, `Shape.kt`, `Type.kt`) |
+| Window tiers | `ui/layouts/ScreenLayout.kt` (`ScreenLayoutSpec`, `LocalScreenLayout`, `FeedContentMaxWidth`) |
+| Shell + nav | `ui/app/AmethystApp.kt`, `ui/app/AppRoot.kt`, `ui/navigation/` (see below) |
+| Platform ports for UI | `ui/platform/AppPlatform.kt` (`LocalAppPlatform`), `ui/components/PlatformPermission.kt` |
+| Icons | `icons/` (Amethyst glyph font) and `icons/symbols/` (`MaterialSymbols`, `AmethystIcons`) |
+| Robohash avatars | `robohash/` (`CachedRobohash`, `RobohashAssembler`, `parts/`) |
+| Strings | `commonsUI/src/commonMain/composeResources/values/strings.xml` -> `Res.string.*` (rules: `AGENTS.md` "Strings") |
 
-**Default to `commonsUI/commonMain`** (shared composables live in `:commonsUI`, the Compose half of the shared layer; headless state/ViewModels stay in `:commons`) unless platform experts indicate otherwise.
+The Android app's `AmethystTheme` wrapper is still in
+`amethyst/src/main/java/com/vitorpamplona/amethyst/ui/theme/Theme.kt`; the palettes it
+applies are shared.
 
-### Always Share
+## The shell and window tiers
 
-- **UI components**: Buttons, cards, lists, dialogs, inputs
-- **State visualization**: Loading, empty, error states
-- **Custom icons**: ImageVector assets (robohash, custom paths)
-- **Theme utilities**: Color calculations, style helpers
-- **Material3 components**: Any UI using Material primitives
+One shell for every window, chosen by size, not by platform (`AGENTS.md` "Navigation Shell"):
 
-**Screens and navigation are shared too.** Android also ships on laptops and the new
-Desktop app renders the same UI, so screens, the nav host and the bottom bar / rail /
-permanent drawer all belong in `commonsUI`. They adapt to the window with
-`ScreenLayoutSpec` / `LocalScreenLayout`, not per platform. See
-`commons/plans/2026-09-27-one-ui-android-desktop.md`.
+- `AmethystApp` (`ui/app/AmethystApp.kt`) is the root both front ends call. Android's
+  `MainActivity` passes `AndroidAppRoot`; the desktop window (`AmethystDesktop.kt`) passes a
+  `DesktopAppRoot`. `AppRoot`
+  (`ui/app/AppRoot.kt`) is the port each platform implements: `createAccountViewModel`,
+  `rememberScreenLayoutSpec`, `registerDestinations`, `ShellOverlay`, `NavigationEffects`, ...
+- `ScreenLayoutSpec.navigationStyle` is `BOTTOM_BAR`, `NAV_RAIL` or `PERMANENT_DRAWER`;
+  `hasRoomForNotificationPanel` docks the notification panel. `isLargeScreen` is "not the
+  bottom bar". Read it with `LocalScreenLayout.current`, never with a platform check.
+- `AppShellLayout` (`ui/navigation/shell/`) lays out the bar / rail / drawer;
+  `ui/navigation/bottombars/` holds `AppBottomBar` and `AppNavigationRail`;
+  `ui/navigation/deck/DeckArea.kt` adds the opt-in deck columns on windows of 1,200 dp+.
 
-### Keep Platform-Specific
+## Navigation 3
 
-- **Entry points**: Android `Activity`/`Service`, Desktop `Window`, tray, menu bar
-- **System integrations**: File pickers, notifications, share sheets, camera, media3, WebView
-- **Platform leaves inside shared UI**: behind expect/actual or a slot the shim fills
+The app owns its back stack as snapshot state; `NavDisplay` only renders it. No
+`NavController`, no graph. Full rules in `references/navigation.md`.
 
-### Decision Framework
-
-1. **Uses only Material3 primitives?** → Share in `commonMain`
-2. **Requires platform system APIs?** → Platform-specific
-3. **Pure visual component without navigation?** → Share in `commonMain`
-4. **Needs platform UX patterns?** → Ask `android-expert` or `desktop-expert`
-
-If uncertain, **default to sharing** - easier to split later than merge.
-
-## Shared Composable Anatomy
-
-### Structure
-
-```kotlin
-@Composable
-fun SharedComponent(
-    // State parameters (read-only)
-    data: DataClass,
-    isLoading: Boolean,
-    // Event parameters (write-only)
-    onAction: () -> Unit,
-    // Visual parameters
-    modifier: Modifier = Modifier,
-    // Optional customization
-    colors: ComponentColors = ComponentDefaults.colors()
-) {
-    // Implementation
-}
-```
-
-**Pattern**: State down, events up
-- Parameters above modifier = required state/events
-- `modifier` parameter = layout control
-- Parameters below modifier = optional customization
-
-### Example: AddButton
+- Routes: `@Serializable sealed class Route` in
+  `commons/src/commonMain/kotlin/com/vitorpamplona/amethyst/commons/model/navigation/Routes.kt`.
+  The back stack is saved through kotlinx-serialization, so every route argument must be
+  serializable.
+- `NavBackStacks` (same package) holds `stack` (never empty, starts at `Route.Home`) and
+  `savedTabs` (the root entry of each bottom-bar tab you left, so its ViewModels and scroll
+  survive). A `NavStackEntry`'s `contentKey` is `"nav-$id"`: saved state and ViewModels key
+  on it, so the same route opened twice is two screens.
+- `Nav` (`ui/navigation/navs/Nav.kt`) implements `INav`: `nav`, `navDrawer`, `newStack`,
+  `navBottomBar`, `popBack`, `popUpTo`, each after the keyboard settles (`ImeSettler`).
+- Register a screen once with a builder from `ui/navigation/host/NavDestinations.kt`. Shared
+  screens go in `NavDestinations.sharedDestinations` (`ui/navigation/host/SharedDestinations.kt`);
+  Android-only ones in `androidDestinations` in
+  `amethyst/src/main/java/com/vitorpamplona/amethyst/ui/navigation/AppNavigation.kt`. The builder
+  picks the motion and the reading-column cap:
 
 ```kotlin
-@Composable
-fun AddButton(
-    onClick: () -> Unit,
-    modifier: Modifier = Modifier,
-    text: String = "Add",
-    enabled: Boolean = true
-) {
-    OutlinedButton(
-        modifier = modifier,
-        enabled = enabled,
-        onClick = onClick,
-        shape = ActionButtonShape,
-        contentPadding = ActionButtonPadding
-    ) {
-        Text(text = text, textAlign = TextAlign.Center)
-    }
-}
-
-// Shared constants for consistency
-val ActionButtonShape = RoundedCornerShape(20.dp)
-val ActionButtonPadding = PaddingValues(vertical = 0.dp, horizontal = 16.dp)
+// from SharedDestinations.kt
+composableCapped<Route.Home> { HomeScreen(accountViewModel, nav) }
+composable<Route.Message> { MessagesScreen(accountViewModel, nav) }
+composableFromEnd<Route.Polls> { PollsScreen(accountViewModel, nav) }
+composableFromEnd<Route.Browser>(capWidth = false) { BrowserScreen(accountViewModel, nav) }
+composableFromBottomArgs<Route.AwardBadge> { AwardBadgeScreen(it.kind, it.pubKeyHex, it.dTag, accountViewModel, nav) }
 ```
 
-**Why this works on all platforms:**
-- Material3 primitives (OutlinedButton, Text)
-- No platform APIs
-- Configurable through parameters
-- Consistent styling via shared constants
-
-## State Management Patterns
-
-### remember - Cache Across Recompositions
-
-```kotlin
-@Composable
-fun ExpandableCard() {
-    var isExpanded by remember { mutableStateOf(false) }
-
-    Column {
-        IconButton(onClick = { isExpanded = !isExpanded }) {
-            Icon(
-                if (isExpanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
-                contentDescription = if (isExpanded) "Collapse" else "Expand"
-            )
-        }
-
-        if (isExpanded) {
-            Text("Expanded content...")
-        }
-    }
-}
-```
-
-**Visual pattern**: Toggle button → state changes → UI expands/collapses
-**Use for**: Simple UI state (toggles, counters, text input)
-
-### derivedStateOf - Optimize Frequent Changes
-
-```kotlin
-@Composable
-fun ScrollToTopButton(listState: LazyListState) {
-    // Only recomposes when showButton changes, not every scroll pixel
-    val showButton by remember {
-        derivedStateOf {
-            listState.firstVisibleItemIndex > 0
-        }
-    }
-
-    if (showButton) {
-        FloatingActionButton(onClick = { /* scroll to top */ }) {
-            Icon(Icons.Default.ArrowUpward, null)
-        }
-    }
-}
-```
-
-**Visual pattern**: Scroll position (0, 1, 2...) → boolean (show/hide) → Button visibility
-**Use for**: Input changes frequently, derived result changes rarely
-**Performance**: Prevents recomposition on every scroll event
-
-### produceState - Async to Compose State
-
-```kotlin
-@Composable
-fun LoadUserProfile(userId: String): State<User?> {
-    return produceState<User?>(initialValue = null, userId) {
-        value = repository.fetchUser(userId)
-    }
-}
-
-@Composable
-fun ProfileScreen(userId: String) {
-    val user by LoadUserProfile(userId)
-
-    when (user) {
-        null -> LoadingState("Loading profile...")
-        else -> ProfileCard(user!!)
-    }
-}
-```
-
-**Visual pattern**: Async operation → state updates → UI reflects changes
-**Use for**: Convert Flow, LiveData, callbacks into Compose state
-**Lifecycle**: Coroutine cancelled when composable leaves composition
-
-For Kotlin-specific state patterns (StateFlow, sealed classes), see `kotlin-expert`.
-
-## State Hoisting
-
-Move state up to make composables reusable:
-
-```kotlin
-// ❌ Stateful - hard to test, can't control externally
-@Composable
-fun BadSearchBar() {
-    var query by remember { mutableStateOf("") }
-    TextField(value = query, onValueChange = { query = it })
-}
-
-// ✅ Stateless - reusable, testable
-@Composable
-fun GoodSearchBar(
-    query: String,
-    onQueryChange: (String) -> Unit,
-    modifier: Modifier = Modifier
-) {
-    TextField(
-        value = query,
-        onValueChange = onQueryChange,
-        modifier = modifier
-    )
-}
-
-@Composable
-fun SearchScreen() {
-    var query by remember { mutableStateOf("") }
-
-    Column {
-        GoodSearchBar(query = query, onQueryChange = { query = it })
-        SearchResults(query = query)
-    }
-}
-```
-
-**Principle**: State up, events down
-- State: `query: String` (read-only parameter)
-- Events: `onQueryChange: (String) -> Unit` (callback parameter)
-
-## Recomposition Optimization
-
-### Visual Usage of @Immutable
-
-Use @Immutable on data classes passed to composables:
-
-```kotlin
-@Immutable
-data class UserProfile(val name: String, val avatar: String)
-
-@Composable
-fun ProfileCard(profile: UserProfile) {
-    // Only recomposes when profile instance changes
-    Row {
-        RobohashImage(robot = profile.avatar)
-        Text(profile.name, style = MaterialTheme.typography.titleMedium)
-    }
-}
-```
-
-**Visual effect**: Prevents recomposition when parent recomposes with same data
-**Pattern**: Mark parameter data classes as @Immutable
-**Note**: For Kotlin language details on @Immutable, see `kotlin-expert`
-
-### Stable Parameters
-
-```kotlin
-// ✅ Stable - won't trigger recomposition unless colors instance changes
-@Composable
-fun ThemedCard(
-    content: String,
-    colors: CardColors = CardDefaults.colors(),
-    modifier: Modifier = Modifier
-) {
-    Card(colors = colors, modifier = modifier) {
-        Text(content)
-    }
-}
-```
-
-For @Stable annotation details, see `kotlin-expert`.
-
-## Material3 Theming
-
-All shared composables use Material3 for consistency:
-
-```kotlin
-@Composable
-fun ThemedComponent() {
-    val bg = MaterialTheme.colorScheme.background
-    val fg = MaterialTheme.colorScheme.onBackground
-    val primary = MaterialTheme.colorScheme.primary
-
-    Column(
-        modifier = Modifier.background(bg)
-    ) {
-        Text(
-            "Title",
-            style = MaterialTheme.typography.headlineMedium,
-            color = fg
-        )
-        Button(
-            onClick = { /* ... */ },
-            colors = ButtonDefaults.buttonColors(containerColor = primary)
-        ) {
-            Text("Action")
-        }
-    }
-}
-```
-
-**Principles:**
-- Colors: `MaterialTheme.colorScheme.*`
-- Typography: `MaterialTheme.typography.*`
-- Shapes: `MaterialTheme.shapes.*`
-
-### Theme Detection
-
-```kotlin
-@Composable
-private fun isLightTheme(): Boolean {
-    val background = MaterialTheme.colorScheme.background
-    return (background.red + background.green + background.blue) / 3 > 0.5f
-}
-
-@Composable
-fun ThemedIcon() {
-    val isDark = !isLightTheme()
-    val tint = if (isDark) Color.White else Color.Black
-    Icon(Icons.Default.Face, null, tint = tint)
-}
-```
-
-## Custom Icons: ImageVector Pattern
-
-Amethyst uses ImageVector for multiplatform icons.
-
-### roboBuilder DSL
-
-```kotlin
-fun roboBuilder(block: Builder.() -> Unit): ImageVector {
-    return ImageVector.Builder(
-        name = "Robohash",
-        defaultWidth = 300.dp,
-        defaultHeight = 300.dp,
-        viewportWidth = 300f,
-        viewportHeight = 300f
-    ).apply(block).build()
-}
-```
-
-### Building Icons
-
-```kotlin
-fun customIcon(fgColor: SolidColor, builder: Builder) {
-    builder.addPath(pathData1, fill = fgColor, stroke = Black, strokeLineWidth = 1.5f)
-    builder.addPath(pathData2, fill = Black, fillAlpha = 0.4f)
-    builder.addPath(pathData3, fill = Black, fillAlpha = 0.2f)
-}
-
-private val pathData1 = PathData {
-    moveTo(144.5f, 87.5f)
-    reflectiveCurveToRelative(-51.0f, 3.0f, -53.0f, 55.0f)
-    lineToRelative(16.0f, 16.0f)
-    close()
-}
-
-@Composable
-fun CustomIcon() {
-    Image(
-        painter = rememberVectorPainter(
-            roboBuilder {
-                customIcon(SolidColor(Color.Blue), this)
-            }
-        ),
-        contentDescription = "Custom icon"
-    )
-}
-```
-
-**Why ImageVector?**
-- Pure Kotlin, no XML
-- Works on Android, Desktop, iOS
-- GPU-accelerated
-- Type-safe
-
-### Caching Pattern
-
-```kotlin
-object CustomIcons {
-    private val cache = mutableMapOf<String, ImageVector>()
-
-    fun get(key: String): ImageVector {
-        return cache.getOrPut(key) {
-            buildIcon(key)
-        }
-    }
-}
-
-@Composable
-fun CachedIcon(key: String) {
-    Image(imageVector = CustomIcons.get(key), contentDescription = null)
-}
-```
-
-For detailed icon patterns, see `references/icon-assets.md`.
-
-## Common Visual Patterns
-
-### State Visualization
-
-```kotlin
-@Composable
-fun DataScreen(uiState: UiState) {
-    when (uiState) {
-        is UiState.Loading -> LoadingState("Loading...")
-        is UiState.Empty -> EmptyState(
-            title = "No data",
-            onRefresh = { /* refresh */ }
-        )
-        is UiState.Error -> ErrorState(
-            message = uiState.message,
-            onRetry = { /* retry */ }
-        )
-        is UiState.Success -> ContentList(uiState.items)
-    }
-}
-```
-
-**Components** (all in `commonsUI/commonMain`):
-- `LoadingState` - Progress indicator + message
-- `EmptyState` - Empty message + optional refresh button
-- `ErrorState` - Error message + optional retry button
-
-### Relay Status (Amethyst Pattern)
-
-```kotlin
-@Composable
-fun RelayStatusIndicator(connectedCount: Int) {
-    val statusColor = when {
-        connectedCount == 0 -> RelayStatusColors.Disconnected
-        connectedCount < 3 -> RelayStatusColors.Connecting
-        else -> RelayStatusColors.Connected
-    }
-
-    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-        Icon(
-            imageVector = if (connectedCount > 0) Icons.Default.Check else Icons.Default.Close,
-            tint = statusColor,
-            modifier = Modifier.size(16.dp)
-        )
-        Text(
-            "$connectedCount relay${if (connectedCount != 1) "s" else ""}",
-            color = MaterialTheme.colorScheme.onSurfaceVariant
-        )
-    }
-}
-```
-
-**Visual mapping**:
-- 0 relays → Red + X icon
-- 1-2 relays → Yellow + Check icon
-- 3+ relays → Green + Check icon
-
-### Placeholder Pattern
-
-```kotlin
-@Composable
-fun PlaceholderScreen(
-    title: String,
-    description: String,
-    modifier: Modifier = Modifier
-) {
-    Column(modifier = modifier) {
-        Text(title, style = MaterialTheme.typography.headlineMedium)
-        Spacer(Modifier.height(16.dp))
-        Text(description, color = MaterialTheme.colorScheme.onSurfaceVariant)
-    }
-}
-
-// Specific implementations
-@Composable
-fun SearchPlaceholder() = PlaceholderScreen(
-    title = "Search",
-    description = "Search for users, notes, and hashtags."
-)
-```
-
-**Pattern**: Generic composable + specific wrappers with preset text
-
-## Performance
-
-### Avoid Unnecessary Recomposition
-
-```kotlin
-// ❌ Bad - recomposes on every scroll
-@Composable
-fun BadButton(scrollState: ScrollState) {
-    if (scrollState.value > 100) {
-        Button(onClick = {}) { Text("Top") }
-    }
-}
-
-// ✅ Good - only recomposes when visibility changes
-@Composable
-fun GoodButton(scrollState: ScrollState) {
-    val show by remember { derivedStateOf { scrollState.value > 100 } }
-    if (show) {
-        Button(onClick = {}) { Text("Top") }
-    }
-}
-```
-
-### Lazy Lists
-
-```kotlin
-@Composable
-fun FeedList(items: List<Item>) {
-    LazyColumn {
-        items(items, key = { it.id }) { item ->
-            FeedItem(item)
-        }
-    }
-}
-```
-
-**Key principle**: Use `key` parameter for stable item identity
-
-## Bundled Resources
-
-- **references/shared-composables-catalog.md** - Complete catalog of shared UI components
-- **references/state-patterns.md** - State management patterns with visual examples
-- **references/icon-assets.md** - Custom ImageVector icon patterns
-- **references/rich-text-parsing.md** - `RichTextParser`, `UrlParser`, `GalleryParser`, `Patterns`, `MediaContentModels`; NIP-92 imeta enrichment
-- **scripts/find-composables.sh** - Find all @Composable functions in codebase
-
-## Quick Reference
-
-| Task | Pattern | Location |
-|------|---------|----------|
-| Reusable UI | State hoisting | commonsUI/commonMain |
-| Simple state | remember { mutableStateOf() } | Composable scope |
-| Derived state | derivedStateOf { } | remember block |
-| Async → state | produceState { } | Composable function |
-| Custom icons | roboBuilder + PathData | commonsUI/icons |
-| Loading/Error | LoadingState, ErrorState | commonsUI/ui/components |
-| Theme colors | MaterialTheme.colorScheme | Any @Composable |
-| Navigation | Delegate to platform expert | amethyst/, desktopApp/ |
-
-## Common Workflows
-
-### Creating a Shared Component
-
-1. Start in `commonsUI/src/commonMain/kotlin/.../ui/components/`
-2. Use Material3 primitives only
-3. Hoist state (parameters for data, callbacks for events)
-4. Add modifier parameter
-5. Use MaterialTheme for colors/typography
-6. Test on both Android and Desktop
-
-### Converting Existing Component
-
-1. Read current implementation in `amethyst/` or `desktopApp/`
-2. Identify pure visual logic (no platform APIs)
-3. Create in `commonsUI/commonMain` with hoisted state
-4. Replace platform implementations with shared component
-5. Keep platform-specific wrappers if needed
-
-### Custom Icon
-
-1. Export SVG from design tool
-2. Convert to PathData using Android Studio
-3. Create icon function with roboBuilder
-4. Add caching if generated dynamically
-5. Wrap in @Composable for easy use
-
-### Navigation
-
-The navigation shell is shared (`ScreenLayoutSpec` picks bottom bar, rail or permanent
-drawer by window size) and is moving to `commonsUI` with `AppNavigation`. Delegate only
-the platform leaves:
-- Activity / intent plumbing → `android-expert`
-- Window, tray, menu bar, multi-window → `desktop-expert`
-- Today's legacy `desktopApp` sidebar shell → `desktop-expert` (to be replaced)
-
-## Related Skills
-
-- **kotlin-expert** - Kotlin language aspects (@Immutable details, StateFlow, sealed classes)
-- **android-expert** - Android navigation, platform APIs
-- **desktop-expert** - Desktop navigation, window management, OS specifics
-- **kotlin-coroutines** - Async patterns, Flow integration
+A route nobody registered fails the first time it is opened (the desktop installs an
+`unavailable` screen instead). Gate a menu item on `canOpen(route)` when a front end may lack it.
+
+## Composable conventions that differ from the default
+
+- **Strings come from `Res`**, read with `stringRes(Res.string.x)`; no literal user-visible text
+  in a shared composable, no Android `R.string`. Default label parameters are `StringResource`
+  (see `AddButton` in `ui/components/ActionButtons.kt`).
+- **UI-state collections are `kotlinx.collections.immutable`** (`ImmutableList`,
+  `ImmutableMap`, `persistentListOf`), an `api` dependency of `commonsUI`. The parser output
+  (`RichTextViewerState`, `ParagraphState`) and the platform ports already use them; pass those,
+  not `List`, into composables.
+- **`@Immutable` / `@Stable`** mark the state classes and port interfaces handed to composables
+  (`ScreenLayoutSpec`, `AppPlatform`, `PlatformPermission`). Only mark a class you can keep
+  truly immutable.
+- **Theme-dependent values come from the color scheme**: `MaterialTheme.colorScheme.isLight`
+  (memoized in `AmethystColorScheme.kt`), not a hand-rolled luminance check.
+- **Icons** follow `AGENTS.md` "Icons": `icons/*.kt` compile into `amethyst_icons.ttf` and
+  draw through `AmethystIconGlyph`; Material icons are `MaterialSymbols` from a subset font, so
+  a new codepoint needs `tools/material-symbols-subset/subset.sh`. Robohash is the one
+  ImageVector-built asset: `references/icon-assets.md`.
+- **Parse rich text through `CachedRichTextParser`**, never per recomposition:
+  `references/rich-text-parsing.md`.
+- **Permissions in shared UI** go through an `expect fun rememberXPermission(): PlatformPermission`
+  (see `ui/components/LocationPermission.kt`; the Android actual wraps Accompanist).
+
+## Reviewing a component's public API
+
+For slot parameters, `modifier` placement, and the other API-shape checks, use
+`references/api-style.md`.
+
+## Performance: measure first
+
+Feed jank in this app has been measured as GC-bound and RenderThread-bound, with composition a
+small share of frame time. Stability annotations, `derivedStateOf` and deferred reads only help
+when a trace shows composition is the cost. Profile a release-like build (the `benchmark`
+build type in `amethyst/build.gradle.kts` is minified and profileable) before you apply them, and
+measure again afterwards.
+
+Compose compiler reports are configured only for `:amethyst` (`composeCompiler { reportsDestination
+... }` near line 551 of `amethyst/build.gradle.kts`, written to `amethyst/build/compose_compiler/`).
+They cover only composables compiled in that module. Shared composables are compiled in
+`:commonsUI`, which has no such block. To inspect their skippability, add the block to
+`commonsUI/build.gradle.kts` temporarily, and don't commit it.
+
+## References
+
+- `references/navigation.md`: back-stack operations, rendering, transitions, intents, tests
+- `references/shared-composables-catalog.md`: the reusable components and their signatures
+- `references/rich-text-parsing.md`: `RichTextParser`, segments, `CachedRichTextParser`, NIP-92 imeta
+- `references/icon-assets.md`: robohash avatars
+- `references/api-style.md`: component API review checklist (slots, modifiers)

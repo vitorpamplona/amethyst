@@ -1,68 +1,50 @@
-# EventFactory: Parsing JSON into Typed Events
+# EventFactory and registering a new kind
 
-`quartz/src/commonMain/kotlin/com/vitorpamplona/quartz/utils/EventFactory.kt` is the single dispatch point that turns a parsed `(id, pubKey, createdAt, kind, tags, content, sig)` tuple into the correct `Event` subclass.
+`quartz/src/commonMain/kotlin/com/vitorpamplona/quartz/utils/EventFactory.kt` turns a
+parsed `(id, pubKey, createdAt, kind, tags, content, sig)` into the typed `Event`
+subclass. Callers normally reach it through `Event.fromJson(...)` or the relay message
+parser.
 
-## What It Does
-
-EventFactory is a giant `when` over `kind` that maps integer kind values to concrete event classes. If a kind isn't recognized, it falls back to the generic base `Event` (so unknown kinds still round-trip). Every NIP that defines a new kind registers its class here.
-
-Typical shape:
+Shape (verbatim structure):
 
 ```kotlin
-object EventFactory {
-    fun create(
-        id: HexKey,
-        pubKey: HexKey,
-        createdAt: Long,
-        kind: Int,
-        tags: TagArray,
-        content: String,
-        sig: HexKey,
-    ): Event = when (kind) {
-        MetadataEvent.KIND        -> MetadataEvent(id, pubKey, createdAt, tags, content, sig)
-        TextNoteEvent.KIND        -> TextNoteEvent(id, pubKey, createdAt, tags, content, sig)
-        ContactListEvent.KIND     -> ContactListEvent(id, pubKey, createdAt, tags, content, sig)
-        ReactionEvent.KIND        -> ReactionEvent(id, pubKey, createdAt, tags, content, sig)
-        // …hundreds more…
-        else                      -> Event(id, pubKey, createdAt, kind, tags, content, sig)
+class EventFactory {
+    companion object {
+        val factories: MutableMap<Int, EventBuilder> = mutableMapOf()   // runtime registrations
+
+        fun <T : Event> create(id, pubKey, createdAt, kind, tags, content, sig): T =
+            when (kind) {
+                AcceptedBadgeSetEvent.KIND -> AcceptedBadgeSetEvent(id, pubKey, createdAt, tags, content, sig)
+                …
+                else -> factories[kind]?.build(id, pubKey, createdAt, tags, content, sig)
+                    ?: Event(id, pubKey, createdAt, kind, tags, content, sig)
+            }
+
+        fun isKnownKind(kind: Int): Boolean   // typed class exists?
+        fun probe(kind: Int): Event           // a tagless instance, used by the stores' searchable checks
     }
 }
 ```
 
-Callers are normally upstream of this: `Event.fromJson(...)` / `EventMapper.fromJson(...)` / the relay client's message parser. You rarely call EventFactory directly — you consume typed events it produces.
+Some kinds pick their class from tags (kinds 38000 and 30301 have nested `when`s that
+fall back to `UnrecognizedKind…Event`). Unknown kinds round-trip as plain `Event`.
 
-## Registering a New Event Kind
+## Adding a kind — three registrations
 
-Adding a NIP is roughly:
+1. **The class**, in its `nipXX…/` package (or `experimental/…`): subclass `Event`,
+   `BaseReplaceableEvent` or `BaseAddressableEvent` (see `event-hierarchy.md`), add
+   `companion object { const val KIND = n; fun build(...) }`, tag codecs and builder
+   extensions (see `tag-patterns.md`).
+2. **`EventFactory.create`** — a branch, or the kind parses as plain `Event`.
+3. **`LocalCache` dispatch** — `justConsumeInnerInner` in
+   `commons/src/commonMain/kotlin/com/vitorpamplona/amethyst/commons/model/cache/EventCache.kt`
+   (`LocalCache` is `object LocalCache : EventCache()`). Without a branch the event hits the
+   `else` and is dropped with only a `Log.w("Event Not Supported")` — including the
+   account's own freshly signed copy. Add it next to a sibling of the same shape.
 
-1. Create the event class under `quartz/src/commonMain/kotlin/com/vitorpamplona/quartz/nipXX…/` alongside the NIP package.
-2. Subclass the right base:
-   - `Event` — regular events (stored forever).
-   - `BaseReplaceableEvent` — kinds `10000-19999`, `0`, `3`.
-   - `BaseAddressableEvent` — kinds `30000-39999` (identified by `kind:pubkey:d-tag`).
-   - Ephemeral events extend `Event` but have kind `20000-29999`.
-3. Define `companion object { const val KIND = <n> }`.
-4. If the event has tag builders, define a `TagArrayBuilder<YourEvent>` DSL in a `TagArrayBuilder` extension — see `nostr-expert/references/tag-patterns.md`.
-5. Add a branch to `EventFactory.create(...)` so JSON parsing produces your typed class.
-6. If the event is addressable, ensure it exposes a stable `dTag()` and `address()`.
-7. Add tests under `quartz/src/commonTest/...`.
+Then, if relevant: make it `SearchableEvent` (see the `event-store-semantics` skill), add
+it to the subscription filter that should fetch it, and add a test in
+`quartz/src/commonTest/...`. Regenerate `nip-catalog.md` with `scripts/nip-catalog.py`.
 
-## Why a Monolithic when?
-
-- **Zero overhead**: compiled to a dense lookup. No reflection, no registry map.
-- **Exhaustive browsing**: every known kind lives at one search location. `grep KIND = 1234 quartz/...` finds everything.
-- **Obvious migration path**: adding a kind means adding a case; removing a kind is a grep-and-delete.
-
-The tradeoff is the file is large and every new kind edits the same file — expect merge conflicts in PRs that touch it, and resolve by keeping both branches.
-
-## Supporting Utilities
-
-- `EventAssembler.kt` (crypto/) — higher-level helper that takes a signer and a `kind + tags + content` and produces a fully signed event (id + sig populated).
-- `EventTemplate.kt` (signers/) — unsigned-event holder, useful in signer flows.
-- `Event.fromJson(...)` / `Event.toJson()` — JSON round-trip using `OptimizedJsonMapper` (Jackson on jvmAndroid).
-
-## Related References
-
-- `event-hierarchy.md` — class hierarchy, Kind ranges
-- `nip-catalog.md` — which kind maps to which NIP
-- `tag-patterns.md` — `TagArrayBuilder` DSL for writing tags cleanly
+`EventFactory.kt` is one large file every new kind edits — expect merge conflicts and
+keep both sides.

@@ -1730,8 +1730,8 @@
     <!-- Elapsed call time. %1$d is minutes and %2$d seconds in the short form; in the long
          form %1$d is hours, %2$d minutes and %3$d seconds. Separator and field order are the
          translator's to change. -->
-    <string name="call_duration_minutes_seconds"></string>
-    <string name="call_duration_hours_minutes_seconds"></string>
+    <string name="call_duration_minutes_seconds">%1$02d:%2$02d</string>
+    <string name="call_duration_hours_minutes_seconds">%1$d:%2$02d:%3$02d</string>
     <string name="call_dismiss">Ignoruj</string>
     <string name="call_switch_camera">Przełącz kamerę</string>
     <string name="call_voice">Połączenie głosowe</string>
@@ -4814,7 +4814,7 @@
     <string name="napplet_op_seal_message">wyślij prywatną wiadomość</string>
     <string name="napplet_consent_seal_unknown">Zaszyfrowana prywatna wiadomość. Ametyst jej nie zaszyfrował, więc nie może pokazać, co jest w środku.</string>
     <string name="napplet_op_update_profile">zaktualizuj swój profil</string>
-    <string name="consent_profile_changes">Zmienia Twój profil</string>
+    <string name="consent_profile_changes">Zmienia w profilu: %1$s</string>
     <string name="consent_profile_removes">Usuwa Twój %1$s</string>
     <string name="consent_profile_removes_other">Usuwa pola z Twojego profilu</string>
     <string name="consent_profile_no_change">Brak zmian w Twoim profilu</string>

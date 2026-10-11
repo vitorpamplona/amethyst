@@ -20,7 +20,7 @@ val pubkey: HexKey? = resolveUserHexOrNull(userInput, nip05Client)
 
 Pass `nip05Client = null` in pure-offline contexts — NIP-05-shaped inputs then fall through to `null` and no HTTP is attempted.
 
-## ❌ Do not write this (the hand-rolled anti-pattern)
+## Do not write this (the hand-rolled anti-pattern)
 
 ```kotlin
 // DON'T. This re-implements resolveUserHexOrNull badly:
@@ -37,7 +37,7 @@ fun resolveObserver(input: String): String? {
 }
 ```
 
-## ✅ Do this instead
+## Do this instead
 
 ```kotlin
 // CLI already exposes it — commands call Context.requireUserHex(input):

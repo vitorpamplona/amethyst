@@ -1,83 +1,49 @@
-# NIP-19: Bech32 Encoding & Parsing
+# NIP-19 bech32 in Quartz
 
-Quartz implementation for `npub`, `nsec`, `note`, `nevent`, `nprofile`, `naddr`, `nrelay`, `nembed` — the user-facing encoded forms of Nostr identifiers.
+All under `quartz/src/commonMain/kotlin/com/vitorpamplona/quartz/nip19Bech32/`.
 
-## Layout
-
-All under `quartz/src/commonMain/kotlin/com/vitorpamplona/quartz/nip19Bech32/`:
-
-- `Nip19Parser.kt` — the entry point. Parses any Bech32 or `nostr:` URI into a typed `Entity`.
-- `bech32/Bech32Util.kt` — raw Bech32 encode/decode (bits ↔ 5-bit groups).
-- `tlv/Tlv.kt` / `tlv/TlvBuilder.kt` — Type-Length-Value codec for composite entities (`nevent`, `nprofile`, `naddr`).
-- `TlvTypes.kt` — TLV type constants (0 = special payload, 1 = relay, 2 = author, 3 = kind).
-- `entities/` — one class per entity type (see below).
-- `ATagExt.kt`, `ByteArrayExt.kt`, `EventExt.kt`, `ListEntityExt.kt`, `TlvBuilderExt.kt` — convenience extensions for encoding domain objects directly.
-
-## Entity Types
-
-Each is a `sealed class Entity` subclass under `entities/`:
-
-| Class       | Prefix     | Payload                                           | Purpose |
-|-------------|------------|---------------------------------------------------|---------|
-| `NPub`      | `npub1...` | 32-byte pubkey                                    | Public key |
-| `NSec`      | `nsec1...` | 32-byte private key                               | Private key (never log/share) |
-| `NNote`     | `note1...` | 32-byte event id                                  | Bare note reference (no hints) |
-| `NEvent`    | `nevent1…` | TLV: event id + relays + author + kind            | Rich note reference |
-| `NProfile`  | `nprofile…`| TLV: pubkey + relays                              | User reference with relay hints |
-| `NAddress`  | `naddr1…`  | TLV: d-tag + relays + author + kind (addressable) | Parameterized replaceable event |
-| `NRelay`    | `nrelay1…` | TLV: relay URL                                    | Relay pointer |
-| `NEmbed`    | `nembed1…` | Compressed event JSON                             | Full event embedded inline |
-
-## Parsing
-
-```kotlin
-// From anywhere (URI, Bech32, nostr: prefix, "nostr:" + data):
-val entity: Entity? = Nip19Parser.uriToRoute(input)?.entity
-
-// More forgiving — strips scheme, whitespace, surrounding chars:
-val parsed = Nip19Parser.tryParseAndClean(dirtyInput)
-
-when (entity) {
-    is NPub      -> entity.hex           // 32-byte pubkey hex
-    is NEvent    -> entity.hex + entity.relay + entity.author + entity.kind
-    is NAddress  -> entity.atag          // kind:pubkey:d-tag
-    is NProfile  -> entity.hex + entity.relay
-    // …
-}
-```
+| File | Holds |
+|---|---|
+| `Nip19Parser.kt` | `object Nip19Parser`: `uriToRoute(uri): ParseReturn?` (`entity`, `nip19raw`, `additionalChars`), `tryParseAndClean(uri): String?` (bare `npub1…` out of dirty input), `parseAll(content)`, `parseAllStandalone`, `parseAllEvents`, `hasAny`. Top-level `decodePublicKey`, `decodePublicKeyAsHexOrNull`, `decodePrivateKeyAsHexOrNull`, `decodeEventIdAsHexOrNull`. |
+| `ByteArrayExt.kt` | `toNpub()`, `toNsec()`, `toNote()`, `toNEvent()`, `toNProfile()`, `toNAddress()`, `toNEmbed()`, `toLnUrl()` on raw bytes |
+| `entities/` | `Entity` (plain interface) and `NPub`, `NSec`, `NNote`, `NEvent`, `NProfile`, `NAddress`, `NRelay`, `NEmbed`; each has `parse(bytes)` and a companion `create(...)` that returns the bech32 string |
+| `EventExt.kt` | `Event.toNIP19(relayHint)` — `naddr` for addressable events, `nevent` otherwise |
+| `ATagExt.kt` | `ATag.toNAddr()`, `ATag.parseAny`, `ATag.parseNAddr`, `ATag.isATag` |
+| `ListEntityExt.kt` | `List<Entity>.eventHints()/eventIds()/addressHints()/pubKeys()…` for parsed content |
+| `tlv/`, `TlvTypes.kt` | `TlvBuilder` (`addHex`, `addString`, `addInt`, `…IfNotNull`), `TlvTypes { SPECIAL, RELAY, AUTHOR, KIND }` |
+| `bech32/Bech32Util.kt` | `object Bech32` (`encodeBytes`, `decodeBytes`), `String.bechToBytes()` |
 
 ## Encoding
 
-The cleanest path is the entity's `toNostrUri()` / `toBech32()` methods (each entity class defines them). For composite entities (NEvent, NProfile, NAddress), internally the code builds a TLV buffer via `TlvBuilder`:
-
 ```kotlin
-// TlvBuilder DSL (tlv/TlvBuilder.kt)
-val bytes = TlvBuilder().apply {
-    addHex(TlvTypes.SPECIAL, eventIdHex)
-    addString(TlvTypes.RELAY, relayUrl)
-    addHex(TlvTypes.AUTHOR, authorHex)
-    addInt(TlvTypes.KIND, kind)
-}.build()
-
-Bech32Util.encode("nevent", bytes)
+val npub = pubkeyBytes.toNpub()                        // or NPub.create(hex)
+val nevent = NEvent.create(idHex, authorHex, kind, relays)   // relays: List<NormalizedRelayUrl> (or one, nullable)
+val nprofile = NProfile.create(pubkeyHex, relays)
+val link = event.toNIP19(relayHint)
 ```
 
-Kotlin-idiomatic extension helpers live in `TlvBuilderExt.kt`, `EventExt.kt`, and `ATagExt.kt` — prefer those over hand-building TLV.
+Entities have no `toBech32()`/`toNostrUri()` methods; use `create(...)`, the `ByteArray`
+extensions, or `toNIP19`.
 
-## When to Use
+## Decoding
 
-- **Pasted input from users** → `Nip19Parser.tryParseAndClean` (handles prefixes, whitespace, leftover `nostr:`)
-- **Internal routing / deep links** → `Nip19Parser.uriToRoute`
-- **Outbound share links** → call the entity's `toNostrUri()` / `toBech32()` directly
-- **Building a custom TLV entity** → `TlvBuilder` DSL + `Bech32Util.encode`
+```kotlin
+when (val entity = Nip19Parser.uriToRoute(input)?.entity) {   // accepts nostr: URIs
+    is NPub -> entity.hex
+    is NEvent -> entity.hex to entity.relay                      // relay: List<NormalizedRelayUrl>
+    is NAddress -> entity.aTag()                                  // or entity.address()
+    null -> /* not bech32 */
+}
+```
+
+Just need a pubkey from hex/npub/nprofile/nsec? `decodePublicKeyAsHexOrNull(input)`, or
+`resolveUserHexOrNull` to also accept NIP-05 (see `nip05-identifiers.md`).
 
 ## Gotchas
 
-- `NSec` should never be logged or propagated. Parse and discard the string buffer.
-- Relay hints in `NEvent`/`NProfile`/`NAddress` are hints, not guarantees. The Outbox model (NIP-65) overrides them.
-- TLV types are fixed (see `TlvTypes.kt`); do not reorder or invent new types without NIP-19 support.
-- `NEmbed` is an Amethyst-specific compressed-event extension, not part of NIP-19 proper.
-
-## Tests
-
-See `quartz/src/commonTest/kotlin/com/vitorpamplona/quartz/nip19Bech32/` for round-trip tests covering every entity and `Nip19Parser` input cleaning.
+- Relay hints in `nevent`/`nprofile`/`naddr` are hints; the outbox model decides where to
+  fetch.
+- `NEmbed` is a gzip-compressed full event (`NEmbed.create(event)`), an Amethyst extension
+  beyond NIP-19.
+- Never log an `NSec` or the input string it came from. `PubKeysNeverLeakNsecTest`
+  (commonTest `nip19Bech32/`) guards the decode helpers.
