@@ -760,7 +760,7 @@
     <string name="backup_keys_nudge_already_saved">उनको मैंने सुरक्षित कर लिया</string>
     <string name="backup_keys_nudge_dismiss">हटाएँ</string>
     <string name="badge_award_image_for">पदक पुरस्कार चित्र %1$s के लिए</string>
-    <string name="badge_award_image">"पदक पुरस्कार चित्र</string>
+    <string name="badge_award_image">पदक पुरस्कार चित्र</string>
     <string name="new_badge_award_notif">आपको नया पदक पुरस्कार प्राप्त हुआ</string>
     <string name="award_granted_to">पदक पुरस्कार इनको दिया गया</string>
     <string name="account_switch_add_account_dialog_title">नयी लेखा जोडें</string>
