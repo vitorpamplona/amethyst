@@ -264,8 +264,12 @@ class LoginViewModel(
     }
 
     companion object {
-        /** Where the `nostrconnect://` handshake happens; the signer replies on the same relays. */
-        private val NOSTR_CONNECT_RELAYS = listOf("wss://relay.nsec.app")
+        /**
+         * Where the `nostrconnect://` handshake happens; the signer replies on the same relays.
+         * Two, so one relay going down doesn't break the login: relay.nsec.app was the only one
+         * and stopped answering (2026-10). Both are dedicated NIP-46 relays.
+         */
+        private val NOSTR_CONNECT_RELAYS = listOf("wss://relay.nip46.com", "wss://nrs.primal.net")
 
         // URL-encoded: it rides in the nostrconnect:// query string.
         private const val NOSTR_CONNECT_APP_NAME = "Amethyst"
