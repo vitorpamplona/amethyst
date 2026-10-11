@@ -173,6 +173,18 @@
 }
 
 # ============================================================================
+# Desktop-only: kdroidfilter ComposeMediaPlayer — JNI natives registered
+# from the bundled Swift dylib's JNI_OnLoad via a fixed RegisterNatives
+# table. Shrink sees no Java callsites for some natives (e.g. nGetVolume)
+# and strips the declarations, so RegisterNatives fails with
+# NoSuchMethodError during System.load() at first video init on macOS.
+# ============================================================================
+-keep class io.github.kdroidfilter.** { *; }
+-keepclassmembers class io.github.kdroidfilter.** {
+    native <methods>;
+}
+
+# ============================================================================
 # Desktop-only: OkHttp / Conscrypt / BouncyCastle / OpenJSSE / Graal
 # ============================================================================
 # okhttp ships TLS adapters for GraalVM native-image, Conscrypt, BouncyCastle,
