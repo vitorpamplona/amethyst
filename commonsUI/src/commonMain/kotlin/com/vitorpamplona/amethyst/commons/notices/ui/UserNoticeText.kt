@@ -123,6 +123,8 @@ import com.vitorpamplona.amethyst.commons.resources.video_compression_hdr_messag
 import com.vitorpamplona.amethyst.commons.resources.video_compression_hdr_title
 import com.vitorpamplona.amethyst.commons.resources.video_compression_hevc_unavailable_message
 import com.vitorpamplona.amethyst.commons.resources.video_compression_hevc_unavailable_title
+import com.vitorpamplona.amethyst.commons.resources.video_compression_not_smaller_message
+import com.vitorpamplona.amethyst.commons.resources.video_compression_not_smaller_title
 import com.vitorpamplona.amethyst.commons.resources.wallet_connect_no_response_error
 import com.vitorpamplona.amethyst.commons.resources.wallet_connect_pay_invoice_error_error
 import com.vitorpamplona.amethyst.commons.resources.wallet_connect_unreadable_response_error
@@ -214,6 +216,7 @@ fun UserNotice.text(): NoticeText =
             )
         UploadNotice.HevcUnavailable -> text(Res.string.video_compression_hevc_unavailable_title, Res.string.video_compression_hevc_unavailable_message)
         UploadNotice.HdrSource -> text(Res.string.video_compression_hdr_title, Res.string.video_compression_hdr_message)
+        UploadNotice.CompressionNotSmaller -> text(Res.string.video_compression_not_smaller_title, Res.string.video_compression_not_smaller_message)
 
         is PowPublishFailed -> {
             val kindLabel = str(powKindLabelRes(kind))

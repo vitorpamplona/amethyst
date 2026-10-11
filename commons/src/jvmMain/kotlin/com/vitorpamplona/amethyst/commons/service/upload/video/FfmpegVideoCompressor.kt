@@ -83,7 +83,7 @@ class FfmpegVideoCompressor(
         if (outSize >= sourceSize) {
             Log.i(TAG) { "Encoded ${source.name} is not smaller ($outSize ≥ $sourceSize); keeping the original" }
             encoded.file.deleteOrWarn(TAG, "oversized encode")
-            return VideoCompressionResult.Original(strip(source), plan.notices)
+            return VideoCompressionResult.Original(strip(source), plan.notices + UploadNotice.CompressionNotSmaller)
         }
         val hevcMissed = useH265 && !FfmpegEncoders.isHevc(encoded.encoder)
         return VideoCompressionResult.Compressed(encoded.file, if (hevcMissed) plan.notices + UploadNotice.HevcUnavailable else plan.notices)

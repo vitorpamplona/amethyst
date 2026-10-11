@@ -2144,6 +2144,8 @@
     <string name="video_compression_hevc_unavailable_message">ffmpeg has no working HEVC encoder on this computer, so the video was encoded as H.264.</string>
     <string name="video_compression_hdr_title">HDR video</string>
     <string name="video_compression_hdr_message">Compressed HDR video looks flat. Choose Uncompressed to keep the original colours.</string>
+    <string name="video_compression_not_smaller_title">Original video kept</string>
+    <string name="video_compression_not_smaller_message">Compressing did not make the video smaller, so the original is uploaded with its metadata removed. It is already compact for its size.</string>
     <string name="metadata_strip_failed_body">This file format does not support metadata stripping. Private information such as location and device info may be included. Upload anyway?</string>
     <string name="metadata_strip_failed_upload">Upload anyway</string>
     <string name="edit_draft">Edit draft</string>

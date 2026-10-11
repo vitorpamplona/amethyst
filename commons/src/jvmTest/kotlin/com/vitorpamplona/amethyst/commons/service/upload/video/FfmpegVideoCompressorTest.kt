@@ -144,6 +144,7 @@ class FfmpegVideoCompressorTest {
             val r = compressor(runner, setOf("libx264")).compress(source(1000), CompressorQuality.HIGH, false) {}
             assertIs<VideoCompressionResult.Original>(r)
             assertNotNull(r.stripped)
+            assertEquals(listOf(UploadNotice.CompressionNotSmaller), r.notices)
             assertEquals(1, tempVideos().size)
         }
 

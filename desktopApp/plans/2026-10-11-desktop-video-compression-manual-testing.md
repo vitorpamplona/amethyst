@@ -69,7 +69,7 @@ Upload **`big.mp4`** to **blossom.band** from the composer, once per row, and fe
 | 2.4 | **High**, H.265 **on**, machine **without** an HEVC encoder | A toast **"H.265 not available … encoded as H.264"**; the blob is `h264` | |
 | 2.5 | **Uncompressed**, strip metadata **on** | sha256 differs from the source (remuxed); `codec_name` is the **source's**; bitrate is the source's; no `title`/`location` tags | |
 | 2.6 | **Uncompressed**, strip metadata **off** | sha256 **equals** the source | |
-| 2.7 | `file_example_MOV_1920_2_2MB.mov` at **High** | The upload is the **remuxed original**: sha256 differs from `ead8b50c…e40c62`, `codec_name` `h264`, bitrate ≈ 450 kbps (the source's, not 4 Mbps), size ≈ 2.2 MB, tags gone. No toast: an encode that is not smaller is silently discarded by design | |
+| 2.7 | `file_example_MOV_1920_2_2MB.mov` at **High** | The upload is the **remuxed original**: sha256 differs from `ead8b50c…e40c62`, `codec_name` `h264`, bitrate ≈ 450 kbps (the source's, not 4 Mbps), size ≈ 2.2 MB, tags gone. A dialog **"Original video kept — Compressing did not make the video smaller…"** | |
 | 2.8 | `file_example_MOV_1920_2_2MB.mov` at **Low** | Compressed to 854×480 (the only level whose encode is smaller than this source) | |
 
 ---

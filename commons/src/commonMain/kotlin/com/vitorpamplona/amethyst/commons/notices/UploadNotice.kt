@@ -32,4 +32,7 @@ sealed interface UploadNotice : UserNotice {
 
     /** The source is HDR (PQ or HLG); compressed output will look flat. */
     data object HdrSource : UploadNotice
+
+    /** The encode came out no smaller than the source, so the original (remuxed) is uploaded instead. */
+    data object CompressionNotSmaller : UploadNotice
 }
