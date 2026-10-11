@@ -105,15 +105,18 @@ class FfmpegVideoCompressor(
         }
     }
 
+    // Under the gate like an encode, so one ffmpeg runs at a time; never called while a permit is held.
     override suspend fun strip(source: File): File? {
         val ffmpeg = locator.ffmpeg ?: return null
-        return withTempOutput("remux of ${source.name}") { out ->
-            val outcome = runner.run(FfmpegCommandBuilder.remux(ffmpeg, source, out), {}, stallTimeoutMs)
-            if (outcome.exitCode == 0) {
-                out
-            } else {
-                Log.w(TAG) { "Remux of ${source.name} exited ${outcome.exitCode}: ${outcome.stderrTail.trim()}" }
-                null
+        return gate.withPermit {
+            withTempOutput("remux of ${source.name}") { out ->
+                val outcome = runner.run(FfmpegCommandBuilder.remux(ffmpeg, source, out), {}, stallTimeoutMs)
+                if (outcome.exitCode == 0) {
+                    out
+                } else {
+                    Log.w(TAG) { "Remux of ${source.name} exited ${outcome.exitCode}: ${outcome.stderrTail.trim()}" }
+                    null
+                }
             }
         }
     }

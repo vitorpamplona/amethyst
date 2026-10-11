@@ -276,4 +276,16 @@ class FfmpegVideoCompressorTest {
             assertNull(c.probe(src))
             assertEquals(VideoResolution(1920, 1080), c.probe(src)?.resolution)
         }
+
+    @Test
+    fun remuxWaitsForTheEncodeGate() =
+        runTest {
+            val runner = FakeRunner(exitCodes = listOf(0, 0), outputBytes = 10, delayMs = 1_000, recordConcurrency = true)
+            val c = compressor(runner, setOf("libx264"))
+            listOf(
+                async { c.compress(source(1000), CompressorQuality.HIGH, false) {} },
+                async { c.strip(source(1000)) },
+            ).awaitAll()
+            assertEquals(1, runner.maxConcurrent)
+        }
 }
