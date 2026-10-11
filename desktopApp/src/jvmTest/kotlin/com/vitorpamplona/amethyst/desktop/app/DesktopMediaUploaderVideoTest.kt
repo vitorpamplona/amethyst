@@ -51,6 +51,7 @@ import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertFalse
 import kotlin.test.assertIs
+import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 class DesktopMediaUploaderVideoTest {
@@ -353,5 +354,12 @@ class DesktopMediaUploaderVideoTest {
     fun probeVideoReturnsInfo() =
         runTest {
             assertEquals(VideoResolution(1920, 1080), uploader().probeVideo(uri(src))!!.resolution)
+        }
+
+    @Test
+    fun probeVideoIsNullForAnUnparseableUri() =
+        runTest {
+            // A file: URI with a bare space fails to parse; the slider's probe must see null, not an exception.
+            assertNull(uploader().probeVideo(StringMediaUri("file:///tmp/has space.mov")))
         }
 }

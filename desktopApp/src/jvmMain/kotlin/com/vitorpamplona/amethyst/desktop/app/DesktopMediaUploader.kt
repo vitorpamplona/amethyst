@@ -67,6 +67,7 @@ import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip01Core.signers.SignerExceptions
 import com.vitorpamplona.quartz.nip94FileMetadata.tags.DimensionTag
 import com.vitorpamplona.quartz.nip98HttpAuth.HTTPAuthorizationEvent
+import com.vitorpamplona.quartz.utils.Log
 import com.vitorpamplona.quartz.utils.ciphers.AESGCM
 import com.vitorpamplona.quartz.utils.ciphers.NostrCipher
 import com.vitorpamplona.quartz.utils.sha256.sha256
@@ -99,7 +100,16 @@ class DesktopMediaUploader(
     override val videoCompression: VideoCompressionSupport
         get() = if (videoCompressor.available) VideoCompressionSupport.Supported else VideoCompressionSupport.NeedsFfmpeg
 
-    override suspend fun probeVideo(uri: MediaUri): VideoInfo? = videoCompressor.probe(fileOf(uri))
+    // Read from composition by the slider: a URI that will not parse is "unknown", never an exception.
+    override suspend fun probeVideo(uri: MediaUri): VideoInfo? =
+        try {
+            videoCompressor.probe(fileOf(uri))
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            Log.w(TAG, "Could not probe $uri", e)
+            null
+        }
 
     private fun fileOf(uri: MediaUri): File {
         val value = uri.toString()
