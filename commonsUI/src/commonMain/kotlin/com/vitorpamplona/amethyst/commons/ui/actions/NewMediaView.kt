@@ -63,7 +63,9 @@ import com.vitorpamplona.amethyst.commons.resources.strip_metadata_label
 import com.vitorpamplona.amethyst.commons.resources.video_codec_h265_description
 import com.vitorpamplona.amethyst.commons.resources.video_codec_h265_label
 import com.vitorpamplona.amethyst.commons.service.upload.ui.StrippingFailureDialog
+import com.vitorpamplona.amethyst.commons.service.uploads.CompressorQuality
 import com.vitorpamplona.amethyst.commons.service.uploads.SelectedMedia
+import com.vitorpamplona.amethyst.commons.service.uploads.VideoCompressionSupport
 import com.vitorpamplona.amethyst.commons.ui.actions.uploads.ShowImageUploadGallery
 import com.vitorpamplona.amethyst.commons.ui.components.SetDialogToEdgeToEdge
 import com.vitorpamplona.amethyst.commons.ui.components.TextSpinner
@@ -74,6 +76,7 @@ import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.navigation.topbars.PostingTopBar
 import com.vitorpamplona.amethyst.commons.ui.note.creators.contentWarning.SettingSwitchItem
 import com.vitorpamplona.amethyst.commons.ui.note.creators.uploads.MediaQualitySlider
+import com.vitorpamplona.amethyst.commons.ui.note.creators.uploads.VideoCompressionNeedsFfmpegHint
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.settings.SettingsRow
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.Size5dp
@@ -250,8 +253,14 @@ fun ImageVideoPost(
         uploader = accountViewModel.host.mediaUploader,
     )
 
-    // Only show H.265 codec option if there are videos in the upload
-    if (postViewModel.multiOrchestrator?.hasVideo() == true) {
+    // The H.265 switch only where the platform will compress the video; a hint where it needs ffmpeg.
+    val support = accountViewModel.host.mediaUploader.videoCompression
+    val hasVideo = postViewModel.multiOrchestrator?.hasVideo() == true
+    val isVideoWithCompression = hasVideo && support == VideoCompressionSupport.Supported && postViewModel.mediaQualitySlider != CompressorQuality.uncompressedSliderPosition
+    if (hasVideo && support == VideoCompressionSupport.NeedsFfmpeg) {
+        VideoCompressionNeedsFfmpegHint(Modifier.fillMaxWidth().padding(top = 8.dp))
+    }
+    if (isVideoWithCompression) {
         SettingSwitchItem(
             title = Res.string.video_codec_h265_label,
             description = Res.string.video_codec_h265_description,

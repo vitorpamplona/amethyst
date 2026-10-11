@@ -64,6 +64,7 @@ import com.vitorpamplona.amethyst.commons.resources.media_compression_quality_ex
 import com.vitorpamplona.amethyst.commons.resources.media_compression_quality_label
 import com.vitorpamplona.amethyst.commons.resources.strip_metadata_description
 import com.vitorpamplona.amethyst.commons.resources.strip_metadata_label
+import com.vitorpamplona.amethyst.commons.service.uploads.VideoCompressionSupport
 import com.vitorpamplona.amethyst.commons.ui.actions.uploads.ShowImageUploadGallery
 import com.vitorpamplona.amethyst.commons.ui.components.SetDialogToEdgeToEdge
 import com.vitorpamplona.amethyst.commons.ui.components.TextSpinner
@@ -76,6 +77,7 @@ import com.vitorpamplona.amethyst.commons.ui.navigation.topbars.TitleIconModifie
 import com.vitorpamplona.amethyst.commons.ui.note.ArrowBackIcon
 import com.vitorpamplona.amethyst.commons.ui.note.creators.contentWarning.SettingSwitchItem
 import com.vitorpamplona.amethyst.commons.ui.note.creators.uploads.MediaQualitySlider
+import com.vitorpamplona.amethyst.commons.ui.note.creators.uploads.VideoCompressionNeedsFfmpegHint
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.settings.SettingsRow
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.Size5dp
@@ -235,7 +237,10 @@ private fun ImageVideoPostChat(
         }
     }
 
-    if (fileUploadState.multiOrchestrator?.hasCompressible() == true) {
+    val support = accountViewModel.host.mediaUploader.videoCompression
+    val hasVideo = fileUploadState.multiOrchestrator?.hasVideo() == true
+    val canCompressVideo = support == VideoCompressionSupport.Supported
+    if (fileUploadState.multiOrchestrator?.hasCompressibleImage() == true || (hasVideo && canCompressVideo)) {
         Column(
             modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
             verticalArrangement = Arrangement.spacedBy(Size5dp),
@@ -260,6 +265,10 @@ private fun ImageVideoPostChat(
             media = fileUploadState.multiOrchestrator,
             uploader = accountViewModel.host.mediaUploader,
         )
+    }
+
+    if (hasVideo && support == VideoCompressionSupport.NeedsFfmpeg) {
+        VideoCompressionNeedsFfmpegHint(Modifier.fillMaxWidth().padding(top = 8.dp))
     }
 
     SettingSwitchItem(

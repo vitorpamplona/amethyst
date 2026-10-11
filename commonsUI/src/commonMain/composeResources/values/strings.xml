@@ -567,6 +567,8 @@
     <string name="pinned_to_top">Pinned to top</string>
     <string name="pinned_chat_no_messages_loaded">No recent messages loaded</string>
     <string name="upload_image">Upload Image</string>
+    <string name="upload_media">Upload Media</string>
+    <string name="video_compression_needs_ffmpeg">Install ffmpeg to compress videos. Until then videos are uploaded as they are.</string>
     <string name="upload_file">Upload File</string>
     <string name="take_a_picture">Take a picture</string>
     <string name="record_a_video">Record a video</string>

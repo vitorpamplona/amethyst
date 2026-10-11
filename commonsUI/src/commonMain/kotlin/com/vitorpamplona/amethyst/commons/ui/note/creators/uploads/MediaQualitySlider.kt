@@ -84,6 +84,7 @@ import com.vitorpamplona.amethyst.commons.resources.media_compression_quality_ve
 import com.vitorpamplona.amethyst.commons.resources.media_compression_quality_very_low
 import com.vitorpamplona.amethyst.commons.resources.media_compression_video_target
 import com.vitorpamplona.amethyst.commons.resources.media_compression_video_target_example
+import com.vitorpamplona.amethyst.commons.resources.video_compression_needs_ffmpeg
 import com.vitorpamplona.amethyst.commons.service.uploads.CompressorQuality
 import com.vitorpamplona.amethyst.commons.service.uploads.ImageCompressionPreview
 import com.vitorpamplona.amethyst.commons.service.uploads.ImageFileStats
@@ -195,6 +196,17 @@ private fun videoPhrase(
     }
     val rule = VideoCompressionRules.ruleFor(quality, VideoStandard.FHD_1080P) ?: return null
     return stringRes(Res.string.media_compression_video_target_example, rule.shortSide, mbps(rule.bitrateMbps))
+}
+
+/** The one line a dialog shows in place of the video controls when the platform needs ffmpeg to compress. */
+@Composable
+fun VideoCompressionNeedsFfmpegHint(modifier: Modifier = Modifier) {
+    Text(
+        text = stringRes(Res.string.video_compression_needs_ffmpeg),
+        style = MaterialTheme.typography.bodySmall,
+        color = Color.Gray,
+        modifier = modifier,
+    )
 }
 
 /** `2`, `0.75`, `8`: no trailing `.0`. */
