@@ -42,6 +42,7 @@ import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.async
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.runBlocking
@@ -148,6 +149,44 @@ class RateLimitRetryAfterTest {
 
                 assertTrue(start.elapsedNow().inWholeMilliseconds >= 400, "re-sent before the back-off passed")
                 assertEquals(2, relay.reqs.get())
+            }
+        }
+
+    @Test
+    fun aNewReqMidBackOffWaitsWithTheRefusedOne() =
+        runBlocking {
+            Relay(backOffMs = 600).use { relay ->
+                val first = Listener()
+                val second = Listener()
+                relay.client.subscribe("sub", mapOf(url to listOf(Filter(kinds = listOf(1)))), first)
+                withTimeout(5_000) { first.closedParams.await() }
+
+                relay.client.subscribe("sub2", mapOf(url to listOf(Filter(kinds = listOf(7)))), second)
+                delay(200)
+                assertEquals(1, relay.reqs.get(), "a REQ reached the relay inside its back-off")
+
+                withTimeout(5_000) { first.eose.await() }
+                withTimeout(5_000) { second.eose.await() }
+                assertEquals(3, relay.reqs.get())
+            }
+        }
+
+    @Test
+    fun aNewPublishMidBackOffWaitsWithTheRefusedOne() =
+        runBlocking {
+            Relay(backOffMs = 600).use { relay ->
+                val refused = note()
+                val first = async { relay.client.publishAndCollectResults(refused, setOf(url), timeoutInSeconds = 5).getValue(url) }
+                while (relay.events.get() < 1) delay(10)
+                delay(100)
+
+                val second = async { relay.client.publishAndCollectResults(note(), setOf(url), timeoutInSeconds = 5).getValue(url) }
+                delay(200)
+                assertEquals(1, relay.events.get(), "an EVENT reached the relay inside its back-off")
+
+                assertTrue(first.await().accepted)
+                assertTrue(second.await().accepted)
+                assertEquals(3, relay.events.get())
             }
         }
 

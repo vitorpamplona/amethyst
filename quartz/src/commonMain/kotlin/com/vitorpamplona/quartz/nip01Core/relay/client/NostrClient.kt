@@ -38,6 +38,7 @@ import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.OkMessage
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toRelay.AuthCmd
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toRelay.CloseCmd
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toRelay.Command
+import com.vitorpamplona.quartz.nip01Core.relay.commands.toRelay.ReqCmd
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.relay.sockets.WebsocketBuilder
@@ -314,6 +315,13 @@ class NostrClient(
             activeRequests.sendToRelayIfChanged(subId, relaysToUpdate) { relay, cmd ->
                 if (cmd is CloseCmd || cmd is AuthCmd) {
                     relayPool.sendIfConnected(relay, cmd)
+                } else if (cmd is ReqCmd && reqRetries.isPending(relay)) {
+                    // The relay asked for no REQ before its back-off passes: queue this one with
+                    // the refused ones. Parked first, so a batch firing in between still finds it.
+                    activeRequests.parkRateLimited(relay, cmd.subId)
+                    if (!reqRetries.defer(relay, cmd.subId)) {
+                        activeRequests.retryRateLimited(relay, setOf(cmd.subId)) { relayPool.sendOrConnectAndSync(relay, it) }
+                    }
                 } else {
                     relayPool.sendOrConnectAndSync(relay, cmd)
                 }
@@ -354,7 +362,10 @@ class NostrClient(
         val relaysToUpdate = eventOutbox.markAsSending(event, relayList)
 
         if (isActive()) {
-            eventOutbox.sendToRelayIfChanged(event, relaysToUpdate, relayPool::sendOrConnectAndSync)
+            eventOutbox.sendToRelayIfChanged(event, relaysToUpdate) { relay, cmd ->
+                // Mid-back-off, the event waits with the ones the relay already refused.
+                if (!eventRetries.defer(relay, event.id)) relayPool.sendOrConnectAndSync(relay, cmd)
+            }
 
             // wakes up all the other relays
             reconnect(true)

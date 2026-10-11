@@ -341,6 +341,10 @@ class PoolRequests(
                 // blocked the relay, drop it from the desired set so the pool disconnects.
                 val newlyBlocked = relayRefusals.onRefused(relay.url, msg.message)
 
+                // A `rate-limited:` CLOSED that states a back-off forbids a REQ before it passes,
+                // even when the sub's filters changed while this one was in flight: the CLOSED
+                // stays parked and [retryRateLimited] sends the current filters when it is due.
+                val backingOff = msg.retryAfterMs != null
                 var forFilters: List<Filter>? = null
                 val cmd =
                     relayState.get(msg.subId)?.let { state ->
@@ -348,7 +352,7 @@ class PoolRequests(
                             state.onClosed(relay.url)
                             forFilters = state.lastKnownFilterStates(relay.url)
                             recordRefusalIfStructural(state, relay.url, msg.message, forFilters)
-                            decideCommandLocked(state, msg.subId, relay.url)
+                            if (backingOff) null else decideCommandLocked(state, msg.subId, relay.url)
                         }
                     }
 
@@ -365,6 +369,22 @@ class PoolRequests(
                 if (cmd != null && cmd !is CloseCmd) {
                     relay.sendOrConnectAndSync(cmd)
                 }
+            }
+        }
+    }
+
+    /**
+     * Holds back the REQ that [decideCommandLocked] just decided for [subId] on [relay], because
+     * [relay] is waiting out a back-off: the sub is marked CLOSED instead of in flight, so
+     * [retryRateLimited] sends it once the back-off passes.
+     */
+    fun parkRateLimited(
+        relay: NormalizedRelayUrl,
+        subId: String,
+    ) {
+        relayState.get(subId)?.let { state ->
+            state.withLock(relay) {
+                if (state.currentState(relay) == ReqSubStatus.SENT) state.onClosed(relay)
             }
         }
     }

@@ -146,7 +146,7 @@ class MessageDeserializer : StdDeserializer<Message>(Message::class.java) {
                     // stepping one token: anything that is not a number leaves
                     // the loop below to drain the frame, as before.
                     val cap =
-                        if (jp.nextToken() == JsonToken.VALUE_NUMBER_INT) {
+                        if (nextOptional(jp) == JsonToken.VALUE_NUMBER_INT) {
                             jp.longValue
                         } else {
                             null
@@ -160,9 +160,11 @@ class MessageDeserializer : StdDeserializer<Message>(Message::class.java) {
             }
 
         if (jp.currentToken != JsonToken.END_ARRAY) {
-            // cleaning out other array elements
-            while (jp.nextToken() != JsonToken.END_ARRAY) {
-                // clears out
+            // cleaning out other array elements. Stops at the end of input too: a frame cut
+            // short must not leave this spinning on the relay's reader thread.
+            while (true) {
+                val token = jp.nextToken()
+                if (token == null || token == JsonToken.END_ARRAY) break
             }
         }
 
@@ -176,7 +178,7 @@ class MessageDeserializer : StdDeserializer<Message>(Message::class.java) {
      * absent.
      */
     private fun nextParams(jp: JsonParser): String? =
-        when (jp.nextToken()) {
+        when (nextOptional(jp)) {
             JsonToken.VALUE_STRING, JsonToken.VALUE_NUMBER_INT -> {
                 jp.text
             }
@@ -190,4 +192,11 @@ class MessageDeserializer : StdDeserializer<Message>(Message::class.java) {
                 null
             }
         }
+
+    /**
+     * The next element of the frame, or null when the frame already ended: a frame cut short
+     * (`["CLOSED","sub"]`) leaves the parser ON its closing `]`, and stepping past it would read
+     * beyond the frame.
+     */
+    private fun nextOptional(jp: JsonParser): JsonToken? = if (jp.currentToken == JsonToken.END_ARRAY) null else jp.nextToken()
 }

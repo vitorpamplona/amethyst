@@ -90,6 +90,22 @@ class RateLimitRetries(
     /** True while [relay] has keys waiting out a back-off. */
     fun isPending(relay: NormalizedRelayUrl): Boolean = lock.withLock { relay in batches }
 
+    /**
+     * Adds [key] to [relay]'s pending batch without moving its deadline, so a command the
+     * client wants to send mid-back-off goes out with the refused ones instead of reaching
+     * the relay early. Returns false, adding nothing, when [relay] has no back-off pending:
+     * the caller sends now.
+     */
+    fun defer(
+        relay: NormalizedRelayUrl,
+        key: String,
+    ): Boolean =
+        lock.withLock {
+            val batch = batches[relay] ?: return false
+            batch.keys.add(key)
+            true
+        }
+
     /** Forgets everything pending; their timers fire into nothing. */
     fun clear() = lock.withLock { batches.clear() }
 
