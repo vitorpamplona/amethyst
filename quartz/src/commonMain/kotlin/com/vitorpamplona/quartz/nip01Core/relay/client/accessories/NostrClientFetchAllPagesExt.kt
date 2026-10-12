@@ -350,8 +350,8 @@ suspend fun INostrClient.fetchAllPages(
     // because the cross-walk dedup below remembers what a walk delivered that a later filter
     // also matches, and a search filter matches on its other fields alone (often just kinds):
     // after a full-history walk that would be most of it, before one page it is at most a page.
-    val searches = filters.filter { it.isRankedSearch() }
-    val walks = listOfNotNull(searches.ifEmpty { null }) + filters.filter { !it.isRankedSearch() }.map { listOf(it) }
+    val (searches, plain) = filters.partition { it.isRankedSearch() }
+    val walks = listOfNotNull(searches.ifEmpty { null }) + plain.map { listOf(it) }
     if (walks.size < 2) {
         return walkPages(relay, filters, idleTimeoutMs, onNewPage, pageSize, throttleBackoff, onEvent)
     }
@@ -498,6 +498,11 @@ private suspend fun INostrClient.walkPages(
     // Which filters are ranked searches, which get one page and never move the cursor. Parsed
     // once here: the per-event loop below reads it for every event of the walk.
     val rankedSearch = BooleanArray(filters.size) { filters[it].isRankedSearch() }
+
+    // A search with no words pages on the assumption that the relay answers it newest first.
+    // One that ranks it some other way (trust, the signed-in user) breaks that silently: each
+    // `until` step skips what ranked below the page's cut. So its pages are watched for order.
+    val unrankedSearch = BooleanArray(filters.size) { filters[it].search != null && !rankedSearch[it] }
 
     // Bounded dedup: ids already delivered at exactly the current boundary second
     // (`until`), which the next inclusive page re-fetches. `until` decreases
@@ -689,6 +694,13 @@ private suspend fun INostrClient.walkPages(
             var deliveredBefore = 0
             var outOfOrder = 0
             var lastCreatedAt = Long.MAX_VALUE
+
+            // An unranked search's page that came back out of `created_at` order (see
+            // [unrankedSearch]). Not on the open-ended first page, which honestly carries events
+            // stored while the query ran, newer than the ones before them.
+            val watchSearchOrder = until != null && activeFilters.any { unrankedSearch[it.index] }
+            var searchUnordered = false
+            var searchLastCreatedAt = Long.MAX_VALUE
             var pageMinTs = Long.MAX_VALUE
             val idsAtPageMin = HashSet<HexKey>()
 
@@ -735,6 +747,10 @@ private suspend fun INostrClient.walkPages(
                             // early) or an unsafely published `idsAtPageMin`.
                             try {
                                 received++
+                                if (watchSearchOrder) {
+                                    if (event.createdAt > searchLastCreatedAt) searchUnordered = true
+                                    searchLastCreatedAt = event.createdAt
+                                }
                                 // Before the dedup return, so it is counted for every event
                                 // the page received, not just the ones that reach the match.
                                 if (boundary != null && event.createdAt > boundary) aboveBoundary++
@@ -1163,6 +1179,14 @@ private suspend fun INostrClient.walkPages(
                 until = step - 1
                 seenAtBoundary = HashSet()
                 continue
+            }
+
+            // A search with no words that the relay ranked anyway: stepping `until` past this
+            // page would skip whatever ranked below its cut, so it is read no further.
+            if (searchUnordered) {
+                Log.d("fetchAllPages") { "${relay.url} answered a search with no words out of created_at order; not paging it further" }
+                end = PagedFetchResult.End.UNPAGEABLE
+                break
             }
 
             // Only search hits advanced nothing pageable → can't page further.

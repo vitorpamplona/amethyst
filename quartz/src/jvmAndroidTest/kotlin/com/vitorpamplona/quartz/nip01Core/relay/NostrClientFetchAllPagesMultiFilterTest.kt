@@ -120,6 +120,22 @@ class NostrClientFetchAllPagesMultiFilterTest {
             assertTrue(client.requests.all { req -> req.all { it.search == "include:spam" } }, "every page keeps the token the relay demands")
         }
 
+    /**
+     * A relay that ranks a search with no words some other way (trust, the signed-in user)
+     * answers out of `created_at` order. Paging that by `until` skips the events ranked below
+     * each page's cut, so the walk stops at the first such page and does not claim DRAINED.
+     */
+    @Test
+    fun aSearchPageOutOfDateOrderStopsTheWalk() =
+        runBlocking {
+            val client = FakePagingRelay(this, dense, maxLimit = 50, answerFor = { req, _, honest -> if (req >= 2) honest.reversed() else honest })
+
+            val result = client.fetchAllPages(relay, listOf(Filter(kinds = listOf(1), search = "include:spam")), idleTimeoutMs = 2_000) { }
+
+            assertEquals(PagedFetchResult.End.UNPAGEABLE, result.end)
+            assertEquals(2, client.requests.size, "stops at the first page that comes back unordered")
+        }
+
     /** A real search term ranks the hits, so it still gets its one page, extensions or not. */
     @Test
     fun aSearchWithATermStillGetsOnePage() =
