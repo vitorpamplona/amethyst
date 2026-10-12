@@ -111,19 +111,27 @@ jobs:
           chmod +x scripts/add-deb-gstreamer-deps.sh
           scripts/add-deb-gstreamer-deps.sh desktopApp/build/compose/binaries/main-release/deb/*.deb
 
+      # Also mirrors create-release.yml. Without it, jpackage's postinst runs
+      # xdg-desktop-menu, which fails here as on any system without menu
+      # directories ("No writable system menu directory found").
+      - name: Fix desktop entry in .deb
+        run: |
+          set -euo pipefail
+          chmod +x scripts/fix-deb-desktop-entry.sh
+          scripts/fix-deb-desktop-entry.sh desktopApp/build/compose/binaries/main-release/deb/*.deb
+
       - name: Install .deb
         run: |
+          set -euo pipefail
           # Installed via apt (not `dpkg -i`) so the .deb's declared Depends are
           # actually resolved — that is what pulls in libegl1 on the arm64
-          # runner, which does not ship it preinstalled.
-          #
-          # jpackage's post-install script runs xdg-desktop-menu which fails
-          # on CI runners ("No writable system menu directory"). The files are
-          # extracted successfully; only the menu registration fails. Allow the
-          # install error, then verify the binary was actually installed.
-          sudo apt-get install -y ./desktopApp/build/compose/binaries/main-release/deb/*.deb || true
+          # runner, which does not ship it preinstalled. A failed install,
+          # maintainer scripts included, fails the job.
+          sudo apt-get install -y ./desktopApp/build/compose/binaries/main-release/deb/*.deb
+          dpkg-query -W -f='${Status}\n' amethyst | grep -qx 'install ok installed'
+          test -f /usr/share/applications/amethyst-Amethyst.desktop
           echo "Installed files:"
-          dpkg -L amethyst | head -30
+          dpkg -L amethyst | sed -n '1,30p'
           # Fail if the binary wasn't actually extracted
           test -d /opt/amethyst || test -d /opt/Amethyst || {
             echo "FAIL: /opt/amethyst not found after dpkg -i"

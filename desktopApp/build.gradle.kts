@@ -276,7 +276,7 @@ compose.desktop {
 // task's own package options and a resource dir holding jpackage's template, read from the JDK it
 // packages with, plus these lines. The .deb gets the same packages from
 // scripts/add-deb-gstreamer-deps.sh in CI. The same resource dir also adds StartupWMClass to the
-// desktop entry (scripts/add-deb-wm-class.sh does that for the .deb).
+// desktop entry (scripts/fix-deb-desktop-entry.sh does that for the .deb).
 //
 // base: playbin, appsink, volume; good: HTTP, MP4, HLS, audio output; libav/openh264: H.264 and
 // AAC decoding. The boolean forms take Fedora's or openSUSE's name; the decoders are weak
