@@ -206,7 +206,8 @@ fun LoginPage(
         )
 
         if (platform.supportsRemoteSignerLogin) {
-            OrDivider()
+            // Where a signer app leads, its "or" already introduced the alternatives.
+            if (!signerFirst) OrDivider()
             RemoteSignerLoginButton(loginViewModel)
         }
     }

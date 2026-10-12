@@ -75,7 +75,7 @@ interface AppPlatform {
 
     /**
      * Whether the login screen offers NIP-46 remote signers (`bunker://` addresses and a
-     * `nostrconnect://` code). Off where the app is a bunker and never a bunker's client (Android).
+     * `nostrconnect://` code). Desktop and Android both do; Android is also a bunker for other apps.
      */
     val supportsRemoteSignerLogin: Boolean get() = false
 

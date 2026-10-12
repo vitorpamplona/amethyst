@@ -56,6 +56,7 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.settings.AndroidNotificatio
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.settings.AndroidNotificationDeliverySettings
 import com.vitorpamplona.amethyst.ui.screen.loggedOff.login.ExternalSignerButton
 import com.vitorpamplona.amethyst.ui.screen.loggedOff.login.OpenURIIfNotLoggedIn
+import com.vitorpamplona.amethyst.ui.screen.loggedOff.login.openNostrConnectInSigner
 import com.vitorpamplona.quartz.concord.cord02Community.ImagePointer
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip55AndroidSigner.client.isExternalSignerInstalled
@@ -104,6 +105,11 @@ object AndroidAppPlatform : AppPlatform {
         onCheckedChange: (Boolean) -> Unit,
         showError: Boolean,
     ) = FlavorTermsGate(checked, onCheckedChange, showError)
+
+    // NIP-46: a bunker:// address in the key field, or a nostrconnect:// code for a signer to scan.
+    override val supportsRemoteSignerLogin: Boolean get() = true
+
+    override fun openNostrConnect(uri: String): Boolean = openNostrConnectInSigner(Amethyst.instance.appContext, uri)
 
     @Composable
     override fun ExternalSignerLoginButton(loginViewModel: LoginViewModel) = ExternalSignerButton(loginViewModel)

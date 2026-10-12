@@ -118,7 +118,7 @@ class LoginViewModel(
 
     /**
      * Whether this build signs in through NIP-46 remote signers (`bunker://`, `nostrconnect://`).
-     * Desktop does; Android is a bunker, never a bunker's client, and rejects these addresses.
+     * Desktop and Android do; a platform without it rejects a pasted `bunker://` with a reason.
      */
     var remoteSignerLoginSupported = false
 
@@ -218,8 +218,7 @@ class LoginViewModel(
         // Caught here rather than left to the key parser. Neither of these is a key, so both used
         // to fall through to the hex branch and come back as "Invalid key: ... Invalid hex
         // bunker://...", which reads as "you mistyped it" for a string the user pasted correctly.
-        // Amethyst for Android is the bunker, never the bunker's client: the only remote signing it
-        // can persist is an external signer app (see AccountSettings.isWriteable).
+        // A nostrconnect:// offer is never a way in: it is an app asking a signer to pair with it.
         val trimmedKey = key.text.trim()
         if (!remoteSignerLoginSupported && trimmedKey.startsWith("bunker:", ignoreCase = true)) {
             errorManager.error(Res.string.login_bunker_not_supported)

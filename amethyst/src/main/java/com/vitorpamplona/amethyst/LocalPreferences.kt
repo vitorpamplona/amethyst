@@ -597,6 +597,7 @@ object LocalPreferences : AccountSessionStore {
                 accountSettings.isWriteable(),
                 accountSettings.externalSignerPackageName != null,
                 accountSettings.transientAccount,
+                loggedInWithRemoteSigner = accountSettings.usesRemoteSigner(),
             )
         updateCurrentAccount(accInfo)
         addAccount(accInfo)
