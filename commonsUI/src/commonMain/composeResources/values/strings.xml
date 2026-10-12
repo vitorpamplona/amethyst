@@ -4561,7 +4561,7 @@
     <string name="login_key_placeholder_bunker">nsec, npub or bunker://</string>
     <string name="remote_signer_open">Open signer</string>
     <string name="remote_signer_no_app">No signer app</string>
-    <string name="remote_signer_scan_title">Connect your signer</string>
+    <string name="remote_signer_scan_title">Connect signer</string>
     <string name="remote_signer_waiting">Waiting for your signer to approve…</string>
     <string name="remote_signer_login_failed">Could not log in with the remote signer: %1$s</string>
     <string name="remote_signer_relay_label">One of your inbox relays</string>
