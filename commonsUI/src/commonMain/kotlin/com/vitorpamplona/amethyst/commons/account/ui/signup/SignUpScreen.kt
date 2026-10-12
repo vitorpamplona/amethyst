@@ -38,7 +38,7 @@ import com.vitorpamplona.amethyst.commons.account.ui.LoggedOffTitle
 import com.vitorpamplona.amethyst.commons.account.ui.SwitchScreenFooter
 import com.vitorpamplona.amethyst.commons.account.ui.login.LoggedOffPrimaryButton
 import com.vitorpamplona.amethyst.commons.account.ui.login.LoggedOffShape
-import com.vitorpamplona.amethyst.commons.account.ui.login.LoginErrorText
+import com.vitorpamplona.amethyst.commons.account.ui.login.loginErrorText
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.resources.Res
@@ -103,6 +103,7 @@ fun SignUpPage(
     ) {
         LoggedOffTitle(stringRes(Res.string.welcome))
 
+        val nameError = loginErrorText(signUpViewModel.errorManager)
         OutlinedTextField(
             value = signUpViewModel.displayName,
             onValueChange = signUpViewModel::updateDisplayName,
@@ -111,6 +112,9 @@ fun SignUpPage(
             singleLine = true,
             label = { Text(stringRes(Res.string.how_should_we_call_you)) },
             leadingIcon = { Icon(MaterialSymbols.Person, contentDescription = null) },
+            // Attached to the field, not a row of the form below it.
+            isError = nameError != null,
+            supportingText = nameError?.let { { Text(it) } },
             placeholder = {
                 Text(
                     text = stringRes(Res.string.my_awesome_name),
@@ -126,8 +130,6 @@ fun SignUpPage(
                 ),
             keyboardActions = KeyboardActions(onGo = { signUpViewModel.signup() }),
         )
-
-        LoginErrorText(signUpViewModel.errorManager)
 
         platform.TermsGate(
             checked = signUpViewModel.acceptedTerms,

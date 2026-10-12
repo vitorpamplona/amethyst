@@ -103,8 +103,8 @@ internal fun CreateKeyPasswordDialog(prompt: KeyPrompt.CreatePassword) {
         onDismiss = { prompt.answer(NewPasswordAnswer.DontRemember) },
     ) {
         PromptSecretField(password, stringRes(Res.string.key_storage_password), { password = it }, isError = error != null)
-        PromptSecretField(confirm, stringRes(Res.string.key_storage_confirm_password), { confirm = it }, isError = error != null, onDone = keep)
-        error?.let { PromptError(it) }
+        // The mismatch is about both; its words go under the second, where the user just typed.
+        PromptSecretField(confirm, stringRes(Res.string.key_storage_confirm_password), { confirm = it }, error = error, onDone = keep)
     }
 }
 
@@ -128,10 +128,9 @@ internal fun UnlockKeysDialog(prompt: KeyPrompt.Unlock) {
             value = password,
             label = stringRes(Res.string.key_storage_password),
             onValueChange = { password = it },
-            isError = prompt.wrongPassword,
+            error = if (prompt.wrongPassword) stringRes(Res.string.privacy_lock_password_wrong) else null,
             onDone = { if (password.isNotEmpty()) prompt.answer(password) },
         )
-        if (prompt.wrongPassword) PromptError(stringRes(Res.string.privacy_lock_password_wrong))
     }
 }
 
@@ -154,10 +153,9 @@ internal fun EnterKeyDialog(prompt: KeyPrompt.EnterKey) {
             value = key,
             label = stringRes(Res.string.key_storage_nsec),
             onValueChange = { key = it },
-            isError = prompt.wrongKey,
+            error = if (prompt.wrongKey) stringRes(Res.string.key_storage_wrong_key) else null,
             onDone = { if (key.isNotBlank()) prompt.answer(key) },
         )
-        if (prompt.wrongKey) PromptError(stringRes(Res.string.key_storage_wrong_key))
     }
 }
 
@@ -209,13 +207,3 @@ internal fun KeyStorageErrorDetails(detail: String) {
 
 /** npub1qe3e5wr…zefe: enough of both ends to tell accounts apart. */
 private fun shortNpub(npub: String) = if (npub.length > 20) npub.take(12) + "…" + npub.takeLast(4) else npub
-
-@Composable
-private fun PromptError(text: String) {
-    Text(
-        text = text,
-        color = MaterialTheme.colorScheme.error,
-        style = MaterialTheme.typography.bodySmall,
-        modifier = Modifier.fillMaxWidth(),
-    )
-}

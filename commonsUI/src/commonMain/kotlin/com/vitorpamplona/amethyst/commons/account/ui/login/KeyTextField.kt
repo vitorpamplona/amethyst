@@ -61,7 +61,7 @@ import androidx.compose.material3.Icon as PainterIcon
 
 /**
  * The key, `npub` or address to log in with. [acceptsBunker] says so in the placeholder where a
- * `bunker://` address from a remote signer works too.
+ * `bunker://` address from a remote signer works too. [error], when set, sits right under it.
  */
 @Composable
 fun KeyTextField(
@@ -69,6 +69,7 @@ fun KeyTextField(
     onValueChange: (TextFieldValue, throughQR: Boolean) -> Unit,
     onLogin: () -> Unit,
     acceptsBunker: Boolean = false,
+    error: String? = null,
 ) {
     var scannerOpen by remember { mutableStateOf(false) }
     var showCharsKey by remember { mutableStateOf(false) }
@@ -105,6 +106,9 @@ fun KeyTextField(
             )
         },
         leadingIcon = { Icon(MaterialSymbols.Key, contentDescription = null) },
+        // Attached to the field, not a row of the form below it.
+        isError = error != null,
+        supportingText = error?.let { { Text(it) } },
         trailingIcon = {
             Row {
                 IconButton(onClick = { scannerOpen = true }) {

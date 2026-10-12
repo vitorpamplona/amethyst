@@ -20,9 +20,12 @@
  */
 package com.vitorpamplona.amethyst.commons.account.ui.login
 
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -154,12 +157,14 @@ fun LoginPage(
         // it works. Each one's error sits under its own button.
         val hasSignerApp = platform.rememberHasExternalSignerLogin()
         if (hasSignerApp) {
-            platform.ExternalSignerLoginButton(loginViewModel)
-            LoginErrorText(loginViewModel.signerErrorManager)
+            WithErrorBelow(loginViewModel.signerErrorManager) {
+                platform.ExternalSignerLoginButton(loginViewModel)
+            }
         }
         if (platform.supportsRemoteSignerLogin) {
-            RemoteSignerLoginButton(loginViewModel)
-            LoginErrorText(loginViewModel.remoteSignerErrorManager)
+            WithErrorBelow(loginViewModel.remoteSignerErrorManager) {
+                RemoteSignerLoginButton(loginViewModel)
+            }
         }
         if (hasSignerApp || platform.supportsRemoteSignerLogin) {
             OrDivider()
@@ -170,9 +175,8 @@ fun LoginPage(
             onValueChange = loginViewModel::updateKey,
             onLogin = loginViewModel::login,
             acceptsBunker = platform.supportsRemoteSignerLogin,
+            error = loginErrorText(loginViewModel.errorManager),
         )
-
-        LoginErrorText(loginViewModel.errorManager)
 
         PasswordField(loginViewModel)
 
@@ -211,22 +215,35 @@ fun LoginPage(
     }
 }
 
-/** The form's error, in the error color under the field it is about. */
+/** The words of [errorManager]'s error, or null while there is none. */
 @Composable
-fun LoginErrorText(errorManager: LoginErrorManager) {
-    val text =
-        when (val error = errorManager.error) {
-            is LoginErrorManager.SingleErrorMsg -> stringRes(error.errorResId)
-            is LoginErrorManager.ParamsErrorMsg -> stringRes(error.errorResId, *error.params)
-            else -> null
-        } ?: return
+fun loginErrorText(errorManager: LoginErrorManager): String? =
+    when (val error = errorManager.error) {
+        is LoginErrorManager.SingleErrorMsg -> stringRes(error.errorResId)
+        is LoginErrorManager.ParamsErrorMsg -> stringRes(error.errorResId, *error.params)
+        else -> null
+    }
 
-    Text(
-        text = text,
-        color = MaterialTheme.colorScheme.error,
-        style = MaterialTheme.typography.bodySmall,
-        modifier = Modifier.fillMaxWidth(),
-    )
+/**
+ * [content] (a button) with [errorManager]'s error right under it, as close as a text field's
+ * supporting text: the form's own row spacing would set it as far from the button as the next row.
+ */
+@Composable
+fun WithErrorBelow(
+    errorManager: LoginErrorManager,
+    content: @Composable () -> Unit,
+) {
+    Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+        content()
+        val text = loginErrorText(errorManager) ?: return@Column
+        Text(
+            text = text,
+            color = MaterialTheme.colorScheme.error,
+            style = MaterialTheme.typography.bodySmall,
+            // Where a text field's supporting text starts.
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
+        )
+    }
 }
 
 /** The screen's main action: a full-width filled button, with a spinner while it works. */
@@ -314,6 +331,7 @@ private fun PasswordField(loginViewModel: LoginViewModel) {
             onValueChange = loginViewModel::updatePassword,
             passwordFocusRequester = passwordFocusRequester,
             onGo = loginViewModel::login,
+            error = loginErrorText(loginViewModel.passwordErrorManager),
         )
 
         // Only once the key is complete: a pasted ncryptsec jumps straight to the password,
@@ -334,6 +352,7 @@ fun PasswordField(
     onValueChange: (TextFieldValue) -> Unit,
     passwordFocusRequester: FocusRequester,
     onGo: () -> Unit,
+    error: String? = null,
 ) {
     var showCharsPassword by rememberSaveable { mutableStateOf(false) }
     OutlinedTextField(
@@ -353,6 +372,8 @@ fun PasswordField(
                 imeAction = ImeAction.Go,
             ),
         label = { Text(stringRes(Res.string.ncryptsec_password), maxLines = 1, overflow = TextOverflow.Ellipsis) },
+        isError = error != null,
+        supportingText = error?.let { { Text(it) } },
         leadingIcon = { Icon(MaterialSymbols.Lock, contentDescription = null) },
         // Nothing to reveal in an empty field; its room goes to the label.
         trailingIcon =

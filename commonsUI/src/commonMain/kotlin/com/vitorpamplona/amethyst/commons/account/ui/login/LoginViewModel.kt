@@ -67,6 +67,9 @@ class LoginViewModel(
     /** A signer app's (Amber's) refusal or failure, shown under its button rather than the key field. */
     val signerErrorManager = LoginErrorManager()
 
+    /** A missing password, under the password field rather than the key field above it. */
+    val passwordErrorManager = LoginErrorManager()
+
     /** Why the last `nostrconnect://` login failed, under the remote-signer button that started it. */
     val remoteSignerErrorManager = LoginErrorManager()
 
@@ -168,6 +171,7 @@ class LoginViewModel(
         errorManager.clearErrors()
         signerErrorManager.clearErrors()
         remoteSignerErrorManager.clearErrors()
+        passwordErrorManager.clearErrors()
         acceptedTerms = !requiresTermsAcceptance
         processingLogin = false
         isTemporary = false
@@ -188,11 +192,13 @@ class LoginViewModel(
         // Also a signer's answer landing here: a new attempt, so the last one's error goes.
         signerErrorManager.clearErrors()
         remoteSignerErrorManager.clearErrors()
+        passwordErrorManager.clearErrors()
     }
 
     fun updatePassword(newPassword: TextFieldValue) {
         password = newPassword
         errorManager.clearErrors()
+        passwordErrorManager.clearErrors()
     }
 
     fun updateAcceptedTerms(newAcceptedTerms: Boolean) {
@@ -204,6 +210,7 @@ class LoginViewModel(
         errorManager.clearErrors()
         signerErrorManager.clearErrors()
         remoteSignerErrorManager.clearErrors()
+        passwordErrorManager.clearErrors()
     }
 
     fun updateOfferTemporaryLogin(tempLogin: Boolean) {
@@ -236,7 +243,7 @@ class LoginViewModel(
         }
 
         if (needsPassword && password.text.isBlank()) {
-            errorManager.error(Res.string.password_is_required)
+            passwordErrorManager.error(Res.string.password_is_required)
             return false
         }
 

@@ -141,13 +141,17 @@ fun PromptDialog(
     }
 }
 
-/** A secret for a [PromptDialog]: a rounded field with a lock and a show/hide toggle. */
+/**
+ * A secret for a [PromptDialog]: a rounded field with a lock and a show/hide toggle. [error] sits
+ * right under it; [isError] alone only marks it, for a field another one's error is also about.
+ */
 @Composable
 fun PromptSecretField(
     value: String,
     label: String,
     onValueChange: (String) -> Unit,
-    isError: Boolean = false,
+    error: String? = null,
+    isError: Boolean = error != null,
     onDone: (() -> Unit)? = null,
 ) {
     var visible by remember { mutableStateOf(false) }
@@ -157,6 +161,7 @@ fun PromptSecretField(
         label = { Text(label) },
         singleLine = true,
         isError = isError,
+        supportingText = error?.let { { Text(it) } },
         shape = PromptShape,
         leadingIcon = { Icon(MaterialSymbols.Lock, contentDescription = null) },
         trailingIcon = {
