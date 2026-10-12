@@ -46,6 +46,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.keystorage.KeyStorageStatus
 import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.key_storage_save_keys
 import com.vitorpamplona.amethyst.commons.resources.key_storage_try_again
 import com.vitorpamplona.amethyst.commons.resources.key_storage_unlock
 import com.vitorpamplona.amethyst.commons.ui.stringRes
@@ -54,7 +55,7 @@ import kotlinx.coroutines.launch
 /**
  * Where this device keeps private keys and whether that works, for Key Backup: an icon and a
  * short title, the system's error folded away, and the fix (try the keyring again, or unlock the
- * key file). Renders nothing where the platform keeps keys without the user (Android).
+ * key file, or take back this run's "Don't save"). Renders nothing where the platform keeps keys without the user (Android).
  */
 @Composable
 fun KeyStorageStatusCard(modifier: Modifier = Modifier) {
@@ -92,6 +93,10 @@ fun KeyStorageStatusCard(modifier: Modifier = Modifier) {
                             FilledTonalButton(onClick = { scope.launch { controller.unlock() } }) {
                                 Text(stringRes(Res.string.key_storage_unlock))
                             }
+                        }
+                    KeyStorageStatus.NotKept ->
+                        FilledTonalButton(onClick = { scope.launch { controller.saveKeys() } }) {
+                            Text(stringRes(Res.string.key_storage_save_keys))
                         }
                     else -> Unit
                 }

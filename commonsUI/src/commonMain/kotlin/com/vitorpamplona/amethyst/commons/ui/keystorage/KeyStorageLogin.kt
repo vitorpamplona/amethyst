@@ -34,6 +34,7 @@ import com.vitorpamplona.amethyst.commons.resources.key_storage_login_notice_loc
 import com.vitorpamplona.amethyst.commons.resources.key_storage_login_notice_not_kept
 import com.vitorpamplona.amethyst.commons.resources.key_storage_login_notice_unreachable
 import com.vitorpamplona.amethyst.commons.resources.key_storage_remember_key
+import com.vitorpamplona.amethyst.commons.resources.key_storage_save_keys
 import com.vitorpamplona.amethyst.commons.resources.key_storage_try_again
 import com.vitorpamplona.amethyst.commons.resources.key_storage_unlock
 import com.vitorpamplona.amethyst.commons.ui.stringRes
@@ -83,8 +84,16 @@ private fun KeyStorageLoginBanner(
                 actionText = stringRes(Res.string.key_storage_try_again),
                 onAction = { scope.launch { controller.retry() } },
             )
+        // The user's own "Don't save" from earlier in this run: say so, and let them take it back.
         KeyStorageStatus.NotKept ->
-            if (typingKey) LoggedOffBanner(MaterialSymbols.Info, stringRes(Res.string.key_storage_login_notice_not_kept))
+            if (typingKey) {
+                LoggedOffBanner(
+                    symbol = MaterialSymbols.Info,
+                    text = stringRes(Res.string.key_storage_login_notice_not_kept),
+                    actionText = stringRes(Res.string.key_storage_save_keys),
+                    onAction = { scope.launch { controller.saveKeys() } },
+                )
+            }
         is KeyStorageStatus.PasswordFile ->
             when {
                 current.hasPassword && !current.unlocked ->

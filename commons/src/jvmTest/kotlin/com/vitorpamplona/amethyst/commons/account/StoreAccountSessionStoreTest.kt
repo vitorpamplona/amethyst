@@ -305,6 +305,52 @@ class StoreAccountSessionStoreTest {
             assertEquals(1, declining.saves)
         }
 
+    /** Save keys: the key a "Don't save" left out this run is kept once the user takes it back. */
+    @Test
+    fun saveKeysKeepsTheKeyADontSaveLeftOut() =
+        runTest {
+            val vaultThatDeclinesOnce =
+                object : PrivateKeyVault {
+                    var declining = true
+                    val keys = mutableMapOf<String, String>()
+
+                    override suspend fun get(npub: String): String? = keys[npub]
+
+                    override suspend fun save(
+                        npub: String,
+                        privKeyHex: String,
+                    ) {
+                        if (declining) throw KeyNotKeptException("Keys are not kept on this device")
+                        keys[npub] = privKeyHex
+                    }
+
+                    override suspend fun delete(npub: String) {
+                        keys.remove(npub)
+                    }
+                }
+            val root = folder.root
+            val store =
+                StoreAccountSessionStore(
+                    rootFilesDir = { root.toOkioPath() },
+                    appStores = AppPreferenceStores(rootFilesDir = { root.toOkioPath() }),
+                    keyVault = vaultThatDeclinesOnce,
+                    scope = CoroutineScope(Dispatchers.IO + SupervisorJob()),
+                    encryption = SecretEncryption(File(root, "secret.key")),
+                )
+            val settings = AccountSettings(keyPair = KeyPair())
+            val npub = settings.keyPair.pubKey.toNpub()
+
+            store.setDefaultAccount(settings)
+            store.saveAccountSettings(settings)
+            assertEquals(false, store.allSavedAccounts().single().keyRemembered)
+
+            vaultThatDeclinesOnce.declining = false
+            store.keepDeclinedKeys()
+
+            assertEquals(settings.keyPair.privKey!!.toHexKey(), vaultThatDeclinesOnce.keys[npub])
+            assertEquals(true, store.allSavedAccounts().single().keyRemembered)
+        }
+
     @Test
     fun anAccountThatLoadedWithoutItsKeyReloadsWithItOnceTheKeysOpen() =
         runTest {

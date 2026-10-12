@@ -42,6 +42,7 @@ class DesktopKeyStorage(
     private val storage: SecureKeyStorage,
     override val prompts: KeyStoragePrompts,
     private val scope: CoroutineScope,
+    private val keepDeclinedKeys: suspend () -> Unit = {},
     private val reopen: suspend () -> Unit,
 ) : KeyStorageController {
     override val status: StateFlow<KeyStorageStatus> = storage.status
@@ -51,6 +52,15 @@ class DesktopKeyStorage(
             .launch {
                 storage.resetKeyring()
                 reopen()
+            }.join()
+    }
+
+    // Then the keys this run's "Don't save" left out (the open account's) are kept after all.
+    override suspend fun saveKeys() {
+        scope
+            .launch {
+                storage.allowKeepingKeys()
+                keepDeclinedKeys()
             }.join()
     }
 

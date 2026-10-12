@@ -315,6 +315,12 @@ actual class SecureKeyStorage private actual constructor() {
         _status.value = KeyStorageStatus.Unknown
     }
 
+    /** Takes back this run's "Don't save" for the key file (Save keys). */
+    fun allowKeepingKeys() {
+        passwordFile.allowKeeping()
+        publishPasswordFileStatus()
+    }
+
     /** Asks for the key-file password now (Key Backup › Unlock). */
     suspend fun unlockPasswordFile() {
         withContext(Dispatchers.IO) {

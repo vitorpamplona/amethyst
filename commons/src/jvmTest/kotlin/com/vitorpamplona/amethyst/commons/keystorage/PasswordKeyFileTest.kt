@@ -98,6 +98,27 @@ class PasswordKeyFileTest {
             job.cancel()
         }
 
+    /** Save keys (login screen, Key Backup): a "Don't save" taken back asks for a password again. */
+    @Test
+    fun allowKeepingAfterDontRememberAsksAgainAndKeeps() =
+        runBlocking<Unit> {
+            val script = ScriptedPrompts(NewPasswordAnswer.DontRemember, NewPasswordAnswer.Password("correct horse"))
+            val job = script.start(this)
+            val file = newFile()
+
+            assertFailsWith<KeyNotKeptException> { file.put("npub1a", key, script.prompts) }
+            assertEquals(KeyStorageStatus.NotKept, file.status())
+
+            file.allowKeeping()
+            assertEquals(KeyStorageStatus.PasswordFile(hasPassword = false, unlocked = false), file.status())
+
+            file.put("npub1a", key, script.prompts)
+            assertEquals(2, script.asked.size)
+            assertEquals(key, file.get("npub1a", script.prompts))
+            assertEquals(KeyStorageStatus.PasswordFile(hasPassword = true, unlocked = true), file.status())
+            job.cancel()
+        }
+
     @Test
     fun skippingTheUnlockReadsNothingForTheRun() =
         runBlocking<Unit> {

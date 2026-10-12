@@ -37,4 +37,10 @@ interface KeyStorageController {
 
     /** Asks for the key file's password now, instead of when a key is next needed. */
     suspend fun unlock()
+
+    /**
+     * Takes back the user's "Don't save" from this run ([KeyStorageStatus.NotKept]): the next login
+     * that keeps its key asks for the key-file password again.
+     */
+    suspend fun saveKeys()
 }

@@ -135,6 +135,14 @@ internal class PasswordKeyFile(
             true
         }
 
+    /**
+     * Takes back this run's "Don't save" (Save keys): the next key to keep asks for a password
+     * again. A login that already declined keeps its account's choice until it logs in again.
+     */
+    fun allowKeeping() {
+        declined = false
+    }
+
     /** Asks for the password now (Key Backup › Unlock), even after a skip. */
     suspend fun unlock(prompts: KeyStoragePrompts?) {
         mutex.withLock {

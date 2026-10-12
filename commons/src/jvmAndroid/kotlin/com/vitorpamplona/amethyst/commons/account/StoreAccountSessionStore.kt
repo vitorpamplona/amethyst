@@ -242,6 +242,20 @@ class StoreAccountSessionStore(
         }
     }
 
+    /**
+     * Save keys: keeps the keys this run's "Don't save" left out, now that the user took it back.
+     * Each one goes to [keyVault] again (the key file asks for its new password) and its account
+     * counts as remembered; a second "Don't save" marks it as not kept again.
+     */
+    suspend fun keepDeclinedKeys() {
+        keysNotKept.toList().forEach { npub ->
+            keysNotKept.remove(npub)
+            val key = keysInVault.remove(npub) ?: return@forEach
+            updateSavedAccounts(allSavedAccounts().map { if (it.npub == npub) it.copy(keyRemembered = true) else it })
+            saveKey(npub, key)
+        }
+    }
+
     /** Deletes the key a login that no longer remembers it may have left in [keyVault], once per run. */
     private suspend fun forgetKey(npub: String) {
         keysInVault.remove(npub)
