@@ -50,10 +50,12 @@ import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -90,6 +92,9 @@ val AmethystBlue = Color(0xFF2598CF)
 /** Below this width the brand sits above the form; from it, the two share the window side by side. */
 private val TwoPaneMinWidth = 840.dp
 private val FormMaxWidth = 420.dp
+
+/** True where the brand stands beside the form rather than right above it. */
+private val LocalBrandBesideForm = staticCompositionLocalOf { false }
 
 /**
  * The frame of the logged-off screens (login, sign-up): the brand, the [form] and a [footer] that
@@ -153,7 +158,9 @@ fun LoggedOffScaffold(
                         tonalElevation = 2.dp,
                         modifier = Modifier.widthIn(max = FormMaxWidth + 64.dp),
                     ) {
-                        FormColumn(torSettingsFlow, onTorError, footer, Modifier.padding(32.dp), form)
+                        CompositionLocalProvider(LocalBrandBesideForm provides true) {
+                            FormColumn(torSettingsFlow, onTorError, footer, Modifier.padding(32.dp), form)
+                        }
                     }
                 }
             }
@@ -217,9 +224,13 @@ private fun BrandMark(
     }
 }
 
-/** The form's headline, left out where the brand already names the screen. */
+/**
+ * The form's headline, on the card beside the brand. Left out where the brand sits right above
+ * the form: a second heading under the logo and name only crowds it.
+ */
 @Composable
 fun LoggedOffTitle(text: String) {
+    if (!LocalBrandBesideForm.current) return
     Text(
         text = text,
         style = MaterialTheme.typography.headlineSmall,
