@@ -114,11 +114,14 @@ fun KeyTextField(
                         modifier = Modifier.size(22.dp),
                     )
                 }
-                IconButton(onClick = { showCharsKey = !showCharsKey }) {
-                    Icon(
-                        symbol = if (showCharsKey) MaterialSymbols.VisibilityOff else MaterialSymbols.Visibility,
-                        contentDescription = stringRes(if (showCharsKey) Res.string.hide_password else Res.string.show_password),
-                    )
+                // Nothing to reveal in an empty field; its room goes to the placeholder on a narrow phone.
+                if (value.text.isNotEmpty()) {
+                    IconButton(onClick = { showCharsKey = !showCharsKey }) {
+                        Icon(
+                            symbol = if (showCharsKey) MaterialSymbols.VisibilityOff else MaterialSymbols.Visibility,
+                            contentDescription = stringRes(if (showCharsKey) Res.string.hide_password else Res.string.show_password),
+                        )
+                    }
                 }
             }
         },

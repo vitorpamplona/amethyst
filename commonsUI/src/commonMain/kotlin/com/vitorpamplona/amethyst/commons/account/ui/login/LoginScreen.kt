@@ -53,6 +53,7 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.text.input.VisualTransformation
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.commons.account.AccountSessionManager
@@ -351,21 +352,27 @@ fun PasswordField(
                 keyboardType = KeyboardType.Password,
                 imeAction = ImeAction.Go,
             ),
-        label = { Text(stringRes(Res.string.ncryptsec_password)) },
+        label = { Text(stringRes(Res.string.ncryptsec_password), maxLines = 1, overflow = TextOverflow.Ellipsis) },
         leadingIcon = { Icon(MaterialSymbols.Lock, contentDescription = null) },
-        trailingIcon = {
-            IconButton(onClick = { showCharsPassword = !showCharsPassword }) {
-                Icon(
-                    symbol = if (showCharsPassword) MaterialSymbols.VisibilityOff else MaterialSymbols.Visibility,
-                    contentDescription =
-                        if (showCharsPassword) {
-                            stringRes(Res.string.hide_password)
-                        } else {
-                            stringRes(Res.string.show_password)
-                        },
-                )
-            }
-        },
+        // Nothing to reveal in an empty field; its room goes to the label.
+        trailingIcon =
+            if (value.text.isEmpty()) {
+                null
+            } else {
+                {
+                    IconButton(onClick = { showCharsPassword = !showCharsPassword }) {
+                        Icon(
+                            symbol = if (showCharsPassword) MaterialSymbols.VisibilityOff else MaterialSymbols.Visibility,
+                            contentDescription =
+                                if (showCharsPassword) {
+                                    stringRes(Res.string.hide_password)
+                                } else {
+                                    stringRes(Res.string.show_password)
+                                },
+                        )
+                    }
+                }
+            },
         visualTransformation =
             if (showCharsPassword) VisualTransformation.None else PasswordVisualTransformation(),
         keyboardActions = KeyboardActions(onGo = { onGo() }),

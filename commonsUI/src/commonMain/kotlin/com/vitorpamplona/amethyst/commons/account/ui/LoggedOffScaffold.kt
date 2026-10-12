@@ -28,14 +28,19 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.displayCutout
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.systemBars
+import androidx.compose.foundation.layout.union
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -64,8 +69,10 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.layout.SubcomposeLayout
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.commons.hashtags.Amethyst
@@ -131,7 +138,10 @@ fun LoggedOffScaffold(
                     drawRect(purple)
                     drawRect(blue)
                 }
-            },
+            }
+            // The glow runs under the system bars (the app draws edge to edge); the form keeps
+            // clear of them, or it slides under them once it is taller than the window.
+            .windowInsetsPadding(WindowInsets.systemBars.union(WindowInsets.displayCutout)),
     ) {
         if (maxWidth >= TwoPaneMinWidth) {
             Row(Modifier.fillMaxSize()) {
@@ -165,19 +175,54 @@ fun LoggedOffScaffold(
                 }
             }
         } else {
-            Column(
+            BrandAboveForm(
                 modifier =
                     Modifier
                         .fillMaxSize()
                         .imePaddingSafe()
                         .verticalScroll(rememberScrollState())
-                        .padding(horizontal = 24.dp, vertical = 32.dp),
-                verticalArrangement = Arrangement.Center,
-                horizontalAlignment = Alignment.CenterHorizontally,
+                        .padding(horizontal = 24.dp, vertical = 24.dp),
             ) {
-                BrandMark(logoSize = 96.dp, large = false)
-                Spacer(Modifier.height(32.dp))
                 FormColumn(torSettingsFlow, onTorError, footer, Modifier.widthIn(max = FormMaxWidth), form)
+            }
+        }
+    }
+}
+
+private enum class BrandSlot { Form, Full, Compact }
+
+/**
+ * The brand over the [form], centered in the window. The full brand (logo over the name) where
+ * both fit the window's height; otherwise the logo shrinks beside the name, so a small phone or
+ * an open keyboard keeps the ways in on screen instead of the logo.
+ */
+@Composable
+private fun BrandAboveForm(
+    modifier: Modifier,
+    form: @Composable () -> Unit,
+) {
+    SubcomposeLayout(modifier) { constraints ->
+        // Inside the scroll the height is unbounded; its minimum is the window's.
+        val window = constraints.minHeight
+        val loose = Constraints(maxWidth = constraints.maxWidth)
+        val formPlaceables = subcompose(BrandSlot.Form, form).map { it.measure(loose) }
+        val formHeight = formPlaceables.sumOf { it.height }
+
+        val fullGap = 32.dp.roundToPx()
+        val full = subcompose(BrandSlot.Full) { BrandMark(logoSize = 96.dp, large = false) }.map { it.measure(loose) }
+        val fits = full.sumOf { it.height } + fullGap + formHeight <= window
+        val brand = if (fits) full else subcompose(BrandSlot.Compact) { CompactBrandMark() }.map { it.measure(loose) }
+        val gap = if (fits) fullGap else 20.dp.roundToPx()
+
+        val contentHeight = brand.sumOf { it.height } + gap + formHeight
+        val width = constraints.maxWidth
+        val height = maxOf(contentHeight, window)
+        layout(width, height) {
+            var y = (height - contentHeight) / 2
+            (brand + formPlaceables).forEachIndexed { index, placeable ->
+                if (index == brand.size) y += gap
+                placeable.placeRelative((width - placeable.width) / 2, y)
+                y += placeable.height
             }
         }
     }
@@ -219,6 +264,25 @@ private fun BrandMark(
         Text(
             text = stringRes(Res.string.app_name),
             style = if (large) MaterialTheme.typography.displaySmall else MaterialTheme.typography.headlineMedium,
+            fontWeight = FontWeight.Bold,
+        )
+    }
+}
+
+/** The logo beside the name, small: the brand where the full one would push the form off screen. */
+@Composable
+private fun CompactBrandMark() {
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        Image(
+            imageVector = CustomHashTagIcons.Amethyst,
+            contentDescription = stringRes(Res.string.app_logo),
+            modifier = Modifier.size(40.dp),
+            contentScale = ContentScale.Inside,
+        )
+        Spacer(Modifier.width(12.dp))
+        Text(
+            text = stringRes(Res.string.app_name),
+            style = MaterialTheme.typography.headlineSmall,
             fontWeight = FontWeight.Bold,
         )
     }
