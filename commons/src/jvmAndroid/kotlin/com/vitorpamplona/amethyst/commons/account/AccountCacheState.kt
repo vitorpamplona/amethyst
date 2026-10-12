@@ -258,8 +258,15 @@ class AccountCacheState(
     }
 
     override fun loadAccount(accountSettings: AccountSettings): Account {
+        val pubKey = accountSettings.keyPair.pubKey.toHexKey()
         // Checked before a signer is built: a remote signer opens a relay subscription.
-        accounts.value[accountSettings.keyPair.pubKey.toHexKey()]?.let { return it }
+        accounts.value[pubKey]?.let { cached ->
+            if (!supersedes(accountSettings, cached.settings)) return cached
+            // A login that brings what the loaded account lacks, or changes whether its key is
+            // kept: the old account would go on signing with nothing, and its saves would put back
+            // the settings this login replaced.
+            removeAccount(pubKey)
+        }
         return loadAccount(
             signer =
                 if (accountSettings.keyPair.privKey != null) {
@@ -470,4 +477,18 @@ class AccountCacheState(
     companion object {
         const val CLIENT_TAG_NAME = AMETHYST_CLIENT_TAG_NAME
     }
+}
+
+/**
+ * Whether [incoming], the settings a login just made current, replace the loaded account's
+ * [loaded] ones: it can sign where the loaded one is read-only (the key was skipped or could not
+ * be read at launch, and the user logged in again with it), or it keeps the key where the loaded
+ * one did not, or the other way around.
+ */
+internal fun supersedes(
+    incoming: AccountSettings,
+    loaded: AccountSettings,
+): Boolean {
+    if (incoming === loaded || !incoming.isWriteable()) return false
+    return !loaded.isWriteable() || incoming.rememberKey != loaded.rememberKey
 }

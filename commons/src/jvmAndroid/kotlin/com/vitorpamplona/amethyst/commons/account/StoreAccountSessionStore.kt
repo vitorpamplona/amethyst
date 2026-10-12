@@ -312,6 +312,24 @@ class StoreAccountSessionStore(
     /** Drops the in-memory copies, so the next load reads the stores again. */
     internal suspend fun forgetLoadedSettings() = loadMutex.withLock { cachedAccounts.clear() }
 
+    /**
+     * Reads [npub]'s settings again for an account that loaded without the key it keeps (its
+     * password was skipped, or the keychain refused), once the key storage opens: Settings › Key
+     * storage › Unlock or Try again. Null when it still has no key, or keeps none on this device.
+     */
+    suspend fun reloadWithKey(npub: String): AccountSettings? {
+        val info = allSavedAccounts().firstOrNull { it.npub == npub } ?: return null
+        if (!info.holdsOwnKey() || !info.keyRemembered) return null
+        // What the keyless session changed (last-read markers, settings) goes to disk first, or the
+        // reload would read it back from before.
+        loadMutex.withLock { cachedAccounts[npub] }?.let { saveAccountSettings(it) }
+        return loadMutex.withLock {
+            val fresh = load(npub)?.takeIf { it.isWriteable() } ?: return@withLock null
+            cachedAccounts[npub] = fresh
+            fresh
+        }
+    }
+
     override suspend fun setHasBackedUpKeys(
         value: Boolean,
         npub: String,

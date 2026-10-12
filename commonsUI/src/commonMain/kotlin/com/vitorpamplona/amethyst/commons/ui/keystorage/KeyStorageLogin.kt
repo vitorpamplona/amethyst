@@ -23,20 +23,26 @@ package com.vitorpamplona.amethyst.commons.ui.keystorage
 import androidx.compose.foundation.layout.Row
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.text.style.TextAlign
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.commons.keystorage.KeyStorageController
 import com.vitorpamplona.amethyst.commons.keystorage.KeyStorageStatus
 import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.key_storage_login_notice_locked
 import com.vitorpamplona.amethyst.commons.resources.key_storage_login_notice_not_kept
 import com.vitorpamplona.amethyst.commons.resources.key_storage_login_notice_password
 import com.vitorpamplona.amethyst.commons.resources.key_storage_login_notice_unreachable
 import com.vitorpamplona.amethyst.commons.resources.key_storage_remember_key
+import com.vitorpamplona.amethyst.commons.resources.key_storage_try_again
+import com.vitorpamplona.amethyst.commons.resources.key_storage_unlock
 import com.vitorpamplona.amethyst.commons.ui.stringRes
+import kotlinx.coroutines.launch
 
 /**
  * The login screen's part: *Remember my key on this device*, and a line when a key typed now
@@ -51,6 +57,32 @@ fun KeyStorageLoginOptions(
     val controller = LocalKeyStorage.current ?: return
     RememberKeyCheckbox(rememberKey, onRememberKeyChange)
     if (rememberKey) KeyStorageLoginNotice(controller)
+    KeyStorageLoginFix(controller)
+}
+
+/**
+ * Try again (the keyring refused) or Unlock (the key file is locked), here as in Settings › Key
+ * storage, which a logged-off user cannot reach: either one logs the saved account in once the
+ * keys open. Shown whatever the checkbox says, since it is about the saved account, not the key
+ * being typed.
+ */
+@Composable
+private fun KeyStorageLoginFix(controller: KeyStorageController) {
+    val status by controller.status.collectAsStateWithLifecycle()
+    val scope = rememberCoroutineScope()
+    when (val current = status) {
+        is KeyStorageStatus.KeyringUnreachable ->
+            OutlinedButton(onClick = { scope.launch { controller.retry() } }) {
+                Text(stringRes(Res.string.key_storage_try_again))
+            }
+        is KeyStorageStatus.PasswordFile ->
+            if (current.hasPassword && !current.unlocked) {
+                OutlinedButton(onClick = { scope.launch { controller.unlock() } }) {
+                    Text(stringRes(Res.string.key_storage_unlock))
+                }
+            }
+        else -> Unit
+    }
 }
 
 @Composable
@@ -71,7 +103,12 @@ private fun KeyStorageLoginNotice(controller: KeyStorageController) {
         when (val current = status) {
             is KeyStorageStatus.KeyringUnreachable -> Res.string.key_storage_login_notice_unreachable
             KeyStorageStatus.NotKept -> Res.string.key_storage_login_notice_not_kept
-            is KeyStorageStatus.PasswordFile -> if (current.hasPassword) null else Res.string.key_storage_login_notice_password
+            is KeyStorageStatus.PasswordFile ->
+                when {
+                    !current.hasPassword -> Res.string.key_storage_login_notice_password
+                    !current.unlocked -> Res.string.key_storage_login_notice_locked
+                    else -> null
+                }
             else -> null
         } ?: return
     Text(

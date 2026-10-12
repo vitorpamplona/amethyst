@@ -4533,6 +4533,7 @@
     <string name="key_storage_login_notice_unreachable">Amethyst can't reach your system keyring right now, so a key you log in with won't be kept after you close the app.</string>
     <string name="key_storage_login_notice_not_kept">This device doesn't keep keys: your key will be asked for each time Amethyst starts.</string>
     <string name="key_storage_login_notice_password">This computer has no system keyring: your key will be kept in a password-protected file.</string>
+    <string name="key_storage_login_notice_locked">Your key file is locked. Unlock it so the key you log in with is kept on this computer.</string>
     <string name="desktop_notifications">Desktop notifications</string>
     <string name="desktop_notifications_description">Show mentions, replies, reactions, zaps and messages as system notifications while Amethyst is in the background.</string>
     <string name="desktop_notifications_denied">The system blocked notifications from Amethyst. Allow them in your system settings.</string>

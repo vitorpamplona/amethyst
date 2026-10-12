@@ -127,6 +127,27 @@ class SecureKeyStorageStatusTest {
         }
 
     @Test
+    fun aReadRacingTryAgainStillRefusesUntilTheVaultIsReadAgain() =
+        runBlocking<Unit> {
+            val keyring = FakeKeyring()
+            storage { keyring }.apply {
+                enableConsolidatedVault(emptyList())
+                savePrivateKey("npub1a", key)
+            }
+            keyring.denyReads = true
+            val storage = storage { keyring }
+            storage.enableConsolidatedVault(listOf("npub1a"))
+
+            // Try again resets the keyring; the launch's own login reads before the vault reopens.
+            keyring.denyReads = false
+            storage.resetKeyring()
+            assertFailsWith<SecureStorageException> { storage.getPrivateKeyOrThrow("npub1a") }
+
+            storage.enableConsolidatedVault(listOf("npub1a"))
+            assertEquals(key, storage.getPrivateKeyOrThrow("npub1a"))
+        }
+
+    @Test
     fun tryingAgainAfterADenialOpensTheVault() =
         runBlocking<Unit> {
             val keyring = FakeKeyring()
