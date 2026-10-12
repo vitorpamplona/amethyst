@@ -98,7 +98,8 @@ object FetchCommand {
         |                                                A --search with words gets one page per
         |                                                relay (hits are ranked; listed in
         |                                                unpaged_relays, `amy sync` gets them all);
-        |                                                key:value tokens alone (include:spam) page.
+        |                                                key:value tokens alone (include:spam) page,
+        |                                                except trust-ranked observer:<pubkey>.
         |  fetch <nevent1…|naddr1…|nprofile1…|npub1…|note1…|name@domain>
         |                                               outbox-model resolution of a shared code.
         """.trimMargin()

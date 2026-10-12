@@ -284,7 +284,8 @@ class PageRetryBackoff(
  * later page and its hits never advance (nor drag back) the `until` cursor other filters
  * page with. Give it a `limit` to bound that single page; without one you get the relay's
  * default page of top hits. A search of only `key:value` extensions (`include:spam`) has
- * no text to rank by and pages like any other filter, the token kept on every page.
+ * no text to rank by and pages like any other filter, the token kept on every page;
+ * `observer:<pubkey>` is the exception, since it ranks by web of trust ([isRankedSearch]).
  *
  * **NIP-67 completeness hints.** A relay may append hints to a page's `EOSE`:
  *
@@ -1227,10 +1228,17 @@ suspend fun INostrClient.fetchAllPages(
 private fun List<String>?.hasHint(hint: String) = this != null && contains(hint)
 
 /**
- * Whether this filter's NIP-50 `search` asks for text ([SearchQuery.hasText]: loose terms or
- * quoted phrases), so the relay ranks its hits by relevance and they cannot be paged by
- * `until`. A search of only `key:value` extensions, such as search.brainstorm.world's
+ * Whether this filter's NIP-50 `search` ranks its hits, so they cannot be paged by `until`:
+ * it asks for text ([SearchQuery.hasText]: loose terms or quoted phrases), or it carries an
+ * `observer:<pubkey>` token, which search.brainstorm.world uses to rank hits by that
+ * observer's web of trust. A search of only other `key:value` extensions, such as Brainstorm's
  * `include:spam` access token, or only `-exclusions`, has nothing to rank by: the relay
  * answers it newest first like any filter, so it pages like one.
  */
-internal fun Filter.isRankedSearch(): Boolean = search != null && SearchQuery.parse(search).hasText
+internal fun Filter.isRankedSearch(): Boolean {
+    val query = SearchQuery.parse(search ?: return false)
+    return query.hasText || query.extension(OBSERVER_EXTENSION) != null
+}
+
+/** search.brainstorm.world's trust-ranking token: `observer:<64-hex pubkey>`. Not a NIP-50 key. */
+private const val OBSERVER_EXTENSION = "observer"

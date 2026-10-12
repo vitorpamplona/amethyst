@@ -132,6 +132,18 @@ class NostrClientFetchAllPagesMultiFilterTest {
             assertEquals(1, client.requests.size, "a ranked search is asked once")
         }
 
+    /** Brainstorm's `observer:<pubkey>` ranks hits by that observer's web of trust: no words, still ranked. */
+    @Test
+    fun anObserverTokenStillGetsOnePage() =
+        runBlocking {
+            val client = FakePagingRelay(this, dense, maxLimit = 50)
+
+            val result = client.fetchAllPages(relay, listOf(Filter(kinds = listOf(1), search = "include:spam observer:${"ab".repeat(32)}")), idleTimeoutMs = 2_000) { }
+
+            assertEquals(PagedFetchResult.End.UNPAGEABLE, result.end)
+            assertEquals(1, client.requests.size, "a trust-ranked search is asked once")
+        }
+
     @Test
     fun aMetLimitBesideASearchStillReportsTheLimit() =
         runBlocking {
