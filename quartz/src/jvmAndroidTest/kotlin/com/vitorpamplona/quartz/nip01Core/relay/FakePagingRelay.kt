@@ -41,6 +41,8 @@ import java.util.Collections
  *  - [closeWith]: given the 1-based REQ number, a CLOSED reason to answer it with instead;
  *    [closeWhen] does the same given what the REQ asked for.
  *  - [silentOn]: given the 1-based REQ number, whether to leave it unanswered entirely.
+ *  - [dropAfter]: given the 1-based REQ number, how many events to send before the connection
+ *    drops (an `onCannotConnect` instead of the EOSE), as strfry does to a slow reader.
  *  - [answer]: given the 1-based REQ number and the honest page, return what the relay
  *    actually sends — e.g. a throttled relay's shrunken or empty page. [answerFor] does the
  *    same and also sees the REQ's filters.
@@ -57,6 +59,7 @@ class FakePagingRelay(
     private val closeWith: (req: Int) -> String? = { null },
     private val closeWhen: (filters: List<Filter>) -> String? = { null },
     private val silentOn: (req: Int) -> Boolean = { false },
+    private val dropAfter: (req: Int) -> Int? = { null },
     private val answerFor: ((req: Int, filters: List<Filter>, honest: List<Event>) -> List<Event>)? = null,
     private val answer: (req: Int, honest: List<Event>) -> List<Event> = { _, honest -> honest },
 ) : INostrClient by EmptyNostrClient() {
@@ -93,6 +96,12 @@ class FakePagingRelay(
                     }.distinctBy { it.id }
                     .sortedByDescending { it.createdAt }
             val sent = answerFor?.invoke(req, relayFilters, honest) ?: answer(req, honest)
+            val dropAt = dropAfter(req)
+            if (dropAt != null) {
+                sent.take(dropAt).forEach { listener?.onEvent(it, false, relay, relayFilters) }
+                listener?.onCannotConnect(relay, "WebSocket Failure: EOFException", relayFilters)
+                return@launch
+            }
             sent.forEach { listener?.onEvent(it, false, relay, relayFilters) }
             listener?.onEose(relay, relayFilters)
         }
