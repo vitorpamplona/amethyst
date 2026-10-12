@@ -40,10 +40,14 @@ import com.vitorpamplona.amethyst.commons.resources.password_is_required
 import com.vitorpamplona.amethyst.commons.resources.remote_signer_login_failed
 import com.vitorpamplona.amethyst.commons.resources.sign_request_rejected_description
 import com.vitorpamplona.amethyst.commons.tor.TorSettingsFlow
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
 import com.vitorpamplona.quartz.nip19Bech32.Bech32Transcription
 import com.vitorpamplona.quartz.nip19Bech32.bech32.bechToBytes
+import kotlinx.collections.immutable.ImmutableList
+import kotlinx.collections.immutable.persistentListOf
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.job
 import kotlinx.coroutines.launch
 
 /**
@@ -95,9 +99,19 @@ class LoginViewModel(
      */
     var remoteSignerLoginSupported = false
 
-    /** The `nostrconnect://` address a remote signer should scan, while a connection is pending. */
+    /** Whether the `nostrconnect://` dialog is up: from the request until the login ends. */
+    var nostrConnectPending by mutableStateOf(false)
+        private set
+
+    /** The `nostrconnect://` address a remote signer should scan; null while it is being made. */
     var nostrConnectUri by mutableStateOf<String?>(null)
         private set
+
+    /** The relays the `nostrconnect://` address names. The user can swap in the one their signer uses. */
+    var nostrConnectRelays by mutableStateOf(DEFAULT_NOSTR_CONNECT_RELAYS)
+        private set
+
+    val usesDefaultNostrConnectRelays by derivedStateOf { nostrConnectRelays == DEFAULT_NOSTR_CONNECT_RELAYS }
 
     private var nostrConnectJob: Job? = null
 
@@ -238,12 +252,20 @@ class LoginViewModel(
         }
         if (nostrConnectJob?.isActive == true) return
 
+        startNostrConnect()
+    }
+
+    private fun startNostrConnect() {
         processingLogin = true
+        nostrConnectPending = true
+        nostrConnectUri = null
+        val relays = nostrConnectRelays
         nostrConnectJob =
             viewModelScope.launch {
+                val thisJob = coroutineContext.job
                 try {
                     accountSessionManager.loginWithNostrConnect(
-                        relays = NOSTR_CONNECT_RELAYS,
+                        relays = relays,
                         appName = NOSTR_CONNECT_APP_NAME,
                         transientAccount = isTemporary,
                         onUri = { nostrConnectUri = it },
@@ -253,8 +275,12 @@ class LoginViewModel(
                 } catch (e: Exception) {
                     errorManager.error(Res.string.remote_signer_login_failed, e.message ?: e::class.simpleName.orEmpty())
                 } finally {
-                    nostrConnectUri = null
-                    processingLogin = false
+                    // A relay change replaced this attempt with a new one, which owns the dialog now.
+                    if (nostrConnectJob === thisJob) {
+                        nostrConnectUri = null
+                        nostrConnectPending = false
+                        processingLogin = false
+                    }
                 }
             }
     }
@@ -263,13 +289,38 @@ class LoginViewModel(
         nostrConnectJob?.cancel()
     }
 
+    /**
+     * Names the relay the user's signer uses in the `nostrconnect://` address instead of the
+     * defaults, for a signer that only reaches some relays. False when [input] is not a relay.
+     */
+    fun useNostrConnectRelay(input: String): Boolean {
+        val relay = RelayUrlNormalizer.normalizeOrNull(input.trim()) ?: return false
+        updateNostrConnectRelays(persistentListOf(relay.url))
+        return true
+    }
+
+    fun useDefaultNostrConnectRelays() = updateNostrConnectRelays(DEFAULT_NOSTR_CONNECT_RELAYS)
+
+    /** A pending connection restarts with a new address: the one on screen names the old relays. */
+    private fun updateNostrConnectRelays(relays: ImmutableList<String>) {
+        if (relays == nostrConnectRelays) return
+        nostrConnectRelays = relays
+        if (nostrConnectJob?.isActive == true) {
+            val previous = nostrConnectJob
+            startNostrConnect()
+            previous?.cancel()
+        }
+    }
+
     companion object {
         /**
          * Where the `nostrconnect://` handshake happens; the signer replies on the same relays.
-         * Two, so one relay going down doesn't break the login: relay.nsec.app was the only one
-         * and stopped answering (2026-10). Both are dedicated NIP-46 relays.
+         * Several, so one relay going down doesn't break the login: relay.nsec.app was the only
+         * one and stopped answering (2026-10). All three are NIP-46 relays that Amber and Opal
+         * also use by default.
          */
-        private val NOSTR_CONNECT_RELAYS = listOf("wss://relay.nip46.com", "wss://nrs.primal.net")
+        val DEFAULT_NOSTR_CONNECT_RELAYS: ImmutableList<String> =
+            persistentListOf("wss://relay.nip46.com", "wss://nrs.primal.net", "wss://bucket.coracle.social")
 
         // URL-encoded: it rides in the nostrconnect:// query string.
         private const val NOSTR_CONNECT_APP_NAME = "Amethyst"

@@ -27,23 +27,38 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalClipboard
+import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.cancel
 import com.vitorpamplona.amethyst.commons.resources.copy
 import com.vitorpamplona.amethyst.commons.resources.login_with_remote_signer
+import com.vitorpamplona.amethyst.commons.resources.relay_url_not_valid
+import com.vitorpamplona.amethyst.commons.resources.remote_signer_default_relays
+import com.vitorpamplona.amethyst.commons.resources.remote_signer_relay_apply
+import com.vitorpamplona.amethyst.commons.resources.remote_signer_relay_label
+import com.vitorpamplona.amethyst.commons.resources.remote_signer_relays
 import com.vitorpamplona.amethyst.commons.resources.remote_signer_scan_description
 import com.vitorpamplona.amethyst.commons.resources.remote_signer_scan_title
 import com.vitorpamplona.amethyst.commons.resources.remote_signer_waiting
@@ -65,16 +80,15 @@ fun RemoteSignerLoginButton(loginViewModel: LoginViewModel) {
         Text(stringRes(Res.string.login_with_remote_signer))
     }
 
-    loginViewModel.nostrConnectUri?.let { uri ->
-        NostrConnectDialog(uri, onCancel = loginViewModel::cancelNostrConnect)
+    if (loginViewModel.nostrConnectPending) {
+        NostrConnectDialog(loginViewModel)
     }
 }
 
 @Composable
-private fun NostrConnectDialog(
-    uri: String,
-    onCancel: () -> Unit,
-) {
+private fun NostrConnectDialog(loginViewModel: LoginViewModel) {
+    val uri = loginViewModel.nostrConnectUri
+    val onCancel = loginViewModel::cancelNostrConnect
     val clipboard = LocalClipboard.current
     val scope = rememberCoroutineScope()
 
@@ -88,12 +102,21 @@ private fun NostrConnectDialog(
             ) {
                 Text(stringRes(Res.string.remote_signer_scan_description), textAlign = TextAlign.Center)
                 // A quiet zone of white around the code, so scanners find it on a dark theme too.
-                Box(Modifier.background(Color.White).padding(12.dp)) {
-                    QrCodeDrawer(uri, Modifier.size(220.dp))
+                Box(Modifier.background(Color.White).padding(12.dp), contentAlignment = Alignment.Center) {
+                    if (uri != null) {
+                        QrCodeDrawer(uri, Modifier.size(220.dp))
+                    } else {
+                        Box(Modifier.size(220.dp), contentAlignment = Alignment.Center) {
+                            CircularProgressIndicator()
+                        }
+                    }
                 }
-                SelectionContainer {
-                    Text(uri, style = MaterialTheme.typography.bodySmall, maxLines = 3)
+                if (uri != null) {
+                    SelectionContainer {
+                        Text(uri, style = MaterialTheme.typography.bodySmall, maxLines = 3)
+                    }
                 }
+                NostrConnectRelayPicker(loginViewModel)
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Text(
                         stringRes(Res.string.remote_signer_waiting),
@@ -104,7 +127,7 @@ private fun NostrConnectDialog(
             }
         },
         confirmButton = {
-            TextButton(onClick = { scope.launch { clipboard.setText(uri) } }) {
+            TextButton(onClick = { uri?.let { scope.launch { clipboard.setText(it) } } }, enabled = uri != null) {
                 Text(stringRes(Res.string.copy))
             }
         },
@@ -114,4 +137,63 @@ private fun NostrConnectDialog(
             }
         },
     )
+}
+
+/**
+ * The relays the code names, and a field to name the relay the user's signer uses instead: a
+ * signer that can't reach the defaults never sees the request.
+ */
+@Composable
+private fun NostrConnectRelayPicker(loginViewModel: LoginViewModel) {
+    var relay by remember { mutableStateOf("") }
+    var invalid by remember { mutableStateOf(false) }
+
+    val apply = {
+        if (loginViewModel.useNostrConnectRelay(relay)) {
+            relay = ""
+            invalid = false
+        } else {
+            invalid = true
+        }
+    }
+
+    Column(
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(4.dp),
+    ) {
+        Text(
+            stringRes(
+                Res.string.remote_signer_relays,
+                loginViewModel.nostrConnectRelays.joinToString { it.removePrefix("wss://").removeSuffix("/") },
+            ),
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            textAlign = TextAlign.Center,
+        )
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            OutlinedTextField(
+                value = relay,
+                onValueChange = {
+                    relay = it
+                    invalid = false
+                },
+                label = { Text(stringRes(Res.string.remote_signer_relay_label)) },
+                placeholder = { Text("wss://") },
+                singleLine = true,
+                isError = invalid,
+                supportingText = if (invalid) ({ Text(stringRes(Res.string.relay_url_not_valid)) }) else null,
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Uri, imeAction = ImeAction.Done),
+                keyboardActions = KeyboardActions(onDone = { apply() }),
+                modifier = Modifier.weight(1f),
+            )
+            TextButton(onClick = apply, enabled = relay.isNotBlank()) {
+                Text(stringRes(Res.string.remote_signer_relay_apply))
+            }
+        }
+        if (!loginViewModel.usesDefaultNostrConnectRelays) {
+            TextButton(onClick = loginViewModel::useDefaultNostrConnectRelays) {
+                Text(stringRes(Res.string.remote_signer_default_relays))
+            }
+        }
+    }
 }
