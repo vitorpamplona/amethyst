@@ -202,6 +202,14 @@
     native <methods>;
 }
 
+# Any library can bind its natives from JNI_OnLoad with RegisterNatives, which
+# fails for the whole table when one declaration is missing, and shrink cannot
+# see those callers. Keep every native of every class that is kept anyway; the
+# declarations cost nothing. verifyJniNativesSurviveProguard checks it holds.
+-keepclassmembers class * {
+    native <methods>;
+}
+
 # ============================================================================
 # Desktop-only: OkHttp / Conscrypt / BouncyCastle / OpenJSSE / Graal
 # ============================================================================
