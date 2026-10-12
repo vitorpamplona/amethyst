@@ -50,6 +50,8 @@ class TrustedRelayListsState(
     val proxyRelayList: ProxyRelayListState,
     val trustedRelayList: TrustedRelayListState,
     val broadcastRelayList: BroadcastRelayListState,
+    /** The relays of the user's kind 10040 trust providers. */
+    val trustProviderRelays: StateFlow<Set<NormalizedRelayUrl>>,
     val scope: CoroutineScope,
 ) {
     fun mergeLists(lists: Array<Set<NormalizedRelayUrl>>): Set<NormalizedRelayUrl> = lists.reduce { acc, set -> acc + set }
@@ -66,6 +68,7 @@ class TrustedRelayListsState(
                 proxyRelayList.flow,
                 trustedRelayList.flow,
                 broadcastRelayList.flow,
+                trustProviderRelays,
             ),
             ::mergeLists,
         ).onStart {
@@ -81,6 +84,7 @@ class TrustedRelayListsState(
                         proxyRelayList.flow.value,
                         trustedRelayList.flow.value,
                         broadcastRelayList.flow.value,
+                        trustProviderRelays.value,
                     ),
                 ),
             )
@@ -99,6 +103,7 @@ class TrustedRelayListsState(
                         proxyRelayList.flow.value,
                         trustedRelayList.flow.value,
                         broadcastRelayList.flow.value,
+                        trustProviderRelays.value,
                     ),
                 ),
             )
