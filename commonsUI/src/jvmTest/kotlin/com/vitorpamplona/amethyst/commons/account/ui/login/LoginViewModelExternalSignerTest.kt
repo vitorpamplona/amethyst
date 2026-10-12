@@ -28,6 +28,8 @@ import io.mockk.slot
 import io.mockk.verify
 import kotlin.test.Test
 import kotlin.test.assertFalse
+import kotlin.test.assertNotNull
+import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 /**
@@ -76,7 +78,13 @@ class LoginViewModelExternalSignerTest {
         model.updateKey(TextFieldValue(pubkey), false)
         model.loginWithExternalSigner("com.greenart7c3.nostrsigner")
         assertFalse(model.processingLogin)
+        // Under the Amber button, not the key field.
+        assertNotNull(model.signerErrorManager.error)
+        assertNull(model.errorManager.error)
 
+        // The next answer from the signer clears it before trying again.
+        model.updateKey(TextFieldValue(pubkey), false)
+        assertNull(model.signerErrorManager.error)
         model.loginWithExternalSigner("com.greenart7c3.nostrsigner")
         verify(exactly = 2) { session.login(any(), any(), true, "com.greenart7c3.nostrsigner", any<(String) -> Unit>()) }
     }

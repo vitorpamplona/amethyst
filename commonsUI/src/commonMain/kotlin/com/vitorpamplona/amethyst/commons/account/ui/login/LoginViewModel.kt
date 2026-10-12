@@ -64,6 +64,9 @@ class LoginViewModel(
 
     val errorManager = LoginErrorManager()
 
+    /** A signer app's (Amber's) refusal or failure, shown under its button rather than the key field. */
+    val signerErrorManager = LoginErrorManager()
+
     var key by mutableStateOf(TextFieldValue(""))
     var acceptedTerms by mutableStateOf(false)
     var termsAcceptanceIsRequiredError by mutableStateOf(false)
@@ -160,6 +163,7 @@ class LoginViewModel(
         password = TextFieldValue("")
 
         errorManager.clearErrors()
+        signerErrorManager.clearErrors()
         acceptedTerms = !requiresTermsAcceptance
         processingLogin = false
         isTemporary = false
@@ -177,6 +181,8 @@ class LoginViewModel(
             isTemporary = true
         }
         errorManager.clearErrors()
+        // Also a signer's answer landing here: a new attempt, so the last one's error goes.
+        signerErrorManager.clearErrors()
     }
 
     fun updatePassword(newPassword: TextFieldValue) {
@@ -191,6 +197,7 @@ class LoginViewModel(
         }
 
         errorManager.clearErrors()
+        signerErrorManager.clearErrors()
     }
 
     fun updateOfferTemporaryLogin(tempLogin: Boolean) {
@@ -263,7 +270,7 @@ class LoginViewModel(
                 packageName = packageName,
             ) {
                 processingLogin = false
-                errorManager.error(Res.string.sign_request_rejected_description)
+                signerErrorManager.error(Res.string.sign_request_rejected_description)
             }
         }
     }

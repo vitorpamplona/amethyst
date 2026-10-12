@@ -152,6 +152,8 @@ fun LoginPage(
                 )
             }
             platform.ExternalSignerLoginButton(loginViewModel)
+            // Under the button that failed, not under the key field below the "or".
+            LoginErrorText(loginViewModel.signerErrorManager)
             OrDivider()
         }
 

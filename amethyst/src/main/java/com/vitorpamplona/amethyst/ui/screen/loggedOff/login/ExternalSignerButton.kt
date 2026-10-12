@@ -93,7 +93,7 @@ fun ExternalSignerButton(loginViewModel: LoginViewModel) {
                         loginViewModel.loginWithExternalSigner(loginInfo.result.packageName)
                     }
                 } else {
-                    loginViewModel.errorManager.error(Res.string.sign_request_rejected2)
+                    loginViewModel.signerErrorManager.error(Res.string.sign_request_rejected2)
                 }
             }
         }
@@ -136,7 +136,7 @@ fun ExternalSignerButton(loginViewModel: LoginViewModel) {
                                                 } catch (e: Exception) {
                                                     if (e is CancellationException) throw e
                                                     Log.e("ExternalSigner", "Error opening Signer app", e)
-                                                    loginViewModel.errorManager.error(Res.string.error_opening_external_signer)
+                                                    loginViewModel.signerErrorManager.error(Res.string.error_opening_external_signer)
                                                 } finally {
                                                     shouldSelectSigner = false
                                                 }
@@ -188,7 +188,7 @@ fun ExternalSignerButton(loginViewModel: LoginViewModel) {
                 } catch (e: Exception) {
                     if (e is CancellationException) throw e
                     Log.e("ExternalSigner", "Error opening Signer app", e)
-                    loginViewModel.errorManager.error(Res.string.error_opening_external_signer)
+                    loginViewModel.signerErrorManager.error(Res.string.error_opening_external_signer)
                 }
             }
         },
