@@ -30,6 +30,7 @@ import com.vitorpamplona.amethyst.commons.favorites.FavoriteAppsRegistry
 import com.vitorpamplona.amethyst.commons.model.preferences.AppPreferenceStores
 import com.vitorpamplona.amethyst.commons.model.preferences.DrawerSectionCollapsePreferences
 import com.vitorpamplona.amethyst.commons.model.preferences.NamecoinSettingsStore
+import com.vitorpamplona.amethyst.commons.model.preferences.NotificationPanelCollapsePreferences
 import com.vitorpamplona.amethyst.commons.model.preferences.OtsSettingsStore
 import com.vitorpamplona.amethyst.commons.model.preferences.PaneWidthPreferences
 import com.vitorpamplona.amethyst.commons.napplet.permissions.NappletPermissionLedger
@@ -72,6 +73,8 @@ class DesktopAppServices(
     override val drawerSectionCollapsePrefs: DrawerSectionCollapsePreferences get() = modules.drawerSectionCollapsePrefs
 
     override val paneWidthPrefs: PaneWidthPreferences get() = modules.paneWidthPrefs
+
+    override val notificationPanelCollapsePrefs: NotificationPanelCollapsePreferences get() = modules.notificationPanelCollapsePrefs
 
     override val scheduledPostStore: ScheduledPostStore get() = modules.scheduledPostStore
 

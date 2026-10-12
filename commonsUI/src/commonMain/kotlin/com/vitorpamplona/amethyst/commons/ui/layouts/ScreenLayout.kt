@@ -107,6 +107,9 @@ val PermanentDrawerWidth = 300.dp
 
 val NotificationPanelWidth = 360.dp
 
+/** The folded notification panel's strip: just the badged bell, no feed. */
+val NotificationPanelCollapsedWidth = 48.dp
+
 /** How far the user can drag the docked drawer, in dp. */
 val DrawerWidthRange = 220f..480f
 

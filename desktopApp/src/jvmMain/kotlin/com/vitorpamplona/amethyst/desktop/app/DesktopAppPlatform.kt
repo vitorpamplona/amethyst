@@ -67,6 +67,9 @@ class DesktopAppPlatform(
     // DesktopAppModules reports every connection as unmetered.
     override val detectsMeteredConnections: Boolean get() = false
 
+    // The window's notification panel folds away to its badged bell.
+    override val collapsibleNotificationPanel: Boolean get() = true
+
     // The shared bar, imported under another name: inside this override the bare name is the override.
     @Composable
     override fun AppBottomBar(

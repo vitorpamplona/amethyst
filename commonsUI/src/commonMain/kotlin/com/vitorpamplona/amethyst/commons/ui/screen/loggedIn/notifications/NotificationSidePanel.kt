@@ -34,6 +34,8 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.systemBars
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.windowInsetsPadding
+import androidx.compose.material3.Badge
+import androidx.compose.material3.BadgedBox
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -44,13 +46,18 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.vitorpamplona.amethyst.commons.feeds.Card
+import com.vitorpamplona.amethyst.commons.feeds.CardFeedState
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.navigation.Route
 import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.collapse
+import com.vitorpamplona.amethyst.commons.resources.expand
 import com.vitorpamplona.amethyst.commons.resources.refresh
 import com.vitorpamplona.amethyst.commons.resources.route_notifications
 import com.vitorpamplona.amethyst.commons.ui.feeds.ScrollStateKeys
+import com.vitorpamplona.amethyst.commons.ui.layouts.NotificationPanelCollapsedWidth
 import com.vitorpamplona.amethyst.commons.ui.layouts.NotificationPanelWidth
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.stringRes
@@ -72,12 +79,16 @@ import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
  * screen's default tab. Under the header it shows today's counts, which expand into the
  * 7-day chart when tapped. Tapping the header opens the full screen, which adds the
  * Following/Everyone tabs; its refresh button reloads and regroups the cards.
+ *
+ * Where the platform folds the panel away (desktop), [onCollapse] is non-null and the header
+ * carries the fold button beside the refresh one; everywhere else the panel has no way to fold.
  */
 @Composable
 fun NotificationSidePanel(
     accountViewModel: AccountViewModel,
     nav: INav,
     modifier: Modifier = Modifier,
+    onCollapse: (() -> Unit)? = null,
 ) {
     val split by accountViewModel.account.settings.splitNotificationsEnabled
         .collectAsStateWithLifecycle()
@@ -145,6 +156,20 @@ fun NotificationSidePanel(
                         tint = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                 }
+                // Where the platform folds the panel away, the header carries the fold button.
+                if (onCollapse != null) {
+                    IconButton(
+                        onClick = onCollapse,
+                        modifier = Size24Modifier,
+                    ) {
+                        Icon(
+                            symbol = MaterialSymbols.AutoMirrored.KeyboardArrowRight,
+                            contentDescription = stringRes(Res.string.collapse),
+                            modifier = Size20Modifier,
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                }
             }
 
             // Today's counts; tapping them expands the 7-day chart, as on the full screen.
@@ -165,3 +190,74 @@ fun NotificationSidePanel(
         }
     }
 }
+
+/**
+ * The folded form of [NotificationSidePanel]: just the bell, badged with how many notification
+ * cards landed since the panel was folded ([collapsedAt]; null — a fold restored from disk —
+ * reads as zero). Tapping the bell unfolds the panel, which resets the count. The feed the
+ * panel would show is watched here too, so the badge ticks as cards arrive while folded.
+ */
+@Composable
+fun CollapsedNotificationPanel(
+    accountViewModel: AccountViewModel,
+    collapsedAt: Long?,
+    onExpand: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val split by accountViewModel.account.settings.splitNotificationsEnabled
+        .collectAsStateWithLifecycle()
+
+    val notifFeedContentState =
+        if (split) {
+            accountViewModel.feedStates.notificationsFollowing
+        } else {
+            accountViewModel.feedStates.notifications
+        }
+
+    WatchAccountForNotifications(notifFeedContentState, accountViewModel)
+
+    val feedState by notifFeedContentState.feedContent.collectAsStateWithLifecycle()
+    val loadedFeed = (feedState as? CardFeedState.Loaded)?.feed?.collectAsStateWithLifecycle()?.value
+    val missed = countNewerThan(loadedFeed?.list, collapsedAt)
+
+    // The Surface provides the Material container color + onBackground as LocalContentColor, as
+    // in the expanded panel above.
+    Surface(
+        modifier = modifier.width(NotificationPanelCollapsedWidth).fillMaxHeight(),
+        color = MaterialTheme.colorScheme.background,
+        contentColor = MaterialTheme.colorScheme.onBackground,
+    ) {
+        Column(
+            Modifier.windowInsetsPadding(
+                WindowInsets.systemBars.only(
+                    WindowInsetsSides.Top + WindowInsetsSides.Bottom + WindowInsetsSides.End,
+                ),
+            ),
+            horizontalAlignment = Alignment.CenterHorizontally,
+        ) {
+            IconButton(
+                onClick = onExpand,
+                modifier = Modifier.padding(top = Size12dp),
+            ) {
+                BadgedBox(
+                    badge = {
+                        if (missed > 0) Badge { Text(missed.toString()) }
+                    },
+                ) {
+                    Icon(
+                        symbol = MaterialSymbols.Notifications,
+                        contentDescription = stringRes(Res.string.expand),
+                        modifier = Size22Modifier,
+                        tint = MaterialTheme.colorScheme.onBackground,
+                    )
+                }
+            }
+        }
+    }
+}
+
+/** The cards newer than [sinceSeconds]; null — no fold yet or no feed yet — reads as nothing missed. */
+internal fun countNewerThan(
+    cards: List<Card>?,
+    sinceSeconds: Long?,
+): Int = if (cards == null || sinceSeconds == null) 0 else cards.count { it.createdAt() > sinceSeconds }

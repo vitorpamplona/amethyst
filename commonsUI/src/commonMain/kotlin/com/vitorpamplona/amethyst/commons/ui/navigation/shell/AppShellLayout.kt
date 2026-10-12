@@ -68,10 +68,13 @@ import com.vitorpamplona.amethyst.commons.ui.layouts.fitPaneWidths
 import com.vitorpamplona.amethyst.commons.ui.navigation.bottombars.AppNavigationRail
 import com.vitorpamplona.amethyst.commons.ui.navigation.deck.DeckFocus
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.Nav
+import com.vitorpamplona.amethyst.commons.ui.platform.LocalAppPlatform
 import com.vitorpamplona.amethyst.commons.ui.platform.LocalAppServices
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.notifications.CollapsedNotificationPanel
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.notifications.NotificationSidePanel
 import com.vitorpamplona.amethyst.commons.ui.theme.DividerThickness
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
+import com.vitorpamplona.quartz.utils.TimeUtils
 import kotlinx.coroutines.launch
 
 /**
@@ -258,7 +261,9 @@ private fun ModalDrawerShell(
  *
  * The docked drawer ([resizableLeading]) and the notification panel sit behind [PaneSplitter]s the
  * user drags to resize them; the widths are kept per device ([PaneWidthPreferences]) and fitted to
- * the window by [fitPaneWidths], so the centre pane keeps its room.
+ * the window by [fitPaneWidths], so the centre pane keeps its room. Where the platform offers it,
+ * the panel can also fold away to its badged bell ([CollapsedNotificationPanel]), which takes a
+ * fixed strip in place of the fitted width.
  */
 @Composable
 private fun MultiPaneShell(
@@ -273,13 +278,20 @@ private fun MultiPaneShell(
     val widths by paneWidthPrefs.flow.collectAsStateWithLifecycle()
     // The deck takes the panel's place, so no room is kept for it.
     val showPanel = deck == null && notificationPanelShown(nav)
+    // Where the platform offers the fold (desktop), a folded panel leaves only its badged bell.
+    val panelCollapsible = LocalAppPlatform.current.collapsibleNotificationPanel
+    val collapsePrefs = LocalAppServices.current.notificationPanelCollapsePrefs
+    val panelFolded by collapsePrefs.flow.collectAsStateWithLifecycle()
+    val foldedAt by collapsePrefs.collapsedAt.collectAsStateWithLifecycle()
+    val showFoldedStrip = showPanel && panelCollapsible && panelFolded
     val windowWidth =
         with(LocalDensity.current) {
             LocalWindowInfo.current.containerSize.width
                 .toDp()
                 .value
         }
-    val fitted = fitPaneWidths(windowWidth, widths.drawer, widths.notifications, resizableLeading, showPanel)
+    // A folded panel takes only its strip, so the panes fit as if it were not there.
+    val fitted = fitPaneWidths(windowWidth, widths.drawer, widths.notifications, resizableLeading, showPanel && !showFoldedStrip)
 
     Row(Modifier.fillMaxSize()) {
         if (resizableLeading) {
@@ -306,10 +318,26 @@ private fun MultiPaneShell(
             // lights): the panel to the right takes that inset back, so its header reaches the
             // window's edge instead of growing a band under an empty title bar.
             if (showPanel) {
-                Row(Modifier.consumeWindowInsets(PaddingValues(top = LocalTitleBarOverlay.current))) {
-                    // Dragging the line left widens the panel.
-                    PaneSplitter(onDrag = { delta -> paneWidthPrefs.setNotifications((fitted.notifications - delta).coerceIn(NotificationPanelWidthRange)) })
-                    NotificationSidePanel(accountViewModel, nav, Modifier.width(fitted.notifications.dp))
+                if (showFoldedStrip) {
+                    Row(Modifier.consumeWindowInsets(PaddingValues(top = LocalTitleBarOverlay.current))) {
+                        VerticalDivider(thickness = DividerThickness)
+                        CollapsedNotificationPanel(
+                            accountViewModel = accountViewModel,
+                            collapsedAt = foldedAt,
+                            onExpand = collapsePrefs::expand,
+                        )
+                    }
+                } else {
+                    Row(Modifier.consumeWindowInsets(PaddingValues(top = LocalTitleBarOverlay.current))) {
+                        // Dragging the line left widens the panel.
+                        PaneSplitter(onDrag = { delta -> paneWidthPrefs.setNotifications((fitted.notifications - delta).coerceIn(NotificationPanelWidthRange)) })
+                        NotificationSidePanel(
+                            accountViewModel = accountViewModel,
+                            nav = nav,
+                            modifier = Modifier.width(fitted.notifications.dp),
+                            onCollapse = if (panelCollapsible) ({ collapsePrefs.collapse(TimeUtils.now()) }) else null,
+                        )
+                    }
                 }
             }
         }

@@ -31,6 +31,7 @@ import com.vitorpamplona.amethyst.commons.model.location.DeviceLocation
 import com.vitorpamplona.amethyst.commons.model.preferences.AppPreferenceStores
 import com.vitorpamplona.amethyst.commons.model.preferences.DrawerSectionCollapsePreferences
 import com.vitorpamplona.amethyst.commons.model.preferences.NamecoinSettingsStore
+import com.vitorpamplona.amethyst.commons.model.preferences.NotificationPanelCollapsePreferences
 import com.vitorpamplona.amethyst.commons.model.preferences.OtsSettingsStore
 import com.vitorpamplona.amethyst.commons.model.preferences.PaneWidthPreferences
 import com.vitorpamplona.amethyst.commons.napplet.permissions.NappletPermissionLedger
@@ -91,6 +92,8 @@ object AndroidAppServices : AppServices {
     override val drawerSectionCollapsePrefs: DrawerSectionCollapsePreferences get() = Amethyst.instance.drawerSectionCollapsePrefs
 
     override val paneWidthPrefs: PaneWidthPreferences get() = Amethyst.instance.paneWidthPrefs
+
+    override val notificationPanelCollapsePrefs: NotificationPanelCollapsePreferences get() = Amethyst.instance.notificationPanelCollapsePrefs
 
     override val scheduledPostStore: ScheduledPostStore get() = Amethyst.instance.scheduledPostStore
 
