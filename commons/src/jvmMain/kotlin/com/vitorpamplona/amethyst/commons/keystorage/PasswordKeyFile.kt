@@ -30,6 +30,7 @@ import kotlinx.coroutines.sync.withLock
 import java.io.File
 import java.nio.file.Files
 import java.nio.file.StandardCopyOption
+import java.util.Base64
 import java.util.Properties
 
 /**
@@ -41,7 +42,9 @@ import java.util.Properties
  * Only 32-byte private keys fit NIP-49; anything else is refused.
  *
  * [legacyFile] is the old console-password fallback (`npub:base64(AES-GCM)` lines). When the
- * password typed here also opens it, its keys move into [file] and it is renamed aside.
+ * password typed here also opens it, its private keys move into [file]; it is renamed aside once
+ * nothing is left in it that [file] cannot hold (the legacy app's metadata key is not a private
+ * key), and until then reads fall back to it.
  */
 internal class PasswordKeyFile(
     private val file: File,
@@ -65,8 +68,12 @@ internal class PasswordKeyFile(
 
     val isUnlocked: Boolean get() = password != null
 
-    /** Whether a password was ever chosen: keys exist under one. */
-    fun hasPassword(): Boolean = read().isNotEmpty() || legacyFile?.exists() == true
+    /**
+     * Whether a password was ever chosen: keys exist under one. A legacy file with nothing readable
+     * in it (empty, or not the old format) does not count: no password could open it, so the user
+     * could never choose a new one.
+     */
+    fun hasPassword(): Boolean = read().isNotEmpty() || legacyEntries().isNotEmpty()
 
     fun status(): KeyStorageStatus =
         if (declined && !hasPassword()) {
@@ -80,9 +87,13 @@ internal class PasswordKeyFile(
         prompts: KeyStoragePrompts?,
     ): String? =
         mutex.withLock {
-            val encrypted = read()[alias] ?: return@withLock null
+            // A key only the legacy file holds is still a key: answering "absent" for it would load
+            // the account read-only, or let the legacy import mint a new metadata key.
+            if (alias !in read() && alias !in legacyEntries()) return@withLock null
             val pass = password ?: unlockLocked(prompts) ?: return@withLock null
-            Nip49().decrypt(encrypted, pass)
+            // Unlocking moved the legacy private keys over; what could not move is read in place.
+            read()[alias]?.let { return@withLock Nip49().decrypt(it, pass) }
+            legacyEntries()[alias]?.let { legacyDecrypt(it, pass) }
         }
 
     /**
@@ -184,8 +195,12 @@ internal class PasswordKeyFile(
                 }
             }
             write(entries)
-            legacy.renameTo(File(legacy.parentFile, legacy.name + ".migrated"))
-            Log.d(TAG) { "Moved ${old.size} key(s) out of the old password file" }
+            // Kept while it holds anything the new file cannot (a metadata key, a URI): reads fall
+            // back to it, and renaming it aside would hide those for good.
+            if (old.keys.all { it in entries }) {
+                legacy.renameTo(File(legacy.parentFile, legacy.name + ".migrated"))
+            }
+            Log.d(TAG) { "Moved the private keys out of the old password file" }
         } catch (e: Exception) {
             if (e is CancellationException) throw e
             Log.w(TAG, "Could not move the keys of the old password file", e)
@@ -199,8 +214,14 @@ internal class PasswordKeyFile(
             .readLines()
             .mapNotNull { line ->
                 val parts = line.split(":", limit = 2)
-                if (parts.size == 2) parts[0] to parts[1] else null
+                if (parts.size == 2 && isLegacyCiphertext(parts[1])) parts[0] to parts[1] else null
             }.toMap()
+    }
+
+    /** Base64 of salt (16), IV (12) and an AES-GCM ciphertext with its 16-byte tag. */
+    private fun isLegacyCiphertext(value: String): Boolean {
+        val bytes = runCatching { Base64.getDecoder().decode(value.trim()) }.getOrNull() ?: return false
+        return bytes.size > LEGACY_HEADER_AND_TAG
     }
 
     private fun read(): Map<String, String> {
@@ -227,5 +248,6 @@ internal class PasswordKeyFile(
 
     companion object {
         private const val TAG = "PasswordKeyFile"
+        private const val LEGACY_HEADER_AND_TAG = 16 + 12 + 16
     }
 }

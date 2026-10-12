@@ -304,11 +304,14 @@ actual class SecureKeyStorage private actual constructor() {
     /**
      * Forgets that the OS keyring failed or was missing, so the next access opens it again.
      * Settings › Key storage › Try again calls this, then re-opens the vault and logs in.
+     *
+     * A refused vault stays refused until the vault is read again: cleared here, a strict read
+     * racing the retry (the launch's own login) would skip the vault, find no per-alias item, and
+     * log the account in read-only.
      */
     fun resetKeyring() {
         synchronized(keyringLock) { cachedKeyring = null }
         keyringAvailable = true
-        vaultReadFailed = false
         _status.value = KeyStorageStatus.Unknown
     }
 
@@ -345,6 +348,8 @@ actual class SecureKeyStorage private actual constructor() {
     private fun keyringMissing(e: BackendNotSupportedException) {
         if (keyringAvailable) Log.w(TAG, "No OS keyring; keys go to the password file", e)
         keyringAvailable = false
+        // No keyring, so nothing refused: reads go to the password file.
+        vaultReadFailed = false
         publishPasswordFileStatus()
     }
 
