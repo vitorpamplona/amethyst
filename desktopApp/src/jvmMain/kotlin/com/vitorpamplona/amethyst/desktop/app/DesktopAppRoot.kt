@@ -32,6 +32,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.platform.LocalWindowInfo
 import com.vitorpamplona.amethyst.commons.account.AccountSessionManager
+import com.vitorpamplona.amethyst.commons.keystorage.KeyStorageController
 import com.vitorpamplona.amethyst.commons.model.Account
 import com.vitorpamplona.amethyst.commons.privacylock.PrivacyLockSettings
 import com.vitorpamplona.amethyst.commons.resources.Res
@@ -61,6 +62,8 @@ class DesktopAppRoot(
     override val privacyLockSettings: PrivacyLockSettings get() = modules.privacyLockSettings
 
     override val blurWalletWhenUnfocused: Boolean = true
+
+    override val keyStorage: KeyStorageController get() = modules.keyStorageController
 
     private val host by lazy { DesktopAccountViewModelHost(modules) }
 

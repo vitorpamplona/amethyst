@@ -66,6 +66,9 @@ class LoginViewModel(
     var offerTemporaryLogin by mutableStateOf(false)
     var isTemporary by mutableStateOf(false)
 
+    /** Keep the private key on this device (desktop: OS keyring or password file); off asks at each launch. */
+    var rememberKey by mutableStateOf(true)
+
     var processingLogin by mutableStateOf(false)
 
     var password by mutableStateOf(TextFieldValue(""))
@@ -204,6 +207,7 @@ class LoginViewModel(
                 key = key.text,
                 password = password.text,
                 transientAccount = isTemporary,
+                rememberKey = rememberKey,
             ) {
                 processingLogin = false
                 if (it != null) {

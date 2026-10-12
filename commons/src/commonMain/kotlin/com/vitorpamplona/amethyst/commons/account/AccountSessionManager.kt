@@ -109,7 +109,16 @@ class AccountSessionManager(
     }
 
     private suspend fun loginWithDefaultAccount(routeBuilder: ((account: Account) -> Route?)? = null) {
-        val accountSettings = localPreferences.loadAccountConfigFromEncryptedStorage()
+        val accountSettings =
+            try {
+                localPreferences.loadAccountConfigFromEncryptedStorage()
+            } catch (e: Exception) {
+                if (e is CancellationException) throw e
+                // A keystore that cannot be read (locked, or access denied) would otherwise leave
+                // the app on its loading screen; the saved account stays for the next attempt.
+                Log.w("AccountSessionManager", "Could not load the default account", e)
+                null
+            }
 
         if (accountSettings != null) {
             startUI(accountSettings, routeBuilder)
@@ -125,6 +134,7 @@ class AccountSessionManager(
         transientAccount: Boolean,
         loginWithExternalSigner: Boolean = false,
         packageName: String = "",
+        rememberKey: Boolean = true,
     ) = withContext(Dispatchers.IO) {
         if (key.startsWith(BUNKER_URI_PREFIX)) {
             return@withContext startUI(localPreferences.setDefaultAccount(remoteSignerLogin(key, transientAccount)))
@@ -165,6 +175,7 @@ class AccountSessionManager(
                     AccountSettings(
                         keyPair = KeyPair(privKey = privHex.hexToByteArray()),
                         transientAccount = transientAccount,
+                        rememberKey = rememberKey,
                     )
                 }
 
@@ -172,6 +183,7 @@ class AccountSessionManager(
                     AccountSettings(
                         keyPair = KeyPair(privKey = Nip06().privateKeyFromMnemonic(key)),
                         transientAccount = transientAccount,
+                        rememberKey = rememberKey,
                     )
                 }
 
@@ -186,6 +198,7 @@ class AccountSessionManager(
                     AccountSettings(
                         keyPair = KeyPair(Hex.decode(key)),
                         transientAccount = transientAccount,
+                        rememberKey = rememberKey,
                     )
                 }
             }
@@ -264,6 +277,7 @@ class AccountSessionManager(
         transientAccount: Boolean,
         loginWithExternalSigner: Boolean = false,
         packageName: String = "",
+        rememberKey: Boolean = true,
         onError: (String?) -> Unit,
     ) {
         // Accepts keys copied by hand from the backup screen: UPPERCASE, and split
@@ -288,7 +302,7 @@ class AccountSessionManager(
                     onError("Could not decrypt key with provided password")
                     Log.e("Login", "Could not decrypt ncryptsec")
                 } else {
-                    loginSync(newKey, transientAccount, loginWithExternalSigner, packageName, onError)
+                    loginSync(newKey, transientAccount, loginWithExternalSigner, packageName, onError, rememberKey)
                 }
             } else if (EMAIL_PATTERN.matches(cleanKey)) {
                 // Delegate to the shared quartz resolver so NIP-05 handling stays in
@@ -306,7 +320,7 @@ class AccountSessionManager(
                     onError("Could not load nip05 address from the server: $cleanKey. ${e.message}")
                 }
             } else {
-                loginSync(cleanKey, transientAccount, loginWithExternalSigner, packageName, onError)
+                loginSync(cleanKey, transientAccount, loginWithExternalSigner, packageName, onError, rememberKey)
             }
         }
     }
@@ -329,9 +343,10 @@ class AccountSessionManager(
         loginWithExternalSigner: Boolean = false,
         packageName: String = "",
         onError: (String) -> Unit,
+        rememberKey: Boolean = true,
     ) {
         try {
-            loginAndStartUI(key, transientAccount, loginWithExternalSigner, packageName)
+            loginAndStartUI(key, transientAccount, loginWithExternalSigner, packageName, rememberKey)
         } catch (e: Exception) {
             if (e is CancellationException) throw e
             Log.e("Login", "Could not sign in", e)
@@ -460,15 +475,19 @@ class AccountSessionManager(
                 // End what the account had running before its state is torn down.
                 hooks.onSessionEnding()
                 // log off and relogin with the 0 account
-                localPreferences.deleteAccount(accountInfo)
+                // Cancels the account's scope first: its debounced settings save, landing after the
+                // delete, would write the account (and its key) back.
                 accountsCache.removeAccount(hex)
+                localPreferences.deleteAccount(accountInfo)
                 accountsCache.deleteAccountFiles(hex)
                 hooks.onAccountRemoved(hex)
                 loginWithDefaultAccount()
             } else {
                 // delete without switching logins
-                localPreferences.deleteAccount(accountInfo)
+                // Cancels the account's scope first: its debounced settings save, landing after the
+                // delete, would write the account (and its key) back.
                 accountsCache.removeAccount(hex)
+                localPreferences.deleteAccount(accountInfo)
                 accountsCache.deleteAccountFiles(hex)
                 hooks.onAccountRemoved(hex)
             }
