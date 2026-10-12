@@ -20,7 +20,6 @@
  */
 package com.vitorpamplona.amethyst.commons.account.ui.login
 
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -30,7 +29,6 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.Button
-import androidx.compose.material3.Checkbox
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -44,7 +42,6 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.autofill.ContentType
 import androidx.compose.ui.focus.FocusRequester
@@ -60,6 +57,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.commons.account.AccountSessionManager
 import com.vitorpamplona.amethyst.commons.account.ui.LoggedOffScaffold
+import com.vitorpamplona.amethyst.commons.account.ui.LoggedOffSwitchRow
 import com.vitorpamplona.amethyst.commons.account.ui.LoggedOffTitle
 import com.vitorpamplona.amethyst.commons.account.ui.OrDivider
 import com.vitorpamplona.amethyst.commons.account.ui.SwitchScreenFooter
@@ -164,6 +162,8 @@ fun LoginPage(
             KeyStorageLoginOptions(
                 rememberKey = loginViewModel.rememberKey,
                 onRememberKeyChange = { loginViewModel.rememberKey = it },
+                // An npub, a bunker:// or a NIP-05 brings no private key to keep.
+                offerRememberKey = loginViewModel.keyMayBePrivate,
             )
         }
 
@@ -286,16 +286,7 @@ fun LoggedOffSecondaryButton(
 fun OfferTemporaryAccount(
     checked: Boolean,
     onCheckedChange: (Boolean) -> Unit,
-) {
-    Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
-        Checkbox(
-            checked = checked,
-            onCheckedChange = onCheckedChange,
-        )
-
-        Text(stringRes(Res.string.temporary_account))
-    }
-}
+) = LoggedOffSwitchRow(MaterialSymbols.Timer, stringRes(Res.string.temporary_account), checked, onCheckedChange)
 
 @Composable
 private fun PasswordField(loginViewModel: LoginViewModel) {

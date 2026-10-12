@@ -20,17 +20,13 @@
  */
 package com.vitorpamplona.amethyst.commons.ui.keystorage
 
-import androidx.compose.foundation.layout.Row
-import androidx.compose.material3.Checkbox
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.ui.Alignment
-import androidx.compose.ui.text.style.TextAlign
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.vitorpamplona.amethyst.commons.account.ui.LoggedOffBanner
+import com.vitorpamplona.amethyst.commons.account.ui.LoggedOffSwitchRow
+import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.keystorage.KeyStorageController
 import com.vitorpamplona.amethyst.commons.keystorage.KeyStorageStatus
 import com.vitorpamplona.amethyst.commons.resources.Res
@@ -45,76 +41,61 @@ import com.vitorpamplona.amethyst.commons.ui.stringRes
 import kotlinx.coroutines.launch
 
 /**
- * The login screen's part: *Remember my key on this device*, and a line when a key typed now
- * would not be kept as the user expects. Renders nothing where the platform has no key storage
- * the user deals with.
+ * The login screen's part: *Remember my key on this device* where [offerRememberKey] (the field
+ * may hold a private key), and a banner when the keys can't be kept as the user expects, with the
+ * action that fixes it. Renders nothing where the platform has no key storage the user deals with.
  */
 @Composable
 fun KeyStorageLoginOptions(
     rememberKey: Boolean,
     onRememberKeyChange: (Boolean) -> Unit,
+    offerRememberKey: Boolean = true,
 ) {
     val controller = LocalKeyStorage.current ?: return
-    RememberKeyCheckbox(rememberKey, onRememberKeyChange)
-    if (rememberKey) KeyStorageLoginNotice(controller)
-    KeyStorageLoginFix(controller)
+    if (offerRememberKey) {
+        LoggedOffSwitchRow(MaterialSymbols.Lock, stringRes(Res.string.key_storage_remember_key), rememberKey, onRememberKeyChange)
+    }
+    KeyStorageLoginBanner(controller, keepingKey = offerRememberKey && rememberKey)
 }
 
 /**
- * Try again (the keyring refused) or Unlock (the key file is locked), here as in Settings › Key
- * storage, which a logged-off user cannot reach: either one logs the saved account in once the
- * keys open. Shown whatever the checkbox says, since it is about the saved account, not the key
- * being typed.
+ * One box for how the keys stand. Try again (the keyring refused) and Unlock (the key file is
+ * locked) are here as in Settings › Key storage, which a logged-off user cannot reach, and show
+ * whatever the switch says: either one logs the saved account in once the keys open. The other
+ * notices are about the key being typed, so they show only while it is to be kept ([keepingKey]).
  */
 @Composable
-private fun KeyStorageLoginFix(controller: KeyStorageController) {
+private fun KeyStorageLoginBanner(
+    controller: KeyStorageController,
+    keepingKey: Boolean,
+) {
     val status by controller.status.collectAsStateWithLifecycle()
     val scope = rememberCoroutineScope()
+
     when (val current = status) {
         is KeyStorageStatus.KeyringUnreachable ->
-            OutlinedButton(onClick = { scope.launch { controller.retry() } }) {
-                Text(stringRes(Res.string.key_storage_try_again))
-            }
+            LoggedOffBanner(
+                symbol = MaterialSymbols.Warning,
+                text = stringRes(Res.string.key_storage_login_notice_unreachable),
+                isError = true,
+                actionText = stringRes(Res.string.key_storage_try_again),
+                onAction = { scope.launch { controller.retry() } },
+            )
+        KeyStorageStatus.NotKept ->
+            if (keepingKey) LoggedOffBanner(MaterialSymbols.Info, stringRes(Res.string.key_storage_login_notice_not_kept))
         is KeyStorageStatus.PasswordFile ->
-            if (current.hasPassword && !current.unlocked) {
-                OutlinedButton(onClick = { scope.launch { controller.unlock() } }) {
-                    Text(stringRes(Res.string.key_storage_unlock))
-                }
+            when {
+                current.hasPassword && !current.unlocked ->
+                    LoggedOffBanner(
+                        symbol = MaterialSymbols.Lock,
+                        text = stringRes(Res.string.key_storage_login_notice_locked),
+                        actionText = stringRes(Res.string.key_storage_unlock),
+                        onAction = { scope.launch { controller.unlock() } },
+                    )
+                !current.hasPassword && keepingKey ->
+                    LoggedOffBanner(MaterialSymbols.Info, stringRes(Res.string.key_storage_login_notice_password))
+                else -> Unit
             }
         else -> Unit
     }
-}
-
-@Composable
-private fun RememberKeyCheckbox(
-    checked: Boolean,
-    onCheckedChange: (Boolean) -> Unit,
-) {
-    Row(verticalAlignment = Alignment.CenterVertically) {
-        Checkbox(checked = checked, onCheckedChange = onCheckedChange)
-        Text(stringRes(Res.string.key_storage_remember_key))
-    }
-}
-
-@Composable
-private fun KeyStorageLoginNotice(controller: KeyStorageController) {
-    val status by controller.status.collectAsStateWithLifecycle()
-    val notice =
-        when (val current = status) {
-            is KeyStorageStatus.KeyringUnreachable -> Res.string.key_storage_login_notice_unreachable
-            KeyStorageStatus.NotKept -> Res.string.key_storage_login_notice_not_kept
-            is KeyStorageStatus.PasswordFile ->
-                when {
-                    !current.hasPassword -> Res.string.key_storage_login_notice_password
-                    !current.unlocked -> Res.string.key_storage_login_notice_locked
-                    else -> null
-                }
-            else -> null
-        } ?: return
-    Text(
-        text = stringRes(notice),
-        style = MaterialTheme.typography.bodySmall,
-        color = MaterialTheme.colorScheme.onSurfaceVariant,
-        textAlign = TextAlign.Center,
-    )
 }

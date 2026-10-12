@@ -29,6 +29,7 @@ import androidx.compose.ui.text.input.TextFieldValue
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.vitorpamplona.amethyst.commons.account.AccountSessionManager
+import com.vitorpamplona.amethyst.commons.account.EMAIL_PATTERN
 import com.vitorpamplona.amethyst.commons.account.ui.login.LoginErrorManager
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.invalid_key
@@ -92,6 +93,22 @@ class LoginViewModel(
             } catch (e: Exception) {
                 false
             }
+    }
+
+    /**
+     * Whether what is typed could be a private key (nsec, ncryptsec, hex, mnemonic), or nothing
+     * yet: only then is there a key to remember. An npub, nprofile, bunker:// or NIP-05 has none.
+     */
+    val keyMayBePrivate by derivedStateOf {
+        val typed = Bech32Transcription.normalize(key.text).lowercase()
+        typed.isEmpty() ||
+            !(
+                typed.startsWith("npub1") ||
+                    typed.startsWith("nprofile1") ||
+                    typed.startsWith("bunker:") ||
+                    typed.startsWith("nostrconnect:") ||
+                    EMAIL_PATTERN.matches(typed)
+            )
     }
 
     var isFirstLogin by mutableStateOf(false)

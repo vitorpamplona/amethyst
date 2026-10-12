@@ -34,8 +34,10 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AssistChip
@@ -44,6 +46,7 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
+import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -53,16 +56,19 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawWithCache
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.commons.hashtags.Amethyst
 import com.vitorpamplona.amethyst.commons.hashtags.CustomHashTagIcons
+import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbol
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.app_logo
 import com.vitorpamplona.amethyst.commons.resources.app_name
@@ -75,6 +81,7 @@ import com.vitorpamplona.amethyst.commons.ui.painterRes
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.isLight
 import com.vitorpamplona.amethyst.commons.ui.tor.ConnectTorDialog
+import com.vitorpamplona.amethyst.commons.icons.symbols.Icon as SymbolIcon
 
 /** The two ends of the logo's gradient: the logged-off screens glow in them. */
 val AmethystPurple = Color(0xFF652D80)
@@ -233,6 +240,61 @@ fun OrDivider() {
             modifier = Modifier.padding(horizontal = 16.dp),
         )
         HorizontalDivider(Modifier.weight(1f))
+    }
+}
+
+/** An on/off choice of the form: its icon and label, and a switch at the end. The whole row toggles. */
+@Composable
+fun LoggedOffSwitchRow(
+    symbol: MaterialSymbol,
+    text: String,
+    checked: Boolean,
+    onCheckedChange: (Boolean) -> Unit,
+) {
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .clip(RoundedCornerShape(16.dp))
+                .toggleable(value = checked, role = Role.Switch, onValueChange = onCheckedChange)
+                .padding(horizontal = 4.dp, vertical = 4.dp),
+    ) {
+        SymbolIcon(symbol, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
+        Spacer(Modifier.width(16.dp))
+        Text(text, style = MaterialTheme.typography.bodyLarge, modifier = Modifier.weight(1f))
+        // Null: the row is the toggle, so the switch must not take the click for itself.
+        Switch(checked = checked, onCheckedChange = null)
+    }
+}
+
+/**
+ * Something the form should know about how keys are kept here, in a tinted box with its icon, and
+ * the one action that fixes it ([actionText]) when there is one.
+ */
+@Composable
+fun LoggedOffBanner(
+    symbol: MaterialSymbol,
+    text: String,
+    isError: Boolean = false,
+    actionText: String? = null,
+    onAction: () -> Unit = {},
+) {
+    val container = if (isError) MaterialTheme.colorScheme.errorContainer else MaterialTheme.colorScheme.secondaryContainer
+    val onContainer = if (isError) MaterialTheme.colorScheme.onErrorContainer else MaterialTheme.colorScheme.onSecondaryContainer
+    Surface(shape = RoundedCornerShape(16.dp), color = container, contentColor = onContainer, modifier = Modifier.fillMaxWidth()) {
+        Column(Modifier.padding(start = 16.dp, end = 16.dp, top = 14.dp, bottom = if (actionText != null) 4.dp else 14.dp)) {
+            Row(verticalAlignment = Alignment.Top) {
+                SymbolIcon(symbol, contentDescription = null, modifier = Modifier.size(20.dp))
+                Spacer(Modifier.width(12.dp))
+                Text(text, style = MaterialTheme.typography.bodyMedium)
+            }
+            if (actionText != null) {
+                TextButton(onClick = onAction, modifier = Modifier.align(Alignment.End)) {
+                    Text(actionText, fontWeight = FontWeight.SemiBold, color = onContainer)
+                }
+            }
+        }
     }
 }
 
