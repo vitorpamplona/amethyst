@@ -128,6 +128,13 @@ They cover only composables compiled in that module. Shared composables are comp
 `:commonsUI`, which has no such block. To inspect their skippability, add the block to
 `commonsUI/build.gradle.kts` temporarily, and don't commit it.
 
+## See it running
+
+A screen change is not done until you've looked at it: `tools/desktop-run/run-headless.sh start`
+runs the desktop app, which is this same UI, on a virtual display and screenshots it.
+`AMETHYST_SCREEN=480x900x24` shows the phone tier. See `tools/desktop-run/README.md` and
+`desktop-expert`.
+
 ## References
 
 - `references/navigation.md`: back-stack operations, rendering, transitions, intents, tests
