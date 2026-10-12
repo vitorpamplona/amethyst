@@ -21,6 +21,7 @@
 package com.vitorpamplona.amethyst.commons.account.ui
 
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.IconButton
@@ -51,8 +52,9 @@ fun AddAccountDialog(
         properties = DialogProperties(usePlatformDefaultWidth = false),
     ) {
         Surface(modifier = Modifier.fillMaxSize()) {
-            Box {
-                LoginOrSignupScreen(newAccountKey, accountSessionManager, isFirstLogin = false)
+            // The bar above the form, not over it: the form fits itself to the height left, and on
+            // a small phone the bar covered its brand.
+            Column {
                 TopAppBar(
                     title = {
                         Text(text = stringRes(Res.string.account_switch_add_account_dialog_title))
@@ -65,6 +67,9 @@ fun AddAccountDialog(
                             containerColor = MaterialTheme.colorScheme.surface,
                         ),
                 )
+                Box(Modifier.weight(1f)) {
+                    LoginOrSignupScreen(newAccountKey, accountSessionManager, isFirstLogin = false)
+                }
             }
         }
     }
