@@ -95,6 +95,10 @@ object FetchCommand {
         |                                                a big page is re-asked at its max.
         |                                                --paginate --limit 0 streams events in
         |                                                arrival order (not newest-first).
+        |                                                A --search with words gets one page per
+        |                                                relay (hits are ranked; listed in
+        |                                                unpaged_relays, `amy sync` gets them all);
+        |                                                key:value tokens alone (include:spam) page.
         |  fetch <nevent1…|naddr1…|nprofile1…|npub1…|note1…|name@domain>
         |                                               outbox-model resolution of a shared code.
         """.trimMargin()
@@ -139,15 +143,17 @@ object FetchCommand {
             if (relays.isEmpty()) return Output.error("no_relays", "no relays available; pass --relay or run `amy relay add`")
 
             val relayErrors = mutableMapOf<NormalizedRelayUrl, RelayError>()
+            val unpaged = mutableSetOf<NormalizedRelayUrl>()
 
             // Unbounded walk: there is no "newest N" to keep, so nothing needs sorting —
             // write each event out as it arrives instead of holding the whole history.
-            if (paginate && effectiveLimit == null) return streamAllPages(ctx, filter, relays, timeoutMs, relayErrors)
+            if (paginate && effectiveLimit == null) return streamAllPages(ctx, filter, relays, timeoutMs, relayErrors, unpaged)
 
             val received =
                 if (paginate) {
                     ctx.drainAllPages(relays.associateWith { listOf(filter) }, timeoutMs) { relay, result ->
                         refusalOf(result)?.let { synchronized(relayErrors) { relayErrors[relay] = it } }
+                        if (result.end == PagedFetchResult.End.UNPAGEABLE) synchronized(unpaged) { unpaged.add(relay) }
                     }
                 } else {
                     val result = ctx.drainResult(relays.associateWith { listOf(filter) }, timeoutMs)
@@ -172,7 +178,7 @@ object FetchCommand {
                     "queried_relays" to relays.map { it.url },
                     "count" to events.size,
                     "events" to events,
-                ),
+                ) + unpagedField(unpaged),
                 relays,
                 relayErrors,
             )
@@ -194,12 +200,14 @@ object FetchCommand {
         relays: Set<NormalizedRelayUrl>,
         timeoutMs: Long,
         relayErrors: MutableMap<NormalizedRelayUrl, RelayError>,
+        unpaged: MutableSet<NormalizedRelayUrl>,
     ): Int {
         val stream = Output.listStream(mapOf("queried_relays" to relays.map { it.url }), "events")
         val count =
             try {
                 ctx.streamAllPages(relays.associateWith { listOf(filter) }, timeoutMs, onRelayResult = { relay, result ->
                     refusalOf(result)?.let { synchronized(relayErrors) { relayErrors[relay] = it } }
+                    if (result.end == PagedFetchResult.End.UNPAGEABLE) synchronized(unpaged) { unpaged.add(relay) }
                 }) { _, event -> stream.item({ event.toJson() }, { eventAsMap(event) }) }
             } catch (e: Throwable) {
                 // Close the half-written object (with an `error`) before anything else reports:
@@ -218,8 +226,27 @@ object FetchCommand {
         }
 
         val errors = reportRelayErrors(relayErrors)
-        stream.finish(if (errors.isEmpty()) mapOf("count" to count) else mapOf("count" to count, "relay_errors" to errors))
+        stream.finish(mapOf("count" to count) + unpagedField(unpaged) + (if (errors.isEmpty()) emptyMap() else mapOf("relay_errors" to errors)))
         return 0
+    }
+
+    /**
+     * `unpaged_relays`, for the relays whose walk ended [PagedFetchResult.End.UNPAGEABLE]: a
+     * `search` filter (NIP-50 hits are ranked, so they get one page) or a relay that ignores
+     * `until`. Their answer may be partial, so each gets a stderr warning pointing at `amy
+     * sync`, which reconciles the whole matching set over NIP-77 instead of paging it.
+     * Empty when every walk paged to its end, so the key only appears when it means something.
+     */
+    private fun unpagedField(unpaged: Set<NormalizedRelayUrl>): Map<String, Any> {
+        val sorted = synchronized(unpaged) { unpaged.sortedBy { it.url } }
+        if (sorted.isEmpty()) return emptyMap()
+        sorted.forEach { relay ->
+            System.err.println(
+                "warning: ${relay.url} could only be read one page deep (a search filter, or the relay ignores `until`), " +
+                    "so this may be partial. To download every match, run `amy sync --relay ${relay.url}` with the same filter flags.",
+            )
+        }
+        return mapOf("unpaged_relays" to sorted.map { it.url })
     }
 
     /** Warns about each refusing relay on stderr and returns them as the `relay_errors` map. */
