@@ -27,19 +27,30 @@ import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.resources.Res
-import com.vitorpamplona.amethyst.commons.resources.login_with_external_signer
+import com.vitorpamplona.amethyst.commons.resources.login_with_a_signer_app
+import com.vitorpamplona.amethyst.commons.resources.login_with_signer_app
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 
-/** Android's signer-app login. Filled: where a signer app is installed, it is the way in. */
+/**
+ * Android's signer-app login. Filled: where a signer app is installed, it is the way in. Named
+ * and drawn as the app itself ([appName], [appIcon]) when there is just one to pick.
+ */
 @Composable
-fun LoginWithAmberButton(
+fun SignerAppLoginButton(
     enabled: Boolean,
     onClick: () -> Unit,
+    appName: String? = null,
+    appIcon: (@Composable () -> Unit)? = null,
 ) {
     LoggedOffPrimaryButton(
-        text = stringRes(Res.string.login_with_external_signer),
+        text =
+            if (appName != null) {
+                stringRes(Res.string.login_with_signer_app, appName)
+            } else {
+                stringRes(Res.string.login_with_a_signer_app)
+            },
         enabled = enabled,
         onClick = onClick,
-        icon = { Icon(MaterialSymbols.Key, contentDescription = null, modifier = Modifier.size(20.dp)) },
+        icon = appIcon ?: { Icon(MaterialSymbols.Security, contentDescription = null, modifier = Modifier.size(20.dp)) },
     )
 }

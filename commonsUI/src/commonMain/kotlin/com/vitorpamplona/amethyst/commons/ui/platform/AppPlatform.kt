@@ -104,7 +104,7 @@ interface AppPlatform {
     @Composable
     fun ExternalSignerLoginButton(loginViewModel: LoginViewModel) {}
 
-    /** Whether a signer app can log in here: the form shows [ExternalSignerLoginButton] and the "or" before it. */
+    /** Whether a signer app can log in here: the form then leads with [ExternalSignerLoginButton]. */
     @Composable
     fun rememberHasExternalSignerLogin(): Boolean = false
 

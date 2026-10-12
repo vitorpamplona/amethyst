@@ -914,7 +914,6 @@
     <string name="created_at">สร้างโดย</string>
     <string name="guidelines">แนวปฏิบัติ</string>
     <string name="moderators">ผู้ดูแล</string>
-    <string name="login_with_external_signer">เข้าสู่ระบบด้วย Amber</string>
     <string name="status_update">คุณกำลังทำอะไรอยู่…</string>
     <string name="poll_zap_value_min_max_explainer">โหวตถูกให้น้ำหนักโดยจำนวน Zaps. คุณสามารถตั้งจำนวนเงินต่ำสุด และจำนวนครั้งสูงสุดในการโหวตเพื่อหลีกเลี่ยงการแสปมผลโพล. ใช้จำนวนเงินที่เท่ากันในทุกหัวข้อเพื่อให้การโหวตเป็นไปอย่างเท่าเทียม ปล่อยช่องว่าง หากต้องการให้โหวตเท่าใดก็ได้</string>
     <string name="error_dialog_talk_to_user">ส่งข้อความ</string>

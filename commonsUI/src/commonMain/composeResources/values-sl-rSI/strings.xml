@@ -1548,7 +1548,6 @@
     <string name="created_at">Ustvarjeno ob</string>
     <string name="guidelines">Smernice</string>
     <string name="moderators">Moderatorji</string>
-    <string name="login_with_external_signer">Prijavi se z Amber</string>
     <string name="status_update">Posodobi svoj status</string>
     <string name="poll_zap_value_min_max_explainer">Glasovi so ovrednoteni glede na količino zapov. Lahko nastavite minimalni znesek, da se izognete nezaželjenim glasovom, in največji znesek, da preprečite, da bi bogatejši volilci prevzeli glasovanje. V obeh poljih uporabite enak znesek, da zagotovite, da je vsak glas enako ovrednoten. Pustite prazno, če želite sprejeti poljubno količino.</string>
     <string name="error_dialog_talk_to_user">Pošlji sporočilo uporabniku</string>

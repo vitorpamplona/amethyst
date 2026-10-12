@@ -916,7 +916,6 @@
     <string name="created_at">생성 날짜</string>
     <string name="guidelines">가이드라인</string>
     <string name="moderators">관리자</string>
-    <string name="login_with_external_signer">Amber로 로그인</string>
     <string name="status_update">상태 업데이트</string>
     <string name="poll_zap_value_min_max_explainer">투표는 zap 금액에 따라 가중치가 부여됩니다. 스팸 방지를 위해 최소 금액을, 대규모 zap이 투표를 독점하지 않도록 최대 금액을 설정할 수 있습니다. 두 필드에 같은 금액을 입력하면 모든 투표의 가치를 동일하게 유지할 수 있습니다. 아무 금액이나 허용하려면 비워두세요.</string>
     <string name="error_dialog_talk_to_user">사용자에게 메시지 보내기</string>

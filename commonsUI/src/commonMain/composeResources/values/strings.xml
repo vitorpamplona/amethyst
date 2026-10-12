@@ -2061,7 +2061,6 @@
     <string name="created_at">Created at</string>
     <string name="guidelines">Guidelines</string>
     <string name="moderators">Moderators</string>
-    <string name="login_with_external_signer">Login with Amber</string>
     <string name="status_update">Update your status</string>
     <string name="poll_zap_value_min_max_explainer">Votes are weighted by the zap amount. You can set a minimum amount to avoid spammers and a maximum amount to avoid a large zappers taking over the poll. Use the same amount in both fields to make sure every vote is valued the same amount. Leave it empty to accept any amount.</string>
     <string name="error_dialog_talk_to_user">Message the User</string>
@@ -4554,7 +4553,9 @@
     <string name="desktop_menu_notifications">Notifications</string>
     <string name="desktop_menu_about">About Amethyst</string>
     <string name="desktop_menu_report_issue">Report an issue</string>
-    <string name="login_with_remote_signer">Log in with a remote signer</string>
+    <string name="login_with_remote_signer">Login with a remote signer</string>
+    <string name="login_with_signer_app">Login with %1$s</string>
+    <string name="login_with_a_signer_app">Login with a signer app</string>
     <string name="login_or">or</string>
     <string name="login_welcome_back">Welcome back</string>
     <string name="login_key_placeholder_bunker">nsec, npub or bunker://</string>

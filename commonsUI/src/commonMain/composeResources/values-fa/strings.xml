@@ -918,7 +918,6 @@
     <string name="created_at">ایجاد شده در</string>
     <string name="guidelines">دستورالعمل‌ها</string>
     <string name="moderators">مدیران</string>
-    <string name="login_with_external_signer">ورود با Amber</string>
     <string name="status_update">بارگذاری وضعیت</string>
     <string name="poll_zap_value_min_max_explainer">آراء با مبلغ زپ سنجیده می شوند. می توانید برای جلوگیری از اسپم یک مبلغ حداقل تعیین کنید و برای جلوگیری از دستکاری نتیجه با زپ های بزرگ یک مبلغ حداکثر تعیین کنید. برای اینکه همه آراء ارزش یکسان داشته باشند در هر دو قسمت یک مبلغ را بزنید. یا این قسمت را خالی بگذارید تا هر مبلغ زپی را بپذیرد.</string>
     <string name="error_dialog_talk_to_user">پیام به کاربر</string>

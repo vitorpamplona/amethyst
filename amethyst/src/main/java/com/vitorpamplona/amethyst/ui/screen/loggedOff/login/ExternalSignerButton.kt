@@ -46,6 +46,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.TextFieldValue
@@ -55,7 +56,7 @@ import androidx.compose.ui.window.Dialog
 import androidx.core.graphics.drawable.toBitmap
 import coil3.compose.rememberAsyncImagePainter
 import com.vitorpamplona.amethyst.commons.account.ui.login.LoginViewModel
-import com.vitorpamplona.amethyst.commons.account.ui.login.LoginWithAmberButton
+import com.vitorpamplona.amethyst.commons.account.ui.login.SignerAppLoginButton
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.error_opening_external_signer
 import com.vitorpamplona.amethyst.commons.resources.select_signer
@@ -173,7 +174,18 @@ fun ExternalSignerButton(loginViewModel: LoginViewModel) {
         )
     }
 
-    LoginWithAmberButton(
+    // The one signer installed is named and drawn as itself; several share a generic label and
+    // the chooser above.
+    val onlySigner = installedSigners.singleOrNull()
+    val onlySignerName = remember(onlySigner) { onlySigner?.loadLabel(context.packageManager)?.toString() }
+    val onlySignerIcon =
+        remember(onlySigner) {
+            onlySigner?.loadIcon(context.packageManager)?.toBitmap(SIGNER_ICON_PX, SIGNER_ICON_PX)?.asImageBitmap()
+        }
+
+    SignerAppLoginButton(
+        appName = onlySignerName,
+        appIcon = onlySignerIcon?.let { icon -> { Image(icon, contentDescription = null, modifier = Modifier.size(24.dp)) } },
         enabled = loginViewModel.acceptedTerms,
         onClick = {
             if (!loginViewModel.acceptedTerms) {
@@ -194,6 +206,9 @@ fun ExternalSignerButton(loginViewModel: LoginViewModel) {
         },
     )
 }
+
+// The signer's launcher icon, at the button's 24dp on the densest screens.
+private const val SIGNER_ICON_PX = 96
 
 /** What Amethyst asks a NIP-55 signer app to pre-approve when the user logs in with it. */
 val DefaultSignerPermissions =

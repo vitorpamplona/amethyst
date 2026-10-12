@@ -139,21 +139,28 @@ fun LoginPage(
     ) {
         LoggedOffTitle(stringRes(Res.string.login_welcome_back))
 
-        // A signer app (Amber and the like) is the way in where one is installed: the key never
-        // reaches Amethyst. It leads, filled; typing a key becomes the alternative below it.
-        val signerFirst = platform.rememberHasExternalSignerLogin()
-        if (signerFirst) {
-            // Before the button it gates: the signer button stays disabled until it is checked.
-            if (loginViewModel.isFirstLogin) {
-                platform.TermsGate(
-                    checked = loginViewModel.acceptedTerms,
-                    onCheckedChange = loginViewModel::updateAcceptedTerms,
-                    showError = loginViewModel.termsAcceptanceIsRequiredError,
-                )
-            }
+        // Before everything it gates: every way in below stays disabled until it is checked.
+        if (loginViewModel.isFirstLogin) {
+            platform.TermsGate(
+                checked = loginViewModel.acceptedTerms,
+                onCheckedChange = loginViewModel::updateAcceptedTerms,
+                showError = loginViewModel.termsAcceptanceIsRequiredError,
+            )
+        }
+
+        // The signers lead on every platform, in one order: the key never reaches Amethyst. A
+        // signer app (Amber and the like) where one is installed, filled; a remote signer anywhere
+        // it works. Each one's error sits under its own button.
+        val hasSignerApp = platform.rememberHasExternalSignerLogin()
+        if (hasSignerApp) {
             platform.ExternalSignerLoginButton(loginViewModel)
-            // Under the button that failed, not under the key field below the "or".
             LoginErrorText(loginViewModel.signerErrorManager)
+        }
+        if (platform.supportsRemoteSignerLogin) {
+            RemoteSignerLoginButton(loginViewModel)
+            LoginErrorText(loginViewModel.remoteSignerErrorManager)
+        }
+        if (hasSignerApp || platform.supportsRemoteSignerLogin) {
             OrDivider()
         }
 
@@ -185,31 +192,16 @@ fun LoginPage(
             )
         }
 
-        if (loginViewModel.isFirstLogin && !signerFirst) {
-            platform.TermsGate(
-                checked = loginViewModel.acceptedTerms,
-                onCheckedChange = loginViewModel::updateAcceptedTerms,
-                showError = loginViewModel.termsAcceptanceIsRequiredError,
-            )
-        }
-
-        LoggedOffButton(
+        LoggedOffPrimaryButton(
             text = stringRes(Res.string.login),
-            // Stays enabled while it works: a disabled button would grey out under its spinner.
-            // login() ignores taps until the attempt ends.
-            enabled = loginViewModel.acceptedTerms,
+            // Lights up once there is a key to log in with, so it never outshines a signer above
+            // an empty field. Stays enabled while it works: a disabled button would grey out under
+            // its spinner. login() ignores taps until the attempt ends.
+            enabled = loginViewModel.acceptedTerms && loginViewModel.key.text.isNotBlank(),
             // A remote signer's login has its own dialog; the button only spins for its own.
             loading = loginViewModel.processingLogin && !loginViewModel.nostrConnectPending,
-            // The alternative when a signer app leads.
-            filled = !signerFirst,
             onClick = loginViewModel::login,
         )
-
-        if (platform.supportsRemoteSignerLogin) {
-            // Where a signer app leads, its "or" already introduced the alternatives.
-            if (!signerFirst) OrDivider()
-            RemoteSignerLoginButton(loginViewModel)
-        }
     }
 
     platform.IncomingLoginKeys { key ->

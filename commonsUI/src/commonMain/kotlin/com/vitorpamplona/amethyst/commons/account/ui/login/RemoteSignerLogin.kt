@@ -88,7 +88,6 @@ import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.add_a_relay
 import com.vitorpamplona.amethyst.commons.resources.cancel
 import com.vitorpamplona.amethyst.commons.resources.copy
-import com.vitorpamplona.amethyst.commons.resources.ic_qrcode
 import com.vitorpamplona.amethyst.commons.resources.login_with_remote_signer
 import com.vitorpamplona.amethyst.commons.resources.relay_url_not_valid
 import com.vitorpamplona.amethyst.commons.resources.remote_signer_default_relays
@@ -101,7 +100,6 @@ import com.vitorpamplona.amethyst.commons.resources.remote_signer_scan_title
 import com.vitorpamplona.amethyst.commons.resources.remote_signer_waiting
 import com.vitorpamplona.amethyst.commons.ui.components.LocalAnimationsEnabled
 import com.vitorpamplona.amethyst.commons.ui.components.util.setText
-import com.vitorpamplona.amethyst.commons.ui.painterRes
 import com.vitorpamplona.amethyst.commons.ui.platform.LocalAppPlatform
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.qrcode.QrCodeDrawer
 import com.vitorpamplona.amethyst.commons.ui.stringRes
@@ -109,7 +107,6 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.IO
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import androidx.compose.material3.Icon as PainterIcon
 
 /**
  * Logs in through a NIP-46 remote signer: opens a `nostrconnect://` code for the signer to scan.
@@ -119,14 +116,10 @@ import androidx.compose.material3.Icon as PainterIcon
 fun RemoteSignerLoginButton(loginViewModel: LoginViewModel) {
     LoggedOffSecondaryButton(
         text = stringRes(Res.string.login_with_remote_signer),
-        icon = {
-            PainterIcon(
-                painter = painterRes(Res.drawable.ic_qrcode, 5),
-                contentDescription = null,
-                modifier = Modifier.size(20.dp),
-            )
-        },
-        enabled = !loginViewModel.processingLogin,
+        // A key locked in another device. Not a QR: the key field's QR button scans one.
+        symbol = MaterialSymbols.PhonelinkLock,
+        // Gated by the terms like every other way in.
+        enabled = loginViewModel.acceptedTerms && !loginViewModel.processingLogin,
         onClick = loginViewModel::loginWithNostrConnect,
     )
 

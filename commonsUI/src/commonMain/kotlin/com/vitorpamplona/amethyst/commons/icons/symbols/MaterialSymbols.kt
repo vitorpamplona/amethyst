@@ -198,6 +198,7 @@ object MaterialSymbols {
     val PersonOff = MaterialSymbol("\uE510")
     val PersonRemove = MaterialSymbol("\uEF66")
     val Phone = MaterialSymbol("\uF0D4")
+    val PhonelinkLock = MaterialSymbol("\uF2BE")
     val Photo = MaterialSymbol("\uE432")
     val PhotoLibrary = MaterialSymbol("\uE413")
     val PictureAsPdf = MaterialSymbol("\uE415")

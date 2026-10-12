@@ -918,7 +918,6 @@
     <string name="created_at">Gemaakt op</string>
     <string name="guidelines">Richtlijnen</string>
     <string name="moderators">Moderators</string>
-    <string name="login_with_external_signer">Login met Amber</string>
     <string name="status_update">Status bijwerken</string>
     <string name="poll_zap_value_min_max_explainer">Stemmen worden gewogen door het aantal zap. U kunt een minimumbedrag instellen om spammers te voorkomen en een maximumbedrag om te voorkomen dat een grote zappers de enquête overneemt. Gebruik hetzelfde bedrag in beide velden om ervoor te zorgen dat elke stem hetzelfde wordt gewaardeerd. Laat het leeg om elk bedrag te accepteren.</string>
     <string name="error_dialog_talk_to_user">Bericht de gebruiker</string>

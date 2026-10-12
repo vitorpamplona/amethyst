@@ -916,7 +916,6 @@
     <string name="created_at">Dibuat pada</string>
     <string name="guidelines">Panduan</string>
     <string name="moderators">Moderator</string>
-    <string name="login_with_external_signer">Masuk dengan Amber</string>
     <string name="status_update">Perbaharui statusmu</string>
     <string name="poll_zap_value_min_max_explainer">Suara ditimbang berdasarkan jumlah zap. Anda dapat menetapkan jumlah minimum untuk menghindari pembuat spam dan jumlah maksimum untuk menghindari pengirim zap besar mengambil alih pemungutan suara. Gunakan jumlah yang sama di kedua kolom untuk memastikan setiap suara bernilai sama. Biarkan kosong untuk menerima jumlah berapa pun.</string>
     <string name="error_dialog_talk_to_user">Kirim Pesan ke Pengguna</string>

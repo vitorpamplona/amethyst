@@ -2080,7 +2080,6 @@
     <string name="created_at">Vytvořeno</string>
     <string name="guidelines">Pokyny</string>
     <string name="moderators">Moderátoři</string>
-    <string name="login_with_external_signer">Přihlásit se pomocí Amber</string>
     <string name="status_update">Aktualizovat svůj stav</string>
     <string name="poll_zap_value_min_max_explainer">Hlasy jsou váženy podle hodnoty zapu. Můžete nastavit minimální částku, abyste se vyhnuli spammerům, a maximální částku, abyste zabránili velkým zapperům, kteří by mohli ovládnout hlasování. Použijte stejnou částku v obou polích, aby byla hodnota každého hlasu stejná. Nechte prázdné pro přijetí libovolné částky.</string>
     <string name="error_dialog_talk_to_user">Poslat zprávu uživateli</string>

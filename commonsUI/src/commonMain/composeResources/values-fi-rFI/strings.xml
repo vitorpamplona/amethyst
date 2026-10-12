@@ -917,7 +917,6 @@
     <string name="created_at">Luotu</string>
     <string name="guidelines">Ohjeet</string>
     <string name="moderators">Moderaattorit</string>
-    <string name="login_with_external_signer">Kirjaudu sisään Amberilla</string>
     <string name="status_update">Päivitä tilaasi</string>
     <string name="poll_zap_value_min_max_explainer">Äänet painotetaan zappin määrän perusteella. Voit asettaa minimimäärän roskapostin välttämiseksi ja maksimimäärän suurten zappereiden estämiseksi. Käytä samaa määrää molemmissa kentissä, jotta jokainen ääni arvostetaan samalla määrällä. Jätä se tyhjäksi hyväksyäksesi minkä tahansa määrän.</string>
     <string name="error_dialog_talk_to_user">Viesti käyttäjälle</string>

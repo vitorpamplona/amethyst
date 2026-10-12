@@ -921,7 +921,6 @@
     <string name="created_at">যেখানে নির্মিত</string>
     <string name="guidelines">নির্দেশিকা</string>
     <string name="moderators">মডারেটর</string>
-    <string name="login_with_external_signer">Amber দিয়ে লগইন করুন</string>
     <string name="status_update">আপনার স্ট্যাটাস আপডেট করুন</string>
     <string name="poll_zap_value_min_max_explainer">জ্যাপের পরিমাণ দ্বারা ভোটসংখ্যা গোণা হয়। আপনি স্প্যামার এড়াতে একটি সর্বনিম্ন পরিমাণ এবং একটি বড়ো জ্যাপার দ্বারা পোল দখল এড়াতে সর্বোচ্চ পরিমাণ স্যাট নির্ধারণ করতে পারেন। প্রতিটি ভোটের মূল্য একই পরিমাণে রয়েছে তা নিশ্চিত করতে উভয় ক্ষেত্রেই একই পরিমাণ ব্যবহার করুন। যেকোনো পরিমাণ গ্রহণ করতে এটি খালি ছেড়ে দিন।</string>
     <string name="error_dialog_talk_to_user">ব্যবহারকারীকে বার্তা দিন</string>

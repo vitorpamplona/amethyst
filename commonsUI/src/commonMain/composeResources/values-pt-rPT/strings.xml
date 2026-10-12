@@ -919,7 +919,6 @@
     <string name="created_at">Criado em</string>
     <string name="guidelines">Diretrizes</string>
     <string name="moderators">Moderadores</string>
-    <string name="login_with_external_signer">Login com Amber</string>
     <string name="status_update">O que você está fazendo?</string>
     <string name="poll_zap_value_min_max_explainer">Os votos são ponderados pelo valor do zap. Você pode definir um valor mínimo para evitar spammers e um valor máximo para evitar que grandes zappers assumam o controle da enquete. Use o mesmo valor em ambos os campos para garantir que cada voto tenha o mesmo valor. Deixe em branco para aceitar qualquer valor.</string>
     <string name="error_dialog_talk_to_user">Mensagem ao usuário</string>

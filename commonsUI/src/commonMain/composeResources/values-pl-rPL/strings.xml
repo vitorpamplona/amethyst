@@ -2078,7 +2078,6 @@
     <string name="created_at">Utworzono</string>
     <string name="guidelines">Wskazówki</string>
     <string name="moderators">Moderatorzy</string>
-    <string name="login_with_external_signer">Zaloguj się za pomocą Amber</string>
     <string name="status_update">Zaktualizuj swój status</string>
     <string name="poll_zap_value_min_max_explainer">Głosy są oceniane na podstawie ilości zapperów. Możesz ustawić minimalną kwotę, aby uniknąć spamerów i maksymalną kwotę, aby uniknąć przejęcia ankiety przez dużych zapperów. Użyj tej samej kwoty w obu polach, aby upewnić się, że każdy głos ma taką samą wartość. Pozostaw to pole puste, aby zaakceptować dowolną kwotę.</string>
     <string name="error_dialog_talk_to_user">Wyślij wiadomość użytkownikowi</string>

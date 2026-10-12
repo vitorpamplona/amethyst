@@ -2044,7 +2044,6 @@
     <string name="created_at">तब बनाया गया</string>
     <string name="guidelines">दिशा निर्देश</string>
     <string name="moderators">नियामक</string>
-    <string name="login_with_external_signer">आम्बेर के साथ प्रवेशांकन करें</string>
     <string name="status_update">आपकी स्थिति का नवीकरण करें</string>
     <string name="poll_zap_value_min_max_explainer">निर्वाचन का भार ज्साप मात्रा के अनुसार माना जाता है। आप एक न्यूनतम मात्रा स्थापित कर सकते हैं कचरालेख भेजनेवालों से बचने के लिए तथा एक अधिकतम मात्रा बडे ज्सापकर्ताओं के द्वारा मतदान का अधिग्रहण होने से बचने के लिए। दोनों प्रपत्रस्थानों में एक ही मात्रा का प्रयोग करें प्रत्येक निर्वाचन का मूल्य समान मानने को सुनिश्चित करने के लिए। रिक्त रख दें कुछ भी मात्रा स्वीकार करने के लिए।</string>
     <string name="error_dialog_talk_to_user">उपयोगकर्ता को संदेश भेजें</string>

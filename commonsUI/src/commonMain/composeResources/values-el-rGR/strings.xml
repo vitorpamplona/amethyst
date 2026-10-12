@@ -920,7 +920,6 @@
     <string name="created_at">Δημιουργήθηκε στις</string>
     <string name="guidelines">Οδηγίες</string>
     <string name="moderators">Συντονιστές</string>
-    <string name="login_with_external_signer">Σύνδεση με Amber</string>
     <string name="status_update">Ενημέρωση κατάστασης</string>
     <string name="poll_zap_value_min_max_explainer">Η ψηφοφορία σε μια δημοσίευση Δημοσκόπησης γίνεται με zaps. Τα zaps είναι μικροπληρωμές σε satoshi (sats). Τα sats είναι υποδιαίρεση του Bitcoin. Κάθε Bitcoin έχει 100.000.000 sats. Η επιλογή με τα περισσότερα zaps (δηλαδή τα περισσότερα sats) είναι η επικρατέστερη. Μπορείτε να ορίσετε ένα ελάχιστο ποσό zap για να αποφύγετε την ψήφο spammers αλλά και ένα μέγιστο ποσό ώστε να αποφύγετε μεγάλους zappers (χρήστες που στέλνουν zaps) που επιθυμούν να χειραγωγήσουν την ψηφοφορία. Χρησιμοποιήστε το ίδιο ποσό και στα δύο πεδία για να βεβαιωθείτε ότι κάθε ψήφος αποτιμάται το ίδιο. Ή αφήστε τα πεδία κενά για να αποδεχτείτε οποιοδήποτε ποσό.</string>
     <string name="error_dialog_talk_to_user">Μήνυμα στον Χρήστη</string>

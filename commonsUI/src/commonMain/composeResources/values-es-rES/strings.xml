@@ -921,7 +921,6 @@
     <string name="created_at">Creado</string>
     <string name="guidelines">Directrices</string>
     <string name="moderators">Moderadores</string>
-    <string name="login_with_external_signer">Iniciar sesión con Amber</string>
     <string name="status_update">Actualiza tu estado</string>
     <string name="poll_zap_value_min_max_explainer">Los votos se calculan según la cantidad de zaps. Puedes establecer una cantidad mínima para evitar spammers y una máxima para que los zappers grandes no puedan dominar la encuesta. Usa la misma cantidad en ambos campos para asegurarte de que cada voto tenga el mismo valor. Déjalos vacíos para aceptar cualquier cantidad.</string>
     <string name="error_dialog_talk_to_user">Mensaje para el usuario</string>

@@ -2044,7 +2044,6 @@
     <string name="created_at">Skapad den</string>
     <string name="guidelines">Riktlinjer</string>
     <string name="moderators">Moderatorer</string>
-    <string name="login_with_external_signer">Logga in med Amber</string>
     <string name="status_update">Uppdatera din status</string>
     <string name="poll_zap_value_min_max_explainer">Röster viktas av zap-beloppet. Du kan ställa in en minsta mängd för att undvika spammare och en maximal mängd för att undvika att en stor zapper tar över omröstningen. Använd samma belopp i båda fälten för att se till att varje röst värderas till samma belopp. Lämna tomt för att acceptera valfritt belopp.</string>
     <string name="error_dialog_talk_to_user">Meddela användaren</string>

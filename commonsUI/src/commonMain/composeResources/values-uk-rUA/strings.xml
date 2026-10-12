@@ -928,7 +928,6 @@
     <string name="created_at">Створено в</string>
     <string name="guidelines">Правила</string>
     <string name="moderators">Модератори</string>
-    <string name="login_with_external_signer">Увійти з Amber</string>
     <string name="status_update">Оновіть свій статус</string>
     <string name="poll_zap_value_min_max_explainer">Голоси зважуються відповідно до суми зап. Ви можете встановити мінімальну суму, щоб уникнути спамерів, та максимальну, щоб великі заппери не домінували в опитуванні. Введіть однакову суму в обох полях, щоб кожен голос мав однакову вагу. Залиште порожнім, щоб приймати будь-яку суму.</string>
     <string name="error_dialog_talk_to_user">Написати користувачу</string>

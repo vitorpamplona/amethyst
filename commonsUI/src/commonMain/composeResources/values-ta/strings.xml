@@ -918,7 +918,6 @@
     <string name="created_at">உருவாக்கப்பட்ட நேரம்</string>
     <string name="guidelines">வழிகாட்டுதல்கள்</string>
     <string name="moderators">மதிப்பாளர்கள்</string>
-    <string name="login_with_external_signer">Amber மூலம் உள்நுழை</string>
     <string name="status_update">உங்கள் நிலையை புதுப்பி</string>
     <string name="poll_zap_value_min_max_explainer">வாக்குகள் Zap தொகையால் எடை கொடுக்கப்படுகின்றன. ஸ்பாமர்களை தவிர்க்க குறைந்தபட்ச தொகையை மற்றும் பெரிய Zap செய்பவர்கள் வாக்கெடுப்பை கைப்பற்றுவதை தடுக்க அதிகபட்ச தொகையை அமைக்கலாம். ஒவ்வொரு வாக்கும் சம மதிப்புடையதாக இருக்க இரண்டு புலங்களிலும் ஒரே தொகையை உள்ளிடவும். எந்த தொகையையும் ஏற்க காலியாக விடவும்.</string>
     <string name="error_dialog_talk_to_user">பயனரிடம் செய்தி அனுப்பு</string>

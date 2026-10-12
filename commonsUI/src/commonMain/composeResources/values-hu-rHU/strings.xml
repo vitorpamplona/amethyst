@@ -2043,7 +2043,6 @@
     <string name="created_at">Létrehozva ekkor:</string>
     <string name="guidelines">Útmutatók</string>
     <string name="moderators">Moderátorok</string>
-    <string name="login_with_external_signer">Bejelentkezés Amberrel</string>
     <string name="status_update">Állapot frissítése</string>
     <string name="poll_zap_value_min_max_explainer">A szavazatok egy zapösszeggel vannak súlyozva. Beállíthat egy minimális összeget, hogy elkerülje a spamelőket, és egy maximális összeget, hogy elkerülje, hogy a nagy zapelők átvegyék a szavazást. Használja ugyanazt az összeget mindkét mezőben, hogy minden szavazatot ugyanannyira értékeljen. Hagyja üresen, hogy bármilyen összeget elfogadjon.</string>
     <string name="error_dialog_talk_to_user">Üzenet a felhasználónak</string>

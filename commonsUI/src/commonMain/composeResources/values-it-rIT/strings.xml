@@ -907,7 +907,6 @@
     <string name="created_at">Creato il</string>
     <string name="guidelines">Linee guida</string>
     <string name="moderators">Moderatori</string>
-    <string name="login_with_external_signer">Accedi con Amber</string>
     <string name="status_update">Aggiorna il tuo stato</string>
     <string name="poll_zap_value_min_max_explainer">I voti sono ponderati con l'importo dello zap. È possibile impostare una quantità minima per evitare gli spammer e una quantità massima per evitare che un grande zapper predomini il sondaggio. Usa lo stesso importo in entrambi i campi per assicurarti che ogni voto valga lo stesso importo. Lascialo vuoto per accettare qualsiasi importo.</string>
     <string name="error_dialog_talk_to_user">Invia un messaggio all'utente</string>

@@ -67,6 +67,9 @@ class LoginViewModel(
     /** A signer app's (Amber's) refusal or failure, shown under its button rather than the key field. */
     val signerErrorManager = LoginErrorManager()
 
+    /** Why the last `nostrconnect://` login failed, under the remote-signer button that started it. */
+    val remoteSignerErrorManager = LoginErrorManager()
+
     var key by mutableStateOf(TextFieldValue(""))
     var acceptedTerms by mutableStateOf(false)
     var termsAcceptanceIsRequiredError by mutableStateOf(false)
@@ -164,6 +167,7 @@ class LoginViewModel(
 
         errorManager.clearErrors()
         signerErrorManager.clearErrors()
+        remoteSignerErrorManager.clearErrors()
         acceptedTerms = !requiresTermsAcceptance
         processingLogin = false
         isTemporary = false
@@ -183,6 +187,7 @@ class LoginViewModel(
         errorManager.clearErrors()
         // Also a signer's answer landing here: a new attempt, so the last one's error goes.
         signerErrorManager.clearErrors()
+        remoteSignerErrorManager.clearErrors()
     }
 
     fun updatePassword(newPassword: TextFieldValue) {
@@ -198,6 +203,7 @@ class LoginViewModel(
 
         errorManager.clearErrors()
         signerErrorManager.clearErrors()
+        remoteSignerErrorManager.clearErrors()
     }
 
     fun updateOfferTemporaryLogin(tempLogin: Boolean) {
@@ -282,6 +288,7 @@ class LoginViewModel(
         }
         if (nostrConnectJob?.isActive == true) return
 
+        remoteSignerErrorManager.clearErrors()
         startNostrConnect()
     }
 
@@ -304,7 +311,7 @@ class LoginViewModel(
                 } catch (e: CancellationException) {
                     throw e
                 } catch (e: Exception) {
-                    errorManager.error(Res.string.remote_signer_login_failed, e.message ?: e::class.simpleName.orEmpty())
+                    remoteSignerErrorManager.error(Res.string.remote_signer_login_failed, e.message ?: e::class.simpleName.orEmpty())
                 } finally {
                     // A relay change replaced this attempt with a new one, which owns the dialog now.
                     if (nostrConnectJob === thisJob) {

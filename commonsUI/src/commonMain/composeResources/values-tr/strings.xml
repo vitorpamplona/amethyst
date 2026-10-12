@@ -918,7 +918,6 @@
     <string name="created_at">Oluşturulma tarihi</string>
     <string name="guidelines">Kurallar</string>
     <string name="moderators">Moderatörler</string>
-    <string name="login_with_external_signer">Amber ile Giriş Yap</string>
     <string name="status_update">Durumunuzu güncelleyin</string>
     <string name="poll_zap_value_min_max_explainer">Oylar, zap miktarına göre ağırlıklandırılır. Spam gönderenleri önlemek için minimum miktar, büyük zap gönderenlerin ankete hâkim olmasını önlemek için maksimum miktar belirleyebilirsiniz. Her oyun eşit değerde olmasını sağlamak için her iki alana aynı miktarı girin. Herhangi bir miktarı kabul etmek için boş bırakın.</string>
     <string name="error_dialog_talk_to_user">Kullanıcıya Mesaj Gönder</string>

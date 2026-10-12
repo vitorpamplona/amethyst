@@ -918,7 +918,6 @@
     <string name="created_at">Aangemaakt op</string>
     <string name="guidelines">Richtlijnen</string>
     <string name="moderators">Moderators</string>
-    <string name="login_with_external_signer">Inloggen met Amber</string>
     <string name="status_update">Status bijwerken</string>
     <string name="poll_zap_value_min_max_explainer">Stemmen wegen zwaarder naarmate het zap-bedrag hoger is. Stel een minimum in om spam te voorkomen en een maximum om dominante stemmen te voorkomen.</string>
     <string name="error_dialog_talk_to_user">Bericht de gebruiker</string>

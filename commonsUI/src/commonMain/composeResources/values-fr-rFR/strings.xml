@@ -998,7 +998,6 @@
     <string name="created_at">Créé le</string>
     <string name="guidelines">Lignes directrices</string>
     <string name="moderators">Modérateurs</string>
-    <string name="login_with_external_signer">Se connecter avec Amber</string>
     <string name="status_update">Mettez à jour votre statut</string>
     <string name="poll_zap_value_min_max_explainer">Les votes sont pondérés par le montant du zap. Vous pouvez définir un montant minimum pour éviter les spammeurs et un montant maximum pour éviter qu'un grand nombre de zappeurs ne prenne le contrôle du sondage. Utilisez le même montant dans les deux champs pour vous assurer que chaque vote a la même valeur. Laissez le champ vide pour accepter n'importe quel montant.</string>
     <string name="error_dialog_talk_to_user">Contacter l'utilisateur</string>
