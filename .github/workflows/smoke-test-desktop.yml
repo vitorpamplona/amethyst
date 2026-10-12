@@ -104,6 +104,13 @@ jobs:
           chmod +x scripts/add-deb-libegl-dep.sh
           scripts/add-deb-libegl-dep.sh desktopApp/build/compose/binaries/main-release/deb/*.deb
 
+      # Also mirrors create-release.yml, so the install below resolves the same Depends.
+      - name: Add GStreamer deps to .deb
+        run: |
+          set -euo pipefail
+          chmod +x scripts/add-deb-gstreamer-deps.sh
+          scripts/add-deb-gstreamer-deps.sh desktopApp/build/compose/binaries/main-release/deb/*.deb
+
       - name: Install .deb
         run: |
           # Installed via apt (not `dpkg -i`) so the .deb's declared Depends are

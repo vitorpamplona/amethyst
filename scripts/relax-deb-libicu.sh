@@ -24,21 +24,14 @@
 # Usage: relax-deb-libicu.sh <path-to-deb> [<path-to-deb> ...]
 set -euo pipefail
 
+source "$(dirname "${BASH_SOURCE[0]}")/deb-control.sh"
+
 # Spans Debian 11 → 13 and Ubuntu 20.04 → 26.04. Append new SONAMEs here when
 # a new Debian/Ubuntu release ships a bumped libicu.
 ALT='libicu66 | libicu67 | libicu70 | libicu72 | libicu74 | libicu76 | libicu77'
 
-for deb in "$@"; do
-    if [[ ! -f "$deb" ]]; then
-        echo "skip: not a file: $deb" >&2
-        continue
-    fi
-
-    work="$(mktemp -d)"
-    trap 'rm -rf "$work"' EXIT
-    dpkg-deb -R "$deb" "$work/pkg"
-    control="$work/pkg/DEBIAN/control"
-    cp "$control" "$work/control.orig"
+relax_control() {
+    local control="$1"
 
     sed -i -E "s/libicu[0-9]+([[:space:]]*\\|[[:space:]]*libicu[0-9]+)*/${ALT}/g" "$control"
 
@@ -55,17 +48,25 @@ for deb in "$@"; do
             $_ = "$field:" . join(",", @clauses) . "\n";
         }
     ' "$control"
+}
 
-    if cmp -s "$control" "$work/control.orig"; then
-        echo "No pinned deps to relax, leaving as-is: $deb"
-    else
-        # Built beside it and moved over it, so an interrupted run leaves the original intact.
-        dpkg-deb --root-owner-group -Zxz -b "$work/pkg" "$work/out.deb" >/dev/null
-        mv -f "$work/out.deb" "$deb"
-        echo "Relaxed pinned deps: $deb"
-        grep -E '^(Pre-Depends|Depends|Recommends):' "$control"
+# An unmatched glob reaches us as the literal pattern: fail rather than ship an unrelaxed .deb.
+if [[ $# -eq 0 ]]; then
+    echo "error: no .deb given" >&2
+    exit 1
+fi
+
+for deb in "$@"; do
+    if [[ ! -f "$deb" ]]; then
+        echo "error: not a file: $deb" >&2
+        exit 1
     fi
 
-    rm -rf "$work"
-    trap - EXIT
+    deb_edit_control "$deb" relax_control
+    if [[ $DEB_CONTROL_CHANGED -eq 1 ]]; then
+        echo "Relaxed pinned deps: $deb"
+        dpkg-deb -f "$deb" Depends
+    else
+        echo "No pinned deps to relax, leaving as-is: $deb"
+    fi
 done
