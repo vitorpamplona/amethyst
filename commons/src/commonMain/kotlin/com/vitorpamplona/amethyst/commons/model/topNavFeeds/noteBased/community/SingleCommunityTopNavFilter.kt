@@ -43,8 +43,11 @@ class SingleCommunityTopNavFilter(
 ) : IFeedTopNavFilter {
     override fun matchAuthor(pubkey: HexKey) = authors == null || pubkey in authors
 
-    // The moderators' own relays are only read when the community names no relays of its own.
-    override fun outboxAuthors(): Set<HexKey> = if (relays.isEmpty()) authors.orEmpty() else emptySet()
+    // The moderators whose own relays this feed reads: only when the community names no relays of its
+    // own. Routes both the REQ (toPerRelayFlow) and the relay-list loading (outboxAuthors).
+    private val authorsByOutbox: Set<HexKey>? = if (relays.isEmpty()) authors else null
+
+    override fun outboxAuthors(): Set<HexKey> = authorsByOutbox.orEmpty()
 
     override fun match(noteEvent: Event): Boolean =
         if (noteEvent is LiveActivitiesEvent) {
@@ -66,9 +69,9 @@ class SingleCommunityTopNavFilter(
             }
         }
 
-        if (authors != null) {
+        if (authorsByOutbox != null) {
             // go by authors
-            val authorsPerRelay = OutboxRelayLoader().toAuthorsPerRelayFlow(authors, cache) { it }
+            val authorsPerRelay = OutboxRelayLoader().toAuthorsPerRelayFlow(authorsByOutbox, cache) { it }
 
             return combine(authorsPerRelay, blockedRelays) { authorsPerRelay, blocked ->
                 SingleCommunityTopNavPerRelayFilterSet(
@@ -99,9 +102,9 @@ class SingleCommunityTopNavFilter(
             )
         }
 
-        if (authors != null) {
+        if (authorsByOutbox != null) {
             // go by authors
-            val authorsPerRelay = OutboxRelayLoader().authorsPerRelaySnapshot(authors, cache) { it }
+            val authorsPerRelay = OutboxRelayLoader().authorsPerRelaySnapshot(authorsByOutbox, cache) { it }
 
             return SingleCommunityTopNavPerRelayFilterSet(
                 authorsPerRelay.minus(blockedRelays.value).mapValues {

@@ -55,11 +55,10 @@ class UserOutboxFinderSubAssembler(
      * This assembler saves the EOSE per user key. That EOSE includes their metadata, etc
      * and reports, but only from trusted accounts (follows of all logged in users).
      *
-     * Sized for a feed's whole author list (see [UserFinderQueryState.isFeedAuthor]), not just the
-     * users on screen: everyone still missing a relay list must fit, or an evicted user is asked for
-     * again on the next pass and each answer evicts another, looping while the feed is open.
+     * Fitted to the users still missing a relay list on every pass ([EOSEAccountFast.fitTo]): a feed
+     * hands over whole lists (see [UserFinderQueryState.isFeedAuthor]), not just the users on screen.
      */
-    var hasTried: EOSEAccountFast<User> = EOSEAccountFast(10_000)
+    var hasTried: EOSEAccountFast<User> = EOSEAccountFast(200)
 
     fun newEose(
         relay: NormalizedRelayUrl,
@@ -102,6 +101,8 @@ class UserOutboxFinderSubAssembler(
                 noOutboxList.add(it.user)
             }
         }
+
+        hasTried.fitTo(noOutboxList.size)
 
         if (noOutboxList.isEmpty()) return null
 

@@ -75,27 +75,31 @@ class CustomFeedTopNavFilter(
 
     private fun byOutbox(authorsPerRelay: Map<NormalizedRelayUrl, Set<HexKey>>) = CustomFeedTopNavPerRelayFilterSet(authorsPerRelay.mapValues { scope(it.value) })
 
-    // Mirrors toPerRelayFlow: the authors' own relays are read only when the feed pins no relays.
-    override fun outboxAuthors(): Set<HexKey> = if (source != null && ownRelays.isEmpty() && proxyRelays.isEmpty()) authors else emptySet()
+    // The authors whose own relays this feed reads: only when it names authors and pins no relays of
+    // its own or a proxy. Routes both the REQ (toPerRelayFlow) and the relay-list loading (outboxAuthors).
+    private val authorsByOutbox: Set<HexKey>? =
+        if (source != null && ownRelays.isEmpty() && proxyRelays.isEmpty() && authors.isNotEmpty()) authors else null
+
+    override fun outboxAuthors(): Set<HexKey> = authorsByOutbox.orEmpty()
 
     override fun toPerRelayFlow(cache: ICacheProvider): Flow<CustomFeedTopNavPerRelayFilterSet> =
         when {
             source == null -> MutableStateFlow(CustomFeedTopNavPerRelayFilterSet(emptyMap()))
-            ownRelays.isNotEmpty() -> MutableStateFlow(everywhere(ownRelays))
-            proxyRelays.isNotEmpty() -> MutableStateFlow(everywhere(proxyRelays))
-            authors.isNotEmpty() ->
-                combine(OutboxRelayLoader().toAuthorsPerRelayFlow(authors, cache) { it }, blockedRelays) { perRelay, blocked ->
+            authorsByOutbox != null ->
+                combine(OutboxRelayLoader().toAuthorsPerRelayFlow(authorsByOutbox, cache) { it }, blockedRelays) { perRelay, blocked ->
                     byOutbox(perRelay.minus(blocked))
                 }
+            ownRelays.isNotEmpty() -> MutableStateFlow(everywhere(ownRelays))
+            proxyRelays.isNotEmpty() -> MutableStateFlow(everywhere(proxyRelays))
             else -> followsRelays.map { everywhere(it) }
         }
 
     override fun startValue(cache: ICacheProvider): CustomFeedTopNavPerRelayFilterSet =
         when {
             source == null -> CustomFeedTopNavPerRelayFilterSet(emptyMap())
+            authorsByOutbox != null -> byOutbox(OutboxRelayLoader().authorsPerRelaySnapshot(authorsByOutbox, cache) { it }.minus(blockedRelays.value))
             ownRelays.isNotEmpty() -> everywhere(ownRelays)
             proxyRelays.isNotEmpty() -> everywhere(proxyRelays)
-            authors.isNotEmpty() -> byOutbox(OutboxRelayLoader().authorsPerRelaySnapshot(authors, cache) { it }.minus(blockedRelays.value))
             else -> everywhere(followsRelays.value)
         }
 }

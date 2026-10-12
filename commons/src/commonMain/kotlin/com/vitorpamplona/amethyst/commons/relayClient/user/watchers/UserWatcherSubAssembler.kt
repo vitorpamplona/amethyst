@@ -44,11 +44,11 @@ class UserWatcherSubAssembler(
      * This assembler saves the EOSE per user key. That EOSE includes their metadata, etc
      * and reports, but only from trusted accounts (follows of all logged in users).
      *
-     * Sized for a feed's whole author list (see [UserFinderQueryState.isFeedAuthor]), not just the
-     * users on screen: an evicted user loses its `since` and is downloaded again in full, and that
-     * download's EOSE evicts another, looping while the feed is open.
+     * Fitted to the watched users on every pass ([EOSEAccountFast.fitTo]): a feed hands over whole
+     * lists (see [UserFinderQueryState.isFeedAuthor]), and an evicted user loses its `since` and is
+     * downloaded again in full.
      */
-    var latestEOSEs: EOSEAccountFast<User> = EOSEAccountFast(10_000)
+    var latestEOSEs: EOSEAccountFast<User> = EOSEAccountFast(200)
 
     fun newEose(
         relay: NormalizedRelayUrl,
@@ -92,6 +92,7 @@ class UserWatcherSubAssembler(
 
     override fun updateSubscriptions(keys: Set<UserFinderQueryState>) {
         val users = keys.mapTo(mutableSetOf()) { it.user }
+        latestEOSEs.fitTo(users.size)
 
         if (users.isEmpty()) {
             sub.updateFilters(null)

@@ -195,6 +195,25 @@ class FeedAuthorsUserFinderTest {
     }
 
     @Test
+    fun aListLargerThanTheBaseCacheIsNotAskedForAgain() {
+        // More members than the tried-set's base size (200). Before it was fitted to the live keys,
+        // marking them all tried evicted the first 100, which the next pass asked for again.
+        val keys = List(300) { UserFinderQueryState(newUser(), account, isFeedAuthor = true) }
+        assertEquals(
+            300,
+            outboxFinder
+                .updateFilter(keys)
+                .orEmpty()
+                .authors()
+                .size,
+        )
+
+        keys.forEach { outboxFinder.hasTried.newEose(it.user, indexRelay, TimeUtils.now()) }
+
+        assertEquals(emptySet(), outboxFinder.updateFilter(keys).orEmpty().authors())
+    }
+
+    @Test
     fun onlyDrawnUsersKeepAStandingReqWhenNoRelayHasTheirList() {
         val member = newUser()
         val drawn = newUser()
