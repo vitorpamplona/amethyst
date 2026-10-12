@@ -241,8 +241,8 @@ finished. Now:
 - Step 2 reconciles **all** cards, not the window, and drops the ids only we hold. Measured on
   that relay: 151k ids reconciled in ~40 KB down, ~26 KB up, ~3 s.
 - Kind 5s are fetched only in step 3 (relays without NIP-77), where they are the only signal.
-- The provider's relays count as the user's own (`TrustedRelayListsState`), so under default
-  privacy settings the sync goes over clearnet, not Tor.
+- Under default privacy settings the provider's relay was a "new" relay, so the sync went over
+  Tor; PR #4437 counts the relays in the user's 10040 as their own.
 
 ### D11. On disk
 A single file per account: `filesDir/accounts/<pubkey>/wot/network-v1.bin`. It lives inside the
