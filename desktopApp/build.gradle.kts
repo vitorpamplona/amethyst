@@ -291,8 +291,8 @@ val rpmGStreamerDeps =
 
 // jpackage's template sets Autoreq: 0 (rpm would otherwise require the bundled runtime's own
 // sonames, which Autoprov: 0 leaves unprovided) and fills in the system libraries itself, but it can
-// only name their packages on an rpm-based host. Built on Ubuntu, the .rpm required none of them,
-// so a minimal Fedora or openSUSE install took it and then failed at launch. These are the sonames
+// only name their packages on an rpm-based host. Built on Ubuntu, the .rpm required none of them
+// and only got them through what the GStreamer packages happen to pull in. These are the sonames
 // the launcher, the bundled runtime and skiko link (DT_NEEDED) that the package doesn't ship, the
 // same set the .deb gets from dpkg-shlibdeps; soname requires resolve on both distributions.
 // The arm64 skiko also links libEGL (see scripts/add-deb-libegl-dep.sh). The arch is the packaging
