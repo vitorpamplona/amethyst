@@ -139,6 +139,22 @@ fun LoginPage(
     ) {
         LoggedOffTitle(stringRes(Res.string.login_welcome_back))
 
+        // A signer app (Amber and the like) is the way in where one is installed: the key never
+        // reaches Amethyst. It leads, filled; typing a key becomes the alternative below it.
+        val signerFirst = platform.rememberHasExternalSignerLogin()
+        if (signerFirst) {
+            // Before the button it gates: the signer button stays disabled until it is checked.
+            if (loginViewModel.isFirstLogin) {
+                platform.TermsGate(
+                    checked = loginViewModel.acceptedTerms,
+                    onCheckedChange = loginViewModel::updateAcceptedTerms,
+                    showError = loginViewModel.termsAcceptanceIsRequiredError,
+                )
+            }
+            platform.ExternalSignerLoginButton(loginViewModel)
+            OrDivider()
+        }
+
         KeyTextField(
             value = loginViewModel.key,
             onValueChange = loginViewModel::updateKey,
@@ -167,7 +183,7 @@ fun LoginPage(
             )
         }
 
-        if (loginViewModel.isFirstLogin) {
+        if (loginViewModel.isFirstLogin && !signerFirst) {
             platform.TermsGate(
                 checked = loginViewModel.acceptedTerms,
                 onCheckedChange = loginViewModel::updateAcceptedTerms,
@@ -175,26 +191,20 @@ fun LoginPage(
             )
         }
 
-        LoggedOffPrimaryButton(
+        LoggedOffButton(
             text = stringRes(Res.string.login),
             // Stays enabled while it works: a disabled button would grey out under its spinner.
             // login() ignores taps until the attempt ends.
             enabled = loginViewModel.acceptedTerms,
             // A remote signer's login has its own dialog; the button only spins for its own.
             loading = loginViewModel.processingLogin && !loginViewModel.nostrConnectPending,
+            // The alternative when a signer app leads.
+            filled = !signerFirst,
             onClick = loginViewModel::login,
         )
 
-        val hasExternalSigner = platform.rememberHasExternalSignerLogin()
-        if (platform.supportsRemoteSignerLogin || hasExternalSigner) {
-            OrDivider()
-        }
-
-        if (hasExternalSigner) {
-            platform.ExternalSignerLoginButton(loginViewModel)
-        }
-
         if (platform.supportsRemoteSignerLogin) {
+            OrDivider()
             RemoteSignerLoginButton(loginViewModel)
         }
     }
@@ -230,22 +240,41 @@ fun LoggedOffPrimaryButton(
     enabled: Boolean,
     onClick: () -> Unit,
     loading: Boolean = false,
+    icon: (@Composable () -> Unit)? = null,
+) = LoggedOffButton(text, enabled, onClick, loading, filled = true, icon = icon)
+
+/**
+ * A full-width button of the logged-off screens: filled for the screen's main way in, outlined
+ * for an alternative. Shows a spinner instead of its [icon] while [loading].
+ */
+@Composable
+fun LoggedOffButton(
+    text: String,
+    enabled: Boolean,
+    onClick: () -> Unit,
+    loading: Boolean = false,
+    filled: Boolean = true,
+    icon: (@Composable () -> Unit)? = null,
 ) {
-    Button(
-        onClick = onClick,
-        enabled = enabled,
-        shape = LoggedOffShape,
-        modifier = Modifier.fillMaxWidth().height(52.dp),
-    ) {
+    val content: @Composable () -> Unit = {
         if (loading) {
             CircularProgressIndicator(
                 modifier = Modifier.size(18.dp),
                 strokeWidth = 2.dp,
-                color = MaterialTheme.colorScheme.onPrimary,
+                color = if (filled) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.primary,
             )
+            Spacer(Modifier.width(12.dp))
+        } else if (icon != null) {
+            icon()
             Spacer(Modifier.width(12.dp))
         }
         Text(text, style = MaterialTheme.typography.titleSmall)
+    }
+    val modifier = Modifier.fillMaxWidth().height(52.dp)
+    if (filled) {
+        Button(onClick = onClick, enabled = enabled, shape = LoggedOffShape, modifier = modifier) { content() }
+    } else {
+        OutlinedButton(onClick = onClick, enabled = enabled, shape = LoggedOffShape, modifier = modifier) { content() }
     }
 }
 
@@ -270,16 +299,7 @@ fun LoggedOffSecondaryButton(
     enabled: Boolean = true,
     onClick: () -> Unit,
 ) {
-    OutlinedButton(
-        onClick = onClick,
-        enabled = enabled,
-        shape = LoggedOffShape,
-        modifier = Modifier.fillMaxWidth().height(52.dp),
-    ) {
-        icon()
-        Spacer(Modifier.width(12.dp))
-        Text(text, style = MaterialTheme.typography.titleSmall)
-    }
+    LoggedOffButton(text, enabled, onClick, filled = false, icon = icon)
 }
 
 @Composable

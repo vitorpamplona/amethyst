@@ -20,21 +20,26 @@
  */
 package com.vitorpamplona.amethyst.commons.account.ui.login
 
+import androidx.compose.foundation.layout.size
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.unit.dp
+import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.login_with_external_signer
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 
+/** Android's signer-app login. Filled: where a signer app is installed, it is the way in. */
 @Composable
 fun LoginWithAmberButton(
     enabled: Boolean,
     onClick: () -> Unit,
 ) {
-    LoggedOffSecondaryButton(
+    LoggedOffPrimaryButton(
         text = stringRes(Res.string.login_with_external_signer),
-        symbol = MaterialSymbols.Key,
         enabled = enabled,
         onClick = onClick,
+        icon = { Icon(MaterialSymbols.Key, contentDescription = null, modifier = Modifier.size(20.dp)) },
     )
 }
