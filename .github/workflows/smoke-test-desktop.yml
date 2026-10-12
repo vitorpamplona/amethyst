@@ -6,6 +6,10 @@ on:
     paths:
       - 'desktopApp/**'
       - '.github/workflows/smoke-test-desktop.yml'
+      # The keyring self-test exercises these, and the libraries they pin.
+      - 'commons/src/jvmMain/kotlin/com/vitorpamplona/amethyst/commons/keystorage/**'
+      - 'scripts/keyring-self-test.sh'
+      - 'gradle/libs.versions.toml'
 
 permissions:
   contents: read
@@ -77,7 +81,8 @@ jobs:
           cache-read-only: true
 
       - name: Install xvfb + packaging deps
-        run: sudo apt-get update && sudo apt-get install -y xvfb fakeroot
+        # gnome-keyring + dbus: the keyring self-test below needs a Secret Service session.
+        run: sudo apt-get update && sudo apt-get install -y xvfb fakeroot gnome-keyring dbus
 
       - name: Build release .deb
         uses: nick-fields/retry@ad984534de44a9489a53aefd81eb77f87c70dc60  # v4.0.0
@@ -158,6 +163,19 @@ jobs:
             echo "FAIL: Application exited with code $EXIT_CODE within 10s"
             exit 1
           fi
+
+      # The release build must keep keys in the OS keyring: ProGuard once stripped the D-Bus
+      # transport and broke a signed jar, so every Linux release silently stopped using it.
+      # See commons/plans/2026-10-12-desktop-key-storage.md.
+      - name: Keyring self-test - the installed app keeps keys in GNOME Keyring
+        run: |
+          set -euo pipefail
+          LAUNCHER=$(find /opt -name "Amethyst" -type f -executable 2>/dev/null | head -1)
+          if [[ -z "$LAUNCHER" ]]; then
+            LAUNCHER=$(dpkg -L amethyst | grep -E '/bin/[Aa]methyst$' | head -1)
+          fi
+          [[ -n "$LAUNCHER" ]] || { echo "FAIL: could not find Amethyst launcher binary"; exit 1; }
+          bash scripts/keyring-self-test.sh "$LAUNCHER"
 
       - name: Upload .deb artifact (for manual testing)
         if: always()

@@ -134,6 +134,7 @@ class AccountSessionManager(
         transientAccount: Boolean,
         loginWithExternalSigner: Boolean = false,
         packageName: String = "",
+        rememberKey: Boolean = true,
     ) = withContext(Dispatchers.IO) {
         if (key.startsWith(BUNKER_URI_PREFIX)) {
             return@withContext startUI(localPreferences.setDefaultAccount(remoteSignerLogin(key, transientAccount)))
@@ -174,6 +175,7 @@ class AccountSessionManager(
                     AccountSettings(
                         keyPair = KeyPair(privKey = privHex.hexToByteArray()),
                         transientAccount = transientAccount,
+                        rememberKey = rememberKey,
                     )
                 }
 
@@ -181,6 +183,7 @@ class AccountSessionManager(
                     AccountSettings(
                         keyPair = KeyPair(privKey = Nip06().privateKeyFromMnemonic(key)),
                         transientAccount = transientAccount,
+                        rememberKey = rememberKey,
                     )
                 }
 
@@ -195,6 +198,7 @@ class AccountSessionManager(
                     AccountSettings(
                         keyPair = KeyPair(Hex.decode(key)),
                         transientAccount = transientAccount,
+                        rememberKey = rememberKey,
                     )
                 }
             }
@@ -273,6 +277,7 @@ class AccountSessionManager(
         transientAccount: Boolean,
         loginWithExternalSigner: Boolean = false,
         packageName: String = "",
+        rememberKey: Boolean = true,
         onError: (String?) -> Unit,
     ) {
         // Accepts keys copied by hand from the backup screen: UPPERCASE, and split
@@ -297,7 +302,7 @@ class AccountSessionManager(
                     onError("Could not decrypt key with provided password")
                     Log.e("Login", "Could not decrypt ncryptsec")
                 } else {
-                    loginSync(newKey, transientAccount, loginWithExternalSigner, packageName, onError)
+                    loginSync(newKey, transientAccount, loginWithExternalSigner, packageName, onError, rememberKey)
                 }
             } else if (EMAIL_PATTERN.matches(cleanKey)) {
                 // Delegate to the shared quartz resolver so NIP-05 handling stays in
@@ -315,7 +320,7 @@ class AccountSessionManager(
                     onError("Could not load nip05 address from the server: $cleanKey. ${e.message}")
                 }
             } else {
-                loginSync(cleanKey, transientAccount, loginWithExternalSigner, packageName, onError)
+                loginSync(cleanKey, transientAccount, loginWithExternalSigner, packageName, onError, rememberKey)
             }
         }
     }
@@ -338,9 +343,10 @@ class AccountSessionManager(
         loginWithExternalSigner: Boolean = false,
         packageName: String = "",
         onError: (String) -> Unit,
+        rememberKey: Boolean = true,
     ) {
         try {
-            loginAndStartUI(key, transientAccount, loginWithExternalSigner, packageName)
+            loginAndStartUI(key, transientAccount, loginWithExternalSigner, packageName, rememberKey)
         } catch (e: Exception) {
             if (e is CancellationException) throw e
             Log.e("Login", "Could not sign in", e)

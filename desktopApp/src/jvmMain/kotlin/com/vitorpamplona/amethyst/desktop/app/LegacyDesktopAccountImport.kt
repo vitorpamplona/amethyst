@@ -20,7 +20,9 @@
  */
 package com.vitorpamplona.amethyst.desktop.app
 
+import com.vitorpamplona.amethyst.commons.account.AccountInfo
 import com.vitorpamplona.amethyst.commons.account.StoreAccountSessionStore
+import com.vitorpamplona.amethyst.commons.keystorage.KeyStorageStatus
 import com.vitorpamplona.amethyst.commons.keystorage.SecureKeyStorage
 import com.vitorpamplona.amethyst.commons.model.AccountSettings
 import com.vitorpamplona.amethyst.commons.model.account.SignerType
@@ -59,9 +61,17 @@ class LegacyDesktopAccountImport(
      */
     suspend fun start() {
         enableVault(listOf(DesktopAccountStorage.METADATA_KEY_ALIAS))
+        // A keyring that refused (a denied prompt, a locked keyring) would answer "absent" for keys it
+        // holds: the import would mint a new metadata key, lose the legacy accounts file and mark
+        // itself done. Leave it for the next start, or for Settings › Key storage › Try again.
+        if (keyStorage.status.value is KeyStorageStatus.KeyringUnreachable) return
         importIfNeeded()
-        enableVault(sessionStore.allSavedAccounts().flatMap { keyAliases(it.npub) } + LEGACY_SHARED_TRANSPORT_KEY_ALIAS)
+        // Only the keys of logins that hold one: the import folds the bunker transport aliases in
+        // itself, and probing them on every launch found nothing at the cost of keyring calls.
+        enableVault(sessionStore.allSavedAccounts().filter { it.holdsOwnKey() }.map { it.npub })
     }
+
+    private fun AccountInfo.holdsOwnKey() = hasPrivKey && keyRemembered && !loggedInWithExternalSigner && !loggedInWithRemoteSigner
 
     private suspend fun enableVault(aliases: List<String>) {
         try {

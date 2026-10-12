@@ -29,6 +29,7 @@ import com.vitorpamplona.amethyst.commons.browser.BrowserIconRegistry
 import com.vitorpamplona.amethyst.commons.connectedApps.DataStoreNostrSignerPermissionStore
 import com.vitorpamplona.amethyst.commons.connectedApps.nip46.DataStoreNip46ClientStore
 import com.vitorpamplona.amethyst.commons.favorites.FavoriteAppsRegistry
+import com.vitorpamplona.amethyst.commons.keystorage.KeyStoragePrompts
 import com.vitorpamplona.amethyst.commons.keystorage.SecureKeyStorage
 import com.vitorpamplona.amethyst.commons.keystorage.SecureKeyStorageVault
 import com.vitorpamplona.amethyst.commons.model.UiSettingsFlow
@@ -95,6 +96,7 @@ import com.vitorpamplona.amethyst.desktop.service.scheduledposts.OsScheduler
 import com.vitorpamplona.amethyst.desktop.tor.DesktopTorManager
 import com.vitorpamplona.marmotquic.QuicAgentTextStreamTransport
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
+import com.vitorpamplona.quartz.nip01Core.core.hexToByteArray
 import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.NostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.RelayOfflineTracker
@@ -105,11 +107,13 @@ import com.vitorpamplona.quartz.nip03Timestamp.okhttp.OkHttpBitcoinExplorer
 import com.vitorpamplona.quartz.nip03Timestamp.ots.OtsBlockHeightCache
 import com.vitorpamplona.quartz.nip05DnsIdentifiers.Nip05Client
 import com.vitorpamplona.quartz.nip05DnsIdentifiers.OkHttpNip05Fetcher
+import com.vitorpamplona.quartz.nip19Bech32.toNpub
 import com.vitorpamplona.quartz.nip46RemoteSigner.BunkerClientMetadata
 import com.vitorpamplona.quartz.nipBCOnchainZaps.chain.CachingOnchainBackend
 import com.vitorpamplona.quartz.nipBCOnchainZaps.chain.EsploraBackend
 import com.vitorpamplona.quartz.utils.Log
 import com.vitorpamplona.quic.tls.JdkCertificateValidator
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineExceptionHandler
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -390,8 +394,11 @@ class DesktopAppModules(
     /** OS notifications: the native notifier, its settings, and what is worth a notification. */
     val notifications by lazy { DesktopNotifications(applicationIOScope) }
 
-    /** The OS keyring (or its encrypted-file fallback). */
-    private val keyStorage = SecureKeyStorage.create(null)
+    /** What key storage asks the user (the key-file password, a key this device does not keep). */
+    private val keyPrompts = KeyStoragePrompts()
+
+    /** The OS keyring, or without one the NIP-49 password file in [filesDir]. */
+    private val keyStorage = SecureKeyStorage.create(filesDir).also { it.prompts = keyPrompts }
 
     val sessionStore =
         StoreAccountSessionStore(
@@ -399,6 +406,7 @@ class DesktopAppModules(
             appStores = appStores,
             keyVault = SecureKeyStorageVault(keyStorage),
             scope = applicationIOScope,
+            keyPrompts = keyPrompts,
         )
 
     // A desktop has no location provider yet: location chats and "around me" ask for a geohash.
@@ -457,6 +465,16 @@ class DesktopAppModules(
             remoteSignerMetadata = REMOTE_SIGNER_METADATA,
         )
 
+    /** Settings › Key storage, the key prompts and the keyring alert, for the shared UI. */
+    val keyStorageController by lazy { DesktopKeyStorage(keyStorage, keyPrompts, ::openKeysAndLogIn) }
+
+    // Before the first login, so a user of the legacy app starts where they left off; again after
+    // the user retries the keyring or unlocks the password file.
+    private suspend fun openKeysAndLogIn() {
+        LegacyDesktopAccountImport(sessionStore, keyStorage, filesDir).start()
+        sessionManager.loginWithDefaultAccountIfLoggedOff()
+    }
+
     /**
      * Saves every loaded account's settings now, as [flushUiPrefs] does the UI's: a last-read marker
      * or a setting changed in the last second before quitting is still in the account's debounce.
@@ -483,6 +501,13 @@ class DesktopAppModules(
             scheduledPostStore.removeForAccount(pubkey)
             powPublishQueue.cancelForOwner(pubkey)
             powJobStore.removeForAccount(pubkey)
+            // A login imported from the legacy app may still own a bunker transport key in the keyring.
+            try {
+                keyStorage.deletePrivateKey(LegacyDesktopAccountImport.bunkerTransportKeyAlias(pubkey.hexToByteArray().toNpub()))
+            } catch (e: Exception) {
+                if (e is CancellationException) throw e
+                Log.w("DesktopAppModules", "Could not delete the bunker transport key of a removed account", e)
+            }
         }
     }
 
@@ -547,11 +572,7 @@ class DesktopAppModules(
             }
         }
 
-        applicationIOScope.launch {
-            // Before the first login, so a user of the legacy app starts where they left off.
-            LegacyDesktopAccountImport(sessionStore, keyStorage, filesDir).start()
-            sessionManager.loginWithDefaultAccountIfLoggedOff()
-        }
+        applicationIOScope.launch { openKeysAndLogIn() }
     }
 
     companion object {

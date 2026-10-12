@@ -101,6 +101,12 @@ import kotlin.uuid.Uuid
 class AccountSettings(
     val keyPair: KeyPair,
     val transientAccount: Boolean = false,
+    /**
+     * Whether this device keeps the private key. False: the account and its settings are saved,
+     * the key is not, and it is asked for at the next launch. Set by the login screen's
+     * "Remember my key on this device", and by the session store when it loads such an account.
+     */
+    var rememberKey: Boolean = true,
     var externalSignerPackageName: String? = null,
     /**
      * NIP-46 login: the `bunker://` address (secret stripped) of the remote signer that holds this

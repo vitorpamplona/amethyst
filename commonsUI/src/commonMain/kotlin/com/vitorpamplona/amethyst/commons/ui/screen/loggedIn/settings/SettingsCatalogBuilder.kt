@@ -55,6 +55,8 @@ import com.vitorpamplona.amethyst.commons.resources.favorite_dvms_title
 import com.vitorpamplona.amethyst.commons.resources.home_tabs_search_keywords
 import com.vitorpamplona.amethyst.commons.resources.ic_tor
 import com.vitorpamplona.amethyst.commons.resources.import_follows_search_keywords
+import com.vitorpamplona.amethyst.commons.resources.key_storage_search_keywords
+import com.vitorpamplona.amethyst.commons.resources.key_storage_title
 import com.vitorpamplona.amethyst.commons.resources.media_servers
 import com.vitorpamplona.amethyst.commons.resources.media_servers_search_keywords
 import com.vitorpamplona.amethyst.commons.resources.messages_settings
@@ -133,6 +135,7 @@ fun buildSettingsCatalog(
     legal: SettingsCategory?,
     onResetMarmot: () -> Unit,
     canOpen: (Route) -> Boolean = { true },
+    hasKeyStorage: Boolean = false,
 ): List<SettingsCategory> {
     // Most rows are a symbol icon + a keyword blob that navigates to a route. This local
     // helper collapses that shape to one line per row and makes a mismatched keyword/route
@@ -181,6 +184,7 @@ fun buildSettingsCatalog(
                     symEntry(Res.string.bolt12_offers, MaterialSymbols.Payment, Res.string.bolt12_offers_search_keywords, Route.EditBolt12Offers),
                     symEntry(Res.string.security_filters, MaterialSymbols.Security, Res.string.security_filters_search_keywords, Route.SecurityFilters),
                     symEntry(Res.string.privacy_lock_title, MaterialSymbols.Lock, Res.string.privacy_lock_search_keywords, Route.PrivacyLockSettings),
+                    if (hasKeyStorage) symEntry(Res.string.key_storage_title, MaterialSymbols.Key, Res.string.key_storage_search_keywords, Route.KeyStorageSettings) else null,
                     symEntry(Res.string.web_of_trust, MaterialSymbols.Shield, Res.string.web_of_trust_search_keywords, Route.WebOfTrust),
                     symEntry(Res.string.translations, MaterialSymbols.Translate, Res.string.translations_search_keywords, Route.UserSettings),
                     symEntry(Res.string.napplet_permissions_title, MaterialSymbols.Apps, Res.string.napplet_connected_apps_search_keywords, Route.ConnectedApps),

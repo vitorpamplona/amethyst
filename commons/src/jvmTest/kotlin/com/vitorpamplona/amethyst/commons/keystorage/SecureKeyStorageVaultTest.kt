@@ -57,7 +57,7 @@ class SecureKeyStorageVaultTest {
             account: String,
         ): String {
             readsBySlot.computeIfAbsent(service to account) { AtomicInteger(0) }.incrementAndGet()
-            return store[service to account] ?: throw PasswordAccessException("no entry")
+            return store[service to account] ?: throw PasswordAccessException("No stored credentials match $service account: $account")
         }
 
         override fun setPassword(
@@ -75,7 +75,7 @@ class SecureKeyStorageVaultTest {
             account: String,
         ) {
             if (store.remove(service to account) == null) {
-                throw PasswordAccessException("no entry")
+                throw PasswordAccessException("No stored credentials match $service account: $account")
             }
         }
 
@@ -455,17 +455,12 @@ class SecureKeyStorageVaultTest {
                 }
             storage.enableConsolidatedVault(listOf("account-metadata-key"))
 
-            // An alias the vault never covered still falls through to the strict probe.
-            // Off macOS that probe is javakeyring, which cannot tell a miss from a denial,
-            // so the strict contract there is to throw on any miss.
+            // An alias the vault never covered still falls through to the strict probe. Off macOS
+            // that probe is javakeyring: its "No stored credentials match" (Windows: error 1168) is
+            // a miss, and anything else, a denial, throws (SecureKeyStorageOrThrowTest). A miss
+            // used to throw too, which left every view-only or bunker login unloadable there.
             if (!System.getProperty("os.name").orEmpty().startsWith("Mac")) {
-                try {
-                    storage.getPrivateKeyOrThrow("npub1neverseen")
-                    throw AssertionError("Expected SecureStorageException for a non-mac keyring miss")
-                } catch (e: SecureStorageException) {
-                    // Walk the chain: coroutine stack-trace recovery may wrap the original.
-                    assertTrue(generateSequence<Throwable>(e) { it.cause }.any { it is PasswordAccessException })
-                }
+                assertNull(storage.getPrivateKeyOrThrow("npub1neverseen"))
                 return@runBlocking
             }
 

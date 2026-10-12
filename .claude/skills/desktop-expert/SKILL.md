@@ -50,9 +50,16 @@ the actual system (menu bar, Cmd key, shell-outs).
 ## Keys
 
 Keys go to the OS keyring through `SecureKeyStorage`
-(`commons/src/jvmMain/.../commons/keystorage/SecureKeyStorage.kt`, `java-keyring`; falls back to a
-password-encrypted file). On macOS the release ProGuard pass must keep jkeychain's native library:
-`desktopApp/compose-rules.pro` and the `verifyJkeychainNativeSurvivesProguard` task guard that.
+(`commons/src/jvmMain/.../commons/keystorage/SecureKeyStorage.kt`, `java-keyring`). Without one they
+go to a NIP-49 password file (`PasswordKeyFile`), and a login can opt out of keeping its key. The
+status, prompts and Settings › Key storage are shared (`KeyStorageController`, provided by
+`DesktopAppRoot.keyStorage`); see `commons/plans/2026-10-12-desktop-key-storage.md`.
+
+The keyring breaks in release builds only, so test the packaged app: `Amethyst --keyring-self-test`
+(CI runs it through `keyring-self-test.sh` in the repo's top-level scripts folder). ProGuard must keep jkeychain's native library and
+dbus-java's ServiceLoader transport, and drop the signatures of jars it rewrites (hkdf):
+`desktopApp/compose-rules.pro`, `verifyJkeychainNativeSurvivesProguard`,
+`verifyDbusTransportSurvivesProguard`.
 
 ## Run and package
 

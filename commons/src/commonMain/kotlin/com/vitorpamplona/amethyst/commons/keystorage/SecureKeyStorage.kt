@@ -125,7 +125,15 @@ expect class SecureKeyStorage private constructor() {
 /**
  * Exception thrown when secure storage operations fail.
  */
-class SecureStorageException(
+open class SecureStorageException(
     message: String,
     cause: Throwable? = null,
 ) : Exception(message, cause)
+
+/**
+ * The key was not kept because the user chose so: they declined to keep keys on this device, or
+ * skipped unlocking the key file. Not a failure to report; the key is asked for again next launch.
+ */
+class KeyNotKeptException(
+    message: String,
+) : SecureStorageException(message)
