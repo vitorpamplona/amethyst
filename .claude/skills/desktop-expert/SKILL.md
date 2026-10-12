@@ -1,6 +1,6 @@
 ---
 name: desktop-expert
-description: Desktop JVM shim in desktopApp/.../desktop/app/: AmethystDesktop window, DesktopMenuBar shortcuts, platform ports, OS keyring; run/package (:desktopApp:run, packageDmg/Msi/Deb/Rpm). Use when touching desktopApp. NOT for shared screens/navigation.
+description: Desktop JVM shim in desktopApp/: AmethystDesktop window, DesktopMenuBar, platform ports, OS keyring; :desktopApp:run, packaging. Use when touching desktopApp, or to run/screenshot the shared UI headless (tools/desktop-run, Xvfb) to verify a UI change. NOT for writing shared screens.
 ---
 
 # Desktop (JVM shim)
@@ -76,5 +76,29 @@ dbus-java's ServiceLoader transport, and drop the signatures of jars it rewrites
   `:desktopApp:run` JVM loaded and it crashes with `NoClassDefFoundError`. Relaunch it afterwards.
 - Build fails? Check `java -version` (21+), then that `./gradlew :quartz:build` compiles.
 
-Tests: `./gradlew :desktopApp:jvmTest`; `desktopApp/src/jvmTest/.../desktop/testrelay/` has an
-in-process relay fixture (`LaunchFixtureRelay`).
+## Verify a UI change by running it (headless too)
+
+The window renders the shared UI, so this is how an agent checks a `commonsUI`/`commons` change for
+real (AGENTS.md "Run the app before calling a UI change done"). `tools/desktop-run/` does it without
+a display or a window manager: `run-headless.sh start` runs Xvfb + `:desktopApp:run` on a scratch
+profile (`/tmp/amethyst-desktop-run/profile`), waits for the first paint and saves `shot.png`;
+`Drive.java` (pure JDK `java.awt.Robot`) clicks, types, presses keys, scrolls and takes screenshots.
+Read the screenshots with the image-reading tool. Details: `tools/desktop-run/README.md`.
+
+- Log in with a public `npub` for a read-only session. A throwaway Sign Up account is only for flows
+  that must sign, and only when asked, because it publishes to real relays.
+- The screen size picks the shell: `AMETHYST_SCREEN=480x900x24` gives the phone layout (bottom bar),
+  the default 1600x1000 gives the permanent drawer + docked notifications. Use a new
+  `AMETHYST_DISPLAY` per size.
+- Under Xvfb: no GL (the script sets `SKIKO_RENDER_API=SOFTWARE`), no keyring (password-file
+  fallback), no native video player ("Can't play this video"). Those are the environment, not your
+  change. `run-headless.sh logs` lists exceptions first.
+- Never `pkill -f AmethystDesktopKt` from a tool shell: it matches the shell itself. Use `stop`.
+
+For a check that must keep passing, write a Compose UI test (`createComposeRule()`, see
+`desktopApp/src/jvmTest/.../desktop/ui/BlockInteractionsUiTest.kt`); CI runs them under
+`xvfb-run --auto-servernum ./gradlew :desktopApp:test`.
+
+Tests: `./gradlew :desktopApp:test` (a plain JVM module: sources sit in `src/jvmTest` but the task
+is `test`); `desktopApp/src/jvmTest/.../desktop/testrelay/` has an in-process relay fixture
+(`LaunchFixtureRelay`).
