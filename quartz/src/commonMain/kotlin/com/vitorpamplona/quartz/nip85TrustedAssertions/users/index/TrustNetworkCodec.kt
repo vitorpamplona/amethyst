@@ -49,6 +49,12 @@ data class TrustNetworkHeader(
      */
     val heldAfterCursor: Int? = null,
     /**
+     * Every card held (entries and tombstones), or null when unknown. A card the relay no longer
+     * serves (a deletion it applied, or a version it replaced) lowers the relay's count below
+     * this one, so an update learns of it from a COUNT instead of downloading kind 5s.
+     */
+    val heldTotal: Int? = null,
+    /**
      * A random number written into both files at each save. An index is used with an ids file
      * only when the two match, so a crash between the two writes cannot pair an index with the
      * ids of another one (they can have the same size).
@@ -64,7 +70,8 @@ data class TrustNetworkHeader(
  * ```
  * "AWOT" | u16 version | 32B provider | u16 relayLen + utf8 relay
  * | i64 syncCursor | i64 lastFullCheck | i64 lastUpdate | i32 heldAtCursor (-1 unknown)
- * | i32 heldAfterCursor (-1 unknown, version 4+) | i64 generation | i32 N
+ * | i32 heldAfterCursor (-1 unknown, version 4+) | i32 heldTotal (-1 unknown, version 5+)
+ * | i64 generation | i32 N
  * | keys N×16 | rank N×1 | hops N×1 | followers N×4
  * ```
  * Ids file (`network-ids-v2.bin`), aligned with the index, then the tombstones:
@@ -75,11 +82,11 @@ data class TrustNetworkHeader(
  */
 object TrustNetworkCodec {
     /**
-     * Version 2 added `heldAtCursor`, version 3 the `generation`, version 4 `heldAfterCursor`.
-     * Version 3 still reads (its `heldAfterCursor` is unknown, so the next update reconciles
-     * once); older files are ignored (and downloaded again).
+     * Version 2 added `heldAtCursor`, version 3 the `generation`, version 4 `heldAfterCursor`,
+     * version 5 `heldTotal`. Versions 3 and 4 still read (the counts they lack are unknown, so the
+     * next update reconciles once); older files are ignored (and downloaded again).
      */
-    const val VERSION = 4
+    const val VERSION = 5
     private const val OLDEST_READABLE_VERSION = 3
 
     /** The ids file gained tombstones in version 2 and the `generation` in 3; older ones are ignored. */
@@ -93,7 +100,7 @@ object TrustNetworkCodec {
     ): ByteArray {
         val relay = header.relay.encodeToByteArray()
         val n = index.size
-        val out = Writer(4 + 2 + 32 + 2 + relay.size + 8 * 3 + 4 + 4 + 8 + 4 + n * 22)
+        val out = Writer(4 + 2 + 32 + 2 + relay.size + 8 * 3 + 4 + 4 + 4 + 8 + 4 + n * 22)
         out.bytes(INDEX_MAGIC)
         out.short(VERSION)
         out.bytes(Hex.decode(header.provider))
@@ -104,6 +111,7 @@ object TrustNetworkCodec {
         out.long(header.lastUpdate)
         out.int(header.heldAtCursor ?: -1)
         out.int(header.heldAfterCursor ?: -1)
+        out.int(header.heldTotal ?: -1)
         out.long(header.generation)
         out.int(n)
         for (v in index.keys) out.long(v)
@@ -235,7 +243,8 @@ object TrustNetworkCodec {
             val lastUpdate = long()
             val heldAtCursor = int().takeIf { it >= 0 }
             val heldAfterCursor = if (version >= 4) int().takeIf { it >= 0 } else null
-            return TrustNetworkHeader(provider, relay, syncCursor, lastFullCheck, lastUpdate, heldAtCursor, heldAfterCursor, generation = long())
+            val heldTotal = if (version >= 5) int().takeIf { it >= 0 } else null
+            return TrustNetworkHeader(provider, relay, syncCursor, lastFullCheck, lastUpdate, heldAtCursor, heldAfterCursor, heldTotal, generation = long())
         }
     }
 }

@@ -108,11 +108,14 @@ class TrustNetworkSchedulingTest {
     /** A relay that answers from these fields and records what it was asked. */
     private inner class FakeSource : TrustNetworkSource {
         val calls = CopyOnWriteArrayList<String>()
-        var news = TrustNetworkNews(cards = false, deletions = 0)
+        var news = TrustNetworkNews(cards = false)
         var newsGate: CompletableDeferred<Unit>? = null
         var downloadGate: CompletableDeferred<Unit>? = null
         var downloadSize = 3
         var downloadComplete = true
+
+        /** Thrown by the download, as a phone's OutOfMemoryError was. */
+        var downloadError: Throwable? = null
 
         /** The update finds nothing new but learns the held counts (a version 3 file lacks one). */
         var updateLearnsCounts = false
@@ -141,6 +144,7 @@ class TrustNetworkSchedulingTest {
                         calls.add("download:${provider.pubkey}")
                         resumedFrom.add(resumeFrom?.cards ?: 0)
                         downloadGate?.await()
+                        downloadError?.let { throw it }
                         return result(provider, downloadSize).let {
                             if (downloadComplete) it else TrustNetworkSyncResult(it.header, it.index, it.ids, complete = false, invalid = 0, received = it.received, detail = "partial")
                         }
@@ -211,6 +215,27 @@ class TrustNetworkSchedulingTest {
     }
 
     @Test
+    fun aSyncKilledByAnErrorEndsInAProblemInsteadOfRunningForever() =
+        runBlocking {
+            // Not an Exception: an OutOfMemoryError used to skip the status reset, so the screen
+            // said "Downloading" for good, with no Retry, while nothing ran.
+            val source = FakeSource().apply { downloadError = OutOfMemoryError("Java heap space") }
+            val wot = state(MutableStateFlow(ResolvedProvider(providerA)), source)
+            wot.awaitReady()
+            wot.awaitIdle()
+
+            assertEquals(listOf("download:${providerA.pubkey}"), source.calls.toList())
+            assertNull(wot.status.value.running, "not stuck on downloading")
+            assertEquals(TrustNetworkProblem.Failed("Java heap space"), wot.status.value.problem)
+
+            // Retry works.
+            source.downloadError = null
+            assertIs<TrustNetworkOutcome.Applied>(assertNotNull(wot.syncNow()).outcome)
+            assertNull(wot.status.value.problem)
+            assertTrue(wot.network.value != null)
+        }
+
+    @Test
     fun nothingSyncsBeforeTheProviderListIsRead() =
         runBlocking {
             writeIndex(providerA)
@@ -249,7 +274,7 @@ class TrustNetworkSchedulingTest {
     fun newsRunsTheUpdateWithoutCountingAgain() =
         runBlocking {
             writeIndex(providerA)
-            val source = FakeSource().apply { news = TrustNetworkNews(cards = true, deletions = 0) }
+            val source = FakeSource().apply { news = TrustNetworkNews(cards = true) }
             val wot = state(MutableStateFlow(ResolvedProvider(providerA)), source)
             wot.awaitReady()
             val run = assertNotNull(wot.syncNow(TrustNetworkSyncStatus.Kind.UPDATE))
@@ -267,7 +292,7 @@ class TrustNetworkSchedulingTest {
             assertNull(store.readIndex()!!.header.heldAfterCursor)
             val source =
                 FakeSource().apply {
-                    news = TrustNetworkNews(cards = true, deletions = 0)
+                    news = TrustNetworkNews(cards = true)
                     updateLearnsCounts = true
                 }
             val wot = state(MutableStateFlow(ResolvedProvider(providerA)), source)
@@ -313,7 +338,7 @@ class TrustNetworkSchedulingTest {
         runBlocking {
             // The ids file is gone, so an update would have to download everything.
             writeIndex(providerA, updatedAgo = TrustNetworkState.UPDATE_EVERY_SECS, withIds = false)
-            val source = FakeSource().apply { news = TrustNetworkNews(cards = true, deletions = 0) }
+            val source = FakeSource().apply { news = TrustNetworkNews(cards = true) }
             val wot = state(MutableStateFlow(ResolvedProvider(providerA)), source, metered = true)
             wot.awaitReady()
             wot.awaitIdle()

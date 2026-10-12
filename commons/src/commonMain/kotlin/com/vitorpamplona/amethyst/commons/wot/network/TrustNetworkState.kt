@@ -420,7 +420,9 @@ class TrustNetworkState(
             } catch (e: CancellationException) {
                 _status.value = TrustNetworkSyncStatus()
                 throw e
-            } catch (e: Exception) {
+            } catch (e: Throwable) {
+                // Not only Exceptions: an Error (an OutOfMemoryError building a large index) that
+                // escaped here left the status "running" for good, with no Retry, while nothing ran.
                 Log.w(TAG, "Trust network $requested failed for ${provider.relayUrl.url}", e)
                 TrustNetworkRun(requested, TrustNetworkOutcome.Failed(e.message ?: e::class.simpleName.orEmpty()))
             }
@@ -546,7 +548,10 @@ class TrustNetworkState(
             // header lacked (a file from before they existed would otherwise make every process
             // start reconcile again); an update's lastUpdate is not, which only means the next
             // process start asks again.
-            val countsLearned = header.heldAtCursor != current.header.heldAtCursor || header.heldAfterCursor != current.header.heldAfterCursor
+            val countsLearned =
+                header.heldAtCursor != current.header.heldAtCursor ||
+                    header.heldAfterCursor != current.header.heldAfterCursor ||
+                    header.heldTotal != current.header.heldTotal
             // A kind 5 that changed nothing still moves the cursor past it, or every update finds it again.
             val cursorMoved = header.syncCursor != current.header.syncCursor
             val saved =
