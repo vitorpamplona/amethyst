@@ -214,7 +214,9 @@ class PageRetryBackoff(
  * relay's page cap its unreachable tail is lost — there is no client-side fix (raising
  * the request `limit` is futile: the relay clamps it to the same page, or refuses it).
  * Stepping past at least keeps the download progressing to older events instead of
- * stalling forever.
+ * stalling forever. Only an EOSEd page licenses the step: one cut short by a dropped
+ * connection, silence or a CLOSED is re-asked at the same cursor (bounded by
+ * [PageRetryBackoff]), and ends the walk with that page's reading if it never gets further.
  *
  * **A filter's [Filter.limit] caps the walk, not the page.** Each `REQ` asks for what the
  * filter still needs (plus the boundary second's repeats), so a relay that serves 50000 in
@@ -1111,6 +1113,30 @@ private suspend fun INostrClient.walkPages(
                 // are resolved by stepping strictly past it. `boundary` is null only on
                 // the first page, which has no dedup and so can't be all-duplicate.
                 val step = boundary ?: break // first page, all-duplicate: impossible, and `end` stays UNPAGEABLE
+
+                // Unless the page was cut short (the connection dropped, the relay went silent or
+                // CLOSED it): then the repeats say nothing about the second running out, and the
+                // rest of it may be right behind them. scores.brainstorm.world, measured: strfry
+                // drops a slow reader mid-page, one drop landed inside a second holding hundreds
+                // of a provider's kind 5s, and stepping past lost 457 of them while the walk still
+                // reported DRAINED. Re-ask the same cursor; once the re-asks are spent, end with
+                // the page's own reading rather than claim a second the walk never finished.
+                if (pageEnd != PageSignal.EOSE) {
+                    if (reAsks < throttleBackoff.delaysMs.size) {
+                        val waitMs = throttleBackoff.delaysMs[reAsks++]
+                        Log.d("fetchAllPages") { "${relay.url} page cut short ($pageEnd) inside the boundary second at until=$until; re-asking in ${waitMs}ms (#$reAsks)" }
+                        throttleBackoff.sleep(waitMs)
+                        continue
+                    }
+                    end =
+                        when (pageEnd) {
+                            PageSignal.AUTH_REQUIRED -> PagedFetchResult.End.AUTH_REQUIRED
+                            PageSignal.CLOSED -> PagedFetchResult.End.CLOSED
+                            PageSignal.CANNOT_CONNECT -> PagedFetchResult.End.CANNOT_CONNECT
+                            else -> PagedFetchResult.End.IDLE
+                        }
+                    break
+                }
 
                 // Unless the relay is trickling (two short pages in a row): then a page of only
                 // the boundary's repeats is the throttle cutting the page short, not the second

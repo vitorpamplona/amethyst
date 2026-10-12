@@ -128,7 +128,7 @@ class AccountSessionManagerTest {
             val npub = KeyPair().pubKey.toNpub()
             manager.logOff(AccountInfo(npub))
             settle()
-            assertEquals(listOf("removing", "store.delete", "cache.remove", "cache.files", "removed"), events)
+            assertEquals(listOf("removing", "cache.remove", "store.delete", "cache.files", "removed"), events)
         }
 
     @Test

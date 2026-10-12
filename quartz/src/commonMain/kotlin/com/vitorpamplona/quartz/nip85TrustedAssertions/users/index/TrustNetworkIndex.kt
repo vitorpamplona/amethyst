@@ -190,6 +190,9 @@ class TrustNetworkIds(
 
     val tombstones: Int get() = tombstoneCreatedAt.size
 
+    /** Every card held: entries and tombstones. */
+    val total: Int get() = size + tombstones
+
     fun idHex(i: Int): HexKey = Hex.encode(ids.copyOfRange(32 * i, 32 * i + 32))
 
     fun tombstoneIdHex(i: Int): HexKey = Hex.encode(tombstoneIds.copyOfRange(32 * i, 32 * i + 32))

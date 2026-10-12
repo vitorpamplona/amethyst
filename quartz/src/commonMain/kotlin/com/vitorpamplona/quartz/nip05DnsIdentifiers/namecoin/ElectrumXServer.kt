@@ -96,20 +96,26 @@ data class ServerTestResult(
 /** Well-known public Namecoin ElectrumX servers (clearnet). */
 val DEFAULT_ELECTRUMX_SERVERS =
     listOf(
-        ElectrumxServer("electrumx.testls.space", 50002, useSsl = true, usePinnedTrustStore = true),
+        // electrumx.testls.space — since 2026-10-02 this operator serves a publicly-
+        // trusted Let's Encrypt cert (previously self-signed, formerly pinned in
+        // PINNED_ELECTRUMX_CERTS). The system trust store is now sufficient.
+        ElectrumxServer("electrumx.testls.space", 50002, useSsl = true, usePinnedTrustStore = false),
         ElectrumxServer("nmc2.bitcoins.sk", 57002, useSsl = true, usePinnedTrustStore = true),
         ElectrumxServer("46.229.238.187", 57002, useSsl = true, usePinnedTrustStore = true),
         // relay.testls.bit — second public Namecoin ElectrumX deployment, served
         // alongside the Namecoin-anchored Nostr relay at wss://relay.testls.bit/.
         // TLS endpoint pinned to a self-signed cert (see PINNED_ELECTRUMX_CERTS).
-        // Also exposed as wss://relay.testls.bit/electrumx (browser-viable, future
-        // WS transport — see N1 §"Browser / WebSocket transport" in mstrofnone/nips).
-        ElectrumxServer("relay.testls.bit", 50002, useSsl = true, usePinnedTrustStore = true),
+        // Since 2026-10-08 the self-signed deployment lives on port 50012; the
+        // default 50001/50002 ports on this box now serve the LE-cert
+        // electrumx2.testls.space endpoint below. Also exposed as
+        // wss://relay.testls.bit/electrumx (browser-viable, future WS transport —
+        // see N1 §"Browser / WebSocket transport" in mstrofnone/nips).
+        ElectrumxServer("relay.testls.bit", 50012, useSsl = true, usePinnedTrustStore = true),
         // Bare IP peer of relay.testls.bit — same operator, same cert, same box.
         // Listed as a separate entry (mirrors how 46.229.238.187 sits beside
         // nmc2.bitcoins.sk) so resolvers that have an unhealthy DNS path can
         // still reach the server. Cert pin works by SHA-256 of DER, no SNI required.
-        ElectrumxServer("23.158.233.10", 50002, useSsl = true, usePinnedTrustStore = true),
+        ElectrumxServer("23.158.233.10", 50012, useSsl = true, usePinnedTrustStore = true),
         // electrum.nmc.ethicnology.com — third public Namecoin ElectrumX deployment,
         // operated by @ethicnology (github.com/ethicnology/namecoin-compose, a
         // namecoind + ElectrumX + mempool podman stack). ElectrumX 1.19.0,
@@ -126,17 +132,19 @@ val DEFAULT_ELECTRUMX_SERVERS =
         // operator, on the same box as relay.testls.bit (23.158.233.10) but
         // terminating TLS at nginx with a publicly-trusted Let's Encrypt cert
         // (CN=electrumx2.testls.space, issuer LE YE1) instead of the self-signed
-        // relay.testls.bit cert served on the standard ports. usePinnedTrustStore
+        // relay.testls.bit cert (which moved to port 50012). usePinnedTrustStore
         // is left at the default (false) because the system trust store is
         // sufficient.
         //
-        // Port 50012 is the TCP+TLS endpoint (what this client uses). The same
-        // nginx vhost also exposes WSS on port 50014 for browser-based Nostr
-        // clients that want to do Namecoin NIP-05 lookups without a backend
-        // proxy — browsers refuse WSS to self-signed certs, so the LE cert on
-        // electrumx2 makes it the first browser-viable public Namecoin
-        // ElectrumX endpoint alongside electrum.nmc.ethicnology.com.
-        ElectrumxServer("electrumx2.testls.space", 50012, useSsl = true, usePinnedTrustStore = false),
+        // Since 2026-10-08 this endpoint lives on the default ElectrumX ports:
+        // 50001 (TCP), 50002 (SSL, what this client uses), 50003 (WS) and 50004
+        // (WSS), matching electrumx.testls.space. WSS on 50004 serves
+        // browser-based Nostr clients doing Namecoin NIP-05 lookups without a
+        // backend proxy — browsers refuse WSS to self-signed certs, so the LE
+        // cert on electrumx2 makes it the first browser-viable public Namecoin
+        // ElectrumX endpoint alongside electrum.nmc.ethicnology.com. Port 50014
+        // remains as a WSS alias for previously deployed clients.
+        ElectrumxServer("electrumx2.testls.space", 50002, useSsl = true, usePinnedTrustStore = false),
         // Note: no bare-IP companion entry for electrum.nmc.ethicnology.com.
         // Unlike the 46.229.238.187 / 23.158.233.10 peers above (which use
         // usePinnedTrustStore=true and DER-SHA256 pinning that doesn't care
@@ -165,13 +173,13 @@ val TOR_ELECTRUMX_SERVERS =
             useSsl = false,
             usePinnedTrustStore = false,
         ),
-        ElectrumxServer("electrumx.testls.space", 50002, useSsl = true, usePinnedTrustStore = true),
+        ElectrumxServer("electrumx.testls.space", 50002, useSsl = true, usePinnedTrustStore = false),
         ElectrumxServer("nmc2.bitcoins.sk", 57002, useSsl = true, usePinnedTrustStore = true),
-        ElectrumxServer("relay.testls.bit", 50002, useSsl = true, usePinnedTrustStore = true),
+        ElectrumxServer("relay.testls.bit", 50012, useSsl = true, usePinnedTrustStore = true),
         // Bare IP peer (same operator/cert/box). See clearnet list above.
-        ElectrumxServer("23.158.233.10", 50002, useSsl = true, usePinnedTrustStore = true),
+        ElectrumxServer("23.158.233.10", 50012, useSsl = true, usePinnedTrustStore = true),
         // electrum.nmc.ethicnology.com — public LE-cert ElectrumX. See clearnet list above.
         ElectrumxServer("electrum.nmc.ethicnology.com", 50002, useSsl = true, usePinnedTrustStore = false),
         // electrumx2.testls.space — LE-cert redundancy endpoint. See clearnet list above.
-        ElectrumxServer("electrumx2.testls.space", 50012, useSsl = true, usePinnedTrustStore = false),
+        ElectrumxServer("electrumx2.testls.space", 50002, useSsl = true, usePinnedTrustStore = false),
     )

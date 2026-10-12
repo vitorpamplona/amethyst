@@ -26,6 +26,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalWindowInfo
 import com.vitorpamplona.amethyst.commons.account.AccountSessionManager
+import com.vitorpamplona.amethyst.commons.keystorage.KeyStorageController
 import com.vitorpamplona.amethyst.commons.model.Account
 import com.vitorpamplona.amethyst.commons.privacylock.PrivacyLockSettings
 import com.vitorpamplona.amethyst.commons.ui.layouts.ScreenLayoutSpec
@@ -111,4 +112,10 @@ interface AppRoot {
 
     /** Whether the wallet blurs while the window is not focused, once its lock is on (the desktop). */
     val blurWalletWhenUnfocused: Boolean get() = false
+
+    /**
+     * Key storage the user deals with (the desktop's OS keyring or password file): its status,
+     * the questions it asks, Settings › Key storage. Null where keys are kept without asking.
+     */
+    val keyStorage: KeyStorageController? get() = null
 }

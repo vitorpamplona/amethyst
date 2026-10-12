@@ -24,6 +24,9 @@ import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.stringPreferencesKey
 import com.vitorpamplona.amethyst.commons.cashu.CashuKeysetCounterStore
 import com.vitorpamplona.amethyst.commons.cashu.UnavailableCashuKeysetCounterStore
+import com.vitorpamplona.amethyst.commons.keystorage.KeyFileLockedException
+import com.vitorpamplona.amethyst.commons.keystorage.KeyNotKeptException
+import com.vitorpamplona.amethyst.commons.keystorage.KeyStoragePrompts
 import com.vitorpamplona.amethyst.commons.keystorage.PrivateKeyVault
 import com.vitorpamplona.amethyst.commons.model.AccountSettings
 import com.vitorpamplona.amethyst.commons.model.GeohashIdentityStore
@@ -43,6 +46,7 @@ import com.vitorpamplona.quartz.nip01Core.core.JsonMapper
 import com.vitorpamplona.quartz.nip01Core.core.hexToByteArray
 import com.vitorpamplona.quartz.nip01Core.core.toHexKey
 import com.vitorpamplona.quartz.nip01Core.crypto.KeyPair
+import com.vitorpamplona.quartz.nip19Bech32.decodePrivateKeyAsHexOrNull
 import com.vitorpamplona.quartz.nip19Bech32.toNpub
 import com.vitorpamplona.quartz.utils.Log
 import kotlinx.coroutines.CancellationException
@@ -53,6 +57,7 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import okio.Path
+import java.util.concurrent.ConcurrentHashMap
 
 /**
  * The saved logins of a front end with no legacy storage to migrate from: the encrypted roster, each
@@ -66,6 +71,8 @@ class StoreAccountSessionStore(
     scope: CoroutineScope,
     private val cashuCounters: (npub: String) -> CashuKeysetCounterStore = { UnavailableCashuKeysetCounterStore },
     encryption: SecretEncryption = SecretEncryption(),
+    /** Asks for the key of an account whose key this device does not keep; null never asks. */
+    private val keyPrompts: KeyStoragePrompts? = null,
 ) : AccountSessionStore {
     private val accountStores = AccountPreferenceStores(rootFilesDir)
     private val settingsStores = AccountSettingsStores(accountStores)
@@ -77,6 +84,26 @@ class StoreAccountSessionStore(
 
     private val loadMutex = Mutex()
     private val cachedAccounts = mutableMapOf<String, AccountSettings>()
+
+    // The key each npub holds in [keyVault], as last read or written. Every settings save carries
+    // the key, and settings are saved on each last-read marker, so without this every post that
+    // loads rewrites the OS keychain item, and macOS asks for the keychain password each time.
+    private val keysInVault = ConcurrentHashMap<String, String>()
+
+    // Same for the secrets: AES-GCM re-randomises the IV, so DataStore can never skip an
+    // unchanged group by itself and every save would rewrite and fsync the file.
+    private val savedSecrets = ConcurrentHashMap<String, AccountSecrets>()
+
+    // Accounts whose key the user chose not to keep on this device during this run: the key file's
+    // "Don't remember", which happens inside the vault, after the roster entry was built.
+    private val keysNotKept = ConcurrentHashMap.newKeySet<String>()
+
+    // Accounts whose stored key was deleted because they no longer remember it, once per run.
+    private val keysForgotten = ConcurrentHashMap.newKeySet<String>()
+
+    // Keys that could not be kept because the key file stayed locked this run. Saved again only on
+    // the next run: the user already skipped the password, and each settings save would retry.
+    private val keysLockedOut = ConcurrentHashMap<String, String>()
 
     @Volatile
     private var currentAccount: String? = null
@@ -148,6 +175,7 @@ class StoreAccountSessionStore(
                 loggedInWithExternalSigner = settings.externalSignerPackageName != null,
                 isTransient = settings.transientAccount,
                 loggedInWithRemoteSigner = settings.usesRemoteSigner(),
+                keyRemembered = settings.rememberKey && settings.keyPair.pubKey.toNpub() !in keysNotKept,
             )
         updateCurrentAccount(info)
         updateSavedAccounts(allSavedAccounts().filter { it.npub != info.npub } + info)
@@ -158,8 +186,16 @@ class StoreAccountSessionStore(
         if (settings.transientAccount) return
         val npub = settings.keyPair.pubKey.toNpub()
         settingsStores.save(settings)
-        secretsStores.saveSecrets(npub, settings.toAccountSecrets())
-        settings.keyPair.privKey?.let { saveKey(npub, it.toHexKey()) }
+        val secrets = settings.toAccountSecrets()
+        if (savedSecrets[npub] != secrets) {
+            secretsStores.saveSecrets(npub, secrets)
+            savedSecrets[npub] = secrets
+        }
+        if (settings.rememberKey) {
+            settings.keyPair.privKey?.let { saveKey(npub, it.toHexKey()) }
+        } else {
+            forgetKey(npub)
+        }
         accountStores.getDataStore(npub).edit {
             it[lastReadPerRouteKey] = JsonMapper.toJson(settings.lastReadPerRoute.value.mapValues { entry -> entry.value.value })
             it[pendingAttestationsKey] = JsonMapper.toJson(settings.pendingAttestations.value)
@@ -183,12 +219,58 @@ class StoreAccountSessionStore(
         npub: String,
         privKeyHex: String,
     ) {
+        if (keysInVault[npub] == privKeyHex || keysLockedOut[npub] == privKeyHex) return
         try {
             keyVault.save(npub, privKeyHex)
+            keysInVault[npub] = privKeyHex
+            keysForgotten.remove(npub)
+        } catch (e: KeyNotKeptException) {
+            // The user's choice, not a failure: no dialog, and no asking again this run.
+            keysInVault[npub] = privKeyHex
+            keysNotKept.add(npub)
+            updateSavedAccounts(allSavedAccounts().map { if (it.npub == npub) it.copy(keyRemembered = false) else it })
+        } catch (e: KeyFileLockedException) {
+            // A skipped password is not "don't remember": marking the account so would ask for its key
+            // at the next launch and delete the copy the key file still holds.
+            Log.w(TAG, "Could not keep the private key of $npub: the key file is locked", e)
+            keysLockedOut[npub] = privKeyHex
+            _keyVaultFailure.value = e
         } catch (e: Exception) {
             if (e is CancellationException) throw e
             Log.w(TAG, "Could not keep the private key of $npub", e)
             _keyVaultFailure.value = e
+        }
+    }
+
+    /** Deletes the key a login that no longer remembers it may have left in [keyVault], once per run. */
+    private suspend fun forgetKey(npub: String) {
+        keysInVault.remove(npub)
+        if (!keysForgotten.add(npub)) return
+        try {
+            keyVault.delete(npub)
+        } catch (e: Exception) {
+            if (e is CancellationException) throw e
+            Log.w(TAG, "Could not delete the private key of $npub", e)
+        }
+    }
+
+    /**
+     * Asks for the key of [npub], whose key this device does not keep, until it matches [pubKeyHex]
+     * or the user skips (null: the account loads read-only).
+     */
+    private suspend fun askForKey(
+        npub: String,
+        pubKeyHex: String,
+    ): String? {
+        val prompts = keyPrompts ?: return null
+        var wrong = false
+        while (true) {
+            val typed = prompts.enterKey(npub, wrong)?.trim() ?: return null
+            val hex = decodePrivateKeyAsHexOrNull(typed)
+            if (hex != null && runCatching { KeyPair(privKey = hex.hexToByteArray()).pubKey.toHexKey() }.getOrNull() == pubKeyHex) {
+                return hex
+            }
+            wrong = true
         }
     }
 
@@ -202,22 +284,51 @@ class StoreAccountSessionStore(
     private suspend fun load(npub: String): AccountSettings? {
         val records = settingsStores.load(npub)
         val pubKey = records.identity.pubKeyHex ?: return null
-        val privKey = keyVault.get(npub)
+        // Only a login holding its own key has one in the vault. Asking the keychain for the others
+        // costs a keychain access on macOS and, on Windows and Linux, throws: their backends report a
+        // missing item as an error, which the strict lookup must not read as absent.
+        val info = allSavedAccounts().firstOrNull { it.npub == npub }
+        val remembered = info?.keyRemembered ?: true
+        val privKey =
+            when {
+                info != null && !info.holdsOwnKey() -> null
+                !remembered -> askForKey(npub, pubKey)
+                else -> keyVault.get(npub)?.also { keysInVault[npub] = it }
+            }
         val keyPair = KeyPair(privKey = privKey?.hexToByteArray(), pubKey = pubKey.hexToByteArray())
         val state = accountStores.getDataStore(npub).data.first()
         return AccountSettingsSource(
             keyPair = keyPair,
             externalSignerPackageName = records.identity.externalSignerPackageName,
             stores = records,
-            secrets = secretsStores.loadSecrets(npub) ?: AccountSecrets(),
+            secrets = (secretsStores.loadSecrets(npub)?.also { savedSecrets[npub] = it }) ?: AccountSecrets(),
             pendingAttestationsJson = state[pendingAttestationsKey],
             lastReadPerRouteJson = state[lastReadPerRouteKey],
             cashuCounters = cashuCounters(npub),
         ).toAccountSettings()
+            .also { it.rememberKey = remembered }
     }
 
     /** Drops the in-memory copies, so the next load reads the stores again. */
     internal suspend fun forgetLoadedSettings() = loadMutex.withLock { cachedAccounts.clear() }
+
+    /**
+     * Reads [npub]'s settings again for an account that loaded without the key it keeps (its
+     * password was skipped, or the keychain refused), once the key storage opens: Settings › Key
+     * storage › Unlock or Try again. Null when it still has no key, or keeps none on this device.
+     */
+    suspend fun reloadWithKey(npub: String): AccountSettings? {
+        val info = allSavedAccounts().firstOrNull { it.npub == npub } ?: return null
+        if (!info.holdsOwnKey() || !info.keyRemembered) return null
+        // What the keyless session changed (last-read markers, settings) goes to disk first, or the
+        // reload would read it back from before.
+        loadMutex.withLock { cachedAccounts[npub] }?.let { saveAccountSettings(it) }
+        return loadMutex.withLock {
+            val fresh = load(npub)?.takeIf { it.isWriteable() } ?: return@withLock null
+            cachedAccounts[npub] = fresh
+            fresh
+        }
+    }
 
     override suspend fun setHasBackedUpKeys(
         value: Boolean,
@@ -232,6 +343,11 @@ class StoreAccountSessionStore(
     override suspend fun deleteAccount(accountInfo: AccountInfo) {
         val npub = accountInfo.npub
         loadMutex.withLock { cachedAccounts.remove(npub) }
+        keysInVault.remove(npub)
+        keysNotKept.remove(npub)
+        keysForgotten.remove(npub)
+        keysLockedOut.remove(npub)
+        savedSecrets.remove(npub)
         keyVault.delete(npub)
         secretsStores.removeAccount(npub)
         accountStores.removeAccount(npub)
@@ -264,3 +380,5 @@ class StoreAccountSessionStore(
         private val pendingAttestationsKey = stringPreferencesKey("pending_attestations")
     }
 }
+
+private fun AccountInfo.holdsOwnKey() = hasPrivKey && !loggedInWithExternalSigner && !loggedInWithRemoteSigner

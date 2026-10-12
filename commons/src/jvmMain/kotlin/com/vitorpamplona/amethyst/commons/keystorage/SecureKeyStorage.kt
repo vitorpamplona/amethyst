@@ -22,17 +22,17 @@ package com.vitorpamplona.amethyst.commons.keystorage
 
 import com.github.javakeyring.BackendNotSupportedException
 import com.github.javakeyring.Keyring
+import com.github.javakeyring.KeyringStorageType
 import com.github.javakeyring.PasswordAccessException
-import com.vitorpamplona.amethyst.commons.util.deleteOrWarn
+import com.vitorpamplona.amethyst.commons.util.appDataDir
+import com.vitorpamplona.quartz.utils.Log
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import java.io.File
-import java.io.RandomAccessFile
-import java.nio.file.Files
-import java.nio.file.StandardCopyOption
-import java.nio.file.attribute.PosixFilePermission
 import java.security.SecureRandom
 import java.util.Base64
 import javax.crypto.Cipher
@@ -45,35 +45,32 @@ import javax.crypto.spec.SecretKeySpec
  * Desktop implementation of SecureKeyStorage using OS-native credential managers
  * (macOS Keychain, Windows Credential Manager, Linux Secret Service/KWallet).
  *
- * Falls back to encrypted file storage with user-provided password if OS keyring
- * is unavailable.
+ * Without an OS keyring, private keys go to a NIP-49 password file ([PasswordKeyFile]) whose
+ * password is asked through [prompts]; with no [prompts] attached nothing is kept. [status] says
+ * which of these is in use and whether it works, see `commons/plans/2026-10-12-desktop-key-storage.md`.
  *
- * ## Fallback Storage Security
- *
- * When OS keyring is unavailable, the implementation uses:
- * - **Encryption:** AES-256-GCM with PBKDF2 (100k iterations)
- * - **File Permissions:** Owner-only read/write (600 for files, 700 for directories) on Unix systems
- * - **Atomic Writes:** Temp file + atomic move to prevent corruption
- * - **File Locking:** Prevents concurrent access race conditions
- *
- * **Password Memory Limitation:** The fallback password is stored as a String and cannot be
- * securely zeroed from memory. It remains cached for the application lifetime to avoid repeated
- * password prompts. This is acceptable for desktop applications where the user's session is
- * already trusted, but may not be suitable for shared/multi-user systems.
+ * **Password Memory Limitation:** The key-file password is held as a String for the run and cannot
+ * be securely zeroed from memory.
  */
 actual class SecureKeyStorage private actual constructor() {
     actual companion object {
         /**
          * Creates a SecureKeyStorage instance for Desktop.
          *
-         * @param context Ignored on Desktop (no context needed)
+         * @param context The directory for the password key file, as a [File]; anything else
+         *   uses [appDataDir].
          * @return SecureKeyStorage instance
          */
-        actual fun create(context: Any?): SecureKeyStorage = SecureKeyStorage()
+        actual fun create(context: Any?): SecureKeyStorage = SecureKeyStorage().also { it.keyFileDir = (context as? File) ?: appDataDir }
 
+        private const val TAG = "SecureKeyStorage"
         private const val SERVICE_NAME = "amethyst-desktop"
-        private const val FALLBACK_DIR = ".amethyst"
-        private const val FALLBACK_FILE = "keys.enc"
+        private const val SELF_TEST_SERVICE_NAME = "amethyst-desktop-self-test"
+        private const val KEY_FILE = "keys.ncryptsec"
+
+        // The old console-password fallback, read once to move its keys into [KEY_FILE].
+        private const val LEGACY_FALLBACK_DIR = ".amethyst"
+        private const val LEGACY_FALLBACK_FILE = "keys.enc"
 
         // Encryption constants for fallback
         private const val ALGORITHM = "AES"
@@ -87,9 +84,34 @@ actual class SecureKeyStorage private actual constructor() {
         private const val IV_LENGTH = 12 // GCM standard
     }
 
+    @Volatile
     private var keyringAvailable: Boolean = true
-    private var fallbackPassword: String? = null
-    private val fallbackMutex = Mutex() // Protects concurrent access to fallback file
+
+    private val _status = MutableStateFlow<KeyStorageStatus>(KeyStorageStatus.Unknown)
+
+    /** Where keys are kept and whether that works; updated as the backend opens and fails. */
+    val status: StateFlow<KeyStorageStatus> = _status
+
+    /** Asks the user for the key-file password. Without it, no key is kept when there is no OS keyring. */
+    @Volatile
+    var prompts: KeyStoragePrompts? = null
+
+    private var keyFileDir: File = appDataDir
+
+    internal val passwordFile by lazy {
+        PasswordKeyFile(
+            file = File(keyFileDir, KEY_FILE),
+            legacyFile = File(System.getProperty("user.home"), "$LEGACY_FALLBACK_DIR/$LEGACY_FALLBACK_FILE"),
+            legacyDecrypt = ::decryptData,
+        )
+    }
+
+    /**
+     * The vault item exists but could not be read (denied, locked, failed). Strict reads then
+     * throw instead of answering "absent" from a per-alias item the migration already deleted.
+     */
+    @Volatile
+    private var vaultReadFailed: Boolean = false
 
     /**
      * Cached Keyring instance. Opening a Keyring session is expensive and, on
@@ -143,17 +165,20 @@ actual class SecureKeyStorage private actual constructor() {
     ) {
         withContext(Dispatchers.IO) {
             try {
-                if (vaultActive) {
-                    vaultPut(npub, privKeyHex)
-                } else if (keyringAvailable) {
-                    saveToKeyring(npub, privKeyHex)
-                } else {
-                    saveToFallback(npub, privKeyHex)
+                when {
+                    vaultActive -> vaultMutex.withLock { vaultPut(npub, privKeyHex) }
+                    keyringAvailable -> saveToKeyring(npub, privKeyHex)
+                    else -> savePasswordFile(npub, privKeyHex)
                 }
+                keyringAnswered()
             } catch (e: BackendNotSupportedException) {
-                keyringAvailable = false
-                println("OS keyring not available, using fallback encrypted storage")
-                saveToFallback(npub, privKeyHex)
+                keyringMissing(e)
+                savePasswordFile(npub, privKeyHex)
+            } catch (e: SecureStorageException) {
+                throw e
+            } catch (e: PasswordAccessException) {
+                keyringFailed(e)
+                throw SecureStorageException("Failed to save private key", e)
             } catch (e: Exception) {
                 throw SecureStorageException("Failed to save private key", e)
             }
@@ -170,14 +195,11 @@ actual class SecureKeyStorage private actual constructor() {
                     // it. Fall back to the legacy per-alias item before reporting null.
                     vaultActive -> vaultGet(npub) ?: getFromKeyring(npub)
                     keyringAvailable -> getFromKeyring(npub)
-                    else -> getFromFallback(npub)
+                    else -> getPasswordFile(npub)
                 }
             } catch (e: BackendNotSupportedException) {
-                keyringAvailable = false
-                println("OS keyring not available, using fallback encrypted storage")
-                getFromFallback(npub)
-            } catch (e: PasswordAccessException) {
-                null // Key doesn't exist
+                keyringMissing(e)
+                getPasswordFile(npub)
             } catch (e: Exception) {
                 throw SecureStorageException("Failed to retrieve private key", e)
             }
@@ -185,19 +207,13 @@ actual class SecureKeyStorage private actual constructor() {
 
     /**
      * Strict variant that distinguishes "backend confirms item not found" from every
-     * other outcome. This matters on macOS: `javakeyring` collapses `errSecItemNotFound`
-     * (-25300), `errSecAuthFailed` (-25293), `errSecUserCanceled` (-128), and
-     * `errSecInteractionNotAllowed` (-25308) into the same `PasswordAccessException`.
-     * A caller that mistook "user clicked Deny" for "first launch, generate a fresh
+     * other outcome. A caller that mistook "user clicked Deny" for "first launch, generate a fresh
      * key" would silently rotate the metadata AES key and permanently destroy the
      * accounts.json.enc it was supposed to unlock.
      *
-     * On macOS this shells out to `/usr/bin/security find-generic-password`, whose
-     * exit codes are documented and unambiguous (44 = not found, 128 = user cancel /
-     * dialog dismissed, others = backend failure). On Windows / Linux, javakeyring
-     * has no such ambiguity for the equivalent flows in practice, but we still treat
-     * any `PasswordAccessException` here as ambiguous (throw) to keep the contract
-     * strict on the getOrCreate path.
+     * java-keyring turns every failure into a `PasswordAccessException`; [isNotFound] reads the
+     * backends' wording for a missing item, and anything else throws. On macOS a vault miss still
+     * asks `/usr/bin/security`, whose exit codes are documented (44 = not found).
      */
     actual suspend fun getPrivateKeyOrThrow(npub: String): String? =
         withContext(Dispatchers.IO) {
@@ -212,29 +228,32 @@ actual class SecureKeyStorage private actual constructor() {
                 if (vaultActive) {
                     vaultGet(npub)?.let { return@withContext it }
                 }
+                // The vault is there but was not read: a per-alias "absent" would be a lie.
+                if (vaultReadFailed) {
+                    throw SecureStorageException("The OS keyring refused to open the key vault")
+                }
                 if (!keyringAvailable) {
-                    return@withContext getFromFallback(npub)
+                    return@withContext getPasswordFile(npub)
                 }
                 if (isMacOs()) {
                     return@withContext getFromMacSecurityCli(SERVICE_NAME, npub)
                 }
                 try {
-                    keyring().getPassword(SERVICE_NAME, npub)
+                    keyring().getPassword(SERVICE_NAME, npub).also { keyringAnswered() }
                 } catch (e: PasswordAccessException) {
-                    // Non-mac backends: keep the strict contract by refusing to
-                    // treat this as "definitively absent". A caller that needs a
-                    // permissive lookup should use getPrivateKey() instead.
-                    throw SecureStorageException(
-                        "Keyring backend refused access or returned ambiguous not-found",
-                        e,
-                    )
+                    if (e.isNotFound()) {
+                        keyringAnswered()
+                        null
+                    } else {
+                        keyringFailed(e)
+                        throw SecureStorageException("Keyring backend refused access", e)
+                    }
                 }
             } catch (e: SecureStorageException) {
                 throw e
             } catch (e: BackendNotSupportedException) {
-                keyringAvailable = false
-                println("OS keyring not available, using fallback encrypted storage")
-                getFromFallback(npub)
+                keyringMissing(e)
+                getPasswordFile(npub)
             } catch (e: Exception) {
                 throw SecureStorageException("Failed to retrieve private key (strict)", e)
             }
@@ -266,19 +285,107 @@ actual class SecureKeyStorage private actual constructor() {
         withContext(Dispatchers.IO) {
             try {
                 when {
-                    vaultActive -> vaultDelete(npub)
+                    vaultActive -> vaultMutex.withLock { vaultDelete(npub) }
                     keyringAvailable -> deleteFromKeyring(npub)
-                    else -> deleteFromFallback(npub)
+                    else -> passwordFile.delete(npub).also { publishPasswordFileStatus() }
                 }
             } catch (e: BackendNotSupportedException) {
-                keyringAvailable = false
-                deleteFromFallback(npub)
+                keyringMissing(e)
+                passwordFile.delete(npub).also { publishPasswordFileStatus() }
             } catch (e: Exception) {
                 throw SecureStorageException("Failed to delete private key", e)
             }
         }
 
     actual suspend fun hasPrivateKey(npub: String): Boolean = getPrivateKey(npub) != null
+
+    // --- Status, retry and the password file ---
+
+    /**
+     * Forgets that the OS keyring failed or was missing, so the next access opens it again.
+     * Settings › Key storage › Try again calls this, then re-opens the vault and logs in.
+     *
+     * A refused vault stays refused until the vault is read again: cleared here, a strict read
+     * racing the retry (the launch's own login) would skip the vault, find no per-alias item, and
+     * log the account in read-only.
+     */
+    fun resetKeyring() {
+        synchronized(keyringLock) { cachedKeyring = null }
+        keyringAvailable = true
+        _status.value = KeyStorageStatus.Unknown
+    }
+
+    /** Asks for the key-file password now (Settings › Key storage › Unlock). */
+    suspend fun unlockPasswordFile() {
+        withContext(Dispatchers.IO) {
+            passwordFile.unlock(prompts)
+            publishPasswordFileStatus()
+        }
+    }
+
+    private suspend fun savePasswordFile(
+        npub: String,
+        privKeyHex: String,
+    ) {
+        try {
+            passwordFile.put(npub, privKeyHex, prompts)
+        } finally {
+            publishPasswordFileStatus()
+        }
+    }
+
+    private suspend fun getPasswordFile(npub: String): String? =
+        try {
+            passwordFile.get(npub, prompts)
+        } finally {
+            publishPasswordFileStatus()
+        }
+
+    private fun publishPasswordFileStatus() {
+        if (!keyringAvailable) _status.value = passwordFile.status()
+    }
+
+    private fun keyringMissing(e: BackendNotSupportedException) {
+        if (keyringAvailable) Log.w(TAG, "No OS keyring; keys go to the password file", e)
+        keyringAvailable = false
+        // No keyring, so nothing refused: reads go to the password file.
+        vaultReadFailed = false
+        publishPasswordFileStatus()
+    }
+
+    private fun keyringFailed(e: Exception) {
+        Log.w(TAG, "The OS keyring refused or failed", e)
+        _status.value = KeyStorageStatus.KeyringUnreachable(cachedKeyring?.kind, e.message ?: e.javaClass.simpleName)
+    }
+
+    private fun keyringAnswered() {
+        if (keyringAvailable) _status.value = KeyStorageStatus.Keyring(cachedKeyring?.kind)
+    }
+
+    /**
+     * Writes, reads back and deletes a probe secret in the OS keyring, under its own service name
+     * so no user item is touched. Never falls back to the password file: `--keyring-self-test`
+     * runs this on packaged builds in CI, where a broken keyring must fail.
+     */
+    fun selfTest(): KeyringSelfTestResult {
+        var kind: OsKeyring? = null
+        return try {
+            val handle = keyringFactory()
+            kind = handle.kind
+            val account = "probe-" + System.nanoTime()
+            val value = "value-" + SecureRandom().nextLong()
+            handle.setPassword(SELF_TEST_SERVICE_NAME, account, value)
+            val read = handle.getPassword(SELF_TEST_SERVICE_NAME, account)
+            handle.deletePassword(SELF_TEST_SERVICE_NAME, account)
+            if (read == value) {
+                KeyringSelfTestResult(true, kind, "wrote, read back and deleted a probe secret")
+            } else {
+                KeyringSelfTestResult(false, kind, "read back a different value than it wrote")
+            }
+        } catch (t: Throwable) {
+            KeyringSelfTestResult(false, kind, generateSequence(t) { it.cause }.joinToString(" <- ") { it.toString() })
+        }
+    }
 
     // --- Consolidated vault (see [vaultAlias] docs) ---
 
@@ -324,9 +431,19 @@ actual class SecureKeyStorage private actual constructor() {
                         val existing =
                             try {
                                 handle.getPassword(SERVICE_NAME, vaultAlias)
-                            } catch (_: PasswordAccessException) {
+                            } catch (e: PasswordAccessException) {
+                                if (!e.isNotFound()) {
+                                    // Denied, locked or failed: the vault may well exist. Writing
+                                    // a fresh one would replace it; reading per alias would answer
+                                    // "absent" for keys it holds. Stop, and let strict reads throw.
+                                    vaultReadFailed = true
+                                    keyringFailed(e)
+                                    return@withLock
+                                }
                                 null
                             }
+                        vaultReadFailed = false
+                        keyringAnswered()
                         if (existing != null) {
                             vaultContents = decodeVault(existing).toMutableMap()
                             vaultActive = true
@@ -390,12 +507,12 @@ actual class SecureKeyStorage private actual constructor() {
                         vaultContents = merged
                     }
                 } catch (e: BackendNotSupportedException) {
-                    keyringAvailable = false
-                    println("OS keyring not available during vault migration, keeping fallback storage")
+                    keyringMissing(e)
                 } catch (e: Exception) {
                     // Migration is best-effort: if the OS keychain is misbehaving we leave
                     // the legacy per-alias items in place and continue in legacy mode.
-                    println("enableConsolidatedVault: aborting migration: ${e.message}")
+                    Log.w(TAG, "enableConsolidatedVault: aborting migration", e)
+                    if (e is PasswordAccessException) keyringFailed(e)
                 }
             }
         }
@@ -413,13 +530,23 @@ actual class SecureKeyStorage private actual constructor() {
 
     private fun vaultGet(alias: String): String? = vaultContents?.get(alias)
 
+    /**
+     * Writes the vault with [alias] set to [value]. The in-memory copy changes only after the
+     * keychain write succeeds: changed first, a denied or failed write would leave memory claiming
+     * a key the keychain never got, and the next save of that key would skip it as unchanged.
+     *
+     * Callers hold [vaultMutex], so two writes cannot each encode a snapshot missing the other.
+     */
     private fun vaultPut(
         alias: String,
         value: String,
     ) {
-        val contents = vaultContents ?: LinkedHashMap<String, String>().also { vaultContents = it }
-        contents[alias] = value
-        keyring().setPassword(SERVICE_NAME, vaultAlias, encodeVault(contents))
+        val current = vaultContents ?: emptyMap()
+        // Rewriting the item is a keychain access, and macOS may prompt for each one.
+        if (current[alias] == value) return
+        val updated = LinkedHashMap(current).also { it[alias] = value }
+        keyring().setPassword(SERVICE_NAME, vaultAlias, encodeVault(updated))
+        vaultContents = updated
     }
 
     /**
@@ -427,10 +554,11 @@ actual class SecureKeyStorage private actual constructor() {
      * holding it. An alias the vault does not cover (a partial migration, or a
      * phase 2 that failed) would otherwise survive a logout as an orphaned secret
      * in the OS keychain, since [getPrivateKey] can still read it.
+     *
+     * Like [vaultPut], memory follows the keychain, never leads it. Callers hold [vaultMutex].
      */
     private fun vaultDelete(alias: String): Boolean {
         val contents = vaultContents
-        val removedFromVault = contents != null && contents.remove(alias) != null
 
         val removedLegacy =
             try {
@@ -440,19 +568,20 @@ actual class SecureKeyStorage private actual constructor() {
                 false // no legacy item, fine
             }
 
-        if (removedFromVault) {
-            if (contents.isEmpty()) {
-                try {
-                    keyring().deletePassword(SERVICE_NAME, vaultAlias)
-                } catch (_: PasswordAccessException) {
-                    // already gone, still removed from our POV
-                }
-            } else {
-                keyring().setPassword(SERVICE_NAME, vaultAlias, encodeVault(contents))
-            }
-        }
+        if (contents == null || alias !in contents) return removedLegacy
 
-        return removedFromVault || removedLegacy
+        val updated = LinkedHashMap(contents).also { it.remove(alias) }
+        if (updated.isEmpty()) {
+            try {
+                keyring().deletePassword(SERVICE_NAME, vaultAlias)
+            } catch (_: PasswordAccessException) {
+                // already gone, still removed from our POV
+            }
+        } else {
+            keyring().setPassword(SERVICE_NAME, vaultAlias, encodeVault(updated))
+        }
+        vaultContents = updated
+        return true
     }
 
     /**
@@ -663,9 +792,24 @@ actual class SecureKeyStorage private actual constructor() {
     private fun keyring(): KeyringHandle {
         cachedKeyring?.let { return it }
         return synchronized(keyringLock) {
-            cachedKeyring ?: keyringFactory().also { cachedKeyring = it }
+            cachedKeyring ?: openKeyring().also {
+                cachedKeyring = it
+                _status.value = KeyStorageStatus.Keyring(it.kind)
+            }
         }
     }
+
+    /**
+     * A backend whose classes fail to load (a release build missing a class, a native library
+     * that will not link) is no backend: without this the Error escapes every `catch (Exception)`.
+     */
+    private fun openKeyring(): KeyringHandle =
+        try {
+            keyringFactory()
+        } catch (e: LinkageError) {
+            // NoClassDefFoundError, UnsatisfiedLinkError, ExceptionInInitializerError.
+            throw BackendNotSupportedException("The keyring backend failed to load", e)
+        }
 
     private fun saveToKeyring(
         npub: String,
@@ -676,8 +820,9 @@ actual class SecureKeyStorage private actual constructor() {
 
     private fun getFromKeyring(npub: String): String? =
         try {
-            keyring().getPassword(SERVICE_NAME, npub)
+            keyring().getPassword(SERVICE_NAME, npub).also { keyringAnswered() }
         } catch (e: PasswordAccessException) {
+            if (!e.isNotFound()) keyringFailed(e)
             null
         }
 
@@ -689,191 +834,8 @@ actual class SecureKeyStorage private actual constructor() {
             false
         }
 
-    // Fallback encrypted file storage
-    private suspend fun saveToFallback(
-        npub: String,
-        privKeyHex: String,
-    ) {
-        fallbackMutex.withLock {
-            val password = getFallbackPassword()
-            val encrypted = encryptData(privKeyHex, password)
-
-            val fallbackFile = getFallbackFile()
-
-            // Create directory with restrictive permissions
-            fallbackFile.parentFile?.let { dir ->
-                if (!dir.exists()) {
-                    dir.mkdirs()
-                    setRestrictivePermissions(dir)
-                }
-            }
-
-            withFileLock(fallbackFile) {
-                val data = loadFallbackDataUnsafe().toMutableMap()
-                data[npub] = encrypted
-                atomicWriteFallbackData(fallbackFile, data)
-            }
-        }
-    }
-
-    private suspend fun getFromFallback(npub: String): String? {
-        val password = fallbackPassword ?: return null // No password set yet
-
-        return fallbackMutex.withLock {
-            val fallbackFile = getFallbackFile()
-            if (!fallbackFile.exists()) return@withLock null
-
-            withFileLock(fallbackFile) {
-                val data = loadFallbackDataUnsafe()
-                val encrypted = data[npub] ?: return@withFileLock null
-
-                try {
-                    decryptData(encrypted, password)
-                } catch (e: Exception) {
-                    null
-                }
-            }
-        }
-    }
-
-    private suspend fun deleteFromFallback(npub: String): Boolean {
-        return fallbackMutex.withLock {
-            val fallbackFile = getFallbackFile()
-            if (!fallbackFile.exists()) return@withLock false
-
-            withFileLock(fallbackFile) {
-                val data = loadFallbackDataUnsafe().toMutableMap()
-                val existed = data.remove(npub) != null
-
-                if (existed) {
-                    if (data.isEmpty()) {
-                        fallbackFile.deleteOrWarn("SecureKeyStorage", "fallback key file")
-                    } else {
-                        atomicWriteFallbackData(fallbackFile, data)
-                    }
-                }
-
-                existed
-            }
-        }
-    }
-
-    /**
-     * Loads fallback data without locking. Caller must hold mutex and file lock.
-     */
-    private fun loadFallbackDataUnsafe(): Map<String, String> {
-        val fallbackFile = getFallbackFile()
-        if (!fallbackFile.exists()) return emptyMap()
-
-        return fallbackFile
-            .readLines()
-            .mapNotNull { line ->
-                val parts = line.split(":", limit = 2)
-                if (parts.size == 2) parts[0] to parts[1] else null
-            }.toMap()
-    }
-
-    /**
-     * Atomically writes fallback data using temp file + rename.
-     */
-    private fun atomicWriteFallbackData(
-        fallbackFile: File,
-        data: Map<String, String>,
-    ) {
-        val tempFile = File(fallbackFile.parentFile, "${fallbackFile.name}.tmp")
-        try {
-            // Write to temp file
-            tempFile.writeText(data.entries.joinToString("\n") { "${it.key}:${it.value}" })
-            setRestrictivePermissions(tempFile)
-
-            // Atomic rename
-            Files.move(
-                tempFile.toPath(),
-                fallbackFile.toPath(),
-                StandardCopyOption.ATOMIC_MOVE,
-                StandardCopyOption.REPLACE_EXISTING,
-            )
-        } finally {
-            // Clean up any leftover temp file
-            tempFile.deleteOrWarn("SecureKeyStorage", "temp key file")
-        }
-    }
-
-    /**
-     * Executes block with file lock held.
-     */
-    private fun <T> withFileLock(
-        file: File,
-        block: () -> T,
-    ): T {
-        // Ensure lock file exists
-        val lockFile = File(file.parentFile, "${file.name}.lock")
-        lockFile.parentFile?.mkdirs()
-        if (!lockFile.exists()) {
-            lockFile.createNewFile()
-            setRestrictivePermissions(lockFile)
-        }
-
-        return RandomAccessFile(lockFile, "rw").use { raf ->
-            raf.channel.lock().use { lock ->
-                block()
-            }
-        }
-    }
-
-    private fun getFallbackFile(): File {
-        val homeDir = System.getProperty("user.home")
-        return File(homeDir, "$FALLBACK_DIR/$FALLBACK_FILE")
-    }
-
-    private fun getFallbackPassword(): String {
-        if (fallbackPassword == null) {
-            println("OS keyring not available. Fallback encrypted storage requires a password.")
-            val console = System.console()
-            fallbackPassword =
-                if (console != null) {
-                    // Use Console.readPassword() for masked input
-                    val password = console.readPassword("Enter master password: ")
-                    password?.let {
-                        val str = String(it)
-                        it.fill('\u0000') // Clear the char array from memory
-                        str
-                    } ?: throw SecureStorageException("Password required for fallback storage")
-                } else {
-                    // Fallback for non-interactive environments (testing, etc.)
-                    print("Enter master password: ")
-                    readlnOrNull() ?: throw SecureStorageException("Password required for fallback storage")
-                }
-        }
-        return fallbackPassword!!
-    }
-
-    private fun setRestrictivePermissions(file: File) {
-        try {
-            val path = file.toPath()
-            // Set owner-only read/write permissions (600 for files, 700 for directories)
-            val permissions =
-                if (file.isDirectory) {
-                    setOf(
-                        PosixFilePermission.OWNER_READ,
-                        PosixFilePermission.OWNER_WRITE,
-                        PosixFilePermission.OWNER_EXECUTE,
-                    )
-                } else {
-                    setOf(
-                        PosixFilePermission.OWNER_READ,
-                        PosixFilePermission.OWNER_WRITE,
-                    )
-                }
-            Files.setPosixFilePermissions(path, permissions)
-        } catch (e: UnsupportedOperationException) {
-            // Windows doesn't support POSIX permissions - file system security handles this
-            // No action needed
-        } catch (e: Exception) {
-            // Log but don't fail - permissions are a security enhancement, not critical
-            System.err.println("Warning: Could not set restrictive file permissions: ${e.message}")
-        }
-    }
+    // The old console-password fallback's cipher: [PasswordKeyFile] decrypts its file once to move
+    // the keys out, and the tests keep it honest.
 
     internal fun encryptData(
         plaintext: String,
@@ -928,6 +890,9 @@ actual class SecureKeyStorage private actual constructor() {
  * keystorage package.
  */
 internal interface KeyringHandle {
+    /** Which OS keyring this is, when known. */
+    val kind: OsKeyring? get() = null
+
     @Throws(PasswordAccessException::class)
     fun getPassword(
         service: String,
@@ -1043,6 +1008,15 @@ internal fun defaultMacSecurityLookup(
 internal class RealKeyringHandle(
     private val keyring: Keyring,
 ) : KeyringHandle {
+    override val kind: OsKeyring? =
+        when (runCatching { keyring.keyringStorageType }.getOrNull()) {
+            KeyringStorageType.OSX_KEYCHAIN, KeyringStorageType.LEGACY_OSX_KEYCHAIN -> OsKeyring.MAC_KEYCHAIN
+            KeyringStorageType.GNOME_KEYRING -> OsKeyring.SECRET_SERVICE
+            KeyringStorageType.WINDOWS_CREDENTIAL_STORE -> OsKeyring.WINDOWS_CREDENTIALS
+            KeyringStorageType.KWALLET -> OsKeyring.KWALLET
+            null -> null
+        }
+
     override fun getPassword(
         service: String,
         account: String,
@@ -1063,3 +1037,24 @@ internal class RealKeyringHandle(
         keyring.deletePassword(service, account)
     }
 }
+
+/**
+ * Whether the backend said the item does not exist, rather than refusing or failing. java-keyring
+ * words a missing item `No stored credentials match …` on macOS (jkeychain returns no value) and
+ * on the Secret Service, KWallet says `Password is not in wallet` (and `… cannot be deleted, it is
+ * not in wallet`) after its own hasEntry check, and Windows reports ERROR_NOT_FOUND (1168);
+ * everything else, a denied prompt included, is a failure.
+ */
+internal fun PasswordAccessException.isNotFound(): Boolean {
+    val text = message.orEmpty()
+    return text.startsWith("No stored credentials match") ||
+        text.endsWith("not in wallet") ||
+        text.contains("Error code 1168")
+}
+
+/** What `--keyring-self-test` reports. */
+data class KeyringSelfTestResult(
+    val ok: Boolean,
+    val keyring: OsKeyring?,
+    val detail: String,
+)

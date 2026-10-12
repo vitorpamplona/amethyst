@@ -114,6 +114,9 @@ fun main(args: Array<String>) {
     // window, no keyring, just the pre-signed posts that are due.
     if (args.contains("--publish-scheduled")) exitProcess(runHeadlessPublish())
 
+    // CI runs this on each packaged build: the OS keyring must work in what ships, not only in dev.
+    if (args.contains("--keyring-self-test")) exitProcess(runKeyringSelfTest())
+
     // macOS: the menu bar goes to the top of the screen, under the app's own name. Both must be set
     // before AWT starts.
     if (PlatformInfo.isMacOS) {
@@ -160,6 +163,7 @@ fun main(args: Array<String>) {
             // Releases the native video and audio engines before the JVM goes.
             GlobalMediaPlayer.shutdown()
             runCatching { modules.flushUiPrefs() }
+            runCatching { modules.flushAccountSettings() }
             modules.torManager.stopSync()
         },
     )

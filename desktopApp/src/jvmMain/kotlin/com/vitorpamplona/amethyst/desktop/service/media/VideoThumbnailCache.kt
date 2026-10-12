@@ -23,6 +23,7 @@ package com.vitorpamplona.amethyst.desktop.service.media
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.toComposeImageBitmap
 import com.vitorpamplona.amethyst.commons.service.upload.AmethystTempDir
+import com.vitorpamplona.amethyst.commons.service.upload.video.FfmpegLocator
 import com.vitorpamplona.amethyst.commons.util.deleteOrWarn
 import com.vitorpamplona.quartz.utils.Log
 import kotlinx.coroutines.CompletableDeferred
@@ -107,34 +108,6 @@ object VideoThumbnailCache {
             }
             trimDisk(dir)
         }
-    }
-
-    private val ffmpegBinary: String? by lazy {
-        // 1. System ffmpeg on PATH. Probe with `ffmpeg -version`, killing it if it overruns.
-        val onPath =
-            runCatching {
-                val probe =
-                    ProcessBuilder("ffmpeg", "-version")
-                        .redirectErrorStream(true)
-                        .redirectOutput(ProcessBuilder.Redirect.DISCARD)
-                        .start()
-                val exited = probe.waitFor(2, TimeUnit.SECONDS)
-                if (!exited) {
-                    probe.destroyForcibly()
-                    return@runCatching false
-                }
-                probe.exitValue() == 0
-            }.getOrDefault(false)
-        if (onPath) return@lazy "ffmpeg"
-
-        // 2. Bundled ffmpeg in the app resources (also set by `./gradlew :desktopApp:run`). Never a
-        // path relative to the working directory, which whoever launches the app controls.
-        val binaryName = if ("win" in System.getProperty("os.name").lowercase()) "ffmpeg.exe" else "ffmpeg"
-        System
-            .getProperty("compose.application.resources.dir")
-            ?.let { File(it, "ffmpeg/$binaryName") }
-            ?.takeIf { it.exists() && it.canExecute() }
-            ?.absolutePath
     }
 
     fun getCached(url: String): ImageBitmap? = synchronized(memory) { memory[url] }
@@ -271,7 +244,7 @@ object VideoThumbnailCache {
      * a stalled server would otherwise hold the process and this thread forever.
      */
     private fun runFfmpeg(input: String): BufferedImage? {
-        val ffmpeg = ffmpegBinary ?: return null
+        val ffmpeg = FfmpegLocator.default.ffmpeg ?: return null
         val cmd =
             listOf(
                 ffmpeg,

@@ -101,6 +101,24 @@
     native <methods>;
 }
 
+# java-keyring's Linux backend: the Secret Service (GNOME Keyring, KWallet's
+# Secret Service) over D-Bus, through de.swiesend:secret-service
+# (org.freedesktop.secret) and dbus-java (org.freedesktop.dbus). Shrinking
+# breaks it three ways (the signed hkdf jar it also needs is handled in
+# build.gradle.kts, after the ProGuard task):
+#   - dbus-java finds its socket transport through ServiceLoader
+#     (META-INF/services/...ITransportProvider -> NativeTransportProvider), so
+#     shrink saw no caller and emptied the transport jar. With no transport the
+#     backend failed to open, java-keyring reported no backend at all, and every
+#     Linux release build fell back to the console-password file store, which a
+#     GUI app cannot answer: no keyring prompt, and no key kept.
+#   - D-Bus calls go through reflective proxies of the remote interfaces, and
+#     structs are (de)serialised from their fields by reflection.
+#   - java-keyring builds each backend by reflection (getConstructor()).
+-keep class com.github.javakeyring.** { *; }
+-keep class org.freedesktop.dbus.** { *; }
+-keep class org.freedesktop.secret.** { *; }
+
 # kmp-tor — loads native Tor daemon via JNI reflection
 -keep class io.matthewnelson.** { *; }
 
@@ -170,6 +188,18 @@
 }
 -keepclassmembers class * implements uk.co.caprica.vlcj.factory.discovery.provider.DiscoveryProvider {
     public <init>(...);
+}
+
+# ============================================================================
+# Desktop-only: kdroidfilter ComposeMediaPlayer — JNI natives registered
+# from the bundled Swift dylib's JNI_OnLoad via a fixed RegisterNatives
+# table. Shrink sees no Java callsites for some natives (e.g. nGetVolume)
+# and strips the declarations, so RegisterNatives fails with
+# NoSuchMethodError during System.load() at first video init on macOS.
+# ============================================================================
+-keep class io.github.kdroidfilter.** { *; }
+-keepclassmembers class io.github.kdroidfilter.** {
+    native <methods>;
 }
 
 # ============================================================================
