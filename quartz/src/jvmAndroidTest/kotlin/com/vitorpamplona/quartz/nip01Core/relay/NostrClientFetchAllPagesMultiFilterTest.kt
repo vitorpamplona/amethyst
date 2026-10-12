@@ -101,6 +101,37 @@ class NostrClientFetchAllPagesMultiFilterTest {
             )
         }
 
+    /**
+     * search.brainstorm.world reads only with a NIP-50 token like `include:spam`. A search of
+     * nothing but `key:value` extensions has no words to rank by, so the relay serves it newest
+     * first like any filter, and taking one page of it returned 5,000 of 35,578 zap receipts.
+     */
+    @Test
+    fun aSearchOfOnlyExtensionsPagesToTheEnd() =
+        runBlocking {
+            val client = FakePagingRelay(this, dense, maxLimit = 50)
+            val got = mutableListOf<HexKey>()
+
+            val result = client.fetchAllPages(relay, listOf(Filter(kinds = listOf(1), search = "include:spam")), idleTimeoutMs = 2_000) { got.add(it.id) }
+
+            assertEquals(PagedFetchResult.End.DRAINED, result.end)
+            assertEquals(300, got.toSet().size, "every note, page after page")
+            assertTrue(client.requests.size > 1, "paged: ${client.requests.size} REQ")
+            assertTrue(client.requests.all { req -> req.all { it.search == "include:spam" } }, "every page keeps the token the relay demands")
+        }
+
+    /** A real search term ranks the hits, so it still gets its one page, extensions or not. */
+    @Test
+    fun aSearchWithATermStillGetsOnePage() =
+        runBlocking {
+            val client = FakePagingRelay(this, dense, maxLimit = 50)
+
+            val result = client.fetchAllPages(relay, listOf(Filter(kinds = listOf(1), search = "nostr include:spam")), idleTimeoutMs = 2_000) { }
+
+            assertEquals(PagedFetchResult.End.UNPAGEABLE, result.end)
+            assertEquals(1, client.requests.size, "a ranked search is asked once")
+        }
+
     @Test
     fun aMetLimitBesideASearchStillReportsTheLimit() =
         runBlocking {

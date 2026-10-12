@@ -35,6 +35,7 @@ import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.MachineReadabl
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
+import com.vitorpamplona.quartz.nip50Search.SearchQuery
 import com.vitorpamplona.quartz.utils.Log
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.delay
@@ -236,9 +237,9 @@ class PageRetryBackoff(
  * [PagedFetchResult.end] is the most serious of the walks' (see [severity]), so the result
  * drains only if every filter did; a relay that cannot be reached, or stays silent through a
  * whole walk, is not asked for the remaining filters.
- * Filters with a `search` are walked together, first: NIP-50 hits are relevance-ranked and
- * never page, so they get their one page, and their ending (UNPAGEABLE) ranks below a met
- * limit.
+ * Filters with a ranked `search` (see [isRankedSearch]) are walked together, first: NIP-50
+ * hits are relevance-ranked and never page, so they get their one page, and their ending
+ * (UNPAGEABLE) ranks below a met limit.
  *
  * **A throttled relay is re-asked before it is believed.** relay.damus.io, paged quickly
  * on one connection, shrinks its pages to a handful of events and then EOSEs an EMPTY page
@@ -275,14 +276,15 @@ class PageRetryBackoff(
  *    it proves nothing about what the relay holds, so no coverage claim can be built
  *    on a page the relay never really answered.
  *
- * A `search` ([Filter.search]) filter is the exception: NIP-50 results are ranked by
- * relevance, not `created_at`, so paging one by a `until` cursor is meaningless — it
- * would silently turn a top-N search into a time-walk, and never terminate against a
- * relay that runs FTS over its whole corpus regardless of `until`. So a search filter
- * is queried on the FIRST page only; it is then dropped from every later page and its
- * hits never advance (nor drag back) the `until` cursor other filters page with. Give
- * it a `limit` to bound that single page; without one you get the relay's default page
- * of top hits.
+ * A `search` ([Filter.search]) filter that asks for text is the exception: NIP-50 results
+ * are ranked by relevance, not `created_at`, so paging one by a `until` cursor is
+ * meaningless — it would silently turn a top-N search into a time-walk, and never
+ * terminate against a relay that runs FTS over its whole corpus regardless of `until`. So
+ * a ranked search filter is queried on the FIRST page only; it is then dropped from every
+ * later page and its hits never advance (nor drag back) the `until` cursor other filters
+ * page with. Give it a `limit` to bound that single page; without one you get the relay's
+ * default page of top hits. A search of only `key:value` extensions (`include:spam`) has
+ * no text to rank by and pages like any other filter, the token kept on every page.
  *
  * **NIP-67 completeness hints.** A relay may append hints to a page's `EOSE`:
  *
@@ -347,8 +349,8 @@ suspend fun INostrClient.fetchAllPages(
     // because the cross-walk dedup below remembers what a walk delivered that a later filter
     // also matches, and a search filter matches on its other fields alone (often just kinds):
     // after a full-history walk that would be most of it, before one page it is at most a page.
-    val searches = filters.filter { it.search != null }
-    val walks = listOfNotNull(searches.ifEmpty { null }) + filters.filter { it.search == null }.map { listOf(it) }
+    val searches = filters.filter { it.isRankedSearch() }
+    val walks = listOfNotNull(searches.ifEmpty { null }) + filters.filter { !it.isRankedSearch() }.map { listOf(it) }
     if (walks.size < 2) {
         return walkPages(relay, filters, idleTimeoutMs, onNewPage, pageSize, throttleBackoff, onEvent)
     }
@@ -492,6 +494,10 @@ private suspend fun INostrClient.walkPages(
     // Track how many matching events each filter has received so far.
     val matchCountPerFilter = IntArray(filters.size)
 
+    // Which filters are ranked searches, which get one page and never move the cursor. Parsed
+    // once here: the per-event loop below reads it for every event of the walk.
+    val rankedSearch = BooleanArray(filters.size) { filters[it].isRankedSearch() }
+
     // Bounded dedup: ids already delivered at exactly the current boundary second
     // (`until`), which the next inclusive page re-fetches. `until` decreases
     // monotonically, so a duplicate can only ever be a boundary-second event —
@@ -578,7 +584,7 @@ private suspend fun INostrClient.walkPages(
                 filters.indices.filter { index ->
                     val limit = filters[index].limit
                     val stillNeedsMore = limit == null || matchCountPerFilter[index] < limit
-                    val pageableThisPage = until == null || filters[index].search == null
+                    val pageableThisPage = until == null || !rankedSearch[index]
                     stillNeedsMore && pageableThisPage
                 }
             val capToPageSize = pageable.size == 1
@@ -780,7 +786,7 @@ private suspend fun INostrClient.walkPages(
                                     if (matchCountPerFilter[index] < (filters[index].limit ?: Int.MAX_VALUE) && filter.match(event)) {
                                         matchCountPerFilter[index]++
                                         atLeastOne = true
-                                        if (filter.search == null) advancesCursor = true
+                                        if (!rankedSearch[index]) advancesCursor = true
                                     }
                                 }
                                 if (atLeastOne) {
@@ -1051,7 +1057,7 @@ private suspend fun INostrClient.walkPages(
                         pageEnd == PageSignal.CANNOT_CONNECT -> PagedFetchResult.End.CANNOT_CONNECT
                         pageEnd == null -> PagedFetchResult.End.IDLE
                         cappedByLimit -> PagedFetchResult.End.LIMIT_REACHED
-                        filters.any { it.search != null } -> PagedFetchResult.End.UNPAGEABLE
+                        rankedSearch.any { it } -> PagedFetchResult.End.UNPAGEABLE
                         authBlocked -> PagedFetchResult.End.AUTH_REQUIRED
                         else -> PagedFetchResult.End.DRAINED
                     }
@@ -1068,7 +1074,7 @@ private suspend fun INostrClient.walkPages(
                     when {
                         authBlocked -> PagedFetchResult.End.AUTH_REQUIRED
                         filters.indices.any { i -> filters[i].limit.let { it != null && matchCountPerFilter[i] >= it } } -> PagedFetchResult.End.LIMIT_REACHED
-                        filters.any { it.search != null } -> PagedFetchResult.End.UNPAGEABLE
+                        rankedSearch.any { it } -> PagedFetchResult.End.UNPAGEABLE
                         else -> PagedFetchResult.End.DRAINED
                     }
                 break
@@ -1219,3 +1225,12 @@ suspend fun INostrClient.fetchAllPages(
     )
 
 private fun List<String>?.hasHint(hint: String) = this != null && contains(hint)
+
+/**
+ * Whether this filter's NIP-50 `search` asks for text ([SearchQuery.hasText]: loose terms or
+ * quoted phrases), so the relay ranks its hits by relevance and they cannot be paged by
+ * `until`. A search of only `key:value` extensions, such as search.brainstorm.world's
+ * `include:spam` access token, or only `-exclusions`, has nothing to rank by: the relay
+ * answers it newest first like any filter, so it pages like one.
+ */
+internal fun Filter.isRankedSearch(): Boolean = search != null && SearchQuery.parse(search).hasText
