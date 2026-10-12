@@ -554,6 +554,8 @@
     <string name="pinned_to_top">ऊपर टँकित</string>
     <string name="pinned_chat_no_messages_loaded">कोई निकटकाल सन्देश प्राप्त नहीं</string>
     <string name="upload_image">चित्र आरोहण</string>
+    <string name="upload_media">श्रव्यदृश्याभिलेख आरोहण</string>
+    <string name="video_compression_needs_ffmpeg">एफएफएम्पेग॰ की स्थापना करें चलचित्रों का संकुचन करने के लिए। तब तक चलचित्र यथावत आरोहित।</string>
     <string name="upload_file">अभिलेख आरोहण</string>
     <string name="take_a_picture">एक चित्र लें</string>
     <string name="record_a_video">चलचित्र का अभिलेखन करें</string>
@@ -2107,10 +2109,15 @@
     <string name="media_compression_quality_uncompressed">असंकुचित</string>
     <string name="media_compression_quality_very_low">अति निम्न</string>
     <string name="media_compression_quality_very_high">अति उच्च</string>
+    <string name="media_compression_images_up_to">चित्र %1$d बिन्दु तक</string>
+    <string name="media_compression_video_target">%1$s चलचित्र से %2$d बि॰ तथा %3$s दशलक्षांकप्रतिसेकण्ड</string>
+    <string name="media_compression_video_target_example">१०८० बि॰ चलचित्र से %1$d बि॰ तथा %2$s दशलक्षांकप्रतिसेकण्ड</string>
     <string name="media_compression_preview_compressed">संक्षिप्तीकृत</string>
     <string name="media_compression_preview_original">मूल</string>
     <string name="media_compression_preview_tap_original">चित्र पर दबाएँ मूल रूप देखने के लिए</string>
     <string name="media_compression_preview_tap_compressed">मूल रूप दिखाया जा रहा है। दबाएँ संक्षिप्तीकृत चित्र देखने के लिए</string>
+    <string name="media_compression_preview_uncompressed">मूल अभिलेख का आरोहण चालू बिना संकुचन</string>
+    <string name="media_compression_preview_tap_zoom">चित्र पर दबाएँ बृहत्कृत वीक्षण के लिए तथा मूल से तुलना करने के लिए</string>
     <string name="metadata_strip_failed_body">यह अभिलेख प्रारूप उपतथ्य हटाने का अवलम्बन नहीं करता। निजी जानकारी जैसे स्थान तथा यन्त्र विवरण समाविष्ट हो सकते हैं। क्या तो भी आरोहण करें।</string>
     <string name="metadata_strip_failed_upload">तो भी आरोहण करें</string>
     <string name="edit_draft">पाण्डुलिपि सम्पादन</string>

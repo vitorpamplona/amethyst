@@ -77,6 +77,7 @@ import com.vitorpamplona.amethyst.commons.resources.sign_up
 import com.vitorpamplona.amethyst.commons.resources.temporary_account
 import com.vitorpamplona.amethyst.commons.tor.TorSettingsFlow
 import com.vitorpamplona.amethyst.commons.ui.components.rememberViewModel
+import com.vitorpamplona.amethyst.commons.ui.keystorage.KeyStorageLoginOptions
 import com.vitorpamplona.amethyst.commons.ui.platform.LocalAppPlatform
 import com.vitorpamplona.amethyst.commons.ui.platform.LocalAppServices
 import com.vitorpamplona.amethyst.commons.ui.stringRes
@@ -155,6 +156,14 @@ fun LoginPage(
             OfferTemporaryAccount(
                 checked = loginViewModel.isTemporary,
                 onCheckedChange = { loginViewModel.isTemporary = it },
+            )
+        }
+
+        // A temporary login keeps nothing, so whether to keep the key only matters otherwise.
+        if (!loginViewModel.isTemporary) {
+            KeyStorageLoginOptions(
+                rememberKey = loginViewModel.rememberKey,
+                onRememberKeyChange = { loginViewModel.rememberKey = it },
             )
         }
 

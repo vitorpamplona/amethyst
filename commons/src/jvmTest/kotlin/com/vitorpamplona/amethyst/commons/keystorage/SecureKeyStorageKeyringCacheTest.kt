@@ -49,7 +49,7 @@ class SecureKeyStorageKeyringCacheTest {
         override fun getPassword(
             service: String,
             account: String,
-        ): String = store[service to account] ?: throw PasswordAccessException("no entry")
+        ): String = store[service to account] ?: throw PasswordAccessException("No stored credentials match $service account: $account")
 
         override fun setPassword(
             service: String,
@@ -64,7 +64,7 @@ class SecureKeyStorageKeyringCacheTest {
             account: String,
         ) {
             if (store.remove(service to account) == null) {
-                throw PasswordAccessException("no entry")
+                throw PasswordAccessException("No stored credentials match $service account: $account")
             }
         }
     }

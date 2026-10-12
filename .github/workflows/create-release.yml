@@ -326,6 +326,32 @@ jobs:
             --runtime-repo=https://dl.flathub.org/repo/flathub.flatpakrepo
           ls -la "$OUT"
 
+      # Every packaged build proves the OS keyring works in what ships, not only in development:
+      # ProGuard stripping a class, a jar signature it broke, a sandbox permission the Flatpak lacks
+      # all showed up only here. See commons/plans/2026-10-12-desktop-key-storage.md.
+      - name: Install a keyring session (Linux legs)
+        if: startsWith(matrix.family, 'linux')
+        run: sudo apt-get update && sudo apt-get install -y gnome-keyring dbus
+
+      - name: Keyring self-test (packaged app)
+        run: |
+          set -euo pipefail
+          APP=desktopApp/build/compose/binaries/main-release/app
+          case "${{ matrix.family }}" in
+            macos)   BIN="$APP/Amethyst.app/Contents/MacOS/Amethyst" ;;
+            windows) BIN="$APP/Amethyst/Amethyst.exe" ;;
+            *)       BIN="$APP/Amethyst/bin/Amethyst" ;;
+          esac
+          [[ -f "$BIN" ]] || { echo "::error::no packaged app at $BIN"; find "$APP" -maxdepth 3 | head -40; exit 1; }
+          bash scripts/keyring-self-test.sh "$BIN"
+
+      - name: Keyring self-test (Flatpak bundle, linux-portable only)
+        if: matrix.family == 'linux-portable'
+        run: |
+          set -euo pipefail
+          flatpak install --user -y --noninteractive desktopApp/build/flatpak/*.flatpak
+          bash scripts/keyring-self-test.sh flatpak run com.vitorpamplona.amethyst
+
       - name: Collect + rename assets
         run: |
           set -euo pipefail

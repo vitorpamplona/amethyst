@@ -33,6 +33,8 @@ data class AccountInfo(
     val isTransient: Boolean = false,
     /** Signs through a NIP-46 remote signer (a `bunker://` login). */
     val loggedInWithRemoteSigner: Boolean = false,
+    /** False when the private key is not kept on this device and is asked for at each launch. */
+    val keyRemembered: Boolean = true,
 ) {
     /** Whether this login can sign: a key on this device, a signer app, or a remote signer. */
     fun canSign() = hasPrivKey || loggedInWithExternalSigner || loggedInWithRemoteSigner

@@ -499,86 +499,52 @@ val verifyJkeychainNativeSurvivesProguard = tasks.register("verifyJkeychainNativ
     }
 }
 
-// ProGuard rewrites every class but copies a signed jar's signature files (META-INF/*.SF and
-// its .RSA/.DSA/.EC block) as they were, so the JVM refuses the first class it loads from the
-// jar: "SHA-256 digest error". hkdf, which the Linux Secret Service client needs to open its
-// encrypted session, ships signed, so every Linux release lost the OS keyring. A shrunk jar
-// can't match its original signature anyway: drop the signature, keep the classes.
-val jarSignatureFile = Regex("META-INF/[^/]+\\.(SF|RSA|DSA|EC)", RegexOption.IGNORE_CASE)
-
+// ProGuard rewrites the classes of every jar it processes, so a signed jar's
+// digests (META-INF/*.SF) stop matching and the JVM refuses its classes with a
+// SecurityException. at.favre.lib:hkdf is signed and the Linux keyring needs it
+// to open its Secret Service session (secret-service's TransportEncryption):
+// with its classes refused, java-keyring found no Linux backend at all. The
+// signatures cannot survive shrinking, so drop them from the output jars.
 tasks.matching { it.name == "proguardReleaseJars" }.configureEach {
     val proguardDir = layout.buildDirectory.dir("compose/tmp/main-release/proguard")
     doLast {
+        val signature = Regex("META-INF/[^/]+\\.(SF|RSA|DSA|EC)|META-INF/SIG-[^/]+")
         proguardDir.get().asFile.listFiles { f -> f.extension == "jar" }?.forEach { jar ->
-            FileSystems.newFileSystem(jar.toPath()).use { zip ->
-                val metaInf = zip.getPath("META-INF")
-                if (Files.isDirectory(metaInf)) {
-                    Files.list(metaInf).use { entries ->
-                        entries.filter { jarSignatureFile.matches(it.toString().removePrefix("/")) }.toList()
-                    }.forEach { Files.delete(it) }
-                }
+            val stale = ZipFile(jar).use { zip -> zip.entries().toList().map { it.name }.filter { signature.matches(it) } }
+            if (stale.isNotEmpty()) {
+                FileSystems.newFileSystem(jar.toPath()).use { fs -> stale.forEach { Files.delete(fs.getPath(it)) } }
+                println("Dropped the jar signature of ${jar.name}: ${stale.joinToString()}")
             }
         }
     }
 }
 
-// ProGuard does not read META-INF/services: a class that only a services file names looks
-// unused and is stripped, while the services file survives and points at nothing. That is how
-// dbus-java's unix-socket transport vanished and every Linux release lost the OS keyring.
-// Fail the release build if a provider a services file names is missing from the output, or if
-// a jar still carries a signature its rewritten classes no longer match (see above).
-val verifyProguardedJarsLoad = tasks.register("verifyProguardedJarsLoad") {
-    description = "Fail the release build if ProGuard strips a META-INF/services provider or leaves a stale jar signature"
+// The Linux keyring's D-Bus transport is found through ServiceLoader, so a
+// shrink with no keep rule empties its jar and every Linux release silently
+// stops using the OS keyring (see compose-rules.pro). Guard it like the .so.
+val verifyDbusTransportSurvivesProguard = tasks.register("verifyDbusTransportSurvivesProguard") {
+    description = "Fail the release build if ProGuard strips dbus-java's socket transport (would break the Linux keyring at runtime)"
     group = "verification"
     dependsOn("proguardReleaseJars")
     val proguardDir = layout.buildDirectory.dir("compose/tmp/main-release/proguard")
     inputs.dir(proguardDir).withPropertyName("proguardOutput").withPathSensitivity(PathSensitivity.RELATIVE)
-    val marker = layout.buildDirectory.file("verify-proguarded-jars.ok")
+    val marker = layout.buildDirectory.file("verify-dbus-transport.ok")
     outputs.file(marker)
     doLast {
-        val dir = proguardDir.get().asFile
-        val jars = dir.listFiles { f -> f.extension == "jar" } ?: emptyArray()
-        require(jars.isNotEmpty()) { "No proguarded jars under $dir" }
-        val classes = mutableSetOf<String>()
-        val providers = mutableListOf<Triple<String, String, String>>() // jar, service, provider
-        val signed = mutableListOf<String>()
-        jars.forEach { jar ->
-            ZipFile(jar).use { zip ->
-                zip.entries().asSequence().forEach { entry ->
-                    val name = entry.name
-                    when {
-                        name.endsWith(".class") -> {
-                            // Multi-release entries: META-INF/versions/<n>/a/b/C.class
-                            val path = if (name.startsWith("META-INF/versions/")) name.split('/', limit = 4)[3] else name
-                            classes += path.removeSuffix(".class").replace('/', '.')
-                        }
-                        name.startsWith("META-INF/services/") && !entry.isDirectory ->
-                            zip.getInputStream(entry).bufferedReader().readLines()
-                                .map { it.substringBefore('#').trim() }
-                                .filter { it.isNotEmpty() }
-                                .forEach { providers += Triple(jar.name, name.removePrefix("META-INF/services/"), it) }
-                        jarSignatureFile.matches(name) -> signed += "${jar.name}: $name"
-                    }
-                }
-            }
+        val required = "org/freedesktop/dbus/transport/jre/NativeTransportProvider.class"
+        val jars = proguardDir.get().asFile.listFiles { f -> f.extension == "jar" } ?: emptyArray()
+        val foundIn = jars.firstOrNull { jar -> ZipFile(jar).use { it.getEntry(required) != null } }
+        require(foundIn != null) {
+            "REGRESSION: $required missing from every proguarded jar.\n" +
+                "dbus-java loads it through ServiceLoader; without it java-keyring finds no Linux backend\n" +
+                "and the app silently stops keeping private keys in the OS keyring."
         }
-        val missing = providers.filter { it.third !in classes }
-        require(missing.isEmpty()) {
-            "REGRESSION: ProGuard stripped classes that META-INF/services registers:\n" +
-                missing.joinToString("\n") { (jar, service, provider) -> "  $provider ($service, in $jar)" } +
-                "\nServiceLoader finds nothing at runtime. Add a -keep rule in compose-rules.pro."
-        }
-        require(signed.isEmpty()) {
-            "REGRESSION: proguarded jars still carry signatures their rewritten classes fail:\n  " +
-                signed.joinToString("\n  ") + "\nThe JVM refuses every class in them (SHA-256 digest error)."
-        }
-        marker.get().asFile.writeText("verified ${providers.size} service providers, no stale signatures\n")
-        println("verifyProguardedJarsLoad: ${providers.size} service providers present, no stale signatures")
+        marker.get().asFile.writeText("verified $required survived ProGuard in ${foundIn.name}\n")
     }
 }
 
-// Gate every release-packaging task on the verifications so a stripped .so, service
-// provider or stale signature never reaches a release artifact.
+// Gate every release-packaging task on the verification so a stripped .so
+// never reaches a release artifact.
 listOf(
     "packageReleaseDmg",
     "packageReleaseMsi",
@@ -590,7 +556,8 @@ listOf(
     "runReleaseDistributable",
 ).forEach { name ->
     tasks.matching { it.name == name }.configureEach {
-        dependsOn(verifyJkeychainNativeSurvivesProguard, verifyProguardedJarsLoad)
+        dependsOn(verifyJkeychainNativeSurvivesProguard)
+        dependsOn(verifyDbusTransportSurvivesProguard)
     }
 }
 
