@@ -225,6 +225,20 @@ class NegentropyDownloadTest {
             assertEquals(delivered.size, delivered.toSet().size, "no event delivered twice: $delivered")
         }
 
+    /**
+     * search.brainstorm.world reads only with a NIP-50 token (`include:spam`) and refuses a
+     * `REQ` without it `auth-required:`. The reconcile carried the token, so every id it named
+     * must be asked for with it too: without it the sync named 2 needs and downloaded none.
+     */
+    @Test
+    fun theSearchTokenOfTheReconciledFilterGoesOutWithTheIds() =
+        runBlocking {
+            val result = sync(30, Filter(kinds = listOf(1), search = SEARCH_TOKEN)) { RequiresSearchToken() }
+
+            assertEquals(30, result.needCount)
+            assertEquals(30, result.downloaded, "every id is asked for with the token the relay demands")
+        }
+
     @Test
     fun eventsTheRelaySendsUnaskedAreNotCollected() =
         runBlocking {
@@ -358,6 +372,26 @@ class NegentropyDownloadTest {
         override fun accept(cmd: NegOpenCmd): PolicyResult<NegOpenCmd> = PolicyResult.Accepted(NegOpenCmd(cmd.subId, cmd.filter.copy(until = null, limit = n), cmd.initialMessage))
     }
 
+    /**
+     * Answers only reads that carry [SEARCH_TOKEN], as search.brainstorm.world does, then
+     * serves them as plain filters: the token is an access switch there, not a text query.
+     */
+    private class RequiresSearchToken : PassThroughPolicy() {
+        override fun accept(cmd: NegOpenCmd): PolicyResult<NegOpenCmd> =
+            if (cmd.filter.search == SEARCH_TOKEN) {
+                PolicyResult.Accepted(NegOpenCmd(cmd.subId, cmd.filter.copy(search = null), cmd.initialMessage))
+            } else {
+                PolicyResult.Rejected(AUTH_REQUIRED)
+            }
+
+        override fun accept(cmd: ReqCmd): PolicyResult<ReqCmd> =
+            if (cmd.filters.all { it.search == SEARCH_TOKEN }) {
+                PolicyResult.Accepted(ReqCmd(cmd.subId, cmd.filters.map { it.copy(search = null) }))
+            } else {
+                PolicyResult.Rejected(AUTH_REQUIRED)
+            }
+    }
+
     /** Refuses a `REQ` filter that names ids and nothing else, as conduit does. */
     private class RefusesBareIds : PassThroughPolicy() {
         override fun accept(cmd: ReqCmd): PolicyResult<ReqCmd> =
@@ -366,5 +400,10 @@ class NegentropyDownloadTest {
             } else {
                 PolicyResult.Accepted(cmd)
             }
+    }
+
+    private companion object {
+        const val SEARCH_TOKEN = "include:spam"
+        const val AUTH_REQUIRED = "auth-required: this relay answers through a web of trust"
     }
 }

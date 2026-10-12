@@ -60,6 +60,10 @@ import kotlin.concurrent.atomics.incrementAndFetch
  *    every id a reconcile of [reconciledFrom] named matches. A filter with no kinds may hold
  *    a long `authors` list, too heavy to repeat on every batch, so its ids go out
  *    bare and its `authors` and tags are added only to re-ask a `CLOSED` batch.
+ *  - **A relay that reads only with a NIP-50 token**, such as search.brainstorm.world,
+ *    which refuses any `REQ` without `include:spam` or an `observer:` token as
+ *    `auth-required:`. The reconcile carried that `search`, so every `REQ` carries
+ *    [reconciledFrom]'s `search` as well; the ids it named all match it.
  *
  * An `auth-required:` refusal is re-asked once, after this client's NIP-42 responder
  * (if it has one) authenticates.
@@ -101,8 +105,8 @@ suspend fun INostrClient.fetchByIds(
         val authMark = authSuccessMark(relay)
         val filter =
             when {
-                widened -> Filter(ids = missing, authors = reconciledFrom?.authors, kinds = reconciledFrom?.kinds, tags = reconciledFrom?.tags, tagsAll = reconciledFrom?.tagsAll)
-                else -> Filter(ids = missing, kinds = reconciledFrom?.kinds)
+                widened -> Filter(ids = missing, authors = reconciledFrom?.authors, kinds = reconciledFrom?.kinds, tags = reconciledFrom?.tags, tagsAll = reconciledFrom?.tagsAll, search = reconciledFrom?.search)
+                else -> Filter(ids = missing, kinds = reconciledFrom?.kinds, search = reconciledFrom?.search)
             }
         if (pacing.gaveUp) break
         val end = pacing.turn { fetchByIdsRound(relay, filter, batchIdleMs, pending, seen, collected) }
