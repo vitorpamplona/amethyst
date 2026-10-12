@@ -1,5 +1,6 @@
 import org.jetbrains.compose.desktop.application.dsl.TargetFormat
 import org.jetbrains.compose.desktop.application.tasks.AbstractJPackageTask
+import java.io.DataInputStream
 import java.net.URI
 import java.nio.file.FileSystems
 import java.nio.file.Files
@@ -620,6 +621,44 @@ val verifyDbusTransportSurvivesProguard = tasks.register("verifyDbusTransportSur
     }
 }
 
+// A native library that binds its methods from JNI_OnLoad with RegisterNatives fails to load if
+// any method in its table is missing from the class, and the JVM then unloads it. Shrink strips
+// a native declaration nothing in Java calls, so the library breaks in the release build only:
+// ComposeMediaPlayer's DLL registers WindowsNativeBridge.nGetPlaybackSpeed, which no Kotlin code
+// calls, and with it stripped the v1.18.0 Windows release had no video or audio at all ("Video
+// playback unavailable"). A class ProGuard keeps must keep every native it declared.
+val verifyJniNativesSurviveProguard = tasks.register("verifyJniNativesSurviveProguard") {
+    description = "Fail the release build if ProGuard strips a native method from a class it keeps (breaks RegisterNatives libraries at load)"
+    group = "verification"
+    dependsOn("proguardReleaseJars")
+    val proguardDir = layout.buildDirectory.dir("compose/tmp/main-release/proguard")
+    val originalJars: FileCollection = configurations.getByName("runtimeClasspath")
+    inputs.dir(proguardDir).withPropertyName("proguardOutput").withPathSensitivity(PathSensitivity.RELATIVE)
+    inputs.files(originalJars).withPropertyName("originalJars").withNormalizer(ClasspathNormalizer::class.java)
+    val marker = layout.buildDirectory.file("verify-jni-natives.ok")
+    outputs.file(marker)
+    doLast {
+        val shrunk = nativeMethodsByClass(proguardDir.get().asFile.listFiles { f -> f.extension == "jar" }.orEmpty().toList())
+        require(shrunk.isNotEmpty()) { "No native methods found in the proguarded jars under ${proguardDir.get().asFile}" }
+        val original = nativeMethodsByClass(originalJars.filter { it.extension == "jar" }.files.toList())
+        // A class ProGuard dropped whole is never loaded, so nothing registers natives on it.
+        val stripped =
+            original.flatMap { (cls, methods) ->
+                val kept = shrunk[cls] ?: return@flatMap emptyList()
+                (methods - kept).map { "$cls.$it" }
+            }
+        require(stripped.isEmpty()) {
+            "REGRESSION: ProGuard stripped native methods from classes it kept:\n" +
+                stripped.sorted().joinToString("\n") { "  $it" } + "\n" +
+                "A library that binds its natives with RegisterNatives fails to load without them.\n" +
+                "Add a -keep rule for the class in desktopApp/compose-rules.pro."
+        }
+        val count = shrunk.values.sumOf { it.size }
+        marker.get().asFile.writeText("verified $count native methods in ${shrunk.size} classes survived ProGuard\n")
+        println("verifyJniNativesSurviveProguard: $count native methods in ${shrunk.size} classes kept")
+    }
+}
+
 // Gate every release-packaging task on the verification so a stripped .so
 // never reaches a release artifact.
 listOf(
@@ -635,7 +674,63 @@ listOf(
     tasks.matching { it.name == name }.configureEach {
         dependsOn(verifyJkeychainNativeSurvivesProguard)
         dependsOn(verifyDbusTransportSurvivesProguard)
+        dependsOn(verifyJniNativesSurviveProguard)
     }
+}
+
+/** Every class in [jars] that declares native methods, mapped to them as `name(descriptor)`. */
+fun nativeMethodsByClass(jars: List<File>): Map<String, Set<String>> {
+    val result = HashMap<String, MutableSet<String>>()
+    jars.forEach { jar ->
+        ZipFile(jar).use { zip ->
+            zip.entries().asSequence()
+                .filter { it.name.endsWith(".class") && !it.name.startsWith("META-INF/") }
+                .forEach { entry ->
+                    val natives = zip.getInputStream(entry).use { readNativeMethods(DataInputStream(it.buffered())) }
+                    if (natives.isNotEmpty()) result.getOrPut(entry.name.removeSuffix(".class")) { HashSet() } += natives
+                }
+        }
+    }
+    return result
+}
+
+/** The `name(descriptor)` of each ACC_NATIVE method in one class file (JVMS 4.1). */
+fun readNativeMethods(input: DataInputStream): List<String> {
+    if (input.readInt() != 0xCAFEBABE.toInt()) return emptyList()
+    input.skipNBytes(4) // minor + major version
+    val poolSize = input.readUnsignedShort()
+    val utf8 = arrayOfNulls<String>(poolSize)
+    var i = 1
+    while (i < poolSize) {
+        when (val tag = input.readUnsignedByte()) {
+            1 -> utf8[i] = input.readUTF()
+            7, 8, 16, 19, 20 -> input.skipNBytes(2)
+            15 -> input.skipNBytes(3)
+            3, 4, 9, 10, 11, 12, 17, 18 -> input.skipNBytes(4)
+            5, 6 -> {
+                input.skipNBytes(8)
+                i++ // longs and doubles take two pool slots
+            }
+            else -> throw GradleException("Unknown constant pool tag $tag")
+        }
+        i++
+    }
+    input.skipNBytes(6) // access flags, this class, super class
+    input.skipNBytes(2L * input.readUnsignedShort()) // interfaces
+    fun skipMembers(collect: MutableList<String>?) {
+        repeat(input.readUnsignedShort()) {
+            val access = input.readUnsignedShort()
+            val name = utf8[input.readUnsignedShort()]
+            val descriptor = utf8[input.readUnsignedShort()]
+            repeat(input.readUnsignedShort()) {
+                input.skipNBytes(2)
+                input.skipNBytes(input.readInt().toLong() and 0xFFFFFFFFL)
+            }
+            if (collect != null && access and 0x0100 != 0) collect += "$name$descriptor"
+        }
+    }
+    skipMembers(null) // fields
+    return ArrayList<String>().also { skipMembers(it) }
 }
 
 // macOS notarization: the bundled jars (secp256k1, jna, sqlite-bundled, skiko,
