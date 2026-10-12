@@ -43,8 +43,12 @@ class UserWatcherSubAssembler(
     /**
      * This assembler saves the EOSE per user key. That EOSE includes their metadata, etc
      * and reports, but only from trusted accounts (follows of all logged in users).
+     *
+     * Sized for a feed's whole author list (see [UserFinderQueryState.isFeedAuthor]), not just the
+     * users on screen: an evicted user loses its `since` and is downloaded again in full, and that
+     * download's EOSE evicts another, looping while the feed is open.
      */
-    var latestEOSEs: EOSEAccountFast<User> = EOSEAccountFast(200)
+    var latestEOSEs: EOSEAccountFast<User> = EOSEAccountFast(10_000)
 
     fun newEose(
         relay: NormalizedRelayUrl,

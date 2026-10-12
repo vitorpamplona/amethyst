@@ -36,6 +36,13 @@ import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.RelayOfflineT
 class UserFinderQueryState(
     val user: User,
     val account: UserFinderAccount,
+    /**
+     * True when [user] is watched because the selected feed reads their notes (a member of the list
+     * picked in the top bar), not because they are drawn on screen. Such a user gets the relay list
+     * and the live metadata the rest of the app reads, but not the reports and contact cards a
+     * profile or note card shows: a list can hold thousands of members, few of them ever drawn.
+     */
+    val isFeedAuthor: Boolean = false,
 )
 
 @Stable
@@ -48,9 +55,12 @@ class UserFinderFilterAssembler(
         listOf(
             UserOutboxFinderSubAssembler(client, cache, failureTracker, ::allKeys),
             UserWatcherSubAssembler(client, cache, failureTracker, ::allKeys),
-            UserReportsSubAssembler(client, cache, ::allKeys),
-            UserCardsSubAssembler(client, cache, ::allKeys),
+            UserReportsSubAssembler(client, cache, ::onScreenKeys),
+            UserCardsSubAssembler(client, cache, ::onScreenKeys),
         )
+
+    /** The users drawn on screen, without the authors a feed only reads: see [UserFinderQueryState.isFeedAuthor]. */
+    private fun onScreenKeys() = allKeys().filterNotTo(mutableSetOf()) { it.isFeedAuthor }
 
     override fun invalidateFilters() = group.forEach { it.invalidateFilters() }
 

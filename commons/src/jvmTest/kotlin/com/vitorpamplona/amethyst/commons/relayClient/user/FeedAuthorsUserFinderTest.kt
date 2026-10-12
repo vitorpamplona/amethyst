@@ -29,12 +29,17 @@ import com.vitorpamplona.amethyst.commons.model.topNavFeeds.noteBased.author.Aut
 import com.vitorpamplona.amethyst.commons.model.topNavFeeds.noteBased.author.AuthorsByProxyTopNavFilter
 import com.vitorpamplona.amethyst.commons.model.topNavFeeds.noteBased.community.SingleCommunityTopNavFilter
 import com.vitorpamplona.amethyst.commons.model.topNavFeeds.noteBased.muted.MutedAuthorsByOutboxTopNavFilter
+import com.vitorpamplona.amethyst.commons.relayClient.eoseManagers.BaseEoseManager
 import com.vitorpamplona.amethyst.commons.relayClient.user.loaders.UserOutboxFinderSubAssembler
+import com.vitorpamplona.amethyst.commons.relayClient.user.watchers.UserCardsSubAssembler
+import com.vitorpamplona.amethyst.commons.relayClient.user.watchers.UserReportsSubAssembler
+import com.vitorpamplona.amethyst.commons.relayClient.user.watchers.UserWatcherSubAssembler
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.crypto.KeyPair
 import com.vitorpamplona.quartz.nip01Core.metadata.MetadataEvent
 import com.vitorpamplona.quartz.nip01Core.relay.client.EmptyNostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.RelayOfflineTracker
+import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerSync
 import com.vitorpamplona.quartz.nip65RelayList.AdvertisedRelayListEvent
@@ -51,18 +56,19 @@ import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
 /**
- * A people-list member nobody follows has no loader asking for their kind:10002, so a list feed
- * only looked for their notes on fallback relays. The feed now hands its authors to
- * [FeedAuthorsOutboxFilterAssembler], which must ask for the relay lists that are still missing.
+ * A member of a list the user picked in the top bar, but does not follow, had no loader asking for
+ * their kind:10002, so the feed only looked for their notes on fallback relays. The feed now watches
+ * its authors through the regular user finder as feed authors ([UserFinderQueryState.isFeedAuthor]):
+ * relay list and live metadata, but not the reports and cards only a drawn profile needs.
  */
-class FeedAuthorsOutboxFilterAssemblerTest {
+class FeedAuthorsUserFinderTest {
     private val indexRelay = NormalizedRelayUrl("wss://index.test/")
     private val outboxRelay = NormalizedRelayUrl("wss://outbox.test/")
     private val blocked = MutableStateFlow(emptySet<NormalizedRelayUrl>())
 
     private val client = EmptyNostrClient()
     private val cache = EventCache()
-    private val assembler = FeedAuthorsOutboxFilterAssembler(client, cache, RelayOfflineTracker(client))
+    private val outboxFinder = UserOutboxFinderSubAssembler(client, cache, RelayOfflineTracker(client), { emptySet() })
 
     private val account =
         object : UserFinderAccount {
@@ -90,7 +96,11 @@ class FeedAuthorsOutboxFilterAssemblerTest {
         }
 
     @AfterTest
-    fun tearDown() = assembler.destroy()
+    fun tearDown() = outboxFinder.destroy()
+
+    private fun newUser() = cache.getOrCreateUser(NostrSignerSync(KeyPair()).pubKey)
+
+    private fun List<RelayBasedFilter>.authors() = flatMap { it.filter.authors.orEmpty() }.toSet()
 
     @Test
     fun listFeedsExposeTheirAuthors() {
@@ -121,27 +131,27 @@ class FeedAuthorsOutboxFilterAssemblerTest {
         assertEquals(emptySet(), CustomFeedTopNavFilter(pinned, follows, blocked, emptySet()).outboxAuthors())
         assertEquals(emptySet(), CustomFeedTopNavFilter(byAuthors, follows, blocked, setOf(outboxRelay)).outboxAuthors())
 
-        assertEquals(authors, SingleCommunityTopNavFilter("34550:${"cc".repeat(32)}:x", authors, emptySet(), blocked).outboxAuthors())
-        assertEquals(emptySet(), SingleCommunityTopNavFilter("34550:${"cc".repeat(32)}:x", authors, setOf(outboxRelay), blocked).outboxAuthors())
+        val community = "34550:${"cc".repeat(32)}:x"
+        assertEquals(authors, SingleCommunityTopNavFilter(community, authors, emptySet(), blocked).outboxAuthors())
+        assertEquals(emptySet(), SingleCommunityTopNavFilter(community, authors, setOf(outboxRelay), blocked).outboxAuthors())
     }
 
     @Test
-    fun membersNoRelayHasAListForAreDroppedNotKeptInAStandingReq() {
-        val noList = NostrSignerSync(KeyPair())
-        val user = cache.getOrCreateUser(noList.pubKey)
-        val keys = listOf(UserFinderQueryState(user, account))
-
-        // Every relay this account would ask already answered without a kind:10002.
-        assembler.outboxFinder.hasTried.newEose(user, indexRelay, TimeUtils.now())
-        assertEquals(emptyList(), assembler.outboxFinder.updateFilter(keys).orEmpty())
-
-        // The on-screen user finder keeps asking the default index relays for them instead.
-        val onScreen = UserOutboxFinderSubAssembler(client, cache, RelayOfflineTracker(client), { emptySet() })
+    fun feedAuthorsGetRelayListsAndMetadataButNotReportsOrCards() {
+        val finder = UserFinderFilterAssembler(client, cache, RelayOfflineTracker(client))
         try {
-            onScreen.hasTried.newEose(user, indexRelay, TimeUtils.now())
-            assertTrue(onScreen.updateFilter(keys).orEmpty().isNotEmpty())
+            val drawn = UserFinderQueryState(newUser(), account)
+            val member = UserFinderQueryState(newUser(), account, isFeedAuthor = true)
+            finder.subscribe(listOf(drawn, member))
+
+            fun keysOf(type: Class<*>) = (finder.group.single { type.isInstance(it) } as BaseEoseManager<*>).allKeys()
+
+            assertEquals(setOf(drawn, member), keysOf(UserOutboxFinderSubAssembler::class.java))
+            assertEquals(setOf(drawn, member), keysOf(UserWatcherSubAssembler::class.java))
+            assertEquals(setOf(drawn), keysOf(UserReportsSubAssembler::class.java))
+            assertEquals(setOf(drawn), keysOf(UserCardsSubAssembler::class.java))
         } finally {
-            onScreen.destroy()
+            finder.destroy()
         }
     }
 
@@ -155,16 +165,63 @@ class FeedAuthorsOutboxFilterAssemblerTest {
 
         val keys =
             listOf(listOnly, withRelayList).map {
-                UserFinderQueryState(cache.getOrCreateUser(it.pubKey), account)
+                UserFinderQueryState(cache.getOrCreateUser(it.pubKey), account, isFeedAuthor = true)
             }
 
-        val filters = assembler.outboxFinder.updateFilter(keys).orEmpty()
+        val filters = outboxFinder.updateFilter(keys).orEmpty()
 
-        val requested = filters.flatMap { it.filter.authors.orEmpty() }.toSet()
-        assertEquals(setOf(listOnly.pubKey), requested)
+        assertEquals(setOf(listOnly.pubKey), filters.authors())
         filters.forEach {
             assertEquals(listOf(MetadataEvent.KIND, AdvertisedRelayListEvent.KIND), it.filter.kinds)
         }
         assertTrue(filters.any { it.relay == indexRelay }, "the index relays are asked: ${filters.map { it.relay }}")
+    }
+
+    @Test
+    fun aWholeListIsAskedForInChunks() {
+        val keys = List(250) { UserFinderQueryState(newUser(), account, isFeedAuthor = true) }
+
+        val onIndex = outboxFinder.updateFilter(keys).orEmpty().filter { it.relay == indexRelay }
+
+        assertEquals(3, onIndex.size)
+        onIndex.forEach {
+            assertTrue(
+                it.filter.authors
+                    .orEmpty()
+                    .size <= 100,
+            )
+        }
+        assertEquals(keys.map { it.user.pubkeyHex }.toSet(), onIndex.authors())
+    }
+
+    @Test
+    fun onlyDrawnUsersKeepAStandingReqWhenNoRelayHasTheirList() {
+        val member = newUser()
+        val drawn = newUser()
+        val keys =
+            listOf(
+                UserFinderQueryState(member, account, isFeedAuthor = true),
+                UserFinderQueryState(drawn, account),
+            )
+
+        // Every relay this account would ask already answered without a kind:10002.
+        outboxFinder.hasTried.newEose(member, indexRelay, TimeUtils.now())
+        outboxFinder.hasTried.newEose(drawn, indexRelay, TimeUtils.now())
+
+        assertEquals(setOf(drawn.pubkeyHex), outboxFinder.updateFilter(keys).orEmpty().authors())
+    }
+
+    @Test
+    fun aMemberThatIsAlsoDrawnIsTreatedAsDrawn() {
+        val user = newUser()
+        val keys =
+            listOf(
+                UserFinderQueryState(user, account, isFeedAuthor = true),
+                UserFinderQueryState(user, account),
+            )
+
+        outboxFinder.hasTried.newEose(user, indexRelay, TimeUtils.now())
+
+        assertEquals(setOf(user.pubkeyHex), outboxFinder.updateFilter(keys).orEmpty().authors())
     }
 }

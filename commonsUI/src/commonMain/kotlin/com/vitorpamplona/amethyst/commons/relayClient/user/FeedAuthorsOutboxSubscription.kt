@@ -33,15 +33,16 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.withContext
 
 /**
- * Loads the relay lists (and profiles) of the authors the selected top-nav feed reads by the
- * outbox model, for as long as the feed is in composition. Without it, a people-list member that
- * the user does not follow keeps no kind:10002 in the cache, so the feed never asks their relays.
+ * Watches the authors the selected top-nav feed reads by the outbox model, for as long as the feed
+ * is in composition: their relay lists and live metadata load through the regular [UserFinderFilterAssembler],
+ * as feed authors ([UserFinderQueryState.isFeedAuthor]). Without it, a member of someone else's list
+ * keeps no kind:10002 in the cache, so the feed never asks their relays.
  */
 @Composable
 fun FeedAuthorsOutboxSubscription(
     topNavFilter: StateFlow<IFeedTopNavFilter>,
     account: Account,
-    dataSource: FeedAuthorsOutboxFilterAssembler,
+    dataSource: UserFinderFilterAssembler,
 ) {
     val filter by topNavFilter.collectAsStateWithLifecycle()
     val authors = filter.outboxAuthors()
@@ -53,7 +54,7 @@ fun FeedAuthorsOutboxSubscription(
         value =
             withContext(Dispatchers.Default) {
                 authors.mapNotNull { pubkey ->
-                    account.cache.checkGetOrCreateUser(pubkey)?.let { UserFinderQueryState(it, account) }
+                    account.cache.checkGetOrCreateUser(pubkey)?.let { UserFinderQueryState(it, account, isFeedAuthor = true) }
                 }
             }
     }
@@ -67,5 +68,5 @@ fun FeedAuthorsOutboxSubscription(
     topNavFilter: StateFlow<IFeedTopNavFilter>,
     accountViewModel: AccountViewModel,
 ) {
-    FeedAuthorsOutboxSubscription(topNavFilter, accountViewModel.account, accountViewModel.dataSources().feedAuthorsOutbox)
+    FeedAuthorsOutboxSubscription(topNavFilter, accountViewModel.account, accountViewModel.dataSources().userFinder)
 }
