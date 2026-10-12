@@ -1122,7 +1122,8 @@ private suspend fun INostrClient.walkPages(
                 // reported DRAINED. Re-ask the same cursor; once the re-asks are spent, end with
                 // the page's own reading rather than claim a second the walk never finished.
                 if (pageEnd != PageSignal.EOSE) {
-                    if (reAsks < throttleBackoff.delaysMs.size) {
+                    // Not on the walk's own schedule when the relay stated a back-off it cannot wait out.
+                    if (reAsks < throttleBackoff.delaysMs.size && !(pageEnd == PageSignal.CLOSED && refusalBackedOff)) {
                         val waitMs = throttleBackoff.delaysMs[reAsks++]
                         Log.d("fetchAllPages") { "${relay.url} page cut short ($pageEnd) inside the boundary second at until=$until; re-asking in ${waitMs}ms (#$reAsks)" }
                         throttleBackoff.sleep(waitMs)

@@ -261,6 +261,41 @@ class NostrClientFetchAllPagesDrainTest {
         }
 
     /**
+     * The same inside a boundary second: a page that re-served only the boundary's repeats and
+     * was then CLOSED with a back-off too long to wait is not re-asked on the walk's schedule.
+     */
+    @Test
+    fun aLongBackOffInsideTheBoundarySecondIsNotReAsked() =
+        runBlocking {
+            val client = ScriptedClient()
+            val slept = mutableListOf<Long>()
+            val feeder =
+                launch {
+                    client.awaitPage(1)
+                    client.listener!!.onEvent(event(2000), false, relay, null)
+                    client.listener!!.onEvent(event(1000), false, relay, null)
+                    client.listener!!.onEose(relay, null)
+                    client.awaitPage(2)
+                    // Only the boundary second's repeat, then the throttle.
+                    client.listener!!.onEvent(event(1000), false, relay, null)
+                    client.listener!!.onClosed("rate-limited: slow down", relay, null, "3600000")
+                }
+
+            val result =
+                client.fetchAllPages(
+                    relay = relay,
+                    filters = listOf(Filter(kinds = listOf(1))),
+                    idleTimeoutMs = 2_000,
+                    throttleBackoff = PageRetryBackoff(listOf(1L, 1L, 1L)) { slept.add(it) },
+                ) { }
+            feeder.join()
+
+            assertEquals(PagedFetchResult.End.CLOSED, result.end)
+            assertEquals(2, client.subscribeCount)
+            assertTrue(slept.isEmpty(), "re-asked inside an hour-long back-off: $slept")
+        }
+
+    /**
      * An `auth-required:` CLOSED is a refusal too, but its own kind: the caller can fix it
      * with a signer the relay accepts, which is true of none of the others [End.CLOSED]
      * covers. It is reported separately even here, where the client has no NIP-42 responder
