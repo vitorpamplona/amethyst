@@ -313,6 +313,63 @@ val rpmLibraryDeps =
 // the solver.
 val rpmFontDeps = "Requires: (dejavu-sans-fonts or dejavu-fonts)"
 
+// jpackage's .rpm registers the menu entry from %post with `xdg-desktop-menu install` and removes
+// it from %preun. On a system without /usr/share/desktop-directories (a minimal openSUSE) that
+// exits 3: %post only warns, but a failed %preun aborts the erase, so the package could not be
+// removed. And RPM runs the old package's %preun after the new one's %post, so every upgrade
+// unregistered the entry the new version had just registered. Like the .deb
+// (scripts/fix-deb-desktop-entry.sh), the spec now ships the entry as a file the package owns and
+// drops those calls. Two scriptlets cover upgrades from a version that still has them:
+//  - %pre creates /usr/share/desktop-directories, so the old %preun can't fail and abort the upgrade.
+//  - %posttrans, which runs after the old %preun, puts the entry back where that %preun deleted it
+//    (it removes the copy in the first writable of /usr/local/share and /usr/share).
+fun rpmSpec(
+    template: String,
+    requires: String,
+): String {
+    fun String.edit(
+        pattern: String,
+        change: (String) -> String,
+    ): String {
+        val match = Regex(pattern, RegexOption.MULTILINE).find(this)
+        checkNotNull(match) { "jpackage's spec template no longer matches /$pattern/; update rpmSpec()" }
+        return replaceRange(match.range, change(match.value))
+    }
+    // Shell variables in the scriptlets below; `$` would otherwise start a Kotlin template.
+    val entry = "${'$'}entry"
+    val name = "${'$'}{entry##*/}"
+    return template
+        .edit("^Autoreq: 0$") { "$it\n$requires" }
+        // The package must not own the system directories the filesystem package does. Built
+        // without an rpm database, jpackage falls back to its own list of them, but echoes it on
+        // one line, which `comm` then never matches, so the .rpm owned /opt. One per line, plus the
+        // directories the menu entry goes into.
+        .edit("^%define default_filesystem .*$") { "$it /usr/share /usr/share/applications" }
+        .edit("^\\{ rpm -ql filesystem \\|\\| echo %\\{default_filesystem}; }") {
+            "{ rpm -ql filesystem || echo %{default_filesystem} | tr ' ' '\\n'; }"
+        }
+        .edit("^cp -r %\\{_sourcedir}APPLICATION_DIRECTORY/\\* %\\{buildroot}APPLICATION_DIRECTORY$") {
+            """
+            $it
+            for entry in %{buildroot}APPLICATION_DIRECTORY/lib/*.desktop; do
+              install -p -D -m 644 "$entry" "%{buildroot}%{_datadir}/applications/$name"
+            done
+            """.trimIndent()
+        }.edit("^DESKTOP_COMMANDS_INSTALL\n") { "" }
+        .edit("^DESKTOP_COMMANDS_UNINSTALL\n") { "" }
+        .edit("^%pre\npackage_type=rpm$") { "$it\nif [ \"${'$'}1\" -gt 1 ]; then mkdir -p /usr/share/desktop-directories; fi" }
+        .edit("^%clean$") {
+            """
+            %posttrans
+            for entry in APPLICATION_DIRECTORY/lib/*.desktop; do
+              [ -e "%{_datadir}/applications/$name" ] || install -p -m 644 "$entry" "%{_datadir}/applications/$name"
+            done
+
+            $it
+            """.trimIndent()
+        }
+}
+
 // What an app image already holds; jpackage refuses these next to --app-image.
 val appImageOptions =
     setOf(
@@ -341,12 +398,8 @@ listOf("packageRpm" to "main", "packageReleaseRpm" to "main-release").forEach { 
                     Files.readString(jrt.getPath("$resources/template.spec")) to
                         Files.readString(jrt.getPath("$resources/template.desktop"))
                 }
-            val anchor = Regex("(?m)^Autoreq: 0$")
-            check(anchor.containsMatchIn(template)) {
-                "jpackage's spec template has no 'Autoreq: 0' line to add the Requires after"
-            }
             val resources = specDir.get().asFile.apply { deleteRecursively(); mkdirs() }
-            File(resources, "${rpmPackageName.get()}.spec").writeText(anchor.replaceFirst(template, "Autoreq: 0\n$deps"))
+            File(resources, "${rpmPackageName.get()}.spec").writeText(rpmSpec(template, deps))
             // Docks and app switchers match the window's WM_CLASS ("Amethyst", set in AmethystDesktop.kt)
             // to the desktop entry's StartupWMClass, which jpackage's template lacks. jpackage takes
             // <app name>.desktop from the resource dir in its place and still fills in its fields.
