@@ -554,6 +554,7 @@
     <string name="pinned_to_top">Kitűzve felülre</string>
     <string name="pinned_chat_no_messages_loaded">Nincsenek betöltött friss üzenetek</string>
     <string name="upload_image">Kép feltöltése</string>
+    <string name="upload_media">Média feltöltése</string>
     <string name="upload_file">Fájl feltöltése</string>
     <string name="take_a_picture">Kép készítése</string>
     <string name="record_a_video">Videó rögzítése</string>
@@ -2112,6 +2113,7 @@
     <string name="media_compression_preview_original">Eredeti</string>
     <string name="media_compression_preview_tap_original">Koppintson a képre az eredeti megtekintéséhez</string>
     <string name="media_compression_preview_tap_compressed">Az eredeti látható. Koppintson a tömörített kép megtekintéséhez</string>
+    <string name="video_compression_hdr_title">HDR-videó</string>
     <string name="metadata_strip_failed_body">Ez a fájlformátum nem támogatja a metaadatok eltávolítását. Lehet, hogy a fájl tartalmaz személyes adatokat, például hely- és eszközadatokat. Mindenképp fel akarja tölteni?</string>
     <string name="metadata_strip_failed_upload">Feltöltés mindenképp</string>
     <string name="edit_draft">Piszkozat szerkesztése</string>
