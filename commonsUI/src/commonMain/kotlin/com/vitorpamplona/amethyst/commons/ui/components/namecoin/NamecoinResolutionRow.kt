@@ -49,6 +49,8 @@ import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.User
 import com.vitorpamplona.amethyst.commons.model.nip05DnsIdentifiers.namecoin.NamecoinResolveState
+import com.vitorpamplona.amethyst.commons.search.SearchSegment
+import com.vitorpamplona.amethyst.commons.search.SearchTokenizer
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.EmptyNav
 import com.vitorpamplona.amethyst.commons.ui.note.UserPicture
 import com.vitorpamplona.amethyst.commons.ui.platform.LocalAppServices
@@ -125,14 +127,40 @@ fun looksLikeNamecoinIdentifier(raw: String): Boolean {
 }
 
 /**
+ * The single Namecoin term [searchInput] asks to resolve, or null when
+ * the field holds anything but one bare identifier.
+ *
+ * The search field speaks the search token language
+ * ([com.vitorpamplona.amethyst.commons.search.SearchTokenizer]): a seeded
+ * chip — the `kind:git ` the Git Repositories search icon pre-populates,
+ * an author filter, a date bound — is a segment of its own, separate
+ * from the word typed after it. Gating on the raw string glued the
+ * segments together, so `kind:git mstrofnone.bit` was looked up as
+ * `d/kind:git mstrofnone` and the row reported "No record for
+ * kind:git mstrofnone.bit", a record nobody asked for, on top of the
+ * actual search results. Only a lone plain word ([SearchSegment.Text])
+ * that itself passes [looksLikeNamecoinIdentifier] is resolved; a
+ * compound query is a search, not a lookup, and the row stays out of
+ * its way.
+ */
+fun namecoinLookupTerm(searchInput: String): String? {
+    val trimmed = searchInput.trim().removePrefix("@")
+    if (trimmed.isEmpty() || trimmed.any(Char::isWhitespace)) return null
+    if (SearchTokenizer.tokenize(trimmed).singleOrNull() !is SearchSegment.Text) return null
+    return trimmed.takeIf(::looksLikeNamecoinIdentifier)
+}
+
+/**
  * Inline Namecoin resolution indicator + result row. Designed to be
  * mounted alongside any text input whose local-cache prefix search can
  * race ahead of an on-chain `.bit` lookup (the onchain-zap recipient
  * field and the global search bar both have this race).
  *
  * Behaviour:
- *  - Renders nothing when [searchInput] is not a Namecoin-shaped
- *    identifier (`.bit`, `d/<name>`, or `id/<name>`).
+ *  - Renders nothing when [searchInput] is not one bare Namecoin-shaped
+ *    identifier (`.bit`, `d/<name>`, or `id/<name>`) — see
+ *    [namecoinLookupTerm], which keeps seeded search chips like
+ *    `kind:git ` out of the lookup.
  *  - Shows a small spinner row ("Resolving on Namecoin…") while the
  *    ElectrumX lookup is in flight (after a 300 ms debounce to match
  *    typical input-field debounce intervals).
@@ -159,13 +187,12 @@ fun NamecoinResolutionRow(
     onUserResolved: (User) -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    val trimmed = remember(searchInput) { searchInput.trim().removePrefix("@") }
-    if (!looksLikeNamecoinIdentifier(trimmed)) return
+    val term = remember(searchInput) { namecoinLookupTerm(searchInput) } ?: return
 
     var state by remember { mutableStateOf<NamecoinResolveState?>(null) }
     val resolver = LocalAppServices.current.namecoinResolver
 
-    LaunchedEffect(trimmed) {
+    LaunchedEffect(term) {
         // Match UserSuggestionState's 300 ms debounce so we don't fire a
         // lookup on every keystroke.
         delay(300)
@@ -173,7 +200,7 @@ fun NamecoinResolutionRow(
         val outcome =
             withContext(Dispatchers.IO) {
                 runCatching {
-                    resolver.resolveDetailed(trimmed)
+                    resolver.resolveDetailed(term)
                 }.getOrElse {
                     NamecoinResolveOutcome.ServersUnreachable(
                         it.message ?: it::class.simpleName ?: "Lookup error",
@@ -190,9 +217,9 @@ fun NamecoinResolutionRow(
     Column(modifier = modifier) {
         Spacer(Modifier.size(8.dp))
         when (val s = state) {
-            null, NamecoinResolveState.Loading -> ResolvingChip(trimmed)
-            is NamecoinResolveState.Resolved -> ResolvedRow(trimmed, s, accountViewModel, onUserResolved)
-            NamecoinResolveState.NotFound -> FailedRow("No record for $trimmed on Namecoin.")
+            null, NamecoinResolveState.Loading -> ResolvingChip(term)
+            is NamecoinResolveState.Resolved -> ResolvedRow(term, s, accountViewModel, onUserResolved)
+            NamecoinResolveState.NotFound -> FailedRow("No record for $term on Namecoin.")
             is NamecoinResolveState.Error -> FailedRow(s.message)
         }
     }
