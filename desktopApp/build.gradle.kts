@@ -638,20 +638,21 @@ val verifyJniNativesSurviveProguard = tasks.register("verifyJniNativesSurvivePro
     val marker = layout.buildDirectory.file("verify-jni-natives.ok")
     outputs.file(marker)
     doLast {
-        val shrunk = nativeMethodsByClass(proguardDir.get().asFile.listFiles { f -> f.extension == "jar" }.orEmpty().toList())
+        val shrunkJars = proguardDir.get().asFile.listFiles { f -> f.extension == "jar" }.orEmpty().toList()
+        require(shrunkJars.isNotEmpty()) { "No proguarded jars under ${proguardDir.get().asFile}" }
+        // Every class ProGuard kept, natives or not: a kept class that lost all of them still breaks.
+        val keptClasses = HashSet<String>()
+        shrunkJars.forEach { jar -> ZipFile(jar).use { zip -> zip.entries().asSequence().forEach { keptClasses += it.name } } }
+        val shrunk = nativeMethodsByClass(shrunkJars, keptClasses)
         require(shrunk.isNotEmpty()) { "No native methods found in the proguarded jars under ${proguardDir.get().asFile}" }
-        val original = nativeMethodsByClass(originalJars.filter { it.extension == "jar" }.files.toList())
         // A class ProGuard dropped whole is never loaded, so nothing registers natives on it.
-        val stripped =
-            original.flatMap { (cls, methods) ->
-                val kept = shrunk[cls] ?: return@flatMap emptyList()
-                (methods - kept).map { "$cls.$it" }
-            }
+        val original = nativeMethodsByClass(originalJars.filter { it.extension == "jar" }.files.toList(), keptClasses)
+        val stripped = original.flatMap { (cls, methods) -> (methods - shrunk[cls].orEmpty()).map { "${cls.removeSuffix(".class")}.$it" } }
         require(stripped.isEmpty()) {
             "REGRESSION: ProGuard stripped native methods from classes it kept:\n" +
                 stripped.sorted().joinToString("\n") { "  $it" } + "\n" +
                 "A library that binds its natives with RegisterNatives fails to load without them.\n" +
-                "Add a -keep rule for the class in desktopApp/compose-rules.pro."
+                "Check the -keepclassmembers native rule in desktopApp/compose-rules.pro."
         }
         val count = shrunk.values.sumOf { it.size }
         marker.get().asFile.writeText("verified $count native methods in ${shrunk.size} classes survived ProGuard\n")
@@ -678,16 +679,23 @@ listOf(
     }
 }
 
-/** Every class in [jars] that declares native methods, mapped to them as `name(descriptor)`. */
-fun nativeMethodsByClass(jars: List<File>): Map<String, Set<String>> {
-    val result = HashMap<String, MutableSet<String>>()
+/**
+ * Each class entry in [jars] that is in [only] and declares native methods, mapped to them as
+ * `name(descriptor)`. A class in two jars counts once, from the first, as ProGuard keeps only that one.
+ */
+fun nativeMethodsByClass(
+    jars: List<File>,
+    only: Set<String>,
+): Map<String, Set<String>> {
+    val seen = HashSet<String>()
+    val result = HashMap<String, Set<String>>()
     jars.forEach { jar ->
         ZipFile(jar).use { zip ->
             zip.entries().asSequence()
-                .filter { it.name.endsWith(".class") && !it.name.startsWith("META-INF/") }
+                .filter { it.name.endsWith(".class") && !it.name.startsWith("META-INF/") && it.name in only && seen.add(it.name) }
                 .forEach { entry ->
                     val natives = zip.getInputStream(entry).use { readNativeMethods(DataInputStream(it.buffered())) }
-                    if (natives.isNotEmpty()) result.getOrPut(entry.name.removeSuffix(".class")) { HashSet() } += natives
+                    if (natives.isNotEmpty()) result[entry.name] = natives.toSet()
                 }
         }
     }
