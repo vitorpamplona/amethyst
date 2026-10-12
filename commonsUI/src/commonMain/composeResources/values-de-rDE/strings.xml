@@ -6924,4 +6924,21 @@
     <string name="crash_window_title">Bei Amethyst ist ein Problem aufgetreten</string>
     <string name="crash_window_body">Etwas ist schiefgelaufen und dieses Fenster muss geschlossen werden. Du kannst den Absturzbericht per DM an die Entwickler von Amethyst senden; dabei werden keine persönlichen Daten geteilt. Wenn du stattdessen schließt, bietet Amethyst beim nächsten Start an, ihn zu senden.</string>
     <string name="crash_window_send">An Entwickler senden</string>
+    <string name="media_compression_images_up_to">Bilder bis %1$d px</string>
+    <string name="media_compression_preview_tap_zoom">Tippe auf das Bild, um es zu vergrößern und mit dem Original zu vergleichen</string>
+    <string name="media_compression_preview_uncompressed">Die Originaldatei wird ohne Kompression hochgeladen</string>
+    <string name="media_compression_preview_zoom_hint">Zum Zoomen auseinanderziehen, scrollen oder doppelt tippen</string>
+    <string name="media_compression_video_target">%1$s-Video → %2$dp, %3$s Mbit/s</string>
+    <string name="media_compression_video_target_example">1080p-Video → %1$dp, %2$s Mbit/s</string>
+    <string name="upload_media">Medien hochladen</string>
+    <string name="video_compression_failed_message">Stattdessen wird die Originaldatei hochgeladen.</string>
+    <string name="video_compression_failed_message_with_reason">Stattdessen wird die Originaldatei hochgeladen. ffmpeg meldete: %1$s</string>
+    <string name="video_compression_failed_title">Videokomprimierung fehlgeschlagen</string>
+    <string name="video_compression_hdr_message">Komprimiertes HDR-Video wirkt flau. Wähle „Ohne Kompression“, um die Originalfarben zu behalten.</string>
+    <string name="video_compression_hdr_title">HDR-Video</string>
+    <string name="video_compression_hevc_unavailable_message">ffmpeg hat auf diesem Computer keinen funktionierenden HEVC-Encoder, daher wurde das Video als H.264 kodiert.</string>
+    <string name="video_compression_hevc_unavailable_title">H.265 nicht verfügbar</string>
+    <string name="video_compression_needs_ffmpeg">Installiere ffmpeg, um Videos zu komprimieren. Bis dahin werden Videos unverändert hochgeladen.</string>
+    <string name="video_compression_not_smaller_message">Die Komprimierung hat das Video nicht verkleinert, daher wird das Original ohne Metadaten hochgeladen. Es ist für seine Größe bereits kompakt.</string>
+    <string name="video_compression_not_smaller_title">Originalvideo beibehalten</string>
 </resources>
