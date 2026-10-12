@@ -25,31 +25,34 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.produceState
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.commons.model.Account
-import com.vitorpamplona.amethyst.commons.model.topNavFeeds.IFeedTopNavFilter
 import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.LifecycleAwareKeyDataSourceSubscription
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.withContext
 
 /**
- * Watches the authors the selected top-nav feed reads by the outbox model, for as long as the feed
- * is in composition: their relay lists and live metadata load through the regular [UserFinderFilterAssembler],
- * as feed authors ([UserFinderQueryState.isFeedAuthor]). Without it, a member of someone else's list
- * keeps no kind:10002 in the cache, so the feed never asks their relays.
+ * Watches the members of every list the user picked in a top bar ([Account.selectedListAuthors])
+ * through the regular [UserFinderFilterAssembler], as feed authors ([UserFinderQueryState.isFeedAuthor]):
+ * their relay lists and live metadata load even when nobody follows them, so those feeds can ask
+ * their relays. Called once, at the app root.
+ *
+ * Changing a selection swaps the set, which unsubscribes the old members and subscribes the new
+ * ones. Like the other app-wide loaders it stops 30s after the app leaves the foreground.
  */
 @Composable
-fun FeedAuthorsOutboxSubscription(
-    topNavFilter: StateFlow<IFeedTopNavFilter>,
+fun SelectedListAuthorsSubscription(accountViewModel: AccountViewModel) {
+    SelectedListAuthorsSubscription(accountViewModel.account, accountViewModel.dataSources().userFinder)
+}
+
+@Composable
+fun SelectedListAuthorsSubscription(
     account: Account,
     dataSource: UserFinderFilterAssembler,
 ) {
-    val filter by topNavFilter.collectAsStateWithLifecycle()
-    val authors = filter.outboxAuthors()
+    val authors by account.selectedListAuthors.collectAsStateWithLifecycle()
 
-    // Keyed on the author set, not the filter: the filter is rebuilt whenever the list event
-    // updates, and resubscribing the same members would only churn the finder. A list can hold
-    // thousands of members, so their users are looked up (and created) off the main thread.
+    // A list can hold thousands of members, so their users are looked up (and created) off the
+    // main thread. The set only changes when a selection or a selected list changes.
     val states by produceState(emptyList<UserFinderQueryState>(), authors, account) {
         value =
             withContext(Dispatchers.Default) {
@@ -59,14 +62,5 @@ fun FeedAuthorsOutboxSubscription(
             }
     }
 
-    // Stops asking 30s after the app leaves the foreground, like the feed's own subscription.
     LifecycleAwareKeyDataSourceSubscription(states, dataSource)
-}
-
-@Composable
-fun FeedAuthorsOutboxSubscription(
-    topNavFilter: StateFlow<IFeedTopNavFilter>,
-    accountViewModel: AccountViewModel,
-) {
-    FeedAuthorsOutboxSubscription(topNavFilter, accountViewModel.account, accountViewModel.dataSources().userFinder)
 }

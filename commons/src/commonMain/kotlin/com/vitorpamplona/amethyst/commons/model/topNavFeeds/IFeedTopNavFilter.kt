@@ -36,12 +36,18 @@ interface IFeedTopNavFilter {
 
     /**
      * The members of a selected list that this feed reads from their own outbox relays (their
-     * kind:10002). A screen showing the feed loads the relay lists of these authors: someone who is
-     * only in a people list, and not followed, has no other loader asking for it, so the feed would
-     * only look on fallback relays.
+     * kind:10002). They are collected across every screen into `Account.selectedListAuthors` and
+     * watched through the user finder, so their relay lists load even when nobody follows them.
      *
-     * The follows feeds return nothing: their kind:3 part is already loaded at startup, and handing
-     * every follow to the finder would hold a standing REQ for the ones that never published a list.
+     * The follows feeds return nothing: `AccountFollowsLoaderSubAssembler` already loads relay lists
+     * for their whole author set (kind:3 plus the user's own lists and follow packs) at startup.
      */
     fun outboxAuthors(): Set<HexKey> = emptySet()
+}
+
+/** The union of [IFeedTopNavFilter.outboxAuthors] across several feeds' selections. */
+fun mergeOutboxAuthors(filters: List<IFeedTopNavFilter>): Set<HexKey> {
+    val merged = mutableSetOf<HexKey>()
+    filters.forEach { merged.addAll(it.outboxAuthors()) }
+    return merged
 }
