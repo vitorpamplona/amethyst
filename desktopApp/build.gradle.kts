@@ -289,6 +289,22 @@ val rpmGStreamerDeps =
     Recommends: gstreamer1-plugin-openh264
     """.trimIndent()
 
+// jpackage's template sets Autoreq: 0 (rpm would otherwise require the bundled runtime's own
+// sonames, which Autoprov: 0 leaves unprovided) and fills in the system libraries itself, but it can
+// only name their packages on an rpm-based host. Built on Ubuntu, the .rpm required none of them,
+// so a minimal Fedora or openSUSE install took it and then failed at launch. These are the sonames
+// the launcher, the bundled runtime and skiko link (DT_NEEDED) that the package doesn't ship, the
+// same set the .deb gets from dpkg-shlibdeps; soname requires resolve on both distributions.
+// The arm64 skiko also links libEGL (see scripts/add-deb-libegl-dep.sh). The arch is the packaging
+// host's: jpackage only packages for the machine it runs on.
+val rpmLibraryDeps =
+    (
+        listOf(
+            "libasound.so.2", "libfontconfig.so.1", "libGL.so.1", "libstdc++.so.6", "libX11.so.6",
+            "libXext.so.6", "libXi.so.6", "libXrender.so.1", "libXtst.so.6",
+        ) + (if (System.getProperty("os.arch") == "aarch64") listOf("libEGL.so.1") else emptyList())
+    ).joinToString("\n") { "Requires: $it()(64bit)" }
+
 // What an app image already holds; jpackage refuses these next to --app-image.
 val appImageOptions =
     setOf(
@@ -307,7 +323,7 @@ listOf("packageRpm" to "main", "packageReleaseRpm" to "main-release").forEach { 
         val ourArgs = layout.buildDirectory.file("compose/tmp/$rpmTask.gstreamer.args.txt")
         val specDir = layout.buildDirectory.dir("compose/tmp/$rpmTask-rpm-resources")
         val appImages = layout.buildDirectory.dir("compose/binaries/$buildType/app")
-        val deps = rpmGStreamerDeps
+        val deps = rpmGStreamerDeps + "\n" + rpmLibraryDeps
         val skip = appImageOptions
         doLast {
             val jdk = packagingJdk.get()
@@ -319,7 +335,7 @@ listOf("packageRpm" to "main", "packageReleaseRpm" to "main-release").forEach { 
                 }
             val anchor = Regex("(?m)^Autoreq: 0$")
             check(anchor.containsMatchIn(template)) {
-                "jpackage's spec template has no 'Autoreq: 0' line to add the GStreamer Requires after"
+                "jpackage's spec template has no 'Autoreq: 0' line to add the Requires after"
             }
             val resources = specDir.get().asFile.apply { deleteRecursively(); mkdirs() }
             File(resources, "${rpmPackageName.get()}.spec").writeText(anchor.replaceFirst(template, "Autoreq: 0\n$deps"))
@@ -352,8 +368,8 @@ listOf("packageRpm" to "main", "packageReleaseRpm" to "main-release").forEach { 
                     .redirectErrorStream(true)
                     .start()
             val output = process.inputStream.bufferedReader().readText()
-            check(process.waitFor() == 0) { "jpackage could not repackage the .rpm with its GStreamer dependencies:\n$output" }
-            logger.lifecycle("Repackaged ${dest.listFiles { f -> f.name.endsWith(".rpm") }?.joinToString { it.name }} with its GStreamer dependencies")
+            check(process.waitFor() == 0) { "jpackage could not repackage the .rpm with its dependencies:\n$output" }
+            logger.lifecycle("Repackaged ${dest.listFiles { f -> f.name.endsWith(".rpm") }?.joinToString { it.name }} with its dependencies")
         }
     }
 }

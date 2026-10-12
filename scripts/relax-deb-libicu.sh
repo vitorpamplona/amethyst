@@ -26,9 +26,9 @@ set -euo pipefail
 
 source "$(dirname "${BASH_SOURCE[0]}")/deb-control.sh"
 
-# Spans Debian 11 → 13 and Ubuntu 20.04 → 26.04. Append new SONAMEs here when
+# Spans Debian 11 → 13 and Ubuntu 20.04 → 26.04 (libicu78). Append new SONAMEs here when
 # a new Debian/Ubuntu release ships a bumped libicu.
-ALT='libicu66 | libicu67 | libicu70 | libicu72 | libicu74 | libicu76 | libicu77'
+ALT='libicu66 | libicu67 | libicu70 | libicu72 | libicu74 | libicu76 | libicu77 | libicu78'
 
 relax_control() {
     local control="$1"
