@@ -499,6 +499,50 @@ val verifyJkeychainNativeSurvivesProguard = tasks.register("verifyJkeychainNativ
     }
 }
 
+// ProGuard rewrites the classes of every jar it processes, so a signed jar's
+// digests (META-INF/*.SF) stop matching and the JVM refuses its classes with a
+// SecurityException. at.favre.lib:hkdf is signed and the Linux keyring needs it
+// to open its Secret Service session (secret-service's TransportEncryption):
+// with its classes refused, java-keyring found no Linux backend at all. The
+// signatures cannot survive shrinking, so drop them from the output jars.
+tasks.matching { it.name == "proguardReleaseJars" }.configureEach {
+    val proguardDir = layout.buildDirectory.dir("compose/tmp/main-release/proguard")
+    doLast {
+        val signature = Regex("META-INF/[^/]+\\.(SF|RSA|DSA|EC)|META-INF/SIG-[^/]+")
+        proguardDir.get().asFile.listFiles { f -> f.extension == "jar" }?.forEach { jar ->
+            val stale = ZipFile(jar).use { zip -> zip.entries().toList().map { it.name }.filter { signature.matches(it) } }
+            if (stale.isNotEmpty()) {
+                FileSystems.newFileSystem(jar.toPath()).use { fs -> stale.forEach { Files.delete(fs.getPath(it)) } }
+                println("Dropped the jar signature of ${jar.name}: ${stale.joinToString()}")
+            }
+        }
+    }
+}
+
+// The Linux keyring's D-Bus transport is found through ServiceLoader, so a
+// shrink with no keep rule empties its jar and every Linux release silently
+// stops using the OS keyring (see compose-rules.pro). Guard it like the .so.
+val verifyDbusTransportSurvivesProguard = tasks.register("verifyDbusTransportSurvivesProguard") {
+    description = "Fail the release build if ProGuard strips dbus-java's socket transport (would break the Linux keyring at runtime)"
+    group = "verification"
+    dependsOn("proguardReleaseJars")
+    val proguardDir = layout.buildDirectory.dir("compose/tmp/main-release/proguard")
+    inputs.dir(proguardDir).withPropertyName("proguardOutput").withPathSensitivity(PathSensitivity.RELATIVE)
+    val marker = layout.buildDirectory.file("verify-dbus-transport.ok")
+    outputs.file(marker)
+    doLast {
+        val required = "org/freedesktop/dbus/transport/jre/NativeTransportProvider.class"
+        val jars = proguardDir.get().asFile.listFiles { f -> f.extension == "jar" } ?: emptyArray()
+        val foundIn = jars.firstOrNull { jar -> ZipFile(jar).use { it.getEntry(required) != null } }
+        require(foundIn != null) {
+            "REGRESSION: $required missing from every proguarded jar.\n" +
+                "dbus-java loads it through ServiceLoader; without it java-keyring finds no Linux backend\n" +
+                "and the app silently stops keeping private keys in the OS keyring."
+        }
+        marker.get().asFile.writeText("verified $required survived ProGuard in ${foundIn.name}\n")
+    }
+}
+
 // Gate every release-packaging task on the verification so a stripped .so
 // never reaches a release artifact.
 listOf(
@@ -513,6 +557,7 @@ listOf(
 ).forEach { name ->
     tasks.matching { it.name == name }.configureEach {
         dependsOn(verifyJkeychainNativeSurvivesProguard)
+        dependsOn(verifyDbusTransportSurvivesProguard)
     }
 }
 
