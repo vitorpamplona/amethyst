@@ -120,6 +120,11 @@ import com.vitorpamplona.amethyst.commons.resources.follow_list_mine
 import com.vitorpamplona.amethyst.commons.resources.follow_list_mine_summary
 import com.vitorpamplona.amethyst.commons.resources.follow_list_mute_list
 import com.vitorpamplona.amethyst.commons.resources.follow_list_mute_list_summary
+import com.vitorpamplona.amethyst.commons.resources.follow_list_notifications_all_follows_summary
+import com.vitorpamplona.amethyst.commons.resources.follow_list_notifications_default_follows_summary
+import com.vitorpamplona.amethyst.commons.resources.follow_list_notifications_global_summary
+import com.vitorpamplona.amethyst.commons.resources.follow_list_notifications_mute_list_summary
+import com.vitorpamplona.amethyst.commons.resources.follow_list_notifications_people_list_summary
 import com.vitorpamplona.amethyst.commons.resources.follow_list_people_list_summary
 import com.vitorpamplona.amethyst.commons.resources.follow_list_relay_summary
 import com.vitorpamplona.amethyst.commons.resources.follow_list_teleport
@@ -156,6 +161,7 @@ fun FeedFilterSpinner(
     onSelect: (FeedDefinition) -> Unit,
     modifier: Modifier = Modifier,
     accountViewModel: AccountViewModel,
+    filtersNotifications: Boolean = false,
 ) {
     var optionsShowing by remember { mutableStateOf(false) }
 
@@ -290,6 +296,7 @@ fun FeedFilterSpinner(
         GroupedFeedFilterDialog(
             title = explainer,
             options = options,
+            filtersNotifications = filtersNotifications,
             onDismiss = { optionsShowing = false },
             onSelect = { definition ->
                 optionsShowing = false
@@ -390,8 +397,13 @@ private fun TopNavLabel.descriptionResource(): StringResource? =
 /**
  * The description behind the ⓘ affordance for a filter row: built-ins get their own text,
  * dynamic entries (lists, hashtags, relays, …) a generic per-type one.
+ *
+ * The Notifications screen uses the same picker, but there a filter narrows who can notify
+ * you rather than which posts a feed shows, so it gets its own text ([notificationDescriptionRes]).
  */
-private fun FeedDefinition.descriptionRes(): StringResource? =
+private fun FeedDefinition.descriptionRes(filtersNotifications: Boolean): StringResource? = if (filtersNotifications) notificationDescriptionRes() else feedDescriptionRes()
+
+private fun FeedDefinition.feedDescriptionRes(): StringResource? =
     when (val n = name) {
         is LabelName -> n.label.descriptionResource()
         is HashtagName -> Res.string.follow_list_hashtag_summary
@@ -402,6 +414,28 @@ private fun FeedDefinition.descriptionRes(): StringResource? =
         is InterestSetName -> Res.string.follow_list_interest_set_summary
         is FavoriteAlgoFeedName -> Res.string.follow_list_algo_feed_summary
         is CustomFeedName -> Res.string.follow_list_custom_feed_summary
+    }
+
+/**
+ * What a filter does to the Notifications feed (`NotificationFeedFilter`): Global keeps everything
+ * that tags you, Curated drops authors outside your Web of Trust, and a list keeps only its own
+ * authors, though reactions and replies to your posts pass from anyone. The other filters get no
+ * ⓘ here rather than feed text that does not describe them.
+ */
+private fun FeedDefinition.notificationDescriptionRes(): StringResource? =
+    when (val n = name) {
+        is LabelName -> {
+            when (n.label) {
+                TopNavLabel.GLOBAL -> Res.string.follow_list_notifications_global_summary
+                TopNavLabel.CURATED -> Res.string.follow_list_curated_summary
+                TopNavLabel.ALL_FOLLOWS, TopNavLabel.ALL_USER_FOLLOWS -> Res.string.follow_list_notifications_all_follows_summary
+                TopNavLabel.DEFAULT_FOLLOWS -> Res.string.follow_list_notifications_default_follows_summary
+                TopNavLabel.MUTE_LIST -> Res.string.follow_list_notifications_mute_list_summary
+                else -> null
+            }
+        }
+        is PeopleListName -> Res.string.follow_list_notifications_people_list_summary
+        else -> null
     }
 
 @Composable
@@ -538,6 +572,7 @@ private fun groupFeedDefinitions(options: ImmutableList<FeedDefinition>): List<P
 private fun GroupedFeedFilterDialog(
     title: String,
     options: ImmutableList<FeedDefinition>,
+    filtersNotifications: Boolean,
     onSelect: (FeedDefinition) -> Unit,
     onDismiss: () -> Unit,
     onRenderItem: @Composable (FeedDefinition) -> Unit,
@@ -578,6 +613,7 @@ private fun GroupedFeedFilterDialog(
                             label = stringRes(group.labelRes),
                             items = items,
                             isChipLayout = group == FeedGroup.HASHTAGS,
+                            filtersNotifications = filtersNotifications,
                             onSelect = onSelect,
                             onInfo = { title, text -> infoItem = title to text },
                             onRenderItem = onRenderItem,
@@ -595,6 +631,7 @@ private fun GroupSection(
     label: String,
     items: List<FeedDefinition>,
     isChipLayout: Boolean,
+    filtersNotifications: Boolean,
     onSelect: (FeedDefinition) -> Unit,
     onInfo: (title: String, text: String) -> Unit,
     onRenderItem: @Composable (FeedDefinition) -> Unit,
@@ -624,7 +661,7 @@ private fun GroupSection(
                 ) {
                     items.forEach { entry ->
                         val name = displayName(entry.name)
-                        val infoText = entry.descriptionRes()?.let { stringRes(it) }
+                        val infoText = entry.descriptionRes(filtersNotifications)?.let { stringRes(it) }
                         Surface(
                             modifier =
                                 Modifier.combinedClickable(
@@ -649,7 +686,7 @@ private fun GroupSection(
             } else {
                 items.forEach { entry ->
                     val entryName = displayName(entry.name)
-                    val infoText = entry.descriptionRes()?.let { stringRes(it) }
+                    val infoText = entry.descriptionRes(filtersNotifications)?.let { stringRes(it) }
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
                         modifier =
