@@ -106,6 +106,16 @@ class TrustProviderListState(
             )
 
     /**
+     * The relays the user's providers publish on. The user named them in their own list, so they
+     * count among the user's relays: with default privacy settings that means clearnet, not Tor
+     * (a provider's first download moves tens of MB through it).
+     */
+    val liveRelays: StateFlow<Set<NormalizedRelayUrl>> =
+        liveTrustProviderList
+            .map { providers -> providers.mapTo(HashSet()) { it.relayUrl } }
+            .stateIn(scope, SharingStarted.Eagerly, liveTrustProviderList.value.mapTo(HashSet()) { it.relayUrl })
+
+    /**
      * The list once it is known for sure: read (or its backup), with its private part decrypted.
      * Null until then, and while the private part cannot be decrypted (a signer that is not
      * available), so "not known yet" never reads as "no providers".
