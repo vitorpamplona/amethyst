@@ -23,6 +23,7 @@ package com.vitorpamplona.amethyst.commons.ui.keystorage
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -76,26 +77,27 @@ fun KeyStorageStatusCard(modifier: Modifier = Modifier) {
                 Box(Modifier.size(40.dp).background(badge, CircleShape), contentAlignment = Alignment.Center) {
                     Icon(keyStorageSymbol(status), contentDescription = null, tint = onBadge, modifier = Modifier.size(22.dp))
                 }
-                Spacer(Modifier.width(16.dp))
+                Spacer(Modifier.width(12.dp))
                 Text(
                     text = keyStorageDescription(status),
-                    style = MaterialTheme.typography.titleMedium,
+                    // One line beside its button on a 360 dp phone.
+                    style = MaterialTheme.typography.titleSmall,
                     fontWeight = FontWeight.SemiBold,
                     modifier = Modifier.weight(1f),
                 )
                 when (val current = status) {
                     is KeyStorageStatus.KeyringUnreachable ->
-                        FilledTonalButton(onClick = { scope.launch { controller.retry() } }) {
+                        FilledTonalButton(onClick = { scope.launch { controller.retry() } }, contentPadding = ActionPadding) {
                             Text(stringRes(Res.string.key_storage_try_again))
                         }
                     is KeyStorageStatus.PasswordFile ->
                         if (current.hasPassword && !current.unlocked) {
-                            FilledTonalButton(onClick = { scope.launch { controller.unlock() } }) {
+                            FilledTonalButton(onClick = { scope.launch { controller.unlock() } }, contentPadding = ActionPadding) {
                                 Text(stringRes(Res.string.key_storage_unlock))
                             }
                         }
                     KeyStorageStatus.NotKept ->
-                        FilledTonalButton(onClick = { scope.launch { controller.saveKeys() } }) {
+                        FilledTonalButton(onClick = { scope.launch { controller.saveKeys() } }, contentPadding = ActionPadding) {
                             Text(stringRes(Res.string.key_storage_save_keys))
                         }
                     else -> Unit
@@ -105,3 +107,5 @@ fun KeyStorageStatusCard(modifier: Modifier = Modifier) {
         }
     }
 }
+
+private val ActionPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp)
