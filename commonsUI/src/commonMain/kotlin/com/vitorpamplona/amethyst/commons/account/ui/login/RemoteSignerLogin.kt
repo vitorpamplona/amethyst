@@ -57,6 +57,7 @@ import com.vitorpamplona.amethyst.commons.resources.login_with_remote_signer
 import com.vitorpamplona.amethyst.commons.resources.relay_url_not_valid
 import com.vitorpamplona.amethyst.commons.resources.remote_signer_default_relays
 import com.vitorpamplona.amethyst.commons.resources.remote_signer_relay_apply
+import com.vitorpamplona.amethyst.commons.resources.remote_signer_relay_hint
 import com.vitorpamplona.amethyst.commons.resources.remote_signer_relay_label
 import com.vitorpamplona.amethyst.commons.resources.remote_signer_relays
 import com.vitorpamplona.amethyst.commons.resources.remote_signer_scan_description
@@ -140,7 +141,7 @@ private fun NostrConnectDialog(loginViewModel: LoginViewModel) {
 }
 
 /**
- * The relays the code names, and a field to name the relay the user's signer uses instead: a
+ * The relays the code names, and a field to name one of the account's inbox relays instead: a
  * signer that can't reach the defaults never sees the request.
  */
 @Composable
@@ -181,7 +182,9 @@ private fun NostrConnectRelayPicker(loginViewModel: LoginViewModel) {
                 placeholder = { Text("wss://") },
                 singleLine = true,
                 isError = invalid,
-                supportingText = if (invalid) ({ Text(stringRes(Res.string.relay_url_not_valid)) }) else null,
+                supportingText = {
+                    Text(stringRes(if (invalid) Res.string.relay_url_not_valid else Res.string.remote_signer_relay_hint))
+                },
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Uri, imeAction = ImeAction.Done),
                 keyboardActions = KeyboardActions(onDone = { apply() }),
                 modifier = Modifier.weight(1f),

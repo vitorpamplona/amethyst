@@ -4526,7 +4526,8 @@
     <string name="remote_signer_waiting">Waiting for your signer to approve…</string>
     <string name="remote_signer_login_failed">Could not log in with the remote signer: %1$s</string>
     <string name="remote_signer_relays">Relays in this code: %1$s</string>
-    <string name="remote_signer_relay_label">Relay your signer uses</string>
+    <string name="remote_signer_relay_label">One of your inbox relays</string>
+    <string name="remote_signer_relay_hint">Signer not connecting? Use one of your account's inbox relays instead.</string>
     <string name="remote_signer_relay_apply">Use relay</string>
     <string name="remote_signer_default_relays">Use the default relays</string>
     <string name="login_with_a_private_key_to_be_able_to_boost_posts">You are using a public key and public keys are read-only. Login with a Private key to be able to boost posts</string>

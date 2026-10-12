@@ -107,7 +107,7 @@ class LoginViewModel(
     var nostrConnectUri by mutableStateOf<String?>(null)
         private set
 
-    /** The relays the `nostrconnect://` address names. The user can swap in the one their signer uses. */
+    /** The relays the `nostrconnect://` address names. The user can swap in one of their inbox relays. */
     var nostrConnectRelays by mutableStateOf(DEFAULT_NOSTR_CONNECT_RELAYS)
         private set
 
@@ -290,8 +290,8 @@ class LoginViewModel(
     }
 
     /**
-     * Names the relay the user's signer uses in the `nostrconnect://` address instead of the
-     * defaults, for a signer that only reaches some relays. False when [input] is not a relay.
+     * Names [input], one of the account's inbox relays, in the `nostrconnect://` address instead
+     * of the defaults, for a signer that can't reach those. False when [input] is not a relay.
      */
     fun useNostrConnectRelay(input: String): Boolean {
         val relay = RelayUrlNormalizer.normalizeOrNull(input.trim()) ?: return false
