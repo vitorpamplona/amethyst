@@ -21,7 +21,9 @@
 package com.vitorpamplona.amethyst.commons.ui.navigation.topbars
 
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -33,6 +35,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -92,23 +95,44 @@ import com.vitorpamplona.amethyst.commons.resources.feed_group_lists
 import com.vitorpamplona.amethyst.commons.resources.feed_group_locations
 import com.vitorpamplona.amethyst.commons.resources.feed_group_relays
 import com.vitorpamplona.amethyst.commons.resources.follow_geohash
+import com.vitorpamplona.amethyst.commons.resources.follow_list_algo_feed_summary
 import com.vitorpamplona.amethyst.commons.resources.follow_list_all_favorite_dvms
+import com.vitorpamplona.amethyst.commons.resources.follow_list_all_favorite_dvms_summary
 import com.vitorpamplona.amethyst.commons.resources.follow_list_aroundme
+import com.vitorpamplona.amethyst.commons.resources.follow_list_aroundme_summary
+import com.vitorpamplona.amethyst.commons.resources.follow_list_community_summary
 import com.vitorpamplona.amethyst.commons.resources.follow_list_curated
+import com.vitorpamplona.amethyst.commons.resources.follow_list_curated_summary
+import com.vitorpamplona.amethyst.commons.resources.follow_list_custom_feed_summary
+import com.vitorpamplona.amethyst.commons.resources.follow_list_default_follows_summary
+import com.vitorpamplona.amethyst.commons.resources.follow_list_geohash_summary
 import com.vitorpamplona.amethyst.commons.resources.follow_list_global
+import com.vitorpamplona.amethyst.commons.resources.follow_list_global_summary
+import com.vitorpamplona.amethyst.commons.resources.follow_list_hashtag_summary
+import com.vitorpamplona.amethyst.commons.resources.follow_list_info
+import com.vitorpamplona.amethyst.commons.resources.follow_list_interest_set_summary
 import com.vitorpamplona.amethyst.commons.resources.follow_list_kind3_follows_users_only
 import com.vitorpamplona.amethyst.commons.resources.follow_list_kind3follows
+import com.vitorpamplona.amethyst.commons.resources.follow_list_kind3follows_summary
 import com.vitorpamplona.amethyst.commons.resources.follow_list_kind3follows_users_only
+import com.vitorpamplona.amethyst.commons.resources.follow_list_kind3follows_users_only_summary
 import com.vitorpamplona.amethyst.commons.resources.follow_list_mine
+import com.vitorpamplona.amethyst.commons.resources.follow_list_mine_summary
 import com.vitorpamplona.amethyst.commons.resources.follow_list_mute_list
+import com.vitorpamplona.amethyst.commons.resources.follow_list_mute_list_summary
+import com.vitorpamplona.amethyst.commons.resources.follow_list_people_list_summary
+import com.vitorpamplona.amethyst.commons.resources.follow_list_relay_summary
 import com.vitorpamplona.amethyst.commons.resources.follow_list_teleport
+import com.vitorpamplona.amethyst.commons.resources.follow_list_teleport_summary
 import com.vitorpamplona.amethyst.commons.resources.login_with_a_private_key_to_be_able_to_follow
 import com.vitorpamplona.amethyst.commons.resources.login_with_a_private_key_to_be_able_to_unfollow
 import com.vitorpamplona.amethyst.commons.resources.open_dropdown_menu
 import com.vitorpamplona.amethyst.commons.resources.read_only_user
 import com.vitorpamplona.amethyst.commons.resources.select_an_option
 import com.vitorpamplona.amethyst.commons.resources.unfollow_geohash
+import com.vitorpamplona.amethyst.commons.ui.components.InformationDialog
 import com.vitorpamplona.amethyst.commons.ui.components.LoadingAnimation
+import com.vitorpamplona.amethyst.commons.ui.components.toasts.ToastSeverity
 import com.vitorpamplona.amethyst.commons.ui.note.platform.LoadCityName
 import com.vitorpamplona.amethyst.commons.ui.platform.AroundMeLocationLabel
 import com.vitorpamplona.amethyst.commons.ui.platform.GeohashLocationPickerDialog
@@ -116,6 +140,7 @@ import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.dvms.rememberDvmHea
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.Font12SP
 import com.vitorpamplona.amethyst.commons.ui.theme.Font14SP
+import com.vitorpamplona.amethyst.commons.ui.theme.Size16Modifier
 import com.vitorpamplona.amethyst.commons.ui.theme.Size20Modifier
 import com.vitorpamplona.amethyst.commons.ui.theme.StdHorzSpacer
 import com.vitorpamplona.amethyst.commons.ui.theme.placeholderText
@@ -346,6 +371,39 @@ private fun TopNavLabel.resource(): StringResource =
         TopNavLabel.MANAGE_CUSTOM_FEEDS -> Res.string.custom_feeds_manage
     }
 
+/** Short "what does this filter show" blurb, or null when the row is an action, not a filter. */
+private fun TopNavLabel.descriptionResource(): StringResource? =
+    when (this) {
+        TopNavLabel.ALL_FOLLOWS -> Res.string.follow_list_kind3follows_summary
+        TopNavLabel.ALL_USER_FOLLOWS -> Res.string.follow_list_kind3follows_users_only_summary
+        TopNavLabel.DEFAULT_FOLLOWS -> Res.string.follow_list_default_follows_summary
+        TopNavLabel.GLOBAL -> Res.string.follow_list_global_summary
+        TopNavLabel.CURATED -> Res.string.follow_list_curated_summary
+        TopNavLabel.AROUND_ME -> Res.string.follow_list_aroundme_summary
+        TopNavLabel.TELEPORT -> Res.string.follow_list_teleport_summary
+        TopNavLabel.MUTE_LIST -> Res.string.follow_list_mute_list_summary
+        TopNavLabel.MINE -> Res.string.follow_list_mine_summary
+        TopNavLabel.ALL_FAVORITE_DVMS -> Res.string.follow_list_all_favorite_dvms_summary
+        TopNavLabel.MANAGE_CUSTOM_FEEDS -> null
+    }
+
+/**
+ * The description behind the ⓘ affordance for a filter row: built-ins get their own text,
+ * dynamic entries (lists, hashtags, relays, …) a generic per-type one.
+ */
+private fun FeedDefinition.descriptionRes(): StringResource? =
+    when (val n = name) {
+        is LabelName -> n.label.descriptionResource()
+        is HashtagName -> Res.string.follow_list_hashtag_summary
+        is GeoHashName -> Res.string.follow_list_geohash_summary
+        is CommunityName -> Res.string.follow_list_community_summary
+        is PeopleListName -> Res.string.follow_list_people_list_summary
+        is RelayName -> Res.string.follow_list_relay_summary
+        is InterestSetName -> Res.string.follow_list_interest_set_summary
+        is FavoriteAlgoFeedName -> Res.string.follow_list_algo_feed_summary
+        is CustomFeedName -> Res.string.follow_list_custom_feed_summary
+    }
+
 @Composable
 fun RenderOption(
     option: Name,
@@ -485,6 +543,16 @@ private fun GroupedFeedFilterDialog(
     onRenderItem: @Composable (FeedDefinition) -> Unit,
 ) {
     val grouped = remember(options) { groupFeedDefinitions(options) }
+    var infoItem by remember { mutableStateOf<Pair<String, String>?>(null) }
+
+    infoItem?.let { (title, text) ->
+        InformationDialog(
+            title = title,
+            textContent = text,
+            severity = ToastSeverity.INFO,
+            onDismiss = { infoItem = null },
+        )
+    }
 
     Dialog(onDismissRequest = onDismiss) {
         Surface(
@@ -511,6 +579,7 @@ private fun GroupedFeedFilterDialog(
                             items = items,
                             isChipLayout = group == FeedGroup.HASHTAGS,
                             onSelect = onSelect,
+                            onInfo = { title, text -> infoItem = title to text },
                             onRenderItem = onRenderItem,
                         )
                     }
@@ -520,15 +589,18 @@ private fun GroupedFeedFilterDialog(
     }
 }
 
-@OptIn(ExperimentalLayoutApi::class)
+@OptIn(ExperimentalLayoutApi::class, ExperimentalFoundationApi::class)
 @Composable
 private fun GroupSection(
     label: String,
     items: List<FeedDefinition>,
     isChipLayout: Boolean,
     onSelect: (FeedDefinition) -> Unit,
+    onInfo: (title: String, text: String) -> Unit,
     onRenderItem: @Composable (FeedDefinition) -> Unit,
 ) {
+    val infoLabel = stringRes(Res.string.follow_list_info)
+
     Surface(
         modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp),
         shape = RoundedCornerShape(16.dp),
@@ -551,14 +623,21 @@ private fun GroupSection(
                     verticalArrangement = Arrangement.spacedBy(6.dp),
                 ) {
                     items.forEach { entry ->
+                        val name = displayName(entry.name)
+                        val infoText = entry.descriptionRes()?.let { stringRes(it) }
                         Surface(
-                            modifier = Modifier.clickable { onSelect(entry) },
+                            modifier =
+                                Modifier.combinedClickable(
+                                    onLongClickLabel = infoLabel,
+                                    onLongClick = infoText?.let { text -> { onInfo(name, text) } },
+                                    onClick = { onSelect(entry) },
+                                ),
                             shape = RoundedCornerShape(18.dp),
                             border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
                             color = Color.Transparent,
                         ) {
                             Text(
-                                text = displayName(entry.name),
+                                text = name,
                                 fontSize = 13.sp,
                                 color = MaterialTheme.colorScheme.onSurface,
                                 modifier = Modifier.padding(horizontal = 14.dp, vertical = 7.dp),
@@ -569,6 +648,8 @@ private fun GroupSection(
                 Spacer(modifier = Modifier.height(4.dp))
             } else {
                 items.forEach { entry ->
+                    val entryName = displayName(entry.name)
+                    val infoText = entry.descriptionRes()?.let { stringRes(it) }
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
                         modifier =
@@ -583,10 +664,39 @@ private fun GroupSection(
                         )
                         Spacer(modifier = Modifier.width(12.dp))
                         Column(modifier = Modifier.weight(1f)) { onRenderItem(entry) }
+                        if (infoText != null) {
+                            FilterInfoButton(
+                                label = infoLabel,
+                                onClick = { onInfo(entryName, infoText) },
+                            )
+                        }
                     }
                 }
             }
         }
+    }
+}
+
+/** A compact ⓘ button that opens the filter's description dialog without selecting the row. */
+@Composable
+private fun FilterInfoButton(
+    label: String,
+    onClick: () -> Unit,
+) {
+    Box(
+        contentAlignment = Alignment.Center,
+        modifier =
+            Modifier
+                .size(32.dp)
+                .semantics { contentDescription = label }
+                .clickable(role = Role.Button, onClick = onClick),
+    ) {
+        Icon(
+            symbol = MaterialSymbols.Info,
+            contentDescription = null,
+            modifier = Size16Modifier,
+            tint = MaterialTheme.colorScheme.placeholderText,
+        )
     }
 }
 
