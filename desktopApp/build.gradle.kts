@@ -305,6 +305,14 @@ val rpmLibraryDeps =
         ) + (if (System.getProperty("os.arch") == "aarch64") listOf("libEGL.so.1") else emptyList())
     ).joinToString("\n") { "Requires: $it()(64bit)" }
 
+// Compose lays out text with the system's fonts and throws "Could not load font" when fontconfig
+// has none, which is how a minimal openSUSE install comes: fontconfig there requires no font.
+// Debian's fontconfig pulls in DejaVu, so the .deb needs no such line; this asks for the same font
+// by Fedora's or openSUSE's name. Not the generic font(:lang=en): zypper satisfied that with the X11
+// bitmap fonts, which fontconfig doesn't list, and an alternative that generic leaves the pick to
+// the solver.
+val rpmFontDeps = "Requires: (dejavu-sans-fonts or dejavu-fonts)"
+
 // What an app image already holds; jpackage refuses these next to --app-image.
 val appImageOptions =
     setOf(
@@ -323,7 +331,7 @@ listOf("packageRpm" to "main", "packageReleaseRpm" to "main-release").forEach { 
         val ourArgs = layout.buildDirectory.file("compose/tmp/$rpmTask.gstreamer.args.txt")
         val specDir = layout.buildDirectory.dir("compose/tmp/$rpmTask-rpm-resources")
         val appImages = layout.buildDirectory.dir("compose/binaries/$buildType/app")
-        val deps = rpmGStreamerDeps + "\n" + rpmLibraryDeps
+        val deps = listOf(rpmGStreamerDeps, rpmLibraryDeps, rpmFontDeps).joinToString("\n")
         val skip = appImageOptions
         doLast {
             val jdk = packagingJdk.get()
