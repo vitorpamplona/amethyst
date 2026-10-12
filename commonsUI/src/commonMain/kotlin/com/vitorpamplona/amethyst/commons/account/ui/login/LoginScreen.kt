@@ -20,23 +20,21 @@
  */
 package com.vitorpamplona.amethyst.commons.account.ui.login
 
-import androidx.compose.foundation.Image
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.Button
 import androidx.compose.material3.Checkbox
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -51,7 +49,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.autofill.ContentType
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
-import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.semantics.contentType
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.input.ImeAction
@@ -62,33 +59,32 @@ import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.commons.account.AccountSessionManager
-import com.vitorpamplona.amethyst.commons.account.ui.TorSettingsSetup
-import com.vitorpamplona.amethyst.commons.account.ui.login.LoginButton
-import com.vitorpamplona.amethyst.commons.account.ui.login.LoginErrorManager
-import com.vitorpamplona.amethyst.commons.account.ui.login.SignUpButton
-import com.vitorpamplona.amethyst.commons.hashtags.Amethyst
-import com.vitorpamplona.amethyst.commons.hashtags.CustomHashTagIcons
+import com.vitorpamplona.amethyst.commons.account.ui.LoggedOffScaffold
+import com.vitorpamplona.amethyst.commons.account.ui.LoggedOffTitle
+import com.vitorpamplona.amethyst.commons.account.ui.OrDivider
+import com.vitorpamplona.amethyst.commons.account.ui.SwitchScreenFooter
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
+import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbol
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.resources.Res
-import com.vitorpamplona.amethyst.commons.resources.app_logo
 import com.vitorpamplona.amethyst.commons.resources.don_t_have_an_account
 import com.vitorpamplona.amethyst.commons.resources.hide_password
+import com.vitorpamplona.amethyst.commons.resources.login
+import com.vitorpamplona.amethyst.commons.resources.login_welcome_back
 import com.vitorpamplona.amethyst.commons.resources.ncryptsec_password
 import com.vitorpamplona.amethyst.commons.resources.show_password
+import com.vitorpamplona.amethyst.commons.resources.sign_up
 import com.vitorpamplona.amethyst.commons.resources.temporary_account
 import com.vitorpamplona.amethyst.commons.tor.TorSettingsFlow
 import com.vitorpamplona.amethyst.commons.ui.components.rememberViewModel
-import com.vitorpamplona.amethyst.commons.ui.insets.imePaddingSafe
 import com.vitorpamplona.amethyst.commons.ui.platform.LocalAppPlatform
 import com.vitorpamplona.amethyst.commons.ui.platform.LocalAppServices
 import com.vitorpamplona.amethyst.commons.ui.stringRes
-import com.vitorpamplona.amethyst.commons.ui.theme.Size10dp
-import com.vitorpamplona.amethyst.commons.ui.theme.Size20dp
-import com.vitorpamplona.amethyst.commons.ui.theme.Size40dp
 import com.vitorpamplona.amethyst.commons.ui.theme.ThemeComparisonRow
-import com.vitorpamplona.amethyst.commons.ui.theme.placeholderText
 import kotlinx.coroutines.delay
+
+/** The fields and buttons of the logged-off screens: rounded, full width. */
+val LoggedOffShape = RoundedCornerShape(16.dp)
 
 @Preview(device = "spec:width=2160px,height=2340px,dpi=440")
 @Composable
@@ -125,67 +121,35 @@ fun LoginPage(
 @Composable
 fun LoginPage(
     loginViewModel: LoginViewModel,
-    onWantsToLogin: () -> Unit,
+    onWantsToSignUp: () -> Unit,
 ) {
     val platform = LocalAppPlatform.current
     val toaster = platform.rememberToaster()
     loginViewModel.remoteSignerLoginSupported = platform.supportsRemoteSignerLogin
 
-    Column(
-        modifier =
-            Modifier
-                .fillMaxSize()
-                .imePaddingSafe()
-                .verticalScroll(rememberScrollState())
-                .padding(Size20dp),
-        verticalArrangement = Arrangement.Center,
-        horizontalAlignment = Alignment.CenterHorizontally,
+    LoggedOffScaffold(
+        torSettingsFlow = loginViewModel.torSettings,
+        onTorError = { toaster.show(it, long = true) },
+        footer = {
+            SwitchScreenFooter(
+                question = stringRes(Res.string.don_t_have_an_account),
+                action = stringRes(Res.string.sign_up),
+                onClick = onWantsToSignUp,
+            )
+        },
     ) {
-        Image(
-            imageVector = CustomHashTagIcons.Amethyst,
-            contentDescription = stringRes(Res.string.app_logo),
-            modifier = Modifier.size(150.dp),
-            contentScale = ContentScale.Inside,
-        )
-
-        Spacer(modifier = Modifier.height(Size40dp))
+        LoggedOffTitle(stringRes(Res.string.login_welcome_back))
 
         KeyTextField(
             value = loginViewModel.key,
             onValueChange = loginViewModel::updateKey,
             onLogin = loginViewModel::login,
+            acceptsBunker = platform.supportsRemoteSignerLogin,
         )
 
-        loginViewModel.errorManager.error?.let { error ->
-            when (error) {
-                is LoginErrorManager.SingleErrorMsg -> {
-                    Text(
-                        text = stringRes(error.errorResId),
-                        color = MaterialTheme.colorScheme.error,
-                        style = MaterialTheme.typography.bodySmall,
-                    )
-                }
-
-                is LoginErrorManager.ParamsErrorMsg -> {
-                    Text(
-                        text = stringRes(error.errorResId, *error.params),
-                        color = MaterialTheme.colorScheme.error,
-                        style = MaterialTheme.typography.bodySmall,
-                    )
-                }
-
-                else -> {}
-            }
-        }
+        LoginErrorText(loginViewModel.errorManager)
 
         PasswordField(loginViewModel)
-
-        Spacer(modifier = Modifier.height(10.dp))
-
-        TorSettingsSetup(
-            torSettingsFlow = loginViewModel.torSettings,
-            onError = { toaster.show(it, long = true) },
-        )
 
         if (loginViewModel.offerTemporaryLogin) {
             OfferTemporaryAccount(
@@ -202,30 +166,22 @@ fun LoginPage(
             )
         }
 
-        Spacer(modifier = Modifier.height(Size10dp))
+        LoggedOffPrimaryButton(
+            text = stringRes(Res.string.login),
+            enabled = loginViewModel.acceptedTerms && !loginViewModel.processingLogin,
+            // A remote signer's login has its own dialog; the button only spins for its own.
+            loading = loginViewModel.processingLogin && !loginViewModel.nostrConnectPending,
+            onClick = loginViewModel::login,
+        )
 
-        Box(modifier = Modifier.padding(Size40dp, 0.dp, Size40dp, 0.dp)) {
-            LoginButton(
-                enabled = loginViewModel.acceptedTerms,
-                processingLogin = loginViewModel.processingLogin,
-                onClick = loginViewModel::login,
-            )
+        if (platform.supportsRemoteSignerLogin || platform.rememberHasExternalSignerLogin()) {
+            OrDivider()
         }
 
         platform.ExternalSignerLoginButton(loginViewModel)
 
         if (platform.supportsRemoteSignerLogin) {
             RemoteSignerLoginButton(loginViewModel)
-        }
-
-        Spacer(modifier = Modifier.height(Size40dp))
-
-        Text(text = stringRes(Res.string.don_t_have_an_account))
-
-        Spacer(modifier = Modifier.height(Size20dp))
-
-        Box(modifier = Modifier.padding(Size40dp, 0.dp, Size40dp, 0.dp)) {
-            SignUpButton(onWantsToLogin)
         }
     }
 
@@ -235,12 +191,89 @@ fun LoginPage(
     }
 }
 
+/** The form's error, in the error color under the field it is about. */
+@Composable
+fun LoginErrorText(errorManager: LoginErrorManager) {
+    val text =
+        when (val error = errorManager.error) {
+            is LoginErrorManager.SingleErrorMsg -> stringRes(error.errorResId)
+            is LoginErrorManager.ParamsErrorMsg -> stringRes(error.errorResId, *error.params)
+            else -> null
+        } ?: return
+
+    Text(
+        text = text,
+        color = MaterialTheme.colorScheme.error,
+        style = MaterialTheme.typography.bodySmall,
+        modifier = Modifier.fillMaxWidth(),
+    )
+}
+
+/** The screen's main action: a full-width filled button, with a spinner while it works. */
+@Composable
+fun LoggedOffPrimaryButton(
+    text: String,
+    enabled: Boolean,
+    onClick: () -> Unit,
+    loading: Boolean = false,
+) {
+    Button(
+        onClick = onClick,
+        enabled = enabled,
+        shape = LoggedOffShape,
+        modifier = Modifier.fillMaxWidth().height(52.dp),
+    ) {
+        if (loading) {
+            CircularProgressIndicator(
+                modifier = Modifier.size(18.dp),
+                strokeWidth = 2.dp,
+                color = MaterialTheme.colorScheme.onPrimary,
+            )
+            Spacer(Modifier.width(12.dp))
+        }
+        Text(text, style = MaterialTheme.typography.titleSmall)
+    }
+}
+
+/** Another way in (a signer app, a remote signer): a full-width outlined button with an icon. */
+@Composable
+fun LoggedOffSecondaryButton(
+    text: String,
+    symbol: MaterialSymbol,
+    enabled: Boolean = true,
+    onClick: () -> Unit,
+) = LoggedOffSecondaryButton(
+    text = text,
+    icon = { Icon(symbol, contentDescription = null, modifier = Modifier.size(20.dp)) },
+    enabled = enabled,
+    onClick = onClick,
+)
+
+@Composable
+fun LoggedOffSecondaryButton(
+    text: String,
+    icon: @Composable () -> Unit,
+    enabled: Boolean = true,
+    onClick: () -> Unit,
+) {
+    OutlinedButton(
+        onClick = onClick,
+        enabled = enabled,
+        shape = LoggedOffShape,
+        modifier = Modifier.fillMaxWidth().height(52.dp),
+    ) {
+        icon()
+        Spacer(Modifier.width(12.dp))
+        Text(text, style = MaterialTheme.typography.titleSmall)
+    }
+}
+
 @Composable
 fun OfferTemporaryAccount(
     checked: Boolean,
     onCheckedChange: (Boolean) -> Unit,
 ) {
-    Row(verticalAlignment = Alignment.CenterVertically) {
+    Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
         Checkbox(
             checked = checked,
             onCheckedChange = onCheckedChange,
@@ -253,8 +286,6 @@ fun OfferTemporaryAccount(
 @Composable
 private fun PasswordField(loginViewModel: LoginViewModel) {
     if (loginViewModel.needsPassword) {
-        Spacer(modifier = Modifier.height(10.dp))
-
         val passwordFocusRequester = remember { FocusRequester() }
 
         PasswordField(
@@ -287,46 +318,36 @@ fun PasswordField(
     OutlinedTextField(
         modifier =
             Modifier
+                .fillMaxWidth()
                 .focusRequester(passwordFocusRequester)
                 .semantics { contentType = ContentType.Password },
         value = value,
         onValueChange = onValueChange,
+        shape = LoggedOffShape,
+        singleLine = true,
         keyboardOptions =
             KeyboardOptions(
                 autoCorrectEnabled = false,
                 keyboardType = KeyboardType.Password,
                 imeAction = ImeAction.Go,
             ),
-        placeholder = {
-            Text(
-                text = stringRes(Res.string.ncryptsec_password),
-                color = MaterialTheme.colorScheme.placeholderText,
-            )
-        },
+        label = { Text(stringRes(Res.string.ncryptsec_password)) },
+        leadingIcon = { Icon(MaterialSymbols.Lock, contentDescription = null) },
         trailingIcon = {
-            Row {
-                IconButton(onClick = { showCharsPassword = !showCharsPassword }) {
-                    Icon(
-                        symbol = if (showCharsPassword) MaterialSymbols.VisibilityOff else MaterialSymbols.Visibility,
-                        contentDescription =
-                            if (showCharsPassword) {
-                                stringRes(Res.string.show_password)
-                            } else {
-                                stringRes(
-                                    Res.string.hide_password,
-                                )
-                            },
-                    )
-                }
+            IconButton(onClick = { showCharsPassword = !showCharsPassword }) {
+                Icon(
+                    symbol = if (showCharsPassword) MaterialSymbols.VisibilityOff else MaterialSymbols.Visibility,
+                    contentDescription =
+                        if (showCharsPassword) {
+                            stringRes(Res.string.hide_password)
+                        } else {
+                            stringRes(Res.string.show_password)
+                        },
+                )
             }
         },
         visualTransformation =
             if (showCharsPassword) VisualTransformation.None else PasswordVisualTransformation(),
-        keyboardActions =
-            KeyboardActions(
-                onGo = {
-                    onGo()
-                },
-            ),
+        keyboardActions = KeyboardActions(onGo = { onGo() }),
     )
 }

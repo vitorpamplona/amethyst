@@ -4459,7 +4459,6 @@
     <string name="desktop_menu_report_issue">Rapportera ett problem</string>
     <string name="login_with_remote_signer">Logga in med en fjärrsignatär</string>
     <string name="remote_signer_scan_title">Anslut din signatär</string>
-    <string name="remote_signer_scan_description">Skanna den här koden med en NIP-46-signatär, eller klistra in adressen i den. En bunker://-adress från din signatär anges i stället i nyckelfältet.</string>
     <string name="remote_signer_waiting">Väntar på att din signatär ska godkänna…</string>
     <string name="remote_signer_login_failed">Kunde inte logga in med fjärrsignatären: %1$s</string>
     <string name="login_with_a_private_key_to_be_able_to_boost_posts">Logga in med en privat nyckel för att kunna boosta inlägg</string>

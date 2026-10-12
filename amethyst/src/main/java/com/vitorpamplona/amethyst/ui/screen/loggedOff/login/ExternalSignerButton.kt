@@ -25,7 +25,6 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -62,9 +61,6 @@ import com.vitorpamplona.amethyst.commons.resources.error_opening_external_signe
 import com.vitorpamplona.amethyst.commons.resources.select_signer
 import com.vitorpamplona.amethyst.commons.resources.sign_request_rejected2
 import com.vitorpamplona.amethyst.commons.ui.stringRes
-import com.vitorpamplona.amethyst.commons.ui.theme.Size0dp
-import com.vitorpamplona.amethyst.commons.ui.theme.Size20dp
-import com.vitorpamplona.amethyst.commons.ui.theme.Size40dp
 import com.vitorpamplona.quartz.nip37Drafts.DraftWrapEvent
 import com.vitorpamplona.quartz.nip42RelayAuth.RelayAuthEvent
 import com.vitorpamplona.quartz.nip55AndroidSigner.api.CommandType
@@ -177,28 +173,26 @@ fun ExternalSignerButton(loginViewModel: LoginViewModel) {
         )
     }
 
-    Box(modifier = Modifier.padding(Size40dp, Size20dp, Size40dp, Size0dp)) {
-        LoginWithAmberButton(
-            enabled = loginViewModel.acceptedTerms,
-            onClick = {
-                if (!loginViewModel.acceptedTerms) {
-                    loginViewModel.termsAcceptanceIsRequiredError = true
-                } else {
-                    try {
-                        if (installedSigners.size == 1) {
-                            launcher.launch(ExternalSignerLogin.createIntent(DefaultSignerPermissions))
-                        } else {
-                            shouldSelectSigner = true
-                        }
-                    } catch (e: Exception) {
-                        if (e is CancellationException) throw e
-                        Log.e("ExternalSigner", "Error opening Signer app", e)
-                        loginViewModel.errorManager.error(Res.string.error_opening_external_signer)
+    LoginWithAmberButton(
+        enabled = loginViewModel.acceptedTerms,
+        onClick = {
+            if (!loginViewModel.acceptedTerms) {
+                loginViewModel.termsAcceptanceIsRequiredError = true
+            } else {
+                try {
+                    if (installedSigners.size == 1) {
+                        launcher.launch(ExternalSignerLogin.createIntent(DefaultSignerPermissions))
+                    } else {
+                        shouldSelectSigner = true
                     }
+                } catch (e: Exception) {
+                    if (e is CancellationException) throw e
+                    Log.e("ExternalSigner", "Error opening Signer app", e)
+                    loginViewModel.errorManager.error(Res.string.error_opening_external_signer)
                 }
-            },
-        )
-    }
+            }
+        },
+    )
 }
 
 /** What Amethyst asks a NIP-55 signer app to pre-approve when the user logs in with it. */

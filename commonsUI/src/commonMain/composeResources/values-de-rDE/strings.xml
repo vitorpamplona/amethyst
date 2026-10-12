@@ -4459,7 +4459,6 @@
     <string name="desktop_menu_report_issue">Problem melden</string>
     <string name="login_with_remote_signer">Mit einem Remote-Signer anmelden</string>
     <string name="remote_signer_scan_title">Verbinde deinen Signer</string>
-    <string name="remote_signer_scan_description">Scanne diesen Code mit einem NIP-46-Signer oder füge die Adresse dort ein. Eine bunker://-Adresse von deinem Signer gehört stattdessen in das Schlüsselfeld.</string>
     <string name="remote_signer_waiting">Warte auf die Freigabe durch deinen Signer…</string>
     <string name="remote_signer_login_failed">Anmeldung mit dem Remote-Signer fehlgeschlagen: %1$s</string>
     <string name="login_with_a_private_key_to_be_able_to_boost_posts">Du verwendest einen öffentlichen Schlüssel und öffentliche Schlüssel sind schreibgeschützt. Mit einem privaten Schlüssel anmelden, um Beiträge boosten zu können</string>

@@ -4577,7 +4577,6 @@
     <string name="desktop_menu_report_issue">Nahlásit problém</string>
     <string name="login_with_remote_signer">Přihlásit se vzdáleným podepisovatelem</string>
     <string name="remote_signer_scan_title">Připojte svého podepisovatele</string>
-    <string name="remote_signer_scan_description">Naskenujte tento kód podepisovatelem NIP-46, nebo do něj vložte adresu. Adresu bunker:// od vašeho podepisovatele naopak vložte do pole pro klíč.</string>
     <string name="remote_signer_waiting">Čeká se na schválení vaším podepisovatelem…</string>
     <string name="remote_signer_login_failed">Přihlášení vzdáleným podepisovatelem se nezdařilo: %1$s</string>
     <string name="login_with_a_private_key_to_be_able_to_boost_posts">Pro zvýšení příspěvků se přihlaste s privátním klíčem</string>

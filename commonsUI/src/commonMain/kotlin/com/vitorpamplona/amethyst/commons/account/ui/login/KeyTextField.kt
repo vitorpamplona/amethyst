@@ -21,10 +21,10 @@
 package com.vitorpamplona.amethyst.commons.account.ui.login
 
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
@@ -49,6 +49,7 @@ import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.hide_password
 import com.vitorpamplona.amethyst.commons.resources.ic_qrcode
+import com.vitorpamplona.amethyst.commons.resources.login_key_placeholder_bunker
 import com.vitorpamplona.amethyst.commons.resources.login_with_qr_code
 import com.vitorpamplona.amethyst.commons.resources.nsec_npub_hex_private_key
 import com.vitorpamplona.amethyst.commons.resources.show_password
@@ -56,23 +57,40 @@ import com.vitorpamplona.amethyst.commons.ui.painterRes
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.qrcode.SimpleQrCodeScanner
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.placeholderText
+import androidx.compose.material3.Icon as PainterIcon
 
+/**
+ * The key, `npub` or address to log in with. [acceptsBunker] says so in the placeholder where a
+ * `bunker://` address from a remote signer works too.
+ */
 @Composable
 fun KeyTextField(
     value: TextFieldValue,
     onValueChange: (TextFieldValue, throughQR: Boolean) -> Unit,
     onLogin: () -> Unit,
+    acceptsBunker: Boolean = false,
 ) {
-    var dialogOpen by remember { mutableStateOf(false) }
-
+    var scannerOpen by remember { mutableStateOf(false) }
     var showCharsKey by remember { mutableStateOf(false) }
+
+    if (scannerOpen) {
+        SimpleQrCodeScanner {
+            scannerOpen = false
+            if (!it.isNullOrEmpty()) {
+                onValueChange(TextFieldValue(it), true)
+            }
+        }
+    }
 
     OutlinedTextField(
         modifier =
             Modifier
+                .fillMaxWidth()
                 .semantics { contentType = ContentType.Password },
         value = value,
         onValueChange = { onValueChange(it, false) },
+        shape = LoggedOffShape,
+        singleLine = true,
         keyboardOptions =
             KeyboardOptions(
                 autoCorrectEnabled = false,
@@ -81,52 +99,31 @@ fun KeyTextField(
             ),
         placeholder = {
             Text(
-                text = stringRes(Res.string.nsec_npub_hex_private_key),
+                text = stringRes(if (acceptsBunker) Res.string.login_key_placeholder_bunker else Res.string.nsec_npub_hex_private_key),
                 color = MaterialTheme.colorScheme.placeholderText,
+                maxLines = 1,
             )
         },
+        leadingIcon = { Icon(MaterialSymbols.Key, contentDescription = null) },
         trailingIcon = {
             Row {
+                IconButton(onClick = { scannerOpen = true }) {
+                    PainterIcon(
+                        painter = painterRes(Res.drawable.ic_qrcode, 5),
+                        contentDescription = stringRes(Res.string.login_with_qr_code),
+                        modifier = Modifier.size(22.dp),
+                    )
+                }
                 IconButton(onClick = { showCharsKey = !showCharsKey }) {
                     Icon(
                         symbol = if (showCharsKey) MaterialSymbols.VisibilityOff else MaterialSymbols.Visibility,
-                        contentDescription =
-                            if (showCharsKey) {
-                                stringRes(Res.string.show_password)
-                            } else {
-                                stringRes(
-                                    Res.string.hide_password,
-                                )
-                            },
+                        contentDescription = stringRes(if (showCharsKey) Res.string.hide_password else Res.string.show_password),
                     )
                 }
             }
         },
-        leadingIcon = {
-            if (dialogOpen) {
-                SimpleQrCodeScanner {
-                    dialogOpen = false
-                    if (!it.isNullOrEmpty()) {
-                        onValueChange(TextFieldValue(it), true)
-                    }
-                }
-            }
-            IconButton(onClick = { dialogOpen = true }) {
-                Icon(
-                    painter = painterRes(Res.drawable.ic_qrcode, 5),
-                    contentDescription = stringRes(Res.string.login_with_qr_code),
-                    modifier = Modifier.size(24.dp),
-                    tint = MaterialTheme.colorScheme.primary,
-                )
-            }
-        },
         visualTransformation =
             if (showCharsKey) VisualTransformation.None else PasswordVisualTransformation(),
-        keyboardActions =
-            KeyboardActions(
-                onGo = {
-                    onLogin()
-                },
-            ),
+        keyboardActions = KeyboardActions(onGo = { onLogin() }),
     )
 }

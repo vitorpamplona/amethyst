@@ -20,34 +20,21 @@
  */
 package com.vitorpamplona.amethyst.commons.account.ui.login
 
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.Button
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.Modifier
+import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.login_with_external_signer
 import com.vitorpamplona.amethyst.commons.ui.stringRes
-import com.vitorpamplona.amethyst.commons.ui.theme.Size35dp
-import com.vitorpamplona.amethyst.commons.ui.theme.Size40dp
-import com.vitorpamplona.amethyst.commons.ui.theme.Size50dp
 
 @Composable
 fun LoginWithAmberButton(
     enabled: Boolean,
     onClick: () -> Unit,
 ) {
-    Button(
+    LoggedOffSecondaryButton(
+        text = stringRes(Res.string.login_with_external_signer),
+        symbol = MaterialSymbols.Key,
         enabled = enabled,
         onClick = onClick,
-        shape = RoundedCornerShape(Size35dp),
-        modifier = Modifier.height(Size50dp),
-    ) {
-        Text(
-            text = stringRes(Res.string.login_with_external_signer),
-            modifier = Modifier.padding(horizontal = Size40dp),
-        )
-    }
+    )
 }

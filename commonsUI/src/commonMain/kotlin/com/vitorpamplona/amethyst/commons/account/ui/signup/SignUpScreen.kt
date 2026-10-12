@@ -20,52 +20,39 @@
  */
 package com.vitorpamplona.amethyst.commons.account.ui.signup
 
-import androidx.compose.foundation.Image
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.tooling.preview.Preview
-import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.commons.account.AccountSessionManager
-import com.vitorpamplona.amethyst.commons.account.ui.TorSettingsSetup
-import com.vitorpamplona.amethyst.commons.account.ui.login.LoginErrorManager
-import com.vitorpamplona.amethyst.commons.account.ui.signup.LoginButton
-import com.vitorpamplona.amethyst.commons.account.ui.signup.SignUpButton
-import com.vitorpamplona.amethyst.commons.hashtags.Amethyst
-import com.vitorpamplona.amethyst.commons.hashtags.CustomHashTagIcons
+import com.vitorpamplona.amethyst.commons.account.ui.LoggedOffScaffold
+import com.vitorpamplona.amethyst.commons.account.ui.LoggedOffTitle
+import com.vitorpamplona.amethyst.commons.account.ui.SwitchScreenFooter
+import com.vitorpamplona.amethyst.commons.account.ui.login.LoggedOffPrimaryButton
+import com.vitorpamplona.amethyst.commons.account.ui.login.LoggedOffShape
+import com.vitorpamplona.amethyst.commons.account.ui.login.LoginErrorText
+import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
+import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.already_have_an_account
-import com.vitorpamplona.amethyst.commons.resources.app_logo
+import com.vitorpamplona.amethyst.commons.resources.create_account
 import com.vitorpamplona.amethyst.commons.resources.how_should_we_call_you
+import com.vitorpamplona.amethyst.commons.resources.login
 import com.vitorpamplona.amethyst.commons.resources.my_awesome_name
 import com.vitorpamplona.amethyst.commons.resources.welcome
 import com.vitorpamplona.amethyst.commons.tor.TorSettingsFlow
 import com.vitorpamplona.amethyst.commons.ui.components.rememberViewModel
-import com.vitorpamplona.amethyst.commons.ui.insets.imePaddingSafe
 import com.vitorpamplona.amethyst.commons.ui.platform.LocalAppPlatform
 import com.vitorpamplona.amethyst.commons.ui.platform.LocalAppServices
 import com.vitorpamplona.amethyst.commons.ui.stringRes
-import com.vitorpamplona.amethyst.commons.ui.theme.Size10dp
-import com.vitorpamplona.amethyst.commons.ui.theme.Size20dp
-import com.vitorpamplona.amethyst.commons.ui.theme.Size40dp
 import com.vitorpamplona.amethyst.commons.ui.theme.ThemeComparisonRow
 import com.vitorpamplona.amethyst.commons.ui.theme.placeholderText
 
@@ -103,84 +90,44 @@ fun SignUpPage(
     val platform = LocalAppPlatform.current
     val toaster = platform.rememberToaster()
 
-    Column(
-        modifier =
-            Modifier
-                .fillMaxSize()
-                .imePaddingSafe()
-                .verticalScroll(rememberScrollState())
-                .padding(Size20dp),
-        verticalArrangement = Arrangement.Center,
-        horizontalAlignment = Alignment.CenterHorizontally,
+    LoggedOffScaffold(
+        torSettingsFlow = signUpViewModel.torSettings,
+        onTorError = { toaster.show(it, long = true) },
+        footer = {
+            SwitchScreenFooter(
+                question = stringRes(Res.string.already_have_an_account),
+                action = stringRes(Res.string.login),
+                onClick = onWantsToLogin,
+            )
+        },
     ) {
-        Image(
-            imageVector = CustomHashTagIcons.Amethyst,
-            contentDescription = stringRes(Res.string.app_logo),
-            modifier = Modifier.size(150.dp),
-            contentScale = ContentScale.Inside,
-        )
-
-        Spacer(modifier = Modifier.height(Size40dp))
-
-        Text(text = stringRes(Res.string.welcome), style = MaterialTheme.typography.titleLarge)
-
-        Spacer(modifier = Modifier.height(Size20dp))
-
-        Text(text = stringRes(Res.string.how_should_we_call_you), style = MaterialTheme.typography.titleMedium)
-
-        Spacer(modifier = Modifier.height(Size20dp))
+        LoggedOffTitle(stringRes(Res.string.welcome))
 
         OutlinedTextField(
             value = signUpViewModel.displayName,
             onValueChange = signUpViewModel::updateDisplayName,
-            keyboardOptions =
-                KeyboardOptions(
-                    autoCorrectEnabled = false,
-                    keyboardType = KeyboardType.Text,
-                    imeAction = ImeAction.Go,
-                ),
+            modifier = Modifier.fillMaxWidth(),
+            shape = LoggedOffShape,
+            singleLine = true,
+            label = { Text(stringRes(Res.string.how_should_we_call_you)) },
+            leadingIcon = { Icon(MaterialSymbols.Person, contentDescription = null) },
             placeholder = {
                 Text(
                     text = stringRes(Res.string.my_awesome_name),
                     color = MaterialTheme.colorScheme.placeholderText,
                 )
             },
-            keyboardActions =
-                KeyboardActions(
-                    onGo = {
-                        signUpViewModel.signup()
-                    },
+            keyboardOptions =
+                KeyboardOptions(
+                    autoCorrectEnabled = false,
+                    capitalization = KeyboardCapitalization.Words,
+                    keyboardType = KeyboardType.Text,
+                    imeAction = ImeAction.Go,
                 ),
+            keyboardActions = KeyboardActions(onGo = { signUpViewModel.signup() }),
         )
 
-        signUpViewModel.errorManager.error?.let { error ->
-            when (error) {
-                is LoginErrorManager.SingleErrorMsg -> {
-                    Text(
-                        text = stringRes(error.errorResId),
-                        color = MaterialTheme.colorScheme.error,
-                        style = MaterialTheme.typography.bodySmall,
-                    )
-                }
-
-                is LoginErrorManager.ParamsErrorMsg -> {
-                    Text(
-                        text = stringRes(error.errorResId, *error.params),
-                        color = MaterialTheme.colorScheme.error,
-                        style = MaterialTheme.typography.bodySmall,
-                    )
-                }
-
-                else -> {}
-            }
-        }
-
-        Spacer(modifier = Modifier.height(10.dp))
-
-        TorSettingsSetup(
-            torSettingsFlow = signUpViewModel.torSettings,
-            onError = { toaster.show(it, long = true) },
-        )
+        LoginErrorText(signUpViewModel.errorManager)
 
         platform.TermsGate(
             checked = signUpViewModel.acceptedTerms,
@@ -188,23 +135,10 @@ fun SignUpPage(
             showError = signUpViewModel.termsAcceptanceIsRequiredError,
         )
 
-        Spacer(modifier = Modifier.height(Size10dp))
-
-        Box(modifier = Modifier.padding(Size40dp, 0.dp, Size40dp, 0.dp)) {
-            SignUpButton(
-                enabled = signUpViewModel.acceptedTerms,
-                onClick = signUpViewModel::signup,
-            )
-        }
-
-        Spacer(modifier = Modifier.height(Size40dp))
-
-        Text(text = stringRes(Res.string.already_have_an_account))
-
-        Spacer(modifier = Modifier.height(Size20dp))
-
-        Box(modifier = Modifier.padding(Size40dp, 0.dp, Size40dp, 0.dp)) {
-            LoginButton(onWantsToLogin)
-        }
+        LoggedOffPrimaryButton(
+            text = stringRes(Res.string.create_account),
+            enabled = signUpViewModel.acceptedTerms,
+            onClick = signUpViewModel::signup,
+        )
     }
 }

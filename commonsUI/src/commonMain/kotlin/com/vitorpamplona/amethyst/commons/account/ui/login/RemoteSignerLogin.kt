@@ -20,23 +20,46 @@
  */
 package com.vitorpamplona.amethyst.commons.account.ui.login
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.LinearEasing
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.foundation.text.selection.SelectionContainer
-import androidx.compose.material3.AlertDialog
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.FilledTonalButton
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.State
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -44,108 +67,233 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.drawscope.rotate
 import androidx.compose.ui.platform.LocalClipboard
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
+import com.vitorpamplona.amethyst.commons.account.ui.AmethystBlue
+import com.vitorpamplona.amethyst.commons.account.ui.AmethystPurple
+import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
+import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.add_a_relay
 import com.vitorpamplona.amethyst.commons.resources.cancel
 import com.vitorpamplona.amethyst.commons.resources.copy
+import com.vitorpamplona.amethyst.commons.resources.ic_qrcode
 import com.vitorpamplona.amethyst.commons.resources.login_with_remote_signer
 import com.vitorpamplona.amethyst.commons.resources.relay_url_not_valid
 import com.vitorpamplona.amethyst.commons.resources.remote_signer_default_relays
+import com.vitorpamplona.amethyst.commons.resources.remote_signer_open
 import com.vitorpamplona.amethyst.commons.resources.remote_signer_relay_apply
 import com.vitorpamplona.amethyst.commons.resources.remote_signer_relay_hint
 import com.vitorpamplona.amethyst.commons.resources.remote_signer_relay_label
-import com.vitorpamplona.amethyst.commons.resources.remote_signer_relays
-import com.vitorpamplona.amethyst.commons.resources.remote_signer_scan_description
 import com.vitorpamplona.amethyst.commons.resources.remote_signer_scan_title
 import com.vitorpamplona.amethyst.commons.resources.remote_signer_waiting
+import com.vitorpamplona.amethyst.commons.ui.components.LocalAnimationsEnabled
 import com.vitorpamplona.amethyst.commons.ui.components.util.setText
+import com.vitorpamplona.amethyst.commons.ui.painterRes
+import com.vitorpamplona.amethyst.commons.ui.platform.LocalAppPlatform
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.qrcode.QrCodeDrawer
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import kotlinx.coroutines.launch
+import androidx.compose.material3.Icon as PainterIcon
 
 /**
- * Logs in through a NIP-46 remote signer: shows a `nostrconnect://` code for the signer to scan.
+ * Logs in through a NIP-46 remote signer: opens a `nostrconnect://` code for the signer to scan.
  * (A `bunker://` address the signer hands out goes in the key field instead.)
  */
 @Composable
 fun RemoteSignerLoginButton(loginViewModel: LoginViewModel) {
-    TextButton(
-        onClick = loginViewModel::loginWithNostrConnect,
+    LoggedOffSecondaryButton(
+        text = stringRes(Res.string.login_with_remote_signer),
+        icon = {
+            PainterIcon(
+                painter = painterRes(Res.drawable.ic_qrcode, 5),
+                contentDescription = null,
+                modifier = Modifier.size(20.dp),
+            )
+        },
         enabled = !loginViewModel.processingLogin,
-    ) {
-        Text(stringRes(Res.string.login_with_remote_signer))
-    }
+        onClick = loginViewModel::loginWithNostrConnect,
+    )
 
     if (loginViewModel.nostrConnectPending) {
         NostrConnectDialog(loginViewModel)
     }
 }
 
+/**
+ * The code, the signal that Amethyst is listening for the signer, and the ways to hand the code
+ * over (scan, copy, open the signer). The relays it names sit at the bottom as chips.
+ */
 @Composable
 private fun NostrConnectDialog(loginViewModel: LoginViewModel) {
     val uri = loginViewModel.nostrConnectUri
-    val onCancel = loginViewModel::cancelNostrConnect
+    val platform = LocalAppPlatform.current
     val clipboard = LocalClipboard.current
     val scope = rememberCoroutineScope()
 
-    AlertDialog(
-        onDismissRequest = onCancel,
-        title = { Text(stringRes(Res.string.remote_signer_scan_title)) },
-        text = {
+    Dialog(
+        onDismissRequest = loginViewModel::cancelNostrConnect,
+        properties = DialogProperties(usePlatformDefaultWidth = false),
+    ) {
+        Surface(
+            shape = RoundedCornerShape(28.dp),
+            color = MaterialTheme.colorScheme.surfaceContainerHigh,
+            modifier = Modifier.padding(16.dp).widthIn(max = 400.dp),
+        ) {
             Column(
+                modifier = Modifier.verticalScroll(rememberScrollState()).padding(24.dp),
                 horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.spacedBy(12.dp),
+                verticalArrangement = Arrangement.spacedBy(20.dp),
             ) {
-                Text(stringRes(Res.string.remote_signer_scan_description), textAlign = TextAlign.Center)
-                // A quiet zone of white around the code, so scanners find it on a dark theme too.
-                Box(Modifier.background(Color.White).padding(12.dp), contentAlignment = Alignment.Center) {
-                    if (uri != null) {
-                        QrCodeDrawer(uri, Modifier.size(220.dp))
-                    } else {
-                        Box(Modifier.size(220.dp), contentAlignment = Alignment.Center) {
-                            CircularProgressIndicator()
-                        }
-                    }
-                }
-                if (uri != null) {
-                    SelectionContainer {
-                        Text(uri, style = MaterialTheme.typography.bodySmall, maxLines = 3)
-                    }
-                }
-                NostrConnectRelayPicker(loginViewModel)
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Text(
-                        stringRes(Res.string.remote_signer_waiting),
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        text = stringRes(Res.string.remote_signer_scan_title),
+                        style = MaterialTheme.typography.titleLarge,
+                        fontWeight = FontWeight.SemiBold,
+                        modifier = Modifier.weight(1f),
                     )
+                    IconButton(onClick = loginViewModel::cancelNostrConnect) {
+                        Icon(MaterialSymbols.Close, contentDescription = stringRes(Res.string.cancel))
+                    }
                 }
+
+                ListeningQrCode(uri)
+
+                WaitingPill()
+
+                Row(horizontalArrangement = Arrangement.spacedBy(12.dp), modifier = Modifier.fillMaxWidth()) {
+                    FilledTonalButton(
+                        onClick = { uri?.let { scope.launch { clipboard.setText(it) } } },
+                        enabled = uri != null,
+                        contentPadding = ActionPadding,
+                        modifier = Modifier.weight(1f),
+                    ) {
+                        Icon(MaterialSymbols.ContentCopy, contentDescription = null, modifier = Modifier.size(18.dp))
+                        Spacer(Modifier.width(8.dp))
+                        Text(stringRes(Res.string.copy), maxLines = 1)
+                    }
+                    FilledTonalButton(
+                        onClick = { uri?.let { platform.openNostrConnect(it) } },
+                        enabled = uri != null,
+                        contentPadding = ActionPadding,
+                        modifier = Modifier.weight(1f),
+                    ) {
+                        Icon(MaterialSymbols.OpenInBrowser, contentDescription = null, modifier = Modifier.size(18.dp))
+                        Spacer(Modifier.width(8.dp))
+                        Text(stringRes(Res.string.remote_signer_open), maxLines = 1)
+                    }
+                }
+
+                NostrConnectRelays(loginViewModel)
             }
-        },
-        confirmButton = {
-            TextButton(onClick = { uri?.let { scope.launch { clipboard.setText(it) } } }, enabled = uri != null) {
-                Text(stringRes(Res.string.copy))
-            }
-        },
-        dismissButton = {
-            TextButton(onClick = onCancel) {
-                Text(stringRes(Res.string.cancel))
-            }
-        },
+        }
+    }
+}
+
+private val ActionPadding = PaddingValues(horizontal = 12.dp, vertical = 10.dp)
+
+/**
+ * The code in a white frame (scanners need the contrast, dark theme or not) ringed by the logo's
+ * colors, which sweep around it while Amethyst waits for the signer.
+ */
+@Composable
+private fun ListeningQrCode(uri: String?) {
+    val sweep = rememberSweepAngle()
+
+    Box(
+        modifier =
+            Modifier
+                .size(264.dp)
+                .clip(RoundedCornerShape(32.dp))
+                .drawBehind {
+                    rotate(sweep?.value ?: 0f) {
+                        drawCircle(
+                            brush =
+                                Brush.sweepGradient(
+                                    listOf(AmethystPurple.copy(alpha = 0.15f), AmethystPurple, AmethystBlue, AmethystPurple.copy(alpha = 0.15f)),
+                                ),
+                            radius = size.maxDimension,
+                        )
+                    }
+                }.padding(4.dp)
+                .clip(RoundedCornerShape(28.dp))
+                .background(Color.White)
+                .padding(16.dp),
+        contentAlignment = Alignment.Center,
+    ) {
+        if (uri != null) {
+            QrCodeDrawer(uri, Modifier.fillMaxSize())
+        } else {
+            CircularProgressIndicator(color = AmethystPurple)
+        }
+    }
+}
+
+/** One turn every four seconds; null, and a still ring, where the user turned animations off. */
+@Composable
+private fun rememberSweepAngle(): State<Float>? {
+    if (!LocalAnimationsEnabled.current) return null
+    return rememberInfiniteTransition(label = "nostrconnect-sweep").animateFloat(
+        initialValue = 0f,
+        targetValue = 360f,
+        animationSpec = infiniteRepeatable(tween(durationMillis = 4000, easing = LinearEasing)),
+        label = "nostrconnect-sweep-angle",
     )
 }
 
-/**
- * The relays the code names, and a field to name one of the account's inbox relays instead: a
- * signer that can't reach the defaults never sees the request.
- */
 @Composable
-private fun NostrConnectRelayPicker(loginViewModel: LoginViewModel) {
+private fun WaitingPill() {
+    val pulse =
+        if (LocalAnimationsEnabled.current) {
+            rememberInfiniteTransition(label = "nostrconnect-pulse").animateFloat(
+                initialValue = 0.3f,
+                targetValue = 1f,
+                animationSpec = infiniteRepeatable(tween(durationMillis = 900), RepeatMode.Reverse),
+                label = "nostrconnect-pulse-alpha",
+            )
+        } else {
+            null
+        }
+    val dotColor = MaterialTheme.colorScheme.primary
+
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        modifier =
+            Modifier
+                .clip(CircleShape)
+                .background(MaterialTheme.colorScheme.secondaryContainer)
+                .padding(horizontal = 14.dp, vertical = 8.dp),
+    ) {
+        Box(
+            Modifier.size(8.dp).drawBehind { drawCircle(dotColor.copy(alpha = pulse?.value ?: 1f)) },
+        )
+        Spacer(Modifier.width(10.dp))
+        Text(
+            text = stringRes(Res.string.remote_signer_waiting),
+            style = MaterialTheme.typography.labelLarge,
+            color = MaterialTheme.colorScheme.onSecondaryContainer,
+        )
+    }
+}
+
+/**
+ * The relays the code names, as chips, then a chip to name one of the account's inbox relays
+ * instead: a signer that can't reach the defaults never sees the request.
+ */
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+private fun NostrConnectRelays(loginViewModel: LoginViewModel) {
+    var editing by remember { mutableStateOf(false) }
     var relay by remember { mutableStateOf("") }
     var invalid by remember { mutableStateOf(false) }
 
@@ -153,25 +301,35 @@ private fun NostrConnectRelayPicker(loginViewModel: LoginViewModel) {
         if (loginViewModel.useNostrConnectRelay(relay)) {
             relay = ""
             invalid = false
+            editing = false
         } else {
             invalid = true
         }
     }
 
-    Column(
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(4.dp),
-    ) {
-        Text(
-            stringRes(
-                Res.string.remote_signer_relays,
-                loginViewModel.nostrConnectRelays.joinToString { it.removePrefix("wss://").removeSuffix("/") },
-            ),
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            textAlign = TextAlign.Center,
-        )
-        Row(verticalAlignment = Alignment.CenterVertically) {
+    Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        FlowRow(
+            horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.CenterHorizontally),
+            verticalArrangement = Arrangement.spacedBy(8.dp),
+            modifier = Modifier.fillMaxWidth(),
+        ) {
+            loginViewModel.nostrConnectRelays.forEach { RelayPill(it) }
+
+            if (!editing) {
+                Pill(onClick = { editing = true }) {
+                    Icon(MaterialSymbols.Add, contentDescription = null, modifier = Modifier.size(16.dp), tint = MaterialTheme.colorScheme.primary)
+                    Text(stringRes(Res.string.add_a_relay), style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary)
+                }
+            }
+            if (!loginViewModel.usesDefaultNostrConnectRelays) {
+                Pill(onClick = loginViewModel::useDefaultNostrConnectRelays) {
+                    Icon(MaterialSymbols.Refresh, contentDescription = null, modifier = Modifier.size(16.dp), tint = MaterialTheme.colorScheme.primary)
+                    Text(stringRes(Res.string.remote_signer_default_relays), style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary)
+                }
+            }
+        }
+
+        AnimatedVisibility(editing) {
             OutlinedTextField(
                 value = relay,
                 onValueChange = {
@@ -182,21 +340,53 @@ private fun NostrConnectRelayPicker(loginViewModel: LoginViewModel) {
                 placeholder = { Text("wss://") },
                 singleLine = true,
                 isError = invalid,
+                shape = LoggedOffShape,
                 supportingText = {
                     Text(stringRes(if (invalid) Res.string.relay_url_not_valid else Res.string.remote_signer_relay_hint))
                 },
+                trailingIcon = {
+                    IconButton(onClick = apply, enabled = relay.isNotBlank()) {
+                        Icon(MaterialSymbols.Check, contentDescription = stringRes(Res.string.remote_signer_relay_apply))
+                    }
+                },
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Uri, imeAction = ImeAction.Done),
                 keyboardActions = KeyboardActions(onDone = { apply() }),
-                modifier = Modifier.weight(1f),
+                modifier = Modifier.fillMaxWidth(),
             )
-            TextButton(onClick = apply, enabled = relay.isNotBlank()) {
-                Text(stringRes(Res.string.remote_signer_relay_apply))
-            }
         }
-        if (!loginViewModel.usesDefaultNostrConnectRelays) {
-            TextButton(onClick = loginViewModel::useDefaultNostrConnectRelays) {
-                Text(stringRes(Res.string.remote_signer_default_relays))
-            }
-        }
+    }
+}
+
+/** A relay the code names: its host, after a dot that reads as "live". */
+@Composable
+private fun RelayPill(url: String) {
+    val dotColor = MaterialTheme.colorScheme.primary
+    Pill {
+        Box(Modifier.size(6.dp).drawBehind { drawCircle(dotColor) })
+        Text(
+            text = url.removePrefix("wss://").removePrefix("ws://").removeSuffix("/"),
+            style = MaterialTheme.typography.labelLarge,
+        )
+    }
+}
+
+/** The outlined capsule the relays and their actions share, so the row lines up. */
+@Composable
+private fun Pill(
+    onClick: (() -> Unit)? = null,
+    content: @Composable () -> Unit,
+) {
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        modifier =
+            Modifier
+                .height(32.dp)
+                .clip(CircleShape)
+                .border(1.dp, MaterialTheme.colorScheme.outlineVariant, CircleShape)
+                .then(if (onClick != null) Modifier.clickable(onClick = onClick) else Modifier)
+                .padding(horizontal = 12.dp),
+    ) {
+        content()
     }
 }

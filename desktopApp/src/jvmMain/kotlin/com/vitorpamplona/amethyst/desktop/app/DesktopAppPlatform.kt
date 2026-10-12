@@ -64,6 +64,9 @@ class DesktopAppPlatform(
     // Desktop has no signer app to hand keys to; a NIP-46 remote signer plays that role.
     override val supportsRemoteSignerLogin: Boolean get() = true
 
+    // Only the addresses the login screen makes: never a scheme a page or note could slip in.
+    override fun openNostrConnect(uri: String): Boolean = uri.startsWith("nostrconnect://") && DesktopBrowser.open(uri)
+
     // DesktopAppModules reports every connection as unmetered.
     override val detectsMeteredConnections: Boolean get() = false
 

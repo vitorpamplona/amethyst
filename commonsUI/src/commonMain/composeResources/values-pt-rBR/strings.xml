@@ -4459,7 +4459,6 @@
     <string name="desktop_menu_report_issue">Relatar um problema</string>
     <string name="login_with_remote_signer">Entrar com um assinador remoto</string>
     <string name="remote_signer_scan_title">Conecte seu assinador</string>
-    <string name="remote_signer_scan_description">Escaneie este código com um assinador NIP-46 ou cole o endereço nele. Um endereço bunker:// do seu assinador vai no campo da chave.</string>
     <string name="remote_signer_waiting">Aguardando a aprovação do seu assinador…</string>
     <string name="remote_signer_login_failed">Não foi possível entrar com o assinador remoto: %1$s</string>
     <string name="login_with_a_private_key_to_be_able_to_boost_posts">Faça login com uma chave privada para poder impulsionar postagens</string>

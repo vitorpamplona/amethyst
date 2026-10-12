@@ -4459,7 +4459,6 @@
     <string name="desktop_menu_report_issue">Hibajelentés</string>
     <string name="login_with_remote_signer">Bejelentkezés távoli aláíróval</string>
     <string name="remote_signer_scan_title">Összekapcsolás aláíróval</string>
-    <string name="remote_signer_scan_description">Olvassa be ezt a kódot egy NIP-46 aláíróval, vagy illessze be a címet abba. A saját aláírójától származó bunker:// cím helyette a kulcsmezőbe kerül.</string>
     <string name="remote_signer_waiting">Várakozás az aláíró jóváhagyására…</string>
     <string name="remote_signer_login_failed">Nem sikerült bejelentkezni a távoli aláíróval: %1$s</string>
     <string name="login_with_a_private_key_to_be_able_to_boost_posts">Ön nyilvános kulcsot használ, és a nyilvános kulccsal csak olvashatóak a bejegyzések. Jelentkezzen be a privát kulcsával, hogy meg tudja tolni a bejegyzéseket</string>

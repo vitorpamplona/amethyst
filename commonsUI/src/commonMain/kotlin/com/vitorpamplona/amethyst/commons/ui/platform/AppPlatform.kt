@@ -80,6 +80,12 @@ interface AppPlatform {
     val supportsRemoteSignerLogin: Boolean get() = false
 
     /**
+     * Hands a `nostrconnect://` address to the signer app the system registered for it (Opal on
+     * Linux), so the user approves without scanning. False where nothing can take it.
+     */
+    fun openNostrConnect(uri: String): Boolean = false
+
+    /**
      * Whether the platform tells metered and mobile connections from unmetered ones. Where it
      * cannot (Desktop reports every connection as unmetered), the "Wi-Fi" choice of the media
      * settings behaves exactly like "Always", so the settings leave it out.
@@ -97,6 +103,10 @@ interface AppPlatform {
     /** Logs in through a signer app (Android's NIP-55 signers), when one is installed. */
     @Composable
     fun ExternalSignerLoginButton(loginViewModel: LoginViewModel) {}
+
+    /** Whether [ExternalSignerLoginButton] shows here: the login form drops its "or" when nothing follows it. */
+    @Composable
+    fun rememberHasExternalSignerLogin(): Boolean = false
 
     /** Hands the login form the keys the app is opened with (a `nostr:` link) while logged off. */
     @Composable
