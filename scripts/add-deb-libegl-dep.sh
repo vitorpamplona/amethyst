@@ -26,32 +26,13 @@
 # Usage: add-deb-libegl-dep.sh <path-to-deb> [<path-to-deb> ...]
 set -euo pipefail
 
-for deb in "$@"; do
-    if [[ ! -f "$deb" ]]; then
-        echo "skip: not a file: $deb" >&2
-        continue
-    fi
+source "$(dirname "${BASH_SOURCE[0]}")/deb-control.sh"
 
-    work="$(mktemp -d)"
-    trap 'rm -rf "$work"' EXIT
-    dpkg-deb -R "$deb" "$work/pkg"
-    control="$work/pkg/DEBIAN/control"
-
-    # Only touch .debs whose payload actually contains the arm64 skiko native.
-    # Applying this to x64 .debs is harmless but the whole point is to be
-    # surgical.
-    if ! find "$work/pkg" -type f -name 'libskiko-linux-arm64.so' | grep -q .; then
-        echo "No arm64 skiko in payload, leaving as-is: $deb"
-        rm -rf "$work"
-        trap - EXIT
-        continue
-    fi
+add_libegl() {
+    local control="$1"
 
     if grep -qE '(^| )libegl1( |,|$)' "$control"; then
-        echo "libegl1 already in Depends, leaving as-is: $deb"
-        rm -rf "$work"
-        trap - EXIT
-        continue
+        return
     fi
 
     # Append libegl1 to the Depends line. jpackage-generated lines are single
@@ -59,10 +40,34 @@ for deb in "$@"; do
     #   Depends: libasound2t64, ..., zlib1g
     # We insert `, libegl1` before the trailing newline.
     sed -i -E 's/^(Depends: .*[^,[:space:]])[[:space:]]*$/\1, libegl1/' "$control"
+}
 
-    dpkg-deb --root-owner-group -Zxz -b "$work/pkg" "$deb" >/dev/null
-    echo "Added libegl1 dep: $deb"
+# An unmatched glob reaches us as the literal pattern: fail rather than ship a .deb without the dep.
+if [[ $# -eq 0 ]]; then
+    echo "error: no .deb given" >&2
+    exit 1
+fi
 
-    rm -rf "$work"
-    trap - EXIT
+for deb in "$@"; do
+    if [[ ! -f "$deb" ]]; then
+        echo "error: not a file: $deb" >&2
+        exit 1
+    fi
+
+    # Only touch .debs whose payload actually contains the arm64 skiko native.
+    # Applying this to x64 .debs is harmless but the whole point is to be
+    # surgical. The listing is captured first: `grep -q` on a pipe can exit
+    # before dpkg-deb finishes, and pipefail would read that SIGPIPE as no match.
+    listing="$(dpkg-deb -c "$deb")"
+    if ! grep -q '/libskiko-linux-arm64\.so$' <<< "$listing"; then
+        echo "No arm64 skiko in payload, leaving as-is: $deb"
+        continue
+    fi
+
+    deb_edit_control "$deb" add_libegl
+    if [[ $DEB_CONTROL_CHANGED -eq 1 ]]; then
+        echo "Added libegl1 dep: $deb"
+    else
+        echo "libegl1 already in Depends, leaving as-is: $deb"
+    fi
 done
