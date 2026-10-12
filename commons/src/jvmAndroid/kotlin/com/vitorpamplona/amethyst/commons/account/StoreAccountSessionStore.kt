@@ -24,6 +24,7 @@ import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.stringPreferencesKey
 import com.vitorpamplona.amethyst.commons.cashu.CashuKeysetCounterStore
 import com.vitorpamplona.amethyst.commons.cashu.UnavailableCashuKeysetCounterStore
+import com.vitorpamplona.amethyst.commons.keystorage.KeyFileLockedException
 import com.vitorpamplona.amethyst.commons.keystorage.KeyNotKeptException
 import com.vitorpamplona.amethyst.commons.keystorage.KeyStoragePrompts
 import com.vitorpamplona.amethyst.commons.keystorage.PrivateKeyVault
@@ -99,6 +100,10 @@ class StoreAccountSessionStore(
 
     // Accounts whose stored key was deleted because they no longer remember it, once per run.
     private val keysForgotten = ConcurrentHashMap.newKeySet<String>()
+
+    // Keys that could not be kept because the key file stayed locked this run. Saved again only on
+    // the next run: the user already skipped the password, and each settings save would retry.
+    private val keysLockedOut = ConcurrentHashMap<String, String>()
 
     @Volatile
     private var currentAccount: String? = null
@@ -214,7 +219,7 @@ class StoreAccountSessionStore(
         npub: String,
         privKeyHex: String,
     ) {
-        if (keysInVault[npub] == privKeyHex) return
+        if (keysInVault[npub] == privKeyHex || keysLockedOut[npub] == privKeyHex) return
         try {
             keyVault.save(npub, privKeyHex)
             keysInVault[npub] = privKeyHex
@@ -224,6 +229,12 @@ class StoreAccountSessionStore(
             keysInVault[npub] = privKeyHex
             keysNotKept.add(npub)
             updateSavedAccounts(allSavedAccounts().map { if (it.npub == npub) it.copy(keyRemembered = false) else it })
+        } catch (e: KeyFileLockedException) {
+            // A skipped password is not "don't remember": marking the account so would ask for its key
+            // at the next launch and delete the copy the key file still holds.
+            Log.w(TAG, "Could not keep the private key of $npub: the key file is locked", e)
+            keysLockedOut[npub] = privKeyHex
+            _keyVaultFailure.value = e
         } catch (e: Exception) {
             if (e is CancellationException) throw e
             Log.w(TAG, "Could not keep the private key of $npub", e)
@@ -317,6 +328,7 @@ class StoreAccountSessionStore(
         keysInVault.remove(npub)
         keysNotKept.remove(npub)
         keysForgotten.remove(npub)
+        keysLockedOut.remove(npub)
         savedSecrets.remove(npub)
         keyVault.delete(npub)
         secretsStores.removeAccount(npub)

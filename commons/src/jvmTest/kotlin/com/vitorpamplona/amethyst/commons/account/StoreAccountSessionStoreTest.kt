@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst.commons.account
 
+import com.vitorpamplona.amethyst.commons.keystorage.KeyFileLockedException
 import com.vitorpamplona.amethyst.commons.keystorage.KeyNotKeptException
 import com.vitorpamplona.amethyst.commons.keystorage.KeyPrompt
 import com.vitorpamplona.amethyst.commons.keystorage.KeyStoragePrompts
@@ -45,6 +46,7 @@ import java.io.File
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
+import kotlin.test.assertIs
 import kotlin.test.assertNotNull
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
@@ -300,5 +302,50 @@ class StoreAccountSessionStoreTest {
             assertNull(store.keyVaultFailure.value)
             assertEquals(false, store.allSavedAccounts().single().keyRemembered)
             assertEquals(1, declining.saves)
+        }
+
+    @Test
+    fun aLockedKeyFileIsAFailureAndTheAccountStillKeepsItsKey() =
+        runTest {
+            val locked =
+                object : PrivateKeyVault {
+                    var saves = 0
+                    var deletes = 0
+
+                    override suspend fun get(npub: String): String? = null
+
+                    override suspend fun save(
+                        npub: String,
+                        privKeyHex: String,
+                    ) {
+                        saves++
+                        throw KeyFileLockedException("The key file stayed locked")
+                    }
+
+                    override suspend fun delete(npub: String) {
+                        deletes++
+                    }
+                }
+            val root = folder.root
+            val store =
+                StoreAccountSessionStore(
+                    rootFilesDir = { root.toOkioPath() },
+                    appStores = AppPreferenceStores(rootFilesDir = { root.toOkioPath() }),
+                    keyVault = locked,
+                    scope = CoroutineScope(Dispatchers.IO + SupervisorJob()),
+                    encryption = SecretEncryption(File(root, "secret.key")),
+                )
+            val settings = AccountSettings(keyPair = KeyPair())
+
+            store.setDefaultAccount(settings)
+            store.saveAccountSettings(settings)
+
+            // Told, not taken as "don't remember": that would ask for the key next launch and
+            // delete the copy the key file still holds.
+            assertIs<KeyFileLockedException>(store.keyVaultFailure.value)
+            assertEquals(true, store.allSavedAccounts().single().keyRemembered)
+            assertEquals(0, locked.deletes)
+            // Not retried on every save: the user already skipped the password this run.
+            assertEquals(1, locked.saves)
         }
 }

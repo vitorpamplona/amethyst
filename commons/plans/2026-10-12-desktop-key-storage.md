@@ -60,7 +60,7 @@ failure.
 Both choices are offered.
 
 **Password file (NIP-49).** When no OS keyring exists, keys go to
-`<appDataDir>/keys.ncryptsec.json`, each one a NIP-49 `ncryptsec` (scrypt, XChaCha20-Poly1305)
+`<data dir>/keys.ncryptsec` (a properties file), each one a NIP-49 `ncryptsec` (scrypt, XChaCha20-Poly1305)
 under one device password. The first key to be kept asks the user to choose that password (12
 characters at least, `Nip49.MIN_PASSWORD_LENGTH`); each launch asks for it once, in a dialog, before
 the default account loads. A wrong password asks again; Skip loads the account read-only for this

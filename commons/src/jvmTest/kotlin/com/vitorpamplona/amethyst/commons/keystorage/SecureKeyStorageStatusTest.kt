@@ -47,12 +47,16 @@ class SecureKeyStorageStatusTest {
         /** Every read fails the way a denied macOS prompt or a locked keyring does. */
         var denyReads = false
 
+        /** How this backend words a missing item: macOS and the Secret Service by default. */
+        var missingRead: (String, String) -> String = { service, account -> "No stored credentials match $service account: $account" }
+        var missingDelete: (String, String) -> String = missingRead
+
         override fun getPassword(
             service: String,
             account: String,
         ): String {
             if (denyReads) throw PasswordAccessException("Failed to get credential. User canceled the operation.")
-            return store[service to account] ?: throw PasswordAccessException("No stored credentials match $service account: $account")
+            return store[service to account] ?: throw PasswordAccessException(missingRead(service, account))
         }
 
         override fun setPassword(
@@ -68,7 +72,7 @@ class SecureKeyStorageStatusTest {
             service: String,
             account: String,
         ) {
-            store.remove(service to account) ?: throw PasswordAccessException("No stored credentials match $service account: $account")
+            store.remove(service to account) ?: throw PasswordAccessException(missingDelete(service, account))
         }
     }
 
@@ -101,6 +105,25 @@ class SecureKeyStorageStatusTest {
             assertIs<KeyStorageStatus.KeyringUnreachable>(storage.status.value)
             // Not a silent read-only login: the strict read refuses to say "absent".
             assertFailsWith<SecureStorageException> { storage.getPrivateKeyOrThrow("npub1a") }
+        }
+
+    @Test
+    fun aKWalletMissIsAbsenceNotADenial() =
+        runBlocking<Unit> {
+            // java-keyring's KWallet backend, on a fresh install: no vault item yet.
+            val keyring = FakeKeyring(OsKeyring.KWALLET)
+            keyring.missingRead = { _, _ -> "Password is not in wallet" }
+            keyring.missingDelete = { _, _ -> "Password cannot be deleted, it is not in wallet" }
+            val storage = storage { keyring }
+
+            storage.enableConsolidatedVault(listOf("npub1a"))
+
+            assertTrue(storage.isVaultActive())
+            assertEquals(KeyStorageStatus.Keyring(OsKeyring.KWALLET), storage.status.value)
+            assertNull(storage.getPrivateKeyOrThrow("npub1a"))
+            storage.savePrivateKey("npub1a", key)
+            assertTrue(storage.deletePrivateKey("npub1a"))
+            assertEquals(KeyStorageStatus.Keyring(OsKeyring.KWALLET), storage.status.value)
         }
 
     @Test

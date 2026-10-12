@@ -466,7 +466,7 @@ class DesktopAppModules(
         )
 
     /** Settings › Key storage, the key prompts and the keyring alert, for the shared UI. */
-    val keyStorageController by lazy { DesktopKeyStorage(keyStorage, keyPrompts, ::openKeysAndLogIn) }
+    val keyStorageController by lazy { DesktopKeyStorage(keyStorage, keyPrompts, applicationIOScope, ::openKeysAndLogIn) }
 
     // Before the first login, so a user of the legacy app starts where they left off; again after
     // the user retries the keyring or unlocks the password file.

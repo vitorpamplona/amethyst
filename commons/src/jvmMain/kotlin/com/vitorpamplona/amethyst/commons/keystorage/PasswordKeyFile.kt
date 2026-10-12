@@ -87,7 +87,8 @@ internal class PasswordKeyFile(
 
     /**
      * Keeps [privKeyHex] under [alias]. Throws [KeyNotKeptException] when the user chose not to
-     * keep keys (or skipped the password), [SecureStorageException] when nothing can ask them.
+     * keep keys, [KeyFileLockedException] when they skipped the password this run, and
+     * [SecureStorageException] when nothing can ask them.
      */
     suspend fun put(
         alias: String,
@@ -100,7 +101,7 @@ internal class PasswordKeyFile(
         mutex.withLock {
             val pass =
                 password ?: if (hasPassword()) {
-                    unlockLocked(prompts) ?: throw KeyNotKeptException("The key file stayed locked")
+                    unlockLocked(prompts) ?: throw KeyFileLockedException("The key file stayed locked")
                 } else {
                     createLocked(prompts)
                 }

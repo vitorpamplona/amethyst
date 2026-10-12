@@ -117,6 +117,27 @@ class PasswordKeyFileTest {
         }
 
     @Test
+    fun keepingAKeyAfterASkippedUnlockFailsAsLockedNotAsDeclined() =
+        runBlocking<Unit> {
+            val setup = ScriptedPrompts(NewPasswordAnswer.Password(password))
+            val setupJob = setup.start(this)
+            newFile().put("npub1a", key, setup.prompts)
+            setupJob.cancel()
+
+            val script = ScriptedPrompts(null)
+            val job = script.start(this)
+            val file = newFile()
+            assertNull(file.get("npub1a", script.prompts))
+            // Logging in again with the key: the user skipped the password, they did not decline.
+            val failure = assertFailsWith<SecureStorageException> { file.put("npub1a", key, script.prompts) }
+            assertIs<KeyFileLockedException>(failure)
+            assertEquals(1, script.asked.size)
+            // The key already kept stays for the next run.
+            assertTrue(File(folder.root, "keys.ncryptsec").readText().contains("npub1a="))
+            job.cancel()
+        }
+
+    @Test
     fun withNothingToAskNoKeyIsKept() =
         runBlocking<Unit> {
             assertFailsWith<SecureStorageException> { newFile().put("npub1a", key, null) }

@@ -24,27 +24,41 @@ import com.vitorpamplona.amethyst.commons.keystorage.KeyStorageController
 import com.vitorpamplona.amethyst.commons.keystorage.KeyStoragePrompts
 import com.vitorpamplona.amethyst.commons.keystorage.KeyStorageStatus
 import com.vitorpamplona.amethyst.commons.keystorage.SecureKeyStorage
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.launch
 
 /**
  * The desktop's key storage as the shared UI sees it: [SecureKeyStorage]'s status and prompts,
  * and the two fixes Settings › Key storage offers. [reopen] opens the keyring's vault again and
  * logs the default account in, as a cold start does.
+ *
+ * Both fixes run in [scope], the app's, and the caller only waits for them: the screen that asked
+ * goes away as the status changes (the "couldn't open your keychain" alert leaves the moment
+ * [SecureKeyStorage.resetKeyring] clears the failure), and its own scope would cancel the login
+ * that was meant to follow.
  */
 class DesktopKeyStorage(
     private val storage: SecureKeyStorage,
     override val prompts: KeyStoragePrompts,
+    private val scope: CoroutineScope,
     private val reopen: suspend () -> Unit,
 ) : KeyStorageController {
     override val status: StateFlow<KeyStorageStatus> = storage.status
 
     override suspend fun retry() {
-        storage.resetKeyring()
-        reopen()
+        scope
+            .launch {
+                storage.resetKeyring()
+                reopen()
+            }.join()
     }
 
     override suspend fun unlock() {
-        storage.unlockPasswordFile()
-        reopen()
+        scope
+            .launch {
+                storage.unlockPasswordFile()
+                reopen()
+            }.join()
     }
 }

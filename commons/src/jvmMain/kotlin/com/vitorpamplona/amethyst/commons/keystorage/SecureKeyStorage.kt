@@ -1036,12 +1036,15 @@ internal class RealKeyringHandle(
 /**
  * Whether the backend said the item does not exist, rather than refusing or failing. java-keyring
  * words a missing item `No stored credentials match …` on macOS (jkeychain returns no value) and
- * on the Secret Service, and Windows reports ERROR_NOT_FOUND (1168); everything else, a denied
- * prompt included, is a failure.
+ * on the Secret Service, KWallet says `Password is not in wallet` (and `… cannot be deleted, it is
+ * not in wallet`) after its own hasEntry check, and Windows reports ERROR_NOT_FOUND (1168);
+ * everything else, a denied prompt included, is a failure.
  */
 internal fun PasswordAccessException.isNotFound(): Boolean {
     val text = message.orEmpty()
-    return text.startsWith("No stored credentials match") || text.contains("Error code 1168")
+    return text.startsWith("No stored credentials match") ||
+        text.endsWith("not in wallet") ||
+        text.contains("Error code 1168")
 }
 
 /** What `--keyring-self-test` reports. */
