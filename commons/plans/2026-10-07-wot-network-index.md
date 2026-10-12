@@ -229,6 +229,21 @@ pre-check below a check that finds nothing costs two COUNTs (~30 ms each once co
 *First version (fixed):* a plain `since: cursor - 3600` fetch. Because a batch-publishing
 provider puts every card in that hour, each update re-downloaded all 155k cards (~93 MB).
 
+*Revised 2026-10-12: no kind 5s on NIP-77 relays.* A provider's deletions can outweigh its
+cards many times over: scores.brainstorm.world held 341,569 kind 5s (380 MB, ~9.4k of them
+with ~199 `a` tags each) against 151,831 cards (70 MB), and none of them named a card the
+relay still served. The cold download also fetched them all, which on a phone over Tor never
+finished. Now:
+
+- The cold download fetches **no** kind 5: the relay serves only the cards it still holds.
+- Step 1's deletion COUNT is replaced by `COUNT {30382, authors:[P]}` against every card held
+  (`heldTotal` in the header, format version 5): a card the relay stopped serving lowers it.
+- Step 2 reconciles **all** cards, not the window, and drops the ids only we hold. Measured on
+  that relay: 151k ids reconciled in ~40 KB down, ~26 KB up, ~3 s.
+- Kind 5s are fetched only in step 3 (relays without NIP-77), where they are the only signal.
+- Under default privacy settings the provider's relay was a "new" relay, so the sync went over
+  Tor; PR #4437 counts the relays in the user's 10040 as their own.
+
 ### D11. On disk
 A single file per account: `filesDir/accounts/<pubkey>/wot/network-v1.bin`. It lives inside the
 account directory, so the existing `deleteAccountFiles` cleans it up on logoff.

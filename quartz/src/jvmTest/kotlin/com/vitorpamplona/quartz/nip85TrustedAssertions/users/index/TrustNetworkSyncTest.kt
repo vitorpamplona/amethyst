@@ -140,9 +140,29 @@ class TrustNetworkSyncTest {
 
                 // The counts say something changed (a relay without NIP-45 always does), but the
                 // reconcile finds nothing: the same index comes back, so nothing is rewritten.
-                val noNews = client.updateTrustNetwork(full.header, full.index, full.ids, relay, knownNews = TrustNetworkNews(cards = true, deletions = 0))
+                val noNews = client.updateTrustNetwork(full.header, full.index, full.ids, relay, knownNews = TrustNetworkNews(cards = true))
                 assertTrue(noNews.unchanged)
                 assertSame(full.index, noNews.index)
+
+                // The cursor moves far past the batch, then the relay drops a batch card (a kind 5
+                // signed at the cursor's second, so no "newer than the cursor" count sees it, and
+                // the card sits far below the update window). Only the total count notices, and
+                // the reconcile drops the card the relay stopped serving: no kind 5 is downloaded.
+                val far = batchTime + 10 * TRUST_NETWORK_UPDATE_OVERLAP_SECS
+                publish(listOf(card(subjects[3], 50, far)))
+                val moved = client.updateTrustNetwork(full.header, full.index, full.ids, relay)
+                assertEquals(far, moved.header.syncCursor)
+                assertEquals(50, moved.index.rankOf(subjects[3]))
+                assertEquals(299, moved.header.heldTotal, "298 entries and the tombstone")
+
+                publish(listOf(deletion(far, subjects[4])))
+                assertTrue(client.trustNetworkNews(moved.header, relay).any, "the total count sees a card gone below the window")
+                val dropped = client.updateTrustNetwork(moved.header, moved.index, moved.ids, relay)
+                assertTrue(dropped.complete)
+                assertNull(dropped.index.rankOf(subjects[4]), dropped.detail)
+                assertEquals(297, dropped.index.size)
+                assertEquals("need 0, gone 1", dropped.detail)
+                assertTrue(client.updateTrustNetwork(dropped.header, dropped.index, dropped.ids, relay).unchanged, "and the counts agree again")
 
                 // The ids file round-trips with the tombstone.
                 val decoded = assertNotNull(TrustNetworkCodec.decodeIds(TrustNetworkCodec.encodeIds(full.ids)))

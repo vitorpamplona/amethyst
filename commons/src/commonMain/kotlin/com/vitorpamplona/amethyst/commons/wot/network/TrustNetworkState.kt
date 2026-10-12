@@ -40,7 +40,9 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.IO
 import kotlinx.coroutines.async
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -94,6 +96,8 @@ class TrustNetworkState(
      */
     private val autoSync: Boolean = true,
     private val clock: () -> Long = { TimeUtils.now() },
+    /** How often a download that may not use mobile data checks it still has Wi-Fi. */
+    private val meteredCheckMs: Long = METERED_CHECK_MS,
 ) {
     private val _network = MutableStateFlow<TrustNetwork?>(null)
 
@@ -150,7 +154,13 @@ class TrustNetworkState(
         }
     }
 
-    private val currentProvider: ServiceProviderTag? get() = rankProvider.value?.provider
+    /**
+     * The provider [network] belongs to: the last choice applied, not the raw [rankProvider]. That
+     * one goes null while a newer 10040's private part cannot be decrypted yet (an external signer
+     * in the background); read here, it made a finished download look like a provider change and
+     * threw it away.
+     */
+    private val currentProvider: ServiceProviderTag? get() = applied.value?.provider
 
     /**
      * The switch every filter keys on (through [TrustVerdicts.isActive]): true when the provider
@@ -279,8 +289,10 @@ class TrustNetworkState(
 
     private suspend fun applyProvider(choice: ResolvedProvider) {
         val provider = choice.provider
-        // The previous provider's problem or wait is not the new one's.
-        if (provider == null || _network.value?.isFrom(provider) != true) _status.value = TrustNetworkSyncStatus()
+        // The previous provider's problem or wait is not the new one's. The same provider again
+        // (another row of the 10040 changed) keeps it: during its first download there is no
+        // network yet, and resetting would hide the running download.
+        if (provider == null || applied.value?.provider != provider) _status.value = TrustNetworkSyncStatus()
         if (provider == null) {
             // The list says there is no provider (removed here or on another device): drop the
             // files too, or the next cold start would filter with them until the list is read.
@@ -290,6 +302,10 @@ class TrustNetworkState(
         } else {
             val current = _network.value
             if (current == null || !current.isFrom(provider)) {
+                // The old network goes before the overlay is cleared: while it stands, [offer]
+                // accepts the old provider's cards into the fresh overlay, where they would
+                // outrank the new provider's index.
+                _network.value = null
                 _overlay.value = emptyMap()
                 _network.value =
                     withContext(Dispatchers.IO) {
@@ -396,8 +412,9 @@ class TrustNetworkState(
                     runningFor = null
                 }
                 // The provider changed while it ran: its result was dropped, and the new
-                // provider's trigger found it running. Start the new one now.
-                if (autoSync && currentProvider != provider) start(requested = null, force = false)
+                // provider's trigger found it running. Start the new one now. A cancelled run too:
+                // switching away and back (P, Q, P) leaves the provider equal, but P's files are gone.
+                if (autoSync && (currentProvider != provider || run.isCancelled)) start(requested = null, force = false)
             }
         }
         return run
@@ -416,11 +433,13 @@ class TrustNetworkState(
 
         val run =
             try {
-                source.connect { relay -> sync(relay, store, provider, current, requested, mayDownload) }
+                source.connect { relay -> sync(relay, store, provider, current, requested, mayDownload, allowMetered) }
             } catch (e: CancellationException) {
                 _status.value = TrustNetworkSyncStatus()
                 throw e
-            } catch (e: Exception) {
+            } catch (e: Throwable) {
+                // Not only Exceptions: an Error (an OutOfMemoryError building a large index) that
+                // escaped here left the status "running" for good, with no Retry, while nothing ran.
                 Log.w(TAG, "Trust network $requested failed for ${provider.relayUrl.url}", e)
                 TrustNetworkRun(requested, TrustNetworkOutcome.Failed(e.message ?: e::class.simpleName.orEmpty()))
             }
@@ -444,6 +463,7 @@ class TrustNetworkState(
         current: TrustNetwork?,
         requested: TrustNetworkSyncStatus.Kind,
         mayDownload: Boolean,
+        allowMetered: Boolean,
     ): TrustNetworkRun {
         // The common case: nothing changed. Two COUNTs answer it before the ids file (12 MB at
         // 300k) is read, and nothing is written: the files keep an older lastUpdate, which only
@@ -469,7 +489,8 @@ class TrustNetworkState(
                     // its last checkpoint: at a phone's pace, the whole download is minutes.
                     val partial = withContext(Dispatchers.IO) { store.readPartial(provider.pubkey) }
                     if (partial != null) Log.d(TAG) { "Resuming the download from ${partial.cards} cards" }
-                    relay.download(provider, progress, checkpoint = { savePartial(store, it) }, resumeFrom = partial)
+                    val download = suspend { relay.download(provider, progress, checkpoint = { savePartial(store, it) }, resumeFrom = partial) }
+                    if (allowMetered) download() else unlessMetered(download) ?: return TrustNetworkRun(kind, TrustNetworkOutcome.WaitingForUnmetered)
                 }
 
                 TrustNetworkSyncStatus.Kind.UPDATE -> {
@@ -519,6 +540,32 @@ class TrustNetworkState(
         }
     }
 
+    /**
+     * Runs [download], one not allowed on mobile data, and stops it (null) if the phone moves to a
+     * metered network meanwhile. The phone dropping Wi-Fi mid-download (or WorkManager cancelling
+     * the worker for it) otherwise left the rest of tens of MB to go over mobile data. The last
+     * checkpoint stays, so the download resumes from it on Wi-Fi.
+     */
+    private suspend fun <T> unlessMetered(download: suspend () -> T): T? =
+        coroutineScope {
+            val work = async { download() }
+            val watch =
+                launch {
+                    while (canDownloadLarge()) delay(meteredCheckMs)
+                    Log.d(TAG) { "On a metered network now: the download waits for Wi-Fi" }
+                    work.cancel()
+                }
+            try {
+                work.await()
+            } catch (e: CancellationException) {
+                // Our own stop, unless the sync itself was cancelled.
+                currentCoroutineContext().ensureActive()
+                null
+            } finally {
+                watch.cancel()
+            }
+        }
+
     /** A checkpoint that fails to save only costs the resume, never the download. */
     private fun savePartial(
         store: TrustNetworkStore,
@@ -546,7 +593,10 @@ class TrustNetworkState(
             // header lacked (a file from before they existed would otherwise make every process
             // start reconcile again); an update's lastUpdate is not, which only means the next
             // process start asks again.
-            val countsLearned = header.heldAtCursor != current.header.heldAtCursor || header.heldAfterCursor != current.header.heldAfterCursor
+            val countsLearned =
+                header.heldAtCursor != current.header.heldAtCursor ||
+                    header.heldAfterCursor != current.header.heldAfterCursor ||
+                    header.heldTotal != current.header.heldTotal
             // A kind 5 that changed nothing still moves the cursor past it, or every update finds it again.
             val cursorMoved = header.syncCursor != current.header.syncCursor
             val saved =
@@ -624,6 +674,7 @@ class TrustNetworkState(
         const val FORCE_DOWNLOAD_WINDOW_SECS = 10 * 60L
         const val MAX_FAILED_FULL_CHECKS = 3
         const val FULL_CHECK_RETRY_SECS = 24 * 60 * 60L
+        const val METERED_CHECK_MS = 5_000L
 
         /**
          * Which sync is due for [current] at [now]: a download when there is no index, a full
