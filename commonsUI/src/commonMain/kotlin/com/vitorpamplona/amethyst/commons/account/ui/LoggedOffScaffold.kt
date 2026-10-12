@@ -283,14 +283,16 @@ fun LoggedOffBanner(
     val container = if (isError) MaterialTheme.colorScheme.errorContainer else MaterialTheme.colorScheme.secondaryContainer
     val onContainer = if (isError) MaterialTheme.colorScheme.onErrorContainer else MaterialTheme.colorScheme.onSecondaryContainer
     Surface(shape = RoundedCornerShape(16.dp), color = container, contentColor = onContainer, modifier = Modifier.fillMaxWidth()) {
-        Column(Modifier.padding(start = 16.dp, end = 16.dp, top = 14.dp, bottom = if (actionText != null) 4.dp else 14.dp)) {
-            Row(verticalAlignment = Alignment.Top) {
-                SymbolIcon(symbol, contentDescription = null, modifier = Modifier.size(20.dp))
-                Spacer(Modifier.width(12.dp))
-                Text(text, style = MaterialTheme.typography.bodyMedium)
-            }
+        // One row: the action sits at the end of the line it fixes, not on a line of its own.
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier.padding(start = 16.dp, end = if (actionText != null) 4.dp else 16.dp, top = 6.dp, bottom = 6.dp),
+        ) {
+            SymbolIcon(symbol, contentDescription = null, modifier = Modifier.size(20.dp))
+            Spacer(Modifier.width(12.dp))
+            Text(text, style = MaterialTheme.typography.bodyMedium, modifier = Modifier.weight(1f).padding(vertical = 8.dp))
             if (actionText != null) {
-                TextButton(onClick = onAction, modifier = Modifier.align(Alignment.End)) {
+                TextButton(onClick = onAction) {
                     Text(actionText, fontWeight = FontWeight.SemiBold, color = onContainer)
                 }
             }

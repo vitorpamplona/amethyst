@@ -21,6 +21,8 @@
 package com.vitorpamplona.amethyst.commons.ui.keystorage
 
 import androidx.compose.runtime.Composable
+import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbol
+import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.keystorage.KeyStorageStatus
 import com.vitorpamplona.amethyst.commons.keystorage.OsKeyring
 import com.vitorpamplona.amethyst.commons.resources.Res
@@ -49,7 +51,16 @@ fun keyringName(keyring: OsKeyring?): String =
         },
     )
 
-/** One sentence on where keys are kept and whether that works. */
+/** The icon of a state: a shield when keys are kept and readable, a lock or warning when not. */
+fun keyStorageSymbol(status: KeyStorageStatus): MaterialSymbol =
+    when (status) {
+        is KeyStorageStatus.KeyringUnreachable -> MaterialSymbols.Warning
+        is KeyStorageStatus.PasswordFile -> if (status.hasPassword && !status.unlocked) MaterialSymbols.Lock else MaterialSymbols.Shield
+        KeyStorageStatus.NotKept -> MaterialSymbols.Info
+        else -> MaterialSymbols.Shield
+    }
+
+/** Where keys are kept and whether that works, as a short title. */
 @Composable
 fun keyStorageDescription(status: KeyStorageStatus): String =
     when (status) {

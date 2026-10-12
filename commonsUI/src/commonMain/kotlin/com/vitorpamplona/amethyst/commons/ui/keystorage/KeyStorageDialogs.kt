@@ -20,16 +20,23 @@
  */
 package com.vitorpamplona.amethyst.commons.ui.keystorage
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.style.TextAlign
+import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.keystorage.KeyPrompt
 import com.vitorpamplona.amethyst.commons.keystorage.KeyStorageStatus
@@ -38,17 +45,17 @@ import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.key_storage_confirm_password
 import com.vitorpamplona.amethyst.commons.resources.key_storage_create_password_description
 import com.vitorpamplona.amethyst.commons.resources.key_storage_create_password_title
+import com.vitorpamplona.amethyst.commons.resources.key_storage_details
 import com.vitorpamplona.amethyst.commons.resources.key_storage_dont_remember
 import com.vitorpamplona.amethyst.commons.resources.key_storage_enter_key_description
 import com.vitorpamplona.amethyst.commons.resources.key_storage_enter_key_title
 import com.vitorpamplona.amethyst.commons.resources.key_storage_keep_key
 import com.vitorpamplona.amethyst.commons.resources.key_storage_not_now
+import com.vitorpamplona.amethyst.commons.resources.key_storage_nsec
 import com.vitorpamplona.amethyst.commons.resources.key_storage_password
 import com.vitorpamplona.amethyst.commons.resources.key_storage_skip
-import com.vitorpamplona.amethyst.commons.resources.key_storage_status_detail
 import com.vitorpamplona.amethyst.commons.resources.key_storage_try_again
 import com.vitorpamplona.amethyst.commons.resources.key_storage_unlock
-import com.vitorpamplona.amethyst.commons.resources.key_storage_unlock_description
 import com.vitorpamplona.amethyst.commons.resources.key_storage_unlock_title
 import com.vitorpamplona.amethyst.commons.resources.key_storage_unreachable_description
 import com.vitorpamplona.amethyst.commons.resources.key_storage_unreachable_title
@@ -109,7 +116,8 @@ internal fun UnlockKeysDialog(prompt: KeyPrompt.Unlock) {
     PromptDialog(
         symbol = MaterialSymbols.LockOpen,
         title = stringRes(Res.string.key_storage_unlock_title),
-        description = stringRes(Res.string.key_storage_unlock_description),
+        // The title and the Password field say it all.
+        description = null,
         confirmText = stringRes(Res.string.key_storage_unlock),
         onConfirm = { prompt.answer(password) },
         confirmEnabled = password.isNotEmpty(),
@@ -135,7 +143,7 @@ internal fun EnterKeyDialog(prompt: KeyPrompt.EnterKey) {
     PromptDialog(
         symbol = MaterialSymbols.Key,
         title = stringRes(Res.string.key_storage_enter_key_title),
-        description = stringRes(Res.string.key_storage_enter_key_description, prompt.npub.take(16) + "…"),
+        description = stringRes(Res.string.key_storage_enter_key_description, shortNpub(prompt.npub)),
         confirmText = stringRes(Res.string.key_storage_use_key),
         onConfirm = { prompt.answer(key) },
         confirmEnabled = key.isNotBlank(),
@@ -144,7 +152,7 @@ internal fun EnterKeyDialog(prompt: KeyPrompt.EnterKey) {
     ) {
         PromptSecretField(
             value = key,
-            label = stringRes(Res.string.key_storage_enter_key_title),
+            label = stringRes(Res.string.key_storage_nsec),
             onValueChange = { key = it },
             isError = prompt.wrongKey,
             onDone = { if (key.isNotBlank()) prompt.answer(key) },
@@ -172,15 +180,35 @@ internal fun KeyringUnreachableDialog(
         // Nothing waits on this one: closing it is the same as Not now.
         dismissible = true,
     ) {
-        Text(
-            text = stringRes(Res.string.key_storage_status_detail, status.detail),
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            textAlign = TextAlign.Center,
-            modifier = Modifier.fillMaxWidth(),
-        )
+        KeyStorageErrorDetails(status.detail)
     }
 }
+
+/** The system's own error, folded away: it is for a bug report, not for reading first. */
+@Composable
+internal fun KeyStorageErrorDetails(detail: String) {
+    var open by remember(detail) { mutableStateOf(false) }
+    Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.fillMaxWidth()) {
+        TextButton(onClick = { open = !open }) {
+            Text(stringRes(Res.string.key_storage_details))
+            Icon(if (open) MaterialSymbols.ExpandLess else MaterialSymbols.ExpandMore, contentDescription = null)
+        }
+        AnimatedVisibility(open) {
+            SelectionContainer {
+                Text(
+                    text = detail,
+                    style = MaterialTheme.typography.bodySmall.copy(fontFamily = FontFamily.Monospace),
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier.fillMaxWidth(),
+                )
+            }
+        }
+    }
+}
+
+/** npub1qe3e5wr…zefe: enough of both ends to tell accounts apart. */
+private fun shortNpub(npub: String) = if (npub.length > 20) npub.take(12) + "…" + npub.takeLast(4) else npub
 
 @Composable
 private fun PromptError(text: String) {

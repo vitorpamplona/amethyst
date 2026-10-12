@@ -465,7 +465,7 @@ class DesktopAppModules(
             remoteSignerMetadata = REMOTE_SIGNER_METADATA,
         )
 
-    /** Settings › Key storage, the key prompts and the keyring alert, for the shared UI. */
+    /** Key Backup, the key prompts and the keyring alert, for the shared UI. */
     val keyStorageController by lazy { DesktopKeyStorage(keyStorage, keyPrompts, applicationIOScope, ::openKeysAndLogIn) }
 
     // Before the first login, so a user of the legacy app starts where they left off; again after

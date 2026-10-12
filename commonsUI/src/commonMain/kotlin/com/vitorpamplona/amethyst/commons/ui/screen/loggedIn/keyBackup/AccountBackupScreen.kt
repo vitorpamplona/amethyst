@@ -124,6 +124,7 @@ import com.vitorpamplona.amethyst.commons.ui.components.util.getText
 import com.vitorpamplona.amethyst.commons.ui.components.util.setSensitiveText
 import com.vitorpamplona.amethyst.commons.ui.components.util.setText
 import com.vitorpamplona.amethyst.commons.ui.insets.imePaddingSafe
+import com.vitorpamplona.amethyst.commons.ui.keystorage.KeyStorageStatusCard
 import com.vitorpamplona.amethyst.commons.ui.loadStringRes
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.EmptyNav
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
@@ -198,6 +199,9 @@ private fun AccountBackupScreenContent(
             verticalArrangement = Arrangement.spacedBy(16.dp),
         ) {
             BackupHeader()
+
+            // Where this device keeps the key, and the fix when it can't read it (desktop only).
+            KeyStorageStatusCard()
 
             val nsec =
                 remember(accountViewModel) {

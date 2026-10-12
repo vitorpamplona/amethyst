@@ -24,7 +24,7 @@ import kotlinx.coroutines.flow.StateFlow
 
 /**
  * What the shared UI needs from a platform's key storage: its status, the questions it is asking,
- * and the actions Settings › Key storage offers. A platform without user-facing key storage
+ * and the actions Key Backup offers. A platform without user-facing key storage
  * (Android keeps keys in its Keystore without asking) provides none.
  */
 interface KeyStorageController {

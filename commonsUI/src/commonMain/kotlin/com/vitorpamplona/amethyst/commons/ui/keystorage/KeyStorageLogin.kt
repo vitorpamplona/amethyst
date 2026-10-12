@@ -32,7 +32,6 @@ import com.vitorpamplona.amethyst.commons.keystorage.KeyStorageStatus
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.key_storage_login_notice_locked
 import com.vitorpamplona.amethyst.commons.resources.key_storage_login_notice_not_kept
-import com.vitorpamplona.amethyst.commons.resources.key_storage_login_notice_password
 import com.vitorpamplona.amethyst.commons.resources.key_storage_login_notice_unreachable
 import com.vitorpamplona.amethyst.commons.resources.key_storage_remember_key
 import com.vitorpamplona.amethyst.commons.resources.key_storage_try_again
@@ -52,24 +51,27 @@ fun KeyStorageLoginOptions(
     offerRememberKey: Boolean = true,
 ) {
     val controller = LocalKeyStorage.current ?: return
-    if (offerRememberKey) {
+    val status by controller.status.collectAsStateWithLifecycle()
+    // This device keeps no keys this run: a switch saying it would is a promise nothing keeps.
+    if (offerRememberKey && status != KeyStorageStatus.NotKept) {
         LoggedOffSwitchRow(MaterialSymbols.Lock, stringRes(Res.string.key_storage_remember_key), rememberKey, onRememberKeyChange)
     }
-    KeyStorageLoginBanner(controller, keepingKey = offerRememberKey && rememberKey)
+    KeyStorageLoginBanner(controller, status, typingKey = offerRememberKey)
 }
 
 /**
- * One box for how the keys stand. Try again (the keyring refused) and Unlock (the key file is
- * locked) are here as in Settings › Key storage, which a logged-off user cannot reach, and show
- * whatever the switch says: either one logs the saved account in once the keys open. The other
- * notices are about the key being typed, so they show only while it is to be kept ([keepingKey]).
+ * One line on how the keys stand, with the action that fixes it. Try again (the keyring refused)
+ * and Unlock (the key file is locked) are here as in Key Backup, which a logged-off
+ * user cannot reach, and show whatever the switch says: either one logs the saved account in once
+ * the keys open. Not kept is about the key being typed ([typingKey]). A first key file needs no
+ * line: its password dialog says what it is when it opens.
  */
 @Composable
 private fun KeyStorageLoginBanner(
     controller: KeyStorageController,
-    keepingKey: Boolean,
+    status: KeyStorageStatus,
+    typingKey: Boolean,
 ) {
-    val status by controller.status.collectAsStateWithLifecycle()
     val scope = rememberCoroutineScope()
 
     when (val current = status) {
@@ -82,7 +84,7 @@ private fun KeyStorageLoginBanner(
                 onAction = { scope.launch { controller.retry() } },
             )
         KeyStorageStatus.NotKept ->
-            if (keepingKey) LoggedOffBanner(MaterialSymbols.Info, stringRes(Res.string.key_storage_login_notice_not_kept))
+            if (typingKey) LoggedOffBanner(MaterialSymbols.Info, stringRes(Res.string.key_storage_login_notice_not_kept))
         is KeyStorageStatus.PasswordFile ->
             when {
                 current.hasPassword && !current.unlocked ->
@@ -92,8 +94,6 @@ private fun KeyStorageLoginBanner(
                         actionText = stringRes(Res.string.key_storage_unlock),
                         onAction = { scope.launch { controller.unlock() } },
                     )
-                !current.hasPassword && keepingKey ->
-                    LoggedOffBanner(MaterialSymbols.Info, stringRes(Res.string.key_storage_login_notice_password))
                 else -> Unit
             }
         else -> Unit

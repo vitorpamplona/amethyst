@@ -30,7 +30,7 @@ import kotlinx.coroutines.launch
 
 /**
  * The desktop's key storage as the shared UI sees it: [SecureKeyStorage]'s status and prompts,
- * and the two fixes Settings › Key storage offers. [reopen] opens the keyring's vault again and
+ * and the two fixes Key Backup offers. [reopen] opens the keyring's vault again and
  * logs the default account in, as a cold start does.
  *
  * Both fixes run in [scope], the app's, and the caller only waits for them: the screen that asked

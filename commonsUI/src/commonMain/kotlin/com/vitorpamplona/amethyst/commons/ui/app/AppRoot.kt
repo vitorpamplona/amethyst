@@ -115,7 +115,7 @@ interface AppRoot {
 
     /**
      * Key storage the user deals with (the desktop's OS keyring or password file): its status,
-     * the questions it asks, Settings › Key storage. Null where keys are kept without asking.
+     * the questions it asks, Key Backup. Null where keys are kept without asking.
      */
     val keyStorage: KeyStorageController? get() = null
 }

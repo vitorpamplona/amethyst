@@ -319,7 +319,7 @@ class StoreAccountSessionStoreTest {
             val readOnly = store.loadAccountConfigFromEncryptedStorage(npub)!!
             assertFalse(readOnly.isWriteable())
 
-            // Settings › Key storage › Unlock: the key reads again.
+            // Key Backup › Unlock: the key reads again.
             vault.keys[npub] = stored
             val reloaded = store.reloadWithKey(npub)!!
             assertTrue(reloaded.isWriteable())

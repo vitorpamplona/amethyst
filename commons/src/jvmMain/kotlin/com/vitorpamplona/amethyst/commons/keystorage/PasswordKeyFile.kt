@@ -135,7 +135,7 @@ internal class PasswordKeyFile(
             true
         }
 
-    /** Asks for the password now (Settings › Key storage › Unlock), even after a skip. */
+    /** Asks for the password now (Key Backup › Unlock), even after a skip. */
     suspend fun unlock(prompts: KeyStoragePrompts?) {
         mutex.withLock {
             skippedUnlock = false
