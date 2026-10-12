@@ -172,6 +172,47 @@ class PasswordKeyFileTest {
         }
 
     @Test
+    fun aKeyOnlyTheOldConsoleFileHoldsIsReadNotReportedAbsent() =
+        runBlocking<Unit> {
+            val metadataKey = "c2VjcmV0LWFlcy1rZXktYnl0ZXMtMzItbG9uZy4uLi4="
+            val cipher = SecureKeyStorage.create()
+            val legacy = File(folder.root, "keys.enc")
+            legacy.writeText(
+                "npub1old:" + cipher.encryptData(key, password) + "\n" +
+                    "account-metadata-key:" + cipher.encryptData(metadataKey, password),
+            )
+
+            val script = ScriptedPrompts(password)
+            val job = script.start(this)
+            val file = newFile(legacy)
+            // Nothing in the new file yet: before, both read as absent without asking.
+            assertEquals(key, file.get("npub1old", script.prompts))
+            assertEquals(metadataKey, file.get("account-metadata-key", script.prompts))
+            assertEquals(1, script.asked.size)
+            // The metadata key cannot move into the NIP-49 file, so the old file stays readable.
+            assertTrue(legacy.exists())
+            assertEquals(metadataKey, file.get("account-metadata-key", script.prompts))
+            job.cancel()
+        }
+
+    @Test
+    fun anUnreadableOldConsoleFileDoesNotLockTheDevice() =
+        runBlocking<Unit> {
+            val legacy = File(folder.root, "keys.enc")
+            legacy.writeText("not the old format\n")
+
+            val script = ScriptedPrompts(NewPasswordAnswer.Password(password))
+            val job = script.start(this)
+            val file = newFile(legacy)
+            assertFalse(file.hasPassword())
+            // A new password can be chosen instead of an unlock nothing could ever pass.
+            file.put("npub1a", key, script.prompts)
+            assertIs<KeyPrompt.CreatePassword>(script.asked.single())
+            assertEquals(key, file.get("npub1a", script.prompts))
+            job.cancel()
+        }
+
+    @Test
     fun deletingTheLastKeyRemovesTheFile() =
         runBlocking<Unit> {
             val script = ScriptedPrompts(NewPasswordAnswer.Password(password))

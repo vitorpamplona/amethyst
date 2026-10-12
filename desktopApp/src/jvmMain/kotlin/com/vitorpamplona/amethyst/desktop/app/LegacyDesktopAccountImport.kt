@@ -24,6 +24,7 @@ import com.vitorpamplona.amethyst.commons.account.AccountInfo
 import com.vitorpamplona.amethyst.commons.account.StoreAccountSessionStore
 import com.vitorpamplona.amethyst.commons.keystorage.KeyStorageStatus
 import com.vitorpamplona.amethyst.commons.keystorage.SecureKeyStorage
+import com.vitorpamplona.amethyst.commons.keystorage.SecureStorageException
 import com.vitorpamplona.amethyst.commons.model.AccountSettings
 import com.vitorpamplona.amethyst.commons.model.account.SignerType
 import com.vitorpamplona.amethyst.desktop.account.DesktopAccountStorage
@@ -114,7 +115,7 @@ class LegacyDesktopAccountImport(
             val settings =
                 when (val signer = info.signerType) {
                     is SignerType.Internal -> {
-                        val privKey = keyStorage.getPrivateKey(info.npub)?.takeIf { it.isNotBlank() }
+                        val privKey = readKey(info.npub)
                         if (privKey != null) {
                             AccountSettings(keyPair = KeyPair(privKey = privKey.hexToByteArray()))
                         } else {
@@ -125,8 +126,8 @@ class LegacyDesktopAccountImport(
                     is SignerType.Remote -> {
                         // Per account first; the oldest builds kept one shared transport key.
                         val transportKey =
-                            keyStorage.getPrivateKey(bunkerTransportKeyAlias(info.npub))?.takeIf { it.isNotBlank() }
-                                ?: keyStorage.getPrivateKey(LEGACY_SHARED_TRANSPORT_KEY_ALIAS)?.takeIf { it.isNotBlank() }
+                            readKey(bunkerTransportKeyAlias(info.npub))
+                                ?: readKey(LEGACY_SHARED_TRANSPORT_KEY_ALIAS)
                         AccountSettings(
                             keyPair = KeyPair(pubKey = pubKey),
                             remoteSignerBunkerUri = signer.bunkerUri.takeIf { transportKey != null },
@@ -147,6 +148,13 @@ class LegacyDesktopAccountImport(
         sessionStore.allSavedAccounts().firstOrNull { it.npub == active }?.let { sessionStore.switchToAccount(it) }
     }
 
+    /**
+     * The legacy key under [alias], or null when the keyring says it has none. A keyring that
+     * refused instead (a denied prompt for this one item) ends the import: imported without its
+     * key, the login would be view-only for good, since the import runs once.
+     */
+    private suspend fun readKey(alias: String): String? = readLegacyKey({ keyStorage.getPrivateKey(alias) }, { keyStorage.status.value })
+
     companion object {
         private const val TAG = "LegacyDesktopAccountImport"
         private const val MARKER_FILE = "legacy-desktop-accounts.imported"
@@ -159,4 +167,20 @@ class LegacyDesktopAccountImport(
 
         private const val LEGACY_SHARED_TRANSPORT_KEY_ALIAS = "bunker_ephemeral"
     }
+}
+
+/**
+ * A legacy key read through [read] (the keyring's lenient lookup, which answers null both for an
+ * absent item and for one it refused), or null when it is absent. When [status] says the keyring
+ * refused, throws instead.
+ */
+internal suspend fun readLegacyKey(
+    read: suspend () -> String?,
+    status: () -> KeyStorageStatus,
+): String? {
+    val key = read()?.takeIf { it.isNotBlank() }
+    if (key == null && status() is KeyStorageStatus.KeyringUnreachable) {
+        throw SecureStorageException("The keyring refused the legacy key; the import runs again next start")
+    }
+    return key
 }

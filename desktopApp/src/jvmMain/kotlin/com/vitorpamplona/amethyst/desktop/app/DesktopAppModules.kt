@@ -469,10 +469,20 @@ class DesktopAppModules(
     val keyStorageController by lazy { DesktopKeyStorage(keyStorage, keyPrompts, applicationIOScope, ::openKeysAndLogIn) }
 
     // Before the first login, so a user of the legacy app starts where they left off; again after
-    // the user retries the keyring or unlocks the password file.
+    // the user retries the keyring or unlocks the password file. Then, an account already open
+    // without the key it keeps (its password skipped, the keychain refused) loads again with it.
     private suspend fun openKeysAndLogIn() {
         LegacyDesktopAccountImport(sessionStore, keyStorage, filesDir).start()
-        sessionManager.loginWithDefaultAccountIfLoggedOff()
+        val readOnly = sessionManager.loggedInAccount()?.takeIf { !it.isWriteable() }
+        if (readOnly == null) {
+            sessionManager.loginWithDefaultAccountIfLoggedOff()
+        } else {
+            sessionStore
+                .reloadWithKey(
+                    readOnly.settings.keyPair.pubKey
+                        .toNpub(),
+                )?.let { sessionManager.startUI(it) }
+        }
     }
 
     /**

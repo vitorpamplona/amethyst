@@ -49,6 +49,7 @@ import kotlin.test.assertFalse
 import kotlin.test.assertIs
 import kotlin.test.assertNotNull
 import kotlin.test.assertNull
+import kotlin.test.assertSame
 import kotlin.test.assertTrue
 
 class StoreAccountSessionStoreTest {
@@ -302,6 +303,38 @@ class StoreAccountSessionStoreTest {
             assertNull(store.keyVaultFailure.value)
             assertEquals(false, store.allSavedAccounts().single().keyRemembered)
             assertEquals(1, declining.saves)
+        }
+
+    @Test
+    fun anAccountThatLoadedWithoutItsKeyReloadsWithItOnceTheKeysOpen() =
+        runTest {
+            val keyPair = KeyPair()
+            val npub = keyPair.pubKey.toNpub()
+            val store = newStore()
+            store.setDefaultAccount(AccountSettings(keyPair = keyPair))
+
+            // Next launch: the key could not be read (its password skipped), so it loads read-only.
+            val stored = vault.keys.remove(npub)!!
+            store.forgetLoadedSettings()
+            val readOnly = store.loadAccountConfigFromEncryptedStorage(npub)!!
+            assertFalse(readOnly.isWriteable())
+
+            // Settings › Key storage › Unlock: the key reads again.
+            vault.keys[npub] = stored
+            val reloaded = store.reloadWithKey(npub)!!
+            assertTrue(reloaded.isWriteable())
+            assertSame(reloaded, store.loadAccountConfigFromEncryptedStorage(npub))
+        }
+
+    @Test
+    fun anAccountThatKeepsNoKeyIsNotReloaded() =
+        runTest {
+            val keyPair = KeyPair()
+            val store = newStore()
+            store.setDefaultAccount(AccountSettings(keyPair = keyPair, rememberKey = false))
+            vault.keys[keyPair.pubKey.toNpub()] = keyPair.privKey!!.toHexKey()
+
+            assertNull(store.reloadWithKey(keyPair.pubKey.toNpub()))
         }
 
     @Test
