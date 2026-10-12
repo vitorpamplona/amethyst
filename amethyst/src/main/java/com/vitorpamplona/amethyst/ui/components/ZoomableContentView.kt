@@ -207,17 +207,20 @@ fun ZoomableContentView(
                 backdrop = (content.thumbhash ?: content.blurhash)?.let { { BlurhashBackdrop(content.blurhash, content.description, content.thumbhash) } },
             ) {
                 if (content.isAnimatedMedia()) {
-                    GifVideoView(
-                        videoUri = content.url,
-                        contentDescription = content.description,
-                        dimensions = content.dim,
-                        blurhash = content.blurhash,
-                        roundedCorner = roundedCorner,
-                        contentScale = contentScale,
-                        onDialog = { dialogOpen = true },
-                        accountViewModel = accountViewModel,
-                        thumbhash = content.thumbhash,
-                    )
+                    // The anchor lets the viewer grow out of, and shrink back into, the gif.
+                    Box(modifier = boundsTrackingModifier) {
+                        GifVideoView(
+                            videoUri = content.url,
+                            contentDescription = content.description,
+                            dimensions = content.dim,
+                            blurhash = content.blurhash,
+                            roundedCorner = roundedCorner,
+                            contentScale = contentScale,
+                            onDialog = { dialogOpen = true },
+                            accountViewModel = accountViewModel,
+                            thumbhash = content.thumbhash,
+                        )
+                    }
                 } else {
                     TwoSecondController(content) { controllerVisible ->
                         val mainImageModifier =
@@ -328,17 +331,19 @@ fun ZoomableContentView(
         is MediaLocalImage -> {
             if (content.isAnimatedMedia()) {
                 content.localJavaFile?.let {
-                    GifVideoView(
-                        videoUri = it.toUri().toString(),
-                        contentDescription = content.description,
-                        dimensions = content.dim,
-                        blurhash = content.blurhash,
-                        roundedCorner = roundedCorner,
-                        contentScale = contentScale,
-                        onDialog = { dialogOpen = true },
-                        accountViewModel = accountViewModel,
-                        thumbhash = content.thumbhash,
-                    )
+                    Box(modifier = boundsTrackingModifier) {
+                        GifVideoView(
+                            videoUri = it.toUri().toString(),
+                            contentDescription = content.description,
+                            dimensions = content.dim,
+                            blurhash = content.blurhash,
+                            roundedCorner = roundedCorner,
+                            contentScale = contentScale,
+                            onDialog = { dialogOpen = true },
+                            accountViewModel = accountViewModel,
+                            thumbhash = content.thumbhash,
+                        )
+                    }
                 }
             } else {
                 TwoSecondController(content) { controllerVisible ->
