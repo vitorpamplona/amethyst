@@ -147,10 +147,10 @@ jobs:
             cli/build/reports/tests
             desktopApp/build/reports/tests
 
-      # jpackage pins libicu to the build host's version (libicu74 on
-      # ubuntu-24.04). Rewrite the .deb so testers on other Debian/Ubuntu
+      # jpackage pins libicu and the t64-renamed libs (libasound2t64, ...) to the
+      # build host (ubuntu-24.04). Rewrite the .deb so testers on other Debian/Ubuntu
       # releases can install the uploaded artifact.
-      - name: Relax libicu dependency in .deb
+      - name: Relax build-host-pinned deps in .deb
         if: matrix.desktop-task == 'packageDeb'
         run: |
           set -euo pipefail

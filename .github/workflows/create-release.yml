@@ -227,9 +227,9 @@ jobs:
           fi
           echo "notarization ticket stapled OK"
 
-      # jpackage pins libicu to the build host's version (libicu74 on
-      # ubuntu-24.04). Rewrite the .deb so it installs across Debian/Ubuntu.
-      - name: Relax libicu dependency in .deb
+      # jpackage pins libicu and the t64-renamed libs (libasound2t64, ...) to the
+      # build host (ubuntu-24.04). Rewrite the .deb so it installs across Debian/Ubuntu.
+      - name: Relax build-host-pinned deps in .deb
         if: matrix.family == 'linux'
         run: |
           set -euo pipefail
@@ -556,9 +556,9 @@ jobs:
             exit 1
           fi
 
-      # jpackage pins libicu to the build host's version (libicu74 on
-      # ubuntu-24.04). Rewrite the .deb so it installs across Debian/Ubuntu.
-      - name: Relax libicu dependency in .deb
+      # jpackage pins libicu and the t64-renamed libs (libasound2t64, ...) to the
+      # build host (ubuntu-24.04). Rewrite the .deb so it installs across Debian/Ubuntu.
+      - name: Relax build-host-pinned deps in .deb
         if: matrix.family == 'linux'
         run: |
           set -euo pipefail
@@ -822,9 +822,9 @@ jobs:
             exit 1
           fi
 
-      # jpackage pins libicu to the build host's version (libicu74 on
-      # ubuntu-24.04). Rewrite the .deb so it installs across Debian/Ubuntu.
-      - name: Relax libicu dependency in .deb
+      # jpackage pins libicu and the t64-renamed libs (libasound2t64, ...) to the
+      # build host (ubuntu-24.04). Rewrite the .deb so it installs across Debian/Ubuntu.
+      - name: Relax build-host-pinned deps in .deb
         if: matrix.family == 'linux'
         run: |
           set -euo pipefail

@@ -86,7 +86,7 @@ jobs:
           timeout_minutes: 20
           command: ./gradlew --no-daemon :desktopApp:packageReleaseDeb
 
-      - name: Relax libicu dependency
+      - name: Relax build-host-pinned deps
         run: |
           set -euo pipefail
           chmod +x scripts/relax-deb-libicu.sh

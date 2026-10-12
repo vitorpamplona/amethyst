@@ -1,13 +1,22 @@
 #!/usr/bin/env bash
-# Broaden the libicu Depends clause in a jpackage-built .deb so it installs
-# across Debian/Ubuntu releases.
+# Broaden the build-host-pinned Depends clauses in a jpackage-built .deb so it
+# installs across Debian/Ubuntu releases.
 #
 # jpackage shells out to `dpkg-shlibdeps` against the bundled JDK runtime's
-# native libraries (libfontmanager.so, etc., which link libicu). That pins the
-# Depends to whatever libicu the build host ships — libicu74 on ubuntu-24.04 —
-# even though the bundled JRE works fine against any reasonably recent ICU.
-# Without this rewrite, users on Ubuntu 22.04 (libicu70), Debian 12 (libicu72),
-# Debian 11 (libicu67), or Debian 13 (libicu76) cannot install the package.
+# native libraries, which pins each Depends to the package name the build host
+# (ubuntu-24.04) ships, even though the bundled JRE runs fine against older
+# releases. Two kinds of pin are relaxed here:
+#
+# 1. libicu: libfontmanager.so etc. link libicu, pinned to libicu74. Users on
+#    Ubuntu 22.04 (libicu70), Debian 12 (libicu72), Debian 11 (libicu67) or
+#    Debian 13 (libicu76) could not install the package.
+#
+# 2. The 64-bit time_t transition: Ubuntu 24.04 and Debian 13 renamed many
+#    libraries with a t64 suffix (libasound2 -> libasound2t64, libpng16-16 ->
+#    libpng16-16t64). Ubuntu 22.04, Debian 12 and their derivatives (Mint 21,
+#    Pop!_OS 22.04, Zorin 17) have only the old names, so apt, gdebi and the App
+#    Center refused the package. Each `<name>t64` becomes `<name>t64 | <name>`:
+#    newer releases pick the t64 package, older ones the original.
 #
 # Neither jpackage nor the Compose Multiplatform DSL exposes a way to override
 # the auto-generated Depends, so we rewrite the .deb after the fact.
@@ -29,13 +38,32 @@ for deb in "$@"; do
     trap 'rm -rf "$work"' EXIT
     dpkg-deb -R "$deb" "$work/pkg"
     control="$work/pkg/DEBIAN/control"
+    cp "$control" "$work/control.orig"
 
-    if grep -qE 'libicu[0-9]+' "$control"; then
-        sed -i -E "s/libicu[0-9]+([[:space:]]*\\|[[:space:]]*libicu[0-9]+)*/${ALT}/g" "$control"
-        dpkg-deb --root-owner-group -Zxz -b "$work/pkg" "$deb" >/dev/null
-        echo "Relaxed libicu dep: $deb"
+    sed -i -E "s/libicu[0-9]+([[:space:]]*\\|[[:space:]]*libicu[0-9]+)*/${ALT}/g" "$control"
+
+    # Only clauses that name a single package are rewritten, so a clause that
+    # already lists alternatives (including one this script wrote) is left alone.
+    perl -i -pe '
+        if (/^(Pre-Depends|Depends|Recommends):(.*)$/) {
+            my ($field, $list) = ($1, $2);
+            my @clauses = map {
+                /^\s*([a-z0-9][a-z0-9.+-]*?)t64(\s*\([^)]*\))?\s*$/
+                    ? " $1t64" . ($2 // "") . " | $1"
+                    : $_
+            } split(/,/, $list, -1);
+            $_ = "$field:" . join(",", @clauses) . "\n";
+        }
+    ' "$control"
+
+    if cmp -s "$control" "$work/control.orig"; then
+        echo "No pinned deps to relax, leaving as-is: $deb"
     else
-        echo "No libicu dep, leaving as-is: $deb"
+        # Built beside it and moved over it, so an interrupted run leaves the original intact.
+        dpkg-deb --root-owner-group -Zxz -b "$work/pkg" "$work/out.deb" >/dev/null
+        mv -f "$work/out.deb" "$deb"
+        echo "Relaxed pinned deps: $deb"
+        grep -E '^(Pre-Depends|Depends|Recommends):' "$control"
     fi
 
     rm -rf "$work"
