@@ -223,7 +223,7 @@ object FetchCommand {
         // Nothing arrived, so nothing was written: answer exactly as the buffered path would
         // (an empty result, or `no_relay_served` when every relay refused).
         if (!stream.started) {
-            return emitWithRelayErrors(mapOf("queried_relays" to relays.map { it.url }, "count" to 0, "events" to emptyList<Any>()), relays, relayErrors)
+            return emitWithRelayErrors(mapOf("queried_relays" to relays.map { it.url }, "count" to 0, "events" to emptyList<Any>()) + unpagedField(unpaged), relays, relayErrors)
         }
 
         val errors = reportRelayErrors(relayErrors)

@@ -74,6 +74,19 @@ class FetchUnpagedSearchTest {
         assertUnpaged(r)
     }
 
+    /** A ranked search with no hits is still one page deep: the empty answer is reported the same way on both paths. */
+    @Test
+    fun aSearchWithNoHitsStillReportsTheRelay() {
+        for (limit in listOf("0", "100")) {
+            val r = amy("--json", "fetch", "--kind", "1", "--search", "absent", "--paginate", "--limit", limit, "--relay", relay.url, "--timeout", "5")
+
+            assertEquals(0, r.exit, r.stderr)
+            val result = Output.mapper.readTree(r.stdoutLines.single())
+            assertEquals(0, result["count"].asInt(), "--limit $limit: $result")
+            assertEquals(listOf(relay.url.normalizeRelayUrl().url), result["unpaged_relays"]?.map { it.asText() }, "--limit $limit: $result")
+        }
+    }
+
     /** `include:spam` is an access token with no words to rank by, so the walk pages it like a plain filter. */
     @Test
     fun aSearchOfOnlyExtensionsIsPagedToTheEnd() {

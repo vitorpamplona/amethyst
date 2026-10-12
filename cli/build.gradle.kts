@@ -1,4 +1,5 @@
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
+import org.gradle.internal.os.OperatingSystem
 import java.util.zip.ZipEntry
 import java.util.zip.ZipFile
 import java.util.zip.ZipOutputStream
@@ -256,7 +257,7 @@ fun javaToolBin(name: String): Provider<String> =
     javaToolchains.launcherFor {
         languageVersion.set(JavaLanguageVersion.of(21))
     }.map {
-        val exe = if (org.gradle.internal.os.OperatingSystem.current().isWindows) "$name.exe" else name
+        val exe = if (OperatingSystem.current().isWindows) "$name.exe" else name
         it.metadata.installationPath.file("bin/$exe").asFile.absolutePath
     }
 
@@ -302,8 +303,10 @@ fun withoutModuleInfo(
         if (zip.entries().asSequence().none { it.name.endsWith("module-info.class") }) return jar
         val copy = File(dir, jar.name)
         ZipOutputStream(copy.outputStream()).use { out ->
+            // Some merged jars hold an entry name twice; a zip stream refuses the second.
+            val written = HashSet<String>()
             for (entry in zip.entries()) {
-                if (entry.name.endsWith("module-info.class")) continue
+                if (entry.name.endsWith("module-info.class") || !written.add(entry.name)) continue
                 out.putNextEntry(ZipEntry(entry.name))
                 zip.getInputStream(entry).use { it.copyTo(out) }
                 out.closeEntry()
@@ -326,41 +329,45 @@ val verifyAmyRuntimeModules =
         dependsOn(tasks.named("installDist"), jlinkRuntime)
         inputs.dir(installLibDir)
         inputs.dir(jlinkRuntimeDir)
+        // A marker, so an unchanged lib/ and runtime skip the jdeps run as UP-TO-DATE.
+        val marker = layout.buildDirectory.file("verifyAmyRuntimeModules/ok")
+        outputs.file(marker)
 
         val jdepsBin = javaToolBin("jdeps")
         val libDir = installLibDir
         val runtimeDir = jlinkRuntimeDir
-        val javaExe = if (org.gradle.internal.os.OperatingSystem.current().isWindows) "java.exe" else "java"
+        val javaExe = if (OperatingSystem.current().isWindows) "java.exe" else "java"
 
         doLast {
             val runtimeJava = runtimeDir.get().file("bin/$javaExe").asFile.absolutePath
-            val present =
-                ProcessBuilder(runtimeJava, "--list-modules").start().inputStream.bufferedReader().readLines()
-                    .map { it.substringBefore('@').trim() }
-                    .toSet()
+            val listModules = ProcessBuilder(runtimeJava, "--list-modules").redirectErrorStream(true).start()
+            val listed = listModules.inputStream.bufferedReader().readLines()
+            // A runtime that cannot start lists nothing, and every module would read as missing.
+            if (listModules.waitFor() != 0) throw GradleException("the jlink'd runtime did not start (`java --list-modules`):\n" + listed.joinToString("\n"))
+            val present = listed.map { it.substringBefore('@').trim() }.toSet()
 
             // jdeps resolves a jar with a module-info (okhttp3, commons-imaging) as a module
             // and fails on the first `requires` it cannot find, and a module path doesn't help
             // because many of the other jars have no valid automatic module name. amy runs
-            // everything from the class path anyway, so analyse a copy without module-info.
+            // everything from the class path anyway, so analyse copies without module-info:
+            // then one jdeps run over all of them works, instead of one JVM per jar.
             val scratch = temporaryDir.also { it.deleteRecursively(); it.mkdirs() }
             val jars = libDir.get().asFile.listFiles { f -> f.extension == "jar" }.orEmpty().sortedBy { it.name }
-            val missing = sortedMapOf<String, MutableSet<String>>()
-            for (jar in jars) {
-                val analysed = withoutModuleInfo(jar, scratch)
-                val jdeps =
-                    ProcessBuilder(jdepsBin.get(), "-s", "--ignore-missing-deps", "--multi-release", "21", analysed.absolutePath)
-                        .redirectErrorStream(true)
-                        .start()
-                val lines = jdeps.inputStream.bufferedReader().readLines()
-                if (jdeps.waitFor() != 0) throw GradleException("jdeps failed on ${jar.name}:\n" + lines.joinToString("\n"))
+            val analysed = jars.map { withoutModuleInfo(it, scratch) }
+            val jdeps =
+                ProcessBuilder(listOf(jdepsBin.get(), "-s", "--ignore-missing-deps", "--multi-release", "21") + analysed.map { it.absolutePath })
+                    .redirectErrorStream(true)
+                    .start()
+            val lines = jdeps.inputStream.bufferedReader().readLines()
+            if (jdeps.waitFor() != 0) throw GradleException("jdeps failed:\n" + lines.joinToString("\n"))
 
-                // `-s` prints one `<jar> -> <module>` line per module the jar uses.
-                for (line in lines) {
-                    val module = line.substringAfter("->", "").trim()
-                    if ((module.startsWith("java.") || module.startsWith("jdk.")) && module !in present) {
-                        missing.getOrPut(module) { sortedSetOf() }.add(jar.name)
-                    }
+            // `-s` prints one `<jar> -> <module>` line per module each jar uses.
+            val missing = sortedMapOf<String, MutableSet<String>>()
+            for (line in lines) {
+                val jar = line.substringBefore("->", "").trim()
+                val module = line.substringAfter("->", "").trim()
+                if ((module.startsWith("java.") || module.startsWith("jdk.")) && module !in present) {
+                    missing.getOrPut(module) { sortedSetOf() }.add(jar)
                 }
             }
             if (missing.isNotEmpty()) {
@@ -369,6 +376,7 @@ val verifyAmyRuntimeModules =
                         missing.entries.joinToString("\n") { (module, users) -> "  $module  (used by ${users.joinToString(", ")})" },
                 )
             }
+            marker.get().asFile.writeText("every JDK module the amy jars use is in the runtime\n")
         }
     }
 
