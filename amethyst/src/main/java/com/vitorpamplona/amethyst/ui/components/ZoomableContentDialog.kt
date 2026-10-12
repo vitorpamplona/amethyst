@@ -82,7 +82,7 @@ import com.vitorpamplona.amethyst.commons.richtext.localJavaFile
 import com.vitorpamplona.amethyst.commons.ui.components.SlidingCarousel
 import com.vitorpamplona.amethyst.commons.ui.components.ViewerBackButton
 import com.vitorpamplona.amethyst.commons.ui.components.ViewerControlsRow
-import com.vitorpamplona.amethyst.commons.ui.components.ZoomSource
+import com.vitorpamplona.amethyst.commons.ui.components.ZoomSourceAnchor
 import com.vitorpamplona.amethyst.commons.ui.components.ZoomTransition
 import com.vitorpamplona.amethyst.commons.ui.components.getActivityWindow
 import com.vitorpamplona.amethyst.commons.ui.components.getDialogWindow
@@ -106,13 +106,13 @@ import net.engawapg.lib.zoomable.zoomable
 fun ZoomableImageDialog(
     imageUrl: BaseMediaContent,
     allImages: ImmutableList<BaseMediaContent> = listOf(imageUrl).toImmutableList(),
-    sourceBounds: ZoomSource? = null,
+    source: ZoomSourceAnchor? = null,
     onDismiss: () -> Unit,
     accountViewModel: AccountViewModel,
     sourceCornerRadius: Dp = 0.dp,
 ) {
     // The grow-from-thumbnail transition, shared with the desktop viewer.
-    val transition = rememberZoomTransition(sourceBounds, sourceCornerRadius, onDismiss)
+    val transition = rememberZoomTransition(source, sourceCornerRadius, onDismiss)
 
     // ZoomState of the currently-visible image, hoisted from RenderImageOrVideo so the
     // grow/shrink animation can read live scale/offset and start the exit from the

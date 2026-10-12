@@ -54,14 +54,13 @@ import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.accessibility_download_for_offline
-import com.vitorpamplona.amethyst.commons.ui.components.ZoomSource
-import com.vitorpamplona.amethyst.commons.ui.components.zoomSource
+import com.vitorpamplona.amethyst.commons.ui.components.ZoomSourceAnchor
+import com.vitorpamplona.amethyst.commons.ui.components.zoomSourceAnchor
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.desktop.service.media.GlobalMediaPlayer
 import com.vitorpamplona.amethyst.desktop.service.media.VideoThumbnailCache
@@ -99,7 +98,7 @@ fun DesktopVideoPlayer(
     loadOnDemand: Boolean = false,
     shape: Shape = MaterialTheme.shapes.small,
     // Where the picture itself sits in the window, for a full-screen view that grows out of it.
-    onPictureBounds: ((ZoomSource) -> Unit)? = null,
+    pictureSource: ZoomSourceAnchor? = null,
 ) {
     // Only this video's state: every other card on screen would otherwise recompose on each tick
     // of whichever video is playing.
@@ -220,7 +219,7 @@ fun DesktopVideoPlayer(
                 Modifier
                     .width(width)
                     .height(constrainedHeight)
-                    .then(if (onPictureBounds != null) Modifier.onGloballyPositioned { onPictureBounds(it.zoomSource()) } else Modifier)
+                    .then(if (pictureSource != null) Modifier.zoomSourceAnchor(pictureSource) else Modifier)
                     .clip(shape)
                     .background(backdrop),
             contentAlignment = Alignment.Center,

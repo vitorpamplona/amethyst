@@ -31,7 +31,7 @@ import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.richtext.BaseMediaContent
 import com.vitorpamplona.amethyst.commons.ui.components.UrlCachedPreviewer
 import com.vitorpamplona.amethyst.commons.ui.components.UrlPreviewState
-import com.vitorpamplona.amethyst.commons.ui.components.ZoomSource
+import com.vitorpamplona.amethyst.commons.ui.components.ZoomSourceAnchor
 import com.vitorpamplona.amethyst.commons.ui.components.urlPreview
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.note.platform.NotePlatform
@@ -112,13 +112,13 @@ object AndroidNotePlatform : NotePlatform {
     override fun ZoomableImageDialog(
         imageUrl: BaseMediaContent,
         allImages: ImmutableList<BaseMediaContent>,
-        sourceBounds: ZoomSource?,
+        source: ZoomSourceAnchor?,
         onDismiss: () -> Unit,
         accountViewModel: AccountViewModel,
     ) = AppZoomableImageDialog(
         imageUrl = imageUrl,
         allImages = allImages,
-        sourceBounds = sourceBounds,
+        source = source,
         onDismiss = onDismiss,
         accountViewModel = accountViewModel,
     )

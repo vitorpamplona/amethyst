@@ -34,7 +34,6 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalClipboard
 import androidx.compose.ui.unit.dp
 import coil3.compose.AsyncImage
@@ -45,10 +44,10 @@ import com.vitorpamplona.amethyst.commons.resources.profile_banner
 import com.vitorpamplona.amethyst.commons.resources.profile_image
 import com.vitorpamplona.amethyst.commons.richtext.RichTextParser
 import com.vitorpamplona.amethyst.commons.ui.components.DisplayBlurHash
-import com.vitorpamplona.amethyst.commons.ui.components.ZoomSource
 import com.vitorpamplona.amethyst.commons.ui.components.rememberFallbackUrlState
+import com.vitorpamplona.amethyst.commons.ui.components.rememberZoomSourceAnchor
 import com.vitorpamplona.amethyst.commons.ui.components.util.setText
-import com.vitorpamplona.amethyst.commons.ui.components.zoomSource
+import com.vitorpamplona.amethyst.commons.ui.components.zoomSourceAnchor
 import com.vitorpamplona.amethyst.commons.ui.note.platform.ZoomableImageDialog
 import com.vitorpamplona.amethyst.commons.ui.painterRes
 import com.vitorpamplona.amethyst.commons.ui.stringRes
@@ -82,7 +81,7 @@ fun DrawBanner(
         val clipboardManager = LocalClipboard.current
         val scope = rememberCoroutineScope()
         var zoomImageDialogOpen by remember { mutableStateOf(false) }
-        var sourceBounds by remember { mutableStateOf<ZoomSource?>(null) }
+        val source = rememberZoomSourceAnchor()
 
         val bannerUrl = rememberFallbackUrlState(banner, bannerMeta?.fallback ?: emptyList())
         // Whichever URL is on screen: the primary, or the fallback that replaced it.
@@ -94,7 +93,7 @@ fun DrawBanner(
                 Modifier
                     .fillMaxWidth()
                     .height(150.dp)
-                    .onGloballyPositioned { sourceBounds = it.zoomSource() }
+                    .zoomSourceAnchor(source)
                     .combinedClickable(
                         onClick = { zoomImageDialogOpen = true },
                         onLongClick = {
@@ -128,7 +127,7 @@ fun DrawBanner(
         if (zoomImageDialogOpen) {
             ZoomableImageDialog(
                 imageUrl = RichTextParser.parseImageOrVideo(shownBanner),
-                sourceBounds = sourceBounds,
+                source = source,
                 onDismiss = { zoomImageDialogOpen = false },
                 accountViewModel = accountViewModel,
             )

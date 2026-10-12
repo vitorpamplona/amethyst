@@ -64,7 +64,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalClipboard
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.text.font.FontFamily
@@ -101,10 +100,10 @@ import com.vitorpamplona.amethyst.commons.resources.profile_image
 import com.vitorpamplona.amethyst.commons.richtext.RichTextParser
 import com.vitorpamplona.amethyst.commons.ui.components.ClickableTextPrimary
 import com.vitorpamplona.amethyst.commons.ui.components.TranslatableRichTextViewer
-import com.vitorpamplona.amethyst.commons.ui.components.ZoomSource
 import com.vitorpamplona.amethyst.commons.ui.components.rememberModalSheetState
+import com.vitorpamplona.amethyst.commons.ui.components.rememberZoomSourceAnchor
 import com.vitorpamplona.amethyst.commons.ui.components.util.setText
-import com.vitorpamplona.amethyst.commons.ui.components.zoomSource
+import com.vitorpamplona.amethyst.commons.ui.components.zoomSourceAnchor
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.note.BaseUserPicture
 import com.vitorpamplona.amethyst.commons.ui.note.LinkIcon
@@ -160,7 +159,7 @@ fun RenderAppDefinition(
 
             if (!theAppMetadata.banner.isNullOrBlank()) {
                 var zoomImageDialogOpen by remember { mutableStateOf(false) }
-                var bannerSourceBounds by remember { mutableStateOf<ZoomSource?>(null) }
+                val bannerSource = rememberZoomSourceAnchor()
 
                 AsyncImage(
                     model = theAppMetadata.banner,
@@ -170,7 +169,7 @@ fun RenderAppDefinition(
                         Modifier
                             .fillMaxWidth()
                             .height(125.dp)
-                            .onGloballyPositioned { bannerSourceBounds = it.zoomSource() }
+                            .zoomSourceAnchor(bannerSource)
                             .combinedClickable(
                                 onClick = {},
                                 onLongClick = {
@@ -186,7 +185,7 @@ fun RenderAppDefinition(
                 if (zoomImageDialogOpen) {
                     ZoomableImageDialog(
                         imageUrl = RichTextParser.parseImageOrVideo(theAppMetadata.banner!!),
-                        sourceBounds = bannerSourceBounds,
+                        source = bannerSource,
                         onDismiss = { zoomImageDialogOpen = false },
                         accountViewModel = accountViewModel,
                     )
@@ -215,7 +214,7 @@ fun RenderAppDefinition(
                     verticalAlignment = Alignment.Bottom,
                 ) {
                     var zoomImageDialogOpen by remember { mutableStateOf(false) }
-                    var pictureSourceBounds by remember { mutableStateOf<ZoomSource?>(null) }
+                    val pictureSource = rememberZoomSourceAnchor()
                     Box(Modifier.size(100.dp)) {
                         theAppMetadata.picture?.let { picture ->
                             AsyncImage(
@@ -231,7 +230,7 @@ fun RenderAppDefinition(
                                         ).clip(shape = CircleShape)
                                         .fillMaxSize()
                                         .background(MaterialTheme.colorScheme.background)
-                                        .onGloballyPositioned { pictureSourceBounds = it.zoomSource() }
+                                        .zoomSourceAnchor(pictureSource)
                                         .combinedClickable(
                                             onClick = { zoomImageDialogOpen = true },
                                             onLongClick = {
@@ -245,7 +244,7 @@ fun RenderAppDefinition(
                             if (zoomImageDialogOpen) {
                                 ZoomableImageDialog(
                                     imageUrl = RichTextParser.parseImageOrVideo(theAppMetadata.picture!!),
-                                    sourceBounds = pictureSourceBounds,
+                                    source = pictureSource,
                                     onDismiss = { zoomImageDialogOpen = false },
                                     accountViewModel = accountViewModel,
                                 )

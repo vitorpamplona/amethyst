@@ -24,7 +24,10 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.offset
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.ui.ImageComposeScene
 import androidx.compose.ui.Modifier
@@ -34,6 +37,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.dp
+import com.vitorpamplona.amethyst.commons.ui.layouts.DisappearingScaffold
 import org.jetbrains.skia.Bitmap
 import org.jetbrains.skia.Image
 import kotlin.test.Test
@@ -78,7 +82,7 @@ class ZoomTransitionTest {
         var dismissed = false
         val scene =
             ImageComposeScene(200, 200, Density(1f)) {
-                val t = rememberZoomTransition(ZoomSource(thumbnail), onDismissed = { dismissed = true })
+                val t = rememberZoomTransition({ ZoomSource(thumbnail) }, onDismissed = { dismissed = true })
                 transition = t
                 Box(Modifier.fillMaxSize().zoomTransitionContainer(t)) {
                     Box(Modifier.fillMaxSize().zoomTransitionLayer(t)) {
@@ -124,7 +128,7 @@ class ZoomTransitionTest {
         val source = ZoomSource(bounds = thumbnail, visibleBounds = Rect(10f, 35f, 60f, 60f))
         val scene =
             ImageComposeScene(200, 200, Density(1f)) {
-                val t = rememberZoomTransition(source, onDismissed = {})
+                val t = rememberZoomTransition({ source }, onDismissed = {})
                 transition = t
                 Box(Modifier.fillMaxSize().zoomTransitionContainer(t)) {
                     Box(Modifier.fillMaxSize().zoomTransitionLayer(t)) {
@@ -172,6 +176,98 @@ class ZoomTransitionTest {
             scene.render(0)
             assertEquals(Rect(30f, -5f, 80f, 45f), source!!.bounds)
             assertEquals(Rect(30f, 20f, 80f, 45f), source!!.visibleBounds)
+        } finally {
+            scene.close()
+        }
+    }
+
+    @Test
+    fun zoomSourceIsCutToTheViewport() {
+        var source: ZoomSource? = null
+        val scene =
+            ImageComposeScene(200, 200, Density(1f)) {
+                Box(Modifier.fillMaxSize()) {
+                    Box(Modifier.offset(30.dp, 10.dp).size(50.dp).onGloballyPositioned { source = it.zoomSource(Rect(0f, 40f, 200f, 200f)) })
+                }
+            }
+        try {
+            scene.render(0)
+            assertEquals(Rect(30f, 10f, 80f, 60f), source!!.bounds)
+            assertEquals(Rect(30f, 40f, 80f, 60f), source!!.visibleBounds, "the part above the viewport was under a bar")
+        } finally {
+            scene.close()
+        }
+    }
+
+    /**
+     * The scaffold lays its content out under its top bar, so nothing clips a thumbnail scrolled
+     * under the bar: the viewport it provides must leave the bar out.
+     */
+    @Test
+    fun aThumbnailUnderTheScaffoldsTopBarIsCutAtTheBar() {
+        var anchor: ZoomSourceAnchor? = null
+        val scene =
+            ImageComposeScene(200, 200, Density(1f)) {
+                DisappearingScaffold(
+                    isInvertedLayout = false,
+                    topBar = { Box(Modifier.fillMaxWidth().height(40.dp)) },
+                    allowBarHide = false,
+                ) {
+                    val a = rememberZoomSourceAnchor()
+                    anchor = a
+                    Box(Modifier.fillMaxSize()) {
+                        Box(
+                            Modifier
+                                .padding(top = 20.dp)
+                                .offset(10.dp, 0.dp)
+                                .size(50.dp)
+                                .zoomSourceAnchor(a),
+                        )
+                    }
+                }
+            }
+        try {
+            scene.render(0)
+            val source = anchor!!.capture()!!
+            assertEquals(Rect(10f, 20f, 60f, 70f), source.bounds)
+            // The bar is 40 tall plus its divider.
+            assertTrue(source.visibleBounds.top >= 40f, "the slice under the top bar is left out: ${source.visibleBounds}")
+            assertEquals(70f, source.visibleBounds.bottom)
+        } finally {
+            scene.close()
+        }
+    }
+
+    @Test
+    fun theExitShrinksIntoWhereTheThumbnailIsWhenItCloses() {
+        var transition: ZoomTransition? = null
+        var current = ZoomSource(thumbnail)
+        val scene =
+            ImageComposeScene(200, 200, Density(1f)) {
+                val t = rememberZoomTransition({ current }, onDismissed = {})
+                transition = t
+                Box(Modifier.fillMaxSize().zoomTransitionContainer(t)) {
+                    Box(Modifier.fillMaxSize().zoomTransitionLayer(t)) {
+                        Box(Modifier.fillMaxSize().background(Color.Red).onGloballyPositioned { t.onMediaPositioned(it, null) })
+                    }
+                }
+            }
+        try {
+            val ms = 1_000_000L
+            scene.render(0)
+            scene.render(600 * ms)
+            assertEquals(thumbnail, transition!!.sourceBounds!!.bounds)
+
+            val moved = Rect(110f, 110f, 160f, 160f)
+            current = ZoomSource(moved)
+            transition!!.dismiss()
+            assertEquals(moved, transition!!.sourceBounds!!.bounds)
+
+            scene.render(616 * ms)
+            scene.render(632 * ms)
+            val closing = scene.render(860 * ms)
+            assertTrue(closing.isRed(135, 135), "it lands where the thumbnail is now")
+            assertFalse(closing.isRed(35, 35), "not where it was")
         } finally {
             scene.close()
         }

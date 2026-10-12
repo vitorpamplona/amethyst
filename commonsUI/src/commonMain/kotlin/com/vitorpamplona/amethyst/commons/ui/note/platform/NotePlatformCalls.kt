@@ -31,7 +31,7 @@ import com.vitorpamplona.amethyst.commons.audio.WaveformData
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.richtext.BaseMediaContent
 import com.vitorpamplona.amethyst.commons.ui.components.UrlPreviewState
-import com.vitorpamplona.amethyst.commons.ui.components.ZoomSource
+import com.vitorpamplona.amethyst.commons.ui.components.ZoomSourceAnchor
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.quartz.nip94FileMetadata.tags.DimensionTag
@@ -63,13 +63,13 @@ fun ZoomableContentView(
 fun ZoomableImageDialog(
     imageUrl: BaseMediaContent,
     allImages: ImmutableList<BaseMediaContent> = remember(imageUrl) { persistentListOf(imageUrl) },
-    sourceBounds: ZoomSource? = null,
+    source: ZoomSourceAnchor? = null,
     onDismiss: () -> Unit,
     accountViewModel: AccountViewModel,
 ) = LocalNotePlatform.current.ZoomableImageDialog(
     imageUrl = imageUrl,
     allImages = allImages,
-    sourceBounds = sourceBounds,
+    source = source,
     onDismiss = onDismiss,
     accountViewModel = accountViewModel,
 )

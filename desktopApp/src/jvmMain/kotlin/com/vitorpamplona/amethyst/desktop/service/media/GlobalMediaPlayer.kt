@@ -26,7 +26,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
-import com.vitorpamplona.amethyst.commons.ui.components.ZoomSource
+import com.vitorpamplona.amethyst.commons.ui.components.ZoomSourceAnchor
 import com.vitorpamplona.amethyst.desktop.ui.media.MediaType
 import com.vitorpamplona.quartz.utils.Log
 import io.github.kdroidfilter.composemediaplayer.InitialPlayerState
@@ -690,35 +690,37 @@ object GlobalMediaPlayer {
     }
 
     /**
-     * Where, in the window, the video that went full screen was shown: the full-screen view grows
-     * out of it and shrinks back into it. Null when full screen started elsewhere (a plain fade).
+     * The card the video that went full screen plays in: the full-screen view grows out of it and
+     * shrinks back into it. Null when full screen started elsewhere (a plain fade).
      */
     @Volatile
-    var fullscreenSourceBounds: ZoomSource? = null
+    var fullscreenSource: ZoomSourceAnchor? = null
         private set
 
-    /** The corner radius of [fullscreenSourceBounds]'s card. */
+    /** The corner radius of [fullscreenSource]'s card. */
     @Volatile
     var fullscreenSourceCornerRadius: Dp = 0.dp
         private set
 
     fun toggleFullscreen() {
-        if (!_isFullscreen.value) fullscreenSourceBounds = null
+        if (!_isFullscreen.value) fullscreenSource = null
         _isFullscreen.value = !_isFullscreen.value
     }
 
-    /** Full screen, growing out of [sourceBounds] (window coordinates, [cornerRadius]) when given. */
+    /** Full screen, growing out of the card [source] tracks (with [cornerRadius]) when given. */
     fun enterFullscreen(
-        sourceBounds: ZoomSource?,
+        source: ZoomSourceAnchor?,
         cornerRadius: Dp = 0.dp,
     ) {
-        fullscreenSourceBounds = sourceBounds
+        fullscreenSource = source
         fullscreenSourceCornerRadius = cornerRadius
         _isFullscreen.value = true
     }
 
     fun exitFullscreen() {
         _isFullscreen.value = false
+        // The overlay holds its own reference while it closes; don't keep the card's node alive.
+        fullscreenSource = null
     }
 
     /** Call on app exit. Disposes native handles owned by kdroidFilter. */
