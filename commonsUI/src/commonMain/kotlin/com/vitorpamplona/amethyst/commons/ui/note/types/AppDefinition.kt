@@ -63,9 +63,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.layout.boundsInWindow
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalClipboard
 import androidx.compose.ui.platform.LocalUriHandler
@@ -103,8 +101,10 @@ import com.vitorpamplona.amethyst.commons.resources.profile_image
 import com.vitorpamplona.amethyst.commons.richtext.RichTextParser
 import com.vitorpamplona.amethyst.commons.ui.components.ClickableTextPrimary
 import com.vitorpamplona.amethyst.commons.ui.components.TranslatableRichTextViewer
+import com.vitorpamplona.amethyst.commons.ui.components.ZoomSource
 import com.vitorpamplona.amethyst.commons.ui.components.rememberModalSheetState
 import com.vitorpamplona.amethyst.commons.ui.components.util.setText
+import com.vitorpamplona.amethyst.commons.ui.components.zoomSource
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.note.BaseUserPicture
 import com.vitorpamplona.amethyst.commons.ui.note.LinkIcon
@@ -160,7 +160,7 @@ fun RenderAppDefinition(
 
             if (!theAppMetadata.banner.isNullOrBlank()) {
                 var zoomImageDialogOpen by remember { mutableStateOf(false) }
-                var bannerSourceBounds by remember { mutableStateOf<Rect?>(null) }
+                var bannerSourceBounds by remember { mutableStateOf<ZoomSource?>(null) }
 
                 AsyncImage(
                     model = theAppMetadata.banner,
@@ -170,7 +170,7 @@ fun RenderAppDefinition(
                         Modifier
                             .fillMaxWidth()
                             .height(125.dp)
-                            .onGloballyPositioned { bannerSourceBounds = it.boundsInWindow() }
+                            .onGloballyPositioned { bannerSourceBounds = it.zoomSource() }
                             .combinedClickable(
                                 onClick = {},
                                 onLongClick = {
@@ -215,7 +215,7 @@ fun RenderAppDefinition(
                     verticalAlignment = Alignment.Bottom,
                 ) {
                     var zoomImageDialogOpen by remember { mutableStateOf(false) }
-                    var pictureSourceBounds by remember { mutableStateOf<Rect?>(null) }
+                    var pictureSourceBounds by remember { mutableStateOf<ZoomSource?>(null) }
                     Box(Modifier.size(100.dp)) {
                         theAppMetadata.picture?.let { picture ->
                             AsyncImage(
@@ -231,7 +231,7 @@ fun RenderAppDefinition(
                                         ).clip(shape = CircleShape)
                                         .fillMaxSize()
                                         .background(MaterialTheme.colorScheme.background)
-                                        .onGloballyPositioned { pictureSourceBounds = it.boundsInWindow() }
+                                        .onGloballyPositioned { pictureSourceBounds = it.zoomSource() }
                                         .combinedClickable(
                                             onClick = { zoomImageDialogOpen = true },
                                             onLongClick = {

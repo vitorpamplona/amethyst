@@ -43,8 +43,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.geometry.Rect
-import androidx.compose.ui.layout.boundsInWindow
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalClipboard
 import androidx.compose.ui.unit.Dp
@@ -60,8 +58,10 @@ import com.vitorpamplona.amethyst.commons.richtext.RichTextParser
 import com.vitorpamplona.amethyst.commons.ui.actions.NewUserMetadataViewModel
 import com.vitorpamplona.amethyst.commons.ui.actions.uploads.GallerySelectSingle
 import com.vitorpamplona.amethyst.commons.ui.components.LoadingAnimation
+import com.vitorpamplona.amethyst.commons.ui.components.ZoomSource
 import com.vitorpamplona.amethyst.commons.ui.components.rememberViewModel
 import com.vitorpamplona.amethyst.commons.ui.components.util.setText
+import com.vitorpamplona.amethyst.commons.ui.components.zoomSource
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.note.ClickableUserPicture
 import com.vitorpamplona.amethyst.commons.ui.note.platform.ZoomableImageDialog
@@ -129,7 +129,7 @@ fun ZoomableUserPicture(
     val scope = rememberCoroutineScope()
 
     var zoomImageUrl by remember { mutableStateOf<String?>(null) }
-    var sourceBounds by remember { mutableStateOf<Rect?>(null) }
+    var sourceBounds by remember { mutableStateOf<ZoomSource?>(null) }
 
     ClickableUserPicture(
         baseUser = baseUser,
@@ -137,7 +137,7 @@ fun ZoomableUserPicture(
         size = size,
         modifier =
             MaterialTheme.colorScheme.userProfileBorderModifier
-                .onGloballyPositioned { sourceBounds = it.boundsInWindow() },
+                .onGloballyPositioned { sourceBounds = it.zoomSource() },
         onClick = {
             val pic = baseUser.profilePicture()
             if (pic != null) {

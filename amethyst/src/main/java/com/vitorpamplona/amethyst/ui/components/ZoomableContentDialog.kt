@@ -51,7 +51,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.LayoutCoordinates
@@ -83,6 +82,7 @@ import com.vitorpamplona.amethyst.commons.richtext.localJavaFile
 import com.vitorpamplona.amethyst.commons.ui.components.SlidingCarousel
 import com.vitorpamplona.amethyst.commons.ui.components.ViewerBackButton
 import com.vitorpamplona.amethyst.commons.ui.components.ViewerControlsRow
+import com.vitorpamplona.amethyst.commons.ui.components.ZoomSource
 import com.vitorpamplona.amethyst.commons.ui.components.ZoomTransition
 import com.vitorpamplona.amethyst.commons.ui.components.getActivityWindow
 import com.vitorpamplona.amethyst.commons.ui.components.getDialogWindow
@@ -106,7 +106,7 @@ import net.engawapg.lib.zoomable.zoomable
 fun ZoomableImageDialog(
     imageUrl: BaseMediaContent,
     allImages: ImmutableList<BaseMediaContent> = listOf(imageUrl).toImmutableList(),
-    sourceBounds: Rect? = null,
+    sourceBounds: ZoomSource? = null,
     onDismiss: () -> Unit,
     accountViewModel: AccountViewModel,
     sourceCornerRadius: Dp = 0.dp,

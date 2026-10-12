@@ -44,11 +44,9 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.layout.boundsInWindow
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
@@ -74,10 +72,12 @@ import com.vitorpamplona.amethyst.commons.richtext.MediaUrlVideo
 import com.vitorpamplona.amethyst.commons.richtext.isAnimatedGifUrl
 import com.vitorpamplona.amethyst.commons.ui.components.UrlCachedPreviewer
 import com.vitorpamplona.amethyst.commons.ui.components.UrlPreviewState
+import com.vitorpamplona.amethyst.commons.ui.components.ZoomSource
 import com.vitorpamplona.amethyst.commons.ui.components.pdf.PdfPreviewCard
 import com.vitorpamplona.amethyst.commons.ui.components.pdf.PdfViewerContent
 import com.vitorpamplona.amethyst.commons.ui.components.rememberZoomTransition
 import com.vitorpamplona.amethyst.commons.ui.components.urlPreview
+import com.vitorpamplona.amethyst.commons.ui.components.zoomSource
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.note.elements.DisplayUncitedHashtags
 import com.vitorpamplona.amethyst.commons.ui.note.platform.NotePlatform
@@ -132,7 +132,7 @@ object DesktopNotePlatform : NotePlatform {
     private fun playFullscreen(
         url: String,
         position: Float,
-        sourceBounds: Rect?,
+        sourceBounds: ZoomSource?,
         cornerRadius: Dp,
     ) {
         val current = GlobalMediaPlayer.videoState.value
@@ -149,7 +149,7 @@ object DesktopNotePlatform : NotePlatform {
         accountViewModel: AccountViewModel,
     ) {
         var showViewer by remember { mutableStateOf(false) }
-        var sourceBounds by remember { mutableStateOf<Rect?>(null) }
+        var sourceBounds by remember { mutableStateOf<ZoomSource?>(null) }
         val cornerRadius = if (roundedCorner) 12.dp else 0.dp
         val shape = RoundedCornerShape(cornerRadius)
         val url = content.mediaUrl() ?: return
@@ -207,7 +207,7 @@ object DesktopNotePlatform : NotePlatform {
                     Modifier
                         .inlineImageSize(ratio, MaxInlineMediaHeight)
                         // Where the viewer grows the image out of, and shrinks it back into.
-                        .onGloballyPositioned { sourceBounds = it.boundsInWindow() }
+                        .onGloballyPositioned { sourceBounds = it.zoomSource() }
                         .clip(shape)
                         .clickable { showViewer = true }
                 if (isAnimatedGifUrl(url)) {
@@ -236,7 +236,7 @@ object DesktopNotePlatform : NotePlatform {
     override fun ZoomableImageDialog(
         imageUrl: BaseMediaContent,
         allImages: ImmutableList<BaseMediaContent>,
-        sourceBounds: Rect?,
+        sourceBounds: ZoomSource?,
         onDismiss: () -> Unit,
         accountViewModel: AccountViewModel,
     ) = MediaViewerDialog(imageUrl, allImages, sourceBounds, 0.dp, onDismiss)
@@ -252,7 +252,7 @@ object DesktopNotePlatform : NotePlatform {
     private fun MediaViewerDialog(
         imageUrl: BaseMediaContent,
         allImages: ImmutableList<BaseMediaContent>,
-        sourceBounds: Rect?,
+        sourceBounds: ZoomSource?,
         sourceCornerRadius: Dp,
         onDismiss: () -> Unit,
     ) {
@@ -317,7 +317,7 @@ object DesktopNotePlatform : NotePlatform {
     ) {
         val cornerRadius = if (roundedCorner) 12.dp else 0.dp
         val shape = RoundedCornerShape(cornerRadius)
-        var sourceBounds by remember { mutableStateOf<Rect?>(null) }
+        var sourceBounds by remember { mutableStateOf<ZoomSource?>(null) }
         DesktopVideoPlayer(
             url = videoUri,
             modifier = Modifier.fillMaxWidth().heightIn(max = MaxInlineMediaHeight),

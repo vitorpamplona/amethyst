@@ -24,9 +24,9 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
-import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import com.vitorpamplona.amethyst.commons.ui.components.ZoomSource
 import com.vitorpamplona.amethyst.desktop.ui.media.MediaType
 import com.vitorpamplona.quartz.utils.Log
 import io.github.kdroidfilter.composemediaplayer.InitialPlayerState
@@ -694,7 +694,7 @@ object GlobalMediaPlayer {
      * out of it and shrinks back into it. Null when full screen started elsewhere (a plain fade).
      */
     @Volatile
-    var fullscreenSourceBounds: Rect? = null
+    var fullscreenSourceBounds: ZoomSource? = null
         private set
 
     /** The corner radius of [fullscreenSourceBounds]'s card. */
@@ -709,7 +709,7 @@ object GlobalMediaPlayer {
 
     /** Full screen, growing out of [sourceBounds] (window coordinates, [cornerRadius]) when given. */
     fun enterFullscreen(
-        sourceBounds: Rect?,
+        sourceBounds: ZoomSource?,
         cornerRadius: Dp = 0.dp,
     ) {
         fullscreenSourceBounds = sourceBounds
