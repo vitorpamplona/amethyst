@@ -32,6 +32,7 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
@@ -77,6 +78,7 @@ import androidx.compose.ui.platform.LocalClipboard
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
@@ -145,71 +147,81 @@ private fun NostrConnectDialog(loginViewModel: LoginViewModel) {
         onDismissRequest = loginViewModel::cancelNostrConnect,
         properties = DialogProperties(usePlatformDefaultWidth = false),
     ) {
-        Surface(
-            shape = RoundedCornerShape(28.dp),
-            color = MaterialTheme.colorScheme.surfaceContainerHigh,
-            modifier = Modifier.padding(16.dp).widthIn(max = 400.dp),
-        ) {
-            Column(
-                modifier = Modifier.verticalScroll(rememberScrollState()).padding(24.dp),
-                horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.spacedBy(20.dp),
+        BoxWithConstraints(contentAlignment = Alignment.Center) {
+            // The code gives up height first on a short window (a small phone, an open keyboard), so
+            // the actions and relays below it stay in view; it stays big enough to scan.
+            val qrSize = (maxHeight - DialogChromeHeight).coerceIn(QrMinSize, QrMaxSize)
+            Surface(
+                shape = RoundedCornerShape(28.dp),
+                color = MaterialTheme.colorScheme.surfaceContainerHigh,
+                modifier = Modifier.padding(16.dp).widthIn(max = 400.dp),
             ) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text(
-                        text = stringRes(Res.string.remote_signer_scan_title),
-                        style = MaterialTheme.typography.titleLarge,
-                        fontWeight = FontWeight.SemiBold,
-                        modifier = Modifier.weight(1f),
-                    )
-                    IconButton(onClick = loginViewModel::cancelNostrConnect) {
-                        Icon(MaterialSymbols.Close, contentDescription = stringRes(Res.string.cancel))
-                    }
-                }
-
-                ListeningQrCode(uri)
-
-                WaitingPill()
-
-                Row(horizontalArrangement = Arrangement.spacedBy(12.dp), modifier = Modifier.fillMaxWidth()) {
-                    FilledTonalButton(
-                        onClick = { uri?.let { scope.launch { clipboard.setText(it) } } },
-                        enabled = uri != null,
-                        contentPadding = ActionPadding,
-                        modifier = Modifier.weight(1f),
-                    ) {
-                        Icon(MaterialSymbols.ContentCopy, contentDescription = null, modifier = Modifier.size(18.dp))
-                        Spacer(Modifier.width(8.dp))
-                        Text(stringRes(Res.string.copy), maxLines = 1)
-                    }
-                    FilledTonalButton(
-                        onClick = {
-                            uri?.let {
-                                // Off the UI thread: the desktop's browse() can block for seconds.
-                                scope.launch {
-                                    noSignerApp = !withContext(Dispatchers.IO) { platform.openNostrConnect(it) }
-                                }
-                            }
-                        },
-                        enabled = uri != null && !noSignerApp,
-                        contentPadding = ActionPadding,
-                        modifier = Modifier.weight(1f),
-                    ) {
-                        Icon(
-                            if (noSignerApp) MaterialSymbols.Warning else MaterialSymbols.OpenInBrowser,
-                            contentDescription = null,
-                            modifier = Modifier.size(18.dp),
+                Column(
+                    modifier = Modifier.verticalScroll(rememberScrollState()).padding(20.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.spacedBy(16.dp),
+                ) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text(
+                            text = stringRes(Res.string.remote_signer_scan_title),
+                            style = MaterialTheme.typography.titleLarge,
+                            fontWeight = FontWeight.SemiBold,
+                            modifier = Modifier.weight(1f),
                         )
-                        Spacer(Modifier.width(8.dp))
-                        Text(stringRes(if (noSignerApp) Res.string.remote_signer_no_app else Res.string.remote_signer_open), maxLines = 1)
+                        IconButton(onClick = loginViewModel::cancelNostrConnect) {
+                            Icon(MaterialSymbols.Close, contentDescription = stringRes(Res.string.cancel))
+                        }
                     }
-                }
 
-                NostrConnectRelays(loginViewModel)
+                    ListeningQrCode(uri, qrSize)
+
+                    WaitingPill()
+
+                    Row(horizontalArrangement = Arrangement.spacedBy(12.dp), modifier = Modifier.fillMaxWidth()) {
+                        FilledTonalButton(
+                            onClick = { uri?.let { scope.launch { clipboard.setText(it) } } },
+                            enabled = uri != null,
+                            contentPadding = ActionPadding,
+                            modifier = Modifier.weight(1f),
+                        ) {
+                            Icon(MaterialSymbols.ContentCopy, contentDescription = null, modifier = Modifier.size(18.dp))
+                            Spacer(Modifier.width(8.dp))
+                            Text(stringRes(Res.string.copy), maxLines = 1)
+                        }
+                        FilledTonalButton(
+                            onClick = {
+                                uri?.let {
+                                    // Off the UI thread: the desktop's browse() can block for seconds.
+                                    scope.launch {
+                                        noSignerApp = !withContext(Dispatchers.IO) { platform.openNostrConnect(it) }
+                                    }
+                                }
+                            },
+                            enabled = uri != null && !noSignerApp,
+                            contentPadding = ActionPadding,
+                            modifier = Modifier.weight(1f),
+                        ) {
+                            Icon(
+                                if (noSignerApp) MaterialSymbols.Warning else MaterialSymbols.OpenInBrowser,
+                                contentDescription = null,
+                                modifier = Modifier.size(18.dp),
+                            )
+                            Spacer(Modifier.width(8.dp))
+                            Text(stringRes(if (noSignerApp) Res.string.remote_signer_no_app else Res.string.remote_signer_open), maxLines = 1)
+                        }
+                    }
+
+                    NostrConnectRelays(loginViewModel)
+                }
             }
         }
     }
 }
+
+/** Everything in the dialog but the code, at its tallest on a 360 dp phone: what the code leaves room for. */
+private val DialogChromeHeight = 384.dp
+private val QrMinSize = 176.dp
+private val QrMaxSize = 264.dp
 
 private val ActionPadding = PaddingValues(horizontal = 12.dp, vertical = 10.dp)
 
@@ -220,13 +232,16 @@ private val SweepColors = listOf(AmethystPurple.copy(alpha = 0.15f), AmethystPur
  * colors, which sweep around it while Amethyst waits for the signer.
  */
 @Composable
-private fun ListeningQrCode(uri: String?) {
+private fun ListeningQrCode(
+    uri: String?,
+    codeSize: Dp,
+) {
     val sweep = rememberSweepAngle()
 
     Box(
         modifier =
             Modifier
-                .size(264.dp)
+                .size(codeSize)
                 .clip(RoundedCornerShape(32.dp))
                 .drawWithCache {
                     // Built once per size; each frame of the sweep only rotates it.
@@ -282,15 +297,16 @@ private fun WaitingPill() {
             Modifier
                 .clip(CircleShape)
                 .background(MaterialTheme.colorScheme.secondaryContainer)
-                .padding(horizontal = 14.dp, vertical = 8.dp),
+                .padding(horizontal = 12.dp, vertical = 8.dp),
     ) {
         Box(
             Modifier.size(8.dp).drawBehind { drawCircle(dotColor.copy(alpha = pulse?.value ?: 1f)) },
         )
-        Spacer(Modifier.width(10.dp))
+        Spacer(Modifier.width(8.dp))
         Text(
             text = stringRes(Res.string.remote_signer_waiting),
-            style = MaterialTheme.typography.labelLarge,
+            // One line on a 360 dp phone.
+            style = MaterialTheme.typography.labelMedium,
             color = MaterialTheme.colorScheme.onSecondaryContainer,
         )
     }
@@ -319,8 +335,8 @@ private fun NostrConnectRelays(loginViewModel: LoginViewModel) {
 
     Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(12.dp)) {
         FlowRow(
-            horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.CenterHorizontally),
-            verticalArrangement = Arrangement.spacedBy(8.dp),
+            horizontalArrangement = Arrangement.spacedBy(6.dp, Alignment.CenterHorizontally),
+            verticalArrangement = Arrangement.spacedBy(6.dp),
             modifier = Modifier.fillMaxWidth(),
         ) {
             loginViewModel.nostrConnectRelays.forEach { RelayPill(it) }
@@ -328,13 +344,13 @@ private fun NostrConnectRelays(loginViewModel: LoginViewModel) {
             if (!editing) {
                 Pill(onClick = { editing = true }) {
                     Icon(MaterialSymbols.Add, contentDescription = null, modifier = Modifier.size(16.dp), tint = MaterialTheme.colorScheme.primary)
-                    Text(stringRes(Res.string.add_a_relay), style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary)
+                    Text(stringRes(Res.string.add_a_relay), style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary)
                 }
             }
             if (!loginViewModel.usesDefaultNostrConnectRelays) {
                 Pill(onClick = loginViewModel::useDefaultNostrConnectRelays) {
                     Icon(MaterialSymbols.Refresh, contentDescription = null, modifier = Modifier.size(16.dp), tint = MaterialTheme.colorScheme.primary)
-                    Text(stringRes(Res.string.remote_signer_default_relays), style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary)
+                    Text(stringRes(Res.string.remote_signer_default_relays), style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary)
                 }
             }
         }
@@ -375,7 +391,7 @@ private fun RelayPill(url: String) {
         Box(Modifier.size(6.dp).drawBehind { drawCircle(dotColor) })
         Text(
             text = url.removePrefix("wss://").removePrefix("ws://").removeSuffix("/"),
-            style = MaterialTheme.typography.labelLarge,
+            style = MaterialTheme.typography.labelMedium,
         )
     }
 }
@@ -388,14 +404,14 @@ private fun Pill(
 ) {
     Row(
         verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        horizontalArrangement = Arrangement.spacedBy(6.dp),
         modifier =
             Modifier
-                .height(32.dp)
+                .height(30.dp)
                 .clip(CircleShape)
                 .border(1.dp, MaterialTheme.colorScheme.outlineVariant, CircleShape)
                 .then(if (onClick != null) Modifier.clickable(onClick = onClick) else Modifier)
-                .padding(horizontal = 12.dp),
+                .padding(horizontal = 10.dp),
     ) {
         content()
     }
