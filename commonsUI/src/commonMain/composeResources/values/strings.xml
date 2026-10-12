@@ -4501,11 +4501,11 @@
     <string name="key_storage_keyring_kwallet">KWallet</string>
     <string name="key_storage_status_keyring">Saved in %1$s</string>
     <string name="key_storage_status_unknown">Saved in your system keyring</string>
-    <string name="key_storage_status_unreachable">Can't open %1$s</string>
+    <string name="key_storage_status_unreachable">Keychain error</string>
     <string name="key_storage_status_password_locked">Key file locked</string>
     <string name="key_storage_status_password_unlocked">Saved in an encrypted key file</string>
     <string name="key_storage_status_password_new">No system keyring found</string>
-    <string name="key_storage_status_not_kept">Keys aren't saved this session</string>
+    <string name="key_storage_status_not_kept">Keys not saved</string>
     <string name="key_storage_try_again">Try again</string>
     <string name="key_storage_unlock">Unlock</string>
     <string name="key_storage_save_keys">Save keys</string>
@@ -4528,7 +4528,7 @@
     <string name="key_storage_use_key">Use key</string>
     <string name="key_storage_remember_key">Remember my key</string>
     <string name="key_storage_login_notice_unreachable">Can't reach your keychain</string>
-    <string name="key_storage_login_notice_not_kept">Keys aren't saved this session</string>
+    <string name="key_storage_login_notice_not_kept">Keys not saved</string>
     <string name="key_storage_login_notice_locked">Your key file is locked</string>
     <string name="desktop_notifications">Desktop notifications</string>
     <string name="desktop_notifications_description">Show mentions, replies, reactions, zaps and messages as system notifications while Amethyst is in the background.</string>

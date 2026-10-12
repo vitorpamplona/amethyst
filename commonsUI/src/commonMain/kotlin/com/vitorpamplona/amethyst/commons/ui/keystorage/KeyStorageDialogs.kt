@@ -171,7 +171,7 @@ internal fun KeyringUnreachableDialog(
     PromptDialog(
         symbol = MaterialSymbols.Warning,
         title = stringRes(Res.string.key_storage_unreachable_title),
-        description = stringRes(Res.string.key_storage_unreachable_description, keyringName(status.keyring)),
+        description = stringRes(Res.string.key_storage_unreachable_description),
         confirmText = stringRes(Res.string.key_storage_try_again),
         onConfirm = onRetry,
         dismissText = stringRes(Res.string.key_storage_not_now),

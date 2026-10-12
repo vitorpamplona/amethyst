@@ -66,7 +66,8 @@ fun keyStorageDescription(status: KeyStorageStatus): String =
     when (status) {
         KeyStorageStatus.Unknown -> stringRes(Res.string.key_storage_status_unknown)
         is KeyStorageStatus.Keyring -> stringRes(Res.string.key_storage_status_keyring, keyringName(status.keyring))
-        is KeyStorageStatus.KeyringUnreachable -> stringRes(Res.string.key_storage_status_unreachable, keyringName(status.keyring))
+        // Short, with no keyring name: anything longer wraps beside Try again on a phone.
+        is KeyStorageStatus.KeyringUnreachable -> stringRes(Res.string.key_storage_status_unreachable)
         is KeyStorageStatus.PasswordFile ->
             when {
                 !status.hasPassword -> stringRes(Res.string.key_storage_status_password_new)
