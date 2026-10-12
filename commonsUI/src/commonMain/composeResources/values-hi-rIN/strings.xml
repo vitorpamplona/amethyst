@@ -1657,7 +1657,6 @@
     <string name="uploading_state_hashing">वस्तुसूचक उत्पादन प्रक्रिया चल रही है</string>
     <string name="uploading_state_finished">हो गया</string>
     <string name="uploading_state_error">अपक्रम</string>
-    <string name="connect_via_tor1">अनुकूल करें</string>
     <string name="connect_via_tor2">टोर स्थापना विकल्प</string>
     <string name="yes">हाँ</string>
     <string name="no">नहीं</string>

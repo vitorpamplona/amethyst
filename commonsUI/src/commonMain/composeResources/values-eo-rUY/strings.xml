@@ -708,7 +708,6 @@
     <string name="uploading_state_hashing">Haŝante</string>
     <string name="uploading_state_finished">Farite</string>
     <string name="uploading_state_error">Eraro</string>
-    <string name="connect_via_tor1">Agordi</string>
     <string name="connect_via_tor2">Tor-Agordojn</string>
     <string name="yes">Jes</string>
     <string name="no">Ne</string>

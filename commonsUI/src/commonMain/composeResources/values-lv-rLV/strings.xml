@@ -710,7 +710,6 @@
     <string name="uploading_state_hashing">Kešo</string>
     <string name="uploading_state_finished">Pabeigts</string>
     <string name="uploading_state_error">Kļūda</string>
-    <string name="connect_via_tor1">Pielāgot</string>
     <string name="connect_via_tor2">Tor iestatījumi</string>
     <string name="yes">Jā</string>
     <string name="no">Nē</string>

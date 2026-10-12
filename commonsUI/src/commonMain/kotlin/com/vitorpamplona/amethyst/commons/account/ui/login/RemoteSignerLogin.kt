@@ -69,6 +69,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.draw.drawWithCache
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.rotate
@@ -91,6 +92,7 @@ import com.vitorpamplona.amethyst.commons.resources.ic_qrcode
 import com.vitorpamplona.amethyst.commons.resources.login_with_remote_signer
 import com.vitorpamplona.amethyst.commons.resources.relay_url_not_valid
 import com.vitorpamplona.amethyst.commons.resources.remote_signer_default_relays
+import com.vitorpamplona.amethyst.commons.resources.remote_signer_no_app
 import com.vitorpamplona.amethyst.commons.resources.remote_signer_open
 import com.vitorpamplona.amethyst.commons.resources.remote_signer_relay_apply
 import com.vitorpamplona.amethyst.commons.resources.remote_signer_relay_hint
@@ -103,7 +105,10 @@ import com.vitorpamplona.amethyst.commons.ui.painterRes
 import com.vitorpamplona.amethyst.commons.ui.platform.LocalAppPlatform
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.qrcode.QrCodeDrawer
 import com.vitorpamplona.amethyst.commons.ui.stringRes
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.IO
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import androidx.compose.material3.Icon as PainterIcon
 
 /**
@@ -140,6 +145,8 @@ private fun NostrConnectDialog(loginViewModel: LoginViewModel) {
     val platform = LocalAppPlatform.current
     val clipboard = LocalClipboard.current
     val scope = rememberCoroutineScope()
+    // Set when no app took the address: the button says so instead of doing nothing.
+    var noSignerApp by remember(uri) { mutableStateOf(false) }
 
     Dialog(
         onDismissRequest = loginViewModel::cancelNostrConnect,
@@ -183,14 +190,25 @@ private fun NostrConnectDialog(loginViewModel: LoginViewModel) {
                         Text(stringRes(Res.string.copy), maxLines = 1)
                     }
                     FilledTonalButton(
-                        onClick = { uri?.let { platform.openNostrConnect(it) } },
-                        enabled = uri != null,
+                        onClick = {
+                            uri?.let {
+                                // Off the UI thread: the desktop's browse() can block for seconds.
+                                scope.launch {
+                                    noSignerApp = !withContext(Dispatchers.IO) { platform.openNostrConnect(it) }
+                                }
+                            }
+                        },
+                        enabled = uri != null && !noSignerApp,
                         contentPadding = ActionPadding,
                         modifier = Modifier.weight(1f),
                     ) {
-                        Icon(MaterialSymbols.OpenInBrowser, contentDescription = null, modifier = Modifier.size(18.dp))
+                        Icon(
+                            if (noSignerApp) MaterialSymbols.Warning else MaterialSymbols.OpenInBrowser,
+                            contentDescription = null,
+                            modifier = Modifier.size(18.dp),
+                        )
                         Spacer(Modifier.width(8.dp))
-                        Text(stringRes(Res.string.remote_signer_open), maxLines = 1)
+                        Text(stringRes(if (noSignerApp) Res.string.remote_signer_no_app else Res.string.remote_signer_open), maxLines = 1)
                     }
                 }
 
@@ -201,6 +219,8 @@ private fun NostrConnectDialog(loginViewModel: LoginViewModel) {
 }
 
 private val ActionPadding = PaddingValues(horizontal = 12.dp, vertical = 10.dp)
+
+private val SweepColors = listOf(AmethystPurple.copy(alpha = 0.15f), AmethystPurple, AmethystBlue, AmethystPurple.copy(alpha = 0.15f))
 
 /**
  * The code in a white frame (scanners need the contrast, dark theme or not) ringed by the logo's
@@ -215,15 +235,12 @@ private fun ListeningQrCode(uri: String?) {
             Modifier
                 .size(264.dp)
                 .clip(RoundedCornerShape(32.dp))
-                .drawBehind {
-                    rotate(sweep?.value ?: 0f) {
-                        drawCircle(
-                            brush =
-                                Brush.sweepGradient(
-                                    listOf(AmethystPurple.copy(alpha = 0.15f), AmethystPurple, AmethystBlue, AmethystPurple.copy(alpha = 0.15f)),
-                                ),
-                            radius = size.maxDimension,
-                        )
+                .drawWithCache {
+                    // Built once per size; each frame of the sweep only rotates it.
+                    val ring = Brush.sweepGradient(SweepColors)
+                    val radius = size.maxDimension
+                    onDrawBehind {
+                        rotate(sweep?.value ?: 0f) { drawCircle(brush = ring, radius = radius) }
                     }
                 }.padding(4.dp)
                 .clip(RoundedCornerShape(28.dp))

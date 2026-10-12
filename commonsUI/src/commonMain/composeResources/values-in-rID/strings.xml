@@ -692,7 +692,6 @@
     <string name="uploading_state_downloading">Mengunduh</string>
     <string name="uploading_state_finished">Selesai</string>
     <string name="uploading_state_error">Galat</string>
-    <string name="connect_via_tor1">Sesuaikan</string>
     <string name="connect_via_tor2">Pengaturan Tor</string>
     <string name="yes">Ya</string>
     <string name="no">Tidak</string>

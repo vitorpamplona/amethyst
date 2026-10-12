@@ -710,7 +710,6 @@
     <string name="uploading_state_hashing">Хешування</string>
     <string name="uploading_state_finished">Готово</string>
     <string name="uploading_state_error">Помилка</string>
-    <string name="connect_via_tor1">Налаштувати</string>
     <string name="connect_via_tor2">Налаштування Tor</string>
     <string name="yes">Так</string>
     <string name="no">Ні</string>

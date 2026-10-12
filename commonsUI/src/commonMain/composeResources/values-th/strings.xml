@@ -697,7 +697,6 @@
     <string name="uploading_state_hashing">กำลังแฮช</string>
     <string name="uploading_state_finished">เสร็จสิ้น</string>
     <string name="uploading_state_error">ข้อผิดพลาด</string>
-    <string name="connect_via_tor1">ปรับแต่ง</string>
     <string name="connect_via_tor2">การตั้งค่า Tor</string>
     <string name="yes">ใช่</string>
     <string name="no">ไม่</string>

@@ -1689,7 +1689,6 @@
     <string name="uploading_state_hashing">Hashování</string>
     <string name="uploading_state_finished">Hotovo</string>
     <string name="uploading_state_error">Chyba</string>
-    <string name="connect_via_tor1">Upravit</string>
     <string name="connect_via_tor2">Nastavení Tor</string>
     <string name="yes">Ano</string>
     <string name="no">Ne</string>

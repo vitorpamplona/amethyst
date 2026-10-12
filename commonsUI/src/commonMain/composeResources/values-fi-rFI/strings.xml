@@ -699,7 +699,6 @@
     <string name="uploading_state_hashing">Tiivistetään</string>
     <string name="uploading_state_finished">Valmis</string>
     <string name="uploading_state_error">Virhe</string>
-    <string name="connect_via_tor1">Säädä</string>
     <string name="connect_via_tor2">Tor-asetukset</string>
     <string name="yes">Kyllä</string>
     <string name="no">Ei</string>

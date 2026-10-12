@@ -389,8 +389,9 @@ class NostrSignerRemote(
             if (!bunkerUri.startsWith(NostrConnectURI.BUNKER_SCHEME)) throw Exception("Invalid bunker uri")
             // Percent-decodes the values: signers built on the `url` crate (Opal, nak) send
             // `relay=wss%3A%2F%2F…`, which read raw is no relay at all.
+            // No relay is not an error here: saved accounts load through this, and one that can't
+            // sign beats one that can't load. A login checks for relays before it connects.
             val parsed = NostrConnectURI.parseBunker(bunkerUri) ?: throw Exception("Invalid pubkey in bunker uri")
-            if (parsed.relays.isEmpty()) throw Exception("No relay in bunker uri")
             return NostrSignerRemote(
                 signer = signer,
                 remotePubkey = parsed.remoteSignerPubKey.lowercase(),

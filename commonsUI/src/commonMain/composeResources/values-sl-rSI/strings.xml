@@ -1181,7 +1181,6 @@
     <string name="uploading_state_hashing">Razpršujem</string>
     <string name="uploading_state_finished">Končano</string>
     <string name="uploading_state_error">Napaka</string>
-    <string name="connect_via_tor1">Prilagodi</string>
     <string name="connect_via_tor2">Tor nastavitve</string>
     <string name="yes">Da</string>
     <string name="no">Ne</string>

@@ -703,7 +703,6 @@
     <string name="uploading_state_hashing">Xeshlash</string>
     <string name="uploading_state_finished">Tugadi</string>
     <string name="uploading_state_error">Xato</string>
-    <string name="connect_via_tor1">Sozlash</string>
     <string name="connect_via_tor2">Tor Sozlamalari</string>
     <string name="yes">Ha</string>
     <string name="no">Yo'q</string>

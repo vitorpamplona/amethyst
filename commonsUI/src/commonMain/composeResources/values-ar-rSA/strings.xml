@@ -719,7 +719,6 @@
     <string name="uploading_state_hashing">تجزئة</string>
     <string name="uploading_state_finished">تم</string>
     <string name="uploading_state_error">خطأ</string>
-    <string name="connect_via_tor1">ضبط</string>
     <string name="connect_via_tor2">إعدادات Tor</string>
     <string name="yes">نعم</string>
     <string name="no">لا</string>

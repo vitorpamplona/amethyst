@@ -34,6 +34,7 @@ import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerInternal
 import com.vitorpamplona.quartz.nip01Core.store.sqlite.EventStore
 import com.vitorpamplona.quartz.nip46RemoteSigner.BunkerRequest
 import com.vitorpamplona.quartz.nip46RemoteSigner.BunkerRequestConnect
+import com.vitorpamplona.quartz.nip46RemoteSigner.NostrConnectURI
 import com.vitorpamplona.quartz.nip46RemoteSigner.server.BunkerRequestProcessor
 import com.vitorpamplona.quartz.nip46RemoteSigner.server.Nip46ConnectDecision
 import com.vitorpamplona.quartz.nip46RemoteSigner.server.Nip46RequestAuthorizer
@@ -135,6 +136,39 @@ class BunkerLoginUseCaseTest {
                 server.close()
             }
         }
+
+    @Test
+    fun anAddressWithoutRelaysFailsTheLogin() =
+        runBlocking(Dispatchers.Default) {
+            val scope = CoroutineScope(Dispatchers.Default + SupervisorJob())
+            val client =
+                NostrClient(
+                    object : WebsocketBuilder {
+                        override fun build(
+                            url: NormalizedRelayUrl,
+                            out: WebSocketListener,
+                        ) = NeverConnects
+                    },
+                    scope,
+                )
+            try {
+                BunkerLoginUseCase.execute("bunker://${KeyPair().pubKey.toHexKey()}?secret=s1", NostrSignerInternal(KeyPair()), client)
+                fail("Login should fail without a relay")
+            } catch (e: Exception) {
+                assertFalse(e is CancellationException, e.toString())
+            } finally {
+                scope.cancel()
+            }
+        }
+
+    /** The address a nostrconnect login stores survives a relay with characters a query reserves. */
+    @Test
+    fun nostrConnectCodeRoundTripsReservedCharacters() {
+        val data = NostrConnectLoginUseCase.generateUri(KeyPair(), listOf("wss://relay.example.com/inbox?a=1&b=2"), "Amethyst")
+        val parsed = NostrConnectURI.parseNostrConnect(data.uri)!!
+        assertEquals(data.relays, parsed.relays)
+        assertEquals("Amethyst", parsed.name)
+    }
 
     /**
      * A relay that never connects used to end the login with a TimeoutCancellationException, which

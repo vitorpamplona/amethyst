@@ -706,7 +706,6 @@
     <string name="uploading_state_hashing">ハッシュ化中</string>
     <string name="uploading_state_finished">完了</string>
     <string name="uploading_state_error">エラー</string>
-    <string name="connect_via_tor1">調整</string>
     <string name="connect_via_tor2">Tor設定</string>
     <string name="yes">はい</string>
     <string name="no">いいえ</string>

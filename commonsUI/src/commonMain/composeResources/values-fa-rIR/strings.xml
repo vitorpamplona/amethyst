@@ -710,7 +710,6 @@
     <string name="uploading_state_hashing">در حال هش کردن</string>
     <string name="uploading_state_finished">انجام شد</string>
     <string name="uploading_state_error">خطا</string>
-    <string name="connect_via_tor1">تنظیم</string>
     <string name="connect_via_tor2">تنظیمات تور</string>
     <string name="yes">بله</string>
     <string name="no">خیر</string>

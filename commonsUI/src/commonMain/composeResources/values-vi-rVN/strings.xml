@@ -699,7 +699,6 @@
     <string name="uploading_state_hashing">Đang băm</string>
     <string name="uploading_state_finished">Hoàn tất</string>
     <string name="uploading_state_error">Lỗi</string>
-    <string name="connect_via_tor1">Điều chỉnh</string>
     <string name="connect_via_tor2">Cài đặt Tor</string>
     <string name="yes">Có</string>
     <string name="no">Không</string>

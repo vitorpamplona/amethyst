@@ -704,7 +704,6 @@
     <string name="uploading_state_hashing">হ্যাশিং হচ্ছে</string>
     <string name="uploading_state_finished">সম্পন্ন</string>
     <string name="uploading_state_error">ত্রুটি</string>
-    <string name="connect_via_tor1">পরিবর্তন করুন</string>
     <string name="connect_via_tor2">Tor সেটিংস</string>
     <string name="yes">হ্যাঁ</string>
     <string name="no">না</string>

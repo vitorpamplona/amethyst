@@ -699,7 +699,6 @@
     <string name="uploading_state_hashing">해싱 중</string>
     <string name="uploading_state_finished">완료</string>
     <string name="uploading_state_error">오류</string>
-    <string name="connect_via_tor1">조정</string>
     <string name="connect_via_tor2">Tor 설정</string>
     <string name="yes">예</string>
     <string name="no">아니오</string>

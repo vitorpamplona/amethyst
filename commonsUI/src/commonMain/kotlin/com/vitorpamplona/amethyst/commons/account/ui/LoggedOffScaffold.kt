@@ -53,7 +53,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.draw.drawWithCache
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
@@ -101,21 +101,24 @@ fun LoggedOffScaffold(
     BoxWithConstraints(
         Modifier
             .fillMaxSize()
-            .drawBehind {
-                drawRect(
+            .drawWithCache {
+                // Built once per size and theme, not on every redraw of the screen.
+                val purple =
                     Brush.radialGradient(
                         listOf(AmethystPurple.copy(alpha = glow), Color.Transparent),
                         center = Offset(size.width * 0.1f, size.height * 0.05f),
                         radius = size.maxDimension * 0.7f,
-                    ),
-                )
-                drawRect(
+                    )
+                val blue =
                     Brush.radialGradient(
                         listOf(AmethystBlue.copy(alpha = glow * 0.8f), Color.Transparent),
                         center = Offset(size.width * 0.95f, size.height * 0.95f),
                         radius = size.maxDimension * 0.6f,
-                    ),
-                )
+                    )
+                onDrawBehind {
+                    drawRect(purple)
+                    drawRect(blue)
+                }
             },
     ) {
         if (maxWidth >= TwoPaneMinWidth) {

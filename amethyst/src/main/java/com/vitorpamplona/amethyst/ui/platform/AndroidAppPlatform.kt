@@ -106,11 +106,7 @@ object AndroidAppPlatform : AppPlatform {
     ) = FlavorTermsGate(checked, onCheckedChange, showError)
 
     @Composable
-    override fun ExternalSignerLoginButton(loginViewModel: LoginViewModel) {
-        if (rememberHasExternalSignerLogin()) {
-            ExternalSignerButton(loginViewModel)
-        }
-    }
+    override fun ExternalSignerLoginButton(loginViewModel: LoginViewModel) = ExternalSignerButton(loginViewModel)
 
     @Composable
     override fun rememberHasExternalSignerLogin(): Boolean {

@@ -77,7 +77,7 @@ import kotlinx.coroutines.launch
 fun ExternalSignerButton(loginViewModel: LoginViewModel) {
     val scope = rememberCoroutineScope()
     val context = LocalContext.current
-    val installedSigners = getExternalSignersInstalled(context)
+    val installedSigners = remember(context) { getExternalSignersInstalled(context) }
     var shouldSelectSigner by remember { mutableStateOf(false) }
 
     val launcher =

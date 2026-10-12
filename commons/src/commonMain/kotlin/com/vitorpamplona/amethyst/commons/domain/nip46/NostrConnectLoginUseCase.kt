@@ -28,6 +28,7 @@ import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.reqs.StaticSubscription
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerInternal
 import com.vitorpamplona.quartz.nip46RemoteSigner.BunkerMessage
 import com.vitorpamplona.quartz.nip46RemoteSigner.BunkerRequest
@@ -35,6 +36,7 @@ import com.vitorpamplona.quartz.nip46RemoteSigner.BunkerRequestConnect
 import com.vitorpamplona.quartz.nip46RemoteSigner.BunkerResponse
 import com.vitorpamplona.quartz.nip46RemoteSigner.BunkerResponseAck
 import com.vitorpamplona.quartz.nip46RemoteSigner.NostrConnectEvent
+import com.vitorpamplona.quartz.nip46RemoteSigner.NostrConnectURI
 import com.vitorpamplona.quartz.nip46RemoteSigner.signer.NostrSignerRemote
 import com.vitorpamplona.quartz.utils.Hex
 import com.vitorpamplona.quartz.utils.SecureRandom
@@ -68,9 +70,10 @@ object NostrConnectLoginUseCase {
         val ephemeralPubKey = ephemeralKeyPair.pubKey.toHexKey()
         val secret = generateSecret()
 
-        val relayParams = relays.joinToString("&") { "relay=$it" }
-        val uri = "nostrconnect://$ephemeralPubKey?$relayParams&secret=$secret&name=$appName"
-        val normalizedRelays = relays.map { NormalizedRelayUrl(it) }.toSet()
+        // Normalized, so the pool keys these relays the way it keys them everywhere else, and
+        // percent-encoded, as NIP-46 writes them.
+        val normalizedRelays = relays.mapNotNull { RelayUrlNormalizer.normalizeOrNull(it) }.toSet()
+        val uri = NostrConnectURI.buildNostrConnect(ephemeralPubKey, normalizedRelays, secret, name = appName)
 
         return NostrConnectUri(
             uri = uri,
@@ -107,9 +110,13 @@ object NostrConnectLoginUseCase {
             )
         remoteSigner.openSubscription()
 
-        val verifiedPubkey = remoteSigner.getPublicKey()
-
-        return BunkerLoginResult(remoteSigner, verifiedPubkey)
+        try {
+            return BunkerLoginResult(remoteSigner, remoteSigner.getPublicKey())
+        } catch (e: Throwable) {
+            // Cancellation included: nobody else holds this signer to close it.
+            remoteSigner.closeSubscription()
+            throw e
+        }
     }
 
     private suspend fun waitForConnectRequest(

@@ -52,6 +52,7 @@ import com.vitorpamplona.quartz.nip19Bech32.entities.NRelay
 import com.vitorpamplona.quartz.nip19Bech32.entities.NSec
 import com.vitorpamplona.quartz.nip19Bech32.toNpub
 import com.vitorpamplona.quartz.nip46RemoteSigner.BunkerClientMetadata
+import com.vitorpamplona.quartz.nip46RemoteSigner.NostrConnectURI
 import com.vitorpamplona.quartz.nip49PrivKeyEnc.Nip49
 import com.vitorpamplona.quartz.utils.Hex
 import com.vitorpamplona.quartz.utils.Log
@@ -65,7 +66,6 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import kotlinx.coroutines.withTimeoutOrNull
 
 val EMAIL_PATTERN = Regex(".+@.+\\.[a-z]+")
 
@@ -226,15 +226,12 @@ class AccountSessionManager(
         val uriData = NostrConnectLoginUseCase.generateUri(transport, relays, appName)
         onUri(uriData.uri)
 
-        // Not withTimeout: its TimeoutCancellationException reads as a cancellation, so the
-        // login screen would close the address without saying why.
-        val result =
-            withTimeoutOrNull(NostrConnectLoginUseCase.NOSTRCONNECT_TIMEOUT_MS) {
-                NostrConnectLoginUseCase.awaitAndLogin(uriData, clientBuilder())
-            } ?: throw Exception("No signer answered the connection request in time")
+        // The wait for the signer and each request to it carry their own timeouts. One more around
+        // the whole would cut off a signer that answers near the end of the first.
+        val result = NostrConnectLoginUseCase.awaitAndLogin(uriData, clientBuilder())
         result.signer.closeSubscription()
 
-        val bunkerUri = BUNKER_URI_PREFIX + result.signer.remotePubkey + "?" + uriData.relays.joinToString("&") { "relay=${it.url}" }
+        val bunkerUri = NostrConnectURI.buildBunker(result.signer.remotePubkey, uriData.relays, secret = null)
         startUI(localPreferences.setDefaultAccount(remoteSignerSettings(result.pubKeyHex, bunkerUri, transport, transientAccount)))
     }
 

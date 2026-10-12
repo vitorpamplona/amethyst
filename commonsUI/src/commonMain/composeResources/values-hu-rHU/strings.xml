@@ -1657,7 +1657,6 @@
     <string name="uploading_state_hashing">Kivonatolás</string>
     <string name="uploading_state_finished">Kész</string>
     <string name="uploading_state_error">Hiba</string>
-    <string name="connect_via_tor1">Módosítás</string>
     <string name="connect_via_tor2">Tor-beállítások</string>
     <string name="yes">Igen</string>
     <string name="no">Nem</string>

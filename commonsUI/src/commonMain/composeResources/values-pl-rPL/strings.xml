@@ -1689,7 +1689,6 @@
     <string name="uploading_state_hashing">Hashowanie</string>
     <string name="uploading_state_finished">Gotowe</string>
     <string name="uploading_state_error">Błąd</string>
-    <string name="connect_via_tor1">Dostosuj</string>
     <string name="connect_via_tor2">Ustawienia TORa</string>
     <string name="yes">Tak</string>
     <string name="no">Nie</string>

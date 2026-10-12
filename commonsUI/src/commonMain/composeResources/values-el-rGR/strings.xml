@@ -704,7 +704,6 @@
     <string name="uploading_state_hashing">Κατακερματισμός</string>
     <string name="uploading_state_finished">Ολοκληρώθηκε</string>
     <string name="uploading_state_error">Σφάλμα</string>
-    <string name="connect_via_tor1">Ρύθμιση</string>
     <string name="connect_via_tor2">Ρυθμίσεις Tor</string>
     <string name="yes">Ναι</string>
     <string name="no">Όχι</string>

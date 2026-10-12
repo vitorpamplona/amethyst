@@ -707,7 +707,6 @@
     <string name="uploading_state_hashing">雜湊計算中</string>
     <string name="uploading_state_finished">完成</string>
     <string name="uploading_state_error">錯誤</string>
-    <string name="connect_via_tor1">調整</string>
     <string name="connect_via_tor2">Tor 設定</string>
     <string name="yes">是</string>
     <string name="no">否</string>

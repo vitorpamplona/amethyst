@@ -37,25 +37,23 @@ object BunkerLoginUseCase {
         clientMetadata: BunkerClientMetadata? = null,
     ): BunkerLoginResult {
         val remoteSigner = NostrSignerRemote.fromBunkerUri(bunkerUri, ephemeralSigner, client, clientMetadata = clientMetadata)
+        if (remoteSigner.relays.isEmpty()) throw Exception("The bunker address names no relay")
         remoteSigner.openSubscription()
 
-        // Wait for websocket to be ready before sending connect request. Not withTimeout: its
-        // TimeoutCancellationException reads as a cancellation to callers, who rethrow it, so
-        // the login screen never learns the attempt is over and keeps spinning.
-        withTimeoutOrNull(RELAY_CONNECT_TIMEOUT_MS) {
-            client.connectedRelaysFlow().first { connected ->
-                remoteSigner.relays.any { it in connected }
-            }
-        } ?: run {
-            remoteSigner.closeSubscription()
-            throw Exception("Could not reach the signer's relays: ${remoteSigner.relays.joinToString { it.url }}")
-        }
-
         try {
+            // Wait for websocket to be ready before sending connect request. Not withTimeout: its
+            // TimeoutCancellationException reads as a cancellation to callers, who rethrow it, so
+            // the login screen never learns the attempt is over and keeps spinning.
+            withTimeoutOrNull(RELAY_CONNECT_TIMEOUT_MS) {
+                client.connectedRelaysFlow().first { connected ->
+                    remoteSigner.relays.any { it in connected }
+                }
+            } ?: throw Exception("Could not reach the signer's relays: ${remoteSigner.relays.joinToString { it.url }}")
+
             remoteSigner.connect()
-            val pubkey = remoteSigner.getPublicKey()
-            return BunkerLoginResult(remoteSigner, pubkey)
-        } catch (e: Exception) {
+            return BunkerLoginResult(remoteSigner, remoteSigner.getPublicKey())
+        } catch (e: Throwable) {
+            // Cancellation included: nobody else holds this signer to close it.
             remoteSigner.closeSubscription()
             throw e
         }

@@ -1676,7 +1676,6 @@
     <string name="uploading_state_hashing">Hashing</string>
     <string name="uploading_state_finished">Done</string>
     <string name="uploading_state_error">Error</string>
-    <string name="connect_via_tor1">Adjust</string>
     <string name="connect_via_tor2">Tor Settings</string>
     <string name="yes">Yes</string>
     <string name="no">No</string>
@@ -4525,6 +4524,7 @@
     <string name="login_welcome_back">Welcome back</string>
     <string name="login_key_placeholder_bunker">nsec, npub or bunker://</string>
     <string name="remote_signer_open">Open signer</string>
+    <string name="remote_signer_no_app">No signer app</string>
     <string name="remote_signer_scan_title">Connect your signer</string>
     <string name="remote_signer_waiting">Waiting for your signer to approve…</string>
     <string name="remote_signer_login_failed">Could not log in with the remote signer: %1$s</string>

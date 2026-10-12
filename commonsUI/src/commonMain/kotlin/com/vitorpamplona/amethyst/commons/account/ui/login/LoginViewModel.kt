@@ -212,6 +212,8 @@ class LoginViewModel(
     }
 
     fun login() {
+        // The key field's Enter reaches here too, not just the button: one login at a time.
+        if (processingLogin) return
         if (checkCanLogin()) {
             processingLogin = true
             accountSessionManager.login(
@@ -230,6 +232,7 @@ class LoginViewModel(
     }
 
     fun loginWithExternalSigner(packageName: String) {
+        if (processingLogin) return
         if (checkCanLogin()) {
             processingLogin = true
             accountSessionManager.login(
@@ -268,7 +271,8 @@ class LoginViewModel(
                         relays = relays,
                         appName = NOSTR_CONNECT_APP_NAME,
                         transientAccount = isTemporary,
-                        onUri = { nostrConnectUri = it },
+                        // A relay change may have replaced this attempt before its code was ready.
+                        onUri = { if (nostrConnectJob === thisJob) nostrConnectUri = it },
                     )
                 } catch (e: CancellationException) {
                     throw e

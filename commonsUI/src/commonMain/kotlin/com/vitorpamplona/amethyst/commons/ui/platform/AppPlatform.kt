@@ -100,11 +100,11 @@ interface AppPlatform {
         showError: Boolean,
     ) {}
 
-    /** Logs in through a signer app (Android's NIP-55 signers), when one is installed. */
+    /** Logs in through a signer app (Android's NIP-55 signers); shown where [rememberHasExternalSignerLogin]. */
     @Composable
     fun ExternalSignerLoginButton(loginViewModel: LoginViewModel) {}
 
-    /** Whether [ExternalSignerLoginButton] shows here: the login form drops its "or" when nothing follows it. */
+    /** Whether a signer app can log in here: the form shows [ExternalSignerLoginButton] and the "or" before it. */
     @Composable
     fun rememberHasExternalSignerLogin(): Boolean = false
 

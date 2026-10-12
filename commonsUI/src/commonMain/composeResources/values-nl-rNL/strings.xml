@@ -1107,7 +1107,6 @@
     <string name="uploading_state_hashing">Hashen</string>
     <string name="uploading_state_finished">Klaar</string>
     <string name="uploading_state_error">Fout</string>
-    <string name="connect_via_tor1">Aanpassen</string>
     <string name="connect_via_tor2">Tor-instellingen</string>
     <string name="yes">Ja</string>
     <string name="no">Nee</string>

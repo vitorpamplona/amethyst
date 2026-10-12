@@ -706,7 +706,6 @@
     <string name="uploading_state_hashing">ஹேஷ் செய்கிறது</string>
     <string name="uploading_state_finished">முடிந்தது</string>
     <string name="uploading_state_error">பிழை</string>
-    <string name="connect_via_tor1">சரிசெய்</string>
     <string name="connect_via_tor2">Tor அமைப்புகள்</string>
     <string name="yes">ஆம்</string>
     <string name="no">இல்லை</string>

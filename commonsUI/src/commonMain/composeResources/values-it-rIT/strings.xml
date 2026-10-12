@@ -692,7 +692,6 @@
     <string name="uploading_state_downloading">Download</string>
     <string name="uploading_state_finished">Completato</string>
     <string name="uploading_state_error">Errore</string>
-    <string name="connect_via_tor1">Regola</string>
     <string name="connect_via_tor2">Impostazioni Tor</string>
     <string name="yes">Sì</string>
     <string name="follow_sets">Liste di seguiti</string>

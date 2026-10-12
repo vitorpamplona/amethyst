@@ -1657,7 +1657,6 @@
     <string name="uploading_state_hashing">Hashning</string>
     <string name="uploading_state_finished">Klart</string>
     <string name="uploading_state_error">Fel</string>
-    <string name="connect_via_tor1">Justera</string>
     <string name="connect_via_tor2">Tor Inställningar</string>
     <string name="yes">Ja</string>
     <string name="no">Nej</string>

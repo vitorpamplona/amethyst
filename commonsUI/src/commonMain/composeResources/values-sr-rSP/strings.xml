@@ -699,7 +699,6 @@
     <string name="uploading_state_hashing">Heširanje</string>
     <string name="uploading_state_finished">Gotovo</string>
     <string name="uploading_state_error">Greška</string>
-    <string name="connect_via_tor1">Podesi</string>
     <string name="connect_via_tor2">Tor podešavanja</string>
     <string name="yes">Da</string>
     <string name="no">Ne</string>

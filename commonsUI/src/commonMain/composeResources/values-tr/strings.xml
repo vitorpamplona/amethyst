@@ -699,7 +699,6 @@
     <string name="uploading_state_hashing">Hash hesaplanıyor</string>
     <string name="uploading_state_finished">Tamamlandı</string>
     <string name="uploading_state_error">Hata</string>
-    <string name="connect_via_tor1">Ayarla</string>
     <string name="connect_via_tor2">Tor Ayarları</string>
     <string name="yes">Evet</string>
     <string name="no">Hayır</string>

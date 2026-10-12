@@ -72,11 +72,12 @@ class FromBunkerUriTest {
         }
     }
 
+    /** Like an address without relays: it parses, and a login turns it down before connecting. */
     @Test
-    fun missingQueryParamsThrows() {
-        assertFailsWith<Exception> {
-            NostrSignerRemote.fromBunkerUri("bunker://$validHex", signer, client)
-        }
+    fun missingQueryParamsParsesWithoutRelays() {
+        val remote = NostrSignerRemote.fromBunkerUri("bunker://$validHex", signer, client)
+        assertEquals(0, remote.relays.size)
+        assertNull(remote.secret)
     }
 
     @Test
@@ -108,10 +109,10 @@ class FromBunkerUriTest {
         assertEquals("a+b", remote.secret)
     }
 
+    /** Saved accounts load through this: one whose address names no usable relay still loads. */
     @Test
-    fun noUsableRelayThrows() {
-        assertFailsWith<Exception> {
-            NostrSignerRemote.fromBunkerUri("bunker://$validHex?secret=abc", signer, client)
-        }
+    fun noUsableRelayStillParses() {
+        val remote = NostrSignerRemote.fromBunkerUri("bunker://$validHex?secret=abc", signer, client)
+        assertEquals(0, remote.relays.size)
     }
 }

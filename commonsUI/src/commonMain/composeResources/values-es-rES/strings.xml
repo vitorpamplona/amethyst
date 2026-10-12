@@ -703,7 +703,6 @@
     <string name="uploading_state_downloading">Descargando</string>
     <string name="uploading_state_hashing">Cifrando</string>
     <string name="uploading_state_finished">Listo</string>
-    <string name="connect_via_tor1">Ajustar</string>
     <string name="connect_via_tor2">Configuración de Tor</string>
     <string name="yes">Sí</string>
     <string name="follow_sets">Conjuntos de seguimiento</string>

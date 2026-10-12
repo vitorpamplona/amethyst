@@ -715,7 +715,6 @@
     <string name="uploading_state_hashing">正在计算 Hash</string>
     <string name="uploading_state_finished">完成</string>
     <string name="uploading_state_error">错误</string>
-    <string name="connect_via_tor1">调整</string>
     <string name="connect_via_tor2">Tor 设置</string>
     <string name="yes">是</string>
     <string name="no">否</string>

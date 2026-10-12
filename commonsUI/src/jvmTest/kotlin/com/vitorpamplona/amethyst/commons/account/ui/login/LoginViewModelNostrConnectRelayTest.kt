@@ -22,6 +22,7 @@ package com.vitorpamplona.amethyst.commons.account.ui.login
 
 import com.vitorpamplona.amethyst.commons.account.AccountSessionManager
 import com.vitorpamplona.quartz.nip01Core.relay.client.EmptyNostrClient
+import com.vitorpamplona.quartz.nip46RemoteSigner.NostrConnectURI
 import io.mockk.mockk
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -75,6 +76,14 @@ class LoginViewModelNostrConnectRelayTest {
 
     private suspend fun until(condition: () -> Boolean) = withTimeout(10_000) { while (!condition()) delay(10) }
 
+    /** The relays a `nostrconnect://` code names, decoded the way a signer reads them. */
+    private fun relaysIn(uri: String?) =
+        uri
+            ?.let { NostrConnectURI.parseNostrConnect(it) }
+            ?.relays
+            ?.map { it.url }
+            ?.toSet()
+
     @Test
     fun pickingARelayReissuesThePendingCodeOnIt() =
         runBlocking {
@@ -83,13 +92,12 @@ class LoginViewModelNostrConnectRelayTest {
             model.loginWithNostrConnect()
             until { model.nostrConnectUri != null }
             val first = model.nostrConnectUri!!
-            LoginViewModel.DEFAULT_NOSTR_CONNECT_RELAYS.forEach { assertTrue("relay=$it" in first, first) }
+            assertEquals(LoginViewModel.DEFAULT_NOSTR_CONNECT_RELAYS.map { "$it/" }.toSet(), relaysIn(first), first)
 
             assertTrue(model.useNostrConnectRelay("relay.example.com"))
             until { model.nostrConnectUri.let { it != null && it != first } }
             val second = model.nostrConnectUri!!
-            assertTrue("relay=wss://relay.example.com/" in second, second)
-            assertFalse("relay.nip46.com" in second, second)
+            assertEquals(setOf("wss://relay.example.com/"), relaysIn(second), second)
             assertEquals(listOf("wss://relay.example.com/"), model.nostrConnectRelays)
             assertFalse(model.usesDefaultNostrConnectRelays)
             // The dialog stays up across the switch; the cancelled attempt doesn't close it.
@@ -98,7 +106,7 @@ class LoginViewModelNostrConnectRelayTest {
             assertTrue(model.processingLogin)
 
             model.useDefaultNostrConnectRelays()
-            until { model.nostrConnectUri.let { it != null && "relay.nip46.com" in it } }
+            until { relaysIn(model.nostrConnectUri)?.contains("wss://relay.nip46.com/") == true }
             assertTrue(model.usesDefaultNostrConnectRelays)
 
             model.cancelNostrConnect()
@@ -126,7 +134,7 @@ class LoginViewModelNostrConnectRelayTest {
 
             model.loginWithNostrConnect()
             until { model.nostrConnectUri != null }
-            assertTrue("relay=wss://relay.example.com/" in model.nostrConnectUri!!)
+            assertEquals(setOf("wss://relay.example.com/"), relaysIn(model.nostrConnectUri))
 
             model.cancelNostrConnect()
             until { !model.nostrConnectPending }

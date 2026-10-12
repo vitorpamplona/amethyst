@@ -702,7 +702,6 @@
     <string name="uploading_state_hashing">Hashando</string>
     <string name="uploading_state_finished">Concluído</string>
     <string name="uploading_state_error">Erro</string>
-    <string name="connect_via_tor1">Ajustar</string>
     <string name="connect_via_tor2">Configurações Tor</string>
     <string name="yes">Sim</string>
     <string name="no">Não</string>

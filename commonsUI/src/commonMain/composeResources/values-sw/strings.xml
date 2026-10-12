@@ -701,7 +701,6 @@
     <string name="uploading_state_hashing">Inafanya hashing</string>
     <string name="uploading_state_finished">Imekamilika</string>
     <string name="uploading_state_error">Hitilafu</string>
-    <string name="connect_via_tor1">Badilisha</string>
     <string name="connect_via_tor2">Mipangilio ya Tor</string>
     <string name="yes">Ndio</string>
     <string name="no">Hapana</string>

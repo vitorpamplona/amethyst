@@ -168,17 +168,22 @@ fun LoginPage(
 
         LoggedOffPrimaryButton(
             text = stringRes(Res.string.login),
-            enabled = loginViewModel.acceptedTerms && !loginViewModel.processingLogin,
+            // Stays enabled while it works: a disabled button would grey out under its spinner.
+            // login() ignores taps until the attempt ends.
+            enabled = loginViewModel.acceptedTerms,
             // A remote signer's login has its own dialog; the button only spins for its own.
             loading = loginViewModel.processingLogin && !loginViewModel.nostrConnectPending,
             onClick = loginViewModel::login,
         )
 
-        if (platform.supportsRemoteSignerLogin || platform.rememberHasExternalSignerLogin()) {
+        val hasExternalSigner = platform.rememberHasExternalSignerLogin()
+        if (platform.supportsRemoteSignerLogin || hasExternalSigner) {
             OrDivider()
         }
 
-        platform.ExternalSignerLoginButton(loginViewModel)
+        if (hasExternalSigner) {
+            platform.ExternalSignerLoginButton(loginViewModel)
+        }
 
         if (platform.supportsRemoteSignerLogin) {
             RemoteSignerLoginButton(loginViewModel)
