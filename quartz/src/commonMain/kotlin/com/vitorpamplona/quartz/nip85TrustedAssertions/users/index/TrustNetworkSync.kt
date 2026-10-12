@@ -177,12 +177,16 @@ suspend fun INostrClient.downloadTrustNetwork(
     // Each checkpoint sorts and writes everything so far, so they are spaced geometrically: at
     // [checkpointEvery], then whenever the download has grown by half. A fixed step would cost
     // O(n²) over a million cards, on the coroutine that drains the socket.
-    var lastCheckpoint = 0
+    // Counted on the builder, not per phase: each phase (the walk, a negentropy fill, a resume's
+    // fetch) counts its own cards from 0, and against a checkpoint taken in an earlier phase a
+    // fill never reached the next one.
+    var lastCheckpoint = builder.cardCount
     val save: ((Int) -> Unit)? =
         checkpoint?.let { sink ->
-            { accepted ->
-                if (accepted - lastCheckpoint >= maxOf(checkpointEvery, lastCheckpoint / 2)) {
-                    lastCheckpoint = accepted
+            { _ ->
+                val cards = builder.cardCount
+                if (cards - lastCheckpoint >= maxOf(checkpointEvery, lastCheckpoint / 2)) {
+                    lastCheckpoint = cards
                     val (index, ids) = builder.build()
                     sink.save(TrustNetworkPartial(TrustNetworkHeader(provider, relay.url, syncCursor = 0, lastFullCheck = 0, lastUpdate = 0), index, ids))
                 }

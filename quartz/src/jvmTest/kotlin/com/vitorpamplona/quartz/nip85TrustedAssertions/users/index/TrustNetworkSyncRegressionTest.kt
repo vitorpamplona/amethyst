@@ -261,6 +261,24 @@ class TrustNetworkSyncRegressionTest {
         }
 
     @Test
+    fun theNegentropyFillAfterPagingKeepsCheckpointing() =
+        runBlocking {
+            // Paging gets 2,000 cards (the dense second's first page and the older ones), then
+            // negentropy fills the other 2,500. The fill counted from 0 against a last checkpoint
+            // of 2,000, so it never saved: an interruption there lost everything it fetched.
+            val dense = List(3_000) { card(hex(), 50, batchTime) }
+            val older = List(1_500) { i -> card(hex(), 50, batchTime - 1 - i) }
+            val saved = mutableListOf<Int>()
+            val result =
+                withRelay(dense + older, pageCap = 500) { _, client, relay ->
+                    client.downloadTrustNetwork(provider.pubKey, relay, checkpoint = { saved += it.cards }, checkpointEvery = 1_000)
+                }
+            assertTrue(result.complete, result.detail)
+            assertEquals(4_500, result.index.size)
+            assertEquals(listOf(1_000, 2_000, 3_000, 4_500), saved, "the fill checkpoints too")
+        }
+
+    @Test
     fun aSecondDenserThanTheRelaysPageIsFetchedByNegentropy() =
         runBlocking {
             // A provider publishing a batch: 1,200 cards in one second, on a relay that pages 500
