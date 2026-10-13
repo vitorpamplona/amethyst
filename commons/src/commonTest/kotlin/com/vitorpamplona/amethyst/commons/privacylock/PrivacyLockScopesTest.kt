@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst.commons.privacylock
 
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
@@ -28,6 +29,7 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 
 /** Each of the three locks (app, messages, wallet) has its own switch and its own state. */
+@OptIn(ExperimentalCoroutinesApi::class)
 class PrivacyLockScopesTest {
     private class ScopedSettings(
         app: Boolean = false,

@@ -97,7 +97,18 @@ class KtorRelay(
             httpCommands?.trustedProxies ?: emptySet(),
             httpCommands?.clientAddressHeader ?: HttpCommandSettings().clientAddressHeader,
         ),
+    /**
+     * Largest WebSocket frame the relay accepts; a bigger one closes the socket with 1009. Ktor
+     * allocates a frame's buffer as soon as its header names the length, so without a cap a single
+     * header claiming 2 GB costs that much memory before any payload arrives.
+     */
+    val maxFrameSize: Long = DEFAULT_MAX_FRAME_SIZE,
 ) {
+    companion object {
+        /** Room for a large contact list or long-form article; far below what could exhaust the heap. */
+        const val DEFAULT_MAX_FRAME_SIZE: Long = 1024 * 1024
+    }
+
     /**
      * NIP-86 HTTP adapter. Wraps the engine's [RelayEngine.nip86Server]
      * with the NIP-98 HTTP flow ([Nip86HttpHandler]) and binds it to
@@ -189,7 +200,7 @@ class KtorRelay(
                 rootConfig =
                     serverConfig {
                         module {
-                            install(WebSockets)
+                            install(WebSockets) { maxFrameSize = this@KtorRelay.maxFrameSize }
                             routing {
                                 // NIP-11: GET on the relay URL with Accept:
                                 // application/nostr+json returns the relay info doc.

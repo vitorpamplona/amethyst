@@ -48,6 +48,7 @@ import com.vitorpamplona.amethyst.commons.search.SearchSortOrder
 import com.vitorpamplona.amethyst.commons.search.SearchSource
 import com.vitorpamplona.amethyst.commons.search.SearchState
 import com.vitorpamplona.amethyst.commons.search.wholeInputNip19
+import com.vitorpamplona.amethyst.commons.ui.components.namecoin.namecoinLookupTerm
 import com.vitorpamplona.amethyst.commons.ui.note.creators.userSuggestions.userUriPrefixes
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.relays.common.relaySetupInfoBuilder
 import com.vitorpamplona.quartz.buzz.invite.BuzzInviteLink
@@ -241,16 +242,7 @@ class SearchBarViewModel(
                     return@mapLatest resolvePetnamePath(path)
                 }
 
-                // NIP-05 resolution: user@domain or bare .bit domain
-                val nip05 =
-                    if (term.contains('@')) {
-                        Nip05Id.parse(term)
-                    } else if (term.endsWith(".bit", ignoreCase = true)) {
-                        // Bare .bit domain → synthesize _@domain.bit
-                        Nip05Id("_", term.lowercase())
-                    } else {
-                        null
-                    }
+                val nip05 = directNip05Target(term)
                 when {
                     nip05 != null -> {
                         runCatching {
@@ -700,3 +692,20 @@ class SearchBarViewModel(
         ): T = SearchBarViewModel(account, nip05, historyStorage, initialQuery) as T
     }
 }
+
+/**
+ * The NIP-05 address the search field asks to open directly: `user@domain`, or a bare `.bit`
+ * domain. The `.bit` case goes through [namecoinLookupTerm], like the inline Namecoin row, so a
+ * seeded chip such as `kind:git ` is not glued to the name typed after it and looked up as
+ * `_@kind:git name.bit`. `user@domain` needs no such gate: [Nip05Id.parse] rejects anything with
+ * spaces or a `:` in it.
+ */
+internal fun directNip05Target(term: String): Nip05Id? =
+    if (term.contains('@')) {
+        Nip05Id.parse(term)
+    } else {
+        namecoinLookupTerm(term)
+            ?.takeIf { it.endsWith(".bit", ignoreCase = true) }
+            // Bare .bit domain → synthesize _@domain.bit
+            ?.let { Nip05Id("_", it.lowercase()) }
+    }

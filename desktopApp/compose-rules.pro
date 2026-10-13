@@ -202,6 +202,32 @@
     native <methods>;
 }
 
+# Any library can bind its natives from JNI_OnLoad with RegisterNatives, which
+# fails for the whole table when one declaration is missing, and shrink cannot
+# see those callers. Keep every native of every class that is kept anyway; the
+# declarations cost nothing. verifyJniNativesSurviveProguard checks it holds.
+-keepclassmembers class * {
+    native <methods>;
+}
+
+# ============================================================================
+# Desktop-only: vico charts — Kotlin interface default-method super-calls.
+# MutableCartesianMeasuringContext implements both MeasuringContext and
+# CartesianMeasuringContext (which extends it), and its getPixels()/isLtr()
+# bodies are `invokespecial MeasuringContext.<default>` calls. The JVM
+# requires an invokespecial interface-method target to be a *direct*
+# superinterface of the class — but shrink prunes the "redundant" direct
+# MeasuringContext implements edge (reachable via CartesianMeasuringContext),
+# producing bytecode the verifier rejects at class-load time:
+#   java.lang.VerifyError: Bad invokespecial instruction: interface method
+#   reference is in an indirect superinterface
+# on the first notifications-chart composition. Confirmed by diffing the
+# proguarded bundle against the pristine com.patrykandpatrick.vico:
+# compose-desktop:3.3.1 artifact. Package-wide keep pins the hierarchy;
+# which edge the shrinker deems redundant can shift with any vico bump.
+# ============================================================================
+-keep class com.patrykandpatrick.vico.** { *; }
+
 # ============================================================================
 # Desktop-only: OkHttp / Conscrypt / BouncyCastle / OpenJSSE / Graal
 # ============================================================================

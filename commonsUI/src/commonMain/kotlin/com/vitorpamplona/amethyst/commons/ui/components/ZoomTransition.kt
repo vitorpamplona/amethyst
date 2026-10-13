@@ -24,6 +24,7 @@ import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.tween
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.Stable
 import androidx.compose.runtime.getValue
@@ -32,6 +33,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
+import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Rect
@@ -43,6 +45,8 @@ import androidx.compose.ui.graphics.TransformOrigin
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.LayoutCoordinates
+import androidx.compose.ui.layout.boundsInWindow
+import androidx.compose.ui.layout.findRootCoordinates
 import androidx.compose.ui.layout.onPlaced
 import androidx.compose.ui.layout.positionInWindow
 import androidx.compose.ui.unit.Density
@@ -55,11 +59,87 @@ import kotlinx.coroutines.flow.first
 import net.engawapg.lib.zoomable.ZoomState
 
 /**
+ * Where a [ZoomTransition] starts and ends, in window coordinates: the thumbnail's whole rect
+ * ([bounds]) and the part of it that was on screen ([visibleBounds]). They differ when the
+ * thumbnail is scrolled partly out of a feed or sits under a bar: the media is laid over the whole
+ * thumbnail, so the part on screen lines up with what the feed showed, and shows only through a
+ * window that grows out of [visibleBounds], so nothing is drawn over the bars. Thumbnails get one
+ * through a [ZoomSourceAnchor].
+ */
+@Immutable
+data class ZoomSource(
+    val bounds: Rect,
+    val visibleBounds: Rect = bounds,
+) {
+    fun translate(
+        offsetX: Float,
+        offsetY: Float,
+    ) = ZoomSource(bounds.translate(offsetX, offsetY), visibleBounds.translate(offsetX, offsetY))
+}
+
+/**
+ * The part of the window, in window coordinates, where a screen's content can be seen. A scaffold
+ * that lays its content out under bars drawn on top of it (`DisappearingScaffold`) provides one
+ * through [LocalZoomViewport] that leaves out what its bars cover right now, so a thumbnail half
+ * under the top bar opens from the half that was showing instead of being drawn over the bar.
+ */
+fun interface ZoomViewport {
+    fun boundsInWindow(): Rect?
+}
+
+val LocalZoomViewport = staticCompositionLocalOf<ZoomViewport?> { null }
+
+/**
+ * Tracks a thumbnail so a viewer can grow out of it: put [zoomSourceAnchor] on the thumbnail and
+ * hand this to the viewer, which reads the [ZoomSource] with [capture] when it opens and again
+ * when it closes, so both ends match what is on screen at that moment (bars slide without moving
+ * the feed, so a position stored on the last scroll can be stale).
+ */
+@Stable
+class ZoomSourceAnchor internal constructor() {
+    internal var coordinates: LayoutCoordinates? = null
+    internal var viewport: ZoomViewport? = null
+
+    /** Where the thumbnail is now, or null when it is not laid out. */
+    fun capture(): ZoomSource? {
+        val coordinates = coordinates?.takeIf { it.isAttached } ?: return null
+        return coordinates.zoomSource(viewport?.boundsInWindow())
+    }
+}
+
+@Composable
+fun rememberZoomSourceAnchor(): ZoomSourceAnchor {
+    val viewport = LocalZoomViewport.current
+    return remember { ZoomSourceAnchor() }.also { it.viewport = viewport }
+}
+
+/** Marks the thumbnail [anchor] tracks: the media's clipped box, before any padding around it. */
+fun Modifier.zoomSourceAnchor(anchor: ZoomSourceAnchor): Modifier = onPlaced { anchor.coordinates = it }
+
+/**
+ * This layout's [ZoomSource], seen through [viewport]. [boundsInWindow] alone is clipped by every
+ * ancestor, so for a thumbnail cut off at the top or bottom of a list it is only the visible slice,
+ * and it is not clipped by bars drawn over the list, which [viewport] accounts for.
+ */
+fun LayoutCoordinates.zoomSource(viewport: Rect? = null): ZoomSource {
+    val root = findRootCoordinates()
+    val local = root.localBoundingBoxOf(this, clipBounds = false)
+    val topLeft = root.localToWindow(local.topLeft)
+    val bottomRight = root.localToWindow(local.bottomRight)
+    val visible = boundsInWindow()
+    return ZoomSource(
+        bounds = Rect(topLeft, bottomRight),
+        visibleBounds = if (viewport != null) visible.intersect(viewport) else visible,
+    )
+}
+
+/**
  * The transition of a full-screen media viewer: the media grows out of the thumbnail that was
  * clicked ([sourceBounds], in window coordinates) to its place in the viewer, and shrinks back
- * into it on dismiss. A window clipped to the thumbnail's rect (and its [sourceCornerRadius])
- * opens up to the whole viewer alongside, so the transition starts from and ends on exactly what
- * was on screen. Without a [sourceBounds] it is a plain fade.
+ * into it on dismiss. A window clipped to the visible part of the thumbnail (with its
+ * [sourceCornerRadius]) opens up to the whole viewer alongside, so the transition starts from and
+ * ends on exactly what was on screen. Without a [sourceBounds], or when none of the thumbnail is
+ * on screen, it is a plain fade.
  *
  * Use [rememberZoomTransition]. Put [zoomTransitionContainer] on the viewer's fill-size container,
  * [zoomTransitionLayer] on the fill-size box that holds the media (and nothing that should stay
@@ -68,9 +148,13 @@ import net.engawapg.lib.zoomable.ZoomState
  */
 @Stable
 class ZoomTransition internal constructor(
-    val sourceBounds: Rect?,
+    private val source: () -> ZoomSource?,
     val sourceCornerRadius: Dp,
 ) {
+    /** Where the thumbnail was when the viewer opened, then where it is when the viewer closes. */
+    var sourceBounds by mutableStateOf(source())
+        private set
+
     /** 0 at the thumbnail, 1 in the viewer. */
     internal val animatable = Animatable(0f)
 
@@ -87,7 +171,12 @@ class ZoomTransition internal constructor(
 
     /** Plays the exit, then calls the dismiss callback given to [rememberZoomTransition]. */
     fun dismiss() {
-        if (!isExiting) isExiting = true
+        if (isExiting) return
+        // The thumbnail may have moved under the viewer (insets changing as the viewer hid the
+        // system bars, a bar sliding back): shrink into where it is now. Keep the old one if it
+        // is gone.
+        source()?.let { sourceBounds = it }
+        isExiting = true
     }
 
     /**
@@ -116,17 +205,27 @@ class ZoomTransition internal constructor(
     }
 }
 
+/** A [ZoomTransition] out of the thumbnail [anchor] tracks, or a fade without one. */
+@Composable
+fun rememberZoomTransition(
+    anchor: ZoomSourceAnchor?,
+    sourceCornerRadius: Dp = 0.dp,
+    onDismissed: () -> Unit,
+): ZoomTransition = rememberZoomTransition({ anchor?.capture() }, sourceCornerRadius, onDismissed)
+
 /**
  * A [ZoomTransition] that grows in as soon as the media has reported its bounds (300ms) and, after
- * [ZoomTransition.dismiss], shrinks back (250ms) and then calls [onDismissed].
+ * [ZoomTransition.dismiss], shrinks back (250ms) and then calls [onDismissed]. [source] is read
+ * when the viewer opens and again when it closes; null makes it a fade.
  */
 @Composable
 fun rememberZoomTransition(
-    sourceBounds: Rect?,
+    source: () -> ZoomSource?,
     sourceCornerRadius: Dp = 0.dp,
     onDismissed: () -> Unit,
 ): ZoomTransition {
-    val transition = remember { ZoomTransition(sourceBounds, sourceCornerRadius) }
+    val currentSource by rememberUpdatedState(source)
+    val transition = remember { ZoomTransition({ currentSource() }, sourceCornerRadius) }
     val currentOnDismissed by rememberUpdatedState(onDismissed)
 
     // Start the enter animation as soon as valid media bounds are available. Without this gate,
@@ -169,14 +268,17 @@ fun Modifier.zoomTransitionLayer(
     zoomState: () -> ZoomState? = { null },
 ): Modifier =
     graphicsLayer {
-        val src = transition.sourceBounds
+        val source = transition.sourceBounds
+        val src = source?.bounds
+        val window = source?.visibleBounds
         val img = transition.mediaBounds
-        if (src != null && img != null && src.hasArea() && img.hasArea()) {
+        if (src != null && window != null && img != null && src.hasArea() && window.hasArea() && img.hasArea()) {
             // Account for user-applied zoom: the exit animation must start from the visible
             // bounds, not the unzoomed layout bounds — otherwise dismissing a zoomed-in image jumps.
             val zoomed = img.zoomedBy(zoomState())
             // Uniform scale so non-square images keep their aspect ratio during the grow
-            // animation. The image covers the source rect; the overflow is clipped below.
+            // animation. The image covers the whole thumbnail, even where it was scrolled out of
+            // view, so the part on screen lines up with what the feed showed; the rest is clipped.
             val startScale = coverScale(src, zoomed)
             val p = transition.progress
             val scale = lerp(startScale, 1f, p)
@@ -191,9 +293,10 @@ fun Modifier.zoomTransitionLayer(
 
             if (p < 1f) {
                 // The thumbnail may be a crop of the image (e.g. a square gallery cell showing a
-                // 4:3 photo). Clip to a window that morphs from the thumbnail's rect into the whole
-                // viewport, so the transition opens from and closes into exactly what was on
-                // screen. The viewport (not the measured image) is the end state so there is nothing
+                // 4:3 photo), and only part of it may be on screen (cut off at the top or bottom of
+                // the feed). Clip to a window that morphs from the visible part of the thumbnail
+                // into the whole viewport, so the transition opens from and closes into exactly what
+                // was on screen. The viewport (not the measured image) is the end state so there is nothing
                 // to snap when the clip turns off at p = 1, where pager neighbours must show.
                 // Window coordinates, mapped back into this layer's pre-transform space. A layer
                 // outline, not a draw-phase clip, so animating it doesn't re-record the pager's
@@ -201,16 +304,25 @@ fun Modifier.zoomTransitionLayer(
                 //
                 // The window keeps the thumbnail's rounded corners and squares them off as it
                 // grows, reaching 0 exactly at full screen (and rounding back on the way out),
-                // instead of snapping square on the first frame.
+                // instead of snapping square on the first frame. An edge the feed cut off was
+                // square on screen, so the corners on it stay square.
+                val radius = lerp(transition.sourceCornerRadius.toPx(), 0f, p) / scale
+                val leftCut = window.left > src.left + 0.5f
+                val topCut = window.top > src.top + 0.5f
+                val rightCut = window.right < src.right - 0.5f
+                val bottomCut = window.bottom < src.bottom - 0.5f
                 shape =
                     RectClipShape(
                         Rect(
-                            left = (lerp(src.left, 0f, p) - tx) / scale,
-                            top = (lerp(src.top, 0f, p) - ty) / scale,
-                            right = (lerp(src.right, size.width, p) - tx) / scale,
-                            bottom = (lerp(src.bottom, size.height, p) - ty) / scale,
+                            left = (lerp(window.left, 0f, p) - tx) / scale,
+                            top = (lerp(window.top, 0f, p) - ty) / scale,
+                            right = (lerp(window.right, size.width, p) - tx) / scale,
+                            bottom = (lerp(window.bottom, size.height, p) - ty) / scale,
                         ),
-                        cornerRadius = lerp(transition.sourceCornerRadius.toPx(), 0f, p) / scale,
+                        topLeftRadius = if (topCut || leftCut) 0f else radius,
+                        topRightRadius = if (topCut || rightCut) 0f else radius,
+                        bottomRightRadius = if (bottomCut || rightCut) 0f else radius,
+                        bottomLeftRadius = if (bottomCut || leftCut) 0f else radius,
                     )
                 clip = true
             }
@@ -283,15 +395,26 @@ internal fun coverScale(
 /** Clips a layer to a fixed [rect] in its own coordinates, regardless of the layer's size. */
 private class RectClipShape(
     private val rect: Rect,
-    private val cornerRadius: Float = 0f,
+    private val topLeftRadius: Float,
+    private val topRightRadius: Float,
+    private val bottomRightRadius: Float,
+    private val bottomLeftRadius: Float,
 ) : Shape {
     override fun createOutline(
         size: Size,
         layoutDirection: LayoutDirection,
         density: Density,
     ): Outline =
-        if (cornerRadius > 0f) {
-            Outline.Rounded(RoundRect(rect, CornerRadius(cornerRadius)))
+        if (topLeftRadius > 0f || topRightRadius > 0f || bottomRightRadius > 0f || bottomLeftRadius > 0f) {
+            Outline.Rounded(
+                RoundRect(
+                    rect,
+                    CornerRadius(topLeftRadius),
+                    CornerRadius(topRightRadius),
+                    CornerRadius(bottomRightRadius),
+                    CornerRadius(bottomLeftRadius),
+                ),
+            )
         } else {
             Outline.Rectangle(rect)
         }

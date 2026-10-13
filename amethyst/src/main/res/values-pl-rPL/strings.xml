@@ -2,24 +2,6 @@
 <resources xmlns:tools="http://schemas.android.com/tools">
     <!-- Placeholder shown in a chat row while an encrypted message is still being decrypted -->
     <!-- Prefix on a Messages-list preview when the newest message was sent by the logged-in user. %1$s is the message text -->
-    <string name="block_hide_user"><![CDATA[Zablokuj i ukryj użytkownika]]></string>
-    <string name="boosted">wpis powtórzono</string>
-    <string name="edited_number">edytuj #%1$s</string>
-    <string name="save">Zapisz</string>
-    <string name="rename">Zmień nazwę</string>
-    <string name="concord_create_icon">URL ikony (opcjonalnie)</string>
-    <plurals name="buzz_workspaces_count">
-        <item quantity="one">%1$d przestrzeń robocza</item>
-        <item quantity="few">%1$d przestrzeni roboczych</item>
-        <item quantity="many">%1$d przestrzeni roboczych</item>
-        <item quantity="other">%1$d przestrzenie robocze</item>
-    </plurals>
-    <plurals name="buzz_workspaces_channel_count">
-        <item quantity="one">%1$d kanał</item>
-        <item quantity="few">%1$d kanałów</item>
-        <item quantity="many">%1$d kanały</item>
-        <item quantity="other">%1$d kanały</item>
-    </plurals>
     <!-- Reply-mode toggle in the chat composer: reply inline in the timeline vs pull it aside into a thread. -->
     <!-- Title of the minichat (thread) screen opened from a chat message. -->
     <!-- Title of the picked-image confirmation dialog when attaching a picture to a thread reply. -->
@@ -27,21 +9,9 @@
     <!-- A reply whose target was searched for across all reachable history and never found. -->
     <!-- Reply subtitle when every relay genuinely bottomed out (no stalls) and it still wasn't there. -->
     <!-- Overflow count on the capped reporter avatar row, e.g. "+21". -->
-    <string name="changed_chat_profile_to">Nowy profil czatu:</string>
-    <string name="route_software_apps">Aplikacje</string>
-    <string name="napplet_permissions">uprawnienia nApplet</string>
-    <string name="napplet_permissions_empty">Brak uprawnień nApplet</string>
-    <string name="napplet_permissions_empty_subtitle">Uprawnienia, które przyznasz dla nApplets pojawią się tutaj.</string>
-    <string name="napplet_permissions_forget">Zapomnij o tym nApplet</string>
-    <string name="napplet_permissions_blocked">Zablokowane</string>
-    <string name="napplet_permissions_revoke">Odwołaj</string>
     <!-- Napplet sandbox chrome (host top bar + live action notices) -->
     <!-- Napplet capability names -->
-    <string name="napplet_cap_shell">Powłoka</string>
-    <string name="napplet_cap_shell_desc">Zapytaj jakie opcje są dostępne</string>
     <!-- Napplet consent dialog -->
-    <string name="napplet_consent_capability">Możliwość: %1$s</string>
-    <string name="napplet_consent_pay">Ta aplikacja nApplet chce zapłacić fakturę w systemie Lightning.</string>
     <!-- An amountless BOLT11: the payee decides how much. Never render this as "0 sats". -->
     <!-- Consequence lines for event kinds whose payload lives entirely in the tags, so a
          kind-only summary would hide what is actually being signed. These replaceable lists are
@@ -53,12 +23,8 @@
     <!-- Re-publishing an identical list is harmless; say so rather than raising a false alarm. -->
     <!-- No cached copy to compare against, so the whole list is what gets written. -->
     <!-- Signer permissions: first-connect dialog -->
-    <string name="napplet_connect_title">Połącz z Nostr</string>
     <!-- Signer trust levels -->
     <!-- Signer per-op consent dialog -->
-    <string name="napplet_signer_allow_op">Nie pytaj ponownie do %1$s</string>
-    <string name="napplet_signer_last_used">Ostatnio użyte</string>
-    <string name="napplet_signer_expires">Wygasa</string>
     <!-- Signer op labels -->
     <!-- Decrypt: the message is already decrypted by Amethyst; the permission is to expose it to the app -->
     <!-- Decrypt scoped to one counterparty. %1$s is that person's name (or a shortened npub) -->
@@ -66,21 +32,7 @@
     <!-- Shown as the preview when Amethyst itself cannot decrypt the message the app asked to read -->
     <!-- Label above the counterparty avatar in the decrypt consent dialog -->
     <!-- Permissions management screen -->
-    <string name="napplet_permissions_revoke_all">Cofnij wszystkie uprawnienia</string>
-    <string name="napplet_permissions_overrides">Nadpisywanie operacji</string>
-    <string name="napplet_signer_permissions_empty">Żadna aplikacja jeszcze się nie połączyła.</string>
     <!-- NIP-46 remote signer (bunker) -->
-    <string name="nip46_signer_search_keywords">logowanie bunkier nip46 nostr zdalne logowanie</string>
-    <string name="nip46_signer_enable">Występuj jako zdalny sygnatariusz</string>
-    <plurals name="nip46_signer_status_listening">
-        <item quantity="one">Nasłuchuje %1$d transmiter</item>
-        <item quantity="few">Nasłuchuje %1$d transmitery</item>
-        <item quantity="many">Nadsłuchuje %1$d transmitterów</item>
-        <item quantity="other">Nasłuchuje %1$d transmitery</item>
-    </plurals>
-    <string name="nip46_signer_bunker_uri_label">Twój adres bunkra</string>
-    <string name="nip46_signer_bunker_uri_hint">Wklej to do innej aplikacji, aby połączyć to ze swoim kluczem.</string>
-    <string name="nip46_signer_activity_empty">Nie obsłużono jeszcze żadnych zgłoszeń.</string>
     <!-- Relay Authentication (NIP-42) settings -->
     <!-- The group header carries the grammar; each toggle is a completion of the sentence, so these
          keys are new rather than reused - a stale translation of the old standalone titles would
@@ -93,22 +45,7 @@
     <!-- No longer shown in the prompt: kept so the existing translations aren't orphaned. -->
     <!-- Settings: three lists that each hold what their header says. -->
     <!-- Short labels for the purpose chips on a "recent logins" row. -->
-    <string name="agent_console_title">Konsola agenta</string>
-    <string name="podcast_premium">Premium</string>
-    <string name="podcast_value_add_recipient">Dodaj odbiorcę</string>
-    <string name="private_note_no_receivers">Nie ma jeszcze odbiorców: ten wpis zobaczysz tylko Ty. Dodaj osoby, którym chcesz go udostępnić.</string>
     <!-- Composer audience control (Notify / "Visible to") -->
-    <string name="notify_add_user">Dodaj</string>
-    <string name="notify_remove_user">Usuń użytkownika z powiadomień</string>
-    <string name="notify_search_and_add_user">Wyszukaj i dodaj użytkownika do powiadomień</string>
-    <string name="set_preferred_media_servers">Ustaw swoje preferowane serwery przesyłania multimediów.</string>
-    <string name="manage_stored_files">Zarządzaj przechowywanymi plikami</string>
-    <string name="blossom_delete_from">Usuń z…</string>
-    <string name="recommended_media_servers">Polecane serwery multimediów</string>
-    <string name="built_in_servers_description">Domyślna lista Amethyst-a. Możesz dodawać je pojedynczo lub dodać pełną listę.</string>
-    <string name="media_server_status_checking">Sprawdzanie…</string>
-    <string name="app_notification_replies_channel_message">%1$s odpowiedział</string>
-    <string name="app_notification_replies_channel_message_for">na: %1$s</string>
     <!-- Notification channel groups (organize the per-kind channels in system settings) -->
     <!-- Reposts -->
     <!-- Media (picture &amp; video posts that mention you) -->
@@ -128,12 +65,7 @@
          a relay count they think is too high. -->
     <!-- Two countable nouns, so two plurals composed at the call site rather than one string with
          two %d in it: filter and relay decline independently in Slavic/Baltic/Semitic languages. -->
-    <string name="active_subs_pair">%1$s \u00b7 %2$s</string>
-    <string name="always_on_notif_setting_title">Usługa powiadomień zawsze włączona</string>
-    <string name="always_on_notif_setting_description">Utrzymuje stałe połączenie z transmiterami odbiorczymi, aby zapewnić natychmiastowe dostarczanie powiadomień. Wyświetla bieżące powiadomienia. Zużywa więcej baterii, ale gwarantuje, że nigdy nie przegapisz żadnej wiadomości.</string>
     <string name="always_on_notif_tile_label">Usługa powiadomień</string>
-    <string name="notification_service_participation_title">Zachowaj aktywne konto w tle</string>
-    <string name="preferences">Ustawienia Aplikacji</string>
     <!-- Settings search -->
     <!-- Settings search keywords: an English concept/protocol index that supplements the
          (translated) row titles. Marked translatable="false" so protocol terms (blossom, nsec,
@@ -141,52 +73,11 @@
     <!-- Compact label for the segmented control, where "Unmetered WiFi" does not fit. -->
     <!-- Compact labels for the segmented control. -->
     <!-- Compact labels for the segmented control, rendered in each option's own typeface. -->
-    <string name="messages_create_public_chat">Publiczna</string>
-    <string name="messages_create_group">Grupa</string>
     <!-- New conversation chooser (full-screen picker opened from the Messages FAB).
          Each row stays lean; the "best for" line and the pros/cons appear only when a row is tapped. -->
     <!-- Buzz calls its groups channels, and a Buzz relay is one workspace rather than a directory of groups. -->
-    <string name="buzz_channel_flag_forum">Kanał forum</string>
-    <string name="buzz_channel_flag_forum_desc">Wpisy w wątku zamiast osi czasu czatu. Nie można tego później zmienić.</string>
-    <string name="relay_group_create_name">Nazwa grupy</string>
-    <string name="relay_group_create_topic">Temat (opcjonalnie)</string>
-    <string name="relay_group_create_private">Prywatna (odczyt tylko dla członków)</string>
-    <string name="relay_group_create_invite_only">Tylko zaproszenie</string>
-    <string name="relay_group_create_confirm">Utwórz</string>
-    <string name="relay_group_invite_generating">Tworzenie zaproszenia…</string>
-    <string name="relay_group_invite_copied">Kod zaproszenia skopiowany</string>
-    <string name="relay_group_edit_name">Nazwa grupy</string>
-    <string name="relay_group_edit_topic">Temat (opcjonalnie)</string>
-    <string name="relay_group_edit_private">Prywatna (odczyt tylko dla członków)</string>
-    <string name="relay_group_edit_invite_only">Tylko na zaproszenie</string>
-    <string name="relay_group_edit_confirm">Zapisz</string>
-    <string name="relay_group_location_edit">Zmień lokalizację</string>
     <!-- Reusable geohash location picker (shared, not group-specific) -->
-    <string name="relay_group_discovery_empty">Szukam grup w Twoich transmiterach…</string>
-    <string name="relay_group_discovery_empty_filtered">Nie znaleziono jeszcze żadnych grup dla tego filtra.</string>
     <!-- Same, where this viewer cannot start one: not a member, or a Buzz chat channel (forum posts belong to forum channels). -->
-    <string name="relay_group_thread_body_label">Napisz coś…</string>
-    <string name="relay_group_thread_post">Post</string>
-    <string name="channel_invite_title">Dodano do %1$s</string>
-    <plurals name="relay_group_message_count">
-        <item quantity="one">%1$d wiadomość</item>
-        <item quantity="few">%1$d wiadomości</item>
-        <item quantity="many">%1$d wiadomości</item>
-        <item quantity="other">%1$d wiadomości</item>
-    </plurals>
-    <plurals name="relay_group_message_count_capped">
-        <item quantity="one">%1$d+ wiadomość</item>
-        <item quantity="few">%1$d+ wiadomości</item>
-        <item quantity="many">%1$d+ wiadomości</item>
-        <item quantity="other">%1$d+ wiadomości</item>
-    </plurals>
-    <plurals name="relay_group_follows_participating">
-        <item quantity="one">%1$d osoba, którą obserwujesz</item>
-        <item quantity="few">%1$d osób, które obserwujesz</item>
-        <item quantity="many">%1$d osób, które obserwujesz</item>
-        <item quantity="other">%1$d osoby, które obserwujesz</item>
-    </plurals>
-    <string name="messages_new_message">Prywatna</string>
     <string name="share_target_as_dm">Wyślij jako DM</string>
     <string name="share_target_as_highlight">Nowe wyróżnienie</string>
     <string name="share_target_as_picture">Nowe zdjęcie</string>
@@ -195,59 +86,15 @@
     <string name="share_target_scan_qr">Zeskanuj QR kod</string>
     <string name="shortcut_scan_qr_short">Skanuj QR </string>
     <string name="shortcut_scan_qr_long">Zeskanuj QR kod</string>
-    <string name="new_highlight_passage_label">Wyróżniony tekst</string>
     <!-- Label for the mixed media feed: pictures + every NIP-71 video kind + NIP-94 files.
          Distinct from the "shorts" string, which labels the vertical/short-video-only feed. -->
-    <string name="cashu_p2pk_section">Klucz Nutzap (zaawansowany)</string>
-    <string name="cashu_p2pk_explainer">Oddzielny klucz prywatny służący wyłącznie do odbierania NIP-61 Nutzaps. Nie jest to klucz tożsamości Nostr.</string>
-    <string name="cashu_p2pk_autogen">Wygeneruj nowy klucz</string>
-    <string name="cashu_p2pk_manual_label">Klucz prywatny P2PK (hex)</string>
-    <string name="wallet_save_changes">Aktualizuj dane mojego konta</string>
     <!-- Onchain zap send dialog -->
-    <string name="bottom_bar_settings_description">Przeciągnij, aby zmienić kolejność. Przełącz, aby dodać lub usunąć element z dolnego paska. Gdy nie ma żadnych elementów, dolny pasek jest ukryty.</string>
-    <string name="bottom_bar_settings_reorder">Zmień kolejność</string>
-    <string name="home_tabs_settings_description">Wybierz, które karty pojawiają się na ekranie głównym. Gdy tylko jedna karta jest aktywna, pasek karty jest ukryty.</string>
-    <string name="profile_ui_settings_description">Wybierz które sekcje i kanały pojawiają się na ekranach profilu użytkownika. Wszystkie opcje są domyślnie włączone.</string>
     <!-- Buzz kind-40099 system messages: relay-authored narration of a channel state change. -->
     <!-- Fallback for a system message type this version does not know yet: "alice: some_new_type". -->
     <!-- Buzz huddles (kind 481xx): live audio-room lifecycle, narrated in the chat timeline. -->
     <!-- Buzz agent jobs (kind 43xxx): an agent task's lifecycle, narrated in the chat timeline. -->
     <!-- Buzz forum votes (kind 45002). -->
-    <string name="buzz_workspaces_title">Przestrzenie robocze Buzz</string>
-    <string name="buzz_workspaces_hero_tagline">Gdzie ludzie i agenci tworzą wspólnie</string>
-    <string name="buzz_workspaces_leave">Opuść przestrzeń roboczą</string>
-    <string name="buzz_workspaces_section">Twoja przestrzeń robocza</string>
-    <string name="buzz_workspaces_empty_title">Brak przestrzeni roboczej</string>
-    <string name="buzz_workspaces_empty_body">Przestrzeń robocza Buzz to przestrzenie gdzie ludzie i agenci AI budują wspólnie. Dołącz, aby zobaczyć ją tutaj.</string>
-    <string name="buzz_workspaces_browse">Przeglądaj grupy</string>
-    <string name="buzz_console_card_subtitle">Koszty · Osoby · Obserwator na żywo</string>
-    <string name="buzz_dm_nav_label">Buzz DM</string>
-    <string name="buzz_dm_card_subtitle">Prywatne rozmowy na twoich przestrzeniach roboczych</string>
-    <string name="buzz_import_title">Importuj kanały przestrzeni roboczej</string>
-    <string name="buzz_import_your_channels">Twoje kanały na tej przestrzeni roboczej</string>
-    <string name="buzz_import_add">Dodaj</string>
-    <string name="buzz_import_empty_title">Nie znaleziono kanałów</string>
-    <string name="buzz_import_empty_body">Wygląda na to, że nie jesteś jeszcze członkiem żadnego kanału w tym transmiterze. Najpierw zaakceptuj zaproszenie do przestrzeni roboczej w przeglądarce, a następnie spróbuj ponownie.</string>
-    <string name="git_web_address">Strona internetowa:</string>
-    <string name="git_repo_tab_overview">Przegląd</string>
-    <string name="git_repo_maintained_by">Utrzymywane przez</string>
-    <string name="git_repo_section_about">O programie</string>
-    <string name="git_repo_section_links">Linki</string>
-    <string name="git_repo_section_maintainers">Opiekunowie</string>
-    <string name="git_repo_section_topics">Tematy</string>
-    <string name="git_repo_tab_readme">Plik Readme</string>
-    <string name="git_issue_close">Zamknij problem</string>
-    <string name="git_issue_reopen">Otwórz ponownie</string>
-    <string name="media_servers_blossom_section">Serwery Blossom</string>
-    <string name="media_servers_blossom_explainer">Dodaj tyle serwerów, ile chcesz. Możesz wybrać, z którego chcesz skorzystać później podczas wgrywania zdjęcia</string>
-    <string name="torrent_download">Pobierz</string>
     <!-- %1$s is replaced at runtime by an inline star icon, not text. Keep the placeholder. -->
-    <string name="resource_usage_today">Dzisiaj</string>
-    <string name="resource_usage_week">Ostatnie 7 dni</string>
-    <string name="resource_usage_cellular_bg">Dane mobilny (w tle)</string>
-    <string name="resource_usage_cellular_fg">Dane komórkowe (w aplikacji)</string>
-    <string name="resource_usage_wifi">Dane Wi-Fi</string>
-    <string name="resource_usage_fg_time">Czas w aplikacji</string>
     <!-- Kind display names for relay subscription filter chips -->
     <!-- M3 Action Dialog titles -->
     <!-- Nicknames (NIP-85 contact cards); the dialog strings live in commons -->

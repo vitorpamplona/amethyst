@@ -42,7 +42,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalWindowInfo
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.LocalWindowExceptionHandlerFactory
-import androidx.compose.ui.window.Window
 import androidx.compose.ui.window.WindowPlacement
 import androidx.compose.ui.window.WindowPosition
 import androidx.compose.ui.window.WindowState
@@ -64,6 +63,7 @@ import com.vitorpamplona.amethyst.commons.ui.screen.collectDisplaySettings
 import com.vitorpamplona.amethyst.commons.ui.theme.AmethystMaterialTheme
 import com.vitorpamplona.amethyst.commons.ui.theme.isDarkTheme
 import com.vitorpamplona.amethyst.desktop.platform.AmethystWindowExceptionHandlerFactory
+import com.vitorpamplona.amethyst.desktop.platform.AppWindow
 import com.vitorpamplona.amethyst.desktop.platform.DesktopDrawerMetrics
 import com.vitorpamplona.amethyst.desktop.platform.DesktopTypography
 import com.vitorpamplona.amethyst.desktop.platform.IconResources
@@ -73,6 +73,7 @@ import com.vitorpamplona.amethyst.desktop.platform.PlatformIconWeight
 import com.vitorpamplona.amethyst.desktop.platform.PlatformInfo
 import com.vitorpamplona.amethyst.desktop.platform.ProvideTitleBarInsets
 import com.vitorpamplona.amethyst.desktop.platform.SavedWindowBounds
+import com.vitorpamplona.amethyst.desktop.platform.WaylandDisplay
 import com.vitorpamplona.amethyst.desktop.platform.applyNativeWindowChrome
 import com.vitorpamplona.amethyst.desktop.platform.boundsToSave
 import com.vitorpamplona.amethyst.desktop.platform.clickToActivate
@@ -116,6 +117,10 @@ fun main(args: Array<String>) {
 
     // CI runs this on each packaged build: the OS keyring must work in what ships, not only in dev.
     if (args.contains("--keyring-self-test")) exitProcess(runKeyringSelfTest())
+
+    // Linux: native Wayland when the session has it. Like the macOS properties below, it must be
+    // decided before AWT starts.
+    WaylandDisplay.configure()
 
     // macOS: the menu bar goes to the top of the screen, under the app's own name. Both must be set
     // before AWT starts.
@@ -213,7 +218,7 @@ fun main(args: Array<String>) {
         // A crash in the window's UI shows our crash window, not Compose's bare system "Error" box.
         CompositionLocalProvider(LocalWindowExceptionHandlerFactory provides exceptionHandlerFactory) {
             key(windowGeneration) {
-                Window(
+                AppWindow(
                     onCloseRequest = ::exitApplication,
                     state = windowState,
                     title = "Amethyst",
@@ -221,9 +226,9 @@ fun main(args: Array<String>) {
                     onPreviewKeyEvent = { root.navigator.handleShortcut(it, onQuit = ::exitApplication) },
                 ) {
                     // macOS: the title bar turns transparent over the app, which draws its own strip there.
-                    applyNativeWindowChrome()
+                    frameScope?.applyNativeWindowChrome()
 
-                    DesktopMenuBar(root.navigator, onQuit = ::exitApplication)
+                    frameScope?.DesktopMenuBar(root.navigator, onQuit = ::exitApplication)
 
                     // The window outlives every destination: screens that share state across destinations
                     // (the chess lobby and board, the Cordn group draft) keep it here.

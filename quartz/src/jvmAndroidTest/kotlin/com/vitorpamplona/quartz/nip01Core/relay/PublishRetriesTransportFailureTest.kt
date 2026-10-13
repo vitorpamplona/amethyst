@@ -26,6 +26,7 @@ import com.vitorpamplona.quartz.nip01Core.relay.client.NostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.PublishResult
 import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.publishAndCollectResults
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
 import com.vitorpamplona.quartz.nip01Core.relay.sockets.WebSocket
 import com.vitorpamplona.quartz.nip01Core.relay.sockets.WebSocketListener
 import com.vitorpamplona.quartz.nip01Core.relay.sockets.WebsocketBuilder
@@ -36,6 +37,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.runBlocking
+import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.atomic.AtomicInteger
 import kotlin.test.AfterTest
 import kotlin.test.Test
@@ -212,6 +214,41 @@ class PublishRetriesTransportFailureTest {
                 builder.eventFramesSeen.get(),
                 "an OK on the first try must not be followed by a speculative resend",
             )
+            client.disconnect()
+        }
+
+    @Test
+    fun aRetryOnOneRelayLeavesTheOthersConnected() =
+        runBlocking {
+            // The retry used to reconnect the whole pool: every healthy socket was torn down and
+            // dialed again (resending every REQ, redoing every AUTH) because one relay hung up.
+            val flaky = RelayUrlNormalizer.normalize("ws://127.0.0.1:7771/")
+            val healthy = InProcessRelays.DEFAULT_URL
+            val socketsTo = ConcurrentHashMap<NormalizedRelayUrl, AtomicInteger>()
+            val flakyHub = HangsUpOnFirstEvent(hub, dropFirstConnections = 1)
+            val builder =
+                object : WebsocketBuilder {
+                    override fun build(
+                        url: NormalizedRelayUrl,
+                        out: WebSocketListener,
+                    ): WebSocket {
+                        socketsTo.getOrPut(url) { AtomicInteger(0) }.incrementAndGet()
+                        return if (url == flaky) flakyHub.build(url, out) else hub.build(url, out)
+                    }
+                }
+            val client = NostrClient(builder, scope)
+            val event = NostrSignerInternal(KeyPair()).sign(TextNoteEvent.build("one relay hangs up"))
+
+            val results =
+                client.publishAndCollectResults(
+                    event = event,
+                    relayList = setOf(healthy, flaky),
+                    timeoutInSeconds = 20,
+                )
+
+            assertTrue(results.getValue(healthy).accepted)
+            assertTrue(results.getValue(flaky).accepted, "the flaky relay is retried (got \"${results.getValue(flaky).message}\")")
+            assertEquals(1, socketsTo.getValue(healthy).get(), "the healthy relay must keep its one socket")
             client.disconnect()
         }
 

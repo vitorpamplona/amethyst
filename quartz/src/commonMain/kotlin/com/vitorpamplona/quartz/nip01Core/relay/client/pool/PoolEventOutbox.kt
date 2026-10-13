@@ -75,14 +75,14 @@ class PoolEventOutbox {
         var relaysToRemoveCounter = 0
 
         currentRelays.forEach { currentRelay ->
-            if (eventOutbox.values().none { currentRelay in it.relaysRemaining }) {
+            if (eventOutbox.values().none { it.isSupposedToGo(currentRelay) }) {
                 relaysToRemoveCounter++
             }
         }
 
         var relaysToAddCounter = 0
         eventOutbox.values().forEach { outboxState ->
-            if (outboxState.relaysRemaining.any { it !in currentRelays }) {
+            if (outboxState.relaysLeft().any { it !in currentRelays }) {
                 relaysToAddCounter++
             }
         }
@@ -96,14 +96,14 @@ class PoolEventOutbox {
                 val relaysToRemove = mutableSetOf<NormalizedRelayUrl>()
 
                 currentRelays.forEach { currentRelay ->
-                    if (eventOutbox.values().none { currentRelay in it.relaysRemaining }) {
+                    if (eventOutbox.values().none { it.isSupposedToGo(currentRelay) }) {
                         relaysToRemove.add(currentRelay)
                     }
                 }
 
                 val relaysToAdd = mutableSetOf<NormalizedRelayUrl>()
                 eventOutbox.values().forEach { outboxState ->
-                    outboxState.relaysRemaining.forEach { relay ->
+                    outboxState.relaysLeft().forEach { relay ->
                         if (relay !in relaysToAdd && relay !in currentRelays) {
                             relaysToAdd.add(relay)
                         }
@@ -118,7 +118,7 @@ class PoolEventOutbox {
     fun activeOutboxCacheFor(url: NormalizedRelayUrl): Set<HexKey> {
         val myEvents = mutableSetOf<HexKey>()
         eventOutbox.forEach { eventId, outboxCache ->
-            if (url in outboxCache.relaysRemaining) {
+            if (outboxCache.isSupposedToGo(url)) {
                 myEvents.add(eventId)
             }
         }
@@ -133,7 +133,7 @@ class PoolEventOutbox {
     fun activeOutboxEventsFor(url: NormalizedRelayUrl): List<Event> {
         val myEvents = mutableListOf<Event>()
         eventOutbox.forEach { _, outboxCache ->
-            if (url in outboxCache.relaysRemaining) {
+            if (outboxCache.isSupposedToGo(url)) {
                 myEvents.add(outboxCache.event)
             }
         }
@@ -283,7 +283,7 @@ class PoolEventOutbox {
         errorMessage: String,
     ) {
         eventOutbox.forEach { id, outboxCache ->
-            if (relay in outboxCache.relaysRemaining) {
+            if (outboxCache.isSupposedToGo(relay)) {
                 newResponse(id, relay, false, errorMessage)
             }
         }

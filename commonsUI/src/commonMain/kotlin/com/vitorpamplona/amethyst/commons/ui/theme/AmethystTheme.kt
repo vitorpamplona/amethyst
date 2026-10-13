@@ -182,7 +182,11 @@ fun FontFamilyType.toFontFamily(): FontFamily? =
  * card, and Material's 8% black wash over it reads as a heavy gray block under a mouse; 4% still
  * marks the card. Press, focus and drag keep Material's values (touch feedback is unchanged), and
  * dark mode keeps its hover: a white wash over a dark card is already faint.
+ *
+ * RippleAlpha is deprecated in Material3 1.12, but its replacements (RippleThemeConfiguration,
+ * RippleConfiguration.Focus) only cover focus: the hover layer has no public setting yet.
  */
+@Suppress("DEPRECATION")
 fun amethystRippleConfiguration(
     darkTheme: Boolean,
     showHover: Boolean = true,

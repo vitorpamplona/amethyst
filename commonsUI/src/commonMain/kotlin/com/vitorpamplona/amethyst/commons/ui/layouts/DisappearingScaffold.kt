@@ -42,14 +42,21 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.nestedscroll.nestedScroll
+import androidx.compose.ui.layout.LayoutCoordinates
 import androidx.compose.ui.layout.SubcomposeLayout
+import androidx.compose.ui.layout.onPlaced
+import androidx.compose.ui.layout.positionInWindow
 import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.toSize
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
+import com.vitorpamplona.amethyst.commons.ui.components.LocalZoomViewport
+import com.vitorpamplona.amethyst.commons.ui.components.ZoomViewport
 import com.vitorpamplona.amethyst.commons.ui.insets.rememberSafeImeInsets
 import com.vitorpamplona.amethyst.commons.ui.theme.DividerThickness
 import kotlinx.coroutines.launch
@@ -164,7 +171,9 @@ private fun ScaffoldLayout(
     mainContent: @Composable (padding: PaddingValues) -> Unit,
 ) {
     val navBarInsets = WindowInsets.navigationBars
-    SubcomposeLayout { constraints ->
+    val outerViewport = LocalZoomViewport.current
+    val viewport = remember(state, outerViewport) { UncoveredContentViewport(state, outerViewport) }
+    SubcomposeLayout(Modifier.onPlaced { viewport.coordinates = it }) { constraints ->
         val layoutWidth = constraints.maxWidth
         val layoutHeight = constraints.maxHeight
         val looseConstraints = constraints.copy(minWidth = 0, minHeight = 0)
@@ -230,6 +239,7 @@ private fun ScaffoldLayout(
                 CompositionLocalProvider(
                     LocalDisappearingScaffoldPadding provides contentPadding,
                     LocalDisappearingBarState provides state,
+                    LocalZoomViewport provides viewport,
                 ) {
                     mainContent(contentPadding)
                 }
@@ -256,6 +266,28 @@ private fun ScaffoldLayout(
                 fabPlaceable.place(x, yBase)
             }
         }
+    }
+}
+
+/**
+ * The content area minus what the bars, drawn over it, cover right now: the content is laid out
+ * under them (it scrolls behind the bars), so nothing else clips a thumbnail at their edge. Read
+ * when a media viewer opens or closes so it grows out of, and shrinks into, only what was showing.
+ */
+private class UncoveredContentViewport(
+    private val state: DisappearingBarState,
+    private val outer: ZoomViewport?,
+) : ZoomViewport {
+    var coordinates: LayoutCoordinates? = null
+
+    override fun boundsInWindow(): Rect? {
+        val coordinates = coordinates?.takeIf { it.isAttached } ?: return outer?.boundsInWindow()
+        val content = Rect(coordinates.positionInWindow(), coordinates.size.toSize())
+        // Offsets run from -limit (bar hidden) to 0 (bar fully shown).
+        val topCovered = (state.topHeightLimit + state.topHeightOffset).coerceAtLeast(0f)
+        val bottomCovered = (state.bottomHeightLimit + state.bottomHeightOffset).coerceAtLeast(0f)
+        val uncovered = Rect(content.left, content.top + topCovered, content.right, content.bottom - bottomCovered)
+        return outer?.boundsInWindow()?.intersect(uncovered) ?: uncovered
     }
 }
 

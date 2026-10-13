@@ -43,9 +43,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.geometry.Rect
-import androidx.compose.ui.layout.boundsInWindow
-import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalClipboard
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
@@ -61,7 +58,9 @@ import com.vitorpamplona.amethyst.commons.ui.actions.NewUserMetadataViewModel
 import com.vitorpamplona.amethyst.commons.ui.actions.uploads.GallerySelectSingle
 import com.vitorpamplona.amethyst.commons.ui.components.LoadingAnimation
 import com.vitorpamplona.amethyst.commons.ui.components.rememberViewModel
+import com.vitorpamplona.amethyst.commons.ui.components.rememberZoomSourceAnchor
 import com.vitorpamplona.amethyst.commons.ui.components.util.setText
+import com.vitorpamplona.amethyst.commons.ui.components.zoomSourceAnchor
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.note.ClickableUserPicture
 import com.vitorpamplona.amethyst.commons.ui.note.platform.ZoomableImageDialog
@@ -129,7 +128,7 @@ fun ZoomableUserPicture(
     val scope = rememberCoroutineScope()
 
     var zoomImageUrl by remember { mutableStateOf<String?>(null) }
-    var sourceBounds by remember { mutableStateOf<Rect?>(null) }
+    val source = rememberZoomSourceAnchor()
 
     ClickableUserPicture(
         baseUser = baseUser,
@@ -137,7 +136,7 @@ fun ZoomableUserPicture(
         size = size,
         modifier =
             MaterialTheme.colorScheme.userProfileBorderModifier
-                .onGloballyPositioned { sourceBounds = it.boundsInWindow() },
+                .zoomSourceAnchor(source),
         onClick = {
             val pic = baseUser.profilePicture()
             if (pic != null) {
@@ -156,7 +155,7 @@ fun ZoomableUserPicture(
     zoomImageUrl?.let {
         ZoomableImageDialog(
             imageUrl = RichTextParser.parseImageOrVideo(it),
-            sourceBounds = sourceBounds,
+            source = source,
             onDismiss = { zoomImageUrl = null },
             accountViewModel = accountViewModel,
         )

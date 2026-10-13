@@ -132,6 +132,14 @@ fun feedDatagram(
             "CRYPTO_ERROR (TLS internal_error): ${e.message ?: e::class.simpleName}",
             errorCode = 0x100L + alertCode.toLong(),
         )
+    } catch (e: Exception) {
+        // Anything else a peer's bytes can provoke (an index or argument check deep in a codec)
+        // ends this connection, not the process: the read loop runs in a scope with no exception
+        // handler, so an escape here reaches the thread's uncaught-exception handler.
+        conn.markClosedExternally(
+            "INTERNAL_ERROR: ${e.message ?: e::class.simpleName}",
+            errorCode = com.vitorpamplona.quic.frame.QuicTransportError.INTERNAL_ERROR,
+        )
     }
 }
 

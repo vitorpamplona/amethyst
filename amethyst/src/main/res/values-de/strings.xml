@@ -1,19 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources xmlns:tools="http://schemas.android.com/tools">
-    <string name="block_hide_user"><![CDATA[Benutzer blockieren und ausblenden]]></string>
-    <string name="boosted">boosted</string>
-    <string name="edited_number">Bearbeitung #%1$s</string>
-    <string name="save">Speichern</string>
-    <string name="set_preferred_media_servers">Legen Sie Ihre bevorzugten Medienupload Server fest.</string>
-    <string name="built_in_servers_description">Amethysts Standardliste. Sie können sie einzeln hinzufügen oder die Liste hinzufügen.</string>
-    <string name="preferences">App Einstellungen</string>
-    <string name="messages_create_public_chat">Öffentlich</string>
-    <string name="messages_new_message">Privat</string>
-    <string name="git_web_address">Internet:</string>
-    <string name="media_servers_blossom_section">Blossom Server</string>
-    <string name="media_servers_blossom_explainer">Fügen Sie beliebig viele Server hinzu. Sie können wählen, welche später beim Hochladen Ihres Bildes verwendet werden soll</string>
-    <string name="torrent_download">Herunterladen</string>
-    <string name="rename">Umbenennen</string>
     
     
     
@@ -129,7 +115,6 @@
     
     
     
-<string name="changed_chat_profile_to">Neues Chat-Profil:</string>
     
     
     
@@ -561,13 +546,9 @@
     
     
     
-<string name="private_note_no_receivers">Noch keine Empfänger: Nur du kannst diese Notiz sehen. Füge Personen hinzu, um sie zu teilen.</string>
     
-<string name="notify_add_user">Hinzufügen</string>
     
-<string name="notify_remove_user">Nutzer aus Benachrichtigungen entfernen</string>
     
-<string name="notify_search_and_add_user">Nutzer suchen und zum Benachrichtigen hinzufügen</string>
     
     
     
@@ -622,7 +603,6 @@
     
     
     
-<string name="recommended_media_servers">Empfohlene Medienserver</string>
     
     
     
@@ -674,9 +654,7 @@
     
     
     
-<string name="app_notification_replies_channel_message">%1$s hat geantwortet</string>
     
-<string name="app_notification_replies_channel_message_for">auf: %1$s</string>
     
     
     
@@ -734,9 +712,7 @@
     
     
     
-<string name="always_on_notif_setting_title">Dauerhafter Benachrichtigungsdienst</string>
     
-<string name="always_on_notif_setting_description">Hält eine dauerhafte Verbindung zu deinen Inbox-Relays für sofortige Benachrichtigungen aufrecht. Zeigt eine fortlaufende Benachrichtigung an. Verbraucht mehr Akku, stellt aber sicher, dass du keine Nachricht verpasst.</string>
     
     
     
@@ -877,7 +853,6 @@
     
     
     
-<string name="messages_create_group">Gruppe</string>
     
     
     
@@ -978,16 +953,11 @@
     
     
     
-<string name="cashu_p2pk_section">Nutzap-Schlüssel (erweitert)</string>
     
-<string name="cashu_p2pk_explainer">Ein separater privater Schlüssel, der nur zum Empfangen von NIP-61-Nutzaps dient. Nicht dein Nostr-Identitätsschlüssel.</string>
     
-<string name="cashu_p2pk_autogen">Neuen Schlüssel erzeugen</string>
     
-<string name="cashu_p2pk_manual_label">Privater P2PK-Schlüssel (hex)</string>
     
     
-<string name="wallet_save_changes">Änderungen speichern</string>
     
     
     
@@ -1239,18 +1209,14 @@
     
     
     
-<string name="bottom_bar_settings_description">Zum Umordnen ziehen. Zum Hinzufügen oder Entfernen eines Elements aus der unteren Leiste umschalten. Mit null Elementen wird die untere Leiste ausgeblendet.</string>
     
     
-<string name="bottom_bar_settings_reorder">Umordnen</string>
     
     
     
-<string name="home_tabs_settings_description">Wähle, welche Tabs auf der Startseite erscheinen. Wenn nur ein Tab aktiv ist, wird die Tab-Leiste ausgeblendet.</string>
     
     
     
-<string name="profile_ui_settings_description">Wähle, welche Abschnitte und Feeds auf den Profilseiten erscheinen. Alle Optionen sind standardmäßig aktiviert.</string>
     
     
     
@@ -1336,17 +1302,12 @@
     
     
     
-<string name="git_repo_tab_overview">Übersicht</string>
     
     
     
-<string name="git_repo_section_about">Über</string>
     
-<string name="git_repo_section_links">Links</string>
     
-<string name="git_repo_section_maintainers">Maintainer</string>
     
-<string name="git_repo_section_topics">Themen</string>
     
     
     
@@ -2143,9 +2104,7 @@
     
     
     
-<string name="napplet_cap_shell">Shell</string>
     
-<string name="napplet_cap_shell_desc">Abfragen, welche Funktionen verfügbar sind</string>
     
     
     
@@ -2159,14 +2118,12 @@
     
     
     
-<string name="napplet_consent_capability">Funktion: %1$s</string>
     
     
     
     
     
     
-<string name="napplet_consent_pay">Dieses nApplet möchte eine Lightning-Rechnung bezahlen.</string>
     
     
     
@@ -2179,17 +2136,11 @@
     
     
     
-<string name="napplet_permissions">nApplet-Berechtigungen</string>
     
-<string name="napplet_permissions_blocked">Blockiert</string>
     
-<string name="napplet_permissions_empty">Noch keine nApplet-Berechtigungen</string>
     
-<string name="napplet_permissions_empty_subtitle">Berechtigungen, die Sie nApplets erteilen, werden hier angezeigt.</string>
     
-<string name="napplet_permissions_forget">Dieses nApplet vergessen</string>
     
-<string name="napplet_permissions_revoke">Widerrufen</string>
     
     
     
@@ -2221,7 +2172,6 @@
     
     
     
-<string name="route_software_apps">Apps</string>
     
     
     

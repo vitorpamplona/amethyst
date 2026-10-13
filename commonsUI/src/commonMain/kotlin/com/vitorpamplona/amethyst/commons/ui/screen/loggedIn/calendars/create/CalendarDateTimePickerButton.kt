@@ -84,8 +84,8 @@ fun CalendarDateTimePickerButton(
     val initialSeconds = if (unixSeconds > 0L) unixSeconds else TimeUtils.now()
     val initialMillis = initialSeconds * 1000L
     val initialSecondOfDay = LocalClock.secondOfDay(initialSeconds)
-    val initialHour = (initialSecondOfDay / TimeUtils.ONE_HOUR).toInt()
-    val initialMinute = ((initialSecondOfDay % TimeUtils.ONE_HOUR) / TimeUtils.ONE_MINUTE).toInt()
+    val initialHour = initialSecondOfDay / TimeUtils.ONE_HOUR
+    val initialMinute = (initialSecondOfDay % TimeUtils.ONE_HOUR) / TimeUtils.ONE_MINUTE
 
     val datePickerState =
         rememberDatePickerState(

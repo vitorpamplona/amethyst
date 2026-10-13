@@ -410,7 +410,9 @@ fun DecryptAndRenderZapGallery(
 ) {
     @Suppress("ProduceStateDoesNotAssignValue")
     val zapEvents by
-        produceState(initialValue = accountViewModel.cachedDecryptAmountMessageInGroup(multiSetCard.zapEvents)) {
+        // Keyed on the zaps: a late zap can join a card without changing its list key, and the
+        // gallery has to decrypt the new list rather than keep showing the first one.
+        produceState(initialValue = accountViewModel.cachedDecryptAmountMessageInGroup(multiSetCard.zapEvents), multiSetCard.zapEvents) {
             accountViewModel.decryptAmountMessageInGroup(multiSetCard.zapEvents) { value = it }
         }
 

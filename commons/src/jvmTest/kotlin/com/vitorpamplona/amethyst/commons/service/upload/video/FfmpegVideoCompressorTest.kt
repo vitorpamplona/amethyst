@@ -24,6 +24,7 @@ import com.vitorpamplona.amethyst.commons.notices.UploadNotice
 import com.vitorpamplona.amethyst.commons.service.uploads.CompressorQuality
 import com.vitorpamplona.amethyst.commons.service.uploads.video.VideoInfo
 import com.vitorpamplona.amethyst.commons.service.uploads.video.VideoResolution
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.cancelAndJoin
@@ -43,6 +44,7 @@ import kotlin.test.assertNotNull
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
+@OptIn(ExperimentalCoroutinesApi::class)
 class FfmpegVideoCompressorTest {
     private lateinit var tempDir: File
 

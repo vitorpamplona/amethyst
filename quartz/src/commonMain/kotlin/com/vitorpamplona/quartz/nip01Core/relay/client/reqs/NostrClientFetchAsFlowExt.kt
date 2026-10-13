@@ -30,6 +30,7 @@ import com.vitorpamplona.quartz.utils.RandomInstance
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
+import kotlinx.coroutines.flow.conflate
 
 /**
  * 1. Subscribes to a req while the flow is active
@@ -90,3 +91,6 @@ fun INostrClient.fetchAsFlow(
             unsubscribe(subId)
         }
     }
+        // Every emission is the whole list so far: a collector that falls behind needs only the
+        // newest one. The default 64-slot buffer would instead drop sends once full, newest first.
+        .conflate()

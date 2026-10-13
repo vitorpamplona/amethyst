@@ -40,6 +40,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.awt.ComposeDialog
+import androidx.compose.ui.awt.ComposePanel
+import androidx.compose.ui.awt.RenderSettings
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.WindowExceptionHandler
@@ -60,6 +62,7 @@ import com.vitorpamplona.quartz.utils.Log
 import java.awt.Dialog
 import java.awt.Window
 import java.awt.event.WindowEvent
+import javax.swing.JDialog
 
 /**
  * What a window shows when its Compose UI throws (while composing, drawing or handling input), in
@@ -111,9 +114,8 @@ private fun showCrashWindow(
     val colors = if (dark) amethystDarkColors(AccentColorType.PURPLE) else amethystLightColors(AccentColorType.PURPLE)
     var choice = CrashChoice.CLOSE
 
-    val dialog = ComposeDialog(owner, Dialog.ModalityType.APPLICATION_MODAL)
-    dialog.title = "Amethyst"
-    dialog.setContent {
+    @Composable
+    fun Body(dialog: JDialog) {
         MaterialTheme(colorScheme = colors) {
             Surface(Modifier.fillMaxSize()) {
                 CrashContent(
@@ -128,6 +130,19 @@ private fun showCrashWindow(
             }
         }
     }
+
+    // On native Wayland, Compose's dialog can't draw (see WaylandDisplay): Swing draws this one.
+    val dialog =
+        if (WaylandDisplay.isActive) {
+            WaylandDialog(owner, Dialog.ModalityType.APPLICATION_MODAL).also { dialog ->
+                val panel = ComposePanel(renderSettings = RenderSettings.SwingGraphics())
+                panel.setContent { Body(dialog) }
+                dialog.contentPane.add(panel)
+            }
+        } else {
+            ComposeDialog(owner, Dialog.ModalityType.APPLICATION_MODAL).also { dialog -> dialog.setContent { Body(dialog) } }
+        }
+    dialog.title = "Amethyst"
     dialog.setSize(600, 620)
     dialog.setLocationRelativeTo(owner)
     dialog.isVisible = true // blocks until closed

@@ -360,11 +360,15 @@ class QuicConnectionDriver(
      * exponential backoff is needed — the peer ACKs that fix the
      * loss state arrive on their normal cadence.
      */
-    private fun handleLossTimerFired(conn: QuicConnection) {
-        val nowMs = conn.nowMillis()
-        runLossDetectionForLevel(conn, conn.initial, EncryptionLevel.INITIAL, nowMs)
-        runLossDetectionForLevel(conn, conn.handshake, EncryptionLevel.HANDSHAKE, nowMs)
-        runLossDetectionForLevel(conn, conn.application, EncryptionLevel.APPLICATION, nowMs)
+    private suspend fun handleLossTimerFired(conn: QuicConnection) {
+        // Under streamsLock like the parser's ACK path: both walk and remove from the same plain
+        // HashMap of sent packets, and onTokensLost requires the lock.
+        conn.streamsLock.withLock {
+            val nowMs = conn.nowMillis()
+            runLossDetectionForLevel(conn, conn.initial, EncryptionLevel.INITIAL, nowMs)
+            runLossDetectionForLevel(conn, conn.handshake, EncryptionLevel.HANDSHAKE, nowMs)
+            runLossDetectionForLevel(conn, conn.application, EncryptionLevel.APPLICATION, nowMs)
+        }
     }
 
     private fun runLossDetectionForLevel(

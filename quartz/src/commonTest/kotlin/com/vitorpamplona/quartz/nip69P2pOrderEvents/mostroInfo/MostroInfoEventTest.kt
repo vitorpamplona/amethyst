@@ -33,6 +33,7 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertIs
+import kotlin.test.assertIsNot
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
@@ -147,7 +148,7 @@ class MostroInfoEventTest {
             val event = parse(it)
             assertIs<UnrecognizedKind38385Event>(event)
             assertIs<AddressableEvent>(event)
-            assertFalse(event is SearchableEvent)
+            assertIsNot<SearchableEvent>(event)
         }
     }
 

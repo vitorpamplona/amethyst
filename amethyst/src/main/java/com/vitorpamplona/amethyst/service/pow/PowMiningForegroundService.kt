@@ -65,6 +65,8 @@ import kotlinx.coroutines.launch
  * to that card.
  */
 class PowMiningForegroundService : FlowProgressForegroundService<ImmutableList<PoWJobState>>() {
+    // Only passed to startForeground on API 34+, where the type exists.
+    @Suppress("InlinedApi")
     override val fgsType: Int = ServiceInfo.FOREGROUND_SERVICE_TYPE_SHORT_SERVICE
     override val channelId = CHANNEL_ID
     override val channelNameRes = R.string.pow_notification_channel_name
