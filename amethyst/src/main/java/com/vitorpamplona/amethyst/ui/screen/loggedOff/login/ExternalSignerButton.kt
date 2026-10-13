@@ -25,7 +25,6 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -47,6 +46,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.TextFieldValue
@@ -56,15 +56,12 @@ import androidx.compose.ui.window.Dialog
 import androidx.core.graphics.drawable.toBitmap
 import coil3.compose.rememberAsyncImagePainter
 import com.vitorpamplona.amethyst.commons.account.ui.login.LoginViewModel
-import com.vitorpamplona.amethyst.commons.account.ui.login.LoginWithAmberButton
+import com.vitorpamplona.amethyst.commons.account.ui.login.SignerAppLoginButton
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.error_opening_external_signer
 import com.vitorpamplona.amethyst.commons.resources.select_signer
 import com.vitorpamplona.amethyst.commons.resources.sign_request_rejected2
 import com.vitorpamplona.amethyst.commons.ui.stringRes
-import com.vitorpamplona.amethyst.commons.ui.theme.Size0dp
-import com.vitorpamplona.amethyst.commons.ui.theme.Size20dp
-import com.vitorpamplona.amethyst.commons.ui.theme.Size40dp
 import com.vitorpamplona.quartz.nip37Drafts.DraftWrapEvent
 import com.vitorpamplona.quartz.nip42RelayAuth.RelayAuthEvent
 import com.vitorpamplona.quartz.nip55AndroidSigner.api.CommandType
@@ -81,7 +78,7 @@ import kotlinx.coroutines.launch
 fun ExternalSignerButton(loginViewModel: LoginViewModel) {
     val scope = rememberCoroutineScope()
     val context = LocalContext.current
-    val installedSigners = getExternalSignersInstalled(context)
+    val installedSigners = remember(context) { getExternalSignersInstalled(context) }
     var shouldSelectSigner by remember { mutableStateOf(false) }
 
     val launcher =
@@ -97,7 +94,7 @@ fun ExternalSignerButton(loginViewModel: LoginViewModel) {
                         loginViewModel.loginWithExternalSigner(loginInfo.result.packageName)
                     }
                 } else {
-                    loginViewModel.errorManager.error(Res.string.sign_request_rejected2)
+                    loginViewModel.signerErrorManager.error(Res.string.sign_request_rejected2)
                 }
             }
         }
@@ -123,9 +120,14 @@ fun ExternalSignerButton(loginViewModel: LoginViewModel) {
                         Spacer(Modifier.height(4.dp))
                         LazyColumn {
                             items(installedSigners) {
-                                val appName = it.loadLabel(context.packageManager).toString()
-                                val appIcon = it.loadIcon(context.packageManager)
-                                val iconBitmap = appIcon.toBitmap()
+                                val appName =
+                                    remember(it) {
+                                        it.activityInfo.applicationInfo
+                                            .loadLabel(context.packageManager)
+                                            .toString()
+                                    }
+                                // A fixed size: an icon with no intrinsic size (-1) throws without one.
+                                val iconBitmap = remember(it) { it.loadIcon(context.packageManager).toBitmap(SIGNER_ICON_PX, SIGNER_ICON_PX) }
 
                                 Row(
                                     Modifier
@@ -140,7 +142,7 @@ fun ExternalSignerButton(loginViewModel: LoginViewModel) {
                                                 } catch (e: Exception) {
                                                     if (e is CancellationException) throw e
                                                     Log.e("ExternalSigner", "Error opening Signer app", e)
-                                                    loginViewModel.errorManager.error(Res.string.error_opening_external_signer)
+                                                    loginViewModel.signerErrorManager.error(Res.string.error_opening_external_signer)
                                                 } finally {
                                                     shouldSelectSigner = false
                                                 }
@@ -177,29 +179,49 @@ fun ExternalSignerButton(loginViewModel: LoginViewModel) {
         )
     }
 
-    Box(modifier = Modifier.padding(Size40dp, Size20dp, Size40dp, Size0dp)) {
-        LoginWithAmberButton(
-            enabled = loginViewModel.acceptedTerms,
-            onClick = {
-                if (!loginViewModel.acceptedTerms) {
-                    loginViewModel.termsAcceptanceIsRequiredError = true
-                } else {
-                    try {
-                        if (installedSigners.size == 1) {
-                            launcher.launch(ExternalSignerLogin.createIntent(DefaultSignerPermissions))
-                        } else {
-                            shouldSelectSigner = true
-                        }
-                    } catch (e: Exception) {
-                        if (e is CancellationException) throw e
-                        Log.e("ExternalSigner", "Error opening Signer app", e)
-                        loginViewModel.errorManager.error(Res.string.error_opening_external_signer)
+    // The one signer installed is named and drawn as itself; several share a generic label and
+    // the chooser above.
+    val onlySigner = installedSigners.singleOrNull()
+    // The app's name: a signer may label its signing activity something else ("Sign request").
+    val onlySignerName =
+        remember(onlySigner) {
+            onlySigner
+                ?.activityInfo
+                ?.applicationInfo
+                ?.loadLabel(context.packageManager)
+                ?.toString()
+        }
+    val onlySignerIcon =
+        remember(onlySigner) {
+            onlySigner?.loadIcon(context.packageManager)?.toBitmap(SIGNER_ICON_PX, SIGNER_ICON_PX)?.asImageBitmap()
+        }
+
+    SignerAppLoginButton(
+        appName = onlySignerName,
+        appIcon = onlySignerIcon?.let { icon -> { Image(icon, contentDescription = null, modifier = Modifier.size(24.dp)) } },
+        enabled = loginViewModel.acceptedTerms,
+        onClick = {
+            if (!loginViewModel.acceptedTerms) {
+                loginViewModel.termsAcceptanceIsRequiredError = true
+            } else {
+                try {
+                    if (installedSigners.size == 1) {
+                        launcher.launch(ExternalSignerLogin.createIntent(DefaultSignerPermissions))
+                    } else {
+                        shouldSelectSigner = true
                     }
+                } catch (e: Exception) {
+                    if (e is CancellationException) throw e
+                    Log.e("ExternalSigner", "Error opening Signer app", e)
+                    loginViewModel.signerErrorManager.error(Res.string.error_opening_external_signer)
                 }
-            },
-        )
-    }
+            }
+        },
+    )
 }
+
+// The signer's launcher icon, at the button's 24dp on the densest screens.
+private const val SIGNER_ICON_PX = 96
 
 /** What Amethyst asks a NIP-55 signer app to pre-approve when the user logs in with it. */
 val DefaultSignerPermissions =

@@ -27,6 +27,7 @@ import com.vitorpamplona.amethyst.commons.resources.login_nostrconnect_not_suppo
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
+import kotlin.test.assertTrue
 
 /**
  * Amethyst for Android is the bunker, never the bunker's client.
@@ -79,5 +80,16 @@ class LoginViewModelKeyKindTest {
         val model = viewModelWithKey("npub1${"q".repeat(58)}")
 
         assertEquals(true, model.checkCanLogin())
+    }
+
+    /** "Remember my key" is offered only where a private key could be typed. */
+    @Test
+    fun onlyAPrivateKeyIsOfferedToBeRemembered() {
+        listOf("", "nsec1abc", "ncryptsec1abc", "a".repeat(64), "word ".repeat(12).trim()).forEach {
+            assertTrue(viewModelWithKey(it).keyMayBePrivate, it)
+        }
+        listOf("npub1${"q".repeat(58)}", "NPUB1QQQQ", "nprofile1abc", "bunker://${"a".repeat(64)}", "nostrconnect://x", "alice@example.com").forEach {
+            assertFalse(viewModelWithKey(it).keyMayBePrivate, it)
+        }
     }
 }

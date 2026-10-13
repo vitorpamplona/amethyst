@@ -33,7 +33,6 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.IconButton
@@ -76,6 +75,7 @@ import com.vitorpamplona.amethyst.commons.resources.scheduled_posts_logout_toast
 import com.vitorpamplona.amethyst.commons.resources.scheduled_posts_logout_toast_zero
 import com.vitorpamplona.amethyst.commons.resources.scheduled_posts_logout_warning
 import com.vitorpamplona.amethyst.commons.scheduledposts.ScheduledPostStatus
+import com.vitorpamplona.amethyst.commons.ui.components.PromptDialog
 import com.vitorpamplona.amethyst.commons.ui.components.RobohashFallbackAsyncImage
 import com.vitorpamplona.amethyst.commons.ui.components.RoundedDropdownMenu
 import com.vitorpamplona.amethyst.commons.ui.components.RoundedMenuItemModifier
@@ -328,62 +328,47 @@ private fun LogoutConfirmationDialog(
             }
         }
     }
-    AlertDialog(
-        title = { Text(text = stringRes(Res.string.log_out)) },
-        text = {
+    // The redesigned prompt the key-storage questions use, its badge red when posts would be lost.
+    PromptDialog(
+        symbol = MaterialSymbols.AutoMirrored.Logout,
+        title = stringRes(Res.string.log_out),
+        description =
             if (unpublishedCount > 0) {
-                Text(
-                    text =
-                        pluralStringRes(
-                            id = Res.plurals.scheduled_posts_logout_warning,
-                            count = unpublishedCount,
-                            unpublishedCount,
-                        ),
-                )
+                pluralStringRes(Res.plurals.scheduled_posts_logout_warning, unpublishedCount, unpublishedCount)
             } else {
-                Text(text = stringRes(Res.string.are_you_sure_you_want_to_log_out))
-            }
-        },
-        onDismissRequest = { onDismiss() },
-        confirmButton = {
-            TextButton(
-                onClick = {
-                    // Snapshot the count *now* so the user-facing Toast matches what
-                    // the dialog displayed, even if the store mutates between this
-                    // tap and the cleanup completing.
-                    val confirmedCount = unpublishedCount
-                    onDismiss()
-                    // Guard against a malformed npub: skip the Toast so we don't
-                    // claim "Logged out" when logOff's coroutine bails early.
-                    if (accountHex == null) return@TextButton
-                    accountSessionManager.logOff(acc)
-                    // The plural depends on the snapshot taken above, so it cannot be
-                    // read in composition; this onClick borrows the screen's scope.
-                    scope.launch {
-                        val toastMessage =
-                            if (confirmedCount > 0) {
-                                loadPluralStringRes(
-                                    Res.plurals.scheduled_posts_logout_toast,
-                                    confirmedCount,
-                                    confirmedCount,
-                                )
-                            } else {
-                                scheduledPostsLogoutToastZeroStr
-                            }
-                        toaster.show(toastMessage, long = false)
+                stringRes(Res.string.are_you_sure_you_want_to_log_out)
+            },
+        confirmText = stringRes(Res.string.log_out),
+        onConfirm = {
+            // Snapshot the count *now* so the user-facing Toast matches what
+            // the dialog displayed, even if the store mutates between this
+            // tap and the cleanup completing.
+            val confirmedCount = unpublishedCount
+            onDismiss()
+            // Guard against a malformed npub: skip the Toast so we don't
+            // claim "Logged out" when logOff's coroutine bails early.
+            if (accountHex == null) return@PromptDialog
+            accountSessionManager.logOff(acc)
+            // The plural depends on the snapshot taken above, so it cannot be
+            // read in composition; this onClick borrows the screen's scope.
+            scope.launch {
+                val toastMessage =
+                    if (confirmedCount > 0) {
+                        loadPluralStringRes(
+                            Res.plurals.scheduled_posts_logout_toast,
+                            confirmedCount,
+                            confirmedCount,
+                        )
+                    } else {
+                        scheduledPostsLogoutToastZeroStr
                     }
-                },
-            ) {
-                Text(text = stringRes(Res.string.log_out))
+                toaster.show(toastMessage, long = false)
             }
         },
-        dismissButton = {
-            TextButton(
-                onClick = { onDismiss() },
-            ) {
-                Text(text = stringRes(Res.string.cancel))
-            }
-        },
+        dismissText = stringRes(Res.string.cancel),
+        onDismiss = onDismiss,
+        isError = unpublishedCount > 0,
+        dismissible = true,
     )
 }
 

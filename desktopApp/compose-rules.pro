@@ -118,6 +118,9 @@
 -keep class com.github.javakeyring.** { *; }
 -keep class org.freedesktop.dbus.** { *; }
 -keep class org.freedesktop.secret.** { *; }
+# SimpleCollection also talks to GNOME Keyring's own D-Bus interface (creating and
+# unlocking a collection), a reflective proxy like the ones above.
+-keep class org.gnome.keyring.** { *; }
 
 # kmp-tor — loads native Tor daemon via JNI reflection
 -keep class io.matthewnelson.** { *; }

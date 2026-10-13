@@ -703,7 +703,6 @@
     <string name="uploading_state_hashing">Xeshlash</string>
     <string name="uploading_state_finished">Tugadi</string>
     <string name="uploading_state_error">Xato</string>
-    <string name="connect_via_tor1">Sozlash</string>
     <string name="connect_via_tor2">Tor Sozlamalari</string>
     <string name="yes">Ha</string>
     <string name="no">Yo'q</string>
@@ -922,7 +921,6 @@
     <string name="created_at">Yaratilgan vaqt</string>
     <string name="guidelines">Ko'rsatmalar</string>
     <string name="moderators">Moderatorlar</string>
-    <string name="login_with_external_signer">Amber bilan kirish</string>
     <string name="status_update">Holatingizni yangilang</string>
     <string name="poll_zap_value_min_max_explainer">Ovozlar Zap miqdori bo'yicha tortib olinadi. Spamchilarning oldini olish uchun minimal miqdor va ko'p Zap qiluvchilar tomonidan so'rovnoma egallab olinishining oldini olish uchun maksimal miqdor belgilashingiz mumkin. Har bir ovoz bir xil qiymatta baholanishini ta'minlash uchun ikkala maydonga ham bir xil miqdor kiriting. Har qanday miqdorni qabul qilish uchun bo'sh qoldiring.</string>
     <string name="error_dialog_talk_to_user">Foydalanuvchiga xabar yuborish</string>

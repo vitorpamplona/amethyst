@@ -18,36 +18,39 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.commons.account.ui.signup
+package com.vitorpamplona.amethyst.commons.account.ui.login
 
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.Button
-import androidx.compose.material3.Text
+import androidx.compose.foundation.layout.size
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
+import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.resources.Res
-import com.vitorpamplona.amethyst.commons.resources.create_account
+import com.vitorpamplona.amethyst.commons.resources.login_with_a_signer_app
+import com.vitorpamplona.amethyst.commons.resources.login_with_signer_app
 import com.vitorpamplona.amethyst.commons.ui.stringRes
-import com.vitorpamplona.amethyst.commons.ui.theme.Size35dp
-import com.vitorpamplona.amethyst.commons.ui.theme.Size40dp
 
+/**
+ * Android's signer-app login. Filled: where a signer app is installed, it is the way in. Named
+ * and drawn as the app itself ([appName], [appIcon]) when there is just one to pick.
+ */
 @Composable
-fun SignUpButton(
+fun SignerAppLoginButton(
     enabled: Boolean,
     onClick: () -> Unit,
+    appName: String? = null,
+    appIcon: (@Composable () -> Unit)? = null,
 ) {
-    Button(
+    LoggedOffPrimaryButton(
+        text =
+            if (appName != null) {
+                stringRes(Res.string.login_with_signer_app, appName)
+            } else {
+                stringRes(Res.string.login_with_a_signer_app)
+            },
         enabled = enabled,
         onClick = onClick,
-        shape = RoundedCornerShape(Size35dp),
-        modifier = Modifier.height(50.dp),
-    ) {
-        Text(
-            text = stringRes(Res.string.create_account),
-            modifier = Modifier.padding(horizontal = Size40dp),
-        )
-    }
+        icon = appIcon ?: { Icon(MaterialSymbols.Security, contentDescription = null, modifier = Modifier.size(20.dp)) },
+    )
 }

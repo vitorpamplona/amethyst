@@ -710,7 +710,6 @@
     <string name="uploading_state_hashing">Kešo</string>
     <string name="uploading_state_finished">Pabeigts</string>
     <string name="uploading_state_error">Kļūda</string>
-    <string name="connect_via_tor1">Pielāgot</string>
     <string name="connect_via_tor2">Tor iestatījumi</string>
     <string name="yes">Jā</string>
     <string name="no">Nē</string>
@@ -929,7 +928,6 @@
     <string name="created_at">Izveidots</string>
     <string name="guidelines">Vadlīnijas</string>
     <string name="moderators">Moderatori</string>
-    <string name="login_with_external_signer">Pieteikties ar Amber</string>
     <string name="status_update">Atjauniniet savu statusu</string>
     <string name="poll_zap_value_min_max_explainer">Balsis tiek svērtas pēc zap summas. Varat iestatīt minimālo summu, lai izvairītos no surogātpasta sūtītājiem, un maksimālo summu, lai neļautu lieliem zap sūtītājiem dominēt aptaujā. Izmantojiet vienādu summu abos laukos, lai katrai balsij būtu vienāda vērtība. Atstājiet tukšu, lai pieņemtu jebkādu summu.</string>
     <string name="error_dialog_talk_to_user">Rakstīt lietotājam</string>

@@ -701,7 +701,6 @@
     <string name="uploading_state_hashing">Inafanya hashing</string>
     <string name="uploading_state_finished">Imekamilika</string>
     <string name="uploading_state_error">Hitilafu</string>
-    <string name="connect_via_tor1">Badilisha</string>
     <string name="connect_via_tor2">Mipangilio ya Tor</string>
     <string name="yes">Ndio</string>
     <string name="no">Hapana</string>
@@ -920,7 +919,6 @@
     <string name="created_at">Imetengenezwa saa</string>
     <string name="guidelines">Miongozo</string>
     <string name="moderators">Wasimamizi</string>
-    <string name="login_with_external_signer">Ingia na Amber</string>
     <string name="status_update">Sasisha hali yako</string>
     <string name="poll_zap_value_min_max_explainer">Kura zina uzito kulingana na kiasi cha zap. Unaweza kuweka kiasi cha chini ili kuepuka wahasibu na kiasi cha juu ili kuepuka wahasibu wakubwa kuchukua kura ya maoni. Tumia kiasi sawa katika sehemu zote mbili ili kuhakikisha kila kura inathaminiwa kwa kiasi sawa. Acha tupu ili kukubali kiasi chochote.</string>
     <string name="error_dialog_talk_to_user">Tuma ujumbe kwa mtumiaji</string>

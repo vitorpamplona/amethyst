@@ -1659,7 +1659,6 @@
     <string name="uploading_state_hashing">Hashen</string>
     <string name="uploading_state_finished">Fertig</string>
     <string name="uploading_state_error">Fehler</string>
-    <string name="connect_via_tor1">Anpassen</string>
     <string name="connect_via_tor2">Tor-Einstellungen</string>
     <string name="yes">Ja</string>
     <string name="no">Nein</string>
@@ -2045,7 +2044,6 @@
     <string name="created_at">Erstellt am</string>
     <string name="guidelines">Richtlinien</string>
     <string name="moderators">Moderatoren</string>
-    <string name="login_with_external_signer">Mit Amber anmelden</string>
     <string name="status_update">Status aktualisieren</string>
     <string name="poll_zap_value_min_max_explainer">Die Abstimmungen werden nach der Höhe des Zaps gewichtet. Du kannst einen Mindestbetrag festlegen, um Spam zu verhindern, und einen Höchstbetrag, um zu verhindern, dass große Zapper die Abstimmung dominieren. Verwende denselben Betrag in beiden Feldern, um sicherzustellen, dass jeder Stimme der gleiche Wert zukommt. Lass die Felder leer, um jeden Betrag zu akzeptieren.</string>
     <string name="error_dialog_talk_to_user">Mit dem Benutzer kommunizieren</string>
@@ -4476,7 +4474,6 @@
     <string name="desktop_menu_report_issue">Problem melden</string>
     <string name="login_with_remote_signer">Mit einem Remote-Signer anmelden</string>
     <string name="remote_signer_scan_title">Verbinde deinen Signer</string>
-    <string name="remote_signer_scan_description">Scanne diesen Code mit einem NIP-46-Signer oder füge die Adresse dort ein. Eine bunker://-Adresse von deinem Signer gehört stattdessen in das Schlüsselfeld.</string>
     <string name="remote_signer_waiting">Warte auf die Freigabe durch deinen Signer…</string>
     <string name="remote_signer_login_failed">Anmeldung mit dem Remote-Signer fehlgeschlagen: %1$s</string>
     <string name="login_with_a_private_key_to_be_able_to_boost_posts">Du verwendest einen öffentlichen Schlüssel und öffentliche Schlüssel sind schreibgeschützt. Mit einem privaten Schlüssel anmelden, um Beiträge boosten zu können</string>

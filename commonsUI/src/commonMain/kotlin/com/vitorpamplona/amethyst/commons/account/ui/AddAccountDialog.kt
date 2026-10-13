@@ -21,6 +21,8 @@
 package com.vitorpamplona.amethyst.commons.account.ui
 
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.IconButton
@@ -32,10 +34,11 @@ import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.window.Dialog
-import androidx.compose.ui.window.DialogProperties
 import com.vitorpamplona.amethyst.commons.account.AccountSessionManager
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.account_switch_add_account_dialog_title
+import com.vitorpamplona.amethyst.commons.ui.components.SetDialogToEdgeToEdge
+import com.vitorpamplona.amethyst.commons.ui.components.edgeToEdgeDialogProperties
 import com.vitorpamplona.amethyst.commons.ui.note.ArrowBackIcon
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 
@@ -48,11 +51,16 @@ fun AddAccountDialog(
 ) {
     Dialog(
         onDismissRequest = onClose,
-        properties = DialogProperties(usePlatformDefaultWidth = false),
+        // Edge to edge, as the activity: a dialog window that fits the system bars left the status
+        // bar's strip showing the drawer behind it, and took the keyboard's inset away from the
+        // form, which then could not shrink or scroll to keep its button above the keyboard.
+        properties = edgeToEdgeDialogProperties(),
     ) {
+        SetDialogToEdgeToEdge()
         Surface(modifier = Modifier.fillMaxSize()) {
-            Box {
-                LoginOrSignupScreen(newAccountKey, accountSessionManager, isFirstLogin = false)
+            // The bar above the form, not over it: the form fits itself to the height left, and on
+            // a small phone the bar covered its brand.
+            Column {
                 TopAppBar(
                     title = {
                         Text(text = stringRes(Res.string.account_switch_add_account_dialog_title))
@@ -65,6 +73,11 @@ fun AddAccountDialog(
                             containerColor = MaterialTheme.colorScheme.surface,
                         ),
                 )
+                // The bar already keeps clear of the status bar; the form's own system-bar padding
+                // would add it again.
+                Box(Modifier.weight(1f).consumeWindowInsets(TopAppBarDefaults.windowInsets)) {
+                    LoginOrSignupScreen(newAccountKey, accountSessionManager, isFirstLogin = false)
+                }
             }
         }
     }

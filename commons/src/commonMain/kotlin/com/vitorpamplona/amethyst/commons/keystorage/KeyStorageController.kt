@@ -20,11 +20,12 @@
  */
 package com.vitorpamplona.amethyst.commons.keystorage
 
+import com.vitorpamplona.amethyst.commons.model.navigation.Route
 import kotlinx.coroutines.flow.StateFlow
 
 /**
  * What the shared UI needs from a platform's key storage: its status, the questions it is asking,
- * and the actions Settings › Key storage offers. A platform without user-facing key storage
+ * and the actions Key Backup offers. A platform without user-facing key storage
  * (Android keeps keys in its Keystore without asking) provides none.
  */
 interface KeyStorageController {
@@ -32,9 +33,18 @@ interface KeyStorageController {
 
     val prompts: KeyStoragePrompts
 
-    /** Opens the OS keyring again after it was unreachable, and logs the default account in. */
-    suspend fun retry()
+    /**
+     * Opens the OS keyring again after it was unreachable, and logs the default account in. An
+     * account already open without its key loads again with it, on [returnTo] (null: its home).
+     */
+    suspend fun retry(returnTo: Route? = null)
 
-    /** Asks for the key file's password now, instead of when a key is next needed. */
-    suspend fun unlock()
+    /** Asks for the key file's password now, instead of when a key is next needed; [returnTo] as in [retry]. */
+    suspend fun unlock(returnTo: Route? = null)
+
+    /**
+     * Takes back the user's "Don't save" from this run ([KeyStorageStatus.NotKept]): the next login
+     * that keeps its key asks for the key-file password again.
+     */
+    suspend fun saveKeys()
 }
