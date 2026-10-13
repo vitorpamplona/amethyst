@@ -4448,17 +4448,12 @@
     <string name="login_nostrconnect_not_supported">Ez egy alkalmazás, amely az aláírójához szeretne csatlakozni, nem bejelentkezési mód. Először jelentkezzen be, majd nyissa meg a NIP-46 aláíró képernyőről.</string>
     <string name="desktop_key_not_kept_title">Az Ön kulcsa nem lett mentve</string>
     <string name="desktop_key_not_kept_description">Ezen a számítógépen nincs olyan kulcstár, amelyet az Amethyst használhatna, így a privát kulcsa csak az Amethyst bezárásáig marad meg. Legközelebb újra be kell jelentkeznie.</string>
-    <string name="key_storage_title">Kulcstároló</string>
-    <string name="key_storage_search_keywords">kulcstartó, jelszó, privát kulcs, nsec, hitelesítőadat-kezelő, titokszolgáltatás, kwallet, feloldás</string>
-    <string name="key_storage_where">Hol tárolja ez az eszköz a privát kulcsait</string>
     <string name="key_storage_keyring_mac">a macOS Kulcstartóban</string>
     <string name="key_storage_keyring_secret_service">az Ön rendszer-kulcstartója</string>
     <string name="key_storage_keyring_windows">a Windows Hitelesítőadat-kezelőben</string>
     <string name="key_storage_keyring_kwallet">KWallet</string>
     <string name="key_storage_status_keyring">A privát kulcsai a következőben vannak tárolva: %1$s.</string>
     <string name="key_storage_status_unknown">Az Amethyst a rendszer-kulcstartóban tárolja a privát kulcsokat, és az első kulcsigény esetén nyitja meg azt.</string>
-    <string name="key_storage_status_unreachable">Az Amethyst nem tudta megnyitni a következőt: %1$s. A kulcsai továbbra is ott vannak, de az alkalmazás nem tud aláírni, amíg nem tudja beolvasni őket.</string>
-    <string name="key_storage_status_detail">Részletek: %1$s</string>
     <string name="key_storage_status_password_locked">Ezen a számítógépen nincs rendszer-kulcstartó, ezért a kulcsai egy jelszóval védett fájlban vannak tárolva (NIP-49). Az zárolva van.</string>
     <string name="key_storage_status_password_unlocked">Ezen a számítógépen nincs rendszer-kulcstartó, ezért a kulcsai egy jelszóval védett fájlban vannak tárolva (NIP-49).</string>
     <string name="key_storage_status_password_new">Ezen a számítógépen nincs rendszer-kulcstartó. Az első kulcs tárolásakor jelszót kér, amely védi azt ezen az eszközön.</string>
@@ -4467,7 +4462,6 @@
     <string name="key_storage_unlock">Feloldás</string>
     <string name="key_storage_not_now">Most nem</string>
     <string name="key_storage_unreachable_title">Nem sikerült megnyitni a kulcstartót</string>
-    <string name="key_storage_unreachable_description">Az Amethyst nem tudta beolvasni a kulcsait innen: %1$s. Ha a rendszer engedélyt kért, engedélyezze, majd próbálja újra.</string>
     <string name="key_storage_create_password_title">Védje a kulcsait jelszóval</string>
     <string name="key_storage_create_password_description">Ezen a számítógépen nincs olyan rendszerkulcstartó, amelyet az Amethyst használhatna. Válasszon jelszót, hogy a privát kulcsa egy titkosított fájlban legyen tárolva ezen az eszközön. Minden alkalommal be kell írnia egyszer, amikor az Amethyst elindul.</string>
     <string name="key_storage_password">Jelszó</string>
@@ -4475,7 +4469,6 @@
     <string name="key_storage_keep_key">Kulcs megtartása</string>
     <string name="key_storage_dont_remember">Kulcs elfelejtése</string>
     <string name="key_storage_unlock_title">Kulcsok feloldása</string>
-    <string name="key_storage_unlock_description">Írja be a jelszót, amely védi a privát kulcsait ezen az eszközön.</string>
     <string name="key_storage_skip">Kihagyás</string>
     <string name="key_storage_enter_key_title">Adja meg a privát kulcsát</string>
     <string name="key_storage_enter_key_description">Ez az eszköz nem tárolja %1$s kulcsát. Illessze be az nsec-et az aláíráshoz ebben a munkamenetben, vagy hagyja ki a böngészéshez aláírás nélkül.</string>
@@ -4484,7 +4477,6 @@
     <string name="key_storage_remember_key">Kulcs megjegyzése</string>
     <string name="key_storage_login_notice_unreachable">Az Amethyst jelenleg nem éri el a kulcstartót, ezért a bejelentkezéshez használt kulcs nem marad meg az alkalmazás bezárása után.</string>
     <string name="key_storage_login_notice_not_kept">Ez az eszköz nem tárol kulcsokat: induláskor a kulcsait minden alkalommal bekéri az Amethyst.</string>
-    <string name="key_storage_login_notice_password">Ezen a számítógépen nincs rendszer-kulcstartó: a kulcsa egy jelszóval védett fájlban lesz tárolva.</string>
     <string name="key_storage_login_notice_locked">A kulcsfájlja zárolva van. Oldja fel a zárolást, hogy a bejelentkezéshez használt kulcs ezen a számítógépen tárolódjon.</string>
     <string name="desktop_notifications">Asztali értesítések</string>
     <string name="desktop_notifications_description">Az említések, válaszok, reakciók, zap-ek és üzenetek rendszerértesítésként való megjelenítése, amíg az Amethyst a háttérben fut.</string>
