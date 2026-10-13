@@ -31,6 +31,7 @@ import com.vitorpamplona.amethyst.commons.relays.EOSEAccountFast
 import com.vitorpamplona.amethyst.commons.service.BundledUpdate
 import com.vitorpamplona.amethyst.commons.util.isDebug
 import com.vitorpamplona.quartz.nip01Core.core.Event
+import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.RelayOfflineTracker
 import com.vitorpamplona.quartz.nip01Core.relay.client.auth.IAuthStatus
@@ -50,6 +51,8 @@ import kotlinx.coroutines.IO
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.sample
 import kotlinx.coroutines.launch
 
@@ -74,6 +77,8 @@ class AccountFollowsLoaderSubAssembler(
     /**
      * This assembler saves the EOSE per user key. That EOSE includes their metadata, etc
      * and reports, but only from trusted accounts (follows of all logged in users).
+     *
+     * Fitted to the users still missing a relay list on every pass ([EOSEAccountFast.fitTo]).
      */
     val hasTried: EOSEAccountFast<User> = EOSEAccountFast(2000)
 
@@ -146,12 +151,18 @@ class AccountFollowsLoaderSubAssembler(
     fun updateFilterForAllAccounts(accounts: Collection<Account>): List<RelayBasedFilter>? {
         val users = mutableSetOf<User>()
         accounts.forEach { key ->
-            key.kind3FollowList.userList.value.forEach { user ->
-                if (user.authorRelayList() == null) {
+            // Every author the "All Follows" feed reads by the outbox model: the kind:3 follows plus
+            // the members of the user's own people lists and follow packs. A member nobody follows
+            // has no other loader asking for their kind:10002, so the feed could not find their notes.
+            key.allFollows.flow.value.authors.forEach { pubkey ->
+                val user = cache.checkGetOrCreateUser(pubkey)
+                if (user != null && user.authorRelayList() == null) {
                     users.add(user)
                 }
             }
         }
+
+        hasTried.fitTo(users.size)
 
         if (users.isEmpty()) {
             hasTried.removeEveryoneBut(emptySet())
@@ -200,7 +211,14 @@ class AccountFollowsLoaderSubAssembler(
         // adds new subscriptions
         uniqueSubscribedAccounts.forEach {
             if (it.value.userProfile() !in accountUpdatesJobMap.keys) {
-                newWatcher(it.value.userProfile(), it.value.kind3FollowList.userList)
+                // Only the authors matter here: the merged set also changes with hashtags, geohashes
+                // and communities, none of which have a relay list to load.
+                newWatcher(
+                    it.value.userProfile(),
+                    it.value.allFollows.flow
+                        .map { follows -> follows.authors }
+                        .distinctUntilChanged(),
+                )
             }
         }
 
@@ -217,7 +235,7 @@ class AccountFollowsLoaderSubAssembler(
     @OptIn(FlowPreview::class)
     fun newWatcher(
         user: User,
-        followList: Flow<List<User>>,
+        followList: Flow<Set<HexKey>>,
     ) {
         accountUpdatesJobMap[user]?.cancel()
         accountUpdatesJobMap[user] =

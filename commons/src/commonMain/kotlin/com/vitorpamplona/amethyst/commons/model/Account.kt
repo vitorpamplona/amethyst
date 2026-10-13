@@ -166,6 +166,7 @@ import com.vitorpamplona.amethyst.commons.model.topNavFeeds.FeedDecryptionCaches
 import com.vitorpamplona.amethyst.commons.model.topNavFeeds.FeedTopNavFilterState
 import com.vitorpamplona.amethyst.commons.model.topNavFeeds.IFeedTopNavFilter
 import com.vitorpamplona.amethyst.commons.model.topNavFeeds.OutboxLoaderState
+import com.vitorpamplona.amethyst.commons.model.topNavFeeds.SelectedListAuthorsState
 import com.vitorpamplona.amethyst.commons.model.topNavFeeds.TopFilter
 import com.vitorpamplona.amethyst.commons.model.trustedAssertions.TrustProviderListState
 import com.vitorpamplona.amethyst.commons.model.trustedAssertions.TrustProviderRow
@@ -1250,6 +1251,17 @@ class Account(
             geohashCache = geohashListDecryptionCache,
         )
 
+    // The members of every list picked in a top bar, on any screen: see [SelectedListAuthorsState].
+    // It must stay declared above the `live*FollowLists` below: Kotlin initializes properties in
+    // declaration order, and each of them registers here while the account is being constructed.
+    private val selectedLists = SelectedListAuthorsState(scope)
+
+    /** The members of every list the user picked in a top bar, watched as feed authors while the app is in the foreground. */
+    val selectedListAuthors: StateFlow<Set<HexKey>> = selectedLists.flow
+
+    /** Builds a screen's top-nav flow and registers it in [selectedListAuthors]. */
+    private fun selectedTopNavFilterFlow(listName: MutableStateFlow<TopFilter>): StateFlow<IFeedTopNavFilter> = topNavFilterFlow(listName).also(selectedLists::register)
+
     fun topNavFilterFlow(listName: MutableStateFlow<TopFilter>) =
         FeedTopNavFilterState(
             feedFilterListName = listName,
@@ -1271,105 +1283,105 @@ class Account(
         ).flow
 
     // App-ready Feeds
-    val liveHomeFollowLists: StateFlow<IFeedTopNavFilter> = topNavFilterFlow(settings.defaultHomeFollowList)
+    val liveHomeFollowLists: StateFlow<IFeedTopNavFilter> = selectedTopNavFilterFlow(settings.defaultHomeFollowList)
     val liveHomeFollowListsPerRelay = OutboxLoaderState(liveHomeFollowLists, cache, scope).flow
 
-    val liveStoriesFollowLists: StateFlow<IFeedTopNavFilter> = topNavFilterFlow(settings.defaultStoriesFollowList)
+    val liveStoriesFollowLists: StateFlow<IFeedTopNavFilter> = selectedTopNavFilterFlow(settings.defaultStoriesFollowList)
     val liveStoriesFollowListsPerRelay = OutboxLoaderState(liveStoriesFollowLists, cache, scope).flow
 
-    val liveDiscoveryFollowLists: StateFlow<IFeedTopNavFilter> = topNavFilterFlow(settings.defaultDiscoveryFollowList)
+    val liveDiscoveryFollowLists: StateFlow<IFeedTopNavFilter> = selectedTopNavFilterFlow(settings.defaultDiscoveryFollowList)
     val liveDiscoveryFollowListsPerRelay = OutboxLoaderState(liveDiscoveryFollowLists, cache, scope).flow
 
-    val liveNotificationFollowLists: StateFlow<IFeedTopNavFilter> = topNavFilterFlow(settings.defaultNotificationFollowList)
+    val liveNotificationFollowLists: StateFlow<IFeedTopNavFilter> = selectedTopNavFilterFlow(settings.defaultNotificationFollowList)
     val liveNotificationFollowListsPerRelay = OutboxLoaderState(liveNotificationFollowLists, cache, scope).flow
 
-    val livePollsFollowLists: StateFlow<IFeedTopNavFilter> = topNavFilterFlow(settings.defaultPollsFollowList)
+    val livePollsFollowLists: StateFlow<IFeedTopNavFilter> = selectedTopNavFilterFlow(settings.defaultPollsFollowList)
     val livePollsFollowListsPerRelay = OutboxLoaderState(livePollsFollowLists, cache, scope).flow
 
-    val livePicturesFollowLists: StateFlow<IFeedTopNavFilter> = topNavFilterFlow(settings.defaultPicturesFollowList)
+    val livePicturesFollowLists: StateFlow<IFeedTopNavFilter> = selectedTopNavFilterFlow(settings.defaultPicturesFollowList)
     val livePicturesFollowListsPerRelay = OutboxLoaderState(livePicturesFollowLists, cache, scope).flow
 
-    val liveRelayGroupsDiscoveryFollowLists: StateFlow<IFeedTopNavFilter> = topNavFilterFlow(settings.defaultRelayGroupsDiscoveryFollowList)
+    val liveRelayGroupsDiscoveryFollowLists: StateFlow<IFeedTopNavFilter> = selectedTopNavFilterFlow(settings.defaultRelayGroupsDiscoveryFollowList)
     val liveRelayGroupsDiscoveryFollowListsPerRelay = OutboxLoaderState(liveRelayGroupsDiscoveryFollowLists, cache, scope).flow
 
-    val liveNappletsFollowLists: StateFlow<IFeedTopNavFilter> = topNavFilterFlow(settings.defaultNappletsFollowList)
+    val liveNappletsFollowLists: StateFlow<IFeedTopNavFilter> = selectedTopNavFilterFlow(settings.defaultNappletsFollowList)
     val liveNappletsFollowListsPerRelay = OutboxLoaderState(liveNappletsFollowLists, cache, scope).flow
 
-    val liveNsitesFollowLists: StateFlow<IFeedTopNavFilter> = topNavFilterFlow(settings.defaultNsitesFollowList)
+    val liveNsitesFollowLists: StateFlow<IFeedTopNavFilter> = selectedTopNavFilterFlow(settings.defaultNsitesFollowList)
     val liveNsitesFollowListsPerRelay = OutboxLoaderState(liveNsitesFollowLists, cache, scope).flow
 
-    val liveWorkoutsFollowLists: StateFlow<IFeedTopNavFilter> = topNavFilterFlow(settings.defaultWorkoutsFollowList)
+    val liveWorkoutsFollowLists: StateFlow<IFeedTopNavFilter> = selectedTopNavFilterFlow(settings.defaultWorkoutsFollowList)
     val liveWorkoutsFollowListsPerRelay = OutboxLoaderState(liveWorkoutsFollowLists, cache, scope).flow
 
     // My Fitness reads the user's own workouts whatever the Workouts feed has selected, so it keys
     // the same workouts data source to a fixed "Mine" instead of defaultWorkoutsFollowList.
     val mineWorkoutsListName = MutableStateFlow<TopFilter>(TopFilter.Mine)
-    val liveMineWorkoutsPerRelay = OutboxLoaderState(topNavFilterFlow(mineWorkoutsListName), cache, scope).flow
+    val liveMineWorkoutsPerRelay = OutboxLoaderState(selectedTopNavFilterFlow(mineWorkoutsListName), cache, scope).flow
 
-    val liveGitRepositoriesFollowLists: StateFlow<IFeedTopNavFilter> = topNavFilterFlow(settings.defaultGitRepositoriesFollowList)
+    val liveGitRepositoriesFollowLists: StateFlow<IFeedTopNavFilter> = selectedTopNavFilterFlow(settings.defaultGitRepositoriesFollowList)
     val liveGitRepositoriesFollowListsPerRelay = OutboxLoaderState(liveGitRepositoriesFollowLists, cache, scope).flow
 
-    val liveHighlightsFollowLists: StateFlow<IFeedTopNavFilter> = topNavFilterFlow(settings.defaultHighlightsFollowList)
+    val liveHighlightsFollowLists: StateFlow<IFeedTopNavFilter> = selectedTopNavFilterFlow(settings.defaultHighlightsFollowList)
     val liveHighlightsFollowListsPerRelay = OutboxLoaderState(liveHighlightsFollowLists, cache, scope).flow
 
-    val liveCalendarsFollowLists: StateFlow<IFeedTopNavFilter> = topNavFilterFlow(settings.defaultCalendarsFollowList)
+    val liveCalendarsFollowLists: StateFlow<IFeedTopNavFilter> = selectedTopNavFilterFlow(settings.defaultCalendarsFollowList)
     val liveCalendarsFollowListsPerRelay = OutboxLoaderState(liveCalendarsFollowLists, cache, scope).flow
 
-    val liveProductsFollowLists: StateFlow<IFeedTopNavFilter> = topNavFilterFlow(settings.defaultProductsFollowList)
+    val liveProductsFollowLists: StateFlow<IFeedTopNavFilter> = selectedTopNavFilterFlow(settings.defaultProductsFollowList)
     val liveProductsFollowListsPerRelay = OutboxLoaderState(liveProductsFollowLists, cache, scope).flow
 
-    val liveGeocachesFollowLists: StateFlow<IFeedTopNavFilter> = topNavFilterFlow(settings.defaultGeocachesFollowList)
+    val liveGeocachesFollowLists: StateFlow<IFeedTopNavFilter> = selectedTopNavFilterFlow(settings.defaultGeocachesFollowList)
     val liveGeocachesFollowListsPerRelay = OutboxLoaderState(liveGeocachesFollowLists, cache, scope).flow
 
-    val liveShortsFollowLists: StateFlow<IFeedTopNavFilter> = topNavFilterFlow(settings.defaultShortsFollowList)
+    val liveShortsFollowLists: StateFlow<IFeedTopNavFilter> = selectedTopNavFilterFlow(settings.defaultShortsFollowList)
     val liveShortsFollowListsPerRelay = OutboxLoaderState(liveShortsFollowLists, cache, scope).flow
 
-    val livePublicChatsFollowLists: StateFlow<IFeedTopNavFilter> = topNavFilterFlow(settings.defaultPublicChatsFollowList)
+    val livePublicChatsFollowLists: StateFlow<IFeedTopNavFilter> = selectedTopNavFilterFlow(settings.defaultPublicChatsFollowList)
     val livePublicChatsFollowListsPerRelay = OutboxLoaderState(livePublicChatsFollowLists, cache, scope).flow
 
-    val liveLiveStreamsFollowLists: StateFlow<IFeedTopNavFilter> = topNavFilterFlow(settings.defaultLiveStreamsFollowList)
+    val liveLiveStreamsFollowLists: StateFlow<IFeedTopNavFilter> = selectedTopNavFilterFlow(settings.defaultLiveStreamsFollowList)
     val liveLiveStreamsFollowListsPerRelay = OutboxLoaderState(liveLiveStreamsFollowLists, cache, scope).flow
 
-    val liveNestsFollowLists: StateFlow<IFeedTopNavFilter> = topNavFilterFlow(settings.defaultNestsFollowList)
+    val liveNestsFollowLists: StateFlow<IFeedTopNavFilter> = selectedTopNavFilterFlow(settings.defaultNestsFollowList)
     val liveNestsFollowListsPerRelay = OutboxLoaderState(liveNestsFollowLists, cache, scope).flow
 
-    val liveLongsFollowLists: StateFlow<IFeedTopNavFilter> = topNavFilterFlow(settings.defaultLongsFollowList)
+    val liveLongsFollowLists: StateFlow<IFeedTopNavFilter> = selectedTopNavFilterFlow(settings.defaultLongsFollowList)
     val liveLongsFollowListsPerRelay = OutboxLoaderState(liveLongsFollowLists, cache, scope).flow
 
-    val liveArticlesFollowLists: StateFlow<IFeedTopNavFilter> = topNavFilterFlow(settings.defaultArticlesFollowList)
+    val liveArticlesFollowLists: StateFlow<IFeedTopNavFilter> = selectedTopNavFilterFlow(settings.defaultArticlesFollowList)
     val liveArticlesFollowListsPerRelay = OutboxLoaderState(liveArticlesFollowLists, cache, scope).flow
 
-    val liveMusicTracksFollowLists: StateFlow<IFeedTopNavFilter> = topNavFilterFlow(settings.defaultMusicTracksFollowList)
+    val liveMusicTracksFollowLists: StateFlow<IFeedTopNavFilter> = selectedTopNavFilterFlow(settings.defaultMusicTracksFollowList)
     val liveMusicTracksFollowListsPerRelay = OutboxLoaderState(liveMusicTracksFollowLists, cache, scope).flow
 
-    val liveMusicPlaylistsFollowLists: StateFlow<IFeedTopNavFilter> = topNavFilterFlow(settings.defaultMusicPlaylistsFollowList)
+    val liveMusicPlaylistsFollowLists: StateFlow<IFeedTopNavFilter> = selectedTopNavFilterFlow(settings.defaultMusicPlaylistsFollowList)
     val liveMusicPlaylistsFollowListsPerRelay = OutboxLoaderState(liveMusicPlaylistsFollowLists, cache, scope).flow
 
-    val livePodcastEpisodesFollowLists: StateFlow<IFeedTopNavFilter> = topNavFilterFlow(settings.defaultPodcastEpisodesFollowList)
+    val livePodcastEpisodesFollowLists: StateFlow<IFeedTopNavFilter> = selectedTopNavFilterFlow(settings.defaultPodcastEpisodesFollowList)
     val livePodcastEpisodesFollowListsPerRelay = OutboxLoaderState(livePodcastEpisodesFollowLists, cache, scope).flow
 
-    val livePodcastsFollowLists: StateFlow<IFeedTopNavFilter> = topNavFilterFlow(settings.defaultPodcastsFollowList)
+    val livePodcastsFollowLists: StateFlow<IFeedTopNavFilter> = selectedTopNavFilterFlow(settings.defaultPodcastsFollowList)
     val livePodcastsFollowListsPerRelay = OutboxLoaderState(livePodcastsFollowLists, cache, scope).flow
 
-    val liveSoftwareAppsFollowLists: StateFlow<IFeedTopNavFilter> = topNavFilterFlow(settings.defaultSoftwareAppsFollowList)
+    val liveSoftwareAppsFollowLists: StateFlow<IFeedTopNavFilter> = selectedTopNavFilterFlow(settings.defaultSoftwareAppsFollowList)
     val liveSoftwareAppsFollowListsPerRelay = OutboxLoaderState(liveSoftwareAppsFollowLists, cache, scope).flow
 
-    val liveBadgesFollowLists: StateFlow<IFeedTopNavFilter> = topNavFilterFlow(settings.defaultBadgesFollowList)
+    val liveBadgesFollowLists: StateFlow<IFeedTopNavFilter> = selectedTopNavFilterFlow(settings.defaultBadgesFollowList)
     val liveBadgesFollowListsPerRelay = OutboxLoaderState(liveBadgesFollowLists, cache, scope).flow
 
-    val liveBrowseEmojiSetsFollowLists: StateFlow<IFeedTopNavFilter> = topNavFilterFlow(settings.defaultBrowseEmojiSetsFollowList)
+    val liveBrowseEmojiSetsFollowLists: StateFlow<IFeedTopNavFilter> = selectedTopNavFilterFlow(settings.defaultBrowseEmojiSetsFollowList)
     val liveBrowseEmojiSetsFollowListsPerRelay = OutboxLoaderState(liveBrowseEmojiSetsFollowLists, cache, scope).flow
 
-    val liveCommunitiesFollowLists: StateFlow<IFeedTopNavFilter> = topNavFilterFlow(settings.defaultCommunitiesFollowList)
+    val liveCommunitiesFollowLists: StateFlow<IFeedTopNavFilter> = selectedTopNavFilterFlow(settings.defaultCommunitiesFollowList)
     val liveCommunitiesFollowListsPerRelay = OutboxLoaderState(liveCommunitiesFollowLists, cache, scope).flow
 
-    val liveFollowPacksFollowLists: StateFlow<IFeedTopNavFilter> = topNavFilterFlow(settings.defaultFollowPacksFollowList)
+    val liveFollowPacksFollowLists: StateFlow<IFeedTopNavFilter> = selectedTopNavFilterFlow(settings.defaultFollowPacksFollowList)
     val liveFollowPacksFollowListsPerRelay = OutboxLoaderState(liveFollowPacksFollowLists, cache, scope).flow
 
     // App recommendations are read straight from LocalCache (no relay feed of its
     // own), so only the in-memory author/tag matcher is needed here, not a
     // per-relay outbox loader.
-    val liveAppRecommendationsFollowLists: StateFlow<IFeedTopNavFilter> = topNavFilterFlow(settings.defaultAppRecommendationsFollowList)
+    val liveAppRecommendationsFollowLists: StateFlow<IFeedTopNavFilter> = selectedTopNavFilterFlow(settings.defaultAppRecommendationsFollowList)
 
     override fun isWriteable(): Boolean = settings.isWriteable()
 

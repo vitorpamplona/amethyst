@@ -60,6 +60,7 @@ import com.vitorpamplona.amethyst.commons.relayClient.reqCommand.account.Account
 import com.vitorpamplona.amethyst.commons.relayClient.reqCommand.account.AccountForegroundFilterAssemblerSubscription
 import com.vitorpamplona.amethyst.commons.relayClient.user.LocalUserFinder
 import com.vitorpamplona.amethyst.commons.relayClient.user.LocalUserFinderAccount
+import com.vitorpamplona.amethyst.commons.relayClient.user.SelectedListAuthorsSubscription
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.loading_account
 import com.vitorpamplona.amethyst.commons.service.crashreports.DisplayCrashMessages
@@ -213,6 +214,10 @@ private fun LoggedInPage(
     // Foreground-only loaders: follows-outbox finder + random-relay notifications.
     // Pauses on ON_STOP, resumes on ON_START.
     AccountForegroundFilterAssemblerSubscription(accountViewModel)
+
+    // Relay lists and metadata of the members of every list picked in a top bar, on any screen, so
+    // those feeds can reach members nobody follows. Swaps as selections change; pauses on ON_STOP.
+    SelectedListAuthorsSubscription(accountViewModel)
 
     // Pre-loads the feed for every icon the user has pinned to the bottom bar.
     // Subscriptions follow the user's chosen list reactively, not the default 5.
