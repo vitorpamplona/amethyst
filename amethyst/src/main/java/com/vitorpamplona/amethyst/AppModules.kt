@@ -1263,6 +1263,9 @@ class AppModules(
     @Suppress("DEPRECATION")
     fun encryptedStorage(npub: String? = null): EncryptedSharedPreferences = EncryptedStorage.preferences(appContext, npub)
 
+    // UnexpectedCrashSaver captures the previous default handler and hands every crash on to it;
+    // lint cannot see that from here because the class lives in commons.
+    @Suppress("DefaultUncaughtExceptionDelegation")
     fun initiate(appContext: Context) {
         Thread.setDefaultUncaughtExceptionHandler(UnexpectedCrashSaver(crashReportCache, androidCrashReportAssembler()))
 

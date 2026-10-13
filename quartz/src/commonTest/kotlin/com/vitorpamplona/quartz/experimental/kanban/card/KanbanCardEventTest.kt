@@ -76,7 +76,7 @@ class KanbanCardEventTest {
         assertFalse(card.isTracker())
         assertNull(card.trackedEvent())
         assertNull(card.trackedAddress())
-        assertTrue(card is RootScope)
+        assertIs<RootScope>(card)
     }
 
     @Test

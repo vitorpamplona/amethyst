@@ -3,23 +3,6 @@
     <!-- Placeholder shown in a chat row while an encrypted message is still being decrypted -->
     <!-- Prefix on a Messages-list preview when the newest message was sent by the logged-in user. %1$s is the message text -->
     <string name="block_hide_user"><![CDATA[Blokiraj in skrij uporabnika]]></string>
-    <string name="boosted">poslano naprej</string>
-    <string name="edited_number">uredi #%1$s</string>
-    <string name="save">Shrani</string>
-    <string name="rename">Preimenuj</string>
-    <string name="concord_create_icon">URL ikone (izbirno)</string>
-    <plurals name="buzz_workspaces_count">
-        <item quantity="one">%1$d delovni prostor</item>
-        <item quantity="two">%1$d delovna prostora</item>
-        <item quantity="few">%1$d delovni prostori</item>
-        <item quantity="other">%1$d delovnih prostorov</item>
-    </plurals>
-    <plurals name="buzz_workspaces_channel_count">
-        <item quantity="one">%1$d kanal</item>
-        <item quantity="two">%1$d kanala</item>
-        <item quantity="few">%1$d kanali</item>
-        <item quantity="other">%1$d kanalov</item>
-    </plurals>
     <!-- Reply-mode toggle in the chat composer: reply inline in the timeline vs pull it aside into a thread. -->
     <!-- Title of the minichat (thread) screen opened from a chat message. -->
     <!-- Title of the picked-image confirmation dialog when attaching a picture to a thread reply. -->
@@ -27,21 +10,9 @@
     <!-- A reply whose target was searched for across all reachable history and never found. -->
     <!-- Reply subtitle when every relay genuinely bottomed out (no stalls) and it still wasn't there. -->
     <!-- Overflow count on the capped reporter avatar row, e.g. "+21". -->
-    <string name="changed_chat_profile_to">Nov profil klepeta:</string>
-    <string name="route_software_apps">Applikacije</string>
-    <string name="napplet_permissions">nApplet dovoljenja</string>
-    <string name="napplet_permissions_empty">Še ni dovoljenj za nApplet</string>
-    <string name="napplet_permissions_empty_subtitle">Tukaj bodo prikazana dovoljenja, ki jih dodelite nAppletom.</string>
-    <string name="napplet_permissions_forget">Pozabi ta nApplet</string>
-    <string name="napplet_permissions_blocked">Blokirano</string>
-    <string name="napplet_permissions_revoke">Prekliči</string>
     <!-- Napplet sandbox chrome (host top bar + live action notices) -->
     <!-- Napplet capability names -->
-    <string name="napplet_cap_shell">Shell</string>
-    <string name="napplet_cap_shell_desc">Ta nApplet želi preveriti, katere zmogljivosti so na voljo</string>
     <!-- Napplet consent dialog -->
-    <string name="napplet_consent_capability">Zmogljivost: %1$s</string>
-    <string name="napplet_consent_pay">Ta nApplet želi plačati Lightning račun.</string>
     <!-- An amountless BOLT11: the payee decides how much. Never render this as "0 sats". -->
     <!-- Consequence lines for event kinds whose payload lives entirely in the tags, so a
          kind-only summary would hide what is actually being signed. These replaceable lists are
@@ -53,12 +24,8 @@
     <!-- Re-publishing an identical list is harmless; say so rather than raising a false alarm. -->
     <!-- No cached copy to compare against, so the whole list is what gets written. -->
     <!-- Signer permissions: first-connect dialog -->
-    <string name="napplet_connect_title">Povezava z Nostrom</string>
     <!-- Signer trust levels -->
     <!-- Signer per-op consent dialog -->
-    <string name="napplet_signer_allow_op">Ne vprašaj me več, da %1$s</string>
-    <string name="napplet_signer_last_used">Nazadnje uporabljeno</string>
-    <string name="napplet_signer_expires">Preteče</string>
     <!-- Signer op labels -->
     <!-- Decrypt: the message is already decrypted by Amethyst; the permission is to expose it to the app -->
     <!-- Decrypt scoped to one counterparty. %1$s is that person's name (or a shortened npub) -->
@@ -66,21 +33,7 @@
     <!-- Shown as the preview when Amethyst itself cannot decrypt the message the app asked to read -->
     <!-- Label above the counterparty avatar in the decrypt consent dialog -->
     <!-- Permissions management screen -->
-    <string name="napplet_permissions_revoke_all">Prekliči vsa dovoljenja</string>
-    <string name="napplet_permissions_overrides">Preglasitve operacij</string>
-    <string name="napplet_signer_permissions_empty">Nobena aplikacija se še ni povezala.</string>
     <!-- NIP-46 remote signer (bunker) -->
-    <string name="nip46_signer_search_keywords">Podpisnik, bunker, NIP-46, Nostr Connect, oddaljeno podpisovanje</string>
-    <string name="nip46_signer_enable">Deluj kot oddaljeni podpisnik</string>
-    <plurals name="nip46_signer_status_listening">
-        <item quantity="one">Poslušanje na %1$d releju</item>
-        <item quantity="two">Poslušanje na %1$d relejih</item>
-        <item quantity="few">Poslušanje na %1$d relejih</item>
-        <item quantity="other">Poslušanje na %1$d relejih</item>
-    </plurals>
-    <string name="nip46_signer_bunker_uri_label">Vaš bunker naslov</string>
-    <string name="nip46_signer_bunker_uri_hint">Prilepite to v drugo aplikacijo, da jo povežete s svojim ključem.</string>
-    <string name="nip46_signer_activity_empty">Še ni bilo obdelanih zahtev.</string>
     <!-- Relay Authentication (NIP-42) settings -->
     <!-- The group header carries the grammar; each toggle is a completion of the sentence, so these
          keys are new rather than reused - a stale translation of the old standalone titles would
@@ -93,22 +46,7 @@
     <!-- No longer shown in the prompt: kept so the existing translations aren't orphaned. -->
     <!-- Settings: three lists that each hold what their header says. -->
     <!-- Short labels for the purpose chips on a "recent logins" row. -->
-    <string name="agent_console_title">Konzola za agente</string>
-    <string name="podcast_premium">Premium</string>
-    <string name="podcast_value_add_recipient">Dodaj prejemnika</string>
-    <string name="private_note_no_receivers">Ni še prejemnikov: ta zapis lahko vidiš samo ti. Dodaj ljudi, da ga deliš z njimi.</string>
     <!-- Composer audience control (Notify / "Visible to") -->
-    <string name="notify_add_user">Dodaj</string>
-    <string name="notify_remove_user">Odstrani uporabnika iz obvestil</string>
-    <string name="notify_search_and_add_user">Poišči in dodaj prejemnika obvestil</string>
-    <string name="set_preferred_media_servers">Nastavi svoje prednostne medijske strežnike za nalaganje medijev.</string>
-    <string name="manage_stored_files">Upravljanje shranjenih datotek</string>
-    <string name="blossom_delete_from">Izbriši iz…</string>
-    <string name="recommended_media_servers">Priporočljivi medijski strežniki</string>
-    <string name="built_in_servers_description">Privzeti seznam Amethysta. Lahko jih dodate posamično ali dodate celoten seznam.</string>
-    <string name="media_server_status_checking">Preverjam…</string>
-    <string name="app_notification_replies_channel_message">%1$s vam odgovarja</string>
-    <string name="app_notification_replies_channel_message_for">na: %1$s</string>
     <!-- Notification channel groups (organize the per-kind channels in system settings) -->
     <!-- Reposts -->
     <!-- Media (picture &amp; video posts that mention you) -->
@@ -128,12 +66,7 @@
          a relay count they think is too high. -->
     <!-- Two countable nouns, so two plurals composed at the call site rather than one string with
          two %d in it: filter and relay decline independently in Slavic/Baltic/Semitic languages. -->
-    <string name="active_subs_pair">%1$s \u00b7 %2$s</string>
-    <string name="always_on_notif_setting_title">Vedno aktivna obvestila</string>
-    <string name="always_on_notif_setting_description">Ohranja stalno povezavo z vašimi releji za takojšnjo dostavo obvestil. Prikazuje trajno obvestilo. Porabi več baterije, a zagotavlja, da ne zamudite nobenega sporočila.</string>
     <string name="always_on_notif_tile_label">Storitev obveščanja</string>
-    <string name="notification_service_participation_title">Ta račun naj ostane aktiven v ozadju</string>
-    <string name="preferences">Nastavitve aplikacije</string>
     <!-- Settings search -->
     <!-- Settings search keywords: an English concept/protocol index that supplements the
          (translated) row titles. Marked translatable="false" so protocol terms (blossom, nsec,
@@ -141,110 +74,26 @@
     <!-- Compact label for the segmented control, where "Unmetered WiFi" does not fit. -->
     <!-- Compact labels for the segmented control. -->
     <!-- Compact labels for the segmented control, rendered in each option's own typeface. -->
-    <string name="messages_create_public_chat">Javno</string>
-    <string name="messages_create_group">Skupina</string>
     <!-- New conversation chooser (full-screen picker opened from the Messages FAB).
          Each row stays lean; the "best for" line and the pros/cons appear only when a row is tapped. -->
     <!-- Buzz calls its groups channels, and a Buzz relay is one workspace rather than a directory of groups. -->
-    <string name="buzz_channel_flag_forum">Kanal foruma</string>
-    <string name="buzz_channel_flag_forum_desc">Objave v nizov objav namesto časovnice klepeta. Tega kasneje ni mogoče spremeniti.</string>
-    <string name="relay_group_create_name">Ime supine</string>
-    <string name="relay_group_create_topic">Tema (neobvezno)</string>
-    <string name="relay_group_create_private">Zasebno (branje samo za člane)</string>
-    <string name="relay_group_create_invite_only">Samo s povabilom</string>
-    <string name="relay_group_create_confirm">Ustvari</string>
-    <string name="relay_group_invite_generating">Ustvarjam povabilo…</string>
-    <string name="relay_group_invite_copied">Koda povabila kopirana</string>
-    <string name="relay_group_edit_name">Ime skupine</string>
-    <string name="relay_group_edit_topic">Tema (nebvezno)</string>
-    <string name="relay_group_edit_private">Zasebno (branje samo za člane)</string>
-    <string name="relay_group_edit_invite_only">Samo s povabilom</string>
-    <string name="relay_group_edit_confirm">Shrani</string>
-    <string name="relay_group_location_edit">Spremeni lokacijo</string>
     <!-- Reusable geohash location picker (shared, not group-specific) -->
-    <string name="relay_group_discovery_empty">Iščem skupine po vaših relejih…</string>
-    <string name="relay_group_discovery_empty_filtered">S tem filtrom še ni najdenih nobenih skupin.</string>
     <!-- Same, where this viewer cannot start one: not a member, or a Buzz chat channel (forum posts belong to forum channels). -->
-    <string name="relay_group_thread_body_label">Napiši kaj…</string>
-    <string name="relay_group_thread_post">Pošlji</string>
-    <string name="channel_invite_title">Dodano v: %1$s</string>
-    <plurals name="relay_group_message_count">
-        <item quantity="one">%1$d sporočilo</item>
-        <item quantity="two">%1$d sporočila</item>
-        <item quantity="few">%1$d sporočila</item>
-        <item quantity="other">%1$d sporočil</item>
-    </plurals>
-    <plurals name="relay_group_message_count_capped">
-        <item quantity="one">%1$d+ sporočilo</item>
-        <item quantity="two">%1$d+ sporočila</item>
-        <item quantity="few">%1$d+ sporočila</item>
-        <item quantity="other">%1$d+ sporočil</item>
-    </plurals>
-    <plurals name="relay_group_follows_participating">
-        <item quantity="one">%1$d uporabnik, ki mu sledite</item>
-        <item quantity="two">%1$d uporabnika, ki jima sledite</item>
-        <item quantity="few">%1$d uporabniki, ki jim sledite</item>
-        <item quantity="other">%1$d uporabnikov, ki jim sledite</item>
-    </plurals>
-    <string name="messages_new_message">Zasebno</string>
     <string name="share_target_as_dm">Pošlji kot ZS</string>
     <string name="share_target_as_highlight">Nov poudarek</string>
     <string name="share_target_as_picture">Nova slika</string>
     <string name="share_target_as_short_video">Nov kratek videoposnetek</string>
     <string name="share_target_as_video">Nov video</string>
-    <string name="new_highlight_passage_label">Poudarjeno besedilo</string>
     <!-- Label for the mixed media feed: pictures + every NIP-71 video kind + NIP-94 files.
          Distinct from the "shorts" string, which labels the vertical/short-video-only feed. -->
-    <string name="cashu_p2pk_section">Ključ Nutzap (napredno)</string>
-    <string name="cashu_p2pk_explainer">Ločen zasebni ključ, uporabljen le za prejemanje NIP-61 nutzapov. To ni vaš ključ identitete Nostr.</string>
-    <string name="cashu_p2pk_autogen">Generiraj nov ključ</string>
-    <string name="cashu_p2pk_manual_label">Zasebni ključ P2PK (hex)</string>
     <string name="wallet_save_changes">Shrani spremembe</string>
     <!-- Onchain zap send dialog -->
-    <string name="bottom_bar_settings_description">Povlecite za spremembo vrstnega reda. Preklopite za dodajanje ali odstranjevanje elementov s spodnje vrstice. Če ni izbran noben element, je spodnja vrstica skrita.</string>
-    <string name="bottom_bar_settings_reorder">Razporedi</string>
-    <string name="home_tabs_settings_description">Izberite zavihke, ki se prikažejo na začetnem zaslonu. Če je aktiven le en zavihek, je vrstica z zavihki skrita.</string>
-    <string name="profile_ui_settings_description">Izberi, kateri razdelki in viri vsebin naj se prikažejo na profilih uporabnikov. Vse možnosti so privzeto omogočene.</string>
     <!-- Buzz kind-40099 system messages: relay-authored narration of a channel state change. -->
     <!-- Fallback for a system message type this version does not know yet: "alice: some_new_type". -->
     <!-- Buzz huddles (kind 481xx): live audio-room lifecycle, narrated in the chat timeline. -->
     <!-- Buzz agent jobs (kind 43xxx): an agent task's lifecycle, narrated in the chat timeline. -->
     <!-- Buzz forum votes (kind 45002). -->
-    <string name="buzz_workspaces_title">Buzz delovni prostori</string>
-    <string name="buzz_workspaces_hero_tagline">Kjer ljudje in agenti ustvarjajo skupaj</string>
-    <string name="buzz_workspaces_leave">Zapusti delovni prostor</string>
-    <string name="buzz_workspaces_section">Vaši delovni prostori</string>
-    <string name="buzz_workspaces_empty_title">Ni delovnih prostorov</string>
-    <string name="buzz_workspaces_empty_body">Delovni prostori Buzz so releji, kjer ljudje in AI-agenti ustvarjajo skupaj. Pridružite se enemu,  se prikaže tukaj.</string>
-    <string name="buzz_workspaces_browse">Brskaj po skupinah</string>
-    <string name="buzz_console_card_subtitle">Stroški · Liki · Opazovalec v živo</string>
-    <string name="buzz_dm_nav_label">ZS Buzz</string>
-    <string name="buzz_dm_card_subtitle">Zasebni pogovori v vaših delovnih prostorih</string>
-    <string name="buzz_import_title">Uvozi kanale delovnega prostora</string>
-    <string name="buzz_import_your_channels">Vaši kanali v tem delovnem prostoru</string>
-    <string name="buzz_import_add">Dodaj</string>
-    <string name="buzz_import_empty_title">Ni najdenih kanalov</string>
-    <string name="buzz_import_empty_body">Videti je, da na tem releju še nisi član nobenega kanala. Najprej v brskalniku sprejmi vabilo v delovni prostor in poskusite znova.</string>
-    <string name="git_web_address">Splet:</string>
-    <string name="git_repo_tab_overview">Predogled</string>
-    <string name="git_repo_maintained_by">Vzdržuje:</string>
-    <string name="git_repo_section_about">Vizitka repozitorija</string>
-    <string name="git_repo_section_links">Povezave</string>
-    <string name="git_repo_section_maintainers">Vzdrževalci</string>
-    <string name="git_repo_section_topics">Teme</string>
-    <string name="git_repo_tab_readme">Readme</string>
-    <string name="git_issue_close">Zapri težavo</string>
-    <string name="git_issue_reopen">Ponovno odpri</string>
-    <string name="media_servers_blossom_section">Blossom strežniki</string>
-    <string name="media_servers_blossom_explainer">Dodajte poljubno število strežnikov. Kasneje lahko izberete, katerega želite uporabiti pri nalaganju slike</string>
-    <string name="torrent_download">Prenesi</string>
     <!-- %1$s is replaced at runtime by an inline star icon, not text. Keep the placeholder. -->
-    <string name="resource_usage_today">Danes</string>
-    <string name="resource_usage_week">Zadnjih 7 dni</string>
-    <string name="resource_usage_cellular_bg">Mobilni podatki (v ozadju)</string>
-    <string name="resource_usage_cellular_fg">Mobilni podatki (v aplikaciji)</string>
-    <string name="resource_usage_wifi">Wi-Fi podatki</string>
-    <string name="resource_usage_fg_time">Čas v aplikaciji</string>
     <!-- Kind display names for relay subscription filter chips -->
     <!-- M3 Action Dialog titles -->
     <!-- Nicknames (NIP-85 contact cards); the dialog strings live in commons -->

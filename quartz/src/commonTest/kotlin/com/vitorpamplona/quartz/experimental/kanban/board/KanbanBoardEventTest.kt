@@ -64,7 +64,7 @@ class KanbanBoardEventTest {
         assertTrue(board.canEditCards(owner))
         assertTrue(board.canEditCards(maintainer))
         assertFalse(board.canEditCards("f".repeat(64)))
-        assertTrue(board is RootScope)
+        assertIs<RootScope>(board)
     }
 
     @Test

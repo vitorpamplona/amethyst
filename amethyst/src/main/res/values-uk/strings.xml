@@ -1,8 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources xmlns:tools="http://schemas.android.com/tools">
     <string name="block_hide_user"><![CDATA[Заблокувати та приховати користувача]]></string>
-    <string name="boosted">підсилено</string>
-    <string name="save">Зберегти</string>
     
     
     
@@ -79,13 +77,9 @@
     
     
     
-    <string name="private_note_no_receivers">Немає одержувачів: лише ви зможете бачити цю нотатку. Додайте людей, щоб поділитися нею.</string>
     
-    <string name="notify_add_user">Додати</string>
     
-    <string name="notify_remove_user">Видалити користувача з сповіщень</string>
     
-    <string name="notify_search_and_add_user">Знайти та додати користувача для сповіщення</string>
     
     
     
@@ -141,7 +135,6 @@
     
     
     
-    <string name="set_preferred_media_servers">Встановіть бажані сервери для завантаження медіа.</string>
     
     
     
@@ -150,9 +143,7 @@
     
     
     
-    <string name="recommended_media_servers">Рекомендовані медіасервери</string>
     
-    <string name="built_in_servers_description">Стандартний список Amethyst. Ви можете додавати їх окремо або додати весь список.</string>
     
     
     
@@ -272,9 +263,6 @@
     
     
     
-    <string name="app_notification_replies_channel_message">%1$s відповів(ла)</string>
-    
-    <string name="app_notification_replies_channel_message_for">на: %1$s</string>
     
     
     
@@ -333,9 +321,8 @@
     
     
     
-    <string name="always_on_notif_setting_title">Постійна служба сповіщень</string>
     
-    <string name="always_on_notif_setting_description">Підтримує постійне з\'єднання з вашими inbox relay для миттєвої доставки сповіщень. Відображає постійне сповіщення. Використовує більше заряду батареї, але гарантує, що ви ніколи не пропустите повідомлення.</string>
+    
     
     
     
@@ -454,7 +441,6 @@
     
     
     
-    <string name="preferences">Параметри додатку</string>
     
     
     
@@ -527,12 +513,9 @@
     
     
     
-    <string name="messages_create_public_chat">Публічний</string>
     
-    <string name="messages_create_group">Група</string>
     
     
-    <string name="messages_new_message">Приватний</string>
     
     
     
@@ -708,13 +691,9 @@
     
     
     
-    <string name="cashu_p2pk_section">Nutzap ключ (для досвідчених)</string>
     
-    <string name="cashu_p2pk_explainer">Окремий приватний ключ, що використовується лише для отримання NIP-61 nutzap. Це не ваш ключ ідентифікації Nostr.</string>
     
-    <string name="cashu_p2pk_autogen">Згенерувати новий ключ</string>
     
-    <string name="cashu_p2pk_manual_label">P2PK приватний ключ (hex)</string>
     
     
     <string name="wallet_save_changes">Зберегти зміни</string>
@@ -999,18 +978,14 @@
     
     
     
-    <string name="bottom_bar_settings_description">Перетягніть для зміни порядку. Перемикайте, щоб додати або видалити елемент із нижньої панелі. При нулі елементів нижня панель прихована.</string>
     
     
-    <string name="bottom_bar_settings_reorder">Змінити порядок</string>
     
     
     
-    <string name="home_tabs_settings_description">Виберіть, які вкладки з\'являються на головному екрані. Якщо активна лише одна вкладка, панель вкладок прихована.</string>
     
     
     
-    <string name="profile_ui_settings_description">Виберіть, які розділи та стрічки з\'являються на екранах профілів користувачів. За замовчуванням усі параметри увімкнені.</string>
     
     
     
@@ -1162,24 +1137,18 @@
     
     
     
-    <string name="git_web_address">Веб:</string>
     
     
     
     
     
     
-    <string name="git_repo_tab_overview">Огляд</string>
     
     
     
-    <string name="git_repo_section_about">Про репозиторій</string>
     
-    <string name="git_repo_section_links">Посилання</string>
     
-    <string name="git_repo_section_maintainers">Супровідники</string>
     
-    <string name="git_repo_section_topics">Теми</string>
     
     
     
@@ -1243,16 +1212,13 @@
     
     
     
-    <string name="media_servers_blossom_section">Сервери Blossom</string>
     
-    <string name="media_servers_blossom_explainer">Додайте стільки серверів, скільки потрібно. Ви зможете обрати, який використовувати пізніше, під час завантаження зображення</string>
     
     
     
     
     
     
-    <string name="torrent_download">Завантажити</string>
     
     
     
@@ -2027,7 +1993,6 @@
 
 
 
-    <string name="edited_number">редакція #%1$s</string>
 
 
 
@@ -2107,7 +2072,6 @@
 
 
 
-    <string name="rename">Перейменувати</string>
 
 
 
@@ -2166,7 +2130,6 @@
 
 
 
-    <string name="changed_chat_profile_to">Новий профіль чату:</string>
 
 
 
@@ -2386,7 +2349,6 @@
     
     
     
-    <string name="route_software_apps">Застосунки</string>
     
     
     
@@ -2422,23 +2384,16 @@
 
 
 
-    <string name="napplet_permissions">Дозволи nApplet</string>
 
 
-    <string name="napplet_permissions_empty">Дозволів nApplet ще немає</string>
 
-    <string name="napplet_permissions_empty_subtitle">Тут з\'являться дозволи, які ви надасте nApplets.</string>
 
-    <string name="napplet_permissions_forget">Забути цей nApplet</string>
 
-    <string name="napplet_permissions_blocked">Заблоковано</string>
 
-    <string name="napplet_permissions_revoke">Відкликати</string>
 
 
 
 
-    <string name="napplet_cap_shell">Shell</string>
 
 
 
@@ -2447,7 +2402,6 @@
 
 
 
-    <string name="napplet_cap_shell_desc">Запитати, які можливості доступні</string>
 
 
 
@@ -2462,7 +2416,6 @@
 
 
 
-    <string name="napplet_consent_capability">Можливість: %1$s</string>
 
 
 
@@ -2475,7 +2428,6 @@
 
 
 
-    <string name="napplet_consent_pay">Цей nApplet хоче оплатити Lightning-інвойс.</string>
 
 
 

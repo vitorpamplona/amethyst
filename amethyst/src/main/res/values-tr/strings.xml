@@ -1,8 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="block_hide_user"><![CDATA[Blokla Ve Engelle]]></string>
-    <string name="boosted">desteklendi</string>
-    <string name="save">Kaydet</string>
     
     
     
@@ -157,13 +155,9 @@
     
     
     
-    <string name="private_note_no_receivers">Henüz alıcı yok: bu notu yalnızca siz görebilirsiniz. Paylaşmak için kişi ekleyin.</string>
     
-    <string name="notify_add_user">Ekle</string>
     
-    <string name="notify_remove_user">Kullanıcıyı bildirimlerden kaldır</string>
     
-    <string name="notify_search_and_add_user">Bildirim göndermek için kullanıcı ara ve ekle</string>
     
     
     
@@ -187,434 +181,6 @@
     
     
     
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    <string name="set_preferred_media_servers">Tercih ettiğiniz medya yükleme sunucularını ayarlayın.</string>
-    
-    
-    
-    
-    
-    
-    
-    
-    <string name="recommended_media_servers">Önerilen Medya Sunucuları</string>
-    
-    <string name="built_in_servers_description">Amethyst\'in varsayılan listesi. Bunları tek tek veya liste olarak ekleyebilirsiniz.</string>
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    <string name="app_notification_replies_channel_message">%1$s yanıtladı</string>
-    
-    <string name="app_notification_replies_channel_message_for">şurada: %1$s</string>
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    <string name="always_on_notif_setting_title">Her zaman açık bildirim servisi</string>
-    
-    <string name="always_on_notif_setting_description">Anlık bildirim teslimi için gelen kutusu relay\'lerinize kalıcı bir bağlantı tutar. Devam eden bir bildirim gösterir. Daha fazla pil kullanır ancak bir mesajı kaçırmamanızı sağlar.</string>
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    <string name="preferences">Uygulama Tercihleri</string>
     
     
     
@@ -709,12 +275,429 @@
     
     
     
-    <string name="messages_create_public_chat">Herkese Açık</string>
-    
-    <string name="messages_create_group">Grup</string>
     
     
-    <string name="messages_new_message">Özel</string>
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
     
     
     
@@ -952,13 +935,9 @@
     
     
     
-    <string name="cashu_p2pk_section">Nutzap anahtarı (gelişmiş)</string>
     
-    <string name="cashu_p2pk_explainer">Yalnızca NIP-61 nutzap almak için kullanılan ayrı bir özel anahtar. Nostr kimlik anahtarınız değildir.</string>
     
-    <string name="cashu_p2pk_autogen">Yeni bir anahtar oluştur</string>
     
-    <string name="cashu_p2pk_manual_label">P2PK özel anahtarı (hex)</string>
     
     
     <string name="wallet_save_changes">Değişiklikleri kaydet</string>
@@ -1243,18 +1222,14 @@
     
     
     
-    <string name="bottom_bar_settings_description">Sıralamak için sürükleyin. Bir öğeyi alt çubuktan eklemek veya kaldırmak için geçiş yapın. Sıfır öğeyle alt çubuk gizlenir.</string>
     
     
-    <string name="bottom_bar_settings_reorder">Yeniden Sırala</string>
     
     
     
-    <string name="home_tabs_settings_description">Ana Sayfa ekranında hangi sekmelerin görüneceğini seçin. Yalnızca bir sekme etkin olduğunda sekme çubuğu gizlenir.</string>
     
     
     
-    <string name="profile_ui_settings_description">Kullanıcı profil ekranlarında hangi bölümlerin ve akışların görüneceğini seçin. Tüm seçenekler varsayılan olarak etkindir.</string>
     
     
     
@@ -1406,24 +1381,18 @@
     
     
     
-    <string name="git_web_address">Web:</string>
     
     
     
     
     
     
-    <string name="git_repo_tab_overview">Genel Bakış</string>
     
     
     
-    <string name="git_repo_section_about">Hakkında</string>
     
-    <string name="git_repo_section_links">Bağlantılar</string>
     
-    <string name="git_repo_section_maintainers">Bakımcılar</string>
     
-    <string name="git_repo_section_topics">Konular</string>
     
     
     
@@ -1487,16 +1456,13 @@
     
     
     
-    <string name="media_servers_blossom_section">Blossom Sunucuları</string>
     
-    <string name="media_servers_blossom_explainer">İstediğiniz kadar sunucu ekleyin. Resminizi yüklerken hangisini kullanacağınızı daha sonra seçebilirsiniz</string>
     
     
     
     
     
     
-    <string name="torrent_download">İndir</string>
     
     
     
@@ -2273,7 +2239,6 @@
     
     
     
-    <string name="edited_number">düzenleme #%1$s</string>
     
     
     
@@ -2355,7 +2320,6 @@
     
     
     
-    <string name="rename">Yeniden adlandır</string>
     
     
     
@@ -2423,7 +2387,6 @@
     
     
     
-    <string name="changed_chat_profile_to">Yeni sohbet profili:</string>
     
     
     
@@ -2699,7 +2662,6 @@
 
 
 
-    <string name="route_software_apps">Uygulamalar</string>
 
 
 
@@ -2735,23 +2697,16 @@
 
 
 
-    <string name="napplet_permissions">nApplet izinleri</string>
 
 
-    <string name="napplet_permissions_empty">Henüz nApplet izni yok</string>
 
-    <string name="napplet_permissions_empty_subtitle">nApplet\'lere verdiğin izinler burada görünecek.</string>
 
-    <string name="napplet_permissions_forget">Bu nApplet\'i unut</string>
 
-    <string name="napplet_permissions_blocked">Engellendi</string>
 
-    <string name="napplet_permissions_revoke">İptal et</string>
 
 
 
 
-    <string name="napplet_cap_shell">Kabuk</string>
 
 
 
@@ -2760,7 +2715,6 @@
 
 
 
-    <string name="napplet_cap_shell_desc">Hangi özelliklerin mevcut olduğunu sorgula</string>
 
 
 
@@ -2775,7 +2729,6 @@
 
 
 
-    <string name="napplet_consent_capability">Yetenek: %1$s</string>
 
 
 
@@ -2788,7 +2741,6 @@
 
 
 
-    <string name="napplet_consent_pay">Bu nApplet bir Lightning faturası ödemek istiyor.</string>
 
 
 

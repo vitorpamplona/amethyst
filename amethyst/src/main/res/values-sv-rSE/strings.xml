@@ -3,19 +3,6 @@
     <!-- Placeholder shown in a chat row while an encrypted message is still being decrypted -->
     <!-- Prefix on a Messages-list preview when the newest message was sent by the logged-in user. %1$s is the message text -->
     <string name="block_hide_user"><![CDATA[Blockera och göm användare]]></string>
-    <string name="boosted">boostad</string>
-    <string name="edited_number">redigering #%1$s</string>
-    <string name="save">Spara</string>
-    <string name="rename">Byt namn</string>
-    <string name="concord_create_icon">Ikon-URL (valfritt)</string>
-    <plurals name="buzz_workspaces_count">
-        <item quantity="one">%1$d arbetsyta</item>
-        <item quantity="other">%1$d arbetsytor</item>
-    </plurals>
-    <plurals name="buzz_workspaces_channel_count">
-        <item quantity="one">%1$d kanal</item>
-        <item quantity="other">%1$d kanaler</item>
-    </plurals>
     <!-- Reply-mode toggle in the chat composer: reply inline in the timeline vs pull it aside into a thread. -->
     <!-- Title of the minichat (thread) screen opened from a chat message. -->
     <!-- Title of the picked-image confirmation dialog when attaching a picture to a thread reply. -->
@@ -23,21 +10,9 @@
     <!-- A reply whose target was searched for across all reachable history and never found. -->
     <!-- Reply subtitle when every relay genuinely bottomed out (no stalls) and it still wasn't there. -->
     <!-- Overflow count on the capped reporter avatar row, e.g. "+21". -->
-    <string name="changed_chat_profile_to">Ny chattprofil:</string>
-    <string name="route_software_apps">Appar</string>
-    <string name="napplet_permissions">nApplet-behörigheter</string>
-    <string name="napplet_permissions_empty">Inga nApplet-behörigheter ännu</string>
-    <string name="napplet_permissions_empty_subtitle">Behörigheter du beviljar nApplets visas här.</string>
-    <string name="napplet_permissions_forget">Glöm det här nApplet</string>
-    <string name="napplet_permissions_blocked">Blockerad</string>
-    <string name="napplet_permissions_revoke">Återkalla</string>
     <!-- Napplet sandbox chrome (host top bar + live action notices) -->
     <!-- Napplet capability names -->
-    <string name="napplet_cap_shell">Shell</string>
-    <string name="napplet_cap_shell_desc">Fråga vilka funktioner som är tillgängliga</string>
     <!-- Napplet consent dialog -->
-    <string name="napplet_consent_capability">Funktion: %1$s</string>
-    <string name="napplet_consent_pay">Det här nApplet vill betala en Lightning-faktura.</string>
     <!-- An amountless BOLT11: the payee decides how much. Never render this as "0 sats". -->
     <!-- Consequence lines for event kinds whose payload lives entirely in the tags, so a
          kind-only summary would hide what is actually being signed. These replaceable lists are
@@ -49,12 +24,8 @@
     <!-- Re-publishing an identical list is harmless; say so rather than raising a false alarm. -->
     <!-- No cached copy to compare against, so the whole list is what gets written. -->
     <!-- Signer permissions: first-connect dialog -->
-    <string name="napplet_connect_title">Anslut till Nostr</string>
     <!-- Signer trust levels -->
     <!-- Signer per-op consent dialog -->
-    <string name="napplet_signer_allow_op">Fråga inte igen om att %1$s</string>
-    <string name="napplet_signer_last_used">Senast använd</string>
-    <string name="napplet_signer_expires">Upphör</string>
     <!-- Signer op labels -->
     <!-- Decrypt: the message is already decrypted by Amethyst; the permission is to expose it to the app -->
     <!-- Decrypt scoped to one counterparty. %1$s is that person's name (or a shortened npub) -->
@@ -62,19 +33,7 @@
     <!-- Shown as the preview when Amethyst itself cannot decrypt the message the app asked to read -->
     <!-- Label above the counterparty avatar in the decrypt consent dialog -->
     <!-- Permissions management screen -->
-    <string name="napplet_permissions_revoke_all">Återkalla alla behörigheter</string>
-    <string name="napplet_permissions_overrides">Åsidosättningar för operationer</string>
-    <string name="napplet_signer_permissions_empty">Inga appar har anslutit ännu.</string>
     <!-- NIP-46 remote signer (bunker) -->
-    <string name="nip46_signer_search_keywords">signatär bunker nip46 nostr anslut fjärr signera</string>
-    <string name="nip46_signer_enable">Agera som en fjärrsignatär</string>
-    <plurals name="nip46_signer_status_listening">
-        <item quantity="one">Lyssnar på %1$d relä</item>
-        <item quantity="other">Lyssnar på %1$d reläer</item>
-    </plurals>
-    <string name="nip46_signer_bunker_uri_label">Din bunkeradress</string>
-    <string name="nip46_signer_bunker_uri_hint">Klistra in detta i en annan app för att ansluta den till din nyckel.</string>
-    <string name="nip46_signer_activity_empty">Inga förfrågningar har behandlats än.</string>
     <!-- Relay Authentication (NIP-42) settings -->
     <!-- The group header carries the grammar; each toggle is a completion of the sentence, so these
          keys are new rather than reused - a stale translation of the old standalone titles would
@@ -87,22 +46,7 @@
     <!-- No longer shown in the prompt: kept so the existing translations aren't orphaned. -->
     <!-- Settings: three lists that each hold what their header says. -->
     <!-- Short labels for the purpose chips on a "recent logins" row. -->
-    <string name="agent_console_title">Agentkonsol</string>
-    <string name="podcast_premium">Premium</string>
-    <string name="podcast_value_add_recipient">Lägg till mottagare</string>
-    <string name="private_note_no_receivers">Inga mottagare ännu: bara du kommer att kunna se den här anteckningen. Lägg till personer att dela den med.</string>
     <!-- Composer audience control (Notify / "Visible to") -->
-    <string name="notify_add_user">Lägg till</string>
-    <string name="notify_remove_user">Ta bort användare från aviseringar</string>
-    <string name="notify_search_and_add_user">Sök och lägg till en användare att avisera</string>
-    <string name="set_preferred_media_servers">Ställ in dina önskade mediauppladdningsservrar.</string>
-    <string name="manage_stored_files">Hantera lagrade filer</string>
-    <string name="blossom_delete_from">Ta bort från…</string>
-    <string name="recommended_media_servers">Rekommenderade Mediaservrar</string>
-    <string name="built_in_servers_description">Amethysts standardlista. Du kan lägga till dem individuellt eller lägga till listan.</string>
-    <string name="media_server_status_checking">Kontrollerar…</string>
-    <string name="app_notification_replies_channel_message">%1$s svarade</string>
-    <string name="app_notification_replies_channel_message_for">på: %1$s</string>
     <!-- Notification channel groups (organize the per-kind channels in system settings) -->
     <!-- Reposts -->
     <!-- Media (picture &amp; video posts that mention you) -->
@@ -122,12 +66,7 @@
          a relay count they think is too high. -->
     <!-- Two countable nouns, so two plurals composed at the call site rather than one string with
          two %d in it: filter and relay decline independently in Slavic/Baltic/Semitic languages. -->
-    <string name="active_subs_pair">%1$s \u00b7 %2$s</string>
-    <string name="always_on_notif_setting_title">Alltid på-notifieringstjänst</string>
-    <string name="always_on_notif_setting_description">Upprätthåller en konstant anslutning till dina inbox-relän för omedelbar leverans av notifieringar. Visar en pågående notifiering. Använder mer batteri men säkerställer att du aldrig missar ett meddelande.</string>
     <string name="always_on_notif_tile_label">Aviseringstjänst</string>
-    <string name="notification_service_participation_title">Håll det här kontot aktivt i bakgrunden</string>
-    <string name="preferences">Appinställningar</string>
     <!-- Settings search -->
     <!-- Settings search keywords: an English concept/protocol index that supplements the
          (translated) row titles. Marked translatable="false" so protocol terms (blossom, nsec,
@@ -135,46 +74,11 @@
     <!-- Compact label for the segmented control, where "Unmetered WiFi" does not fit. -->
     <!-- Compact labels for the segmented control. -->
     <!-- Compact labels for the segmented control, rendered in each option's own typeface. -->
-    <string name="messages_create_public_chat">Publik</string>
-    <string name="messages_create_group">Grupp</string>
     <!-- New conversation chooser (full-screen picker opened from the Messages FAB).
          Each row stays lean; the "best for" line and the pros/cons appear only when a row is tapped. -->
     <!-- Buzz calls its groups channels, and a Buzz relay is one workspace rather than a directory of groups. -->
-    <string name="buzz_channel_flag_forum">Forumkanal</string>
-    <string name="buzz_channel_flag_forum_desc">Inlägg i trådar i stället för en chattidslinje. Detta kan inte ändras senare.</string>
-    <string name="relay_group_create_name">Gruppnamn</string>
-    <string name="relay_group_create_topic">Ämne (valfritt)</string>
-    <string name="relay_group_create_private">Privat (läsning endast för medlemmar)</string>
-    <string name="relay_group_create_invite_only">Endast inbjudan</string>
-    <string name="relay_group_create_confirm">Skapa</string>
-    <string name="relay_group_invite_generating">Skapar en inbjudan…</string>
-    <string name="relay_group_invite_copied">Inbjudningskod kopierad</string>
-    <string name="relay_group_edit_name">Gruppnamn</string>
-    <string name="relay_group_edit_topic">Ämne (valfritt)</string>
-    <string name="relay_group_edit_private">Privat (läsning endast för medlemmar)</string>
-    <string name="relay_group_edit_invite_only">Endast inbjudan</string>
-    <string name="relay_group_edit_confirm">Spara</string>
-    <string name="relay_group_location_edit">Ändra plats</string>
     <!-- Reusable geohash location picker (shared, not group-specific) -->
-    <string name="relay_group_discovery_empty">Söker efter grupper på dina reläer…</string>
-    <string name="relay_group_discovery_empty_filtered">Inga grupper hittades för det här filtret ännu.</string>
     <!-- Same, where this viewer cannot start one: not a member, or a Buzz chat channel (forum posts belong to forum channels). -->
-    <string name="relay_group_thread_body_label">Skriv något…</string>
-    <string name="relay_group_thread_post">Publicera</string>
-    <string name="channel_invite_title">Tillagd i %1$s</string>
-    <plurals name="relay_group_message_count">
-        <item quantity="one">%1$d meddelande</item>
-        <item quantity="other">%1$d meddelanden</item>
-    </plurals>
-    <plurals name="relay_group_message_count_capped">
-        <item quantity="one">%1$d+ meddelande</item>
-        <item quantity="other">%1$d+ meddelanden</item>
-    </plurals>
-    <plurals name="relay_group_follows_participating">
-        <item quantity="one">%1$d person du följer</item>
-        <item quantity="other">%1$d personer du följer</item>
-    </plurals>
-    <string name="messages_new_message">Privat</string>
     <string name="share_target_as_dm">Skicka som DM</string>
     <string name="share_target_as_highlight">Ny höjdpunkt</string>
     <string name="share_target_as_picture">Ny bild</string>
@@ -183,59 +87,16 @@
     <string name="share_target_scan_qr">Skanna QR-kod</string>
     <string name="shortcut_scan_qr_short">Skanna QR</string>
     <string name="shortcut_scan_qr_long">Skanna en QR-kod</string>
-    <string name="new_highlight_passage_label">Markerad text</string>
     <!-- Label for the mixed media feed: pictures + every NIP-71 video kind + NIP-94 files.
          Distinct from the "shorts" string, which labels the vertical/short-video-only feed. -->
-    <string name="cashu_p2pk_section">Nutzap-nyckel (avancerat)</string>
-    <string name="cashu_p2pk_explainer">En separat privat nyckel som endast används för att ta emot NIP-61-nutzaps. Inte din Nostr-identitetsnyckel.</string>
-    <string name="cashu_p2pk_autogen">Generera en ny nyckel</string>
-    <string name="cashu_p2pk_manual_label">Privat P2PK-nyckel (hex)</string>
     <string name="wallet_save_changes">Spara ändringar</string>
     <!-- Onchain zap send dialog -->
-    <string name="bottom_bar_settings_description">Dra för att ändra ordning. Växla för att lägga till eller ta bort ett objekt från nedre fältet. Med noll objekt döljs det nedre fältet.</string>
-    <string name="bottom_bar_settings_reorder">Ändra ordning</string>
-    <string name="home_tabs_settings_description">Välj vilka flikar som visas på startskärmen. När endast en flik är aktiv döljs flikraden.</string>
-    <string name="profile_ui_settings_description">Välj vilka sektioner och flöden som visas på användarprofiler. Alla alternativ är aktiverade som standard.</string>
     <!-- Buzz kind-40099 system messages: relay-authored narration of a channel state change. -->
     <!-- Fallback for a system message type this version does not know yet: "alice: some_new_type". -->
     <!-- Buzz huddles (kind 481xx): live audio-room lifecycle, narrated in the chat timeline. -->
     <!-- Buzz agent jobs (kind 43xxx): an agent task's lifecycle, narrated in the chat timeline. -->
     <!-- Buzz forum votes (kind 45002). -->
-    <string name="buzz_workspaces_title">Buzz-arbetsytor</string>
-    <string name="buzz_workspaces_hero_tagline">Där människor och agenter bygger tillsammans</string>
-    <string name="buzz_workspaces_leave">Lämna arbetsytan</string>
-    <string name="buzz_workspaces_section">Dina arbetsytor</string>
-    <string name="buzz_workspaces_empty_title">Inga arbetsytor än</string>
-    <string name="buzz_workspaces_empty_body">Buzz-arbetsytor är reläer där människor och AI-agenter bygger tillsammans. Gå med i en för att se den här.</string>
-    <string name="buzz_workspaces_browse">Bläddra bland grupper</string>
-    <string name="buzz_console_card_subtitle">Kostnader · Personas · Liveobservatör</string>
-    <string name="buzz_dm_nav_label">Buzz-DM</string>
-    <string name="buzz_dm_card_subtitle">Privata konversationer i dina arbetsytor</string>
-    <string name="buzz_import_title">Importera arbetsytans kanaler</string>
-    <string name="buzz_import_your_channels">Dina kanaler i den här arbetsytan</string>
-    <string name="buzz_import_add">Lägg till</string>
-    <string name="buzz_import_empty_title">Inga kanaler hittades</string>
-    <string name="buzz_import_empty_body">Du verkar inte vara medlem i några kanaler på det här relät än. Acceptera arbetsyteinbjudan i webbläsaren först och försök sedan igen.</string>
-    <string name="git_web_address">Webbplats:</string>
-    <string name="git_repo_tab_overview">Översikt</string>
-    <string name="git_repo_maintained_by">Underhålls av</string>
-    <string name="git_repo_section_about">Om</string>
-    <string name="git_repo_section_links">Länkar</string>
-    <string name="git_repo_section_maintainers">Underhållare</string>
-    <string name="git_repo_section_topics">Ämnen</string>
-    <string name="git_repo_tab_readme">Readme</string>
-    <string name="git_issue_close">Stäng ärende</string>
-    <string name="git_issue_reopen">Öppna igen</string>
-    <string name="media_servers_blossom_section">Blossom Servrar</string>
-    <string name="media_servers_blossom_explainer">Lägg till så många servrar som du vill. Du kan välja vilken som ska användas senare när du laddar upp din bild</string>
-    <string name="torrent_download">Ladda ner</string>
     <!-- %1$s is replaced at runtime by an inline star icon, not text. Keep the placeholder. -->
-    <string name="resource_usage_today">Idag</string>
-    <string name="resource_usage_week">Senaste 7 dagarna</string>
-    <string name="resource_usage_cellular_bg">Mobildata (bakgrund)</string>
-    <string name="resource_usage_cellular_fg">Mobildata (i appen)</string>
-    <string name="resource_usage_wifi">Wi-Fi-data</string>
-    <string name="resource_usage_fg_time">Tid i appen</string>
     <!-- Kind display names for relay subscription filter chips -->
     <!-- M3 Action Dialog titles -->
     <!-- Nicknames (NIP-85 contact cards); the dialog strings live in commons -->

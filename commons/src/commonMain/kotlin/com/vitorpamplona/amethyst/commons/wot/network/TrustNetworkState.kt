@@ -241,7 +241,7 @@ class TrustNetworkState(
             // At or before the cursor the index has it (or a deletion the sync saw removed it).
             if (event.createdAt <= loaded.header.syncCursor) continue
             val subject = event.aboutUser()
-            if (subject == null || subject.length != 64 || !Hex.isHex64(subject)) continue
+            if (subject.length != 64 || !Hex.isHex64(subject)) continue
             val held = (result ?: overlay)[subject]
             if (held != null && held.createdAt >= event.createdAt) continue
 

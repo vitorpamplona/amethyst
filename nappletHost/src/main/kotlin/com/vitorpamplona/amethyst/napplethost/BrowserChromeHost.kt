@@ -34,6 +34,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -153,7 +154,7 @@ class BrowserChromeHost(
     var findOpen by mutableStateOf(false)
         private set
     private var findQuery by mutableStateOf("")
-    private var findActive by mutableStateOf(0)
+    private var findActive by mutableIntStateOf(0)
     private var findTotal by mutableStateOf<Int?>(null)
 
     var consoleShowing by mutableStateOf(false)

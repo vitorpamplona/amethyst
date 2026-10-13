@@ -30,6 +30,7 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertIs
+import kotlin.test.assertIsNot
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
@@ -62,9 +63,11 @@ class PostingStreakEventTest {
         val event = sample()
         assertIs<PostingStreakEvent>(event)
         assertTrue(EventFactory.isKnownKind(PostingStreakEvent.KIND))
-        assertFalse(event is SearchableEvent)
-        assertFalse(event is PubKeyHintProvider || event is EventHintProvider || event is AddressHintProvider, "a streak references nothing")
-        assertEquals("", (event as? PostingStreakEvent)?.dTag())
+        assertIsNot<SearchableEvent>(event)
+        assertIsNot<PubKeyHintProvider>(event, "a streak references nothing")
+        assertIsNot<EventHintProvider>(event, "a streak references nothing")
+        assertIsNot<AddressHintProvider>(event, "a streak references nothing")
+        assertEquals("", event.dTag())
     }
 
     @Test

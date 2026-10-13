@@ -3,10 +3,6 @@
     <!-- Placeholder shown in a chat row while an encrypted message is still being decrypted -->
     <!-- Prefix on a Messages-list preview when the newest message was sent by the logged-in user. %1$s is the message text -->
     <string name="block_hide_user"><![CDATA[பயனரை முடக்கு + மறை]]></string>
-    <string name="boosted">உயர்த்தப்பட்டது</string>
-    <string name="edited_number">திருத்தம் #%1$s</string>
-    <string name="save">சேமி</string>
-    <string name="rename">பெயர் மாற்று</string>
     <!-- Reply-mode toggle in the chat composer: reply inline in the timeline vs pull it aside into a thread. -->
     <!-- Title of the minichat (thread) screen opened from a chat message. -->
     <!-- Title of the picked-image confirmation dialog when attaching a picture to a thread reply. -->
@@ -14,20 +10,9 @@
     <!-- A reply whose target was searched for across all reachable history and never found. -->
     <!-- Reply subtitle when every relay genuinely bottomed out (no stalls) and it still wasn't there. -->
     <!-- Overflow count on the capped reporter avatar row, e.g. "+21". -->
-    <string name="changed_chat_profile_to">புதிய அரட்டை சுயவிவரம்:</string>
-    <string name="route_software_apps">பயன்பாடுகள்</string>
-    <string name="napplet_permissions">nApplet அனுமதிகள்</string>
-    <string name="napplet_permissions_empty">இன்னும் nApplet அனுமதிகள் இல்லை</string>
-    <string name="napplet_permissions_empty_subtitle">nApplets க்கு நீங்கள் வழங்கும் அனுமதிகள் இங்கே தோன்றும்.</string>
-    <string name="napplet_permissions_forget">இந்த nApplet ஐ மறக்கவும்</string>
-    <string name="napplet_permissions_blocked">தடுக்கப்பட்டது</string>
-    <string name="napplet_permissions_revoke">திரும்பப் பெறவும்</string>
     <!-- Napplet sandbox chrome (host top bar + live action notices) -->
     <!-- Napplet capability names -->
-    <string name="napplet_cap_shell_desc">எந்த திறன்கள் கிடைக்கின்றன என்று கேட்கவும்</string>
     <!-- Napplet consent dialog -->
-    <string name="napplet_consent_capability">திறன்: %1$s</string>
-    <string name="napplet_consent_pay">இந்த nApplet ஒரு Lightning இன்வாய்ஸை செலுத்த விரும்புகிறது.</string>
     <!-- An amountless BOLT11: the payee decides how much. Never render this as "0 sats". -->
     <!-- Consequence lines for event kinds whose payload lives entirely in the tags, so a
          kind-only summary would hide what is actually being signed. These replaceable lists are
@@ -61,16 +46,7 @@
     <!-- No longer shown in the prompt: kept so the existing translations aren't orphaned. -->
     <!-- Settings: three lists that each hold what their header says. -->
     <!-- Short labels for the purpose chips on a "recent logins" row. -->
-    <string name="private_note_no_receivers">இன்னும் பெறுநர்கள் இல்லை: இந்த குறிப்பை நீங்கள் மட்டுமே காண முடியும். பகிர்வதற்கு மக்களை சேர்க்கவும்.</string>
     <!-- Composer audience control (Notify / "Visible to") -->
-    <string name="notify_add_user">சேர்</string>
-    <string name="notify_remove_user">அறிவிப்புகளிலிருந்து பயனரை நீக்கு</string>
-    <string name="notify_search_and_add_user">அறிவிக்க ஒரு பயனரை தேடி சேர்க்கவும்</string>
-    <string name="set_preferred_media_servers">உங்கள் விருப்பமான மீடியா பதிவேற்ற சேவையகங்களை அமைக்கவும்.</string>
-    <string name="recommended_media_servers">பரிந்துரைக்கப்பட்ட மீடியா சேவையகங்கள்</string>
-    <string name="built_in_servers_description">Amethyst\'ன் இயல்புநிலை பட்டியல். அவற்றை தனித்தனியாக சேர்க்கலாம் அல்லது பட்டியலை சேர்க்கலாம்.</string>
-    <string name="app_notification_replies_channel_message">%1$s பதிலளித்தார்</string>
-    <string name="app_notification_replies_channel_message_for">இதில்: %1$s</string>
     <!-- Notification channel groups (organize the per-kind channels in system settings) -->
     <!-- Reposts -->
     <!-- Media (picture &amp; video posts that mention you) -->
@@ -90,9 +66,6 @@
          a relay count they think is too high. -->
     <!-- Two countable nouns, so two plurals composed at the call site rather than one string with
          two %d in it: filter and relay decline independently in Slavic/Baltic/Semitic languages. -->
-    <string name="always_on_notif_setting_title">எப்போதும் இயங்கும் அறிவிப்பு சேவை</string>
-    <string name="always_on_notif_setting_description">உடனடி அறிவிப்பு வழங்கலுக்காக உங்கள் inbox relays உடன் நிரந்தர இணைப்பை பராமரிக்கிறது. தொடர்ச்சியான அறிவிப்பை காட்டுகிறது. அதிக பேட்டரி பயன்படுத்துகிறது, ஆனால் ஒரு செய்தியையும் தவறவிடாமல் உறுதி செய்கிறது.</string>
-    <string name="preferences">செயலி விருப்பங்கள்</string>
     <!-- Settings search -->
     <!-- Settings search keywords: an English concept/protocol index that supplements the
          (translated) row titles. Marked translatable="false" so protocol terms (blossom, nsec,
@@ -100,41 +73,21 @@
     <!-- Compact label for the segmented control, where "Unmetered WiFi" does not fit. -->
     <!-- Compact labels for the segmented control. -->
     <!-- Compact labels for the segmented control, rendered in each option's own typeface. -->
-    <string name="messages_create_public_chat">பொது</string>
-    <string name="messages_create_group">குழு</string>
     <!-- New conversation chooser (full-screen picker opened from the Messages FAB).
          Each row stays lean; the "best for" line and the pros/cons appear only when a row is tapped. -->
     <!-- Buzz calls its groups channels, and a Buzz relay is one workspace rather than a directory of groups. -->
     <!-- Reusable geohash location picker (shared, not group-specific) -->
     <!-- Same, where this viewer cannot start one: not a member, or a Buzz chat channel (forum posts belong to forum channels). -->
-    <string name="messages_new_message">தனியார்</string>
     <string name="share_target_as_dm">DM ஆக அனுப்பு</string>
     <!-- Label for the mixed media feed: pictures + every NIP-71 video kind + NIP-94 files.
          Distinct from the "shorts" string, which labels the vertical/short-video-only feed. -->
-    <string name="cashu_p2pk_section">Nutzap விசை (மேம்பட்டது)</string>
-    <string name="cashu_p2pk_explainer">NIP-61 nutzap-களை பெறுவதற்கு மட்டும் பயன்படுத்தப்படும் தனி தனிப்பட்ட விசை. உங்கள் Nostr அடையாள விசை அல்ல.</string>
-    <string name="cashu_p2pk_autogen">புதிய விசையை உருவாக்கவும்</string>
-    <string name="cashu_p2pk_manual_label">P2PK தனிப்பட்ட விசை (hex)</string>
     <string name="wallet_save_changes">மாற்றங்களை சேமிக்கவும்</string>
     <!-- Onchain zap send dialog -->
-    <string name="bottom_bar_settings_description">மறுவரிசைப்படுத்த இழுக்கவும். கீழ் பட்டையில் ஒரு உருப்படியை சேர்க்க அல்லது அகற்ற மாற்றவும். பூஜ்ய உருப்படிகளுடன் கீழ் பட்டை மறைக்கப்படும்.</string>
-    <string name="bottom_bar_settings_reorder">மறுவரிசைப்படுத்து</string>
-    <string name="home_tabs_settings_description">முகப்புத் திரையில் எந்த தாவல்கள் தோன்றுமென்று தேர்வு செய்யுங்கள். ஒரே ஒரு தாவல் மட்டும் இயக்கத்தில் இருக்கும்போது தாவல் பட்டை மறைக்கப்படும்.</string>
-    <string name="profile_ui_settings_description">பயனர் சுயவிவரத் திரைகளில் எந்த பகுதிகள் மற்றும் ஊட்டங்கள் தோன்றுமென்று தேர்வு செய்யுங்கள். அனைத்து விருப்பங்களும் இயல்பாக இயக்கப்பட்டிருக்கும்.</string>
     <!-- Buzz kind-40099 system messages: relay-authored narration of a channel state change. -->
     <!-- Fallback for a system message type this version does not know yet: "alice: some_new_type". -->
     <!-- Buzz huddles (kind 481xx): live audio-room lifecycle, narrated in the chat timeline. -->
     <!-- Buzz agent jobs (kind 43xxx): an agent task's lifecycle, narrated in the chat timeline. -->
     <!-- Buzz forum votes (kind 45002). -->
-    <string name="git_web_address">இணையம்:</string>
-    <string name="git_repo_tab_overview">மேலோட்டம்</string>
-    <string name="git_repo_section_about">பற்றி</string>
-    <string name="git_repo_section_links">இணைப்புகள்</string>
-    <string name="git_repo_section_maintainers">பராமரிப்பாளர்கள்</string>
-    <string name="git_repo_section_topics">தலைப்புகள்</string>
-    <string name="media_servers_blossom_section">Blossom சேவையகங்கள்</string>
-    <string name="media_servers_blossom_explainer">உங்களுக்கு விரும்பிய அளவு சேவையகங்கள் சேர்க்கவும். உங்கள் படத்தை பதிவேற்றும்போது எதைப் பயன்படுத்த வேண்டும் என்று பின்னர் தேர்வு செய்யலாம்</string>
-    <string name="torrent_download">பதிவிறக்கு</string>
     <!-- %1$s is replaced at runtime by an inline star icon, not text. Keep the placeholder. -->
     <!-- Kind display names for relay subscription filter chips -->
     <!-- M3 Action Dialog titles -->

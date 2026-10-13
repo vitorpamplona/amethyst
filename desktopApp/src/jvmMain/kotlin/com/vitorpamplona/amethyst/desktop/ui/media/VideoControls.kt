@@ -235,7 +235,7 @@ fun VideoControls(
         ) {
             if (canSkip) {
                 FadingBox(visible) {
-                    SkipButton(MaterialSymbols.Replay10, stringRes(Res.string.skip_back, SKIP_SECONDS)) { onSkip?.invoke(-SKIP_MILLIS) }
+                    SkipButton(MaterialSymbols.Replay10, stringRes(Res.string.skip_back, SKIP_SECONDS)) { onSkip(-SKIP_MILLIS) }
                 }
             }
             if (isBuffering) {
@@ -249,7 +249,7 @@ fun VideoControls(
             }
             if (canSkip) {
                 FadingBox(visible) {
-                    SkipButton(MaterialSymbols.Forward10, stringRes(Res.string.skip_forward, SKIP_SECONDS)) { onSkip?.invoke(SKIP_MILLIS) }
+                    SkipButton(MaterialSymbols.Forward10, stringRes(Res.string.skip_forward, SKIP_SECONDS)) { onSkip(SKIP_MILLIS) }
                 }
             }
         }

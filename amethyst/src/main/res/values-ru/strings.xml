@@ -1,9 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources xmlns:tools="http://schemas.android.com/tools">
     <string name="block_hide_user"><![CDATA[Блокировать и скрыть пользователя]]></string>
-    <string name="save">Сохранить</string>
-    <string name="messages_create_public_chat">Публичный</string>
-    <string name="messages_new_message">Приватный</string>
     
     
     
@@ -31,7 +28,6 @@
     
     
     
-    <string name="set_preferred_media_servers">Задайте предпочтительные серверы для загрузки медиафайлов.</string>
     
     
     
@@ -40,7 +36,6 @@
     
     
     
-    <string name="recommended_media_servers">Рекомендуемые медиасерверы</string>
     
     
     
@@ -140,221 +135,6 @@
     
     
     
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    <string name="app_notification_replies_channel_message">%1$s ответил(а)</string>
-    
-    <string name="app_notification_replies_channel_message_for">на: %1$s</string>
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-
-    <string name="always_on_notif_setting_title">Постоянный сервис уведомлений</string>
-    
-    <string name="always_on_notif_setting_description">Поддерживает постоянное соединение с вашими inbox-relay для мгновенной доставки уведомлений. Отображает постоянное уведомление. Расходует больше заряда батареи, но гарантирует, что вы не пропустите ни одного сообщения.</string>
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    <string name="preferences">Настройки приложения</string>
     
     
     
@@ -433,7 +213,216 @@
 
     
     
-    <string name="messages_create_group">Группа</string>
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+
+    
+    
     
     
     
@@ -640,13 +629,9 @@
     
     
     
-    <string name="cashu_p2pk_section">Ключ для nutzap (расширенные настройки)</string>
     
-    <string name="cashu_p2pk_explainer">Отдельный приватный ключ, используемый только для получения NIP-61 nutzap. Не ваш идентификационный ключ Nostr.</string>
     
-    <string name="cashu_p2pk_autogen">Сгенерировать новый ключ</string>
 
-    <string name="cashu_p2pk_manual_label">Приватный ключ P2PK (hex)</string>
     
     
     <string name="wallet_save_changes">Сохранить изменения</string>
@@ -931,18 +916,14 @@
     
     
     
-    <string name="bottom_bar_settings_description">Перетащите для изменения порядка. Включите или отключите, чтобы добавить или убрать элемент из нижней панели. При нулевом количестве элементов нижняя панель скрывается.</string>
-    
-    
-    <string name="bottom_bar_settings_reorder">Изменить порядок</string>
     
     
     
-    <string name="home_tabs_settings_description">Выберите вкладки для главного экрана. Если активна только одна вкладка, панель вкладок скрывается.</string>
     
     
     
-    <string name="profile_ui_settings_description">Выберите разделы и ленты, отображаемые на экранах профилей пользователей. По умолчанию все параметры включены.</string>
+    
+    
     
     
     
@@ -1094,24 +1075,18 @@
     
     
     
-    <string name="git_web_address">Веб:</string>
     
     
     
     
     
     
-    <string name="git_repo_tab_overview">Обзор</string>
     
     
     
-    <string name="git_repo_section_about">О репозитории</string>
     
-    <string name="git_repo_section_links">Ссылки</string>
     
-    <string name="git_repo_section_maintainers">Сопровождающие</string>
     
-    <string name="git_repo_section_topics">Темы</string>
     
     
     
@@ -1175,16 +1150,13 @@
     
     
     
-    <string name="media_servers_blossom_section">Серверы Blossom</string>
     
-    <string name="media_servers_blossom_explainer">Добавьте столько серверов, сколько хотите. Вы сможете выбрать нужный при загрузке изображения.</string>
     
     
     
     
     
     
-    <string name="torrent_download">Скачать</string>
     
     
     
@@ -1914,7 +1886,6 @@
     
     
     
-    <string name="boosted">репост</string>
     
     
     
@@ -2206,7 +2177,6 @@
     
     
     
-    <string name="route_software_apps">Приложения</string>
     
     
     
@@ -2242,23 +2212,16 @@
     
     
     
-    <string name="napplet_permissions">Разрешения nApplet</string>
     
     
-    <string name="napplet_permissions_empty">Разрешений nApplet пока нет</string>
     
-    <string name="napplet_permissions_empty_subtitle">Разрешения, которые вы предоставляете nApplets, появятся здесь.</string>
     
-    <string name="napplet_permissions_forget">Забыть этот nApplet</string>
     
-    <string name="napplet_permissions_blocked">Заблокировано</string>
     
-    <string name="napplet_permissions_revoke">Отозвать</string>
     
     
     
     
-    <string name="napplet_cap_shell">Оболочка</string>
     
     
     
@@ -2267,7 +2230,6 @@
     
     
     
-    <string name="napplet_cap_shell_desc">Запрашивать доступные возможности</string>
     
     
     
@@ -2282,7 +2244,6 @@
     
     
     
-    <string name="napplet_consent_capability">Возможность: %1$s</string>
     
     
     
@@ -2295,7 +2256,6 @@
     
     
     
-    <string name="napplet_consent_pay">Этот nApplet хочет оплатить Lightning-инвойс.</string>
     
     
     
@@ -2531,13 +2491,6 @@
     
     
     
-    <string name="private_note_no_receivers">Получателей пока нет: только вы сможете видеть эту заметку. Добавьте людей, чтобы поделиться с ними.</string>
-    
-    <string name="notify_add_user">Добавить</string>
-    
-    <string name="notify_remove_user">Удалить пользователя из уведомлений</string>
-    
-    <string name="notify_search_and_add_user">Найти и добавить пользователя для уведомления</string>
     
     
     
@@ -2548,10 +2501,9 @@
     
     
     
-<string name="built_in_servers_description">Список по умолчанию Amethyst. Вы можете добавлять их по отдельности или добавить весь список.</string>
-<string name="changed_chat_profile_to">Новый профиль чата:</string>
-<string name="edited_number">правка №%1$s</string>
-<string name="rename">Переименовать</string>
+    
+    
+    
     <string name="always_on_notif_channel_description">Поддерживает активные подключения к входящим relay для уведомлений в реальном времени</string>
     <plurals name="always_on_notif_connected_foreground">
     <item quantity="one">Подключено к %1$d relay</item>

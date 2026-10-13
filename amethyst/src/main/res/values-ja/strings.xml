@@ -1,8 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources xmlns:tools="http://schemas.android.com/tools">
     <string name="block_hide_user"><![CDATA[ユーザをブロックして非表示]]></string>
-    <string name="boosted">ブーストされました</string>
-    <string name="save">保存</string>
     
     
     
@@ -92,13 +90,9 @@
     
     
     
-    <string name="private_note_no_receivers">まだ受信者がいません：あなただけがこのノートを見ることができます。共有したい人を追加してください。</string>
     
-    <string name="notify_add_user">追加</string>
     
-    <string name="notify_remove_user">通知からユーザーを削除</string>
     
-    <string name="notify_search_and_add_user">通知するユーザーを検索して追加</string>
     
     
     
@@ -157,7 +151,6 @@
     
     
     
-    <string name="set_preferred_media_servers">優先するメディアアップロードサーバーを設定してください。</string>
     
     
     
@@ -166,9 +159,7 @@
     
     
     
-    <string name="recommended_media_servers">おすすめのメディアサーバー</string>
     
-    <string name="built_in_servers_description">Amethystのデフォルトリストです。個別に追加するかリスト全体を追加できます。</string>
     
     
     
@@ -288,9 +279,6 @@
     
     
     
-    <string name="app_notification_replies_channel_message">%1$s が返信しました</string>
-    
-    <string name="app_notification_replies_channel_message_for">投稿: %1$s</string>
     
     
     
@@ -349,9 +337,8 @@
     
     
     
-    <string name="always_on_notif_setting_title">常時接続通知サービス</string>
     
-    <string name="always_on_notif_setting_description">インボックス relay への永続的な接続を維持し、通知をすぐに届けます。継続中の通知が表示されます。バッテリー消費は増えますが、メッセージを見逃しません。</string>
+    
     
     
     
@@ -464,7 +451,6 @@
     
     
     
-    <string name="preferences">アプリ設定</string>
     
     
     
@@ -548,12 +534,9 @@
     
     
     
-    <string name="messages_create_public_chat">公開</string>
     
-    <string name="messages_create_group">グループ</string>
     
     
-    <string name="messages_new_message">プライベート</string>
     
     
     
@@ -791,13 +774,9 @@
     
     
     
-    <string name="cashu_p2pk_section">Nutzapキー（上級者向け）</string>
     
-    <string name="cashu_p2pk_explainer">NIP-61 nutzapを受け取るためだけに使用する別の秘密鍵です。Nostrのアイデンティティキーではありません。</string>
     
-    <string name="cashu_p2pk_autogen">新しいキーを生成</string>
     
-    <string name="cashu_p2pk_manual_label">P2PK秘密鍵（hex）</string>
     
     
     <string name="wallet_save_changes">変更を保存</string>
@@ -1082,18 +1061,14 @@
     
     
     
-    <string name="bottom_bar_settings_description">ドラッグして並べ替え。トグルでボトムバーへの追加・削除を切り替え。アイテムが0個の場合はボトムバーが非表示になります。</string>
     
     
-    <string name="bottom_bar_settings_reorder">並べ替え</string>
     
     
     
-    <string name="home_tabs_settings_description">ホーム画面に表示するタブを選択します。タブが1つだけ有効の場合、タブバーは非表示になります。</string>
     
     
     
-    <string name="profile_ui_settings_description">ユーザープロフィール画面に表示するセクションとフィードを選択します。デフォルトではすべての項目が有効になっています。</string>
     
     
     
@@ -1245,24 +1220,18 @@
     
     
     
-    <string name="git_web_address">Web:</string>
     
     
     
     
     
     
-    <string name="git_repo_tab_overview">概要</string>
     
     
     
-    <string name="git_repo_section_about">概要</string>
     
-    <string name="git_repo_section_links">リンク</string>
     
-    <string name="git_repo_section_maintainers">メンテナー</string>
     
-    <string name="git_repo_section_topics">トピック</string>
     
     
     
@@ -1270,430 +1239,6 @@
     
     
     
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    <string name="media_servers_blossom_section">Blossom サーバー</string>
-    
-    <string name="media_servers_blossom_explainer">必要なだけサーバーを追加できます。写真をアップロードする際にどれを使用するかは後で選択できます</string>
-    
-    
-    
-    
-    
-    
-    <string name="torrent_download">ダウンロード</string>
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-
     
     
     
@@ -2072,197 +1617,49 @@
     
     
     
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
 
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    <string name="edited_number">編集 #%1$s</string>
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    <string name="rename">名前を変更</string>
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    <string name="changed_chat_profile_to">新しいチャットプロフィール:</string>
-    
-    
-    
-    
-    
-    
-    
-    
-    
     
     
     
@@ -2476,7 +1873,6 @@
     
     
     
-    <string name="route_software_apps">アプリ</string>
     
     
     
@@ -2512,32 +1908,6 @@
     
     
     
-    <string name="napplet_permissions">nApplet の権限</string>
-    
-    
-    <string name="napplet_permissions_empty">nApplet の権限はまだありません</string>
-    
-    <string name="napplet_permissions_empty_subtitle">nApplet に付与した権限はここに表示されます。</string>
-    
-    <string name="napplet_permissions_forget">この nApplet を削除</string>
-    
-    <string name="napplet_permissions_blocked">ブロック済み</string>
-    
-    <string name="napplet_permissions_revoke">取り消す</string>
-    
-    
-    
-    
-    <string name="napplet_cap_shell">シェル</string>
-    
-    
-    
-    
-    
-    
-    
-    
-    <string name="napplet_cap_shell_desc">利用可能な機能を確認する</string>
     
     
     
@@ -2552,7 +1922,6 @@
     
     
     
-    <string name="napplet_consent_capability">機能: %1$s</string>
     
     
     
@@ -2565,7 +1934,590 @@
     
     
     
-    <string name="napplet_consent_pay">この nApplet は Lightning インボイスを支払おうとしています。</string>
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
     
     
     

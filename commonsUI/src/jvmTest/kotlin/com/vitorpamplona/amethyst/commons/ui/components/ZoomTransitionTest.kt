@@ -102,7 +102,7 @@ class ZoomTransitionTest {
             assertEquals(1f, transition!!.progress)
             assertTrue(open.isRed(150, 150), "then fills the viewer")
 
-            transition!!.dismiss()
+            transition.dismiss()
             scene.render(616 * ms)
             scene.render(632 * ms)
             val closing = scene.render(760 * ms)
@@ -152,7 +152,7 @@ class ZoomTransitionTest {
             assertEquals(1f, transition!!.progress)
 
             // Pause the exit just before it ends: it must already be on the feed's slice.
-            transition!!.dismiss()
+            transition.dismiss()
             scene.render(616 * ms)
             scene.render(632 * ms)
             val closing = scene.render(860 * ms)
@@ -175,7 +175,7 @@ class ZoomTransitionTest {
         try {
             scene.render(0)
             assertEquals(Rect(30f, -5f, 80f, 45f), source!!.bounds)
-            assertEquals(Rect(30f, 20f, 80f, 45f), source!!.visibleBounds)
+            assertEquals(Rect(30f, 20f, 80f, 45f), source.visibleBounds)
         } finally {
             scene.close()
         }
@@ -193,7 +193,7 @@ class ZoomTransitionTest {
         try {
             scene.render(0)
             assertEquals(Rect(30f, 10f, 80f, 60f), source!!.bounds)
-            assertEquals(Rect(30f, 40f, 80f, 60f), source!!.visibleBounds, "the part above the viewport was under a bar")
+            assertEquals(Rect(30f, 40f, 80f, 60f), source.visibleBounds, "the part above the viewport was under a bar")
         } finally {
             scene.close()
         }
@@ -260,8 +260,8 @@ class ZoomTransitionTest {
 
             val moved = Rect(110f, 110f, 160f, 160f)
             current = ZoomSource(moved)
-            transition!!.dismiss()
-            assertEquals(moved, transition!!.sourceBounds!!.bounds)
+            transition.dismiss()
+            assertEquals(moved, transition.sourceBounds!!.bounds)
 
             scene.render(616 * ms)
             scene.render(632 * ms)

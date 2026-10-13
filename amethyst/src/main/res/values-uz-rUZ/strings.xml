@@ -3,10 +3,6 @@
     <!-- Placeholder shown in a chat row while an encrypted message is still being decrypted -->
     <!-- Prefix on a Messages-list preview when the newest message was sent by the logged-in user. %1$s is the message text -->
     <string name="block_hide_user"><![CDATA[Foydalanuvchini bloklash va yashirish]]></string>
-    <string name="boosted">Targ\'ib qilidi</string>
-    <string name="edited_number">Tahrir № %1$s</string>
-    <string name="save">Saqlash</string>
-    <string name="rename">Qayta nomlash</string>
     <!-- Reply-mode toggle in the chat composer: reply inline in the timeline vs pull it aside into a thread. -->
     <!-- Title of the minichat (thread) screen opened from a chat message. -->
     <!-- Title of the picked-image confirmation dialog when attaching a picture to a thread reply. -->
@@ -14,20 +10,9 @@
     <!-- A reply whose target was searched for across all reachable history and never found. -->
     <!-- Reply subtitle when every relay genuinely bottomed out (no stalls) and it still wasn't there. -->
     <!-- Overflow count on the capped reporter avatar row, e.g. "+21". -->
-    <string name="changed_chat_profile_to">Yangi chat profili:</string>
-    <string name="route_software_apps">Ilovalar</string>
-    <string name="napplet_permissions">nApplet ruxsatlari</string>
-    <string name="napplet_permissions_empty">Hali nApplet ruxsatlari yo\'q</string>
-    <string name="napplet_permissions_empty_subtitle">nAppletlarga bergan ruxsatlaringiz bu yerda ko\'rinadi.</string>
-    <string name="napplet_permissions_forget">Bu nAppletni unutish</string>
-    <string name="napplet_permissions_blocked">Bloklangan</string>
-    <string name="napplet_permissions_revoke">Bekor qilish</string>
     <!-- Napplet sandbox chrome (host top bar + live action notices) -->
     <!-- Napplet capability names -->
-    <string name="napplet_cap_shell_desc">Qaysi imkoniyatlar mavjudligini so\'rash</string>
     <!-- Napplet consent dialog -->
-    <string name="napplet_consent_capability">Imkoniyat: %1$s</string>
-    <string name="napplet_consent_pay">Bu nApplet Lightning hisob-fakturasini to\'lashni xohlaydi.</string>
     <!-- An amountless BOLT11: the payee decides how much. Never render this as "0 sats". -->
     <!-- Consequence lines for event kinds whose payload lives entirely in the tags, so a
          kind-only summary would hide what is actually being signed. These replaceable lists are
@@ -61,16 +46,7 @@
     <!-- No longer shown in the prompt: kept so the existing translations aren't orphaned. -->
     <!-- Settings: three lists that each hold what their header says. -->
     <!-- Short labels for the purpose chips on a "recent logins" row. -->
-    <string name="private_note_no_receivers">Hozircha qabul qiluvchilar yo\'q: faqat siz bu eslatmani ko\'ra olasiz. Ulashish uchun odamlarni qo\'shing.</string>
     <!-- Composer audience control (Notify / "Visible to") -->
-    <string name="notify_add_user">Qo\'shish</string>
-    <string name="notify_remove_user">Foydalanuvchini bildirishnomalardan olib tashlash</string>
-    <string name="notify_search_and_add_user">Xabardor qilish uchun foydalanuvchini qidirish va qo\'shish</string>
-    <string name="set_preferred_media_servers">Afzal ko\'rgan media yuklash serverlaringizni belgilang.</string>
-    <string name="recommended_media_servers">Tavsiya Etilgan Media Serverlari</string>
-    <string name="built_in_servers_description">Amethyst\'ning standart ro\'yxati. Ularni alohida yoki ro\'yxat sifatida qo\'shishingiz mumkin.</string>
-    <string name="app_notification_replies_channel_message">%1$s javob berdi</string>
-    <string name="app_notification_replies_channel_message_for">bu haqda: %1$s</string>
     <!-- Notification channel groups (organize the per-kind channels in system settings) -->
     <!-- Reposts -->
     <!-- Media (picture &amp; video posts that mention you) -->
@@ -90,9 +66,6 @@
          a relay count they think is too high. -->
     <!-- Two countable nouns, so two plurals composed at the call site rather than one string with
          two %d in it: filter and relay decline independently in Slavic/Baltic/Semitic languages. -->
-    <string name="always_on_notif_setting_title">Har doim yoqiq bildirishnoma xizmati</string>
-    <string name="always_on_notif_setting_description">Darhol bildirishnoma yetkazib berish uchun kirish relaylaringizga doimiy ulanishni saqlaydi. Davom etayotgan bildirishnomani ko\'rsatadi. Ko\'proq batareya sarflaydi, lekin xabarni o\'tkazib yubormasligingizni ta\'minlaydi.</string>
-    <string name="preferences">Ilova sozlamalari</string>
     <!-- Settings search -->
     <!-- Settings search keywords: an English concept/protocol index that supplements the
          (translated) row titles. Marked translatable="false" so protocol terms (blossom, nsec,
@@ -100,41 +73,21 @@
     <!-- Compact label for the segmented control, where "Unmetered WiFi" does not fit. -->
     <!-- Compact labels for the segmented control. -->
     <!-- Compact labels for the segmented control, rendered in each option's own typeface. -->
-    <string name="messages_create_public_chat">Ommaviy</string>
-    <string name="messages_create_group">Guruh</string>
     <!-- New conversation chooser (full-screen picker opened from the Messages FAB).
          Each row stays lean; the "best for" line and the pros/cons appear only when a row is tapped. -->
     <!-- Buzz calls its groups channels, and a Buzz relay is one workspace rather than a directory of groups. -->
     <!-- Reusable geohash location picker (shared, not group-specific) -->
     <!-- Same, where this viewer cannot start one: not a member, or a Buzz chat channel (forum posts belong to forum channels). -->
-    <string name="messages_new_message">Shaxsiy</string>
     <string name="share_target_as_dm">DM sifatida yuborish</string>
     <!-- Label for the mixed media feed: pictures + every NIP-71 video kind + NIP-94 files.
          Distinct from the "shorts" string, which labels the vertical/short-video-only feed. -->
-    <string name="cashu_p2pk_section">Nutzap kaliti (kengaytirilgan)</string>
-    <string name="cashu_p2pk_explainer">Faqat NIP-61 nutzaplarini qabul qilish uchun ishlatiladigan alohida shaxsiy kalit. Bu sizning Nostr identifikatsiya kalitingiz emas.</string>
-    <string name="cashu_p2pk_autogen">Yangi kalit yaratish</string>
-    <string name="cashu_p2pk_manual_label">P2PK shaxsiy kalit (hex)</string>
     <string name="wallet_save_changes">O\'zgarishlarni saqlash</string>
     <!-- Onchain zap send dialog -->
-    <string name="bottom_bar_settings_description">Qayta tartiblash uchun sudrang. Quyi panelga element qo\'shish yoki olib tashlash uchun almashtiring. Nol element bo\'lganda quyi panel yashiriladi.</string>
-    <string name="bottom_bar_settings_reorder">Qayta tartiblash</string>
-    <string name="home_tabs_settings_description">Asosiy ekranda qaysi yorliqlar ko\'rinishini tanlang. Faqat bitta yorliq faol bo\'lganda yorliq paneli yashiriladi.</string>
-    <string name="profile_ui_settings_description">Foydalanuvchi profil ekranlarida qaysi bo\'limlar va lentalar ko\'rinishini tanlang. Barcha variantlar sukut bo\'yicha yoqilgan.</string>
     <!-- Buzz kind-40099 system messages: relay-authored narration of a channel state change. -->
     <!-- Fallback for a system message type this version does not know yet: "alice: some_new_type". -->
     <!-- Buzz huddles (kind 481xx): live audio-room lifecycle, narrated in the chat timeline. -->
     <!-- Buzz agent jobs (kind 43xxx): an agent task's lifecycle, narrated in the chat timeline. -->
     <!-- Buzz forum votes (kind 45002). -->
-    <string name="git_web_address">Veb:</string>
-    <string name="git_repo_tab_overview">Umumiy Ko\'rinish</string>
-    <string name="git_repo_section_about">Haqida</string>
-    <string name="git_repo_section_links">Havolalar</string>
-    <string name="git_repo_section_maintainers">Qo\'llab-quvvatlovchilar</string>
-    <string name="git_repo_section_topics">Mavzular</string>
-    <string name="media_servers_blossom_section">Blossom Serverlari</string>
-    <string name="media_servers_blossom_explainer">Xohlagancha server qo\'shing. Rasmingizni yuklashda qaysi birini ishlatishni keyinroq tanlashingiz mumkin</string>
-    <string name="torrent_download">Yuklab olish</string>
     <!-- %1$s is replaced at runtime by an inline star icon, not text. Keep the placeholder. -->
     <!-- Kind display names for relay subscription filter chips -->
     <!-- M3 Action Dialog titles -->

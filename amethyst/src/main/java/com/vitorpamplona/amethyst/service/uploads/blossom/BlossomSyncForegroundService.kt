@@ -39,6 +39,8 @@ import com.vitorpamplona.amethyst.ui.stringRes
  * [FlowProgressForegroundService]; this maps the sweep's [BlossomSyncState] onto the card.
  */
 class BlossomSyncForegroundService : FlowProgressForegroundService<BlossomSyncState?>() {
+    // Only passed to startForeground on API 34+, where the type exists.
+    @Suppress("InlinedApi")
     override val fgsType: Int = ServiceInfo.FOREGROUND_SERVICE_TYPE_DATA_SYNC
     override val channelId = CHANNEL_ID
     override val channelNameRes = R.string.blossom_sync_channel_name

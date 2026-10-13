@@ -160,6 +160,8 @@ private fun rememberIsBluetoothOutput(): State<Boolean> {
     return isBluetooth
 }
 
+// The BLE device types are API 31 constants; an older device simply never reports them.
+@Suppress("InlinedApi")
 private fun AudioManager?.isBluetoothOutput(): Boolean {
     if (this == null) return false
     return getDevices(AudioManager.GET_DEVICES_OUTPUTS).any { device ->

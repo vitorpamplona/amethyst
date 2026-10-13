@@ -111,7 +111,9 @@ class MediaRelayTest {
         range?.let { connection.setRequestProperty("Range", it) }
         val code = connection.responseCode
         val body = (if (code < 400) connection.inputStream else connection.errorStream)?.use { it.readBytes() } ?: ByteArray(0)
-        return Triple(code, connection.headerFields.filterKeys { it != null }, body)
+        // Typed from headerFields, not from the return type: the status line sits under a null key.
+        val headers = connection.headerFields.filterKeys { it != null }
+        return Triple(code, headers, body)
     }
 
     @Test

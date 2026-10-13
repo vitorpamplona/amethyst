@@ -77,7 +77,7 @@ class BackupConflictStorageTest {
         // The diff is recomputed rather than stored, so it has to still be derivable.
         val diff = ReplaceableBackupDiff.detectLoss(restoredSaved, restoredIncoming)
         assertNotNull(diff)
-        assertTrue(diff!!.removesData())
+        assertTrue(diff.removesData())
     }
 
     @Test

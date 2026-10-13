@@ -2,8 +2,6 @@
     <string name="block_hide_user">
 		<![CDATA[阻止并隐藏用户]]>
 	</string>
-    <string name="boosted">已提升</string>
-    <string name="save">保存</string>
     
     
     
@@ -39,7 +37,6 @@
     
     
     
-<string name="edited_number">编辑 #%1$s</string>
     
     
     
@@ -120,7 +117,6 @@
     
     
     
-<string name="rename">重命名</string>
     
     
     
@@ -189,7 +185,6 @@
     
     
     
-<string name="changed_chat_profile_to">新的聊天资料：</string>
     
     
     
@@ -412,7 +407,6 @@
     
     
     
-<string name="route_software_apps">应用</string>
     
     
     
@@ -448,25 +442,18 @@
     
     
     
-<string name="napplet_permissions">nApplet 权限</string>
     
     
-<string name="napplet_permissions_empty">尚无nApplet 权限</string>
     
-<string name="napplet_permissions_empty_subtitle">您授予nApplets的权限将显示在这里。</string>
     
-<string name="napplet_permissions_forget">忘记此 nApplet</string>
     
-<string name="napplet_permissions_blocked">已阻止</string>
     
-<string name="napplet_permissions_revoke">撤销</string>
     
     
     
     
     
     
-<string name="napplet_cap_shell">外壳</string>
     
     
     
@@ -475,7 +462,6 @@
     
     
     
-<string name="napplet_cap_shell_desc">询问哪些功能可用</string>
     
     
     
@@ -491,7 +477,6 @@
     
     
     
-<string name="napplet_consent_capability">功能：%1$s</string>
     
     
     
@@ -504,7 +489,6 @@
     
     
     
-<string name="napplet_consent_pay">此 nApplet 想要支付闪电发票。</string>
     
     
     
@@ -745,13 +729,9 @@
     
     
     
-<string name="private_note_no_receivers">尚无接收方：只有您才能看到此笔记。添加分享对象。</string>
     
-<string name="notify_add_user">添加</string>
     
-<string name="notify_remove_user">从通知中删除用户</string>
     
-<string name="notify_search_and_add_user">搜索并添加要通知的用户</string>
     
     
     
@@ -841,7 +821,6 @@
     
     
     
-<string name="set_preferred_media_servers">设置首选媒体上传服务器。</string>
     
     
     
@@ -850,9 +829,7 @@
     
     
     
-<string name="recommended_media_servers">推荐的媒体服务器</string>
     
-<string name="built_in_servers_description">Amethyst 的默认列表。可单独添加或添加整个列表。</string>
     
     
     
@@ -984,9 +961,7 @@
     
     
     
-<string name="app_notification_replies_channel_message">%1$s 回复了</string>
     
-<string name="app_notification_replies_channel_message_for">在: %1$s</string>
     
     
     
@@ -1046,9 +1021,7 @@
     
     
     
-<string name="always_on_notif_setting_title">“始终显示通知”服务</string>
     
-<string name="always_on_notif_setting_description">保持与收件箱中继的持续连接以便即时发送通知。 显示正在进行的通知。使用更多电量，但确保您永远不会错过消息。</string>
     
     
     
@@ -1201,7 +1174,6 @@
     
     
     
-<string name="preferences">偏好设置</string>
     
     
     
@@ -1298,12 +1270,9 @@
     
     
     
-<string name="messages_create_public_chat">公开</string>
     
-<string name="messages_create_group">组</string>
     
     
-<string name="messages_new_message">私人</string>
     
     
     
@@ -1541,13 +1510,9 @@
     
     
     
-<string name="cashu_p2pk_section">Nutzap 密钥(高级)</string>
     
-<string name="cashu_p2pk_explainer">一枚单独的私钥仅用于接收NIP-61 nutzaps。不是您的 Nostr 身份密钥。</string>
     
-<string name="cashu_p2pk_autogen">生成新密钥</string>
     
-<string name="cashu_p2pk_manual_label">P2PK 私钥(十六进制)</string>
     
     
 <string name="wallet_save_changes">保存更改</string>
@@ -1833,18 +1798,14 @@
     
     
     
-<string name="bottom_bar_settings_description">拖动可重新排序。切换可从底部栏中添加或删除一个项目。无项目则底部栏隐藏。</string>
     
     
-<string name="bottom_bar_settings_reorder">调整顺序</string>
     
     
     
-<string name="home_tabs_settings_description">选择主屏幕上出现的标签页。当只有一个标签处于活动状态时，标签栏将被隐藏。</string>
     
     
     
-<string name="profile_ui_settings_description">选择在用户个人资料屏幕上显示哪些部分和源。默认情况下所有选项都启用。</string>
     
     
     
@@ -1996,24 +1957,18 @@
     
     
     
-<string name="git_web_address">网址</string>
     
     
     
     
     
     
-<string name="git_repo_tab_overview">概述</string>
     
     
     
-<string name="git_repo_section_about">关于</string>
     
-<string name="git_repo_section_links">链接</string>
     
-<string name="git_repo_section_maintainers">维护者</string>
     
-<string name="git_repo_section_topics">话题</string>
     
     
     
@@ -2077,16 +2032,13 @@
     
     
     
-<string name="media_servers_blossom_section">Blossom 服务器</string>
     
-<string name="media_servers_blossom_explainer">添加上传图片时可以选择的服务器。</string>
     
     
     
     
     
     
-<string name="torrent_download">下载</string>
     
     
     

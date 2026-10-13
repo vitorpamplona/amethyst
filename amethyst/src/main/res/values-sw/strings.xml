@@ -3,10 +3,6 @@
     <!-- Placeholder shown in a chat row while an encrypted message is still being decrypted -->
     <!-- Prefix on a Messages-list preview when the newest message was sent by the logged-in user. %1$s is the message text -->
     <string name="block_hide_user"><![CDATA[Zuia na Ufiche Mtumiaji]]></string>
-    <string name="boosted">imeimarishwa</string>
-    <string name="edited_number">hariri #%1$s</string>
-    <string name="save">Hifadhi</string>
-    <string name="rename">Badilisha jina</string>
     <!-- Reply-mode toggle in the chat composer: reply inline in the timeline vs pull it aside into a thread. -->
     <!-- Title of the minichat (thread) screen opened from a chat message. -->
     <!-- Title of the picked-image confirmation dialog when attaching a picture to a thread reply. -->
@@ -14,21 +10,9 @@
     <!-- A reply whose target was searched for across all reachable history and never found. -->
     <!-- Reply subtitle when every relay genuinely bottomed out (no stalls) and it still wasn't there. -->
     <!-- Overflow count on the capped reporter avatar row, e.g. "+21". -->
-    <string name="changed_chat_profile_to">Wasifu mpya wa mazungumzo:</string>
-    <string name="route_software_apps">Programu</string>
-    <string name="napplet_permissions">Ruhusa za nApplet</string>
-    <string name="napplet_permissions_empty">Bado hakuna ruhusa za nApplet</string>
-    <string name="napplet_permissions_empty_subtitle">Ruhusa unazotoa kwa nApplets zitaonekana hapa.</string>
-    <string name="napplet_permissions_forget">Sahau nApplet hii</string>
-    <string name="napplet_permissions_blocked">Imezuiwa</string>
-    <string name="napplet_permissions_revoke">Batilisha</string>
     <!-- Napplet sandbox chrome (host top bar + live action notices) -->
     <!-- Napplet capability names -->
-    <string name="napplet_cap_shell">Ganda</string>
-    <string name="napplet_cap_shell_desc">Uliza ni uwezo gani unapatikana</string>
     <!-- Napplet consent dialog -->
-    <string name="napplet_consent_capability">Uwezo: %1$s</string>
-    <string name="napplet_consent_pay">nApplet hii inataka kulipa ankara ya Lightning.</string>
     <!-- An amountless BOLT11: the payee decides how much. Never render this as "0 sats". -->
     <!-- Consequence lines for event kinds whose payload lives entirely in the tags, so a
          kind-only summary would hide what is actually being signed. These replaceable lists are
@@ -62,16 +46,7 @@
     <!-- No longer shown in the prompt: kept so the existing translations aren't orphaned. -->
     <!-- Settings: three lists that each hold what their header says. -->
     <!-- Short labels for the purpose chips on a "recent logins" row. -->
-    <string name="private_note_no_receivers">Bado hakuna wapokeaji: wewe peke yako utaweza kuona kumbuka hii. Ongeza watu ili kushiriki nao.</string>
     <!-- Composer audience control (Notify / "Visible to") -->
-    <string name="notify_add_user">Ongeza</string>
-    <string name="notify_remove_user">Ondoa mtumiaji kutoka arifa</string>
-    <string name="notify_search_and_add_user">Tafuta na ongeza mtumiaji wa kutaarifu</string>
-    <string name="set_preferred_media_servers">Weka seva zako zinazopendelewa za kupakia media.</string>
-    <string name="recommended_media_servers">Seva Zinazopendekezwa za Media</string>
-    <string name="built_in_servers_description">Orodha ya chaguo-msingi ya Amethyst. Unaweza kuziongeza mmoja mmoja au kuongeza orodha nzima.</string>
-    <string name="app_notification_replies_channel_message">%1$s alijibu</string>
-    <string name="app_notification_replies_channel_message_for">kwenye: %1$s</string>
     <!-- Notification channel groups (organize the per-kind channels in system settings) -->
     <!-- Reposts -->
     <!-- Media (picture &amp; video posts that mention you) -->
@@ -91,9 +66,6 @@
          a relay count they think is too high. -->
     <!-- Two countable nouns, so two plurals composed at the call site rather than one string with
          two %d in it: filter and relay decline independently in Slavic/Baltic/Semitic languages. -->
-    <string name="always_on_notif_setting_title">Huduma ya arifa inayofanya kazi daima</string>
-    <string name="always_on_notif_setting_description">Inaweka muunganiko wa kudumu kwenye relays za inbox yako kwa utoaji wa arifa wa papo hapo. Inaonyesha arifa inayoendelea. Inatumia betri zaidi lakini inahakikisha hukosi ujumbe wowote.</string>
-    <string name="preferences">Mapendeleo ya Programu</string>
     <!-- Settings search -->
     <!-- Settings search keywords: an English concept/protocol index that supplements the
          (translated) row titles. Marked translatable="false" so protocol terms (blossom, nsec,
@@ -101,41 +73,21 @@
     <!-- Compact label for the segmented control, where "Unmetered WiFi" does not fit. -->
     <!-- Compact labels for the segmented control. -->
     <!-- Compact labels for the segmented control, rendered in each option's own typeface. -->
-    <string name="messages_create_public_chat">Umma</string>
-    <string name="messages_create_group">Kikundi</string>
     <!-- New conversation chooser (full-screen picker opened from the Messages FAB).
          Each row stays lean; the "best for" line and the pros/cons appear only when a row is tapped. -->
     <!-- Buzz calls its groups channels, and a Buzz relay is one workspace rather than a directory of groups. -->
     <!-- Reusable geohash location picker (shared, not group-specific) -->
     <!-- Same, where this viewer cannot start one: not a member, or a Buzz chat channel (forum posts belong to forum channels). -->
-    <string name="messages_new_message">Binafsi</string>
     <string name="share_target_as_dm">Tuma kama DM</string>
     <!-- Label for the mixed media feed: pictures + every NIP-71 video kind + NIP-94 files.
          Distinct from the "shorts" string, which labels the vertical/short-video-only feed. -->
-    <string name="cashu_p2pk_section">Ufunguo wa Nutzap (wa hali ya juu)</string>
-    <string name="cashu_p2pk_explainer">Ufunguo tofauti wa kibinafsi unaotumika tu kupokea nutzap za NIP-61. Si ufunguo wako wa utambulisho wa Nostr.</string>
-    <string name="cashu_p2pk_autogen">Tengeneza ufunguo mpya</string>
-    <string name="cashu_p2pk_manual_label">Ufunguo wa kibinafsi wa P2PK (hex)</string>
     <string name="wallet_save_changes">Hifadhi mabadiliko</string>
     <!-- Onchain zap send dialog -->
-    <string name="bottom_bar_settings_description">Buruta kupanga upya. Geuza kuongeza au kuondoa kipengee kutoka kwenye upau wa chini. Bila vipengee vya upau wa chini unafichwa.</string>
-    <string name="bottom_bar_settings_reorder">Panga upya</string>
-    <string name="home_tabs_settings_description">Chagua vichupo vinavyoonekana kwenye skrini ya Nyumbani. Wakati kichupo kimoja tu kipo hai, upau wa vichupo unafichwa.</string>
-    <string name="profile_ui_settings_description">Chagua sehemu na malisho yanayoonekana kwenye skrini za wasifu wa watumiaji. Chaguo zote zimewezeshwa kwa chaguomsingi.</string>
     <!-- Buzz kind-40099 system messages: relay-authored narration of a channel state change. -->
     <!-- Fallback for a system message type this version does not know yet: "alice: some_new_type". -->
     <!-- Buzz huddles (kind 481xx): live audio-room lifecycle, narrated in the chat timeline. -->
     <!-- Buzz agent jobs (kind 43xxx): an agent task's lifecycle, narrated in the chat timeline. -->
     <!-- Buzz forum votes (kind 45002). -->
-    <string name="git_web_address">Wavuti:</string>
-    <string name="git_repo_tab_overview">Muhtasari</string>
-    <string name="git_repo_section_about">Kuhusu</string>
-    <string name="git_repo_section_links">Viungo</string>
-    <string name="git_repo_section_maintainers">Watunzaji</string>
-    <string name="git_repo_section_topics">Mada</string>
-    <string name="media_servers_blossom_section">Seva za Blossom</string>
-    <string name="media_servers_blossom_explainer">Ongeza seva nyingi unavyotaka. Unaweza kuchagua ni ipi ya kutumia baadaye unapopakia picha yako</string>
-    <string name="torrent_download">Pakua</string>
     <!-- %1$s is replaced at runtime by an inline star icon, not text. Keep the placeholder. -->
     <!-- Kind display names for relay subscription filter chips -->
     <!-- M3 Action Dialog titles -->

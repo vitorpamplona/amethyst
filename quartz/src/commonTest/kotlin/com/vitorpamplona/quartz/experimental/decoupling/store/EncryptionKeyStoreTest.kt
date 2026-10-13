@@ -134,7 +134,7 @@ class EncryptionKeyStoreTest {
             val request = alice.sign(EncryptionKeyRequestEvent.build(client2.pubKey.toHexKey()))
             val genuine = assertNotNull(holder.answerRequest(request, aliceList, KeyPair().privKey!!))
             val forged = bob.sign(genuine)
-            assertNull(receiver.acceptTransfer(forged, client2.privKey!!, aliceList))
+            assertNull(receiver.acceptTransfer(forged, client2.privKey, aliceList))
             assertNull(receiver.get(alice.pubKey, announced))
         }
 

@@ -3,10 +3,6 @@
     <!-- Placeholder shown in a chat row while an encrypted message is still being decrypted -->
     <!-- Prefix on a Messages-list preview when the newest message was sent by the logged-in user. %1$s is the message text -->
     <string name="block_hide_user"><![CDATA[阻止並隱藏用户]]></string>
-    <string name="boosted">已提升</string>
-    <string name="edited_number">編輯 #%1$s</string>
-    <string name="save">保存</string>
-    <string name="rename">重新命名</string>
     <!-- Reply-mode toggle in the chat composer: reply inline in the timeline vs pull it aside into a thread. -->
     <!-- Title of the minichat (thread) screen opened from a chat message. -->
     <!-- Title of the picked-image confirmation dialog when attaching a picture to a thread reply. -->
@@ -14,20 +10,9 @@
     <!-- A reply whose target was searched for across all reachable history and never found. -->
     <!-- Reply subtitle when every relay genuinely bottomed out (no stalls) and it still wasn't there. -->
     <!-- Overflow count on the capped reporter avatar row, e.g. "+21". -->
-    <string name="changed_chat_profile_to">新的聊天個人資料：</string>
-    <string name="route_software_apps">應用程式</string>
-    <string name="napplet_permissions">nApplet 權限</string>
-    <string name="napplet_permissions_empty">尚無 nApplet 權限</string>
-    <string name="napplet_permissions_empty_subtitle">您授予 nApplets 的權限將顯示於此。</string>
-    <string name="napplet_permissions_forget">忘記此 nApplet</string>
-    <string name="napplet_permissions_blocked">已封鎖</string>
-    <string name="napplet_permissions_revoke">撤銷</string>
     <!-- Napplet sandbox chrome (host top bar + live action notices) -->
     <!-- Napplet capability names -->
-    <string name="napplet_cap_shell_desc">查詢可用的功能</string>
     <!-- Napplet consent dialog -->
-    <string name="napplet_consent_capability">功能：%1$s</string>
-    <string name="napplet_consent_pay">此 nApplet 想要支付一筆 Lightning 發票。</string>
     <!-- An amountless BOLT11: the payee decides how much. Never render this as "0 sats". -->
     <!-- Consequence lines for event kinds whose payload lives entirely in the tags, so a
          kind-only summary would hide what is actually being signed. These replaceable lists are
@@ -61,16 +46,7 @@
     <!-- No longer shown in the prompt: kept so the existing translations aren't orphaned. -->
     <!-- Settings: three lists that each hold what their header says. -->
     <!-- Short labels for the purpose chips on a "recent logins" row. -->
-    <string name="private_note_no_receivers">尚無接收者：只有您能看到此筆記。新增人員以分享給他們。</string>
     <!-- Composer audience control (Notify / "Visible to") -->
-    <string name="notify_add_user">新增</string>
-    <string name="notify_remove_user">從通知中移除使用者</string>
-    <string name="notify_search_and_add_user">搜尋並新增要通知的使用者</string>
-    <string name="set_preferred_media_servers">設置首選媒體上傳服務器</string>
-    <string name="recommended_media_servers">推薦媒體伺服器</string>
-    <string name="built_in_servers_description">Amethyst 的默認列表。可單獨添加或添加整個列表。</string>
-    <string name="app_notification_replies_channel_message">%1$s 已回覆</string>
-    <string name="app_notification_replies_channel_message_for">關於：%1$s</string>
     <!-- Notification channel groups (organize the per-kind channels in system settings) -->
     <!-- Reposts -->
     <!-- Media (picture &amp; video posts that mention you) -->
@@ -90,9 +66,6 @@
          a relay count they think is too high. -->
     <!-- Two countable nouns, so two plurals composed at the call site rather than one string with
          two %d in it: filter and relay decline independently in Slavic/Baltic/Semitic languages. -->
-    <string name="always_on_notif_setting_title">常駐通知服務</string>
-    <string name="always_on_notif_setting_description">與收件匣 relay 保持持久連線，以確保即時傳遞通知。會顯示持續性通知，耗電量較高，但可確保您不會錯過任何訊息。</string>
-    <string name="preferences">應用程式偏好設定</string>
     <!-- Settings search -->
     <!-- Settings search keywords: an English concept/protocol index that supplements the
          (translated) row titles. Marked translatable="false" so protocol terms (blossom, nsec,
@@ -100,41 +73,21 @@
     <!-- Compact label for the segmented control, where "Unmetered WiFi" does not fit. -->
     <!-- Compact labels for the segmented control. -->
     <!-- Compact labels for the segmented control, rendered in each option's own typeface. -->
-    <string name="messages_create_public_chat">公開</string>
-    <string name="messages_create_group">群組</string>
     <!-- New conversation chooser (full-screen picker opened from the Messages FAB).
          Each row stays lean; the "best for" line and the pros/cons appear only when a row is tapped. -->
     <!-- Buzz calls its groups channels, and a Buzz relay is one workspace rather than a directory of groups. -->
     <!-- Reusable geohash location picker (shared, not group-specific) -->
     <!-- Same, where this viewer cannot start one: not a member, or a Buzz chat channel (forum posts belong to forum channels). -->
-    <string name="messages_new_message">私人</string>
     <string name="share_target_as_dm">以私訊傳送</string>
     <!-- Label for the mixed media feed: pictures + every NIP-71 video kind + NIP-94 files.
          Distinct from the "shorts" string, which labels the vertical/short-video-only feed. -->
-    <string name="cashu_p2pk_section">Nutzap 金鑰（進階）</string>
-    <string name="cashu_p2pk_explainer">僅用於接收 NIP-61 nutzap 的獨立私鑰。不是您的 Nostr 身分金鑰。</string>
-    <string name="cashu_p2pk_autogen">產生新金鑰</string>
-    <string name="cashu_p2pk_manual_label">P2PK 私鑰（十六進位）</string>
     <string name="wallet_save_changes">儲存變更</string>
     <!-- Onchain zap send dialog -->
-    <string name="bottom_bar_settings_description">拖曳以重新排序。切換以新增或移除底部列項目。項目數為零時底部列將隱藏。</string>
-    <string name="bottom_bar_settings_reorder">重新排序</string>
-    <string name="home_tabs_settings_description">選擇首頁顯示的分頁。只有一個分頁啟用時，分頁列將隱藏。</string>
-    <string name="profile_ui_settings_description">選擇使用者個人資料頁面顯示的區塊和動態。預設啟用全部選項。</string>
     <!-- Buzz kind-40099 system messages: relay-authored narration of a channel state change. -->
     <!-- Fallback for a system message type this version does not know yet: "alice: some_new_type". -->
     <!-- Buzz huddles (kind 481xx): live audio-room lifecycle, narrated in the chat timeline. -->
     <!-- Buzz agent jobs (kind 43xxx): an agent task's lifecycle, narrated in the chat timeline. -->
     <!-- Buzz forum votes (kind 45002). -->
-    <string name="git_web_address">網址</string>
-    <string name="git_repo_tab_overview">概覽</string>
-    <string name="git_repo_section_about">關於</string>
-    <string name="git_repo_section_links">連結</string>
-    <string name="git_repo_section_maintainers">維護者</string>
-    <string name="git_repo_section_topics">主題</string>
-    <string name="media_servers_blossom_section">Blossom 伺服器</string>
-    <string name="media_servers_blossom_explainer">可新增任意數量的伺服器。上傳圖片時可選擇要使用的伺服器。</string>
-    <string name="torrent_download">下載</string>
     <!-- %1$s is replaced at runtime by an inline star icon, not text. Keep the placeholder. -->
     <!-- Kind display names for relay subscription filter chips -->
     <!-- M3 Action Dialog titles -->

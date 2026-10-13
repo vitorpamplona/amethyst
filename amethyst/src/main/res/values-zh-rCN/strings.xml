@@ -3,11 +3,6 @@
     <!-- Placeholder shown in a chat row while an encrypted message is still being decrypted -->
     <!-- Prefix on a Messages-list preview when the newest message was sent by the logged-in user. %1$s is the message text -->
     <string name="block_hide_user"><![CDATA[阻止并隐藏用户]]></string>
-    <string name="boosted">已提升</string>
-    <string name="edited_number">编辑 #%1$s</string>
-    <string name="save">保存</string>
-    <string name="rename">重命名</string>
-    <string name="concord_create_icon">图标 URL (可选)</string>
     <!-- Reply-mode toggle in the chat composer: reply inline in the timeline vs pull it aside into a thread. -->
     <!-- Title of the minichat (thread) screen opened from a chat message. -->
     <!-- Title of the picked-image confirmation dialog when attaching a picture to a thread reply. -->
@@ -15,21 +10,9 @@
     <!-- A reply whose target was searched for across all reachable history and never found. -->
     <!-- Reply subtitle when every relay genuinely bottomed out (no stalls) and it still wasn't there. -->
     <!-- Overflow count on the capped reporter avatar row, e.g. "+21". -->
-    <string name="changed_chat_profile_to">新的聊天资料：</string>
-    <string name="route_software_apps">App Store</string>
-    <string name="napplet_permissions">nApplet 权限</string>
-    <string name="napplet_permissions_empty">尚无nApplet 权限</string>
-    <string name="napplet_permissions_empty_subtitle">您授予nApplets的权限将显示在这里。</string>
-    <string name="napplet_permissions_forget">忘记此 nApplet</string>
-    <string name="napplet_permissions_blocked">已阻止</string>
-    <string name="napplet_permissions_revoke">撤销</string>
     <!-- Napplet sandbox chrome (host top bar + live action notices) -->
     <!-- Napplet capability names -->
-    <string name="napplet_cap_shell">外壳</string>
-    <string name="napplet_cap_shell_desc">询问哪些功能可用</string>
     <!-- Napplet consent dialog -->
-    <string name="napplet_consent_capability">功能：%1$s</string>
-    <string name="napplet_consent_pay">此 nApplet 想要支付闪电发票。</string>
     <!-- An amountless BOLT11: the payee decides how much. Never render this as "0 sats". -->
     <!-- Consequence lines for event kinds whose payload lives entirely in the tags, so a
          kind-only summary would hide what is actually being signed. These replaceable lists are
@@ -41,12 +24,8 @@
     <!-- Re-publishing an identical list is harmless; say so rather than raising a false alarm. -->
     <!-- No cached copy to compare against, so the whole list is what gets written. -->
     <!-- Signer permissions: first-connect dialog -->
-    <string name="napplet_connect_title">连接到 Nostr</string>
     <!-- Signer trust levels -->
     <!-- Signer per-op consent dialog -->
-    <string name="napplet_signer_allow_op">不要再次询问 %1$s</string>
-    <string name="napplet_signer_last_used">上次使用</string>
-    <string name="napplet_signer_expires">过期时间</string>
     <!-- Signer op labels -->
     <!-- Decrypt: the message is already decrypted by Amethyst; the permission is to expose it to the app -->
     <!-- Decrypt scoped to one counterparty. %1$s is that person's name (or a shortened npub) -->
@@ -54,18 +33,7 @@
     <!-- Shown as the preview when Amethyst itself cannot decrypt the message the app asked to read -->
     <!-- Label above the counterparty avatar in the decrypt consent dialog -->
     <!-- Permissions management screen -->
-    <string name="napplet_permissions_revoke_all">撤销所有权限</string>
-    <string name="napplet_permissions_overrides">操作覆盖</string>
-    <string name="napplet_signer_permissions_empty">尚未连接任何应用。</string>
     <!-- NIP-46 remote signer (bunker) -->
-    <string name="nip46_signer_search_keywords">签名者掩体nip46 nostr 连接远程签名</string>
-    <string name="nip46_signer_enable">充当远程签名人</string>
-    <plurals name="nip46_signer_status_listening">
-        <item quantity="other">正在监听 %1$d 个中继</item>
-    </plurals>
-    <string name="nip46_signer_bunker_uri_label">您的掩体地址</string>
-    <string name="nip46_signer_bunker_uri_hint">将此粘贴到另一个应用程序将它连接到您的密钥。</string>
-    <string name="nip46_signer_activity_empty">还没有满足请求。</string>
     <!-- Relay Authentication (NIP-42) settings -->
     <!-- The group header carries the grammar; each toggle is a completion of the sentence, so these
          keys are new rather than reused - a stale translation of the old standalone titles would
@@ -78,21 +46,7 @@
     <!-- No longer shown in the prompt: kept so the existing translations aren't orphaned. -->
     <!-- Settings: three lists that each hold what their header says. -->
     <!-- Short labels for the purpose chips on a "recent logins" row. -->
-    <string name="podcast_premium">高级版</string>
-    <string name="podcast_value_add_recipient">添加收款人</string>
-    <string name="private_note_no_receivers">尚无接收方：只有您才能看到此笔记。添加分享对象。</string>
     <!-- Composer audience control (Notify / "Visible to") -->
-    <string name="notify_add_user">添加</string>
-    <string name="notify_remove_user">从通知中删除用户</string>
-    <string name="notify_search_and_add_user">搜索并添加要通知的用户</string>
-    <string name="set_preferred_media_servers">设置首选媒体上传服务器。</string>
-    <string name="manage_stored_files">管理存储的文件</string>
-    <string name="blossom_delete_from">从何处删除…</string>
-    <string name="recommended_media_servers">推荐的媒体服务器</string>
-    <string name="built_in_servers_description">Amethyst 的默认列表。可单独添加或添加整个列表。</string>
-    <string name="media_server_status_checking">正在检查…</string>
-    <string name="app_notification_replies_channel_message">%1$s 回复了</string>
-    <string name="app_notification_replies_channel_message_for">在: %1$s</string>
     <!-- Notification channel groups (organize the per-kind channels in system settings) -->
     <!-- Reposts -->
     <!-- Media (picture &amp; video posts that mention you) -->
@@ -112,11 +66,7 @@
          a relay count they think is too high. -->
     <!-- Two countable nouns, so two plurals composed at the call site rather than one string with
          two %d in it: filter and relay decline independently in Slavic/Baltic/Semitic languages. -->
-    <string name="always_on_notif_setting_title">“始终显示通知”服务</string>
-    <string name="always_on_notif_setting_description">保持与收件箱中继的持续连接以便即时发送通知。 显示正在进行的通知。使用更多电量，但确保您永远不会错过消息。</string>
     <string name="always_on_notif_tile_label">通知服务</string>
-    <string name="notification_service_participation_title">保持该账户在后台活跃</string>
-    <string name="preferences">偏好设置</string>
     <!-- Settings search -->
     <!-- Settings search keywords: an English concept/protocol index that supplements the
          (translated) row titles. Marked translatable="false" so protocol terms (blossom, nsec,
@@ -124,77 +74,22 @@
     <!-- Compact label for the segmented control, where "Unmetered WiFi" does not fit. -->
     <!-- Compact labels for the segmented control. -->
     <!-- Compact labels for the segmented control, rendered in each option's own typeface. -->
-    <string name="messages_create_public_chat">公开</string>
-    <string name="messages_create_group">组</string>
     <!-- New conversation chooser (full-screen picker opened from the Messages FAB).
          Each row stays lean; the "best for" line and the pros/cons appear only when a row is tapped. -->
     <!-- Buzz calls its groups channels, and a Buzz relay is one workspace rather than a directory of groups. -->
-    <string name="relay_group_create_name">群名称</string>
-    <string name="relay_group_create_topic">主题(可选)</string>
-    <string name="relay_group_create_private">私有(仅成员可读取)</string>
-    <string name="relay_group_create_invite_only">仅限邀请</string>
-    <string name="relay_group_create_confirm">创建</string>
-    <string name="relay_group_invite_generating">正在创建邀请…</string>
-    <string name="relay_group_invite_copied">已复制邀请码</string>
-    <string name="relay_group_edit_name">群名称</string>
-    <string name="relay_group_edit_topic">主题(可选)</string>
-    <string name="relay_group_edit_private">私有(仅成员可读取)</string>
-    <string name="relay_group_edit_invite_only">仅限受邀</string>
-    <string name="relay_group_edit_confirm">保存</string>
     <!-- Reusable geohash location picker (shared, not group-specific) -->
-    <string name="relay_group_discovery_empty">在您的中继中寻找群组…</string>
-    <string name="relay_group_discovery_empty_filtered">此筛选器尚未找到群组。</string>
     <!-- Same, where this viewer cannot start one: not a member, or a Buzz chat channel (forum posts belong to forum channels). -->
-    <string name="relay_group_thread_body_label">写点什么…</string>
-    <string name="relay_group_thread_post">发表</string>
-    <plurals name="relay_group_message_count">
-        <item quantity="other">%1$d 条消息</item>
-    </plurals>
-    <plurals name="relay_group_message_count_capped">
-        <item quantity="other">超过 %1$d 条消息</item>
-    </plurals>
-    <plurals name="relay_group_follows_participating">
-        <item quantity="other">您关注的 %1$d 人</item>
-    </plurals>
-    <string name="messages_new_message">私人</string>
     <string name="share_target_as_dm">已私信形式发送</string>
     <!-- Label for the mixed media feed: pictures + every NIP-71 video kind + NIP-94 files.
          Distinct from the "shorts" string, which labels the vertical/short-video-only feed. -->
-    <string name="cashu_p2pk_section">Nutzap 密钥(高级)</string>
-    <string name="cashu_p2pk_explainer">一枚单独的私钥仅用于接收NIP-61 nutzaps。不是您的 Nostr 身份密钥。</string>
-    <string name="cashu_p2pk_autogen">生成新密钥</string>
-    <string name="cashu_p2pk_manual_label">P2PK 私钥(十六进制)</string>
     <string name="wallet_save_changes">保存更改</string>
     <!-- Onchain zap send dialog -->
-    <string name="bottom_bar_settings_description">拖动可重新排序。切换可从底部栏中添加或删除一个项目。无项目则底部栏隐藏。</string>
-    <string name="bottom_bar_settings_reorder">调整顺序</string>
-    <string name="home_tabs_settings_description">选择主屏幕上出现的标签页。当只有一个标签处于活动状态时，标签栏将被隐藏。</string>
-    <string name="profile_ui_settings_description">选择在用户个人资料屏幕上显示哪些部分和源。默认情况下所有选项都启用。</string>
     <!-- Buzz kind-40099 system messages: relay-authored narration of a channel state change. -->
     <!-- Fallback for a system message type this version does not know yet: "alice: some_new_type". -->
     <!-- Buzz huddles (kind 481xx): live audio-room lifecycle, narrated in the chat timeline. -->
     <!-- Buzz agent jobs (kind 43xxx): an agent task's lifecycle, narrated in the chat timeline. -->
     <!-- Buzz forum votes (kind 45002). -->
-    <string name="git_web_address">网址</string>
-    <string name="git_repo_tab_overview">概述</string>
-    <string name="git_repo_maintained_by">维护者</string>
-    <string name="git_repo_section_about">关于</string>
-    <string name="git_repo_section_links">链接</string>
-    <string name="git_repo_section_maintainers">维护者</string>
-    <string name="git_repo_section_topics">话题</string>
-    <string name="git_repo_tab_readme">Readme</string>
-    <string name="git_issue_close">关闭工单</string>
-    <string name="git_issue_reopen">重新打开</string>
-    <string name="media_servers_blossom_section">Blossom 服务器</string>
-    <string name="media_servers_blossom_explainer">添加上传图片时可以选择的服务器。</string>
-    <string name="torrent_download">下载</string>
     <!-- %1$s is replaced at runtime by an inline star icon, not text. Keep the placeholder. -->
-    <string name="resource_usage_today">今天</string>
-    <string name="resource_usage_week">最近7天</string>
-    <string name="resource_usage_cellular_bg">蜂窝数据(后台)</string>
-    <string name="resource_usage_cellular_fg">蜂窝移动数据(应用内)</string>
-    <string name="resource_usage_wifi">Wi-Fi 数据</string>
-    <string name="resource_usage_fg_time">应用内时间</string>
     <!-- Kind display names for relay subscription filter chips -->
     <!-- M3 Action Dialog titles -->
     <!-- Nicknames (NIP-85 contact cards); the dialog strings live in commons -->

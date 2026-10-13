@@ -3,10 +3,6 @@
     <!-- Placeholder shown in a chat row while an encrypted message is still being decrypted -->
     <!-- Prefix on a Messages-list preview when the newest message was sent by the logged-in user. %1$s is the message text -->
     <string name="block_hide_user"><![CDATA[Блокировать и скрыть пользователя]]></string>
-    <string name="boosted">репост</string>
-    <string name="edited_number">изменить #%1$s</string>
-    <string name="save">Сохранить</string>
-    <string name="rename">Переименовать</string>
     <!-- Reply-mode toggle in the chat composer: reply inline in the timeline vs pull it aside into a thread. -->
     <!-- Title of the minichat (thread) screen opened from a chat message. -->
     <!-- Title of the picked-image confirmation dialog when attaching a picture to a thread reply. -->
@@ -14,21 +10,9 @@
     <!-- A reply whose target was searched for across all reachable history and never found. -->
     <!-- Reply subtitle when every relay genuinely bottomed out (no stalls) and it still wasn't there. -->
     <!-- Overflow count on the capped reporter avatar row, e.g. "+21". -->
-    <string name="changed_chat_profile_to">Новый профиль чата:</string>
-    <string name="route_software_apps">Приложения</string>
-    <string name="napplet_permissions">Разрешения nApplet</string>
-    <string name="napplet_permissions_empty">Разрешений nApplet пока нет</string>
-    <string name="napplet_permissions_empty_subtitle">Разрешения, которые вы предоставляете nApplets, появятся здесь.</string>
-    <string name="napplet_permissions_forget">Забыть этот nApplet</string>
-    <string name="napplet_permissions_blocked">Заблокировано</string>
-    <string name="napplet_permissions_revoke">Отозвать</string>
     <!-- Napplet sandbox chrome (host top bar + live action notices) -->
     <!-- Napplet capability names -->
-    <string name="napplet_cap_shell">Оболочка</string>
-    <string name="napplet_cap_shell_desc">Запрашивать доступные возможности</string>
     <!-- Napplet consent dialog -->
-    <string name="napplet_consent_capability">Возможность: %1$s</string>
-    <string name="napplet_consent_pay">Этот nApplet хочет оплатить Lightning-инвойс.</string>
     <!-- An amountless BOLT11: the payee decides how much. Never render this as "0 sats". -->
     <!-- Consequence lines for event kinds whose payload lives entirely in the tags, so a
          kind-only summary would hide what is actually being signed. These replaceable lists are
@@ -62,16 +46,7 @@
     <!-- No longer shown in the prompt: kept so the existing translations aren't orphaned. -->
     <!-- Settings: three lists that each hold what their header says. -->
     <!-- Short labels for the purpose chips on a "recent logins" row. -->
-    <string name="private_note_no_receivers">Получателей пока нет: только вы сможете видеть эту заметку. Добавьте людей, чтобы поделиться с ними.</string>
     <!-- Composer audience control (Notify / "Visible to") -->
-    <string name="notify_add_user">Добавить</string>
-    <string name="notify_remove_user">Удалить пользователя из уведомлений</string>
-    <string name="notify_search_and_add_user">Найти и добавить пользователя для уведомления</string>
-    <string name="set_preferred_media_servers">Задайте предпочтительные серверы для загрузки медиафайлов.</string>
-    <string name="recommended_media_servers">Рекомендуемые медиасерверы</string>
-    <string name="built_in_servers_description">Список Amethyst. Вы можете добавить его индивидуально или добавить список.</string>
-    <string name="app_notification_replies_channel_message">%1$s ответил(а)</string>
-    <string name="app_notification_replies_channel_message_for">на: %1$s</string>
     <!-- Notification channel groups (organize the per-kind channels in system settings) -->
     <!-- Reposts -->
     <!-- Media (picture &amp; video posts that mention you) -->
@@ -91,9 +66,6 @@
          a relay count they think is too high. -->
     <!-- Two countable nouns, so two plurals composed at the call site rather than one string with
          two %d in it: filter and relay decline independently in Slavic/Baltic/Semitic languages. -->
-    <string name="always_on_notif_setting_title">Постоянный сервис уведомлений</string>
-    <string name="always_on_notif_setting_description">Поддерживает постоянное соединение с вашими inbox-relay для мгновенной доставки уведомлений. Отображает постоянное уведомление. Расходует больше заряда батареи, но гарантирует, что вы не пропустите ни одного сообщения.</string>
-    <string name="preferences">Настройки приложения</string>
     <!-- Settings search -->
     <!-- Settings search keywords: an English concept/protocol index that supplements the
          (translated) row titles. Marked translatable="false" so protocol terms (blossom, nsec,
@@ -101,41 +73,21 @@
     <!-- Compact label for the segmented control, where "Unmetered WiFi" does not fit. -->
     <!-- Compact labels for the segmented control. -->
     <!-- Compact labels for the segmented control, rendered in each option's own typeface. -->
-    <string name="messages_create_public_chat">Публичный</string>
-    <string name="messages_create_group">Группа</string>
     <!-- New conversation chooser (full-screen picker opened from the Messages FAB).
          Each row stays lean; the "best for" line and the pros/cons appear only when a row is tapped. -->
     <!-- Buzz calls its groups channels, and a Buzz relay is one workspace rather than a directory of groups. -->
     <!-- Reusable geohash location picker (shared, not group-specific) -->
     <!-- Same, where this viewer cannot start one: not a member, or a Buzz chat channel (forum posts belong to forum channels). -->
-    <string name="messages_new_message">Приватный</string>
     <string name="share_target_as_dm">Отправить как DM</string>
     <!-- Label for the mixed media feed: pictures + every NIP-71 video kind + NIP-94 files.
          Distinct from the "shorts" string, which labels the vertical/short-video-only feed. -->
-    <string name="cashu_p2pk_section">Ключ для nutzap (расширенные настройки)</string>
-    <string name="cashu_p2pk_explainer">Отдельный приватный ключ, используемый только для получения NIP-61 nutzap. Не ваш идентификационный ключ Nostr.</string>
-    <string name="cashu_p2pk_autogen">Сгенерировать новый ключ</string>
-    <string name="cashu_p2pk_manual_label">Приватный ключ P2PK (hex)</string>
     <string name="wallet_save_changes">Сохранить изменения</string>
     <!-- Onchain zap send dialog -->
-    <string name="bottom_bar_settings_description">Перетащите для изменения порядка. Включите или отключите, чтобы добавить или убрать элемент из нижней панели. При нулевом количестве элементов нижняя панель скрывается.</string>
-    <string name="bottom_bar_settings_reorder">Изменить порядок</string>
-    <string name="home_tabs_settings_description">Выберите вкладки для главного экрана. Если активна только одна вкладка, панель вкладок скрывается.</string>
-    <string name="profile_ui_settings_description">Выберите разделы и ленты, отображаемые на экранах профилей пользователей. По умолчанию все параметры включены.</string>
     <!-- Buzz kind-40099 system messages: relay-authored narration of a channel state change. -->
     <!-- Fallback for a system message type this version does not know yet: "alice: some_new_type". -->
     <!-- Buzz huddles (kind 481xx): live audio-room lifecycle, narrated in the chat timeline. -->
     <!-- Buzz agent jobs (kind 43xxx): an agent task's lifecycle, narrated in the chat timeline. -->
     <!-- Buzz forum votes (kind 45002). -->
-    <string name="git_web_address">Веб:</string>
-    <string name="git_repo_tab_overview">Обзор</string>
-    <string name="git_repo_section_about">О репозитории</string>
-    <string name="git_repo_section_links">Ссылки</string>
-    <string name="git_repo_section_maintainers">Сопровождающие</string>
-    <string name="git_repo_section_topics">Темы</string>
-    <string name="media_servers_blossom_section">Серверы Blossom</string>
-    <string name="media_servers_blossom_explainer">Добавьте столько серверов, сколько хотите. Вы сможете выбрать нужный при загрузке изображения.</string>
-    <string name="torrent_download">Скачать</string>
     <!-- %1$s is replaced at runtime by an inline star icon, not text. Keep the placeholder. -->
     <!-- Kind display names for relay subscription filter chips -->
     <!-- M3 Action Dialog titles -->

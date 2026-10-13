@@ -3,10 +3,6 @@
     <!-- Placeholder shown in a chat row while an encrypted message is still being decrypted -->
     <!-- Prefix on a Messages-list preview when the newest message was sent by the logged-in user. %1$s is the message text -->
     <string name="block_hide_user"><![CDATA[Bloquear y ocultar usuario]]></string>
-    <string name="boosted">Impulsada</string>
-    <string name="edited_number">edición #%1$s</string>
-    <string name="save">Guardar</string>
-    <string name="rename">Cambiar nombre</string>
     <!-- Reply-mode toggle in the chat composer: reply inline in the timeline vs pull it aside into a thread. -->
     <!-- Title of the minichat (thread) screen opened from a chat message. -->
     <!-- Title of the picked-image confirmation dialog when attaching a picture to a thread reply. -->
@@ -14,20 +10,9 @@
     <!-- A reply whose target was searched for across all reachable history and never found. -->
     <!-- Reply subtitle when every relay genuinely bottomed out (no stalls) and it still wasn't there. -->
     <!-- Overflow count on the capped reporter avatar row, e.g. "+21". -->
-    <string name="changed_chat_profile_to">Nuevo perfil de chat:</string>
-    <string name="route_software_apps">Apps</string>
-    <string name="napplet_permissions">Permisos de nApplet</string>
-    <string name="napplet_permissions_empty">Aún no hay permisos de nApplet</string>
-    <string name="napplet_permissions_empty_subtitle">Los permisos que concedas a nApplets aparecerán aquí.</string>
-    <string name="napplet_permissions_forget">Olvidar este nApplet</string>
-    <string name="napplet_permissions_blocked">Bloqueado</string>
-    <string name="napplet_permissions_revoke">Revocar</string>
     <!-- Napplet sandbox chrome (host top bar + live action notices) -->
     <!-- Napplet capability names -->
-    <string name="napplet_cap_shell_desc">Preguntar qué funcionalidades están disponibles</string>
     <!-- Napplet consent dialog -->
-    <string name="napplet_consent_capability">Funcionalidad: %1$s</string>
-    <string name="napplet_consent_pay">Este nApplet quiere pagar una factura Lightning.</string>
     <!-- An amountless BOLT11: the payee decides how much. Never render this as "0 sats". -->
     <!-- Consequence lines for event kinds whose payload lives entirely in the tags, so a
          kind-only summary would hide what is actually being signed. These replaceable lists are
@@ -61,16 +46,7 @@
     <!-- No longer shown in the prompt: kept so the existing translations aren't orphaned. -->
     <!-- Settings: three lists that each hold what their header says. -->
     <!-- Short labels for the purpose chips on a "recent logins" row. -->
-    <string name="private_note_no_receivers">Aún no hay destinatarios: solo tú podrás ver esta nota. Añade personas para compartirla.</string>
     <!-- Composer audience control (Notify / "Visible to") -->
-    <string name="notify_add_user">Añadir</string>
-    <string name="notify_remove_user">Eliminar usuario de las notificaciones</string>
-    <string name="notify_search_and_add_user">Buscar y añadir un usuario para notificar</string>
-    <string name="set_preferred_media_servers">Configura tus servidores preferidos para subir contenido multimedia.</string>
-    <string name="recommended_media_servers">Servidores multimedia recomendados</string>
-    <string name="built_in_servers_description">Lista predeterminada de Amethyst. Puedes agregarlos individualmente o añadir la lista.</string>
-    <string name="app_notification_replies_channel_message">%1$s respondió</string>
-    <string name="app_notification_replies_channel_message_for">en: %1$s</string>
     <!-- Notification channel groups (organize the per-kind channels in system settings) -->
     <!-- Reposts -->
     <!-- Media (picture &amp; video posts that mention you) -->
@@ -90,9 +66,6 @@
          a relay count they think is too high. -->
     <!-- Two countable nouns, so two plurals composed at the call site rather than one string with
          two %d in it: filter and relay decline independently in Slavic/Baltic/Semitic languages. -->
-    <string name="always_on_notif_setting_title">Servicio de notificaciones permanente</string>
-    <string name="always_on_notif_setting_description">Mantiene una conexión persistente a tus relays de bandeja de entrada para la entrega instantánea de notificaciones. Muestra una notificación en curso. Consume más batería, pero garantiza que nunca te pierdas un mensaje.</string>
-    <string name="preferences">Preferencias de la app</string>
     <!-- Settings search -->
     <!-- Settings search keywords: an English concept/protocol index that supplements the
          (translated) row titles. Marked translatable="false" so protocol terms (blossom, nsec,
@@ -100,41 +73,21 @@
     <!-- Compact label for the segmented control, where "Unmetered WiFi" does not fit. -->
     <!-- Compact labels for the segmented control. -->
     <!-- Compact labels for the segmented control, rendered in each option's own typeface. -->
-    <string name="messages_create_public_chat">Público</string>
-    <string name="messages_create_group">Grupo</string>
     <!-- New conversation chooser (full-screen picker opened from the Messages FAB).
          Each row stays lean; the "best for" line and the pros/cons appear only when a row is tapped. -->
     <!-- Buzz calls its groups channels, and a Buzz relay is one workspace rather than a directory of groups. -->
     <!-- Reusable geohash location picker (shared, not group-specific) -->
     <!-- Same, where this viewer cannot start one: not a member, or a Buzz chat channel (forum posts belong to forum channels). -->
-    <string name="messages_new_message">Privado</string>
     <string name="share_target_as_dm">Enviar como MD</string>
     <!-- Label for the mixed media feed: pictures + every NIP-71 video kind + NIP-94 files.
          Distinct from the "shorts" string, which labels the vertical/short-video-only feed. -->
-    <string name="cashu_p2pk_section">Clave nutzap (avanzado)</string>
-    <string name="cashu_p2pk_explainer">Una clave privada separada usada únicamente para recibir nutzaps NIP-61. No es tu clave de identidad Nostr.</string>
-    <string name="cashu_p2pk_autogen">Generar una nueva clave</string>
-    <string name="cashu_p2pk_manual_label">Clave privada P2PK (hex)</string>
     <string name="wallet_save_changes">Guardar cambios</string>
     <!-- Onchain zap send dialog -->
-    <string name="bottom_bar_settings_description">Arrastra para reordenar. Activa o desactiva para añadir o eliminar un elemento de la barra inferior. Con cero elementos la barra inferior se oculta.</string>
-    <string name="bottom_bar_settings_reorder">Reordenar</string>
-    <string name="home_tabs_settings_description">Elige qué pestañas aparecen en la pantalla de inicio. Cuando solo hay una pestaña activa la barra de pestañas se oculta.</string>
-    <string name="profile_ui_settings_description">Elige qué secciones y feeds aparecen en las pantallas de perfil de usuario. Todas las opciones están habilitadas de forma predeterminada.</string>
     <!-- Buzz kind-40099 system messages: relay-authored narration of a channel state change. -->
     <!-- Fallback for a system message type this version does not know yet: "alice: some_new_type". -->
     <!-- Buzz huddles (kind 481xx): live audio-room lifecycle, narrated in the chat timeline. -->
     <!-- Buzz agent jobs (kind 43xxx): an agent task's lifecycle, narrated in the chat timeline. -->
     <!-- Buzz forum votes (kind 45002). -->
-    <string name="git_web_address">Web:</string>
-    <string name="git_repo_tab_overview">Resumen</string>
-    <string name="git_repo_section_about">Acerca de</string>
-    <string name="git_repo_section_links">Enlaces</string>
-    <string name="git_repo_section_maintainers">Mantenedores</string>
-    <string name="git_repo_section_topics">Temas</string>
-    <string name="media_servers_blossom_section">Servidores Blossom</string>
-    <string name="media_servers_blossom_explainer">Agrega tantos servidores como quieras. Puedes elegir cuál usar más tarde al subir tu foto.</string>
-    <string name="torrent_download">Descargar</string>
     <!-- %1$s is replaced at runtime by an inline star icon, not text. Keep the placeholder. -->
     <!-- Kind display names for relay subscription filter chips -->
     <!-- M3 Action Dialog titles -->

@@ -3,19 +3,6 @@
     <!-- Placeholder shown in a chat row while an encrypted message is still being decrypted -->
     <!-- Prefix on a Messages-list preview when the newest message was sent by the logged-in user. %1$s is the message text -->
     <string name="block_hide_user"><![CDATA[बाधित करें तथा उपयोगकर्ता को छिपाएँ]]></string>
-    <string name="boosted">उद्धृत</string>
-    <string name="edited_number">सम्पादन #%1$s</string>
-    <string name="save">अभिलेखन करें</string>
-    <string name="rename">पुनःनामकरण</string>
-    <string name="concord_create_icon">चिह्न जालपता (विकल्पात्मक)</string>
-    <plurals name="buzz_workspaces_count">
-        <item quantity="one">%1$d कार्यशाला</item>
-        <item quantity="other">%1$d कार्यशालाएँ</item>
-    </plurals>
-    <plurals name="buzz_workspaces_channel_count">
-        <item quantity="one">%1$d प्रणाली</item>
-        <item quantity="other">%1$d प्रणालियाँ</item>
-    </plurals>
     <!-- Reply-mode toggle in the chat composer: reply inline in the timeline vs pull it aside into a thread. -->
     <!-- Title of the minichat (thread) screen opened from a chat message. -->
     <!-- Title of the picked-image confirmation dialog when attaching a picture to a thread reply. -->
@@ -23,21 +10,9 @@
     <!-- A reply whose target was searched for across all reachable history and never found. -->
     <!-- Reply subtitle when every relay genuinely bottomed out (no stalls) and it still wasn't there. -->
     <!-- Overflow count on the capped reporter avatar row, e.g. "+21". -->
-    <string name="changed_chat_profile_to">नया चर्चा परिचय :</string>
-    <string name="route_software_apps">क्रमक विपणि</string>
-    <string name="napplet_permissions">नोस्टर संलग्नक्रमक अनुमतियाँ</string>
-    <string name="napplet_permissions_empty">कोई नोस्टर संलग्नक्रमक अनुमतियाँ नहीं अब तक</string>
-    <string name="napplet_permissions_empty_subtitle">नोस्टर संलग्नक्रमकों को आपके द्वारा दिए गए अनुमतियाँ यहाँ दिखेंगे।</string>
-    <string name="napplet_permissions_forget">इस नोस्टर संलग्नक्रमक को भूल जाएँ</string>
-    <string name="napplet_permissions_blocked">प्रति उपयोग अनुमति आवश्यक</string>
-    <string name="napplet_permissions_revoke">निराकरण</string>
     <!-- Napplet sandbox chrome (host top bar + live action notices) -->
     <!-- Napplet capability names -->
-    <string name="napplet_cap_shell">छाल</string>
-    <string name="napplet_cap_shell_desc">पूछें क्या क्षमताएँ उपलब्ध हैं</string>
     <!-- Napplet consent dialog -->
-    <string name="napplet_consent_capability">क्षमता : %1$s</string>
-    <string name="napplet_consent_pay">यह नोस्टर संलग्नक्रमक एक लैटनिंग चालान का भुगतान करना चाहता है।</string>
     <!-- An amountless BOLT11: the payee decides how much. Never render this as "0 sats". -->
     <!-- Consequence lines for event kinds whose payload lives entirely in the tags, so a
          kind-only summary would hide what is actually being signed. These replaceable lists are
@@ -49,12 +24,8 @@
     <!-- Re-publishing an identical list is harmless; say so rather than raising a false alarm. -->
     <!-- No cached copy to compare against, so the whole list is what gets written. -->
     <!-- Signer permissions: first-connect dialog -->
-    <string name="napplet_connect_title">नोस्टर से संयोजन</string>
     <!-- Signer trust levels -->
     <!-- Signer per-op consent dialog -->
-    <string name="napplet_signer_allow_op">पुनःप्रश्न ना करें %1$s के लिए</string>
-    <string name="napplet_signer_last_used">पूर्व उपयुक्त</string>
-    <string name="napplet_signer_expires">समाप्ति</string>
     <!-- Signer op labels -->
     <!-- Decrypt: the message is already decrypted by Amethyst; the permission is to expose it to the app -->
     <!-- Decrypt scoped to one counterparty. %1$s is that person's name (or a shortened npub) -->
@@ -62,19 +33,7 @@
     <!-- Shown as the preview when Amethyst itself cannot decrypt the message the app asked to read -->
     <!-- Label above the counterparty avatar in the decrypt consent dialog -->
     <!-- Permissions management screen -->
-    <string name="napplet_permissions_revoke_all">सभी अनुमतियों का निराकरण</string>
-    <string name="napplet_permissions_overrides">परिचालन आवरक आदेश</string>
-    <string name="napplet_signer_permissions_empty">कोई क्रमक संयोजित नहीं अब तक।</string>
     <!-- NIP-46 remote signer (bunker) -->
-    <string name="nip46_signer_search_keywords">हस्ताक्षरकर्ता कोष्ठागार निप॰४६ नोस्टर संयोजन दूरस्थ हस्ताक्षर</string>
-    <string name="nip46_signer_enable">दूरस्थ हस्ताक्षरकर्ता के रूप में कार्य करें</string>
-    <plurals name="nip46_signer_status_listening">
-        <item quantity="one">%1$d पुनःप्रसारक पर श्रवण</item>
-        <item quantity="other">%1$d पुनःप्रसारकों पर श्रवण</item>
-    </plurals>
-    <string name="nip46_signer_bunker_uri_label">आपका कोष्ठागार पता</string>
-    <string name="nip46_signer_bunker_uri_hint">इसे एक अन्य क्रमक में चिपकाएँ आपकी कुंचिका के साथ उसे जोडने के लिए।</string>
-    <string name="nip46_signer_activity_empty">किसी भी अनुरोध पर कार्य हुआ नहीं अब तक।</string>
     <!-- Relay Authentication (NIP-42) settings -->
     <!-- The group header carries the grammar; each toggle is a completion of the sentence, so these
          keys are new rather than reused - a stale translation of the old standalone titles would
@@ -87,22 +46,7 @@
     <!-- No longer shown in the prompt: kept so the existing translations aren't orphaned. -->
     <!-- Settings: three lists that each hold what their header says. -->
     <!-- Short labels for the purpose chips on a "recent logins" row. -->
-    <string name="agent_console_title">घटक कोष्ठक</string>
-    <string name="podcast_premium">अधिमूल्य</string>
-    <string name="podcast_value_add_recipient">प्राप्तकर्ता जोडें</string>
-    <string name="private_note_no_receivers">कोई प्राप्तकर्ता नहीं अब तक। केवल आप इस टीका को देख सकेंगे। लोगों को जोडें इसे बाँटने के लिए।</string>
     <!-- Composer audience control (Notify / "Visible to") -->
-    <string name="notify_add_user">जोडें</string>
-    <string name="notify_remove_user">प्रयोक्ता हटाएँ सूचनाओं से</string>
-    <string name="notify_search_and_add_user">खोजें तथा जोडें प्रयोक्ता को जिसे सूचित करना है</string>
-    <string name="set_preferred_media_servers">आपके श्रव्यदृश्याभिलेख सेवासंगणक आद्यताएँ स्थापित करें।</string>
-    <string name="manage_stored_files">रखे गए अभिलेखों का प्रबन्धन</string>
-    <string name="blossom_delete_from">यहाँ से मिटाएँ…</string>
-    <string name="recommended_media_servers">अनुशम्सित श्रव्यदृश्याभिलेख सेवासंगणक</string>
-    <string name="built_in_servers_description">अमेथिस्त की मूलविकल्प सूची। आप एक एक करके जोड सकते हैं अथवा सूची जोड सकते हैं।</string>
-    <string name="media_server_status_checking">जाँच चालू…</string>
-    <string name="app_notification_replies_channel_message">%1$s उत्तर दिया</string>
-    <string name="app_notification_replies_channel_message_for">पर : %1$s</string>
     <!-- Notification channel groups (organize the per-kind channels in system settings) -->
     <!-- Reposts -->
     <!-- Media (picture &amp; video posts that mention you) -->
@@ -122,12 +66,7 @@
          a relay count they think is too high. -->
     <!-- Two countable nouns, so two plurals composed at the call site rather than one string with
          two %d in it: filter and relay decline independently in Slavic/Baltic/Semitic languages. -->
-    <string name="active_subs_pair">%1$s \u00b7 %2$s</string>
-    <string name="always_on_notif_setting_title">सदैव सक्रिय सूचना सेवा</string>
-    <string name="always_on_notif_setting_description">अनवरत संयोजन बनाए रखता है आपके आगतपेटिका पुनःप्रसारकों के साथ तत्काल सूचना वितरण के लिए। एक स्थायी सूचना दिखाता है। विद्युत्कोष का अधिक उपयोग करता है पर निश्चित करता है कि आप कभी भी सन्देश नहीं खोएँगे।</string>
     <string name="always_on_notif_tile_label">सूचना सेवा</string>
-    <string name="notification_service_participation_title">इस लेखा को पृष्ठभूत सक्रिय रखें</string>
-    <string name="preferences">क्रमक आद्यताएँ</string>
     <!-- Settings search -->
     <!-- Settings search keywords: an English concept/protocol index that supplements the
          (translated) row titles. Marked translatable="false" so protocol terms (blossom, nsec,
@@ -135,46 +74,11 @@
     <!-- Compact label for the segmented control, where "Unmetered WiFi" does not fit. -->
     <!-- Compact labels for the segmented control. -->
     <!-- Compact labels for the segmented control, rendered in each option's own typeface. -->
-    <string name="messages_create_public_chat">सार्वजनिक</string>
-    <string name="messages_create_group">समूह</string>
     <!-- New conversation chooser (full-screen picker opened from the Messages FAB).
          Each row stays lean; the "best for" line and the pros/cons appear only when a row is tapped. -->
     <!-- Buzz calls its groups channels, and a Buzz relay is one workspace rather than a directory of groups. -->
-    <string name="buzz_channel_flag_forum">मंच प्रणाली</string>
-    <string name="buzz_channel_flag_forum_desc">सूत्रबद्ध पत्र प्रदर्शनशैली चर्चा समयरेखा के स्थान पर। यह तत्पश्चात परिवर्तनीय नहीं।</string>
-    <string name="relay_group_create_name">समूह नाम</string>
-    <string name="relay_group_create_topic">विषय (विकल्पात्मक)</string>
-    <string name="relay_group_create_private">निजी (केवल सदस्य पठन)</string>
-    <string name="relay_group_create_invite_only">केवल आमन्त्रित</string>
-    <string name="relay_group_create_confirm">बनाएँ</string>
-    <string name="relay_group_invite_generating">आमन्त्रण बनाया जा रहा है…</string>
-    <string name="relay_group_invite_copied">आमन्त्रण अक्षरराशि अनुकृत</string>
-    <string name="relay_group_edit_name">समूह नाम</string>
-    <string name="relay_group_edit_topic">विषय (विकल्पात्मक)</string>
-    <string name="relay_group_edit_private">निजी (केवल सदस्य पठन)</string>
-    <string name="relay_group_edit_invite_only">केवल आमन्त्रित</string>
-    <string name="relay_group_edit_confirm">अभिलेखन</string>
-    <string name="relay_group_location_edit">स्थान परिवर्तन</string>
     <!-- Reusable geohash location picker (shared, not group-specific) -->
-    <string name="relay_group_discovery_empty">आपके पुनःप्रसारकों में समूहों का खोज…</string>
-    <string name="relay_group_discovery_empty_filtered">इस छलनी के अनुकूल कोई समूह प्राप्त नहीं अब तक।</string>
     <!-- Same, where this viewer cannot start one: not a member, or a Buzz chat channel (forum posts belong to forum channels). -->
-    <string name="relay_group_thread_body_label">कुछ लिखें…</string>
-    <string name="relay_group_thread_post">पत्र प्रकाशन</string>
-    <string name="channel_invite_title">%1$s में जोडा गया</string>
-    <plurals name="relay_group_message_count">
-        <item quantity="one">%1$d सन्देश</item>
-        <item quantity="other">%1$d सन्देश</item>
-    </plurals>
-    <plurals name="relay_group_message_count_capped">
-        <item quantity="one">%1$d से अधिक सन्देश</item>
-        <item quantity="other">%1$d से अधिक सन्देश</item>
-    </plurals>
-    <plurals name="relay_group_follows_participating">
-        <item quantity="one">%1$d व्यक्ति जिसके आप अनुचर</item>
-        <item quantity="other">%1$d व्यक्ति जिसके आप अनुचर</item>
-    </plurals>
-    <string name="messages_new_message">निजी</string>
     <string name="share_target_as_dm">सीधेसन्देश के रूप में भेजें</string>
     <string name="share_target_as_highlight">नया उद्दीप्तव्य</string>
     <string name="share_target_as_picture">नया चित्र</string>
@@ -183,59 +87,16 @@
     <string name="share_target_scan_qr">क्यूआर॰ चित्र अक्षरराशि परखें</string>
     <string name="shortcut_scan_qr_short">क्यूआर॰ क्रमचित्र को परखें</string>
     <string name="shortcut_scan_qr_long">एक क्यूआर॰ चित्र अक्षरराशि परखें</string>
-    <string name="new_highlight_passage_label">उद्दीप्त लेख</string>
     <!-- Label for the mixed media feed: pictures + every NIP-71 video kind + NIP-94 files.
          Distinct from the "shorts" string, which labels the vertical/short-video-only feed. -->
-    <string name="cashu_p2pk_section">नटज्साप कुंचिका (उन्नत)</string>
-    <string name="cashu_p2pk_explainer">एक पृथक निजी कुंचिका केवल निप॰६१ नटज्साप प्राप्त करने के लिए। आपकी नोस्टर लेखा बद्ध कुंचिका नहीं।</string>
-    <string name="cashu_p2pk_autogen">एक नयी कुंचिका बनाएँ</string>
-    <string name="cashu_p2pk_manual_label">पीटूपीके॰ निजी कुंचिका (षोडशांक)</string>
     <string name="wallet_save_changes">परिवर्तनों का अभिलेखन</string>
     <!-- Onchain zap send dialog -->
-    <string name="bottom_bar_settings_description">टँकित वस्तुओं को खींचें पुनःव्यवस्थित करने के लिए। नीचे एक श्रेणी खोलें तथा एक वस्तु का विकल्पान्तरण करें उसे जोडने अथवा हटाने के लिए। जालवीक्षक खोलें अथवा एक चर्चा प्रकार प्रियचिह्नित अथवा समूह विशेष को टाँकने के लिए। शून्य वस्तु हो तो निचली पट्टी अदृश्य रहेगी।</string>
-    <string name="bottom_bar_settings_reorder">क्रम पुनःव्यवस्था</string>
-    <string name="home_tabs_settings_description">चयन करें किन पृष्ठसूचक दिखने चाहिए मुख्यपटल पर। जब एक ही सक्रिय है तब पृष्ठसूचक पट्टी छुपाई जाएगी।</string>
-    <string name="profile_ui_settings_description">चयन करें कि किन विभाग तथा सूचनावलियाँ दिखेंगे प्रयोक्ता परिचय पटल पर। सभी विकल्प सक्षम हैं मूलतः।</string>
     <!-- Buzz kind-40099 system messages: relay-authored narration of a channel state change. -->
     <!-- Fallback for a system message type this version does not know yet: "alice: some_new_type". -->
     <!-- Buzz huddles (kind 481xx): live audio-room lifecycle, narrated in the chat timeline. -->
     <!-- Buzz agent jobs (kind 43xxx): an agent task's lifecycle, narrated in the chat timeline. -->
     <!-- Buzz forum votes (kind 45002). -->
-    <string name="buzz_workspaces_title">बज्स्स कार्यशालाएँ</string>
-    <string name="buzz_workspaces_hero_tagline">जहाँ मनुष्य तथा घटक एक साथ निर्माण करते हैं</string>
-    <string name="buzz_workspaces_leave">कार्यशाला निर्गमन</string>
-    <string name="buzz_workspaces_section">आपके कार्यशालाएँ</string>
-    <string name="buzz_workspaces_empty_title">कोई कार्यशालाएँ नहीं अब तक</string>
-    <string name="buzz_workspaces_empty_body">बज्स्स कार्यशालाएँ पुनःप्रसारक हैं जहाँ मनुष्य तथा एआई॰ घटक एक साथ निर्माण करते हैं। एक के साथ जुडें उसे यहाँ देखने के लिए।</string>
-    <string name="buzz_workspaces_browse">समूहों का वीक्षण</string>
-    <string name="buzz_console_card_subtitle">परिव्यय। व्यक्तिशैलियाँ। वर्तमान अवलोकनकर्ता</string>
-    <string name="buzz_dm_nav_label">बज्स्स सीधेसन्देश</string>
-    <string name="buzz_dm_card_subtitle">निजी वार्तालाप आपके कार्यशालाओं में</string>
-    <string name="buzz_import_title">कार्यशाला प्रणालियों का आयात</string>
-    <string name="buzz_import_your_channels">आपके प्रणालियाँ इस कार्यशाला में</string>
-    <string name="buzz_import_add">जोडें</string>
-    <string name="buzz_import_empty_title">कोई प्रणालियाँ प्राप्त नहीं</string>
-    <string name="buzz_import_empty_body">आप इस पुनःप्रसारक के किसी भी प्रणाली के सदस्य प्रतीत नहीं होते अब तक। पहले वीक्षक में कार्यशाला आमन्त्रण स्वीकार करें। तत्पश्चात पुनःप्रयास करें।</string>
-    <string name="git_web_address">जाल :</string>
-    <string name="git_repo_tab_overview">रूपरेखा विवरण</string>
-    <string name="git_repo_maintained_by">रखाव इनके द्वारा</string>
-    <string name="git_repo_section_about">जानकारी</string>
-    <string name="git_repo_section_links">योजक</string>
-    <string name="git_repo_section_maintainers">परिपालक</string>
-    <string name="git_repo_section_topics">विषय सूची</string>
-    <string name="git_repo_tab_readme">पठनीय</string>
-    <string name="git_issue_close">विषय आवृत करें</string>
-    <string name="git_issue_reopen">पुनःखोलें</string>
-    <string name="media_servers_blossom_section">ब्लोस्सम सेवासंगणक</string>
-    <string name="media_servers_blossom_explainer">सेवासंगणक जितना चाहें जोडें। किस संगणक का उपयोग करना है उसका चयन कर सकते हैं चित्र का आरोहण करते समय</string>
-    <string name="torrent_download">अवरोहण</string>
     <!-- %1$s is replaced at runtime by an inline star icon, not text. Keep the placeholder. -->
-    <string name="resource_usage_today">आज</string>
-    <string name="resource_usage_week">पिछले सात दिन</string>
-    <string name="resource_usage_cellular_bg">चलनशील संचार (पृष्ठभूत)</string>
-    <string name="resource_usage_cellular_fg">चलनशील संचार (क्रमकाभ्यन्तर)</string>
-    <string name="resource_usage_wifi">वैफै॰ संचार</string>
-    <string name="resource_usage_fg_time">क्रमकाभ्यन्तर समय</string>
     <!-- Kind display names for relay subscription filter chips -->
     <!-- M3 Action Dialog titles -->
     <!-- Nicknames (NIP-85 contact cards); the dialog strings live in commons -->

@@ -31,7 +31,7 @@ import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.coroutines.executeAsync
 import java.net.HttpURLConnection
-import java.net.URL
+import java.net.URI
 
 class ImageDownloader {
     class Blob(
@@ -144,7 +144,7 @@ class ImageDownloader {
         withContext(Dispatchers.IO) {
             // TODO: Migrate to OkHttp
             HttpURLConnection.setFollowRedirects(true)
-            var url = URL(imageUrl)
+            var url = URI(imageUrl).toURL()
             var clientProxy = okHttpClient(imageUrl).proxy
             var huc =
                 if (clientProxy != null) {
@@ -160,7 +160,7 @@ class ImageDownloader {
                 val newUrl: String = huc.getHeaderField("Location")
 
                 // open the new connection again
-                url = URL(newUrl)
+                url = URI(newUrl).toURL()
                 clientProxy = okHttpClient(newUrl).proxy
                 huc =
                     if (clientProxy != null) {
