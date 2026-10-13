@@ -28,6 +28,7 @@ import com.vitorpamplona.quartz.nip10Notes.TextNoteEvent
 import kotlinx.coroutines.runBlocking
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 /**
@@ -45,5 +46,13 @@ class EventDeserializerFieldNameTest {
 
         assertEquals(event.id, parsed.id)
         assertTrue(parsed.verify(), "the parsed event must still verify")
+    }
+
+    @Test
+    fun aTruncatedObjectFailsInsteadOfLooping() {
+        val event = runBlocking { NostrSignerInternal(KeyPair()).sign(TextNoteEvent.build("cut short")) }
+        val truncated = event.toJson().substringBefore(",\"sig\"")
+
+        assertNull(Event.fromJsonOrNull(truncated))
     }
 }

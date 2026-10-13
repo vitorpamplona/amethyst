@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.quartz.nip01Core.signers
 
+import com.fasterxml.jackson.core.JsonParseException
 import com.fasterxml.jackson.core.JsonParser
 import com.fasterxml.jackson.core.JsonToken
 import com.fasterxml.jackson.databind.DeserializationContext
@@ -40,7 +41,10 @@ class EventTemplateDeserializer : StdDeserializer<EventTemplate<Event>>(EventTem
         var tags = emptyArray
         var content = ""
 
-        while (p.nextToken() != JsonToken.END_OBJECT) {
+        while (true) {
+            // nextToken() is null at the end of input: a truncated object must fail, not loop.
+            val token = p.nextToken() ?: throw JsonParseException(p, "Unexpected end of input inside an object")
+            if (token == JsonToken.END_OBJECT) break
             val fieldName = p.currentName()
             p.nextToken()
 
