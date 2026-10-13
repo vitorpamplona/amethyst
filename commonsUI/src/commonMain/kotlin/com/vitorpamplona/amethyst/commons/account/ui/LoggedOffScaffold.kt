@@ -22,6 +22,7 @@ package com.vitorpamplona.amethyst.commons.account.ui
 
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
@@ -90,6 +91,7 @@ import com.vitorpamplona.amethyst.commons.tor.TorSettingsFlow
 import com.vitorpamplona.amethyst.commons.ui.insets.imePaddingSafe
 import com.vitorpamplona.amethyst.commons.ui.painterRes
 import com.vitorpamplona.amethyst.commons.ui.stringRes
+import com.vitorpamplona.amethyst.commons.ui.theme.CardSurfaces
 import com.vitorpamplona.amethyst.commons.ui.theme.isLight
 import com.vitorpamplona.amethyst.commons.ui.tor.ConnectTorDialog
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon as SymbolIcon
@@ -179,7 +181,9 @@ fun LoggedOffScaffold(
                             Modifier
                                 .widthIn(max = FormMaxWidth + 64.dp)
                                 .clip(FormCardShape)
-                                .background(MaterialTheme.colorScheme.surfaceContainer.copy(alpha = 0.92f))
+                                // Frosted over the glow, not a grey slab on it.
+                                .background(CardSurfaces.frosted)
+                                .border(CardSurfaces.frostedBorder, FormCardShape)
                                 .padding(32.dp)
                         } else {
                             Modifier.widthIn(max = FormMaxWidth)

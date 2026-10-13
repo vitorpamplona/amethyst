@@ -83,6 +83,7 @@ import com.vitorpamplona.amethyst.commons.ui.keystorage.KeyStorageLoginOptions
 import com.vitorpamplona.amethyst.commons.ui.platform.LocalAppPlatform
 import com.vitorpamplona.amethyst.commons.ui.platform.LocalAppServices
 import com.vitorpamplona.amethyst.commons.ui.stringRes
+import com.vitorpamplona.amethyst.commons.ui.theme.CardSurfaces
 import com.vitorpamplona.amethyst.commons.ui.theme.ThemeComparisonRow
 import kotlinx.coroutines.delay
 
@@ -288,7 +289,7 @@ fun LoggedOffButton(
     }
     val modifier = Modifier.fillMaxWidth().height(52.dp)
     if (filled) {
-        Button(onClick = onClick, enabled = enabled, shape = LoggedOffShape, modifier = modifier) { content() }
+        Button(onClick = onClick, enabled = enabled, shape = LoggedOffShape, colors = CardSurfaces.mainButtonColors(), modifier = modifier) { content() }
     } else {
         OutlinedButton(onClick = onClick, enabled = enabled, shape = LoggedOffShape, modifier = modifier) { content() }
     }
