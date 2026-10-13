@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst.desktop.platform
 
+import com.vitorpamplona.quartz.utils.Log
 import java.awt.Toolkit
 import java.io.File
 
@@ -43,7 +44,34 @@ object WaylandDisplay {
      * toolkit AWT actually started, or Compose's window opens where it can't draw. Reading it starts
      * AWT, so only ask once [configure] has run.
      */
-    val isActive: Boolean by lazy { Toolkit.getDefaultToolkit().javaClass.name == WAYLAND_TOOLKIT }
+    val isActive: Boolean by lazy {
+        val active = Toolkit.getDefaultToolkit().javaClass.name == WAYLAND_TOOLKIT
+        if (active) preferServerSideDecorations()
+        active
+    }
+
+    /**
+     * The title bar. Where the compositor draws window decorations (KDE, wlroots compositors such as
+     * sway, Hyprland, COSMIC, niri), the window gets the same title bar as every other app there;
+     * left to itself JBR draws its own: a plain gray bar on KDE, a GTK one elsewhere. GNOME draws
+     * none, so it keeps JBR's GTK bar. JBR's "server" style falls back to the plain bar when the
+     * compositor can't, so the compositor is asked first.
+     *
+     * JBR reads the style once, when the first window opens: this runs as the toolkit starts, before
+     * any window. Needs `--add-exports java.desktop/sun.awt.wl` (set in the build); without it, or on a
+     * runtime without the method, JBR's default stays.
+     */
+    private fun preferServerSideDecorations() {
+        if (System.getProperty(DECORATION_STYLE) != null) return
+        val available =
+            try {
+                Class.forName(WAYLAND_TOOLKIT).getMethod("isSSDAvailable").invoke(null) == true
+            } catch (e: ReflectiveOperationException) {
+                Log.w("WaylandDisplay", "Could not ask the compositor for its window decorations", e)
+                false
+            }
+        if (available) System.setProperty(DECORATION_STYLE, "server")
+    }
 
     fun configure() {
         if (!PlatformInfo.host.isLinux) return
@@ -96,3 +124,4 @@ object WaylandDisplay {
 }
 
 private const val WAYLAND_TOOLKIT = "sun.awt.wl.WLToolkit"
+private const val DECORATION_STYLE = "sun.awt.wl.WindowDecorationStyle"

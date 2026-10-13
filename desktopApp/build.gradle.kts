@@ -144,6 +144,12 @@ compose.desktop {
         // declare as StartupWMClass. A no-op on macOS and Windows, and on native Wayland, where
         // WaylandDisplay names the window through its app_id instead.
         jvmArgs += "--add-opens=java.desktop/sun.awt.X11=ALL-UNNAMED"
+        // Lets the app ask a Wayland compositor whether it draws the window's title bar
+        // (WaylandDisplay.preferServerSideDecorations). Only the JetBrains Runtime has the package,
+        // and a JDK without it warns at every start, so only Linux builds (packaged on JBR) get it.
+        if (System.getProperty("os.name").startsWith("Linux")) {
+            jvmArgs += "--add-exports=java.desktop/sun.awt.wl=ALL-UNNAMED"
+        }
 
         jvmArgs += "-Xmx2g"
 
