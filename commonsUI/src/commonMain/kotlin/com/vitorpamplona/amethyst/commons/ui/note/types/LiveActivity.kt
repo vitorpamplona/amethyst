@@ -23,6 +23,7 @@ package com.vitorpamplona.amethyst.commons.ui.note.types
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -30,8 +31,8 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.material3.Button
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -255,40 +256,7 @@ fun RenderLiveActivityEventInner(
                 }
             } else {
                 if (status == StatusTag.STATUS.ENDED || (status == StatusTag.STATUS.PLANNED && (starts ?: 0) < TimeUtils.eightHoursAgo())) {
-                    Box(
-                        contentAlignment = Alignment.Center,
-                        modifier =
-                            Modifier
-                                .padding(vertical = 10.dp)
-                                .heightIn(min = 100.dp),
-                    ) {
-                        cover?.let {
-                            Row(
-                                verticalAlignment = Alignment.CenterVertically,
-                            ) {
-                                MyAsyncImage(
-                                    imageUrl = it,
-                                    contentDescription =
-                                        stringRes(
-                                            Res.string.preview_card_image_for,
-                                            it,
-                                        ),
-                                    contentScale = ContentScale.FillWidth,
-                                    mainImageModifier = Modifier.fillMaxWidth(),
-                                    loadedImageModifier = MaterialTheme.colorScheme.imageModifier,
-                                    accountViewModel = accountViewModel,
-                                    onLoadingBackground = { DefaultImageHeaderBackground(baseNote, accountViewModel) },
-                                    onError = { DefaultImageHeader(baseNote, accountViewModel) },
-                                )
-                            }
-                        } ?: run { DisplayAuthorBanner(baseNote, accountViewModel, MaterialTheme.colorScheme.imageModifier) }
-
-                        Text(
-                            text = stringRes(id = Res.string.live_stream_has_ended),
-                            color = MaterialTheme.colorScheme.onBackground,
-                            fontWeight = FontWeight.Bold,
-                        )
-                    }
+                    LiveActivityEndedCover(cover, baseNote, accountViewModel)
                 }
             }
         }
@@ -403,17 +371,10 @@ private fun LiveActivityRecording(
             )
         }
     } else {
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            modifier = Modifier.fillMaxWidth().padding(vertical = 5.dp),
-        ) {
-            Text(
-                text = stringRes(id = Res.string.live_stream_has_ended),
-                color = MaterialTheme.colorScheme.onBackground,
-                fontWeight = FontWeight.Bold,
-                modifier = Modifier.weight(1f),
-            )
-            OutlinedButton(onClick = { playing = true }) {
+        // The same cover an ended stream without a replay shows, with the way to the replay on it.
+        LiveActivityEndedCover(cover, baseNote, accountViewModel) {
+            Spacer(Modifier.height(8.dp))
+            Button(onClick = { playing = true }) {
                 Icon(
                     symbol = MaterialSymbols.PlayArrow,
                     contentDescription = null,
@@ -422,6 +383,56 @@ private fun LiveActivityRecording(
                 Spacer(StdHorzSpacer)
                 Text(stringRes(Res.string.live_activity_watch_recording))
             }
+        }
+    }
+}
+
+/**
+ * An ended stream's cover image (or its author's banner when it has none) with "Live stream has
+ * ended" over it, and whatever [actions] the stream still offers under that line.
+ */
+@Composable
+private fun LiveActivityEndedCover(
+    cover: String?,
+    baseNote: Note,
+    accountViewModel: AccountViewModel,
+    actions: @Composable ColumnScope.() -> Unit = {},
+) {
+    Box(
+        contentAlignment = Alignment.Center,
+        modifier =
+            Modifier
+                .padding(vertical = 10.dp)
+                .heightIn(min = 100.dp),
+    ) {
+        cover?.let {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                MyAsyncImage(
+                    imageUrl = it,
+                    contentDescription =
+                        stringRes(
+                            Res.string.preview_card_image_for,
+                            it,
+                        ),
+                    contentScale = ContentScale.FillWidth,
+                    mainImageModifier = Modifier.fillMaxWidth(),
+                    loadedImageModifier = MaterialTheme.colorScheme.imageModifier,
+                    accountViewModel = accountViewModel,
+                    onLoadingBackground = { DefaultImageHeaderBackground(baseNote, accountViewModel) },
+                    onError = { DefaultImageHeader(baseNote, accountViewModel) },
+                )
+            }
+        } ?: run { DisplayAuthorBanner(baseNote, accountViewModel, MaterialTheme.colorScheme.imageModifier) }
+
+        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+            Text(
+                text = stringRes(id = Res.string.live_stream_has_ended),
+                color = MaterialTheme.colorScheme.onBackground,
+                fontWeight = FontWeight.Bold,
+            )
+            actions()
         }
     }
 }
