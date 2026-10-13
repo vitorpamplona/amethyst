@@ -68,12 +68,12 @@ import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.navigation.Route
 import com.vitorpamplona.amethyst.commons.model.toImmutableListOfLists
 import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.chips_n_more
 import com.vitorpamplona.amethyst.commons.resources.nip82_by_author
 import com.vitorpamplona.amethyst.commons.resources.nip82_download
 import com.vitorpamplona.amethyst.commons.resources.nip82_platform_with_cpus
 import com.vitorpamplona.amethyst.commons.resources.nip82_repository_label
 import com.vitorpamplona.amethyst.commons.resources.nip82_version_label
-import com.vitorpamplona.amethyst.commons.resources.topic_chips_more
 import com.vitorpamplona.amethyst.commons.richtext.MediaUrlImage
 import com.vitorpamplona.amethyst.commons.softwareapps.SoftwareAssetDownloads
 import com.vitorpamplona.amethyst.commons.softwareapps.SoftwareOs
@@ -351,7 +351,7 @@ fun TopicChipFlow(
         }
         if (hidden > 0) {
             Chip(
-                text = pluralStringRes(Res.plurals.topic_chips_more, hidden, hidden),
+                text = pluralStringRes(Res.plurals.chips_n_more, hidden, hidden),
                 tint = MaterialTheme.colorScheme.secondaryContainer,
                 modifier = Modifier.clickable { expanded = true },
             )

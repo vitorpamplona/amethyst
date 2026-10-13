@@ -37,6 +37,7 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -83,7 +84,9 @@ import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.note.LoadAddressableNote
 import com.vitorpamplona.amethyst.commons.ui.note.types.lists.AddressMemberRow
 import com.vitorpamplona.amethyst.commons.ui.note.types.lists.BookmarkMemberRow
+import com.vitorpamplona.amethyst.commons.ui.note.types.lists.PagedMemberColumn
 import com.vitorpamplona.amethyst.commons.ui.note.types.lists.UserMemberRow
+import com.vitorpamplona.amethyst.commons.ui.note.types.trust.CappedChips
 import com.vitorpamplona.amethyst.commons.ui.note.types.trust.TonalChip
 import com.vitorpamplona.amethyst.commons.ui.note.types.trust.TrustCardFrame
 import com.vitorpamplona.amethyst.commons.ui.note.types.trust.TrustSectionLabel
@@ -101,6 +104,7 @@ import com.vitorpamplona.quartz.experimental.decentralizedLists.item.tags.Parent
 import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.nip01Core.core.AddressableEvent
 import com.vitorpamplona.quartz.nip01Core.core.Event
+import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip51Lists.bookmarkList.tags.EventBookmark
 import kotlinx.coroutines.flow.map
@@ -112,6 +116,35 @@ private const val PREVIEW_ITEMS = 3
 private const val COLLAPSED_FACTS = 6
 
 private val PictureShape = RoundedCornerShape(12.dp)
+
+/** Field names on a header, or words on an item, shown before a "+N more" chip. */
+private const val MAX_CHIPS = 16
+
+/** What a D-list item lists, people first, then notes, then addresses, as the card draws them. */
+@Immutable
+private sealed interface DListMember {
+    @Immutable
+    class Person(
+        val pubKey: HexKey,
+    ) : DListMember
+
+    @Immutable
+    class NoteId(
+        val id: HexKey,
+    ) : DListMember
+
+    @Immutable
+    class Coordinate(
+        val address: Address,
+    ) : DListMember
+}
+
+private fun dListItemMembers(event: Event): List<DListMember> =
+    buildList {
+        event.tags.itemKeys().forEach { add(DListMember.Person(it)) }
+        event.tags.itemEventIds().forEach { add(DListMember.NoteId(it)) }
+        event.tags.itemAddressIds().forEach { id -> Address.parse(id)?.let { add(DListMember.Coordinate(it)) } }
+    }
 
 private fun Event.dTagOrNull() = (this as? AddressableEvent)?.dTag()
 
@@ -169,7 +202,7 @@ fun RenderDListHeader(
                 horizontalArrangement = Arrangement.spacedBy(4.dp),
                 verticalArrangement = Arrangement.spacedBy(4.dp),
             ) {
-                header.fields.forEach { field ->
+                CappedChips(header.fields, MAX_CHIPS) { field ->
                     TonalChip(field.name, emphasized = field.requirement == FieldRequirement.REQUIRED)
                 }
             }
@@ -310,9 +343,7 @@ private fun RenderDListItem(
 ) {
     val header = remember(headerEvent) { headerEvent?.let { dListHeaderView(it.tags, it.dTagOrNull()) } }
     val view = remember(event, header) { dListItemView(event.tags, event.content, header) }
-    val people = remember(event) { event.tags.itemKeys() }
-    val notes = remember(event) { event.tags.itemEventIds() }
-    val addresses = remember(event) { event.tags.itemAddressIds().mapNotNull { Address.parse(it) } }
+    val members = remember(event) { dListItemMembers(event) }
     val words = remember(event) { event.tags.itemStrings() }
 
     TrustCardFrame {
@@ -396,16 +427,19 @@ private fun RenderDListItem(
                 horizontalArrangement = Arrangement.spacedBy(4.dp),
                 verticalArrangement = Arrangement.spacedBy(4.dp),
             ) {
-                words.forEach { TonalChip(it) }
+                CappedChips(words, MAX_CHIPS) { TonalChip(it) }
             }
         }
 
-        if (people.isNotEmpty() || notes.isNotEmpty() || addresses.isNotEmpty()) {
+        if (members.isNotEmpty()) {
             TrustSectionLabel(stringRes(Res.string.dlist_items))
-            Column {
-                people.forEach { UserMemberRow(it, accountViewModel, nav) }
-                notes.forEach { BookmarkMemberRow(EventBookmark(it), quotesLeft, backgroundColor, accountViewModel, nav) }
-                addresses.forEach { AddressMemberRow(it, quotesLeft, backgroundColor, accountViewModel, nav) }
+            // An item can list thousands of people or notes: they page in like a list card's members.
+            PagedMemberColumn(members, backgroundColor) { member ->
+                when (member) {
+                    is DListMember.Person -> UserMemberRow(member.pubKey, accountViewModel, nav)
+                    is DListMember.NoteId -> BookmarkMemberRow(EventBookmark(member.id), quotesLeft, backgroundColor, accountViewModel, nav)
+                    is DListMember.Coordinate -> AddressMemberRow(member.address, quotesLeft, backgroundColor, accountViewModel, nav)
+                }
             }
         }
     }

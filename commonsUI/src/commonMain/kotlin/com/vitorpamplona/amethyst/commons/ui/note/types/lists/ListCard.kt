@@ -33,7 +33,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.State
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -61,6 +61,12 @@ import kotlin.coroutines.cancellation.CancellationException
 private const val COLLAPSED_MEMBERS = 3
 
 /**
+ * How many more members each "Show more" adds once a card is expanded. A Trusted List or a mute
+ * list can hold thousands, and a feed row that composed all of them at once would stall the feed.
+ */
+private const val MEMBERS_PAGE = 50
+
+/**
  * The shared shape of every NIP-51 list card: a name, an optional description, the members, and —
  * when the viewer is not the list's author — an honest line about the ones they cannot see.
  *
@@ -80,9 +86,6 @@ fun <T> ListCard(
     subtitle: (@Composable () -> Unit)? = null,
     itemContent: @Composable (T) -> Unit,
 ) {
-    var expanded by rememberSaveable { mutableStateOf(false) }
-    val shown = if (expanded) items else items.take(COLLAPSED_MEMBERS)
-
     Text(
         text = title,
         fontWeight = FontWeight.Bold,
@@ -119,12 +122,39 @@ fun <T> ListCard(
         )
     }
 
+    PagedMemberColumn(items, backgroundColor, Modifier.fillMaxWidth().padding(top = 5.dp), itemContent = itemContent)
+}
+
+/**
+ * A card's members, a few at a time: [collapsed] of them under a fading "Show more" (a plain one
+ * under them when there is no [backgroundColor] to fade into), then pages of [MEMBERS_PAGE] with a
+ * "Show more" under the last one, so a list of thousands only ever composes what the reader asked
+ * to see.
+ */
+@Composable
+fun <T> PagedMemberColumn(
+    items: List<T>,
+    backgroundColor: MutableState<Color>?,
+    modifier: Modifier = Modifier,
+    collapsed: Int = COLLAPSED_MEMBERS,
+    itemContent: @Composable (T) -> Unit,
+) {
+    var shownCount by rememberSaveable { mutableIntStateOf(collapsed) }
+    val shown = if (items.size <= shownCount) items else items.subList(0, shownCount)
+    val hasMore = items.size > shownCount
+
     Box {
-        Column(modifier = Modifier.fillMaxWidth().padding(top = 5.dp)) {
+        Column(modifier = modifier) {
             shown.forEach { itemContent(it) }
+
+            if (hasMore && (shownCount > collapsed || backgroundColor == null)) {
+                Row(horizontalArrangement = Arrangement.Center, modifier = Modifier.fillMaxWidth()) {
+                    ShowMoreButton { shownCount = if (shownCount <= collapsed) MEMBERS_PAGE else shownCount + MEMBERS_PAGE }
+                }
+            }
         }
 
-        if (items.size > COLLAPSED_MEMBERS && !expanded) {
+        if (hasMore && shownCount <= collapsed && backgroundColor != null) {
             Row(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.Center,
@@ -134,7 +164,7 @@ fun <T> ListCard(
                         .fillMaxWidth()
                         .background(getGradient(backgroundColor)),
             ) {
-                ShowMoreButton { expanded = true }
+                ShowMoreButton { shownCount = MEMBERS_PAGE }
             }
         }
     }

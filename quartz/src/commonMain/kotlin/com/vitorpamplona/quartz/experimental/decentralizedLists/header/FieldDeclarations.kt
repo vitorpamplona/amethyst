@@ -89,16 +89,20 @@ fun TagArray.fieldDeclarations(): List<FieldDeclaration> {
  */
 fun TagArray.displayHints(declared: Collection<String>): List<DisplayHint> {
     val out = ArrayList<DisplayHint>()
+    // Sets rather than scans of [out], so a header with thousands of hints stays linear.
+    val declaredSet = declared as? Set<String> ?: declared.toHashSet()
+    val roles = HashSet<String>()
+    val factFields = HashSet<String>()
     for (tag in this) {
         val hint = DisplayHintTag.parse(tag) ?: continue
-        if (hint.field !in declared) continue
-        val duplicate =
+        if (hint.field !in declaredSet) continue
+        val isNew =
             if (hint.role == DisplayHintTag.FACT) {
-                out.any { it.role == DisplayHintTag.FACT && it.field == hint.field }
+                factFields.add(hint.field)
             } else {
-                out.any { it.role == hint.role }
+                roles.add(hint.role)
             }
-        if (!duplicate) out.add(hint)
+        if (isNew) out.add(hint)
     }
     return out
 }

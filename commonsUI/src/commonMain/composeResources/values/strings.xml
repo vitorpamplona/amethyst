@@ -5031,7 +5031,7 @@
         <item quantity="one">%1$d person</item>
         <item quantity="other">%1$d people</item>
     </plurals>
-    <plurals name="topic_chips_more">
+    <plurals name="chips_n_more">
         <item quantity="one">+%1$d more</item>
         <item quantity="other">+%1$d more</item>
     </plurals>

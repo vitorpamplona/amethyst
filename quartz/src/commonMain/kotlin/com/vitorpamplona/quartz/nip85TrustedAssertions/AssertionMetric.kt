@@ -64,15 +64,17 @@ private fun isTimestampName(name: String) = name.endsWith("_at") || name.endsWit
  * `first_created_at` as "1,700,000,000" says nothing.
  */
 fun TagArray.assertionMetrics(): List<AssertionMetric> {
-    val out = ArrayList<AssertionMetric>(size)
+    val out = ArrayList<AssertionMetric>()
+    // A set, not a scan of [out]: the tags are the author's, and thousands of them must stay linear.
+    val seen = HashSet<String>()
     for (tag in this) {
         if (tag.size < 2) continue
         val name = tag[0]
-        if (name.length < 2 || name in NON_METRIC_TAGS || isTimestampName(name)) continue
+        if (name.length < 2 || name in NON_METRIC_TAGS || isTimestampName(name) || name in seen) continue
         val value = tag[1].trim()
         if (!PLAIN_NUMBER.matches(value)) continue
         val number = value.toDoubleOrNull() ?: continue
-        if (out.any { it.name == name }) continue
+        seen.add(name)
         out.add(AssertionMetric(name, value, number))
     }
     return out

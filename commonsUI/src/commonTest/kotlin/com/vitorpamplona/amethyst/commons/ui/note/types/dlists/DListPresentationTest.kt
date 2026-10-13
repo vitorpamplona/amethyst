@@ -102,6 +102,26 @@ class DListPresentationTest {
     }
 
     @Test
+    fun repeatedFieldsCountTheirExtraValues() {
+        val item =
+            choconat +
+                arrayOf(
+                    arrayOf("phone", "+55 61 0000-0000"),
+                    arrayOf("phone", " "),
+                    arrayOf("btcmap-id", "2820"),
+                    arrayOf("btcmap-id", "2821"),
+                )
+
+        val facts = dListItemView(item, dListHeaderView(foodHeader, null)).facts.associateBy { it.field }
+
+        // Blank values are not values; declared and undeclared fields both count their repeats.
+        assertEquals("+55 61995218884", facts.getValue("phone").value)
+        assertEquals(1, facts.getValue("phone").extra)
+        assertEquals("2819", facts.getValue("btcmap-id").value)
+        assertEquals(2, facts.getValue("btcmap-id").extra)
+    }
+
+    @Test
     fun missingRequiredFieldsAreReported() {
         val item = dListItemView(arrayOf(arrayOf("name", "El Sapo")), dListHeaderView(foodHeader, null))
 

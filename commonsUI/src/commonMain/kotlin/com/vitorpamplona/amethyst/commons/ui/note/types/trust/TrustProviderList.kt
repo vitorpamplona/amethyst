@@ -68,6 +68,7 @@ import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.note.LoadUser
 import com.vitorpamplona.amethyst.commons.ui.note.UserPicture
 import com.vitorpamplona.amethyst.commons.ui.note.UsernameDisplay
+import com.vitorpamplona.amethyst.commons.ui.note.types.lists.PagedMemberColumn
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.DividerThickness
 import com.vitorpamplona.amethyst.commons.ui.theme.Size40dp
@@ -77,6 +78,12 @@ import com.vitorpamplona.quartz.nip01Core.relay.normalizer.displayUrl
 import com.vitorpamplona.quartz.nip85TrustedAssertions.list.TrustProviderListEvent
 import com.vitorpamplona.quartz.utils.Log
 import kotlin.coroutines.cancellation.CancellationException
+
+/** Provider rows the designation card shows before "Show more". */
+private const val MAX_PROVIDER_ROWS = 10
+
+/** Service chips one provider row shows before "+N more". */
+private const val MAX_SERVICE_CHIPS = 8
 
 /**
  * A kind-10040 Treasure Map: whose computations this person reads, and from where. It has no
@@ -130,11 +137,10 @@ fun RenderTrustProviderList(
             )
         }
 
-        Column {
-            providers.forEachIndexed { index, provider ->
-                if (index > 0) HorizontalDivider(thickness = DividerThickness)
-                ProviderRow(provider, accountViewModel, nav)
-            }
+        // A Treasure Map names a handful of providers; one with hundreds of rows pages instead.
+        PagedMemberColumn(providers, backgroundColor = null, collapsed = MAX_PROVIDER_ROWS) { provider ->
+            if (provider !== providers.first()) HorizontalDivider(thickness = DividerThickness)
+            ProviderRow(provider, accountViewModel, nav)
         }
 
         if (hidesPrivateRows) {
@@ -185,7 +191,7 @@ private fun ProviderRow(
                     if (provider.isPrivate) {
                         TonalChip(stringRes(Res.string.nip85_designation_private_entry), emphasized = true)
                     }
-                    provider.services.forEach { TonalChip(serviceLabel(it)) }
+                    CappedChips(provider.services, MAX_SERVICE_CHIPS) { TonalChip(serviceLabel(it)) }
                 }
             }
         }

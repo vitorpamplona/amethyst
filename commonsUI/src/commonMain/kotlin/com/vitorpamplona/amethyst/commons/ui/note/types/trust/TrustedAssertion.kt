@@ -92,6 +92,9 @@ import com.vitorpamplona.quartz.nip85TrustedAssertions.users.UserAssertionEvent
 import com.vitorpamplona.quartz.utils.Hex
 import org.jetbrains.compose.resources.StringResource
 
+/** Metric tiles an assertion card shows before a "+N more" chip; providers publish about a dozen. */
+private const val MAX_METRIC_TILES = 12
+
 /** Counts that are a negative signal: tinted when they are not zero. */
 private val NEGATIVE_METRICS = setOf("reporters", "muters", "reports_cnt_recd", "verifiedReporterCount", "verifiedMuterCount")
 
@@ -200,7 +203,7 @@ private fun RenderTrustedAssertion(
                         StatTile("—", stringRes(Res.string.nip85_no_follow_path))
                     }
                 }
-                rest.forEach { MetricTile(it) }
+                CappedChips(rest, MAX_METRIC_TILES) { MetricTile(it) }
             }
         }
 

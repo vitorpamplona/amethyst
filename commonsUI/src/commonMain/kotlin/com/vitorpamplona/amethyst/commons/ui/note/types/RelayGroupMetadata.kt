@@ -101,7 +101,9 @@ fun RenderGroupMetadata(
         .flow()
         .metadata.stateFlow
         .collectAsStateWithLifecycle()
-    val memberCount = (rosterState.note.event as? GroupMembersEvent)?.members()?.size
+    // Counted once per roster version, not on every recomposition: a roster can list thousands.
+    val rosterEvent = rosterState.note.event as? GroupMembersEvent
+    val memberCount = remember(rosterEvent) { rosterEvent?.memberCount() }
 
     val name = event.name()?.ifBlank { null } ?: groupId
     val showPictures = LocalDisplaySettings.current.showProfilePictures

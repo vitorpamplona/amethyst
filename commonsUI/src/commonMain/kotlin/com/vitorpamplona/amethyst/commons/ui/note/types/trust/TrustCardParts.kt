@@ -34,6 +34,10 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -43,10 +47,13 @@ import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbol
 import com.vitorpamplona.amethyst.commons.model.navigation.routeFor
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.chips_n_more
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.note.LoadUser
 import com.vitorpamplona.amethyst.commons.ui.note.UserPicture
 import com.vitorpamplona.amethyst.commons.ui.note.UsernameDisplay
+import com.vitorpamplona.amethyst.commons.ui.pluralStringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.Size20dp
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
@@ -190,6 +197,31 @@ fun TonalChip(
                 .background(if (emphasized) scheme.primaryContainer else scheme.surfaceContainerHigh)
                 .padding(horizontal = 10.dp, vertical = 4.dp),
     )
+}
+
+/**
+ * The first [maxShown] of [items], then a "+N more" chip that shows the rest. Emits its children
+ * into the caller's `FlowRow`, so a card can put fixed tiles or chips before them. Event authors
+ * decide how many tags a card gets, and a feed row should not draw a thousand chips unasked.
+ */
+@Composable
+fun <T> CappedChips(
+    items: List<T>,
+    maxShown: Int,
+    item: @Composable (T) -> Unit,
+) {
+    var expanded by rememberSaveable { mutableStateOf(false) }
+    val shown = if (expanded || items.size <= maxShown) items else items.subList(0, maxShown)
+    shown.forEach { item(it) }
+
+    val hidden = items.size - shown.size
+    if (hidden > 0) {
+        TonalChip(
+            text = pluralStringRes(Res.plurals.chips_n_more, hidden, hidden),
+            emphasized = true,
+            modifier = Modifier.clickable { expanded = true },
+        )
+    }
 }
 
 /** A label followed by a person, small avatar and name, which opens their profile. */

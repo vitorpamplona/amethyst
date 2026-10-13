@@ -99,7 +99,18 @@ fun fieldWords(name: String): String =
 
 private fun TagArray.firstValue(name: String): String? = firstOrNull { it.size > 1 && it[0] == name && it[1].isNotBlank() }?.get(1)
 
-private fun TagArray.valuesOf(name: String): List<String> = mapNotNull { if (it.size > 1 && it[0] == name && it[1].isNotBlank()) it[1] else null }
+/**
+ * Every non-blank value of an item's tags, by tag name, read in one pass: a header can declare
+ * hundreds of fields and an item carry thousands of tags, and looking each field up with its own
+ * scan multiplies the two.
+ */
+private fun TagArray.valuesByName(): Map<String, List<String>> {
+    val out = HashMap<String, MutableList<String>>()
+    for (tag in this) {
+        if (tag.size > 1 && tag[1].isNotBlank()) out.getOrPut(tag[0]) { ArrayList(1) }.add(tag[1])
+    }
+    return out
+}
 
 fun dListHeaderView(
     tags: TagArray,
@@ -153,8 +164,9 @@ fun dListItemView(
 
     val fields = header.fields
     val declared = fields.associateBy { it.name }
+    val values = item.valuesByName()
 
-    fun valueOf(field: String?): String? = field?.takeIf { it in declared }?.let { item.firstValue(it) }
+    fun valueOf(field: String?): String? = field?.takeIf { it in declared }?.let { values[it]?.firstOrNull() }
 
     val titleField = header.hint(DisplayHintTag.TITLE) ?: fields.firstOrNull { it.requirement == FieldRequirement.REQUIRED }?.name ?: fields.first().name
     val summaryField =
@@ -177,13 +189,13 @@ fun dListItemView(
 
     val facts =
         order.mapNotNull { name ->
-            val values = item.valuesOf(name)
-            val value = values.firstOrNull() ?: return@mapNotNull null
+            val fieldValues = values[name] ?: return@mapNotNull null
+            val value = fieldValues.firstOrNull() ?: return@mapNotNull null
             DListFact(
                 field = name,
                 label = labels[name],
                 value = value,
-                extra = values.size - 1,
+                extra = fieldValues.size - 1,
                 href = httpUrl(value),
             )
         } + undeclaredFacts(item, declared.keys)
@@ -194,7 +206,7 @@ fun dListItemView(
         image = httpUrl(valueOf(imageField)),
         link = httpUrl(valueOf(linkField)),
         facts = facts,
-        missing = fields.filter { it.requirement == FieldRequirement.REQUIRED && item.firstValue(it.name) == null }.map { it.name },
+        missing = fields.filter { it.requirement == FieldRequirement.REQUIRED && values[it.name] == null }.map { it.name },
     )
 }
 
@@ -217,19 +229,21 @@ private fun undeclaredFacts(
     item: TagArray,
     declared: Set<String>,
 ): List<DListFact> {
-    val out = ArrayList<DListFact>()
+    // Keyed by field, in first-seen order, so repeats are counted without rescanning the list.
+    val out = LinkedHashMap<String, DListFact>()
     for (tag in item) {
         if (tag.size < 2) continue
         val name = tag[0]
         if (name.length < 2 || name in declared || name in METADATA_TAGS) continue
         val value = tag[1]
         if (value.isBlank()) continue
-        val existing = out.indexOfFirst { it.field == name }
-        if (existing >= 0) {
-            out[existing] = out[existing].copy(extra = out[existing].extra + 1)
-        } else {
-            out.add(DListFact(name, null, value, 0, httpUrl(value)))
-        }
+        val existing = out[name]
+        out[name] =
+            if (existing != null) {
+                existing.copy(extra = existing.extra + 1)
+            } else {
+                DListFact(name, null, value, 0, httpUrl(value))
+            }
     }
-    return out
+    return out.values.toList()
 }
