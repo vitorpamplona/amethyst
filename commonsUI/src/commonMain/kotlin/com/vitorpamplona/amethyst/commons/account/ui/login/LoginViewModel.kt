@@ -294,6 +294,9 @@ class LoginViewModel(
             return
         }
         if (nostrConnectJob?.isActive == true) return
+        // A key or bunker:// login is still running: its end would clear processingLogin under
+        // this dialog, and a second login could then start beside this one.
+        if (processingLogin) return
 
         remoteSignerErrorManager.clearErrors()
         startNostrConnect()

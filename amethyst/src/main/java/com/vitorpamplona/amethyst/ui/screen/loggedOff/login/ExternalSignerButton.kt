@@ -120,9 +120,14 @@ fun ExternalSignerButton(loginViewModel: LoginViewModel) {
                         Spacer(Modifier.height(4.dp))
                         LazyColumn {
                             items(installedSigners) {
-                                val appName = it.loadLabel(context.packageManager).toString()
-                                val appIcon = it.loadIcon(context.packageManager)
-                                val iconBitmap = appIcon.toBitmap()
+                                val appName =
+                                    remember(it) {
+                                        it.activityInfo.applicationInfo
+                                            .loadLabel(context.packageManager)
+                                            .toString()
+                                    }
+                                // A fixed size: an icon with no intrinsic size (-1) throws without one.
+                                val iconBitmap = remember(it) { it.loadIcon(context.packageManager).toBitmap(SIGNER_ICON_PX, SIGNER_ICON_PX) }
 
                                 Row(
                                     Modifier
@@ -177,7 +182,15 @@ fun ExternalSignerButton(loginViewModel: LoginViewModel) {
     // The one signer installed is named and drawn as itself; several share a generic label and
     // the chooser above.
     val onlySigner = installedSigners.singleOrNull()
-    val onlySignerName = remember(onlySigner) { onlySigner?.loadLabel(context.packageManager)?.toString() }
+    // The app's name: a signer may label its signing activity something else ("Sign request").
+    val onlySignerName =
+        remember(onlySigner) {
+            onlySigner
+                ?.activityInfo
+                ?.applicationInfo
+                ?.loadLabel(context.packageManager)
+                ?.toString()
+        }
     val onlySignerIcon =
         remember(onlySigner) {
             onlySigner?.loadIcon(context.packageManager)?.toBitmap(SIGNER_ICON_PX, SIGNER_ICON_PX)?.asImageBitmap()

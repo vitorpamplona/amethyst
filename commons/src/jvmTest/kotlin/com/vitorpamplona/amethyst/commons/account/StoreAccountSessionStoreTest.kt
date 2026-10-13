@@ -43,6 +43,7 @@ import okio.Path.Companion.toOkioPath
 import org.junit.Rule
 import org.junit.rules.TemporaryFolder
 import java.io.File
+import java.io.IOException
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
@@ -349,6 +350,48 @@ class StoreAccountSessionStoreTest {
 
             assertEquals(settings.keyPair.privKey!!.toHexKey(), vaultThatDeclinesOnce.keys[npub])
             assertEquals(true, store.allSavedAccounts().single().keyRemembered)
+        }
+
+    /** Save keys whose save fails leaves the account not remembered, so the next launch asks for its key. */
+    @Test
+    fun saveKeysThatFailsDoesNotMarkTheKeyRemembered() =
+        runTest {
+            val vault =
+                object : PrivateKeyVault {
+                    var declining = true
+
+                    override suspend fun get(npub: String): String? = null
+
+                    override suspend fun save(
+                        npub: String,
+                        privKeyHex: String,
+                    ) {
+                        if (declining) throw KeyNotKeptException("Keys are not kept on this device")
+                        throw IOException("disk full")
+                    }
+
+                    override suspend fun delete(npub: String) {}
+                }
+            val root = folder.root
+            val store =
+                StoreAccountSessionStore(
+                    rootFilesDir = { root.toOkioPath() },
+                    appStores = AppPreferenceStores(rootFilesDir = { root.toOkioPath() }),
+                    keyVault = vault,
+                    scope = CoroutineScope(Dispatchers.IO + SupervisorJob()),
+                    encryption = SecretEncryption(File(root, "secret.key")),
+                )
+            val settings = AccountSettings(keyPair = KeyPair())
+
+            store.setDefaultAccount(settings)
+            store.saveAccountSettings(settings)
+            assertEquals(false, store.allSavedAccounts().single().keyRemembered)
+
+            vault.declining = false
+            store.keepDeclinedKeys()
+
+            assertEquals(false, store.allSavedAccounts().single().keyRemembered)
+            assertNotNull(store.keyVaultFailure.value)
         }
 
     @Test

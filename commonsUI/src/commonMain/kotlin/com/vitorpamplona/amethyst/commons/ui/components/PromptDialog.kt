@@ -44,12 +44,15 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
@@ -153,8 +156,20 @@ fun PromptSecretField(
     error: String? = null,
     isError: Boolean = error != null,
     onDone: (() -> Unit)? = null,
+    autoFocus: Boolean = false,
 ) {
     var visible by remember { mutableStateOf(false) }
+    val focusRequester = remember { FocusRequester() }
+    if (autoFocus) {
+        // The prompt opens at launch, over the app: typing should not wait for a click.
+        LaunchedEffect(Unit) {
+            try {
+                focusRequester.requestFocus()
+            } catch (e: IllegalStateException) {
+                // Not attached yet; the user can still click into the field.
+            }
+        }
+    }
     OutlinedTextField(
         value = value,
         onValueChange = onValueChange,
@@ -175,6 +190,6 @@ fun PromptSecretField(
         visualTransformation = if (visible) VisualTransformation.None else PasswordVisualTransformation(),
         keyboardOptions = KeyboardOptions(autoCorrectEnabled = false, keyboardType = KeyboardType.Password, imeAction = if (onDone != null) ImeAction.Done else ImeAction.Next),
         keyboardActions = KeyboardActions(onDone = { onDone?.invoke() }),
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier.fillMaxWidth().focusRequester(focusRequester),
     )
 }

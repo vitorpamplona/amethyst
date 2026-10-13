@@ -32,7 +32,9 @@ import com.vitorpamplona.amethyst.commons.ui.platform.AppLauncher
 import com.vitorpamplona.amethyst.commons.ui.platform.AppPlatform
 import com.vitorpamplona.amethyst.commons.ui.platform.Toaster
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
+import com.vitorpamplona.quartz.utils.Log
 import kotlinx.coroutines.launch
+import java.util.concurrent.TimeUnit
 import com.vitorpamplona.amethyst.commons.ui.navigation.bottombars.AppBottomBar as SharedAppBottomBar
 
 /**
@@ -65,7 +67,7 @@ class DesktopAppPlatform(
     override val supportsRemoteSignerLogin: Boolean get() = true
 
     // Only the addresses the login screen makes: never a scheme a page or note could slip in.
-    override fun openNostrConnect(uri: String): Boolean = uri.startsWith("nostrconnect://") && DesktopBrowser.open(uri)
+    override fun openNostrConnect(uri: String): Boolean = uri.startsWith("nostrconnect://") && hasNostrConnectHandler() && DesktopBrowser.open(uri)
 
     // DesktopAppModules reports every connection as unmetered.
     override val detectsMeteredConnections: Boolean get() = false
@@ -106,5 +108,39 @@ private object DesktopAppLauncher : AppLauncher {
         preferTor: Boolean,
     ) {
         DesktopBrowser.open(url)
+    }
+}
+
+/**
+ * False only where the desktop says for certain that no app takes `nostrconnect://`: xdg-open
+ * starts (and so reports success) whether or not a handler exists, which left "Open signer"
+ * doing nothing on a Linux desktop without one. Anything else, or a failed query, lets the
+ * open go ahead as before.
+ */
+private fun hasNostrConnectHandler(): Boolean {
+    if (!System
+            .getProperty("os.name")
+            .orEmpty()
+            .lowercase()
+            .contains("linux")
+    ) {
+        return true
+    }
+    return try {
+        val query =
+            ProcessBuilder("xdg-mime", "query", "default", "x-scheme-handler/nostrconnect")
+                .redirectError(ProcessBuilder.Redirect.DISCARD)
+                .start()
+        if (!query.waitFor(2, TimeUnit.SECONDS)) {
+            query.destroy()
+            return true
+        }
+        query.inputStream
+            .bufferedReader()
+            .readText()
+            .isNotBlank()
+    } catch (e: Exception) {
+        Log.w("DesktopAppPlatform", "Could not ask xdg-mime for a nostrconnect handler", e)
+        true
     }
 }

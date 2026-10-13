@@ -25,6 +25,7 @@ import android.content.ActivityNotFoundException
 import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
+import android.content.pm.PackageManager
 import android.os.Parcelable
 import androidx.core.net.toUri
 import com.vitorpamplona.quartz.utils.Log
@@ -42,7 +43,9 @@ fun openNostrConnectInSigner(
 ): Boolean {
     if (!uri.startsWith("nostrconnect://")) return false
     val view = Intent(Intent.ACTION_VIEW, uri.toUri()).addCategory(Intent.CATEGORY_BROWSABLE)
-    val handlers = context.packageManager.queryIntentActivities(view, 0)
+    // Only what an implicit startActivity can launch: a filter without CATEGORY_DEFAULT would
+    // count as a signer here and leave the chooser empty.
+    val handlers = context.packageManager.queryIntentActivities(view, PackageManager.MATCH_DEFAULT_ONLY)
     val (own, others) = handlers.partition { it.activityInfo.packageName == context.packageName }
     if (others.isEmpty()) return false
 

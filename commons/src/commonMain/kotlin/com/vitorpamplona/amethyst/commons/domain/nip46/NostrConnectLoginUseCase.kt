@@ -38,11 +38,11 @@ import com.vitorpamplona.quartz.nip46RemoteSigner.BunkerResponseAck
 import com.vitorpamplona.quartz.nip46RemoteSigner.NostrConnectEvent
 import com.vitorpamplona.quartz.nip46RemoteSigner.NostrConnectURI
 import com.vitorpamplona.quartz.nip46RemoteSigner.signer.NostrSignerRemote
-import com.vitorpamplona.quartz.utils.Hex
 import com.vitorpamplona.quartz.utils.SecureRandom
 import com.vitorpamplona.quartz.utils.TimeUtils
-import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.withTimeoutOrNull
+import kotlin.coroutines.cancellation.CancellationException
 
 object NostrConnectLoginUseCase {
     const val NOSTRCONNECT_TIMEOUT_MS = 120_000L
@@ -126,7 +126,8 @@ object NostrConnectLoginUseCase {
         expectedSecret: String,
         client: INostrClient,
     ): ConnectRequestData {
-        val deferred = CompletableDeferred<NostrConnectEvent>()
+        // Every event for the code's key, in order: the first one is not necessarily the signer's.
+        val events = Channel<NostrConnectEvent>(Channel.UNLIMITED)
 
         val subscription =
             StaticSubscription(
@@ -141,68 +142,74 @@ object NostrConnectLoginUseCase {
                     )
                 },
             ) { event ->
-                if (event is NostrConnectEvent && !deferred.isCompleted) {
-                    deferred.complete(event)
-                }
+                if (event is NostrConnectEvent) events.trySend(event)
             }
 
         try {
             // Not withTimeout: its TimeoutCancellationException reads as a cancellation to
             // callers, so the login screen would never show that the wait ended.
-            val event =
-                withTimeoutOrNull(NOSTRCONNECT_TIMEOUT_MS) {
-                    deferred.await()
-                } ?: throw Exception("No signer answered the connection request in time")
-
-            val signerPubkey = event.talkingWith(ephemeralSigner.pubKey)
-            val decryptedJson = ephemeralSigner.decrypt(event.content, signerPubkey)
-            val message = OptimizedJsonMapper.fromJsonTo<BunkerMessage>(decryptedJson)
-
-            return when (message) {
-                is BunkerRequest -> {
-                    if (message.method != BunkerRequestConnect.METHOD_NAME) {
-                        throw Exception("Expected 'connect' method, got '${message.method}'")
-                    }
-
-                    val userPubkey =
-                        message.params.getOrNull(0)
-                            ?: throw Exception("Missing user pubkey in connect request")
-                    val receivedSecret = message.params.getOrNull(1)
-
-                    if (receivedSecret != expectedSecret) {
-                        throw Exception("Secret mismatch in connect request")
-                    }
-
-                    ConnectRequestData(
-                        requestId = message.id,
-                        signerPubkey = signerPubkey,
-                        userPubkey = userPubkey,
-                    )
+            return withTimeoutOrNull(NOSTRCONNECT_TIMEOUT_MS) {
+                for (event in events) {
+                    readConnect(event, ephemeralSigner, expectedSecret)?.let { return@withTimeoutOrNull it }
                 }
-
-                is BunkerResponse -> {
-                    if (message.error != null) {
-                        throw Exception("Signer rejected connection: ${message.error}")
-                    }
-
-                    val userPubkey =
-                        message.result
-                            ?.takeIf { it.length == 64 && Hex.isHex(it) }
-                            ?: signerPubkey
-
-                    ConnectRequestData(
-                        requestId = null,
-                        signerPubkey = signerPubkey,
-                        userPubkey = userPubkey,
-                    )
-                }
-
-                else -> {
-                    throw Exception("Unexpected NIP-46 message format")
-                }
-            }
+                null
+            } ?: throw Exception("No signer answered the connection request in time")
         } finally {
             subscription.close()
+            events.close()
+        }
+    }
+
+    /**
+     * The signer's answer to the code, or null for an event that is not one. Anyone who sees the
+     * code, or the relay's subscription to its key, can write to that key: only an answer that
+     * carries the code's secret (NIP-46) is the signer the user approved in. Anything else is
+     * ignored rather than ending the login, so a stray event can neither pose as the signer
+     * (and receive the account's encryption requests) nor fail the wait for the real one.
+     */
+    private suspend fun readConnect(
+        event: NostrConnectEvent,
+        ephemeralSigner: NostrSignerInternal,
+        expectedSecret: String,
+    ): ConnectRequestData? {
+        val signerPubkey = event.talkingWith(ephemeralSigner.pubKey)
+        val message =
+            try {
+                OptimizedJsonMapper.fromJsonTo<BunkerMessage>(ephemeralSigner.decrypt(event.content, signerPubkey))
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                // Not encrypted to this code, or not NIP-46.
+                return null
+            }
+
+        return when (message) {
+            is BunkerRequest -> {
+                if (message.method != BunkerRequestConnect.METHOD_NAME) return null
+                if (message.params.getOrNull(1) != expectedSecret) return null
+                val userPubkey = message.params.getOrNull(0) ?: return null
+                ConnectRequestData(
+                    requestId = message.id,
+                    signerPubkey = signerPubkey,
+                    userPubkey = userPubkey,
+                )
+            }
+
+            is BunkerResponse -> {
+                // A refusal carries no secret to check; it only ends this attempt.
+                if (message.error != null) throw Exception("Signer rejected connection: ${message.error}")
+                if (message.result != expectedSecret) return null
+                // The account's key comes from get_public_key once connected.
+                ConnectRequestData(
+                    requestId = null,
+                    signerPubkey = signerPubkey,
+                    userPubkey = signerPubkey,
+                )
+            }
+
+            else -> {
+                null
+            }
         }
     }
 

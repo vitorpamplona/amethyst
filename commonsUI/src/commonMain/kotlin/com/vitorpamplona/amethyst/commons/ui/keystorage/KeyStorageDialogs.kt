@@ -102,9 +102,28 @@ internal fun CreateKeyPasswordDialog(prompt: KeyPrompt.CreatePassword) {
         dismissText = stringRes(Res.string.key_storage_dont_remember),
         onDismiss = { prompt.answer(NewPasswordAnswer.DontRemember) },
     ) {
-        PromptSecretField(password, stringRes(Res.string.key_storage_password), { password = it }, isError = error != null)
+        // A change to either answers the last check: the red goes until Keep checks again.
+        PromptSecretField(
+            password,
+            stringRes(Res.string.key_storage_password),
+            {
+                password = it
+                error = null
+            },
+            isError = error != null,
+            autoFocus = true,
+        )
         // The mismatch is about both; its words go under the second, where the user just typed.
-        PromptSecretField(confirm, stringRes(Res.string.key_storage_confirm_password), { confirm = it }, error = error, onDone = keep)
+        PromptSecretField(
+            confirm,
+            stringRes(Res.string.key_storage_confirm_password),
+            {
+                confirm = it
+                error = null
+            },
+            error = error,
+            onDone = keep,
+        )
     }
 }
 
@@ -130,6 +149,7 @@ internal fun UnlockKeysDialog(prompt: KeyPrompt.Unlock) {
             onValueChange = { password = it },
             error = if (prompt.wrongPassword) stringRes(Res.string.privacy_lock_password_wrong) else null,
             onDone = { if (password.isNotEmpty()) prompt.answer(password) },
+            autoFocus = true,
         )
     }
 }
@@ -155,6 +175,7 @@ internal fun EnterKeyDialog(prompt: KeyPrompt.EnterKey) {
             onValueChange = { key = it },
             error = if (prompt.wrongKey) stringRes(Res.string.key_storage_wrong_key) else null,
             onDone = { if (key.isNotBlank()) prompt.answer(key) },
+            autoFocus = true,
         )
     }
 }

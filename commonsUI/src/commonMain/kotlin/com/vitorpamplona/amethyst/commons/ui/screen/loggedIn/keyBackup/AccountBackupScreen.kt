@@ -210,7 +210,13 @@ private fun AccountBackupScreenContent(
                 }
 
             if (nsec == null) {
-                TipRow(MaterialSymbols.Info, stringRes(Res.string.backup_keys_external_signer))
+                // Only where a signer really holds the key. An account whose key did not load here
+                // (a locked key file, a keychain error) also arrives without one: the card above
+                // says why, and calling that an external signer would be false.
+                val settings = accountViewModel.account.settings
+                if (settings.externalSignerPackageName != null || settings.usesRemoteSigner()) {
+                    TipRow(MaterialSymbols.Info, stringRes(Res.string.backup_keys_external_signer))
+                }
             } else {
                 val gate = rememberKeyAccessGate(accountViewModel)
 

@@ -34,6 +34,8 @@ import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerInternal
 import com.vitorpamplona.quartz.nip01Core.store.sqlite.EventStore
 import com.vitorpamplona.quartz.nip46RemoteSigner.BunkerRequest
 import com.vitorpamplona.quartz.nip46RemoteSigner.BunkerRequestConnect
+import com.vitorpamplona.quartz.nip46RemoteSigner.BunkerResponse
+import com.vitorpamplona.quartz.nip46RemoteSigner.NostrConnectEvent
 import com.vitorpamplona.quartz.nip46RemoteSigner.NostrConnectURI
 import com.vitorpamplona.quartz.nip46RemoteSigner.server.BunkerRequestProcessor
 import com.vitorpamplona.quartz.nip46RemoteSigner.server.Nip46ConnectDecision
@@ -44,7 +46,9 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.async
 import kotlinx.coroutines.cancel
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeout
@@ -158,6 +162,56 @@ class BunkerLoginUseCaseTest {
                 assertFalse(e is CancellationException, e.toString())
             } finally {
                 scope.cancel()
+            }
+        }
+
+    /**
+     * Anyone who sees the code can answer its key. A reply without the code's secret used to be
+     * taken as the signer, which then received the account's encryption requests; it must be
+     * ignored, and the real signer that answers with the secret still logs in.
+     */
+    @Test
+    fun nostrConnectIgnoresAnAnswerWithoutTheSecret() =
+        runBlocking(Dispatchers.Default) {
+            val server = NostrServer(EventStore(null))
+            val scope = CoroutineScope(Dispatchers.Default + SupervisorJob())
+            val client =
+                NostrClient(
+                    object : WebsocketBuilder {
+                        override fun build(
+                            url: NormalizedRelayUrl,
+                            out: WebSocketListener,
+                        ) = if (url == relay) InProcessWebSocket(server, out) else NeverConnects
+                    },
+                    scope,
+                )
+
+            val user = NostrSignerInternal(KeyPair())
+            val signerTransport = NostrSignerInternal(KeyPair())
+            val processor = BunkerRequestProcessor(user, { setOf(relay) }, AllowAuthorizer())
+            val service = NostrConnectSignerService(client, signerTransport, processor, setOf(relay))
+            scope.launch(start = CoroutineStart.UNDISPATCHED) { service.run() }
+
+            val code = NostrConnectLoginUseCase.generateUri(KeyPair(), listOf(relay.url), "Amethyst")
+            val codeKey = code.ephemeralKeyPair.pubKey.toHexKey()
+
+            try {
+                val login = async { NostrConnectLoginUseCase.awaitAndLogin(code, client) }
+                // The code's subscription is open before anyone answers: these events are ephemeral.
+                delay(1_000)
+
+                val forger = NostrSignerInternal(KeyPair())
+                client.publish(NostrConnectEvent.create(BunkerResponse("1", "ack", null), codeKey, forger), setOf(relay))
+                delay(300)
+                client.publish(NostrConnectEvent.create(BunkerResponse("2", code.secret, null), codeKey, signerTransport), setOf(relay))
+
+                val result = withTimeout(20_000) { login.await() }
+                result.signer.closeSubscription()
+
+                assertEquals(user.pubKey, result.pubKeyHex, "the signer that proved the secret logged in")
+            } finally {
+                scope.cancel()
+                server.close()
             }
         }
 

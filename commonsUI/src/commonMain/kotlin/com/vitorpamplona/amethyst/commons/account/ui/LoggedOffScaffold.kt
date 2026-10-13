@@ -21,11 +21,12 @@
 package com.vitorpamplona.amethyst.commons.account.ui
 
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
@@ -69,9 +70,11 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.layout.Placeable
 import androidx.compose.ui.layout.SubcomposeLayout
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
@@ -79,7 +82,6 @@ import com.vitorpamplona.amethyst.commons.hashtags.Amethyst
 import com.vitorpamplona.amethyst.commons.hashtags.CustomHashTagIcons
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbol
 import com.vitorpamplona.amethyst.commons.resources.Res
-import com.vitorpamplona.amethyst.commons.resources.app_logo
 import com.vitorpamplona.amethyst.commons.resources.app_name
 import com.vitorpamplona.amethyst.commons.resources.connect_via_tor2
 import com.vitorpamplona.amethyst.commons.resources.ic_tor
@@ -143,8 +145,13 @@ fun LoggedOffScaffold(
             // clear of them, or it slides under them once it is taller than the window.
             .windowInsetsPadding(WindowInsets.systemBars.union(WindowInsets.displayCutout)),
     ) {
-        if (maxWidth >= TwoPaneMinWidth) {
-            Row(Modifier.fillMaxSize()) {
+        val twoPane = maxWidth >= TwoPaneMinWidth
+        // One call site for the form at every width: crossing TwoPaneMinWidth (a phone turned to
+        // landscape, a foldable opened, a window resized) only moves the brand and dresses the
+        // form as a card. Two branches each holding the form would rebuild it at the crossing,
+        // dropping the keyboard and closing its open dialogs (QR scanner, Tor, remote signer).
+        Row(Modifier.fillMaxSize()) {
+            if (twoPane) {
                 Column(
                     modifier = Modifier.weight(1f).fillMaxHeight(),
                     verticalArrangement = Arrangement.Center,
@@ -152,42 +159,40 @@ fun LoggedOffScaffold(
                 ) {
                     BrandMark(logoSize = 180.dp, large = true)
                 }
-                Box(
+            }
+            CompositionLocalProvider(LocalBrandBesideForm provides twoPane) {
+                BrandAboveForm(
+                    showBrand = !twoPane,
                     modifier =
                         Modifier
                             .weight(1f)
                             .fillMaxHeight()
                             .imePaddingSafe()
                             .verticalScroll(rememberScrollState())
-                            .padding(32.dp),
-                    contentAlignment = Alignment.Center,
+                            .padding(if (twoPane) PaddingValues(32.dp) else PaddingValues(24.dp)),
                 ) {
-                    Surface(
-                        shape = RoundedCornerShape(28.dp),
-                        color = MaterialTheme.colorScheme.surfaceContainer.copy(alpha = 0.92f),
-                        tonalElevation = 2.dp,
-                        modifier = Modifier.widthIn(max = FormMaxWidth + 64.dp),
-                    ) {
-                        CompositionLocalProvider(LocalBrandBesideForm provides true) {
-                            FormColumn(torSettingsFlow, onTorError, footer, Modifier.padding(32.dp), form)
-                        }
-                    }
+                    FormColumn(
+                        torSettingsFlow,
+                        onTorError,
+                        footer,
+                        if (twoPane) {
+                            Modifier
+                                .widthIn(max = FormMaxWidth + 64.dp)
+                                .clip(FormCardShape)
+                                .background(MaterialTheme.colorScheme.surfaceContainer.copy(alpha = 0.92f))
+                                .padding(32.dp)
+                        } else {
+                            Modifier.widthIn(max = FormMaxWidth)
+                        },
+                        form,
+                    )
                 }
-            }
-        } else {
-            BrandAboveForm(
-                modifier =
-                    Modifier
-                        .fillMaxSize()
-                        .imePaddingSafe()
-                        .verticalScroll(rememberScrollState())
-                        .padding(horizontal = 24.dp, vertical = 24.dp),
-            ) {
-                FormColumn(torSettingsFlow, onTorError, footer, Modifier.widthIn(max = FormMaxWidth), form)
             }
         }
     }
 }
+
+private val FormCardShape = RoundedCornerShape(28.dp)
 
 private enum class BrandSlot { Form, Full, Compact }
 
@@ -198,6 +203,7 @@ private enum class BrandSlot { Form, Full, Compact }
  */
 @Composable
 private fun BrandAboveForm(
+    showBrand: Boolean,
     modifier: Modifier,
     form: @Composable () -> Unit,
 ) {
@@ -208,11 +214,19 @@ private fun BrandAboveForm(
         val formPlaceables = subcompose(BrandSlot.Form, form).map { it.measure(loose) }
         val formHeight = formPlaceables.sumOf { it.height }
 
-        val fullGap = 32.dp.roundToPx()
-        val full = subcompose(BrandSlot.Full) { BrandMark(logoSize = 96.dp, large = false) }.map { it.measure(loose) }
-        val fits = full.sumOf { it.height } + fullGap + formHeight <= window
-        val brand = if (fits) full else subcompose(BrandSlot.Compact) { CompactBrandMark() }.map { it.measure(loose) }
-        val gap = if (fits) fullGap else 20.dp.roundToPx()
+        val brand: List<Placeable>
+        val gap: Int
+        if (showBrand) {
+            val fullGap = 32.dp.roundToPx()
+            val full = subcompose(BrandSlot.Full) { BrandMark(logoSize = 96.dp, large = false) }.map { it.measure(loose) }
+            val fits = full.sumOf { it.height } + fullGap + formHeight <= window
+            brand = if (fits) full else subcompose(BrandSlot.Compact) { CompactBrandMark() }.map { it.measure(loose) }
+            gap = if (fits) fullGap else 20.dp.roundToPx()
+        } else {
+            // The brand stands beside the form instead.
+            brand = emptyList()
+            gap = 0
+        }
 
         val contentHeight = brand.sumOf { it.height } + gap + formHeight
         val width = constraints.maxWidth
@@ -220,7 +234,7 @@ private fun BrandAboveForm(
         layout(width, height) {
             var y = (height - contentHeight) / 2
             (brand + formPlaceables).forEachIndexed { index, placeable ->
-                if (index == brand.size) y += gap
+                if (index == brand.size && index > 0) y += gap
                 placeable.placeRelative((width - placeable.width) / 2, y)
                 y += placeable.height
             }
@@ -256,7 +270,8 @@ private fun BrandMark(
     Column(horizontalAlignment = Alignment.CenterHorizontally) {
         Image(
             imageVector = CustomHashTagIcons.Amethyst,
-            contentDescription = stringRes(Res.string.app_logo),
+            // The name beside it already says it: a screen reader would read it twice.
+            contentDescription = null,
             modifier = Modifier.size(logoSize),
             contentScale = ContentScale.Inside,
         )
@@ -275,7 +290,8 @@ private fun CompactBrandMark() {
     Row(verticalAlignment = Alignment.CenterVertically) {
         Image(
             imageVector = CustomHashTagIcons.Amethyst,
-            contentDescription = stringRes(Res.string.app_logo),
+            // The name beside it already says it: a screen reader would read it twice.
+            contentDescription = null,
             modifier = Modifier.size(40.dp),
             contentScale = ContentScale.Inside,
         )
@@ -387,6 +403,10 @@ fun SwitchScreenFooter(
             text = question,
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
+            textAlign = TextAlign.End,
+            // Measured after the link: a long translation or a large font wraps the question
+            // instead of squeezing the link out of the row.
+            modifier = Modifier.weight(1f, fill = false),
         )
         TextButton(onClick = onClick) {
             Text(action, fontWeight = FontWeight.SemiBold)

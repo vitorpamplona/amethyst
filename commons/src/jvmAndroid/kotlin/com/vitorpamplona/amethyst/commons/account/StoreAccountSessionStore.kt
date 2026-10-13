@@ -245,14 +245,19 @@ class StoreAccountSessionStore(
     /**
      * Save keys: keeps the keys this run's "Don't save" left out, now that the user took it back.
      * Each one goes to [keyVault] again (the key file asks for its new password) and its account
-     * counts as remembered; a second "Don't save" marks it as not kept again.
+     * counts as remembered once the save succeeds; a second "Don't save" marks it as not kept again.
      */
     suspend fun keepDeclinedKeys() {
         keysNotKept.toList().forEach { npub ->
             keysNotKept.remove(npub)
             val key = keysInVault.remove(npub) ?: return@forEach
-            updateSavedAccounts(allSavedAccounts().map { if (it.npub == npub) it.copy(keyRemembered = true) else it })
             saveKey(npub, key)
+            // Only once the key is in the vault: a save that failed (an I/O error, a key file left
+            // locked) marked remembered would open the account read-only at the next launch
+            // instead of asking for its key.
+            if (keysInVault[npub] == key && npub !in keysNotKept) {
+                updateSavedAccounts(allSavedAccounts().map { if (it.npub == npub) it.copy(keyRemembered = true) else it })
+            }
         }
     }
 

@@ -75,6 +75,7 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.rotate
 import androidx.compose.ui.platform.LocalClipboard
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
@@ -341,11 +342,22 @@ private fun NostrConnectRelays(loginViewModel: LoginViewModel) {
         ) {
             loginViewModel.nostrConnectRelays.forEach { RelayPill(it) }
 
-            if (!editing) {
-                Pill(onClick = { editing = true }) {
-                    Icon(MaterialSymbols.Add, contentDescription = null, modifier = Modifier.size(16.dp), tint = MaterialTheme.colorScheme.primary)
-                    Text(stringRes(Res.string.add_a_relay), style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary)
-                }
+            // Stays while the field is open, as its way back out: a relay field opened by mistake
+            // otherwise had no exit but closing the whole dialog.
+            Pill(
+                onClick = {
+                    editing = !editing
+                    relay = ""
+                    invalid = false
+                },
+            ) {
+                Icon(
+                    if (editing) MaterialSymbols.Close else MaterialSymbols.Add,
+                    contentDescription = null,
+                    modifier = Modifier.size(16.dp),
+                    tint = MaterialTheme.colorScheme.primary,
+                )
+                Text(stringRes(Res.string.add_a_relay), style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary)
             }
             if (!loginViewModel.usesDefaultNostrConnectRelays) {
                 Pill(onClick = loginViewModel::useDefaultNostrConnectRelays) {
@@ -376,7 +388,8 @@ private fun NostrConnectRelays(loginViewModel: LoginViewModel) {
                     }
                 },
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Uri, imeAction = ImeAction.Done),
-                keyboardActions = KeyboardActions(onDone = { apply() }),
+                // Like the check button, which is off for an empty field.
+                keyboardActions = KeyboardActions(onDone = { if (relay.isNotBlank()) apply() }),
                 modifier = Modifier.fillMaxWidth(),
             )
         }
@@ -410,7 +423,7 @@ private fun Pill(
                 .height(30.dp)
                 .clip(CircleShape)
                 .border(1.dp, MaterialTheme.colorScheme.outlineVariant, CircleShape)
-                .then(if (onClick != null) Modifier.clickable(onClick = onClick) else Modifier)
+                .then(if (onClick != null) Modifier.clickable(role = Role.Button, onClick = onClick) else Modifier)
                 .padding(horizontal = 10.dp),
     ) {
         content()
