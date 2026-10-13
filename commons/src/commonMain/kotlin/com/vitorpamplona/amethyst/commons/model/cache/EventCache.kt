@@ -250,6 +250,12 @@ import com.vitorpamplona.quartz.nip09Deletions.DeletionIndex
 import com.vitorpamplona.quartz.nip09Deletions.DeletionRequestEvent
 import com.vitorpamplona.quartz.nip10Notes.BaseNoteEvent
 import com.vitorpamplona.quartz.nip10Notes.TextNoteEvent
+import com.vitorpamplona.quartz.nip15Marketplace.auction.AuctionEvent
+import com.vitorpamplona.quartz.nip15Marketplace.bid.BidEvent
+import com.vitorpamplona.quartz.nip15Marketplace.bidConfirmation.BidConfirmationEvent
+import com.vitorpamplona.quartz.nip15Marketplace.marketplace.MarketplaceEvent
+import com.vitorpamplona.quartz.nip15Marketplace.product.ProductEvent
+import com.vitorpamplona.quartz.nip15Marketplace.stall.StallEvent
 import com.vitorpamplona.quartz.nip17Dm.files.ChatMessageEncryptedFileHeaderEvent
 import com.vitorpamplona.quartz.nip17Dm.messages.ChatMessageEvent
 import com.vitorpamplona.quartz.nip17Dm.settings.DmRelayListEvent
@@ -1455,6 +1461,19 @@ open class EventCache :
 
             is CommentEvent -> {
                 event.tagsWithoutCitations().mapNotNull { checkGetOrCreateNote(it) }
+            }
+
+            is BidEvent -> {
+                // A bid names the auction version by event id (NIP-15: an edited auction loses its
+                // bids). checkGetOrCreateNote files it under the auction's address, whose replies the
+                // auction card reads for the highest bid, keeping only those on the current version.
+                listOfNotNull(event.auctionId()?.let { checkGetOrCreateNote(it) })
+            }
+
+            is BidConfirmationEvent -> {
+                // Under the bid it confirms and the auction, so the auction card sees the merchant's
+                // statuses and time extensions next to the bids themselves.
+                event.linkedEventIds().mapNotNull { checkGetOrCreateNote(it) }
             }
 
             is KanbanCardEvent -> {
@@ -4088,6 +4107,16 @@ open class EventCache :
                 -> consumeBaseReplaceable(event, relay, wasVerified)
 
                 is KanbanCardEvent -> consumeKanbanCard(event, relay, wasVerified)
+
+                // NIP-15 marketplace. Other apps publish their own formats on 30017-30020 (a typing
+                // game's scores, offers, encrypted blobs); only the shapes the cards can draw are
+                // stored, so the rest stay unconsumed as before and nothing draws them as raw JSON.
+                is StallEvent -> if (event.isWellFormed()) consumeBaseReplaceable(event, relay, wasVerified) else false
+                is ProductEvent -> if (event.isWellFormed()) consumeBaseReplaceable(event, relay, wasVerified) else false
+                is MarketplaceEvent -> if (event.isWellFormed()) consumeBaseReplaceable(event, relay, wasVerified) else false
+                is AuctionEvent -> if (event.isWellFormed()) consumeBaseReplaceable(event, relay, wasVerified) else false
+                is BidEvent -> if (event.isWellFormed()) consumeRegularEvent(event, relay, wasVerified) else false
+                is BidConfirmationEvent -> if (event.isWellFormed()) consumeRegularEvent(event, relay, wasVerified) else false
 
                 // Decentralized Lists' immutable header and item (9998 / 9999). Other apps publish
                 // their own formats on these kinds (license offers, encrypted blobs); only a header

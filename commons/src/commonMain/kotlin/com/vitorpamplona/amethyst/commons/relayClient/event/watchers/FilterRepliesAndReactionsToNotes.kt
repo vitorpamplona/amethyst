@@ -34,6 +34,8 @@ import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
 import com.vitorpamplona.quartz.nip03Timestamp.OtsEvent
 import com.vitorpamplona.quartz.nip09Deletions.DeletionRequestEvent
 import com.vitorpamplona.quartz.nip10Notes.TextNoteEvent
+import com.vitorpamplona.quartz.nip15Marketplace.bid.BidEvent
+import com.vitorpamplona.quartz.nip15Marketplace.bidConfirmation.BidConfirmationEvent
 import com.vitorpamplona.quartz.nip18Reposts.GenericRepostEvent
 import com.vitorpamplona.quartz.nip18Reposts.RepostEvent
 import com.vitorpamplona.quartz.nip22Comments.CommentEvent
@@ -117,6 +119,10 @@ val RepliesAndReactionsKinds2 =
         GitCoverNoteEvent.KIND,
         PollResponseEvent.KIND,
         ZapPollEvent.KIND,
+        // NIP-15 bids and the merchant's confirmations name the auction VERSION by its id (`e`),
+        // so an auction card watching that version note fetches them here: its highest bid.
+        BidEvent.KIND,
+        BidConfirmationEvent.KIND,
     )
 
 fun filterRepliesAndReactionsToNotes(
