@@ -4520,6 +4520,12 @@ class Account(
 
         chatFeedToggles.start(scope)
 
+        // Apart from the collector below, which indexes one batch at a time: a remote signer's
+        // decrypts start as each batch arrives instead of waiting for the batches ahead of it.
+        scope.launch {
+            cache.live.newEventBundles.collect { newNotes -> newNotesPreProcessor.prefetch(newNotes) }
+        }
+
         scope.launch {
             cache.live.newEventBundles.collect { newNotes ->
                 logTime("Account ${userProfile().toBestDisplayName()} newEventBundle Update with ${newNotes.size} new notes") {
