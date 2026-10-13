@@ -23,6 +23,10 @@ package com.vitorpamplona.amethyst.desktop.platform
 import com.vitorpamplona.quartz.utils.Log
 import java.awt.Toolkit
 import java.io.File
+import java.io.IOException
+import java.net.StandardProtocolFamily
+import java.net.UnixDomainSocketAddress
+import java.nio.channels.SocketChannel
 
 /**
  * Picks how the app talks to a Linux display: natively over Wayland, or over X11 (XWayland on a
@@ -98,6 +102,8 @@ object WaylandDisplay {
     /**
      * The compositor's socket: `$WAYLAND_DISPLAY`, relative to `$XDG_RUNTIME_DIR` unless absolute. A
      * Flatpak without the wayland socket, or an X11 session, has none, and WLToolkit would fail to start.
+     * So would a socket file left behind by a compositor that is gone (a shell that kept the variable
+     * from an old Wayland session), so the socket must also accept a connection.
      */
     private fun hasWaylandSocket(): Boolean {
         val display = System.getenv("WAYLAND_DISPLAY")?.takeIf { it.isNotBlank() } ?: return false
@@ -108,7 +114,14 @@ object WaylandDisplay {
                 val runtimeDir = System.getenv("XDG_RUNTIME_DIR")?.takeIf { it.isNotBlank() } ?: return false
                 File(runtimeDir, display)
             }
-        return socket.exists()
+        if (!socket.exists()) return false
+        return try {
+            SocketChannel.open(StandardProtocolFamily.UNIX).use { it.connect(UnixDomainSocketAddress.of(socket.toPath())) }
+            true
+        } catch (e: IOException) {
+            Log.w("WaylandDisplay", "No compositor answers on ${socket.path}; using X11", e)
+            false
+        }
     }
 
     /** The JetBrains Runtime has it; a stock JDK (a `./gradlew :desktopApp:run` on Temurin, say) does not. */

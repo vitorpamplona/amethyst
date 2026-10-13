@@ -146,8 +146,9 @@ compose.desktop {
         jvmArgs += "--add-opens=java.desktop/sun.awt.X11=ALL-UNNAMED"
         // Lets the app ask a Wayland compositor whether it draws the window's title bar
         // (WaylandDisplay.preferServerSideDecorations). Only the JetBrains Runtime has the package,
-        // and a JDK without it warns at every start, so only Linux builds (packaged on JBR) get it.
-        if (System.getProperty("os.name").startsWith("Linux")) {
+        // and a JDK without it warns at every start, so only builds on JBR (the JDK Gradle runs on,
+        // which is the one the packages bundle) get it.
+        if (File(System.getProperty("java.home"), "lib/libawt_wlawt.so").isFile) {
             jvmArgs += "--add-exports=java.desktop/sun.awt.wl=ALL-UNNAMED"
         }
 

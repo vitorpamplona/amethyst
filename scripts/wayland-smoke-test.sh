@@ -42,19 +42,22 @@ env -u DISPLAY WLR_BACKENDS=headless WLR_LIBINPUT_NO_DEVICES=1 WLR_RENDERER=pixm
   sway -c "$WORK/sway.conf" > "$WORK/sway.log" 2>&1 &
 SWAY_PID=$!
 
+# Sway creates its IPC socket after the Wayland one: wait for both, or swaymsg can't ask it anything.
 socket=""
+ipc=""
 for _ in $(seq 1 50); do
   socket="$(find "$XDG_RUNTIME_DIR" -maxdepth 1 -name 'wayland-*' -type s -print -quit)"
-  [[ -n "$socket" ]] && break
+  ipc="$(find "$XDG_RUNTIME_DIR" -maxdepth 1 -name 'sway-ipc.*' -type s -print -quit)"
+  [[ -n "$socket" && -n "$ipc" ]] && break
   sleep 0.2
 done
-if [[ -z "$socket" ]]; then
+if [[ -z "$socket" || -z "$ipc" ]]; then
   echo "FAIL: sway did not start" >&2
   cat "$WORK/sway.log" >&2
   exit 1
 fi
 export WAYLAND_DISPLAY="$(basename "$socket")"
-export SWAYSOCK="$(find "$XDG_RUNTIME_DIR" -maxdepth 1 -name 'sway-ipc.*' -print -quit)"
+export SWAYSOCK="$ipc"
 
 # A throwaway profile, so the run neither reads nor writes a real one. A jpackage launcher hands its
 # arguments to the app, not the JVM, so the property goes through JAVA_TOOL_OPTIONS.

@@ -51,6 +51,7 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.DpSize
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.window.WindowPlacement
 import androidx.compose.ui.window.WindowPosition
 import androidx.compose.ui.window.rememberWindowState
 import com.vitorpamplona.amethyst.commons.ui.components.ZoomSource
@@ -101,8 +102,13 @@ fun GlobalFullscreenOverlay() {
     }
     val cornerRadius = remember { GlobalMediaPlayer.fullscreenSourceCornerRadius }
 
+    // Nor does it let a window place itself over the screen: there the overlay is full screen from
+    // the moment it opens until it is dismissed, opaque (full screen makes a window opaque anyway),
+    // and the video fades in and out over black.
+    val onWayland = WaylandDisplay.isActive
     val windowState =
         rememberWindowState(
+            placement = if (onWayland) WindowPlacement.Fullscreen else WindowPlacement.Floating,
             position = WindowPosition(screen.x.dp, screen.y.dp),
             size = DpSize(screen.width.dp, screen.height.dp),
         )
@@ -120,15 +126,13 @@ fun GlobalFullscreenOverlay() {
         state = windowState,
         title = "Amethyst",
         undecorated = true,
-        transparent = true,
+        transparent = !onWayland,
         resizable = false,
         alwaysOnTop = true,
+        fullscreenDevice = device,
     ) {
         val overlay = window
         DisposableEffect(overlay) {
-            // Nor does Wayland let a window place itself over the screen: there it goes full screen
-            // as it opens, on the same screen the rest of this uses.
-            if (WaylandDisplay.isActive && device.isFullScreenSupported) device.fullScreenWindow = overlay
             onDispose { if (device.fullScreenWindow === overlay) device.fullScreenWindow = null }
         }
 
@@ -136,8 +140,9 @@ fun GlobalFullscreenOverlay() {
             source = source,
             cornerRadius = cornerRadius,
             videoState = videoState,
-            onGrown = { if (device.isFullScreenSupported) device.fullScreenWindow = overlay },
-            beforeShrink = { if (device.fullScreenWindow === overlay) device.fullScreenWindow = null },
+            opaqueBackdrop = onWayland,
+            onGrown = { if (!onWayland && device.isFullScreenSupported) device.fullScreenWindow = overlay },
+            beforeShrink = { if (!onWayland && device.fullScreenWindow === overlay) device.fullScreenWindow = null },
             onDismissed = {
                 // Hidden the moment the video is back in its card: tearing the window down takes a
                 // while, and the screen stayed covered until it was gone.
@@ -153,6 +158,7 @@ private fun FullscreenVideo(
     source: () -> ZoomSource?,
     cornerRadius: Dp,
     videoState: MediaPlaybackState,
+    opaqueBackdrop: Boolean,
     onGrown: () -> Unit,
     beforeShrink: suspend () -> Unit,
     onDismissed: () -> Unit,
@@ -185,7 +191,7 @@ private fun FullscreenVideo(
             Modifier
                 .fillMaxSize()
                 .zoomTransitionContainer(transition)
-                .drawBehind { drawRect(Color.Black.copy(alpha = transition.progress)) }
+                .drawBehind { drawRect(Color.Black.copy(alpha = if (opaqueBackdrop) 1f else transition.progress)) }
                 .focusRequester(focusRequester)
                 // A focus target, or requestFocus() above finds none and the keys never arrive.
                 .focusable()

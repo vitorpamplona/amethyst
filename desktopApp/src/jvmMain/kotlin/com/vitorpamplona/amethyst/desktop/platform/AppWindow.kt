@@ -55,7 +55,9 @@ import java.awt.Color
 import java.awt.Dialog
 import java.awt.EventQueue
 import java.awt.Frame
+import java.awt.GraphicsDevice
 import java.awt.GraphicsDevice.WindowTranslucency.PERPIXEL_TRANSLUCENT
+import java.awt.GraphicsEnvironment
 import java.awt.KeyEventDispatcher
 import java.awt.KeyboardFocusManager
 import java.awt.event.ComponentAdapter
@@ -82,6 +84,8 @@ class AppWindowScope(
 /**
  * A top-level window: Compose's [Window] everywhere it can draw, and a Swing-drawn [WaylandWindow]
  * when the app runs natively on Wayland ([WaylandDisplay]), where Compose's window surface can't.
+ * [fullscreenDevice] is the screen a [WindowPlacement.Fullscreen] placement uses on Wayland, where a
+ * window can't be placed on a screen first; elsewhere the window's position picks it.
  */
 @Composable
 fun AppWindow(
@@ -93,11 +97,12 @@ fun AppWindow(
     transparent: Boolean = false,
     resizable: Boolean = true,
     alwaysOnTop: Boolean = false,
+    fullscreenDevice: GraphicsDevice? = null,
     onPreviewKeyEvent: (KeyEvent) -> Boolean = { false },
     content: @Composable AppWindowScope.() -> Unit,
 ) {
     if (WaylandDisplay.isActive) {
-        WaylandWindow(onCloseRequest, state, title, icon, undecorated, transparent, resizable, alwaysOnTop, onPreviewKeyEvent, content)
+        WaylandWindow(onCloseRequest, state, title, icon, undecorated, transparent, resizable, alwaysOnTop, fullscreenDevice, onPreviewKeyEvent, content)
     } else {
         Window(
             onCloseRequest = onCloseRequest,
@@ -138,6 +143,7 @@ private fun WaylandWindow(
     transparent: Boolean,
     resizable: Boolean,
     alwaysOnTop: Boolean,
+    fullscreenDevice: GraphicsDevice?,
     onPreviewKeyEvent: (KeyEvent) -> Boolean,
     content: @Composable AppWindowScope.() -> Unit,
 ) {
@@ -151,13 +157,18 @@ private fun WaylandWindow(
 
     val frame = remember { WaylandFrame() }
 
+    // Only what changed: each setter reaches the compositor even with the same value, and the video
+    // overlay recomposes with every tick of the player's clock.
     SideEffect {
-        frame.title = title
-        frame.isResizable = resizable
-        frame.isAlwaysOnTop = alwaysOnTop
+        if (frame.title != title) frame.title = title
+        if (frame.isResizable != resizable) frame.isResizable = resizable
+        if (frame.isAlwaysOnTop != alwaysOnTop) frame.isAlwaysOnTop = alwaysOnTop
+        frame.fullscreenDevice = fullscreenDevice
     }
 
     DisposableEffect(frame) {
+        // Before the placement below: effects run ahead of the SideEffect that keeps it current.
+        frame.fullscreenDevice = fullscreenDevice
         val panel = ComposePanel(renderSettings = RenderSettings.SwingGraphics())
         val scope = AppWindowScope(frame, frameScope = null)
         panel.exceptionHandler = exceptionHandlerFactory.exceptionHandler(frame)
@@ -207,6 +218,9 @@ private fun WaylandWindow(
 
                 private fun saveFloatingBounds() {
                     if (frame.placement() != WindowPlacement.Floating) return
+                    // Full screen the compositor entered (a shortcut) is not reported to AWT: a frame
+                    // covering its screen is not a floating size worth keeping.
+                    if (frame.size == frame.graphicsConfiguration?.bounds?.size) return
                     frame.reportedSize = DpSize(frame.width.dp, frame.height.dp)
                     state.size = frame.reportedSize
                     // Saved bounds need a position; what AWT reports here means nothing on Wayland.
@@ -233,9 +247,7 @@ private fun WaylandWindow(
             frame.removeWindowListener(closeListener)
             frame.removeWindowStateListener(closeListener)
             frame.removeComponentListener(boundsListener)
-            if (frame.graphicsConfiguration?.device?.fullScreenWindow === frame) {
-                frame.graphicsConfiguration.device.fullScreenWindow = null
-            }
+            frame.fullScreenDevice()?.fullScreenWindow = null
             panel.dispose()
             frame.dispose()
         }
@@ -288,6 +300,9 @@ internal class WaylandFrame : JFrame() {
     var reportedSize: DpSize = DpSize.Unspecified
     var reportedPlacement: WindowPlacement? = null
 
+    /** Where [WindowPlacement.Fullscreen] goes; null for the screen the frame is on. */
+    var fullscreenDevice: GraphicsDevice? = null
+
     override fun removeNotify() {
         if (EventQueue.isDispatchThread()) super.removeNotify()
     }
@@ -309,27 +324,30 @@ private fun JFrame.applySize(size: DpSize) {
     setSize(width, height)
 }
 
+/** The screen this frame is full screen on, whichever that is. */
+private fun JFrame.fullScreenDevice(): GraphicsDevice? = GraphicsEnvironment.getLocalGraphicsEnvironment().screenDevices.firstOrNull { it.fullScreenWindow === this }
+
 private fun JFrame.placement(): WindowPlacement =
     when {
-        graphicsConfiguration?.device?.fullScreenWindow === this -> WindowPlacement.Fullscreen
+        fullScreenDevice() != null -> WindowPlacement.Fullscreen
         extendedState and Frame.MAXIMIZED_BOTH == Frame.MAXIMIZED_BOTH -> WindowPlacement.Maximized
         else -> WindowPlacement.Floating
     }
 
-private fun JFrame.applyPlacement(placement: WindowPlacement) {
-    val device = graphicsConfiguration?.device ?: return
+private fun WaylandFrame.applyPlacement(placement: WindowPlacement) {
     when (placement) {
         WindowPlacement.Fullscreen -> {
+            val device = fullscreenDevice ?: graphicsConfiguration?.device ?: return
             if (device.isFullScreenSupported) device.fullScreenWindow = this
         }
 
         WindowPlacement.Maximized -> {
-            if (device.fullScreenWindow === this) device.fullScreenWindow = null
+            fullScreenDevice()?.fullScreenWindow = null
             extendedState = extendedState or Frame.MAXIMIZED_BOTH
         }
 
         WindowPlacement.Floating -> {
-            if (device.fullScreenWindow === this) device.fullScreenWindow = null
+            fullScreenDevice()?.fullScreenWindow = null
             extendedState = extendedState and Frame.MAXIMIZED_BOTH.inv()
         }
     }
