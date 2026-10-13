@@ -306,6 +306,51 @@ class StoreAccountSessionStoreTest {
             assertEquals(1, declining.saves)
         }
 
+    /**
+     * A vault that cannot keep the key tells the user once. Every later settings save (switching the
+     * feed in the top bar is one) used to try the same key again, fail again and reopen the dialog.
+     */
+    @Test
+    fun aKeyTheVaultCouldNotKeepIsReportedOnce() =
+        runTest {
+            val failing =
+                object : PrivateKeyVault {
+                    var saves = 0
+
+                    override suspend fun get(npub: String): String? = null
+
+                    override suspend fun save(
+                        npub: String,
+                        privKeyHex: String,
+                    ) {
+                        saves++
+                        throw IOException("Failed to save private key")
+                    }
+
+                    override suspend fun delete(npub: String) {}
+                }
+            val root = folder.root
+            val store =
+                StoreAccountSessionStore(
+                    rootFilesDir = { root.toOkioPath() },
+                    appStores = AppPreferenceStores(rootFilesDir = { root.toOkioPath() }),
+                    keyVault = failing,
+                    scope = CoroutineScope(Dispatchers.IO + SupervisorJob()),
+                    encryption = SecretEncryption(File(root, "secret.key")),
+                )
+            val settings = AccountSettings(keyPair = KeyPair())
+
+            store.setDefaultAccount(settings)
+            assertNotNull(store.keyVaultFailure.value)
+
+            // The user dismisses the dialog, then switches feeds a few times.
+            store.clearKeyVaultFailure()
+            repeat(3) { store.saveAccountSettings(settings) }
+
+            assertNull(store.keyVaultFailure.value)
+            assertEquals(1, failing.saves)
+        }
+
     /** Save keys: the key a "Don't save" left out this run is kept once the user takes it back. */
     @Test
     fun saveKeysKeepsTheKeyADontSaveLeftOut() =

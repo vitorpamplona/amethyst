@@ -105,6 +105,12 @@ class StoreAccountSessionStore(
     // the next run: the user already skipped the password, and each settings save would retry.
     private val keysLockedOut = ConcurrentHashMap<String, String>()
 
+    // Keys the vault failed to keep for any other reason this run (the OS keyring refused, an I/O
+    // error). Saved again only on the next run: each settings save (a feed switch, a last-read
+    // marker) would otherwise fail the same way, reopen the dialog the user just dismissed, and on
+    // a refusing keyring ask for its password again.
+    private val keysFailed = ConcurrentHashMap<String, String>()
+
     @Volatile
     private var currentAccount: String? = null
 
@@ -219,7 +225,7 @@ class StoreAccountSessionStore(
         npub: String,
         privKeyHex: String,
     ) {
-        if (keysInVault[npub] == privKeyHex || keysLockedOut[npub] == privKeyHex) return
+        if (keysInVault[npub] == privKeyHex || keysLockedOut[npub] == privKeyHex || keysFailed[npub] == privKeyHex) return
         try {
             keyVault.save(npub, privKeyHex)
             keysInVault[npub] = privKeyHex
@@ -238,6 +244,7 @@ class StoreAccountSessionStore(
         } catch (e: Exception) {
             if (e is CancellationException) throw e
             Log.w(TAG, "Could not keep the private key of $npub", e)
+            keysFailed[npub] = privKeyHex
             _keyVaultFailure.value = e
         }
     }
@@ -366,6 +373,7 @@ class StoreAccountSessionStore(
         keysNotKept.remove(npub)
         keysForgotten.remove(npub)
         keysLockedOut.remove(npub)
+        keysFailed.remove(npub)
         savedSecrets.remove(npub)
         keyVault.delete(npub)
         secretsStores.removeAccount(npub)
