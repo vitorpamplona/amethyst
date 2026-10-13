@@ -27,8 +27,9 @@ import com.vitorpamplona.quartz.utils.ensure
 /**
  * `["field-type", <field name>, <type>]`: types a field the header declares with a
  * `required`/`recommended`/`optional`/`allowed` rule. It never declares a field of its own.
- * Readers know `text` (the default) and `url`; Brainstorm also reads a provisional `address`
- * (a `kind:pubkey:d`). Any other type reads as text.
+ * Readers know `text` (the default) and `url`; Brainstorm also reads the provisional `tel` and
+ * `email` (a call and a mail, when the value is one) and `address` (a `kind:pubkey:d`). A type
+ * changes rendering only where it has one obvious rendering, and any other type reads as text.
  */
 @Immutable
 data class FieldType(
@@ -42,6 +43,8 @@ class FieldTypeTag {
 
         const val TEXT = "text"
         const val URL = "url"
+        const val TEL = "tel"
+        const val EMAIL = "email"
         const val ADDRESS = "address"
 
         fun isTag(tag: Array<String>) = tag.has(2) && tag[0] == TAG_NAME && tag[1].isNotEmpty() && tag[2].isNotEmpty()

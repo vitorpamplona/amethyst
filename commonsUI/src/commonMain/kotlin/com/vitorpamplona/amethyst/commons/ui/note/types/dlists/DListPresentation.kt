@@ -29,6 +29,7 @@ import com.vitorpamplona.quartz.experimental.decentralizedLists.header.fieldDecl
 import com.vitorpamplona.quartz.experimental.decentralizedLists.header.listImage
 import com.vitorpamplona.quartz.experimental.decentralizedLists.header.tags.DisplayHint
 import com.vitorpamplona.quartz.experimental.decentralizedLists.header.tags.DisplayHintTag
+import com.vitorpamplona.quartz.experimental.decentralizedLists.header.tags.FieldTypeTag
 import com.vitorpamplona.quartz.experimental.decentralizedLists.isDeliberatelyUnaffiliated
 import com.vitorpamplona.quartz.experimental.decentralizedLists.taggings.TagElementContent
 import com.vitorpamplona.quartz.nip01Core.core.TagArray
@@ -60,7 +61,11 @@ data class DListFact(
     val value: String,
     /** How many more values the item gives the same field. */
     val extra: Int,
-    /** A link when the value is an http(s) URL. */
+    /**
+     * What the value opens, when its field's declared type says and the value is one ([fieldHref]):
+     * a `url` field's http(s) URL, a `tel` field's `tel:`, an `email` field's `mailto:`. Never
+     * guessed from the value: an untyped field or an undeclared tag is text, whatever it looks like.
+     */
     val href: String?,
 )
 
@@ -88,6 +93,55 @@ fun httpUrl(value: String?): String? {
     if (!lower.startsWith("https://") && !lower.startsWith("http://")) return null
     return if (trimmed.length > lower.indexOf("://") + 3) trimmed else null
 }
+
+/**
+ * A `tel` field's value as a call (provisional): its digits and a leading `+`, once the separators
+ * people write (spaces, dots, dashes, brackets) are gone; null when anything else is left. The
+ * header said it is a phone number; this only spells it the way a `tel:` link wants. Brainstorm's
+ * `telHref` (`lib/dlistFields.ts`).
+ */
+fun telHref(value: String?): String? {
+    val trimmed = value?.trim() ?: return null
+    val cleaned = StringBuilder(trimmed.length)
+    for (c in trimmed) {
+        if (c.isWhitespace() || c == '(' || c == ')' || c == '.' || c == '-') continue
+        cleaned.append(c)
+    }
+    if (cleaned.isEmpty()) return null
+    val digitsFrom = if (cleaned[0] == '+') 1 else 0
+    if (digitsFrom == cleaned.length) return null
+    for (i in digitsFrom until cleaned.length) {
+        if (cleaned[i] !in '0'..'9') return null
+    }
+    return "tel:$cleaned"
+}
+
+private val SINGLE_EMAIL = Regex("[^\\s@?#:]+@[^\\s@?#:]+\\.[^\\s@?#:]+")
+
+/**
+ * An `email` field's value as a mail (provisional): one address, `name@host.tld`, nothing around it
+ * (no second address, no `?` headers, no `mailto:` of its own); null otherwise. Brainstorm's `emailHref`.
+ */
+fun emailHref(value: String?): String? {
+    val trimmed = value?.trim() ?: return null
+    return if (SINGLE_EMAIL.matches(trimmed)) "mailto:$trimmed" else null
+}
+
+/**
+ * What a typed field's value opens: one obvious rendering per type, none for any other. A `url`
+ * field links an http(s) value, a `tel` field calls, an `email` field mails. `text`, no type, or a
+ * type no reader knows is text: a value's look never decides its type.
+ */
+fun fieldHref(
+    type: String?,
+    value: String,
+): String? =
+    when (type) {
+        FieldTypeTag.URL -> httpUrl(value)
+        FieldTypeTag.TEL -> telHref(value)
+        FieldTypeTag.EMAIL -> emailHref(value)
+        else -> null
+    }
 
 /** A field name as words: `opening-hours` -> "Opening hours". */
 fun fieldWords(name: String): String =
@@ -196,7 +250,7 @@ fun dListItemView(
                 label = labels[name],
                 value = value,
                 extra = fieldValues.size - 1,
-                href = httpUrl(value),
+                href = fieldHref(declared[name]?.type, value),
             )
         } + undeclaredFacts(item, declared.keys)
 
@@ -242,7 +296,8 @@ private fun undeclaredFacts(
             if (existing != null) {
                 existing.copy(extra = existing.extra + 1)
             } else {
-                DListFact(name, null, value, 0, httpUrl(value))
+                // Undeclared, so untyped: text, even when it looks like a link.
+                DListFact(name, null, value, 0, null)
             }
     }
     return out.values.toList()

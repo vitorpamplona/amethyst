@@ -182,6 +182,93 @@ class DListPresentationTest {
     }
 
     @Test
+    fun aTelFieldCallsItsDigitsAndALeadingPlus() {
+        assertEquals("tel:+15403910134", telHref("+1-540-391-0134"))
+        assertEquals("tel:02079460958", telHref("(020) 7946.0958"))
+        assertEquals("tel:911", telHref(" 911 "))
+        assertEquals("tel:+5561995218884", telHref("+55 61995218884"))
+    }
+
+    @Test
+    fun aTelValueWithAnythingElseInItStaysText() {
+        assertNull(telHref("call us"))
+        assertNull(telHref("555-1234 ext 2"))
+        assertNull(telHref("1+2"))
+        assertNull(telHref("+"))
+        assertNull(telHref(""))
+        assertNull(telHref(null))
+    }
+
+    @Test
+    fun anEmailFieldMailsOneAddressAndNothingElse() {
+        assertEquals("mailto:hello@ilsolefood.com", emailHref(" hello@ilsolefood.com "))
+        assertNull(emailHref("hello at ilsolefood.com"))
+        assertNull(emailHref("a@b"))
+        assertNull(emailHref("a@b.com?bcc=c@d.com"))
+        assertNull(emailHref("mailto:a@b.com"))
+        assertNull(emailHref("a@b.com, c@d.com"))
+        assertNull(emailHref(null))
+    }
+
+    @Test
+    fun aFieldsTypeDecidesWhatItsValueOpens() {
+        assertEquals("tel:+13464932858", fieldHref("tel", "+1 346 493 2858"))
+        assertEquals("mailto:hello@ilsolefood.com", fieldHref("email", "hello@ilsolefood.com"))
+        assertEquals("https://btcmap.org", fieldHref("url", "https://btcmap.org"))
+        // `url` links only http(s).
+        assertNull(fieldHref("url", "javascript:alert(1)"))
+        assertNull(fieldHref("url", "tel:+15403910134"))
+        // A value's look never types it: text, no type, or a type no reader knows stays text.
+        assertNull(fieldHref("text", "+1-540-391-0134"))
+        assertNull(fieldHref("text", "hello@ilsolefood.com"))
+        assertNull(fieldHref("text", "https://btcmap.org"))
+        assertNull(fieldHref(null, "https://btcmap.org"))
+        assertNull(fieldHref("toString", "+1-540-391-0134"))
+    }
+
+    @Test
+    fun itemFactsLinkOnlyWhereTheHeaderTypedTheField() {
+        val header =
+            dListHeaderView(
+                foodHeader +
+                    arrayOf(
+                        arrayOf("optional", "email", "Contact address"),
+                        arrayOf("optional", "menu", "Menu"),
+                        arrayOf("field-type", "phone", "tel"),
+                        arrayOf("field-type", "email", "email"),
+                    ),
+                null,
+            )
+        val item =
+            choconat +
+                arrayOf(
+                    arrayOf("email", "hello@choconat.com.br"),
+                    arrayOf("menu", "https://choconat.example/menu"),
+                    arrayOf("instagram", "https://instagram.com/choconat"),
+                )
+
+        val facts = dListItemView(item, header).facts.associateBy { it.field }
+
+        assertEquals("tel:+5561995218884", facts.getValue("phone").href)
+        assertEquals("+55 61995218884", facts.getValue("phone").value)
+        assertEquals("mailto:hello@choconat.com.br", facts.getValue("email").href)
+        // An untyped field and a tag the header never declared are text, whatever they look like.
+        assertNull(facts.getValue("menu").href)
+        assertNull(facts.getValue("instagram").href)
+        assertNull(facts.getValue("opening-hours").href)
+    }
+
+    @Test
+    fun withoutAHeaderNoValueIsGuessedALink() {
+        val item = arrayOf(arrayOf("name", "Choconat"), arrayOf("website", "http://instagram.com/choconat.confeitariadf"), arrayOf("phone", "+55 61995218884"))
+
+        val facts = dListItemView(item, null).facts
+
+        assertEquals(listOf("website", "phone"), facts.map { it.field })
+        assertTrue(facts.all { it.href == null })
+    }
+
+    @Test
     fun wordsAndUrls() {
         assertEquals("Opening hours", fieldWords("opening-hours"))
         assertEquals("https://btcmap.org", httpUrl(" https://btcmap.org "))

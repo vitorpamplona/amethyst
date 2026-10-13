@@ -46,6 +46,12 @@ data class FieldDeclaration(
     val type: String,
 ) {
     fun isUrl() = type == FieldTypeTag.URL
+
+    /** A phone number (provisional): a `tel:` link when the value is one. */
+    fun isTel() = type == FieldTypeTag.TEL
+
+    /** An email address (provisional): a `mailto:` link when the value is one. */
+    fun isEmail() = type == FieldTypeTag.EMAIL
 }
 
 private fun TagRuleType.requirement() =

@@ -463,7 +463,9 @@ private fun Facts(facts: List<DListFact>) {
                 )
                 Row(Modifier.weight(0.65f), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                     if (fact.href != null) {
-                        ClickableUrl(url = fact.href, style = MaterialTheme.typography.bodySmall, modifier = Modifier.weight(1f, fill = false))
+                        // The value as written ("+1 346 493 2858"); the link is what its type spells
+                        // ("tel:+13464932858"), handed to the platform: a browser, a dialer or a mail app.
+                        ClickableUrl(url = fact.href, displayText = fact.value, style = MaterialTheme.typography.bodySmall, modifier = Modifier.weight(1f, fill = false))
                     } else {
                         Text(
                             text = fact.value,

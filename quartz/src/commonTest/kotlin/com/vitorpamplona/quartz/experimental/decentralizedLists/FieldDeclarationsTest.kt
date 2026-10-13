@@ -27,9 +27,11 @@ import com.vitorpamplona.quartz.experimental.decentralizedLists.header.listImage
 import com.vitorpamplona.quartz.experimental.decentralizedLists.header.optionalTags
 import com.vitorpamplona.quartz.experimental.decentralizedLists.header.tagRules
 import com.vitorpamplona.quartz.experimental.decentralizedLists.header.tags.DisplayHint
+import com.vitorpamplona.quartz.experimental.decentralizedLists.header.tags.FieldTypeTag
 import com.vitorpamplona.quartz.experimental.decentralizedLists.header.tags.TagRuleType
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
@@ -84,6 +86,31 @@ class FieldDeclarationsTest {
         assertTrue(fields[2].isUrl())
         assertEquals("text", fields[0].type)
         assertEquals(FieldRequirement.OPTIONAL, fields[4].requirement)
+    }
+
+    @Test
+    fun telAndEmailAreTypesBesideUrl() {
+        // Provisional (Brainstorm 2026-10-13): a phone number and an email address, declared.
+        val tags =
+            arrayOf(
+                arrayOf("required", "name"),
+                arrayOf("optional", "phone"),
+                arrayOf("optional", "contact"),
+                arrayOf("optional", "notes"),
+                arrayOf("field-type", "phone", "tel"),
+                arrayOf("field-type", "contact", "email"),
+                arrayOf("field-type", "notes", "toString"),
+            )
+
+        val fields = tags.fieldDeclarations().associateBy { it.name }
+
+        assertEquals(FieldTypeTag.TEL, fields.getValue("phone").type)
+        assertTrue(fields.getValue("phone").isTel())
+        assertEquals(FieldTypeTag.EMAIL, fields.getValue("contact").type)
+        assertTrue(fields.getValue("contact").isEmail())
+        // A type no reader knows is kept as written, and reads as text.
+        assertEquals("toString", fields.getValue("notes").type)
+        assertFalse(fields.getValue("notes").isTel() || fields.getValue("notes").isEmail() || fields.getValue("notes").isUrl())
     }
 
     @Test
