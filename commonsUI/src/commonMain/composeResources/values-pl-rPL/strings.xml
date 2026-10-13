@@ -4572,7 +4572,6 @@
     <string name="key_storage_keyring_kwallet">KWallet</string>
     <string name="key_storage_status_keyring">Twoje klucze prywatne są przechowywane w %1$s.</string>
     <string name="key_storage_status_unknown">Ametyst utrzymuje klucze prywatne w Twoim systemowym pierścieniu kluczy i otwiera je po raz pierwszy, gdy potrzebuje klucza.</string>
-    <string name="key_storage_status_unreachable">Amethyst nie mogła otworzyć pliku %1$s. Twoje klucze nadal tam są, ale aplikacja nie może podpisywać, dopóki nie będzie mogła ich odczytać.</string>
     <string name="key_storage_status_password_locked">Komputer nie posiada systemowego pęku kluczy, więc klucze są przechowywane w pliku chronionym hasłem (NIP-49). Plik ten jest zablokowany.</string>
     <string name="key_storage_status_password_unlocked">Komputer nie posiada systemowego pęku kluczy, więc klucze są przechowywane w pliku chronionym hasłem (NIP-49).</string>
     <string name="key_storage_status_password_new">Ten komputer nie posiada systemowego pęku kluczy. Przy utworzeniu pierwszego klucza pojawi się prośba o podanie hasła, które będzie go chronić na tym urządzeniu.</string>
@@ -4581,7 +4580,6 @@
     <string name="key_storage_unlock">Odblokuj</string>
     <string name="key_storage_not_now">Nie teraz</string>
     <string name="key_storage_unreachable_title">Nie można otworzyć Twojego pęku kluczy</string>
-    <string name="key_storage_unreachable_description">Amethyst nie mógł odczytać twoich kluczy z %1$s. Jeśli system poprosi o zgodę, wyraź ją, a następnie spróbuj ponownie.</string>
     <string name="key_storage_create_password_title">Zabezpiecz swój klucz hasłem</string>
     <string name="key_storage_create_password_description">Komputer nie posiada pęku kluczy systemowych, z którego mogłaby korzystać aplikacja Amethyst. Wybierz hasło, aby przechowywać swój klucz prywatny w zaszyfrowanym pliku na tym urządzeniu. Będziesz je wpisywać raz przy każdym uruchomieniu aplikacji Amethyst.</string>
     <string name="key_storage_password">Hasło</string>
