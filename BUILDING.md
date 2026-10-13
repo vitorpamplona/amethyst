@@ -41,7 +41,12 @@ Platform-specific:
   package an arm64 MSI. Locally you *can* build one on an arm64 Windows box with
   WiX 3.x installed (jpackage produces host-native artifacts; the WiX 3 binaries
   themselves are x86 and run under emulation).
-- **Linux (all)**: nothing extra for `.deb`; `rpm` + `fakeroot` for `.rpm`;
+- **Linux (all)**: run Gradle on the **JetBrains Runtime 21** (the `jbrsdk`
+  build: `actions/setup-java` with `distribution: jetbrains`, or
+  `JAVA_HOME=/path/to/jbrsdk-21`). jpackage bundles the JDK Gradle runs on, and
+  only JBR's AWT can draw natively on Wayland; a package built on Temurin runs on
+  X11/XWayland only (see [Wayland and X11 on Linux](#wayland-and-x11-on-linux)).
+  Nothing extra for `.deb`; `rpm` + `fakeroot` for `.rpm`;
   `appimagetool` + `desktop-file-utils` for AppImage; `flatpak` +
   `flatpak-builder` for the Flatpak bundle (see
   [`desktopApp/packaging/flatpak/README.md`](desktopApp/packaging/flatpak/README.md))
@@ -790,6 +795,32 @@ On Fedora Silverblue / very minimal distros, FUSE might be missing. Use
 ```bash
 ./Amethyst-*.AppImage --appimage-extract-and-run
 ```
+
+---
+
+## Wayland and X11 on Linux
+
+Every Linux package (`.deb`, `.rpm`, AppImage, tar.gz, Flatpak) draws natively
+on Wayland, with no XWayland, and through X11 on an X11 session. Two pieces
+make that work:
+
+- **The runtime.** The packages bundle the JetBrains Runtime instead of
+  Temurin: stock OpenJDK's AWT only speaks X11, while JBR's has a Wayland
+  toolkit (`WLToolkit`). Release CI builds the Linux legs on it and fails a
+  build whose runtime lacks `lib/libawt_wlawt.so`.
+- **The window.** On a Wayland session (`$WAYLAND_DISPLAY` names a live
+  socket) the app starts AWT on `WLToolkit` before anything else
+  (`desktopApp/.../platform/WaylandDisplay.kt`). Compose's own window can't
+  draw there (Skiko's window surface needs an X11 handle), so the windows are
+  Swing frames with a Compose panel that draws through Swing, with Skiko's CPU
+  renderer (`AppWindow.kt`). On X11, macOS and Windows nothing changes.
+
+Set `AMETHYST_X11=1` to keep a Wayland session on XWayland (the Flatpak also
+needs `--socket=x11` for that). `./gradlew :desktopApp:run` on a stock JDK runs
+on X11/XWayland; run it on JBR to try the Wayland path.
+`scripts/wayland-smoke-test.sh <launcher>` starts a packaged app on a headless
+sway with Xwayland turned off and passes only if it opens a native Wayland
+window (needs `sway`).
 
 ---
 

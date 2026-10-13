@@ -1,5 +1,7 @@
 import org.jetbrains.compose.desktop.application.dsl.TargetFormat
+import org.jetbrains.compose.desktop.application.tasks.AbstractJLinkTask
 import org.jetbrains.compose.desktop.application.tasks.AbstractJPackageTask
+import org.jetbrains.compose.desktop.application.tasks.AbstractJvmToolOperationTask
 import java.io.DataInputStream
 import java.net.URI
 import java.nio.file.FileSystems
@@ -139,7 +141,8 @@ compose.desktop {
         mainClass = "com.vitorpamplona.amethyst.desktop.app.AmethystDesktopKt"
         jvmArgs += "--add-opens=java.base/java.nio=ALL-UNNAMED"
         // Lets the app name its X11 windows "Amethyst" (WM_CLASS), which the Linux desktop entries
-        // declare as StartupWMClass. A no-op on macOS and Windows.
+        // declare as StartupWMClass. A no-op on macOS and Windows, and on native Wayland, where
+        // WaylandDisplay names the window through its app_id instead.
         jvmArgs += "--add-opens=java.desktop/sun.awt.X11=ALL-UNNAMED"
 
         jvmArgs += "-Xmx2g"
@@ -265,6 +268,28 @@ compose.desktop {
     }
 }
 
+// --- The packaged runtime ---
+//
+// jlink and jpackage run from the JDK Gradle runs on, and the runtime image bundles that JDK. Linux
+// packages must be built on the JetBrains Runtime: only its AWT draws natively on Wayland
+// (WLToolkit, lib/libawt_wlawt.so; see platform/WaylandDisplay.kt). CI installs it with
+// actions/setup-java (`distribution: jetbrains`); a build on a stock JDK still works, X11 and
+// XWayland only.
+//
+// Compose marks the tasks' JDK @Internal, so the build cache restored a runtime image jlinked on
+// Temurin into a JetBrains Runtime build. The JDK's release file (vendor and version) keys it now.
+tasks.withType<AbstractJvmToolOperationTask>().configureEach {
+    inputs.property("jdkRelease", javaHome.map { File(it, "release").takeIf(File::isFile)?.readText().orEmpty() })
+}
+tasks.withType<AbstractJLinkTask>().configureEach {
+    val jdk = javaHome
+    doFirst {
+        if (System.getProperty("os.name").startsWith("Linux") && !File(jdk.get(), "lib/libawt_wlawt.so").isFile) {
+            logger.warn("w: ${jdk.get()} has no Wayland toolkit: this runtime draws through X11/XWayland only. Build Linux packages on the JetBrains Runtime.")
+        }
+    }
+}
+
 // --- GStreamer in the .rpm (Linux) ---
 //
 // The media player (kdroidFilter) drives the system GStreamer from a native library it unpacks
@@ -303,6 +328,8 @@ val rpmLibraryDeps =
         listOf(
             "libasound.so.2", "libfontconfig.so.1", "libGL.so.1", "libstdc++.so.6", "libX11.so.6",
             "libXext.so.6", "libXi.so.6", "libXrender.so.1", "libXtst.so.6",
+            // The JetBrains Runtime's Wayland toolkit: linked, and libxkbcommon opened with dlopen.
+            "libwayland-client.so.0", "libwayland-cursor.so.0", "libxkbcommon.so.0",
         ) + (if (System.getProperty("os.arch") == "aarch64") listOf("libEGL.so.1") else emptyList())
     ).joinToString("\n") { "Requires: $it()(64bit)" }
 
