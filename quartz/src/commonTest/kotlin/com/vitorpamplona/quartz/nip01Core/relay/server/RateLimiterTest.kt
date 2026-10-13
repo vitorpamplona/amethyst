@@ -108,6 +108,21 @@ class RateLimiterTest {
     }
 
     @Test
+    fun idleBucketsAreSweptOnATimerNotACommandCount() {
+        val limiter = RateLimiter(perMinute = 60, burst = 2, clock = clock)
+        limiter.acquire("idle")
+        now += 5_000
+        // Idle long enough to be dropped, but the sweep interval has not passed: however many
+        // commands arrive, nobody walks the buckets.
+        repeat(10_000) { limiter.acquire("busy$it") }
+        assertEquals(10_001, limiter.trackedClients())
+
+        now += RateLimiter.MIN_SWEEP_INTERVAL_MS
+        limiter.acquire("late")
+        assertEquals(1, limiter.trackedClients())
+    }
+
+    @Test
     fun invalidRatesAreRefused() {
         assertFailsWith<IllegalArgumentException> { RateLimiter(perMinute = 0) }
         assertFailsWith<IllegalArgumentException> { RateLimiter(perMinute = 10, burst = 0) }

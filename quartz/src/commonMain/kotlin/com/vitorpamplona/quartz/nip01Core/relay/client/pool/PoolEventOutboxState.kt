@@ -76,8 +76,9 @@ class PoolEventOutboxState(
     ) {
         if (success || message.shouldDiscard()) {
             relaysRemaining = relaysRemaining - url
-            failures = failures - url
-            backOffs = backOffs - url
+            // Map.minus copies even when the key is absent; most OKs find nothing to forget.
+            if (url in failures) failures = failures - url
+            if (url in backOffs) backOffs = backOffs - url
         } else if (retryAfterMs != null && (backOffs[url] ?: 0) < MAX_BACK_OFFS) {
             // NIP-01 `rate-limited:` with a back-off: the relay is up and will take the event
             // later; the pool re-sends it once the back-off passes. Like auth-required, that is

@@ -24,9 +24,8 @@ import com.vitorpamplona.quartz.utils.TimeUtils
 import com.vitorpamplona.quartz.utils.concurrent.ConcurrentMap
 import com.vitorpamplona.quartz.utils.concurrent.PlatformLock
 import com.vitorpamplona.quartz.utils.concurrent.withLock
-import kotlin.concurrent.atomics.AtomicInt
+import kotlin.concurrent.atomics.AtomicLong
 import kotlin.concurrent.atomics.ExperimentalAtomicApi
-import kotlin.concurrent.atomics.incrementAndFetch
 import kotlin.math.ceil
 
 /**
@@ -39,8 +38,10 @@ import kotlin.math.ceil
  * is refused at most once per wait.
  *
  * A bucket idle long enough to have refilled is the same as no bucket, so those are swept
- * every [SWEEP_EVERY] acquisitions; memory follows the clients active in the last refill
- * window, not every address ever seen.
+ * once per refill window (at least [MIN_SWEEP_INTERVAL_MS] apart); memory follows the clients
+ * active in the last two windows, not every address ever seen. On a timer, not a command count:
+ * a sweep walks every bucket, and buckets only go idle with time, so sweeping more often under
+ * more traffic would cost the busiest relay the most for nothing.
  */
 @OptIn(ExperimentalAtomicApi::class)
 class RateLimiter(
@@ -67,18 +68,21 @@ class RateLimiter(
     private val fullAfterMs = ceil(burst / refillPerMs).toLong()
 
     private val buckets = ConcurrentMap<String, Bucket>()
-    private val sinceSweep = AtomicInt(0)
+
+    private val sweepIntervalMs = maxOf(fullAfterMs, MIN_SWEEP_INTERVAL_MS)
+    private val nextSweepAtMs = AtomicLong(clock() + sweepIntervalMs)
 
     /**
      * Spends one of [client]'s tokens and returns 0, or, when it has none, spends nothing and
      * returns the milliseconds until it will have one (always at least 1).
      */
     fun acquire(client: String): Long {
-        // One sweeper at a time: whoever resets the counter does it.
-        val count = sinceSweep.incrementAndFetch()
-        if (count >= SWEEP_EVERY && sinceSweep.compareAndSet(count, 0)) sweep()
         val now = clock()
-        val bucket = buckets.getOrPut(client) { Bucket(burst.toDouble(), now) }
+        // One sweeper at a time: whoever moves the deadline does it.
+        val sweepAt = nextSweepAtMs.load()
+        if (now >= sweepAt && nextSweepAtMs.compareAndSet(sweepAt, now + sweepIntervalMs)) sweep()
+        // The plain read first: getOrPut builds its lambda even when the bucket exists.
+        val bucket = buckets[client] ?: buckets.getOrPut(client) { Bucket(burst.toDouble(), now) }
         return bucket.lock.withLock {
             val elapsed = now - bucket.updatedAtMs
             if (elapsed > 0) {
@@ -107,6 +111,7 @@ class RateLimiter(
     }
 
     companion object {
-        const val SWEEP_EVERY = 4096
+        /** Sweeps no more often than this, however short the refill window. */
+        const val MIN_SWEEP_INTERVAL_MS = 30_000L
     }
 }
