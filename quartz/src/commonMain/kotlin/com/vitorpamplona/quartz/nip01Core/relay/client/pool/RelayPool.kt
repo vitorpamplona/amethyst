@@ -64,6 +64,11 @@ class RelayPool(
     val decoder: MessageDecoder = MessageDecoder.Default,
     /** Runs each relay's rate-limit gate; see [BasicRelayClient]. Without one, back-offs are not honored. */
     val scope: CoroutineScope? = null,
+    /**
+     * The command to send for one a relay's rate-limit gate held and is releasing now: the
+     * owner's current version of it (a subscription's current filters). See [RateLimitGate].
+     */
+    val refreshHeld: (relay: NormalizedRelayUrl, held: Command) -> Command = { _, held -> held },
 ) : RelayConnectionListener {
     private val relays = LargeCache<NormalizedRelayUrl, IRelayClient>()
 
@@ -89,7 +94,7 @@ class RelayPool(
             socketBuilder = websocketBuilder,
             listener = this,
             decoder = decoder,
-            rateLimits = scope?.let { scope -> gates.getOrCreate(url) { RateLimitGate(scope) } },
+            rateLimits = scope?.let { scope -> gates.getOrCreate(url) { RateLimitGate(scope, refresh = { refreshHeld(url, it) }) } },
         )
 
     /** Clears every relay's reconnect backoff. See [IRelayClient.resetBackoff]. */

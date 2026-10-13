@@ -62,6 +62,11 @@ import kotlin.concurrent.Volatile
  * the subscription is still wanted): handed back right after the refusal, it goes to the head
  * of the queue.
  *
+ * A held command goes out as it is NOW, not as it was when queued: [refresh] swaps a `REQ` for
+ * its subscription's current filters at release, so a filter change while it waited rides the
+ * same `REQ` instead of a second one after the stale one's `EOSE` (relays serve REQs in order,
+ * so the stale one would delay the one that matters by a whole query).
+ *
  * When the back-off passes the queue drains one command at a time. A stated back-off says when
  * the relay takes the NEXT command, not how many: a sliding window (nostream states the whole
  * window, e.g. 60 s for 12 notes a minute) then takes many, a token bucket one per token. So
@@ -83,6 +88,8 @@ class RateLimitGate(
     private val scope: CoroutineScope,
     /** Writes [Command] to the socket; false when nothing went out (the socket is gone). */
     send: (Command) -> Boolean = { false },
+    /** The command to put on the wire for a held one now released; see the class notes. */
+    private val refresh: (Command) -> Command = { it },
     private val maxDelayMs: Long = MAX_DELAY_MS,
     private val clock: () -> Long = TimeUtils::nowMillis,
 ) {
@@ -334,8 +341,17 @@ class RateLimitGate(
                     }
                     left
                 }
-            val cmd = due
-            if (cmd != null) {
+            val held = due
+            if (held != null) {
+                val cmd =
+                    try {
+                        refresh(held)
+                    } catch (e: CancellationException) {
+                        throw e
+                    } catch (e: Exception) {
+                        Log.w("RateLimitGate", "Failed to refresh a held ${held.label()}", e)
+                        held
+                    }
                 // A failure here must not end the loop: the lane would stay registered with
                 // nobody draining it, and every later command of its type would be held forever.
                 val sent =

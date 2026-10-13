@@ -55,6 +55,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeout
 import kotlinx.coroutines.withTimeoutOrNull
+import java.util.concurrent.ConcurrentLinkedQueue
 import java.util.concurrent.atomic.AtomicInteger
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -76,6 +77,9 @@ class RateLimitRetryAfterTest {
         val refuseCounts: Int = 0,
     ) : AutoCloseable {
         val reqs = AtomicInteger(0)
+
+        /** The kinds of every REQ the relay received, in order. */
+        val reqKinds = ConcurrentLinkedQueue<List<Int>?>()
         val events = AtomicInteger(0)
         val counts = AtomicInteger(0)
 
@@ -85,7 +89,7 @@ class RateLimitRetryAfterTest {
                 policyBuilder = {
                     object : PassThroughPolicy() {
                         override fun accept(cmd: ReqCmd): PolicyResult<ReqCmd> =
-                            if (reqs.incrementAndGet() <= refuseFirst) {
+                            if (reqKinds.add(cmd.filters.first().kinds) && reqs.incrementAndGet() <= refuseFirst) {
                                 PolicyResult.Rejected.rateLimited("slow down there chief", backOffMs)
                             } else {
                                 PolicyResult.Accepted(cmd)
@@ -251,6 +255,26 @@ class RateLimitRetryAfterTest {
                 withTimeout(5_000) { eose.await() }
                 assertTrue(start.elapsedNow().inWholeMilliseconds >= 600, "sent before the back-off passed")
                 connection.disconnect()
+            }
+        }
+
+    @Test
+    fun aFilterChangeWhileTheReqIsHeldSendsOneReqWithTheNewFilters() =
+        runBlocking {
+            // Relays serve a sub's REQs in order: a stale REQ released first would make the one
+            // that matters wait a whole query behind it. The held REQ goes out with the new filters.
+            Relay(backOffMs = 600).use { relay ->
+                val listener = Listener()
+                relay.client.subscribe("sub", mapOf(url to listOf(Filter(kinds = listOf(1)))), listener)
+                withTimeout(5_000) { listener.closedParams.await() }
+                // Past the client handing the refused REQ back: the change finds it held.
+                delay(150)
+                relay.client.subscribe("sub", mapOf(url to listOf(Filter(kinds = listOf(7)))), listener)
+
+                withTimeout(5_000) { listener.eose.await() }
+                // Long enough for a second REQ after the EOSE, had one been owed.
+                delay(300)
+                assertEquals(listOf(listOf(1), listOf(7)), relay.reqKinds.toList())
             }
         }
 

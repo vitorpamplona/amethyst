@@ -311,7 +311,8 @@ connection (`BasicRelayClient`) has a `RateLimitGate` that holds every command o
 type (`REQ`, `EVENT`, or `COUNT`) until the back-off passes, whoever sends it — new
 subscriptions and publishes, a subscription's update after its `EOSE`, the replay after a
 reconnect. The client hands the refused REQ or EVENT straight back, and the gate queues it
-first. Then the held commands go out one at a time: each one the relay answers without
+first. A held REQ goes out with its subscription's filters as they are when it is released, so
+changing a subscription during a back-off sends one REQ, not a stale one and then the new one. Then the held commands go out one at a time: each one the relay answers without
 throttling (`OK` true, `EOSE`, a `COUNT` result) releases the next at once, and one it refuses
 again waits out its new back-off (plus a tenth). That drains a sliding window, which
 states its whole period and then takes many, in one round trip per command, and a token bucket

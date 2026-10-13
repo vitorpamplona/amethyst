@@ -63,8 +63,9 @@ class RateLimitGateTest {
 
     private fun TestScope.gate(
         sent: MutableList<Sent>,
+        refresh: (Command) -> Command = { it },
         onSend: (Command) -> Boolean = { true },
-    ) = RateLimitGate(this, clock = { testScheduler.currentTime }, send = { cmd ->
+    ) = RateLimitGate(this, clock = { testScheduler.currentTime }, refresh = refresh, send = { cmd ->
         sent.add(Sent(cmd.what(), testScheduler.currentTime))
         onSend(cmd)
     })
@@ -248,6 +249,31 @@ class RateLimitGateTest {
             advanceUntilIdle()
 
             assertEquals("[a:5@1000]", sent.toString())
+        }
+
+    @Test
+    fun aHeldReqGoesOutWithItsSubsCurrentFilters() =
+        runTest {
+            // The sub's filters changed while its REQ waited: the release sends the new ones, once.
+            val sent = mutableListOf<Sent>()
+            var current = 5
+            val gate = gate(sent, refresh = { cmd -> if (cmd is ReqCmd) req(cmd.subId, limit = current) else cmd })
+            gate.refuseReq("a", 1_000)
+            current = 9
+            advanceUntilIdle()
+
+            assertEquals("[a:9@1000]", sent.toString())
+        }
+
+    @Test
+    fun aFailingRefreshSendsTheHeldCommand() =
+        runTest {
+            val sent = mutableListOf<Sent>()
+            val gate = gate(sent, refresh = { error("pool gone") })
+            gate.refuseReq("a", 1_000)
+            advanceUntilIdle()
+
+            assertEquals("[a@1000]", sent.toString())
         }
 
     @Test

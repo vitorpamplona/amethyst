@@ -38,6 +38,7 @@ import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.OkMessage
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toRelay.AuthCmd
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toRelay.CloseCmd
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toRelay.Command
+import com.vitorpamplona.quartz.nip01Core.relay.commands.toRelay.ReqCmd
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.relay.sockets.WebsocketBuilder
@@ -101,7 +102,10 @@ class NostrClient(
     /** Scope for all subscriptions. */
     private val scope = CoroutineScope(parentScope.coroutineContext + SupervisorJob())
 
-    private val relayPool: RelayPool = RelayPool(websocketBuilder, this, decoder, scope)
+    private val relayPool: RelayPool =
+        RelayPool(websocketBuilder, this, decoder, scope) { relay, held ->
+            if (held is ReqCmd) activeRequests.refreshHeld(relay, held) else held
+        }
 
     private val activeRequests: PoolRequests = PoolRequests()
     private val activeCounts: PoolCounts = PoolCounts()
