@@ -341,9 +341,9 @@ class PoolRequests(
                 // blocked the relay, drop it from the desired set so the pool disconnects.
                 val newlyBlocked = relayRefusals.onRefused(relay.url, msg.message)
 
-                // A `rate-limited:` CLOSED that states a back-off forbids a REQ before it passes,
-                // even when the sub's filters changed while this one was in flight: the CLOSED
-                // stays parked and [retryRateLimited] sends the current filters when it is due.
+                // A `rate-limited:` CLOSED that states a back-off is not re-decided here: the
+                // client hands the current filters to [retryRateLimited], and the relay's
+                // rate-limit gate holds that REQ until the back-off passes.
                 val backingOff = msg.retryAfterMs != null
                 var forFilters: List<Filter>? = null
                 val cmd =
@@ -374,24 +374,10 @@ class PoolRequests(
     }
 
     /**
-     * Holds back the REQ that [decideCommandLocked] just decided for [subId] on [relay], because
-     * [relay] is waiting out a back-off: the sub is marked CLOSED instead of in flight, so
-     * [retryRateLimited] sends it once the back-off passes.
-     */
-    fun parkRateLimited(
-        relay: NormalizedRelayUrl,
-        subId: String,
-    ) {
-        relayState.get(subId)?.let { state ->
-            state.withLock(relay) {
-                if (state.currentState(relay) == ReqSubStatus.SENT) state.onClosed(relay)
-            }
-        }
-    }
-
-    /**
-     * Re-sends the REQs of [subIds] that [relay] CLOSED as `rate-limited:` with a back-off, now
-     * that the back-off has passed. A CLOSED sub keeps its filters so it is not re-sent on its
+     * Re-sends the REQs of [subIds] that [relay] CLOSED as `rate-limited:` with a back-off. Sent
+     * right after the refusal: the relay's
+     * [com.vitorpamplona.quartz.nip01Core.relay.client.single.basic.RateLimitGate] holds them until
+     * the back-off passes. A CLOSED sub keeps its filters so it is not re-sent on its
      * own (see [RequestSubscriptionState.onClosed]); this forgets them so the current desired
      * filters go out again. A sub that moved on in the meantime — re-sent after a filter change,
      * a reconnect, or dropped from this relay — is left alone. Returns whether any REQ went out.

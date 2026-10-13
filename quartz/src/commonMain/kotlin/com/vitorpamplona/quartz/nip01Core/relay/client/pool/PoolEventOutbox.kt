@@ -239,8 +239,9 @@ class PoolEventOutbox {
     }
 
     /**
-     * Re-sends the events of [eventIds] that [relay] refused as `rate-limited:` with a back-off,
-     * now that the back-off has passed. Events already delivered, given up on, or no longer
+     * Re-sends the events of [eventIds] that [relay] refused as `rate-limited:` with a back-off.
+     * Sent right after the refusal: the relay's rate-limit gate holds them until the back-off
+     * passes. Events already delivered, given up on, or no longer
      * meant for [relay] are skipped. Returns whether any EVENT went out.
      */
     fun retryRateLimited(

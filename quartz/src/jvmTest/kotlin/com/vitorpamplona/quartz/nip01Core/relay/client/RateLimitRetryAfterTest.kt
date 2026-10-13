@@ -23,7 +23,12 @@ package com.vitorpamplona.quartz.nip01Core.relay.client
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.crypto.KeyPair
 import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.publishAndCollectResults
+import com.vitorpamplona.quartz.nip01Core.relay.client.listeners.RelayConnectionListener
 import com.vitorpamplona.quartz.nip01Core.relay.client.reqs.SubscriptionListener
+import com.vitorpamplona.quartz.nip01Core.relay.client.single.IRelayClient
+import com.vitorpamplona.quartz.nip01Core.relay.client.single.basic.BasicRelayClient
+import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.EoseMessage
+import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.Message
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toRelay.CountCmd
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toRelay.EventCmd
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toRelay.ReqCmd
@@ -73,7 +78,7 @@ class RateLimitRetryAfterTest {
         val events = AtomicInteger(0)
         val counts = AtomicInteger(0)
 
-        private val server =
+        val server =
             NostrServer(
                 store = EventStore(null),
                 policyBuilder = {
@@ -102,18 +107,17 @@ class RateLimitRetryAfterTest {
                 },
             )
 
-        private val scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
+        val scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
 
-        val client =
-            NostrClient(
-                object : WebsocketBuilder {
-                    override fun build(
-                        url: NormalizedRelayUrl,
-                        out: WebSocketListener,
-                    ): WebSocket = InProcessWebSocket(server, out)
-                },
-                scope,
-            )
+        val sockets =
+            object : WebsocketBuilder {
+                override fun build(
+                    url: NormalizedRelayUrl,
+                    out: WebSocketListener,
+                ): WebSocket = InProcessWebSocket(server, out)
+            }
+
+        val client = NostrClient(sockets, scope)
 
         override fun close() {
             client.close()
@@ -198,6 +202,54 @@ class RateLimitRetryAfterTest {
                 assertTrue(first.await().accepted)
                 assertTrue(second.await().accepted)
                 assertEquals(3, relay.events.get())
+            }
+        }
+
+    @Test
+    fun anySendOnTheConnectionWaitsOutItsBackOff() =
+        runBlocking {
+            // The hold lives on the relay connection, so a REQ sent straight to it, past the
+            // pool (as a sub's update after its EOSE or a NOTICE-narrowed re-send is), still waits.
+            Relay(backOffMs = 600).use { relay ->
+                val eose = CompletableDeferred<Unit>()
+                val connected = CompletableDeferred<Unit>()
+                val connection =
+                    BasicRelayClient(
+                        url,
+                        relay.sockets,
+                        object : RelayConnectionListener {
+                            override fun onConnected(
+                                relay: IRelayClient,
+                                pingMillis: Int,
+                                compressed: Boolean,
+                            ) {
+                                connected.complete(Unit)
+                            }
+
+                            override suspend fun onIncomingMessage(
+                                relay: IRelayClient,
+                                msgStr: String,
+                                msg: Message,
+                            ) {
+                                if (msg is EoseMessage && msg.subId == "direct") eose.complete(Unit)
+                            }
+                        },
+                        scope = relay.scope,
+                    )
+                connection.connect()
+                withTimeout(5_000) { connected.await() }
+
+                val start = TimeSource.Monotonic.markNow()
+                connection.sendIfConnected(ReqCmd("refused", listOf(Filter(kinds = listOf(1)))))
+                withTimeout(5_000) { while (relay.reqs.get() < 1) delay(10) }
+                delay(100)
+                connection.sendIfConnected(ReqCmd("direct", listOf(Filter(kinds = listOf(7)))))
+                delay(200)
+                assertEquals(1, relay.reqs.get(), "a REQ reached the relay inside its back-off")
+
+                withTimeout(5_000) { eose.await() }
+                assertTrue(start.elapsedNow().inWholeMilliseconds >= 600, "sent before the back-off passed")
+                connection.disconnect()
             }
         }
 

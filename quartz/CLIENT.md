@@ -306,14 +306,18 @@ results.forEach { (relay, success) ->
 
 A relay may refuse an `EVENT` or a `REQ` as `rate-limited:` and say how long to back off, in
 the optional trailing `params` of NIP-01's `OK` / `CLOSED` (milliseconds, e.g.
-`["OK", id, false, "rate-limited: slow down", "1000"]`). `NostrClient` honors it: nothing of the
-refused type goes to that relay until the back-off passes — new subscriptions and publishes
-included, and the replay after a reconnect too. Then the held REQs/EVENTs go out one at a
-time: each one the relay accepts (`OK` true, `EOSE`) releases the next at once, and one it
-refuses again waits out its new back-off (plus a tenth). That drains a sliding window, which
+`["OK", id, false, "rate-limited: slow down", "1000"]`). `NostrClient` honors it: each relay
+connection (`BasicRelayClient`) has a `RateLimitGate` that holds every command of the refused
+type (`REQ`, `EVENT`, or `COUNT`) until the back-off passes, whoever sends it — new
+subscriptions and publishes, a subscription's update after its `EOSE`, the replay after a
+reconnect. The client hands the refused REQ or EVENT straight back, and the gate queues it
+first. Then the held commands go out one at a time: each one the relay answers without
+throttling (`OK` true, `EOSE`, a `COUNT` result) releases the next at once, and one it refuses
+again waits out its new back-off (plus a tenth). That drains a sliding window, which
 states its whole period and then takes many, in one round trip per command, and a token bucket
 at its refill rate. A `rate-limited:` refusal without a back-off is left parked until the next
-reconnect or filter change.
+reconnect or filter change. A `RelayPool` or `BasicRelayClient` built without a `scope` has
+no gate and honors no back-off; `NostrClient` always passes its own.
 
 `publishAndCollectResults` waits for that retry when it fits inside the timeout; otherwise
 the relay's refusal is reported with `PublishResult.retryAfterMs` set. `fetchAllPages` keeps

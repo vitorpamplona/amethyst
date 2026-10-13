@@ -27,20 +27,17 @@ import com.vitorpamplona.quartz.nip01Core.relay.client.listeners.RelayConnection
 import com.vitorpamplona.quartz.nip01Core.relay.client.pool.PoolCounts
 import com.vitorpamplona.quartz.nip01Core.relay.client.pool.PoolEventOutbox
 import com.vitorpamplona.quartz.nip01Core.relay.client.pool.PoolRequests
-import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RateLimitRetries
 import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayPool
 import com.vitorpamplona.quartz.nip01Core.relay.client.reqs.SubscriptionListener
 import com.vitorpamplona.quartz.nip01Core.relay.client.single.IRelayClient
+import com.vitorpamplona.quartz.nip01Core.relay.client.single.basic.RateLimitGate
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.ClosedMessage
-import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.EoseMessage
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.Message
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.MessageDecoder
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.OkMessage
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toRelay.AuthCmd
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toRelay.CloseCmd
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toRelay.Command
-import com.vitorpamplona.quartz.nip01Core.relay.commands.toRelay.EventCmd
-import com.vitorpamplona.quartz.nip01Core.relay.commands.toRelay.ReqCmd
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.relay.sockets.WebsocketBuilder
@@ -101,30 +98,14 @@ class NostrClient(
 ) : INostrClient,
     RelayConnectionListener,
     AutoCloseable {
-    private val relayPool: RelayPool = RelayPool(websocketBuilder, this, decoder)
-
     /** Scope for all subscriptions. */
     private val scope = CoroutineScope(parentScope.coroutineContext + SupervisorJob())
+
+    private val relayPool: RelayPool = RelayPool(websocketBuilder, this, decoder, scope)
 
     private val activeRequests: PoolRequests = PoolRequests()
     private val activeCounts: PoolCounts = PoolCounts()
     private val eventOutbox: PoolEventOutbox = PoolEventOutbox()
-
-    /**
-     * REQs a relay CLOSED as `rate-limited:` with a NIP-01 back-off, re-sent once it passes.
-     * Only while active: an inactive pool is disconnected, and reconnecting re-syncs every
-     * subscription anyway.
-     */
-    private val reqRetries =
-        RateLimitRetries(scope) { relay, subId ->
-            isActive() && activeRequests.retryRateLimited(relay, setOf(subId)) { cmd -> relayPool.sendOrConnectAndSync(relay, cmd) }
-        }
-
-    /** EVENTs a relay refused as `rate-limited:` with a NIP-01 back-off, re-sent once it passes. */
-    private val eventRetries =
-        RateLimitRetries(scope) { relay, eventId ->
-            isActive() && eventOutbox.retryRateLimited(relay, setOf(eventId)) { cmd -> relayPool.sendOrConnectAndSync(relay, cmd) }
-        }
 
     private var listeners = setOf<RelayConnectionListener>()
 
@@ -314,7 +295,7 @@ class NostrClient(
                 if (cmd is CloseCmd || cmd is AuthCmd) {
                     relayPool.sendIfConnected(relay, cmd)
                 } else {
-                    sendHonoringBackOff(relay, cmd) { relayPool.sendOrConnectAndSync(relay, it) }
+                    relayPool.sendOrConnectAndSync(relay, cmd)
                 }
             }
 
@@ -354,7 +335,7 @@ class NostrClient(
 
         if (isActive()) {
             eventOutbox.sendToRelayIfChanged(event, relaysToUpdate) { relay, cmd ->
-                sendHonoringBackOff(relay, cmd) { relayPool.sendOrConnectAndSync(relay, it) }
+                relayPool.sendOrConnectAndSync(relay, cmd)
             }
 
             // wakes up all the other relays
@@ -388,41 +369,9 @@ class NostrClient(
             scope.launch {
                 // A back-off a relay stated outlives the socket it was stated on: a reconnect
                 // replays everything, so the replay goes through the same gate.
-                activeRequests.syncState(relay.url) { sendHonoringBackOff(relay.url, it, relay::sendOrConnectAndSync) }
+                activeRequests.syncState(relay.url, relay::sendOrConnectAndSync)
                 activeCounts.syncState(relay.url, relay::sendOrConnectAndSync)
-                eventOutbox.syncState(relay.url) { sendHonoringBackOff(relay.url, it, relay::sendOrConnectAndSync) }
-            }
-        }
-    }
-
-    /**
-     * Sends [cmd] to [relay] unless the relay is waiting out a back-off it stated for that
-     * command type (NIP-01 `rate-limited:` params). Then the REQ or EVENT joins the pending
-     * batch and goes out with the refused ones when the back-off passes. A REQ is parked first
-     * (in flight -> CLOSED), so a batch that fires in between still finds it; if the batch
-     * already fired, it is sent now.
-     */
-    private fun sendHonoringBackOff(
-        relay: NormalizedRelayUrl,
-        cmd: Command,
-        send: (Command) -> Unit,
-    ) {
-        when (cmd) {
-            is ReqCmd -> {
-                if (reqRetries.isPending(relay)) {
-                    activeRequests.parkRateLimited(relay, cmd.subId)
-                    if (!reqRetries.defer(relay, cmd.subId)) activeRequests.retryRateLimited(relay, setOf(cmd.subId), send)
-                } else {
-                    send(cmd)
-                }
-            }
-
-            is EventCmd -> {
-                if (!eventRetries.defer(relay, cmd.event.id)) send(cmd)
-            }
-
-            else -> {
-                send(cmd)
+                eventOutbox.syncState(relay.url, relay::sendOrConnectAndSync)
             }
         }
     }
@@ -473,28 +422,23 @@ class NostrClient(
         activeCounts.onIncomingMessage(relay, msg)
         eventOutbox.onIncomingMessage(relay.url, msg)
 
-        // NIP-01: a `rate-limited:` refusal may say how long to back off. Ask again once it
-        // passes; without one, the refused REQ or EVENT stays parked as before.
+        // NIP-01: a `rate-limited:` refusal may say how long to back off. Hand the refused REQ
+        // or EVENT straight back to the relay, whose [RateLimitGate] holds it until the back-off
+        // passes; without one, it stays parked as before. COUNTs are one-shot and not re-sent.
         when (msg) {
-            // A CLOSED answers a REQ or a COUNT, and the back-off covers the type it answered.
-            // COUNTs are one-shot and not re-sent, so theirs must not hold back the REQs.
             is ClosedMessage -> {
                 val backOff = msg.retryAfterMs
-                if (backOff != null && activeCounts.getSubscriptionFiltersOrNull(msg.subId) == null) {
-                    reqRetries.schedule(relay.url, msg.subId, backOff)
+                if (backOff != null && RateLimitGate.honors(backOff) && activeCounts.getSubscriptionFiltersOrNull(msg.subId) == null) {
+                    activeRequests.retryRateLimited(relay.url, setOf(msg.subId), relay::sendOrConnectAndSync)
                 }
             }
 
             is OkMessage -> {
-                if (msg.success) {
-                    // A re-sent event landed: the relay takes events again, release the next.
-                    eventRetries.onAccepted(relay.url, msg.eventId)
-                } else {
-                    msg.retryAfterMs?.let { eventRetries.schedule(relay.url, msg.eventId, it) }
+                val backOff = msg.retryAfterMs
+                if (!msg.success && backOff != null && RateLimitGate.honors(backOff)) {
+                    eventOutbox.retryRateLimited(relay.url, setOf(msg.eventId), relay::sendOrConnectAndSync)
                 }
             }
-
-            is EoseMessage -> reqRetries.onAccepted(relay.url, msg.subId)
 
             else -> {}
         }
@@ -585,8 +529,6 @@ class NostrClient(
         activeCounts.destroy()
         activeRequests.destroy()
         eventOutbox.destroy()
-        reqRetries.clear()
-        eventRetries.clear()
         scope.cancel()
     }
 }

@@ -32,6 +32,7 @@ import com.vitorpamplona.quartz.nip01Core.relay.sockets.WebSocketListener
 import com.vitorpamplona.quartz.nip01Core.relay.sockets.WebsocketBuilder
 import com.vitorpamplona.quartz.utils.Log
 import com.vitorpamplona.quartz.utils.TimeUtils
+import kotlinx.coroutines.CoroutineScope
 import kotlin.concurrent.Volatile
 import kotlin.concurrent.atomics.AtomicBoolean
 import kotlin.concurrent.atomics.ExperimentalAtomicApi
@@ -69,6 +70,11 @@ open class BasicRelayClient(
      * frames that other relays/subscriptions already delivered.
      */
     val decoder: MessageDecoder = MessageDecoder.Default,
+    /**
+     * Runs the [RateLimitGate] that holds commands while the relay's stated `rate-limited:`
+     * back-off runs. Without one the relay's back-offs are not honored.
+     */
+    scope: CoroutineScope? = null,
 ) : IRelayClient {
     companion object {
         // minimum wait time to reconnect: 1 second
@@ -82,6 +88,8 @@ open class BasicRelayClient(
     }
 
     private var socket: WebSocket? = null
+
+    private val rateLimits = scope?.let { RateLimitGate(it, ::write) }
 
     // True if it has received the onOpen call from the socket.
     // @Volatile: written on the serialized socket-callback thread, read from the
@@ -159,6 +167,8 @@ open class BasicRelayClient(
         override suspend fun onMessage(text: String) {
             try {
                 val msg = decoder.decode(text)
+                // Before the listener: a refusal's back-off must hold what the listener re-sends.
+                rateLimits?.onIncoming(msg)
                 listener.onIncomingMessage(this@BasicRelayClient, text, msg)
             } catch (e: Throwable) {
                 if (e is CancellationException) throw e
@@ -273,6 +283,7 @@ open class BasicRelayClient(
         this.socket = null
         this.isReady = false
         this.usingCompression = false
+        rateLimits?.onDisconnected()
     }
 
     override fun disconnect() {
@@ -283,6 +294,7 @@ open class BasicRelayClient(
         socket = null
         isReady = false
         usingCompression = false
+        rateLimits?.onDisconnected()
     }
 
     override fun connectAndSyncFiltersIfDisconnected(ignoreRetryDelays: Boolean) {
@@ -339,10 +351,18 @@ open class BasicRelayClient(
     }
 
     override fun sendIfConnected(cmd: Command) {
-        socket?.let {
-            val msg = OptimizedJsonMapper.toJson(cmd)
-            val success = it.send(msg)
-            listener.onSent(this@BasicRelayClient, msg, cmd, success)
-        }
+        if (socket == null) return
+        // Held while the relay's back-off for its type runs; the gate sends it when due.
+        if (rateLimits?.admit(cmd) == false) return
+        write(cmd)
+    }
+
+    /** Puts [cmd] on the socket. False when there is no socket to put it on. */
+    private fun write(cmd: Command): Boolean {
+        val socket = socket ?: return false
+        val msg = OptimizedJsonMapper.toJson(cmd)
+        val success = socket.send(msg)
+        listener.onSent(this@BasicRelayClient, msg, cmd, success)
+        return success
     }
 }

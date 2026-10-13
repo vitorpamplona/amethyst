@@ -30,6 +30,7 @@ import com.vitorpamplona.quartz.nip01Core.relay.commands.toRelay.Command
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.relay.sockets.WebsocketBuilder
 import com.vitorpamplona.quartz.utils.cache.LargeCache
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
@@ -60,6 +61,8 @@ class RelayPool(
     val listener: RelayConnectionListener = EmptyConnectionListener,
     /** Shared per-frame decode strategy for every relay in the pool. */
     val decoder: MessageDecoder = MessageDecoder.Default,
+    /** Runs each relay's rate-limit gate; see [BasicRelayClient]. Without one, back-offs are not honored. */
+    val scope: CoroutineScope? = null,
 ) : RelayConnectionListener {
     private val relays = LargeCache<NormalizedRelayUrl, IRelayClient>()
 
@@ -77,6 +80,7 @@ class RelayPool(
             socketBuilder = websocketBuilder,
             listener = this,
             decoder = decoder,
+            scope = scope,
         )
 
     /** Clears every relay's reconnect backoff. See [IRelayClient.resetBackoff]. */
