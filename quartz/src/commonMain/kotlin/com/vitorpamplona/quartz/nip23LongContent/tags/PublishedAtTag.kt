@@ -21,6 +21,7 @@
 package com.vitorpamplona.quartz.nip23LongContent.tags
 
 import com.vitorpamplona.quartz.nip01Core.core.has
+import com.vitorpamplona.quartz.utils.TimeUtils
 import com.vitorpamplona.quartz.utils.ensure
 
 class PublishedAtTag {
@@ -31,16 +32,7 @@ class PublishedAtTag {
             ensure(tag.has(1)) { return null }
             ensure(tag[0] == TAG_NAME) { return null }
             ensure(tag[1].isNotEmpty()) { return null }
-            val timestamp = tag[1].toLongOrNull()
-
-            if (timestamp == null) return null
-
-            if (timestamp > 3_000_000_000) {
-                // like in milliseconds
-                return timestamp / 1000
-            } else {
-                return timestamp
-            }
+            return tag[1].toLongOrNull()?.let(TimeUtils::toUnixSeconds)
         }
 
         fun assemble(timestamp: Long) = arrayOf(TAG_NAME, timestamp.toString())

@@ -21,6 +21,7 @@
 package com.vitorpamplona.quartz.nip75ZapGoals.tags
 
 import com.vitorpamplona.quartz.nip01Core.core.has
+import com.vitorpamplona.quartz.utils.TimeUtils
 import com.vitorpamplona.quartz.utils.ensure
 
 class ClosedAtTag {
@@ -31,7 +32,7 @@ class ClosedAtTag {
             ensure(tag.has(1)) { return null }
             ensure(tag[0] == TAG_NAME) { return null }
             ensure(tag[1].isNotEmpty()) { return null }
-            return tag[1].toLongOrNull()
+            return tag[1].toLongOrNull()?.let(TimeUtils::toUnixSeconds)
         }
 
         fun assemble(timestamp: Long) = arrayOf(TAG_NAME, timestamp.toString())
