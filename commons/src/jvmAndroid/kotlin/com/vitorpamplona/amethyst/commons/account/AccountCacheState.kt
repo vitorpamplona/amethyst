@@ -20,9 +20,7 @@
  */
 package com.vitorpamplona.amethyst.commons.account
 
-import com.vitorpamplona.amethyst.commons.connectedApps.nip46.InMemoryNip46ClientStore
 import com.vitorpamplona.amethyst.commons.connectedApps.nip46.Nip46ClientStore
-import com.vitorpamplona.amethyst.commons.connectedApps.signers.InMemoryNostrSignerPermissionStore
 import com.vitorpamplona.amethyst.commons.connectedApps.signers.NostrSignerPermissionStore
 import com.vitorpamplona.amethyst.commons.cordn.CordnBlobCipher
 import com.vitorpamplona.amethyst.commons.marmot.EncryptedKeyPackageBundleStore
@@ -75,6 +73,12 @@ import okio.Path.Companion.toOkioPath
 import java.io.File
 import java.util.concurrent.ConcurrentHashMap
 
+/**
+ * Builds and holds the logged-in [Account]s. Each app passes its platform pieces in, and none of
+ * them has a default: a feature that needs a new piece fails to compile in every app until that
+ * app supplies it, or passes `null` (or a no-op) to say it goes without. A default here let the
+ * desktop app ship without a Web of Trust download and without Cordn storage, unnoticed.
+ */
 class AccountCacheState(
     val geolocationFlow: () -> StateFlow<LocationResult>,
     val nwcFilterAssembler: () -> NWCPaymentFilterAssembler,
@@ -82,16 +86,16 @@ class AccountCacheState(
     val okHttpClientForMoney: (String) -> OkHttpClient,
     /**
      * The signer for an account whose key lives in a signer app ([AccountSettings.externalSignerPackageName]):
-     * Android's NIP-55 apps. Null where the platform has none, which leaves such an account read-only.
+     * Android's NIP-55 apps. Returns null where the platform has none, which leaves such an account read-only.
      */
-    val externalSignerFactory: (pubKey: HexKey, packageName: String) -> NostrSigner? = { _, _ -> null },
+    val externalSignerFactory: (pubKey: HexKey, packageName: String) -> NostrSigner?,
     /** Builds the raw-QUIC transport for Marmot agent text stream previews. */
     val marmotStreamTransportFactory: (CoroutineScope) -> MarmotQuicTransport,
     /**
      * Encrypts the Cordn group files kept in each account's directory. Null where the platform has no
      * key store for it yet, which keeps Cordn's state in memory only.
      */
-    val cordnBlobCipher: (() -> CordnBlobCipher)? = null,
+    val cordnBlobCipher: (() -> CordnBlobCipher)?,
     val otsResolverBuilder: () -> OtsResolver,
     val cache: LocalCache,
     val client: INostrClient,
@@ -107,30 +111,31 @@ class AccountCacheState(
     val nip46Consent: Nip46ConsentPrompter,
     /** Builds the store for one account's geohash-chat identity, keyed by its pubkey. */
     val geohashIdentityStore: (HexKey) -> GeohashIdentityStore,
-    val rootFilesDir: () -> File = { File("") },
-    val powQueue: () -> PoWPublishQueue? = { null },
-    /** Optional resource-ledger wrapper applied to every account signer (see MeteringNostrSigner). */
-    val meterSigner: (NostrSigner) -> NostrSigner = { it },
+    val rootFilesDir: () -> File,
+    val powQueue: () -> PoWPublishQueue?,
+    /** Resource-ledger wrapper applied to every account signer (see MeteringNostrSigner); `{ it }` for none. */
+    val meterSigner: (NostrSigner) -> NostrSigner,
     /** App-global Connected-Apps signer permission store (shared with napplets), gating the NIP-46 bunker. */
-    val signerPermissionStore: NostrSignerPermissionStore = InMemoryNostrSignerPermissionStore(),
+    val signerPermissionStore: NostrSignerPermissionStore,
     /** App-global store of connected NIP-46 client display + relay info. */
-    val nip46ClientStore: Nip46ClientStore = InMemoryNip46ClientStore(),
+    val nip46ClientStore: Nip46ClientStore,
     /**
      * Starts per-account persistence of the Buzz client-side bookkeeping that has no Nostr event to
      * rebuild from — the joined workspaces and the starred channels (restore now, mirror later
      * changes). A lambda because those stores need an Android `Context` and this class deliberately
-     * takes none; no-op by default so tests and non-Android hosts build an Account without it.
+     * takes none.
      */
-    val startBuzzPersistence: (Account) -> Unit = { },
+    val startBuzzPersistence: (Account) -> Unit,
     /** Who this app says it is when it asks a NIP-46 remote signer to sign (NIP-46 client metadata). */
-    val remoteSignerMetadata: BunkerClientMetadata? = null,
+    val remoteSignerMetadata: BunkerClientMetadata?,
     /**
      * Builds a throwaway relay client for each Web of Trust sync, apart from [client]: the shared
      * client files everything into [cache], and a sync downloads hundreds of thousands of cards.
+     * Null turns the Web of Trust download off: the screen then never leaves "not downloaded".
      */
-    val trustNetworkClientBuilder: (() -> INostrClient)? = null,
+    val trustNetworkClientBuilder: (() -> INostrClient)?,
     /** False on a metered network: background Web of Trust downloads then wait. */
-    val canDownloadLargeFiles: () -> Boolean = { true },
+    val canDownloadLargeFiles: () -> Boolean,
 ) : AccountCache {
     val accounts = MutableStateFlow<Map<HexKey, Account>>(emptyMap())
 
