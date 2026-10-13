@@ -227,9 +227,9 @@ jobs:
           fi
           echo "notarization ticket stapled OK"
 
-      # jpackage pins libicu to the build host's version (libicu74 on
-      # ubuntu-24.04). Rewrite the .deb so it installs across Debian/Ubuntu.
-      - name: Relax libicu dependency in .deb
+      # jpackage pins libicu and the t64-renamed libs (libasound2t64, ...) to the
+      # build host (ubuntu-24.04). Rewrite the .deb so it installs across Debian/Ubuntu.
+      - name: Relax build-host-pinned deps in .deb
         if: matrix.family == 'linux'
         run: |
           set -euo pipefail
@@ -261,14 +261,15 @@ jobs:
           chmod +x scripts/add-deb-gstreamer-deps.sh
           scripts/add-deb-gstreamer-deps.sh desktopApp/build/compose/binaries/main-release/deb/*.deb
 
-      # Docks and app switchers match the window's WM_CLASS ("Amethyst") to the desktop
-      # entry's StartupWMClass, which jpackage's entry lacks.
-      - name: Add StartupWMClass to .deb
+      # Ships the menu entry in /usr/share/applications with StartupWMClass (docks match the
+      # window's WM_CLASS to it) instead of registering it from postinst with xdg-desktop-menu,
+      # which fails on systems without menu directories. Also sets the .deb's compression (xz).
+      - name: Fix desktop entry in .deb
         if: matrix.family == 'linux'
         run: |
           set -euo pipefail
-          chmod +x scripts/add-deb-wm-class.sh
-          scripts/add-deb-wm-class.sh desktopApp/build/compose/binaries/main-release/deb/*.deb
+          chmod +x scripts/fix-deb-desktop-entry.sh
+          scripts/fix-deb-desktop-entry.sh desktopApp/build/compose/binaries/main-release/deb/*.deb
 
       - name: Build portable archives (windows + linux-portable)
         if: matrix.family == 'windows' || matrix.family == 'linux-portable'
@@ -582,9 +583,9 @@ jobs:
             exit 1
           fi
 
-      # jpackage pins libicu to the build host's version (libicu74 on
-      # ubuntu-24.04). Rewrite the .deb so it installs across Debian/Ubuntu.
-      - name: Relax libicu dependency in .deb
+      # jpackage pins libicu and the t64-renamed libs (libasound2t64, ...) to the
+      # build host (ubuntu-24.04). Rewrite the .deb so it installs across Debian/Ubuntu.
+      - name: Relax build-host-pinned deps in .deb
         if: matrix.family == 'linux'
         run: |
           set -euo pipefail
@@ -848,9 +849,9 @@ jobs:
             exit 1
           fi
 
-      # jpackage pins libicu to the build host's version (libicu74 on
-      # ubuntu-24.04). Rewrite the .deb so it installs across Debian/Ubuntu.
-      - name: Relax libicu dependency in .deb
+      # jpackage pins libicu and the t64-renamed libs (libasound2t64, ...) to the
+      # build host (ubuntu-24.04). Rewrite the .deb so it installs across Debian/Ubuntu.
+      - name: Relax build-host-pinned deps in .deb
         if: matrix.family == 'linux'
         run: |
           set -euo pipefail

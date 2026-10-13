@@ -225,6 +225,44 @@ class NegentropyDownloadTest {
             assertEquals(delivered.size, delivered.toSet().size, "no event delivered twice: $delivered")
         }
 
+    /**
+     * search.brainstorm.world reads only with a NIP-50 token (`include:spam`) and refuses a
+     * `REQ` without it `auth-required:`. The reconcile carried the token, so every id it named
+     * must be asked for with it too: without it the sync named 2 needs and downloaded none.
+     */
+    @Test
+    fun theSearchTokenOfTheReconciledFilterGoesOutWithTheIds() =
+        runBlocking {
+            val result = sync(30, Filter(kinds = listOf(1), search = SEARCH_TOKEN)) { RequiresSearchToken() }
+
+            assertEquals(30, result.needCount)
+            assertEquals(30, result.downloaded, "every id is asked for with the token the relay demands")
+        }
+
+    /**
+     * A search with words is applied differently to an ids `REQ` by some relays, or refused
+     * there outright, so the ids go out without it, as before tokens were carried: a relay that
+     * reconciles `hello` but rejects `search` on a `REQ` still serves every id.
+     */
+    @Test
+    fun aSearchWithWordsIsLeftOffTheIdsReq() =
+        runBlocking {
+            val result = sync(30, Filter(kinds = listOf(1), search = "hello")) { RefusesSearchOnReq() }
+
+            assertEquals(30, result.needCount)
+            assertEquals(30, result.downloaded, "the ids are asked for without the search the relay refuses on a REQ")
+        }
+
+    /** A search with words on a token relay: refused without its token, the ids are asked again with it. */
+    @Test
+    fun aRefusedIdsReqIsAskedAgainWithTheSearch() =
+        runBlocking {
+            val result = sync(30, Filter(kinds = listOf(1), search = "hello $SEARCH_TOKEN")) { RequiresSearchToken(contains = true) }
+
+            assertEquals(30, result.needCount)
+            assertEquals(30, result.downloaded, "re-asked with the search after the auth-required refusal")
+        }
+
     @Test
     fun eventsTheRelaySendsUnaskedAreNotCollected() =
         runBlocking {
@@ -358,6 +396,38 @@ class NegentropyDownloadTest {
         override fun accept(cmd: NegOpenCmd): PolicyResult<NegOpenCmd> = PolicyResult.Accepted(NegOpenCmd(cmd.subId, cmd.filter.copy(until = null, limit = n), cmd.initialMessage))
     }
 
+    /**
+     * Answers only reads that carry [SEARCH_TOKEN] (as the whole search, or one of its words
+     * when [contains]), as search.brainstorm.world does, then serves them as plain filters: the
+     * token is an access switch there, not a text query.
+     */
+    private class RequiresSearchToken(
+        private val contains: Boolean = false,
+    ) : PassThroughPolicy() {
+        private fun hasToken(search: String?) = if (contains) search?.split(' ')?.contains(SEARCH_TOKEN) == true else search == SEARCH_TOKEN
+
+        override fun accept(cmd: NegOpenCmd): PolicyResult<NegOpenCmd> =
+            if (hasToken(cmd.filter.search)) {
+                PolicyResult.Accepted(NegOpenCmd(cmd.subId, cmd.filter.copy(search = null), cmd.initialMessage))
+            } else {
+                PolicyResult.Rejected(AUTH_REQUIRED)
+            }
+
+        override fun accept(cmd: ReqCmd): PolicyResult<ReqCmd> =
+            if (cmd.filters.all { hasToken(it.search) }) {
+                PolicyResult.Accepted(ReqCmd(cmd.subId, cmd.filters.map { it.copy(search = null) }))
+            } else {
+                PolicyResult.Rejected(AUTH_REQUIRED)
+            }
+    }
+
+    /** Reconciles a search (as plain recall, here) but refuses `search` on a `REQ`. */
+    private class RefusesSearchOnReq : PassThroughPolicy() {
+        override fun accept(cmd: NegOpenCmd): PolicyResult<NegOpenCmd> = PolicyResult.Accepted(NegOpenCmd(cmd.subId, cmd.filter.copy(search = null), cmd.initialMessage))
+
+        override fun accept(cmd: ReqCmd): PolicyResult<ReqCmd> = if (cmd.filters.any { it.search != null }) PolicyResult.Rejected("unsupported: search") else PolicyResult.Accepted(cmd)
+    }
+
     /** Refuses a `REQ` filter that names ids and nothing else, as conduit does. */
     private class RefusesBareIds : PassThroughPolicy() {
         override fun accept(cmd: ReqCmd): PolicyResult<ReqCmd> =
@@ -366,5 +436,10 @@ class NegentropyDownloadTest {
             } else {
                 PolicyResult.Accepted(cmd)
             }
+    }
+
+    private companion object {
+        const val SEARCH_TOKEN = "include:spam"
+        const val AUTH_REQUIRED = "auth-required: this relay answers through a web of trust"
     }
 }

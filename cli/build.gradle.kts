@@ -1,4 +1,8 @@
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
+import org.gradle.internal.os.OperatingSystem
+import java.util.zip.ZipEntry
+import java.util.zip.ZipFile
+import java.util.zip.ZipOutputStream
 
 plugins {
     alias(libs.plugins.jetbrainsKotlinJvm)
@@ -217,16 +221,35 @@ val mainJarName: String = "cli-$appVersion.jar"
 val mainClassName: String = "com.vitorpamplona.amethyst.cli.MainKt"
 
 // Minimal JDK 21 module set for amy. Keep this tight — every module adds
-// megabytes to the bundle. If a transitive dep needs more, `jlink` fails loudly
-// at build time with "module X not found".
+// megabytes to the bundle. jlink does NOT notice a missing module: amy's jars
+// are not modular, so a class from an absent module only fails at run time
+// (NoClassDefFoundError). `verifyAmyRuntimeModules` below runs jdeps over the
+// shipped jars and fails the image build instead. Modules jdeps cannot see
+// (loaded by name or as a service) are listed here by hand: java.naming,
+// java.net.http, java.sql (the SQLite JDBC driver), jdk.crypto.ec (TLS).
 val jlinkModules: String = listOf(
     "java.base",
+    // AWT/ImageIO: image re-encoding and metadata for uploads (dm send-file).
+    "java.desktop",
+    // kotlinx-coroutines' debug agent (AgentPremain); tiny, and keeps the check exact.
+    "java.instrument",
     "java.logging",
+    // ManagementFactory: Context sizes its socket pool from the fd limit.
+    "java.management",
     "java.naming",
     "java.net.http",
+    // java.util.prefs: PreferencesIndexRelays, built by every Context.
+    "java.prefs",
     "java.sql",
     "java.xml",
     "jdk.crypto.ec",
+    // com.sun.net.httpserver: StaticSiteServe (nsite/napplet serve).
+    "jdk.httpserver",
+    // UnixOperatingSystemMXBean: the fd limit itself.
+    "jdk.management",
+    // dbus-java, the Linux Secret Service keyring: unix-socket options and SASL auth.
+    "jdk.net",
+    "jdk.security.auth",
     "jdk.unsupported",
 ).joinToString(",")
 
@@ -234,7 +257,7 @@ fun javaToolBin(name: String): Provider<String> =
     javaToolchains.launcherFor {
         languageVersion.set(JavaLanguageVersion.of(21))
     }.map {
-        val exe = if (org.gradle.internal.os.OperatingSystem.current().isWindows) "$name.exe" else name
+        val exe = if (OperatingSystem.current().isWindows) "$name.exe" else name
         it.metadata.installationPath.file("bin/$exe").asFile.absolutePath
     }
 
@@ -271,6 +294,92 @@ val jlinkRuntime =
         }
     }
 
+/** [jar] itself, or a copy in [dir] without its module-info.class entries when it has any. */
+fun withoutModuleInfo(
+    jar: File,
+    dir: File,
+): File {
+    ZipFile(jar).use { zip ->
+        if (zip.entries().asSequence().none { it.name.endsWith("module-info.class") }) return jar
+        val copy = File(dir, jar.name)
+        ZipOutputStream(copy.outputStream()).use { out ->
+            // Some merged jars hold an entry name twice; a zip stream refuses the second.
+            val written = HashSet<String>()
+            for (entry in zip.entries()) {
+                if (entry.name.endsWith("module-info.class") || !written.add(entry.name)) continue
+                out.putNextEntry(ZipEntry(entry.name))
+                zip.getInputStream(entry).use { it.copyTo(out) }
+                out.closeEntry()
+            }
+        }
+        return copy
+    }
+}
+
+// jlink cannot tell that a non-modular jar needs a module it was not given, so a
+// gap only shows when a command reaches the missing class: v1.18.0 shipped without
+// java.management and every command that opened a Context died with
+// NoClassDefFoundError. This runs jdeps over every jar the image ships and fails
+// when one needs a module the jlink'd runtime does not contain.
+val verifyAmyRuntimeModules =
+    tasks.register("verifyAmyRuntimeModules") {
+        group = "verification"
+        description = "Fail if a jar shipped with amy needs a JDK module its jlink'd runtime lacks."
+
+        dependsOn(tasks.named("installDist"), jlinkRuntime)
+        inputs.dir(installLibDir)
+        inputs.dir(jlinkRuntimeDir)
+        // A marker, so an unchanged lib/ and runtime skip the jdeps run as UP-TO-DATE.
+        val marker = layout.buildDirectory.file("verifyAmyRuntimeModules/ok")
+        outputs.file(marker)
+
+        val jdepsBin = javaToolBin("jdeps")
+        val libDir = installLibDir
+        val runtimeDir = jlinkRuntimeDir
+        val javaExe = if (OperatingSystem.current().isWindows) "java.exe" else "java"
+
+        doLast {
+            val runtimeJava = runtimeDir.get().file("bin/$javaExe").asFile.absolutePath
+            val listModules = ProcessBuilder(runtimeJava, "--list-modules").redirectErrorStream(true).start()
+            val listed = listModules.inputStream.bufferedReader().readLines()
+            // A runtime that cannot start lists nothing, and every module would read as missing.
+            if (listModules.waitFor() != 0) throw GradleException("the jlink'd runtime did not start (`java --list-modules`):\n" + listed.joinToString("\n"))
+            val present = listed.map { it.substringBefore('@').trim() }.toSet()
+
+            // jdeps resolves a jar with a module-info (okhttp3, commons-imaging) as a module
+            // and fails on the first `requires` it cannot find, and a module path doesn't help
+            // because many of the other jars have no valid automatic module name. amy runs
+            // everything from the class path anyway, so analyse copies without module-info:
+            // then one jdeps run over all of them works, instead of one JVM per jar.
+            val scratch = temporaryDir.also { it.deleteRecursively(); it.mkdirs() }
+            val jars = libDir.get().asFile.listFiles { f -> f.extension == "jar" }.orEmpty().sortedBy { it.name }
+            val analysed = jars.map { withoutModuleInfo(it, scratch) }
+            val jdeps =
+                ProcessBuilder(listOf(jdepsBin.get(), "-s", "--ignore-missing-deps", "--multi-release", "21") + analysed.map { it.absolutePath })
+                    .redirectErrorStream(true)
+                    .start()
+            val lines = jdeps.inputStream.bufferedReader().readLines()
+            if (jdeps.waitFor() != 0) throw GradleException("jdeps failed:\n" + lines.joinToString("\n"))
+
+            // `-s` prints one `<jar> -> <module>` line per module each jar uses.
+            val missing = sortedMapOf<String, MutableSet<String>>()
+            for (line in lines) {
+                val jar = line.substringBefore("->", "").trim()
+                val module = line.substringAfter("->", "").trim()
+                if ((module.startsWith("java.") || module.startsWith("jdk.")) && module !in present) {
+                    missing.getOrPut(module) { sortedSetOf() }.add(jar)
+                }
+            }
+            if (missing.isNotEmpty()) {
+                throw GradleException(
+                    "amy's jlink runtime lacks modules its jars use; add them to jlinkModules:\n" +
+                        missing.entries.joinToString("\n") { (module, users) -> "  $module  (used by ${users.joinToString(", ")})" },
+                )
+            }
+            marker.get().asFile.writeText("every JDK module the amy jars use is in the runtime\n")
+        }
+    }
+
 // Flat app-image: bin/amy launcher + lib/*.jar + runtime/ (the jlink'd JRE).
 // Cross-platform — the release workflow archives this on every OS (tar.gz on
 // unix, zip on Windows). We write BOTH a POSIX `amy` shell launcher AND a
@@ -285,7 +394,7 @@ val amyImage =
         group = "distribution"
         description = "Assemble a portable amy app-image (bin/ + lib/ + runtime/)."
 
-        dependsOn(tasks.named("installDist"), jlinkRuntime)
+        dependsOn(tasks.named("installDist"), jlinkRuntime, verifyAmyRuntimeModules)
 
         into(amyImageDir)
 
@@ -347,7 +456,7 @@ fun registerJpackage(
     group = "distribution"
     description = "Run jpackage --type $type for amy."
 
-    dependsOn(tasks.named("installDist"), jlinkRuntime)
+    dependsOn(tasks.named("installDist"), jlinkRuntime, verifyAmyRuntimeModules)
 
     inputs.dir(installLibDir)
     inputs.dir(jlinkRuntimeDir)

@@ -30,6 +30,9 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeout
+import java.util.concurrent.CountDownLatch
+import java.util.concurrent.TimeUnit
+import kotlin.concurrent.thread
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
@@ -147,4 +150,33 @@ class ParallelEventVerifierTest {
                 assertTrue(verifier.verifiedCount == 10L)
             }
         }
+
+    @Test
+    fun cancellingTheScopeReleasesASubmitterBlockedOnAFullBacklog() {
+        // A relay reader thread blocked on a full backlog when the sync is cancelled (the user
+        // switched provider) must not stay blocked: it would hold the thread and the backlog's
+        // events for the rest of the process.
+        val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
+        val drainStarted = CountDownLatch(1)
+        val verifier =
+            ParallelEventVerifier<Unit>(scope = scope, maxBatch = 1, capacity = 1) { _, _ ->
+                // Slow on the first event only: the scope is cancelled meanwhile, and the drain
+                // ends at its next receive, as it does mid-download.
+                if (drainStarted.count > 0) {
+                    drainStarted.countDown()
+                    Thread.sleep(1_000)
+                }
+            }
+        val returned = CountDownLatch(1)
+        val reader =
+            thread {
+                repeat(10) { verifier.submit(signed(it), Unit) }
+                returned.countDown()
+            }
+        assertTrue(drainStarted.await(5, TimeUnit.SECONDS))
+        Thread.sleep(200) // the reader is now blocked on the full channel
+        scope.cancel()
+        assertTrue(returned.await(5, TimeUnit.SECONDS), "the blocked submitter was released")
+        reader.join(1_000)
+    }
 }

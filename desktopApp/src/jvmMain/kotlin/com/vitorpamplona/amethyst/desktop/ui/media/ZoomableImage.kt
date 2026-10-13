@@ -49,7 +49,6 @@ import com.vitorpamplona.amethyst.commons.richtext.isAnimatedGifUrl
 fun ZoomableImage(
     url: String,
     modifier: Modifier = Modifier,
-    onTap: (() -> Unit)? = null,
     onMediaPositioned: ((LayoutCoordinates, aspectRatio: Float?) -> Unit)? = null,
 ) {
     // Where the image's box sits and the loaded image's proportions: a viewer that animates the
@@ -71,18 +70,15 @@ fun ZoomableImage(
         modifier =
             modifier
                 .fillMaxSize()
-                .pointerInput(onTap) {
+                .pointerInput(Unit) {
                     detectTapGestures(
                         onDoubleTap = {
                             scale = 1f
                             offsetX = 0f
                             offsetY = 0f
                         },
-                        onTap = {
-                            // Single tap → caller handles (e.g. copy URL).
-                            // Consumed either way so backdrop dismiss never fires.
-                            onTap?.invoke()
-                        },
+                        // Consumed so a click on the image never reaches the backdrop's dismiss.
+                        onTap = {},
                     )
                 }.pointerInput(Unit) {
                     awaitPointerEventScope {

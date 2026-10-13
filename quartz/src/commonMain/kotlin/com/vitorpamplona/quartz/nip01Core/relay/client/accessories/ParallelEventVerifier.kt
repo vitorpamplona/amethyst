@@ -119,6 +119,11 @@ class ParallelEventVerifier<C>(
                 }
             } catch (_: ClosedReceiveChannelException) {
                 // normal shutdown via close()
+            } finally {
+                // Cancelled (the scope went): a submitter blocked on the full backlog would
+                // otherwise stay blocked for good — closing the channel does not wake a send
+                // already suspended — holding its thread (a relay reader) and the backlog.
+                incoming.cancel()
             }
         }
 
