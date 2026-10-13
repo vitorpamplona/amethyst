@@ -815,6 +815,14 @@ make that work:
   Swing frames with a Compose panel that draws through Swing, with Skiko's CPU
   renderer (`AppWindow.kt`). On X11, macOS and Windows nothing changes.
 
+The title bar on Wayland: where the compositor draws window decorations (KDE,
+sway, labwc, Hyprland, COSMIC, niri) the app uses them, so it gets the same
+title bar as every other app there. GNOME draws none, so JBR draws a GTK title
+bar, which follows the desktop's light/dark setting. That is deliberate: JBR
+has no API to draw into the title bar on Wayland (as the app does on macOS),
+and an app-drawn bar would lose GNOME's window menu and button layout.
+`-Dsun.awt.wl.WindowDecorationStyle=builtin|gtk|server` overrides the choice.
+
 Set `AMETHYST_X11=1` to keep a Wayland session on XWayland (the Flatpak also
 needs `--socket=x11` for that). `./gradlew :desktopApp:run` on a stock JDK runs
 on X11/XWayland; run it on JBR to try the Wayland path.
