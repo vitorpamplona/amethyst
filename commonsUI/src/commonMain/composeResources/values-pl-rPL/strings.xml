@@ -572,6 +572,8 @@
     <string name="pinned_to_top">Przypięte do góry</string>
     <string name="pinned_chat_no_messages_loaded">Nie wczytano ostatnich wiadomości</string>
     <string name="upload_image">Dodaj zdjęcie</string>
+    <string name="upload_media">Wgraj multimedia</string>
+    <string name="video_compression_needs_ffmpeg">Zainstaluj ffmpeg, aby skompresować filmy. Do tego czasu filmy są przesyłane w niezmienionej postaci.</string>
     <string name="upload_file">Prześlij plik</string>
     <string name="take_a_picture">Zrób zdjęcie</string>
     <string name="record_a_video">Nagraj film</string>
@@ -2142,10 +2144,25 @@
     <string name="media_compression_quality_uncompressed">Nieskompresowane</string>
     <string name="media_compression_quality_very_low">Bardzo niska</string>
     <string name="media_compression_quality_very_high">Bardzo wysoka</string>
+    <string name="media_compression_images_up_to">obrazy do %1$d px</string>
+    <string name="media_compression_video_target">%1$s wideo → %2$dp, %3$s Mbps</string>
+    <string name="media_compression_video_target_example">1080p wideo → %1$dp, %2$s Mbps</string>
     <string name="media_compression_preview_compressed">Skompresowane</string>
     <string name="media_compression_preview_original">Oryginał</string>
     <string name="media_compression_preview_tap_original">Kliknij obrazek, aby zobaczyć oryginał</string>
     <string name="media_compression_preview_tap_compressed">Wyświetlanie oryginału. Kliknij, aby zobaczyć skompresowany obraz</string>
+    <string name="media_compression_preview_uncompressed">Wgrywanie oryginalnego pliku, bez kompresji</string>
+    <string name="media_compression_preview_tap_zoom">Kliknij obrazek, aby powiększyć i porównać go z oryginalnym</string>
+    <string name="media_compression_preview_zoom_hint">Ściśnij, przewiń lub dwukrotnie kliknij, aby powiększyć</string>
+    <string name="video_compression_failed_title">Kompresja wideo nie powiodła się</string>
+    <string name="video_compression_failed_message">Zamiast tego przesyłany jest oryginalny plik.</string>
+    <string name="video_compression_failed_message_with_reason">Oryginalny plik jest przesyłany. ffmpeg powiedział: %1$s</string>
+    <string name="video_compression_hevc_unavailable_title">H.265 nie jest dostępny</string>
+    <string name="video_compression_hevc_unavailable_message">ffmpeg nie posiada na tym komputerze działającego kodera HEVC, dlatego film został zakodowany w formacie H.264.</string>
+    <string name="video_compression_hdr_title">Wideo HDR</string>
+    <string name="video_compression_hdr_message">Skompresowane wideo HDR wygląda płasko. Wybierz opcję Nieskompresowane, aby zachować oryginalne kolory.</string>
+    <string name="video_compression_not_smaller_title">Zachowano oryginalne wideo</string>
+    <string name="video_compression_not_smaller_message">Kompresja nie zmniejszyła rozmiaru pliku wideo, dlatego zamieszczamy wersję oryginalną bez metadanych. Jak na swój rozmiar, plik jest już dość kompaktowy.</string>
     <string name="metadata_strip_failed_body">Ten format pliku nie obsługuje usuwania metadanych. Plik może zawierać dane osobowe, takie jak informacje o lokalizacji i urządzeniu. Czy mimo to chcesz go przesłać?</string>
     <string name="metadata_strip_failed_upload">Prześlij mimo wszystko</string>
     <string name="edit_draft">Edytuj wersję roboczą</string>
@@ -4549,12 +4566,46 @@
     <string name="login_nostrconnect_not_supported">To aplikacja, która prosi o nawiązanie połączenia z Twoim podpisywaczem, a nie sposób na zalogowanie się. Najpierw się zaloguj, a potem otwórz ją z poziomu ekranu podpisywacza NIP-46.</string>
     <string name="desktop_key_not_kept_title">Twój klucz nie został zapisany</string>
     <string name="desktop_key_not_kept_description">Ten komputer nie posiada zestawu kluczy, z którego mogłaby skorzystać Amethyst, więc Twój klucz prywatny jest przechowywany tylko do momentu zamknięcia programu Amethyst. Przy następnym uruchomieniu konieczne będzie ponowne zalogowanie się.</string>
+    <string name="key_storage_keyring_mac">pęk kluczy macOS</string>
+    <string name="key_storage_keyring_secret_service">twój pęk kluczy systemowych</string>
+    <string name="key_storage_keyring_windows">Menedżer poświadczeń Windows</string>
+    <string name="key_storage_keyring_kwallet">KWallet</string>
+    <string name="key_storage_status_keyring">Twoje klucze prywatne są przechowywane w %1$s.</string>
+    <string name="key_storage_status_unknown">Ametyst utrzymuje klucze prywatne w Twoim systemowym pierścieniu kluczy i otwiera je po raz pierwszy, gdy potrzebuje klucza.</string>
+    <string name="key_storage_status_unreachable">Amethyst nie mogła otworzyć pliku %1$s. Twoje klucze nadal tam są, ale aplikacja nie może podpisywać, dopóki nie będzie mogła ich odczytać.</string>
+    <string name="key_storage_status_password_locked">Komputer nie posiada systemowego pęku kluczy, więc klucze są przechowywane w pliku chronionym hasłem (NIP-49). Plik ten jest zablokowany.</string>
+    <string name="key_storage_status_password_unlocked">Komputer nie posiada systemowego pęku kluczy, więc klucze są przechowywane w pliku chronionym hasłem (NIP-49).</string>
+    <string name="key_storage_status_password_new">Ten komputer nie posiada systemowego pęku kluczy. Przy utworzeniu pierwszego klucza pojawi się prośba o podanie hasła, które będzie go chronić na tym urządzeniu.</string>
+    <string name="key_storage_status_not_kept">Komputer nie posiada systemowego pęku kluczy, a użytkownik zdecydował się nie przechowywać na nim kluczy. Klucz jest wymagany przy każdym uruchomieniu programu Amethyst.</string>
+    <string name="key_storage_try_again">Spróbuj ponownie</string>
+    <string name="key_storage_unlock">Odblokuj</string>
+    <string name="key_storage_not_now">Nie teraz</string>
+    <string name="key_storage_unreachable_title">Nie można otworzyć Twojego pęku kluczy</string>
+    <string name="key_storage_unreachable_description">Amethyst nie mógł odczytać twoich kluczy z %1$s. Jeśli system poprosi o zgodę, wyraź ją, a następnie spróbuj ponownie.</string>
+    <string name="key_storage_create_password_title">Zabezpiecz swój klucz hasłem</string>
+    <string name="key_storage_create_password_description">Komputer nie posiada pęku kluczy systemowych, z którego mogłaby korzystać aplikacja Amethyst. Wybierz hasło, aby przechowywać swój klucz prywatny w zaszyfrowanym pliku na tym urządzeniu. Będziesz je wpisywać raz przy każdym uruchomieniu aplikacji Amethyst.</string>
+    <string name="key_storage_password">Hasło</string>
+    <string name="key_storage_confirm_password">Potwierdź hasło</string>
+    <string name="key_storage_keep_key">Zatrzymaj mój klucz</string>
+    <string name="key_storage_dont_remember">Nie pamiętaj mojego klucza</string>
+    <string name="key_storage_unlock_title">Odblokuj klucze</string>
+    <string name="key_storage_skip">Pomiń</string>
+    <string name="key_storage_enter_key_title">Wprowadź swój klucz prywatny</string>
+    <string name="key_storage_enter_key_description">To urządzenie nie zachowuje klucza %1$s. Wklej swój nsec, aby podpisywać podczas tej sesji lub pomiń przeglądanie bez podpisywania.</string>
+    <string name="key_storage_wrong_key">Ten klucz nie należy do tego konta.</string>
+    <string name="key_storage_use_key">Użyj klucza</string>
+    <string name="key_storage_remember_key">Zapamiętaj mój klucz na tym urządzeniu</string>
+    <string name="key_storage_login_notice_unreachable">Amethyst nie ma obecnie dostępu do zestawu kluczy systemu, więc klucz użyty do zalogowania się nie zostanie zachowany po zamknięciu aplikacji.</string>
+    <string name="key_storage_login_notice_not_kept">To urządzenie nie przechowuje kluczy: przy każdym uruchomieniu programu Amethyst pojawi się prośba o podanie klucza.</string>
+    <string name="key_storage_login_notice_locked">Twój plik klucza jest zablokowany. Odblokuj go, aby klucz używany do logowania był przechowywany na tym komputerze.</string>
     <string name="desktop_notifications">Powiadomienia z pulpitu</string>
     <string name="desktop_notifications_description">Wyświetlaj wzmianki, odpowiedzi, reakcje, zapy i wiadomości jako powiadomienia systemowe, gdy aplikacja Amethyst działa w tle.</string>
     <string name="desktop_notifications_denied">System zablokował powiadomienia od Amethyst. Zezwól na nie w ustawieniach systemu.</string>
     <string name="desktop_notifications_preview">Pokaż tekst wiadomości</string>
     <string name="desktop_notifications_preview_description">W powiadomieniu należy podać treść wypowiedzi, a nie tylko to, kto ją wygłosił.</string>
     <string name="desktop_notification_someone">Ktoś</string>
+    <string name="desktop_notification_zap">⚡ %1$s wysłał Ci zap</string>
+    <string name="desktop_notification_zap_amount">⚡Przyszedł zap od %1$s na %2$s satsoszy</string>
     <string name="desktop_notification_dm">Nowa zaszyfrowana wiadomość</string>
     <string name="desktop_notification_reply">%1$s odpowiedział</string>
     <string name="desktop_notification_mention">%1$s wspomniał o Tobie</string>
@@ -4806,6 +4857,12 @@
     <string name="napplet_op_blossom_list">wykaz plików na serwerze multimediów</string>
     <string name="napplet_op_blossom_get">pobierz plik z serwera multimediów</string>
     <string name="napplet_consent_wants_described">Ta strona chce %1$s.</string>
+    <plurals name="napplet_consent_waiting_long">
+        <item quantity="one">Zapytano minutę temu. Aplikacja mogła przestać czekać.</item>
+        <item quantity="few">Zapytano %1$d minut temu. Aplikacja mogła przestać czekać.</item>
+        <item quantity="many">Zapytano %1$d minut temu. Aplikacja mogła przestać czekać.</item>
+        <item quantity="other">Zapytano %1$d minuty temu. Aplikacja mogła przestać czekać.</item>
+    </plurals>
     <string name="napplet_op_seal_message_to">wyślij prywatną wiadomość do %1$s</string>
     <string name="napplet_op_seal_message">wyślij prywatną wiadomość</string>
     <string name="napplet_consent_seal_unknown">Zaszyfrowana prywatna wiadomość. Ametyst jej nie zaszyfrował, więc nie może pokazać, co jest w środku.</string>
@@ -7059,6 +7116,12 @@
     <string name="wot_copy_action">Kopiuj</string>
     <string name="wot_copy_house">Domyślny widok %1$s</string>
     <string name="wot_copy_loading">Przeglądam ich listę…</string>
+    <plurals name="wot_copy_done">
+        <item quantity="one">Skopiowano tag %1$d. Sprawdź go, i zapisz.</item>
+        <item quantity="few">Skopiowano tagi %1$d. Sprawdź ich, i zapisz.</item>
+        <item quantity="many">Skopiowano tagi %1$d. Sprawdź ich, i zapisz.</item>
+        <item quantity="other">Skopiowano %1$d tagi. Sprawdź ich, i zapisz.</item>
+    </plurals>
     <string name="wot_copy_unknown_user">Nieprawidłowy npub lub adres.</string>
     <string name="wot_copy_no_list">Nie znaleziono dla nich listy dostawców publicznych.</string>
     <string name="wot_copy_no_rank">Lista nie zawiera rankingu dostawców.</string>
@@ -7104,6 +7167,7 @@
         <item quantity="other">%1$d godziny</item>
     </plurals>
     <string name="mostro_escrow">Escrow</string>
+    <string name="mostro_escrow_lightning">Faktura bezgotówkowa</string>
     <string name="mostro_escrow_cashu">Cashu ecash</string>
     <string name="mostro_in_maintenance">W trakcie konserwacji: nie przyjmujemy nowych zamówień</string>
     <!-- Kanban boards (kind 30301) and cards (kind 30302) -->
@@ -7151,10 +7215,17 @@
     </plurals>
     <string name="build_show_report">Pokaż raport</string>
     <string name="build_hide_report">Ukryj raport</string>
+    <string name="pdf_tap_to_load">Kliknij, aby załadować PDF</string>
     <string name="pdf_loading">Wczytywanie…</string>
     <string name="pdf_unable_to_open">Nie można otworzyć pliku PDF</string>
     <string name="pdf_previous_page">Poprzednia strona</string>
     <string name="pdf_next_page">Następna strona</string>
+    <plurals name="pdf_page_count">
+        <item quantity="one">%1$d strona</item>
+        <item quantity="few">%1$d stron</item>
+        <item quantity="many">%1$d stron</item>
+        <item quantity="other">%1$d strony</item>
+    </plurals>
     <string name="relay_latency_title">Czasy reakcji</string>
     <string name="relay_latency_post">Post</string>
     <string name="relay_latency_query">Zapytanie</string>
@@ -7220,6 +7291,18 @@
     <string name="custom_feeds_edit">Edytuj</string>
     <string name="custom_feeds_delete">Usuń</string>
     <string name="custom_feeds_delete_confirm">Usunąć %1$s?</string>
+    <plurals name="custom_feeds_summary_authors">
+        <item quantity="one">%1$d osoba</item>
+        <item quantity="few">%1$d osób</item>
+        <item quantity="many">%1$d osób</item>
+        <item quantity="other">%1$d osoby</item>
+    </plurals>
+    <plurals name="custom_feeds_summary_relays">
+        <item quantity="one">%1$d transmiter</item>
+        <item quantity="few">%1$d transmiterów</item>
+        <item quantity="many">%1$d transmiterów</item>
+        <item quantity="other">%1$d transmitery</item>
+    </plurals>
     <string name="custom_feeds_new_title">Nowy kanał</string>
     <string name="custom_feeds_edit_title">Edytuj kanał</string>
     <string name="custom_feeds_emoji">Emotikon</string>

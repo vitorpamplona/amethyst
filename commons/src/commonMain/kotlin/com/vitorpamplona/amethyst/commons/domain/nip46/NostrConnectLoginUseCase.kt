@@ -30,6 +30,7 @@ import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerInternal
+import com.vitorpamplona.quartz.nip46RemoteSigner.BunkerClientMetadata
 import com.vitorpamplona.quartz.nip46RemoteSigner.BunkerMessage
 import com.vitorpamplona.quartz.nip46RemoteSigner.BunkerRequest
 import com.vitorpamplona.quartz.nip46RemoteSigner.BunkerRequestConnect
@@ -38,6 +39,7 @@ import com.vitorpamplona.quartz.nip46RemoteSigner.BunkerResponseAck
 import com.vitorpamplona.quartz.nip46RemoteSigner.NostrConnectEvent
 import com.vitorpamplona.quartz.nip46RemoteSigner.NostrConnectURI
 import com.vitorpamplona.quartz.nip46RemoteSigner.signer.NostrSignerRemote
+import com.vitorpamplona.quartz.utils.Log
 import com.vitorpamplona.quartz.utils.SecureRandom
 import com.vitorpamplona.quartz.utils.TimeUtils
 import kotlinx.coroutines.channels.Channel
@@ -45,7 +47,14 @@ import kotlinx.coroutines.withTimeoutOrNull
 import kotlin.coroutines.cancellation.CancellationException
 
 object NostrConnectLoginUseCase {
-    const val NOSTRCONNECT_TIMEOUT_MS = 120_000L
+    private const val TAG = "NostrConnectLogin"
+
+    /**
+     * How long the code waits for a signer, from the moment it shows. Five minutes: the user may
+     * first have to clear the signer's queue of other apps' requests and answer whether to
+     * replace an existing connection, and two minutes ran out on that path. Cancel ends it sooner.
+     */
+    const val NOSTRCONNECT_TIMEOUT_MS = 300_000L
 
     data class NostrConnectUri(
         val uri: String,
@@ -64,7 +73,7 @@ object NostrConnectLoginUseCase {
     fun generateUri(
         ephemeralKeyPair: KeyPair,
         relays: List<String>,
-        appName: String,
+        clientMetadata: BunkerClientMetadata?,
     ): NostrConnectUri {
         val ephemeralSigner = NostrSignerInternal(ephemeralKeyPair)
         val ephemeralPubKey = ephemeralKeyPair.pubKey.toHexKey()
@@ -73,7 +82,16 @@ object NostrConnectLoginUseCase {
         // Normalized, so the pool keys these relays the way it keys them everywhere else, and
         // percent-encoded, as NIP-46 writes them.
         val normalizedRelays = relays.mapNotNull { RelayUrlNormalizer.normalizeOrNull(it) }.toSet()
-        val uri = NostrConnectURI.buildNostrConnect(ephemeralPubKey, normalizedRelays, secret, name = appName)
+        // The signer's approval screen and its list of connected apps show this name and icon.
+        val uri =
+            NostrConnectURI.buildNostrConnect(
+                clientPubKey = ephemeralPubKey,
+                relays = normalizedRelays,
+                secret = secret,
+                name = clientMetadata?.name,
+                url = clientMetadata?.url,
+                image = clientMetadata?.image,
+            )
 
         return NostrConnectUri(
             uri = uri,
@@ -109,6 +127,7 @@ object NostrConnectLoginUseCase {
                 client = client,
             )
         remoteSigner.openSubscription()
+        Log.d(TAG) { "Signer ${connectData.signerPubkey.take(8)} answered the code; asking it for the account's key" }
 
         try {
             return BunkerLoginResult(remoteSigner, remoteSigner.getPublicKey())
@@ -180,13 +199,17 @@ object NostrConnectLoginUseCase {
                 throw e
             } catch (e: Exception) {
                 // Not encrypted to this code, or not NIP-46.
+                Log.d(TAG) { "Ignored an event for the code that is not a NIP-46 message: ${e::class.simpleName}" }
                 return null
             }
 
         return when (message) {
             is BunkerRequest -> {
                 if (message.method != BunkerRequestConnect.METHOD_NAME) return null
-                if (message.params.getOrNull(1) != expectedSecret) return null
+                if (message.params.getOrNull(1) != expectedSecret) {
+                    Log.d(TAG) { "Ignored a connect request for the code without its secret" }
+                    return null
+                }
                 val userPubkey = message.params.getOrNull(0) ?: return null
                 ConnectRequestData(
                     requestId = message.id,
@@ -198,7 +221,10 @@ object NostrConnectLoginUseCase {
             is BunkerResponse -> {
                 // A refusal carries no secret to check; it only ends this attempt.
                 if (message.error != null) throw Exception("Signer rejected connection: ${message.error}")
-                if (message.result != expectedSecret) return null
+                if (message.result != expectedSecret) {
+                    Log.d(TAG) { "Ignored a response for the code without its secret" }
+                    return null
+                }
                 // The account's key comes from get_public_key once connected.
                 ConnectRequestData(
                     requestId = null,

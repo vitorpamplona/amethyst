@@ -24,6 +24,7 @@ import com.vitorpamplona.amethyst.commons.keystorage.KeyStorageController
 import com.vitorpamplona.amethyst.commons.keystorage.KeyStoragePrompts
 import com.vitorpamplona.amethyst.commons.keystorage.KeyStorageStatus
 import com.vitorpamplona.amethyst.commons.keystorage.SecureKeyStorage
+import com.vitorpamplona.amethyst.commons.model.navigation.Route
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
@@ -43,15 +44,15 @@ class DesktopKeyStorage(
     override val prompts: KeyStoragePrompts,
     private val scope: CoroutineScope,
     private val keepDeclinedKeys: suspend () -> Unit = {},
-    private val reopen: suspend () -> Unit,
+    private val reopen: suspend (returnTo: Route?) -> Unit,
 ) : KeyStorageController {
     override val status: StateFlow<KeyStorageStatus> = storage.status
 
-    override suspend fun retry() {
+    override suspend fun retry(returnTo: Route?) {
         scope
             .launch {
                 storage.resetKeyring()
-                reopen()
+                reopen(returnTo)
             }.join()
     }
 
@@ -64,11 +65,11 @@ class DesktopKeyStorage(
             }.join()
     }
 
-    override suspend fun unlock() {
+    override suspend fun unlock(returnTo: Route?) {
         scope
             .launch {
                 storage.unlockPasswordFile()
-                reopen()
+                reopen(returnTo)
             }.join()
     }
 }

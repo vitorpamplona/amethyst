@@ -320,7 +320,6 @@ class LoginViewModel(
                 try {
                     accountSessionManager.loginWithNostrConnect(
                         relays = relays,
-                        appName = NOSTR_CONNECT_APP_NAME,
                         transientAccount = isTemporary,
                         // A relay change may have replaced this attempt before its code was ready.
                         onUri = { if (nostrConnectJob === thisJob) nostrConnectUri = it },
@@ -378,9 +377,6 @@ class LoginViewModel(
          */
         val DEFAULT_NOSTR_CONNECT_RELAYS: ImmutableList<String> =
             persistentListOf("wss://relay.nip46.com", "wss://nrs.primal.net", "wss://bucket.coracle.social")
-
-        // URL-encoded: it rides in the nostrconnect:// query string.
-        private const val NOSTR_CONNECT_APP_NAME = "Amethyst"
 
         // version + log_n + salt(16) + nonce(24) + key security + ciphertext(48), per NIP-49.
         private const val NCRYPTSEC_PAYLOAD_SIZE = 91
