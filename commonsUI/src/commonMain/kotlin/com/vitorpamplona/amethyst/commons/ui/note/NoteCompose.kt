@@ -198,6 +198,7 @@ import com.vitorpamplona.amethyst.commons.ui.note.types.RenderGeocacheFoundLog
 import com.vitorpamplona.amethyst.commons.ui.note.types.RenderGitCoverNoteEvent
 import com.vitorpamplona.amethyst.commons.ui.note.types.RenderGitStatusEvent
 import com.vitorpamplona.amethyst.commons.ui.note.types.RenderGoal
+import com.vitorpamplona.amethyst.commons.ui.note.types.RenderGroupMetadata
 import com.vitorpamplona.amethyst.commons.ui.note.types.RenderHighlight
 import com.vitorpamplona.amethyst.commons.ui.note.types.RenderHttpAuth
 import com.vitorpamplona.amethyst.commons.ui.note.types.RenderInteractiveStory
@@ -384,6 +385,7 @@ import com.vitorpamplona.quartz.nip25Reactions.ReactionEvent
 import com.vitorpamplona.quartz.nip28PublicChat.admin.ChannelCreateEvent
 import com.vitorpamplona.quartz.nip28PublicChat.admin.ChannelMetadataEvent
 import com.vitorpamplona.quartz.nip28PublicChat.message.ChannelMessageEvent
+import com.vitorpamplona.quartz.nip29RelayGroups.metadata.GroupMetadataEvent
 import com.vitorpamplona.quartz.nip30CustomEmoji.pack.EmojiPackEvent
 import com.vitorpamplona.quartz.nip34Git.coverNote.GitCoverNoteEvent
 import com.vitorpamplona.quartz.nip34Git.issue.GitIssueEvent
@@ -2091,6 +2093,10 @@ internal fun RenderNoteRow(
             } else {
                 RenderDListItem(baseNote, quotesLeft, backgroundColor, accountViewModel, nav)
             }
+        }
+
+        is GroupMetadataEvent -> {
+            RenderGroupMetadata(baseNote, accountViewModel, nav)
         }
 
         else -> {

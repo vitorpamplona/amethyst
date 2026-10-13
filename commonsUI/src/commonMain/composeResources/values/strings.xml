@@ -7199,4 +7199,6 @@
     <string name="dlist_untitled_item">Untitled %1$s</string>
     <string name="dlist_missing_fields">Missing %1$s, which the list requires</string>
     <string name="dlist_more_values">+%1$d more</string>
+    <string name="relay_group_card_public">Public</string>
+    <string name="relay_group_card_open_join">Anyone can join</string>
 </resources>
