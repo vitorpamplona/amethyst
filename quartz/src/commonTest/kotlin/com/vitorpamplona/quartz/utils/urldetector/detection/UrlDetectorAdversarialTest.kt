@@ -38,8 +38,12 @@ class UrlDetectorAdversarialTest {
     @Test
     fun colonHeavyContentIsNotQuadratic() {
         // Each ':' scanned to the end of the token looking for '@': 160 KB took ~24 s.
+        // The linear version takes well under a second on the JVM, but the iOS test
+        // binary is a debug (unoptimized) Kotlin/Native build: up to 2 s on an M5 Pro
+        // and 3.2 s on the 3-core macos-latest runner. The bound only has to sit clearly
+        // below the quadratic case, so it leaves room for a slow debug build.
         val elapsed = measureTime { UrlDetector("a:".repeat(80_000)).detect() }
-        assertTrue(elapsed.inWholeSeconds < 3, "took $elapsed")
+        assertTrue(elapsed.inWholeSeconds < 15, "took $elapsed")
     }
 
     @Test
