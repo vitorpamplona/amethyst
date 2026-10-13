@@ -51,6 +51,7 @@ import com.vitorpamplona.amethyst.commons.resources.key_storage_save_keys
 import com.vitorpamplona.amethyst.commons.resources.key_storage_try_again
 import com.vitorpamplona.amethyst.commons.resources.key_storage_unlock
 import com.vitorpamplona.amethyst.commons.ui.stringRes
+import com.vitorpamplona.amethyst.commons.ui.theme.CardSurfaces
 import kotlinx.coroutines.launch
 
 /**
@@ -68,7 +69,8 @@ fun KeyStorageStatusCard(modifier: Modifier = Modifier) {
     Surface(
         modifier = modifier.fillMaxWidth(),
         shape = RoundedCornerShape(16.dp),
-        color = MaterialTheme.colorScheme.surfaceContainerHigh,
+        color = CardSurfaces.color,
+        border = CardSurfaces.border,
     ) {
         Column(Modifier.padding(16.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {

@@ -69,6 +69,7 @@ import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.hide_password
 import com.vitorpamplona.amethyst.commons.resources.show_password
 import com.vitorpamplona.amethyst.commons.ui.stringRes
+import com.vitorpamplona.amethyst.commons.ui.theme.CardSurfaces
 
 private val PromptShape = RoundedCornerShape(16.dp)
 
@@ -98,7 +99,8 @@ fun PromptDialog(
     ) {
         Surface(
             shape = RoundedCornerShape(28.dp),
-            color = MaterialTheme.colorScheme.surfaceContainerHigh,
+            color = CardSurfaces.color,
+            border = CardSurfaces.border,
             modifier = Modifier.padding(16.dp).widthIn(max = 400.dp),
         ) {
             Column(
@@ -131,6 +133,7 @@ fun PromptDialog(
                         onClick = onConfirm,
                         enabled = confirmEnabled,
                         shape = PromptShape,
+                        colors = CardSurfaces.mainButtonColors(),
                         modifier = Modifier.fillMaxWidth().height(52.dp),
                     ) {
                         Text(confirmText, style = MaterialTheme.typography.titleSmall)

@@ -106,6 +106,7 @@ import com.vitorpamplona.amethyst.commons.ui.components.util.setText
 import com.vitorpamplona.amethyst.commons.ui.platform.LocalAppPlatform
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.qrcode.QrCodeDrawer
 import com.vitorpamplona.amethyst.commons.ui.stringRes
+import com.vitorpamplona.amethyst.commons.ui.theme.CardSurfaces
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.IO
 import kotlinx.coroutines.launch
@@ -154,7 +155,8 @@ private fun NostrConnectDialog(loginViewModel: LoginViewModel) {
             val qrSize = (maxHeight - DialogChromeHeight).coerceIn(QrMinSize, QrMaxSize)
             Surface(
                 shape = RoundedCornerShape(28.dp),
-                color = MaterialTheme.colorScheme.surfaceContainerHigh,
+                color = CardSurfaces.color,
+                border = CardSurfaces.border,
                 modifier = Modifier.padding(16.dp).widthIn(max = 400.dp),
             ) {
                 Column(

@@ -134,6 +134,7 @@ import com.vitorpamplona.amethyst.commons.ui.privacylock.rememberDeviceAuthentic
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.qrcode.BackButton
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.qrcode.QrCodeDrawer
 import com.vitorpamplona.amethyst.commons.ui.stringRes
+import com.vitorpamplona.amethyst.commons.ui.theme.CardSurfaces
 import com.vitorpamplona.amethyst.commons.ui.theme.ThemeComparisonRow
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.amethyst.commons.viewmodels.mockAccountViewModel
@@ -292,7 +293,8 @@ private fun SecretKeyCard(
     Surface(
         modifier = Modifier.fillMaxWidth(),
         shape = CardShape,
-        color = MaterialTheme.colorScheme.surfaceContainerHigh,
+        color = CardSurfaces.color,
+        border = CardSurfaces.border,
     ) {
         Column(Modifier.padding(start = 16.dp, end = 8.dp, top = 8.dp, bottom = 16.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
@@ -311,7 +313,7 @@ private fun SecretKeyCard(
                         Modifier
                             .fillMaxWidth()
                             .clip(RoundedCornerShape(12.dp))
-                            .background(MaterialTheme.colorScheme.surface)
+                            .background(CardSurfaces.well)
                             .clickable(enabled = !revealed, onClick = reveal)
                             .padding(horizontal = 12.dp, vertical = 16.dp),
                     contentAlignment = Alignment.Center,
@@ -446,7 +448,8 @@ private fun EncryptedKeyCard(
     Surface(
         modifier = Modifier.fillMaxWidth(),
         shape = CardShape,
-        color = MaterialTheme.colorScheme.surfaceContainerHigh,
+        color = CardSurfaces.color,
+        border = CardSurfaces.border,
     ) {
         Column {
             Row(
@@ -582,7 +585,7 @@ private fun EncryptedKeyCard(
                                 Modifier
                                     .fillMaxWidth()
                                     .clip(RoundedCornerShape(12.dp))
-                                    .background(MaterialTheme.colorScheme.surface)
+                                    .background(CardSurfaces.well)
                                     .padding(12.dp),
                         )
 
