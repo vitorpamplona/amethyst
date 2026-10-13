@@ -25,6 +25,7 @@ import com.vitorpamplona.amethyst.commons.defaults.DefaultSearchRelayList
 import com.vitorpamplona.amethyst.commons.model.User
 import com.vitorpamplona.amethyst.commons.model.cache.ICacheProvider
 import com.vitorpamplona.amethyst.commons.relayClient.eoseManagers.BaseEoseManager
+import com.vitorpamplona.amethyst.commons.relayClient.event.loaders.forEachChunk
 import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.ExplainedFilter
 import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.SubPurpose
 import com.vitorpamplona.amethyst.commons.relayClient.user.UserFinderQueryState
@@ -53,6 +54,9 @@ class UserOutboxFinderSubAssembler(
     /**
      * This assembler saves the EOSE per user key. That EOSE includes their metadata, etc
      * and reports, but only from trusted accounts (follows of all logged in users).
+     *
+     * Fitted to the users still missing a relay list on every pass ([EOSEAccountFast.fitTo]): a feed
+     * hands over whole lists (see [UserFinderQueryState.isFeedAuthor]), not just the users on screen.
      */
     var hasTried: EOSEAccountFast<User> = EOSEAccountFast(200)
 
@@ -98,6 +102,8 @@ class UserOutboxFinderSubAssembler(
             }
         }
 
+        hasTried.fitTo(noOutboxList.size)
+
         if (noOutboxList.isEmpty()) return null
 
         val accounts = keys.mapTo(mutableSetOf()) { it.account }
@@ -142,24 +148,25 @@ class UserOutboxFinderSubAssembler(
                 hasTried,
             )
 
-        val activeFilters =
-            perRelayKeysBoth.mapNotNull {
-                val sortedUsers = it.value.sorted()
-                if (sortedUsers.isNotEmpty()) {
+        // Chunked like the metadata watcher: a feed hands over whole lists, and a relay that clamps
+        // `limit` answers only part of an oversized batch, silently.
+        val activeFilters = mutableListOf<RelayBasedFilter>()
+        perRelayKeysBoth.forEach { (relay, pubkeys) ->
+            forEachChunk(pubkeys.sorted()) { chunk ->
+                activeFilters.add(
                     RelayBasedFilter(
-                        relay = it.key,
+                        relay = relay,
                         filter =
                             ExplainedFilter(
                                 kinds = relayListKinds,
-                                authors = sortedUsers,
+                                authors = chunk,
                                 purpose = SubPurpose.RELAY_LISTS,
                                 accountPubKeys = listOfNotNull(soleAccountPubKey),
                             ),
-                    )
-                } else {
-                    null
-                }
+                    ),
+                )
             }
+        }
 
         // Users that pickRelaysToLoadUsers could not place anywhere this pass:
         // every candidate relay tier (outbox/hints/index/search/connected/common)
@@ -170,9 +177,14 @@ class UserOutboxFinderSubAssembler(
                 .asSequence()
                 .flatten()
                 .toSet()
+        //
+        // Only for users on screen: a feed's authors are dropped after one round instead. A list can
+        // hold thousands of members that never published a relay list (a mute list of spam bots),
+        // and keeping all of them in a standing REQ on every default relay costs more than it finds.
+        val onScreenUsers = keys.mapNotNullTo(mutableSetOf()) { key -> key.user.takeUnless { key.isFeedAuthor } }
         val abandonedPubkeys =
             noOutboxList.mapNotNullTo(mutableSetOf<HexKey>()) { user ->
-                user.pubkeyHex.takeIf { it !in placedPubkeys }
+                user.pubkeyHex.takeIf { it !in placedPubkeys && user in onScreenUsers }
             }
 
         if (abandonedPubkeys.isEmpty()) return activeFilters
@@ -180,21 +192,24 @@ class UserOutboxFinderSubAssembler(
         val sortedAbandoned = abandonedPubkeys.sorted()
         val fallbackRelays =
             (DefaultIndexerRelayList + DefaultSearchRelayList) - failureTracker.cannotConnectRelays
-        val fallbackFilters =
-            fallbackRelays.map { relay ->
-                RelayBasedFilter(
-                    relay = relay,
-                    filter =
-                        ExplainedFilter(
-                            kinds = relayListKinds,
-                            authors = sortedAbandoned,
-                            purpose = SubPurpose.RELAY_LISTS,
-                            purposeDetail = "outbox discovery for users whose relay list we lost",
-                            accountPubKeys = listOfNotNull(soleAccountPubKey),
-                        ),
+        fallbackRelays.forEach { relay ->
+            forEachChunk(sortedAbandoned) { chunk ->
+                activeFilters.add(
+                    RelayBasedFilter(
+                        relay = relay,
+                        filter =
+                            ExplainedFilter(
+                                kinds = relayListKinds,
+                                authors = chunk,
+                                purpose = SubPurpose.RELAY_LISTS,
+                                purposeDetail = "outbox discovery for users whose relay list we lost",
+                                accountPubKeys = listOfNotNull(soleAccountPubKey),
+                            ),
+                    ),
                 )
             }
+        }
 
-        return activeFilters + fallbackFilters
+        return activeFilters
     }
 }
