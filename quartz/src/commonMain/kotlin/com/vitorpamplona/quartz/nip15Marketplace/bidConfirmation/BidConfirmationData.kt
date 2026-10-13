@@ -21,14 +21,35 @@
 package com.vitorpamplona.quartz.nip15Marketplace.bidConfirmation
 
 import androidx.compose.runtime.Immutable
+import com.vitorpamplona.quartz.nip15Marketplace.Nip15Json
+import com.vitorpamplona.quartz.nip15Marketplace.textOrNull
+import com.vitorpamplona.quartz.nip15Marketplace.wholeNumberOrNull
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 
+/**
+ * The JSON body of a NIP-15 bid confirmation (kind 1022): the merchant's [status] for a bid
+ * (`accepted`, `rejected`, `pending` or `winner`), an optional [message], and the seconds the
+ * auction is extended by ([durationExtended]).
+ */
 @Immutable
 @Serializable
 data class BidConfirmationData(
-    val status: String,
+    val status: String? = null,
     val message: String? = null,
-    @SerialName("duration_extension")
-    val durationExtension: Long? = null,
-)
+    @SerialName("duration_extended")
+    val durationExtended: Long? = null,
+) {
+    companion object {
+        /** The body of [content], or null when it is not a JSON object. Never throws. */
+        fun parse(content: String): BidConfirmationData? {
+            val json = Nip15Json.parseObject(content) ?: return null
+            return BidConfirmationData(
+                status = json.textOrNull("status")?.lowercase(),
+                message = json.textOrNull("message"),
+                // NIP-15 names it `duration_extended`; earlier Quartz wrote `duration_extension`.
+                durationExtended = json.wholeNumberOrNull("duration_extended") ?: json.wholeNumberOrNull("duration_extension"),
+            )
+        }
+    }
+}

@@ -111,7 +111,7 @@ Separator legend: **NL** = `joinToString("\n")`, **SP** = `joinToString(" ")`.
 | 30017 | StallEvent | nip15Marketplace/stall | `stallData()?.let { listOfNotNull(it.name, it.description).joinToString("\n") } ?: ""` |
 | 30018 | ProductEvent | nip15Marketplace/product | `productData()?.let { (listOfNotNull(it.name, it.description) + categories()).joinToString("\n") } ?: ""` |
 | 30019 | MarketplaceEvent | nip15Marketplace/marketplace | `marketplaceData()?.let { listOfNotNull(it.name, it.about).joinToString("\n") } ?: ""` |
-| 30020 | AuctionEvent | nip15Marketplace/auction | `auctionData()?.let { (listOfNotNull(it.name, it.description) + tags.hashtags()).joinToString("\n") } ?: ""` |
+| 30020 | AuctionEvent | nip15Marketplace/auction | `auctionData()?.let { (listOfNotNull(it.name, it.description) + tags.hashtags()).joinToString("\n") } ?: ""` — `auctionData()` reads the JSON body and fills its gaps from the tag form auction apps publish (`title`/`name`, `summary`, else plain-text content as the description) |
 | 30023 | LongFormContentEvent | nip23LongContent | `(listOfNotNull(title(), summary(), content) + topics())` NL |
 | 30024 | LongFormDraftEvent | nip23LongContent/draft | `tags.longFormIndexableContent(content)` — the same as 30023: `(listOfNotNull(title(), summary(), content) + topics())` NL |
 | 30030 | EmojiPackEvent | nip30CustomEmoji/pack | `(listOfNotNull(titleOrName(), description()) + publicEmojiCodes())` NL — the public `emoji` tags' shortcodes; `content` is NOT indexed (it is the NIP-44 ciphertext of the private emoji tags) |

@@ -54,7 +54,11 @@ class BidEvent(
     // The builder notifies a single `p`, the auction's author.
     override fun linkedPubKeys() = listOfNotNull(auctionAuthor())
 
-    fun amount() = content.toDoubleOrNull()
+    /** The amount bid, in the auction's currency; null when the content is not a number. */
+    fun amount() = content.trim().toDoubleOrNull()?.takeIf { it.isFinite() && it >= 0 }
+
+    /** A bid names its auction and an amount. */
+    fun isWellFormed() = auctionId() != null && amount() != null
 
     fun auctionId() = tags.firstNotNullOfOrNull(ETag::parseId)
 

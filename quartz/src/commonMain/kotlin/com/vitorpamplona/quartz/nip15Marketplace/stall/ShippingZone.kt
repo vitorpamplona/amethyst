@@ -20,15 +20,37 @@
  */
 package com.vitorpamplona.quartz.nip15Marketplace.stall
 
-import kotlinx.serialization.SerialName
+import androidx.compose.runtime.Immutable
+import com.vitorpamplona.quartz.nip15Marketplace.numberOrNull
+import com.vitorpamplona.quartz.nip15Marketplace.textList
+import com.vitorpamplona.quartz.nip15Marketplace.textOrNull
 import kotlinx.serialization.Serializable
+import kotlinx.serialization.json.JsonObject
 
+/**
+ * A stall's shipping zone: a base [cost] (in the stall's currency) to ship to its [regions].
+ * Some merchants write `countries` instead of `regions`; both are kept.
+ */
+@Immutable
 @Serializable
 data class ShippingZone(
-    val id: String,
+    val id: String? = null,
     val name: String? = null,
-    val cost: Double,
-    val regions: List<String>? = null,
-    @SerialName("countries")
-    val countries: List<String>? = null,
-)
+    val cost: Double? = null,
+    val regions: List<String> = emptyList(),
+    val countries: List<String> = emptyList(),
+) {
+    /** Where the zone ships, whichever of the two fields the merchant used. */
+    fun destinations(): List<String> = regions.ifEmpty { countries }
+
+    companion object {
+        fun from(json: JsonObject) =
+            ShippingZone(
+                id = json.textOrNull("id"),
+                name = json.textOrNull("name"),
+                cost = json.numberOrNull("cost"),
+                regions = json.textList("regions"),
+                countries = json.textList("countries"),
+            )
+    }
+}
