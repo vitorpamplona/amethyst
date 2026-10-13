@@ -231,9 +231,10 @@ Amethyst's Nostr profile.
 - Let your `gh` login push to ghcr: `gh auth refresh -s write:packages`. The
   image goes to `ghcr.io/vitorpamplona/amethyst-flatpak`. After the first push, make that package **public** in its settings: ghcr
   packages start private, and Orchard cannot pull a private one.
-- Commit `orchard.txt` at the repo root with Amethyst's npub on one line.
-  Orchard reads it from the default branch to show the repository link as
-  verified. Don't use the tool's `--prove`: it commits that file itself.
+- `orchard.txt` at the repo root names Amethyst's npub. Orchard reads it from
+  the default branch to show the repository link as verified. Update it if the
+  signing key ever changes. Don't use the tool's `--prove`: it commits that
+  file itself.
 
 **Each release**, after the GH Release assets exist. Run it once per arch; both
 runs sign the same listing. The tree comes straight out of the release bundle
