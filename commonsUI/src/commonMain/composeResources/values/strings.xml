@@ -7134,6 +7134,8 @@
     <string name="nip85_score_for_event">Score for a note</string>
     <string name="nip85_score_for_address">Score for an address</string>
     <string name="nip85_score_for_identifier">Score for an identifier</string>
+    <string name="nip85_score_for_named">Score for %1$s</string>
+    <string name="nip85_score_for_relay">Score for relay %1$s</string>
     <string name="nip85_score_explainer">From one observer's web of trust, as this provider computed it. Scores from different observers don't compare.</string>
     <string name="nip85_rank">Rank</string>
     <string name="nip85_rank_of_100">%1$s / 100</string>

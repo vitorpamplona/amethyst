@@ -127,3 +127,35 @@ fun designatedProviders(
 
     return out.map { (key, services) -> DesignatedProvider(key.first, relays[key], services, key.third) }
 }
+
+private const val TITLE_MAX = 80
+
+/** True for a relay's address, which a score's title names as "relay <host>". */
+fun isRelayIdentifier(identifier: String): Boolean {
+    val id = identifier.trim().lowercase()
+    return id.startsWith("wss://") || id.startsWith("ws://")
+}
+
+/**
+ * What a score's title calls a NIP-73 identifier, so the thing scored leads the card: a web page
+ * by its host and path, a relay by its host, anything else (a hashtag, `isbn:…`) as written.
+ */
+fun identifierTitleName(identifier: String): String {
+    val id = identifier.trim()
+    val scheme = id.substringBefore("://", "").lowercase()
+    val name =
+        if (scheme == "http" || scheme == "https" || scheme == "ws" || scheme == "wss") {
+            val rest = id.substringAfter("://")
+            val host = rest.substringBefore('/').substringBefore('?').substringBefore('#')
+            val path =
+                rest
+                    .drop(host.length)
+                    .substringBefore('?')
+                    .substringBefore('#')
+                    .trimEnd('/')
+            if (scheme.startsWith("ws")) host else host + path
+        } else {
+            id
+        }
+    return if (name.length > TITLE_MAX) name.take(TITLE_MAX - 1) + "\u2026" else name
+}

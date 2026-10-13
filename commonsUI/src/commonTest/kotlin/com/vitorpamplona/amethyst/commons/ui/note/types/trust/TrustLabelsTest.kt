@@ -92,4 +92,16 @@ class TrustLabelsTest {
         assertTrue(!providers[0].isPrivate)
         assertTrue(providers[1].isPrivate)
     }
+
+    @Test
+    fun namesTheScoredIdentifierForTheTitle() {
+        assertEquals("yabu.me", identifierTitleName("wss://yabu.me/"))
+        assertTrue(isRelayIdentifier("wss://yabu.me"))
+        assertEquals("example.com/post/1", identifierTitleName("https://example.com/post/1?utm=x#top"))
+        assertEquals("example.com", identifierTitleName("https://example.com/"))
+        assertEquals("isbn:9780141439518", identifierTitleName(" isbn:9780141439518 "))
+        assertEquals("#bitcoin", identifierTitleName("#bitcoin"))
+        assertTrue(!isRelayIdentifier("https://example.com"))
+        assertEquals(80, identifierTitleName("https://example.com/" + "a".repeat(200)).length)
+    }
 }

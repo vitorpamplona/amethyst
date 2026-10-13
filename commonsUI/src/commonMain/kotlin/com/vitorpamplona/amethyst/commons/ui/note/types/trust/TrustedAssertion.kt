@@ -67,6 +67,8 @@ import com.vitorpamplona.amethyst.commons.resources.nip85_score_explainer
 import com.vitorpamplona.amethyst.commons.resources.nip85_score_for_address
 import com.vitorpamplona.amethyst.commons.resources.nip85_score_for_event
 import com.vitorpamplona.amethyst.commons.resources.nip85_score_for_identifier
+import com.vitorpamplona.amethyst.commons.resources.nip85_score_for_named
+import com.vitorpamplona.amethyst.commons.resources.nip85_score_for_relay
 import com.vitorpamplona.amethyst.commons.resources.nip85_scored
 import com.vitorpamplona.amethyst.commons.resources.nip85_scored_by
 import com.vitorpamplona.amethyst.commons.resources.nip85_trust_score
@@ -166,21 +168,30 @@ private fun RenderTrustedAssertion(
     // The account's own contact cards share kind 30382 with provider scores; they carry their
     // nickname in encrypted content and no public metrics, so they are not a "trust score".
     val isContactCard = isPerson && metrics.isEmpty() && event.content.isNotEmpty()
+    val identifier = remember(event) { (event as? ExternalIdAssertionEvent)?.aboutExternalId()?.takeIf { it.isNotBlank() } }
 
     TrustCardFrame {
         TrustCardHeader(
             symbol = if (isContactCard) MaterialSymbols.Person else MaterialSymbols.Shield,
+            // The thing scored leads: an identifier is named in the title, and every subject's
+            // card sits right under the title, above the numbers.
             title =
-                stringRes(
-                    when (event) {
-                        is UserAssertionEvent -> if (isContactCard) Res.string.nip85_contact_card else Res.string.nip85_trust_score
-                        is EventAssertionEvent -> Res.string.nip85_score_for_event
-                        is AddressableAssertionEvent -> Res.string.nip85_score_for_address
-                        else -> Res.string.nip85_score_for_identifier
-                    },
-                ),
+                when (event) {
+                    is UserAssertionEvent -> stringRes(if (isContactCard) Res.string.nip85_contact_card else Res.string.nip85_trust_score)
+                    is EventAssertionEvent -> stringRes(Res.string.nip85_score_for_event)
+                    is AddressableAssertionEvent -> stringRes(Res.string.nip85_score_for_address)
+                    else ->
+                        identifier?.let {
+                            stringRes(
+                                if (isRelayIdentifier(it)) Res.string.nip85_score_for_relay else Res.string.nip85_score_for_named,
+                                identifierTitleName(it),
+                            )
+                        } ?: stringRes(Res.string.nip85_score_for_identifier)
+                },
             subtitle = stringRes(if (isContactCard) Res.string.nip85_contact_card_private else Res.string.nip85_score_explainer),
         )
+
+        AssertionSubject(event, quotesLeft, backgroundColor, accountViewModel, nav)
 
         if (rank != null || (isPerson && !isContactCard) || rest.isNotEmpty()) {
             FlowRow(
@@ -206,8 +217,6 @@ private fun RenderTrustedAssertion(
                 CappedChips(rest, MAX_METRIC_TILES) { MetricTile(it) }
             }
         }
-
-        AssertionSubject(event, quotesLeft, backgroundColor, accountViewModel, nav)
 
         LabeledInlineUser(stringRes(Res.string.nip85_scored_by), event.pubKey, accountViewModel, nav)
     }
