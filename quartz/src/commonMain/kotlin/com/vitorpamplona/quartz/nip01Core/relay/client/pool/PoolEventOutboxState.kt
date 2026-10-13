@@ -23,6 +23,8 @@ package com.vitorpamplona.quartz.nip01Core.relay.client.pool
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.utils.TimeUtils
+import com.vitorpamplona.quartz.utils.concurrent.PlatformLock
+import com.vitorpamplona.quartz.utils.concurrent.withLock
 import kotlin.concurrent.Volatile
 
 class PoolEventOutboxState(
@@ -31,8 +33,12 @@ class PoolEventOutboxState(
 ) {
     private var failures = mapOf<NormalizedRelayUrl, Tries>()
 
+    // Each relay's OK arrives on that relay's socket thread, so every read-modify-write of
+    // relaysRemaining / failures goes through this lock; otherwise two OKs landing together lose one.
+    private val lock = PlatformLock()
+
     fun updateRelays(newRelays: Set<NormalizedRelayUrl>) {
-        relaysRemaining = newRelays
+        lock.withLock { relaysRemaining = newRelays }
     }
 
     fun isDone() = relaysRemaining.isEmpty()
@@ -50,7 +56,9 @@ class PoolEventOutboxState(
 
     /** Records a send attempt to [url]. Returns true if the retry budget is now exhausted and the
      *  relay was dropped (i.e. we gave up delivering this event to [url]). */
-    fun newTry(url: NormalizedRelayUrl): Boolean {
+    fun newTry(url: NormalizedRelayUrl): Boolean = lock.withLock { newTryLocked(url) }
+
+    private fun newTryLocked(url: NormalizedRelayUrl): Boolean {
         val currentTries = failures[url]
         if (currentTries != null) {
             currentTries.addTriedTime(TimeUtils.now())
@@ -66,6 +74,12 @@ class PoolEventOutboxState(
     }
 
     fun newResponse(
+        url: NormalizedRelayUrl,
+        success: Boolean,
+        message: String,
+    ) = lock.withLock { newResponseLocked(url, success, message) }
+
+    private fun newResponseLocked(
         url: NormalizedRelayUrl,
         success: Boolean,
         message: String,

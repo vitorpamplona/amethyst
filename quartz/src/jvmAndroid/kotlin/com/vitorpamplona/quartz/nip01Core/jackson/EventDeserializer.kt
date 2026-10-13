@@ -51,14 +51,16 @@ class EventDeserializer : StdDeserializer<Event>(Event::class.java) {
             val fieldName = p.currentName()
             p.nextToken()
 
-            when (fieldName.hashCode()) {
-                3355 -> id = p.text.intern()
-                -977424830 -> pubKey = p.text.intern()
-                1369680106 -> createdAt = p.longValue
-                3292052 -> kind = p.intValue
-                3552281 -> tags = tagsDeserializer.deserialize(p, ctxt)
-                951530617 -> content = p.text
-                113873 -> sig = p.text
+            // A String `when` compiles to the same hash switch plus an equals() check, so a field whose
+            // name merely shares a hash with one of these ("jE" and "id" do) is skipped, not taken.
+            when (fieldName) {
+                "id" -> id = p.text.intern()
+                "pubkey" -> pubKey = p.text.intern()
+                "created_at" -> createdAt = p.longValue
+                "kind" -> kind = p.intValue
+                "tags" -> tags = tagsDeserializer.deserialize(p, ctxt)
+                "content" -> content = p.text
+                "sig" -> sig = p.text
                 else -> p.skipChildren()
             }
         }

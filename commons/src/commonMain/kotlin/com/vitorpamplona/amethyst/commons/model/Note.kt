@@ -648,25 +648,31 @@ open class Note(
         }
     }
 
+    // Under syncLock like the add paths: an unlocked remove wrote back a map built from a snapshot,
+    // dropping any zap a relay thread added in between.
     fun removeZap(note: Note) {
-        if (zaps[note] != null) {
-            zaps = zaps.minus(note)
-            updateZapTotal()
-            flowSet?.zaps?.invalidateData()
-        } else if (zaps.containsValue(note)) {
-            zaps = zaps.filterValues { it != note }
-            updateZapTotal()
-            flowSet?.zaps?.invalidateData()
+        syncLock.withLock {
+            if (zaps[note] != null) {
+                zaps = zaps.minus(note)
+                updateZapTotal()
+                flowSet?.zaps?.invalidateData()
+            } else if (zaps.containsValue(note)) {
+                zaps = zaps.filterValues { it != note }
+                updateZapTotal()
+                flowSet?.zaps?.invalidateData()
+            }
         }
     }
 
     fun removeZapPayment(note: Note) {
-        if (zapPayments.containsKey(note)) {
-            zapPayments = zapPayments.minus(note)
-            flowSet?.zaps?.invalidateData()
-        } else if (zapPayments.containsValue(note)) {
-            zapPayments = zapPayments.filterValues { it != note }
-            flowSet?.zaps?.invalidateData()
+        syncLock.withLock {
+            if (zapPayments.containsKey(note)) {
+                zapPayments = zapPayments.minus(note)
+                flowSet?.zaps?.invalidateData()
+            } else if (zapPayments.containsValue(note)) {
+                zapPayments = zapPayments.filterValues { it != note }
+                flowSet?.zaps?.invalidateData()
+            }
         }
     }
 

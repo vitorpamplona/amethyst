@@ -85,17 +85,34 @@ class BasicBundledUpdate(
                 isProcessing = true
             }
 
+            // Runs once, then once more per delay for as long as invalidations keep arriving. The flag is
+            // read and the slot released under one lock, so an invalidation that lands while an update is
+            // running is never cleared unseen.
+            var released = false
             try {
                 onUpdate()
-                delay(delay)
-                if (invalidatesAgain) {
+                while (true) {
+                    delay(delay)
+                    val again =
+                        mutex.withLock {
+                            if (invalidatesAgain) {
+                                invalidatesAgain = false
+                            } else {
+                                isProcessing = false
+                                released = true
+                            }
+                            !released
+                        }
+                    if (!again) break
                     onUpdate()
                 }
             } finally {
-                withContext(NonCancellable) {
-                    mutex.withLock {
-                        invalidatesAgain = false
-                        isProcessing = false
+                if (!released) {
+                    withContext(NonCancellable) {
+                        mutex.withLock {
+                            invalidatesAgain = false
+                            isProcessing = false
+                        }
                     }
                 }
             }
