@@ -23,6 +23,7 @@ package com.vitorpamplona.amethyst.commons.model.cache
 import com.vitorpamplona.quartz.experimental.decentralizedLists.header.AddressableListHeaderEvent
 import com.vitorpamplona.quartz.experimental.decentralizedLists.header.ListHeaderEvent
 import com.vitorpamplona.quartz.experimental.decentralizedLists.item.AddressableListItemEvent
+import com.vitorpamplona.quartz.experimental.decentralizedLists.item.ListItemEvent
 import com.vitorpamplona.quartz.experimental.trustedLists.users.UserTrustedListEvent
 import com.vitorpamplona.quartz.nip01Core.core.AddressableEvent
 import com.vitorpamplona.quartz.nip01Core.core.Event
@@ -79,6 +80,41 @@ class TrustAndDListConsumeTest {
         // contentport's license events share kind 9998 but declare no list.
         val event = Event.fromJson(OTHER_APP_9998)
         assertIs<ListHeaderEvent>(event)
+        val cache = EventCache()
+        assertFalse(cache.justConsume(event, null, true))
+        assertNull(cache.getNoteIfExists(event.id)?.event)
+    }
+
+    private fun kind9999(vararg tags: Array<String>) =
+        ListItemEvent(
+            id = "ab".repeat(32),
+            pubKey = "cd".repeat(32),
+            createdAt = 1_791_000_000,
+            tags = arrayOf(*tags),
+            content = "",
+            sig = "ef".repeat(64),
+        )
+
+    @Test
+    fun kind9999ThatDeclaresAListIsKept() {
+        // The spec's "nonstandard" way to declare a list: an item with `names` and no parent. The
+        // card draws it as a header, so the cache must keep it even though it names no list.
+        val event = kind9999(arrayOf("names", "Recipe", "Recipes"), arrayOf("required", "title"))
+        val cache = EventCache()
+        assertTrue(cache.justConsume(event, null, true))
+        assertSame(event, cache.getNoteIfExists(event.id)?.event)
+    }
+
+    @Test
+    fun kind9999ThatNamesAListIsKept() {
+        val event = kind9999(arrayOf("z", "39998:${"12".repeat(32)}:recipes"), arrayOf("title", "Pancakes"))
+        val cache = EventCache()
+        assertTrue(cache.justConsume(event, null, true))
+    }
+
+    @Test
+    fun otherAppsKind9999StaysOut() {
+        val event = kind9999(arrayOf("t", "something-else"))
         val cache = EventCache()
         assertFalse(cache.justConsume(event, null, true))
         assertNull(cache.getNoteIfExists(event.id)?.event)

@@ -4091,11 +4091,12 @@ open class EventCache :
 
                 // Decentralized Lists' immutable header and item (9998 / 9999). Other apps publish
                 // their own formats on these kinds (license offers, encrypted blobs); only a header
-                // that declares a list and an item that names its list are this protocol, and the
-                // rest stay unconsumed as before, so nothing draws them as a list.
+                // that declares a list, and an item that names its list or declares one itself (the
+                // spec's "nonstandard" header, drawn as a header), are this protocol. The rest stay
+                // unconsumed as before, so nothing draws them as a list.
                 is ListHeaderEvent -> if (event.names() != null) consumeRegularEvent(event, relay, wasVerified) else false
 
-                is ListItemEvent -> if (event.parentListPointers().isNotEmpty()) consumeRegularEvent(event, relay, wasVerified) else false
+                is ListItemEvent -> if (event.declaresList() || event.parentListPointers().isNotEmpty()) consumeRegularEvent(event, relay, wasVerified) else false
 
                 // ============================================================
                 // Regular kinds with no per-kind logic: stored as plain notes.

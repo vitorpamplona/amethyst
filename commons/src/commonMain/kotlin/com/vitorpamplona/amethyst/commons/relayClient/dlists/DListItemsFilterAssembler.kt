@@ -28,6 +28,7 @@ import com.vitorpamplona.quartz.experimental.decentralizedLists.header.acceptedI
 import com.vitorpamplona.quartz.experimental.decentralizedLists.inheritFrom
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 
 /** A D-list header on screen whose items should be loaded. */
 class DListItemsQueryState(
@@ -46,6 +47,52 @@ fun dListItemPointers(header: Event): List<String> {
 
 /** The kinds this header's items are published as: its `item-kind`s, else 9999 and 39999. */
 fun dListItemKinds(header: Event?): List<Int> = header?.tags?.acceptedItemKinds() ?: STANDARD_ITEM_KINDS
+
+/** A header on screen, keyed by [headerId], with the relays it was seen on. */
+class DListHeaderOnRelays(
+    val headerId: String,
+    val header: Event,
+    val relays: Collection<NormalizedRelayUrl>,
+)
+
+/**
+ * One `#z` filter: the items of every header in [headerIds] that was seen on [relay] and files
+ * its items under the same [kinds], asked for together.
+ */
+data class DListItemsRequest(
+    val relay: NormalizedRelayUrl,
+    val kinds: List<Int>,
+    val pointers: List<String>,
+    val headerIds: List<String>,
+)
+
+/**
+ * Groups the headers on screen into one filter per relay and item kinds, so a feed with several
+ * D-list cards sends each relay one filter rather than one per card. A header seen on no relay
+ * asks nothing: its items live wherever it does, and there is nowhere to look.
+ */
+fun planDListItemRequests(headers: List<DListHeaderOnRelays>): List<DListItemsRequest> {
+    class Group(
+        val pointers: LinkedHashSet<String> = LinkedHashSet(),
+        val headerIds: LinkedHashSet<String> = LinkedHashSet(),
+    )
+
+    val groups = LinkedHashMap<Pair<NormalizedRelayUrl, List<Int>>, Group>()
+    headers.forEach { onRelays ->
+        val pointers = dListItemPointers(onRelays.header)
+        if (pointers.isEmpty()) return@forEach
+        val kinds = dListItemKinds(onRelays.header).sorted()
+        onRelays.relays.forEach { relay ->
+            val group = groups.getOrPut(relay to kinds) { Group() }
+            group.pointers.addAll(pointers)
+            group.headerIds.add(onRelays.headerId)
+        }
+    }
+
+    return groups.map { (key, group) ->
+        DListItemsRequest(key.first, key.second, group.pointers.toList(), group.headerIds.toList())
+    }
+}
 
 /**
  * Loads the items filed under the D-list headers on screen, from the relays each header was
