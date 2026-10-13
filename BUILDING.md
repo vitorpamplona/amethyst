@@ -836,17 +836,27 @@ by any other channel.
 app with its own `~/.var/app/<id>/`:
 
 - **v1.18.0, `com.vitorpamplona.amethyst`.** It kept accounts, drafts and
-  settings in `~/.var/app/com.vitorpamplona.amethyst/`. Move that directory
-  *before the first launch* of the new app (if the new one has already run,
-  `mv` would nest the old directory inside the new one), then remove the old
-  app. The keys themselves live in the system keyring, which the rename does
-  not touch.
+  settings in `~/.var/app/com.vitorpamplona.amethyst/`. Without a system
+  keyring, the private keys are there too: the password key file lives under
+  the sandbox's `XDG_DATA_HOME` (`data/amethyst/`). Move the whole directory to
+  the new ID, then remove the old app *without* `--delete-data`:
 
   ```bash
   flatpak kill com.vitorpamplona.amethyst 2>/dev/null
-  mv ~/.var/app/com.vitorpamplona.amethyst ~/.var/app/com.vitorpamplona.amethyst.Amethyst
+  flatpak kill com.vitorpamplona.amethyst.Amethyst 2>/dev/null
+  mv -T ~/.var/app/com.vitorpamplona.amethyst ~/.var/app/com.vitorpamplona.amethyst.Amethyst
   flatpak uninstall com.vitorpamplona.amethyst
   ```
+
+  `mv -T` refuses to merge into a directory that is not empty, instead of
+  nesting the old one inside it. If it fails with "Directory not empty", the
+  new app has already run once. If you have not logged in to it yet, delete its
+  fresh directory (`rm -r ~/.var/app/com.vitorpamplona.amethyst.Amethyst`) and
+  run the `mv` again.
+
+  Until the old app is removed, the menu shows two "Amethyst" entries: the
+  single-file bundle has no remote, so flatpak cannot replace one ID with the
+  other on its own.
 
 - **Up to v1.17.0, `com.vitorpamplona.amethyst.Desktop`** (Flathub forbids IDs
   ending in `.desktop`). There is no data worth moving: that bundle did not
