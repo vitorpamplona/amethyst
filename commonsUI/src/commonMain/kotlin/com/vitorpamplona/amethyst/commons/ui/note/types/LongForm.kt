@@ -51,6 +51,7 @@ import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.navigation.Route
 import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.long_form_published
 import com.vitorpamplona.amethyst.commons.resources.long_form_reading_minutes
 import com.vitorpamplona.amethyst.commons.resources.preview_card_image_for
 import com.vitorpamplona.amethyst.commons.ui.components.MyAsyncImage
@@ -61,6 +62,8 @@ import com.vitorpamplona.amethyst.commons.ui.note.WatchAuthor
 import com.vitorpamplona.amethyst.commons.ui.note.elements.DefaultImageHeader
 import com.vitorpamplona.amethyst.commons.ui.note.elements.DefaultImageHeaderBackground
 import com.vitorpamplona.amethyst.commons.ui.note.elements.TimeAgo
+import com.vitorpamplona.amethyst.commons.ui.note.elements.TimeAgoStyle
+import com.vitorpamplona.amethyst.commons.ui.note.elements.ToggleableTimeAgoText
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.Font10SP
 import com.vitorpamplona.amethyst.commons.ui.theme.Size5dp
@@ -68,8 +71,10 @@ import com.vitorpamplona.amethyst.commons.ui.theme.grayText
 import com.vitorpamplona.amethyst.commons.ui.theme.replyModifier
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.quartz.nip23LongContent.LongFormContentEvent
+import com.vitorpamplona.quartz.utils.TimeUtils
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.toImmutableList
+import kotlin.math.abs
 
 private const val WORDS_PER_MINUTE = 225
 private val COVER_ASPECT_RATIO = 16f / 9f
@@ -215,6 +220,47 @@ fun LongFormDateAndReadingTime(
         if (publishedAt != null) TimeAgo(publishedAt) else TimeAgo(note)
 
         MetaSeparator()
+        ReadingTimeBadge(readingMinutes)
+    }
+}
+
+/**
+ * An article's `published_at` when it says something its `created_at` does not: the thread view
+ * already dates the article by `created_at` in its author row (the last edit, for an addressable
+ * article), so the header repeats a date only when the article was first published materially
+ * earlier (or later) than that.
+ */
+fun publishedAtWorthShowing(
+    publishedAt: Long?,
+    createdAt: Long,
+): Long? = publishedAt?.takeIf { abs(it - createdAt) >= TimeUtils.ONE_HOUR }
+
+/**
+ * The thread header's line: "Published 3d · 6 min read" when [publishedAt] is set (see
+ * [publishedAtWorthShowing]), just the reading time otherwise.
+ */
+@Composable
+fun LongFormPublishedAndReadingTime(
+    publishedAt: Long?,
+    readingMinutes: Int,
+) {
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        if (publishedAt != null) {
+            Text(
+                text = stringRes(Res.string.long_form_published),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.grayText,
+                maxLines = 1,
+            )
+            Spacer(Modifier.padding(start = 4.dp))
+            ToggleableTimeAgoText(
+                timestamp = publishedAt,
+                style = TimeAgoStyle.Short,
+                color = MaterialTheme.colorScheme.grayText,
+                fontSize = MaterialTheme.typography.bodySmall.fontSize,
+            )
+            MetaSeparator()
+        }
         ReadingTimeBadge(readingMinutes)
     }
 }

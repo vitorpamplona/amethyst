@@ -146,7 +146,7 @@ import com.vitorpamplona.amethyst.commons.ui.note.types.BadgeDisplay
 import com.vitorpamplona.amethyst.commons.ui.note.types.ClassifiedSoldBadge
 import com.vitorpamplona.amethyst.commons.ui.note.types.DisplayStarterPack
 import com.vitorpamplona.amethyst.commons.ui.note.types.EditState
-import com.vitorpamplona.amethyst.commons.ui.note.types.LongFormDateAndReadingTime
+import com.vitorpamplona.amethyst.commons.ui.note.types.LongFormPublishedAndReadingTime
 import com.vitorpamplona.amethyst.commons.ui.note.types.LongFormTopicChips
 import com.vitorpamplona.amethyst.commons.ui.note.types.MAX_THREAD_SECTIONS
 import com.vitorpamplona.amethyst.commons.ui.note.types.PublicationHeader
@@ -156,6 +156,7 @@ import com.vitorpamplona.amethyst.commons.ui.note.types.RenderTextEvent
 import com.vitorpamplona.amethyst.commons.ui.note.types.ReplyRenderType
 import com.vitorpamplona.amethyst.commons.ui.note.types.estimateReadingMinutes
 import com.vitorpamplona.amethyst.commons.ui.note.types.observeZapSender
+import com.vitorpamplona.amethyst.commons.ui.note.types.publishedAtWorthShowing
 import com.vitorpamplona.amethyst.commons.ui.painterRes
 import com.vitorpamplona.amethyst.commons.ui.pluralStringRes
 import com.vitorpamplona.amethyst.commons.ui.screen.RenderFeedState
@@ -1183,7 +1184,8 @@ private fun RenderLongFormHeaderForThread(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    val publishedAt = remember(noteEvent) { noteEvent.publishedAt() }
+    // The author row above already shows created_at; repeat a date only when published_at differs.
+    val publishedAt = remember(noteEvent) { publishedAtWorthShowing(noteEvent.publishedAt(), noteEvent.createdAt) }
     val readingMinutes = remember(noteEvent) { estimateReadingMinutes(noteEvent.content) }
     val topics = remember(noteEvent) { noteEvent.topics().distinct().toImmutableList() }
 
@@ -1231,7 +1233,7 @@ private fun RenderLongFormHeaderForThread(
             }
 
         Spacer(modifier = StdVertSpacer)
-        LongFormDateAndReadingTime(note, publishedAt, readingMinutes)
+        LongFormPublishedAndReadingTime(publishedAt, readingMinutes)
 
         if (topics.isNotEmpty()) {
             Spacer(modifier = StdVertSpacer)
