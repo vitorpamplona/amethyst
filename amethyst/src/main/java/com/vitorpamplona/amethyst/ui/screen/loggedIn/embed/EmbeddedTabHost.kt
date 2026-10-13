@@ -25,6 +25,7 @@ import android.os.Handler
 import android.os.Looper
 import androidx.annotation.RequiresApi
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
@@ -71,7 +72,7 @@ object EmbeddedTabHost {
      * The favorite screens and the preloader key their acquisition on this, so they re-acquire a freshly
      * built session instead of the stale warm one.
      */
-    var rebuildEpoch by mutableStateOf(0)
+    var rebuildEpoch by mutableIntStateOf(0)
         private set
 
     /** Window-space bounds of the active tab's reserved content area. */

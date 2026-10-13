@@ -30,8 +30,8 @@ import com.vitorpamplona.quartz.nip50Search.SearchableEvent
 import com.vitorpamplona.quartz.utils.EventFactory
 import kotlin.test.Test
 import kotlin.test.assertEquals
-import kotlin.test.assertFalse
 import kotlin.test.assertIs
+import kotlin.test.assertIsNot
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
@@ -64,7 +64,7 @@ class CiSecretUpdateEventTest {
         val event = update(specShape)
         assertIs<CiSecretUpdateEvent>(event)
         assertTrue(EventFactory.isKnownKind(CiSecretUpdateEvent.KIND))
-        assertFalse(event is SearchableEvent)
+        assertIsNot<SearchableEvent>(event)
     }
 
     @Test

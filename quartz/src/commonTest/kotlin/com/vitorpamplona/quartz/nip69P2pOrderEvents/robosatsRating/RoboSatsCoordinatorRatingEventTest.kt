@@ -29,6 +29,7 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertIs
+import kotlin.test.assertIsNot
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
@@ -111,7 +112,7 @@ class RoboSatsCoordinatorRatingEventTest {
         val report = parse(P2PKindFixtures.REAL_BORKSTR_REPORT)
         assertIs<UnrecognizedKind31986Event>(report)
         assertIs<AddressableEvent>(report)
-        assertFalse(report is SearchableEvent)
+        assertIsNot<SearchableEvent>(report)
     }
 
     @Test

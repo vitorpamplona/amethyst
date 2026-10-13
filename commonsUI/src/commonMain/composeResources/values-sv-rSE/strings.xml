@@ -1659,7 +1659,6 @@
     <string name="uploading_state_hashing">Hashning</string>
     <string name="uploading_state_finished">Klart</string>
     <string name="uploading_state_error">Fel</string>
-    <string name="connect_via_tor1">Justera</string>
     <string name="connect_via_tor2">Tor Inställningar</string>
     <string name="yes">Ja</string>
     <string name="no">Nej</string>
@@ -2045,7 +2044,6 @@
     <string name="created_at">Skapad den</string>
     <string name="guidelines">Riktlinjer</string>
     <string name="moderators">Moderatorer</string>
-    <string name="login_with_external_signer">Logga in med Amber</string>
     <string name="status_update">Uppdatera din status</string>
     <string name="poll_zap_value_min_max_explainer">Röster viktas av zap-beloppet. Du kan ställa in en minsta mängd för att undvika spammare och en maximal mängd för att undvika att en stor zapper tar över omröstningen. Använd samma belopp i båda fälten för att se till att varje röst värderas till samma belopp. Lämna tomt för att acceptera valfritt belopp.</string>
     <string name="error_dialog_talk_to_user">Meddela användaren</string>
@@ -4476,7 +4474,6 @@
     <string name="desktop_menu_report_issue">Rapportera ett problem</string>
     <string name="login_with_remote_signer">Logga in med en fjärrsignatär</string>
     <string name="remote_signer_scan_title">Anslut din signatär</string>
-    <string name="remote_signer_scan_description">Skanna den här koden med en NIP-46-signatär, eller klistra in adressen i den. En bunker://-adress från din signatär anges i stället i nyckelfältet.</string>
     <string name="remote_signer_waiting">Väntar på att din signatär ska godkänna…</string>
     <string name="remote_signer_login_failed">Kunde inte logga in med fjärrsignatären: %1$s</string>
     <string name="login_with_a_private_key_to_be_able_to_boost_posts">Logga in med en privat nyckel för att kunna boosta inlägg</string>

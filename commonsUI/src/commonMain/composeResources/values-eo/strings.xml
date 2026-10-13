@@ -699,7 +699,6 @@
     <string name="uploading_state_hashing">Haŝante</string>
     <string name="uploading_state_finished">Farite</string>
     <string name="uploading_state_error">Eraro</string>
-    <string name="connect_via_tor1">Agordi</string>
     <string name="connect_via_tor2">Tor-Agordojn</string>
     <string name="yes">Jes</string>
     <string name="no">Ne</string>
@@ -919,7 +918,6 @@
     <string name="created_at">Kreita en</string>
     <string name="guidelines">Gvidlinioj</string>
     <string name="moderators">Moderigistoj</string>
-    <string name="login_with_external_signer">Ensaluti kun Amber</string>
     <string name="status_update">Ĝistadigi vian staton</string>
     <string name="poll_zap_value_min_max_explainer">Voĉdonoj pezas laŭ la zap-kvanto. Vi povas difini minimuman kvanton por eviti spamistojn kaj maksimuman kvanton por eviti ke grandaj zapistoj ekregu la enketon. Uzu la saman kvanton en ambaŭ kampoj por certigi ke ĉiuj voĉdonoj pezus same. Malplenigu ĝin por akcepti ajnan kvanton.</string>
     <string name="error_dialog_talk_to_user">Mesaĝi la Uzanto</string>

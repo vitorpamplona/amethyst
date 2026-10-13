@@ -69,4 +69,12 @@ interface RequestContext {
      * mid-query.
      */
     val authenticatedUsers: Set<HexKey>
+
+    /**
+     * Who is on the other end, as the transport saw it: the peer's address, or the client a
+     * trusted reverse proxy reported. Null when the transport has none to give (in-process
+     * sockets, tests). Policies that count per client (a rate limit) key on it, falling back
+     * to [connectionId].
+     */
+    val clientAddress: String? get() = null
 }

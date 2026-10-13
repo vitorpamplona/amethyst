@@ -14,7 +14,7 @@ specific to shipping the official Amethyst artifacts.
 
 ## At a glance
 
-A release is one tag push that fans out to four live distribution channels:
+A release is one tag push that fans out to these distribution channels:
 
 | Channel | Mechanism | Who pushes |
 |---|---|---|
@@ -22,6 +22,7 @@ A release is one tag push that fans out to four live distribution channels:
 | **Google Play** | **Manual** — download the signed AAB from the GH Release, upload in Play Console | Maintainer |
 | **F-Droid** | **Pull** — F-Droid's build server builds the `fdroid` flavor from source when it sees the new tag | F-Droid (we just maintain the recipe + metadata) |
 | **Zapstore** | `zsp publish` reads `zapstore.yaml`, signs a Nostr release event with Amethyst's nsec | Maintainer |
+| **Orchard** | `orchard-publish` pushes the Flatpak to ghcr and signs its listing with Amethyst's nsec | Maintainer |
 | **Homebrew** | **Autobump** — BrewTestBot opens the `amethyst-nostr` cask and `amy` formula PRs itself; `scripts/bump-homebrew-cask.sh` only verifies | Homebrew (we verify) |
 | **Winget** | `scripts/bump-winget.sh` opens the `winget-pkgs` PR with your `gh` auth | Maintainer |
 
@@ -79,7 +80,7 @@ own, so don't expect to find it in the run's job list.
         release-notes note (which signer, which relays). -->
 
 4. **Add the release to the Linux metainfo**: a new first entry in `<releases>`
-   of `desktopApp/packaging/flatpak/com.vitorpamplona.amethyst.metainfo.xml`
+   of `desktopApp/packaging/flatpak/com.vitorpamplona.amethyst.Amethyst.metainfo.xml`
    (`<release version="1.12.1" date="YYYY-MM-DD">` with a `details` URL to the
    GitHub release, as the existing entries do). If you forget, release CI
    prints a warning and injects a bare entry, but only into the bundle it
@@ -204,6 +205,70 @@ RELAY_URLS="wss://relay.zapstore.dev,wss://nos.lol,wss://nostr.mom,wss://vitor.n
 Keep `wss://relay.zapstore.dev` in the list — that is the relay the Zapstore app
 itself reads from.
 
+### Orchard — `orchard-publish` with Amethyst's nsec
+[Orchard](https://github.com/Letdown2491/orchard) is a Flatpak store over Nostr.
+Its publisher CLI, `orchard-publish`, turns the Flatpak's app tree into an OCI
+image, pushes it to our ghcr registry, then signs three events with Amethyst's
+key: a listing (kind 32267), a release (30063) and an asset (3063) that pins the
+image by digest. Orchard installs only an image whose digest matches the signed
+asset. The listing comes from
+[`desktopApp/packaging/orchard/com.vitorpamplona.amethyst.Amethyst.publish.toml`](desktopApp/packaging/orchard/com.vitorpamplona.amethyst.Amethyst.publish.toml).
+
+It shares the key and the event kinds with Zapstore, so the two must never sign
+the same app id: the Flatpak is `com.vitorpamplona.amethyst.Amethyst`, Zapstore
+lists the APK as `com.vitorpamplona.amethyst`. Keep `author-name` and `nip05`
+out of the config: either makes the tool sign a kind 0 that replaces
+Amethyst's Nostr profile.
+
+**One-time setup.**
+- Build the tool at a tag and keep the binary (Rust; `rust-toolchain.toml`
+  pins the toolchain):
+  ```bash
+  git clone --branch v0.1.2 https://github.com/Letdown2491/orchard
+  cargo build --release -p orchard-publish --manifest-path orchard/Cargo.toml
+  cp orchard/target/release/orchard-publish ~/.local/bin/   # anywhere on PATH
+  ```
+- Let your `gh` login push to ghcr: `gh auth refresh -s write:packages`. The
+  image goes to `ghcr.io/vitorpamplona/amethyst-flatpak`. After the first push, make that package **public** in its settings: ghcr
+  packages start private, and Orchard cannot pull a private one.
+- `orchard.txt` at the repo root names Amethyst's npub. Orchard reads it from
+  the default branch to show the repository link as verified. Update it if the
+  signing key ever changes. Don't use the tool's `--prove`: it commits that
+  file itself.
+
+**Each release**, after the GH Release assets exist. Run it once per arch; both
+runs sign the same listing. The tree comes straight out of the release bundle
+with `ostree`, so nothing is rebuilt and no runtime is installed:
+
+```bash
+VER=$(grep -E '^app\s*=' gradle/libs.versions.toml | cut -d'"' -f2)
+DIR=desktopApp/packaging/orchard
+read -rsp "Amethyst nsec: " ORCHARD_NSEC; echo      # prompted, so it stays out of shell history
+export ORCHARD_NSEC ORCHARD_PUBLISH_VERSION="$VER"
+export ORCHARD_REGISTRY_USER=$(gh api user -q .login) ORCHARD_REGISTRY_PASSWORD=$(gh auth token)
+
+for ARCH in x64:x86_64 arm64:aarch64; do
+  GH=${ARCH%%:*}; FP=${ARCH##*:}
+  gh release download "v$VER" -p "amethyst-desktop-$VER-linux-$GH.flatpak" -O /tmp/amethyst.flatpak --clobber
+  rm -rf /tmp/orchard-repo "$DIR/tree"
+  ostree init --repo=/tmp/orchard-repo --mode=archive-z2
+  flatpak build-import-bundle /tmp/orchard-repo /tmp/amethyst.flatpak
+  ostree checkout --repo=/tmp/orchard-repo -U "app/com.vitorpamplona.amethyst.Amethyst/$FP/master" "$DIR/tree"
+  orchard-publish "$DIR/com.vitorpamplona.amethyst.Amethyst.publish.toml" \
+    --arch "linux-$FP" \
+    --registry ghcr.io/vitorpamplona/amethyst-flatpak \
+    --tag "latest-linux-$FP"
+done
+unset ORCHARD_NSEC ORCHARD_REGISTRY_PASSWORD
+```
+
+`flatpak build-import-bundle` may print a harmless `GLib-CRITICAL` line. The
+tool checks the registry serves the digest it built before it signs anything.
+Try a run first with `--skip-push --skip-relays` (and no `ORCHARD_NSEC`, which
+makes it use a throwaway key) to see the build without publishing. When the
+freedesktop runtime moves, update `runtime` in the config along with the
+Flatpak manifest.
+
 ### Homebrew + Winget
 
 The in-repo sync workflows (`bump-homebrew.yml`, `bump-homebrew-formula.yml`,
@@ -325,6 +390,8 @@ Owner assignments and rotation reminders live with the team (issue tracker).
       propagation; the publish step's log is the authoritative signal).
 - [ ] Play Console: rollout started, no policy rejection.
 - [ ] Zapstore: release event visible.
+- [ ] Orchard: the Amethyst row shows the new version, and its repository link
+      wears the check (the `orchard.txt` proof).
 - [ ] F-Droid: new version detected (may lag days).
 - [ ] Four sync PRs opened against this repo (`amy` formula, `geode` formula,
       `amethyst-nostr` cask, winget manifests) — merge them.

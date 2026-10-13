@@ -699,7 +699,6 @@
     <string name="uploading_state_hashing">Hashen</string>
     <string name="uploading_state_finished">Fertig</string>
     <string name="uploading_state_error">Fehler</string>
-    <string name="connect_via_tor1">Anpassen</string>
     <string name="connect_via_tor2">Tor-Einstellungen</string>
     <string name="yes">Ja</string>
     <string name="no">Nein</string>
@@ -919,7 +918,6 @@
     <string name="created_at">Erstellt am</string>
     <string name="guidelines">Richtlinien</string>
     <string name="moderators">Moderatoren</string>
-    <string name="login_with_external_signer">Mit Amber anmelden</string>
     <string name="status_update">Status aktualisieren</string>
     <string name="poll_zap_value_min_max_explainer">Die Abstimmungen werden nach der Höhe des Zaps gewichtet. Sie können einen Mindestbetrag festlegen, um Spam zu verhindern, und einen Höchstbetrag, um zu verhindern, dass große Zapper die Abstimmung dominieren. Verwenden Sie denselben Betrag in beiden Feldern, um sicherzustellen, dass jeder Stimme der gleiche Wert zukommt. Lassen Sie es leer, um jeden Betrag zu akzeptieren.</string>
     <string name="error_dialog_talk_to_user">Mit dem Benutzer kommunizieren</string>

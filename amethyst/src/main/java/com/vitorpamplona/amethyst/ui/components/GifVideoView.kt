@@ -39,6 +39,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import coil3.asDrawable
@@ -92,6 +93,7 @@ fun GifVideoView(
     val autoPlay = accountViewModel.settings.autoPlayVideos()
     val borderModifier = if (roundedCorner) MaterialTheme.colorScheme.imageModifier else Modifier
     val context = LocalContext.current
+    val resources = LocalResources.current
 
     // Share the static-image sizing policy so animated media obeys it too: in Crop
     // contexts (e.g. the multi-image gallery grid) the cell has a fixed width AND height,
@@ -115,7 +117,7 @@ fun GifVideoView(
             val state by painter.state.collectAsState()
 
             val successState = state as? AsyncImagePainter.State.Success
-            val drawable = successState?.result?.image?.asDrawable(context.resources)
+            val drawable = successState?.result?.image?.asDrawable(resources)
 
             LaunchedEffect(autoPlay, drawable) {
                 if (drawable is Animatable) {

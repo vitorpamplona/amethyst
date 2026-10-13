@@ -173,9 +173,9 @@ class EncryptionKeyTransferEventsTest {
         assertNotEquals(encryptionPrivHex, event.content)
 
         assertEquals(encryptionPrivHex, event.decryptKey(requester.privKey!!))
-        assertEquals(encryptionPrivHex, event.decryptAndVerify(requester.privKey!!, encryptionPubHex))
+        assertEquals(encryptionPrivHex, event.decryptAndVerify(requester.privKey, encryptionPubHex))
         // Wrong expected key: NIP-4E says to ignore non-matching responses.
-        assertNull(event.decryptAndVerify(requester.privKey!!, "f".repeat(64)))
+        assertNull(event.decryptAndVerify(requester.privKey, "f".repeat(64)))
         // Anyone else: undecryptable, ignored.
         assertNull(event.decryptKey(stranger.privKey!!))
 
@@ -227,7 +227,7 @@ class EncryptionKeyTransferEventsTest {
             assertIs<EncryptionKeyTransferEvent>(
                 EventFactory.create<Event>("1".repeat(64), identity, 1L, EncryptionKeyTransferEvent.KIND, arrayOf(arrayOf("P", KeyPair().pubKey.toHexKey())), "garbage", ""),
             )
-        assertNull(withSender.decryptKey(requester.privKey!!))
+        assertNull(withSender.decryptKey(requester.privKey))
         assertFalse(isSearchable(withSender))
     }
 }

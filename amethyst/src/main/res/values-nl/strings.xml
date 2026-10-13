@@ -1,18 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources xmlns:tools="http://schemas.android.com/tools">
-    <string name="block_hide_user"><![CDATA[Blokkeer en verberg gebruiker]]></string>
-    <string name="boosted">geboost</string>
-    <string name="edited_number">bewerk #%1$s</string>
-    <string name="save">Opslaan</string>
-    <string name="set_preferred_media_servers">Stel uw gewenste media upload servers in.</string>
-    <string name="built_in_servers_description">Amethyst\'s standaardlijst. U kunt ze individueel toevoegen of de lijst toevoegen.</string>
-    <string name="preferences">App-voorkeuren</string>
-    <string name="messages_create_public_chat">Publiek</string>
-    <string name="messages_new_message">Privé</string>
-    <string name="git_web_address">Web:</string>
-    <string name="media_servers_blossom_section">Blossom servers</string>
-    <string name="media_servers_blossom_explainer">Voeg zoveel servers toe als je wilt. Je kunt later kiezen welke zal worden gebruikt bij het uploaden van je afbeelding</string>
-    <string name="torrent_download">Downloaden</string>
     
     
     
@@ -91,7 +78,6 @@
     
     
     
-<string name="rename">Hernoemen</string>
     
     
     
@@ -134,7 +120,6 @@
     
     
     
-<string name="changed_chat_profile_to">Nieuw chatprofiel:</string>
     
     
     
@@ -560,13 +545,9 @@
     
     
     
-<string name="private_note_no_receivers">Nog geen ontvangers: alleen jij kunt deze notitie zien. Voeg mensen toe om te delen.</string>
     
-<string name="notify_add_user">Toevoegen</string>
     
-<string name="notify_remove_user">Gebruiker verwijderen uit meldingen</string>
     
-<string name="notify_search_and_add_user">Zoek en voeg een gebruiker toe om te melden</string>
     
     
     
@@ -620,7 +601,6 @@
     
     
     
-<string name="recommended_media_servers">Aanbevolen mediaservers</string>
     
     
     
@@ -683,9 +663,7 @@
     
     
     
-<string name="app_notification_replies_channel_message">%1$s reageerde</string>
     
-<string name="app_notification_replies_channel_message_for">op: %1$s</string>
     
     
     
@@ -743,9 +721,7 @@
     
     
     
-<string name="always_on_notif_setting_title">Altijd-aan meldingsdienst</string>
     
-<string name="always_on_notif_setting_description">Houdt een persistente verbinding met je inbox-relays voor directe melding. Toont een permanente notificatie. Gebruikt meer batterij maar zorgt dat je nooit een bericht mist.</string>
     
     
     
@@ -869,7 +845,6 @@
     
     
     
-<string name="messages_create_group">Groep</string>
     
     
     
@@ -1117,18 +1092,14 @@
     
     
     
-<string name="bottom_bar_settings_description">Sleep om te herordenen. Schakel in/uit om items toe te voegen of te verwijderen. Met nul items wordt de balk verborgen.</string>
     
     
-<string name="bottom_bar_settings_reorder">Herordenen</string>
     
     
     
-<string name="home_tabs_settings_description">Kies welke tabbladen op het startscherm verschijnen. Wanneer slechts één tab actief is, wordt de tabbalk verborgen.</string>
     
     
     
-<string name="profile_ui_settings_description">Kies welke secties en feeds op gebruikersprofielschermen verschijnen. Standaard zijn alle opties ingeschakeld.</string>
     
     
     
@@ -1234,17 +1205,12 @@
     
     
     
-<string name="git_repo_tab_overview">Overzicht</string>
     
     
     
-<string name="git_repo_section_about">Over</string>
     
-<string name="git_repo_section_links">Links</string>
     
-<string name="git_repo_section_maintainers">Beheerders</string>
     
-<string name="git_repo_section_topics">Onderwerpen</string>
     
     
     
@@ -1929,7 +1895,6 @@
 
 
 
-<string name="route_software_apps">Apps</string>
 
 
 
@@ -1965,23 +1930,16 @@
 
 
 
-<string name="napplet_permissions">nApplet-machtigingen</string>
 
 
-<string name="napplet_permissions_empty">Nog geen nApplet-machtigingen</string>
 
-<string name="napplet_permissions_empty_subtitle">Machtigingen die u aan nApplets verleent, verschijnen hier.</string>
 
-<string name="napplet_permissions_forget">Deze nApplet vergeten</string>
 
-<string name="napplet_permissions_blocked">Geblokkeerd</string>
 
-<string name="napplet_permissions_revoke">Intrekken</string>
 
 
 
 
-<string name="napplet_cap_shell">Shell</string>
 
 
 
@@ -1990,7 +1948,6 @@
 
 
 
-<string name="napplet_cap_shell_desc">Vragen welke mogelijkheden beschikbaar zijn</string>
 
 
 
@@ -2005,7 +1962,6 @@
 
 
 
-<string name="napplet_consent_capability">Mogelijkheid: %1$s</string>
 
 
 
@@ -2018,7 +1974,6 @@
 
 
 
-<string name="napplet_consent_pay">Deze nApplet wil een Lightning-factuur betalen.</string>
 
 
 
@@ -2103,16 +2058,11 @@
 
 
 
-<string name="cashu_p2pk_section">Nutzap-sleutel (geavanceerd)</string>
-
-<string name="cashu_p2pk_explainer">Een aparte privésleutel die uitsluitend wordt gebruikt om NIP-61 nutzaps te ontvangen. Niet uw Nostr-identiteitssleutel.</string>
-
-<string name="cashu_p2pk_autogen">Een nieuwe sleutel genereren</string>
-
-<string name="cashu_p2pk_manual_label">P2PK privésleutel (hex)</string>
 
 
-<string name="wallet_save_changes">Wijzigingen opslaan</string>
+
+
+
 
 
 

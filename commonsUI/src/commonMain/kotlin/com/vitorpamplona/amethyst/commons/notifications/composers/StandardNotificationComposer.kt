@@ -58,6 +58,9 @@ import com.vitorpamplona.quartz.nipBCOnchainZaps.zap.OnchainZapEvent
  * whether a note is a reply and whether a feature is on.
  */
 object StandardNotificationComposer {
+    // GitReplyEvent (kind 1622) is deprecated in favour of NIP-22 comments, but events already
+    // on relays still arrive and still notify.
+    @Suppress("DEPRECATION")
     suspend fun compose(
         account: Account,
         event: Event,

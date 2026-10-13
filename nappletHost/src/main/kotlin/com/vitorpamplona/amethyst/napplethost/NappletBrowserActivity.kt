@@ -79,6 +79,7 @@ import androidx.core.net.toUri
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
+import androidx.core.view.isEmpty
 import androidx.webkit.JavaScriptReplyProxy
 import androidx.webkit.WebMessageCompat
 import androidx.webkit.WebViewCompat
@@ -1519,7 +1520,7 @@ class NappletBrowserActivity : ComponentActivity() {
         menu: ContextMenu,
         link: String,
     ) {
-        if (menu.size() == 0) menu.setHeaderTitle(link)
+        if (menu.isEmpty()) menu.setHeaderTitle(link)
         if (link.startsWith("http")) {
             menu.add(CommonsR.string.browser_ctx_open_new_window).setOnMenuItemClickListener {
                 startActivity(newWindowIntent(link))
@@ -1540,7 +1541,7 @@ class NappletBrowserActivity : ComponentActivity() {
         menu: ContextMenu,
         image: String,
     ) {
-        if (menu.size() == 0) menu.setHeaderTitle(image.take(80))
+        if (menu.isEmpty()) menu.setHeaderTitle(image.take(80))
         if (image.startsWith("http") || image.startsWith("data:")) {
             menu.add(CommonsR.string.browser_ctx_download_image).setOnMenuItemClickListener {
                 val wv = webView

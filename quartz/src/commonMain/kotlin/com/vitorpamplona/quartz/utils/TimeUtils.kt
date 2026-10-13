@@ -20,6 +20,8 @@
  */
 package com.vitorpamplona.quartz.utils
 
+import kotlin.time.TimeSource
+
 /**
  * Clock and duration helpers for Nostr timestamps.
  *
@@ -58,6 +60,15 @@ object TimeUtils {
 
     /** Current time in Unix **milliseconds**. For non-protocol use only; `created_at` wants [now]. */
     fun nowMillis() = currentTimeMillis()
+
+    private val monotonicOrigin = TimeSource.Monotonic.markNow()
+
+    /**
+     * Milliseconds on a clock that only moves forward, from an arbitrary origin: for timing
+     * waits (a relay's back-off, a token refill), which a wall clock set back or forward
+     * would stretch or cut short. Never a timestamp.
+     */
+    fun monotonicMillis(): Long = monotonicOrigin.elapsedNow().inWholeMilliseconds
 
     fun tenSecondsFromNow() = now() + TEN_SECONDS
 

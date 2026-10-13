@@ -699,7 +699,6 @@
     <string name="uploading_state_hashing">Đang băm</string>
     <string name="uploading_state_finished">Hoàn tất</string>
     <string name="uploading_state_error">Lỗi</string>
-    <string name="connect_via_tor1">Điều chỉnh</string>
     <string name="connect_via_tor2">Cài đặt Tor</string>
     <string name="yes">Có</string>
     <string name="no">Không</string>
@@ -914,7 +913,6 @@
     <string name="created_at">Tạo lúc</string>
     <string name="guidelines">Hướng dẫn</string>
     <string name="moderators">Người kiểm duyệt</string>
-    <string name="login_with_external_signer">Đăng nhập bằng Amber</string>
     <string name="status_update">Cập nhật trạng thái của bạn</string>
     <string name="poll_zap_value_min_max_explainer">Các phiếu bầu được tính theo số lượng zap. Bạn có thể đặt số lượng tối thiểu để tránh spam và số lượng tối đa để tránh một người zap lớn chiếm lĩnh cuộc bình chọn. Sử dụng cùng một số lượng ở cả hai trường để đảm bảo mỗi phiếu bầu có giá trị như nhau. Để trống để chấp nhận bất kỳ số lượng nào.</string>
     <string name="error_dialog_talk_to_user">Nhắn tin cho Người dùng</string>

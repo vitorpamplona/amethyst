@@ -98,7 +98,8 @@ geode --version
 Key sections: `[info]` (NIP-11 doc), `[network]` (bind + thread pools),
 `[database]` (SQLite path/tuning), `[options]` (AUTH / verify / search),
 `[authorization]` (allow/deny lists), `[[mirror]]` (upstream mirroring),
-`[http]` (NIP-FE limits), `[admin]` (NIP-86 management), `[identity]` (the
+`[http]` (NIP-FE limits), `[rate_limits]` (per-client EVENT and REQ rates),
+`[admin]` (NIP-86 management), `[identity]` (the
 relay's own key, NIP-11 `self`) and `[membership]` (NIP-43). See the example
 file for every knob.
 
@@ -126,6 +127,26 @@ Streamed answers are gzipped for clients that send `Accept-Encoding: gzip`
 (`curl --compressed`), sync-flushed so events still arrive as they are found;
 `[http].gzip = false` turns it off. Quartz's `HttpRelayClient` does all of this
 for clients, over OkHttp via `OkHttpRelayTransport` or any `HttpRelayTransport`.
+
+### Rate limits
+
+`[rate_limits]` caps how many EVENTs and REQs (COUNTs, NEG-OPENs) one client may
+send a minute, with a burst on top. The client is its address, or the one a
+trusted proxy reports (`[http].trusted_proxies`), and its allowance is shared by
+all its sockets and HTTP commands. Past it, the command is refused as NIP-01
+`rate-limited:` and the frame states how long to back off, in milliseconds
+(nostr-protocol/nips#2498):
+
+```
+["OK","<id>",false,"rate-limited: too many events, slow down","1500"]
+["CLOSED","sub","rate-limited: too many subscriptions opened, slow down","1500"]
+```
+
+The back-off is exactly when the client's next token is due, so a client that
+waits it out is let through. Over HTTP the same refusal is a `429` with
+`Retry-After` set to it, rounded up to seconds. Quartz's `NostrClient` (Amethyst,
+`amy`) honors it: it holds that relay's REQs or EVENTs until the back-off passes,
+reconnects included, then sends them one per back-off.
 
 ## Membership (NIP-43)
 

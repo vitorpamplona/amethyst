@@ -154,6 +154,7 @@ object NappletFileChooser {
      * limited to one file. The two embedded providers resolve this before sending the request, so all
      * four surfaces agree on it.
      */
+    @Suppress("InlinedApi") // MODE_OPEN_FOLDER is API 37; on an older runtime the compare never matches.
     fun allowsMultiple(mode: Int): Boolean = mode == FileChooserParams.MODE_OPEN_MULTIPLE || mode == FileChooserParams.MODE_OPEN_FOLDER
 
     /**

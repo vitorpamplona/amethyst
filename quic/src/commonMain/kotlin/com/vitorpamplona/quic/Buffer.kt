@@ -281,7 +281,8 @@ class QuicReader(
     fun readTlsOpaque3(): ByteArray = readBytes(readUint24())
 
     private fun require(n: Int) {
-        if (pos + n > end) {
+        // `n > end - pos`, not `pos + n > end`: n is peer-chosen, and the sum overflows near Int.MAX_VALUE.
+        if (n < 0 || n > end - pos) {
             throw QuicCodecException("short read at pos=$pos: wanted $n, have $remaining")
         }
     }

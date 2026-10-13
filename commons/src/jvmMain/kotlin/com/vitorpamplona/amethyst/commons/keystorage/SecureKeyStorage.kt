@@ -303,7 +303,7 @@ actual class SecureKeyStorage private actual constructor() {
 
     /**
      * Forgets that the OS keyring failed or was missing, so the next access opens it again.
-     * Settings › Key storage › Try again calls this, then re-opens the vault and logs in.
+     * Key Backup › Try again calls this, then re-opens the vault and logs in.
      *
      * A refused vault stays refused until the vault is read again: cleared here, a strict read
      * racing the retry (the launch's own login) would skip the vault, find no per-alias item, and
@@ -315,7 +315,13 @@ actual class SecureKeyStorage private actual constructor() {
         _status.value = KeyStorageStatus.Unknown
     }
 
-    /** Asks for the key-file password now (Settings › Key storage › Unlock). */
+    /** Takes back this run's "Don't save" for the key file (Save keys). */
+    fun allowKeepingKeys() {
+        passwordFile.allowKeeping()
+        publishPasswordFileStatus()
+    }
+
+    /** Asks for the key-file password now (Key Backup › Unlock). */
     suspend fun unlockPasswordFile() {
         withContext(Dispatchers.IO) {
             passwordFile.unlock(prompts)

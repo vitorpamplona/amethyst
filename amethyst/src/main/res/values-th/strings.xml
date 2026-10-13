@@ -1,15 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources xmlns:tools="http://schemas.android.com/tools">
-    <string name="block_hide_user"><![CDATA[บล๊อก & ซ่อนผู้ใช้นี้]]></string>
-    <string name="boosted">แชร์</string>
-    <string name="edited_number">แก้ไข #%1$s</string>
-    <string name="save">บันทึก</string>
-    <string name="set_preferred_media_servers">ตั้งค่า media server ที่คุณต้องการ</string>
-    <string name="built_in_servers_description">รายการค่าเริ่มต้นของ Amethyst คุณสามารถเพิ่มทีละรายการหรือเพิ่มทั้งรายการก็ได้</string>
-    <string name="messages_create_public_chat">สาธรณะ</string>
-    <string name="messages_new_message">ส่วนตัว</string>
-    <string name="git_web_address">เว็บไซน์</string>
-    <string name="torrent_download">ดาวน์โหลด</string>
     
     
     
@@ -58,13 +48,9 @@
     
     
     
-    <string name="private_note_no_receivers">ยังไม่มีผู้รับ: เฉพาะคุณเท่านั้นที่จะเห็นโน้ตนี้ เพิ่มผู้คนเพื่อแชร์</string>
     
-    <string name="notify_add_user">เพิ่ม</string>
     
-    <string name="notify_remove_user">ลบผู้ใช้ออกจากการแจ้งเตือน</string>
     
-    <string name="notify_search_and_add_user">ค้นหาและเพิ่มผู้ใช้เพื่อแจ้งเตือน</string>
     
     
     
@@ -125,7 +111,6 @@
     
     
     
-    <string name="recommended_media_servers">เซิร์ฟเวอร์สื่อที่แนะนำ</string>
     
     
     
@@ -233,9 +218,7 @@
     
     
     
-    <string name="app_notification_replies_channel_message">%1$s ตอบกลับ</string>
     
-    <string name="app_notification_replies_channel_message_for">เกี่ยวกับ: %1$s</string>
     
     
     
@@ -294,9 +277,7 @@
     
     
     
-    <string name="always_on_notif_setting_title">บริการแจ้งเตือนแบบถาวร</string>
     
-    <string name="always_on_notif_setting_description">รักษาการเชื่อมต่อถาวรกับ inbox relay ของคุณเพื่อการส่งการแจ้งเตือนแบบทันที แสดงการแจ้งเตือนที่กำลังดำเนินอยู่ ใช้แบตเตอรี่มากขึ้น แต่รับประกันว่าคุณจะไม่พลาดข้อความ</string>
     
     
     
@@ -401,7 +382,6 @@
     
     
     
-    <string name="preferences">การตั้งค่าแอป</string>
     
     
     
@@ -465,7 +445,6 @@
     
     
     
-    <string name="messages_create_group">กลุ่ม</string>
     
     
     
@@ -582,16 +561,11 @@
     
     
     
-    <string name="cashu_p2pk_section">คีย์ Nutzap (ขั้นสูง)</string>
     
-    <string name="cashu_p2pk_explainer">คีย์ส่วนตัวแยกต่างหากที่ใช้เฉพาะสำหรับรับ NIP-61 nutzap ไม่ใช่คีย์ตัวตน Nostr ของคุณ</string>
     
-    <string name="cashu_p2pk_autogen">สร้างคีย์ใหม่</string>
     
-    <string name="cashu_p2pk_manual_label">คีย์ส่วนตัว P2PK (hex)</string>
     
     
-    <string name="wallet_save_changes">บันทึกการเปลี่ยนแปลง</string>
     
     
     
@@ -863,18 +837,14 @@
     
     
     
-    <string name="bottom_bar_settings_description">ลากเพื่อจัดลำดับ สลับเพื่อเพิ่มหรือลบรายการออกจากแถบด้านล่าง หากไม่มีรายการ แถบด้านล่างจะถูกซ่อน</string>
     
     
-    <string name="bottom_bar_settings_reorder">จัดลำดับใหม่</string>
     
 
     
-    <string name="home_tabs_settings_description">เลือกแท็บที่จะแสดงในหน้าหลัก เมื่อมีเพียงแท็บเดียวที่เปิดใช้งาน แถบแท็บจะถูกซ่อน</string>
     
     
     
-    <string name="profile_ui_settings_description">เลือกส่วนและฟีดที่จะแสดงในหน้าโปรไฟล์ผู้ใช้ ตัวเลือกทั้งหมดเปิดใช้งานตามค่าเริ่มต้น</string>
     
     
     
@@ -981,17 +951,12 @@
     
     
     
-    <string name="git_repo_tab_overview">ภาพรวม</string>
     
     
     
-    <string name="git_repo_section_about">เกี่ยวกับ</string>
     
-    <string name="git_repo_section_links">ลิงก์</string>
     
-    <string name="git_repo_section_maintainers">ผู้ดูแล</string>
     
-    <string name="git_repo_section_topics">หัวข้อ</string>
     
     
     
@@ -1006,9 +971,7 @@
     
     
     
-    <string name="media_servers_blossom_section">Blossom Servers</string>
     
-    <string name="media_servers_blossom_explainer">เพิ่มเซิร์ฟเวอร์ได้มากเท่าที่ต้องการ คุณสามารถเลือกเซิร์ฟเวอร์ที่จะใช้ในภายหลังเมื่ออัปโหลดรูปภาพ</string>
     
     
     
@@ -1832,7 +1795,6 @@
 
 
 
-    <string name="rename">เปลี่ยนชื่อ</string>
 
 
 
@@ -1885,7 +1847,6 @@
 
 
 
-    <string name="changed_chat_profile_to">โปรไฟล์แชทใหม่:</string>
 
 
 
@@ -2099,7 +2060,6 @@
 
 
 
-    <string name="route_software_apps">แอป</string>
 
 
 
@@ -2135,23 +2095,16 @@
 
 
 
-    <string name="napplet_permissions">สิทธิ์ nApplet</string>
 
 
-    <string name="napplet_permissions_empty">ยังไม่มีสิทธิ์ nApplet</string>
 
-    <string name="napplet_permissions_empty_subtitle">สิทธิ์ที่คุณให้แก่ nApplets จะปรากฏที่นี่</string>
 
-    <string name="napplet_permissions_forget">ลืม nApplet นี้</string>
 
-    <string name="napplet_permissions_blocked">ถูกบล็อก</string>
 
-    <string name="napplet_permissions_revoke">เพิกถอน</string>
 
 
 
 
-    <string name="napplet_cap_shell">Shell</string>
 
 
 
@@ -2160,7 +2113,6 @@
 
 
 
-    <string name="napplet_cap_shell_desc">ถามว่าความสามารถใดบ้างที่พร้อมใช้งาน</string>
 
 
 
@@ -2175,7 +2127,6 @@
 
 
 
-    <string name="napplet_consent_capability">ความสามารถ: %1$s</string>
 
 
 
@@ -2188,7 +2139,6 @@
 
 
 
-    <string name="napplet_consent_pay">nApplet นี้ต้องการชำระใบแจ้งหนี้ Lightning</string>
 
 
 

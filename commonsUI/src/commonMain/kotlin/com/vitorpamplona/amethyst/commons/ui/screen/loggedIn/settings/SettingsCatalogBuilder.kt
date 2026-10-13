@@ -55,8 +55,6 @@ import com.vitorpamplona.amethyst.commons.resources.favorite_dvms_title
 import com.vitorpamplona.amethyst.commons.resources.home_tabs_search_keywords
 import com.vitorpamplona.amethyst.commons.resources.ic_tor
 import com.vitorpamplona.amethyst.commons.resources.import_follows_search_keywords
-import com.vitorpamplona.amethyst.commons.resources.key_storage_search_keywords
-import com.vitorpamplona.amethyst.commons.resources.key_storage_title
 import com.vitorpamplona.amethyst.commons.resources.media_servers
 import com.vitorpamplona.amethyst.commons.resources.media_servers_search_keywords
 import com.vitorpamplona.amethyst.commons.resources.messages_settings
@@ -184,7 +182,6 @@ fun buildSettingsCatalog(
                     symEntry(Res.string.bolt12_offers, MaterialSymbols.Payment, Res.string.bolt12_offers_search_keywords, Route.EditBolt12Offers),
                     symEntry(Res.string.security_filters, MaterialSymbols.Security, Res.string.security_filters_search_keywords, Route.SecurityFilters),
                     symEntry(Res.string.privacy_lock_title, MaterialSymbols.Lock, Res.string.privacy_lock_search_keywords, Route.PrivacyLockSettings),
-                    if (hasKeyStorage) symEntry(Res.string.key_storage_title, MaterialSymbols.Key, Res.string.key_storage_search_keywords, Route.KeyStorageSettings) else null,
                     symEntry(Res.string.web_of_trust, MaterialSymbols.Shield, Res.string.web_of_trust_search_keywords, Route.WebOfTrust),
                     symEntry(Res.string.translations, MaterialSymbols.Translate, Res.string.translations_search_keywords, Route.UserSettings),
                     symEntry(Res.string.napplet_permissions_title, MaterialSymbols.Apps, Res.string.napplet_connected_apps_search_keywords, Route.ConnectedApps),
@@ -231,7 +228,9 @@ fun buildSettingsCatalog(
             isDanger = true,
             entries =
                 buildList {
-                    if (hasPrivateKey) {
+                    // Also where the desktop keeps keys: an account that loaded without its key
+                    // (key file locked, keychain refused) must still reach Unlock and Try again.
+                    if (hasPrivateKey || hasKeyStorage) {
                         add(
                             SettingsEntry(
                                 titleRes = Res.string.backup_keys,
@@ -240,6 +239,8 @@ fun buildSettingsCatalog(
                                 isDanger = true,
                             ) { nav.nav(Route.AccountBackup) },
                         )
+                    }
+                    if (hasPrivateKey) {
                         add(
                             SettingsEntry(
                                 titleRes = Res.string.request_to_vanish,

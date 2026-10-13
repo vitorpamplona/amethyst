@@ -22,7 +22,9 @@ package com.vitorpamplona.quartz.nip01Core.relay.server.policies
 
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
+import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.MachineReadablePrefix
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.Message
+import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.RetryAfter
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toRelay.AuthCmd
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toRelay.Command
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toRelay.CountCmd
@@ -87,7 +89,7 @@ interface IRelayPolicy {
     fun accept(cmd: NegOpenCmd): PolicyResult<NegOpenCmd> =
         when (val asReq = accept(ReqCmd(cmd.subId, listOf(cmd.filter)))) {
             is PolicyResult.Rejected -> {
-                PolicyResult.Rejected(asReq.reason)
+                PolicyResult.Rejected(asReq.reason, asReq.params)
             }
 
             is PolicyResult.Accepted -> {
@@ -202,7 +204,24 @@ sealed interface PolicyResult<T : Command> {
 
     class Rejected<T : Command>(
         val reason: String,
-    ) : PolicyResult<T>
+        /**
+         * The optional NIP-01 `params` sent after [reason] in the refusing `OK` or `CLOSED`.
+         * For a `rate-limited:` reason, the milliseconds the client should back off — build
+         * that one with [rateLimited].
+         */
+        val params: String? = null,
+    ) : PolicyResult<T> {
+        companion object {
+            /**
+             * A `rate-limited:` refusal that tells the client to wait [retryAfterMs] before
+             * sending another command of the same type; null leaves the back-off out.
+             */
+            fun <T : Command> rateLimited(
+                message: String,
+                retryAfterMs: Long? = null,
+            ) = Rejected<T>(MachineReadablePrefix.RATE_LIMITED.format(message), retryAfterMs?.let(RetryAfter::format))
+        }
+    }
 }
 
 /** The refusal a policy that does not accept transport-proved identities answers with. */

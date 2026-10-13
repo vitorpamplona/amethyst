@@ -2,10 +2,6 @@
 <resources xmlns:tools="http://schemas.android.com/tools">
     <!-- Placeholder shown in a chat row while an encrypted message is still being decrypted -->
     <!-- Prefix on a Messages-list preview when the newest message was sent by the logged-in user. %1$s is the message text -->
-    <string name="block_hide_user"><![CDATA[Blok & Sembunyikan Pengguna]]></string>
-    <string name="boosted">disebarkan</string>
-    <string name="save">Simpan</string>
-    <string name="rename">Ganti nama</string>
     <!-- Reply-mode toggle in the chat composer: reply inline in the timeline vs pull it aside into a thread. -->
     <!-- Title of the minichat (thread) screen opened from a chat message. -->
     <!-- Title of the picked-image confirmation dialog when attaching a picture to a thread reply. -->
@@ -13,20 +9,9 @@
     <!-- A reply whose target was searched for across all reachable history and never found. -->
     <!-- Reply subtitle when every relay genuinely bottomed out (no stalls) and it still wasn't there. -->
     <!-- Overflow count on the capped reporter avatar row, e.g. "+21". -->
-    <string name="changed_chat_profile_to">Profil obrolan baru:</string>
-    <string name="route_software_apps">Aplikasi</string>
-    <string name="napplet_permissions">Izin nApplet</string>
-    <string name="napplet_permissions_empty">Belum ada izin nApplet</string>
-    <string name="napplet_permissions_empty_subtitle">Izin yang Anda berikan kepada nApplet akan muncul di sini.</string>
-    <string name="napplet_permissions_forget">Lupakan nApplet ini</string>
-    <string name="napplet_permissions_blocked">Diblokir</string>
-    <string name="napplet_permissions_revoke">Cabut</string>
     <!-- Napplet sandbox chrome (host top bar + live action notices) -->
     <!-- Napplet capability names -->
-    <string name="napplet_cap_shell_desc">Tanyakan kapabilitas apa yang tersedia</string>
     <!-- Napplet consent dialog -->
-    <string name="napplet_consent_capability">Kapabilitas: %1$s</string>
-    <string name="napplet_consent_pay">nApplet ini ingin membayar invoice Lightning.</string>
     <!-- An amountless BOLT11: the payee decides how much. Never render this as "0 sats". -->
     <!-- Consequence lines for event kinds whose payload lives entirely in the tags, so a
          kind-only summary would hide what is actually being signed. These replaceable lists are
@@ -60,16 +45,7 @@
     <!-- No longer shown in the prompt: kept so the existing translations aren't orphaned. -->
     <!-- Settings: three lists that each hold what their header says. -->
     <!-- Short labels for the purpose chips on a "recent logins" row. -->
-    <string name="private_note_no_receivers">Belum ada penerima: hanya Anda yang dapat melihat catatan ini. Tambahkan orang untuk berbagi.</string>
     <!-- Composer audience control (Notify / "Visible to") -->
-    <string name="notify_add_user">Tambah</string>
-    <string name="notify_remove_user">Hapus pengguna dari notifikasi</string>
-    <string name="notify_search_and_add_user">Cari dan tambah pengguna untuk diberitahu</string>
-    <string name="set_preferred_media_servers">Atur server unggah media pilihan Anda.</string>
-    <string name="recommended_media_servers">Server Media yang Direkomendasikan</string>
-    <string name="built_in_servers_description">Daftar default Amethyst. Anda dapat menambahkannya satu per satu atau menambahkan seluruh daftarnya.</string>
-    <string name="app_notification_replies_channel_message">%1$s membalas</string>
-    <string name="app_notification_replies_channel_message_for">pada: %1$s</string>
     <!-- Notification channel groups (organize the per-kind channels in system settings) -->
     <!-- Reposts -->
     <!-- Media (picture &amp; video posts that mention you) -->
@@ -89,9 +65,6 @@
          a relay count they think is too high. -->
     <!-- Two countable nouns, so two plurals composed at the call site rather than one string with
          two %d in it: filter and relay decline independently in Slavic/Baltic/Semitic languages. -->
-    <string name="always_on_notif_setting_title">Layanan notifikasi selalu aktif</string>
-    <string name="always_on_notif_setting_description">Menjaga koneksi persisten ke relay inbox Anda untuk pengiriman notifikasi instan. Menampilkan notifikasi yang terus berjalan. Menggunakan lebih banyak baterai tetapi memastikan Anda tidak pernah melewatkan pesan.</string>
-    <string name="preferences">Preferensi Aplikasi</string>
     <!-- Settings search -->
     <!-- Settings search keywords: an English concept/protocol index that supplements the
          (translated) row titles. Marked translatable="false" so protocol terms (blossom, nsec,
@@ -99,40 +72,20 @@
     <!-- Compact label for the segmented control, where "Unmetered WiFi" does not fit. -->
     <!-- Compact labels for the segmented control. -->
     <!-- Compact labels for the segmented control, rendered in each option's own typeface. -->
-    <string name="messages_create_public_chat">Publik</string>
-    <string name="messages_create_group">Grup</string>
     <!-- New conversation chooser (full-screen picker opened from the Messages FAB).
          Each row stays lean; the "best for" line and the pros/cons appear only when a row is tapped. -->
     <!-- Buzz calls its groups channels, and a Buzz relay is one workspace rather than a directory of groups. -->
     <!-- Reusable geohash location picker (shared, not group-specific) -->
     <!-- Same, where this viewer cannot start one: not a member, or a Buzz chat channel (forum posts belong to forum channels). -->
-    <string name="messages_new_message">Privat</string>
     <string name="share_target_as_dm">Kirim sebagai DM</string>
     <!-- Label for the mixed media feed: pictures + every NIP-71 video kind + NIP-94 files.
          Distinct from the "shorts" string, which labels the vertical/short-video-only feed. -->
-    <string name="cashu_p2pk_section">Kunci Nutzap (lanjutan)</string>
-    <string name="cashu_p2pk_explainer">Kunci privat terpisah yang hanya digunakan untuk menerima NIP-61 nutzap. Bukan kunci identitas Nostr Anda.</string>
-    <string name="cashu_p2pk_autogen">Buat kunci baru</string>
-    <string name="cashu_p2pk_manual_label">Kunci privat P2PK (hex)</string>
-    <string name="wallet_save_changes">Simpan perubahan</string>
     <!-- Onchain zap send dialog -->
-    <string name="bottom_bar_settings_description">Seret untuk mengurutkan ulang. Aktifkan/nonaktifkan untuk menambah atau menghapus item dari bilah bawah. Dengan nol item, bilah bawah tersembunyi.</string>
-    <string name="bottom_bar_settings_reorder">Urutkan Ulang</string>
-    <string name="home_tabs_settings_description">Pilih tab mana yang muncul di layar Beranda. Ketika hanya satu tab yang aktif, bilah tab disembunyikan.</string>
-    <string name="profile_ui_settings_description">Pilih bagian dan umpan mana yang muncul di layar profil pengguna. Semua opsi diaktifkan secara default.</string>
     <!-- Buzz kind-40099 system messages: relay-authored narration of a channel state change. -->
     <!-- Fallback for a system message type this version does not know yet: "alice: some_new_type". -->
     <!-- Buzz huddles (kind 481xx): live audio-room lifecycle, narrated in the chat timeline. -->
     <!-- Buzz agent jobs (kind 43xxx): an agent task's lifecycle, narrated in the chat timeline. -->
     <!-- Buzz forum votes (kind 45002). -->
-    <string name="git_repo_tab_overview">Ikhtisar</string>
-    <string name="git_repo_section_about">Tentang</string>
-    <string name="git_repo_section_links">Tautan</string>
-    <string name="git_repo_section_maintainers">Pemelihara</string>
-    <string name="git_repo_section_topics">Topik</string>
-    <string name="media_servers_blossom_section">Server Blossom</string>
-    <string name="media_servers_blossom_explainer">Tambahkan server sebanyak yang Anda inginkan. Anda dapat memilih mana yang akan digunakan nanti saat mengunggah gambar Anda</string>
-    <string name="torrent_download">Unduh</string>
     <!-- %1$s is replaced at runtime by an inline star icon, not text. Keep the placeholder. -->
     <!-- Kind display names for relay subscription filter chips -->
     <!-- M3 Action Dialog titles -->

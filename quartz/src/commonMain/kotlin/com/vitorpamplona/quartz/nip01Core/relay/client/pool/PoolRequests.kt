@@ -242,7 +242,7 @@ class PoolRequests(
                 // the sub was unsubscribed while the frame was in flight -- recreating
                 // the row would resurrect a dead subscription in the registry.
                 relayState.get(cmd.subId)?.let { state ->
-                    state.withLock(relay) { state.onOpenReq(relay, cmd.filters) }
+                    state.withLock(relay) { state.onReqSent(relay, cmd.filters) }
                 }
                 desiredSubListeners.get(cmd.subId)?.onSubscriptionStarted(
                     relay = relay.url,
@@ -275,7 +275,7 @@ class PoolRequests(
                 relayState.get(msg.subId)?.let { state ->
                     state.withLock(relay.url) {
                         state.onNewEvent(relay.url)
-                        isLive = state.currentState(relay.url) == ReqSubStatus.LIVE
+                        isLive = state.isLive(relay.url)
                         forFilters = state.lastKnownFilterStates(relay.url)
                     }
                 }
@@ -341,6 +341,10 @@ class PoolRequests(
                 // blocked the relay, drop it from the desired set so the pool disconnects.
                 val newlyBlocked = relayRefusals.onRefused(relay.url, msg.message)
 
+                // A `rate-limited:` CLOSED that states a back-off is not re-decided here: the
+                // client hands the current filters to [retryRateLimited], and the relay's
+                // rate-limit gate holds that REQ until the back-off passes.
+                val backingOff = msg.retryAfterMs != null
                 var forFilters: List<Filter>? = null
                 val cmd =
                     relayState.get(msg.subId)?.let { state ->
@@ -348,7 +352,7 @@ class PoolRequests(
                             state.onClosed(relay.url)
                             forFilters = state.lastKnownFilterStates(relay.url)
                             recordRefusalIfStructural(state, relay.url, msg.message, forFilters)
-                            decideCommandLocked(state, msg.subId, relay.url)
+                            if (backingOff) null else decideCommandLocked(state, msg.subId, relay.url)
                         }
                     }
 
@@ -358,6 +362,7 @@ class PoolRequests(
                     message = msg.message,
                     relay = relay.url,
                     forFilters = forFilters,
+                    params = msg.params,
                 )
 
                 // send a newer version when done, but don't send a close if just closed
@@ -365,6 +370,88 @@ class PoolRequests(
                     relay.sendOrConnectAndSync(cmd)
                 }
             }
+        }
+    }
+
+    /**
+     * Re-sends the REQs of [subIds] that [relay] CLOSED as `rate-limited:` with a back-off. Sent
+     * right after the refusal: the relay's
+     * [com.vitorpamplona.quartz.nip01Core.relay.client.single.basic.RateLimitGate] holds them until
+     * the back-off passes. A CLOSED sub keeps its filters so it is not re-sent on its
+     * own (see [RequestSubscriptionState.onClosed]); this forgets them so the current desired
+     * filters go out again. A sub that moved on in the meantime — re-sent after a filter change,
+     * a reconnect, or dropped from this relay — is left alone. Returns whether any REQ went out.
+     */
+    fun retryRateLimited(
+        relay: NormalizedRelayUrl,
+        subIds: Set<String>,
+        sync: (Command) -> Unit,
+    ): Boolean {
+        var sent = false
+        subIds.forEach { subId ->
+            val cmd =
+                relayState.get(subId)?.let { state ->
+                    state.withLock(relay) {
+                        if (state.currentState(relay) == ReqSubStatus.CLOSED) {
+                            state.onSubscriptionClosed(relay)
+                            decideCommandLocked(state, subId, relay)
+                        } else {
+                            null
+                        }
+                    }
+                }
+            if (cmd is ReqCmd) {
+                sync(cmd)
+                sent = true
+            }
+        }
+        return sent
+    }
+
+    /**
+     * [relay]'s rate-limit gate held [held] instead of sending it. Until it goes, what the relay
+     * sends for the sub belongs to the REQ before it: a LIVE sub keeps streaming its old
+     * filters, and those events must stay matched to them, and live.
+     */
+    fun onHeld(
+        relay: NormalizedRelayUrl,
+        held: ReqCmd,
+    ) {
+        relayState.get(held.subId)?.let { state ->
+            state.withLock(relay) { state.onHeld(relay, held.filters) }
+        }
+    }
+
+    /**
+     * The REQ to write for [held], a REQ [relay]'s rate-limit gate held through a back-off and is
+     * releasing now, or null to write nothing. Relays queue a sub's REQs and serve each in full,
+     * so there is only ever one per sub on the wire:
+     *  - a newer decision owns the row (a NOTICE narrowing, a resubscribe while this one was
+     *    being released): its own REQ follows, so this one is dropped. Not the replay after a
+     *    successful AUTH: relays drop REQs sent before AUTH finishes, so that replay is the sub's
+     *    real REQ, and while this one is still queued it simply takes its place (same sub id);
+     *  - the sub is gone: its CLOSE dropped the held REQ, or closes this one, so nothing goes;
+     *  - otherwise the sub's CURRENT filters go out. A change made while it waited found the sub
+     *    in flight and was left for its EOSE ([decideCommandLocked]); sent here, it costs no
+     *    second REQ, and the EOSE finds nothing left to send.
+     *
+     * The row is marked in flight with the filters that go out before they do, as every send
+     * path here pre-marks: a fast relay answers before [onSent] runs, and whatever it answered
+     * while the REQ was held came from the REQ before it.
+     */
+    fun refreshHeld(
+        relay: NormalizedRelayUrl,
+        held: ReqCmd,
+    ): ReqCmd? {
+        val state = relayState.get(held.subId) ?: return null
+        val desired = desiredSubs.get(held.subId)?.get(relay)?.let { relayRefusals.narrow(relay, it) }
+        return state.withLock(relay) {
+            // Identity, not equality: the decision that queued this REQ recorded this very list,
+            // and a newer one (a NOTICE narrowing, a resubscribe) records a list of its own.
+            if (state.currentFilters(relay) !== held.filters) return@withLock null
+            val filters = if (desired.isNullOrEmpty() || !FiltersChanged.needsToResendRequest(held.filters, desired)) held.filters else desired
+            state.onWriting(relay, filters)
+            if (filters === held.filters) held else ReqCmd(held.subId, filters)
         }
     }
 
@@ -510,7 +597,23 @@ class PoolRequests(
             newFilters.isNullOrEmpty() -> {
                 // some relays are not in this sub anymore. Stop their subscriptions
                 // only if the old filters are not already closed.
-                if (!oldFilters.isNullOrEmpty()) CloseCmd(subId) else null
+                when {
+                    oldFilters.isNullOrEmpty() -> {
+                        null
+                    }
+
+                    state.currentState(relay) == ReqSubStatus.CLOSED -> {
+                        // The relay already ended it (or, parked behind a back-off, never saw
+                        // it): a CLOSE would only earn `error: no such subscription`. Forget the
+                        // filters the CLOSED kept, so wanting them again sends a REQ.
+                        state.onSubscriptionClosed(relay)
+                        null
+                    }
+
+                    else -> {
+                        CloseCmd(subId)
+                    }
+                }
             }
 
             oldFilters.isNullOrEmpty() || FiltersChanged.needsToResendRequest(oldFilters, newFilters) -> {

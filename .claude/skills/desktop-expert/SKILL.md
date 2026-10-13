@@ -26,6 +26,7 @@ Background: `commons/plans/2026-09-27-one-ui-android-desktop.md`,
 | `app/Legacy*Import.kt` | One-time import of the retired legacy app's accounts, deck, feeds, privacy lock. |
 | `platform/PlatformInfo.kt` | `PlatformInfo.current` / `host`, `isMacOS`, `isWindows`, `isLinux`, `isGnome`, `isKde`. |
 | `platform/SavedWindowBounds.kt` | Window position/size persisted to `window-bounds.properties`. |
+| `platform/WaylandDisplay.kt`, `platform/AppWindow.kt` | Native Wayland: `WLToolkit` picked in `main()` on a Wayland session (`AMETHYST_X11=1` opts out); `AppWindow` is Compose's `Window` elsewhere and a Swing-drawn frame there. Open new top-level windows with `AppWindow`, never `Window`/`ComposeDialog`. |
 | `account/`, `tor/`, `network/`, `service/`, `ui/media/` | Account storage, Tor, HTTP, scheduled posts, video/audio players. |
 
 A new shared feature that needs a desktop behaviour = a member on one of the ports above
@@ -90,6 +91,8 @@ Read the screenshots with the image-reading tool. Details: `tools/desktop-run/RE
 - The screen size picks the shell: `AMETHYST_SCREEN=480x900x24` gives the phone layout (bottom bar),
   the default 1600x1000 gives the permanent drawer + docked notifications. Use a new
   `AMETHYST_DISPLAY` per size.
+- Linux packages bundle the JetBrains Runtime (build on `jbrsdk` 21, see BUILDING.md "Wayland and X11
+  on Linux"); `scripts/wayland-smoke-test.sh <launcher>` checks one on a sway with no Xwayland.
 - Under Xvfb: no GL (the script sets `SKIKO_RENDER_API=SOFTWARE`), no keyring (password-file
   fallback), no native video player ("Can't play this video"). Those are the environment, not your
   change. `run-headless.sh logs` lists exceptions first.

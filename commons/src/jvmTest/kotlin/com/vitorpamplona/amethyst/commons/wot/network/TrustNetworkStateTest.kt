@@ -193,16 +193,20 @@ class TrustNetworkStateTest {
             val flow = wot.verdicts(me, follows, scope)
             val first = withTimeout(5_000) { flow.first { it.isActive } }
 
+            // Waits for the answer, not for the next object: the combine's first value (computed from
+            // the old follows on another thread) can replace the initial snapshot after `first` was
+            // read, and is a new object that does not have the friend yet.
+
             // Following someone is a new answer.
             val friend = hex()
             follows.value = setOf(friend)
-            val followed = withTimeout(5_000) { flow.first { it !== first } }
-            assertEquals(TrustVerdict.FOLLOW, followed.explain(friend))
+            val followed = withTimeout(5_000) { flow.first { it.explain(friend) == TrustVerdict.FOLLOW } }
+            assertTrue(followed !== first)
 
             // So is a new minimum score.
             minScore.value = 1
-            val lowered = withTimeout(5_000) { flow.first { it !== followed } }
-            assertTrue(lowered.passes(lowRank))
+            val lowered = withTimeout(5_000) { flow.first { it.passes(lowRank) } }
+            assertTrue(lowered !== followed)
         }
 
     private fun newerCard(
