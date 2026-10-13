@@ -18,11 +18,13 @@ command: amethyst-desktop
 finish-args:
   - --share=network
   - --share=ipc
-  # Compose Desktop renders through AWT/skiko, which is X11-only on Linux
-  # (runs under XWayland on Wayland sessions). fallback-x11 + wayland would
-  # leave the app without a usable display socket on Wayland sessions, so
-  # grant x11 unconditionally.
-  - --socket=x11
+  # Native Wayland: the bundled runtime is the JetBrains Runtime, whose AWT
+  # speaks Wayland (WLToolkit), and the app picks it whenever it finds a
+  # Wayland socket (desktopApp/.../platform/WaylandDisplay.kt). X11 is only
+  # the fallback for X11 sessions: fallback-x11 grants it when there is no
+  # Wayland, so a Wayland session never exposes the X server to the app.
+  - --socket=wayland
+  - --socket=fallback-x11
   - --socket=pulseaudio
   - --device=dri
   # AWT's FileDialog uses the GTK file chooser directly, not the file chooser
