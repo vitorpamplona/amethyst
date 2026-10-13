@@ -35,9 +35,18 @@ import kotlinx.collections.immutable.persistentListOf
 
 @Composable
 fun RenderReaction(reactionType: String) {
-    if (reactionType.startsWith(":")) {
-        val noStartColon = reactionType.removePrefix(":")
-        val url = noStartColon.substringAfter(":")
+    // A custom emoji arrives here normalized to `:shortcode:url` (see firstFullCharOrEmoji). A
+    // bare `:shortcode:` whose event carries no matching emoji tag has no image to draw: show the
+    // shortcode as text instead of an empty image.
+    val customEmojiUrl =
+        if (reactionType.startsWith(":")) {
+            reactionType.removePrefix(":").substringAfter(":", "").ifBlank { null }
+        } else {
+            null
+        }
+
+    if (customEmojiUrl != null) {
+        val url = customEmojiUrl
 
         InLineIconRenderer(
             persistentListOf(
