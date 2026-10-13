@@ -5,7 +5,7 @@
 # submission manifest: Flathub requires building from source. See
 # desktopApp/packaging/flatpak/README.md.
 
-app-id: com.vitorpamplona.amethyst
+app-id: com.vitorpamplona.amethyst.Amethyst
 runtime: org.freedesktop.Platform
 runtime-version: '26.08'
 sdk: org.freedesktop.Sdk
@@ -18,11 +18,13 @@ command: amethyst-desktop
 finish-args:
   - --share=network
   - --share=ipc
-  # Compose Desktop renders through AWT/skiko, which is X11-only on Linux
-  # (runs under XWayland on Wayland sessions). fallback-x11 + wayland would
-  # leave the app without a usable display socket on Wayland sessions, so
-  # grant x11 unconditionally.
-  - --socket=x11
+  # Native Wayland: the bundled runtime is the JetBrains Runtime, whose AWT
+  # speaks Wayland (WLToolkit), and the app picks it whenever it finds a
+  # Wayland socket (desktopApp/.../platform/WaylandDisplay.kt). X11 is only
+  # the fallback for X11 sessions: fallback-x11 grants it when there is no
+  # Wayland, so a Wayland session never exposes the X server to the app.
+  - --socket=wayland
+  - --socket=fallback-x11
   - --socket=pulseaudio
   - --device=dri
   # AWT's FileDialog uses the GTK file chooser directly, not the file chooser
@@ -36,7 +38,7 @@ finish-args:
   - --talk-name=org.freedesktop.secrets
   # The app keeps accounts, drafts and scheduled posts under ~/.amethyst and
   # Java Preferences under ~/.java. Without home access those paths are
-  # throwaway, so map them into ~/.var/app/com.vitorpamplona.amethyst/.
+  # throwaway, so map them into ~/.var/app/com.vitorpamplona.amethyst.Amethyst/.
   - --persist=.amethyst
   - --persist=.java
 
@@ -52,10 +54,10 @@ modules:
       - mkdir -p /app/lib/Amethyst
       - cp -r ./Amethyst/* /app/lib/Amethyst/
       - install -Dm755 amethyst-desktop.sh /app/bin/amethyst-desktop
-      - install -Dm644 com.vitorpamplona.amethyst.metainfo.xml -t /app/share/metainfo/
-      - install -Dm644 com.vitorpamplona.amethyst.desktop -t /app/share/applications/
-      - install -Dm644 icons/512/com.vitorpamplona.amethyst.png -t /app/share/icons/hicolor/512x512/apps/
-      - install -Dm644 LICENSE -t /app/share/licenses/com.vitorpamplona.amethyst/
+      - install -Dm644 com.vitorpamplona.amethyst.Amethyst.metainfo.xml -t /app/share/metainfo/
+      - install -Dm644 com.vitorpamplona.amethyst.Amethyst.desktop -t /app/share/applications/
+      - install -Dm644 icons/512/com.vitorpamplona.amethyst.Amethyst.png -t /app/share/icons/hicolor/512x512/apps/
+      - install -Dm644 LICENSE -t /app/share/licenses/com.vitorpamplona.amethyst.Amethyst/
     sources:
       # Built artifact from `./gradlew :desktopApp:createReleaseDistributable`.
       # Path matches Compose Multiplatform 1.11's output layout.
@@ -70,10 +72,10 @@ modules:
           - exec /app/lib/Amethyst/bin/Amethyst "$@"
 
       - type: file
-        path: com.vitorpamplona.amethyst.metainfo.xml
+        path: com.vitorpamplona.amethyst.Amethyst.metainfo.xml
 
       - type: file
-        path: com.vitorpamplona.amethyst.desktop
+        path: com.vitorpamplona.amethyst.Amethyst.desktop
 
       - type: dir
         path: icons

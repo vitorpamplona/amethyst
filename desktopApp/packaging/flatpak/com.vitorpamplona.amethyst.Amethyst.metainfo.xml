@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <component type="desktop-application">
-  <id>com.vitorpamplona.amethyst</id>
+  <id>com.vitorpamplona.amethyst.Amethyst</id>
   <metadata_license>CC0-1.0</metadata_license>
   <!-- Amethyst is MIT. The Flatpak also ships the bundled JRE (OpenJDK,
        GPL-2.0 with the Classpath exception) and the libraries listed with
@@ -9,8 +9,11 @@
   <name>Amethyst</name>
   <summary>Join the social network you control</summary>
 
-  <!-- Up to v1.17.0 the Flatpak bundle shipped as com.vitorpamplona.amethyst.Desktop -->
+  <!-- Up to v1.17.0 the Flatpak bundle shipped as com.vitorpamplona.amethyst.Desktop,
+       and v1.18.0 as com.vitorpamplona.amethyst (the Android package name, which
+       also names our NIP-82 listing on Zapstore) -->
   <replaces>
+    <id>com.vitorpamplona.amethyst</id>
     <id>com.vitorpamplona.amethyst.Desktop</id>
   </replaces>
 
@@ -36,7 +39,7 @@
     </p>
   </description>
 
-  <launchable type="desktop-id">com.vitorpamplona.amethyst.desktop</launchable>
+  <launchable type="desktop-id">com.vitorpamplona.amethyst.Amethyst.desktop</launchable>
 
   <url type="homepage">https://amethyst.social</url>
   <url type="bugtracker">https://github.com/vitorpamplona/amethyst/issues</url>

@@ -1,9 +1,20 @@
 # Flatpak packaging for Amethyst Desktop
 
-App ID: **`com.vitorpamplona.amethyst`**. Up to v1.17.0 the bundle shipped as
-`com.vitorpamplona.amethyst.Desktop`; Flathub forbids IDs that end in generic
-terms like `.desktop`, so it was renamed. `BUILDING.md` § Uninstall + state
-paths explains how users move their data to the new ID.
+App ID: **`com.vitorpamplona.amethyst.Amethyst`**. Earlier bundles used two
+other IDs:
+
+- Up to v1.17.0: `com.vitorpamplona.amethyst.Desktop`. Flathub forbids IDs that
+  end in generic terms like `.desktop`, `.app` or `.linux` ("it's fine to repeat
+  the application name in such cases", hence `.Amethyst`).
+- v1.18.0: `com.vitorpamplona.amethyst`, the Android package name. Nostr app
+  stores (NIP-82) key an app's listing on its native ID: Zapstore lists the
+  Android app under `com.vitorpamplona.amethyst`, and Orchard, a Flatpak store,
+  would list the Flatpak under its app ID. Both listings are signed by the same
+  key, so one shared ID would make each store's publish overwrite the other's
+  listing.
+
+`BUILDING.md` § Uninstall + state paths explains how users move their data to
+the new ID.
 
 Release CI (`.github/workflows/create-release.yml`, `linux-portable` leg)
 builds a single-file bundle from this directory on every tag and attaches it to
@@ -14,40 +25,44 @@ which Flathub does not accept. See [Flathub](#flathub) below.
 
 ## Files
 
-- `com.vitorpamplona.amethyst.yml`: Flatpak manifest for the GitHub Release
-  bundle. It packages the **prebuilt** jpackage tree from
+- `com.vitorpamplona.amethyst.Amethyst.yml`: Flatpak manifest for the GitHub
+  Release bundle. It packages the **prebuilt** jpackage tree from
   `./gradlew :desktopApp:createReleaseDistributable`, which bundles its own
-  trimmed JRE (hence no openjdk extension).
-- `com.vitorpamplona.amethyst.metainfo.xml`: AppStream metadata. It keeps the
-  release history: add an entry when tagging (`RELEASE_OPS.md` § Pre-tag
+  trimmed JRE (hence no openjdk extension). Build that tree on the JetBrains
+  Runtime (see [Sandbox notes](#sandbox-notes)), or the bundle can't draw on
+  Wayland.
+- `com.vitorpamplona.amethyst.Amethyst.metainfo.xml`: AppStream metadata. It
+  keeps the release history: add an entry when tagging (`RELEASE_OPS.md` § Pre-tag
   checklist). CI injects a bare entry for the version it builds if one is
   missing.
-- `com.vitorpamplona.amethyst.desktop`: XDG desktop entry.
-- `icons/512/com.vitorpamplona.amethyst.png`: 512x512 icon (copy of
+- `com.vitorpamplona.amethyst.Amethyst.desktop`: XDG desktop entry.
+- `icons/512/com.vitorpamplona.amethyst.Amethyst.png`: 512x512 icon (copy of
   `desktopApp/src/jvmMain/resources/icon.png`).
 
 Validate after editing:
 
 ```bash
-appstreamcli validate --pedantic com.vitorpamplona.amethyst.metainfo.xml
-desktop-file-validate com.vitorpamplona.amethyst.desktop
+appstreamcli validate --pedantic com.vitorpamplona.amethyst.Amethyst.metainfo.xml
+desktop-file-validate com.vitorpamplona.amethyst.Amethyst.desktop
 ```
 
-Both pass cleanly. Flathub's own linter (`flatpak-builder-lint` from the
-`org.flatpak.Builder` app) also passes on the manifest; on the built repo it
-reports only the missing screenshot:
+Both pass. `--pedantic` prints one hint, `cid-contains-uppercase-letter`: the
+`.Amethyst` component is capitalised, which Flathub's ID rules allow. Flathub's
+own linter (`flatpak-builder-lint` from the `org.flatpak.Builder` app) passed
+on the manifest under the previous ID and has not been re-run since the rename;
+on the built repo it reported only the missing screenshot:
 
 ```bash
 flatpak install --user flathub org.flatpak.Builder
-flatpak run --command=flatpak-builder-lint org.flatpak.Builder manifest com.vitorpamplona.amethyst.yml
+flatpak run --command=flatpak-builder-lint org.flatpak.Builder manifest com.vitorpamplona.amethyst.Amethyst.yml
 flatpak run --command=flatpak-builder-lint org.flatpak.Builder repo <path-to>/repo
 ```
 
 ## Local build
 
 ```bash
-# 1. Build the app tree the manifest packages
-./gradlew :desktopApp:createReleaseDistributable
+# 1. Build the app tree the manifest packages, on the JetBrains Runtime 21 (jbrsdk)
+JAVA_HOME=/path/to/jbrsdk-21 ./gradlew :desktopApp:createReleaseDistributable
 
 # 2. Tooling + Flathub remote (one-time)
 sudo apt-get install -y flatpak flatpak-builder   # or distro equivalent
@@ -56,16 +71,16 @@ flatpak remote-add --user --if-not-exists flathub https://dl.flathub.org/repo/fl
 # 3. Build + install locally
 cd desktopApp/packaging/flatpak
 flatpak-builder --user --install --install-deps-from=flathub --force-clean \
-  build-dir com.vitorpamplona.amethyst.yml
-flatpak run com.vitorpamplona.amethyst
+  build-dir com.vitorpamplona.amethyst.Amethyst.yml
+flatpak run com.vitorpamplona.amethyst.Amethyst
 ```
 
 To produce the distributable single-file bundle instead (what CI ships):
 
 ```bash
 flatpak-builder --user --install-deps-from=flathub --force-clean \
-  --repo=repo build-dir com.vitorpamplona.amethyst.yml
-flatpak build-bundle repo amethyst.flatpak com.vitorpamplona.amethyst \
+  --repo=repo build-dir com.vitorpamplona.amethyst.Amethyst.yml
+flatpak build-bundle repo amethyst.flatpak com.vitorpamplona.amethyst.Amethyst \
   --runtime-repo=https://dl.flathub.org/repo/flathub.flatpakrepo
 ```
 
@@ -87,9 +102,14 @@ lists the codecs-extra plugin directory, and overriding it hides those plugins.
 
 ## Sandbox notes
 
-- `--socket=x11` (not wayland/fallback-x11): Compose Desktop renders through
-  AWT/skiko, which is X11-only on Linux and runs under XWayland on Wayland
-  sessions.
+- `--socket=wayland` + `--socket=fallback-x11`: the app draws natively on
+  Wayland and gets X11 only on X11 sessions. This needs the bundled runtime to
+  be the JetBrains Runtime (its AWT has a Wayland toolkit, `WLToolkit`; stock
+  OpenJDK's AWT is X11-only), which release CI builds the Linux legs on. Skiko's
+  window surface needs X11, so on Wayland the app draws through Swing with
+  Skiko's CPU renderer (`desktopApp/.../platform/WaylandDisplay.kt`,
+  `AppWindow.kt`). `flatpak run --env=AMETHYST_X11=1 --socket=x11
+  com.vitorpamplona.amethyst.Amethyst` puts it back on XWayland.
 - File access is limited to Downloads and Pictures. AWT's `FileDialog` calls
   the GTK file chooser directly rather than the file chooser portal, so it can
   only browse what the sandbox can see.
@@ -102,8 +122,8 @@ lists the codecs-extra plugin directory, and overriding it hides those plugins.
   drafts, scheduled posts and the local relay under `~/.amethyst`, and Java
   Preferences (relay lists, search history) under `~/.java`. Without home
   access, writes there are lost when the sandbox exits; `--persist` keeps them
-  under `~/.var/app/com.vitorpamplona.amethyst/`. Tor state and the image
-  cache already follow `XDG_DATA_HOME`/`XDG_CACHE_HOME`.
+  under `~/.var/app/com.vitorpamplona.amethyst.Amethyst/`. Tor state and the
+  image cache already follow `XDG_DATA_HOME`/`XDG_CACHE_HOME`.
 - Scheduled posts only publish while the app is open. `OsScheduler` registers
   a systemd user timer (or crontab entry) to publish while the app is closed,
   and neither can be reached from the sandbox.
@@ -143,8 +163,12 @@ checked 2026-10-09:
      generated files), plus an init script that points the repositories in
      `settings.gradle.kts` at that local copy;
    - the Gradle distribution itself, since the wrapper downloads it;
-   - a JDK from `org.freedesktop.Sdk.Extension.openjdk21` to run Gradle and
-     jpackage. The jpackage tree then bundles a trimmed JRE as it does today.
+   - a JDK to run Gradle and jpackage. The jpackage tree bundles a trimmed
+     JRE of that JDK, and it must be the JetBrains Runtime (jbrsdk 21) to
+     draw on Wayland. `org.freedesktop.Sdk.Extension.openjdk21` is stock
+     OpenJDK, X11 only, so the manifest would list JBR's source archive
+     instead (or JBR's prebuilt jbrsdk, which a reviewer may also ask to be
+     built from source).
 
    Some Maven dependencies ship prebuilt Linux binaries inside their jars,
    and a reviewer may ask for those to be built from source too. In the
@@ -153,12 +177,12 @@ checked 2026-10-09:
    `mediaplayer-jvm`, `nucleus.notification-linux` and Skiko's runtime.
 3. **Screenshot.** The metainfo needs at least one screenshot of the Linux
    app (see the commented-out `<screenshots>` block).
-4. **Domain verification.** `com.vitorpamplona.amethyst` is verified by
+4. **Domain verification.** `com.vitorpamplona.amethyst.Amethyst` is verified by
    serving the token Flathub provides at
    `https://vitorpamplona.com/.well-known/org.flathub.VerifiedApps.txt`.
 5. **Latest runtime.** Flathub requires the newest runtime at submission time.
 
-Once accepted, Flathub creates `flathub/com.vitorpamplona.amethyst`, and
+Once accepted, Flathub creates `flathub/com.vitorpamplona.amethyst.Amethyst`, and
 updates are PRs there.
 
 ## License metadata
@@ -167,5 +191,5 @@ The metainfo declares
 `MIT AND LGPL-2.1-or-later AND BSD-2-Clause AND Apache-2.0 AND GPL-2.0-only WITH Classpath-exception-2.0`:
 the expression from `rpmLicenseType` in `desktopApp/build.gradle.kts` plus the
 bundled OpenJDK runtime. The manifest installs the repository `LICENSE` to
-`/app/share/licenses/com.vitorpamplona.amethyst/`. The JRE's own notices ship
+`/app/share/licenses/com.vitorpamplona.amethyst.Amethyst/`. The JRE's own notices ship
 inside the jpackage tree under `lib/runtime/legal/`.

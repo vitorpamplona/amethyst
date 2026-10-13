@@ -41,7 +41,12 @@ Platform-specific:
   package an arm64 MSI. Locally you *can* build one on an arm64 Windows box with
   WiX 3.x installed (jpackage produces host-native artifacts; the WiX 3 binaries
   themselves are x86 and run under emulation).
-- **Linux (all)**: nothing extra for `.deb`; `rpm` + `fakeroot` for `.rpm`;
+- **Linux (all)**: run Gradle on the **JetBrains Runtime 21** (the `jbrsdk`
+  build: `actions/setup-java` with `distribution: jetbrains`, or
+  `JAVA_HOME=/path/to/jbrsdk-21`). jpackage bundles the JDK Gradle runs on, and
+  only JBR's AWT can draw natively on Wayland; a package built on Temurin runs on
+  X11/XWayland only (see [Wayland and X11 on Linux](#wayland-and-x11-on-linux)).
+  Nothing extra for `.deb`; `rpm` + `fakeroot` for `.rpm`;
   `appimagetool` + `desktop-file-utils` for AppImage; `flatpak` +
   `flatpak-builder` for the Flatpak bundle (see
   [`desktopApp/packaging/flatpak/README.md`](desktopApp/packaging/flatpak/README.md))
@@ -793,6 +798,40 @@ On Fedora Silverblue / very minimal distros, FUSE might be missing. Use
 
 ---
 
+## Wayland and X11 on Linux
+
+Every Linux package (`.deb`, `.rpm`, AppImage, tar.gz, Flatpak) draws natively
+on Wayland, with no XWayland, and through X11 on an X11 session. Two pieces
+make that work:
+
+- **The runtime.** The packages bundle the JetBrains Runtime instead of
+  Temurin: stock OpenJDK's AWT only speaks X11, while JBR's has a Wayland
+  toolkit (`WLToolkit`). Release CI builds the Linux legs on it and fails a
+  build whose runtime lacks `lib/libawt_wlawt.so`.
+- **The window.** On a Wayland session (`$WAYLAND_DISPLAY` names a live
+  socket) the app starts AWT on `WLToolkit` before anything else
+  (`desktopApp/.../platform/WaylandDisplay.kt`). Compose's own window can't
+  draw there (Skiko's window surface needs an X11 handle), so the windows are
+  Swing frames with a Compose panel that draws through Swing, with Skiko's CPU
+  renderer (`AppWindow.kt`). On X11, macOS and Windows nothing changes.
+
+The title bar on Wayland: where the compositor draws window decorations (KDE,
+sway, labwc, Hyprland, COSMIC, niri) the app uses them, so it gets the same
+title bar as every other app there. GNOME draws none, so JBR draws a GTK title
+bar, which follows the desktop's light/dark setting. That is deliberate: JBR
+has no API to draw into the title bar on Wayland (as the app does on macOS),
+and an app-drawn bar would lose GNOME's window menu and button layout.
+`-Dsun.awt.wl.WindowDecorationStyle=builtin|gtk|server` overrides the choice.
+
+Set `AMETHYST_X11=1` to keep a Wayland session on XWayland (the Flatpak also
+needs `--socket=x11` for that). `./gradlew :desktopApp:run` on a stock JDK runs
+on X11/XWayland; run it on JBR to try the Wayland path.
+`scripts/wayland-smoke-test.sh <launcher>` starts a packaged app on a headless
+sway with Xwayland turned off and passes only if it opens a native Wayland
+window (needs `sway`).
+
+---
+
 ## Video and audio on Linux
 
 The desktop player decodes through the system's GStreamer. The released `.deb`
@@ -826,19 +865,45 @@ expose downgrade migration risks — **prefer a single install channel per
 machine**.
 
 **Exception: Flatpak.** The sandbox redirects XDG dirs into
-`~/.var/app/com.vitorpamplona.amethyst/` (the manifest persists `~/.amethyst`
+`~/.var/app/com.vitorpamplona.amethyst.Amethyst/` (the manifest persists `~/.amethyst`
 and `~/.java` there too), so a Flatpak install keeps
 its own separate state and does not see (or risk downgrading) state written
 by any other channel.
 
-**Flatpak app ID change.** Up to v1.17.0 the Flatpak bundle used the ID
-`com.vitorpamplona.amethyst.Desktop` (Flathub forbids IDs ending in
-`.desktop`). The renamed bundle installs as a separate app. There is no data
-worth moving: that bundle did not persist `~/.amethyst` or `~/.java`, so it
-lost its accounts, drafts and settings on every restart, and what it did keep
-(Tor state, image cache) is rebuilt on demand. Remove it with
-`flatpak uninstall --delete-data com.vitorpamplona.amethyst.Desktop` and log
-in again in the new one.
+**Flatpak app ID changes.** The bundle is now
+`com.vitorpamplona.amethyst.Amethyst`. Each earlier ID installs as a separate
+app with its own `~/.var/app/<id>/`:
+
+- **v1.18.0, `com.vitorpamplona.amethyst`.** It kept accounts, drafts and
+  settings in `~/.var/app/com.vitorpamplona.amethyst/`. Without a system
+  keyring, the private keys are there too: the password key file lives under
+  the sandbox's `XDG_DATA_HOME` (`data/amethyst/`). Move the whole directory to
+  the new ID, then remove the old app *without* `--delete-data`:
+
+  ```bash
+  flatpak kill com.vitorpamplona.amethyst 2>/dev/null
+  flatpak kill com.vitorpamplona.amethyst.Amethyst 2>/dev/null
+  mv -T ~/.var/app/com.vitorpamplona.amethyst ~/.var/app/com.vitorpamplona.amethyst.Amethyst
+  flatpak uninstall com.vitorpamplona.amethyst
+  ```
+
+  `mv -T` refuses to merge into a directory that is not empty, instead of
+  nesting the old one inside it. If it fails with "Directory not empty", the
+  new app has already run once. If you have not logged in to it yet, delete its
+  fresh directory (`rm -r ~/.var/app/com.vitorpamplona.amethyst.Amethyst`) and
+  run the `mv` again.
+
+  Until the old app is removed, the menu shows two "Amethyst" entries: the
+  single-file bundle has no remote, so flatpak cannot replace one ID with the
+  other on its own.
+
+- **Up to v1.17.0, `com.vitorpamplona.amethyst.Desktop`** (Flathub forbids IDs
+  ending in `.desktop`). There is no data worth moving: that bundle did not
+  persist `~/.amethyst` or `~/.java`, so it lost its accounts, drafts and
+  settings on every restart, and what it did keep (Tor state, image cache) is
+  rebuilt on demand. Remove it with
+  `flatpak uninstall --delete-data com.vitorpamplona.amethyst.Desktop` and log
+  in again in the new one.
 
 | OS | App location | State directories |
 |---|---|---|
@@ -846,7 +911,7 @@ in again in the new one.
 | Windows | `%LOCALAPPDATA%\Amethyst` or `C:\Program Files\Amethyst` | `%APPDATA%\Amethyst`<br>`%LOCALAPPDATA%\Amethyst` |
 | Linux (deb/rpm) | `/opt/amethyst` | `~/.config/amethyst`<br>`~/.local/share/amethyst`<br>`~/.cache/amethyst` |
 | Linux (AppImage/tar.gz) | user-chosen | Same as above |
-| Linux (Flatpak) | `/var/lib/flatpak` or `~/.local/share/flatpak` | `~/.var/app/com.vitorpamplona.amethyst/` |
+| Linux (Flatpak) | `/var/lib/flatpak` or `~/.local/share/flatpak` | `~/.var/app/com.vitorpamplona.amethyst.Amethyst/` |
 
 **macOS preferences are in a SHARED file.** `DesktopPreferences` uses the Java
 Preferences API, which on macOS writes into
@@ -862,7 +927,7 @@ Uninstall:
 - .deb: `sudo apt remove amethyst`
 - .rpm: `sudo dnf remove amethyst`
 - AppImage / tar.gz: delete the file / extracted directory
-- Flatpak: `flatpak uninstall com.vitorpamplona.amethyst` (add
+- Flatpak: `flatpak uninstall com.vitorpamplona.amethyst.Amethyst` (add
   `--delete-data` to also remove `~/.var/app/…`)
 - macOS `.dmg`: drag from `/Applications` to Trash, then delete state dirs manually
 

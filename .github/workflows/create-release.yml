@@ -77,10 +77,13 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v7
 
+      # Linux legs build on the JetBrains Runtime: jlink/jpackage bundle the JDK Gradle runs on,
+      # and only JBR's AWT can draw natively on Wayland (WLToolkit; see
+      # desktopApp/.../platform/WaylandDisplay.kt). macOS and Windows keep Temurin.
       - name: Set up JDK 21
         uses: actions/setup-java@v6.0.1
         with:
-          distribution: 'temurin'
+          distribution: ${{ startsWith(matrix.family, 'linux') && 'jetbrains' || 'temurin' }}
           java-version: 21
 
       - name: Resolve tag + version
@@ -148,7 +151,7 @@ jobs:
             set -euo pipefail
             sudo apt-get update && sudo apt-get install -y flatpak flatpak-builder
             flatpak remote-add --user --if-not-exists flathub https://dl.flathub.org/repo/flathub.flatpakrepo
-            FDO_VER=$(grep -E "^runtime-version:" desktopApp/packaging/flatpak/com.vitorpamplona.amethyst.yml | cut -d"'" -f2)
+            FDO_VER=$(grep -E "^runtime-version:" desktopApp/packaging/flatpak/com.vitorpamplona.amethyst.Amethyst.yml | cut -d"'" -f2)
             flatpak install --user --noninteractive flathub \
               "org.freedesktop.Platform//${FDO_VER}" \
               "org.freedesktop.Sdk//${FDO_VER}"
@@ -227,6 +230,16 @@ jobs:
           fi
           echo "notarization ticket stapled OK"
 
+      # A Linux build packaged on a stock JDK still runs, but only through XWayland. Fail instead
+      # of shipping that: the bundled runtime must carry JBR's Wayland toolkit.
+      - name: Verify the bundled runtime draws on Wayland (Linux legs)
+        if: startsWith(matrix.family, 'linux')
+        run: |
+          set -euo pipefail
+          found=$(find desktopApp/build/compose/binaries/main-release -path '*/lib/runtime/lib/libawt_wlawt.so' -print -quit)
+          [[ -n "$found" ]] || { echo "::error::the bundled runtime has no Wayland toolkit (libawt_wlawt.so); build on the JetBrains Runtime"; exit 1; }
+          echo "Wayland toolkit bundled: $found"
+
       # jpackage pins libicu and the t64-renamed libs (libasound2t64, ...) to the
       # build host (ubuntu-24.04). Rewrite the .deb so it installs across Debian/Ubuntu.
       - name: Relax build-host-pinned deps in .deb
@@ -260,6 +273,15 @@ jobs:
           set -euo pipefail
           chmod +x scripts/add-deb-gstreamer-deps.sh
           scripts/add-deb-gstreamer-deps.sh desktopApp/build/compose/binaries/main-release/deb/*.deb
+
+      # The bundled JBR loads libxkbcommon (the keyboard on Wayland) with dlopen, which jpackage's
+      # dependency scan never sees. See scripts/add-deb-wayland-deps.sh.
+      - name: Add Wayland deps to .deb
+        if: matrix.family == 'linux'
+        run: |
+          set -euo pipefail
+          chmod +x scripts/add-deb-wayland-deps.sh
+          scripts/add-deb-wayland-deps.sh desktopApp/build/compose/binaries/main-release/deb/*.deb
 
       # Ships the menu entry in /usr/share/applications with StartupWMClass (docks match the
       # window's WM_CLASS to it) instead of registering it from postinst with xdg-desktop-menu,
@@ -297,7 +319,7 @@ jobs:
           set -euo pipefail
           VER="${{ steps.ver.outputs.version }}"
           PKG="desktopApp/packaging/flatpak"
-          APP_ID="com.vitorpamplona.amethyst"
+          APP_ID="com.vitorpamplona.amethyst.Amethyst"
           OUT="desktopApp/build/flatpak"
           # AppImage-style arch names for the bundle filename.
           case "${{ matrix.arch }}" in
@@ -351,7 +373,7 @@ jobs:
         run: |
           set -euo pipefail
           flatpak install --user -y --noninteractive desktopApp/build/flatpak/*.flatpak
-          bash scripts/keyring-self-test.sh flatpak run com.vitorpamplona.amethyst
+          bash scripts/keyring-self-test.sh flatpak run com.vitorpamplona.amethyst.Amethyst
 
       - name: Collect + rename assets
         run: |
