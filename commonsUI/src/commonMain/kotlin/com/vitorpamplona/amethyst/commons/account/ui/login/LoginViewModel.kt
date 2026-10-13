@@ -47,9 +47,11 @@ import com.vitorpamplona.quartz.nip19Bech32.bech32.bechToBytes
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.persistentListOf
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.job
 import kotlinx.coroutines.launch
+import kotlin.concurrent.Volatile
 
 /**
  * The login form's state. [requiresTermsAcceptance] is the build's: where it holds, a first login
@@ -142,6 +144,8 @@ class LoginViewModel(
 
     val usesDefaultNostrConnectRelays by derivedStateOf { nostrConnectRelays == DEFAULT_NOSTR_CONNECT_RELAYS }
 
+    // Read from the attempt's own thread (onUri, finally) as well as the main one.
+    @Volatile
     private var nostrConnectJob: Job? = null
 
     fun init(accountSessionManager: AccountSessionManager) {
@@ -307,8 +311,11 @@ class LoginViewModel(
         nostrConnectPending = true
         nostrConnectUri = null
         val relays = nostrConnectRelays
-        nostrConnectJob =
-            viewModelScope.launch {
+        // Lazy, so the attempt is nostrConnectJob before any of it runs: started at once, it could
+        // reach onUri (on another thread) before the assignment, drop its own code and, failing
+        // early, skip the reset in finally and leave the spinner on.
+        val job =
+            viewModelScope.launch(start = CoroutineStart.LAZY) {
                 val thisJob = coroutineContext.job
                 try {
                     accountSessionManager.loginWithNostrConnect(
@@ -331,6 +338,8 @@ class LoginViewModel(
                     }
                 }
             }
+        nostrConnectJob = job
+        job.start()
     }
 
     fun cancelNostrConnect() {
