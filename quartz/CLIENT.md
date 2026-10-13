@@ -316,8 +316,10 @@ throttling (`OK` true, `EOSE`, a `COUNT` result) releases the next at once, and 
 again waits out its new back-off (plus a tenth). That drains a sliding window, which
 states its whole period and then takes many, in one round trip per command, and a token bucket
 at its refill rate. A `rate-limited:` refusal without a back-off is left parked until the next
-reconnect or filter change. A `RelayPool` or `BasicRelayClient` built without a `scope` has
-no gate and honors no back-off; `NostrClient` always passes its own.
+reconnect or filter change. The pool keeps each relay's gate by URL, so a back-off outlives the
+relay leaving the pool and being dialed again. A `RelayPool` built without a `scope` (or a
+`BasicRelayClient` without a `RateLimitGate`) honors no back-off; `NostrClient` always passes
+its own.
 
 `publishAndCollectResults` waits for that retry when it fits inside the timeout; otherwise
 the relay's refusal is reported with `PublishResult.retryAfterMs` set. `fetchAllPages` keeps

@@ -251,6 +251,42 @@ class RateLimitGateTest {
         }
 
     @Test
+    fun aCloseThatOvertakesAReleasedReqClosesItAgain() =
+        runTest {
+            // The unsubscribe lands while the gate is writing the REQ, outside its lock: the
+            // CLOSE may reach the relay first, so the gate closes the sub again after the REQ.
+            val sent = mutableListOf<Sent>()
+            lateinit var gate: RateLimitGate
+            gate =
+                gate(sent) { cmd ->
+                    if (cmd is ReqCmd) assertTrue(gate.admit(CloseCmd(cmd.subId)))
+                    true
+                }
+            gate.refuseReq("a", 1_000)
+            advanceUntilIdle()
+
+            assertEquals("[a@1000, CLOSE@1000]", sent.toString())
+        }
+
+    @Test
+    fun aNewConnectionBoundToTheGateGetsTheReleases() =
+        runTest {
+            val old = mutableListOf<Sent>()
+            val gate = gate(old)
+            gate.refuseReq("a", 1_000)
+            val new = mutableListOf<Sent>()
+            gate.bind { cmd ->
+                new.add(Sent(cmd.what(), testScheduler.currentTime))
+                true
+            }
+            advanceUntilIdle()
+
+            assertEquals("[]", old.toString())
+            assertEquals("[a@1000]", new.toString())
+            assertTrue(gate.isIdle())
+        }
+
+    @Test
     fun aDisconnectDropsWhatIsHeldButKeepsTheBackOffForTheReplay() =
         runTest {
             val sent = mutableListOf<Sent>()

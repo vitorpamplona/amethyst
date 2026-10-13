@@ -40,6 +40,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withTimeoutOrNull
+import kotlin.concurrent.Volatile
 
 /**
  * One relay's outgoing back-off: holds the commands of a type the relay refused as
@@ -73,14 +74,25 @@ import kotlinx.coroutines.withTimeoutOrNull
  * A back-off longer than [maxDelayMs] is not honored (see [honors]): the refused command stays
  * parked and the next reconnect re-sends it. A disconnect drops what is queued, since the
  * reconnect replays everything still wanted, but keeps the back-off running for that replay.
+ *
+ * The back-off belongs to the relay, not to one connection object: a pool that drops an idle
+ * relay and dials it again later hands the new connection the same gate ([bind]), so the
+ * back-off outlives both the socket and the client that heard it.
  */
 class RateLimitGate(
     private val scope: CoroutineScope,
     /** Writes [Command] to the socket; false when nothing went out (the socket is gone). */
-    private val send: (Command) -> Boolean,
+    send: (Command) -> Boolean = { false },
     private val maxDelayMs: Long = MAX_DELAY_MS,
     private val clock: () -> Long = TimeUtils::nowMillis,
 ) {
+    @Volatile private var send = send
+
+    /** Points released commands at [send]: the connection that now owns this relay's socket. */
+    fun bind(send: (Command) -> Boolean) {
+        this.send = send
+    }
+
     /** One command type's back-off and what it holds. */
     private class Lane(
         var dueAtMs: Long,
@@ -100,6 +112,12 @@ class RateLimitGate(
         /** The key released last, until the relay answers it; see [onIncoming]. */
         var inFlight: String? = null
 
+        /** The key being written right now, outside the lock; see [admit] for a `CLOSE` racing it. */
+        var releasing: String? = null
+
+        /** A `CLOSE` for [releasing] went out while it was being written: close it again after. */
+        var closedWhileReleasing = false
+
         /** The deadline set when [inFlight] went out: a later one means a newer refusal moved it. */
         var releasedDueAtMs = 0L
 
@@ -118,13 +136,21 @@ class RateLimitGate(
             if (refused.remove(key)) order.addFirst(key) else order.addLast(key)
         }
 
-        fun remove(key: String) {
+        /**
+         * A `CLOSE` for [key]: drop it if held. If it is being written this very moment, the
+         * `CLOSE` may reach the relay first and leave the subscription open there, so the drain
+         * closes it again once its write is done.
+         */
+        fun closed(key: String) {
             if (commands.remove(key) != null) order.remove(key)
+            if (releasing == key) closedWhileReleasing = true
         }
 
         fun removeFirst(): Command {
             val key = order.removeFirst()
             inFlight = key
+            releasing = key
+            closedWhileReleasing = false
             return commands.remove(key)!!
         }
 
@@ -147,6 +173,9 @@ class RateLimitGate(
 
     /** True while commands of [type] (a command label: `REQ`, `EVENT`, `COUNT`) are held. */
     fun isHolding(type: String): Boolean = lock.withLock { type in lanes }
+
+    /** True when no back-off is running: the gate holds nothing and can be dropped. */
+    fun isIdle(): Boolean = lock.withLock { lanes.isEmpty() }
 
     /**
      * Whether [cmd] may go out now. False means it is held, to be sent when its turn comes:
@@ -174,8 +203,8 @@ class RateLimitGate(
             is CloseCmd -> {
                 lock.withLock {
                     counts.remove(cmd.subId)
-                    lanes[ReqCmd.LABEL]?.remove(cmd.subId)
-                    lanes[CountCmd.LABEL]?.remove(cmd.subId)
+                    lanes[ReqCmd.LABEL]?.closed(cmd.subId)
+                    lanes[CountCmd.LABEL]?.closed(cmd.subId)
                 }
                 return true
             }
@@ -284,6 +313,7 @@ class RateLimitGate(
             // The deadline moves while we wait (a newer refusal named a later one, an answer
             // pulled it in), so re-read it after every wait and only release once it passed.
             var due: Command? = null
+            var releasingKey: String? = null
             var nextAt = 0L
             val waitMs =
                 lock.withLock {
@@ -296,6 +326,7 @@ class RateLimitGate(
                             return
                         }
                         due = lane.removeFirst()
+                        releasingKey = lane.releasing
                         lane.draining = true
                         nextAt = now + lane.spacing()
                         lane.dueAtMs = nextAt
@@ -316,16 +347,33 @@ class RateLimitGate(
                         Log.w("RateLimitGate", "Failed to send a held ${cmd.label()}", e)
                         false
                     }
-                if (!sent) {
-                    // Nothing used this slot: release the next now, unless a refusal moved the deadline.
+                val closeAgain =
                     lock.withLock {
-                        lane.inFlight = null
-                        if (lane.dueAtMs == nextAt) lane.dueAtMs = clock()
+                        val closeAgain = sent && lane.closedWhileReleasing
+                        lane.releasing = null
+                        lane.closedWhileReleasing = false
+                        if (!sent) {
+                            // Nothing used this slot: release the next now, unless a refusal moved the deadline.
+                            lane.inFlight = null
+                            if (lane.dueAtMs == nextAt) lane.dueAtMs = clock()
+                        }
+                        closeAgain
                     }
-                }
+                val key = releasingKey
+                if (closeAgain && key != null) closeQuietly(key)
             } else {
                 withTimeoutOrNull(waitMs) { lane.wake.receive() }
             }
+        }
+    }
+
+    private fun closeQuietly(subId: String) {
+        try {
+            send(CloseCmd(subId))
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            Log.w("RateLimitGate", "Failed to close $subId", e)
         }
     }
 

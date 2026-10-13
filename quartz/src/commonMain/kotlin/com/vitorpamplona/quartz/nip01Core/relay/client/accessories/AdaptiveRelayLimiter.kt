@@ -22,6 +22,7 @@ package com.vitorpamplona.quartz.nip01Core.relay.client.accessories
 
 import com.vitorpamplona.quartz.nip01Core.relay.client.listeners.RelayConnectionListener
 import com.vitorpamplona.quartz.nip01Core.relay.client.single.IRelayClient
+import com.vitorpamplona.quartz.nip01Core.relay.client.single.basic.RateLimitGate
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.ClosedMessage
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.Message
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.NoticeMessage
@@ -157,7 +158,9 @@ class AdaptiveRelayLimiter(
         val retryAfterMs = (msg as? ClosedMessage)?.retryAfterMs
         if (isRateLimitMessage(text)) throttleRate(relay.url)
         if (isSubscriptionLimitMessage(text)) demoteConcurrency(relay.url)
-        if (retryAfterMs != null) holdOpens(relay.url, retryAfterMs)
+        // Past the client's cap the back-off is left to the next reconnect, as everywhere else:
+        // an hour-long hold would stall every withPermit on this relay for that hour.
+        if (retryAfterMs != null && RateLimitGate.honors(retryAfterMs)) holdOpens(relay.url, retryAfterMs)
     }
 
     /**

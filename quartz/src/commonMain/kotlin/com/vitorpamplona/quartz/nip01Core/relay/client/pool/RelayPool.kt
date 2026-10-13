@@ -24,6 +24,7 @@ import com.vitorpamplona.quartz.nip01Core.relay.client.listeners.EmptyConnection
 import com.vitorpamplona.quartz.nip01Core.relay.client.listeners.RelayConnectionListener
 import com.vitorpamplona.quartz.nip01Core.relay.client.single.IRelayClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.single.basic.BasicRelayClient
+import com.vitorpamplona.quartz.nip01Core.relay.client.single.basic.RateLimitGate
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.Message
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.MessageDecoder
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toRelay.Command
@@ -66,6 +67,14 @@ class RelayPool(
 ) : RelayConnectionListener {
     private val relays = LargeCache<NormalizedRelayUrl, IRelayClient>()
 
+    /**
+     * Each relay's rate-limit back-offs, kept apart from its client: a relay dropped from the
+     * pool while a back-off runs (its last subscription ended) and dialed again gets a new
+     * client, which must still wait the back-off out. Idle gates of relays no longer in the
+     * pool are dropped on the next pool change.
+     */
+    private val gates = LargeCache<NormalizedRelayUrl, RateLimitGate>()
+
     private val _connectedRelays = MutableStateFlow<Set<NormalizedRelayUrl>>(emptySet())
     val connectedRelays = _connectedRelays.asStateFlow()
 
@@ -80,7 +89,7 @@ class RelayPool(
             socketBuilder = websocketBuilder,
             listener = this,
             decoder = decoder,
-            scope = scope,
+            rateLimits = scope?.let { scope -> gates.getOrCreate(url) { RateLimitGate(scope) } },
         )
 
     /** Clears every relay's reconnect backoff. See [IRelayClient.resetBackoff]. */
@@ -192,6 +201,15 @@ class RelayPool(
         if (atLeastOne) {
             _availableRelays.update { relays.keys() }
         }
+        dropIdleGates()
+    }
+
+    /** Forgets the gates of relays that left the pool once their back-offs ran out. */
+    private fun dropIdleGates() {
+        if (gates.size() == relays.size()) return
+        gates.forEach { url, gate ->
+            if (relays.get(url) == null && gate.isIdle()) gates.remove(url)
+        }
     }
 
     fun addRelay(relay: NormalizedRelayUrl): IRelayClient {
@@ -230,6 +248,7 @@ class RelayPool(
         if (removeRelayInner(relay)) {
             _availableRelays.update { relays.keys() }
         }
+        dropIdleGates()
     }
 
     fun removeAllRelays() {

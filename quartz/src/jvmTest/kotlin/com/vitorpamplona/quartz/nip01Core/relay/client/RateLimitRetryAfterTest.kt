@@ -27,6 +27,7 @@ import com.vitorpamplona.quartz.nip01Core.relay.client.listeners.RelayConnection
 import com.vitorpamplona.quartz.nip01Core.relay.client.reqs.SubscriptionListener
 import com.vitorpamplona.quartz.nip01Core.relay.client.single.IRelayClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.single.basic.BasicRelayClient
+import com.vitorpamplona.quartz.nip01Core.relay.client.single.basic.RateLimitGate
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.EoseMessage
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.Message
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toRelay.CountCmd
@@ -234,7 +235,7 @@ class RateLimitRetryAfterTest {
                                 if (msg is EoseMessage && msg.subId == "direct") eose.complete(Unit)
                             }
                         },
-                        scope = relay.scope,
+                        rateLimits = RateLimitGate(relay.scope),
                     )
                 connection.connect()
                 withTimeout(5_000) { connected.await() }
@@ -250,6 +251,30 @@ class RateLimitRetryAfterTest {
                 withTimeout(5_000) { eose.await() }
                 assertTrue(start.elapsedNow().inWholeMilliseconds >= 600, "sent before the back-off passed")
                 connection.disconnect()
+            }
+        }
+
+    @Test
+    fun aBackOffOutlivesTheRelayLeavingThePool() =
+        runBlocking {
+            // The relay's only sub ends inside its back-off, so the pool drops the relay (and its
+            // client). Dialed again for a new sub, the relay must still get nothing until it passes.
+            Relay(backOffMs = 1_500).use { relay ->
+                val first = Listener()
+                val start = TimeSource.Monotonic.markNow()
+                relay.client.subscribe("sub", mapOf(url to listOf(Filter(kinds = listOf(1)))), first)
+                withTimeout(5_000) { first.closedParams.await() }
+                relay.client.unsubscribe("sub")
+                // Past the pool's 300 ms sample: the relay has left the pool.
+                delay(700)
+
+                val second = Listener()
+                relay.client.subscribe("sub2", mapOf(url to listOf(Filter(kinds = listOf(7)))), second)
+                delay(300)
+                assertEquals(1, relay.reqs.get(), "a REQ reached the relay inside its back-off")
+
+                withTimeout(5_000) { second.eose.await() }
+                assertTrue(start.elapsedNow().inWholeMilliseconds >= 1_500, "sent before the back-off passed")
             }
         }
 

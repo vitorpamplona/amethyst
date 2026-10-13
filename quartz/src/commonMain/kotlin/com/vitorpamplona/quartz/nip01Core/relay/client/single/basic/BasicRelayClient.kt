@@ -32,7 +32,6 @@ import com.vitorpamplona.quartz.nip01Core.relay.sockets.WebSocketListener
 import com.vitorpamplona.quartz.nip01Core.relay.sockets.WebsocketBuilder
 import com.vitorpamplona.quartz.utils.Log
 import com.vitorpamplona.quartz.utils.TimeUtils
-import kotlinx.coroutines.CoroutineScope
 import kotlin.concurrent.Volatile
 import kotlin.concurrent.atomics.AtomicBoolean
 import kotlin.concurrent.atomics.ExperimentalAtomicApi
@@ -71,10 +70,11 @@ open class BasicRelayClient(
      */
     val decoder: MessageDecoder = MessageDecoder.Default,
     /**
-     * Runs the [RateLimitGate] that holds commands while the relay's stated `rate-limited:`
-     * back-off runs. Without one the relay's back-offs are not honored.
+     * Holds commands while the relay's stated `rate-limited:` back-off runs. Without one the
+     * relay's back-offs are not honored. Bound to this client on creation; a pool hands every
+     * client it builds for a relay the same gate, so a back-off survives a new client.
      */
-    scope: CoroutineScope? = null,
+    private val rateLimits: RateLimitGate? = null,
 ) : IRelayClient {
     companion object {
         // minimum wait time to reconnect: 1 second
@@ -89,7 +89,9 @@ open class BasicRelayClient(
 
     private var socket: WebSocket? = null
 
-    private val rateLimits = scope?.let { RateLimitGate(it, ::write) }
+    init {
+        rateLimits?.bind(::write)
+    }
 
     // True if it has received the onOpen call from the socket.
     // @Volatile: written on the serialized socket-callback thread, read from the
