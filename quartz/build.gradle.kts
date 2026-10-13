@@ -108,16 +108,27 @@ kotlin {
         environment("SIMCTL_CHILD_TEST_RESOURCES_ROOT", rootDir)
     }
 
-    // Enable LLVM optimizations for native test binaries (benchmark accuracy).
-    // Without opt, K/N test binaries compile in debug mode (~20× slower).
-    // Use the binary-level API instead of -opt freeCompilerArg to avoid the
-    // "Unsupported combination of flags: -opt and -g" conflict in Kotlin/Native 2.1+.
-    targets.withType<org.jetbrains.kotlin.gradle.plugin.mpp.KotlinNativeTarget>().configureEach {
-        binaries.withType<org.jetbrains.kotlin.gradle.plugin.mpp.TestExecutable>().configureEach {
-            optimized = true
-            debuggable = false
+    // Enable LLVM optimizations for the linuxX64 test binary only: that is where
+    // Secp256k1NativeBenchmark (src/linuxTest) runs, and a benchmark on an
+    // unoptimized binary measures nothing (~20× slower code). Use the binary-level
+    // API instead of the -opt freeCompilerArg to avoid the "Unsupported combination
+    // of flags: -opt and -g" conflict in Kotlin/Native 2.1+.
+    //
+    // The Apple test binaries stay unoptimized on purpose. An optimized link is a
+    // release-style LTO build with the Kotlin/Native dependency cache disabled: on
+    // the 3-core GitHub macOS runner it took 12 minutes for the iOS simulator test
+    // binary (2.5 min here), while the unoptimized link takes 45 s here and the
+    // test suite minus the benchmark runs in ~90 s instead of ~25 s. Net win on
+    // every machine, and it is what made the test-quartz-ios job hit its timeout.
+    targets
+        .withType<org.jetbrains.kotlin.gradle.plugin.mpp.KotlinNativeTarget>()
+        .matching { it.konanTarget.family == org.jetbrains.kotlin.konan.target.Family.LINUX }
+        .configureEach {
+            binaries.withType<org.jetbrains.kotlin.gradle.plugin.mpp.TestExecutable>().configureEach {
+                optimized = true
+                debuggable = false
+            }
         }
-    }
 
     // Source set declarations.
     // Declaring a target automatically creates a source set with the same name. By default, the
