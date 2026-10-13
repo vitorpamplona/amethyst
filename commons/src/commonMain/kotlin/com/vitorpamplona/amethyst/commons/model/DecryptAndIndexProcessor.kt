@@ -68,7 +68,10 @@ class EventProcessor(
     private val cache: LocalCache,
 ) {
     private val chatHandler = ChatHandler(account.chatroomList)
-    private val draftHandler = DraftEventHandler(account, cache)
+    private val giftWrapPrefetch =
+        GiftWrapPrefetch(account.scope, { account.signer }) { draft -> account.draftsDecryptionCache.cachedDraft(draft) }
+
+    private val draftHandler = DraftEventHandler(account, cache, giftWrapPrefetch::awaitDraft)
 
     private val giftWrapHandler = GiftWrapEventHandler(account, cache, this)
     private val sealHandler = SealEventHandler(account, cache, this)
@@ -77,6 +80,12 @@ class EventProcessor(
     private val zapEvent = ZapReceiptEventHandler(account.privateZapsDecryptionCache)
 
     private val groupEventHandler = GroupEventHandler(account, cache)
+
+    /** What the gift wrap and seal handlers decrypt with: the account's signer, with answers fetched ahead. */
+    internal val decryptSigner get() = giftWrapPrefetch.signer
+
+    /** Starts opening the gift wraps in a batch as it arrives, before [runNew] gets to it. */
+    fun prefetch(newNotes: Set<Note>) = giftWrapPrefetch.offer(newNotes.mapNotNull { it.event })
 
     var callManager: CallManager? = null
 
@@ -167,6 +176,9 @@ class EventProcessor(
 
     suspend fun runNew(newNotes: Set<Note>) {
         try {
+            // Serial, the handlers share state; their signer round trips run ahead in parallel. Also
+            // offered here in case this batch beat the early offer: a wrap is never fetched twice.
+            prefetch(newNotes)
             newNotes.forEach { consume(it) }
             handleDeletedDrafts(newNotes)
         } catch (e: Exception) {
@@ -245,6 +257,8 @@ class ChatHandler(
 class DraftEventHandler(
     private val account: Account,
     private val cache: LocalCache,
+    /** Waits for a draft's decrypt that [GiftWrapPrefetch] already started. */
+    private val awaitPrefetch: suspend (DraftWrapEvent) -> Unit = {},
 ) : EventHandler<DraftWrapEvent> {
     override suspend fun add(
         event: DraftWrapEvent,
@@ -252,6 +266,7 @@ class DraftEventHandler(
         publicNote: Note,
     ) {
         if (event.pubKey == account.signer.pubKey && !event.isDeleted() && !LocalCache.deletionIndex.hasBeenDeleted(event)) {
+            awaitPrefetch(event)
             val rumor = account.draftsDecryptionCache.preCachedDraft(event) ?: account.draftsDecryptionCache.cachedDraft(event)
             rumor?.let { indexDraftAsRealEvent(eventNote, it) }
         }
@@ -352,7 +367,7 @@ class GiftWrapEventHandler(
     ) {
         val innerGift =
             try {
-                event.unwrapThrowing(account.signer)
+                event.unwrapThrowing(eventProcessor.decryptSigner)
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
@@ -557,7 +572,7 @@ class SealEventHandler(
         // checked against NIP-59 anti-spoofing without a second decrypt.
         val rumor =
             try {
-                event.unsealRumorThrowing(account.signer)
+                event.unsealRumorThrowing(eventProcessor.decryptSigner)
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
