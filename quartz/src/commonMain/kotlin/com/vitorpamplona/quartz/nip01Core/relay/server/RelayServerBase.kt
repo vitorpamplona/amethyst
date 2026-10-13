@@ -99,8 +99,14 @@ abstract class RelayServerBase(
      */
     fun connect(send: (String) -> Unit): RelaySession = connect(SessionSink.of(send))
 
-    /** Registers a new client connection whose frames go to [sink], typed where the engine has the type. */
-    fun connect(sink: SessionSink): RelaySession =
+    /**
+     * Registers a new client connection whose frames go to [sink], typed where the engine has the type.
+     * [clientAddress] is who the transport says is connecting; see [RequestContext.clientAddress].
+     */
+    fun connect(
+        sink: SessionSink,
+        clientAddress: String? = null,
+    ): RelaySession =
         connections.register(
             RelaySession(
                 policy = buildPolicy(),
@@ -111,6 +117,7 @@ abstract class RelayServerBase(
                 negentropySettings = negentropySettings,
                 completenessHints = completenessHints,
                 commandHandler = eventCommandHandler,
+                clientAddress = clientAddress,
             ),
         )
 
@@ -125,14 +132,15 @@ abstract class RelayServerBase(
     suspend fun serve(
         send: (String) -> Unit,
         incoming: suspend (RelaySession) -> Unit,
-    ) = serve(SessionSink.of(send), incoming)
+    ) = serve(SessionSink.of(send), incoming = incoming)
 
     /** [serve] over a [SessionSink]. */
     suspend fun serve(
         sink: SessionSink,
+        clientAddress: String? = null,
         incoming: suspend (RelaySession) -> Unit,
     ) {
-        val session = connect(sink)
+        val session = connect(sink, clientAddress)
         try {
             incoming(session)
         } finally {

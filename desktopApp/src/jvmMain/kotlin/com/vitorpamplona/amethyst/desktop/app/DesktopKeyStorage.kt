@@ -24,13 +24,14 @@ import com.vitorpamplona.amethyst.commons.keystorage.KeyStorageController
 import com.vitorpamplona.amethyst.commons.keystorage.KeyStoragePrompts
 import com.vitorpamplona.amethyst.commons.keystorage.KeyStorageStatus
 import com.vitorpamplona.amethyst.commons.keystorage.SecureKeyStorage
+import com.vitorpamplona.amethyst.commons.model.navigation.Route
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 
 /**
  * The desktop's key storage as the shared UI sees it: [SecureKeyStorage]'s status and prompts,
- * and the two fixes Settings › Key storage offers. [reopen] opens the keyring's vault again and
+ * and the two fixes Key Backup offers. [reopen] opens the keyring's vault again and
  * logs the default account in, as a cold start does.
  *
  * Both fixes run in [scope], the app's, and the caller only waits for them: the screen that asked
@@ -42,23 +43,33 @@ class DesktopKeyStorage(
     private val storage: SecureKeyStorage,
     override val prompts: KeyStoragePrompts,
     private val scope: CoroutineScope,
-    private val reopen: suspend () -> Unit,
+    private val keepDeclinedKeys: suspend () -> Unit = {},
+    private val reopen: suspend (returnTo: Route?) -> Unit,
 ) : KeyStorageController {
     override val status: StateFlow<KeyStorageStatus> = storage.status
 
-    override suspend fun retry() {
+    override suspend fun retry(returnTo: Route?) {
         scope
             .launch {
                 storage.resetKeyring()
-                reopen()
+                reopen(returnTo)
             }.join()
     }
 
-    override suspend fun unlock() {
+    // Then the keys this run's "Don't save" left out (the open account's) are kept after all.
+    override suspend fun saveKeys() {
+        scope
+            .launch {
+                storage.allowKeepingKeys()
+                keepDeclinedKeys()
+            }.join()
+    }
+
+    override suspend fun unlock(returnTo: Route?) {
         scope
             .launch {
                 storage.unlockPasswordFile()
-                reopen()
+                reopen(returnTo)
             }.join()
     }
 }

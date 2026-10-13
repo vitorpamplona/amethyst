@@ -277,6 +277,7 @@ contract.
   `rejected_by`: a list of `{relay, reason}` objects, because the relay's
   NIP-01 OK reason (`blocked: …`, `rate-limited: …`, a connect error, or
   `no response within timeout`) is the answer to "why didn't it post".
+  A `rate-limited:` refusal that stated its back-off adds `retry_after_ms`.
 - Lists of events under a plural key (`"messages"`, `"members"`); each
   item converges on `event_id` / `author` / `created_at` / `content`
   (+ domain extras). `author` is reserved for the key that signed an

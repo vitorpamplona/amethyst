@@ -75,14 +75,14 @@ class PoolEventOutbox {
         var relaysToRemoveCounter = 0
 
         currentRelays.forEach { currentRelay ->
-            if (eventOutbox.values().none { currentRelay in it.relaysRemaining }) {
+            if (eventOutbox.values().none { it.isSupposedToGo(currentRelay) }) {
                 relaysToRemoveCounter++
             }
         }
 
         var relaysToAddCounter = 0
         eventOutbox.values().forEach { outboxState ->
-            if (outboxState.relaysRemaining.any { it !in currentRelays }) {
+            if (outboxState.relaysLeft().any { it !in currentRelays }) {
                 relaysToAddCounter++
             }
         }
@@ -96,14 +96,14 @@ class PoolEventOutbox {
                 val relaysToRemove = mutableSetOf<NormalizedRelayUrl>()
 
                 currentRelays.forEach { currentRelay ->
-                    if (eventOutbox.values().none { currentRelay in it.relaysRemaining }) {
+                    if (eventOutbox.values().none { it.isSupposedToGo(currentRelay) }) {
                         relaysToRemove.add(currentRelay)
                     }
                 }
 
                 val relaysToAdd = mutableSetOf<NormalizedRelayUrl>()
                 eventOutbox.values().forEach { outboxState ->
-                    outboxState.relaysRemaining.forEach { relay ->
+                    outboxState.relaysLeft().forEach { relay ->
                         if (relay !in relaysToAdd && relay !in currentRelays) {
                             relaysToAdd.add(relay)
                         }
@@ -118,7 +118,7 @@ class PoolEventOutbox {
     fun activeOutboxCacheFor(url: NormalizedRelayUrl): Set<HexKey> {
         val myEvents = mutableSetOf<HexKey>()
         eventOutbox.forEach { eventId, outboxCache ->
-            if (url in outboxCache.relaysRemaining) {
+            if (outboxCache.isSupposedToGo(url)) {
                 myEvents.add(eventId)
             }
         }
@@ -133,7 +133,7 @@ class PoolEventOutbox {
     fun activeOutboxEventsFor(url: NormalizedRelayUrl): List<Event> {
         val myEvents = mutableListOf<Event>()
         eventOutbox.forEach { _, outboxCache ->
-            if (url in outboxCache.relaysRemaining) {
+            if (outboxCache.isSupposedToGo(url)) {
                 myEvents.add(outboxCache.event)
             }
         }
@@ -203,10 +203,11 @@ class PoolEventOutbox {
         url: NormalizedRelayUrl,
         success: Boolean,
         message: String,
+        retryAfterMs: Long? = null,
     ) {
         val waiting = eventOutbox.get(id)
         if (waiting != null) {
-            waiting.newResponse(url, success, message)
+            waiting.newResponse(url, success, message, retryAfterMs)
             if (waiting.isDone()) {
                 eventOutbox.remove(waiting.event.id)
                 onRemoved()
@@ -233,8 +234,29 @@ class PoolEventOutbox {
         msg: Message,
     ) {
         if (msg is OkMessage) {
-            newResponse(msg.eventId, relay, msg.success, msg.message)
+            newResponse(msg.eventId, relay, msg.success, msg.message, msg.retryAfterMs)
         }
+    }
+
+    /**
+     * Re-sends the events of [eventIds] that [relay] refused as `rate-limited:` with a back-off.
+     * Sent right after the refusal: the relay's rate-limit gate holds them until the back-off
+     * passes. Events already delivered, given up on, or no longer
+     * meant for [relay] are skipped. Returns whether any EVENT went out.
+     */
+    fun retryRateLimited(
+        relay: NormalizedRelayUrl,
+        eventIds: Set<HexKey>,
+        sync: (Command) -> Unit,
+    ): Boolean {
+        var sent = false
+        eventIds.forEach { id ->
+            eventOutbox.get(id)?.forEachUnsentEvent(relay) {
+                sync(EventCmd(it))
+                sent = true
+            }
+        }
+        return sent
     }
 
     /** Returns the event if this send attempt made us give up delivering it to [relay]. */
@@ -261,7 +283,7 @@ class PoolEventOutbox {
         errorMessage: String,
     ) {
         eventOutbox.forEach { id, outboxCache ->
-            if (relay in outboxCache.relaysRemaining) {
+            if (outboxCache.isSupposedToGo(relay)) {
                 newResponse(id, relay, false, errorMessage)
             }
         }

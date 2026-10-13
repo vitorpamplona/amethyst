@@ -1,18 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources xmlns:tools="http://schemas.android.com/tools">
-    <string name="block_hide_user"><![CDATA[Bloquer et cacher l\'utilisateur]]></string>
-    <string name="boosted">boosté</string>
-    <string name="edited_number">modification #%1$s</string>
-    <string name="save">Sauvegarder</string>
-    <string name="set_preferred_media_servers">Définissez vos serveurs de téléversement de média préférés.</string>
-    <string name="built_in_servers_description">Liste par défaut d\'Amethyst. Vous pouvez les ajouter individuellement ou ajouter la liste.</string>
-    <string name="preferences">Préférences de l\'application</string>
-    <string name="messages_create_public_chat">Public</string>
-    <string name="messages_new_message">Privé</string>
-    <string name="git_web_address">Web :</string>
-    <string name="media_servers_blossom_section">Serveurs Blossom</string>
-    <string name="media_servers_blossom_explainer">Ajoutez autant de serveurs que vous le souhaitez. Vous pourrez choisir celui à utiliser plus tard lors du téléversement de votre image</string>
-    <string name="torrent_download">Télécharger</string>
     
     
     
@@ -81,7 +68,6 @@
     
     
     
-<string name="rename">Renommer</string>
     
     
     
@@ -122,7 +108,6 @@
     
     
     
-<string name="changed_chat_profile_to">Nouveau profil de tchat :</string>
     
     
     
@@ -362,13 +347,9 @@
     
     
     
-<string name="private_note_no_receivers">Aucun récepteur pour le moment : vous seul serez en mesure de voir cette note. Ajoutez des personnes pour la partager.</string>
     
-<string name="notify_add_user">Ajouter</string>
     
-<string name="notify_remove_user">Retirer l\'utilisateur des notifications</string>
     
-<string name="notify_search_and_add_user">Rechercher et ajouter un utilisateur à notifier</string>
     
     
     
@@ -573,7 +554,6 @@
     
     
     
-<string name="messages_create_group">Groupe</string>
     
     
     
@@ -1034,7 +1014,6 @@
     
     
     
-<string name="route_software_apps">Applications</string>
     
     
     
@@ -1070,23 +1049,16 @@
     
     
     
-<string name="napplet_permissions">Permissions nApplet</string>
     
     
-<string name="napplet_permissions_empty">Aucune permission nApplet pour l\'instant</string>
     
-<string name="napplet_permissions_empty_subtitle">Les permissions que vous accordez aux nApplets apparaîtront ici.</string>
     
-<string name="napplet_permissions_forget">Oublier ce nApplet</string>
     
-<string name="napplet_permissions_blocked">Bloqué</string>
     
-<string name="napplet_permissions_revoke">Révoquer</string>
     
     
     
     
-<string name="napplet_cap_shell">Shell</string>
     
     
     
@@ -1095,7 +1067,6 @@
     
     
     
-<string name="napplet_cap_shell_desc">Demander quelles fonctionnalités sont disponibles</string>
     
     
     
@@ -1110,7 +1081,6 @@
     
     
     
-<string name="napplet_consent_capability">Fonctionnalité : %1$s</string>
     
     
     
@@ -1123,7 +1093,6 @@
     
     
     
-<string name="napplet_consent_pay">Ce nApplet veut payer une facture Lightning.</string>
     
     
     
@@ -1299,29 +1268,6 @@
     
     
     
-<string name="recommended_media_servers">Serveurs multimédia recommandés</string>
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-<string name="app_notification_replies_channel_message">%1$s a répondu</string>
-    
-<string name="app_notification_replies_channel_message_for">sur : %1$s</string>
     
     
     
@@ -1342,9 +1288,27 @@
     
     
     
-<string name="always_on_notif_setting_title">Service de notification permanent</string>
     
-<string name="always_on_notif_setting_description">Maintient une connexion persistante à vos relais de boîte de réception pour une livraison instantanée des notifications. Affiche une notification permanente. Consomme plus de batterie mais garantit que vous ne manquez aucun message.</string>
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
     
     
     
@@ -1456,16 +1420,11 @@
     
     
     
-<string name="cashu_p2pk_section">Clé nutzap (avancé)</string>
     
-<string name="cashu_p2pk_explainer">Une clé privée distincte utilisée uniquement pour recevoir les nutzaps NIP-61. Ce n\'est pas votre clé d\'identité Nostr.</string>
     
-<string name="cashu_p2pk_autogen">Générer une nouvelle clé</string>
 
-<string name="cashu_p2pk_manual_label">Clé privée P2PK (hex)</string>
     
     
-<string name="wallet_save_changes">Enregistrer les modifications</string>
     
     
     
@@ -1638,18 +1597,14 @@
     
     
     
-<string name="bottom_bar_settings_description">Glissez pour réorganiser. Activez ou désactivez pour ajouter ou supprimer un élément de la barre inférieure. Avec zéro élément, la barre inférieure est masquée.</string>
     
     
-<string name="bottom_bar_settings_reorder">Réorganiser</string>
     
     
     
-<string name="home_tabs_settings_description">Choisissez les onglets qui apparaissent sur l\'écran d\'accueil. Lorsqu\'un seul onglet est actif, la barre d\'onglets est masquée.</string>
     
     
     
-<string name="profile_ui_settings_description">Choisissez les sections et les fils qui apparaissent sur les écrans de profil utilisateur. Toutes les options sont activées par défaut.</string>
     
     
     
@@ -1703,17 +1658,12 @@
 
 
 
-<string name="git_repo_tab_overview">Aperçu</string>
 
 
 
-<string name="git_repo_section_about">À propos</string>
 
-<string name="git_repo_section_links">Liens</string>
 
-<string name="git_repo_section_maintainers">Mainteneurs</string>
 
-<string name="git_repo_section_topics">Sujets</string>
 
 
 

@@ -124,6 +124,7 @@ import com.vitorpamplona.amethyst.commons.ui.components.util.getText
 import com.vitorpamplona.amethyst.commons.ui.components.util.setSensitiveText
 import com.vitorpamplona.amethyst.commons.ui.components.util.setText
 import com.vitorpamplona.amethyst.commons.ui.insets.imePaddingSafe
+import com.vitorpamplona.amethyst.commons.ui.keystorage.KeyStorageStatusCard
 import com.vitorpamplona.amethyst.commons.ui.loadStringRes
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.EmptyNav
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
@@ -133,6 +134,7 @@ import com.vitorpamplona.amethyst.commons.ui.privacylock.rememberDeviceAuthentic
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.qrcode.BackButton
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.qrcode.QrCodeDrawer
 import com.vitorpamplona.amethyst.commons.ui.stringRes
+import com.vitorpamplona.amethyst.commons.ui.theme.CardSurfaces
 import com.vitorpamplona.amethyst.commons.ui.theme.ThemeComparisonRow
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.amethyst.commons.viewmodels.mockAccountViewModel
@@ -199,6 +201,9 @@ private fun AccountBackupScreenContent(
         ) {
             BackupHeader()
 
+            // Where this device keeps the key, and the fix when it can't read it (desktop only).
+            KeyStorageStatusCard()
+
             val nsec =
                 remember(accountViewModel) {
                     accountViewModel.account.settings.keyPair.privKey
@@ -206,7 +211,13 @@ private fun AccountBackupScreenContent(
                 }
 
             if (nsec == null) {
-                TipRow(MaterialSymbols.Info, stringRes(Res.string.backup_keys_external_signer))
+                // Only where a signer really holds the key. An account whose key did not load here
+                // (a locked key file, a keychain error) also arrives without one: the card above
+                // says why, and calling that an external signer would be false.
+                val settings = accountViewModel.account.settings
+                if (settings.externalSignerPackageName != null || settings.usesRemoteSigner()) {
+                    TipRow(MaterialSymbols.Info, stringRes(Res.string.backup_keys_external_signer))
+                }
             } else {
                 val gate = rememberKeyAccessGate(accountViewModel)
 
@@ -282,7 +293,8 @@ private fun SecretKeyCard(
     Surface(
         modifier = Modifier.fillMaxWidth(),
         shape = CardShape,
-        color = MaterialTheme.colorScheme.surfaceContainerHigh,
+        color = CardSurfaces.color,
+        border = CardSurfaces.border,
     ) {
         Column(Modifier.padding(start = 16.dp, end = 8.dp, top = 8.dp, bottom = 16.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
@@ -301,7 +313,7 @@ private fun SecretKeyCard(
                         Modifier
                             .fillMaxWidth()
                             .clip(RoundedCornerShape(12.dp))
-                            .background(MaterialTheme.colorScheme.surface)
+                            .background(CardSurfaces.well)
                             .clickable(enabled = !revealed, onClick = reveal)
                             .padding(horizontal = 12.dp, vertical = 16.dp),
                     contentAlignment = Alignment.Center,
@@ -436,7 +448,8 @@ private fun EncryptedKeyCard(
     Surface(
         modifier = Modifier.fillMaxWidth(),
         shape = CardShape,
-        color = MaterialTheme.colorScheme.surfaceContainerHigh,
+        color = CardSurfaces.color,
+        border = CardSurfaces.border,
     ) {
         Column {
             Row(
@@ -572,7 +585,7 @@ private fun EncryptedKeyCard(
                                 Modifier
                                     .fillMaxWidth()
                                     .clip(RoundedCornerShape(12.dp))
-                                    .background(MaterialTheme.colorScheme.surface)
+                                    .background(CardSurfaces.well)
                                     .padding(12.dp),
                         )
 

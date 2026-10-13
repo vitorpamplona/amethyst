@@ -23,9 +23,11 @@ package com.vitorpamplona.quartz.nipFERelayOverHttp
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.OptimizedJsonMapper
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.AuthMessage
+import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.ClosedMessage
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.MachineReadablePrefix
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.Message
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.NoticeMessage
+import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.OkMessage
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toRelay.Command
 import com.vitorpamplona.quartz.nip01Core.relay.server.RelayServerBase
 import com.vitorpamplona.quartz.nip01Core.relay.server.SessionSink
@@ -54,6 +56,12 @@ class HttpRelayRequest(
      * engine measures a frame in characters, and a UTF-8 character takes up to three bytes.
      */
     val body: ByteArray,
+    /**
+     * Who sent it, as the host saw it (the peer, or the client a trusted proxy reported).
+     * Reaches the policies as [com.vitorpamplona.quartz.nip01Core.relay.server.backend.RequestContext.clientAddress],
+     * so a per-client rate limit counts HTTP commands with the same client's websocket ones.
+     */
+    val clientAddress: String? = null,
 )
 
 /**
@@ -68,6 +76,17 @@ interface HttpRelayResponse {
         status: Int,
         frame: String,
     )
+
+    /**
+     * [single] for a refusal that states its NIP-01 back-off ([retryAfterMs], from a
+     * `rate-limited:` OK or CLOSED), so the host can send it as `Retry-After`. The default
+     * ignores it.
+     */
+    suspend fun single(
+        status: Int,
+        frame: String,
+        retryAfterMs: Long?,
+    ) = single(status, frame)
 
     /** A 200 answer written line by line, as `application/x-ndjson`. Returns when [lines] does. */
     suspend fun stream(lines: suspend HttpRelayLines.() -> Unit)
@@ -140,7 +159,7 @@ class HttpRelayHandler(
                 is Proof.Signed -> proof.pubkey
                 is Proof.Refused -> return response.single(HttpRelayStatus.forReason(proof.reason), HttpRelayCommand.refusal(cmd, proof.reason).toJson())
             }
-        exchange(text, cmd, command, signedIn, response)
+        exchange(text, cmd, command, signedIn, request.clientAddress, response)
     }
 
     /** A frame as queued: its wire text, its type when the engine built one, and whether it ends the answer. */
@@ -155,6 +174,7 @@ class HttpRelayHandler(
         cmd: Command,
         command: HttpRelayCommand,
         signedIn: HexKey?,
+        clientAddress: String?,
         response: HttpRelayResponse,
     ) = coroutineScope {
         val frames = Channel<Frame>(maxQueuedFrames)
@@ -186,7 +206,7 @@ class HttpRelayHandler(
         val session =
             launch {
                 try {
-                    server.serve(sink) { session ->
+                    server.serve(sink, clientAddress) { session ->
                         val refused = signedIn?.let { session.authenticateByTransport(it) }
                         if (refused != null) fail(refused) else session.receive(text, cmd)
                         ended.await()
@@ -213,7 +233,8 @@ class HttpRelayHandler(
                 }
 
                 first.last || status != HttpRelayStatus.OK -> {
-                    single(status, first.json)
+                    val retryAfterMs = (first.message as? OkMessage)?.retryAfterMs ?: (first.message as? ClosedMessage)?.retryAfterMs
+                    bounded(due) { response.single(status, first.json, retryAfterMs) }
                 }
 
                 else -> {

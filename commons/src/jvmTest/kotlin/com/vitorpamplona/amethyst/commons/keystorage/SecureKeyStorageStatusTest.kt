@@ -187,6 +187,27 @@ class SecureKeyStorageStatusTest {
             job.cancel()
         }
 
+    /** The status the login screen and Key Backup watch: Save keys turns NotKept back into a key file. */
+    @Test
+    fun saveKeysTakesBackDontRemember() =
+        runBlocking<Unit> {
+            val script = ScriptedPrompts(NewPasswordAnswer.DontRemember, NewPasswordAnswer.Password("correct horse battery"))
+            val job = script.start(this)
+            val storage = storage { throw BackendNotSupportedException("No available keyring backend found") }
+            storage.prompts = script.prompts
+
+            assertFailsWith<KeyNotKeptException> { storage.savePrivateKey("npub1a", key) }
+            assertEquals(KeyStorageStatus.NotKept, storage.status.value)
+
+            storage.allowKeepingKeys()
+            assertEquals(KeyStorageStatus.PasswordFile(hasPassword = false, unlocked = false), storage.status.value)
+
+            storage.savePrivateKey("npub1a", key)
+            assertEquals(key, storage.getPrivateKey("npub1a"))
+            assertEquals(KeyStorageStatus.PasswordFile(hasPassword = true, unlocked = true), storage.status.value)
+            job.cancel()
+        }
+
     @Test
     fun aBackendThatFailsToLoadIsNoBackend() =
         runBlocking<Unit> {

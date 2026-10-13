@@ -188,10 +188,6 @@ private fun LoggedInPage(
 ) {
     val accountViewModel: AccountViewModel = rememberViewModel(key = "AccountViewModel") { root.createAccountViewModel(account) }
 
-    LaunchedEffect(Unit) {
-        accountViewModel.firstRoute = route
-    }
-
     // Adds this account to the authentication procedures for relays.
     RelayAuthSubscription(accountViewModel)
 
@@ -229,7 +225,7 @@ private fun LoggedInPage(
 
     root.LoggedInEffects(accountViewModel)
 
-    AppNavigation(accountViewModel, sessionManager, root)
+    AppNavigation(accountViewModel, route, sessionManager, root)
 }
 
 @Composable
@@ -253,6 +249,7 @@ private fun ObserveAntiSpamFilterSettings(accountViewModel: AccountViewModel) {
 @Composable
 private fun AppNavigation(
     accountViewModel: AccountViewModel,
+    firstRoute: Route?,
     sessionManager: AccountSessionManager,
     root: AppRoot,
 ) {
@@ -313,7 +310,7 @@ private fun AppNavigation(
             }
         }
 
-        OpenFirstRoute(accountViewModel, nav)
+        OpenFirstRoute(firstRoute, nav)
 
         root.NavigationEffects(accountViewModel, nav, sessionManager)
 
@@ -328,14 +325,17 @@ private fun AppNavigation(
 /** Opens the screen a sign-in or account switch asked for (an import-follows step, a linked note), once. */
 @Composable
 private fun OpenFirstRoute(
-    accountViewModel: AccountViewModel,
+    route: Route?,
     nav: Nav,
 ) {
-    accountViewModel.firstRoute?.let { newRoute ->
-        accountViewModel.firstRoute = null
-        val currentRoute = Snapshot.withoutReadObservation { getRouteWithArguments(newRoute::class, nav) }
-        if (!isSameRoute(currentRoute, newRoute)) {
-            nav.newStack(newRoute)
+    // An effect, not a read in composition: the route used to reach here through a field set by
+    // an effect, after this had already composed, so it opened only when something else happened
+    // to recompose the page (a reload with the key from Key Backup landed on Home).
+    LaunchedEffect(route) {
+        if (route == null) return@LaunchedEffect
+        val currentRoute = Snapshot.withoutReadObservation { getRouteWithArguments(route::class, nav) }
+        if (!isSameRoute(currentRoute, route)) {
+            nav.newStack(route)
         }
     }
 }

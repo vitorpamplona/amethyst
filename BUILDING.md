@@ -865,19 +865,45 @@ expose downgrade migration risks — **prefer a single install channel per
 machine**.
 
 **Exception: Flatpak.** The sandbox redirects XDG dirs into
-`~/.var/app/com.vitorpamplona.amethyst/` (the manifest persists `~/.amethyst`
+`~/.var/app/com.vitorpamplona.amethyst.Amethyst/` (the manifest persists `~/.amethyst`
 and `~/.java` there too), so a Flatpak install keeps
 its own separate state and does not see (or risk downgrading) state written
 by any other channel.
 
-**Flatpak app ID change.** Up to v1.17.0 the Flatpak bundle used the ID
-`com.vitorpamplona.amethyst.Desktop` (Flathub forbids IDs ending in
-`.desktop`). The renamed bundle installs as a separate app. There is no data
-worth moving: that bundle did not persist `~/.amethyst` or `~/.java`, so it
-lost its accounts, drafts and settings on every restart, and what it did keep
-(Tor state, image cache) is rebuilt on demand. Remove it with
-`flatpak uninstall --delete-data com.vitorpamplona.amethyst.Desktop` and log
-in again in the new one.
+**Flatpak app ID changes.** The bundle is now
+`com.vitorpamplona.amethyst.Amethyst`. Each earlier ID installs as a separate
+app with its own `~/.var/app/<id>/`:
+
+- **v1.18.0, `com.vitorpamplona.amethyst`.** It kept accounts, drafts and
+  settings in `~/.var/app/com.vitorpamplona.amethyst/`. Without a system
+  keyring, the private keys are there too: the password key file lives under
+  the sandbox's `XDG_DATA_HOME` (`data/amethyst/`). Move the whole directory to
+  the new ID, then remove the old app *without* `--delete-data`:
+
+  ```bash
+  flatpak kill com.vitorpamplona.amethyst 2>/dev/null
+  flatpak kill com.vitorpamplona.amethyst.Amethyst 2>/dev/null
+  mv -T ~/.var/app/com.vitorpamplona.amethyst ~/.var/app/com.vitorpamplona.amethyst.Amethyst
+  flatpak uninstall com.vitorpamplona.amethyst
+  ```
+
+  `mv -T` refuses to merge into a directory that is not empty, instead of
+  nesting the old one inside it. If it fails with "Directory not empty", the
+  new app has already run once. If you have not logged in to it yet, delete its
+  fresh directory (`rm -r ~/.var/app/com.vitorpamplona.amethyst.Amethyst`) and
+  run the `mv` again.
+
+  Until the old app is removed, the menu shows two "Amethyst" entries: the
+  single-file bundle has no remote, so flatpak cannot replace one ID with the
+  other on its own.
+
+- **Up to v1.17.0, `com.vitorpamplona.amethyst.Desktop`** (Flathub forbids IDs
+  ending in `.desktop`). There is no data worth moving: that bundle did not
+  persist `~/.amethyst` or `~/.java`, so it lost its accounts, drafts and
+  settings on every restart, and what it did keep (Tor state, image cache) is
+  rebuilt on demand. Remove it with
+  `flatpak uninstall --delete-data com.vitorpamplona.amethyst.Desktop` and log
+  in again in the new one.
 
 | OS | App location | State directories |
 |---|---|---|
@@ -885,7 +911,7 @@ in again in the new one.
 | Windows | `%LOCALAPPDATA%\Amethyst` or `C:\Program Files\Amethyst` | `%APPDATA%\Amethyst`<br>`%LOCALAPPDATA%\Amethyst` |
 | Linux (deb/rpm) | `/opt/amethyst` | `~/.config/amethyst`<br>`~/.local/share/amethyst`<br>`~/.cache/amethyst` |
 | Linux (AppImage/tar.gz) | user-chosen | Same as above |
-| Linux (Flatpak) | `/var/lib/flatpak` or `~/.local/share/flatpak` | `~/.var/app/com.vitorpamplona.amethyst/` |
+| Linux (Flatpak) | `/var/lib/flatpak` or `~/.local/share/flatpak` | `~/.var/app/com.vitorpamplona.amethyst.Amethyst/` |
 
 **macOS preferences are in a SHARED file.** `DesktopPreferences` uses the Java
 Preferences API, which on macOS writes into
@@ -901,7 +927,7 @@ Uninstall:
 - .deb: `sudo apt remove amethyst`
 - .rpm: `sudo dnf remove amethyst`
 - AppImage / tar.gz: delete the file / extracted directory
-- Flatpak: `flatpak uninstall com.vitorpamplona.amethyst` (add
+- Flatpak: `flatpak uninstall com.vitorpamplona.amethyst.Amethyst` (add
   `--delete-data` to also remove `~/.var/app/…`)
 - macOS `.dmg`: drag from `/Applications` to Trash, then delete state dirs manually
 

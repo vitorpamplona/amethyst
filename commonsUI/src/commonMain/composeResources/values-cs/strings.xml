@@ -1691,7 +1691,6 @@
     <string name="uploading_state_hashing">Hashování</string>
     <string name="uploading_state_finished">Hotovo</string>
     <string name="uploading_state_error">Chyba</string>
-    <string name="connect_via_tor1">Upravit</string>
     <string name="connect_via_tor2">Nastavení Tor</string>
     <string name="yes">Ano</string>
     <string name="no">Ne</string>
@@ -2081,7 +2080,6 @@
     <string name="created_at">Vytvořeno</string>
     <string name="guidelines">Pokyny</string>
     <string name="moderators">Moderátoři</string>
-    <string name="login_with_external_signer">Přihlásit se pomocí Amber</string>
     <string name="status_update">Aktualizovat svůj stav</string>
     <string name="poll_zap_value_min_max_explainer">Hlasy jsou váženy podle hodnoty zapu. Můžete nastavit minimální částku, abyste se vyhnuli spammerům, a maximální částku, abyste zabránili velkým zapperům, kteří by mohli ovládnout hlasování. Použijte stejnou částku v obou polích, aby byla hodnota každého hlasu stejná. Nechte prázdné pro přijetí libovolné částky.</string>
     <string name="error_dialog_talk_to_user">Poslat zprávu uživateli</string>
@@ -4594,7 +4592,6 @@
     <string name="desktop_menu_report_issue">Nahlásit problém</string>
     <string name="login_with_remote_signer">Přihlásit se vzdáleným podepisovatelem</string>
     <string name="remote_signer_scan_title">Připojte svého podepisovatele</string>
-    <string name="remote_signer_scan_description">Naskenujte tento kód podepisovatelem NIP-46, nebo do něj vložte adresu. Adresu bunker:// od vašeho podepisovatele naopak vložte do pole pro klíč.</string>
     <string name="remote_signer_waiting">Čeká se na schválení vaším podepisovatelem…</string>
     <string name="remote_signer_login_failed">Přihlášení vzdáleným podepisovatelem se nezdařilo: %1$s</string>
     <string name="login_with_a_private_key_to_be_able_to_boost_posts">Pro zvýšení příspěvků se přihlaste s privátním klíčem</string>

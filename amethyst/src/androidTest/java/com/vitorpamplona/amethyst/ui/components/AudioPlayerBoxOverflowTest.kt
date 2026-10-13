@@ -59,15 +59,15 @@ class AudioPlayerBoxOverflowTest {
         var bottom = 0f
         var width = 0
         var height = 0
-
-        fun modifier() =
-            Modifier.onGloballyPositioned {
-                top = it.positionInRoot().y
-                width = it.size.width
-                height = it.size.height
-                bottom = top + height
-            }
     }
+
+    private fun Modifier.trackBounds(bounds: Bounds) =
+        onGloballyPositioned {
+            bounds.top = it.positionInRoot().y
+            bounds.width = it.size.width
+            bounds.height = it.size.height
+            bounds.bottom = bounds.top + bounds.height
+        }
 
     private fun measure(
         url: String,
@@ -79,10 +79,10 @@ class AudioPlayerBoxOverflowTest {
         rule.setContent {
             Box(Modifier.size(width = 400.dp, height = 1200.dp)) {
                 Box(
-                    modifier = mediaSizingModifier(unknownMediaAspectRatio(null, url), ContentScale.Fit).then(box.modifier()),
+                    modifier = mediaSizingModifier(unknownMediaAspectRatio(null, url), ContentScale.Fit).trackBounds(box),
                     contentAlignment = Alignment.Center,
                 ) {
-                    Box((if (square) Modifier.audioSquare() else Modifier).then(player.modifier()))
+                    Box((if (square) Modifier.audioSquare() else Modifier).trackBounds(player))
                 }
             }
         }

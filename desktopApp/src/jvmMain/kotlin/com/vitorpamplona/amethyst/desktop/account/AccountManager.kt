@@ -117,6 +117,7 @@ class AccountManager internal constructor(
             BunkerClientMetadata(
                 name = "Amethyst Desktop",
                 url = "https://amethyst.social",
+                image = "https://raw.githubusercontent.com/vitorpamplona/amethyst/refs/heads/main/icon.png",
             )
     }
 
@@ -519,7 +520,7 @@ class AccountManager internal constructor(
         var client: INostrClient? = null
         try {
             val ephemeralKeyPair = KeyPair()
-            val uriData = NostrConnectLoginUseCase.generateUri(ephemeralKeyPair, NIP46_RELAYS, "Amethyst%20Desktop")
+            val uriData = NostrConnectLoginUseCase.generateUri(ephemeralKeyPair, NIP46_RELAYS, NIP46_CLIENT_METADATA)
 
             val nip46Client = getOrCreateNip46Client()
             client = nip46Client

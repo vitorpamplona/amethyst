@@ -1178,11 +1178,15 @@ open class EventCache :
         // Already processed this event.
         if (note.event != null) return false
 
-        if (event is BaseNoteEvent && antiSpam.isSpam(event, relay)) {
+        // Verify before the spam check: the check records each event it sees, so a forged copy of
+        // a real note would otherwise get the real one dropped as its duplicate.
+        val verified = wasVerified || justVerify(event)
+
+        if (verified && event is BaseNoteEvent && antiSpam.isSpam(event, relay)) {
             return false
         }
 
-        return if (wasVerified || justVerify(event)) {
+        return if (verified) {
             val replyTo = computeReplyTo(event)
 
             note.loadEvent(event, author, replyTo)
@@ -1775,7 +1779,12 @@ open class EventCache :
                         val deleteNoteEvent = deleteNote.event
                         if (deleteNoteEvent is AddressableEvent) {
                             val addressableNote = getAddressableNoteIfExists(deleteNoteEvent.addressTag())
-                            if (addressableNote?.author?.pubkeyHex == event.pubKey && (addressableNote.createdAt() ?: 0L) <= event.createdAt) {
+                            // An `e` tag deletes that one version: the address goes only when the
+                            // version it currently shows is the one being deleted.
+                            if (addressableNote?.author?.pubkeyHex == event.pubKey &&
+                                addressableNote.event?.id == deleteNoteEvent.id &&
+                                (addressableNote.createdAt() ?: 0L) <= event.createdAt
+                            ) {
                                 // Counts the replies
                                 deleteNote(addressableNote)
 
@@ -1805,14 +1814,18 @@ open class EventCache :
                         }
                     }
 
-                notes.forEach { _, note ->
-                    val noteEvent = note.event
-                    if (noteEvent is AddressableEvent &&
-                        noteEvent.addressTag() in addressSet &&
-                        noteEvent.pubKey == event.pubKey &&
-                        noteEvent.createdAt <= event.createdAt
-                    ) {
-                        deleteNote(note)
+                // A full pass over the cache, so only for deletions that name addresses; most
+                // (un-likes, deleted replies) carry `e` tags alone.
+                if (addressSet.isNotEmpty()) {
+                    notes.forEach { _, note ->
+                        val noteEvent = note.event
+                        if (noteEvent is AddressableEvent &&
+                            noteEvent.addressTag() in addressSet &&
+                            noteEvent.pubKey == event.pubKey &&
+                            noteEvent.createdAt <= event.createdAt
+                        ) {
+                            deleteNote(note)
+                        }
                     }
                 }
             }

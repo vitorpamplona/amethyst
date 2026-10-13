@@ -697,7 +697,6 @@
     <string name="uploading_state_hashing">ハッシュ化中</string>
     <string name="uploading_state_finished">完了</string>
     <string name="uploading_state_error">エラー</string>
-    <string name="connect_via_tor1">調整</string>
     <string name="connect_via_tor2">Tor設定</string>
     <string name="yes">はい</string>
     <string name="no">いいえ</string>
@@ -917,7 +916,6 @@
     <string name="created_at">作成日時</string>
     <string name="guidelines">ガイドライン</string>
     <string name="moderators">モデレーター</string>
-    <string name="login_with_external_signer">Amber でログイン</string>
     <string name="status_update">ステータスを更新</string>
     <string name="poll_zap_value_min_max_explainer">投票は zap 金額によって重み付けされます。スパマーを避けるために最低金額を、大口 zapper が投票を独占するのを防ぐために最高金額を設定できます。すべての投票を同じ価値にするには両方のフィールドに同じ金額を入力してください。任意の金額を受け入れるには空白のままにしてください。</string>
     <string name="error_dialog_talk_to_user">ユーザーにメッセージを送る</string>

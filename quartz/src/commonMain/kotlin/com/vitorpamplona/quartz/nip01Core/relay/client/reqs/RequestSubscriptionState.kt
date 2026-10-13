@@ -89,6 +89,23 @@ class RequestSubscriptionState<T : Any> {
         var refusedFilters: List<Filter>? = null
 
         var refusalCount: Int = 0
+
+        /**
+         * A REQ was decided ([onOpenReq]) but not written yet. A relay's rate-limit gate can
+         * hold it through a back-off; until it goes, whatever the relay sends belongs to the
+         * REQ before it.
+         */
+        var unwritten = false
+
+        /** What [lastKnownFilters] and liveness were before [onOpenReq], for [onHeld]. */
+        var filtersBefore: List<Filter>? = null
+        var liveBefore = false
+
+        /**
+         * The relay is still streaming the LIVE sub this one's held REQ will replace: its
+         * events are live and match [lastKnownFilters], the old filters, until the REQ goes.
+         */
+        var streamingOld = false
     }
 
     private val states = ConcurrentMap<T, RelayState>()
@@ -165,12 +182,20 @@ class RequestSubscriptionState<T : Any> {
 
     fun currentState(reference: T) = peek(reference)?.status
 
+    /** True when an event arriving now is a live one: the sub is LIVE, or still streams the LIVE REQ a held one will replace. */
+    fun isLive(reference: T): Boolean {
+        val state = peek(reference) ?: return false
+        return state.status == ReqSubStatus.LIVE || state.streamingOld
+    }
+
     fun onNewEvent(reference: T) {
         val state = mutable(reference)
         // The relay is serving this REQ (it matched an event), so any past refusal
         // no longer applies — let it be tried freely again.
         state.refusedFilters = null
         state.refusalCount = 0
+        // An event of the old live stream, not the first answer to the REQ waiting to go.
+        if (state.streamingOld) return
         if (state.status == ReqSubStatus.SENT) {
             state.status = ReqSubStatus.QUERYING_PAST
         }
@@ -182,13 +207,16 @@ class RequestSubscriptionState<T : Any> {
         state.refusedFilters = null
         state.refusalCount = 0
         state.status = ReqSubStatus.LIVE
+        state.streamingOld = false
     }
 
     fun onClosed(reference: T) {
         // Closed messages are usually relays refusing to process a REQ. This keeps
         // [RelayState.filters] intact to avoid sending the same filter, and getting
         // immediately closed, over and over again.
-        mutable(reference).status = ReqSubStatus.CLOSED
+        val state = mutable(reference)
+        state.status = ReqSubStatus.CLOSED
+        state.streamingOld = false
     }
 
     fun onOpenReq(
@@ -196,15 +224,72 @@ class RequestSubscriptionState<T : Any> {
         filters: List<Filter>,
     ) {
         val state = mutable(reference)
+        state.filtersBefore = state.lastKnownFilters
+        state.liveBefore = state.status == ReqSubStatus.LIVE || state.streamingOld
+        state.unwritten = true
         state.status = ReqSubStatus.SENT
         state.filters = filters
         state.lastKnownFilters = filters
+        state.streamingOld = false
+    }
+
+    /**
+     * The REQ decided for [filters] is held by the relay's rate-limit gate instead of sent. Until
+     * it goes, events belong to the REQ before it: they keep its filters and, if it was LIVE,
+     * stay live. Ignored once a newer decision owns the row or the REQ was written.
+     */
+    fun onHeld(
+        reference: T,
+        filters: List<Filter>,
+    ) {
+        val state = peek(reference) ?: return
+        if (!state.unwritten || state.filters !== filters) return
+        state.lastKnownFilters = state.filtersBefore
+        state.streamingOld = state.liveBefore
+    }
+
+    /**
+     * A held REQ for [filters] is being written now. Anything the relay answered while it was
+     * held came from the REQ before it, so it is in flight again whatever that answer was.
+     */
+    fun onWriting(
+        reference: T,
+        filters: List<Filter>,
+    ) {
+        val state = mutable(reference)
+        state.status = ReqSubStatus.SENT
+        state.filters = filters
+        state.lastKnownFilters = filters
+        state.unwritten = false
+        state.streamingOld = false
+    }
+
+    /**
+     * The REQ for [filters] left the socket. Both send paths pre-mark the row with [onOpenReq]
+     * before the frame goes, so this only records the filters: a fast relay's EOSE or CLOSED
+     * can be handled before the transport reports the send, and re-marking SENT here would
+     * erase it — leaving a LIVE sub looking in flight forever, or a CLOSED one invisible to
+     * the retry its back-off scheduled. The status is set only when nothing marked it (a
+     * reconnect wiped the row between the pre-mark and the send).
+     */
+    fun onReqSent(
+        reference: T,
+        filters: List<Filter>,
+    ) {
+        val state = mutable(reference)
+        if (state.status == null) state.status = ReqSubStatus.SENT
+        state.filters = filters
+        state.lastKnownFilters = filters
+        state.unwritten = false
+        state.streamingOld = false
     }
 
     fun onSubscriptionClosed(reference: T) {
         val state = mutable(reference)
         state.status = ReqSubStatus.CLOSED
         state.filters = null
+        state.unwritten = false
+        state.streamingOld = false
     }
 
     fun connecting(reference: T) {
@@ -213,6 +298,8 @@ class RequestSubscriptionState<T : Any> {
         peek(reference)?.let {
             it.status = null
             it.filters = null
+            it.unwritten = false
+            it.streamingOld = false
         }
     }
 
@@ -220,6 +307,8 @@ class RequestSubscriptionState<T : Any> {
         peek(reference)?.let {
             it.status = null
             it.filters = null
+            it.unwritten = false
+            it.streamingOld = false
         }
     }
 

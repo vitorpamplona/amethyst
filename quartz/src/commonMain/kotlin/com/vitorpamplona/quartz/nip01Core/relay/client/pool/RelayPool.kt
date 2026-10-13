@@ -24,12 +24,14 @@ import com.vitorpamplona.quartz.nip01Core.relay.client.listeners.EmptyConnection
 import com.vitorpamplona.quartz.nip01Core.relay.client.listeners.RelayConnectionListener
 import com.vitorpamplona.quartz.nip01Core.relay.client.single.IRelayClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.single.basic.BasicRelayClient
+import com.vitorpamplona.quartz.nip01Core.relay.client.single.basic.RateLimitGate
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.Message
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.MessageDecoder
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toRelay.Command
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.relay.sockets.WebsocketBuilder
 import com.vitorpamplona.quartz.utils.cache.LargeCache
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
@@ -60,8 +62,20 @@ class RelayPool(
     val listener: RelayConnectionListener = EmptyConnectionListener,
     /** Shared per-frame decode strategy for every relay in the pool. */
     val decoder: MessageDecoder = MessageDecoder.Default,
+    /** Runs each relay's rate-limit gate; see [BasicRelayClient]. Without one, back-offs are not honored. */
+    val scope: CoroutineScope? = null,
+    /** Told what each relay's rate-limit gate holds, and asked what to send on release. See [RateLimitGate]. */
+    val heldCommands: RateLimitGate.Owner? = null,
 ) : RelayConnectionListener {
     private val relays = LargeCache<NormalizedRelayUrl, IRelayClient>()
+
+    /**
+     * Each relay's rate-limit back-offs, kept apart from its client: a relay dropped from the
+     * pool while a back-off runs (its last subscription ended) and dialed again gets a new
+     * client, which must still wait the back-off out. Idle gates of relays no longer in the
+     * pool are dropped on the next pool change.
+     */
+    private val gates = LargeCache<NormalizedRelayUrl, RateLimitGate>()
 
     private val _connectedRelays = MutableStateFlow<Set<NormalizedRelayUrl>>(emptySet())
     val connectedRelays = _connectedRelays.asStateFlow()
@@ -77,7 +91,20 @@ class RelayPool(
             socketBuilder = websocketBuilder,
             listener = this,
             decoder = decoder,
+            rateLimits = scope?.let { scope -> gates.getOrCreate(url) { newGate(scope, url) } },
         )
+
+    private fun newGate(
+        scope: CoroutineScope,
+        url: NormalizedRelayUrl,
+    ): RateLimitGate {
+        val owner = heldCommands ?: return RateLimitGate(scope)
+        return RateLimitGate(
+            scope,
+            refresh = { owner.onRelease(url, it) },
+            onHold = { owner.onHeld(url, it) },
+        )
+    }
 
     /** Clears every relay's reconnect backoff. See [IRelayClient.resetBackoff]. */
     fun resetBackoff() {
@@ -188,6 +215,15 @@ class RelayPool(
         if (atLeastOne) {
             _availableRelays.update { relays.keys() }
         }
+        dropIdleGates()
+    }
+
+    /** Forgets the gates of relays that left the pool once their back-offs ran out. */
+    private fun dropIdleGates() {
+        if (gates.size() == relays.size()) return
+        gates.forEach { url, gate ->
+            if (relays.get(url) == null && gate.isIdle()) gates.remove(url)
+        }
     }
 
     fun addRelay(relay: NormalizedRelayUrl): IRelayClient {
@@ -226,6 +262,7 @@ class RelayPool(
         if (removeRelayInner(relay)) {
             _availableRelays.update { relays.keys() }
         }
+        dropIdleGates()
     }
 
     fun removeAllRelays() {

@@ -298,6 +298,30 @@ jobs:
           name: Quartz Linux Native Test Reports
           path: quartz/build/reports
 
+  # The three iOS jobs run on macos-latest, the smallest hosted runner there
+  # is: 3 M1 cores and 7 GB of RAM, and 5 to 10x slower than a current laptop
+  # on Kotlin/Native compiles and links (:commonsUI:compileKotlinIosSimulatorArm64
+  # is 48 s on an M5 Pro and 8 to 14 minutes here). Run-to-run speed also
+  # varies by about 1.5x, so every job needs real headroom under its limit.
+  # Until 2026-10-12 they were one job, and it hit its 45-minute limit whenever
+  # :quartz had to be rebuilt (the green runs before that were Gradle
+  # build-cache hits on an unchanged :quartz: 2.5 min instead of 19). What
+  # changed:
+  # - :quartz linked its iOS test binary optimized (an LTO release link with the
+  #   Kotlin/Native dependency cache off): 12 minutes on this runner. The test
+  #   binaries are unoptimized now; only linuxX64 keeps -opt for the benchmark.
+  # - One job became three, one per module, so each has its own 45 minutes
+  #   and they run side by side: about 15 to 20 min for :quartz and :commons,
+  #   about 25 for :commonsUI.
+  # - ~/.konan is cached, so a run does not re-download the compiler, LLVM and
+  #   the sysroot. Same cache step as test-quartz-linux-native, keyed per job
+  #   because each job populates different per-library caches.
+  # - gradle.properties asks for a 6 GB daemon heap, more than the host has.
+  #   These jobs cap it at 4 GB with the same `-D` override the Android jobs
+  #   use. That keeps the daemon off swap, but measured on CI it is not what
+  #   makes the difference: the runner's speed is. The Kotlin JVM daemon is not
+  #   involved; every compile and link task here is Kotlin/Native and runs
+  #   inside the Gradle daemon.
   test-quartz-ios:
     # Phase 1 of the iOS support plan
     # (amethyst/plans/2026-05-24-ios-support.md): keep :quartz green on iOS
@@ -323,6 +347,15 @@ jobs:
         with:
           cache-read-only: ${{ github.ref != 'refs/heads/main' }}
 
+      - name: Cache Kotlin/Native toolchain
+        uses: actions/cache@v6
+        with:
+          path: ~/.konan
+          key: konan-${{ runner.os }}-quartz-${{ hashFiles('gradle/libs.versions.toml') }}
+          restore-keys: |
+            konan-${{ runner.os }}-quartz-
+            konan-${{ runner.os }}-
+
       # Two tasks, two purposes:
       # - iosSimulatorArm64Test runs the existing iosTest suite on the
       #   simulator (NIP-04 / NIP-17 / NIP-19 / NIP-49 / AES-GCM /
@@ -335,37 +368,145 @@ jobs:
       - name: Test Quartz on iOS
         run: |
           ./gradlew \
+            -Dorg.gradle.jvmargs="-Xmx4g -Dfile.encoding=UTF-8" \
             :quartz:iosSimulatorArm64Test \
             :quartz:compileTestKotlinIosArm64
 
-      # :commons gained iosArm64 + iosSimulatorArm64 targets in Phase 2 of the
-      # iOS plan. Actual UI / lifecycle wiring will land with the iosApp module
-      # in Phase 3, but the shared commonMain + commonTest sources are already
-      # built here against an Apple Native frontend. Same two-task shape as
-      # quartz above:
-      # - iosSimulatorArm64Test compiles AND runs the shared commonTest suite
-      #   on the simulator. commonTest is built for every target, so a test
-      #   reaching for a JVM-only API (JUnit, javaClass, @JvmStatic, or a
-      #   jvmAndroid-only symbol) breaks the Apple build even though
-      #   :commons:jvmTest stays green — this is the job that catches it.
-      # - compileTestKotlinIosArm64 catches device-only compile drift
-      #   (iosArm64 = aarch64-apple-ios) without needing a physical device.
-      # :commonsUI (the Compose half split out of :commons) gets the same
-      # treatment so the shared composables keep compiling on Apple targets.
-      - name: Test Commons on iOS
-        run: |
-          ./gradlew \
-            :commons:iosSimulatorArm64Test \
-            :commons:compileTestKotlinIosArm64 \
-            :commonsUI:iosSimulatorArm64Test \
-            :commonsUI:compileTestKotlinIosArm64
+      - name: Quartz iOS Test Report
+        uses: mikepenz/action-junit-report@a9170d5795813c01ab4901ffb045b52bab4ab09d # v6.5.0
+        if: always()
+        with:
+          report_paths: 'quartz/build/test-results/iosSimulatorArm64Test/TEST-*.xml'
+          annotate_only: true
+          detailed_summary: true
+          fail_on_failure: true
 
-      - name: Upload iOS Test Reports
+      - name: Upload Quartz iOS Test Reports
         uses: actions/upload-artifact@v7
         if: failure()
         with:
           name: Quartz iOS Test Reports
           path: quartz/build/reports
+
+  test-commons-ios:
+    # :commons gained iosArm64 + iosSimulatorArm64 targets in Phase 2 of the
+    # iOS plan. Actual UI / lifecycle wiring will land with the iosApp module
+    # in Phase 3, but the shared commonMain + commonTest sources are already
+    # built here against an Apple Native frontend. Same two-task shape as
+    # test-quartz-ios:
+    # - iosSimulatorArm64Test compiles AND runs the shared commonTest suite
+    #   on the simulator. commonTest is built for every target, so a test
+    #   reaching for a JVM-only API (JUnit, javaClass, @JvmStatic, or a
+    #   jvmAndroid-only symbol) breaks the Apple build even though
+    #   :commons:jvmTest stays green — this is the job that catches it.
+    # - compileTestKotlinIosArm64 catches device-only compile drift
+    #   (iosArm64 = aarch64-apple-ios) without needing a physical device.
+    needs: lint
+    runs-on: macos-latest
+    timeout-minutes: 45
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v7
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@v6.0.1
+        with:
+          distribution: 'temurin'
+          java-version: 21
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v6
+        with:
+          cache-read-only: ${{ github.ref != 'refs/heads/main' }}
+
+      - name: Cache Kotlin/Native toolchain
+        uses: actions/cache@v6
+        with:
+          path: ~/.konan
+          key: konan-${{ runner.os }}-commons-${{ hashFiles('gradle/libs.versions.toml') }}
+          restore-keys: |
+            konan-${{ runner.os }}-commons-
+            konan-${{ runner.os }}-
+
+      - name: Test Commons on iOS
+        run: |
+          ./gradlew \
+            -Dorg.gradle.jvmargs="-Xmx4g -Dfile.encoding=UTF-8" \
+            :commons:iosSimulatorArm64Test \
+            :commons:compileTestKotlinIosArm64
+
+      - name: Commons iOS Test Report
+        uses: mikepenz/action-junit-report@a9170d5795813c01ab4901ffb045b52bab4ab09d # v6.5.0
+        if: always()
+        with:
+          report_paths: 'commons/build/test-results/iosSimulatorArm64Test/TEST-*.xml'
+          annotate_only: true
+          detailed_summary: true
+          fail_on_failure: true
+
+      - name: Upload Commons iOS Test Reports
+        uses: actions/upload-artifact@v7
+        if: failure()
+        with:
+          name: Commons iOS Test Reports
+          path: commons/build/reports
+
+  test-commonsui-ios:
+    # :commonsUI (the Compose half split out of :commons) gets the same
+    # treatment as :commons so the shared composables keep compiling on Apple
+    # targets. It is the slowest of the three iOS modules by far (Compose,
+    # Skiko and the resource pipeline all go through the native compiler), so
+    # it has a job to itself: together with :commons it ran 35 to 37 minutes
+    # against the 45-minute limit on back-to-back runs.
+    needs: lint
+    runs-on: macos-latest
+    timeout-minutes: 45
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v7
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@v6.0.1
+        with:
+          distribution: 'temurin'
+          java-version: 21
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v6
+        with:
+          cache-read-only: ${{ github.ref != 'refs/heads/main' }}
+
+      - name: Cache Kotlin/Native toolchain
+        uses: actions/cache@v6
+        with:
+          path: ~/.konan
+          key: konan-${{ runner.os }}-commonsui-${{ hashFiles('gradle/libs.versions.toml') }}
+          restore-keys: |
+            konan-${{ runner.os }}-commonsui-
+            konan-${{ runner.os }}-
+
+      - name: Test CommonsUI on iOS
+        run: |
+          ./gradlew \
+            -Dorg.gradle.jvmargs="-Xmx4g -Dfile.encoding=UTF-8" \
+            :commonsUI:iosSimulatorArm64Test \
+            :commonsUI:compileTestKotlinIosArm64
+
+      - name: CommonsUI iOS Test Report
+        uses: mikepenz/action-junit-report@a9170d5795813c01ab4901ffb045b52bab4ab09d # v6.5.0
+        if: always()
+        with:
+          report_paths: 'commonsUI/build/test-results/iosSimulatorArm64Test/TEST-*.xml'
+          annotate_only: true
+          detailed_summary: true
+          fail_on_failure: true
+
+      - name: Upload CommonsUI iOS Test Reports
+        uses: actions/upload-artifact@v7
+        if: failure()
+        with:
+          name: CommonsUI iOS Test Reports
+          path: commonsUI/build/reports
 
   # Android Lint, split out of test-and-build-android.
   #

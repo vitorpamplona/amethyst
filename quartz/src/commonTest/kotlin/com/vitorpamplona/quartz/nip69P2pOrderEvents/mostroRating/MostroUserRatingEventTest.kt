@@ -31,6 +31,7 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertIs
+import kotlin.test.assertIsNot
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
@@ -80,11 +81,11 @@ class MostroUserRatingEventTest {
         listOf(P2PKindFixtures.REAL_PAYGRESS_HEARTBEAT, P2PKindFixtures.SYNTHETIC_PAYGRESS_HEARTBEAT_WITH_P).forEach {
             val event = parse(it)
             assertIs<UnrecognizedKind38384Event>(event)
-            assertFalse(event is MostroUserRatingEvent)
+            assertIsNot<MostroUserRatingEvent>(event)
             // Still addressable, so replacement and `a`-tag deletion reach it.
             assertIs<AddressableEvent>(event)
-            assertFalse(event is SearchableEvent)
-            assertFalse(event is PubKeyHintProvider)
+            assertIsNot<SearchableEvent>(event)
+            assertIsNot<PubKeyHintProvider>(event)
         }
     }
 

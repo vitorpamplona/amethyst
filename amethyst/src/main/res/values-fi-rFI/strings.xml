@@ -2,11 +2,6 @@
 <resources xmlns:tools="http://schemas.android.com/tools">
     <!-- Placeholder shown in a chat row while an encrypted message is still being decrypted -->
     <!-- Prefix on a Messages-list preview when the newest message was sent by the logged-in user. %1$s is the message text -->
-    <string name="block_hide_user"><![CDATA[Estä & Piilota käyttäjä]]></string>
-    <string name="boosted">tehostettu</string>
-    <string name="edited_number">muokkaus #%1$s</string>
-    <string name="save">Tallenna</string>
-    <string name="rename">Nimeä uudelleen</string>
     <!-- Reply-mode toggle in the chat composer: reply inline in the timeline vs pull it aside into a thread. -->
     <!-- Title of the minichat (thread) screen opened from a chat message. -->
     <!-- Title of the picked-image confirmation dialog when attaching a picture to a thread reply. -->
@@ -14,21 +9,9 @@
     <!-- A reply whose target was searched for across all reachable history and never found. -->
     <!-- Reply subtitle when every relay genuinely bottomed out (no stalls) and it still wasn't there. -->
     <!-- Overflow count on the capped reporter avatar row, e.g. "+21". -->
-    <string name="changed_chat_profile_to">Uusi chat-profiili:</string>
-    <string name="route_software_apps">Sovellukset</string>
-    <string name="napplet_permissions">nApplet-oikeudet</string>
-    <string name="napplet_permissions_empty">Ei vielä nApplet-oikeuksia</string>
-    <string name="napplet_permissions_empty_subtitle">Napplet-sovelluksille myöntämäsi oikeudet näkyvät täällä.</string>
-    <string name="napplet_permissions_forget">Unohda tämä nApplet</string>
-    <string name="napplet_permissions_blocked">Estetty</string>
-    <string name="napplet_permissions_revoke">Peruuta</string>
     <!-- Napplet sandbox chrome (host top bar + live action notices) -->
     <!-- Napplet capability names -->
-    <string name="napplet_cap_shell">Komentotulkki</string>
-    <string name="napplet_cap_shell_desc">Kysy, mitkä ominaisuudet ovat käytettävissä</string>
     <!-- Napplet consent dialog -->
-    <string name="napplet_consent_capability">Ominaisuus: %1$s</string>
-    <string name="napplet_consent_pay">Tämä nApplet haluaa maksaa Lightning-laskun.</string>
     <!-- An amountless BOLT11: the payee decides how much. Never render this as "0 sats". -->
     <!-- Consequence lines for event kinds whose payload lives entirely in the tags, so a
          kind-only summary would hide what is actually being signed. These replaceable lists are
@@ -62,16 +45,7 @@
     <!-- No longer shown in the prompt: kept so the existing translations aren't orphaned. -->
     <!-- Settings: three lists that each hold what their header says. -->
     <!-- Short labels for the purpose chips on a "recent logins" row. -->
-    <string name="private_note_no_receivers">Ei vastaanottajia vielä: vain sinä voit nähdä tämän muistiinpanon. Lisää henkilöitä jakaaksesi sen.</string>
     <!-- Composer audience control (Notify / "Visible to") -->
-    <string name="notify_add_user">Lisää</string>
-    <string name="notify_remove_user">Poista käyttäjä ilmoituksista</string>
-    <string name="notify_search_and_add_user">Etsi ja lisää ilmoitettava käyttäjä</string>
-    <string name="set_preferred_media_servers">Aseta haluamasi median latauspalvelimet.</string>
-    <string name="recommended_media_servers">Suositellut mediapalvelimet</string>
-    <string name="built_in_servers_description">Amethystin oletusluettelo. Voit lisätä ne yksitellen tai lisätä koko luettelon.</string>
-    <string name="app_notification_replies_channel_message">%1$s vastasi</string>
-    <string name="app_notification_replies_channel_message_for">kohteessa: %1$s</string>
     <!-- Notification channel groups (organize the per-kind channels in system settings) -->
     <!-- Reposts -->
     <!-- Media (picture &amp; video posts that mention you) -->
@@ -91,9 +65,6 @@
          a relay count they think is too high. -->
     <!-- Two countable nouns, so two plurals composed at the call site rather than one string with
          two %d in it: filter and relay decline independently in Slavic/Baltic/Semitic languages. -->
-    <string name="always_on_notif_setting_title">Jatkuvasti päällä oleva ilmoituspalvelu</string>
-    <string name="always_on_notif_setting_description">Pitää pysyvän yhteyden inbox-relayihisi välittömän ilmoituksen toimitusta varten. Näyttää jatkuvan ilmoituksen. Kuluttaa enemmän akkua, mutta varmistaa että et koskaan missaa viestiä.</string>
-    <string name="preferences">Sovelluksen asetukset</string>
     <!-- Settings search -->
     <!-- Settings search keywords: an English concept/protocol index that supplements the
          (translated) row titles. Marked translatable="false" so protocol terms (blossom, nsec,
@@ -101,41 +72,20 @@
     <!-- Compact label for the segmented control, where "Unmetered WiFi" does not fit. -->
     <!-- Compact labels for the segmented control. -->
     <!-- Compact labels for the segmented control, rendered in each option's own typeface. -->
-    <string name="messages_create_public_chat">Julkinen</string>
-    <string name="messages_create_group">Ryhmä</string>
     <!-- New conversation chooser (full-screen picker opened from the Messages FAB).
          Each row stays lean; the "best for" line and the pros/cons appear only when a row is tapped. -->
     <!-- Buzz calls its groups channels, and a Buzz relay is one workspace rather than a directory of groups. -->
     <!-- Reusable geohash location picker (shared, not group-specific) -->
     <!-- Same, where this viewer cannot start one: not a member, or a Buzz chat channel (forum posts belong to forum channels). -->
-    <string name="messages_new_message">Yksityinen</string>
     <string name="share_target_as_dm">Lähetä DM-viestinä</string>
     <!-- Label for the mixed media feed: pictures + every NIP-71 video kind + NIP-94 files.
          Distinct from the "shorts" string, which labels the vertical/short-video-only feed. -->
-    <string name="cashu_p2pk_section">Nutzap-avain (lisäasetukset)</string>
-    <string name="cashu_p2pk_explainer">Erillinen yksityinen avain, jota käytetään vain NIP-61 nutzapien vastaanottamiseen. Ei ole Nostr-henkilöllisyysavaimesi.</string>
-    <string name="cashu_p2pk_autogen">Luo uusi avain</string>
-    <string name="cashu_p2pk_manual_label">P2PK-yksityisavain (hex)</string>
-    <string name="wallet_save_changes">Tallenna muutokset</string>
     <!-- Onchain zap send dialog -->
-    <string name="bottom_bar_settings_description">Vedä järjestääksesi. Ota käyttöön tai poista kohde alapalkista. Kun kohteita on nolla, alapalkki piilotetaan.</string>
-    <string name="bottom_bar_settings_reorder">Järjestä uudelleen</string>
-    <string name="home_tabs_settings_description">Valitse välilehdet, jotka näkyvät aloitusnäytöllä. Kun vain yksi välilehti on aktiivinen, välilehtipalkki piilotetaan.</string>
-    <string name="profile_ui_settings_description">Valitse osiot ja syötteet, jotka näkyvät käyttäjäprofiileissa. Kaikki asetukset ovat oletuksena käytössä.</string>
     <!-- Buzz kind-40099 system messages: relay-authored narration of a channel state change. -->
     <!-- Fallback for a system message type this version does not know yet: "alice: some_new_type". -->
     <!-- Buzz huddles (kind 481xx): live audio-room lifecycle, narrated in the chat timeline. -->
     <!-- Buzz agent jobs (kind 43xxx): an agent task's lifecycle, narrated in the chat timeline. -->
     <!-- Buzz forum votes (kind 45002). -->
-    <string name="git_web_address">Verkko:</string>
-    <string name="git_repo_tab_overview">Yleiskatsaus</string>
-    <string name="git_repo_section_about">Tietoa</string>
-    <string name="git_repo_section_links">Linkit</string>
-    <string name="git_repo_section_maintainers">Ylläpitäjät</string>
-    <string name="git_repo_section_topics">Aiheet</string>
-    <string name="media_servers_blossom_section">Blossom-palvelimet</string>
-    <string name="media_servers_blossom_explainer">Lisää niin monta palvelinta kuin haluat. Voit myöhemmin valita, mitä käytät kuvan lataamiseen</string>
-    <string name="torrent_download">Lataa</string>
     <!-- %1$s is replaced at runtime by an inline star icon, not text. Keep the placeholder. -->
     <!-- Kind display names for relay subscription filter chips -->
     <!-- M3 Action Dialog titles -->

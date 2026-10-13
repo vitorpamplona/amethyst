@@ -23,6 +23,11 @@ package com.vitorpamplona.amethyst.commons.model
 import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
+import com.vitorpamplona.quartz.nip47WalletConnect.events.NwcRequestEvent
+import com.vitorpamplona.quartz.nip47WalletConnect.events.NwcResponseEvent
+import com.vitorpamplona.quartz.nip57Zaps.ZapReceiptEvent
+import com.vitorpamplona.quartz.nip57Zaps.ZapRequestEvent
+import com.vitorpamplona.quartz.utils.EventFactory
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertSame
@@ -57,6 +62,73 @@ class NotePruningReferenceTest {
             content = "",
             sig = "sig",
         )
+
+    private fun typed(
+        idHex: HexKey,
+        kind: Int,
+    ): Note = note(idHex).apply { event = EventFactory.create<Event>(idHex, "ab".repeat(32), 1L, kind, emptyArray(), "", "sig") }
+
+    // ── removeNote and the zap maps (its no-op path skips the lock and the scan) ──
+
+    @Test
+    fun removeNoteDetachesAZapReceipt() {
+        val target = note("d".repeat(64))
+        val request = typed("01".repeat(32), ZapRequestEvent.KIND)
+        val receipt = typed("02".repeat(32), ZapReceiptEvent.KIND)
+        target.addZap(request, receipt)
+
+        target.removeNote(receipt)
+
+        assertTrue(target.zaps.isEmpty(), "a pruned receipt must leave the zap map")
+    }
+
+    @Test
+    fun removeNoteDetachesAZapRequest() {
+        val target = note("e".repeat(64))
+        val request = typed("03".repeat(32), ZapRequestEvent.KIND)
+        val receipt = typed("04".repeat(32), ZapReceiptEvent.KIND)
+        target.addZap(request, receipt)
+
+        target.removeNote(request)
+
+        assertTrue(target.zaps.isEmpty(), "a pruned request must leave the zap map")
+    }
+
+    @Test
+    fun removeNoteOfAReplyLeavesTheZapsAlone() {
+        val target = note("f".repeat(64))
+        val request = typed("05".repeat(32), ZapRequestEvent.KIND)
+        val receipt = typed("06".repeat(32), ZapReceiptEvent.KIND)
+        target.addZap(request, receipt)
+
+        target.removeNote(typed("07".repeat(32), 1))
+
+        assertEquals(mapOf(request to receipt), target.zaps)
+    }
+
+    @Test
+    fun removeNoteDetachesAReceiptWhoseEventIsNotLoaded() {
+        val target = note("1".repeat(64))
+        val request = typed("08".repeat(32), ZapRequestEvent.KIND)
+        val receipt = note("09".repeat(32))
+        target.addZap(request, receipt)
+
+        target.removeNote(receipt)
+
+        assertTrue(target.zaps.isEmpty(), "with no event to tell its kind, the full check still finds it")
+    }
+
+    @Test
+    fun removeNoteDetachesAnNwcResponse() {
+        val target = note("2".repeat(64))
+        val request = typed("0a".repeat(32), NwcRequestEvent.KIND)
+        val response = typed("0b".repeat(32), NwcResponseEvent.KIND)
+        target.addZapPayment(request, response)
+
+        target.removeNote(response)
+
+        assertTrue(target.zapPayments.isEmpty(), "a pruned NWC response must leave the payment map")
+    }
 
     // ── Fix 1: removeNote drops onchain-zap and nutzap sources ──────────────
 

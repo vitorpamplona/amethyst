@@ -340,7 +340,10 @@ fun RenderThreadFeed(
                 }
             },
         ) { index, item ->
-            val level = viewModel.levelFlowForItem(item).collectAsStateWithLifecycle(0)
+            // Remembered per item: a fresh flow on every recomposition restarted the collector each
+            // time, and starting from 0 drew every reply un-indented for a frame.
+            val levelFlow = remember(item) { viewModel.levelFlowForItem(item) }
+            val level = levelFlow.collectAsStateWithLifecycle(viewModel.levelCacheFlow.value[item] ?: 0)
 
             val modifier =
                 Modifier

@@ -28,22 +28,33 @@ import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.reqs.StaticSubscription
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerInternal
+import com.vitorpamplona.quartz.nip46RemoteSigner.BunkerClientMetadata
 import com.vitorpamplona.quartz.nip46RemoteSigner.BunkerMessage
 import com.vitorpamplona.quartz.nip46RemoteSigner.BunkerRequest
 import com.vitorpamplona.quartz.nip46RemoteSigner.BunkerRequestConnect
 import com.vitorpamplona.quartz.nip46RemoteSigner.BunkerResponse
 import com.vitorpamplona.quartz.nip46RemoteSigner.BunkerResponseAck
 import com.vitorpamplona.quartz.nip46RemoteSigner.NostrConnectEvent
+import com.vitorpamplona.quartz.nip46RemoteSigner.NostrConnectURI
 import com.vitorpamplona.quartz.nip46RemoteSigner.signer.NostrSignerRemote
-import com.vitorpamplona.quartz.utils.Hex
+import com.vitorpamplona.quartz.utils.Log
 import com.vitorpamplona.quartz.utils.SecureRandom
 import com.vitorpamplona.quartz.utils.TimeUtils
-import kotlinx.coroutines.CompletableDeferred
-import kotlinx.coroutines.withTimeout
+import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.withTimeoutOrNull
+import kotlin.coroutines.cancellation.CancellationException
 
 object NostrConnectLoginUseCase {
-    const val NOSTRCONNECT_TIMEOUT_MS = 120_000L
+    private const val TAG = "NostrConnectLogin"
+
+    /**
+     * How long the code waits for a signer, from the moment it shows. Five minutes: the user may
+     * first have to clear the signer's queue of other apps' requests and answer whether to
+     * replace an existing connection, and two minutes ran out on that path. Cancel ends it sooner.
+     */
+    const val NOSTRCONNECT_TIMEOUT_MS = 300_000L
 
     data class NostrConnectUri(
         val uri: String,
@@ -62,15 +73,25 @@ object NostrConnectLoginUseCase {
     fun generateUri(
         ephemeralKeyPair: KeyPair,
         relays: List<String>,
-        appName: String,
+        clientMetadata: BunkerClientMetadata?,
     ): NostrConnectUri {
         val ephemeralSigner = NostrSignerInternal(ephemeralKeyPair)
         val ephemeralPubKey = ephemeralKeyPair.pubKey.toHexKey()
         val secret = generateSecret()
 
-        val relayParams = relays.joinToString("&") { "relay=$it" }
-        val uri = "nostrconnect://$ephemeralPubKey?$relayParams&secret=$secret&name=$appName"
-        val normalizedRelays = relays.map { NormalizedRelayUrl(it) }.toSet()
+        // Normalized, so the pool keys these relays the way it keys them everywhere else, and
+        // percent-encoded, as NIP-46 writes them.
+        val normalizedRelays = relays.mapNotNull { RelayUrlNormalizer.normalizeOrNull(it) }.toSet()
+        // The signer's approval screen and its list of connected apps show this name and icon.
+        val uri =
+            NostrConnectURI.buildNostrConnect(
+                clientPubKey = ephemeralPubKey,
+                relays = normalizedRelays,
+                secret = secret,
+                name = clientMetadata?.name,
+                url = clientMetadata?.url,
+                image = clientMetadata?.image,
+            )
 
         return NostrConnectUri(
             uri = uri,
@@ -106,10 +127,15 @@ object NostrConnectLoginUseCase {
                 client = client,
             )
         remoteSigner.openSubscription()
+        Log.d(TAG) { "Signer ${connectData.signerPubkey.take(8)} answered the code; asking it for the account's key" }
 
-        val verifiedPubkey = remoteSigner.getPublicKey()
-
-        return BunkerLoginResult(remoteSigner, verifiedPubkey)
+        try {
+            return BunkerLoginResult(remoteSigner, remoteSigner.getPublicKey())
+        } catch (e: Throwable) {
+            // Cancellation included: nobody else holds this signer to close it.
+            remoteSigner.closeSubscription()
+            throw e
+        }
     }
 
     private suspend fun waitForConnectRequest(
@@ -119,7 +145,8 @@ object NostrConnectLoginUseCase {
         expectedSecret: String,
         client: INostrClient,
     ): ConnectRequestData {
-        val deferred = CompletableDeferred<NostrConnectEvent>()
+        // Every event for the code's key, in order: the first one is not necessarily the signer's.
+        val events = Channel<NostrConnectEvent>(Channel.UNLIMITED)
 
         val subscription =
             StaticSubscription(
@@ -134,66 +161,81 @@ object NostrConnectLoginUseCase {
                     )
                 },
             ) { event ->
-                if (event is NostrConnectEvent && !deferred.isCompleted) {
-                    deferred.complete(event)
-                }
+                if (event is NostrConnectEvent) events.trySend(event)
             }
 
         try {
-            val event =
-                withTimeout(NOSTRCONNECT_TIMEOUT_MS) {
-                    deferred.await()
+            // Not withTimeout: its TimeoutCancellationException reads as a cancellation to
+            // callers, so the login screen would never show that the wait ended.
+            return withTimeoutOrNull(NOSTRCONNECT_TIMEOUT_MS) {
+                for (event in events) {
+                    readConnect(event, ephemeralSigner, expectedSecret)?.let { return@withTimeoutOrNull it }
                 }
-
-            val signerPubkey = event.talkingWith(ephemeralSigner.pubKey)
-            val decryptedJson = ephemeralSigner.decrypt(event.content, signerPubkey)
-            val message = OptimizedJsonMapper.fromJsonTo<BunkerMessage>(decryptedJson)
-
-            return when (message) {
-                is BunkerRequest -> {
-                    if (message.method != BunkerRequestConnect.METHOD_NAME) {
-                        throw Exception("Expected 'connect' method, got '${message.method}'")
-                    }
-
-                    val userPubkey =
-                        message.params.getOrNull(0)
-                            ?: throw Exception("Missing user pubkey in connect request")
-                    val receivedSecret = message.params.getOrNull(1)
-
-                    if (receivedSecret != expectedSecret) {
-                        throw Exception("Secret mismatch in connect request")
-                    }
-
-                    ConnectRequestData(
-                        requestId = message.id,
-                        signerPubkey = signerPubkey,
-                        userPubkey = userPubkey,
-                    )
-                }
-
-                is BunkerResponse -> {
-                    if (message.error != null) {
-                        throw Exception("Signer rejected connection: ${message.error}")
-                    }
-
-                    val userPubkey =
-                        message.result
-                            ?.takeIf { it.length == 64 && Hex.isHex(it) }
-                            ?: signerPubkey
-
-                    ConnectRequestData(
-                        requestId = null,
-                        signerPubkey = signerPubkey,
-                        userPubkey = userPubkey,
-                    )
-                }
-
-                else -> {
-                    throw Exception("Unexpected NIP-46 message format")
-                }
-            }
+                null
+            } ?: throw Exception("No signer answered the connection request in time")
         } finally {
             subscription.close()
+            events.close()
+        }
+    }
+
+    /**
+     * The signer's answer to the code, or null for an event that is not one. Anyone who sees the
+     * code, or the relay's subscription to its key, can write to that key: only an answer that
+     * carries the code's secret (NIP-46) is the signer the user approved in. Anything else is
+     * ignored rather than ending the login, so a stray event can neither pose as the signer
+     * (and receive the account's encryption requests) nor fail the wait for the real one.
+     */
+    private suspend fun readConnect(
+        event: NostrConnectEvent,
+        ephemeralSigner: NostrSignerInternal,
+        expectedSecret: String,
+    ): ConnectRequestData? {
+        val signerPubkey = event.talkingWith(ephemeralSigner.pubKey)
+        val message =
+            try {
+                OptimizedJsonMapper.fromJsonTo<BunkerMessage>(ephemeralSigner.decrypt(event.content, signerPubkey))
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                // Not encrypted to this code, or not NIP-46.
+                Log.d(TAG) { "Ignored an event for the code that is not a NIP-46 message: ${e::class.simpleName}" }
+                return null
+            }
+
+        return when (message) {
+            is BunkerRequest -> {
+                if (message.method != BunkerRequestConnect.METHOD_NAME) return null
+                if (message.params.getOrNull(1) != expectedSecret) {
+                    Log.d(TAG) { "Ignored a connect request for the code without its secret" }
+                    return null
+                }
+                val userPubkey = message.params.getOrNull(0) ?: return null
+                ConnectRequestData(
+                    requestId = message.id,
+                    signerPubkey = signerPubkey,
+                    userPubkey = userPubkey,
+                )
+            }
+
+            is BunkerResponse -> {
+                // A refusal carries no secret to check; it only ends this attempt.
+                if (message.error != null) throw Exception("Signer rejected connection: ${message.error}")
+                if (message.result != expectedSecret) {
+                    Log.d(TAG) { "Ignored a response for the code without its secret" }
+                    return null
+                }
+                // The account's key comes from get_public_key once connected.
+                ConnectRequestData(
+                    requestId = null,
+                    signerPubkey = signerPubkey,
+                    userPubkey = signerPubkey,
+                )
+            }
+
+            else -> {
+                null
+            }
         }
     }
 

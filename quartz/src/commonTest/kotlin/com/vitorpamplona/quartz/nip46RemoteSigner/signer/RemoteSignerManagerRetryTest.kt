@@ -50,7 +50,6 @@ import kotlinx.coroutines.test.runTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertIs
-import kotlin.test.assertNotEquals
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class RemoteSignerManagerRetryTest {
@@ -326,7 +325,7 @@ class RemoteSignerManagerRetryTest {
         }
 
     @Test
-    fun lateResponseFromAttempt1DoesNotCorruptAttempt2() =
+    fun retryResendsTheSameRequestAndTakesTheAnswerToTheFirstCopy() =
         runTest {
             val capturing = CapturingNostrClient()
             val manager =
@@ -349,29 +348,25 @@ class RemoteSignerManagerRetryTest {
             runCurrent()
 
             // Attempt 1 publishes, then times out at T=100.
-            val attempt1Id = decodeRequestId(capturing.publishedEvents[0])
             advanceTimeBy(150)
             // delay(2_000) between attempts: attempt 2 starts at T=2_100.
             // Land mid-window so attempt 2's own 100 ms timeout (T=2_200) hasn't fired yet.
             advanceTimeBy(2_000)
             runCurrent()
 
-            // Attempt 2 must use a different id — otherwise a late attempt-1 response
-            // could resume the attempt-2 channel with stale data.
+            // The same event again: a signer that queues requests for approval (Amber, which
+            // dedupes its queue by request id) must not ask its user twice.
             assertEquals(2, capturing.publishedEvents.size)
-            val attempt2Id = decodeRequestId(capturing.publishedEvents[1])
-            assertNotEquals(attempt1Id, attempt2Id)
+            assertEquals(capturing.publishedEvents[0].id, capturing.publishedEvents[1].id)
+            val requestId = decodeRequestId(capturing.publishedEvents[0])
 
-            // Late delivery of attempt 1's response. With the fix it has no entry in
-            // `pending` and is silently discarded.
-            manager.newResponse(bunkerPongFor(attempt1Id))
-            // Attempt 2's real response.
-            manager.newResponse(bunkerPongFor(attempt2Id))
+            // The user approved the copy that arrived first, while attempt 2 waits: that answers it.
+            manager.newResponse(bunkerPongFor(requestId))
             advanceUntilIdle()
 
             val result = deferred.await()
             val success = assertIs<SignerResult.RequestAddressed.Successful<PingResult>>(result)
-            assertEquals(attempt2Id, success.result.pong)
+            assertEquals(requestId, success.result.pong)
         }
 }
 

@@ -222,7 +222,6 @@ import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.settings.ComposeSet
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.settings.DrawerSettingsScreen
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.settings.HiddenWordsScreen
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.settings.HomeTabsSettingsScreen
-import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.settings.KeyStorageSettingsScreen
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.settings.MessagesSettingsScreen
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.settings.MutedThreadsScreen
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.settings.NIP47SetupScreen
@@ -421,7 +420,6 @@ fun NavDestinations.sharedDestinations(
     composableFromEnd<Route.AllSettings> { AllSettingsScreen(accountViewModel, nav) }
     composableFromEnd<Route.SecurityFilters> { SecurityFiltersScreen(accountViewModel, nav) }
     composableFromEnd<Route.PrivacyLockSettings> { PrivacyLockSettingsScreen(nav) }
-    composableFromEnd<Route.KeyStorageSettings> { KeyStorageSettingsScreen(nav) }
     composableFromEnd<Route.CustomFeeds> { CustomFeedsScreen(accountViewModel, nav) }
     composableFromEndArgs<Route.EditCustomFeed> { EditCustomFeedScreen(it.id, accountViewModel, nav) }
     composableFromEnd<Route.WebOfTrust> { WebOfTrustScreen(accountViewModel, nav) }

@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedOff.legal
 
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.MaterialTheme
@@ -41,14 +42,17 @@ fun TermsGate(
     onCheckedChange: (Boolean) -> Unit,
     showError: Boolean,
 ) {
-    AcceptTerms(checked = checked, onCheckedChange = onCheckedChange)
+    // One block, so the error hugs the checkbox instead of taking a row of the form's spacing.
+    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+        AcceptTerms(checked = checked, onCheckedChange = onCheckedChange)
 
-    if (showError) {
-        Text(
-            text = stringRes(Res.string.acceptance_of_terms_is_required),
-            color = MaterialTheme.colorScheme.error,
-            style = MaterialTheme.typography.bodySmall,
-        )
+        if (showError) {
+            Text(
+                text = stringRes(Res.string.acceptance_of_terms_is_required),
+                color = MaterialTheme.colorScheme.error,
+                style = MaterialTheme.typography.bodySmall,
+            )
+        }
     }
 }
 

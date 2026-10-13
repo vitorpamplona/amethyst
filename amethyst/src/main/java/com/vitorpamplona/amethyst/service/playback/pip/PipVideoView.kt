@@ -129,16 +129,19 @@ fun KeepScreenOnWhilePlaying(controller: MediaControllerState) {
 fun RegisterControllerReceiver(controllerState: MediaControllerState) {
     val context = LocalContext.current
 
-    // Use DisposableEffect to manage the receiver's lifecycle
-    DisposableEffect(context) {
+    // Keyed on the controller too: the PiP activity is reused for the next video, and a receiver
+    // registered for the first one kept toggling that player's state.
+    DisposableEffect(context, controllerState) {
         val receiver =
             ActionReceiver(
                 onMute = controllerState::toggleMute,
                 onPlayPause = controllerState::togglePlayPause,
             )
 
-        ContextCompat.registerReceiver(context, receiver, receiver.filterMute, ContextCompat.RECEIVER_EXPORTED)
-        ContextCompat.registerReceiver(context, receiver, receiver.filterPlayPause, ContextCompat.RECEIVER_EXPORTED)
+        // Not exported: the PiP buttons' PendingIntents are package-scoped broadcasts from this app,
+        // and nothing else should be able to play, pause or mute the user's video.
+        ContextCompat.registerReceiver(context, receiver, receiver.filterMute, ContextCompat.RECEIVER_NOT_EXPORTED)
+        ContextCompat.registerReceiver(context, receiver, receiver.filterPlayPause, ContextCompat.RECEIVER_NOT_EXPORTED)
 
         onDispose {
             context.unregisterReceiver(receiver)

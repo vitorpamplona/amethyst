@@ -202,6 +202,26 @@ retry_after_seconds = 1
 # (nginx) or equivalent; the relay sends X-Accel-Buffering: no.
 # trusted_proxies = ["127.0.0.1"]
 # client_address_header = "X-Forwarded-For"
+# The same proxy settings decide who a websocket counts against for
+# [rate_limits], so set them even with NIP-FE off.
+
+[rate_limits]
+# Per-client command rates, counted across all of a client's websockets
+# and HTTP commands (the client is its address, or the one a trusted
+# proxy reports). Over a rate the command is refused as NIP-01
+# `rate-limited:` with the back-off in milliseconds as the frame's last
+# element, e.g. ["OK", id, false, "rate-limited: ...", "1500"] or
+# ["CLOSED", sub, "rate-limited: ...", "1500"]; a client that waits it
+# out gets through. Over HTTP the refusal is a 429 whose Retry-After is
+# that back-off in seconds. 0 = no limit (the default).
+#
+# EVENTs. AUTH is never limited.
+events_per_minute = 0
+# How many a quiet client may send at once. 0 = events_per_minute.
+event_burst = 0
+# REQs, COUNTs and NEG-OPENs. CLOSE is never limited.
+reqs_per_minute = 0
+req_burst = 0
 
 [admin]
 # NIP-86 relay management API. When `pubkeys` is non-empty, the relay

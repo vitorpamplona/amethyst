@@ -10,7 +10,7 @@
 #
 # Usage: wayland-smoke-test.sh <command that starts the app> [args...]
 #   e.g. wayland-smoke-test.sh /opt/amethyst/bin/Amethyst
-#        wayland-smoke-test.sh flatpak run com.vitorpamplona.amethyst
+#        wayland-smoke-test.sh flatpak run com.vitorpamplona.amethyst.Amethyst
 set -euo pipefail
 
 if [[ $# -lt 1 ]]; then

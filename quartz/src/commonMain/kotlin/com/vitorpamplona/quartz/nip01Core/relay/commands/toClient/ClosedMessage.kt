@@ -23,8 +23,22 @@ package com.vitorpamplona.quartz.nip01Core.relay.commands.toClient
 class ClosedMessage(
     val subId: String,
     val message: String,
+    /**
+     * The optional fourth element, in the same form as [OkMessage.params]: a
+     * string whose meaning depends on [message]'s machine-readable prefix. For
+     * `rate-limited:` it is the back-off in milliseconds — read it with
+     * [retryAfterMs]. Null when the relay sent the three-element form.
+     */
+    val params: String? = null,
 ) : Message {
     override fun label() = LABEL
+
+    /**
+     * How long the relay asked this client to wait before sending it another
+     * `REQ` (or `COUNT`), when it closed this one as `rate-limited:` with a
+     * back-off. See [RetryAfter].
+     */
+    val retryAfterMs: Long? get() = RetryAfter.parse(message, params)
 
     companion object {
         const val LABEL = "CLOSED"
@@ -37,6 +51,17 @@ class ClosedMessage(
             subId: String,
             prefix: MachineReadablePrefix,
             message: String,
-        ) = ClosedMessage(subId, prefix.format(message))
+            params: String? = null,
+        ) = ClosedMessage(subId, prefix.format(message), params)
+
+        /**
+         * A `rate-limited:` `CLOSED` for [subId] telling the client to wait
+         * [retryAfterMs] before its next `REQ`; null leaves the back-off out.
+         */
+        fun rateLimited(
+            subId: String,
+            message: String,
+            retryAfterMs: Long? = null,
+        ) = of(subId, MachineReadablePrefix.RATE_LIMITED, message, retryAfterMs?.let(RetryAfter::format))
     }
 }

@@ -302,6 +302,38 @@ results.forEach { (relay, success) ->
 }
 ```
 
+#### Rate limits
+
+A relay may refuse an `EVENT` or a `REQ` as `rate-limited:` and say how long to back off, in
+the optional trailing `params` of NIP-01's `OK` / `CLOSED` (milliseconds, e.g.
+`["OK", id, false, "rate-limited: slow down", "1000"]`). `NostrClient` honors it: each relay
+connection (`BasicRelayClient`) has a `RateLimitGate` that holds every command of the refused
+type (`REQ`, `EVENT`, or `COUNT`) until the back-off passes, whoever sends it — new
+subscriptions and publishes, a subscription's update after its `EOSE`, the replay after a
+reconnect. The client hands the refused REQ or EVENT straight back, and the gate queues it
+first. A held REQ goes out with its subscription's filters as they are when it is released, so
+changing a subscription during a back-off sends one REQ, not a stale one and then the new one. Then the held commands go out one at a time: each one the relay answers without
+throttling (`OK` true, `EOSE`, a `COUNT` result) releases the next at once, and one it refuses
+again waits out its new back-off (plus a tenth). That drains a sliding window, which
+states its whole period and then takes many, in one round trip per command, and a token bucket
+at its refill rate. A `rate-limited:` refusal without a back-off is left parked until the next
+reconnect or filter change. The pool keeps each relay's gate by URL, so a back-off outlives the
+relay leaving the pool and being dialed again. A `RelayPool` built without a `scope` (or a
+`BasicRelayClient` without a `RateLimitGate`) honors no back-off; `NostrClient` always passes
+its own.
+
+`publishAndCollectResults` waits for that retry when it fits inside the timeout; otherwise
+the relay's refusal is reported with `PublishResult.retryAfterMs` set. `fetchAllPages` keeps
+waiting on the same page while the pool re-sends it. A `SubscriptionListener` reads the raw
+value by overriding the `onClosed` overload that takes `params` (forward the three-argument
+one to it too), and `RetryAfter.parse(message, params)` turns it into milliseconds.
+
+On the relay side, `RateLimitPolicy` refuses with exactly the wait a client's token bucket
+needs: build one `RateLimiter` per command type once, and a `RateLimitPolicy(events, reqs)`
+per connection around them. It counts per `RequestContext.clientAddress` (pass it to
+`RelayServerBase.connect(sink, clientAddress)`), or per connection when there is none. A
+custom policy can state a back-off itself with `PolicyResult.Rejected.rateLimited(message, retryAfterMs)`.
+
 ### 6. One-shot Reads (fetch, page, count)
 
 Most code doesn't need a live subscription: it needs "the events matching this

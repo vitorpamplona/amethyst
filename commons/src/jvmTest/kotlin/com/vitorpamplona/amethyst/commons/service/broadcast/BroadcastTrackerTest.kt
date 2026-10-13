@@ -28,6 +28,7 @@ import com.vitorpamplona.quartz.nip01Core.relay.client.single.IRelayClient
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.OkMessage
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toRelay.Command
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.advanceTimeBy
 import kotlinx.coroutines.test.advanceUntilIdle
@@ -39,6 +40,7 @@ import kotlin.test.assertFalse
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
+@OptIn(ExperimentalCoroutinesApi::class)
 class BroadcastTrackerTest {
     private val event =
         Event(
@@ -125,6 +127,62 @@ class BroadcastTrackerTest {
             val done = tracker.activeBroadcasts.value.single()
             assertEquals(RelayResult.Success, done.results[outbox])
             assertFalse(done.needsAttention)
+        }
+
+    @Test
+    fun aRateLimitWithABackOffShowsRetryingUntilTheResentEventLands() =
+        runTest {
+            val client = ScriptedClient()
+            val tracker = BroadcastTracker(outboxRelays = { setOf(outbox) })
+
+            launch { tracker.trackBroadcast(event = event, relays = setOf(outbox), client = client) }
+            runCurrent()
+            client.listener!!.onIncomingMessage(FakeRelay(outbox), "", OkMessage.rateLimited(event.id, "slow down", 1_000))
+            runCurrent()
+
+            val waiting = tracker.activeBroadcasts.value.single()
+            assertEquals(RelayResult.Retrying, waiting.results[outbox], "the client resends after the back-off")
+            assertFalse(waiting.needsAttention)
+
+            advanceTimeBy(1_000)
+            client.listener!!.onIncomingMessage(FakeRelay(outbox), "", OkMessage(event.id, true, ""))
+            advanceUntilIdle()
+
+            val done = tracker.activeBroadcasts.value.single()
+            assertEquals(RelayResult.Success, done.results[outbox])
+            assertTrue(done.isOut)
+        }
+
+    @Test
+    fun aRateLimitWhoseRetryNeverAnswersKeepsTheRefusal() =
+        runTest {
+            val client = ScriptedClient()
+            val tracker = BroadcastTracker(outboxRelays = { setOf(outbox) })
+
+            launch { tracker.trackBroadcast(event = event, relays = setOf(outbox), client = client) }
+            runCurrent()
+            client.listener!!.onIncomingMessage(FakeRelay(outbox), "", OkMessage.rateLimited(event.id, "slow down", 1_000))
+            advanceUntilIdle()
+
+            val done = tracker.activeBroadcasts.value.single()
+            assertEquals(RelayResult.Error("rate-limited: slow down"), done.results[outbox])
+            assertTrue(done.needsAttention)
+        }
+
+    @Test
+    fun aBackOffLongerThanTheWaitIsReportedAtOnce() =
+        runTest {
+            val client = ScriptedClient()
+            val tracker = BroadcastTracker(outboxRelays = { setOf(outbox) })
+
+            launch { tracker.trackBroadcast(event = event, relays = setOf(outbox), client = client) }
+            runCurrent()
+            client.listener!!.onIncomingMessage(FakeRelay(outbox), "", OkMessage.rateLimited(event.id, "slow down", 60_000))
+            runCurrent()
+
+            val done = tracker.activeBroadcasts.value.single()
+            assertEquals(RelayResult.Error("rate-limited: slow down"), done.results[outbox])
+            assertTrue(done.needsAttention)
         }
 
     private val outbox = NormalizedRelayUrl("wss://outbox.test/")
