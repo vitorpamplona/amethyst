@@ -52,6 +52,7 @@ import com.vitorpamplona.amethyst.commons.relayClient.communities.CommunityFilte
 import com.vitorpamplona.amethyst.commons.relayClient.communities.list.CommunitiesListFilterAssembler
 import com.vitorpamplona.amethyst.commons.relayClient.discover.DiscoveryFilterAssembler
 import com.vitorpamplona.amethyst.commons.relayClient.discover.nip90DVMs.DvmHeartbeatSources
+import com.vitorpamplona.amethyst.commons.relayClient.dlists.DListItemsFilterAssembler
 import com.vitorpamplona.amethyst.commons.relayClient.emojipacks.BrowseEmojiSetsFilterAssembler
 import com.vitorpamplona.amethyst.commons.relayClient.event.EventFinderFilterAssembler
 import com.vitorpamplona.amethyst.commons.relayClient.followPacks.FollowPacksFilterAssembler
@@ -181,6 +182,9 @@ class RelaySubscriptionsCoordinator(
     val chatroom = ChatroomFilterAssembler(client)
     val community = CommunityFilterAssembler(cache, client)
     val gitRepository = RepositoryFilterAssembler(cache, client)
+
+    // The items filed under the D-list headers on screen (kinds 9999/39999 by `#z`).
+    val dListItems = DListItemsFilterAssembler(client)
     val thread = ThreadFilterAssembler(cache, client)
     val profile = UserProfileFilterAssembler(cache, client)
     val hashtags = HashtagFilterAssembler(client)
@@ -297,6 +301,7 @@ class RelaySubscriptionsCoordinator(
             chatroom,
             community,
             gitRepository,
+            dListItems,
             thread,
             profile,
             hashtags,

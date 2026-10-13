@@ -170,6 +170,10 @@ import com.vitorpamplona.quartz.experimental.bitchat.geohash.GeohashChatEvent
 import com.vitorpamplona.quartz.experimental.citations.ExternalCitationEvent
 import com.vitorpamplona.quartz.experimental.citations.HardcopyCitationEvent
 import com.vitorpamplona.quartz.experimental.citations.PromptCitationEvent
+import com.vitorpamplona.quartz.experimental.decentralizedLists.header.AddressableListHeaderEvent
+import com.vitorpamplona.quartz.experimental.decentralizedLists.header.ListHeaderEvent
+import com.vitorpamplona.quartz.experimental.decentralizedLists.item.AddressableListItemEvent
+import com.vitorpamplona.quartz.experimental.decentralizedLists.item.ListItemEvent
 import com.vitorpamplona.quartz.experimental.edits.TextNoteModificationEvent
 import com.vitorpamplona.quartz.experimental.ephemChat.chat.EphemeralChatEvent
 import com.vitorpamplona.quartz.experimental.ephemChat.chat.RoomId
@@ -4034,6 +4038,9 @@ open class EventCache :
                 is EventTrustedListEvent,
                 is AddressableTrustedListEvent,
                 is ExternalIdTrustedListEvent,
+                // Decentralized Lists' editable header and item (39998 / 39999).
+                is AddressableListHeaderEvent,
+                is AddressableListItemEvent,
                 is AddressableNormalVideoEvent,
                 is AddressableShortVideoEvent,
                 is TextTrackEvent,
@@ -4068,6 +4075,14 @@ open class EventCache :
                 -> consumeBaseReplaceable(event, relay, wasVerified)
 
                 is KanbanCardEvent -> consumeKanbanCard(event, relay, wasVerified)
+
+                // Decentralized Lists' immutable header and item (9998 / 9999). Other apps publish
+                // their own formats on these kinds (license offers, encrypted blobs); only a header
+                // that declares a list and an item that names its list are this protocol, and the
+                // rest stay unconsumed as before, so nothing draws them as a list.
+                is ListHeaderEvent -> if (event.names() != null) consumeRegularEvent(event, relay, wasVerified) else false
+
+                is ListItemEvent -> if (event.parentListPointers().isNotEmpty()) consumeRegularEvent(event, relay, wasVerified) else false
 
                 // ============================================================
                 // Regular kinds with no per-kind logic: stored as plain notes.

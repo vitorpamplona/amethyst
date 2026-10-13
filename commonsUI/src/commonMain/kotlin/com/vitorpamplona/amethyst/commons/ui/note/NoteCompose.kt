@@ -259,6 +259,8 @@ import com.vitorpamplona.amethyst.commons.ui.note.types.RenderZapPoll
 import com.vitorpamplona.amethyst.commons.ui.note.types.RenderZapReceipt
 import com.vitorpamplona.amethyst.commons.ui.note.types.ReplyRenderType
 import com.vitorpamplona.amethyst.commons.ui.note.types.VideoDisplay
+import com.vitorpamplona.amethyst.commons.ui.note.types.dlists.RenderDListHeader
+import com.vitorpamplona.amethyst.commons.ui.note.types.dlists.RenderDListItem
 import com.vitorpamplona.amethyst.commons.ui.note.types.lists.RenderAppCurationSet
 import com.vitorpamplona.amethyst.commons.ui.note.types.lists.RenderArticleCurationSet
 import com.vitorpamplona.amethyst.commons.ui.note.types.lists.RenderBookmarkList
@@ -327,6 +329,10 @@ import com.vitorpamplona.quartz.experimental.birdstar.BirdDetectionEvent
 import com.vitorpamplona.quartz.experimental.birdstar.BirdexEvent
 import com.vitorpamplona.quartz.experimental.bounties.bountyBaseReward
 import com.vitorpamplona.quartz.experimental.citations.CitationEvent
+import com.vitorpamplona.quartz.experimental.decentralizedLists.header.AddressableListHeaderEvent
+import com.vitorpamplona.quartz.experimental.decentralizedLists.header.ListHeaderEvent
+import com.vitorpamplona.quartz.experimental.decentralizedLists.item.AddressableListItemEvent
+import com.vitorpamplona.quartz.experimental.decentralizedLists.item.ListItemEvent
 import com.vitorpamplona.quartz.experimental.edits.TextNoteModificationEvent
 import com.vitorpamplona.quartz.experimental.fitness.workout.ExerciseTemplateEvent
 import com.vitorpamplona.quartz.experimental.fitness.workout.WorkoutRecordEvent
@@ -2062,6 +2068,29 @@ internal fun RenderNoteRow(
         // Trusted Lists, kinds 30392-30395.
         is TrustedListEvent -> {
             RenderTrustedList(baseNote, quotesLeft, backgroundColor, accountViewModel, nav)
+        }
+
+        // Decentralized Lists. An item that declares a list (the spec's "nonstandard method") is a header.
+        is ListHeaderEvent,
+        is AddressableListHeaderEvent,
+        -> {
+            RenderDListHeader(baseNote, accountViewModel, nav)
+        }
+
+        is ListItemEvent -> {
+            if (noteEvent.declaresList()) {
+                RenderDListHeader(baseNote, accountViewModel, nav)
+            } else {
+                RenderDListItem(baseNote, quotesLeft, backgroundColor, accountViewModel, nav)
+            }
+        }
+
+        is AddressableListItemEvent -> {
+            if (noteEvent.declaresList()) {
+                RenderDListHeader(baseNote, accountViewModel, nav)
+            } else {
+                RenderDListItem(baseNote, quotesLeft, backgroundColor, accountViewModel, nav)
+            }
         }
 
         else -> {

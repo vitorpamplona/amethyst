@@ -7186,4 +7186,17 @@
     <string name="trusted_list_param_cutoff">Cutoff %1$s</string>
     <string name="trusted_list_param_rigor">Rigor %1$s</string>
     <string name="trusted_list_score_of_100">Score %1$d of 100</string>
+    <string name="dlist_list_of">List of %1$s</string>
+    <string name="dlist_fields">Fields</string>
+    <string name="dlist_items">Items</string>
+    <plurals name="dlist_items_count">
+        <item quantity="one">%1$d item</item>
+        <item quantity="other">%1$d items</item>
+    </plurals>
+    <string name="dlist_items_count_more">%1$d+ items</string>
+    <string name="dlist_unaffiliated">Withdrawn: affiliated with no list</string>
+    <string name="dlist_item_in">in %1$s</string>
+    <string name="dlist_untitled_item">Untitled %1$s</string>
+    <string name="dlist_missing_fields">Missing %1$s, which the list requires</string>
+    <string name="dlist_more_values">+%1$d more</string>
 </resources>
