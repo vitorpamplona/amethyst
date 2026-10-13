@@ -5009,6 +5009,22 @@
     </plurals>
     <string name="nip46_signer_remote_app">Remote signer app</string>
     <string name="nip46_signer_title">Remote Signer</string>
+    <plurals name="nip51_bookmark_count_notes">
+        <item quantity="one">%1$d note</item>
+        <item quantity="other">%1$d notes</item>
+    </plurals>
+    <plurals name="nip51_bookmark_count_hashtags">
+        <item quantity="one">%1$d hashtag</item>
+        <item quantity="other">%1$d hashtags</item>
+    </plurals>
+    <plurals name="nip51_bookmark_count_links">
+        <item quantity="one">%1$d link</item>
+        <item quantity="other">%1$d links</item>
+    </plurals>
+    <plurals name="nip51_bookmark_count_people">
+        <item quantity="one">%1$d person</item>
+        <item quantity="other">%1$d people</item>
+    </plurals>
     <string name="nip51_list_has_private_members">This list has private members only its author can see</string>
     <plurals name="nip82_downloads_count">
         <item quantity="one">%1$d download</item>

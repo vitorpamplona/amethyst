@@ -1339,7 +1339,7 @@ private fun RenderNoteRow(
         }
 
         is PinListEvent -> {
-            RenderPinListEvent(baseNote, backgroundColor, accountViewModel, nav)
+            RenderPinListEvent(baseNote, quotesLeft, backgroundColor, accountViewModel, nav)
         }
 
         is EmojiPackEvent -> {

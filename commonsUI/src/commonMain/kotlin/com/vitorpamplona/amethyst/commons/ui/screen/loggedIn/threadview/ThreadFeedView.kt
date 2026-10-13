@@ -1079,6 +1079,7 @@ private fun FullBleedNoteCompose(
                 } else if (noteEvent is PinListEvent) {
                     RenderPinListEvent(
                         baseNote,
+                        3,
                         backgroundColor,
                         accountViewModel,
                         nav,

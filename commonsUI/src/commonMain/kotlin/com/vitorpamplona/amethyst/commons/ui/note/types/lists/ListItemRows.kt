@@ -21,6 +21,7 @@
 package com.vitorpamplona.amethyst.commons.ui.note.types.lists
 
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -34,12 +35,14 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.commons.model.navigation.Route
+import com.vitorpamplona.amethyst.commons.ui.components.ClickableUrl
 import com.vitorpamplona.amethyst.commons.ui.components.LoadNote
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.note.LoadAddressableNote
 import com.vitorpamplona.amethyst.commons.ui.note.LoadUser
 import com.vitorpamplona.amethyst.commons.ui.note.NoteCompose
 import com.vitorpamplona.amethyst.commons.ui.note.UserCompose
+import com.vitorpamplona.amethyst.commons.ui.note.platform.LoadUrlPreview
 import com.vitorpamplona.amethyst.commons.ui.theme.DividerThickness
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.quartz.nip01Core.core.Address
@@ -161,3 +164,28 @@ fun HashtagMemberRow(
     hashtag: String,
     nav: INav,
 ) = LabelMemberRow("#$hashtag") { nav.nav(Route.Hashtag(hashtag)) }
+
+/**
+ * A member that is a web link (`r` tag). A preview card when the viewer has link previews on, a
+ * plain clickable URL otherwise, the same choice the rich-text renderer makes for a link in a note.
+ */
+@Composable
+fun LinkMemberRow(
+    url: String,
+    accountViewModel: AccountViewModel,
+    nav: INav,
+) {
+    Column(modifier = Modifier.fillMaxWidth()) {
+        if (accountViewModel.settings.showUrlPreview()) {
+            Box(Modifier.fillMaxWidth().padding(vertical = 4.dp)) {
+                LoadUrlPreview(url, url, null, accountViewModel, nav)
+            }
+        } else {
+            ClickableUrl(
+                url = url,
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 10.dp, vertical = 6.dp),
+            )
+        }
+        HorizontalDivider(thickness = DividerThickness)
+    }
+}
