@@ -703,7 +703,6 @@
     <string name="uploading_state_hashing">Хэширование</string>
     <string name="uploading_state_finished">Готово</string>
     <string name="uploading_state_error">Ошибка</string>
-    <string name="connect_via_tor1">Настроить</string>
     <string name="connect_via_tor2">Настройки Tor</string>
     <string name="yes">Да</string>
     <string name="no">Нет</string>
@@ -923,7 +922,6 @@
     <string name="created_at">Создано</string>
     <string name="guidelines">Правила</string>
     <string name="moderators">Модераторы</string>
-    <string name="login_with_external_signer">Войти через Amber</string>
     <string name="status_update">Обновить статус</string>
     <string name="poll_zap_value_min_max_explainer">Голоса взвешиваются по сумме зап. Можно установить минимальную сумму, чтобы избежать спама, и максимальную, чтобы крупные заперы не захватили голосование. Установите одинаковое значение в обоих полях, чтобы каждый голос имел равный вес. Оставьте пустым, чтобы принимать любую сумму.</string>
     <string name="error_dialog_talk_to_user">Написать пользователю</string>

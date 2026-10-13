@@ -1659,7 +1659,6 @@
     <string name="uploading_state_hashing">वस्तुसूचक उत्पादन प्रक्रिया चल रही है</string>
     <string name="uploading_state_finished">हो गया</string>
     <string name="uploading_state_error">अपक्रम</string>
-    <string name="connect_via_tor1">अनुकूल करें</string>
     <string name="connect_via_tor2">टोर स्थापना विकल्प</string>
     <string name="yes">हाँ</string>
     <string name="no">नहीं</string>
@@ -2045,7 +2044,6 @@
     <string name="created_at">तब बनाया गया</string>
     <string name="guidelines">दिशा निर्देश</string>
     <string name="moderators">नियामक</string>
-    <string name="login_with_external_signer">आम्बेर के साथ प्रवेशांकन करें</string>
     <string name="status_update">आपकी स्थिति का नवीकरण करें</string>
     <string name="poll_zap_value_min_max_explainer">निर्वाचन का भार ज्साप मात्रा के अनुसार माना जाता है। आप एक न्यूनतम मात्रा स्थापित कर सकते हैं कचरालेख भेजनेवालों से बचने के लिए तथा एक अधिकतम मात्रा बडे ज्सापकर्ताओं के द्वारा मतदान का अधिग्रहण होने से बचने के लिए। दोनों प्रपत्रस्थानों में एक ही मात्रा का प्रयोग करें प्रत्येक निर्वाचन का मूल्य समान मानने को सुनिश्चित करने के लिए। रिक्त रख दें कुछ भी मात्रा स्वीकार करने के लिए।</string>
     <string name="error_dialog_talk_to_user">उपयोगकर्ता को संदेश भेजें</string>
@@ -4450,17 +4448,12 @@
     <string name="login_nostrconnect_not_supported">वह एक क्रमक है जो आपके हस्ताक्षरकर्ता से संयोजन का अनुरोध कर रहा है। हस्ताक्षर प्रवेश करने की विधि नहीं है। पहले हस्ताक्षर प्रवेश करें। तत्पश्चात उसे निप॰छियालीस हस्ताक्षरण पटल से खोलें।</string>
     <string name="desktop_key_not_kept_title">आपकी कुंचिका का अभिलेखन नहीं हुआ</string>
     <string name="desktop_key_not_kept_description">इस संगणक में कोई कुंचिकावलय नहीं जिसका उपयोग अमेथिस्ट कर सके। इसलिए आपकी निजी कुंचिका रखी जाएगी केवल अमेथिस्ट को आवृत करने तक। अगली बार आपको पुनःप्रवेशांकन करना पडेगा।</string>
-    <string name="key_storage_title">कुंचिका संग्रह</string>
-    <string name="key_storage_search_keywords">कुंचिकावलय कुंचिकाश्रृंखला पारणशब्द निजी कुंचिका एनसेक प्रमाणपत्र प्रबन्धक गुप्तसेवा के॰धनकोष ताला खोलना</string>
-    <string name="key_storage_where">कहाँ यह यन्त्र आपके निजी कुंचिकाओं को रखता है</string>
     <string name="key_storage_keyring_mac">माकओएस कुंचिकाश्रृंखला</string>
     <string name="key_storage_keyring_secret_service">आपका यन्त्रस्तर कुंचिकावलय</string>
     <string name="key_storage_keyring_windows">विण्डोव्स प्रमाणपत्र प्रबन्धक</string>
     <string name="key_storage_keyring_kwallet">के॰धनकोष</string>
     <string name="key_storage_status_keyring">आपके निजी कुंचिकाएँ %1$s में रखे गए हैं।</string>
     <string name="key_storage_status_unknown">अमेथिस्ट निजी कुंचिकाओं को आपके यन्त्रस्तर कुंचिकावलय में रखता है। तथा इसको खोलता है प्रथम बार जब कुंचिका की आवश्यकता हो।</string>
-    <string name="key_storage_status_unreachable">अमेथिस्ट %1$s नहीं खोल सका। आपके कुंचिकाएँ अभी भी वहीं हैं। पर क्रमक तब तक हस्ताक्षर नहीं कर सकता जब तक उन्हें पढ नहीं सकता।</string>
-    <string name="key_storage_status_detail">विवरण। %1$s</string>
     <string name="key_storage_status_password_locked">इस संगणक में कोई यन्त्रस्तर कुंचिकावलय नहीं। इसलिए आपके कुंचिकाएँ एक पारणशब्द सुरक्षित अभिलेख (निप॰उनचास) में रखे गए हैं। वह तालाबद्ध है।</string>
     <string name="key_storage_status_password_unlocked">इस संगणक में कोई यन्त्रस्तर कुंचिकावलय नहीं। इसलिए आपके कुंचिकाएँ एक पारणशब्द सुरक्षित अभिलेख (निप॰उनचास) में रखे गए हैं।</string>
     <string name="key_storage_status_password_new">इस संगणक में कोई यन्त्रस्तर कुंचिकावलय नहीं। आपके द्वारा रखे गए प्रथम कुंचिका एक पारणशब्द के लिए पूछेगी जो उसे सुरक्षित रखेगी इस यन्त्र पर।</string>
@@ -4469,7 +4462,6 @@
     <string name="key_storage_unlock">ताला खोलें</string>
     <string name="key_storage_not_now">अभी नहीं</string>
     <string name="key_storage_unreachable_title">आपकी कुंचिकाश्रृंखला को खोलने में असफल</string>
-    <string name="key_storage_unreachable_description">अमेथिस्ट आपके कुंचिकाओं को पढ नहीं सका %1$s से। यदि यन्त्र कोई अनुमति पूछे तो उसे स्वीकारें तथा पुनःप्रयास करें।</string>
     <string name="key_storage_create_password_title">आपकी कुंचिका को एक पारणशब्द से सुरक्षित करें</string>
     <string name="key_storage_create_password_description">इस संगणक में कोई यन्त्रस्तर कुंचिकावलय नहीं जिसका उपयोग अमेथिस्ट कर सके। एक पारणशब्द का चयन करें अपने निजी कुंचिकाओं को एक रहस्यीकृत अभिलेख में रखने के लिए इस यन्त्र पर। आप उसका टंकण करेंगे प्रत्येक बार जब अमेथिस्ट आरम्भ करता है।</string>
     <string name="key_storage_password">पारणशब्द</string>
@@ -4477,7 +4469,6 @@
     <string name="key_storage_keep_key">मेरी कुंचिका रखें</string>
     <string name="key_storage_dont_remember">मेरी कुंचिका स्मृत नहीं</string>
     <string name="key_storage_unlock_title">अपने कुंचिकाओं का ताला खोलें</string>
-    <string name="key_storage_unlock_description">पारणशब्द का टंकण करें जो आपके निजी कुंचिकाओं को सुरक्षित रखता है इस यन्त्र पर।</string>
     <string name="key_storage_skip">छोड दें</string>
     <string name="key_storage_enter_key_title">अपनी निजी कुंचिका प्रविष्ट करें</string>
     <string name="key_storage_enter_key_description">यह यन्त्र %1$s की कुंचिका नहीं रखता। अपने एनसेक चिपकाएँ हस्ताक्षर प्रवेश करने के लिए इस सत्र में। अथवा छोड दें हस्ताक्षर बिना वीक्षण करने के लिए।</string>
@@ -4486,7 +4477,6 @@
     <string name="key_storage_remember_key">इस यन्त्र पर मेरी कुंचिका स्मृत रखना</string>
     <string name="key_storage_login_notice_unreachable">अमेथिस्ट के लिए आपका यन्त्रस्तर कुंचिकावलय अभिगम्य नहीं इस समय। इसलिए प्रवेशांकन करने के लिए उपयुक्त कुंचिका नहीं रखी जाएगी क्रमक आवृत करने के पश्चात।</string>
     <string name="key_storage_login_notice_not_kept">यह यन्त्र कुंचिकाओं को नहीं रखता। आपकी कुंचिका पूछी जाएगी प्रत्येक बार जब अमेथिस्ट आरम्भ करता है।</string>
-    <string name="key_storage_login_notice_password">इस संगणक में कोई यन्त्रस्तर कुंचिकावलय नहीं। आपकी कुंचिका एक पारणशब्द सुरक्षित अभिलेख में रखी जाएगी।</string>
     <string name="key_storage_login_notice_locked">आपका कुंचिका अभिलेख तालाबद्ध है। ताला खोलें जिससे कि वह कुंचिका जिससे आप प्रवेशांकन करते हैं इस संगणक में रखी जाए।</string>
     <string name="desktop_notifications">लेखनपीठ संगणक सूचनाएँ</string>
     <string name="desktop_notifications_description">उल्लेख प्रतिवचन प्रतिक्रिया ज्साप तथा सन्देशों को यन्त्र सूचना के रूप में दिखाएँ जब अमेथिस्ट पृष्ठभूत हो।</string>
@@ -4514,7 +4504,6 @@
     <string name="desktop_menu_report_issue">समस्या का वृत्तान्त भेजें</string>
     <string name="login_with_remote_signer">दूरस्थ हस्ताक्षरकर्ता द्वारा प्रवेशांकन</string>
     <string name="remote_signer_scan_title">अपने हस्ताक्षरकर्ता को जोडें</string>
-    <string name="remote_signer_scan_description">इस अक्षरराशि को परखें एक निप॰छियालीस हस्ताक्षरकर्ता के साथ। अथवा पता इसमें छिपकाएँ। आपके हस्ताक्षरकर्ता से एक bunker:// पता जाता है कुंचिका प्रपत्रस्थान में।</string>
     <string name="remote_signer_waiting">आपके हस्ताक्षरकर्ता की अनुमति की प्रतीक्षा में…</string>
     <string name="remote_signer_login_failed">दूरस्थ हस्ताक्षरकर्ता द्वारा प्रवेशांकन असफल। %1$s</string>
     <string name="login_with_a_private_key_to_be_able_to_boost_posts">आप ख्याप्य कुंचिका का प्रयोग कर रहे हैं जिससे केवल पढ सकते हैं। प्रकाशित पत्रों को उद्धृत करने के लिए गुप्त कुंचिका के साथ प्रवेशांकन करें</string>

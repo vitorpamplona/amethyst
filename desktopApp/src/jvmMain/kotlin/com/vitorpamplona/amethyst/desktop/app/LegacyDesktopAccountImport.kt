@@ -64,7 +64,7 @@ class LegacyDesktopAccountImport(
         enableVault(listOf(DesktopAccountStorage.METADATA_KEY_ALIAS))
         // A keyring that refused (a denied prompt, a locked keyring) would answer "absent" for keys it
         // holds: the import would mint a new metadata key, lose the legacy accounts file and mark
-        // itself done. Leave it for the next start, or for Settings › Key storage › Try again.
+        // itself done. Leave it for the next start, or for Key Backup › Try again.
         if (keyStorage.status.value is KeyStorageStatus.KeyringUnreachable) return
         importIfNeeded()
         // Only the keys of logins that hold one: the import folds the bunker transport aliases in

@@ -719,7 +719,6 @@
     <string name="uploading_state_hashing">تجزئة</string>
     <string name="uploading_state_finished">تم</string>
     <string name="uploading_state_error">خطأ</string>
-    <string name="connect_via_tor1">ضبط</string>
     <string name="connect_via_tor2">إعدادات Tor</string>
     <string name="yes">نعم</string>
     <string name="no">لا</string>
@@ -938,7 +937,6 @@
     <string name="created_at">أنشئ في</string>
     <string name="guidelines">الإرشادات</string>
     <string name="moderators">المشرفون</string>
-    <string name="login_with_external_signer">تسجيل الدخول باستخدام Amber</string>
     <string name="status_update">تحديث الحالة</string>
     <string name="poll_zap_value_min_max_explainer">تُحسب الاصوات بكمية الزاب، يمكنك وضع حد أعلى لتجنب انحياز التصويت وحد ادنى لتجنب المزعجين. يمكنك استخدام نفس الكمية للحدين للتأكد من ان جميع الاصوات متساوية. لا تضع أي حدود لإستقبال أي كمية.</string>
     <string name="error_dialog_talk_to_user">رسالة إلى المستخدم</string>

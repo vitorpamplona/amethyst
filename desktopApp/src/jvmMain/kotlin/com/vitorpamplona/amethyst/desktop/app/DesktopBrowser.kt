@@ -39,7 +39,7 @@ object DesktopBrowser {
                 return true
             }
         } catch (e: Exception) {
-            Log.w("DesktopBrowser", "Could not open $uri", e)
+            Log.w("DesktopBrowser") { "Could not open a ${scheme(uri)} link: ${e::class.simpleName}" }
         }
         if (!System
                 .getProperty("os.name")
@@ -56,8 +56,15 @@ object DesktopBrowser {
                 .start()
             true
         } catch (e: Exception) {
-            Log.w("DesktopBrowser", "Could not open $uri with xdg-open", e)
+            Log.w("DesktopBrowser") { "Could not open a ${scheme(uri)} link with xdg-open: ${e::class.simpleName}" }
             false
         }
     }
+
+    /**
+     * Only the scheme goes to the log. The rest can be a secret: a nostrconnect:// code carries
+     * the pairing secret, a lightning: link the invoice, a web link a token. The exception stays
+     * out for the same reason, since its message usually quotes the URI (AWT's browse does).
+     */
+    private fun scheme(uri: String) = uri.substringBefore(':', missingDelimiterValue = "schemeless")
 }

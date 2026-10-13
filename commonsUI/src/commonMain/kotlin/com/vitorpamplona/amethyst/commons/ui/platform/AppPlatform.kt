@@ -21,6 +21,7 @@
 package com.vitorpamplona.amethyst.commons.ui.platform
 
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.Stable
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Modifier
@@ -40,6 +41,13 @@ import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nipACWebRtcCalls.tags.CallType
 import kotlinx.collections.immutable.ImmutableMap
 import kotlinx.collections.immutable.persistentMapOf
+
+/** A signer app that takes `nostrconnect://` addresses: [id] is what [AppPlatform.openNostrConnect] takes. */
+@Immutable
+data class NostrConnectApp(
+    val id: String,
+    val label: String,
+)
 
 /**
  * The app shell's pieces that shared screens embed but only the front end can draw yet: the
@@ -75,9 +83,26 @@ interface AppPlatform {
 
     /**
      * Whether the login screen offers NIP-46 remote signers (`bunker://` addresses and a
-     * `nostrconnect://` code). Off where the app is a bunker and never a bunker's client (Android).
+     * `nostrconnect://` code). Desktop and Android both do; Android is also a bunker for other apps.
      */
     val supportsRemoteSignerLogin: Boolean get() = false
+
+    /**
+     * The signer apps that take a `nostrconnect://` address, for the login dialog to let the user
+     * pick one when there are several. Empty where the platform picks the app itself (Desktop's
+     * registered handler) or none is installed.
+     */
+    fun nostrConnectApps(uri: String): List<NostrConnectApp> = emptyList()
+
+    /**
+     * Hands a `nostrconnect://` address to a signer app so the user approves without scanning:
+     * [appId], one of [nostrConnectApps], or else the only one there is (the system's registered
+     * handler on Desktop, Opal on Linux). False where nothing took it.
+     */
+    fun openNostrConnect(
+        uri: String,
+        appId: String? = null,
+    ): Boolean = false
 
     /**
      * Whether the platform tells metered and mobile connections from unmetered ones. Where it
@@ -94,9 +119,13 @@ interface AppPlatform {
         showError: Boolean,
     ) {}
 
-    /** Logs in through a signer app (Android's NIP-55 signers), when one is installed. */
+    /** Logs in through a signer app (Android's NIP-55 signers); shown where [rememberHasExternalSignerLogin]. */
     @Composable
     fun ExternalSignerLoginButton(loginViewModel: LoginViewModel) {}
+
+    /** Whether a signer app can log in here: the form then leads with [ExternalSignerLoginButton]. */
+    @Composable
+    fun rememberHasExternalSignerLogin(): Boolean = false
 
     /** Hands the login form the keys the app is opened with (a `nostr:` link) while logged off. */
     @Composable

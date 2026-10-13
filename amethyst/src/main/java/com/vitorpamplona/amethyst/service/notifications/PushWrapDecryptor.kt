@@ -43,7 +43,10 @@ object PushWrapDecryptor {
     private const val TAG = "PushWrapDecryptor"
 
     suspend fun unwrapAndFeed(outerWrap: GiftWrapEvent) {
-        LocalPreferences.allSavedAccounts().forEach { savedAccount ->
+        // A remote signer answers over a relay, and a signer that is offline holds the probe for
+        // its whole timeout: try every account that decrypts on the device first, so its
+        // notifications never wait on a bunker that isn't theirs.
+        LocalPreferences.allSavedAccounts().sortedBy { it.loggedInWithRemoteSigner }.forEach { savedAccount ->
             if (!savedAccount.hasPrivKey && !savedAccount.loggedInWithExternalSigner) return@forEach
 
             val accountSettings = LocalPreferences.loadAccountConfigFromEncryptedStorage(savedAccount.npub) ?: return@forEach

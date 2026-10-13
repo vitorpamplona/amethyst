@@ -20,101 +20,91 @@
  */
 package com.vitorpamplona.amethyst.commons.ui.keystorage
 
-import androidx.compose.foundation.layout.Row
-import androidx.compose.material3.Checkbox
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.ui.Alignment
-import androidx.compose.ui.text.style.TextAlign
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.vitorpamplona.amethyst.commons.account.ui.LoggedOffBanner
+import com.vitorpamplona.amethyst.commons.account.ui.LoggedOffSwitchRow
+import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.keystorage.KeyStorageController
 import com.vitorpamplona.amethyst.commons.keystorage.KeyStorageStatus
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.key_storage_login_notice_locked
 import com.vitorpamplona.amethyst.commons.resources.key_storage_login_notice_not_kept
-import com.vitorpamplona.amethyst.commons.resources.key_storage_login_notice_password
 import com.vitorpamplona.amethyst.commons.resources.key_storage_login_notice_unreachable
 import com.vitorpamplona.amethyst.commons.resources.key_storage_remember_key
+import com.vitorpamplona.amethyst.commons.resources.key_storage_save_keys
 import com.vitorpamplona.amethyst.commons.resources.key_storage_try_again
 import com.vitorpamplona.amethyst.commons.resources.key_storage_unlock
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import kotlinx.coroutines.launch
 
 /**
- * The login screen's part: *Remember my key on this device*, and a line when a key typed now
- * would not be kept as the user expects. Renders nothing where the platform has no key storage
- * the user deals with.
+ * The login screen's part: *Remember my key on this device* where [offerRememberKey] (the field
+ * may hold a private key), and a banner when the keys can't be kept as the user expects, with the
+ * action that fixes it. Renders nothing where the platform has no key storage the user deals with.
  */
 @Composable
 fun KeyStorageLoginOptions(
     rememberKey: Boolean,
     onRememberKeyChange: (Boolean) -> Unit,
+    offerRememberKey: Boolean = true,
 ) {
     val controller = LocalKeyStorage.current ?: return
-    RememberKeyCheckbox(rememberKey, onRememberKeyChange)
-    if (rememberKey) KeyStorageLoginNotice(controller)
-    KeyStorageLoginFix(controller)
+    val status by controller.status.collectAsStateWithLifecycle()
+    // This device keeps no keys this run: a switch saying it would is a promise nothing keeps.
+    if (offerRememberKey && status != KeyStorageStatus.NotKept) {
+        LoggedOffSwitchRow(MaterialSymbols.Lock, stringRes(Res.string.key_storage_remember_key), rememberKey, onRememberKeyChange)
+    }
+    KeyStorageLoginBanner(controller, status, typingKey = offerRememberKey)
 }
 
 /**
- * Try again (the keyring refused) or Unlock (the key file is locked), here as in Settings › Key
- * storage, which a logged-off user cannot reach: either one logs the saved account in once the
- * keys open. Shown whatever the checkbox says, since it is about the saved account, not the key
- * being typed.
+ * One line on how the keys stand, with the action that fixes it. Try again (the keyring refused)
+ * and Unlock (the key file is locked) are here as in Key Backup, which a logged-off
+ * user cannot reach, and show whatever the switch says: either one logs the saved account in once
+ * the keys open. Not kept is about the key being typed ([typingKey]). A first key file needs no
+ * line: its password dialog says what it is when it opens.
  */
 @Composable
-private fun KeyStorageLoginFix(controller: KeyStorageController) {
-    val status by controller.status.collectAsStateWithLifecycle()
+private fun KeyStorageLoginBanner(
+    controller: KeyStorageController,
+    status: KeyStorageStatus,
+    typingKey: Boolean,
+) {
     val scope = rememberCoroutineScope()
+
     when (val current = status) {
         is KeyStorageStatus.KeyringUnreachable ->
-            OutlinedButton(onClick = { scope.launch { controller.retry() } }) {
-                Text(stringRes(Res.string.key_storage_try_again))
+            LoggedOffBanner(
+                symbol = MaterialSymbols.Warning,
+                text = stringRes(Res.string.key_storage_login_notice_unreachable),
+                isError = true,
+                actionText = stringRes(Res.string.key_storage_try_again),
+                onAction = { scope.launch { controller.retry() } },
+            )
+        // The user's own "Don't save" from earlier in this run: say so, and let them take it back.
+        KeyStorageStatus.NotKept ->
+            if (typingKey) {
+                LoggedOffBanner(
+                    symbol = MaterialSymbols.Info,
+                    text = stringRes(Res.string.key_storage_login_notice_not_kept),
+                    actionText = stringRes(Res.string.key_storage_save_keys),
+                    onAction = { scope.launch { controller.saveKeys() } },
+                )
             }
         is KeyStorageStatus.PasswordFile ->
-            if (current.hasPassword && !current.unlocked) {
-                OutlinedButton(onClick = { scope.launch { controller.unlock() } }) {
-                    Text(stringRes(Res.string.key_storage_unlock))
-                }
+            when {
+                current.hasPassword && !current.unlocked ->
+                    LoggedOffBanner(
+                        symbol = MaterialSymbols.Lock,
+                        text = stringRes(Res.string.key_storage_login_notice_locked),
+                        actionText = stringRes(Res.string.key_storage_unlock),
+                        onAction = { scope.launch { controller.unlock() } },
+                    )
+                else -> Unit
             }
         else -> Unit
     }
-}
-
-@Composable
-private fun RememberKeyCheckbox(
-    checked: Boolean,
-    onCheckedChange: (Boolean) -> Unit,
-) {
-    Row(verticalAlignment = Alignment.CenterVertically) {
-        Checkbox(checked = checked, onCheckedChange = onCheckedChange)
-        Text(stringRes(Res.string.key_storage_remember_key))
-    }
-}
-
-@Composable
-private fun KeyStorageLoginNotice(controller: KeyStorageController) {
-    val status by controller.status.collectAsStateWithLifecycle()
-    val notice =
-        when (val current = status) {
-            is KeyStorageStatus.KeyringUnreachable -> Res.string.key_storage_login_notice_unreachable
-            KeyStorageStatus.NotKept -> Res.string.key_storage_login_notice_not_kept
-            is KeyStorageStatus.PasswordFile ->
-                when {
-                    !current.hasPassword -> Res.string.key_storage_login_notice_password
-                    !current.unlocked -> Res.string.key_storage_login_notice_locked
-                    else -> null
-                }
-            else -> null
-        } ?: return
-    Text(
-        text = stringRes(notice),
-        style = MaterialTheme.typography.bodySmall,
-        color = MaterialTheme.colorScheme.onSurfaceVariant,
-        textAlign = TextAlign.Center,
-    )
 }

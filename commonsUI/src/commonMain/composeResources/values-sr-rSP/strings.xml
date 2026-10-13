@@ -699,7 +699,6 @@
     <string name="uploading_state_hashing">Heširanje</string>
     <string name="uploading_state_finished">Gotovo</string>
     <string name="uploading_state_error">Greška</string>
-    <string name="connect_via_tor1">Podesi</string>
     <string name="connect_via_tor2">Tor podešavanja</string>
     <string name="yes">Da</string>
     <string name="no">Ne</string>
@@ -918,7 +917,6 @@
     <string name="created_at">Kreirano</string>
     <string name="guidelines">Smernice</string>
     <string name="moderators">Moderatori</string>
-    <string name="login_with_external_signer">Prijavi se sa Amber</string>
     <string name="status_update">Ažuriraj status</string>
     <string name="poll_zap_value_min_max_explainer">Glasovi su ponderisani iznosom Zap-a. Možete postaviti minimalni iznos kako biste izbegli spamere i maksimalni iznos kako biste sprečili velike zapatere da preuzmu anketu. Koristite isti iznos u oba polja kako bi svaki glas imao istu vrednost. Ostavite prazno da biste prihvatili bilo koji iznos.</string>
     <string name="error_dialog_talk_to_user">Pošalji poruku korisniku</string>

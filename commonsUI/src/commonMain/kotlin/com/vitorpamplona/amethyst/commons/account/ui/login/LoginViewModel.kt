@@ -29,6 +29,7 @@ import androidx.compose.ui.text.input.TextFieldValue
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.vitorpamplona.amethyst.commons.account.AccountSessionManager
+import com.vitorpamplona.amethyst.commons.account.EMAIL_PATTERN
 import com.vitorpamplona.amethyst.commons.account.ui.login.LoginErrorManager
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.invalid_key
@@ -40,11 +41,17 @@ import com.vitorpamplona.amethyst.commons.resources.password_is_required
 import com.vitorpamplona.amethyst.commons.resources.remote_signer_login_failed
 import com.vitorpamplona.amethyst.commons.resources.sign_request_rejected_description
 import com.vitorpamplona.amethyst.commons.tor.TorSettingsFlow
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
 import com.vitorpamplona.quartz.nip19Bech32.Bech32Transcription
 import com.vitorpamplona.quartz.nip19Bech32.bech32.bechToBytes
+import kotlinx.collections.immutable.ImmutableList
+import kotlinx.collections.immutable.persistentListOf
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.job
 import kotlinx.coroutines.launch
+import kotlin.concurrent.Volatile
 
 /**
  * The login form's state. [requiresTermsAcceptance] is the build's: where it holds, a first login
@@ -58,6 +65,15 @@ class LoginViewModel(
     lateinit var torSettings: TorSettingsFlow
 
     val errorManager = LoginErrorManager()
+
+    /** A signer app's (Amber's) refusal or failure, shown under its button rather than the key field. */
+    val signerErrorManager = LoginErrorManager()
+
+    /** A missing password, under the password field rather than the key field above it. */
+    val passwordErrorManager = LoginErrorManager()
+
+    /** Why the last `nostrconnect://` login failed, under the remote-signer button that started it. */
+    val remoteSignerErrorManager = LoginErrorManager()
 
     var key by mutableStateOf(TextFieldValue(""))
     var acceptedTerms by mutableStateOf(false)
@@ -90,18 +106,46 @@ class LoginViewModel(
             }
     }
 
+    /**
+     * Whether what is typed could be a private key (nsec, ncryptsec, hex, mnemonic), or nothing
+     * yet: only then is there a key to remember. An npub, nprofile, bunker:// or NIP-05 has none.
+     */
+    val keyMayBePrivate by derivedStateOf {
+        val typed = Bech32Transcription.normalize(key.text).lowercase()
+        typed.isEmpty() ||
+            !(
+                typed.startsWith("npub1") ||
+                    typed.startsWith("nprofile1") ||
+                    typed.startsWith("bunker:") ||
+                    typed.startsWith("nostrconnect:") ||
+                    EMAIL_PATTERN.matches(typed)
+            )
+    }
+
     var isFirstLogin by mutableStateOf(false)
 
     /**
      * Whether this build signs in through NIP-46 remote signers (`bunker://`, `nostrconnect://`).
-     * Desktop does; Android is a bunker, never a bunker's client, and rejects these addresses.
+     * Desktop and Android do; a platform without it rejects a pasted `bunker://` with a reason.
      */
     var remoteSignerLoginSupported = false
 
-    /** The `nostrconnect://` address a remote signer should scan, while a connection is pending. */
+    /** Whether the `nostrconnect://` dialog is up: from the request until the login ends. */
+    var nostrConnectPending by mutableStateOf(false)
+        private set
+
+    /** The `nostrconnect://` address a remote signer should scan; null while it is being made. */
     var nostrConnectUri by mutableStateOf<String?>(null)
         private set
 
+    /** The relays the `nostrconnect://` address names. The user can swap in one of their inbox relays. */
+    var nostrConnectRelays by mutableStateOf(DEFAULT_NOSTR_CONNECT_RELAYS)
+        private set
+
+    val usesDefaultNostrConnectRelays by derivedStateOf { nostrConnectRelays == DEFAULT_NOSTR_CONNECT_RELAYS }
+
+    // Read from the attempt's own thread (onUri, finally) as well as the main one.
+    @Volatile
     private var nostrConnectJob: Job? = null
 
     fun init(accountSessionManager: AccountSessionManager) {
@@ -129,6 +173,9 @@ class LoginViewModel(
         password = TextFieldValue("")
 
         errorManager.clearErrors()
+        signerErrorManager.clearErrors()
+        remoteSignerErrorManager.clearErrors()
+        passwordErrorManager.clearErrors()
         acceptedTerms = !requiresTermsAcceptance
         processingLogin = false
         isTemporary = false
@@ -146,11 +193,16 @@ class LoginViewModel(
             isTemporary = true
         }
         errorManager.clearErrors()
+        // Also a signer's answer landing here: a new attempt, so the last one's error goes.
+        signerErrorManager.clearErrors()
+        remoteSignerErrorManager.clearErrors()
+        passwordErrorManager.clearErrors()
     }
 
     fun updatePassword(newPassword: TextFieldValue) {
         password = newPassword
         errorManager.clearErrors()
+        passwordErrorManager.clearErrors()
     }
 
     fun updateAcceptedTerms(newAcceptedTerms: Boolean) {
@@ -160,6 +212,9 @@ class LoginViewModel(
         }
 
         errorManager.clearErrors()
+        signerErrorManager.clearErrors()
+        remoteSignerErrorManager.clearErrors()
+        passwordErrorManager.clearErrors()
     }
 
     fun updateOfferTemporaryLogin(tempLogin: Boolean) {
@@ -180,8 +235,7 @@ class LoginViewModel(
         // Caught here rather than left to the key parser. Neither of these is a key, so both used
         // to fall through to the hex branch and come back as "Invalid key: ... Invalid hex
         // bunker://...", which reads as "you mistyped it" for a string the user pasted correctly.
-        // Amethyst for Android is the bunker, never the bunker's client: the only remote signing it
-        // can persist is an external signer app (see AccountSettings.isWriteable).
+        // A nostrconnect:// offer is never a way in: it is an app asking a signer to pair with it.
         val trimmedKey = key.text.trim()
         if (!remoteSignerLoginSupported && trimmedKey.startsWith("bunker:", ignoreCase = true)) {
             errorManager.error(Res.string.login_bunker_not_supported)
@@ -193,7 +247,7 @@ class LoginViewModel(
         }
 
         if (needsPassword && password.text.isBlank()) {
-            errorManager.error(Res.string.password_is_required)
+            passwordErrorManager.error(Res.string.password_is_required)
             return false
         }
 
@@ -201,6 +255,8 @@ class LoginViewModel(
     }
 
     fun login() {
+        // The key field's Enter reaches here too, not just the button: one login at a time.
+        if (processingLogin) return
         if (checkCanLogin()) {
             processingLogin = true
             accountSessionManager.login(
@@ -220,6 +276,7 @@ class LoginViewModel(
     }
 
     fun loginWithExternalSigner(packageName: String) {
+        if (processingLogin) return
         if (checkCanLogin()) {
             processingLogin = true
             accountSessionManager.login(
@@ -229,7 +286,7 @@ class LoginViewModel(
                 packageName = packageName,
             ) {
                 processingLogin = false
-                errorManager.error(Res.string.sign_request_rejected_description)
+                signerErrorManager.error(Res.string.sign_request_rejected_description)
             }
         }
     }
@@ -241,38 +298,85 @@ class LoginViewModel(
             return
         }
         if (nostrConnectJob?.isActive == true) return
+        // A key or bunker:// login is still running: its end would clear processingLogin under
+        // this dialog, and a second login could then start beside this one.
+        if (processingLogin) return
 
+        remoteSignerErrorManager.clearErrors()
+        startNostrConnect()
+    }
+
+    private fun startNostrConnect() {
         processingLogin = true
-        nostrConnectJob =
-            viewModelScope.launch {
+        nostrConnectPending = true
+        nostrConnectUri = null
+        val relays = nostrConnectRelays
+        // Lazy, so the attempt is nostrConnectJob before any of it runs: started at once, it could
+        // reach onUri (on another thread) before the assignment, drop its own code and, failing
+        // early, skip the reset in finally and leave the spinner on.
+        val job =
+            viewModelScope.launch(start = CoroutineStart.LAZY) {
+                val thisJob = coroutineContext.job
                 try {
                     accountSessionManager.loginWithNostrConnect(
-                        relays = NOSTR_CONNECT_RELAYS,
-                        appName = NOSTR_CONNECT_APP_NAME,
+                        relays = relays,
                         transientAccount = isTemporary,
-                        onUri = { nostrConnectUri = it },
+                        // A relay change may have replaced this attempt before its code was ready.
+                        onUri = { if (nostrConnectJob === thisJob) nostrConnectUri = it },
                     )
                 } catch (e: CancellationException) {
                     throw e
                 } catch (e: Exception) {
-                    errorManager.error(Res.string.remote_signer_login_failed, e.message ?: e::class.simpleName.orEmpty())
+                    remoteSignerErrorManager.error(Res.string.remote_signer_login_failed, e.message ?: e::class.simpleName.orEmpty())
                 } finally {
-                    nostrConnectUri = null
-                    processingLogin = false
+                    // A relay change replaced this attempt with a new one, which owns the dialog now.
+                    if (nostrConnectJob === thisJob) {
+                        nostrConnectUri = null
+                        nostrConnectPending = false
+                        processingLogin = false
+                    }
                 }
             }
+        nostrConnectJob = job
+        job.start()
     }
 
     fun cancelNostrConnect() {
         nostrConnectJob?.cancel()
     }
 
-    companion object {
-        /** Where the `nostrconnect://` handshake happens; the signer replies on the same relays. */
-        private val NOSTR_CONNECT_RELAYS = listOf("wss://relay.nsec.app")
+    /**
+     * Names [input], one of the account's inbox relays, in the `nostrconnect://` address instead
+     * of the defaults, for a signer that can't reach those. False when [input] is not a relay.
+     */
+    fun useNostrConnectRelay(input: String): Boolean {
+        val relay = RelayUrlNormalizer.normalizeOrNull(input.trim()) ?: return false
+        updateNostrConnectRelays(persistentListOf(relay.url))
+        return true
+    }
 
-        // URL-encoded: it rides in the nostrconnect:// query string.
-        private const val NOSTR_CONNECT_APP_NAME = "Amethyst"
+    fun useDefaultNostrConnectRelays() = updateNostrConnectRelays(DEFAULT_NOSTR_CONNECT_RELAYS)
+
+    /** A pending connection restarts with a new address: the one on screen names the old relays. */
+    private fun updateNostrConnectRelays(relays: ImmutableList<String>) {
+        if (relays == nostrConnectRelays) return
+        nostrConnectRelays = relays
+        if (nostrConnectJob?.isActive == true) {
+            val previous = nostrConnectJob
+            startNostrConnect()
+            previous?.cancel()
+        }
+    }
+
+    companion object {
+        /**
+         * Where the `nostrconnect://` handshake happens; the signer replies on the same relays.
+         * Several, so one relay going down doesn't break the login: relay.nsec.app was the only
+         * one and stopped answering (2026-10). All three are NIP-46 relays that Amber and Opal
+         * also use by default.
+         */
+        val DEFAULT_NOSTR_CONNECT_RELAYS: ImmutableList<String> =
+            persistentListOf("wss://relay.nip46.com", "wss://nrs.primal.net", "wss://bucket.coracle.social")
 
         // version + log_n + salt(16) + nonce(24) + key security + ciphertext(48), per NIP-49.
         private const val NCRYPTSEC_PAYLOAD_SIZE = 91

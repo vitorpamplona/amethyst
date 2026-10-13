@@ -50,9 +50,11 @@ failure.
   rewrites the vault, no longer lets the legacy import mint a fresh metadata key, and no longer
   logs the account in read-only: the strict read throws, and the app shows **Amethyst couldn't open
   your keychain** with **Try again**.
-- **Settings › Key storage** (a shared screen, `KeyStorageSettingsScreen`, shown when the platform
-  provides a `KeyStorageController` through `AppRoot.keyStorage`) shows the status and offers Try
-  again, Unlock, or setting the password-file password.
+- **Key Backup** carries the status as one card (`KeyStorageStatusCard`, shown when the platform
+  provides a `KeyStorageController` through `AppRoot.keyStorage`) with Try again or Unlock. It
+  began as its own Settings › Key storage screen; it moved to Key Backup, where users already go
+  for their key, and the Key Backup entry shows wherever there is key storage, so an account
+  loaded without its key still reaches Unlock.
 - **The login screen** says when this device cannot keep a key, before the user types an nsec.
 
 ## 3. A fallback without an OS keyring, and keys that are never kept

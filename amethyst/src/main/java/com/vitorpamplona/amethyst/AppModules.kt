@@ -187,6 +187,7 @@ import com.vitorpamplona.quartz.nip03Timestamp.ots.OtsBlockHeightCache
 import com.vitorpamplona.quartz.nip05DnsIdentifiers.Nip05Client
 import com.vitorpamplona.quartz.nip05DnsIdentifiers.OkHttpNip05Fetcher
 import com.vitorpamplona.quartz.nip19Bech32.decodePublicKeyAsHexOrNull
+import com.vitorpamplona.quartz.nip46RemoteSigner.BunkerClientMetadata
 import com.vitorpamplona.quartz.nip52Calendar.appt.day.CalendarDateSlotEvent
 import com.vitorpamplona.quartz.nip52Calendar.appt.tags.RSVPStatusTag
 import com.vitorpamplona.quartz.nip52Calendar.appt.time.CalendarTimeSlotEvent
@@ -986,6 +987,8 @@ class AppModules(
             appVersion = BuildConfig.VERSION_NAME,
             encryptionKeyCache = keyCache,
             saveSettings = { LocalPreferences.saveToEncryptedStorage(it) },
+            // Who this app is to a NIP-46 remote signer an account logs in with.
+            remoteSignerMetadata = REMOTE_SIGNER_METADATA,
             // A provider: notificationDispatcher is declared further down this class.
             marmotNotifier = { notificationDispatcher },
             nip46Consent = Nip46ConsentBridge,
@@ -1024,6 +1027,7 @@ class AppModules(
             localPreferences = LocalPreferences,
             scope = applicationIOScope,
             hooks = AndroidAccountSessionHooks(),
+            remoteSignerMetadata = REMOTE_SIGNER_METADATA,
         )
 
     // Web of Trust: whenever the app comes to the foreground, or the network changes under it (a
@@ -1662,3 +1666,6 @@ private fun androidCrashReportAssembler() =
     )
 
 private const val RELAY_HEALTH_FILE = "relay_health.json"
+
+/** How Amethyst for Android introduces itself to a NIP-46 remote signer (its approval screen). */
+private val REMOTE_SIGNER_METADATA = BunkerClientMetadata(name = "Amethyst", url = "https://amethyst.social", image = "https://raw.githubusercontent.com/vitorpamplona/amethyst/refs/heads/main/icon.png")

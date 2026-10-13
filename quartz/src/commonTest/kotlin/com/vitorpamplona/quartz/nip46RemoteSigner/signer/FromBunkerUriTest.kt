@@ -22,6 +22,7 @@ package com.vitorpamplona.quartz.nip46RemoteSigner.signer
 
 import com.vitorpamplona.quartz.nip01Core.crypto.KeyPair
 import com.vitorpamplona.quartz.nip01Core.relay.client.EmptyNostrClient
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerInternal
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -71,11 +72,12 @@ class FromBunkerUriTest {
         }
     }
 
+    /** Like an address without relays: it parses, and a login turns it down before connecting. */
     @Test
-    fun missingQueryParamsThrows() {
-        assertFailsWith<Exception> {
-            NostrSignerRemote.fromBunkerUri("bunker://$validHex", signer, client)
-        }
+    fun missingQueryParamsParsesWithoutRelays() {
+        val remote = NostrSignerRemote.fromBunkerUri("bunker://$validHex", signer, client)
+        assertEquals(0, remote.relays.size)
+        assertNull(remote.secret)
     }
 
     @Test
@@ -84,5 +86,33 @@ class FromBunkerUriTest {
         val remote = NostrSignerRemote.fromBunkerUri(uri, signer, client)
         assertEquals(1, remote.relays.size)
         assertNull(remote.secret)
+    }
+
+    /**
+     * Signers built on rust-nostr / the `url` crate (Opal, nak) percent-encode every query value.
+     * Read raw, `wss%3A%2F%2F…` is no relay at all: the client then never reaches the signer.
+     */
+    @Test
+    fun percentEncodedRelaysAndSecret() {
+        val uri =
+            "bunker://$validHex?relay=wss%3A%2F%2Frelay.nsec.app&relay=wss%3A%2F%2Frelay.nip46.com" +
+                "&relay=wss%3A%2F%2Fbucket.coracle.social&secret=a%2Bb"
+        val remote = NostrSignerRemote.fromBunkerUri(uri, signer, client)
+        assertEquals(
+            setOf(
+                NormalizedRelayUrl("wss://relay.nsec.app/"),
+                NormalizedRelayUrl("wss://relay.nip46.com/"),
+                NormalizedRelayUrl("wss://bucket.coracle.social/"),
+            ),
+            remote.relays,
+        )
+        assertEquals("a+b", remote.secret)
+    }
+
+    /** Saved accounts load through this: one whose address names no usable relay still loads. */
+    @Test
+    fun noUsableRelayStillParses() {
+        val remote = NostrSignerRemote.fromBunkerUri("bunker://$validHex?secret=abc", signer, client)
+        assertEquals(0, remote.relays.size)
     }
 }
