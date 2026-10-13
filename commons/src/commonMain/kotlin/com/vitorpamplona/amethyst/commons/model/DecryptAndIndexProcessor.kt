@@ -69,7 +69,13 @@ class EventProcessor(
 ) {
     private val chatHandler = ChatHandler(account.chatroomList)
     private val giftWrapPrefetch =
-        GiftWrapPrefetch(account.scope, { account.signer }) { draft -> account.draftsDecryptionCache.cachedDraft(draft) }
+        GiftWrapPrefetch(
+            scope = account.scope,
+            accountSigner = { account.signer },
+            enabled = { account.settings.usesRemoteSigner() },
+            skipDraft = { LocalCache.deletionIndex.hasBeenDeleted(it) },
+            warmDraft = { draft -> account.draftsDecryptionCache.cachedDraft(draft) },
+        )
 
     private val draftHandler = DraftEventHandler(account, cache, giftWrapPrefetch::awaitDraft)
 

@@ -156,6 +156,74 @@ class GiftWrapPrefetchTest {
             assertTrue(elapsed < 600, "took $elapsed ms")
         }
 
+    @Test
+    fun aCopyOfAWrapUnderAnotherKeyNeverGetsTheOriginalsPlaintext() =
+        runTest {
+            val original = wrappedDms(1).single()
+            // Anyone can republish the content under their own key, p-tagging the same recipient.
+            val copy =
+                NostrSignerInternal(KeyPair()).sign<GiftWrapEvent>(
+                    TimeUtils.now(),
+                    GiftWrapEvent.KIND,
+                    arrayOf(arrayOf("p", recipient.pubKey)),
+                    original.content,
+                )
+            val signer = SlowSigner(recipient, delayMs = 10)
+            val prefetch = GiftWrapPrefetch(backgroundScope, { signer })
+
+            // Both orders: the copy fails as the real signer fails it, the original still opens.
+            prefetch.offer(listOf(original, copy))
+            assertTrue(runCatching { copy.unwrapThrowing(prefetch.signer) }.isFailure)
+            assertEquals("message 1", (original.unwrapThrowing(prefetch.signer) as SealEvent).unsealRumorThrowing(prefetch.signer).content)
+
+            val original2 = wrappedDms(1).single()
+            val copy2 =
+                NostrSignerInternal(KeyPair()).sign<GiftWrapEvent>(TimeUtils.now(), GiftWrapEvent.KIND, arrayOf(arrayOf("p", recipient.pubKey)), original2.content)
+            prefetch.offer(listOf(copy2, original2))
+            assertEquals("message 1", (original2.unwrapThrowing(prefetch.signer) as SealEvent).unsealRumorThrowing(prefetch.signer).content)
+            assertTrue(runCatching { copy2.unwrapThrowing(prefetch.signer) }.isFailure)
+        }
+
+    @Test
+    fun theFirstMessageOpensWithoutWaitingForTheWholeBacklog() =
+        runTest {
+            val wraps = wrappedDms(40)
+            val signer = SlowSigner(recipient, delayMs = 100)
+            val prefetch = GiftWrapPrefetch(backgroundScope, { signer })
+
+            val start = currentTime
+            prefetch.offer(wraps)
+            (wraps.first().unwrapThrowing(prefetch.signer) as SealEvent).unsealRumorThrowing(prefetch.signer)
+
+            // Its wrap and its seal, one after the other; not behind the other 39 wraps.
+            assertEquals(200, currentTime - start)
+        }
+
+    @Test
+    fun offWhenTheSignerIsNotRemote() =
+        runTest {
+            val signer = SlowSigner(recipient, delayMs = 10)
+            val prefetch = GiftWrapPrefetch(backgroundScope, { signer }, enabled = { false })
+
+            prefetch.offer(wrappedDms(3))
+            advanceUntilIdle()
+
+            assertEquals(0, signer.calls)
+        }
+
+    @Test
+    fun deletedDraftsAreNotWarmed() =
+        runTest {
+            val draft = DraftWrapEvent.create("d", recipient.sign<Event>(TimeUtils.now(), 1, emptyArray(), "draft"), recipient)
+            var warmed = 0
+            val prefetch = GiftWrapPrefetch(backgroundScope, { recipient }, skipDraft = { true }) { warmed++ }
+
+            prefetch.offer(listOf(draft))
+            advanceUntilIdle()
+
+            assertEquals(0, warmed)
+        }
+
     private class SlowSigner(
         val inner: NostrSigner,
         val delayMs: Long,
