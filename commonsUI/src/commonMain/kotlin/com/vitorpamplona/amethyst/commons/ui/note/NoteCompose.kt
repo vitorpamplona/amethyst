@@ -279,6 +279,9 @@ import com.vitorpamplona.amethyst.commons.ui.note.types.lists.RenderOldBookmarkL
 import com.vitorpamplona.amethyst.commons.ui.note.types.lists.RenderPictureCurationSet
 import com.vitorpamplona.amethyst.commons.ui.note.types.lists.RenderSimpleGroupList
 import com.vitorpamplona.amethyst.commons.ui.note.types.observeZapSender
+import com.vitorpamplona.amethyst.commons.ui.note.types.trust.RenderTrustProviderList
+import com.vitorpamplona.amethyst.commons.ui.note.types.trust.RenderTrustedAssertion
+import com.vitorpamplona.amethyst.commons.ui.note.types.trust.RenderTrustedList
 import com.vitorpamplona.amethyst.commons.ui.screen.LocalDisplaySettings
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.feed.types.RenderChatClip
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.publicChannels.nip28PublicChat.RenderPublicChatChannelHeader
@@ -352,6 +355,7 @@ import com.vitorpamplona.quartz.experimental.ratings.EntityRatingEvent
 import com.vitorpamplona.quartz.experimental.ratings.RelayReviewEvent
 import com.vitorpamplona.quartz.experimental.roadstr.confirmation.RoadEventConfirmationEvent
 import com.vitorpamplona.quartz.experimental.roadstr.report.RoadEventReportEvent
+import com.vitorpamplona.quartz.experimental.trustedLists.TrustedListEvent
 import com.vitorpamplona.quartz.experimental.videoCollaboration.VideoCollaborationEvent
 import com.vitorpamplona.quartz.experimental.walletScrutiny.verification.BuildVerificationEvent
 import com.vitorpamplona.quartz.experimental.zapPolls.ZapPollEvent
@@ -465,6 +469,11 @@ import com.vitorpamplona.quartz.nip75ZapGoals.ZapGoalEvent
 import com.vitorpamplona.quartz.nip78AppData.AppSpecificDataEvent
 import com.vitorpamplona.quartz.nip7DThreads.ThreadEvent
 import com.vitorpamplona.quartz.nip84Highlights.HighlightEvent
+import com.vitorpamplona.quartz.nip85TrustedAssertions.addressables.AddressableAssertionEvent
+import com.vitorpamplona.quartz.nip85TrustedAssertions.events.EventAssertionEvent
+import com.vitorpamplona.quartz.nip85TrustedAssertions.externalIds.ExternalIdAssertionEvent
+import com.vitorpamplona.quartz.nip85TrustedAssertions.list.TrustProviderListEvent
+import com.vitorpamplona.quartz.nip85TrustedAssertions.users.UserAssertionEvent
 import com.vitorpamplona.quartz.nip87Ecash.cashu.CashuMintEvent
 import com.vitorpamplona.quartz.nip87Ecash.fedimint.FedimintEvent
 import com.vitorpamplona.quartz.nip87Ecash.recommendation.MintRecommendationEvent
@@ -2035,6 +2044,24 @@ internal fun RenderNoteRow(
 
         is GoodWikiRelayListEvent -> {
             RenderGoodWikiRelayList(baseNote, backgroundColor, accountViewModel)
+        }
+
+        // NIP-85: one card for the four assertion kinds, which differ only in what they score.
+        is UserAssertionEvent,
+        is EventAssertionEvent,
+        is AddressableAssertionEvent,
+        is ExternalIdAssertionEvent,
+        -> {
+            RenderTrustedAssertion(baseNote, quotesLeft, backgroundColor, accountViewModel, nav)
+        }
+
+        is TrustProviderListEvent -> {
+            RenderTrustProviderList(baseNote, accountViewModel, nav)
+        }
+
+        // Trusted Lists, kinds 30392-30395.
+        is TrustedListEvent -> {
+            RenderTrustedList(baseNote, quotesLeft, backgroundColor, accountViewModel, nav)
         }
 
         else -> {

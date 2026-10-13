@@ -203,6 +203,10 @@ import com.vitorpamplona.quartz.experimental.ratings.EntityRatingEvent
 import com.vitorpamplona.quartz.experimental.ratings.RelayReviewEvent
 import com.vitorpamplona.quartz.experimental.roadstr.confirmation.RoadEventConfirmationEvent
 import com.vitorpamplona.quartz.experimental.roadstr.report.RoadEventReportEvent
+import com.vitorpamplona.quartz.experimental.trustedLists.addressables.AddressableTrustedListEvent
+import com.vitorpamplona.quartz.experimental.trustedLists.events.EventTrustedListEvent
+import com.vitorpamplona.quartz.experimental.trustedLists.externalIds.ExternalIdTrustedListEvent
+import com.vitorpamplona.quartz.experimental.trustedLists.users.UserTrustedListEvent
 import com.vitorpamplona.quartz.experimental.videoCollaboration.VideoCollaborationEvent
 import com.vitorpamplona.quartz.experimental.walletScrutiny.verification.BuildVerificationEvent
 import com.vitorpamplona.quartz.experimental.zapPolls.ZapPollEvent
@@ -395,6 +399,9 @@ import com.vitorpamplona.quartz.nip75ZapGoals.ZapGoalEvent
 import com.vitorpamplona.quartz.nip78AppData.AppSpecificDataEvent
 import com.vitorpamplona.quartz.nip7DThreads.ThreadEvent
 import com.vitorpamplona.quartz.nip84Highlights.HighlightEvent
+import com.vitorpamplona.quartz.nip85TrustedAssertions.addressables.AddressableAssertionEvent
+import com.vitorpamplona.quartz.nip85TrustedAssertions.events.EventAssertionEvent
+import com.vitorpamplona.quartz.nip85TrustedAssertions.externalIds.ExternalIdAssertionEvent
 import com.vitorpamplona.quartz.nip85TrustedAssertions.list.TrustProviderListEvent
 import com.vitorpamplona.quartz.nip85TrustedAssertions.users.UserAssertionEvent
 import com.vitorpamplona.quartz.nip87Ecash.cashu.CashuMintEvent
@@ -4016,6 +4023,17 @@ open class EventCache :
                 is SoftwareApplicationEvent,
                 is TrustedRelayListEvent,
                 is TrustProviderListEvent,
+                // NIP-85 assertions about an event, an address or an external id (30383-30385) and
+                // the Trusted Lists built on them (30392-30395). Nothing derives state from them yet;
+                // they are stored so a link to one opens its card, and so a newer version replaces
+                // the old one at its address.
+                is EventAssertionEvent,
+                is AddressableAssertionEvent,
+                is ExternalIdAssertionEvent,
+                is UserTrustedListEvent,
+                is EventTrustedListEvent,
+                is AddressableTrustedListEvent,
+                is ExternalIdTrustedListEvent,
                 is AddressableNormalVideoEvent,
                 is AddressableShortVideoEvent,
                 is TextTrackEvent,
