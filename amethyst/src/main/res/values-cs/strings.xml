@@ -2,24 +2,6 @@
 <resources xmlns:tools="http://schemas.android.com/tools">
     <!-- Placeholder shown in a chat row while an encrypted message is still being decrypted -->
     <!-- Prefix on a Messages-list preview when the newest message was sent by the logged-in user. %1$s is the message text -->
-    <string name="block_hide_user"><![CDATA[Blokovat a skrýt uživatele]]></string>
-    <string name="boosted">zvýšeno</string>
-    <string name="edited_number">úprava #%1$s</string>
-    <string name="save">Uložit</string>
-    <string name="rename">Přejmenovat</string>
-    <string name="concord_create_icon">URL ikony (volitelné)</string>
-    <plurals name="buzz_workspaces_count">
-        <item quantity="one">%1$d pracovní prostor</item>
-        <item quantity="few">%1$d pracovní prostory</item>
-        <item quantity="many">%1$d pracovního prostoru</item>
-        <item quantity="other">%1$d pracovních prostorů</item>
-    </plurals>
-    <plurals name="buzz_workspaces_channel_count">
-        <item quantity="one">%1$d kanál</item>
-        <item quantity="few">%1$d kanály</item>
-        <item quantity="many">%1$d kanálu</item>
-        <item quantity="other">%1$d kanálů</item>
-    </plurals>
     <!-- Reply-mode toggle in the chat composer: reply inline in the timeline vs pull it aside into a thread. -->
     <!-- Title of the minichat (thread) screen opened from a chat message. -->
     <!-- Title of the picked-image confirmation dialog when attaching a picture to a thread reply. -->
@@ -27,21 +9,9 @@
     <!-- A reply whose target was searched for across all reachable history and never found. -->
     <!-- Reply subtitle when every relay genuinely bottomed out (no stalls) and it still wasn't there. -->
     <!-- Overflow count on the capped reporter avatar row, e.g. "+21". -->
-    <string name="changed_chat_profile_to">Nový chatový profil:</string>
-    <string name="route_software_apps">Aplikace</string>
-    <string name="napplet_permissions">Oprávnění nApplet</string>
-    <string name="napplet_permissions_empty">Zatím žádná oprávnění nApplet</string>
-    <string name="napplet_permissions_empty_subtitle">Oprávnění udělená nApplets se zobrazí zde.</string>
-    <string name="napplet_permissions_forget">Zapomenout tento nApplet</string>
-    <string name="napplet_permissions_blocked">Zablokováno</string>
-    <string name="napplet_permissions_revoke">Odebrat</string>
     <!-- Napplet sandbox chrome (host top bar + live action notices) -->
     <!-- Napplet capability names -->
-    <string name="napplet_cap_shell">Shell</string>
-    <string name="napplet_cap_shell_desc">Zjistit, které funkce jsou dostupné</string>
     <!-- Napplet consent dialog -->
-    <string name="napplet_consent_capability">Funkce: %1$s</string>
-    <string name="napplet_consent_pay">Tento nApplet chce zaplatit Lightning fakturu.</string>
     <!-- An amountless BOLT11: the payee decides how much. Never render this as "0 sats". -->
     <!-- Consequence lines for event kinds whose payload lives entirely in the tags, so a
          kind-only summary would hide what is actually being signed. These replaceable lists are
@@ -53,12 +23,8 @@
     <!-- Re-publishing an identical list is harmless; say so rather than raising a false alarm. -->
     <!-- No cached copy to compare against, so the whole list is what gets written. -->
     <!-- Signer permissions: first-connect dialog -->
-    <string name="napplet_connect_title">Připojit k Nostr</string>
     <!-- Signer trust levels -->
     <!-- Signer per-op consent dialog -->
-    <string name="napplet_signer_allow_op">Znovu se neptat na %1$s</string>
-    <string name="napplet_signer_last_used">Naposledy použito</string>
-    <string name="napplet_signer_expires">Vyprší</string>
     <!-- Signer op labels -->
     <!-- Decrypt: the message is already decrypted by Amethyst; the permission is to expose it to the app -->
     <!-- Decrypt scoped to one counterparty. %1$s is that person's name (or a shortened npub) -->
@@ -66,21 +32,7 @@
     <!-- Shown as the preview when Amethyst itself cannot decrypt the message the app asked to read -->
     <!-- Label above the counterparty avatar in the decrypt consent dialog -->
     <!-- Permissions management screen -->
-    <string name="napplet_permissions_revoke_all">Odvolat všechna oprávnění</string>
-    <string name="napplet_permissions_overrides">Výjimky operací</string>
-    <string name="napplet_signer_permissions_empty">Zatím se nepřipojily žádné aplikace.</string>
     <!-- NIP-46 remote signer (bunker) -->
-    <string name="nip46_signer_search_keywords">podepisovatel bunker nip46 nostr připojit vzdálený podepsat</string>
-    <string name="nip46_signer_enable">Fungovat jako vzdálený podepisovatel</string>
-    <plurals name="nip46_signer_status_listening">
-        <item quantity="one">Naslouchá na %1$d relay</item>
-        <item quantity="few">Naslouchá na %1$d relaye</item>
-        <item quantity="many">Naslouchá na %1$d relaye</item>
-        <item quantity="other">Naslouchá na %1$d relayů</item>
-    </plurals>
-    <string name="nip46_signer_bunker_uri_label">Vaše bunker adresa</string>
-    <string name="nip46_signer_bunker_uri_hint">Vložte toto do jiné aplikace, abyste ji připojili ke svému klíči.</string>
-    <string name="nip46_signer_activity_empty">Zatím nebyly obslouženy žádné požadavky.</string>
     <!-- Relay Authentication (NIP-42) settings -->
     <!-- The group header carries the grammar; each toggle is a completion of the sentence, so these
          keys are new rather than reused - a stale translation of the old standalone titles would
@@ -93,22 +45,7 @@
     <!-- No longer shown in the prompt: kept so the existing translations aren't orphaned. -->
     <!-- Settings: three lists that each hold what their header says. -->
     <!-- Short labels for the purpose chips on a "recent logins" row. -->
-    <string name="agent_console_title">Konzole agenta</string>
-    <string name="podcast_premium">Prémiový</string>
-    <string name="podcast_value_add_recipient">Přidat příjemce</string>
-    <string name="private_note_no_receivers">Zatím žádní příjemci: tuto poznámku uvidíš jen ty. Přidej lidi, se kterými ji chceš sdílet.</string>
     <!-- Composer audience control (Notify / "Visible to") -->
-    <string name="notify_add_user">Přidat</string>
-    <string name="notify_remove_user">Odebrat uživatele z oznámení</string>
-    <string name="notify_search_and_add_user">Vyhledat a přidat uživatele k oznámení</string>
-    <string name="set_preferred_media_servers">Nastavte preferované servery pro nahrávání médií.</string>
-    <string name="manage_stored_files">Spravovat uložené soubory</string>
-    <string name="blossom_delete_from">Smazat z…</string>
-    <string name="recommended_media_servers">Doporučené média servery</string>
-    <string name="built_in_servers_description">Výchozí seznam Amethysty. Můžete je přidat jednotlivě nebo přidat seznam.</string>
-    <string name="media_server_status_checking">Kontrola…</string>
-    <string name="app_notification_replies_channel_message">%1$s odpověděl(a)</string>
-    <string name="app_notification_replies_channel_message_for">k: %1$s</string>
     <!-- Notification channel groups (organize the per-kind channels in system settings) -->
     <!-- Reposts -->
     <!-- Media (picture &amp; video posts that mention you) -->
@@ -128,12 +65,7 @@
          a relay count they think is too high. -->
     <!-- Two countable nouns, so two plurals composed at the call site rather than one string with
          two %d in it: filter and relay decline independently in Slavic/Baltic/Semitic languages. -->
-    <string name="active_subs_pair">%1$s \u00b7 %2$s</string>
-    <string name="always_on_notif_setting_title">Služba trvalých oznámení</string>
-    <string name="always_on_notif_setting_description">Udržuje trvalé připojení k vašim inbox relayím pro okamžité doručování oznámení. Zobrazuje průběžné oznámení. Spotřebovává více baterie, ale zajišťuje, že nezmeškáte žádnou zprávu.</string>
     <string name="always_on_notif_tile_label">Služba oznámení</string>
-    <string name="notification_service_participation_title">Ponechat tento účet aktivní na pozadí</string>
-    <string name="preferences">Nastavení aplikace</string>
     <!-- Settings search -->
     <!-- Settings search keywords: an English concept/protocol index that supplements the
          (translated) row titles. Marked translatable="false" so protocol terms (blossom, nsec,
@@ -141,52 +73,11 @@
     <!-- Compact label for the segmented control, where "Unmetered WiFi" does not fit. -->
     <!-- Compact labels for the segmented control. -->
     <!-- Compact labels for the segmented control, rendered in each option's own typeface. -->
-    <string name="messages_create_public_chat">Veřejné</string>
-    <string name="messages_create_group">Skupina</string>
     <!-- New conversation chooser (full-screen picker opened from the Messages FAB).
          Each row stays lean; the "best for" line and the pros/cons appear only when a row is tapped. -->
     <!-- Buzz calls its groups channels, and a Buzz relay is one workspace rather than a directory of groups. -->
-    <string name="buzz_channel_flag_forum">Fórový kanál</string>
-    <string name="buzz_channel_flag_forum_desc">Vláknové příspěvky místo chatové časové osy. Toto nelze později změnit.</string>
-    <string name="relay_group_create_name">Název skupiny</string>
-    <string name="relay_group_create_topic">Téma (volitelné)</string>
-    <string name="relay_group_create_private">Soukromá (čtení jen pro členy)</string>
-    <string name="relay_group_create_invite_only">Pouze na pozvání</string>
-    <string name="relay_group_create_confirm">Vytvořit</string>
-    <string name="relay_group_invite_generating">Vytváření pozvánky…</string>
-    <string name="relay_group_invite_copied">Kód pozvánky zkopírován</string>
-    <string name="relay_group_edit_name">Název skupiny</string>
-    <string name="relay_group_edit_topic">Téma (volitelné)</string>
-    <string name="relay_group_edit_private">Soukromá (čtení jen pro členy)</string>
-    <string name="relay_group_edit_invite_only">Pouze na pozvání</string>
-    <string name="relay_group_edit_confirm">Uložit</string>
-    <string name="relay_group_location_edit">Změnit místo</string>
     <!-- Reusable geohash location picker (shared, not group-specific) -->
-    <string name="relay_group_discovery_empty">Hledání skupin napříč vašimi relayi…</string>
-    <string name="relay_group_discovery_empty_filtered">Pro tento filtr zatím nebyly nalezeny žádné skupiny.</string>
     <!-- Same, where this viewer cannot start one: not a member, or a Buzz chat channel (forum posts belong to forum channels). -->
-    <string name="relay_group_thread_body_label">Napište něco…</string>
-    <string name="relay_group_thread_post">Přispět</string>
-    <string name="channel_invite_title">Přidáno do %1$s</string>
-    <plurals name="relay_group_message_count">
-        <item quantity="one">%1$d zpráva</item>
-        <item quantity="few">%1$d zprávy</item>
-        <item quantity="many">%1$d zprávy</item>
-        <item quantity="other">%1$d zpráv</item>
-    </plurals>
-    <plurals name="relay_group_message_count_capped">
-        <item quantity="one">%1$d+ zpráva</item>
-        <item quantity="few">%1$d+ zprávy</item>
-        <item quantity="many">%1$d+ zprávy</item>
-        <item quantity="other">%1$d+ zpráv</item>
-    </plurals>
-    <plurals name="relay_group_follows_participating">
-        <item quantity="one">%1$d osoba, kterou sledujete</item>
-        <item quantity="few">%1$d osoby, které sledujete</item>
-        <item quantity="many">%1$d osoby, které sledujete</item>
-        <item quantity="other">%1$d osob, které sledujete</item>
-    </plurals>
-    <string name="messages_new_message">Soukromé</string>
     <string name="share_target_as_dm">Odeslat jako DM</string>
     <string name="share_target_as_highlight">Nové zvýraznění</string>
     <string name="share_target_as_picture">Nový obrázek</string>
@@ -195,59 +86,15 @@
     <string name="share_target_scan_qr">Skenovat QR kód</string>
     <string name="shortcut_scan_qr_short">Skenovat QR</string>
     <string name="shortcut_scan_qr_long">Naskenovat QR kód</string>
-    <string name="new_highlight_passage_label">Zvýrazněný text</string>
     <!-- Label for the mixed media feed: pictures + every NIP-71 video kind + NIP-94 files.
          Distinct from the "shorts" string, which labels the vertical/short-video-only feed. -->
-    <string name="cashu_p2pk_section">Klíč pro nutzap (pokročilé)</string>
-    <string name="cashu_p2pk_explainer">Samostatný soukromý klíč používaný pouze k příjmu nutzapů NIP-61. Není to klíč vaší identity Nostr.</string>
-    <string name="cashu_p2pk_autogen">Vygenerovat nový klíč</string>
-    <string name="cashu_p2pk_manual_label">Soukromý klíč P2PK (hex)</string>
-    <string name="wallet_save_changes">Uložit změny</string>
     <!-- Onchain zap send dialog -->
-    <string name="bottom_bar_settings_description">Přetažením změníte pořadí. Přepnutím položku přidáte nebo odeberete ze spodní lišty. S nulovým počtem položek bude lišta skryta.</string>
-    <string name="bottom_bar_settings_reorder">Změnit pořadí</string>
-    <string name="home_tabs_settings_description">Vyberte, které záložky se zobrazí na domovské obrazovce. Pokud je aktivní jen jedna záložka, lišta záložek se skryje.</string>
-    <string name="profile_ui_settings_description">Vyberte, které sekce a kanály se zobrazí na profilových obrazovkách uživatelů. Všechny možnosti jsou ve výchozím nastavení povoleny.</string>
     <!-- Buzz kind-40099 system messages: relay-authored narration of a channel state change. -->
     <!-- Fallback for a system message type this version does not know yet: "alice: some_new_type". -->
     <!-- Buzz huddles (kind 481xx): live audio-room lifecycle, narrated in the chat timeline. -->
     <!-- Buzz agent jobs (kind 43xxx): an agent task's lifecycle, narrated in the chat timeline. -->
     <!-- Buzz forum votes (kind 45002). -->
-    <string name="buzz_workspaces_title">Pracovní prostory Buzz</string>
-    <string name="buzz_workspaces_hero_tagline">Kde lidé a agenti tvoří společně</string>
-    <string name="buzz_workspaces_leave">Opustit pracovní prostor</string>
-    <string name="buzz_workspaces_section">Vaše pracovní prostory</string>
-    <string name="buzz_workspaces_empty_title">Zatím žádné pracovní prostory</string>
-    <string name="buzz_workspaces_empty_body">Pracovní prostory Buzz jsou relaye, kde lidé a AI agenti tvoří společně. Připojte se k některému a uvidíte ho tady.</string>
-    <string name="buzz_workspaces_browse">Procházet skupiny</string>
-    <string name="buzz_console_card_subtitle">Náklady · Persony · Živý pozorovatel</string>
-    <string name="buzz_dm_nav_label">Zprávy Buzz</string>
-    <string name="buzz_dm_card_subtitle">Soukromé konverzace ve vašich pracovních prostorech</string>
-    <string name="buzz_import_title">Importovat kanály pracovního prostoru</string>
-    <string name="buzz_import_your_channels">Vaše kanály v tomto pracovním prostoru</string>
-    <string name="buzz_import_add">Přidat</string>
-    <string name="buzz_import_empty_title">Nenalezeny žádné kanály</string>
-    <string name="buzz_import_empty_body">Zdá se, že zatím nejste členem žádného kanálu na tomto relayi. Nejprve přijměte pozvánku do pracovního prostoru v prohlížeči a pak to zkuste znovu.</string>
-    <string name="git_web_address">Internet:</string>
-    <string name="git_repo_tab_overview">Přehled</string>
-    <string name="git_repo_maintained_by">Spravuje</string>
-    <string name="git_repo_section_about">O projektu</string>
-    <string name="git_repo_section_links">Odkazy</string>
-    <string name="git_repo_section_maintainers">Správci</string>
-    <string name="git_repo_section_topics">Témata</string>
-    <string name="git_repo_tab_readme">Readme</string>
-    <string name="git_issue_close">Uzavřít problém</string>
-    <string name="git_issue_reopen">Znovu otevřít</string>
-    <string name="media_servers_blossom_section">Blossom Servery</string>
-    <string name="media_servers_blossom_explainer">Přidejte tolik serverů, kolik chcete. Můžete si vybrat, které použít později při nahrávání obrázku</string>
-    <string name="torrent_download">Stáhnout</string>
     <!-- %1$s is replaced at runtime by an inline star icon, not text. Keep the placeholder. -->
-    <string name="resource_usage_today">Dnes</string>
-    <string name="resource_usage_week">Posledních 7 dní</string>
-    <string name="resource_usage_cellular_bg">Mobilní data (na pozadí)</string>
-    <string name="resource_usage_cellular_fg">Mobilní data (v aplikaci)</string>
-    <string name="resource_usage_wifi">Data Wi-Fi</string>
-    <string name="resource_usage_fg_time">Čas v aplikaci</string>
     <!-- Kind display names for relay subscription filter chips -->
     <!-- M3 Action Dialog titles -->
     <!-- Nicknames (NIP-85 contact cards); the dialog strings live in commons -->

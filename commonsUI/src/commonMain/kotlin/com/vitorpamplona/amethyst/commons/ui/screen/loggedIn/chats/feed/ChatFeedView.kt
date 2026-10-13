@@ -35,6 +35,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.saveable.Saver
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
@@ -299,7 +300,10 @@ fun ChatFeedLoaded(
             highlightedNoteId.value = id
         }
     }
-    val onScrollToNote: (Note) -> Unit = { note -> scrollToNote(note.idHex) }
+    // One stable callback for every row: scrollToNote is rebuilt on each feed emission (it reads the
+    // current rows), and handing the rows a new lambda made every visible bubble recompose per message.
+    val latestScrollToNote by rememberUpdatedState(scrollToNote)
+    val onScrollToNote: (Note) -> Unit = remember { { note -> latestScrollToNote(note.idHex) } }
 
     // External jump request (pinned-message bar). Keyed on the id alone, so a message arriving mid-jump
     // can't cancel the scroll animation or restart the effect. Always clears the request after one

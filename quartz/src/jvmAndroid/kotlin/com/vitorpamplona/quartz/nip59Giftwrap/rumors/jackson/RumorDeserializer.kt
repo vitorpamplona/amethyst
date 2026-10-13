@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.quartz.nip59Giftwrap.rumors.jackson
 
+import com.fasterxml.jackson.core.JsonParseException
 import com.fasterxml.jackson.core.JsonParser
 import com.fasterxml.jackson.core.JsonToken
 import com.fasterxml.jackson.databind.DeserializationContext
@@ -43,10 +44,15 @@ class RumorDeserializer : StdDeserializer<Rumor>(Rumor::class.java) {
         var tags: TagArray? = null
         var content: String? = null
 
-        while (p.nextToken() != JsonToken.END_OBJECT) {
+        while (true) {
+            // nextToken() is null at the end of input: a truncated object must fail, not loop.
+            val token = p.nextToken() ?: throw JsonParseException(p, "Unexpected end of input inside an object")
+            if (token == JsonToken.END_OBJECT) break
             val fieldName = p.currentName()
             p.nextToken()
 
+            // Dispatched on the hash alone: a field whose name merely shares a hash with one of these
+            // is taken as that field.
             when (fieldName.hashCode()) {
                 3355 -> id = p.text.intern()
                 -977424830 -> pubKey = p.text.intern()

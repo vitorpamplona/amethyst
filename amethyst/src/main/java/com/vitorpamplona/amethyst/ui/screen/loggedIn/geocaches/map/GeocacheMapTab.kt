@@ -44,6 +44,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
@@ -108,6 +109,7 @@ fun GeocacheMapTab(
     nav: INav,
 ) {
     val context = LocalContext.current
+    val resources = LocalResources.current
     val lifecycleOwner = LocalLifecycleOwner.current
     val feedState by feedContentState.feedContent.collectAsStateWithLifecycle()
     val found = rememberMyFoundCacheIds(accountViewModel)
@@ -224,8 +226,8 @@ fun GeocacheMapTab(
                                             roadEventPinBitmap(
                                                 group.size.toString(),
                                                 amber.toArgb(),
-                                                context.resources.displayMetrics.density,
-                                            ).toDrawable(context.resources)
+                                                resources.displayMetrics.density,
+                                            ).toDrawable(resources)
                                         setOnMarkerClickListener { _, view ->
                                             // Zoom into the cluster rather than picking one of
                                             // its caches arbitrarily.

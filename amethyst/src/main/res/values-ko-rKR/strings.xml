@@ -2,11 +2,6 @@
 <resources xmlns:tools="http://schemas.android.com/tools">
     <!-- Placeholder shown in a chat row while an encrypted message is still being decrypted -->
     <!-- Prefix on a Messages-list preview when the newest message was sent by the logged-in user. %1$s is the message text -->
-    <string name="block_hide_user"><![CDATA[사용자 차단 및 숨기기]]></string>
-    <string name="boosted">부스트됨</string>
-    <string name="edited_number">수정 #%1$s</string>
-    <string name="save">저장</string>
-    <string name="rename">이름 바꾸기</string>
     <!-- Reply-mode toggle in the chat composer: reply inline in the timeline vs pull it aside into a thread. -->
     <!-- Title of the minichat (thread) screen opened from a chat message. -->
     <!-- Title of the picked-image confirmation dialog when attaching a picture to a thread reply. -->
@@ -14,21 +9,9 @@
     <!-- A reply whose target was searched for across all reachable history and never found. -->
     <!-- Reply subtitle when every relay genuinely bottomed out (no stalls) and it still wasn't there. -->
     <!-- Overflow count on the capped reporter avatar row, e.g. "+21". -->
-    <string name="changed_chat_profile_to">새 채팅 프로필:</string>
-    <string name="route_software_apps">앱</string>
-    <string name="napplet_permissions">nApplet 권한</string>
-    <string name="napplet_permissions_empty">아직 nApplet 권한이 없습니다</string>
-    <string name="napplet_permissions_empty_subtitle">nApplet에 부여한 권한이 여기에 표시됩니다.</string>
-    <string name="napplet_permissions_forget">이 nApplet 잊기</string>
-    <string name="napplet_permissions_blocked">차단됨</string>
-    <string name="napplet_permissions_revoke">취소</string>
     <!-- Napplet sandbox chrome (host top bar + live action notices) -->
     <!-- Napplet capability names -->
-    <string name="napplet_cap_shell">셸</string>
-    <string name="napplet_cap_shell_desc">사용 가능한 기능 확인</string>
     <!-- Napplet consent dialog -->
-    <string name="napplet_consent_capability">기능: %1$s</string>
-    <string name="napplet_consent_pay">이 nApplet이 Lightning 인보이스를 결제하려고 합니다.</string>
     <!-- An amountless BOLT11: the payee decides how much. Never render this as "0 sats". -->
     <!-- Consequence lines for event kinds whose payload lives entirely in the tags, so a
          kind-only summary would hide what is actually being signed. These replaceable lists are
@@ -62,16 +45,7 @@
     <!-- No longer shown in the prompt: kept so the existing translations aren't orphaned. -->
     <!-- Settings: three lists that each hold what their header says. -->
     <!-- Short labels for the purpose chips on a "recent logins" row. -->
-    <string name="private_note_no_receivers">아직 수신자가 없습니다. 본인만 이 노트를 볼 수 있습니다. 공유할 사람을 추가하세요.</string>
     <!-- Composer audience control (Notify / "Visible to") -->
-    <string name="notify_add_user">추가</string>
-    <string name="notify_remove_user">알림에서 사용자 제거</string>
-    <string name="notify_search_and_add_user">알림을 보낼 사용자 검색 및 추가</string>
-    <string name="set_preferred_media_servers">선호하는 미디어 업로드 서버를 설정하세요.</string>
-    <string name="recommended_media_servers">추천 미디어 서버</string>
-    <string name="built_in_servers_description">Amethyst의 기본 목록입니다. 개별적으로 추가하거나 전체 목록을 추가할 수 있습니다.</string>
-    <string name="app_notification_replies_channel_message">%1$s님이 답글을 달았습니다</string>
-    <string name="app_notification_replies_channel_message_for">게시물: %1$s</string>
     <!-- Notification channel groups (organize the per-kind channels in system settings) -->
     <!-- Reposts -->
     <!-- Media (picture &amp; video posts that mention you) -->
@@ -91,9 +65,6 @@
          a relay count they think is too high. -->
     <!-- Two countable nouns, so two plurals composed at the call site rather than one string with
          two %d in it: filter and relay decline independently in Slavic/Baltic/Semitic languages. -->
-    <string name="always_on_notif_setting_title">상시 알림 서비스</string>
-    <string name="always_on_notif_setting_description">즉각적인 알림 전달을 위해 inbox relay에 지속적인 연결을 유지합니다. 진행 중인 알림이 표시됩니다. 배터리를 더 많이 사용하지만 메시지를 놓치지 않도록 합니다.</string>
-    <string name="preferences">앱 설정</string>
     <!-- Settings search -->
     <!-- Settings search keywords: an English concept/protocol index that supplements the
          (translated) row titles. Marked translatable="false" so protocol terms (blossom, nsec,
@@ -101,41 +72,20 @@
     <!-- Compact label for the segmented control, where "Unmetered WiFi" does not fit. -->
     <!-- Compact labels for the segmented control. -->
     <!-- Compact labels for the segmented control, rendered in each option's own typeface. -->
-    <string name="messages_create_public_chat">공개</string>
-    <string name="messages_create_group">그룹</string>
     <!-- New conversation chooser (full-screen picker opened from the Messages FAB).
          Each row stays lean; the "best for" line and the pros/cons appear only when a row is tapped. -->
     <!-- Buzz calls its groups channels, and a Buzz relay is one workspace rather than a directory of groups. -->
     <!-- Reusable geohash location picker (shared, not group-specific) -->
     <!-- Same, where this viewer cannot start one: not a member, or a Buzz chat channel (forum posts belong to forum channels). -->
-    <string name="messages_new_message">비공개</string>
     <string name="share_target_as_dm">DM으로 보내기</string>
     <!-- Label for the mixed media feed: pictures + every NIP-71 video kind + NIP-94 files.
          Distinct from the "shorts" string, which labels the vertical/short-video-only feed. -->
-    <string name="cashu_p2pk_section">Nutzap 키 (고급)</string>
-    <string name="cashu_p2pk_explainer">NIP-61 nutzap 수신에만 사용되는 별도의 개인 키입니다. Nostr 신원 키가 아닙니다.</string>
-    <string name="cashu_p2pk_autogen">새 키 생성</string>
-    <string name="cashu_p2pk_manual_label">P2PK 개인 키 (hex)</string>
-    <string name="wallet_save_changes">변경사항 저장</string>
     <!-- Onchain zap send dialog -->
-    <string name="bottom_bar_settings_description">드래그하여 순서 변경. 토글로 하단 모음에 항목 추가 또는 제거. 항목이 없으면 하단 모음이 숨겨집니다.</string>
-    <string name="bottom_bar_settings_reorder">순서 변경</string>
-    <string name="home_tabs_settings_description">홈 화면에 표시할 탭을 선택하세요. 탭이 하나만 활성화되면 탭 표시줄이 숨겨집니다.</string>
-    <string name="profile_ui_settings_description">사용자 프로필 화면에 표시할 섹션과 피드를 선택하세요. 기본적으로 모든 옵션이 활성화되어 있습니다.</string>
     <!-- Buzz kind-40099 system messages: relay-authored narration of a channel state change. -->
     <!-- Fallback for a system message type this version does not know yet: "alice: some_new_type". -->
     <!-- Buzz huddles (kind 481xx): live audio-room lifecycle, narrated in the chat timeline. -->
     <!-- Buzz agent jobs (kind 43xxx): an agent task's lifecycle, narrated in the chat timeline. -->
     <!-- Buzz forum votes (kind 45002). -->
-    <string name="git_web_address">웹:</string>
-    <string name="git_repo_tab_overview">개요</string>
-    <string name="git_repo_section_about">소개</string>
-    <string name="git_repo_section_links">링크</string>
-    <string name="git_repo_section_maintainers">관리자</string>
-    <string name="git_repo_section_topics">주제</string>
-    <string name="media_servers_blossom_section">Blossom 서버</string>
-    <string name="media_servers_blossom_explainer">원하는 만큼 서버를 추가할 수 있습니다. 사진을 업로드할 때 사용할 서버를 나중에 선택할 수 있습니다.</string>
-    <string name="torrent_download">다운로드</string>
     <!-- %1$s is replaced at runtime by an inline star icon, not text. Keep the placeholder. -->
     <!-- Kind display names for relay subscription filter chips -->
     <!-- M3 Action Dialog titles -->

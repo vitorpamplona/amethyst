@@ -301,7 +301,9 @@ suspend fun INostrClient.publishAndCollectResults(
                                         // Ignore the accumulated backoff — this is a user-visible
                                         // publish waiting on it, not a background refresh.
                                         resetBackoff()
-                                        reconnect(onlyIfChanged = false, ignoreRetryDelays = true)
+                                        // Only redials what is down: a full reconnect would tear down
+                                        // every healthy socket in the pool for one relay's hang-up.
+                                        reconnect(onlyIfChanged = true, ignoreRetryDelays = true)
                                     }
 
                                     if (untilFirstAccept && receivedResults[result.relay]?.accepted == true) break

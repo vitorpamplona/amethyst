@@ -1,18 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources xmlns:tools="http://schemas.android.com/tools">
-    <string name="block_hide_user"><![CDATA[بلاک/پنهان کردن کاربر]]></string>
-    <string name="boosted">بازنشر شده</string>
-    <string name="edited_number">ویرایش#%1$s</string>
-    <string name="save">ذخیره</string>
-    <string name="set_preferred_media_servers">سرورهای مورد علاقه خود برای بارگزاری رسانه را انتخاب کنید.</string>
-    <string name="built_in_servers_description">لیست پیش فرض امتیست. می توانید تک به تک یا تمام لیست را اضافه کنید.</string>
-    <string name="preferences">ترجیحات اپ</string>
-    <string name="messages_create_public_chat">عمومی</string>
-    <string name="messages_new_message">خصوصی</string>
-    <string name="git_web_address">وب:</string>
-    <string name="media_servers_blossom_section">سرورهای Blossom</string>
-    <string name="media_servers_blossom_explainer">هر تعداد سرور که می خواهید اضافه کنید. می توانید بعدا هنگام بارگذاری تصویرتان انتخاب کنید که از کدام سرور استفاده شود</string>
-    <string name="torrent_download">بارگيری</string>
     
     
     
@@ -37,13 +24,9 @@
     
     
     
-    <string name="private_note_no_receivers">هنوز دریافت‌کننده‌ای ندارد: فقط شما می‌توانید این یادداشت را ببینید. افراد را اضافه کنید تا با آن‌ها به اشتراک بگذارید.</string>
     
-    <string name="notify_add_user">افزودن</string>
     
-    <string name="notify_remove_user">حذف کاربر از اعلان‌ها</string>
     
-    <string name="notify_search_and_add_user">جستجو و افزودن کاربر برای اطلاع‌رسانی</string>
     
     
     
@@ -98,7 +81,6 @@
     
     
     
-    <string name="recommended_media_servers">سرورهای رسانه پیشنهادی</string>
     
     
     
@@ -161,9 +143,7 @@
     
     
     
-    <string name="app_notification_replies_channel_message">%1$s پاسخ داد</string>
     
-    <string name="app_notification_replies_channel_message_for">در: %1$s</string>
     
     
     
@@ -222,9 +202,7 @@
     
     
     
-    <string name="always_on_notif_setting_title">سرویس اعلان همیشه فعال</string>
     
-    <string name="always_on_notif_setting_description">یک اتصال دائمی به relay های صندوق ورودی شما برای تحویل فوری اعلان‌ها حفظ می‌کند. یک اعلان مداوم نمایش می‌دهد. مصرف باتری بیشتری دارد اما اطمینان می‌دهد هیچ پیامی از دست نمی‌رود.</string>
     
     
     
@@ -380,7 +358,6 @@
     
     
     
-    <string name="messages_create_group">گروه</string>
     
     
     
@@ -485,16 +462,11 @@
     
     
     
-    <string name="cashu_p2pk_section">کلید Nutzap (پیشرفته)</string>
     
-    <string name="cashu_p2pk_explainer">یک کلید خصوصی جداگانه که فقط برای دریافت nutzap های NIP-61 استفاده می‌شود. این کلید هویت Nostr شما نیست.</string>
     
-    <string name="cashu_p2pk_autogen">ایجاد کلید جدید</string>
     
-    <string name="cashu_p2pk_manual_label">کلید خصوصی P2PK (hex)</string>
     
     
-    <string name="wallet_save_changes">ذخیره تغییرات</string>
     
     
     
@@ -766,18 +738,14 @@
     
     
     
-    <string name="bottom_bar_settings_description">برای مرتب‌سازی بکشید. برای افزودن یا حذف یک آیتم از نوار پایین، وضعیت را تغییر دهید. با صفر آیتم، نوار پایین پنهان می‌شود.</string>
     
     
-    <string name="bottom_bar_settings_reorder">مرتب‌سازی مجدد</string>
     
     
     
-    <string name="home_tabs_settings_description">انتخاب کنید کدام تب‌ها در صفحه خانه نمایش داده شوند. وقتی فقط یک تب فعال است، نوار تب پنهان می‌شود.</string>
     
     
     
-    <string name="profile_ui_settings_description">انتخاب کنید کدام بخش‌ها و فیدها در صفحه پروفایل کاربران نمایش داده شوند. به طور پیش‌فرض همه گزینه‌ها فعال هستند.</string>
     
     
     
@@ -883,17 +851,12 @@
     
     
     
-    <string name="git_repo_tab_overview">مرور کلی</string>
     
     
     
-    <string name="git_repo_section_about">درباره</string>
     
-    <string name="git_repo_section_links">لینک‌ها</string>
     
-    <string name="git_repo_section_maintainers">نگهدارندگان</string>
     
-    <string name="git_repo_section_topics">موضوعات</string>
     
     
     
@@ -1724,7 +1687,6 @@
     
     
     
-    <string name="rename">تغییر نام</string>
     
     
     
@@ -1974,7 +1936,6 @@
 
 
 
-    <string name="route_software_apps">برنامه‌ها</string>
 
 
 
@@ -2010,23 +1971,16 @@
 
 
 
-    <string name="napplet_permissions">مجوزهای nApplet</string>
 
 
-    <string name="napplet_permissions_empty">هنوز هیچ مجوز nApplet ای وجود ندارد</string>
 
-    <string name="napplet_permissions_empty_subtitle">مجوزهایی که به nApplet ها می‌دهید اینجا نمایش داده می‌شوند.</string>
 
-    <string name="napplet_permissions_forget">فراموش کردن این nApplet</string>
 
-    <string name="napplet_permissions_blocked">مسدود شده</string>
 
-    <string name="napplet_permissions_revoke">لغو</string>
 
 
 
 
-    <string name="napplet_cap_shell">Shell</string>
 
 
 
@@ -2035,7 +1989,6 @@
 
 
 
-    <string name="napplet_cap_shell_desc">پرسیدن اینکه کدام قابلیت‌ها در دسترس هستند</string>
 
 
 
@@ -2050,7 +2003,6 @@
 
 
 
-    <string name="napplet_consent_capability">قابلیت: %1$s</string>
 
 
 
@@ -2063,7 +2015,6 @@
 
 
 
-    <string name="napplet_consent_pay">این nApplet می‌خواهد یک فاکتور Lightning پرداخت کند.</string>
 
 
 
@@ -2279,7 +2230,6 @@
     
     
     
-<string name="changed_chat_profile_to">پروفایل چت جدید:</string>
     <string name="always_on_notif_channel_description">اتصالات به relay های صندوق ورودی شما را برای اعلان‌های بلادرنگ فعال نگه می‌دارد</string>
     <plurals name="always_on_notif_connected_foreground">
     <item quantity="one">متصل به %1$d relay</item>

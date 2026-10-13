@@ -30,6 +30,7 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertIs
+import kotlin.test.assertIsNot
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
@@ -69,8 +70,8 @@ class TopEightEventTest {
         val event = fixture()
         assertIs<TopEightEvent>(event)
         assertTrue(EventFactory.isKnownKind(TopEightEvent.KIND))
-        assertFalse(event is SearchableEvent)
-        assertEquals("", (event as? TopEightEvent)?.dTag())
+        assertIsNot<SearchableEvent>(event)
+        assertEquals("", event.dTag())
     }
 
     @Test

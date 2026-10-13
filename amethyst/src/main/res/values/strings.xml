@@ -2,31 +2,17 @@
     <string name="app_name" translatable="false">Amethyst</string>
     <!-- Placeholder shown in a chat row while an encrypted message is still being decrypted -->
     <!-- Prefix on a Messages-list preview when the newest message was sent by the logged-in user. %1$s is the message text -->
-    <string name="block_hide_user"><![CDATA[Block & Hide User]]></string>
 
 
 
 
 
 
-    <string name="boosted">boosted</string>
-    <string name="edited_number">edit #%1$s</string>
 
 
 
 
 
-    <string name="save">Save</string>
-    <string name="rename">Rename</string>
-    <string name="concord_create_icon">Icon URL (optional)</string>
-    <plurals name="buzz_workspaces_count">
-        <item quantity="one">%1$d workspace</item>
-        <item quantity="other">%1$d workspaces</item>
-    </plurals>
-    <plurals name="buzz_workspaces_channel_count">
-        <item quantity="one">%1$d channel</item>
-        <item quantity="other">%1$d channels</item>
-    </plurals>
     <!-- Reply-mode toggle in the chat composer: reply inline in the timeline vs pull it aside into a thread. -->
     <!-- Title of the minichat (thread) screen opened from a chat message. -->
     <!-- Title of the picked-image confirmation dialog when attaching a picture to a thread reply. -->
@@ -34,7 +20,6 @@
     <!-- A reply whose target was searched for across all reachable history and never found. -->
     <!-- Reply subtitle when every relay genuinely bottomed out (no stalls) and it still wasn't there. -->
     <!-- Overflow count on the capped reporter avatar row, e.g. "+21". -->
-    <string name="changed_chat_profile_to">New chat profile:</string>
 
 
 
@@ -43,21 +28,10 @@
 
 
 
-    <string name="route_software_apps">App Store</string>
-    <string name="napplet_permissions">nApplet permissions</string>
-    <string name="napplet_permissions_empty">No nApplet permissions yet</string>
-    <string name="napplet_permissions_empty_subtitle">Permissions you grant to nApplets will appear here.</string>
-    <string name="napplet_permissions_forget">Forget this nApplet</string>
-    <string name="napplet_permissions_blocked">Requires per-use approval</string>
-    <string name="napplet_permissions_revoke">Revoke</string>
     <!-- Napplet sandbox chrome (host top bar + live action notices) -->
 
     <!-- Napplet capability names -->
-    <string name="napplet_cap_shell">Shell</string>
-    <string name="napplet_cap_shell_desc">Ask which capabilities are available</string>
     <!-- Napplet consent dialog -->
-    <string name="napplet_consent_capability">Capability: %1$s</string>
-    <string name="napplet_consent_pay">This nApplet wants to pay a Lightning invoice.</string>
     <!-- An amountless BOLT11: the payee decides how much. Never render this as "0 sats". -->
     <!-- Consequence lines for event kinds whose payload lives entirely in the tags, so a
          kind-only summary would hide what is actually being signed. These replaceable lists are
@@ -69,14 +43,10 @@
     <!-- Re-publishing an identical list is harmless; say so rather than raising a false alarm. -->
     <!-- No cached copy to compare against, so the whole list is what gets written. -->
     <!-- Signer permissions: first-connect dialog -->
-    <string name="napplet_connect_title">Connect to Nostr</string>
 
     <!-- Signer trust levels -->
 
     <!-- Signer per-op consent dialog -->
-    <string name="napplet_signer_allow_op">Don\'t ask again to %1$s</string>
-    <string name="napplet_signer_last_used">Last used</string>
-    <string name="napplet_signer_expires">Expires</string>
 
     <!-- Signer op labels -->
     <!-- Decrypt: the message is already decrypted by Amethyst; the permission is to expose it to the app -->
@@ -86,20 +56,8 @@
     <!-- Label above the counterparty avatar in the decrypt consent dialog -->
 
     <!-- Permissions management screen -->
-    <string name="napplet_permissions_revoke_all">Revoke all permissions</string>
-    <string name="napplet_permissions_overrides">Operation overrides</string>
-    <string name="napplet_signer_permissions_empty">No apps have connected yet.</string>
 
     <!-- NIP-46 remote signer (bunker) -->
-    <string name="nip46_signer_search_keywords">signer bunker nip46 nostr connect remote sign</string>
-    <string name="nip46_signer_enable">Act as a remote signer</string>
-    <plurals name="nip46_signer_status_listening">
-        <item quantity="one">Listening on %1$d relay</item>
-        <item quantity="other">Listening on %1$d relays</item>
-    </plurals>
-    <string name="nip46_signer_bunker_uri_label">Your bunker address</string>
-    <string name="nip46_signer_bunker_uri_hint">Paste this into another app to connect it to your key.</string>
-    <string name="nip46_signer_activity_empty">No requests serviced yet.</string>
 
     <!-- Relay Authentication (NIP-42) settings -->
 
@@ -118,20 +76,13 @@
 
     <!-- Short labels for the purpose chips on a "recent logins" row. -->
 
-    <string name="agent_console_title">Agent console</string>
-    <string name="podcast_premium">Premium</string>
-    <string name="podcast_value_add_recipient">Add recipient</string>
 
 
 
 
 
-    <string name="private_note_no_receivers">No receivers yet: only you will be able to see this note. Add people to share it with.</string>
 
     <!-- Composer audience control (Notify / "Visible to") -->
-    <string name="notify_add_user">Add</string>
-    <string name="notify_remove_user">Remove user from notifications</string>
-    <string name="notify_search_and_add_user">Search and add a user to notify</string>
 
 
 
@@ -155,16 +106,10 @@
 
 
 
-    <string name="set_preferred_media_servers">Set your preferred media upload servers.</string>
 
 
 
-    <string name="manage_stored_files">Manage stored files</string>
-    <string name="blossom_delete_from">Delete from…</string>
 
-    <string name="recommended_media_servers">Recommended Media Servers</string>
-    <string name="built_in_servers_description">Amethyst\'s default list. You can add them individually or add the list.</string>
-    <string name="media_server_status_checking">Checking…</string>
 
 
 
@@ -200,8 +145,6 @@
 
 
 
-    <string name="app_notification_replies_channel_message">%1$s replied</string>
-    <string name="app_notification_replies_channel_message_for">on: %1$s</string>
 
     <!-- Notification channel groups (organize the per-kind channels in system settings) -->
 
@@ -231,13 +174,9 @@
          a relay count they think is too high. -->
     <!-- Two countable nouns, so two plurals composed at the call site rather than one string with
          two %d in it: filter and relay decline independently in Slavic/Baltic/Semitic languages. -->
-    <string name="active_subs_pair">%1$s \u00b7 %2$s</string>
-    <string name="always_on_notif_setting_title">Always-on notification service</string>
-    <string name="always_on_notif_setting_description">Keeps a persistent connection to your inbox relays for instant notification delivery. Shows an ongoing notification. Uses more battery but ensures you never miss a message.</string>
 
     <string name="always_on_notif_tile_label">Notification service</string>
 
-    <string name="notification_service_participation_title">Keep this account active in the background</string>
 
 
 
@@ -260,7 +199,6 @@
 
 
 
-    <string name="preferences">App Preferences</string>
 
 
     <!-- Settings search -->
@@ -268,7 +206,6 @@
     <!-- Settings search keywords: an English concept/protocol index that supplements the
          (translated) row titles. Marked translatable="false" so protocol terms (blossom, nsec,
          negentropy, …) stay searchable in every locale and aren't sent to translators. -->
-    <string name="agent_console_search_keywords" translatable="false">buzz, agents, personas, cost, tokens, fleet, ai, turn metrics</string>
 
     <!-- Compact label for the segmented control, where "Unmetered WiFi" does not fit. -->
 
@@ -294,8 +231,6 @@
 
 
 
-    <string name="messages_create_public_chat">Public</string>
-    <string name="messages_create_group">Group</string>
 
     <!-- New conversation chooser (full-screen picker opened from the Messages FAB).
          Each row stays lean; the "best for" line and the pros/cons appear only when a row is tapped. -->
@@ -306,41 +241,8 @@
 
 
     <!-- Buzz calls its groups channels, and a Buzz relay is one workspace rather than a directory of groups. -->
-    <string name="buzz_channel_flag_forum">Forum channel</string>
-    <string name="buzz_channel_flag_forum_desc">Threaded posts instead of a chat timeline. This cannot be changed later.</string>
-    <string name="relay_group_create_name">Group name</string>
-    <string name="relay_group_create_topic">Topic (optional)</string>
-    <string name="relay_group_create_private">Private (members-only read)</string>
-    <string name="relay_group_create_invite_only">Invite only</string>
-    <string name="relay_group_create_confirm">Create</string>
-    <string name="relay_group_invite_generating">Creating an invite…</string>
-    <string name="relay_group_invite_copied">Invite code copied</string>
-    <string name="relay_group_edit_name">Group name</string>
-    <string name="relay_group_edit_topic">Topic (optional)</string>
-    <string name="relay_group_edit_private">Private (members-only read)</string>
-    <string name="relay_group_edit_invite_only">Invite only</string>
-    <string name="relay_group_edit_confirm">Save</string>
-    <string name="relay_group_location_edit">Change location</string>
     <!-- Reusable geohash location picker (shared, not group-specific) -->
-    <string name="relay_group_discovery_empty">Looking for groups across your relays…</string>
-    <string name="relay_group_discovery_empty_filtered">No groups found for this filter yet.</string>
     <!-- Same, where this viewer cannot start one: not a member, or a Buzz chat channel (forum posts belong to forum channels). -->
-    <string name="relay_group_thread_body_label">Write something…</string>
-    <string name="relay_group_thread_post">Post</string>
-    <string name="channel_invite_title">Added to %1$s</string>
-    <plurals name="relay_group_message_count">
-        <item quantity="one">%1$d message</item>
-        <item quantity="other">%1$d messages</item>
-    </plurals>
-    <plurals name="relay_group_message_count_capped">
-        <item quantity="one">%1$d+ message</item>
-        <item quantity="other">%1$d+ messages</item>
-    </plurals>
-    <plurals name="relay_group_follows_participating">
-        <item quantity="one">%1$d person you follow</item>
-        <item quantity="other">%1$d people you follow</item>
-    </plurals>
-    <string name="messages_new_message">Private</string>
 
 
 
@@ -357,7 +259,6 @@
     <string name="share_target_scan_qr">Scan QR code</string>
     <string name="shortcut_scan_qr_short">Scan QR</string>
     <string name="shortcut_scan_qr_long">Scan a QR code</string>
-    <string name="new_highlight_passage_label">Highlighted text</string>
 
 
 
@@ -408,11 +309,6 @@
 
     <!-- Label for the mixed media feed: pictures + every NIP-71 video kind + NIP-94 files.
          Distinct from the "shorts" string, which labels the vertical/short-video-only feed. -->
-    <string name="cashu_p2pk_section">Nutzap key (advanced)</string>
-    <string name="cashu_p2pk_explainer">A separate private key used only to receive NIP-61 nutzaps. Not your Nostr identity key.</string>
-    <string name="cashu_p2pk_autogen">Generate a new key</string>
-    <string name="cashu_p2pk_manual_label">P2PK private key (hex)</string>
-    <string name="wallet_save_changes">Save changes</string>
 
     <!-- Onchain zap send dialog -->
 
@@ -427,10 +323,6 @@
 
 
 
-    <string name="bottom_bar_settings_description">Drag the pinned items to reorder. Open a category below and toggle an item to add or remove it. Open Browser or a chat type to pin a favorite or a specific group. With zero items the bottom bar is hidden.</string>
-    <string name="bottom_bar_settings_reorder">Reorder</string>
-    <string name="home_tabs_settings_description">Pick which tabs appear on the Home screen. When only one tab is active the tab bar is hidden.</string>
-    <string name="profile_ui_settings_description">Pick which sections and feeds appear on user profile screens. All options are enabled by default.</string>
 
 
 
@@ -449,21 +341,6 @@
     <!-- Buzz agent jobs (kind 43xxx): an agent task's lifecycle, narrated in the chat timeline. -->
 
     <!-- Buzz forum votes (kind 45002). -->
-    <string name="buzz_workspaces_title">Buzz Workspaces</string>
-    <string name="buzz_workspaces_hero_tagline">Where humans and agents build together</string>
-    <string name="buzz_workspaces_leave">Leave workspace</string>
-    <string name="buzz_workspaces_section">Your workspaces</string>
-    <string name="buzz_workspaces_empty_title">No workspaces yet</string>
-    <string name="buzz_workspaces_empty_body">Buzz workspaces are relays where humans and AI agents build together. Join one to see it here.</string>
-    <string name="buzz_workspaces_browse">Browse groups</string>
-    <string name="buzz_console_card_subtitle">Costs · Personas · Live observer</string>
-    <string name="buzz_dm_nav_label">Buzz DMs</string>
-    <string name="buzz_dm_card_subtitle">Private conversations on your workspaces</string>
-    <string name="buzz_import_title">Import workspace channels</string>
-    <string name="buzz_import_your_channels">Your channels on this workspace</string>
-    <string name="buzz_import_add">Add</string>
-    <string name="buzz_import_empty_title">No channels found</string>
-    <string name="buzz_import_empty_body">You don\'t seem to be a member of any channels on this relay yet. Accept the workspace invite in the browser first, then try again.</string>
 
 
 
@@ -485,16 +362,6 @@
 
 
 
-    <string name="git_web_address">Web:</string>
-    <string name="git_repo_tab_overview">Overview</string>
-    <string name="git_repo_maintained_by">Maintained by</string>
-    <string name="git_repo_section_about">About</string>
-    <string name="git_repo_section_links">Links</string>
-    <string name="git_repo_section_maintainers">Maintainers</string>
-    <string name="git_repo_section_topics">Topics</string>
-    <string name="git_repo_tab_readme">Readme</string>
-    <string name="git_issue_close">Close issue</string>
-    <string name="git_issue_reopen">Reopen</string>
 
 
 
@@ -506,11 +373,8 @@
 
 
 
-    <string name="media_servers_blossom_section">Blossom Servers</string>
-    <string name="media_servers_blossom_explainer">Add as many servers as you want. You can choose which one to use later when uploading your picture</string>
 
 
-    <string name="torrent_download">Download</string>
 
 
     <!-- %1$s is replaced at runtime by an inline star icon, not text. Keep the placeholder. -->
@@ -521,12 +385,6 @@
 
 
 
-    <string name="resource_usage_today">Today</string>
-    <string name="resource_usage_week">Last 7 days</string>
-    <string name="resource_usage_cellular_bg">Cellular data (background)</string>
-    <string name="resource_usage_cellular_fg">Cellular data (in app)</string>
-    <string name="resource_usage_wifi">Wi-Fi data</string>
-    <string name="resource_usage_fg_time">Time in app</string>
 
 
 

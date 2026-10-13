@@ -121,7 +121,7 @@ class WorkoutTemplateEventTest {
                 .first()
                 .relay.url,
         )
-        assertTrue(event is RootScope)
+        assertIs<RootScope>(event)
     }
 
     @Test

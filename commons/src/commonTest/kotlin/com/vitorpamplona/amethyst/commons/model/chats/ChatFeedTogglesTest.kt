@@ -66,7 +66,7 @@ class ChatFeedTogglesTest {
     // `applied` still listed it (it must: applied publishes last).
     private val hookSaw = mutableListOf<Triple<ChatFeedType, Boolean, Boolean>>()
 
-    private lateinit var toggles: ChatFeedToggles
+    private val toggles: ChatFeedToggles
 
     init {
         toggles =
