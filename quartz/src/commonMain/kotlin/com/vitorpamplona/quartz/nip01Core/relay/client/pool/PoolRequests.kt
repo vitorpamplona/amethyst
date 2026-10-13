@@ -426,8 +426,10 @@ class PoolRequests(
      * The REQ to write for [held], a REQ [relay]'s rate-limit gate held through a back-off and is
      * releasing now, or null to write nothing. Relays queue a sub's REQs and serve each in full,
      * so there is only ever one per sub on the wire:
-     *  - a newer decision owns the row (a NOTICE narrowing, an AUTH replay, a resubscribe while
-     *    this one was being released): its own REQ follows, so this one is dropped;
+     *  - a newer decision owns the row (a NOTICE narrowing, a resubscribe while this one was
+     *    being released): its own REQ follows, so this one is dropped. Not the replay after a
+     *    successful AUTH: relays drop REQs sent before AUTH finishes, so that replay is the sub's
+     *    real REQ, and while this one is still queued it simply takes its place (same sub id);
      *  - the sub is gone: its CLOSE dropped the held REQ, or closes this one, so nothing goes;
      *  - otherwise the sub's CURRENT filters go out. A change made while it waited found the sub
      *    in flight and was left for its EOSE ([decideCommandLocked]); sent here, it costs no
