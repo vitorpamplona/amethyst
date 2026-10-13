@@ -115,6 +115,11 @@ exist to move issues nobody is currently working on. Security issues do not
 need a bounty and should not be filed publicly; see
 [SECURITY.md](SECURITY.md).
 
+**A bounty is not, and will never be, a promise of payment.** Even if the
+issue's author likes your solution and it is approved and merged, the author
+can still decide, for any reason, whether to pay you or not. If you take on a
+bounty, you accept the risk of not being paid even after the work is done.
+
 ## Security issues
 
 **Do not file security vulnerabilities as public GitHub issues.** Use
