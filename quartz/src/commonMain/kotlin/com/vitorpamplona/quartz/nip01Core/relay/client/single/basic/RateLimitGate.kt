@@ -31,6 +31,7 @@ import com.vitorpamplona.quartz.nip01Core.relay.commands.toRelay.Command
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toRelay.CountCmd
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toRelay.EventCmd
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toRelay.ReqCmd
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.utils.Log
 import com.vitorpamplona.quartz.utils.TimeUtils
 import com.vitorpamplona.quartz.utils.concurrent.PlatformLock
@@ -88,11 +89,31 @@ class RateLimitGate(
     private val scope: CoroutineScope,
     /** Writes [Command] to the socket; false when nothing went out (the socket is gone). */
     send: (Command) -> Boolean = { false },
-    /** The command to put on the wire for a held one now released; see the class notes. */
-    private val refresh: (Command) -> Command = { it },
+    /** The command to put on the wire for a held one now released, or null to drop it; see the class notes. */
+    private val refresh: (Command) -> Command? = { it },
+    /** Told when a command is held instead of sent, so its owner knows it is not on the wire. */
+    private val onHold: (Command) -> Unit = {},
     private val maxDelayMs: Long = MAX_DELAY_MS,
-    private val clock: () -> Long = TimeUtils::nowMillis,
+    private val clock: () -> Long = TimeUtils::monotonicMillis,
 ) {
+    /**
+     * Whoever decides the commands a gate holds (the pool's subscription and publish state),
+     * told when one is held and asked what to send when it is released.
+     */
+    interface Owner {
+        /** [cmd] for [relay] was held instead of sent: it is not on the wire yet. */
+        fun onHeld(
+            relay: NormalizedRelayUrl,
+            cmd: Command,
+        ) {}
+
+        /** The command to write for [held] now that its turn came, or null to write nothing. */
+        fun onRelease(
+            relay: NormalizedRelayUrl,
+            held: Command,
+        ): Command? = held
+    }
+
     @Volatile private var send = send
 
     /** Points released commands at [send]: the connection that now owns this relay's socket. */
@@ -223,16 +244,27 @@ class RateLimitGate(
                 return true
             }
         }
-        return lock.withLock {
-            when (cmd) {
-                is ReqCmd -> counts.remove(key)
-                is CountCmd -> counts.add(key)
-                else -> {}
+        val admitted =
+            lock.withLock {
+                when (cmd) {
+                    is ReqCmd -> counts.remove(key)
+                    is CountCmd -> counts.add(key)
+                    else -> {}
+                }
+                val lane = lanes[type] ?: return@withLock true
+                lane.enqueue(key, cmd)
+                false
             }
-            val lane = lanes[type] ?: return@withLock true
-            lane.enqueue(key, cmd)
-            false
+        if (!admitted) {
+            try {
+                onHold(cmd)
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                Log.w("RateLimitGate", "Failed to report a held ${cmd.label()}", e)
+            }
         }
+        return admitted
     }
 
     /** Reads every message from the relay, before anyone else does. */
@@ -358,7 +390,12 @@ class RateLimitGate(
                 // nobody draining it, and every later command of its type would be held forever.
                 val sent =
                     try {
-                        sameSocket() && writeIf(refreshed(held), sameSocket)
+                        if (sameSocket()) {
+                            val cmd = refreshed(held)
+                            cmd != null && writeIf(cmd, sameSocket)
+                        } else {
+                            false
+                        }
                     } catch (e: CancellationException) {
                         throw e
                     } catch (e: Exception) {
@@ -385,8 +422,8 @@ class RateLimitGate(
         }
     }
 
-    /** [held] as its owner wants it now; [held] itself when asking fails. */
-    private fun refreshed(held: Command): Command =
+    /** [held] as its owner wants it now, null when it no longer wants it; [held] itself when asking fails. */
+    private fun refreshed(held: Command): Command? =
         try {
             refresh(held)
         } catch (e: CancellationException) {

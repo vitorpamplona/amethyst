@@ -63,9 +63,10 @@ class RateLimitGateTest {
 
     private fun TestScope.gate(
         sent: MutableList<Sent>,
-        refresh: (Command) -> Command = { it },
+        refresh: (Command) -> Command? = { it },
+        onHold: (Command) -> Unit = {},
         onSend: (Command) -> Boolean = { true },
-    ) = RateLimitGate(this, clock = { testScheduler.currentTime }, refresh = refresh, send = { cmd ->
+    ) = RateLimitGate(this, clock = { testScheduler.currentTime }, refresh = refresh, onHold = onHold, send = { cmd ->
         sent.add(Sent(cmd.what(), testScheduler.currentTime))
         onSend(cmd)
     })
@@ -263,6 +264,31 @@ class RateLimitGateTest {
             advanceUntilIdle()
 
             assertEquals("[a:9@1000]", sent.toString())
+        }
+
+    @Test
+    fun aHeldCommandItsOwnerNoLongerWantsIsNotSentAndCostsNoSlot() =
+        runTest {
+            val sent = mutableListOf<Sent>()
+            val gate = gate(sent, refresh = { cmd -> if (cmd is ReqCmd && cmd.subId == "stale") null else cmd })
+            gate.refuseReq("stale", 1_000)
+            gate.refuseReq("b", 1_000)
+            advanceUntilIdle()
+
+            assertEquals("[b@1000]", sent.toString())
+        }
+
+    @Test
+    fun theOwnerIsToldOfEveryHeldCommand() =
+        runTest {
+            val held = mutableListOf<String>()
+            val gate = gate(mutableListOf(), onHold = { held.add(it.what()) })
+            assertTrue(gate.admit(req("x")))
+            gate.refuseReq("a", 1_000)
+            assertFalse(gate.admit(req("b")))
+            assertFalse(gate.admit(req("b", limit = 3)))
+
+            assertEquals(listOf("a", "b", "b:3"), held)
         }
 
     @Test

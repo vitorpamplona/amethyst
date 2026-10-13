@@ -33,6 +33,8 @@ import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import kotlinx.coroutines.test.runTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertNotNull
+import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 /**
@@ -118,11 +120,102 @@ class PoolRequestsBackOffTest {
             pool.addOrUpdate("sub", mapOf(relay to filter(7)), null)
             pool.sendToRelayIfChanged("sub", setOf(relay)) { _, cmd -> error("a second REQ while one is in flight: $cmd") }
 
-            val released = pool.refreshHeld(relay, held)
+            val released = assertNotNull(pool.refreshHeld(relay, held))
             assertEquals(listOf(7), released.filters.single().kinds)
             pool.onIncomingMessage(FakeRelayClient(relay), EventMessage("sub", Event("e", "p", 0, 7, emptyArray(), "", "s")))
 
             assertEquals(listOf(7), seen.single()?.single()?.kinds)
+        }
+
+    /** Records what each event was matched to, and whether it was reported live. */
+    private class Seen : SubscriptionListener {
+        val events = mutableListOf<String>()
+
+        override suspend fun onEvent(
+            event: Event,
+            isLive: Boolean,
+            relay: NormalizedRelayUrl,
+            forFilters: List<Filter>?,
+        ) {
+            events.add("${forFilters?.single()?.kinds?.single()}${if (isLive) " live" else ""}")
+        }
+    }
+
+    private fun event(kind: Int) = EventMessage("sub", Event("e$kind", "p", 0, kind, emptyArray(), "", "s"))
+
+    @Test
+    fun aLiveSubKeepsItsFiltersAndLivenessWhileItsReplacementIsHeld() =
+        runTest {
+            // LIVE on kind 1, the feed moves to kind 7, and the relay's gate holds that REQ through
+            // a back-off. The relay keeps streaming kind 1 meanwhile: those events are kind 1's, and
+            // live, until the kind-7 REQ is written.
+            val seen = Seen()
+            val pool = PoolRequests()
+            val socket = FakeRelayClient(relay)
+            pool.addOrUpdate("sub", mapOf(relay to filter(1)), seen)
+            sync(pool)
+            pool.onIncomingMessage(socket, EoseMessage("sub"))
+
+            pool.addOrUpdate("sub", mapOf(relay to filter(7)), seen)
+            val sent = mutableListOf<Command>()
+            pool.sendToRelayIfChanged("sub", setOf(relay)) { _, cmd -> sent.add(cmd) }
+            val held = sent.single() as ReqCmd
+            pool.onHeld(relay, held)
+            pool.onIncomingMessage(socket, event(1))
+
+            assertNotNull(pool.refreshHeld(relay, held))
+            pool.onIncomingMessage(socket, event(7))
+
+            assertEquals(listOf("1 live", "7"), seen.events)
+        }
+
+    @Test
+    fun aHeldReqANewerDecisionReplacedIsDropped() =
+        runTest {
+            // The sub was dropped and wanted again (or NOTICE-narrowed) while its held REQ was being
+            // released: the newer decision's REQ follows, so the older one must not go too.
+            val pool = PoolRequests()
+            pool.addOrUpdate("sub", mapOf(relay to filter(1)), null)
+            val held = sync(pool).single() as ReqCmd
+            pool.remove("sub")
+            pool.sendToRelayIfChanged("sub", setOf(relay)) { _, cmd -> pool.onSent(relay, cmd) }
+            val newer = mutableListOf<Command>()
+            pool.addOrUpdate("sub", mapOf(relay to filter(1)), null)
+            pool.sendToRelayIfChanged("sub", setOf(relay)) { _, cmd -> newer.add(cmd) }
+            assertEquals(1, newer.size)
+
+            assertNull(pool.refreshHeld(relay, held))
+            assertNotNull(pool.refreshHeld(relay, newer.single() as ReqCmd))
+        }
+
+    @Test
+    fun aHeldReqOfAnUnsubscribedSubIsDropped() =
+        runTest {
+            val pool = PoolRequests()
+            pool.addOrUpdate("sub", mapOf(relay to filter(1)), null)
+            val held = sync(pool).single() as ReqCmd
+            pool.remove("sub")
+            pool.sendToRelayIfChanged("sub", setOf(relay)) { _, cmd -> pool.onSent(relay, cmd) }
+
+            assertNull(pool.refreshHeld(relay, held))
+        }
+
+    @Test
+    fun aHeldReqReleasedAfterAnEarlierAnswerIsInFlightAgain() =
+        runTest {
+            // The EOSE of the REQ before it landed while this one was held: once this one is
+            // written the sub is in flight, so a filter change waits for ITS EOSE.
+            val pool = PoolRequests()
+            val socket = FakeRelayClient(relay)
+            pool.addOrUpdate("sub", mapOf(relay to filter(1)), null)
+            val held = sync(pool).single() as ReqCmd
+            pool.onHeld(relay, held)
+            pool.onIncomingMessage(socket, EoseMessage("sub"))
+            socket.sent.clear()
+
+            assertNotNull(pool.refreshHeld(relay, held))
+            pool.addOrUpdate("sub", mapOf(relay to filter(7)), null)
+            pool.sendToRelayIfChanged("sub", setOf(relay)) { _, cmd -> error("a second REQ while one is in flight: $cmd") }
         }
 
     @Test

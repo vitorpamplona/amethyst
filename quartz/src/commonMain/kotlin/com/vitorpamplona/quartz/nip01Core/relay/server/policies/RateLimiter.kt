@@ -47,7 +47,7 @@ import kotlin.math.ceil
 class RateLimiter(
     val perMinute: Int,
     val burst: Int = perMinute,
-    private val clock: () -> Long = TimeUtils::nowMillis,
+    private val clock: () -> Long = TimeUtils::monotonicMillis,
 ) {
     init {
         require(perMinute > 0) { "perMinute must be > 0, got $perMinute" }

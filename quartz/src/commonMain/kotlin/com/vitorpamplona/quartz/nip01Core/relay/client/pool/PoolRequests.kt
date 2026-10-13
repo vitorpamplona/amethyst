@@ -275,7 +275,7 @@ class PoolRequests(
                 relayState.get(msg.subId)?.let { state ->
                     state.withLock(relay.url) {
                         state.onNewEvent(relay.url)
-                        isLive = state.currentState(relay.url) == ReqSubStatus.LIVE
+                        isLive = state.isLive(relay.url)
                         forFilters = state.lastKnownFilterStates(relay.url)
                     }
                 }
@@ -409,32 +409,47 @@ class PoolRequests(
     }
 
     /**
-     * The REQ to send for [held], a REQ of this pool that [relay]'s rate-limit gate held through
-     * a back-off and is releasing now: the sub's CURRENT filters for [relay]. A change made while
-     * it waited found the sub in flight and was left for its EOSE ([decideCommandLocked]); sent
-     * here instead, it costs no second REQ, and the EOSE finds nothing left to send. [held] as is
-     * when the change is not worth a REQ, or when the sub no longer wants [relay] (its CLOSE
-     * already dropped the held REQ, or will close it).
+     * [relay]'s rate-limit gate held [held] instead of sending it. Until it goes, what the relay
+     * sends for the sub belongs to the REQ before it: a LIVE sub keeps streaming its old
+     * filters, and those events must stay matched to them, and live.
+     */
+    fun onHeld(
+        relay: NormalizedRelayUrl,
+        held: ReqCmd,
+    ) {
+        relayState.get(held.subId)?.let { state ->
+            state.withLock(relay) { state.onHeld(relay, held.filters) }
+        }
+    }
+
+    /**
+     * The REQ to write for [held], a REQ [relay]'s rate-limit gate held through a back-off and is
+     * releasing now, or null to write nothing. Relays queue a sub's REQs and serve each in full,
+     * so there is only ever one per sub on the wire:
+     *  - a newer decision owns the row (a NOTICE narrowing, an AUTH replay, a resubscribe while
+     *    this one was being released): its own REQ follows, so this one is dropped;
+     *  - the sub is gone: its CLOSE dropped the held REQ, or closes this one, so nothing goes;
+     *  - otherwise the sub's CURRENT filters go out. A change made while it waited found the sub
+     *    in flight and was left for its EOSE ([decideCommandLocked]); sent here, it costs no
+     *    second REQ, and the EOSE finds nothing left to send.
      *
-     * The new filters are recorded before they leave, as every send path here pre-marks: a fast
-     * relay answers before [onSent] runs, and its events must be matched against the filters that
-     * asked for them, not the held ones.
+     * The row is marked in flight with the filters that go out before they do, as every send
+     * path here pre-marks: a fast relay answers before [onSent] runs, and whatever it answered
+     * while the REQ was held came from the REQ before it.
      */
     fun refreshHeld(
         relay: NormalizedRelayUrl,
         held: ReqCmd,
-    ): ReqCmd {
-        val filters = desiredSubs.get(held.subId)?.get(relay)?.let { relayRefusals.narrow(relay, it) }
-        if (filters.isNullOrEmpty() || !FiltersChanged.needsToResendRequest(held.filters, filters)) return held
-        val state = relayState.get(held.subId) ?: return held
+    ): ReqCmd? {
+        val state = relayState.get(held.subId) ?: return null
+        val desired = desiredSubs.get(held.subId)?.get(relay)?.let { relayRefusals.narrow(relay, it) }
         return state.withLock(relay) {
-            // Only the REQ the pool still has in flight; anything else moved on without it.
-            if (state.currentState(relay) == ReqSubStatus.SENT) {
-                state.onReqSent(relay, filters)
-                ReqCmd(held.subId, filters)
-            } else {
-                held
-            }
+            // Identity, not equality: the decision that queued this REQ recorded this very list,
+            // and a newer one (a NOTICE narrowing, a resubscribe) records a list of its own.
+            if (state.currentFilters(relay) !== held.filters) return@withLock null
+            val filters = if (desired.isNullOrEmpty() || !FiltersChanged.needsToResendRequest(held.filters, desired)) held.filters else desired
+            state.onWriting(relay, filters)
+            if (filters === held.filters) held else ReqCmd(held.subId, filters)
         }
     }
 

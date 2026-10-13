@@ -103,9 +103,25 @@ class NostrClient(
     private val scope = CoroutineScope(parentScope.coroutineContext + SupervisorJob())
 
     private val relayPool: RelayPool =
-        RelayPool(websocketBuilder, this, decoder, scope) { relay, held ->
-            if (held is ReqCmd) activeRequests.refreshHeld(relay, held) else held
-        }
+        RelayPool(
+            websocketBuilder,
+            this,
+            decoder,
+            scope,
+            object : RateLimitGate.Owner {
+                override fun onHeld(
+                    relay: NormalizedRelayUrl,
+                    cmd: Command,
+                ) {
+                    if (cmd is ReqCmd) activeRequests.onHeld(relay, cmd)
+                }
+
+                override fun onRelease(
+                    relay: NormalizedRelayUrl,
+                    held: Command,
+                ): Command? = if (held is ReqCmd) activeRequests.refreshHeld(relay, held) else held
+            },
+        )
 
     private val activeRequests: PoolRequests = PoolRequests()
     private val activeCounts: PoolCounts = PoolCounts()
