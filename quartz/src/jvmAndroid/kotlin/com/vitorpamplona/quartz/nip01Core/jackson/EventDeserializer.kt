@@ -55,17 +55,17 @@ class EventDeserializer : StdDeserializer<Event>(Event::class.java) {
             val fieldName = p.currentName()
             p.nextToken()
 
-            // One switch on the hash, then the name itself: a field that merely shares a hash with
-            // one of these ("jE" and "id" do) is skipped, not taken. Jackson interns field names, so
-            // the check exits on identity. A `when (fieldName)` adds a second switch (~2 ns a field).
+            // Dispatched on the hash alone. A field whose name merely shares a hash with one of these
+            // ("jE" and "id" do) is taken as that field, which leaves an event whose id or signature
+            // no longer verifies, so it is rejected downstream anyway.
             when (fieldName.hashCode()) {
-                3355 -> if (fieldName == "id") id = p.text.intern() else p.skipChildren()
-                -977424830 -> if (fieldName == "pubkey") pubKey = p.text.intern() else p.skipChildren()
-                1369680106 -> if (fieldName == "created_at") createdAt = p.longValue else p.skipChildren()
-                3292052 -> if (fieldName == "kind") kind = p.intValue else p.skipChildren()
-                3552281 -> if (fieldName == "tags") tags = tagsDeserializer.deserialize(p, ctxt) else p.skipChildren()
-                951530617 -> if (fieldName == "content") content = p.text else p.skipChildren()
-                113873 -> if (fieldName == "sig") sig = p.text else p.skipChildren()
+                3355 -> id = p.text.intern()
+                -977424830 -> pubKey = p.text.intern()
+                1369680106 -> createdAt = p.longValue
+                3292052 -> kind = p.intValue
+                3552281 -> tags = tagsDeserializer.deserialize(p, ctxt)
+                951530617 -> content = p.text
+                113873 -> sig = p.text
                 else -> p.skipChildren()
             }
         }

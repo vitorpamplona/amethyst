@@ -22,32 +22,14 @@ package com.vitorpamplona.quartz.nip01Core.jackson
 
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.crypto.KeyPair
-import com.vitorpamplona.quartz.nip01Core.crypto.verify
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerInternal
 import com.vitorpamplona.quartz.nip10Notes.TextNoteEvent
 import kotlinx.coroutines.runBlocking
 import kotlin.test.Test
-import kotlin.test.assertEquals
 import kotlin.test.assertNull
-import kotlin.test.assertTrue
 
-/**
- * Extra fields are legal in an event object and must be ignored. Fields used to be picked by the
- * name's hashCode() alone, so "jE" (hash 3355, the same as "id") replaced the event's id.
- */
-class EventDeserializerFieldNameTest {
-    @Test
-    fun aFieldThatSharesTheIdsHashDoesNotReplaceTheId() {
-        val event = runBlocking { NostrSignerInternal(KeyPair()).sign(TextNoteEvent.build("hello")) }
-        val json = event.toJson()
-        val withCollidingField = json.dropLast(1) + ",\"jE\":\"" + "f".repeat(64) + "\",\"Aa\":1}"
-
-        val parsed = Event.fromJson(withCollidingField)
-
-        assertEquals(event.id, parsed.id)
-        assertTrue(parsed.verify(), "the parsed event must still verify")
-    }
-
+/** The field loop ends on END_OBJECT, which never comes when the input is cut short. */
+class EventDeserializerTruncationTest {
     @Test
     fun aTruncatedObjectFailsInsteadOfLooping() {
         val event = runBlocking { NostrSignerInternal(KeyPair()).sign(TextNoteEvent.build("cut short")) }

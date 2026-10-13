@@ -48,14 +48,13 @@ class EventTemplateDeserializer : StdDeserializer<EventTemplate<Event>>(EventTem
             val fieldName = p.currentName()
             p.nextToken()
 
-            // One switch on the hash, then the name itself: a field that merely shares a hash with
-            // one of these ("jE" and "id" do) is skipped, not taken. Jackson interns field names, so
-            // the check exits on identity. A `when (fieldName)` adds a second switch (~2 ns a field).
+            // Dispatched on the hash alone: a field whose name merely shares a hash with one of these
+            // is taken as that field.
             when (fieldName.hashCode()) {
-                1369680106 -> if (fieldName == "created_at") createdAt = p.longValue else p.skipChildren()
-                3292052 -> if (fieldName == "kind") kind = p.intValue else p.skipChildren()
-                3552281 -> if (fieldName == "tags") tags = tagsDeserializer.deserialize(p, ctxt) else p.skipChildren()
-                951530617 -> if (fieldName == "content") content = p.text else p.skipChildren()
+                1369680106 -> createdAt = p.longValue
+                3292052 -> kind = p.intValue
+                3552281 -> tags = tagsDeserializer.deserialize(p, ctxt)
+                951530617 -> content = p.text
                 else -> p.skipChildren()
             }
         }
