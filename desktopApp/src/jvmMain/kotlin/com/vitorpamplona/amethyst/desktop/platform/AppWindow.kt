@@ -21,9 +21,11 @@
 package com.vitorpamplona.amethyst.desktop.platform
 
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.SideEffect
+import androidx.compose.runtime.currentCompositionLocalContext
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
@@ -121,8 +123,9 @@ fun AppWindow(
  * this does what it does for the parts the app uses: the [WindowState] both ways, the close request,
  * window-wide key handling and the crash window.
  *
- * Wayland doesn't let a window place itself or learn where it is, so the position in [state] is
- * whatever AWT reports; the compositor ignores it on the way in.
+ * Wayland doesn't let a window place itself or learn where it is. The position in [state] is left
+ * as it came (the one saved on X11, say) and only filled in when it had none, so the size can be
+ * saved; the compositor ignores it on the way in.
  */
 @OptIn(ExperimentalComposeUiApi::class)
 @Composable
@@ -142,6 +145,9 @@ private fun WaylandWindow(
     val currentOnCloseRequest by rememberUpdatedState(onCloseRequest)
     val currentOnPreviewKeyEvent by rememberUpdatedState(onPreviewKeyEvent)
     val exceptionHandlerFactory = LocalWindowExceptionHandlerFactory.current
+    // The panel's composition is a root of its own, not a child of this one as Compose's Window's is,
+    // so the locals provided around this window (the theme, the platform ports) are carried over.
+    val parentLocals by rememberUpdatedState(currentCompositionLocalContext)
 
     val frame = remember { WaylandFrame() }
 
@@ -155,12 +161,19 @@ private fun WaylandWindow(
         val panel = ComposePanel(renderSettings = RenderSettings.SwingGraphics())
         val scope = AppWindowScope(frame, frameScope = null)
         panel.exceptionHandler = exceptionHandlerFactory.exceptionHandler(frame)
-        panel.setContent { currentContent(scope) }
+        panel.setContent {
+            // The panel's own window locals (density, window info, focus) win over the parent's.
+            val windowLocals = currentCompositionLocalContext
+            CompositionLocalProvider(parentLocals) {
+                CompositionLocalProvider(windowLocals) { currentContent(scope) }
+            }
+        }
 
         frame.defaultCloseOperation = WindowConstants.DO_NOTHING_ON_CLOSE
         frame.isUndecorated = undecorated
         if (transparent && frame.graphicsConfiguration.device.isWindowTranslucencySupported(PERPIXEL_TRANSLUCENT)) {
             frame.background = Color(0, 0, 0, 0)
+            panel.background = Color(0, 0, 0, 0)
         }
         icon?.let { frame.iconImage = it.toAwtImage(Density(1f), LayoutDirection.Ltr, Size(ICON_SIZE, ICON_SIZE)) }
         frame.contentPane.add(panel)
@@ -178,7 +191,9 @@ private fun WaylandWindow(
 
                 override fun windowStateChanged(e: WindowEvent) {
                     state.isMinimized = frame.extendedState and Frame.ICONIFIED != 0
-                    state.placement = frame.placement()
+                    val placement = frame.placement()
+                    frame.reportedPlacement = placement
+                    state.placement = placement
                 }
             }
         frame.addWindowListener(closeListener)
@@ -192,8 +207,10 @@ private fun WaylandWindow(
 
                 private fun saveFloatingBounds() {
                     if (frame.placement() != WindowPlacement.Floating) return
-                    state.size = DpSize(frame.width.dp, frame.height.dp)
-                    state.position = WindowPosition(frame.x.dp, frame.y.dp)
+                    frame.reportedSize = DpSize(frame.width.dp, frame.height.dp)
+                    state.size = frame.reportedSize
+                    // Saved bounds need a position; what AWT reports here means nothing on Wayland.
+                    if (state.position !is WindowPosition.Absolute) state.position = WindowPosition(frame.x.dp, frame.y.dp)
                 }
             }
         frame.addComponentListener(boundsListener)
@@ -224,15 +241,15 @@ private fun WaylandWindow(
         }
     }
 
-    // The app changing the state (going full screen, say) after the window opened.
+    // The app changing the state (going full screen, say) after the window opened. A value the frame
+    // itself reported is not applied back: mid-resize the frame has already moved on, and setting the
+    // older size would snap it back.
     LaunchedEffect(frame) {
-        snapshotFlow { state.placement }.collect { if (frame.placement() != it) frame.applyPlacement(it) }
+        snapshotFlow { state.placement }.collect { if (it != frame.reportedPlacement && it != frame.placement()) frame.applyPlacement(it) }
     }
     LaunchedEffect(frame) {
         snapshotFlow { state.size }.collect { size ->
-            if (frame.placement() == WindowPlacement.Floating && size.isSpecified && DpSize(frame.width.dp, frame.height.dp) != size) {
-                frame.applySize(size)
-            }
+            if (size != frame.reportedSize && size.isSpecified && frame.placement() == WindowPlacement.Floating) frame.applySize(size)
         }
     }
 }
@@ -267,6 +284,10 @@ private fun AwtKeyEvent.toComposeKeyEvent(): KeyEvent =
  * Closing a window normally detaches it on the event thread, as before.
  */
 internal class WaylandFrame : JFrame() {
+    /** The last size and placement this frame reported to its [WindowState], on the event thread. */
+    var reportedSize: DpSize = DpSize.Unspecified
+    var reportedPlacement: WindowPlacement? = null
+
     override fun removeNotify() {
         if (EventQueue.isDispatchThread()) super.removeNotify()
     }

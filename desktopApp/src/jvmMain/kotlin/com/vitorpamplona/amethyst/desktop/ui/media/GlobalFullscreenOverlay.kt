@@ -51,7 +51,6 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.DpSize
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.window.WindowPlacement
 import androidx.compose.ui.window.WindowPosition
 import androidx.compose.ui.window.rememberWindowState
 import com.vitorpamplona.amethyst.commons.ui.components.ZoomSource
@@ -102,10 +101,8 @@ fun GlobalFullscreenOverlay() {
     }
     val cornerRadius = remember { GlobalMediaPlayer.fullscreenSourceCornerRadius }
 
-    // Nor does it let a window place itself over the screen: there it opens in full screen.
     val windowState =
         rememberWindowState(
-            placement = if (WaylandDisplay.isActive) WindowPlacement.Fullscreen else WindowPlacement.Floating,
             position = WindowPosition(screen.x.dp, screen.y.dp),
             size = DpSize(screen.width.dp, screen.height.dp),
         )
@@ -129,6 +126,9 @@ fun GlobalFullscreenOverlay() {
     ) {
         val overlay = window
         DisposableEffect(overlay) {
+            // Nor does Wayland let a window place itself over the screen: there it goes full screen
+            // as it opens, on the same screen the rest of this uses.
+            if (WaylandDisplay.isActive && device.isFullScreenSupported) device.fullScreenWindow = overlay
             onDispose { if (device.fullScreenWindow === overlay) device.fullScreenWindow = null }
         }
 

@@ -328,10 +328,13 @@ val rpmLibraryDeps =
         listOf(
             "libasound.so.2", "libfontconfig.so.1", "libGL.so.1", "libstdc++.so.6", "libX11.so.6",
             "libXext.so.6", "libXi.so.6", "libXrender.so.1", "libXtst.so.6",
-            // The JetBrains Runtime's Wayland toolkit: linked, and libxkbcommon opened with dlopen.
-            "libwayland-client.so.0", "libwayland-cursor.so.0", "libxkbcommon.so.0",
         ) + (if (System.getProperty("os.arch") == "aarch64") listOf("libEGL.so.1") else emptyList())
     ).joinToString("\n") { "Requires: $it()(64bit)" }
+
+// The JetBrains Runtime's Wayland toolkit: what lib/libawt_wlawt.so links, and libxkbcommon, which it
+// opens with dlopen. Only a runtime that has it needs them (scripts/add-deb-wayland-deps.sh, likewise).
+val rpmWaylandDeps =
+    listOf("libwayland-client.so.0", "libwayland-cursor.so.0", "libxkbcommon.so.0").joinToString("\n") { "Requires: $it()(64bit)" }
 
 // Compose lays out text with the system's fonts and throws "Could not load font" when fontconfig
 // has none, which is how a minimal openSUSE install comes: fontconfig there requires no font.
@@ -416,10 +419,11 @@ listOf("packageRpm" to "main", "packageReleaseRpm" to "main-release").forEach { 
         val ourArgs = layout.buildDirectory.file("compose/tmp/$rpmTask.gstreamer.args.txt")
         val specDir = layout.buildDirectory.dir("compose/tmp/$rpmTask-rpm-resources")
         val appImages = layout.buildDirectory.dir("compose/binaries/$buildType/app")
-        val deps = listOf(rpmGStreamerDeps, rpmLibraryDeps, rpmFontDeps).joinToString("\n")
         val skip = appImageOptions
         doLast {
             val jdk = packagingJdk.get()
+            val waylandDeps = if (File(jdk, "lib/libawt_wlawt.so").isFile) listOf(rpmWaylandDeps) else emptyList()
+            val deps = (listOf(rpmGStreamerDeps, rpmLibraryDeps, rpmFontDeps) + waylandDeps).joinToString("\n")
             val (template, desktopTemplate) =
                 FileSystems.newFileSystem(URI.create("jrt:/"), mapOf("java.home" to jdk)).use { jrt ->
                     val resources = "/modules/jdk.jpackage/jdk/jpackage/internal/resources"

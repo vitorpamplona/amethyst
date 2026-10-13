@@ -69,7 +69,10 @@ while ((SECONDS < deadline)); do
     tail -50 "$WORK/app.log" >&2
     exit 1
   fi
-  if swaymsg -t get_tree 2>/dev/null | grep -q "\"app_id\": \"$EXPECTED_APP_ID\""; then
+  # Captured first: `grep -q` on a pipe can exit before swaymsg finishes, and pipefail would read
+  # that SIGPIPE as no match.
+  tree="$(swaymsg -t get_tree 2>/dev/null || true)"
+  if grep -q "\"app_id\": \"$EXPECTED_APP_ID\"" <<< "$tree"; then
     echo "PASS: native Wayland window with app_id $EXPECTED_APP_ID"
     exit 0
   fi

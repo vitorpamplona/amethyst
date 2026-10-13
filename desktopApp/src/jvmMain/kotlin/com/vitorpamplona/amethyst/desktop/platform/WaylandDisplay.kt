@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst.desktop.platform
 
+import java.awt.Toolkit
 import java.io.File
 
 /**
@@ -36,9 +37,13 @@ import java.io.File
  * `AMETHYST_X11=1` keeps a Wayland session on XWayland, as before.
  */
 object WaylandDisplay {
-    /** True when this run draws natively on Wayland. Set by [configure]. */
-    var isActive: Boolean = false
-        private set
+    /**
+     * True when AWT runs on the Wayland toolkit, whoever picked it: [configure], or a hand-set
+     * `-Dawt.toolkit.name=WLToolkit` that [configure] would have skipped. The windows must follow the
+     * toolkit AWT actually started, or Compose's window opens where it can't draw. Reading it starts
+     * AWT, so only ask once [configure] has run.
+     */
+    val isActive: Boolean by lazy { Toolkit.getDefaultToolkit().javaClass.name == WAYLAND_TOOLKIT }
 
     fun configure() {
         if (!PlatformInfo.host.isLinux) return
@@ -52,11 +57,14 @@ object WaylandDisplay {
         // WM_CLASS. The Flatpak's entry is named after its app ID; the .deb, .rpm and AppImage entries
         // declare StartupWMClass=Amethyst, which GNOME and KDE match the app_id against too.
         System.setProperty("awt.app.id", System.getenv("FLATPAK_ID")?.takeIf { it.isNotBlank() } ?: "Amethyst")
+        // JBR draws its own drop shadow under undecorated windows. The app's only one is the video's
+        // full-screen overlay, which is transparent while it fades in: the shadow darkened the screen
+        // behind it.
+        if (System.getProperty("sun.awt.wl.Shadow") == null) System.setProperty("sun.awt.wl.Shadow", "false")
         // Skiko's OpenGL path needs an X11 display; skip the failed attempt and its stack trace.
         if (System.getProperty("skiko.renderApi") == null && System.getenv("SKIKO_RENDER_API") == null) {
             System.setProperty("skiko.renderApi", "SOFTWARE")
         }
-        isActive = true
     }
 
     /**
@@ -78,7 +86,7 @@ object WaylandDisplay {
     /** The JetBrains Runtime has it; a stock JDK (a `./gradlew :desktopApp:run` on Temurin, say) does not. */
     private fun runtimeHasWaylandToolkit(): Boolean =
         try {
-            Class.forName("sun.awt.wl.WLToolkit", false, ClassLoader.getSystemClassLoader())
+            Class.forName(WAYLAND_TOOLKIT, false, ClassLoader.getSystemClassLoader())
             true
         } catch (_: ClassNotFoundException) {
             false
@@ -86,3 +94,5 @@ object WaylandDisplay {
             false
         }
 }
+
+private const val WAYLAND_TOOLKIT = "sun.awt.wl.WLToolkit"
