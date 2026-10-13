@@ -80,9 +80,9 @@
     "since": "2026-10-11T15:09:13-04:00",
     "translators": [
       {
-        "user": "maxblake2015",
+        "user": "raj2516",
         "languages": [
-          "Polish"
+          "Hindi"
         ]
       },
       {
@@ -90,6 +90,9 @@
         "languages": [
           "Czech",
           "German",
+          "Hindi",
+          "Hungarian",
+          "Polish",
           "Portuguese, Brazilian",
           "Swedish"
         ]
@@ -101,9 +104,9 @@
         ]
       },
       {
-        "user": "raj2516",
+        "user": "maxblake2015",
         "languages": [
-          "Hindi"
+          "Polish"
         ]
       },
       {
