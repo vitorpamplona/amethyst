@@ -79,7 +79,7 @@ own, so don't expect to find it in the run's job list.
         release-notes note (which signer, which relays). -->
 
 4. **Add the release to the Linux metainfo**: a new first entry in `<releases>`
-   of `desktopApp/packaging/flatpak/com.vitorpamplona.amethyst.metainfo.xml`
+   of `desktopApp/packaging/flatpak/com.vitorpamplona.amethyst.Amethyst.metainfo.xml`
    (`<release version="1.12.1" date="YYYY-MM-DD">` with a `details` URL to the
    GitHub release, as the existing entries do). If you forget, release CI
    prints a warning and injects a bare entry, but only into the bundle it

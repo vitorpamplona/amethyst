@@ -14,7 +14,7 @@
 #
 # Usage: keyring-self-test.sh <command that starts the app> [args...]
 #   e.g. keyring-self-test.sh /opt/amethyst/bin/Amethyst
-#        keyring-self-test.sh flatpak run com.vitorpamplona.amethyst
+#        keyring-self-test.sh flatpak run com.vitorpamplona.amethyst.Amethyst
 set -euo pipefail
 
 if [[ $# -lt 1 ]]; then

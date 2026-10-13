@@ -148,7 +148,7 @@ jobs:
             set -euo pipefail
             sudo apt-get update && sudo apt-get install -y flatpak flatpak-builder
             flatpak remote-add --user --if-not-exists flathub https://dl.flathub.org/repo/flathub.flatpakrepo
-            FDO_VER=$(grep -E "^runtime-version:" desktopApp/packaging/flatpak/com.vitorpamplona.amethyst.yml | cut -d"'" -f2)
+            FDO_VER=$(grep -E "^runtime-version:" desktopApp/packaging/flatpak/com.vitorpamplona.amethyst.Amethyst.yml | cut -d"'" -f2)
             flatpak install --user --noninteractive flathub \
               "org.freedesktop.Platform//${FDO_VER}" \
               "org.freedesktop.Sdk//${FDO_VER}"
@@ -297,7 +297,7 @@ jobs:
           set -euo pipefail
           VER="${{ steps.ver.outputs.version }}"
           PKG="desktopApp/packaging/flatpak"
-          APP_ID="com.vitorpamplona.amethyst"
+          APP_ID="com.vitorpamplona.amethyst.Amethyst"
           OUT="desktopApp/build/flatpak"
           # AppImage-style arch names for the bundle filename.
           case "${{ matrix.arch }}" in
@@ -351,7 +351,7 @@ jobs:
         run: |
           set -euo pipefail
           flatpak install --user -y --noninteractive desktopApp/build/flatpak/*.flatpak
-          bash scripts/keyring-self-test.sh flatpak run com.vitorpamplona.amethyst
+          bash scripts/keyring-self-test.sh flatpak run com.vitorpamplona.amethyst.Amethyst
 
       - name: Collect + rename assets
         run: |

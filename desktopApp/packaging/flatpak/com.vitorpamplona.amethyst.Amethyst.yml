@@ -5,7 +5,7 @@
 # submission manifest: Flathub requires building from source. See
 # desktopApp/packaging/flatpak/README.md.
 
-app-id: com.vitorpamplona.amethyst
+app-id: com.vitorpamplona.amethyst.Amethyst
 runtime: org.freedesktop.Platform
 runtime-version: '26.08'
 sdk: org.freedesktop.Sdk
@@ -36,7 +36,7 @@ finish-args:
   - --talk-name=org.freedesktop.secrets
   # The app keeps accounts, drafts and scheduled posts under ~/.amethyst and
   # Java Preferences under ~/.java. Without home access those paths are
-  # throwaway, so map them into ~/.var/app/com.vitorpamplona.amethyst/.
+  # throwaway, so map them into ~/.var/app/com.vitorpamplona.amethyst.Amethyst/.
   - --persist=.amethyst
   - --persist=.java
 
@@ -52,10 +52,10 @@ modules:
       - mkdir -p /app/lib/Amethyst
       - cp -r ./Amethyst/* /app/lib/Amethyst/
       - install -Dm755 amethyst-desktop.sh /app/bin/amethyst-desktop
-      - install -Dm644 com.vitorpamplona.amethyst.metainfo.xml -t /app/share/metainfo/
-      - install -Dm644 com.vitorpamplona.amethyst.desktop -t /app/share/applications/
-      - install -Dm644 icons/512/com.vitorpamplona.amethyst.png -t /app/share/icons/hicolor/512x512/apps/
-      - install -Dm644 LICENSE -t /app/share/licenses/com.vitorpamplona.amethyst/
+      - install -Dm644 com.vitorpamplona.amethyst.Amethyst.metainfo.xml -t /app/share/metainfo/
+      - install -Dm644 com.vitorpamplona.amethyst.Amethyst.desktop -t /app/share/applications/
+      - install -Dm644 icons/512/com.vitorpamplona.amethyst.Amethyst.png -t /app/share/icons/hicolor/512x512/apps/
+      - install -Dm644 LICENSE -t /app/share/licenses/com.vitorpamplona.amethyst.Amethyst/
     sources:
       # Built artifact from `./gradlew :desktopApp:createReleaseDistributable`.
       # Path matches Compose Multiplatform 1.11's output layout.
@@ -70,10 +70,10 @@ modules:
           - exec /app/lib/Amethyst/bin/Amethyst "$@"
 
       - type: file
-        path: com.vitorpamplona.amethyst.metainfo.xml
+        path: com.vitorpamplona.amethyst.Amethyst.metainfo.xml
 
       - type: file
-        path: com.vitorpamplona.amethyst.desktop
+        path: com.vitorpamplona.amethyst.Amethyst.desktop
 
       - type: dir
         path: icons
