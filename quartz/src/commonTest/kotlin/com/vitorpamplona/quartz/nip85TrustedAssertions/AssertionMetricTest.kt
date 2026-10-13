@@ -98,6 +98,60 @@ class AssertionMetricTest {
     }
 
     @Test
+    fun timestampsAreMomentsNotCounts() {
+        // MintRadar-style 30385s carry their own timestamps among the counts.
+        val tags =
+            arrayOf(
+                arrayOf("d", "https://mint.example"),
+                arrayOf("rank", "80"),
+                arrayOf("mint_audit_at", "1791913269"),
+                arrayOf("expiration", "1792086507"),
+                // Milliseconds read as seconds.
+                arrayOf("checkedAt", "1791913501000"),
+                arrayOf("last_seen", "1791724609"),
+                arrayOf("snapshot_time", "1700000000"),
+                arrayOf("timestamp", "946684800"),
+                // A name alone is not enough: `seen_at` 3 is no moment, and neither is year 2200.
+                arrayOf("seen_at", "3"),
+                arrayOf("verified_at", "7258118400"),
+                arrayOf("first_created_at", "not a number"),
+                // A count stays a count, however large; a repeated name keeps its first value.
+                arrayOf("followers", "1791913269"),
+                arrayOf("mint_audit_at", "1700000000"),
+                // Case matters, as in Brainstorm's rule: `updatedTimestamp` and `flat` are no time names.
+                arrayOf("updatedTimestamp", "12"),
+                arrayOf("flat", "4"),
+            )
+
+        val metrics = tags.assertionMetrics()
+        val moments = tags.assertionTimestamps()
+
+        assertEquals(listOf("rank", "followers", "updatedTimestamp", "flat"), metrics.map { it.name })
+        assertEquals(
+            listOf(
+                "mint_audit_at" to 1791913269L,
+                "expiration" to 1792086507L,
+                "checkedAt" to 1791913501L,
+                "last_seen" to 1791724609L,
+                "snapshot_time" to 1700000000L,
+                "timestamp" to 946684800L,
+            ),
+            moments.map { it.name to it.seconds },
+        )
+        assertEquals("1791913501000", moments[2].value)
+    }
+
+    @Test
+    fun timeNamesFollowBrainstormsRule() {
+        listOf("expiration", "mint_audit_at", "checkedAt", "run_time", "timestamp", "last_timestamp", "first_seen").forEach {
+            assertTrue(isAssertionTimeName(it), it)
+        }
+        listOf("expirations", "At", "rank", "updatedTimestamp", "followers", "flat", "at").forEach {
+            assertFalse(isAssertionTimeName(it), it)
+        }
+    }
+
+    @Test
     fun negativeWholeNumbersAreWhole() {
         assertTrue(AssertionMetric("x", "-3", -3.0).isWhole())
         assertFalse(AssertionMetric("x", "1e3", 1000.0).isWhole())

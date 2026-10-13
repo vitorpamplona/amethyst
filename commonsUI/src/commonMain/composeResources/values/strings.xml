@@ -7164,6 +7164,7 @@
     <string name="nip85_metric_sats_sent_per_day">Sats sent per day</string>
     <string name="nip85_metric_reports_received">Reports received</string>
     <string name="nip85_metric_reports_sent">Reports sent</string>
+    <string name="nip85_metric_expires">Expires</string>
     <string name="nip85_designation_title">Trust designation</string>
     <string name="nip85_designation_explainer">The services this person trusts to compute scores and lists for them, and where each one publishes.</string>
     <string name="nip85_designation_none">No trust provider designated</string>
