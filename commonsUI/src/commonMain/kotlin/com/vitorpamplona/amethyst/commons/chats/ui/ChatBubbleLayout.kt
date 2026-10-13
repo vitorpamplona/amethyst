@@ -373,26 +373,34 @@ private fun InnerChatBubble(
     val pressScale by animateFloatAsState(if (isPressed) 0.97f else 1f, label = "bubblePressScale")
 
     val indication = LocalIndication.current
+    // The modifier is built once, so it reads the callbacks through these: capturing them directly
+    // kept the first composition's onClick, which scrolls to a quoted message by an index from the
+    // list as it was then, off by however many messages arrived since.
+    val currentOnClick by rememberUpdatedState(onClick)
+    val currentOnDoubleTap by rememberUpdatedState(onDoubleTap)
+    val hasDoubleTap = onDoubleTap != null
     val clickableModifier =
-        remember {
+        remember(hasDoubleTap, indication) {
             Modifier.combinedClickable(
                 interactionSource = pressInteractionSource,
                 indication = indication,
                 onClick = {
                     // Only inner-quote bubbles do anything on tap (scroll to the quoted
                     // message); a normal bubble tap is a no-op.
-                    onClick()
+                    currentOnClick()
                 },
                 onLongClick = {
                     haptic.performHapticFeedback(HapticFeedbackType.LongPress)
                     popupExpanded.value = true
                 },
                 onDoubleClick =
-                    onDoubleTap?.let { action ->
+                    if (hasDoubleTap) {
                         {
                             haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                            action()
+                            currentOnDoubleTap?.invoke()
                         }
+                    } else {
+                        null
                     },
             )
         }

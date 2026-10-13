@@ -78,7 +78,6 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -1092,14 +1091,9 @@ fun ObserveLikeIcon(
 ) {
     val reactionsState by observeNoteReactions(baseNote, accountViewModel)
 
-    @Suppress("ProduceStateDoesNotAssignValue")
-    val reactionType by
-        produceState(initialValue = null as String?, key1 = reactionsState) {
-            val newReactionType = accountViewModel.loadReactionTo(reactionsState?.note)
-            if (value != newReactionType) {
-                value = newReactionType
-            }
-        }
+    // A plain lookup, so it is read in composition: starting from null made every liked note draw an
+    // empty heart for a frame and then crossfade to the liked one each time it scrolled in.
+    val reactionType = remember(reactionsState) { accountViewModel.loadReactionTo(reactionsState?.note ?: baseNote) }
 
     inner(reactionType)
 }
