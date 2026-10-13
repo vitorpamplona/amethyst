@@ -1,6 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources xmlns:tools="http://schemas.android.com/tools">
-    <string name="block_hide_user"><![CDATA[Blokkeer en verberg gebruiker]]></string>
     
     
     
@@ -2064,7 +2063,6 @@
 
 
 
-<string name="wallet_save_changes">Wijzigingen opslaan</string>
 
 
 

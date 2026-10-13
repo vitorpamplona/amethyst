@@ -1,7 +1,4 @@
 <resources xmlns:tools="http://schemas.android.com/tools">
-    <string name="block_hide_user">
-		<![CDATA[阻止并隐藏用户]]>
-	</string>
     
     
     
@@ -1515,7 +1512,6 @@
     
     
     
-<string name="wallet_save_changes">保存更改</string>
     
     
     

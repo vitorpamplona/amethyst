@@ -1,6 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="block_hide_user"><![CDATA[Blokla Ve Engelle]]></string>
     
     
     
@@ -940,7 +939,6 @@
     
     
     
-    <string name="wallet_save_changes">Değişiklikleri kaydet</string>
     
     
     

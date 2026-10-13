@@ -1,8 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources xmlns:tools="http://schemas.android.com/tools">
-    <string name="block_hide_user"><![CDATA[Bloki kaj Kaŝi Uzanton]]></string>
 <string name="share_target_as_dm">Sendi kiel DM</string>
-<string name="wallet_save_changes">Konservi ŝanĝojn</string>
     <string name="always_on_notif_channel_description">Konservas konektojn al viaj enirkestaj relay-oj aktivaj por realtempaj sciigoj</string>
     <plurals name="always_on_notif_connected_foreground">
         <item quantity="one">Konektita al %1$d relay</item>
