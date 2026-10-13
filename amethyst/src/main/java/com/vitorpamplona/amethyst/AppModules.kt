@@ -1665,4 +1665,4 @@ private fun androidCrashReportAssembler() =
 private const val RELAY_HEALTH_FILE = "relay_health.json"
 
 /** How Amethyst for Android introduces itself to a NIP-46 remote signer (its approval screen). */
-private val REMOTE_SIGNER_METADATA = BunkerClientMetadata(name = "Amethyst", url = "https://amethyst.social")
+private val REMOTE_SIGNER_METADATA = BunkerClientMetadata(name = "Amethyst", url = "https://amethyst.social", image = "https://raw.githubusercontent.com/vitorpamplona/amethyst/refs/heads/main/icon.png")

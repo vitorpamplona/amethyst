@@ -118,12 +118,14 @@ fun LoginPage(
         loginViewModel.load(isFirstLogin, newAccountKey)
     }
 
-    LoginPage(loginViewModel, onWantsToLogin)
+    LoginPage(loginViewModel, isFirstLogin, onWantsToLogin)
 }
 
+/** [isFirstLogin] false is the Add New Account dialog, whose bar already names the screen. */
 @Composable
 fun LoginPage(
     loginViewModel: LoginViewModel,
+    isFirstLogin: Boolean = true,
     onWantsToSignUp: () -> Unit,
 ) {
     val platform = LocalAppPlatform.current
@@ -141,7 +143,8 @@ fun LoginPage(
             )
         },
     ) {
-        LoggedOffTitle(stringRes(Res.string.login_welcome_back))
+        // Not "Welcome back" over a form that adds another account.
+        if (isFirstLogin) LoggedOffTitle(stringRes(Res.string.login_welcome_back))
 
         // Before everything it gates: every way in below stays disabled until it is checked.
         if (loginViewModel.isFirstLogin) {

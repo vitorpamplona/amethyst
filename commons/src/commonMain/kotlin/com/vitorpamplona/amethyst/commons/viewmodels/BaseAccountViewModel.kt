@@ -228,8 +228,6 @@ open class BaseAccountViewModel(
     val noticeResolver: UserNoticeResolver,
 ) : ViewModel(),
     Dao {
-    var firstRoute: Route? = null
-
     // A dead outbox relay would hold every post's banner until it times out, then flag it.
     val broadcastTracker =
         BroadcastTracker(

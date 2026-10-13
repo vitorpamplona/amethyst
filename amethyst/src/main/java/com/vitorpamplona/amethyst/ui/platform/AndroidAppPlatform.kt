@@ -39,6 +39,7 @@ import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.payments.PayToAppProbe
 import com.vitorpamplona.amethyst.commons.ui.platform.AppLauncher
 import com.vitorpamplona.amethyst.commons.ui.platform.AppPlatform
+import com.vitorpamplona.amethyst.commons.ui.platform.NostrConnectApp
 import com.vitorpamplona.amethyst.commons.ui.platform.Toaster
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.qrcode.ScanOutcome
 import com.vitorpamplona.amethyst.commons.ui.settings.SettingsCategory
@@ -56,6 +57,7 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.settings.AndroidNotificatio
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.settings.AndroidNotificationDeliverySettings
 import com.vitorpamplona.amethyst.ui.screen.loggedOff.login.ExternalSignerButton
 import com.vitorpamplona.amethyst.ui.screen.loggedOff.login.OpenURIIfNotLoggedIn
+import com.vitorpamplona.amethyst.ui.screen.loggedOff.login.nostrConnectSignerApps
 import com.vitorpamplona.amethyst.ui.screen.loggedOff.login.openNostrConnectInSigner
 import com.vitorpamplona.quartz.concord.cord02Community.ImagePointer
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
@@ -109,7 +111,12 @@ object AndroidAppPlatform : AppPlatform {
     // NIP-46: a bunker:// address in the key field, or a nostrconnect:// code for a signer to scan.
     override val supportsRemoteSignerLogin: Boolean get() = true
 
-    override fun openNostrConnect(uri: String): Boolean = openNostrConnectInSigner(Amethyst.instance.appContext, uri)
+    override fun nostrConnectApps(uri: String): List<NostrConnectApp> = nostrConnectSignerApps(Amethyst.instance.appContext, uri)
+
+    override fun openNostrConnect(
+        uri: String,
+        appId: String?,
+    ): Boolean = openNostrConnectInSigner(Amethyst.instance.appContext, uri, appId)
 
     @Composable
     override fun ExternalSignerLoginButton(loginViewModel: LoginViewModel) = ExternalSignerButton(loginViewModel)

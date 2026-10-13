@@ -67,7 +67,10 @@ class DesktopAppPlatform(
     override val supportsRemoteSignerLogin: Boolean get() = true
 
     // Only the addresses the login screen makes: never a scheme a page or note could slip in.
-    override fun openNostrConnect(uri: String): Boolean = uri.startsWith("nostrconnect://") && hasNostrConnectHandler() && DesktopBrowser.open(uri)
+    override fun openNostrConnect(
+        uri: String,
+        appId: String?,
+    ): Boolean = uri.startsWith("nostrconnect://") && hasNostrConnectHandler() && DesktopBrowser.open(uri)
 
     // DesktopAppModules reports every connection as unmetered.
     override val detectsMeteredConnections: Boolean get() = false

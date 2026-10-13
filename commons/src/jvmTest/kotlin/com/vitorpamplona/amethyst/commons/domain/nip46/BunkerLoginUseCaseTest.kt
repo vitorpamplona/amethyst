@@ -32,6 +32,7 @@ import com.vitorpamplona.quartz.nip01Core.relay.sockets.WebSocketListener
 import com.vitorpamplona.quartz.nip01Core.relay.sockets.WebsocketBuilder
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerInternal
 import com.vitorpamplona.quartz.nip01Core.store.sqlite.EventStore
+import com.vitorpamplona.quartz.nip46RemoteSigner.BunkerClientMetadata
 import com.vitorpamplona.quartz.nip46RemoteSigner.BunkerRequest
 import com.vitorpamplona.quartz.nip46RemoteSigner.BunkerRequestConnect
 import com.vitorpamplona.quartz.nip46RemoteSigner.BunkerResponse
@@ -192,7 +193,7 @@ class BunkerLoginUseCaseTest {
             val service = NostrConnectSignerService(client, signerTransport, processor, setOf(relay))
             scope.launch(start = CoroutineStart.UNDISPATCHED) { service.run() }
 
-            val code = NostrConnectLoginUseCase.generateUri(KeyPair(), listOf(relay.url), "Amethyst")
+            val code = NostrConnectLoginUseCase.generateUri(KeyPair(), listOf(relay.url), BunkerClientMetadata(name = "Amethyst"))
             val codeKey = code.ephemeralKeyPair.pubKey.toHexKey()
 
             try {
@@ -218,7 +219,7 @@ class BunkerLoginUseCaseTest {
     /** The address a nostrconnect login stores survives a relay with characters a query reserves. */
     @Test
     fun nostrConnectCodeRoundTripsReservedCharacters() {
-        val data = NostrConnectLoginUseCase.generateUri(KeyPair(), listOf("wss://relay.example.com/inbox?a=1&b=2"), "Amethyst")
+        val data = NostrConnectLoginUseCase.generateUri(KeyPair(), listOf("wss://relay.example.com/inbox?a=1&b=2"), BunkerClientMetadata(name = "Amethyst"))
         val parsed = NostrConnectURI.parseNostrConnect(data.uri)!!
         assertEquals(data.relays, parsed.relays)
         assertEquals("Amethyst", parsed.name)

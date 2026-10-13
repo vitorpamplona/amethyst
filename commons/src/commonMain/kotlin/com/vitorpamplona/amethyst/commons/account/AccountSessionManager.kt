@@ -171,9 +171,15 @@ class AccountSessionManager(
                 key.startsWith("nsec") -> {
                     val privHex =
                         decodePrivateKeyAsHexOrNull(key)
-                            ?: throw Exception("Invalid nsec key")
+                            ?: throw InvalidKeyException("Invalid nsec key")
+                    val keyPair =
+                        try {
+                            KeyPair(privKey = privHex.hexToByteArray())
+                        } catch (e: Exception) {
+                            throw InvalidKeyException("Not a key: ${e::class.simpleName}")
+                        }
                     AccountSettings(
-                        keyPair = KeyPair(privKey = privHex.hexToByteArray()),
+                        keyPair = keyPair,
                         transientAccount = transientAccount,
                         rememberKey = rememberKey,
                     )
@@ -195,8 +201,14 @@ class AccountSessionManager(
                 }
 
                 else -> {
+                    val keyPair =
+                        try {
+                            KeyPair(Hex.decode(key))
+                        } catch (e: Exception) {
+                            throw InvalidKeyException("Not a key: ${e::class.simpleName}")
+                        }
                     AccountSettings(
-                        keyPair = KeyPair(Hex.decode(key)),
+                        keyPair = keyPair,
                         transientAccount = transientAccount,
                         rememberKey = rememberKey,
                     )
@@ -231,12 +243,11 @@ class AccountSessionManager(
      */
     suspend fun loginWithNostrConnect(
         relays: List<String>,
-        appName: String,
         transientAccount: Boolean,
         onUri: (String) -> Unit,
     ) = withContext(Dispatchers.IO) {
         val transport = KeyPair()
-        val uriData = NostrConnectLoginUseCase.generateUri(transport, relays, appName)
+        val uriData = NostrConnectLoginUseCase.generateUri(transport, relays, remoteSignerMetadata)
         onUri(uriData.uri)
 
         // The wait for the signer and each request to it carry their own timeouts. One more around
@@ -269,6 +280,11 @@ class AccountSessionManager(
             AccountState.LoggedIn(account, routeBuilder?.invoke(account))
         }
     }
+
+    /** What the user typed is not a key; the login form words this itself. */
+    class InvalidKeyException(
+        message: String,
+    ) : Exception(message)
 
     fun login(
         key: String,
@@ -332,7 +348,7 @@ class AccountSessionManager(
         onError: (String) -> Unit,
     ) {
         scope.launch(Dispatchers.IO) {
-            loginSync(key, transientAccount, loginWithExternalSigner, packageName, onError)
+            loginSync(key, transientAccount, loginWithExternalSigner, packageName, { onError(it.orEmpty()) })
         }
     }
 
@@ -341,15 +357,19 @@ class AccountSessionManager(
         transientAccount: Boolean,
         loginWithExternalSigner: Boolean = false,
         packageName: String = "",
-        onError: (String) -> Unit,
+        onError: (String?) -> Unit,
         rememberKey: Boolean = true,
     ) {
         try {
             loginAndStartUI(key, transientAccount, loginWithExternalSigner, packageName, rememberKey)
+        } catch (e: InvalidKeyException) {
+            // Null: the form says "Invalid key" once, rather than "Invalid key: ... Invalid nsec key".
+            Log.w("Login") { "The key did not parse: ${e.message}" }
+            onError(null)
         } catch (e: Exception) {
             if (e is CancellationException) throw e
             Log.e("Login", "Could not sign in", e)
-            onError("Could not sign in: " + e.message)
+            onError(e.message)
         }
     }
 

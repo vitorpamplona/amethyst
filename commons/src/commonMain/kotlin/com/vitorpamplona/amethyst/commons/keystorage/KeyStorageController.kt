@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst.commons.keystorage
 
+import com.vitorpamplona.amethyst.commons.model.navigation.Route
 import kotlinx.coroutines.flow.StateFlow
 
 /**
@@ -32,11 +33,14 @@ interface KeyStorageController {
 
     val prompts: KeyStoragePrompts
 
-    /** Opens the OS keyring again after it was unreachable, and logs the default account in. */
-    suspend fun retry()
+    /**
+     * Opens the OS keyring again after it was unreachable, and logs the default account in. An
+     * account already open without its key loads again with it, on [returnTo] (null: its home).
+     */
+    suspend fun retry(returnTo: Route? = null)
 
-    /** Asks for the key file's password now, instead of when a key is next needed. */
-    suspend fun unlock()
+    /** Asks for the key file's password now, instead of when a key is next needed; [returnTo] as in [retry]. */
+    suspend fun unlock(returnTo: Route? = null)
 
     /**
      * Takes back the user's "Don't save" from this run ([KeyStorageStatus.NotKept]): the next login

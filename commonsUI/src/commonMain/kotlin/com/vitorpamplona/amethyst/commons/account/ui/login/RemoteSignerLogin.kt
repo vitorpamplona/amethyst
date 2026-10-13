@@ -53,6 +53,8 @@ import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -104,6 +106,7 @@ import com.vitorpamplona.amethyst.commons.resources.remote_signer_waiting
 import com.vitorpamplona.amethyst.commons.ui.components.LocalAnimationsEnabled
 import com.vitorpamplona.amethyst.commons.ui.components.util.setText
 import com.vitorpamplona.amethyst.commons.ui.platform.LocalAppPlatform
+import com.vitorpamplona.amethyst.commons.ui.platform.NostrConnectApp
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.qrcode.QrCodeDrawer
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import kotlinx.coroutines.Dispatchers
@@ -143,6 +146,20 @@ private fun NostrConnectDialog(loginViewModel: LoginViewModel) {
     val scope = rememberCoroutineScope()
     // Set when no app took the address: the button says so instead of doing nothing.
     var noSignerApp by remember(uri) { mutableStateOf(false) }
+
+    // Several signer apps take the address: the user picks one here rather than in the system's
+    // chooser, which on Android 16 restarts the phone when a target is picked.
+    var signerApps by remember(uri) { mutableStateOf<List<NostrConnectApp>>(emptyList()) }
+
+    fun openIn(
+        uri: String,
+        appId: String?,
+    ) {
+        // Off the UI thread: the desktop's browse() can block for seconds.
+        scope.launch {
+            noSignerApp = !withContext(Dispatchers.IO) { platform.openNostrConnect(uri, appId) }
+        }
+    }
 
     Dialog(
         onDismissRequest = loginViewModel::cancelNostrConnect,
@@ -189,26 +206,39 @@ private fun NostrConnectDialog(loginViewModel: LoginViewModel) {
                             Spacer(Modifier.width(8.dp))
                             Text(stringRes(Res.string.copy), maxLines = 1)
                         }
-                        FilledTonalButton(
-                            onClick = {
-                                uri?.let {
-                                    // Off the UI thread: the desktop's browse() can block for seconds.
-                                    scope.launch {
-                                        noSignerApp = !withContext(Dispatchers.IO) { platform.openNostrConnect(it) }
+                        Box(Modifier.weight(1f)) {
+                            FilledTonalButton(
+                                onClick = {
+                                    uri?.let {
+                                        scope.launch {
+                                            val apps = withContext(Dispatchers.IO) { platform.nostrConnectApps(it) }
+                                            if (apps.size > 1) signerApps = apps else openIn(it, apps.singleOrNull()?.id)
+                                        }
                                     }
+                                },
+                                enabled = uri != null && !noSignerApp,
+                                contentPadding = ActionPadding,
+                                modifier = Modifier.fillMaxWidth(),
+                            ) {
+                                Icon(
+                                    if (noSignerApp) MaterialSymbols.Warning else MaterialSymbols.OpenInBrowser,
+                                    contentDescription = null,
+                                    modifier = Modifier.size(18.dp),
+                                )
+                                Spacer(Modifier.width(8.dp))
+                                Text(stringRes(if (noSignerApp) Res.string.remote_signer_no_app else Res.string.remote_signer_open), maxLines = 1)
+                            }
+                            DropdownMenu(expanded = signerApps.isNotEmpty(), onDismissRequest = { signerApps = emptyList() }) {
+                                signerApps.forEach { app ->
+                                    DropdownMenuItem(
+                                        text = { Text(app.label) },
+                                        onClick = {
+                                            signerApps = emptyList()
+                                            uri?.let { openIn(it, app.id) }
+                                        },
+                                    )
                                 }
-                            },
-                            enabled = uri != null && !noSignerApp,
-                            contentPadding = ActionPadding,
-                            modifier = Modifier.weight(1f),
-                        ) {
-                            Icon(
-                                if (noSignerApp) MaterialSymbols.Warning else MaterialSymbols.OpenInBrowser,
-                                contentDescription = null,
-                                modifier = Modifier.size(18.dp),
-                            )
-                            Spacer(Modifier.width(8.dp))
-                            Text(stringRes(if (noSignerApp) Res.string.remote_signer_no_app else Res.string.remote_signer_open), maxLines = 1)
+                            }
                         }
                     }
 

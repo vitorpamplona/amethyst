@@ -37,6 +37,7 @@ import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
 import com.vitorpamplona.amethyst.commons.model.cache.MemoryTrimmingService
 import com.vitorpamplona.amethyst.commons.model.location.LocationResult
 import com.vitorpamplona.amethyst.commons.model.marmot.MarmotGroupNotifier
+import com.vitorpamplona.amethyst.commons.model.navigation.Route
 import com.vitorpamplona.amethyst.commons.model.nip03Timestamp.BitcoinExplorerEndpoint
 import com.vitorpamplona.amethyst.commons.model.nip03Timestamp.TorAwareOkHttpOtsResolverBuilder
 import com.vitorpamplona.amethyst.commons.model.nip46Signer.Nip46ConsentPrompter
@@ -478,8 +479,9 @@ class DesktopAppModules(
 
     // Before the first login, so a user of the legacy app starts where they left off; again after
     // the user retries the keyring or unlocks the password file. Then, an account already open
-    // without the key it keeps (its password skipped, the keychain refused) loads again with it.
-    private suspend fun openKeysAndLogIn() {
+    // without the key it keeps (its password skipped, the keychain refused) loads again with it,
+    // on [returnTo]: a new session starts a new back stack, which would otherwise open on Home.
+    private suspend fun openKeysAndLogIn(returnTo: Route? = null) {
         LegacyDesktopAccountImport(sessionStore, keyStorage, filesDir).start()
         val readOnly = sessionManager.loggedInAccount()?.takeIf { !it.isWriteable() }
         if (readOnly == null) {
@@ -489,7 +491,7 @@ class DesktopAppModules(
                 .reloadWithKey(
                     readOnly.settings.keyPair.pubKey
                         .toNpub(),
-                )?.let { sessionManager.startUI(it) }
+                )?.let { sessionManager.startUI(it) { returnTo } }
         }
     }
 
@@ -602,7 +604,7 @@ class DesktopAppModules(
         private const val FLUSH_TIMEOUT_MS = 3_000L
 
         /** What a NIP-46 remote signer shows when this app asks to connect. */
-        val REMOTE_SIGNER_METADATA = BunkerClientMetadata(name = "Amethyst Desktop", url = "https://amethyst.social")
+        val REMOTE_SIGNER_METADATA = BunkerClientMetadata(name = "Amethyst Desktop", url = "https://amethyst.social", image = "https://raw.githubusercontent.com/vitorpamplona/amethyst/refs/heads/main/icon.png")
     }
 }
 

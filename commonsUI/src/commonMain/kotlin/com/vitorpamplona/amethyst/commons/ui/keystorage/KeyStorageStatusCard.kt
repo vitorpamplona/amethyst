@@ -46,6 +46,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.keystorage.KeyStorageStatus
+import com.vitorpamplona.amethyst.commons.model.navigation.Route
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.key_storage_save_keys
 import com.vitorpamplona.amethyst.commons.resources.key_storage_try_again
@@ -87,12 +88,12 @@ fun KeyStorageStatusCard(modifier: Modifier = Modifier) {
                 )
                 when (val current = status) {
                     is KeyStorageStatus.KeyringUnreachable ->
-                        FilledTonalButton(onClick = { scope.launch { controller.retry() } }, contentPadding = ActionPadding) {
+                        FilledTonalButton(onClick = { scope.launch { controller.retry(Route.AccountBackup) } }, contentPadding = ActionPadding) {
                             Text(stringRes(Res.string.key_storage_try_again))
                         }
                     is KeyStorageStatus.PasswordFile ->
                         if (current.hasPassword && !current.unlocked) {
-                            FilledTonalButton(onClick = { scope.launch { controller.unlock() } }, contentPadding = ActionPadding) {
+                            FilledTonalButton(onClick = { scope.launch { controller.unlock(Route.AccountBackup) } }, contentPadding = ActionPadding) {
                                 Text(stringRes(Res.string.key_storage_unlock))
                             }
                         }

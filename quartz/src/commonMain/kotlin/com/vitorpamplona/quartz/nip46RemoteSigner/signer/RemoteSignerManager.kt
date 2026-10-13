@@ -69,10 +69,11 @@ class RemoteSignerManager(
     /**
      * Launches the signer, waits and parses the result.
      *
-     * Each retry attempt uses a fresh request id so a late response from a previous
-     * attempt cannot resume the current attempt with stale data. The bunker request
-     * builder is still called only once per call; the manager rewrites the id per
-     * attempt internally.
+     * A retry sends the same request again, the same event under the same id, rather than a new
+     * one: a signer that asks its user to approve each request (Amber) queues every request it
+     * receives, so a fresh id per attempt made the user approve the same thing twice, and the
+     * answer to the first copy was then dropped as unknown. The same event is still redelivered
+     * where a relay lost it, and an answer to it is the answer whichever attempt is waiting.
      *
      * @param bunkerRequestBuilder The BunkerRequest to be sent.
      * @param parser A function that parses the BunkerResponse into a [SignerResult.RequestAddressed<T>].
@@ -83,31 +84,30 @@ class RemoteSignerManager(
         parser: (response: BunkerResponse) -> SignerResult.RequestAddressed<T>,
     ): SignerResult.RequestAddressed<T> {
         val template = bunkerRequestBuilder()
+        val request =
+            BunkerRequest(
+                id = RandomInstance.randomChars(32),
+                method = template.method,
+                params = template.params,
+            )
+        val event =
+            NostrConnectEvent.create(
+                message = request,
+                remoteKey = remoteKey,
+                signer = signer,
+            )
 
-        var attempt = 0
-        while (true) {
-            val attemptRequest =
-                BunkerRequest(
-                    id = RandomInstance.randomChars(32),
-                    method = template.method,
-                    params = template.params,
-                )
-            val event =
-                NostrConnectEvent.create(
-                    message = attemptRequest,
-                    remoteKey = remoteKey,
-                    signer = signer,
-                )
+        // UNLIMITED so an `auth_url` challenge and the follow-up real
+        // response (same id) can both be buffered without dropping either.
+        val channel = Channel<BunkerResponse>(capacity = Channel.UNLIMITED)
+        pending.put(request.id, channel)
 
-            // UNLIMITED so an `auth_url` challenge and the follow-up real
-            // response (same id) can both be buffered without dropping either.
-            val channel = Channel<BunkerResponse>(capacity = Channel.UNLIMITED)
-            pending.put(attemptRequest.id, channel)
-
-            var announcedAuthUrl: String? = null
-            val response =
-                try {
-                    client.publish(event, relayList = relayList)
+        var announcedAuthUrl: String? = null
+        try {
+            var attempt = 0
+            while (true) {
+                client.publish(event, relayList = relayList)
+                val response =
                     withTimeoutOrNull(timeout) {
                         var real: BunkerResponse? = null
                         while (real == null) {
@@ -125,19 +125,19 @@ class RemoteSignerManager(
                         }
                         real
                     }
-                } finally {
-                    pending.remove(attemptRequest.id)
-                    channel.close()
-                }
 
-            when {
-                response != null -> return parser(response)
-                attempt >= maxRetries -> return SignerResult.RequestAddressed.TimedOut()
-                else -> {
-                    attempt++
-                    delay(2_000L)
+                when {
+                    response != null -> return parser(response)
+                    attempt >= maxRetries -> return SignerResult.RequestAddressed.TimedOut()
+                    else -> {
+                        attempt++
+                        delay(2_000L)
+                    }
                 }
             }
+        } finally {
+            pending.remove(request.id)
+            channel.close()
         }
     }
 }
