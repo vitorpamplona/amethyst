@@ -99,9 +99,11 @@ class PublishRetriesTransportFailureTest {
                     if (!msg.startsWith("[\"EVENT\"")) return inner.send(msg)
                     eventFramesSeen.incrementAndGet()
                     if (!hangUp) return inner.send(msg)
-                    // Take the bytes, answer nothing, drop the socket.
+                    // Take the bytes, answer nothing, drop the socket. disconnect()
+                    // reports the close itself: a session ends with exactly one
+                    // terminal callback (see WebSocket), so a second onClosed here
+                    // would be a drop no real socket ever reports.
                     inner.disconnect()
-                    out.onClosed(1006, "abnormal closure")
                     return true
                 }
             }
