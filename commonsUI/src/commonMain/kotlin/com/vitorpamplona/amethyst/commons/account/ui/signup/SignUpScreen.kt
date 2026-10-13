@@ -139,7 +139,8 @@ fun SignUpPage(
 
         LoggedOffPrimaryButton(
             text = stringRes(Res.string.create_account),
-            enabled = signUpViewModel.acceptedTerms,
+            // Like Login: faded until there is a name to create the account with.
+            enabled = signUpViewModel.acceptedTerms && signUpViewModel.displayName.text.isNotBlank(),
             onClick = signUpViewModel::signup,
         )
     }
