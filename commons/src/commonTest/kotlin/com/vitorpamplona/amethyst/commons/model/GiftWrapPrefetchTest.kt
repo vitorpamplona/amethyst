@@ -33,7 +33,6 @@ import com.vitorpamplona.quartz.nip59Giftwrap.wraps.GiftWrapEvent
 import com.vitorpamplona.quartz.utils.TimeUtils
 import kotlinx.coroutines.async
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.currentTime
 import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
@@ -106,9 +105,30 @@ class GiftWrapPrefetchTest {
             prefetch.offer(wraps)
             opening.await()
             wraps.drop(1).forEach { (it.unwrapThrowing(prefetch.signer) as SealEvent).unsealRumorThrowing(prefetch.signer) }
-            advanceUntilIdle()
+            delay(1_000)
 
             assertEquals(6, signer.calls)
+        }
+
+    @Test
+    fun aWrapSentAgainAfterItWasOpenedIsFetchedAheadAgain() =
+        runTest {
+            val wrap = wrappedDms(1).single()
+            val signer = SlowSigner(recipient, delayMs = 10)
+            val prefetch = GiftWrapPrefetch(backgroundScope, { signer })
+
+            prefetch.offer(listOf(wrap))
+            (wrap.unwrapThrowing(prefetch.signer) as SealEvent).unsealRumorThrowing(prefetch.signer)
+            prefetch.opened(wrap)
+
+            // Pruned from the cache and delivered again: a fresh, unopened copy of the same wrap.
+            val again = Event.fromJson(wrap.toJson()) as GiftWrapEvent
+            prefetch.offer(listOf(again))
+            // The prefetch runs in the background scope, which advanceUntilIdle does not wait for.
+            delay(1_000)
+
+            // Its wrap and seal fetched ahead the second time too.
+            assertEquals(4, signer.calls)
         }
 
     @Test
@@ -119,7 +139,7 @@ class GiftWrapPrefetchTest {
 
             // Addressed to the recipient, while this account is the sender.
             prefetch.offer(wrappedDms(3))
-            advanceUntilIdle()
+            delay(1_000)
 
             assertEquals(0, signer.calls)
         }
@@ -206,7 +226,7 @@ class GiftWrapPrefetchTest {
             val prefetch = GiftWrapPrefetch(backgroundScope, { signer }, enabled = { false })
 
             prefetch.offer(wrappedDms(3))
-            advanceUntilIdle()
+            delay(1_000)
 
             assertEquals(0, signer.calls)
         }
@@ -219,7 +239,7 @@ class GiftWrapPrefetchTest {
             val prefetch = GiftWrapPrefetch(backgroundScope, { recipient }, skipDraft = { true }) { warmed++ }
 
             prefetch.offer(listOf(draft))
-            advanceUntilIdle()
+            delay(1_000)
 
             assertEquals(0, warmed)
         }

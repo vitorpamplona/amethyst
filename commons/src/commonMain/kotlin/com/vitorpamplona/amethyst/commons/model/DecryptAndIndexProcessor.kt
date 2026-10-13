@@ -90,6 +90,9 @@ class EventProcessor(
     /** What the gift wrap and seal handlers decrypt with: the account's signer, with answers fetched ahead. */
     internal val decryptSigner get() = giftWrapPrefetch.signer
 
+    /** The gift wrap handler is done with [wrap]: the prefetch may fetch a later copy again. */
+    internal fun openedGiftWrap(wrap: GiftWrapEvent) = giftWrapPrefetch.opened(wrap)
+
     /** Starts opening the gift wraps in a batch as it arrives, before [runNew] gets to it. */
     fun prefetch(newNotes: Set<Note>) = giftWrapPrefetch.offer(newNotes.mapNotNull { it.event })
 
@@ -377,6 +380,7 @@ class GiftWrapEventHandler(
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
+                eventProcessor.openedGiftWrap(event)
                 // A Direct Invite-tagged wrap (CORD-05 §6) that will never open is written off in the
                 // invite inbox too, so its sweep does not decrypt it again; a signer that merely
                 // could not answer now leaves it to be retried.
@@ -388,6 +392,7 @@ class GiftWrapEventHandler(
             }
 
         eventNote.event = event.copyNoContent()
+        eventProcessor.openedGiftWrap(event)
 
         if (cache.justConsume(innerGift, null, false)) {
             cache.copyRelaysFromTo(publicNote, innerGift)

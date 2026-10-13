@@ -91,8 +91,10 @@ internal class GiftWrapPrefetch(
     // answer the real signer would give it (a failure), never the original's plaintext.
     private val pending = LargeCache<String, Answer>()
 
-    // Wraps already being opened, by id, in seconds: a batch the indexer reached first is offered
-    // again by the early collector while its wrap is still opening, and must not be opened twice.
+    // Wraps being opened, by id, in seconds, until the indexer has opened them ([opened]): a batch
+    // the indexer reached first is offered again by the early collector while its wrap is still
+    // opening, and must not be opened twice. Not longer: a wrap pruned from the cache and sent
+    // again by a relay is a new note to open, and should be fetched ahead like the first time.
     private val started = LargeCache<HexKey, Long>()
 
     // Draft id -> its warm-up, while it runs: the handler waits for it rather than asking again.
@@ -121,6 +123,11 @@ internal class GiftWrapPrefetch(
                 if (event.pubKey == me && !event.isDeleted() && !skipDraft(event)) warm(event)
             }
         }
+    }
+
+    /** The indexer opened [wrap] (or gave up on it): a later copy of it is a new note to open. */
+    fun opened(wrap: GiftWrapEvent) {
+        started.remove(wrap.id)
     }
 
     /** Waits for [draft]'s warm-up if one is running, so the handler finds it in the draft cache. */
