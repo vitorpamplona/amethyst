@@ -143,14 +143,18 @@ import com.vitorpamplona.amethyst.commons.ui.note.nip22Comments.DisplayCommentSc
 import com.vitorpamplona.amethyst.commons.ui.note.observeEdits
 import com.vitorpamplona.amethyst.commons.ui.note.platform.ZoomableContentView
 import com.vitorpamplona.amethyst.commons.ui.note.types.BadgeDisplay
+import com.vitorpamplona.amethyst.commons.ui.note.types.ClassifiedSoldBadge
 import com.vitorpamplona.amethyst.commons.ui.note.types.DisplayStarterPack
 import com.vitorpamplona.amethyst.commons.ui.note.types.EditState
+import com.vitorpamplona.amethyst.commons.ui.note.types.LongFormDateAndReadingTime
+import com.vitorpamplona.amethyst.commons.ui.note.types.LongFormTopicChips
 import com.vitorpamplona.amethyst.commons.ui.note.types.MAX_THREAD_SECTIONS
 import com.vitorpamplona.amethyst.commons.ui.note.types.PublicationHeader
 import com.vitorpamplona.amethyst.commons.ui.note.types.RenderChat
 import com.vitorpamplona.amethyst.commons.ui.note.types.RenderSoftwareRelease
 import com.vitorpamplona.amethyst.commons.ui.note.types.RenderTextEvent
 import com.vitorpamplona.amethyst.commons.ui.note.types.ReplyRenderType
+import com.vitorpamplona.amethyst.commons.ui.note.types.estimateReadingMinutes
 import com.vitorpamplona.amethyst.commons.ui.note.types.observeZapSender
 import com.vitorpamplona.amethyst.commons.ui.painterRes
 import com.vitorpamplona.amethyst.commons.ui.pluralStringRes
@@ -203,6 +207,7 @@ import com.vitorpamplona.quartz.nip72ModCommunities.communityAddress
 import com.vitorpamplona.quartz.nip72ModCommunities.isACommunityPost
 import com.vitorpamplona.quartz.nip7DThreads.ThreadEvent
 import com.vitorpamplona.quartz.nip99Classifieds.ClassifiedsEvent
+import com.vitorpamplona.quartz.nip99Classifieds.tags.StatusTag
 import com.vitorpamplona.quartz.nipC0CodeSnippets.CodeSnippetEvent
 import com.vitorpamplona.quartz.nipC7Chats.ChatEvent
 import com.vitorpamplona.quartz.utils.parseBigDecimalOrNull
@@ -793,7 +798,7 @@ private fun FullBleedNoteCompose(
         // plain text body below instead of their feed card.
         when (noteEvent) {
             is BadgeDefinitionEvent -> BadgeDisplay(baseNote = baseNote, accountViewModel)
-            is LongFormContentEvent -> RenderLongFormHeaderForThread(noteEvent, baseNote, accountViewModel)
+            is LongFormContentEvent -> RenderLongFormHeaderForThread(noteEvent, baseNote, accountViewModel, nav)
             is ThreadEvent -> RenderThreadHeaderForThread(noteEvent)
             is WikiArticleEvent -> RenderWikiHeaderForThread(noteEvent, accountViewModel, nav)
             is ClassifiedsEvent -> RenderClassifiedsReaderForThread(noteEvent, baseNote, accountViewModel, nav)
@@ -994,6 +999,7 @@ private fun RenderClassifiedsReaderForThread(
         }
     val price = remember(noteEvent) { noteEvent.price() }
     val location = remember(noteEvent) { noteEvent.location() }
+    val isSold = remember(noteEvent) { noteEvent.status().equals(StatusTag.STATUS.SOLD.value, ignoreCase = true) }
 
     Row(modifier = Modifier.padding(start = 12.dp, end = 12.dp, bottom = 12.dp)) {
         Column {
@@ -1021,6 +1027,9 @@ private fun RenderClassifiedsReaderForThread(
                         style = MaterialTheme.typography.headlineSmall,
                         modifier = Modifier.weight(1f),
                     )
+                }
+                if (isSold) {
+                    ClassifiedSoldBadge()
                 }
             }
 
@@ -1169,7 +1178,11 @@ private fun RenderLongFormHeaderForThread(
     noteEvent: LongFormContentEvent,
     note: Note,
     accountViewModel: AccountViewModel,
+    nav: INav,
 ) {
+    val publishedAt = remember(noteEvent) { noteEvent.publishedAt() }
+    val readingMinutes = remember(noteEvent) { estimateReadingMinutes(noteEvent.content) }
+    val topics = remember(noteEvent) { noteEvent.topics().distinct().toImmutableList() }
 
     Column(modifier = Modifier.padding(start = 12.dp, end = 12.dp, bottom = 12.dp)) {
         noteEvent.image()?.let {
@@ -1213,6 +1226,14 @@ private fun RenderLongFormHeaderForThread(
                     color = MaterialTheme.colorScheme.grayText,
                 )
             }
+
+        Spacer(modifier = StdVertSpacer)
+        LongFormDateAndReadingTime(note, publishedAt, readingMinutes)
+
+        if (topics.isNotEmpty()) {
+            Spacer(modifier = StdVertSpacer)
+            LongFormTopicChips(topics, nav)
+        }
     }
 }
 

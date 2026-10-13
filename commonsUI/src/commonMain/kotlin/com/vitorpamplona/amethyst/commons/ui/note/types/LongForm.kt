@@ -21,6 +21,7 @@
 package com.vitorpamplona.amethyst.commons.ui.note.types
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -48,6 +49,7 @@ import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.Note
+import com.vitorpamplona.amethyst.commons.model.navigation.Route
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.long_form_reading_minutes
 import com.vitorpamplona.amethyst.commons.resources.preview_card_image_for
@@ -66,6 +68,7 @@ import com.vitorpamplona.amethyst.commons.ui.theme.grayText
 import com.vitorpamplona.amethyst.commons.ui.theme.replyModifier
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.quartz.nip23LongContent.LongFormContentEvent
+import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.toImmutableList
 
 private const val WORDS_PER_MINUTE = 225
@@ -104,6 +107,8 @@ fun LongFormHeader(
                 .toImmutableList()
         }
     val readingMinutes = remember(noteEvent) { estimateReadingMinutes(noteEvent.content) }
+    // NIP-23: `published_at` is when the article first went out; `created_at` moves with every edit.
+    val publishedAt = remember(noteEvent) { noteEvent.publishedAt() }
 
     Column(MaterialTheme.colorScheme.replyModifier) {
         LongFormCoverImage(image, note, accountViewModel)
@@ -138,16 +143,11 @@ fun LongFormHeader(
             }
 
             Spacer(Modifier.padding(top = 12.dp))
-            AuthorMetaRow(note, readingMinutes, accountViewModel)
+            AuthorMetaRow(note, publishedAt, readingMinutes, accountViewModel)
 
             if (topics.isNotEmpty()) {
                 Spacer(Modifier.padding(top = 8.dp))
-                FlowRow(
-                    horizontalArrangement = Arrangement.spacedBy(Size5dp),
-                    verticalArrangement = Arrangement.spacedBy(Size5dp),
-                ) {
-                    topics.forEach { TopicChip(it) }
-                }
+                LongFormTopicChips(topics)
             }
         }
     }
@@ -184,8 +184,46 @@ private fun LongFormCoverImage(
     }
 }
 
+/** The article's `t` topics as small chips; each opens its hashtag feed when [nav] is given. */
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
-private fun TopicChip(topic: String) {
+fun LongFormTopicChips(
+    topics: ImmutableList<String>,
+    nav: INav? = null,
+) {
+    FlowRow(
+        horizontalArrangement = Arrangement.spacedBy(Size5dp),
+        verticalArrangement = Arrangement.spacedBy(Size5dp),
+    ) {
+        topics.forEach { topic ->
+            TopicChip(
+                topic,
+                if (nav != null) Modifier.clickable { nav.nav(Route.Hashtag(topic.lowercase())) } else Modifier,
+            )
+        }
+    }
+}
+
+/** The article's date (its `published_at` when it has one) and reading time: "• 2d · 6 min read". */
+@Composable
+fun LongFormDateAndReadingTime(
+    note: Note,
+    publishedAt: Long?,
+    readingMinutes: Int,
+) {
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        if (publishedAt != null) TimeAgo(publishedAt) else TimeAgo(note)
+
+        MetaSeparator()
+        ReadingTimeBadge(readingMinutes)
+    }
+}
+
+@Composable
+private fun TopicChip(
+    topic: String,
+    modifier: Modifier = Modifier,
+) {
     Text(
         text = "#$topic",
         style = MaterialTheme.typography.labelSmall,
@@ -195,7 +233,7 @@ private fun TopicChip(topic: String) {
         maxLines = 1,
         overflow = TextOverflow.Ellipsis,
         modifier =
-            Modifier
+            modifier
                 .clip(CircleShape)
                 .background(MaterialTheme.colorScheme.onSurface.copy(alpha = 0.06f))
                 .padding(horizontal = 8.dp, vertical = 2.dp),
@@ -205,6 +243,7 @@ private fun TopicChip(topic: String) {
 @Composable
 private fun AuthorMetaRow(
     note: Note,
+    publishedAt: Long?,
     readingMinutes: Int,
     accountViewModel: AccountViewModel,
 ) {
@@ -226,10 +265,7 @@ private fun AuthorMetaRow(
         )
 
         MetaSeparator()
-        TimeAgo(note)
-
-        MetaSeparator()
-        ReadingTimeBadge(readingMinutes)
+        LongFormDateAndReadingTime(note, publishedAt, readingMinutes)
     }
 }
 
@@ -261,7 +297,7 @@ private fun ReadingTimeBadge(minutes: Int) {
     }
 }
 
-private fun estimateReadingMinutes(content: String): Int {
+fun estimateReadingMinutes(content: String): Int {
     if (content.isBlank()) return 1
     val words = content.split(Regex("\\s+")).count { it.isNotBlank() }
     return maxOf(1, (words + WORDS_PER_MINUTE - 1) / WORDS_PER_MINUTE)

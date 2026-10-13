@@ -5025,6 +5025,17 @@
         <item quantity="one">%1$d person</item>
         <item quantity="other">%1$d people</item>
     </plurals>
+    <string name="live_activity_starts_in">Starts in %1$s</string>
+    <string name="live_activity_started_ago">Started %1$s ago</string>
+    <plurals name="live_activity_viewers">
+        <item quantity="one">%1$d watching</item>
+        <item quantity="other">%1$d watching</item>
+    </plurals>
+    <string name="live_activity_watch_recording">Watch recording</string>
+    <string name="classifieds_status_sold">Sold</string>
+    <string name="goal_ends_in">Ends in %1$s</string>
+    <string name="calendar_time_in_zone">%1$s (%2$s)</string>
+    <string name="calendar_time_zone">Time zone: %1$s</string>
     <string name="nip51_list_has_private_members">This list has private members only its author can see</string>
     <plurals name="nip82_downloads_count">
         <item quantity="one">%1$d download</item>

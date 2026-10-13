@@ -29,7 +29,9 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -46,6 +48,8 @@ import androidx.compose.ui.text.intl.Locale
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
+import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.User
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
@@ -55,6 +59,10 @@ import com.vitorpamplona.amethyst.commons.nip53LiveActivities.ui.LiveFlag
 import com.vitorpamplona.amethyst.commons.nip53LiveActivities.ui.ScheduledFlag
 import com.vitorpamplona.amethyst.commons.relayClient.event.observeNote
 import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.live_activity_started_ago
+import com.vitorpamplona.amethyst.commons.resources.live_activity_starts_in
+import com.vitorpamplona.amethyst.commons.resources.live_activity_viewers
+import com.vitorpamplona.amethyst.commons.resources.live_activity_watch_recording
 import com.vitorpamplona.amethyst.commons.resources.live_stream_has_ended
 import com.vitorpamplona.amethyst.commons.resources.live_stream_is_offline
 import com.vitorpamplona.amethyst.commons.resources.preview_card_image_for
@@ -67,12 +75,15 @@ import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.note.ClickableUserPicture
 import com.vitorpamplona.amethyst.commons.ui.note.DisplayAuthorBanner
 import com.vitorpamplona.amethyst.commons.ui.note.UsernameDisplay
+import com.vitorpamplona.amethyst.commons.ui.note.durationPhrase
 import com.vitorpamplona.amethyst.commons.ui.note.elements.DefaultImageHeader
 import com.vitorpamplona.amethyst.commons.ui.note.elements.DefaultImageHeaderBackground
 import com.vitorpamplona.amethyst.commons.ui.note.platform.VideoView
+import com.vitorpamplona.amethyst.commons.ui.pluralStringRes
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.StdHorzSpacer
 import com.vitorpamplona.amethyst.commons.ui.theme.ThemeComparisonColumn
+import com.vitorpamplona.amethyst.commons.ui.theme.grayText
 import com.vitorpamplona.amethyst.commons.ui.theme.imageModifier
 import com.vitorpamplona.amethyst.commons.ui.theme.placeholderText
 import com.vitorpamplona.amethyst.commons.util.equalImmutableLists
@@ -147,6 +158,8 @@ fun RenderLiveActivityEventInner(
     val participants = remember(eventUpdates) { noteEvent.participants() }
     val status = remember(eventUpdates) { noteEvent.status() }
     val starts = remember(eventUpdates) { noteEvent.starts() }
+    val recording = remember(eventUpdates) { noteEvent.recording() }
+    val viewers = remember(eventUpdates) { noteEvent.currentParticipants() }
 
     Row(
         verticalAlignment = Alignment.CenterVertically,
@@ -188,77 +201,94 @@ fun RenderLiveActivityEventInner(
         }
     }
 
-    media?.let { media ->
-        if (status == StatusTag.STATUS.LIVE) {
-            CheckIfVideoIsOnline(media, accountViewModel) { isOnline ->
-                if (isOnline) {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        VideoView(
-                            videoUri = media,
-                            mimeType = null,
-                            title = subject,
-                            artworkUri = cover,
-                            authorName = baseNote.author?.toBestDisplayName(),
-                            roundedCorner = true,
-                            contentScale = ContentScale.FillWidth,
-                            accountViewModel = accountViewModel,
-                            nostrUriCallback = "nostr:${baseNote.toNEvent()}",
-                            isLiveStream = true,
-                        )
+    LiveActivityTimingLine(status, starts, viewers)
+
+    content?.ifBlank { null }?.let {
+        Text(
+            text = it,
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.grayText,
+            maxLines = 3,
+            overflow = TextOverflow.Ellipsis,
+            modifier = Modifier.fillMaxWidth().padding(bottom = 5.dp),
+        )
+    }
+
+    if (status == StatusTag.STATUS.ENDED && recording != null) {
+        LiveActivityRecording(recording, subject, cover, baseNote, accountViewModel)
+    } else {
+        media?.let { media ->
+            if (status == StatusTag.STATUS.LIVE) {
+                CheckIfVideoIsOnline(media, accountViewModel) { isOnline ->
+                    if (isOnline) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            VideoView(
+                                videoUri = media,
+                                mimeType = null,
+                                title = subject,
+                                artworkUri = cover,
+                                authorName = baseNote.author?.toBestDisplayName(),
+                                roundedCorner = true,
+                                contentScale = ContentScale.FillWidth,
+                                accountViewModel = accountViewModel,
+                                nostrUriCallback = "nostr:${baseNote.toNEvent()}",
+                                isLiveStream = true,
+                            )
+                        }
+                    } else {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier =
+                                Modifier
+                                    .padding(10.dp)
+                                    .height(100.dp),
+                        ) {
+                            Text(
+                                text = stringRes(id = Res.string.live_stream_is_offline),
+                                color = MaterialTheme.colorScheme.onBackground,
+                                fontWeight = FontWeight.Bold,
+                            )
+                        }
                     }
-                } else {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
+                }
+            } else {
+                if (status == StatusTag.STATUS.ENDED || (status == StatusTag.STATUS.PLANNED && (starts ?: 0) < TimeUtils.eightHoursAgo())) {
+                    Box(
+                        contentAlignment = Alignment.Center,
                         modifier =
                             Modifier
-                                .padding(10.dp)
-                                .height(100.dp),
+                                .padding(vertical = 10.dp)
+                                .heightIn(min = 100.dp),
                     ) {
+                        cover?.let {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                            ) {
+                                MyAsyncImage(
+                                    imageUrl = it,
+                                    contentDescription =
+                                        stringRes(
+                                            Res.string.preview_card_image_for,
+                                            it,
+                                        ),
+                                    contentScale = ContentScale.FillWidth,
+                                    mainImageModifier = Modifier.fillMaxWidth(),
+                                    loadedImageModifier = MaterialTheme.colorScheme.imageModifier,
+                                    accountViewModel = accountViewModel,
+                                    onLoadingBackground = { DefaultImageHeaderBackground(baseNote, accountViewModel) },
+                                    onError = { DefaultImageHeader(baseNote, accountViewModel) },
+                                )
+                            }
+                        } ?: run { DisplayAuthorBanner(baseNote, accountViewModel, MaterialTheme.colorScheme.imageModifier) }
+
                         Text(
-                            text = stringRes(id = Res.string.live_stream_is_offline),
+                            text = stringRes(id = Res.string.live_stream_has_ended),
                             color = MaterialTheme.colorScheme.onBackground,
                             fontWeight = FontWeight.Bold,
                         )
                     }
-                }
-            }
-        } else {
-            if (status == StatusTag.STATUS.ENDED || (status == StatusTag.STATUS.PLANNED && (starts ?: 0) < TimeUtils.eightHoursAgo())) {
-                Box(
-                    contentAlignment = Alignment.Center,
-                    modifier =
-                        Modifier
-                            .padding(vertical = 10.dp)
-                            .heightIn(min = 100.dp),
-                ) {
-                    cover?.let {
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                        ) {
-                            MyAsyncImage(
-                                imageUrl = it,
-                                contentDescription =
-                                    stringRes(
-                                        Res.string.preview_card_image_for,
-                                        it,
-                                    ),
-                                contentScale = ContentScale.FillWidth,
-                                mainImageModifier = Modifier.fillMaxWidth(),
-                                loadedImageModifier = MaterialTheme.colorScheme.imageModifier,
-                                accountViewModel = accountViewModel,
-                                onLoadingBackground = { DefaultImageHeaderBackground(baseNote, accountViewModel) },
-                                onError = { DefaultImageHeader(baseNote, accountViewModel) },
-                            )
-                        }
-                    } ?: run { DisplayAuthorBanner(baseNote, accountViewModel, MaterialTheme.colorScheme.imageModifier) }
-
-                    Text(
-                        text = stringRes(id = Res.string.live_stream_has_ended),
-                        color = MaterialTheme.colorScheme.onBackground,
-                        fontWeight = FontWeight.Bold,
-                    )
                 }
             }
         }
@@ -297,6 +327,100 @@ fun RenderLiveActivityEventInner(
                     color = MaterialTheme.colorScheme.placeholderText,
                     maxLines = 1,
                 )
+            }
+        }
+    }
+}
+
+/**
+ * "Started 2 hours ago · 140 watching" for a live stream, "Starts in 3 days" for a planned one.
+ * Nothing for an ended stream: its start time is history, and the ended banner says the rest.
+ */
+@Composable
+private fun LiveActivityTimingLine(
+    status: StatusTag.STATUS?,
+    starts: Long?,
+    viewers: Int?,
+) {
+    val now = TimeUtils.now()
+    val timing =
+        when {
+            starts == null -> null
+            status == StatusTag.STATUS.PLANNED && starts > now -> stringRes(Res.string.live_activity_starts_in, durationPhrase(starts - now))
+            status == StatusTag.STATUS.LIVE && starts <= now -> stringRes(Res.string.live_activity_started_ago, durationPhrase(now - starts))
+            else -> null
+        }
+    val watching =
+        if (status == StatusTag.STATUS.LIVE && viewers != null && viewers > 0) {
+            pluralStringRes(Res.plurals.live_activity_viewers, viewers, viewers)
+        } else {
+            null
+        }
+
+    val line = listOfNotNull(timing, watching).joinToString(" · ")
+    if (line.isEmpty()) return
+
+    Text(
+        text = line,
+        style = MaterialTheme.typography.bodySmall,
+        color = MaterialTheme.colorScheme.grayText,
+        maxLines = 1,
+        overflow = TextOverflow.Ellipsis,
+        modifier = Modifier.fillMaxWidth().padding(bottom = 5.dp),
+    )
+}
+
+/**
+ * An ended stream that left a `recording` tag: the replay, behind a button so a feed full of past
+ * streams does not start loading every one of them.
+ */
+@Composable
+private fun LiveActivityRecording(
+    recording: String,
+    title: String?,
+    cover: String?,
+    baseNote: Note,
+    accountViewModel: AccountViewModel,
+) {
+    var playing by remember(recording) { mutableStateOf(false) }
+
+    if (playing) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier.padding(vertical = 5.dp),
+        ) {
+            VideoView(
+                videoUri = recording,
+                mimeType = null,
+                title = title,
+                artworkUri = cover,
+                authorName = baseNote.author?.toBestDisplayName(),
+                roundedCorner = true,
+                contentScale = ContentScale.FillWidth,
+                accountViewModel = accountViewModel,
+                nostrUriCallback = "nostr:${baseNote.toNEvent()}",
+                isLiveStream = false,
+            )
+        }
+    } else {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier.fillMaxWidth().padding(vertical = 5.dp),
+        ) {
+            Text(
+                text = stringRes(id = Res.string.live_stream_has_ended),
+                color = MaterialTheme.colorScheme.onBackground,
+                fontWeight = FontWeight.Bold,
+                modifier = Modifier.weight(1f),
+            )
+            OutlinedButton(onClick = { playing = true }) {
+                Icon(
+                    symbol = MaterialSymbols.PlayArrow,
+                    contentDescription = null,
+                    modifier = Modifier.size(18.dp),
+                )
+                Spacer(StdHorzSpacer)
+                Text(stringRes(Res.string.live_activity_watch_recording))
             }
         }
     }
