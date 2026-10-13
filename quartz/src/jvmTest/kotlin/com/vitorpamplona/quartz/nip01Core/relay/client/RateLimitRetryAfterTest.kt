@@ -259,6 +259,48 @@ class RateLimitRetryAfterTest {
         }
 
     @Test
+    fun aClientBuiltForTheSameRelayButNeverConnectedDoesNotTakeTheGate() =
+        runBlocking {
+            // A pool racing to create one URL's client builds a loser it throws away unconnected.
+            // Sharing the relay's gate, it must not become where the gate's releases are written.
+            Relay(backOffMs = 400).use { relay ->
+                val gate = RateLimitGate(relay.scope)
+                val eose = CompletableDeferred<Unit>()
+                val connected = CompletableDeferred<Unit>()
+                val listener =
+                    object : RelayConnectionListener {
+                        override fun onConnected(
+                            relay: IRelayClient,
+                            pingMillis: Int,
+                            compressed: Boolean,
+                        ) {
+                            connected.complete(Unit)
+                        }
+
+                        override suspend fun onIncomingMessage(
+                            relay: IRelayClient,
+                            msgStr: String,
+                            msg: Message,
+                        ) {
+                            if (msg is EoseMessage && msg.subId == "held") eose.complete(Unit)
+                        }
+                    }
+                val winner = BasicRelayClient(url, relay.sockets, listener, rateLimits = gate)
+                winner.connect()
+                withTimeout(5_000) { connected.await() }
+                BasicRelayClient(url, relay.sockets, listener, rateLimits = gate)
+
+                winner.sendIfConnected(ReqCmd("refused", listOf(Filter(kinds = listOf(1)))))
+                withTimeout(5_000) { while (relay.reqs.get() < 1) delay(10) }
+                delay(50)
+                winner.sendIfConnected(ReqCmd("held", listOf(Filter(kinds = listOf(7)))))
+
+                withTimeout(5_000) { eose.await() }
+                winner.disconnect()
+            }
+        }
+
+    @Test
     fun aFilterChangeWhileTheReqIsHeldSendsOneReqWithTheNewFilters() =
         runBlocking {
             // Relays serve a sub's REQs in order: a stale REQ released first would make the one

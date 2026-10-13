@@ -71,8 +71,9 @@ open class BasicRelayClient(
     val decoder: MessageDecoder = MessageDecoder.Default,
     /**
      * Holds commands while the relay's stated `rate-limited:` back-off runs. Without one the
-     * relay's back-offs are not honored. Bound to this client on creation; a pool hands every
-     * client it builds for a relay the same gate, so a back-off survives a new client.
+     * relay's back-offs are not honored. A pool hands every client it builds for a relay the
+     * same gate, so a back-off survives a new client; the gate sends through whichever of them
+     * opened a socket last (see [markConnectionAsReady]).
      */
     private val rateLimits: RateLimitGate? = null,
 ) : IRelayClient {
@@ -88,10 +89,6 @@ open class BasicRelayClient(
     }
 
     private var socket: WebSocket? = null
-
-    init {
-        rateLimits?.bind(::write)
-    }
 
     // True if it has received the onOpen call from the socket.
     // @Volatile: written on the serialized socket-callback thread, read from the
@@ -265,6 +262,10 @@ open class BasicRelayClient(
     }
 
     fun markConnectionAsReady(usingCompression: Boolean) {
+        // Bound on open, not on creation: a pool racing to create a client for one URL builds
+        // a loser that is thrown away unconnected, and bound at creation it could take the
+        // gate from the client that owns the socket, leaving every release written nowhere.
+        rateLimits?.bind(::write)
         this.isReady = true
         this.usingCompression = usingCompression
         this.connectedAtInSeconds = nowInSeconds()
