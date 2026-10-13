@@ -69,4 +69,21 @@ class BookmarkItemTest {
         val keys = listOf(BookmarkItem.Hashtag("x"), BookmarkItem.Link("x"), BookmarkItem.Person("x")).map { it.key }
         assertEquals(keys.size, keys.toSet().size)
     }
+
+    @Test
+    fun publicAndPrivateDuplicatesCountOnce() {
+        val public = arrayOf(arrayOf("e", eventId), arrayOf("t", "nostr"), arrayOf("e", eventId)).bookmarkItems()
+        val private = arrayOf(arrayOf("e", eventId), arrayOf("t", "Nostr"), arrayOf("r", "https://example.com")).bookmarkItems()
+
+        val members = distinctBookmarkMembers(public, private)
+
+        assertEquals(listOf("e", "t", "r"), members.map { it.key.substringBefore(":") })
+        assertEquals(BookmarkCounts(notes = 1, hashtags = 1, links = 1, people = 0), BookmarkCounts.of(members))
+    }
+
+    @Test
+    fun undecryptedPrivateMembersAreIgnored() {
+        val public = arrayOf(arrayOf("p", pubKey), arrayOf("p", pubKey)).bookmarkItems()
+        assertEquals(1, distinctBookmarkMembers(public, null).size)
+    }
 }

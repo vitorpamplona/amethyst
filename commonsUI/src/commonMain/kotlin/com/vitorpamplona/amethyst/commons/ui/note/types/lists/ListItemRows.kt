@@ -44,6 +44,7 @@ import com.vitorpamplona.amethyst.commons.ui.note.NoteCompose
 import com.vitorpamplona.amethyst.commons.ui.note.UserCompose
 import com.vitorpamplona.amethyst.commons.ui.note.platform.LoadUrlPreview
 import com.vitorpamplona.amethyst.commons.ui.theme.DividerThickness
+import com.vitorpamplona.amethyst.commons.util.isWebLink
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
@@ -168,6 +169,8 @@ fun HashtagMemberRow(
 /**
  * A member that is a web link (`r` tag). A preview card when the viewer has link previews on, a
  * plain clickable URL otherwise, the same choice the rich-text renderer makes for a link in a note.
+ * Only `http(s)` links get either: anything else the author wrote (`javascript:`, `file:`,
+ * `intent:`) is shown as plain text that opens nothing.
  */
 @Composable
 fun LinkMemberRow(
@@ -175,6 +178,11 @@ fun LinkMemberRow(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
+    if (!isWebLink(url)) {
+        LabelMemberRow(url)
+        return
+    }
+
     Column(modifier = Modifier.fillMaxWidth()) {
         if (accountViewModel.settings.showUrlPreview()) {
             Box(Modifier.fillMaxWidth().padding(vertical = 4.dp)) {

@@ -29,3 +29,19 @@ package com.vitorpamplona.amethyst.commons.util
  * allocation-light.
  */
 expect fun isValidUrl(url: String?): Boolean
+
+/**
+ * True when [url] is an `http(s)://` link with something after the scheme: the only links a card
+ * may preview or open. Event authors write whatever they like into a tag, and a `javascript:`,
+ * `file:` or `intent:` value handed to a link opener is not a web page.
+ */
+fun isWebLink(url: String): Boolean {
+    val trimmed = url.trim()
+    val rest =
+        when {
+            trimmed.startsWith("https://", ignoreCase = true) -> 8
+            trimmed.startsWith("http://", ignoreCase = true) -> 7
+            else -> return false
+        }
+    return trimmed.length > rest
+}

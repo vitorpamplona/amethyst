@@ -111,6 +111,7 @@ import com.vitorpamplona.amethyst.commons.ui.thread.drawReplyLevel
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.quartz.experimental.nip82SoftwareApps.application.SoftwareApplicationEvent
 import com.vitorpamplona.quartz.nip01Core.core.Address
+import kotlinx.collections.immutable.toImmutableList
 import org.jetbrains.compose.resources.StringResource
 
 @Composable
@@ -194,7 +195,7 @@ private fun SoftwareAppDetailBody(
     val summary = remember(event) { event.summary() }
     val description = remember(event) { event.content.trim() }
     val images = remember(event) { event.images() }
-    val topics = remember(event) { event.topics() }
+    val topics = remember(event) { event.topics().toImmutableList() }
     val platforms = remember(event) { event.platforms() }
     val license = remember(event) { event.license() }
     val website = remember(event) { event.url() }

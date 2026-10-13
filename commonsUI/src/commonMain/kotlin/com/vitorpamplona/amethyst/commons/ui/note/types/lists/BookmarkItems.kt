@@ -23,6 +23,7 @@ package com.vitorpamplona.amethyst.commons.ui.note.types.lists
 import androidx.compose.runtime.Immutable
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.TagArray
+import com.vitorpamplona.quartz.nip01Core.core.fastMapNotNullDense
 import com.vitorpamplona.quartz.nip01Core.tags.hashtags.HashtagTag
 import com.vitorpamplona.quartz.nip01Core.tags.people.PTag
 import com.vitorpamplona.quartz.nip01Core.tags.references.ReferenceTag
@@ -50,7 +51,8 @@ sealed interface BookmarkItem {
     class Hashtag(
         val hashtag: String,
     ) : BookmarkItem {
-        override val key = "t:$hashtag"
+        // Hashtag feeds are case-insensitive, so `#Nostr` and `#nostr` are one member.
+        override val key = "t:${hashtag.lowercase()}"
     }
 
     @Immutable
@@ -78,8 +80,24 @@ sealed interface BookmarkItem {
     }
 }
 
-/** Every member this list carries, in tag order. */
-fun TagArray.bookmarkItems(): List<BookmarkItem> = mapNotNull(BookmarkItem::parse)
+/** Every member this list carries, in tag order. Almost every tag of a bookmark list is a member. */
+fun TagArray.bookmarkItems(): List<BookmarkItem> = fastMapNotNullDense(BookmarkItem::parse)
+
+/**
+ * The public members followed by the private ones (once decrypted), each member once: authors
+ * bookmark the same note twice, or keep it both in the clear and in the encrypted half, and the
+ * card should neither count nor draw it twice.
+ */
+fun distinctBookmarkMembers(
+    public: List<BookmarkItem>,
+    private: List<BookmarkItem>?,
+): List<BookmarkItem> {
+    val seen = HashSet<String>(public.size + (private?.size ?: 0))
+    val result = ArrayList<BookmarkItem>(public.size + (private?.size ?: 0))
+    public.forEach { if (seen.add(it.key)) result.add(it) }
+    private?.forEach { if (seen.add(it.key)) result.add(it) }
+    return result
+}
 
 /** How many members of each kind a bookmark list holds, for its header. */
 @Immutable

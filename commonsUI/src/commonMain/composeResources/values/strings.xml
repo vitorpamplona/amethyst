@@ -5030,6 +5030,10 @@
         <item quantity="one">%1$d person</item>
         <item quantity="other">%1$d people</item>
     </plurals>
+    <plurals name="topic_chips_more">
+        <item quantity="one">+%1$d more</item>
+        <item quantity="other">+%1$d more</item>
+    </plurals>
     <string name="live_activity_starts_in">Starts in %1$s</string>
     <string name="live_activity_started_ago">Started %1$s ago</string>
     <plurals name="live_activity_viewers">

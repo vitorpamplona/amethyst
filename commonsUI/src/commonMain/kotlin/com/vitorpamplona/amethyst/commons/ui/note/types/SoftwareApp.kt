@@ -49,6 +49,8 @@ import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -71,6 +73,7 @@ import com.vitorpamplona.amethyst.commons.resources.nip82_download
 import com.vitorpamplona.amethyst.commons.resources.nip82_platform_with_cpus
 import com.vitorpamplona.amethyst.commons.resources.nip82_repository_label
 import com.vitorpamplona.amethyst.commons.resources.nip82_version_label
+import com.vitorpamplona.amethyst.commons.resources.topic_chips_more
 import com.vitorpamplona.amethyst.commons.richtext.MediaUrlImage
 import com.vitorpamplona.amethyst.commons.softwareapps.SoftwareAssetDownloads
 import com.vitorpamplona.amethyst.commons.softwareapps.SoftwareOs
@@ -85,6 +88,7 @@ import com.vitorpamplona.amethyst.commons.ui.note.NoteUsernameDisplay
 import com.vitorpamplona.amethyst.commons.ui.note.ReactionsRow
 import com.vitorpamplona.amethyst.commons.ui.note.elements.MoreOptionsButton
 import com.vitorpamplona.amethyst.commons.ui.note.platform.ZoomableContentView
+import com.vitorpamplona.amethyst.commons.ui.pluralStringRes
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.QuoteBorder
 import com.vitorpamplona.amethyst.commons.ui.theme.Size16Modifier
@@ -101,6 +105,7 @@ import com.vitorpamplona.quartz.experimental.nip82SoftwareApps.application.Softw
 import com.vitorpamplona.quartz.experimental.nip82SoftwareApps.asset.SoftwareAssetEvent
 import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.nip01Core.tags.dTag.dTag
+import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.toImmutableList
 
 /**
@@ -324,18 +329,31 @@ fun LicenseChip(license: String) {
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun TopicChipFlow(
-    topics: List<String>,
+    topics: ImmutableList<String>,
     nav: INav,
+    /** Chips drawn before a "+N more" chip that reveals the rest. */
+    maxShown: Int = Int.MAX_VALUE,
 ) {
     if (topics.isEmpty()) return
+    var expanded by rememberSaveable { mutableStateOf(false) }
+    val shown = if (expanded || topics.size <= maxShown) topics else topics.subList(0, maxShown)
+    val hidden = topics.size - shown.size
+
     FlowRow(
         horizontalArrangement = Arrangement.spacedBy(6.dp),
         verticalArrangement = Arrangement.spacedBy(6.dp),
     ) {
-        topics.forEach { tag ->
+        shown.forEach { tag ->
             Chip(
                 text = "#$tag",
                 modifier = Modifier.clickable { nav.nav(Route.Hashtag(tag.lowercase())) },
+            )
+        }
+        if (hidden > 0) {
+            Chip(
+                text = pluralStringRes(Res.plurals.topic_chips_more, hidden, hidden),
+                tint = MaterialTheme.colorScheme.secondaryContainer,
+                modifier = Modifier.clickable { expanded = true },
             )
         }
     }

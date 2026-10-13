@@ -55,6 +55,7 @@ import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.utils.Log
 import org.jetbrains.compose.resources.StringResource
+import kotlin.coroutines.cancellation.CancellationException
 
 /** How many members a list card shows before it asks to be expanded. Matches DisplayPeopleList. */
 private const val COLLAPSED_MEMBERS = 3
@@ -158,7 +159,7 @@ fun <T> loadPrivateItems(
             try {
                 load(accountViewModel.account.signer)
             } catch (e: Exception) {
-                if (e is kotlin.coroutines.cancellation.CancellationException) throw e
+                if (e is CancellationException) throw e
                 Log.w("NIP51ListCard", "Cannot decrypt private members of ${noteEvent.id}", e)
                 null
             }

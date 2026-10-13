@@ -54,6 +54,10 @@ import com.vitorpamplona.quartz.nip51Lists.bookmarkList.BookmarkListEvent
 import com.vitorpamplona.quartz.nip51Lists.bookmarkList.OldBookmarkListEvent
 import com.vitorpamplona.quartz.nip51Lists.bookmarkSet.BookmarkSetEvent
 import com.vitorpamplona.quartz.nip51Lists.pictureCurationSet.PictureCurationSetEvent
+import kotlinx.collections.immutable.toImmutableList
+
+/** How many hashtag chips a bookmark card shows before a "+N more" chip. */
+private const val COLLAPSED_HASHTAGS = 12
 
 /** NIP-51 kind 10003: the user's bookmarks — notes, articles, hashtags and links. */
 @Composable
@@ -213,9 +217,9 @@ private fun BookmarkCard(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    val all = rememberAllMembers(public, private)
+    val all = remember(public, private) { distinctBookmarkMembers(public, private) }
     val counts = remember(all) { BookmarkCounts.of(all) }
-    val hashtags = remember(all) { all.mapNotNull { (it as? BookmarkItem.Hashtag)?.hashtag }.distinct() }
+    val hashtags = remember(all) { all.mapNotNull { (it as? BookmarkItem.Hashtag)?.hashtag }.toImmutableList() }
     val rows = remember(all) { all.filter { it !is BookmarkItem.Hashtag } }
 
     ListCard(
@@ -228,7 +232,9 @@ private fun BookmarkCard(
             BookmarkCountsLine(counts)
             if (hashtags.isNotEmpty()) {
                 Box(Modifier.fillMaxWidth().padding(horizontal = 10.dp, vertical = 4.dp)) {
-                    TopicChipFlow(hashtags, nav)
+                    // The chips sit above the member rows, outside their collapse, so a list of
+                    // hundreds of hashtags would otherwise be hundreds of chips in a feed row.
+                    TopicChipFlow(hashtags, nav, maxShown = COLLAPSED_HASHTAGS)
                 }
             }
         },
@@ -247,17 +253,16 @@ private fun BookmarkCard(
 /** "3 notes · 2 hashtags · 1 link", skipping the kinds the list does not hold. */
 @Composable
 private fun BookmarkCountsLine(counts: BookmarkCounts) {
-    val parts =
-        buildList {
-            if (counts.notes > 0) add(pluralStringRes(Res.plurals.nip51_bookmark_count_notes, counts.notes, counts.notes))
-            if (counts.hashtags > 0) add(pluralStringRes(Res.plurals.nip51_bookmark_count_hashtags, counts.hashtags, counts.hashtags))
-            if (counts.links > 0) add(pluralStringRes(Res.plurals.nip51_bookmark_count_links, counts.links, counts.links))
-            if (counts.people > 0) add(pluralStringRes(Res.plurals.nip51_bookmark_count_people, counts.people, counts.people))
-        }
-    if (parts.isEmpty()) return
+    val notes = if (counts.notes > 0) pluralStringRes(Res.plurals.nip51_bookmark_count_notes, counts.notes, counts.notes) else null
+    val hashtags = if (counts.hashtags > 0) pluralStringRes(Res.plurals.nip51_bookmark_count_hashtags, counts.hashtags, counts.hashtags) else null
+    val links = if (counts.links > 0) pluralStringRes(Res.plurals.nip51_bookmark_count_links, counts.links, counts.links) else null
+    val people = if (counts.people > 0) pluralStringRes(Res.plurals.nip51_bookmark_count_people, counts.people, counts.people) else null
+
+    val line = remember(notes, hashtags, links, people) { listOfNotNull(notes, hashtags, links, people).joinToString(" · ") }
+    if (line.isEmpty()) return
 
     Text(
-        text = parts.joinToString(" · "),
+        text = line,
         style = MaterialTheme.typography.bodySmall,
         color = MaterialTheme.colorScheme.onSurfaceVariant,
         textAlign = TextAlign.Center,
