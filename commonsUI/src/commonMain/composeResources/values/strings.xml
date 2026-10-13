@@ -7211,4 +7211,47 @@
     <string name="dlist_more_values">+%1$d more</string>
     <string name="relay_group_card_public">Public</string>
     <string name="relay_group_card_open_join">Anyone can join</string>
+    <string name="marketplace_stall">Stall</string>
+    <string name="marketplace_prices_in">Prices in %1$s</string>
+    <string name="marketplace_shipping">Shipping</string>
+    <string name="marketplace_shipping_free">Free</string>
+    <plurals name="marketplace_shipping_regions">
+        <item quantity="one">%1$d region</item>
+        <item quantity="other">%1$d regions</item>
+    </plurals>
+    <string name="marketplace_merchant">Merchant</string>
+    <string name="marketplace_from_stall">From %1$s</string>
+    <string name="marketplace_out_of_stock">Out of stock</string>
+    <plurals name="marketplace_in_stock">
+        <item quantity="one">%1$d in stock</item>
+        <item quantity="other">%1$d in stock</item>
+    </plurals>
+    <string name="marketplace_specs">Specifications</string>
+    <string name="marketplace_message_seller">Message seller</string>
+    <string name="marketplace_market">Marketplace</string>
+    <plurals name="marketplace_merchants">
+        <item quantity="one">%1$d merchant</item>
+        <item quantity="other">%1$d merchants</item>
+    </plurals>
+    <string name="marketplace_auction">Auction</string>
+    <string name="marketplace_starting_bid">Starting bid</string>
+    <string name="marketplace_highest_bid">Highest bid</string>
+    <string name="marketplace_highest_bid_unconfirmed">Highest bid (unconfirmed)</string>
+    <plurals name="marketplace_bids">
+        <item quantity="one">%1$d bid</item>
+        <item quantity="other">%1$d bids</item>
+    </plurals>
+    <string name="marketplace_auction_starts">Starts %1$s</string>
+    <string name="marketplace_auction_started">Started %1$s</string>
+    <string name="marketplace_auction_ends">Ends %1$s</string>
+    <string name="marketplace_auction_ended">Ended %1$s</string>
+    <string name="marketplace_auction_ended_chip">Ended</string>
+    <string name="marketplace_auction_live_chip">Live</string>
+    <string name="marketplace_auction_scheduled_chip">Upcoming</string>
+    <string name="marketplace_bid_amount">Bid %1$s</string>
+    <string name="marketplace_bid_status_accepted">Accepted</string>
+    <string name="marketplace_bid_status_rejected">Rejected</string>
+    <string name="marketplace_bid_status_pending">Pending</string>
+    <string name="marketplace_bid_status_winner">Winner</string>
+    <string name="marketplace_bid_extended">Auction extended by %1$s</string>
 </resources>

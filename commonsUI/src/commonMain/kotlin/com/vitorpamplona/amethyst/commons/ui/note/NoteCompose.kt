@@ -74,6 +74,12 @@ import com.vitorpamplona.amethyst.commons.model.nip28PublicChats.PublicChatChann
 import com.vitorpamplona.amethyst.commons.model.nip29RelayGroups.RelayGroupChannel
 import com.vitorpamplona.amethyst.commons.model.replyingDirectlyTo
 import com.vitorpamplona.amethyst.commons.model.textNoteModifications
+import com.vitorpamplona.amethyst.commons.nip15Marketplace.ui.RenderAuction
+import com.vitorpamplona.amethyst.commons.nip15Marketplace.ui.RenderBid
+import com.vitorpamplona.amethyst.commons.nip15Marketplace.ui.RenderBidConfirmation
+import com.vitorpamplona.amethyst.commons.nip15Marketplace.ui.RenderMarketplace
+import com.vitorpamplona.amethyst.commons.nip15Marketplace.ui.RenderProduct
+import com.vitorpamplona.amethyst.commons.nip15Marketplace.ui.RenderStall
 import com.vitorpamplona.amethyst.commons.nip69P2pOrderEvents.ui.RenderMostroInfo
 import com.vitorpamplona.amethyst.commons.nipC0CodeSnippets.ui.RenderCodeSnippetEvent
 import com.vitorpamplona.amethyst.commons.relayClient.event.observeCommunityApprovalNeedStatus
@@ -374,6 +380,12 @@ import com.vitorpamplona.quartz.nip04Dm.messages.EncryptedDmEvent
 import com.vitorpamplona.quartz.nip10Notes.BaseThreadedEvent
 import com.vitorpamplona.quartz.nip10Notes.TextNoteEvent
 import com.vitorpamplona.quartz.nip13Pow.strongPoWOrNull
+import com.vitorpamplona.quartz.nip15Marketplace.auction.AuctionEvent
+import com.vitorpamplona.quartz.nip15Marketplace.bid.BidEvent
+import com.vitorpamplona.quartz.nip15Marketplace.bidConfirmation.BidConfirmationEvent
+import com.vitorpamplona.quartz.nip15Marketplace.marketplace.MarketplaceEvent
+import com.vitorpamplona.quartz.nip15Marketplace.product.ProductEvent
+import com.vitorpamplona.quartz.nip15Marketplace.stall.StallEvent
 import com.vitorpamplona.quartz.nip17Dm.files.ChatMessageEncryptedFileHeaderEvent
 import com.vitorpamplona.quartz.nip17Dm.messages.ChatMessageEvent
 import com.vitorpamplona.quartz.nip17Dm.settings.DmRelayListEvent
@@ -1595,6 +1607,32 @@ internal fun RenderNoteRow(
                 accountViewModel,
                 nav,
             )
+        }
+
+        // NIP-15. Other apps' records on 30017-30020 (no name, no merchants) fall through to the
+        // text card below, as they always did.
+        is StallEvent if noteEvent.isWellFormed() -> {
+            RenderStall(baseNote, makeItShort, accountViewModel, nav)
+        }
+
+        is ProductEvent if noteEvent.isWellFormed() -> {
+            RenderProduct(baseNote, makeItShort, accountViewModel, nav)
+        }
+
+        is MarketplaceEvent if noteEvent.isWellFormed() -> {
+            RenderMarketplace(baseNote, makeItShort, accountViewModel, nav)
+        }
+
+        is AuctionEvent if noteEvent.isWellFormed() -> {
+            RenderAuction(baseNote, makeItShort, accountViewModel, nav)
+        }
+
+        is BidEvent if noteEvent.isWellFormed() -> {
+            RenderBid(baseNote, quotesLeft, backgroundColor, accountViewModel, nav)
+        }
+
+        is BidConfirmationEvent if noteEvent.isWellFormed() -> {
+            RenderBidConfirmation(baseNote, quotesLeft, backgroundColor, accountViewModel, nav)
         }
 
         is CalendarTimeSlotEvent -> {
