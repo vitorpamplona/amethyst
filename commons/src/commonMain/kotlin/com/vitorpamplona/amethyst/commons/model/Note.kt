@@ -245,6 +245,8 @@ open class Note(
     var labels = mapOf<String, List<Note>>()
         private set
 
+    // `@Volatile`: written under [syncLock], read lock-free by addZap/removeZap's fast paths.
+    @Volatile
     var zaps = mapOf<Note, Note?>()
         private set
 
@@ -310,6 +312,8 @@ open class Note(
     var bolt12Zaps = mapOf<String, Bolt12ZapEntry>()
         private set
 
+    // `@Volatile`: written under [syncLock], read lock-free by removeZapPayment's fast path.
+    @Volatile
     var zapPayments = mapOf<Note, Note?>()
         private set
 
@@ -648,9 +652,17 @@ open class Note(
         }
     }
 
-    // Under syncLock like the add paths: an unlocked remove wrote back a map built from a snapshot,
-    // dropping any zap a relay thread added in between.
+    // Pruning calls this for every child it frees, nearly always a reply or a reaction, so the
+    // no-op is decided without the lock: only a zap request (key) or receipt (value) can be in
+    // [zaps], and the map is an immutable snapshot published through a volatile field. A child that
+    // is there is removed under syncLock, like the add paths: an unlocked remove wrote back a map
+    // built from a snapshot, dropping any zap a relay thread added in between.
     fun removeZap(note: Note) {
+        val event = note.event
+        if (event != null && event !is ZapRequestEvent && event !is ZapReceiptEvent) return
+        val current = zaps
+        if (current.isEmpty() || (current[note] == null && !current.containsValue(note))) return
+
         syncLock.withLock {
             if (zaps[note] != null) {
                 zaps = zaps.minus(note)
@@ -664,7 +676,13 @@ open class Note(
         }
     }
 
+    // Same fast path as [removeZap]: only NWC requests (keys) and responses (values) are in here.
     fun removeZapPayment(note: Note) {
+        val event = note.event
+        if (event != null && event !is NwcRequestEvent && event !is NwcResponseEvent) return
+        val current = zapPayments
+        if (current.isEmpty() || (!current.containsKey(note) && !current.containsValue(note))) return
+
         syncLock.withLock {
             if (zapPayments.containsKey(note)) {
                 zapPayments = zapPayments.minus(note)

@@ -80,4 +80,22 @@ class BasicBundledUpdateTest {
 
             assertEquals(1, runs)
         }
+
+    @Test
+    fun aBurstOfCallsDuringARunStartsOnlyOneMore() =
+        runTest {
+            val updater = BasicBundledUpdate(100, StandardTestDispatcher(testScheduler), this)
+            var runs = 0
+            lateinit var onUpdate: suspend () -> Unit
+            onUpdate = {
+                runs++
+                if (runs == 1) repeat(10_000) { updater.invalidate(onUpdate = onUpdate) }
+                delay(10)
+            }
+
+            updater.invalidate(onUpdate = onUpdate)
+            advanceUntilIdle()
+
+            assertEquals(2, runs)
+        }
 }
