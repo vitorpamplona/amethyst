@@ -42,6 +42,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.commons.audio.WaveformData
+import com.vitorpamplona.amethyst.commons.audio.playableAudio
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.User
 import com.vitorpamplona.amethyst.commons.model.navigation.routeFor
@@ -79,7 +80,9 @@ fun AudioTrackHeader(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    val media = remember(noteEvent) { noteEvent.mediaUrl() }
+    // The file the dispatch found to play (its imeta or `m` mime with it), not just `media`/`url`:
+    // a podcast that names its show's page in `url` keeps the episode's file in its imeta.
+    val media = remember(noteEvent) { noteEvent.playableAudio() }
     val cover = remember(noteEvent) { noteEvent.coverUrl() }
     val subject = remember(noteEvent) { noteEvent.displayTitle() }
     val participants = remember(noteEvent) { noteEvent.participants() }
@@ -132,8 +135,8 @@ fun AudioTrackHeader(
             media?.let { media ->
                 Column(Modifier.fillMaxWidth()) {
                     AudioFirstMedia(
-                        url = media,
-                        mimeType = null,
+                        url = media.url,
+                        mimeType = media.mimeType,
                         title = subject,
                         cover = cover,
                         showCover = true,

@@ -54,6 +54,7 @@ import androidx.compose.ui.graphics.compositeOver
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.vitorpamplona.amethyst.commons.audio.hasPlayableAudio
 import com.vitorpamplona.amethyst.commons.birdstar.ui.RenderBirdDetection
 import com.vitorpamplona.amethyst.commons.birdstar.ui.RenderBirdex
 import com.vitorpamplona.amethyst.commons.concord.ui.ConcordCommunityPill
@@ -1142,7 +1143,9 @@ internal fun RenderNoteRow(
             RenderAttestorProficiency(baseNote, quotesLeft, backgroundColor, accountViewModel, nav)
         }
 
-        is AudioTrackEvent -> {
+        // Kind 31337 is borrowed (AntennaPod's ad-skip data, game state, sync indexes): only an
+        // event with an audio file to play is a track. The rest fall through to the text card.
+        is AudioTrackEvent if noteEvent.hasPlayableAudio() -> {
             RenderAudioTrack(baseNote, ContentScale.FillWidth, accountViewModel, nav)
         }
 
