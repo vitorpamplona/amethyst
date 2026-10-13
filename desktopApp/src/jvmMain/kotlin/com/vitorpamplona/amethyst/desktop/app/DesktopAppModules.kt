@@ -28,6 +28,7 @@ import com.vitorpamplona.amethyst.commons.browser.BrowserHistoryRegistry
 import com.vitorpamplona.amethyst.commons.browser.BrowserIconRegistry
 import com.vitorpamplona.amethyst.commons.connectedApps.DataStoreNostrSignerPermissionStore
 import com.vitorpamplona.amethyst.commons.connectedApps.nip46.DataStoreNip46ClientStore
+import com.vitorpamplona.amethyst.commons.cordn.SecretEncryptionCordnBlobCipher
 import com.vitorpamplona.amethyst.commons.favorites.FavoriteAppsRegistry
 import com.vitorpamplona.amethyst.commons.keystorage.KeyStoragePrompts
 import com.vitorpamplona.amethyst.commons.keystorage.SecureKeyStorage
@@ -424,9 +425,12 @@ class DesktopAppModules(
             nwcFilterAssembler = { sources.nwc },
             cashuMintDirectoryFilterAssembler = { sources.cashuMintDirectory },
             okHttpClientForMoney = roleBasedHttpClientBuilder::okHttpClientForMoney,
+            // NIP-55 signer apps are Android's: an account that used one is read-only here.
+            externalSignerFactory = { _, _ -> null },
             marmotStreamTransportFactory = { scope ->
                 QuicAgentTextStreamTransport(parentScope = scope, certificateValidator = JdkCertificateValidator())
             },
+            cordnBlobCipher = { SecretEncryptionCordnBlobCipher() },
             otsResolverBuilder = { otsResolverBuilder.build() },
             cache = cache,
             client = client,
@@ -438,9 +442,15 @@ class DesktopAppModules(
             geohashIdentityStore = { pubKey -> sessionStore.geohashIdentityStore(pubKey) },
             rootFilesDir = { filesDir },
             powQueue = { powPublishQueue },
+            // The resource-usage ledger is Android's; nothing reads signer counts here.
+            meterSigner = { it },
             signerPermissionStore = signerPermissionStore,
             nip46ClientStore = nip46ClientStore,
             remoteSignerMetadata = REMOTE_SIGNER_METADATA,
+            // Same sockets as the app (Tor, blocked relays), but never filed into LocalCache.
+            trustNetworkClientBuilder = { NostrClient(websocketBuilder) },
+            // No metered networks to wait out on a desktop.
+            canDownloadLargeFiles = { true },
             // Per account, as on Android: joined Buzz workspaces and starred channels, NIP-OA
             // attestations, declined Concord invites and the now-playing status settings.
             startBuzzPersistence = { account ->
