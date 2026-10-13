@@ -1,0 +1,47 @@
+# Orchard (https://github.com/Letdown2491/orchard) listing for the Flatpak.
+#
+# Read by `orchard-publish`, Orchard's own publisher. RELEASE_OPS.md § Orchard
+# has the steps: extract `tree/` from the release bundle, then run the tool once
+# per arch with Amethyst's nsec in ORCHARD_NSEC.
+#
+# The app id is NOT the Android package name on purpose: Zapstore lists the APK
+# under `com.vitorpamplona.amethyst` with the same key and the same listing kind
+# (32267), so a shared id would make each store's publish replace the other's.
+
+[app]
+id = "com.vitorpamplona.amethyst.Amethyst"
+name = "Amethyst"
+summary = "Join the social network you control"
+description-file = "description.md"
+# Must be a PNG: Orchard caches icons without extensions, and an SVG then fails to render.
+icon = "https://raw.githubusercontent.com/vitorpamplona/amethyst/main/desktopApp/packaging/flatpak/icons/512/com.vitorpamplona.amethyst.Amethyst.png"
+# AppStream categories, the same as the metainfo.
+categories = ["Network", "InstantMessaging"]
+# The same expression as the metainfo's project_license: the app plus the bundled JRE.
+license = "MIT AND LGPL-2.1-or-later AND BSD-2-Clause AND Apache-2.0 AND GPL-2.0-only WITH Classpath-exception-2.0"
+repository = "https://github.com/vitorpamplona/amethyst"
+homepage = "https://amethyst.social"
+
+[release]
+# Placeholder. Always set ORCHARD_PUBLISH_VERSION from gradle/libs.versions.toml,
+# as RELEASE_OPS.md does; it overrides this.
+version = "0.0.0"
+channel = "stable"
+# This run's arch; `--arch linux-aarch64` switches it for the second run.
+arch = "linux-x86_64"
+platforms = ["linux-x86_64", "linux-aarch64"]
+# Keep in step with runtime-version in the flatpak manifest. The arch segment is
+# rewritten per run.
+runtime = "org.freedesktop.Platform/x86_64/26.08"
+notes = "Release notes: https://github.com/vitorpamplona/amethyst/releases"
+
+[artifact]
+# Extracted from the release bundle (RELEASE_OPS.md § Orchard); gitignored.
+tree = "tree"
+
+[publish]
+# relay.orchard.rocks must come first: orchard-publish refuses a manifest without it.
+relays = ["wss://relay.orchard.rocks", "wss://nos.lol", "wss://relay.primal.net"]
+tag = "latest"
+# No author-name or nip05: either one makes orchard-publish sign a kind 0 profile,
+# which would REPLACE Amethyst's existing Nostr profile with just those fields.
