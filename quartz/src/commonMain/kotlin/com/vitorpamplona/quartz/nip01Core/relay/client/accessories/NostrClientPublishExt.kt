@@ -199,13 +199,20 @@ suspend fun INostrClient.publishAndCollectResults(
              * disconnected relay dials and drops the command, so a retry has to
              * be re-issued from here rather than at the moment we noticed the
              * hang-up.
+             *
+             * Only while the relay is still up: [com.vitorpamplona.quartz.nip01Core.relay.client.NostrClient]
+             * flushes the outbox before it announces the connection, so a socket that hangs
+             * up during its own flush reports `onDisconnected` first and this call second.
+             * Taken as the retry's reconnect, that stale announcement reopened the relay to
+             * the drop's echo, which then stood as the final verdict while the real retry
+             * was still dialing.
              */
             override fun onConnected(
                 relay: IRelayClient,
                 pingMillis: Int,
                 compressed: Boolean,
             ) {
-                if (relay.url in relayList) {
+                if (relay.url in relayList && relay.isConnected()) {
                     resultChannel.trySend(DetailedResult(relay.url, false, RECONNECTED))
                 }
             }
