@@ -27,8 +27,9 @@ import com.vitorpamplona.quartz.utils.concurrent.PlatformLock
 import com.vitorpamplona.quartz.utils.concurrent.withLock
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.delay
+import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withTimeoutOrNull
 
 /**
  * Holds what a relay refused as `rate-limited:` WITH a back-off (NIP-01's `params`, see
@@ -51,6 +52,13 @@ import kotlinx.coroutines.launch
  * A key refused while the queue drains goes back to the head: it was next in line, and its new
  * back-off says exactly when the next token is due. One coroutine per relay with something
  * pending, not one per refusal — a bulk publish refused event by event costs one timer.
+ *
+ * A released key the relay accepts ([onAccepted]) releases the next one at once. A stated
+ * back-off says when the relay takes the NEXT command, not how many it takes then: a sliding
+ * window (nostream states the whole window, e.g. 60 s for 12 notes a minute) opens room for
+ * many, and pacing one per back-off would drain twelve refused notes over twelve minutes. So
+ * the queue drains as fast as the relay accepts, and only a refusal makes it wait again. On a
+ * token bucket that costs one extra refusal per token; on a window it saves whole windows.
  *
  * A back-off longer than [maxDelayMs] is not scheduled ([schedule] returns false): the command
  * stays parked as it would without a back-off, and the next reconnect re-sends it.
@@ -83,6 +91,15 @@ class RateLimitRetries(
 
         /** True once a key went out: a refusal from then on is a released key coming back. */
         var draining = false
+
+        /** The key released last, until the relay accepts it; see [onAccepted]. */
+        var inFlight: String? = null
+
+        /** The deadline set when [inFlight] went out: a later one means a newer refusal moved it. */
+        var releasedDueAtMs = 0L
+
+        /** Cuts the drain's wait short when [inFlight] is accepted. */
+        val wake = Channel<Unit>(Channel.CONFLATED)
 
         /** How far apart queued keys are released. */
         fun spacing() = longestBackOffMs + longestBackOffMs / SPACING_MARGIN_DIVISOR + 1
@@ -149,6 +166,28 @@ class RateLimitRetries(
             true
         }
 
+    /**
+     * The relay accepted [key] (an `OK` true for an event, an `EOSE` for a subscription). If it
+     * is the key [relay]'s queue released last, the next one goes now instead of waiting out the
+     * spacing: the relay is taking commands again. Cheap for every other key.
+     */
+    fun onAccepted(
+        relay: NormalizedRelayUrl,
+        key: String,
+    ) {
+        val batch =
+            lock.withLock {
+                val batch = batches[relay] ?: return
+                if (batch.inFlight != key) return
+                batch.inFlight = null
+                // A refusal that landed meanwhile named a later deadline: honor it.
+                if (batch.dueAtMs != batch.releasedDueAtMs) return
+                batch.dueAtMs = clock()
+                batch
+            }
+        batch.wake.trySend(Unit)
+    }
+
     /** Forgets everything pending; their timers fire into nothing. */
     fun clear() = lock.withLock { batches.clear() }
 
@@ -168,13 +207,16 @@ class RateLimitRetries(
                     val now = clock()
                     val left = batch.dueAtMs - now
                     if (left <= 0) {
-                        due = batch.removeFirst()
+                        val key = batch.removeFirst()
+                        due = key
                         batch.draining = true
                         if (batch.isEmpty()) {
                             batches.remove(relay)
                         } else {
                             nextAt = now + batch.spacing()
                             batch.dueAtMs = nextAt
+                            batch.inFlight = key
+                            batch.releasedDueAtMs = nextAt
                         }
                     }
                     left
@@ -196,10 +238,14 @@ class RateLimitRetries(
                 if (!sent) {
                     // Nothing used this slot: release the next key now, unless a refusal that
                     // landed meanwhile moved the deadline.
-                    lock.withLock { if (batches[relay] === batch && batch.dueAtMs == nextAt) batch.dueAtMs = clock() }
+                    lock.withLock {
+                        if (batch.inFlight == key) batch.inFlight = null
+                        if (batches[relay] === batch && batch.dueAtMs == nextAt) batch.dueAtMs = clock()
+                    }
                 }
             } else {
-                delay(waitMs)
+                // Woken early when the released key is accepted; the loop re-reads the deadline.
+                withTimeoutOrNull(waitMs) { batch.wake.receive() }
             }
         }
     }

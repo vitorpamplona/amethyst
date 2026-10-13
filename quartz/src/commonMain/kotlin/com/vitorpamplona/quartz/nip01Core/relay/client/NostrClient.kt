@@ -32,6 +32,7 @@ import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayPool
 import com.vitorpamplona.quartz.nip01Core.relay.client.reqs.SubscriptionListener
 import com.vitorpamplona.quartz.nip01Core.relay.client.single.IRelayClient
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.ClosedMessage
+import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.EoseMessage
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.Message
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.MessageDecoder
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.OkMessage
@@ -484,7 +485,17 @@ class NostrClient(
                 }
             }
 
-            is OkMessage -> if (!msg.success) msg.retryAfterMs?.let { eventRetries.schedule(relay.url, msg.eventId, it) }
+            is OkMessage -> {
+                if (msg.success) {
+                    // A re-sent event landed: the relay takes events again, release the next.
+                    eventRetries.onAccepted(relay.url, msg.eventId)
+                } else {
+                    msg.retryAfterMs?.let { eventRetries.schedule(relay.url, msg.eventId, it) }
+                }
+            }
+
+            is EoseMessage -> reqRetries.onAccepted(relay.url, msg.subId)
+
             else -> {}
         }
 

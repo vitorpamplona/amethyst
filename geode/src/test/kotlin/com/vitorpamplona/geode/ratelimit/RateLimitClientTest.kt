@@ -203,8 +203,10 @@ class RateLimitClientTest {
             results.forEachIndexed { i, result -> assertTrue(result.accepted, "event #$i: ${result.message}" + wire.timeline()) }
             assertTrue(wire.refusals("EVENT") > 0, "the burst never met the limit, so this proved nothing")
             wire.assertNothingSentInsideABackOff()
-            // Paced at the stated back-off, an event is refused about once, not once per release.
-            assertTrue(wire.sends("EVENT") <= 2 * events.size, "${wire.sends("EVENT")} sends for ${events.size} events")
+            // Each event goes out at most three times: the burst, once early on the accept before
+            // it (a token bucket refuses that one), and once paced at the stated back-off. Not
+            // once per release.
+            assertTrue(wire.sends("EVENT") <= 3 * events.size, "${wire.sends("EVENT")} sends for ${events.size} events" + wire.timeline())
         }
 
     @Test
@@ -217,7 +219,8 @@ class RateLimitClientTest {
 
             assertTrue(wire.refusals("REQ") > 0, "the burst never met the limit, so this proved nothing")
             wire.assertNothingSentInsideABackOff()
-            assertTrue(wire.sends("REQ") <= 12, "${wire.sends("REQ")} REQs for 6 subscriptions")
+            // As with events: the burst, once early on the EOSE before it, once paced.
+            assertTrue(wire.sends("REQ") <= 18, "${wire.sends("REQ")} REQs for 6 subscriptions" + wire.timeline())
         }
 
     @Test

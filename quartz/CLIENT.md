@@ -308,9 +308,11 @@ A relay may refuse an `EVENT` or a `REQ` as `rate-limited:` and say how long to 
 the optional trailing `params` of NIP-01's `OK` / `CLOSED` (milliseconds, e.g.
 `["OK", id, false, "rate-limited: slow down", "1000"]`). `NostrClient` honors it: nothing of the
 refused type goes to that relay until the back-off passes — new subscriptions and publishes
-included, and the replay after a reconnect too. Then the held REQs/EVENTs go out one per
-back-off, so they meet the relay's refilled tokens one at a time instead of being refused
-again together. A `rate-limited:` refusal without a back-off is left parked until the next
+included, and the replay after a reconnect too. Then the held REQs/EVENTs go out one at a
+time: each one the relay accepts (`OK` true, `EOSE`) releases the next at once, and one it
+refuses again waits out its new back-off (plus a tenth). That drains a sliding window, which
+states its whole period and then takes many, in one round trip per command, and a token bucket
+at its refill rate. A `rate-limited:` refusal without a back-off is left parked until the next
 reconnect or filter change.
 
 `publishAndCollectResults` waits for that retry when it fits inside the timeout; otherwise

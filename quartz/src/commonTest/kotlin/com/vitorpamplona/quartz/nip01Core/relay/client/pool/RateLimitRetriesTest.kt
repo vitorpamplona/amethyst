@@ -23,6 +23,8 @@ package com.vitorpamplona.quartz.nip01Core.relay.client.pool
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runTest
@@ -115,6 +117,59 @@ class RateLimitRetriesTest {
         }
 
     @Test
+    fun anAcceptedReleaseLetsTheNextGoAtOnce() =
+        runTest {
+            // A sliding window (nostream) states its whole period and then takes several: each
+            // accepted retry releases the next one round trip later, not a period later.
+            val released = mutableListOf<Released>()
+            lateinit var retries: RateLimitRetries
+            retries =
+                retries(released) { key ->
+                    launch {
+                        delay(ROUND_TRIP_MS)
+                        retries.onAccepted(relay, key)
+                    }
+                    true
+                }
+            listOf("a", "b", "c").forEach { retries.schedule(relay, it, 60_000) }
+            // An answer for a key the queue did not just release moves nothing.
+            retries.onAccepted(relay, "b")
+            advanceUntilIdle()
+
+            assertEquals("[a@60000, b@60010, c@60020]", released.toString())
+            assertFalse(retries.isPending(relay))
+        }
+
+    @Test
+    fun aKeyReleasedEarlyAndRefusedWaitsOutTheSpacingAgain() =
+        runTest {
+            // A token bucket: the release right after an accept meets an empty bucket, is refused,
+            // and the queue falls back to the spaced release.
+            val released = mutableListOf<Released>()
+            lateinit var retries: RateLimitRetries
+            var refusedB = false
+            retries =
+                retries(released) { key ->
+                    launch {
+                        delay(ROUND_TRIP_MS)
+                        if (key == "b" && !refusedB) {
+                            refusedB = true
+                            retries.schedule(relay, "b", 1_000)
+                        } else {
+                            retries.onAccepted(relay, key)
+                        }
+                    }
+                    true
+                }
+            listOf("a", "b", "c").forEach { retries.schedule(relay, it, 1_000) }
+            advanceUntilIdle()
+
+            // b goes out on a's accept, is refused, and waits the 1101 ms spacing from its release.
+            assertEquals("[a@1000, b@1010, b@2111, c@2121]", released.toString())
+            assertFalse(retries.isPending(relay))
+        }
+
+    @Test
     fun aDeferredKeyJoinsTheQueueWithoutMovingTheDeadline() =
         runTest {
             val released = mutableListOf<Released>()
@@ -135,4 +190,8 @@ class RateLimitRetriesTest {
             assertFalse(retries.schedule(relay, "a", RateLimitRetries.MAX_DELAY_MS + 1))
             assertFalse(retries.isPending(relay))
         }
+
+    companion object {
+        const val ROUND_TRIP_MS = 10L
+    }
 }
