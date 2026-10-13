@@ -45,6 +45,16 @@ expect object LocalClock {
     fun utcOffsetSeconds(unixSeconds: Long): Long
 
     /**
+     * How many seconds the IANA zone [zoneId] is ahead of UTC at [unixSeconds], or null when this
+     * platform does not know the zone. Two ids name the same clock at an instant when these match
+     * ("UTC" and "Etc/UTC"; Paris and Berlin).
+     */
+    fun utcOffsetSeconds(
+        zoneId: String,
+        unixSeconds: Long,
+    ): Long?
+
+    /**
      * Which local day a unix second falls on, with the zone read once for the whole counter
      * rather than per timestamp: for grouping a batch of events by day in one pass.
      */

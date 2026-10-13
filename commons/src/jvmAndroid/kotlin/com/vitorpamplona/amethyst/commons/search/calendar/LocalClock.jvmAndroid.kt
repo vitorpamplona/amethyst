@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst.commons.search.calendar
 
+import java.time.DateTimeException
 import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
@@ -60,6 +61,22 @@ actual object LocalClock {
             .getOffset(Instant.ofEpochSecond(unixSeconds))
             .totalSeconds
             .toLong()
+
+    actual fun utcOffsetSeconds(
+        zoneId: String,
+        unixSeconds: Long,
+    ): Long? {
+        val zone =
+            try {
+                ZoneId.of(zoneId.trim())
+            } catch (e: DateTimeException) {
+                return null
+            }
+        return zone.rules
+            .getOffset(Instant.ofEpochSecond(unixSeconds))
+            .totalSeconds
+            .toLong()
+    }
 
     actual fun epochDayCounter(): EpochDayCounter {
         val rules = zone().rules

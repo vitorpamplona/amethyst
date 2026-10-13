@@ -269,7 +269,9 @@ fun calendarTimeZoneLine(
     val zone = tzId?.trim()?.ifBlank { null } ?: return null
     val atEventClock =
         remember(start, zone) {
-            if (start == null || zone == LocalClock.zoneId()) {
+            // Compare clocks, not names: "Etc/UTC" for a reader on "UTC", or a Paris event read in
+            // Berlin, would otherwise repeat the very time already shown above.
+            if (start == null || zone == LocalClock.zoneId() || LocalClock.utcOffsetSeconds(zone, start) == LocalClock.utcOffsetSeconds(start)) {
                 null
             } else {
                 formatDateTimeInZone(start * 1000, DateTimeStyle.MEDIUM, DateTimeStyle.SHORT, zone)
