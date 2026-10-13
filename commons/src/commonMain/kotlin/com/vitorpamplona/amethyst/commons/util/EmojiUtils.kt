@@ -149,3 +149,16 @@ fun String.firstFullCharOrEmoji(tags: ImmutableListOfLists<String>): String {
 
     return firstFullChar()
 }
+
+/**
+ * The image url of a normalized custom-emoji reaction (`:shortcode:url`, see
+ * [firstFullCharOrEmoji]), or null when this is not a custom emoji or carries no url: a bare
+ * `:shortcode:` whose event had no matching emoji tag must be drawn as text, not as an empty image.
+ */
+fun String.customEmojiUrlOrNull(): String? {
+    if (length < 3 || this[0] != ':') return null
+    val secondColon = indexOf(':', 1)
+    if (secondColon < 2) return null
+    val url = substring(secondColon + 1)
+    return url.ifBlank { null }
+}

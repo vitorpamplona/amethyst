@@ -230,6 +230,7 @@ import com.vitorpamplona.amethyst.commons.ui.theme.selectedReactionBoxModifier
 import com.vitorpamplona.amethyst.commons.ui.wallet.WalletAppLauncher
 import com.vitorpamplona.amethyst.commons.ui.wallet.payInvoice
 import com.vitorpamplona.amethyst.commons.ui.wallet.rememberWalletAppLauncher
+import com.vitorpamplona.amethyst.commons.util.customEmojiUrlOrNull
 import com.vitorpamplona.amethyst.commons.util.showAmount
 import com.vitorpamplona.amethyst.commons.util.showCount
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
@@ -1104,14 +1105,13 @@ private fun RenderReactionType(
     iconSizeModifier: Modifier = Size20Modifier,
     iconFontSize: TextUnit,
 ) {
-    if (reactionType.isNotEmpty() && reactionType[0] == ':') {
-        val renderable =
-            remember(reactionType) {
-                persistentListOf(
-                    CustomEmoji.ImageUrlType(reactionType.removePrefix(":").substringAfter(":")),
-                )
-            }
+    // A bare `:shortcode:` (its event had no emoji tag) has no image: it falls to the text branch.
+    val renderable =
+        remember(reactionType) {
+            reactionType.customEmojiUrlOrNull()?.let { persistentListOf(CustomEmoji.ImageUrlType(it)) }
+        }
 
+    if (renderable != null) {
         InLineIconRenderer(
             renderable,
             style = SpanStyle(color = Color.White),

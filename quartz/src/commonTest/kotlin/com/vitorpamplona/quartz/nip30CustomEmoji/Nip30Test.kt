@@ -231,4 +231,32 @@ class Nip30Test {
         assertFalse(EmojiUrlTag.isValidShortcode("soap!"))
         assertFalse(EmojiUrlTag.isValidShortcode("絵文字"))
     }
+
+    @Test
+    fun decodeReadsShortcodeAndUrl() {
+        assertEquals(EmojiUrlTag("soapbox", "https://x.com/a.png"), EmojiUrlTag.decode(":soapbox:https://x.com/a.png"))
+    }
+
+    @Test
+    fun decodeKeepsColonsInsideTheUrl() {
+        assertEquals(EmojiUrlTag("soapbox", "https://x.com:8080/a.png"), EmojiUrlTag.decode(":soapbox:https://x.com:8080/a.png"))
+    }
+
+    @Test
+    fun decodeRejectsABareShortcodeWithoutUrl() {
+        // A `:shortcode:` with no url would otherwise publish `["emoji", "shortcode", ""]`.
+        assertNull(EmojiUrlTag.decode(":blob:"))
+        assertNull(EmojiUrlTag.decode(":blob:   "))
+    }
+
+    @Test
+    fun decodeRejectsAnEmptyShortcode() {
+        assertNull(EmojiUrlTag.decode("::https://x.com/a.png"))
+    }
+
+    @Test
+    fun decodeRejectsTextWithoutTheEncoding() {
+        assertNull(EmojiUrlTag.decode(":blob"))
+        assertNull(EmojiUrlTag.decode("+"))
+    }
 }

@@ -118,6 +118,7 @@ import com.vitorpamplona.amethyst.commons.ui.theme.WidthAuthorPictureModifierWit
 import com.vitorpamplona.amethyst.commons.ui.theme.bitcoinColor
 import com.vitorpamplona.amethyst.commons.ui.theme.overPictureBackground
 import com.vitorpamplona.amethyst.commons.ui.theme.profile35dpModifier
+import com.vitorpamplona.amethyst.commons.util.customEmojiUrlOrNull
 import com.vitorpamplona.amethyst.commons.util.showAmount
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.quartz.nip30CustomEmoji.CustomEmoji
@@ -302,13 +303,13 @@ fun RenderLikeGallery(
             ) {
                 val modifier = remember { Modifier.align(Alignment.TopEnd) }
 
-                if (reactionType.startsWith(":")) {
-                    val noStartColon = reactionType.removePrefix(":")
-                    val url = noStartColon.substringAfter(":")
+                // A bare `:shortcode:` (its event had no emoji tag) has no image: it falls to the text branch.
+                val renderable =
+                    remember(reactionType) {
+                        reactionType.customEmojiUrlOrNull()?.let { persistentListOf(CustomEmoji.ImageUrlType(it)) }
+                    }
 
-                    val renderable =
-                        persistentListOf(CustomEmoji.ImageUrlType(url))
-
+                if (renderable != null) {
                     InLineIconRenderer(
                         renderable,
                         style = SpanStyle(color = Color.White),

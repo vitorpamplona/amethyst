@@ -23,6 +23,7 @@ package com.vitorpamplona.amethyst.commons.util
 import com.vitorpamplona.amethyst.commons.model.ImmutableListOfLists
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertNull
 
 class ReactionEmojiTest {
     private fun tags(vararg tags: Array<String>) = ImmutableListOfLists(arrayOf(*tags))
@@ -53,5 +54,32 @@ class ReactionEmojiTest {
         assertEquals("+", "+".firstFullCharOrEmoji(tags()))
         assertEquals("-", "-".firstFullCharOrEmoji(tags()))
         assertEquals("😀", "😀".firstFullCharOrEmoji(tags()))
+    }
+
+    @Test
+    fun customEmojiUrlIsReadFromTheNormalizedReaction() {
+        assertEquals("https://example.com/soapbox.png", ":soapbox:https://example.com/soapbox.png".customEmojiUrlOrNull())
+        assertEquals("https://x.com:8080/a.png", ":soapbox:https://x.com:8080/a.png".customEmojiUrlOrNull())
+    }
+
+    @Test
+    fun bareShortcodeHasNoCustomEmojiUrl() {
+        assertNull(":soapbox:".customEmojiUrlOrNull())
+        assertNull(":soapbox: ".customEmojiUrlOrNull())
+        assertNull(":soapbox".customEmojiUrlOrNull())
+        assertNull(":".customEmojiUrlOrNull())
+    }
+
+    @Test
+    fun plainReactionsHaveNoCustomEmojiUrl() {
+        assertNull("+".customEmojiUrlOrNull())
+        assertNull("😀".customEmojiUrlOrNull())
+        assertNull("".customEmojiUrlOrNull())
+    }
+
+    @Test
+    fun untaggedShortcodeReactionRendersWithoutAnImage() {
+        // End to end: the normalized key of an untagged `:blob:` reaction must not yield an image url.
+        assertNull(":blob:".firstFullCharOrEmoji(tags()).customEmojiUrlOrNull())
     }
 }

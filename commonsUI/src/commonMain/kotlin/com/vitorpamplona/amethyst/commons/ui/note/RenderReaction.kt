@@ -23,6 +23,7 @@ package com.vitorpamplona.amethyst.commons.ui.note
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.unit.sp
 import com.vitorpamplona.amethyst.commons.emojicoder.EmojiCoder
@@ -30,6 +31,7 @@ import com.vitorpamplona.amethyst.commons.ui.components.AnimatedBorderTextCorner
 import com.vitorpamplona.amethyst.commons.ui.note.LikedIcon
 import com.vitorpamplona.amethyst.commons.ui.richtext.InLineIconRenderer
 import com.vitorpamplona.amethyst.commons.ui.theme.Size28Modifier
+import com.vitorpamplona.amethyst.commons.util.customEmojiUrlOrNull
 import com.vitorpamplona.quartz.nip30CustomEmoji.CustomEmoji
 import kotlinx.collections.immutable.persistentListOf
 
@@ -38,12 +40,7 @@ fun RenderReaction(reactionType: String) {
     // A custom emoji arrives here normalized to `:shortcode:url` (see firstFullCharOrEmoji). A
     // bare `:shortcode:` whose event carries no matching emoji tag has no image to draw: show the
     // shortcode as text instead of an empty image.
-    val customEmojiUrl =
-        if (reactionType.startsWith(":")) {
-            reactionType.removePrefix(":").substringAfter(":", "").ifBlank { null }
-        } else {
-            null
-        }
+    val customEmojiUrl = remember(reactionType) { reactionType.customEmojiUrlOrNull() }
 
     if (customEmojiUrl != null) {
         val url = customEmojiUrl
