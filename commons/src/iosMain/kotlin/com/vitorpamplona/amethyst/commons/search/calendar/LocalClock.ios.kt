@@ -33,6 +33,7 @@ import platform.Foundation.NSTimeZone
 import platform.Foundation.currentLocale
 import platform.Foundation.dateWithTimeIntervalSince1970
 import platform.Foundation.localTimeZone
+import platform.Foundation.timeZoneWithName
 
 // NSDateFormatter is not thread-safe for concurrent stringFromDate calls (Apple docs), and the
 // search field re-reads a month grid from whichever dispatcher the state flow ran on. One lock
@@ -68,6 +69,15 @@ actual object LocalClock {
     actual fun today(): SearchDate = ZoneMath.dayAt(currentTimeSeconds(), localZone)
 
     actual fun utcOffsetSeconds(unixSeconds: Long): Long = localZone.at(unixSeconds)
+
+    actual fun utcOffsetSeconds(
+        zoneId: String,
+        unixSeconds: Long,
+    ): Long? =
+        NSTimeZone
+            .timeZoneWithName(zoneId.trim())
+            ?.secondsFromGMTForDate(dateAt(unixSeconds))
+            ?.toLong()
 
     actual fun epochDayCounter(): EpochDayCounter = EpochDayCounter { ZoneMath.epochDayAt(it, localZone) }
 

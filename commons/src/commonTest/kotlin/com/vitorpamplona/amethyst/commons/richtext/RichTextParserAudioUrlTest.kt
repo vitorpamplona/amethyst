@@ -21,6 +21,7 @@
 package com.vitorpamplona.amethyst.commons.richtext
 
 import kotlin.test.Test
+import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
@@ -36,6 +37,17 @@ class RichTextParserAudioUrlTest {
         RichTextParser.audioExt.forEach {
             assertTrue(RichTextParser.isAudioUrl("https://example.com/a.$it"), it)
         }
+    }
+
+    @Test
+    fun blossomMpgaIsAudio() {
+        // Blossom servers name an `audio/mpeg` upload `.mpga` (podcast episodes, trailers and tracks
+        // as served by wss://search.brainstorm.world, 2026-10).
+        val url = "https://blossom.yakihonne.com/3a9b1d2fdab3be3273271918cc641bbdb514b28b25c7b9511b822a5e7f1d2d45.mpga"
+        assertTrue(RichTextParser.isAudioUrl(url))
+        assertTrue(RichTextParser.isAudioContent(null, url))
+        assertEquals("audio/mpeg", mimeTypeMap["mpga"])
+        assertEquals("audio/mpeg", normalizeMimeType("mpga"))
     }
 
     @Test

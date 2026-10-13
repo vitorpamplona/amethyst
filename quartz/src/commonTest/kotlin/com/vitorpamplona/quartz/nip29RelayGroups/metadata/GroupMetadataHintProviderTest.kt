@@ -70,6 +70,14 @@ class GroupMetadataHintProviderTest {
     }
 
     @Test
+    fun memberCountMatchesMembersWithoutBuildingTheList() {
+        val members = GroupMembersEvent(id, pk, 1L, arrayOf(arrayOf("d", "g"), arrayOf("p", other), arrayOf("p", "short"), arrayOf("p", third, relay), arrayOf("t", other)), "", sig)
+
+        assertEquals(members.members().size, members.memberCount())
+        assertEquals(2, members.memberCount())
+    }
+
+    @Test
     fun participantsAreNotLinked() {
         val participants =
             GroupParticipantsEvent(

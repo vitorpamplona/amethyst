@@ -29,13 +29,11 @@ import com.vitorpamplona.quartz.nip01Core.hints.PubKeyHintProvider
 import com.vitorpamplona.quartz.nip01Core.hints.types.PubKeyHint
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.nip01Core.tags.dTag.dTag
-import com.vitorpamplona.quartz.nip21UriScheme.toNostrUri
+import com.vitorpamplona.quartz.nip15Marketplace.Nip15ParseFailed
 import com.vitorpamplona.quartz.nip50Search.IndexableFieldVisitor
 import com.vitorpamplona.quartz.nip50Search.SearchableEvent
 import com.vitorpamplona.quartz.utils.Hex
-import com.vitorpamplona.quartz.utils.Log
 import com.vitorpamplona.quartz.utils.TimeUtils
-import kotlinx.coroutines.CancellationException
 
 @Immutable
 class MarketplaceEvent(
@@ -51,30 +49,25 @@ class MarketplaceEvent(
     override fun isContentEncoded() = true
 
     // linkedPubKeys() runs for every relay copy of every event and forEachIndexableField() on
-    // every keystroke, so the body is decoded once per instance — a failure included, which
-    // also keeps the warning to one per event. A failure is cached as the [ParseFailed] marker,
-    // not a `Result.failure`: that would pin the exception and its stack trace to every
-    // malformed event the cache holds. Events are immutable; a race only decodes twice.
+    // every keystroke, so the body is decoded once per instance, a failure included (cached as
+    // the [Nip15ParseFailed] marker). Events are immutable; a race only decodes twice.
     @kotlinx.serialization.Transient
     @kotlin.jvm.Transient
-    private var marketplaceDataCache: Any? = null // MarketplaceData, or ParseFailed
+    private var marketplaceDataCache: Any? = null // MarketplaceData, or Nip15ParseFailed
 
+    /** The market's JSON body, read leniently: null only when [content] is not a JSON object. */
     fun marketplaceData(): MarketplaceData? {
         marketplaceDataCache?.let { return it as? MarketplaceData }
-        val parsed =
-            try {
-                JsonMapper.fromJson<MarketplaceData>(content)
-            } catch (e: Exception) {
-                if (e is CancellationException) throw e
-                Log.w("MarketplaceEvent") { "Content Parse Error: ${toNostrUri()} ${e.message}" }
-                null
-            }
-        marketplaceDataCache = parsed ?: ParseFailed
+        val parsed = MarketplaceData.parse(content)
+        marketplaceDataCache = parsed ?: Nip15ParseFailed
         return parsed
     }
 
-    /** What [marketplaceDataCache] holds once the body failed to decode. */
-    private object ParseFailed
+    /**
+     * A marketplace names itself or lists merchants. Other apps publish their own JSON on kind
+     * 30019 (offers, orders); with neither there is nothing to show as a marketplace.
+     */
+    fun isWellFormed() = marketplaceData()?.let { it.name != null || merchants().isNotEmpty() } == true
 
     override fun indexableContent() = marketplaceData()?.let { listOfNotNull(it.name, it.about).joinToString("\n") } ?: ""
 

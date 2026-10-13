@@ -41,7 +41,8 @@ import androidx.compose.ui.text.style.TextOverflow
  *
  * [underline] + the hover cursor are mouse-first affordances: Desktop passes
  * `true`; touch front ends leave it `false`. A scheme-less [url] is opened as
- * `https://`.
+ * `https://`; a `tel:` or `mailto:` one goes to the platform as it is, which
+ * hands it to the dialer or the mail app.
  */
 @Composable
 fun ClickableUrl(
@@ -62,11 +63,13 @@ fun ClickableUrl(
         modifier =
             modifier.pointerHoverIcon(PointerIcon.Hand).clickable {
                 runCatching {
-                    uriHandler.openUri(if (url.contains("://")) url else "https://$url")
+                    uriHandler.openUri(if (url.contains("://") || isCallOrMail(url)) url else "https://$url")
                 }
             },
     )
 }
+
+private fun isCallOrMail(url: String) = url.startsWith("tel:", ignoreCase = true) || url.startsWith("mailto:", ignoreCase = true)
 
 /**
  * A primary-colored clickable email that opens the platform mail client via

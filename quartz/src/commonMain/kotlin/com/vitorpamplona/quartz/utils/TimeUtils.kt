@@ -55,6 +55,19 @@ object TimeUtils {
     const val ONE_MONTH = 30 * ONE_DAY
     const val ONE_YEAR = 365 * ONE_DAY
 
+    /**
+     * Above this a tag's "unix seconds" is past the year 2065, which no real event means: it is
+     * a client that wrote milliseconds.
+     */
+    private const val MAX_PLAUSIBLE_SECONDS = 3_000_000_000L
+
+    /**
+     * Reads a timestamp tag value as Unix seconds, scaling down one that was written in
+     * milliseconds (some clients do), so a deadline does not read as tens of thousands of years
+     * away.
+     */
+    fun toUnixSeconds(timestamp: Long): Long = if (timestamp > MAX_PLAUSIBLE_SECONDS) timestamp / 1000 else timestamp
+
     /** Current time in Unix **seconds** — the value for an event's `created_at`. */
     fun now() = currentTimeSeconds()
 

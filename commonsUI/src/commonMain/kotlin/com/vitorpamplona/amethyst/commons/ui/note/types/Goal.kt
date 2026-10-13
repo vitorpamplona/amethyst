@@ -41,6 +41,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.commons.model.Note
@@ -48,15 +49,18 @@ import com.vitorpamplona.amethyst.commons.model.ZapraiserStatus
 import com.vitorpamplona.amethyst.commons.relayClient.event.observeNoteZaps
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.goal_closed
+import com.vitorpamplona.amethyst.commons.resources.goal_ends_in
 import com.vitorpamplona.amethyst.commons.resources.goal_progress
 import com.vitorpamplona.amethyst.commons.resources.preview_card_image_for
 import com.vitorpamplona.amethyst.commons.ui.components.MyAsyncImage
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
+import com.vitorpamplona.amethyst.commons.ui.note.durationPhrase
 import com.vitorpamplona.amethyst.commons.ui.note.elements.DefaultImageHeader
 import com.vitorpamplona.amethyst.commons.ui.note.elements.DefaultImageHeaderBackground
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.Font14SP
 import com.vitorpamplona.amethyst.commons.ui.theme.fundraiserProgressColor
+import com.vitorpamplona.amethyst.commons.ui.theme.grayText
 import com.vitorpamplona.amethyst.commons.ui.theme.replyModifier
 import com.vitorpamplona.amethyst.commons.util.showAmount
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
@@ -85,10 +89,11 @@ fun GoalHeader(
     nav: INav,
 ) {
     val image = noteEvent.image()
-    val summary =
-        remember(noteEvent) {
-            noteEvent.summary()?.ifBlank { null } ?: noteEvent.content.take(200).ifBlank { null }
-        }
+    // NIP-75: the content is the goal's human-readable description, which clients show as its
+    // title; `summary` is a longer explanation under it. Show both rather than letting the
+    // summary replace the content.
+    val title = remember(noteEvent) { noteEvent.content.ifBlank { null } }
+    val summary = remember(noteEvent) { noteEvent.summary()?.ifBlank { null }?.takeIf { it != title } }
     val goalAmountMillisats = noteEvent.amount() ?: 0L
     val goalAmountSats = goalAmountMillisats / 1000
     val closedAt = noteEvent.closedAt()
@@ -111,13 +116,28 @@ fun GoalHeader(
         }
 
         Column(Modifier.padding(10.dp)) {
+            title?.let {
+                Text(
+                    text = it,
+                    style = MaterialTheme.typography.bodyLarge,
+                    fontWeight = FontWeight.Bold,
+                    maxLines = 3,
+                    overflow = TextOverflow.Ellipsis,
+                )
+                Spacer(modifier = Modifier.height(4.dp))
+            }
+
             summary?.let {
                 Text(
                     text = it,
                     style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.grayText,
                     maxLines = 3,
                     overflow = TextOverflow.Ellipsis,
                 )
+            }
+
+            if (title != null || summary != null) {
                 Spacer(modifier = Modifier.height(8.dp))
             }
 
@@ -133,6 +153,13 @@ fun GoalHeader(
                 Spacer(modifier = Modifier.height(4.dp))
                 Text(
                     text = stringRes(Res.string.goal_closed),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = Color.Gray,
+                )
+            } else if (closedAt != null) {
+                Spacer(modifier = Modifier.height(4.dp))
+                Text(
+                    text = stringRes(Res.string.goal_ends_in, durationPhrase(closedAt - TimeUtils.now())),
                     style = MaterialTheme.typography.bodySmall,
                     color = Color.Gray,
                 )

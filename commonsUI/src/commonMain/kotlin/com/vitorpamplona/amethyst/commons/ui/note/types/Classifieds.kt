@@ -20,12 +20,15 @@
  */
 package com.vitorpamplona.amethyst.commons.ui.note.types
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -38,19 +41,26 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
+import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.Note
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.classifieds_status_sold
 import com.vitorpamplona.amethyst.commons.richtext.MediaUrlImage
 import com.vitorpamplona.amethyst.commons.ui.components.AutoNonlazyGrid
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.note.elements.DefaultImageHeader
 import com.vitorpamplona.amethyst.commons.ui.note.platform.ZoomableContentView
+import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.DoubleVertSpacer
 import com.vitorpamplona.amethyst.commons.ui.theme.QuoteBorder
 import com.vitorpamplona.amethyst.commons.ui.theme.SmallBorder
+import com.vitorpamplona.amethyst.commons.ui.theme.grayText
 import com.vitorpamplona.amethyst.commons.ui.theme.subtleBorder
 import com.vitorpamplona.amethyst.commons.util.showAmount
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.quartz.nip99Classifieds.ClassifiedsEvent
+import com.vitorpamplona.quartz.nip99Classifieds.tags.StatusTag
 import com.vitorpamplona.quartz.utils.parseBigDecimalOrNull
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.toImmutableList
@@ -91,7 +101,8 @@ fun RenderClassifieds(
             noteEvent.summary() ?: noteEvent.content.take(200).ifBlank { null }
         }
     val price = remember(noteEvent) { noteEvent.price() }
-    val location = remember(noteEvent) { noteEvent.location() }
+    val location = remember(noteEvent) { noteEvent.location()?.ifBlank { null } }
+    val isSold = remember(noteEvent) { noteEvent.status().equals(StatusTag.STATUS.SOLD.value, ignoreCase = true) }
 
     Row(
         modifier =
@@ -132,6 +143,10 @@ fun RenderClassifieds(
                         overflow = TextOverflow.Ellipsis,
                         modifier = Modifier.weight(1f),
                     )
+                }
+
+                if (isSold) {
+                    ClassifiedSoldBadge()
                 }
 
                 price?.let {
@@ -178,7 +193,47 @@ fun RenderClassifieds(
                 }
             }
 
+            location?.let {
+                Row(
+                    Modifier.padding(start = 10.dp, end = 10.dp, top = 5.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Icon(
+                        symbol = MaterialSymbols.LocationOn,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.grayText,
+                        modifier = Modifier.size(14.dp),
+                    )
+                    Spacer(Modifier.width(4.dp))
+                    Text(
+                        text = it,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.grayText,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                }
+            }
+
             Spacer(modifier = DoubleVertSpacer)
         }
     }
+}
+
+/** NIP-99 `["status", "sold"]`: the listing is still on relays but no longer for sale. */
+@Composable
+fun ClassifiedSoldBadge() {
+    Text(
+        text = stringRes(Res.string.classifieds_status_sold),
+        style = MaterialTheme.typography.labelSmall,
+        fontWeight = FontWeight.Bold,
+        color = MaterialTheme.colorScheme.onErrorContainer,
+        maxLines = 1,
+        modifier =
+            Modifier
+                .padding(start = 5.dp)
+                .clip(SmallBorder)
+                .background(MaterialTheme.colorScheme.errorContainer)
+                .padding(horizontal = 6.dp, vertical = 2.dp),
+    )
 }

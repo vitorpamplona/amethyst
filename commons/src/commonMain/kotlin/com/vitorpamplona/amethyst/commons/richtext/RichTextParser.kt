@@ -500,7 +500,10 @@ class RichTextParser {
         // drift apart. It is also why [audioExt] is declared first; the compiler rejects the
         // reverse order outright ("Variable 'audioExt' must be initialized"), so this note is
         // intent, not a guard rail.
-        val audioExt = listOf("mp3", "ogg", "wav", "flac", "aac", "opus", "m4a", "f4a")
+        //
+        // `mpga` is what Blossom servers name an `audio/mpeg` upload (podcast episodes, trailers and
+        // tracks), so a bare `.mpga` link plays as the MP3 it is.
+        val audioExt = listOf("mp3", "mpga", "ogg", "wav", "flac", "aac", "opus", "m4a", "f4a")
         val videoExt = listOf("mp4", "avi", "wmv", "mpg", "amv", "webm", "mov", "m3u8") + audioExt
         val pdfExt = listOf("pdf")
 
@@ -774,6 +777,7 @@ val mimeTypeMap: Map<String, String> =
         "mkv" to "video/x-matroska",
         // Audio
         "mp3" to "audio/mpeg",
+        "mpga" to "audio/mpeg",
         "wav" to "audio/wav",
         "ogg" to "audio/ogg",
         "m4a" to "audio/mp4",

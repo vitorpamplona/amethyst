@@ -37,6 +37,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.commons.model.Note
+import com.vitorpamplona.amethyst.commons.podcasts.trailerAudio
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.podcast_trailer
 import com.vitorpamplona.amethyst.commons.resources.podcast_trailer_season
@@ -69,10 +70,8 @@ fun PodcastTrailerListItem(
 
     val title = remember(noteEvent) { noteEvent.title() }
     val season = remember(noteEvent) { noteEvent.season() }
-    val media =
-        remember(noteEvent) {
-            noteEvent.url()?.let { PodcastAudio(it, noteEvent.mimeType()) }
-        }
+    // The file in `url`, its mime in `type`: a Blossom `.mpga` or extensionless trailer is audio by it.
+    val media = remember(noteEvent) { noteEvent.trailerAudio() }
 
     val timeLabels = rememberTimeAgoLabels()
     val dateStr = remember(noteEvent, timeLabels) { timeAgoWith(noteEvent.createdAt, timeLabels, prefix = "") }

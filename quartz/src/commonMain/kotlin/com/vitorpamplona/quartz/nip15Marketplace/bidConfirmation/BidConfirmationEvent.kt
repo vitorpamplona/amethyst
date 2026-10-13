@@ -31,14 +31,12 @@ import com.vitorpamplona.quartz.nip01Core.hints.PubKeyHintProvider
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.nip01Core.tags.events.ETag
 import com.vitorpamplona.quartz.nip01Core.tags.people.PTag
+import com.vitorpamplona.quartz.nip15Marketplace.Nip15ParseFailed
 import com.vitorpamplona.quartz.nip15Marketplace.auction.AuctionEvent
 import com.vitorpamplona.quartz.nip15Marketplace.bid.BidEvent
-import com.vitorpamplona.quartz.nip21UriScheme.toNostrUri
 import com.vitorpamplona.quartz.nip50Search.IndexableFieldVisitor
 import com.vitorpamplona.quartz.nip50Search.SearchableEvent
-import com.vitorpamplona.quartz.utils.Log
 import com.vitorpamplona.quartz.utils.TimeUtils
-import kotlinx.coroutines.CancellationException
 
 @Immutable
 class BidConfirmationEvent(
@@ -87,31 +85,23 @@ class BidConfirmationEvent(
     /** The author of the confirmed bid (`p`, written by [notifyBidder]). */
     fun bidder(): HexKey? = tags.firstNotNullOfOrNull(PTag::parseKey)
 
-    // forEachIndexableField() runs on every keystroke, so the body is decoded once per
-    // instance — a failure included, which also keeps the warning to one per event. A failure
-    // is cached as the [ParseFailed] marker, not a `Result.failure`: that would pin the
-    // exception and its stack trace to every malformed event the cache holds. Events are
-    // immutable; a race only decodes twice.
+    // forEachIndexableField() runs on every keystroke, so the body is decoded once per instance,
+    // a failure included (cached as the [Nip15ParseFailed] marker). Events are immutable; a race
+    // only decodes twice.
     @kotlinx.serialization.Transient
     @kotlin.jvm.Transient
-    private var confirmationDataCache: Any? = null // BidConfirmationData, or ParseFailed
+    private var confirmationDataCache: Any? = null // BidConfirmationData, or Nip15ParseFailed
 
+    /** The confirmation's JSON body, read leniently: null only when [content] is not a JSON object. */
     fun confirmationData(): BidConfirmationData? {
         confirmationDataCache?.let { return it as? BidConfirmationData }
-        val parsed =
-            try {
-                JsonMapper.fromJson<BidConfirmationData>(content)
-            } catch (e: Exception) {
-                if (e is CancellationException) throw e
-                Log.w("BidConfirmationEvent") { "Content Parse Error: ${toNostrUri()} ${e.message}" }
-                null
-            }
-        confirmationDataCache = parsed ?: ParseFailed
+        val parsed = BidConfirmationData.parse(content)
+        confirmationDataCache = parsed ?: Nip15ParseFailed
         return parsed
     }
 
-    /** What [confirmationDataCache] holds once the body failed to decode. */
-    private object ParseFailed
+    /** A confirmation states a status for a bid it names. */
+    fun isWellFormed() = status() != null && bidId() != null
 
     fun status() = confirmationData()?.status
 

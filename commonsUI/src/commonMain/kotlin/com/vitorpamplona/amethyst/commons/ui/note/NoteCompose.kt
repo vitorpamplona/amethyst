@@ -54,6 +54,7 @@ import androidx.compose.ui.graphics.compositeOver
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.vitorpamplona.amethyst.commons.audio.hasPlayableAudio
 import com.vitorpamplona.amethyst.commons.birdstar.ui.RenderBirdDetection
 import com.vitorpamplona.amethyst.commons.birdstar.ui.RenderBirdex
 import com.vitorpamplona.amethyst.commons.concord.ui.ConcordCommunityPill
@@ -74,6 +75,12 @@ import com.vitorpamplona.amethyst.commons.model.nip28PublicChats.PublicChatChann
 import com.vitorpamplona.amethyst.commons.model.nip29RelayGroups.RelayGroupChannel
 import com.vitorpamplona.amethyst.commons.model.replyingDirectlyTo
 import com.vitorpamplona.amethyst.commons.model.textNoteModifications
+import com.vitorpamplona.amethyst.commons.nip15Marketplace.ui.RenderAuction
+import com.vitorpamplona.amethyst.commons.nip15Marketplace.ui.RenderBid
+import com.vitorpamplona.amethyst.commons.nip15Marketplace.ui.RenderBidConfirmation
+import com.vitorpamplona.amethyst.commons.nip15Marketplace.ui.RenderMarketplace
+import com.vitorpamplona.amethyst.commons.nip15Marketplace.ui.RenderProduct
+import com.vitorpamplona.amethyst.commons.nip15Marketplace.ui.RenderStall
 import com.vitorpamplona.amethyst.commons.nip69P2pOrderEvents.ui.RenderMostroInfo
 import com.vitorpamplona.amethyst.commons.nipC0CodeSnippets.ui.RenderCodeSnippetEvent
 import com.vitorpamplona.amethyst.commons.relayClient.event.observeCommunityApprovalNeedStatus
@@ -198,6 +205,7 @@ import com.vitorpamplona.amethyst.commons.ui.note.types.RenderGeocacheFoundLog
 import com.vitorpamplona.amethyst.commons.ui.note.types.RenderGitCoverNoteEvent
 import com.vitorpamplona.amethyst.commons.ui.note.types.RenderGitStatusEvent
 import com.vitorpamplona.amethyst.commons.ui.note.types.RenderGoal
+import com.vitorpamplona.amethyst.commons.ui.note.types.RenderGroupMetadata
 import com.vitorpamplona.amethyst.commons.ui.note.types.RenderHighlight
 import com.vitorpamplona.amethyst.commons.ui.note.types.RenderHttpAuth
 import com.vitorpamplona.amethyst.commons.ui.note.types.RenderInteractiveStory
@@ -259,6 +267,8 @@ import com.vitorpamplona.amethyst.commons.ui.note.types.RenderZapPoll
 import com.vitorpamplona.amethyst.commons.ui.note.types.RenderZapReceipt
 import com.vitorpamplona.amethyst.commons.ui.note.types.ReplyRenderType
 import com.vitorpamplona.amethyst.commons.ui.note.types.VideoDisplay
+import com.vitorpamplona.amethyst.commons.ui.note.types.dlists.RenderDListHeader
+import com.vitorpamplona.amethyst.commons.ui.note.types.dlists.RenderDListItem
 import com.vitorpamplona.amethyst.commons.ui.note.types.lists.RenderAppCurationSet
 import com.vitorpamplona.amethyst.commons.ui.note.types.lists.RenderArticleCurationSet
 import com.vitorpamplona.amethyst.commons.ui.note.types.lists.RenderBookmarkList
@@ -279,6 +289,9 @@ import com.vitorpamplona.amethyst.commons.ui.note.types.lists.RenderOldBookmarkL
 import com.vitorpamplona.amethyst.commons.ui.note.types.lists.RenderPictureCurationSet
 import com.vitorpamplona.amethyst.commons.ui.note.types.lists.RenderSimpleGroupList
 import com.vitorpamplona.amethyst.commons.ui.note.types.observeZapSender
+import com.vitorpamplona.amethyst.commons.ui.note.types.trust.RenderTrustProviderList
+import com.vitorpamplona.amethyst.commons.ui.note.types.trust.RenderTrustedAssertion
+import com.vitorpamplona.amethyst.commons.ui.note.types.trust.RenderTrustedList
 import com.vitorpamplona.amethyst.commons.ui.screen.LocalDisplaySettings
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.feed.types.RenderChatClip
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.publicChannels.nip28PublicChat.RenderPublicChatChannelHeader
@@ -324,6 +337,10 @@ import com.vitorpamplona.quartz.experimental.birdstar.BirdDetectionEvent
 import com.vitorpamplona.quartz.experimental.birdstar.BirdexEvent
 import com.vitorpamplona.quartz.experimental.bounties.bountyBaseReward
 import com.vitorpamplona.quartz.experimental.citations.CitationEvent
+import com.vitorpamplona.quartz.experimental.decentralizedLists.header.AddressableListHeaderEvent
+import com.vitorpamplona.quartz.experimental.decentralizedLists.header.ListHeaderEvent
+import com.vitorpamplona.quartz.experimental.decentralizedLists.item.AddressableListItemEvent
+import com.vitorpamplona.quartz.experimental.decentralizedLists.item.ListItemEvent
 import com.vitorpamplona.quartz.experimental.edits.TextNoteModificationEvent
 import com.vitorpamplona.quartz.experimental.fitness.workout.ExerciseTemplateEvent
 import com.vitorpamplona.quartz.experimental.fitness.workout.WorkoutRecordEvent
@@ -352,6 +369,7 @@ import com.vitorpamplona.quartz.experimental.ratings.EntityRatingEvent
 import com.vitorpamplona.quartz.experimental.ratings.RelayReviewEvent
 import com.vitorpamplona.quartz.experimental.roadstr.confirmation.RoadEventConfirmationEvent
 import com.vitorpamplona.quartz.experimental.roadstr.report.RoadEventReportEvent
+import com.vitorpamplona.quartz.experimental.trustedLists.TrustedListEvent
 import com.vitorpamplona.quartz.experimental.videoCollaboration.VideoCollaborationEvent
 import com.vitorpamplona.quartz.experimental.walletScrutiny.verification.BuildVerificationEvent
 import com.vitorpamplona.quartz.experimental.zapPolls.ZapPollEvent
@@ -363,6 +381,12 @@ import com.vitorpamplona.quartz.nip04Dm.messages.EncryptedDmEvent
 import com.vitorpamplona.quartz.nip10Notes.BaseThreadedEvent
 import com.vitorpamplona.quartz.nip10Notes.TextNoteEvent
 import com.vitorpamplona.quartz.nip13Pow.strongPoWOrNull
+import com.vitorpamplona.quartz.nip15Marketplace.auction.AuctionEvent
+import com.vitorpamplona.quartz.nip15Marketplace.bid.BidEvent
+import com.vitorpamplona.quartz.nip15Marketplace.bidConfirmation.BidConfirmationEvent
+import com.vitorpamplona.quartz.nip15Marketplace.marketplace.MarketplaceEvent
+import com.vitorpamplona.quartz.nip15Marketplace.product.ProductEvent
+import com.vitorpamplona.quartz.nip15Marketplace.stall.StallEvent
 import com.vitorpamplona.quartz.nip17Dm.files.ChatMessageEncryptedFileHeaderEvent
 import com.vitorpamplona.quartz.nip17Dm.messages.ChatMessageEvent
 import com.vitorpamplona.quartz.nip17Dm.settings.DmRelayListEvent
@@ -374,6 +398,7 @@ import com.vitorpamplona.quartz.nip25Reactions.ReactionEvent
 import com.vitorpamplona.quartz.nip28PublicChat.admin.ChannelCreateEvent
 import com.vitorpamplona.quartz.nip28PublicChat.admin.ChannelMetadataEvent
 import com.vitorpamplona.quartz.nip28PublicChat.message.ChannelMessageEvent
+import com.vitorpamplona.quartz.nip29RelayGroups.metadata.GroupMetadataEvent
 import com.vitorpamplona.quartz.nip30CustomEmoji.pack.EmojiPackEvent
 import com.vitorpamplona.quartz.nip34Git.coverNote.GitCoverNoteEvent
 import com.vitorpamplona.quartz.nip34Git.issue.GitIssueEvent
@@ -465,6 +490,11 @@ import com.vitorpamplona.quartz.nip75ZapGoals.ZapGoalEvent
 import com.vitorpamplona.quartz.nip78AppData.AppSpecificDataEvent
 import com.vitorpamplona.quartz.nip7DThreads.ThreadEvent
 import com.vitorpamplona.quartz.nip84Highlights.HighlightEvent
+import com.vitorpamplona.quartz.nip85TrustedAssertions.addressables.AddressableAssertionEvent
+import com.vitorpamplona.quartz.nip85TrustedAssertions.events.EventAssertionEvent
+import com.vitorpamplona.quartz.nip85TrustedAssertions.externalIds.ExternalIdAssertionEvent
+import com.vitorpamplona.quartz.nip85TrustedAssertions.list.TrustProviderListEvent
+import com.vitorpamplona.quartz.nip85TrustedAssertions.users.UserAssertionEvent
 import com.vitorpamplona.quartz.nip87Ecash.cashu.CashuMintEvent
 import com.vitorpamplona.quartz.nip87Ecash.fedimint.FedimintEvent
 import com.vitorpamplona.quartz.nip87Ecash.recommendation.MintRecommendationEvent
@@ -1048,8 +1078,14 @@ fun NoteBody(
     }
 }
 
+/**
+ * The per-kind body of a note: the one place that maps an event class to the composable that draws
+ * it. The feed cards call it, and so does the thread view's master note (ThreadFeedView) for every
+ * kind that has no thread-specific header, so a kind added here renders in both without a second
+ * branch to keep in sync.
+ */
 @Composable
-private fun RenderNoteRow(
+internal fun RenderNoteRow(
     baseNote: Note,
     backgroundColor: MutableState<Color>,
     makeItShort: Boolean,
@@ -1107,7 +1143,9 @@ private fun RenderNoteRow(
             RenderAttestorProficiency(baseNote, quotesLeft, backgroundColor, accountViewModel, nav)
         }
 
-        is AudioTrackEvent -> {
+        // Kind 31337 is borrowed (AntennaPod's ad-skip data, game state, sync indexes): only an
+        // event with an audio file to play is a track. The rest fall through to the text card.
+        is AudioTrackEvent if noteEvent.hasPlayableAudio() -> {
             RenderAudioTrack(baseNote, ContentScale.FillWidth, accountViewModel, nav)
         }
 
@@ -1339,7 +1377,7 @@ private fun RenderNoteRow(
         }
 
         is PinListEvent -> {
-            RenderPinListEvent(baseNote, backgroundColor, accountViewModel, nav)
+            RenderPinListEvent(baseNote, quotesLeft, backgroundColor, accountViewModel, nav)
         }
 
         is EmojiPackEvent -> {
@@ -1572,6 +1610,32 @@ private fun RenderNoteRow(
                 accountViewModel,
                 nav,
             )
+        }
+
+        // NIP-15. Other apps' records on 30017-30020 (no name, no merchants) fall through to the
+        // text card below, as they always did.
+        is StallEvent if noteEvent.isWellFormed() -> {
+            RenderStall(baseNote, makeItShort, accountViewModel, nav)
+        }
+
+        is ProductEvent if noteEvent.isWellFormed() -> {
+            RenderProduct(baseNote, makeItShort, accountViewModel, nav)
+        }
+
+        is MarketplaceEvent if noteEvent.isWellFormed() -> {
+            RenderMarketplace(baseNote, makeItShort, accountViewModel, nav)
+        }
+
+        is AuctionEvent if noteEvent.isWellFormed() -> {
+            RenderAuction(baseNote, makeItShort, accountViewModel, nav)
+        }
+
+        is BidEvent if noteEvent.isWellFormed() -> {
+            RenderBid(baseNote, quotesLeft, backgroundColor, accountViewModel, nav)
+        }
+
+        is BidConfirmationEvent if noteEvent.isWellFormed() -> {
+            RenderBidConfirmation(baseNote, quotesLeft, backgroundColor, accountViewModel, nav)
         }
 
         is CalendarTimeSlotEvent -> {
@@ -2029,6 +2093,51 @@ private fun RenderNoteRow(
 
         is GoodWikiRelayListEvent -> {
             RenderGoodWikiRelayList(baseNote, backgroundColor, accountViewModel)
+        }
+
+        // NIP-85: one card for the four assertion kinds, which differ only in what they score.
+        is UserAssertionEvent,
+        is EventAssertionEvent,
+        is AddressableAssertionEvent,
+        is ExternalIdAssertionEvent,
+        -> {
+            RenderTrustedAssertion(baseNote, quotesLeft, backgroundColor, accountViewModel, nav)
+        }
+
+        is TrustProviderListEvent -> {
+            RenderTrustProviderList(baseNote, accountViewModel, nav)
+        }
+
+        // Trusted Lists, kinds 30392-30395.
+        is TrustedListEvent -> {
+            RenderTrustedList(baseNote, quotesLeft, backgroundColor, accountViewModel, nav)
+        }
+
+        // Decentralized Lists. An item that declares a list (the spec's "nonstandard method") is a header.
+        is ListHeaderEvent,
+        is AddressableListHeaderEvent,
+        -> {
+            RenderDListHeader(baseNote, accountViewModel, nav)
+        }
+
+        is ListItemEvent -> {
+            if (noteEvent.declaresList()) {
+                RenderDListHeader(baseNote, accountViewModel, nav)
+            } else {
+                RenderDListItem(baseNote, quotesLeft, backgroundColor, accountViewModel, nav)
+            }
+        }
+
+        is AddressableListItemEvent -> {
+            if (noteEvent.declaresList()) {
+                RenderDListHeader(baseNote, accountViewModel, nav)
+            } else {
+                RenderDListItem(baseNote, quotesLeft, backgroundColor, accountViewModel, nav)
+            }
+        }
+
+        is GroupMetadataEvent -> {
+            RenderGroupMetadata(baseNote, accountViewModel, nav)
         }
 
         else -> {

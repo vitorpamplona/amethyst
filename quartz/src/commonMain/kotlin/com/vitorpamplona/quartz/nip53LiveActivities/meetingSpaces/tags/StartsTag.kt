@@ -21,6 +21,7 @@
 package com.vitorpamplona.quartz.nip53LiveActivities.meetingSpaces.tags
 
 import com.vitorpamplona.quartz.nip01Core.core.has
+import com.vitorpamplona.quartz.utils.TimeUtils
 import com.vitorpamplona.quartz.utils.ensure
 
 /**
@@ -39,7 +40,7 @@ class StartsTag {
         fun parse(tag: Array<String>): Long? {
             ensure(tag.has(1)) { return null }
             ensure(tag[0] == TAG_NAME) { return null }
-            return tag[1].toLongOrNull()
+            return tag[1].toLongOrNull()?.let(TimeUtils::toUnixSeconds)
         }
 
         fun assemble(unixSeconds: Long): Array<String> {

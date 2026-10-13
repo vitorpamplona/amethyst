@@ -51,7 +51,7 @@ class MusicTrackMediaTest {
 
     @Test
     fun audioExtensionsStayAudio() {
-        listOf("mp3", "m4a", "flac", "ogg", "opus", "wav").forEach { ext ->
+        listOf("mp3", "mpga", "m4a", "flac", "ogg", "opus", "wav").forEach { ext ->
             val url = "https://example.com/song.$ext"
             assertEquals(MusicTrackMedia.Audio(url, null), track(arrayOf("url", url)).media(), ext)
         }
@@ -88,6 +88,8 @@ class MusicTrackMediaTest {
         assertEquals(MusicTrackMedia.Audio(url, "audio/mp4"), track(arrayOf("url", url), arrayOf("format", "m4a")).media())
         assertEquals(MusicTrackMedia.Audio(url, "audio/mpeg"), track(arrayOf("url", url), arrayOf("format", "mp3")).media())
         assertEquals(MusicTrackMedia.Audio(url, "audio/flac"), track(arrayOf("url", url), arrayOf("format", "FLAC")).media())
+        // Blossom's name for an `audio/mpeg` upload.
+        assertEquals(MusicTrackMedia.Audio(url, "audio/mpeg"), track(arrayOf("url", url), arrayOf("format", "mpga")).media())
     }
 
     @Test

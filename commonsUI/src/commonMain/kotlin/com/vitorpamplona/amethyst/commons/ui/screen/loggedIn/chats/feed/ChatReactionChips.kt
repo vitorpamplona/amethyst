@@ -75,6 +75,7 @@ import com.vitorpamplona.amethyst.commons.ui.theme.Font12SP
 import com.vitorpamplona.amethyst.commons.ui.theme.Size14Modifier
 import com.vitorpamplona.amethyst.commons.ui.theme.bitcoinColor
 import com.vitorpamplona.amethyst.commons.ui.theme.grayText
+import com.vitorpamplona.amethyst.commons.util.customEmojiUrlOrNull
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.quartz.nip30CustomEmoji.CustomEmoji
 import kotlinx.collections.immutable.ImmutableList
@@ -412,10 +413,14 @@ private fun ChipContentRow(content: @Composable () -> Unit) {
 
 @Composable
 internal fun ChipReactionGlyph(reactionType: String) {
-    if (reactionType.startsWith(":")) {
-        val url = reactionType.removePrefix(":").substringAfter(":")
+    // A bare `:shortcode:` (its event had no emoji tag) has no image: it falls to the text branch.
+    val renderable =
+        remember(reactionType) {
+            reactionType.customEmojiUrlOrNull()?.let { persistentListOf(CustomEmoji.ImageUrlType(it)) }
+        }
+    if (renderable != null) {
         InLineIconRenderer(
-            persistentListOf(CustomEmoji.ImageUrlType(url)),
+            renderable,
             style = SpanStyle(color = MaterialTheme.colorScheme.onBackground),
             fontSize = ChipGlyphFontSize,
             maxLines = 1,

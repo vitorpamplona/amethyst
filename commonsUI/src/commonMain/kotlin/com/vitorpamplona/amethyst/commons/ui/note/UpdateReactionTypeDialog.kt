@@ -91,6 +91,7 @@ import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.ButtonBorder
 import com.vitorpamplona.amethyst.commons.ui.theme.StdVertSpacer
 import com.vitorpamplona.amethyst.commons.ui.theme.placeholderText
+import com.vitorpamplona.amethyst.commons.util.customEmojiUrlOrNull
 import com.vitorpamplona.amethyst.commons.util.firstFullChar
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.quartz.nip01Core.core.Address
@@ -288,10 +289,8 @@ private fun RenderReactionOption(
                     shape = RoundedCornerShape(8.dp),
                 ).padding(8.dp),
     ) {
-        if (reactionType.startsWith(":")) {
-            val noStartColon = reactionType.removePrefix(":")
-            val url = noStartColon.substringAfter(":")
-
+        val url = remember(reactionType) { reactionType.customEmojiUrlOrNull() }
+        if (url != null) {
             val renderable =
                 persistentListOf(
                     CustomEmoji.ImageUrlType(url),

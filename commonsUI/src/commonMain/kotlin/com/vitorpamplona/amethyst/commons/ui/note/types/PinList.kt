@@ -20,45 +20,29 @@
  */
 package com.vitorpamplona.amethyst.commons.ui.note.types
 
-import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.ExperimentalLayoutApi
-import androidx.compose.foundation.layout.FlowRow
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.width
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.MutableState
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.key
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
-import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.commons.model.Note
-import com.vitorpamplona.amethyst.commons.ui.components.ShowMoreButton
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.pinned_notes
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
-import com.vitorpamplona.amethyst.commons.ui.note.PinIcon
-import com.vitorpamplona.amethyst.commons.ui.note.getGradient
-import com.vitorpamplona.amethyst.commons.ui.theme.Size15Modifier
+import com.vitorpamplona.amethyst.commons.ui.note.types.lists.BookmarkMemberRow
+import com.vitorpamplona.amethyst.commons.ui.note.types.lists.ListCard
+import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
-import com.vitorpamplona.quartz.nip19Bech32.entities.NEvent
 import com.vitorpamplona.quartz.nip51Lists.PinListEvent
 
-@OptIn(ExperimentalLayoutApi::class)
+/**
+ * NIP-51 kind 10001: the notes a user pinned to their profile, drawn as the quoted notes themselves
+ * (each opens its thread) in the same collapsible frame as the other lists.
+ */
 @Composable
 fun RenderPinListEvent(
     baseNote: Note,
+    quotesLeft: Int,
     backgroundColor: MutableState<Color>,
     accountViewModel: AccountViewModel,
     nav: INav,
@@ -67,62 +51,15 @@ fun RenderPinListEvent(
 
     val pins = remember(noteEvent) { noteEvent.pinnedEvents() }
 
-    var expanded by remember { mutableStateOf(false) }
-
-    val pinsToShow =
-        if (expanded) {
-            pins
-        } else {
-            pins.take(3)
-        }
-
-    Text(
-        text = "Pinned Notes",
-        fontWeight = FontWeight.Bold,
-        maxLines = 1,
-        overflow = TextOverflow.Ellipsis,
-        modifier =
-            Modifier
-                .fillMaxWidth()
-                .padding(5.dp),
-        textAlign = TextAlign.Center,
-    )
-
-    Box {
-        FlowRow(modifier = Modifier.padding(top = 5.dp)) {
-            pinsToShow.forEach { pin ->
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    PinIcon(
-                        modifier = Size15Modifier,
-                        tint = MaterialTheme.colorScheme.onBackground.copy(0.32f),
-                    )
-
-                    Spacer(modifier = Modifier.width(5.dp))
-
-                    Text(
-                        text = NEvent.create(pin.eventId, pin.author, null, pin.relay),
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                    )
-                }
-            }
-        }
-
-        if (pins.size > 3 && !expanded) {
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.Center,
-                modifier =
-                    Modifier
-                        .align(Alignment.BottomCenter)
-                        .fillMaxWidth()
-                        .background(getGradient(backgroundColor)),
-            ) {
-                ShowMoreButton { expanded = !expanded }
-            }
+    ListCard(
+        title = stringRes(Res.string.pinned_notes),
+        description = null,
+        items = pins,
+        hasUnreadablePrivateItems = false,
+        backgroundColor = backgroundColor,
+    ) { pin ->
+        key(pin.eventId) {
+            BookmarkMemberRow(pin, quotesLeft, backgroundColor, accountViewModel, nav)
         }
     }
 }

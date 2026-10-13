@@ -27,12 +27,10 @@ import com.vitorpamplona.quartz.nip01Core.core.JsonMapper
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.nip01Core.tags.dTag.dTag
-import com.vitorpamplona.quartz.nip21UriScheme.toNostrUri
+import com.vitorpamplona.quartz.nip15Marketplace.Nip15ParseFailed
 import com.vitorpamplona.quartz.nip50Search.IndexableFieldVisitor
 import com.vitorpamplona.quartz.nip50Search.SearchableEvent
-import com.vitorpamplona.quartz.utils.Log
 import com.vitorpamplona.quartz.utils.TimeUtils
-import kotlinx.coroutines.CancellationException
 
 @Immutable
 class StallEvent(
@@ -46,14 +44,26 @@ class StallEvent(
     SearchableEvent {
     override fun isContentEncoded() = true
 
-    fun stallData(): StallData? =
-        try {
-            JsonMapper.fromJson<StallData>(content)
-        } catch (e: Exception) {
-            if (e is CancellationException) throw e
-            Log.w("StallEvent") { "Content Parse Error: ${toNostrUri()} ${e.message}" }
-            null
-        }
+    // isWellFormed() runs for every copy the cache consumes and forEachIndexableField() on every
+    // search keystroke, so the body is decoded once per instance, a failure included. Events are
+    // immutable; a race only decodes twice.
+    @kotlinx.serialization.Transient
+    @kotlin.jvm.Transient
+    private var stallDataCache: Any? = null // StallData, or Nip15ParseFailed
+
+    /** The stall's JSON body, read leniently: null only when [content] is not a JSON object. */
+    fun stallData(): StallData? {
+        stallDataCache?.let { return it as? StallData }
+        val parsed = StallData.parse(content, dTag())
+        stallDataCache = parsed ?: Nip15ParseFailed
+        return parsed
+    }
+
+    /**
+     * A stall has a name. Other apps publish their own JSON on kind 30017 (a typing game's
+     * scores, shop listings in other shapes); without a name there is nothing to show as a stall.
+     */
+    fun isWellFormed() = stallData()?.name != null
 
     override fun indexableContent() = stallData()?.let { listOfNotNull(it.name, it.description).joinToString("\n") } ?: ""
 

@@ -21,6 +21,7 @@
 package com.vitorpamplona.quartz.nip15Marketplace.product
 
 import androidx.compose.runtime.Immutable
+import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.nip01Core.core.BaseAddressableEvent
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.JsonMapper
@@ -28,12 +29,11 @@ import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.nip01Core.tags.dTag.dTag
 import com.vitorpamplona.quartz.nip01Core.tags.hashtags.hashtags
-import com.vitorpamplona.quartz.nip21UriScheme.toNostrUri
+import com.vitorpamplona.quartz.nip15Marketplace.Nip15ParseFailed
+import com.vitorpamplona.quartz.nip15Marketplace.stall.StallEvent
 import com.vitorpamplona.quartz.nip50Search.IndexableFieldVisitor
 import com.vitorpamplona.quartz.nip50Search.SearchableEvent
-import com.vitorpamplona.quartz.utils.Log
 import com.vitorpamplona.quartz.utils.TimeUtils
-import kotlinx.coroutines.CancellationException
 
 @Immutable
 class ProductEvent(
@@ -47,16 +47,31 @@ class ProductEvent(
     SearchableEvent {
     override fun isContentEncoded() = true
 
-    fun productData(): ProductData? =
-        try {
-            JsonMapper.fromJson<ProductData>(content)
-        } catch (e: Exception) {
-            if (e is CancellationException) throw e
-            Log.w("ProductEvent") { "Content Parse Error: ${toNostrUri()} ${e.message}" }
-            null
-        }
+    // isWellFormed() runs for every copy the cache consumes and forEachIndexableField() on every
+    // search keystroke, so the body is decoded once per instance, a failure included. Events are
+    // immutable; a race only decodes twice.
+    @kotlinx.serialization.Transient
+    @kotlin.jvm.Transient
+    private var productDataCache: Any? = null // ProductData, or Nip15ParseFailed
+
+    /** The product's JSON body, read leniently: null only when [content] is not a JSON object. */
+    fun productData(): ProductData? {
+        productDataCache?.let { return it as? ProductData }
+        val parsed = ProductData.parse(content, dTag())
+        productDataCache = parsed ?: Nip15ParseFailed
+        return parsed
+    }
+
+    /** A product has a name; other apps' JSON on kind 30018 without one is not a product. */
+    fun isWellFormed() = productData()?.name != null
 
     fun categories() = tags.hashtags()
+
+    /**
+     * The stall this is sold from: NIP-15 makes a stall's `d` tag equal its id, so `stall_id` on
+     * the same merchant names its kind-30017 address.
+     */
+    fun stallAddress(): Address? = productData()?.stallId?.let { Address(StallEvent.KIND, pubKey, it) }
 
     override fun indexableContent() = productData()?.let { (listOfNotNull(it.name, it.description) + categories()).joinToString("\n") } ?: ""
 

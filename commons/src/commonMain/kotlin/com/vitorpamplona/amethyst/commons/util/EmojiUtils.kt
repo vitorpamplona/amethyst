@@ -115,6 +115,12 @@ fun String.firstFullChar(): String {
     return substring(start, start + previousCharLength)
 }
 
+/**
+ * Normalizes a kind-7/17 reaction content to what the reactions row and the reaction badges draw:
+ * a NIP-30 custom emoji `:shortcode:` becomes `:shortcode:url` using the event's matching
+ * `["emoji", shortcode, url]` tag (or stays `:shortcode:` when the tag is missing), an EmojiCoder message is cropped to its first message, and
+ * anything else is cut to its first full (grapheme-ish) character.
+ */
 fun String.firstFullCharOrEmoji(tags: ImmutableListOfLists<String>): String {
     if (length <= 2) {
         return firstFullChar()
@@ -125,9 +131,14 @@ fun String.firstFullCharOrEmoji(tags: ImmutableListOfLists<String>): String {
         val emojiParts = this.split(":", limit = 3)
         if (emojiParts.size >= 2) {
             val emojiName = emojiParts[1]
-            val emojiUrl = tags.lists.firstOrNull { it.size > 1 && it[1] == emojiName }?.getOrNull(2)
+            val emojiUrl = tags.lists.firstOrNull { it.size > 2 && it[0] == "emoji" && it[1] == emojiName }?.get(2)
             if (emojiUrl != null) {
                 return ":$emojiName:$emojiUrl"
+            }
+            // A `:shortcode:` without its emoji tag cannot be drawn as an image; keep the
+            // shortcode so it shows (and groups) as text instead of collapsing to ":".
+            if (emojiParts.size == 3 && emojiName.isNotEmpty() && emojiParts[2].isEmpty()) {
+                return ":$emojiName:"
             }
         }
     }
@@ -137,4 +148,17 @@ fun String.firstFullCharOrEmoji(tags: ImmutableListOfLists<String>): String {
     }
 
     return firstFullChar()
+}
+
+/**
+ * The image url of a normalized custom-emoji reaction (`:shortcode:url`, see
+ * [firstFullCharOrEmoji]), or null when this is not a custom emoji or carries no url: a bare
+ * `:shortcode:` whose event had no matching emoji tag must be drawn as text, not as an empty image.
+ */
+fun String.customEmojiUrlOrNull(): String? {
+    if (length < 3 || this[0] != ':') return null
+    val secondColon = indexOf(':', 1)
+    if (secondColon < 2) return null
+    val url = substring(secondColon + 1)
+    return url.ifBlank { null }
 }

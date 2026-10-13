@@ -30,12 +30,16 @@ import com.vitorpamplona.quartz.experimental.decentralizedLists.header.tags.Titl
 import com.vitorpamplona.quartz.nip01Core.core.TagArray
 import com.vitorpamplona.quartz.nip01Core.core.fastAny
 import com.vitorpamplona.quartz.nip01Core.core.fastFirstNotNullOfOrNull
+import com.vitorpamplona.quartz.nip51Lists.tags.ImageTag
 
 fun TagArray.names() = fastFirstNotNullOfOrNull(NamesTag::parse)
 
 fun TagArray.titles() = fastFirstNotNullOfOrNull(TitlesTag::parse)
 
 fun TagArray.slugs() = fastFirstNotNullOfOrNull(SlugsTag::parse)
+
+/** The list's own picture, `["image", <url>]`, as NIP-51 sets carry it. Brainstorm shows it on the list and on items with no picture of their own. */
+fun TagArray.listImage() = fastFirstNotNullOfOrNull(ImageTag::parse)
 
 /** Every `required` / `allowed` / `recommended` / `disallowed` rule, in tag order. */
 fun TagArray.tagRules() = mapNotNull(TagRuleTag::parse)
@@ -49,6 +53,8 @@ fun TagArray.allowedTags() = tagRuleNames(TagRuleType.ALLOWED)
 fun TagArray.recommendedTags() = tagRuleNames(TagRuleType.RECOMMENDED)
 
 fun TagArray.disallowedTags() = tagRuleNames(TagRuleType.DISALLOWED)
+
+fun TagArray.optionalTags() = tagRuleNames(TagRuleType.OPTIONAL)
 
 /**
  * True when the tags carry a list declaration. Standard headers (9998/39998) must; an item

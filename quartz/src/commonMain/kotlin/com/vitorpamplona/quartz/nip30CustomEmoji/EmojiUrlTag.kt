@@ -50,9 +50,14 @@ data class EmojiUrlTag(
 
         fun contentEncode(code: String): String = ":$code:"
 
+        /**
+         * Reads the `:shortcode:url` form the reaction pickers carry. Returns null unless both the
+         * shortcode and the url are present: a bare `:shortcode:` has no image, and turning it
+         * into a tag would publish `["emoji", shortcode, ""]`.
+         */
         fun decode(encodedEmojiSetup: String): EmojiUrlTag? {
             val emojiParts = encodedEmojiSetup.split(":", limit = 3)
-            return if (emojiParts.size > 2) {
+            return if (emojiParts.size > 2 && emojiParts[1].isNotEmpty() && emojiParts[2].isNotBlank()) {
                 EmojiUrlTag(emojiParts[1], emojiParts[2])
             } else {
                 null

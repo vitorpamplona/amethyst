@@ -377,3 +377,44 @@ fun timeAgoShort(
     if (time == null) return " "
     return relativeTimeSpanShortOrNull(time * 1000, TimeUtils.nowMillis(), labels.now) ?: timeAgoWith(time, labels, prefix = "")
 }
+
+/**
+ * A span of time as words, in the largest unit that fits: "5 minutes", "2 hours", "3 days",
+ * "2 weeks", "4 months", "1 year". For "starts in …" / "started … ago" sentences, whose wrapper
+ * string supplies the direction. Never less than one minute.
+ */
+@Composable
+fun durationPhrase(seconds: Long): String {
+    val span = if (seconds < 0) -seconds else seconds
+    return when {
+        span < TimeUtils.ONE_HOUR -> {
+            val n = (span / TimeUtils.ONE_MINUTE).toInt().coerceAtLeast(1)
+            pluralStringRes(Res.plurals.duration_minutes, n, n)
+        }
+
+        span < TimeUtils.ONE_DAY -> {
+            val n = (span / TimeUtils.ONE_HOUR).toInt()
+            pluralStringRes(Res.plurals.duration_hours, n, n)
+        }
+
+        span < TimeUtils.ONE_WEEK -> {
+            val n = (span / TimeUtils.ONE_DAY).toInt()
+            pluralStringRes(Res.plurals.duration_days, n, n)
+        }
+
+        span < TimeUtils.ONE_MONTH -> {
+            val n = (span / TimeUtils.ONE_WEEK).toInt()
+            pluralStringRes(Res.plurals.duration_weeks, n, n)
+        }
+
+        span < TimeUtils.ONE_YEAR -> {
+            val n = (span / TimeUtils.ONE_MONTH).toInt().coerceAtLeast(1)
+            pluralStringRes(Res.plurals.duration_months, n, n)
+        }
+
+        else -> {
+            val n = (span / TimeUtils.ONE_YEAR).toInt().coerceAtLeast(1)
+            pluralStringRes(Res.plurals.duration_years, n, n)
+        }
+    }
+}

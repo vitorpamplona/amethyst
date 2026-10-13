@@ -46,6 +46,7 @@ import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.vitorpamplona.amethyst.commons.ui.richtext.InLineIconRenderer
+import com.vitorpamplona.amethyst.commons.util.customEmojiUrlOrNull
 import com.vitorpamplona.amethyst.commons.viewmodels.RoomReaction
 import com.vitorpamplona.quartz.nip30CustomEmoji.CustomEmoji
 import kotlinx.collections.immutable.persistentListOf
@@ -206,13 +207,12 @@ private fun ReactionChip(
  */
 @Composable
 private fun RenderReactionContent(content: String) {
-    if (content.isNotEmpty() && content[0] == ':') {
-        val renderable =
-            remember(content) {
-                persistentListOf(
-                    CustomEmoji.ImageUrlType(content.removePrefix(":").substringAfter(":")),
-                )
-            }
+    // A bare `:shortcode:` (its event had no emoji tag) has no image: it falls to the text branch.
+    val renderable =
+        remember(content) {
+            content.customEmojiUrlOrNull()?.let { persistentListOf(CustomEmoji.ImageUrlType(it)) }
+        }
+    if (renderable != null) {
         InLineIconRenderer(
             wordsInOrder = renderable,
             style = SpanStyle(color = Color.Unspecified),

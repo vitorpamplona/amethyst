@@ -46,6 +46,12 @@ class PlayableLayoutTest {
     }
 
     @Test
+    fun blossomMpgaIsAudioWithoutAMime() {
+        assertEquals(true, declaredAsAudio(null, "https://cdn.test/ed13.mpga"))
+        assertEquals(PlayableLayout.AUDIO_WAVEFORM, playableLayout(null, "https://cdn.test/ed13.mpga", hasArtwork = false))
+    }
+
+    @Test
     fun declaredMimeBeatsTheExtension() {
         assertEquals(PlayableLayout.VIDEO, playableLayout("video/mp4", "https://x.com/a.mp3", hasArtwork = false))
         assertEquals(PlayableLayout.AUDIO_WAVEFORM, playableLayout("audio/mp4", "https://x.com/a.mp4", hasArtwork = false))

@@ -98,6 +98,7 @@ import com.vitorpamplona.amethyst.commons.ui.note.ReactionsRow
 import com.vitorpamplona.amethyst.commons.ui.note.UsernameDisplay
 import com.vitorpamplona.amethyst.commons.ui.note.rememberTimeOfDayFormatter
 import com.vitorpamplona.amethyst.commons.ui.note.types.CalendarRsvpRow
+import com.vitorpamplona.amethyst.commons.ui.note.types.calendarTimeZoneLine
 import com.vitorpamplona.amethyst.commons.ui.pluralStringRes
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.calendars.datasource.CalendarsFilterAssemblerSubscription
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.calendars.formatCalendarRange
@@ -347,6 +348,15 @@ private fun EventBody(
                 style = MaterialTheme.typography.bodyLarge,
                 color = MaterialTheme.colorScheme.primary,
             )
+        }
+        (event as? CalendarTimeSlotEvent)?.let { timed ->
+            calendarTimeZoneLine(timed.start(), timed.startTzId())?.let {
+                Text(
+                    text = it,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
         }
         val relative = rememberRelativeTimeLabel(view, note.idHex)
         relative?.let {

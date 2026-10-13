@@ -33,6 +33,12 @@ enum class TagRuleType(
     ALLOWED("allowed"),
     RECOMMENDED("recommended"),
     DISALLOWED("disallowed"),
+
+    /**
+     * The name Brainstorm and Tapestry's list editors write for a field an item may carry, read
+     * the same as [ALLOWED] (Brainstorm `lib/dlistFields.ts`: "`allowed` reads as optional").
+     */
+    OPTIONAL("optional"),
     ;
 
     companion object {
@@ -42,6 +48,7 @@ enum class TagRuleType(
                 ALLOWED.code -> ALLOWED
                 RECOMMENDED.code -> RECOMMENDED
                 DISALLOWED.code -> DISALLOWED
+                OPTIONAL.code -> OPTIONAL
                 else -> null
             }
     }

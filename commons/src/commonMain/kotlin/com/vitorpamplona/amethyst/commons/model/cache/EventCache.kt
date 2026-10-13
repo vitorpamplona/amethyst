@@ -170,6 +170,10 @@ import com.vitorpamplona.quartz.experimental.bitchat.geohash.GeohashChatEvent
 import com.vitorpamplona.quartz.experimental.citations.ExternalCitationEvent
 import com.vitorpamplona.quartz.experimental.citations.HardcopyCitationEvent
 import com.vitorpamplona.quartz.experimental.citations.PromptCitationEvent
+import com.vitorpamplona.quartz.experimental.decentralizedLists.header.AddressableListHeaderEvent
+import com.vitorpamplona.quartz.experimental.decentralizedLists.header.ListHeaderEvent
+import com.vitorpamplona.quartz.experimental.decentralizedLists.item.AddressableListItemEvent
+import com.vitorpamplona.quartz.experimental.decentralizedLists.item.ListItemEvent
 import com.vitorpamplona.quartz.experimental.edits.TextNoteModificationEvent
 import com.vitorpamplona.quartz.experimental.ephemChat.chat.EphemeralChatEvent
 import com.vitorpamplona.quartz.experimental.ephemChat.chat.RoomId
@@ -203,6 +207,10 @@ import com.vitorpamplona.quartz.experimental.ratings.EntityRatingEvent
 import com.vitorpamplona.quartz.experimental.ratings.RelayReviewEvent
 import com.vitorpamplona.quartz.experimental.roadstr.confirmation.RoadEventConfirmationEvent
 import com.vitorpamplona.quartz.experimental.roadstr.report.RoadEventReportEvent
+import com.vitorpamplona.quartz.experimental.trustedLists.addressables.AddressableTrustedListEvent
+import com.vitorpamplona.quartz.experimental.trustedLists.events.EventTrustedListEvent
+import com.vitorpamplona.quartz.experimental.trustedLists.externalIds.ExternalIdTrustedListEvent
+import com.vitorpamplona.quartz.experimental.trustedLists.users.UserTrustedListEvent
 import com.vitorpamplona.quartz.experimental.videoCollaboration.VideoCollaborationEvent
 import com.vitorpamplona.quartz.experimental.walletScrutiny.verification.BuildVerificationEvent
 import com.vitorpamplona.quartz.experimental.zapPolls.ZapPollEvent
@@ -242,6 +250,12 @@ import com.vitorpamplona.quartz.nip09Deletions.DeletionIndex
 import com.vitorpamplona.quartz.nip09Deletions.DeletionRequestEvent
 import com.vitorpamplona.quartz.nip10Notes.BaseNoteEvent
 import com.vitorpamplona.quartz.nip10Notes.TextNoteEvent
+import com.vitorpamplona.quartz.nip15Marketplace.auction.AuctionEvent
+import com.vitorpamplona.quartz.nip15Marketplace.bid.BidEvent
+import com.vitorpamplona.quartz.nip15Marketplace.bidConfirmation.BidConfirmationEvent
+import com.vitorpamplona.quartz.nip15Marketplace.marketplace.MarketplaceEvent
+import com.vitorpamplona.quartz.nip15Marketplace.product.ProductEvent
+import com.vitorpamplona.quartz.nip15Marketplace.stall.StallEvent
 import com.vitorpamplona.quartz.nip17Dm.files.ChatMessageEncryptedFileHeaderEvent
 import com.vitorpamplona.quartz.nip17Dm.messages.ChatMessageEvent
 import com.vitorpamplona.quartz.nip17Dm.settings.DmRelayListEvent
@@ -395,6 +409,9 @@ import com.vitorpamplona.quartz.nip75ZapGoals.ZapGoalEvent
 import com.vitorpamplona.quartz.nip78AppData.AppSpecificDataEvent
 import com.vitorpamplona.quartz.nip7DThreads.ThreadEvent
 import com.vitorpamplona.quartz.nip84Highlights.HighlightEvent
+import com.vitorpamplona.quartz.nip85TrustedAssertions.addressables.AddressableAssertionEvent
+import com.vitorpamplona.quartz.nip85TrustedAssertions.events.EventAssertionEvent
+import com.vitorpamplona.quartz.nip85TrustedAssertions.externalIds.ExternalIdAssertionEvent
 import com.vitorpamplona.quartz.nip85TrustedAssertions.list.TrustProviderListEvent
 import com.vitorpamplona.quartz.nip85TrustedAssertions.users.UserAssertionEvent
 import com.vitorpamplona.quartz.nip87Ecash.cashu.CashuMintEvent
@@ -1444,6 +1461,19 @@ open class EventCache :
 
             is CommentEvent -> {
                 event.tagsWithoutCitations().mapNotNull { checkGetOrCreateNote(it) }
+            }
+
+            is BidEvent -> {
+                // A bid names the auction version by event id (NIP-15: an edited auction loses its
+                // bids). checkGetOrCreateNote files it under the auction's address, whose replies the
+                // auction card reads for the highest bid, keeping only those on the current version.
+                listOfNotNull(event.auctionId()?.let { checkGetOrCreateNote(it) })
+            }
+
+            is BidConfirmationEvent -> {
+                // Under the bid it confirms and the auction, so the auction card sees the merchant's
+                // statuses and time extensions next to the bids themselves.
+                event.linkedEventIds().mapNotNull { checkGetOrCreateNote(it) }
             }
 
             is KanbanCardEvent -> {
@@ -4029,6 +4059,20 @@ open class EventCache :
                 is SoftwareApplicationEvent,
                 is TrustedRelayListEvent,
                 is TrustProviderListEvent,
+                // NIP-85 assertions about an event, an address or an external id (30383-30385) and
+                // the Trusted Lists built on them (30392-30395). Nothing derives state from them yet;
+                // they are stored so a link to one opens its card, and so a newer version replaces
+                // the old one at its address.
+                is EventAssertionEvent,
+                is AddressableAssertionEvent,
+                is ExternalIdAssertionEvent,
+                is UserTrustedListEvent,
+                is EventTrustedListEvent,
+                is AddressableTrustedListEvent,
+                is ExternalIdTrustedListEvent,
+                // Decentralized Lists' editable header and item (39998 / 39999).
+                is AddressableListHeaderEvent,
+                is AddressableListItemEvent,
                 is AddressableNormalVideoEvent,
                 is AddressableShortVideoEvent,
                 is TextTrackEvent,
@@ -4063,6 +4107,25 @@ open class EventCache :
                 -> consumeBaseReplaceable(event, relay, wasVerified)
 
                 is KanbanCardEvent -> consumeKanbanCard(event, relay, wasVerified)
+
+                // NIP-15 marketplace. Other apps publish their own formats on 30017-30020 (a typing
+                // game's scores, offers, encrypted blobs); only the shapes the cards can draw are
+                // stored, so the rest stay unconsumed as before and nothing draws them as raw JSON.
+                is StallEvent -> if (event.isWellFormed()) consumeBaseReplaceable(event, relay, wasVerified) else false
+                is ProductEvent -> if (event.isWellFormed()) consumeBaseReplaceable(event, relay, wasVerified) else false
+                is MarketplaceEvent -> if (event.isWellFormed()) consumeBaseReplaceable(event, relay, wasVerified) else false
+                is AuctionEvent -> if (event.isWellFormed()) consumeBaseReplaceable(event, relay, wasVerified) else false
+                is BidEvent -> if (event.isWellFormed()) consumeRegularEvent(event, relay, wasVerified) else false
+                is BidConfirmationEvent -> if (event.isWellFormed()) consumeRegularEvent(event, relay, wasVerified) else false
+
+                // Decentralized Lists' immutable header and item (9998 / 9999). Other apps publish
+                // their own formats on these kinds (license offers, encrypted blobs); only a header
+                // that declares a list, and an item that names its list or declares one itself (the
+                // spec's "nonstandard" header, drawn as a header), are this protocol. The rest stay
+                // unconsumed as before, so nothing draws them as a list.
+                is ListHeaderEvent -> if (event.names() != null) consumeRegularEvent(event, relay, wasVerified) else false
+
+                is ListItemEvent -> if (event.declaresList() || event.parentListPointers().isNotEmpty()) consumeRegularEvent(event, relay, wasVerified) else false
 
                 // ============================================================
                 // Regular kinds with no per-kind logic: stored as plain notes.

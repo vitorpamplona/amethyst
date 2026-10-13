@@ -21,6 +21,7 @@
 package com.vitorpamplona.quartz.nip15Marketplace.auction
 
 import androidx.compose.runtime.Immutable
+import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.nip01Core.core.BaseAddressableEvent
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.JsonMapper
@@ -28,12 +29,11 @@ import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.nip01Core.tags.dTag.dTag
 import com.vitorpamplona.quartz.nip01Core.tags.hashtags.hashtags
-import com.vitorpamplona.quartz.nip21UriScheme.toNostrUri
+import com.vitorpamplona.quartz.nip15Marketplace.Nip15ParseFailed
+import com.vitorpamplona.quartz.nip15Marketplace.stall.StallEvent
 import com.vitorpamplona.quartz.nip50Search.IndexableFieldVisitor
 import com.vitorpamplona.quartz.nip50Search.SearchableEvent
-import com.vitorpamplona.quartz.utils.Log
 import com.vitorpamplona.quartz.utils.TimeUtils
-import kotlinx.coroutines.CancellationException
 
 @Immutable
 class AuctionEvent(
@@ -47,14 +47,34 @@ class AuctionEvent(
     SearchableEvent {
     override fun isContentEncoded() = true
 
-    fun auctionData(): AuctionData? =
-        try {
-            JsonMapper.fromJson<AuctionData>(content)
-        } catch (e: Exception) {
-            if (e is CancellationException) throw e
-            Log.w("AuctionEvent") { "Content Parse Error: ${toNostrUri()} ${e.message}" }
-            null
-        }
+    // isWellFormed() runs for every copy the cache consumes and forEachIndexableField() on every
+    // search keystroke, so the auction is read once per instance, a failure included. Events are
+    // immutable; a race only decodes twice.
+    @kotlinx.serialization.Transient
+    @kotlin.jvm.Transient
+    private var auctionDataCache: Any? = null // AuctionData, or Nip15ParseFailed
+
+    /**
+     * The auction, from the JSON body with the tag form filling its gaps (see [AuctionData.read]):
+     * null only when neither describes one.
+     */
+    fun auctionData(): AuctionData? {
+        auctionDataCache?.let { return it as? AuctionData }
+        val parsed = AuctionData.read(content, tags, dTag())
+        auctionDataCache = parsed ?: Nip15ParseFailed
+        return parsed
+    }
+
+    /** An auction has a name. Other apps' records on kind 30020 (encrypted blobs, scores) do not. */
+    fun isWellFormed() = auctionData()?.name != null
+
+    fun categories() = tags.hashtags()
+
+    /**
+     * The stall this is sold from: NIP-15 makes a stall's `d` tag equal its id, so `stall_id` on
+     * the same merchant names its kind-30017 address.
+     */
+    fun stallAddress(): Address? = auctionData()?.stallId?.let { Address(StallEvent.KIND, pubKey, it) }
 
     override fun indexableContent() = auctionData()?.let { (listOfNotNull(it.name, it.description) + tags.hashtags()).joinToString("\n") } ?: ""
 

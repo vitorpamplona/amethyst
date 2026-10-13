@@ -24,15 +24,21 @@ import com.vitorpamplona.quartz.experimental.trustedLists.tags.CutoffTag
 import com.vitorpamplona.quartz.experimental.trustedLists.tags.MetricTag
 import com.vitorpamplona.quartz.experimental.trustedLists.tags.MinRankTag
 import com.vitorpamplona.quartz.experimental.trustedLists.tags.ObserverTag
+import com.vitorpamplona.quartz.experimental.trustedLists.tags.RigorTag
 import com.vitorpamplona.quartz.experimental.trustedLists.tags.SourceTag
 import com.vitorpamplona.quartz.experimental.trustedLists.tags.StatusTag
 import com.vitorpamplona.quartz.experimental.trustedLists.tags.TruncatedTag
 import com.vitorpamplona.quartz.nip01Core.core.TagArray
 import com.vitorpamplona.quartz.nip01Core.core.fastAny
 import com.vitorpamplona.quartz.nip01Core.core.fastFirstNotNullOfOrNull
+import com.vitorpamplona.quartz.nip51Lists.tags.DescriptionTag
 import com.vitorpamplona.quartz.nip51Lists.tags.TitleTag
 
 fun TagArray.title() = fastFirstNotNullOfOrNull(TitleTag::parse)
+
+fun TagArray.description() = fastFirstNotNullOfOrNull(DescriptionTag::parse)
+
+fun TagArray.rigor() = fastFirstNotNullOfOrNull(RigorTag::parse)
 
 fun TagArray.metric() = fastFirstNotNullOfOrNull(MetricTag::parse)
 

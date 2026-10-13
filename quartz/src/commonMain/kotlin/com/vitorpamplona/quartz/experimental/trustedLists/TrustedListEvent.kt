@@ -121,6 +121,9 @@ abstract class TrustedListEvent(
 
     fun title() = tags.title()
 
+    /** The publisher's sentence about what the list holds. Not indexed: it is optional and Brainstorm-written. */
+    fun description() = tags.description()
+
     fun metric() = tags.metric()
 
     fun observer() = tags.observer()
@@ -130,6 +133,9 @@ abstract class TrustedListEvent(
     fun cutoff() = tags.cutoff()
 
     fun minRank() = tags.minRank()
+
+    /** How strictly the computation weighed its inputs, as published (a free-form value Brainstorm shows verbatim). */
+    fun rigor() = tags.rigor()
 
     /**
      * The members of this list, in the tag this kind's last digit denotes.
