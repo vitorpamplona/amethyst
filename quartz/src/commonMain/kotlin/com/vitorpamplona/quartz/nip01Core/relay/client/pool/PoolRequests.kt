@@ -412,9 +412,13 @@ class PoolRequests(
      * The REQ to send for [held], a REQ of this pool that [relay]'s rate-limit gate held through
      * a back-off and is releasing now: the sub's CURRENT filters for [relay]. A change made while
      * it waited found the sub in flight and was left for its EOSE ([decideCommandLocked]); sent
-     * here instead, it costs no second REQ, and [onSent] records what actually went out, so the
-     * EOSE finds nothing left to send. [held] as is when the change is not worth a REQ, or when
-     * the sub no longer wants [relay] (its CLOSE already dropped the held REQ, or will close it).
+     * here instead, it costs no second REQ, and the EOSE finds nothing left to send. [held] as is
+     * when the change is not worth a REQ, or when the sub no longer wants [relay] (its CLOSE
+     * already dropped the held REQ, or will close it).
+     *
+     * The new filters are recorded before they leave, as every send path here pre-marks: a fast
+     * relay answers before [onSent] runs, and its events must be matched against the filters that
+     * asked for them, not the held ones.
      */
     fun refreshHeld(
         relay: NormalizedRelayUrl,
@@ -422,7 +426,16 @@ class PoolRequests(
     ): ReqCmd {
         val filters = desiredSubs.get(held.subId)?.get(relay)?.let { relayRefusals.narrow(relay, it) }
         if (filters.isNullOrEmpty() || !FiltersChanged.needsToResendRequest(held.filters, filters)) return held
-        return ReqCmd(held.subId, filters)
+        val state = relayState.get(held.subId) ?: return held
+        return state.withLock(relay) {
+            // Only the REQ the pool still has in flight; anything else moved on without it.
+            if (state.currentState(relay) == ReqSubStatus.SENT) {
+                state.onReqSent(relay, filters)
+                ReqCmd(held.subId, filters)
+            } else {
+                held
+            }
+        }
     }
 
     /**

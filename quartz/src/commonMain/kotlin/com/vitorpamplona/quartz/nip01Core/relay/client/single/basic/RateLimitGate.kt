@@ -172,6 +172,9 @@ class RateLimitGate(
     private val lock = PlatformLock()
     private val lanes = HashMap<String, Lane>()
 
+    /** Bumped on every disconnect: a command taken for one socket must not land on the next. */
+    private var connection = 0L
+
     /** Subscriptions whose last command was a `COUNT`: their `CLOSED` refuses a `COUNT`, not a `REQ`. */
     private val counts = HashSet<String>()
 
@@ -256,6 +259,7 @@ class RateLimitGate(
     /** The connection dropped: what is queued goes, the back-offs stay for the reconnect's replay. */
     fun onDisconnected() =
         lock.withLock {
+            connection++
             counts.clear()
             lanes.values.forEach { it.clearQueue() }
         }
@@ -321,6 +325,7 @@ class RateLimitGate(
             // pulled it in), so re-read it after every wait and only release once it passed.
             var due: Command? = null
             var releasingKey: String? = null
+            var takenOn = 0L
             var nextAt = 0L
             val waitMs =
                 lock.withLock {
@@ -334,6 +339,7 @@ class RateLimitGate(
                         }
                         due = lane.removeFirst()
                         releasingKey = lane.releasing
+                        takenOn = connection
                         lane.draining = true
                         nextAt = now + lane.spacing()
                         lane.dueAtMs = nextAt
@@ -343,24 +349,20 @@ class RateLimitGate(
                 }
             val held = due
             if (held != null) {
-                val cmd =
-                    try {
-                        refresh(held)
-                    } catch (e: CancellationException) {
-                        throw e
-                    } catch (e: Exception) {
-                        Log.w("RateLimitGate", "Failed to refresh a held ${held.label()}", e)
-                        held
-                    }
+                // Taken off the queue for a socket that dropped since: the reconnect replays what
+                // is still wanted, and this copy beside it would put two REQs for one sub on the
+                // new socket. Checked before the refresh (which records what goes out) and again
+                // right before the write.
+                val sameSocket = { lock.withLock { connection == takenOn } }
                 // A failure here must not end the loop: the lane would stay registered with
                 // nobody draining it, and every later command of its type would be held forever.
                 val sent =
                     try {
-                        send(cmd)
+                        sameSocket() && writeIf(refreshed(held), sameSocket)
                     } catch (e: CancellationException) {
                         throw e
                     } catch (e: Exception) {
-                        Log.w("RateLimitGate", "Failed to send a held ${cmd.label()}", e)
+                        Log.w("RateLimitGate", "Failed to send a held ${held.label()}", e)
                         false
                     }
                 val closeAgain =
@@ -382,6 +384,23 @@ class RateLimitGate(
             }
         }
     }
+
+    /** [held] as its owner wants it now; [held] itself when asking fails. */
+    private fun refreshed(held: Command): Command =
+        try {
+            refresh(held)
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            Log.w("RateLimitGate", "Failed to refresh a held ${held.label()}", e)
+            held
+        }
+
+    /** Writes [cmd] if [stillValid] holds right before the write. */
+    private fun writeIf(
+        cmd: Command,
+        stillValid: () -> Boolean,
+    ): Boolean = stillValid() && send(cmd)
 
     private fun closeQuietly(subId: String) {
         try {

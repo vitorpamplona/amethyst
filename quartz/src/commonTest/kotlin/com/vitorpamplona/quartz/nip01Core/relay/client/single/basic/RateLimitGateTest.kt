@@ -277,6 +277,26 @@ class RateLimitGateTest {
         }
 
     @Test
+    fun aCommandTakenForASocketThatDroppedIsNotWrittenToTheNextOne() =
+        runTest {
+            // The socket drops (and comes back) while a released REQ is between the queue and
+            // the write: the reconnect replays the sub, so writing this copy too would put two
+            // REQs for one sub on the new socket.
+            val sent = mutableListOf<Sent>()
+            lateinit var gate: RateLimitGate
+            gate =
+                gate(sent, refresh = { cmd ->
+                    gate.onDisconnected()
+                    cmd
+                })
+            gate.refuseReq("a", 1_000)
+            advanceUntilIdle()
+
+            assertEquals("[]", sent.toString())
+            assertTrue(gate.isIdle())
+        }
+
+    @Test
     fun aCloseThatOvertakesAReleasedReqClosesItAgain() =
         runTest {
             // The unsubscribe lands while the gate is writing the REQ, outside its lock: the

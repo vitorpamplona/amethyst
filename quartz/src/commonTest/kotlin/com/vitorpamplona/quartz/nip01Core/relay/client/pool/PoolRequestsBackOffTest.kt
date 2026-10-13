@@ -20,9 +20,12 @@
  */
 package com.vitorpamplona.quartz.nip01Core.relay.client.pool
 
+import com.vitorpamplona.quartz.nip01Core.core.Event
+import com.vitorpamplona.quartz.nip01Core.relay.client.reqs.SubscriptionListener
 import com.vitorpamplona.quartz.nip01Core.relay.client.testing.FakeRelayClient
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.ClosedMessage
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.EoseMessage
+import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.EventMessage
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toRelay.Command
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toRelay.ReqCmd
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
@@ -87,6 +90,39 @@ class PoolRequestsBackOffTest {
             pool.addOrUpdate("sub", mapOf(relay to filter(1)), null)
             pool.sendToRelayIfChanged("sub", setOf(relay)) { _, cmd -> back.add(cmd) }
             assertEquals(listOf(1), (back.single() as ReqCmd).filters.single().kinds)
+        }
+
+    @Test
+    fun aHeldReqRefreshedAtReleaseMatchesItsEventsToTheNewFilters() =
+        runTest {
+            // The relay's gate held the REQ (pre-marked with kind 1) while the feed moved to kind 7.
+            // Released with the new filters, the relay may answer before onSent runs: its events
+            // must be matched against kind 7, never against the kind-1 REQ that never went out.
+            val seen = mutableListOf<List<Filter>?>()
+            val pool = PoolRequests()
+            pool.addOrUpdate(
+                "sub",
+                mapOf(relay to filter(1)),
+                object : SubscriptionListener {
+                    override suspend fun onEvent(
+                        event: Event,
+                        isLive: Boolean,
+                        relay: NormalizedRelayUrl,
+                        forFilters: List<Filter>?,
+                    ) {
+                        seen.add(forFilters)
+                    }
+                },
+            )
+            val held = sync(pool).single() as ReqCmd
+            pool.addOrUpdate("sub", mapOf(relay to filter(7)), null)
+            pool.sendToRelayIfChanged("sub", setOf(relay)) { _, cmd -> error("a second REQ while one is in flight: $cmd") }
+
+            val released = pool.refreshHeld(relay, held)
+            assertEquals(listOf(7), released.filters.single().kinds)
+            pool.onIncomingMessage(FakeRelayClient(relay), EventMessage("sub", Event("e", "p", 0, 7, emptyArray(), "", "s")))
+
+            assertEquals(listOf(7), seen.single()?.single()?.kinds)
         }
 
     @Test
