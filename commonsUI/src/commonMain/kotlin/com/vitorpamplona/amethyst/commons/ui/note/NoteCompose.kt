@@ -1048,8 +1048,14 @@ fun NoteBody(
     }
 }
 
+/**
+ * The per-kind body of a note: the one place that maps an event class to the composable that draws
+ * it. The feed cards call it, and so does the thread view's master note (ThreadFeedView) for every
+ * kind that has no thread-specific header, so a kind added here renders in both without a second
+ * branch to keep in sync.
+ */
 @Composable
-private fun RenderNoteRow(
+internal fun RenderNoteRow(
     baseNote: Note,
     backgroundColor: MutableState<Color>,
     makeItShort: Boolean,
