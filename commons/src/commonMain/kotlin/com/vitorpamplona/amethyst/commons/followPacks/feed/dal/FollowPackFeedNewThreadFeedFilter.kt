@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst.commons.followPacks.feed.dal
 
+import com.vitorpamplona.amethyst.commons.audio.hasPlayableAudio
 import com.vitorpamplona.amethyst.commons.feeds.AdditiveFeedFilter
 import com.vitorpamplona.amethyst.commons.feeds.FilterByListParams
 import com.vitorpamplona.amethyst.commons.feeds.isRenderableRepost
@@ -149,7 +150,7 @@ class FollowPackFeedNewThreadFeedFilter(
                 noteEvent is HighlightEvent ||
                 noteEvent is InteractiveStoryPrologueEvent ||
                 noteEvent is CommentEvent ||
-                noteEvent is AudioTrackEvent ||
+                (noteEvent is AudioTrackEvent && noteEvent.hasPlayableAudio()) ||
                 noteEvent is MusicTrackEvent ||
                 noteEvent is MusicPlaylistEvent ||
                 noteEvent is PodcastEpisodeEvent ||

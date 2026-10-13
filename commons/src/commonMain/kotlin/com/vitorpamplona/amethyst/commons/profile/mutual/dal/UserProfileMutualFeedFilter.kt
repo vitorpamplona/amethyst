@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst.commons.profile.mutual.dal
 
+import com.vitorpamplona.amethyst.commons.audio.hasPlayableAudio
 import com.vitorpamplona.amethyst.commons.feeds.AdditiveFeedFilter
 import com.vitorpamplona.amethyst.commons.feeds.isRenderableRepost
 import com.vitorpamplona.amethyst.commons.feeds.sortedByDefaultFeedOrder
@@ -89,7 +90,7 @@ class UserProfileMutualFeedFilter(
                     it.event is ZapPollEvent ||
                     it.event is HighlightEvent ||
                     it.event is InteractiveStoryPrologueEvent ||
-                    it.event is AudioTrackEvent ||
+                    (it.event as? AudioTrackEvent)?.hasPlayableAudio() == true ||
                     it.event is MusicTrackEvent ||
                     it.event is MusicPlaylistEvent ||
                     it.event is PodcastEpisodeEvent ||
