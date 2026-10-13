@@ -130,6 +130,10 @@ data class FittedPaneWidths(
  * wide: what the user dragged them to ([drawer], [notifications], null for the default), within
  * their ranges, and narrowed (the panel first) when together they would leave the center pane
  * under [MIN_CENTER_PANE_DP]. The user's choice is kept as is, so a wider window gives it back.
+ *
+ * [notificationStripWidth] is the folded panel's fixed strip, when it shows instead of the panel:
+ * it cannot narrow, so it reserves its room before the panes fit — without it the center pane
+ * would drop below its minimum by exactly the strip's width.
  */
 fun fitPaneWidths(
     windowWidth: Float,
@@ -137,11 +141,12 @@ fun fitPaneWidths(
     notifications: Float?,
     showDrawer: Boolean,
     showNotifications: Boolean,
+    notificationStripWidth: Float = 0f,
 ): FittedPaneWidths {
     var drawerWidth = if (showDrawer) (drawer ?: PermanentDrawerWidth.value).coerceIn(DrawerWidthRange) else 0f
     var panelWidth = if (showNotifications) (notifications ?: NotificationPanelWidth.value).coerceIn(NotificationPanelWidthRange) else 0f
 
-    var excess = drawerWidth + panelWidth + MIN_CENTER_PANE_DP - windowWidth
+    var excess = drawerWidth + panelWidth + notificationStripWidth + MIN_CENTER_PANE_DP - windowWidth
     if (excess > 0 && showNotifications) {
         val narrowed = maxOf(NotificationPanelWidthRange.start, panelWidth - excess)
         excess -= panelWidth - narrowed

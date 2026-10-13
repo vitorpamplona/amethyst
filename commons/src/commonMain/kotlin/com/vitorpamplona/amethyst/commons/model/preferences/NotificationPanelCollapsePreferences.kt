@@ -26,6 +26,7 @@ import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
 import com.vitorpamplona.quartz.utils.Log
+import com.vitorpamplona.quartz.utils.TimeUtils
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -45,9 +46,9 @@ import kotlin.coroutines.cancellation.CancellationException
  * on construction (build it eagerly at startup), then writes every later change back.
  *
  * [collapsedAt] — the moment the current fold began, which the collapsed bell's missed-count
- * badge counts from — is deliberately in-memory only: a restart reopens the fold with an empty
- * badge rather than greeting the user with everything that arrived while the app was closed,
- * and expanding always resets the count by clearing it.
+ * badge counts from — is deliberately in-memory only: nothing that arrived while the app was
+ * closed counts, so a restored fold restarts the clock at the restore instead of greeting the
+ * user with a stale count of the downtime, and expanding always resets the count by clearing it.
  */
 @Stable
 class NotificationPanelCollapsePreferences(
@@ -61,7 +62,7 @@ class NotificationPanelCollapsePreferences(
 
     private val collapseInstant = MutableStateFlow<Long?>(null)
 
-    /** When the current fold began, in epoch seconds; null while expanded. Never written to disk. */
+    /** When the current fold began, in epoch seconds; null while expanded. Never written to disk — a fold restored from disk restarts the clock at the restore. */
     val collapsedAt: StateFlow<Long?> = collapseInstant.asStateFlow()
 
     init {
@@ -86,7 +87,14 @@ class NotificationPanelCollapsePreferences(
 
     private suspend fun restoreFromDisk() {
         try {
-            collapsed.value = store.data.first()[KEY] ?: false
+            val restored = store.data.first()[KEY] ?: false
+            collapsed.value = restored
+            if (restored) {
+                // The fold's instant is not on disk: what arrived while the app was closed must
+                // not count, but the badge must tick from here on — so the restored fold's clock
+                // starts at the restore rather than staying null (which reads as zero forever).
+                collapseInstant.value = TimeUtils.now()
+            }
         } catch (e: Exception) {
             if (e is CancellationException) throw e
             Log.e("NotifPanelCollapsePrefs") { "Error reading notification panel collapse: ${e.message}" }

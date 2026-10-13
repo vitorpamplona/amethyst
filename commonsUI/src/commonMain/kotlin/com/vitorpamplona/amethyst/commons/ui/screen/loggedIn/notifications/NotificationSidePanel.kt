@@ -46,6 +46,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.vitorpamplona.amethyst.commons.chats.ui.CHAT_UNREAD_CAP
 import com.vitorpamplona.amethyst.commons.feeds.Card
 import com.vitorpamplona.amethyst.commons.feeds.CardFeedState
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
@@ -53,13 +54,14 @@ import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.navigation.Route
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.collapse
-import com.vitorpamplona.amethyst.commons.resources.expand
+import com.vitorpamplona.amethyst.commons.resources.notification_panel_folded_new
 import com.vitorpamplona.amethyst.commons.resources.refresh
 import com.vitorpamplona.amethyst.commons.resources.route_notifications
 import com.vitorpamplona.amethyst.commons.ui.feeds.ScrollStateKeys
 import com.vitorpamplona.amethyst.commons.ui.layouts.NotificationPanelCollapsedWidth
 import com.vitorpamplona.amethyst.commons.ui.layouts.NotificationPanelWidth
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
+import com.vitorpamplona.amethyst.commons.ui.pluralStringRes
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.DividerThickness
 import com.vitorpamplona.amethyst.commons.ui.theme.Size12dp
@@ -80,8 +82,8 @@ import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
  * 7-day chart when tapped. Tapping the header opens the full screen, which adds the
  * Following/Everyone tabs; its refresh button reloads and regroups the cards.
  *
- * Where the platform folds the panel away (desktop), [onCollapse] is non-null and the header
- * carries the fold button beside the refresh one; everywhere else the panel has no way to fold.
+ * The fold rides the window's width, not the platform: wherever the panel docks, the shell hands
+ * [onCollapse] down and the header carries the fold button beside the refresh one.
  */
 @Composable
 fun NotificationSidePanel(
@@ -156,7 +158,8 @@ fun NotificationSidePanel(
                         tint = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                 }
-                // Where the platform folds the panel away, the header carries the fold button.
+                // The panel docks wherever the window has the width, so the fold button is
+                // always there beside the refresh one.
                 if (onCollapse != null) {
                     IconButton(
                         onClick = onCollapse,
@@ -193,9 +196,9 @@ fun NotificationSidePanel(
 
 /**
  * The folded form of [NotificationSidePanel]: just the bell, badged with how many notification
- * cards landed since the panel was folded ([collapsedAt]; null — a fold restored from disk —
- * reads as zero). Tapping the bell unfolds the panel, which resets the count. The feed the
- * panel would show is watched here too, so the badge ticks as cards arrive while folded.
+ * cards landed since the panel was folded ([collapsedAt]; null — expanded, or the saved fold not
+ * loaded yet — reads as zero). Tapping the bell unfolds the panel, which resets the count. The
+ * feed the panel would show is watched here too, so the badge ticks as cards arrive while folded.
  */
 @Composable
 fun CollapsedNotificationPanel(
@@ -220,6 +223,15 @@ fun CollapsedNotificationPanel(
     val loadedFeed = (feedState as? CardFeedState.Loaded)?.feed?.collectAsStateWithLifecycle()?.value
     val missed = countNewerThan(loadedFeed?.list, collapsedAt)
 
+    // The bell is the strip's only control: name what it opens, plus the missed count when there
+    // is one, rather than the bare action ("Expand"), which reads as nonsense out of context.
+    val bellDescription =
+        if (missed > 0) {
+            pluralStringRes(Res.plurals.notification_panel_folded_new, missed, missed)
+        } else {
+            stringRes(Res.string.route_notifications)
+        }
+
     // The Surface provides the Material container color + onBackground as LocalContentColor, as
     // in the expanded panel above.
     Surface(
@@ -241,12 +253,12 @@ fun CollapsedNotificationPanel(
             ) {
                 BadgedBox(
                     badge = {
-                        if (missed > 0) Badge { Text(missed.toString()) }
+                        if (missed > 0) Badge { Text(missedBadgeLabel(missed)) }
                     },
                 ) {
                     Icon(
                         symbol = MaterialSymbols.Notifications,
-                        contentDescription = stringRes(Res.string.expand),
+                        contentDescription = bellDescription,
                         modifier = Size22Modifier,
                         tint = MaterialTheme.colorScheme.onBackground,
                     )
@@ -261,3 +273,6 @@ internal fun countNewerThan(
     cards: List<Card>?,
     sinceSeconds: Long?,
 ): Int = if (cards == null || sinceSeconds == null) 0 else cards.count { it.createdAt() > sinceSeconds }
+
+/** The collapsed bell's badge text, capped at [CHAT_UNREAD_CAP]+ like every other unread pill. */
+internal fun missedBadgeLabel(missed: Int): String = if (missed > CHAT_UNREAD_CAP) "$CHAT_UNREAD_CAP+" else missed.toString()

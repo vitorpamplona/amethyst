@@ -23,6 +23,7 @@ package com.vitorpamplona.amethyst.commons.model.preferences
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.PreferenceDataStoreFactory
 import androidx.datastore.preferences.core.Preferences
+import com.vitorpamplona.quartz.utils.TimeUtils
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.cancel
@@ -33,6 +34,7 @@ import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Rule
@@ -41,9 +43,10 @@ import org.junit.rules.TemporaryFolder
 
 /**
  * The collapse survives a restart while the fold's instant — the missed-count badge's base —
- * does not, and none of that is visible within one process: the write happens in a collector on
- * the app scope, and the read happens in the *next* process's constructor. [session] drives both
- * halves against a real DataStore on a temp file, so a test reads as "one launch, then another".
+ * does not (the restore restarts the clock at "now"), and none of that is visible within one
+ * process: the write happens in a collector on the app scope, and the read happens in the
+ * *next* process's constructor. [session] drives both halves against a real DataStore on a temp
+ * file, so a test reads as "one launch, then another".
  */
 @OptIn(ExperimentalCoroutinesApi::class)
 class NotificationPanelCollapsePreferencesTest {
@@ -107,13 +110,28 @@ class NotificationPanelCollapsePreferencesTest {
         }
 
     @Test
-    fun theFoldInstantIsNotPersistedAcrossLaunches() =
+    fun aRestoredFoldStartsTheMissedCountAtTheRestore() =
         runTest(StandardTestDispatcher()) {
             session { collapse(atSeconds = 1_000) }
 
+            val before = TimeUtils.now()
             val next = session()
+            val after = TimeUtils.now()
+
             assertTrue("the fold itself survives", next.flow.value)
-            assertNull("but the badge starts empty, not counting what arrived while closed", next.collapsedAt.value)
+            val restoredAt = next.collapsedAt.value
+            // The original fold's stamp is not on disk: what arrived while the app was closed must
+            // not count, but the badge must tick from here on, so the restore restarts the clock.
+            assertNotNull("the badge counts from the restore, not stuck at zero", restoredAt)
+            assertTrue("the clock restamps at the restore", restoredAt!! in before..after)
+        }
+
+    @Test
+    fun anExpandedRestoreHasNoFoldClock() =
+        runTest(StandardTestDispatcher()) {
+            val next = session()
+            assertFalse(next.flow.value)
+            assertNull("expanded: no fold, no clock, nothing counted", next.collapsedAt.value)
         }
 
     @Test

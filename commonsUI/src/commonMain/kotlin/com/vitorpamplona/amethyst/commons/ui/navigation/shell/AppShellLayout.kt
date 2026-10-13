@@ -55,6 +55,7 @@ import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.commons.model.navigation.Route
+import com.vitorpamplona.amethyst.commons.model.preferences.NotificationPanelCollapsePreferences
 import com.vitorpamplona.amethyst.commons.model.preferences.PaneWidthPreferences
 import com.vitorpamplona.amethyst.commons.ui.components.PlatformBackHandler
 import com.vitorpamplona.amethyst.commons.ui.components.rememberModalSheetState
@@ -62,13 +63,13 @@ import com.vitorpamplona.amethyst.commons.ui.layouts.DrawerWidthRange
 import com.vitorpamplona.amethyst.commons.ui.layouts.LocalScreenLayout
 import com.vitorpamplona.amethyst.commons.ui.layouts.LocalTitleBarOverlay
 import com.vitorpamplona.amethyst.commons.ui.layouts.NavigationStyle
+import com.vitorpamplona.amethyst.commons.ui.layouts.NotificationPanelCollapsedWidth
 import com.vitorpamplona.amethyst.commons.ui.layouts.NotificationPanelWidthRange
 import com.vitorpamplona.amethyst.commons.ui.layouts.PaneSplitter
 import com.vitorpamplona.amethyst.commons.ui.layouts.fitPaneWidths
 import com.vitorpamplona.amethyst.commons.ui.navigation.bottombars.AppNavigationRail
 import com.vitorpamplona.amethyst.commons.ui.navigation.deck.DeckFocus
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.Nav
-import com.vitorpamplona.amethyst.commons.ui.platform.LocalAppPlatform
 import com.vitorpamplona.amethyst.commons.ui.platform.LocalAppServices
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.notifications.CollapsedNotificationPanel
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.notifications.NotificationSidePanel
@@ -149,6 +150,12 @@ fun AppShellLayout(
 
     val docked = LocalScreenLayout.current.navigationStyle == NavigationStyle.PERMANENT_DRAWER
 
+    // The notification panel's fold is a window-size feature, not a platform one: the panel docks
+    // wherever the window has the width (ScreenLayoutSpec.hasRoomForNotificationPanel), on every
+    // front end. The state is device-wide (a window-layout choice, like pane widths), so it lives
+    // on the shared services; the shell just hands it down to both shell shapes.
+    val notificationPanelCollapsePrefs = LocalAppServices.current.notificationPanelCollapsePrefs
+
     // Publish docked-ness on the Nav so drawer consumers (openDrawer, edge swipes, the
     // status editor) can behave correctly without each re-deriving the layout tier.
     LaunchedEffect(nav, docked) {
@@ -161,9 +168,9 @@ fun AppShellLayout(
     }
 
     if (docked) {
-        PermanentDrawerShell(accountViewModel, nav, { permanentDrawerContent(openSheetFunction) }, deckSlot, movableContent)
+        PermanentDrawerShell(accountViewModel, nav, { permanentDrawerContent(openSheetFunction) }, deckSlot, notificationPanelCollapsePrefs, movableContent)
     } else {
-        ModalDrawerShell(accountViewModel, nav, { drawerContent(openSheetFunction) }, suspendEdgeSwipe, deckSlot, movableContent)
+        ModalDrawerShell(accountViewModel, nav, { drawerContent(openSheetFunction) }, suspendEdgeSwipe, deckSlot, notificationPanelCollapsePrefs, movableContent)
     }
 
     // Sheet content
@@ -198,6 +205,7 @@ private fun ModalDrawerShell(
     drawer: @Composable () -> Unit,
     suspendEdgeSwipe: () -> Boolean,
     deck: (@Composable (Modifier) -> Unit)?,
+    notificationPanelCollapsePrefs: NotificationPanelCollapsePreferences,
     content: @Composable () -> Unit,
 ) {
     // Derived, so a window being resized (a desktop drag, a foldable mid-unfold) recomposes this shell
@@ -244,6 +252,7 @@ private fun ModalDrawerShell(
                     resizableLeading = false,
                     leading = { AppNavigationRail(nav, accountViewModel) },
                     deck = deck,
+                    notificationPanelCollapsePrefs = notificationPanelCollapsePrefs,
                     content = content,
                 )
             } else {
@@ -261,9 +270,9 @@ private fun ModalDrawerShell(
  *
  * The docked drawer ([resizableLeading]) and the notification panel sit behind [PaneSplitter]s the
  * user drags to resize them; the widths are kept per device ([PaneWidthPreferences]) and fitted to
- * the window by [fitPaneWidths], so the centre pane keeps its room. Where the platform offers it,
- * the panel can also fold away to its badged bell ([CollapsedNotificationPanel]), which takes a
- * fixed strip in place of the fitted width.
+ * the window by [fitPaneWidths], so the centre pane keeps its room. The panel can also fold away
+ * to its badged bell ([CollapsedNotificationPanel]), which takes a fixed strip in place of the
+ * fitted width.
  */
 @Composable
 private fun MultiPaneShell(
@@ -272,26 +281,35 @@ private fun MultiPaneShell(
     resizableLeading: Boolean,
     leading: @Composable () -> Unit,
     deck: (@Composable (Modifier) -> Unit)?,
+    notificationPanelCollapsePrefs: NotificationPanelCollapsePreferences,
     content: @Composable () -> Unit,
 ) {
     val paneWidthPrefs = LocalAppServices.current.paneWidthPrefs
     val widths by paneWidthPrefs.flow.collectAsStateWithLifecycle()
     // The deck takes the panel's place, so no room is kept for it.
     val showPanel = deck == null && notificationPanelShown(nav)
-    // Where the platform offers the fold (desktop), a folded panel leaves only its badged bell.
-    val panelCollapsible = LocalAppPlatform.current.collapsibleNotificationPanel
-    val collapsePrefs = LocalAppServices.current.notificationPanelCollapsePrefs
+    // A folded panel leaves only its badged bell, wherever the panel docks.
+    val collapsePrefs = notificationPanelCollapsePrefs
     val panelFolded by collapsePrefs.flow.collectAsStateWithLifecycle()
     val foldedAt by collapsePrefs.collapsedAt.collectAsStateWithLifecycle()
-    val showFoldedStrip = showPanel && panelCollapsible && panelFolded
+    val showFoldedStrip = showPanel && panelFolded
     val windowWidth =
         with(LocalDensity.current) {
             LocalWindowInfo.current.containerSize.width
                 .toDp()
                 .value
         }
-    // A folded panel takes only its strip, so the panes fit as if it were not there.
-    val fitted = fitPaneWidths(windowWidth, widths.drawer, widths.notifications, resizableLeading, showPanel && !showFoldedStrip)
+    // A folded panel takes only its strip: the panel fits as if it were not there, but the strip's
+    // fixed width still reserves its room, so the centre pane keeps its minimum.
+    val fitted =
+        fitPaneWidths(
+            windowWidth,
+            widths.drawer,
+            widths.notifications,
+            resizableLeading,
+            showPanel && !showFoldedStrip,
+            notificationStripWidth = if (showFoldedStrip) NotificationPanelCollapsedWidth.value else 0f,
+        )
 
     Row(Modifier.fillMaxSize()) {
         if (resizableLeading) {
@@ -335,7 +353,7 @@ private fun MultiPaneShell(
                             accountViewModel = accountViewModel,
                             nav = nav,
                             modifier = Modifier.width(fitted.notifications.dp),
-                            onCollapse = if (panelCollapsible) ({ collapsePrefs.collapse(TimeUtils.now()) }) else null,
+                            onCollapse = { collapsePrefs.collapse(TimeUtils.now()) },
                         )
                     }
                 }
@@ -407,6 +425,7 @@ private fun PermanentDrawerShell(
     nav: Nav,
     drawer: @Composable () -> Unit,
     deck: (@Composable (Modifier) -> Unit)?,
+    notificationPanelCollapsePrefs: NotificationPanelCollapsePreferences,
     content: @Composable () -> Unit,
 ) {
     MultiPaneShell(
@@ -415,6 +434,7 @@ private fun PermanentDrawerShell(
         resizableLeading = true,
         leading = drawer,
         deck = deck,
+        notificationPanelCollapsePrefs = notificationPanelCollapsePrefs,
         content = content,
     )
 }

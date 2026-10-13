@@ -49,8 +49,19 @@ class NotificationSidePanelTest {
     }
 
     @Test
+    fun `a restored fold counts only what lands after the restore`() {
+        // A fold restored from disk restarts its clock at the restore (see
+        // NotificationPanelCollapsePreferences): cards that landed while the app was closed are
+        // older than the restore and read as already past, not missed.
+        val restoredAt = 5_000L
+        val cards = listOf(FakeCard(1_000, "while-closed"), FakeCard(6_000, "after-restore"))
+
+        assertEquals(1, countNewerThan(cards, sinceSeconds = restoredAt))
+    }
+
+    @Test
     fun `no fold instant reads as nothing missed`() {
-        // A fold restored from disk carries no instant: the badge starts empty after a restart.
+        // Expanded, or the saved fold not loaded yet: no clock, nothing counts.
         val cards = listOf(FakeCard(9_999, "a"))
 
         assertEquals(0, countNewerThan(cards, sinceSeconds = null))
@@ -60,5 +71,18 @@ class NotificationSidePanelTest {
     fun `no feed yet reads as nothing missed`() {
         assertEquals(0, countNewerThan(cards = null, sinceSeconds = 1_000))
         assertEquals(0, countNewerThan(cards = emptyList(), sinceSeconds = 1_000))
+    }
+
+    @Test
+    fun `the badge shows the raw count up to the cap`() {
+        assertEquals("1", missedBadgeLabel(1))
+        assertEquals("99", missedBadgeLabel(99))
+    }
+
+    @Test
+    fun `the badge caps past 99 at 99+`() {
+        // Same cap as the chat unread pills: a busy afternoon must not blow out the strip.
+        assertEquals("99+", missedBadgeLabel(100))
+        assertEquals("99+", missedBadgeLabel(1_234))
     }
 }

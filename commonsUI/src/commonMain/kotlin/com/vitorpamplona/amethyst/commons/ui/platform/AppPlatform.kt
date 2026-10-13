@@ -80,13 +80,6 @@ interface AppPlatform {
     val supportsRemoteSignerLogin: Boolean get() = false
 
     /**
-     * Whether the docked notification panel of a wide window offers the fold-away-to-its-bell
-     * collapse (desktop windows, where reclaiming the panel's width matters). Where false, the
-     * panel always draws expanded and no collapse state is read.
-     */
-    val collapsibleNotificationPanel: Boolean get() = false
-
-    /**
      * Whether the platform tells metered and mobile connections from unmetered ones. Where it
      * cannot (Desktop reports every connection as unmetered), the "Wi-Fi" choice of the media
      * settings behaves exactly like "Always", so the settings leave it out.

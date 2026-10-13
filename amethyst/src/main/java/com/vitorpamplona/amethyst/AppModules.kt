@@ -410,7 +410,7 @@ class AppModules(
     val paneWidthPrefs = PaneWidthPreferences(sharedSettingsStore, applicationIOScope)
 
     // Device-global: whether the docked notification panel of a wide window is folded away to
-    // its bell. Only the desktop offers the fold; the value simply goes unread here.
+    // its bell. The fold rides window width, not the platform, so every front end keeps it.
     val notificationPanelCollapsePrefs = NotificationPanelCollapsePreferences(sharedSettingsStore, applicationIOScope)
 
     // Service that will run at all times to receive events from Pokey

@@ -5512,6 +5512,10 @@
     <string name="route_new_geocache">Hide a cache</string>
     <string name="route_new_geocache_hunt">New hunt</string>
     <string name="route_notifications">Notifications</string>
+    <plurals name="notification_panel_folded_new">
+        <item quantity="one">Notifications, %1$d new</item>
+        <item quantity="other">Notifications, %1$d new</item>
+    </plurals>
     <string name="route_podcast_episodes">Episodes</string>
     <string name="route_podcasts">Podcasts</string>
     <string name="sats" translatable="false">sats</string>
