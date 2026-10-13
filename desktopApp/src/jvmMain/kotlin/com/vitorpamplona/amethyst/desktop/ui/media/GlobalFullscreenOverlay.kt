@@ -51,13 +51,15 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.DpSize
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.window.Window
+import androidx.compose.ui.window.WindowPlacement
 import androidx.compose.ui.window.WindowPosition
 import androidx.compose.ui.window.rememberWindowState
 import com.vitorpamplona.amethyst.commons.ui.components.ZoomSource
 import com.vitorpamplona.amethyst.commons.ui.components.rememberZoomTransition
 import com.vitorpamplona.amethyst.commons.ui.components.zoomTransitionContainer
 import com.vitorpamplona.amethyst.commons.ui.components.zoomTransitionLayer
+import com.vitorpamplona.amethyst.desktop.platform.AppWindow
+import com.vitorpamplona.amethyst.desktop.platform.WaylandDisplay
 import com.vitorpamplona.amethyst.desktop.service.media.GlobalMediaPlayer
 import com.vitorpamplona.amethyst.desktop.service.media.MediaPlaybackState
 import io.github.kdroidfilter.composemediaplayer.VideoPlayerSurface
@@ -92,15 +94,21 @@ fun GlobalFullscreenOverlay() {
 
     // The card's rect in the overlay window, which covers [screen]. Read when the overlay opens
     // and again when it closes.
+    // Wayland never tells a window where it is on the screen, so there the video fades in instead.
     val card = remember { GlobalMediaPlayer.fullscreenSource }
     val source: () -> ZoomSource? = {
-        val origin = mainWindow?.locationOnScreen
+        val origin = mainWindow?.takeUnless { WaylandDisplay.isActive }?.locationOnScreen
         if (origin != null) card?.capture()?.translate((origin.x - screen.x) * density, (origin.y - screen.y) * density) else null
     }
     val cornerRadius = remember { GlobalMediaPlayer.fullscreenSourceCornerRadius }
 
+    // Nor does it let a window place itself over the screen: there the overlay is full screen from
+    // the moment it opens until it is dismissed, opaque (full screen makes a window opaque anyway),
+    // and the video fades in and out over black.
+    val onWayland = WaylandDisplay.isActive
     val windowState =
         rememberWindowState(
+            placement = if (onWayland) WindowPlacement.Fullscreen else WindowPlacement.Floating,
             position = WindowPosition(screen.x.dp, screen.y.dp),
             size = DpSize(screen.width.dp, screen.height.dp),
         )
@@ -113,14 +121,15 @@ fun GlobalFullscreenOverlay() {
         }
     }
 
-    Window(
+    AppWindow(
         onCloseRequest = { GlobalMediaPlayer.exitFullscreen() },
         state = windowState,
         title = "Amethyst",
         undecorated = true,
-        transparent = true,
+        transparent = !onWayland,
         resizable = false,
         alwaysOnTop = true,
+        fullscreenDevice = device,
     ) {
         val overlay = window
         DisposableEffect(overlay) {
@@ -131,8 +140,9 @@ fun GlobalFullscreenOverlay() {
             source = source,
             cornerRadius = cornerRadius,
             videoState = videoState,
-            onGrown = { if (device.isFullScreenSupported) device.fullScreenWindow = overlay },
-            beforeShrink = { if (device.fullScreenWindow === overlay) device.fullScreenWindow = null },
+            opaqueBackdrop = onWayland,
+            onGrown = { if (!onWayland && device.isFullScreenSupported) device.fullScreenWindow = overlay },
+            beforeShrink = { if (!onWayland && device.fullScreenWindow === overlay) device.fullScreenWindow = null },
             onDismissed = {
                 // Hidden the moment the video is back in its card: tearing the window down takes a
                 // while, and the screen stayed covered until it was gone.
@@ -148,6 +158,7 @@ private fun FullscreenVideo(
     source: () -> ZoomSource?,
     cornerRadius: Dp,
     videoState: MediaPlaybackState,
+    opaqueBackdrop: Boolean,
     onGrown: () -> Unit,
     beforeShrink: suspend () -> Unit,
     onDismissed: () -> Unit,
@@ -180,7 +191,7 @@ private fun FullscreenVideo(
             Modifier
                 .fillMaxSize()
                 .zoomTransitionContainer(transition)
-                .drawBehind { drawRect(Color.Black.copy(alpha = transition.progress)) }
+                .drawBehind { drawRect(Color.Black.copy(alpha = if (opaqueBackdrop) 1f else transition.progress)) }
                 .focusRequester(focusRequester)
                 // A focus target, or requestFocus() above finds none and the keys never arrive.
                 .focusable()

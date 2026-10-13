@@ -28,7 +28,9 @@ which Flathub does not accept. See [Flathub](#flathub) below.
 - `com.vitorpamplona.amethyst.Amethyst.yml`: Flatpak manifest for the GitHub
   Release bundle. It packages the **prebuilt** jpackage tree from
   `./gradlew :desktopApp:createReleaseDistributable`, which bundles its own
-  trimmed JRE (hence no openjdk extension).
+  trimmed JRE (hence no openjdk extension). Build that tree on the JetBrains
+  Runtime (see [Sandbox notes](#sandbox-notes)), or the bundle can't draw on
+  Wayland.
 - `com.vitorpamplona.amethyst.Amethyst.metainfo.xml`: AppStream metadata. It
   keeps the release history: add an entry when tagging (`RELEASE_OPS.md` § Pre-tag
   checklist). CI injects a bare entry for the version it builds if one is
@@ -59,8 +61,8 @@ flatpak run --command=flatpak-builder-lint org.flatpak.Builder repo <path-to>/re
 ## Local build
 
 ```bash
-# 1. Build the app tree the manifest packages
-./gradlew :desktopApp:createReleaseDistributable
+# 1. Build the app tree the manifest packages, on the JetBrains Runtime 21 (jbrsdk)
+JAVA_HOME=/path/to/jbrsdk-21 ./gradlew :desktopApp:createReleaseDistributable
 
 # 2. Tooling + Flathub remote (one-time)
 sudo apt-get install -y flatpak flatpak-builder   # or distro equivalent
@@ -100,9 +102,14 @@ lists the codecs-extra plugin directory, and overriding it hides those plugins.
 
 ## Sandbox notes
 
-- `--socket=x11` (not wayland/fallback-x11): Compose Desktop renders through
-  AWT/skiko, which is X11-only on Linux and runs under XWayland on Wayland
-  sessions.
+- `--socket=wayland` + `--socket=fallback-x11`: the app draws natively on
+  Wayland and gets X11 only on X11 sessions. This needs the bundled runtime to
+  be the JetBrains Runtime (its AWT has a Wayland toolkit, `WLToolkit`; stock
+  OpenJDK's AWT is X11-only), which release CI builds the Linux legs on. Skiko's
+  window surface needs X11, so on Wayland the app draws through Swing with
+  Skiko's CPU renderer (`desktopApp/.../platform/WaylandDisplay.kt`,
+  `AppWindow.kt`). `flatpak run --env=AMETHYST_X11=1 --socket=x11
+  com.vitorpamplona.amethyst.Amethyst` puts it back on XWayland.
 - File access is limited to Downloads and Pictures. AWT's `FileDialog` calls
   the GTK file chooser directly rather than the file chooser portal, so it can
   only browse what the sandbox can see.
@@ -156,8 +163,12 @@ checked 2026-10-09:
      generated files), plus an init script that points the repositories in
      `settings.gradle.kts` at that local copy;
    - the Gradle distribution itself, since the wrapper downloads it;
-   - a JDK from `org.freedesktop.Sdk.Extension.openjdk21` to run Gradle and
-     jpackage. The jpackage tree then bundles a trimmed JRE as it does today.
+   - a JDK to run Gradle and jpackage. The jpackage tree bundles a trimmed
+     JRE of that JDK, and it must be the JetBrains Runtime (jbrsdk 21) to
+     draw on Wayland. `org.freedesktop.Sdk.Extension.openjdk21` is stock
+     OpenJDK, X11 only, so the manifest would list JBR's source archive
+     instead (or JBR's prebuilt jbrsdk, which a reviewer may also ask to be
+     built from source).
 
    Some Maven dependencies ship prebuilt Linux binaries inside their jars,
    and a reviewer may ask for those to be built from source too. In the
