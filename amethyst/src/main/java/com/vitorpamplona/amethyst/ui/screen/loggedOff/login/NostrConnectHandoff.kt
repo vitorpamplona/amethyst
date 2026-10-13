@@ -61,7 +61,8 @@ fun openNostrConnectInSigner(
         context.startActivity(target.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
         true
     } catch (e: ActivityNotFoundException) {
-        Log.w("NostrConnectHandoff", "No app took the nostrconnect address", e)
+        // Not the exception: its message prints the intent, nostrconnect:// address and secret included.
+        Log.w("NostrConnectHandoff") { "No app took the nostrconnect address: ${e::class.simpleName}" }
         false
     }
 }
