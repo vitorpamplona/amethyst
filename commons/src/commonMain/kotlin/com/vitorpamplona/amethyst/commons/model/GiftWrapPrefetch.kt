@@ -51,7 +51,7 @@ import kotlinx.coroutines.sync.withPermit
  * serial pass reaches it. A local key or a NIP-55 app answers in milliseconds, so for them this
  * changes little.
  *
- * The serial pass decrypts through [signer], which hands each prefetched plaintext back once and
+ * The serial pass decrypts through [signer], which hands back each prefetched plaintext and
  * passes everything else, misses included, to the account's signer.
  */
 internal class GiftWrapPrefetch(
@@ -62,7 +62,9 @@ internal class GiftWrapPrefetch(
 ) {
     private val gate = Semaphore(MAX_IN_FLIGHT)
 
-    // Ciphertext -> its plaintext, in flight or done, until the serial pass claims it.
+    // Ciphertext -> its plaintext, in flight or done. Kept for [UNCLAIMED_MS] from the offer,
+    // not dropped when claimed: a batch the indexer reached first is often offered again by the
+    // early collector while its wrap is still opening, and would otherwise be decrypted twice.
     private val pending = LargeCache<String, CompletableDeferred<String>>()
 
     // Draft id -> its warm-up, while it runs: the handler waits for it rather than asking again.
@@ -136,7 +138,7 @@ internal class GiftWrapPrefetch(
     private fun expect(ciphertext: String): CompletableDeferred<String> {
         val result = CompletableDeferred<String>()
         pending.put(ciphertext, result)
-        // An answer the serial pass never claims (a seal it already had) is dropped after a while.
+        // Dropped after a while, claimed or not: by then the serial pass is long past it.
         scope.launch {
             delay(UNCLAIMED_MS)
             if (pending.get(ciphertext) === result) pending.remove(ciphertext)
@@ -162,7 +164,7 @@ internal class GiftWrapPrefetch(
         override suspend fun nip44Decrypt(
             ciphertext: String,
             fromPublicKey: HexKey,
-        ): String = pending.remove(ciphertext)?.await() ?: inner.nip44Decrypt(ciphertext, fromPublicKey)
+        ): String = pending.get(ciphertext)?.await() ?: inner.nip44Decrypt(ciphertext, fromPublicKey)
 
         override suspend fun <T : Event> sign(
             createdAt: Long,

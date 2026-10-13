@@ -31,9 +31,11 @@ import com.vitorpamplona.quartz.nip57Zaps.ZapRequestEvent
 import com.vitorpamplona.quartz.nip59Giftwrap.seals.SealEvent
 import com.vitorpamplona.quartz.nip59Giftwrap.wraps.GiftWrapEvent
 import com.vitorpamplona.quartz.utils.TimeUtils
+import kotlinx.coroutines.async
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.currentTime
+import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -85,6 +87,26 @@ class GiftWrapPrefetchTest {
             prefetch.offer(wraps)
             prefetch.offer(wraps)
             wraps.forEach { (it.unwrapThrowing(prefetch.signer) as SealEvent).unsealRumorThrowing(prefetch.signer) }
+
+            assertEquals(6, signer.calls)
+        }
+
+    @Test
+    fun aLateOfferOfAWrapTheSerialPassAlreadyClaimedAsksNothingAgain() =
+        runTest {
+            val wraps = wrappedDms(3)
+            val signer = SlowSigner(recipient, delayMs = 100)
+            val prefetch = GiftWrapPrefetch(backgroundScope, { signer })
+
+            // The indexer got the batch first: it offers it and starts opening the first wrap.
+            prefetch.offer(wraps)
+            val opening = async { (wraps[0].unwrapThrowing(prefetch.signer) as SealEvent).unsealRumorThrowing(prefetch.signer) }
+            runCurrent()
+            // The early collector sees the same batch only now, while that wrap is still open.
+            prefetch.offer(wraps)
+            opening.await()
+            wraps.drop(1).forEach { (it.unwrapThrowing(prefetch.signer) as SealEvent).unsealRumorThrowing(prefetch.signer) }
+            advanceUntilIdle()
 
             assertEquals(6, signer.calls)
         }
