@@ -6,6 +6,10 @@ on:
     paths:
       - 'desktopApp/**'
       - '.github/workflows/smoke-test-desktop.yml'
+      # The keyring self-test exercises these, and the libraries they pin.
+      - 'commons/src/jvmMain/kotlin/com/vitorpamplona/amethyst/commons/keystorage/**'
+      - 'scripts/keyring-self-test.sh'
+      - 'gradle/libs.versions.toml'
 
 permissions:
   contents: read
@@ -77,7 +81,8 @@ jobs:
           cache-read-only: true
 
       - name: Install xvfb + packaging deps
-        run: sudo apt-get update && sudo apt-get install -y xvfb fakeroot
+        # gnome-keyring + dbus: the keyring self-test below needs a Secret Service session.
+        run: sudo apt-get update && sudo apt-get install -y xvfb fakeroot gnome-keyring dbus
 
       - name: Build release .deb
         uses: nick-fields/retry@ad984534de44a9489a53aefd81eb77f87c70dc60  # v4.0.0
@@ -86,7 +91,7 @@ jobs:
           timeout_minutes: 20
           command: ./gradlew --no-daemon :desktopApp:packageReleaseDeb
 
-      - name: Relax libicu dependency
+      - name: Relax build-host-pinned deps
         run: |
           set -euo pipefail
           chmod +x scripts/relax-deb-libicu.sh
@@ -104,19 +109,34 @@ jobs:
           chmod +x scripts/add-deb-libegl-dep.sh
           scripts/add-deb-libegl-dep.sh desktopApp/build/compose/binaries/main-release/deb/*.deb
 
+      # Also mirrors create-release.yml, so the install below resolves the same Depends.
+      - name: Add GStreamer deps to .deb
+        run: |
+          set -euo pipefail
+          chmod +x scripts/add-deb-gstreamer-deps.sh
+          scripts/add-deb-gstreamer-deps.sh desktopApp/build/compose/binaries/main-release/deb/*.deb
+
+      # Also mirrors create-release.yml. Without it, jpackage's postinst runs
+      # xdg-desktop-menu, which fails here as on any system without menu
+      # directories ("No writable system menu directory found").
+      - name: Fix desktop entry in .deb
+        run: |
+          set -euo pipefail
+          chmod +x scripts/fix-deb-desktop-entry.sh
+          scripts/fix-deb-desktop-entry.sh desktopApp/build/compose/binaries/main-release/deb/*.deb
+
       - name: Install .deb
         run: |
+          set -euo pipefail
           # Installed via apt (not `dpkg -i`) so the .deb's declared Depends are
           # actually resolved — that is what pulls in libegl1 on the arm64
-          # runner, which does not ship it preinstalled.
-          #
-          # jpackage's post-install script runs xdg-desktop-menu which fails
-          # on CI runners ("No writable system menu directory"). The files are
-          # extracted successfully; only the menu registration fails. Allow the
-          # install error, then verify the binary was actually installed.
-          sudo apt-get install -y ./desktopApp/build/compose/binaries/main-release/deb/*.deb || true
+          # runner, which does not ship it preinstalled. A failed install,
+          # maintainer scripts included, fails the job.
+          sudo apt-get install -y ./desktopApp/build/compose/binaries/main-release/deb/*.deb
+          dpkg-query -W -f='${Status}\n' amethyst | grep -qx 'install ok installed'
+          test -f /usr/share/applications/amethyst-Amethyst.desktop
           echo "Installed files:"
-          dpkg -L amethyst | head -30
+          dpkg -L amethyst | sed -n '1,30p'
           # Fail if the binary wasn't actually extracted
           test -d /opt/amethyst || test -d /opt/Amethyst || {
             echo "FAIL: /opt/amethyst not found after dpkg -i"
@@ -158,6 +178,19 @@ jobs:
             echo "FAIL: Application exited with code $EXIT_CODE within 10s"
             exit 1
           fi
+
+      # The release build must keep keys in the OS keyring: ProGuard once stripped the D-Bus
+      # transport and broke a signed jar, so every Linux release silently stopped using it.
+      # See commons/plans/2026-10-12-desktop-key-storage.md.
+      - name: Keyring self-test - the installed app keeps keys in GNOME Keyring
+        run: |
+          set -euo pipefail
+          LAUNCHER=$(find /opt -name "Amethyst" -type f -executable 2>/dev/null | head -1)
+          if [[ -z "$LAUNCHER" ]]; then
+            LAUNCHER=$(dpkg -L amethyst | grep -E '/bin/[Aa]methyst$' | head -1)
+          fi
+          [[ -n "$LAUNCHER" ]] || { echo "FAIL: could not find Amethyst launcher binary"; exit 1; }
+          bash scripts/keyring-self-test.sh "$LAUNCHER"
 
       - name: Upload .deb artifact (for manual testing)
         if: always()

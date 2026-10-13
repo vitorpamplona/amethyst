@@ -101,6 +101,24 @@
     native <methods>;
 }
 
+# java-keyring's Linux backend: the Secret Service (GNOME Keyring, KWallet's
+# Secret Service) over D-Bus, through de.swiesend:secret-service
+# (org.freedesktop.secret) and dbus-java (org.freedesktop.dbus). Shrinking
+# breaks it three ways (the signed hkdf jar it also needs is handled in
+# build.gradle.kts, after the ProGuard task):
+#   - dbus-java finds its socket transport through ServiceLoader
+#     (META-INF/services/...ITransportProvider -> NativeTransportProvider), so
+#     shrink saw no caller and emptied the transport jar. With no transport the
+#     backend failed to open, java-keyring reported no backend at all, and every
+#     Linux release build fell back to the console-password file store, which a
+#     GUI app cannot answer: no keyring prompt, and no key kept.
+#   - D-Bus calls go through reflective proxies of the remote interfaces, and
+#     structs are (de)serialised from their fields by reflection.
+#   - java-keyring builds each backend by reflection (getConstructor()).
+-keep class com.github.javakeyring.** { *; }
+-keep class org.freedesktop.dbus.** { *; }
+-keep class org.freedesktop.secret.** { *; }
+
 # kmp-tor — loads native Tor daemon via JNI reflection
 -keep class io.matthewnelson.** { *; }
 
@@ -171,6 +189,44 @@
 -keepclassmembers class * implements uk.co.caprica.vlcj.factory.discovery.provider.DiscoveryProvider {
     public <init>(...);
 }
+
+# ============================================================================
+# Desktop-only: kdroidfilter ComposeMediaPlayer — JNI natives registered
+# from the bundled Swift dylib's JNI_OnLoad via a fixed RegisterNatives
+# table. Shrink sees no Java callsites for some natives (e.g. nGetVolume)
+# and strips the declarations, so RegisterNatives fails with
+# NoSuchMethodError during System.load() at first video init on macOS.
+# ============================================================================
+-keep class io.github.kdroidfilter.** { *; }
+-keepclassmembers class io.github.kdroidfilter.** {
+    native <methods>;
+}
+
+# Any library can bind its natives from JNI_OnLoad with RegisterNatives, which
+# fails for the whole table when one declaration is missing, and shrink cannot
+# see those callers. Keep every native of every class that is kept anyway; the
+# declarations cost nothing. verifyJniNativesSurviveProguard checks it holds.
+-keepclassmembers class * {
+    native <methods>;
+}
+
+# ============================================================================
+# Desktop-only: vico charts — Kotlin interface default-method super-calls.
+# MutableCartesianMeasuringContext implements both MeasuringContext and
+# CartesianMeasuringContext (which extends it), and its getPixels()/isLtr()
+# bodies are `invokespecial MeasuringContext.<default>` calls. The JVM
+# requires an invokespecial interface-method target to be a *direct*
+# superinterface of the class — but shrink prunes the "redundant" direct
+# MeasuringContext implements edge (reachable via CartesianMeasuringContext),
+# producing bytecode the verifier rejects at class-load time:
+#   java.lang.VerifyError: Bad invokespecial instruction: interface method
+#   reference is in an indirect superinterface
+# on the first notifications-chart composition. Confirmed by diffing the
+# proguarded bundle against the pristine com.patrykandpatrick.vico:
+# compose-desktop:3.3.1 artifact. Package-wide keep pins the hierarchy;
+# which edge the shrinker deems redundant can shift with any vico bump.
+# ============================================================================
+-keep class com.patrykandpatrick.vico.** { *; }
 
 # ============================================================================
 # Desktop-only: OkHttp / Conscrypt / BouncyCastle / OpenJSSE / Graal

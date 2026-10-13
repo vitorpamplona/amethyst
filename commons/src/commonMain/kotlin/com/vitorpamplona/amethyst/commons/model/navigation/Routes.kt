@@ -461,6 +461,9 @@ sealed class Route {
 
     @Serializable object PrivacyLockSettings : Route()
 
+    /** Where this device keeps private keys (desktop: OS keyring or password file), and fixing it. */
+    @Serializable object KeyStorageSettings : Route()
+
     /** The feeds the user built for Home: list, create, edit, delete. */
     @Serializable object CustomFeeds : Route()
 

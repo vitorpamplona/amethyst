@@ -20,17 +20,24 @@
  */
 package com.vitorpamplona.amethyst.commons.account
 
+import com.vitorpamplona.amethyst.commons.keystorage.KeyFileLockedException
+import com.vitorpamplona.amethyst.commons.keystorage.KeyNotKeptException
+import com.vitorpamplona.amethyst.commons.keystorage.KeyPrompt
+import com.vitorpamplona.amethyst.commons.keystorage.KeyStoragePrompts
 import com.vitorpamplona.amethyst.commons.keystorage.PrivateKeyVault
+import com.vitorpamplona.amethyst.commons.keystorage.ScriptedPrompts
 import com.vitorpamplona.amethyst.commons.model.AccountSettings
 import com.vitorpamplona.amethyst.commons.model.preferences.AppPreferenceStores
 import com.vitorpamplona.amethyst.commons.model.preferences.SecretEncryption
 import com.vitorpamplona.quartz.nip01Core.core.toHexKey
 import com.vitorpamplona.quartz.nip01Core.crypto.KeyPair
 import com.vitorpamplona.quartz.nip19Bech32.toNpub
+import com.vitorpamplona.quartz.nip19Bech32.toNsec
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.test.runTest
 import okio.Path.Companion.toOkioPath
 import org.junit.Rule
@@ -38,8 +45,11 @@ import org.junit.rules.TemporaryFolder
 import java.io.File
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
+import kotlin.test.assertIs
 import kotlin.test.assertNotNull
 import kotlin.test.assertNull
+import kotlin.test.assertSame
 import kotlin.test.assertTrue
 
 class StoreAccountSessionStoreTest {
@@ -48,13 +58,18 @@ class StoreAccountSessionStoreTest {
 
     private class MemoryVault : PrivateKeyVault {
         val keys = mutableMapOf<String, String>()
+        var saves = 0
 
-        override suspend fun get(npub: String): String? = keys[npub]
+        // Windows and Linux backends report a missing item as an error, which the strict lookup rethrows.
+        var throwOnMissing = false
+
+        override suspend fun get(npub: String): String? = keys[npub] ?: if (throwOnMissing) throw IllegalStateException("no item") else null
 
         override suspend fun save(
             npub: String,
             privKeyHex: String,
         ) {
+            saves++
             keys[npub] = privKeyHex
         }
 
@@ -65,7 +80,7 @@ class StoreAccountSessionStoreTest {
 
     private val vault = MemoryVault()
 
-    private fun newStore(): StoreAccountSessionStore {
+    private fun newStore(keyPrompts: KeyStoragePrompts? = null): StoreAccountSessionStore {
         val root = folder.root
         return StoreAccountSessionStore(
             rootFilesDir = { root.toOkioPath() },
@@ -73,6 +88,7 @@ class StoreAccountSessionStoreTest {
             keyVault = vault,
             scope = CoroutineScope(Dispatchers.IO + SupervisorJob()),
             encryption = SecretEncryption(File(root, "secret.key")),
+            keyPrompts = keyPrompts,
         )
     }
 
@@ -174,5 +190,195 @@ class StoreAccountSessionStoreTest {
 
             assertNull(store.loadAccountConfigFromEncryptedStorage(keyPair.pubKey.toNpub()))
             assertTrue(vault.keys.isEmpty())
+        }
+
+    @Test
+    fun savingSettingsAgainDoesNotRewriteAnUnchangedKey() =
+        runTest {
+            val store = newStore()
+            val settings = AccountSettings(keyPair = KeyPair())
+
+            store.setDefaultAccount(settings)
+            assertEquals(1, vault.saves)
+
+            // Every last-read marker saves the settings; none of them may reach the OS keychain.
+            repeat(5) { store.saveAccountSettings(settings) }
+            assertEquals(1, vault.saves)
+
+            // A changed key is still written.
+            store.saveAccountSettings(AccountSettings(keyPair = KeyPair(privKey = KeyPair().privKey, pubKey = settings.keyPair.pubKey, forceReplacePubkey = false)))
+            assertEquals(2, vault.saves)
+        }
+
+    @Test
+    fun aViewOnlyLoginLoadsWhenTheKeychainThrowsOnAMissingKey() =
+        runTest {
+            val store = newStore()
+            val pubKey = KeyPair().pubKey
+            store.setDefaultAccount(AccountSettings(keyPair = KeyPair(pubKey = pubKey)))
+            store.forgetLoadedSettings()
+            vault.throwOnMissing = true
+
+            val loaded = assertNotNull(store.loadAccountConfigFromEncryptedStorage(pubKey.toNpub()))
+            assertNull(loaded.keyPair.privKey)
+        }
+
+    @Test
+    fun aKeyNotRememberedIsNotKeptAndIsAskedForOnTheNextLoad() =
+        runBlocking<Unit> {
+            val keyPair = KeyPair()
+            val npub = keyPair.pubKey.toNpub()
+            val nsec = keyPair.privKey!!.toNsec()
+            // A key left in the vault from before the user turned "Remember" off is deleted.
+            vault.keys[npub] = keyPair.privKey!!.toHexKey()
+
+            val script = ScriptedPrompts(KeyPair().privKey!!.toNsec(), nsec)
+            val job = script.start(this)
+            val store = newStore(script.prompts)
+
+            store.setDefaultAccount(AccountSettings(keyPair = keyPair, rememberKey = false))
+            assertTrue(vault.keys.isEmpty())
+            assertEquals(false, store.allSavedAccounts().single().keyRemembered)
+
+            store.forgetLoadedSettings()
+            val loaded = assertNotNull(store.loadAccountConfigFromEncryptedStorage(npub))
+            assertEquals(keyPair.privKey?.toHexKey(), loaded.keyPair.privKey?.toHexKey())
+            assertFalse(loaded.rememberKey)
+            // The first key belonged to someone else, so it asked again.
+            assertEquals(listOf(false, true), script.asked.map { (it as KeyPrompt.EnterKey).wrongKey })
+
+            store.saveAccountSettings(loaded)
+            assertTrue(vault.keys.isEmpty())
+            job.cancel()
+        }
+
+    @Test
+    fun skippingTheKeyLoadsTheAccountWithoutSigning() =
+        runBlocking<Unit> {
+            val keyPair = KeyPair()
+            val script = ScriptedPrompts(null)
+            val job = script.start(this)
+            val store = newStore(script.prompts)
+
+            store.setDefaultAccount(AccountSettings(keyPair = keyPair, rememberKey = false))
+            store.forgetLoadedSettings()
+            val loaded = assertNotNull(store.loadAccountConfigFromEncryptedStorage(keyPair.pubKey.toNpub()))
+            assertNull(loaded.keyPair.privKey)
+            job.cancel()
+        }
+
+    @Test
+    fun aKeyTheUserChoseNotToKeepIsNoFailure() =
+        runTest {
+            val declining =
+                object : PrivateKeyVault {
+                    var saves = 0
+
+                    override suspend fun get(npub: String): String? = null
+
+                    override suspend fun save(
+                        npub: String,
+                        privKeyHex: String,
+                    ) {
+                        saves++
+                        throw KeyNotKeptException("Keys are not kept on this device")
+                    }
+
+                    override suspend fun delete(npub: String) {}
+                }
+            val root = folder.root
+            val store =
+                StoreAccountSessionStore(
+                    rootFilesDir = { root.toOkioPath() },
+                    appStores = AppPreferenceStores(rootFilesDir = { root.toOkioPath() }),
+                    keyVault = declining,
+                    scope = CoroutineScope(Dispatchers.IO + SupervisorJob()),
+                    encryption = SecretEncryption(File(root, "secret.key")),
+                )
+            val settings = AccountSettings(keyPair = KeyPair())
+
+            store.setDefaultAccount(settings)
+            store.saveAccountSettings(settings)
+
+            assertNull(store.keyVaultFailure.value)
+            assertEquals(false, store.allSavedAccounts().single().keyRemembered)
+            assertEquals(1, declining.saves)
+        }
+
+    @Test
+    fun anAccountThatLoadedWithoutItsKeyReloadsWithItOnceTheKeysOpen() =
+        runTest {
+            val keyPair = KeyPair()
+            val npub = keyPair.pubKey.toNpub()
+            val store = newStore()
+            store.setDefaultAccount(AccountSettings(keyPair = keyPair))
+
+            // Next launch: the key could not be read (its password skipped), so it loads read-only.
+            val stored = vault.keys.remove(npub)!!
+            store.forgetLoadedSettings()
+            val readOnly = store.loadAccountConfigFromEncryptedStorage(npub)!!
+            assertFalse(readOnly.isWriteable())
+
+            // Settings › Key storage › Unlock: the key reads again.
+            vault.keys[npub] = stored
+            val reloaded = store.reloadWithKey(npub)!!
+            assertTrue(reloaded.isWriteable())
+            assertSame(reloaded, store.loadAccountConfigFromEncryptedStorage(npub))
+        }
+
+    @Test
+    fun anAccountThatKeepsNoKeyIsNotReloaded() =
+        runTest {
+            val keyPair = KeyPair()
+            val store = newStore()
+            store.setDefaultAccount(AccountSettings(keyPair = keyPair, rememberKey = false))
+            vault.keys[keyPair.pubKey.toNpub()] = keyPair.privKey!!.toHexKey()
+
+            assertNull(store.reloadWithKey(keyPair.pubKey.toNpub()))
+        }
+
+    @Test
+    fun aLockedKeyFileIsAFailureAndTheAccountStillKeepsItsKey() =
+        runTest {
+            val locked =
+                object : PrivateKeyVault {
+                    var saves = 0
+                    var deletes = 0
+
+                    override suspend fun get(npub: String): String? = null
+
+                    override suspend fun save(
+                        npub: String,
+                        privKeyHex: String,
+                    ) {
+                        saves++
+                        throw KeyFileLockedException("The key file stayed locked")
+                    }
+
+                    override suspend fun delete(npub: String) {
+                        deletes++
+                    }
+                }
+            val root = folder.root
+            val store =
+                StoreAccountSessionStore(
+                    rootFilesDir = { root.toOkioPath() },
+                    appStores = AppPreferenceStores(rootFilesDir = { root.toOkioPath() }),
+                    keyVault = locked,
+                    scope = CoroutineScope(Dispatchers.IO + SupervisorJob()),
+                    encryption = SecretEncryption(File(root, "secret.key")),
+                )
+            val settings = AccountSettings(keyPair = KeyPair())
+
+            store.setDefaultAccount(settings)
+            store.saveAccountSettings(settings)
+
+            // Told, not taken as "don't remember": that would ask for the key next launch and
+            // delete the copy the key file still holds.
+            assertIs<KeyFileLockedException>(store.keyVaultFailure.value)
+            assertEquals(true, store.allSavedAccounts().single().keyRemembered)
+            assertEquals(0, locked.deletes)
+            // Not retried on every save: the user already skipped the password this run.
+            assertEquals(1, locked.saves)
         }
 }

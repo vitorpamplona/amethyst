@@ -48,6 +48,30 @@ CLI (built partly to drive `quartz`/`commons` for interop checks). If a
 claim is checkable in under a minute, check it before stating it — write
 the failing case first, watch it fail, then explain.
 
+### Run the app before calling a UI change done
+
+Compiling and unit tests don't show a screen that crashes on open, a missing
+string or a collapsed layout. The desktop app renders the **same shared UI**
+as Android (`AmethystApp` from `commonsUI`: same screens, shell and feeds), so
+running it on the JVM checks the shared code path without a phone. Any change
+under `commonsUI`, `commons` or `desktopApp` that a user can see gets this
+check before you report it done:
+
+```bash
+tools/desktop-run/run-headless.sh start   # Xvfb + :desktopApp:run, waits for paint, screenshots
+# open the screenshot it names, click/type/screenshot with tools/desktop-run/Drive.java
+tools/desktop-run/run-headless.sh logs    # exceptions first
+tools/desktop-run/run-headless.sh stop    # before any rebuild
+```
+
+It works in a headless container (Xvfb is enough; no xdotool, no window
+manager). Log in with a public `npub` for a read-only session, and pick the
+screen size to see the phone (bottom bar) or wide (drawer) shell.
+`tools/desktop-run/README.md` has the driver commands, accounts, expected
+noise and traps, and `desktop-expert` covers the rest. Say in your report what you
+looked at; if you could not run it, say that instead of implying it works.
+Android-only code (`amethyst/`) still needs a device or emulator.
+
 ## Architecture
 
 ```
@@ -253,6 +277,8 @@ version. `quartz/` is protocol-only — no composables.
 ```bash
 # Run desktop app (the shared UI)
 ./gradlew :desktopApp:run
+# ...headless, for agents: virtual display, screenshots, Robot driver
+tools/desktop-run/run-headless.sh start
 
 # Run Android app
 ./gradlew :amethyst:installDebug

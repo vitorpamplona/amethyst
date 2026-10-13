@@ -847,35 +847,6 @@ class ElectrumXClient(
          */
         private val PINNED_ELECTRUMX_CERTS =
             listOf(
-                // electrumx.testls.space:50002 — expires 2027-05-04
-                // Also covers the .onion hidden service (same operator, same cert):
-                // i665jpwsq46zlsdbnj4axgzd3s56uzey5uhotsnxzsknzbn36jaddsid.onion:50002
-                // SHA-256: 53:65:D5:BB:26:19:F5:40:1C:D8:8E:FC:AF:FB:A5:B2:A0:EA:7A:99:2D:F7:0F:05:7E:9B:CD:50:36:C7:79:9C
-                """
------BEGIN CERTIFICATE-----
-MIIDwzCCAqsCFGGKT5mjh7oN98aNyjOCiqafL8VyMA0GCSqGSIb3DQEBCwUAMIGd
-MQswCQYDVQQGEwJVUzEQMA4GA1UECAwHQ2hpY2FnbzEQMA4GA1UEBwwHQ2hpY2Fn
-bzESMBAGA1UECgwJSW50ZXJuZXRzMQ8wDQYDVQQLDAZJbnRlcncxHjAcBgNVBAMM
-FWVsZWN0cnVtLnRlc3Rscy5zcGFjZTElMCMGCSqGSIb3DQEJARYWbWpfZ2lsbF84
-OUBob3RtYWlsLmNvbTAeFw0yMjA1MDUwNjIzNDFaFw0yNzA1MDQwNjIzNDFaMIGd
-MQswCQYDVQQGEwJVUzEQMA4GA1UECAwHQ2hpY2FnbzEQMA4GA1UEBwwHQ2hpY2Fn
-bzESMBAGA1UECgwJSW50ZXJuZXRzMQ8wDQYDVQQLDAZJbnRlcncxHjAcBgNVBAMM
-FWVsZWN0cnVtLnRlc3Rscy5zcGFjZTElMCMGCSqGSIb3DQEJARYWbWpfZ2lsbF84
-OUBob3RtYWlsLmNvbTCCASIwDQYJKoZIhvcNAQEBBQADggEPADCCAQoCggEBAO4H
-+PKCdiiz3jNOA77aAmS2YaU7eOQ8ZGliEVr/PlLcgF5gmthb2DI6iK4KhC1ad34G
-1n9IhkXPhkVJ94i8wB3uoTBlA7mI5h59m01yhzSkJAoYoU/i6DM9ipbakqWFCTEp
-P+yE216NTU5MbYwThZdRSAIIABe9RyIliMSidyrwHvKBLfnJPFScghW6rhBWN7PG
-PA8k0MFGzf+HXbpnV/jAvz08ZC34qiBIjkJrTgh49JweyoZKdppyJcH4UbkslJ2t
-YUJR3oURBvrPj+D7TwLVRbX36ul7r4+dP3IjgmljsSAHDK4N/PfWrCBdlj9Pc1Cp
-yX+ZDh8X2NrL4ukHoVMCAwEAATANBgkqhkiG9w0BAQsFAAOCAQEAeVj6VZNmY/Vb
-nhzrC7xBSHqVWQ1wkLOClLsdvgKP8cFFJuUoCMQU5bPMi7nWnkfvvsIKH4Eibk5K
-fqiA9jVsY0FHvQ8gP3KMk1LVuUf/sTcRe5itp3guBOSk/zXZUD5tUz/oRk3k+rdc
-MsInqhomjNy/dqYmD6Wm4DNPjZh6fWy+AVQKVNOI2t4koaVdpoi8Uv8h4gFGPbdI
-sVmtoGiIGkKNIWum+6mnF6PfynNrLk+ztH4TrdacVNeoJUPYEAxOuesWXFy3H4r+
-HKBqA4xAzyjgKLPqoWnjSu7gxj1GIjBhnDxkM6wUOnDq8A0EqxR+A17OcXW9sZ2O
-2ZIVwmtnyA==
------END CERTIFICATE-----
-                """.trimIndent(),
                 // nmc2.bitcoins.sk:57002 / 46.229.238.187:57002 — expires 2030-10-22
                 """
 -----BEGIN CERTIFICATE-----
@@ -903,7 +874,9 @@ bK2N2smrHUOQnFijuiFw3WOrjERi0eMhjVNfVu9W9ZYa/Wd6SdIzV55LbG+NpmSf
 5W7ix41hRvdT6cTAJA==
 -----END CERTIFICATE-----
                 """.trimIndent(),
-                // relay.testls.bit:50002 — expires 2036-04-30
+                // relay.testls.bit:50012 — expires 2036-04-30
+                // (served on :50002 until 2026-10-08, when the box's default
+                // 50001/50002 ports switched to the LE-cert electrumx2 endpoint)
                 // Self-signed RSA-2048 cert (CN=relay.testls.bit) served by
                 // ElectrumX-NMC alongside the Namecoin-anchored Nostr relay.
                 // SHA-256 (DER): BB:0B:35:E6:42:35:A7:94:E1:57:B6:9A:CD:72:DA:4C:CC:16:A4:D8:1D:0F:F6:B1:D8:F7:FD:FC:6C:CA:6C:BA

@@ -1,5 +1,6 @@
 import org.jetbrains.compose.desktop.application.dsl.TargetFormat
 import org.jetbrains.compose.desktop.application.tasks.AbstractJPackageTask
+import java.io.DataInputStream
 import java.net.URI
 import java.nio.file.FileSystems
 import java.nio.file.Files
@@ -276,7 +277,7 @@ compose.desktop {
 // task's own package options and a resource dir holding jpackage's template, read from the JDK it
 // packages with, plus these lines. The .deb gets the same packages from
 // scripts/add-deb-gstreamer-deps.sh in CI. The same resource dir also adds StartupWMClass to the
-// desktop entry (scripts/add-deb-wm-class.sh does that for the .deb).
+// desktop entry (scripts/fix-deb-desktop-entry.sh does that for the .deb).
 //
 // base: playbin, appsink, volume; good: HTTP, MP4, HLS, audio output; libav/openh264: H.264 and
 // AAC decoding. The boolean forms take Fedora's or openSUSE's name; the decoders are weak
@@ -288,6 +289,87 @@ val rpmGStreamerDeps =
     Recommends: (gstreamer1-plugin-libav or gstreamer-plugins-libav)
     Recommends: gstreamer1-plugin-openh264
     """.trimIndent()
+
+// jpackage's template sets Autoreq: 0 (rpm would otherwise require the bundled runtime's own
+// sonames, which Autoprov: 0 leaves unprovided) and fills in the system libraries itself, but it can
+// only name their packages on an rpm-based host. Built on Ubuntu, the .rpm required none of them
+// and only got them through what the GStreamer packages happen to pull in. These are the sonames
+// the launcher, the bundled runtime and skiko link (DT_NEEDED) that the package doesn't ship, the
+// same set the .deb gets from dpkg-shlibdeps; soname requires resolve on both distributions.
+// The arm64 skiko also links libEGL (see scripts/add-deb-libegl-dep.sh). The arch is the packaging
+// host's: jpackage only packages for the machine it runs on.
+val rpmLibraryDeps =
+    (
+        listOf(
+            "libasound.so.2", "libfontconfig.so.1", "libGL.so.1", "libstdc++.so.6", "libX11.so.6",
+            "libXext.so.6", "libXi.so.6", "libXrender.so.1", "libXtst.so.6",
+        ) + (if (System.getProperty("os.arch") == "aarch64") listOf("libEGL.so.1") else emptyList())
+    ).joinToString("\n") { "Requires: $it()(64bit)" }
+
+// Compose lays out text with the system's fonts and throws "Could not load font" when fontconfig
+// has none, which is how a minimal openSUSE install comes: fontconfig there requires no font.
+// Debian's fontconfig pulls in DejaVu, so the .deb needs no such line; this asks for the same font
+// by Fedora's or openSUSE's name. Not the generic font(:lang=en): zypper satisfied that with the X11
+// bitmap fonts, which fontconfig doesn't list, and an alternative that generic leaves the pick to
+// the solver.
+val rpmFontDeps = "Requires: (dejavu-sans-fonts or dejavu-fonts)"
+
+// jpackage's .rpm registers the menu entry from %post with `xdg-desktop-menu install` and removes
+// it from %preun. On a system without /usr/share/desktop-directories (a minimal openSUSE) that
+// exits 3: %post only warns, but a failed %preun aborts the erase, so the package could not be
+// removed. And RPM runs the old package's %preun after the new one's %post, so every upgrade
+// unregistered the entry the new version had just registered. Like the .deb
+// (scripts/fix-deb-desktop-entry.sh), the spec now ships the entry as a file the package owns and
+// drops those calls. Two scriptlets cover upgrades from a version that still has them:
+//  - %pre creates /usr/share/desktop-directories, so the old %preun can't fail and abort the upgrade.
+//  - %posttrans, which runs after the old %preun, puts the entry back where that %preun deleted it
+//    (it removes the copy in the first writable of /usr/local/share and /usr/share).
+fun rpmSpec(
+    template: String,
+    requires: String,
+): String {
+    fun String.edit(
+        pattern: String,
+        change: (String) -> String,
+    ): String {
+        val match = Regex(pattern, RegexOption.MULTILINE).find(this)
+        checkNotNull(match) { "jpackage's spec template no longer matches /$pattern/; update rpmSpec()" }
+        return replaceRange(match.range, change(match.value))
+    }
+    // Shell variables in the scriptlets below; `$` would otherwise start a Kotlin template.
+    val entry = "${'$'}entry"
+    val name = "${'$'}{entry##*/}"
+    return template
+        .edit("^Autoreq: 0$") { "$it\n$requires" }
+        // The package must not own the system directories the filesystem package does. Built
+        // without an rpm database, jpackage falls back to its own list of them, but echoes it on
+        // one line, which `comm` then never matches, so the .rpm owned /opt. One per line, plus the
+        // directories the menu entry goes into.
+        .edit("^%define default_filesystem .*$") { "$it /usr/share /usr/share/applications" }
+        .edit("^\\{ rpm -ql filesystem \\|\\| echo %\\{default_filesystem}; }") {
+            "{ rpm -ql filesystem || echo %{default_filesystem} | tr ' ' '\\n'; }"
+        }
+        .edit("^cp -r %\\{_sourcedir}APPLICATION_DIRECTORY/\\* %\\{buildroot}APPLICATION_DIRECTORY$") {
+            """
+            $it
+            for entry in %{buildroot}APPLICATION_DIRECTORY/lib/*.desktop; do
+              install -p -D -m 644 "$entry" "%{buildroot}%{_datadir}/applications/$name"
+            done
+            """.trimIndent()
+        }.edit("^DESKTOP_COMMANDS_INSTALL\n") { "" }
+        .edit("^DESKTOP_COMMANDS_UNINSTALL\n") { "" }
+        .edit("^%pre\npackage_type=rpm$") { "$it\nif [ \"${'$'}1\" -gt 1 ]; then mkdir -p /usr/share/desktop-directories; fi" }
+        .edit("^%clean$") {
+            """
+            %posttrans
+            for entry in APPLICATION_DIRECTORY/lib/*.desktop; do
+              [ -e "%{_datadir}/applications/$name" ] || install -p -m 644 "$entry" "%{_datadir}/applications/$name"
+            done
+
+            $it
+            """.trimIndent()
+        }
+}
 
 // What an app image already holds; jpackage refuses these next to --app-image.
 val appImageOptions =
@@ -307,7 +389,7 @@ listOf("packageRpm" to "main", "packageReleaseRpm" to "main-release").forEach { 
         val ourArgs = layout.buildDirectory.file("compose/tmp/$rpmTask.gstreamer.args.txt")
         val specDir = layout.buildDirectory.dir("compose/tmp/$rpmTask-rpm-resources")
         val appImages = layout.buildDirectory.dir("compose/binaries/$buildType/app")
-        val deps = rpmGStreamerDeps
+        val deps = listOf(rpmGStreamerDeps, rpmLibraryDeps, rpmFontDeps).joinToString("\n")
         val skip = appImageOptions
         doLast {
             val jdk = packagingJdk.get()
@@ -317,12 +399,8 @@ listOf("packageRpm" to "main", "packageReleaseRpm" to "main-release").forEach { 
                     Files.readString(jrt.getPath("$resources/template.spec")) to
                         Files.readString(jrt.getPath("$resources/template.desktop"))
                 }
-            val anchor = Regex("(?m)^Autoreq: 0$")
-            check(anchor.containsMatchIn(template)) {
-                "jpackage's spec template has no 'Autoreq: 0' line to add the GStreamer Requires after"
-            }
             val resources = specDir.get().asFile.apply { deleteRecursively(); mkdirs() }
-            File(resources, "${rpmPackageName.get()}.spec").writeText(anchor.replaceFirst(template, "Autoreq: 0\n$deps"))
+            File(resources, "${rpmPackageName.get()}.spec").writeText(rpmSpec(template, deps))
             // Docks and app switchers match the window's WM_CLASS ("Amethyst", set in AmethystDesktop.kt)
             // to the desktop entry's StartupWMClass, which jpackage's template lacks. jpackage takes
             // <app name>.desktop from the resource dir in its place and still fills in its fields.
@@ -352,8 +430,8 @@ listOf("packageRpm" to "main", "packageReleaseRpm" to "main-release").forEach { 
                     .redirectErrorStream(true)
                     .start()
             val output = process.inputStream.bufferedReader().readText()
-            check(process.waitFor() == 0) { "jpackage could not repackage the .rpm with its GStreamer dependencies:\n$output" }
-            logger.lifecycle("Repackaged ${dest.listFiles { f -> f.name.endsWith(".rpm") }?.joinToString { it.name }} with its GStreamer dependencies")
+            check(process.waitFor() == 0) { "jpackage could not repackage the .rpm with its dependencies:\n$output" }
+            logger.lifecycle("Repackaged ${dest.listFiles { f -> f.name.endsWith(".rpm") }?.joinToString { it.name }} with its dependencies")
         }
     }
 }
@@ -499,6 +577,89 @@ val verifyJkeychainNativeSurvivesProguard = tasks.register("verifyJkeychainNativ
     }
 }
 
+// ProGuard rewrites the classes of every jar it processes, so a signed jar's
+// digests (META-INF/*.SF) stop matching and the JVM refuses its classes with a
+// SecurityException. at.favre.lib:hkdf is signed and the Linux keyring needs it
+// to open its Secret Service session (secret-service's TransportEncryption):
+// with its classes refused, java-keyring found no Linux backend at all. The
+// signatures cannot survive shrinking, so drop them from the output jars.
+tasks.matching { it.name == "proguardReleaseJars" }.configureEach {
+    val proguardDir = layout.buildDirectory.dir("compose/tmp/main-release/proguard")
+    doLast {
+        val signature = Regex("META-INF/[^/]+\\.(SF|RSA|DSA|EC)|META-INF/SIG-[^/]+")
+        proguardDir.get().asFile.listFiles { f -> f.extension == "jar" }?.forEach { jar ->
+            val stale = ZipFile(jar).use { zip -> zip.entries().toList().map { it.name }.filter { signature.matches(it) } }
+            if (stale.isNotEmpty()) {
+                FileSystems.newFileSystem(jar.toPath()).use { fs -> stale.forEach { Files.delete(fs.getPath(it)) } }
+                println("Dropped the jar signature of ${jar.name}: ${stale.joinToString()}")
+            }
+        }
+    }
+}
+
+// The Linux keyring's D-Bus transport is found through ServiceLoader, so a
+// shrink with no keep rule empties its jar and every Linux release silently
+// stops using the OS keyring (see compose-rules.pro). Guard it like the .so.
+val verifyDbusTransportSurvivesProguard = tasks.register("verifyDbusTransportSurvivesProguard") {
+    description = "Fail the release build if ProGuard strips dbus-java's socket transport (would break the Linux keyring at runtime)"
+    group = "verification"
+    dependsOn("proguardReleaseJars")
+    val proguardDir = layout.buildDirectory.dir("compose/tmp/main-release/proguard")
+    inputs.dir(proguardDir).withPropertyName("proguardOutput").withPathSensitivity(PathSensitivity.RELATIVE)
+    val marker = layout.buildDirectory.file("verify-dbus-transport.ok")
+    outputs.file(marker)
+    doLast {
+        val required = "org/freedesktop/dbus/transport/jre/NativeTransportProvider.class"
+        val jars = proguardDir.get().asFile.listFiles { f -> f.extension == "jar" } ?: emptyArray()
+        val foundIn = jars.firstOrNull { jar -> ZipFile(jar).use { it.getEntry(required) != null } }
+        require(foundIn != null) {
+            "REGRESSION: $required missing from every proguarded jar.\n" +
+                "dbus-java loads it through ServiceLoader; without it java-keyring finds no Linux backend\n" +
+                "and the app silently stops keeping private keys in the OS keyring."
+        }
+        marker.get().asFile.writeText("verified $required survived ProGuard in ${foundIn.name}\n")
+    }
+}
+
+// A native library that binds its methods from JNI_OnLoad with RegisterNatives fails to load if
+// any method in its table is missing from the class, and the JVM then unloads it. Shrink strips
+// a native declaration nothing in Java calls, so the library breaks in the release build only:
+// ComposeMediaPlayer's DLL registers WindowsNativeBridge.nGetPlaybackSpeed, which no Kotlin code
+// calls, and with it stripped the v1.18.0 Windows release had no video or audio at all ("Video
+// playback unavailable"). A class ProGuard keeps must keep every native it declared.
+val verifyJniNativesSurviveProguard = tasks.register("verifyJniNativesSurviveProguard") {
+    description = "Fail the release build if ProGuard strips a native method from a class it keeps (breaks RegisterNatives libraries at load)"
+    group = "verification"
+    dependsOn("proguardReleaseJars")
+    val proguardDir = layout.buildDirectory.dir("compose/tmp/main-release/proguard")
+    val originalJars: FileCollection = configurations.getByName("runtimeClasspath")
+    inputs.dir(proguardDir).withPropertyName("proguardOutput").withPathSensitivity(PathSensitivity.RELATIVE)
+    inputs.files(originalJars).withPropertyName("originalJars").withNormalizer(ClasspathNormalizer::class.java)
+    val marker = layout.buildDirectory.file("verify-jni-natives.ok")
+    outputs.file(marker)
+    doLast {
+        val shrunkJars = proguardDir.get().asFile.listFiles { f -> f.extension == "jar" }.orEmpty().toList()
+        require(shrunkJars.isNotEmpty()) { "No proguarded jars under ${proguardDir.get().asFile}" }
+        // Every class ProGuard kept, natives or not: a kept class that lost all of them still breaks.
+        val keptClasses = HashSet<String>()
+        shrunkJars.forEach { jar -> ZipFile(jar).use { zip -> zip.entries().asSequence().forEach { keptClasses += it.name } } }
+        val shrunk = nativeMethodsByClass(shrunkJars, keptClasses)
+        require(shrunk.isNotEmpty()) { "No native methods found in the proguarded jars under ${proguardDir.get().asFile}" }
+        // A class ProGuard dropped whole is never loaded, so nothing registers natives on it.
+        val original = nativeMethodsByClass(originalJars.filter { it.extension == "jar" }.files.toList(), keptClasses)
+        val stripped = original.flatMap { (cls, methods) -> (methods - shrunk[cls].orEmpty()).map { "${cls.removeSuffix(".class")}.$it" } }
+        require(stripped.isEmpty()) {
+            "REGRESSION: ProGuard stripped native methods from classes it kept:\n" +
+                stripped.sorted().joinToString("\n") { "  $it" } + "\n" +
+                "A library that binds its natives with RegisterNatives fails to load without them.\n" +
+                "Check the -keepclassmembers native rule in desktopApp/compose-rules.pro."
+        }
+        val count = shrunk.values.sumOf { it.size }
+        marker.get().asFile.writeText("verified $count native methods in ${shrunk.size} classes survived ProGuard\n")
+        println("verifyJniNativesSurviveProguard: $count native methods in ${shrunk.size} classes kept")
+    }
+}
+
 // Gate every release-packaging task on the verification so a stripped .so
 // never reaches a release artifact.
 listOf(
@@ -513,7 +674,71 @@ listOf(
 ).forEach { name ->
     tasks.matching { it.name == name }.configureEach {
         dependsOn(verifyJkeychainNativeSurvivesProguard)
+        dependsOn(verifyDbusTransportSurvivesProguard)
+        dependsOn(verifyJniNativesSurviveProguard)
     }
+}
+
+/**
+ * Each class entry in [jars] that is in [only] and declares native methods, mapped to them as
+ * `name(descriptor)`. A class in two jars counts once, from the first, as ProGuard keeps only that one.
+ */
+fun nativeMethodsByClass(
+    jars: List<File>,
+    only: Set<String>,
+): Map<String, Set<String>> {
+    val seen = HashSet<String>()
+    val result = HashMap<String, Set<String>>()
+    jars.forEach { jar ->
+        ZipFile(jar).use { zip ->
+            zip.entries().asSequence()
+                .filter { it.name.endsWith(".class") && !it.name.startsWith("META-INF/") && it.name in only && seen.add(it.name) }
+                .forEach { entry ->
+                    val natives = zip.getInputStream(entry).use { readNativeMethods(DataInputStream(it.buffered())) }
+                    if (natives.isNotEmpty()) result[entry.name] = natives.toSet()
+                }
+        }
+    }
+    return result
+}
+
+/** The `name(descriptor)` of each ACC_NATIVE method in one class file (JVMS 4.1). */
+fun readNativeMethods(input: DataInputStream): List<String> {
+    if (input.readInt() != 0xCAFEBABE.toInt()) return emptyList()
+    input.skipNBytes(4) // minor + major version
+    val poolSize = input.readUnsignedShort()
+    val utf8 = arrayOfNulls<String>(poolSize)
+    var i = 1
+    while (i < poolSize) {
+        when (val tag = input.readUnsignedByte()) {
+            1 -> utf8[i] = input.readUTF()
+            7, 8, 16, 19, 20 -> input.skipNBytes(2)
+            15 -> input.skipNBytes(3)
+            3, 4, 9, 10, 11, 12, 17, 18 -> input.skipNBytes(4)
+            5, 6 -> {
+                input.skipNBytes(8)
+                i++ // longs and doubles take two pool slots
+            }
+            else -> throw GradleException("Unknown constant pool tag $tag")
+        }
+        i++
+    }
+    input.skipNBytes(6) // access flags, this class, super class
+    input.skipNBytes(2L * input.readUnsignedShort()) // interfaces
+    fun skipMembers(collect: MutableList<String>?) {
+        repeat(input.readUnsignedShort()) {
+            val access = input.readUnsignedShort()
+            val name = utf8[input.readUnsignedShort()]
+            val descriptor = utf8[input.readUnsignedShort()]
+            repeat(input.readUnsignedShort()) {
+                input.skipNBytes(2)
+                input.skipNBytes(input.readInt().toLong() and 0xFFFFFFFFL)
+            }
+            if (collect != null && access and 0x0100 != 0) collect += "$name$descriptor"
+        }
+    }
+    skipMembers(null) // fields
+    return ArrayList<String>().also { skipMembers(it) }
 }
 
 // macOS notarization: the bundled jars (secp256k1, jna, sqlite-bundled, skiko,

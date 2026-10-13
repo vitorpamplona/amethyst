@@ -1067,7 +1067,7 @@ class Account(
                 },
         )
 
-    val trustedRelays = TrustedRelayListsState(nip65RelayList, privateStorageRelayList, localRelayList, dmRelayList, searchRelayList, indexerRelayList, proxyRelayList, trustedRelayList, broadcastRelayList, scope)
+    val trustedRelays = TrustedRelayListsState(nip65RelayList, privateStorageRelayList, localRelayList, dmRelayList, searchRelayList, indexerRelayList, proxyRelayList, trustedRelayList, broadcastRelayList, trustProviderList.liveRelays, scope)
 
     /** Relays guessed on the user's behalf until their own lists arrive. Read only by Tor routing. */
     val assumedRelays = AssumedRelayListsState(nip65RelayList, searchRelayList, indexerRelayList, scope)
@@ -4553,7 +4553,14 @@ class Account(
             @OptIn(kotlinx.coroutines.FlowPreview::class)
             settings.saveable.debounce(1000).collect {
                 if (it.accountSettings != null) {
-                    saveSettings(it.accountSettings)
+                    // Caught here: one failed write (a full disk, a locked keychain) escaping would
+                    // end this collector, and nothing would be saved again until a restart.
+                    try {
+                        saveSettings(it.accountSettings)
+                    } catch (e: Exception) {
+                        if (e is CancellationException) throw e
+                        Log.w("Account", "Could not save the account settings", e)
+                    }
                 }
             }
         }

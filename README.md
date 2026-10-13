@@ -18,7 +18,6 @@ Join the social network you control.
 [![JitPack snapshots](https://img.shields.io/badge/Quartz%20snapshots-JitPack-27303D?labelColor=27303D&color=0877d2)](https://jitpack.io/#vitorpamplona/amethyst)
 [![CI](https://img.shields.io/github/actions/workflow/status/vitorpamplona/amethyst/build.yml?labelColor=27303D)](https://github.com/vitorpamplona/amethyst/actions/workflows/build.yml)
 [![License: MIT](https://img.shields.io/github/license/vitorpamplona/amethyst?labelColor=27303D&color=0877d2)](/LICENSE)
-[![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/vitorpamplona/amethyst)
 
 ## Download and Install
 
@@ -41,7 +40,6 @@ height="70">](https://github.com/vitorpamplona/amethyst/releases)
 | OS | CLI install | Direct download |
 |---|---|---|
 | macOS (Apple Silicon) | `brew install --cask amethyst-nostr` | [.dmg arm64](https://github.com/vitorpamplona/amethyst/releases/latest) |
-| macOS (Intel) | `brew install --cask amethyst-nostr` | [.dmg x64](https://github.com/vitorpamplona/amethyst/releases/latest) |
 | Windows 10/11 | `winget install VitorPamplona.Amethyst` | [.msi](https://github.com/vitorpamplona/amethyst/releases/latest) · [.zip portable](https://github.com/vitorpamplona/amethyst/releases/latest) |
 | Debian/Ubuntu | — | [.deb](https://github.com/vitorpamplona/amethyst/releases/latest) |
 | Fedora/RHEL/openSUSE | — | [.rpm](https://github.com/vitorpamplona/amethyst/releases/latest) |

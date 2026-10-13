@@ -32,6 +32,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.platform.LocalWindowInfo
 import com.vitorpamplona.amethyst.commons.account.AccountSessionManager
+import com.vitorpamplona.amethyst.commons.keystorage.KeyStorageController
 import com.vitorpamplona.amethyst.commons.model.Account
 import com.vitorpamplona.amethyst.commons.privacylock.PrivacyLockSettings
 import com.vitorpamplona.amethyst.commons.resources.Res
@@ -62,6 +63,8 @@ class DesktopAppRoot(
 
     override val blurWalletWhenUnfocused: Boolean = true
 
+    override val keyStorage: KeyStorageController get() = modules.keyStorageController
+
     private val host by lazy { DesktopAccountViewModelHost(modules) }
 
     /** Hands the logged-in shell's navigator to the menu bar, which lives outside the shared app. */
@@ -76,7 +79,7 @@ class DesktopAppRoot(
             httpClientBuilder = modules.roleBasedHttpClientBuilder,
             nip05ClientBuilder = { modules.nip05Client },
             host = host,
-        )
+        ).also { host.notices.target = it.toastManager }
 
     /** Keeps the relay pool and the HTTP clients alive while the window is open. */
     @Composable

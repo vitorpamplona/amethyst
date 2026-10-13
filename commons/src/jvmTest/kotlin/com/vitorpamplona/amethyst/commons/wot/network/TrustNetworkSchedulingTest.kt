@@ -34,9 +34,11 @@ import com.vitorpamplona.quartz.nip85TrustedAssertions.users.index.TrustNetworkP
 import com.vitorpamplona.quartz.nip85TrustedAssertions.users.index.TrustNetworkProgress
 import com.vitorpamplona.quartz.nip85TrustedAssertions.users.index.TrustNetworkSyncResult
 import com.vitorpamplona.quartz.utils.Hex
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.async
 import kotlinx.coroutines.cancel
@@ -44,6 +46,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeout
 import okio.FileSystem
 import okio.Path
@@ -108,11 +111,17 @@ class TrustNetworkSchedulingTest {
     /** A relay that answers from these fields and records what it was asked. */
     private inner class FakeSource : TrustNetworkSource {
         val calls = CopyOnWriteArrayList<String>()
-        var news = TrustNetworkNews(cards = false, deletions = 0)
+        var news = TrustNetworkNews(cards = false)
         var newsGate: CompletableDeferred<Unit>? = null
         var downloadGate: CompletableDeferred<Unit>? = null
         var downloadSize = 3
         var downloadComplete = true
+
+        /** How long a cancelled download takes to unwind (a real one closes its socket, saves). */
+        var unwindMs = 0L
+
+        /** Thrown by the download, as a phone's OutOfMemoryError was. */
+        var downloadError: Throwable? = null
 
         /** The update finds nothing new but learns the held counts (a version 3 file lacks one). */
         var updateLearnsCounts = false
@@ -140,7 +149,13 @@ class TrustNetworkSchedulingTest {
                     ): TrustNetworkSyncResult {
                         calls.add("download:${provider.pubkey}")
                         resumedFrom.add(resumeFrom?.cards ?: 0)
-                        downloadGate?.await()
+                        try {
+                            downloadGate?.await()
+                        } catch (e: CancellationException) {
+                            withContext(NonCancellable) { delay(unwindMs) }
+                            throw e
+                        }
+                        downloadError?.let { throw it }
                         return result(provider, downloadSize).let {
                             if (downloadComplete) it else TrustNetworkSyncResult(it.header, it.index, it.ids, complete = false, invalid = 0, received = it.received, detail = "partial")
                         }
@@ -179,14 +194,16 @@ class TrustNetworkSchedulingTest {
         rankProvider: MutableStateFlow<ResolvedProvider?>,
         source: FakeSource,
         metered: Boolean = false,
+        isMetered: () -> Boolean = { metered },
     ) = TrustNetworkState(
         rankProvider = rankProvider,
         minTrustScore = MutableStateFlow(5),
         store = store,
         source = source,
         scope = scope,
-        canDownloadLarge = { !metered },
+        canDownloadLarge = { !isMetered() },
         clock = { now },
+        meteredCheckMs = 20,
     )
 
     @AfterTest
@@ -209,6 +226,106 @@ class TrustNetworkSchedulingTest {
         assertEquals(TrustNetworkSyncStatus.Kind.UPDATE, TrustNetworkState.dueSync(at(now - TrustNetworkState.UPDATE_EVERY_SECS, now - 60), now, force = false))
         assertEquals(TrustNetworkSyncStatus.Kind.FULL_CHECK, TrustNetworkState.dueSync(at(now - 60, now - TrustNetworkState.FULL_CHECK_EVERY_SECS), now, force = false))
     }
+
+    @Test
+    fun aDownloadStopsWhenThePhoneMovesToMobileData() =
+        runBlocking {
+            var metered = false
+            val source = FakeSource().apply { downloadGate = CompletableDeferred() }
+            val wot = state(MutableStateFlow(ResolvedProvider(providerA)), source, isMetered = { metered })
+            wot.awaitReady()
+            withTimeout(5_000) { wot.status.first { it.running == TrustNetworkSyncStatus.Kind.DOWNLOAD } }
+
+            // Wi-Fi drops mid-download: the rest must not go over mobile data.
+            metered = true
+            withTimeout(5_000) { wot.status.first { it.waitingForUnmetered } }
+            wot.awaitIdle()
+            assertNull(wot.status.value.running)
+            assertNull(wot.network.value)
+            assertEquals(1, source.calls.size, "and it does not start again on mobile data")
+        }
+
+    @Test
+    fun theListChangingElsewhereKeepsTheRunningDownloadOnScreen() =
+        runBlocking {
+            // Another row of the 10040 changes mid-download: the same rank provider resolves again.
+            val source = FakeSource().apply { downloadGate = CompletableDeferred() }
+            val rankProvider = MutableStateFlow<ResolvedProvider?>(ResolvedProvider(providerA))
+            val wot = state(rankProvider, source)
+            wot.awaitReady()
+            withTimeout(5_000) { wot.status.first { it.running == TrustNetworkSyncStatus.Kind.DOWNLOAD } }
+
+            rankProvider.value = ResolvedProvider(providerA)
+            withTimeout(5_000) { wot.awaitReady() }
+            delay(100)
+            assertEquals(TrustNetworkSyncStatus.Kind.DOWNLOAD, wot.status.value.running, "the download is still shown")
+
+            source.downloadGate?.complete(Unit)
+            withTimeout(5_000) { wot.network.first { it?.isFrom(providerA) == true } }
+            assertEquals(1, source.calls.size)
+        }
+
+    @Test
+    fun aListThatCannotBeDecryptedForAMomentKeepsTheDownload() =
+        runBlocking {
+            // A newer 10040 arrives while an external signer cannot decrypt it: the resolved
+            // provider reads null ("not known yet") while the download finishes.
+            val source = FakeSource().apply { downloadGate = CompletableDeferred() }
+            val rankProvider = MutableStateFlow<ResolvedProvider?>(ResolvedProvider(providerA))
+            val wot = state(rankProvider, source)
+            wot.awaitReady()
+            withTimeout(5_000) { wot.status.first { it.running == TrustNetworkSyncStatus.Kind.DOWNLOAD } }
+
+            rankProvider.value = null
+            source.downloadGate?.complete(Unit)
+            withTimeout(5_000) { wot.network.first { it?.isFrom(providerA) == true } }
+            assertTrue(store.readIndex()?.isFrom(providerA) == true, "the finished download is kept")
+        }
+
+    @Test
+    fun switchingAwayAndBackStillDownloads() =
+        runBlocking {
+            val source =
+                FakeSource().apply {
+                    downloadGate = CompletableDeferred()
+                    unwindMs = 500
+                }
+            val rankProvider = MutableStateFlow<ResolvedProvider?>(ResolvedProvider(providerA))
+            val wot = state(rankProvider, source, metered = false)
+            wot.awaitReady()
+            withTimeout(5_000) { wot.status.first { it.running == TrustNetworkSyncStatus.Kind.DOWNLOAD } }
+
+            // A to B and back to A while A's download is still unwinding from its cancel: both
+            // switches find it running, so neither starts a download; only its end can.
+            rankProvider.value = ResolvedProvider(providerB)
+            wot.awaitReady()
+            rankProvider.value = ResolvedProvider(providerA)
+            wot.awaitReady()
+            source.downloadGate?.complete(Unit)
+            withTimeout(5_000) { wot.network.first { it?.isFrom(providerA) == true } }
+            assertTrue(wot.isActive)
+        }
+
+    @Test
+    fun aSyncKilledByAnErrorEndsInAProblemInsteadOfRunningForever() =
+        runBlocking {
+            // Not an Exception: an OutOfMemoryError used to skip the status reset, so the screen
+            // said "Downloading" for good, with no Retry, while nothing ran.
+            val source = FakeSource().apply { downloadError = OutOfMemoryError("Java heap space") }
+            val wot = state(MutableStateFlow(ResolvedProvider(providerA)), source)
+            wot.awaitReady()
+            wot.awaitIdle()
+
+            assertEquals(listOf("download:${providerA.pubkey}"), source.calls.toList())
+            assertNull(wot.status.value.running, "not stuck on downloading")
+            assertEquals(TrustNetworkProblem.Failed("Java heap space"), wot.status.value.problem)
+
+            // Retry works.
+            source.downloadError = null
+            assertIs<TrustNetworkOutcome.Applied>(assertNotNull(wot.syncNow()).outcome)
+            assertNull(wot.status.value.problem)
+            assertTrue(wot.network.value != null)
+        }
 
     @Test
     fun nothingSyncsBeforeTheProviderListIsRead() =
@@ -249,7 +366,7 @@ class TrustNetworkSchedulingTest {
     fun newsRunsTheUpdateWithoutCountingAgain() =
         runBlocking {
             writeIndex(providerA)
-            val source = FakeSource().apply { news = TrustNetworkNews(cards = true, deletions = 0) }
+            val source = FakeSource().apply { news = TrustNetworkNews(cards = true) }
             val wot = state(MutableStateFlow(ResolvedProvider(providerA)), source)
             wot.awaitReady()
             val run = assertNotNull(wot.syncNow(TrustNetworkSyncStatus.Kind.UPDATE))
@@ -267,7 +384,7 @@ class TrustNetworkSchedulingTest {
             assertNull(store.readIndex()!!.header.heldAfterCursor)
             val source =
                 FakeSource().apply {
-                    news = TrustNetworkNews(cards = true, deletions = 0)
+                    news = TrustNetworkNews(cards = true)
                     updateLearnsCounts = true
                 }
             val wot = state(MutableStateFlow(ResolvedProvider(providerA)), source)
@@ -313,7 +430,7 @@ class TrustNetworkSchedulingTest {
         runBlocking {
             // The ids file is gone, so an update would have to download everything.
             writeIndex(providerA, updatedAgo = TrustNetworkState.UPDATE_EVERY_SECS, withIds = false)
-            val source = FakeSource().apply { news = TrustNetworkNews(cards = true, deletions = 0) }
+            val source = FakeSource().apply { news = TrustNetworkNews(cards = true) }
             val wot = state(MutableStateFlow(ResolvedProvider(providerA)), source, metered = true)
             wot.awaitReady()
             wot.awaitIdle()

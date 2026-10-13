@@ -47,11 +47,8 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.layout.boundsInWindow
-import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalClipboard
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
@@ -114,7 +111,9 @@ import com.vitorpamplona.amethyst.commons.ui.components.M3ActionSection
 import com.vitorpamplona.amethyst.commons.ui.components.WaitAndDisplay
 import com.vitorpamplona.amethyst.commons.ui.components.mediaSizingModifier
 import com.vitorpamplona.amethyst.commons.ui.components.pdf.PdfPreviewCard
+import com.vitorpamplona.amethyst.commons.ui.components.rememberZoomSourceAnchor
 import com.vitorpamplona.amethyst.commons.ui.components.util.setText
+import com.vitorpamplona.amethyst.commons.ui.components.zoomSourceAnchor
 import com.vitorpamplona.amethyst.commons.ui.loadStringRes
 import com.vitorpamplona.amethyst.commons.ui.note.BlankNote
 import com.vitorpamplona.amethyst.commons.ui.note.DownloadForOfflineIcon
@@ -193,11 +192,8 @@ fun ZoomableContentView(
     accountViewModel: AccountViewModel,
 ) {
     var dialogOpen by remember(content) { mutableStateOf(false) }
-    var sourceBounds by remember(content) { mutableStateOf<Rect?>(null) }
-    val boundsTrackingModifier =
-        Modifier.onGloballyPositioned { coordinates ->
-            sourceBounds = coordinates.boundsInWindow()
-        }
+    val source = rememberZoomSourceAnchor()
+    val boundsTrackingModifier = Modifier.zoomSourceAnchor(source)
 
     when (content) {
         is MediaUrlImage -> {
@@ -211,17 +207,20 @@ fun ZoomableContentView(
                 backdrop = (content.thumbhash ?: content.blurhash)?.let { { BlurhashBackdrop(content.blurhash, content.description, content.thumbhash) } },
             ) {
                 if (content.isAnimatedMedia()) {
-                    GifVideoView(
-                        videoUri = content.url,
-                        contentDescription = content.description,
-                        dimensions = content.dim,
-                        blurhash = content.blurhash,
-                        roundedCorner = roundedCorner,
-                        contentScale = contentScale,
-                        onDialog = { dialogOpen = true },
-                        accountViewModel = accountViewModel,
-                        thumbhash = content.thumbhash,
-                    )
+                    // The anchor lets the viewer grow out of, and shrink back into, the gif.
+                    Box(modifier = boundsTrackingModifier) {
+                        GifVideoView(
+                            videoUri = content.url,
+                            contentDescription = content.description,
+                            dimensions = content.dim,
+                            blurhash = content.blurhash,
+                            roundedCorner = roundedCorner,
+                            contentScale = contentScale,
+                            onDialog = { dialogOpen = true },
+                            accountViewModel = accountViewModel,
+                            thumbhash = content.thumbhash,
+                        )
+                    }
                 } else {
                     TwoSecondController(content) { controllerVisible ->
                         val mainImageModifier =
@@ -332,17 +331,19 @@ fun ZoomableContentView(
         is MediaLocalImage -> {
             if (content.isAnimatedMedia()) {
                 content.localJavaFile?.let {
-                    GifVideoView(
-                        videoUri = it.toUri().toString(),
-                        contentDescription = content.description,
-                        dimensions = content.dim,
-                        blurhash = content.blurhash,
-                        roundedCorner = roundedCorner,
-                        contentScale = contentScale,
-                        onDialog = { dialogOpen = true },
-                        accountViewModel = accountViewModel,
-                        thumbhash = content.thumbhash,
-                    )
+                    Box(modifier = boundsTrackingModifier) {
+                        GifVideoView(
+                            videoUri = it.toUri().toString(),
+                            contentDescription = content.description,
+                            dimensions = content.dim,
+                            blurhash = content.blurhash,
+                            roundedCorner = roundedCorner,
+                            contentScale = contentScale,
+                            onDialog = { dialogOpen = true },
+                            accountViewModel = accountViewModel,
+                            thumbhash = content.thumbhash,
+                        )
+                    }
                 }
             } else {
                 TwoSecondController(content) { controllerVisible ->
@@ -410,7 +411,7 @@ fun ZoomableContentView(
             ZoomableImageDialog(
                 imageUrl = content,
                 allImages = images,
-                sourceBounds = sourceBounds,
+                source = source,
                 onDismiss = {
                     dialogOpen = false
                 },

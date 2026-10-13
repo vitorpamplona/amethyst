@@ -69,6 +69,7 @@ import com.vitorpamplona.amethyst.commons.ui.broadcast.DisplayBroadcastProgress
 import com.vitorpamplona.amethyst.commons.ui.components.rememberCoarseLocationPermission
 import com.vitorpamplona.amethyst.commons.ui.components.rememberViewModel
 import com.vitorpamplona.amethyst.commons.ui.components.toasts.DisplayErrorMessages
+import com.vitorpamplona.amethyst.commons.ui.keystorage.KeyStorageHost
 import com.vitorpamplona.amethyst.commons.ui.layouts.LocalScreenLayout
 import com.vitorpamplona.amethyst.commons.ui.navigation.bottombars.LocalTabReselectCoordinator
 import com.vitorpamplona.amethyst.commons.ui.navigation.bottombars.TabReselectCoordinator
@@ -118,15 +119,18 @@ fun AmethystApp(
 
     Log.d("ActivityLifecycle") { "AmethystApp $accountState $sessionManager" }
 
-    PrivacyLockHost(root.privacyLockSettings, root.blurWalletWhenUnfocused) {
-        Crossfade(
-            targetState = accountState,
-            animationSpec = tween(durationMillis = 100),
-        ) { state ->
-            when (state) {
-                is AccountState.Loading -> LoadingSetup()
-                is AccountState.LoggedOff -> LoggedOffSetup(sessionManager)
-                is AccountState.LoggedIn -> LoggedInSetup(state, sessionManager, root)
+    // Outside the privacy lock: unlocking the keys comes before the account (and its lock) loads.
+    KeyStorageHost(root.keyStorage) {
+        PrivacyLockHost(root.privacyLockSettings, root.blurWalletWhenUnfocused) {
+            Crossfade(
+                targetState = accountState,
+                animationSpec = tween(durationMillis = 100),
+            ) { state ->
+                when (state) {
+                    is AccountState.Loading -> LoadingSetup()
+                    is AccountState.LoggedOff -> LoggedOffSetup(sessionManager)
+                    is AccountState.LoggedIn -> LoggedInSetup(state, sessionManager, root)
+                }
             }
         }
     }

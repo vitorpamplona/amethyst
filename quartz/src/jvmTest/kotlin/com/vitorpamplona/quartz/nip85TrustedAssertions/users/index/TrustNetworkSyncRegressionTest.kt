@@ -223,19 +223,27 @@ class TrustNetworkSyncRegressionTest {
 
     @Test
     fun anIndexFromTheVersionBeforeStillReads() {
-        val header = TrustNetworkHeader(provider.pubKey, "wss://scores.example.com", syncCursor = batchTime, lastFullCheck = 1, lastUpdate = 2, heldAtCursor = 300, heldAfterCursor = 0, generation = 7)
+        val header = TrustNetworkHeader(provider.pubKey, "wss://scores.example.com", syncCursor = batchTime, lastFullCheck = 1, lastUpdate = 2, heldAtCursor = 300, heldAfterCursor = 0, heldTotal = 301, generation = 7)
         val builder = TrustNetworkBuilder(provider.pubKey)
         val current = TrustNetworkCodec.encodeIndex(header, builder.build().first)
         assertEquals(header, TrustNetworkCodec.decodeHeader(current))
 
-        // Version 3: the same bytes without heldAfterCursor (the i32 after heldAtCursor).
         val relayLength = header.relay.encodeToByteArray().size
         val heldAfterAt = 4 + 2 + 32 + 2 + relayLength + 8 * 3 + 4
-        val v3 = current.copyOfRange(0, heldAfterAt) + current.copyOfRange(heldAfterAt + 4, current.size)
+
+        // Version 4: the same bytes without heldTotal (the i32 after heldAfterCursor).
+        val v4 = current.copyOfRange(0, heldAfterAt + 4) + current.copyOfRange(heldAfterAt + 8, current.size)
+        v4[4] = 0
+        v4[5] = 4
+        val decoded4 = assertNotNull(TrustNetworkCodec.decodeIndex(v4), "a version 4 file is still read")
+        assertEquals(header.copy(heldTotal = null), decoded4.first, "unknown, so the next update reconciles once")
+
+        // Version 3: without heldAfterCursor either.
+        val v3 = current.copyOfRange(0, heldAfterAt) + current.copyOfRange(heldAfterAt + 8, current.size)
         v3[4] = 0
         v3[5] = 3
         val decoded = assertNotNull(TrustNetworkCodec.decodeIndex(v3), "a version 3 file is still read")
-        assertEquals(header.copy(heldAfterCursor = null), decoded.first, "unknown, so the next update reconciles once")
+        assertEquals(header.copy(heldAfterCursor = null, heldTotal = null), decoded.first, "unknown, so the next update reconciles once")
     }
 
     @Test
@@ -250,6 +258,24 @@ class TrustNetworkSyncRegressionTest {
             assertTrue(result.complete)
             // Each holds everything so far; after the first few they come as the download grows by half.
             assertEquals(listOf(1_000, 2_000, 3_000, 4_500), saved)
+        }
+
+    @Test
+    fun theNegentropyFillAfterPagingKeepsCheckpointing() =
+        runBlocking {
+            // Paging gets 2,000 cards (the dense second's first page and the older ones), then
+            // negentropy fills the other 2,500. The fill counted from 0 against a last checkpoint
+            // of 2,000, so it never saved: an interruption there lost everything it fetched.
+            val dense = List(3_000) { card(hex(), 50, batchTime) }
+            val older = List(1_500) { i -> card(hex(), 50, batchTime - 1 - i) }
+            val saved = mutableListOf<Int>()
+            val result =
+                withRelay(dense + older, pageCap = 500) { _, client, relay ->
+                    client.downloadTrustNetwork(provider.pubKey, relay, checkpoint = { saved += it.cards }, checkpointEvery = 1_000)
+                }
+            assertTrue(result.complete, result.detail)
+            assertEquals(4_500, result.index.size)
+            assertEquals(listOf(1_000, 2_000, 3_000, 4_500), saved, "the fill checkpoints too")
         }
 
     @Test

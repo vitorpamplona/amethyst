@@ -24,31 +24,16 @@
 # Usage: add-deb-gstreamer-deps.sh <path-to-deb> [<path-to-deb> ...]
 set -euo pipefail
 
+source "$(dirname "${BASH_SOURCE[0]}")/deb-control.sh"
+
 DEPENDS='gstreamer1.0-plugins-base, gstreamer1.0-plugins-good'
 RECOMMENDS='gstreamer1.0-libav'
 
-# An unmatched glob reaches us as the literal pattern: fail rather than ship a .deb without the deps.
-if [[ $# -eq 0 ]]; then
-    echo "error: no .deb given" >&2
-    exit 1
-fi
-
-for deb in "$@"; do
-    if [[ ! -f "$deb" ]]; then
-        echo "error: not a file: $deb" >&2
-        exit 1
-    fi
-
-    work="$(mktemp -d)"
-    trap 'rm -rf "$work"' EXIT
-    dpkg-deb -R "$deb" "$work/pkg"
-    control="$work/pkg/DEBIAN/control"
+add_gstreamer() {
+    local control="$1"
 
     if grep -qE '(^|[ ,])gstreamer1\.0-plugins-base([ ,]|$)' "$control"; then
-        echo "GStreamer already declared, leaving as-is: $deb"
-        rm -rf "$work"
-        trap - EXIT
-        continue
+        return
     fi
 
     # A binary control file is one stanza; jpackage's template can end in a blank
@@ -70,12 +55,24 @@ for deb in "$@"; do
     else
         echo "Recommends: ${RECOMMENDS}" >> "$control"
     fi
+}
 
-    # Built beside it and moved over it, so an interrupted run leaves the original intact.
-    dpkg-deb --root-owner-group -Zxz -b "$work/pkg" "$work/out.deb" >/dev/null
-    mv -f "$work/out.deb" "$deb"
-    echo "Added GStreamer deps: $deb"
+# An unmatched glob reaches us as the literal pattern: fail rather than ship a .deb without the deps.
+if [[ $# -eq 0 ]]; then
+    echo "error: no .deb given" >&2
+    exit 1
+fi
 
-    rm -rf "$work"
-    trap - EXIT
+for deb in "$@"; do
+    if [[ ! -f "$deb" ]]; then
+        echo "error: not a file: $deb" >&2
+        exit 1
+    fi
+
+    deb_edit_control "$deb" add_gstreamer
+    if [[ $DEB_CONTROL_CHANGED -eq 1 ]]; then
+        echo "Added GStreamer deps: $deb"
+    else
+        echo "GStreamer already declared, leaving as-is: $deb"
+    fi
 done

@@ -31,6 +31,7 @@ import com.vitorpamplona.quartz.nip01Core.relay.client.single.newSubId
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.MachineReadablePrefix
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
+import com.vitorpamplona.quartz.nip50Search.SearchQuery
 import com.vitorpamplona.quartz.utils.Log
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.delay
@@ -60,6 +61,13 @@ import kotlin.concurrent.atomics.incrementAndFetch
  *    every id a reconcile of [reconciledFrom] named matches. A filter with no kinds may hold
  *    a long `authors` list, too heavy to repeat on every batch, so its ids go out
  *    bare and its `authors` and tags are added only to re-ask a `CLOSED` batch.
+ *  - **A relay that reads only with a NIP-50 token**, such as search.brainstorm.world,
+ *    which refuses any `REQ` without `include:spam` or an `observer:` token as
+ *    `auth-required:`. A [reconciledFrom] `search` of only such `key:value` tokens goes
+ *    out with every `REQ`. One with words does not, at first: a relay may refuse `search`
+ *    on a `REQ`, or apply ranked text to it differently, and the ids alone already name
+ *    the events. It is added once the bare `REQ` is refused (`auth-required:` or
+ *    `CLOSED`); the ids a reconcile of that filter named all match it.
  *
  * An `auth-required:` refusal is re-asked once, after this client's NIP-42 responder
  * (if it has one) authenticates.
@@ -91,6 +99,8 @@ suspend fun INostrClient.fetchByIds(
 
     var widened = false
     var authed = false
+    val search = reconciledFrom?.search
+    var withSearch = search != null && !SearchQuery.parse(search).hasText
     var drops = 0
     // A batch on its own still pauses and gives up the same way; it just learns alone.
     val pacing = pace ?: DownloadPace()
@@ -101,8 +111,8 @@ suspend fun INostrClient.fetchByIds(
         val authMark = authSuccessMark(relay)
         val filter =
             when {
-                widened -> Filter(ids = missing, authors = reconciledFrom?.authors, kinds = reconciledFrom?.kinds, tags = reconciledFrom?.tags, tagsAll = reconciledFrom?.tagsAll)
-                else -> Filter(ids = missing, kinds = reconciledFrom?.kinds)
+                widened -> Filter(ids = missing, authors = reconciledFrom?.authors, kinds = reconciledFrom?.kinds, tags = reconciledFrom?.tags, tagsAll = reconciledFrom?.tagsAll, search = search.takeIf { withSearch })
+                else -> Filter(ids = missing, kinds = reconciledFrom?.kinds, search = search.takeIf { withSearch })
             }
         if (pacing.gaveUp) break
         val end = pacing.turn { fetchByIdsRound(relay, filter, batchIdleMs, pending, seen, collected) }
@@ -114,8 +124,12 @@ suspend fun INostrClient.fetchByIds(
             }
 
             RoundEnd.AUTH_REQUIRED -> {
-                if (authed || awaitAuthOutcome(relay, authMark, settleMs = batchIdleMs) != AuthOutcome.AUTHENTICATED) break
-                authed = true
+                if (search != null && !withSearch) {
+                    withSearch = true
+                } else {
+                    if (authed || awaitAuthOutcome(relay, authMark, settleMs = batchIdleMs) != AuthOutcome.AUTHENTICATED) break
+                    authed = true
+                }
             }
 
             RoundEnd.DROPPED -> {
@@ -125,8 +139,12 @@ suspend fun INostrClient.fetchByIds(
             }
 
             RoundEnd.CLOSED -> {
-                if (widened || !reconciledFrom.narrowsBeyondKinds()) break
-                widened = true
+                if (search != null && !withSearch) {
+                    withSearch = true
+                } else {
+                    if (widened || !reconciledFrom.narrowsBeyondKinds()) break
+                    widened = true
+                }
             }
 
             RoundEnd.IDLE -> {

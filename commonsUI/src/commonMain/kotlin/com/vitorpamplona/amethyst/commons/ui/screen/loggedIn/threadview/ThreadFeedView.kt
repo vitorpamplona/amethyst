@@ -188,7 +188,9 @@ import com.vitorpamplona.amethyst.commons.ui.note.types.RenderBlossomAuth
 import com.vitorpamplona.amethyst.commons.ui.note.types.RenderBlossomPieceIndex
 import com.vitorpamplona.amethyst.commons.ui.note.types.RenderBolt12Zap
 import com.vitorpamplona.amethyst.commons.ui.note.types.RenderBookshelfDirectory
+import com.vitorpamplona.amethyst.commons.ui.note.types.RenderCalendarCollectionEvent
 import com.vitorpamplona.amethyst.commons.ui.note.types.RenderCalendarDateSlotEvent
+import com.vitorpamplona.amethyst.commons.ui.note.types.RenderCalendarRSVPEvent
 import com.vitorpamplona.amethyst.commons.ui.note.types.RenderCalendarTimeSlotEvent
 import com.vitorpamplona.amethyst.commons.ui.note.types.RenderChannelMessage
 import com.vitorpamplona.amethyst.commons.ui.note.types.RenderChat
@@ -368,6 +370,8 @@ import com.vitorpamplona.quartz.nip51Lists.releaseArtifactSet.ReleaseArtifactSet
 import com.vitorpamplona.quartz.nip51Lists.starterPack.StarterPackEvent
 import com.vitorpamplona.quartz.nip52Calendar.appt.day.CalendarDateSlotEvent
 import com.vitorpamplona.quartz.nip52Calendar.appt.time.CalendarTimeSlotEvent
+import com.vitorpamplona.quartz.nip52Calendar.calendar.CalendarCollectionEvent
+import com.vitorpamplona.quartz.nip52Calendar.rsvp.CalendarRSVPEvent
 import com.vitorpamplona.quartz.nip53LiveActivities.chat.LiveActivitiesChatMessageEvent
 import com.vitorpamplona.quartz.nip53LiveActivities.meetingSpaces.MeetingRoomEvent
 import com.vitorpamplona.quartz.nip53LiveActivities.meetingSpaces.MeetingSpaceEvent
@@ -1211,6 +1215,10 @@ private fun FullBleedNoteCompose(
                     RenderCalendarTimeSlotEvent(baseNote, accountViewModel, nav)
                 } else if (noteEvent is CalendarDateSlotEvent) {
                     RenderCalendarDateSlotEvent(baseNote, accountViewModel, nav)
+                } else if (noteEvent is CalendarCollectionEvent) {
+                    RenderCalendarCollectionEvent(baseNote, accountViewModel, nav)
+                } else if (noteEvent is CalendarRSVPEvent) {
+                    RenderCalendarRSVPEvent(baseNote, accountViewModel, nav)
                 } else if (noteEvent is ZapGoalEvent) {
                     RenderGoal(baseNote, accountViewModel, nav)
                 } else if (noteEvent is FundraiserEvent) {

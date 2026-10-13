@@ -44,12 +44,9 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.layout.boundsInWindow
-import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
@@ -74,10 +71,13 @@ import com.vitorpamplona.amethyst.commons.richtext.MediaUrlVideo
 import com.vitorpamplona.amethyst.commons.richtext.isAnimatedGifUrl
 import com.vitorpamplona.amethyst.commons.ui.components.UrlCachedPreviewer
 import com.vitorpamplona.amethyst.commons.ui.components.UrlPreviewState
+import com.vitorpamplona.amethyst.commons.ui.components.ZoomSourceAnchor
 import com.vitorpamplona.amethyst.commons.ui.components.pdf.PdfPreviewCard
 import com.vitorpamplona.amethyst.commons.ui.components.pdf.PdfViewerContent
+import com.vitorpamplona.amethyst.commons.ui.components.rememberZoomSourceAnchor
 import com.vitorpamplona.amethyst.commons.ui.components.rememberZoomTransition
 import com.vitorpamplona.amethyst.commons.ui.components.urlPreview
+import com.vitorpamplona.amethyst.commons.ui.components.zoomSourceAnchor
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.note.elements.DisplayUncitedHashtags
 import com.vitorpamplona.amethyst.commons.ui.note.platform.NotePlatform
@@ -127,17 +127,17 @@ object DesktopNotePlatform : NotePlatform {
     /**
      * Shows [url] in the window's OS full-screen overlay, starting it at [position] (0..1) unless
      * it is already the playing video: that one carries on where it is, with no seek to stutter it.
-     * The overlay grows out of [sourceBounds], where the video sat in the window.
+     * The overlay grows out of [source], where the video sits in the window.
      */
     private fun playFullscreen(
         url: String,
         position: Float,
-        sourceBounds: Rect?,
+        source: ZoomSourceAnchor?,
         cornerRadius: Dp,
     ) {
         val current = GlobalMediaPlayer.videoState.value
         if (current.url != url || current.errorReason != null) GlobalMediaPlayer.playVideo(url, position)
-        if (!GlobalMediaPlayer.isFullscreen.value) GlobalMediaPlayer.enterFullscreen(sourceBounds, cornerRadius)
+        if (!GlobalMediaPlayer.isFullscreen.value) GlobalMediaPlayer.enterFullscreen(source, cornerRadius)
     }
 
     @Composable
@@ -149,7 +149,7 @@ object DesktopNotePlatform : NotePlatform {
         accountViewModel: AccountViewModel,
     ) {
         var showViewer by remember { mutableStateOf(false) }
-        var sourceBounds by remember { mutableStateOf<Rect?>(null) }
+        val source = rememberZoomSourceAnchor()
         val cornerRadius = if (roundedCorner) 12.dp else 0.dp
         val shape = RoundedCornerShape(cornerRadius)
         val url = content.mediaUrl() ?: return
@@ -182,9 +182,9 @@ object DesktopNotePlatform : NotePlatform {
                     url = url,
                     modifier = Modifier.fillMaxWidth().heightIn(max = MaxInlineMediaHeight),
                     shape = shape,
-                    onPictureBounds = { sourceBounds = it },
+                    pictureSource = source,
                     isLive = (content as? MediaUrlVideo)?.isLiveStream == true,
-                    onFullscreen = { position -> playFullscreen(url, position, sourceBounds, cornerRadius) },
+                    onFullscreen = { position -> playFullscreen(url, position, source, cornerRadius) },
                     autoPlayWhenVisible = accountViewModel.settings.autoPlayVideos(),
                     pauseWhenHidden = true,
                     loadOnDemand = !accountViewModel.settings.startVideoPlayback(),
@@ -207,7 +207,7 @@ object DesktopNotePlatform : NotePlatform {
                     Modifier
                         .inlineImageSize(ratio, MaxInlineMediaHeight)
                         // Where the viewer grows the image out of, and shrinks it back into.
-                        .onGloballyPositioned { sourceBounds = it.boundsInWindow() }
+                        .zoomSourceAnchor(source)
                         .clip(shape)
                         .clickable { showViewer = true }
                 if (isAnimatedGifUrl(url)) {
@@ -228,7 +228,7 @@ object DesktopNotePlatform : NotePlatform {
         }
 
         if (showViewer) {
-            MediaViewerDialog(content, images, sourceBounds, cornerRadius) { showViewer = false }
+            MediaViewerDialog(content, images, source, cornerRadius) { showViewer = false }
         }
     }
 
@@ -236,13 +236,13 @@ object DesktopNotePlatform : NotePlatform {
     override fun ZoomableImageDialog(
         imageUrl: BaseMediaContent,
         allImages: ImmutableList<BaseMediaContent>,
-        sourceBounds: Rect?,
+        source: ZoomSourceAnchor?,
         onDismiss: () -> Unit,
         accountViewModel: AccountViewModel,
-    ) = MediaViewerDialog(imageUrl, allImages, sourceBounds, 0.dp, onDismiss)
+    ) = MediaViewerDialog(imageUrl, allImages, source, 0.dp, onDismiss)
 
     /**
-     * The full-size viewer over the window. The media grows out of [sourceBounds] (window
+     * The full-size viewer over the window. The media grows out of [source] (window
      * coordinates, with [sourceCornerRadius]) and shrinks back into it on close, as on the phone.
      * The dialog's own scrim, open animation and insets are off: the viewer fades its backdrop with
      * the transition, and must sit exactly over the window for the bounds to line up.
@@ -252,7 +252,7 @@ object DesktopNotePlatform : NotePlatform {
     private fun MediaViewerDialog(
         imageUrl: BaseMediaContent,
         allImages: ImmutableList<BaseMediaContent>,
-        sourceBounds: Rect?,
+        source: ZoomSourceAnchor?,
         sourceCornerRadius: Dp,
         onDismiss: () -> Unit,
     ) {
@@ -260,7 +260,7 @@ object DesktopNotePlatform : NotePlatform {
         val start = remember(urls, imageUrl) { urls.indexOf(imageUrl.mediaUrl()).coerceAtLeast(0) }
         if (urls.isEmpty()) return
 
-        val transition = rememberZoomTransition(sourceBounds, sourceCornerRadius, onDismiss)
+        val transition = rememberZoomTransition(source, sourceCornerRadius, onDismiss)
 
         Dialog(
             onDismissRequest = transition::dismiss,
@@ -317,14 +317,14 @@ object DesktopNotePlatform : NotePlatform {
     ) {
         val cornerRadius = if (roundedCorner) 12.dp else 0.dp
         val shape = RoundedCornerShape(cornerRadius)
-        var sourceBounds by remember { mutableStateOf<Rect?>(null) }
+        val source = rememberZoomSourceAnchor()
         DesktopVideoPlayer(
             url = videoUri,
             modifier = Modifier.fillMaxWidth().heightIn(max = MaxInlineMediaHeight),
             shape = shape,
-            onPictureBounds = { sourceBounds = it },
+            pictureSource = source,
             isLive = isLiveStream,
-            onFullscreen = { position -> playFullscreen(videoUri, position, sourceBounds, cornerRadius) },
+            onFullscreen = { position -> playFullscreen(videoUri, position, source, cornerRadius) },
             autoPlayWhenVisible = accountViewModel.settings.autoPlayVideos(),
             pauseWhenHidden = true,
             loadOnDemand = !accountViewModel.settings.startVideoPlayback(),

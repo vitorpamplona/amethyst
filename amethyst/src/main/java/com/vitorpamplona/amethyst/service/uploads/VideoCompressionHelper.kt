@@ -35,6 +35,9 @@ import com.davotoula.lightcompressor.config.Configuration
 import com.davotoula.lightcompressor.config.VideoResizer
 import com.vitorpamplona.amethyst.commons.service.uploads.CompressorQuality
 import com.vitorpamplona.amethyst.commons.service.uploads.MediaCompressorResult
+import com.vitorpamplona.amethyst.commons.service.uploads.video.VideoCompressionRules
+import com.vitorpamplona.amethyst.commons.service.uploads.video.VideoInfo
+import com.vitorpamplona.amethyst.commons.service.uploads.video.VideoResolution
 import com.vitorpamplona.quartz.utils.Log
 import com.vitorpamplona.quartz.utils.LogLevel
 import kotlinx.coroutines.suspendCancellableCoroutine
@@ -44,107 +47,8 @@ import java.util.UUID
 import kotlin.coroutines.resume
 
 // TODO: add Auto setting. Focus on small fast streams. 4->1080p, 1080p->720p, 720p and below stay the same resolution. Use existing matrix to determine bitrate.
-data class VideoInfo(
-    val resolution: VideoResolution,
-    val framerate: Float,
-)
-
-data class VideoResolution(
-    val width: Int,
-    val height: Int,
-) {
-    fun getStandard(): VideoStandard {
-        val shortSide = minOf(width, height)
-        return when {
-            shortSide >= 2160 -> VideoStandard.UHD_4K
-            shortSide >= 1440 -> VideoStandard.QHD_1440P
-            shortSide >= 1080 -> VideoStandard.FHD_1080P
-            shortSide >= 720 -> VideoStandard.HD_720P
-            shortSide >= 480 -> VideoStandard.SD_480P
-            shortSide >= 360 -> VideoStandard.NHD_360P
-            shortSide >= 240 -> VideoStandard.QVGA_240P
-            else -> VideoStandard.UNKNOWN
-        }
-    }
-}
-
-enum class VideoStandard(
-    val label: String,
-) {
-    UHD_4K("4K"),
-    QHD_1440P("1440p"),
-    FHD_1080P("1080p"),
-    HD_720P("720p"),
-    SD_480P("480p"),
-    NHD_360P("360p"),
-    QVGA_240P("240p"),
-    UNKNOWN("unknown"),
-    ;
-
-    override fun toString(): String = label
-}
-
-private const val MBPS_TO_BPS_MULTIPLIER = 1_000_000
-
-data class CompressionRule(
-    val shortSide: Int,
-    val bitrateMbps: Float,
-    val description: String,
-) {
-    fun getBitrateBps(
-        framerate: Float,
-        useH265: Boolean,
-    ): Int {
-        // Apply 1.3x multiplier for 60fps+ videos, 0.7x multiplier for H265
-        val framerateMultiplier = if (framerate >= 60f) 1.3f else 1.0f
-        val codecMultiplier = if (useH265) 0.75f else 1.0f
-        val finalMultiplier = framerateMultiplier * codecMultiplier
-
-        Log.d("VideoCompressionHelper") { "framerate: $framerate, useH265: $useH265, Bitrate multiplier: $finalMultiplier" }
-
-        return (bitrateMbps * finalMultiplier * MBPS_TO_BPS_MULTIPLIER).toInt()
-    }
-}
-
 object VideoCompressionHelper {
     private const val LOG_TAG = "VideoCompressionHelper"
-
-    private val compressionRules =
-        mapOf(
-            CompressorQuality.LOW to
-                mapOf(
-                    VideoStandard.UHD_4K to CompressionRule(720, 1f, "4K→720p, 1Mbps"),
-                    VideoStandard.QHD_1440P to CompressionRule(720, 1f, "1440p→720p, 1Mbps"),
-                    VideoStandard.FHD_1080P to CompressionRule(480, 0.75f, "1080p→480p, 0.75Mbps"),
-                    VideoStandard.HD_720P to CompressionRule(360, 0.5f, "720p→360p, 0.5Mbps"),
-                    VideoStandard.SD_480P to CompressionRule(240, 0.5f, "480p→240p, 0.5Mbps"),
-                    VideoStandard.NHD_360P to CompressionRule(240, 0.3f, "360p→240p, 0.3Mbps"),
-                    VideoStandard.QVGA_240P to CompressionRule(180, 0.2f, "240p→180p, 0.2Mbps"),
-                    VideoStandard.UNKNOWN to CompressionRule(480, 0.75f, "Low quality fallback, 0.75Mbps"),
-                ),
-            CompressorQuality.MEDIUM to
-                mapOf(
-                    VideoStandard.UHD_4K to CompressionRule(1080, 4f, "4K→1080p, 4Mbps"),
-                    VideoStandard.QHD_1440P to CompressionRule(1080, 4f, "1440p→1080p, 4Mbps"),
-                    VideoStandard.FHD_1080P to CompressionRule(720, 2f, "1080p→720p, 2Mbps"),
-                    VideoStandard.HD_720P to CompressionRule(480, 1.5f, "720p→480p, 1.5Mbps"),
-                    VideoStandard.SD_480P to CompressionRule(360, 1f, "480p→360p, 1Mbps"),
-                    VideoStandard.NHD_360P to CompressionRule(240, 0.5f, "360p→240p, 0.5Mbps"),
-                    VideoStandard.QVGA_240P to CompressionRule(180, 0.3f, "240p→180p, 0.3Mbps"),
-                    VideoStandard.UNKNOWN to CompressionRule(720, 2f, "Medium quality fallback, 2Mbps"),
-                ),
-            CompressorQuality.HIGH to
-                mapOf(
-                    VideoStandard.UHD_4K to CompressionRule(2160, 8f, "4K→4K, 8Mbps"),
-                    VideoStandard.QHD_1440P to CompressionRule(1080, 8f, "1440p→1080p, 8Mbps"),
-                    VideoStandard.FHD_1080P to CompressionRule(1080, 4f, "1080p→1080p, 4Mbps"),
-                    VideoStandard.HD_720P to CompressionRule(720, 2f, "720p→720p, 2Mbps"),
-                    VideoStandard.SD_480P to CompressionRule(480, 1.5f, "480p→480p, 1.5Mbps"),
-                    VideoStandard.NHD_360P to CompressionRule(360, 1f, "360p→360p, 1Mbps"),
-                    VideoStandard.QVGA_240P to CompressionRule(240, 0.5f, "240p→240p, 0.5Mbps"),
-                    VideoStandard.UNKNOWN to CompressionRule(1080, 4f, "High quality fallback, 4Mbps"),
-                ),
-        )
 
     suspend fun compressVideo(
         uri: Uri,
@@ -159,9 +63,8 @@ object VideoCompressionHelper {
         val (videoBitrateInBps, resizer) =
             videoInfo?.let { info ->
                 val rule =
-                    compressionRules
-                        .getValue(mediaQuality)
-                        .getValue(info.resolution.getStandard())
+                    VideoCompressionRules.ruleFor(mediaQuality, info.resolution.getStandard())
+                        ?: return MediaCompressorResult(uri, contentType, null)
 
                 val bitrateBps = rule.getBitrateBps(info.framerate, useH265)
                 Log.d(LOG_TAG) { "Bitrate: ${bitrateBps}bps for ${info.resolution.getStandard()} quality=$mediaQuality framerate=${info.framerate}fps useH265=$useH265." }
@@ -176,7 +79,7 @@ object VideoCompressionHelper {
             } ?: run {
                 Log.w(LOG_TAG, "Video bitrate fallback: 2Mbps (videoInfo unavailable)")
                 Log.d(LOG_TAG, "Resizer: null (original resolution preserved)")
-                Pair(2 * MBPS_TO_BPS_MULTIPLIER, null)
+                Pair(VideoCompressionRules.PROBE_FAILED_BITRATE_BPS, null)
             }
 
         // Get original file size safely
