@@ -52,6 +52,9 @@ class PoolEventOutboxState(
 
     @Volatile private var remainingCount = remaining.size
 
+    // Guarded by [lock]; created on the first `rate-limited:` refusal with a back-off. See [newResponse].
+    private var backOffs: HashMap<NormalizedRelayUrl, Int>? = null
+
     fun updateRelays(newRelays: Set<NormalizedRelayUrl>) {
         lock.withLock {
             remaining.clear()
@@ -105,10 +108,21 @@ class PoolEventOutboxState(
         url: NormalizedRelayUrl,
         success: Boolean,
         message: String,
+        retryAfterMs: Long? = null,
     ) {
         lock.withLock {
             if (success || message.shouldDiscard()) {
                 drop(url)
+                failures?.remove(url)
+                backOffs?.remove(url)
+            } else if (retryAfterMs != null && (backOffs?.get(url) ?: 0) < MAX_BACK_OFFS) {
+                // NIP-01 `rate-limited:` with a back-off: the relay is up and will take the event
+                // later; the pool re-sends it once the back-off passes. Like auth-required, that is
+                // not a failure of the event, so it must not spend the retry budget — a busy relay
+                // pacing a burst would otherwise drop events it was about to accept. Bounded, so a
+                // relay that only ever says "later" still ends up a failure.
+                val b = backOffs ?: HashMap<NormalizedRelayUrl, Int>(2).also { backOffs = it }
+                b[url] = (b[url] ?: 0) + 1
                 failures?.remove(url)
             } else if (message.isAuthRequired()) {
                 // NIP-42 AUTH challenge in flight. The relay responded, so it's up and simply wants
@@ -130,6 +144,11 @@ class PoolEventOutboxState(
                 }
             }
         }
+    }
+
+    companion object {
+        /** `rate-limited:` back-offs one relay may state for one event before they count as failures. */
+        const val MAX_BACK_OFFS = 10
     }
 
     fun String.shouldDiscard() =

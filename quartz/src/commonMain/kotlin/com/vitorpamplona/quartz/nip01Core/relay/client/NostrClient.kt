@@ -30,11 +30,15 @@ import com.vitorpamplona.quartz.nip01Core.relay.client.pool.PoolRequests
 import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayPool
 import com.vitorpamplona.quartz.nip01Core.relay.client.reqs.SubscriptionListener
 import com.vitorpamplona.quartz.nip01Core.relay.client.single.IRelayClient
+import com.vitorpamplona.quartz.nip01Core.relay.client.single.basic.RateLimitGate
+import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.ClosedMessage
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.Message
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.MessageDecoder
+import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.OkMessage
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toRelay.AuthCmd
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toRelay.CloseCmd
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toRelay.Command
+import com.vitorpamplona.quartz.nip01Core.relay.commands.toRelay.ReqCmd
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.relay.sockets.WebsocketBuilder
@@ -95,10 +99,29 @@ class NostrClient(
 ) : INostrClient,
     RelayConnectionListener,
     AutoCloseable {
-    private val relayPool: RelayPool = RelayPool(websocketBuilder, this, decoder)
-
     /** Scope for all subscriptions. */
     private val scope = CoroutineScope(parentScope.coroutineContext + SupervisorJob())
+
+    private val relayPool: RelayPool =
+        RelayPool(
+            websocketBuilder,
+            this,
+            decoder,
+            scope,
+            object : RateLimitGate.Owner {
+                override fun onHeld(
+                    relay: NormalizedRelayUrl,
+                    cmd: Command,
+                ) {
+                    if (cmd is ReqCmd) activeRequests.onHeld(relay, cmd)
+                }
+
+                override fun onRelease(
+                    relay: NormalizedRelayUrl,
+                    held: Command,
+                ): Command? = if (held is ReqCmd) activeRequests.refreshHeld(relay, held) else held
+            },
+        )
 
     private val activeRequests: PoolRequests = PoolRequests()
     private val activeCounts: PoolCounts = PoolCounts()
@@ -331,7 +354,9 @@ class NostrClient(
         val relaysToUpdate = eventOutbox.markAsSending(event, relayList)
 
         if (isActive()) {
-            eventOutbox.sendToRelayIfChanged(event, relaysToUpdate, relayPool::sendOrConnectAndSync)
+            eventOutbox.sendToRelayIfChanged(event, relaysToUpdate) { relay, cmd ->
+                relayPool.sendOrConnectAndSync(relay, cmd)
+            }
 
             // wakes up all the other relays
             reconnect(true)
@@ -362,6 +387,8 @@ class NostrClient(
     override fun syncFilters(relay: IRelayClient) {
         if (isActive()) {
             scope.launch {
+                // A back-off a relay stated outlives the socket it was stated on: a reconnect
+                // replays everything, so the replay goes through the same gate.
                 activeRequests.syncState(relay.url, relay::sendOrConnectAndSync)
                 activeCounts.syncState(relay.url, relay::sendOrConnectAndSync)
                 eventOutbox.syncState(relay.url, relay::sendOrConnectAndSync)
@@ -414,6 +441,27 @@ class NostrClient(
         activeRequests.onIncomingMessage(relay, msg)
         activeCounts.onIncomingMessage(relay, msg)
         eventOutbox.onIncomingMessage(relay.url, msg)
+
+        // NIP-01: a `rate-limited:` refusal may say how long to back off. Hand the refused REQ
+        // or EVENT straight back to the relay, whose [RateLimitGate] holds it until the back-off
+        // passes; without one, it stays parked as before. COUNTs are one-shot and not re-sent.
+        when (msg) {
+            is ClosedMessage -> {
+                val backOff = msg.retryAfterMs
+                if (backOff != null && RateLimitGate.honors(backOff) && activeCounts.getSubscriptionFiltersOrNull(msg.subId) == null) {
+                    activeRequests.retryRateLimited(relay.url, setOf(msg.subId), relay::sendOrConnectAndSync)
+                }
+            }
+
+            is OkMessage -> {
+                val backOff = msg.retryAfterMs
+                if (!msg.success && backOff != null && RateLimitGate.honors(backOff)) {
+                    eventOutbox.retryRateLimited(relay.url, setOf(msg.eventId), relay::sendOrConnectAndSync)
+                }
+            }
+
+            else -> {}
+        }
 
         listeners.forEach { it.onIncomingMessage(relay, msgStr, msg) }
     }

@@ -50,11 +50,12 @@ class MessageSerializer : StdSerializer<Message>(Message::class.java) {
             }
 
             is OkMessage -> {
-                // NIP-01 wire format: ["OK", <event_id>, <true|false>, <message>]
+                // NIP-01 wire format: ["OK", <event_id>, <true|false>, <message>, <?params>]
                 // The third element is a JSON boolean, not a string.
                 gen.writeString(msg.eventId)
                 gen.writeBoolean(msg.success)
                 gen.writeString(msg.message)
+                msg.params?.let { gen.writeString(it) }
             }
 
             is AuthMessage -> {
@@ -66,8 +67,10 @@ class MessageSerializer : StdSerializer<Message>(Message::class.java) {
             }
 
             is ClosedMessage -> {
+                // NIP-01 wire format: ["CLOSED", <subscription_id>, <message>, <?params>]
                 gen.writeString(msg.subId)
                 gen.writeString(msg.message)
+                msg.params?.let { gen.writeString(it) }
             }
 
             is CountMessage -> {

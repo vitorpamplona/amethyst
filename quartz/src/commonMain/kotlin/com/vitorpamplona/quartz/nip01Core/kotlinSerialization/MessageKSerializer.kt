@@ -40,6 +40,7 @@ import kotlinx.serialization.encoding.Encoder
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonDecoder
 import kotlinx.serialization.json.JsonEncoder
+import kotlinx.serialization.json.JsonNull
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.boolean
@@ -72,10 +73,11 @@ object MessageKSerializer : KSerializer<Message> {
                     }
 
                     is OkMessage -> {
-                        // NIP-01 wire format: ["OK", <event_id>, <true|false>, <message>]
+                        // NIP-01 wire format: ["OK", <event_id>, <true|false>, <message>, <?params>]
                         add(JsonPrimitive(value.eventId))
                         add(JsonPrimitive(value.success))
                         add(JsonPrimitive(value.message))
+                        value.params?.let { add(JsonPrimitive(it)) }
                     }
 
                     is AuthMessage -> {
@@ -87,8 +89,10 @@ object MessageKSerializer : KSerializer<Message> {
                     }
 
                     is ClosedMessage -> {
+                        // NIP-01 wire format: ["CLOSED", <subscription_id>, <message>, <?params>]
                         add(JsonPrimitive(value.subId))
                         add(JsonPrimitive(value.message))
+                        value.params?.let { add(JsonPrimitive(it)) }
                     }
 
                     is CountMessage -> {
@@ -158,6 +162,7 @@ object MessageKSerializer : KSerializer<Message> {
                     eventId = array[1].jsonPrimitive.content,
                     success = array[2].jsonPrimitive.boolean,
                     message = if (array.size > 3) array[3].jsonPrimitive.content else "",
+                    params = paramsAt(array, 4),
                 )
             }
 
@@ -173,6 +178,7 @@ object MessageKSerializer : KSerializer<Message> {
                 ClosedMessage(
                     subId = array[1].jsonPrimitive.content,
                     message = if (array.size > 2) array[2].jsonPrimitive.content else "",
+                    params = paramsAt(array, 3),
                 )
             }
 
@@ -212,5 +218,19 @@ object MessageKSerializer : KSerializer<Message> {
                 throw IllegalArgumentException("Message $type is not supported")
             }
         }
+    }
+
+    /**
+     * The optional trailing `params` of an OK or CLOSED (NIP-01), at [index]. The spec sends it
+     * as a string; a bare integer is taken by its text too. Anything else (null, an object, an
+     * array) is read as absent rather than failing the frame.
+     */
+    private fun paramsAt(
+        array: JsonArray,
+        index: Int,
+    ): String? {
+        val element = array.getOrNull(index) as? JsonPrimitive ?: return null
+        if (element is JsonNull) return null
+        return if (element.isString || element.longOrNull != null) element.content else null
     }
 }

@@ -22,6 +22,7 @@ package com.vitorpamplona.quartz.nip01Core.relay.client.accessories
 
 import com.vitorpamplona.quartz.nip01Core.relay.client.listeners.RelayConnectionListener
 import com.vitorpamplona.quartz.nip01Core.relay.client.single.IRelayClient
+import com.vitorpamplona.quartz.nip01Core.relay.client.single.basic.RateLimitGate
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.ClosedMessage
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.Message
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.NoticeMessage
@@ -51,6 +52,10 @@ import kotlin.concurrent.atomics.ExperimentalAtomicApi
  *     wouldn't help; the fix is to *space the REQs out in time*, so we impose a
  *     minimum interval between opens to that relay, growing it up [rateLadder]
  *     (250ms → 500ms → 1s → 2s).
+ *
+ * A `rate-limited:` CLOSED that states its back-off (NIP-01's `params`) also holds the
+ * relay's next open until that back-off has passed, on top of the ladder step: the relay
+ * said when it will take the next REQ, so nothing is sent before then.
  *
  * Mixing the two mishandles the relay: capping concurrency does nothing for a
  * rate limit, and slowing the rate does nothing for a subscription-count cap. So
@@ -150,8 +155,29 @@ class AdaptiveRelayLimiter(
             }
         // Route each complaint to the matching actuator. Not mutually exclusive:
         // if a relay somehow reports both, we act on both (they don't conflict).
+        val retryAfterMs = (msg as? ClosedMessage)?.retryAfterMs
         if (isRateLimitMessage(text)) throttleRate(relay.url)
         if (isSubscriptionLimitMessage(text)) demoteConcurrency(relay.url)
+        // Past the client's cap the back-off is left to the next reconnect, as everywhere else:
+        // an hour-long hold would stall every withPermit on this relay for that hour.
+        if (retryAfterMs != null && RateLimitGate.honors(retryAfterMs)) holdOpens(relay.url, retryAfterMs)
+    }
+
+    /**
+     * Pushes [relay]'s next open slot at least [retryAfterMs] into the future, the back-off
+     * its `rate-limited:` CLOSED stated. Slots already claimed later than that keep theirs.
+     */
+    private fun holdOpens(
+        relay: NormalizedRelayUrl,
+        retryAfterMs: Long,
+    ) {
+        val until = TimeUtils.nowMillis() + retryAfterMs
+        val slot = nextAllowedAtMs.getOrPut(relay) { AtomicLong(until) }
+        while (true) {
+            val prev = slot.load()
+            if (prev >= until || slot.compareAndSet(prev, until)) break
+        }
+        Log.d("AdaptiveRelayLimiter") { "${relay.url} asked for a ${retryAfterMs}ms back-off; holding its next REQ" }
     }
 
     /** Step [relay] one rung down the concurrency-cap ladder, unless already at the floor. */

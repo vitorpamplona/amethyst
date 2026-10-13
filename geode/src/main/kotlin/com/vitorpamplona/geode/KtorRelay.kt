@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.geode
 
+import com.vitorpamplona.geode.server.ClientAddresses
 import com.vitorpamplona.geode.server.HttpCommandSettings
 import com.vitorpamplona.geode.server.Nip11HttpRoute
 import com.vitorpamplona.geode.server.Nip86HttpRoute
@@ -87,6 +88,16 @@ class KtorRelay(
      */
     val httpCommands: HttpCommandSettings? = HttpCommandSettings(),
     /**
+     * Who a websocket or NIP-FE request counts against for per-client limits (rate limits,
+     * NIP-FE admission): the peer, or the client a trusted reverse proxy reports. Kept even
+     * when [httpCommands] is off, since websockets need it too.
+     */
+    val clientAddresses: ClientAddresses =
+        ClientAddresses(
+            httpCommands?.trustedProxies ?: emptySet(),
+            httpCommands?.clientAddressHeader ?: HttpCommandSettings().clientAddressHeader,
+        ),
+    /**
      * Largest WebSocket frame the relay accepts; a bigger one closes the socket with 1009. Ktor
      * allocates a frame's buffer as soon as its header names the length, so without a cap a single
      * header claiming 2 GB costs that much memory before any payload arrives.
@@ -135,6 +146,7 @@ class KtorRelay(
             NipFEHttpRoute(
                 handler = HttpRelayHandler(relay.server, origins = { origins }, deadline = settings.deadline),
                 settings = settings,
+                clients = clientAddresses,
             )
         }
 
@@ -220,6 +232,7 @@ class KtorRelay(
                                         server = relay.server,
                                         registerSession = activeSessions::add,
                                         unregisterSession = activeSessions::remove,
+                                        clientAddress = clientAddresses.of(call),
                                     )
                                 }
                             }

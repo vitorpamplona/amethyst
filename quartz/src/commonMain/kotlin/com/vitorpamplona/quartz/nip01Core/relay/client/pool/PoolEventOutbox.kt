@@ -203,10 +203,11 @@ class PoolEventOutbox {
         url: NormalizedRelayUrl,
         success: Boolean,
         message: String,
+        retryAfterMs: Long? = null,
     ) {
         val waiting = eventOutbox.get(id)
         if (waiting != null) {
-            waiting.newResponse(url, success, message)
+            waiting.newResponse(url, success, message, retryAfterMs)
             if (waiting.isDone()) {
                 eventOutbox.remove(waiting.event.id)
                 onRemoved()
@@ -233,8 +234,29 @@ class PoolEventOutbox {
         msg: Message,
     ) {
         if (msg is OkMessage) {
-            newResponse(msg.eventId, relay, msg.success, msg.message)
+            newResponse(msg.eventId, relay, msg.success, msg.message, msg.retryAfterMs)
         }
+    }
+
+    /**
+     * Re-sends the events of [eventIds] that [relay] refused as `rate-limited:` with a back-off.
+     * Sent right after the refusal: the relay's rate-limit gate holds them until the back-off
+     * passes. Events already delivered, given up on, or no longer
+     * meant for [relay] are skipped. Returns whether any EVENT went out.
+     */
+    fun retryRateLimited(
+        relay: NormalizedRelayUrl,
+        eventIds: Set<HexKey>,
+        sync: (Command) -> Unit,
+    ): Boolean {
+        var sent = false
+        eventIds.forEach { id ->
+            eventOutbox.get(id)?.forEachUnsentEvent(relay) {
+                sync(EventCmd(it))
+                sent = true
+            }
+        }
+        return sent
     }
 
     /** Returns the event if this send attempt made us give up delivering it to [relay]. */

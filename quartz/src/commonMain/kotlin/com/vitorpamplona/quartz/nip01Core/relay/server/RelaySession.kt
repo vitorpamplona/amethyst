@@ -92,6 +92,8 @@ class RelaySession(
      * Null (the default) sends every EVENT down the normal path.
      */
     private val commandHandler: EventCommandHandler? = null,
+    /** The client's address as the transport saw it; see [RequestContext.clientAddress]. */
+    val clientAddress: String? = null,
 ) : AutoCloseable {
     /** The original, string-only constructor; every frame goes to [onSend] as wire JSON. */
     constructor(
@@ -135,6 +137,7 @@ class RelaySession(
             override val connectionId = id
             override val policy = this@RelaySession.policy
             override val authenticatedUsers: Set<HexKey> get() = this@RelaySession.authenticatedUsers
+            override val clientAddress: String? get() = this@RelaySession.clientAddress
         }
 
     /** NIP-77 negentropy state for this connection. */
@@ -259,7 +262,7 @@ class RelaySession(
 
         val result = policy.accept(cmd)
         if (result is PolicyResult.Rejected) {
-            send(OkMessage(cmd.event.id, false, result.reason))
+            send(OkMessage(cmd.event.id, false, result.reason, result.params))
             return
         }
 
@@ -305,7 +308,7 @@ class RelaySession(
     private suspend fun handleCount(cmd: CountCmd) {
         val result = policy.accept(cmd)
         if (result is PolicyResult.Rejected) {
-            send(ClosedMessage(cmd.queryId, result.reason))
+            send(ClosedMessage(cmd.queryId, result.reason, result.params))
             return
         }
 
@@ -347,7 +350,7 @@ class RelaySession(
     private suspend fun handleAuth(cmd: AuthCmd) {
         val result = policy.accept(cmd)
         if (result is PolicyResult.Rejected) {
-            send(OkMessage(cmd.event.id, false, result.reason))
+            send(OkMessage(cmd.event.id, false, result.reason, result.params))
             return
         }
 
@@ -391,7 +394,7 @@ class RelaySession(
 
         val result = policy.accept(cmd)
         if (result is PolicyResult.Rejected) {
-            send(ClosedMessage(cmd.subId, result.reason))
+            send(ClosedMessage(cmd.subId, result.reason, result.params))
             return
         }
 

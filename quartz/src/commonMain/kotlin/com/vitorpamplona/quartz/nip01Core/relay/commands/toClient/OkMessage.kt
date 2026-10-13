@@ -26,24 +26,44 @@ class OkMessage(
     val eventId: HexKey,
     val success: Boolean,
     val message: String,
+    /**
+     * The optional fifth element: a string whose meaning depends on [message]'s
+     * machine-readable prefix. For `rate-limited:` it is the back-off in
+     * milliseconds — read it with [retryAfterMs]. Null when the relay sent the
+     * four-element form.
+     */
+    val params: String? = null,
 ) : Message {
     override fun label() = LABEL
 
     /**
-     * Wire form is `["OK","<eventId>",<true|false>,"<message>"]` — sent
-     * once per published EVENT. [eventId] is validated hex (always
-     * escape-free); splice directly when [message] also needs no escaping,
-     * which covers the empty-string success ack and the plain-ASCII
-     * rejection reasons. Byte-identical output; a reason with quotes or
+     * How long the relay asked this client to wait before sending it another
+     * `EVENT`, when it refused this one as `rate-limited:` with a back-off. See
+     * [RetryAfter].
+     */
+    val retryAfterMs: Long? get() = RetryAfter.parse(message, params)
+
+    /**
+     * Wire form is `["OK","<eventId>",<true|false>,"<message>"]`, plus a
+     * trailing `"<params>"` when there are any — sent once per published
+     * EVENT. [eventId] is validated hex (always escape-free); splice directly
+     * when [message] and [params] also need no escaping, which covers the
+     * empty-string success ack, the plain-ASCII rejection reasons and a
+     * numeric back-off. Byte-identical output; a reason with quotes or
      * non-ASCII falls back to the generic serializer.
      */
     override fun toJson(): String {
         if (!isEscapeFreeAscii(message)) return super.toJson()
-        return buildString(eventId.length + message.length + 20) {
+        if (params != null && !isEscapeFreeAscii(params)) return super.toJson()
+        return buildString(eventId.length + message.length + (params?.length ?: 0) + 24) {
             append("[\"OK\",\"")
             append(eventId)
             append(if (success) "\",true,\"" else "\",false,\"")
             append(message)
+            if (params != null) {
+                append("\",\"")
+                append(params)
+            }
             append("\"]")
         }
     }
@@ -65,6 +85,17 @@ class OkMessage(
             eventId: HexKey,
             prefix: MachineReadablePrefix,
             message: String,
-        ) = OkMessage(eventId, false, prefix.format(message))
+            params: String? = null,
+        ) = OkMessage(eventId, false, prefix.format(message), params)
+
+        /**
+         * A `rate-limited:` `OK false` for [eventId] telling the client to wait
+         * [retryAfterMs] before its next `EVENT`; null leaves the back-off out.
+         */
+        fun rateLimited(
+            eventId: HexKey,
+            message: String,
+            retryAfterMs: Long? = null,
+        ) = rejected(eventId, MachineReadablePrefix.RATE_LIMITED, message, retryAfterMs?.let(RetryAfter::format))
     }
 }
