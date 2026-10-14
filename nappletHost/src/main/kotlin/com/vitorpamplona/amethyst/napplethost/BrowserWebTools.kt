@@ -285,6 +285,11 @@ object BrowserWebTools {
      * in [webView]'s profile — the account's whole browser jar — plus the HTTP cache, then reloads the page
      * logged out. Unlike [clearSiteData] this also reaches cookies a site keeps on another domain (YouTube's
      * sign-in lives on google.com). Other accounts' profiles are untouched.
+     *
+     * Napplets and nSites share this profile (on `napplet.local` origins), so their saved state goes too;
+     * the confirmation says so. They can't be spared reliably: [WebStorage.getOrigins] only lists
+     * quota-managed storage, so deleting origin by origin could miss a site that keeps its login in
+     * localStorage alone.
      */
     fun clearAllSiteData(
         context: Context,
