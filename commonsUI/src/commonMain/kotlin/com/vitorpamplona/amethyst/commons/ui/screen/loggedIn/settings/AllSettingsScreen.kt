@@ -81,6 +81,7 @@ import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.ThemeComparisonColumn
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.amethyst.commons.viewmodels.mockAccountViewModel
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.IO
 import kotlinx.coroutines.launch
@@ -199,6 +200,9 @@ fun AllSettingsScreen(
                         launch(Dispatchers.Main) {
                             shortNotice.show(successMessage)
                         }
+                    } catch (e: CancellationException) {
+                        // Leaving the screen cancels the reset; that is not a failure to report.
+                        throw e
                     } catch (e: Exception) {
                         val failureMessage =
                             loadStringRes(Res.string.reset_marmot_failure, e.message ?: "")
