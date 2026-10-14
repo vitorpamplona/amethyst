@@ -51,6 +51,7 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
 import java.net.URISyntaxException
 import java.text.DateFormat
+import java.util.Collections
 import java.util.WeakHashMap
 import com.vitorpamplona.amethyst.commons.R as CommonsR
 
@@ -74,6 +75,7 @@ object BrowserWebTools {
      */
     @Suppress("SetJavaScriptEnabled")
     fun applyBrowserSettings(webView: WebView) {
+        liveWebViews.add(webView)
         webView.settings.apply {
             javaScriptEnabled = true
             domStorageEnabled = true
@@ -263,13 +265,19 @@ object BrowserWebTools {
         val host = BrowserChrome.displayHost(url)
         // A cookie can be scoped to the host or to any parent domain; expire it on each so it really goes.
         val domains = host.split('.').let { parts -> (0 until (parts.size - 1).coerceAtLeast(1)).map { parts.drop(it).joinToString(".") } }
+        // `__Secure-` / `__Host-` cookies (where Google keeps its sign-in) are only accepted with `Secure`, so
+        // an expiry without it is silently dropped. Secure isn't part of a cookie's identity, so adding it
+        // still expires the plain ones; it can only be set from https.
+        val secure = if (url.startsWith("https://", ignoreCase = true)) "; Secure" else ""
         names.forEach { name ->
-            cookies.setCookie(url, "$name=; Max-Age=0; Path=/")
-            domains.forEach { domain -> cookies.setCookie(url, "$name=; Max-Age=0; Path=/; Domain=$domain") }
+            cookies.setCookie(url, "$name=; Max-Age=0; Path=/$secure")
+            domains.forEach { domain -> cookies.setCookie(url, "$name=; Max-Age=0; Path=/; Domain=$domain$secure") }
         }
         cookies.flush()
         Toast.makeText(context, CommonsR.string.browser_site_data_cleared, Toast.LENGTH_SHORT).show()
-        webView.reload()
+        // Every open tab or window on this site reloads, not just this one: one left running would stay
+        // signed in from memory, and could write its session back.
+        reloadSameProfile(webView) { BrowserChrome.originOf(it.url.orEmpty()).equals(origin, ignoreCase = true) }
     }
 
     /**
@@ -287,7 +295,8 @@ object BrowserWebTools {
         val cookies = cookieManager(webView)
         cookies.removeAllCookies {
             cookies.flush()
-            webView.reload()
+            // Every open tab and window of this account reloads signed out, not just the one asking.
+            reloadSameProfile(webView) { true }
         }
         val appContext = context.applicationContext
         // The embedded provider is a service that never composes, so resources may not be wired up yet.
@@ -298,6 +307,35 @@ object BrowserWebTools {
                 .onFailure { Log.w(TAG, "Could not load the cleared-data toast", it) }
         }
     }
+
+    /**
+     * Every browser WebView this process created ([applyBrowserSettings] registers it), held weakly so a
+     * closed tab or window just drops out. Main thread only, like the WebViews themselves.
+     */
+    private val liveWebViews: MutableSet<WebView> = Collections.newSetFromMap(WeakHashMap())
+
+    /**
+     * Reloads [source] and every other live browser WebView that shares its storage profile (the same
+     * account) and matches [filter]. A WebView already destroyed ignores the call.
+     */
+    private fun reloadSameProfile(
+        source: WebView,
+        filter: (WebView) -> Boolean,
+    ) {
+        val profile = profileName(source)
+        source.reload()
+        liveWebViews.toList().forEach { other ->
+            if (other !== source && profileName(other) == profile && filter(other)) other.reload()
+        }
+    }
+
+    /** [webView]'s storage profile name, or null on a WebView without profiles (one shared jar). */
+    private fun profileName(webView: WebView): String? =
+        if (WebViewFeature.isFeatureSupported(WebViewFeature.MULTI_PROFILE)) {
+            runCatching { WebViewCompat.getProfile(webView).name }.getOrNull()
+        } else {
+            null
+        }
 
     /** Process-long scope for the toasts that need a Compose resource string loaded first. */
     private val uiScope = CoroutineScope(Dispatchers.Main + SupervisorJob())
