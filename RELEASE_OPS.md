@@ -23,6 +23,7 @@ A release is one tag push that fans out to these distribution channels:
 | **F-Droid** | **Pull** — F-Droid's build server builds the `fdroid` flavor from source when it sees the new tag | F-Droid (we just maintain the recipe + metadata) |
 | **Zapstore** | `zsp publish` reads `zapstore.yaml`, signs a Nostr release event with Amethyst's nsec | Maintainer |
 | **Orchard** | `orchard-publish` pushes the Flatpak to ghcr and signs its listing with Amethyst's nsec | Maintainer |
+| **Flathub** | **Not submitted yet.** Once accepted: a PR to the Flathub app repo with the regenerated source manifest | Maintainer, by hand (Flathub's AI policy) |
 | **Homebrew** | **Autobump** — BrewTestBot opens the `amethyst-nostr` cask and `amy` formula PRs itself; `scripts/bump-homebrew-cask.sh` only verifies | Homebrew (we verify) |
 | **Winget** | `scripts/bump-winget.sh` opens the `winget-pkgs` PR with your `gh` auth | Maintainer |
 
@@ -308,6 +309,69 @@ makes it use a throwaway key) to see the build without publishing. When the
 freedesktop runtime moves, update `runtime` in the config along with the
 Flatpak manifest.
 
+### Flathub — not submitted yet
+
+Amethyst is not on Flathub. The source-build manifest that a submission would
+use lives in
+[`desktopApp/packaging/flatpak/flathub/`](desktopApp/packaging/flatpak/flathub/),
+and [its README section](desktopApp/packaging/flatpak/README.md#flathub) lists
+what is still missing (AI disclosure, domain verification, a tag whose metainfo
+has the screenshot). Until then there is nothing to ship here; the steps below
+are for once Flathub has created `flathub/com.vitorpamplona.amethyst.Amethyst`.
+
+**Flathub's AI policy.** These files were written with Claude Code. Flathub
+forbids AI tools from opening or automating its PRs and from writing their
+descriptions or review replies, so a person opens each update PR there and
+answers the review. An agent may prepare the files in this repo.
+
+**Each release**, after the tag is pushed:
+
+1. Regenerate the Maven list from a real online build of the tag, both arches
+   in Docker (about 35 minutes; work files go to `build/flathub-regen/`):
+   ```bash
+   desktopApp/packaging/flatpak/flathub/tools/regenerate-gradle-sources.sh vX.Y.Z
+   ```
+   It rewrites `gradle-sources.json` and prints the tag tarball's sha256.
+2. In `flathub/com.vitorpamplona.amethyst.Amethyst.yml`, point the `archive`
+   source at the tag's URL and that sha256. When the JetBrains Runtime moves
+   (`JBR_BUILD` in the regenerate script and the two `jbrsdk` sources), bump
+   both and their sha256s together.
+3. Build and lint it locally (below), commit the three files here, then copy
+   the manifest, `flathub-offline.init.gradle` and `gradle-sources.json` into a
+   PR to the Flathub app repo. Flathub's update bot can bump a URL, but not
+   regenerate the Maven list, so every release is this manual PR.
+
+**Testing locally.** `flatpak-builder` needs Linux; on macOS run it in a
+privileged Debian container (`flatpak flatpak-builder elfutils` installed, the
+freedesktop 26.08 Platform and Sdk from Flathub). From the `flathub/` directory:
+
+```bash
+flatpak-builder --force-clean --repo=repo --mirror-screenshots-url=https://dl.flathub.org/media/ \
+  builddir com.vitorpamplona.amethyst.Amethyst.yml          # add --disable-rofiles-fuse in Docker
+ostree commit --repo=repo --canonical-permissions \
+  --branch=screenshots/$(flatpak --default-arch) builddir/files/share/app-info/media
+flatpak run --command=flatpak-builder-lint org.flatpak.Builder manifest com.vitorpamplona.amethyst.Amethyst.yml
+flatpak run --command=flatpak-builder-lint org.flatpak.Builder repo repo
+```
+
+The build step has no network, so a Maven file missing from
+`gradle-sources.json` fails Gradle's resolution there. Expected noise: built
+with Debian's `flatpak-builder`/AppStream, the repo lint reports
+`appstream-external-screenshot-url` and `appstream-remote-icon-not-mirrored`,
+because that AppStream writes media paths relative to `media_baseurl`, while
+the linter wants the full `dl.flathub.org/media` URLs Flathub's own builder
+writes. Anything else it reports is real. Then install it and run it:
+
+```bash
+flatpak remote-add --user --no-gpg-verify amethyst-local repo
+flatpak install --user amethyst-local com.vitorpamplona.amethyst.Amethyst
+flatpak run com.vitorpamplona.amethyst.Amethyst
+```
+
+The app should open, and `lib/Amethyst/lib/runtime/lib/libawt_wlawt.so` should
+be in the installed tree (JBR's Wayland toolkit). `builddir/`, `repo/` and
+`.flatpak-builder/` are gitignored.
+
 ### Homebrew + Winget
 
 The in-repo sync workflows (`bump-homebrew.yml`, `bump-homebrew-formula.yml`,
@@ -432,6 +496,8 @@ Owner assignments and rotation reminders live with the team (issue tracker).
 - [ ] Orchard: the Amethyst row shows the new version, and its repository link
       wears the check (the `orchard.txt` proof).
 - [ ] F-Droid: new version detected (may lag days).
+- [ ] Flathub (only once Amethyst is on Flathub): the app-repo PR with the
+      regenerated `gradle-sources.json` is merged and Flathub's build is green.
 - [ ] Four sync PRs opened against this repo (`amy` formula, `geode` formula,
       `amethyst-nostr` cask, winget manifests) — merge them.
 - [ ] Homebrew: `scripts/bump-homebrew-cask.sh vX.Y.Z` passes — DMG verified and
