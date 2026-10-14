@@ -81,7 +81,7 @@ class BrowserChromeTest {
             ),
             sections[0].actions,
         )
-        assertEquals(listOf(Action.TOR, Action.SITE_SETTINGS), sections[1].actions)
+        assertEquals(listOf(Action.TOR, Action.SITE_SETTINGS, Action.SITE_DATA), sections[1].actions)
         assertEquals(listOf(Action.CONSOLE), sections[2].actions)
     }
 

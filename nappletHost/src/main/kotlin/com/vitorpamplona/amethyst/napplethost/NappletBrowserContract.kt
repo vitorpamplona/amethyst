@@ -147,6 +147,9 @@ object NappletBrowserContract {
     /** Clear the current site's cookies and storage in this account's profile, then reload. */
     const val MSG_CLEAR_SITE_DATA = 24
 
+    /** Clear every site's cookies and storage in this account's profile, then reload. */
+    const val MSG_CLEAR_ALL_SITE_DATA = 42
+
     /** Ask for the page's certificate for page info; answered with [MSG_PAGE_INFO]. */
     const val MSG_PAGE_INFO_REQUEST = 25
 

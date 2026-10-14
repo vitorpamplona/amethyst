@@ -85,6 +85,7 @@ import com.vitorpamplona.amethyst.commons.resources.browser_pill_left_site
 import com.vitorpamplona.amethyst.commons.resources.browser_pill_other_browser_named
 import com.vitorpamplona.amethyst.commons.resources.browser_pill_permission_state
 import com.vitorpamplona.amethyst.commons.resources.browser_pill_privacy
+import com.vitorpamplona.amethyst.commons.resources.browser_pill_site_data_desc
 import com.vitorpamplona.amethyst.commons.resources.browser_pill_site_settings_none
 import com.vitorpamplona.amethyst.commons.resources.browser_pill_text_larger
 import com.vitorpamplona.amethyst.commons.resources.browser_pill_text_reset
@@ -291,7 +292,8 @@ fun BrowserPillSheet(
                     TextSizeControl(ui.textZoom) { onEvent(BrowserPillEvent.TextZoom(it)) }
                 }
                 if (privacy.isNotEmpty()) {
-                    PrivacyCard(ui, privacy) { onEvent(BrowserPillEvent.Action(it)) }
+                    // The cookies row opens page info, where the site's data (or every site's) is cleared.
+                    PrivacyCard(ui, privacy) { onEvent(if (it == Action.SITE_DATA) BrowserPillEvent.PageInfo else BrowserPillEvent.Action(it)) }
                 }
                 if (Action.CONSOLE in developer) {
                     ConsoleRow(ui) { onEvent(BrowserPillEvent.Action(Action.CONSOLE)) }
@@ -470,7 +472,8 @@ fun TextSizeControl(
 
 /**
  * Privacy: Tor with what it means for the site, site settings with a summary of what the site may use,
- * and, for sandboxed apps, what they can access.
+ * cookies and site data (opens page info, where they are cleared), and, for sandboxed apps, what they
+ * can access.
  */
 @Composable
 private fun PrivacyCard(
@@ -506,6 +509,14 @@ private fun PrivacyCard(
                         title = stringRes(pillLabelFor(Action.SITE_SETTINGS)),
                         supporting = permissionSummary(ui.sitePermissions),
                         onClick = { onAction(Action.SITE_SETTINGS) },
+                    ) { Icon(MaterialSymbols.ChevronRight, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant) }
+                Action.SITE_DATA ->
+                    GroupRow(
+                        icon = { PillActionIcon(Action.SITE_DATA, tint = MaterialTheme.colorScheme.onSurfaceVariant, size = 22.dp) },
+                        iconContainer = MaterialTheme.colorScheme.surfaceContainerHighest,
+                        title = stringRes(pillLabelFor(Action.SITE_DATA)),
+                        supporting = stringRes(Res.string.browser_pill_site_data_desc),
+                        onClick = { onAction(Action.SITE_DATA) },
                     ) { Icon(MaterialSymbols.ChevronRight, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant) }
                 Action.ACCESS_INFO ->
                     GroupRow(

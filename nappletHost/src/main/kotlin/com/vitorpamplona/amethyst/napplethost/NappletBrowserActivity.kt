@@ -1696,6 +1696,10 @@ class NappletBrowserActivity : ComponentActivity() {
                 webView?.let { BrowserWebTools.clearSiteData(this@NappletBrowserActivity, it, currentUrl()) }
             }
 
+            override fun onClearAllSiteData() {
+                webView?.let { BrowserWebTools.clearAllSiteData(this@NappletBrowserActivity, it) }
+            }
+
             override fun onPanelsChanged() = syncBackState()
         }
 

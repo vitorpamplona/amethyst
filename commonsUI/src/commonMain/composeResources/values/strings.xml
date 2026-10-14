@@ -6179,6 +6179,10 @@
     <string name="browser_pill_info_site_data_desc">Logins and preferences this site saved for this account</string>
     <string name="browser_pill_info_clear">Clear site data</string>
     <string name="browser_pill_info_clear_confirm">Sign out of this site and delete its data?</string>
+    <string name="browser_pill_info_clear_all">Clear data for all sites</string>
+    <string name="browser_pill_info_clear_all_confirm">Sign out of every site you visited with this account and delete all their cookies and data? This also resets what your Nostr web apps saved.</string>
+    <string name="browser_pill_info_all_cleared">Cookies and data cleared for all sites</string>
+    <string name="browser_pill_site_data_desc">Logins, cookies and storage sites saved</string>
     <string name="backup_action_block_again">Block %1$s again</string>
     <string name="backup_action_keep_count">Keep %1$s</string>
     <string name="backup_action_rejoin">Rejoin %1$s</string>
