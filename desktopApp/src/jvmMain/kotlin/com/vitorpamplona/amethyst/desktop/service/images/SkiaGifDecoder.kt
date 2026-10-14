@@ -21,7 +21,6 @@
 package com.vitorpamplona.amethyst.desktop.service.images
 
 import coil3.ImageLoader
-import coil3.asImage
 import coil3.decode.DecodeResult
 import coil3.decode.Decoder
 import coil3.decode.ImageSource
@@ -30,9 +29,11 @@ import coil3.request.Options
 import org.jetbrains.skia.Bitmap
 import org.jetbrains.skia.Codec
 import org.jetbrains.skia.Data
+import org.jetbrains.skia.Image
 
 class SkiaGifDecoder(
     private val source: ImageSource,
+    private val options: Options,
 ) : Decoder {
     override suspend fun decode(): DecodeResult {
         val bytes = source.source().use { it.readByteArray() }
@@ -41,11 +42,14 @@ class SkiaGifDecoder(
         val bitmap = Bitmap()
         bitmap.allocN32Pixels(codec.width, codec.height)
         codec.readPixels(bitmap, 0)
-        bitmap.setImmutable()
-        return DecodeResult(
-            image = bitmap.asImage(),
-            isSampled = false,
-        )
+        // Shrunk to the drawn size like every other image (see SkiaDownsamplingDecoder).
+        val image = Image.makeFromBitmap(bitmap)
+        try {
+            return downsample(image, options)
+        } finally {
+            image.close()
+            bitmap.close()
+        }
     }
 
     class Factory : Decoder.Factory {
@@ -56,7 +60,7 @@ class SkiaGifDecoder(
         ): Decoder? {
             val mimeType = result.mimeType ?: return null
             if (mimeType != "image/gif") return null
-            return SkiaGifDecoder(result.source)
+            return SkiaGifDecoder(result.source, options)
         }
     }
 }
