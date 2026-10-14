@@ -117,7 +117,7 @@ fun ExpandableRichTextViewer(
 
     if (canCollapse && gutter == null) {
         // No author column here (chats, profiles, quotes): "Show Less" goes under the text.
-        val viewport = LocalZoomViewport.current
+        val topBarHeight = rememberTopBarHeightPx()
         val dispatcher = remember { NestedScrollDispatcher() }
         val placed = remember { PlacedCoordinates() }
 
@@ -130,7 +130,7 @@ fun ExpandableRichTextViewer(
 
             Row(horizontalArrangement = Arrangement.Center, modifier = Modifier.fillMaxWidth()) {
                 ShowLessButton {
-                    placed.coordinates?.let { dispatcher.revealTopOf(it, viewport) }
+                    placed.coordinates?.let { dispatcher.revealTopOf(it, topBarHeight) }
                     showFullText = false
                     ShowFullTextCache.cache.put(id, false)
                 }

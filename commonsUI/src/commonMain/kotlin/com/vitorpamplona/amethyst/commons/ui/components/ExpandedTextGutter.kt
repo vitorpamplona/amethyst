@@ -53,6 +53,7 @@ import androidx.compose.ui.layout.boundsInWindow
 import androidx.compose.ui.layout.layout
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.positionInWindow
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -61,6 +62,7 @@ import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.show_less
+import com.vitorpamplona.amethyst.commons.ui.layouts.LocalDisappearingScaffoldPadding
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import kotlin.math.roundToInt
 
@@ -105,6 +107,7 @@ fun ExpandedTextGutter(state: ExpandedTextGutterState) {
 @Composable
 private fun StickyShowLessButton(collapse: () -> Unit) {
     val viewport = LocalZoomViewport.current
+    val topBarHeight = rememberTopBarHeightPx()
     val tracker = remember { GutterTracker() }
     val dispatcher = remember { NestedScrollDispatcher() }
 
@@ -126,7 +129,7 @@ private fun StickyShowLessButton(collapse: () -> Unit) {
 
         Surface(
             onClick = {
-                tracker.revealNoteTop(dispatcher, viewport)
+                tracker.revealNoteTop(dispatcher, topBarHeight)
                 collapse()
             },
             shape = RoundedCornerShape(14.dp),
@@ -198,10 +201,10 @@ private class GutterTracker {
 
     fun revealNoteTop(
         dispatcher: NestedScrollDispatcher,
-        viewport: ZoomViewport?,
+        topBarHeight: Float,
     ) {
         val gutter = coordinates?.takeIf { it.isAttached } ?: return
-        dispatcher.revealTopOf(gutter.parentLayoutCoordinates ?: gutter, viewport)
+        dispatcher.revealTopOf(gutter.parentLayoutCoordinates ?: gutter, topBarHeight)
     }
 }
 
@@ -210,16 +213,27 @@ private class GutterTracker {
  * collapsed from deep inside would leave the feed scrolled past its note, onto whatever came next.
  * The parent scrollable consumes what its children leave over, so a post-scroll dispatch moves the
  * list right away, before the collapse lays out. [dispatcher] must be attached with nestedScroll.
+ *
+ * The list runs under the top bar, and scrolling back up brings a hidden bar back, so the top lands
+ * [topBarHeight] below the list's visible edge whether or not the bar shows right now.
  */
 internal fun NestedScrollDispatcher.revealTopOf(
     target: LayoutCoordinates,
-    viewport: ZoomViewport?,
+    topBarHeight: Float,
 ) {
     if (!target.isAttached) return
-    val hidden = target.visibleTopInWindow(viewport) - target.positionInWindow().y
+    val hidden = target.boundsInWindow().top + topBarHeight - target.positionInWindow().y
     if (hidden > 0f) {
         dispatchPostScroll(Offset.Zero, Offset(0f, hidden), NestedScrollSource.UserInput)
     }
+}
+
+/** The height of the bar the feed scrolls under, in pixels; zero outside the disappearing scaffold. */
+@Composable
+internal fun rememberTopBarHeightPx(): Float {
+    val topPadding = LocalDisappearingScaffoldPadding.current.calculateTopPadding()
+    val density = LocalDensity.current
+    return remember(topPadding, density) { with(density) { topPadding.toPx() } }
 }
 
 /** The top of what shows of this layout: clipped by its scrolling parents and by bars drawn over them. */
