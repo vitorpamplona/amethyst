@@ -5163,6 +5163,17 @@
     </plurals>
     <string name="live_activity_starts_in">Rozpoczyna się o %1$s</string>
     <string name="live_activity_started_ago">Rozpoczęto %1$s temu</string>
+    <plurals name="live_activity_viewers">
+        <item quantity="one">%1$d oglądający</item>
+        <item quantity="few">%1$d oglądających</item>
+        <item quantity="many">%1$d oglądających</item>
+        <item quantity="other">%1$d oglądających</item>
+    </plurals>
+    <string name="live_activity_watch_recording">Oglądaj nagranie</string>
+    <string name="classifieds_status_sold">Sprzedane</string>
+    <string name="goal_ends_in">Koniec za %1$s</string>
+    <string name="calendar_time_in_zone">%1$s (%2$s)</string>
+    <string name="calendar_time_zone">Strefa czasowa: %1$s</string>
     <string name="nip51_list_has_private_members">Ta lista jest prywatna – widzi ją wyłącznie jej autor</string>
     <plurals name="nip82_downloads_count">
         <item quantity="one">%1$d pobranie</item>
@@ -7434,4 +7445,47 @@
     <string name="crash_window_title">Amethyst napotkał problem</string>
     <string name="crash_window_body">Coś poszło nie tak i to okno musi zostać zamknięte. Możesz wysłać raport o awarii do deweloperów Amethysta w DM; żadne dane osobowe nie są udostępniane. Jeśli zamiast tego zamkniesz, Amethyst zaproponuje wysłanie go następnym razem.</string>
     <string name="crash_window_send">Wyślij do deweloperów</string>
+    <string name="nip85_trust_score">Wskaźnik zaufania</string>
+    <string name="nip85_contact_card">Wizytówka</string>
+    <string name="nip85_contact_card_private">Prywatny wpis autora na temat tej osoby</string>
+    <string name="nip85_score_for_event">Ranking wpisu</string>
+    <string name="nip85_score_for_address">Ranking adresu</string>
+    <string name="nip85_score_for_identifier">Ranking identyfikatora</string>
+    <string name="nip85_score_for_named">Ranking dla %1$s</string>
+    <string name="nip85_score_for_relay">Ranking dla transmitera %1$s</string>
+    <string name="nip85_score_explainer">Z sieci zaufania jednego obserwatora, ponieważ ten dostawca go obliczył. Wyniki pochodzące od różnych obserwatorów nie są porównywane.</string>
+    <string name="nip85_rank">Ranking</string>
+    <string name="nip85_rank_of_100">%1$s / 100</string>
+    <plurals name="nip85_hops_away">
+        <item quantity="one">skocz</item>
+        <item quantity="few">skoczą</item>
+        <item quantity="many">skoczą</item>
+        <item quantity="other">skacze</item>
+    </plurals>
+    <string name="nip85_no_follow_path">Brak znanej ścieżki kontynuacji</string>
+    <string name="nip85_about">O profilu</string>
+    <string name="nip85_scored">Punktacja</string>
+    <string name="nip85_scored_by">Punktacja wg</string>
+    <string name="nip85_metric_followers">Zweryfikowani obserwujący</string>
+    <string name="nip85_metric_reporters">Zweryfikowani zgłaszający</string>
+    <string name="nip85_metric_muters">Zweryfikowani wyciszający</string>
+    <string name="nip85_metric_posts">Posty</string>
+    <string name="nip85_metric_replies">Odpowiedzi</string>
+    <string name="nip85_metric_reactions">Reakcje</string>
+    <string name="nip85_metric_comments">Komentarze</string>
+    <string name="nip85_metric_quotes">Cytaty</string>
+    <string name="nip85_metric_reposts">Reposty</string>
+    <string name="nip85_metric_zaps">Zapy</string>
+    <string name="nip85_metric_zaps_received">Otrzymano Zapy</string>
+    <string name="nip85_metric_zaps_sent">Zapy wysłane</string>
+    <string name="nip85_metric_sats_received">Otrzymane satosze</string>
+    <string name="nip85_metric_sats_sent">Wysłane satosze</string>
+    <string name="nip85_metric_sats_received_per_day">Satosze otrzymywane dziennie</string>
+    <string name="nip85_metric_sats_sent_per_day">Liczba satoszów wysyłanych dziennie</string>
+    <string name="nip85_metric_reports_received">Zgłoszenia otrzymano</string>
+    <string name="nip85_metric_reports_sent">Zgłoszenia wysłano</string>
+    <string name="nip85_metric_expires">Wygasa</string>
+    <string name="nip85_designation_title">Oznaczenie zaufania</string>
+    <string name="nip85_designation_explainer">Serwisy, którym ta osoba powierza obliczanie wyników i tworzenie list, oraz miejsca, w których każdy z nich publikuje te wyniki i listy.</string>
+    <string name="nip85_designation_none">Nie wyznaczono zaufanego dostawcy</string>
 </resources>

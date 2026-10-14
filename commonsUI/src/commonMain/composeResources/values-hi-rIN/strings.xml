@@ -7048,6 +7048,10 @@
     <string name="nip85_score_explainer">एक अवलोकनकर्ता के विश्वासजाल से तथा इस प्रदाता के परिकलन अनुसार। पृथक अवलोकनकर्ताओं के परिणाम तुलनीय नहीं।</string>
     <string name="nip85_rank">श्रेणी</string>
     <string name="nip85_rank_of_100">%1$s प्रति शत</string>
+    <plurals name="nip85_hops_away">
+        <item quantity="one">छलाँग दूर</item>
+        <item quantity="other">छलाँग दूर</item>
+    </plurals>
     <string name="nip85_no_follow_path">कोई ज्ञात अनुगमन पथ नहीं</string>
     <string name="nip85_about">जानकारी</string>
     <string name="nip85_scored">प्राप्तांक</string>
