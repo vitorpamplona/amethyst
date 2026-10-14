@@ -137,7 +137,7 @@ private fun showCrashWindow(
         if (WaylandDisplay.isActive) {
             WaylandDialog(owner, Dialog.ModalityType.APPLICATION_MODAL).also { dialog ->
                 val panel = ComposePanel(renderSettings = RenderSettings.SwingGraphics())
-                panel.setContent { Body(dialog) }
+                panel.setContent { ProvideDesktopUiScale { Body(dialog) } }
                 dialog.contentPane.add(panel)
             }
         } else {

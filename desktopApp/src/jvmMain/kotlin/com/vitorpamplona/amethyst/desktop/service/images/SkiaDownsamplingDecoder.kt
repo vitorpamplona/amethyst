@@ -35,7 +35,10 @@ import coil3.size.Scale
 import coil3.size.isOriginal
 import org.jetbrains.skia.Bitmap
 import org.jetbrains.skia.Canvas
+import org.jetbrains.skia.Codec
 import org.jetbrains.skia.Color
+import org.jetbrains.skia.Data
+import org.jetbrains.skia.EncodedOrigin
 import org.jetbrains.skia.FilterMipmap
 import org.jetbrains.skia.FilterMode
 import org.jetbrains.skia.Image
@@ -50,6 +53,10 @@ import kotlin.math.roundToInt
  * pixel in every n and drops the rest, so a 400 px avatar drawn at 36 px comes out blocky and a
  * link preview's 1200 px card comes out jagged. This decoder makes the same size choice and
  * filters through mipmaps instead, which averages every source pixel into the result.
+ *
+ * A JPEG much larger than its slot is first decoded at 1/2, 1/4 or 1/8 of its size, which libjpeg
+ * does natively: a 6000 x 4000 phone photo in a feed card decodes in a quarter of the time,
+ * through a 1.5 MB bitmap instead of a 96 MB one.
  */
 class SkiaDownsamplingDecoder(
     private val source: ImageSource,
@@ -57,6 +64,7 @@ class SkiaDownsamplingDecoder(
 ) : Decoder {
     override suspend fun decode(): DecodeResult {
         val bytes = source.source().use { it.readByteArray() }
+        if (isJpeg(bytes)) shrinkJpeg(bytes, options)?.let { return it }
         val image = Image.makeFromEncoded(bytes)
         try {
             return downsample(image, options)
@@ -75,9 +83,8 @@ class SkiaDownsamplingDecoder(
 }
 
 /**
- * Draws [image] into a bitmap of the size [options] asks for, never larger than the image. The
- * size math is Coil's (`makeFromImage` in coil-core's non-Android utils); only the sampling
- * differs. [image] stays open: the caller owns it.
+ * Draws [image] into a bitmap of the size [options] asks for ([decodedSize]). Only the sampling
+ * differs from Coil's. [image] stays open: the caller owns it.
  */
 internal fun downsample(
     image: Image,
@@ -85,7 +92,117 @@ internal fun downsample(
 ): DecodeResult {
     val srcWidth = image.width
     val srcHeight = image.height
+    val (width, height) = decodedSize(srcWidth, srcHeight, options)
 
+    val bitmap =
+        if (width == srcWidth && height == srcHeight) {
+            Bitmap().apply {
+                allocN32Pixels(width, height)
+                image.readPixels(this)
+                setImmutable()
+            }
+        } else {
+            drawScaled(image, width, height, EncodedOrigin.TOP_LEFT)
+        }
+
+    return DecodeResult(
+        image = bitmap.asImage(),
+        isSampled = width < srcWidth || height < srcHeight,
+    )
+}
+
+/**
+ * [bytes] decoded at the largest 1/2, 1/4 or 1/8 of its size that still covers the size [options]
+ * asks for, then filtered down to it; null when the full size is needed, so the caller decodes as
+ * usual. The JPEG's EXIF orientation is applied here, as `Image.makeFromEncoded` does.
+ */
+internal fun shrinkJpeg(
+    bytes: ByteArray,
+    options: Options,
+): DecodeResult? =
+    Data.makeFromBytes(bytes).use { data ->
+        Codec.makeFromData(data).use { codec ->
+            val origin = codec.encodedOrigin
+            val swaps = origin.swapsWidthHeight()
+            // The size asked for is the upright picture's; the codec decodes it as stored.
+            val (width, height) = if (swaps) decodedSize(codec.height, codec.width, options) else decodedSize(codec.width, codec.height, options)
+            val storedWidth = if (swaps) height else width
+            val storedHeight = if (swaps) width else height
+
+            var denominator = 8
+            while (denominator > 1 && (ceilDiv(codec.width, denominator) < storedWidth || ceilDiv(codec.height, denominator) < storedHeight)) denominator /= 2
+            if (denominator == 1) return@use null
+
+            val scaled = Bitmap()
+            try {
+                // libjpeg's scaled sizes round up; Skia decodes natively only at exactly those.
+                scaled.allocN32Pixels(ceilDiv(codec.width, denominator), ceilDiv(codec.height, denominator))
+                codec.readPixels(scaled, 0)
+                scaled.setImmutable()
+                Image.makeFromBitmap(scaled).use { image ->
+                    DecodeResult(image = drawScaled(image, width, height, origin).asImage(), isSampled = true)
+                }
+            } catch (e: Exception) {
+                // A JPEG Skia can't decode at that scale (a broken or exotic file): the usual path.
+                null
+            } finally {
+                scaled.close()
+            }
+        }
+    }
+
+/** [image] filtered through mipmaps into a [width] x [height] bitmap, turned upright from [origin]. */
+private fun drawScaled(
+    image: Image,
+    width: Int,
+    height: Int,
+    origin: EncodedOrigin,
+): Bitmap {
+    val bitmap = Bitmap()
+    bitmap.allocN32Pixels(width, height)
+    Canvas(bitmap).use { canvas ->
+        // Drawn over what is there, so a transparent picture needs a clear start.
+        canvas.clear(Color.TRANSPARENT)
+        if (origin != EncodedOrigin.TOP_LEFT) canvas.concat(origin.toMatrix(width, height))
+        // Under a rotation the picture is drawn as stored, sideways, and the matrix stands it up.
+        val drawWidth = if (origin.swapsWidthHeight()) height else width
+        val drawHeight = if (origin.swapsWidthHeight()) width else height
+        canvas.drawImageRect(
+            image,
+            0f,
+            0f,
+            image.width.toFloat(),
+            image.height.toFloat(),
+            0f,
+            0f,
+            drawWidth.toFloat(),
+            drawHeight.toFloat(),
+            MIPMAP_SAMPLING,
+            null,
+            true,
+        )
+    }
+    bitmap.setImmutable()
+    return bitmap
+}
+
+private fun ceilDiv(
+    value: Int,
+    divisor: Int,
+) = (value + divisor - 1) / divisor
+
+/** JPEG's start-of-image marker and the first segment marker after it. */
+private fun isJpeg(bytes: ByteArray) = bytes.size > 3 && bytes[0] == 0xFF.toByte() && bytes[1] == 0xD8.toByte() && bytes[2] == 0xFF.toByte()
+
+/**
+ * The size [options] asks a [srcWidth] x [srcHeight] picture to be decoded at: Coil's math
+ * (`makeFromImage` in coil-core's non-Android utils), never larger than the picture when inexact.
+ */
+internal fun decodedSize(
+    srcWidth: Int,
+    srcHeight: Int,
+    options: Options,
+): Pair<Int, Int> {
     val dstWidth: Int
     val dstHeight: Int
     if (options.size.isOriginal) {
@@ -109,37 +226,7 @@ internal fun downsample(
 
     val width = (multiplier * srcWidth).roundToInt().coerceAtLeast(1)
     val height = (multiplier * srcHeight).roundToInt().coerceAtLeast(1)
-
-    val bitmap = Bitmap()
-    bitmap.allocN32Pixels(width, height)
-    if (width == srcWidth && height == srcHeight) {
-        image.readPixels(bitmap)
-    } else {
-        Canvas(bitmap).use { canvas ->
-            // Drawn over what is there, so a transparent picture needs a clear start.
-            canvas.clear(Color.TRANSPARENT)
-            canvas.drawImageRect(
-                image,
-                0f,
-                0f,
-                srcWidth.toFloat(),
-                srcHeight.toFloat(),
-                0f,
-                0f,
-                width.toFloat(),
-                height.toFloat(),
-                MIPMAP_SAMPLING,
-                null,
-                true,
-            )
-        }
-    }
-    bitmap.setImmutable()
-
-    return DecodeResult(
-        image = bitmap.asImage(),
-        isSampled = width < srcWidth || height < srcHeight,
-    )
+    return width to height
 }
 
 /** Trilinear: bilinear inside the two nearest mip levels, blended. */

@@ -21,6 +21,7 @@
 package com.vitorpamplona.amethyst.desktop.service.images
 
 import coil3.ImageLoader
+import coil3.asImage
 import coil3.decode.DecodeResult
 import coil3.decode.Decoder
 import coil3.decode.ImageSource
@@ -37,17 +38,25 @@ class SkiaGifDecoder(
 ) : Decoder {
     override suspend fun decode(): DecodeResult {
         val bytes = source.source().use { it.readByteArray() }
-        val data = Data.makeFromBytes(bytes)
-        val codec = Codec.makeFromData(data)
-        val bitmap = Bitmap()
-        bitmap.allocN32Pixels(codec.width, codec.height)
-        codec.readPixels(bitmap, 0)
-        // Shrunk to the drawn size like every other image (see SkiaDownsamplingDecoder).
-        val image = Image.makeFromBitmap(bitmap)
+        val bitmap =
+            Data.makeFromBytes(bytes).use { data ->
+                Codec.makeFromData(data).use { codec ->
+                    Bitmap().apply {
+                        allocN32Pixels(codec.width, codec.height)
+                        codec.readPixels(this, 0)
+                        setImmutable()
+                    }
+                }
+            }
+
+        val (width, height) = decodedSize(bitmap.width, bitmap.height, options)
+        if (width == bitmap.width && height == bitmap.height) return DecodeResult(image = bitmap.asImage(), isSampled = false)
+
+        // Shrunk to the drawn size like every other image (see SkiaDownsamplingDecoder). The bitmap
+        // is immutable, so the image shares its pixels instead of copying them.
         try {
-            return downsample(image, options)
+            return Image.makeFromBitmap(bitmap).use { downsample(it, options) }
         } finally {
-            image.close()
             bitmap.close()
         }
     }

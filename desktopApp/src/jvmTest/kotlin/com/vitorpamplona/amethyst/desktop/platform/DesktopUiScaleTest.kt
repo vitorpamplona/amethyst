@@ -69,4 +69,12 @@ class DesktopUiScaleTest {
     fun neverSmallerThanAwt() {
         assertEquals(1f, extraScale(desktopScale = 1.5f, awtScale = 2f))
     }
+
+    @Test
+    fun aManualScaleMayAlsoShrink() {
+        assertEquals(1.25f, manualExtraScale(manualScale = 1.25f, awtScale = 1f))
+        // AMETHYST_SCALE=1.5 on a GDK_SCALE=2 session: three quarters of AWT's.
+        assertEquals(0.75f, manualExtraScale(manualScale = 1.5f, awtScale = 2f))
+        assertEquals(1f, manualExtraScale(manualScale = 2f, awtScale = 2f))
+    }
 }

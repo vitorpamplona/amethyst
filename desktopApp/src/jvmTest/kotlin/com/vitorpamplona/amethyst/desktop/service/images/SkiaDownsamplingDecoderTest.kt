@@ -31,11 +31,16 @@ import coil3.size.Size
 import kotlinx.coroutines.test.runTest
 import okio.Buffer
 import okio.FileSystem
+import org.jetbrains.skia.Bitmap
+import org.jetbrains.skia.Image
+import java.awt.Color
 import java.awt.image.BufferedImage
 import java.io.ByteArrayOutputStream
 import javax.imageio.ImageIO
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertNotNull
+import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 /**
@@ -106,6 +111,52 @@ class SkiaDownsamplingDecoderTest {
         options: Options,
     ): DecodeResult = SkiaDownsamplingDecoder(source(bytes), options).decode()
 
+    @Test
+    fun aBigJpegDecodesAtAFractionOfItsSize() =
+        runTest {
+            // Odd sides: libjpeg's 1/8 of 2001 x 1001 is 251 x 126, rounded up.
+            val jpeg = solidJpeg(2001, 1001, 0x808080)
+            val options = options(Size(100, 100))
+
+            assertNotNull(shrinkJpeg(jpeg, options))
+            val result = decode(jpeg, options)
+            val bitmap = (result.image as BitmapImage).bitmap
+            assertEquals(100, bitmap.width)
+            assertEquals(50, bitmap.height)
+            assertTrue(result.isSampled)
+            val gray = bitmap.getColor(50, 25) and 0xFF
+            assertTrue(gray in 118..138, "center is $gray, expected the JPEG's gray")
+        }
+
+    @Test
+    fun aJpegNearItsSlotSizeDecodesInFull() {
+        assertNull(shrinkJpeg(solidJpeg(150, 150, 0x808080), options(Size(100, 100))))
+    }
+
+    @Test
+    fun aRotatedJpegComesOutUprightLikeSkiasOwnDecode() =
+        runTest {
+            // Stored 800 x 400, red left and blue right, with EXIF orientation 6 (rotate 90 degrees).
+            val jpeg = withExifOrientation(halvesJpeg(800, 400), 6)
+
+            val upright =
+                Image.makeFromEncoded(jpeg).use { image ->
+                    Bitmap().also {
+                        it.allocN32Pixels(image.width, image.height)
+                        image.readPixels(it)
+                    }
+                }
+            assertEquals(400, upright.width)
+            assertEquals(800, upright.height)
+
+            val bitmap = (decode(jpeg, options(Size(100, 100))).image as BitmapImage).bitmap
+            assertEquals(50, bitmap.width)
+            assertEquals(100, bitmap.height)
+            assertEquals(dominant(upright.getColor(200, 100)), dominant(bitmap.getColor(25, 12)))
+            assertEquals(dominant(upright.getColor(200, 700)), dominant(bitmap.getColor(25, 88)))
+            assertTrue(dominant(bitmap.getColor(25, 12)) != dominant(bitmap.getColor(25, 88)))
+        }
+
     private fun source(bytes: ByteArray): ImageSource = ImageSource(Buffer().write(bytes), FileSystem.SYSTEM)
 
     private fun options(
@@ -133,5 +184,91 @@ class SkiaDownsamplingDecoderTest {
         val out = ByteArrayOutputStream()
         check(ImageIO.write(image, format, out)) { "No $format writer" }
         return out.toByteArray()
+    }
+
+    /** Which of red, green or blue is strongest in [argb]. */
+    private fun dominant(argb: Int): Char {
+        val r = argb shr 16 and 0xFF
+        val g = argb shr 8 and 0xFF
+        val b = argb and 0xFF
+        return if (r >= g && r >= b) {
+            'r'
+        } else if (g >= b) {
+            'g'
+        } else {
+            'b'
+        }
+    }
+
+    private fun solidJpeg(
+        width: Int,
+        height: Int,
+        rgb: Int,
+    ): ByteArray {
+        val image = BufferedImage(width, height, BufferedImage.TYPE_INT_RGB)
+        image.createGraphics().apply {
+            color = Color(rgb)
+            fillRect(0, 0, width, height)
+            dispose()
+        }
+        return jpeg(image)
+    }
+
+    /** Red on the left half, blue on the right. */
+    private fun halvesJpeg(
+        width: Int,
+        height: Int,
+    ): ByteArray {
+        val image = BufferedImage(width, height, BufferedImage.TYPE_INT_RGB)
+        image.createGraphics().apply {
+            color = Color.RED
+            fillRect(0, 0, width / 2, height)
+            color = Color.BLUE
+            fillRect(width / 2, 0, width - width / 2, height)
+            dispose()
+        }
+        return jpeg(image)
+    }
+
+    private fun jpeg(image: BufferedImage): ByteArray = ByteArrayOutputStream().also { ImageIO.write(image, "jpg", it) }.toByteArray()
+
+    /** [jpeg] with an EXIF block holding only an orientation tag, right after its start marker. */
+    private fun withExifOrientation(
+        jpeg: ByteArray,
+        orientation: Int,
+    ): ByteArray {
+        val tiff =
+            byteArrayOf(
+                'M'.code.toByte(),
+                'M'.code.toByte(),
+                0,
+                42,
+                0,
+                0,
+                0,
+                8, // big-endian header, first IFD at 8
+                0,
+                1, // one entry
+                0x01,
+                0x12,
+                0,
+                3,
+                0,
+                0,
+                0,
+                1,
+                0,
+                orientation.toByte(),
+                0,
+                0, // Orientation, SHORT, 1 value
+                0,
+                0,
+                0,
+                0, // no next IFD
+            )
+        val payload = "Exif".toByteArray() + byteArrayOf(0, 0) + tiff
+        val length = payload.size + 2
+        val segment = byteArrayOf(0xFF.toByte(), 0xE1.toByte(), (length shr 8).toByte(), length.toByte()) + payload
+        return jpeg.copyOfRange(0, 2) + segment + jpeg.copyOfRange(2, jpeg.size)
     }
 }
