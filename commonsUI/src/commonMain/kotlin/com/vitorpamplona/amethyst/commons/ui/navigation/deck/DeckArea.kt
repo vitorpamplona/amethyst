@@ -47,6 +47,7 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.VerticalDivider
@@ -174,22 +175,26 @@ fun DeckArea(
         }
     }
 
-    Row(modifier.fillMaxHeight()) {
-        VerticalDivider(thickness = DividerThickness)
-        DeckToolbar(layout, settings, onAddColumn = { picking = true }, onSaveWorkspace = { naming = true })
+    // The toolbar and the resize handles paint nothing themselves: without this surface the bare
+    // window shows through them (light grey on desktop, even in dark mode) and icons lose their tint.
+    Surface(modifier.fillMaxHeight(), color = MaterialTheme.colorScheme.background) {
+        Row(Modifier.fillMaxHeight()) {
+            VerticalDivider(thickness = DividerThickness)
+            DeckToolbar(layout, settings, onAddColumn = { picking = true }, onSaveWorkspace = { naming = true })
 
-        Row(Modifier.weight(1f, fill = false).fillMaxHeight().horizontalScroll(scroll)) {
-            columns.forEach { column ->
-                key(column.id) {
-                    ResizeHandle(column, settings)
-                    DeckColumnPane(
-                        column = column,
-                        focused = column.id == DeckFocus.columnId,
-                        onFocus = { DeckFocus.columnId = column.id },
-                        settings = settings,
-                        mainNav = mainNav,
-                        destinationsFor = destinationsFor,
-                    )
+            Row(Modifier.weight(1f, fill = false).fillMaxHeight().horizontalScroll(scroll)) {
+                columns.forEach { column ->
+                    key(column.id) {
+                        ResizeHandle(column, settings)
+                        DeckColumnPane(
+                            column = column,
+                            focused = column.id == DeckFocus.columnId,
+                            onFocus = { DeckFocus.columnId = column.id },
+                            settings = settings,
+                            mainNav = mainNav,
+                            destinationsFor = destinationsFor,
+                        )
+                    }
                 }
             }
         }
