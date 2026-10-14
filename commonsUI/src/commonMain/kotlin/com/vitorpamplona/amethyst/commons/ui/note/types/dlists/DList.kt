@@ -66,6 +66,7 @@ import com.vitorpamplona.amethyst.commons.relayClient.dlists.dListItemKinds
 import com.vitorpamplona.amethyst.commons.relayClient.dlists.dListItemPointers
 import com.vitorpamplona.amethyst.commons.relayClient.event.observeNoteEvent
 import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.chips_n_more
 import com.vitorpamplona.amethyst.commons.resources.dlist_fields
 import com.vitorpamplona.amethyst.commons.resources.dlist_item_in
 import com.vitorpamplona.amethyst.commons.resources.dlist_items
@@ -73,7 +74,6 @@ import com.vitorpamplona.amethyst.commons.resources.dlist_items_count
 import com.vitorpamplona.amethyst.commons.resources.dlist_items_count_more
 import com.vitorpamplona.amethyst.commons.resources.dlist_list_of
 import com.vitorpamplona.amethyst.commons.resources.dlist_missing_fields
-import com.vitorpamplona.amethyst.commons.resources.dlist_more_values
 import com.vitorpamplona.amethyst.commons.resources.dlist_unaffiliated
 import com.vitorpamplona.amethyst.commons.resources.dlist_untitled_item
 import com.vitorpamplona.amethyst.commons.ui.components.ClickableUrl
@@ -477,7 +477,7 @@ private fun Facts(facts: List<DListFact>) {
                     }
                     if (fact.extra > 0) {
                         Text(
-                            text = stringRes(Res.string.dlist_more_values, fact.extra),
+                            text = pluralStringRes(Res.plurals.chips_n_more, fact.extra, fact.extra),
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )

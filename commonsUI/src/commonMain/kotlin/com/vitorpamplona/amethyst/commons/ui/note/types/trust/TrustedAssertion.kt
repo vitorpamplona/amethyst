@@ -40,7 +40,6 @@ import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.nip85_about
 import com.vitorpamplona.amethyst.commons.resources.nip85_contact_card
 import com.vitorpamplona.amethyst.commons.resources.nip85_contact_card_private
-import com.vitorpamplona.amethyst.commons.resources.nip85_hop_away
 import com.vitorpamplona.amethyst.commons.resources.nip85_hops_away
 import com.vitorpamplona.amethyst.commons.resources.nip85_metric_comments
 import com.vitorpamplona.amethyst.commons.resources.nip85_metric_expires
@@ -83,6 +82,7 @@ import com.vitorpamplona.amethyst.commons.ui.note.LoadUser
 import com.vitorpamplona.amethyst.commons.ui.note.NoteCompose
 import com.vitorpamplona.amethyst.commons.ui.note.UserCompose
 import com.vitorpamplona.amethyst.commons.ui.note.types.ReplyRenderType
+import com.vitorpamplona.amethyst.commons.ui.pluralStringRes
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.replyModifier
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
@@ -220,7 +220,7 @@ private fun RenderTrustedAssertion(
                 // An absent `hops` is no known follow path, never 0, which is the observer's own record.
                 if (isPerson && !isContactCard) {
                     if (hops != null) {
-                        StatTile(formatMetricValue(hops), stringRes(if (hops.value == "1") Res.string.nip85_hop_away else Res.string.nip85_hops_away))
+                        StatTile(formatMetricValue(hops), pluralStringRes(Res.plurals.nip85_hops_away, hops.value.toIntOrNull() ?: 0))
                     } else {
                         StatTile("—", stringRes(Res.string.nip85_no_follow_path))
                     }
