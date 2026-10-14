@@ -100,6 +100,8 @@ class BrowserChromeHost(
 
         fun onClearSiteData() {}
 
+        fun onClearAllSiteData() {}
+
         /** The pill, find or the console opened or closed (the window may need to route back). */
         fun onPanelsChanged() {}
     }
@@ -420,6 +422,10 @@ class BrowserChromeHost(
                         onClearSiteData = {
                             pageInfoOpen = false
                             listener.onClearSiteData()
+                        },
+                        onClearAllSiteData = {
+                            pageInfoOpen = false
+                            listener.onClearAllSiteData()
                         },
                         modifier = Modifier.widthIn(max = 560.dp),
                     )

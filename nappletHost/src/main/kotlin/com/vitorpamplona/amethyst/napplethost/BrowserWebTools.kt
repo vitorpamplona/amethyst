@@ -41,7 +41,14 @@ import androidx.webkit.WebViewCompat
 import androidx.webkit.WebViewFeature
 import com.vitorpamplona.amethyst.commons.browser.BrowserChrome
 import com.vitorpamplona.amethyst.commons.browser.ui.pill.CertificateInfo
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.browser_pill_info_all_cleared
+import com.vitorpamplona.amethyst.commons.ui.loadStringRes
 import com.vitorpamplona.quartz.utils.Log
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.launch
 import java.net.URISyntaxException
 import java.text.DateFormat
 import java.util.WeakHashMap
@@ -264,6 +271,36 @@ object BrowserWebTools {
         Toast.makeText(context, CommonsR.string.browser_site_data_cleared, Toast.LENGTH_SHORT).show()
         webView.reload()
     }
+
+    /**
+     * Clears every site's cookies and web storage (local storage, IndexedDB, cache storage, service workers)
+     * in [webView]'s profile — the account's whole browser jar — plus the HTTP cache, then reloads the page
+     * logged out. Unlike [clearSiteData] this also reaches cookies a site keeps on another domain (YouTube's
+     * sign-in lives on google.com). Other accounts' profiles are untouched.
+     */
+    fun clearAllSiteData(
+        context: Context,
+        webView: WebView,
+    ) {
+        runCatching { webStorage(webView).deleteAllData() }.onFailure { Log.w(TAG, "Failed to clear web storage", it) }
+        webView.clearCache(true)
+        val cookies = cookieManager(webView)
+        cookies.removeAllCookies {
+            cookies.flush()
+            webView.reload()
+        }
+        val appContext = context.applicationContext
+        // The embedded provider is a service that never composes, so resources may not be wired up yet.
+        SandboxComposeResources.ensure(appContext)
+        uiScope.launch {
+            runCatching { loadStringRes(Res.string.browser_pill_info_all_cleared) }
+                .onSuccess { Toast.makeText(appContext, it, Toast.LENGTH_SHORT).show() }
+                .onFailure { Log.w(TAG, "Could not load the cleared-data toast", it) }
+        }
+    }
+
+    /** Process-long scope for the toasts that need a Compose resource string loaded first. */
+    private val uiScope = CoroutineScope(Dispatchers.Main + SupervisorJob())
 
     // ---- page info ----
 

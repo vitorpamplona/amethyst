@@ -352,6 +352,10 @@ class NappletBrowserService : Service() {
                 val tab = tabFor(msg) ?: return true
                 tab.webView?.let { wv -> wv.url?.let { BrowserWebTools.clearSiteData(this, wv, it) } }
             }
+            NappletBrowserContract.MSG_CLEAR_ALL_SITE_DATA -> {
+                val tab = tabFor(msg) ?: return true
+                tab.webView?.let { BrowserWebTools.clearAllSiteData(this, it) }
+            }
             NappletBrowserContract.MSG_PAGE_INFO_REQUEST -> {
                 val tab = tabFor(msg) ?: return true
                 val wv = tab.webView ?: return true

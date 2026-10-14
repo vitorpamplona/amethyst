@@ -91,6 +91,8 @@ import com.vitorpamplona.amethyst.commons.resources.browser_pill_dialog_says
 import com.vitorpamplona.amethyst.commons.resources.browser_pill_info_certificate
 import com.vitorpamplona.amethyst.commons.resources.browser_pill_info_certificate_desc
 import com.vitorpamplona.amethyst.commons.resources.browser_pill_info_clear
+import com.vitorpamplona.amethyst.commons.resources.browser_pill_info_clear_all
+import com.vitorpamplona.amethyst.commons.resources.browser_pill_info_clear_all_confirm
 import com.vitorpamplona.amethyst.commons.resources.browser_pill_info_clear_confirm
 import com.vitorpamplona.amethyst.commons.resources.browser_pill_info_connection
 import com.vitorpamplona.amethyst.commons.resources.browser_pill_info_http
@@ -328,7 +330,7 @@ data class CertificateInfo(
 /**
  * Page info as a sheet: who the site is, how you're connected (encryption, route, certificate), what it
  * may use (camera / mic / location as Ask · Allow · Block, editable in place), and its stored data with a
- * clear that asks first.
+ * clear that asks first — for this site, or for every site this account's browser has visited.
  */
 @Composable
 fun PageInfoSheet(
@@ -336,8 +338,9 @@ fun PageInfoSheet(
     certificate: CertificateInfo?,
     onPermissionChange: (BrowserSitePermission, Decision) -> Unit,
     onClearSiteData: () -> Unit,
+    onClearAllSiteData: () -> Unit,
     modifier: Modifier = Modifier,
-    initiallyConfirmingClear: Boolean = false,
+    initiallyConfirmingClear: ClearScope = ClearScope.NONE,
 ) {
     var confirmingClear by remember { mutableStateOf(initiallyConfirmingClear) }
     val https = ui.chrome.url.startsWith("https://", ignoreCase = true)
@@ -412,42 +415,81 @@ fun PageInfoSheet(
                     }
                     Spacer(Modifier.height(12.dp))
                     AnimatedContent(targetState = confirmingClear, label = "clear-site-data") { confirming ->
-                        if (!confirming) {
-                            OutlinedButton(
-                                onClick = { confirmingClear = true },
-                                colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.error),
-                                modifier = Modifier.fillMaxWidth(),
-                            ) {
-                                Icon(MaterialSymbols.Delete, contentDescription = null, modifier = Modifier.size(18.dp))
-                                Spacer(Modifier.width(8.dp))
-                                Text(stringRes(Res.string.browser_pill_info_clear))
-                            }
-                        } else {
-                            Column(
-                                Modifier
-                                    .fillMaxWidth()
-                                    .clip(RoundedCornerShape(16.dp))
-                                    .background(MaterialTheme.colorScheme.errorContainer)
-                                    .padding(12.dp),
-                            ) {
-                                Text(stringRes(Res.string.browser_pill_info_clear_confirm), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onErrorContainer)
-                                Spacer(Modifier.height(8.dp))
-                                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
-                                    TextButton(onClick = { confirmingClear = false }) { Text(stringRes(Res.string.browser_pill_cancel), color = MaterialTheme.colorScheme.onErrorContainer) }
-                                    Spacer(Modifier.width(8.dp))
-                                    Button(
-                                        onClick = {
-                                            confirmingClear = false
-                                            onClearSiteData()
-                                        },
-                                        colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error, contentColor = MaterialTheme.colorScheme.onError),
-                                    ) { Text(stringRes(Res.string.browser_pill_info_clear)) }
+                        when (confirming) {
+                            ClearScope.NONE ->
+                                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                                    OutlinedButton(
+                                        onClick = { confirmingClear = ClearScope.SITE },
+                                        colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.error),
+                                        modifier = Modifier.fillMaxWidth(),
+                                    ) {
+                                        Icon(MaterialSymbols.Delete, contentDescription = null, modifier = Modifier.size(18.dp))
+                                        Spacer(Modifier.width(8.dp))
+                                        Text(stringRes(Res.string.browser_pill_info_clear))
+                                    }
+                                    TextButton(
+                                        onClick = { confirmingClear = ClearScope.ALL },
+                                        colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error),
+                                        modifier = Modifier.fillMaxWidth(),
+                                    ) {
+                                        Text(stringRes(Res.string.browser_pill_info_clear_all))
+                                    }
                                 }
-                            }
+                            ClearScope.SITE ->
+                                ClearConfirmation(
+                                    message = stringRes(Res.string.browser_pill_info_clear_confirm),
+                                    confirmLabel = stringRes(Res.string.browser_pill_info_clear),
+                                    onCancel = { confirmingClear = ClearScope.NONE },
+                                    onConfirm = {
+                                        confirmingClear = ClearScope.NONE
+                                        onClearSiteData()
+                                    },
+                                )
+                            ClearScope.ALL ->
+                                ClearConfirmation(
+                                    message = stringRes(Res.string.browser_pill_info_clear_all_confirm),
+                                    confirmLabel = stringRes(Res.string.browser_pill_info_clear_all),
+                                    onCancel = { confirmingClear = ClearScope.NONE },
+                                    onConfirm = {
+                                        confirmingClear = ClearScope.NONE
+                                        onClearAllSiteData()
+                                    },
+                                )
                         }
                     }
                 }
             }
+        }
+    }
+}
+
+/** Which clear [PageInfoSheet] is asking to confirm, if any. */
+enum class ClearScope { NONE, SITE, ALL }
+
+/** The red "are you sure" box a clear asks through before it deletes anything. */
+@Composable
+private fun ClearConfirmation(
+    message: String,
+    confirmLabel: String,
+    onCancel: () -> Unit,
+    onConfirm: () -> Unit,
+) {
+    Column(
+        Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(16.dp))
+            .background(MaterialTheme.colorScheme.errorContainer)
+            .padding(12.dp),
+    ) {
+        Text(message, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onErrorContainer)
+        Spacer(Modifier.height(8.dp))
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
+            TextButton(onClick = onCancel) { Text(stringRes(Res.string.browser_pill_cancel), color = MaterialTheme.colorScheme.onErrorContainer) }
+            Spacer(Modifier.width(8.dp))
+            Button(
+                onClick = onConfirm,
+                colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error, contentColor = MaterialTheme.colorScheme.onError),
+            ) { Text(confirmLabel) }
         }
     }
 }
