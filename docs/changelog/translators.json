@@ -84,6 +84,13 @@
   "sinceLastTag": {
     "tag": "v1.19.0",
     "since": "2026-10-14T09:06:00-04:00",
-    "translators": []
+    "translators": [
+      {
+        "user": "maxblake2015",
+        "languages": [
+          "Polish"
+        ]
+      }
+    ]
   }
 }
