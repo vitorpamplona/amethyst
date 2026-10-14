@@ -49,6 +49,7 @@ import com.vitorpamplona.amethyst.commons.model.preferences.BuzzWorkspaceStore
 import com.vitorpamplona.amethyst.commons.model.preferences.ConcordDirectInviteDeclineStore
 import com.vitorpamplona.amethyst.commons.model.preferences.DrawerSectionCollapsePreferences
 import com.vitorpamplona.amethyst.commons.model.preferences.NamecoinSettingsStore
+import com.vitorpamplona.amethyst.commons.model.preferences.NotificationPanelCollapsePreferences
 import com.vitorpamplona.amethyst.commons.model.preferences.NowPlayingSettingsStore
 import com.vitorpamplona.amethyst.commons.model.preferences.OtsSettingsStore
 import com.vitorpamplona.amethyst.commons.model.preferences.PaneWidthPreferences
@@ -204,6 +205,7 @@ class DesktopAppModules(
 
     val drawerSectionCollapsePrefs = DrawerSectionCollapsePreferences(sharedSettingsStore, applicationIOScope)
     val paneWidthPrefs = PaneWidthPreferences(sharedSettingsStore, applicationIOScope)
+    val notificationPanelCollapsePrefs = NotificationPanelCollapsePreferences(sharedSettingsStore, applicationIOScope)
 
     // A desktop is never on a metered connection the app can see, and is always "connected":
     // relays find out about a lost network from their own sockets.

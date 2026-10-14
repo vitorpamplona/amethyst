@@ -55,6 +55,7 @@ import com.vitorpamplona.amethyst.commons.model.preferences.CALENDAR_REMINDER_SE
 import com.vitorpamplona.amethyst.commons.model.preferences.ConcordDirectInviteDeclineStore
 import com.vitorpamplona.amethyst.commons.model.preferences.DrawerSectionCollapsePreferences
 import com.vitorpamplona.amethyst.commons.model.preferences.NamecoinSettingsStore
+import com.vitorpamplona.amethyst.commons.model.preferences.NotificationPanelCollapsePreferences
 import com.vitorpamplona.amethyst.commons.model.preferences.NowPlayingSettingsStore
 import com.vitorpamplona.amethyst.commons.model.preferences.OtsSettingsStore
 import com.vitorpamplona.amethyst.commons.model.preferences.PaneWidthPreferences
@@ -408,6 +409,10 @@ class AppModules(
 
     // Device-global: the widths the user dragged the panes of a wide window to.
     val paneWidthPrefs = PaneWidthPreferences(sharedSettingsStore, applicationIOScope)
+
+    // Device-global: whether the docked notification panel of a wide window is folded away to
+    // its bell. The fold rides window width, not the platform, so every front end keeps it.
+    val notificationPanelCollapsePrefs = NotificationPanelCollapsePreferences(sharedSettingsStore, applicationIOScope)
 
     // Service that will run at all times to receive events from Pokey
     val pokeyReceiver = PokeyReceiver()

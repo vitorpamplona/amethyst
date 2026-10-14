@@ -32,6 +32,7 @@ import com.vitorpamplona.amethyst.commons.model.preferences.CALENDAR_REMINDER_SE
 import com.vitorpamplona.amethyst.commons.model.preferences.CalendarReminderSettingsStore
 import com.vitorpamplona.amethyst.commons.model.preferences.DrawerSectionCollapsePreferences
 import com.vitorpamplona.amethyst.commons.model.preferences.NamecoinSettingsStore
+import com.vitorpamplona.amethyst.commons.model.preferences.NotificationPanelCollapsePreferences
 import com.vitorpamplona.amethyst.commons.model.preferences.OtsSettingsStore
 import com.vitorpamplona.amethyst.commons.model.preferences.PaneWidthPreferences
 import com.vitorpamplona.amethyst.commons.napplet.permissions.NappletPermissionLedger
@@ -86,6 +87,9 @@ interface AppServices {
 
     /** Device-wide widths the user dragged the panes of a wide window to. Never synced. */
     val paneWidthPrefs: PaneWidthPreferences
+
+    /** Device-wide state of the docked notification panel of a wide window: folded away to its bell or expanded. Never synced. */
+    val notificationPanelCollapsePrefs: NotificationPanelCollapsePreferences
 
     /** Posts scheduled for later, across every account on this device. */
     val scheduledPostStore: ScheduledPostStore
