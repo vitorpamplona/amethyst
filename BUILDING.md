@@ -1029,4 +1029,4 @@ internal policy.
 
 - **AUR** (`amethyst-desktop-bin`) — blocked on AUR account ownership decision
 - **Scoop** (Windows) — blocked on bucket strategy (own vs Extras)
-- **Flathub** — deferred (moderate ongoing maintenance)
+- **Flathub** — source-build manifest in `desktopApp/packaging/flatpak/flathub/`, not submitted (see its README section for what is left)
