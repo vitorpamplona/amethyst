@@ -7048,8 +7048,10 @@
     <string name="nip85_score_explainer">एक अवलोकनकर्ता के विश्वासजाल से तथा इस प्रदाता के परिकलन अनुसार। पृथक अवलोकनकर्ताओं के परिणाम तुलनीय नहीं।</string>
     <string name="nip85_rank">श्रेणी</string>
     <string name="nip85_rank_of_100">%1$s प्रति शत</string>
-    <string name="nip85_hop_away">छलाँग दूर</string>
-    <string name="nip85_hops_away">छलाँग दूर</string>
+    <plurals name="nip85_hops_away">
+        <item quantity="one">छलाँग दूर</item>
+        <item quantity="other">छलाँग दूर</item>
+    </plurals>
     <string name="nip85_no_follow_path">कोई ज्ञात अनुगमन पथ नहीं</string>
     <string name="nip85_about">जानकारी</string>
     <string name="nip85_scored">प्राप्तांक</string>
@@ -7120,7 +7122,6 @@
     <string name="dlist_item_in">%1$s में</string>
     <string name="dlist_untitled_item">शीर्षकरहित %1$s</string>
     <string name="dlist_missing_fields">%1$s अनुपलब्ध। जिनकी आवश्यकता है सूची के लिए</string>
-    <string name="dlist_more_values">स %1$d अधिक</string>
     <string name="relay_group_card_public">सार्वजनिक</string>
     <string name="relay_group_card_open_join">कोई भी जुड सकता है</string>
     <string name="marketplace_stall">विपणि</string>

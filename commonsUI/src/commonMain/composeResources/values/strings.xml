@@ -7139,8 +7139,10 @@
     <string name="nip85_score_explainer">From one observer's web of trust, as this provider computed it. Scores from different observers don't compare.</string>
     <string name="nip85_rank">Rank</string>
     <string name="nip85_rank_of_100">%1$s / 100</string>
-    <string name="nip85_hop_away">hop away</string>
-    <string name="nip85_hops_away">hops away</string>
+    <plurals name="nip85_hops_away">
+        <item quantity="one">hop away</item>
+        <item quantity="other">hops away</item>
+    </plurals>
     <string name="nip85_no_follow_path">No known follow path</string>
     <string name="nip85_about">About</string>
     <string name="nip85_scored">Scored</string>
@@ -7211,7 +7213,6 @@
     <string name="dlist_item_in">in %1$s</string>
     <string name="dlist_untitled_item">Untitled %1$s</string>
     <string name="dlist_missing_fields">Missing %1$s, which the list requires</string>
-    <string name="dlist_more_values">+%1$d more</string>
     <string name="relay_group_card_public">Public</string>
     <string name="relay_group_card_open_join">Anyone can join</string>
     <string name="marketplace_stall">Stall</string>
