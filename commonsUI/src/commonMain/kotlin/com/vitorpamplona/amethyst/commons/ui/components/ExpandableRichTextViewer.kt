@@ -24,11 +24,20 @@ import androidx.collection.LruCache
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.FilledTonalButton
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
@@ -39,8 +48,12 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.unit.dp
+import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
+import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.ImmutableListOfLists
 import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.show_less
 import com.vitorpamplona.amethyst.commons.resources.show_more
 import com.vitorpamplona.amethyst.commons.richtext.ExpandableTextCutOffCalculator
 import com.vitorpamplona.amethyst.commons.ui.components.RichTextViewer
@@ -48,8 +61,8 @@ import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.note.getGradient
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.ButtonBorder
-import com.vitorpamplona.amethyst.commons.ui.theme.ButtonPadding
 import com.vitorpamplona.amethyst.commons.ui.theme.StdTopPadding
+import com.vitorpamplona.amethyst.commons.ui.theme.placeholderText
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 
 object ShowFullTextCache {
@@ -94,12 +107,35 @@ fun ExpandableRichTextViewer(
             }
         }
 
-    Box {
+    val canCollapse = showFullText && content.length > whereToCut
+    val gutter = LocalExpandedTextGutter.current
+
+    if (canCollapse && gutter != null) {
+        // The note measures itself in its author column. When it is taller than the feed, "Show
+        // Less" is pinned there while the text scrolls by; otherwise it stays under the text.
+        DisposableEffect(gutter, id) {
+            val collapse: () -> Unit = {
+                showFullText = false
+                ShowFullTextCache.cache.put(id, false)
+            }
+            gutter.register(collapse)
+            onDispose { gutter.unregister(collapse) }
+        }
+    }
+
+    // "Show Less" goes where "Show More" was, under the text, when the note fits on screen or there
+    // is no author column to pin it in (chats, profiles, quotes).
+    val showLessInline = canCollapse && (gutter == null || !gutter.pinned)
+    val revealTop = if (showLessInline && gutter == null) rememberRevealTop() else null
+
+    // One call site for the text in every state: expanding, collapsing or pinning never throws away
+    // what it has laid out (loaded images, players). The inline button sits in the text's padding.
+    Box(modifier = revealTop?.modifier ?: Modifier) {
         RichTextViewer(
             text,
             canPreview,
             quotesLeft,
-            modifier.align(Alignment.TopStart),
+            if (showLessInline) modifier.align(Alignment.TopStart).padding(bottom = ShowLessRowHeight) else modifier.align(Alignment.TopStart),
             tags,
             backgroundColor,
             callbackUri,
@@ -124,8 +160,24 @@ fun ExpandableRichTextViewer(
                 }
             }
         }
+
+        if (showLessInline) {
+            Row(
+                horizontalArrangement = Arrangement.Center,
+                modifier = Modifier.align(Alignment.BottomCenter).fillMaxWidth(),
+            ) {
+                ShowLessButton {
+                    // In a note, bring the whole note back, author row included.
+                    if (gutter != null) gutter.revealNoteTop() else revealTop?.reveal()
+                    showFullText = false
+                    ShowFullTextCache.cache.put(id, false)
+                }
+            }
+        }
     }
 }
+
+private val ShowLessRowHeight = 40.dp
 
 @Composable
 fun ShowMoreButton(onClick: () -> Unit) {
@@ -133,8 +185,32 @@ fun ShowMoreButton(onClick: () -> Unit) {
         modifier = StdTopPadding,
         onClick = onClick,
         shape = ButtonBorder,
-        contentPadding = ButtonPadding,
+        contentPadding = ShowMoreButtonPadding,
     ) {
         Text(text = stringRes(Res.string.show_more))
+        Spacer(Modifier.width(4.dp))
+        Icon(symbol = MaterialSymbols.UnfoldMore, contentDescription = null, modifier = Modifier.size(18.dp))
     }
 }
+
+private val ShowMoreButtonPadding = PaddingValues(start = 16.dp, end = 12.dp, top = 6.dp, bottom = 6.dp)
+
+/**
+ * The quiet half of the [ShowMoreButton] pair: same place, same shape, mirrored icon, but no fill and
+ * a muted color, since collapsing is something people rarely reach for.
+ */
+@Composable
+fun ShowLessButton(onClick: () -> Unit) {
+    TextButton(
+        onClick = onClick,
+        shape = ButtonBorder,
+        contentPadding = ShowLessButtonPadding,
+        colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.placeholderText),
+    ) {
+        Text(text = stringRes(Res.string.show_less), style = MaterialTheme.typography.labelMedium)
+        Spacer(Modifier.width(4.dp))
+        Icon(symbol = MaterialSymbols.UnfoldLess, contentDescription = null, modifier = Modifier.size(16.dp))
+    }
+}
+
+private val ShowLessButtonPadding = PaddingValues(horizontal = 12.dp)

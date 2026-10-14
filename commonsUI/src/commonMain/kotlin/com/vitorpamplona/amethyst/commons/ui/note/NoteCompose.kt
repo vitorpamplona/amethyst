@@ -38,6 +38,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.State
@@ -100,7 +101,10 @@ import com.vitorpamplona.amethyst.commons.resources.private_rumor_info_descripti
 import com.vitorpamplona.amethyst.commons.resources.private_rumor_info_title
 import com.vitorpamplona.amethyst.commons.resources.private_rumor_mark
 import com.vitorpamplona.amethyst.commons.ui.components.ClickableBox
+import com.vitorpamplona.amethyst.commons.ui.components.ExpandedTextGutter
+import com.vitorpamplona.amethyst.commons.ui.components.ExpandedTextGutterState
 import com.vitorpamplona.amethyst.commons.ui.components.GenericLoadable
+import com.vitorpamplona.amethyst.commons.ui.components.LocalExpandedTextGutter
 import com.vitorpamplona.amethyst.commons.ui.components.RobohashFallbackAsyncImage
 import com.vitorpamplona.amethyst.commons.ui.layouts.GenericRepostLayout
 import com.vitorpamplona.amethyst.commons.ui.layouts.NoteComposeLayout
@@ -894,86 +898,96 @@ fun InnerNoteWithReactions(
     val isNotRepost = baseNote.event !is RepostEvent && baseNote.event !is GenericRepostEvent
     val showSecondRow = isNotRepost && notBoostedNorQuote && accountViewModel.settings.isCompleteUIMode()
 
-    NoteComposeLayout(
-        modifier =
-            clickModifier
-                .drawBehind { drawRect(backgroundColor.value) }
-                .fillMaxWidth(),
-        addPadding = !isBoostedNote,
-        showAuthorColumn = notBoostedNorQuote,
-        showSecondRow = showSecondRow,
-        showContentSpacer = isNotRepost,
-        authorPicture = {
-            if (notBoostedNorQuote) {
-                Box(modifier = Size55Modifier, contentAlignment = Alignment.BottomEnd) {
-                    RenderAuthorImages(baseNote, nav, accountViewModel)
+    // A note with an author column takes "Show Less" for its expanded text there. A boosted note
+    // has none and uses its booster's; a quote is its own box, so its text keeps the button inline.
+    val gutter = if (notBoostedNorQuote) remember { ExpandedTextGutterState() } else null
+    val providedGutter = if (isQuotedNote) null else gutter ?: LocalExpandedTextGutter.current
+
+    CompositionLocalProvider(LocalExpandedTextGutter provides providedGutter) {
+        NoteComposeLayout(
+            modifier =
+                clickModifier
+                    .drawBehind { drawRect(backgroundColor.value) }
+                    .fillMaxWidth(),
+            addPadding = !isBoostedNote,
+            showAuthorColumn = notBoostedNorQuote,
+            showSecondRow = showSecondRow,
+            showContentSpacer = isNotRepost,
+            authorPicture = {
+                if (notBoostedNorQuote) {
+                    Box(modifier = Size55Modifier, contentAlignment = Alignment.BottomEnd) {
+                        RenderAuthorImages(baseNote, nav, accountViewModel)
+                    }
                 }
-            }
-        },
-        firstRow = {
-            FirstUserInfoRow(
-                baseNote = baseNote,
-                showAuthorPicture = isQuotedNote,
-                isPinned = isPinned,
-                editState = editState,
-                accountViewModel = accountViewModel,
-                nav = nav,
-                moreOptions = moreOptions,
-            )
-        },
-        secondRow = {
-            if (showSecondRow) {
-                SecondUserInfoRow(
-                    baseNote,
-                    accountViewModel,
-                    nav,
+            },
+            firstRow = {
+                FirstUserInfoRow(
+                    baseNote = baseNote,
+                    showAuthorPicture = isQuotedNote,
+                    isPinned = isPinned,
+                    editState = editState,
+                    accountViewModel = accountViewModel,
+                    nav = nav,
+                    moreOptions = moreOptions,
                 )
-            }
-        },
-        noteContent = {
-            RenderNoteRow(
-                baseNote = baseNote,
-                backgroundColor = backgroundColor,
-                makeItShort = makeItShort,
-                canPreview = canPreview,
-                editState = editState,
-                quotesLeft = quotesLeft,
-                unPackReply = unPackReply,
-                accountViewModel = accountViewModel,
-                nav = nav,
-                isBoostedNote = isBoostedNote,
-            )
-
-            if (!makeItShort) {
-                val noteEvent = baseNote.event
-                val zapSplits = remember(noteEvent) { noteEvent?.hasZapSplitSetupBesidesAuthor() ?: false }
-                if (zapSplits && noteEvent != null) {
-                    Spacer(modifier = HalfDoubleVertSpacer)
-                    DisplayZapSplits(noteEvent, false, accountViewModel, nav)
-                }
-            }
-
-            RenderApprovalIfNeeded(baseNote, accountViewModel, nav)
-        },
-        reactionsRow = {
-            if (isNotRepost && baseNote.event !is DraftWrapEvent) {
-                if (makeItShort) {
-                    Spacer(modifier = DoubleVertSpacer)
-                } else {
-                    ReactionsRow(
-                        baseNote = baseNote,
-                        showReactionDetail = notBoostedNorQuote,
-                        addPadding = !isBoostedNote,
-                        editState = editState,
-                        accountViewModel = accountViewModel,
-                        nav = nav,
+            },
+            secondRow = {
+                if (showSecondRow) {
+                    SecondUserInfoRow(
+                        baseNote,
+                        accountViewModel,
+                        nav,
                     )
                 }
-            } else if (baseNote.event is DraftWrapEvent) {
-                Spacer(modifier = DoubleVertSpacer)
-            }
-        },
-    )
+            },
+            noteContent = {
+                RenderNoteRow(
+                    baseNote = baseNote,
+                    backgroundColor = backgroundColor,
+                    makeItShort = makeItShort,
+                    canPreview = canPreview,
+                    editState = editState,
+                    quotesLeft = quotesLeft,
+                    unPackReply = unPackReply,
+                    accountViewModel = accountViewModel,
+                    nav = nav,
+                    isBoostedNote = isBoostedNote,
+                )
+
+                if (!makeItShort) {
+                    val noteEvent = baseNote.event
+                    val zapSplits = remember(noteEvent) { noteEvent?.hasZapSplitSetupBesidesAuthor() ?: false }
+                    if (zapSplits && noteEvent != null) {
+                        Spacer(modifier = HalfDoubleVertSpacer)
+                        DisplayZapSplits(noteEvent, false, accountViewModel, nav)
+                    }
+                }
+
+                RenderApprovalIfNeeded(baseNote, accountViewModel, nav)
+            },
+            reactionsRow = {
+                if (isNotRepost && baseNote.event !is DraftWrapEvent) {
+                    if (makeItShort) {
+                        Spacer(modifier = DoubleVertSpacer)
+                    } else {
+                        ReactionsRow(
+                            baseNote = baseNote,
+                            showReactionDetail = notBoostedNorQuote,
+                            addPadding = !isBoostedNote,
+                            editState = editState,
+                            accountViewModel = accountViewModel,
+                            nav = nav,
+                        )
+                    }
+                } else if (baseNote.event is DraftWrapEvent) {
+                    Spacer(modifier = DoubleVertSpacer)
+                }
+            },
+            authorGutter = {
+                if (gutter != null) ExpandedTextGutter(gutter)
+            },
+        )
+    }
 }
 
 @Composable

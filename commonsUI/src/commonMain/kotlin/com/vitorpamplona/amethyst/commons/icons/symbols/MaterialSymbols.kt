@@ -261,6 +261,8 @@ object MaterialSymbols {
     val Translate = MaterialSymbol("\uE8E2")
     val TravelExplore = MaterialSymbol("\uE2DB")
     val Tune = MaterialSymbol("\uE429")
+    val UnfoldLess = MaterialSymbol("\uE5D6")
+    val UnfoldMore = MaterialSymbol("\uE5D7")
     val Upload = MaterialSymbol("\uF09B")
     val VideoLibrary = MaterialSymbol("\uE04A")
     val VideoSettings = MaterialSymbol("\uEA75")

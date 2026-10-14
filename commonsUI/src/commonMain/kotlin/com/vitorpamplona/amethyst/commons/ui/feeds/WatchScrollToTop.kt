@@ -43,6 +43,8 @@ fun WatchScrollToTop(
             feedContentState.sentToTop()
         }
     }
+
+    ReportToBackToTop(listState) { feedContentState.sendToTop() }
 }
 
 @Composable
@@ -58,6 +60,8 @@ fun WatchScrollToTop(
             feedContentState.sentToTop()
         }
     }
+
+    ReportToBackToTop(listState) { feedContentState.sendToTop() }
 }
 
 @Composable
@@ -88,4 +92,6 @@ fun WatchScrollToTop(
             feedContent.sentToTop()
         }
     }
+
+    ReportToBackToTop(listState) { feedContent.sendToTop() }
 }
