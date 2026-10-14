@@ -118,7 +118,9 @@ class MediaCompressor {
         } catch (e: Exception) {
             if (e is CancellationException) {
                 // The copy of the original is a full-size file in the cache.
-                tempFile?.delete()
+                if (tempFile?.delete() == false) {
+                    Log.w("MediaCompressor") { "Failed to delete temp file: ${tempFile.absolutePath}" }
+                }
                 throw e
             }
             Log.d("MediaCompressor") { "Image compression failed: ${e.message}" }
