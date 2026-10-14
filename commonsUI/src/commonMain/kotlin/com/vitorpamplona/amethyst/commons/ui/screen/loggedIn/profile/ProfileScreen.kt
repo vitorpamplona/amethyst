@@ -45,6 +45,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Tab
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
@@ -88,6 +89,9 @@ import com.vitorpamplona.amethyst.commons.resources.notes
 import com.vitorpamplona.amethyst.commons.resources.profile_tab_apps
 import com.vitorpamplona.amethyst.commons.resources.replies
 import com.vitorpamplona.amethyst.commons.ui.components.rememberViewModel
+import com.vitorpamplona.amethyst.commons.ui.feeds.BackToTopButton
+import com.vitorpamplona.amethyst.commons.ui.feeds.BackToTopState
+import com.vitorpamplona.amethyst.commons.ui.feeds.LocalBackToTop
 import com.vitorpamplona.amethyst.commons.ui.feeds.UserBlockedFeed
 import com.vitorpamplona.amethyst.commons.ui.feeds.WatchLifecycleAndUpdateModel
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
@@ -337,6 +341,9 @@ fun ProfileScreen(
     val scrollState = rememberScrollState()
     val coroutineScope = rememberCoroutineScope()
 
+    // The tabs' feeds report here. Going back to the top also brings the profile header back.
+    val backToTop = remember { BackToTopState { coroutineScope.launch { scrollState.animateScrollTo(0) } } }
+
     Scaffold(
         topBar = {
             ProfileTopBar(baseUser, accountViewModel, nav)
@@ -358,29 +365,32 @@ fun ProfileScreen(
                 }
             }
         },
+        floatingActionButton = { BackToTopButton(backToTop) },
     ) { padding ->
         Box(modifier = Modifier.padding(bottom = padding.calculateBottomPadding())) {
             RenderSurface(scrollState) { tabRowModifier: Modifier, pagerModifier: Modifier ->
-                RenderScreen(
-                    baseUser,
-                    tabRowModifier,
-                    pagerModifier,
-                    threadsViewModel,
-                    repliesViewModel,
-                    mutualViewModel,
-                    appRecommendations,
-                    externalIdentities,
-                    followsFeedViewModel,
-                    followersFeedViewModel,
-                    zapFeedViewModel,
-                    bookmarksFeedViewModel,
-                    pinnedNotesFeedViewModel,
-                    galleryFeedViewModel,
-                    reportsFeedViewModel,
-                    appsFeedViewModel,
-                    accountViewModel,
-                    nav,
-                )
+                CompositionLocalProvider(LocalBackToTop provides backToTop) {
+                    RenderScreen(
+                        baseUser,
+                        tabRowModifier,
+                        pagerModifier,
+                        threadsViewModel,
+                        repliesViewModel,
+                        mutualViewModel,
+                        appRecommendations,
+                        externalIdentities,
+                        followsFeedViewModel,
+                        followersFeedViewModel,
+                        zapFeedViewModel,
+                        bookmarksFeedViewModel,
+                        pinnedNotesFeedViewModel,
+                        galleryFeedViewModel,
+                        reportsFeedViewModel,
+                        appsFeedViewModel,
+                        accountViewModel,
+                        nav,
+                    )
+                }
             }
         }
     }

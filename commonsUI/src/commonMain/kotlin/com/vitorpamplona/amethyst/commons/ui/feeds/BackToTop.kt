@@ -60,7 +60,10 @@ import kotlinx.coroutines.launch
  * scrolled is the target, so a screen with tabs or a pager follows the page being read.
  */
 @Stable
-class BackToTopState {
+class BackToTopState(
+    /** Runs after the feed is sent to top, for screens that also scroll something around it. */
+    private val onSendToTop: () -> Unit = {},
+) {
     private var active by mutableStateOf<BackToTopEntry?>(null)
 
     /** The button shows while the feed being read is scrolled well past its top. */
@@ -68,6 +71,7 @@ class BackToTopState {
 
     fun sendToTop() {
         active?.sendToTop?.invoke()
+        onSendToTop()
     }
 
     internal fun activate(entry: BackToTopEntry) {
