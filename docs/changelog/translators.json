@@ -8,6 +8,9 @@
     "  Keys match case-insensitively against the Crowdin username; a numeric key",
     "  matches the Crowdin user id.",
     "",
+    "ignore: Crowdin usernames never credited, such as the maintainer account",
+    "  that uploads machine translations and key removals. Hand-kept.",
+    "",
     "sinceLastTag: a rolling snapshot of who has translated since the last release",
     "  tag. Each entry is { user, languages }. Refreshed on every --seed run; do",
     "  not hand-edit. The changelog '## Translations' block is generated offline",
@@ -75,6 +78,9 @@
     "crowdin.pretended462": "",
     "rchk": ""
   },
+  "ignore": [
+    "vitorpamplona"
+  ],
   "sinceLastTag": {
     "tag": "v1.18.0",
     "since": "2026-10-11T15:09:13-04:00",

@@ -43,6 +43,8 @@ comment and fill in the sections below; drop any section that doesn't apply.
 
 ## Contributors
 
+<!-- Generate with scripts/contributors.sh; credit anyone it lists as UNMAPPED by hand. -->
+
 - @npub1gcxzte5zlkncx26j68ez60fzkvtkm9e0vrwdcvsjakxf9mu9qewqlfnj5z
 - @npub1e2yuky03caw4ke3zy68lg0fz3r4gkt94hx4fjmlelacyljgyk79svn3eef
 - @npub12cfje6nl2nuxplcqfvhg7ljt89fmpj0n0fd24zxsukja5qm9wmtqd7y76c
@@ -52,6 +54,8 @@ comment and fill in the sections below; drop any section that doesn't apply.
 - @npub1ncff8m25y0c058xdljmxhpr4lxetzjpea6uq9733qmp4slfts43qawj87x
 
 ## Translations
+
+<!-- Generate with scripts/translators.sh. -->
 
 - Czech, German, Swedish, and Portuguese by @npub1e2yuky03caw4ke3zy68lg0fz3r4gkt94hx4fjmlelacyljgyk79svn3eef
 - Hungarian by @npub1dnvslq0vvrs8d603suykc4harv94yglcxwna9sl2xu8grt2afm3qgfh0tp
