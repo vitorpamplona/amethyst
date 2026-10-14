@@ -175,8 +175,8 @@ checked 2026-10-09:
    v1.17 desktop distributable: `resource-exec-tor` (a `tor` executable),
    `secp256k1-kmp-jni-jvm-linux`, `jna`, `sqlite-bundled-jvm`,
    `mediaplayer-jvm`, `nucleus.notification-linux` and Skiko's runtime.
-3. **Screenshot.** The metainfo needs at least one screenshot of the Linux
-   app (see the commented-out `<screenshots>` block).
+3. **Screenshot.** Done: the metainfo lists `docs/screenshots/desktop-home.png`,
+   the 1.19.0 Linux build's home feed, from a commit-pinned URL.
 4. **Domain verification.** `com.vitorpamplona.amethyst.Amethyst` is verified by
    serving the token Flathub provides at
    `https://vitorpamplona.com/.well-known/org.flathub.VerifiedApps.txt`.
