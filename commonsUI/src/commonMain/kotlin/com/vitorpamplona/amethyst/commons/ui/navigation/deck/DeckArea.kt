@@ -148,7 +148,8 @@ fun DeckArea(
     val layout by settings.deck.collectAsState()
     val columns = layout.current.columns
     val scroll = rememberScrollState()
-    val density = LocalDensity.current
+    // Read through state: the command collector below outlives a move to a screen of another density.
+    val density by rememberUpdatedState(LocalDensity.current)
 
     var picking by remember { mutableStateOf(false) }
     var naming by remember { mutableStateOf(false) }
@@ -432,6 +433,15 @@ private fun columnChoices(myPubKey: String): List<Pair<StringResource, Route>> =
         Res.string.deck_column_settings to Route.AllSettings,
     )
 
+/**
+ * The hashtag a typed [input] names, lowercased like every other way into a hashtag feed, or null
+ * when it is not one word: "a b" or "#a #b" would make a column that matches nothing.
+ */
+internal fun columnHashtag(input: String): String? {
+    val tag = input.trim().removePrefix("#").lowercase()
+    return tag.takeIf { it.isNotEmpty() && it.none { c -> c.isWhitespace() || c == '#' } }
+}
+
 @Composable
 private fun AddColumnDialog(
     myPubKey: String,
@@ -439,7 +449,7 @@ private fun AddColumnDialog(
     onDismiss: () -> Unit,
 ) {
     var hashtag by remember { mutableStateOf("") }
-    val tag = hashtag.trim().removePrefix("#")
+    val tag = columnHashtag(hashtag)
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text(stringRes(Res.string.deck_add_column)) },
@@ -461,13 +471,13 @@ private fun AddColumnDialog(
                     label = { Text(stringRes(Res.string.deck_column_hashtag)) },
                     singleLine = true,
                     keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
-                    keyboardActions = KeyboardActions(onDone = { if (tag.isNotBlank()) onPick(Route.Hashtag(tag)) }),
+                    keyboardActions = KeyboardActions(onDone = { if (tag != null) onPick(Route.Hashtag(tag)) }),
                     modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
                 )
             }
         },
         confirmButton = {
-            TextButton(onClick = { onPick(Route.Hashtag(tag)) }, enabled = tag.isNotBlank()) { Text(stringRes(Res.string.deck_add_column)) }
+            TextButton(onClick = { if (tag != null) onPick(Route.Hashtag(tag)) }, enabled = tag != null) { Text(stringRes(Res.string.deck_add_column)) }
         },
         dismissButton = { TextButton(onClick = onDismiss) { Text(stringRes(Res.string.cancel)) } },
     )
