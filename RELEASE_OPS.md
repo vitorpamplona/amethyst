@@ -237,22 +237,45 @@ out of the config: either makes the tool sign a kind 0 that replaces
 Amethyst's Nostr profile.
 
 **One-time setup.**
-- Build the tool at a tag and keep the binary (Rust; `rust-toolchain.toml`
-  pins the toolchain):
-  ```bash
-  git clone --branch v0.1.2 https://github.com/Letdown2491/orchard
-  cargo build --release -p orchard-publish --manifest-path orchard/Cargo.toml
-  cp orchard/target/release/orchard-publish ~/.local/bin/   # anywhere on PATH
-  ```
 - Let your `gh` login push to ghcr: `gh auth refresh -s write:packages`. The
-  image goes to `ghcr.io/vitorpamplona/amethyst-flatpak`. After the first push, make that package **public** in its settings: ghcr
-  packages start private, and Orchard cannot pull a private one.
+  image goes to `ghcr.io/vitorpamplona/amethyst-flatpak`. ghcr packages start
+  private and Orchard cannot pull a private one; this one was made **public**
+  after its first push (v1.19.0). A new package would need the same.
 - `orchard.txt` at the repo root names Amethyst's npub. Orchard reads it from
   the default branch to show the repository link as verified. Update it if the
   signing key ever changes. Don't use the tool's `--prove`: it commits that
   file itself.
 
-**Each release**, after the GH Release assets exist. Run it once per arch; both
+**Each release**, after the GH Release assets exist, from the repo root on any
+machine with Docker, macOS included:
+
+```bash
+desktopApp/packaging/orchard/docker/publish-orchard.sh dry    # throwaway key; nothing leaves
+desktopApp/packaging/orchard/docker/publish-orchard.sh live
+```
+
+`ostree` and `flatpak`, which unpack the release bundles, only exist on Linux,
+so the script runs everything in a container
+([`desktopApp/packaging/orchard/docker/`](desktopApp/packaging/orchard/docker/)):
+it builds `orchard-publish` from Orchard's pinned tag (several minutes the
+first time, cached after), downloads both `linux-*.flatpak` assets of the
+version in `gradle/libs.versions.toml` into `build/orchard/`, and publishes both
+arches. `live` first checks that the key's npub is the one `orchard.txt` names
+and refuses to push or send anything otherwise. It reads the nsec from
+`ORCHARD_NSEC`, or from `~/.orchard-nsec`; create that file in your own shell
+(the script's header has the zsh and bash lines) and delete it afterwards. The
+log lands in `build/orchard/live.log`.
+
+**By hand on Linux**, without Docker: build the tool at a tag and keep the
+binary (Rust; `rust-toolchain.toml` pins the toolchain):
+
+```bash
+git clone --branch v0.1.2 https://github.com/Letdown2491/orchard
+cargo build --release -p orchard-publish --manifest-path orchard/Cargo.toml
+cp orchard/target/release/orchard-publish ~/.local/bin/   # anywhere on PATH
+```
+
+Then, each release, run it once per arch; both
 runs sign the same listing. The tree comes straight out of the release bundle
 with `ostree`, so nothing is rebuilt and no runtime is installed:
 
