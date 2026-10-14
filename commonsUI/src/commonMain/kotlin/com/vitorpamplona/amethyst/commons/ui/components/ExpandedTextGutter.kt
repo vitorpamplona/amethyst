@@ -54,6 +54,7 @@ import androidx.compose.ui.layout.layout
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.positionInWindow
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalWindowInfo
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -95,8 +96,9 @@ private val GutterButtonTopMargin = 8.dp
 
 /**
  * Emits nothing while the text is collapsed, so the note lays out no gutter at all. While expanded,
- * a thin track spans the column and the button stays pinned to the top of what is visible of the
- * note, until the note's bottom pushes it up.
+ * and only when the note is taller than the feed can show at once, a thin track spans the column and
+ * the button stays pinned to the top of what is visible of the note, until the note's bottom pushes
+ * it up. A note that fits on screen gets no button: it is read in one look and scrolled past.
  */
 @Composable
 fun ExpandedTextGutter(state: ExpandedTextGutterState) {
@@ -108,6 +110,7 @@ fun ExpandedTextGutter(state: ExpandedTextGutterState) {
 private fun StickyShowLessButton(collapse: () -> Unit) {
     val viewport = LocalZoomViewport.current
     val topBarHeight = rememberTopBarHeightPx()
+    val feedHeight = rememberFeedHeightPx()
     val tracker = remember { GutterTracker() }
     val dispatcher = remember { NestedScrollDispatcher() }
 
@@ -119,6 +122,8 @@ private fun StickyShowLessButton(collapse: () -> Unit) {
                 .onGloballyPositioned { tracker.onPositioned(it) },
         contentAlignment = Alignment.TopCenter,
     ) {
+        if (tracker.noteHeight <= feedHeight) return@Box
+
         Box(
             Modifier
                 .padding(top = GutterButtonTopMargin)
@@ -181,9 +186,14 @@ private class GutterTracker {
     // Bumped every time the gutter moves on screen, so the button's placement runs again.
     private var moves by mutableIntStateOf(0)
 
+    /** The whole note's height: the button only shows when the note is taller than the feed. */
+    var noteHeight by mutableIntStateOf(0)
+        private set
+
     fun onPositioned(coordinates: LayoutCoordinates) {
         this.coordinates = coordinates
         moves++
+        noteHeight = (coordinates.parentLayoutCoordinates ?: coordinates).size.height
     }
 
     /** How far down the gutter the button sits: the visible top, kept inside the gutter. */
@@ -234,6 +244,17 @@ internal fun rememberTopBarHeightPx(): Float {
     val topPadding = LocalDisappearingScaffoldPadding.current.calculateTopPadding()
     val density = LocalDensity.current
     return remember(topPadding, density) { with(density) { topPadding.toPx() } }
+}
+
+/** How much of the feed shows at once with its bars in place: the window minus the bars, in pixels. */
+@Composable
+private fun rememberFeedHeightPx(): Int {
+    val windowHeight = LocalWindowInfo.current.containerSize.height
+    val padding = LocalDisappearingScaffoldPadding.current
+    val density = LocalDensity.current
+    return remember(windowHeight, padding, density) {
+        with(density) { windowHeight - (padding.calculateTopPadding() + padding.calculateBottomPadding()).roundToPx() }
+    }
 }
 
 /** The top of what shows of this layout: clipped by its scrolling parents and by bars drawn over them. */
