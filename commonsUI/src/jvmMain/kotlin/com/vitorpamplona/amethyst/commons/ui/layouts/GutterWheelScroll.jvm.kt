@@ -24,7 +24,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.awt.awtEventOrNull
 import androidx.compose.ui.input.pointer.PointerEvent
-import androidx.compose.ui.platform.LocalDensity
 import java.awt.event.MouseEvent
 import java.awt.event.MouseWheelEvent
 import javax.swing.SwingUtilities
@@ -32,14 +31,15 @@ import kotlin.math.roundToInt
 
 /** Posts a copy of the AWT wheel event, after the current one is handled, to the same component. */
 @Composable
-internal actual fun rememberWheelRedispatcher(): (event: PointerEvent, dxPx: Float) -> Unit {
-    // AWT measures in points; Compose's density is pixels per point.
-    val scale = LocalDensity.current.density
-    return remember(scale) {
+internal actual fun rememberWheelRedispatcher(): (event: PointerEvent, dxPx: Float) -> Unit =
+    remember {
         { event, dxPx ->
             val wheel = event.awtEventOrNull as? MouseWheelEvent
             val target = wheel?.component
             if (wheel != null && target != null) {
+                // AWT measures in points; its scale is pixels per point. Not Compose's density, which
+                // a desktop app may raise past AWT's to draw at a scale AWT can't (fractional on X11).
+                val scale = target.graphicsConfiguration?.defaultTransform?.scaleX ?: 1.0
                 val dx = (dxPx / scale).roundToInt()
                 val moved =
                     MouseWheelEvent(
@@ -81,4 +81,3 @@ internal actual fun rememberWheelRedispatcher(): (event: PointerEvent, dxPx: Flo
             }
         }
     }
-}

@@ -30,22 +30,35 @@ import coil3.request.Options
 import org.jetbrains.skia.Bitmap
 import org.jetbrains.skia.Codec
 import org.jetbrains.skia.Data
+import org.jetbrains.skia.Image
 
 class SkiaGifDecoder(
     private val source: ImageSource,
+    private val options: Options,
 ) : Decoder {
     override suspend fun decode(): DecodeResult {
         val bytes = source.source().use { it.readByteArray() }
-        val data = Data.makeFromBytes(bytes)
-        val codec = Codec.makeFromData(data)
-        val bitmap = Bitmap()
-        bitmap.allocN32Pixels(codec.width, codec.height)
-        codec.readPixels(bitmap, 0)
-        bitmap.setImmutable()
-        return DecodeResult(
-            image = bitmap.asImage(),
-            isSampled = false,
-        )
+        val bitmap =
+            Data.makeFromBytes(bytes).use { data ->
+                Codec.makeFromData(data).use { codec ->
+                    Bitmap().apply {
+                        allocN32Pixels(codec.width, codec.height)
+                        codec.readPixels(this, 0)
+                        setImmutable()
+                    }
+                }
+            }
+
+        val (width, height) = decodedSize(bitmap.width, bitmap.height, options)
+        if (width == bitmap.width && height == bitmap.height) return DecodeResult(image = bitmap.asImage(), isSampled = false)
+
+        // Shrunk to the drawn size like every other image (see SkiaDownsamplingDecoder). The bitmap
+        // is immutable, so the image shares its pixels instead of copying them.
+        try {
+            return Image.makeFromBitmap(bitmap).use { downsample(it, options) }
+        } finally {
+            bitmap.close()
+        }
     }
 
     class Factory : Decoder.Factory {
@@ -56,7 +69,7 @@ class SkiaGifDecoder(
         ): Decoder? {
             val mimeType = result.mimeType ?: return null
             if (mimeType != "image/gif") return null
-            return SkiaGifDecoder(result.source)
+            return SkiaGifDecoder(result.source, options)
         }
     }
 }

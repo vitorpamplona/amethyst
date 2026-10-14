@@ -63,6 +63,8 @@ object DesktopImageLoaderSetup {
                 add(TorAwareOkHttpFactory(clientForUrl))
                 add(SvgDecoder.Factory())
                 add(SkiaGifDecoder.Factory())
+                // After the SVG and GIF decoders: it takes any format, so it must come last.
+                add(SkiaDownsamplingDecoder.Factory())
                 add(Base64Fetcher.Factory)
                 add(BlurHashFetcher.Factory)
                 add(SnoFetcher.Factory)

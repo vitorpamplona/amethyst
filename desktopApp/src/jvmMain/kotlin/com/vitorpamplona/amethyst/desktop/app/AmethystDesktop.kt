@@ -66,6 +66,7 @@ import com.vitorpamplona.amethyst.desktop.platform.AmethystWindowExceptionHandle
 import com.vitorpamplona.amethyst.desktop.platform.AppWindow
 import com.vitorpamplona.amethyst.desktop.platform.DesktopDrawerMetrics
 import com.vitorpamplona.amethyst.desktop.platform.DesktopTypography
+import com.vitorpamplona.amethyst.desktop.platform.DesktopUiScale
 import com.vitorpamplona.amethyst.desktop.platform.IconResources
 import com.vitorpamplona.amethyst.desktop.platform.PlatformAppearance
 import com.vitorpamplona.amethyst.desktop.platform.PlatformFonts
@@ -121,6 +122,8 @@ fun main(args: Array<String>) {
     // Linux: native Wayland when the session has it. Like the macOS properties below, it must be
     // decided before AWT starts.
     WaylandDisplay.configure()
+    // X11: the desktop's scale (Xft.dpi), read while nothing else talks to the X server yet.
+    DesktopUiScale.readXResources()
 
     // macOS: the menu bar goes to the top of the screen, under the app's own name. Both must be set
     // before AWT starts.

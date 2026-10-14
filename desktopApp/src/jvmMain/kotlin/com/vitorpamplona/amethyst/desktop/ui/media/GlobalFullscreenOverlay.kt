@@ -47,7 +47,6 @@ import androidx.compose.ui.input.key.onKeyEvent
 import androidx.compose.ui.input.key.type
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.onGloballyPositioned
-import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.DpSize
 import androidx.compose.ui.unit.dp
@@ -60,6 +59,7 @@ import com.vitorpamplona.amethyst.commons.ui.components.zoomTransitionContainer
 import com.vitorpamplona.amethyst.commons.ui.components.zoomTransitionLayer
 import com.vitorpamplona.amethyst.desktop.platform.AppWindow
 import com.vitorpamplona.amethyst.desktop.platform.WaylandDisplay
+import com.vitorpamplona.amethyst.desktop.platform.awtPixelScale
 import com.vitorpamplona.amethyst.desktop.service.media.GlobalMediaPlayer
 import com.vitorpamplona.amethyst.desktop.service.media.MediaPlaybackState
 import io.github.kdroidfilter.composemediaplayer.VideoPlayerSurface
@@ -86,7 +86,8 @@ fun GlobalFullscreenOverlay() {
 
     val mainWindow = LocalAwtWindow.current
     val isImmersiveFullscreen = LocalIsImmersiveFullscreen.current
-    val density = LocalDensity.current.density
+    // Pixels per AWT unit, to turn the window's AWT position into the overlay's pixels.
+    val awtScale = awtPixelScale(mainWindow)
 
     // The screen the app's window is on, in the units windows are placed in.
     val device = remember { mainWindow?.graphicsConfiguration?.device ?: GraphicsEnvironment.getLocalGraphicsEnvironment().defaultScreenDevice }
@@ -98,7 +99,7 @@ fun GlobalFullscreenOverlay() {
     val card = remember { GlobalMediaPlayer.fullscreenSource }
     val source: () -> ZoomSource? = {
         val origin = mainWindow?.takeUnless { WaylandDisplay.isActive }?.locationOnScreen
-        if (origin != null) card?.capture()?.translate((origin.x - screen.x) * density, (origin.y - screen.y) * density) else null
+        if (origin != null) card?.capture()?.translate((origin.x - screen.x) * awtScale, (origin.y - screen.y) * awtScale) else null
     }
     val cornerRadius = remember { GlobalMediaPlayer.fullscreenSourceCornerRadius }
 
