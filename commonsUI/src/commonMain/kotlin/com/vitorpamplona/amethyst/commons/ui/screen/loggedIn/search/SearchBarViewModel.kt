@@ -37,11 +37,13 @@ import com.vitorpamplona.amethyst.commons.model.Account
 import com.vitorpamplona.amethyst.commons.model.User
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
 import com.vitorpamplona.amethyst.commons.model.navigation.Route
+import com.vitorpamplona.amethyst.commons.relayClient.search.ResolvedSearchAuthors
 import com.vitorpamplona.amethyst.commons.relayClient.search.SearchQueryState
 import com.vitorpamplona.amethyst.commons.search.RenderableKinds
 import com.vitorpamplona.amethyst.commons.search.SearchHistory
 import com.vitorpamplona.amethyst.commons.search.SearchHistoryStorage
 import com.vitorpamplona.amethyst.commons.search.SearchPipeline
+import com.vitorpamplona.amethyst.commons.search.SearchQuery
 import com.vitorpamplona.amethyst.commons.search.SearchResultKind
 import com.vitorpamplona.amethyst.commons.search.SearchScope
 import com.vitorpamplona.amethyst.commons.search.SearchSortOrder
@@ -53,6 +55,7 @@ import com.vitorpamplona.amethyst.commons.ui.note.creators.userSuggestions.userU
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.relays.common.relaySetupInfoBuilder
 import com.vitorpamplona.quartz.buzz.invite.BuzzInviteLink
 import com.vitorpamplona.quartz.experimental.ephemChat.chat.EphemeralChatEvent
+import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.toHexKey
 import com.vitorpamplona.quartz.nip01Core.metadata.MetadataEvent
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
@@ -62,9 +65,11 @@ import com.vitorpamplona.quartz.nip02FollowList.petnames.PetnamePath
 import com.vitorpamplona.quartz.nip02FollowList.petnames.PetnameResolver
 import com.vitorpamplona.quartz.nip05DnsIdentifiers.INip05Client
 import com.vitorpamplona.quartz.nip05DnsIdentifiers.Nip05Id
+import com.vitorpamplona.quartz.nip05DnsIdentifiers.namecoin.NamecoinNameResolver
 import com.vitorpamplona.quartz.nip10Notes.content.findHashtags
 import com.vitorpamplona.quartz.nip19Bech32.Nip19Parser
 import com.vitorpamplona.quartz.nip19Bech32.decodeEventIdAsHexOrNull
+import com.vitorpamplona.quartz.nip19Bech32.decodePublicKeyAsHexOrNull
 import com.vitorpamplona.quartz.nip19Bech32.entities.Entity
 import com.vitorpamplona.quartz.nip19Bech32.entities.IPubKeyEntity
 import com.vitorpamplona.quartz.nip19Bech32.entities.NAddress
@@ -73,6 +78,7 @@ import com.vitorpamplona.quartz.nip19Bech32.entities.NNote
 import com.vitorpamplona.quartz.nip19Bech32.entities.NProfile
 import com.vitorpamplona.quartz.nip19Bech32.entities.NPub
 import com.vitorpamplona.quartz.nip19Bech32.entities.NSec
+import com.vitorpamplona.quartz.nip34Git.repository.GitRepositoryEvent
 import com.vitorpamplona.quartz.utils.Hex
 import com.vitorpamplona.quartz.utils.Rfc3986
 import com.vitorpamplona.quartz.utils.startsWithAny
@@ -108,6 +114,12 @@ import kotlin.reflect.KClass
 class SearchBarViewModel(
     val account: Account,
     val nip05Client: INip05Client,
+    /**
+     * The `.bit` / `d/` / `id/` resolver behind the Namecoin lookups. Held beside [nip05Client]
+     * because the NIP-05 grammar cannot express a `d/<name>` or `id/<name>` identifier, so those
+     * two namespaces are resolved here directly.
+     */
+    val namecoinResolver: NamecoinNameResolver,
     /** Where this device keeps what has been searched for; see [history]. */
     historyStorage: SearchHistoryStorage,
     /**
@@ -224,6 +236,86 @@ class SearchBarViewModel(
             .map { it.text }
             .onEach(::updateDataSource)
             .stateIn(viewModelScope, SharingStarted.Eagerly, searchValue)
+
+    /**
+     * The author identifiers a `kind:git` query carries in its free text, resolved to pubkeys —
+     * the asynchronous half of the git-author lookup, keyed by term for
+     * [SearchFilterBuilder][com.vitorpamplona.amethyst.commons.search.SearchFilterBuilder]'s
+     * synchronous npub half.
+     *
+     * `kind:git name.bit` and `kind:git alice@example.com` name a person the event itself never
+     * spells out: a repository announcement holds the author's hex key and a `maintainers` tag
+     * of more hex, so neither NIP-50 nor the cache's tag scan can match the name the reader
+     * typed. Resolving the term to its pubkey turns the query back into an index lookup —
+     * `authors` — which is what "show me this person's repositories" always meant.
+     *
+     * The resolution feeds both halves of the screen: the cache scan below reads it through
+     * [searchResultsNotes]' combine, and the relay REQs through [searchDataSourceState] — the
+     * moment a lookup lands, the merged flow there re-issues the subscription with the author
+     * filter in place.
+     */
+    @OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)
+    val resolvedSearchAuthors: StateFlow<Map<String, HexKey>> =
+        state.debounced
+            .mapLatest { input -> resolveGitAuthorTerms(input.text, input.query) }
+            .onEach { resolution ->
+                searchDataSourceState.resolvedSearchAuthors.value =
+                    ResolvedSearchAuthors(resolution.first, resolution.second)
+            }.map { it.second }
+            .flowOn(Dispatchers.IO)
+            .stateIn(viewModelScope, SharingStarted.Eagerly, emptyMap())
+
+    /**
+     * The git-author terms of [query], resolved where a resolver exists. Only terms the query
+     * names in its free text are tried, and only when the query is git-scoped — outside
+     * `kind:git` an npub is content (see [SearchFilterBuilder][com.vitorpamplona.amethyst.commons.search.SearchFilterBuilder])
+     * and a bare domain is the Namecoin row's lookup, not an author filter.
+     */
+    private suspend fun resolveGitAuthorTerms(
+        queryText: String,
+        query: SearchQuery,
+    ): Pair<String, Map<String, HexKey>> {
+        if (GitRepositoryEvent.KIND !in query.kinds) return queryText to emptyMap()
+        val terms = query.text.split(' ').filter { it.isNotBlank() && !it.startsWith('"') }
+        if (terms.isEmpty()) return queryText to emptyMap()
+
+        val resolved = LinkedHashMap<String, HexKey>()
+        terms.forEach { term ->
+            when {
+                // npub/nprofile/hex: SearchFilterBuilder decodes these itself at filter-build
+                // time; mirroring the term here would only key the map, so skip it.
+                decodePublicKeyAsHexOrNull(term) != null -> Unit
+
+                // NIP-05 — `alice@example.com`, a bare domain, and every `.bit` spelling of
+                // either. The client routes `.bit` through the Namecoin resolver itself.
+                Nip05Id.parse(term) != null ->
+                    Nip05Id.parse(term)?.let { nip05 ->
+                        runCatching { nip05Client.get(nip05) }
+                            .onFailure { if (it is CancellationException) throw it }
+                            .getOrNull()
+                            ?.let { info ->
+                                resolved[term] = info.pubkey
+                                info.relays.forEach { relay ->
+                                    relay.normalizeRelayUrlOrNull()?.let { account.cache.relayHints.addKey(info.pubkey, it) }
+                                }
+                            }
+                    }
+
+                // The Namecoin-only shapes the NIP-05 grammar rejects: `d/<name>`, `id/<name>`.
+                NamecoinNameResolver.isNamecoinIdentifier(term) ->
+                    runCatching { namecoinResolver.resolve(term) }
+                        .onFailure { if (it is CancellationException) throw it }
+                        .getOrNull()
+                        ?.let { result ->
+                            resolved[term] = result.pubkey
+                            result.relays.forEach { relay ->
+                                relay.normalizeRelayUrlOrNull()?.let { account.cache.relayHints.addKey(result.pubkey, it) }
+                            }
+                        }
+            }
+        }
+        return queryText to resolved
+    }
 
     @Suppress("unused")
     val sourceWatcher =
@@ -408,10 +500,11 @@ class SearchBarViewModel(
             refreshes,
             scope,
             sortOrder,
-            combine(followsOnly, account.kind3FollowList.flow) { only, follows ->
-                if (only) follows.authorsPlusMe else null
+            combine(resolvedSearchAuthors, followsOnly, account.kind3FollowList.flow) { resolved, only, follows ->
+                resolved to if (only) follows.authorsPlusMe else null
             },
-        ) { input, _, currentScope, order, follows ->
+        ) { input, _, currentScope, order, resolvedAndFollows ->
+            val (resolvedAuthors, follows) = resolvedAndFollows
             if (!currentScope.shows(SearchResultKind.NOTES)) return@combine emptyList()
 
             // The same filters the REQ carries, run against the cache — so `from:`, `to:`,
@@ -447,7 +540,7 @@ class SearchBarViewModel(
                         // ever asked for. Asked flat rather than in RenderableKinds.GROUPS: the
                         // groups exist for a relay's per-filter cap, and a cache has none.
                         LocalCache.findNotesMatching(
-                            SearchPipeline.filters(parsed, RenderableKinds.ALL, limit = 200),
+                            SearchPipeline.filters(parsed, RenderableKinds.ALL, limit = 200, resolvedAuthors = resolvedAuthors),
                             account.hiddenUsers.flow.value,
                         )
                 }
@@ -682,6 +775,7 @@ class SearchBarViewModel(
     class Factory(
         val account: Account,
         val nip05: INip05Client,
+        val namecoinResolver: NamecoinNameResolver,
         val historyStorage: SearchHistoryStorage,
         val initialQuery: String? = null,
     ) : ViewModelProvider.Factory {
@@ -689,7 +783,7 @@ class SearchBarViewModel(
         override fun <T : ViewModel> create(
             modelClass: KClass<T>,
             extras: CreationExtras,
-        ): T = SearchBarViewModel(account, nip05, historyStorage, initialQuery) as T
+        ): T = SearchBarViewModel(account, nip05, namecoinResolver, historyStorage, initialQuery) as T
     }
 }
 

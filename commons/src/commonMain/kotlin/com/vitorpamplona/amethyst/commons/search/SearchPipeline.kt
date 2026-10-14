@@ -21,6 +21,7 @@
 package com.vitorpamplona.amethyst.commons.search
 
 import com.vitorpamplona.quartz.nip01Core.core.Event
+import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 
 /**
@@ -62,12 +63,23 @@ object SearchPipeline {
      *
      * [kinds] is the caller's kind window; when the query names its own, that wins — a `kind:`
      * chip that did not reach here is a chip claiming a filter the REQ never carried.
+     *
+     * [resolvedAuthors] is the asynchronous half of the `kind:git` author lookup — the
+     * `.bit` / NIP-05 terms a caller resolved to pubkeys ahead of time; see
+     * [SearchFilterBuilder.liftGitAuthorTerms].
      */
     fun filters(
         query: SearchQuery,
         kinds: List<Int>? = null,
         limit: Int = 100,
-    ): List<Filter> = SearchFilterBuilder.build(query, query.kinds.takeIf { it.isNotEmpty() }?.toList() ?: kinds, limit)
+        resolvedAuthors: Map<String, HexKey> = emptyMap(),
+    ): List<Filter> =
+        SearchFilterBuilder.build(
+            query,
+            query.kinds.takeIf { it.isNotEmpty() }?.toList() ?: kinds,
+            limit,
+            resolvedAuthors = resolvedAuthors,
+        )
 
     /**
      * The parts of the query no relay can be asked about, applied to what came back.

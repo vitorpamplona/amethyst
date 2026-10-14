@@ -20,10 +20,15 @@
  */
 package com.vitorpamplona.amethyst.commons.search
 
+import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
+import com.vitorpamplona.quartz.nip19Bech32.decodePublicKeyAsHexOrNull
 import com.vitorpamplona.quartz.nip22Comments.CommentEvent
 import com.vitorpamplona.quartz.nip29RelayGroups.metadata.GroupMetadataEvent
 import com.vitorpamplona.quartz.nip32Labeling.LabelEvent
+import com.vitorpamplona.quartz.nip34Git.repository.GitRepositoryEvent
+import com.vitorpamplona.quartz.utils.Hex
+import kotlinx.collections.immutable.toImmutableList
 
 /**
  * A [SearchQuery] as the REQ a search sends: NIP-01 filters, ORed inside one subscription.
@@ -51,13 +56,19 @@ object SearchFilterBuilder {
      * The filters this query sends. [kinds] is the caller's kind window (null asks every kind),
      * [limit] the page size, and [searchString] the caller's own NIP-50 builder over the leftover
      * terms — that is where `language:`, `domain:` and any relay-specific extension belong.
+     *
+     * [resolvedAuthors] carries the asynchronous half of [liftGitAuthorTerms]: the leftover terms
+     * a caller has already resolved to pubkeys (a `.bit` name over Namecoin, a NIP-05 address),
+     * keyed by the term as it appears in [SearchQuery.text].
      */
     fun build(
         query: SearchQuery,
         kinds: List<Int>? = null,
         limit: Int = 100,
         searchString: (SearchQuery) -> String? = ::defaultSearchString,
+        resolvedAuthors: Map<String, HexKey> = emptyMap(),
     ): List<Filter> {
+        val query = liftGitAuthorTerms(query, resolvedAuthors)
         if (query.isEmpty) return emptyList()
 
         val tags = mutableMapOf<String, List<String>>()
@@ -161,5 +172,61 @@ object SearchFilterBuilder {
         query.language?.let { parts.add("language:$it") }
         query.domain?.let { parts.add("domain:$it") }
         return parts.joinToString(" ").takeIf { it.isNotBlank() }
+    }
+
+    /**
+     * Lifts the author identifiers a `kind:git` query carries in its free text into the
+     * `authors` filter field, leaving the rest of the text behind for NIP-50.
+     *
+     * A git repository announcement names its people by pubkey alone: the author is the event's
+     * own key, and the `maintainers` tag holds hex. Neither the npub of the author nor the
+     * `.bit` / NIP-05 identifier that resolves to them appears anywhere in the event, so a
+     * NIP-50 relay handed `kind:git npub1…` or `kind:git name.bit` as plain text can match
+     * nothing — and the reader reasonably expects "every repository of this person". The Git
+     * Repositories screen's own search box ([GitRepositorySearchMatcher]) already reads these
+     * terms as author lookups; this makes the global search agree.
+     *
+     * Two term families are lifted:
+     *  - **synchronous** — a bare npub/nprofile or a 64-char hex key, decoded on the spot;
+     *  - **asynchronous** — any term the caller has already resolved and passed in
+     *    [resolvedAuthors] (a `.bit` name over Namecoin, a NIP-05 address), which a pure
+     *    function cannot look up itself.
+     *
+     * Gated on the query naming the git kind: outside `kind:git` an npub is content — a note
+     * quoting somebody by their npub is a legitimate thing to search for — and stays a search
+     * term. A quoted term is a literal phrase and is never lifted.
+     */
+    internal fun liftGitAuthorTerms(
+        query: SearchQuery,
+        resolvedAuthors: Map<String, HexKey>,
+    ): SearchQuery {
+        if (GitRepositoryEvent.KIND !in query.kinds || query.text.isBlank()) return query
+
+        val lifted = mutableListOf<HexKey>()
+        val remaining = mutableListOf<String>()
+        query.text.split(' ').forEach { term ->
+            val hex = gitAuthorTermHex(term, resolvedAuthors)
+            if (hex != null) lifted.add(hex) else remaining.add(term)
+        }
+        if (lifted.isEmpty()) return query
+
+        return query.copy(
+            text = remaining.joinToString(" "),
+            authors = (query.authors + lifted).distinct().toImmutableList(),
+        )
+    }
+
+    private fun gitAuthorTermHex(
+        term: String,
+        resolvedAuthors: Map<String, HexKey>,
+    ): HexKey? {
+        resolvedAuthors[term]?.let { return it }
+        // A quoted phrase is literal text, not an identifier.
+        if (term.startsWith('"')) return null
+        if (term.length == 64 && Hex.isHex(term)) return term.lowercase()
+        if (term.startsWith("npub1") || term.startsWith("nprofile1")) {
+            return decodePublicKeyAsHexOrNull(term)
+        }
+        return null
     }
 }
