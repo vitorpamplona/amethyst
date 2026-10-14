@@ -39,8 +39,10 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.layout.Layout
 import androidx.compose.ui.text.style.TextDirection
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.commons.chats.publicChannels.concord.concordCommunityHasUnreadFlow
@@ -182,6 +184,8 @@ import com.vitorpamplona.quartz.nip37Drafts.DraftWrapEvent
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.emptyFlow
 import org.jetbrains.compose.resources.StringResource
+import kotlin.math.max
+import kotlin.math.min
 
 @Composable
 fun ChatroomHeaderCompose(
@@ -981,7 +985,7 @@ private fun ConcordRoomCompose(
                     )
                 } else {
                     Row(verticalAlignment = Alignment.CenterVertically, modifier = modifier) {
-                        ChannelTitleText(channel.toBestDisplayName())
+                        ChannelTitleText(channel.toBestDisplayName(), Modifier.weight(1f, fill = false))
                     }
                 }
             },
@@ -1164,22 +1168,26 @@ internal fun ChannelTitleWithLabelInfo(
     labelContentDescription: String? = null,
 ) {
     Row(verticalAlignment = Alignment.CenterVertically, modifier = modifier) {
-        ChannelTitleText(channelName)
+        ChannelTitleText(channelName, Modifier.weight(1f, fill = false))
         Spacer(TitleLabelGap)
         ChatRowTypeIcon(labelIcon, labelContentDescription ?: stringRes(id = label))
     }
 }
 
-private val TitleLabelGap = Modifier.width(6.dp)
+private val TitleLabelGapWidth = 6.dp
+private val TitleLabelGap = Modifier.width(TitleLabelGapWidth)
 
 @Composable
-private fun RowScope.ChannelTitleText(channelName: String) {
+private fun ChannelTitleText(
+    channelName: String,
+    modifier: Modifier = Modifier,
+) {
     Text(
         text = channelName,
         style = LocalTextStyle.current.copy(textDirection = TextDirection.Content),
         maxLines = 1,
         overflow = TextOverflow.Ellipsis,
-        modifier = Modifier.weight(1f, fill = false),
+        modifier = modifier,
     )
 }
 
@@ -1201,17 +1209,40 @@ internal fun ChannelTitleWithLabelInfo(
     labelContentDescription: String? = null,
     onLabelClick: (() -> Unit)? = null,
 ) {
-    Row(verticalAlignment = Alignment.CenterVertically, modifier = modifier) {
-        ChannelTitleText(channelName)
-        Spacer(TitleLabelGap)
-        ChatRowLabel(
-            symbol = labelIcon,
-            text = labelText,
-            contentDescription = labelContentDescription,
-            onClick = onLabelClick,
-        )
+    Layout(
+        content = {
+            ChannelTitleText(channelName)
+            ChatRowLabel(
+                symbol = labelIcon,
+                text = labelText,
+                contentDescription = labelContentDescription,
+                onClick = onLabelClick,
+            )
+        },
+        modifier = modifier,
+    ) { measurables, constraints ->
+        val (title, label) = measurables
+        val gap = TitleLabelGapWidth.roundToPx()
+        val width = if (constraints.hasBoundedWidth) constraints.maxWidth else Int.MAX_VALUE / 2
+        // The name is what the row is for, so it is sized first: up to [NAME_MIN_SHARE] of the
+        // row is held for it before the label gets any. Measured the other way round, a label at
+        // its full cap (an npub, a long relay URL) left a narrow pane's name no width at all.
+        val nameNeeds = title.maxIntrinsicWidth(Constraints.Infinity)
+        val nameReserve = min(nameNeeds, (width * NAME_MIN_SHARE).toInt())
+        val labelPlaceable = label.measure(Constraints(maxWidth = (width - nameReserve - gap).coerceAtLeast(0)))
+        val labelSpace = if (labelPlaceable.width > 0) labelPlaceable.width + gap else 0
+        val titlePlaceable = title.measure(Constraints(maxWidth = (width - labelSpace).coerceAtLeast(0)))
+
+        val height = max(titlePlaceable.height, labelPlaceable.height).coerceIn(constraints.minHeight, constraints.maxHeight)
+        layout((titlePlaceable.width + labelSpace).coerceIn(constraints.minWidth, constraints.maxWidth), height) {
+            titlePlaceable.placeRelative(0, (height - titlePlaceable.height) / 2)
+            labelPlaceable.placeRelative(titlePlaceable.width + gap, (height - labelPlaceable.height) / 2)
+        }
     }
 }
+
+/** The share of a title row held for the room name before a text label is sized. */
+private const val NAME_MIN_SHARE = 0.6f
 
 /**
  * A warning glyph on the row of a 1:1 room whose counterpart has been reported by someone the user
