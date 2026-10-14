@@ -47,6 +47,19 @@ own, so don't expect to find it in the run's job list.
    e.g. `v1.12.01.md`) and add it to `docs/changelog/README.md`. Follow the
    house style: plain text, short verb-first sentences.
 
+   For the `## Contributors` section, generate the credits from git instead of
+   writing them by hand:
+   ```bash
+   scripts/contributors.sh
+   ```
+   It lists the commit authors and `Co-authored-by` trailers since the last
+   release tag, resolved to npubs through `docs/changelog/github.json`
+   (`mappings` by GitHub username, `aliases` for other names and emails a
+   person commits under, `ignore` for AI co-authors and bots). Anyone it can't
+   resolve is listed under `UNMAPPED` with a commit count — credit them by hand,
+   then add their npub or an alias so future releases pick them up. Pass
+   `--from`/`--to` to rebuild an older release's list.
+
    For the `## Translations` section, generate the credits instead of writing
    them by hand — no token needed:
    ```bash
@@ -57,7 +70,10 @@ own, so don't expect to find it in the run's job list.
    `seed-translators` job records everyone who has translated since the last `v*`
    tag, with their languages, in the file's `sinceLastTag` list, and accumulates
    their npubs in the forever-growing `mappings` registry. The script resolves
-   that list to npubs and prints the `## Translations` block grouped by language.
+   that list to npubs and prints the `## Translations` block, one line per
+   translator with all their languages. Usernames under `ignore` (the account
+   that uploads machine translations) are left out, so credit translations that
+   arrived through git rather than Crowdin by hand.
    Contributors with no npub yet are listed under `UNMAPPED` — credit them by
    hand, then add their npub under `mappings` so future releases pick them up
    automatically. (To re-query Crowdin live as a sanity check, run
