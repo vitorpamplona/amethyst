@@ -1,0 +1,105 @@
+# Flathub manifest for Amethyst Desktop: builds from source, offline.
+#
+# Unlike ../com.vitorpamplona.amethyst.Amethyst.yml, which repackages the
+# release CI's prebuilt tree for the GitHub Release bundle, this one compiles
+# the tagged source the way Flathub requires: every input is a pinned source
+# below, and the build has no network. It, flathub-offline.init.gradle and
+# gradle-sources.json are what goes into the Flathub app repo.
+#
+# Each release:
+#   1. tools/regenerate-gradle-sources.sh vX.Y.Z  (rewrites gradle-sources.json,
+#      prints the tarball's sha256; ~35 min, both arches in Docker)
+#   2. set the archive url and sha256 below to that tag
+#   3. bump the jbrsdk sources too when the JetBrains Runtime moves
+#
+# AI disclosure: this manifest and its tools were written with Claude Code.
+# Flathub's policy asks for that to be stated in the submission.
+
+app-id: com.vitorpamplona.amethyst.Amethyst
+runtime: org.freedesktop.Platform
+runtime-version: '26.08'
+sdk: org.freedesktop.Sdk
+command: amethyst-desktop
+
+finish-args:
+  - --share=network
+  - --share=ipc
+  # Native Wayland: the app runs on the JetBrains Runtime, whose AWT speaks
+  # Wayland (WLToolkit), and picks it whenever it finds a Wayland socket. X11
+  # is the fallback for X11 sessions only.
+  - --socket=wayland
+  - --socket=fallback-x11
+  - --socket=pulseaudio
+  - --device=dri
+  # AWT's FileDialog uses the GTK file chooser directly, not the portal, so it
+  # only sees what the sandbox can see.
+  - --filesystem=xdg-download
+  - --filesystem=xdg-pictures
+  # Desktop notifications (org.freedesktop.Notifications over D-Bus).
+  - --talk-name=org.freedesktop.Notifications
+  # Account keys go to the Secret Service keyring.
+  - --talk-name=org.freedesktop.secrets
+  # Accounts, drafts and scheduled posts live under ~/.amethyst, Java
+  # Preferences under ~/.java; keep both in the app's own data directory.
+  - --persist=.amethyst
+  - --persist=.java
+
+modules:
+  - name: amethyst
+    buildsystem: simple
+    build-options:
+      env:
+        GRADLE_USER_HOME: /run/build/amethyst/gradle-home
+        AMETHYST_OFFLINE_REPO: /run/build/amethyst/offline-repository
+    build-commands:
+      # The JetBrains Runtime SDK runs Gradle and jpackage, so the runtime
+      # jpackage bundles is JBR too: the only JDK whose AWT draws on Wayland.
+      - mkdir -p jbr && tar xzf jbrsdk.tar.gz -C jbr --strip-components=1
+      # The wrapper takes the Gradle distribution from the file source below;
+      # it still checks distributionSha256Sum.
+      - sed -i 's|^distributionUrl=.*|distributionUrl=gradle-bin.zip|' gradle/wrapper/gradle-wrapper.properties
+      - JAVA_HOME=$PWD/jbr ./gradlew --offline --no-daemon --console=plain --init-script flathub-offline.init.gradle
+        :desktopApp:createReleaseDistributable
+      - mkdir -p /app/lib
+      - cp -r desktopApp/build/compose/binaries/main-release/app/Amethyst /app/lib/Amethyst
+      - install -Dm755 amethyst-desktop.sh /app/bin/amethyst-desktop
+      - install -Dm644 desktopApp/packaging/flatpak/com.vitorpamplona.amethyst.Amethyst.metainfo.xml
+        -t /app/share/metainfo/
+      - install -Dm644 desktopApp/packaging/flatpak/com.vitorpamplona.amethyst.Amethyst.desktop
+        -t /app/share/applications/
+      - install -Dm644 desktopApp/packaging/flatpak/icons/512/com.vitorpamplona.amethyst.Amethyst.png
+        -t /app/share/icons/hicolor/512x512/apps/
+      - install -Dm644 LICENSE -t /app/share/licenses/com.vitorpamplona.amethyst.Amethyst/
+    sources:
+      - type: archive
+        url: https://github.com/vitorpamplona/amethyst/archive/refs/tags/v1.19.0.tar.gz
+        sha256: 7c883b5d0bd775c05477b827c95fcda366a5f75e97dcc1429182fb3add872fd3
+
+      - type: file
+        url: https://cache-redirector.jetbrains.com/intellij-jbr/jbrsdk-21.0.11-linux-x64-b1163.116.tar.gz
+        sha256: 097bf328b5bf5a236c095b8c8e5204c0eda91e5baa06b37383a7754b10671d8b
+        dest-filename: jbrsdk.tar.gz
+        only-arches:
+          - x86_64
+      - type: file
+        url: https://cache-redirector.jetbrains.com/intellij-jbr/jbrsdk-21.0.11-linux-aarch64-b1163.116.tar.gz
+        sha256: 21ff925581865d97da97df5c8bdb2ab320dbf6aa609a6556efe3c9a7a7c62db2
+        dest-filename: jbrsdk.tar.gz
+        only-arches:
+          - aarch64
+
+      - type: file
+        url: https://services.gradle.org/distributions/gradle-9.8.0-bin.zip
+        sha256: bafd5ce9cfaea0fbccfdc8439a1ac42fbd4cd9c89dc9a988228d8a2639a58e6c
+        dest: gradle/wrapper
+        dest-filename: gradle-bin.zip
+
+      - type: file
+        path: flathub-offline.init.gradle
+
+      - gradle-sources.json
+
+      - type: script
+        dest-filename: amethyst-desktop.sh
+        commands:
+          - exec /app/lib/Amethyst/bin/Amethyst "$@"

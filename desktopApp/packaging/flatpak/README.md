@@ -21,7 +21,8 @@ builds a single-file bundle from this directory on every tag and attaches it to
 the GitHub Release as `amethyst-desktop-<version>-linux-<x64|arm64>.flatpak`.
 
 **Amethyst is not on Flathub.** The manifest here repackages a prebuilt tree,
-which Flathub does not accept. See [Flathub](#flathub) below.
+which Flathub does not accept; [`flathub/`](flathub/) has the source build. See
+[Flathub](#flathub) below.
 
 ## Files
 
@@ -133,57 +134,61 @@ lists the codecs-extra plugin directory, and overriding it hides those plugins.
 
 ## Flathub
 
-Amethyst has not been submitted. These are the gaps against Flathub's
-[requirements](https://docs.flathub.org/docs/for-app-authors/requirements),
-checked 2026-10-09:
+Amethyst has not been submitted yet. [`flathub/`](flathub/) holds a manifest
+that builds from source as Flathub requires, and the tools that keep it current.
+Status against Flathub's
+[requirements](https://docs.flathub.org/docs/for-app-authors/requirements):
 
-1. **Generative AI policy.** Flathub manifests "must not contain AI-generated
-   or AI-assisted content", AI tools "must not open or automate Flathub
-   submission pull requests, or generate their commit messages, descriptions,
-   review comments, or replies", and all other AI-generated code,
-   documentation or packaging must be disclosed. The files in this directory
-   were AI-assisted, so a human must write the Flathub manifest, open the
-   submission PR and answer the review. Reviewers may also reject a
-   submission based on how much of the app itself is AI-generated. An earlier,
-   AI-written `flathub/` submission directory was removed for this reason.
-2. **Build from source.** "All source available submissions must be built
-   entirely from source code", offline, with every dependency listed as a
-   manifest source. Repackaging the GitHub Release tarball, as the manifest
-   here does, is not accepted.
+1. **Build from source: done.** `flathub/com.vitorpamplona.amethyst.Amethyst.yml`
+   compiles the release tag offline with `:desktopApp:createReleaseDistributable`.
+   Its pinned sources are the tag's tarball, the JetBrains Runtime SDK 21 (it runs
+   Gradle and jpackage, so the bundled runtime keeps JBR's Wayland toolkit), the
+   Gradle distribution, and `gradle-sources.json`: every Maven file the build
+   resolves, for x86_64 and aarch64. `flathub-offline.init.gradle` replaces every
+   repository with that local copy. Flathub already ships a prebuilt JBR and
+   Skiko's natives in `com.prof18.feedflow`, a Compose Desktop app built the same
+   way.
 
-   The Gradle side already holds up. On 2026-10-09,
-   `./gradlew :desktopApp:createReleaseDistributable` built from scratch
-   (`--rerun-tasks --no-build-cache`) with no Android SDK (no `local.properties`,
-   no `ANDROID_HOME`). It then ran again with `--offline` and an empty
-   `KONAN_DATA_DIR`, and fetched no Kotlin/Native toolchain. The AGP
-   multiplatform plugin and the iOS/Linux native targets don't get in the way
-   of JVM-only tasks. What a source manifest still has to provide:
-   - every Maven artifact the build resolves, plugins included, as manifest
-     sources (generated with Flatpak's Gradle tooling, which Flathub allows as
-     generated files), plus an init script that points the repositories in
-     `settings.gradle.kts` at that local copy;
-   - the Gradle distribution itself, since the wrapper downloads it;
-   - a JDK to run Gradle and jpackage. The jpackage tree bundles a trimmed
-     JRE of that JDK, and it must be the JetBrains Runtime (jbrsdk 21) to
-     draw on Wayland. `org.freedesktop.Sdk.Extension.openjdk21` is stock
-     OpenJDK, X11 only, so the manifest would list JBR's source archive
-     instead (or JBR's prebuilt jbrsdk, which a reviewer may also ask to be
-     built from source).
+   Checked on aarch64 with `flatpak-builder` (network-less build, installs,
+   `flatpak run` reaches the login screen, bundled runtime has
+   `libawt_wlawt.so`); x86_64's dependency list was captured but not built
+   through `flatpak-builder`. `flatpak-builder-lint` passes the manifest and the
+   metainfo. On the build it reports only `appstream-external-screenshot-url`
+   and `appstream-remote-icon-not-mirrored`: Debian's AppStream 1.0.5 writes
+   media paths relative to `media_baseurl`, while the linter expects the full
+   `https://dl.flathub.org/media` URLs Flathub's own builder writes.
+   Flathub's builder (`org.flatpak.Builder`) could not run nested in Docker, so
+   that was not checked end to end.
 
-   Some Maven dependencies ship prebuilt Linux binaries inside their jars,
-   and a reviewer may ask for those to be built from source too. In the
-   v1.17 desktop distributable: `resource-exec-tor` (a `tor` executable),
-   `secp256k1-kmp-jni-jvm-linux`, `jna`, `sqlite-bundled-jvm`,
-   `mediaplayer-jvm`, `nucleus.notification-linux` and Skiko's runtime.
-3. **Screenshot.** Done: the metainfo lists `docs/screenshots/desktop-home.png`,
-   the 1.19.0 Linux build's home feed, from a commit-pinned URL.
+   Every release: `flathub/tools/regenerate-gradle-sources.sh vX.Y.Z` (about
+   35 minutes, both arches in Docker) rewrites `gradle-sources.json` from a real
+   online build and prints the tarball's sha256 for the manifest. Flathub's
+   update bot can't regenerate that list, so each release is a manual PR to the
+   Flathub app repo.
+
+   Some Maven dependencies ship prebuilt Linux binaries inside their jars (JNA,
+   secp256k1, SQLite, the media player, notifications, Skiko, and a `tor`
+   executable in kmp-tor). FeedFlow's acceptance covers the Skiko kind; a
+   reviewer may still ask about the `tor` executable.
+2. **Generative AI policy: not met.** Flathub manifests "must not contain
+   AI-generated or AI-assisted content", AI tools "must not open or automate
+   Flathub submission pull requests, or generate their commit messages,
+   descriptions, review comments, or replies", and all other AI-generated
+   code, documentation or packaging must be disclosed. The `flathub/` files
+   were written with Claude Code (the manifest says so), so the submission
+   must disclose it and reviewers may decline; a person opens the submission
+   PR and answers the review.
+3. **Screenshot: done.** The metainfo lists `docs/screenshots/desktop-home.png`,
+   the 1.19.0 Linux build's home feed, from a commit-pinned URL. It landed
+   after `v1.19.0`, so submit with the next tag: the `v1.19.0` metainfo has none.
 4. **Domain verification.** `com.vitorpamplona.amethyst.Amethyst` is verified by
    serving the token Flathub provides at
    `https://vitorpamplona.com/.well-known/org.flathub.VerifiedApps.txt`.
-5. **Latest runtime.** Flathub requires the newest runtime at submission time.
+5. **Latest runtime: done.** 26.08 is the newest freedesktop runtime.
 
-Once accepted, Flathub creates `flathub/com.vitorpamplona.amethyst.Amethyst`, and
-updates are PRs there.
+Once accepted, Flathub creates `flathub/com.vitorpamplona.amethyst.Amethyst`;
+copy the manifest, the init script and `gradle-sources.json` there, and each
+update is a PR to it.
 
 ## License metadata
 
