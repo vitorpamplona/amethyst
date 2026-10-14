@@ -87,17 +87,16 @@
     <control>keyboard</control>
   </supports>
 
-  <!-- Flathub requires at least one screenshot of the Linux desktop app.
-       Capture the Linux app (ideally 1280x800 PNG), commit it under
-       docs/screenshots/, and list it from a tag- or commit-pinned
-       raw.githubusercontent.com URL:
+  <!-- Screenshots of the Linux desktop app, as Flathub requires. Each URL is
+       pinned to the commit that added the image, so the listing never changes
+       under a published release. To replace one, commit the new image under
+       docs/screenshots/ first, then point the URL at that commit. -->
   <screenshots>
     <screenshot type="default">
-      <image>https://raw.githubusercontent.com/vitorpamplona/amethyst/<tag>/docs/screenshots/desktop-home.png</image>
-      <caption>The home feed</caption>
+      <image width="1281" height="800">https://raw.githubusercontent.com/vitorpamplona/amethyst/32af66f498c8270d835e7b92f1d7514224f1203a/docs/screenshots/desktop-home.png</image>
+      <caption>The home feed, with the drawer and notifications docked beside it</caption>
     </screenshot>
   </screenshots>
-  -->
 
   <!-- Newest first. Add the entry before tagging a release
        (RELEASE_OPS.md); release CI warns when the tag is missing here. -->
