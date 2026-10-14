@@ -67,6 +67,7 @@ import com.vitorpamplona.amethyst.commons.notices.Bolt12OfferNotice
 import com.vitorpamplona.amethyst.commons.notices.CashuRedeemNotice
 import com.vitorpamplona.amethyst.commons.notices.ConcordNotice
 import com.vitorpamplona.amethyst.commons.notices.InvoiceNotice
+import com.vitorpamplona.amethyst.commons.notices.MarmotNotice
 import com.vitorpamplona.amethyst.commons.notices.NoWalletFound
 import com.vitorpamplona.amethyst.commons.notices.NoteActionNotice
 import com.vitorpamplona.amethyst.commons.notices.NutzapNotice
@@ -2569,8 +2570,31 @@ open class BaseAccountViewModel(
         account.marmot.setMarmotGroupAvatarUrl(nostrGroupId, url, relays)
     }
 
-    suspend fun resetMarmotState() {
-        account.marmot.resetMarmotState()
+    private val marmotResetJob = MutableStateFlow(false)
+
+    /** Whether [resetMarmotState] is running, so the screen can refuse a second one. */
+    val isResettingMarmot: StateFlow<Boolean> = marmotResetJob
+
+    /**
+     * Wipes all Marmot state (see `AccountMarmotActions.resetMarmotState`) and reports the outcome
+     * as a [MarmotNotice]. It runs on the account's scope rather than the screen's: leaving the
+     * screen must not stop a wipe halfway, with some groups gone and others still there.
+     */
+    fun resetMarmotState() {
+        if (!marmotResetJob.compareAndSet(expect = false, update = true)) return
+        account.scope.launch(Dispatchers.IO) {
+            try {
+                account.marmot.resetMarmotState()
+                notices.notify(MarmotNotice.ResetDone)
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                Log.w("AccountViewModel", "Marmot reset failed", e)
+                notices.notify(MarmotNotice.ResetFailed(e.message))
+            } finally {
+                marmotResetJob.value = false
+            }
+        }
     }
 
     fun marmotGroupMembers(nostrGroupId: String): List<GroupMemberInfo> = account.marmotManager?.memberPubkeys(nostrGroupId) ?: emptyList()

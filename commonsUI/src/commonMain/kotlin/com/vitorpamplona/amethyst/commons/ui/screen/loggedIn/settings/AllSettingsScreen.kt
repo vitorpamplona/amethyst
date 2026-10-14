@@ -36,6 +36,7 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -57,13 +58,8 @@ import com.vitorpamplona.amethyst.commons.resources.cancel
 import com.vitorpamplona.amethyst.commons.resources.reset_marmot_confirm_action
 import com.vitorpamplona.amethyst.commons.resources.reset_marmot_confirm_body
 import com.vitorpamplona.amethyst.commons.resources.reset_marmot_confirm_title
-import com.vitorpamplona.amethyst.commons.resources.reset_marmot_failure
-import com.vitorpamplona.amethyst.commons.resources.reset_marmot_success
 import com.vitorpamplona.amethyst.commons.resources.settings_search_no_results
-import com.vitorpamplona.amethyst.commons.ui.components.rememberLongNotice
-import com.vitorpamplona.amethyst.commons.ui.components.rememberShortNotice
 import com.vitorpamplona.amethyst.commons.ui.keystorage.LocalKeyStorage
-import com.vitorpamplona.amethyst.commons.ui.loadStringRes
 import com.vitorpamplona.amethyst.commons.ui.navigation.host.LocalNavDestinations
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.EmptyNav
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
@@ -81,8 +77,6 @@ import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.ThemeComparisonColumn
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.amethyst.commons.viewmodels.mockAccountViewModel
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.IO
 import kotlinx.coroutines.launch
 import org.jetbrains.compose.resources.StringResource
 
@@ -102,12 +96,10 @@ fun AllSettingsScreen(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    val shortNotice = rememberShortNotice()
-    val longNotice = rememberLongNotice()
     val uriHandler = LocalUriHandler.current
     val scope = rememberCoroutineScope()
     var showResetMarmotDialog by remember { mutableStateOf(false) }
-    var isResettingMarmot by remember { mutableStateOf(false) }
+    val isResettingMarmot by accountViewModel.isResettingMarmot.collectAsState()
     val scrollState = rememberScrollState()
     val hasPrivateKey = accountViewModel.account.settings.keyPair.privKey != null
 
@@ -191,24 +183,9 @@ fun AllSettingsScreen(
         ResetMarmotStateDialog(
             onConfirm = {
                 showResetMarmotDialog = false
-                isResettingMarmot = true
-                scope.launch(Dispatchers.IO) {
-                    val successMessage = loadStringRes(Res.string.reset_marmot_success)
-                    try {
-                        accountViewModel.resetMarmotState()
-                        launch(Dispatchers.Main) {
-                            shortNotice.show(successMessage)
-                        }
-                    } catch (e: Exception) {
-                        val failureMessage =
-                            loadStringRes(Res.string.reset_marmot_failure, e.message ?: "")
-                        launch(Dispatchers.Main) {
-                            longNotice.show(failureMessage)
-                        }
-                    } finally {
-                        isResettingMarmot = false
-                    }
-                }
+                // Runs on the account's scope and reports its outcome itself, so it finishes even
+                // if the user leaves this screen.
+                accountViewModel.resetMarmotState()
             },
             onDismiss = { showResetMarmotDialog = false },
         )

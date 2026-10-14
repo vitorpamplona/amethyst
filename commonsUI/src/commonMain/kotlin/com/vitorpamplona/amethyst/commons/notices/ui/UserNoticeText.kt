@@ -31,6 +31,7 @@ import com.vitorpamplona.amethyst.commons.notices.ClinkDebitFailed
 import com.vitorpamplona.amethyst.commons.notices.ConcordNotice
 import com.vitorpamplona.amethyst.commons.notices.InvoiceNotice
 import com.vitorpamplona.amethyst.commons.notices.LnurlFailureDetail
+import com.vitorpamplona.amethyst.commons.notices.MarmotNotice
 import com.vitorpamplona.amethyst.commons.notices.NoWalletFound
 import com.vitorpamplona.amethyst.commons.notices.NoteActionNotice
 import com.vitorpamplona.amethyst.commons.notices.NutzapNotice
@@ -105,6 +106,9 @@ import com.vitorpamplona.amethyst.commons.resources.pow_publish_failed
 import com.vitorpamplona.amethyst.commons.resources.pow_publish_failed_retry
 import com.vitorpamplona.amethyst.commons.resources.pow_settings_title
 import com.vitorpamplona.amethyst.commons.resources.read_only_user
+import com.vitorpamplona.amethyst.commons.resources.reset_marmot_failure
+import com.vitorpamplona.amethyst.commons.resources.reset_marmot_state
+import com.vitorpamplona.amethyst.commons.resources.reset_marmot_success
 import com.vitorpamplona.amethyst.commons.resources.signer_illegal_state_exception_description
 import com.vitorpamplona.amethyst.commons.resources.signer_not_found_exception
 import com.vitorpamplona.amethyst.commons.resources.signer_not_found_exception_description
@@ -253,6 +257,9 @@ fun UserNotice.text(): NoticeText =
         ConcordNotice.KickFailed -> text(Res.string.concord_members_title, Res.string.concord_members_kick_failed)
 
         Bolt12OfferNotice.PaymentSent -> text(Res.string.bolt12_offers, Res.string.bolt12_payment_sent)
+        MarmotNotice.ResetDone -> text(Res.string.reset_marmot_state, Res.string.reset_marmot_success)
+        is MarmotNotice.ResetFailed -> NoticeText(Res.string.reset_marmot_state, str(Res.string.reset_marmot_failure, raw(message)))
+
         is Bolt12OfferNotice.PaymentFailed -> NoticeText(Res.string.bolt12_offers, str(Res.string.bolt12_payment_failed, raw(detail)))
 
         NutzapNotice.PrivateNote -> text(Res.string.nutzap_failed_title, Res.string.nutzap_failed_private_note)
