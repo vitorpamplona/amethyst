@@ -24,11 +24,11 @@ import androidx.collection.LruCache
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.material3.ButtonDefaults
@@ -48,9 +48,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.input.nestedscroll.NestedScrollDispatcher
-import androidx.compose.ui.input.nestedscroll.nestedScroll
-import androidx.compose.ui.layout.onPlaced
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
@@ -126,37 +123,19 @@ fun ExpandableRichTextViewer(
         }
     }
 
-    if (canCollapse && (gutter == null || !gutter.pinned)) {
-        // "Show Less" goes where "Show More" was, under the text: the note fits on screen, or there
-        // is no author column to pin it in (chats, profiles, quotes).
-        val topBarHeight = rememberTopBarHeightPx()
-        val dispatcher = remember { NestedScrollDispatcher() }
-        val placed = remember { PlacedCoordinates() }
+    // "Show Less" goes where "Show More" was, under the text, when the note fits on screen or there
+    // is no author column to pin it in (chats, profiles, quotes).
+    val showLessInline = canCollapse && (gutter == null || !gutter.pinned)
+    val revealTop = if (showLessInline && gutter == null) rememberRevealTop() else null
 
-        Column(
-            Modifier
-                .nestedScroll(NoOpNestedScrollConnection, dispatcher)
-                .onPlaced { placed.coordinates = it },
-        ) {
-            RichTextViewer(text, canPreview, quotesLeft, modifier, tags, backgroundColor, callbackUri, authorPubKey, accountViewModel, nav)
-
-            Row(horizontalArrangement = Arrangement.Center, modifier = Modifier.fillMaxWidth()) {
-                ShowLessButton {
-                    placed.coordinates?.let { dispatcher.revealTopOf(it, topBarHeight) }
-                    showFullText = false
-                    ShowFullTextCache.cache.put(id, false)
-                }
-            }
-        }
-        return
-    }
-
-    Box {
+    // One call site for the text in every state: expanding, collapsing or pinning never throws away
+    // what it has laid out (loaded images, players). The inline button sits in the text's padding.
+    Box(modifier = revealTop?.modifier ?: Modifier) {
         RichTextViewer(
             text,
             canPreview,
             quotesLeft,
-            modifier.align(Alignment.TopStart),
+            if (showLessInline) modifier.align(Alignment.TopStart).padding(bottom = ShowLessRowHeight) else modifier.align(Alignment.TopStart),
             tags,
             backgroundColor,
             callbackUri,
@@ -181,8 +160,24 @@ fun ExpandableRichTextViewer(
                 }
             }
         }
+
+        if (showLessInline) {
+            Row(
+                horizontalArrangement = Arrangement.Center,
+                modifier = Modifier.align(Alignment.BottomCenter).fillMaxWidth(),
+            ) {
+                ShowLessButton {
+                    // In a note, bring the whole note back, author row included.
+                    if (gutter != null) gutter.revealNoteTop() else revealTop?.reveal()
+                    showFullText = false
+                    ShowFullTextCache.cache.put(id, false)
+                }
+            }
+        }
     }
 }
+
+private val ShowLessRowHeight = 40.dp
 
 @Composable
 fun ShowMoreButton(onClick: () -> Unit) {

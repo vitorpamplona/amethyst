@@ -351,7 +351,11 @@ fun NoteComposeLayout(
         val mainAreaHeight = maxOf(authorColumnHeight, contentColumnHeight)
 
         val gutterPlaceable =
-            gutterMeasurable?.measure(Constraints.fixed(px.authorWidth, (mainAreaHeight - gutterTop).coerceAtLeast(0)))
+            gutterMeasurable?.let {
+                // A very long expanded note can be taller than Constraints can hold at this width.
+                val height = (mainAreaHeight - gutterTop).coerceAtLeast(0)
+                it.measure(Constraints.fitPrioritizingWidth(px.authorWidth, px.authorWidth, height, height))
+            }
         val totalHeight = padTop + mainAreaHeight + reactionsHeight
 
         // placeRelative handles RTL by mirroring x coordinates automatically.

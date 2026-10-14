@@ -22,13 +22,16 @@ package com.vitorpamplona.amethyst.commons.ui.components
 
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.systemBars
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.Stable
 import androidx.compose.runtime.getValue
@@ -51,6 +54,7 @@ import androidx.compose.ui.layout.LayoutCoordinates
 import androidx.compose.ui.layout.boundsInWindow
 import androidx.compose.ui.layout.layout
 import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.layout.onPlaced
 import androidx.compose.ui.layout.positionInWindow
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalWindowInfo
@@ -64,6 +68,7 @@ import com.vitorpamplona.amethyst.commons.ui.layouts.LocalDisappearingScaffoldPa
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.placeholderText
 import com.vitorpamplona.amethyst.commons.ui.theme.subtleBorder
+import kotlinx.collections.immutable.persistentListOf
 import kotlinx.coroutines.flow.filter
 import kotlin.math.roundToInt
 
@@ -76,19 +81,36 @@ import kotlin.math.roundToInt
  */
 @Stable
 class ExpandedTextGutterState {
-    var collapse by mutableStateOf<(() -> Unit)?>(null)
-        private set
+    // A note can show several expandable texts (a poll and its options, a highlight and its comment).
+    private var collapseActions by mutableStateOf(persistentListOf<() -> Unit>())
+
+    val isExpanded: Boolean get() = collapseActions.isNotEmpty()
 
     /** True while the note is taller than the feed: "Show Less" is pinned in the gutter, not under the text. */
     var pinned by mutableStateOf(false)
         internal set
 
+    // Set by the gutter while it is composed, which is whenever a text is expanded.
+    internal var revealNote: (() -> Unit)? = null
+
     fun register(action: () -> Unit) {
-        collapse = action
+        collapseActions = collapseActions.add(action)
     }
 
     fun unregister(action: () -> Unit) {
-        if (collapse === action) collapse = null
+        collapseActions = collapseActions.remove(action)
+        if (collapseActions.isEmpty()) pinned = false
+    }
+
+    /** Scrolls the feed so the note's top is on screen, before one of its texts shrinks. */
+    fun revealNoteTop() {
+        revealNote?.invoke()
+    }
+
+    /** The pinned button folds every expanded text in the note. */
+    fun collapseAll() {
+        revealNoteTop()
+        collapseActions.forEach { it() }
     }
 }
 
@@ -113,15 +135,12 @@ private val PinHysteresis = 64.dp
  */
 @Composable
 fun ExpandedTextGutter(state: ExpandedTextGutterState) {
-    val collapse = state.collapse ?: return
-    StickyShowLessButton(state, collapse)
+    if (!state.isExpanded) return
+    StickyShowLessButton(state)
 }
 
 @Composable
-private fun StickyShowLessButton(
-    state: ExpandedTextGutterState,
-    collapse: () -> Unit,
-) {
+private fun StickyShowLessButton(state: ExpandedTextGutterState) {
     val viewport = LocalZoomViewport.current
     val topBarHeight = rememberTopBarHeightPx()
     val feedHeight = rememberFeedHeightPx()
@@ -129,6 +148,11 @@ private fun StickyShowLessButton(
     val hysteresis = remember(density) { with(density) { PinHysteresis.roundToPx() } }
     val tracker = remember { GutterTracker() }
     val dispatcher = remember { NestedScrollDispatcher() }
+
+    DisposableEffect(state, tracker, dispatcher, viewport, topBarHeight) {
+        state.revealNote = { tracker.revealNoteTop(dispatcher, viewport, topBarHeight) }
+        onDispose { state.revealNote = null }
+    }
 
     LaunchedEffect(state, tracker, feedHeight, hysteresis) {
         snapshotFlow { tracker.noteHeight }
@@ -169,10 +193,7 @@ private fun StickyShowLessButton(
                         }
                     }.size(GutterButtonSize)
                     .clip(CircleShape)
-                    .clickable(role = Role.Button) {
-                        tracker.revealNoteTop(dispatcher, topBarHeight)
-                        collapse()
-                    },
+                    .clickable(role = Role.Button) { state.collapseAll() },
             contentAlignment = Alignment.Center,
         ) {
             Icon(
@@ -186,11 +207,6 @@ private fun StickyShowLessButton(
 }
 
 internal object NoOpNestedScrollConnection : NestedScrollConnection
-
-/** Where a layout was last placed, kept out of snapshot state: it is read on click, not composed. */
-internal class PlacedCoordinates {
-    var coordinates: LayoutCoordinates? = null
-}
 
 private class GutterTracker {
     private var coordinates: LayoutCoordinates? = null
@@ -223,10 +239,11 @@ private class GutterTracker {
 
     fun revealNoteTop(
         dispatcher: NestedScrollDispatcher,
+        viewport: ZoomViewport?,
         topBarHeight: Float,
     ) {
         val gutter = coordinates?.takeIf { it.isAttached } ?: return
-        dispatcher.revealTopOf(gutter.parentLayoutCoordinates ?: gutter, topBarHeight)
+        dispatcher.revealTopOf(gutter.parentLayoutCoordinates ?: gutter, viewport, topBarHeight)
     }
 }
 
@@ -236,15 +253,25 @@ private class GutterTracker {
  * The parent scrollable consumes what its children leave over, so a post-scroll dispatch moves the
  * list right away, before the collapse lays out. [dispatcher] must be attached with nestedScroll.
  *
- * The list runs under the top bar, and scrolling back up brings a hidden bar back, so the top lands
- * [topBarHeight] below the list's visible edge whether or not the bar shows right now.
+ * When the list cuts [target] off, the list runs under the top bar and scrolling back up brings a
+ * hidden bar back, so the top lands [topBarHeight] below the list's edge whether or not the bar
+ * shows right now. When [target]'s top is inside the list, only a bar drawn over it can hide it.
  */
 internal fun NestedScrollDispatcher.revealTopOf(
     target: LayoutCoordinates,
+    viewport: ZoomViewport?,
     topBarHeight: Float,
 ) {
     if (!target.isAttached) return
-    val hidden = target.boundsInWindow().top + topBarHeight - target.positionInWindow().y
+    val top = target.positionInWindow().y
+    val clippedTop = target.boundsInWindow().top
+    val landAt =
+        if (clippedTop > top + 0.5f) {
+            clippedTop + topBarHeight
+        } else {
+            viewport?.boundsInWindow()?.top ?: return
+        }
+    val hidden = landAt - top
     if (hidden > 0f) {
         dispatchPostScroll(Offset.Zero, Offset(0f, hidden), NestedScrollSource.UserInput)
     }
@@ -258,14 +285,51 @@ internal fun rememberTopBarHeightPx(): Float {
     return remember(topPadding, density) { with(density) { topPadding.toPx() } }
 }
 
-/** How much of the feed shows at once with its bars in place: the window minus the bars, in pixels. */
+/**
+ * How much of the feed shows at once with its bars in place: the window minus the scaffold's bars,
+ * or minus the system bars outside a disappearing scaffold, in pixels. Screens with their own
+ * header (a profile's tabs) show a bit less than this.
+ */
 @Composable
 private fun rememberFeedHeightPx(): Int {
     val windowHeight = LocalWindowInfo.current.containerSize.height
     val padding = LocalDisappearingScaffoldPadding.current
     val density = LocalDensity.current
-    return remember(windowHeight, padding, density) {
-        with(density) { windowHeight - (padding.calculateTopPadding() + padding.calculateBottomPadding()).roundToPx() }
+    val systemBarsTop = WindowInsets.systemBars.getTop(density)
+    val systemBarsBottom = WindowInsets.systemBars.getBottom(density)
+    return remember(windowHeight, padding, density, systemBarsTop, systemBarsBottom) {
+        val bars = with(density) { (padding.calculateTopPadding() + padding.calculateBottomPadding()).roundToPx() }
+        windowHeight - if (bars > 0) bars else systemBarsTop + systemBarsBottom
+    }
+}
+
+/**
+ * Scrolls the feed back to a layout's top before it shrinks. The layout it is attached to with
+ * [modifier] is the one revealed, unless a note's gutter reveals the whole note instead.
+ */
+internal class RevealTop {
+    private val dispatcher = NestedScrollDispatcher()
+    private var coordinates: LayoutCoordinates? = null
+    var viewport: ZoomViewport? = null
+    var topBarHeight: Float = 0f
+
+    val modifier: Modifier =
+        Modifier
+            .nestedScroll(NoOpNestedScrollConnection, dispatcher)
+            .onPlaced { coordinates = it }
+
+    fun reveal() {
+        coordinates?.let { dispatcher.revealTopOf(it, viewport, topBarHeight) }
+    }
+}
+
+@Composable
+internal fun rememberRevealTop(): RevealTop {
+    val viewport = LocalZoomViewport.current
+    val topBarHeight = rememberTopBarHeightPx()
+    return remember { RevealTop() }.also {
+        it.viewport = viewport
+        it.topBarHeight = topBarHeight
     }
 }
 

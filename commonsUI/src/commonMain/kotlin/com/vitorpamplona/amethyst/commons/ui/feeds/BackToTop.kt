@@ -66,6 +66,9 @@ class BackToTopState(
 ) {
     private var active by mutableStateOf<BackToTopEntry?>(null)
 
+    // Every list still composed, least recently shown or scrolled first.
+    private val entries = mutableListOf<BackToTopEntry>()
+
     /** The button shows while the feed being read is scrolled well past its top. */
     val isVisible: Boolean get() = active?.isScrolledAway == true
 
@@ -75,11 +78,15 @@ class BackToTopState(
     }
 
     internal fun activate(entry: BackToTopEntry) {
+        entries.remove(entry)
+        entries.add(entry)
         active = entry
     }
 
+    /** A page swiped away hands the button back to the list that was in use before it. */
     internal fun remove(entry: BackToTopEntry) {
-        if (active === entry) active = null
+        entries.remove(entry)
+        if (active === entry) active = entries.lastOrNull()
     }
 }
 
