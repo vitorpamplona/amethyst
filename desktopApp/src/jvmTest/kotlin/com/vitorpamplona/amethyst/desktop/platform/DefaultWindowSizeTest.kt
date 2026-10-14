@@ -36,4 +36,16 @@ class DefaultWindowSizeTest {
         // A 13" MacBook Air at its default 1440 x 900 pt, minus the menu bar and the Dock.
         assertEquals(DpSize(1296.dp, 774.dp), fitWindowSize(1440f, 860f))
     }
+
+    @Test
+    fun anAppScaledDesktopGetsThePreferredSizeInItsOwnUnits() {
+        // X11 at 125%: AWT counts physical pixels, so 1380 x 920 dp is 1725 x 1150 of them.
+        assertEquals(DpSize(1725.dp, 1150.dp), fitWindowSize(2560f, 1400f, uiScale = 1.25f))
+    }
+
+    @Test
+    fun anAppScaledDesktopStillFitsTheScreen() {
+        // A 1920 x 1080 laptop at 125%, minus its panel.
+        assertEquals(DpSize(1725.dp, 921.6f.dp), fitWindowSize(1920f, 1024f, uiScale = 1.25f))
+    }
 }

@@ -33,7 +33,8 @@ private const val MAX_SCREEN_SHARE = 0.9f
 
 /**
  * [PREFERRED_WINDOW_SIZE], shrunk to fit the main screen's usable area (without the menu bar, the
- * Dock or the taskbar). AWT reports that area in the same logical units Compose sizes windows in.
+ * Dock or the taskbar). AWT reports that area in the same logical units Compose sizes windows in,
+ * which are smaller than the app's own by [DesktopUiScale] where the app scales itself.
  */
 fun defaultWindowSize(): DpSize {
     val usable =
@@ -42,15 +43,19 @@ fun defaultWindowSize(): DpSize {
         } catch (e: Exception) {
             null
         } ?: return PREFERRED_WINDOW_SIZE
-    return fitWindowSize(usable.width.toFloat(), usable.height.toFloat())
+    return fitWindowSize(usable.width.toFloat(), usable.height.toFloat(), DesktopUiScale.extra)
 }
 
-/** [PREFERRED_WINDOW_SIZE], no larger than [MAX_SCREEN_SHARE] of a usable area of [usableWidth] x [usableHeight]. */
+/**
+ * [PREFERRED_WINDOW_SIZE] at [uiScale] AWT units per dp, no larger than [MAX_SCREEN_SHARE] of a usable
+ * area of [usableWidth] x [usableHeight] AWT units. The result is in AWT units, as windows are sized.
+ */
 internal fun fitWindowSize(
     usableWidth: Float,
     usableHeight: Float,
+    uiScale: Float = 1f,
 ): DpSize =
     DpSize(
-        width = min(PREFERRED_WINDOW_SIZE.width.value, usableWidth * MAX_SCREEN_SHARE).dp,
-        height = min(PREFERRED_WINDOW_SIZE.height.value, usableHeight * MAX_SCREEN_SHARE).dp,
+        width = min(PREFERRED_WINDOW_SIZE.width.value * uiScale, usableWidth * MAX_SCREEN_SHARE).dp,
+        height = min(PREFERRED_WINDOW_SIZE.height.value * uiScale, usableHeight * MAX_SCREEN_SHARE).dp,
     )

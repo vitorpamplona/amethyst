@@ -106,6 +106,10 @@ dependencies {
     // SLF4J no-op — silence "No SLF4J providers" warnings from transitive deps
     implementation(libs.slf4j.nop)
 
+    // Reads the X server's resources (Xft.dpi) for the fractional scale AWT ignores on X11.
+    // Already shipped (nestsClient's Opus bindings); declared so desktopApp can compile against it.
+    implementation(libs.jna)
+
     // QR code generation (ZXing core)
     implementation(libs.zxing)
 

@@ -63,6 +63,7 @@ import java.awt.Dialog
 import java.awt.Window
 import java.awt.event.WindowEvent
 import javax.swing.JDialog
+import kotlin.math.roundToInt
 
 /**
  * What a window shows when its Compose UI throws (while composing, drawing or handling input), in
@@ -140,10 +141,10 @@ private fun showCrashWindow(
                 dialog.contentPane.add(panel)
             }
         } else {
-            ComposeDialog(owner, Dialog.ModalityType.APPLICATION_MODAL).also { dialog -> dialog.setContent { Body(dialog) } }
+            ComposeDialog(owner, Dialog.ModalityType.APPLICATION_MODAL).also { dialog -> dialog.setContent { ProvideDesktopUiScale { Body(dialog) } } }
         }
     dialog.title = "Amethyst"
-    dialog.setSize(600, 620)
+    dialog.setSize((600 * DesktopUiScale.extra).roundToInt(), (620 * DesktopUiScale.extra).roundToInt())
     dialog.setLocationRelativeTo(owner)
     dialog.isVisible = true // blocks until closed
     dialog.dispose()

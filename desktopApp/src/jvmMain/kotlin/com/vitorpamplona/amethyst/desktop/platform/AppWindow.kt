@@ -116,7 +116,7 @@ fun AppWindow(
             onPreviewKeyEvent = onPreviewKeyEvent,
         ) {
             val scope = remember(window) { AppWindowScope(window, this) }
-            scope.content()
+            ProvideDesktopUiScale { scope.content() }
         }
     }
 }
@@ -176,7 +176,7 @@ private fun WaylandWindow(
             // The panel's own window locals (density, window info, focus) win over the parent's.
             val windowLocals = currentCompositionLocalContext
             CompositionLocalProvider(parentLocals) {
-                CompositionLocalProvider(windowLocals) { currentContent(scope) }
+                CompositionLocalProvider(windowLocals) { ProvideDesktopUiScale { currentContent(scope) } }
             }
         }
 
