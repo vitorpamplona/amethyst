@@ -196,6 +196,7 @@ private fun NoteComposeLayoutBoostedPreview() {
  * - 2: [secondRow] - 0 or 1 measurables
  * - 3: [noteContent] - 1+ measurables (stacked vertically)
  * - 4: [reactionsRow] - 0+ measurables (stacked vertically)
+ * - 5: [authorGutter] - 0 or 1 measurables
  *
  * ## Performance
  *
@@ -230,6 +231,9 @@ private fun NoteComposeLayoutBoostedPreview() {
  *   children (content + zap splits + approval button) which are stacked vertically.
  * @param reactionsRow Slot for the reaction buttons row. May emit a ReactionsRow,
  *   a Spacer, or nothing depending on event type.
+ * @param authorGutter Slot for the author column below the picture, sized to run down
+ *   to the end of the note content (the expanded text's "Show Less"). Usually empty;
+ *   when it emits, the main area grows to fit at least its minimum height.
  */
 @Composable
 fun NoteComposeLayout(
@@ -243,6 +247,7 @@ fun NoteComposeLayout(
     secondRow: @Composable () -> Unit,
     noteContent: @Composable () -> Unit,
     reactionsRow: @Composable () -> Unit,
+    authorGutter: @Composable () -> Unit = {},
 ) {
     val density = LocalDensity.current
     val px =
@@ -268,6 +273,7 @@ fun NoteComposeLayout(
                 secondRow, // 2
                 noteContent, // 3
                 reactionsRow, // 4
+                authorGutter, // 5
             ),
         modifier = modifier,
     ) { allMeasurables, constraints ->
@@ -327,14 +333,25 @@ fun NoteComposeLayout(
                 spacer +
                 contentStackHeight
 
+        val gutterMeasurable =
+            if (showAuthorColumn && authorPlaceable != null) allMeasurables[5].firstOrNull() else null
+        val gutterTop = (authorPlaceable?.height ?: 0) + px.authorContentGap
+
         val authorColumnHeight =
             if (showAuthorColumn && authorPlaceable != null) {
-                authorPlaceable.height
+                if (gutterMeasurable != null) {
+                    gutterTop + gutterMeasurable.minIntrinsicHeight(px.authorWidth)
+                } else {
+                    authorPlaceable.height
+                }
             } else {
                 0
             }
 
         val mainAreaHeight = maxOf(authorColumnHeight, contentColumnHeight)
+
+        val gutterPlaceable =
+            gutterMeasurable?.measure(Constraints.fixed(px.authorWidth, (mainAreaHeight - gutterTop).coerceAtLeast(0)))
         val totalHeight = padTop + mainAreaHeight + reactionsHeight
 
         // placeRelative handles RTL by mirroring x coordinates automatically.
@@ -342,6 +359,7 @@ fun NoteComposeLayout(
             // Author column (inside padding area)
             if (showAuthorColumn) {
                 authorPlaceable?.placeRelative(padStart, padTop)
+                gutterPlaceable?.placeRelative(padStart, padTop + gutterTop)
             }
 
             // Content column (to the right of author, inside padding area)

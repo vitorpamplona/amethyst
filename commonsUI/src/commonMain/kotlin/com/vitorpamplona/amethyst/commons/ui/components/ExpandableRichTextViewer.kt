@@ -24,11 +24,13 @@ import androidx.collection.LruCache
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
@@ -39,8 +41,12 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.nestedscroll.NestedScrollDispatcher
+import androidx.compose.ui.input.nestedscroll.nestedScroll
+import androidx.compose.ui.layout.onPlaced
 import com.vitorpamplona.amethyst.commons.model.ImmutableListOfLists
 import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.show_less
 import com.vitorpamplona.amethyst.commons.resources.show_more
 import com.vitorpamplona.amethyst.commons.richtext.ExpandableTextCutOffCalculator
 import com.vitorpamplona.amethyst.commons.ui.components.RichTextViewer
@@ -94,6 +100,45 @@ fun ExpandableRichTextViewer(
             }
         }
 
+    val canCollapse = showFullText && content.length > whereToCut
+    val gutter = LocalExpandedTextGutter.current
+
+    if (canCollapse && gutter != null) {
+        // The note shows "Show Less" in its author column, pinned while the text scrolls by.
+        DisposableEffect(gutter, id) {
+            val collapse: () -> Unit = {
+                showFullText = false
+                ShowFullTextCache.cache.put(id, false)
+            }
+            gutter.register(collapse)
+            onDispose { gutter.unregister(collapse) }
+        }
+    }
+
+    if (canCollapse && gutter == null) {
+        // No author column here (chats, profiles, quotes): "Show Less" goes under the text.
+        val viewport = LocalZoomViewport.current
+        val dispatcher = remember { NestedScrollDispatcher() }
+        val placed = remember { PlacedCoordinates() }
+
+        Column(
+            Modifier
+                .nestedScroll(NoOpNestedScrollConnection, dispatcher)
+                .onPlaced { placed.coordinates = it },
+        ) {
+            RichTextViewer(text, canPreview, quotesLeft, modifier, tags, backgroundColor, callbackUri, authorPubKey, accountViewModel, nav)
+
+            Row(horizontalArrangement = Arrangement.Center, modifier = Modifier.fillMaxWidth()) {
+                ShowLessButton {
+                    placed.coordinates?.let { dispatcher.revealTopOf(it, viewport) }
+                    showFullText = false
+                    ShowFullTextCache.cache.put(id, false)
+                }
+            }
+        }
+        return
+    }
+
     Box {
         RichTextViewer(
             text,
@@ -136,5 +181,17 @@ fun ShowMoreButton(onClick: () -> Unit) {
         contentPadding = ButtonPadding,
     ) {
         Text(text = stringRes(Res.string.show_more))
+    }
+}
+
+@Composable
+fun ShowLessButton(onClick: () -> Unit) {
+    FilledTonalButton(
+        modifier = StdTopPadding,
+        onClick = onClick,
+        shape = ButtonBorder,
+        contentPadding = ButtonPadding,
+    ) {
+        Text(text = stringRes(Res.string.show_less))
     }
 }
