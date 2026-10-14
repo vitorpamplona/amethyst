@@ -26,9 +26,11 @@ import androidx.compose.foundation.pager.PagerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.snapshotFlow
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.commons.feeds.FeedContentState
 import com.vitorpamplona.amethyst.commons.notifications.CardFeedContentState
+import kotlinx.coroutines.flow.distinctUntilChanged
 
 @Composable
 fun WatchScrollToTop(
@@ -43,7 +45,16 @@ fun WatchScrollToTop(
             feedContentState.sentToTop()
         }
     }
+
+    LaunchedEffect(feedContentState, listState) {
+        snapshotFlow { listState.firstVisibleItemIndex >= SCROLLED_AWAY_AFTER_ITEMS }
+            .distinctUntilChanged()
+            .collect { feedContentState.isScrolledAway.value = it }
+    }
 }
+
+// About two screens of an average feed: past this, the back-to-top button shows.
+private const val SCROLLED_AWAY_AFTER_ITEMS = 6
 
 @Composable
 fun WatchScrollToTop(

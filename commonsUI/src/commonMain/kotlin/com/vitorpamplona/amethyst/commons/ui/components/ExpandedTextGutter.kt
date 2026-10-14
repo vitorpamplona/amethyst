@@ -20,29 +20,28 @@
  */
 package com.vitorpamplona.amethyst.commons.ui.components
 
-import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Surface
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.Stable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
 import androidx.compose.ui.input.nestedscroll.NestedScrollDispatcher
@@ -55,27 +54,34 @@ import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.positionInWindow
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalWindowInfo
-import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.show_less
 import com.vitorpamplona.amethyst.commons.ui.layouts.LocalDisappearingScaffoldPadding
 import com.vitorpamplona.amethyst.commons.ui.stringRes
+import com.vitorpamplona.amethyst.commons.ui.theme.placeholderText
+import com.vitorpamplona.amethyst.commons.ui.theme.subtleBorder
+import kotlinx.coroutines.flow.filter
 import kotlin.math.roundToInt
 
 /**
- * The note's author column, under the picture, while the note's text is expanded: the "Show Less"
- * button lives there instead of over the text. [ExpandableRichTextViewer] registers how to collapse
- * itself while it shows its full text; the note renders [ExpandedTextGutter] in that column.
+ * Where an expanded note text puts its "Show Less". [ExpandableRichTextViewer] registers how to
+ * collapse itself while it shows its full text, and the note renders [ExpandedTextGutter] in its
+ * author column, under the picture. A note taller than the feed can show at once gets the button
+ * pinned in that column ([pinned]), so it can be collapsed from anywhere in it. A shorter one keeps
+ * it at the end of the text, where "Show More" was.
  */
 @Stable
 class ExpandedTextGutterState {
     var collapse by mutableStateOf<(() -> Unit)?>(null)
         private set
+
+    /** True while the note is taller than the feed: "Show Less" is pinned in the gutter, not under the text. */
+    var pinned by mutableStateOf(false)
+        internal set
 
     fun register(action: () -> Unit) {
         collapse = action
@@ -88,87 +94,93 @@ class ExpandedTextGutterState {
 
 /**
  * The gutter of the note being rendered, or null where there is none (quotes, chats, profiles):
- * [ExpandableRichTextViewer] then puts its "Show Less" under the text.
+ * [ExpandableRichTextViewer] then always puts its "Show Less" under the text.
  */
 val LocalExpandedTextGutter = staticCompositionLocalOf<ExpandedTextGutterState?> { null }
 
-private val GutterButtonTopMargin = 8.dp
+private val GutterButtonSize = 44.dp
+private val GutterButtonTopMargin = 4.dp
+
+// The text drops its own "Show Less" while the gutter's is pinned. That button is shorter than
+// this, so pinning cannot shrink the note back under the feed's height and flip it straight back.
+private val PinHysteresis = 64.dp
 
 /**
- * Emits nothing while the text is collapsed, so the note lays out no gutter at all. While expanded,
- * and only when the note is taller than the feed can show at once, a thin track spans the column and
- * the button stays pinned to the top of what is visible of the note, until the note's bottom pushes
- * it up. A note that fits on screen gets no button: it is read in one look and scrolled past.
+ * Emits nothing while the text is collapsed, so the note lays out no gutter at all. While expanded
+ * it measures the note, and when the note is taller than the feed a faint rail runs down the column
+ * with a quiet fold icon pinned to the top of what is visible of the note, until the note's bottom
+ * pushes it up. "Show Less" is something people rarely need, so it stays out of the way.
  */
 @Composable
 fun ExpandedTextGutter(state: ExpandedTextGutterState) {
     val collapse = state.collapse ?: return
-    StickyShowLessButton(collapse)
+    StickyShowLessButton(state, collapse)
 }
 
 @Composable
-private fun StickyShowLessButton(collapse: () -> Unit) {
+private fun StickyShowLessButton(
+    state: ExpandedTextGutterState,
+    collapse: () -> Unit,
+) {
     val viewport = LocalZoomViewport.current
     val topBarHeight = rememberTopBarHeightPx()
     val feedHeight = rememberFeedHeightPx()
+    val density = LocalDensity.current
+    val hysteresis = remember(density) { with(density) { PinHysteresis.roundToPx() } }
     val tracker = remember { GutterTracker() }
     val dispatcher = remember { NestedScrollDispatcher() }
+
+    LaunchedEffect(state, tracker, feedHeight, hysteresis) {
+        snapshotFlow { tracker.noteHeight }
+            .filter { it > 0 }
+            .collect { height ->
+                state.pinned = if (state.pinned) height > feedHeight - hysteresis else height > feedHeight
+            }
+    }
+
+    val railColor = MaterialTheme.colorScheme.subtleBorder
 
     Box(
         modifier =
             Modifier
                 .fillMaxSize()
                 .nestedScroll(NoOpNestedScrollConnection, dispatcher)
-                .onGloballyPositioned { tracker.onPositioned(it) },
+                .onGloballyPositioned { tracker.onPositioned(it) }
+                .drawBehind {
+                    if (!state.pinned) return@drawBehind
+                    val buttonHeight = GutterButtonSize.roundToPx()
+                    val railTop = tracker.stickyOffset(viewport, buttonHeight, GutterButtonTopMargin.roundToPx()) + buttonHeight
+                    if (railTop < size.height) {
+                        val x = size.width / 2
+                        drawLine(railColor, Offset(x, railTop.toFloat()), Offset(x, size.height), strokeWidth = 1.dp.toPx())
+                    }
+                },
         contentAlignment = Alignment.TopCenter,
     ) {
-        if (tracker.noteHeight <= feedHeight) return@Box
+        if (!state.pinned) return@Box
 
         Box(
-            Modifier
-                .padding(top = GutterButtonTopMargin)
-                .width(2.dp)
-                .fillMaxHeight()
-                .background(MaterialTheme.colorScheme.outlineVariant, RoundedCornerShape(1.dp)),
-        )
-
-        Surface(
-            onClick = {
-                tracker.revealNoteTop(dispatcher, topBarHeight)
-                collapse()
-            },
-            shape = RoundedCornerShape(14.dp),
-            color = MaterialTheme.colorScheme.secondaryContainer,
-            contentColor = MaterialTheme.colorScheme.onSecondaryContainer,
             modifier =
                 Modifier
-                    .width(48.dp)
                     .layout { measurable, constraints ->
                         val placeable = measurable.measure(constraints)
                         layout(placeable.width, placeable.height) {
                             placeable.place(0, tracker.stickyOffset(viewport, placeable.height, GutterButtonTopMargin.roundToPx()))
                         }
+                    }.size(GutterButtonSize)
+                    .clip(CircleShape)
+                    .clickable(role = Role.Button) {
+                        tracker.revealNoteTop(dispatcher, topBarHeight)
+                        collapse()
                     },
+            contentAlignment = Alignment.Center,
         ) {
-            Column(
-                modifier = Modifier.padding(vertical = 6.dp, horizontal = 2.dp),
-                horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.spacedBy(2.dp),
-            ) {
-                Icon(
-                    symbol = MaterialSymbols.ExpandLess,
-                    contentDescription = null,
-                    modifier = Modifier.size(20.dp),
-                )
-                Text(
-                    text = stringRes(Res.string.show_less),
-                    fontSize = 11.sp,
-                    lineHeight = 12.sp,
-                    fontWeight = FontWeight.Bold,
-                    textAlign = TextAlign.Center,
-                    maxLines = 2,
-                )
-            }
+            Icon(
+                symbol = MaterialSymbols.UnfoldLess,
+                contentDescription = stringRes(Res.string.show_less),
+                modifier = Modifier.size(20.dp),
+                tint = MaterialTheme.colorScheme.placeholderText,
+            )
         }
     }
 }

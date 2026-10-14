@@ -83,6 +83,7 @@ import com.vitorpamplona.amethyst.commons.ui.feeds.RenderFeedContentState
 import com.vitorpamplona.amethyst.commons.ui.feeds.SaveableFeedContentState
 import com.vitorpamplona.amethyst.commons.ui.feeds.ScrollStateKeys
 import com.vitorpamplona.amethyst.commons.ui.feeds.WatchLifecycleAndUpdateModel
+import com.vitorpamplona.amethyst.commons.ui.feeds.WithBackToTopButton
 import com.vitorpamplona.amethyst.commons.ui.feeds.rememberForeverPagerState
 import com.vitorpamplona.amethyst.commons.ui.layouts.DisappearingScaffold
 import com.vitorpamplona.amethyst.commons.ui.layouts.rememberFeedContentPadding
@@ -276,7 +277,9 @@ private fun HomePages(
         },
         floatingButton = {
             FabBottomBarPadded(nav) {
-                HomeScreenFloatingButton(accountViewModel, nav)
+                WithBackToTopButton(tabs.getOrNull(pagerState.currentPage)?.feedState) {
+                    HomeScreenFloatingButton(accountViewModel, nav)
+                }
             }
         },
         accountViewModel = accountViewModel,

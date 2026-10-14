@@ -53,6 +53,12 @@ class FeedContentState(
     val scrollToTop = _scrollToTop.asStateFlow()
     var scrollToTopPending = false
 
+    /**
+     * True while the list showing this feed is scrolled well past its top. The list reports it, and
+     * a screen shows a back-to-top button from it that calls [sendToTop].
+     */
+    val isScrolledAway = MutableStateFlow(false)
+
     private var lastFeedKey: Any? = null
 
     override val isRefreshing: MutableState<Boolean> = mutableStateOf(false)

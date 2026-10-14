@@ -479,6 +479,7 @@
     <string name="log_out">Logout</string>
     <string name="show_more">Show More</string>
     <string name="show_less">Show Less</string>
+    <string name="back_to_top">Back to top</string>
     <string name="lightning_invoice">Lightning Invoice</string>
     <string name="invoice_expired">Expired</string>
     <string name="clink_lightning_offer">CLINK Offer</string>
