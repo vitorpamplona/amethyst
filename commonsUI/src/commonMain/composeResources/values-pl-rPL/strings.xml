@@ -1903,6 +1903,7 @@
     <string name="external_id_scope">Skomentuj na zewnętrznym serwisie</string>
     <string name="url_preview_open_in_browser">Otwórz w przeglądarce</string>
     <string name="long_form_reading_minutes">Czas czytania: %1$d min.</string>
+    <string name="long_form_published">Opublikowany</string>
     <string name="search_waiting_on_relays">Oczekuję na %1$d z %2$d transmiterów</string>
     <plurals name="publication_section_count">
         <item quantity="one">%1$d sekcja</item>
@@ -5130,6 +5131,37 @@
     </plurals>
     <string name="nip46_signer_remote_app">Aplikacja zdalnego logowania</string>
     <string name="nip46_signer_title">Zdalne logowanie</string>
+    <plurals name="nip51_bookmark_count_notes">
+        <item quantity="one">%1$d wpis</item>
+        <item quantity="few">%1$d wpisów</item>
+        <item quantity="many">%1$d wpisów</item>
+        <item quantity="other">%1$d wpisy</item>
+    </plurals>
+    <plurals name="nip51_bookmark_count_hashtags">
+        <item quantity="one">%1$d hashtag</item>
+        <item quantity="few">%1$d hashtagów</item>
+        <item quantity="many">%1$d hashtagów</item>
+        <item quantity="other">%1$d hashtagi</item>
+    </plurals>
+    <plurals name="nip51_bookmark_count_links">
+        <item quantity="one">%1$d odnośnik</item>
+        <item quantity="few">%1$d odnośników</item>
+        <item quantity="many">%1$d odnośników</item>
+        <item quantity="other">%1$d odnośniki</item>
+    </plurals>
+    <plurals name="nip51_bookmark_count_people">
+        <item quantity="one">%1$d osoba</item>
+        <item quantity="few">%1$d osób</item>
+        <item quantity="many">%1$d osób</item>
+        <item quantity="other">%1$d osoby</item>
+    </plurals>
+    <plurals name="chips_n_more">
+        <item quantity="one">+%1$d więcej</item>
+        <item quantity="few">+%1$d więcej</item>
+        <item quantity="many">+%1$d więcej</item>
+        <item quantity="other">+%1$d więcej</item>
+    </plurals>
+    <string name="live_activity_starts_in">Rozpoczyna się o %1$s</string>
     <string name="nip51_list_has_private_members">Ta lista jest prywatna – widzi ją wyłącznie jej autor</string>
     <plurals name="nip82_downloads_count">
         <item quantity="one">%1$d pobranie</item>
