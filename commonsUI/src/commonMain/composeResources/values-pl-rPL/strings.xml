@@ -5162,6 +5162,7 @@
         <item quantity="other">+%1$d więcej</item>
     </plurals>
     <string name="live_activity_starts_in">Rozpoczyna się o %1$s</string>
+    <string name="live_activity_started_ago">Rozpoczęto %1$s temu</string>
     <string name="nip51_list_has_private_members">Ta lista jest prywatna – widzi ją wyłącznie jej autor</string>
     <plurals name="nip82_downloads_count">
         <item quantity="one">%1$d pobranie</item>
