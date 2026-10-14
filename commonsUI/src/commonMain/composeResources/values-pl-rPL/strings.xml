@@ -7476,6 +7476,7 @@
     <string name="nip85_metric_quotes">Cytaty</string>
     <string name="nip85_metric_reposts">Reposty</string>
     <string name="nip85_metric_zaps">Zapy</string>
+    <string name="nip85_metric_sats_zapped">Wysłanych satoszów</string>
     <string name="nip85_metric_zaps_received">Otrzymano Zapy</string>
     <string name="nip85_metric_zaps_sent">Zapy wysłane</string>
     <string name="nip85_metric_sats_received">Otrzymane satosze</string>
@@ -7524,4 +7525,68 @@
     <string name="dlist_list_of">Lista %1$s</string>
     <string name="dlist_fields">Pola</string>
     <string name="dlist_items">Pozycje</string>
+    <plurals name="dlist_items_count">
+        <item quantity="one">%1$d pozycja</item>
+        <item quantity="few">%1$d pozycji</item>
+        <item quantity="many">%1$d pozycji</item>
+        <item quantity="other">%1$d pozycje</item>
+    </plurals>
+    <string name="dlist_items_count_more">%1$d pozycje</string>
+    <string name="dlist_unaffiliated">Wycofane: nie jest przypisane do żadnej listy</string>
+    <string name="dlist_item_in">w %1$s</string>
+    <string name="dlist_untitled_item">Bez nazwy %1$s</string>
+    <string name="dlist_missing_fields">Brakuje %1$s, której lista wymaga</string>
+    <string name="relay_group_card_public">Publiczna</string>
+    <string name="relay_group_card_open_join">Każdy może dołączyć</string>
+    <string name="marketplace_stall">Stoisko</string>
+    <string name="marketplace_prices_in">Ceny w %1$s</string>
+    <string name="marketplace_shipping">Wysyłka</string>
+    <string name="marketplace_shipping_free">Bezpłatna</string>
+    <plurals name="marketplace_shipping_regions">
+        <item quantity="one">%1$d region</item>
+        <item quantity="few">%1$d regionów</item>
+        <item quantity="many">%1$d regionów</item>
+        <item quantity="other">%1$d regiony</item>
+    </plurals>
+    <string name="marketplace_merchant">Handlowiec</string>
+    <string name="marketplace_from_stall">Od %1$s</string>
+    <string name="marketplace_out_of_stock">Brak na stanie</string>
+    <plurals name="marketplace_in_stock">
+        <item quantity="one">%1$d w magazynie</item>
+        <item quantity="few">%1$d na magazynie</item>
+        <item quantity="many">%1$d na magazynie</item>
+        <item quantity="other">%1$d na magazynie</item>
+    </plurals>
+    <string name="marketplace_specs">Specyfikacja</string>
+    <string name="marketplace_message_seller">Wiadomość do sprzedawcy</string>
+    <string name="marketplace_market">Marketplace</string>
+    <plurals name="marketplace_merchants">
+        <item quantity="one">%1$d handlowiec</item>
+        <item quantity="few">%1$d handlowców</item>
+        <item quantity="many">%1$d handlowców</item>
+        <item quantity="other">%1$d handlowcy</item>
+    </plurals>
+    <string name="marketplace_auction">Aukcja</string>
+    <string name="marketplace_starting_bid">Cena wywoławcza</string>
+    <string name="marketplace_highest_bid">Najwyższa oferta</string>
+    <string name="marketplace_highest_bid_unconfirmed">Najwyższa oferta (niepotwierdzona)</string>
+    <plurals name="marketplace_bids">
+        <item quantity="one">%1$d oferta</item>
+        <item quantity="few">%1$d ofert</item>
+        <item quantity="many">%1$d ofert</item>
+        <item quantity="other">%1$d oferty</item>
+    </plurals>
+    <string name="marketplace_auction_starts">Rozpoczęcie %1$s</string>
+    <string name="marketplace_auction_started">Rozpoczęta %1$s</string>
+    <string name="marketplace_auction_ends">Kończy się %1$s</string>
+    <string name="marketplace_auction_ended">Zakończona %1$s</string>
+    <string name="marketplace_auction_ended_chip">Zakończona</string>
+    <string name="marketplace_auction_live_chip">Na żywo</string>
+    <string name="marketplace_auction_scheduled_chip">Nadchodząca</string>
+    <string name="marketplace_bid_amount">Oferta %1$s</string>
+    <string name="marketplace_bid_status_accepted">Zaakceptowana</string>
+    <string name="marketplace_bid_status_rejected">Odrzucona</string>
+    <string name="marketplace_bid_status_pending">Oczekuje</string>
+    <string name="marketplace_bid_status_winner">Zwycięzca</string>
+    <string name="marketplace_bid_extended">Aukcja przedłużona o %1$s</string>
 </resources>
