@@ -75,6 +75,16 @@ sealed interface ConcordNotice : UserNotice {
 }
 
 /** A plain BOLT12 offer payment over NWC (not a zap). */
+sealed interface MarmotNotice : UserNotice {
+    /** Every Marmot group, key and message on this device was wiped. */
+    data object ResetDone : MarmotNotice
+
+    /** The wipe stopped with an error; [message] is its detail. */
+    data class ResetFailed(
+        val message: String?,
+    ) : MarmotNotice
+}
+
 sealed interface Bolt12OfferNotice : UserNotice {
     data object PaymentSent : Bolt12OfferNotice
 
