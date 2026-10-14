@@ -351,7 +351,12 @@ fun PageInfoSheet(
         shadowElevation = 6.dp,
         border = PillDefaults.hairline(),
     ) {
-        Column(Modifier.padding(PillDefaults.SheetPadding), verticalArrangement = Arrangement.spacedBy(16.dp)) {
+        // Scrolls: connection, three permissions and the data card outgrow a phone, and the clear
+        // confirmations grow the sheet further, so its end would be cut off below the screen.
+        Column(
+            Modifier.verticalScroll(rememberScrollState()).padding(PillDefaults.SheetPadding),
+            verticalArrangement = Arrangement.spacedBy(16.dp),
+        ) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 SiteMonogram(ui.title.ifBlank { ui.host }, size = 48.dp)
                 Spacer(Modifier.width(14.dp))
