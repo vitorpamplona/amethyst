@@ -2,6 +2,7 @@
 
 Release notes for Amethyst, one file per version. Files are named with zero-padded version numbers so they sort correctly in any file browser. Use [`TEMPLATE.md`](TEMPLATE.md) as the starting point for the next release.
 
+- [v1.19.0 — A New Login, Remote Signers on Android, Wayland, and Marketplace Cards](v1.19.00.md)
 - [v1.18.0 — Amethyst Desktop, Web of Trust, Privacy Lock, and a Deck](v1.18.00.md)
 - [v1.17.0 — Cordn, Geocaching, a New QR Scanner, and One UI](v1.17.00.md)
 - [v1.16.0 — My Fitness, BOLT12 Payments, and a Leaner Core](v1.16.00.md)
