@@ -102,6 +102,9 @@
   <!-- Newest first. Add the entry before tagging a release
        (RELEASE_OPS.md); release CI warns when the tag is missing here. -->
   <releases>
+    <release version="1.19.0" date="2026-10-14">
+      <url type="details">https://github.com/vitorpamplona/amethyst/releases/tag/v1.19.0</url>
+    </release>
     <release version="1.18.0" date="2026-10-11">
       <url type="details">https://github.com/vitorpamplona/amethyst/releases/tag/v1.18.0</url>
     </release>

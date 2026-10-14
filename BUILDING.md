@@ -628,7 +628,7 @@ So the split is:
   PR, and fails if the sha256 in it differs from ours. No token is needed:
 
 ```bash
-scripts/bump-homebrew-cask.sh v1.18.0     # verify only; re-run if the PR is not open yet
+scripts/bump-homebrew-cask.sh v1.19.0     # verify only; re-run if the PR is not open yet
 ```
 
 Only if the cask is ever taken off autobump does the script call
@@ -637,7 +637,7 @@ shell:
 
 ```bash
 export HOMEBREW_GITHUB_API_TOKEN=ghp_...   # classic PAT, `repo` scope
-scripts/bump-homebrew-cask.sh v1.18.0
+scripts/bump-homebrew-cask.sh v1.19.0
 ```
 
 Create one at
@@ -653,7 +653,7 @@ Same split, and it needs **no token at all**. `scripts/bump-winget.sh` drives
 runs fine from macOS or Linux:
 
 ```bash
-scripts/bump-winget.sh v1.18.0
+scripts/bump-winget.sh v1.19.0
 ```
 
 CI (`bump-winget.yml`, `GITHUB_TOKEN` only) does the bookkeeping: downloads the

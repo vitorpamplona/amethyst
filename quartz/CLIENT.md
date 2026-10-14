@@ -32,7 +32,7 @@ dependencies {
     implementation("io.ktor:ktor-client-websockets:3.1.1")
 
     // Quartz from Maven Central (check the latest version there)
-    implementation("com.vitorpamplona.quartz:quartz:1.18.0")
+    implementation("com.vitorpamplona.quartz:quartz:1.19.0")
 }
 ```
 
