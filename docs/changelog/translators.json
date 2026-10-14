@@ -82,38 +82,12 @@
     "vitorpamplona"
   ],
   "sinceLastTag": {
-    "tag": "v1.18.0",
-    "since": "2026-10-11T15:09:13-04:00",
+    "tag": "v1.19.0",
+    "since": "2026-10-14T09:06:00-04:00",
     "translators": [
       {
-        "user": "raj2516",
-        "languages": [
-          "Hindi"
-        ]
-      },
-      {
-        "user": "maxblake2015",
-        "languages": [
-          "Polish"
-        ]
-      },
-      {
         "user": "vitorpamplona",
-        "languages": [
-          "Czech",
-          "German",
-          "Hindi",
-          "Hungarian",
-          "Polish",
-          "Portuguese, Brazilian",
-          "Swedish"
-        ]
-      },
-      {
-        "user": "summoner001",
-        "languages": [
-          "Hungarian"
-        ]
+        "languages": []
       },
       {
         "user": "greenart7c3",
@@ -256,6 +230,10 @@
         "languages": []
       },
       {
+        "user": "raj2516",
+        "languages": []
+      },
+      {
         "user": "Maxblake",
         "languages": []
       },
@@ -280,6 +258,10 @@
         "languages": []
       },
       {
+        "user": "summoner001",
+        "languages": []
+      },
+      {
         "user": "fiddleway",
         "languages": []
       },
@@ -297,6 +279,10 @@
       },
       {
         "user": "hypnotichemionus4",
+        "languages": []
+      },
+      {
+        "user": "maxblake2015",
         "languages": []
       },
       {
