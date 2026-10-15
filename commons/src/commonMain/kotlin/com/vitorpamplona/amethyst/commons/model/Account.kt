@@ -1542,11 +1542,8 @@ class Account(
         }
     }
 
-    suspend fun changeReactionRowItems(items: List<ReactionRowItem>) {
-        if (settings.changeReactionRowItems(items)) {
-            sendNewAppSpecificData()
-        }
-    }
+    /** The reaction-row counterpart of [applyBottomBarItems] — same synchronous-apply, publish-after contract. */
+    fun applyReactionRowItems(items: List<ReactionRowItem>): Boolean = settings.changeReactionRowItems(items)
 
     suspend fun changeCaptionsEnabled(enabled: Boolean) {
         if (settings.changeCaptionsEnabled(enabled)) {

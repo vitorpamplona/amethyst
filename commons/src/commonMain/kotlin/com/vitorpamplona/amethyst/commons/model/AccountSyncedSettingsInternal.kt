@@ -27,6 +27,11 @@ import com.vitorpamplona.amethyst.commons.util.getDefaultLanguageCode
 import com.vitorpamplona.amethyst.commons.util.getLanguagesSpokenByUser
 import com.vitorpamplona.quartz.nip57Zaps.ZapReceiptEvent
 import kotlinx.serialization.Serializable
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.decodeFromJsonElement
+import kotlinx.serialization.json.encodeToJsonElement
+import kotlinx.serialization.json.jsonObject
 
 val DefaultReactions =
     listOf(
@@ -144,6 +149,53 @@ fun mergeWithDefaultVideoPlayerButtons(saved: List<VideoPlayerButtonItem>): List
     val knownActions = saved.mapTo(mutableSetOf()) { it.action }
     val missing = DefaultVideoPlayerButtonItems.filter { it.action !in knownActions }
     return if (missing.isEmpty()) saved else saved + missing
+}
+
+// Writes every field, defaults included, so two snapshots can be compared field by field.
+private val SyncedSettingsDiffJson =
+    Json {
+        encodeDefaults = true
+        ignoreUnknownKeys = true
+        isLenient = true
+    }
+
+/**
+ * Lays the settings [local] changed away from the defaults over [stored], one field at a time.
+ *
+ * For a [local] snapshot taken while memory still held the defaults, because the saved version
+ * could not be decrypted yet: every field that differs from the defaults is an edit made since,
+ * and every other field must come from [stored] instead of resetting it.
+ */
+fun keepEditsOverDefaults(
+    local: AccountSyncedSettingsInternal,
+    stored: AccountSyncedSettingsInternal,
+): AccountSyncedSettingsInternal {
+    // The defaults as memory holds them, round-tripped like [local] was, so fields that memory
+    // derives (merged lists, the legacy on-chain amounts) compare equal when untouched.
+    val defaults = AccountSyncedSettings(AccountSyncedSettingsInternal()).toInternal(emptySet())
+
+    val base = SyncedSettingsDiffJson.encodeToJsonElement(defaults).jsonObject
+    val mine = SyncedSettingsDiffJson.encodeToJsonElement(local).jsonObject
+    val theirs = SyncedSettingsDiffJson.encodeToJsonElement(stored).jsonObject
+
+    val merged =
+        theirs.keys.associateWith { section ->
+            val baseSection = base[section] as? JsonObject
+            val mySection = mine[section] as? JsonObject
+            val theirSection = theirs.getValue(section) as? JsonObject
+            if (baseSection == null || mySection == null || theirSection == null) {
+                theirs.getValue(section)
+            } else {
+                JsonObject(
+                    theirSection.mapValues { (field, theirValue) ->
+                        val myValue = mySection[field]
+                        if (myValue != null && myValue != baseSection[field]) myValue else theirValue
+                    },
+                )
+            }
+        }
+
+    return SyncedSettingsDiffJson.decodeFromJsonElement(JsonObject(merged))
 }
 
 @Serializable

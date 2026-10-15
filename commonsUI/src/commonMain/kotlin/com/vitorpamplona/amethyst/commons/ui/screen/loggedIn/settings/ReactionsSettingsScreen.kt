@@ -46,6 +46,7 @@ import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -233,6 +234,8 @@ fun ReactionsSettingsContent(accountViewModel: AccountViewModel) {
                 onDragCancel = {
                     draggedItemIndex = -1
                     dragOffset = 0f
+                    // The rows already moved on screen; keep what the user sees.
+                    save(items)
                 },
                 modifier =
                     Modifier
@@ -265,6 +268,14 @@ private fun ReactionRowItemCard(
     val actionName = reactionActionName(item.action)
     val actionDescription = reactionActionDescription(item.action)
 
+    // The drag detector below lives as long as the row, but these callbacks close over the list
+    // the screen holds now, which is replaced after every save. Reading the latest ones keeps a
+    // drag from reordering the list as it was before the last toggle, which would undo it.
+    val currentOnDragStart by rememberUpdatedState(onDragStart)
+    val currentOnDrag by rememberUpdatedState(onDrag)
+    val currentOnDragEnd by rememberUpdatedState(onDragEnd)
+    val currentOnDragCancel by rememberUpdatedState(onDragCancel)
+
     Column(
         modifier =
             modifier
@@ -281,13 +292,13 @@ private fun ReactionRowItemCard(
                 }.padding(vertical = 8.dp, horizontal = Size20dp)
                 .pointerInput(Unit) {
                     detectDragGestures(
-                        onDragStart = { onDragStart() },
+                        onDragStart = { currentOnDragStart() },
                         onDrag = { change, dragAmount ->
                             change.consume()
-                            onDrag(dragAmount.y)
+                            currentOnDrag(dragAmount.y)
                         },
-                        onDragEnd = { onDragEnd() },
-                        onDragCancel = { onDragCancel() },
+                        onDragEnd = { currentOnDragEnd() },
+                        onDragCancel = { currentOnDragCancel() },
                     )
                 },
     ) {

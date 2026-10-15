@@ -1994,17 +1994,19 @@ open class BaseAccountViewModel(
 
     fun reactionRowItemsFlow() = account.settings.syncedSettings.reactions.reactionRowItems
 
-    fun changeReactionRowItems(items: List<ReactionRowItem>) =
-        launchSigner {
-            account.changeReactionRowItems(items)
+    /** Same ordering contract as [changeBottomBarItems]: apply on the caller's thread, publish off it. */
+    fun changeReactionRowItems(items: List<ReactionRowItem>) {
+        if (account.applyReactionRowItems(items)) {
+            launchSigner { account.sendNewAppSpecificData() }
         }
+    }
 
     fun videoPlayerButtonItemsFlow() = account.settings.syncedSettings.videoPlayer.buttonItems
 
     fun captionsEnabledFlow() = account.settings.syncedSettings.videoPlayer.captionsEnabled
 
     fun setCaptionsEnabled(enabled: Boolean) {
-        viewModelScope.launch { account.changeCaptionsEnabled(enabled) }
+        launchSigner { account.changeCaptionsEnabled(enabled) }
     }
 
     fun changeVideoPlayerButtonItems(items: List<VideoPlayerButtonItem>) =
