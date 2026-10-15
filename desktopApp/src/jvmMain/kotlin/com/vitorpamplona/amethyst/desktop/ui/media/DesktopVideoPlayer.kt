@@ -66,6 +66,7 @@ import com.vitorpamplona.amethyst.desktop.service.media.GlobalMediaPlayer
 import com.vitorpamplona.amethyst.desktop.service.media.VideoThumbnailCache
 import com.vitorpamplona.quartz.utils.Log
 import io.github.kdroidfilter.composemediaplayer.VideoPlayerSurface
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
@@ -154,11 +155,22 @@ fun DesktopVideoPlayer(
                 val state = GlobalMediaPlayer.videoState.value
                 if (isWinner.value) {
                     hasBeenVisible[0] = true
+                    // The card in view draws the video, also when another card showing it started it.
+                    if (state.url == url) GlobalMediaPlayer.claimVideoSurface(surfaceOwner)
                     val ended = state.url == url && state.position >= 0.99f
                     if (autoPlayWhenVisible && loaded && !ended && (state.url != url || !state.isPlaying)) {
                         GlobalMediaPlayer.playVideo(url, owner = surfaceOwner)
                     }
                 } else if (hasBeenVisible[0] && pauseWhenHidden && state.url == url) {
+                    // A screen sliding or scaling away takes its cards out of view too. Waiting
+                    // out that transition lets the card leave first, and releaseVideo decide.
+                    delay(SCREEN_TRANSITION_MS)
+                    // Meanwhile another card showing the same video may have come into view.
+                    val owner = GlobalMediaPlayer.videoSurfaceOwner.value
+                    val handedOver = owner != null && owner !== surfaceOwner
+                    if (handedOver || GlobalMediaPlayer.isFullscreen.value || GlobalMediaPlayer.videoState.value.url != url) {
+                        return@LaunchedEffect
+                    }
                     // Also while it is still loading, or it would start once loaded, off screen.
                     GlobalMediaPlayer.pauseVideo()
                 }
@@ -168,10 +180,11 @@ fun DesktopVideoPlayer(
             Modifier
         }
 
-    if (pauseWhenHidden) {
-        DisposableEffect(url) {
-            onDispose { GlobalMediaPlayer.releaseVideo(url) }
-        }
+    // Counts every card showing this video, so only the last one to leave lets it go: the same
+    // video can be on screen twice (a note and its repost, a feed card and the thread it opens).
+    DisposableEffect(url) {
+        GlobalMediaPlayer.showVideo(url)
+        onDispose { GlobalMediaPlayer.hideVideo(url, release = pauseWhenHidden) }
     }
 
     // Surface playback errors to the log — kdroidFilter reports these only via state, so without
@@ -339,6 +352,9 @@ fun DesktopVideoPlayer(
 
 /** Below this the top, middle and bottom rows of [VideoControls] overflow. */
 private val MinControlsWidth = 280.dp
+
+// Longer than the navigation's push and pop transitions (the default 300 ms tween).
+private const val SCREEN_TRANSITION_MS = 400L
 
 @Composable
 private fun PlaybackErrorMessage(

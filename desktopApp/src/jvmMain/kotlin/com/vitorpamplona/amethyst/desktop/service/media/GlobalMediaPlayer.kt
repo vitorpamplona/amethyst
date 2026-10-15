@@ -676,13 +676,35 @@ object GlobalMediaPlayer {
         _isFullscreen.value = false
     }
 
+    // How many cards show each video. Only touched from composition effects, on the UI thread.
+    private val shownVideos = HashMap<String, Int>()
+
+    /** A card showing [url] came on screen. */
+    fun showVideo(url: String) {
+        shownVideos[url] = (shownVideos[url] ?: 0) + 1
+    }
+
+    /** A card showing [url] left; the last one to leave lets it go when it asks to [release] it. */
+    fun hideVideo(
+        url: String,
+        release: Boolean,
+    ) {
+        val left = (shownVideos[url] ?: 1) - 1
+        if (left > 0) {
+            shownVideos[url] = left
+        } else {
+            shownVideos.remove(url)
+            if (release) releaseVideo(url)
+        }
+    }
+
     /**
      * Lets go of [url] once nothing shows it any more, as Android releases a player whose card left
      * the screen: stops it if it is the loaded video, keeping its position (as [playVideo] does for
      * a video it replaces) for when it comes back. One the user chose that is still playing keeps
      * going in the now-playing bar, and one on screen in full screen is left alone.
      */
-    fun releaseVideo(url: String) {
+    private fun releaseVideo(url: String) {
         val state = _videoState.value
         if (state.url != url || _isFullscreen.value) return
         if (state.isChosen && isVideoGoing(state)) return
