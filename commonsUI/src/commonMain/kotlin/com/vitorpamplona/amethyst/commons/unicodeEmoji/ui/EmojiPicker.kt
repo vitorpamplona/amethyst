@@ -21,6 +21,7 @@
 package com.vitorpamplona.amethyst.commons.unicodeEmoji.ui
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Box
@@ -41,6 +42,7 @@ import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.itemsIndexed
 import androidx.compose.foundation.lazy.grid.rememberLazyGridState
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.input.TextFieldLineLimits
 import androidx.compose.foundation.text.input.TextFieldState
@@ -68,8 +70,11 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -95,6 +100,12 @@ import com.vitorpamplona.amethyst.commons.resources.emoji_group_travel_places
 import com.vitorpamplona.amethyst.commons.resources.emoji_picker_favorites
 import com.vitorpamplona.amethyst.commons.resources.emoji_picker_open
 import com.vitorpamplona.amethyst.commons.resources.emoji_picker_skin_tone
+import com.vitorpamplona.amethyst.commons.resources.emoji_skin_tone_dark
+import com.vitorpamplona.amethyst.commons.resources.emoji_skin_tone_default
+import com.vitorpamplona.amethyst.commons.resources.emoji_skin_tone_light
+import com.vitorpamplona.amethyst.commons.resources.emoji_skin_tone_medium
+import com.vitorpamplona.amethyst.commons.resources.emoji_skin_tone_medium_dark
+import com.vitorpamplona.amethyst.commons.resources.emoji_skin_tone_medium_light
 import com.vitorpamplona.amethyst.commons.ui.components.HoverTooltip
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.text.insertAtCursor
@@ -522,35 +533,100 @@ private fun PaletteCell(
     }
 }
 
-private val ToneSamples = listOf("✋", "✋🏻", "✋🏼", "✋🏽", "✋🏾", "✋🏿")
+/** The tone's swatch (Twemoji's skin colors, and its yellow for the default) and name. */
+private class ToneOption(
+    val swatch: Color,
+    val label: StringResource,
+    val sample: String,
+)
 
+private val ToneOptions =
+    mapOf(
+        SkinTone.NONE to ToneOption(Color(0xFFFFCC4D), Res.string.emoji_skin_tone_default, "👋"),
+        SkinTone.LIGHT to ToneOption(Color(0xFFF7DECE), Res.string.emoji_skin_tone_light, "👋🏻"),
+        SkinTone.MEDIUM_LIGHT to ToneOption(Color(0xFFF3D2A2), Res.string.emoji_skin_tone_medium_light, "👋🏼"),
+        SkinTone.MEDIUM to ToneOption(Color(0xFFD5AB88), Res.string.emoji_skin_tone_medium, "👋🏽"),
+        SkinTone.MEDIUM_DARK to ToneOption(Color(0xFFAF7E57), Res.string.emoji_skin_tone_medium_dark, "👋🏾"),
+        SkinTone.DARK to ToneOption(Color(0xFF7C533E), Res.string.emoji_skin_tone_dark, "👋🏿"),
+    )
+
+@Composable
+private fun ToneSwatch(
+    tone: SkinTone,
+    size: Dp,
+) {
+    Box(
+        Modifier
+            .size(size)
+            .clip(CircleShape)
+            .background(ToneOptions.getValue(tone).swatch)
+            .border(1.dp, MaterialTheme.colorScheme.outline, CircleShape),
+    )
+}
+
+/**
+ * The skin tone the palette draws its people and hands in: a swatch of the current tone with a
+ * dropdown arrow, opening a menu of the named tones. A hand glyph alone did not read as a setting.
+ */
 @Composable
 private fun SkinToneSelector(
     tone: SkinTone,
     onChange: (SkinTone) -> Unit,
 ) {
     var open by remember { mutableStateOf(false) }
-    val description = stringRes(Res.string.emoji_picker_skin_tone)
+    val title = stringRes(Res.string.emoji_picker_skin_tone)
+    val current = stringRes(ToneOptions.getValue(tone).label)
 
     Box {
-        HoverTooltip(description) {
-            Box(
-                contentAlignment = Alignment.Center,
+        HoverTooltip("$title: $current") {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
                 modifier =
                     Modifier
                         .padding(start = 4.dp)
-                        .size(CellSize)
+                        .height(CellSize)
                         .clip(RoundedCornerShape(8.dp))
-                        .clickable { open = true },
+                        .clickable(onClickLabel = title) { open = true }
+                        .semantics { contentDescription = "$title: $current" }
+                        .padding(start = 6.dp, end = 2.dp),
             ) {
-                Text(ToneSamples[tone.ordinal], style = EmojiStyle)
+                ToneSwatch(tone, 20.dp)
+                Icon(
+                    symbol = MaterialSymbols.ExpandMore,
+                    contentDescription = null,
+                    modifier = Modifier.size(18.dp),
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
             }
         }
 
         DropdownMenu(expanded = open, onDismissRequest = { open = false }) {
+            Text(
+                text = title,
+                style = MaterialTheme.typography.labelMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
+            )
             SkinTone.entries.forEach { option ->
+                val details = ToneOptions.getValue(option)
                 DropdownMenuItem(
-                    text = { Text(ToneSamples[option.ordinal], style = EmojiStyle) },
+                    leadingIcon = { ToneSwatch(option, 18.dp) },
+                    text = { Text(stringRes(details.label)) },
+                    trailingIcon = {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Text(details.sample, style = TabEmojiStyle)
+                            Box(Modifier.size(24.dp), contentAlignment = Alignment.Center) {
+                                if (option == tone) {
+                                    Icon(
+                                        symbol = MaterialSymbols.Check,
+                                        contentDescription = null,
+                                        modifier = Modifier.size(18.dp),
+                                        tint = MaterialTheme.colorScheme.primary,
+                                    )
+                                }
+                            }
+                        }
+                    },
                     onClick = {
                         onChange(option)
                         open = false

@@ -7061,6 +7061,12 @@
     <string name="emoji_picker_open">Insert emoji</string>
     <string name="emoji_picker_skin_tone">Skin tone</string>
     <string name="emoji_picker_favorites">Favorites</string>
+    <string name="emoji_skin_tone_default">Default</string>
+    <string name="emoji_skin_tone_light">Light</string>
+    <string name="emoji_skin_tone_medium_light">Medium-light</string>
+    <string name="emoji_skin_tone_medium">Medium</string>
+    <string name="emoji_skin_tone_medium_dark">Medium-dark</string>
+    <string name="emoji_skin_tone_dark">Dark</string>
     <string name="emoji_group_smileys_emotion">Smileys &amp; Emotion</string>
     <string name="emoji_group_people_body">People &amp; Body</string>
     <string name="emoji_group_animals_nature">Animals &amp; Nature</string>
