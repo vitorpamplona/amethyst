@@ -23,6 +23,7 @@ package com.vitorpamplona.amethyst.desktop.ui.map
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
+import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.ImageComposeScene
@@ -226,6 +227,96 @@ class DesktopLocationPreviewMapRenderTest {
         assertTrue(mercatorY(85.1) == mercatorY(89.0), "the poles are clamped to Web Mercator's edge")
         assertEquals(41.0739, latitudeOf(mercatorY(41.0739)), 1e-9)
         assertEquals(-85.219, longitudeOf(mercatorX(-85.219)), 1e-9)
+        // A longitude past the antimeridian is the same place one world over.
+        assertEquals(0.0, mercatorX(180.0))
+        assertEquals(mercatorX(-170.0), mercatorX(190.0), 1e-12)
+    }
+
+    /** A notch zooms a level; a trackpad's run of small deltas zooms one level per beat, not one per delta. */
+    @Test
+    fun theWheelStepsOneLevelAtATime() {
+        val wheel = WheelSteps()
+        assertEquals(1, wheel.step(-1f, 5_000))
+        assertEquals(null, wheel.step(-1f, 5_050), "too soon after the last step")
+        assertEquals(-1, wheel.step(2f, 5_200))
+        val trackpad = WheelSteps()
+        val steps = (0 until 40).mapNotNull { trackpad.step(-0.3f, 10_000L + it * 8) }
+        assertEquals(listOf(1, 1, 1), steps)
+    }
+
+    /** Panning stops where the world does: a pole never reaches the middle of the view. */
+    @Test
+    fun panningStopsAtThePoles() {
+        val state = DesktopMapState(0.0, 0.0, 3)
+        val world = 8 * 256.0
+        state.panBy(0.0, 1e9, world, 400f)
+        assertEquals(200 / world, state.centerY, 1e-12)
+        state.panBy(0.0, -1e9, world, 400f)
+        assertEquals(1 - 200 / world, state.centerY, 1e-12)
+        assertTrue(state.positioned, "a pan places the map, so a first pin doesn't pull it back")
+    }
+
+    private fun renderScene(
+        width: Int,
+        height: Int,
+        content: @Composable () -> Unit,
+    ): Image {
+        val scene = ImageComposeScene(width = width, height = height, density = Density(1f)) { AmethystPreviewTheme(dark = false) { content() } }
+        try {
+            var image = scene.render(0)
+            repeat(10) {
+                Thread.sleep(40)
+                image = scene.render((it + 1) * 40_000_000L)
+            }
+            return image
+        } finally {
+            scene.close()
+        }
+    }
+
+    private fun Image.countPixels(color: Color): Int {
+        val pixels = peekPixels()!!
+        var n = 0
+        for (y in 0 until height step 2) {
+            for (x in 0 until width step 2) {
+                val c = Color(pixels.getColor(x, y))
+                if (abs(c.red - color.red) < 0.05f && abs(c.green - color.green) < 0.05f && abs(c.blue - color.blue) < 0.05f) n++
+            }
+        }
+        return n
+    }
+
+    /** At zoom 3 the world is under two views wide: a pin across the antimeridian from the centre still shows. */
+    @Test
+    fun aPinAcrossTheAntimeridianShows() {
+        val red = Color(0xFFE53935)
+        val image =
+            renderScene(1200, 400) {
+                val state = remember { DesktopMapState(0.0, 144.0, 3) }
+                DesktopTileMap(state, listOf(MapMarker("p", 0.0, -137.0, red)), Modifier.fillMaxSize(), tileUrl = { z, x, y -> "http://127.0.0.1:${server.address.port}/$z/$x/$y.png" })
+            }
+        assertTrue(image.countPixels(red) > 50, "the pin east of the antimeridian is missing")
+    }
+
+    /** Coordinates that aren't numbers ("NaN" parses as one) draw no pin and break nothing. */
+    @Test
+    fun coordinatesThatAreNoNumbersDrawNoPin() {
+        val red = Color(0xFFE53935)
+        val image =
+            renderScene(600, 300) {
+                DesktopLocationPreviewMap(
+                    latitude = Double.NaN,
+                    longitude = Double.POSITIVE_INFINITY,
+                    modifier = Modifier,
+                    zoom = 16.0,
+                    aspectRatio = 2f,
+                    pinColor = red,
+                    pinEmoji = null,
+                    pinAlpha = 1f,
+                    tileUrl = { z, x, y -> "http://127.0.0.1:${server.address.port}/$z/$x/$y.png" },
+                )
+            }
+        assertEquals(0, image.countPixels(red))
     }
 
     /** The real OSM tiles, for a human: AMETHYST_MAP_LIVE=1 ./gradlew :desktopApp:test --tests '*DesktopLocationPreviewMapRenderTest*'. */

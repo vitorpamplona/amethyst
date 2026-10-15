@@ -20,7 +20,6 @@
  */
 package com.vitorpamplona.amethyst.desktop.ui.map
 
-import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectDragGestures
@@ -29,6 +28,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -39,7 +39,9 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.Stable
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableDoubleStateOf
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.remember
@@ -49,6 +51,7 @@ import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clipToBounds
+import androidx.compose.ui.draw.drawWithCache
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.Color
@@ -64,6 +67,7 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.IntOffset
+import androidx.compose.ui.unit.IntRect
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil3.compose.AsyncImage
@@ -76,6 +80,7 @@ import com.vitorpamplona.amethyst.commons.resources.map_zoom_out
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.isLight
 import kotlin.math.PI
+import kotlin.math.abs
 import kotlin.math.asinh
 import kotlin.math.atan
 import kotlin.math.floor
@@ -103,7 +108,7 @@ internal const val MAX_ZOOM = 18
 private const val WEB_MERCATOR_MAX_LAT = 85.05112878
 
 /** The point as a fraction of the Web Mercator world, 0..1 on both axes (y grows south). */
-internal fun mercatorX(lon: Double) = (lon + 180.0) / 360.0
+internal fun mercatorX(lon: Double) = ((lon + 180.0) / 360.0).mod(1.0)
 
 internal fun mercatorY(lat: Double): Double {
     val clamped = lat.coerceIn(-WEB_MERCATOR_MAX_LAT, WEB_MERCATOR_MAX_LAT)
@@ -179,18 +184,22 @@ private val MutedTileFilter =
         },
     )
 
-/** Where the map looks: its centre as a world fraction, so a zoom keeps the same spot in the middle. */
+/**
+ * Where the map looks: its centre as a world fraction, so a zoom keeps the same spot in the middle.
+ * A point that isn't a number (an event's `NaN` coordinates, say) is no place to look at: the map
+ * stays where it was, or at 0,0.
+ */
 @Stable
 class DesktopMapState(
     lat: Double,
     lon: Double,
     zoom: Int,
 ) {
-    var centerX by mutableDoubleStateOf(mercatorX(lon))
-    var centerY by mutableDoubleStateOf(mercatorY(lat))
+    var centerX by mutableDoubleStateOf(if (lon.isFinite()) mercatorX(lon) else 0.5)
+    var centerY by mutableDoubleStateOf(if (lat.isFinite()) mercatorY(lat) else 0.5)
     var zoom by mutableIntStateOf(zoom.coerceIn(MIN_ZOOM, MAX_ZOOM))
 
-    /** False until something centres the map on purpose (a caller placing its first pin). */
+    /** False until the map is placed on purpose: a caller centring it, or the reader moving it. */
     var positioned = false
 
     fun centerOn(
@@ -198,6 +207,7 @@ class DesktopMapState(
         lon: Double,
         zoom: Int = this.zoom,
     ) {
+        if (!lat.isFinite() || !lon.isFinite()) return
         centerX = mercatorX(lon)
         centerY = mercatorY(lat)
         this.zoom = zoom.coerceIn(MIN_ZOOM, MAX_ZOOM)
@@ -206,16 +216,32 @@ class DesktopMapState(
 
     fun zoomBy(delta: Int) {
         zoom = (zoom + delta).coerceIn(MIN_ZOOM, MAX_ZOOM)
+        positioned = true
     }
 
+    /** Moves the view by a drag, east and west around the world, north and south no further than its edge. */
     internal fun panBy(
         dx: Double,
         dy: Double,
         worldPx: Double,
+        viewHeightPx: Float,
     ) {
         centerX = (centerX - dx / worldPx).mod(1.0)
-        centerY = (centerY - dy / worldPx).coerceIn(0.0, 1.0)
+        val half = viewHeightPx / 2 / worldPx
+        centerY = if (half >= 0.5) 0.5 else (centerY - dy / worldPx).coerceIn(half, 1.0 - half)
+        positioned = true
     }
+
+    /** The world pixel at the view's left edge, for a world [worldPx] wide and a view [viewWidthPx] wide. */
+    internal fun leftPx(
+        worldPx: Double,
+        viewWidthPx: Float,
+    ) = centerX * worldPx - viewWidthPx / 2
+
+    internal fun topPx(
+        worldPx: Double,
+        viewHeightPx: Float,
+    ) = centerY * worldPx - viewHeightPx / 2
 }
 
 @Composable
@@ -276,27 +302,42 @@ fun DesktopTileMap(
         val tiles = 1 shl zoom
         val worldPx = tiles * tilePx.toDouble()
 
-        // The world pixel at the view's top left corner.
-        val left = state.centerX * worldPx - widthPx / 2
-        val top = state.centerY * worldPx - heightPx / 2
+        // The tiles in view. A drag moves the centre every frame, but this only changes when the
+        // view crosses a tile's edge, so a drag recomposes the tiles that often and otherwise only
+        // lays them out again (the offsets below read the centre in the layout phase).
+        val range by remember(state, zoom, widthPx, heightPx, tilePx) {
+            derivedStateOf {
+                val left = state.leftPx(worldPx, widthPx)
+                val top = state.topPx(worldPx, heightPx)
+                IntRect(
+                    left = floor(left / tilePx).toInt(),
+                    top = floor(top / tilePx).toInt().coerceAtLeast(0),
+                    right = floor((left + widthPx) / tilePx).toInt(),
+                    bottom = floor((top + heightPx) / tilePx).toInt().coerceAtMost(tiles - 1),
+                )
+            }
+        }
+        // One wheel step per notch: a trackpad sends dozens of small deltas a swipe.
+        val wheel = remember { WheelSteps() }
 
         Box(
             Modifier
                 .matchParentSize()
-                .pointerInput(state, zoom) {
+                .pointerInput(state, tilePx) {
                     detectDragGestures { change, drag ->
                         change.consume()
-                        state.panBy(drag.x.toDouble(), drag.y.toDouble(), (1 shl zoom) * tilePx.toDouble())
+                        state.panBy(drag.x.toDouble(), drag.y.toDouble(), (1 shl state.zoom) * tilePx.toDouble(), size.height.toFloat())
                     }
-                }.pointerInput(state, zoom, onTap, onLongPress) {
+                }.pointerInput(state, tilePx, onTap, onLongPress) {
                     detectTapGestures(
                         onTap = onTap?.let { tap -> { tap() } },
                         onLongPress =
                             onLongPress?.let { press ->
                                 { at ->
-                                    val world = (1 shl zoom) * tilePx.toDouble()
-                                    val x = (state.centerX * world - widthPx / 2 + at.x) / world
-                                    val y = (state.centerY * world - heightPx / 2 + at.y) / world
+                                    // The view's size now, not when the gesture began listening.
+                                    val world = (1 shl state.zoom) * tilePx.toDouble()
+                                    val x = (state.leftPx(world, size.width.toFloat()) + at.x) / world
+                                    val y = (state.topPx(world, size.height.toFloat()) + at.y) / world
                                     press(latitudeOf(y.coerceIn(0.0, 1.0)), longitudeOf(x.mod(1.0)))
                                 }
                             },
@@ -304,57 +345,61 @@ fun DesktopTileMap(
                 }.then(
                     if (wheelZoom) {
                         Modifier.onPointerEvent(PointerEventType.Scroll) { event ->
-                            val dy =
-                                event.changes
-                                    .firstOrNull()
-                                    ?.scrollDelta
-                                    ?.y ?: 0f
-                            if (dy < 0) {
-                                state.zoomBy(1)
-                            } else if (dy > 0) {
-                                state.zoomBy(-1)
-                            }
+                            val change = event.changes.firstOrNull() ?: return@onPointerEvent
+                            wheel.step(change.scrollDelta.y, change.uptimeMillis)?.let { state.zoomBy(it) }
+                            event.changes.forEach { it.consume() }
                         }
                     } else {
                         Modifier
                     },
                 ),
         ) {
-            val firstX = floor(left / tilePx).toInt()
-            val lastX = floor((left + widthPx) / tilePx).toInt()
-            val firstY = floor(top / tilePx).toInt().coerceAtLeast(0)
-            val lastY = floor((top + heightPx) / tilePx).toInt().coerceAtMost(tiles - 1)
-            for (ty in firstY..lastY) {
-                for (tx in firstX..lastX) {
-                    // The world repeats east and west.
-                    AsyncImage(
-                        model = tileUrl(zoom, tx.mod(tiles), ty),
-                        contentDescription = null,
-                        contentScale = ContentScale.FillBounds,
-                        colorFilter = tileFilter,
-                        modifier =
-                            Modifier
-                                .offset { IntOffset((tx * tilePx - left).roundToInt(), (ty * tilePx - top).roundToInt()) }
-                                .size(TILE_PIXELS.dp),
-                    )
+            val shown = range
+            for (ty in shown.top..shown.bottom) {
+                for (tx in shown.left..shown.right) {
+                    key(tx, ty) {
+                        // The world repeats east and west.
+                        AsyncImage(
+                            model = tileUrl(zoom, tx.mod(tiles), ty),
+                            contentDescription = null,
+                            contentScale = ContentScale.FillBounds,
+                            colorFilter = tileFilter,
+                            modifier =
+                                Modifier
+                                    .offset {
+                                        IntOffset(
+                                            (tx * tilePx - state.leftPx(worldPx, widthPx)).roundToInt(),
+                                            (ty * tilePx - state.topPx(worldPx, heightPx)).roundToInt(),
+                                        )
+                                    }.size(TILE_PIXELS.dp),
+                        )
+                    }
                 }
             }
 
             markers.forEach { marker ->
-                // The copy of the world nearest the view, so a pin across the antimeridian still shows.
-                var x = mercatorX(marker.lon) * worldPx - left
-                if (x < -worldPx / 2) x += worldPx
-                if (x > worldPx / 2 + widthPx) x -= worldPx
-                val y = mercatorY(marker.lat) * worldPx - top
-                if (x < -PIN_WIDTH_PX || x > widthPx + PIN_WIDTH_PX || y < -PIN_HEIGHT_PX || y > heightPx + PIN_HEIGHT_PX) return@forEach
-                val anchorY = if (marker.centered) PIN_HEIGHT / 2 else PIN_HEIGHT
-                Pin(
-                    color = marker.color,
-                    label = marker.label,
-                    alpha = marker.alpha,
-                    onClick = marker.onClick,
-                    modifier = Modifier.offset { IntOffset((x - PIN_WIDTH.toPx() / 2).roundToInt(), (y - anchorY.toPx()).roundToInt()) },
-                )
+                // A point that isn't a number has nowhere to stand.
+                if (!marker.lat.isFinite() || !marker.lon.isFinite()) return@forEach
+                key(marker.key) {
+                    val anchorY = if (marker.centered) PIN_HEIGHT / 2 else PIN_HEIGHT
+                    val worldX = mercatorX(marker.lon) * worldPx
+                    val worldY = mercatorY(marker.lat) * worldPx
+                    Pin(
+                        color = marker.color,
+                        label = marker.label,
+                        alpha = marker.alpha,
+                        onClick = marker.onClick,
+                        modifier =
+                            Modifier.offset {
+                                // The copy of the world nearest the view's centre, so a pin across the
+                                // antimeridian from it still shows.
+                                val fromLeft = worldX - state.leftPx(worldPx, widthPx)
+                                val x = widthPx / 2 + (fromLeft - widthPx / 2 + worldPx / 2).mod(worldPx) - worldPx / 2
+                                val y = worldY - state.topPx(worldPx, heightPx)
+                                IntOffset((x - PIN_WIDTH.toPx() / 2).roundToInt(), (y - anchorY.toPx()).roundToInt())
+                            },
+                    )
+                }
             }
         }
 
@@ -384,12 +429,33 @@ fun DesktopTileMap(
     }
 }
 
+/**
+ * Turns wheel deltas into zoom steps: one level once a notch's worth has gathered, no more than one
+ * per [WHEEL_STEP_MILLIS], so a trackpad swipe zooms a level or two instead of flying to the end.
+ */
+internal class WheelSteps {
+    private var gathered = 0f
+    private var lastStepAt: Long? = null
+
+    fun step(
+        deltaY: Float,
+        atMillis: Long,
+    ): Int? {
+        gathered += deltaY
+        if (abs(gathered) < 1f) return null
+        val last = lastStepAt
+        if (last != null && atMillis - last < WHEEL_STEP_MILLIS) return null
+        val step = if (gathered < 0) 1 else -1
+        gathered = 0f
+        lastStepAt = atMillis
+        return step
+    }
+}
+
+private const val WHEEL_STEP_MILLIS = 120L
+
 private val PIN_WIDTH: Dp = 34.dp
 private val PIN_HEIGHT: Dp = 46.dp
-
-// Generous bounds for skipping pins well off screen; exactness doesn't matter there.
-private const val PIN_WIDTH_PX = 200.0
-private const val PIN_HEIGHT_PX = 200.0
 
 /** Android's pin (`MapPinIcon.kt`): a coloured teardrop with a white ring, the label on its head when there is one. */
 @Composable
@@ -407,25 +473,31 @@ private fun Pin(
             .then(if (onClick != null) Modifier.clickable(onClick = onClick) else Modifier),
         contentAlignment = Alignment.TopCenter,
     ) {
-        Canvas(Modifier.size(PIN_WIDTH, PIN_HEIGHT)) {
-            val radius = size.width / 2f * 0.9f
-            val cx = size.width / 2f
-            val cy = radius + 1.dp.toPx()
-            val head = Path().apply { addOval(Rect(Offset(cx, cy), radius)) }
-            val mouth = radius * 0.7f
-            val tail =
-                Path().apply {
-                    moveTo(cx - mouth, cy + radius * 0.55f)
-                    lineTo(cx + mouth, cy + radius * 0.55f)
-                    lineTo(cx, size.height)
-                    close()
+        Spacer(
+            Modifier.size(PIN_WIDTH, PIN_HEIGHT).drawWithCache {
+                // Built once per size, not on every frame a drag draws.
+                val radius = size.width / 2f * 0.9f
+                val cx = size.width / 2f
+                val cy = radius + 1.dp.toPx()
+                val head = Path().apply { addOval(Rect(Offset(cx, cy), radius)) }
+                val mouth = radius * 0.7f
+                val tail =
+                    Path().apply {
+                        moveTo(cx - mouth, cy + radius * 0.55f)
+                        lineTo(cx + mouth, cy + radius * 0.55f)
+                        lineTo(cx, size.height)
+                        close()
+                    }
+                // One outline, so the ring doesn't cross the head where the tail joins it.
+                val body = Path().apply { op(head, tail, PathOperation.Union) }
+                val ring = Stroke(width = 2.5.dp.toPx())
+                onDrawBehind {
+                    drawPath(body, color)
+                    drawPath(body, Color.White, style = ring)
+                    if (label == null) drawCircle(Color.White, radius * 0.35f, Offset(cx, cy))
                 }
-            // One outline, so the ring doesn't cross the head where the tail joins it.
-            val body = Path().apply { op(head, tail, PathOperation.Union) }
-            drawPath(body, color)
-            drawPath(body, Color.White, style = Stroke(width = 2.5.dp.toPx()))
-            if (label == null) drawCircle(Color.White, radius * 0.35f, Offset(cx, cy))
-        }
+            },
+        )
         if (label != null) {
             Text(text = label, fontSize = 15.sp, color = Color.White, modifier = Modifier.padding(top = 7.dp))
         }
