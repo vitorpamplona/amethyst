@@ -23,15 +23,9 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn.geocaches.map
 import android.content.Context
 import android.view.MotionEvent
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.Button
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
@@ -41,11 +35,9 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalResources
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.core.graphics.drawable.toDrawable
@@ -54,18 +46,22 @@ import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.commons.feeds.FeedContentState
-import com.vitorpamplona.amethyst.commons.feeds.FeedState
 import com.vitorpamplona.amethyst.commons.model.navigation.Route
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.geocache_map_long_press
-import com.vitorpamplona.amethyst.commons.resources.geocache_map_open
-import com.vitorpamplona.amethyst.commons.resources.geocache_unnamed
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
-import com.vitorpamplona.amethyst.commons.ui.note.GeocachePalette
-import com.vitorpamplona.amethyst.commons.ui.note.GeocacheSpecLine
-import com.vitorpamplona.amethyst.commons.ui.note.geocacheEmoji
 import com.vitorpamplona.amethyst.commons.ui.note.geocachePoint
 import com.vitorpamplona.amethyst.commons.ui.note.rememberGeocachePalette
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.geocaches.map.GEOCACHE_CLUSTER_THRESHOLD
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.geocaches.map.GEOCACHE_MAP_FIRST_CLUSTERED_ZOOM
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.geocaches.map.GEOCACHE_MAP_FIRST_ZOOM
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.geocaches.map.GEOCACHE_MAP_INITIAL_ZOOM
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.geocaches.map.GeocacheMapMark
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.geocaches.map.GeocachePeekSheet
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.geocaches.map.GeocachePin
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.geocaches.map.geocacheMapMarks
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.geocaches.map.geocachePin
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.geocaches.map.rememberGeocacheListings
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.geocaches.rememberMyFoundCacheIds
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
@@ -82,8 +78,6 @@ import org.osmdroid.views.MapView
 import org.osmdroid.views.overlay.MapEventsOverlay
 import org.osmdroid.views.overlay.Marker
 import kotlin.math.abs
-import kotlin.math.pow
-import kotlin.math.roundToLong
 
 /**
  * The caches on a map, which is how people actually browse for something to go and find.
@@ -121,10 +115,6 @@ fun GeocacheMapTab(
     // The map used to pick its own tints, which meant a cache could be one colour here and a
     // different one on its own card. The palette is the single source of that meaning now.
     val palette = rememberGeocachePalette()
-    val amber = palette.live
-    val gold = palette.prize
-    val green = palette.proven
-    val grey = palette.over
 
     val mapView =
         remember(context) {
@@ -138,7 +128,7 @@ fun GeocacheMapTab(
                 // a phone, and the world stops at the poles instead of stacking copies of itself.
                 isVerticalMapRepetitionEnabled = false
                 setScrollableAreaLimitLatitude(MapView.getTileSystem().maxLatitude, MapView.getTileSystem().minLatitude, 0)
-                controller.setZoom(INITIAL_ZOOM)
+                controller.setZoom(GEOCACHE_MAP_INITIAL_ZOOM)
                 setOnTouchListener { view, event ->
                     when (event.action) {
                         MotionEvent.ACTION_DOWN -> view.parent?.requestDisallowInterceptTouchEvent(true)
@@ -192,75 +182,46 @@ fun GeocacheMapTab(
                     ),
                 )
 
-                var first: GeoPoint? = null
-
-                // Above the threshold, pins are folded into per-cell counts. osmdroid draws
-                // every Marker on every invalidate, so a few hundred individual pins turn a pan
-                // into a slideshow — and a screen of overlapping teardrops tells the reader less
-                // than "7 here" does anyway. The cell size tracks zoom, so zooming in splits
+                // Above the threshold, pins are folded into per-cell counts (geocacheMapMarks).
+                // osmdroid draws every Marker on every invalidate, so a few hundred individual
+                // pins turn a pan into a slideshow. The cell size tracks zoom, so zooming in splits
                 // clusters apart, which is the gesture people already expect to do.
-                val visible = listings.mapNotNull { l -> l.geocachePoint()?.let { l to it } }
+                val clustered = listings.count { it.geocachePoint() != null } > GEOCACHE_CLUSTER_THRESHOLD
+                val marks = geocacheMapMarks(listings, map.zoomLevelDouble)
 
-                if (visible.size > CLUSTER_THRESHOLD) {
-                    val cell = clusterCellSize(map.zoomLevelDouble)
-                    visible
-                        .groupBy { (_, p) -> (p.first / cell).roundToLong() to (p.second / cell).roundToLong() }
-                        .forEach { (_, group) ->
-                            val centre = group.first().second
-                            val geo = GeoPoint(centre.first, centre.second)
-                            if (first == null) first = geo
-
-                            if (group.size == 1) {
-                                map.overlays.add(
-                                    markerFor(map, group.first().first, geo, context, found, amber, gold, green, grey) {
-                                        peek = it
-                                    },
-                                )
-                            } else {
-                                map.overlays.add(
-                                    Marker(map).apply {
-                                        position = geo
-                                        setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_CENTER)
-                                        setInfoWindow(null)
-                                        icon =
-                                            roadEventPinBitmap(
-                                                group.size.toString(),
-                                                amber.toArgb(),
-                                                resources.displayMetrics.density,
-                                            ).toDrawable(resources)
-                                        setOnMarkerClickListener { _, view ->
-                                            // Zoom into the cluster rather than picking one of
-                                            // its caches arbitrarily.
-                                            view.controller.animateTo(geo, view.zoomLevelDouble + 2.0, 300L)
-                                            true
-                                        }
-                                    },
-                                )
-                            }
-                        }
-
-                    first?.let {
-                        if (map.isUnpositioned()) {
-                            map.controller.setZoom(11.0)
-                            map.controller.setCenter(it)
-                        }
+                marks.forEach { mark ->
+                    val geo = GeoPoint(mark.lat, mark.lon)
+                    when (mark) {
+                        is GeocacheMapMark.Cache -> map.overlays.add(markerFor(map, mark.listing, geo, context, geocachePin(mark.listing, found, palette)) { peek = it })
+                        is GeocacheMapMark.Cluster ->
+                            map.overlays.add(
+                                Marker(map).apply {
+                                    position = geo
+                                    setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_CENTER)
+                                    setInfoWindow(null)
+                                    icon =
+                                        roadEventPinBitmap(
+                                            mark.size.toString(),
+                                            palette.live.toArgb(),
+                                            resources.displayMetrics.density,
+                                        ).toDrawable(resources)
+                                    setOnMarkerClickListener { _, view ->
+                                        // Zoom into the cluster rather than picking one of
+                                        // its caches arbitrarily.
+                                        view.controller.animateTo(geo, view.zoomLevelDouble + 2.0, 300L)
+                                        true
+                                    }
+                                },
+                            )
                     }
-                    map.invalidate()
-                    return@AndroidView
                 }
 
-                visible.forEach { (listing, point) ->
-                    val geo = GeoPoint(point.first, point.second)
-                    if (first == null) first = geo
-                    map.overlays.add(markerFor(map, listing, geo, context, found, amber, gold, green, grey) { peek = it })
-                }
-
-                first?.let {
+                marks.firstOrNull()?.let {
                     // Only recentre while the map has not been positioned yet, so a pan is not
                     // yanked back every time a new cache arrives from a relay.
                     if (map.isUnpositioned()) {
-                        map.controller.setZoom(13.0)
-                        map.controller.setCenter(it)
+                        map.controller.setZoom(if (clustered) GEOCACHE_MAP_FIRST_CLUSTERED_ZOOM else GEOCACHE_MAP_FIRST_ZOOM)
+                        map.controller.setCenter(GeoPoint(it.lat, it.lon))
                     }
                 }
 
@@ -287,109 +248,25 @@ fun GeocacheMapTab(
     }
 }
 
-@Composable
-private fun GeocachePeekSheet(
-    listing: GeocacheListingEvent,
-    onOpen: () -> Unit,
-    modifier: Modifier = Modifier,
-) {
-    Surface(
-        modifier = modifier.fillMaxWidth().padding(12.dp),
-        tonalElevation = 4.dp,
-        shadowElevation = 6.dp,
-    ) {
-        Column(Modifier.padding(14.dp)) {
-            Text(
-                text =
-                    listing.cacheType().geocacheEmoji() + "  " +
-                        (listing.cacheName()?.trim()?.ifBlank { null } ?: stringRes(Res.string.geocache_unnamed)),
-                style = MaterialTheme.typography.titleSmall,
-                fontWeight = FontWeight.Bold,
-            )
-
-            GeocacheSpecLine(listing.cacheType(), listing.cacheSize(), listing.difficulty(), listing.terrain())
-
-            Spacer(Modifier.height(10.dp))
-
-            Button(onClick = onOpen, modifier = Modifier.fillMaxWidth()) {
-                Text(stringRes(Res.string.geocache_map_open))
-            }
-        }
-    }
-}
-
-/**
- * Above this many visible caches the map switches to counts. A starting figure rather than a
- * measured one — it wants checking on a mid-range device with a busy city on screen.
- */
-private const val CLUSTER_THRESHOLD = 50
-
-private const val INITIAL_ZOOM = 3.0
-
 /** Still on the untouched initial view: centred on 0,0, which a zoom can leave a hair off exact zero. */
 private fun MapView.isUnpositioned() = abs(mapCenter.latitude) < 1e-6 && abs(mapCenter.longitude) < 1e-6
-
-/**
- * Degrees per cluster cell at [zoom]. Roughly a fixed number of screen pixels: each zoom level
- * halves the ground covered by a pixel, so the cell halves with it and clusters break apart at
- * the same apparent density all the way in.
- */
-private fun clusterCellSize(zoom: Double): Double = 40.0 / (256.0 * 2.0.pow(zoom)) * 360.0
 
 private fun markerFor(
     map: MapView,
     listing: GeocacheListingEvent,
     geo: GeoPoint,
     context: Context,
-    found: Set<String>,
-    amber: Color,
-    gold: Color,
-    green: Color,
-    grey: Color,
+    pin: GeocachePin,
     onTap: (GeocacheListingEvent) -> Unit,
-): Marker {
-    val mine = found.contains(listing.address().toValue())
-    val over = listing.isArchived() || listing.firstToFindWinner() != null
-    val tint =
-        when {
-            over -> grey
-            mine -> green
-            listing.isFirstToFind() -> gold
-            else -> amber
-        }
-
-    return Marker(map).apply {
+): Marker =
+    Marker(map).apply {
         position = geo
         setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_BOTTOM)
         setInfoWindow(null)
-        icon =
-            roadEventPinBitmap(
-                listing.cacheType().geocacheEmoji(),
-                tint.toArgb(),
-                context.resources.displayMetrics.density,
-            ).toDrawable(context.resources)
-        alpha = if (over) GeocachePalette.OVER_ALPHA else 1f
+        icon = roadEventPinBitmap(pin.emoji, pin.color.toArgb(), context.resources.displayMetrics.density).toDrawable(context.resources)
+        alpha = pin.alpha
         setOnMarkerClickListener { _, _ ->
             onTap(listing)
             true
         }
-    }
-}
-
-/**
- * Collects the loaded feed's own flow. [FeedState.Loaded] is handed out once and then mutated
- * through its inner flow, so reading `.value` here would pin the map to whatever had arrived when
- * the tab first composed — caches streaming in from relays would never get a pin.
- */
-@Composable
-private fun rememberGeocacheListings(feedState: FeedState): List<GeocacheListingEvent> =
-    when (feedState) {
-        is FeedState.Loaded -> {
-            val loaded by feedState.feed.collectAsStateWithLifecycle()
-
-            remember(loaded) {
-                loaded.list.mapNotNull { it.event as? GeocacheListingEvent }
-            }
-        }
-        else -> emptyList()
     }

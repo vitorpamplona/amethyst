@@ -23,6 +23,8 @@ package com.vitorpamplona.amethyst.desktop.ui.map
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
+import androidx.compose.runtime.remember
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.ImageComposeScene
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -34,7 +36,13 @@ import coil3.SingletonImageLoader
 import coil3.annotation.DelicateCoilApi
 import coil3.network.okhttp.OkHttpNetworkFetcherFactory
 import com.sun.net.httpserver.HttpServer
+import com.vitorpamplona.amethyst.commons.ui.note.rememberGeocachePalette
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.geocaches.map.GeocacheMapMark
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.geocaches.map.geocacheMapMarks
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.geocaches.map.geocachePin
 import com.vitorpamplona.amethyst.commons.ui.theme.AmethystPreviewTheme
+import com.vitorpamplona.quartz.nip01Core.tags.geohash.GeoHash
+import com.vitorpamplona.quartz.nipCCGeocaching.listing.GeocacheListingEvent
 import okhttp3.OkHttpClient
 import org.jetbrains.skia.EncodedImageFormat
 import org.jetbrains.skia.Image
@@ -44,6 +52,7 @@ import java.io.File
 import java.net.InetSocketAddress
 import java.util.concurrent.ConcurrentLinkedQueue
 import javax.imageio.ImageIO
+import kotlin.math.abs
 import kotlin.math.floor
 import kotlin.test.AfterTest
 import kotlin.test.BeforeTest
@@ -93,8 +102,44 @@ class DesktopLocationPreviewMapRenderTest {
         SingletonImageLoader.setUnsafe { ctx: PlatformContext ->
             ImageLoader
                 .Builder(ctx)
+                // Coil keeps a shared disk cache by default: a tile cached by another run would be served instead.
+                .diskCache(null)
                 .components { add(OkHttpNetworkFetcherFactory(callFactory = { OkHttpClient() })) }
                 .build()
+        }
+    }
+
+    /**
+     * OSM serves its "Access blocked" tile to a client that doesn't say who it is (OkHttp's default
+     * User-Agent included), so the live renders identify themselves, as the app's image client does.
+     */
+    private fun useIdentifiedLoader() {
+        // The setup's loader may already be built; a new factory alone would not replace it.
+        SingletonImageLoader.reset()
+        SingletonImageLoader.setUnsafe { ctx: PlatformContext ->
+            ImageLoader
+                .Builder(ctx)
+                // Coil keeps a shared disk cache by default: a tile cached by another run would be served instead.
+                .diskCache(null)
+                .components {
+                    add(
+                        OkHttpNetworkFetcherFactory(
+                            callFactory = {
+                                OkHttpClient
+                                    .Builder()
+                                    .addInterceptor {
+                                        it.proceed(
+                                            it
+                                                .request()
+                                                .newBuilder()
+                                                .header("User-Agent", "Amethyst-Desktop/test")
+                                                .build(),
+                                        )
+                                    }.build()
+                            },
+                        ),
+                    )
+                }.build()
         }
     }
 
@@ -179,38 +224,90 @@ class DesktopLocationPreviewMapRenderTest {
         assertEquals(0.5, mercatorX(0.0))
         assertEquals(0.5, mercatorY(0.0), 1e-12)
         assertTrue(mercatorY(85.1) == mercatorY(89.0), "the poles are clamped to Web Mercator's edge")
+        assertEquals(41.0739, latitudeOf(mercatorY(41.0739)), 1e-9)
+        assertEquals(-85.219, longitudeOf(mercatorX(-85.219)), 1e-9)
     }
 
     /** The real OSM tiles, for a human: AMETHYST_MAP_LIVE=1 ./gradlew :desktopApp:test --tests '*DesktopLocationPreviewMapRenderTest*'. */
     @Test
     fun liveOpenStreetMap() {
         if (System.getenv("AMETHYST_MAP_LIVE") == null) return
-        SingletonImageLoader.setUnsafe { ctx: PlatformContext ->
-            ImageLoader
-                .Builder(ctx)
-                .components {
-                    add(
-                        OkHttpNetworkFetcherFactory(
-                            callFactory = {
-                                OkHttpClient
-                                    .Builder()
-                                    .addInterceptor {
-                                        it.proceed(
-                                            it
-                                                .request()
-                                                .newBuilder()
-                                                .header("User-Agent", "Amethyst-Desktop/test")
-                                                .build(),
-                                        )
-                                    }.build()
-                            },
-                        ),
-                    )
-                }.build()
-        }
+        useIdentifiedLoader()
         val start = System.currentTimeMillis()
         render("live-light", dark = false, tileUrl = ::osmTileUrl) { System.currentTimeMillis() - start > 6000 }
         val start2 = System.currentTimeMillis()
         render("live-dark", dark = true, tileUrl = ::osmTileUrl) { System.currentTimeMillis() - start2 > 6000 }
+    }
+
+    private fun cache(
+        n: Int,
+        lat: Double,
+        lon: Double,
+    ) = GeocacheListingEvent(
+        id = n.toString().padStart(64, '0'),
+        pubKey = "a".repeat(64),
+        createdAt = 1L,
+        tags = arrayOf(arrayOf("d", "cache-$n"), arrayOf("g", GeoHash.encode(lat, lon, 9).toString())),
+        content = "",
+        sig = "b".repeat(128),
+    )
+
+    /**
+     * The geocache tab's pins (shared marks and colours, `geocacheMapMarks` and `geocachePin`)
+     * on the desktop map: a busy cluster drawn as a count, and the caches around it as their own pins.
+     */
+    @Test
+    fun geocachePinsAndClusters() {
+        val city = (0 until 60).map { cache(it, 41.07 + (it % 6) * 0.0008, -85.21 + (it / 6) * 0.0008) }
+        val loners = listOf(cache(100, 41.10, -85.30), cache(101, 41.04, -85.12))
+        val listings = city + loners
+        var live = Color.Unspecified
+        val liveTiles = System.getenv("AMETHYST_MAP_LIVE") != null
+        if (liveTiles) useIdentifiedLoader()
+        val tileUrl = { z: Int, x: Int, y: Int -> if (liveTiles) osmTileUrl(z, x, y) else "http://127.0.0.1:${server.address.port}/$z/$x/$y.png" }
+
+        val density = 2f
+        val scene =
+            ImageComposeScene(width = (600 * density).toInt(), height = (400 * density).toInt(), density = Density(density)) {
+                AmethystPreviewTheme(dark = false) {
+                    val palette = rememberGeocachePalette()
+                    live = palette.live
+                    val state = remember { DesktopMapState(41.07, -85.21, 12) }
+                    val markers =
+                        geocacheMapMarks(listings, state.zoom.toDouble()).map { mark ->
+                            when (mark) {
+                                is GeocacheMapMark.Cache -> {
+                                    val pin = geocachePin(mark.listing, emptySet(), palette)
+                                    MapMarker(mark.listing.address(), mark.lat, mark.lon, pin.color, pin.emoji, pin.alpha)
+                                }
+                                is GeocacheMapMark.Cluster -> MapMarker("c", mark.lat, mark.lon, palette.live, mark.size.toString(), centered = true)
+                            }
+                        }
+                    DesktopTileMap(state, markers, Modifier.fillMaxSize(), wheelZoom = true, controlsAlignment = Alignment.TopEnd, tileUrl = tileUrl)
+                }
+            }
+        try {
+            var image = scene.render(0)
+            repeat(if (liveTiles) 80 else 25) {
+                Thread.sleep(80)
+                image = scene.render((it + 1) * 80_000_000L)
+            }
+            File(outDir, "geocache-pins.png").writeBytes(image.encodeToData(EncodedImageFormat.PNG)!!.bytes)
+
+            // The cluster sits on the view's centre: its head is the palette's amber.
+            val pixels = image.peekPixels()!!
+            var amber = 0
+            val cx = image.width / 2
+            val cy = image.height / 2
+            for (y in cy - 40 until cy + 40 step 2) {
+                for (x in cx - 40 until cx + 40 step 2) {
+                    val c = Color(pixels.getColor(x, y))
+                    if (abs(c.red - live.red) < 0.05f && abs(c.green - live.green) < 0.05f && abs(c.blue - live.blue) < 0.05f) amber++
+                }
+            }
+            assertTrue(amber > 50, "no amber cluster pin at the centre ($amber pixels)")
+        } finally {
+            scene.close()
+        }
     }
 }
