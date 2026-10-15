@@ -1,6 +1,8 @@
 # Desktop self-update: study
 
-Status: **research, no code.** Written 2026-10-15.
+Status: **built (phases 1 to 5), not yet tried on a real macOS or Windows machine.** Written
+2026-10-15; see [Implementation](#implementation) for what was built, how it was checked and what is
+left.
 
 Question: when someone installs Amethyst Desktop from a file on the GitHub
 Release page (not from Homebrew, winget, Flathub or Orchard), how can the app
@@ -549,3 +551,81 @@ The app must not rewrite root-owned `/opt/amethyst` itself. Two honest paths:
 - Should updates install automatically by default, or only notify by default?
   Nostr users tend to want control. Suggest: notify by default, auto-install
   opt-in.
+
+## Implementation
+
+Built on 2026-10-15, following the recommendations above. Decisions taken where the study left a
+question open:
+
+- **App id:** `com.vitorpamplona.amethyst.desktop`.
+- **Signing:** by hand, with Amethyst's nsec, through `amy desktop-release publish` (RELEASE_OPS.md
+  § Desktop self-update). No key in CI.
+- **.deb and .rpm assets:** published too (12 assets per release), for the PackageKit hand-off.
+- **Default:** the app checks on its own (at start and twice a day) and asks before it installs
+  anything. Settings › App › Updates turns the checks off.
+
+### Where the code is
+
+| Piece | Where |
+|---|---|
+| Release lookup, trust rules, state machine, settings | `commons/…/appupdate/` (`Nip82UpdateSource`, `Nip82UpdateFinder`, `AppUpdateManager`, `AppUpdateSettingsStore`) |
+| Release events and asset names (shared with amy) | `commons/…/appupdate/DesktopReleaseEvents.kt`, `DesktopRelease.kt` |
+| Prompt and Settings › App › Updates | `commonsUI/…/appupdate/ui/` (`AppUpdateHost`, `AppUpdateSettingsSection`), wired through `AppRoot.appUpdates` |
+| Install channel, downloader, installers, helper scripts, GitHub fallback | `desktopApp/…/desktop/update/` |
+| Publishing | `cli/…/commands/DesktopReleaseCommands.kt` (`amy desktop-release publish`) |
+| AppImage zsync | `createReleaseAppImage` (`-u gh-releases-zsync|…`), `scripts/asset-name.sh`, `zsync` in `create-release.yml` |
+
+How each part behaves:
+
+- **Trust.** The app installs only from a kind 30063 release signed by `DesktopRelease.PUBLISHER`,
+  for the desktop app id, on the `main` (or `stable`) channel, with the host's platform. Its file
+  must be one of the release's own `e`-tagged assets, signed by the same key, with an https URL and
+  a SHA-256. The download is checked against that hash and size before anything moves. The GitHub
+  API only produces a "new version, open the download page" notice, never an install.
+- **Prereleases.** `amy` publishes a prerelease version on the `beta` channel, which the app
+  ignores.
+- **Applying.**
+  - AppImage: renamed over the running file, then relaunched.
+  - Windows zip and Linux tarball: unpacked next to the app folder; after the app quits, a helper
+    script swaps the folders and puts the old one back if the move fails.
+  - DMG: `codesign --verify --deep --strict` and the same Team ID as the running app, then the
+    same swap.
+  - MSI: `msiexec` with UAC after the app quits.
+  - .deb/.rpm: `pkcon install-local` after the app quits, or the desktop's software installer
+    when PackageKit is missing.
+
+  Every helper relaunches the app whether or not the update went in.
+- **Notify only.** Homebrew (with the `brew upgrade` command), Flatpak (with `flatpak update`), a
+  translocated macOS app (move it to Applications), and any install the user cannot write to (the
+  download page).
+
+### How it was checked
+
+- **Unit tests (46 tests).**
+  - `commons` (24): release selection, including forged, foreign, unnamed and http assets,
+    channels, platforms and prereleases; the state machine; asset names.
+  - `desktopApp` (22): channel detection per OS and installer, the downloader against a local HTTP
+    server (hash, size and network failures), zip-slip, and the Unix helper run for real (it waits
+    for a process, swaps the folders and relaunches, and rolls back when the new folder is missing).
+- **End to end** (`UpdateEndToEndTest`, 1 more test): signed events on an in-process relay, the updater finding
+  them, downloading, verifying, staging and swapping an AppImage.
+- **amy** against a local `amy serve` relay: 13 events published (12 assets and the release); a
+  `#i` + `#f` query returns the release and the right asset.
+- **The desktop app, headless:** with `-Damethyst.update.devCheck=true -Damethyst.update.pretendVersion=1.0.0`,
+  the app queried the relays (no signed release exists yet), fell back to GitHub, showed the
+  "Amethyst 1.19.0 is available" prompt and the Settings › App › Updates section, and kept the
+  auto-check switch.
+- **appimagetool 1.9.0** writes the `.zsync` only when `zsyncmake` is installed, and points it at
+  the AppImage's file name. That is why the build now names the AppImage as the release asset, and
+  why CI installs `zsync`.
+
+### Left to do
+
+- **Try it on real installs:** the DMG (Gatekeeper, writing to `/Applications`, quarantine), the
+  MSI (UAC, the upgrade keeping the Start menu shortcut), the Windows zip under Defender, and a .deb
+  through PackageKit. The phase 0 assumptions above are still unverified on those systems.
+- **Publish the first release events** for the next stable tag (`--listing` the first time).
+- Authenticode signing for the MSI and the Windows launcher.
+- Signed apt/dnf repositories, which would make the .deb/.rpm updates the system's job.
+- A hosted Flatpak repo (`--repo-url`) for the GitHub bundle, or pointing those users at Orchard.
+

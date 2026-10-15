@@ -24,6 +24,7 @@ import com.vitorpamplona.amethyst.commons.account.AccountCacheState
 import com.vitorpamplona.amethyst.commons.account.AccountSessionHooks
 import com.vitorpamplona.amethyst.commons.account.AccountSessionManager
 import com.vitorpamplona.amethyst.commons.account.StoreAccountSessionStore
+import com.vitorpamplona.amethyst.commons.appupdate.AppUpdateManager
 import com.vitorpamplona.amethyst.commons.browser.BrowserHistoryRegistry
 import com.vitorpamplona.amethyst.commons.browser.BrowserIconRegistry
 import com.vitorpamplona.amethyst.commons.connectedApps.DataStoreNostrSignerPermissionStore
@@ -97,6 +98,8 @@ import com.vitorpamplona.amethyst.desktop.service.scheduledposts.DesktopSchedule
 import com.vitorpamplona.amethyst.desktop.service.scheduledposts.DesktopScheduledPostStore
 import com.vitorpamplona.amethyst.desktop.service.scheduledposts.OsScheduler
 import com.vitorpamplona.amethyst.desktop.tor.DesktopTorManager
+import com.vitorpamplona.amethyst.desktop.update.DesktopAppUpdates
+import com.vitorpamplona.amethyst.desktop.update.InstallChannel
 import com.vitorpamplona.marmotquic.QuicAgentTextStreamTransport
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.hexToByteArray
@@ -478,6 +481,23 @@ class DesktopAppModules(
             remoteSignerMetadata = REMOTE_SIGNER_METADATA,
         )
 
+    /** How this copy was installed, which decides how it updates. */
+    val installChannel: InstallChannel by lazy { InstallChannel.detect() }
+
+    /** The updater for this install; null for a development run. Started by [initiate]. */
+    val appUpdates: AppUpdateManager? by lazy {
+        DesktopAppUpdates.create(
+            appVersion = appVersion,
+            channel = installChannel,
+            client = client,
+            downloadClient = roleBasedHttpClientBuilder::okHttpClientForVideo,
+            apiClient = roleBasedHttpClientBuilder::okHttpClientForPreview,
+            settings = sharedSettingsStore,
+            updatesDir = File(filesDir, "updates"),
+            scope = applicationIOScope,
+        )
+    }
+
     /** Key Backup, the key prompts and the keyring alert, for the shared UI. */
     val keyStorageController by lazy {
         DesktopKeyStorage(
@@ -605,6 +625,8 @@ class DesktopAppModules(
         }
 
         applicationIOScope.launch { openKeysAndLogIn() }
+
+        applicationIOScope.launch { appUpdates?.start() }
     }
 
     companion object {

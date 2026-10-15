@@ -152,7 +152,7 @@ either way; Studio/AGP fetches the pinned NDK on demand, or pre-install it with
 | Windows MSI | `./gradlew :desktopApp:packageReleaseMsi` | `desktopApp/build/compose/binaries/main-release/msi/Amethyst-*.msi` |
 | Linux `.deb` | `./gradlew :desktopApp:packageReleaseDeb` | `desktopApp/build/compose/binaries/main-release/deb/amethyst_*.deb` |
 | Linux `.rpm` | `./gradlew :desktopApp:packageReleaseRpm` | `desktopApp/build/compose/binaries/main-release/rpm/amethyst-*.rpm` |
-| Linux AppImage | `./gradlew :desktopApp:createReleaseAppImage` | `desktopApp/build/appimage/Amethyst-*-<arch>.AppImage` (x86_64 or aarch64, from host) |
+| Linux AppImage | `./gradlew :desktopApp:createReleaseAppImage` | `desktopApp/build/appimage/amethyst-desktop-*-<arch>.AppImage` (x86_64 or aarch64, from host), plus its `.zsync` when `zsyncmake` is installed |
 | Linux Flatpak | `flatpak-builder` over `createReleaseDistributable` output — see [`desktopApp/packaging/flatpak/README.md`](desktopApp/packaging/flatpak/README.md) | `desktopApp/build/flatpak/Amethyst-*-<arch>.flatpak` (CI; x86_64 or aarch64) |
 | Windows `.zip` portable | See below (inline `7z`) | — |
 | Linux `.tar.gz` portable | See below (inline `tar`) | — |
@@ -785,15 +785,15 @@ bypasses the UI dialog after accepting the installer's inherent trust.
 ### Linux AppImage won't execute
 
 ```bash
-chmod +x Amethyst-*.AppImage
-./Amethyst-*.AppImage
+chmod +x amethyst-desktop-*.AppImage
+./amethyst-desktop-*.AppImage
 ```
 
 On Fedora Silverblue / very minimal distros, FUSE might be missing. Use
 `--appimage-extract-and-run`:
 
 ```bash
-./Amethyst-*.AppImage --appimage-extract-and-run
+./amethyst-desktop-*.AppImage --appimage-extract-and-run
 ```
 
 ---

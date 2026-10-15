@@ -26,6 +26,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalWindowInfo
 import com.vitorpamplona.amethyst.commons.account.AccountSessionManager
+import com.vitorpamplona.amethyst.commons.appupdate.AppUpdateController
 import com.vitorpamplona.amethyst.commons.keystorage.KeyStorageController
 import com.vitorpamplona.amethyst.commons.model.Account
 import com.vitorpamplona.amethyst.commons.privacylock.PrivacyLockSettings
@@ -118,4 +119,7 @@ interface AppRoot {
      * the questions it asks, Key Backup. Null where keys are kept without asking.
      */
     val keyStorage: KeyStorageController? get() = null
+
+    /** The app's own updater, where the app updates itself (the desktop); null where a store does. */
+    val appUpdates: AppUpdateController? get() = null
 }

@@ -10,7 +10,8 @@
 #
 # Env: AMETHYST_DISPLAY (default :99), AMETHYST_SCREEN (default 1600x1000x24),
 #      AMETHYST_RUN_DIR (default /tmp/amethyst-desktop-run: log, profile, screenshots),
-#      AMETHYST_START_TIMEOUT seconds (default 900: a cold Gradle build is slow).
+#      AMETHYST_START_TIMEOUT seconds (default 900: a cold Gradle build is slow),
+#      AMETHYST_RUN_ARGS extra Gradle arguments, e.g. "-Damethyst.update.devCheck=true".
 
 set -uo pipefail
 
@@ -70,7 +71,7 @@ case "${1:-}" in
     : > "$LOG"
     # Redirected as a whole, so no process keeps the caller's stdout open: `start | tail` returns.
     (cd "$REPO_ROOT" && exec nohup ./gradlew :desktopApp:run --console=plain \
-      "-Damethyst.dataDir=$DATA_DIR" -Damethyst.debug=true) >> "$LOG" 2>&1 < /dev/null &
+      "-Damethyst.dataDir=$DATA_DIR" -Damethyst.debug=true ${AMETHYST_RUN_ARGS:-}) >> "$LOG" 2>&1 < /dev/null &
     echo $! > "$PID_FILE"
     echo "Building and launching (log: $LOG, profile: $DATA_DIR, DISPLAY=$DISPLAY_NUM)..."
     deadline=$((SECONDS + TIMEOUT))

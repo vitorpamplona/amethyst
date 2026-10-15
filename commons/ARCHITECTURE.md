@@ -133,6 +133,7 @@ type (`LazyListState`, `TextFieldValue`, `TextFieldState`) goes to `commonsUI`.
 |----------------|-----|---------|
 | `util`         | no  | KMP primitives: `KmpLock`, `WeakReference`, number/URL/codepoint helpers, list/debug helpers. **This is the only general-utility package** — there is no `utils`. |
 | `keystorage`   | no  | Secure key storage interface (Keystore / keychain / keyring actuals). |
+| `appupdate`    | mixed | The desktop app's self-update, headless: NIP-82 release lookup (`Nip82UpdateSource`, `Nip82UpdateFinder`: only releases signed by `DesktopRelease.PUBLISHER`), the `AppUpdateManager` state machine behind the `AppUpdateController` port, the `AppUpdateInstaller` port the platform implements, and the release events `amy desktop-release` signs (`DesktopReleaseEvents`). The prompt and the Settings section are in `commonsUI` `appupdate/ui`; the installers in `desktopApp` `desktop/update`. |
 | `tor`          | no  | Tor manager interface + settings. |
 | `service`      | no  | Cross-cutting services: `BundledUpdate` batching (common); `service/upload` (JVM), `service/nwc`, `service/lnurl` (jvmAndroid). **Singular `service`** — there is no `services`. |
 

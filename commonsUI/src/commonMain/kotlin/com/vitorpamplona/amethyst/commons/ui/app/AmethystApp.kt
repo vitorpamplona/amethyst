@@ -45,6 +45,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.commons.account.AccountSessionManager
 import com.vitorpamplona.amethyst.commons.account.AccountState
 import com.vitorpamplona.amethyst.commons.account.ui.LoginOrSignupScreen
+import com.vitorpamplona.amethyst.commons.appupdate.ui.AppUpdateHost
 import com.vitorpamplona.amethyst.commons.model.Account
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
 import com.vitorpamplona.amethyst.commons.model.navigation.Route
@@ -122,14 +123,17 @@ fun AmethystApp(
     // Outside the privacy lock: unlocking the keys comes before the account (and its lock) loads.
     KeyStorageHost(root.keyStorage) {
         PrivacyLockHost(root.privacyLockSettings, root.blurWalletWhenUnfocused) {
-            Crossfade(
-                targetState = accountState,
-                animationSpec = tween(durationMillis = 100),
-            ) { state ->
-                when (state) {
-                    is AccountState.Loading -> LoadingSetup()
-                    is AccountState.LoggedOff -> LoggedOffSetup(sessionManager)
-                    is AccountState.LoggedIn -> LoggedInSetup(state, sessionManager, root)
+            // Inside the privacy lock: a locked app shows nothing, an update prompt included.
+            AppUpdateHost(root.appUpdates) {
+                Crossfade(
+                    targetState = accountState,
+                    animationSpec = tween(durationMillis = 100),
+                ) { state ->
+                    when (state) {
+                        is AccountState.Loading -> LoadingSetup()
+                        is AccountState.LoggedOff -> LoggedOffSetup(sessionManager)
+                        is AccountState.LoggedIn -> LoggedInSetup(state, sessionManager, root)
+                    }
                 }
             }
         }

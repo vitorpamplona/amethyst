@@ -77,7 +77,7 @@ private val PromptShape = RoundedCornerShape(16.dp)
  * A dialog that asks one thing: an icon badge, a title, a short [description], the fields in
  * [content], then the answer as a full-width button and the alternative as a text button below it.
  * Unless [dismissible], only those two buttons close it: a click outside or Back would leave the
- * caller waiting on an answer.
+ * caller waiting on an answer. An empty [dismissText] leaves the text button out.
  */
 @Composable
 fun PromptDialog(
@@ -138,8 +138,11 @@ fun PromptDialog(
                     ) {
                         Text(confirmText, style = MaterialTheme.typography.titleSmall)
                     }
-                    TextButton(onClick = onDismiss, modifier = Modifier.fillMaxWidth()) {
-                        Text(dismissText)
+                    // A prompt with one way out (a progress the user can only hide) passes no text.
+                    if (dismissText.isNotEmpty()) {
+                        TextButton(onClick = onDismiss, modifier = Modifier.fillMaxWidth()) {
+                            Text(dismissText)
+                        }
                     }
                 }
             }

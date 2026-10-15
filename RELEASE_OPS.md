@@ -23,6 +23,7 @@ A release is one tag push that fans out to these distribution channels:
 | **F-Droid** | **Pull** — F-Droid's build server builds the `fdroid` flavor from source when it sees the new tag | F-Droid (we just maintain the recipe + metadata) |
 | **Zapstore** | `zsp publish` reads `zapstore.yaml`, signs a Nostr release event with Amethyst's nsec | Maintainer |
 | **Orchard** | `orchard-publish` pushes the Flatpak to ghcr and signs its listing with Amethyst's nsec | Maintainer |
+| **Desktop self-update** | `amy desktop-release publish` signs the NIP-82 events the desktop app updates from, with Amethyst's nsec | Maintainer |
 | **Flathub** | **Not submitted yet.** Once accepted: a PR to the Flathub app repo with the regenerated source manifest | Maintainer, by hand (Flathub's AI policy) |
 | **Homebrew** | **Autobump** — BrewTestBot opens the `amethyst-nostr` cask and `amy` formula PRs itself; `scripts/bump-homebrew-cask.sh` only verifies | Homebrew (we verify) |
 | **Winget** | `scripts/bump-winget.sh` opens the `winget-pkgs` PR with your `gh` auth | Maintainer |
@@ -221,6 +222,34 @@ RELAY_URLS="wss://relay.zapstore.dev,wss://nos.lol,wss://nostr.mom,wss://vitor.n
 
 Keep `wss://relay.zapstore.dev` in the list — that is the relay the Zapstore app
 itself reads from.
+
+### Desktop self-update — `amy desktop-release publish` with Amethyst's nsec
+The desktop app updates itself from NIP-82 events signed by Amethyst's key, under its own app id
+`com.vitorpamplona.amethyst.desktop` (the APK's and the Flatpak's ids belong to Zapstore and
+Orchard, and a shared id would let one publish replace another's release). Until this runs, a
+desktop user only hears about the new version from GitHub, with a link to the download page; the
+app never installs a file a signed release does not name. How the app reads these events and what
+each install does with them: `desktopApp/plans/2026-10-15-desktop-self-update-study.md`.
+
+**Each release**, after the GH Release assets exist, download the desktop assets into one folder
+and run, logged in to amy with Amethyst's nsec:
+
+```bash
+gh release download vX.Y.Z --pattern 'amethyst-desktop-*' --dir /tmp/desktop-vX.Y.Z
+amy desktop-release publish /tmp/desktop-vX.Y.Z --version X.Y.Z --notes-file notes.md --dry-run   # check
+amy desktop-release publish /tmp/desktop-vX.Y.Z --version X.Y.Z --notes-file notes.md
+```
+
+It hashes every `amethyst-desktop-X.Y.Z-*` file the app can install (DMG, MSI, both zips, both
+AppImages, both tarballs, the .debs and .rpms; it skips the Flatpak bundles and the `.zsync`
+files), signs one kind 3063 asset per file with its GitHub download URL, SHA-256, size, platform
+and MIME type, then the kind 30063 release that names them, and publishes to the relays the app
+reads (`DesktopRelease.RELAYS`). Add `--listing` the first time, and whenever the listing text in
+`DesktopReleaseEvents` changes, to (re)publish the kind 32267 app. It refuses any key but
+Amethyst's: the app ignores releases signed by anyone else.
+
+A prerelease version (anything but `X.Y.Z`, as the release workflow classifies tags) goes out on
+the `beta` channel, which the app ignores, so publishing one reaches nobody's updater.
 
 ### Orchard — `orchard-publish` with Amethyst's nsec
 [Orchard](https://github.com/Letdown2491/orchard) is a Flatpak store over Nostr.

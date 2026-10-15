@@ -35,6 +35,7 @@ import com.vitorpamplona.amethyst.cli.commands.DebitCommands
 import com.vitorpamplona.amethyst.cli.commands.DecodeCommand
 import com.vitorpamplona.amethyst.cli.commands.DecryptCommand
 import com.vitorpamplona.amethyst.cli.commands.DeleteCommand
+import com.vitorpamplona.amethyst.cli.commands.DesktopReleaseCommands
 import com.vitorpamplona.amethyst.cli.commands.DmCommands
 import com.vitorpamplona.amethyst.cli.commands.EncodeCommand
 import com.vitorpamplona.amethyst.cli.commands.EncryptCommand
@@ -311,6 +312,7 @@ private suspend fun dispatch(argv: Array<String>): Int {
         "pow" -> PowCommands.dispatch(dataDir, tail)
         "nsite" -> NsiteCommands.dispatch(dataDir, tail)
         "napplet" -> NappletCommands.dispatch(dataDir, tail)
+        "desktop-release" -> DesktopReleaseCommands.dispatch(dataDir, tail)
         "store" -> StoreCommands.dispatch(dataDir, tail)
         "follow" -> FollowCommand.follow(dataDir, tail)
         "unfollow" -> FollowCommand.unfollow(dataDir, tail)
@@ -375,6 +377,7 @@ private fun printVerbList() {
         |  relays:      relay admin serve store
         |  trust:       trust graperank fof
         |  media/sites: blossom nsite napplet podcast podcast20 git
+        |  releases:    desktop-release
         |  payments:    cashu offer debit
         |  signing:     bunker
         """.trimMargin(),
@@ -728,6 +731,12 @@ private fun printUsage() {
         |        [--max-inline-bytes N]                 (--d selects a kind:35129 named napplet, else
         |  napplet fetch --snapshot EVENT-ID            the kind:15129 root; --snapshot pins a kind:5129
         |        [--path P] …                            immutable snapshot by event id)
+        |
+        |Desktop releases (NIP-82, read by the desktop app's updater):
+        |  desktop-release publish DIR --version X.Y.Z  hash the release files in DIR and publish
+        |        [--notes-file F] [--listing]            their signed asset events + the release
+        |        [--url-base URL] [--relay URL[,URL]]    (Amethyst's key only, unless --any-key;
+        |        [--dry-run] [--any-key]                 --dry-run signs and prints, no publish)
         |
         |Contacts (NIP-02 kind:3):
         |  follow USER [--timeout SECS]               add USER to your contact list
