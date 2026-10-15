@@ -69,13 +69,19 @@ class BasicOkHttpWebSocketDialRaceTest {
                         val s = server.accept()
                         accepted.incrementAndGet()
                         thread(isDaemon = true) {
-                            runCatching {
-                                val input = s.getInputStream()
-                                handshake(input, s.getOutputStream())
-                                // Blocks until the client drops the TCP connection.
-                                while (input.read() != -1) { }
-                                closedByClient.countDown()
+                            s.use {
+                                runCatching {
+                                    val input = s.getInputStream()
+                                    handshake(input, s.getOutputStream())
+                                    // Blocks until the client drops the TCP connection.
+                                    while (input.read() != -1) { }
+                                }
                             }
+                            // However the connection ended, the handshake included: a dial
+                            // cancelled after the TCP connect but before its upgrade request went
+                            // out drops the connection mid-handshake, and that is the client
+                            // closing it too.
+                            closedByClient.countDown()
                         }
                     }
                 }
