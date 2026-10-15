@@ -5065,6 +5065,8 @@
     <string name="no_reaction_type_setup_long_press_to_change">No reaction types pre-selected for this user. Long press on the heart button to change</string>
     <string name="no_reactions_setup">No reactions setup</string>
     <string name="no_wallet_found">No Wallets found to pay a lightning invoice. Please install a Lightning wallet to use zaps</string>
+    <string name="pay_elsewhere_title">Pay with another wallet</string>
+    <string name="pay_elsewhere_description">No app on this computer can pay this. Scan the code with a wallet on your phone, or copy it into any Lightning wallet.</string>
     <string name="no_wallet_found_with_error">No Wallets found to pay a lightning invoice (Error: %1$s). Please install a Lightning wallet to use zaps</string>
     <string name="no_zap_amount_setup_long_press_to_change">No Zap Amount Setup. Long Press to change</string>
     <string name="notification_service_accounts_title">Accounts active in the background</string>
