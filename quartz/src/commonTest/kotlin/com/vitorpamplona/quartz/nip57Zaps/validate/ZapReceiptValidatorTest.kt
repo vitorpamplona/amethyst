@@ -204,4 +204,35 @@ class LnurlFormTest {
     fun `does not match different recipients`() {
         assertEquals(false, LnurlForm.matches("alice@example.com", "bob@example.com"))
     }
+
+    @Test
+    fun `lud16 keeps ports and international domains`() {
+        assertEquals("https://localhost:8080/.well-known/lnurlp/vitor", LnurlForm.toUrl("vitor@localhost:8080"))
+        assertEquals("https://münchen.de/.well-known/lnurlp/vitor", LnurlForm.toUrl("vitor@münchen.de"))
+    }
+
+    @Test
+    fun `bech32 resolves to its url`() {
+        val url = "https://example.com/.well-known/lnurlp/vitor"
+        assertEquals(url, LnurlForm.toUrl(LnurlForm.urlToBech32(url)))
+    }
+
+    @Test
+    fun `punctuation glued to the domain is rejected`() {
+        // OkHttp parses https://stardroid.app)⭐ into the host stardroid.xn--app)-3z8b, then
+        // throws "unexpected host" on that same host when it connects, crashing the app.
+        assertEquals(null, LnurlForm.toUrl("vitor@stardroid.app)⭐"))
+        assertEquals(null, LnurlForm.toUrl("vitor@stardroid.app)"))
+        assertEquals(null, LnurlForm.toUrl("vitor@star droid.app"))
+        assertEquals(null, LnurlForm.toUrl("https://stardroid.app)⭐/.well-known/lnurlp/vitor"))
+        assertEquals(null, LnurlForm.toUrl(LnurlForm.urlToBech32("https://stardroid.app)⭐/.well-known/lnurlp/vitor")))
+        assertEquals(false, LnurlForm.matches("vitor@stardroid.app)⭐", "vitor@stardroid.app)⭐"))
+    }
+
+    @Test
+    fun `empty host labels are rejected`() {
+        assertEquals(null, LnurlForm.toUrl("vitor@example..com"))
+        assertEquals(null, LnurlForm.toUrl("vitor@.example.com"))
+        assertEquals(null, LnurlForm.toUrl("https:///.well-known/lnurlp/vitor"))
+    }
 }

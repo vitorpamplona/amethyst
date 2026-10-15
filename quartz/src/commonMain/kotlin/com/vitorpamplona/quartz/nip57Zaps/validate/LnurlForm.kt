@@ -37,9 +37,12 @@ import com.vitorpamplona.quartz.nip19Bech32.toLnUrl
 object LnurlForm {
     /**
      * Resolve any of the three forms to the canonical LNURL-pay URL. Returns
-     * null if the input doesn't match a known form.
+     * null if the input doesn't match a known form, or if its host isn't a
+     * plausible host name (see [isPlausibleHost]).
      */
-    fun toUrl(value: String): String? {
+    fun toUrl(value: String): String? = rawUrl(value)?.takeIf { isPlausibleHost(hostOf(it)) }
+
+    private fun rawUrl(value: String): String? {
         val trimmed = value.trim()
         if (trimmed.isEmpty()) return null
 
@@ -62,6 +65,43 @@ object LnurlForm {
         }
 
         return null
+    }
+
+    /** The host of [url] without user info or port, or "" when there is none. */
+    private fun hostOf(url: String): String {
+        val schemeEnd = url.indexOf("://")
+        if (schemeEnd < 0) return ""
+        val authorityStart = schemeEnd + 3
+        var authorityEnd = url.length
+        for (i in authorityStart until url.length) {
+            val c = url[i]
+            if (c == '/' || c == '?' || c == '#') {
+                authorityEnd = i
+                break
+            }
+        }
+        val hostAndPort = url.substring(authorityStart, authorityEnd).substringAfterLast('@')
+        val colon = hostAndPort.lastIndexOf(':')
+        return if (colon >= 0 && hostAndPort.substring(colon + 1).all { it.isDigit() }) {
+            hostAndPort.substring(0, colon)
+        } else {
+            hostAndPort
+        }
+    }
+
+    /**
+     * A lightning address is free text in someone's profile, so its "domain" can be
+     * `stardroid.app)⭐`. OkHttp parses that URL but then throws on its own encoded
+     * host (`xn--app)-3z8b`) when it connects, so such hosts are rejected here.
+     *
+     * Every label must be non-empty, and its ASCII characters must be letters,
+     * digits, `-` or `_`. Non-ASCII characters are left to IDN encoding.
+     */
+    fun isPlausibleHost(host: String): Boolean {
+        if (host.isEmpty()) return false
+        return host.split('.').all { label ->
+            label.isNotEmpty() && label.all { c -> c.code > 0x7F || c.isLetterOrDigit() || c == '-' || c == '_' }
+        }
     }
 
     /**

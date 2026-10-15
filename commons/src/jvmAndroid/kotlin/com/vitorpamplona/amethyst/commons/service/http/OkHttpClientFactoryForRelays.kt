@@ -82,6 +82,9 @@ class OkHttpClientFactoryForRelays(
             .eventListenerFactory(DnsInvalidatingEventListener.Factory(dns))
             .followRedirects(true)
             .followSslRedirects(true)
+            // First, so it wraps every interceptor below and the connection step: keeps a
+            // malformed host from crashing the app on the Dispatcher thread.
+            .addInterceptor(RuntimeToIoExceptionInterceptor())
             .addInterceptor(DefaultContentTypeInterceptor(userAgent))
             .addInterceptor(OnionLocationInterceptor(onionCache))
             .build()

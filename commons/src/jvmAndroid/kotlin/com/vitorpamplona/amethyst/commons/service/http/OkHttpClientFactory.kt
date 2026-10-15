@@ -142,6 +142,9 @@ class OkHttpClientFactory(
             .pingInterval(Duration.ofSeconds(HTTP2_PING_INTERVAL_SECS))
             .followRedirects(true)
             .followSslRedirects(true)
+            // First, so it wraps every interceptor below and the connection step: keeps a
+            // malformed host from crashing the app on the Dispatcher thread.
+            .addInterceptor(RuntimeToIoExceptionInterceptor())
             .apply { usageInterceptor?.let { addInterceptor(it) } }
             .addInterceptor(DefaultContentTypeInterceptor(userAgent))
             // Sits before the local-cache redirect and outside the network interceptors, so it
