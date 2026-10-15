@@ -64,6 +64,27 @@ class SnoParserAcceptanceTest {
         assertEquals(120, payload.tickAt(3, 2))
     }
 
+    /**
+     * §1.8: "a reader MUST NOT reject a payload for its vertex or face count". Until
+     * 2026-09-24 the format capped both at 512 and 1,024, and this reader kept the cap after
+     * it was lifted, so every larger object (one on the network has 2,057 vertices and
+     * 3,097 faces) showed as nothing.
+     */
+    @Test
+    fun noVertexOrFaceCountIsTooMany() {
+        val vertexCount = 1200
+        val vertices = (0 until vertexCount).joinToString(",") { "[${it % 64},${it / 64},0]" }
+        val colors = (0 until vertexCount).joinToString(",") { "0" }
+        // A fan around vertex 0: one face per neighbouring pair, each with three distinct vertices.
+        val faces = (1 until vertexCount - 1).joinToString(",") { "[0,$it,${it + 1}]" }
+        val json = """{"v":2,"unit":0,"mode":"solid","vertices":[$vertices],"colors":[$colors],"faces":[$faces]}"""
+
+        val payload = SnoParser.parse(json).payloadOrNull()
+        assertNotNull(payload)
+        assertEquals(vertexCount, payload.vertexCount)
+        assertEquals(vertexCount - 2, payload.faceCount)
+    }
+
     @Test
     fun fortyTicksIsExactlyOneThirdOfAUnit() {
         // The whole reason positions are integers: a third of a unit lands on the
