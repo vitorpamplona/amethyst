@@ -35,7 +35,6 @@ import com.vitorpamplona.amethyst.cli.commands.DebitCommands
 import com.vitorpamplona.amethyst.cli.commands.DecodeCommand
 import com.vitorpamplona.amethyst.cli.commands.DecryptCommand
 import com.vitorpamplona.amethyst.cli.commands.DeleteCommand
-import com.vitorpamplona.amethyst.cli.commands.DesktopReleaseCommands
 import com.vitorpamplona.amethyst.cli.commands.DmCommands
 import com.vitorpamplona.amethyst.cli.commands.EncodeCommand
 import com.vitorpamplona.amethyst.cli.commands.EncryptCommand
@@ -73,6 +72,7 @@ import com.vitorpamplona.amethyst.cli.commands.ProfileCommands
 import com.vitorpamplona.amethyst.cli.commands.PublishCommand
 import com.vitorpamplona.amethyst.cli.commands.RelayCommands
 import com.vitorpamplona.amethyst.cli.commands.RelayGroupCommands
+import com.vitorpamplona.amethyst.cli.commands.ReleasesCommands
 import com.vitorpamplona.amethyst.cli.commands.SearchCommand
 import com.vitorpamplona.amethyst.cli.commands.ServeCommand
 import com.vitorpamplona.amethyst.cli.commands.SnoCommands
@@ -312,7 +312,7 @@ private suspend fun dispatch(argv: Array<String>): Int {
         "pow" -> PowCommands.dispatch(dataDir, tail)
         "nsite" -> NsiteCommands.dispatch(dataDir, tail)
         "napplet" -> NappletCommands.dispatch(dataDir, tail)
-        "desktop-release" -> DesktopReleaseCommands.dispatch(dataDir, tail)
+        "releases" -> ReleasesCommands.dispatch(dataDir, tail)
         "store" -> StoreCommands.dispatch(dataDir, tail)
         "follow" -> FollowCommand.follow(dataDir, tail)
         "unfollow" -> FollowCommand.unfollow(dataDir, tail)
@@ -377,7 +377,7 @@ private fun printVerbList() {
         |  relays:      relay admin serve store
         |  trust:       trust graperank fof
         |  media/sites: blossom nsite napplet podcast podcast20 git
-        |  releases:    desktop-release
+        |  releases:    releases
         |  payments:    cashu offer debit
         |  signing:     bunker
         """.trimMargin(),
@@ -733,7 +733,7 @@ private fun printUsage() {
         |        [--path P] …                            immutable snapshot by event id)
         |
         |Desktop releases (NIP-82, read by the desktop app's updater):
-        |  desktop-release publish DIR --version X.Y.Z  hash the release files in DIR and publish
+        |  releases publish DIR --version X.Y.Z          hash the release files in DIR and publish
         |        [--notes-file F] [--listing]            their signed asset events + the release
         |        [--url-base URL] [--relay URL[,URL]]    (Amethyst's key only, unless --any-key;
         |        [--dry-run] [--any-key]                 --dry-run signs and prints, no publish)

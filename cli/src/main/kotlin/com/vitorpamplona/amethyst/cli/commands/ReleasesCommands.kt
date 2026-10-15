@@ -35,18 +35,18 @@ import java.io.File
 import java.security.MessageDigest
 
 /**
- * `amy desktop-release publish` — announce a desktop release to the app's updater: hashes the
+ * `amy releases publish` — announce a desktop release to the app's updater: hashes the
  * release files in a folder and signs the NIP-82 events the desktop app installs from (one kind
  * 3063 asset per file, the kind 30063 release naming them, and with `--listing` the kind 32267
  * app). Run it with Amethyst's key after the GitHub Release assets exist (RELEASE_OPS.md).
  *
  * Thin assembly: file naming, event shapes and the app id are commons' `appupdate`.
  */
-object DesktopReleaseCommands {
+object ReleasesCommands {
     val USAGE: String =
         """
         |Desktop releases (the desktop app's self-update, NIP-82):
-        |  desktop-release publish DIR --version X.Y.Z    hash the amethyst-desktop-* files in DIR and
+        |  releases publish DIR --version X.Y.Z          hash the amethyst-desktop-* files in DIR and
         |        [--notes-file F] [--listing]            publish their signed asset events and the
         |        [--url-base URL] [--relay URL[,URL]]    release that names them (--listing also
         |        [--dry-run] [--any-key]                 publishes the app listing). URLs default to
@@ -59,7 +59,7 @@ object DesktopReleaseCommands {
     suspend fun dispatch(
         dataDir: DataDir,
         tail: Array<String>,
-    ): Int = route("desktop-release", tail, "desktop-release publish DIR --version X.Y.Z …", mapOf("publish" to { publish(dataDir, it) }), USAGE)
+    ): Int = route("releases", tail, "releases publish DIR --version X.Y.Z …", mapOf("publish" to { publish(dataDir, it) }), USAGE)
 
     private suspend fun publish(
         dataDir: DataDir,

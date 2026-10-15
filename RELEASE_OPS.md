@@ -23,7 +23,7 @@ A release is one tag push that fans out to these distribution channels:
 | **F-Droid** | **Pull** — F-Droid's build server builds the `fdroid` flavor from source when it sees the new tag | F-Droid (we just maintain the recipe + metadata) |
 | **Zapstore** | `zsp publish` reads `zapstore.yaml`, signs a Nostr release event with Amethyst's nsec | Maintainer |
 | **Orchard** | `orchard-publish` pushes the Flatpak to ghcr and signs its listing with Amethyst's nsec | Maintainer |
-| **Desktop self-update** | `amy desktop-release publish` signs the NIP-82 events the desktop app updates from, with Amethyst's nsec | Maintainer |
+| **Desktop self-update** | `amy releases publish` signs the NIP-82 events the desktop app updates from, with Amethyst's nsec | Maintainer |
 | **Flathub** | **Not submitted yet.** Once accepted: a PR to the Flathub app repo with the regenerated source manifest | Maintainer, by hand (Flathub's AI policy) |
 | **Homebrew** | **Autobump** — BrewTestBot opens the `amethyst-nostr` cask and `amy` formula PRs itself; `scripts/bump-homebrew-cask.sh` only verifies | Homebrew (we verify) |
 | **Winget** | `scripts/bump-winget.sh` opens the `winget-pkgs` PR with your `gh` auth | Maintainer |
@@ -223,7 +223,7 @@ RELAY_URLS="wss://relay.zapstore.dev,wss://nos.lol,wss://nostr.mom,wss://vitor.n
 Keep `wss://relay.zapstore.dev` in the list — that is the relay the Zapstore app
 itself reads from.
 
-### Desktop self-update — `amy desktop-release publish` with Amethyst's nsec
+### Desktop self-update — `amy releases publish` with Amethyst's nsec
 The desktop app updates itself from NIP-82 events signed by Amethyst's key, under its own app id
 `com.vitorpamplona.amethyst.desktop` (the APK's and the Flatpak's ids belong to Zapstore and
 Orchard, and a shared id would let one publish replace another's release). Until this runs, a
@@ -236,8 +236,8 @@ and run, logged in to amy with Amethyst's nsec:
 
 ```bash
 gh release download vX.Y.Z --pattern 'amethyst-desktop-*' --dir /tmp/desktop-vX.Y.Z
-amy desktop-release publish /tmp/desktop-vX.Y.Z --version X.Y.Z --notes-file notes.md --dry-run   # check
-amy desktop-release publish /tmp/desktop-vX.Y.Z --version X.Y.Z --notes-file notes.md
+amy releases publish /tmp/desktop-vX.Y.Z --version X.Y.Z --notes-file notes.md --dry-run   # check
+amy releases publish /tmp/desktop-vX.Y.Z --version X.Y.Z --notes-file notes.md
 ```
 
 It hashes every `amethyst-desktop-X.Y.Z-*` file the app can install (DMG, MSI, both zips, both

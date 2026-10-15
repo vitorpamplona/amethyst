@@ -558,7 +558,7 @@ Built on 2026-10-15, following the recommendations above. Decisions taken where 
 question open:
 
 - **App id:** `com.vitorpamplona.amethyst.desktop`.
-- **Signing:** by hand, with Amethyst's nsec, through `amy desktop-release publish` (RELEASE_OPS.md
+- **Signing:** by hand, with Amethyst's nsec, through `amy releases publish` (RELEASE_OPS.md
   § Desktop self-update). No key in CI.
 - **.deb and .rpm assets:** published too (12 assets per release), for the PackageKit hand-off.
 - **Default:** the app checks on its own (at start and twice a day) and asks before it installs
@@ -572,7 +572,7 @@ question open:
 | Release events and asset names (shared with amy) | `commons/…/appupdate/DesktopReleaseEvents.kt`, `DesktopRelease.kt` |
 | Prompt and Settings › App › Updates | `commonsUI/…/appupdate/ui/` (`AppUpdateHost`, `AppUpdateSettingsSection`), wired through `AppRoot.appUpdates` |
 | Install channel, downloader, installers, helper scripts, GitHub fallback | `desktopApp/…/desktop/update/` |
-| Publishing | `cli/…/commands/DesktopReleaseCommands.kt` (`amy desktop-release publish`) |
+| Publishing | `cli/…/commands/ReleasesCommands.kt` (`amy releases publish`) |
 | AppImage zsync | `createReleaseAppImage` (`-u gh-releases-zsync|…`), `scripts/asset-name.sh`, `zsync` in `create-release.yml` |
 
 How each part behaves:
