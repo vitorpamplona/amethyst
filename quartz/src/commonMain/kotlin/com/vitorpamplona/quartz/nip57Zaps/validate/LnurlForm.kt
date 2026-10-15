@@ -37,9 +37,12 @@ import com.vitorpamplona.quartz.nip19Bech32.toLnUrl
 object LnurlForm {
     /**
      * Resolve any of the three forms to the canonical LNURL-pay URL. Returns
-     * null if the input doesn't match a known form.
+     * null if the input doesn't match a known form, or if its host isn't a
+     * plausible host name (see [isPlausibleHost]).
      */
-    fun toUrl(value: String): String? {
+    fun toUrl(value: String): String? = rawUrl(value)?.takeIf { isPlausibleHost(hostOf(it)) }
+
+    private fun rawUrl(value: String): String? {
         val trimmed = value.trim()
         if (trimmed.isEmpty()) return null
 
@@ -63,6 +66,80 @@ object LnurlForm {
 
         return null
     }
+
+    /** The host of [url] without user info or port, or "" when there is none. */
+    private fun hostOf(url: String): String {
+        val schemeEnd = url.indexOf("://")
+        if (schemeEnd < 0) return ""
+        val authorityStart = schemeEnd + 3
+        var authorityEnd = url.length
+        for (i in authorityStart until url.length) {
+            val c = url[i]
+            if (c == '/' || c == '?' || c == '#') {
+                authorityEnd = i
+                break
+            }
+        }
+        val hostAndPort = url.substring(authorityStart, authorityEnd).substringAfterLast('@')
+        val colon = hostAndPort.lastIndexOf(':')
+        return if (colon >= 0 && hostAndPort.substring(colon + 1).all { it.isDigit() }) {
+            hostAndPort.substring(0, colon)
+        } else {
+            hostAndPort
+        }
+    }
+
+    /**
+     * A lightning address is free text in someone's profile, so its "domain" can be
+     * `stardroid.app)⭐`. OkHttp parses that URL but then throws on its own encoded
+     * host (`xn--app)-3z8b`) when it connects, so such hosts are rejected here.
+     *
+     * Every label must be non-empty. ASCII characters must be letters, digits, `-`
+     * or `_`, and `_` only in an all-ASCII label. Non-ASCII characters must be
+     * letters, decimal digits or combining marks: IDN encoding maps symbols such as
+     * a fullwidth `）` or `⑴` to ASCII punctuation, which OkHttp then rejects. One
+     * trailing dot (a fully-qualified name) is allowed.
+     */
+    fun isPlausibleHost(host: String): Boolean {
+        val end = if (host.endsWith('.')) host.length - 1 else host.length
+        if (end <= 0) return false
+        var labelStart = 0
+        var hasNonAscii = false
+        var hasUnderscore = false
+        for (i in 0..end) {
+            if (i == end || host[i] == '.') {
+                if (i == labelStart || (hasNonAscii && hasUnderscore)) return false
+                labelStart = i + 1
+                hasNonAscii = false
+                hasUnderscore = false
+                continue
+            }
+            val c = host[i]
+            if (c.code < 0x80) {
+                when (c) {
+                    in 'a'..'z', in 'A'..'Z', in '0'..'9', '-' -> {}
+                    '_' -> hasUnderscore = true
+                    else -> return false
+                }
+            } else {
+                hasNonAscii = true
+                if (c.category !in IDN_CATEGORIES) return false
+            }
+        }
+        return true
+    }
+
+    private val IDN_CATEGORIES =
+        setOf(
+            CharCategory.UPPERCASE_LETTER,
+            CharCategory.LOWERCASE_LETTER,
+            CharCategory.TITLECASE_LETTER,
+            CharCategory.MODIFIER_LETTER,
+            CharCategory.OTHER_LETTER,
+            CharCategory.DECIMAL_DIGIT_NUMBER,
+            CharCategory.NON_SPACING_MARK,
+            CharCategory.COMBINING_SPACING_MARK,
+        )
 
     /**
      * Encode an LNURL-pay URL as a bech32 LNURL string. Used to populate the

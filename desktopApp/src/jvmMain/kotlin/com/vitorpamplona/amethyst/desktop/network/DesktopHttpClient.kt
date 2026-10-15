@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst.desktop.network
 
+import com.vitorpamplona.amethyst.commons.service.http.RuntimeToIoExceptionInterceptor
 import com.vitorpamplona.amethyst.commons.tor.ITorManager
 import com.vitorpamplona.amethyst.commons.tor.TorType
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
@@ -67,6 +68,7 @@ class DesktopHttpClient(
     private val directClient: OkHttpClient by lazy {
         OkHttpClient
             .Builder()
+            .addInterceptor(RuntimeToIoExceptionInterceptor())
             // TCP_NODELAY: keeps CLOSE-then-REQ bursts (feed switches) from
             // nagling behind the unACKed CLOSE — see TcpNoDelaySocketFactory.
             .socketFactory(TcpNoDelaySocketFactory)
@@ -90,6 +92,7 @@ class DesktopHttpClient(
                     val torTimeout = BASE_TIMEOUT_SECONDS * TOR_TIMEOUT_MULTIPLIER
                     OkHttpClient
                         .Builder()
+                        .addInterceptor(RuntimeToIoExceptionInterceptor())
                         .connectionPool(sharedConnectionPool)
                         .proxy(proxy)
                         .connectTimeout(torTimeout, TimeUnit.SECONDS)
@@ -144,6 +147,7 @@ class DesktopHttpClient(
         private val failClosedClient: OkHttpClient by lazy {
             OkHttpClient
                 .Builder()
+                .addInterceptor(RuntimeToIoExceptionInterceptor())
                 .proxy(Proxy(Proxy.Type.SOCKS, InetSocketAddress("127.0.0.1", 1)))
                 .connectTimeout(1, TimeUnit.SECONDS)
                 .readTimeout(1, TimeUnit.SECONDS)
@@ -154,6 +158,7 @@ class DesktopHttpClient(
         private val simpleClient: OkHttpClient by lazy {
             OkHttpClient
                 .Builder()
+                .addInterceptor(RuntimeToIoExceptionInterceptor())
                 // Direct relay sockets opened before setInstance() should
                 // get the same TCP_NODELAY as directClient — see
                 // TcpNoDelaySocketFactory. (failClosedClient is SOCKS, and

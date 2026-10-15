@@ -22,10 +22,10 @@ package com.vitorpamplona.amethyst.commons.service.lnurl
 
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.vitorpamplona.quartz.lightning.LnInvoiceUtil
-import com.vitorpamplona.quartz.lightning.Lud06
 import com.vitorpamplona.quartz.nip57Zaps.ZapRequestEvent
 import com.vitorpamplona.quartz.nip57Zaps.validate.LnurlEndpointCache
 import com.vitorpamplona.quartz.nip57Zaps.validate.LnurlEndpointInfo
+import com.vitorpamplona.quartz.nip57Zaps.validate.LnurlForm
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import okhttp3.OkHttpClient
@@ -67,19 +67,7 @@ class LightningAddressResolver(
      * Converts a lightning address to its LNURL-pay endpoint URL.
      * Supports: user@domain, LNURL bech32
      */
-    fun assembleUrl(lnAddress: String): String? {
-        val parts = lnAddress.split("@")
-
-        if (parts.size == 2) {
-            return "https://${parts[1]}/.well-known/lnurlp/${parts[0]}"
-        }
-
-        if (lnAddress.lowercase().startsWith("lnurl")) {
-            return Lud06().toLnUrlp(lnAddress)
-        }
-
-        return null
-    }
+    fun assembleUrl(lnAddress: String): String? = LnurlForm.toUrl(lnAddress)
 
     /**
      * Resolves a lightning address to a BOLT11 invoice.
