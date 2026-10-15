@@ -559,7 +559,8 @@ question open:
 
 - **App id:** `com.vitorpamplona.amethyst.desktop`.
 - **Signing:** by hand, with Amethyst's nsec, through `amy releases publish` (RELEASE_OPS.md
-  § Desktop self-update). No key in CI.
+  § Zapstore and desktop self-update). No key in CI. The same run also publishes the APK's events
+  for Zapstore, tag for tag as `zsp` did, so one command covers both NIP-82 readers.
 - **.deb and .rpm assets:** published too (12 assets per release), for the PackageKit hand-off.
 - **Default:** the app checks on its own (at start and twice a day) and asks before it installs
   anything. Settings › App › Updates turns the checks off.

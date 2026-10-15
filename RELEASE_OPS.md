@@ -21,9 +21,9 @@ A release is one tag push that fans out to these distribution channels:
 | **GitHub Releases** | Automatic — the `Create Release Assets` workflow builds + signs everything on the `v*` tag | CI |
 | **Google Play** | **Manual** — download the signed AAB from the GH Release, upload in Play Console | Maintainer |
 | **F-Droid** | **Pull** — F-Droid's build server builds the `fdroid` flavor from source when it sees the new tag | F-Droid (we just maintain the recipe + metadata) |
-| **Zapstore** | `zsp publish` reads `zapstore.yaml`, signs a Nostr release event with Amethyst's nsec | Maintainer |
+| **Zapstore** | `amy releases publish` signs the APK's NIP-82 events (as `zsp` did), reading `zapstore.yaml`, with Amethyst's nsec | Maintainer |
 | **Orchard** | `orchard-publish` pushes the Flatpak to ghcr and signs its listing with Amethyst's nsec | Maintainer |
-| **Desktop self-update** | `amy releases publish` signs the NIP-82 events the desktop app updates from, with Amethyst's nsec | Maintainer |
+| **Desktop self-update** | The same `amy releases publish` run signs the NIP-82 events the desktop app updates from | Maintainer |
 | **Flathub** | **Not submitted yet.** Once accepted: a PR to the Flathub app repo with the regenerated source manifest | Maintainer, by hand (Flathub's AI policy) |
 | **Homebrew** | **Autobump** — BrewTestBot opens the `amethyst-nostr` cask and `amy` formula PRs itself; `scripts/bump-homebrew-cask.sh` only verifies | Homebrew (we verify) |
 | **Winget** | `scripts/bump-winget.sh` opens the `winget-pkgs` PR with your `gh` auth | Maintainer |
@@ -194,62 +194,51 @@ What we own to keep that working:
 After a release, just confirm F-Droid picked up the new version (it can lag a
 few days): <https://f-droid.org/packages/com.vitorpamplona.amethyst/>.
 
-### Zapstore — `zsp publish` with Amethyst's nsec
-[Zapstore](https://zapstore.dev/) is a Nostr-native app store. The `zsp` CLI
-reads [`zapstore.yaml`](zapstore.yaml) at the repo root (name, summary,
-description, tags, license, `icon`, screenshots, `supported_nips`, and the
-`variants` regexes that match our `*-fdroid-*.apk` / `*-googleplay-*.apk`
-GH-release assets), then publishes a signed software-release event to Nostr
-relays.
+### Zapstore and desktop self-update — `amy releases publish` with Amethyst's nsec
+One command announces the release on Nostr (NIP-82) for two readers, each under its own app id:
+
+- **Zapstore** ([zapstore.dev](https://zapstore.dev/)) installs and updates the APK from events
+  under `com.vitorpamplona.amethyst`. `amy` writes them tag for tag as
+  [`zsp`](https://github.com/zapstore/zsp) did, reading the same [`zapstore.yaml`](zapstore.yaml),
+  so installs Zapstore made keep updating.
+- **The desktop app** updates itself from events under `com.vitorpamplona.amethyst.desktop`.
+  Until they are out, a desktop user only hears about the new version from GitHub, with a link to
+  the download page; the app never installs a file a signed release does not name
+  (`desktopApp/plans/2026-10-15-desktop-self-update-study.md`).
+
+The Flatpak's id belongs to Orchard. A shared id would let one publish replace another's release.
+
+**Each release**, after the GH Release assets exist, download them into one folder and run from
+the repo root (for `zapstore.yaml`), logged in to amy with Amethyst's nsec:
 
 ```bash
-# from the repo root, after the GH Release assets exist
-zsp publish
+gh release download vX.Y.Z --pattern 'amethyst-desktop-*' --pattern 'amethyst-googleplay-arm64-v8a-*.apk' --dir /tmp/release-vX.Y.Z
+amy releases publish /tmp/release-vX.Y.Z --version X.Y.Z --notes-file notes.md --blossom https://cdn.zapstore.dev --dry-run   # check
+amy releases publish /tmp/release-vX.Y.Z --version X.Y.Z --notes-file notes.md --blossom https://cdn.zapstore.dev
 ```
 
-It signs with **Amethyst's nsec** — provide the key the way `zsp` expects
-(`SIGN_WITH` env var / prompt / its own config), never commit it.
+For each app with files in the folder, it signs one kind 3063 asset per file, then the kind 30063
+release that names them, and publishes to that app's relays. `--listing` also (re)publishes the
+kind 32267 listing: do it when `zapstore.yaml` (Android) or `DesktopReleaseEvents` (desktop)
+changes, and the first time for the desktop.
 
-**Relays.** `zsp` does *not* take relays from `zapstore.yaml`; it reads the
-`RELAY_URLS` env var (comma-separated) and defaults to `wss://relay.zapstore.dev`
-when unset. To fan the release event out to more relays for discoverability,
-set `RELAY_URLS` for the run:
+- **Android:** by default the googleplay arm64-v8a APK, the one `zsp` picked and the only platform
+  Zapstore installs for (`--android-flavor`, `--android-abis` choose others). Each APK is checked
+  with apksig (signature, package, version) and tagged with `version_code`, the SDK range, its ABIs,
+  `apk_certificate_hash`, the `variant` and the `supported_nips` from `zapstore.yaml`.
+  `--blossom https://cdn.zapstore.dev` mirrors the APK there as a second URL, and for `--listing`
+  uploads the icon and screenshots, as `zsp` did. Relays: `relay.zapstore.dev` (the one the
+  Zapstore app reads), `nos.lol`, `nostr.mom` and `vitor.nostr1.com`.
+- **Desktop:** every `amethyst-desktop-X.Y.Z-*` file the app installs (DMG, MSI, both zips, both
+  AppImages, both tarballs, the .debs and .rpms; not the Flatpak bundles or `.zsync` files), with
+  its GitHub URL, SHA-256, size, platform and MIME type. Relays: `DesktopRelease.RELAYS`.
 
-```bash
-RELAY_URLS="wss://relay.zapstore.dev,wss://nos.lol,wss://nostr.mom,wss://vitor.nostr1.com" \
-  SIGN_WITH=<amethyst-nsec> zsp publish
-```
+It refuses any key but Amethyst's. A prerelease version (anything but `X.Y.Z`, as the release
+workflow classifies tags) goes out on the `beta` channel, which neither reader installs from.
+`--only android` or `--only desktop` publishes one app.
 
-Keep `wss://relay.zapstore.dev` in the list — that is the relay the Zapstore app
-itself reads from.
-
-### Desktop self-update — `amy releases publish` with Amethyst's nsec
-The desktop app updates itself from NIP-82 events signed by Amethyst's key, under its own app id
-`com.vitorpamplona.amethyst.desktop` (the APK's and the Flatpak's ids belong to Zapstore and
-Orchard, and a shared id would let one publish replace another's release). Until this runs, a
-desktop user only hears about the new version from GitHub, with a link to the download page; the
-app never installs a file a signed release does not name. How the app reads these events and what
-each install does with them: `desktopApp/plans/2026-10-15-desktop-self-update-study.md`.
-
-**Each release**, after the GH Release assets exist, download the desktop assets into one folder
-and run, logged in to amy with Amethyst's nsec:
-
-```bash
-gh release download vX.Y.Z --pattern 'amethyst-desktop-*' --dir /tmp/desktop-vX.Y.Z
-amy releases publish /tmp/desktop-vX.Y.Z --version X.Y.Z --notes-file notes.md --dry-run   # check
-amy releases publish /tmp/desktop-vX.Y.Z --version X.Y.Z --notes-file notes.md
-```
-
-It hashes every `amethyst-desktop-X.Y.Z-*` file the app can install (DMG, MSI, both zips, both
-AppImages, both tarballs, the .debs and .rpms; it skips the Flatpak bundles and the `.zsync`
-files), signs one kind 3063 asset per file with its GitHub download URL, SHA-256, size, platform
-and MIME type, then the kind 30063 release that names them, and publishes to the relays the app
-reads (`DesktopRelease.RELAYS`). Add `--listing` the first time, and whenever the listing text in
-`DesktopReleaseEvents` changes, to (re)publish the kind 32267 app. It refuses any key but
-Amethyst's: the app ignores releases signed by anyone else.
-
-A prerelease version (anything but `X.Y.Z`, as the release workflow classifies tags) goes out on
-the `beta` channel, which the app ignores, so publishing one reaches nobody's updater.
+`zsp publish` still works for the APK if `amy` is unavailable: it reads the same `zapstore.yaml`,
+with the relays in the `RELAY_URLS` env var.
 
 ### Orchard — `orchard-publish` with Amethyst's nsec
 [Orchard](https://github.com/Letdown2491/orchard) is a Flatpak store over Nostr.

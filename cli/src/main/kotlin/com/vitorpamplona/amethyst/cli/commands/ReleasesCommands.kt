@@ -20,40 +20,52 @@
  */
 package com.vitorpamplona.amethyst.cli.commands
 
+import com.fasterxml.jackson.databind.ObjectMapper
+import com.fasterxml.jackson.dataformat.yaml.YAMLFactory
 import com.vitorpamplona.amethyst.cli.Args
 import com.vitorpamplona.amethyst.cli.Context
 import com.vitorpamplona.amethyst.cli.DataDir
 import com.vitorpamplona.amethyst.cli.Output
-import com.vitorpamplona.amethyst.commons.appupdate.DesktopAssetNames
+import com.vitorpamplona.amethyst.commons.appupdate.AndroidRelease
 import com.vitorpamplona.amethyst.commons.appupdate.DesktopRelease
-import com.vitorpamplona.amethyst.commons.appupdate.DesktopReleaseEvents
-import com.vitorpamplona.amethyst.commons.appupdate.HashedDesktopAsset
-import com.vitorpamplona.quartz.nip01Core.core.Event
-import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
+import com.vitorpamplona.amethyst.commons.appupdate.ReleaseBundles
+import com.vitorpamplona.amethyst.commons.appupdate.ReleaseFilesException
+import com.vitorpamplona.amethyst.commons.appupdate.SignedRelease
+import com.vitorpamplona.amethyst.commons.appupdate.ZapstoreConfig
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
 import java.io.File
-import java.security.MessageDigest
 
 /**
- * `amy releases publish` — announce a desktop release to the app's updater: hashes the
- * release files in a folder and signs the NIP-82 events the desktop app installs from (one kind
- * 3063 asset per file, the kind 30063 release naming them, and with `--listing` the kind 32267
- * app). Run it with Amethyst's key after the GitHub Release assets exist (RELEASE_OPS.md).
+ * `amy releases publish` — announce a release on Nostr (NIP-82), signed with Amethyst's key:
+ * the desktop files for the desktop app's updater, and the APKs for Zapstore, as zsp
+ * (https://github.com/zapstore/zsp) did. Run after the GitHub Release assets exist
+ * (RELEASE_OPS.md § Zapstore and desktop self-update).
  *
- * Thin assembly: file naming, event shapes and the app id are commons' `appupdate`.
+ * Thin assembly: file naming, APK inspection, event shapes and Blossom mirroring are commons'
+ * `appupdate` ([ReleaseBundles]); this reads the flags and `zapstore.yaml` and publishes.
  */
 object ReleasesCommands {
     val USAGE: String =
         """
-        |Desktop releases (the desktop app's self-update, NIP-82):
-        |  releases publish DIR --version X.Y.Z          hash the amethyst-desktop-* files in DIR and
-        |        [--notes-file F] [--listing]            publish their signed asset events and the
-        |        [--url-base URL] [--relay URL[,URL]]    release that names them (--listing also
-        |        [--dry-run] [--any-key]                 publishes the app listing). URLs default to
-        |                                                the GitHub Release of vX.Y.Z; relays to the
-        |                                                ones the app reads. --dry-run signs and
-        |                                                prints without publishing. Refuses a key
-        |                                                other than Amethyst's unless --any-key.
+        |Releases (NIP-82: the desktop app's updater and Zapstore):
+        |  releases publish DIR --version X.Y.Z          sign and publish the release of every app
+        |        [--only desktop|android]                whose files are in DIR: one kind:3063 asset
+        |        [--notes-file F] [--listing]            per file and the kind:30063 release naming
+        |        [--zapstore-yaml F] [--blossom URL]     them (--listing adds the kind:32267 app).
+        |        [--android-flavor googleplay|fdroid]    Desktop: the amethyst-desktop-* files, under
+        |        [--android-abis A[,A]|all]              com.vitorpamplona.amethyst.desktop. Android:
+        |        [--url-base URL] [--relay URL[,URL]]    the APKs of one flavor (googleplay) and ABI
+        |        [--dry-run] [--any-key]                 list (arm64-v8a), checked with apksig and
+        |                                                tagged as zsp does (version_code, SDKs,
+        |                                                apk_certificate_hash, supported_nip from
+        |                                                --zapstore-yaml, default ./zapstore.yaml).
+        |                                                --blossom mirrors the APKs (and the listing's
+        |                                                icon and screenshots) there, as zsp does with
+        |                                                https://cdn.zapstore.dev. URLs default to the
+        |                                                GitHub Release of vX.Y.Z; relays to each
+        |                                                app's. --dry-run signs and prints, uploading
+        |                                                nothing. Refuses a key other than Amethyst's
+        |                                                unless --any-key.
         """.trimMargin()
 
     suspend fun dispatch(
@@ -68,95 +80,105 @@ object ReleasesCommands {
         val args = Args(rest)
         val dir = File(args.positional(0, "DIR"))
         val version = args.requireFlag("version").removePrefix("v")
+        val only = args.flag("only")
         val notes = args.flag("notes-file")?.let { File(it).readText() } ?: ""
         val withListing = args.bool("listing")
-        val urlBase = args.flag("url-base")?.trimEnd('/')
-        val relayFlag = args.flag("relay")
+        val yaml = File(args.flag("zapstore-yaml") ?: "zapstore.yaml")
+        val blossom = args.flag("blossom")?.trimEnd('/')
+        val flavorName = args.flag("android-flavor") ?: AndroidRelease.Flavor.GOOGLE_PLAY.fileTag
+        val abisFlag = args.flag("android-abis") ?: "arm64-v8a"
+        val urlBase = args.flag("url-base")
+        val relayOverride =
+            args
+                .flag("relay")
+                ?.split(',')
+                ?.map(String::trim)
+                ?.filter { RelayUrlNormalizer.normalizeOrNull(it) != null }
         val dryRun = args.bool("dry-run")
         val anyKey = args.bool("any-key")
         args.rejectUnknown()
 
         if (!dir.isDirectory) return Output.error("bad_args", "not a directory: $dir")
-        val files =
-            dir
-                .listFiles()
-                .orEmpty()
-                .sortedBy { it.name }
-                .mapNotNull { file -> DesktopAssetNames.classify(file.name, version)?.let { file to it } }
-        if (files.isEmpty()) return Output.error("bad_args", "no amethyst-desktop-$version-* release files in $dir")
-
-        val relays: Set<NormalizedRelayUrl> =
-            (relayFlag?.split(',')?.map(String::trim) ?: DesktopRelease.RELAYS)
-                .mapNotNull { RelayUrlNormalizer.normalizeOrNull(it) }
-                .toSet()
-        if (relays.isEmpty()) return Output.error("bad_args", "no valid relay")
+        if (only != null && only != "desktop" && only != "android") return Output.error("bad_args", "--only takes desktop or android")
+        val flavor = AndroidRelease.Flavor.parse(flavorName) ?: return Output.error("bad_args", "--android-flavor takes googleplay or fdroid")
+        val abis = if (abisFlag == "all") AndroidRelease.ABIS else abisFlag.split(',').map(String::trim)
+        abis.firstOrNull { it !in AndroidRelease.ABIS }?.let { return Output.error("bad_args", "unknown ABI $it (expected ${AndroidRelease.ABIS.joinToString(",")})") }
+        if (relayOverride?.isEmpty() == true) return Output.error("bad_args", "no valid relay")
 
         Context.open(dataDir).use { ctx ->
             ctx.prepare()
-            if (ctx.signer.pubKey != DesktopRelease.PUBLISHER && !anyKey) {
-                return Output.error("wrong_key", "the app installs only releases signed by ${DesktopRelease.PUBLISHER}; this account is ${ctx.signer.pubKey} (pass --any-key to sign anyway)")
+            val signer = ctx.signer
+            if (signer.pubKey != DesktopRelease.PUBLISHER && !anyKey) {
+                return Output.error("wrong_key", "releases must be signed by ${DesktopRelease.PUBLISHER}; this account is ${signer.pubKey} (pass --any-key to sign anyway)")
             }
 
-            val hashed =
-                files.map { (file, classified) ->
-                    HashedDesktopAsset(
-                        file = classified,
-                        sha256 = sha256(file),
-                        sizeInBytes = file.length(),
-                        url = urlBase?.let { "$it/${file.name}" } ?: DesktopRelease.downloadUrl(version, file.name),
-                    )
+            val releases = mutableListOf<SignedRelease>()
+            try {
+                if (only != "android") {
+                    val assets = ReleaseBundles.desktopAssets(dir, version, urlBase)
+                    if (assets.isNotEmpty()) {
+                        releases += ReleaseBundles.signDesktop(signer, version, notes, assets, relayOverride ?: DesktopRelease.RELAYS, withListing)
+                    }
                 }
-            val assets = hashed.map { ctx.signer.sign(DesktopReleaseEvents.asset(it, version)) }
-            val release = ctx.signer.sign(DesktopReleaseEvents.release(ctx.signer.pubKey, version, notes, assets, relays.first()))
-            val listing = if (withListing) ctx.signer.sign(DesktopReleaseEvents.listing()) else null
+                if (only != "desktop") {
+                    val apks = ReleaseBundles.androidApks(dir, version, flavor, abis, urlBase)
+                    if (apks.isNotEmpty()) {
+                        val config = if (yaml.isFile) ZapstoreConfig.fromMap(readYaml(yaml)) else ZapstoreConfig()
+                        if (withListing && !yaml.isFile) return Output.error("bad_args", "--listing for the APK needs --zapstore-yaml (no $yaml)")
+                        val mirrored =
+                            apks.map { (file, apk) ->
+                                if (blossom == null) apk else apk.copy(urls = apk.urls + ReleaseBundles.mirrorToBlossom(file, AndroidRelease.APK_MIME_TYPE, blossom, signer, dryRun = dryRun))
+                            }
+                        val media =
+                            if (withListing) {
+                                ReleaseBundles.listingMedia(config, yaml.absoluteFile.parentFile, blossom, signer, dryRun)
+                            } else {
+                                null
+                            }
+                        releases += ReleaseBundles.signAndroid(signer, version, notes, mirrored, config.supportedNips, relayOverride ?: AndroidRelease.RELAYS, media, config)
+                    }
+                }
+            } catch (e: ReleaseFilesException) {
+                return Output.error("bad_release_files", e.message ?: "bad release files")
+            }
+            if (releases.isEmpty()) return Output.error("bad_args", "no release files for $version in $dir")
 
-            val events: List<Event> = assets + release + listOfNotNull(listing)
-            val published = mutableMapOf<String, List<String>>()
+            val published = mutableMapOf<String, Map<String, List<String>>>()
             if (!dryRun) {
-                for (event in events) {
-                    val ack = ctx.publish(event, relays)
-                    RawEventSupport.publishGuard(ack, event.id)?.let { return it }
-                    published[event.id] = ack.filterValues { it.accepted }.keys.map { it.url }
+                for (release in releases) {
+                    val relays = release.relays.mapNotNull { RelayUrlNormalizer.normalizeOrNull(it) }.toSet()
+                    published[release.appId] =
+                        release.events.associate { event ->
+                            val ack = ctx.publish(event, relays)
+                            RawEventSupport.publishGuard(ack, event.id)?.let { return it }
+                            event.id to ack.filterValues { it.accepted }.keys.map { it.url }
+                        }
                 }
             }
 
             Output.emit(
                 mapOf(
-                    "app_id" to DesktopRelease.APP_ID,
                     "version" to version,
-                    "release_id" to release.id,
-                    "listing_id" to listing?.id,
-                    "assets" to
-                        hashed.zip(assets).map { (h, event) ->
+                    "dry_run" to dryRun,
+                    "apps" to
+                        releases.map { r ->
                             mapOf(
-                                "file" to h.file.filename,
-                                "platform" to h.file.platform,
-                                "mime_type" to h.file.packageType.mimeType,
-                                "sha256" to h.sha256,
-                                "size_bytes" to h.sizeInBytes,
-                                "url" to h.url,
-                                "event_id" to event.id,
+                                "app_id" to r.appId,
+                                "release_id" to r.release.id,
+                                "channel" to r.release.channel(),
+                                "listing_id" to r.listing?.id,
+                                "assets" to r.files,
+                                "relays" to r.relays,
+                                "published_to" to published[r.appId],
+                                "events" to if (dryRun) r.events.map { it.toJson() } else null,
                             )
                         },
-                    "dry_run" to dryRun,
-                    "events" to if (dryRun) events.map { it.toJson() } else null,
-                    "published_to" to published,
                 ),
             )
             return 0
         }
     }
 
-    private fun sha256(file: File): String {
-        val digest = MessageDigest.getInstance("SHA-256")
-        file.inputStream().use { input ->
-            val buffer = ByteArray(1 shl 16)
-            while (true) {
-                val n = input.read(buffer)
-                if (n < 0) break
-                digest.update(buffer, 0, n)
-            }
-        }
-        return digest.digest().joinToString("") { "%02x".format(it) }
-    }
+    @Suppress("UNCHECKED_CAST")
+    private fun readYaml(file: File): Map<String, Any?> = ObjectMapper(YAMLFactory()).readValue(file, Map::class.java) as Map<String, Any?>
 }

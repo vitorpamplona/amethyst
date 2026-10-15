@@ -60,6 +60,8 @@ dependencies {
     implementation(libs.okhttp)
     implementation(libs.okhttpCoroutines)
     implementation(libs.jackson.module.kotlin)
+    // Reads zapstore.yaml for `amy releases publish` (Apache-2.0, with SnakeYAML, Apache-2.0).
+    implementation(libs.jackson.dataformat.yaml)
     implementation(libs.slf4j.nop)
 
     testImplementation(libs.kotlin.test)

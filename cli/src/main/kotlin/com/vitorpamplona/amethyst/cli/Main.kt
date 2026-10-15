@@ -732,11 +732,13 @@ private fun printUsage() {
         |  napplet fetch --snapshot EVENT-ID            the kind:15129 root; --snapshot pins a kind:5129
         |        [--path P] …                            immutable snapshot by event id)
         |
-        |Desktop releases (NIP-82, read by the desktop app's updater):
-        |  releases publish DIR --version X.Y.Z          hash the release files in DIR and publish
-        |        [--notes-file F] [--listing]            their signed asset events + the release
-        |        [--url-base URL] [--relay URL[,URL]]    (Amethyst's key only, unless --any-key;
-        |        [--dry-run] [--any-key]                 --dry-run signs and prints, no publish)
+        |Releases (NIP-82: the desktop app's updater and Zapstore):
+        |  releases publish DIR --version X.Y.Z          sign + publish the release of every app with
+        |        [--only desktop|android] [--listing]    files in DIR (desktop files; APKs as zsp
+        |        [--zapstore-yaml F] [--blossom URL]     does, apksig-checked). Amethyst's key only
+        |        [--android-flavor F] [--android-abis A]  unless --any-key; --dry-run signs + prints
+        |        [--notes-file F] [--url-base URL]       (`amy releases --help` for details)
+        |        [--relay URL[,URL]] [--dry-run] [--any-key]
         |
         |Contacts (NIP-02 kind:3):
         |  follow USER [--timeout SECS]               add USER to your contact list
