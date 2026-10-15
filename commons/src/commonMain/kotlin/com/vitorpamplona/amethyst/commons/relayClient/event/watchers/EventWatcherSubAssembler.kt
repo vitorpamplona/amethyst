@@ -76,12 +76,10 @@ class EventWatcherSubAssembler(
                     val addressables = group.filterIsInstance<AddressableNote>()
                     val events = group.mapNotNull { if (it !is AddressableNote) it else null }
 
-                    val addressableEOSEs = findMinimumEOSEs(addressables, latestEOSEs)
-
                     listOfNotNull(
                         filterRepliesAndReactionsToNotes(events, findMinimumEOSEs(events, latestEOSEs), soleAccountPubKey),
-                        filterRepliesAndReactionsToAddresses(addressables, addressableEOSEs, soleAccountPubKey),
-                        filterNewVersionsOfAddresses(addressables, addressableEOSEs),
+                        filterRepliesAndReactionsToAddresses(addressables, findMinimumEOSEs(addressables, latestEOSEs), soleAccountPubKey),
+                        filterNewVersionsOfAddresses(addressables),
                     ).flatten()
                 } else {
                     emptyList()

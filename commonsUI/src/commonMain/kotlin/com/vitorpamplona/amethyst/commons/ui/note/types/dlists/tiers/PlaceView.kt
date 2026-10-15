@@ -101,6 +101,7 @@ import com.vitorpamplona.amethyst.commons.resources.dlist_place_listed_on
 import com.vitorpamplona.amethyst.commons.resources.dlist_place_location
 import com.vitorpamplona.amethyst.commons.resources.dlist_place_menu
 import com.vitorpamplona.amethyst.commons.resources.dlist_place_nearby
+import com.vitorpamplona.amethyst.commons.resources.dlist_place_open_always
 import com.vitorpamplona.amethyst.commons.resources.dlist_place_open_until
 import com.vitorpamplona.amethyst.commons.resources.dlist_place_osm_license
 import com.vitorpamplona.amethyst.commons.resources.dlist_place_reserve
@@ -120,6 +121,7 @@ import com.vitorpamplona.amethyst.commons.ui.note.types.dlists.observeListItems
 import com.vitorpamplona.amethyst.commons.ui.note.types.trust.TrustSectionLabel
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.DividerThickness
+import com.vitorpamplona.amethyst.commons.util.DecimalPatternFormatter
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.utils.TimeUtils
@@ -143,9 +145,9 @@ private val ClosedColor = Color(0xFFB26A00)
  * the attribution the data's ODbL licence asks for.
  *
  * Every value is read through the governing definition's fields, by the community concept's names
- * for them. Brainstorm's page adds an embedded map, reviews, recommendations and the website's own
- * picture; here the map is a link (no map server is contacted until the reader asks) and the rest is
- * left out.
+ * for them. The page leads with a map, as Brainstorm's does; its reviews, recommendations and the
+ * website's own picture are left out. (A card in a feed keeps its map behind a button, so a
+ * scrolling feed contacts no map server; on the place's own page the map is the point.)
  */
 @Composable
 internal fun PlaceView(
@@ -161,15 +163,18 @@ internal fun PlaceView(
     val definition = resolved.governing
     val place = remember(event, definition) { placeOf(event.tags, definition) } ?: return
     val week = remember(place) { parseOpeningHours(place.hours) }
-    // Ticks once a minute, so "Open now" turns to "Closed" while the page stays open.
-    val now by produceState(TimeUtils.now()) {
+    val placeLon = place.lon
+    // Ticks once a minute, so "Open now" turns to "Closed" while the page stays open; nothing to
+    // tick for without hours and a longitude to read the place's clock by.
+    val now by produceState(TimeUtils.now(), week, placeLon) {
+        if (week == null || placeLon == null) return@produceState
         while (true) {
             delay(60_000)
             value = TimeUtils.now()
         }
     }
-    val local = remember(place, now / 60) { place.lon?.let { placeLocalTime(it, now) } }
-    val status = remember(week, local) { if (week != null && local != null) openingStatus(week, local.first, local.second) else null }
+    val local = remember(placeLon, now / 60) { placeLon?.let { placeLocalTime(it, now) } }
+    val status = remember(week, local) { if (week != null && local != null) local.first to openingStatus(week, local.first, local.second) else null }
 
     DListKicker(MaterialSymbols.Restaurant, definition.singular, null, openList)
 
@@ -197,7 +202,7 @@ internal fun PlaceView(
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
-        status?.let { OpenStatus(it, local!!.first) }
+        status?.let { (today, open) -> OpenStatus(open, today) }
     }
 
     place.description?.let { Text(text = it, style = MaterialTheme.typography.bodyMedium) }
@@ -247,7 +252,7 @@ private fun OpenStatus(
 ) {
     val text =
         when (status) {
-            is OpeningStatus.Open -> stringRes(Res.string.dlist_place_open_until, clockWords(status.until))
+            is OpeningStatus.Open -> status.until?.let { stringRes(Res.string.dlist_place_open_until, clockWords(it)) } ?: stringRes(Res.string.dlist_place_open_always)
             is OpeningStatus.Closed -> {
                 val at = status.opensAt
                 val day = status.opensDay
@@ -404,12 +409,16 @@ private fun DetailRow(
 }
 
 @Composable
-private fun distanceWords(km: Double): String =
-    if (km < 1) {
-        stringRes(Res.string.dlist_distance_m, (km * 1000).roundToInt())
+private fun distanceWords(km: Double): String {
+    val meters = (km * 1000).roundToInt()
+    return if (meters < 1000) {
+        stringRes(Res.string.dlist_distance_m, meters)
     } else {
-        stringRes(Res.string.dlist_distance_km, ((km * 10).roundToInt() / 10.0).toString())
+        // In the reader's own decimal separator.
+        val format = remember { DecimalPatternFormatter("0.0") }
+        stringRes(Res.string.dlist_distance_km, format.format(km))
     }
+}
 
 /** The nearest places from the same list: the one thing a list can give that a review site can't. */
 @Composable
@@ -473,7 +482,7 @@ private fun Attribution(
     FlowRow(horizontalArrangement = Arrangement.spacedBy(4.dp), verticalArrangement = Arrangement.spacedBy(2.dp)) {
         if (listings.isNotEmpty()) {
             Text(text = stringRes(Res.string.dlist_place_listed_on), style = style, color = muted)
-            listings.forEach { ClickableUrl(url = it.href, displayText = it.label.removeSuffix(" place"), style = style) }
+            listings.forEach { ClickableUrl(url = it.href, displayText = it.label, style = style) }
         } else if (place.source == "btcmap") {
             Text(text = stringRes(Res.string.dlist_place_seeded_btcmap), style = style, color = muted)
         }

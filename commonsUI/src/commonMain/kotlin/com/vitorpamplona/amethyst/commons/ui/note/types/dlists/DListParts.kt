@@ -95,12 +95,15 @@ import com.vitorpamplona.amethyst.commons.resources.dlist_difference_names
 import com.vitorpamplona.amethyst.commons.resources.dlist_differs
 import com.vitorpamplona.amethyst.commons.resources.dlist_more_fields
 import com.vitorpamplona.amethyst.commons.resources.dlist_not_in_definition
+import com.vitorpamplona.amethyst.commons.resources.dlist_not_in_the_definition
 import com.vitorpamplona.amethyst.commons.resources.dlist_open_in_osm
 import com.vitorpamplona.amethyst.commons.resources.dlist_show_on_map
+import com.vitorpamplona.amethyst.commons.resources.dlist_show_on_map_from
 import com.vitorpamplona.amethyst.commons.resources.dlist_shown_as_assistant
 import com.vitorpamplona.amethyst.commons.resources.dlist_shown_as_community
 import com.vitorpamplona.amethyst.commons.resources.dlist_shown_as_listed
 import com.vitorpamplona.amethyst.commons.resources.dlist_shown_as_personal
+import com.vitorpamplona.amethyst.commons.resources.dlist_untitled
 import com.vitorpamplona.amethyst.commons.resources.dlist_untitled_item
 import com.vitorpamplona.amethyst.commons.richtext.MediaUrlVideo
 import com.vitorpamplona.amethyst.commons.ui.components.ClickableUrl
@@ -275,7 +278,7 @@ internal fun DListKicker(
 @Composable
 internal fun DListItemTitle(
     title: String?,
-    singular: String,
+    singular: String?,
     fontWeight: FontWeight?,
     large: Boolean = false,
 ) {
@@ -284,7 +287,7 @@ internal fun DListItemTitle(
         Text(text = title, style = style, fontWeight = fontWeight, maxLines = 2, overflow = TextOverflow.Ellipsis)
     } else {
         Text(
-            text = stringRes(Res.string.dlist_untitled_item, singular.lowercase()),
+            text = singular?.ifBlank { null }?.let { stringRes(Res.string.dlist_untitled_item, it.lowercase()) } ?: stringRes(Res.string.dlist_untitled),
             style = style,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             maxLines = 1,
@@ -447,7 +450,7 @@ internal fun DListRawFields(fields: List<DListFact>) {
 internal fun DListMoreFields(
     moreFields: List<DListFact>,
     undeclared: List<DListFact>,
-    singular: String,
+    singular: String?,
 ) {
     if (moreFields.isEmpty() && undeclared.isEmpty()) return
     var open by rememberSaveable { mutableStateOf(false) }
@@ -473,7 +476,7 @@ internal fun DListMoreFields(
             DListRawFields(moreFields)
             if (undeclared.isNotEmpty()) {
                 Text(
-                    text = stringRes(Res.string.dlist_not_in_definition, singular),
+                    text = singular?.ifBlank { null }?.let { stringRes(Res.string.dlist_not_in_definition, it) } ?: stringRes(Res.string.dlist_not_in_the_definition),
                     style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
@@ -533,7 +536,7 @@ internal fun DListLocationMap(location: DListLocation) {
         } else {
             OutlinedButton(onClick = { open = true }) {
                 Icon(symbol = MaterialSymbols.LocationOn, contentDescription = null, modifier = Modifier.size(16.dp))
-                Text(text = stringRes(Res.string.dlist_show_on_map) + " · openstreetmap.org", modifier = Modifier.padding(start = 6.dp))
+                Text(text = stringRes(Res.string.dlist_show_on_map_from, stringRes(Res.string.dlist_show_on_map), "openstreetmap.org"), modifier = Modifier.padding(start = 6.dp))
             }
         }
     }

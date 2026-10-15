@@ -100,6 +100,8 @@ import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip51Lists.bookmarkList.tags.EventBookmark
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.map
 
 /** Item previews a header card shows before "open the list". */
@@ -225,7 +227,8 @@ internal fun observeListItems(
 
     val items by remember(header) {
         val filter = Filter(kinds = dListItemKinds(header), tags = mapOf("z" to dListItemPointers(header)))
-        LocalCache.observeNotes(filter).map { notes -> notes.filter { it.event != null } }
+        // Off the main thread: the first emission is a scan of the whole cache.
+        LocalCache.observeNotes(filter).map { notes -> notes.filter { it.event != null } }.flowOn(Dispatchers.Default)
     }.collectAsStateWithLifecycle(emptyList())
     return items
 }
@@ -394,7 +397,7 @@ private fun RenderDListItemCard(
                     DListPicture(view.image, header?.image, 56.dp, accountViewModel, view.imageShape)
                 }
                 Column(Modifier.weight(1f)) {
-                    DListItemTitle(view.title, singular ?: "", FontWeight.Bold, large = true)
+                    DListItemTitle(view.title, singular, FontWeight.Bold, large = true)
                     view.summary?.let {
                         Text(text = it, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
@@ -446,7 +449,7 @@ private fun RenderDListItemCard(
         } else {
             // A definition was read: what it doesn't show waits in the fold, outside-the-definition
             // tags apart (all of them, for a header that declares nothing).
-            DListMoreFields(view.moreFields, view.undeclared, singular ?: "")
+            DListMoreFields(view.moreFields, view.undeclared, singular)
         }
 
         resolved?.let { DListDefinitionLine(it) }

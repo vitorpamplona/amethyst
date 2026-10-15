@@ -72,7 +72,10 @@ const val URL_TEMPLATES_CONCEPT = "39998:2efaa715bbb46dd5be6b7da8d7700266d11674b
 private val HEX64 = Regex("^[0-9a-fA-F]{64}$")
 private val VARNAME = Regex("^[A-Za-z0-9_]+$")
 private val PLACEHOLDER = Regex("\\{([^{}]*)\\}")
-private val HTTPS_HEAD = Regex("^https://([^/?#{}]+)(/|$)", RegexOption.IGNORE_CASE)
+
+// The host is letters, digits, dots and dashes only: `@` (userinfo) or `\\` would let a template
+// read as one host and open another.
+private val HTTPS_HEAD = Regex("^https://([A-Za-z0-9.-]+(?::[0-9]{1,5})?)(/|$)", RegexOption.IGNORE_CASE)
 
 /** The header's link templates. A pair may only bind a declared field; an id that isn't one is no link. */
 fun TagArray.linkRefs(declared: Set<String>): List<LinkRef> {
@@ -161,7 +164,8 @@ fun expandTemplate(
     values: Map<String, String?>,
 ): String? {
     val names = templatePlaceholders(template) ?: return null
-    if (names.any { values[it].isNullOrBlank() }) return null
+    // `.` and `..` survive percent-encoding and would climb the template's path.
+    if (names.any { values[it].isNullOrBlank() || values[it]!!.trim().let { v -> v == "." || v == ".." } }) return null
     val href = template.replace(PLACEHOLDER) { percentEncode(values.getValue(it.groupValues[1])!!.trim()) }
     val host = httpsHost(template.replace(PLACEHOLDER, "x")) ?: return null
     return if (httpsHost(href) == host) href else null
@@ -176,7 +180,7 @@ fun itemLinks(
     val out = ArrayList<DListLink>()
     for (ref in refs) {
         val template = templates[ref.templateId] ?: continue
-        val values = ref.bindings.associate { (placeholder, field) -> placeholder to item.firstOrNull { it.size > 1 && it[0] == field }?.get(1) }
+        val values = ref.bindings.associate { (placeholder, field) -> placeholder to item.firstOrNull { it.size > 1 && it[0] == field && it[1].isNotBlank() }?.get(1) }
         val href = expandTemplate(template.template, values) ?: continue
         if (out.any { it.href == href }) continue
         out.add(DListLink(template.name, href, httpsHost(href) ?: continue))

@@ -7223,11 +7223,14 @@
     <string name="dlist_unaffiliated">Withdrawn: affiliated with no list</string>
     <string name="dlist_item_in">in %1$s</string>
     <string name="dlist_untitled_item">Untitled %1$s</string>
+    <string name="dlist_untitled">Untitled</string>
     <string name="dlist_missing_fields">Missing %1$s, which the list requires</string>
     <string name="dlist_more_fields">More fields (%1$d)</string>
     <string name="dlist_not_in_definition">Not part of the %1$s definition</string>
+    <string name="dlist_not_in_the_definition">Not part of the definition</string>
     <string name="dlist_undefined">This item is in a list whose definition couldn't be read, so its fields can't be shown as the list means them. What it carries:</string>
     <string name="dlist_show_on_map">Show on map</string>
+    <string name="dlist_show_on_map_from">%1$s · %2$s</string>
     <string name="dlist_open_in_osm">Open in OpenStreetMap</string>
     <string name="map_osm_attribution">© OpenStreetMap contributors</string>
     <string name="map_zoom_in">Zoom in</string>
@@ -7246,6 +7249,7 @@
     <string name="dlist_difference_links">links</string>
     <string name="dlist_github_repositories">Repositories on GitHub</string>
     <string name="dlist_place_open_until">Open now · until %1$s</string>
+    <string name="dlist_place_open_always">Open now · 24 hours</string>
     <string name="dlist_place_closed_opens_today">Closed · opens at %1$s</string>
     <string name="dlist_place_closed_opens_on">Closed · opens %1$s %2$s</string>
     <string name="dlist_place_closed">Closed</string>

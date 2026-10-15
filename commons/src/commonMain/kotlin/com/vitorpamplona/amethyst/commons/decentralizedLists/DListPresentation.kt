@@ -165,22 +165,48 @@ data class DListItemView(
     val usedFields: Set<String> = emptySet(),
 )
 
-/** The trimmed value when it is an http(s) URL. */
+/**
+ * The trimmed value when it is an http(s) URL whose host reads as what it is: no spaces, control
+ * characters or backslashes (browsers read `\` as `/`, so `https://evil.com\@github.com` goes to
+ * evil.com) and no `user@` before the host, so the host shown beside a link is the one it opens.
+ */
 fun httpUrl(value: String?): String? {
     val trimmed = value?.trim() ?: return null
     val lower = trimmed.lowercase()
-    if (!lower.startsWith("https://") && !lower.startsWith("http://")) return null
-    return if (trimmed.length > lower.indexOf("://") + 3) trimmed else null
+    val start =
+        when {
+            lower.startsWith("https://") -> 8
+            lower.startsWith("http://") -> 7
+            else -> return null
+        }
+    if (trimmed.any { it.isWhitespace() || it.isISOControl() || it == '\\' }) return null
+    val authority = authorityOf(trimmed, start)
+    return if (isPlainHost(authority)) trimmed else null
 }
 
-/** The host of an http(s) URL, without `www.`. */
+private fun authorityOf(
+    url: String,
+    start: Int,
+): String {
+    var end = start
+    while (end < url.length && url[end] != '/' && url[end] != '?' && url[end] != '#') end++
+    return url.substring(start, end)
+}
+
+/** `host` or `host:port`: letters, digits, dots and dashes; nothing that could hide another host. */
+internal fun isPlainHost(authority: String): Boolean {
+    val host = authority.substringBefore(':')
+    val port = authority.substringAfter(':', "")
+    if (host.isEmpty() || host.startsWith('.') || host.startsWith('-')) return false
+    if (host.any { !it.isLetterOrDigit() && it != '.' && it != '-' }) return false
+    if (':' in authority && (port.isEmpty() || port.length > 5 || port.any { it !in '0'..'9' })) return false
+    return true
+}
+
+/** The host of an [httpUrl], without `www.`. */
 fun httpHost(url: String): String =
-    url
-        .substringAfter("://")
-        .substringBefore('/')
-        .substringBefore('?')
-        .substringBefore('#')
-        .substringAfter('@')
+    authorityOf(url, url.indexOf("://") + 3)
+        .substringBefore(':')
         .lowercase()
         .removePrefix("www.")
 
@@ -206,7 +232,7 @@ fun telHref(value: String?): String? {
     return "tel:$cleaned"
 }
 
-private val SINGLE_EMAIL = Regex("[^\\s@?#:]+@[^\\s@?#:]+\\.[^\\s@?#:]+")
+private val SINGLE_EMAIL = Regex("[^\\s@?#:,;]+@[^\\s@?#:,;]+\\.[^\\s@?#:,;]+")
 
 /**
  * An `email` field's value as a mail (provisional): one address, `name@host.tld`, nothing around it

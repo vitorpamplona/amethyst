@@ -79,4 +79,20 @@ class LinkTemplatesTest {
         assertTrue(itemLinks(item, refs, emptyMap()).isEmpty())
         assertTrue(itemLinks(arrayOf(arrayOf("description", "x")), refs, mapOf(templateId to template)).isEmpty())
     }
+
+    /** A host with userinfo or a backslash would read as one host and open another. */
+    @Test
+    fun templatesWhoseHostHidesAnotherAreRefused() {
+        assertNull(templatePlaceholders("https://github.com@evil.com/{u}"))
+        assertNull(templatePlaceholders("https://evil.com\\x.github.com/{u}"))
+        assertEquals(listOf("u"), templatePlaceholders("https://github.com:443/{u}"))
+    }
+
+    /** `.` and `..` pass percent-encoding untouched and would climb the template's path. */
+    @Test
+    fun dotSegmentsAreNoValue() {
+        assertNull(expandTemplate("https://github.com/{u}", mapOf("u" to "..")))
+        assertNull(expandTemplate("https://github.com/{u}", mapOf("u" to ".")))
+        assertEquals("https://github.com/a.b", expandTemplate("https://github.com/{u}", mapOf("u" to "a.b")))
+    }
 }

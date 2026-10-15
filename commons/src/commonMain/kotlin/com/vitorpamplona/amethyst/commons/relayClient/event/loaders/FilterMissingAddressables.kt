@@ -127,12 +127,14 @@ fun filterMissingAddressables(missingAddressables: Map<NormalizedRelayUrl, Set<A
 
 /**
  * The filters that ask each relay for the latest version of its addresses, grouped as
- * [filterMissingAddressables] documents. [since] narrows a relay's filters to versions newer than
- * what it already answered (the new-versions watcher); null asks for whatever the relay holds.
+ * [filterMissingAddressables] documents. [since] gives an address's lower bound, by kind, author
+ * and `d` (the new-versions watcher: just past the version the cache holds); each filter takes the
+ * lowest of its addresses', and none at all when one of them has none. Null asks for whatever the
+ * relay holds.
  */
 fun filterAddressesPerRelay(
     addressesPerRelay: Map<NormalizedRelayUrl, Set<Address>>,
-    since: (NormalizedRelayUrl) -> Long? = { null },
+    since: ((kind: Int, author: String, dTag: String) -> Long?)? = null,
 ): List<RelayBasedFilter> {
     if (addressesPerRelay.isEmpty()) return emptyList()
 
@@ -140,7 +142,6 @@ fun filterAddressesPerRelay(
 
     addressesPerRelay.forEach { (relay, addresses) ->
         if (addresses.isEmpty()) return@forEach
-        val relaySince = since(relay)
 
         // kind -> author -> the `d`s wanted from that author
         var byAuthor: MutableMap<Int, MutableMap<String, MutableList<String>>>? = null
@@ -177,7 +178,7 @@ fun filterAddressesPerRelay(
                                     tags = mapOf("d" to chunk),
                                     authors = authorList,
                                     limit = chunk.size,
-                                    since = relaySince,
+                                    since = since?.let { lowest(chunk) { d -> it(kind, author, d) } },
                                 ),
                         ),
                     )
@@ -198,7 +199,7 @@ fun filterAddressesPerRelay(
                                 kinds = kinds,
                                 authors = chunk,
                                 limit = chunk.size,
-                                since = relaySince,
+                                since = since?.let { lowest(chunk) { pubkey -> it(kind, pubkey, "") } },
                             ),
                     ),
                 )
@@ -207,6 +208,19 @@ fun filterAddressesPerRelay(
     }
 
     return filters
+}
+
+/** The lowest of [values]' bounds; null as soon as one has none. */
+private inline fun lowest(
+    values: List<String>,
+    bound: (String) -> Long?,
+): Long? {
+    var min = Long.MAX_VALUE
+    for (value in values) {
+        val b = bound(value) ?: return null
+        if (b < min) min = b
+    }
+    return if (values.isEmpty()) null else min
 }
 
 /**

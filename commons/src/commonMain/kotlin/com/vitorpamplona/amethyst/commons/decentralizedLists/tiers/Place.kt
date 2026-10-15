@@ -176,15 +176,18 @@ fun Place.mapUrl(): String? {
 /** How a place takes Bitcoin, from its `accepts-bitcoin` value. */
 enum class BitcoinPayment { LIGHTNING, ONCHAIN, BOTH, UNSPECIFIED }
 
-/** `lightning`, `onchain`, `both`, anything else that isn't `no` (yes, the method unknown); null for no or nothing. */
+/** `lightning`, `onchain`, `both`, anything else that isn't a no (yes, the method unknown); null for a no or nothing. */
 fun bitcoinPaymentOf(value: String?): BitcoinPayment? =
     when (value?.trim()?.lowercase()) {
-        null, "", "no" -> null
+        null, "", "no", "false", "none", "0" -> null
         "lightning" -> BitcoinPayment.LIGHTNING
         "onchain", "on-chain" -> BitcoinPayment.ONCHAIN
         "both" -> BitcoinPayment.BOTH
         else -> BitcoinPayment.UNSPECIFIED
     }
+
+private val WHITESPACE = Regex("\\s+")
+private val ZIP_PLUS_FOUR = Regex("^(\\d{5})-\\d{4}$")
 
 /**
  * The address as a reader expects it: the street, then the city, region and postcode. The list's
@@ -198,7 +201,9 @@ fun Place.addressLines(): List<String> {
     var street = address?.trim()?.ifEmpty { null }
     var postalSeen: String? = null
     if (street != null) {
-        val words = street.split(Regex("\\s+")).toMutableList()
+        val words = street.split(WHITESPACE).toMutableList()
+
+        val localityWords = locality?.split(WHITESPACE)
 
         fun peel(): Boolean {
             val last = words.lastOrNull() ?: return false
@@ -206,8 +211,8 @@ fun Place.addressLines(): List<String> {
                 postalSeen = words.removeAt(words.lastIndex)
                 return true
             }
-            if (locality != null) {
-                val lw = locality.split(Regex("\\s+"))
+            if (locality != null && localityWords != null) {
+                val lw = localityWords
                 if (words.size > lw.size && words.takeLast(lw.size).joinToString(" ").equals(locality, ignoreCase = true)) {
                     repeat(lw.size) { words.removeAt(words.lastIndex) }
                     return true
@@ -225,7 +230,7 @@ fun Place.addressLines(): List<String> {
                 .trimEnd(',', ' ')
                 .ifEmpty { null }
     }
-    val code = (postalSeen ?: postal)?.replace(Regex("^(\\d{5})-\\d{4}$"), "$1")
+    val code = (postalSeen ?: postal)?.replace(ZIP_PLUS_FOUR, "$1")
     val regionLine = listOfNotNull(region, code).joinToString(" ").ifEmpty { null }
     val cityLine = listOfNotNull(locality, regionLine).joinToString(", ").ifEmpty { null }
     return listOfNotNull(street, cityLine)
@@ -261,8 +266,9 @@ data class Span(
 typealias Week = Map<Weekday, List<Span>>
 
 sealed interface OpeningStatus {
+    /** Open until [until] (minutes from today's midnight, past 1440 for tomorrow); null when it never closes. */
     data class Open(
-        val until: Int,
+        val until: Int?,
     ) : OpeningStatus
 
     data class Closed(
@@ -272,6 +278,10 @@ sealed interface OpeningStatus {
 }
 
 private val TIME = Regex("^(\\d{1,2}):(\\d{2})$")
+
+// OpenStreetMap's `,` between rules ("Mo-Fr 09:00-17:00, Sa 10:00-14:00"): after a time, before days.
+private val ADDITIONAL_RULE = Regex("(?<=\\d)\\s*,\\s*(?=[A-Za-z]{2}\\b)")
+private val HOLIDAYS = setOf("ph", "sh")
 private val RULE = Regex("^([A-Za-z]{2}(?:-[A-Za-z]{2})?(?:,[A-Za-z]{2}(?:-[A-Za-z]{2})?)*)\\s+(.+)$")
 
 private fun minutesOf(text: String): Int? {
@@ -285,6 +295,7 @@ private fun minutesOf(text: String): Int? {
 private fun daysOf(text: String): List<Weekday>? {
     val out = ArrayList<Weekday>()
     for (part in text.split(',')) {
+        if (part.trim().lowercase() in HOLIDAYS) continue
         val range = part.trim().split('-')
         when (range.size) {
             1 -> out.add(Weekday.of(range[0]) ?: return null)
@@ -318,18 +329,23 @@ private fun spansOf(text: String): List<Span>? =
  * Opening hours as OpenStreetMap writes them, the subset the Food and Drink list carries (Brainstorm
  * `lib/openingHours.ts`): `;`-separated rules, each a day or day range (`Mo`, `Tu-Sa`, `Sa-Mo`
  * wrapping the week) with `HH:MM-HH:MM` spans separated by `,`, or `off`; and `24/7`. A later rule
- * replaces an earlier one for its days. Anything else is null: no week is better than a wrong one.
+ * replaces an earlier one for its days. Beyond Brainstorm's subset, a rule with no days is every
+ * day, rules may also be joined by `,`, and public and school holiday rules (`PH off`) are skipped:
+ * there is no holiday calendar to apply them by. Anything else is null: no week is better than a
+ * wrong one.
  */
 fun parseOpeningHours(text: String?): Week? {
     val s = text?.trim()?.ifEmpty { null } ?: return null
     if (s == "24/7") return Weekday.entries.associateWith { listOf(Span(0, 1440)) }
     val week = Weekday.entries.associateWith { emptyList<Span>() }.toMutableMap()
-    for (rule in s.split(';')) {
+    for (rule in s.split(';').flatMap { it.split(ADDITIONAL_RULE) }) {
         val r = rule.trim()
         if (r.isEmpty()) continue
-        val m = RULE.find(r) ?: return null
-        val days = daysOf(m.groupValues[1]) ?: return null
-        val rest = m.groupValues[2].trim().lowercase()
+        if (r.take(2).lowercase() in HOLIDAYS && (r.length == 2 || !r[2].isLetter())) continue
+        val m = RULE.find(r)
+        val days = if (m != null) daysOf(m.groupValues[1]) ?: return null else Weekday.entries
+        if (days.isEmpty()) continue
+        val rest = (if (m != null) m.groupValues[2] else r).trim().lowercase()
         val spans = if (rest == "off" || rest == "closed") emptyList() else spansOf(rest) ?: return null
         days.forEach { week[it] = spans }
     }
@@ -342,15 +358,34 @@ fun openingStatus(
     day: Weekday,
     minutes: Int,
 ): OpeningStatus {
-    week[day.plus(-1)]?.forEach { s -> if (s.close > 1440 && minutes < s.close - 1440) return OpeningStatus.Open(s.close - 1440) }
+    week[day.plus(-1)]?.forEach { s -> if (s.close > 1440 && minutes < s.close - 1440) return openUntil(week, day, s.close - 1440) }
     val today = week[day].orEmpty()
-    today.forEach { s -> if (minutes >= s.open && minutes < s.close) return OpeningStatus.Open(if (s.close > 1440) s.close - 1440 else s.close) }
+    today.forEach { s -> if (minutes >= s.open && minutes < s.close) return openUntil(week, day, s.close) }
     today.filter { it.open > minutes }.minByOrNull { it.open }?.let { return OpeningStatus.Closed(it.open, day) }
     for (k in 1..7) {
         val d = day.plus(k)
         week[d].orEmpty().minByOrNull { it.open }?.let { return OpeningStatus.Closed(it.open, d) }
     }
     return OpeningStatus.Closed(null, null)
+}
+
+/**
+ * Open until [close], minutes from [day]'s midnight, carried on while the next day opens at the
+ * midnight this one closes at: a `24/7` place, or `Fr 18:00-24:00; Sa 00:00-02:00`, never reads
+ * "until 00:00". A week of that never closes.
+ */
+private fun openUntil(
+    week: Week,
+    day: Weekday,
+    close: Int,
+): OpeningStatus.Open {
+    var end = close
+    repeat(7) {
+        if (end % 1440 != 0) return OpeningStatus.Open(end)
+        val next = week[day.plus(end / 1440)]?.firstOrNull { it.open == 0 } ?: return OpeningStatus.Open(end)
+        end = end + next.close
+    }
+    return OpeningStatus.Open(null)
 }
 
 /**

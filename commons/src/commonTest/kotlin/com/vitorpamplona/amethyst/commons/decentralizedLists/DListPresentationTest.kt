@@ -357,4 +357,25 @@ class DListPresentationTest {
         assertEquals("0.000000", degreesText(0.0))
         assertTrue(DListLocation("gcpuv", 51.47, -0.0005).osmUrl().endsWith("#map=13/51.470000/-0.000500"))
     }
+
+    /** The host shown beside a link is the one it opens: nothing that browsers would read as another. */
+    @Test
+    fun urlsThatHideTheirHostAreNoLinks() {
+        assertNull(httpUrl("https://evil.com\\@github.com"))
+        assertNull(httpUrl("https://a@github.com@evil.com"))
+        assertNull(httpUrl("https://github.com@evil.com/x"))
+        assertNull(httpUrl("https://git hub.com"))
+        assertNull(httpUrl("https://"))
+        assertNull(httpUrl("https://github.com:x/"))
+        assertEquals("https://github.com:8080/a?b#c", httpUrl("https://github.com:8080/a?b#c"))
+        assertEquals("github.com", httpHost("https://www.github.com:8080/a"))
+        assertEquals("mapy.cz", httpHost("https://mapy.cz?x=1"))
+    }
+
+    @Test
+    fun oneEmailAddressOnly() {
+        assertEquals("mailto:a@b.co", emailHref("a@b.co"))
+        assertNull(emailHref("a,b@c.co"))
+        assertNull(emailHref("a@b.co;c@d.co"))
+    }
 }

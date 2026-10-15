@@ -276,4 +276,38 @@ class ConceptViewsTest {
         assertEquals("tel:+12604321958", place.call)
         assertTrue(parseOpeningHours(place.hours)!!.values.all { it == listOf(Span(600, 1320)) })
     }
+
+    @Test
+    fun aWrittenNoIsNoBitcoin() {
+        listOf("false", "None", "0").forEach { assertNull(bitcoinPaymentOf(it)) }
+    }
+
+    /** OpenStreetMap habits beyond Brainstorm's subset: holidays, rules without days, `,` between rules. */
+    @Test
+    fun commonOsmHoursAreRead() {
+        val holidays = parseOpeningHours("Mo-Fr 09:00-17:00; PH off")!!
+        assertEquals(listOf(Span(540, 1020)), holidays[Weekday.MO])
+        assertEquals(emptyList(), holidays[Weekday.SA])
+
+        assertTrue(parseOpeningHours("10:00-22:00")!!.values.all { it == listOf(Span(600, 1320)) })
+
+        val joined = parseOpeningHours("Mo-Fr 09:00-17:00, Sa 10:00-14:00")!!
+        assertEquals(listOf(Span(540, 1020)), joined[Weekday.FR])
+        assertEquals(listOf(Span(600, 840)), joined[Weekday.SA])
+        assertEquals(emptyList(), joined[Weekday.SU])
+
+        val sundays = parseOpeningHours("Mo-Sa 09:00-17:00; Su,PH off")!!
+        assertEquals(emptyList(), sundays[Weekday.SU])
+        // Day lists with commas still read as days, not as a second rule.
+        assertEquals(listOf(Span(600, 720)), parseOpeningHours("Mo,We 10:00-12:00")!![Weekday.WE])
+    }
+
+    /** Open around the clock never reads "until 00:00"; a span that runs into the next day's carries on. */
+    @Test
+    fun openUntilFollowsSpansThatJoinAtMidnight() {
+        assertEquals(OpeningStatus.Open(null), openingStatus(parseOpeningHours("24/7")!!, Weekday.TU, 600))
+        assertEquals(OpeningStatus.Open(null), openingStatus(parseOpeningHours("Mo-Su 00:00-24:00")!!, Weekday.TU, 600))
+        val late = parseOpeningHours("Fr 18:00-24:00; Sa 00:00-02:00")!!
+        assertEquals(OpeningStatus.Open(1440 + 120), openingStatus(late, Weekday.FR, 1200))
+    }
 }

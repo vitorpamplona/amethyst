@@ -21,7 +21,6 @@
 package com.vitorpamplona.amethyst.commons.relayClient.event.watchers
 
 import com.vitorpamplona.amethyst.commons.model.AddressableNote
-import com.vitorpamplona.amethyst.commons.relays.MutableTime
 import com.vitorpamplona.quartz.experimental.decentralizedLists.header.AddressableListHeaderEvent
 import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
@@ -48,24 +47,25 @@ class FilterNewVersionsOfAddressesTest {
 
     @Test
     fun asksForNewerVersionsOfWhatIsHeldPerAuthor() {
-        val filters = filterNewVersionsOfAddresses(listOf(header(alice, "github-accounts", 200), header(bob, "books", 100)), null)!!
+        val filters = filterNewVersionsOfAddresses(listOf(header(alice, "github-accounts", 200), header(bob, "books", 100)))!!
 
         assertEquals(2, filters.size)
         assertEquals(setOf(relay), filters.map { it.relay }.toSet())
         assertEquals(listOf(listOf(alice), listOf(bob)), filters.map { it.filter.authors }.sortedBy { it!!.first() })
         assertEquals(setOf(listOf("github-accounts"), listOf("books")), filters.map { it.filter.tags!!.getValue("d") }.toSet())
         assertTrue(filters.all { it.filter.kinds == listOf(AddressableListHeaderEvent.KIND) })
-        // No answer yet from the relay: the version it holds, one per address.
-        assertTrue(filters.all { it.filter.since == null && it.filter.limit == 1 })
+        // Only what is newer than the version held here.
+        assertEquals(mapOf(alice to 201L, bob to 101L), filters.associate { it.filter.authors!!.single() to it.filter.since })
+        assertTrue(filters.all { it.filter.limit == 1 })
     }
 
+    /** Addresses that share a filter are asked from the oldest version among them, so none is missed. */
     @Test
-    fun onceTheRelayAnsweredOnlyWhatIsNewer() {
-        val since = mutableMapOf(relay to MutableTime(500))
+    fun aSharedFilterStartsAtItsOldestVersion() {
+        val filter = filterNewVersionsOfAddresses(listOf(header(alice, "github-accounts", 200), header(alice, "books", 100)))!!.single().filter
 
-        val filters = filterNewVersionsOfAddresses(listOf(header(alice, "github-accounts", 200)), since)!!
-
-        assertEquals(500L, filters.single().filter.since)
+        assertEquals(listOf("books", "github-accounts"), filter.tags!!.getValue("d"))
+        assertEquals(101L, filter.since)
     }
 
     @Test
@@ -76,7 +76,7 @@ class FilterNewVersionsOfAddressesTest {
                 event = LongFormContentEvent("e".repeat(64), alice, 300, arrayOf(arrayOf("d", "post")), "", "f".repeat(128))
             }
 
-        val filters = filterNewVersionsOfAddresses(listOf(header(alice, "github-accounts", 200), article), null)!!
+        val filters = filterNewVersionsOfAddresses(listOf(header(alice, "github-accounts", 200), article))!!
 
         assertEquals(setOf(listOf(LongFormContentEvent.KIND), listOf(AddressableListHeaderEvent.KIND)), filters.map { it.filter.kinds }.toSet())
     }
@@ -90,11 +90,12 @@ class FilterNewVersionsOfAddressesTest {
                 event = TrustProviderListEvent("e".repeat(64), alice, 300, emptyArray(), "", "f".repeat(128))
             }
 
-        val filter = filterNewVersionsOfAddresses(listOf(list), null)!!.single().filter
+        val filter = filterNewVersionsOfAddresses(listOf(list))!!.single().filter
 
         assertEquals(listOf(TrustProviderListEvent.KIND), filter.kinds)
         assertEquals(listOf(alice), filter.authors)
         assertNull(filter.tags)
+        assertEquals(301L, filter.since)
     }
 
     /** As many addresses as a long publication has sections: split where a relay would cap them. */
@@ -102,7 +103,7 @@ class FilterNewVersionsOfAddressesTest {
     fun manyAddressesAreChunked() {
         val sections = (1..240).map { header(alice, "section-$it", it.toLong()) }
 
-        val filters = filterNewVersionsOfAddresses(sections, null)!!
+        val filters = filterNewVersionsOfAddresses(sections)!!
 
         assertTrue(filters.size > 1)
         assertEquals(
@@ -120,6 +121,6 @@ class FilterNewVersionsOfAddressesTest {
     fun skipsAddressesNotYetLoaded() {
         val missing = AddressableNote(Address(AddressableListHeaderEvent.KIND, alice, "x")).apply { addRelaySync(relay) }
 
-        assertNull(filterNewVersionsOfAddresses(listOf(missing), null))
+        assertNull(filterNewVersionsOfAddresses(listOf(missing)))
     }
 }

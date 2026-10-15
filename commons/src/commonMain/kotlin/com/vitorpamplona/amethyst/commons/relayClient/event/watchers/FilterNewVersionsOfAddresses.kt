@@ -22,7 +22,6 @@ package com.vitorpamplona.amethyst.commons.relayClient.event.watchers
 
 import com.vitorpamplona.amethyst.commons.model.AddressableNote
 import com.vitorpamplona.amethyst.commons.relayClient.event.loaders.filterAddressesPerRelay
-import com.vitorpamplona.amethyst.commons.relays.SincePerRelayMap
 import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
@@ -34,22 +33,24 @@ import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
  * it. This keeps asking, while the note is watched, where its author writes and where it was seen.
  *
  * The filters are the loader's ([filterAddressesPerRelay]: per kind and author, `#d` in chunks a
- * relay won't cap, plain replaceables by author alone), narrowed by [since], the watcher's last
- * EOSE per relay. Until a relay has answered once it sends the version it holds: one event per
- * address, the one time.
+ * relay won't cap, plain replaceables by author alone), each with `since` just past the oldest
+ * version its addresses hold here. A newer version is newer than the cached one by definition, so
+ * that bound never misses one, and a relay with nothing newer answers with nothing. The
+ * subscription's EOSE times are no bound: they are kept per note, not per note and relay, so a
+ * relay first asked for an address (its author's outbox just arrived) would be asked only for what
+ * came after it answered for other notes.
  */
-fun filterNewVersionsOfAddresses(
-    keys: List<AddressableNote>,
-    since: SincePerRelayMap?,
-): List<RelayBasedFilter>? {
+fun filterNewVersionsOfAddresses(keys: List<AddressableNote>): List<RelayBasedFilter>? {
     val perRelay = HashMap<NormalizedRelayUrl, MutableSet<Address>>()
+    val held = HashMap<Address, Long>()
     keys.forEach { note ->
         // An address with no version yet is the loader's to find.
-        if (note.event == null) return@forEach
+        val event = note.event ?: return@forEach
+        held[note.address] = event.createdAt + 1
         note.author?.outboxRelays()?.forEach { relay -> perRelay.getOrPut(relay) { HashSet() }.add(note.address) }
         note.relays.forEach { relay -> perRelay.getOrPut(relay) { HashSet() }.add(note.address) }
     }
     if (perRelay.isEmpty()) return null
 
-    return filterAddressesPerRelay(perRelay) { relay -> since?.get(relay)?.time }
+    return filterAddressesPerRelay(perRelay) { kind, author, dTag -> held[Address(kind, author, dTag)] }
 }
