@@ -26,12 +26,6 @@ android {
         targetCompatibility = JavaVersion.VERSION_21
     }
 
-    sourceSets {
-        getByName("androidTest") {
-            resources.directories.add(file("../testdata").path)
-        }
-    }
-
     testBuildType = "benchmark"
     buildTypes {
         getByName("debug") {
@@ -68,9 +62,6 @@ dependencies {
     androidTestImplementation(libs.quartz)
     androidTestImplementation(project(":commons"))
     androidTestImplementation(project(":commonsUI"))
-
-    // Custom C secp256k1 (libschnorr256k1) for the 3-way Android benchmark
-    androidTestImplementation(libs.schnorr256k1.kmp)
 
     androidTestImplementation(libs.androidx.compose.foundation)
 

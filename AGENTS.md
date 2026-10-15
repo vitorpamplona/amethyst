@@ -26,7 +26,8 @@ a non-interactive JVM command-line client that drives the same Quartz + `commons
 humans, agents, and interop tests. `quic` is a from-scratch pure-Kotlin QUIC v1 + HTTP/3 +
 WebTransport client (no JNI, no BouncyCastle), built because no Android-compatible Java QUIC library
 exists. `geode` is a standalone JVM Nostr relay (Ktor) built on Quartz's
-relay-server code; smaller modules are `benchmark` (Android macrobenchmarks),
+relay-server code; smaller modules are `benchmark` (Android microbenchmarks of `commons`
+code; Quartz's own are in the Quartz repository),
 `relayBench` (head-to-head relay benchmark — boots geode, strfry and other
 relay binaries, replays a shared deterministic corpus, measures ingest/query/
 NIP-77 sync; `./relayBench/run.sh`, see `relayBench/README.md`) and
