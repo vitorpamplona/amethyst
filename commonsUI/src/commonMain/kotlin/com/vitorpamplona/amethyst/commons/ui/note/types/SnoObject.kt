@@ -32,7 +32,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.sno.ui.SnoObjectViewer
-import com.vitorpamplona.amethyst.commons.ui.note.SnoObjectCard
+import com.vitorpamplona.amethyst.commons.ui.note.SnoObjectTurntableCard
 import com.vitorpamplona.amethyst.commons.ui.note.SnoObjectUnreadableCard
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.quartz.cyberspace.deck0003Sno.SnoObjectEvent
@@ -74,10 +74,10 @@ fun RenderSnoObject(
             is SnoResult.Valid -> {
                 var turning by remember(noteEvent) { mutableStateOf(false) }
 
-                SnoObjectCard(
+                SnoObjectTurntableCard(
                     payload = parsed.payload,
                     eventId = noteEvent.id,
-                    onClick = { turning = true },
+                    onOpen = { turning = true },
                 )
 
                 if (turning) {
