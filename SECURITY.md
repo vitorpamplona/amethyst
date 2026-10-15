@@ -16,8 +16,11 @@ older versions. Fixes also land on the `main` branch ahead of the next release.
 | Older          | ❌        |
 
 This covers all artifacts built from this repository: the Android app
-(`amethyst/`), the desktop app (`desktopApp/`), the `amy` CLI (`cli/`), and
-the `quartz` / `commons` libraries.
+(`amethyst/`), the desktop app (`desktopApp/`), the `amy` CLI (`cli/`), the
+`geode` relay, and the `commons` libraries. The Quartz protocol library has its
+own repository and policy: report issues in Quartz's code, such as its
+cryptography, relay client or event parsing, through
+[Quartz's SECURITY.md](https://github.com/vitorpamplona/quartz/blob/main/SECURITY.md).
 
 ## Reporting a Vulnerability
 
@@ -37,8 +40,8 @@ To help us triage quickly, please provide:
 - A clear description of the vulnerability and its impact (what an attacker
   could achieve — e.g. key material exposure, DM confidentiality, integrity,
   availability).
-- Affected module(s): `quartz`, `commons`, `amethyst` (Android), `desktopApp`,
-  or `cli` / `amy`.
+- Affected module(s): `commons`, `amethyst` (Android), `desktopApp`, `geode`,
+  or `cli` / `amy`, and the Quartz version the build pins.
 - Affected version(s), commit SHA, platform, and OS.
 - Steps to reproduce, a proof of concept, or a failing test.
 - Any suggested remediation.

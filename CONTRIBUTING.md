@@ -159,7 +159,7 @@ Common Gradle entry points:
 
 Modules:
 
-- Quartz — Nostr KMP library (protocol, crypto, models), in its own repository: [vitorpamplona/quartz](https://github.com/vitorpamplona/quartz). **No UI.**
+- Quartz — Nostr KMP library (protocol, crypto, models), in its own repository: [vitorpamplona/quartz](https://github.com/vitorpamplona/quartz). **No UI.** Changes to it follow [Quartz's CONTRIBUTING.md](https://github.com/vitorpamplona/quartz/blob/main/CONTRIBUTING.md).
 - `commons/` — Shared headless layer: models, ViewModels, flows, relay client. **No Compose UI** (the CLI depends on it).
 - `commonsUI/` — Shared Compose Multiplatform UI, icons, theme, Compose resources, on top of `commons`.
 - `quic/` — Pure-Kotlin QUIC v1 + HTTP/3 + WebTransport.
@@ -252,10 +252,10 @@ the PR description. Reviewers may ask if you didn't.
 
 | Suite | Path | What it covers | When you must run it |
 |---|---|---|---|
-| **Marmot / MLS (Whitenoise)** | `cli/tests/marmot/` | NIP-EE MLS groups: KeyPackage publish, group create/invite/remove, admin promote/demote, leave, replay, KP rotation — Amethyst (or `amy`) ↔ `whitenoise-rs` Rust reference | Changes to MLS / Marmot code in `quartz/` or `commons/`, or to the Marmot UI / group-chat flow in `amethyst/` |
-| **NIP-17 DMs (amy ↔ amy)** | `cli/tests/dm/` | Text + file DM round-trip, strict kind:10050, `--allow-fallback` NIP-65 chain, `dm list --since` window slide | Changes to DM, gift-wrap (NIP-59), or NIP-17 code paths in `quartz/` or `commons/` |
+| **Marmot / MLS (Whitenoise)** | `cli/tests/marmot/` | NIP-EE MLS groups: KeyPackage publish, group create/invite/remove, admin promote/demote, leave, replay, KP rotation — Amethyst (or `amy`) ↔ `whitenoise-rs` Rust reference | Changes to MLS / Marmot code in Quartz or `commons/`, or to the Marmot UI / group-chat flow in `amethyst/` |
+| **NIP-17 DMs (amy ↔ amy)** | `cli/tests/dm/` | Text + file DM round-trip, strict kind:10050, `--allow-fallback` NIP-65 chain, `dm list --since` window slide | Changes to DM, gift-wrap (NIP-59), or NIP-17 code paths in Quartz or `commons/` |
 | **Audio rooms (manual)** | `cli/tests/nests/` | 47-test manual harness: Amethyst Android ↔ nostrnests.com reference web client. Host/listener flows, hand-raise, role promotion, kicks, schedule, reconnect, JWT refresh, PIP | Changes to NIP-53 audio rooms (`amethyst/` UI) or `nestsClient/` that affect host/listener UX |
-| **MoQ-lite hang-tier** | `nestsClient/tests/hang-interop/` | Rust `hang-listen` / `hang-publish` ↔ Amethyst Kotlin through a real `moq-relay` 0.10.x subprocess. Wire-byte capture, FFT-on-PCM, mute / hot-swap / packet-loss / late-join / 60s broadcast / multi-listener fan-out | Changes to `nestsClient/.../moq/lite/`, `nestsClient/.../audio/`, `MoqLite*Speaker.kt` / `*Listener.kt`, `ReconnectingNests*.kt`, or `quartz/.../nip53` |
+| **MoQ-lite hang-tier** | `nestsClient/tests/hang-interop/` | Rust `hang-listen` / `hang-publish` ↔ Amethyst Kotlin through a real `moq-relay` 0.10.x subprocess. Wire-byte capture, FFT-on-PCM, mute / hot-swap / packet-loss / late-join / 60s broadcast / multi-listener fan-out | Changes to `nestsClient/.../moq/lite/`, `nestsClient/.../audio/`, `MoqLite*Speaker.kt` / `*Listener.kt`, `ReconnectingNests*.kt`, or Quartz's `nip53` |
 | **MoQ-lite browser-tier** | `nestsClient/tests/browser-interop/` | Headless Chromium with `@moq/lite` + `@moq/hang` via Playwright ↔ Amethyst Kotlin (forward + reverse). WebCodecs encode/decode, ALPN negotiation, browser-side reconnect | Same as hang-tier, plus any change to `:quic` (WebTransport, packet header protection, key updates, stream demux) |
 | **QUIC interop-runner** | `quic/interop/` | The standard `quic-interop-runner` matrix (ns-3 sim) against aioquic, picoquic, quic-go, quinn. Handshake, transfer, loss, corruption, IPv6, migration, key update, version negotiation | Any change in `:quic` that could affect wire bytes, congestion control, or the TLS state machine |
 
