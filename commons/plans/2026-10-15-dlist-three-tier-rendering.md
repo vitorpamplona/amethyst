@@ -43,6 +43,16 @@ their kind-10040), the community header, then the header the item named. A candi
 when its `b` points at the community concept. Never by timestamp. Brainstorm's "house" tier is
 Brainstorm's own account and has no counterpart here.
 
+## Staying current
+
+Every header the card reads (listed, community, the reader's and Assistant's copies) and every
+URL template goes through `observeNoteEvent`, so a version that reaches `LocalCache` redraws the
+card. EventFinder's watcher also asks, while an addressable is on screen, for newer versions of
+it (`filterNewVersionsOfAddresses`: per relay and kind, `authors` × `#d`, `since` the last EOSE or
+the oldest version held), on the author's write relays and where it was seen. This applies to
+every addressable rendered, not only D-lists. Not yet observed: the reader's Assistant, which is
+read once from their kind 10040.
+
 ## Left out, and why
 
 Brainstorm's tier-three pages also fetch third-party data (GitHub's account facts and repositories,
