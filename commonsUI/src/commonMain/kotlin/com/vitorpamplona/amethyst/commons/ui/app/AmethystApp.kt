@@ -231,10 +231,7 @@ private fun LoggedInPage(
 
     root.LoggedInEffects(accountViewModel)
 
-    // The emoji panel docks below every screen, where an on-screen keyboard would be.
-    EmojiPanelHost {
-        AppNavigation(accountViewModel, route, sessionManager, root)
-    }
+    AppNavigation(accountViewModel, route, sessionManager, root)
 }
 
 @Composable
@@ -300,34 +297,38 @@ private fun AppNavigation(
         LocalUserFinderAccount provides accountViewModel.account,
         LocalEventFinder provides accountViewModel.dataSources().eventFinder,
     ) {
-        AppShellLayout(
-            accountViewModel = accountViewModel,
-            nav = nav,
-            drawerContent = { openAccountSwitcher -> DrawerContent(nav, openAccountSwitcher, accountViewModel) },
-            permanentDrawerContent = { openAccountSwitcher ->
-                PermanentDrawerContent(nav, openAccountSwitcher, accountViewModel) { expanded, onDismiss ->
-                    AccountSwitchMenu(expanded, onDismiss, accountViewModel, sessionManager)
+        // The emoji panel docks below every screen, where an on-screen keyboard would be. Inside the
+        // providers, so it reads the window's layout (its hover tooltips are for large screens).
+        EmojiPanelHost {
+            AppShellLayout(
+                accountViewModel = accountViewModel,
+                nav = nav,
+                drawerContent = { openAccountSwitcher -> DrawerContent(nav, openAccountSwitcher, accountViewModel) },
+                permanentDrawerContent = { openAccountSwitcher ->
+                    PermanentDrawerContent(nav, openAccountSwitcher, accountViewModel) { expanded, onDismiss ->
+                        AccountSwitchMenu(expanded, onDismiss, accountViewModel, sessionManager)
+                    }
+                },
+                accountSwitcherContent = { AccountSwitchBottomSheet(accountViewModel, sessionManager) },
+                suspendEdgeSwipe = root::suspendEdgeSwipe,
+                deck = rememberDeck(accountViewModel, nav, root),
+            ) {
+                Box(Modifier.fillMaxSize()) {
+                    BuildNavigation(nav, destinations, root)
+                    root.ShellOverlay(accountViewModel)
                 }
-            },
-            accountSwitcherContent = { AccountSwitchBottomSheet(accountViewModel, sessionManager) },
-            suspendEdgeSwipe = root::suspendEdgeSwipe,
-            deck = rememberDeck(accountViewModel, nav, root),
-        ) {
-            Box(Modifier.fillMaxSize()) {
-                BuildNavigation(nav, destinations, root)
-                root.ShellOverlay(accountViewModel)
             }
+
+            OpenFirstRoute(firstRoute, nav)
+
+            root.NavigationEffects(accountViewModel, nav, sessionManager)
+
+            DisplayErrorMessages(accountViewModel.toastManager, accountViewModel, nav)
+            DisplayNotifyMessages(accountViewModel, nav)
+            DisplayCrashMessages(accountViewModel, nav)
+            DisplayBroadcastProgress(accountViewModel)
+            DisplayBlossomSyncProgress()
         }
-
-        OpenFirstRoute(firstRoute, nav)
-
-        root.NavigationEffects(accountViewModel, nav, sessionManager)
-
-        DisplayErrorMessages(accountViewModel.toastManager, accountViewModel, nav)
-        DisplayNotifyMessages(accountViewModel, nav)
-        DisplayCrashMessages(accountViewModel, nav)
-        DisplayBroadcastProgress(accountViewModel)
-        DisplayBlossomSyncProgress()
     }
 }
 

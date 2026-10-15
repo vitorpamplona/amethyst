@@ -104,6 +104,7 @@ fun EmojiPanelHost(content: @Composable () -> Unit) {
                             onPickUnicode = request.onPickUnicode,
                             onPickCustom = request.onPickCustom,
                             modifier = Modifier.fillMaxWidth(),
+                            onClose = state::close,
                         )
                     }
                 }

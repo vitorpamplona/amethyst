@@ -101,6 +101,8 @@ import com.vitorpamplona.amethyst.commons.resources.emoji_group_people_body
 import com.vitorpamplona.amethyst.commons.resources.emoji_group_smileys_emotion
 import com.vitorpamplona.amethyst.commons.resources.emoji_group_symbols
 import com.vitorpamplona.amethyst.commons.resources.emoji_group_travel_places
+import com.vitorpamplona.amethyst.commons.resources.emoji_picker_close
+import com.vitorpamplona.amethyst.commons.resources.emoji_picker_close_hint
 import com.vitorpamplona.amethyst.commons.resources.emoji_picker_favorites
 import com.vitorpamplona.amethyst.commons.resources.emoji_picker_open
 import com.vitorpamplona.amethyst.commons.resources.emoji_picker_skin_tone
@@ -209,6 +211,7 @@ private fun EmojiPickerMenuButton(
                     onPickCustom(it)
                     open = false
                 },
+                onClose = { open = false },
             )
         }
     }
@@ -288,6 +291,7 @@ fun EmojiPicker(
     onPickUnicode: (String) -> Unit,
     onPickCustom: (EmojiMedia) -> Unit,
     modifier: Modifier = Modifier.width(PickerWidth),
+    onClose: (() -> Unit)? = null,
 ) {
     val catalog by produceState(UnicodeEmojiPalette.cachedOrNull()) {
         if (value == null) {
@@ -313,6 +317,7 @@ fun EmojiPicker(
         Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(top = 8.dp)) {
             EmojiSearchField(search, Modifier.weight(1f))
             SkinToneSelector(tone) { UnicodeEmojiPalette.skinTone = it }
+            onClose?.let { EmojiPickerCloseButton(it) }
         }
 
         val loaded = catalog
@@ -342,6 +347,35 @@ fun EmojiPicker(
             SectionedPalette(sections, tone, onPick)
         } else {
             SearchResults(loaded, shortcodes, query, tone, onPick)
+        }
+    }
+}
+
+/**
+ * Closes the picker. Back, Esc and the composer's highlighted smiley close it too, but none of
+ * those shows in the panel, and a docked panel spanning the window looked stuck without it.
+ */
+@Composable
+private fun EmojiPickerCloseButton(onClose: () -> Unit) {
+    val description = stringRes(Res.string.emoji_picker_close)
+    HoverTooltip(stringRes(Res.string.emoji_picker_close_hint)) {
+        Box(
+            contentAlignment = Alignment.Center,
+            modifier =
+                Modifier
+                    .padding(start = 4.dp)
+                    .size(CellSize)
+                    .clip(CircleShape)
+                    .background(MaterialTheme.colorScheme.surfaceContainerHighest)
+                    .clickable(onClickLabel = description, onClick = onClose)
+                    .semantics { contentDescription = description },
+        ) {
+            Icon(
+                symbol = MaterialSymbols.Close,
+                contentDescription = null,
+                modifier = Modifier.size(18.dp),
+                tint = MaterialTheme.colorScheme.onSurface,
+            )
         }
     }
 }
