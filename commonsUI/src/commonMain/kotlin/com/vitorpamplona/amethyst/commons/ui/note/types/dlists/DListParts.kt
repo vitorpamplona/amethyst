@@ -95,6 +95,7 @@ import com.vitorpamplona.amethyst.commons.resources.dlist_difference_names
 import com.vitorpamplona.amethyst.commons.resources.dlist_differs
 import com.vitorpamplona.amethyst.commons.resources.dlist_more_fields
 import com.vitorpamplona.amethyst.commons.resources.dlist_not_in_definition
+import com.vitorpamplona.amethyst.commons.resources.dlist_open_in_osm
 import com.vitorpamplona.amethyst.commons.resources.dlist_show_on_map
 import com.vitorpamplona.amethyst.commons.resources.dlist_shown_as_assistant
 import com.vitorpamplona.amethyst.commons.resources.dlist_shown_as_community
@@ -107,6 +108,7 @@ import com.vitorpamplona.amethyst.commons.ui.components.LoadNote
 import com.vitorpamplona.amethyst.commons.ui.components.MyAsyncImage
 import com.vitorpamplona.amethyst.commons.ui.components.ShowMoreButton
 import com.vitorpamplona.amethyst.commons.ui.note.LoadAddressableNote
+import com.vitorpamplona.amethyst.commons.ui.note.platform.LocationPreviewMap
 import com.vitorpamplona.amethyst.commons.ui.note.platform.ZoomableContentView
 import com.vitorpamplona.amethyst.commons.ui.note.types.trust.TonalChip
 import com.vitorpamplona.amethyst.commons.ui.pluralStringRes
@@ -503,15 +505,43 @@ internal fun DListMediaBlock(
     ZoomableContentView(content = content, roundedCorner = true, contentScale = ContentScale.FillWidth, accountViewModel = accountViewModel)
 }
 
-/** Where the item is, on OpenStreetMap: a link, so showing the card contacts no map server. */
+/**
+ * Where the item is (Brainstorm's `ItemMap`): a map only when the reader asks, so showing the card
+ * contacts no tile server. Then the platform's map ([LocationPreviewMap], OpenStreetMap tiles), a
+ * spot pinned and closer in than an area, with the place on openstreetmap.org a tap away, which is
+ * all a platform without a map draws.
+ */
 @Composable
-internal fun DListLocationLink(location: DListLocation) {
+internal fun DListLocationMap(location: DListLocation) {
+    var open by rememberSaveable(location.geohash) { mutableStateOf(false) }
     val uriHandler = LocalUriHandler.current
-    OutlinedButton(onClick = { runCatching { uriHandler.openUri(location.osmUrl()) } }) {
-        Icon(symbol = MaterialSymbols.LocationOn, contentDescription = null, modifier = Modifier.size(16.dp))
-        Text(text = stringRes(Res.string.dlist_show_on_map) + " · openstreetmap.org", modifier = Modifier.padding(start = 6.dp))
+    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+        if (open) {
+            LocationPreviewMap(
+                latitude = location.lat,
+                longitude = location.lon,
+                modifier = Modifier.clip(PictureShape),
+                zoom = if (location.isSpot) SPOT_ZOOM else AREA_ZOOM,
+                aspectRatio = MAP_ASPECT_RATIO,
+            )
+            Text(
+                text = stringRes(Res.string.dlist_open_in_osm),
+                style = MaterialTheme.typography.labelMedium,
+                color = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.clickable { runCatching { uriHandler.openUri(location.osmUrl()) } },
+            )
+        } else {
+            OutlinedButton(onClick = { open = true }) {
+                Icon(symbol = MaterialSymbols.LocationOn, contentDescription = null, modifier = Modifier.size(16.dp))
+                Text(text = stringRes(Res.string.dlist_show_on_map) + " · openstreetmap.org", modifier = Modifier.padding(start = 6.dp))
+            }
+        }
     }
 }
+
+internal const val SPOT_ZOOM = 16.0
+private const val AREA_ZOOM = 12.0
+internal const val MAP_ASPECT_RATIO = 2f
 
 /** Last and quietest: which definition drew the item, and whether it agrees with the community's. */
 @OptIn(ExperimentalLayoutApi::class)

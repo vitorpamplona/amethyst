@@ -59,4 +59,9 @@ Brainstorm's tier-three pages also fetch third-party data (GitHub's account fact
 Open Library's description and rating, a website's preview picture) through a same-origin proxy,
 so readers never contact those sites. Amethyst has no such proxy, so none of it is fetched: the
 views show what the item says. Reviews, recommendations and web-of-trust endorsements on places
-and books, and the embedded map, are also not ported. The map is a link to OpenStreetMap.
+and books are also not ported.
+
+Maps use the platform's `LocationPreviewMap` (osmdroid with OpenStreetMap tiles on Android): a
+place's own page shows it outright, as Brainstorm's does; a tier-two item with a `location` shows
+it only when the reader asks, so a card contacts no tile server by itself. Desktop has no map yet,
+so there both keep only the link to openstreetmap.org.

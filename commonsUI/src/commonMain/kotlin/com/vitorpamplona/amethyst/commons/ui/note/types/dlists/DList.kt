@@ -408,7 +408,7 @@ private fun RenderDListItemCard(
 
         view.media?.let { DListMediaBlock(it, view.title ?: singular, view.summary, view.image ?: header?.image, accountViewModel) }
 
-        view.location?.let { DListLocationLink(it) }
+        view.location?.let { DListLocationMap(it) }
 
         if (view.missing.isNotEmpty()) {
             TonalChip(stringRes(Res.string.dlist_missing_fields, view.missing.joinToString(", ")))

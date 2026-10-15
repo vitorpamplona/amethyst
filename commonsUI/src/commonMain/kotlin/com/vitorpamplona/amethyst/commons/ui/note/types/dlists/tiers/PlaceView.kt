@@ -86,6 +86,7 @@ import com.vitorpamplona.amethyst.commons.resources.dlist_day_tuesday
 import com.vitorpamplona.amethyst.commons.resources.dlist_day_wednesday
 import com.vitorpamplona.amethyst.commons.resources.dlist_distance_km
 import com.vitorpamplona.amethyst.commons.resources.dlist_distance_m
+import com.vitorpamplona.amethyst.commons.resources.dlist_open_in_osm
 import com.vitorpamplona.amethyst.commons.resources.dlist_place_accepts_bitcoin
 import com.vitorpamplona.amethyst.commons.resources.dlist_place_accepts_bitcoin_both
 import com.vitorpamplona.amethyst.commons.resources.dlist_place_accepts_bitcoin_lightning
@@ -104,14 +105,17 @@ import com.vitorpamplona.amethyst.commons.resources.dlist_place_open_until
 import com.vitorpamplona.amethyst.commons.resources.dlist_place_osm_license
 import com.vitorpamplona.amethyst.commons.resources.dlist_place_reserve
 import com.vitorpamplona.amethyst.commons.resources.dlist_place_seeded_btcmap
-import com.vitorpamplona.amethyst.commons.resources.dlist_show_on_map
 import com.vitorpamplona.amethyst.commons.resources.website
 import com.vitorpamplona.amethyst.commons.ui.components.ClickableUrl
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
+import com.vitorpamplona.amethyst.commons.ui.note.platform.LocationPreviewMap
 import com.vitorpamplona.amethyst.commons.ui.note.types.dlists.DListDefinitionLine
 import com.vitorpamplona.amethyst.commons.ui.note.types.dlists.DListItemRow
 import com.vitorpamplona.amethyst.commons.ui.note.types.dlists.DListKicker
 import com.vitorpamplona.amethyst.commons.ui.note.types.dlists.DListMoreFields
+import com.vitorpamplona.amethyst.commons.ui.note.types.dlists.MAP_ASPECT_RATIO
+import com.vitorpamplona.amethyst.commons.ui.note.types.dlists.PictureShape
+import com.vitorpamplona.amethyst.commons.ui.note.types.dlists.SPOT_ZOOM
 import com.vitorpamplona.amethyst.commons.ui.note.types.dlists.observeListItems
 import com.vitorpamplona.amethyst.commons.ui.note.types.trust.TrustSectionLabel
 import com.vitorpamplona.amethyst.commons.ui.stringRes
@@ -169,6 +173,20 @@ internal fun PlaceView(
 
     DListKicker(MaterialSymbols.Restaurant, definition.singular, null, openList)
 
+    // The map leads, as on Brainstorm's page: on a place's own page it is the point, so it shows
+    // outright. A platform without a map draws nothing here; the link further down stays.
+    val lat = place.lat
+    val lon = place.lon
+    if (lat != null && lon != null) {
+        LocationPreviewMap(
+            latitude = lat,
+            longitude = lon,
+            modifier = Modifier.clip(PictureShape),
+            zoom = SPOT_ZOOM,
+            aspectRatio = MAP_ASPECT_RATIO,
+        )
+    }
+
     Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
         Text(text = place.name, style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
         val kind = place.kindWords()
@@ -193,7 +211,7 @@ internal fun PlaceView(
     place.mapUrl()?.let { url ->
         val uriHandler = LocalUriHandler.current
         Text(
-            text = stringRes(Res.string.dlist_show_on_map) + " · openstreetmap.org",
+            text = stringRes(Res.string.dlist_open_in_osm),
             style = MaterialTheme.typography.labelLarge,
             color = MaterialTheme.colorScheme.primary,
             modifier = Modifier.clickable { runCatching { uriHandler.openUri(url) } },
