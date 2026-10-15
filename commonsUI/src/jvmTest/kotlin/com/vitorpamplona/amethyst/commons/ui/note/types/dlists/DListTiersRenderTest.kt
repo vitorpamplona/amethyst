@@ -40,8 +40,12 @@ import com.vitorpamplona.quartz.nip01Core.core.AddressableEvent
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.utils.EventFactory
 import io.mockk.mockk
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.test.resetMain
+import kotlinx.coroutines.test.setMain
 import org.jetbrains.skia.EncodedImageFormat
 import java.io.File
+import kotlin.test.AfterTest
 import kotlin.test.BeforeTest
 import kotlin.test.Test
 import kotlin.test.assertTrue
@@ -89,6 +93,17 @@ class DListTiersRenderTest {
         LocalCache.justConsume(event, null, wasVerified)
         assertTrue(note.event != null, "the cache refused ${event.kind}:${event.id}")
     }
+
+    /**
+     * The cards collect with `collectAsStateWithLifecycle`, which runs on `Dispatchers.Main`, and
+     * this module's tests have none: without one, every collection throws in the background and
+     * kotlinx-coroutines-test pins the exceptions on the next `runTest` in the same JVM.
+     */
+    @BeforeTest
+    fun mainDispatcher() = Dispatchers.setMain(Dispatchers.Unconfined)
+
+    @AfterTest
+    fun resetMainDispatcher() = Dispatchers.resetMain()
 
     @BeforeTest
     fun fill() {
