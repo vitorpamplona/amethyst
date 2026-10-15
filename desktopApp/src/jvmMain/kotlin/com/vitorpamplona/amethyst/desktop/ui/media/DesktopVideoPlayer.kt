@@ -79,8 +79,10 @@ import java.net.URI
  * A feed video follows Android's rules when its caller opts in. With [autoPlayWhenVisible] the
  * video nearest the middle of the window starts on its own (muted, unless the user unmuted the
  * last one). With [pauseWhenHidden] it pauses once it scrolls out of view, and when its card
- * leaves the screen the engine lets it go, remembering where it was. With [loadOnDemand] (the
- * "start video playback" setting off) nothing downloads until the user clicks the download button.
+ * leaves the screen (another screen opens) the engine lets it go, remembering where it was, unless
+ * the user pressed play or unmuted it: that one keeps playing in the now-playing bar. With
+ * [loadOnDemand] (the "start video playback" setting off) nothing downloads until the user clicks
+ * the download button.
  */
 @Composable
 fun DesktopVideoPlayer(
@@ -134,7 +136,8 @@ fun DesktopVideoPlayer(
 
     LaunchedEffect(url, autoPlay) {
         if (autoPlay) {
-            GlobalMediaPlayer.playVideo(url, initialSeekPosition, owner = surfaceOwner)
+            // Only views the user opened to watch it (the lightbox, a full-screen view) pass autoPlay.
+            GlobalMediaPlayer.playVideo(url, initialSeekPosition, owner = surfaceOwner, chosen = true)
         }
     }
 
@@ -229,7 +232,7 @@ fun DesktopVideoPlayer(
                     onClick = {
                         loaded = true
                         // A click on the download button is a request to watch it.
-                        GlobalMediaPlayer.playVideo(url, owner = surfaceOwner)
+                        GlobalMediaPlayer.playVideo(url, owner = surfaceOwner, chosen = true)
                     },
                     modifier = Modifier.size(75.dp),
                 ) {
@@ -297,7 +300,7 @@ fun DesktopVideoPlayer(
                             GlobalMediaPlayer.claimVideoSurface(surfaceOwner)
                             GlobalMediaPlayer.toggleVideoPlayPause()
                         } else {
-                            GlobalMediaPlayer.playVideo(url, initialSeekPosition, owner = surfaceOwner)
+                            GlobalMediaPlayer.playVideo(url, initialSeekPosition, owner = surfaceOwner, chosen = true)
                         }
                     },
                     onSeek = { pos ->
