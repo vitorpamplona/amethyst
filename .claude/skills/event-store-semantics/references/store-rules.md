@@ -121,11 +121,13 @@ version stored; newest wins; ties broken by lowest id; older re-inserts blocked 
 such.
 
 **STORE-W02 — addressable supersession.** Same as W01 with unique index
-`(kind, pubkey, d_tag)` over `30000 ≤ kind < 40000`. Nuance: `d_tag` is populated from the
-*parsed* event class (`AddressableEvent.dTag()`); an addressable-range kind whose class doesn't
-parse as `AddressableEvent` stores `d_tag NULL`, and SQLite treats NULLs as distinct in unique
-indexes — such events don't supersede each other. An event with no `d` tag parses as `dTag() = ""`
-(empty string), which *does* dedupe normally.
+`(kind, pubkey, d_tag)` over `30000 ≤ kind < 40000`. Addressability comes from the kind, not
+the parsed class: `d_tag` is `Event.dTag()`, the class's override when the event parsed as an
+`AddressableEvent` and the raw `d` tag otherwise, so a kind whose artifact isn't on the classpath
+(a plain `Event`) still supersedes. A missing `d` tag is `""`, which dedupes normally. The
+filesystem store and `EventStoreProjection` key addressables the same way. Rows written before
+this rule (Quartz < 1.20.0) may hold `d_tag NULL` for such kinds; they don't supersede and stay
+until deleted.
 
 **STORE-W03 — ephemeral events are never stored but are acked as accepted.**
 `insert()` returns silently and `batchInsert` reports `Accepted` for `20000 ≤ kind < 30000`
