@@ -154,6 +154,8 @@ import com.vitorpamplona.amethyst.commons.ui.note.types.RenderChat
 import com.vitorpamplona.amethyst.commons.ui.note.types.RenderSoftwareRelease
 import com.vitorpamplona.amethyst.commons.ui.note.types.RenderTextEvent
 import com.vitorpamplona.amethyst.commons.ui.note.types.ReplyRenderType
+import com.vitorpamplona.amethyst.commons.ui.note.types.dlists.RenderDListItem
+import com.vitorpamplona.amethyst.commons.ui.note.types.dlists.isDListItemPage
 import com.vitorpamplona.amethyst.commons.ui.note.types.estimateReadingMinutes
 import com.vitorpamplona.amethyst.commons.ui.note.types.observeZapSender
 import com.vitorpamplona.amethyst.commons.ui.note.types.publishedAtWorthShowing
@@ -853,6 +855,9 @@ private fun FullBleedNoteCompose(
                             nav,
                         )
                     }
+                } else if (isDListItemPage(noteEvent)) {
+                    // The item's own page: a concept with a view of its own draws it (tier three).
+                    RenderDListItem(baseNote, 3, backgroundColor, accountViewModel, nav, isPage = true)
                 } else if (noteEvent is DraftWrapEvent) {
                     RenderDraft(baseNote, 3, ReplyRenderType.FULL, backgroundColor, accountViewModel, nav)
                 } else if (noteEvent is PublicationIndexEvent) {

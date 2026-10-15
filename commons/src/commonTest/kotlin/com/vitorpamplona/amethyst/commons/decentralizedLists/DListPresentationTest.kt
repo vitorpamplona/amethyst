@@ -18,7 +18,7 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.commons.ui.note.types.dlists
+package com.vitorpamplona.amethyst.commons.decentralizedLists
 
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -94,10 +94,16 @@ class DListPresentationTest {
 
         assertEquals("Choconat", item.title)
         assertEquals("R1-L7 Guará 71020-218", item.summary)
-        assertEquals("http://instagram.com/choconat.confeitariadf", item.link)
-        // Declared fields first (title, summary and link are not repeated), then undeclared tags;
-        // protocol tags and alt are never facts.
-        assertEquals(listOf("category", "phone", "opening-hours", "btcmap-id"), item.facts.map { it.field })
+        assertEquals("http://instagram.com/choconat.confeitariadf", item.link?.href)
+        assertEquals("Website", item.link?.label)
+        assertEquals("instagram.com", item.link?.host)
+        // No `fact` hints: nothing is a fact. The declared fields nothing shows wait in the fold, in
+        // header order (title, summary and link are not repeated), then the undeclared tags apart;
+        // protocol tags and alt are never fields.
+        assertTrue(item.facts.isEmpty())
+        assertEquals(listOf("category", "g", "phone", "opening-hours"), item.moreFields.map { it.field })
+        assertEquals(listOf("btcmap-id"), item.undeclared.map { it.field })
+        assertTrue(item.defined)
         assertTrue(item.missing.isEmpty())
     }
 
@@ -112,7 +118,8 @@ class DListPresentationTest {
                     arrayOf("btcmap-id", "2821"),
                 )
 
-        val facts = dListItemView(item, dListHeaderView(foodHeader, null)).facts.associateBy { it.field }
+        val view = dListItemView(item, dListHeaderView(foodHeader, null))
+        val facts = (view.moreFields + view.undeclared).associateBy { it.field }
 
         // Blank values are not values; declared and undeclared fields both count their repeats.
         assertEquals("+55 61995218884", facts.getValue("phone").value)
@@ -143,6 +150,7 @@ class DListPresentationTest {
         assertEquals("beep-boop", view.title)
         assertEquals("Some evil bot", view.summary)
         assertTrue(view.facts.isEmpty())
+        assertTrue(view.moreFields.isEmpty())
     }
 
     @Test
@@ -157,10 +165,12 @@ class DListPresentationTest {
 
         val view = dListItemView(duty, null)
 
+        // Tier one: no definition, so the tags are shown as they are.
+        assertTrue(!view.defined)
         assertNull(view.title)
-        assertEquals(1, view.facts.size)
-        assertEquals("duty", view.facts.single().field)
-        assertEquals(1, view.facts.single().extra)
+        assertTrue(view.facts.isEmpty())
+        assertEquals("duty", view.undeclared.single().field)
+        assertEquals(1, view.undeclared.single().extra)
     }
 
     @Test
@@ -247,7 +257,8 @@ class DListPresentationTest {
                     arrayOf("instagram", "https://instagram.com/choconat"),
                 )
 
-        val facts = dListItemView(item, header).facts.associateBy { it.field }
+        val view = dListItemView(item, header)
+        val facts = (view.moreFields + view.undeclared).associateBy { it.field }
 
         assertEquals("tel:+5561995218884", facts.getValue("phone").href)
         assertEquals("+55 61995218884", facts.getValue("phone").value)
@@ -262,10 +273,72 @@ class DListPresentationTest {
     fun withoutAHeaderNoValueIsGuessedALink() {
         val item = arrayOf(arrayOf("name", "Choconat"), arrayOf("website", "http://instagram.com/choconat.confeitariadf"), arrayOf("phone", "+55 61995218884"))
 
-        val facts = dListItemView(item, null).facts
+        val facts = dListItemView(item, null).undeclared
 
         assertEquals(listOf("website", "phone"), facts.map { it.field })
         assertTrue(facts.all { it.href == null })
+    }
+
+    @Test
+    fun factHintsAreTheOnlyFactsAndEachFieldShowsOnce() {
+        val header =
+            dListHeaderView(
+                foodHeader +
+                    arrayOf(
+                        arrayOf("display", "fact", "phone"),
+                        arrayOf("display", "fact", "opening-hours", "Hours"),
+                        // A field a role already shows is not a fact as well.
+                        arrayOf("display", "fact", "name"),
+                        arrayOf("field-type", "phone", "tel"),
+                    ),
+                null,
+            )
+
+        val view = dListItemView(choconat, header)
+
+        assertEquals(listOf("phone", "opening-hours"), view.facts.map { it.field })
+        assertEquals(listOf(null, "Hours"), view.facts.map { it.label })
+        assertEquals("tel:+5561995218884", view.facts.first().href)
+        assertEquals(listOf("category", "g"), view.moreFields.map { it.field })
+        assertTrue("phone" in view.usedFields && "name" in view.usedFields)
+    }
+
+    @Test
+    fun mediaPlaysByItsExtensionAndLocationTakesTheMostPreciseGeohash() {
+        val header =
+            dListHeaderView(
+                arrayOf(
+                    arrayOf("names", "Song", "Songs"),
+                    arrayOf("optional", "title"),
+                    arrayOf("optional", "url"),
+                    arrayOf("optional", "g"),
+                    arrayOf("display", "title", "title"),
+                    arrayOf("display", "media", "url"),
+                    arrayOf("display", "location", "g"),
+                ),
+                null,
+            )
+        val song = arrayOf(arrayOf("title", "Tune"), arrayOf("url", "https://cdn.example/a/tune.MP3?x=1"), arrayOf("g", "6vjtx"), arrayOf("g", "6vjtxq2"), arrayOf("g", "6v"))
+
+        val view = dListItemView(song, header)
+
+        assertEquals(DListMediaKind.AUDIO, view.media?.kind)
+        assertEquals("6vjtxq2", view.location?.geohash)
+        assertTrue(view.location!!.isSpot)
+        assertNull(dListItemView(arrayOf(arrayOf("title", "Page"), arrayOf("url", "https://example.com/page.html")), header).media)
+        assertEquals(DListMediaKind.VIDEO, mediaKindOfUrl("https://x.example/v.m3u8"))
+    }
+
+    @Test
+    fun aCopyNamesItsCommunityConceptByItsB() {
+        val community = "39998:b83a28b7e4e5d20bd960c5faeb6625f95529166b8bdb045d42634a2f35919450:github-accounts"
+        val copy = dListHeaderView(arrayOf(arrayOf("d", "github-accounts"), arrayOf("b", community, "pointer"), arrayOf("required", "github-username")), null)
+        val canonical = dListHeaderView(arrayOf(arrayOf("d", "url-templates"), arrayOf("b", URL_TEMPLATES_CONCEPT, "pointer")), null)
+
+        assertEquals(community, communityCoordinateOf("39998:${"a".repeat(64)}:github-accounts", copy))
+        // A concept that points at itself is its own community.
+        assertEquals(URL_TEMPLATES_CONCEPT, communityCoordinateOf(URL_TEMPLATES_CONCEPT, canonical))
+        assertTrue(copy.pointsAt(community))
     }
 
     @Test
