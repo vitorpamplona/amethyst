@@ -79,7 +79,8 @@ class ReleaseBundlesTest {
             assertEquals("amethyst-googleplay-arm64-v8a-v1.19.0.apk", newest.filename())
             assertEquals(
                 signed.assets.map { it.id }.toSet(),
-                signed.release
+                signed.releases
+                    .single()
                     .assets()
                     .map { it.eventId }
                     .toSet(),

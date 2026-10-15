@@ -732,13 +732,14 @@ private fun printUsage() {
         |  napplet fetch --snapshot EVENT-ID            the kind:15129 root; --snapshot pins a kind:5129
         |        [--path P] …                            immutable snapshot by event id)
         |
-        |Releases (NIP-82: the desktop app's updater and Zapstore):
+        |Releases (NIP-82: the desktop app's updater, Zapstore and Orchard):
         |  releases publish DIR --version X.Y.Z          sign + publish the release of every app with
-        |        [--only desktop|android] [--listing]    files in DIR (desktop files; APKs as zsp
-        |        [--zapstore-yaml F] [--blossom URL]     does, apksig-checked). Amethyst's key only
-        |        [--android-flavor F] [--android-abis A]  unless --any-key; --dry-run signs + prints
-        |        [--notes-file F] [--url-base URL]       (`amy releases --help` for details)
-        |        [--relay URL[,URL]] [--dry-run] [--any-key]
+        |        [--only desktop|android|flatpak]        files in DIR (desktop files; APKs as zsp
+        |        [--listing] [--zapstore-yaml F]         does, apksig-checked; the Flatpaks' ghcr
+        |        [--orchard-toml F] [--blossom URL]      images as orchard-publish does, digest-
+        |        [--android-flavor F] [--android-abis A]  checked). Amethyst's key only unless
+        |        [--notes-file F] [--url-base URL]       --any-key; --dry-run signs + prints
+        |        [--relay URL[,URL]] [--dry-run] [--any-key]  (`amy releases --help` for details)
         |
         |Contacts (NIP-02 kind:3):
         |  follow USER [--timeout SECS]               add USER to your contact list

@@ -1,8 +1,9 @@
 # Orchard (https://github.com/Letdown2491/orchard) listing for the Flatpak.
 #
-# Read by `orchard-publish`, Orchard's own publisher. RELEASE_OPS.md § Orchard
-# has the steps: extract `tree/` from the release bundle, then run the tool once
-# per arch with Amethyst's nsec in ORCHARD_NSEC.
+# Read by two tools. The release workflow runs `orchard-publish`, Orchard's own
+# publisher, with it to build and push each arch's OCI image (no key, no relays),
+# and `amy releases publish` reads it to sign the listing, release and asset
+# events that pin those images. RELEASE_OPS.md § Nostr releases and § Orchard.
 #
 # The app id is NOT the Android package name on purpose: Zapstore lists the APK
 # under `com.vitorpamplona.amethyst` with the same key and the same listing kind
@@ -23,8 +24,9 @@ repository = "https://github.com/vitorpamplona/amethyst"
 homepage = "https://amethyst.social"
 
 [release]
-# Placeholder. Always set ORCHARD_PUBLISH_VERSION from gradle/libs.versions.toml,
-# as RELEASE_OPS.md does; it overrides this.
+# Placeholder, for orchard-publish only. ORCHARD_PUBLISH_VERSION overrides it:
+# the release workflow sets it from the tag, the docker fallback from
+# gradle/libs.versions.toml. amy takes the version from --version.
 version = "0.0.0"
 channel = "stable"
 # This run's arch; `--arch linux-aarch64` switches it for the second run.
@@ -36,7 +38,7 @@ runtime = "org.freedesktop.Platform/x86_64/26.08"
 notes = "Release notes: https://github.com/vitorpamplona/amethyst/releases"
 
 [artifact]
-# Extracted from the release bundle (RELEASE_OPS.md § Orchard); gitignored.
+# Checked out by the release workflow (RELEASE_OPS.md § Orchard); gitignored.
 tree = "tree"
 
 [publish]

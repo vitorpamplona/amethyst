@@ -4,7 +4,9 @@
 #
 # Orchard is cloned at a tag and checked against its commit, so a moved tag
 # fails the build instead of building something else. Orchard is MIT-licensed;
-# it is a release tool and nothing from it ships in Amethyst.
+# it is a release tool and nothing from it ships in Amethyst. Keep the pin in
+# step with ORCHARD_TAG/ORCHARD_COMMIT in .github/workflows/create-release.yml,
+# which builds the same tool to push the release images.
 FROM debian:trixie
 
 ARG ORCHARD_TAG=v0.1.2

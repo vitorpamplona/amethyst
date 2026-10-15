@@ -32,6 +32,12 @@ env:
   APPIMAGETOOL_VERSION: '1.9.0'
   APPIMAGETOOL_SHA256_X86_64: 46fdd785094c7f6e545b61afcfb0f3d98d8eab243f644b4b17698c01d06083d1
   APPIMAGETOOL_SHA256_AARCH64: 04f45ea45b5aa07bb2b071aed9dbf7a5185d3953b11b47358c1311f11ea94a96
+  # Orchard's own publisher (https://github.com/Letdown2491/orchard, MIT; a release tool, nothing
+  # of it ships), built from source because it has no release binaries. The tag is checked against
+  # the commit, so a moved tag fails the build. Keep in step with
+  # desktopApp/packaging/orchard/docker/Dockerfile.
+  ORCHARD_TAG: v0.1.2
+  ORCHARD_COMMIT: 087940634e83b436f96591fec4a5cc193c704383
 
 jobs:
   # ---------------------------------------------------------------------------
@@ -39,6 +45,10 @@ jobs:
   # softprops/action-gh-release@v2 (upsert by tag_name). No artifact round-trip.
   # ---------------------------------------------------------------------------
   build-desktop:
+    # packages: the linux-portable legs push the Flatpak's OCI image for Orchard to ghcr.
+    permissions:
+      contents: write
+      packages: write
     strategy:
       fail-fast: false
       matrix:
@@ -375,6 +385,61 @@ jobs:
           set -euo pipefail
           flatpak install --user -y --noninteractive desktopApp/build/flatpak/*.flatpak
           bash scripts/keyring-self-test.sh flatpak run com.vitorpamplona.amethyst.Amethyst
+
+      # Orchard (https://github.com/Letdown2491/orchard) installs Flatpaks from OCI images. Its own
+      # builder turns the app this leg just built into one and pushes it to ghcr under the version's
+      # tag; `amy releases publish` later reads it back by that tag and signs the NIP-82 events that
+      # pin it by digest (RELEASE_OPS.md § Nostr releases). No key here: orchard-publish signs with a
+      # throwaway one and --skip-relays sends nothing. A dry run builds the image and pushes nothing.
+      - name: Cache orchard-publish (linux-portable only)
+        if: matrix.family == 'linux-portable'
+        uses: actions/cache@v6
+        with:
+          path: ~/.orchard-publish
+          key: orchard-publish-${{ runner.os }}-${{ runner.arch }}-${{ env.ORCHARD_COMMIT }}
+
+      - name: Build orchard-publish (linux-portable only)
+        if: matrix.family == 'linux-portable'
+        run: |
+          set -euo pipefail
+          sudo apt-get install -y ostree
+          BIN="$HOME/.orchard-publish/orchard-publish"
+          if [[ ! -x "$BIN" ]]; then
+            command -v rustup >/dev/null || { curl -sSf https://sh.rustup.rs | sh -s -- -y --profile minimal --default-toolchain none; source "$HOME/.cargo/env"; }
+            git clone --quiet --depth 1 --branch "$ORCHARD_TAG" https://github.com/Letdown2491/orchard "$RUNNER_TEMP/orchard"
+            test "$(git -C "$RUNNER_TEMP/orchard" rev-parse HEAD)" = "$ORCHARD_COMMIT"
+            # The toolchain comes from Orchard's rust-toolchain.toml.
+            (cd "$RUNNER_TEMP/orchard" && cargo build --release --locked -p orchard-publish)
+            mkdir -p "$(dirname "$BIN")" && cp "$RUNNER_TEMP/orchard/target/release/orchard-publish" "$BIN"
+          fi
+
+      - name: Push the Orchard image (linux-portable only)
+        if: matrix.family == 'linux-portable'
+        env:
+          ORCHARD_PUBLISH_VERSION: ${{ steps.ver.outputs.version }}
+          ORCHARD_REGISTRY_USER: ${{ github.actor }}
+          ORCHARD_REGISTRY_PASSWORD: ${{ secrets.GITHUB_TOKEN }}
+          DRY_RUN: ${{ github.event.inputs.dry_run || 'false' }}
+        run: |
+          set -euo pipefail
+          APP_ID="com.vitorpamplona.amethyst.Amethyst"
+          MANIFEST="desktopApp/packaging/orchard/${APP_ID}.publish.toml"
+          case "${{ matrix.arch }}" in
+            x64)   FP=x86_64  ;;
+            arm64) FP=aarch64 ;;
+          esac
+          # The tree the manifest's [artifact] names: the app flatpak-builder committed above.
+          rm -rf desktopApp/packaging/orchard/tree
+          ostree checkout --repo=desktopApp/build/flatpak/repo -U "app/${APP_ID}/${FP}/master" desktopApp/packaging/orchard/tree
+          ARGS=("$MANIFEST" --arch "linux-$FP" --out "$RUNNER_TEMP/orchard-out" --skip-relays
+                --registry ghcr.io/vitorpamplona/amethyst-flatpak --tag "${ORCHARD_PUBLISH_VERSION}-linux-${FP}")
+          if [[ "${GITHUB_EVENT_NAME}" == "workflow_dispatch" && "$DRY_RUN" == "true" ]]; then
+            ARGS+=(--skip-push)
+          fi
+          # The filter drops the throwaway nsec orchard-publish prints when it has no key.
+          "$HOME/.orchard-publish/orchard-publish" "${ARGS[@]}" 2>&1 \
+            | grep --line-buffered -v -e '^no key: generated' -e '^  nsec '
+          rm -rf desktopApp/packaging/orchard/tree
 
       - name: Collect + rename assets
         run: |

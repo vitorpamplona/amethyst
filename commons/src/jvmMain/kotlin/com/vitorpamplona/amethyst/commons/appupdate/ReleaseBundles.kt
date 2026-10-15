@@ -36,12 +36,13 @@ class SignedRelease(
     val appId: String,
     val relays: List<String>,
     val assets: List<SoftwareAssetEvent>,
-    val release: ReleaseArtifactSetEvent,
+    /** One release, or one per architecture for Orchard. */
+    val releases: List<ReleaseArtifactSetEvent>,
     val listing: SoftwareApplicationEvent?,
     /** Per asset, what `amy` reports about the file. */
     val files: List<Map<String, Any?>>,
 ) {
-    val events get() = assets + release + listOfNotNull(listing)
+    val events get() = assets + releases + listOfNotNull(listing)
 }
 
 class ReleaseFilesException(
@@ -51,7 +52,8 @@ class ReleaseFilesException(
 /**
  * Turns a folder of release files into signed NIP-82 events, for `amy releases publish`: the
  * desktop files under [DesktopRelease.APP_ID], the APKs under [AndroidRelease.APP_ID] the way zsp
- * did. Reading, checking and hashing the files is here; publishing is the caller's.
+ * did, and the Flatpak images under [FlatpakRelease.APP_ID] the way orchard-publish did. Reading,
+ * checking and hashing the files is here; publishing is the caller's.
  */
 object ReleaseBundles {
     fun desktopAssets(
@@ -79,7 +81,7 @@ object ReleaseBundles {
             appId = DesktopRelease.APP_ID,
             relays = relays,
             assets = signedAssets,
-            release = signer.sign(DesktopReleaseEvents.release(signer.pubKey, version, notes, signedAssets, hint)),
+            releases = listOf(signer.sign(DesktopReleaseEvents.release(signer.pubKey, version, notes, signedAssets, hint))),
             listing = if (withListing) signer.sign(DesktopReleaseEvents.listing()) else null,
             files =
                 assets.zip(signedAssets).map { (asset, event) ->
@@ -148,7 +150,7 @@ object ReleaseBundles {
             appId = AndroidRelease.APP_ID,
             relays = relays,
             assets = signedAssets,
-            release = signer.sign(AndroidReleaseEvents.release(signer.pubKey, version, notes, signedAssets, hint, now)),
+            releases = listOf(signer.sign(AndroidReleaseEvents.release(signer.pubKey, version, notes, signedAssets, hint, now))),
             listing = listing?.let { signer.sign(AndroidReleaseEvents.listing(config, it.iconUrl, it.imageUrls, platforms, now)) },
             files =
                 apks.zip(signedAssets).map { (apk, event) ->
@@ -160,6 +162,52 @@ object ReleaseBundles {
                             "certificate_sha256" to apk.info.certificateSha256,
                             "variant" to apk.file.flavor.variant,
                         )
+                },
+        )
+    }
+
+    /**
+     * The pushed Flatpak images for the bundles in [dir] (`amethyst-desktop-<version>-linux-*.flatpak`):
+     * each read from the registry by its release tag and checked to be this app, arch and version.
+     * The release workflow pushed them with Orchard's builder, deterministically, from the same tree.
+     */
+    suspend fun flatpakImages(
+        dir: File,
+        version: String,
+        registry: OciRegistry = OciRegistry(),
+        repository: String = FlatpakRelease.REGISTRY_REPOSITORY,
+    ): List<FlatpakImage> =
+        files(dir)
+            .mapNotNull { FlatpakRelease.platformOfBundle(it.name, version) }
+            .map { platform -> registry.flatpakImage(repository, FlatpakRelease.tagFor(version, platform), platform, version) }
+
+    /** Signs Orchard's events: per image an asset and its release, then the listing when asked. */
+    suspend fun signFlatpak(
+        signer: NostrSigner,
+        notes: String,
+        images: List<FlatpakImage>,
+        config: OrchardConfig,
+        withListing: Boolean,
+        relays: List<String>,
+    ): SignedRelease {
+        val now = TimeUtils.now()
+        val assets = images.map { signer.sign(FlatpakReleaseEvents.asset(it, now)) }
+        val releases = images.zip(assets).map { (image, asset) -> signer.sign(FlatpakReleaseEvents.release(image, asset, notes.ifBlank { config.notes.orEmpty() }, now)) }
+        return SignedRelease(
+            appId = FlatpakRelease.APP_ID,
+            relays = relays,
+            assets = assets,
+            releases = releases,
+            listing = if (withListing) signer.sign(FlatpakReleaseEvents.listing(config, now)) else null,
+            files =
+                images.zip(assets).map { (image, asset) ->
+                    mapOf(
+                        "platforms" to listOf(image.platform),
+                        "digest" to image.digest,
+                        "location" to image.location,
+                        "runtime" to image.runtime,
+                        "event_id" to asset.id,
+                    )
                 },
         )
     }
