@@ -173,7 +173,12 @@ fun UnicodeEmojiPickerButton(
     EmojiPickerMenuButton(emojiPacks = null, onPickUnicode = onPick, onPickCustom = {}, tint = tint, modifier = modifier)
 }
 
-/** The emoji button and its menu; the menu closes once an emoji is picked. */
+/**
+ * The emoji button. Under an [EmojiPanelHost] it opens the docked panel and is hidden while the
+ * on-screen keyboard is up, since that keyboard has an emoji key of its own: the panel is for
+ * when there is no on-screen keyboard (Desktop, a hardware keyboard) or it was put away. Outside a
+ * host it falls back to a menu that closes once an emoji is picked.
+ */
 @Composable
 private fun EmojiPickerMenuButton(
     emojiPacks: EmojiPackState?,
@@ -182,6 +187,12 @@ private fun EmojiPickerMenuButton(
     tint: Color,
     modifier: Modifier,
 ) {
+    val host = LocalEmojiPanel.current
+    if (host != null) {
+        EmojiPanelButton(host, emojiPacks, onPickUnicode, onPickCustom, tint, modifier)
+        return
+    }
+
     var open by remember { mutableStateOf(false) }
 
     Box(modifier) {
@@ -204,7 +215,7 @@ private fun EmojiPickerMenuButton(
 }
 
 @Composable
-private fun EmojiPickerIcon(
+internal fun EmojiPickerIcon(
     tint: Color,
     onClick: () -> Unit,
 ) {
@@ -276,6 +287,7 @@ fun EmojiPicker(
     emojiPacks: EmojiPackState?,
     onPickUnicode: (String) -> Unit,
     onPickCustom: (EmojiMedia) -> Unit,
+    modifier: Modifier = Modifier.width(PickerWidth),
 ) {
     val catalog by produceState(UnicodeEmojiPalette.cachedOrNull()) {
         if (value == null) {
@@ -297,7 +309,7 @@ fun EmojiPicker(
     val search = rememberTextFieldState()
     val tone = UnicodeEmojiPalette.skinTone
 
-    Column(Modifier.width(PickerWidth).padding(horizontal = 8.dp)) {
+    Column(modifier.padding(horizontal = 8.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(top = 8.dp)) {
             EmojiSearchField(search, Modifier.weight(1f))
             SkinToneSelector(tone) { UnicodeEmojiPalette.skinTone = it }
