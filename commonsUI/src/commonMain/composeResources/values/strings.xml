@@ -2754,6 +2754,7 @@
     <string name="git_repositories_search_placeholder">Filter by name, topic, host, maintainer…</string>
     <string name="git_repositories_search_no_results">No repositories in the current feed match this search.</string>
     <string name="profile_tab_apps">Apps &amp; Sites</string>
+    <string name="profile_tab_repos">Repos</string>
     <string name="edit_article">Edit Article</string>
     <string name="proposal_to_edit">Proposal to improve a post</string>
     <string name="accept_the_suggestion">Accept the Suggestion</string>

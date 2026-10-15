@@ -64,6 +64,7 @@ import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.IntSize
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.vitorpamplona.amethyst.commons.feeds.FeedState
 import com.vitorpamplona.amethyst.commons.model.User
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
 import com.vitorpamplona.amethyst.commons.model.navigation.Route
@@ -73,6 +74,7 @@ import com.vitorpamplona.amethyst.commons.profile.conversations.dal.UserProfileC
 import com.vitorpamplona.amethyst.commons.profile.followers.dal.UserProfileFollowersUserFeedViewModel
 import com.vitorpamplona.amethyst.commons.profile.follows.dal.UserProfileFollowsUserFeedViewModel
 import com.vitorpamplona.amethyst.commons.profile.gallery.dal.UserProfileGalleryFeedViewModel
+import com.vitorpamplona.amethyst.commons.profile.gitrepos.dal.UserProfileGitReposFeedViewModel
 import com.vitorpamplona.amethyst.commons.profile.header.apps.UserAppRecommendationsFeedViewModel
 import com.vitorpamplona.amethyst.commons.profile.mutual.dal.UserProfileMutualFeedViewModel
 import com.vitorpamplona.amethyst.commons.profile.newthreads.dal.UserProfileNewThreadsFeedViewModel
@@ -87,6 +89,7 @@ import com.vitorpamplona.amethyst.commons.resources.gallery
 import com.vitorpamplona.amethyst.commons.resources.mutual
 import com.vitorpamplona.amethyst.commons.resources.notes
 import com.vitorpamplona.amethyst.commons.resources.profile_tab_apps
+import com.vitorpamplona.amethyst.commons.resources.profile_tab_repos
 import com.vitorpamplona.amethyst.commons.resources.replies
 import com.vitorpamplona.amethyst.commons.ui.components.rememberViewModel
 import com.vitorpamplona.amethyst.commons.ui.feeds.BackToTopButton
@@ -105,6 +108,7 @@ import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.profile.followers.T
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.profile.follows.FollowTabHeader
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.profile.follows.TabFollows
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.profile.gallery.TabGallery
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.profile.gitrepos.TabGitRepos
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.profile.hashtags.FollowedTagsTabHeader
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.profile.hashtags.TabFollowedTags
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.profile.header.ProfileHeader
@@ -172,6 +176,16 @@ fun PrepareViewModels(
             key = baseUser.pubkeyHex + "UserGalleryFeedViewModel",
             factory =
                 UserProfileGalleryFeedViewModel.Factory(
+                    baseUser,
+                    accountViewModel.account,
+                ),
+        )
+
+    val gitReposFeedViewModel: UserProfileGitReposFeedViewModel =
+        rememberViewModel(
+            key = baseUser.pubkeyHex + "UserProfileGitReposFeedViewModel",
+            factory =
+                UserProfileGitReposFeedViewModel.Factory(
                     baseUser,
                     accountViewModel.account,
                 ),
@@ -289,6 +303,7 @@ fun PrepareViewModels(
         bookmarksFeedViewModel,
         pinnedNotesFeedViewModel,
         galleryFeedViewModel,
+        gitReposFeedViewModel,
         reportsFeedViewModel,
         appsFeedViewModel,
         accountViewModel = accountViewModel,
@@ -310,6 +325,7 @@ fun ProfileScreen(
     bookmarksFeedViewModel: UserProfileBookmarksFeedViewModel,
     pinnedNotesFeedViewModel: UserProfilePinnedNotesFeedViewModel,
     galleryFeedViewModel: UserProfileGalleryFeedViewModel,
+    gitReposFeedViewModel: UserProfileGitReposFeedViewModel,
     reportsFeedViewModel: UserProfileReportFeedViewModel,
     appsFeedViewModel: UserProfileAppsFeedViewModel,
     accountViewModel: AccountViewModel,
@@ -329,6 +345,7 @@ fun ProfileScreen(
     WatchLifecycleAndUpdateModel(bookmarksFeedViewModel)
     WatchLifecycleAndUpdateModel(pinnedNotesFeedViewModel)
     WatchLifecycleAndUpdateModel(galleryFeedViewModel)
+    WatchLifecycleAndUpdateModel(gitReposFeedViewModel)
     WatchLifecycleAndUpdateModel(appsFeedViewModel)
 
     UserProfileFilterAssemblerSubscription(
@@ -385,6 +402,7 @@ fun ProfileScreen(
                         bookmarksFeedViewModel,
                         pinnedNotesFeedViewModel,
                         galleryFeedViewModel,
+                        gitReposFeedViewModel,
                         reportsFeedViewModel,
                         appsFeedViewModel,
                         accountViewModel,
@@ -486,6 +504,7 @@ private fun RenderScreen(
     bookmarksFeedViewModel: UserProfileBookmarksFeedViewModel,
     pinnedNotesFeedViewModel: UserProfilePinnedNotesFeedViewModel,
     galleryFeedViewModel: UserProfileGalleryFeedViewModel,
+    gitReposFeedViewModel: UserProfileGitReposFeedViewModel,
     reportsFeedViewModel: UserProfileReportFeedViewModel,
     appsFeedViewModel: UserProfileAppsFeedViewModel,
     accountViewModel: AccountViewModel,
@@ -495,14 +514,20 @@ private fun RenderScreen(
     val showFollowersTab by ui.showProfileFollowersFeed.collectAsStateWithLifecycle()
     val showZapsTab by ui.showProfileZapReceivedFeed.collectAsStateWithLifecycle()
 
+    // Most profiles have no repos: the tab only appears once the feed confirms any exist.
+    val gitReposFeedState by gitReposFeedViewModel.feedState.feedContent.collectAsStateWithLifecycle()
+    val loadedGitRepos = (gitReposFeedState as? FeedState.Loaded)?.feed?.collectAsStateWithLifecycle()?.value
+    val showGitReposTab = !loadedGitRepos?.list.isNullOrEmpty()
+
     val visibleTabs =
-        remember(showFollowersTab, showZapsTab) {
+        remember(showFollowersTab, showZapsTab, showGitReposTab) {
             buildList {
                 add(ProfileTab.Notes)
                 add(ProfileTab.Replies)
                 add(ProfileTab.Mutual)
                 add(ProfileTab.Gallery)
                 add(ProfileTab.Apps)
+                if (showGitReposTab) add(ProfileTab.GitRepos)
                 add(ProfileTab.Follows)
                 if (showFollowersTab) add(ProfileTab.Followers)
                 if (showZapsTab) add(ProfileTab.Zaps)
@@ -575,6 +600,7 @@ private fun RenderScreen(
                     bookmarksFeedViewModel,
                     pinnedNotesFeedViewModel,
                     galleryFeedViewModel,
+                    gitReposFeedViewModel,
                     reportsFeedViewModel,
                     appsFeedViewModel,
                     accountViewModel,
@@ -591,6 +617,7 @@ private enum class ProfileTab {
     Mutual,
     Gallery,
     Apps,
+    GitRepos,
     Follows,
     Followers,
     Zaps,
@@ -617,6 +644,7 @@ private fun CreateAndRenderPages(
     bookmarksFeedViewModel: UserProfileBookmarksFeedViewModel,
     pinnedNotesFeedViewModel: UserProfilePinnedNotesFeedViewModel,
     galleryFeedViewModel: UserProfileGalleryFeedViewModel,
+    gitReposFeedViewModel: UserProfileGitReposFeedViewModel,
     reportsFeedViewModel: UserProfileReportFeedViewModel,
     appsFeedViewModel: UserProfileAppsFeedViewModel,
     accountViewModel: AccountViewModel,
@@ -647,6 +675,7 @@ private fun CreateAndRenderPages(
         ProfileTab.Mutual -> TabMutualConversations(mutualViewModel, accountViewModel, nav)
         ProfileTab.Gallery -> TabGallery(galleryFeedViewModel, accountViewModel, nav)
         ProfileTab.Apps -> TabApps(appsFeedViewModel, accountViewModel, nav)
+        ProfileTab.GitRepos -> TabGitRepos(gitReposFeedViewModel, accountViewModel, nav)
         ProfileTab.Follows -> TabFollows(followsFeedViewModel, accountViewModel, nav)
         ProfileTab.Followers -> TabFollowers(followersFeedViewModel, accountViewModel, nav)
         ProfileTab.Zaps -> TabReceivedZaps(baseUser, zapFeedViewModel, accountViewModel, nav)
@@ -701,6 +730,7 @@ private fun CreateAndRenderTabs(
                     ProfileTab.Mutual -> Text(text = stringRes(Res.string.mutual))
                     ProfileTab.Gallery -> Text(text = stringRes(Res.string.gallery))
                     ProfileTab.Apps -> Text(text = stringRes(Res.string.profile_tab_apps))
+                    ProfileTab.GitRepos -> Text(text = stringRes(Res.string.profile_tab_repos))
                     ProfileTab.Follows -> FollowTabHeader(followsFeedViewModel, accountViewModel)
                     ProfileTab.Followers -> FollowersTabHeader(baseUser, followersFeedViewModel, accountViewModel)
                     ProfileTab.Zaps -> ZapTabHeader(zapFeedViewModel, accountViewModel)
