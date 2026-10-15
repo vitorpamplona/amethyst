@@ -77,6 +77,11 @@ data class MediaPlaybackState(
     val speed: Float = 1f,
     /** Last observed error from the engine, or null. JVM emits only SourceError/UnknownError. */
     val errorReason: String? = null,
+    /**
+     * Whether the user asked for this video (pressed play, opened it, or unmuted it) rather than
+     * the feed starting it on its own. Only such a video keeps playing once its screen closes.
+     */
+    val isChosen: Boolean = false,
 )
 
 /**
@@ -231,6 +236,7 @@ object GlobalMediaPlayer {
         url: String,
         seekPosition: Float = 0f,
         owner: Any? = null,
+        chosen: Boolean = false,
     ) {
         // No owner (the now-playing bar, a full-screen request): whichever card shows it claims it.
         _videoSurfaceOwner.value = owner
@@ -251,6 +257,7 @@ object GlobalMediaPlayer {
             Log.d(TAG) { "playVideo reuse url=$url isPlaying=${current.isPlaying}" }
             if (startAt > 0f) loaded.seekTo(startAt * 1000f)
             if (!current.isPlaying) loaded.play()
+            if (chosen) _videoState.update { it.copy(isChosen = true) }
             return
         }
 
@@ -261,7 +268,7 @@ object GlobalMediaPlayer {
         val warm = synchronized(initLock) { warmEngines.remove(url) }
         if (warm != null) {
             if (warm.error == null) {
-                startWarmVideo(warm, url, startAt)
+                startWarmVideo(warm, url, startAt, chosen)
                 return
             }
             retireVideoPlayer(warm)
@@ -276,6 +283,7 @@ object GlobalMediaPlayer {
                         type = MediaType.VIDEO,
                         isBuffering = false,
                         errorReason = "Video playback unavailable",
+                        isChosen = chosen,
                     )
                 return
             }
@@ -299,6 +307,7 @@ object GlobalMediaPlayer {
                 isBuffering = true,
                 volume = if (muted) 0 else 100,
                 isMuted = muted,
+                isChosen = chosen,
             )
         // Only now, so the new engine's first report lands on the new video's state.
         startVideoSync(player, url)
@@ -328,6 +337,7 @@ object GlobalMediaPlayer {
         player: VideoPlayerState,
         url: String,
         startAt: Float,
+        chosen: Boolean,
     ) {
         Log.d(TAG) { "playVideo warm url=$url" }
         val previousUrl = _videoState.value.url
@@ -348,6 +358,7 @@ object GlobalMediaPlayer {
                 isBuffering = !player.hasMedia,
                 volume = if (muted) 0 else 100,
                 isMuted = muted,
+                isChosen = chosen,
             )
         startVideoSync(player, url)
 
@@ -436,6 +447,15 @@ object GlobalMediaPlayer {
             runCatching {
                 player.volume = 0f
                 player.pause()
+            }
+            // One still loading ignores that pause and starts once loaded, unseen: pause it again
+            // then, unless it became the playing video meanwhile.
+            if (player.isLoading) {
+                scope.launch(Dispatchers.Main) {
+                    withTimeoutOrNull(RETIRE_LOAD_TIMEOUT_MS) { snapshotFlow { player.isLoading }.first { !it } }
+                    val stillParked = synchronized(initLock) { warmEngines.values.any { it === player } }
+                    if (stillParked) runCatching { player.pause() }
+                }
             }
         } else {
             retireVideoPlayer(player)
@@ -557,14 +577,17 @@ object GlobalMediaPlayer {
     fun toggleVideoPlayPause() {
         val player = videoPlayer ?: return
         val state = _videoState.value
-        // A video still loading counts as playing: it starts on its own once loaded.
-        if (state.isPlaying || (state.isBuffering && !videoPauseRequested)) {
+        if (isVideoGoing(state)) {
             pauseVideo()
         } else {
             videoPauseRequested = false
             player.play()
+            _videoState.update { it.copy(isChosen = true) }
         }
     }
+
+    // A video still loading counts as playing: it starts on its own once loaded.
+    private fun isVideoGoing(state: MediaPlaybackState) = state.isPlaying || (state.isBuffering && !videoPauseRequested)
 
     /** Pauses the video, or keeps it from starting if it is still loading. */
     fun pauseVideo() {
@@ -613,7 +636,8 @@ object GlobalMediaPlayer {
     /** UI passes volume in 0..100. kdroidFilter wants 0..1. */
     fun setVideoVolume(volume: Int) {
         videoPlayer?.volume = volume.coerceIn(0, 100) / 100f
-        _videoState.update { it.copy(volume = volume, isMuted = it.isMuted && volume == 0) }
+        // Turning the sound up is asking to watch it.
+        _videoState.update { it.copy(volume = volume, isMuted = it.isMuted && volume == 0, isChosen = it.isChosen || volume > 0) }
         if (volume > 0) {
             preMuteVideoVolume = volume
             defaultMuted = false
@@ -661,15 +685,38 @@ object GlobalMediaPlayer {
         _isFullscreen.value = false
     }
 
+    // How many cards show each video. Only touched from composition effects, on the UI thread.
+    private val shownVideos = HashMap<String, Int>()
+
+    /** A card showing [url] came on screen. */
+    fun showVideo(url: String) {
+        shownVideos[url] = (shownVideos[url] ?: 0) + 1
+    }
+
+    /** A card showing [url] left; the last one to leave lets it go when it asks to [release] it. */
+    fun hideVideo(
+        url: String,
+        release: Boolean,
+    ) {
+        val left = (shownVideos[url] ?: 1) - 1
+        if (left > 0) {
+            shownVideos[url] = left
+        } else {
+            shownVideos.remove(url)
+            if (release) releaseVideo(url)
+        }
+    }
+
     /**
      * Lets go of [url] once nothing shows it any more, as Android releases a player whose card left
-     * the screen: stops it if it is the loaded video and paused, keeping its position (as
-     * [playVideo] does for a video it replaces) for when it comes back. One still playing (resumed
-     * from the now-playing bar) or on screen in full screen is left alone.
+     * the screen: stops it if it is the loaded video, keeping its position (as [playVideo] does for
+     * a video it replaces) for when it comes back. One the user chose that is still playing keeps
+     * going in the now-playing bar, and one on screen in full screen is left alone.
      */
-    fun releaseVideo(url: String) {
+    private fun releaseVideo(url: String) {
         val state = _videoState.value
-        if (state.url != url || state.isPlaying || _isFullscreen.value) return
+        if (state.url != url || _isFullscreen.value) return
+        if (state.isChosen && isVideoGoing(state)) return
         rememberPosition(state)
         stopVideo()
     }
