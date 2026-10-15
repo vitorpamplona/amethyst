@@ -13,6 +13,7 @@ _Audited 2026-06-30. 13 plans: 10 shipped (archived), 2 in-progress, 1 queued, 0
 | Plan | Summary |
 | ---- | ------- |
 | [2026-05-21-embedded-wallet-phase2-research.md](2026-05-21-embedded-wallet-phase2-research.md) | Research for an embedded self-custodial Lightning wallet (Breez/ldk-node/lightning-kmp); parked, no code. |
+| [2026-10-15-desktop-self-update-study.md](2026-10-15-desktop-self-update-study.md) | How each GitHub-downloaded desktop artifact (DMG, MSI, zip, AppImage, tarball, deb/rpm, Flatpak) could update itself: install-channel detection, NIP-82-signed manifest, per-OS installers, frameworks rejected; research, no code. |
 
 ## Archived (shipped)
 | Plan | Summary |
