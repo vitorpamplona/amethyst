@@ -94,15 +94,52 @@ object LnurlForm {
      * `stardroid.app)⭐`. OkHttp parses that URL but then throws on its own encoded
      * host (`xn--app)-3z8b`) when it connects, so such hosts are rejected here.
      *
-     * Every label must be non-empty, and its ASCII characters must be letters,
-     * digits, `-` or `_`. Non-ASCII characters are left to IDN encoding.
+     * Every label must be non-empty. ASCII characters must be letters, digits, `-`
+     * or `_`, and `_` only in an all-ASCII label. Non-ASCII characters must be
+     * letters, decimal digits or combining marks: IDN encoding maps symbols such as
+     * a fullwidth `）` or `⑴` to ASCII punctuation, which OkHttp then rejects. One
+     * trailing dot (a fully-qualified name) is allowed.
      */
     fun isPlausibleHost(host: String): Boolean {
-        if (host.isEmpty()) return false
-        return host.split('.').all { label ->
-            label.isNotEmpty() && label.all { c -> c.code > 0x7F || c.isLetterOrDigit() || c == '-' || c == '_' }
+        val end = if (host.endsWith('.')) host.length - 1 else host.length
+        if (end <= 0) return false
+        var labelStart = 0
+        var hasNonAscii = false
+        var hasUnderscore = false
+        for (i in 0..end) {
+            if (i == end || host[i] == '.') {
+                if (i == labelStart || (hasNonAscii && hasUnderscore)) return false
+                labelStart = i + 1
+                hasNonAscii = false
+                hasUnderscore = false
+                continue
+            }
+            val c = host[i]
+            if (c.code < 0x80) {
+                when (c) {
+                    in 'a'..'z', in 'A'..'Z', in '0'..'9', '-' -> {}
+                    '_' -> hasUnderscore = true
+                    else -> return false
+                }
+            } else {
+                hasNonAscii = true
+                if (c.category !in IDN_CATEGORIES) return false
+            }
         }
+        return true
     }
+
+    private val IDN_CATEGORIES =
+        setOf(
+            CharCategory.UPPERCASE_LETTER,
+            CharCategory.LOWERCASE_LETTER,
+            CharCategory.TITLECASE_LETTER,
+            CharCategory.MODIFIER_LETTER,
+            CharCategory.OTHER_LETTER,
+            CharCategory.DECIMAL_DIGIT_NUMBER,
+            CharCategory.NON_SPACING_MARK,
+            CharCategory.COMBINING_SPACING_MARK,
+        )
 
     /**
      * Encode an LNURL-pay URL as a bech32 LNURL string. Used to populate the

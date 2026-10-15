@@ -230,6 +230,18 @@ class LnurlFormTest {
     }
 
     @Test
+    fun `symbols that idn maps to ascii punctuation are rejected`() {
+        // Fullwidth ")" and a parenthesized digit both become ASCII punctuation under IDN
+        // mapping; "_" is fine in an ASCII label but not next to non-ASCII characters.
+        assertEquals(null, LnurlForm.toUrl("vitor@stardroid.app\uFF09"))
+        assertEquals(null, LnurlForm.toUrl("vitor@ab\u2474.com"))
+        assertEquals(null, LnurlForm.toUrl("vitor@a_ü.com"))
+        assertEquals("https://a_b.com/.well-known/lnurlp/vitor", LnurlForm.toUrl("vitor@a_b.com"))
+        assertEquals("https://example.com./.well-known/lnurlp/vitor", LnurlForm.toUrl("vitor@example.com."))
+        assertEquals("https://भारत.com/.well-known/lnurlp/vitor", LnurlForm.toUrl("vitor@भारत.com"))
+    }
+
+    @Test
     fun `empty host labels are rejected`() {
         assertEquals(null, LnurlForm.toUrl("vitor@example..com"))
         assertEquals(null, LnurlForm.toUrl("vitor@.example.com"))
