@@ -1033,6 +1033,7 @@ class AppModules(
             scope = applicationIOScope,
             hooks = AndroidAccountSessionHooks(),
             remoteSignerMetadata = REMOTE_SIGNER_METADATA,
+            signerRelayRouting = torEvaluatorFlow,
         )
 
     // Web of Trust: whenever the app comes to the foreground, or the network changes under it (a

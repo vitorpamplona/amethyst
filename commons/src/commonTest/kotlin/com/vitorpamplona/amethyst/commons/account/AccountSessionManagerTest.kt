@@ -22,9 +22,11 @@ package com.vitorpamplona.amethyst.commons.account
 
 import com.vitorpamplona.amethyst.commons.model.Account
 import com.vitorpamplona.amethyst.commons.model.AccountSettings
+import com.vitorpamplona.amethyst.commons.tor.SignerRelayRouting
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.toHexKey
 import com.vitorpamplona.quartz.nip01Core.crypto.KeyPair
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip19Bech32.toNpub
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
@@ -35,6 +37,7 @@ import kotlinx.coroutines.joinAll
 import kotlinx.coroutines.test.runTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFails
 import kotlin.test.assertIs
 import kotlin.test.assertTrue
 
@@ -145,6 +148,39 @@ class AccountSessionManagerTest {
             settle()
             assertTrue(error != null)
             assertTrue(events.isEmpty())
+        }
+
+    @Test
+    fun aNostrConnectLoginRoutesItsRelaysAsTheUsersOwnUntilItEnds() =
+        runTest {
+            val registered = mutableMapOf<NormalizedRelayUrl, Int>()
+            val routing =
+                object : SignerRelayRouting {
+                    override fun registerSignerRelays(relays: Set<NormalizedRelayUrl>) = relays.forEach { registered[it] = (registered[it] ?: 0) + 1 }
+
+                    override fun unregisterSignerRelays(relays: Set<NormalizedRelayUrl>) = relays.forEach { registered[it] = registered.getValue(it) - 1 }
+                }
+            val failingLogin =
+                AccountSessionManager(
+                    accountsCache = cache,
+                    nip05ClientBuilder = { error("unused") },
+                    clientBuilder = { error("no relays in this test") },
+                    localPreferences = store,
+                    scope = scope,
+                    signerRelayRouting = routing,
+                )
+            val relay = NormalizedRelayUrl("wss://relay.nip46.com/")
+
+            var registeredWhileShown: Map<NormalizedRelayUrl, Int>? = null
+            assertFails {
+                failingLogin.loginWithNostrConnect(listOf(relay.url), transientAccount = true) {
+                    registeredWhileShown = registered.toMap()
+                }
+            }
+
+            assertEquals(mapOf(relay to 1), registeredWhileShown)
+            // A login that ends without an account has nothing to hand over to: released at once.
+            assertEquals(mapOf(relay to 0), registered)
         }
 
     @Test

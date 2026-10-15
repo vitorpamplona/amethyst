@@ -28,11 +28,13 @@ import com.vitorpamplona.amethyst.commons.domain.nip46.stripBunkerSecret
 import com.vitorpamplona.amethyst.commons.model.Account
 import com.vitorpamplona.amethyst.commons.model.AccountSettings
 import com.vitorpamplona.amethyst.commons.model.navigation.Route
+import com.vitorpamplona.amethyst.commons.tor.SignerRelayRouting
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.hexToByteArray
 import com.vitorpamplona.quartz.nip01Core.core.toHexKey
 import com.vitorpamplona.quartz.nip01Core.crypto.KeyPair
 import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerInternal
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerSync
 import com.vitorpamplona.quartz.nip05DnsIdentifiers.Nip05Client
@@ -71,6 +73,9 @@ val EMAIL_PATTERN = Regex(".+@.+\\.[a-z]+")
 
 private const val BUNKER_URI_PREFIX = "bunker://"
 
+// Comfortably longer than the account Tor connector's debounce (200 ms) plus loading the account.
+private const val SIGNER_RELAY_HANDOVER_MS = 10_000L
+
 sealed class AccountState {
     object Loading : AccountState()
 
@@ -93,6 +98,8 @@ class AccountSessionManager(
     val hooks: AccountSessionHooks = object : AccountSessionHooks {},
     /** Who this app says it is to a NIP-46 remote signer it logs in with. */
     val remoteSignerMetadata: BunkerClientMetadata? = null,
+    /** Routes a NIP-46 login's relays like the user's own before any account lists them. */
+    val signerRelayRouting: SignerRelayRouting = SignerRelayRouting.None,
 ) {
     private val _accountContent = MutableStateFlow<AccountState>(AccountState.Loading)
     val accountContent = _accountContent.asStateFlow()
@@ -232,9 +239,38 @@ class AccountSessionManager(
         transientAccount: Boolean,
     ): AccountSettings {
         val transport = KeyPair()
-        val result = BunkerLoginUseCase.execute(bunkerUri, NostrSignerInternal(transport), clientBuilder(), remoteSignerMetadata)
-        result.signer.closeSubscription()
-        return remoteSignerSettings(result.pubKeyHex, stripBunkerSecret(bunkerUri), transport, transientAccount)
+        val relays = NostrConnectURI.parseBunker(bunkerUri)?.relays ?: emptySet()
+        return withSignerRelays(relays) {
+            val result = BunkerLoginUseCase.execute(bunkerUri, NostrSignerInternal(transport), clientBuilder(), remoteSignerMetadata)
+            result.signer.closeSubscription()
+            remoteSignerSettings(result.pubKeyHex, stripBunkerSecret(bunkerUri), transport, transientAccount)
+        }
+    }
+
+    /**
+     * Runs [block] with [relays] routed as the user's own. After a login the account's saved bunker
+     * address takes over (`AccountsTorStateConnector`, which waits out a short debounce), so the
+     * registration outlives success by [SIGNER_RELAY_HANDOVER_MS]: dropping it at once would flip
+     * the signer's sockets onto Tor and straight back.
+     */
+    private suspend fun <T> withSignerRelays(
+        relays: Set<NormalizedRelayUrl>,
+        block: suspend () -> T,
+    ): T {
+        signerRelayRouting.registerSignerRelays(relays)
+        var loggedIn = false
+        try {
+            return block().also { loggedIn = true }
+        } finally {
+            if (loggedIn) {
+                scope.launch {
+                    delay(SIGNER_RELAY_HANDOVER_MS)
+                    signerRelayRouting.unregisterSignerRelays(relays)
+                }
+            } else {
+                signerRelayRouting.unregisterSignerRelays(relays)
+            }
+        }
     }
 
     /**
@@ -248,15 +284,18 @@ class AccountSessionManager(
     ) = withContext(Dispatchers.IO) {
         val transport = KeyPair()
         val uriData = NostrConnectLoginUseCase.generateUri(transport, relays, remoteSignerMetadata)
-        onUri(uriData.uri)
 
-        // The wait for the signer and each request to it carry their own timeouts. One more around
-        // the whole would cut off a signer that answers near the end of the first.
-        val result = NostrConnectLoginUseCase.awaitAndLogin(uriData, clientBuilder())
-        result.signer.closeSubscription()
+        withSignerRelays(uriData.relays) {
+            onUri(uriData.uri)
 
-        val bunkerUri = NostrConnectURI.buildBunker(result.signer.remotePubkey, uriData.relays, secret = null)
-        startUI(localPreferences.setDefaultAccount(remoteSignerSettings(result.pubKeyHex, bunkerUri, transport, transientAccount)))
+            // The wait for the signer and each request to it carry their own timeouts. One more
+            // around the whole would cut off a signer that answers near the end of the first.
+            val result = NostrConnectLoginUseCase.awaitAndLogin(uriData, clientBuilder())
+            result.signer.closeSubscription()
+
+            val bunkerUri = NostrConnectURI.buildBunker(result.signer.remotePubkey, uriData.relays, secret = null)
+            startUI(localPreferences.setDefaultAccount(remoteSignerSettings(result.pubKeyHex, bunkerUri, transport, transientAccount)))
+        }
     }
 
     private fun remoteSignerSettings(

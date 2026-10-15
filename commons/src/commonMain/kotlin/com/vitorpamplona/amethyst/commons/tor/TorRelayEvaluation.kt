@@ -42,6 +42,11 @@ data class RelayClassification(
     /** NIP-47 wallet and CLINK debit relays, including ad-hoc registrations. */
     val moneyOp: Set<NormalizedRelayUrl> = emptySet(),
     /**
+     * NIP-46 relays that reach a remote signer: each logged-in account's bunker relays, plus the
+     * relays of a login still in progress.
+     */
+    val signer: Set<NormalizedRelayUrl> = emptySet(),
+    /**
      * Relays the app is guessing on the user's behalf while their own lists are unknown. Empties
      * itself as soon as any of their events arrive; see `AssumedRelayListsState`.
      */
@@ -75,6 +80,11 @@ class TorRelayEvaluation(
             } else if (relay in classification.dm) {
                 torSettings.dmRelaysViaTor
             } else if (relay in classification.trusted) {
+                torSettings.trustedRelaysViaTor
+            } else if (relay in classification.signer) {
+                // The user picked these to reach their own signer, so they get the policy of the
+                // user's own lists. Under the new-relay policy every signature and decryption
+                // waited on Tor, and a login could not start until Tor was up.
                 torSettings.trustedRelaysViaTor
             } else if (relay in classification.assumed) {
                 // Last resort before treating it as a stranger. Sits below every other
