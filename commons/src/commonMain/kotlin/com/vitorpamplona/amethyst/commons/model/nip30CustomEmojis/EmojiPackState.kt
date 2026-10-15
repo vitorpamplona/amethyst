@@ -106,8 +106,9 @@ class EmojiPackState(
         val emojis: List<EmojiMedia>,
     )
 
+    // An emoji list can name the same pack twice; the picker keys its sections by address.
     suspend fun groupPacksWithPrivate(list: Array<NoteState>): List<EmojiPackGroup> =
-        list.mapNotNull { state ->
+        list.distinctBy { it.note.idHex }.mapNotNull { state ->
             val pack = state.note.event as? EmojiPackEvent ?: return@mapNotNull null
             val emojis = convertEmojiPackWithPrivate(pack)
             if (emojis.isEmpty()) return@mapNotNull null
@@ -143,10 +144,14 @@ class EmojiPackState(
                 emptyList(),
             )
 
-    /** Every emoji of the selected packs, the first one of each image only. */
+    /**
+     * Every shortcode the selected packs define, each with the image it resolves to: the first
+     * pack in the emoji list that uses a code wins, as [findEmojiTags] resolves it, since an event
+     * can carry only one `emoji` tag per code.
+     */
     val myEmojis: StateFlow<List<EmojiMedia>> =
         myPacks
-            .map { packs -> packs.flatMap { it.emojis }.distinctBy { it.link } }
+            .map(::firstByCode)
             .stateIn(
                 scope,
                 SharingStarted.Eagerly,
@@ -186,7 +191,8 @@ class EmojiPackState(
      * the codes to render. Unknown codes are simply skipped.
      */
     fun findEmojiTags(message: String): List<EmojiUrlTag> {
-        val myEmojiSet = myEmojis.value
+        // From myPacks, not myEmojis: the derived flow can lag a pack the picker already shows.
+        val myEmojiSet = firstByCode(myPacks.value)
         if (myEmojiSet.isEmpty()) return emptyList()
         val byCode = myEmojiSet.associateBy { it.code }
         return CustomEmoji
@@ -224,6 +230,9 @@ class EmojiPackState(
     }
 
     companion object {
+        /** The packs' emojis with one entry per shortcode, the first pack's winning. */
+        fun firstByCode(packs: List<EmojiPackGroup>): List<EmojiMedia> = packs.flatMap { it.emojis }.distinctBy { it.code }
+
         /**
          * Maps reaction choices to favorites: `+` and `-` (like and dislike, not emoji) are
          * dropped, a custom emoji (`:shortcode:url`, or a bare `:shortcode:`) is kept only when

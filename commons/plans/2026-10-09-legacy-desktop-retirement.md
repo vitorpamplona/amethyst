@@ -175,11 +175,16 @@ GIF picker:
   grid of the user's NIP-30 emoji (their emoji list and saved emoji sets) and inserts
   `:shortcode:`. Today, typing `:word` suggests from the same data.
 
-**Built.** `CustomEmojiPickerButton` (commonsUI `nip30CustomEmojis/ui`) sits in the note and
-comment toolbars and beside the gallery button in DMs and public chats. It reads
-`EmojiPackState.myEmojis`, filters by name, and inserts `:shortcode: ` at the cursor
-(`insertWordAtCursor`); sending already turns shortcodes into `emoji` tags. The legacy GIF search
-goes with the legacy app.
+**Built.** The legacy GIF search goes with the legacy app. The picker first shipped as
+`CustomEmojiPickerButton` (NIP-30 only) and was then replaced by `EmojiPickerButton` (commonsUI
+`unicodeEmoji/ui`), which brings a Unicode palette back because Desktop has no system emoji
+keyboard. It is built in-house from Unicode's `emoji-test.txt` (`tools/emoji-data/`), not
+`kodein-emoji`. It sits in the note, comment, DM, public chat, Concord and Nest composers and on
+the reaction choices screen. One grid holds the favorites (the reaction choices,
+`EmojiPackState.favorites`), the Unicode groups with a skin tone, and one section per selected
+pack (`EmojiPackState.myPacks`). A Unicode pick goes in at the cursor as is. A custom pick goes in
+as `:shortcode: ` (`insertWordAtCursor`), and sending turns the shortcode into an `emoji` tag
+(`findEmojiTags`).
 
 ### 7. Deck and workspaces
 

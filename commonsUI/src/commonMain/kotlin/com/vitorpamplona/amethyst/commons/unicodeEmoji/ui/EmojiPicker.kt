@@ -118,6 +118,8 @@ import com.vitorpamplona.amethyst.commons.unicodeEmoji.SkinTone
 import com.vitorpamplona.amethyst.commons.unicodeEmoji.UnicodeEmoji
 import com.vitorpamplona.amethyst.commons.unicodeEmoji.UnicodeEmojiCatalog
 import com.vitorpamplona.amethyst.commons.unicodeEmoji.UnicodeEmojiGroup
+import com.vitorpamplona.quartz.utils.Log
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
@@ -132,6 +134,9 @@ private val TabEmojiStyle by lazy { TextStyle(fontFamily = EmojiFontFamily, font
 
 private val NoFavorites: StateFlow<List<Favorite>> = MutableStateFlow(emptyList())
 private val NoPacks: StateFlow<List<EmojiPackGroup>> = MutableStateFlow(emptyList())
+private val NoEmojis: StateFlow<List<EmojiMedia>> = MutableStateFlow(emptyList())
+
+private const val TAG = "EmojiPicker"
 
 /**
  * A composer button that opens the emoji picker and writes the choice into [field] at the
@@ -149,25 +154,13 @@ fun EmojiPickerButton(
     tint: Color = MaterialTheme.colorScheme.onBackground,
     modifier: Modifier = Modifier,
 ) {
-    var open by remember { mutableStateOf(false) }
-
-    Box(modifier) {
-        EmojiPickerIcon(tint) { open = true }
-
-        DropdownMenu(expanded = open, onDismissRequest = { open = false }) {
-            EmojiPicker(
-                emojiPacks = emojiPacks,
-                onPickUnicode = {
-                    field.insertAtCursor(it)
-                    open = false
-                },
-                onPickCustom = {
-                    field.insertWordAtCursor(":${it.code}:")
-                    open = false
-                },
-            )
-        }
-    }
+    EmojiPickerMenuButton(
+        emojiPacks = emojiPacks,
+        onPickUnicode = field::insertAtCursor,
+        onPickCustom = { field.insertWordAtCursor(":${it.code}:") },
+        tint = tint,
+        modifier = modifier,
+    )
 }
 
 /** A button that opens the Unicode emoji palette and hands the chosen emoji to [onPick]. */
@@ -177,6 +170,18 @@ fun UnicodeEmojiPickerButton(
     tint: Color = MaterialTheme.colorScheme.onBackground,
     modifier: Modifier = Modifier,
 ) {
+    EmojiPickerMenuButton(emojiPacks = null, onPickUnicode = onPick, onPickCustom = {}, tint = tint, modifier = modifier)
+}
+
+/** The emoji button and its menu; the menu closes once an emoji is picked. */
+@Composable
+private fun EmojiPickerMenuButton(
+    emojiPacks: EmojiPackState?,
+    onPickUnicode: (String) -> Unit,
+    onPickCustom: (EmojiMedia) -> Unit,
+    tint: Color,
+    modifier: Modifier,
+) {
     var open by remember { mutableStateOf(false) }
 
     Box(modifier) {
@@ -184,12 +189,15 @@ fun UnicodeEmojiPickerButton(
 
         DropdownMenu(expanded = open, onDismissRequest = { open = false }) {
             EmojiPicker(
-                emojiPacks = null,
+                emojiPacks = emojiPacks,
                 onPickUnicode = {
-                    onPick(it)
+                    onPickUnicode(it)
                     open = false
                 },
-                onPickCustom = {},
+                onPickCustom = {
+                    onPickCustom(it)
+                    open = false
+                },
             )
         }
     }
@@ -270,10 +278,22 @@ fun EmojiPicker(
     onPickCustom: (EmojiMedia) -> Unit,
 ) {
     val catalog by produceState(UnicodeEmojiPalette.cachedOrNull()) {
-        if (value == null) value = UnicodeEmojiPalette.load()
+        if (value == null) {
+            value =
+                try {
+                    UnicodeEmojiPalette.load()
+                } catch (e: CancellationException) {
+                    throw e
+                } catch (e: Exception) {
+                    // Keep the favorites and packs usable; the next open tries the file again.
+                    Log.w(TAG, "Could not load the Unicode emoji palette", e)
+                    UnicodeEmojiCatalog(emptyList())
+                }
+        }
     }
     val favorites by (emojiPacks?.favorites ?: NoFavorites).collectAsStateWithLifecycle()
     val packs by (emojiPacks?.myPacks ?: NoPacks).collectAsStateWithLifecycle()
+    val shortcodes by (emojiPacks?.myEmojis ?: NoEmojis).collectAsStateWithLifecycle()
     val search = rememberTextFieldState()
     val tone = UnicodeEmojiPalette.skinTone
 
@@ -306,10 +326,10 @@ fun EmojiPicker(
                 .removePrefix(":")
                 .removeSuffix(":")
         if (query.isEmpty()) {
-            val sections = rememberSections(loaded, favorites, packs)
+            val sections = rememberSections(loaded, favorites, packs, shortcodes)
             SectionedPalette(sections, tone, onPick)
         } else {
-            SearchResults(loaded, packs, query, tone, onPick)
+            SearchResults(loaded, shortcodes, query, tone, onPick)
         }
     }
 }
@@ -387,11 +407,15 @@ private fun rememberSections(
     catalog: UnicodeEmojiCatalog,
     favorites: List<Favorite>,
     packs: List<EmojiPackGroup>,
+    shortcodes: List<EmojiMedia>,
 ): List<PaletteSection> {
     val favoritesLabel = stringRes(Res.string.emoji_picker_favorites)
     val groupLabels = catalog.groups.map { it.label() }
 
-    return remember(catalog, favorites, packs, favoritesLabel, groupLabels) {
+    return remember(catalog, favorites, packs, shortcodes, favoritesLabel, groupLabels) {
+        // A note carries one emoji tag per shortcode, and the first pack using a code wins it, so
+        // a later pack's emoji under a taken code would post the other image: leave it out.
+        val imageOf = shortcodes.associate { it.code to it.link }
         buildList {
             if (favorites.isNotEmpty()) {
                 val items =
@@ -404,11 +428,13 @@ private fun rememberSections(
                 add(PaletteSection("favorites", favoritesLabel, SectionIcon.Favorites, items))
             }
             catalog.groups.forEachIndexed { index, group ->
-                add(PaletteSection("group:${group.name}", groupLabels[index], SectionIcon.Glyph(group.icon()), group.emojis.map { PaletteItem.Palette(it) }))
+                add(PaletteSection("group:${group.name}", groupLabels[index], SectionIcon.Glyph(GroupStyles[group.name]?.icon ?: group.emojis.first().emoji), group.emojis.map { PaletteItem.Palette(it) }))
             }
             packs.forEach { pack ->
-                val title = pack.title?.ifBlank { null } ?: pack.emojis.first().code
-                add(PaletteSection("pack:${pack.address}", title, SectionIcon.Pack(pack.image ?: pack.emojis.first().link), pack.emojis.map { PaletteItem.Custom(it) }))
+                val postable = pack.emojis.filter { imageOf[it.code] == it.link }
+                if (postable.isEmpty()) return@forEach
+                val title = pack.title?.ifBlank { null } ?: postable.first().code
+                add(PaletteSection("pack:${pack.address}", title, SectionIcon.Pack(pack.image ?: postable.first().link), postable.map { PaletteItem.Custom(it) }))
             }
         }
     }
@@ -428,8 +454,15 @@ private fun SectionedPalette(
             var next = 0
             sections.map { section -> next.also { next += 1 + section.items.size } }
         }
+    // A short last section can never reach the top of the grid, so the section a tap jumped to
+    // stays current until the grid moves away from where that jump left it.
+    var jumped by remember(headerIndices) { mutableStateOf<Pair<Int, Int>?>(null) }
     val currentSection by remember(headerIndices) {
-        derivedStateOf { headerIndices.indexOfLast { it <= gridState.firstVisibleItemIndex }.coerceAtLeast(0) }
+        derivedStateOf {
+            val first = gridState.firstVisibleItemIndex
+            jumped?.takeIf { it.second == first }?.first
+                ?: headerIndices.indexOfLast { it <= first }.coerceAtLeast(0)
+        }
     }
 
     // A lazy grid keeps its place by key, so favorites that load after the picker opened would sit
@@ -460,7 +493,14 @@ private fun SectionedPalette(
                             .size(SectionIconSize)
                             .clip(RoundedCornerShape(8.dp))
                             .background(if (index == currentSection) MaterialTheme.colorScheme.secondaryContainer else Color.Transparent)
-                            .clickable { scope.launch { gridState.scrollToItem(headerIndices[index]) } },
+                            .clickable {
+                                scope.launch {
+                                    gridState.scrollToItem(headerIndices[index])
+                                    // Where layout actually left it: the end of the grid clamps the jump.
+                                    withFrameNanos { }
+                                    jumped = index to gridState.firstVisibleItemIndex
+                                }
+                            },
                 ) {
                     SectionIconContent(section)
                 }
@@ -509,15 +549,15 @@ private fun SectionIconContent(section: PaletteSection) {
 @Composable
 private fun SearchResults(
     catalog: UnicodeEmojiCatalog,
-    packs: List<EmojiPackGroup>,
+    shortcodes: List<EmojiMedia>,
     query: String,
     tone: SkinTone,
     onPick: (PaletteItem) -> Unit,
 ) {
     val found =
-        remember(catalog, packs, query) {
-            // The account's own packs first: a search for a shortcode means one of those.
-            val custom = packs.flatMap { it.emojis }.distinctBy { it.link }.filter { it.code.contains(query, ignoreCase = true) }
+        remember(catalog, shortcodes, query) {
+            // The account's own shortcodes first: a search for a shortcode means one of those.
+            val custom = shortcodes.filter { it.code.contains(query, ignoreCase = true) }
             val (starts, contains) = custom.partition { it.code.startsWith(query, ignoreCase = true) }
             (starts + contains).map { PaletteItem.Custom(it) } + catalog.search(query).map { PaletteItem.Palette(it) }
         }
@@ -704,33 +744,24 @@ private fun SkinToneSelector(
     }
 }
 
-/** Group names as emoji-test.txt writes them. */
-private val GroupLabels: Map<String, StringResource> =
+private class GroupStyle(
+    val label: StringResource,
+    val icon: String,
+)
+
+/** Keyed by the group names emoji-test.txt writes. An unknown group shows its own name and first emoji. */
+private val GroupStyles: Map<String, GroupStyle> =
     mapOf(
-        "Smileys & Emotion" to Res.string.emoji_group_smileys_emotion,
-        "People & Body" to Res.string.emoji_group_people_body,
-        "Animals & Nature" to Res.string.emoji_group_animals_nature,
-        "Food & Drink" to Res.string.emoji_group_food_drink,
-        "Travel & Places" to Res.string.emoji_group_travel_places,
-        "Activities" to Res.string.emoji_group_activities,
-        "Objects" to Res.string.emoji_group_objects,
-        "Symbols" to Res.string.emoji_group_symbols,
-        "Flags" to Res.string.emoji_group_flags,
+        "Smileys & Emotion" to GroupStyle(Res.string.emoji_group_smileys_emotion, "😀"),
+        "People & Body" to GroupStyle(Res.string.emoji_group_people_body, "👋"),
+        "Animals & Nature" to GroupStyle(Res.string.emoji_group_animals_nature, "🐻"),
+        "Food & Drink" to GroupStyle(Res.string.emoji_group_food_drink, "🍔"),
+        "Travel & Places" to GroupStyle(Res.string.emoji_group_travel_places, "🚗"),
+        "Activities" to GroupStyle(Res.string.emoji_group_activities, "⚽"),
+        "Objects" to GroupStyle(Res.string.emoji_group_objects, "💡"),
+        "Symbols" to GroupStyle(Res.string.emoji_group_symbols, "🔣"),
+        "Flags" to GroupStyle(Res.string.emoji_group_flags, "🏁"),
     )
 
 @Composable
-private fun UnicodeEmojiGroup.label(): String = GroupLabels[name]?.let { stringRes(it) } ?: name
-
-private fun UnicodeEmojiGroup.icon(): String =
-    when (name) {
-        "Smileys & Emotion" -> "😀"
-        "People & Body" -> "👋"
-        "Animals & Nature" -> "🐻"
-        "Food & Drink" -> "🍔"
-        "Travel & Places" -> "🚗"
-        "Activities" -> "⚽"
-        "Objects" -> "💡"
-        "Symbols" -> "🔣"
-        "Flags" -> "🏁"
-        else -> emojis.first().emoji
-    }
+private fun UnicodeEmojiGroup.label(): String = GroupStyles[name]?.let { stringRes(it.label) } ?: name

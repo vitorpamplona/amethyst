@@ -64,4 +64,14 @@ class EmojiPickerFavoritesTest {
     fun resolvesABareShortcodeByCode() {
         assertEquals(listOf(":pepe:"), describe(EmojiPackState.resolveFavorites(listOf(":pepe:", ":nope:"), listOf(pepe))))
     }
+
+    @Test
+    fun theFirstPackUsingAShortcodeWinsIt() {
+        val first = EmojiPackState.EmojiPackGroup("a", "A", null, listOf(EmojiMedia("heart", "https://a/heart.png"), pepe))
+        val second = EmojiPackState.EmojiPackGroup("b", "B", null, listOf(EmojiMedia("heart", "https://b/heart.png"), EmojiMedia("love", pepe.link)))
+
+        val codes = EmojiPackState.firstByCode(listOf(first, second))
+
+        assertEquals(listOf("heart" to "https://a/heart.png", "pepe" to pepe.link, "love" to pepe.link), codes.map { it.code to it.link })
+    }
 }

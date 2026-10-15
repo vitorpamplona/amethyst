@@ -42,6 +42,9 @@ class UnicodeEmoji(
     val name: String,
     val skinTones: List<String>? = null,
 ) {
+    /** [name] lowercased once, so a search keystroke does not lowercase the whole palette again. */
+    internal val searchName = name.lowercase()
+
     fun withTone(tone: SkinTone): String = if (tone == SkinTone.NONE || skinTones == null) emoji else skinTones[tone.ordinal - 1]
 }
 
@@ -84,6 +87,7 @@ class UnicodeEmojiCatalog(
         val needle = query.trim().lowercase()
         if (needle.isEmpty()) return emptyList()
         val words = needle.split(' ').filter { it.isNotEmpty() }
+        val wordStart = " $needle"
 
         val exact = mutableListOf<UnicodeEmoji>()
         val starts = mutableListOf<UnicodeEmoji>()
@@ -91,12 +95,12 @@ class UnicodeEmojiCatalog(
         val contains = mutableListOf<UnicodeEmoji>()
         groups.forEach { group ->
             group.emojis.forEach { entry ->
-                val name = entry.name.lowercase()
+                val name = entry.searchName
                 if (words.all { name.contains(it) }) {
                     when {
                         name == needle -> exact.add(entry)
                         name.startsWith(needle) -> starts.add(entry)
-                        name.contains(" $needle") -> wordStarts.add(entry)
+                        name.contains(wordStart) -> wordStarts.add(entry)
                         else -> contains.add(entry)
                     }
                 }
