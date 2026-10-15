@@ -20,19 +20,14 @@
  */
 package com.vitorpamplona.amethyst.commons.ui.note.types.dlists
 
-import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -40,22 +35,24 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.saveable.rememberSaveable
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
-import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbol
+import com.vitorpamplona.amethyst.commons.decentralizedLists.DListHeaderView
+import com.vitorpamplona.amethyst.commons.decentralizedLists.DListItemView
+import com.vitorpamplona.amethyst.commons.decentralizedLists.DListLink
+import com.vitorpamplona.amethyst.commons.decentralizedLists.ResolvedConcept
+import com.vitorpamplona.amethyst.commons.decentralizedLists.communityCoordinateOf
+import com.vitorpamplona.amethyst.commons.decentralizedLists.dListHeaderView
+import com.vitorpamplona.amethyst.commons.decentralizedLists.dListItemView
+import com.vitorpamplona.amethyst.commons.decentralizedLists.itemLinks
+import com.vitorpamplona.amethyst.commons.decentralizedLists.tiers.DListConceptView
+import com.vitorpamplona.amethyst.commons.decentralizedLists.tiers.conceptViewFor
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
@@ -64,9 +61,7 @@ import com.vitorpamplona.amethyst.commons.relayClient.dlists.DLIST_ITEMS_LIMIT
 import com.vitorpamplona.amethyst.commons.relayClient.dlists.DListItemsFilterAssemblerSubscription
 import com.vitorpamplona.amethyst.commons.relayClient.dlists.dListItemKinds
 import com.vitorpamplona.amethyst.commons.relayClient.dlists.dListItemPointers
-import com.vitorpamplona.amethyst.commons.relayClient.event.observeNoteEvent
 import com.vitorpamplona.amethyst.commons.resources.Res
-import com.vitorpamplona.amethyst.commons.resources.chips_n_more
 import com.vitorpamplona.amethyst.commons.resources.dlist_fields
 import com.vitorpamplona.amethyst.commons.resources.dlist_item_in
 import com.vitorpamplona.amethyst.commons.resources.dlist_items
@@ -75,13 +70,11 @@ import com.vitorpamplona.amethyst.commons.resources.dlist_items_count_more
 import com.vitorpamplona.amethyst.commons.resources.dlist_list_of
 import com.vitorpamplona.amethyst.commons.resources.dlist_missing_fields
 import com.vitorpamplona.amethyst.commons.resources.dlist_unaffiliated
-import com.vitorpamplona.amethyst.commons.resources.dlist_untitled_item
-import com.vitorpamplona.amethyst.commons.ui.components.ClickableUrl
-import com.vitorpamplona.amethyst.commons.ui.components.LoadNote
-import com.vitorpamplona.amethyst.commons.ui.components.MyAsyncImage
-import com.vitorpamplona.amethyst.commons.ui.components.ShowMoreButton
+import com.vitorpamplona.amethyst.commons.resources.dlist_undefined
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
-import com.vitorpamplona.amethyst.commons.ui.note.LoadAddressableNote
+import com.vitorpamplona.amethyst.commons.ui.note.types.dlists.tiers.BookView
+import com.vitorpamplona.amethyst.commons.ui.note.types.dlists.tiers.GitHubAccountView
+import com.vitorpamplona.amethyst.commons.ui.note.types.dlists.tiers.PlaceView
 import com.vitorpamplona.amethyst.commons.ui.note.types.lists.AddressMemberRow
 import com.vitorpamplona.amethyst.commons.ui.note.types.lists.BookmarkMemberRow
 import com.vitorpamplona.amethyst.commons.ui.note.types.lists.PagedMemberColumn
@@ -95,27 +88,24 @@ import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.DividerThickness
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.quartz.experimental.decentralizedLists.header.FieldRequirement
+import com.vitorpamplona.quartz.experimental.decentralizedLists.item.AddressableListItemEvent
+import com.vitorpamplona.quartz.experimental.decentralizedLists.item.ListItemEvent
 import com.vitorpamplona.quartz.experimental.decentralizedLists.item.itemAddressIds
 import com.vitorpamplona.quartz.experimental.decentralizedLists.item.itemEventIds
 import com.vitorpamplona.quartz.experimental.decentralizedLists.item.itemKeys
 import com.vitorpamplona.quartz.experimental.decentralizedLists.item.itemStrings
-import com.vitorpamplona.quartz.experimental.decentralizedLists.item.parentLists
-import com.vitorpamplona.quartz.experimental.decentralizedLists.item.tags.ParentList
 import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.nip01Core.core.AddressableEvent
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip51Lists.bookmarkList.tags.EventBookmark
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.map
 
 /** Item previews a header card shows before "open the list". */
 private const val PREVIEW_ITEMS = 3
-
-/** Facts an item card shows before it asks to be expanded. */
-private const val COLLAPSED_FACTS = 6
-
-private val PictureShape = RoundedCornerShape(12.dp)
 
 /** Field names on a header, or words on an item, shown before a "+N more" chip. */
 private const val MAX_CHIPS = 16
@@ -146,7 +136,20 @@ private fun dListItemMembers(event: Event): List<DListMember> =
         event.tags.itemAddressIds().forEach { id -> Address.parse(id)?.let { add(DListMember.Coordinate(it)) } }
     }
 
-private fun Event.dTagOrNull() = (this as? AddressableEvent)?.dTag()
+/** A D-list item that is not itself a header: what the thread view draws as the item's own page. */
+fun isDListItemPage(event: Event?): Boolean = (event is ListItemEvent && !event.declaresList()) || (event is AddressableListItemEvent && !event.declaresList())
+
+/**
+ * Tier three's reading of an item among many (Brainstorm's `TierThreeProvider`): a GitHub account's
+ * handle and avatar, a book's cover, title and author. With no view for the concept, or one that
+ * doesn't apply, the hints' reading stands.
+ */
+internal fun presentAmongMany(
+    item: Event,
+    communityCoordinate: String?,
+    definition: DListHeaderView,
+    shown: DListItemView,
+): DListItemView = conceptViewFor(communityCoordinate, item.tags, definition)?.present(item.tags, definition, shown) ?: shown
 
 /**
  * A Decentralized List header (kinds 9998 / 39998): its picture, its names, what it holds, the
@@ -168,10 +171,10 @@ fun RenderDListHeader(
     val header = remember(event) { dListHeaderView(event.tags, event.dTagOrNull()) }
 
     TrustCardFrame {
-        Kicker(MaterialSymbols.AutoMirrored.List, stringRes(Res.string.dlist_list_of, header.plural))
+        DListKicker(MaterialSymbols.AutoMirrored.List, stringRes(Res.string.dlist_list_of, header.plural), null, null)
 
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-            ListPicture(header.image, null, 56.dp, accountViewModel)
+            DListPicture(null, header.image, 56.dp, accountViewModel)
             Column(Modifier.weight(1f)) {
                 Text(
                     text = header.plural,
@@ -212,6 +215,24 @@ fun RenderDListHeader(
     }
 }
 
+/** The items filed under [header], as they arrive in the cache; [subscribe] also asks relays for them. */
+@Composable
+internal fun observeListItems(
+    headerNote: Note,
+    header: Event,
+    accountViewModel: AccountViewModel,
+    subscribe: Boolean = true,
+): List<Note> {
+    if (subscribe) DListItemsFilterAssemblerSubscription(headerNote, accountViewModel.dataSources().dListItems)
+
+    val items by remember(header) {
+        val filter = Filter(kinds = dListItemKinds(header), tags = mapOf("z" to dListItemPointers(header)))
+        // Off the main thread: the first emission is a scan of the whole cache.
+        LocalCache.observeNotes(filter).map { notes -> notes.filter { it.event != null } }.flowOn(Dispatchers.Default)
+    }.collectAsStateWithLifecycle(emptyList())
+    return items
+}
+
 /** The items filed under this header, loaded from the relays it was seen on while the card shows. */
 @Composable
 private fun HeaderItems(
@@ -221,14 +242,10 @@ private fun HeaderItems(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    DListItemsFilterAssemblerSubscription(baseNote, accountViewModel.dataSources().dListItems)
-
-    val items by remember(event) {
-        val filter = Filter(kinds = dListItemKinds(event), tags = mapOf("z" to dListItemPointers(event)))
-        LocalCache.observeNotes(filter).map { notes -> notes.filter { it.event != null } }
-    }.collectAsStateWithLifecycle(emptyList())
-
+    val items = observeListItems(baseNote, event, accountViewModel)
     if (items.isEmpty()) return
+
+    val community = remember(event, header) { communityCoordinateOf((event as? AddressableEvent)?.addressTag(), header) }
 
     TrustSectionLabel(
         if (items.size >= DLIST_ITEMS_LIMIT) {
@@ -241,20 +258,26 @@ private fun HeaderItems(
     Column {
         items.take(PREVIEW_ITEMS).forEachIndexed { index, item ->
             if (index > 0) HorizontalDivider(thickness = DividerThickness)
-            ItemPreviewRow(item, header, accountViewModel, nav)
+            DListItemRow(item, header, community, null, accountViewModel, nav)
         }
     }
 }
 
+/** An item as one line among others: its picture, its title and one grey line (Brainstorm's `ItemLine`). */
 @Composable
-private fun ItemPreviewRow(
+internal fun DListItemRow(
     item: Note,
-    header: DListHeaderView,
+    definition: DListHeaderView,
+    communityCoordinate: String?,
+    line: String?,
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
     val event = item.event ?: return
-    val view = remember(event, header) { dListItemView(event.tags, event.content, header) }
+    val view =
+        remember(event, definition, communityCoordinate) {
+            presentAmongMany(event, communityCoordinate, definition, dListItemView(event.tags, event.content, definition))
+        }
 
     Row(
         verticalAlignment = Alignment.CenterVertically,
@@ -265,10 +288,10 @@ private fun ItemPreviewRow(
                 .clickable { routeFor(item, accountViewModel.account)?.let { nav.nav(it) } }
                 .padding(vertical = 6.dp),
     ) {
-        ListPicture(view.image, header.image, 36.dp, accountViewModel)
+        DListPicture(view.image, definition.image, 36.dp, accountViewModel, view.imageShape)
         Column(Modifier.weight(1f)) {
-            ItemTitle(view.title, header.singular, FontWeight.SemiBold)
-            view.summary?.let {
+            DListItemTitle(view.title, definition.singular, FontWeight.SemiBold)
+            (line ?: view.summary)?.let {
                 Text(
                     text = it,
                     style = MaterialTheme.typography.bodySmall,
@@ -282,10 +305,14 @@ private fun ItemPreviewRow(
 }
 
 /**
- * A Decentralized List item (kinds 9999 / 39999), drawn by what its list says items have: the
- * parent list it sits on, its title, summary and picture, its link, its fields as "label: value",
- * a note of required fields it lacks, and the people, notes and words it lists. Mirrors
- * Brainstorm's `DListItemHero`.
+ * A Decentralized List item (kinds 9999 / 39999), in the tier its concept earns (Brainstorm ADR 0007):
+ *
+ * 1. raw, when no definition can be read: the tags as they are;
+ * 2. dynamic, from the governing definition's fields, hints and URL templates: everywhere else, and
+ *    in a feed, where a tier-three concept's items still read its way (a GitHub account's avatar,
+ *    a book's cover) through [presentAmongMany];
+ * 3. custom, on the item's own page ([isPage], the thread view), for a community concept with a
+ *    view of its own ([DListConceptView]) that applies.
  */
 @Composable
 fun RenderDListItem(
@@ -294,129 +321,97 @@ fun RenderDListItem(
     backgroundColor: MutableState<Color>,
     accountViewModel: AccountViewModel,
     nav: INav,
+    isPage: Boolean = false,
 ) {
     val noteState by baseNote
         .flow()
         .metadata.stateFlow
         .collectAsStateWithLifecycle()
     val event = noteState.note.event ?: return
-    val parent = remember(event) { event.tags.parentLists().firstOrNull() }
 
-    when (parent) {
-        is ParentList.Coordinate ->
-            LoadAddressableNote(parent.address) { headerNote ->
-                if (headerNote == null) {
-                    RenderDListItem(event, null, null, quotesLeft, backgroundColor, accountViewModel, nav)
-                } else {
-                    val headerEvent by observeNoteEvent<Event>(headerNote)
-                    RenderDListItem(event, headerNote, headerEvent, quotesLeft, backgroundColor, accountViewModel, nav)
+    ResolveDListConcept(event, accountViewModel) { resolved, listedNote, listName ->
+        val governing = resolved?.governing
+        val templates = observeUrlTemplates(governing?.links ?: emptyList(), accountViewModel)
+        val hinted = remember(event, governing) { dListItemView(event.tags, event.content, governing) }
+        val links =
+            remember(hinted, governing, templates) {
+                val built = governing?.let { itemLinks(event.tags, it.links, templates) } ?: emptyList()
+                (listOfNotNull(hinted.link) + built).distinctBy { it.href }
+            }
+
+        val custom = remember(resolved, event) { resolved?.let { conceptViewFor(it.communityCoordinate, event.tags, it.governing) } }
+        val openList: (() -> Unit)? =
+            listedNote?.let { note ->
+                {
+                    routeFor(note, accountViewModel.account)?.let { route -> nav.nav(route) }
+                    Unit
                 }
             }
 
-        is ParentList.EventId ->
-            LoadNote(parent.eventId) { headerNote ->
-                if (headerNote == null) {
-                    RenderDListItem(event, null, null, quotesLeft, backgroundColor, accountViewModel, nav)
-                } else {
-                    val headerEvent by observeNoteEvent<Event>(headerNote)
-                    RenderDListItem(event, headerNote, headerEvent, quotesLeft, backgroundColor, accountViewModel, nav)
+        if (isPage && resolved != null && custom != null) {
+            TrustCardFrame {
+                when (custom) {
+                    DListConceptView.GITHUB_ACCOUNT -> GitHubAccountView(event, resolved, hinted, links, openList, accountViewModel)
+                    DListConceptView.PLACE -> PlaceView(event, resolved, hinted, links, listedNote, openList, accountViewModel, nav)
+                    DListConceptView.BOOK -> BookView(event, resolved, hinted, links, listedNote, openList, accountViewModel, nav)
                 }
             }
-
-        is ParentList.Name -> RenderDListItem(event, null, null, quotesLeft, backgroundColor, accountViewModel, nav, listName = parent.name)
-
-        null -> RenderDListItem(event, null, null, quotesLeft, backgroundColor, accountViewModel, nav)
+        } else {
+            val shown =
+                remember(hinted, resolved) {
+                    if (resolved != null) presentAmongMany(event, resolved.communityCoordinate, resolved.governing, hinted) else hinted
+                }
+            RenderDListItemCard(event, resolved, shown, links, listName, openList, quotesLeft, backgroundColor, accountViewModel, nav)
+        }
     }
 }
 
+/** Tiers one and two: the card every concept gets. */
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
-private fun RenderDListItem(
+private fun RenderDListItemCard(
     event: Event,
-    headerNote: Note?,
-    headerEvent: Event?,
+    resolved: ResolvedConcept?,
+    view: DListItemView,
+    links: List<DListLink>,
+    listName: String?,
+    openList: (() -> Unit)?,
     quotesLeft: Int,
     backgroundColor: MutableState<Color>,
     accountViewModel: AccountViewModel,
     nav: INav,
-    listName: String? = null,
 ) {
-    val header = remember(headerEvent) { headerEvent?.let { dListHeaderView(it.tags, it.dTagOrNull()) } }
-    val view = remember(event, header) { dListItemView(event.tags, event.content, header) }
+    val header = resolved?.governing
     val members = remember(event) { dListItemMembers(event) }
     val words = remember(event) { event.tags.itemStrings() }
+    val singular = header?.singular?.ifBlank { null }
 
     TrustCardFrame {
-        val singular = header?.singular?.ifBlank { null }
         val listLabel = header?.plural?.ifBlank { null } ?: listName
-        if (singular != null || listLabel != null) {
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(6.dp),
-                modifier =
-                    if (headerNote != null) {
-                        Modifier.clickable { routeFor(headerNote, accountViewModel.account)?.let { nav.nav(it) } }
-                    } else {
-                        Modifier
-                    },
-            ) {
-                Icon(
-                    symbol = MaterialSymbols.AutoMirrored.Label,
-                    contentDescription = null,
-                    tint = MaterialTheme.colorScheme.primary,
-                    modifier = Modifier.size(18.dp),
-                )
-                singular?.let {
-                    Text(
-                        text = it,
-                        style = MaterialTheme.typography.labelLarge,
-                        fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.primary,
-                    )
+        DListKicker(MaterialSymbols.AutoMirrored.Label, singular, listLabel?.let { stringRes(Res.string.dlist_item_in, it) }, openList)
+
+        // Tier one with nothing to call the item has no heading: the tags below say what it is.
+        if (view.defined || view.title != null || view.summary != null) {
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                if (view.image != null || header?.image != null) {
+                    DListPicture(view.image, header?.image, 56.dp, accountViewModel, view.imageShape)
                 }
-                listLabel?.let {
-                    Text(
-                        text = stringRes(Res.string.dlist_item_in, it),
-                        style = MaterialTheme.typography.labelLarge,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                    )
+                Column(Modifier.weight(1f)) {
+                    DListItemTitle(view.title, singular, FontWeight.Bold, large = true)
+                    view.summary?.let {
+                        Text(text = it, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
                 }
             }
         }
 
-        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-            if (view.image != null || header?.image != null) {
-                ListPicture(view.image, header?.image, 56.dp, accountViewModel)
-            }
-            Column(Modifier.weight(1f)) {
-                ItemTitle(view.title, singular ?: "", FontWeight.Bold, large = true)
-                view.summary?.let {
-                    Text(
-                        text = it,
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                }
-            }
-        }
+        DListLinkButtons(links)
 
-        view.link?.let { link ->
-            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                Icon(
-                    symbol = MaterialSymbols.Link,
-                    contentDescription = null,
-                    tint = MaterialTheme.colorScheme.primary,
-                    modifier = Modifier.size(18.dp),
-                )
-                ClickableUrl(url = link, displayText = link.substringAfter("://").trimEnd('/'))
-            }
-        }
+        DListFacts(view.facts)
 
-        if (view.facts.isNotEmpty()) {
-            Facts(view.facts)
-        }
+        view.media?.let { DListMediaBlock(it, view.title ?: singular, view.summary, view.image ?: header?.image, accountViewModel) }
+
+        view.location?.let { DListLocationMap(it) }
 
         if (view.missing.isNotEmpty()) {
             TonalChip(stringRes(Res.string.dlist_missing_fields, view.missing.joinToString(", ")))
@@ -442,140 +437,21 @@ private fun RenderDListItem(
                 }
             }
         }
-    }
-}
 
-@Composable
-private fun Facts(facts: List<DListFact>) {
-    var expanded by rememberSaveable { mutableStateOf(false) }
-    val shown = if (expanded) facts else facts.take(COLLAPSED_FACTS)
-
-    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-        shown.forEach { fact ->
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                Text(
-                    text = fact.label ?: fieldWords(fact.field),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                    modifier = Modifier.weight(0.35f),
-                )
-                Row(Modifier.weight(0.65f), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                    if (fact.href != null) {
-                        // The value as written ("+1 346 493 2858"); the link is what its type spells
-                        // ("tel:+13464932858"), handed to the platform: a browser, a dialer or a mail app.
-                        ClickableUrl(url = fact.href, displayText = fact.value, style = MaterialTheme.typography.bodySmall, modifier = Modifier.weight(1f, fill = false))
-                    } else {
-                        Text(
-                            text = fact.value,
-                            style = MaterialTheme.typography.bodySmall,
-                            maxLines = 3,
-                            overflow = TextOverflow.Ellipsis,
-                            modifier = Modifier.weight(1f, fill = false),
-                        )
-                    }
-                    if (fact.extra > 0) {
-                        Text(
-                            text = pluralStringRes(Res.plurals.chips_n_more, fact.extra, fact.extra),
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
-                    }
-                }
-            }
-        }
-        if (facts.size > COLLAPSED_FACTS && !expanded) {
-            Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
-                ShowMoreButton { expanded = true }
-            }
-        }
-    }
-}
-
-@Composable
-private fun Kicker(
-    symbol: MaterialSymbol,
-    text: String,
-) {
-    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-        Icon(
-            symbol = symbol,
-            contentDescription = null,
-            tint = MaterialTheme.colorScheme.primary,
-            modifier = Modifier.size(18.dp),
-        )
-        Text(
-            text = text,
-            style = MaterialTheme.typography.labelLarge,
-            fontWeight = FontWeight.Bold,
-            color = MaterialTheme.colorScheme.primary,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis,
-        )
-    }
-}
-
-@Composable
-private fun ItemTitle(
-    title: String?,
-    singular: String,
-    fontWeight: FontWeight?,
-    large: Boolean = false,
-) {
-    val style = if (large) MaterialTheme.typography.titleLarge else MaterialTheme.typography.bodyLarge
-    if (title != null) {
-        Text(text = title, style = style, fontWeight = fontWeight, maxLines = 2, overflow = TextOverflow.Ellipsis)
-    } else {
-        Text(
-            text = stringRes(Res.string.dlist_untitled_item, singular),
-            style = style,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            maxLines = 1,
-        )
-    }
-}
-
-/** The item's picture, else its list's, else the plain list mark. */
-@Composable
-private fun ListPicture(
-    image: String?,
-    fallback: String?,
-    size: Dp,
-    accountViewModel: AccountViewModel,
-) {
-    val url = image ?: fallback
-    Box(
-        modifier =
-            Modifier
-                .size(size)
-                .clip(PictureShape)
-                .background(MaterialTheme.colorScheme.surfaceContainerHigh),
-        contentAlignment = Alignment.Center,
-    ) {
-        if (url != null) {
-            MyAsyncImage(
-                imageUrl = url,
-                contentDescription = null,
-                contentScale = ContentScale.Crop,
-                mainImageModifier = Modifier.fillMaxSize(),
-                loadedImageModifier = Modifier.fillMaxSize(),
-                accountViewModel = accountViewModel,
-                onLoadingBackground = null,
-                onError = { ListMark(size) },
+        if (resolved == null && view.undeclared.isNotEmpty()) {
+            // Tier one: no definition to read the tags by, so they are shown as they are.
+            Text(
+                text = stringRes(Res.string.dlist_undefined),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
+            DListRawFields(view.undeclared)
         } else {
-            ListMark(size)
+            // A definition was read: what it doesn't show waits in the fold, outside-the-definition
+            // tags apart (all of them, for a header that declares nothing).
+            DListMoreFields(view.moreFields, view.undeclared, singular)
         }
-    }
-}
 
-@Composable
-private fun ListMark(size: Dp) {
-    Icon(
-        symbol = MaterialSymbols.AutoMirrored.List,
-        contentDescription = null,
-        tint = MaterialTheme.colorScheme.onSurfaceVariant,
-        modifier = Modifier.size(size / 2),
-    )
+        resolved?.let { DListDefinitionLine(it) }
+    }
 }
