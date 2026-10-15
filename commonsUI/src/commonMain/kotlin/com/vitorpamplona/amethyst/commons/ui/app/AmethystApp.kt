@@ -97,6 +97,7 @@ import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.publicChannel
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.publicChannels.relayGroup.datasource.RelayGroupJoinedChatTailPreload
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.publicChannels.relayGroup.datasource.RelayGroupJoinedStatePreload
 import com.vitorpamplona.amethyst.commons.ui.stringRes
+import com.vitorpamplona.amethyst.commons.unicodeEmoji.ui.EmojiPanelHost
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.quartz.utils.Log
 import kotlinx.coroutines.delay
@@ -230,7 +231,10 @@ private fun LoggedInPage(
 
     root.LoggedInEffects(accountViewModel)
 
-    AppNavigation(accountViewModel, route, sessionManager, root)
+    // The emoji panel docks below every screen, where an on-screen keyboard would be.
+    EmojiPanelHost {
+        AppNavigation(accountViewModel, route, sessionManager, root)
+    }
 }
 
 @Composable

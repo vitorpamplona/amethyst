@@ -476,6 +476,7 @@ class DesktopAppModules(
             scope = applicationIOScope,
             hooks = DesktopAccountSessionHooks(),
             remoteSignerMetadata = REMOTE_SIGNER_METADATA,
+            signerRelayRouting = torEvaluatorFlow,
         )
 
     /** Key Backup, the key prompts and the keyring alert, for the shared UI. */

@@ -247,10 +247,9 @@ fun CollapsedNotificationPanel(
             ),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
-            IconButton(
-                onClick = onExpand,
-                modifier = Modifier.padding(top = Size12dp),
-            ) {
+            // A 48 dp button with no top padding centres the bell 24 dp down, on the same line as
+            // the expanded header (12 dp padding around a 24 dp row) and the centre pane's top bar.
+            IconButton(onClick = onExpand) {
                 BadgedBox(
                     badge = {
                         if (missed > 0) Badge { Text(missedBadgeLabel(missed)) }

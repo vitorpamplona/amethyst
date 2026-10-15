@@ -204,4 +204,47 @@ class LnurlFormTest {
     fun `does not match different recipients`() {
         assertEquals(false, LnurlForm.matches("alice@example.com", "bob@example.com"))
     }
+
+    @Test
+    fun `lud16 keeps ports and international domains`() {
+        assertEquals("https://localhost:8080/.well-known/lnurlp/vitor", LnurlForm.toUrl("vitor@localhost:8080"))
+        assertEquals("https://münchen.de/.well-known/lnurlp/vitor", LnurlForm.toUrl("vitor@münchen.de"))
+    }
+
+    @Test
+    fun `bech32 resolves to its url`() {
+        val url = "https://example.com/.well-known/lnurlp/vitor"
+        assertEquals(url, LnurlForm.toUrl(LnurlForm.urlToBech32(url)))
+    }
+
+    @Test
+    fun `punctuation glued to the domain is rejected`() {
+        // OkHttp parses https://stardroid.app)⭐ into the host stardroid.xn--app)-3z8b, then
+        // throws "unexpected host" on that same host when it connects, crashing the app.
+        assertEquals(null, LnurlForm.toUrl("vitor@stardroid.app)⭐"))
+        assertEquals(null, LnurlForm.toUrl("vitor@stardroid.app)"))
+        assertEquals(null, LnurlForm.toUrl("vitor@star droid.app"))
+        assertEquals(null, LnurlForm.toUrl("https://stardroid.app)⭐/.well-known/lnurlp/vitor"))
+        assertEquals(null, LnurlForm.toUrl(LnurlForm.urlToBech32("https://stardroid.app)⭐/.well-known/lnurlp/vitor")))
+        assertEquals(false, LnurlForm.matches("vitor@stardroid.app)⭐", "vitor@stardroid.app)⭐"))
+    }
+
+    @Test
+    fun `symbols that idn maps to ascii punctuation are rejected`() {
+        // Fullwidth ")" and a parenthesized digit both become ASCII punctuation under IDN
+        // mapping; "_" is fine in an ASCII label but not next to non-ASCII characters.
+        assertEquals(null, LnurlForm.toUrl("vitor@stardroid.app\uFF09"))
+        assertEquals(null, LnurlForm.toUrl("vitor@ab\u2474.com"))
+        assertEquals(null, LnurlForm.toUrl("vitor@a_ü.com"))
+        assertEquals("https://a_b.com/.well-known/lnurlp/vitor", LnurlForm.toUrl("vitor@a_b.com"))
+        assertEquals("https://example.com./.well-known/lnurlp/vitor", LnurlForm.toUrl("vitor@example.com."))
+        assertEquals("https://भारत.com/.well-known/lnurlp/vitor", LnurlForm.toUrl("vitor@भारत.com"))
+    }
+
+    @Test
+    fun `empty host labels are rejected`() {
+        assertEquals(null, LnurlForm.toUrl("vitor@example..com"))
+        assertEquals(null, LnurlForm.toUrl("vitor@.example.com"))
+        assertEquals(null, LnurlForm.toUrl("https:///.well-known/lnurlp/vitor"))
+    }
 }

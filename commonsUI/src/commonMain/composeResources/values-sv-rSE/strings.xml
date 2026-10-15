@@ -6956,9 +6956,7 @@
     <string name="privacy_lock_messages_locked_description">Lås upp för att läsa eller skicka privata meddelanden.</string>
     <string name="privacy_lock_wallet_locked">Plånboken är låst</string>
     <string name="privacy_lock_wallet_locked_description">Lås upp för att se ditt saldo och skicka eller ta emot sats.</string>
-    <string name="custom_emoji_picker_open">Infoga anpassad emoji</string>
     <string name="custom_emoji_picker_search">Sök emoji</string>
-    <string name="custom_emoji_picker_empty">Inga anpassade emojier ännu. Lägg till emoji-paket i din emojilista för att använda dem här.</string>
     <string name="custom_emoji_picker_no_match">Ingen emoji matchar det namnet</string>
     <string name="custom_feeds_manage">Hantera dina flöden</string>
     <string name="feed_group_custom">Dina flöden</string>

@@ -466,6 +466,7 @@
     <string name="log_out">निर्गमनांकन</string>
     <string name="show_more">अधिक दिखाएँ</string>
     <string name="show_less">अल्प दिखाएँ</string>
+    <string name="back_to_top">ऊपर लौटें</string>
     <string name="lightning_invoice">लैटनिंग चालान</string>
     <string name="invoice_expired">समयसीमा समाप्त</string>
     <string name="clink_lightning_offer">क्लिंक॰ प्रस्ताव</string>
@@ -5547,6 +5548,10 @@
     <string name="route_new_geocache">कोष को छिपाएँ</string>
     <string name="route_new_geocache_hunt">नई खोज</string>
     <string name="route_notifications">सूचनाएँ</string>
+    <plurals name="notification_panel_folded_new">
+        <item quantity="one">सूचनाएँ। %1$d नई</item>
+        <item quantity="other">सूचनाएँ। %1$d नए</item>
+    </plurals>
     <string name="route_podcast_episodes">कडियाँ</string>
     <string name="route_podcasts">पुटप्रसार</string>
     <string name="schedule_post_button_add">पत्र प्रकाशन समय निर्धारण</string>
@@ -6089,6 +6094,10 @@
     <string name="browser_pill_info_site_data_desc">प्रवेशांकन तथा आद्यताएँ जो इस जालस्थान ने अभिलेखित किया इस लेखा के लिए</string>
     <string name="browser_pill_info_clear">जालस्थान जानकारी रिक्त करें</string>
     <string name="browser_pill_info_clear_confirm">क्या इस जालस्थान से निर्गमनांकन करें तथा इसकी जानकारी मिटा दें।</string>
+    <string name="browser_pill_info_clear_all">सभी जालस्थानों के लिए जानकारी मिटाएँ</string>
+    <string name="browser_pill_info_clear_all_confirm">क्या इस लेखा द्वारा सभी देखे गए जालस्थानों से निर्गमनांकन करें तथा उनके सभी सेवाप्रसंग तथा जानकारी मिटा दें। इससे आपके नोस्टर जाल क्रमक के अभिलेख भी पुनःस्थापित होंगे।</string>
+    <string name="browser_pill_info_all_cleared">सेवाप्रसंग तथा जानकारी सभी जालस्थानों के लिए मिटा दिए गए</string>
+    <string name="browser_pill_site_data_desc">प्रवेशांकन सेवाप्रसंग तथा स्थानगत भण्डार अभिलेखित</string>
     <string name="backup_action_block_again">पुनःबाधित करें %1$s को</string>
     <string name="backup_action_keep_count">रखें %1$s</string>
     <string name="backup_action_rejoin">पुनःजुडें %1$s</string>
@@ -6956,9 +6965,7 @@
     <string name="privacy_lock_messages_locked_description">ताला खोलें पढने के लिए अथवा निजी सन्देशों को भेजने के लिए।</string>
     <string name="privacy_lock_wallet_locked">धनकोष तालाबद्ध है</string>
     <string name="privacy_lock_wallet_locked_description">ताला खोलें अपना शेष देखने के लिए अथवा साट्स भेजने अथवा प्राप्त करने के लिए।</string>
-    <string name="custom_emoji_picker_open">अनुकूल भावचिह्न भीतर प्रविष्ट करें</string>
     <string name="custom_emoji_picker_search">भावचिह्न खोजें</string>
-    <string name="custom_emoji_picker_empty">कोई अनुकूल भावचिह्न नहीं अब तक। भावचिह्न पोटलियाँ जोडें अपने भावचिह्न सूची में यहाँ उनका उपयोग करने के लिए।</string>
     <string name="custom_emoji_picker_no_match">कोई भावचिह्न नहीं उस नाम का</string>
     <string name="custom_feeds_manage">अपने सूचनावलियों का प्रबन्धन करें</string>
     <string name="feed_group_custom">आपके सूचनावलियाँ</string>

@@ -20,6 +20,14 @@
  */
 package com.vitorpamplona.amethyst.commons.ui.navigation.shell
 
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.SizeTransform
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.togetherWith
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -29,6 +37,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.width
 import androidx.compose.material3.DrawerValue
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.ModalNavigationDrawer
 import androidx.compose.material3.SheetValue
@@ -44,6 +53,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.pointer.PointerEventPass
 import androidx.compose.ui.input.pointer.PointerEventType
@@ -336,31 +346,64 @@ private fun MultiPaneShell(
             // lights): the panel to the right takes that inset back, so its header reaches the
             // window's edge instead of growing a band under an empty title bar.
             if (showPanel) {
-                if (showFoldedStrip) {
-                    Row(Modifier.consumeWindowInsets(PaddingValues(top = LocalTitleBarOverlay.current))) {
-                        VerticalDivider(thickness = DividerThickness)
-                        CollapsedNotificationPanel(
-                            accountViewModel = accountViewModel,
-                            collapsedAt = foldedAt,
-                            onExpand = collapsePrefs::expand,
-                        )
+                // The panel keeps the width it fits at when open while it slides in or out, so a
+                // fold doesn't squeeze the feed into the strip on its way out.
+                val openPanelWidth =
+                    if (showFoldedStrip) {
+                        fitPaneWidths(windowWidth, widths.drawer, widths.notifications, resizableLeading, true).notifications
+                    } else {
+                        fitted.notifications
                     }
-                } else {
-                    Row(Modifier.consumeWindowInsets(PaddingValues(top = LocalTitleBarOverlay.current))) {
-                        // Dragging the line left widens the panel.
-                        PaneSplitter(onDrag = { delta -> paneWidthPrefs.setNotifications((fitted.notifications - delta).coerceIn(NotificationPanelWidthRange)) })
-                        NotificationSidePanel(
-                            accountViewModel = accountViewModel,
-                            nav = nav,
-                            modifier = Modifier.width(fitted.notifications.dp),
-                            onCollapse = { collapsePrefs.collapse(TimeUtils.now()) },
-                        )
+                // Folding slides the panel out to its strip and unfolding slides it back: the size
+                // animates (clipped, the content pinned to its leading edge, so the panel reveals
+                // from the left like a drawer) while the strip and the panel cross-fade over the
+                // theme background, not the window's, which shows through a half-faded pane.
+                AnimatedContent(
+                    targetState = panelFolded,
+                    modifier =
+                        Modifier
+                            .fillMaxHeight()
+                            .background(MaterialTheme.colorScheme.background)
+                            .consumeWindowInsets(PaddingValues(top = LocalTitleBarOverlay.current)),
+                    contentAlignment = Alignment.TopStart,
+                    transitionSpec = {
+                        fadeIn(tween(PANEL_FOLD_FADE_MS)) togetherWith fadeOut(tween(PANEL_FOLD_FADE_MS)) using
+                            SizeTransform(clip = true) { _, _ -> tween(PANEL_FOLD_MS, easing = FastOutSlowInEasing) }
+                    },
+                    label = "NotificationPanelFold",
+                ) { folded ->
+                    if (folded) {
+                        Row(Modifier.fillMaxHeight()) {
+                            VerticalDivider(thickness = DividerThickness)
+                            CollapsedNotificationPanel(
+                                accountViewModel = accountViewModel,
+                                collapsedAt = foldedAt,
+                                onExpand = collapsePrefs::expand,
+                            )
+                        }
+                    } else {
+                        Row(Modifier.fillMaxHeight()) {
+                            // Dragging the line left widens the panel.
+                            PaneSplitter(onDrag = { delta -> paneWidthPrefs.setNotifications((fitted.notifications - delta).coerceIn(NotificationPanelWidthRange)) })
+                            NotificationSidePanel(
+                                accountViewModel = accountViewModel,
+                                nav = nav,
+                                modifier = Modifier.width(openPanelWidth.dp),
+                                onCollapse = { collapsePrefs.collapse(TimeUtils.now()) },
+                            )
+                        }
                     }
                 }
             }
         }
     }
 }
+
+/** How long the notification panel takes to fold to its strip or unfold back. */
+private const val PANEL_FOLD_MS = 250
+
+/** The strip and the panel cross-fade over the first part of the fold. */
+private const val PANEL_FOLD_FADE_MS = 150
 
 /** A press in the main screen takes the focus back from the deck's columns (see [DeckFocus]). */
 private fun Modifier.unfocusDeckOnPress() =

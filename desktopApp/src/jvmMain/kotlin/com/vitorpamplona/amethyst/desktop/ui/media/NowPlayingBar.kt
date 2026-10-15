@@ -42,6 +42,7 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.State
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
@@ -70,6 +71,9 @@ import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.desktop.service.media.GlobalMediaPlayer
 import com.vitorpamplona.amethyst.desktop.service.media.MediaPlaybackState
 import com.vitorpamplona.amethyst.desktop.service.media.VideoThumbnailCache
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 import java.net.URLDecoder
 
@@ -77,19 +81,22 @@ enum class MediaType { AUDIO, VIDEO }
 
 @Composable
 fun NowPlayingBar(modifier: Modifier = Modifier) {
-    val videoState by GlobalMediaPlayer.videoState.collectAsState()
-    val audioState by GlobalMediaPlayer.audioState.collectAsState()
-
-    val hasVideo = videoState.url != null
-    val hasAudio = audioState.url != null
+    // Only whether each is loaded: the clock of the one not shown must not recompose the bar.
+    val hasVideo by rememberIsLoaded(GlobalMediaPlayer.videoState)
+    val hasAudio by rememberIsLoaded(GlobalMediaPlayer.audioState)
     val visible = hasVideo || hasAudio
 
     // Show video bar if video is active, otherwise audio. Once nothing plays it keeps what it last
     // showed, so it slides out with that rather than empty.
-    val lastShown = remember { arrayOfNulls<Pair<MediaPlaybackState, MediaType>>(1) }
-    if (visible) lastShown[0] = if (hasVideo) videoState to MediaType.VIDEO else audioState to MediaType.AUDIO
-    val (activeState, activeType) = lastShown[0] ?: (audioState to MediaType.AUDIO)
+    val lastType = remember { arrayOfNulls<MediaType>(1) }
+    if (visible) lastType[0] = if (hasVideo) MediaType.VIDEO else MediaType.AUDIO
+    val activeType = lastType[0] ?: MediaType.AUDIO
     val isVideo = activeType == MediaType.VIDEO
+
+    val shownState by (if (isVideo) GlobalMediaPlayer.videoState else GlobalMediaPlayer.audioState).collectAsState()
+    val lastState = remember { arrayOfNulls<MediaPlaybackState>(1) }
+    if (shownState.url != null) lastState[0] = shownState
+    val activeState = if (shownState.url != null) shownState else lastState[0] ?: shownState
     val url = activeState.url
 
     val scope = rememberCoroutineScope()
@@ -117,6 +124,9 @@ fun NowPlayingBar(modifier: Modifier = Modifier) {
         )
     }
 }
+
+@Composable
+private fun rememberIsLoaded(state: StateFlow<MediaPlaybackState>): State<Boolean> = remember(state) { state.map { it.url != null }.distinctUntilChanged() }.collectAsState(state.value.url != null)
 
 /** The bar itself, driven only by its arguments so it renders without a player. */
 @Composable

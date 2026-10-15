@@ -52,7 +52,6 @@ import com.vitorpamplona.amethyst.commons.model.User
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
 import com.vitorpamplona.amethyst.commons.model.navigation.routeFor
 import com.vitorpamplona.amethyst.commons.model.navigation.routes.routeFor
-import com.vitorpamplona.amethyst.commons.nip30CustomEmojis.ui.CustomEmojiPickerButton
 import com.vitorpamplona.amethyst.commons.nip30CustomEmojis.ui.ShowEmojiSuggestionList
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.cancel
@@ -88,6 +87,7 @@ import com.vitorpamplona.amethyst.commons.ui.theme.SpacedBy10dp
 import com.vitorpamplona.amethyst.commons.ui.theme.SuggestionListDefaultHeightChat
 import com.vitorpamplona.amethyst.commons.ui.theme.ThemeComparisonColumn
 import com.vitorpamplona.amethyst.commons.ui.theme.placeholderText
+import com.vitorpamplona.amethyst.commons.unicodeEmoji.ui.EmojiPickerButton
 import com.vitorpamplona.amethyst.commons.util.showCount
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.amethyst.commons.viewmodels.mockAccountViewModel
@@ -353,9 +353,7 @@ fun KeyboardLeadingIcon(
             modifier = Modifier,
             onImageChosen = channelScreenModel::pickedMedia,
         )
-        channelScreenModel.emojiSuggestions?.let {
-            CustomEmojiPickerButton(it.emojiPacks, channelScreenModel.message, tint = MaterialTheme.colorScheme.placeholderText)
-        }
+        EmojiPickerButton(channelScreenModel.emojiSuggestions?.emojiPacks, channelScreenModel.message, tint = MaterialTheme.colorScheme.placeholderText)
     }
 }
 

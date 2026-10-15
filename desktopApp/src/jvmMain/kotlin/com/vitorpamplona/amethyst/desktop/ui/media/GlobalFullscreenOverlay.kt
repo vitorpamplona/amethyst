@@ -61,9 +61,10 @@ import com.vitorpamplona.amethyst.desktop.platform.AppWindow
 import com.vitorpamplona.amethyst.desktop.platform.WaylandDisplay
 import com.vitorpamplona.amethyst.desktop.platform.awtPixelScale
 import com.vitorpamplona.amethyst.desktop.service.media.GlobalMediaPlayer
-import com.vitorpamplona.amethyst.desktop.service.media.MediaPlaybackState
 import io.github.kdroidfilter.composemediaplayer.VideoPlayerSurface
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 import java.awt.GraphicsEnvironment
 
@@ -80,9 +81,12 @@ import java.awt.GraphicsEnvironment
 @Composable
 fun GlobalFullscreenOverlay() {
     val isFullscreen by GlobalMediaPlayer.isFullscreen.collectAsState()
-    val videoState by GlobalMediaPlayer.videoState.collectAsState()
+    // Only whether a video is loaded: the whole window must not recompose on every clock tick.
+    val hasVideo by remember {
+        GlobalMediaPlayer.videoState.map { it.url != null }.distinctUntilChanged()
+    }.collectAsState(GlobalMediaPlayer.videoState.value.url != null)
 
-    if (!isFullscreen || videoState.url == null) return
+    if (!isFullscreen || !hasVideo) return
 
     val mainWindow = LocalAwtWindow.current
     val isImmersiveFullscreen = LocalIsImmersiveFullscreen.current
@@ -140,7 +144,6 @@ fun GlobalFullscreenOverlay() {
         FullscreenVideo(
             source = source,
             cornerRadius = cornerRadius,
-            videoState = videoState,
             opaqueBackdrop = onWayland,
             onGrown = { if (!onWayland && device.isFullScreenSupported) device.fullScreenWindow = overlay },
             beforeShrink = { if (!onWayland && device.fullScreenWindow === overlay) device.fullScreenWindow = null },
@@ -158,7 +161,6 @@ fun GlobalFullscreenOverlay() {
 private fun FullscreenVideo(
     source: () -> ZoomSource?,
     cornerRadius: Dp,
-    videoState: MediaPlaybackState,
     opaqueBackdrop: Boolean,
     onGrown: () -> Unit,
     beforeShrink: suspend () -> Unit,
@@ -231,7 +233,7 @@ private fun FullscreenVideo(
                     modifier =
                         Modifier
                             .fillMaxSize()
-                            .onGloballyPositioned { transition.onMediaPositioned(it, videoState.aspectRatio) },
+                            .onGloballyPositioned { transition.onMediaPositioned(it, GlobalMediaPlayer.videoState.value.aspectRatio) },
                     contentScale = ContentScale.Fit,
                 )
             } ?: Box(Modifier.fillMaxSize().onGloballyPositioned { transition.onMediaPositioned(it, null) })
@@ -239,26 +241,33 @@ private fun FullscreenVideo(
 
         // Video controls overlay, fading with the transition.
         Box(Modifier.fillMaxSize().graphicsLayer { alpha = transition.progress }) {
-            VideoControls(
-                isPlaying = videoState.isPlaying,
-                isBuffering = videoState.isBuffering,
-                position = videoState.position,
-                duration = videoState.duration,
-                currentTime = videoState.currentTime,
-                volume = videoState.volume,
-                isMuted = videoState.isMuted,
-                viewMode = ViewMode.FULLSCREEN,
-                onPlayPause = { GlobalMediaPlayer.toggleVideoPlayPause() },
-                onSeek = { GlobalMediaPlayer.seekVideo(it) },
-                onSkip = { GlobalMediaPlayer.skipVideo(it) },
-                speed = videoState.speed,
-                onSpeedChange = { GlobalMediaPlayer.setVideoSpeed(it) },
-                onVolumeChange = { GlobalMediaPlayer.setVideoVolume(it) },
-                onMuteToggle = { GlobalMediaPlayer.toggleVideoMute() },
-                onViewModeChange = { mode ->
-                    if (mode == ViewMode.DEFAULT) leave()
-                },
-            )
+            FullscreenControls(onLeave = { leave() })
         }
     }
+}
+
+/** Its own composable, so each clock tick recomposes the controls and not the video around them. */
+@Composable
+private fun FullscreenControls(onLeave: () -> Unit) {
+    val videoState by GlobalMediaPlayer.videoState.collectAsState()
+    VideoControls(
+        isPlaying = videoState.isPlaying,
+        isBuffering = videoState.isBuffering,
+        position = videoState.position,
+        duration = videoState.duration,
+        currentTime = videoState.currentTime,
+        volume = videoState.volume,
+        isMuted = videoState.isMuted,
+        viewMode = ViewMode.FULLSCREEN,
+        onPlayPause = { GlobalMediaPlayer.toggleVideoPlayPause() },
+        onSeek = { GlobalMediaPlayer.seekVideo(it) },
+        onSkip = { GlobalMediaPlayer.skipVideo(it) },
+        speed = videoState.speed,
+        onSpeedChange = { GlobalMediaPlayer.setVideoSpeed(it) },
+        onVolumeChange = { GlobalMediaPlayer.setVideoVolume(it) },
+        onMuteToggle = { GlobalMediaPlayer.toggleVideoMute() },
+        onViewModeChange = { mode ->
+            if (mode == ViewMode.DEFAULT) onLeave()
+        },
+    )
 }
