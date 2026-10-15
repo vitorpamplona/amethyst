@@ -448,6 +448,15 @@ object GlobalMediaPlayer {
                 player.volume = 0f
                 player.pause()
             }
+            // One still loading ignores that pause and starts once loaded, unseen: pause it again
+            // then, unless it became the playing video meanwhile.
+            if (player.isLoading) {
+                scope.launch(Dispatchers.Main) {
+                    withTimeoutOrNull(RETIRE_LOAD_TIMEOUT_MS) { snapshotFlow { player.isLoading }.first { !it } }
+                    val stillParked = synchronized(initLock) { warmEngines.values.any { it === player } }
+                    if (stillParked) runCatching { player.pause() }
+                }
+            }
         } else {
             retireVideoPlayer(player)
         }
