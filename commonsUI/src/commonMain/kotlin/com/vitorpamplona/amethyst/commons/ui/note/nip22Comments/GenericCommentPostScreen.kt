@@ -57,7 +57,6 @@ import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.AddressableNote
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
 import com.vitorpamplona.amethyst.commons.model.composer.AudienceSelection
-import com.vitorpamplona.amethyst.commons.nip30CustomEmojis.ui.CustomEmojiPickerButton
 import com.vitorpamplona.amethyst.commons.nip30CustomEmojis.ui.ShowEmojiSuggestionList
 import com.vitorpamplona.amethyst.commons.nip72ModCommunities.ui.CommunityRulesViolationBanner
 import com.vitorpamplona.amethyst.commons.relayClient.communities.CommunityFilterAssemblerSubscription
@@ -120,6 +119,7 @@ import com.vitorpamplona.amethyst.commons.ui.theme.Size35dp
 import com.vitorpamplona.amethyst.commons.ui.theme.StdVertSpacer
 import com.vitorpamplona.amethyst.commons.ui.theme.SuggestionListDefaultHeightPage
 import com.vitorpamplona.amethyst.commons.ui.theme.replyModifier
+import com.vitorpamplona.amethyst.commons.unicodeEmoji.ui.EmojiPickerButton
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip73ExternalIds.location.GeohashId
@@ -608,9 +608,7 @@ private fun BottomRowActions(postViewModel: CommentPostViewModel) {
             },
         )
 
-        postViewModel.emojiSuggestions?.let {
-            CustomEmojiPickerButton(it.emojiPacks, postViewModel.message)
-        }
+        EmojiPickerButton(postViewModel.emojiSuggestions?.emojiPacks, postViewModel.message)
 
         TakeVideoButton(
             onVideoTaken = {

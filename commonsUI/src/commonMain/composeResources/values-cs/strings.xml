@@ -7360,7 +7360,6 @@
     <string name="privacy_lock_messages_locked_description">Odemkněte pro čtení a posílání soukromých zpráv.</string>
     <string name="privacy_lock_wallet_locked">Peněženka je zamčená</string>
     <string name="privacy_lock_wallet_locked_description">Odemkněte pro zobrazení zůstatku a posílání nebo přijímání satů.</string>
-    <string name="custom_emoji_picker_open">Vložit vlastní emoji</string>
     <string name="custom_emoji_picker_search">Hledat emoji</string>
     <string name="custom_emoji_picker_empty">Zatím žádné vlastní emoji. Přidejte si emoji balíčky do svého seznamu emoji, abyste je tu mohli použít.</string>
     <string name="custom_emoji_picker_no_match">Tomuto názvu neodpovídá žádné emoji</string>

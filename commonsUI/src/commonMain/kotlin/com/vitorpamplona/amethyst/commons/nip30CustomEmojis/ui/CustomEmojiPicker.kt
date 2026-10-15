@@ -28,80 +28,40 @@ import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.input.TextFieldLineLimits
-import androidx.compose.foundation.text.input.TextFieldState
 import androidx.compose.foundation.text.input.rememberTextFieldState
-import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil3.compose.AsyncImage
-import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
-import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.nip30CustomEmojis.EmojiPackState
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.custom_emoji_picker_empty
 import com.vitorpamplona.amethyst.commons.resources.custom_emoji_picker_no_match
-import com.vitorpamplona.amethyst.commons.resources.custom_emoji_picker_open
 import com.vitorpamplona.amethyst.commons.resources.custom_emoji_picker_search
 import com.vitorpamplona.amethyst.commons.ui.stringRes
-import com.vitorpamplona.amethyst.commons.ui.text.insertWordAtCursor
 
 /**
- * A composer button that opens a grid of the account's NIP-30 custom emoji (its emoji list and the
- * packs it selected) and writes the chosen `:shortcode:` into [field] at the cursor. Sending turns
- * the shortcode into an `emoji` tag, as typing `:word` and picking a suggestion does.
+ * A grid of the account's NIP-30 custom emoji (its emoji list and the packs it selected), with a
+ * search field. The emoji picker (`EmojiPickerButton`) shows it as its custom tab.
  */
 @Composable
-fun CustomEmojiPickerButton(
+fun CustomEmojiGrid(
     emojiPacks: EmojiPackState,
-    field: TextFieldState,
-    tint: Color = MaterialTheme.colorScheme.onBackground,
     modifier: Modifier = Modifier,
-) {
-    var open by remember { mutableStateOf(false) }
-
-    Box(modifier) {
-        IconButton(onClick = { open = true }) {
-            Icon(
-                symbol = MaterialSymbols.EmojiEmotions,
-                contentDescription = stringRes(Res.string.custom_emoji_picker_open),
-                modifier = Modifier.size(20.dp),
-                tint = tint,
-            )
-        }
-
-        DropdownMenu(expanded = open, onDismissRequest = { open = false }) {
-            CustomEmojiGrid(emojiPacks) {
-                field.insertWordAtCursor(":${it.code}:")
-                open = false
-            }
-        }
-    }
-}
-
-@Composable
-private fun CustomEmojiGrid(
-    emojiPacks: EmojiPackState,
     onPick: (EmojiPackState.EmojiMedia) -> Unit,
 ) {
     val all by emojiPacks.myEmojis.collectAsStateWithLifecycle(emptyList())
@@ -114,7 +74,7 @@ private fun CustomEmojiGrid(
             .removeSuffix(":")
     val shown = remember(all, query) { if (query.isEmpty()) all else all.filter { it.code.contains(query, ignoreCase = true) } }
 
-    Column(Modifier.width(320.dp).padding(horizontal = 8.dp)) {
+    Column(modifier.padding(horizontal = 8.dp)) {
         if (all.isEmpty()) {
             Text(
                 text = stringRes(Res.string.custom_emoji_picker_empty),
