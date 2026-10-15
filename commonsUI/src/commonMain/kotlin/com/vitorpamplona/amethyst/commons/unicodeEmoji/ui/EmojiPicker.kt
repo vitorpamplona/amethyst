@@ -44,15 +44,16 @@ import androidx.compose.foundation.lazy.grid.rememberLazyGridState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.input.TextFieldLineLimits
 import androidx.compose.foundation.text.input.TextFieldState
+import androidx.compose.foundation.text.input.clearText
 import androidx.compose.foundation.text.input.rememberTextFieldState
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Immutable
@@ -69,11 +70,13 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -86,6 +89,7 @@ import com.vitorpamplona.amethyst.commons.model.nip30CustomEmojis.EmojiPackState
 import com.vitorpamplona.amethyst.commons.model.nip30CustomEmojis.EmojiPackState.EmojiPackGroup
 import com.vitorpamplona.amethyst.commons.model.nip30CustomEmojis.EmojiPackState.Favorite
 import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.clear
 import com.vitorpamplona.amethyst.commons.resources.custom_emoji_picker_no_match
 import com.vitorpamplona.amethyst.commons.resources.custom_emoji_picker_search
 import com.vitorpamplona.amethyst.commons.resources.emoji_group_activities
@@ -275,12 +279,7 @@ fun EmojiPicker(
 
     Column(Modifier.width(PickerWidth).padding(horizontal = 8.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(top = 8.dp)) {
-            OutlinedTextField(
-                state = search,
-                placeholder = { Text(stringRes(Res.string.custom_emoji_picker_search)) },
-                lineLimits = TextFieldLineLimits.SingleLine,
-                modifier = Modifier.weight(1f),
-            )
+            EmojiSearchField(search, Modifier.weight(1f))
             SkinToneSelector(tone) { UnicodeEmojiPalette.skinTone = it }
         }
 
@@ -313,6 +312,74 @@ fun EmojiPicker(
             SearchResults(loaded, packs, query, tone, onPick)
         }
     }
+}
+
+/**
+ * A compact filled pill, as the settings search bar draws it: a Material text field's 56dp
+ * outlined box dwarfed the emoji rows. Its height matches the skin-tone button beside it.
+ */
+@Composable
+private fun EmojiSearchField(
+    search: TextFieldState,
+    modifier: Modifier = Modifier,
+) {
+    val colorScheme = MaterialTheme.colorScheme
+    BasicTextField(
+        state = search,
+        modifier = modifier,
+        lineLimits = TextFieldLineLimits.SingleLine,
+        textStyle = MaterialTheme.typography.bodyMedium.copy(color = colorScheme.onSurface),
+        cursorBrush = SolidColor(colorScheme.primary),
+        decorator = { innerTextField ->
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .height(CellSize)
+                        .clip(CircleShape)
+                        .background(colorScheme.surfaceContainerHighest)
+                        .padding(start = 12.dp, end = 4.dp),
+            ) {
+                Icon(
+                    symbol = MaterialSymbols.Search,
+                    contentDescription = null,
+                    modifier = Modifier.size(18.dp),
+                    tint = colorScheme.onSurfaceVariant,
+                )
+                Box(Modifier.weight(1f).padding(horizontal = 8.dp), contentAlignment = Alignment.CenterStart) {
+                    if (search.text.isEmpty()) {
+                        Text(
+                            text = stringRes(Res.string.custom_emoji_picker_search),
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = colorScheme.onSurfaceVariant,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                        )
+                    }
+                    innerTextField()
+                }
+                if (search.text.isNotEmpty()) {
+                    val clear = stringRes(Res.string.clear)
+                    Box(
+                        contentAlignment = Alignment.Center,
+                        modifier =
+                            Modifier
+                                .size(32.dp)
+                                .clip(CircleShape)
+                                .clickable(onClickLabel = clear) { search.clearText() },
+                    ) {
+                        Icon(
+                            symbol = MaterialSymbols.Close,
+                            contentDescription = clear,
+                            modifier = Modifier.size(18.dp),
+                            tint = colorScheme.onSurfaceVariant,
+                        )
+                    }
+                }
+            }
+        },
+    )
 }
 
 @Composable
