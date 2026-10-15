@@ -25,7 +25,6 @@ echo "Running test... "
 # build), but this hook stays explicit: a bare `test` would also pull in :desktopApp:test,
 # which needs a display server and is deliberately skipped on CLAUDE_CODE_REMOTE below.
 TASKS=(
-    :quartz:jvmTest
     :commons:jvmTest
     :commonsUI:jvmTest
     # Android-only commonsUI code (e.g. SafeImeInsets) is tested here, not in jvmTest.

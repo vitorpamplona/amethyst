@@ -10,7 +10,7 @@ code never knows which of the three kinds the user has.
 
 ## The contract (all `suspend`)
 
-`quartz/src/commonMain/kotlin/com/vitorpamplona/quartz/nip01Core/signers/NostrSigner.kt`:
+[core/src/commonMain/kotlin/com/vitorpamplona/quartz/nip01Core/signers/NostrSigner.kt](https://github.com/vitorpamplona/quartz/blob/main/core/src/commonMain/kotlin/com/vitorpamplona/quartz/nip01Core/signers/NostrSigner.kt):
 
 ```kotlin
 abstract class NostrSigner(pubKey: HexKey) {
@@ -41,9 +41,9 @@ Failures are thrown as `SignerExceptions` (`nip01Core/signers/SignerExceptions.k
 
 | Signer | File | Notes |
 |---|---|---|
-| `NostrSignerInternal` | `quartz/.../nip01Core/signers/NostrSignerInternal.kt` | key in process memory; created/imported accounts |
-| `NostrSignerRemote` | `quartz/.../nip46RemoteSigner/signer/NostrSignerRemote.kt` | NIP-46 bunker over kind 24133; `references/nip46-remote-signer.md` |
-| `NostrSignerExternal` | `quartz/src/androidMain/.../nip55AndroidSigner/client/NostrSignerExternal.kt` | NIP-55 app (Amber…) via intents + content provider; Android only; `references/nip55-android-signer.md` |
+| `NostrSignerInternal` | `core/.../nip01Core/signers/NostrSignerInternal.kt` | key in process memory; created/imported accounts |
+| `NostrSignerRemote` | `nip46-remote-signer/.../nip46RemoteSigner/signer/NostrSignerRemote.kt` | NIP-46 bunker over kind 24133; `references/nip46-remote-signer.md` |
+| `NostrSignerExternal` | `nip55-android-signer/src/androidMain/.../nip55AndroidSigner/client/NostrSignerExternal.kt` | NIP-55 app (Amber…) via intents + content provider; Android only; `references/nip55-android-signer.md` |
 
 ## Calling it from feature code
 

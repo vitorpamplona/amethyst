@@ -27,9 +27,10 @@ A release is one tag push that fans out to these distribution channels:
 | **Homebrew** | **Autobump** — BrewTestBot opens the `amethyst-nostr` cask and `amy` formula PRs itself; `scripts/bump-homebrew-cask.sh` only verifies | Homebrew (we verify) |
 | **Winget** | `scripts/bump-winget.sh` opens the `winget-pkgs` PR with your `gh` auth | Maintainer |
 
-Maven Central (the `quartz` library) also publishes automatically from the same
-workflow — as a *step* at the end of the `deploy-android` job, not a job of its
-own, so don't expect to find it in the run's job list.
+The `quartz` library no longer ships from here: it releases from its own repository,
+[vitorpamplona/quartz](https://github.com/vitorpamplona/quartz) (a `vX.Y.Z` tag there publishes
+every `quartz-*` artifact to Maven Central). Amethyst pins the version it uses as `quartz` in
+`gradle/libs.versions.toml`; release Quartz first when an Amethyst release needs a Quartz change.
 
 ---
 
@@ -41,7 +42,7 @@ own, so don't expect to find it in the run's job list.
    appCode = "449"      # Android versionCode, monotonic — must increment
    ```
    That single edit propagates to Android (`versionName`/`versionCode`),
-   Desktop & CLI (`packageVersion`), `quartz` (Maven version) and `geode`
+   Desktop & CLI (`packageVersion`) and `geode`
    (`RelayInfo.VERSION`). Nothing else hardcodes the version.
 
 2. **Write the changelog** as `docs/changelog/vMAJOR.MINOR.PP.md` (zero-padded,
@@ -142,11 +143,6 @@ holds **47 assets**, per the asset-name contract:
 - **Relay (10):** the `geode` artifacts, same matrix as `amy`. The geode Docker
   image is **not** a release asset — it goes to the registry, so don't count it
   here.
-- **Maven Central:** `com.vitorpamplona.quartz:quartz:<version>` published.
-  `repo1.maven.org` lags the publish by tens of minutes — a 404 right after the
-  run is normal. Confirm the step's log says "Deployment is being published to
-  Maven Central", and compare against the *previous* version's POM before
-  concluding anything is broken.
 
 ---
 
@@ -489,8 +485,6 @@ Owner assignments and rotation reminders live with the team (issue tracker).
 - [ ] GH Release: 49 assets, sizes sane, and the asset-name set matches the
       previous release (see the `diff` one-liner in BUILDING.md § Release
       runbook). macOS is arm64-only — do **not** look for an Intel DMG.
-- [ ] Maven Central: `quartz:<version>` resolves (allow tens of minutes of
-      propagation; the publish step's log is the authoritative signal).
 - [ ] Play Console: rollout started, no policy rejection.
 - [ ] Zapstore: release event visible.
 - [ ] Orchard: the Amethyst row shows the new version, and its repository link

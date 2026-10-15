@@ -68,7 +68,7 @@ kotlin {
     sourceSets {
         commonMain {
             dependencies {
-                implementation(project(":quartz"))
+                implementation(libs.quartz)
 
                 // Compose *runtime* only — @Stable/@Immutable annotations and
                 // snapshot state (mutableStateOf, State) used by state holders.

@@ -101,7 +101,7 @@ subprojects {
         // aggregate. A root `./gradlew test` therefore runs `test` only in the Java/Android
         // modules that own one and *silently* skips every KMP module - Gradle only errors when
         // no project at all has the task, and four of them do, so it exits 0 looking healthy.
-        // That hid ~8k tests (quartz, commons, commonsUI, quic, nestsClient, marmotQuic), which
+        // That hid thousands of tests (commons, commonsUI, quic, nestsClient, marmotQuic), which
         // is most of this repo's suite. Register the alias so the documented command means what
         // it says.
         //
@@ -111,10 +111,8 @@ subprojects {
         // pre-push hook and CI already run for these modules, so the alias matches the coverage
         // they expect rather than inventing a third definition of "the tests".
         //
-        // The flip side: a KMP module's non-JVM targets stay outside `test`. :quartz's
-        // androidHostTest source set (~3.9k tests) is the big one - nothing runs it today and it
-        // is red on main, so aliasing onto allTests would have turned `test` red for everyone
-        // rather than fixing anything. Tracked in AGENTS.md's Build Commands section.
+        // The flip side: a KMP module's non-JVM targets stay outside `test`; CI runs the
+        // Apple and Android ones in their own jobs.
         if (plugins.hasPlugin("org.jetbrains.kotlin.multiplatform") &&
             tasks.findByName("test") == null &&
             tasks.findByName("jvmTest") != null

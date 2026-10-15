@@ -3,7 +3,14 @@
 
 set -e
 
-QUARTZ_PATH="${QUARTZ_PATH:-./quartz/src/commonMain/kotlin/com/vitorpamplona/quartz}"
+# A checkout of github.com/vitorpamplona/quartz. Its sources are split into modules
+# (core/, social/, ...), so every module's package root is searched.
+QUARTZ_REPO="${QUARTZ_REPO:-../quartz}"
+QUARTZ_PATHS=$(ls -d "$QUARTZ_REPO"/*/src/commonMain/kotlin/com/vitorpamplona/quartz 2>/dev/null || true)
+if [ -z "$QUARTZ_PATHS" ]; then
+    echo "No Quartz sources under $QUARTZ_REPO. Clone github.com/vitorpamplona/quartz there or set QUARTZ_REPO."
+    exit 1
+fi
 
 if [ $# -eq 0 ]; then
     echo "Usage: $0 <nip-number|search-term>"
@@ -14,7 +21,7 @@ if [ $# -eq 0 ]; then
     echo "  $0 B7              # Hex-id NIPs (5A, 7D, B7, ...)"
     echo "  $0 encryption      # Search for 'encryption' in NIP packages"
     echo ""
-    echo "Set QUARTZ_PATH to override default quartz location"
+    echo "Set QUARTZ_REPO to a Quartz checkout (default ../quartz)"
     exit 1
 fi
 
@@ -32,10 +39,10 @@ if [[ "$SEARCH_TERM" =~ ^[0-9]+$ || "$SEARCH_TERM" =~ ^[0-9A-Fa-f]{2}$ ]]; then
     echo ""
 
     # Find directories matching nip##*
-    find "$QUARTZ_PATH" -type d -iname "nip${NIP_NUM}*" | while read -r dir; do
-        echo "📁 $(basename "$dir")/"
+    find $QUARTZ_PATHS -type d -iname "nip${NIP_NUM}*" | while read -r dir; do
+        echo "📁 $(basename "$dir")/  ($(echo "${dir#$QUARTZ_REPO/}" | cut -d/ -f1))"
         find "$dir" -name "*.kt" -type f | while read -r file; do
-            rel_path="${file#$QUARTZ_PATH/}"
+            rel_path="${file#$dir/}"
             echo "   └─ $rel_path"
         done
         echo ""
@@ -46,11 +53,11 @@ else
     echo "================================================"
     echo ""
 
-    find "$QUARTZ_PATH" -type d -name "nip*" | while read -r dir; do
+    find $QUARTZ_PATHS -type d -name "nip*" | while read -r dir; do
         if grep -r -l -i "$SEARCH_TERM" "$dir" --include="*.kt" 2>/dev/null | head -1 > /dev/null; then
             echo "📁 $(basename "$dir")/"
             grep -r -l -i "$SEARCH_TERM" "$dir" --include="*.kt" 2>/dev/null | while read -r file; do
-                rel_path="${file#$QUARTZ_PATH/}"
+                rel_path="${file#$dir/}"
                 matches=$(grep -c -i "$SEARCH_TERM" "$file" 2>/dev/null || echo "0")
                 echo "   └─ $rel_path ($matches matches)"
             done

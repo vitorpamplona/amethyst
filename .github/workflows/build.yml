@@ -48,14 +48,14 @@ jobs:
           cache-read-only: ${{ github.ref != 'refs/heads/main' }}
 
       - name: Linter (gradle)
-        # The three metadata compiles resolve commonMain against only the
+        # The two metadata compiles resolve commonMain against only the
         # deps every target shares, which is the Apple classpath — a
         # dependency that reaches JVM transitively (okio via OkHttp) but is
-        # missing for iOS fails here, on Linux, instead of in test-quartz-ios.
+        # missing for iOS fails here, on Linux, instead of in test-commons-ios.
+        # (Quartz runs the same gate in its own repository.)
         run: |
           ./gradlew spotlessCheck \
-            :quartz:verifyKmpPurity :commons:verifyKmpPurity :commonsUI:verifyKmpPurity \
-            :quartz:compileCommonMainKotlinMetadata \
+            :commons:verifyKmpPurity :commonsUI:verifyKmpPurity \
             :commons:compileCommonMainKotlinMetadata \
             :commonsUI:compileCommonMainKotlinMetadata
 
@@ -107,16 +107,15 @@ jobs:
 
       - name: Test + Build Desktop (gradle)
         run: |
-          CMD="./gradlew :quartz:jvmTest :commons:jvmTest :commonsUI:jvmTest :quic:jvmTest :nestsClient:jvmTest :marmotQuic:jvmTest :cli:test :desktopApp:test :desktopApp:${{ matrix.desktop-task }}"
+          CMD="./gradlew :commons:jvmTest :commonsUI:jvmTest :quic:jvmTest :nestsClient:jvmTest :marmotQuic:jvmTest :cli:test :desktopApp:test :desktopApp:${{ matrix.desktop-task }}"
           if [ "${{ runner.os }}" = "Linux" ]; then
             xvfb-run --auto-servernum $CMD
           else
             $CMD
           fi
 
-      # This job runs the JVM test suites (:quartz, :commons, :commonsUI, :quic,
+      # This job runs the JVM test suites (:commons, :commonsUI, :quic,
       # :nestsClient, :marmotQuic, :cli, :desktopApp) but, unlike test-geode /
-      # test-quartz-ios /
       # test-and-build-android, published nothing when one of them failed. The
       # console line names the failing test and the exception class and stops
       # there, so the message is lost with the runner. That is how the
@@ -142,7 +141,6 @@ jobs:
         with:
           name: Desktop Test Reports (${{ matrix.os }})
           path: |
-            quartz/build/reports/tests
             commons/build/reports/tests
             commonsUI/build/reports/tests
             nestsClient/build/reports/tests
@@ -197,7 +195,7 @@ jobs:
   # a platform-independent module 3× across the desktop OS matrix). Isolating it
   # also keeps its default suite's CPU-heavy throughput benchmarks (a 1M-event
   # mirror sync, WireReqFloor, NegentropyServerReconcile) from contending with the
-  # timing-sensitive quartz relay-client tests under org.gradle.parallel — that
+  # timing-sensitive relay-client tests of the other suites under org.gradle.parallel — that
   # contention flakes tests like NostrClientReqBypassingRelayLimitsTest.
   test-geode:
     needs: lint
@@ -240,65 +238,7 @@ jobs:
           name: geode Test Reports
           path: geode/build/reports
 
-  # Until this job existed nothing ran the linuxX64 target at all — it was compiled by
-  # no CI leg. That is how a copy-on-write LargeCache with O(n) writes and a non-atomic
-  # read-copy-write (concurrent writers silently dropped entries) sat in the tree
-  # unnoticed, and how TestResourceLoader stayed a TODO() that failed every vector-driven
-  # suite on the target.
-  #
-  # Runs the whole :quartz suite on a Linux Native frontend, which also catches a
-  # commonMain or commonTest source reaching for a JVM-only API on a target that, unlike
-  # Apple, has no Foundation to fall back on.
-  test-quartz-linux-native:
-    needs: lint
-    runs-on: ubuntu-latest
-    timeout-minutes: 45
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v7
-
-      - name: Set up JDK 21
-        uses: actions/setup-java@v6.0.1
-        with:
-          distribution: 'temurin'
-          java-version: 21
-
-      - name: Set up Gradle
-        uses: gradle/actions/setup-gradle@v6
-        with:
-          cache-read-only: ${{ github.ref != 'refs/heads/main' }}
-
-      # The Kotlin/Native toolchain (compiler distribution + LLVM + the sysroot) lands
-      # in ~/.konan, which setup-gradle does not cache. Without this the job re-downloads
-      # well over a gigabyte on every run. Keyed on the version catalog so a Kotlin bump
-      # re-populates it.
-      - name: Cache Kotlin/Native toolchain
-        uses: actions/cache@v6
-        with:
-          path: ~/.konan
-          key: konan-${{ runner.os }}-${{ hashFiles('gradle/libs.versions.toml') }}
-          restore-keys: konan-${{ runner.os }}-
-
-      - name: Test Quartz on Linux Native
-        run: ./gradlew :quartz:linuxX64Test
-
-      - name: Linux Native Test Report
-        uses: mikepenz/action-junit-report@a9170d5795813c01ab4901ffb045b52bab4ab09d # v6.5.0
-        if: always()
-        with:
-          report_paths: 'quartz/build/test-results/linuxX64Test/TEST-*.xml'
-          annotate_only: true
-          detailed_summary: true
-          fail_on_failure: true
-
-      - name: Upload Linux Native Test Reports
-        uses: actions/upload-artifact@v7
-        if: failure()
-        with:
-          name: Quartz Linux Native Test Reports
-          path: quartz/build/reports
-
-  # The three iOS jobs run on macos-latest, the smallest hosted runner there
+  # The iOS jobs run on macos-latest, the smallest hosted runner there
   # is: 3 M1 cores and 7 GB of RAM, and 5 to 10x slower than a current laptop
   # on Kotlin/Native compiles and links (:commonsUI:compileKotlinIosSimulatorArm64
   # is 48 s on an M5 Pro and 8 to 14 minutes here). Run-to-run speed also
@@ -314,86 +254,20 @@ jobs:
   #   and they run side by side: about 15 to 20 min for :quartz and :commons,
   #   about 25 for :commonsUI.
   # - ~/.konan is cached, so a run does not re-download the compiler, LLVM and
-  #   the sysroot. Same cache step as test-quartz-linux-native, keyed per job
-  #   because each job populates different per-library caches.
+  #   the sysroot, keyed per job because each job populates different
+  #   per-library caches. (:quartz moved to its own repository, which runs its
+  #   iOS and Linux Native suites itself.)
   # - gradle.properties asks for a 6 GB daemon heap, more than the host has.
   #   These jobs cap it at 4 GB with the same `-D` override the Android jobs
   #   use. That keeps the daemon off swap, but measured on CI it is not what
   #   makes the difference: the runner's speed is. The Kotlin JVM daemon is not
   #   involved; every compile and link task here is Kotlin/Native and runs
   #   inside the Gradle daemon.
-  test-quartz-ios:
-    # Phase 1 of the iOS support plan
-    # (amethyst/plans/2026-05-24-ios-support.md): keep :quartz green on iOS
-    # so JVM-only imports can't sneak into commonMain unnoticed. The
-    # `verifyKmpPurity` task in the lint job is the fast pre-check (Linux,
-    # ~1s); this job is the real one — compiles for the device variant
-    # and actually runs the simulator test suite.
-    needs: lint
-    runs-on: macos-latest
-    timeout-minutes: 45
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v7
-
-      - name: Set up JDK 21
-        uses: actions/setup-java@v6.0.1
-        with:
-          distribution: 'temurin'
-          java-version: 21
-
-      - name: Set up Gradle
-        uses: gradle/actions/setup-gradle@v6
-        with:
-          cache-read-only: ${{ github.ref != 'refs/heads/main' }}
-
-      - name: Cache Kotlin/Native toolchain
-        uses: actions/cache@v6
-        with:
-          path: ~/.konan
-          key: konan-${{ runner.os }}-quartz-${{ hashFiles('gradle/libs.versions.toml') }}
-          restore-keys: |
-            konan-${{ runner.os }}-quartz-
-            konan-${{ runner.os }}-
-
-      # Two tasks, two purposes:
-      # - iosSimulatorArm64Test runs the existing iosTest suite on the
-      #   simulator (NIP-04 / NIP-17 / NIP-19 / NIP-49 / AES-GCM /
-      #   Chatroom keys), exercising secp256k1 and CryptoKit-backed
-      #   primitives on a real Apple toolchain.
-      # - compileTestKotlinIosArm64 catches any device-only compile drift
-      #   (iosArm64 = aarch64-apple-ios) without needing a physical
-      #   device to run on. Compile-only is enough — running on-device
-      #   would require xcodebuild + a provisioning profile.
-      - name: Test Quartz on iOS
-        run: |
-          ./gradlew \
-            -Dorg.gradle.jvmargs="-Xmx4g -Dfile.encoding=UTF-8" \
-            :quartz:iosSimulatorArm64Test \
-            :quartz:compileTestKotlinIosArm64
-
-      - name: Quartz iOS Test Report
-        uses: mikepenz/action-junit-report@a9170d5795813c01ab4901ffb045b52bab4ab09d # v6.5.0
-        if: always()
-        with:
-          report_paths: 'quartz/build/test-results/iosSimulatorArm64Test/TEST-*.xml'
-          annotate_only: true
-          detailed_summary: true
-          fail_on_failure: true
-
-      - name: Upload Quartz iOS Test Reports
-        uses: actions/upload-artifact@v7
-        if: failure()
-        with:
-          name: Quartz iOS Test Reports
-          path: quartz/build/reports
-
   test-commons-ios:
     # :commons gained iosArm64 + iosSimulatorArm64 targets in Phase 2 of the
     # iOS plan. Actual UI / lifecycle wiring will land with the iosApp module
     # in Phase 3, but the shared commonMain + commonTest sources are already
-    # built here against an Apple Native frontend. Same two-task shape as
-    # test-quartz-ios:
+    # built here against an Apple Native frontend. Two tasks:
     # - iosSimulatorArm64Test compiles AND runs the shared commonTest suite
     #   on the simulator. commonTest is built for every target, so a test
     #   reaching for a JVM-only API (JUnit, javaClass, @JvmStatic, or a
@@ -570,7 +444,7 @@ jobs:
     # 90, not 60. On main this job's Gradle step takes ~46 minutes, which used
     # 76% of a 60-minute budget — fine for an incremental run, but PR runs set
     # `cache-read-only` (below), so they restore main's Gradle cache and never
-    # save. A PR that touches `quartz` or `commons` invalidates most of what
+    # save. A PR that touches `commons` invalidates most of what
     # that cache holds for everything downstream, and the job then rebuilds it
     # from cold: measured 2-3x the main-branch time across every job in the
     # workflow, which puts this one past the cap and gets it killed mid-step
@@ -653,7 +527,6 @@ jobs:
           ./gradlew \
             -Dkotlin.daemon.jvmargs="-Xmx4g -XX:MaxMetaspaceSize=1g" \
             --max-workers=3 \
-            :quartz:jvmTest \
             :commons:jvmTest \
             :commonsUI:jvmTest \
             :commonsUI:testAndroidHostTest \

@@ -10,7 +10,7 @@ This recipe is how.
 
 Before writing a new command, ask:
 
-1. Does the piece of logic I need exist in `quartz/` or `commons/`?
+1. Does the piece of logic I need exist in Quartz or `commons/`?
    - **Yes** → use it.
    - **No, but it's in `amethyst/`** → extract. This file.
    - **No, it doesn't exist anywhere** → design it in `commons/`
@@ -44,7 +44,7 @@ Walk the imports. The usual offenders:
 | `android.content.Context` | Often accidental — inline if only used for logging or preferences. Otherwise, invert as constructor arg. |
 | `android.content.SharedPreferences` | Abstract behind an interface in `commons/`; Android actual uses SharedPreferences, JVM actual uses a JSON file. |
 | `androidx.work.WorkManager` | Rarely shareable — if the CLI needs it, simplify the flow to not require background scheduling. |
-| `android.util.Log` | Replace with Quartz `Log` (`quartz/…/utils/Log.kt`), lambda overload for interpolated messages. |
+| `android.util.Log` | Replace with Quartz `Log` (`core/…/utils/Log.kt`), lambda overload for interpolated messages. |
 | `android.graphics.Bitmap` | Almost never needed by Amy. Keep in Android and split the function. |
 | `android.net.Uri` | Replace with `kotlinx.io` path types or a plain `String`. |
 | `androidx.compose.*` | Compose UI (`ui`/`foundation`/`material3`), Coil and `Res` must stay out of `commons` entirely — they belong in `:commonsUI`, which Amy never depends on. Only the Compose *runtime* (`@Stable`, snapshot state) is allowed in `commons`. |

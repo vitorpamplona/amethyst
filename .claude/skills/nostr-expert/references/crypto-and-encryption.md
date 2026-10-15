@@ -38,5 +38,5 @@ old DMs, don't encrypt new content with it.
 - NIP-44 pads plaintext — assert round-trips, not ciphertext lengths.
 - Hashing your own JSON instead of `EventHasher` produces ids relays reject.
 
-Tests: `quartz/src/commonTest/kotlin/com/vitorpamplona/quartz/nip44Encryption/`
+Tests: [core/src/commonTest/kotlin/com/vitorpamplona/quartz/nip44Encryption/](https://github.com/vitorpamplona/quartz/tree/main/core/src/commonTest/kotlin/com/vitorpamplona/quartz/nip44Encryption)
 (`Nip44v2Test`, padding, `SharedKeyCacheTest`).

@@ -4,7 +4,7 @@ A bunker holds the user's key and signs on request. Amethyst talks to it with ki
 `NostrConnectEvent`s, NIP-44-encrypted between a local **transport** keypair and the
 bunker's pubkey.
 
-## Layout (`quartz/src/commonMain/kotlin/com/vitorpamplona/quartz/nip46RemoteSigner/`)
+## Layout ([nip46-remote-signer/src/commonMain/kotlin/com/vitorpamplona/quartz/nip46RemoteSigner/](https://github.com/vitorpamplona/quartz/tree/main/nip46-remote-signer/src/commonMain/kotlin/com/vitorpamplona/quartz/nip46RemoteSigner))
 
 - `BunkerRequest*.kt` — `Connect`, `GetPublicKey`, `GetRelays`, `Ping`, `Sign`,
   `Nip04Encrypt/Decrypt`, `Nip44Encrypt/Decrypt`, `Invalid`; `BunkerRequestParser.kt`.

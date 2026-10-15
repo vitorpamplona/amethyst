@@ -1,6 +1,6 @@
 # Event hierarchy
 
-All in `quartz/src/commonMain/kotlin/com/vitorpamplona/quartz/nip01Core/core/` unless noted.
+All in [core/src/commonMain/kotlin/com/vitorpamplona/quartz/nip01Core/core/](https://github.com/vitorpamplona/quartz/tree/main/core/src/commonMain/kotlin/com/vitorpamplona/quartz/nip01Core/core) unless noted.
 
 ```
 IEvent (marker interface)

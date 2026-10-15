@@ -99,7 +99,7 @@ tasks.withType<Test>().configureEach {
 }
 
 dependencies {
-    api(project(":quartz"))
+    api(libs.quartz)
 
     implementation(libs.kotlinx.coroutines.core)
     implementation(libs.jackson.module.kotlin)
@@ -128,7 +128,7 @@ dependencies {
     // testFixtures: code in src/testFixtures/kotlin (RelayClientTest +
     // synthetic event builders). Not shipped in the production jar but
     // exposed to consumers via testImplementation(testFixtures(...)).
-    testFixturesApi(project(":quartz"))
+    testFixturesApi(libs.quartz)
     testFixturesApi(libs.junit)
     testFixturesImplementation(libs.kotlinx.coroutines.core)
 
@@ -145,7 +145,7 @@ dependencies {
 // artifacts are a bundled-runtime tarball and native Linux packages an operator
 // can drop onto a box. This mirrors the amy CLI's pipeline (cli/build.gradle.kts)
 // — geode is the same kind of `application`-plugin JVM module — but geode drags
-// in no Compose UI (it depends only on :quartz), so there's no render-stack to
+// in no Compose UI (it depends only on the quartz artifacts), so there's no render-stack to
 // exclude and no "no Compose" CI assertion to guard.
 //
 // Outputs land under geode/build/:

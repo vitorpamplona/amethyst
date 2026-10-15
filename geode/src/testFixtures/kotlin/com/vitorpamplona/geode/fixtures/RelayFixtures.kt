@@ -25,10 +25,10 @@ import com.vitorpamplona.quartz.nip01Core.core.OptimizedJsonMapper
 import java.util.zip.GZIPInputStream
 
 /**
- * Loaders for test event corpora bundled in `quartz/src/commonTest/resources/`.
+ * Loaders for test event corpora bundled in `testdata/`.
  * Lookup order:
- *   1. The `TEST_RESOURCES_ROOT` environment variable (set by quartz's Gradle
- *      config to the absolute path of `commonTest/resources`).
+ *   1. The `TEST_RESOURCES_ROOT` environment variable (the absolute path of
+ *      a fixture directory such as `testdata/`).
  *   2. The classpath, for callers that copy fixtures into their own
  *      `src/test/resources`.
  */

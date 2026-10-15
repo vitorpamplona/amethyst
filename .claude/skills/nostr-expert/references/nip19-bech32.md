@@ -1,6 +1,6 @@
 # NIP-19 bech32 in Quartz
 
-All under `quartz/src/commonMain/kotlin/com/vitorpamplona/quartz/nip19Bech32/`.
+All under [core/src/commonMain/kotlin/com/vitorpamplona/quartz/nip19Bech32/](https://github.com/vitorpamplona/quartz/tree/main/core/src/commonMain/kotlin/com/vitorpamplona/quartz/nip19Bech32).
 
 | File | Holds |
 |---|---|

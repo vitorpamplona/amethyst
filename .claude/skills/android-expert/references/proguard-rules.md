@@ -4,10 +4,10 @@
 
 - `amethyst/proguard-rules.pro` — the app's rules. Read it before adding
   anything: it is commented rule by rule.
-- `quartz/consumer-rules.pro` — merged into the R8 configuration of **every**
-  app that depends on Quartz, this one included (wired via
-  `optimization.consumerKeepRules` in `quartz/build.gradle.kts`). A rule added
-  here silently applies to somebody else's whole program.
+- Quartz's consumer rules (`core/consumer-rules.pro` in
+  [vitorpamplona/quartz](https://github.com/vitorpamplona/quartz)) — merged into the R8
+  configuration of **every** app that depends on Quartz, this one included (they ship in the
+  `quartz-core` AAR). A rule added there silently applies to somebody else's whole program.
 - The AGP default `proguard-android-optimize.txt`, which already contributes the
   Android-wide basics (Parcelable CREATOR fields, `native <methods>`, the enum
   `values()`/`valueOf()` pair, …). Don't restate its rules.
@@ -22,7 +22,7 @@ Google Play measures how much of a shipped app's DEX R8 actually optimized and
 renamed, and warns — then restricts store visibility and publishing — below 25%
 in either category. Amethyst has been on the wrong side of that line: a
 `-dontobfuscate` plus `-keepnames class ** { *; }` at the top of both
-`proguard-rules.pro` and `quartz/consumer-rules.pro`, and outright
+`proguard-rules.pro` and Quartz's consumer rules, and outright
 `-keep class com.vitorpamplona.** { *; }` for the app's own code, produced 0%
 obfuscation and 13% optimization. (`-keepnames` is not the mild rule it looks
 like: it expands to `-keep,allowshrinking`, which permits shrinking but neither

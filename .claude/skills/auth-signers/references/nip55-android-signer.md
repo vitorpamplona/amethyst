@@ -3,7 +3,7 @@
 Another Android app (Amber, …) holds the key; Amethyst asks it through `Intent`s
 (foreground, with UI) or its `ContentProvider` (background, pre-approved). Android only.
 
-## Layout (`quartz/src/androidMain/kotlin/com/vitorpamplona/quartz/nip55AndroidSigner/`)
+## Layout ([nip55-android-signer/src/androidMain/kotlin/com/vitorpamplona/quartz/nip55AndroidSigner/](https://github.com/vitorpamplona/quartz/tree/main/nip55-android-signer/src/androidMain/kotlin/com/vitorpamplona/quartz/nip55AndroidSigner))
 
 - `api/CommandType.kt` — `sign_event`, `nip04_encrypt`/`decrypt`, `nip44_encrypt`/`decrypt`,
   `get_public_key`, `decrypt_zap_event`, `derive_key`, `sign_psbt`.
@@ -37,5 +37,5 @@ The Android entry point is
 - Without "always allow", every reaction or zap is an Activity round-trip — bad UX; ask for
   the permissions at login.
 - Desktop has no NIP-55; it uses `NostrSignerInternal` or `NostrSignerRemote`.
-- Tests: `quartz/src/androidHostTest/.../nip55AndroidSigner/` (JVM host) and
-  `quartz/src/androidDeviceTest/.../nip55AndroidSigner/` (device/emulator only).
+- Tests, in the Quartz repository: [nip55-android-signer/src/androidHostTest](https://github.com/vitorpamplona/quartz/tree/main/nip55-android-signer/src/androidHostTest) (JVM host) and
+  `quartz/src/androidDeviceTest/.../nip55AndroidSigner/` in its umbrella module (device/emulator only).

@@ -7,7 +7,7 @@ expression. **Update this file in the same PR as any change to the searchable se
 Counts: 201 concrete classes covering 201 kind values (`GitStatusEvent` spans 4 kinds;
 kind 30063 is shared by two NIPs, kind 38000 by three classes, kind 30301 by two and kind 38385 with other apps — see the footnotes). The kind
 set is exactly `SearchableKinds.ALL` (`nip50Search/SearchableKinds.kt`). File paths are under
-`quartz/src/commonMain/kotlin/com/vitorpamplona/quartz/`.
+[the Quartz repository](https://github.com/vitorpamplona/quartz).
 
 Separator legend: **NL** = `joinToString("\n")`, **SP** = `joinToString(" ")`.
 
@@ -261,18 +261,19 @@ same way: `KanbanCardEvent` on a `title` or an `a` to a 30301 board, else
 ## How to regenerate / verify this table
 
 ```bash
+# In a Quartz checkout (github.com/vitorpamplona/quartz):
 # The authoritative kind set (sorted, one comment per kind naming the class):
-cat quartz/src/commonMain/kotlin/com/vitorpamplona/quartz/nip50Search/SearchableKinds.kt
+cat core/src/commonMain/kotlin/com/vitorpamplona/quartz/nip50Search/SearchableKinds.kt
 # All implementor files:
-grep -rln "override fun indexableContent" quartz/src/commonMain
+grep -rln "override fun indexableContent" */src/commonMain
 # For each, pair the KIND constant with the indexableContent() body.
-# Searchability on the store path additionally requires EventFactory registration:
-grep -n "<ClassName>" quartz/src/commonMain/kotlin/com/vitorpamplona/quartz/utils/EventFactory.kt
+# Searchability on the store path additionally requires registration in its module's provider:
+grep -rn "<ClassName>" */src/commonMain/kotlin/com/vitorpamplona/quartz/*/*EventKinds.kt
 ```
 
 Two tests keep the code side from drifting: `SearchableKindsTest` (commonTest) builds every kind
 0–65535 through `EventFactory` and asserts the searchable ones are exactly `SearchableKinds.ALL`,
 and `IndexableContentGoldenTest` (jvmTest) records each kind's `indexableContent()` for a
-tag-rich sample event in `quartz/src/jvmTest/resources/indexable-content.golden` — a CI-diffable
+tag-rich sample event in [test-resources/indexable-content.golden](https://github.com/vitorpamplona/quartz/blob/main/test-resources/indexable-content.golden) — a CI-diffable
 snapshot. Diff `SearchableKinds.kt` and the golden file at a version bump; this table is still
 updated by hand.

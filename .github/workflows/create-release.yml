@@ -702,7 +702,7 @@ jobs:
   # no-JRE jvm bundle (linux):   geode-<ver>-jvm.tar.gz for the Homebrew formula
   #
   # Unlike build-cli there is no "no Compose UI" assertion — geode depends only on
-  # :quartz and never pulls the Compose render stack. The GHCR Docker image is a
+  # Quartz and never pulls the Compose render stack. The GHCR Docker image is a
   # separate job (docker-geode) below.
   #
   # Asset naming: geode-<version>-<family>-<arch>.<ext>. See scripts/asset-name.sh.
@@ -1220,11 +1220,3 @@ jobs:
           draft: false
           fail_on_unmatched_files: true
           generate_release_notes: true
-
-      - name: Publish Quartz Lib
-        run: ./gradlew publishAllPublicationsToMavenCentral --no-configuration-cache
-        env:
-          ORG_GRADLE_PROJECT_mavenCentralUsername: ${{ secrets.SONATYPE_USERNAME }}
-          ORG_GRADLE_PROJECT_mavenCentralPassword: ${{ secrets.SONATYPE_PASSWORD }}
-          ORG_GRADLE_PROJECT_signingInMemoryKey: ${{ secrets.SIGNING_PRIVATE_KEY }}
-          ORG_GRADLE_PROJECT_signingInMemoryKeyPassword: ${{ secrets.SIGNING_PASSWORD }}

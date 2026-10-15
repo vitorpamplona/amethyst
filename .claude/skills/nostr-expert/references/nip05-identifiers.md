@@ -60,7 +60,7 @@ val nip05Client = Nip05Client(fetcher = OkHttpNip05Fetcher { _ -> okHttpClient }
 
 For tests / offline code, `EmptyNip05Client` is a no-op stub.
 
-## The pieces (all in `quartz/…/nip05DnsIdentifiers/`)
+## The pieces (all in `relay-client/…/nip05DnsIdentifiers/`)
 
 | Type | File | Purpose |
 |------|------|---------|
@@ -95,4 +95,4 @@ val ok: Boolean = nip05Client.verify(Nip05Id.parse("alice@domain.tld")!!, profil
 
 ## Tests
 
-`quartz/src/commonTest/…/nip05DnsIdentifiers/Nip05Test.kt` covers parsing, URL construction, case-normalization, CLINK offers, and the validation rejects (IP literals, malformed domains).
+`core/src/commonTest/…/nip05DnsIdentifiers/Nip05Test.kt` covers parsing, URL construction, case-normalization, CLINK offers, and the validation rejects (IP literals, malformed domains).

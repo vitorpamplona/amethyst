@@ -1,5 +1,5 @@
 // iOS purity gate shared by every KMP library module that targets Apple
-// (`:quartz`, `:commons`, `:commonsUI`). Apply it from the module's build
+// (`:commons`, `:commonsUI`). Apply it from the module's build
 // script with
 //
 //     apply(from = rootProject.file("gradle/kmp-purity.gradle.kts"))

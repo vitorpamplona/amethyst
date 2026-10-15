@@ -25,16 +25,15 @@ adds the source-set mechanics and the build traps.
 | `commonMain` | Pure Kotlin. Compiled for iOS/native too, so no JVM APIs | all |
 | `jvmAndroid` | JVM libraries shared by Android + Desktop: Jackson (`jackson.databind`), OkHttp | android, jvm |
 | `androidMain` / `jvmMain` | Platform actuals (Keystore/DataStore vs keyring, Coil bridges) | one each |
-| `iosMain`, `appleMain`, `nativeMain`, `linuxMain`, `macosMain` | quartz only (plus `iosMain` in commons/commonsUI) | Apple / native |
+| `iosMain` | commons/commonsUI | Apple |
 | `skikoMain` | commonsUI code shared by Desktop and iOS | jvm, ios |
 
-Targets: `quartz` builds android, jvm, iosArm64, iosSimulatorArm64, linuxX64,
-macosArm64. `commons` and `commonsUI` build android, jvm, iosArm64,
+Targets: `commons` and `commonsUI` build android, jvm, iosArm64,
 iosSimulatorArm64. `quic`, `nestsClient`, `marmotQuic` are android + jvm. There is
-no `iosX64`.
+no `iosX64`. (Quartz, in its own repository, also builds linuxX64 and macosArm64.)
 
 `jvmAndroid` is a custom intermediate set created with `create("jvmAndroid")`
-before `androidMain`/`jvmMain` depend on it (see `quartz/build.gradle.kts`).
+before `androidMain`/`jvmMain` depend on it (see `commons/build.gradle.kts`).
 Prefer the most common set that compiles: `commonMain` → `jvmAndroid` → platform.
 
 Jackson and OkHttp are the house JSON and HTTP stack (`AGENTS.md` › Tech Stack).
@@ -52,7 +51,7 @@ iOS-compiled sets, which the purity gate enforces.
 - **A slot** (CompositionLocal the front end installs) for things only a front end
   can draw: `LocalNotePlatform`, `LocalRichTextPlatform`.
 - Not every quartz singleton is expect: `Secp256k1Instance`, `Log` and
-  `LibSodiumInstance` are plain `object`s in `quartz/.../utils/`.
+  `LibSodiumInstance` are plain `object`s in `social/.../utils/`.
 - Don't `expect` a whole screen or navigation; share it and put only the leaf
   behind a port or slot.
 
@@ -75,17 +74,17 @@ after touching `commonMain`.
 - **Versions live only in `gradle/libs.versions.toml`.** Add the library there and
   reference `libs.*`; never hardcode a version or copy one into docs. Check the
   license first (`AGENTS.md` › Dependency Licensing).
-- **`test` is an alias for each KMP module's `jvmTest`.** `:quartz:testAndroidHostTest`
-  is a separate suite that nothing runs; see `AGENTS.md` › Build Commands.
+- **`test` is an alias for each KMP module's `jvmTest`.** A module's other targets
+  (`testAndroidHostTest`, the Apple ones) are separate suites; see `AGENTS.md` › Build Commands.
 - **testFixtures in KMP:** the source-set `dependencies { }` block
   (`KotlinDependencyHandler`) has no `testFixtures(...)`. Use a top-level block with
-  the configuration name as a string, as `quartz/build.gradle.kts` does:
+  the configuration name as a string:
   `dependencies { "jvmAndroidTestImplementation"(testFixtures(project(":geode"))) }`.
 - **secp256k1 variants:** `secp256k1-kmp-common` in `commonMain`,
   `secp256k1-kmp-jni-android` in `androidMain`, `secp256k1-kmp-jni-jvm` in `jvmMain`
   and JVM tests. All three share one `version.ref`. A JVM classpath with the
   android variant fails at load with `UnsatisfiedLinkError`.
-- **R8:** library keep rules ship in `quartz/consumer-rules.pro`. Never add a blanket
+- **R8:** library keep rules ship in Quartz's `core/consumer-rules.pro` (its repository). Never add a blanket
   `-keep class com.vitorpamplona.quartz.** { *; }`. R8 can't see reflection, so a
   moved/renamed reflective class is a silent release break: before tagging, run
   `python3 tools/r8-verify/verify_reflection_contract.py amethyst/build/outputs/mapping/<variant>/`

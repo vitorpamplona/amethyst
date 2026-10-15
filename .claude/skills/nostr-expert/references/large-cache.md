@@ -1,6 +1,6 @@
 # LargeCache
 
-`quartz/src/commonMain/kotlin/com/vitorpamplona/quartz/utils/cache/LargeCache.kt` —
+[core/src/commonMain/kotlin/com/vitorpamplona/quartz/utils/cache/LargeCache.kt](https://github.com/vitorpamplona/quartz/blob/main/core/src/commonMain/kotlin/com/vitorpamplona/quartz/utils/cache/LargeCache.kt) —
 `expect class LargeCache<K, V>()` implementing `ICacheOperations<K, V>`. It is the store
 behind `LocalCache` (`commons/.../model/cache/`: `notes`, `addressables`, `users`);
 see the `account-state` skill for how `LocalCache` uses it.

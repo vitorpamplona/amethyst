@@ -269,7 +269,7 @@ def main():
     if failures:
         print(f"R8 reflection contract: {len(failures)} of {checked} checks FAILED\n", file=sys.stderr)
         print("\n".join(failures), file=sys.stderr)
-        print("\nFix the keep rule in amethyst/proguard-rules.pro (or quartz/consumer-rules.pro),"
+        print("\nFix the keep rule in amethyst/proguard-rules.pro (or Quartz's core/consumer-rules.pro),"
               "\nor update the contract if the code genuinely moved.", file=sys.stderr)
         return 1
     note = f" ({skipped} skipped: not in the {flavor} flavor)" if skipped else ""

@@ -21,7 +21,7 @@ The full rule, with the reasons and examples (`ParallelEventVerifier`,
 Never write your own `callbackFlow { openReqSubscription(...); awaitClose { ... } }`
 REQ loop. One-shot and paged fetches, publish-and-confirm, COUNT and negentropy sync
 already exist as `INostrClient` extensions in
-`quartz/src/commonMain/kotlin/com/vitorpamplona/quartz/nip01Core/relay/client/accessories/`
+[relay-client/src/commonMain/kotlin/com/vitorpamplona/quartz/nip01Core/relay/client/accessories/](https://github.com/vitorpamplona/quartz/tree/main/relay-client/src/commonMain/kotlin/com/vitorpamplona/quartz/nip01Core/relay/client/accessories)
 (catalog: its `README.md`; flow helpers in `../reqs/`). Their timeouts are idle
 windows (`idleTimeoutMs`), not deadlines. For loads tied to a composable's lifetime,
 see the `relay-client` skill.

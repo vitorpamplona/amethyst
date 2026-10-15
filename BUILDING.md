@@ -225,8 +225,8 @@ else. What makes that hold:
   for a fixed version + inputs, so the minified output is stable. Build with the
   same JDK 21 you see in `BUILDING.md` / CI.
 - **No build-time clock.** Nothing injects `System.currentTimeMillis()` /
-  build dates into `BuildConfig` (a Spotless rule bans the call in `quartz` and
-  `commons`), and AGP normalizes ZIP entry timestamps, so two builds an hour
+  build dates into `BuildConfig` (a purity rule bans the call in `commons` and
+  `commonsUI`, and Quartz bans it in its own repository), and AGP normalizes ZIP entry timestamps, so two builds an hour
   apart are identical.
 - **Deterministic version name.** `generateVersionName` only appends a branch
   suffix off feature branches; a release tag builds in detached-`HEAD` (or from a
@@ -456,10 +456,6 @@ provided automatically; everything else you set yourself.)
 | `KEY_ALIAS` | Keystore key alias | Same Android signing step |
 | `KEY_STORE_PASSWORD` | Keystore password | Same |
 | `KEY_PASSWORD` | Key password | Same |
-| `SONATYPE_USERNAME` | Maven Central (Sonatype) user token name | Publishing the `quartz` library |
-| `SONATYPE_PASSWORD` | Maven Central user token password | Same |
-| `SIGNING_PRIVATE_KEY` | **GPG/PGP** private key, ASCII-armored | Signs the Maven artifacts (Central requires it) |
-| `SIGNING_PASSWORD` | Passphrase for that GPG key | Same |
 | `MAC_CERTIFICATE_P12` | Base64 of your **Apple Developer ID Application** cert (`.p12`, includes the private key) | Signs the macOS desktop **DMG** and the macOS **amy** jlink tarball |
 | `MAC_CERTIFICATE_PASSWORD` | Password set when exporting the `.p12` | Imports the cert into the CI keychain |
 | `MAC_SIGN_IDENTITY` | Full identity string, e.g. `Developer ID Application: Your Name (TEAMID)` | The `codesign` identity to sign with |
@@ -470,9 +466,8 @@ provided automatically; everything else you set yourself.)
 | ~~`WINGET_TOKEN`~~ | *Not used.* The winget bump runs on a maintainer's machine — see § Winget | — |
 | `CROWDIN_PERSONAL_TOKEN`, `CROWDIN_PROJECT_ID` | Crowdin API creds | Translation sync (separate workflow, not the release) |
 
-Note the **three distinct signing identities** people often conflate:
-`SIGNING_KEY` + `KEY_*` is the **Android keystore**; `SIGNING_PRIVATE_KEY` +
-`SIGNING_PASSWORD` is the **GPG key** for Maven Central; `MAC_CERTIFICATE_*` +
+Note the **two distinct signing identities** people often conflate:
+`SIGNING_KEY` + `KEY_*` is the **Android keystore**; `MAC_CERTIFICATE_*` +
 `MAC_SIGN_IDENTITY` + `MAC_NOTARY_*` is the **Apple Developer ID** for the macOS
 desktop DMG. They are unrelated — each comes from a different authority.
 
@@ -521,10 +516,6 @@ keytool -genkey -v -keystore upload.jks -keyalg RSA -keysize 2048 \
   -validity 10000 -alias upload          # creates the keystore (once)
 base64 -i upload.jks | tr -d '\n'        # paste output into SIGNING_KEY
 
-# GPG key → armored private key for SIGNING_PRIVATE_KEY
-gpg --full-generate-key                  # create the key (once)
-gpg --armor --export-secret-keys <KEY_ID>   # paste output into SIGNING_PRIVATE_KEY
-
 # Apple Developer ID Application cert → base64 for MAC_CERTIFICATE_P12.
 # In Keychain Access, export the "Developer ID Application: ..." cert (with its
 # private key) as a .p12, setting an export password (-> MAC_CERTIFICATE_PASSWORD).
@@ -534,10 +525,8 @@ security find-identity -v -p codesigning  # shows the exact MAC_SIGN_IDENTITY st
 # (Sign-In and Security -> App-Specific Passwords), NOT your Apple ID login.
 ```
 
-`SONATYPE_USERNAME`/`SONATYPE_PASSWORD` are a **user token** from
-<https://central.sonatype.com> (Account → Generate User Token), not your login.
-A fork that doesn't publish a library can drop the `Publish Quartz Lib` step and
-the four Sonatype/GPG secrets.
+The Maven Central secrets (`SONATYPE_*`, `SIGNING_PRIVATE_KEY`, `SIGNING_PASSWORD`) moved to
+the [Quartz repository](https://github.com/vitorpamplona/quartz), which publishes the library.
 
 ---
 
@@ -550,7 +539,6 @@ distributes; the official Amethyst rollout for each is in
 | Channel | How it ships | Push or pull |
 |---|---|---|
 | **GitHub Releases** | The release workflow builds + signs all assets and attaches them to the tag's Release | Automatic (CI) |
-| **Maven Central** | Same workflow runs `publishAllPublicationsToMavenCentral` for `quartz` — a *step* at the end of the `deploy-android` job, not a job of its own, so it does not appear in a job list | Automatic (CI) |
 | **Google Play** | Download the signed `amethyst-googleplay-<version>.aab` from the GH Release and upload it in Play Console | **Manual push** |
 | **F-Droid** | F-Droid's build server detects the new tag and **builds the `fdroid` flavor from source** per its recipe in the external [`fdroiddata`](https://gitlab.com/fdroid/fdroiddata) repo, then signs + publishes itself | **Pull (build-from-source)** |
 | **Zapstore** | The [`zsp`](https://zapstore.dev/) CLI reads [`zapstore.yaml`](zapstore.yaml) and publishes a Nostr software-release event signed with the app's nsec | **Manual push (Nostr)** |

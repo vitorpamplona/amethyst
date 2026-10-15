@@ -3,7 +3,7 @@
 Thanks for your interest in improving Amethyst. This document captures the
 expectations, conventions, and review rules for code, documentation, and
 translation contributions across all modules in this repository (`amethyst/`,
-`desktopApp/`, `quartz/`, `commons/`, `commonsUI/`, `cli/`, `quic/`, `nestsClient/`).
+`desktopApp/`, `commons/`, `commonsUI/`, `cli/`, `quic/`, `nestsClient/`).
 
 By contributing, you agree to license your work under the MIT license. Any
 work contributed where you are not the original author must contain its
@@ -134,7 +134,7 @@ Prerequisites:
 1. **JDK 21+** (Zulu or Temurin recommended)
 2. **Android Studio** (for Android development)
 3. **Android 8.0+ phone or emulator** (for installing the Android app)
-4. **Xcode + iOS simulator** if you're touching `quartz/` iOS code
+4. **Xcode + iOS simulator** if you're touching `commons/` iOS code
 5. **libsodium** for full local builds (`brew install libsodium` on macOS)
 
 Desktop packaging prerequisites (only if you're building installers) are
@@ -152,7 +152,6 @@ Common Gradle entry points:
 ```bash
 ./gradlew :desktopApp:run         # Run desktop app
 ./gradlew :amethyst:installDebug  # Install Android debug build
-./gradlew :quartz:build           # Build Quartz for all targets
 ./gradlew build                   # Full build + tests
 ```
 
@@ -160,15 +159,15 @@ Common Gradle entry points:
 
 Modules:
 
-- `quartz/` — Nostr KMP library (protocol, crypto, models). **No UI.**
+- Quartz — Nostr KMP library (protocol, crypto, models), in its own repository: [vitorpamplona/quartz](https://github.com/vitorpamplona/quartz). **No UI.**
 - `commons/` — Shared headless layer: models, ViewModels, flows, relay client. **No Compose UI** (the CLI depends on it).
 - `commonsUI/` — Shared Compose Multiplatform UI, icons, theme, Compose resources, on top of `commons`.
 - `quic/` — Pure-Kotlin QUIC v1 + HTTP/3 + WebTransport.
 - `nestsClient/` — Audio-rooms client (NIP-53) built on `:quic` and
-  `:quartz`.
+  Quartz.
 - `amethyst/` — Android app: Activity, layouts, navigation.
 - `desktopApp/` — Desktop JVM app: Window, sidebar, keyboard shortcuts.
-- `cli/` — `amy`, a non-interactive JVM CLI over `quartz` + `commons`.
+- `cli/` — `amy`, a non-interactive JVM CLI over Quartz + `commons`.
 
 Per-module design docs live in `<module>/plans/YYYY-MM-DD-<slug>.md`. The
 global `docs/plans/` folder is frozen.
@@ -179,7 +178,7 @@ of PR churn. Place new code by purpose:
 
 | What you're adding | Goes in |
 |---|---|
-| Nostr event types, NIPs, tags, signing, crypto, Bech32 | `quartz/commonMain/` |
+| Nostr event types, NIPs, tags, signing, crypto, Bech32 | [Quartz](https://github.com/vitorpamplona/quartz) (separate repository) |
 | Shared ViewModels, StateFlows, relay subscriptions | `commons/commonMain/viewmodels/` or `commons/commonMain/` |
 | Shared Composables, icons, theme | `commonsUI/commonMain/` (same packages as `commons`) |
 | Android-only screen, navigation, system integration | `amethyst/` |
@@ -190,9 +189,9 @@ of PR churn. Place new code by purpose:
 
 Hard rules:
 
-- `quartz/` has **no UI**.
+- Quartz has **no UI**.
 - `cli/` has **no Nostr protocol or business logic** — it's a thin assembly
-  layer over `quartz` + `commons`. If your CLI command needs new behavior,
+  layer over Quartz + `commons`. If your CLI command needs new behavior,
   extract it into `commons/` first.
 - ViewModels belong in `commons/commonMain/`; shared composables in
   `commonsUI/commonMain/`. Only screens (the Composable that wires layout +
@@ -228,15 +227,15 @@ Hard rules:
 ```bash
 ./gradlew test                 # Unit + KMP common tests, all modules
 ./gradlew connectedAndroidTest # Android instrumented tests (needs device)
-./gradlew :quartz:test         # Single module
+./gradlew :commons:test        # Single module
 ```
 
 Add tests when:
 
 - You fix a bug — a regression test that fails before your fix and passes
   after.
-- You add new protocol code in `quartz/` — Nostr event parsing, NIP
-  implementations, and crypto paths should have unit coverage.
+- You add new protocol code (in the Quartz repository) — Nostr event parsing,
+  NIP implementations, and crypto paths should have unit coverage there.
 - You add anything to `commons/` with non-trivial state transitions.
 
 UI changes don't need automated UI tests, but they do need the screenshots

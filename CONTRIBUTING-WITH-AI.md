@@ -55,7 +55,7 @@ Put these in the **Test plan** section of the
 - **The minified build** (`./gradlew :amethyst:installPlayBenchmark`) if
   the change touches reflection: ViewModel factories, serialization,
   `expect`/`actual`.
-- **Automated tests** for new logic in `quartz/` or `commons/`, and a
+- **Automated tests** for new logic in Quartz or `commons/`, and a
   regression test for every bug fix. Run any interop suite the change
   touches (see [`CONTRIBUTING.md` § Interoperability tests](CONTRIBUTING.md#interoperability-tests)).
   CI does not run them.

@@ -5,7 +5,7 @@ description: Quartz Nostr code: event classes, kinds, tags, TagArrayBuilder, Eve
 
 # Nostr in Quartz
 
-Quartz (`quartz/src/commonMain/kotlin/com/vitorpamplona/quartz/`) has one package per
+Quartz ([the Quartz repository](https://github.com/vitorpamplona/quartz)) has one package per
 NIP — about 95 `nipXX<Name>/` directories (hex ids too: `nip5aStaticWebsites`,
 `nipB7Blossom`, `nipXX…` for unnumbered drafts) — plus `experimental/` and the non-NIP
 protocol families (`marmot/`, `concord/`, `cordn/`, `contextvm/`, `buzz/`, `mls/`, …)
@@ -44,8 +44,8 @@ val signed: TextNoteEvent = signer.sign(template)
 - Kind ranges (`nip01Core/core/Kind.kt`): `isRegular()` is `> 0 && < 10_000 && != 3`
   (kind 0 and 3 are replaceable), `isReplaceable()` is 0, 3 and 10000–19999,
   `isEphemeral()` 20000–29999, `isAddressable()` 30000–39999.
-- A new kind needs a class, an `EventFactory` branch **and** a `LocalCache` dispatch
-  branch, or it is silently dropped: `references/event-factory.md`.
+- A new kind needs a class, a registration in its Quartz module's `EventKindProvider` **and**
+  a `LocalCache` dispatch branch, or it is silently dropped: `references/event-factory.md`.
 
 ## Hex (`nip01Core/core/HexKey.kt`, `utils/Hex.kt`)
 

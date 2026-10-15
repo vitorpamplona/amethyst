@@ -1,7 +1,7 @@
 # Store rules (STORE-F/W/D/C/S/N)
 
 The full behavioral contract of the SQLite `EventStore`, as numbered rules. Paths are under
-`quartz/src/commonMain/kotlin/com/vitorpamplona/quartz/nip01Core/store/`. When you change
+[store-sqlite/src/commonMain/kotlin/com/vitorpamplona/quartz/nip01Core/store/](https://github.com/vitorpamplona/quartz/tree/main/store-sqlite/src/commonMain/kotlin/com/vitorpamplona/quartz/nip01Core/store). When you change
 store behavior, update the rule here in the same PR and add a line to the
 [Semantics changelog](#semantics-changelog) — downstream implementations pin Quartz by
 commit and review pin bumps against this file. If a rule contradicts a test, the test wins

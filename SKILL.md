@@ -188,10 +188,10 @@ const val CLIENT_TAG_NAME = "YourAppName"
 That constant is passed to `NostrSignerWithClientTag` when the account's signer
 is built, so every signed event carries your name.
 
-The tag itself lives in
-`quartz/src/commonMain/kotlin/com/vitorpamplona/quartz/nip89AppHandlers/clientTag/`
-(`ClientTag`, `TagArrayBuilderExt`, `NostrSignerWithClientTag`) — you only need to
-touch it if you want the optional NIP-89 handler address / relay hint variants.
+The tag itself lives in Quartz (the `com.vitorpamplona.quartz.nip89AppHandlers.clientTag`
+package of [vitorpamplona/quartz](https://github.com/vitorpamplona/quartz): `ClientTag`,
+`TagArrayBuilderExt`, `NostrSignerWithClientTag`) — you only need to touch it if you want the
+optional NIP-89 handler address / relay hint variants.
 
 ### Modify Default Relays
 

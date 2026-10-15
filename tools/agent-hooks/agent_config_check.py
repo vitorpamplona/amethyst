@@ -22,9 +22,6 @@ The layout this enforces (see "Agent Configuration" in AGENTS.md):
   path must exist in that skill (or in another skill, for a cross-reference), a
   `.claude/skills/<name>/…` path must exist, and so must any full repo path (one
   that contains `/src/`). Shorthand like `commons/ui/StringRes.kt` is not checked.
-- Skills shipped for other projects (`quartz/agent-skill/<name>/`) get the same
-  name/description checks, and their links back into this repo (GitHub URLs on
-  `main`) must point at files that exist.
 
 Exit 0 = consistent. Exit 1 = prints every problem found.
 """
@@ -48,9 +45,7 @@ CODEX_FALLBACK_SKILL_LIST = 8000
 # What this repo's entries (name + description + `.agents/skills/<name>/SKILL.md`)
 # may use of that, leaving the rest for the user's own and built-in skills.
 SKILL_LIST_CAP = 6000
-# Skills shipped for OTHER projects to install (not loaded here, so not symlinked or
-# budgeted). They link to this repo by GitHub URL, which must point at a real file.
-DISTRIBUTED_SKILLS = ROOT / "quartz" / "agent-skill"
+# GitHub URLs into this repo; a skill citing one must point at a real file.
 REPO_URLS = (
     "https://github.com/vitorpamplona/amethyst/blob/main/",
     "https://github.com/vitorpamplona/amethyst/tree/main/",
@@ -146,19 +141,6 @@ SKILL_LOCAL = ("references/", "scripts/", "assets/")
 NOT_A_PATH = re.compile(r"[…*<>{}$|]|\.\.\.")
 
 
-def check_distributed_skills(problems):
-    if not DISTRIBUTED_SKILLS.is_dir():
-        return
-    for skill in sorted(d for d in DISTRIBUTED_SKILLS.iterdir() if (d / "SKILL.md").is_file()):
-        where = (skill / "SKILL.md").relative_to(ROOT)
-        declared, description = description_of((skill / "SKILL.md").read_text(encoding="utf-8"))
-        if declared != skill.name:
-            problems.append(f"{where}: frontmatter `name` is {declared!r}, expected {skill.name!r}")
-        if not description or not MIN_DESCRIPTION <= len(description) <= MAX_DESCRIPTION:
-            problems.append(f"{where}: description must be {MIN_DESCRIPTION}-{MAX_DESCRIPTION} characters")
-    check_skill_paths(problems, DISTRIBUTED_SKILLS)
-
-
 def check_skill_paths(problems, root=SKILLS):
     skill_dirs = [d for d in root.iterdir() if (d / "SKILL.md").is_file()]
     for skill in skill_dirs:
@@ -211,7 +193,6 @@ def main():
     problems = []
     check_skills(problems)
     check_skill_paths(problems)
-    check_distributed_skills(problems)
     check_guidance(problems)
     if problems:
         print("Agent configuration is out of sync between Claude Code and Codex:", file=sys.stderr)

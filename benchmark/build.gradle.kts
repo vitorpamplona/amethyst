@@ -28,7 +28,7 @@ android {
 
     sourceSets {
         getByName("androidTest") {
-            resources.directories.add(file("../quartz/src/androidDeviceTest/resources").path)
+            resources.directories.add(file("../testdata").path)
         }
     }
 
@@ -65,7 +65,7 @@ dependencies {
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.junit)
     androidTestImplementation(libs.androidx.benchmark.junit4)
-    androidTestImplementation(project(":quartz"))
+    androidTestImplementation(libs.quartz)
     androidTestImplementation(project(":commons"))
     androidTestImplementation(project(":commonsUI"))
 

@@ -73,7 +73,7 @@ kotlin {
                 // The headless half. `api` because every composable here takes
                 // or returns commons types (Note, User, ViewModels, states).
                 api(project(":commons"))
-                api(project(":quartz"))
+                api(libs.quartz)
 
                 // Compose Multiplatform
                 implementation(libs.jetbrains.compose.ui)

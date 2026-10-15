@@ -58,7 +58,7 @@ kotlin {
             dependencies {
                 implementation(libs.kotlin.stdlib)
                 implementation(libs.kotlinx.coroutines.core)
-                api(project(":quartz"))
+                api(libs.quartz)
             }
         }
 

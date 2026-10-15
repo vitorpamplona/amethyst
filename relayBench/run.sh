@@ -21,7 +21,7 @@ ARGS=()
 for arg in "$@"; do
     case "$arg" in
         --real)
-            ARGS+=("--corpus" "$ROOT/quartz/src/commonTest/resources/nostr_vitor_startup_data.json.gz")
+            ARGS+=("--corpus" "$ROOT/testdata/nostr_vitor_startup_data.json.gz")
             ;;
         *)
             ARGS+=("$arg")

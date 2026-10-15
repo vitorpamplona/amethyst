@@ -105,7 +105,8 @@ inside a composable.
 
 ## R8 and release checks
 
-The rules are `amethyst/proguard-rules.pro` plus `quartz/consumer-rules.pro`. The policy is to keep
+The rules are `amethyst/proguard-rules.pro` plus Quartz's consumer rules (shipped in the
+`quartz-core` AAR, from its repository's `core/consumer-rules.pro`). The policy is to keep
 only what is reached by name. Read `references/proguard-rules.md` before adding a keep.
 
 R8 cannot see reflection, so a broken keep gives a green build and a crash on users' devices.

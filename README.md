@@ -15,7 +15,6 @@ Join the social network you control.
 
 [![Last Version](https://img.shields.io/github/release/vitorpamplona/amethyst.svg?maxAge=3600&label=Stable&labelColor=06599d&color=043b69)](https://github.com/vitorpamplona/amethyst)
 [![Maven Central](https://img.shields.io/maven-central/v/com.vitorpamplona.quartz/quartz?label=Quartz%20%28Maven%20Central%29&labelColor=27303D&color=0877d2)](https://central.sonatype.com/artifact/com.vitorpamplona.quartz/quartz)
-[![JitPack snapshots](https://img.shields.io/badge/Quartz%20snapshots-JitPack-27303D?labelColor=27303D&color=0877d2)](https://jitpack.io/#vitorpamplona/amethyst)
 [![CI](https://img.shields.io/github/actions/workflow/status/vitorpamplona/amethyst/build.yml?labelColor=27303D)](https://github.com/vitorpamplona/amethyst/actions/workflows/build.yml)
 [![License: MIT](https://img.shields.io/github/license/vitorpamplona/amethyst?labelColor=27303D&color=0877d2)](/LICENSE)
 
@@ -219,11 +218,11 @@ Information shared on Nostr can be re-broadcasted to other servers and should be
 
 # Development Overview
 
-This repository is split between Amethyst, Quartz, Commons, and DesktopApp:
+This repository is split between Amethyst, Commons, and DesktopApp, on top of Quartz:
 - **Amethyst** - Native Android app with Kotlin and Jetpack Compose
-- **Quartz** - Nostr-commons KMP library for protocol classes shared across platforms
+- **[Quartz](https://github.com/vitorpamplona/quartz)** - the Nostr KMP library for protocol classes shared across platforms, in its own repository
 - **Commons** - Kotlin Multiplatform module with shared UI components (icons, robohash, blurhash, composables)
-- **DesktopApp** - Compose Multiplatform Desktop application reusing commons and quartz
+- **DesktopApp** - Compose Multiplatform Desktop application reusing commons and Quartz
 
 The app architecture consists of the UI, which uses the usual State/ViewModel/Composition, the service layer that connects with Nostr relays,
 and the model/repository layer, which keeps all Nostr objects in memory, in a full OO graph.
@@ -301,8 +300,8 @@ For the Play build:
 
 A release is one tag push. Bump `app` and `appCode` in
 `gradle/libs.versions.toml`, then `git tag -s vX.Y.Z && git push --tags` — the
-`Create Release Assets` workflow builds and signs every Android, desktop, CLI,
-and Maven artifact, and Homebrew + Winget auto-bump on stable tags.
+`Create Release Assets` workflow builds and signs every Android, desktop and CLI
+artifact (Quartz releases from its own repository), and Homebrew + Winget auto-bump on stable tags.
 
 - **[BUILDING.md](BUILDING.md)** — everything any fork needs: build commands,
   the CI pipeline, the secrets it requires, and the distribution channels.
@@ -312,60 +311,22 @@ and Maven artifact, and Homebrew + Winget auto-bump on stable tags.
 
 ## Using the Quartz library
 
-### Installing
-
-Add Maven Central and Google Maven to your repositories:
-
-```gradle
-repositories {
-    mavenCentral()
-    google()
-}
-```
-
-Add the following line to your `commonMain` dependencies:
+Quartz, the Kotlin Multiplatform Nostr library Amethyst is built on, lives in its own
+repository: **[vitorpamplona/quartz](https://github.com/vitorpamplona/quartz)**. It is published
+to Maven Central as a set of small artifacts, so an app can depend on only what it uses:
 
 ```gradle
-implementation('com.vitorpamplona.quartz:quartz:1.19.0')
+// Everything:
+implementation('com.vitorpamplona.quartz:quartz:<version>')
+
+// Or only the parts you need, e.g. notes and a relay client:
+implementation('com.vitorpamplona.quartz:quartz-social:<version>')
+implementation('com.vitorpamplona.quartz:quartz-relay-client:<version>')
 ```
 
-Variations to each platform are also available:
-
-```gradle
-implementation('com.vitorpamplona.quartz:quartz-android:1.19.0')
-implementation('com.vitorpamplona.quartz:quartz-jvm:1.19.0')
-implementation('com.vitorpamplona.quartz:quartz-iosarm64:1.19.0')
-implementation('com.vitorpamplona.quartz:quartz-iossimulatorarm64:1.19.0')
-implementation('com.vitorpamplona.quartz:quartz-macosarm64:1.19.0')
-implementation('com.vitorpamplona.quartz:quartz-linuxx64:1.19.0')
-```
-
-Check versions on [MavenCentral](https://central.sonatype.com/search?q=com.vitorpamplona.quartz)
-
-Using a coding agent (Claude Code, Codex, Cursor, …)? Install the [Quartz agent skill](quartz/agent-skill/README.md) so it reaches for Quartz's helpers instead of re-implementing them.
-
-#### Snapshots (JitPack)
-
-Tagged releases go to Maven Central. For **pre-release / snapshot** builds —
-e.g. to test an unreleased fix straight from `main` or a feature branch — use
-[JitPack](https://jitpack.io/#vitorpamplona/amethyst), which builds the module
-on demand from any git ref:
-
-```gradle
-repositories {
-    maven { url = uri("https://jitpack.io") }
-}
-
-dependencies {
-    // version can be a tag, a commit hash, or "<branch>-SNAPSHOT"
-    implementation("com.github.vitorpamplona.amethyst:quartz:main-SNAPSHOT")
-}
-```
-
-The resolvable refs and the exact module coordinates are listed on the
-[JitPack page](https://jitpack.io/#vitorpamplona/amethyst). Prefer a Maven
-Central release for anything shipping to production — JitPack snapshots are not
-guaranteed stable.
+The artifact list, guides and the agent skill for projects built on Quartz are in its
+[README](https://github.com/vitorpamplona/quartz#readme). Check versions on
+[Maven Central](https://central.sonatype.com/search?q=com.vitorpamplona.quartz).
 
 ### How to use
 

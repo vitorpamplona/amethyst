@@ -3,6 +3,8 @@
 # and Desktop (desktopApp/). `appCode` is the Android versionCode: a monotonic
 # integer that must increment on every release, even when `app` is unchanged.
 app = "1.19.0"
+# Quartz, the Nostr library, released from github.com/vitorpamplona/quartz.
+quartz = "1.20.0"
 appCode = "464"
 accompanistAdaptive = "0.37.3"
 # Pinned: 0.3.0 turns CacheMap.entries/keys/values into DeprecationLevel.ERROR (and
@@ -126,6 +128,7 @@ appfunctions = "1.0.0-alpha09"
 ksp = "2.3.12"
 
 [libraries]
+quartz = { group = "com.vitorpamplona.quartz", name = "quartz", version.ref = "quartz" }
 abedElazizShe-video-compressor-fork = { group = "com.github.davotoula", name = "LightCompressor-enhanced", version.ref = "lightcompressor-enhanced" }
 accompanist-adaptive = { group = "com.google.accompanist", name = "accompanist-adaptive", version.ref = "accompanistAdaptive" }
 accompanist-permissions = { group = "com.google.accompanist", name = "accompanist-permissions", version.ref = "accompanistAdaptive" }

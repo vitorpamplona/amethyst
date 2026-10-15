@@ -13,7 +13,7 @@ codes are a public API that the interop harnesses depend on. The long-form contr
 ## Rules
 
 1. **Thin assembly layer.** No protocol, filter assembly, state machines or encryption in `cli/`.
-   Protocol goes to `quartz/`; business logic to `commons/`, extracted from `amethyst/` first in its
+   Protocol goes to Quartz (its own repository, github.com/vitorpamplona/quartz); business logic to `commons/`, extracted from `amethyst/` first in its
    own commit if needed (`references/extraction-recipe.md`). A `commands/*.kt` file over ~200 lines
    is a smell. `cli` may depend on `:geode` (for `amy serve`), never on `:commonsUI`, `:amethyst` or
    `:desktopApp`.

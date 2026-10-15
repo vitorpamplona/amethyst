@@ -5,10 +5,10 @@ description: Quartz IEventStore/SQLite store contract (STORE-* rules) and NIP-50
 
 # Event store semantics and NIP-50 search
 
-The SQLite `EventStore` (`quartz/src/commonMain/kotlin/com/vitorpamplona/quartz/nip01Core/store/sqlite/`)
+The SQLite `EventStore` ([store-sqlite/src/commonMain/kotlin/com/vitorpamplona/quartz/nip01Core/store/sqlite/](https://github.com/vitorpamplona/quartz/tree/main/store-sqlite/src/commonMain/kotlin/com/vitorpamplona/quartz/nip01Core/store/sqlite))
 is the reference implementation of a Quartz event store. The filesystem store
-(`quartz/src/jvmMain/.../nip01Core/store/fs/`, held to parity by
-`quartz/src/jvmTest/.../store/fs/FsParityTest.kt`), geode and external engines (e.g. a
+(`store-sqlite/src/jvmMain/.../nip01Core/store/fs/`, held to parity by
+`store-sqlite/src/jvmTest/.../store/fs/FsParityTest.kt`), geode and external engines (e.g. a
 Vespa-backed store) reimplement its observable behavior. Every behavior is a numbered rule
 in **`references/store-rules.md`** so a divergence is a lookup. When you change store
 behavior, update that rule and its changelog in the same PR.
@@ -28,7 +28,7 @@ behavior, update that rule and its changelog in the same PR.
 | Index / feature toggles | `sqlite/IndexingStrategy.kt` (client default); geode's `geode/src/main/kotlin/com/vitorpamplona/geode/RelayIndexingStrategy.kt` (relay preset) |
 | Operations (concurrency, pragmas, maintenance) | `sqlite/README.md` |
 
-Executable spec: `quartz/src/commonTest/.../nip01Core/store/sqlite/` (`BasicTest`,
+Executable spec: `store-sqlite/src/commonTest/.../nip01Core/store/sqlite/` (`BasicTest`,
 `ReplaceableTest`, `AddressableTest`, `DeletionTest`, `ExpirationTest`, `RightToVanishTest`,
 `SearchTest`, `SearchRelevanceOrderTest`, `NoFullTextSearchTest`, `MergeQueryCorrectnessTest`,
 `TagMergeCorrectnessTest`, `QueryAssemblerTest`, `SnapshotIdsForNegentropyTest`,
@@ -77,8 +77,10 @@ interface SearchableEvent {
 }
 ```
 
-A kind is searchable iff its class implements this **and** is wired into `EventFactory` (the
-stores probe by kind). The set is `nip50Search/SearchableKinds.kt` `ALL` — 201 kinds today,
+A kind is searchable iff its class implements this **and** is registered with `EventFactory`
+through its Quartz module's `EventKindProvider` (the stores probe by kind). Its search roles
+(title, summary, body) come from `indexableFields()`, overridden in the class with
+`SearchFieldExtractor.tiers(...)`. The set is `nip50Search/SearchableKinds.kt` `ALL` — 201 kinds today,
 one row each in **`references/searchable-kinds.md`** with the exact `indexableContent()`
 expression.
 
@@ -99,9 +101,10 @@ Implementation rules:
 1. Update `references/searchable-kinds.md` in the same PR — external search engines mirror it
    at pin bumps.
 2. List the kind in `SearchableKinds.ALL` (`SearchableKindsTest` sweeps kinds 0–65535 through
-   `EventFactory` and fails otherwise) and register the class in `EventFactory`, or
+   `EventFactory` and fails otherwise) and register the class in its module's
+   `EventKindProvider`, or
    `FullTextSearchModule.isSearchableKind` and the reindex scan never see it.
-3. Regenerate `quartz/src/jvmTest/resources/indexable-content.golden`
+3. Regenerate [test-resources/indexable-content.golden](https://github.com/vitorpamplona/quartz/blob/main/test-resources/indexable-content.golden)
    (`IndexableContentGoldenTest`).
 4. Existing databases don't reindex themselves: old rows keep their text until
    `IEventStore.reindexFullTextSearch()` runs (its KDoc is the contract); app-side, schedule the

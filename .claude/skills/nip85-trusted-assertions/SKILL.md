@@ -5,7 +5,7 @@ description: NIP-85 trusted assertions in Quartz: kind 10040 provider lists, 303
 
 # NIP-85 Trusted Assertions — the Quartz model
 
-Package: `quartz/src/commonMain/kotlin/com/vitorpamplona/quartz/nip85TrustedAssertions/`.
+Package: [trusted-assertions/src/commonMain/kotlin/com/vitorpamplona/quartz/nip85TrustedAssertions/](https://github.com/vitorpamplona/quartz/tree/main/trusted-assertions/src/commonMain/kotlin/com/vitorpamplona/quartz/nip85TrustedAssertions).
 NIP-85 is still an evolving spec; **this package is the operative definition** of what
 Amethyst-family software writes and reads. This skill states the model (who signs what about
 whom), the exact kind/d-tag/tag vocabulary, and what consumers may — and may not — assume.
@@ -198,7 +198,7 @@ Consumption chain: read `O`'s 10040 → entry matching `ServiceType(30382, "rank
 `{kinds:[30382], authors:["<P>"], "#d":["<S>", …]}` at the hinted relay → newest card per
 address wins → `rank()`.
 
-Literal fixtures: `quartz/src/commonTest/.../experimental/nip85TrustedAssertions/ServiceParser.kt` (a real
+Literal fixtures: `experimental/src/commonTest/.../experimental/nip85TrustedAssertions/ServiceParser.kt` (a real
 10040 — fiatjaf's, pointing at the Brainstorm provider) and `AssertionEventTest.kt` (all four
 assertion kinds with every tag populated).
 
@@ -228,7 +228,7 @@ card's `a`-tag (`30382:<provider>:<target>`).
 
 ## Where it's consumed (reading list)
 
-- **Publisher**: `quartz/.../experimental/graperank/GrapeRankPublisher.kt` (canonical 30382
+- **Publisher**: `experimental/.../experimental/graperank/GrapeRankPublisher.kt` (canonical 30382
   writer), `cli/.../graperank/` (`amy graperank register|unregister|providers|publish`).
 - **Client model**: `commons/.../model/nip85TrustedAssertions/` (`UserAssertionsState`,
   `UserCardsCache`, `UserAssertionDecryptionCache`, `TrustProviderListDecryptionCache`, the

@@ -22,7 +22,7 @@ port or slot rather than leaving the whole screen in `amethyst/`.
      package tree.
    - Headless ViewModels, state holders, services → `commons/src/commonMain/`
      (`viewmodels/` or `<feature>/`), never under a `ui.*` package.
-   - Nostr protocol logic → `quartz/src/commonMain/`.
+   - Nostr protocol logic → [the Quartz repository](https://github.com/vitorpamplona/quartz).
 5. **Replace Android APIs** (table below). Each leftover platform need becomes an
    expect/actual verb, a port, or a slot (see SKILL.md).
 6. **Repoint callers** in `amethyst/` to the shared version and delete the Android

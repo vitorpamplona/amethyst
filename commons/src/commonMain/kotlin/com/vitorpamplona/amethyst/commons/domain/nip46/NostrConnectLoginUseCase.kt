@@ -21,7 +21,6 @@
 package com.vitorpamplona.amethyst.commons.domain.nip46
 
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
-import com.vitorpamplona.quartz.nip01Core.core.OptimizedJsonMapper
 import com.vitorpamplona.quartz.nip01Core.core.toHexKey
 import com.vitorpamplona.quartz.nip01Core.crypto.KeyPair
 import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
@@ -31,7 +30,7 @@ import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerInternal
 import com.vitorpamplona.quartz.nip46RemoteSigner.BunkerClientMetadata
-import com.vitorpamplona.quartz.nip46RemoteSigner.BunkerMessage
+import com.vitorpamplona.quartz.nip46RemoteSigner.BunkerJson
 import com.vitorpamplona.quartz.nip46RemoteSigner.BunkerRequest
 import com.vitorpamplona.quartz.nip46RemoteSigner.BunkerRequestConnect
 import com.vitorpamplona.quartz.nip46RemoteSigner.BunkerResponse
@@ -194,7 +193,7 @@ object NostrConnectLoginUseCase {
         val signerPubkey = event.talkingWith(ephemeralSigner.pubKey)
         val message =
             try {
-                OptimizedJsonMapper.fromJsonTo<BunkerMessage>(ephemeralSigner.decrypt(event.content, signerPubkey))
+                BunkerJson.fromJsonToMessage(ephemeralSigner.decrypt(event.content, signerPubkey))
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
