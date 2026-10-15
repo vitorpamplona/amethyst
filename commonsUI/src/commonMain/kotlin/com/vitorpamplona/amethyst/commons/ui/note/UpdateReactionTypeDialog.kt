@@ -91,6 +91,7 @@ import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.ButtonBorder
 import com.vitorpamplona.amethyst.commons.ui.theme.StdVertSpacer
 import com.vitorpamplona.amethyst.commons.ui.theme.placeholderText
+import com.vitorpamplona.amethyst.commons.unicodeEmoji.ui.UnicodeEmojiPickerButton
 import com.vitorpamplona.amethyst.commons.util.customEmojiUrlOrNull
 import com.vitorpamplona.amethyst.commons.util.firstFullChar
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
@@ -132,6 +133,10 @@ class UpdateReactionTypeViewModel : ViewModel() {
         reactionSet = reactionSet + newValue
 
         nextChoice = TextFieldValue("")
+    }
+
+    fun addChoice(emoji: String) {
+        if (emoji !in reactionSet) reactionSet = reactionSet + emoji
     }
 
     fun addChoice(customEmoji: EmojiUrlTag) {
@@ -240,6 +245,12 @@ fun UpdateReactionTypeScreen(
                                     Text(
                                         text = "\uD83D\uDCAF, \uD83C\uDF89, \uD83D\uDC4E",
                                         color = MaterialTheme.colorScheme.placeholderText,
+                                    )
+                                },
+                                trailingIcon = {
+                                    UnicodeEmojiPickerButton(
+                                        onPick = postViewModel::addChoice,
+                                        tint = MaterialTheme.colorScheme.placeholderText,
                                     )
                                 },
                                 singleLine = true,

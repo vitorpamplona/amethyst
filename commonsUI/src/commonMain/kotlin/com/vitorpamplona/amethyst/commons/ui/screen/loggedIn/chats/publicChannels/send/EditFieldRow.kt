@@ -47,7 +47,6 @@ import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.buzz.BuzzRelayDialect
 import com.vitorpamplona.amethyst.commons.model.buzz.BuzzTypingState
 import com.vitorpamplona.amethyst.commons.model.nip29RelayGroups.RelayGroupChannel
-import com.vitorpamplona.amethyst.commons.nip30CustomEmojis.ui.CustomEmojiPickerButton
 import com.vitorpamplona.amethyst.commons.nip30CustomEmojis.ui.ShowEmojiSuggestionList
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.buzz_editing_banner
@@ -70,6 +69,7 @@ import com.vitorpamplona.amethyst.commons.ui.theme.EditFieldModifier
 import com.vitorpamplona.amethyst.commons.ui.theme.EditFieldTrailingIconModifier
 import com.vitorpamplona.amethyst.commons.ui.theme.SuggestionListDefaultHeightChat
 import com.vitorpamplona.amethyst.commons.ui.theme.placeholderText
+import com.vitorpamplona.amethyst.commons.unicodeEmoji.ui.EmojiPickerButton
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.quartz.utils.TimeUtils
 import kotlinx.collections.immutable.persistentListOf
@@ -222,9 +222,7 @@ fun EditFieldRow(
                         modifier = Modifier.height(32.dp).padding(start = 2.dp),
                         onImageChosen = channelScreenModel::pickedMedia,
                     )
-                    channelScreenModel.emojiSuggestions?.let {
-                        CustomEmojiPickerButton(it.emojiPacks, channelScreenModel.message, tint = MaterialTheme.colorScheme.placeholderText)
-                    }
+                    EmojiPickerButton(channelScreenModel.emojiSuggestions?.emojiPacks, channelScreenModel.message, tint = MaterialTheme.colorScheme.placeholderText)
                 }
             },
             colors =

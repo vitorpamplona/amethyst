@@ -6956,9 +6956,7 @@
     <string name="privacy_lock_messages_locked_description">Desbloqueie para ler ou enviar mensagens privadas.</string>
     <string name="privacy_lock_wallet_locked">A carteira está bloqueada</string>
     <string name="privacy_lock_wallet_locked_description">Desbloqueie para ver seu saldo e enviar ou receber sats.</string>
-    <string name="custom_emoji_picker_open">Inserir emoji personalizado</string>
     <string name="custom_emoji_picker_search">Buscar emoji</string>
-    <string name="custom_emoji_picker_empty">Nenhum emoji personalizado ainda. Adicione pacotes de emojis à sua lista de emojis para usá-los aqui.</string>
     <string name="custom_emoji_picker_no_match">Nenhum emoji com esse nome</string>
     <string name="custom_feeds_manage">Gerenciar seus feeds</string>
     <string name="feed_group_custom">Seus feeds</string>

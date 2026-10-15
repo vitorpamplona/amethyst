@@ -6965,9 +6965,7 @@
     <string name="privacy_lock_messages_locked_description">ताला खोलें पढने के लिए अथवा निजी सन्देशों को भेजने के लिए।</string>
     <string name="privacy_lock_wallet_locked">धनकोष तालाबद्ध है</string>
     <string name="privacy_lock_wallet_locked_description">ताला खोलें अपना शेष देखने के लिए अथवा साट्स भेजने अथवा प्राप्त करने के लिए।</string>
-    <string name="custom_emoji_picker_open">अनुकूल भावचिह्न भीतर प्रविष्ट करें</string>
     <string name="custom_emoji_picker_search">भावचिह्न खोजें</string>
-    <string name="custom_emoji_picker_empty">कोई अनुकूल भावचिह्न नहीं अब तक। भावचिह्न पोटलियाँ जोडें अपने भावचिह्न सूची में यहाँ उनका उपयोग करने के लिए।</string>
     <string name="custom_emoji_picker_no_match">कोई भावचिह्न नहीं उस नाम का</string>
     <string name="custom_feeds_manage">अपने सूचनावलियों का प्रबन्धन करें</string>
     <string name="feed_group_custom">आपके सूचनावलियाँ</string>
