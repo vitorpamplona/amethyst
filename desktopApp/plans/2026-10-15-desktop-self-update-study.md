@@ -113,6 +113,7 @@ which is plenty.
 The release process publishes, per desktop asset, a kind 3063
 `SoftwareAssetEvent` with:
 
+- `i` (the desktop app id)
 - `url` (the GitHub download URL)
 - `x` (SHA-256)
 - `size`
@@ -123,17 +124,22 @@ The release process publishes, per desktop asset, a kind 3063
 
 A kind 30063 release references the assets, and the kind 32267 application
 ties them together. Quartz already models all three:
-`SoftwareApplicationEvent`, `SoftwareReleaseEvent`, `SoftwareAssetEvent`, and
-`PlatformTag` with exactly these platform constants.
+`SoftwareApplicationEvent`, `ReleaseArtifactSetEvent` (kind 30063;
+`SoftwareReleaseEvent` is a deprecated alias for it) and `SoftwareAssetEvent`.
+`PlatformTag` has exactly these platform constants. See the next sections for
+how many events that is and how existing stores read them.
 
 The app:
 
-1. Fetches the latest release from the relays it already talks to, with
-   `fetchFirst`/`fetchAll` from `nip01Core/relay/client/accessories`. Tor
+1. Fetches the newest assets for its own platform from the relays it already
+   talks to, filtered on the relay with `#i` (app id) + `#f` (platform). It
+   uses `fetchFirst`/`fetchAll` from `nip01Core/relay/client/accessories`. Tor
    routing then comes for free when the user has Tor enabled.
-2. Checks that the author equals a **pubkey pinned in the build**.
-3. Verifies the Schnorr signature (Quartz already does this for every event).
-4. Downloads from `url` and refuses anything whose SHA-256 or size differs.
+2. Picks the asset whose `m` (or `variant`) matches how it was installed (MSI,
+   zip, AppImage…).
+3. Checks that the author equals a **pubkey pinned in the build**.
+4. Verifies the Schnorr signature (Quartz already does this for every event).
+5. Downloads from `url` and refuses anything whose SHA-256 or size differs.
 
 Pros:
 
@@ -154,10 +160,8 @@ Cons / open points:
   - a separate "release signer" key that the app pins in addition to the main
     key, so the main nsec never touches CI.
 - **App-id collisions.** Zapstore owns `com.vitorpamplona.amethyst` and Orchard
-  owns `com.vitorpamplona.amethyst.Amethyst`. Their 30063/32267 events are
-  addressable by the same key. The desktop listing needs its own id (e.g. the
-  macOS `bundleID`, `com.vitorpamplona.amethyst.desktop`), or a merge with
-  Orchard's listing. Otherwise one publish overwrites the other.
+  owns `com.vitorpamplona.amethyst.Amethyst`, both signed by the same key. The
+  desktop listing needs a third id; see [Event budget](#event-budget-per-release).
 - **Downgrade and freeze protection.** The app refuses a version lower than its
   own, and refuses an event older than the newest one it has accepted. Relays
   can withhold events (a freeze), but they can't forge one.
@@ -165,6 +169,120 @@ Cons / open points:
 **Recommended:** B is the source of truth for automatic installs. A is the
 fallback for a "new version available" banner only, never for installing
 unattended.
+
+### Event budget per release
+
+Recommended app id: `com.vitorpamplona.amethyst.desktop` (the macOS
+`bundleID`).
+
+| Event | How many | When |
+|---|---|---|
+| 32267 listing | 1 | Once; re-sign only when the listing text or icon changes |
+| 30063 release `com.vitorpamplona.amethyst.desktop@X.Y.Z` | 1 | Every release |
+| 3063 assets | 8 (12 with deb/rpm) | Every release |
+
+The 8 assets are the files the self-updater can install:
+
+| Platform (`f`) | Files |
+|---|---|
+| `darwin-arm64` | DMG |
+| `windows-x86_64` | MSI, zip |
+| `windows-aarch64` | zip |
+| `linux-x86_64` | AppImage, tar.gz |
+| `linux-aarch64` | AppImage, tar.gz |
+
+The .deb and .rpm for both architectures add 4 more. They're only worth
+publishing for the PackageKit hand-off, which needs a verified hash; if those
+installs stay notify-only, they can be left out. The GitHub Flatpak bundles stay
+notify-only too, and Orchard already publishes signed events for Flatpak users.
+
+So a release is 9 events (13 with deb/rpm), against Orchard's 3. All the hashes
+come from the `dist/` folder the release workflow already builds, so one
+command (e.g. an `amy` command that reads `dist/` and the tag) can build and
+sign every event at once.
+
+### Why not fewer events
+
+**Not one release event with the hashes inline, without asset events.** The
+release already works as a single signed manifest: it points to each asset by
+event id (`AssetTag` is an `e` tag holding the 64-character id), and an event id
+is the hash of the event's content. One signature on the release therefore fixes
+every asset event, including each file's SHA-256; swapping an asset changes its
+id and breaks the release signature. Inlining would save one relay round trip
+and take the release off NIP-82, so Zapstore-style clients and our own Software
+Apps screen could no longer read it.
+
+**Not one app id for the APK, the Flatpak and desktop.** NIP-82 allows one
+release to carry assets for every platform, but:
+
+- `zsp` and `orchard-publish` each sign a 30063 with only their own files.
+  Under a shared id, whichever publishes last replaces the others' file list
+  (Orchard's per-arch address, below, avoids that only for its own two
+  architectures). Sharing means retiring both tools for our own publisher.
+- The Flatpak id was moved off `com.vitorpamplona.amethyst` in v1.18.0 for
+  exactly this reason (`desktopApp/packaging/flatpak/README.md`).
+- Zapstore's detail screen would pick up non-Android assets (below).
+
+### How the existing stores filter
+
+NIP-82 has no "type of release". Stores filter by the platform tag `f`, which
+all three kinds carry: the listing (every platform the app supports), the
+release (the union of its assets' platforms, which NIP-82 requires and
+`buildSoftwareRelease` computes), and each asset (its own platform). Relays
+index single-letter tags, so `#f` can be filtered on the relay. Where one
+platform has several formats, the asset's `m` tag (MIME type) or `variant` tells
+them apart.
+
+Checked against the source on 2026-10-15: Zapstore's default branch (last
+commit 2026-08-27) with the `purplebase/models` library it uses, and Orchard's
+(last commit 2026-10-15).
+
+**Zapstore filters on the relay and reads assets directly.**
+
+- The platform is hard-coded: every package manager returns
+  `'android-arm64-v8a'` (`android_package_manager.dart:89`).
+- Catalog and update queries send it to the relay: listings with
+  `{'#d': ids, '#f': {platform}}`, assets with
+  `{'#i': {appId}, '#f': {platform}}, limit: 1` (`catalog_fetcher.dart`).
+- It works asset-first. For current-format apps it skips the 30063 release and
+  takes the newest 3063 for the app id and platform. The release chain is only
+  used for old apps still on kind 1063.
+- It never reads `m` or `variant`.
+- **Gap:** the app detail screen loads `latestAsset` with only the author and
+  `#i`, no platform, limit 1 (`models/lib/src/models/app.dart:40`). A
+  non-Android asset under the APK's app id could show there as the latest
+  build. This is why desktop must not share the APK's id.
+
+**Orchard downloads everything and filters on the device.**
+
+- It subscribes to all 32267, 30063 and 3063 events with no tag filter
+  (`orchard-nostr/src/relay.rs:141`).
+- It drops listings whose platform tags include no `linux-*`, an explicit guard
+  against Zapstore's Android listings.
+- It already expects mixed releases. From `orchard-nostr/src/lib.rs:185`: "A
+  release references every format the publisher ships (apk, exe, AppImage), all
+  sharing the linux platform tags, so the kind, not just the platform, decides
+  installability." An asset is installable only with an `oci:`/`docker://`
+  location, `m = application/vnd.flatpak`, or a `.flatpak` filename, and then
+  only on an exact host-platform match (falling back to assets with no `f`).
+- It accepts stable channels only: no channel tag, `stable`, or `main`
+  (Zapstore's default name).
+- `orchard-publish` addresses releases as `<app-id>@<version>@<platform>`, one
+  per architecture, so its two runs don't overwrite each other. NIP-82 says
+  `<app-id>@<version>`; Orchard's reader accepts both.
+
+**What our events must carry, as a result:**
+
+- `i` and `f` on every asset (what Zapstore filters on), and `m` (what Orchard
+  keys on and what our updater needs). `SoftwareAssetEvent.build` already
+  requires the app id and MIME type; the platform tag is the one to remember.
+- A `c` channel tag of `stable` on stable releases.
+- One release holding all assets, or one per platform like Orchard: both are
+  valid. One release keeps everything under one signature and is simpler.
+
+Our updater should read the same way Zapstore does (`#i` + `#f` on the relay,
+then `m` on the device). The release event stays useful for release notes and
+the single signature over all assets.
 
 ## Per-OS mechanics
 
@@ -389,6 +507,10 @@ The app must not rewrite root-owned `/opt/amethyst` itself. Two honest paths:
 - **`commonsUI`.** An update banner and a Settings › App › Updates section
   (toggle, "Check now", the current channel shown as text, so users understand
   why it's "notify only"). Strings go in `commonsUI` compose resources.
+  Separately, the shared Software Apps screen filters by hashtag and follows
+  but not by platform (`commons/…/relayClient/softwareapps/`), so on desktop it
+  lists Android-only apps. Worth adding a `#f` filter once desktop builds are
+  published.
 - **Release workflow.** `-u` + `.zsync` for the AppImage, Authenticode for the
   MSI/zip exe, publishing of the NIP-82 asset events (hashes come from `dist/*`
   in the same job).
@@ -417,8 +539,9 @@ The app must not rewrite root-owned `/opt/amethyst` itself. Two honest paths:
 
 - Signing the per-release NIP-82 asset events: by hand after each release, via
   a bunker from CI, or with a dedicated release key that the app pins?
-- Which app id should the desktop NIP-82 listing use so it doesn't overwrite
-  the Zapstore (APK) or Orchard (Flatpak) listings?
+- Desktop NIP-82 app id: is `com.vitorpamplona.amethyst.desktop` fine (see
+  [Event budget](#event-budget-per-release))? Publish the .deb/.rpm assets
+  too (13 events per release instead of 9)?
 - Is Authenticode signing for Windows in budget (Azure Trusted Signing is paid
   monthly; SignPath has an OSS program)?
 - Should we host apt/dnf repos, or keep .deb/.rpm as one-shot downloads with
