@@ -39,6 +39,7 @@ import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.platform.LocalWindowInfo
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.LocalWindowExceptionHandlerFactory
@@ -265,6 +266,9 @@ fun main(args: Array<String>) {
                                 LocalAwtWindow provides window,
                                 LocalIsImmersiveFullscreen provides immersiveFullscreen,
                                 LocalDrawerMetrics provides DesktopDrawerMetrics,
+                                // Throws when no app can open a link, as on Android, so a wallet
+                                // handoff that goes nowhere can say so.
+                                LocalUriHandler provides DesktopUriHandler,
                             ) {
                                 // A click on the window in the background only brings it forward.
                                 Box(Modifier.fillMaxSize().clickToActivate(window, LocalWindowInfo.current).trackWheelScrolling(wheelScrolling)) {

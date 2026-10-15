@@ -110,6 +110,8 @@ import com.vitorpamplona.amethyst.commons.ui.theme.grayText
 import com.vitorpamplona.amethyst.commons.ui.theme.placeholderText
 import com.vitorpamplona.amethyst.commons.ui.theme.ripple24dp
 import com.vitorpamplona.amethyst.commons.ui.theme.subtleBorder
+import com.vitorpamplona.amethyst.commons.ui.wallet.payInvoice
+import com.vitorpamplona.amethyst.commons.ui.wallet.rememberWalletAppLauncher
 import com.vitorpamplona.amethyst.commons.util.showAmount
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.amethyst.commons.viewmodels.mockAccountViewModel
@@ -539,6 +541,7 @@ fun ZapVote(
 ) {
     val noWalletFoundStr = stringRes(Res.string.no_wallet_found)
     val errorDialogZapErrorStr = stringRes(Res.string.error_dialog_zap_error)
+    val walletLauncher = rememberWalletAppLauncher()
     val isLoggedUser by remember { derivedStateOf { accountViewModel.isLoggedUser(baseNote.author) } }
 
     var wantsToZap by remember { mutableStateOf(false) }
@@ -605,9 +608,9 @@ fun ZapVote(
                                 onPayViaIntent = {
                                     if (it.size == 1) {
                                         val payable = it.first()
-                                        if (!accountViewModel.host.openLightningWallet(payable.invoice)) {
+                                        walletLauncher.payInvoice(payable.invoice, noWalletFoundStr, { }) {
                                             zappingProgress = 0f
-                                            showErrorMessageDialog = StringToastMsg(errorDialogZapErrorStr, noWalletFoundStr)
+                                            showErrorMessageDialog = StringToastMsg(errorDialogZapErrorStr, it)
                                         }
                                     } else {
                                         val uid = Uuid.random().toString()
@@ -645,9 +648,9 @@ fun ZapVote(
                 onPayViaIntent = {
                     if (it.size == 1) {
                         val payable = it.first()
-                        if (!accountViewModel.host.openLightningWallet(payable.invoice)) {
+                        walletLauncher.payInvoice(payable.invoice, noWalletFoundStr, { }) {
                             zappingProgress = 0f
-                            showErrorMessageDialog = StringToastMsg(errorDialogZapErrorStr, noWalletFoundStr)
+                            showErrorMessageDialog = StringToastMsg(errorDialogZapErrorStr, it)
                         }
                     } else {
                         val uid = Uuid.random().toString()
