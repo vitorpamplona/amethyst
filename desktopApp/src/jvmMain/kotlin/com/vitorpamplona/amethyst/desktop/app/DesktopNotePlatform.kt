@@ -88,6 +88,7 @@ import com.vitorpamplona.amethyst.commons.ui.theme.Size5dp
 import com.vitorpamplona.amethyst.commons.util.extractFilename
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.amethyst.desktop.service.media.GlobalMediaPlayer
+import com.vitorpamplona.amethyst.desktop.ui.map.DesktopLocationPreviewMap
 import com.vitorpamplona.amethyst.desktop.ui.media.AnimatedGifImage
 import com.vitorpamplona.amethyst.desktop.ui.media.AudioPlayer
 import com.vitorpamplona.amethyst.desktop.ui.media.DesktopVideoPlayer
@@ -383,6 +384,27 @@ object DesktopNotePlatform : NotePlatform {
     ) {
         GlobalMediaPlayer.warmVideos(owner, if (accountViewModel.settings.startVideoPlayback()) urls else emptyList())
     }
+
+    @Composable
+    override fun LocationPreviewMap(
+        latitude: Double,
+        longitude: Double,
+        aspectRatio: Float,
+        pinColor: Color?,
+        pinEmoji: String?,
+        pinAlpha: Float,
+        modifier: Modifier,
+        zoom: Double?,
+    ) = DesktopLocationPreviewMap(
+        latitude = latitude,
+        longitude = longitude,
+        modifier = modifier,
+        zoom = zoom,
+        aspectRatio = aspectRatio,
+        pinColor = pinColor,
+        pinEmoji = pinEmoji,
+        pinAlpha = pinAlpha,
+    )
 
     @Composable
     override fun RenderAudioPlayer(

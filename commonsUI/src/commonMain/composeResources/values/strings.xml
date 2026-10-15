@@ -7229,6 +7229,9 @@
     <string name="dlist_undefined">This item is in a list whose definition couldn't be read, so its fields can't be shown as the list means them. What it carries:</string>
     <string name="dlist_show_on_map">Show on map</string>
     <string name="dlist_open_in_osm">Open in OpenStreetMap</string>
+    <string name="map_osm_attribution">© OpenStreetMap contributors</string>
+    <string name="map_zoom_in">Zoom in</string>
+    <string name="map_zoom_out">Zoom out</string>
     <string name="dlist_shown_as_personal">Shown as your own copy of %1$s.</string>
     <string name="dlist_shown_as_assistant">Shown as your Assistant's copy of %1$s.</string>
     <string name="dlist_shown_as_community">Shown as the community concept %1$s.</string>

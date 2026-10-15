@@ -61,7 +61,8 @@ so readers never contact those sites. Amethyst has no such proxy, so none of it 
 views show what the item says. Reviews, recommendations and web-of-trust endorsements on places
 and books are also not ported.
 
-Maps use the platform's `LocationPreviewMap` (osmdroid with OpenStreetMap tiles on Android): a
-place's own page shows it outright, as Brainstorm's does; a tier-two item with a `location` shows
-it only when the reader asks, so a card contacts no tile server by itself. Desktop has no map yet,
-so there both keep only the link to openstreetmap.org.
+Maps use the platform's `LocationPreviewMap`: osmdroid with OpenStreetMap tiles on Android, and on
+desktop `DesktopLocationPreviewMap`, OSM tiles laid out in Compose and loaded through the app's Coil
+loader (its User-Agent, disk cache and Tor routing), with the same tile filters and pin as Android.
+A place's own page shows it outright, as Brainstorm's does; a tier-two item with a `location`
+shows it only when the reader asks, so a card contacts no tile server by itself.
