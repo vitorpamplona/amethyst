@@ -249,7 +249,8 @@ fun ScheduledPostsScreen(
                 verticalArrangement = Arrangement.spacedBy(8.dp),
             ) {
                 groups.forEach { group ->
-                    stickyHeader(key = group.day) {
+                    // Lazy keys must be Bundle-storable on Android: a data class key crashes there.
+                    stickyHeader(key = "day-${group.day.ymd()}") {
                         DayHeader(group.day, today)
                     }
                     items(group.posts, key = { it.id }) { post ->
