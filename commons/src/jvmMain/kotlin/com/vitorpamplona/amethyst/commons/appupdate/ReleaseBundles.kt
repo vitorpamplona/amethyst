@@ -26,6 +26,7 @@ import com.vitorpamplona.quartz.experimental.nip82SoftwareApps.application.Softw
 import com.vitorpamplona.quartz.experimental.nip82SoftwareApps.asset.SoftwareAssetEvent
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
+import com.vitorpamplona.quartz.nip01Core.signers.EventTemplate
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip51Lists.releaseArtifactSet.ReleaseArtifactSetEvent
 import com.vitorpamplona.quartz.utils.TimeUtils
@@ -73,21 +74,19 @@ object ReleaseBundles {
         assets: List<HashedDesktopAsset>,
         relays: List<String>,
         withListing: Boolean,
-    ): SignedRelease {
-        val hint = relays.firstNotNullOfOrNull(::normalize)
-        val signedAssets = assets.map { signer.sign(DesktopReleaseEvents.asset(it, version)) }
-        return SignedRelease(
+    ): SignedRelease =
+        signRelease(
             appId = DesktopRelease.APP_ID,
+            signer = signer,
+            version = version,
+            notes = notes,
             relays = relays,
-            assets = signedAssets,
-            release = signer.sign(DesktopReleaseEvents.release(signer.pubKey, version, notes, signedAssets, hint)),
-            listing = if (withListing) signer.sign(DesktopReleaseEvents.listing()) else null,
-            files =
-                assets.zip(signedAssets).map { (asset, event) ->
-                    report(asset.file.filename, listOf(asset.file.platform), asset.file.packageType.mimeType, asset.sha256, asset.sizeInBytes, listOf(asset.url), event)
-                },
-        )
-    }
+            files = assets,
+            asset = { asset, _ -> DesktopReleaseEvents.asset(asset, version) },
+            listing = if (withListing) DesktopReleaseEvents.listing() else null,
+        ) { asset, event ->
+            report(asset.file.filename, listOf(asset.file.platform), asset.file.packageType.mimeType, asset.sha256, asset.sizeInBytes, listOf(asset.url), event)
+        }
 
     /**
      * The APKs of [flavor] for [abis] in [dir], signature-checked and read. Refuses an APK of
@@ -137,32 +136,28 @@ object ReleaseBundles {
         listing: ListingMedia?,
         config: ZapstoreConfig,
     ): SignedRelease {
-        val hint = relays.firstNotNullOfOrNull(::normalize)
         val now = TimeUtils.now()
-        val signedAssets =
-            apks.map { apk ->
-                val createdAt = if (apks.size == 1 || apk.file.abi == "arm64-v8a") now else now - 1
-                signer.sign(AndroidReleaseEvents.asset(apk, version, supportedNips, createdAt))
-            }
         val platforms = apks.flatMap { it.info.platforms }.distinct()
-        return SignedRelease(
+        return signRelease(
             appId = AndroidRelease.APP_ID,
+            signer = signer,
+            version = version,
+            notes = notes,
             relays = relays,
-            assets = signedAssets,
-            release = signer.sign(AndroidReleaseEvents.release(signer.pubKey, version, notes, signedAssets, hint, now)),
-            listing = listing?.let { signer.sign(AndroidReleaseEvents.listing(config, it.iconUrl, it.imageUrls, platforms, now)) },
-            files =
-                apks.zip(signedAssets).map { (apk, event) ->
-                    report(apk.file.filename, apk.info.platforms, AndroidRelease.APK_MIME_TYPE, apk.sha256, apk.sizeInBytes, apk.urls, event) +
-                        mapOf(
-                            "version_code" to apk.info.versionCode,
-                            "min_sdk" to apk.info.minSdk,
-                            "target_sdk" to apk.info.targetSdk,
-                            "certificate_sha256" to apk.info.certificateSha256,
-                            "variant" to apk.file.flavor.variant,
-                        )
-                },
-        )
+            files = apks,
+            now = now,
+            asset = { apk, createdAt -> AndroidReleaseEvents.asset(apk, version, supportedNips, if (apks.size == 1 || apk.file.abi == "arm64-v8a") createdAt else createdAt - 1) },
+            listing = listing?.let { AndroidReleaseEvents.listing(config, it.iconUrl, it.imageUrls, platforms, now) },
+        ) { apk, event ->
+            report(apk.file.filename, apk.info.platforms, AndroidRelease.APK_MIME_TYPE, apk.sha256, apk.sizeInBytes, apk.urls, event) +
+                mapOf(
+                    "version_code" to apk.info.versionCode,
+                    "min_sdk" to apk.info.minSdk,
+                    "target_sdk" to apk.info.targetSdk,
+                    "certificate_sha256" to apk.info.certificateSha256,
+                    "variant" to apk.file.flavor.variant,
+                )
+        }
     }
 
     /**
@@ -192,19 +187,46 @@ object ReleaseBundles {
         bundles: List<HashedFlatpakBundle>,
         relays: List<String>,
         withListing: Boolean,
+    ): SignedRelease =
+        signRelease(
+            appId = FlatpakRelease.APP_ID,
+            signer = signer,
+            version = version,
+            notes = notes,
+            relays = relays,
+            files = bundles,
+            asset = { bundle, _ -> FlatpakReleaseEvents.asset(bundle, version) },
+            listing = if (withListing) FlatpakReleaseEvents.listing() else null,
+        ) { bundle, event ->
+            report(bundle.filename, listOf(bundle.platform), FlatpakRelease.MIME_TYPE, bundle.sha256, bundle.sizeInBytes, listOf(bundle.url), event)
+        }
+
+    /**
+     * One app's release: an asset per file (built by [asset], given the release's time), then the
+     * release naming the signed assets ([Nip82ReleaseEvents.release]), then [listing]; with a
+     * report line per file.
+     */
+    private suspend fun <F> signRelease(
+        appId: String,
+        signer: NostrSigner,
+        version: String,
+        notes: String,
+        relays: List<String>,
+        files: List<F>,
+        now: Long = TimeUtils.now(),
+        asset: (F, Long) -> EventTemplate<SoftwareAssetEvent>,
+        listing: EventTemplate<SoftwareApplicationEvent>?,
+        report: (F, SoftwareAssetEvent) -> Map<String, Any?>,
     ): SignedRelease {
         val hint = relays.firstNotNullOfOrNull(::normalize)
-        val signedAssets = bundles.map { signer.sign(FlatpakReleaseEvents.asset(it, version)) }
+        val signedAssets = files.map { signer.sign(asset(it, now)) }
         return SignedRelease(
-            appId = FlatpakRelease.APP_ID,
+            appId = appId,
             relays = relays,
             assets = signedAssets,
-            release = signer.sign(FlatpakReleaseEvents.release(signer.pubKey, version, notes, signedAssets, hint)),
-            listing = if (withListing) signer.sign(FlatpakReleaseEvents.listing()) else null,
-            files =
-                bundles.zip(signedAssets).map { (bundle, event) ->
-                    report(bundle.filename, listOf(bundle.platform), FlatpakRelease.MIME_TYPE, bundle.sha256, bundle.sizeInBytes, listOf(bundle.url), event)
-                },
+            release = signer.sign(Nip82ReleaseEvents.release(appId, signer.pubKey, version, notes, signedAssets, hint, now)),
+            listing = listing?.let { signer.sign(it) },
+            files = files.zip(signedAssets).map { (file, event) -> report(file, event) },
         )
     }
 
@@ -255,8 +277,9 @@ object ReleaseBundles {
         signer: NostrSigner,
         client: BlossomClient = BlossomClient(),
         dryRun: Boolean = false,
+        /** The file's SHA-256 when the caller already has it (an APK's, from [androidApks]). */
+        sha256: String = ApkInspector.sha256(file),
     ): String {
-        val sha256 = ApkInspector.sha256(file)
         // A dry run uploads nothing and names where the blob would be (BUD-01: <server>/<sha256>).
         if (dryRun) return "${server.trimEnd('/')}/$sha256"
         val auth = BlossomAuth.createUploadAuth(sha256, file.length(), "Upload ${file.name}", signer)

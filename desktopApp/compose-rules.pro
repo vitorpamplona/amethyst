@@ -284,3 +284,7 @@
 # ============================================================================
 -dontwarn kotlin.concurrent.atomics.**
 -dontwarn kotlin.jvm.internal.EnhancedNullability
+
+# apksig is left out of the desktop app (build.gradle.kts): only the CLI's release publishing
+# (commons' ApkInspector, kept by the com.vitorpamplona.amethyst.** rule) refers to it.
+-dontwarn com.android.apksig.**

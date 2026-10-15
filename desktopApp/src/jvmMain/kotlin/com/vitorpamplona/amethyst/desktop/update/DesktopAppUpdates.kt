@@ -55,16 +55,17 @@ object DesktopAppUpdates {
         settings: DataStore<Preferences>,
         updatesDir: File,
         scope: CoroutineScope,
+        quit: () -> Unit,
     ): AppUpdateManager? {
         val devCheck = channel == InstallChannel.Development && System.getProperty("amethyst.update.devCheck") == "true"
-        val target = channel.target ?: if (devCheck) UpdateTarget(Platform.LINUX_X86_64, emptyList()) else return null
+        val target = channel.target ?: if (devCheck) UpdateTarget(hostPlatform(), emptyList()) else return null
         val method = if (devCheck) UpdateMethod.DownloadPage else channel.method
 
         Log.i(TAG) { "Install channel: $channel, updates by $method" }
 
         val installer =
             if (method.canInstall) {
-                DesktopUpdateInstaller(channel, UpdateDownloader(downloadClient), updatesDir).also { it.cleanUp() }
+                DesktopUpdateInstaller(channel, UpdateDownloader(downloadClient), updatesDir, quit).also { it.cleanUp() }
             } else {
                 null
             }
@@ -79,5 +80,16 @@ object DesktopAppUpdates {
             scope = scope,
             startupDelaySec = if (devCheck) 5 else 60,
         )
+    }
+
+    /** The platform this JVM runs on, for a development run that has no install to read it from. */
+    private fun hostPlatform(): String {
+        val os = System.getProperty("os.name", "").lowercase()
+        val arm = System.getProperty("os.arch", "").lowercase().let { it == "aarch64" || it == "arm64" }
+        return when {
+            os.contains("mac") || os.contains("darwin") -> if (arm) Platform.DARWIN_ARM64 else Platform.DARWIN_X86_64
+            os.contains("win") -> if (arm) Platform.WINDOWS_AARCH64 else Platform.WINDOWS_X86_64
+            else -> if (arm) Platform.LINUX_AARCH64 else Platform.LINUX_X86_64
+        }
     }
 }

@@ -33,7 +33,6 @@ import java.io.IOException
 import java.nio.file.Files
 import java.nio.file.StandardCopyOption
 import java.util.zip.ZipInputStream
-import kotlin.system.exitProcess
 
 /**
  * Applies a verified release file the way [channel] needs:
@@ -54,7 +53,8 @@ class DesktopUpdateInstaller(
     private val channel: InstallChannel,
     private val downloader: UpdateDownloader,
     private val updatesDir: File,
-    private val quit: () -> Unit = { exitProcess(0) },
+    /** Quits the app the way its Quit menu does (the windows close, then the JVM exits), so the helper can take over. */
+    private val quit: () -> Unit,
 ) : AppUpdateInstaller {
     private sealed interface Staged {
         val version: String
@@ -235,14 +235,18 @@ class DesktopUpdateInstaller(
                 mountPoint.listFiles()?.firstOrNull { it.name.endsWith(".app") }
                     ?: throw UpdateInstallException(UpdateFailure.INSTALL_FAILED, "No app in the disk image")
 
-            val (verified, verifyOut) = runCapturing("codesign", "--verify", "--deep", "--strict", newApp.absolutePath)
-            if (verified != 0) throw UpdateInstallException(UpdateFailure.VERIFICATION_FAILED, "codesign rejects the new app: $verifyOut")
-
-            // A signed install takes only an app signed by the same team. An unsigned one (a local
-            // build) has no team to compare; the signed release's SHA-256 already vouched for the file.
+            // A signed install takes only an intact app signed by the same team, so it never turns
+            // into an unsigned one. An unsigned install (a release built without the signing
+            // secrets) has no team to compare: the signed release's SHA-256 already vouched for the
+            // file, and codesign checks the new app only if it is signed at all.
             val currentTeam = teamIdentifier(current)
-            if (currentTeam != null && currentTeam != teamIdentifier(newApp)) {
+            val newTeam = teamIdentifier(newApp)
+            if (currentTeam != null && currentTeam != newTeam) {
                 throw UpdateInstallException(UpdateFailure.VERIFICATION_FAILED, "The new app is not signed by team $currentTeam")
+            }
+            if (newTeam != null) {
+                val (verified, verifyOut) = runCapturing("codesign", "--verify", "--deep", "--strict", newApp.absolutePath)
+                if (verified != 0) throw UpdateInstallException(UpdateFailure.VERIFICATION_FAILED, "codesign rejects the new app: $verifyOut")
             }
 
             replacement.deleteRecursively()

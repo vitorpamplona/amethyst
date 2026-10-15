@@ -30,13 +30,7 @@ import com.vitorpamplona.quartz.experimental.nip82SoftwareApps.application.url
 import com.vitorpamplona.quartz.experimental.nip82SoftwareApps.asset.SoftwareAssetEvent
 import com.vitorpamplona.quartz.experimental.nip82SoftwareApps.asset.filename
 import com.vitorpamplona.quartz.experimental.nip82SoftwareApps.asset.platform
-import com.vitorpamplona.quartz.experimental.nip82SoftwareApps.release.tags.ReleaseChannel
 import com.vitorpamplona.quartz.experimental.nip82SoftwareApps.shared.Platform
-import com.vitorpamplona.quartz.nip01Core.core.HexKey
-import com.vitorpamplona.quartz.nip01Core.hints.EventHintBundle
-import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
-import com.vitorpamplona.quartz.nip01Core.tags.aTag.ATag
-import com.vitorpamplona.quartz.nip51Lists.releaseArtifactSet.ReleaseArtifactSetEvent
 import com.vitorpamplona.quartz.utils.TimeUtils
 
 /** One release file, hashed and ready to be described by a signed asset event. */
@@ -48,9 +42,8 @@ data class HashedDesktopAsset(
 )
 
 /**
- * The NIP-82 events of a desktop release: the app listing (kind 32267), one asset per file (kind
- * 3063) and the release that points at them (kind 30063). The release must be built from the
- * *signed* assets, since it names them by id.
+ * The NIP-82 events of a desktop release: the app listing (kind 32267) and one asset per file (kind
+ * 3063). The release that points at them (kind 30063) is [Nip82ReleaseEvents.release].
  */
 object DesktopReleaseEvents {
     const val SUMMARY = "The all-in-one Nostr client"
@@ -90,28 +83,4 @@ object DesktopReleaseEvents {
         platform(asset.file.platform)
         filename(asset.file.filename)
     }
-
-    private val STABLE_VERSION = Regex("""\d+\.\d+\.\d+""")
-
-    /**
-     * `main` for a stable version (`X.Y.Z`, as the release workflow classifies tags), `beta` for
-     * anything else: the app only installs from `main`.
-     */
-    fun channelFor(version: String) = if (STABLE_VERSION.matches(version)) ReleaseChannel.MAIN else ReleaseChannel.BETA
-
-    fun release(
-        publisher: HexKey,
-        version: String,
-        releaseNotes: String,
-        signedAssets: List<SoftwareAssetEvent>,
-        relayHint: NormalizedRelayUrl?,
-        createdAt: Long = TimeUtils.now(),
-    ) = ReleaseArtifactSetEvent.buildSoftwareRelease(
-        app = ATag(SoftwareApplicationEvent.KIND, publisher, DesktopRelease.APP_ID, relayHint),
-        version = version,
-        channel = channelFor(version),
-        assets = signedAssets.map { EventHintBundle(it, relayHint) },
-        releaseNotes = releaseNotes,
-        createdAt = createdAt,
-    )
 }

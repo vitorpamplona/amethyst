@@ -20,10 +20,14 @@
  */
 package com.vitorpamplona.amethyst.commons.appupdate
 
+import java.io.ByteArrayOutputStream
 import java.io.File
+import java.nio.ByteBuffer
+import java.nio.ByteOrder
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
+import kotlin.test.assertNull
 
 /**
  * `fixture-signed.apk` is a 25 KB APK built with aapt2 and signed with apksigner (v2 + v3) by a
@@ -70,5 +74,106 @@ class ApkInspectorTest {
         assertEquals(listOf("android-arm64-v8a"), info.platforms)
         assertEquals("c2d0aa86bcb6b62090561a41bbe336e98b78c2d0210a498dc885f28e1348cf17", info.certificateSha256)
         assertEquals("158457da5adaad9f915bc2f5f933d12d17a26d325d70e8086ea4bf1d80bb4f2e", ApkInspector.sha256(File(path)))
+    }
+
+    /**
+     * A minimal binary manifest, `<manifest android:versionName="…">`, as aapt writes one: the XML
+     * header, a string pool (UTF-16 or UTF-8), the attribute resource map, the root element.
+     */
+    private fun binaryManifest(
+        utf8: Boolean,
+        versionName: String,
+        rootName: String = "manifest",
+        valueType: Int = 0x03,
+    ): ByteBuffer {
+        val strings = listOf(rootName, "versionName", versionName)
+        val data = ByteArrayOutputStream()
+        val offsets =
+            strings.map { value ->
+                val offset = data.size()
+                if (utf8) {
+                    val bytes = value.toByteArray(Charsets.UTF_8)
+                    data.write(value.length)
+                    data.write(bytes.size)
+                    data.write(bytes)
+                    data.write(0)
+                } else {
+                    data.write(value.length and 0xff)
+                    data.write(value.length shr 8)
+                    value.forEach { c ->
+                        data.write(c.code and 0xff)
+                        data.write(c.code shr 8)
+                    }
+                    data.write(0)
+                    data.write(0)
+                }
+                offset
+            }
+        while (data.size() % 4 != 0) data.write(0)
+
+        val poolHeader = 28
+        val poolSize = poolHeader + 4 * strings.size + data.size()
+        val mapSize = 8 + 4 * 2
+        val elementSize = 16 + 20 + 20
+        val total = 8 + poolSize + mapSize + elementSize
+        val out = ByteBuffer.allocate(total).order(ByteOrder.LITTLE_ENDIAN)
+        out.putShort(0x0003).putShort(8).putInt(total)
+        out.putShort(0x0001).putShort(poolHeader.toShort()).putInt(poolSize)
+        out
+            .putInt(strings.size)
+            .putInt(0)
+            .putInt(if (utf8) 0x100 else 0)
+            .putInt(poolHeader + 4 * strings.size)
+            .putInt(0)
+        offsets.forEach { out.putInt(it) }
+        out.put(data.toByteArray())
+        out
+            .putShort(0x0180)
+            .putShort(8)
+            .putInt(mapSize)
+            .putInt(0)
+            .putInt(0x0101021c)
+        out
+            .putShort(0x0102)
+            .putShort(16)
+            .putInt(elementSize)
+            .putInt(1)
+            .putInt(-1)
+        out
+            .putInt(-1)
+            .putInt(0)
+            .putShort(20)
+            .putShort(20)
+            .putShort(1)
+            .putShort(0)
+            .putShort(0)
+            .putShort(0)
+        out
+            .putInt(-1)
+            .putInt(1)
+            .putInt(2)
+            .putShort(8)
+            .put(0)
+            .put(valueType.toByte())
+            .putInt(2)
+        return out.flip()
+    }
+
+    @Test
+    fun readsTheVersionNameInEitherStringEncoding() {
+        assertEquals("2.3.4-beta", ApkInspector.versionName(binaryManifest(utf8 = false, versionName = "2.3.4-beta")))
+        assertEquals("2.3.4-beta", ApkInspector.versionName(binaryManifest(utf8 = true, versionName = "2.3.4-beta")))
+        assertEquals("1.0-ñ", ApkInspector.versionName(binaryManifest(utf8 = true, versionName = "1.0-ñ")))
+    }
+
+    @Test
+    fun noVersionNameWhenItIsNotALiteralOrNotTheManifest() {
+        // A resource reference (@string/version) is not a literal.
+        assertNull(ApkInspector.versionName(binaryManifest(utf8 = false, versionName = "x", valueType = 0x01)))
+        assertNull(ApkInspector.versionName(binaryManifest(utf8 = false, versionName = "x", rootName = "application")))
+        // Cut short: no crash, no answer.
+        val cut = binaryManifest(utf8 = false, versionName = "2.3.4")
+        assertNull(ApkInspector.versionName(cut.limit(cut.limit() - 30)))
+        assertNull(ApkInspector.versionName(ByteBuffer.wrap(ByteArray(0))))
     }
 }

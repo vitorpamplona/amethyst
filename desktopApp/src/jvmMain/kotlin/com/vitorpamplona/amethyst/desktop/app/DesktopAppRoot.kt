@@ -50,6 +50,7 @@ import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.withContext
 
 /**
@@ -66,7 +67,7 @@ class DesktopAppRoot(
 
     override val keyStorage: KeyStorageController get() = modules.keyStorageController
 
-    override val appUpdates: AppUpdateController? get() = modules.appUpdates
+    override val appUpdates: StateFlow<AppUpdateController?> get() = modules.appUpdates
 
     private val host by lazy { DesktopAccountViewModelHost(modules) }
 

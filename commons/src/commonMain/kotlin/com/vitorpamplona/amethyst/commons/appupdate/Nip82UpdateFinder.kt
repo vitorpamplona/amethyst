@@ -46,16 +46,30 @@ class Nip82UpdateFinder(
         target: UpdateTarget,
         releases: List<Event>,
         assets: List<Event>,
-    ): AvailableUpdate? {
-        val release =
-            releases
-                .asSequence()
-                .mapNotNull { it.asTrustedRelease(target.platform) }
-                .filter { Nip82VersionComparator.compare(it.version()!!, currentVersion) > 0 }
-                .sortedWith(compareByDescending<ReleaseArtifactSetEvent, String>(Nip82VersionComparator) { it.version()!! }.thenByDescending { it.createdAt })
-                .firstOrNull()
-                ?: return null
+    ): AvailableUpdate? = newestRelease(currentVersion, target, releases)?.let { update(it, target, assets) }
 
+    /**
+     * The newest trusted release above [currentVersion]. The cheap checks and the sort run first and
+     * the signature only on the candidates in order, so the releases a relay sends that are older than
+     * the running version cost no signature check.
+     */
+    fun newestRelease(
+        currentVersion: String,
+        target: UpdateTarget,
+        releases: List<Event>,
+    ): ReleaseArtifactSetEvent? =
+        releases
+            .mapNotNull { it.asCandidateRelease(target.platform) }
+            .filter { Nip82VersionComparator.compare(it.version()!!, currentVersion) > 0 }
+            .sortedWith(compareByDescending<ReleaseArtifactSetEvent, String>(Nip82VersionComparator) { it.version()!! }.thenByDescending { it.createdAt })
+            .firstOrNull { it.verify() }
+
+    /** The update [release] offers, with its file for [target] from [assets] (the release's own, signed ones only). */
+    fun update(
+        release: ReleaseArtifactSetEvent,
+        target: UpdateTarget,
+        assets: List<Event>,
+    ): AvailableUpdate {
         val version = release.version()!!
         val ownAssets = release.assets().mapTo(HashSet()) { it.eventId }
         val candidates =
@@ -83,9 +97,10 @@ class Nip82UpdateFinder(
         )
     }
 
-    private fun Event.asTrustedRelease(platform: String): ReleaseArtifactSetEvent? {
+    /** A release that passes every check but the signature, which [newestRelease] checks last. */
+    private fun Event.asCandidateRelease(platform: String): ReleaseArtifactSetEvent? {
         if (kind != ReleaseArtifactSetEvent.KIND || pubKey != publisher) return null
-        if (!isNip82SoftwareRelease() || !verify()) return null
+        if (!isNip82SoftwareRelease()) return null
         val release = this as? ReleaseArtifactSetEvent ?: ReleaseArtifactSetEvent(id, pubKey, createdAt, tags, content, sig)
         if (release.appId() != appId) return null
         if (!DesktopRelease.isStableChannel(release.channel())) return null
@@ -100,13 +115,14 @@ class Nip82UpdateFinder(
         version: String,
         platform: String,
     ): UpdateAsset? {
-        if (kind != SoftwareAssetEvent.KIND || pubKey != publisher || !verify()) return null
+        if (kind != SoftwareAssetEvent.KIND || pubKey != publisher) return null
         val asset = this as? SoftwareAssetEvent ?: SoftwareAssetEvent(id, pubKey, createdAt, tags, content, sig)
         if (asset.appId() != appId) return null
         asset.version()?.let { if (it != version) return null }
         if (platform !in asset.platforms()) return null
         val url = asset.url()?.takeIf { it.startsWith("https://") } ?: return null
         val hash = asset.hash()?.lowercase()?.takeIf { SHA256.matches(it) } ?: return null
+        if (!verify()) return null
         return UpdateAsset(
             url = url,
             sha256 = hash,

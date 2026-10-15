@@ -22,6 +22,7 @@ package com.vitorpamplona.amethyst.desktop.update
 
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.vitorpamplona.amethyst.commons.appupdate.AvailableUpdate
+import com.vitorpamplona.amethyst.commons.appupdate.DesktopAssetNames
 import com.vitorpamplona.amethyst.commons.appupdate.DesktopRelease
 import com.vitorpamplona.amethyst.commons.appupdate.UpdateSource
 import com.vitorpamplona.amethyst.commons.appupdate.UpdateTarget
@@ -35,8 +36,8 @@ import java.time.Instant
 
 /**
  * The fallback: GitHub's latest stable release. It only tells that a version exists and links its
- * page; nothing is ever installed from it, since a GitHub release carries no signature the app
- * checks. Asked only when the signed NIP-82 release found nothing to install.
+ * page, and only when the release has a file for this platform; nothing is ever installed from
+ * it, since a GitHub release carries no signature the app checks. Asked only when the signed NIP-82 release found nothing to install.
  */
 class GitHubReleaseSource(
     private val clientFor: (String) -> OkHttpClient,
@@ -55,16 +56,18 @@ class GitHubReleaseSource(
                     .build()
             clientFor(url).newCall(request).execute().use { response ->
                 if (!response.isSuccessful) throw IOException("HTTP ${response.code} from GitHub")
-                parse(response.body.string(), currentVersion)
+                parse(response.body.string(), currentVersion, target.platform)
             }
         }
 
     companion object {
         private val mapper = ObjectMapper()
 
+        /** The release, when it is newer and has a file for [platform] (an Intel Mac has no DMG to get). */
         internal fun parse(
             json: String,
             currentVersion: String,
+            platform: String,
         ): AvailableUpdate? {
             val release = mapper.readTree(json)
             if (release.path("draft").asBoolean(false) || release.path("prerelease").asBoolean(false)) return null
@@ -75,6 +78,8 @@ class GitHubReleaseSource(
                     .removePrefix("v")
                     .ifBlank { return null }
             if (Nip82VersionComparator.compare(version, currentVersion) <= 0) return null
+            val hasBuild = release.path("assets").any { DesktopAssetNames.classify(it.path("name").asText(""), version)?.platform == platform }
+            if (!hasBuild) return null
             val publishedAt =
                 release
                     .path("published_at")

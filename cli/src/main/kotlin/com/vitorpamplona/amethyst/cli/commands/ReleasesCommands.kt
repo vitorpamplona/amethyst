@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst.cli.commands
 
+import com.fasterxml.jackson.core.JacksonException
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory
 import com.vitorpamplona.amethyst.cli.Args
@@ -87,7 +88,7 @@ object ReleasesCommands {
         val dir = File(args.positional(0, "DIR"))
         val version = args.requireFlag("version").removePrefix("v")
         val only = args.flag("only")
-        val notes = args.flag("notes-file")?.let { File(it).readText() } ?: ""
+        val notesFile = args.flag("notes-file")?.let(::File)
         val withListing = args.bool("listing")
         val yaml = File(args.flag("zapstore-yaml") ?: "zapstore.yaml")
         val blossom = args.flag("blossom")?.trimEnd('/')
@@ -110,6 +111,8 @@ object ReleasesCommands {
         val abis = if (abisFlag == "all") AndroidRelease.ABIS else abisFlag.split(',').map(String::trim)
         abis.firstOrNull { it !in AndroidRelease.ABIS }?.let { return Output.error("bad_args", "unknown ABI $it (expected ${AndroidRelease.ABIS.joinToString(",")})") }
         if (relayOverride?.isEmpty() == true) return Output.error("bad_args", "no valid relay")
+        if (notesFile != null && !notesFile.isFile) return Output.error("bad_args", "no notes file at $notesFile")
+        val notes = notesFile?.readText() ?: ""
 
         Context.open(dataDir).use { ctx ->
             ctx.prepare()
@@ -129,11 +132,21 @@ object ReleasesCommands {
                 if (only == null || only == "android") {
                     val apks = ReleaseBundles.androidApks(dir, version, flavor, abis, urlBase)
                     if (apks.isNotEmpty()) {
-                        val config = if (yaml.isFile) ZapstoreConfig.fromMap(readYaml(yaml)) else ZapstoreConfig()
                         if (withListing && !yaml.isFile) return Output.error("bad_args", "--listing for the APK needs --zapstore-yaml (no $yaml)")
+                        // Read before anything is uploaded to Blossom.
+                        val config =
+                            if (yaml.isFile) {
+                                try {
+                                    ZapstoreConfig.fromMap(readYaml(yaml))
+                                } catch (e: JacksonException) {
+                                    return Output.error("bad_args", "$yaml is not valid YAML: ${e.originalMessage}")
+                                }
+                            } else {
+                                ZapstoreConfig()
+                            }
                         val mirrored =
                             apks.map { (file, apk) ->
-                                if (blossom == null) apk else apk.copy(urls = apk.urls + ReleaseBundles.mirrorToBlossom(file, AndroidRelease.APK_MIME_TYPE, blossom, signer, dryRun = dryRun))
+                                if (blossom == null) apk else apk.copy(urls = apk.urls + ReleaseBundles.mirrorToBlossom(file, AndroidRelease.APK_MIME_TYPE, blossom, signer, dryRun = dryRun, sha256 = apk.sha256))
                             }
                         val media =
                             if (withListing) {
@@ -155,16 +168,27 @@ object ReleasesCommands {
             }
             if (releases.isEmpty()) return Output.error("bad_args", "no release files for $version in $dir")
 
-            val published = mutableMapOf<String, Map<String, List<String>>>()
+            val published = mutableMapOf<String, MutableMap<String, List<String>>>()
             if (!dryRun) {
                 for (release in releases) {
                     val relays = release.relays.mapNotNull { RelayUrlNormalizer.normalizeOrNull(it) }.toSet()
-                    published[release.appId] =
-                        release.events.associate { event ->
-                            val ack = ctx.publish(event, relays)
-                            RawEventSupport.publishGuard(ack, event.id)?.let { return it }
-                            event.id to ack.filterValues { it.accepted }.keys.map { it.url }
-                        }
+                    val acks = published.getOrPut(release.appId) { mutableMapOf() }
+                    for (event in release.events) {
+                        val ack = ctx.publish(event, relays)
+                        // A failure after other apps' events went out says which did, and which did not.
+                        RawEventSupport
+                            .publishGuard(
+                                ack,
+                                event.id,
+                                extra =
+                                    mapOf(
+                                        "app_id" to release.appId,
+                                        "published" to published.filterValues { it.isNotEmpty() },
+                                        "not_published" to releases.filter { it.appId !in published.keys || it.appId == release.appId }.map { it.appId },
+                                    ),
+                            )?.let { return it }
+                        acks[event.id] = ack.filterValues { it.accepted }.keys.map { it.url }
+                    }
                 }
             }
 

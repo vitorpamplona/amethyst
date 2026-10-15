@@ -29,11 +29,16 @@ class GitHubReleaseSourceTest {
     private fun release(
         tag: String,
         prerelease: Boolean = false,
-    ) = """{"tag_name":"$tag","prerelease":$prerelease,"draft":false,"html_url":"https://github.com/vitorpamplona/amethyst/releases/tag/$tag","published_at":"2026-10-01T12:00:00Z"}"""
+        files: List<String> = listOf("macos-arm64.dmg", "linux-x64.deb", "x86_64.AppImage"),
+    ): String {
+        val v = tag.removePrefix("v")
+        val assets = files.joinToString(",") { """{"name":"amethyst-desktop-$v-$it"}""" }
+        return """{"tag_name":"$tag","prerelease":$prerelease,"draft":false,"html_url":"https://github.com/vitorpamplona/amethyst/releases/tag/$tag","published_at":"2026-10-01T12:00:00Z","assets":[$assets]}"""
+    }
 
     @Test
     fun aNewerReleaseIsOfferedWithoutAFile() {
-        val update = GitHubReleaseSource.parse(release("v1.21.0"), "1.20.0")!!
+        val update = GitHubReleaseSource.parse(release("v1.21.0"), "1.20.0", "linux-x86_64")!!
         assertEquals("1.21.0", update.version)
         assertFalse(update.canInstall, "nothing is installed from GitHub's word alone")
         assertEquals("https://github.com/vitorpamplona/amethyst/releases/tag/v1.21.0", update.pageUrl)
@@ -42,8 +47,15 @@ class GitHubReleaseSourceTest {
 
     @Test
     fun ignoresOlderAndPrereleases() {
-        assertNull(GitHubReleaseSource.parse(release("v1.20.0"), "1.20.0"))
-        assertNull(GitHubReleaseSource.parse(release("v1.19.0"), "1.20.0"))
-        assertNull(GitHubReleaseSource.parse(release("v1.21.0-rc1", prerelease = true), "1.20.0"))
+        assertNull(GitHubReleaseSource.parse(release("v1.20.0"), "1.20.0", "linux-x86_64"))
+        assertNull(GitHubReleaseSource.parse(release("v1.19.0"), "1.20.0", "linux-x86_64"))
+        assertNull(GitHubReleaseSource.parse(release("v1.21.0-rc1", prerelease = true), "1.20.0", "linux-x86_64"))
+    }
+
+    /** No build for this machine (an Intel Mac; the release has only the arm64 DMG): nothing to offer. */
+    @Test
+    fun ignoresAReleaseWithNoBuildForThePlatform() {
+        assertNull(GitHubReleaseSource.parse(release("v1.21.0"), "1.20.0", "darwin-x86_64"))
+        assertEquals("1.21.0", GitHubReleaseSource.parse(release("v1.21.0"), "1.20.0", "darwin-arm64")?.version)
     }
 }

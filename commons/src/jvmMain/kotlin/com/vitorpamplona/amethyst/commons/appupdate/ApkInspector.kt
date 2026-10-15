@@ -22,11 +22,13 @@ package com.vitorpamplona.amethyst.commons.appupdate
 
 import com.android.apksig.ApkVerifier
 import com.android.apksig.apk.ApkUtils
-import com.android.apksig.internal.apk.AndroidBinXmlParser
 import com.android.apksig.util.DataSources
+import com.vitorpamplona.quartz.nip01Core.core.toHexKey
+import com.vitorpamplona.quartz.utils.sha256.Sha256Hasher
 import java.io.File
 import java.io.RandomAccessFile
 import java.nio.ByteBuffer
+import java.nio.ByteOrder
 import java.security.MessageDigest
 import java.util.zip.ZipFile
 
@@ -64,26 +66,88 @@ object ApkInspector {
             minSdk = ApkUtils.getMinSdkVersionFromBinaryAndroidManifest(manifest.duplicate()),
             targetSdk = ApkUtils.getTargetSdkVersionFromBinaryAndroidManifest(manifest.duplicate()),
             nativeAbis = nativeAbis(apk),
-            certificateSha256 = MessageDigest.getInstance("SHA-256").digest(certificate.encoded).toHex(),
+            certificateSha256 = MessageDigest.getInstance("SHA-256").digest(certificate.encoded).toHexKey(),
         )
     }
 
-    /** The `android:versionName` of the root `<manifest>` element, when it is a literal string. */
-    private fun versionName(manifest: ByteBuffer): String? {
-        val parser = AndroidBinXmlParser(manifest)
-        while (parser.next() != AndroidBinXmlParser.EVENT_END_DOCUMENT) {
-            if (parser.eventType == AndroidBinXmlParser.EVENT_START_ELEMENT && parser.depth == 1 && parser.name == "manifest") {
-                for (i in 0 until parser.attributeCount) {
-                    if (parser.getAttributeNameResourceId(i) == ATTR_VERSION_NAME &&
-                        parser.getAttributeValueType(i) == AndroidBinXmlParser.VALUE_TYPE_STRING
-                    ) {
-                        return parser.getAttributeStringValue(i)
-                    }
+    /**
+     * The `android:versionName` of the root `<manifest>` element, when it is a literal string. Read
+     * from the binary XML here: apksig's public API has no reader for it, only an internal class.
+     * The format is a run of chunks (`u16 type, u16 headerSize, u32 size`, little-endian): a string
+     * pool, the attribute resource-id map, then one chunk per element start and end.
+     */
+    internal fun versionName(manifest: ByteBuffer): String? =
+        try {
+            BinaryXml(manifest.duplicate().order(ByteOrder.LITTLE_ENDIAN)).rootAttributeString(ATTR_VERSION_NAME)
+        } catch (e: IndexOutOfBoundsException) {
+            null
+        }
+
+    private class BinaryXml(
+        private val buf: ByteBuffer,
+    ) {
+        private val base = buf.position()
+        private var poolAt = -1
+        private var resourceIds = IntArray(0)
+
+        private fun u16(at: Int) = buf.getShort(at).toInt() and 0xffff
+
+        private fun u8(at: Int) = buf.get(at).toInt() and 0xff
+
+        fun rootAttributeString(resourceId: Int): String? {
+            if (u16(base) != XML_TYPE) return null
+            val end = base + buf.getInt(base + 4)
+            var at = base + u16(base + 2)
+            while (at + 8 <= end) {
+                val headerSize = u16(at + 2)
+                val size = buf.getInt(at + 4)
+                if (size < 8 || at + size > end) return null
+                when (u16(at)) {
+                    STRING_POOL_TYPE -> poolAt = at
+                    RESOURCE_MAP_TYPE -> resourceIds = IntArray((size - headerSize) / 4) { buf.getInt(at + headerSize + it * 4) }
+                    // The first element is the root: <manifest>.
+                    START_ELEMENT_TYPE -> return manifestAttribute(at + headerSize, resourceId)
                 }
-                return null
+                at += size
+            }
+            return null
+        }
+
+        // Element: u32 ns, u32 name, u16 attributeStart, u16 attributeSize, u16 attributeCount, ...
+        // Attribute: u32 ns, u32 name, u32 rawValue, u16 size, u8 res0, u8 dataType, u32 data.
+        private fun manifestAttribute(
+            element: Int,
+            resourceId: Int,
+        ): String? {
+            if (string(buf.getInt(element + 4)) != "manifest") return null
+            val start = u16(element + 8)
+            val size = u16(element + 10)
+            for (i in 0 until u16(element + 12)) {
+                val attribute = element + start + i * size
+                if (resourceIds.getOrNull(buf.getInt(attribute + 4)) != resourceId) continue
+                return if (u8(attribute + 15) == TYPE_STRING) string(buf.getInt(attribute + 16)) else null
+            }
+            return null
+        }
+
+        // Pool: header (u32 count, u32 styles, u32 flags, u32 stringsStart, u32 stylesStart), then
+        // u32 offsets from stringsStart. UTF-8: char and byte lengths (1 or 2 bytes each), bytes.
+        // UTF-16: length (1 or 2 u16s), chars.
+        private fun string(index: Int): String? {
+            if (poolAt < 0 || index < 0 || index >= buf.getInt(poolAt + 8)) return null
+            val utf8 = buf.getInt(poolAt + 16) and UTF8_FLAG != 0
+            var at = poolAt + buf.getInt(poolAt + 20) + buf.getInt(poolAt + u16(poolAt + 2) + index * 4)
+            return if (utf8) {
+                at += if (u8(at) and 0x80 != 0) 2 else 1
+                val length = if (u8(at) and 0x80 != 0) ((u8(at) and 0x7f) shl 8) or u8(at + 1) else u8(at)
+                at += if (u8(at) and 0x80 != 0) 2 else 1
+                String(ByteArray(length) { buf.get(at + it) }, Charsets.UTF_8)
+            } else {
+                val length = if (u16(at) and 0x8000 != 0) ((u16(at) and 0x7fff) shl 16) or u16(at + 2) else u16(at)
+                at += if (u16(at) and 0x8000 != 0) 4 else 2
+                String(CharArray(length) { buf.getShort(at + it * 2).toInt().toChar() })
             }
         }
-        return null
     }
 
     /** The ABI folders under `lib/`, sorted. */
@@ -99,18 +163,12 @@ object ApkInspector {
                 .toList()
         }
 
-    fun sha256(file: File): String {
-        val digest = MessageDigest.getInstance("SHA-256")
-        file.inputStream().use { input ->
-            val buffer = ByteArray(1 shl 16)
-            while (true) {
-                val n = input.read(buffer)
-                if (n < 0) break
-                digest.update(buffer, 0, n)
-            }
-        }
-        return digest.digest().toHex()
-    }
+    fun sha256(file: File): String = file.inputStream().use { Sha256Hasher().hashStream(it, 1 shl 16) }.toHexKey()
 
-    private fun ByteArray.toHex() = joinToString("") { "%02x".format(it) }
+    private const val XML_TYPE = 0x0003
+    private const val STRING_POOL_TYPE = 0x0001
+    private const val RESOURCE_MAP_TYPE = 0x0180
+    private const val START_ELEMENT_TYPE = 0x0102
+    private const val TYPE_STRING = 0x03
+    private const val UTF8_FLAG = 0x100
 }

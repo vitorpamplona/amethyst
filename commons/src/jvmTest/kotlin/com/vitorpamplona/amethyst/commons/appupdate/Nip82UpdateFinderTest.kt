@@ -56,7 +56,7 @@ class Nip82UpdateFinderTest {
         signer: NostrSignerSync = publisher,
         channel: String = ReleaseChannel.MAIN,
     ): ReleaseArtifactSetEvent {
-        val template = DesktopReleaseEvents.release(signer.pubKey, version, "notes $version", assets, null)
+        val template = Nip82ReleaseEvents.release(DesktopRelease.APP_ID, signer.pubKey, version, "notes $version", assets, null)
         return if (channel == ReleaseChannel.MAIN) {
             signer.sign(template)
         } else {
@@ -138,7 +138,7 @@ class Nip82UpdateFinderTest {
     @Test
     fun aPrereleasePublishedByAmyIsNotOffered() {
         val a = asset("2.0.0-rc1", "amethyst-desktop-2.0.0-rc1-x86_64.AppImage")
-        assertEquals(ReleaseChannel.BETA, DesktopReleaseEvents.channelFor("2.0.0-rc1"))
+        assertEquals(ReleaseChannel.BETA, Nip82ReleaseEvents.channelFor("2.0.0-rc1"))
         assertNull(find("1.0.0", linuxAppImage, release("2.0.0-rc1", listOf(a)), a))
     }
 

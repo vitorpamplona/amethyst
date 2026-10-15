@@ -26,8 +26,10 @@ import com.vitorpamplona.amethyst.commons.appupdate.AppUpdateSettings
 import com.vitorpamplona.amethyst.commons.appupdate.AppUpdateSettingsPersistence
 import com.vitorpamplona.amethyst.commons.appupdate.AppUpdateState
 import com.vitorpamplona.amethyst.commons.appupdate.DesktopAssetNames
+import com.vitorpamplona.amethyst.commons.appupdate.DesktopRelease
 import com.vitorpamplona.amethyst.commons.appupdate.DesktopReleaseEvents
 import com.vitorpamplona.amethyst.commons.appupdate.HashedDesktopAsset
+import com.vitorpamplona.amethyst.commons.appupdate.Nip82ReleaseEvents
 import com.vitorpamplona.amethyst.commons.appupdate.Nip82UpdateFinder
 import com.vitorpamplona.amethyst.commons.appupdate.Nip82UpdateSource
 import com.vitorpamplona.amethyst.desktop.testrelay.LaunchFixtureRelay
@@ -88,7 +90,7 @@ class UpdateEndToEndTest {
                             version,
                         ),
                     )
-                val release = publisher.sign(DesktopReleaseEvents.release(publisher.pubKey, version, "notes", listOf(asset), null))
+                val release = publisher.sign(Nip82ReleaseEvents.release(DesktopRelease.APP_ID, publisher.pubKey, version, "notes", listOf(asset), null))
 
                 // The release names an https URL, as the finder requires; the test client sends it to the local server.
                 val client =

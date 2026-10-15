@@ -78,8 +78,15 @@ class InstallChannelTest {
     fun translocatedMacAppAsksToBeMoved() {
         val channel = InstallChannel.detect(probe("Mac OS X", "/private/var/folders/x/AppTranslocation/ABC/d/Amethyst.app/Contents/MacOS/Amethyst"))
         assertEquals(UpdateMethod.MoveToApplications, channel.method)
-        val fromDmg = InstallChannel.detect(probe("Mac OS X", "/Volumes/Amethyst/Amethyst.app/Contents/MacOS/Amethyst"))
+        val fromDmg = InstallChannel.detect(probe("Mac OS X", "/Volumes/Amethyst/Amethyst.app/Contents/MacOS/Amethyst", writable = false))
         assertEquals(UpdateMethod.MoveToApplications, fromDmg.method)
+    }
+
+    /** /Volumes is also where other drives mount: an app kept on a writable one updates in place. */
+    @Test
+    fun macAppOnAnotherDriveUpdatesInPlace() {
+        val channel = InstallChannel.detect(probe("Mac OS X", "/Volumes/External/Applications/Amethyst.app/Contents/MacOS/Amethyst"))
+        assertEquals(UpdateMethod.SelfInstall, channel.method)
     }
 
     @Test
@@ -114,10 +121,31 @@ class InstallChannelTest {
 
     @Test
     fun linuxAppImage() {
-        val channel = InstallChannel.detect(probe("Linux", "/tmp/.mount_Amethyx/usr/bin/Amethyst", env = mapOf("APPIMAGE" to "/home/me/Apps/amethyst.AppImage")))
+        val channel =
+            InstallChannel.detect(
+                probe("Linux", "/tmp/.mount_Amethyx/usr/bin/Amethyst", env = mapOf("APPIMAGE" to "/home/me/Apps/amethyst.AppImage", "APPDIR" to "/tmp/.mount_Amethyx")),
+            )
         val appImage = assertIs<InstallChannel.AppImage>(channel)
         assertEquals(File("/home/me/Apps/amethyst.AppImage"), appImage.file)
         assertEquals(listOf(DesktopPackage.APPIMAGE), channel.target?.packages)
+    }
+
+    /**
+     * Started from a terminal or IDE that is itself an AppImage, the app inherits that one's APPIMAGE
+     * and APPDIR. It is not that file, and must never replace it.
+     */
+    @Test
+    fun anInheritedAppImageIsNotThisApp() {
+        val channel =
+            InstallChannel.detect(
+                probe(
+                    "Linux",
+                    "/home/me/Apps/Amethyst/bin/Amethyst",
+                    env = mapOf("APPIMAGE" to "/home/me/Apps/VSCode.AppImage", "APPDIR" to "/tmp/.mount_VSCodeX"),
+                ),
+            )
+        val portable = assertIs<InstallChannel.PortableFolder>(channel)
+        assertEquals(DesktopPackage.LINUX_TARBALL, portable.packageType)
     }
 
     @Test

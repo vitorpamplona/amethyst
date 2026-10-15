@@ -27,11 +27,11 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.compositionLocalOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
-import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -70,7 +70,7 @@ import com.vitorpamplona.amethyst.commons.ui.stringRes
 import org.jetbrains.compose.resources.StringResource
 
 /** The platform's updater, where the app updates itself (the desktop); null otherwise. */
-val LocalAppUpdates = staticCompositionLocalOf<AppUpdateController?> { null }
+val LocalAppUpdates = compositionLocalOf<AppUpdateController?> { null }
 
 /**
  * Provides [controller] to the app and tells the user about a new version: once per version and
@@ -82,13 +82,10 @@ fun AppUpdateHost(
     controller: AppUpdateController?,
     content: @Composable () -> Unit,
 ) {
-    if (controller == null) {
-        content()
-        return
-    }
+    // Always the same tree, so the app's UI is not rebuilt when the controller arrives after startup.
     CompositionLocalProvider(LocalAppUpdates provides controller) {
         content()
-        AppUpdatePrompt(controller)
+        if (controller != null) AppUpdatePrompt(controller)
     }
 }
 

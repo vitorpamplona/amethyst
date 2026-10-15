@@ -28,9 +28,14 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
+import kotlinx.coroutines.withTimeoutOrNull
+import kotlin.concurrent.Volatile
 import kotlin.coroutines.cancellation.CancellationException
 
 /**
@@ -42,7 +47,8 @@ import kotlin.coroutines.cancellation.CancellationException
  * update with an asset (which only a trusted source gives) is ever installed.
  *
  * Checks run once [startupDelaySec] after [start] and then every [checkIntervalSec], while
- * [AppUpdateController.autoCheck] is on. [checkNow] runs one regardless.
+ * [AppUpdateController.autoCheck] is on; a check that reached no source is retried after
+ * [retryDelaySec] instead. [checkNow] runs one regardless.
  */
 class AppUpdateManager(
     override val currentVersion: String,
@@ -55,6 +61,7 @@ class AppUpdateManager(
     private val now: () -> Long = TimeUtils::now,
     private val startupDelaySec: Long = 60,
     private val checkIntervalSec: Long = 12 * 60 * 60,
+    private val retryDelaySec: Long = 30 * 60,
 ) : AppUpdateController {
     private val _state = MutableStateFlow<AppUpdateState>(AppUpdateState.Idle)
     override val state: StateFlow<AppUpdateState> = _state
@@ -65,32 +72,62 @@ class AppUpdateManager(
     private val _skippedVersion = MutableStateFlow<String?>(null)
     override val skippedVersion: StateFlow<String?> = _skippedVersion
 
-    private var lastCheckAt = 0L
+    /** When a check last reached a source; persisted. */
+    @Volatile private var lastCheckAt = 0L
+
+    /** When the periodic loop checks next: after a success, or sooner after a failure. */
+    private val nextCheckAt = MutableStateFlow(0L)
+
     private val checking = Mutex()
+    private val saving = Mutex()
     private var installJob: Job? = null
 
-    /** Loads the settings and starts the periodic check. */
-    fun start(): Job =
-        scope.launch {
-            val settings = persistence.load()
-            _autoCheck.value = settings.autoCheck
-            _skippedVersion.value = settings.skippedVersion
-            lastCheckAt = settings.lastCheckAt
+    // Settings the user changed before the stored ones finished loading: the load keeps them.
+    @Volatile private var loadJob: Job? = null
 
+    @Volatile private var autoCheckChanged = false
+
+    @Volatile private var skippedVersionChanged = false
+
+    /** Whether an update found here can be installed here; when not, any source's answer will do. */
+    private val canInstallHere get() = installer != null && method.canInstall && target.packages.isNotEmpty()
+
+    /** Loads the settings and starts the periodic check. */
+    fun start(): Job {
+        val load =
+            scope.launch {
+                val settings = persistence.load()
+                if (!autoCheckChanged) _autoCheck.value = settings.autoCheck
+                if (!skippedVersionChanged) _skippedVersion.value = settings.skippedVersion
+                lastCheckAt = maxOf(lastCheckAt, settings.lastCheckAt)
+                nextCheckAt.value = maxOf(nextCheckAt.value, lastCheckAt + checkIntervalSec)
+            }
+        loadJob = load
+        return scope.launch {
+            load.join()
             delay(startupDelaySec * 1000)
             while (isActive) {
-                val due = lastCheckAt + checkIntervalSec
-                if (_autoCheck.value && now() >= due) check()
-                delay((due - now()).coerceIn(60, checkIntervalSec) * 1000)
+                // Sleeps while checks are off, until they are turned back on.
+                _autoCheck.first { it }
+                if (now() >= nextCheckAt.value) check()
+                // Then until the next check is due, or until a check (checkNow) reschedules it or
+                // checks are turned off, whichever comes first.
+                val due = nextCheckAt.value
+                withTimeoutOrNull((due - now()).coerceIn(60, checkIntervalSec) * 1000) {
+                    combine(nextCheckAt, _autoCheck) { next, on -> next != due || !on }.first { it }
+                }
             }
         }
+    }
 
     override fun setAutoCheck(enabled: Boolean) {
+        autoCheckChanged = true
         _autoCheck.value = enabled
         persist()
     }
 
     override fun skip(version: String) {
+        skippedVersionChanged = true
         _skippedVersion.value = version
         persist()
     }
@@ -103,18 +140,32 @@ class AppUpdateManager(
     suspend fun check() {
         if (!checking.tryLock()) return
         try {
-            val current = _state.value
-            if (current is AppUpdateState.Downloading || current is AppUpdateState.ReadyToRestart) return
+            while (true) {
+                val current = _state.value
+                if (current is AppUpdateState.Downloading || current is AppUpdateState.ReadyToRestart) {
+                    // Nothing to look for until the user restarts into it, or it fails.
+                    nextCheckAt.value = now() + checkIntervalSec
+                    return
+                }
+                if (_state.compareAndSet(current, AppUpdateState.Checking)) break
+            }
 
-            _state.value = AppUpdateState.Checking
-            _state.value =
+            val result =
                 when (val outcome = findUpdate()) {
                     is Outcome.Found -> AppUpdateState.Available(outcome.update)
                     Outcome.None -> AppUpdateState.UpToDate(now())
                     Outcome.Unreachable -> AppUpdateState.Failed(UpdateFailure.CHECK_FAILED, null)
                 }
-            lastCheckAt = now()
-            persist()
+            // An install the user started meanwhile owns the state now.
+            _state.compareAndSet(AppUpdateState.Checking, result)
+
+            if (result is AppUpdateState.Failed) {
+                nextCheckAt.value = now() + retryDelaySec
+            } else {
+                lastCheckAt = now()
+                nextCheckAt.value = lastCheckAt + checkIntervalSec
+                persist()
+            }
         } finally {
             checking.unlock()
         }
@@ -134,7 +185,9 @@ class AppUpdateManager(
         var best: AvailableUpdate? = null
         var reached = false
         for (source in sources) {
-            if (best?.canInstall == true) break
+            // A later source is only a fallback: stop once the answer is as good as this install
+            // can use (one that only tells about the update needs no installable file).
+            if (best != null && (best.canInstall || !canInstallHere)) break
             val found =
                 try {
                     source.findUpdate(currentVersion, target).also { reached = true }
@@ -193,11 +246,15 @@ class AppUpdateManager(
         }
     }
 
+    /**
+     * Saves the settings as they are when the save runs, one save at a time, so the last one always
+     * holds the newest values; and never before the stored ones are loaded, which it would erase.
+     */
     private fun persist() {
-        val settings = AppUpdateSettings(_autoCheck.value, _skippedVersion.value, lastCheckAt)
         scope.launch {
             try {
-                persistence.save(settings)
+                loadJob?.join()
+                saving.withLock { persistence.save(AppUpdateSettings(_autoCheck.value, _skippedVersion.value, lastCheckAt)) }
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {

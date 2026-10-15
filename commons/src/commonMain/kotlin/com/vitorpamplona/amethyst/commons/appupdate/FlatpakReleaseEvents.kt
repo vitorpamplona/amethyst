@@ -24,12 +24,7 @@ import com.vitorpamplona.quartz.experimental.nip82SoftwareApps.application.Softw
 import com.vitorpamplona.quartz.experimental.nip82SoftwareApps.asset.SoftwareAssetEvent
 import com.vitorpamplona.quartz.experimental.nip82SoftwareApps.asset.filename
 import com.vitorpamplona.quartz.experimental.nip82SoftwareApps.asset.platform
-import com.vitorpamplona.quartz.nip01Core.core.HexKey
-import com.vitorpamplona.quartz.nip01Core.hints.EventHintBundle
-import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
-import com.vitorpamplona.quartz.nip01Core.tags.aTag.ATag
-import com.vitorpamplona.quartz.nip51Lists.releaseArtifactSet.ReleaseArtifactSetEvent
 import com.vitorpamplona.quartz.utils.TimeUtils
 
 /**
@@ -38,7 +33,8 @@ import com.vitorpamplona.quartz.utils.TimeUtils
  *
  * - per bundle, an asset with the GitHub URL, its sha256 as `x`, `m` = [FlatpakRelease.MIME_TYPE]
  *   and the arch as `f` (Orchard picks the asset whose `f` is the machine's);
- * - one release `<id>@<version>` naming both, on `main` (Orchard reads `main` as its `stable`);
+ * - one release `<id>@<version>` naming both ([Nip82ReleaseEvents.release]), on `main` (Orchard
+ *   reads `main` as its `stable`);
  * - the listing, whose `h` tag is the homepage in Orchard's reading (Zapstore reads `h` as its
  *   community, which is why the two listings can never share an app id).
  */
@@ -59,22 +55,6 @@ object FlatpakReleaseEvents {
         platform(bundle.platform)
         filename(bundle.filename)
     }
-
-    fun release(
-        publisher: HexKey,
-        version: String,
-        releaseNotes: String,
-        signedAssets: List<SoftwareAssetEvent>,
-        relayHint: NormalizedRelayUrl?,
-        createdAt: Long = TimeUtils.now(),
-    ) = ReleaseArtifactSetEvent.buildSoftwareRelease(
-        app = ATag(SoftwareApplicationEvent.KIND, publisher, FlatpakRelease.APP_ID, relayHint),
-        version = version,
-        channel = DesktopReleaseEvents.channelFor(version),
-        assets = signedAssets.map { EventHintBundle(it, relayHint) },
-        releaseNotes = releaseNotes,
-        createdAt = createdAt,
-    )
 
     /** Tag for tag the listing orchard-publish signed, so a republish changes nothing Orchard shows. */
     fun listing(createdAt: Long = TimeUtils.now()) =

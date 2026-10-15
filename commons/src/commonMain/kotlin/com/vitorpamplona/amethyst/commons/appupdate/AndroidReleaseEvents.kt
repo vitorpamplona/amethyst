@@ -37,12 +37,7 @@ import com.vitorpamplona.quartz.experimental.nip82SoftwareApps.asset.targetPlatf
 import com.vitorpamplona.quartz.experimental.nip82SoftwareApps.asset.variant
 import com.vitorpamplona.quartz.experimental.nip82SoftwareApps.asset.versionCode
 import com.vitorpamplona.quartz.experimental.nip82SoftwareApps.shared.PlatformTag
-import com.vitorpamplona.quartz.nip01Core.core.HexKey
-import com.vitorpamplona.quartz.nip01Core.hints.EventHintBundle
-import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
-import com.vitorpamplona.quartz.nip01Core.tags.aTag.ATag
 import com.vitorpamplona.quartz.nip01Core.tags.hashtags.HashtagTag
-import com.vitorpamplona.quartz.nip51Lists.releaseArtifactSet.ReleaseArtifactSetEvent
 import com.vitorpamplona.quartz.nip94FileMetadata.tags.UrlTag
 import com.vitorpamplona.quartz.utils.TimeUtils
 
@@ -85,22 +80,6 @@ object AndroidReleaseEvents {
         versionCode(apk.info.versionCode)
         apkCertificateHash(apk.info.certificateSha256)
     }
-
-    fun release(
-        publisher: HexKey,
-        version: String,
-        releaseNotes: String,
-        signedAssets: List<SoftwareAssetEvent>,
-        relayHint: NormalizedRelayUrl?,
-        createdAt: Long = TimeUtils.now(),
-    ) = ReleaseArtifactSetEvent.buildSoftwareRelease(
-        app = ATag(SoftwareApplicationEvent.KIND, publisher, AndroidRelease.APP_ID, relayHint),
-        version = version,
-        channel = DesktopReleaseEvents.channelFor(version),
-        assets = signedAssets.map { EventHintBundle(it, relayHint) },
-        releaseNotes = releaseNotes,
-        createdAt = createdAt,
-    )
 
     /**
      * The listing, from [config] and the hosted [iconUrl] and [imageUrls] (zsp uploads both to

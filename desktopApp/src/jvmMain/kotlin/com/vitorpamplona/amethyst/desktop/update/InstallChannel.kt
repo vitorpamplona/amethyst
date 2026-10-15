@@ -150,12 +150,15 @@ sealed interface InstallChannel {
                     // <bundle>/Contents/MacOS/Amethyst
                     val bundle = launcher.parentFile?.parentFile?.parentFile ?: return Development
                     val path = bundle.path
+                    val parentWritable = bundle.parentFile?.let(probe.canWrite) == true
                     MacApp(
                         bundle = bundle,
                         platform = if (is64BitArm) Platform.DARWIN_ARM64 else Platform.DARWIN_X86_64,
                         homebrew = HOMEBREW_PREFIXES.any { probe.exists("$it/Caskroom/$HOMEBREW_CASK") },
-                        translocated = path.contains("/AppTranslocation/") || path.startsWith("/Volumes/"),
-                        parentWritable = bundle.parentFile?.let(probe.canWrite) == true,
+                        // Run from the quarantined copy, or straight off the mounted DMG (read-only).
+                        // A writable /Volumes/… is an app on another drive, which updates in place.
+                        translocated = path.contains("/AppTranslocation/") || (path.startsWith("/Volumes/") && !parentWritable),
+                        parentWritable = parentWritable,
                     )
                 }
 
@@ -175,7 +178,14 @@ sealed interface InstallChannel {
                 else -> {
                     val platform = if (is64BitArm) Platform.LINUX_AARCH64 else Platform.LINUX_X86_64
                     val flatpakId = probe.env["FLATPAK_ID"]?.takeIf(String::isNotBlank)
-                    val appImage = probe.env["APPIMAGE"]?.takeIf(String::isNotBlank)?.let(::File)
+                    // The AppImage runtime sets APPIMAGE (the file) and APPDIR (its mount), and every
+                    // process started from it inherits both: only a launcher inside APPDIR is that
+                    // AppImage's, or a tarball started from another AppImage's terminal would replace it.
+                    val appImage =
+                        probe.env["APPIMAGE"]
+                            ?.takeIf(String::isNotBlank)
+                            ?.takeIf { probe.env["APPDIR"]?.takeIf(String::isNotBlank)?.let { mount -> launcher.isInside(File(mount)) } == true }
+                            ?.let(::File)
                     when {
                         flatpakId != null || probe.exists("/.flatpak-info") ->
                             Flatpak(flatpakId ?: "com.vitorpamplona.amethyst.Amethyst", platform)
@@ -195,6 +205,8 @@ sealed interface InstallChannel {
         }
 
         private val HOMEBREW_PREFIXES = listOf("/opt/homebrew", "/usr/local")
+
+        private fun File.isInside(dir: File) = toPath().normalize().startsWith(dir.toPath().normalize())
 
         /** Asks dpkg, then rpm, whether a package owns [file]. */
         private fun queryPackageDatabases(file: File): DesktopPackage? {

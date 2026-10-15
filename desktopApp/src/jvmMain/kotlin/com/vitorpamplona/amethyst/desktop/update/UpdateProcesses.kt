@@ -47,18 +47,30 @@ internal fun runQuietly(
         false
     }
 
-/** Runs [command] and returns its exit code and its output (stdout and stderr together). */
+/**
+ * Runs [command] and returns its exit code and its output (stdout and stderr together), or -1 when
+ * it is still running after [timeoutSec] (then it is killed). The output goes to a file, not a pipe:
+ * reading a pipe to its end would wait for the command however long it hangs.
+ */
 internal fun runCapturing(
     vararg command: String,
     timeoutSec: Long = 120,
 ): Pair<Int, String> {
-    val process = ProcessBuilder(*command).redirectErrorStream(true).start()
-    val output = process.inputStream.bufferedReader().readText()
-    if (!process.waitFor(timeoutSec, TimeUnit.SECONDS)) {
-        process.destroyForcibly()
-        return -1 to output
+    val log = File.createTempFile("amethyst-update-cmd", ".log")
+    try {
+        val process =
+            ProcessBuilder(*command)
+                .redirectErrorStream(true)
+                .redirectOutput(log)
+                .start()
+        if (!process.waitFor(timeoutSec, TimeUnit.SECONDS)) {
+            process.destroyForcibly()
+            return -1 to "${command.first()} did not finish in ${timeoutSec}s\n" + log.readText()
+        }
+        return process.exitValue() to log.readText()
+    } finally {
+        log.delete()
     }
-    return process.exitValue() to output
 }
 
 /** Whether [name] is a command on the PATH. */

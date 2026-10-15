@@ -124,7 +124,8 @@ fun AmethystApp(
     KeyStorageHost(root.keyStorage) {
         PrivacyLockHost(root.privacyLockSettings, root.blurWalletWhenUnfocused) {
             // Inside the privacy lock: a locked app shows nothing, an update prompt included.
-            AppUpdateHost(root.appUpdates) {
+            val appUpdates by root.appUpdates.collectAsStateWithLifecycle()
+            AppUpdateHost(appUpdates) {
                 Crossfade(
                     targetState = accountState,
                     animationSpec = tween(durationMillis = 100),

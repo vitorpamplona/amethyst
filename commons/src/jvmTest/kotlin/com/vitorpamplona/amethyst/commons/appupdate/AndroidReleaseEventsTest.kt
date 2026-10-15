@@ -89,7 +89,7 @@ class AndroidReleaseEventsTest {
     fun theReleaseNamesItsAssetsUnderThePackageName() {
         val file = AndroidRelease.classify("amethyst-googleplay-arm64-v8a-v1.19.0.apk", "1.19.0")!!
         val asset = signer.sign(AndroidReleaseEvents.asset(HashedApk(file, info, "a".repeat(64), 1, listOf("https://x")), "1.19.0", emptyList()))
-        val release = signer.sign(AndroidReleaseEvents.release(signer.pubKey, "1.19.0", "notes", listOf(asset), null))
+        val release = signer.sign(Nip82ReleaseEvents.release(AndroidRelease.APP_ID, signer.pubKey, "1.19.0", "notes", listOf(asset), null))
         assertEquals("com.vitorpamplona.amethyst@1.19.0", release.dTag())
         assertEquals("com.vitorpamplona.amethyst", release.appId())
         assertEquals("main", release.channel())

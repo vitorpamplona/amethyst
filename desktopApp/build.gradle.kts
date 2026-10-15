@@ -33,6 +33,12 @@ kotlin {
     jvmToolchain(21)
 }
 
+// apksig reads APKs for `amy releases publish` (commons' ApkInspector); the desktop app never
+// runs that, so it does not ship it. compose-rules.pro tells ProGuard not to look for it.
+configurations.configureEach {
+    exclude(group = "com.android.tools.build", module = "apksig")
+}
+
 dependencies {
     implementation(compose.desktop.currentOs)
     implementation(libs.jetbrains.compose.material3)

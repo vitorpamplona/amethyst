@@ -129,6 +129,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.launchIn
@@ -481,22 +482,17 @@ class DesktopAppModules(
             remoteSignerMetadata = REMOTE_SIGNER_METADATA,
         )
 
-    /** How this copy was installed, which decides how it updates. */
-    val installChannel: InstallChannel by lazy { InstallChannel.detect() }
+    private val _appUpdates = MutableStateFlow<AppUpdateManager?>(null)
 
-    /** The updater for this install; null for a development run. Started by [initiate]. */
-    val appUpdates: AppUpdateManager? by lazy {
-        DesktopAppUpdates.create(
-            appVersion = appVersion,
-            channel = installChannel,
-            client = client,
-            downloadClient = roleBasedHttpClientBuilder::okHttpClientForVideo,
-            apiClient = roleBasedHttpClientBuilder::okHttpClientForPreview,
-            settings = sharedSettingsStore,
-            updatesDir = File(filesDir, "updates"),
-            scope = applicationIOScope,
-        )
-    }
+    /**
+     * The updater for this install, once [initiate] has built it off the main thread (reading the
+     * install asks dpkg and rpm, and clears old update files); null until then, and for a
+     * development run.
+     */
+    val appUpdates: StateFlow<AppUpdateManager?> = _appUpdates
+
+    /** The updater's "quit so the new version can take over": the window collects it and exits as Quit does. */
+    val quitRequests = MutableSharedFlow<Unit>(extraBufferCapacity = 1)
 
     /** Key Backup, the key prompts and the keyring alert, for the shared UI. */
     val keyStorageController by lazy {
@@ -626,7 +622,22 @@ class DesktopAppModules(
 
         applicationIOScope.launch { openKeysAndLogIn() }
 
-        applicationIOScope.launch { appUpdates?.start() }
+        applicationIOScope.launch {
+            val updates =
+                DesktopAppUpdates.create(
+                    appVersion = appVersion,
+                    channel = InstallChannel.detect(),
+                    client = client,
+                    downloadClient = roleBasedHttpClientBuilder::okHttpClientForVideo,
+                    apiClient = roleBasedHttpClientBuilder::okHttpClientForPreview,
+                    settings = sharedSettingsStore,
+                    updatesDir = File(filesDir, "updates"),
+                    scope = applicationIOScope,
+                    quit = { quitRequests.tryEmit(Unit) },
+                )
+            _appUpdates.value = updates
+            updates?.start()
+        }
     }
 
     companion object {
