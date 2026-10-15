@@ -6910,7 +6910,6 @@
     <string name="privacy_lock_wallet_locked">A pénztárca zárolva van</string>
     <string name="privacy_lock_wallet_locked_description">Az egyenleg megtekintéséhez és satoshik küldéséhez vagy fogadásához oldja fel.</string>
     <string name="custom_emoji_picker_search">Emodzsi keresése</string>
-    <string name="custom_emoji_picker_empty">Még nincsenek egyéni emodzsik. Adjon emodzsicsomagokat az emodzsilistájához, hogy itt használhassa őket.</string>
     <string name="custom_emoji_picker_no_match">Egyetlen emodzsi sem egyezik azzal a névvel</string>
     <string name="custom_feeds_manage">Hírfolyamok kezelése</string>
     <string name="feed_group_custom">Saját hírfolyamok</string>

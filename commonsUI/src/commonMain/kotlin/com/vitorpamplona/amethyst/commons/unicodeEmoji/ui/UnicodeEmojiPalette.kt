@@ -49,7 +49,4 @@ object UnicodeEmojiPalette {
 
     /** The skin tone last picked in the palette, applied to every emoji that takes one. */
     var skinTone by mutableStateOf(SkinTone.NONE)
-
-    /** Whether the picker last showed the custom (NIP-30) tab rather than the Unicode one. */
-    var showCustomTab by mutableStateOf(false)
 }

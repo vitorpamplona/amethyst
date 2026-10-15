@@ -68,4 +68,11 @@ class UnicodeEmojiCatalogTest {
         assertEquals(emptyList(), catalog.search("   "))
         assertEquals(emptyList(), catalog.search("unicorn"))
     }
+
+    @Test
+    fun findsAnEntryByItsEmojiOrAToneVariant() {
+        assertEquals("waving hand", catalog.find("👋🏽")?.name)
+        assertEquals("dog", catalog.find("🐕")?.name)
+        assertNull(catalog.find("🦄"))
+    }
 }

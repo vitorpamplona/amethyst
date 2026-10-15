@@ -6959,7 +6959,6 @@
     <string name="privacy_lock_wallet_locked">Wallet ist gesperrt</string>
     <string name="privacy_lock_wallet_locked_description">Entsperre, um dein Guthaben zu sehen und Sats zu senden oder zu empfangen.</string>
     <string name="custom_emoji_picker_search">Emoji suchen</string>
-    <string name="custom_emoji_picker_empty">Noch keine benutzerdefinierten Emojis. Füge Emoji-Pakete zu deiner Emoji-Liste hinzu, um sie hier zu verwenden.</string>
     <string name="custom_emoji_picker_no_match">Kein Emoji passt zu diesem Namen</string>
     <string name="custom_feeds_manage">Deine Feeds verwalten</string>
     <string name="feed_group_custom">Deine Feeds</string>

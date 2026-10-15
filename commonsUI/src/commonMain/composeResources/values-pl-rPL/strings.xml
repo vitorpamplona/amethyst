@@ -7361,7 +7361,6 @@
     <string name="privacy_lock_wallet_locked">Portfel jest zablokowany</string>
     <string name="privacy_lock_wallet_locked_description">Odblokuj, aby zobaczyć swoje saldo i wysyłać lub odbierać satosze.</string>
     <string name="custom_emoji_picker_search">Szukaj emotikonów</string>
-    <string name="custom_emoji_picker_empty">Na razie nie ma żadnych niestandardowych emotikonów. Dodaj zestawy emotikonów do swojej listy, aby móc z nich korzystać w tym miejscu.</string>
     <string name="custom_emoji_picker_no_match">Nie ma emotikonów pasujących do tej nazwy</string>
     <string name="custom_feeds_manage">Zarządzaj swoimi kanałami</string>
     <string name="feed_group_custom">Twoje kanały</string>

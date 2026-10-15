@@ -61,6 +61,20 @@ class UnicodeEmojiGroup(
 class UnicodeEmojiCatalog(
     val groups: List<UnicodeEmojiGroup>,
 ) {
+    private val byEmoji: Map<String, UnicodeEmoji> by lazy {
+        val map = HashMap<String, UnicodeEmoji>()
+        groups.forEach { group ->
+            group.emojis.forEach { entry ->
+                map[entry.emoji] = entry
+                entry.skinTones?.forEach { map[it] = entry }
+            }
+        }
+        map
+    }
+
+    /** The entry for [emoji], or for the base emoji of one of its skin-tone variants. */
+    fun find(emoji: String): UnicodeEmoji? = byEmoji[emoji]
+
     /**
      * The emoji whose name holds every word of [query]: an exact name first, then names starting
      * with the query, then names with a word starting with it, then the rest; palette order within
