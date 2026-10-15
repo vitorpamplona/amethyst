@@ -348,4 +348,13 @@ class DListPresentationTest {
         assertNull(httpUrl("btcmap.org"))
         assertNull(httpUrl("https://"))
     }
+
+    /** Kotlin writes `-5.0E-4` for a small double: a map URL can't read it. */
+    @Test
+    fun coordinatesInLinksNeverUseScientificNotation() {
+        assertEquals("-0.000500", degreesText(-0.0005))
+        assertEquals("51.470000", degreesText(51.47))
+        assertEquals("0.000000", degreesText(0.0))
+        assertTrue(DListLocation("gcpuv", 51.47, -0.0005).osmUrl().endsWith("#map=13/51.470000/-0.000500"))
+    }
 }

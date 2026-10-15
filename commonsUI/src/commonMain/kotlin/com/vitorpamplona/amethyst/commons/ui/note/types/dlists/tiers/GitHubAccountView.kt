@@ -97,7 +97,10 @@ internal fun GitHubAccountView(
         if (profile != null) {
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 IconLink(profile.href, "${profile.label} · ${profile.host}", MaterialSymbols.Code, primary = true)
-                IconLink("${profile.href}?tab=repositories", stringRes(Res.string.dlist_github_repositories), MaterialSymbols.Folder)
+                // The repositories tab of that same profile; a template that already carries a query keeps its one button.
+                if ('?' !in profile.href && '#' !in profile.href) {
+                    IconLink("${profile.href}?tab=repositories", stringRes(Res.string.dlist_github_repositories), MaterialSymbols.Folder)
+                }
             }
         }
     }

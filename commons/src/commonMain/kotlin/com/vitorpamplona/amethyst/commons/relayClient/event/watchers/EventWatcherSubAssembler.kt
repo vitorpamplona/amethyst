@@ -81,7 +81,7 @@ class EventWatcherSubAssembler(
                     listOfNotNull(
                         filterRepliesAndReactionsToNotes(events, findMinimumEOSEs(events, latestEOSEs), soleAccountPubKey),
                         filterRepliesAndReactionsToAddresses(addressables, addressableEOSEs, soleAccountPubKey),
-                        filterNewVersionsOfAddresses(addressables, addressableEOSEs, soleAccountPubKey),
+                        filterNewVersionsOfAddresses(addressables, addressableEOSEs),
                     ).flatten()
                 } else {
                     emptyList()

@@ -26,9 +26,11 @@ import com.vitorpamplona.quartz.experimental.decentralizedLists.header.Addressab
 import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
 import com.vitorpamplona.quartz.nip23LongContent.LongFormContentEvent
+import com.vitorpamplona.quartz.nip85TrustedAssertions.list.TrustProviderListEvent
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNull
+import kotlin.test.assertTrue
 
 class FilterNewVersionsOfAddressesTest {
     private val relay = RelayUrlNormalizer.normalizeOrNull("wss://one.example")!!
@@ -45,16 +47,16 @@ class FilterNewVersionsOfAddressesTest {
     }
 
     @Test
-    fun asksForNewerVersionsOfWhatIsHeld() {
+    fun asksForNewerVersionsOfWhatIsHeldPerAuthor() {
         val filters = filterNewVersionsOfAddresses(listOf(header(alice, "github-accounts", 200), header(bob, "books", 100)), null)!!
 
-        val filter = filters.single()
-        assertEquals(relay, filter.relay)
-        assertEquals(listOf(AddressableListHeaderEvent.KIND), filter.filter.kinds)
-        assertEquals(listOf(alice, bob), filter.filter.authors)
-        assertEquals(mapOf("d" to listOf("books", "github-accounts")), filter.filter.tags)
-        // No answer yet from the relay: from the oldest version held, not from zero.
-        assertEquals(100L, filter.filter.since)
+        assertEquals(2, filters.size)
+        assertEquals(setOf(relay), filters.map { it.relay }.toSet())
+        assertEquals(listOf(listOf(alice), listOf(bob)), filters.map { it.filter.authors }.sortedBy { it!!.first() })
+        assertEquals(setOf(listOf("github-accounts"), listOf("books")), filters.map { it.filter.tags!!.getValue("d") }.toSet())
+        assertTrue(filters.all { it.filter.kinds == listOf(AddressableListHeaderEvent.KIND) })
+        // No answer yet from the relay: the version it holds, one per address.
+        assertTrue(filters.all { it.filter.since == null && it.filter.limit == 1 })
     }
 
     @Test
@@ -76,7 +78,41 @@ class FilterNewVersionsOfAddressesTest {
 
         val filters = filterNewVersionsOfAddresses(listOf(header(alice, "github-accounts", 200), article), null)!!
 
-        assertEquals(listOf(listOf(LongFormContentEvent.KIND), listOf(AddressableListHeaderEvent.KIND)), filters.map { it.filter.kinds })
+        assertEquals(setOf(listOf(LongFormContentEvent.KIND), listOf(AddressableListHeaderEvent.KIND)), filters.map { it.filter.kinds }.toSet())
+    }
+
+    /** A replaceable below 30000 has no `d`: asked by kind and author, never with an empty `#d`. */
+    @Test
+    fun plainReplaceablesAreAskedWithoutD() {
+        val list =
+            AddressableNote(Address(TrustProviderListEvent.KIND, alice, "")).apply {
+                addRelaySync(relay)
+                event = TrustProviderListEvent("e".repeat(64), alice, 300, emptyArray(), "", "f".repeat(128))
+            }
+
+        val filter = filterNewVersionsOfAddresses(listOf(list), null)!!.single().filter
+
+        assertEquals(listOf(TrustProviderListEvent.KIND), filter.kinds)
+        assertEquals(listOf(alice), filter.authors)
+        assertNull(filter.tags)
+    }
+
+    /** As many addresses as a long publication has sections: split where a relay would cap them. */
+    @Test
+    fun manyAddressesAreChunked() {
+        val sections = (1..240).map { header(alice, "section-$it", it.toLong()) }
+
+        val filters = filterNewVersionsOfAddresses(sections, null)!!
+
+        assertTrue(filters.size > 1)
+        assertEquals(
+            240,
+            filters.sumOf {
+                it.filter.tags!!
+                    .getValue("d")
+                    .size
+            },
+        )
     }
 
     /** An address with no version yet is the loader's to find. */

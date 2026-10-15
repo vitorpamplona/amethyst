@@ -32,6 +32,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
@@ -74,6 +75,8 @@ import com.vitorpamplona.amethyst.commons.ui.pluralStringRes
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.quartz.nip01Core.core.Event
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 
 private const val SHELF = 6
 private const val SUBJECTS_SHOWN = 4
@@ -171,9 +174,18 @@ private fun Shelves(
     val header by observeNoteEvent<Event>(listedNote, accountViewModel)
     val headerEvent = header ?: return
     val items = observeListItems(listedNote, headerEvent, accountViewModel)
-    val others = remember(items, event) { items.mapNotNull { note -> note.event?.takeIf { it.id != event.id }?.let { note to it.tags } } }
-    val byAuthor = remember(others, book) { booksByAuthor(book, others).take(SHELF) }
-    val similar = remember(others, book, byAuthor) { similarBooks(book, others).filter { it !in byAuthor }.take(SHELF) }
+    // Every book of the list read once per change, off the main thread, and the shelves from those.
+    val shelves by produceState(Pair(emptyList<Pair<Note, Book>>(), emptyList<Pair<Note, Book>>()), items, event, book) {
+        value =
+            withContext(Dispatchers.Default) {
+                val others = items.mapNotNull { note -> note.event?.takeIf { it.id != event.id }?.let { e -> bookOf(e.tags)?.let { note to it } } }
+                val byNote = others.toMap()
+                val byAuthor = booksByAuthor(book, others).take(SHELF)
+                val similar = similarBooks(book, others).filter { it !in byAuthor }.take(SHELF)
+                Pair(byAuthor.map { it to byNote.getValue(it) }, similar.map { it to byNote.getValue(it) })
+            }
+    }
+    val (byAuthor, similar) = shelves
 
     if (byAuthor.isNotEmpty() && book.author != null) Shelf(stringRes(Res.string.dlist_book_more_by, book.author), byAuthor, accountViewModel, nav)
     if (similar.isNotEmpty()) Shelf(stringRes(Res.string.dlist_book_similar), similar, accountViewModel, nav)
@@ -182,14 +194,13 @@ private fun Shelves(
 @Composable
 private fun Shelf(
     heading: String,
-    notes: List<Note>,
+    books: List<Pair<Note, Book>>,
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
     TrustSectionLabel(heading)
     Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-        notes.forEach { note ->
-            val other = remember(note) { note.event?.let { bookOf(it.tags) } } ?: return@forEach
+        books.forEach { (note, other) ->
             Column(
                 modifier =
                     Modifier

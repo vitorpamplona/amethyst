@@ -35,6 +35,8 @@ import com.vitorpamplona.quartz.experimental.decentralizedLists.isDeliberatelyUn
 import com.vitorpamplona.quartz.experimental.decentralizedLists.taggings.TagElementContent
 import com.vitorpamplona.quartz.nip01Core.core.TagArray
 import com.vitorpamplona.quartz.nip01Core.tags.geohash.GeoHash
+import kotlin.math.abs
+import kotlin.math.roundToLong
 
 /*
  * The three tiers an item is drawn in, after Brainstorm's ADR 0007:
@@ -112,9 +114,22 @@ data class DListLocation(
     /** OpenStreetMap at a zoom that frames the cell. */
     fun osmUrl(): String {
         val zoom = (geohash.length * 2 + 3).coerceIn(3, 18)
-        val pin = if (isSpot) "?mlat=$lat&mlon=$lon" else ""
-        return "https://www.openstreetmap.org/$pin#map=$zoom/$lat/$lon"
+        val la = degreesText(lat)
+        val lo = degreesText(lon)
+        val pin = if (isSpot) "?mlat=$la&mlon=$lo" else ""
+        return "https://www.openstreetmap.org/$pin#map=$zoom/$la/$lo"
     }
+}
+
+/**
+ * A coordinate as a map URL wants it: six decimals (about 10 cm), never the scientific notation
+ * Kotlin writes for small values (`-5.0E-4` near the equator or the prime meridian).
+ */
+fun degreesText(value: Double): String {
+    val micro = (value * 1_000_000).roundToLong()
+    val sign = if (micro < 0) "-" else ""
+    val whole = abs(micro)
+    return "$sign${whole / 1_000_000}.${(whole % 1_000_000).toString().padStart(6, '0')}"
 }
 
 /** How a picture is cut where the item is one among many: round, as a face or a logo, or a portrait, as a cover. */

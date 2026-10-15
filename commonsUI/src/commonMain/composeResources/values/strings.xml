@@ -7252,7 +7252,9 @@
     <string name="dlist_place_location">Location</string>
     <string name="dlist_place_hours">Hours</string>
     <string name="dlist_place_accepts_bitcoin">Accepts Bitcoin</string>
-    <string name="dlist_place_accepts_bitcoin_how">Accepts Bitcoin · %1$s</string>
+    <string name="dlist_place_accepts_bitcoin_lightning">Accepts Bitcoin · Lightning</string>
+    <string name="dlist_place_accepts_bitcoin_onchain">Accepts Bitcoin · On-chain</string>
+    <string name="dlist_place_accepts_bitcoin_both">Accepts Bitcoin · Lightning and on-chain</string>
     <string name="dlist_place_nearby">Nearby</string>
     <string name="dlist_place_listed_on">Listed on</string>
     <string name="dlist_place_seeded_btcmap">Seeded from BTC Map.</string>

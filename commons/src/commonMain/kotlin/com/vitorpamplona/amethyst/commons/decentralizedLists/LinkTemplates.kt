@@ -102,12 +102,13 @@ fun urlTemplateOf(
             ?.get(1)
             ?.trim()
             ?.ifEmpty { null } ?: return null
+    // A template with no name is labelled by where it goes.
     val name =
         tags
             .firstOrNull { it.size > 1 && it[0] == "name" }
             ?.get(1)
             ?.trim()
-            ?.ifEmpty { null } ?: "Link"
+            ?.ifEmpty { null } ?: httpsHost(template) ?: return null
     return UrlTemplate(id, name, template)
 }
 

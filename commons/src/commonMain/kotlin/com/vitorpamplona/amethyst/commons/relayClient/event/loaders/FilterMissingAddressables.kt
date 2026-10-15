@@ -123,13 +123,24 @@ fun filterMissingAddressables(
  * boxed `Int` per address. No de-duplication is needed either -- the input is a `Set<Address>` and
  * `Address` is a data class, so two entries in one group cannot share a `d`.
  */
-fun filterMissingAddressables(missingAddressables: Map<NormalizedRelayUrl, Set<Address>>): List<RelayBasedFilter> {
-    if (missingAddressables.isEmpty()) return emptyList()
+fun filterMissingAddressables(missingAddressables: Map<NormalizedRelayUrl, Set<Address>>): List<RelayBasedFilter> = filterAddressesPerRelay(missingAddressables)
+
+/**
+ * The filters that ask each relay for the latest version of its addresses, grouped as
+ * [filterMissingAddressables] documents. [since] narrows a relay's filters to versions newer than
+ * what it already answered (the new-versions watcher); null asks for whatever the relay holds.
+ */
+fun filterAddressesPerRelay(
+    addressesPerRelay: Map<NormalizedRelayUrl, Set<Address>>,
+    since: (NormalizedRelayUrl) -> Long? = { null },
+): List<RelayBasedFilter> {
+    if (addressesPerRelay.isEmpty()) return emptyList()
 
     val filters = mutableListOf<RelayBasedFilter>()
 
-    missingAddressables.forEach { (relay, addresses) ->
+    addressesPerRelay.forEach { (relay, addresses) ->
         if (addresses.isEmpty()) return@forEach
+        val relaySince = since(relay)
 
         // kind -> author -> the `d`s wanted from that author
         var byAuthor: MutableMap<Int, MutableMap<String, MutableList<String>>>? = null
@@ -166,6 +177,7 @@ fun filterMissingAddressables(missingAddressables: Map<NormalizedRelayUrl, Set<A
                                     tags = mapOf("d" to chunk),
                                     authors = authorList,
                                     limit = chunk.size,
+                                    since = relaySince,
                                 ),
                         ),
                     )
@@ -186,6 +198,7 @@ fun filterMissingAddressables(missingAddressables: Map<NormalizedRelayUrl, Set<A
                                 kinds = kinds,
                                 authors = chunk,
                                 limit = chunk.size,
+                                since = relaySince,
                             ),
                     ),
                 )

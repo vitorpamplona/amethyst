@@ -22,6 +22,7 @@ package com.vitorpamplona.amethyst.commons.decentralizedLists.tiers
 
 import androidx.compose.runtime.Immutable
 import com.vitorpamplona.amethyst.commons.decentralizedLists.DListHeaderView
+import com.vitorpamplona.amethyst.commons.decentralizedLists.degreesText
 import com.vitorpamplona.amethyst.commons.decentralizedLists.fieldHref
 import com.vitorpamplona.amethyst.commons.decentralizedLists.httpUrl
 import com.vitorpamplona.amethyst.commons.decentralizedLists.telHref
@@ -160,29 +161,30 @@ fun Place.kindWords(): String? = listOfNotNull(categoryWords(category), category
 
 /** Directions to the place by its coordinates. On Android the maps app takes the link over. */
 fun Place.directionsUrl(): String? {
-    val lat = lat ?: return null
-    val lon = lon ?: return null
+    val lat = degreesText(lat ?: return null)
+    val lon = degreesText(lon ?: return null)
     return "https://www.google.com/maps/dir/?api=1&destination=$lat%2C$lon"
 }
 
 /** OpenStreetMap, pinned at the place. */
 fun Place.mapUrl(): String? {
-    val lat = lat ?: return null
-    val lon = lon ?: return null
+    val lat = degreesText(lat ?: return null)
+    val lon = degreesText(lon ?: return null)
     return "https://www.openstreetmap.org/?mlat=$lat&mlon=$lon#map=18/$lat/$lon"
 }
 
-/** How it takes Bitcoin, as words; "" for yes with no detail, null for no or nothing said. */
-fun bitcoinWords(value: String?): String? {
-    val v = value?.trim()?.lowercase() ?: return null
-    return when (v) {
-        "lightning" -> "Lightning"
-        "onchain", "on-chain" -> "On-chain"
-        "both" -> "Lightning and on-chain"
-        "no", "" -> null
-        else -> ""
+/** How a place takes Bitcoin, from its `accepts-bitcoin` value. */
+enum class BitcoinPayment { LIGHTNING, ONCHAIN, BOTH, UNSPECIFIED }
+
+/** `lightning`, `onchain`, `both`, anything else that isn't `no` (yes, the method unknown); null for no or nothing. */
+fun bitcoinPaymentOf(value: String?): BitcoinPayment? =
+    when (value?.trim()?.lowercase()) {
+        null, "", "no" -> null
+        "lightning" -> BitcoinPayment.LIGHTNING
+        "onchain", "on-chain" -> BitcoinPayment.ONCHAIN
+        "both" -> BitcoinPayment.BOTH
+        else -> BitcoinPayment.UNSPECIFIED
     }
-}
 
 /**
  * The address as a reader expects it: the street, then the city, region and postcode. The list's
@@ -353,7 +355,9 @@ fun openingStatus(
 
 /**
  * The place's local day and minutes since midnight at [epochSeconds], estimated from its longitude,
- * 15 degrees an hour. Right everywhere but for an hour where daylight saving is in force.
+ * 15 degrees an hour, as Brainstorm does: there is no time-zone map here. It is an estimate: off by
+ * an hour where daylight saving is in force, and by more where a zone is far from its meridian
+ * (Spain, at UTC+1 on Greenwich's longitude; western China, on Beijing's clock).
  */
 fun placeLocalTime(
     lon: Double,

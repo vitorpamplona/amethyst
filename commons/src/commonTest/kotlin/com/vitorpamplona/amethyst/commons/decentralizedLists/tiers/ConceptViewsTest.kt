@@ -24,9 +24,9 @@ import com.vitorpamplona.amethyst.commons.decentralizedLists.DListImageShape
 import com.vitorpamplona.amethyst.commons.decentralizedLists.communityCoordinateOf
 import com.vitorpamplona.amethyst.commons.decentralizedLists.dListHeaderView
 import com.vitorpamplona.amethyst.commons.decentralizedLists.dListItemView
+import com.vitorpamplona.amethyst.commons.util.languageDisplayName
 import kotlin.test.Test
 import kotlin.test.assertEquals
-import kotlin.test.assertIs
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
@@ -113,9 +113,11 @@ class ConceptViewsTest {
         assertEquals("Fast food · Pizza", place.kindWords())
         assertEquals(listOf("1 Main St", "Sarasota, FL 34231"), place.addressLines())
         assertEquals("tel:+19415550100", place.call)
-        assertEquals("Lightning", bitcoinWords(place.bitcoin))
+        assertEquals(BitcoinPayment.LIGHTNING, bitcoinPaymentOf(place.bitcoin))
+        assertNull(bitcoinPaymentOf("no"))
+        assertEquals(BitcoinPayment.UNSPECIFIED, bitcoinPaymentOf("yes"))
         assertNull(place.website)
-        assertTrue(place.directionsUrl()!!.contains("27.3%2C-82.5"))
+        assertTrue(place.directionsUrl()!!.contains("27.300000%2C-82.500000"))
         assertNull(placeOf(arrayOf(arrayOf("category", "cafe")), food))
     }
 
@@ -167,7 +169,8 @@ class ConceptViewsTest {
 
         assertEquals("Frank Herbert", book.author)
         assertEquals("9780441013593", book.isbn)
-        assertEquals("English", book.language)
+        // In the reader's own language: whatever the platform calls English.
+        assertEquals(languageDisplayName("en"), book.language)
         assertEquals(412, book.pages)
         assertEquals(listOf("Science fiction", "Arrakis (Imaginary place) -- Fiction"), book.subjects)
         assertEquals(listOf("Science fiction"), topSubjects(book.subjects, 4))
@@ -196,9 +199,11 @@ class ConceptViewsTest {
                 "other" to arrayOf(arrayOf("title", "Other"), arrayOf("author", "Someone")),
             )
 
-        assertEquals(listOf("messiah"), booksByAuthor(dune, others))
-        assertEquals(listOf("silent", "messiah"), similarBooks(dune, others))
-        assertIs<List<String>>(similarBooks(bookOf(arrayOf(arrayOf("title", "x")))!!, others))
+        val parsed = others.map { (key, tags) -> key to bookOf(tags)!! }
+
+        assertEquals(listOf("messiah"), booksByAuthor(dune, parsed))
+        assertEquals(listOf("silent", "messiah"), similarBooks(dune, parsed))
+        assertTrue(similarBooks(bookOf(arrayOf(arrayOf("title", "x")))!!, parsed).isEmpty())
     }
 
     /** As served by wss://dcosl.brainstorm.world (2026-10-15). */

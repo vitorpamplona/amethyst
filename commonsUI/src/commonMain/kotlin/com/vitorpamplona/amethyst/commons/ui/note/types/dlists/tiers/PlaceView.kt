@@ -38,6 +38,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -51,13 +52,14 @@ import com.vitorpamplona.amethyst.commons.decentralizedLists.DListItemView
 import com.vitorpamplona.amethyst.commons.decentralizedLists.DListLink
 import com.vitorpamplona.amethyst.commons.decentralizedLists.ResolvedConcept
 import com.vitorpamplona.amethyst.commons.decentralizedLists.httpHost
+import com.vitorpamplona.amethyst.commons.decentralizedLists.tiers.BitcoinPayment
 import com.vitorpamplona.amethyst.commons.decentralizedLists.tiers.OpeningStatus
 import com.vitorpamplona.amethyst.commons.decentralizedLists.tiers.Place
 import com.vitorpamplona.amethyst.commons.decentralizedLists.tiers.PlaceFields
 import com.vitorpamplona.amethyst.commons.decentralizedLists.tiers.Week
 import com.vitorpamplona.amethyst.commons.decentralizedLists.tiers.Weekday
 import com.vitorpamplona.amethyst.commons.decentralizedLists.tiers.addressLines
-import com.vitorpamplona.amethyst.commons.decentralizedLists.tiers.bitcoinWords
+import com.vitorpamplona.amethyst.commons.decentralizedLists.tiers.bitcoinPaymentOf
 import com.vitorpamplona.amethyst.commons.decentralizedLists.tiers.categoryWords
 import com.vitorpamplona.amethyst.commons.decentralizedLists.tiers.clockWords
 import com.vitorpamplona.amethyst.commons.decentralizedLists.tiers.directionsUrl
@@ -85,7 +87,9 @@ import com.vitorpamplona.amethyst.commons.resources.dlist_day_wednesday
 import com.vitorpamplona.amethyst.commons.resources.dlist_distance_km
 import com.vitorpamplona.amethyst.commons.resources.dlist_distance_m
 import com.vitorpamplona.amethyst.commons.resources.dlist_place_accepts_bitcoin
-import com.vitorpamplona.amethyst.commons.resources.dlist_place_accepts_bitcoin_how
+import com.vitorpamplona.amethyst.commons.resources.dlist_place_accepts_bitcoin_both
+import com.vitorpamplona.amethyst.commons.resources.dlist_place_accepts_bitcoin_lightning
+import com.vitorpamplona.amethyst.commons.resources.dlist_place_accepts_bitcoin_onchain
 import com.vitorpamplona.amethyst.commons.resources.dlist_place_call
 import com.vitorpamplona.amethyst.commons.resources.dlist_place_closed
 import com.vitorpamplona.amethyst.commons.resources.dlist_place_closed_opens_on
@@ -115,6 +119,9 @@ import com.vitorpamplona.amethyst.commons.ui.theme.DividerThickness
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.utils.TimeUtils
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.withContext
 import org.jetbrains.compose.resources.StringResource
 import kotlin.math.roundToInt
 
@@ -150,7 +157,14 @@ internal fun PlaceView(
     val definition = resolved.governing
     val place = remember(event, definition) { placeOf(event.tags, definition) } ?: return
     val week = remember(place) { parseOpeningHours(place.hours) }
-    val local = remember(place) { place.lon?.let { placeLocalTime(it, TimeUtils.now()) } }
+    // Ticks once a minute, so "Open now" turns to "Closed" while the page stays open.
+    val now by produceState(TimeUtils.now()) {
+        while (true) {
+            delay(60_000)
+            value = TimeUtils.now()
+        }
+    }
+    val local = remember(place, now / 60) { place.lon?.let { placeLocalTime(it, now) } }
     val status = remember(week, local) { if (week != null && local != null) openingStatus(week, local.first, local.second) else null }
 
     DListKicker(MaterialSymbols.Restaurant, definition.singular, null, openList)
@@ -315,10 +329,18 @@ private fun Details(
             }
         }
         // How it pays is a detail beside the address, not a badge: every place on a BTC Map list takes Bitcoin.
-        bitcoinWords(place.bitcoin)?.let { how ->
+        bitcoinPaymentOf(place.bitcoin)?.let { payment ->
             DetailRow(MaterialSymbols.CurrencyBitcoin) {
                 Text(
-                    text = if (how.isEmpty()) stringRes(Res.string.dlist_place_accepts_bitcoin) else stringRes(Res.string.dlist_place_accepts_bitcoin_how, how),
+                    text =
+                        stringRes(
+                            when (payment) {
+                                BitcoinPayment.LIGHTNING -> Res.string.dlist_place_accepts_bitcoin_lightning
+                                BitcoinPayment.ONCHAIN -> Res.string.dlist_place_accepts_bitcoin_onchain
+                                BitcoinPayment.BOTH -> Res.string.dlist_place_accepts_bitcoin_both
+                                BitcoinPayment.UNSPECIFIED -> Res.string.dlist_place_accepts_bitcoin
+                            },
+                        ),
                     style = MaterialTheme.typography.bodyMedium,
                 )
             }
@@ -385,20 +407,23 @@ private fun NearbyPlaces(
     val headerEvent = header ?: return
     val items = observeListItems(listedNote, headerEvent, accountViewModel)
     val definition = resolved.governing
-    val nearest =
-        remember(items, place, definition) {
-            items
-                .mapNotNull { note ->
-                    val other = note.event ?: return@mapNotNull null
-                    if (other.id == event.id) return@mapNotNull null
-                    val p = placeOf(other.tags, definition) ?: return@mapNotNull null
-                    val lat = p.lat ?: return@mapNotNull null
-                    val lon = p.lon ?: return@mapNotNull null
-                    if (p.name == place.name && p.address == place.address) return@mapNotNull null
-                    Triple(note, p, distanceKm(place.lat!!, place.lon!!, lat, lon))
-                }.sortedBy { it.third }
-                .take(NEARBY)
-        }
+    // Every item of the list is read here, up to the relay cap: off the main thread, once per change.
+    val nearest by produceState(emptyList<Triple<Note, Place, Double>>(), items, place, definition) {
+        value =
+            withContext(Dispatchers.Default) {
+                items
+                    .mapNotNull { note ->
+                        val other = note.event ?: return@mapNotNull null
+                        if (other.id == event.id) return@mapNotNull null
+                        val p = placeOf(other.tags, definition) ?: return@mapNotNull null
+                        val lat = p.lat ?: return@mapNotNull null
+                        val lon = p.lon ?: return@mapNotNull null
+                        if (p.name == place.name && p.address == place.address) return@mapNotNull null
+                        Triple(note, p, distanceKm(place.lat!!, place.lon!!, lat, lon))
+                    }.sortedBy { it.third }
+                    .take(NEARBY)
+            }
+    }
     if (nearest.isEmpty()) return
 
     TrustSectionLabel(stringRes(Res.string.dlist_place_nearby))

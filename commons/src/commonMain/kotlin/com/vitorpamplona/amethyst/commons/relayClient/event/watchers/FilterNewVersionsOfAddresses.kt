@@ -21,10 +21,9 @@
 package com.vitorpamplona.amethyst.commons.relayClient.event.watchers
 
 import com.vitorpamplona.amethyst.commons.model.AddressableNote
-import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.ExplainedFilter
-import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.SubPurpose
+import com.vitorpamplona.amethyst.commons.relayClient.event.loaders.filterAddressesPerRelay
 import com.vitorpamplona.amethyst.commons.relays.SincePerRelayMap
-import com.vitorpamplona.quartz.nip01Core.core.HexKey
+import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 
@@ -34,42 +33,23 @@ import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
  * a list header published again from another device never reached a screen that already showed
  * it. This keeps asking, while the note is watched, where its author writes and where it was seen.
  *
- * One filter per relay and kind, `authors` × `#d` (a cross product, as the live-stream watcher
- * does: on-screen addresses are few and rarely share a `d`). Until a relay has answered once, it
- * starts at the oldest version held, so it does not download every address again from zero.
+ * The filters are the loader's ([filterAddressesPerRelay]: per kind and author, `#d` in chunks a
+ * relay won't cap, plain replaceables by author alone), narrowed by [since], the watcher's last
+ * EOSE per relay. Until a relay has answered once it sends the version it holds: one event per
+ * address, the one time.
  */
 fun filterNewVersionsOfAddresses(
     keys: List<AddressableNote>,
     since: SincePerRelayMap?,
-    accountPubKey: HexKey? = null,
 ): List<RelayBasedFilter>? {
-    // An address with no version yet is the loader's to find.
-    val loaded = keys.filter { it.event != null }
-    if (loaded.isEmpty()) return null
-
-    val perRelay = HashMap<NormalizedRelayUrl, MutableSet<AddressableNote>>()
-    loaded.forEach { note ->
-        val relays = (note.author?.outboxRelays() ?: emptyList()) + note.relays
-        relays.forEach { relay -> perRelay.getOrPut(relay) { LinkedHashSet() }.add(note) }
+    val perRelay = HashMap<NormalizedRelayUrl, MutableSet<Address>>()
+    keys.forEach { note ->
+        // An address with no version yet is the loader's to find.
+        if (note.event == null) return@forEach
+        note.author?.outboxRelays()?.forEach { relay -> perRelay.getOrPut(relay) { HashSet() }.add(note.address) }
+        note.relays.forEach { relay -> perRelay.getOrPut(relay) { HashSet() }.add(note.address) }
     }
+    if (perRelay.isEmpty()) return null
 
-    return perRelay.flatMap { (relay, notes) ->
-        notes
-            .groupBy { it.address.kind }
-            .toSortedMap()
-            .map { (kind, sameKind) ->
-                RelayBasedFilter(
-                    relay = relay,
-                    filter =
-                        ExplainedFilter(
-                            purpose = SubPurpose.REFERENCED_EVENTS,
-                            accountPubKeys = listOfNotNull(accountPubKey),
-                            kinds = listOf(kind),
-                            authors = sameKind.map { it.address.pubKeyHex }.distinct().sorted(),
-                            tags = mapOf("d" to sameKind.map { it.address.dTag }.distinct().sorted()),
-                            since = since?.get(relay)?.time ?: sameKind.minOf { it.createdAt() ?: 0L },
-                        ),
-                )
-            }
-    }
+    return filterAddressesPerRelay(perRelay) { relay -> since?.get(relay)?.time }
 }

@@ -48,10 +48,10 @@ Brainstorm's own account and has no counterpart here.
 Every header the card reads (listed, community, the reader's and Assistant's copies) and every
 URL template goes through `observeNoteEvent`, so a version that reaches `LocalCache` redraws the
 card. EventFinder's watcher also asks, while an addressable is on screen, for newer versions of
-it (`filterNewVersionsOfAddresses`: per relay and kind, `authors` × `#d`, `since` the last EOSE or
-the oldest version held), on the author's write relays and where it was seen. This applies to
-every addressable rendered, not only D-lists. Not yet observed: the reader's Assistant, which is
-read once from their kind 10040.
+it (`filterNewVersionsOfAddresses`, the loader's own grouping: per kind and author, `#d` chunked,
+plain replaceables by author, `since` the watcher's last EOSE), on the author's write relays and
+where it was seen. This applies to every addressable rendered, not only D-lists. The reader's
+Assistant comes from their kind 10040's flow, so it changes in place too.
 
 ## Left out, and why
 

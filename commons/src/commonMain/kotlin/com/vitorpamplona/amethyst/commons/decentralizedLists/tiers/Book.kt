@@ -24,6 +24,7 @@ import androidx.compose.runtime.Immutable
 import com.vitorpamplona.amethyst.commons.decentralizedLists.DListImageShape
 import com.vitorpamplona.amethyst.commons.decentralizedLists.DListItemView
 import com.vitorpamplona.amethyst.commons.decentralizedLists.httpUrl
+import com.vitorpamplona.amethyst.commons.util.languageDisplayName
 import com.vitorpamplona.quartz.nip01Core.core.TagArray
 
 /**
@@ -137,44 +138,59 @@ fun topSubjects(
         .sortedWith(compareBy<String> { it.length }.thenBy { it })
         .take(n)
 
-/** The ISO 639-2 codes Open Library's records carry most, by name. Anything else is not named. */
-private val LANGUAGES =
+/** ISO 639-2 codes (what Open Library's records carry) to the two letters a platform names. */
+private val ISO_639_1 =
     mapOf(
-        "eng" to "English",
-        "spa" to "Spanish",
-        "fre" to "French",
-        "fra" to "French",
-        "ger" to "German",
-        "deu" to "German",
-        "por" to "Portuguese",
-        "ita" to "Italian",
-        "dut" to "Dutch",
-        "nld" to "Dutch",
-        "rus" to "Russian",
-        "jpn" to "Japanese",
-        "chi" to "Chinese",
-        "zho" to "Chinese",
-        "kor" to "Korean",
-        "ara" to "Arabic",
-        "heb" to "Hebrew",
-        "hin" to "Hindi",
-        "pol" to "Polish",
-        "swe" to "Swedish",
-        "nor" to "Norwegian",
-        "dan" to "Danish",
-        "fin" to "Finnish",
-        "tur" to "Turkish",
-        "gre" to "Greek",
-        "ell" to "Greek",
-        "lat" to "Latin",
-        "cze" to "Czech",
-        "ces" to "Czech",
-        "hun" to "Hungarian",
-        "ukr" to "Ukrainian",
+        "eng" to "en",
+        "spa" to "es",
+        "fre" to "fr",
+        "fra" to "fr",
+        "ger" to "de",
+        "deu" to "de",
+        "por" to "pt",
+        "ita" to "it",
+        "dut" to "nl",
+        "nld" to "nl",
+        "rus" to "ru",
+        "jpn" to "ja",
+        "chi" to "zh",
+        "zho" to "zh",
+        "kor" to "ko",
+        "ara" to "ar",
+        "heb" to "he",
+        "hin" to "hi",
+        "pol" to "pl",
+        "swe" to "sv",
+        "nor" to "no",
+        "dan" to "da",
+        "fin" to "fi",
+        "tur" to "tr",
+        "gre" to "el",
+        "ell" to "el",
+        "lat" to "la",
+        "cze" to "cs",
+        "ces" to "cs",
+        "hun" to "hu",
+        "ukr" to "uk",
+        "cat" to "ca",
+        "ind" to "id",
+        "vie" to "vi",
+        "tha" to "th",
+        "per" to "fa",
+        "fas" to "fa",
+        "rum" to "ro",
+        "ron" to "ro",
+        "bul" to "bg",
+        "srp" to "sr",
+        "hrv" to "hr",
     )
 
-/** "eng" -> "English"; null for a code this list can't name. */
-fun languageName(code: String?): String? = code?.trim()?.lowercase()?.let { LANGUAGES[it] }
+/** "eng" -> "English", in the reader's own language; null for a code the platform can't name. */
+fun languageName(code: String?): String? {
+    val c = code?.trim()?.lowercase()?.ifEmpty { null } ?: return null
+    val tag = ISO_639_1[c] ?: c.takeIf { it.length == 2 } ?: return null
+    return languageDisplayName(tag).takeIf { it.isNotBlank() && !it.equals(tag, ignoreCase = true) }
+}
 
 /** A book among many: its cover (a portrait), its title, its author. From the item alone. */
 fun bookPresentation(
@@ -190,24 +206,24 @@ fun bookPresentation(
     )
 }
 
-/** The list's other books by the same author, as the cover names them, in the list's order. */
+/** The list's other books by the same author, as the cover names them, in the list's order. Each book read once by the caller. */
 fun <T> booksByAuthor(
     book: Book,
-    others: List<Pair<T, TagArray>>,
+    others: List<Pair<T, Book>>,
 ): List<T> {
     val author = book.author?.trim()?.lowercase() ?: return emptyList()
-    return others.filter { (_, tags) -> bookOf(tags)?.author?.trim()?.lowercase() == author }.map { it.first }
+    return others.filter { (_, other) -> other.author?.trim()?.lowercase() == author }.map { it.first }
 }
 
 /** The list's books sharing the most subjects with this one; sharing none, none. */
 fun <T> similarBooks(
     book: Book,
-    others: List<Pair<T, TagArray>>,
+    others: List<Pair<T, Book>>,
 ): List<T> {
     val mine = book.subjects.mapTo(HashSet()) { it.lowercase() }
     if (mine.isEmpty()) return emptyList()
     return others
-        .map { (key, tags) -> key to (bookOf(tags)?.subjects ?: emptyList()).count { it.lowercase() in mine } }
+        .map { (key, other) -> key to other.subjects.count { it.lowercase() in mine } }
         .filter { it.second > 0 }
         .sortedByDescending { it.second }
         .map { it.first }

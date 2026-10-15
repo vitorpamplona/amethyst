@@ -57,6 +57,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.commons.decentralizedLists.DListFact
 import com.vitorpamplona.amethyst.commons.decentralizedLists.DListHeaderView
 import com.vitorpamplona.amethyst.commons.decentralizedLists.DListImageShape
@@ -118,6 +119,8 @@ import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.nip01Core.core.AddressableEvent
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
+import com.vitorpamplona.quartz.nip85TrustedAssertions.list.TrustProviderListEvent
 
 internal fun Event.dTagOrNull() = (this as? AddressableEvent)?.dTag()
 
@@ -201,13 +204,11 @@ private fun ResolveFromListed(
         }
 
     val account = accountViewModel.account
-    val assistant =
-        remember(account) {
-            account.trustProviderList
-                .getTrustProviderList()
-                ?.publicDListAssistant()
-                ?.assistant
-        }
+    // Observed, not read once: the reader's kind 10040 often arrives after the card has composed.
+    val trustProviders by account.trustProviderList
+        .getTrustProviderListFlow()
+        .collectAsStateWithLifecycle()
+    val assistant = remember(trustProviders) { (trustProviders.note.event as? TrustProviderListEvent)?.publicDListAssistant()?.assistant }
     val candidates = remember(community, account.pubKey, assistant) { copyCandidates(community, account.pubKey, assistant) }
     val copies = candidates.map { (source, address) -> key(address) { source to observeHeaderViewAt(address, accountViewModel) } }
 
@@ -217,10 +218,15 @@ private fun ResolveFromListed(
 
 @Composable
 private fun observeUrlTemplate(
-    id: HexKey,
+    ref: LinkRef,
     accountViewModel: AccountViewModel,
 ): UrlTemplate? {
-    val note = remember(id) { LocalCache.getOrCreateNote(id) }
+    val note =
+        remember(ref) {
+            // The header says where its template lives; the loader asks hinted relays too.
+            ref.relay?.let { RelayUrlNormalizer.normalizeOrNull(it) }?.let { LocalCache.relayHints.addEvent(ref.templateId, it) }
+            LocalCache.getOrCreateNote(ref.templateId)
+        }
     val event by observeNoteEvent<Event>(note, accountViewModel)
     return remember(event) { event?.let { urlTemplateOf(it.id, it.tags) } }
 }
@@ -231,7 +237,7 @@ internal fun observeUrlTemplates(
     refs: List<LinkRef>,
     accountViewModel: AccountViewModel,
 ): Map<HexKey, UrlTemplate> {
-    val templates = refs.map { ref -> key(ref.templateId) { observeUrlTemplate(ref.templateId, accountViewModel) } }
+    val templates = refs.map { ref -> key(ref.templateId) { observeUrlTemplate(ref, accountViewModel) } }
     return remember(templates) { templates.filterNotNull().associateBy { it.id } }
 }
 
