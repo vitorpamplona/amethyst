@@ -560,13 +560,12 @@ question open:
 - **App id:** `com.vitorpamplona.amethyst.desktop`.
 - **Signing:** by hand, with Amethyst's nsec, through `amy releases publish` (RELEASE_OPS.md
   § Nostr releases). No key in CI. The same run also publishes the APK's events for Zapstore, tag
-  for tag as `zsp` did, and the Flatpak's for Orchard, tag for tag as `orchard-publish` did, so one
-  command covers all three NIP-82 readers.
-- **Orchard's images:** CI builds and pushes them with Orchard's own `orchard-publish` (pinned),
-  under the version's tag, with no key and no relays; `amy` reads each one back from ghcr, checks
-  its digest and Flatpak annotations, and signs the events that pin it by digest. That keeps the
-  image byte-for-byte what Orchard's tool makes (the build is deterministic) while the key stays
-  off CI.
+  for tag as `zsp` did, and the Flatpak's for Orchard, so one command covers all three NIP-82
+  readers.
+- **Orchard:** the events name the GitHub Release's `.flatpak` bundles by URL and SHA-256, which
+  Orchard installs since 0.2.0 (2026-10-15). Orchard 0.1.x needed an OCI image on a registry, which
+  1.19.0 had (`orchard-publish`, ghcr); with bundles there is no registry, no image build and no
+  third-party tool in CI.
 - **.deb and .rpm assets:** published too (12 assets per release), for the PackageKit hand-off.
 - **Default:** the app checks on its own (at start and twice a day) and asks before it installs
   anything. Settings › App › Updates turns the checks off.
@@ -580,8 +579,7 @@ question open:
 | Prompt and Settings › App › Updates | `commonsUI/…/appupdate/ui/` (`AppUpdateHost`, `AppUpdateSettingsSection`), wired through `AppRoot.appUpdates` |
 | Install channel, downloader, installers, helper scripts, GitHub fallback | `desktopApp/…/desktop/update/` |
 | Publishing | `cli/…/commands/ReleasesCommands.kt` (`amy releases publish`) |
-| Zapstore and Orchard events, APK and OCI checks | `commons/…/appupdate/` (`AndroidReleaseEvents`, `FlatpakReleaseEvents`, `ReleaseBundles`, `ApkInspector`, `OciRegistry`) |
-| Orchard image push | `create-release.yml` (`linux-portable` legs, `orchard-publish` pinned in `env`) |
+| Zapstore and Orchard events, APK and bundle checks | `commons/…/appupdate/` (`AndroidReleaseEvents`, `FlatpakReleaseEvents`, `FlatpakRelease`, `ReleaseBundles`, `ApkInspector`) |
 | AppImage zsync | `createReleaseAppImage` (`-u gh-releases-zsync|…`), `scripts/asset-name.sh`, `zsync` in `create-release.yml` |
 
 How each part behaves:

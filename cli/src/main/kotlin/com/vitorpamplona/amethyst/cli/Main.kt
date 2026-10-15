@@ -735,11 +735,11 @@ private fun printUsage() {
         |Releases (NIP-82: the desktop app's updater, Zapstore and Orchard):
         |  releases publish DIR --version X.Y.Z          sign + publish the release of every app with
         |        [--only desktop|android|flatpak]        files in DIR (desktop files; APKs as zsp
-        |        [--listing] [--zapstore-yaml F]         does, apksig-checked; the Flatpaks' ghcr
-        |        [--orchard-toml F] [--blossom URL]      images as orchard-publish does, digest-
-        |        [--android-flavor F] [--android-abis A]  checked). Amethyst's key only unless
-        |        [--notes-file F] [--url-base URL]       --any-key; --dry-run signs + prints
-        |        [--relay URL[,URL]] [--dry-run] [--any-key]  (`amy releases --help` for details)
+        |        [--listing] [--zapstore-yaml F]         does, apksig-checked; Flatpak bundles for
+        |        [--blossom URL]                         Orchard). Amethyst's key only unless
+        |        [--android-flavor F] [--android-abis A]  --any-key; --dry-run signs + prints
+        |        [--notes-file F] [--url-base URL]       (`amy releases --help` for details)
+        |        [--relay URL[,URL]] [--dry-run] [--any-key]
         |
         |Contacts (NIP-02 kind:3):
         |  follow USER [--timeout SECS]               add USER to your contact list

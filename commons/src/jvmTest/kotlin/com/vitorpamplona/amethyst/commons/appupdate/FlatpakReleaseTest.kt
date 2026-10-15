@@ -20,106 +20,131 @@
  */
 package com.vitorpamplona.amethyst.commons.appupdate
 
-import com.sun.net.httpserver.HttpServer
 import com.vitorpamplona.quartz.nip01Core.crypto.KeyPair
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerInternal
-import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerSync
 import kotlinx.coroutines.test.runTest
 import java.io.File
-import java.net.InetSocketAddress
 import java.nio.file.Files
 import java.security.MessageDigest
+import kotlin.test.AfterTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
+import kotlin.test.assertNull
+import kotlin.test.assertTrue
 
 /**
- * Orchard's side of `amy releases publish`. The fixture is the manifest of Amethyst 1.19.0's x86_64
- * image on ghcr, which orchard-publish built and Orchard installs; the expected tags are the events
- * orchard-publish signed for it on relay.orchard.rocks.
+ * Orchard's side of `amy releases publish`. The fixture is the first 4 KiB of the 1.19.0
+ * `amethyst-desktop-1.19.0-linux-x64.flatpak` release asset: the header Orchard reads the ref and
+ * the metadata from.
  */
 class FlatpakReleaseTest {
-    private val manifest = requireNotNull(javaClass.getResource("/appupdate/orchard-manifest-1.19.0-x86_64.json")).readBytes()
-    private val digest = "sha256:693bb6f75e3abe032e026acd01413fe68f084c68bb7ded90a2bfe7c45ed131ae"
-    private val repository = "ghcr.io/vitorpamplona/amethyst-flatpak"
+    private val header = requireNotNull(javaClass.getResource("/appupdate/flatpak-header-1.19.0-x86_64.bin")).readBytes()
+    private val dir = Files.createTempDirectory("flatpak-bundles").toFile()
+    private val signer = NostrSignerInternal(KeyPair())
+
+    @AfterTest
+    fun cleanUp() {
+        dir.deleteRecursively()
+    }
+
+    private fun sha256(bytes: ByteArray) = MessageDigest.getInstance("SHA-256").digest(bytes).joinToString("") { "%02x".format(it) }
 
     @Test
-    fun theFixtureIsTheLiveImage() {
-        assertEquals(digest, "sha256:" + MessageDigest.getInstance("SHA-256").digest(manifest).joinToString("") { "%02x".format(it) })
+    fun readsTheRefOfARealBundle() {
+        assertEquals("app/com.vitorpamplona.amethyst.Amethyst/x86_64/master", FlatpakRelease.bundleRef(header))
+        assertNull(FlatpakRelease.bundleRef("not a bundle at all".encodeToByteArray()))
+        assertNull(FlatpakRelease.bundleRef(ByteArray(0)))
     }
 
     @Test
-    fun readsAndChecksTheImage() {
-        val image = OciRegistry.checkedImage(manifest.decodeToString(), digest, repository, "linux-x86_64", "1.19.0")
-        assertEquals("org.freedesktop.Platform/x86_64/26.08", image.runtime)
-        assertEquals("docker://$repository@$digest", image.location)
-
-        assertFailsWith<ReleaseFilesException> { OciRegistry.checkedImage(manifest.decodeToString(), digest, repository, "linux-x86_64", "1.20.0") }
-        assertFailsWith<ReleaseFilesException> { OciRegistry.checkedImage(manifest.decodeToString(), digest, repository, "linux-aarch64", "1.19.0") }
+    fun readsBundleNames() {
+        assertEquals("linux-x86_64", FlatpakRelease.platformOfBundle("amethyst-desktop-1.20.0-linux-x64.flatpak", "1.20.0"))
+        assertEquals("linux-aarch64", FlatpakRelease.platformOfBundle("amethyst-desktop-1.20.0-linux-arm64.flatpak", "1.20.0"))
+        assertNull(FlatpakRelease.platformOfBundle("amethyst-desktop-1.20.0-linux-x64.deb", "1.20.0"))
+        assertNull(FlatpakRelease.platformOfBundle("amethyst-desktop-1.19.0-linux-x64.flatpak", "1.20.0"))
     }
 
-    /** Tag for tag, in order, what orchard-publish signed for 1.19.0 x86_64. */
     @Test
-    fun theEventsAreOrchardPublishs() {
-        val signer = NostrSignerSync()
-        val image = OciRegistry.checkedImage(manifest.decodeToString(), digest, repository, "linux-x86_64", "1.19.0")
-        val asset = signer.sign(FlatpakReleaseEvents.asset(image))
-        assertEquals(
-            listOf(
-                listOf("i", "com.vitorpamplona.amethyst.Amethyst"),
-                listOf("x", digest),
-                listOf("version", "1.19.0"),
-                listOf("f", "linux-x86_64"),
-                listOf("oci", "docker://ghcr.io/vitorpamplona/amethyst-flatpak@$digest"),
-                listOf("runtime", "org.freedesktop.Platform/x86_64/26.08"),
-            ),
-            asset.tags.map { it.toList() },
-        )
-        assertEquals("", asset.content)
+    fun hashesTheBundlesAndSkipsTheRest() {
+        File(dir, "amethyst-desktop-1.19.0-linux-x64.flatpak").writeBytes(header)
+        File(dir, "amethyst-desktop-1.19.0-linux-x64.deb").writeText("deb")
+        File(dir, "amethyst-desktop-1.19.0-x86_64.AppImage").writeText("appimage")
 
-        val release = signer.sign(FlatpakReleaseEvents.release(image, asset, "Release notes: https://github.com/vitorpamplona/amethyst/releases"))
-        assertEquals(
-            listOf(
-                listOf("d", "com.vitorpamplona.amethyst.Amethyst@1.19.0@linux-x86_64"),
-                listOf("i", "com.vitorpamplona.amethyst.Amethyst"),
-                listOf("version", "1.19.0"),
-                listOf("f", "linux-x86_64"),
-                listOf("c", "stable"),
-                listOf("e", asset.id),
-            ),
-            release.tags.map { it.toList() },
-        )
+        val bundle = ReleaseBundles.flatpakBundles(dir, "1.19.0", null).single()
+        assertEquals("linux-x86_64", bundle.platform)
+        assertEquals(sha256(header), bundle.sha256)
+        assertEquals(header.size.toLong(), bundle.sizeInBytes)
+        assertEquals("https://github.com/vitorpamplona/amethyst/releases/download/v1.19.0/amethyst-desktop-1.19.0-linux-x64.flatpak", bundle.url)
+    }
 
-        val config =
-            OrchardConfig.fromMap(
-                mapOf(
-                    "app" to
-                        mapOf(
-                            "id" to "com.vitorpamplona.amethyst.Amethyst",
-                            "name" to "Amethyst",
-                            "summary" to "Join the social network you control",
-                            "description-file" to "description.md",
-                            "icon" to "https://example.com/icon.png",
-                            "categories" to listOf("Network", "InstantMessaging"),
-                            "license" to "MIT",
-                            "repository" to "https://github.com/vitorpamplona/amethyst",
-                            "homepage" to "https://amethyst.social",
-                        ),
-                    "release" to mapOf("platforms" to listOf("linux-x86_64", "linux-aarch64"), "notes" to "notes"),
-                    "publish" to mapOf("relays" to listOf("wss://relay.orchard.rocks", "wss://nos.lol")),
-                ),
-            ) { if (it == "description.md") "Amethyst is a client for Nostr." else null }
-        assertEquals(listOf("wss://relay.orchard.rocks", "wss://nos.lol"), config.relays)
+    /** A bundle named for one arch but built for another, or not a bundle, stops the run. */
+    @Test
+    fun refusesAMislabelledBundle() {
+        File(dir, "amethyst-desktop-1.19.0-linux-arm64.flatpak").writeBytes(header)
+        val e = assertFailsWith<ReleaseFilesException> { ReleaseBundles.flatpakBundles(dir, "1.19.0", null) }
+        assertTrue(e.message!!.contains("x86_64/master"), e.message)
 
-        val listing = signer.sign(FlatpakReleaseEvents.listing(config))
-        assertEquals("Amethyst is a client for Nostr.", listing.content)
+        File(dir, "amethyst-desktop-1.19.0-linux-arm64.flatpak").writeText("<html>Not Found</html>")
+        assertFailsWith<ReleaseFilesException> { ReleaseBundles.flatpakBundles(dir, "1.19.0", null) }
+    }
+
+    /**
+     * The shape Orchard 0.2.0 installs a bundle from (its `zapstore_url_assets_project_as_installable`
+     * test): an asset with `i`, `x`, `version`, `f`, `m` = application/vnd.flatpak, `filename` and an
+     * https `url`, named by a release whose `d` is `<id>@<version>`, with a matching `i`, on `main`.
+     */
+    @Test
+    fun theEventsAreWhatOrchardInstalls() =
+        runTest {
+            File(dir, "amethyst-desktop-1.20.0-linux-x64.flatpak").writeBytes(header)
+            File(dir, "amethyst-desktop-1.20.0-linux-arm64.flatpak").writeBytes(String(header, Charsets.ISO_8859_1).replace("/x86_64/", "/aarch64/").toByteArray(Charsets.ISO_8859_1))
+            val bundles = ReleaseBundles.flatpakBundles(dir, "1.20.0", null)
+            val signed = ReleaseBundles.signFlatpak(signer, "1.20.0", "notes", bundles, FlatpakRelease.RELAYS, withListing = true)
+
+            val byPlatform = signed.assets.associateBy { asset -> asset.tags.first { it[0] == "f" }[1] }
+            assertEquals(setOf("linux-x86_64", "linux-aarch64"), byPlatform.keys)
+            val x64 = byPlatform.getValue("linux-x86_64")
+            val tags = x64.tags.associate { it[0] to it[1] }
+            assertEquals(FlatpakRelease.APP_ID, tags["i"])
+            assertEquals(bundles.first { it.platform == "linux-x86_64" }.sha256, tags["x"])
+            assertEquals("1.20.0", tags["version"])
+            assertEquals("application/vnd.flatpak", tags["m"])
+            assertEquals("amethyst-desktop-1.20.0-linux-x64.flatpak", tags["filename"])
+            assertEquals("https://github.com/vitorpamplona/amethyst/releases/download/v1.20.0/amethyst-desktop-1.20.0-linux-x64.flatpak", tags["url"])
+
+            val release = signed.release.tags.groupBy({ it[0] }, { it[1] })
+            assertEquals(listOf("${FlatpakRelease.APP_ID}@1.20.0"), release["d"])
+            assertEquals(listOf(FlatpakRelease.APP_ID), release["i"])
+            assertEquals(listOf("main"), release["c"])
+            assertEquals(signed.assets.map { it.id }.toSet(), release["e"]!!.toSet())
+            assertEquals("notes", signed.release.content)
+            assertEquals(signed.assets + signed.release + signed.listing!!, signed.events)
+        }
+
+    /** Orchard 0.1.x and later read `stable` or `main`; a prerelease goes out on `beta`, which it skips. */
+    @Test
+    fun aPrereleaseIsOnBeta() =
+        runTest {
+            File(dir, "amethyst-desktop-1.20.0-rc1-linux-x64.flatpak").writeBytes(header)
+            val bundles = ReleaseBundles.flatpakBundles(dir, "1.20.0-rc1", null)
+            val signed = ReleaseBundles.signFlatpak(signer, "1.20.0-rc1", "", bundles, FlatpakRelease.RELAYS, withListing = false)
+            assertEquals("beta", signed.release.tags.first { it[0] == "c" }[1])
+        }
+
+    /** Tag for tag, in order, the listing orchard-publish signed for 1.19.0 on relay.orchard.rocks. */
+    @Test
+    fun theListingIsTheLiveOne() {
+        val listing = FlatpakReleaseEvents.listing()
+        assertTrue(listing.content.startsWith("Amethyst is a client for Nostr, an open protocol"))
+        assertTrue(listing.content.endsWith("or with a public key in read-only mode."))
         assertEquals(
             listOf(
                 listOf("d", "com.vitorpamplona.amethyst.Amethyst"),
                 listOf("name", "Amethyst"),
                 listOf("summary", "Join the social network you control"),
-                listOf("icon", "https://example.com/icon.png"),
-                listOf("license", "MIT"),
+                listOf("icon", "https://raw.githubusercontent.com/vitorpamplona/amethyst/main/desktopApp/packaging/flatpak/icons/512/com.vitorpamplona.amethyst.Amethyst.png"),
+                listOf("license", "MIT AND LGPL-2.1-or-later AND BSD-2-Clause AND Apache-2.0 AND GPL-2.0-only WITH Classpath-exception-2.0"),
                 listOf("repository", "https://github.com/vitorpamplona/amethyst"),
                 listOf("h", "https://amethyst.social"),
                 listOf("t", "Network"),
@@ -130,115 +155,4 @@ class FlatpakReleaseTest {
             listing.tags.map { it.toList() },
         )
     }
-
-    @Test
-    fun aPrereleaseIsOnTheBetaChannel() {
-        assertEquals("stable", FlatpakRelease.channelFor("1.20.0"))
-        assertEquals("beta", FlatpakRelease.channelFor("1.20.0-rc1"))
-    }
-
-    @Test
-    fun readsBundleNames() {
-        assertEquals("linux-x86_64", FlatpakRelease.platformOfBundle("amethyst-desktop-1.20.0-linux-x64.flatpak", "1.20.0"))
-        assertEquals("linux-aarch64", FlatpakRelease.platformOfBundle("amethyst-desktop-1.20.0-linux-arm64.flatpak", "1.20.0"))
-        assertEquals(null, FlatpakRelease.platformOfBundle("amethyst-desktop-1.20.0-linux-x64.deb", "1.20.0"))
-        assertEquals("1.20.0-linux-aarch64", FlatpakRelease.tagFor("1.20.0", "linux-aarch64"))
-    }
-
-    /** The registry protocol as ghcr speaks it: a 401 with a Bearer challenge, a token, then the manifest. */
-    @Test
-    fun fetchesThroughATokenChallengeAndChecksTheBytes() =
-        runTest {
-            var served = manifest
-            val server = HttpServer.create(InetSocketAddress("127.0.0.1", 0), 0)
-            val base = "127.0.0.1:${server.address.port}"
-            server.createContext("/token") { exchange ->
-                val body = """{"token":"abc"}""".toByteArray()
-                exchange.sendResponseHeaders(200, body.size.toLong())
-                exchange.responseBody.use { it.write(body) }
-            }
-            server.createContext("/v2/") { exchange ->
-                if (exchange.requestHeaders.getFirst("Authorization") != "Bearer abc") {
-                    exchange.responseHeaders.add("WWW-Authenticate", """Bearer realm="http://$base/token",service="test",scope="repository:x:pull"""")
-                    exchange.sendResponseHeaders(401, -1)
-                    exchange.close()
-                    return@createContext
-                }
-                exchange.responseHeaders.add("Docker-Content-Digest", digest)
-                exchange.sendResponseHeaders(200, served.size.toLong())
-                exchange.responseBody.use { it.write(served) }
-            }
-            server.start()
-            try {
-                val registry = OciRegistry(scheme = "http")
-                val image = registry.flatpakImage("$base/vitorpamplona/amethyst-flatpak", "1.19.0-linux-x86_64", "linux-x86_64", "1.19.0")
-                assertEquals(digest, image.digest)
-                assertEquals("docker://$base/vitorpamplona/amethyst-flatpak@$digest", image.location)
-
-                // A registry whose bytes do not hash to the digest it names is not believed.
-                served = manifest + ' '.code.toByte()
-                assertFailsWith<ReleaseFilesException> { registry.flatpakImage("$base/vitorpamplona/amethyst-flatpak", "1.19.0-linux-x86_64", "linux-x86_64", "1.19.0") }
-            } finally {
-                server.stop(0)
-            }
-        }
-
-    /** The bundles in the release folder say which images to read; their tags are the version's. */
-    @Test
-    fun signsTheImagesOfTheBundlesInTheFolder() =
-        runTest {
-            val dir = Files.createTempDirectory("flatpak-bundles").toFile()
-            val asked = mutableListOf<String>()
-            val server = HttpServer.create(InetSocketAddress("127.0.0.1", 0), 0)
-            server.createContext("/v2/") { exchange ->
-                asked += exchange.requestURI.path
-                if (exchange.requestURI.path.endsWith("/manifests/1.19.0-linux-x86_64")) {
-                    exchange.sendResponseHeaders(200, manifest.size.toLong())
-                    exchange.responseBody.use { it.write(manifest) }
-                } else {
-                    exchange.sendResponseHeaders(404, -1)
-                    exchange.close()
-                }
-            }
-            server.start()
-            try {
-                File(dir, "amethyst-desktop-1.19.0-linux-x64.flatpak").writeText("bundle")
-                File(dir, "amethyst-desktop-1.19.0-linux-x64.deb").writeText("deb")
-                val repo = "127.0.0.1:${server.address.port}/vitorpamplona/amethyst-flatpak"
-                val images = ReleaseBundles.flatpakImages(dir, "1.19.0", OciRegistry(scheme = "http"), repo)
-                assertEquals(listOf("/v2/vitorpamplona/amethyst-flatpak/manifests/1.19.0-linux-x86_64"), asked)
-                assertEquals(listOf(digest), images.map { it.digest })
-
-                val config = OrchardConfig.fromMap(mapOf("app" to mapOf("name" to "Amethyst"), "release" to mapOf("notes" to "from the toml"))) { null }
-                val signer = NostrSignerInternal(KeyPair())
-                val signed = ReleaseBundles.signFlatpak(signer, "", images, config, withListing = false, relays = listOf("wss://relay.orchard.rocks"))
-                assertEquals(null, signed.listing)
-                assertEquals("from the toml", signed.releases.single().content)
-                assertEquals(
-                    listOf(signed.assets.single().id),
-                    signed.releases
-                        .single()
-                        .assets()
-                        .map { it.eventId },
-                )
-                assertEquals(signed.assets + signed.releases, signed.events)
-
-                // The arm64 bundle with no image pushed for it stops the run before anything is signed.
-                File(dir, "amethyst-desktop-1.19.0-linux-arm64.flatpak").writeText("bundle")
-                assertFailsWith<ReleaseFilesException> { ReleaseBundles.flatpakImages(dir, "1.19.0", OciRegistry(scheme = "http"), repo) }
-            } finally {
-                server.stop(0)
-                dir.deleteRecursively()
-            }
-        }
-
-    /** Against ghcr itself, when asked (`AMETHYST_LIVE_REGISTRY=1`): the 1.19.0 image by digest. */
-    @Test
-    fun readsTheLiveImage() =
-        runTest {
-            if (System.getenv("AMETHYST_LIVE_REGISTRY") != "1") return@runTest
-            val image = OciRegistry().flatpakImage(repository, digest, "linux-x86_64", "1.19.0")
-            println("live ghcr image: ${image.location} ${image.runtime}")
-            assertEquals("org.freedesktop.Platform/x86_64/26.08", image.runtime)
-        }
 }

@@ -22,59 +22,71 @@ package com.vitorpamplona.amethyst.commons.appupdate
 
 import com.vitorpamplona.quartz.experimental.nip82SoftwareApps.application.SoftwareApplicationEvent
 import com.vitorpamplona.quartz.experimental.nip82SoftwareApps.asset.SoftwareAssetEvent
+import com.vitorpamplona.quartz.experimental.nip82SoftwareApps.asset.filename
+import com.vitorpamplona.quartz.experimental.nip82SoftwareApps.asset.platform
+import com.vitorpamplona.quartz.nip01Core.core.HexKey
+import com.vitorpamplona.quartz.nip01Core.hints.EventHintBundle
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
+import com.vitorpamplona.quartz.nip01Core.tags.aTag.ATag
 import com.vitorpamplona.quartz.nip51Lists.releaseArtifactSet.ReleaseArtifactSetEvent
 import com.vitorpamplona.quartz.utils.TimeUtils
 
 /**
- * The NIP-82 events orchard-publish signs for a Flatpak, tag for tag and in its order
- * (`orchard-nostr/src/events.rs` at v0.1.2), so Orchard reads them as before:
+ * The NIP-82 events Orchard installs the Flatpak from, in the shape Orchard 0.2.0 reads for a
+ * bundle served over https (the shape Zapstore uses for its own files):
  *
- * - per architecture, an asset whose `x` is the image's manifest digest, with the `oci` location
- *   (digest form) and the runtime it needs, and a release `<id>@<version>@<platform>` naming it
- *   (one release per arch, so the two do not replace each other);
+ * - per bundle, an asset with the GitHub URL, its sha256 as `x`, `m` = [FlatpakRelease.MIME_TYPE]
+ *   and the arch as `f` (Orchard picks the asset whose `f` is the machine's);
+ * - one release `<id>@<version>` naming both, on `main` (Orchard reads `main` as its `stable`);
  * - the listing, whose `h` tag is the homepage in Orchard's reading (Zapstore reads `h` as its
  *   community, which is why the two listings can never share an app id).
  */
 object FlatpakReleaseEvents {
     fun asset(
-        image: FlatpakImage,
+        bundle: HashedFlatpakBundle,
+        version: String,
         createdAt: Long = TimeUtils.now(),
-    ) = eventTemplate<SoftwareAssetEvent>(SoftwareAssetEvent.KIND, "", createdAt) {
-        add(arrayOf("i", FlatpakRelease.APP_ID))
-        add(arrayOf("x", image.digest))
-        add(arrayOf("version", image.version))
-        add(arrayOf("f", image.platform))
-        add(arrayOf("oci", image.location))
-        image.runtime?.let { add(arrayOf("runtime", it)) }
+    ) = SoftwareAssetEvent.build(
+        appId = FlatpakRelease.APP_ID,
+        mimeType = FlatpakRelease.MIME_TYPE,
+        hash = bundle.sha256,
+        version = version,
+        assetUrl = bundle.url,
+        sizeInBytes = bundle.sizeInBytes.toInt(),
+        createdAt = createdAt,
+    ) {
+        platform(bundle.platform)
+        filename(bundle.filename)
     }
 
     fun release(
-        image: FlatpakImage,
-        signedAsset: SoftwareAssetEvent,
-        notes: String,
+        publisher: HexKey,
+        version: String,
+        releaseNotes: String,
+        signedAssets: List<SoftwareAssetEvent>,
+        relayHint: NormalizedRelayUrl?,
         createdAt: Long = TimeUtils.now(),
-    ) = eventTemplate<ReleaseArtifactSetEvent>(ReleaseArtifactSetEvent.KIND, notes, createdAt) {
-        add(arrayOf("d", "${FlatpakRelease.APP_ID}@${image.version}@${image.platform}"))
-        add(arrayOf("i", FlatpakRelease.APP_ID))
-        add(arrayOf("version", image.version))
-        add(arrayOf("f", image.platform))
-        add(arrayOf("c", FlatpakRelease.channelFor(image.version)))
-        add(arrayOf("e", signedAsset.id))
-    }
+    ) = ReleaseArtifactSetEvent.buildSoftwareRelease(
+        app = ATag(SoftwareApplicationEvent.KIND, publisher, FlatpakRelease.APP_ID, relayHint),
+        version = version,
+        channel = DesktopReleaseEvents.channelFor(version),
+        assets = signedAssets.map { EventHintBundle(it, relayHint) },
+        releaseNotes = releaseNotes,
+        createdAt = createdAt,
+    )
 
-    fun listing(
-        config: OrchardConfig,
-        createdAt: Long = TimeUtils.now(),
-    ) = eventTemplate<SoftwareApplicationEvent>(SoftwareApplicationEvent.KIND, config.description.orEmpty(), createdAt) {
-        add(arrayOf("d", FlatpakRelease.APP_ID))
-        add(arrayOf("name", config.name))
-        add(arrayOf("summary", config.summary))
-        config.icon?.let { add(arrayOf("icon", it)) }
-        config.license?.let { add(arrayOf("license", it)) }
-        config.repository?.let { add(arrayOf("repository", it)) }
-        config.homepage?.let { add(arrayOf("h", it)) }
-        config.categories.forEach { add(arrayOf("t", it)) }
-        config.platforms.forEach { add(arrayOf("f", it)) }
-    }
+    /** Tag for tag the listing orchard-publish signed, so a republish changes nothing Orchard shows. */
+    fun listing(createdAt: Long = TimeUtils.now()) =
+        eventTemplate<SoftwareApplicationEvent>(SoftwareApplicationEvent.KIND, FlatpakRelease.DESCRIPTION, createdAt) {
+            add(arrayOf("d", FlatpakRelease.APP_ID))
+            add(arrayOf("name", FlatpakRelease.NAME))
+            add(arrayOf("summary", FlatpakRelease.SUMMARY))
+            add(arrayOf("icon", FlatpakRelease.ICON))
+            add(arrayOf("license", FlatpakRelease.LICENSE))
+            add(arrayOf("repository", FlatpakRelease.REPOSITORY))
+            add(arrayOf("h", FlatpakRelease.HOMEPAGE))
+            FlatpakRelease.CATEGORIES.forEach { add(arrayOf("t", it)) }
+            FlatpakRelease.PLATFORMS.forEach { add(arrayOf("f", it)) }
+        }
 }

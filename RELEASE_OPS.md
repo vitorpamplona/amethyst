@@ -22,7 +22,7 @@ A release is one tag push that fans out to these distribution channels:
 | **Google Play** | **Manual** — download the signed AAB from the GH Release, upload in Play Console | Maintainer |
 | **F-Droid** | **Pull** — F-Droid's build server builds the `fdroid` flavor from source when it sees the new tag | F-Droid (we just maintain the recipe + metadata) |
 | **Zapstore** | `amy releases publish` signs the APK's NIP-82 events (as `zsp` did), reading `zapstore.yaml`, with Amethyst's nsec | Maintainer |
-| **Orchard** | CI pushes the Flatpak's OCI image to ghcr with Orchard's `orchard-publish`; the same `amy releases publish` run signs its NIP-82 events | CI + Maintainer |
+| **Orchard** | The same `amy releases publish` run signs NIP-82 events naming the GitHub Release's `.flatpak` bundles | Maintainer |
 | **Desktop self-update** | The same `amy releases publish` run signs the NIP-82 events the desktop app updates from | Maintainer |
 | **Flathub** | **Not submitted yet.** Once accepted: a PR to the Flathub app repo with the regenerated source manifest | Maintainer, by hand (Flathub's AI policy) |
 | **Homebrew** | **Autobump** — BrewTestBot opens the `amethyst-nostr` cask and `amy` formula PRs itself; `scripts/bump-homebrew-cask.sh` only verifies | Homebrew (we verify) |
@@ -202,10 +202,8 @@ One command announces the release on Nostr (NIP-82) for three readers, each unde
   [`zsp`](https://github.com/zapstore/zsp) did, reading the same [`zapstore.yaml`](zapstore.yaml),
   so installs Zapstore made keep updating.
 - **Orchard** ([github.com/Letdown2491/orchard](https://github.com/Letdown2491/orchard)), a Flatpak
-  store over Nostr, installs the Flatpak from events under `com.vitorpamplona.amethyst.Amethyst`
-  that pin the OCI image CI pushed (§ Orchard). `amy` writes them tag for tag as Orchard's
-  `orchard-publish` did, reading the same
-  [`publish.toml`](desktopApp/packaging/orchard/com.vitorpamplona.amethyst.Amethyst.publish.toml).
+  store over Nostr, installs the GitHub Release's `.flatpak` bundles from events under
+  `com.vitorpamplona.amethyst.Amethyst` (§ Orchard).
 - **The desktop app** updates itself from events under `com.vitorpamplona.amethyst.desktop`.
   Until they are out, a desktop user only hears about the new version from GitHub, with a link to
   the download page; the app never installs a file a signed release does not name
@@ -215,7 +213,7 @@ The three share the key and the event kinds, so they must never share an app id:
 replace another's release.
 
 **Each release**, after the GH Release assets exist, download them into one folder and run from
-the repo root (for `zapstore.yaml` and the Orchard TOML), logged in to amy with Amethyst's nsec:
+the repo root (for `zapstore.yaml`), logged in to amy with Amethyst's nsec:
 
 ```bash
 gh release download vX.Y.Z --pattern 'amethyst-desktop-*' --pattern 'amethyst-googleplay-arm64-v8a-*.apk' --dir /tmp/release-vX.Y.Z
@@ -224,10 +222,9 @@ amy releases publish /tmp/release-vX.Y.Z --version X.Y.Z --notes-file notes.md -
 ```
 
 For each app with files in the folder, it signs one kind 3063 asset per file, then the kind 30063
-release that names them (Orchard: one release per arch, as `orchard-publish` signs them), and
-publishes to that app's relays. `--listing` also (re)publishes the kind 32267 listing: do it when
-`zapstore.yaml` (Android), the Orchard TOML or its `description.md` (Flatpak), or
-`DesktopReleaseEvents` (desktop) changes, and the first time for the desktop.
+release that names them, and publishes to that app's relays. `--listing` also (re)publishes the kind 32267 listing: do it when
+`zapstore.yaml` (Android), `FlatpakRelease` (Flatpak) or `DesktopReleaseEvents` (desktop)
+changes, and the first time for the desktop.
 
 - **Android:** by default the googleplay arm64-v8a APK, the one `zsp` picked and the only platform
   Zapstore installs for (`--android-flavor`, `--android-abis` choose others). Each APK is checked
@@ -236,13 +233,10 @@ publishes to that app's relays. `--listing` also (re)publishes the kind 32267 li
   `--blossom https://cdn.zapstore.dev` mirrors the APK there as a second URL, and for `--listing`
   uploads the icon and screenshots, as `zsp` did. Relays: `relay.zapstore.dev` (the one the
   Zapstore app reads), `nos.lol`, `nostr.mom` and `vitor.nostr1.com`.
-- **Flatpak:** for each `amethyst-desktop-X.Y.Z-linux-*.flatpak` bundle in the folder, the image
-  CI pushed as `ghcr.io/vitorpamplona/amethyst-flatpak:X.Y.Z-linux-<arch>`. `amy` reads its
-  manifest from ghcr, checks the bytes hash to the digest ghcr names and that its Flatpak
-  annotations say this app, arch and version, and signs the asset with the digest, the
-  `docker://…@sha256:…` location and the runtime. The bundle itself is not read: it only says which
-  arches the release has. Relays: the TOML's `[publish]` (`relay.orchard.rocks` is the one Orchard
-  reads). `--orchard-toml` points at another TOML.
+- **Flatpak:** both `amethyst-desktop-X.Y.Z-linux-*.flatpak` bundles, each checked to be this app
+  for its arch by the ref in its header, with its GitHub URL, SHA-256, size, arch and
+  `application/vnd.flatpak`, in one release. Relays: `FlatpakRelease.RELAYS` (`relay.orchard.rocks`
+  is the one Orchard reads).
 - **Desktop:** every `amethyst-desktop-X.Y.Z-*` file the app installs (DMG, MSI, both zips, both
   AppImages, both tarballs, the .debs and .rpms; not the Flatpak bundles or `.zsync` files), with
   its GitHub URL, SHA-256, size, platform and MIME type. Relays: `DesktopRelease.RELAYS`.
@@ -252,53 +246,22 @@ workflow classifies tags) goes out on the `beta` channel, which none of the read
 `--only android`, `--only flatpak` or `--only desktop` publishes one app.
 
 `zsp publish` still works for the APK if `amy` is unavailable: it reads the same `zapstore.yaml`,
-with the relays in the `RELAY_URLS` env var. Orchard's fallback is below.
+with the relays in the `RELAY_URLS` env var.
 
-### Orchard — the image CI pushes
-Orchard installs a Flatpak from an OCI image, and only one whose digest matches the signed asset.
-The `linux-portable` legs of `Create Release Assets` build that image from the app they just
-packaged, with Orchard's own `orchard-publish` (pinned by tag and commit in the workflow's `env`),
-and push it to `ghcr.io/vitorpamplona/amethyst-flatpak:X.Y.Z-linux-<arch>` with the workflow's
-`GITHUB_TOKEN`. CI holds no Nostr key: `orchard-publish` signs with a throwaway one and sends
-nothing (`--skip-relays`); the events are `amy`'s (§ Nostr releases). A dry run builds the image
-and pushes nothing. The image is deterministic: the same app tree gives the same digest.
+### Orchard
+Orchard (0.2.0 and later) downloads the bundle from the asset's URL, checks it against the signed
+SHA-256 and installs it with `flatpak install --bundle`; an update installs the new bundle over the
+old one. There is nothing to build or host beyond the GitHub Release. Orchard 0.1.x only installed
+OCI images, which `orchard-publish` pushed to `ghcr.io/vitorpamplona/amethyst-flatpak` for 1.19.0;
+the 1.19.0 events still point there, so leave that package until a later release is out, then it
+can be deleted.
 
-Keep `author-name` and `nip05` out of the TOML: either makes `orchard-publish` sign a kind 0 that
-replaces Amethyst's Nostr profile, if it is ever run with the key (the fallback below).
+The bundle is built on the Flatpak branch `master`; the 1.19.0 image was `stable`. Someone who
+installed 1.19.0 from Orchard gets the bundle as a second branch beside the image's on the next
+update; `flatpak uninstall com.vitorpamplona.amethyst.Amethyst//stable` removes the old one.
 
-**One-time setup.**
-- The workflow's token may only push to a package that grants this repository write access. The
-  package was first pushed from a personal login, so in its settings
-  (github.com/users/vitorpamplona/packages/container/amethyst-flatpak/settings) under **Manage
-  Actions access**, add `vitorpamplona/amethyst` with the **Write** role. Without it the push step
-  fails with `403`.
-- ghcr packages start private and Orchard cannot pull a private one; this one was made **public**
-  after its first push (v1.19.0). A new package would need the same.
-- `orchard.txt` at the repo root names Amethyst's npub. Orchard reads it from the default branch to
-  show the repository link as verified. Update it if the signing key ever changes. Don't use the
-  tool's `--prove`: it commits that file itself.
-
-When the freedesktop runtime moves, update `runtime` in the TOML along with the Flatpak manifest
-(`amy` reads the runtime from the image, which takes it from the app's metadata, so only
-`orchard-publish`'s own events would go stale).
-
-**Fallback: `orchard-publish` with the key.** If CI could not push (or for a release from before
-it did), [`desktopApp/packaging/orchard/docker/`](desktopApp/packaging/orchard/docker/) runs the
-whole publish on any machine with Docker, macOS included. It builds `orchard-publish` at the same
-pinned tag, unpacks both `linux-*.flatpak` release assets of the version in
-`gradle/libs.versions.toml` with `ostree`, then pushes each image (as `latest-linux-<arch>`) and
-signs and sends its events itself:
-
-```bash
-desktopApp/packaging/orchard/docker/publish-orchard.sh dry    # throwaway key; nothing leaves
-desktopApp/packaging/orchard/docker/publish-orchard.sh live
-```
-
-`live` first checks that the key's npub is the one `orchard.txt` names and refuses to push or send
-anything otherwise. It reads the nsec from `ORCHARD_NSEC`, or from `~/.orchard-nsec`; create that
-file in your own shell (the script's header has the zsh and bash lines) and delete it afterwards.
-It pushes with your `gh` login (`gh auth refresh -s write:packages`). The log lands in
-`build/orchard/live.log`. Its events are the same as `amy`'s, so either may follow the other.
+**One-time setup.** `orchard.txt` at the repo root names Amethyst's npub. Orchard reads it from the
+default branch to show the repository link as verified. Update it if the signing key ever changes.
 
 ### Flathub — not submitted yet
 

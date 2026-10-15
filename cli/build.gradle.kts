@@ -62,8 +62,6 @@ dependencies {
     implementation(libs.jackson.module.kotlin)
     // Reads zapstore.yaml for `amy releases publish` (Apache-2.0, with SnakeYAML, Apache-2.0).
     implementation(libs.jackson.dataformat.yaml)
-    // Reads Orchard's *.publish.toml for `amy releases publish` (Apache-2.0).
-    implementation(libs.jackson.dataformat.toml)
     implementation(libs.slf4j.nop)
 
     testImplementation(libs.kotlin.test)

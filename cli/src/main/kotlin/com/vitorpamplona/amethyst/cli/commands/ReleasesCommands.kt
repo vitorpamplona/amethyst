@@ -21,7 +21,6 @@
 package com.vitorpamplona.amethyst.cli.commands
 
 import com.fasterxml.jackson.databind.ObjectMapper
-import com.fasterxml.jackson.dataformat.toml.TomlMapper
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory
 import com.vitorpamplona.amethyst.cli.Args
 import com.vitorpamplona.amethyst.cli.Context
@@ -29,7 +28,7 @@ import com.vitorpamplona.amethyst.cli.DataDir
 import com.vitorpamplona.amethyst.cli.Output
 import com.vitorpamplona.amethyst.commons.appupdate.AndroidRelease
 import com.vitorpamplona.amethyst.commons.appupdate.DesktopRelease
-import com.vitorpamplona.amethyst.commons.appupdate.OrchardConfig
+import com.vitorpamplona.amethyst.commons.appupdate.FlatpakRelease
 import com.vitorpamplona.amethyst.commons.appupdate.ReleaseBundles
 import com.vitorpamplona.amethyst.commons.appupdate.ReleaseFilesException
 import com.vitorpamplona.amethyst.commons.appupdate.SignedRelease
@@ -40,13 +39,13 @@ import java.io.File
 /**
  * `amy releases publish` — announce a release on Nostr (NIP-82), signed with Amethyst's key:
  * the desktop files for the desktop app's updater, the APKs for Zapstore as zsp
- * (https://github.com/zapstore/zsp) did, and the Flatpak images for Orchard as orchard-publish
- * (https://github.com/Letdown2491/orchard) did. Run after the GitHub Release assets exist
+ * (https://github.com/zapstore/zsp) did, and the Flatpak bundles for Orchard
+ * (https://github.com/Letdown2491/orchard). Run after the GitHub Release assets exist
  * (RELEASE_OPS.md § Nostr releases).
  *
- * Thin assembly: file naming, APK inspection, registry checks, event shapes and Blossom mirroring
- * are commons' `appupdate` ([ReleaseBundles]); this reads the flags, `zapstore.yaml` and Orchard's
- * TOML, and publishes.
+ * Thin assembly: file naming, APK and bundle checks, event shapes and Blossom mirroring
+ * are commons' `appupdate` ([ReleaseBundles]); this reads the flags and `zapstore.yaml`, and
+ * publishes.
  */
 object ReleasesCommands {
     val USAGE: String =
@@ -58,21 +57,19 @@ object ReleasesCommands {
         |        [--zapstore-yaml F] [--blossom URL]     them (--listing adds the kind:32267 app).
         |        [--android-flavor googleplay|fdroid]    Desktop: the amethyst-desktop-* files, under
         |        [--android-abis A[,A]|all]              com.vitorpamplona.amethyst.desktop. Android:
-        |        [--orchard-toml F]                      the APKs of one flavor (googleplay) and ABI
-        |        [--url-base URL] [--relay URL[,URL]]    list (arm64-v8a), checked with apksig and
-        |        [--dry-run] [--any-key]                 tagged as zsp does (version_code, SDKs,
+        |        [--url-base URL] [--relay URL[,URL]]    the APKs of one flavor (googleplay) and ABI
+        |        [--dry-run] [--any-key]                 list (arm64-v8a), checked with apksig and
+        |                                                tagged as zsp does (version_code, SDKs,
         |                                                apk_certificate_hash, supported_nip from
         |                                                --zapstore-yaml, default ./zapstore.yaml).
         |                                                --blossom mirrors the APKs (and the listing's
         |                                                icon and screenshots) there, as zsp does with
-        |                                                https://cdn.zapstore.dev. Flatpak: for each
-        |                                                linux-*.flatpak bundle in DIR, the image the
-        |                                                release workflow pushed (tag X.Y.Z-linux-ARCH
-        |                                                on ghcr), checked against the registry and
-        |                                                signed as orchard-publish does, with the
-        |                                                listing from --orchard-toml. URLs default to
-        |                                                the GitHub Release of vX.Y.Z; relays to each
-        |                                                app's. --dry-run signs and prints, uploading
+        |                                                https://cdn.zapstore.dev. Flatpak: the
+        |                                                linux-*.flatpak bundles, header-checked, under
+        |                                                com.vitorpamplona.amethyst.Amethyst, for
+        |                                                Orchard 0.2+. URLs default to the GitHub
+        |                                                Release of vX.Y.Z; relays to each app's.
+        |                                                --dry-run signs and prints, uploading
         |                                                nothing. Refuses a key other than Amethyst's
         |                                                unless --any-key.
         """.trimMargin()
@@ -93,7 +90,6 @@ object ReleasesCommands {
         val notes = args.flag("notes-file")?.let { File(it).readText() } ?: ""
         val withListing = args.bool("listing")
         val yaml = File(args.flag("zapstore-yaml") ?: "zapstore.yaml")
-        val orchardToml = File(args.flag("orchard-toml") ?: ORCHARD_TOML)
         val blossom = args.flag("blossom")?.trimEnd('/')
         val flavorName = args.flag("android-flavor") ?: AndroidRelease.Flavor.GOOGLE_PLAY.fileTag
         val abisFlag = args.flag("android-abis") ?: "arm64-v8a"
@@ -149,11 +145,9 @@ object ReleasesCommands {
                     }
                 }
                 if (only == null || only == "flatpak") {
-                    val images = ReleaseBundles.flatpakImages(dir, version)
-                    if (images.isNotEmpty()) {
-                        if (!orchardToml.isFile) return Output.error("bad_args", "the Flatpak needs --orchard-toml (no $orchardToml)")
-                        val config = OrchardConfig.fromMap(readToml(orchardToml)) { File(orchardToml.absoluteFile.parentFile, it).takeIf(File::isFile)?.readText() }
-                        releases += ReleaseBundles.signFlatpak(signer, notes, images, config, withListing, relayOverride ?: config.relays)
+                    val bundles = ReleaseBundles.flatpakBundles(dir, version, urlBase)
+                    if (bundles.isNotEmpty()) {
+                        releases += ReleaseBundles.signFlatpak(signer, version, notes, bundles, relayOverride ?: FlatpakRelease.RELAYS, withListing)
                     }
                 }
             } catch (e: ReleaseFilesException) {
@@ -182,8 +176,8 @@ object ReleasesCommands {
                         releases.map { r ->
                             mapOf(
                                 "app_id" to r.appId,
-                                "release_ids" to r.releases.map { it.id },
-                                "channel" to r.releases.first().channel(),
+                                "release_id" to r.release.id,
+                                "channel" to r.release.channel(),
                                 "listing_id" to r.listing?.id,
                                 "assets" to r.files,
                                 "relays" to r.relays,
@@ -197,11 +191,7 @@ object ReleasesCommands {
         }
     }
 
-    private const val ORCHARD_TOML = "desktopApp/packaging/orchard/com.vitorpamplona.amethyst.Amethyst.publish.toml"
     private val APPS = listOf("desktop", "android", "flatpak")
-
-    @Suppress("UNCHECKED_CAST")
-    internal fun readToml(file: File): Map<String, Any?> = TomlMapper().readValue(file, Map::class.java) as Map<String, Any?>
 
     @Suppress("UNCHECKED_CAST")
     private fun readYaml(file: File): Map<String, Any?> = ObjectMapper(YAMLFactory()).readValue(file, Map::class.java) as Map<String, Any?>
