@@ -110,9 +110,9 @@ object SnoParser {
         val faces = root["faces"] as? JsonArray ?: return SnoResult.Invalid("2", "faces is not an array")
         if (vertices.size != colors.size) return SnoResult.Invalid("2", "vertices and colors differ in length")
 
-        // Rule 3. The limits, enforced before anything is allocated from them (§6).
-        if (vertices.size > SnoPayload.MAX_VERTICES) return SnoResult.Invalid("3", "more than ${SnoPayload.MAX_VERTICES} vertices")
-        if (faces.size > SnoPayload.MAX_FACES) return SnoResult.Invalid("3", "more than ${SnoPayload.MAX_FACES} faces")
+        // Rule 3 sets no bound since 2026-09-24: "a reader MUST NOT reject a payload for its vertex
+        // or face count" (§1.8). The relay's event size limit bounds the payload instead, and every
+        // buffer below is sized from the arrays actually given, never from a number in the payload.
 
         // Rule 4.
         val mode = SnoMode.parseOrNull(root["mode"].asStringOrNull()) ?: return SnoResult.Invalid("4", "mode is not solid, points or lines")

@@ -84,8 +84,6 @@ class SnoPayload(
         /** The lattice spacing: a tick is one 120th of a model unit (§1.2). */
         const val TICKS_PER_UNIT = 120
 
-        const val MAX_VERTICES = 512
-        const val MAX_FACES = 1024
         const val MIN_EXTENT = 1
         const val MAX_EXTENT = 64
         const val DEFAULT_EXTENT = 8
