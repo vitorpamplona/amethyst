@@ -7061,7 +7061,6 @@
     <string name="emoji_picker_open">Insert emoji</string>
     <string name="emoji_picker_skin_tone">Skin tone</string>
     <string name="emoji_picker_close">Close emoji picker</string>
-    <string name="emoji_picker_close_hint">Close (Esc)</string>
     <string name="emoji_picker_favorites">Favorites</string>
     <string name="emoji_skin_tone_default">Default</string>
     <string name="emoji_skin_tone_light">Light</string>

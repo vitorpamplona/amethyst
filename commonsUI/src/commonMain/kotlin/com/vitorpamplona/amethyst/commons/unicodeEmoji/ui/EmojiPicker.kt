@@ -72,6 +72,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.TextStyle
@@ -102,7 +103,6 @@ import com.vitorpamplona.amethyst.commons.resources.emoji_group_smileys_emotion
 import com.vitorpamplona.amethyst.commons.resources.emoji_group_symbols
 import com.vitorpamplona.amethyst.commons.resources.emoji_group_travel_places
 import com.vitorpamplona.amethyst.commons.resources.emoji_picker_close
-import com.vitorpamplona.amethyst.commons.resources.emoji_picker_close_hint
 import com.vitorpamplona.amethyst.commons.resources.emoji_picker_favorites
 import com.vitorpamplona.amethyst.commons.resources.emoji_picker_open
 import com.vitorpamplona.amethyst.commons.resources.emoji_picker_skin_tone
@@ -352,13 +352,13 @@ fun EmojiPicker(
 }
 
 /**
- * Closes the picker. Back, Esc and the composer's highlighted smiley close it too, but none of
- * those shows in the panel, and a docked panel spanning the window looked stuck without it.
+ * Closes the picker. The docked panel also closes on Back, Esc and its highlighted smiley, and the
+ * menu on a tap outside it, but none of that shows: a panel spanning the window looked stuck.
  */
 @Composable
 private fun EmojiPickerCloseButton(onClose: () -> Unit) {
     val description = stringRes(Res.string.emoji_picker_close)
-    HoverTooltip(stringRes(Res.string.emoji_picker_close_hint)) {
+    HoverTooltip(description) {
         Box(
             contentAlignment = Alignment.Center,
             modifier =
@@ -367,7 +367,7 @@ private fun EmojiPickerCloseButton(onClose: () -> Unit) {
                     .size(CellSize)
                     .clip(CircleShape)
                     .background(MaterialTheme.colorScheme.surfaceContainerHighest)
-                    .clickable(onClickLabel = description, onClick = onClose)
+                    .clickable(role = Role.Button, onClick = onClose)
                     .semantics { contentDescription = description },
         ) {
             Icon(
