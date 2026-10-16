@@ -219,7 +219,7 @@ class Nip11RelayInformationBuilder {
 
         /** A one-time fee to be allowed to write to the relay. Repeatable. */
         fun admission(
-            amount: Int? = null,
+            amount: Long? = null,
             unit: String? = null,
             period: Int? = null,
             kinds: List<Int>? = null,
@@ -227,7 +227,7 @@ class Nip11RelayInformationBuilder {
 
         /** A recurring fee to keep writing to the relay. Repeatable. */
         fun subscription(
-            amount: Int? = null,
+            amount: Long? = null,
             unit: String? = null,
             period: Int? = null,
             kinds: List<Int>? = null,
@@ -235,7 +235,7 @@ class Nip11RelayInformationBuilder {
 
         /** A per-event fee to publish. Repeatable (e.g. one entry per kind group). */
         fun publication(
-            amount: Int? = null,
+            amount: Long? = null,
             unit: String? = null,
             period: Int? = null,
             kinds: List<Int>? = null,

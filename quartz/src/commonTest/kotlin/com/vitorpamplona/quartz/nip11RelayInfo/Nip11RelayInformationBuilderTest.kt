@@ -109,7 +109,7 @@ class Nip11RelayInformationBuilderTest {
             }
 
         assertEquals(
-            1000,
+            1000L,
             info.fees
                 ?.admission
                 ?.first()
