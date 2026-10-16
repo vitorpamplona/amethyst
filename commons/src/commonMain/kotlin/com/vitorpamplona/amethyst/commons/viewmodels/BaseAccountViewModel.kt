@@ -1338,6 +1338,8 @@ open class BaseAccountViewModel(
             // light up automatically. A toast on top would be redundant
             // noise.
         } catch (e: Exception) {
+            // A cancelled send (the screen left, the scope closed) is not a mint failure.
+            if (e is CancellationException) throw e
             onError.report(noticeResolver, NutzapNotice.MintFailed(describeMintError(e)), baseNote.author)
         }
     }
