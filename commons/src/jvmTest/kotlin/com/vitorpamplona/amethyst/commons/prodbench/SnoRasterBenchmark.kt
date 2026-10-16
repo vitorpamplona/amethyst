@@ -70,6 +70,14 @@ class SnoRasterBenchmark {
         lighting: SnoLighting? = null,
     ): Double {
         repeat(WARMUP) { SnoRasterizer.render(payload, size, size, lighting = lighting) }
+        return timedBatch(payload, size, lighting)
+    }
+
+    private fun timedBatch(
+        payload: SnoPayload,
+        size: Int,
+        lighting: SnoLighting?,
+    ): Double {
         val start = System.nanoTime()
         repeat(RUNS) { SnoRasterizer.render(payload, size, size, lighting = lighting) }
         return (System.nanoTime() - start) / 1e6 / RUNS
@@ -115,8 +123,21 @@ class SnoRasterBenchmark {
         // pixel.
         val realCost = millisToLight(real)
         val ceiling = millisToLight(adversarial)
-        val flatFrame = millisPerFrame(real, VIEWER_PX)
-        val litFrame = millisPerFrame(real, VIEWER_PX, SnoLighting.of(real))
+        // The two frames are compared with each other, so they are timed in
+        // alternating batches and each keeps its best one: a GC pause, a JIT
+        // recompile or a noisy neighbour on a CI box lands in a single batch of
+        // one side and would otherwise decide the comparison on its own.
+        val light = SnoLighting.of(real)
+        repeat(WARMUP) {
+            SnoRasterizer.render(real, VIEWER_PX, VIEWER_PX)
+            SnoRasterizer.render(real, VIEWER_PX, VIEWER_PX, lighting = light)
+        }
+        var flatFrame = Double.MAX_VALUE
+        var litFrame = Double.MAX_VALUE
+        repeat(TRIALS) {
+            flatFrame = minOf(flatFrame, timedBatch(real, VIEWER_PX, null))
+            litFrame = minOf(litFrame, timedBatch(real, VIEWER_PX, light))
+        }
         println("winding + light: real (94f) ${fmt(realCost)} ms, adversarial (1004f) ${fmt(ceiling)} ms")
         println("a ${VIEWER_PX}px frame of a real object: flat ${fmt(flatFrame)} ms, lit ${fmt(litFrame)} ms")
 
@@ -129,6 +150,7 @@ class SnoRasterBenchmark {
     companion object {
         private const val WARMUP = 10
         private const val RUNS = 20
+        private const val TRIALS = 5
         private const val THUMBNAIL_PX = 96
         private const val VIEWER_PX = 512
     }
