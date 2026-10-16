@@ -1150,14 +1150,15 @@ open class EventCache :
         relay: NormalizedRelayUrl?,
         wasVerified: Boolean,
     ): Boolean {
-        // new event
-        consumeBaseReplaceable(event, relay, wasVerified)
+        // new event. consumeBaseReplaceable only reports a new version after verifying it, so a
+        // true here spares the second Schnorr check below — the common case for a fresh kind 0.
+        val isNew = consumeBaseReplaceable(event, relay, wasVerified)
 
         val user = getOrCreateUser(event.pubKey)
 
         if (user.metadata().shouldUpdateWith(event)) {
             val newUserMetadata = event.contactMetaData()
-            if (newUserMetadata != null && (wasVerified || justVerify(event))) {
+            if (newUserMetadata != null && (wasVerified || isNew || justVerify(event))) {
                 user.updateUserInfo(newUserMetadata, event)
                 BuzzIdentityNames.invalidate()
                 if (relay != null) {
@@ -1814,7 +1815,8 @@ open class EventCache :
         return if (wasVerified || justVerify(event)) {
             note.loadEvent(event, author, emptyList())
 
-            if (deletionIndex.add(event, wasVerified)) {
+            // Verified just above: passing the caller's flag on made the index check it again.
+            if (deletionIndex.add(event, true)) {
                 event
                     .deleteEvents()
                     .mapNotNull { getNoteIfExists(it) }
