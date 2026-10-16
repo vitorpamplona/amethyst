@@ -21,8 +21,9 @@ A release is one tag push that fans out to these distribution channels:
 | **GitHub Releases** | Automatic — the `Create Release Assets` workflow builds + signs everything on the `v*` tag | CI |
 | **Google Play** | **Manual** — download the signed AAB from the GH Release, upload in Play Console | Maintainer |
 | **F-Droid** | **Pull** — F-Droid's build server builds the `fdroid` flavor from source when it sees the new tag | F-Droid (we just maintain the recipe + metadata) |
-| **Zapstore** | `zsp publish` reads `zapstore.yaml`, signs a Nostr release event with Amethyst's nsec | Maintainer |
-| **Orchard** | `orchard-publish` pushes the Flatpak to ghcr and signs its listing with Amethyst's nsec | Maintainer |
+| **Zapstore** | `amy releases publish` signs the APK's NIP-82 events (as `zsp` did), reading `zapstore.yaml`, with Amethyst's nsec | Maintainer |
+| **Orchard** | The same `amy releases publish` run signs NIP-82 events naming the GitHub Release's `.flatpak` bundles | Maintainer |
+| **Desktop self-update** | The same `amy releases publish` run signs the NIP-82 events the desktop app updates from | Maintainer |
 | **Flathub** | **Not submitted yet.** Once accepted: a PR to the Flathub app repo with the regenerated source manifest | Maintainer, by hand (Flathub's AI policy) |
 | **Homebrew** | **Autobump** — BrewTestBot opens the `amethyst-nostr` cask and `amy` formula PRs itself; `scripts/bump-homebrew-cask.sh` only verifies | Homebrew (we verify) |
 | **Winget** | `scripts/bump-winget.sh` opens the `winget-pkgs` PR with your `gh` auth | Maintainer |
@@ -193,121 +194,74 @@ What we own to keep that working:
 After a release, just confirm F-Droid picked up the new version (it can lag a
 few days): <https://f-droid.org/packages/com.vitorpamplona.amethyst/>.
 
-### Zapstore — `zsp publish` with Amethyst's nsec
-[Zapstore](https://zapstore.dev/) is a Nostr-native app store. The `zsp` CLI
-reads [`zapstore.yaml`](zapstore.yaml) at the repo root (name, summary,
-description, tags, license, `icon`, screenshots, `supported_nips`, and the
-`variants` regexes that match our `*-fdroid-*.apk` / `*-googleplay-*.apk`
-GH-release assets), then publishes a signed software-release event to Nostr
-relays.
+### Nostr releases — `amy releases publish` with Amethyst's nsec
+One command announces the release on Nostr (NIP-82) for three readers, each under its own app id:
+
+- **Zapstore** ([zapstore.dev](https://zapstore.dev/)) installs and updates the APK from events
+  under `com.vitorpamplona.amethyst`. `amy` writes them tag for tag as
+  [`zsp`](https://github.com/zapstore/zsp) did, reading the same [`zapstore.yaml`](zapstore.yaml),
+  so installs Zapstore made keep updating.
+- **Orchard** ([github.com/Letdown2491/orchard](https://github.com/Letdown2491/orchard)), a Flatpak
+  store over Nostr, installs the GitHub Release's `.flatpak` bundles from events under
+  `com.vitorpamplona.amethyst.Amethyst` (§ Orchard).
+- **The desktop app** updates itself from events under `com.vitorpamplona.amethyst.desktop`.
+  Until they are out, a desktop user only hears about the new version from GitHub, with a link to
+  the download page; the app never installs a file a signed release does not name
+  (`desktopApp/plans/2026-10-15-desktop-self-update-study.md`).
+
+The three share the key and the event kinds, so they must never share an app id: one publish would
+replace another's release.
+
+**Each release**, after the GH Release assets exist, download them into one folder and run from
+the repo root (for `zapstore.yaml`), logged in to amy with Amethyst's nsec:
 
 ```bash
-# from the repo root, after the GH Release assets exist
-zsp publish
+gh release download vX.Y.Z --pattern 'amethyst-desktop-*' --pattern 'amethyst-googleplay-arm64-v8a-*.apk' --dir /tmp/release-vX.Y.Z
+amy releases publish /tmp/release-vX.Y.Z --version X.Y.Z --notes-file notes.md --blossom https://cdn.zapstore.dev --dry-run   # check
+amy releases publish /tmp/release-vX.Y.Z --version X.Y.Z --notes-file notes.md --blossom https://cdn.zapstore.dev
 ```
 
-It signs with **Amethyst's nsec** — provide the key the way `zsp` expects
-(`SIGN_WITH` env var / prompt / its own config), never commit it.
+For each app with files in the folder, it signs one kind 3063 asset per file, then the kind 30063
+release that names them, and publishes to that app's relays. `--listing` also (re)publishes the kind 32267 listing: do it when
+`zapstore.yaml` (Android), `FlatpakRelease` (Flatpak) or `DesktopReleaseEvents` (desktop)
+changes, and the first time for the desktop.
 
-**Relays.** `zsp` does *not* take relays from `zapstore.yaml`; it reads the
-`RELAY_URLS` env var (comma-separated) and defaults to `wss://relay.zapstore.dev`
-when unset. To fan the release event out to more relays for discoverability,
-set `RELAY_URLS` for the run:
+- **Android:** by default the googleplay arm64-v8a APK, the one `zsp` picked and the only platform
+  Zapstore installs for (`--android-flavor`, `--android-abis` choose others). Each APK is checked
+  with apksig (signature, package, version) and tagged with `version_code`, the SDK range, its ABIs,
+  `apk_certificate_hash`, the `variant` and the `supported_nips` from `zapstore.yaml`.
+  `--blossom https://cdn.zapstore.dev` mirrors the APK there as a second URL, and for `--listing`
+  uploads the icon and screenshots, as `zsp` did. Relays: `relay.zapstore.dev` (the one the
+  Zapstore app reads), `nos.lol`, `nostr.mom` and `vitor.nostr1.com`.
+- **Flatpak:** both `amethyst-desktop-X.Y.Z-linux-*.flatpak` bundles, each checked to be this app
+  for its arch by the ref in its header, with its GitHub URL, SHA-256, size, arch and
+  `application/vnd.flatpak`, in one release. Relays: `FlatpakRelease.RELAYS` (`relay.orchard.rocks`
+  is the one Orchard reads).
+- **Desktop:** every `amethyst-desktop-X.Y.Z-*` file the app installs (DMG, MSI, both zips, both
+  AppImages, both tarballs, the .debs and .rpms; not the Flatpak bundles or `.zsync` files), with
+  its GitHub URL, SHA-256, size, platform and MIME type. Relays: `DesktopRelease.RELAYS`.
 
-```bash
-RELAY_URLS="wss://relay.zapstore.dev,wss://nos.lol,wss://nostr.mom,wss://vitor.nostr1.com" \
-  SIGN_WITH=<amethyst-nsec> zsp publish
-```
+It refuses any key but Amethyst's. A prerelease version (anything but `X.Y.Z`, as the release
+workflow classifies tags) goes out on the `beta` channel, which none of the readers installs from.
+`--only android`, `--only flatpak` or `--only desktop` publishes one app.
 
-Keep `wss://relay.zapstore.dev` in the list — that is the relay the Zapstore app
-itself reads from.
+`zsp publish` still works for the APK if `amy` is unavailable: it reads the same `zapstore.yaml`,
+with the relays in the `RELAY_URLS` env var.
 
-### Orchard — `orchard-publish` with Amethyst's nsec
-[Orchard](https://github.com/Letdown2491/orchard) is a Flatpak store over Nostr.
-Its publisher CLI, `orchard-publish`, turns the Flatpak's app tree into an OCI
-image, pushes it to our ghcr registry, then signs three events with Amethyst's
-key: a listing (kind 32267), a release (30063) and an asset (3063) that pins the
-image by digest. Orchard installs only an image whose digest matches the signed
-asset. The listing comes from
-[`desktopApp/packaging/orchard/com.vitorpamplona.amethyst.Amethyst.publish.toml`](desktopApp/packaging/orchard/com.vitorpamplona.amethyst.Amethyst.publish.toml).
+### Orchard
+Orchard (0.2.0 and later) downloads the bundle from the asset's URL, checks it against the signed
+SHA-256 and installs it with `flatpak install --bundle`; an update installs the new bundle over the
+old one. There is nothing to build or host beyond the GitHub Release. Orchard 0.1.x only installed
+OCI images, which `orchard-publish` pushed to `ghcr.io/vitorpamplona/amethyst-flatpak` for 1.19.0;
+the 1.19.0 events still point there, so leave that package until a later release is out, then it
+can be deleted.
 
-It shares the key and the event kinds with Zapstore, so the two must never sign
-the same app id: the Flatpak is `com.vitorpamplona.amethyst.Amethyst`, Zapstore
-lists the APK as `com.vitorpamplona.amethyst`. Keep `author-name` and `nip05`
-out of the config: either makes the tool sign a kind 0 that replaces
-Amethyst's Nostr profile.
+The bundle is built on the Flatpak branch `master`; the 1.19.0 image was `stable`. Someone who
+installed 1.19.0 from Orchard gets the bundle as a second branch beside the image's on the next
+update; `flatpak uninstall com.vitorpamplona.amethyst.Amethyst//stable` removes the old one.
 
-**One-time setup.**
-- Let your `gh` login push to ghcr: `gh auth refresh -s write:packages`. The
-  image goes to `ghcr.io/vitorpamplona/amethyst-flatpak`. ghcr packages start
-  private and Orchard cannot pull a private one; this one was made **public**
-  after its first push (v1.19.0). A new package would need the same.
-- `orchard.txt` at the repo root names Amethyst's npub. Orchard reads it from
-  the default branch to show the repository link as verified. Update it if the
-  signing key ever changes. Don't use the tool's `--prove`: it commits that
-  file itself.
-
-**Each release**, after the GH Release assets exist, from the repo root on any
-machine with Docker, macOS included:
-
-```bash
-desktopApp/packaging/orchard/docker/publish-orchard.sh dry    # throwaway key; nothing leaves
-desktopApp/packaging/orchard/docker/publish-orchard.sh live
-```
-
-`ostree` and `flatpak`, which unpack the release bundles, only exist on Linux,
-so the script runs everything in a container
-([`desktopApp/packaging/orchard/docker/`](desktopApp/packaging/orchard/docker/)):
-it builds `orchard-publish` from Orchard's pinned tag (several minutes the
-first time, cached after), downloads both `linux-*.flatpak` assets of the
-version in `gradle/libs.versions.toml` into `build/orchard/`, and publishes both
-arches. `live` first checks that the key's npub is the one `orchard.txt` names
-and refuses to push or send anything otherwise. It reads the nsec from
-`ORCHARD_NSEC`, or from `~/.orchard-nsec`; create that file in your own shell
-(the script's header has the zsh and bash lines) and delete it afterwards. The
-log lands in `build/orchard/live.log`.
-
-**By hand on Linux**, without Docker: build the tool at a tag and keep the
-binary (Rust; `rust-toolchain.toml` pins the toolchain):
-
-```bash
-git clone --branch v0.1.2 https://github.com/Letdown2491/orchard
-cargo build --release -p orchard-publish --manifest-path orchard/Cargo.toml
-cp orchard/target/release/orchard-publish ~/.local/bin/   # anywhere on PATH
-```
-
-Then, each release, run it once per arch; both
-runs sign the same listing. The tree comes straight out of the release bundle
-with `ostree`, so nothing is rebuilt and no runtime is installed:
-
-```bash
-VER=$(grep -E '^app\s*=' gradle/libs.versions.toml | cut -d'"' -f2)
-DIR=desktopApp/packaging/orchard
-read -rsp "Amethyst nsec: " ORCHARD_NSEC; echo      # prompted, so it stays out of shell history
-export ORCHARD_NSEC ORCHARD_PUBLISH_VERSION="$VER"
-export ORCHARD_REGISTRY_USER=$(gh api user -q .login) ORCHARD_REGISTRY_PASSWORD=$(gh auth token)
-
-for ARCH in x64:x86_64 arm64:aarch64; do
-  GH=${ARCH%%:*}; FP=${ARCH##*:}
-  gh release download "v$VER" -p "amethyst-desktop-$VER-linux-$GH.flatpak" -O /tmp/amethyst.flatpak --clobber
-  rm -rf /tmp/orchard-repo "$DIR/tree"
-  ostree init --repo=/tmp/orchard-repo --mode=archive-z2
-  flatpak build-import-bundle /tmp/orchard-repo /tmp/amethyst.flatpak
-  ostree checkout --repo=/tmp/orchard-repo -U "app/com.vitorpamplona.amethyst.Amethyst/$FP/master" "$DIR/tree"
-  orchard-publish "$DIR/com.vitorpamplona.amethyst.Amethyst.publish.toml" \
-    --arch "linux-$FP" \
-    --registry ghcr.io/vitorpamplona/amethyst-flatpak \
-    --tag "latest-linux-$FP"
-done
-unset ORCHARD_NSEC ORCHARD_REGISTRY_PASSWORD
-```
-
-`flatpak build-import-bundle` may print a harmless `GLib-CRITICAL` line. The
-tool checks the registry serves the digest it built before it signs anything.
-Try a run first with `--skip-push --skip-relays` (and no `ORCHARD_NSEC`, which
-makes it use a throwaway key) to see the build without publishing. When the
-freedesktop runtime moves, update `runtime` in the config along with the
-Flatpak manifest.
+**One-time setup.** `orchard.txt` at the repo root names Amethyst's npub. Orchard reads it from the
+default branch to show the repository link as verified. Update it if the signing key ever changes.
 
 ### Flathub — not submitted yet
 

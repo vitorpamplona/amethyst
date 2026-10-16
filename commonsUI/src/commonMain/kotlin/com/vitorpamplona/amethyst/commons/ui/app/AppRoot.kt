@@ -26,6 +26,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalWindowInfo
 import com.vitorpamplona.amethyst.commons.account.AccountSessionManager
+import com.vitorpamplona.amethyst.commons.appupdate.AppUpdateController
 import com.vitorpamplona.amethyst.commons.keystorage.KeyStorageController
 import com.vitorpamplona.amethyst.commons.model.Account
 import com.vitorpamplona.amethyst.commons.privacylock.PrivacyLockSettings
@@ -34,6 +35,8 @@ import com.vitorpamplona.amethyst.commons.ui.layouts.rememberScreenLayoutSpec
 import com.vitorpamplona.amethyst.commons.ui.navigation.host.NavDestinations
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.Nav
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
 
 /**
  * What [AmethystApp] needs from the front end that hosts it: how to build the logged-in account's
@@ -118,4 +121,12 @@ interface AppRoot {
      * the questions it asks, Key Backup. Null where keys are kept without asking.
      */
     val keyStorage: KeyStorageController? get() = null
+
+    /**
+     * The app's own updater, where the app updates itself (the desktop); null where a store does,
+     * and until the platform has built it (off the main thread).
+     */
+    val appUpdates: StateFlow<AppUpdateController?> get() = NoAppUpdates
 }
+
+private val NoAppUpdates: StateFlow<AppUpdateController?> = MutableStateFlow(null)

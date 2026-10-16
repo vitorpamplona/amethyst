@@ -119,8 +119,9 @@ jobs:
         if: matrix.family == 'linux-portable'
         run: |
           set -euo pipefail
-          # appimagetool 1.9.0 validates the .desktop file via desktop-file-validate.
-          sudo apt-get update && sudo apt-get install -y desktop-file-utils
+          # appimagetool 1.9.0 validates the .desktop file via desktop-file-validate, and writes the
+          # AppImage's .zsync (delta updates) only when zsyncmake is installed.
+          sudo apt-get update && sudo apt-get install -y desktop-file-utils zsync
           # Map runner arch → upstream AppImage suffix (x86_64 / aarch64).
           case "${{ matrix.arch }}" in
             x64)   TOOL_ARCH=x86_64 ; EXPECTED_SHA="$APPIMAGETOOL_SHA256_X86_64" ;;

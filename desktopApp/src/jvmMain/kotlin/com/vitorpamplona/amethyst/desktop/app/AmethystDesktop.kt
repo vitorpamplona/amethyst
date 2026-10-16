@@ -208,6 +208,9 @@ fun main(args: Array<String>) {
                 }
         }
 
+        // The updater quits through here, as the Quit menu does: windows close, then the JVM exits.
+        LaunchedEffect(Unit) { modules.quitRequests.collect { exitApplication() } }
+
         // Bumped to rebuild the window after a crash the user reports from the crash window: the
         // crashed composition can't be reused, but the session, account and size carry over.
         var windowGeneration by remember { mutableIntStateOf(0) }

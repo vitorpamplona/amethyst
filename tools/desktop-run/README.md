@@ -88,6 +88,9 @@ AMETHYST_DISPLAY=:98 AMETHYST_SCREEN=480x900x24 tools/desktop-run/run-headless.s
   `start`.
 - `start` gives up after `AMETHYST_START_TIMEOUT` seconds (default 900). Raise it for a first cold
   build on a slow machine.
+- `AMETHYST_RUN_ARGS` passes extra Gradle arguments to the run, e.g. the updater's development
+  switches: `AMETHYST_RUN_ARGS="-Damethyst.update.devCheck=true -Damethyst.update.pretendVersion=1.0.0"`
+  checks for updates five seconds after start, as if version 1.0.0 were running.
 
 ## Automated alternative
 

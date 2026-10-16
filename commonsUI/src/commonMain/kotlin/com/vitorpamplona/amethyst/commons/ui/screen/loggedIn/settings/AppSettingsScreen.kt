@@ -60,6 +60,8 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.vitorpamplona.amethyst.commons.appupdate.ui.AppUpdateSettingsSection
+import com.vitorpamplona.amethyst.commons.appupdate.ui.LocalAppUpdates
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbol
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
@@ -210,6 +212,8 @@ fun SettingsScreen(
             SettingsDivider()
             DeckModeTile(sharedPrefs)
         }
+
+        LocalAppUpdates.current?.let { AppUpdateSettingsSection(it) }
     }
 }
 

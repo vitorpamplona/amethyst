@@ -71,10 +71,12 @@ object RawEventSupport {
      * so a total rejection stops a `set -e` script instead of exiting 0.
      * The error carries each relay's own reason (the NIP-01 OK message, a
      * connect error, or a timeout note) — the answer to "why didn't it post".
+     * [extra] adds fields to that error, e.g. what a multi-event command already published.
      */
     fun publishGuard(
         ack: Map<NormalizedRelayUrl, PublishResult>,
         eventId: String,
+        extra: Map<String, Any?> = emptyMap(),
     ): Int? {
         if (ack.isEmpty() || ack.any { it.value.accepted }) return null
         // `rejected` means a relay actually answered `OK false`. When every
@@ -86,13 +88,13 @@ object RawEventSupport {
             Output.error(
                 "rejected",
                 "no relay accepted event $eventId",
-                extra = mapOf("event_id" to eventId, "rejected_by" to rejectedBy(ack)),
+                extra = mapOf("event_id" to eventId, "rejected_by" to rejectedBy(ack)) + extra,
             )
         } else {
             Output.error(
                 "timeout",
                 "no relay answered for event $eventId (all unreachable or silent)",
-                extra = mapOf("event_id" to eventId, "rejected_by" to rejectedBy(ack)),
+                extra = mapOf("event_id" to eventId, "rejected_by" to rejectedBy(ack)) + extra,
             )
         }
     }

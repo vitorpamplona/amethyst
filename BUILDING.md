@@ -5,7 +5,7 @@ cut its own release: prerequisites, build commands, the CI release pipeline, the
 secrets it needs, the distribution channels, and one-time bootstrap steps.
 
 > **Amethyst maintainers:** the account-specific checklist for shipping the
-> official build (Play Console upload, Zapstore `zsp publish` with our nsec,
+> official build (Play Console upload, Zapstore `amy releases publish` with our nsec,
 > secret ownership) lives in [`RELEASE_OPS.md`](RELEASE_OPS.md). This
 > file stays fork-generic.
 
@@ -152,7 +152,7 @@ either way; Studio/AGP fetches the pinned NDK on demand, or pre-install it with
 | Windows MSI | `./gradlew :desktopApp:packageReleaseMsi` | `desktopApp/build/compose/binaries/main-release/msi/Amethyst-*.msi` |
 | Linux `.deb` | `./gradlew :desktopApp:packageReleaseDeb` | `desktopApp/build/compose/binaries/main-release/deb/amethyst_*.deb` |
 | Linux `.rpm` | `./gradlew :desktopApp:packageReleaseRpm` | `desktopApp/build/compose/binaries/main-release/rpm/amethyst-*.rpm` |
-| Linux AppImage | `./gradlew :desktopApp:createReleaseAppImage` | `desktopApp/build/appimage/Amethyst-*-<arch>.AppImage` (x86_64 or aarch64, from host) |
+| Linux AppImage | `./gradlew :desktopApp:createReleaseAppImage` | `desktopApp/build/appimage/amethyst-desktop-*-<arch>.AppImage` (x86_64 or aarch64, from host), plus its `.zsync` when `zsyncmake` is installed |
 | Linux Flatpak | `flatpak-builder` over `createReleaseDistributable` output — see [`desktopApp/packaging/flatpak/README.md`](desktopApp/packaging/flatpak/README.md) | `desktopApp/build/flatpak/Amethyst-*-<arch>.flatpak` (CI; x86_64 or aarch64) |
 | Windows `.zip` portable | See below (inline `7z`) | — |
 | Linux `.tar.gz` portable | See below (inline `tar`) | — |
@@ -553,7 +553,7 @@ distributes; the official Amethyst rollout for each is in
 | **Maven Central** | Same workflow runs `publishAllPublicationsToMavenCentral` for `quartz` — a *step* at the end of the `deploy-android` job, not a job of its own, so it does not appear in a job list | Automatic (CI) |
 | **Google Play** | Download the signed `amethyst-googleplay-<version>.aab` from the GH Release and upload it in Play Console | **Manual push** |
 | **F-Droid** | F-Droid's build server detects the new tag and **builds the `fdroid` flavor from source** per its recipe in the external [`fdroiddata`](https://gitlab.com/fdroid/fdroiddata) repo, then signs + publishes itself | **Pull (build-from-source)** |
-| **Zapstore** | The [`zsp`](https://zapstore.dev/) CLI reads [`zapstore.yaml`](zapstore.yaml) and publishes a Nostr software-release event signed with the app's nsec | **Manual push (Nostr)** |
+| **Zapstore** | `amy releases publish` reads [`zapstore.yaml`](zapstore.yaml), as the [`zsp`](https://github.com/zapstore/zsp) CLI did, and publishes the APK's Nostr software-release events signed with the app's nsec | **Manual push (Nostr)** |
 | **Homebrew + Winget** | `bump-homebrew.yml` / `bump-winget.yml` open version-bump PRs on stable tags — **currently no-ops**: neither package has been bootstrapped upstream yet (§ Bootstrap) | Automatic (CI), inactive |
 
 Two channels need the build to stay split into product flavors (see
@@ -785,15 +785,15 @@ bypasses the UI dialog after accepting the installer's inherent trust.
 ### Linux AppImage won't execute
 
 ```bash
-chmod +x Amethyst-*.AppImage
-./Amethyst-*.AppImage
+chmod +x amethyst-desktop-*.AppImage
+./amethyst-desktop-*.AppImage
 ```
 
 On Fedora Silverblue / very minimal distros, FUSE might be missing. Use
 `--appimage-extract-and-run`:
 
 ```bash
-./Amethyst-*.AppImage --appimage-extract-and-run
+./amethyst-desktop-*.AppImage --appimage-extract-and-run
 ```
 
 ---

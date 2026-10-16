@@ -307,7 +307,7 @@ and Maven artifact, and Homebrew + Winget auto-bump on stable tags.
 - **[BUILDING.md](BUILDING.md)** — everything any fork needs: build commands,
   the CI pipeline, the secrets it requires, and the distribution channels.
 - **[RELEASE_OPS.md](RELEASE_OPS.md)** — the Amethyst maintainers'
-  ship checklist: the manual Play Store upload, Zapstore `zsp publish`, F-Droid
+  ship checklist: the manual Play Store upload, Zapstore `amy releases publish`, F-Droid
   pull, and release-notes publishing.
 
 ## Using the Quartz library

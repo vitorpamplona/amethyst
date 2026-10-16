@@ -29,6 +29,7 @@
 #   amethyst-desktop-1.08.0-linux-x64.deb
 #   amethyst-desktop-1.08.0-linux-x64.rpm
 #   amethyst-desktop-1.08.0-x86_64.AppImage
+#   amethyst-desktop-1.08.0-x86_64.AppImage.zsync
 #   amethyst-desktop-1.08.0-linux-x64.flatpak
 #   amethyst-desktop-1.08.0-linux-x64.tar.gz
 #   amethyst-desktop-1.08.0-linux-arm64.deb
@@ -140,6 +141,11 @@ collect_assets() {
         fi
         cp "$src" "$dst"
         echo "Collected: $dst"
+        # The AppImage's zsync file (delta updates; see createReleaseAppImage) travels with it.
+        if [[ "$ext" == "AppImage" && -f "$src.zsync" ]]; then
+            cp "$src.zsync" "$dst.zsync"
+            echo "Collected: $dst.zsync"
+        fi
     done
     shopt -u nullglob
 }
