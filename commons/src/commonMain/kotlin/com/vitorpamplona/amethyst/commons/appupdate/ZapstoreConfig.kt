@@ -56,7 +56,7 @@ data class ZapstoreConfig(
                 communities = map.strings("communities"),
             )
 
-        private fun Map<String, Any?>.string(key: String) = (this[key] as? Any)?.toString()?.takeIf { it.isNotBlank() }
+        private fun Map<String, Any?>.string(key: String) = this[key]?.toString()?.takeIf { it.isNotBlank() }
 
         private fun Map<String, Any?>.strings(key: String): List<String> = (this[key] as? List<*>)?.mapNotNull { it?.toString()?.takeIf(String::isNotBlank) }.orEmpty()
     }

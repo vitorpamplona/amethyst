@@ -200,8 +200,8 @@ class OpenMarketsParsingTest {
     fun shopstrCartOnTheSameKindIsUnrecognizedAndNotSearchable() {
         // Shopstr's real carts carry no tags: the `d` and items are inside the ciphertext.
         val cart = event<Event>(30405, "AgZ1c2VyY2FydA==?iv=abc")
-        assertIs<UnrecognizedKind30405Event>(cart)
         assertFalse(cart is SearchableEvent)
+        assertIs<UnrecognizedKind30405Event>(cart)
         assertEquals(IndexableFields.None, SearchFieldExtractor.extract(cart))
     }
 
@@ -251,8 +251,8 @@ class OpenMarketsParsingTest {
     @Test
     fun shopstrEscrowOnTheSameKindIsUnrecognized() {
         val escrow = event<Event>(30406, "AgZlc2Nyb3c=?iv=abc", arrayOf("d", "shopstr:p2pk-escrow:1"), arrayOf("type", "p2pk-escrow"))
-        assertIs<UnrecognizedKind30406Event>(escrow)
         assertFalse(escrow is SearchableEvent)
+        assertIs<UnrecognizedKind30406Event>(escrow)
     }
 
     @Test
