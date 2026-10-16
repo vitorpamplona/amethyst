@@ -94,11 +94,11 @@ class ExpandedTextGutterState {
     internal var revealNote: (() -> Unit)? = null
 
     fun register(action: () -> Unit) {
-        collapseActions = collapseActions.add(action)
+        collapseActions = collapseActions.adding(action)
     }
 
     fun unregister(action: () -> Unit) {
-        collapseActions = collapseActions.remove(action)
+        collapseActions = collapseActions.removing(action)
         if (collapseActions.isEmpty()) pinned = false
     }
 

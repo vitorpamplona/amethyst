@@ -280,7 +280,7 @@ private fun AssertionSubject(
 ) {
     when (event) {
         is UserAssertionEvent -> {
-            val subject = event.aboutUser() ?: return
+            val subject = event.aboutUser()
             if (!Hex.isHex64(subject)) return
             TrustSectionLabel(stringRes(Res.string.nip85_about))
             LoadUser(subject) { user ->
@@ -289,7 +289,7 @@ private fun AssertionSubject(
         }
 
         is EventAssertionEvent -> {
-            val id = event.aboutEvent() ?: return
+            val id = event.aboutEvent()
             if (!Hex.isHex64(id) || quotesLeft <= 0) return
             TrustSectionLabel(stringRes(Res.string.nip85_scored))
             LoadNote(id) { note ->
@@ -298,7 +298,7 @@ private fun AssertionSubject(
         }
 
         is AddressableAssertionEvent -> {
-            val address = event.aboutAddress()?.let { Address.parse(it) } ?: return
+            val address = Address.parse(event.aboutAddress()) ?: return
             if (quotesLeft <= 0) return
             TrustSectionLabel(stringRes(Res.string.nip85_scored))
             LoadAddressableNote(address) { note ->
@@ -307,7 +307,7 @@ private fun AssertionSubject(
         }
 
         is ExternalIdAssertionEvent -> {
-            val identifier = event.aboutExternalId()?.takeIf { it.isNotBlank() } ?: return
+            val identifier = event.aboutExternalId().takeIf { it.isNotBlank() } ?: return
             TrustSectionLabel(stringRes(Res.string.nip85_scored))
             if (identifier.startsWith("https://") || identifier.startsWith("http://")) {
                 ClickableUrl(url = identifier)

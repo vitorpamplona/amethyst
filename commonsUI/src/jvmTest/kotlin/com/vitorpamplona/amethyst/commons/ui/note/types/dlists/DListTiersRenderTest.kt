@@ -41,6 +41,7 @@ import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.utils.EventFactory
 import io.mockk.mockk
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.setMain
 import org.jetbrains.skia.EncodedImageFormat
@@ -62,6 +63,7 @@ import kotlin.test.assertTrue
  * The reader (the preview account) holds their own copy of GitHub Accounts, Brainstorm's, which
  * carries the display hints and the GitHub profile URL template, so the GitHub page has its buttons.
  */
+@OptIn(ExperimentalCoroutinesApi::class)
 class DListTiersRenderTest {
     private val outDir = File("build/dlist-tiers").apply { mkdirs() }
 
