@@ -43,6 +43,7 @@ import com.vitorpamplona.quartz.nip01Core.metadata.MetadataEvent
 import com.vitorpamplona.quartz.nip01Core.relay.client.NostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.AdaptiveRelayLimiter
 import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.FetchAllResult
+import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.PageRetryBackoff
 import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.PagedFetchResult
 import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.PublishResult
 import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.fetchAllPagesFromPoolWithHooks
@@ -665,19 +666,24 @@ class Context(
      * A `search` filter is fetched as a single relevance-ranked page (see
      * [com.vitorpamplona.quartz.nip01Core.relay.client.accessories.fetchAllPages]).
      * [onRelayResult] receives each relay's [PagedFetchResult], including the reason a
-     * relay refused the walk.
+     * relay refused the walk. A non-null [resumeBackoff] asks a walk its connection ended
+     * again from where it got to (quartz's `fetchAllPagesResuming`), telling [onRelayResume].
      */
     suspend fun drainAllPages(
         filters: Map<NormalizedRelayUrl, List<Filter>>,
         idleTimeoutMs: Long = 30_000,
         maxConcurrentRelays: Int = 8,
         onRelayResult: ((relay: NormalizedRelayUrl, result: PagedFetchResult) -> Unit)? = null,
+        resumeBackoff: PageRetryBackoff? = null,
+        onRelayResume: ((relay: NormalizedRelayUrl, attempt: Int, last: PagedFetchResult) -> Unit)? = null,
     ): List<Pair<NormalizedRelayUrl, Event>> =
         client.fetchAllPagesFromPoolWithHooks(
             filters = filters,
             idleTimeoutMs = idleTimeoutMs,
             maxConcurrentRelays = maxConcurrentRelays,
             onRelayResult = onRelayResult,
+            resumeBackoff = resumeBackoff,
+            onRelayResume = onRelayResume,
         ) { _, event -> verifyAndStore(event) }
 
     /**
@@ -694,6 +700,8 @@ class Context(
         maxConcurrentRelays: Int = 8,
         onRelayResult: ((relay: NormalizedRelayUrl, result: PagedFetchResult) -> Unit)? = null,
         cache: Boolean = true,
+        resumeBackoff: PageRetryBackoff? = null,
+        onRelayResume: ((relay: NormalizedRelayUrl, attempt: Int, last: PagedFetchResult) -> Unit)? = null,
         onEvent: (relay: NormalizedRelayUrl, event: Event) -> Unit,
     ): Int =
         client.streamAllPagesFromPoolWithHooks(
@@ -701,6 +709,8 @@ class Context(
             idleTimeoutMs = idleTimeoutMs,
             maxConcurrentRelays = maxConcurrentRelays,
             onRelayResult = onRelayResult,
+            resumeBackoff = resumeBackoff,
+            onRelayResume = onRelayResume,
         ) { relay, event -> (if (cache) verifyAndStore(event) else event.verify()).also { if (it) onEvent(relay, event) } }
 
     /**

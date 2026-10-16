@@ -186,6 +186,13 @@ class PageRetryBackoff(
 
         /** Never re-ask: an empty EOSEd page always ends the walk. */
         val NONE = PageRetryBackoff(emptyList())
+
+        /**
+         * [fetchAllPagesResuming]'s waits before re-asking a walk its connection ended: five
+         * re-asks over about 1m47s per stall, long enough for a relay restarting or shedding
+         * readers to take connections again.
+         */
+        val RESUME = PageRetryBackoff(listOf(2_000L, 5_000L, 10_000L, 30_000L, 60_000L))
     }
 }
 
