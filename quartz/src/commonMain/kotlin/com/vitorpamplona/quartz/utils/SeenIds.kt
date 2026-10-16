@@ -75,13 +75,28 @@ class SeenIds(
      * (the caller should process it), false if already seen (the caller should skip
      * it). A too-short/malformed id returns true — it flows through and downstream
      * verification drops it — rather than risk collapsing distinct ids.
+     *
+     * Ids come off the wire unverified, so a char above U+00FF (outside [Hex.readLong]'s
+     * lookup table) must not throw: one hostile event would abort a whole multi-relay
+     * fetch. Such an id is let through unrecorded. The guard is a catch, not a pre-scan,
+     * so a valid id pays nothing for it. Other non-hex chars (`g`, `-`) read as garbage
+     * key bits instead; that is harmless because callers record an id only after it
+     * verifies, which a non-hex id never does.
      */
     fun add(idHex: String): Boolean {
         // Slice the first 128 bits straight to two longs via Hex's table-lookup
         // reader — no hex text parsing, no allocation. A string too short to slice
         // can't be a real 32-byte id, so let it through (verification drops it).
         if (idHex.length < 32) return true
-        return addKey(Hex.readLong(idHex, 0), Hex.readLong(idHex, 16))
+        val hi: Long
+        val lo: Long
+        try {
+            hi = Hex.readLong(idHex, 0)
+            lo = Hex.readLong(idHex, 16)
+        } catch (_: IndexOutOfBoundsException) {
+            return true
+        }
+        return addKey(hi, lo)
     }
 
     /**
@@ -89,12 +104,19 @@ class SeenIds(
      * too-short/malformed id is never "seen" (returns false) — the mirror of [add]
      * letting it through. Use this to check-then-conditionally-add, e.g. to mark an
      * id seen only after it verifies (so a forged copy sharing a valid id can't
-     * pre-empt the genuine one).
+     * pre-empt the genuine one). An id with a char outside the hex table is never
+     * contained either (see [add]).
      */
     fun contains(idHex: String): Boolean {
         if (idHex.length < 32) return false
-        val hi = Hex.readLong(idHex, 0)
-        val lo = Hex.readLong(idHex, 16)
+        val hi: Long
+        val lo: Long
+        try {
+            hi = Hex.readLong(idHex, 0)
+            lo = Hex.readLong(idHex, 16)
+        } catch (_: IndexOutOfBoundsException) {
+            return false
+        }
         if (hi == 0L && lo == 0L) return zeroSeen
         var i = (mix(hi, lo).toInt() and mask)
         while (true) {
