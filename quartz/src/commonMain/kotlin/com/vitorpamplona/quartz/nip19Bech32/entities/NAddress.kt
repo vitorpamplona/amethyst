@@ -71,6 +71,12 @@ data class NAddress(
             val author = tlv.firstAsHex(TlvTypes.AUTHOR.id) ?: return null
             val kind = tlv.firstAsInt(TlvTypes.KIND.id) ?: return null
 
+            // x-only 32-byte pubkey only, as in NPub.parse: a 33-byte compressed key would
+            // flow into `a` tags and filters that strict relays reject. The TLV kind is a raw
+            // uint32 read as a signed Int, so 0xFFFFFFFF arrives as -1; NIP-01 kinds are 0..65535.
+            if (author.length != 64) return null
+            if (kind !in 0..65535) return null
+
             return NAddress(kind, author, d, relay.mapNotNull { RelayUrlNormalizer.normalizeHintOrNull(it) })
         }
 

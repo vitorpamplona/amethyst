@@ -49,10 +49,14 @@ data class NEvent(
 
             val hex = tlv.firstAsHex(TlvTypes.SPECIAL) ?: return null
             val relay = tlv.asStringList(TlvTypes.RELAY) ?: emptyList()
-            val author = tlv.firstAsHex(TlvTypes.AUTHOR)
-            val kind = tlv.firstAsInt(TlvTypes.KIND.id)
+            // The id and author are 32 bytes (see NPub.parse). A bad id makes the entity
+            // useless; the author and kind are only hints, so a malformed one is dropped rather
+            // than sinking the reference. The TLV kind is a raw uint32 read as a signed Int
+            // (0xFFFFFFFF arrives as -1); NIP-01 kinds are 0..65535.
+            val author = tlv.firstAsHex(TlvTypes.AUTHOR)?.takeIf { it.length == 64 }
+            val kind = tlv.firstAsInt(TlvTypes.KIND.id)?.takeIf { it in 0..65535 }
 
-            if (hex.isBlank()) return null
+            if (hex.length != 64) return null
 
             return NEvent(
                 hex,
