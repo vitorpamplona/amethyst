@@ -50,7 +50,8 @@ class CommandSerializer : StdSerializer<Command>(Command::class.java) {
             }
 
             is EventCmd -> {
-                eventSerializer.serialize(cmd.event, gen, provider)
+                val json = cmd.eventJson
+                if (json != null) gen.writeRawValue(json) else eventSerializer.serialize(cmd.event, gen, provider)
             }
 
             is CloseCmd -> {

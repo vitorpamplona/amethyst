@@ -27,12 +27,14 @@ import com.vitorpamplona.quartz.nip01Core.relay.client.listeners.RelayConnection
 import com.vitorpamplona.quartz.nip01Core.relay.client.single.IRelayClient
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.Message
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.OkMessage
+import com.vitorpamplona.quartz.nip01Core.relay.commands.toRelay.EventCmd
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.Semaphore
@@ -99,6 +101,51 @@ suspend fun INostrClient.publishStream(
     idleTimeoutMs: Long = 30_000,
     maxInFlightBytes: Long = DEFAULT_STREAM_IN_FLIGHT_BYTES,
     onResult: (Event, PublishResult) -> Unit,
+): StreamPublishResult = publishOutgoing(relay, events.map { Outgoing(it, null, 0) }, maxInFlight, idleTimeoutMs, maxInFlightBytes, onResult)
+
+/**
+ * An event and its own JSON object, as a bulk publisher read it: [json] is what goes on the
+ * wire, [event] what the bookkeeping keys on. See [EventCmd.eventJson] for what [json] must be.
+ * [jsonBytes] is [json]'s UTF-8 length, counted where the item is made: a publisher parsing on
+ * several threads counts there, off [publishRawStream]'s single reader (3% of a resend's CPU).
+ */
+class EventWithJson(
+    val event: Event,
+    val json: String,
+    val jsonBytes: Long = utf8Bytes(json),
+)
+
+/**
+ * [publishStream] for events already held as JSON: each goes out as its [EventWithJson.json],
+ * verbatim, through [INostrClient.publishRaw], and the byte window counts that text exactly.
+ * For a publisher reading an export, where serializing the parsed event again was the largest
+ * cost after the socket's own.
+ */
+suspend fun INostrClient.publishRawStream(
+    relay: NormalizedRelayUrl,
+    events: Flow<EventWithJson>,
+    maxInFlight: Int = DEFAULT_STREAM_IN_FLIGHT,
+    idleTimeoutMs: Long = 30_000,
+    maxInFlightBytes: Long = DEFAULT_STREAM_IN_FLIGHT_BYTES,
+    onResult: (Event, PublishResult) -> Unit,
+): StreamPublishResult = publishOutgoing(relay, events.map { Outgoing(it.event, it.json, it.jsonBytes) }, maxInFlight, idleTimeoutMs, maxInFlightBytes, onResult)
+
+/** One event of a stream, with its JSON when the publisher had it. */
+private class Outgoing(
+    val event: Event,
+    val json: String?,
+    val jsonBytes: Long,
+) {
+    fun frameBytes(): Long = if (json != null) jsonBytes + EVENT_FRAME_WRAPPER else event.estimatedFrameBytes()
+}
+
+private suspend fun INostrClient.publishOutgoing(
+    relay: NormalizedRelayUrl,
+    events: Flow<Outgoing>,
+    maxInFlight: Int,
+    idleTimeoutMs: Long,
+    maxInFlightBytes: Long,
+    onResult: (Event, PublishResult) -> Unit,
 ): StreamPublishResult {
     require(maxInFlight > 0) { "maxInFlight must be positive, was $maxInFlight" }
     val target = relay
@@ -162,8 +209,9 @@ suspend fun INostrClient.publishStream(
             val reader =
                 launch {
                     try {
-                        events.collect { event ->
-                            val bytes = event.estimatedFrameBytes()
+                        events.collect { outgoing ->
+                            val event = outgoing.event
+                            val bytes = outgoing.frameBytes()
                             // Only this reader adds bytes, so room seen here can only grow until it is taken.
                             while (lock.withLock { bytesInFlight > 0 && bytesInFlight + bytes > maxInFlightBytes }) roomFreed.receive()
                             window.acquire()
@@ -182,7 +230,10 @@ suspend fun INostrClient.publishStream(
                                     }
                                 }
                             sent++
-                            if (first) publish(event, relaySet)
+                            if (first) {
+                                val json = outgoing.json
+                                if (json != null) publishRaw(event, json, relaySet) else publish(event, relaySet)
+                            }
                             if (sent == 1) firstVerdict.await()
                         }
                     } finally {
@@ -299,6 +350,25 @@ private fun jsonStringBytes(value: String): Long {
     }
     return bytes
 }
+
+/** [value]'s length in UTF-8. */
+internal fun utf8Bytes(value: String): Long {
+    var bytes = 0L
+    for (c in value) {
+        bytes +=
+            when {
+                c < '\u0080' -> 1
+                c < '\u0800' -> 2
+                // Each half of a surrogate pair: 4 bytes for the pair.
+                c.isSurrogate() -> 2
+                else -> 3
+            }
+    }
+    return bytes
+}
+
+/** `["EVENT",` and `]` around an event's JSON object. */
+private const val EVENT_FRAME_WRAPPER = 10L
 
 /** `["EVENT",{…}]`, the keys, id, pubkey, sig, kind and created_at. */
 private const val FRAME_OVERHEAD = 400L

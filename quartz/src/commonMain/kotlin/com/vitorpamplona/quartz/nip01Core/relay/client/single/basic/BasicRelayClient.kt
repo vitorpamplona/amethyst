@@ -20,7 +20,6 @@
  */
 package com.vitorpamplona.quartz.nip01Core.relay.client.single.basic
 
-import com.vitorpamplona.quartz.nip01Core.core.OptimizedJsonMapper
 import com.vitorpamplona.quartz.nip01Core.relay.client.listeners.RelayConnectionListener
 import com.vitorpamplona.quartz.nip01Core.relay.client.single.IRelayClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.single.basic.BasicRelayClient.Companion.DELAY_TO_RECONNECT_IN_SECS
@@ -363,7 +362,8 @@ open class BasicRelayClient(
     /** Puts [cmd] on the socket. False when there is no socket to put it on. */
     private fun write(cmd: Command): Boolean {
         val socket = socket ?: return false
-        val msg = OptimizedJsonMapper.toJson(cmd)
+        // Through the command, not the mapper: an EVENT carrying its own JSON is sent as it is.
+        val msg = cmd.toJson()
         val success = socket.send(msg)
         listener.onSent(this@BasicRelayClient, msg, cmd, success)
         return success

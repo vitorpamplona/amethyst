@@ -24,7 +24,9 @@ import com.vitorpamplona.geode.InProcessRelays
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.crypto.KeyPair
 import com.vitorpamplona.quartz.nip01Core.relay.client.NostrClient
+import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.EventWithJson
 import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.PublishResult
+import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.publishRawStream
 import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.publishStream
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.relay.sockets.WebSocket
@@ -40,6 +42,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.asFlow
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.runBlocking
+import java.util.Collections
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.atomic.AtomicInteger
 import kotlin.test.AfterTest
@@ -69,6 +72,7 @@ class PublishStreamTest {
         val swallow: Set<String> = emptySet(),
     ) : WebsocketBuilder {
         val eventFrames = AtomicInteger()
+        val frames: MutableList<String> = Collections.synchronizedList(mutableListOf())
         val outstanding = AtomicInteger()
         val maxOutstanding = AtomicInteger()
 
@@ -89,6 +93,7 @@ class PublishStreamTest {
                     if (!msg.startsWith("[\"EVENT\"")) return inner.send(msg)
                     if (swallow.any { msg.contains(it) }) return true
                     eventFrames.incrementAndGet()
+                    frames.add(msg)
                     maxOutstanding.accumulateAndGet(outstanding.incrementAndGet(), ::maxOf)
                     return inner.send(msg)
                 }
@@ -141,6 +146,28 @@ class PublishStreamTest {
             client.disconnect()
             assertEquals(3, result.sent)
             assertEquals(3, heard.get())
+        }
+
+    @Test
+    fun aRawStreamSendsEachLineAsItWasRead() =
+        runBlocking {
+            val relay = CountingRelay()
+            val client = NostrClient(relay, scope)
+            // Keys reordered and spaced: what a verbatim send puts on the wire, and a serializer never
+            // would. The notes' content ("note N") needs no escaping.
+            val lines =
+                notes(50).map { e ->
+                    EventWithJson(
+                        e,
+                        """{"sig": "${e.sig}", "content": "${e.content}", "tags": [], "kind": ${e.kind}, "created_at": ${e.createdAt}, "pubkey": "${e.pubKey}", "id": "${e.id}"}""",
+                    )
+                }
+            val result = client.publishRawStream(InProcessRelays.DEFAULT_URL, lines.asFlow(), maxInFlight = 8) { _, ok -> assertTrue(ok.accepted, ok.message) }
+            client.disconnect()
+
+            assertEquals(50, result.answered)
+            assertEquals(lines.map { "[\"EVENT\",${it.json}]" }.toSet(), relay.frames.toSet())
+            assertEquals(50, relay.eventFrames.get())
         }
 
     @Test

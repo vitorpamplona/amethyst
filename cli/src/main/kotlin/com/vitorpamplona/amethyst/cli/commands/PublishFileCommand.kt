@@ -27,8 +27,9 @@ import com.vitorpamplona.amethyst.cli.Output
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.crypto.verify
 import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.DEFAULT_STREAM_IN_FLIGHT
+import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.EventWithJson
 import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.PublishResult
-import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.publishStream
+import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.publishRawStream
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
@@ -48,9 +49,10 @@ import java.util.zip.GZIPInputStream
 /**
  * `amy publish --file PATH --relay URL` — stream a file of signed events (one JSON
  * event per line, gzipped when the name ends in `.gz`, stdin for `-`) to one relay
- * through quartz's [publishStream], up to `--in-flight` unanswered at once. Built for
- * backfills and ingest benchmarks: the summary counts every OK by its reason and
- * reports the OK round trip's percentiles. Events that fail to parse or verify are
+ * through quartz's [publishRawStream], up to `--in-flight` unanswered at once. Each line
+ * is parsed (for its id) and verified, then sent as it was read, never re-serialized.
+ * Built for backfills and ingest benchmarks: the summary counts every OK by its reason
+ * and reports the OK round trip's percentiles. Events that fail to parse or verify are
  * counted and never sent.
  */
 object PublishFileCommand {
@@ -91,7 +93,7 @@ object PublishFileCommand {
                 coroutineScope {
                     val progress = if (progressSecs > 0) launch { reportProgress(tally, started, progressSecs * 1000) } else null
                     try {
-                        ctx.client.publishStream(relay, events(input, path.endsWith(".gz"), skip, take, verify, tally), inFlight, idleMs) { _, ok ->
+                        ctx.client.publishRawStream(relay, events(input, path.endsWith(".gz"), skip, take, verify, tally), inFlight, idleMs) { _, ok ->
                             tally.record(ok)
                         }
                     } finally {
@@ -122,7 +124,7 @@ object PublishFileCommand {
         take: Long,
         verify: Boolean,
         tally: Tally,
-    ): Flow<Event> =
+    ): Flow<EventWithJson> =
         flow {
             val reader: BufferedReader = (if (gzipped) GZIPInputStream(input, 1 shl 16) else input).bufferedReader()
             reader.use {
@@ -141,7 +143,7 @@ object PublishFileCommand {
         lines: List<String>,
         verify: Boolean,
         tally: Tally,
-    ): List<Event> =
+    ): List<EventWithJson> =
         coroutineScope {
             val parts = Runtime.getRuntime().availableProcessors().coerceAtLeast(1)
             lines
@@ -163,7 +165,8 @@ object PublishFileCommand {
 
                                 else -> {
                                     tally.bytes.addAndGet(line.length.toLong())
-                                    event
+                                    // The line itself is what gets sent: no second serialization.
+                                    EventWithJson(event, line)
                                 }
                             }
                         }
