@@ -36,6 +36,8 @@ import com.vitorpamplona.quartz.nip19Bech32.entities.NEvent
 import com.vitorpamplona.quartz.nip19Bech32.entities.NNote
 import com.vitorpamplona.quartz.nip19Bech32.entities.NProfile
 import com.vitorpamplona.quartz.nip19Bech32.entities.NPub
+import java.io.File
+import java.util.zip.GZIPOutputStream
 import kotlin.coroutines.cancellation.CancellationException
 
 /**
@@ -94,7 +96,10 @@ object FetchCommand {
         |                                                --limit caps the walk; a relay refusing
         |                                                a big page is re-asked at its max.
         |                                                --paginate --limit 0 streams events in
-        |                                                arrival order (not newest-first).
+        |                                                arrival order (not newest-first);
+        |                                                --out FILE writes them there, one JSON
+        |                                                per line (gzipped for .gz), and prints
+        |                                                only the summary.
         |                                                A --search with words gets one page per
         |                                                relay (hits are ranked; listed in
         |                                                unpaged_relays, `amy sync` gets them all);
@@ -123,7 +128,7 @@ object FetchCommand {
         // The filter/relay/paging flags are read later (buildFilter, queryTargets,
         // the --paginate branch) and code mode skips them entirely, so whitelist
         // them here where both paths still share the flow.
-        args.rejectUnknown("kind", "author", "id", "tag", "since", "until", "search", "relay", "paginate", "all")
+        args.rejectUnknown("kind", "author", "id", "tag", "since", "until", "search", "relay", "paginate", "all", "out")
 
         // Code mode: a nip19/nip05 positional resolves its own relays via the
         // outbox model rather than using a hand-built filter. It fetches a single
@@ -148,6 +153,9 @@ object FetchCommand {
 
             // Unbounded walk: there is no "newest N" to keep, so nothing needs sorting —
             // write each event out as it arrives instead of holding the whole history.
+            val out = args.flag("out")
+            if (paginate && effectiveLimit == null && out != null) return streamAllPagesToFile(ctx, filter, relays, timeoutMs, relayErrors, unpaged, File(out))
+            if (out != null) return Output.error("bad_args", "--out streams a whole walk: it needs --paginate --limit 0")
             if (paginate && effectiveLimit == null) return streamAllPages(ctx, filter, relays, timeoutMs, relayErrors, unpaged)
 
             val received =
@@ -229,6 +237,42 @@ object FetchCommand {
         val errors = reportRelayErrors(relayErrors)
         stream.finish(mapOf("count" to count) + unpagedField(unpaged) + (if (errors.isEmpty()) emptyMap() else mapOf("relay_errors" to errors)))
         return 0
+    }
+
+    /**
+     * `--paginate --limit 0 --out FILE`: [streamAllPages] into a file, one event per line, the
+     * shape `amy publish --file` reads back, verified but not cached. Stdout carries only the
+     * summary.
+     */
+    private suspend fun streamAllPagesToFile(
+        ctx: Context,
+        filter: Filter,
+        relays: Set<NormalizedRelayUrl>,
+        timeoutMs: Long,
+        relayErrors: MutableMap<NormalizedRelayUrl, RelayError>,
+        unpaged: MutableSet<NormalizedRelayUrl>,
+        file: File,
+    ): Int {
+        val raw = file.outputStream().buffered(1 shl 16)
+        val writer = (if (file.name.endsWith(".gz")) GZIPOutputStream(raw, 1 shl 16) else raw).bufferedWriter()
+        val count =
+            writer.use { w ->
+                // Not cached: an export is the one walk too large for the local store.
+                ctx.streamAllPages(relays.associateWith { listOf(filter) }, timeoutMs, onRelayResult = { relay, result ->
+                    refusalOf(result)?.let { synchronized(relayErrors) { relayErrors[relay] = it } }
+                    if (result.end == PagedFetchResult.End.UNPAGEABLE) synchronized(unpaged) { unpaged.add(relay) }
+                }, cache = false) { _, event ->
+                    synchronized(w) {
+                        w.write(event.toJson())
+                        w.write('\n'.code)
+                    }
+                }
+            }
+        return emitWithRelayErrors(
+            mapOf("queried_relays" to relays.map { it.url }, "count" to count, "out" to file.path) + unpagedField(unpaged),
+            relays,
+            relayErrors,
+        )
     }
 
     /**

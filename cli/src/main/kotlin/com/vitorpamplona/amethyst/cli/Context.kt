@@ -38,6 +38,7 @@ import com.vitorpamplona.quartz.marmot.RecipientRelayFetcher
 import com.vitorpamplona.quartz.marmot.mip00KeyPackages.KeyPackageRelayListEvent
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
+import com.vitorpamplona.quartz.nip01Core.crypto.verify
 import com.vitorpamplona.quartz.nip01Core.metadata.MetadataEvent
 import com.vitorpamplona.quartz.nip01Core.relay.client.NostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.AdaptiveRelayLimiter
@@ -684,13 +685,15 @@ class Context(
      * cross-relay dedup, but each accepted event is handed to [onEvent] as it arrives and
      * then dropped — only the dedup set's ids stay in memory. Events come in arrival order
      * (several relays page at once, so their events interleave), not sorted. A slow [onEvent]
-     * holds the walks back. Returns how many were accepted.
+     * holds the walks back. Returns how many were accepted. [cache] false verifies without
+     * storing, for an export too large for the local store.
      */
     suspend fun streamAllPages(
         filters: Map<NormalizedRelayUrl, List<Filter>>,
         idleTimeoutMs: Long = 30_000,
         maxConcurrentRelays: Int = 8,
         onRelayResult: ((relay: NormalizedRelayUrl, result: PagedFetchResult) -> Unit)? = null,
+        cache: Boolean = true,
         onEvent: (relay: NormalizedRelayUrl, event: Event) -> Unit,
     ): Int =
         client.streamAllPagesFromPoolWithHooks(
@@ -698,7 +701,7 @@ class Context(
             idleTimeoutMs = idleTimeoutMs,
             maxConcurrentRelays = maxConcurrentRelays,
             onRelayResult = onRelayResult,
-        ) { relay, event -> verifyAndStore(event).also { if (it) onEvent(relay, event) } }
+        ) { relay, event -> (if (cache) verifyAndStore(event) else event.verify()).also { if (it) onEvent(relay, event) } }
 
     /**
      * Publish [request] to [relays], then wait for the FIRST event matching [responseFilter]
