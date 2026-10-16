@@ -25,6 +25,7 @@ import com.vitorpamplona.amethyst.commons.appupdate.UpdateMethod
 import com.vitorpamplona.amethyst.commons.appupdate.UpdateTarget
 import com.vitorpamplona.quartz.experimental.nip82SoftwareApps.shared.Platform
 import java.io.File
+import java.nio.file.Path
 
 /**
  * How this copy of the app was installed, which decides how it updates. Read once at startup from
@@ -221,16 +222,19 @@ sealed interface InstallChannel {
             bundle: File,
             prefixes: List<String> = HOMEBREW_PREFIXES,
         ): Boolean {
-            val target = runCatching { bundle.canonicalFile }.getOrNull() ?: return false
+            // toRealPath, not canonicalFile: on Windows the JDK's canonical path does not follow links.
+            val target = bundle.realPathOrNull() ?: return false
             return prefixes.any { prefix ->
                 File("$prefix/Caskroom/$HOMEBREW_CASK")
                     .listFiles()
                     .orEmpty()
                     .filter { it.isDirectory && !it.name.startsWith(".") }
                     .flatMap { version -> version.listFiles().orEmpty().filter { it.name.endsWith(".app") } }
-                    .any { link -> runCatching { link.canonicalFile }.getOrNull() == target }
+                    .any { link -> link.realPathOrNull() == target }
             }
         }
+
+        private fun File.realPathOrNull(): Path? = runCatching { toPath().toRealPath() }.getOrNull()
 
         private fun File.isInside(dir: File) = toPath().normalize().startsWith(dir.toPath().normalize())
 
