@@ -69,7 +69,20 @@ data class UiSettings(
     val searchEngine: String = SearchEngines.DEFAULT.id,
     // Extra columns beside the main screen on wide windows (desktop, tablets, Chromebooks). Off by default.
     val deckMode: Boolean = false,
+    // Which engine underlines misspellings in the composers, on platforms that offer one (desktop).
+    val spellCheck: SpellCheckType = SpellCheckType.AUTOMATIC,
 )
+
+/**
+ * The spell checker the composers use. [AUTOMATIC] picks the operating system's checker (macOS,
+ * Windows) when it works and the bundled dictionary otherwise; [BUILT_IN] always uses the bundled
+ * dictionary.
+ */
+enum class SpellCheckType {
+    AUTOMATIC,
+    BUILT_IN,
+    OFF,
+}
 
 enum class ThemeType(
     val screenCode: Int,

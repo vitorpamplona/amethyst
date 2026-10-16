@@ -52,6 +52,7 @@ import com.vitorpamplona.amethyst.commons.resources.login_with_a_private_key_to_
 import com.vitorpamplona.amethyst.commons.resources.optional_picture_url
 import com.vitorpamplona.amethyst.commons.resources.read_only_user
 import com.vitorpamplona.amethyst.commons.ui.actions.uploads.SelectSingleFromGallery
+import com.vitorpamplona.amethyst.commons.ui.components.SpellCheckedOutlinedTextField
 import com.vitorpamplona.amethyst.commons.ui.components.rememberViewModel
 import com.vitorpamplona.amethyst.commons.ui.insets.imePaddingSafe
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
@@ -186,7 +187,7 @@ fun BookmarkGroupMetadataTopBar(
 
 @Composable
 private fun Description(bookmarkGroupInfoViewModel: BookmarkGroupMetadataViewModel) {
-    OutlinedTextField(
+    SpellCheckedOutlinedTextField(
         label = { Text(text = stringRes(Res.string.follow_set_creation_desc_label)) },
         modifier = Modifier.fillMaxWidth(),
         value = bookmarkGroupInfoViewModel.description.value,

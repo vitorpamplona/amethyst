@@ -64,6 +64,7 @@ import com.vitorpamplona.amethyst.commons.resources.geocache_new_publish
 import com.vitorpamplona.amethyst.commons.resources.geocache_unnamed
 import com.vitorpamplona.amethyst.commons.resources.route_edit_geocache_hunt
 import com.vitorpamplona.amethyst.commons.resources.route_new_geocache_hunt
+import com.vitorpamplona.amethyst.commons.ui.components.SpellCheckedOutlinedTextField
 import com.vitorpamplona.amethyst.commons.ui.components.rememberViewModel
 import com.vitorpamplona.amethyst.commons.ui.insets.imePaddingSafe
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
@@ -143,7 +144,7 @@ fun NewGeocacheHuntScreen(
                 .padding(horizontal = 16.dp, vertical = 12.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
-            OutlinedTextField(
+            SpellCheckedOutlinedTextField(
                 value = model.title.value,
                 onValueChange = { model.title.value = it },
                 label = { Text(stringRes(Res.string.geocache_hunt_title)) },
@@ -151,7 +152,7 @@ fun NewGeocacheHuntScreen(
                 singleLine = true,
             )
 
-            OutlinedTextField(
+            SpellCheckedOutlinedTextField(
                 value = model.description.value,
                 onValueChange = { model.description.value = it },
                 label = { Text(stringRes(Res.string.geocache_hunt_description)) },

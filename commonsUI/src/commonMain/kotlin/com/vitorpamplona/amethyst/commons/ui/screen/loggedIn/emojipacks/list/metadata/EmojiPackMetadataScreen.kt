@@ -70,6 +70,7 @@ import com.vitorpamplona.amethyst.commons.resources.emoji_pack_upload_image_cta
 import com.vitorpamplona.amethyst.commons.resources.emoji_pack_upload_image_hint
 import com.vitorpamplona.amethyst.commons.resources.new_emoji_pack
 import com.vitorpamplona.amethyst.commons.ui.actions.uploads.GallerySelectSingle
+import com.vitorpamplona.amethyst.commons.ui.components.SpellCheckedOutlinedTextField
 import com.vitorpamplona.amethyst.commons.ui.components.rememberViewModel
 import com.vitorpamplona.amethyst.commons.ui.insets.imePaddingSafe
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
@@ -310,7 +311,7 @@ private fun PackFormFields(viewModel: EmojiPackMetadataViewModel) {
 
     Spacer(modifier = Modifier.height(12.dp))
 
-    OutlinedTextField(
+    SpellCheckedOutlinedTextField(
         value = viewModel.description.value,
         onValueChange = { viewModel.description.value = it },
         label = { Text(text = stringRes(Res.string.emoji_pack_description_label)) },

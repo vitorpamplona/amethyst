@@ -31,6 +31,7 @@ import com.vitorpamplona.amethyst.commons.model.BooleanType
 import com.vitorpamplona.amethyst.commons.model.ConnectivityType
 import com.vitorpamplona.amethyst.commons.model.FeatureSetType
 import com.vitorpamplona.amethyst.commons.model.FontSizeType
+import com.vitorpamplona.amethyst.commons.model.SpellCheckType
 import com.vitorpamplona.amethyst.commons.model.ThemeType
 import com.vitorpamplona.amethyst.commons.model.UiSettings
 import kotlinx.coroutines.test.runTest
@@ -139,6 +140,7 @@ class UiSettingsStoreTest {
                     showProfileBadges = false,
                     showOnchainWallet = false,
                     showPayToZapChip = false,
+                    spellCheck = SpellCheckType.BUILT_IN,
                 )
 
             store.save(settings)

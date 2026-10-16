@@ -26,6 +26,8 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.style.TextDecoration
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
+import com.vitorpamplona.amethyst.commons.ui.spellcheck.TextReplacement
+import com.vitorpamplona.amethyst.commons.ui.spellcheck.VisualOffsetMapping
 import com.vitorpamplona.amethyst.commons.ui.text.MENTION_REGEX
 import com.vitorpamplona.quartz.nip19Bech32.decodePublicKeyAsHexOrNull
 import com.vitorpamplona.quartz.utils.urldetector.detection.UrlDetector
@@ -33,48 +35,61 @@ import kotlin.coroutines.cancellation.CancellationException
 
 class UrlUserTagOutputTransformation(
     val color: Color,
-) : OutputTransformation {
+) : OutputTransformation,
+    VisualOffsetMapping {
     override fun TextFieldBuffer.transformOutput() {
-        val text = asCharSequence().toString()
+        val replacements = replacements(asCharSequence().toString())
 
-        // Reverse so earlier indices remain valid after each replace.
-        val matches = MENTION_REGEX.findAll(text).toList().reversed()
-
-        // Phase 1: Replace all mentions (reverse order keeps indices valid for replace).
-        // Collect replacement info because addStyle must be called after all text mutations.
-        // (originalStart, originalMatchLength, displayNameLength)
-        val replacements = mutableListOf<Triple<Int, Int, Int>>()
-
-        for (match in matches) {
-            try {
-                val bech32 =
-                    match.value
-                        .removePrefix("@")
-                        .removePrefix("nostr:")
-                val hex = decodePublicKeyAsHexOrNull(bech32) ?: continue
-                val user = LocalCache.getOrCreateUser(hex)
-                val displayName = "@${user.toBestDisplayName()}"
-
-                replace(match.range.first, match.range.last + 1, displayName)
-                replacements.add(Triple(match.range.first, match.range.last + 1 - match.range.first, displayName.length))
-            } catch (e: Exception) {
-                if (e is CancellationException) throw e
-            }
+        // Phase 1: replace mentions back to front, so earlier indices stay valid after each replace.
+        // Styles come after: addStyle must be called after all text mutations.
+        for (index in replacements.indices.reversed()) {
+            val replacement = replacements[index]
+            replace(replacement.rawStart, replacement.rawEnd, replacement.visual)
         }
 
-        // Phase 2: Apply styles after all text mutations are finalized.
-        // Iterate in forward document order, tracking cumulative shift from prior replacements.
+        // Phase 2: style the display names, front to back, tracking the shift of earlier replacements.
         val style = SpanStyle(color = color, textDecoration = TextDecoration.None)
         var cumulativeShift = 0
-        for ((originalStart, originalLen, newLen) in replacements.reversed()) {
-            val adjustedStart = originalStart + cumulativeShift
-            addStyle(style, adjustedStart, adjustedStart + newLen)
-            cumulativeShift += newLen - originalLen
+        for (replacement in replacements) {
+            val adjustedStart = replacement.rawStart + cumulativeShift
+            addStyle(style, adjustedStart, adjustedStart + replacement.visual.length)
+            cumulativeShift += replacement.visual.length - (replacement.rawEnd - replacement.rawStart)
         }
 
         // Highlight URLs in remaining text
         highlightUrls(color)
     }
+
+    // The last text and its replacements. transformOutput and the spell checker both ask for the
+    // same text right after each edit, and must agree: a display name that loads in between would
+    // otherwise shift the checker's offsets away from what the field drew.
+    private var lastText: String? = null
+    private var lastReplacements: List<TextReplacement> = emptyList()
+
+    /** Each `@npub…`/`nostr:nprofile…` mention and the `@Name` the field draws instead, in order. */
+    override fun replacements(rawText: String): List<TextReplacement> {
+        if (rawText == lastText) return lastReplacements
+        return findReplacements(rawText).also {
+            lastText = rawText
+            lastReplacements = it
+        }
+    }
+
+    private fun findReplacements(rawText: String): List<TextReplacement> =
+        MENTION_REGEX.findAll(rawText).mapNotNullTo(ArrayList()) { match ->
+            try {
+                val bech32 =
+                    match.value
+                        .removePrefix("@")
+                        .removePrefix("nostr:")
+                val hex = decodePublicKeyAsHexOrNull(bech32) ?: return@mapNotNullTo null
+                val user = LocalCache.getOrCreateUser(hex)
+                TextReplacement(match.range.first, match.range.last + 1, "@${user.toBestDisplayName()}")
+            } catch (e: Exception) {
+                if (e is CancellationException) throw e
+                null
+            }
+        }
 }
 
 // The same detector the note renderer links with, so the editor highlights what the posted

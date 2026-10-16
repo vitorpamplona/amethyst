@@ -60,6 +60,7 @@ class UiSettingsFlow(
     val showPayToZapChip: MutableStateFlow<Boolean> = MutableStateFlow(true),
     val searchEngine: MutableStateFlow<String> = MutableStateFlow(SearchEngines.DEFAULT.id),
     val deckMode: MutableStateFlow<Boolean> = MutableStateFlow(false),
+    val spellCheck: MutableStateFlow<SpellCheckType> = MutableStateFlow(SpellCheckType.AUTOMATIC),
 ) {
     val listOfFlows: List<Flow<Any?>> =
         listOf<Flow<Any?>>(
@@ -95,6 +96,7 @@ class UiSettingsFlow(
             showPayToZapChip,
             searchEngine,
             deckMode,
+            spellCheck,
         )
 
     // emits at every change in any of the propertyes.
@@ -134,6 +136,7 @@ class UiSettingsFlow(
                 flows[29] as Boolean,
                 flows[30] as String,
                 flows[31] as Boolean,
+                flows[32] as SpellCheckType,
             )
         }
 
@@ -171,6 +174,7 @@ class UiSettingsFlow(
             showPayToZapChip.value,
             searchEngine.value,
             deckMode.value,
+            spellCheck.value,
         )
 
     fun update(torSettings: UiSettings): Boolean {
@@ -304,6 +308,10 @@ class UiSettingsFlow(
             deckMode.tryEmit(torSettings.deckMode)
             any = true
         }
+        if (spellCheck.value != torSettings.spellCheck) {
+            spellCheck.tryEmit(torSettings.spellCheck)
+            any = true
+        }
 
         return any
     }
@@ -361,6 +369,7 @@ class UiSettingsFlow(
                 MutableStateFlow(uiSettings.showPayToZapChip),
                 MutableStateFlow(uiSettings.searchEngine),
                 MutableStateFlow(uiSettings.deckMode),
+                MutableStateFlow(uiSettings.spellCheck),
             )
     }
 }

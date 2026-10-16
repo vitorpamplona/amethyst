@@ -184,6 +184,22 @@
 -dontwarn com.sun.jna.internal.Cleaner$*
 
 # ============================================================================
+# Desktop-only: Lucene Hunspell — the built-in spell checker
+# ============================================================================
+# lucene-core picks implementations at runtime (MethodHandles lookups of the
+# multi-release Panama classes, SPI for codecs), which shrinking cannot see.
+# The Hunspell path is small, but kept whole so a release build cannot drop
+# what only reflection reaches. The vector API is an incubator module the
+# packaged runtime does not include; Lucene falls back without it.
+-keep class org.apache.lucene.** { *; }
+-dontwarn org.apache.lucene.**
+-dontwarn jdk.incubator.vector.**
+# lucene-analysis-common also bundles the Snowball stemmers, which spell
+# checking never reaches; shrinking drops them, so their MethodHandle use
+# needs no keep.
+-dontwarn org.tartarus.snowball.**
+
+# ============================================================================
 # Desktop-only: VLCj — discovery providers loaded via ServiceLoader
 # ============================================================================
 # VLCj enumerates implementations of

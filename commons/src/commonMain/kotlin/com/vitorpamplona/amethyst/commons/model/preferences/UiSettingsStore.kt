@@ -35,6 +35,7 @@ import com.vitorpamplona.amethyst.commons.model.FeatureSetType
 import com.vitorpamplona.amethyst.commons.model.FontFamilyType
 import com.vitorpamplona.amethyst.commons.model.FontSizeType
 import com.vitorpamplona.amethyst.commons.model.ProfileGalleryType
+import com.vitorpamplona.amethyst.commons.model.SpellCheckType
 import com.vitorpamplona.amethyst.commons.model.ThemeType
 import com.vitorpamplona.amethyst.commons.model.UiSettings
 import com.vitorpamplona.quartz.utils.Log
@@ -132,6 +133,7 @@ class UiSettingsStore(
         val UI_SHOW_PAYTO_ZAP_CHIP = booleanPreferencesKey("ui.show_payto_zap_chip")
         val UI_SEARCH_ENGINE = stringPreferencesKey("ui.search_engine")
         val UI_DECK_MODE = booleanPreferencesKey("ui.deck_mode")
+        val UI_SPELL_CHECK = stringPreferencesKey("ui.spell_check")
 
         /**
          * Every setting's default matches what the old `getBoolean(key, default)`
@@ -178,6 +180,9 @@ class UiSettingsStore(
                 showPayToZapChip = preferences[UI_SHOW_PAYTO_ZAP_CHIP] ?: true,
                 searchEngine = preferences[UI_SEARCH_ENGINE] ?: SearchEngines.DEFAULT.id,
                 deckMode = preferences[UI_DECK_MODE] ?: false,
+                spellCheck =
+                    preferences[UI_SPELL_CHECK]?.let { name -> SpellCheckType.entries.firstOrNull { it.name == name } }
+                        ?: SpellCheckType.AUTOMATIC,
             )
         }
 
@@ -222,6 +227,7 @@ class UiSettingsStore(
             preferences[UI_SHOW_PAYTO_ZAP_CHIP] = sharedSettings.showPayToZapChip
             preferences[UI_SEARCH_ENGINE] = sharedSettings.searchEngine
             preferences[UI_DECK_MODE] = sharedSettings.deckMode
+            preferences[UI_SPELL_CHECK] = sharedSettings.spellCheck.name
         }
 
         /**

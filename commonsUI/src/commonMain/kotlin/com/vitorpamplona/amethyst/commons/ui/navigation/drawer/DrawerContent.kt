@@ -49,7 +49,6 @@ import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Badge
@@ -58,7 +57,6 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalDrawerSheet
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -132,6 +130,7 @@ import com.vitorpamplona.amethyst.commons.resources.tor_status_connected
 import com.vitorpamplona.amethyst.commons.scheduledposts.ScheduledPostStatus
 import com.vitorpamplona.amethyst.commons.tor.TorServiceStatus
 import com.vitorpamplona.amethyst.commons.ui.components.RobohashFallbackAsyncImage
+import com.vitorpamplona.amethyst.commons.ui.components.SpellCheckedOutlinedTextField
 import com.vitorpamplona.amethyst.commons.ui.layouts.LocalScreenLayout
 import com.vitorpamplona.amethyst.commons.ui.layouts.NavigationStyle
 import com.vitorpamplona.amethyst.commons.ui.navigation.bottombars.NavBarCatalog
@@ -535,7 +534,19 @@ fun StatusEditBar(
         }
     }
 
-    OutlinedTextField(
+    fun send() {
+        if (address == null) {
+            accountViewModel.createStatus(currentStatus.value)
+        } else {
+            accountViewModel.updateStatus(address, currentStatus.value)
+        }
+        focusManager.clearFocus(true)
+        // Collapse back to the read-only bar: in the docked drawer no drawer-close will ever do
+        // it, and in the modal drawer this beats staying in edit mode until the drawer closes.
+        onDone()
+    }
+
+    SpellCheckedOutlinedTextField(
         value = currentStatus.value,
         onValueChange = { currentStatus.value = it },
         label = { Text(text = stringRes(Res.string.status_update)) },
@@ -551,37 +562,15 @@ fun StatusEditBar(
                 imeAction = ImeAction.Send,
                 capitalization = KeyboardCapitalization.Sentences,
             ),
-        keyboardActions =
-            KeyboardActions(
-                onSend = {
-                    if (address == null) {
-                        accountViewModel.createStatus(currentStatus.value)
-                    } else {
-                        accountViewModel.updateStatus(address, currentStatus.value)
-                    }
-
-                    focusManager.clearFocus(true)
-                    // Collapse back to the read-only bar: in the docked drawer no
-                    // drawer-close will ever do it, and in the modal drawer this beats
-                    // staying in edit mode until the drawer closes.
-                    onDone()
-                },
-            ),
+        onImeAction = ::send,
         singleLine = true,
         trailingIcon = {
             val hasChanged = remember { derivedStateOf { currentStatus.value != (savedStatus ?: "") } }
             if (hasChanged.value) {
                 SendButton(
                     tint = MaterialTheme.colorScheme.primary,
-                ) {
-                    if (address == null) {
-                        accountViewModel.createStatus(currentStatus.value)
-                    } else {
-                        accountViewModel.updateStatus(address, currentStatus.value)
-                    }
-                    focusManager.clearFocus(true)
-                    onDone()
-                }
+                    onClick = ::send,
+                )
             } else {
                 if (address != null) {
                     UserStatusDeleteButton {

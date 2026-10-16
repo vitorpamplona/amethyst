@@ -250,6 +250,7 @@ fun EditField(
                 focusedIndicatorColor = Color.Transparent,
                 unfocusedIndicatorColor = Color.Transparent,
             ),
+        spellCheck = true,
         outputTransformation = UrlUserTagOutputTransformation(MaterialTheme.colorScheme.primary),
     )
 }
