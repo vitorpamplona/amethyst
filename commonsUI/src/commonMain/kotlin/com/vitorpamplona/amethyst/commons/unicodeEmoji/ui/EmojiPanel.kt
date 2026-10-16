@@ -22,8 +22,11 @@ package com.vitorpamplona.amethyst.commons.unicodeEmoji.ui
 
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
@@ -33,6 +36,7 @@ import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.Stable
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -99,38 +103,62 @@ fun EmojiPanelScope(content: @Composable () -> Unit) {
  * window's main content, each deck column, and the conversation pane of a two-pane screen; a
  * composer docks in the nearest one. Back closes the panel. Outside an [EmojiPanelScope] it only
  * shows [content].
+ *
+ * A host that stops being [active] closes its panel: a deck column hands Back to the main screen
+ * when it loses focus, so its panel would otherwise stay open with nothing left to close it.
  */
 @Composable
-fun EmojiPanelHost(content: @Composable () -> Unit) {
+fun EmojiPanelHost(
+    active: Boolean = true,
+    content: @Composable () -> Unit,
+) {
     val state = LocalEmojiPanel.current
     if (state == null) {
         content()
         return
     }
     val region = remember { Any() }
+    // Read here, not in this scope's body, so opening or closing a panel recomposes only the host
+    // that shows it, not every host in the window and the screens they hold.
+    val open by remember(state, region) { derivedStateOf { state.request?.region === region } }
+
+    LaunchedEffect(active) {
+        if (!active && state.request?.region === region) state.close()
+    }
 
     CompositionLocalProvider(LocalEmojiPanelRegion provides region) {
         Column(Modifier.fillMaxSize()) {
-            Box(Modifier.weight(1f)) { content() }
-
-            state.request?.takeIf { it.region === region }?.let { request ->
-                // Registered only while open, and after the screens, so it is the newest handler
-                // and Back closes the panel before it leaves the screen.
-                PlatformBackHandler { state.close() }
-
-                Surface(color = MaterialTheme.colorScheme.surfaceContainer, modifier = Modifier.fillMaxWidth()) {
-                    Column(Modifier.navigationBarsPadding()) {
-                        HorizontalDivider()
-                        EmojiPicker(
-                            emojiPacks = request.emojiPacks,
-                            onPickUnicode = request.onPickUnicode,
-                            onPickCustom = request.onPickCustom,
-                            modifier = Modifier.fillMaxWidth(),
-                            onClose = state::close,
-                        )
-                    }
-                }
+            // The panel covers the navigation bar, so the screen above it leaves no room for one.
+            Box(Modifier.weight(1f).then(if (open) Modifier.consumeWindowInsets(WindowInsets.navigationBars) else Modifier)) {
+                content()
             }
+
+            if (open) DockedPanel(state, region)
+        }
+    }
+}
+
+@Composable
+private fun DockedPanel(
+    state: EmojiPanelState,
+    region: Any,
+) {
+    val request = state.request?.takeIf { it.region === region } ?: return
+
+    // Registered only while open, and after the screens, so it is the newest handler and Back
+    // closes the panel before it leaves the screen.
+    PlatformBackHandler { state.close() }
+
+    Surface(color = MaterialTheme.colorScheme.surfaceContainer, modifier = Modifier.fillMaxWidth()) {
+        Column(Modifier.navigationBarsPadding()) {
+            HorizontalDivider()
+            EmojiPicker(
+                emojiPacks = request.emojiPacks,
+                onPickUnicode = request.onPickUnicode,
+                onPickCustom = request.onPickCustom,
+                modifier = Modifier.fillMaxWidth(),
+                onClose = state::close,
+            )
         }
     }
 }

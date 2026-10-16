@@ -391,8 +391,9 @@ private fun DeckColumnPane(
                 LocalScreenLayout provides ColumnScreenLayout,
                 LocalNavigationEventDispatcherOwner provides backOwner,
             ) {
-                // A composer in this column docks the emoji panel here, under the column.
-                EmojiPanelHost {
+                // A composer in this column docks the emoji panel here, under the column. Back reaches
+                // this column only while it is focused, so the panel closes when it loses focus.
+                EmojiPanelHost(active = focused) {
                     NavigationHost(inner, destinations)
                 }
             }
