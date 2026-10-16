@@ -3398,6 +3398,12 @@ open class EventCache :
         // indistinguishable in the field.
         if (getNoteIfExists(event.id)?.event != null) return false
 
+        // Verify before the tracker: matching consumes the pending entry, and the two things it
+        // matches on — the wallet's pubkey and the request id — are public on the relay. A copy
+        // with a forged signature that names them would otherwise use up the entry, and the real
+        // wallet answer arriving next would find nothing waiting and be dropped as late.
+        if (!wasVerified && !justVerify(event)) return false
+
         val pending =
             when (val match = paymentTracker.onResponseReceived(requestId, event.pubKey)) {
                 is NwcPaymentTracker.MatchResult.Matched -> {
@@ -3440,19 +3446,15 @@ open class EventCache :
         // check above and here. Same outcome, no warning: it is not a protocol problem.
         if (note.event != null) return false
 
-        if (wasVerified || justVerify(event)) {
-            note.loadEvent(event, author, emptyList())
+        note.loadEvent(event, author, emptyList())
 
-            requestNote?.let { request -> zappedNote?.addZapPayment(request, note) }
+        requestNote?.let { request -> zappedNote?.addZapPayment(request, note) }
 
-            appHost.scope.launch {
-                responseCallback(event)
-            }
-
-            return true
+        appHost.scope.launch {
+            responseCallback(event)
         }
 
-        return false
+        return true
     }
 
     fun getPeopleListNotesFor(user: User): List<AddressableNote> = addressables.filter(FollowSetEvent.KIND, user.pubkeyHex)
