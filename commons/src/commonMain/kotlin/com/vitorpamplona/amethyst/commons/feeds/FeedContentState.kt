@@ -27,7 +27,9 @@ import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.cache.ICacheProvider
 import com.vitorpamplona.amethyst.commons.service.BasicBundledInsert
 import com.vitorpamplona.amethyst.commons.service.BasicBundledUpdate
+import com.vitorpamplona.amethyst.commons.util.KmpLock
 import com.vitorpamplona.amethyst.commons.util.equalImmutableLists
+import com.vitorpamplona.amethyst.commons.util.withLock
 import com.vitorpamplona.quartz.nip09Deletions.DeletionRequestEvent
 import com.vitorpamplona.quartz.utils.flattenToSet
 import kotlinx.collections.immutable.ImmutableList
@@ -85,7 +87,17 @@ class FeedContentState(
 
     fun lastNoteCreatedAtIfFilled() = lastNoteCreatedAtWhenFullyLoaded.value
 
-    fun refreshSuspended() {
+    // The writers below — the insert bundler, the full refresh, deletions and the memory-pressure
+    // trim — run on different IO coroutines, and each reads the list, transforms it and writes it
+    // back. Interleaved, the slower one overwrites the other: a deletion landing while an insert
+    // batch merged was undone by the insert's stale copy, and the deleted note stayed until the
+    // next full rebuild. Reentrant, so a writer may fall back to [refreshSuspended] inside it.
+    // The same lock [com.vitorpamplona.amethyst.commons.notifications.CardFeedContentState] holds.
+    private val writeLock = KmpLock()
+
+    fun refreshSuspended() = writeLock.withLock { refreshLocked() }
+
+    private fun refreshLocked() {
         isRefreshing.value = true
         try {
             lastFeedKey = localFilter.feedKey()
@@ -127,7 +139,9 @@ class FeedContentState(
         }
     }
 
-    fun deleteFromFeed(deletedNotes: Set<Note>) {
+    fun deleteFromFeed(deletedNotes: Set<Note>) = writeLock.withLock { deleteLocked(deletedNotes) }
+
+    private fun deleteLocked(deletedNotes: Set<Note>) {
         val feed = _feedContent.value
         if (feed is FeedState.Loaded) {
             val notes = (feed.feed.value.list - deletedNotes).toImmutableList()
@@ -135,7 +149,9 @@ class FeedContentState(
         }
     }
 
-    fun trimToSize(maxItems: Int) {
+    fun trimToSize(maxItems: Int) = writeLock.withLock { trimLocked(maxItems) }
+
+    private fun trimLocked(maxItems: Int) {
         val current = _feedContent.value
         if (current is FeedState.Loaded) {
             val loaded = current.feed.value
@@ -145,7 +161,9 @@ class FeedContentState(
         }
     }
 
-    fun refreshFromOldState(newItems: Set<Note>) {
+    fun refreshFromOldState(newItems: Set<Note>) = writeLock.withLock { refreshFromOldStateLocked(newItems) }
+
+    private fun refreshFromOldStateLocked(newItems: Set<Note>) {
         val oldNotesState = _feedContent.value
         if (localFilter is AdditiveFeedFilter && lastFeedKey == localFilter.feedKey()) {
             if (oldNotesState is FeedState.Loaded) {
@@ -193,11 +211,11 @@ class FeedContentState(
                 }
             } else {
                 // Refresh Everything
-                refreshSuspended()
+                refreshLocked()
             }
         } else {
             // Refresh Everything
-            refreshSuspended()
+            refreshLocked()
         }
     }
 
