@@ -190,8 +190,9 @@ private fun EmojiPickerMenuButton(
     modifier: Modifier,
 ) {
     val host = LocalEmojiPanel.current
-    if (host != null) {
-        EmojiPanelButton(host, emojiPacks, onPickUnicode, onPickCustom, tint, modifier)
+    val region = LocalEmojiPanelRegion.current
+    if (host != null && region != null) {
+        EmojiPanelButton(host, region, emojiPacks, onPickUnicode, onPickCustom, tint, modifier)
         return
     }
 

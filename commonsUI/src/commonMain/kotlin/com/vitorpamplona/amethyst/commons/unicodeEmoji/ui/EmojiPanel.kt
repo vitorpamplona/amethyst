@@ -49,16 +49,17 @@ import com.vitorpamplona.amethyst.commons.ui.components.PlatformBackHandler
 import com.vitorpamplona.amethyst.commons.ui.insets.KeyboardState
 import com.vitorpamplona.amethyst.commons.ui.insets.keyboardAsState
 
-/** Which composer the docked panel is writing into, and how. */
+/** Which composer the docked panel is writing into, how, and which [EmojiPanelHost] shows it. */
 @Stable
 internal class EmojiPanelRequest(
     val owner: Any,
+    val region: Any,
     val emojiPacks: EmojiPackState?,
     val onPickUnicode: (String) -> Unit,
     val onPickCustom: (EmojiMedia) -> Unit,
 )
 
-/** The one docked emoji panel of a window; at most one composer has it open at a time. */
+/** The docked emoji panel of a window: at most one composer, in one [EmojiPanelHost], has it open. */
 @Stable
 class EmojiPanelState {
     internal var request by mutableStateOf<EmojiPanelRequest?>(null)
@@ -70,28 +71,49 @@ class EmojiPanelState {
 
 internal val LocalEmojiPanel = staticCompositionLocalOf<EmojiPanelState?> { null }
 
+/** The nearest [EmojiPanelHost]: where a composer's panel docks. */
+internal val LocalEmojiPanelRegion = staticCompositionLocalOf<Any?> { null }
+
 /**
- * Docks the emoji picker at the bottom of [content], full width, where an on-screen keyboard
- * would be, and lets the composers' emoji buttons open it.
+ * The window's emoji panel state, for the [EmojiPanelHost]s inside [content].
  *
- * It is the fallback for when there is no on-screen keyboard to pick emoji from: Desktop, or a
- * phone with a hardware keyboard or with the keyboard put away. So it closes as soon as the
+ * The panel is the fallback for when there is no on-screen keyboard to pick emoji from: Desktop,
+ * or a phone with a hardware keyboard or with the keyboard put away. So it closes as soon as the
  * keyboard comes up (a tap in the text), and the buttons hide while the keyboard is up. Unlike a
- * menu it stays open between picks, so several emoji go in one after another. Back closes it.
+ * menu it stays open between picks, so several emoji go in one after another.
  */
 @Composable
-fun EmojiPanelHost(content: @Composable () -> Unit) {
+fun EmojiPanelScope(content: @Composable () -> Unit) {
     val state = remember { EmojiPanelState() }
     val keyboard by keyboardAsState()
 
     LaunchedEffect(keyboard) {
         if (keyboard == KeyboardState.Opened) state.close()
     }
-    CompositionLocalProvider(LocalEmojiPanel provides state) {
+    CompositionLocalProvider(LocalEmojiPanel provides state, content = content)
+}
+
+/**
+ * Docks the emoji panel at the bottom of [content], full width, when a composer inside it opens
+ * one: the view that owns the composer gives up the space, not the whole window. Wrap the
+ * window's main content, each deck column, and the conversation pane of a two-pane screen; a
+ * composer docks in the nearest one. Back closes the panel. Outside an [EmojiPanelScope] it only
+ * shows [content].
+ */
+@Composable
+fun EmojiPanelHost(content: @Composable () -> Unit) {
+    val state = LocalEmojiPanel.current
+    if (state == null) {
+        content()
+        return
+    }
+    val region = remember { Any() }
+
+    CompositionLocalProvider(LocalEmojiPanelRegion provides region) {
         Column(Modifier.fillMaxSize()) {
             Box(Modifier.weight(1f)) { content() }
 
-            state.request?.let { request ->
+            state.request?.takeIf { it.region === region }?.let { request ->
                 // Registered only while open, and after the screens, so it is the newest handler
                 // and Back closes the panel before it leaves the screen.
                 PlatformBackHandler { state.close() }
@@ -117,6 +139,7 @@ fun EmojiPanelHost(content: @Composable () -> Unit) {
 @Composable
 internal fun EmojiPanelButton(
     host: EmojiPanelState,
+    region: Any,
     emojiPacks: EmojiPackState?,
     onPickUnicode: (String) -> Unit,
     onPickCustom: (EmojiMedia) -> Unit,
@@ -147,7 +170,7 @@ internal fun EmojiPanelButton(
                 if (open) {
                     null
                 } else {
-                    EmojiPanelRequest(owner, emojiPacks, { pickUnicode(it) }, { pickCustom(it) })
+                    EmojiPanelRequest(owner, region, emojiPacks, { pickUnicode(it) }, { pickCustom(it) })
                 }
         }
     }

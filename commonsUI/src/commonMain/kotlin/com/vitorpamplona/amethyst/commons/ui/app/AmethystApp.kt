@@ -98,6 +98,7 @@ import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.publicChannel
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.publicChannels.relayGroup.datasource.RelayGroupJoinedStatePreload
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.unicodeEmoji.ui.EmojiPanelHost
+import com.vitorpamplona.amethyst.commons.unicodeEmoji.ui.EmojiPanelScope
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.quartz.utils.Log
 import kotlinx.coroutines.delay
@@ -297,9 +298,10 @@ private fun AppNavigation(
         LocalUserFinderAccount provides accountViewModel.account,
         LocalEventFinder provides accountViewModel.dataSources().eventFinder,
     ) {
-        // The emoji panel docks below every screen, where an on-screen keyboard would be. Inside the
-        // providers, so it reads the window's layout (its hover tooltips are for large screens).
-        EmojiPanelHost {
+        // One emoji panel per window. Inside the providers, so it reads the window's layout (its
+        // hover tooltips are for large screens). It docks in the view that owns the composer: the
+        // main content below, a deck column, or a two-pane screen's conversation pane.
+        EmojiPanelScope {
             AppShellLayout(
                 accountViewModel = accountViewModel,
                 nav = nav,
@@ -313,9 +315,11 @@ private fun AppNavigation(
                 suspendEdgeSwipe = root::suspendEdgeSwipe,
                 deck = rememberDeck(accountViewModel, nav, root),
             ) {
-                Box(Modifier.fillMaxSize()) {
-                    BuildNavigation(nav, destinations, root)
-                    root.ShellOverlay(accountViewModel)
+                EmojiPanelHost {
+                    Box(Modifier.fillMaxSize()) {
+                        BuildNavigation(nav, destinations, root)
+                        root.ShellOverlay(accountViewModel)
+                    }
                 }
             }
 

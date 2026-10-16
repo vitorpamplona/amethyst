@@ -124,6 +124,7 @@ import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.Nav
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.DividerThickness
+import com.vitorpamplona.amethyst.commons.unicodeEmoji.ui.EmojiPanelHost
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import org.jetbrains.compose.resources.StringResource
 
@@ -390,7 +391,10 @@ private fun DeckColumnPane(
                 LocalScreenLayout provides ColumnScreenLayout,
                 LocalNavigationEventDispatcherOwner provides backOwner,
             ) {
-                NavigationHost(inner, destinations)
+                // A composer in this column docks the emoji panel here, under the column.
+                EmojiPanelHost {
+                    NavigationHost(inner, destinations)
+                }
             }
         }
     }
