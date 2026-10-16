@@ -247,7 +247,10 @@ and `searchable-kinds.md`; these rules are the store's query-side contract.
 **STORE-S01 — extension stripping at the store boundary.** Every filter-accepting method runs
 `strippingSearchExtensions()`: NIP-50 `key:value` tokens (`include:spam`, `domain:…`, …) are
 removed before FTS. Unsupported extensions are **ignored, never matched as literal text and
-never match-nothing** — an extensions-only search collapses to an unconstrained query. Stores
+never match-nothing** — an extensions-only search collapses to an unconstrained query. That holds
+for any blank (empty or whitespace) search on every path — tag joins, unions, counts and deletes
+neither `MATCH` nor join `event_fts` for it, so it never narrows a filter to FTS-indexed kinds, and
+a filter that is otherwise empty is the empty filter (F10: `delete` removes nothing). Stores
 that *do* implement extensions receive the raw string through the relay layer and parse it with
 `nip50Search.SearchQuery.parse` (see the `IEventStore` KDoc).
 
@@ -265,8 +268,8 @@ FTS5, so implicit-AND terms, `"phrase queries"`, `OR`, and `prefix*` follow FTS5
 Tokenization details live in `FullTextSearchModule` (see SKILL.md › How the stores index).
 
 **STORE-S05 — FTS off.** With `IndexingStrategy.indexFullTextSearch = false`: a filter with a
-non-empty search term matches **nothing** (query/count/delete alike); an empty-string search
-imposes no constraint. Everything else is unchanged.
+non-blank search term matches **nothing** (query/count/delete alike); a blank search imposes no
+constraint. Everything else is unchanged.
 
 **STORE-S06 — deferred FTS.** Relays may set `deferFullTextSearchIndexing = true` (geode does):
 tokenization moves off the insert path to a watermark-driven catch-up
@@ -301,6 +304,10 @@ non-itemizable cases).
 
 Add one line per behavior change, newest first: `YYYY-MM-DD <short sha> <rule id> — what changed`.
 
+- 2026-10-16 (pending) S01, S05 — a blank search no longer joins `event_fts` on the tag/union/
+  count/delete paths (it dropped every non-searchable kind, e.g. reactions under `#e` +
+  `include:spam`), a whitespace-only search no longer reaches FTS5 `MATCH` (syntax error), and a
+  blank-search-only filter deletes nothing.
 - 2026-10-16 (pending) F12 — a negative `limit` is clamped to zero rows instead of compiling to
   SQLite's unbounded `LIMIT -1`; `LimitsPolicy` maps it to the default/max page on a REQ.
 - 2026-09-27 (pending) W01/W02, W09 — a stale replaceable/addressable version is `REPLACED`
