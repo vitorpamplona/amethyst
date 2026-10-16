@@ -464,6 +464,9 @@ import com.vitorpamplona.quartz.nipF4Podcasts.favorites.FavoritePodcastsListEven
 import com.vitorpamplona.quartz.nipF4Podcasts.metadata.PodcastMetadataEvent
 import com.vitorpamplona.quartz.nipXXPodcasting20.episode.Podcasting20EpisodeEvent
 import com.vitorpamplona.quartz.nipXXPodcasting20.trailer.Podcasting20TrailerEvent
+import com.vitorpamplona.quartz.openagents.nipCapCapabilities.discovery.CapabilityDiscoveryEvent
+import com.vitorpamplona.quartz.openagents.nipExtExtensions.listing.ExtensionListingEvent
+import com.vitorpamplona.quartz.openagents.nipExtExtensions.release.ExtensionReleaseEvent
 import com.vitorpamplona.quartz.utils.Hex
 import com.vitorpamplona.quartz.utils.Log
 import com.vitorpamplona.quartz.utils.TimeUtils
@@ -4007,6 +4010,10 @@ open class EventCache :
                 // The relay-signed NIP-29 39004 AV-participants addressable is durable group state.
                 is GroupParticipantsEvent,
                 is ExternalIdentitiesEvent,
+                // OpenAgents capability heads (30180) and package listings (30184): discovery records,
+                // newest per address; nothing derives state from them yet.
+                is CapabilityDiscoveryEvent,
+                is ExtensionListingEvent,
                 is FileServersEvent,
                 is StarterPackEvent,
                 is GeocacheListingEvent,
@@ -4164,6 +4171,8 @@ open class EventCache :
                 is ChatMessageEvent,
                 is BirdDetectionEvent,
                 is CommentEvent,
+                // OpenAgents package releases (3184): immutable, pointed at by a 30184 listing.
+                is ExtensionReleaseEvent,
                 // The NIP-29 9xxx moderation actions and join/leave requests are regular
                 // one-shot events the relay is authoritative for (it applies them and
                 // republishes the 39000/39001/39002); we store them so they're queryable,

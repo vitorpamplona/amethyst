@@ -104,6 +104,7 @@ object SearchableKinds {
             2003, // TorrentEvent
             2004, // TorrentCommentEvent
             2473, // BirdDetectionEvent
+            3184, // ExtensionReleaseEvent
             3302, // ConcordChatEditEvent
             5050, // DvmTextGenerationRequestEvent
             5100, // DvmImageGenerationRequestEvent
@@ -173,6 +174,8 @@ object SearchableKinds {
             30176, // TeamEvent
             30177, // ManagedAgentEvent
             30178, // TeamCatalogEvent
+            30180, // CapabilityDiscoveryEvent
+            30184, // ExtensionListingEvent
             30267, // AppCurationSetEvent
             30296, // InteractiveStoryPrologueEvent
             30297, // InteractiveStorySceneEvent

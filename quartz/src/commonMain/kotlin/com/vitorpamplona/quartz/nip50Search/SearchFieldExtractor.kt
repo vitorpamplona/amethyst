@@ -149,6 +149,9 @@ import com.vitorpamplona.quartz.nipF4Podcasts.episode.PodcastEpisodeEvent
 import com.vitorpamplona.quartz.nipF4Podcasts.metadata.PodcastMetadataEvent
 import com.vitorpamplona.quartz.nipXXPodcasting20.episode.Podcasting20EpisodeEvent
 import com.vitorpamplona.quartz.nipXXPodcasting20.trailer.Podcasting20TrailerEvent
+import com.vitorpamplona.quartz.openagents.nipCapCapabilities.discovery.CapabilityDiscoveryEvent
+import com.vitorpamplona.quartz.openagents.nipExtExtensions.listing.ExtensionListingEvent
+import com.vitorpamplona.quartz.openagents.nipExtExtensions.release.ExtensionReleaseEvent
 
 /**
  * Decomposes every [SearchableEvent] into [IndexableFields] by priority tier:
@@ -333,6 +336,26 @@ object SearchFieldExtractor {
             // is the MCP initialize result (machine JSON) and stays out.
             is CvmServerAnnouncementEvent -> {
                 tiers(event, event.serverName(), event.about(), null)
+            }
+
+            // OpenAgents kinds 30184/3184/30180 -- JSON bodies, parsed. Their `t` tags are
+            // protocol markers (`oa:ext:listing:v1`, `oa:cap:v1`, `oa:profile:adapter`), not
+            // topics, so they skip the hashtag role the funnel would otherwise fill with them.
+            // A listing is named by its title and slug and described by its description.
+            is ExtensionListingEvent -> {
+                markerTaggedTiers(listOf(event.title(), event.slug()), listOf(event.description()), null)
+            }
+
+            // A release carries no prose: the package slug names it, the version qualifies it.
+            is ExtensionReleaseEvent -> {
+                markerTaggedTiers(listOf(event.packageSlug()), listOf(event.version()), null)
+            }
+
+            // A capability is named by its `package/component` path and its operation ids, and
+            // described by the summary its publisher wrote for selectors; the interface id is
+            // machine text a searcher may still type, so it is the body tier.
+            is CapabilityDiscoveryEvent -> {
+                markerTaggedTiers(listOf(event.qualifiedId()?.path()) + event.operations(), listOf(event.summary()), event.interfaceId())
             }
 
             // kinds 11333/33331 -- the `name` tag is the shape's only human
@@ -927,6 +950,20 @@ object SearchFieldExtractor {
         hashtags = hashtagValues(event),
         locations = locationValues(event),
         websites = websites,
+    )
+
+    /**
+     * [tiers] for kinds whose `t` tags are protocol markers rather than topics: the same
+     * cleaning, but no hashtag role (and no location role: none of these kinds carries one).
+     */
+    private fun markerTaggedTiers(
+        primary: List<String?>,
+        secondary: List<String?>,
+        text: String?,
+    ) = IndexableFields.Tiered(
+        primary = cleanAll(primary),
+        secondary = cleanAll(secondary),
+        text = clean(text),
     )
 
     /** Trim and drop empties at the single funnel every derived string passes through. */
