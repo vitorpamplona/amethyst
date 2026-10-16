@@ -490,10 +490,14 @@ class CachePruner(
     fun pruneHiddenEvents(hidden: LiveHiddenUsers) {
         val childrenToBeRemoved = mutableListOf<Note>()
 
+        val hiddenUsers = hidden.hiddenUsers
+        if (hiddenUsers.isEmpty()) return
+
+        // One pass per store, each author looked up in the set. A pass per muted user made every
+        // trim cost (mutes x cache size), and mute lists run into the hundreds.
         val toBeRemoved =
-            hidden.hiddenUsers.flatMap { userHex ->
-                (cache.notes.filter { _, it -> it.event?.pubKey == userHex } + cache.addressables.filter { _, it -> it.event?.pubKey == userHex }).toSet()
-            }
+            cache.notes.filter { _, it -> it.event?.pubKey?.let { author -> author in hiddenUsers } == true } +
+                cache.addressables.filter { _, it -> it.event?.pubKey?.let { author -> author in hiddenUsers } == true }
 
         toBeRemoved.forEach {
             unlinkAndRemove(it)
