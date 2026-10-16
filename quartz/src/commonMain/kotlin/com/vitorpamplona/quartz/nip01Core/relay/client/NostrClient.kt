@@ -163,12 +163,25 @@ class NostrClient(
             reqs + counts + outbox
         }.sample(300)
             .onEach {
-                relayPool.updatePool(it)
+                // The sample only says when to look. What the pool keeps is read now, and read
+                // again before each drop: a publish that came in after the sample has already sent
+                // its EVENT on the socket a stale set would close, losing that EVENT's OK until
+                // the keep-alive sweep redialed (a minute, measured on a one-at-a-time publisher).
+                val added = relayPool.updatePool(wantedRelays(), ::isWanted)
+                // A relay the pool takes back in has work waiting (a REQ, a COUNT or an EVENT the
+                // outbox still holds), and joining the pool does not dial it.
+                if (added && isActive()) reconnect(onlyIfChanged = true)
             }.stateIn(
                 scope,
                 SharingStarted.Eagerly,
                 activeRequests.desiredRelays.value + activeCounts.relays.value + eventOutbox.relays.value,
             )
+
+    /** Every relay a subscription, a count or a pending publish wants, as of now. */
+    private fun wantedRelays(): Set<NormalizedRelayUrl> = activeRequests.desiredRelays.value + activeCounts.relays.value + eventOutbox.relays.value
+
+    /** [wantedRelays] for one relay, without building the union. */
+    private fun isWanted(relay: NormalizedRelayUrl): Boolean = relay in activeRequests.desiredRelays.value || relay in activeCounts.relays.value || relay in eventOutbox.relays.value
 
     // Reconnects all relays that may have disconnected
     override fun connect() {
