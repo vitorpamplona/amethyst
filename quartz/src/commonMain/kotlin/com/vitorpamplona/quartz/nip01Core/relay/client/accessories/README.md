@@ -134,6 +134,7 @@ pins this). The accessories already wait for the first challenge to resolve, so
 | --- | --- | --- |
 | `publishAndConfirm(event, relays, timeout)` | `NostrClientPublishExt` | Send an EVENT and wait for `OK`; returns whether any relay accepted it. |
 | `publishAndConfirmDetailed(event, relays, timeout)` | `NostrClientPublishExt` | Same, but returns the per-relay accepted/rejected map. |
+| `publishStream(relay, events, maxInFlight, idleTimeoutMs, onResult)` | `NostrClientPublishStreamExt` | Bulk publish of a `Flow<Event>` to one relay with a bounded window of unanswered EVENTs; each verdict reaches `onResult` as its OK lands. One listener for the whole stream, so millions of events cost a map lookup per OK. Its wait is an idle window over the relay's answers, not a deadline. |
 
 ## Count (NIP-45)
 
