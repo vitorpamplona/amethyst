@@ -24,4 +24,15 @@ expect object GZip {
     fun compress(content: String): ByteArray
 
     fun decompress(content: ByteArray): String
+
+    /**
+     * [decompress] for untrusted input: gives up, returning null, as soon as the inflated output
+     * passes [maxBytes] UTF-8 bytes. The check runs while inflating, so a bomb (whitespace
+     * deflates ~1000:1) costs at most [maxBytes] of output before it is refused, not its full
+     * inflated size. Malformed input still throws, as in [decompress].
+     */
+    fun decompress(
+        content: ByteArray,
+        maxBytes: Int,
+    ): String?
 }

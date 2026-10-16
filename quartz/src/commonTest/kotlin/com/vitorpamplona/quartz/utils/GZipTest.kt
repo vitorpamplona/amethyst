@@ -23,6 +23,7 @@ package com.vitorpamplona.quartz.utils
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFails
+import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 class GZipTest {
@@ -109,5 +110,23 @@ class GZipTest {
     fun roundTripSpecialCharacters() {
         val original = "\t\n\r\u0000\u001F\u007F"
         assertEquals(original, GZip.decompress(GZip.compress(original)))
+    }
+
+    @Test
+    fun boundedDecompressRoundTripsUpToTheCap() {
+        val original = "abcdefghij".repeat(1000)
+        assertEquals(original, GZip.decompress(GZip.compress(original), maxBytes = 10_000))
+        assertEquals("", GZip.decompress(GZip.compress(""), maxBytes = 0))
+    }
+
+    @Test
+    fun boundedDecompressRefusesOutputPastTheCap() {
+        assertNull(GZip.decompress(GZip.compress("abcdefghij".repeat(1000)), maxBytes = 9_999))
+        assertNull(GZip.decompress(GZip.compress(" ".repeat(4 * 1024 * 1024)), maxBytes = 64 * 1024))
+    }
+
+    @Test
+    fun boundedDecompressInvalidDataThrows() {
+        assertFails { GZip.decompress(byteArrayOf(0x00, 0x01, 0x02, 0x03, 0x04), maxBytes = 1024) }
     }
 }

@@ -101,11 +101,27 @@ actual object GZip {
      * automatic detection of both gzip and zlib formats.
      * Output is collected in fixed-size chunks to handle arbitrary output size.
      */
-    actual fun decompress(content: ByteArray): String {
-        if (content.isEmpty()) return ""
+    actual fun decompress(content: ByteArray): String = inflateBounded(content, Int.MAX_VALUE)!!.decodeToString()
+
+    actual fun decompress(
+        content: ByteArray,
+        maxBytes: Int,
+    ): String? = inflateBounded(content, maxBytes)?.decodeToString()
+
+    /**
+     * Inflates [content], or returns null once more than [maxBytes] have come out. The bound is
+     * checked per chunk, so a bomb stops after one chunk past the cap instead of inflating fully.
+     */
+    private fun inflateBounded(
+        content: ByteArray,
+        maxBytes: Int,
+    ): ByteArray? {
+        if (content.isEmpty()) return ByteArray(0)
 
         val chunks = ArrayList<ByteArray>()
         val chunkSize = maxOf(content.size * 4, 4096)
+        var totalSize = 0L
+        var overflow = false
 
         memScoped {
             val stream = alloc<z_stream>()
@@ -114,37 +130,43 @@ actual object GZip {
             inflateInit2(stream.ptr, 47)
                 .let { check(it == Z_OK) { "inflateInit2 failed: $it" } }
 
-            content.usePinned { pinIn ->
-                if (content.isNotEmpty()) {
+            try {
+                content.usePinned { pinIn ->
                     stream.next_in = pinIn.addressOf(0).reinterpret()
+                    stream.avail_in = content.size.toUInt()
+
+                    var status: Int = Z_OK
+                    do {
+                        val chunk = ByteArray(chunkSize)
+                        chunk.usePinned { pinOut ->
+                            stream.next_out = pinOut.addressOf(0).reinterpret()
+                            stream.avail_out = chunkSize.toUInt()
+                            status = inflate(stream.ptr, Z_NO_FLUSH)
+                            val produced = chunkSize - stream.avail_out.toInt()
+                            if (produced > 0) chunks.add(chunk.copyOf(produced))
+                            totalSize += produced
+                        }
+                        if (totalSize > maxBytes) {
+                            overflow = true
+                            break
+                        }
+                    } while (status == Z_OK)
+
+                    if (!overflow) check(status == Z_STREAM_END) { "inflate failed: $status" }
                 }
-                stream.avail_in = content.size.toUInt()
-
-                var status: Int = Z_OK
-                do {
-                    val chunk = ByteArray(chunkSize)
-                    chunk.usePinned { pinOut ->
-                        stream.next_out = pinOut.addressOf(0).reinterpret()
-                        stream.avail_out = chunkSize.toUInt()
-                        status = inflate(stream.ptr, Z_NO_FLUSH)
-                        val produced = chunkSize - stream.avail_out.toInt()
-                        if (produced > 0) chunks.add(chunk.copyOf(produced))
-                    }
-                } while (status == Z_OK)
-
-                check(status == Z_STREAM_END) { "inflate failed: $status" }
+            } finally {
+                inflateEnd(stream.ptr)
             }
-
-            inflateEnd(stream.ptr)
         }
 
-        val totalSize = chunks.sumOf { it.size }
-        val result = ByteArray(totalSize)
+        if (overflow) return null
+
+        val result = ByteArray(totalSize.toInt())
         var pos = 0
         chunks.forEach { chunk ->
             chunk.copyInto(result, pos)
             pos += chunk.size
         }
-        return result.decodeToString()
+        return result
     }
 }

@@ -32,4 +32,20 @@ actual object GZip {
     }
 
     actual fun decompress(content: ByteArray): String = GZIPInputStream(content.inputStream()).bufferedReader(Charsets.UTF_8).use { it.readText() }
+
+    actual fun decompress(
+        content: ByteArray,
+        maxBytes: Int,
+    ): String? =
+        GZIPInputStream(content.inputStream()).use { input ->
+            val out = ByteArrayOutputStream()
+            val buffer = ByteArray(8192)
+            while (true) {
+                val read = input.read(buffer)
+                if (read < 0) break
+                if (out.size() + read > maxBytes) return null
+                out.write(buffer, 0, read)
+            }
+            out.toByteArray().decodeToString()
+        }
 }
