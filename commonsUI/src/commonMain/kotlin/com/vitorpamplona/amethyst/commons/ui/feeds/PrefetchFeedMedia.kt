@@ -40,7 +40,6 @@ import com.vitorpamplona.amethyst.commons.model.MediaAspectRatioCache
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.toImmutableListOfLists
 import com.vitorpamplona.amethyst.commons.richtext.CachedRichTextParser
-import com.vitorpamplona.amethyst.commons.richtext.ExpandableTextCutOffCalculator
 import com.vitorpamplona.amethyst.commons.richtext.MediaUrlImage
 import com.vitorpamplona.amethyst.commons.richtext.MediaUrlVideo
 import com.vitorpamplona.amethyst.commons.richtext.RichTextParser
@@ -433,14 +432,7 @@ private fun Note.warmRenderCache(ev: Event): RichTextViewerState? {
 
     val tags = ev.tags.toImmutableListOfLists()
     // callbackUri = note.toNostrUri(), authorPubKey = null — the values the feed passes.
-    val uri = toNostrUri()
-    val full = CachedRichTextParser.parseText(body, tags, uri, null)
-    // A long note renders collapsed: ExpandableRichTextViewer hands the parser only the text above
-    // the cut, and the cache matches on content, so warm that entry too. Otherwise the notes that
-    // cost most to parse were exactly the ones parsed again on the main thread at first scroll-in.
-    val cut = ExpandableTextCutOffCalculator.indexToCutOff(body)
-    if (cut < body.length) CachedRichTextParser.parseText(body.take(cut), tags, uri, null)
-    return full
+    return CachedRichTextParser.parseText(body, tags, toNostrUri(), null)
 }
 
 /** Enqueues an image prefetch that also records its decoded aspect ratio. */
