@@ -106,8 +106,11 @@ object PublishFileCommand {
                     .takeIf { it > 0 }
                     ?.let { (it - started) / 1_000_000 } ?: elapsedMs
             Output.emit(summary(relay, tally, result.sent, result.stalled, elapsedMs, answeringMs))
-            // A stall left part of the file unsent; a run nothing landed from is a failed run.
-            return if (result.stalled || (tally.accepted.get() + tally.duplicates.get() == 0L && result.sent > 0)) 1 else 0
+            // A stall left part of the file unsent; a run nothing landed from is a failed run,
+            // including one whose every line was dropped before it could be sent.
+            val dropped = tally.unparseable.get() + tally.badSignatures.get()
+            val nothingLanded = tally.accepted.get() + tally.duplicates.get() == 0L && (result.sent > 0 || dropped > 0)
+            return if (result.stalled || nothingLanded) 1 else 0
         }
     }
 

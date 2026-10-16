@@ -35,24 +35,30 @@ import com.vitorpamplona.quartz.utils.Log
  * got to, so a relay that hangs up every few hundred thousand events (relay.ditto.pub does)
  * is read to its end in one call instead of one call per connection.
  *
- * "Where it got to" is per filter: each filter resumes at the oldest `created_at` it was
- * delivered, `until` inclusive as in [fetchAllPages], and the events of that boundary second
- * already delivered are not delivered again. A filter with a [Filter.limit] resumes with what
- * is left of it, and drops out once that is met.
+ * [filters] are split into walks exactly as [fetchAllPages] splits them (the search filters
+ * once, together, then each pageable filter alone, with its cross-walk dedup), and each
+ * pageable walk resumes on its own cursor: the oldest `created_at` it was delivered, `until`
+ * inclusive as in [fetchAllPages], with the events of that boundary second already delivered
+ * not delivered again. A filter with a [Filter.limit] resumes with what is left of it.
+ * Searches are relevance-ranked, one page, and never resumed.
  *
- * A walk that ends [PagedFetchResult.End.DRAINED] after delivering something is confirmed
- * once, after [resumeBackoff]'s first delay, from its cursor: a relay answering a deep page
- * empty while it still holds events below it ended a walk of relay.ditto.pub's kind 3s 1.58M
- * events early, reporting the end of the corpus. On an honest relay the confirmation costs three
- * REQs: the bottom second, once more to see nothing new in it, and the empty page below it.
+ * Only a walk that got somewhere is resumed: a relay that cannot be reached, or stays silent,
+ * before delivering a single event ends the walk at once, as [fetchAllPages] would, instead of
+ * after the whole backoff.
+ *
+ * A walk that ends [PagedFetchResult.End.DRAINED] after at least [CONFIRM_AFTER_PAGES] pages
+ * and something new is confirmed once, after [resumeBackoff]'s first delay, from its cursor: a
+ * relay answering a deep page empty while it still holds events below it ended a walk of
+ * relay.ditto.pub's kind 3s 1.58M events early, reporting the end of the corpus. On an honest
+ * relay the confirmation costs three REQs (the bottom second, once more to see nothing new in
+ * it, and the empty page below it), and a confirmation that finds nothing new, or fails to get
+ * an answer, leaves the walk DRAINED. Shorter walks are not confirmed: a bounded fetch of a page
+ * or two would pay the wait on every call.
  *
  * The backoff is per stall: any resumed walk that delivers something new resets it, and a
- * stall that outlasts it ends the call with the last walk's own ending. A refusal (`CLOSED`,
+ * stall that outlasts it ends the walk with its last ending. A refusal (`CLOSED`,
  * `auth-required`), a limit met and an unpageable search are the relay's answers and end it
  * at once. [onResume] hears each re-ask with its attempt number within the stall.
- *
- * An event two of [filters] both match may be delivered twice across a resume; the pool walks
- * ([fetchAllPagesFromPool] and its stream) deduplicate by id over the whole call.
  */
 suspend fun INostrClient.fetchAllPagesResuming(
     relay: NormalizedRelayUrl,
@@ -65,34 +71,80 @@ suspend fun INostrClient.fetchAllPagesResuming(
     onResume: ((attempt: Int, last: PagedFetchResult) -> Unit)? = null,
     onEvent: suspend (Event) -> Unit,
 ): PagedFetchResult {
-    val cursors = filters.map { FilterCursor(it) }
+    require(pageSize == null || pageSize > 0) { "pageSize must be positive: $pageSize" }
+    return walkEachFilter(filters, onEvent) { walk, deliver ->
+        val filter = walk.singleOrNull()
+        if (filter == null || filter.isRankedSearch()) {
+            walkPages(relay, walk, idleTimeoutMs, onNewPage, pageSize, throttleBackoff, deliver)
+        } else {
+            resumingWalk(relay, filter, idleTimeoutMs, onNewPage, pageSize, throttleBackoff, resumeBackoff, onResume, deliver)
+        }
+    }
+}
+
+/**
+ * Pages a [DRAINED][PagedFetchResult.End.DRAINED] walk must have read before it is confirmed:
+ * the empty-page-too-early failure was seen deep in a walk, and a shallow one confirming would
+ * make every bounded fetch wait out a backoff delay.
+ */
+const val CONFIRM_AFTER_PAGES = 10
+
+/** One pageable [filter]'s walk, resumed from its cursor after each stall (see [fetchAllPagesResuming]). */
+private suspend fun INostrClient.resumingWalk(
+    relay: NormalizedRelayUrl,
+    filter: Filter,
+    idleTimeoutMs: Long,
+    onNewPage: ((Long) -> Unit)?,
+    pageSize: Int?,
+    throttleBackoff: PageRetryBackoff,
+    resumeBackoff: PageRetryBackoff,
+    onResume: ((attempt: Int, last: PagedFetchResult) -> Unit)?,
+    onEvent: suspend (Event) -> Unit,
+): PagedFetchResult {
+    val cursor = FilterCursor(filter)
     var downloaded = 0
+    var pages = 0
     var attempt = 0
-    var confirmed = false
-    var asking = filters
+    // The DRAINED ending being confirmed: what the walk reports if the re-ask finds nothing new.
+    var confirming: PagedFetchResult? = null
+    var asking = filter
     while (true) {
         var deliveredNew = 0
+        pages++
         val result =
-            fetchAllPages(relay, asking, idleTimeoutMs, onNewPage, pageSize, throttleBackoff) { event ->
-                if (cursors.any { it.alreadyDelivered(event) }) return@fetchAllPages
-                cursors.forEach { it.record(event) }
+            walkPages(
+                relay,
+                listOf(asking),
+                idleTimeoutMs,
+                { until ->
+                    pages++
+                    onNewPage?.invoke(until)
+                },
+                pageSize,
+                throttleBackoff,
+            ) { event ->
+                if (cursor.alreadyDelivered(event)) return@walkPages
+                cursor.record(event)
                 deliveredNew++
                 onEvent(event)
             }
         downloaded += deliveredNew
         if (deliveredNew > 0) {
             attempt = 0
-            confirmed = false
+            confirming = null
+        } else if (confirming != null) {
+            // Nothing below the bottom the walk reported, or no answer to the question: either
+            // way nothing contradicts the DRAINED it already had.
+            return confirming.copy(downloaded = downloaded)
         }
 
         val stalled = result.end == PagedFetchResult.End.CANNOT_CONNECT || result.end == PagedFetchResult.End.IDLE
-        // One re-ask past a DRAINED that delivered: it must find nothing new to be believed.
-        val toConfirm = result.end == PagedFetchResult.End.DRAINED && deliveredNew > 0 && !confirmed
-        val next = cursors.mapNotNull { it.resumeFilter() }
-        if (!(stalled || toConfirm) || next.isEmpty() || next.any { it.isRankedSearch() } || attempt >= resumeBackoff.delaysMs.size) {
+        val toConfirm = result.end == PagedFetchResult.End.DRAINED && deliveredNew > 0 && pages >= CONFIRM_AFTER_PAGES
+        val next = cursor.resumeFilter()
+        if (!(stalled || toConfirm) || downloaded == 0 || next == null || attempt >= resumeBackoff.delaysMs.size) {
             return result.copy(downloaded = downloaded)
         }
-        if (toConfirm) confirmed = true
+        if (toConfirm) confirming = result
         val waitMs = resumeBackoff.delaysMs[attempt++]
         Log.d("fetchAllPagesResuming") { "${relay.url} walk ended ${result.end} (${result.message.orEmpty()}); asking again in ${waitMs}ms (#$attempt)" }
         onResume?.invoke(attempt, result)
@@ -104,6 +156,8 @@ suspend fun INostrClient.fetchAllPagesResuming(
 /**
  * Where one filter's walk got to: the oldest `created_at` it was delivered, the ids delivered at
  * that second (the only ones a walk resumed at it can repeat), and how much of its limit is used.
+ * One cursor per walk, fed only that walk's events: a cursor fed another filter's events could
+ * pass a second its own walk never read.
  */
 private class FilterCursor(
     val filter: Filter,

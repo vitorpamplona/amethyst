@@ -38,6 +38,7 @@ import com.vitorpamplona.quartz.nip19Bech32.entities.NNote
 import com.vitorpamplona.quartz.nip19Bech32.entities.NProfile
 import com.vitorpamplona.quartz.nip19Bech32.entities.NPub
 import java.io.File
+import java.io.IOException
 import java.util.zip.GZIPOutputStream
 import kotlin.coroutines.cancellation.CancellationException
 
@@ -265,20 +266,33 @@ object FetchCommand {
         resumes: Resumes,
         file: File,
     ): Int {
-        val raw = file.outputStream().buffered(1 shl 16)
+        val raw =
+            try {
+                file.outputStream().buffered(1 shl 16)
+            } catch (e: IOException) {
+                return Output.error("bad_args", "cannot write --out ${file.path}: ${e.message}")
+            }
         val writer = (if (file.name.endsWith(".gz")) GZIPOutputStream(raw, 1 shl 16) else raw).bufferedWriter()
+        var written = 0
         val count =
-            writer.use { w ->
-                // Not cached: an export is the one walk too large for the local store.
-                ctx.streamAllPages(relays.associateWith { listOf(filter) }, timeoutMs, onRelayResult = { relay, result ->
-                    refusalOf(result)?.let { synchronized(relayErrors) { relayErrors[relay] = it } }
-                    if (result.end == PagedFetchResult.End.UNPAGEABLE) synchronized(unpaged) { unpaged.add(relay) }
-                }, cache = false, resumeBackoff = PageRetryBackoff.RESUME, onRelayResume = resumes::heard) { _, event ->
-                    synchronized(w) {
-                        w.write(event.toJson())
-                        w.write('\n'.code)
+            try {
+                writer.use { w ->
+                    // Not cached: an export is the one walk too large for the local store.
+                    ctx.streamAllPages(relays.associateWith { listOf(filter) }, timeoutMs, onRelayResult = { relay, result ->
+                        refusalOf(result)?.let { synchronized(relayErrors) { relayErrors[relay] = it } }
+                        if (result.end == PagedFetchResult.End.UNPAGEABLE) synchronized(unpaged) { unpaged.add(relay) }
+                    }, cache = false, resumeBackoff = PageRetryBackoff.RESUME, onRelayResume = resumes::heard) { _, event ->
+                        synchronized(w) {
+                            w.write(event.toJson())
+                            w.write('\n'.code)
+                            written++
+                        }
                     }
                 }
+            } catch (e: IOException) {
+                // A full disk mid-export: say how far the file got, so a rerun can pick up with
+                // `--until` instead of starting over.
+                return Output.error("runtime", "writing ${file.path} failed: ${e.message}", mapOf("out" to file.path, "count" to written))
             }
         return emitWithRelayErrors(
             mapOf("queried_relays" to relays.map { it.url }, "count" to count, "out" to file.path) + unpagedField(unpaged) + resumes.field(),

@@ -353,6 +353,20 @@ suspend fun INostrClient.fetchAllPages(
     onEvent: suspend (Event) -> Unit,
 ): PagedFetchResult {
     require(pageSize == null || pageSize > 0) { "pageSize must be positive: $pageSize" }
+    return walkEachFilter(filters, onEvent) { walk, deliver -> walkPages(relay, walk, idleTimeoutMs, onNewPage, pageSize, throttleBackoff, deliver) }
+}
+
+/**
+ * [fetchAllPages]' split of [filters] into walks, run one after another by [walk]: the search
+ * filters together, then each pageable filter alone, with the dedup between them, the most
+ * serious ending reported, and no further walk once the relay is unreachable or silent.
+ * [fetchAllPagesResuming] runs the same walks, each resuming on its own cursor.
+ */
+internal suspend fun walkEachFilter(
+    filters: List<Filter>,
+    onEvent: suspend (Event) -> Unit,
+    walk: suspend (filters: List<Filter>, onEvent: suspend (Event) -> Unit) -> PagedFetchResult,
+): PagedFetchResult {
     // One walk per pageable filter, and one for the search filters together, first: NIP-50 hits
     // are relevance-ranked, so those get their single page whatever else is asked. First, too,
     // because the cross-walk dedup below remembers what a walk delivered that a later filter
@@ -360,9 +374,7 @@ suspend fun INostrClient.fetchAllPages(
     // after a full-history walk that would be most of it, before one page it is at most a page.
     val (searches, plain) = filters.partition { it.isRankedSearch() }
     val walks = listOfNotNull(searches.ifEmpty { null }) + plain.map { listOf(it) }
-    if (walks.size < 2) {
-        return walkPages(relay, filters, idleTimeoutMs, onNewPage, pageSize, throttleBackoff, onEvent)
-    }
+    if (walks.size < 2) return walk(filters, onEvent)
 
     // An event a walk delivers that a LATER walk's filter also matches is remembered by id, and
     // that walk skips exactly those: right whatever the relay served out of order, skipped
@@ -375,10 +387,10 @@ suspend fun INostrClient.fetchAllPages(
         }
     var downloaded = 0
     var worst: PagedFetchResult? = null
-    for ((index, walk) in walks.withIndex()) {
+    for ((index, filtersOfWalk) in walks.withIndex()) {
         val later = laterOverlapping[index]
         val result =
-            walkPages(relay, walk, idleTimeoutMs, onNewPage, pageSize, throttleBackoff) { event ->
+            walk(filtersOfWalk) { event ->
                 if (event.id !in sharedIds) {
                     if (later.isNotEmpty() && later.any { it.match(event) }) sharedIds.add(event.id)
                     downloaded++
@@ -390,7 +402,7 @@ suspend fun INostrClient.fetchAllPages(
         // (each further walk would wait out its own idle window for nothing). A search walk
         // that found nothing says nothing about the relay, so it never stops the rest.
         if (result.end == PagedFetchResult.End.CANNOT_CONNECT) break
-        if (result.end == PagedFetchResult.End.IDLE && result.downloaded == 0 && walk !== searches) break
+        if (result.end == PagedFetchResult.End.IDLE && result.downloaded == 0 && filtersOfWalk !== searches) break
     }
     return worst!!.copy(downloaded = downloaded)
 }
@@ -474,7 +486,7 @@ internal fun pageLimit(
     }
 }
 
-private suspend fun INostrClient.walkPages(
+internal suspend fun INostrClient.walkPages(
     relay: NormalizedRelayUrl,
     filters: List<Filter>,
     idleTimeoutMs: Long,

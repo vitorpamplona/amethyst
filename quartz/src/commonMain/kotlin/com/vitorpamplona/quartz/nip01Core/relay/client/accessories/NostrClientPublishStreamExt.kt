@@ -194,7 +194,8 @@ suspend fun INostrClient.publishStream(
             while (!inputDone || lock.withLock { inFlight.isNotEmpty() }) {
                 val reply = replies.receiveWithinIdle(clock, idleTimeoutMs)
                 if (reply == null) {
-                    firstVerdict.complete(Unit)
+                    // Nothing outstanding is the input being slow, not the relay: the first
+                    // event, when it comes, still goes out alone.
                     if (lock.withLock { inFlight.isEmpty() }) {
                         clock.bump()
                         continue
@@ -242,7 +243,10 @@ suspend fun INostrClient.publishStream(
                 }
             }
             if (stalled) {
+                // Joined before the snapshot: a reader caught between taking a slot and
+                // sending would otherwise add an event no verdict is ever reported for.
                 reader.cancel(CancellationException("relay went silent for ${idleTimeoutMs}ms"))
+                reader.join()
                 val left = lock.withLock { inFlight.keys.toList() }
                 for (id in left) settle(id) { PublishResult(false, PublishResult.NO_RESPONSE) }
             }
@@ -265,20 +269,39 @@ private class StreamInFlight(
 
 /**
  * About what the event's EVENT frame takes on the wire, without serializing it: the fixed
- * fields, the content and every tag value, plus their quoting. Counts chars, so it reads low
- * on multi-byte text; [DEFAULT_STREAM_IN_FLIGHT_BYTES] leaves room for that.
+ * fields, then the content and every tag value as UTF-8 with their JSON escapes and quoting.
+ * Counting chars instead reads a third of the bytes on CJK text, and the byte budget exists
+ * to stay under a socket limit counted in bytes.
  */
 private fun Event.estimatedFrameBytes(): Long {
-    var size = FRAME_OVERHEAD + content.length
+    var size = FRAME_OVERHEAD + jsonStringBytes(content)
     for (tag in tags) {
         size += 2
-        for (value in tag) size += value.length + 3
+        for (value in tag) size += jsonStringBytes(value) + 1
     }
-    return size.toLong()
+    return size
+}
+
+/** [value] as a quoted JSON string in UTF-8: escapes add a byte (`\"`) or five (`\u0001`). */
+private fun jsonStringBytes(value: String): Long {
+    var bytes = 2L
+    for (c in value) {
+        bytes +=
+            when {
+                c == '"' || c == '\\' -> 2
+                c < ' ' -> 6
+                c < '\u0080' -> 1
+                c < '\u0800' -> 2
+                // Each half of a surrogate pair: 4 bytes for the pair.
+                c.isSurrogate() -> 2
+                else -> 3
+            }
+    }
+    return bytes
 }
 
 /** `["EVENT",{…}]`, the keys, id, pubkey, sig, kind and created_at. */
-private const val FRAME_OVERHEAD = 400
+private const val FRAME_OVERHEAD = 400L
 
 private sealed interface StreamReply {
     class Ok(

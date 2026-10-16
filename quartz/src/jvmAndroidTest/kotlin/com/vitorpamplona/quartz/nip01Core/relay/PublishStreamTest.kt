@@ -36,7 +36,9 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.asFlow
+import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.runBlocking
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.atomic.AtomicInteger
@@ -139,6 +141,27 @@ class PublishStreamTest {
             client.disconnect()
             assertEquals(3, result.sent)
             assertEquals(3, heard.get())
+        }
+
+    @Test
+    fun slowInputStillSendsTheFirstEventAlone() =
+        runBlocking {
+            val relay = CountingRelay()
+            val client = NostrClient(relay, scope)
+            val events = notes(100)
+            // Silent past the idle window before the first event: the input is slow, not the
+            // relay, and the socket only starts connecting once the first event is published.
+            val slow =
+                flow {
+                    delay(1_200)
+                    events.forEach { emit(it) }
+                }
+            val result = client.publishStream(InProcessRelays.DEFAULT_URL, slow, idleTimeoutMs = 400) { _, _ -> }
+            client.disconnect()
+
+            assertFalse(result.stalled)
+            assertEquals(100, result.answered)
+            assertEquals(100, relay.eventFrames.get(), "a window sent into a connecting socket goes out twice")
         }
 
     @Test
