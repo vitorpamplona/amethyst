@@ -50,10 +50,13 @@ class UserProfileMetadataFilterSubAssembler(
                 }
             }
 
+        // One cursor per relay is shared by every profile opened on it.
+        val relaySince = sinceDroppingGrownRelays(userPerRelay, since)
+
         return listOfNotNull(
-            filterUserProfileMetadata(userPerRelay, since),
-            filterUserProfileLists(userPerRelay, since),
-            filterUserProfileLastSeen(userPerRelay, since),
+            filterUserProfileMetadata(userPerRelay, relaySince),
+            filterUserProfileLists(userPerRelay, relaySince),
+            filterUserProfileLastSeen(userPerRelay, relaySince),
         ).flatten()
     }
 

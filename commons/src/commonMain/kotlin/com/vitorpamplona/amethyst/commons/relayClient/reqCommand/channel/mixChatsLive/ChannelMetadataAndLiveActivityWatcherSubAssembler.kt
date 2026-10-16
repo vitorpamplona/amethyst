@@ -68,11 +68,23 @@ class ChannelMetadataAndLiveActivityWatcherSubAssembler(
                 }
             }
 
+        // One cursor per relay is shared by every channel watched on it: a channel that joins a relay
+        // later would otherwise be asked only for metadata newer than the others' EOSE, and keep the
+        // name and picture of its kind 40 even when a kind 41 renamed it.
+        val relaySince =
+            sinceDroppingGrownRelays(
+                mapOfSet {
+                    perRelayPublicChannelFilter.forEach { (relay, channels) -> channels.forEach { add(relay, (it as PublicChatChannel).idHex) } }
+                    perRelayLiveActivityFilter.forEach { (relay, channels) -> channels.forEach { add(relay, (it as LiveActivitiesChannel).address.toValue()) } }
+                },
+                since,
+            )
+
         return perRelayPublicChannelFilter.flatMap { (relay, channels) ->
-            filterChannelMetadataUpdatesById(relay, channels.toList(), since?.get(relay)?.time)
+            filterChannelMetadataUpdatesById(relay, channels.toList(), relaySince?.get(relay)?.time)
         } +
             perRelayLiveActivityFilter.flatMap { (relay, channels) ->
-                filterLiveStreamUpdatesByAddress(relay, channels.toList(), since?.get(relay)?.time)
+                filterLiveStreamUpdatesByAddress(relay, channels.toList(), relaySince?.get(relay)?.time)
             }
     }
 
