@@ -21,6 +21,7 @@
 package com.vitorpamplona.quartz.nip99Classifieds
 
 import androidx.compose.runtime.Immutable
+import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.nip01Core.core.BaseAddressableEvent
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
@@ -35,6 +36,7 @@ import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.nip01Core.tags.aTag.ATag
 import com.vitorpamplona.quartz.nip01Core.tags.dTag.dTag
 import com.vitorpamplona.quartz.nip01Core.tags.events.ETag
+import com.vitorpamplona.quartz.nip01Core.tags.geohash.GeoHashTag
 import com.vitorpamplona.quartz.nip01Core.tags.hashtags.HashtagTag
 import com.vitorpamplona.quartz.nip01Core.tags.hashtags.hashtags
 import com.vitorpamplona.quartz.nip01Core.tags.people.PTag
@@ -57,10 +59,16 @@ import com.vitorpamplona.quartz.nip50Search.SearchableEvent
 import com.vitorpamplona.quartz.nip57Zaps.splits.zapSplitHints
 import com.vitorpamplona.quartz.nip57Zaps.splits.zapSplitPubKeys
 import com.vitorpamplona.quartz.nip92IMeta.imetas
+import com.vitorpamplona.quartz.nip99Classifieds.collection.ProductCollectionEvent
 import com.vitorpamplona.quartz.nip99Classifieds.tags.ConditionTag
 import com.vitorpamplona.quartz.nip99Classifieds.tags.LocationTag
 import com.vitorpamplona.quartz.nip99Classifieds.tags.PriceTag
+import com.vitorpamplona.quartz.nip99Classifieds.tags.ProductTypeTag
+import com.vitorpamplona.quartz.nip99Classifieds.tags.ShippingOptionTag
+import com.vitorpamplona.quartz.nip99Classifieds.tags.SpecTag
 import com.vitorpamplona.quartz.nip99Classifieds.tags.StatusTag
+import com.vitorpamplona.quartz.nip99Classifieds.tags.StockTag
+import com.vitorpamplona.quartz.nip99Classifieds.tags.VisibilityTag
 import com.vitorpamplona.quartz.utils.TimeUtils
 import kotlin.uuid.ExperimentalUuidApi
 import kotlin.uuid.Uuid
@@ -156,6 +164,29 @@ class ClassifiedsEvent(
     fun price() = tags.firstNotNullOfOrNull(PriceTag::parse)
 
     fun location() = tags.firstNotNullOfOrNull(LocationTag::parse)
+
+    fun geohash() = tags.firstNotNullOfOrNull(GeoHashTag::parse)
+
+    // The Open Markets product tags (the e-commerce extension NIP-99 links to).
+
+    fun productType() = tags.firstNotNullOfOrNull(ProductTypeTag::parse)
+
+    fun visibility() = tags.firstNotNullOfOrNull(VisibilityTag::parseVisibility)
+
+    /** True only for an explicit `hidden`: an absent or unknown visibility is on sale. */
+    fun isHidden() = tags.firstNotNullOfOrNull(VisibilityTag::parse) == VisibilityTag.VISIBILITY.HIDDEN.code
+
+    fun stock() = tags.firstNotNullOfOrNull(StockTag::parse)
+
+    fun specs() = tags.mapNotNull(SpecTag::parse)
+
+    fun shippingOptions() = tags.mapNotNull(ShippingOptionTag::parse)
+
+    /** The kind-30405 collections this product names with `a` tags. */
+    fun collections(): List<Address> = tags.mapNotNull { tag -> ATag.parseAddress(tag)?.takeIf { it.kind == ProductCollectionEvent.KIND } }
+
+    /** The `variable` product a variation belongs to: the spec allows exactly one such `a`. */
+    fun parentProduct(): Address? = tags.firstNotNullOfOrNull { tag -> ATag.parseAddress(tag)?.takeIf { it.kind == KIND } }
 
     override fun publishedAt(): Long? {
         val publishedAt = tags.firstNotNullOfOrNull(PublishedAtTag::parse)

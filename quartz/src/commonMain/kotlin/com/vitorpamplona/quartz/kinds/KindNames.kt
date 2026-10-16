@@ -341,6 +341,9 @@ import com.vitorpamplona.quartz.nip94FileMetadata.FileMetadataEvent
 import com.vitorpamplona.quartz.nip96FileStorage.config.FileServersEvent
 import com.vitorpamplona.quartz.nip98HttpAuth.HTTPAuthorizationEvent
 import com.vitorpamplona.quartz.nip99Classifieds.ClassifiedsEvent
+import com.vitorpamplona.quartz.nip99Classifieds.collection.ProductCollectionEvent
+import com.vitorpamplona.quartz.nip99Classifieds.review.ProductReviewEvent
+import com.vitorpamplona.quartz.nip99Classifieds.shipping.ShippingOptionEvent
 import com.vitorpamplona.quartz.nipA0VoiceMessages.VoiceEvent
 import com.vitorpamplona.quartz.nipA0VoiceMessages.VoiceReplyEvent
 import com.vitorpamplona.quartz.nipA3PaymentTargets.PaymentTargetsEvent
@@ -448,6 +451,9 @@ object KindNames {
             ChatMessageEvent.KIND to KindName("DM Message", "17"),
             DmRelayListEvent.KIND to KindName("DM Relays", "17"),
             ClassifiedsEvent.KIND to KindName("Classifieds", "99"),
+            ProductCollectionEvent.KIND to KindName("Product Collection", "99"),
+            ShippingOptionEvent.KIND to KindName("Shipping Option", "99"),
+            ProductReviewEvent.KIND to KindName("Product Review", "99"),
             CommentEvent.KIND to KindName("Comments", "22"),
             GeocacheListingEvent.KIND to KindName("Geocache", "CC"),
             GeocacheFoundLogEvent.KIND to KindName("Geocache Found Log", "CC"),
