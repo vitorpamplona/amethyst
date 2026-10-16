@@ -112,7 +112,7 @@ class IngestQueue(
      * be cheap and non-suspending — it runs on the writer stage.
      */
     private val onBatchCommitted: (() -> Unit)? = null,
-) : AutoCloseable {
+) : EventIngest {
     /**
      * One outstanding ingest request: the event to insert plus the
      * callback the writer fires once the row's outcome is known.
@@ -139,7 +139,7 @@ class IngestQueue(
      * (the FTS catch-up) checks this to yield the writer connection to
      * publish traffic instead of competing with it.
      */
-    fun hasBacklog(): Boolean = pending.load() > 0
+    override fun hasBacklog(): Boolean = pending.load() > 0
 
     /**
      * Lazily-launched drain coroutine. We don't start it in `init`
@@ -164,9 +164,9 @@ class IngestQueue(
      * frame — that's where the per-connection pipeline win comes
      * from.
      */
-    suspend fun submit(
+    override suspend fun submit(
         event: Event,
-        skipVerify: Boolean = false,
+        skipVerify: Boolean,
         onComplete: (IEventStore.InsertOutcome) -> Unit,
     ) {
         ensureWriterStarted()
