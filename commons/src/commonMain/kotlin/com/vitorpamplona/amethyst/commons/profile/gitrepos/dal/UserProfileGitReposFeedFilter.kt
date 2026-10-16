@@ -59,7 +59,7 @@ class UserProfileGitReposFeedFilter(
         return newItems.filterTo(HashSet()) { acceptableEvent(it, params) }
     }
 
-    fun acceptableEvent(
+    private fun acceptableEvent(
         it: Note,
         params: FilterByListParams,
     ): Boolean {
@@ -71,7 +71,7 @@ class UserProfileGitReposFeedFilter(
             account.isAcceptable(it)
     }
 
-    fun buildFilterParams(account: Account): FilterByListParams =
+    private fun buildFilterParams(account: Account): FilterByListParams =
         FilterByListParams.create(
             followLists = account.liveStoriesFollowLists.value,
             hiddenUsers = account.hiddenUsers.flow.value,
