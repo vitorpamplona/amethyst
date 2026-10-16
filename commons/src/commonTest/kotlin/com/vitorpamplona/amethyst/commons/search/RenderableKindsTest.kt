@@ -164,6 +164,11 @@ class RenderableKindsTest {
                 30018,
                 30019,
                 30020,
+                // Open Markets product collections, shipping options and product reviews: no card
+                // yet, so a result would be a blank row
+                30405,
+                30406,
+                31555,
                 // podcasting 2.0 mirrors of kinds already in the window
                 30054,
                 30055,
@@ -243,6 +248,11 @@ class RenderableKindsTest {
                 45010,
                 46030,
                 46031,
+                // OpenAgents capability heads, package listings and releases: indexed so search
+                // relays can find agent capabilities and plugins, but Amethyst has no card for them
+                3184,
+                30180,
+                30184,
             ).sorted(),
             omitted.sorted(),
             "the set of searchable kinds not shown in search changed",
