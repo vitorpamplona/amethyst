@@ -36,6 +36,7 @@ import com.vitorpamplona.amethyst.commons.model.navigation.routes.routeFor
 import com.vitorpamplona.amethyst.commons.nip15Marketplace.ui.MarketFactLine
 import com.vitorpamplona.amethyst.commons.nip15Marketplace.ui.MarketSpec
 import com.vitorpamplona.amethyst.commons.nip15Marketplace.ui.MarketSpecs
+import com.vitorpamplona.amethyst.commons.nip99Classifieds.acknowledges
 import com.vitorpamplona.amethyst.commons.nip99Classifieds.normalized
 import com.vitorpamplona.amethyst.commons.relayClient.event.observeNoteEvent
 import com.vitorpamplona.amethyst.commons.resources.Res
@@ -104,23 +105,34 @@ fun ClassifiedsOpenMarketsDetails(
     ) {
         state.inStock?.let { MarketFactLine(MaterialSymbols.Storefront, pluralStringRes(Res.plurals.marketplace_in_stock, it, it)) }
         if (state.isDigital) MarketFactLine(MaterialSymbols.Download, stringRes(Res.string.open_markets_digital))
-        state.collections.forEach { CollectionLine(it, accountViewModel, nav) }
+        state.collections.forEach { CollectionLine(it, event, accountViewModel, nav) }
         MarketSpecs(state.specs)
         ListingShippingSection(event, accountViewModel, nav)
     }
 }
 
-/** "In <collection>", opening it; nothing until the collection has loaded with a name. */
+/**
+ * "In <collection>", opening it; nothing until the collection has loaded with a name, and nothing
+ * for another seller's collection that does not name this listing.
+ */
 @Composable
 private fun CollectionLine(
     address: Address,
+    listing: ClassifiedsEvent,
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
     LoadAddressableNote(address) { collectionNote ->
         if (collectionNote == null) return@LoadAddressableNote
         val collection by observeNoteEvent<ProductCollectionEvent>(collectionNote, accountViewModel)
-        val title = remember(collection) { collection?.title()?.trim()?.ifEmpty { null } } ?: return@LoadAddressableNote
+        val title =
+            remember(collection, listing) {
+                collection
+                    ?.takeIf { it.acknowledges(listing) }
+                    ?.title()
+                    ?.trim()
+                    ?.ifEmpty { null }
+            } ?: return@LoadAddressableNote
         MarketFactLine(
             symbol = MaterialSymbols.CollectionsBookmark,
             text = stringRes(Res.string.open_markets_in_collection, title),

@@ -91,7 +91,9 @@ import com.vitorpamplona.quartz.nip99Classifieds.collection.ProductCollectionEve
 import com.vitorpamplona.quartz.nip99Classifieds.shipping.ShippingOptionEvent
 import com.vitorpamplona.quartz.nip99Classifieds.shipping.tags.ShippingService
 import kotlinx.collections.immutable.ImmutableList
+import kotlinx.collections.immutable.ImmutableSet
 import kotlinx.collections.immutable.toImmutableList
+import kotlinx.collections.immutable.toImmutableSet
 import org.jetbrains.compose.resources.StringResource
 
 /** A listing's status pill: error-tinted when it is no longer for sale. */
@@ -183,7 +185,18 @@ fun OpenMarketsFactRow(
     }
 }
 
-/** A shipping option reached through a collection, with the extra cost the product adds to it. */
+/**
+ * Shipping references a listing page follows. A tag list has no length limit, and every row loads
+ * its option (and every collection its options), so a listing naming hundreds must not open
+ * hundreds of lookups.
+ */
+private const val MAX_LISTING_OPTIONS = 12
+private const val MAX_LISTING_COLLECTIONS = 4
+
+/** A collection's options listed on a product's page, per collection. */
+private const val MAX_OPTIONS_PER_COLLECTION = 12
+
+/** A shipping reference (an option or a collection) with the extra cost the product adds to it. */
 @Immutable
 private class CollectionShippingRef(
     val address: Address,
@@ -202,8 +215,18 @@ private class ListingShippingState(
         fun from(event: ClassifiedsEvent): ListingShippingState {
             val refs = event.shippingOptions().map { CollectionShippingRef(it.address.normalized(), it.extraCost) }
             return ListingShippingState(
-                options = refs.filter { it.address.kind == ShippingOptionEvent.KIND }.distinctBy { it.address }.toImmutableList(),
-                collections = refs.filter { it.address.kind == ProductCollectionEvent.KIND }.distinctBy { it.address }.toImmutableList(),
+                options =
+                    refs
+                        .filter { it.address.kind == ShippingOptionEvent.KIND }
+                        .distinctBy { it.address }
+                        .take(MAX_LISTING_OPTIONS)
+                        .toImmutableList(),
+                collections =
+                    refs
+                        .filter { it.address.kind == ProductCollectionEvent.KIND }
+                        .distinctBy { it.address }
+                        .take(MAX_LISTING_COLLECTIONS)
+                        .toImmutableList(),
                 currency = event.price()?.currency,
             )
         }
@@ -225,7 +248,7 @@ fun ListingShippingSection(
 ) {
     val state = remember(event) { ListingShippingState.from(event) }
     if (state.isEmpty()) return
-    val own = remember(state) { state.options.map { it.address }.toSet() }
+    val own = remember(state) { state.options.map { it.address }.toImmutableSet() }
 
     Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
         Text(
@@ -235,34 +258,56 @@ fun ListingShippingSection(
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
         state.options.forEach { ShippingOptionRow(it.address, it.extra, state.currency, null, accountViewModel, nav) }
-        state.collections.forEach { ref ->
-            LoadAddressableNote(ref.address) { collectionNote ->
-                val collection =
-                    if (collectionNote != null) {
-                        val observed by observeNoteEvent<ProductCollectionEvent>(collectionNote, accountViewModel)
-                        observed
-                    } else {
-                        null
-                    }
-                if (collection == null) {
-                    ShippingLine(
-                        title = stringRes(Res.string.open_markets_collection_shipping),
-                        details = shippingNameFromD(ref.address.dTag)?.let { stringRes(Res.string.open_markets_via_collection, it) },
-                        cost = shippingCost(null, ref.extra, state.currency)?.let { shippingCostText(it) },
-                        onClick = null,
-                    )
-                } else {
-                    val options =
-                        remember(collection) {
-                            collection
-                                .shippingOptions()
-                                .map { it.address.normalized() }
-                                .filter { it.kind == ShippingOptionEvent.KIND && it !in own }
-                                .distinct()
-                        }
-                    options.forEach { ShippingOptionRow(it, ref.extra, state.currency, collection.title(), accountViewModel, nav) }
-                }
+        CollectionsShipping(state.collections, 0, own, state.currency, accountViewModel, nav)
+    }
+}
+
+/**
+ * The options of the listing's collections, from the [index]th on. Each collection is drawn
+ * inside the one before it, so [seen] (the product's own options and every earlier collection's)
+ * keeps an option two collections share to one row: the first that names it, as Open Markets
+ * reads a product's configuration before its collections'.
+ */
+@Composable
+private fun CollectionsShipping(
+    collections: ImmutableList<CollectionShippingRef>,
+    index: Int,
+    seen: ImmutableSet<Address>,
+    currency: String?,
+    accountViewModel: AccountViewModel,
+    nav: INav,
+) {
+    val ref = collections.getOrNull(index) ?: return
+    LoadAddressableNote(ref.address) { collectionNote ->
+        val collection =
+            if (collectionNote != null) {
+                val observed by observeNoteEvent<ProductCollectionEvent>(collectionNote, accountViewModel)
+                observed
+            } else {
+                null
             }
+        if (collection == null) {
+            ShippingLine(
+                title = stringRes(Res.string.open_markets_collection_shipping),
+                details = shippingNameFromD(ref.address.dTag)?.let { stringRes(Res.string.open_markets_via_collection, it) },
+                cost = shippingCost(null, ref.extra, currency)?.let { shippingCostText(it) },
+                onClick = null,
+            )
+            CollectionsShipping(collections, index + 1, seen, currency, accountViewModel, nav)
+        } else {
+            val options =
+                remember(collection, seen) {
+                    collection
+                        .shippingOptions()
+                        .map { it.address.normalized() }
+                        .filter { it.kind == ShippingOptionEvent.KIND && it !in seen }
+                        .distinct()
+                        .take(MAX_OPTIONS_PER_COLLECTION)
+                }
+            val title = remember(collection) { collection.title()?.trim()?.ifEmpty { null } }
+            options.forEach { ShippingOptionRow(it, ref.extra, currency, title, accountViewModel, nav) }
+            val next = remember(seen, options) { (seen + options).toImmutableSet() }
+            CollectionsShipping(collections, index + 1, next, currency, accountViewModel, nav)
         }
     }
 }
@@ -297,16 +342,40 @@ fun ShippingOptionRow(
                 onClick = null,
             )
         } else {
-            val service = shippingServiceText(option.service())
-            val duration = remember(option) { option.duration()?.toShippingDuration() }?.let { shippingDurationText(it) }
-            val countries = remember(option) { countriesSummary(option.countryCodes()) }
+            val row = remember(option, extra, productCurrency) { ShippingRowFacts.from(option, extra, productCurrency) }
+            val service = shippingServiceText(row.service)
+            val duration = row.duration?.let { shippingDurationText(it) }
             ShippingLine(
-                title = option.title() ?: stringRes(Res.string.open_markets_unnamed_shipping_option),
-                details = listOfNotNull(service, duration, countries, via).joinToString(" · ").ifEmpty { null },
-                cost = shippingCost(option.price(), extra, productCurrency)?.let { shippingCostText(it) },
+                title = row.title ?: stringRes(Res.string.open_markets_unnamed_shipping_option),
+                details = listOfNotNull(service, duration, row.countries, via).joinToString(" · ").ifEmpty { null },
+                cost = row.cost?.let { shippingCostText(it) },
                 onClick = { optionNote?.let { routeFor(it, accountViewModel.account) }?.let { nav.nav(it) } },
             )
         }
+    }
+}
+
+/** A loaded option's row, parsed once per option version and extra cost. */
+@Immutable
+private class ShippingRowFacts(
+    val title: String?,
+    val service: String?,
+    val duration: ShippingDuration?,
+    val countries: String?,
+    val cost: ShippingCost?,
+) {
+    companion object {
+        fun from(
+            option: ShippingOptionEvent,
+            extra: String?,
+            productCurrency: String?,
+        ) = ShippingRowFacts(
+            title = option.title()?.trim()?.ifEmpty { null },
+            service = option.service(),
+            duration = option.duration()?.toShippingDuration(),
+            countries = countriesSummary(option.countryCodes()),
+            cost = shippingCost(option.price(), extra, productCurrency),
+        )
     }
 }
 

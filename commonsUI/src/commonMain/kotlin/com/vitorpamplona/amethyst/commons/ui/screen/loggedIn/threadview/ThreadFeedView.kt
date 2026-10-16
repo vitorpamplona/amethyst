@@ -84,6 +84,7 @@ import com.vitorpamplona.amethyst.commons.model.navigation.routes.routeToMessage
 import com.vitorpamplona.amethyst.commons.nip99Classifieds.listingStatus
 import com.vitorpamplona.amethyst.commons.nip99Classifieds.ui.ClassifiedsOpenMarketsDetails
 import com.vitorpamplona.amethyst.commons.nip99Classifieds.ui.ListingStatusBadge
+import com.vitorpamplona.amethyst.commons.nip99Classifieds.ui.RenderProductCollection
 import com.vitorpamplona.amethyst.commons.relayClient.event.observeCommunityApprovalNeedStatus
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.expand
@@ -212,6 +213,7 @@ import com.vitorpamplona.quartz.nip72ModCommunities.communityAddress
 import com.vitorpamplona.quartz.nip72ModCommunities.isACommunityPost
 import com.vitorpamplona.quartz.nip7DThreads.ThreadEvent
 import com.vitorpamplona.quartz.nip99Classifieds.ClassifiedsEvent
+import com.vitorpamplona.quartz.nip99Classifieds.collection.ProductCollectionEvent
 import com.vitorpamplona.quartz.nipC0CodeSnippets.CodeSnippetEvent
 import com.vitorpamplona.quartz.nipC7Chats.ChatEvent
 import com.vitorpamplona.quartz.utils.parseBigDecimalOrNull
@@ -856,6 +858,9 @@ private fun FullBleedNoteCompose(
                             nav,
                         )
                     }
+                } else if (noteEvent is ProductCollectionEvent) {
+                    // The collection's page: more of its products and shipping than a feed card.
+                    RenderProductCollection(baseNote, false, accountViewModel, nav, isPage = true)
                 } else if (isDListItemPage(noteEvent)) {
                     // The item's own page: a concept with a view of its own draws it (tier three).
                     RenderDListItem(baseNote, 3, backgroundColor, accountViewModel, nav, isPage = true)

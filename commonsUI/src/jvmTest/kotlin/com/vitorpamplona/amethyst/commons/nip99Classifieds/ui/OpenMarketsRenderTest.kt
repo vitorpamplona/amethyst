@@ -111,9 +111,9 @@ class OpenMarketsRenderTest {
 
     @Test
     fun collections() {
-        render("collection-chicago-card", chicago, heightDp = 900) { note, avm, nav -> RenderProductCollection(note, true, avm, nav) }
-        render("collection-chicago-page", chicago, heightDp = 1500) { note, avm, nav -> RenderProductCollection(note, false, avm, nav) }
-        render("collection-feng-shui-page", fengShui, heightDp = 1300) { note, avm, nav -> RenderProductCollection(note, false, avm, nav) }
+        render("collection-chicago-card", chicago, heightDp = 900) { note, avm, nav -> RenderProductCollection(note, false, avm, nav) }
+        render("collection-chicago-page", chicago, heightDp = 1500) { note, avm, nav -> RenderProductCollection(note, false, avm, nav, isPage = true) }
+        render("collection-feng-shui-page", fengShui, heightDp = 1300) { note, avm, nav -> RenderProductCollection(note, false, avm, nav, isPage = true) }
     }
 
     @Test

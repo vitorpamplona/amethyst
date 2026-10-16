@@ -21,6 +21,7 @@
 package com.vitorpamplona.amethyst.commons.nip99Classifieds
 
 import com.vitorpamplona.amethyst.commons.nip15Marketplace.formatMarketAmount
+import com.vitorpamplona.amethyst.commons.nip15Marketplace.formatMarketPrice
 import com.vitorpamplona.quartz.nip99Classifieds.ClassifiedsEvent
 import com.vitorpamplona.quartz.nip99Classifieds.collection.ProductCollectionEvent
 import com.vitorpamplona.quartz.nip99Classifieds.shipping.ShippingOptionEvent
@@ -79,6 +80,23 @@ class OpenMarketsFactsTest {
         // The vendor's tag spells the seller's key in upper case; it is still the same collection.
         assertTrue(summit.shows(listing(arrayOf("a", "30405:${seller.uppercase()}:summit"), pubKey = vendor)))
         assertFalse(summit.shows(listing(arrayOf("a", "30405:$seller:other"), pubKey = vendor)))
+    }
+
+    @Test
+    fun aListingIsInACollectionOnlyWhenTheCollectionAgrees() {
+        val summit = collection(arrayOf("a", "30402:${vendor.uppercase()}:socks"))
+        assertTrue(summit.acknowledges(listing()))
+        assertTrue(summit.acknowledges(listing(pubKey = vendor)))
+        // A stranger's listing tagging the collection cannot put itself in it.
+        assertFalse(collection().acknowledges(listing(arrayOf("a", "30405:$seller:summit"), pubKey = vendor)))
+    }
+
+    @Test
+    fun bitcoinKeepsItsSatoshis() {
+        assertEquals("1.2345 BTC", formatMarketPrice(1.2345, "btc"))
+        assertEquals("0.00021 BTC", formatMarketPrice(0.00021, "BTC"))
+        assertEquals("2 BTC", formatMarketPrice(2.0, "BTC"))
+        assertEquals("1.23 USD", formatMarketPrice(1.2345, "USD"))
     }
 
     @Test

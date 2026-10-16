@@ -93,3 +93,13 @@ fun ProductCollectionEvent.shows(product: ClassifiedsEvent): Boolean {
     val self = address()
     return product.collections().any { it.normalized() == self }
 }
+
+/**
+ * Whether [product] may say it is "in" this collection. Its own `a` tag is a claim anyone can
+ * write, so the collection has to agree: it is the product seller's own, or it names the product.
+ */
+fun ProductCollectionEvent.acknowledges(product: ClassifiedsEvent): Boolean {
+    if (product.pubKey == pubKey) return true
+    val address = product.address()
+    return products().any { it.normalized() == address }
+}

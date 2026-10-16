@@ -43,6 +43,16 @@ fun formatMarketAmount(amount: Double): String {
     return "$sign${cents / 100}.$fraction"
 }
 
+/** Up to a satoshi's eight decimals, trailing zeros dropped: "1.2345", "0.00021", "2". */
+private fun formatBitcoinAmount(amount: Double): String {
+    if (!amount.isFinite()) return ""
+    val sign = if (amount < 0) "-" else ""
+    val sats = round(abs(amount) * 1e8).toLong()
+    val whole = sats / 100_000_000
+    val fraction = (sats % 100_000_000).toString().padStart(8, '0').trimEnd('0')
+    return if (fraction.isEmpty()) "$sign$whole" else "$sign$whole.$fraction"
+}
+
 /** [value] in (0, 1): four significant digits, at most eight decimals, trailing zeros dropped. */
 private fun formatSubUnit(value: Double): String {
     val decimals = (3 - floor(log10(value)).toInt()).coerceIn(2, 8)
@@ -66,6 +76,7 @@ fun formatMarketPrice(
     currency: String?,
 ): String {
     val label = marketCurrencyLabel(currency)
-    val number = formatMarketAmount(amount)
+    // Bitcoin is priced in fractions cents would erase: 1.2345 BTC is not "1.23".
+    val number = if (label == "BTC") formatBitcoinAmount(amount) else formatMarketAmount(amount)
     return if (label == null) number else "$number $label"
 }

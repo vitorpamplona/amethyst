@@ -85,11 +85,19 @@ import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.persistentListOf
 import kotlinx.collections.immutable.toImmutableList
 
-/** Products a feed card shows; an `a` list has no length limit. */
+/**
+ * Products a card shows in a feed; an `a` list has no length limit, and every tile loads its
+ * product. Feeds and quotes alike: the feed passes `makeItShort = false` too, so only [isPage]
+ * (the thread view's master note) can tell a page from a card.
+ */
 private const val FEED_PRODUCTS = 4
 
 /** And the collection's own page. */
 private const val PAGE_PRODUCTS = 24
+
+/** The collection's shipping options a feed card lists, and its page. */
+private const val FEED_SHIPPING = 3
+private const val PAGE_SHIPPING = 12
 
 @Immutable
 private class CollectionCardState(
@@ -137,7 +145,8 @@ private class CollectionCardState(
 
 /**
  * An Open Markets product collection (kind 30405): its picture, name, summary, the products it
- * names and the shipping options it offers them. Products load while the card is on screen and
+ * names and the shipping options it offers them, a few in a feed and more on its own page
+ * ([isPage]). Products load while the card is on screen and
  * are drawn as the marketplace's thumbnails; another seller's product shows only when it files
  * itself under the collection too, and one no longer for sale is left out. A hidden
  * (`visibility: hidden`) product does show: a collection is how an unlisted product is reached.
@@ -150,6 +159,7 @@ fun RenderProductCollection(
     makeItShort: Boolean,
     accountViewModel: AccountViewModel,
     nav: INav,
+    isPage: Boolean = false,
 ) {
     val event by observeNoteEvent<ProductCollectionEvent>(note, accountViewModel)
     val collection = event ?: return
@@ -173,7 +183,7 @@ fun RenderProductCollection(
                     MaterialSymbols.Storefront,
                     pluralStringRes(Res.plurals.open_markets_products, state.products.size, state.products.size),
                 )
-                val limit = if (makeItShort) FEED_PRODUCTS else PAGE_PRODUCTS
+                val limit = if (isPage) PAGE_PRODUCTS else FEED_PRODUCTS
                 val shown = remember(state, limit) { state.products.take(limit) }
                 FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     shown.forEach { CollectionProduct(it, collection, accountViewModel, nav) }
@@ -200,7 +210,16 @@ fun RenderProductCollection(
                     )
                     // The collection's own options, priced as they are: a collection's extra cost
                     // is added per product, in the product's money, on the product's page.
-                    state.shipping.forEach { ShippingOptionRow(it, null, null, null, accountViewModel, nav) }
+                    val shown = remember(state, isPage) { state.shipping.take(if (isPage) PAGE_SHIPPING else FEED_SHIPPING) }
+                    shown.forEach { ShippingOptionRow(it, null, null, null, accountViewModel, nav) }
+                    val more = state.shipping.size - shown.size
+                    if (more > 0) {
+                        Text(
+                            text = pluralStringRes(Res.plurals.chips_n_more, more, more),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.grayText,
+                        )
+                    }
                 }
             }
 
