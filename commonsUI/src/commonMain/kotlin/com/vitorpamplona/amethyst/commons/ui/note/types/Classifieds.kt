@@ -20,7 +20,6 @@
  */
 package com.vitorpamplona.amethyst.commons.ui.note.types
 
-import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -44,14 +43,13 @@ import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.Note
-import com.vitorpamplona.amethyst.commons.resources.Res
-import com.vitorpamplona.amethyst.commons.resources.classifieds_status_sold
+import com.vitorpamplona.amethyst.commons.nip99Classifieds.listingStatus
+import com.vitorpamplona.amethyst.commons.nip99Classifieds.ui.ListingStatusBadge
 import com.vitorpamplona.amethyst.commons.richtext.MediaUrlImage
 import com.vitorpamplona.amethyst.commons.ui.components.AutoNonlazyGrid
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.note.elements.DefaultImageHeader
 import com.vitorpamplona.amethyst.commons.ui.note.platform.ZoomableContentView
-import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.DoubleVertSpacer
 import com.vitorpamplona.amethyst.commons.ui.theme.QuoteBorder
 import com.vitorpamplona.amethyst.commons.ui.theme.SmallBorder
@@ -60,7 +58,6 @@ import com.vitorpamplona.amethyst.commons.ui.theme.subtleBorder
 import com.vitorpamplona.amethyst.commons.util.showAmount
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.quartz.nip99Classifieds.ClassifiedsEvent
-import com.vitorpamplona.quartz.nip99Classifieds.tags.StatusTag
 import com.vitorpamplona.quartz.utils.parseBigDecimalOrNull
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.toImmutableList
@@ -102,7 +99,7 @@ fun RenderClassifieds(
         }
     val price = remember(noteEvent) { noteEvent.price() }
     val location = remember(noteEvent) { noteEvent.location()?.ifBlank { null } }
-    val isSold = remember(noteEvent) { noteEvent.status().equals(StatusTag.STATUS.SOLD.value, ignoreCase = true) }
+    val status = remember(noteEvent) { noteEvent.listingStatus() }
 
     Row(
         modifier =
@@ -145,8 +142,9 @@ fun RenderClassifieds(
                     )
                 }
 
-                if (isSold) {
-                    ClassifiedSoldBadge()
+                status?.let {
+                    Spacer(Modifier.width(5.dp))
+                    ListingStatusBadge(it)
                 }
 
                 price?.let {
@@ -218,22 +216,4 @@ fun RenderClassifieds(
             Spacer(modifier = DoubleVertSpacer)
         }
     }
-}
-
-/** NIP-99 `["status", "sold"]`: the listing is still on relays but no longer for sale. */
-@Composable
-fun ClassifiedSoldBadge() {
-    Text(
-        text = stringRes(Res.string.classifieds_status_sold),
-        style = MaterialTheme.typography.labelSmall,
-        fontWeight = FontWeight.Bold,
-        color = MaterialTheme.colorScheme.onErrorContainer,
-        maxLines = 1,
-        modifier =
-            Modifier
-                .padding(start = 5.dp)
-                .clip(SmallBorder)
-                .background(MaterialTheme.colorScheme.errorContainer)
-                .padding(horizontal = 6.dp, vertical = 2.dp),
-    )
 }
