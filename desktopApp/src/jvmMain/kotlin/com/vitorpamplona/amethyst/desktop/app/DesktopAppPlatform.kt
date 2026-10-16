@@ -28,11 +28,13 @@ import androidx.compose.runtime.rememberCoroutineScope
 import com.vitorpamplona.amethyst.commons.favorites.FavoriteApp
 import com.vitorpamplona.amethyst.commons.feeds.FeedContentState
 import com.vitorpamplona.amethyst.commons.model.navigation.Route
+import com.vitorpamplona.amethyst.commons.service.spellcheck.SpellCheckService
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.platform.AppLauncher
 import com.vitorpamplona.amethyst.commons.ui.platform.AppPlatform
 import com.vitorpamplona.amethyst.commons.ui.platform.Toaster
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
+import com.vitorpamplona.amethyst.desktop.spellcheck.DesktopSpellCheck
 import com.vitorpamplona.amethyst.desktop.ui.map.DesktopGeocacheMapTab
 import com.vitorpamplona.quartz.utils.Log
 import kotlinx.coroutines.launch
@@ -47,6 +49,7 @@ class DesktopAppPlatform(
     override val appVersionName: String,
     override val isDebugBuild: Boolean,
     private val notifications: DesktopNotifications,
+    private val desktopSpellCheck: DesktopSpellCheck? = null,
 ) : AppPlatform {
     override val appFlavor: String get() = "desktop"
 
@@ -76,6 +79,14 @@ class DesktopAppPlatform(
 
     // DesktopAppModules reports every connection as unmetered.
     override val detectsMeteredConnections: Boolean get() = false
+
+    // Loads the dictionary (or reaches the OS checker) the first time a composer asks.
+    override val spellCheck: SpellCheckService?
+        get() =
+            desktopSpellCheck?.let {
+                it.start()
+                it.service
+            }
 
     // The shared bar, imported under another name: inside this override the bare name is the override.
     @Composable

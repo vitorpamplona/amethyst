@@ -428,6 +428,7 @@ private fun MarkdownPostScreenBody(
                                 focusedBorderColor = Color.Transparent,
                                 unfocusedBorderColor = Color.Transparent,
                             ),
+                        spellCheck = true,
                         outputTransformation = UrlUserTagOutputTransformation(MaterialTheme.colorScheme.primary),
                         keyboardOptions =
                             KeyboardOptions.Default.copy(

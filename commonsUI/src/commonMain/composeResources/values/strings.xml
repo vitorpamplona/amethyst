@@ -3467,6 +3467,13 @@
     <string name="add_to_messages">Add to Messages</string>
     <string name="add_to_public_bookmarks">Add to Public Bookmarks</string>
     <string name="ai_writing_setting_description">Uses an on-device AI model to propose text corrections and tone changes.</string>
+    <string name="spell_check_setting_title">Spell checking</string>
+    <string name="spell_check_setting_description">Underline misspelled words in posts and messages. Automatic uses your system's spell checker when it can, and the built-in English dictionary otherwise.</string>
+    <string name="spell_check_automatic">Automatic</string>
+    <string name="spell_check_built_in">Built-in</string>
+    <string name="spell_check_off">Off</string>
+    <string name="spell_check_add_to_dictionary">Add to dictionary</string>
+    <string name="spell_check_no_suggestions">No suggestions</string>
     <string name="ai_writing_setting_title">Propose text improvements</string>
     <string name="app_notification_added_to_group">You've been added to %1$s</string>
     <string name="app_notification_articles_channel_description">Notifies you when somebody mentions or highlights you in an article</string>
@@ -3882,7 +3889,7 @@
     <string name="community_rules_violation_kind_size_exceeded">Draft is %1$d bytes; this community caps this kind at %2$d bytes.</string>
     <string name="community_rules_violation_max_size_exceeded">Draft is %1$d bytes; this community caps events at %2$d bytes.</string>
     <string name="community_rules_violation_quota_exceeded">You have already posted %1$d events of this kind today (limit %2$d).</string>
-    <string name="compose_search_keywords" translatable="false">draft, posting, editor, auto-save, signature, proof of work, pow, mining, nip-13</string>
+    <string name="compose_search_keywords" translatable="false">draft, posting, editor, auto-save, signature, proof of work, pow, mining, nip-13, spell check, spelling, dictionary</string>
     <string name="compose_settings">Compose Settings</string>
     <plurals name="concord_channel_count">
         <item quantity="one">%1$d channel</item>

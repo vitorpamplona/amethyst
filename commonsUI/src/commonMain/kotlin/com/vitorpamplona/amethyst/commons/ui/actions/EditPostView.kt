@@ -384,6 +384,7 @@ private fun MessageField(postViewModel: EditPostViewModel) {
         state = postViewModel.message,
         onTextChanged = { postViewModel.onMessageChanged() },
         inputTransformation = MentionPreservingInputTransformation,
+        spellCheck = true,
         outputTransformation = UrlUserTagOutputTransformation(MaterialTheme.colorScheme.primary),
         keyboardOptions =
             KeyboardOptions.Default.copy(

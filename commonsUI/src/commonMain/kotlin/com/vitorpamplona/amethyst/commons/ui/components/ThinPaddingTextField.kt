@@ -25,6 +25,7 @@ import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsFocusedAsState
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.defaultMinSize
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
@@ -56,6 +57,10 @@ import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.commons.service.uploads.MediaUri
 import com.vitorpamplona.amethyst.commons.ui.components.imageContentReceiver
 import com.vitorpamplona.amethyst.commons.ui.privacylock.LocalUserActivity
+import com.vitorpamplona.amethyst.commons.ui.spellcheck.SpellCheckContextMenu
+import com.vitorpamplona.amethyst.commons.ui.spellcheck.SpellCheckedInnerTextField
+import com.vitorpamplona.amethyst.commons.ui.spellcheck.VisualOffsetMapping
+import com.vitorpamplona.amethyst.commons.ui.spellcheck.rememberSpellCheckFieldState
 import com.vitorpamplona.amethyst.commons.ui.theme.placeholderText
 import kotlinx.coroutines.flow.drop
 
@@ -75,6 +80,7 @@ fun ThinPaddingTextField(
     textStyle: TextStyle = LocalTextStyle.current,
     inputTransformation: InputTransformation? = null,
     outputTransformation: OutputTransformation? = null,
+    spellCheck: Boolean = false,
     label: @Composable (() -> Unit)? = null,
     placeholder: @Composable (() -> Unit)? = null,
     leadingIcon: @Composable (() -> Unit)? = null,
@@ -152,46 +158,59 @@ fun ThinPaddingTextField(
             modifier
         }
 
+    // Underlines misspellings and offers suggestions on right-click where the platform checks spelling.
+    val spell = rememberSpellCheckFieldState(state, spellCheck && enabled && !readOnly, outputTransformation as? VisualOffsetMapping)
+    val scrollState = rememberScrollState()
+
     CompositionLocalProvider(LocalTextSelectionColors provides colors.textSelectionColors) {
-        BasicTextField(
-            state = state,
-            modifier =
-                contentModifier
-                    .defaultMinSize(
-                        minWidth = TextFieldDefaults.MinWidth,
-                        minHeight = 36.dp,
-                    ),
-            enabled = enabled,
-            readOnly = readOnly,
-            textStyle = mergedTextStyle,
-            cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),
-            keyboardOptions = keyboardOptions,
-            lineLimits = lineLimits,
-            interactionSource = interactionSource,
-            inputTransformation = inputTransformation,
-            outputTransformation = outputTransformation,
-            decorator = { innerTextField ->
-                TextFieldDefaults.DecorationBox(
-                    value = state.text.toString(),
-                    visualTransformation = VisualTransformation.None,
-                    innerTextField = innerTextField,
-                    placeholder = placeholder,
-                    label = label,
-                    leadingIcon = leadingIcon,
-                    trailingIcon = trailingIcon,
-                    prefix = prefix,
-                    suffix = suffix,
-                    supportingText = supportingText,
-                    shape = shape,
-                    singleLine = singleLine,
-                    enabled = enabled,
-                    isError = isError,
-                    interactionSource = interactionSource,
-                    colors = colors,
-                    contentPadding = contentPadding,
-                )
-            },
-        )
+        SpellCheckContextMenu(spell) {
+            BasicTextField(
+                state = state,
+                modifier =
+                    contentModifier
+                        .defaultMinSize(
+                            minWidth = TextFieldDefaults.MinWidth,
+                            minHeight = 36.dp,
+                        ),
+                enabled = enabled,
+                readOnly = readOnly,
+                textStyle = mergedTextStyle,
+                cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),
+                keyboardOptions = keyboardOptions,
+                lineLimits = lineLimits,
+                interactionSource = interactionSource,
+                inputTransformation = inputTransformation,
+                outputTransformation = outputTransformation,
+                onTextLayout = spell?.onTextLayout,
+                scrollState = scrollState,
+                decorator = { innerTextField ->
+                    TextFieldDefaults.DecorationBox(
+                        value = state.text.toString(),
+                        visualTransformation = VisualTransformation.None,
+                        innerTextField =
+                            if (spell != null) {
+                                { SpellCheckedInnerTextField(spell, scrollState, singleLine, innerTextField) }
+                            } else {
+                                innerTextField
+                            },
+                        placeholder = placeholder,
+                        label = label,
+                        leadingIcon = leadingIcon,
+                        trailingIcon = trailingIcon,
+                        prefix = prefix,
+                        suffix = suffix,
+                        supportingText = supportingText,
+                        shape = shape,
+                        singleLine = singleLine,
+                        enabled = enabled,
+                        isError = isError,
+                        interactionSource = interactionSource,
+                        colors = colors,
+                        contentPadding = contentPadding,
+                    )
+                },
+            )
+        }
     }
 }
 

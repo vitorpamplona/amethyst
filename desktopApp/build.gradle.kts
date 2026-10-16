@@ -117,6 +117,10 @@ dependencies {
     // Already shipped (nestsClient's Opus bindings); declared so desktopApp can compile against it.
     implementation(libs.jna)
 
+    // Hunspell spell checking for the composers where the OS has no checker (Linux) or it fails.
+    // Lucene's pure-Java port; Apache-2.0, and its only dependency is lucene-core (Apache-2.0).
+    implementation(libs.lucene.analysis.common)
+
     // QR code generation (ZXing core)
     implementation(libs.zxing)
 

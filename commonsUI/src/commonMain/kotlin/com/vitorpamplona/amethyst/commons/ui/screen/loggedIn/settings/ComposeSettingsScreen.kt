@@ -46,6 +46,7 @@ import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbol
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.AccountPoWPreferences
 import com.vitorpamplona.amethyst.commons.model.BooleanType
+import com.vitorpamplona.amethyst.commons.model.SpellCheckType
 import com.vitorpamplona.amethyst.commons.model.UiSettingsFlow
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.add_client_tag_explainer
@@ -87,6 +88,11 @@ import com.vitorpamplona.amethyst.commons.resources.pow_difficulty_explainer
 import com.vitorpamplona.amethyst.commons.resources.pow_difficulty_off
 import com.vitorpamplona.amethyst.commons.resources.pow_difficulty_title
 import com.vitorpamplona.amethyst.commons.resources.pow_settings_title
+import com.vitorpamplona.amethyst.commons.resources.spell_check_automatic
+import com.vitorpamplona.amethyst.commons.resources.spell_check_built_in
+import com.vitorpamplona.amethyst.commons.resources.spell_check_off
+import com.vitorpamplona.amethyst.commons.resources.spell_check_setting_description
+import com.vitorpamplona.amethyst.commons.resources.spell_check_setting_title
 import com.vitorpamplona.amethyst.commons.resources.suggest_workouts_setting_description
 import com.vitorpamplona.amethyst.commons.resources.suggest_workouts_setting_title
 import com.vitorpamplona.amethyst.commons.resources.tracked_broadcasts_setting_description
@@ -96,6 +102,7 @@ import com.vitorpamplona.amethyst.commons.service.pow.PoWEstimator
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.navigation.topbars.TopBarWithBackButton
 import com.vitorpamplona.amethyst.commons.ui.note.creators.pow.POW_PRESETS
+import com.vitorpamplona.amethyst.commons.ui.platform.LocalAppPlatform
 import com.vitorpamplona.amethyst.commons.ui.pow.deviceHashesPerSecond
 import com.vitorpamplona.amethyst.commons.ui.pow.loadApproxDuration
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.settings.SettingsBlockTile
@@ -160,6 +167,11 @@ fun ComposeSettingsContent(
                 )
                 SettingsDivider()
             }
+            // Only where the platform checks spelling itself; on phones the keyboard does it.
+            if (LocalAppPlatform.current.spellCheck != null) {
+                SpellCheckTile(sharedPrefs)
+                SettingsDivider()
+            }
             BooleanSwitchTile(
                 flow = sharedPrefs.useTrackedBroadcasts,
                 icon = MaterialSymbols.CellTower,
@@ -185,6 +197,26 @@ fun ComposeSettingsContent(
             PowCategoryChecklist(accountViewModel)
         }
     }
+}
+
+@Composable
+private fun SpellCheckTile(sharedPrefs: UiSettingsFlow) {
+    val spellCheck by sharedPrefs.spellCheck.collectAsState()
+    SegmentedChoiceTile(
+        icon = MaterialSymbols.MenuBook,
+        title = Res.string.spell_check_setting_title,
+        description = Res.string.spell_check_setting_description,
+        options = SpellCheckType.entries,
+        labelRes = {
+            when (it) {
+                SpellCheckType.AUTOMATIC -> Res.string.spell_check_automatic
+                SpellCheckType.BUILT_IN -> Res.string.spell_check_built_in
+                SpellCheckType.OFF -> Res.string.spell_check_off
+            }
+        },
+        selected = spellCheck,
+        onSelect = { sharedPrefs.spellCheck.tryEmit(it) },
+    )
 }
 
 @Composable
