@@ -149,7 +149,8 @@ sealed interface InstallChannel {
                 os.contains("mac") || os.contains("darwin") -> {
                     // <bundle>/Contents/MacOS/Amethyst
                     val bundle = launcher.parentFile?.parentFile?.parentFile ?: return Development
-                    val path = bundle.path
+                    // Compared with '/' whatever the host's separator, as the probe's paths may be.
+                    val path = bundle.invariantSeparatorsPath
                     val parentWritable = bundle.parentFile?.let(probe.canWrite) == true
                     MacApp(
                         bundle = bundle,
@@ -168,7 +169,7 @@ sealed interface InstallChannel {
                     val programFiles =
                         listOf("ProgramFiles", "ProgramW6432", "ProgramFiles(x86)")
                             .mapNotNull { probe.env[it]?.takeIf(String::isNotBlank) }
-                    if (programFiles.any { appDir.path.startsWith(it, ignoreCase = true) }) {
+                    if (programFiles.any { appDir.invariantSeparatorsPath.startsWith(File(it).invariantSeparatorsPath, ignoreCase = true) }) {
                         WindowsMsi(appDir, launcher, platform)
                     } else {
                         PortableFolder(appDir, launcher, platform, DesktopPackage.WINDOWS_ZIP, appDir.parentFile?.let(probe.canWrite) == true)
