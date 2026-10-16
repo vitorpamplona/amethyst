@@ -275,7 +275,7 @@ fun SpellCheckedOutlinedTextField(
         minLines = minLines,
         shape = shape,
         colors = colors,
-        contentPadding = OutlinedTextFieldDefaults.contentPadding(),
+        contentPadding = if (label == null) OutlinedTextFieldDefaults.contentPaddingWithoutLabel() else OutlinedTextFieldDefaults.contentPaddingWithLabel(),
     )
 }
 
