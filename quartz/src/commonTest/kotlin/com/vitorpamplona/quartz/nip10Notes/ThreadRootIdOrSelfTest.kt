@@ -22,6 +22,7 @@ package com.vitorpamplona.quartz.nip10Notes
 
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertNull
 
 class ThreadRootIdOrSelfTest {
     private val selfId = "3b1ef90115dc6f383e9588d29c86fe3ecda6ecc98415af556cd1399731a15e09"
@@ -71,5 +72,20 @@ class ThreadRootIdOrSelfTest {
         // BaseThreadedEvent.unmarkedRoot().
         val note = textNote(arrayOf(arrayOf("e", rootId, relay)))
         assertEquals(rootId, note.threadRootIdOrSelf())
+    }
+
+    @Test fun unmarkedETagWithMalformedId_isNotARoot() {
+        // The marked parsers require a 64-char id; the positional ones did not, so a
+        // garbage e-tag became the thread root (and reply target) of the note.
+        val note = textNote(arrayOf(arrayOf("e", "garbage")))
+        assertNull(note.root())
+        assertNull(note.reply())
+        assertEquals(selfId, note.threadRootIdOrSelf())
+    }
+
+    @Test fun unmarkedETagWithMalformedId_isSkippedForTheNextOne() {
+        val note = textNote(arrayOf(arrayOf("e", "garbage", relay), arrayOf("e", rootId, relay), arrayOf("e", "x")))
+        assertEquals(rootId, note.root()?.eventId)
+        assertEquals(rootId, note.reply()?.eventId)
     }
 }
