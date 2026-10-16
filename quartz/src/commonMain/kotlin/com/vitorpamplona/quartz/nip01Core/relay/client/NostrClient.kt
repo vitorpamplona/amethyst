@@ -351,8 +351,20 @@ class NostrClient(
     override fun publish(
         event: Event,
         relayList: Set<NormalizedRelayUrl>,
+    ) = publish(event, relayList, null)
+
+    override fun publishRaw(
+        event: Event,
+        eventJson: String,
+        relayList: Set<NormalizedRelayUrl>,
+    ) = publish(event, relayList, eventJson)
+
+    private fun publish(
+        event: Event,
+        relayList: Set<NormalizedRelayUrl>,
+        eventJson: String?,
     ) {
-        val relaysToUpdate = eventOutbox.markAsSending(event, relayList)
+        val relaysToUpdate = eventOutbox.markAsSending(event, relayList, eventJson)
 
         if (isActive()) {
             eventOutbox.sendToRelayIfChanged(event, relaysToUpdate) { relay, cmd ->

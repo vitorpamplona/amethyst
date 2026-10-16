@@ -189,7 +189,7 @@ class RelaySession(
      */
     suspend fun receive(command: String) {
         policy.acceptMessage(command)?.let { reason ->
-            send(NoticeMessage(reason))
+            refuseUnparsed(command, reason)
             return
         }
 
@@ -214,10 +214,23 @@ class RelaySession(
         parsed: Command,
     ) {
         policy.acceptMessage(command)?.let { reason ->
-            send(NoticeMessage(reason))
+            refuseUnparsed(command, reason)
             return
         }
         receive(parsed)
+    }
+
+    /**
+     * Answers a frame [IRelayPolicy.acceptMessage] refused. An EVENT is owed its `OK` (NIP-01),
+     * and a client pipelining EVENTs pairs OKs by id, so a refused EVENT whose id can be read
+     * gets `OK false`; anything else gets a NOTICE.
+     */
+    private fun refuseUnparsed(
+        command: String,
+        reason: String,
+    ) {
+        val id = eventIdOfEventFrame(command)
+        send(if (id != null) OkMessage(id, false, reason) else NoticeMessage(reason))
     }
 
     /**

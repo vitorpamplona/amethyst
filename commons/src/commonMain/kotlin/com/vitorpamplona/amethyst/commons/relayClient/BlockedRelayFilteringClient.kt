@@ -76,6 +76,16 @@ class BlockedRelayFilteringClient(
         delegate.publish(event, if (blocked.hitsNoneOf(relayList)) relayList else relayList - blocked)
     }
 
+    // Overridden, not delegated: `by delegate` would hand the delegate the full relay list.
+    override fun publishRaw(
+        event: Event,
+        eventJson: String,
+        relayList: Set<NormalizedRelayUrl>,
+    ) {
+        val blocked = blockedRelays()
+        delegate.publishRaw(event, eventJson, if (blocked.hitsNoneOf(relayList)) relayList else relayList - blocked)
+    }
+
     private fun Map<NormalizedRelayUrl, List<Filter>>.withoutBlocked(): Map<NormalizedRelayUrl, List<Filter>> {
         val blocked = blockedRelays()
         if (blocked.hitsNoneOf(keys)) return this

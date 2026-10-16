@@ -553,6 +553,7 @@ fun SendDirectMessageTo(
                         color = MaterialTheme.colorScheme.placeholderText,
                     )
                 },
+                spellCheck = true,
                 outputTransformation =
                     UrlUserTagOutputTransformation(
                         MaterialTheme.colorScheme.primary,
@@ -588,6 +589,7 @@ fun SendDirectMessageTo(
                         color = MaterialTheme.colorScheme.placeholderText,
                     )
                 },
+                spellCheck = true,
                 outputTransformation =
                     UrlUserTagOutputTransformation(
                         MaterialTheme.colorScheme.primary,

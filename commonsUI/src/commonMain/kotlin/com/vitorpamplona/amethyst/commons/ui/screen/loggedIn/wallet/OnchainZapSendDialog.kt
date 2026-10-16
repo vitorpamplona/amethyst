@@ -116,6 +116,7 @@ import com.vitorpamplona.amethyst.commons.resources.onchain_send_title
 import com.vitorpamplona.amethyst.commons.resources.onchain_send_to
 import com.vitorpamplona.amethyst.commons.resources.onchain_send_use_note_split
 import com.vitorpamplona.amethyst.commons.resources.send
+import com.vitorpamplona.amethyst.commons.ui.components.SpellCheckedOutlinedTextField
 import com.vitorpamplona.amethyst.commons.ui.components.namecoin.NamecoinResolutionRow
 import com.vitorpamplona.amethyst.commons.ui.components.rememberModalSheetState
 import com.vitorpamplona.amethyst.commons.ui.insets.imePaddingSafe
@@ -418,7 +419,7 @@ fun OnchainZapSendDialog(
 
                             SectionSpacer()
 
-                            OutlinedTextField(
+                            SpellCheckedOutlinedTextField(
                                 value = comment,
                                 onValueChange = { comment = it },
                                 label = { Text(stringRes(Res.string.onchain_send_comment_label)) },

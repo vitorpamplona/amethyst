@@ -73,6 +73,14 @@ class BlockedRelayFilteringClientTest {
         ) {
             publishedRelays = relayList
         }
+
+        override fun publishRaw(
+            event: Event,
+            eventJson: String,
+            relayList: Set<NormalizedRelayUrl>,
+        ) {
+            publishedRelays = relayList
+        }
     }
 
     @Test
@@ -105,6 +113,17 @@ class BlockedRelayFilteringClientTest {
         val client = BlockedRelayFilteringClient(inner) { setOf(blocked) }
 
         client.publish(event(), setOf(good, blocked, alsoGood))
+
+        assertEquals(setOf(good, alsoGood), inner.publishedRelays)
+    }
+
+    @Test
+    fun publishRawDropsBlockedRelays() {
+        val inner = RecordingClient()
+        val client = BlockedRelayFilteringClient(inner) { setOf(blocked) }
+        val event = event()
+
+        client.publishRaw(event, event.toJson(), setOf(good, blocked, alsoGood))
 
         assertEquals(setOf(good, alsoGood), inner.publishedRelays)
     }

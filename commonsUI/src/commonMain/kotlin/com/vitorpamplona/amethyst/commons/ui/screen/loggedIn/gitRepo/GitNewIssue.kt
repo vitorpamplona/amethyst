@@ -49,6 +49,7 @@ import com.vitorpamplona.amethyst.commons.resources.git_new_issue_labels
 import com.vitorpamplona.amethyst.commons.resources.git_new_issue_labels_hint
 import com.vitorpamplona.amethyst.commons.resources.git_new_issue_subject
 import com.vitorpamplona.amethyst.commons.resources.git_new_issue_title
+import com.vitorpamplona.amethyst.commons.ui.components.SpellCheckedOutlinedTextField
 import com.vitorpamplona.amethyst.commons.ui.layouts.DisappearingScaffold
 import com.vitorpamplona.amethyst.commons.ui.layouts.LocalDisappearingScaffoldPadding
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
@@ -123,14 +124,14 @@ private fun GitNewIssueForm(
                     .padding(horizontal = 16.dp, vertical = 16.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
-            OutlinedTextField(
+            SpellCheckedOutlinedTextField(
                 value = subject,
                 onValueChange = { subject = it },
                 label = { Text(stringRes(Res.string.git_new_issue_subject)) },
                 singleLine = true,
                 modifier = Modifier.fillMaxWidth(),
             )
-            OutlinedTextField(
+            SpellCheckedOutlinedTextField(
                 value = body,
                 onValueChange = { body = it },
                 label = { Text(stringRes(Res.string.git_new_issue_body)) },

@@ -89,6 +89,7 @@ import com.vitorpamplona.amethyst.commons.resources.send_payment_method_onchain
 import com.vitorpamplona.amethyst.commons.resources.send_payment_no_methods
 import com.vitorpamplona.amethyst.commons.resources.send_payment_receipt_section
 import com.vitorpamplona.amethyst.commons.resources.send_payment_try_again
+import com.vitorpamplona.amethyst.commons.ui.components.SpellCheckedOutlinedTextField
 import com.vitorpamplona.amethyst.commons.ui.components.rememberShortNotice
 import com.vitorpamplona.amethyst.commons.ui.components.util.setText
 import com.vitorpamplona.amethyst.commons.ui.insets.imePaddingSafe
@@ -333,7 +334,7 @@ fun SendPaymentContent(
         )
 
         if (showMessageField) {
-            OutlinedTextField(
+            SpellCheckedOutlinedTextField(
                 label = { Text(messageLabel) },
                 value = message,
                 onValueChange = onMessageChange,

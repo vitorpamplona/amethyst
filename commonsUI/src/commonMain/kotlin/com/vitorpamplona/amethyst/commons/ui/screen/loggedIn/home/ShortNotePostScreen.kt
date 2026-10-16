@@ -418,6 +418,7 @@ private fun NewPostScreenBody(
                             )
                             ThinPaddingTextField(
                                 state = postViewModel.subject,
+                                spellCheck = true,
                                 modifier = Modifier.fillMaxWidth(),
                                 singleLine = true,
                                 placeholder = {

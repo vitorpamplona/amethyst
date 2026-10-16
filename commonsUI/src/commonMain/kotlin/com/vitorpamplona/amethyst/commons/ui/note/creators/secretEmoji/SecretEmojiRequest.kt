@@ -29,7 +29,6 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -53,6 +52,7 @@ import com.vitorpamplona.amethyst.commons.resources.secret_note_to_receiver
 import com.vitorpamplona.amethyst.commons.resources.secret_note_to_receiver_placeholder
 import com.vitorpamplona.amethyst.commons.resources.secret_visible_text
 import com.vitorpamplona.amethyst.commons.resources.secret_visible_text_placeholder
+import com.vitorpamplona.amethyst.commons.ui.components.SpellCheckedOutlinedTextField
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.DividerThickness
 import com.vitorpamplona.amethyst.commons.ui.theme.QuoteBorder
@@ -86,7 +86,7 @@ fun SecretEmojiRequest(onSuccess: (String) -> Unit) {
         var secretMessage by remember { mutableStateOf("") }
         var publicPrefix by remember { mutableStateOf("") }
 
-        OutlinedTextField(
+        SpellCheckedOutlinedTextField(
             label = { Text(text = stringRes(Res.string.secret_note_to_receiver)) },
             modifier = Modifier.fillMaxWidth(),
             value = secretMessage,
@@ -104,7 +104,7 @@ fun SecretEmojiRequest(onSuccess: (String) -> Unit) {
             singleLine = true,
         )
 
-        OutlinedTextField(
+        SpellCheckedOutlinedTextField(
             label = { Text(text = stringRes(Res.string.secret_visible_text)) },
             modifier = Modifier.fillMaxWidth(),
             value = publicPrefix,

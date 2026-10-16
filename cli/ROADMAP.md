@@ -104,8 +104,8 @@ vs streaming `subscribe`). Stateless verbs run with no account or network.
 | `verify` / `validate` | `amy verify` | ✅ | id-hash + signature, reported separately. |
 | `key` | `amy key generate\|public\|encrypt\|decrypt\|validate` | ✅ | generate/derive + NIP-49 encrypt/decrypt (bidirectionally nak-verified) + `validate` (npub/hex parse check). `expand`/`combine`(MuSig2)/`default` still 🆕. |
 | `event` | `amy event` | ✅ | build/sign an arbitrary event, optional `--publish`/`--relay`. |
-| `publish` | `amy publish` | ✅ | broadcast a pre-made event JSON (verified first). |
-| `req` (one-shot) | `amy fetch` | ✅ | filter → collect-until-EOSE, dedupe, sort, cap. Also accepts a nip19/nip05 code and resolves relays via the outbox model (code hints + author's NIP-65 write relays), like nak's `fetch`. |
+| `publish` | `amy publish` | ✅ | broadcast a pre-made event JSON (verified first); `--file` streams a file of events to one relay through quartz's windowed `publishStream`, with per-reason OK counts and round-trip percentiles. |
+| `req` (one-shot) | `amy fetch` | ✅ | filter → collect-until-EOSE, dedupe, sort, cap. `--paginate --limit 0 --out FILE` exports a whole walk as one event per line. Also accepts a nip19/nip05 code and resolves relays via the outbox model (code hints + author's NIP-65 write relays), like nak's `fetch`. |
 | `req` (stream) | `amy subscribe` | ✅ | filter → live NDJSON stream to stdout. |
 | `count` | `amy count` | ✅ | NIP-45, per-relay counts. |
 | `encrypt` / `decrypt` | `amy encrypt\|decrypt` | ✅ | raw NIP-44 (default) / NIP-04. |

@@ -98,6 +98,7 @@ fun MessageField(
                 focusedBorderColor = Color.Transparent,
                 unfocusedBorderColor = Color.Transparent,
             ),
+        spellCheck = true,
         outputTransformation = UrlUserTagOutputTransformation(MaterialTheme.colorScheme.primary),
         textStyle = LocalTextStyle.current.copy(textDirection = TextDirection.Content),
         contentPadding =

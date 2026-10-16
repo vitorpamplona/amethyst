@@ -73,6 +73,7 @@ import com.vitorpamplona.amethyst.commons.search.calendar.atTime
 import com.vitorpamplona.amethyst.commons.search.calendar.fromPickerMillis
 import com.vitorpamplona.amethyst.commons.search.calendar.secondOfDay
 import com.vitorpamplona.amethyst.commons.ui.actions.uploads.SelectSingleFromGallery
+import com.vitorpamplona.amethyst.commons.ui.components.SpellCheckedOutlinedTextField
 import com.vitorpamplona.amethyst.commons.ui.components.rememberModalSheetState
 import com.vitorpamplona.amethyst.commons.ui.components.rememberViewModel
 import com.vitorpamplona.amethyst.commons.ui.note.DateTimeStyle
@@ -126,7 +127,7 @@ fun CreateNestSheet(
                 style = MaterialTheme.typography.titleLarge,
             )
 
-            OutlinedTextField(
+            SpellCheckedOutlinedTextField(
                 value = state.roomName,
                 onValueChange = viewModel::onRoomNameChange,
                 label = { Text(stringRes(Res.string.nest_create_field_room)) },
@@ -135,7 +136,7 @@ fun CreateNestSheet(
                 modifier = Modifier.fillMaxWidth(),
             )
 
-            OutlinedTextField(
+            SpellCheckedOutlinedTextField(
                 value = state.summary,
                 onValueChange = viewModel::onSummaryChange,
                 label = { Text(stringRes(Res.string.nest_create_field_summary)) },

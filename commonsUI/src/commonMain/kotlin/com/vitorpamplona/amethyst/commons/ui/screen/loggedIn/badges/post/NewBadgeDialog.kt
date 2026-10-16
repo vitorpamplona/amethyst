@@ -80,6 +80,7 @@ import com.vitorpamplona.amethyst.commons.service.upload.ui.StrippingFailureDial
 import com.vitorpamplona.amethyst.commons.ui.actions.uploads.GallerySelect
 import com.vitorpamplona.amethyst.commons.ui.actions.uploads.ShowImageUploadGallery
 import com.vitorpamplona.amethyst.commons.ui.components.SetDialogToEdgeToEdge
+import com.vitorpamplona.amethyst.commons.ui.components.SpellCheckedOutlinedTextField
 import com.vitorpamplona.amethyst.commons.ui.components.TextSpinner
 import com.vitorpamplona.amethyst.commons.ui.components.TitleExplainer
 import com.vitorpamplona.amethyst.commons.ui.components.edgeToEdgeDialogProperties
@@ -279,7 +280,7 @@ private fun BadgeFormFields(
 
     Spacer(modifier = Modifier.height(12.dp))
 
-    OutlinedTextField(
+    SpellCheckedOutlinedTextField(
         value = postViewModel.description,
         onValueChange = { postViewModel.description = it },
         label = { Text(stringRes(Res.string.badge_description_label)) },

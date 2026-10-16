@@ -59,6 +59,25 @@ class RelayLimitsServerTest {
     }
 
     @Test
+    fun answersAnOversizedEventWithOkFalse() =
+        runTest {
+            val dispatcher = UnconfinedTestDispatcher(testScheduler)
+            val server = EventSourceServer(emptySource, parentContext = dispatcher, limits = RelayLimits(maxMessageLength = 200))
+            val collector = Collector()
+            val session = server.connect(collector.send)
+            val id = hexId(7)
+
+            session.receive("""["EVENT",{"id":"$id","pubkey":"${hexId(1)}","created_at":1,"kind":1,"tags":[],"content":"${"x".repeat(300)}","sig":"${hexId(2)}"}]""")
+
+            val oks = collector.containing("OK")
+            assertEquals(1, oks.size)
+            assertTrue(oks[0].contains(id))
+            assertTrue(oks[0].contains("false"))
+            assertTrue(oks[0].contains("too large"))
+            assertTrue(collector.containing("NOTICE").isEmpty())
+        }
+
+    @Test
     fun rejectsOversizedMessageWithNotice() =
         runTest {
             val dispatcher = UnconfinedTestDispatcher(testScheduler)

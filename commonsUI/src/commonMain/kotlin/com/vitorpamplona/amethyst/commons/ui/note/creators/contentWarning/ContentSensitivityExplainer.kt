@@ -30,7 +30,6 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -46,6 +45,7 @@ import com.vitorpamplona.amethyst.commons.resources.add_sensitive_content_descri
 import com.vitorpamplona.amethyst.commons.resources.add_sensitive_content_explainer
 import com.vitorpamplona.amethyst.commons.resources.add_sensitive_content_label
 import com.vitorpamplona.amethyst.commons.resources.content_warning
+import com.vitorpamplona.amethyst.commons.ui.components.SpellCheckedOutlinedTextField
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.DividerThickness
 import com.vitorpamplona.amethyst.commons.ui.theme.placeholderText
@@ -104,7 +104,7 @@ fun ContentSensitivityExplainer(
             modifier = Modifier.padding(vertical = 10.dp),
         )
 
-        OutlinedTextField(
+        SpellCheckedOutlinedTextField(
             value = description,
             onValueChange = onDescriptionChange,
             modifier = Modifier.fillMaxWidth(),

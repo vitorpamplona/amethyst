@@ -96,6 +96,7 @@ import com.vitorpamplona.amethyst.commons.resources.zap_type_private_explainer
 import com.vitorpamplona.amethyst.commons.resources.zap_type_public
 import com.vitorpamplona.amethyst.commons.resources.zap_type_public_explainer
 import com.vitorpamplona.amethyst.commons.service.ZapPaymentHandler
+import com.vitorpamplona.amethyst.commons.ui.components.SpellCheckedOutlinedTextField
 import com.vitorpamplona.amethyst.commons.ui.components.rememberViewModel
 import com.vitorpamplona.amethyst.commons.ui.components.toasts.multiline.UserBasedErrorMessage
 import com.vitorpamplona.amethyst.commons.ui.insets.imePaddingSafe
@@ -325,7 +326,7 @@ fun ZapCustomDialog(
                 }
 
                 // Message input
-                OutlinedTextField(
+                SpellCheckedOutlinedTextField(
                     label = {
                         when (selectedZapType) {
                             ZapReceiptEvent.ZapType.PUBLIC, ZapReceiptEvent.ZapType.ANONYMOUS -> {

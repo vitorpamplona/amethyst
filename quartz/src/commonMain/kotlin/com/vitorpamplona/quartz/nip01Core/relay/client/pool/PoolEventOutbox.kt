@@ -151,12 +151,14 @@ class PoolEventOutbox {
     fun markAsSending(
         event: Event,
         relays: Set<NormalizedRelayUrl>,
+        eventJson: String? = null,
     ): Set<NormalizedRelayUrl> {
         val currentOutbox = eventOutbox.get(event.id)
         if (currentOutbox == null) {
-            eventOutbox.put(event.id, PoolEventOutboxState(event, relays))
+            eventOutbox.put(event.id, PoolEventOutboxState(event, relays, eventJson))
         } else {
             currentOutbox.updateRelays(relays)
+            if (eventJson != null) currentOutbox.eventJson = eventJson
         }
         // Additions only, and only what is genuinely new: the union is over
         // this event's relays, never over the whole outbox.
@@ -224,7 +226,7 @@ class PoolEventOutbox {
     ) {
         eventOutbox.forEach { _, outboxCache ->
             outboxCache.forEachUnsentEvent(relay) {
-                sync(EventCmd(it))
+                sync(outboxCache.command())
             }
         }
     }
@@ -251,8 +253,9 @@ class PoolEventOutbox {
     ): Boolean {
         var sent = false
         eventIds.forEach { id ->
-            eventOutbox.get(id)?.forEachUnsentEvent(relay) {
-                sync(EventCmd(it))
+            val waiting = eventOutbox.get(id) ?: return@forEach
+            waiting.forEachUnsentEvent(relay) {
+                sync(waiting.command())
                 sent = true
             }
         }
@@ -270,8 +273,10 @@ class PoolEventOutbox {
         relaysToUpdate: Set<NormalizedRelayUrl>,
         sync: (NormalizedRelayUrl, Command) -> Unit,
     ) {
+        if (relaysToUpdate.isEmpty()) return
+        val cmd = eventOutbox.get(event.id)?.command() ?: EventCmd(event)
         relaysToUpdate.forEach { relay ->
-            sync(relay, EventCmd(event))
+            sync(relay, cmd)
         }
     }
 

@@ -164,8 +164,8 @@ class RenderableKindsTest {
                 30018,
                 30019,
                 30020,
-                // Open Markets product collections, shipping options and product reviews: no card
-                // yet, so a result would be a blank row
+                // Open Markets collections, shipping options and product reviews: no card yet,
+                // reached through their merchant or product, not searched
                 30405,
                 30406,
                 31555,

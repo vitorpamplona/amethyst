@@ -68,6 +68,7 @@ import com.vitorpamplona.amethyst.commons.resources.podcast_trailer_url_label
 import com.vitorpamplona.amethyst.commons.service.upload.ui.StrippingFailureDialog
 import com.vitorpamplona.amethyst.commons.service.uploads.SelectedMedia
 import com.vitorpamplona.amethyst.commons.ui.actions.uploads.DocumentSelectSingle
+import com.vitorpamplona.amethyst.commons.ui.components.SpellCheckedOutlinedTextField
 import com.vitorpamplona.amethyst.commons.ui.components.rememberViewModel
 import com.vitorpamplona.amethyst.commons.ui.insets.imePaddingSafe
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
@@ -165,7 +166,7 @@ fun NewPodcastTrailerScreen(
                 )
             }
 
-            OutlinedTextField(
+            SpellCheckedOutlinedTextField(
                 value = vm.title.value,
                 onValueChange = { vm.title.value = it },
                 label = { Text(stringRes(Res.string.podcast_episode_title_label)) },

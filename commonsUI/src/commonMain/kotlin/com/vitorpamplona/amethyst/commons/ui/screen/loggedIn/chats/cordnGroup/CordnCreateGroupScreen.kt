@@ -119,6 +119,7 @@ import com.vitorpamplona.amethyst.commons.resources.cordn_group_unavailable
 import com.vitorpamplona.amethyst.commons.resources.cordn_group_unavailable_detail
 import com.vitorpamplona.amethyst.commons.resources.cordn_member_count
 import com.vitorpamplona.amethyst.commons.ui.components.EmptyState
+import com.vitorpamplona.amethyst.commons.ui.components.SpellCheckedOutlinedTextField
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.note.UserPicture
 import com.vitorpamplona.amethyst.commons.ui.note.timeAgoNoDot
@@ -283,7 +284,7 @@ fun CordnCreateGroupScreen(
                 singleLine = true,
                 modifier = Modifier.fillMaxWidth(),
             )
-            OutlinedTextField(
+            SpellCheckedOutlinedTextField(
                 value = draft.description,
                 onValueChange = { draft.description = it },
                 label = { Text(stringRes(Res.string.cordn_create_description)) },

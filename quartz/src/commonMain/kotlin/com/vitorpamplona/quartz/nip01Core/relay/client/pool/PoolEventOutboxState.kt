@@ -21,6 +21,7 @@
 package com.vitorpamplona.quartz.nip01Core.relay.client.pool
 
 import com.vitorpamplona.quartz.nip01Core.core.Event
+import com.vitorpamplona.quartz.nip01Core.relay.commands.toRelay.EventCmd
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.utils.TimeUtils
 import com.vitorpamplona.quartz.utils.concurrent.PlatformLock
@@ -41,6 +42,8 @@ import kotlin.concurrent.Volatile
 class PoolEventOutboxState(
     val event: Event,
     relays: Set<NormalizedRelayUrl>,
+    /** [event]'s JSON as the publisher already held it, sent verbatim on every try; see [EventCmd.eventJson]. */
+    @Volatile var eventJson: String? = null,
 ) {
     private val lock = PlatformLock()
 
@@ -74,6 +77,9 @@ class PoolEventOutboxState(
         url: NormalizedRelayUrl,
         run: (url: Event) -> Unit,
     ) = if (isSupposedToGo(url)) run(event) else null
+
+    /** The EVENT command a send of this event puts on the wire. */
+    fun command() = EventCmd(event, eventJson)
 
     fun remainingRelays() = relaysLeft()
 

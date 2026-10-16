@@ -42,7 +42,6 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedCard
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -89,6 +88,7 @@ import com.vitorpamplona.amethyst.commons.resources.vanish_select_time
 import com.vitorpamplona.amethyst.commons.resources.vanish_send_request
 import com.vitorpamplona.amethyst.commons.resources.vanish_target_relay
 import com.vitorpamplona.amethyst.commons.search.calendar.LocalClock
+import com.vitorpamplona.amethyst.commons.ui.components.SpellCheckedOutlinedTextField
 import com.vitorpamplona.amethyst.commons.ui.components.TitleExplainer
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.EmptyNav
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
@@ -319,7 +319,7 @@ fun RequestToVanishScreen(
             Spacer(modifier = Modifier.height(20.dp))
 
             // Reason
-            OutlinedTextField(
+            SpellCheckedOutlinedTextField(
                 value = reason,
                 onValueChange = { reason = it },
                 label = { Text(stringRes(Res.string.vanish_reason_label)) },

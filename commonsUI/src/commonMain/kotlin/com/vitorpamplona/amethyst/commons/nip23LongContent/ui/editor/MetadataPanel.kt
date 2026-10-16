@@ -46,6 +46,7 @@ import androidx.compose.ui.input.key.onKeyEvent
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
+import com.vitorpamplona.amethyst.commons.ui.components.SpellCheckedOutlinedTextField
 
 /**
  * Form fields for article metadata: title, summary, banner, tags, slug.
@@ -71,18 +72,20 @@ fun MetadataPanel(
         modifier = modifier.fillMaxWidth(),
         verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
-        OutlinedTextField(
+        SpellCheckedOutlinedTextField(
             value = title,
-            onValueChange = { if (it.length <= 256) onTitleChange(it) },
+            onValueChange = onTitleChange,
+            maxLength = 256,
             label = { Text("Title") },
             singleLine = true,
             modifier = Modifier.fillMaxWidth(),
             supportingText = { Text("${title.length}/256") },
         )
 
-        OutlinedTextField(
+        SpellCheckedOutlinedTextField(
             value = summary,
-            onValueChange = { if (it.length <= 1024) onSummaryChange(it) },
+            onValueChange = onSummaryChange,
+            maxLength = 1024,
             label = { Text("Summary") },
             maxLines = 3,
             modifier = Modifier.fillMaxWidth(),

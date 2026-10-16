@@ -80,6 +80,7 @@ in `NostrClient` completion — import them by name:
 | NIP-45 count | `count(relay, filter)`, `countMerged(relays, filter)` |
 | NIP-77 sync | `negentropySync`, `negentropySyncOrFetch` |
 | Publish and wait for `OK` | `publishAndConfirm(event, relays)`, `publishAndConfirmDetailed` |
+| Publish many events to one relay | `publishStream(relay, events, maxInFlight) { event, ok -> }`; `publishRawStream` for events already held as JSON |
 
 Their waits are **idle windows** (`idleTimeoutMs`) that reset on real progress, never
 wall-clock deadlines; wrap a call in `withTimeoutOrNull` for a hard bound. Relay URLs are

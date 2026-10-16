@@ -37,7 +37,6 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -69,6 +68,7 @@ import com.vitorpamplona.amethyst.commons.resources.calendar_untitled
 import com.vitorpamplona.amethyst.commons.resources.cancel
 import com.vitorpamplona.amethyst.commons.resources.edit_calendar_collection
 import com.vitorpamplona.amethyst.commons.resources.new_calendar_collection
+import com.vitorpamplona.amethyst.commons.ui.components.SpellCheckedOutlinedTextField
 import com.vitorpamplona.amethyst.commons.ui.components.rememberViewModel
 import com.vitorpamplona.amethyst.commons.ui.insets.imePaddingSafe
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
@@ -115,7 +115,7 @@ fun NewCalendarCollectionScreen(
                     .verticalScroll(rememberScrollState()),
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
-            OutlinedTextField(
+            SpellCheckedOutlinedTextField(
                 value = vm.title.value,
                 onValueChange = { vm.title.value = it },
                 label = { Text(stringRes(Res.string.calendar_collection_title)) },
@@ -125,7 +125,7 @@ fun NewCalendarCollectionScreen(
                 isError = !vm.isValid(),
             )
 
-            OutlinedTextField(
+            SpellCheckedOutlinedTextField(
                 value = vm.description.value,
                 onValueChange = { vm.description.value = it },
                 label = { Text(stringRes(Res.string.calendar_collection_description)) },

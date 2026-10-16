@@ -44,6 +44,10 @@ object PublishCommand {
         |  publish [EVENT-JSON] [--relay URL[,URL…]]   broadcast a pre-made signed event (verified
         |                                                first; reads stdin when the arg is omitted/`-`;
         |                                                targets default to the account's outbox)
+        |  publish --file PATH --relay URL             stream a file of events, one JSON per line (.gz
+        |       [--in-flight N] [--skip N] [--take N]  read gzipped; `-` is stdin) with N awaiting their
+        |       [--no-verify] [--progress SECS]        OK at once (default 512); prints counts by OK
+        |       [--timeout SECS]                       reason, ev/s and OK round-trip percentiles
         """.trimMargin()
 
     suspend fun run(
@@ -55,6 +59,7 @@ object PublishCommand {
             return 0
         }
         val args = Args(rest)
+        if (args.flag("file") != null) return PublishFileCommand.run(dataDir, args)
         args.rejectUnknown("relay")
         val json = RawEventSupport.readArgOrStdin(args)
         if (json.isEmpty()) return Output.error("bad_args", "no event JSON on the argument or stdin")

@@ -55,7 +55,6 @@ import androidx.compose.material3.ExtendedFloatingActionButton
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SheetState
 import androidx.compose.material3.SuggestionChip
@@ -85,6 +84,7 @@ import com.vitorpamplona.amethyst.commons.model.buzz.JobState
 import com.vitorpamplona.amethyst.commons.model.buzz.JobView
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.buzz_job_board_title
+import com.vitorpamplona.amethyst.commons.ui.components.SpellCheckedOutlinedTextField
 import com.vitorpamplona.amethyst.commons.ui.components.rememberModalSheetState
 import com.vitorpamplona.amethyst.commons.ui.components.rememberViewModel
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
@@ -456,7 +456,7 @@ private fun NewTaskSheet(
                     SuggestionChip(onClick = { if (text.isBlank()) text = "$example: " }, label = { Text(example) })
                 }
             }
-            OutlinedTextField(
+            SpellCheckedOutlinedTextField(
                 value = text,
                 onValueChange = { text = it },
                 label = { Text("What should we build?") },

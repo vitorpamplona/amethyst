@@ -45,7 +45,6 @@ import androidx.compose.material3.LocalTextStyle
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ProvideTextStyle
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextField
 import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -99,6 +98,7 @@ import com.vitorpamplona.amethyst.commons.ui.components.AutoNonlazyGrid
 import com.vitorpamplona.amethyst.commons.ui.components.GenericLoadable
 import com.vitorpamplona.amethyst.commons.ui.components.LoadNote
 import com.vitorpamplona.amethyst.commons.ui.components.MyAsyncImage
+import com.vitorpamplona.amethyst.commons.ui.components.SpellCheckedTextField
 import com.vitorpamplona.amethyst.commons.ui.feeds.RefresheableBox
 import com.vitorpamplona.amethyst.commons.ui.layouts.rememberFeedContentPadding
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.EmptyNav
@@ -1139,7 +1139,7 @@ private fun RenderClassifiedsReaderForThread(
 
                 var message by remember { mutableStateOf(TextFieldValue(msg)) }
 
-                TextField(
+                SpellCheckedTextField(
                     value = message,
                     onValueChange = { message = it },
                     keyboardOptions =
