@@ -32,16 +32,16 @@ import com.vitorpamplona.quartz.utils.Log
 import io.github.kdroidfilter.composemediaplayer.InitialPlayerState
 import io.github.kdroidfilter.composemediaplayer.VideoPlayerError
 import io.github.kdroidfilter.composemediaplayer.VideoPlayerState
+import io.github.kdroidfilter.composemediaplayer.audio.AudioPlayer
+import io.github.kdroidfilter.composemediaplayer.audio.AudioPlayerState
+import io.github.kdroidfilter.composemediaplayer.audio.ErrorListener
 import io.github.kdroidfilter.composemediaplayer.createVideoPlayerState
 import io.github.vinceglb.filekit.PlatformFile
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.CoroutineStart
-import kotlinx.coroutines.Deferred
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
-import kotlinx.coroutines.async
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
@@ -49,7 +49,6 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.distinctUntilChanged
-import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.flow.emptyFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flatMapLatest
@@ -59,6 +58,7 @@ import kotlinx.coroutines.flow.merge
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withTimeoutOrNull
+import java.io.File
 import java.io.IOException
 import java.util.Collections
 
@@ -77,16 +77,23 @@ data class MediaPlaybackState(
     val speed: Float = 1f,
     /** Last observed error from the engine, or null. JVM emits only SourceError/UnknownError. */
     val errorReason: String? = null,
+    /**
+     * Whether the user asked for this video (pressed play, opened it, or unmuted it) rather than
+     * the feed starting it on its own. Only such a video keeps playing once its screen closes.
+     */
+    val isChosen: Boolean = false,
 )
 
 /**
- * Singleton facade over kdroidFilter's [VideoPlayerState] (MIT, OS-native backends:
- * Media Foundation on Windows, AVFoundation on macOS, GStreamer on Linux).
+ * Singleton facade over kdroidFilter's players (MIT): [VideoPlayerState] for video (OS-native
+ * backends: Media Foundation on Windows, AVFoundation on macOS, GStreamer on Linux) and its
+ * audio-only [AudioPlayer] (Rodio) for audio, which the video engine cannot play on macOS and
+ * Windows without a video track.
  *
- * Holds two engine instances (video + audio) for the lifetime of the JVM. The
- * underlying [VideoPlayerState] exposes its state via Compose `mutableStateOf`;
- * a [snapshotFlow] coroutine mirrors that into our public [MediaPlaybackState]
- * `StateFlow`s so non-Compose consumers (and the existing UI) remain unchanged.
+ * The video engine exposes its state via Compose `mutableStateOf`, which a [snapshotFlow]
+ * coroutine mirrors into [videoState]; the audio engine has none, so it is polled into
+ * [audioState]. Both are `StateFlow`s so non-Compose consumers (and the existing UI) remain
+ * unchanged.
  *
  * UI surface for visible video frames is rendered by mounting
  * `VideoPlayerSurface(playerState = [activeVideoPlayerState])` in the active
@@ -101,7 +108,9 @@ object GlobalMediaPlayer {
     // start does not load the native library if the user never plays media.
     @Volatile private var videoPlayer: VideoPlayerState? = null
 
-    @Volatile private var audioPlayer: VideoPlayerState? = null
+    // Audio has its own engine: the video one needs a video track on macOS and Windows and fails
+    // every audio-only file there ("Failed to retrieve video size").
+    @Volatile private var audioPlayer: AudioPlayer? = null
 
     // In-flight `openUri` for the current video track. Cancelled before a new open so two rapid
     // track switches (e.g. opening one live stream while another is still loading) can't interleave
@@ -132,9 +141,7 @@ object GlobalMediaPlayer {
 
     private const val CLOCK_POLL_MS = 250L
 
-    // How long an audio open is watched for its load to start, and then to finish, before a seek
-    // waiting on it gives up.
-    private const val AUDIO_OPEN_START_TIMEOUT_MS = 2_000L
+    // How long a seek waits for a track still opening to learn its length before it gives up.
     private const val AUDIO_OPEN_TIMEOUT_MS = 30_000L
 
     /**
@@ -209,8 +216,6 @@ object GlobalMediaPlayer {
     // settles, so the controls show this target until the engine plays and reports again.
     @Volatile private var videoSeekWhilePaused: Long? = null
 
-    @Volatile private var audioSeekWhilePaused: Long? = null
-
     // The open running on the audio engine. It applies [pendingAudioStartMillis] once the track has
     // loaded, and the next track cancels it, so a seek meant for one never lands on another.
     @Volatile private var audioOpenJob: Job? = null
@@ -223,6 +228,13 @@ object GlobalMediaPlayer {
     @Volatile private var videoDownloading = false
 
     @Volatile private var audioDownloading = false
+
+    // From handing a track to the audio engine until it reports connecting or playing: the engine
+    // says idle until then, which would read as stopped.
+    @Volatile private var audioStarting = false
+
+    // The audio engine reports errors through a listener, not its state.
+    @Volatile private var audioError: String? = null
     private var audioSyncJob: Job? = null
 
     // --- Verbs ---------------------------------------------------------------
@@ -231,6 +243,7 @@ object GlobalMediaPlayer {
         url: String,
         seekPosition: Float = 0f,
         owner: Any? = null,
+        chosen: Boolean = false,
     ) {
         // No owner (the now-playing bar, a full-screen request): whichever card shows it claims it.
         _videoSurfaceOwner.value = owner
@@ -251,6 +264,7 @@ object GlobalMediaPlayer {
             Log.d(TAG) { "playVideo reuse url=$url isPlaying=${current.isPlaying}" }
             if (startAt > 0f) loaded.seekTo(startAt * 1000f)
             if (!current.isPlaying) loaded.play()
+            if (chosen) _videoState.update { it.copy(isChosen = true) }
             return
         }
 
@@ -261,7 +275,7 @@ object GlobalMediaPlayer {
         val warm = synchronized(initLock) { warmEngines.remove(url) }
         if (warm != null) {
             if (warm.error == null) {
-                startWarmVideo(warm, url, startAt)
+                startWarmVideo(warm, url, startAt, chosen)
                 return
             }
             retireVideoPlayer(warm)
@@ -276,6 +290,7 @@ object GlobalMediaPlayer {
                         type = MediaType.VIDEO,
                         isBuffering = false,
                         errorReason = "Video playback unavailable",
+                        isChosen = chosen,
                     )
                 return
             }
@@ -299,6 +314,7 @@ object GlobalMediaPlayer {
                 isBuffering = true,
                 volume = if (muted) 0 else 100,
                 isMuted = muted,
+                isChosen = chosen,
             )
         // Only now, so the new engine's first report lands on the new video's state.
         startVideoSync(player, url)
@@ -328,6 +344,7 @@ object GlobalMediaPlayer {
         player: VideoPlayerState,
         url: String,
         startAt: Float,
+        chosen: Boolean,
     ) {
         Log.d(TAG) { "playVideo warm url=$url" }
         val previousUrl = _videoState.value.url
@@ -348,6 +365,7 @@ object GlobalMediaPlayer {
                 isBuffering = !player.hasMedia,
                 volume = if (muted) 0 else 100,
                 isMuted = muted,
+                isChosen = chosen,
             )
         startVideoSync(player, url)
 
@@ -437,6 +455,15 @@ object GlobalMediaPlayer {
                 player.volume = 0f
                 player.pause()
             }
+            // One still loading ignores that pause and starts once loaded, unseen: pause it again
+            // then, unless it became the playing video meanwhile.
+            if (player.isLoading) {
+                scope.launch(Dispatchers.Main) {
+                    withTimeoutOrNull(RETIRE_LOAD_TIMEOUT_MS) { snapshotFlow { player.isLoading }.first { !it } }
+                    val stillParked = synchronized(initLock) { warmEngines.values.any { it === player } }
+                    if (stillParked) runCatching { player.pause() }
+                }
+            }
         } else {
             retireVideoPlayer(player)
         }
@@ -491,80 +518,95 @@ object GlobalMediaPlayer {
                     scope.launch { seekAudioTo(player, startMillis) }
                 }
             }
-            if (!current.isPlaying) player.play()
+            if (!current.isPlaying) resumeAudio(player, url)
             return
         }
 
-        // Reset engine volume — see playVideo() for rationale.
-        player.volume = 1f
-
-        audioSeekWhilePaused = null
+        audioError = null
         audioDownloading = MediaHttp.isEncrypted(url)
-        _audioState.value = MediaPlaybackState(url = url, type = MediaType.AUDIO, isBuffering = true)
+        audioStarting = true
+        // Unless muted, a new track plays at the volume the bar shows.
+        val volume = if (current.isMuted) 0 else current.volume
+        player.setVolume(volume / 100f)
+        _audioState.value =
+            MediaPlaybackState(url = url, type = MediaType.AUDIO, isBuffering = true, volume = volume, isMuted = current.isMuted)
 
         // A seek waiting on the previous track's open must not land on this one.
         audioOpenJob?.cancel()
         pendingAudioStartMillis = startMillis
-        audioOpenJob =
-            scope.launch(Dispatchers.IO) {
-                // Watch for the load to start before opening: the engine flips isLoading on its own
-                // thread, so a fast open could otherwise start and finish unseen. The first value is
-                // the engine's state before this open, and says nothing about it.
-                val loadStarted = async(start = CoroutineStart.UNDISPATCHED) { snapshotFlow { player.isLoading }.drop(1).first { it } }
-                if (!openSource(player, url, _audioState) { audioDownloading = it }) {
-                    loadStarted.cancel()
-                    return@launch
-                }
-                awaitAudioLoaded(player, loadStarted)
-                pendingAudioStartMillis?.let { start ->
-                    pendingAudioStartMillis = null
-                    seekAudioTo(player, start)
-                }
-            }
+        audioOpenJob = scope.launch(Dispatchers.IO) { openAudio(player, url) }
     }
 
-    /**
-     * Waits for the open just handed to [player] to load. The audio engine is reused across tracks,
-     * so `hasMedia` alone proves nothing (Linux keeps it true from the last track): the open is done
-     * once its load has started ([loadStarted]) and then stopped. A load that came and went before
-     * it was seen leaves [loadStarted] waiting, so that wait is bounded.
-     */
-    private suspend fun awaitAudioLoaded(
-        player: VideoPlayerState,
-        loadStarted: Deferred<Boolean>,
+    /** Hands [url] to the engine, then applies the start position it was opened with, if any. */
+    private suspend fun openAudio(
+        player: AudioPlayer,
+        url: String,
     ) {
-        withTimeoutOrNull(AUDIO_OPEN_START_TIMEOUT_MS) { loadStarted.await() } ?: loadStarted.cancel()
-        withTimeoutOrNull(AUDIO_OPEN_TIMEOUT_MS) { snapshotFlow { !player.isLoading && player.hasMedia }.first { it } }
+        val source = resolveSource(url, _audioState) { audioDownloading = it }
+        if (source == null) {
+            audioStarting = false
+            return
+        }
+        player.play(source.uri, loop = false)
+        pendingAudioStartMillis?.let { start ->
+            pendingAudioStartMillis = null
+            seekAudioTo(player, start)
+        }
     }
 
     /**
-     * Seeks the loaded audio to [startMillis]. The length is not Compose state on every engine
-     * (Linux asks GStreamer on each read), so it is polled until the engine knows it.
+     * Plays the loaded track on. One that finished, or was stopped, has left the engine, which then
+     * only replays it from the start.
+     */
+    private fun resumeAudio(
+        player: AudioPlayer,
+        url: String,
+    ) {
+        if (player.currentPlayerState() == AudioPlayerState.IDLE) {
+            audioStarting = true
+            _audioState.update { it.copy(isBuffering = true) }
+            audioOpenJob?.cancel()
+            audioOpenJob = scope.launch(Dispatchers.IO) { openAudio(player, url) }
+        } else {
+            player.play()
+        }
+    }
+
+    /**
+     * Seeks the loaded audio to [startMillis]. The engine only knows the length once the track has
+     * started, so it is polled until then.
      */
     private suspend fun seekAudioTo(
-        player: VideoPlayerState,
+        player: AudioPlayer,
         startMillis: Long,
     ) {
-        val durationSeconds =
+        val durationMillis =
             withTimeoutOrNull(AUDIO_OPEN_TIMEOUT_MS) {
-                while (player.duration <= 0.0) delay(CLOCK_POLL_MS)
-                player.duration
+                var length = player.currentDuration() ?: 0L
+                while (length <= 0L) {
+                    delay(CLOCK_POLL_MS)
+                    length = player.currentDuration() ?: 0L
+                }
+                length
             } ?: return
         if (player !== audioPlayer) return
-        seekAudio((startMillis / 1000.0 / durationSeconds).toFloat())
+        seekAudio((startMillis.toDouble() / durationMillis).toFloat())
     }
 
     fun toggleVideoPlayPause() {
         val player = videoPlayer ?: return
         val state = _videoState.value
-        // A video still loading counts as playing: it starts on its own once loaded.
-        if (state.isPlaying || (state.isBuffering && !videoPauseRequested)) {
+        if (isVideoGoing(state)) {
             pauseVideo()
         } else {
             videoPauseRequested = false
             player.play()
+            _videoState.update { it.copy(isChosen = true) }
         }
     }
+
+    // A video still loading counts as playing: it starts on its own once loaded.
+    private fun isVideoGoing(state: MediaPlaybackState) = state.isPlaying || (state.isBuffering && !videoPauseRequested)
 
     /** Pauses the video, or keeps it from starting if it is still loading. */
     fun pauseVideo() {
@@ -574,7 +616,9 @@ object GlobalMediaPlayer {
 
     fun toggleAudioPlayPause() {
         val player = audioPlayer ?: return
-        if (_audioState.value.isPlaying) player.pause() else player.play()
+        val state = _audioState.value
+        val url = state.url ?: return
+        if (state.isPlaying) player.pause() else resumeAudio(player, url)
     }
 
     /** UI passes position in 0..1. kdroidFilter wants 0..1000. */
@@ -603,17 +647,19 @@ object GlobalMediaPlayer {
 
     fun seekAudio(position: Float) {
         val target = position.coerceIn(0f, 1f)
-        audioPlayer?.seekTo(target * 1000f)
-        val state = _audioState.value
-        val targetMillis = (target * state.duration).toLong()
-        audioSeekWhilePaused = if (state.isPlaying) null else targetMillis
+        val player = audioPlayer ?: return
+        val durationMillis = player.currentDuration() ?: _audioState.value.duration
+        if (durationMillis <= 0L) return
+        val targetMillis = (target * durationMillis).toLong()
+        player.seekTo(targetMillis)
         _audioState.update { it.copy(position = target, currentTime = targetMillis) }
     }
 
     /** UI passes volume in 0..100. kdroidFilter wants 0..1. */
     fun setVideoVolume(volume: Int) {
         videoPlayer?.volume = volume.coerceIn(0, 100) / 100f
-        _videoState.update { it.copy(volume = volume, isMuted = it.isMuted && volume == 0) }
+        // Turning the sound up is asking to watch it.
+        _videoState.update { it.copy(volume = volume, isMuted = it.isMuted && volume == 0, isChosen = it.isChosen || volume > 0) }
         if (volume > 0) {
             preMuteVideoVolume = volume
             defaultMuted = false
@@ -621,7 +667,7 @@ object GlobalMediaPlayer {
     }
 
     fun setAudioVolume(volume: Int) {
-        audioPlayer?.volume = volume.coerceIn(0, 100) / 100f
+        audioPlayer?.setVolume(volume.coerceIn(0, 100) / 100f)
         _audioState.update { it.copy(volume = volume, isMuted = it.isMuted && volume == 0) }
         if (volume > 0) preMuteAudioVolume = volume
     }
@@ -647,7 +693,7 @@ object GlobalMediaPlayer {
             _audioState.update { it.copy(isMuted = false) }
         } else {
             preMuteAudioVolume = state.volume.coerceAtLeast(1)
-            audioPlayer?.volume = 0f
+            audioPlayer?.setVolume(0f)
             _audioState.update { it.copy(isMuted = true, volume = 0) }
         }
     }
@@ -661,15 +707,38 @@ object GlobalMediaPlayer {
         _isFullscreen.value = false
     }
 
+    // How many cards show each video. Only touched from composition effects, on the UI thread.
+    private val shownVideos = HashMap<String, Int>()
+
+    /** A card showing [url] came on screen. */
+    fun showVideo(url: String) {
+        shownVideos[url] = (shownVideos[url] ?: 0) + 1
+    }
+
+    /** A card showing [url] left; the last one to leave lets it go when it asks to [release] it. */
+    fun hideVideo(
+        url: String,
+        release: Boolean,
+    ) {
+        val left = (shownVideos[url] ?: 1) - 1
+        if (left > 0) {
+            shownVideos[url] = left
+        } else {
+            shownVideos.remove(url)
+            if (release) releaseVideo(url)
+        }
+    }
+
     /**
      * Lets go of [url] once nothing shows it any more, as Android releases a player whose card left
-     * the screen: stops it if it is the loaded video and paused, keeping its position (as
-     * [playVideo] does for a video it replaces) for when it comes back. One still playing (resumed
-     * from the now-playing bar) or on screen in full screen is left alone.
+     * the screen: stops it if it is the loaded video, keeping its position (as [playVideo] does for
+     * a video it replaces) for when it comes back. One the user chose that is still playing keeps
+     * going in the now-playing bar, and one on screen in full screen is left alone.
      */
-    fun releaseVideo(url: String) {
+    private fun releaseVideo(url: String) {
         val state = _videoState.value
-        if (state.url != url || state.isPlaying || _isFullscreen.value) return
+        if (state.url != url || _isFullscreen.value) return
+        if (state.isChosen && isVideoGoing(state)) return
         rememberPosition(state)
         stopVideo()
     }
@@ -685,6 +754,7 @@ object GlobalMediaPlayer {
     fun stopAudio() {
         audioOpenJob?.cancel()
         pendingAudioStartMillis = null
+        audioStarting = false
         audioPlayer?.stop()
         _audioState.value = MediaPlaybackState(type = MediaType.AUDIO)
     }
@@ -729,7 +799,7 @@ object GlobalMediaPlayer {
         videoSyncJob?.cancel()
         audioSyncJob?.cancel()
         runCatching { videoPlayer?.dispose() }
-        runCatching { audioPlayer?.dispose() }
+        runCatching { audioPlayer?.release() }
         // Their delayed release dies with the scope below.
         synchronized(retiring) { retiring.toList().also { retiring.clear() } }.forEach { runCatching { it.dispose() } }
         synchronized(initLock) {
@@ -749,9 +819,8 @@ object GlobalMediaPlayer {
     // --- Engine lifecycle ----------------------------------------------------
 
     /**
-     * Opens [url] on [player]: the decrypted copy for an encrypted blob (see
-     * [DecryptedMediaFiles]; the engine would otherwise stream ciphertext), the URL itself for
-     * everything else. Returns false, with the error on [state], when the blob cannot be fetched.
+     * Opens [url] on [player] (see [resolveSource]). Returns false, with the error on [state], when
+     * it cannot be opened.
      */
     private suspend fun openSource(
         player: VideoPlayerState,
@@ -759,6 +828,28 @@ object GlobalMediaPlayer {
         state: MutableStateFlow<MediaPlaybackState>,
         downloading: (Boolean) -> Unit,
     ): Boolean {
+        val source = resolveSource(url, state, downloading) ?: return false
+        if (source.file != null) player.openFile(PlatformFile(source.file)) else player.openUri(source.uri)
+        return true
+    }
+
+    /** What an engine opens for a URL: a local [file], or a [uri] it streams. */
+    private class MediaSource(
+        val uri: String,
+        val file: File? = null,
+    )
+
+    /**
+     * What an engine should open for [url]: the decrypted copy for an encrypted blob (see
+     * [DecryptedMediaFiles]; the engine would otherwise stream ciphertext), the URL itself for
+     * everything else. Null, with the error on [state], when the blob cannot be fetched, the URL
+     * cannot go over Tor, or a newer request took the engine over meanwhile.
+     */
+    private suspend fun resolveSource(
+        url: String,
+        state: MutableStateFlow<MediaPlaybackState>,
+        downloading: (Boolean) -> Unit,
+    ): MediaSource? {
         val decrypted =
             if (MediaHttp.isEncrypted(url)) {
                 downloading(true)
@@ -769,7 +860,7 @@ object GlobalMediaPlayer {
                     if (state.value.url == url) {
                         state.update { it.copy(isBuffering = false, errorReason = "Could not download the encrypted file") }
                     }
-                    return false
+                    return null
                 } finally {
                     // Unless a newer request already started its own download.
                     if (state.value.url == url) downloading(false)
@@ -778,21 +869,17 @@ object GlobalMediaPlayer {
                 null
             }
         // A newer request took the engine over while this one was downloading.
-        if (state.value.url != url) return false
+        if (state.value.url != url) return null
+        if (decrypted != null) return MediaSource(decrypted.absolutePath, decrypted)
         // Anything else streams from the engine's own HTTP stack, unless it goes over Tor: then
         // through the relay, so the app's Tor-routed client fetches it, as on Android.
-        if (decrypted != null) {
-            player.openFile(PlatformFile(decrypted))
-            return true
-        }
         val streaming = MediaRelay.streamingUrl(url)
         if (streaming == null) {
             // It should go over Tor, which the relay can only do for http(s).
             state.update { if (it.url == url) it.copy(isBuffering = false, errorReason = "This video can't be played over Tor") else it }
-            return false
+            return null
         }
-        player.openUri(streaming)
-        return true
+        return MediaSource(streaming)
     }
 
     /**
@@ -840,12 +927,22 @@ object GlobalMediaPlayer {
         }
     }
 
-    private fun ensureAudioPlayer(): VideoPlayerState? {
+    private fun ensureAudioPlayer(): AudioPlayer? {
         if (shutDown) return null
         return audioPlayer ?: synchronized(initLock) {
-            audioPlayer ?: runCatching { createVideoPlayerState() }
-                .onSuccess { startAudioSync(it) }
-                .onFailure { Log.w(TAG, "Audio engine init failed", it) }
+            audioPlayer ?: runCatching { AudioPlayer() }
+                .onSuccess { player ->
+                    player.setOnErrorListener(
+                        object : ErrorListener {
+                            override fun onError(message: String?) {
+                                Log.w(TAG) { "Audio playback failed: $message" }
+                                audioStarting = false
+                                audioError = message ?: "Can't play this audio"
+                            }
+                        },
+                    )
+                    startAudioSync(player)
+                }.onFailure { Log.w(TAG, "Audio engine init failed", it) }
                 .getOrNull()
                 ?.also { audioPlayer = it }
         }
@@ -889,23 +986,32 @@ object GlobalMediaPlayer {
             }
     }
 
-    private fun startAudioSync(player: VideoPlayerState) {
+    /**
+     * Mirrors the audio engine into [audioState]. It has no observable state, so it is read every
+     * [CLOCK_POLL_MS] while a track is loaded.
+     */
+    private fun startAudioSync(player: AudioPlayer) {
         audioSyncJob?.cancel()
         audioSyncJob =
             scope.launch {
-                engineSnapshots(player).collect { raw ->
-                    if (player !== audioPlayer) return@collect
-                    if (raw.isPlaying) audioSeekWhilePaused = null
-                    val held = audioSeekWhilePaused
-                    val snap = if (held != null && raw.currentTime <= 0.0) raw.copy(currentTime = held / 1000.0) else raw
+                while (true) {
+                    delay(CLOCK_POLL_MS)
+                    if (player !== audioPlayer) return@launch
+                    if (_audioState.value.url == null) continue
+                    val engine = player.currentPlayerState()
+                    if (engine != null && engine != AudioPlayerState.IDLE) audioStarting = false
+                    val duration = (player.currentDuration() ?: 0L).coerceAtLeast(0L)
+                    val currentTime = (player.currentPosition() ?: 0L).coerceAtLeast(0L)
+                    val error = audioError
                     _audioState.update { current ->
+                        if (current.url == null) return@update current
                         current.copy(
-                            isPlaying = snap.isPlaying,
-                            isBuffering = snap.isLoading || audioDownloading,
-                            duration = (snap.duration * 1000.0).toLong().coerceAtLeast(0L),
-                            currentTime = (snap.currentTime * 1000.0).toLong().coerceAtLeast(0L),
-                            position = snap.positionOr(current.position),
-                            errorReason = snap.errorMessage,
+                            isPlaying = engine == AudioPlayerState.PLAYING,
+                            isBuffering = error == null && (engine == AudioPlayerState.BUFFERING || audioStarting || audioDownloading),
+                            duration = if (duration > 0L) duration else current.duration,
+                            currentTime = currentTime,
+                            position = if (duration > 0L) (currentTime.toFloat() / duration).coerceIn(0f, 1f) else current.position,
+                            errorReason = error ?: current.errorReason,
                         )
                     }
                 }

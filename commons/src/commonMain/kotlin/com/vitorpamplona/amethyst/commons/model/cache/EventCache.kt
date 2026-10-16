@@ -2867,6 +2867,17 @@ open class EventCache :
             return true
         }
 
+        if (lnurlEndpointResolver != null && recipientLnurl != null && recipientLnurlpUrl == null) {
+            // The recipient's lud16/lud06 is malformed (LnurlForm rejects its host), so no
+            // provider can vouch for this receipt. Same outcome as a failed lookup below:
+            // show it, but don't credit it.
+            Log.w("ZP") { "recipient lnurl of ${event.id} is malformed; not crediting" }
+            note.loadEvent(event, author, repliesTo)
+            attachZapToLiveActivityChannel(event, note, relay)
+            refreshNewNoteObservers(note)
+            return true
+        }
+
         val resolver = lnurlEndpointResolver
         if (resolver == null || recipientLnurlpUrl == null) {
             // No resolver configured, or recipient has no lud16/lud06 on file.

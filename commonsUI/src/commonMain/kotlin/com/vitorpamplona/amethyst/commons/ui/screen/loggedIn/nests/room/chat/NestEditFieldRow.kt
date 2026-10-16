@@ -21,6 +21,7 @@
 package com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.nests.room.chat
 
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
@@ -30,6 +31,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.input.KeyboardCapitalization
@@ -54,6 +56,7 @@ import com.vitorpamplona.amethyst.commons.ui.theme.EditFieldModifier
 import com.vitorpamplona.amethyst.commons.ui.theme.EditFieldTrailingIconModifier
 import com.vitorpamplona.amethyst.commons.ui.theme.SuggestionListDefaultHeightChat
 import com.vitorpamplona.amethyst.commons.ui.theme.placeholderText
+import com.vitorpamplona.amethyst.commons.unicodeEmoji.ui.EmojiPickerButton
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import kotlinx.collections.immutable.persistentListOf
 import kotlinx.coroutines.FlowPreview
@@ -155,12 +158,19 @@ fun NestEditFieldRow(
                 }
             },
             leadingIcon = {
-                SelectFromGallery(
-                    isUploading = nestScreenModel.isUploadingImage,
-                    tint = MaterialTheme.colorScheme.placeholderText,
-                    modifier = Modifier.height(32.dp).padding(start = 2.dp),
-                    onImageChosen = nestScreenModel::pickedMedia,
-                )
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    SelectFromGallery(
+                        isUploading = nestScreenModel.isUploadingImage,
+                        tint = MaterialTheme.colorScheme.placeholderText,
+                        modifier = Modifier.height(32.dp).padding(start = 2.dp),
+                        onImageChosen = nestScreenModel::pickedMedia,
+                    )
+                    EmojiPickerButton(
+                        nestScreenModel.emojiSuggestions?.emojiPacks,
+                        nestScreenModel.message,
+                        tint = MaterialTheme.colorScheme.placeholderText,
+                    )
+                }
             },
             colors =
                 TextFieldDefaults.colors(

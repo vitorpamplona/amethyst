@@ -117,6 +117,7 @@ import com.vitorpamplona.amethyst.commons.ui.theme.EditFieldModifier
 import com.vitorpamplona.amethyst.commons.ui.theme.EditFieldTrailingIconModifier
 import com.vitorpamplona.amethyst.commons.ui.theme.SuggestionListDefaultHeightChat
 import com.vitorpamplona.amethyst.commons.ui.theme.placeholderText
+import com.vitorpamplona.amethyst.commons.unicodeEmoji.ui.EmojiPickerButton
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.quartz.concord.cord03Channels.ConcordChannelId
 import com.vitorpamplona.quartz.concord.cord03Channels.ConcordChannelKeyring
@@ -606,6 +607,11 @@ private fun ConcordMessageComposer(
                         tint = MaterialTheme.colorScheme.placeholderText,
                         modifier = Modifier,
                         onImageChosen = newMessageModel::pickedMedia,
+                    )
+                    EmojiPickerButton(
+                        newMessageModel.emojiSuggestions?.emojiPacks,
+                        newMessageModel.message,
+                        tint = MaterialTheme.colorScheme.placeholderText,
                     )
                 }
             },

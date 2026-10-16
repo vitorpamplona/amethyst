@@ -989,7 +989,7 @@ class Account(
     val bookmarkState = BookmarkListState(signer, cache, scope)
     val gitRepositoryListState = GitRepositoryListState(signer, cache, scope)
     val pinState = PinListState(signer, cache, scope)
-    val emoji = EmojiPackState(signer, cache, scope)
+    val emoji = EmojiPackState(signer, cache, scope, settings.syncedSettings.reactions.reactionChoices)
     val ownedEmojiPacks = OwnedEmojiPacksState(signer, cache, scope)
 
     // needs `emoji` above: nickname edits resolve :shortcodes: against the account's packs

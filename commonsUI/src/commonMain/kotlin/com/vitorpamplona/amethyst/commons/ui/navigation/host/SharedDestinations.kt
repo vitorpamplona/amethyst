@@ -32,6 +32,7 @@ import com.vitorpamplona.amethyst.commons.ui.actions.nestsServers.NestsServersSc
 import com.vitorpamplona.amethyst.commons.ui.actions.paymentTargets.PaymentTargetsScreen
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.note.PayViaIntentScreen
+import com.vitorpamplona.amethyst.commons.ui.note.UpdateReactionTypeScreen
 import com.vitorpamplona.amethyst.commons.ui.note.nip22Comments.ReplyCommentPostScreen
 import com.vitorpamplona.amethyst.commons.ui.note.share.ShareNoteAsQrScreen
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.apps.recommendations.ProfileAppRecommendationsScreen
@@ -442,6 +443,7 @@ fun NavDestinations.sharedDestinations(
     composableFromEnd<Route.ComposeSettings> { ComposeSettingsScreen(accountViewModel, nav) }
     composableFromEnd<Route.UserSettings> { UserSettingsScreen(accountViewModel, nav) }
     composableFromEnd<Route.ReactionsSettings> { ReactionsSettingsScreen(accountViewModel, nav) }
+    composableFromEndArgs<Route.UpdateReactionType> { UpdateReactionTypeScreen(accountViewModel, nav) }
     composableFromEnd<Route.MessagesSettings> { MessagesSettingsScreen(accountViewModel, nav) }
     composableFromEnd<Route.AudioVisualizerSettings> { AudioVisualizerSettingsScreen(accountViewModel, nav) }
     composableFromEnd<Route.BottomBarSettings> { BottomBarSettingsScreen(accountViewModel, nav) }

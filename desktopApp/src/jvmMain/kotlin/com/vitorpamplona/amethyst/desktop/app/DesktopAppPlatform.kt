@@ -26,12 +26,14 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import com.vitorpamplona.amethyst.commons.favorites.FavoriteApp
+import com.vitorpamplona.amethyst.commons.feeds.FeedContentState
 import com.vitorpamplona.amethyst.commons.model.navigation.Route
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.platform.AppLauncher
 import com.vitorpamplona.amethyst.commons.ui.platform.AppPlatform
 import com.vitorpamplona.amethyst.commons.ui.platform.Toaster
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
+import com.vitorpamplona.amethyst.desktop.ui.map.DesktopGeocacheMapTab
 import com.vitorpamplona.quartz.utils.Log
 import kotlinx.coroutines.launch
 import java.util.concurrent.TimeUnit
@@ -86,6 +88,15 @@ class DesktopAppPlatform(
 
     @Composable
     override fun rememberAppLauncher(): AppLauncher = DesktopAppLauncher
+
+    override val hasGeocacheMap: Boolean get() = true
+
+    @Composable
+    override fun GeocacheMapTab(
+        feedContentState: FeedContentState,
+        accountViewModel: AccountViewModel,
+        nav: INav,
+    ) = DesktopGeocacheMapTab(feedContentState, accountViewModel, nav)
 
     @Composable
     override fun NotificationDeliverySettings(accountViewModel: AccountViewModel) = DesktopNotificationDeliverySettings(notifications)

@@ -91,6 +91,13 @@ dependencies {
     implementation(libs.composemediaplayer) {
         exclude(group = "org.jetbrains.kotlinx", module = "kotlinx-coroutines-test")
     }
+    // Audio-only playback (music, podcasts, voice notes) — MIT, same author; plays through Rodio
+    // (nucleus.rodio, MIT) on every desktop OS. The video engine above needs a video track on
+    // macOS and Windows and fails every audio file there. Its slf4j-simple would compete with
+    // slf4j-nop below and print the library's logs, so it is left out.
+    implementation(libs.composemediaplayer.audio) {
+        exclude(group = "org.slf4j", module = "slf4j-simple")
+    }
 
     // Thumbnail extraction — JCodec (pure-Java H.264). LGPL FFmpeg subprocess
     // for non-H.264 / HLS fallback is invoked via plain ProcessBuilder; no

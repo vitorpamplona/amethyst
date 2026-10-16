@@ -122,6 +122,10 @@
 # unlocking a collection), a reflective proxy like the ones above.
 -keep class org.gnome.keyring.** { *; }
 
+# Rodio (nucleus.rodio, behind composemediaplayer-audio): the native player reports playback
+# events and errors back through JNI callbacks that shrinking would see as unused.
+-keep class dev.nucleusframework.rodio.** { *; }
+
 # kmp-tor — loads native Tor daemon via JNI reflection
 -keep class io.matthewnelson.** { *; }
 

@@ -88,6 +88,15 @@ fun TextFieldState.insertWordAtCursor(word: String) {
     }
 }
 
+/** Replaces the selection with [text], as typing it would, leaving the cursor after it. */
+fun TextFieldState.insertAtCursor(text: String) {
+    edit {
+        val start = selection.start
+        replace(start, selection.end, text)
+        selection = TextRange(start + text.length)
+    }
+}
+
 fun TextFieldState.replaceCurrentWord(wordToInsert: String) {
     edit {
         val text = asCharSequence()

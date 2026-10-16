@@ -24,10 +24,10 @@ import com.vitorpamplona.amethyst.commons.notices.InvoiceNotice
 import com.vitorpamplona.amethyst.commons.notices.LnurlFailureDetail
 import com.vitorpamplona.amethyst.commons.notices.UserNotice
 import com.vitorpamplona.quartz.lightning.LnInvoiceUtil
-import com.vitorpamplona.quartz.lightning.Lud06
 import com.vitorpamplona.quartz.nip57Zaps.ZapRequestEvent
 import com.vitorpamplona.quartz.nip57Zaps.validate.LnurlEndpointCache
 import com.vitorpamplona.quartz.nip57Zaps.validate.LnurlEndpointInfo
+import com.vitorpamplona.quartz.nip57Zaps.validate.LnurlForm
 import com.vitorpamplona.quartz.utils.Log
 import com.vitorpamplona.quartz.utils.UrlEncoder
 import com.vitorpamplona.quartz.utils.toLongValue
@@ -44,19 +44,7 @@ import kotlin.coroutines.cancellation.CancellationException
 class LightningInvoiceResolver(
     private val transport: LnurlHttpTransport,
 ) {
-    fun assembleUrl(lnAddress: String): String? {
-        val parts = lnAddress.split("@")
-
-        if (parts.size == 2) {
-            return "https://${parts[1]}/.well-known/lnurlp/${parts[0]}"
-        }
-
-        if (lnAddress.lowercase().startsWith("lnurl")) {
-            return Lud06().toLnUrlp(lnAddress)
-        }
-
-        return null
-    }
+    fun assembleUrl(lnAddress: String): String? = LnurlForm.toUrl(lnAddress)
 
     /** A failure the user has to be told about, as a typed [notice] rather than text. */
     class LightningAddressError(

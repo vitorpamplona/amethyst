@@ -100,6 +100,7 @@ in `commonsUI`, under the same package.
 | `rendering`    | no  | UI-agnostic event rendering: `RenderedEvent`, the kind-keyed `EventRendererRegistry` (renderers under `rendering/renderers`), the `BodySpans` rich-text post-processor over `richtext`, and `rendering/json/JsonEventFormatter` (amy's `--json` shape). A Compose formatter would live in `commonsUI` under the same package. See `plans/2026-04-21-event-renderer.md`. |
 | `preview`      | no  | OpenGraph / meta-tag link-preview parsing. |
 | `emojicoder`   | no  | Variation-selector emoji encode/decode. |
+| `unicodeEmoji` | mixed | Unicode emoji palette (`UnicodeEmojiCatalog`: groups, skin tones, name search) here; the data file (`composeResources/files/emoji/emoji.tsv`, built by `tools/emoji-data/generate.py`) and the picker (`EmojiPickerButton`) in `commonsUI` `unicodeEmoji/ui`. The picker's favorites and per-pack sections come from `model/nip30CustomEmojis/EmojiPackState` (`favorites`, `myPacks`). Desktop has no system emoji keyboard. |
 | `richtext`     | no  | URL/media/pattern parsing for rich text. |
 | `blurhash`     | no  | BlurHash encode/decode (pure math; platform image bridge in platform sets). |
 | `thumbhash`    | no  | ThumbHash encode/decode. |

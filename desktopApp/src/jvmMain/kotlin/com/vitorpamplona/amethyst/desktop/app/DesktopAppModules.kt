@@ -480,6 +480,7 @@ class DesktopAppModules(
             scope = applicationIOScope,
             hooks = DesktopAccountSessionHooks(),
             remoteSignerMetadata = REMOTE_SIGNER_METADATA,
+            signerRelayRouting = torEvaluatorFlow,
         )
 
     private val _appUpdates = MutableStateFlow<AppUpdateManager?>(null)

@@ -484,6 +484,7 @@
     <string name="log_out">Wyloguj się</string>
     <string name="show_more">Pokaż Więcej</string>
     <string name="show_less">Pokaż mniej</string>
+    <string name="back_to_top">Wróć na górę</string>
     <string name="lightning_invoice">Faktura LN</string>
     <string name="invoice_expired">Wygasła</string>
     <string name="clink_lightning_offer">Oferta CLINK</string>
@@ -5196,6 +5197,8 @@
     <string name="no_reaction_type_setup_long_press_to_change">Brak wstępnie wybranych typów reakcji dla tego użytkownika. Przytrzymaj przycisk serce, aby zmienić</string>
     <string name="no_reactions_setup">Nie ustawiono odzewu</string>
     <string name="no_wallet_found">Nie znaleziono portfeli do zapłacenia faktury z Lightning. Proszę zainstalować Lightning wallet, aby używać zapów</string>
+    <string name="pay_elsewhere_title">Zapłać innym portfelem</string>
+    <string name="pay_elsewhere_description">Żadna aplikacja na tym komputerze nie umożliwia dokonania tej płatności. Zeskanuj kod za pomocą portfela w telefonie lub skopiuj go do dowolnego portfela Lightning.</string>
     <string name="no_wallet_found_with_error">Nie znaleziono portfeli do zapłacenia faktury z Lightning (Error: %1$s). Proszę zainstalować Lightning wallet, aby używać zapów</string>
     <string name="no_zap_amount_setup_long_press_to_change">Nie ustawiono kwoty zap-a. Naciśnij i przytrzymaj, aby zmienić</string>
     <string name="notification_service_accounts_title">Konta aktywne w tle</string>
@@ -5797,6 +5800,12 @@
     <string name="route_new_geocache">Ukryj skrzynkę</string>
     <string name="route_new_geocache_hunt">Nowe polowanie</string>
     <string name="route_notifications">Powiadomienia</string>
+    <plurals name="notification_panel_folded_new">
+        <item quantity="one">Powiadomienia, %1$d nowe</item>
+        <item quantity="few">Powiadomienia, %1$d nowych</item>
+        <item quantity="many">Powiadomienia, %1$d nowych</item>
+        <item quantity="other">Powiadomienia, %1$d nowe</item>
+    </plurals>
     <string name="route_podcast_episodes">Odcinki</string>
     <string name="route_podcasts">Podcasty</string>
     <string name="schedule_post_button_add">Zaplanuj post</string>
@@ -6373,6 +6382,10 @@
     <string name="browser_pill_info_site_data_desc">Loginy i preferencje tej witryny zapisane dla tego konta</string>
     <string name="browser_pill_info_clear">Wyczyść dane witryny</string>
     <string name="browser_pill_info_clear_confirm">Wylogować się z tej witryny i usunąć dane?</string>
+    <string name="browser_pill_info_clear_all">Wyczyść dane wszystkich witryn</string>
+    <string name="browser_pill_info_clear_all_confirm">Czy chcesz wylogować się ze wszystkich stron, które odwiedziłeś przy użyciu tego konta, oraz usunąć wszystkie pliki cookie i dane z tych stron? Spowoduje to również zresetowanie danych zapisanych przez aplikacje internetowe Nostr.</string>
+    <string name="browser_pill_info_all_cleared">Wyczyszczono pliki cookie i dane dla wszystkich stron</string>
+    <string name="browser_pill_site_data_desc">Zapisane dane logowania, pliki cookie i lokalizacje przechowywania danych</string>
     <string name="backup_action_block_again">Zablokuj %1$s ponownie</string>
     <string name="backup_action_keep_count">Zachowaj %1$s</string>
     <string name="backup_action_rejoin">Ponów %1$s</string>
@@ -7360,9 +7373,7 @@
     <string name="privacy_lock_messages_locked_description">Odblokuj aby czytać lub wysyłać prywatne wiadomości.</string>
     <string name="privacy_lock_wallet_locked">Portfel jest zablokowany</string>
     <string name="privacy_lock_wallet_locked_description">Odblokuj, aby zobaczyć swoje saldo i wysyłać lub odbierać satosze.</string>
-    <string name="custom_emoji_picker_open">Wstaw własny emotikon</string>
     <string name="custom_emoji_picker_search">Szukaj emotikonów</string>
-    <string name="custom_emoji_picker_empty">Na razie nie ma żadnych niestandardowych emotikonów. Dodaj zestawy emotikonów do swojej listy, aby móc z nich korzystać w tym miejscu.</string>
     <string name="custom_emoji_picker_no_match">Nie ma emotikonów pasujących do tej nazwy</string>
     <string name="custom_feeds_manage">Zarządzaj swoimi kanałami</string>
     <string name="feed_group_custom">Twoje kanały</string>

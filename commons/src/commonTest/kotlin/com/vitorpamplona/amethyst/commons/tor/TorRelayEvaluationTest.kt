@@ -35,6 +35,7 @@ class TorRelayEvaluationTest {
     private val trustedRelay = NormalizedRelayUrl("wss://trusted.relay.com/")
     private val moneyRelay = NormalizedRelayUrl("wss://wallet.relay.com/")
     private val assumedRelay = NormalizedRelayUrl("wss://assumed.relay.com/")
+    private val signerRelay = NormalizedRelayUrl("wss://relay.nip46.com/")
 
     private fun buildEvaluation(
         torType: TorType = TorType.INTERNAL,
@@ -47,6 +48,7 @@ class TorRelayEvaluationTest {
         trustedRelays: Set<NormalizedRelayUrl> = setOf(trustedRelay),
         moneyOpRelays: Set<NormalizedRelayUrl> = setOf(moneyRelay),
         assumedRelays: Set<NormalizedRelayUrl> = setOf(assumedRelay),
+        signerRelays: Set<NormalizedRelayUrl> = setOf(signerRelay),
     ) = TorRelayEvaluation(
         torSettings =
             TorRelaySettings(
@@ -62,9 +64,42 @@ class TorRelayEvaluationTest {
                 trusted = trustedRelays,
                 dm = dmRelays,
                 moneyOp = moneyOpRelays,
+                signer = signerRelays,
                 assumed = assumedRelays,
             ),
     )
+
+    // --- NIP-46 signer relays: chosen by the user, so treated like their own lists ---
+
+    /** The default settings send new relays over Tor but reach the remote signer directly. */
+    @Test
+    fun signerRelay_followsTrustedPreference() {
+        assertFalse(buildEvaluation(trustedViaTor = false, newViaTor = true).useTor(signerRelay))
+        assertTrue(buildEvaluation(trustedViaTor = true, newViaTor = false).useTor(signerRelay))
+    }
+
+    /** Before the login registers them, the same relays are strangers: the bug being fixed. */
+    @Test
+    fun unregisteredSignerRelay_isANewRelay() {
+        assertTrue(buildEvaluation(trustedViaTor = false, newViaTor = true, signerRelays = emptySet()).useTor(signerRelay))
+    }
+
+    /** Being a signer relay never loosens the policy of an onion, DM or wallet relay. */
+    @Test
+    fun signerRelay_neverOverridesOnionDmOrMoney() {
+        val eval =
+            buildEvaluation(
+                trustedViaTor = false,
+                onionViaTor = true,
+                dmViaTor = true,
+                moneyViaTor = true,
+                signerRelays = setOf(signerRelay, onionRelay, dmRelay, moneyRelay),
+            )
+        assertFalse(eval.useTor(signerRelay))
+        assertTrue(eval.useTor(onionRelay))
+        assertTrue(eval.useTor(dmRelay))
+        assertTrue(eval.useTor(moneyRelay))
+    }
 
     // --- assumed relays: the app's stand-in while the user's lists are unknown ---
 

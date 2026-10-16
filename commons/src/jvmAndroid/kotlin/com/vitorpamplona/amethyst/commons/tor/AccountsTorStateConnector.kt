@@ -24,6 +24,7 @@ import com.vitorpamplona.amethyst.commons.account.AccountCacheState
 import com.vitorpamplona.amethyst.commons.model.Account
 import com.vitorpamplona.amethyst.commons.tor.TorRelayState
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
+import com.vitorpamplona.quartz.nip46RemoteSigner.NostrConnectURI
 import com.vitorpamplona.quartz.utils.Log
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -35,18 +36,19 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.emitAll
+import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.transformLatest
 
 /**
- * Pushes the relay classifications [TorRelayState] needs — which relays are DM, trusted, guessed, or
- * money-operation relays — as a union across every logged-in account.
+ * Pushes the relay classifications [TorRelayState] needs — which relays are DM, trusted, guessed,
+ * money-operation or remote-signer relays — as a union across every logged-in account.
  *
- * All four are the same fold: pick one set per account, union them, publish. It used to be written
+ * All five are the same fold: pick one set per account, union them, publish. It used to be written
  * out four times at ~30 lines each, and the copies had already drifted apart in trivial ways (an
  * `if (isEmpty)` guard that could never fire, differently-named accumulators). Sharing one
- * implementation is what keeps a fifth classification from being another 30 lines of the same
+ * implementation is what keeps the next classification from being another 30 lines of the same
  * thing — and, more importantly, from being 30 lines that quietly forget a step.
  */
 class AccountsTorStateConnector(
@@ -151,6 +153,25 @@ class AccountsTorStateConnector(
                 }
             },
             publish = { torEvaluatorFlow.moneyOpRelays.tryEmit(it) },
+        )
+
+    /**
+     * NIP-46 relays each account reaches its remote signer on, from its saved bunker address. They
+     * follow the trusted-relay preference instead of the new-relay one, which put every signature
+     * behind Tor.
+     */
+    val allSignerRelaysFlow: StateFlow<Set<NormalizedRelayUrl>> =
+        unionAcrossAccounts(
+            accountsCache,
+            scope,
+            select = { account ->
+                flowOf(
+                    account.settings.remoteSignerBunkerUri
+                        ?.let { NostrConnectURI.parseBunker(it)?.relays }
+                        ?: emptySet(),
+                )
+            },
+            publish = { torEvaluatorFlow.signerRelays.tryEmit(it) },
         )
 
     @Volatile private var lastAssumedCount: Int = -1
