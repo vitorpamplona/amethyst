@@ -834,9 +834,15 @@ class QueryBuilder(
 
         val reverseLookup = nonDTagsIn.isNotEmpty() || nonDTagsAll.isNotEmpty()
 
+        // `#d` lives in event_headers.d_tag, whether it came under tags or
+        // tagsAll (STORE-F05). Reading only tags["d"] here dropped a tagsAll d
+        // from the tag-join/union/count/delete paths, so a delete whose only
+        // field was tagsAll d deleted every row.
+        val dTags = filter.dTagValues()
+
         val needHeaders =
             with(filter) {
-                (ids != null) || (tags != null && tags.containsKey("d"))
+                (ids != null) || (dTags != null)
             }
 
         val hasHeaders =
@@ -844,7 +850,7 @@ class QueryBuilder(
                 (ids != null) ||
                     (authors != null && authors.isNotEmpty()) ||
                     (kinds != null && kinds.isNotEmpty()) ||
-                    (tags != null && tags.containsKey("d")) ||
+                    (dTags != null) ||
                     (since != null) ||
                     (until != null) ||
                     (limit != null)
@@ -957,10 +963,8 @@ class QueryBuilder(
                     }
 
                     // there are indexes for these, starting with tags.
-                    filter.tags?.forEach { (tagName, tagValues) ->
-                        if (tagName == "d") {
-                            equalsOrIn("event_headers.d_tag", tagValues)
-                        }
+                    dTags?.let {
+                        equalsOrIn("event_headers.d_tag", it)
                     }
                 } else {
                     filter.kinds?.let {
@@ -971,10 +975,8 @@ class QueryBuilder(
                     }
 
                     // there are indexes for these, starting with tags.
-                    filter.tags?.forEach { (tagName, tagValues) ->
-                        if (tagName == "d") {
-                            equalsOrIn("event_headers.d_tag", tagValues)
-                        }
+                    dTags?.let {
+                        equalsOrIn("event_headers.d_tag", it)
                     }
 
                     filter.since?.let {
@@ -1232,7 +1234,7 @@ class QueryBuilder(
             ids = ids,
             authors = authors,
             kinds = kinds,
-            dTags = tags?.get("d") ?: tagsAll?.get("d"),
+            dTags = dTagValues(),
             nonDTagsIn = tags?.filter { it.key != "d" }?.ifEmpty { null },
             nonDTagsAll = tagsAll?.filter { it.key != "d" }?.ifEmpty { null },
             since = since,
@@ -1240,6 +1242,13 @@ class QueryBuilder(
             limit = limit,
             search = search,
         )
+
+    /**
+     * The `#d` values a filter matches against `event_headers.d_tag` (STORE-F05): `tags["d"]`,
+     * else `tagsAll["d"]` (an event has one d-tag, so AND-across-values degrades to IN). Every
+     * path reads it from here so none of them can drop it.
+     */
+    fun Filter.dTagValues(): List<String>? = tags?.get("d") ?: tagsAll?.get("d")
 
     data class QuerySpec(
         val sql: String,
