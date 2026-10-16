@@ -4,8 +4,8 @@ Every concrete `SearchableEvent` implementor in Quartz, with the exact `indexabl
 expression. **Update this file in the same PR as any change to the searchable set or to an
 `indexableContent()` body** (see the maintenance list in this skill's SKILL.md). Verified against the code 2026-10-08.
 
-Counts: 201 concrete classes covering 201 kind values (`GitStatusEvent` spans 4 kinds;
-kind 30063 is shared by two NIPs, kind 38000 by three classes, kind 30301 by two and kind 38385 with other apps — see the footnotes). The kind
+Counts: 204 concrete classes covering 204 kind values (`GitStatusEvent` spans 4 kinds;
+kind 30063 is shared by two NIPs, kind 38000 by three classes, kind 30301 by two, kind 38385 with other apps and kinds 30405 / 30406 with Shopstr — see the footnotes). The kind
 set is exactly `SearchableKinds.ALL` (`nip50Search/SearchableKinds.kt`). File paths are under
 `quartz/src/commonMain/kotlin/com/vitorpamplona/quartz/`.
 
@@ -145,12 +145,15 @@ Separator legend: **NL** = `joinToString("\n")`, **SP** = `joinToString(" ")`.
 | 30394 | AddressableTrustedListEvent | experimental/trustedLists/addressables | inherited `TrustedListEvent`: `title() ?: ""` |
 | 30395 | ExternalIdTrustedListEvent | experimental/trustedLists/externalIds | inherited `TrustedListEvent`: `title() ?: ""` |
 | 30402 | ClassifiedsEvent | nip99Classifieds | `(listOfNotNull(title(), summary(), content, location()) + categories())` NL |
+| 30405 | ProductCollectionEvent | nip99Classifieds/collection | `(listOfNotNull(title(), summary(), content, location()) + categories())` NL — Shopstr's encrypted carts on this kind parse as `UnrecognizedKind30405Event` and are not indexed |
+| 30406 | ShippingOptionEvent | nip99Classifieds/shipping | `listOfNotNull(title(), carrier(), content, location())` NL — Shopstr's escrow records on this kind parse as `UnrecognizedKind30406Event` and are not indexed |
 | 30617 | GitRepositoryEvent | nip34Git/repository | `(listOfNotNull(name(), description(), content) + hashtags())` NL |
 | 30620 | WorkflowDefEvent | buzz/workflow | `listOfNotNull(name(), content)` NL |
 | 30621 | ProjectEvent | buzz/mpProjects | `listOfNotNull(displayName(), description())` NL |
 | 30817 | NipTextEvent | experimental/nipsOnNostr | `listOfNotNull(title(), content)` NL |
 | 30818 | WikiArticleEvent | nip54Wiki | `listOfNotNull(title(), summary(), content)` NL |
 | 31337 | AudioTrackEvent | experimental/audio/track | `listOfNotNull(subject())` NL |
+| 31555 | ProductReviewEvent | nip99Classifieds/review | `content` (the review text) |
 | 31871 | AttestationEvent | experimental/attestations/attestation | `content` |
 | 31872 | AttestationRequestEvent | experimental/attestations/request | `content` |
 | 31873 | AttestorRecommendationEvent | experimental/attestations/recommendation | `listOfNotNull(description())` NL |

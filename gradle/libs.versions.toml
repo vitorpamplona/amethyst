@@ -40,6 +40,8 @@ healthConnect = "1.1.0"
 jackson = "2.22.3"
 jacksonModuleKotlin = "2.22.3"
 jna = "5.19.1"
+# Hunspell spell checking for the desktop composers (pure Java, Apache-2.0).
+lucene = "10.5.1"
 javaKeyring = "1.0.4"
 kmpTorRuntime = "2.6.0"
 kmpTorResource = "409.5.0"
@@ -214,7 +216,10 @@ google-mlkit-language-id = { group = "com.google.mlkit", name = "language-id", v
 google-mlkit-translate = { group = "com.google.mlkit", name = "translate", version.ref = "translate" }
 jackson-databind = { group = "com.fasterxml.jackson.core", name = "jackson-databind", version.ref = "jackson" }
 jackson-module-kotlin = { group = "com.fasterxml.jackson.module", name = "jackson-module-kotlin", version.ref = "jacksonModuleKotlin" }
+jackson-dataformat-yaml = { group = "com.fasterxml.jackson.dataformat", name = "jackson-dataformat-yaml", version.ref = "jackson" }
+apksig = { group = "com.android.tools.build", name = "apksig", version.ref = "agp" }
 jna = { group = "net.java.dev.jna", name = "jna", version.ref = "jna" }
+lucene-analysis-common = { group = "org.apache.lucene", name = "lucene-analysis-common", version.ref = "lucene" }
 java-keyring = { group = "com.github.javakeyring", name = "java-keyring", version.ref = "javaKeyring" }
 kmp-tor-runtime = { group = "io.matthewnelson.kmp-tor", name = "runtime", version.ref = "kmpTorRuntime" }
 kmp-tor-resource-exec-tor = { group = "io.matthewnelson.kmp-tor", name = "resource-exec-tor", version.ref = "kmpTorResource" }

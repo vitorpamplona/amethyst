@@ -70,6 +70,7 @@ import com.vitorpamplona.amethyst.commons.resources.wallet_creating_invoice
 import com.vitorpamplona.amethyst.commons.resources.wallet_description
 import com.vitorpamplona.amethyst.commons.resources.wallet_receive
 import com.vitorpamplona.amethyst.commons.resources.wallet_sats
+import com.vitorpamplona.amethyst.commons.ui.components.SpellCheckedOutlinedTextField
 import com.vitorpamplona.amethyst.commons.ui.components.rememberViewModel
 import com.vitorpamplona.amethyst.commons.ui.components.util.setText
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
@@ -144,7 +145,7 @@ fun WalletReceiveScreen(
 
                     Spacer(modifier = Modifier.height(12.dp))
 
-                    OutlinedTextField(
+                    SpellCheckedOutlinedTextField(
                         value = descriptionText,
                         onValueChange = { descriptionText = it },
                         label = { Text(stringRes(Res.string.wallet_description)) },

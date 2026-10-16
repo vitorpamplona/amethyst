@@ -72,6 +72,7 @@ import com.vitorpamplona.amethyst.cli.commands.ProfileCommands
 import com.vitorpamplona.amethyst.cli.commands.PublishCommand
 import com.vitorpamplona.amethyst.cli.commands.RelayCommands
 import com.vitorpamplona.amethyst.cli.commands.RelayGroupCommands
+import com.vitorpamplona.amethyst.cli.commands.ReleasesCommands
 import com.vitorpamplona.amethyst.cli.commands.SearchCommand
 import com.vitorpamplona.amethyst.cli.commands.ServeCommand
 import com.vitorpamplona.amethyst.cli.commands.SnoCommands
@@ -311,6 +312,7 @@ private suspend fun dispatch(argv: Array<String>): Int {
         "pow" -> PowCommands.dispatch(dataDir, tail)
         "nsite" -> NsiteCommands.dispatch(dataDir, tail)
         "napplet" -> NappletCommands.dispatch(dataDir, tail)
+        "releases" -> ReleasesCommands.dispatch(dataDir, tail)
         "store" -> StoreCommands.dispatch(dataDir, tail)
         "follow" -> FollowCommand.follow(dataDir, tail)
         "unfollow" -> FollowCommand.unfollow(dataDir, tail)
@@ -375,6 +377,7 @@ private fun printVerbList() {
         |  relays:      relay admin serve store
         |  trust:       trust graperank fof
         |  media/sites: blossom nsite napplet podcast podcast20 git
+        |  releases:    releases
         |  payments:    cashu offer debit
         |  signing:     bunker
         """.trimMargin(),
@@ -728,6 +731,15 @@ private fun printUsage() {
         |        [--max-inline-bytes N]                 (--d selects a kind:35129 named napplet, else
         |  napplet fetch --snapshot EVENT-ID            the kind:15129 root; --snapshot pins a kind:5129
         |        [--path P] …                            immutable snapshot by event id)
+        |
+        |Releases (NIP-82: the desktop app's updater, Zapstore and Orchard):
+        |  releases publish DIR --version X.Y.Z          sign + publish the release of every app with
+        |        [--only desktop|android|flatpak]        files in DIR (desktop files; APKs as zsp
+        |        [--listing] [--zapstore-yaml F]         does, apksig-checked; Flatpak bundles for
+        |        [--blossom URL]                         Orchard). Amethyst's key only unless
+        |        [--android-flavor F] [--android-abis A]  --any-key; --dry-run signs + prints
+        |        [--notes-file F] [--url-base URL]       (`amy releases --help` for details)
+        |        [--relay URL[,URL]] [--dry-run] [--any-key]
         |
         |Contacts (NIP-02 kind:3):
         |  follow USER [--timeout SECS]               add USER to your contact list

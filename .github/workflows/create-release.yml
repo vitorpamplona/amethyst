@@ -61,7 +61,7 @@ jobs:
         # Windows users get that until either the runner image gains WiX or
         # jpackage learns the WiX 4+ CLI.
         include:
-          - { os: macos-14,         arch: arm64, family: macos,          tasks: "packageReleaseDmg" }
+          - { os: macos-15,         arch: arm64, family: macos,          tasks: "packageReleaseDmg" }
           - { os: windows-latest,   arch: x64,   family: windows,        tasks: "packageReleaseMsi createReleaseDistributable" }
           - { os: windows-11-arm,   arch: arm64, family: windows,        tasks: "createReleaseDistributable" }
           - { os: ubuntu-latest,    arch: x64,   family: linux,          tasks: "packageReleaseDeb packageReleaseRpm" }
@@ -119,8 +119,9 @@ jobs:
         if: matrix.family == 'linux-portable'
         run: |
           set -euo pipefail
-          # appimagetool 1.9.0 validates the .desktop file via desktop-file-validate.
-          sudo apt-get update && sudo apt-get install -y desktop-file-utils
+          # appimagetool 1.9.0 validates the .desktop file via desktop-file-validate, and writes the
+          # AppImage's .zsync (delta updates) only when zsyncmake is installed.
+          sudo apt-get update && sudo apt-get install -y desktop-file-utils zsync
           # Map runner arch → upstream AppImage suffix (x86_64 / aarch64).
           case "${{ matrix.arch }}" in
             x64)   TOOL_ARCH=x86_64 ; EXPECTED_SHA="$APPIMAGETOOL_SHA256_X86_64" ;;
@@ -454,7 +455,7 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - { os: macos-14,         arch: arm64, family: macos,   tasks: "amyImage" }
+          - { os: macos-15,         arch: arm64, family: macos,   tasks: "amyImage" }
           - { os: ubuntu-latest,    arch: x64,   family: linux,   tasks: "amyImage jpackageDeb jpackageRpm" }
           - { os: ubuntu-24.04-arm, arch: arm64, family: linux,   tasks: "amyImage jpackageDeb jpackageRpm" }
           # Windows legs: only amyImage. .deb/.rpm are Linux-only jpackage types
@@ -712,7 +713,7 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - { os: macos-14,         arch: arm64, family: macos,   tasks: "geodeImage" }
+          - { os: macos-15,         arch: arm64, family: macos,   tasks: "geodeImage" }
           - { os: ubuntu-latest,    arch: x64,   family: linux,   tasks: "geodeImage jpackageDeb jpackageRpm" }
           - { os: ubuntu-24.04-arm, arch: arm64, family: linux,   tasks: "geodeImage jpackageDeb jpackageRpm" }
           # Windows legs: geodeImage only. The .deb/.rpm are Linux-only; MSI is

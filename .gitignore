@@ -42,6 +42,8 @@ docs/superpowers
 
 # Built application files
 *.apk
+# Signed and unsigned test APKs for ApkInspectorTest (25 KB, built by aapt2 + apksigner).
+!commons/src/jvmTest/resources/appupdate/*.apk
 *.aar
 *.ap_
 *.aab
@@ -195,6 +197,3 @@ benchmark/src/main/jniLibs/
 # Cargo build artifacts for the cross-stack interop sidecars at
 # nestsClient/tests/hang-interop/. Cargo.lock is committed (binary workspace).
 /nestsClient/tests/hang-interop/target/
-
-# Orchard publish tree, extracted from the release bundle (RELEASE_OPS.md § Orchard)
-desktopApp/packaging/orchard/tree/

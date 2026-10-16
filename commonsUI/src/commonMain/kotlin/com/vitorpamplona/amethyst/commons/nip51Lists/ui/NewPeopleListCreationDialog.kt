@@ -40,6 +40,7 @@ import com.vitorpamplona.amethyst.commons.resources.follow_set_creation_action_b
 import com.vitorpamplona.amethyst.commons.resources.follow_set_creation_desc_label
 import com.vitorpamplona.amethyst.commons.resources.follow_set_creation_dialog_title
 import com.vitorpamplona.amethyst.commons.resources.follow_set_creation_name_label
+import com.vitorpamplona.amethyst.commons.ui.components.SpellCheckedTextField
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.DoubleVertSpacer
 import org.jetbrains.compose.resources.StringResource
@@ -81,7 +82,7 @@ fun NewPeopleListCreationDialog(
                 )
                 Spacer(modifier = DoubleVertSpacer)
                 // For the set description
-                TextField(
+                SpellCheckedTextField(
                     value =
                         (
                             if (newListDescription.value != null) newListDescription.value else ""

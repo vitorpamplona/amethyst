@@ -59,6 +59,8 @@ data class DrawerSection(
      * True for a section that renders rows of its own on top of its catalog items (see [CatalogSection]).
      * Such a section stays in the drawer even with every catalog row switched off, and — since a fixed
      * row is not a catalog destination — it never appears in the Side Menu settings screen's counts.
+     * A fixed row can still be build-gated (HLS upload needs the front end's screen); when every fixed
+     * row of a section is gated off, CatalogSection drops the section like any other empty one.
      */
     val hasFixedRows: Boolean = false,
 )

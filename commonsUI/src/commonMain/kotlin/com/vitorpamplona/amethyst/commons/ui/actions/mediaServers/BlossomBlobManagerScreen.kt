@@ -58,7 +58,6 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -126,6 +125,7 @@ import com.vitorpamplona.amethyst.commons.resources.manage_stored_files_empty
 import com.vitorpamplona.amethyst.commons.resources.my_blossom_data
 import com.vitorpamplona.amethyst.commons.resources.quick_action_share
 import com.vitorpamplona.amethyst.commons.resources.retry
+import com.vitorpamplona.amethyst.commons.ui.components.SpellCheckedOutlinedTextField
 import com.vitorpamplona.amethyst.commons.ui.components.edgeToEdgeDialogProperties
 import com.vitorpamplona.amethyst.commons.ui.components.rememberModalSheetState
 import com.vitorpamplona.amethyst.commons.ui.components.rememberTextSharer
@@ -900,7 +900,7 @@ private fun BlossomReportDialog(
                         }
                     }
                 }
-                OutlinedTextField(
+                SpellCheckedOutlinedTextField(
                     value = comment,
                     onValueChange = { comment = it },
                     label = { Text(stringRes(Res.string.blossom_report_comment_hint)) },

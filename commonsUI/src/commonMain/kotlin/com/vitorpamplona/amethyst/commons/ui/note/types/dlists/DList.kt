@@ -344,7 +344,6 @@ fun RenderDListItem(
             listedNote?.let { note ->
                 {
                     routeFor(note, accountViewModel.account)?.let { route -> nav.nav(route) }
-                    Unit
                 }
             }
 

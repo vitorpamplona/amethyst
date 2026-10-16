@@ -21,6 +21,7 @@
 package com.vitorpamplona.quartz.nip99Classifieds
 
 import androidx.compose.runtime.Immutable
+import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.nip01Core.core.BaseAddressableEvent
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
@@ -57,6 +58,7 @@ import com.vitorpamplona.quartz.nip50Search.SearchableEvent
 import com.vitorpamplona.quartz.nip57Zaps.splits.zapSplitHints
 import com.vitorpamplona.quartz.nip57Zaps.splits.zapSplitPubKeys
 import com.vitorpamplona.quartz.nip92IMeta.imetas
+import com.vitorpamplona.quartz.nip99Classifieds.collection.ProductCollectionEvent
 import com.vitorpamplona.quartz.nip99Classifieds.tags.ConditionTag
 import com.vitorpamplona.quartz.nip99Classifieds.tags.LocationTag
 import com.vitorpamplona.quartz.nip99Classifieds.tags.PriceTag
@@ -156,6 +158,35 @@ class ClassifiedsEvent(
     fun price() = tags.firstNotNullOfOrNull(PriceTag::parse)
 
     fun location() = tags.firstNotNullOfOrNull(LocationTag::parse)
+
+    fun geohash() = tags.geohash()
+
+    // The Open Markets product tags (the e-commerce extension NIP-99 links to).
+
+    fun productType() = tags.productType()
+
+    fun visibility() = tags.visibility()
+
+    fun isHidden() = tags.isHidden()
+
+    fun stock() = tags.stock()
+
+    fun specs() = tags.specs()
+
+    fun shippingOptions() = tags.shippingOptions()
+
+    /** The kind-30405 collections this product names with `a` tags. */
+    fun collections(): List<Address> = tags.addressesOfKind(ProductCollectionEvent.KIND)
+
+    /**
+     * The `variable` product a variation belongs to (the spec allows exactly one such `a`). Null on
+     * anything but a variation, and never the listing itself: other apps tag a listing's own address.
+     */
+    fun parentProduct(): Address? {
+        if (productType()?.isVariation() != true) return null
+        val self = address()
+        return tags.addressesOfKind(KIND).firstOrNull { it != self }
+    }
 
     override fun publishedAt(): Long? {
         val publishedAt = tags.firstNotNullOfOrNull(PublishedAtTag::parse)

@@ -87,6 +87,7 @@ import com.vitorpamplona.amethyst.desktop.service.images.DesktopImageLoaderSetup
 import com.vitorpamplona.amethyst.desktop.service.media.GlobalMediaPlayer
 import com.vitorpamplona.amethyst.desktop.service.media.MediaHttp
 import com.vitorpamplona.amethyst.desktop.service.scheduledposts.runHeadlessPublish
+import com.vitorpamplona.amethyst.desktop.spellcheck.DesktopSpellCheck
 import com.vitorpamplona.amethyst.desktop.ui.media.GlobalFullscreenOverlay
 import com.vitorpamplona.amethyst.desktop.ui.media.LocalAwtWindow
 import com.vitorpamplona.amethyst.desktop.ui.media.LocalIsImmersiveFullscreen
@@ -178,7 +179,14 @@ fun main(args: Array<String>) {
     )
 
     val services = DesktopAppServices(modules)
-    val platform = DesktopAppPlatform(appVersionName = version, isDebugBuild = isDebug, notifications = modules.notifications)
+    val spellCheck = DesktopSpellCheck(filesDir, version, modules.uiPrefs.spellCheck, modules.applicationIOScope)
+    val platform =
+        DesktopAppPlatform(
+            appVersionName = version,
+            isDebugBuild = isDebug,
+            notifications = modules.notifications,
+            desktopSpellCheck = spellCheck,
+        )
     val root = DesktopAppRoot(modules)
 
     application {
@@ -207,6 +215,9 @@ fun main(args: Array<String>) {
                     withContext(Dispatchers.IO) { savedBounds.save(bounds) }
                 }
         }
+
+        // The updater quits through here, as the Quit menu does: windows close, then the JVM exits.
+        LaunchedEffect(Unit) { modules.quitRequests.collect { exitApplication() } }
 
         // Bumped to rebuild the window after a crash the user reports from the crash window: the
         // crashed composition can't be reused, but the session, account and size carry over.

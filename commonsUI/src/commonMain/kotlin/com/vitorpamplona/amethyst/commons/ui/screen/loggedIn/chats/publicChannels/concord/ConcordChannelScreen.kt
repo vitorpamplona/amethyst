@@ -588,6 +588,7 @@ private fun ConcordMessageComposer(
                 newMessageModel.pickedMedia(persistentListOf(SelectedMedia(uri, mimeType)))
             },
             inputTransformation = MentionPreservingInputTransformation,
+            spellCheck = true,
             outputTransformation = UrlUserTagOutputTransformation(MaterialTheme.colorScheme.primary),
             modifier = Modifier.fillMaxWidth(),
             shape = EditFieldBorder,

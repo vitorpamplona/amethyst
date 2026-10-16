@@ -103,6 +103,7 @@ import com.vitorpamplona.amethyst.commons.resources.relay_group_section_discover
 import com.vitorpamplona.amethyst.commons.resources.relay_group_section_discovery_desc
 import com.vitorpamplona.amethyst.commons.resources.relay_group_section_permissions
 import com.vitorpamplona.amethyst.commons.ui.actions.uploads.GallerySelectSingle
+import com.vitorpamplona.amethyst.commons.ui.components.SpellCheckedOutlinedTextField
 import com.vitorpamplona.amethyst.commons.ui.components.rememberViewModel
 import com.vitorpamplona.amethyst.commons.ui.insets.imePaddingSafe
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
@@ -413,7 +414,7 @@ private fun GroupMetadataFields(viewModel: RelayGroupMetadataViewModel) {
         modifier = Modifier.fillMaxWidth(),
     )
 
-    OutlinedTextField(
+    SpellCheckedOutlinedTextField(
         value = viewModel.about.value,
         onValueChange = {
             viewModel.about.value = it

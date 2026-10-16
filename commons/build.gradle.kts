@@ -146,6 +146,11 @@ kotlin {
                 // EXIF stripping for image uploads (used by service/upload/MediaCompressor).
                 implementation(libs.commons.imaging)
 
+                // APK inspection for `amy releases publish` (appupdate/ApkInspector): signature
+                // verification, signer certificate and manifest fields. Google's own library,
+                // Apache-2.0, the version the Android Gradle plugin ships.
+                implementation(libs.apksig)
+
                 // Image re-encode + progressive downscale (used by service/upload/ImageReencoder).
                 // Pure-Java, MIT. See docs/plans/2026-06-08-feat-desktop-image-compression-plan.md.
                 implementation(libs.thumbnailator)

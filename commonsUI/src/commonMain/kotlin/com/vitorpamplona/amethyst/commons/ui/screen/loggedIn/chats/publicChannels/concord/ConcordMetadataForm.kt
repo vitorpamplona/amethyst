@@ -74,6 +74,7 @@ import com.vitorpamplona.amethyst.commons.resources.failed_to_upload_media_no_de
 import com.vitorpamplona.amethyst.commons.resources.remove
 import com.vitorpamplona.amethyst.commons.ui.actions.uploads.GallerySelectSingle
 import com.vitorpamplona.amethyst.commons.ui.components.RobohashFallbackAsyncImage
+import com.vitorpamplona.amethyst.commons.ui.components.SpellCheckedOutlinedTextField
 import com.vitorpamplona.amethyst.commons.ui.components.rememberLongNotice
 import com.vitorpamplona.amethyst.commons.ui.components.util.setText
 import com.vitorpamplona.amethyst.commons.ui.loadStringRes
@@ -135,7 +136,7 @@ fun ConcordMetadataFields(
             isError = !concordNameFits(name.value),
             supportingText = { ConcordNameBudget(name.value) },
         )
-        OutlinedTextField(
+        SpellCheckedOutlinedTextField(
             value = about.value,
             onValueChange = { about.value = it },
             modifier = Modifier.fillMaxWidth(),

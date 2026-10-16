@@ -123,6 +123,7 @@ import com.vitorpamplona.amethyst.commons.resources.cordn_share_copy
 import com.vitorpamplona.amethyst.commons.resources.cordn_share_explainer
 import com.vitorpamplona.amethyst.commons.resources.cordn_share_title
 import com.vitorpamplona.amethyst.commons.ui.components.EmptyState
+import com.vitorpamplona.amethyst.commons.ui.components.SpellCheckedOutlinedTextField
 import com.vitorpamplona.amethyst.commons.ui.components.util.setText
 import com.vitorpamplona.amethyst.commons.ui.loadStringRes
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
@@ -1049,7 +1050,7 @@ private fun EditGroupDetailsDialog(
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth(),
                 )
-                OutlinedTextField(
+                SpellCheckedOutlinedTextField(
                     value = draftDescription,
                     onValueChange = { draftDescription = it },
                     label = { Text(stringRes(Res.string.cordn_create_description)) },

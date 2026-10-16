@@ -58,6 +58,7 @@ import com.vitorpamplona.amethyst.commons.resources.goal_website_label
 import com.vitorpamplona.amethyst.commons.resources.goal_website_placeholder
 import com.vitorpamplona.amethyst.commons.resources.new_goal
 import com.vitorpamplona.amethyst.commons.ui.components.PlatformBackHandler
+import com.vitorpamplona.amethyst.commons.ui.components.SpellCheckedOutlinedTextField
 import com.vitorpamplona.amethyst.commons.ui.components.rememberViewModel
 import com.vitorpamplona.amethyst.commons.ui.insets.imePaddingSafe
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
@@ -137,7 +138,7 @@ private fun NewGoalBody(goalViewModel: NewGoalViewModel) {
             .verticalScroll(scrollState)
             .padding(16.dp),
     ) {
-        OutlinedTextField(
+        SpellCheckedOutlinedTextField(
             value = goalViewModel.description,
             onValueChange = { goalViewModel.description = it },
             label = { Text(stringRes(Res.string.goal_description_label)) },
@@ -161,7 +162,7 @@ private fun NewGoalBody(goalViewModel: NewGoalViewModel) {
 
         Spacer(modifier = Modifier.height(12.dp))
 
-        OutlinedTextField(
+        SpellCheckedOutlinedTextField(
             value = goalViewModel.summary,
             onValueChange = { goalViewModel.summary = it },
             label = { Text(stringRes(Res.string.goal_summary_label)) },

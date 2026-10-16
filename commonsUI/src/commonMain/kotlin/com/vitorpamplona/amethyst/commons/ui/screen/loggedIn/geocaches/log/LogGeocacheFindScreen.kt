@@ -87,6 +87,7 @@ import com.vitorpamplona.amethyst.commons.resources.geocache_log_your_log
 import com.vitorpamplona.amethyst.commons.resources.geocache_unnamed
 import com.vitorpamplona.amethyst.commons.resources.route_log_geocache_find
 import com.vitorpamplona.amethyst.commons.ui.actions.uploads.GallerySelectSingle
+import com.vitorpamplona.amethyst.commons.ui.components.SpellCheckedOutlinedTextField
 import com.vitorpamplona.amethyst.commons.ui.components.rememberViewModel
 import com.vitorpamplona.amethyst.commons.ui.insets.imePaddingSafe
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
@@ -200,7 +201,7 @@ fun LogGeocacheFindScreen(
                 }
             }
 
-            OutlinedTextField(
+            SpellCheckedOutlinedTextField(
                 value = model.message.value,
                 onValueChange = { model.message.value = it },
                 modifier = Modifier.fillMaxWidth(),

@@ -31,6 +31,7 @@ import com.vitorpamplona.amethyst.commons.favorites.FavoriteApp
 import com.vitorpamplona.amethyst.commons.feeds.FeedContentState
 import com.vitorpamplona.amethyst.commons.model.UiSettingsFlow
 import com.vitorpamplona.amethyst.commons.model.navigation.Route
+import com.vitorpamplona.amethyst.commons.service.spellcheck.SpellCheckService
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.payments.PayToAppProbe
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.qrcode.ScanOutcome
@@ -110,6 +111,12 @@ interface AppPlatform {
      * settings behaves exactly like "Always", so the settings leave it out.
      */
     val detectsMeteredConnections: Boolean get() = true
+
+    /**
+     * Underlines misspellings in the composers and offers suggestions on right-click. Null where
+     * the keyboard already does this (Android, iOS), which also hides the setting.
+     */
+    val spellCheck: SpellCheckService? get() = null
 
     /** The terms-of-use checkbox the login and sign-up forms show where [requiresTermsAcceptance]. */
     @Composable

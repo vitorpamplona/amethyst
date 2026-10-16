@@ -150,6 +150,7 @@ fun SellProduct(postViewModel: NewProductViewModel) {
                         color = MaterialTheme.colorScheme.placeholderText,
                     )
                 },
+                spellCheck = true,
                 outputTransformation =
                     UrlUserTagOutputTransformation(
                         MaterialTheme.colorScheme.primary,
@@ -351,6 +352,7 @@ fun SellProduct(postViewModel: NewProductViewModel) {
                         color = MaterialTheme.colorScheme.placeholderText,
                     )
                 },
+                spellCheck = true,
                 outputTransformation =
                     UrlUserTagOutputTransformation(
                         MaterialTheme.colorScheme.primary,

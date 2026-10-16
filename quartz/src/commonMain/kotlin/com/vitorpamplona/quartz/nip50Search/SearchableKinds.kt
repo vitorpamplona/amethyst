@@ -188,12 +188,15 @@ object SearchableKinds {
             30394, // AddressableTrustedListEvent
             30395, // ExternalIdTrustedListEvent
             30402, // ClassifiedsEvent
+            30405, // ProductCollectionEvent
+            30406, // ShippingOptionEvent
             30617, // GitRepositoryEvent
             30620, // WorkflowDefEvent
             30621, // ProjectEvent
             30817, // NipTextEvent
             30818, // WikiArticleEvent
             31337, // AudioTrackEvent
+            31555, // ProductReviewEvent
             31871, // AttestationEvent
             31872, // AttestationRequestEvent
             31873, // AttestorRecommendationEvent

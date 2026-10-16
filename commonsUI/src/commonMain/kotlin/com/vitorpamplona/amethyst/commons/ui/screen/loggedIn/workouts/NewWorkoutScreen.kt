@@ -69,6 +69,7 @@ import com.vitorpamplona.amethyst.commons.resources.workout_notes
 import com.vitorpamplona.amethyst.commons.resources.workout_seconds
 import com.vitorpamplona.amethyst.commons.resources.workout_title
 import com.vitorpamplona.amethyst.commons.ui.components.PlatformBackHandler
+import com.vitorpamplona.amethyst.commons.ui.components.SpellCheckedOutlinedTextField
 import com.vitorpamplona.amethyst.commons.ui.components.rememberViewModel
 import com.vitorpamplona.amethyst.commons.ui.insets.imePaddingSafe
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
@@ -149,7 +150,7 @@ private fun NewWorkoutBody(
 
         ExerciseTypeSelector(postViewModel.exercise) { postViewModel.exercise = it }
 
-        OutlinedTextField(
+        SpellCheckedOutlinedTextField(
             value = postViewModel.title,
             onValueChange = { postViewModel.title = it },
             label = { Text(stringRes(Res.string.workout_title)) },
@@ -203,7 +204,7 @@ private fun NewWorkoutBody(
             singleLine = true,
         )
 
-        OutlinedTextField(
+        SpellCheckedOutlinedTextField(
             value = postViewModel.notes,
             onValueChange = { postViewModel.notes = it },
             label = { Text(stringRes(Res.string.workout_notes)) },

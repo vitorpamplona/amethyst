@@ -32,7 +32,6 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.LocalTextStyle
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -50,6 +49,7 @@ import com.vitorpamplona.amethyst.commons.resources.messages_new_message_subject
 import com.vitorpamplona.amethyst.commons.resources.messages_new_message_subject_caption
 import com.vitorpamplona.amethyst.commons.resources.messages_new_subject_message
 import com.vitorpamplona.amethyst.commons.resources.messages_new_subject_message_placeholder
+import com.vitorpamplona.amethyst.commons.ui.components.SpellCheckedOutlinedTextField
 import com.vitorpamplona.amethyst.commons.ui.note.buttons.CloseButton
 import com.vitorpamplona.amethyst.commons.ui.note.buttons.PostButton
 import com.vitorpamplona.amethyst.commons.ui.stringRes
@@ -102,7 +102,7 @@ fun ChatroomSubjectDialog(
 
                 Spacer(modifier = Modifier.height(15.dp))
 
-                OutlinedTextField(
+                SpellCheckedOutlinedTextField(
                     label = { Text(text = stringRes(Res.string.messages_new_message_subject)) },
                     modifier = Modifier.fillMaxWidth(),
                     value = groupName.value,
@@ -122,7 +122,7 @@ fun ChatroomSubjectDialog(
 
                 Spacer(modifier = Modifier.height(15.dp))
 
-                OutlinedTextField(
+                SpellCheckedOutlinedTextField(
                     label = { Text(text = stringRes(Res.string.messages_new_subject_message)) },
                     modifier =
                         Modifier

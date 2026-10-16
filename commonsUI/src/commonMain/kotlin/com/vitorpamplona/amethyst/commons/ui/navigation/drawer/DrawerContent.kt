@@ -49,7 +49,6 @@ import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Badge
@@ -58,7 +57,6 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalDrawerSheet
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -132,6 +130,7 @@ import com.vitorpamplona.amethyst.commons.resources.tor_status_connected
 import com.vitorpamplona.amethyst.commons.scheduledposts.ScheduledPostStatus
 import com.vitorpamplona.amethyst.commons.tor.TorServiceStatus
 import com.vitorpamplona.amethyst.commons.ui.components.RobohashFallbackAsyncImage
+import com.vitorpamplona.amethyst.commons.ui.components.SpellCheckedOutlinedTextField
 import com.vitorpamplona.amethyst.commons.ui.layouts.LocalScreenLayout
 import com.vitorpamplona.amethyst.commons.ui.layouts.NavigationStyle
 import com.vitorpamplona.amethyst.commons.ui.navigation.bottombars.NavBarCatalog
@@ -535,7 +534,19 @@ fun StatusEditBar(
         }
     }
 
-    OutlinedTextField(
+    fun send() {
+        if (address == null) {
+            accountViewModel.createStatus(currentStatus.value)
+        } else {
+            accountViewModel.updateStatus(address, currentStatus.value)
+        }
+        focusManager.clearFocus(true)
+        // Collapse back to the read-only bar: in the docked drawer no drawer-close will ever do
+        // it, and in the modal drawer this beats staying in edit mode until the drawer closes.
+        onDone()
+    }
+
+    SpellCheckedOutlinedTextField(
         value = currentStatus.value,
         onValueChange = { currentStatus.value = it },
         label = { Text(text = stringRes(Res.string.status_update)) },
@@ -551,37 +562,15 @@ fun StatusEditBar(
                 imeAction = ImeAction.Send,
                 capitalization = KeyboardCapitalization.Sentences,
             ),
-        keyboardActions =
-            KeyboardActions(
-                onSend = {
-                    if (address == null) {
-                        accountViewModel.createStatus(currentStatus.value)
-                    } else {
-                        accountViewModel.updateStatus(address, currentStatus.value)
-                    }
-
-                    focusManager.clearFocus(true)
-                    // Collapse back to the read-only bar: in the docked drawer no
-                    // drawer-close will ever do it, and in the modal drawer this beats
-                    // staying in edit mode until the drawer closes.
-                    onDone()
-                },
-            ),
+        onImeAction = ::send,
         singleLine = true,
         trailingIcon = {
             val hasChanged = remember { derivedStateOf { currentStatus.value != (savedStatus ?: "") } }
             if (hasChanged.value) {
                 SendButton(
                     tint = MaterialTheme.colorScheme.primary,
-                ) {
-                    if (address == null) {
-                        accountViewModel.createStatus(currentStatus.value)
-                    } else {
-                        accountViewModel.updateStatus(address, currentStatus.value)
-                    }
-                    focusManager.clearFocus(true)
-                    onDone()
-                }
+                    onClick = ::send,
+                )
             } else {
                 if (address != null) {
                     UserStatusDeleteButton {
@@ -735,6 +724,14 @@ fun ListContent(
     }
 }
 
+/** The HLS-upload row exists only where the front end registers the screen — Android does, desktop doesn't. */
+@Composable
+private fun canShowHlsUploadRow(): Boolean = canOpen(Route.NewHlsVideo)
+
+/** The chess row is a debug-build extra. */
+@Composable
+private fun canShowChessRow(): Boolean = LocalAppPlatform.current.isDebugBuild
+
 /**
  * The Create section's rows — composer entry points, none of which is a catalog destination. They
  * open as plain pushes rather than through [INav.navDrawer]: those screens host no bottom bar, and
@@ -742,7 +739,7 @@ fun ListContent(
  */
 @Composable
 private fun CreateRows(nav: INav) {
-    if (canOpen(Route.NewHlsVideo)) {
+    if (canShowHlsUploadRow()) {
         IconRow(
             title = Res.string.share_hls_video,
             icon = MaterialSymbols.SettingsInputAntenna,
@@ -754,7 +751,7 @@ private fun CreateRows(nav: INav) {
         )
     }
 
-    if (LocalAppPlatform.current.isDebugBuild) {
+    if (canShowChessRow()) {
         IconRow(
             title = Res.string.route_chess,
             icon = MaterialSymbols.ChessKnight,
@@ -768,12 +765,27 @@ private fun CreateRows(nav: INav) {
 }
 
 /**
+ * Whether the section's fixed rows — the ones [CatalogSection]'s `when (section.id)` branch draws on
+ * top of the catalog — actually show in this build. Each is gated (HLS upload on the front end
+ * having the screen, chess on a debug build), and a heading over zero rows is noise: an
+ * all-gated-off section renders nothing, the same rule as one with no visible catalog rows. Gates
+ * are read from the same predicates [CreateRows] uses, so the heading and its rows can't drift.
+ */
+@Composable
+private fun DrawerSection.hasVisibleFixedRows(): Boolean =
+    when (id) {
+        DrawerSectionId.CREATE -> canShowHlsUploadRow() || canShowChessRow()
+        else -> hasFixedRows
+    }
+
+/**
  * Renders one drawer section: its fixed rows, if it has any, then the catalog rows the user hasn't
  * switched off. Profile gets the primary-colored tint; every other item uses onBackground.
  *
  * A section with nothing left to show renders nothing at all — an empty, permanently collapsed
- * heading is just noise. Two sections always have something: Create is entirely fixed rows, and
- * System carries the relay-status row (not a catalog destination — it shows a live counter).
+ * heading is just noise. System always has something: it carries the relay-status row (not a catalog
+ * destination — it shows a live counter). Create is entirely gated fixed rows, so it shows only
+ * while one of them is available (see [DrawerSection.hasVisibleFixedRows]).
  */
 @Composable
 fun CatalogSection(
@@ -788,7 +800,7 @@ fun CatalogSection(
     val onBackground = MaterialTheme.colorScheme.onBackground
 
     val visible = remember(section, hidden) { DrawerSectionVisibility.visibleItems(section, hidden) }
-    if (visible.isEmpty() && !section.hasFixedRows) return
+    if (visible.isEmpty() && !section.hasVisibleFixedRows()) return
 
     CollapsibleSection(title = section.titleRes, expanded = expanded, onToggleExpand = onToggleExpand) {
         when (section.id) {

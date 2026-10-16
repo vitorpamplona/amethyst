@@ -158,6 +158,7 @@ import com.vitorpamplona.amethyst.commons.resources.buzz_workflow_triggered_toas
 import com.vitorpamplona.amethyst.commons.resources.buzz_workflow_view_pr
 import com.vitorpamplona.amethyst.commons.resources.buzz_workflow_waiting_for_approval
 import com.vitorpamplona.amethyst.commons.resources.buzz_workflow_waiting_on
+import com.vitorpamplona.amethyst.commons.ui.components.SpellCheckedOutlinedTextField
 import com.vitorpamplona.amethyst.commons.ui.components.rememberModalSheetState
 import com.vitorpamplona.amethyst.commons.ui.components.rememberViewModel
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
@@ -846,7 +847,7 @@ private fun NewRunSheet(
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                 }
-                OutlinedTextField(
+                SpellCheckedOutlinedTextField(
                     value = task,
                     onValueChange = { task = it },
                     label = { Text(stringRes(Res.string.buzz_workflow_task_label)) },

@@ -92,7 +92,7 @@ fun RenderGroupMetadata(
         .metadata.stateFlow
         .collectAsStateWithLifecycle()
     val event = noteState.note.event as? GroupMetadataEvent ?: return
-    val groupId = event.groupId() ?: return
+    val groupId = event.groupId()
     val relay = remember(noteState) { noteState.note.relays.firstOrNull() }
 
     // The roster is relay-signed at the same coordinate shape: 39002:<relay key>:<group id>.

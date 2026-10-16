@@ -431,6 +431,9 @@ import com.vitorpamplona.quartz.nip90Dvms.userDiscoveryResponse.DvmUserDiscovery
 import com.vitorpamplona.quartz.nip94FileMetadata.FileMetadataEvent
 import com.vitorpamplona.quartz.nip96FileStorage.config.FileServersEvent
 import com.vitorpamplona.quartz.nip99Classifieds.ClassifiedsEvent
+import com.vitorpamplona.quartz.nip99Classifieds.collection.ProductCollectionEvent
+import com.vitorpamplona.quartz.nip99Classifieds.review.ProductReviewEvent
+import com.vitorpamplona.quartz.nip99Classifieds.shipping.ShippingOptionEvent
 import com.vitorpamplona.quartz.nipA0VoiceMessages.VoiceEvent
 import com.vitorpamplona.quartz.nipA0VoiceMessages.VoiceReplyEvent
 import com.vitorpamplona.quartz.nipA3PaymentTargets.PaymentTargetsEvent
@@ -3967,6 +3970,11 @@ open class EventCache :
                 is DmRelayListEvent,
                 is Bolt12OfferListEvent,
                 is ClassifiedsEvent,
+                // Open Markets. Shopstr's carts and escrow records on 30405/30406 split off as
+                // UnrecognizedKind3040xEvent and stay unconsumed, so their ciphertext is never drawn.
+                is ProductCollectionEvent,
+                is ShippingOptionEvent,
+                is ProductReviewEvent,
                 is FundraiserEvent,
                 is BirdexEvent,
                 is Ps1SaveEvent,

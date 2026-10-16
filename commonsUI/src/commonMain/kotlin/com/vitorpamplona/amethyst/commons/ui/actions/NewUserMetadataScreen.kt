@@ -74,6 +74,7 @@ import com.vitorpamplona.amethyst.commons.resources.twitter_proof_url_template
 import com.vitorpamplona.amethyst.commons.resources.username
 import com.vitorpamplona.amethyst.commons.resources.website_url
 import com.vitorpamplona.amethyst.commons.ui.actions.uploads.SelectSingleFromGallery
+import com.vitorpamplona.amethyst.commons.ui.components.SpellCheckedOutlinedTextField
 import com.vitorpamplona.amethyst.commons.ui.components.rememberViewModel
 import com.vitorpamplona.amethyst.commons.ui.insets.imePaddingSafe
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
@@ -174,7 +175,7 @@ fun NewUserMetadataScreen(
 
                 Spacer(modifier = Modifier.height(10.dp))
 
-                OutlinedTextField(
+                SpellCheckedOutlinedTextField(
                     label = { Text(text = stringRes(Res.string.about_me)) },
                     modifier = Modifier.fillMaxWidth().height(100.dp),
                     value = postViewModel.about.value,

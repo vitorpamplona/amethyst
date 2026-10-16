@@ -41,6 +41,7 @@ import com.vitorpamplona.quartz.nip18Reposts.GenericRepostEvent
 import com.vitorpamplona.quartz.nip18Reposts.RepostEvent
 import com.vitorpamplona.quartz.nip22Comments.CommentEvent
 import com.vitorpamplona.quartz.nip23LongContent.LongFormContentEvent
+import com.vitorpamplona.quartz.nip34Git.repository.GitRepositoryEvent
 import com.vitorpamplona.quartz.nip35Torrents.TorrentCommentEvent
 import com.vitorpamplona.quartz.nip35Torrents.TorrentEvent
 import com.vitorpamplona.quartz.nip51Lists.PinListEvent
@@ -86,13 +87,15 @@ val UserProfilePostKinds2 =
     )
 
 // NIP-5A nsites (15128/35128) and NIP-5D napplets (15129/35129) the user publishes, surfaced in
-// the profile "Apps" tab. Fetching them only populates the cache; execution stays sandboxed.
+// the profile "Apps" tab, plus the NIP-34 git repository announcements (30617) behind the
+// profile "Repos" tab. Fetching them only populates the cache; execution stays sandboxed.
 val UserProfileAppKinds =
     listOf(
         RootSiteEvent.KIND,
         NamedSiteEvent.KIND,
         RootNappletEvent.KIND,
         NamedNappletEvent.KIND,
+        GitRepositoryEvent.KIND,
     )
 
 fun filterUserProfilePosts(

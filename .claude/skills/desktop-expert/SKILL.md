@@ -29,6 +29,7 @@ Background: `commons/plans/2026-09-27-one-ui-android-desktop.md`,
 | `platform/WaylandDisplay.kt`, `platform/AppWindow.kt` | Native Wayland: `WLToolkit` picked in `main()` on a Wayland session (`AMETHYST_X11=1` opts out); `AppWindow` is Compose's `Window` elsewhere and a Swing-drawn frame there. Open new top-level windows with `AppWindow`, never `Window`/`ComposeDialog`. |
 | `platform/DesktopUiScale.kt` | X11 at a fractional scale (`Xft.dpi` 120 = 125%, `AMETHYST_SCALE` by hand): AWT draws whole scales only, so `AppWindow` raises Compose's density by the rest. `LocalDensity` is then not AWT's scale: convert AWT window/event coordinates with `awtPixelScale(component)`, and size AWT windows in AWT units. |
 | `account/`, `tor/`, `network/`, `service/`, `ui/media/` | Account storage, Tor, HTTP, scheduled posts, video/audio players. |
+| `update/` | Self-update: `InstallChannel` (how this copy was installed: DMG, Homebrew, MSI, zip, AppImage, tarball, .deb/.rpm, Flatpak), `DesktopUpdateInstaller` + `UpdateHelperScripts` (stage, then swap after quit), `UpdateDownloader` (SHA-256 checked). The checker is commons `appupdate`; dev runs need `-Damethyst.update.devCheck=true`. |
 
 A new shared feature that needs a desktop behaviour = a member on one of the ports above
 (default in the interface, override here), not a desktop branch in the shared screen.

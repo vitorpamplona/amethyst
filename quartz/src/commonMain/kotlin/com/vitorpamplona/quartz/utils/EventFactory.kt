@@ -461,6 +461,11 @@ import com.vitorpamplona.quartz.nip94FileMetadata.FileMetadataEvent
 import com.vitorpamplona.quartz.nip96FileStorage.config.FileServersEvent
 import com.vitorpamplona.quartz.nip98HttpAuth.HTTPAuthorizationEvent
 import com.vitorpamplona.quartz.nip99Classifieds.ClassifiedsEvent
+import com.vitorpamplona.quartz.nip99Classifieds.collection.ProductCollectionEvent
+import com.vitorpamplona.quartz.nip99Classifieds.collection.UnrecognizedKind30405Event
+import com.vitorpamplona.quartz.nip99Classifieds.review.ProductReviewEvent
+import com.vitorpamplona.quartz.nip99Classifieds.shipping.ShippingOptionEvent
+import com.vitorpamplona.quartz.nip99Classifieds.shipping.UnrecognizedKind30406Event
 import com.vitorpamplona.quartz.nipA0VoiceMessages.VoiceEvent
 import com.vitorpamplona.quartz.nipA0VoiceMessages.VoiceReplyEvent
 import com.vitorpamplona.quartz.nipA3PaymentTargets.PaymentTargetsEvent
@@ -701,6 +706,22 @@ class EventFactory {
                 ChatMessageEvent.KIND -> ChatMessageEvent(id.ifBlank { EventHasher.hashId(pubKey, createdAt, kind, tags, content) }, pubKey, createdAt, tags, content, sig)
                 DmRelayListEvent.KIND -> DmRelayListEvent(id, pubKey, createdAt, tags, content, sig)
                 ClassifiedsEvent.KIND -> ClassifiedsEvent(id, pubKey, createdAt, tags, content, sig)
+                // Open Markets kinds 30405/30406: Shopstr reuses both numbers for encrypted carts and buyer
+                // escrow records. Disambiguate by tags and fall back to an Unrecognized class: still
+                // addressable, so stores replace and delete it by `d`, but never indexed.
+                ProductCollectionEvent.KIND ->
+                    if (ProductCollectionEvent.isProductCollection(tags)) {
+                        ProductCollectionEvent(id, pubKey, createdAt, tags, content, sig)
+                    } else {
+                        UnrecognizedKind30405Event(id, pubKey, createdAt, tags, content, sig)
+                    }
+                ShippingOptionEvent.KIND ->
+                    if (ShippingOptionEvent.isShippingOption(tags)) {
+                        ShippingOptionEvent(id, pubKey, createdAt, tags, content, sig)
+                    } else {
+                        UnrecognizedKind30406Event(id, pubKey, createdAt, tags, content, sig)
+                    }
+                ProductReviewEvent.KIND -> ProductReviewEvent(id, pubKey, createdAt, tags, content, sig)
                 CommentEvent.KIND -> CommentEvent(id, pubKey, createdAt, tags, content, sig)
                 CommunityDefinitionEvent.KIND -> CommunityDefinitionEvent(id, pubKey, createdAt, tags, content, sig)
                 CommunityListEvent.KIND -> CommunityListEvent(id, pubKey, createdAt, tags, content, sig)
@@ -1112,8 +1133,9 @@ class EventFactory {
          * 38385 and 38386 and RoboSats' 31986 do the same: with no tags they fall to their
          * `UnrecognizedKind…Event`, and 38385's primary class is searchable. Kind 30301 answers as
          * its Kanban board (WalletScrutiny's verifications on it are searchable too) and 30302 as
-         * the Kanban card. (The other tag-split kinds, 39005 and 20001, already land on a typed
-         * class with no tags.)
+         * the Kanban card, and Open Markets' 30405 and 30406 as their collection and shipping option
+         * (Shopstr's carts and escrow records on them are the unsearchable fallbacks). (The other
+         * tag-split kinds, 39005 and 20001, already land on a typed class with no tags.)
          *
          * The id is non-blank so kinds that lazily hash a missing id (NIP-17 chat) skip that work
          * — only the runtime type matters here.
@@ -1121,6 +1143,8 @@ class EventFactory {
         fun probe(kind: Int): Event =
             when (kind) {
                 MintRecommendationEvent.KIND -> MintRecommendationEvent(PROBE_ID, PROBE_ID, 0L, emptyArray(), "", "")
+                ProductCollectionEvent.KIND -> ProductCollectionEvent(PROBE_ID, PROBE_ID, 0L, emptyArray(), "", "")
+                ShippingOptionEvent.KIND -> ShippingOptionEvent(PROBE_ID, PROBE_ID, 0L, emptyArray(), "", "")
                 MostroUserRatingEvent.KIND -> MostroUserRatingEvent(PROBE_ID, PROBE_ID, 0L, emptyArray(), "", "")
                 MostroInfoEvent.KIND -> MostroInfoEvent(PROBE_ID, PROBE_ID, 0L, emptyArray(), "", "")
                 MostroDisputeEvent.KIND -> MostroDisputeEvent(PROBE_ID, PROBE_ID, 0L, emptyArray(), "", "")

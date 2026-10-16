@@ -33,6 +33,12 @@ kotlin {
     jvmToolchain(21)
 }
 
+// apksig reads APKs for `amy releases publish` (commons' ApkInspector); the desktop app never
+// runs that, so it does not ship it. compose-rules.pro tells ProGuard not to look for it.
+configurations.configureEach {
+    exclude(group = "com.android.tools.build", module = "apksig")
+}
+
 dependencies {
     implementation(compose.desktop.currentOs)
     implementation(libs.jetbrains.compose.material3)
@@ -117,6 +123,10 @@ dependencies {
     // Already shipped (nestsClient's Opus bindings); declared so desktopApp can compile against it.
     implementation(libs.jna)
 
+    // Hunspell spell checking for the composers where the OS has no checker (Linux) or it fails.
+    // Lucene's pure-Java port; Apache-2.0, and its only dependency is lucene-core (Apache-2.0).
+    implementation(libs.lucene.analysis.common)
+
     // QR code generation (ZXing core)
     implementation(libs.zxing)
 
@@ -170,7 +180,7 @@ compose.desktop {
 
         // Forward overrides from the gradle invocation to the launched app's JVM, so
         // `./gradlew :desktopApp:run -Damethyst.dataDir=/tmp/amy` keeps a test profile apart.
-        listOf("amethyst.dataDir", "amethyst.debug").forEach { key ->
+        listOf("amethyst.dataDir", "amethyst.debug", "amethyst.update.devCheck", "amethyst.update.pretendVersion").forEach { key ->
             System.getProperty(key)?.let { jvmArgs += "-D$key=$it" }
         }
 
@@ -527,7 +537,13 @@ val createReleaseAppImage = tasks.register<Exec>("createReleaseAppImage") {
 
     val distDir = layout.buildDirectory.dir("compose/binaries/main-release/app/Amethyst")
     val appDir = layout.buildDirectory.dir("appimage/Amethyst.AppDir")
-    val outFile = layout.buildDirectory.file("appimage/Amethyst-$appVersion-$hostArch.AppImage")
+    // Named as the release asset (scripts/asset-name.sh), because the .zsync file appimagetool
+    // writes next to it points at the AppImage by this file name.
+    val outFile = layout.buildDirectory.file("appimage/amethyst-desktop-$appVersion-$hostArch.AppImage")
+    // Update information (AppImage spec): AppImageUpdate, AppImageLauncher and Gear Lever find
+    // the newest release's .zsync on GitHub and download only the blocks that changed. The .zsync
+    // is written only when zsyncmake is installed (CI installs the zsync package).
+    val updateInformation = "gh-releases-zsync|vitorpamplona|amethyst|latest|amethyst-desktop-*-$hostArch.AppImage.zsync"
     val toolRoot = layout.projectDirectory.dir("packaging/appimage")
     val appimagetool = toolRoot.file("appimagetool-$hostArch.AppImage")
 
@@ -561,6 +577,8 @@ val createReleaseAppImage = tasks.register<Exec>("createReleaseAppImage") {
 
     commandLine(
         appimagetool.asFile.absolutePath,
+        "-u",
+        updateInformation,
         appDir.get().asFile.absolutePath,
         outFile.get().asFile.absolutePath,
     )

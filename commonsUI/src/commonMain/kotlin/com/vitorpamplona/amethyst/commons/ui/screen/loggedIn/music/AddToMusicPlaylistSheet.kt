@@ -41,7 +41,6 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.Button
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -70,6 +69,7 @@ import com.vitorpamplona.amethyst.commons.resources.music_playlist_create_action
 import com.vitorpamplona.amethyst.commons.resources.music_playlist_new_title_placeholder
 import com.vitorpamplona.amethyst.commons.resources.music_playlist_track_count_short
 import com.vitorpamplona.amethyst.commons.resources.music_playlist_untitled
+import com.vitorpamplona.amethyst.commons.ui.components.SpellCheckedOutlinedTextField
 import com.vitorpamplona.amethyst.commons.ui.components.rememberViewModel
 import com.vitorpamplona.amethyst.commons.ui.insets.imePaddingSafe
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.EmptyNav
@@ -144,7 +144,7 @@ private fun CreatePlaylistRow(
                 .padding(horizontal = 16.dp, vertical = 12.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        OutlinedTextField(
+        SpellCheckedOutlinedTextField(
             value = name,
             onValueChange = { name = it },
             placeholder = { Text(stringRes(Res.string.music_playlist_new_title_placeholder)) },

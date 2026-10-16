@@ -24,6 +24,7 @@ import com.vitorpamplona.amethyst.commons.account.AccountCacheState
 import com.vitorpamplona.amethyst.commons.account.AccountSessionHooks
 import com.vitorpamplona.amethyst.commons.account.AccountSessionManager
 import com.vitorpamplona.amethyst.commons.account.StoreAccountSessionStore
+import com.vitorpamplona.amethyst.commons.appupdate.AppUpdateManager
 import com.vitorpamplona.amethyst.commons.browser.BrowserHistoryRegistry
 import com.vitorpamplona.amethyst.commons.browser.BrowserIconRegistry
 import com.vitorpamplona.amethyst.commons.connectedApps.DataStoreNostrSignerPermissionStore
@@ -97,6 +98,8 @@ import com.vitorpamplona.amethyst.desktop.service.scheduledposts.DesktopSchedule
 import com.vitorpamplona.amethyst.desktop.service.scheduledposts.DesktopScheduledPostStore
 import com.vitorpamplona.amethyst.desktop.service.scheduledposts.OsScheduler
 import com.vitorpamplona.amethyst.desktop.tor.DesktopTorManager
+import com.vitorpamplona.amethyst.desktop.update.DesktopAppUpdates
+import com.vitorpamplona.amethyst.desktop.update.InstallChannel
 import com.vitorpamplona.marmotquic.QuicAgentTextStreamTransport
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.hexToByteArray
@@ -126,6 +129,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.launchIn
@@ -479,6 +483,18 @@ class DesktopAppModules(
             signerRelayRouting = torEvaluatorFlow,
         )
 
+    private val _appUpdates = MutableStateFlow<AppUpdateManager?>(null)
+
+    /**
+     * The updater for this install, once [initiate] has built it off the main thread (reading the
+     * install asks dpkg and rpm, and clears old update files); null until then, and for a
+     * development run.
+     */
+    val appUpdates: StateFlow<AppUpdateManager?> = _appUpdates
+
+    /** The updater's "quit so the new version can take over": the window collects it and exits as Quit does. */
+    val quitRequests = MutableSharedFlow<Unit>(extraBufferCapacity = 1)
+
     /** Key Backup, the key prompts and the keyring alert, for the shared UI. */
     val keyStorageController by lazy {
         DesktopKeyStorage(
@@ -606,6 +622,23 @@ class DesktopAppModules(
         }
 
         applicationIOScope.launch { openKeysAndLogIn() }
+
+        applicationIOScope.launch {
+            val updates =
+                DesktopAppUpdates.create(
+                    appVersion = appVersion,
+                    channel = InstallChannel.detect(),
+                    client = client,
+                    downloadClient = roleBasedHttpClientBuilder::okHttpClientForVideo,
+                    apiClient = roleBasedHttpClientBuilder::okHttpClientForPreview,
+                    settings = sharedSettingsStore,
+                    updatesDir = File(filesDir, "updates"),
+                    scope = applicationIOScope,
+                    quit = { quitRequests.tryEmit(Unit) },
+                )
+            _appUpdates.value = updates
+            updates?.start()
+        }
     }
 
     companion object {
