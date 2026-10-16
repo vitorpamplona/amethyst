@@ -22,8 +22,11 @@ package com.vitorpamplona.amethyst.commons.unicodeEmoji.ui
 
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
@@ -33,6 +36,7 @@ import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.Stable
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -49,16 +53,17 @@ import com.vitorpamplona.amethyst.commons.ui.components.PlatformBackHandler
 import com.vitorpamplona.amethyst.commons.ui.insets.KeyboardState
 import com.vitorpamplona.amethyst.commons.ui.insets.keyboardAsState
 
-/** Which composer the docked panel is writing into, and how. */
+/** Which composer the docked panel is writing into, how, and which [EmojiPanelHost] shows it. */
 @Stable
 internal class EmojiPanelRequest(
     val owner: Any,
+    val region: Any,
     val emojiPacks: EmojiPackState?,
     val onPickUnicode: (String) -> Unit,
     val onPickCustom: (EmojiMedia) -> Unit,
 )
 
-/** The one docked emoji panel of a window; at most one composer has it open at a time. */
+/** The docked emoji panel of a window: at most one composer, in one [EmojiPanelHost], has it open. */
 @Stable
 class EmojiPanelState {
     internal var request by mutableStateOf<EmojiPanelRequest?>(null)
@@ -70,44 +75,90 @@ class EmojiPanelState {
 
 internal val LocalEmojiPanel = staticCompositionLocalOf<EmojiPanelState?> { null }
 
+/** The nearest [EmojiPanelHost]: where a composer's panel docks. */
+internal val LocalEmojiPanelRegion = staticCompositionLocalOf<Any?> { null }
+
 /**
- * Docks the emoji picker at the bottom of [content], full width, where an on-screen keyboard
- * would be, and lets the composers' emoji buttons open it.
+ * The window's emoji panel state, for the [EmojiPanelHost]s inside [content].
  *
- * It is the fallback for when there is no on-screen keyboard to pick emoji from: Desktop, or a
- * phone with a hardware keyboard or with the keyboard put away. So it closes as soon as the
+ * The panel is the fallback for when there is no on-screen keyboard to pick emoji from: Desktop,
+ * or a phone with a hardware keyboard or with the keyboard put away. So it closes as soon as the
  * keyboard comes up (a tap in the text), and the buttons hide while the keyboard is up. Unlike a
- * menu it stays open between picks, so several emoji go in one after another. Back closes it.
+ * menu it stays open between picks, so several emoji go in one after another.
  */
 @Composable
-fun EmojiPanelHost(content: @Composable () -> Unit) {
+fun EmojiPanelScope(content: @Composable () -> Unit) {
     val state = remember { EmojiPanelState() }
     val keyboard by keyboardAsState()
 
     LaunchedEffect(keyboard) {
         if (keyboard == KeyboardState.Opened) state.close()
     }
-    CompositionLocalProvider(LocalEmojiPanel provides state) {
+    CompositionLocalProvider(LocalEmojiPanel provides state, content = content)
+}
+
+/**
+ * Docks the emoji panel at the bottom of [content], full width, when a composer inside it opens
+ * one: the view that owns the composer gives up the space, not the whole window. Wrap the
+ * window's main content, each deck column, and the conversation pane of a two-pane screen; a
+ * composer docks in the nearest one. Back closes the panel. Outside an [EmojiPanelScope] it only
+ * shows [content].
+ *
+ * A host that stops being [active] closes its panel: a deck column hands Back to the main screen
+ * when it loses focus, so its panel would otherwise stay open with nothing left to close it.
+ */
+@Composable
+fun EmojiPanelHost(
+    active: Boolean = true,
+    content: @Composable () -> Unit,
+) {
+    val state = LocalEmojiPanel.current
+    if (state == null) {
+        content()
+        return
+    }
+    val region = remember { Any() }
+    // Read here, not in this scope's body, so opening or closing a panel recomposes only the host
+    // that shows it, not every host in the window and the screens they hold.
+    val open by remember(state, region) { derivedStateOf { state.request?.region === region } }
+
+    LaunchedEffect(active) {
+        if (!active && state.request?.region === region) state.close()
+    }
+
+    CompositionLocalProvider(LocalEmojiPanelRegion provides region) {
         Column(Modifier.fillMaxSize()) {
-            Box(Modifier.weight(1f)) { content() }
-
-            state.request?.let { request ->
-                // Registered only while open, and after the screens, so it is the newest handler
-                // and Back closes the panel before it leaves the screen.
-                PlatformBackHandler { state.close() }
-
-                Surface(color = MaterialTheme.colorScheme.surfaceContainer, modifier = Modifier.fillMaxWidth()) {
-                    Column(Modifier.navigationBarsPadding()) {
-                        HorizontalDivider()
-                        EmojiPicker(
-                            emojiPacks = request.emojiPacks,
-                            onPickUnicode = request.onPickUnicode,
-                            onPickCustom = request.onPickCustom,
-                            modifier = Modifier.fillMaxWidth(),
-                        )
-                    }
-                }
+            // The panel covers the navigation bar, so the screen above it leaves no room for one.
+            Box(Modifier.weight(1f).then(if (open) Modifier.consumeWindowInsets(WindowInsets.navigationBars) else Modifier)) {
+                content()
             }
+
+            if (open) DockedPanel(state, region)
+        }
+    }
+}
+
+@Composable
+private fun DockedPanel(
+    state: EmojiPanelState,
+    region: Any,
+) {
+    val request = state.request?.takeIf { it.region === region } ?: return
+
+    // Registered only while open, and after the screens, so it is the newest handler and Back
+    // closes the panel before it leaves the screen.
+    PlatformBackHandler { state.close() }
+
+    Surface(color = MaterialTheme.colorScheme.surfaceContainer, modifier = Modifier.fillMaxWidth()) {
+        Column(Modifier.navigationBarsPadding()) {
+            HorizontalDivider()
+            EmojiPicker(
+                emojiPacks = request.emojiPacks,
+                onPickUnicode = request.onPickUnicode,
+                onPickCustom = request.onPickCustom,
+                modifier = Modifier.fillMaxWidth(),
+                onClose = state::close,
+            )
         }
     }
 }
@@ -116,6 +167,7 @@ fun EmojiPanelHost(content: @Composable () -> Unit) {
 @Composable
 internal fun EmojiPanelButton(
     host: EmojiPanelState,
+    region: Any,
     emojiPacks: EmojiPackState?,
     onPickUnicode: (String) -> Unit,
     onPickCustom: (EmojiMedia) -> Unit,
@@ -146,7 +198,7 @@ internal fun EmojiPanelButton(
                 if (open) {
                     null
                 } else {
-                    EmojiPanelRequest(owner, emojiPacks, { pickUnicode(it) }, { pickCustom(it) })
+                    EmojiPanelRequest(owner, region, emojiPacks, { pickUnicode(it) }, { pickCustom(it) })
                 }
         }
     }

@@ -41,6 +41,7 @@ import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.TwoPaneNav
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.rememberDetailPaneSelection
 import com.vitorpamplona.amethyst.commons.ui.platform.LocalAppServices
+import com.vitorpamplona.amethyst.commons.unicodeEmoji.ui.EmojiPanelHost
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 
 /**
@@ -105,7 +106,10 @@ fun PaneScopedChat(
     content: @Composable () -> Unit,
 ) {
     key(route) {
-        ScopedViewModelStore(content)
+        // The chat's composer docks the emoji panel under this pane, not under the list beside it.
+        EmojiPanelHost {
+            ScopedViewModelStore(content)
+        }
     }
 }
 

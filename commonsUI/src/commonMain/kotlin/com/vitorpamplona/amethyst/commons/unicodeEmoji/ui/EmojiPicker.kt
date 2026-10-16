@@ -72,6 +72,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.TextStyle
@@ -101,6 +102,7 @@ import com.vitorpamplona.amethyst.commons.resources.emoji_group_people_body
 import com.vitorpamplona.amethyst.commons.resources.emoji_group_smileys_emotion
 import com.vitorpamplona.amethyst.commons.resources.emoji_group_symbols
 import com.vitorpamplona.amethyst.commons.resources.emoji_group_travel_places
+import com.vitorpamplona.amethyst.commons.resources.emoji_picker_close
 import com.vitorpamplona.amethyst.commons.resources.emoji_picker_favorites
 import com.vitorpamplona.amethyst.commons.resources.emoji_picker_open
 import com.vitorpamplona.amethyst.commons.resources.emoji_picker_skin_tone
@@ -188,8 +190,9 @@ private fun EmojiPickerMenuButton(
     modifier: Modifier,
 ) {
     val host = LocalEmojiPanel.current
-    if (host != null) {
-        EmojiPanelButton(host, emojiPacks, onPickUnicode, onPickCustom, tint, modifier)
+    val region = LocalEmojiPanelRegion.current
+    if (host != null && region != null) {
+        EmojiPanelButton(host, region, emojiPacks, onPickUnicode, onPickCustom, tint, modifier)
         return
     }
 
@@ -209,6 +212,7 @@ private fun EmojiPickerMenuButton(
                     onPickCustom(it)
                     open = false
                 },
+                onClose = { open = false },
             )
         }
     }
@@ -288,6 +292,7 @@ fun EmojiPicker(
     onPickUnicode: (String) -> Unit,
     onPickCustom: (EmojiMedia) -> Unit,
     modifier: Modifier = Modifier.width(PickerWidth),
+    onClose: (() -> Unit)? = null,
 ) {
     val catalog by produceState(UnicodeEmojiPalette.cachedOrNull()) {
         if (value == null) {
@@ -313,6 +318,7 @@ fun EmojiPicker(
         Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(top = 8.dp)) {
             EmojiSearchField(search, Modifier.weight(1f))
             SkinToneSelector(tone) { UnicodeEmojiPalette.skinTone = it }
+            onClose?.let { EmojiPickerCloseButton(it) }
         }
 
         val loaded = catalog
@@ -342,6 +348,35 @@ fun EmojiPicker(
             SectionedPalette(sections, tone, onPick)
         } else {
             SearchResults(loaded, shortcodes, query, tone, onPick)
+        }
+    }
+}
+
+/**
+ * Closes the picker. The docked panel also closes on Back, Esc and its highlighted smiley, and the
+ * menu on a tap outside it, but none of that shows: a panel spanning the window looked stuck.
+ */
+@Composable
+private fun EmojiPickerCloseButton(onClose: () -> Unit) {
+    val description = stringRes(Res.string.emoji_picker_close)
+    HoverTooltip(description) {
+        Box(
+            contentAlignment = Alignment.Center,
+            modifier =
+                Modifier
+                    .padding(start = 4.dp)
+                    .size(CellSize)
+                    .clip(CircleShape)
+                    .background(MaterialTheme.colorScheme.surfaceContainerHighest)
+                    .clickable(role = Role.Button, onClick = onClose)
+                    .semantics { contentDescription = description },
+        ) {
+            Icon(
+                symbol = MaterialSymbols.Close,
+                contentDescription = null,
+                modifier = Modifier.size(18.dp),
+                tint = MaterialTheme.colorScheme.onSurface,
+            )
         }
     }
 }

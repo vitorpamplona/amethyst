@@ -124,7 +124,9 @@ fun MessagesTwoPane(
                 }
             },
             second = {
-                Box(Modifier.fillMaxSize().padding(padding)) {
+                // Consumed as well as applied: the emoji panel docks inside this pane and would pad
+                // the navigation bar the Scaffold's padding already holds.
+                Box(Modifier.fillMaxSize().padding(padding).consumeWindowInsets(padding)) {
                     twoPaneNav.innerNav.value?.let {
                         PaneScopedChat(it) {
                             when (it) {
@@ -150,12 +152,9 @@ fun MessagesTwoPane(
 
                                 else -> {
                                     // The other chats bring their own top bar (members, pins, join), so
-                                    // they render as full screens. This pane already sits below the
-                                    // Messages top bar: consume its insets so theirs don't add the status
-                                    // bar again.
-                                    Box(Modifier.fillMaxSize().consumeWindowInsets(padding)) {
-                                        ChatDetailPane(it, accountViewModel, detailNav)
-                                    }
+                                    // they render as full screens. The pane consumed the Messages top
+                                    // bar's insets above, so theirs don't add the status bar again.
+                                    ChatDetailPane(it, accountViewModel, detailNav)
                                 }
                             }
                         }

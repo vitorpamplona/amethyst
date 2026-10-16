@@ -98,6 +98,7 @@ import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.publicChannel
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.publicChannels.relayGroup.datasource.RelayGroupJoinedStatePreload
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.unicodeEmoji.ui.EmojiPanelHost
+import com.vitorpamplona.amethyst.commons.unicodeEmoji.ui.EmojiPanelScope
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.quartz.utils.Log
 import kotlinx.coroutines.delay
@@ -231,8 +232,9 @@ private fun LoggedInPage(
 
     root.LoggedInEffects(accountViewModel)
 
-    // The emoji panel docks below every screen, where an on-screen keyboard would be.
-    EmojiPanelHost {
+    // One emoji panel per window. It docks in the view that owns the composer: the main content,
+    // a deck column, or a two-pane screen's conversation pane (each an EmojiPanelHost).
+    EmojiPanelScope {
         AppNavigation(accountViewModel, route, sessionManager, root)
     }
 }
@@ -313,9 +315,13 @@ private fun AppNavigation(
             suspendEdgeSwipe = root::suspendEdgeSwipe,
             deck = rememberDeck(accountViewModel, nav, root),
         ) {
-            Box(Modifier.fillMaxSize()) {
-                BuildNavigation(nav, destinations, root)
-                root.ShellOverlay(accountViewModel)
+            // Inside the providers, so the panel reads the window's layout (its hover tooltips are
+            // for large screens).
+            EmojiPanelHost {
+                Box(Modifier.fillMaxSize()) {
+                    BuildNavigation(nav, destinations, root)
+                    root.ShellOverlay(accountViewModel)
+                }
             }
         }
 
