@@ -403,7 +403,7 @@ class QueryBuilder(
                         append(", id ASC")
                     }
                     append("\nLIMIT ")
-                    append(limit)
+                    append(limit.coerceAtLeast(0))
                 }
             }
 
@@ -449,7 +449,7 @@ class QueryBuilder(
                         append(", event_headers.id ASC")
                     }
                     append("\nLIMIT ")
-                    append(limit)
+                    append(limit.coerceAtLeast(0))
                 }
             }
 
@@ -1001,7 +1001,9 @@ class QueryBuilder(
                         append(" ORDER BY event_headers.created_at DESC")
                     }
                     append(" LIMIT ")
-                    append(filter.limit)
+                    // SQLite reads a negative LIMIT as "no limit": clamp so a
+                    // `limit: -1` returns nothing instead of every row (STORE-F12).
+                    append(filter.limit.coerceAtLeast(0))
                 }
             }
 
@@ -1076,7 +1078,7 @@ class QueryBuilder(
                 }
                 if (limit != null) {
                     append("\nLIMIT ")
-                    append(limit)
+                    append(limit.coerceAtLeast(0))
                 }
             }
 
@@ -1175,7 +1177,8 @@ class QueryBuilder(
                 }
                 if (limit != null) {
                     append("\nLIMIT ")
-                    append(limit)
+                    // negative LIMIT is unbounded in SQLite (STORE-F12)
+                    append(limit.coerceAtLeast(0))
                 }
             }
 

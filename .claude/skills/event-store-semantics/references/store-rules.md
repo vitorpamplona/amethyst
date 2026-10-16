@@ -93,7 +93,10 @@ renders as `1 = 0` → matches nothing. But `Filter.isEmpty()` treats empty list
 empty-list filters as invalid input rather than replicating this shape.
 
 **STORE-F12 — `limit` edge cases.** `limit = 0` compiles to `LIMIT 0` → zero rows.
-`limit = null` means unbounded. Negative limits are not defended against (don't send them).
+`limit = null` means unbounded. A negative limit is clamped to `LIMIT 0` → zero rows on every
+path (query/count/delete/union/negentropy); SQLite alone would read `LIMIT -1` as unbounded.
+The relay's `LimitsPolicy` never lets one reach the store from a REQ: it serves it like an absent
+limit (`defaultLimit`, else `maxLimit`), and drops it from a COUNT.
 
 **STORE-F13 — the in-memory matcher is a separate (simpler) implementation.**
 `Filter.match(event)` (`FilterMatcher`) is used for live-stream matching, not storage queries;
@@ -298,6 +301,8 @@ non-itemizable cases).
 
 Add one line per behavior change, newest first: `YYYY-MM-DD <short sha> <rule id> — what changed`.
 
+- 2026-10-16 (pending) F12 — a negative `limit` is clamped to zero rows instead of compiling to
+  SQLite's unbounded `LIMIT -1`; `LimitsPolicy` maps it to the default/max page on a REQ.
 - 2026-09-27 (pending) W01/W02, W09 — a stale replaceable/addressable version is `REPLACED`
   (`replaced:` → `OK false`) again, not `SUPERSEDED` (`duplicate:` → `OK true`): it is not
   written, and `OK true` told the client it was. `SUPERSEDED` is deprecated. Byte-for-byte
