@@ -69,7 +69,6 @@ import com.vitorpamplona.quartz.nip05DnsIdentifiers.namecoin.NamecoinNameResolve
 import com.vitorpamplona.quartz.nip10Notes.content.findHashtags
 import com.vitorpamplona.quartz.nip19Bech32.Nip19Parser
 import com.vitorpamplona.quartz.nip19Bech32.decodeEventIdAsHexOrNull
-import com.vitorpamplona.quartz.nip19Bech32.decodePublicKeyAsHexOrNull
 import com.vitorpamplona.quartz.nip19Bech32.entities.Entity
 import com.vitorpamplona.quartz.nip19Bech32.entities.IPubKeyEntity
 import com.vitorpamplona.quartz.nip19Bech32.entities.NAddress
@@ -78,7 +77,6 @@ import com.vitorpamplona.quartz.nip19Bech32.entities.NNote
 import com.vitorpamplona.quartz.nip19Bech32.entities.NProfile
 import com.vitorpamplona.quartz.nip19Bech32.entities.NPub
 import com.vitorpamplona.quartz.nip19Bech32.entities.NSec
-import com.vitorpamplona.quartz.nip34Git.repository.GitRepositoryEvent
 import com.vitorpamplona.quartz.utils.Hex
 import com.vitorpamplona.quartz.utils.Rfc3986
 import com.vitorpamplona.quartz.utils.startsWithAny
@@ -238,16 +236,17 @@ class SearchBarViewModel(
             .stateIn(viewModelScope, SharingStarted.Eagerly, searchValue)
 
     /**
-     * The author identifiers a `kind:git` query carries in its free text, resolved to pubkeys —
-     * the asynchronous half of the git-author lookup, keyed by term for
+     * The `from:` author names of the current query, resolved to pubkeys — the asynchronous
+     * half of the author qualifier, keyed by name for
      * [SearchFilterBuilder][com.vitorpamplona.amethyst.commons.search.SearchFilterBuilder]'s
-     * synchronous npub half.
+     * lift. The parser owns the synchronous half: `from:npub1…`, `from:nprofile1…` and
+     * `from:<64-hex>` land in the query's `authors` before any flow here runs.
      *
-     * `kind:git name.bit` and `kind:git alice@example.com` name a person the event itself never
-     * spells out: a repository announcement holds the author's hex key and a `maintainers` tag
-     * of more hex, so neither NIP-50 nor the cache's tag scan can match the name the reader
-     * typed. Resolving the term to its pubkey turns the query back into an index lookup —
-     * `authors` — which is what "show me this person's repositories" always meant.
+     * `from:name.bit` and `from:alice@example.com` name a person the events themselves never
+     * spell out — a repository announcement, like most events, holds keys, not names — so
+     * neither NIP-50 nor the cache's tag scan can match the name the reader typed. Resolving it
+     * to its pubkey turns the query back into an index lookup — `authors` — which is what
+     * "show me this person's repositories" always meant.
      *
      * The resolution feeds both halves of the screen: the cache scan below reads it through
      * [searchResultsNotes]' combine, and the relay REQs through [searchDataSourceState] — the
@@ -257,7 +256,7 @@ class SearchBarViewModel(
     @OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)
     val resolvedSearchAuthors: StateFlow<Map<String, HexKey>> =
         state.debounced
-            .mapLatest { input -> resolveGitAuthorTerms(input.text, input.query) }
+            .mapLatest { input -> resolveAuthorNames(input.text, input.query) }
             .onEach { resolution ->
                 searchDataSourceState.resolvedSearchAuthors.value =
                     ResolvedSearchAuthors(resolution.first, resolution.second)
@@ -266,48 +265,45 @@ class SearchBarViewModel(
             .stateIn(viewModelScope, SharingStarted.Eagerly, emptyMap())
 
     /**
-     * The git-author terms of [query], resolved where a resolver exists. Only terms the query
-     * names in its free text are tried, and only when the query is git-scoped — outside
-     * `kind:git` an npub is content (see [SearchFilterBuilder][com.vitorpamplona.amethyst.commons.search.SearchFilterBuilder])
-     * and a bare domain is the Namecoin row's lookup, not an author filter.
+     * The `from:` names of [query], resolved where a resolver exists. Only the names the
+     * parser could not decode itself are tried — its `authorNames` — in every scope: `from:`
+     * is the explicit author qualifier of the search language, so its meaning does not change
+     * with `kind:`. The free text is never resolved: a bare npub, hex key or `.bit` name
+     * with no `from:` stays NIP-50 search text, so the posts citing a person remain
+     * searchable.
      */
-    private suspend fun resolveGitAuthorTerms(
+    private suspend fun resolveAuthorNames(
         queryText: String,
         query: SearchQuery,
     ): Pair<String, Map<String, HexKey>> {
-        if (GitRepositoryEvent.KIND !in query.kinds) return queryText to emptyMap()
-        val terms = query.text.split(' ').filter { it.isNotBlank() && !it.startsWith('"') }
-        if (terms.isEmpty()) return queryText to emptyMap()
+        if (query.authorNames.isEmpty()) return queryText to emptyMap()
 
         val resolved = LinkedHashMap<String, HexKey>()
-        terms.forEach { term ->
+        query.authorNames.forEach { name ->
             when {
-                // npub/nprofile/hex: SearchFilterBuilder decodes these itself at filter-build
-                // time; mirroring the term here would only key the map, so skip it.
-                decodePublicKeyAsHexOrNull(term) != null -> Unit
-
-                // NIP-05 — `alice@example.com`, a bare domain, and every `.bit` spelling of
-                // either. The client routes `.bit` through the Namecoin resolver itself.
-                Nip05Id.parse(term) != null ->
-                    Nip05Id.parse(term)?.let { nip05 ->
+                // NIP-05 — `alice@example.com` and every `user@domain.bit` spelling of it.
+                // The client routes `.bit` through the Namecoin resolver itself.
+                Nip05Id.parse(name) != null ->
+                    Nip05Id.parse(name)?.let { nip05 ->
                         runCatching { nip05Client.get(nip05) }
                             .onFailure { if (it is CancellationException) throw it }
                             .getOrNull()
                             ?.let { info ->
-                                resolved[term] = info.pubkey
+                                resolved[name] = info.pubkey
                                 info.relays.forEach { relay ->
                                     relay.normalizeRelayUrlOrNull()?.let { account.cache.relayHints.addKey(info.pubkey, it) }
                                 }
                             }
                     }
 
-                // The Namecoin-only shapes the NIP-05 grammar rejects: `d/<name>`, `id/<name>`.
-                NamecoinNameResolver.isNamecoinIdentifier(term) ->
-                    runCatching { namecoinResolver.resolve(term) }
+                // The Namecoin-only shapes the NIP-05 grammar rejects: a bare `name.bit`,
+                // `d/<name>`, `id/<name>`.
+                NamecoinNameResolver.isNamecoinIdentifier(name) ->
+                    runCatching { namecoinResolver.resolve(name) }
                         .onFailure { if (it is CancellationException) throw it }
                         .getOrNull()
                         ?.let { result ->
-                            resolved[term] = result.pubkey
+                            resolved[name] = result.pubkey
                             result.relays.forEach { relay ->
                                 relay.normalizeRelayUrlOrNull()?.let { account.cache.relayHints.addKey(result.pubkey, it) }
                             }

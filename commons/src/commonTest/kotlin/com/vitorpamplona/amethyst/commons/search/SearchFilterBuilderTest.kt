@@ -22,6 +22,7 @@ package com.vitorpamplona.amethyst.commons.search
 
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
+import com.vitorpamplona.quartz.nip19Bech32.entities.NProfile
 import com.vitorpamplona.quartz.nip22Comments.CommentEvent
 import com.vitorpamplona.quartz.nip29RelayGroups.metadata.GroupMetadataEvent
 import com.vitorpamplona.quartz.nip32Labeling.LabelEvent
@@ -37,9 +38,10 @@ class SearchFilterBuilderTest {
         const val NOTE = "note1stqea6wmwezg9x6yyr6qkukw95ewtdukyaztycws65l8wppjmtpscawevv"
         val NOTES = listOf(1)
 
-        // The keys the git-author tests lift: NPUB decoded, and a second standalone hex.
+        // The keys the from: tests lift: NPUB decoded, and a second standalone hex.
         const val VITOR_HEX = "3bf0c63fcb93463407af97a5e5ee64fa883d107ef9e558472c4eb9aaaefa459d"
         const val MSTROFNONE_HEX = "43185edecb675892824b1a37a57f3e407fbde2eda7201a3829b8cf4ba7c5b4f0"
+        val NPROFILE = NProfile.create(VITOR_HEX, null)
     }
 
     private fun build(
@@ -205,12 +207,16 @@ class SearchFilterBuilderTest {
         assertTrue(build("to:$NPUB").isNotEmpty())
     }
 
-    // ---- kind:git author identifiers --------------------------------------------------------
+    // ---- the explicit from: author qualifier ------------------------------------------------
     //
-    // A repository announcement names its people by key alone: the author is the event's own
-    // pubkey and the `maintainers` tag holds hex. Neither an npub nor the `.bit`/NIP-05 name
-    // that resolves to one appears anywhere in the event, so a NIP-50 relay handed the term as
-    // text can match nothing. In a `kind:git` query these terms are author lookups instead.
+    // `from:` is the only spelling that names an author. `from:npub1…`, `from:nprofile1…`
+    // and `from:<64-hex>` decode in the parser; a `from:<name>` it cannot decode (a `.bit`
+    // name over Namecoin, a NIP-05 address, a `d/`/`id/` name) waits in `authorNames` for
+    // the caller's resolution and is lifted here. A bare identifier — npub, nprofile, hex,
+    // `.bit` — stays NIP-50 search text in every scope, `kind:git` included, so the posts
+    // that cite or mention a person remain searchable. The Git Repositories screen's own box
+    // (GitRepositorySearchMatcher) is screen-local and keeps reading a bare npub as an author
+    // lookup; the global search syntax is this section.
 
     private fun buildResolved(
         input: String,
@@ -219,43 +225,75 @@ class SearchFilterBuilderTest {
     ) = SearchPipeline.filters(QueryParser.parse(input), kinds, resolvedAuthors = resolved)
 
     @Test
-    fun aBareNpubInAGitQueryNamesTheAuthorNotTheText() {
+    fun aFromNpubInAGitQueryNamesTheAuthor() {
         // Through the pipeline, so the query's own `kind:` window lands on the filter the way
         // the search screen's REQs carry it.
-        val filters = SearchPipeline.filters(QueryParser.parse("kind:git $NPUB"))
+        val filters = SearchPipeline.filters(QueryParser.parse("kind:git from:$NPUB"))
         assertEquals(1, filters.size)
         assertEquals(listOf(GitRepositoryEvent.KIND), filters[0].kinds)
         assertEquals(listOf(VITOR_HEX), filters[0].authors)
-        // Nothing is left for NIP-50: the whole term was the identifier.
+        // Nothing is left for NIP-50: the whole term was the qualifier.
         assertNull(filters[0].search)
     }
 
     @Test
-    fun aHexKeyInAGitQueryNamesTheAuthor() {
-        val filters = build("kind:git $VITOR_HEX")
+    fun aFromNprofileInAGitQueryNamesTheAuthor() {
+        val filters = build("kind:git from:$NPROFILE")
         assertEquals(listOf(VITOR_HEX), filters[0].authors)
         assertNull(filters[0].search)
     }
 
     @Test
-    fun remainingTextStaysWithTheLiftedAuthor() {
+    fun aFromHexKeyInAGitQueryNamesTheAuthor() {
+        val filters = build("kind:git from:$VITOR_HEX")
+        assertEquals(listOf(VITOR_HEX), filters[0].authors)
+        assertNull(filters[0].search)
+    }
+
+    @Test
+    fun remainingTextStaysWithTheFromAuthor() {
         // "Their repos matching amethyst": the author narrows by index, the rest by NIP-50.
-        val filters = build("kind:git amethyst $NPUB")
+        val filters = build("kind:git amethyst from:$NPUB")
         assertEquals(listOf(VITOR_HEX), filters[0].authors)
         assertEquals("amethyst", filters[0].search)
     }
 
     @Test
-    fun aQuotedNpubIsALiteralPhraseNotAnAuthor() {
-        val filters = build("kind:git \"$NPUB\"")
+    fun aBareNpubInAGitQueryStaysSearchText() {
+        // The reviewer's case: the posts that cite or quote somebody by their npub must keep
+        // matching, in the git scope as anywhere else. Only `from:` names an author.
+        val filters = SearchPipeline.filters(QueryParser.parse("kind:git $NPUB"))
+        assertEquals(1, filters.size)
+        assertEquals(listOf(GitRepositoryEvent.KIND), filters[0].kinds)
         assertNull(filters[0].authors)
-        assertTrue(filters[0].search?.contains("npub1") == true)
+        assertEquals(NPUB, filters[0].search)
+    }
+
+    @Test
+    fun aBareNprofileInAGitQueryStaysSearchText() {
+        val filters = build("kind:git $NPROFILE")
+        assertNull(filters[0].authors)
+        assertEquals(NPROFILE, filters[0].search)
+    }
+
+    @Test
+    fun aBareHexKeyInAGitQueryStaysSearchText() {
+        val filters = build("kind:git $VITOR_HEX")
+        assertNull(filters[0].authors)
+        assertEquals(VITOR_HEX, filters[0].search)
+    }
+
+    @Test
+    fun aQuotedFromNpubIsALiteralPhraseNotAnAuthor() {
+        // A quoted phrase is literal text: the qualifier inside it qualifies nothing.
+        val filters = build("kind:git \"from:$NPUB\"")
+        assertNull(filters[0].authors)
+        assertTrue(filters[0].search?.contains("\"from:npub1") == true, filters[0].search.toString())
     }
 
     @Test
     fun anNpubOutsideAGitQueryStaysASearchTerm() {
-        // A note quoting somebody by their npub is a thing to search for; only the git window
-        // reads an npub as an author.
+        // A note quoting somebody by their npub is a thing to search for, whatever the scope.
         val noKind = build(NPUB)
         assertNull(noKind[0].authors)
         assertEquals(NPUB, noKind[0].search)
@@ -266,10 +304,10 @@ class SearchFilterBuilderTest {
     }
 
     @Test
-    fun aResolvedNamecoinTermNamesTheAuthor() {
-        // `name.bit` is not decodable on the spot: the caller resolves it over Namecoin and
-        // hands the term-to-key map in. The filter is the same one a bare npub would have built.
-        val filters = buildResolved("kind:git mstrofnone.bit", mapOf("mstrofnone.bit" to MSTROFNONE_HEX))
+    fun aResolvedFromNamecoinTermNamesTheAuthor() {
+        // `from:name.bit` is not decodable on the spot: the caller resolves it over Namecoin
+        // and hands the name-to-key map in. The filter is the one `from:npub1…` would have built.
+        val filters = buildResolved("kind:git from:mstrofnone.bit", mapOf("mstrofnone.bit" to MSTROFNONE_HEX))
         assertEquals(1, filters.size)
         assertEquals(listOf(GitRepositoryEvent.KIND), filters[0].kinds)
         assertEquals(listOf(MSTROFNONE_HEX), filters[0].authors)
@@ -277,17 +315,42 @@ class SearchFilterBuilderTest {
     }
 
     @Test
-    fun aResolvedNip05TermNamesTheAuthor() {
-        val filters = buildResolved("kind:git alice@example.com", mapOf("alice@example.com" to MSTROFNONE_HEX))
+    fun aResolvedFromNip05TermNamesTheAuthor() {
+        val filters = buildResolved("kind:git from:alice@example.com", mapOf("alice@example.com" to MSTROFNONE_HEX))
         assertEquals(listOf(MSTROFNONE_HEX), filters[0].authors)
         assertNull(filters[0].search)
     }
 
     @Test
-    fun anUnresolvedNamecoinTermStaysASearchTerm() {
-        // Before the lookup lands the term is plain text: the search still goes out, and the
-        // resolved re-issue replaces it rather than the screen sitting on nothing askable.
-        val filters = buildResolved("kind:git mstrofnone.bit", emptyMap())
+    fun aResolvedFromNameNamesTheAuthorInAnyScope() {
+        // `from:` is the search language's author qualifier, not a kind:git extension — the
+        // same resolved name lifts under an ordinary notes window.
+        val filters = buildResolved("from:mstrofnone.bit", mapOf("mstrofnone.bit" to MSTROFNONE_HEX), NOTES)
+        assertEquals(1, filters.size)
+        assertEquals(NOTES, filters[0].kinds)
+        assertEquals(listOf(MSTROFNONE_HEX), filters[0].authors)
+        assertNull(filters[0].search)
+    }
+
+    @Test
+    fun anUnresolvedFromNameAsksNothing() {
+        // Before the lookup lands the name is not a filter field, and a filter constrained by
+        // nothing but its kinds is an unbounded REQ — the query asks nothing, exactly as an
+        // unresolved `from:vitor` always has.
+        assertTrue(buildResolved("kind:git from:mstrofnone.bit", emptyMap()).isEmpty())
+        // Once there is something askable alongside it, the query is sent — minus the name,
+        // and the resolved re-issue adds the author the moment the lookup lands.
+        val withText = buildResolved("kind:git amethyst from:mstrofnone.bit", emptyMap())
+        assertEquals(1, withText.size)
+        assertEquals("amethyst", withText[0].search)
+        assertNull(withText[0].authors)
+    }
+
+    @Test
+    fun aBareNamecoinTermInAGitQueryStaysSearchText() {
+        // A resolution map never touches the free text: `name.bit` with no `from:` is
+        // something a post can say, not somebody to filter by.
+        val filters = buildResolved("kind:git mstrofnone.bit", mapOf("mstrofnone.bit" to MSTROFNONE_HEX))
         assertEquals(1, filters.size)
         assertNull(filters[0].authors)
         assertEquals("mstrofnone.bit", filters[0].search)
@@ -298,11 +361,14 @@ class SearchFilterBuilderTest {
         val filters = buildResolved("amethyst", mapOf("mstrofnone.bit" to MSTROFNONE_HEX), NOTES)
         assertNull(filters[0].authors)
         assertEquals("amethyst", filters[0].search)
+        // A stale resolution for a name this query does not carry lifts nothing either.
+        val other = buildResolved("kind:git from:alice@example.com", mapOf("mstrofnone.bit" to MSTROFNONE_HEX))
+        assertTrue(other.isEmpty())
     }
 
     @Test
-    fun twoIdentifiersLiftTogether() {
-        val filters = buildResolved("kind:git $NPUB mstrofnone.bit", mapOf("mstrofnone.bit" to MSTROFNONE_HEX))
+    fun twoFromIdentifiersLiftTogether() {
+        val filters = buildResolved("kind:git from:$NPUB from:mstrofnone.bit", mapOf("mstrofnone.bit" to MSTROFNONE_HEX))
         assertEquals(listOf(VITOR_HEX, MSTROFNONE_HEX), filters[0].authors)
         assertNull(filters[0].search)
     }

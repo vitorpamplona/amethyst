@@ -64,9 +64,9 @@ object SearchPipeline {
      * [kinds] is the caller's kind window; when the query names its own, that wins — a `kind:`
      * chip that did not reach here is a chip claiming a filter the REQ never carried.
      *
-     * [resolvedAuthors] is the asynchronous half of the `kind:git` author lookup — the
-     * `.bit` / NIP-05 terms a caller resolved to pubkeys ahead of time; see
-     * [SearchFilterBuilder.liftGitAuthorTerms].
+     * [resolvedAuthors] is the asynchronous half of the `from:` qualifier — the
+     * `from:<name>` terms (a `.bit` name over Namecoin, a NIP-05 address) a caller resolved
+     * to pubkeys ahead of time; see [SearchFilterBuilder.liftResolvedAuthorNames].
      */
     fun filters(
         query: SearchQuery,

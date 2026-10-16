@@ -23,7 +23,9 @@ package com.vitorpamplona.amethyst.commons.search
 import com.vitorpamplona.amethyst.commons.search.calendar.DateField
 import com.vitorpamplona.amethyst.commons.search.calendar.LocalClock
 import com.vitorpamplona.amethyst.commons.search.calendar.SearchDate
+import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip19Bech32.decodePublicKeyAsHexOrNull
+import com.vitorpamplona.quartz.utils.Hex
 import kotlinx.collections.immutable.toImmutableList
 import kotlinx.collections.immutable.toPersistentList
 
@@ -222,6 +224,24 @@ object QueryParser {
     }
 
     /**
+     * The pubkey a `from:`/`to:` value names, or null when the value is a name instead — a
+     * NIP-05 address, a `.bit` name, a display name for the picker.
+     *
+     * Strict on purpose: the bech32 spellings decode by their prefix, and a raw key counts only
+     * as exactly 64 hex chars. [decodePublicKeyAsHexOrNull] cannot be asked this — its fallback
+     * hex-decodes any even-length string, so `from:name.bit` or `from:d/alice` would come out
+     * as noise nibbles and the name would filter by a garbage author nobody can ever match.
+     */
+    internal fun decodeQualifierPubkeyOrNull(value: String): HexKey? =
+        if (value.length == 64 && Hex.isHex64(value)) {
+            value.lowercase()
+        } else if (value.startsWith("npub1") || value.startsWith("nprofile1")) {
+            decodePublicKeyAsHexOrNull(value)
+        } else {
+            null
+        }
+
+    /**
      * `YYYY`, `YYYY-MM` or `YYYY-MM-DD` as the unix second that bound means, in the reader's own
      * timezone: `since` is the first instant of the span and `until` its last, so `until:2026`
      * includes all of December.
@@ -289,7 +309,7 @@ object QueryParser {
         fun readOperator(token: Token.Operator) {
             when (token.name) {
                 "from", "to" -> {
-                    val hex = decodePublicKeyAsHexOrNull(token.value)
+                    val hex = decodeQualifierPubkeyOrNull(token.value)
                     val into = if (token.name == "from") authors else mentions
                     if (hex != null) {
                         into.addDistinct(hex)

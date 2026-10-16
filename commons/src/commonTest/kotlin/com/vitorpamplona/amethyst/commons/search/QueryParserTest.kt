@@ -23,6 +23,7 @@ package com.vitorpamplona.amethyst.commons.search
 import com.vitorpamplona.amethyst.commons.search.calendar.DateField
 import com.vitorpamplona.amethyst.commons.search.calendar.LocalClock
 import com.vitorpamplona.amethyst.commons.search.calendar.SearchDate
+import com.vitorpamplona.quartz.nip19Bech32.entities.NProfile
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
@@ -30,6 +31,10 @@ import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 class QueryParserTest {
+    private companion object {
+        const val VITOR_HEX = "3bf0c63fcb93463407af97a5e5ee64fa883d107ef9e558472c4eb9aaaefa459d"
+    }
+
     @Test
     fun emptyInput() {
         val q = QueryParser.parse("")
@@ -250,6 +255,39 @@ class QueryParserTest {
     fun duplicateAuthorsDeduped() {
         val q = QueryParser.parse("from:vitor from:vitor")
         assertEquals(1, q.authorNames.size)
+    }
+
+    @Test
+    fun fromWithAHexKey() {
+        val q = QueryParser.parse("from:$VITOR_HEX")
+        assertEquals(listOf(VITOR_HEX), q.authors.toList())
+        assertTrue(q.authorNames.isEmpty())
+        // An uppercase key is the same author, stored lowercase.
+        assertEquals(listOf(VITOR_HEX), QueryParser.parse("from:${VITOR_HEX.uppercase()}").authors.toList())
+    }
+
+    @Test
+    fun fromWithAnNprofile() {
+        val q = QueryParser.parse("from:${NProfile.create(VITOR_HEX, null)}")
+        assertEquals(listOf(VITOR_HEX), q.authors.toList())
+    }
+
+    @Test
+    fun fromWithAnEvenLengthNameIsNotAKey() {
+        // The lenient hex fallback would read these 14/6-char names as noise nibbles and filter
+        // by a garbage author; they are names, and names wait for a resolution.
+        val bit = QueryParser.parse("from:mstrofnone.bit")
+        assertTrue(bit.authors.isEmpty())
+        assertEquals(listOf("mstrofnone.bit"), bit.authorNames.toList())
+
+        val d = QueryParser.parse("from:d/alice")
+        assertTrue(d.authors.isEmpty())
+        assertEquals(listOf("d/alice"), d.authorNames.toList())
+
+        // to: has no name list — an undecodable value is plain text, not a garbage mention.
+        val to = QueryParser.parse("to:mstrofnone.bit")
+        assertTrue(to.mentions.isEmpty())
+        assertEquals("to:mstrofnone.bit", to.text)
     }
 
     @Test

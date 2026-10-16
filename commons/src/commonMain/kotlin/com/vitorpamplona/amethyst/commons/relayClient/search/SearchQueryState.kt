@@ -50,15 +50,14 @@ class SearchQueryState(
 ) : MutableQueryState,
     AccountScopedQuery {
     /**
-     * The `kind:git` author identifiers of the current query, resolved to pubkeys — the
-     * asynchronous half of the git-author lookup ([SearchFilterBuilder]'s `liftGitAuthorTerms`
-     * decodes the npubs itself). Keyed by the query text the resolution belongs to, so a stale
-     * resolution from the previous pause can never filter the current one; `null` while no
-     * resolution has landed.
+     * The `from:` author names of the current query, resolved to pubkeys — the asynchronous
+     * half of the author qualifier (the parser decodes `from:<npub>`/`from:<hex>` itself).
+     * Keyed by the query text the resolution belongs to, so a stale resolution from the
+     * previous pause can never filter the current one; `null` while no resolution has landed.
      */
     val resolvedSearchAuthors = MutableStateFlow<ResolvedSearchAuthors?>(null)
 
-    // Both flows re-issue the REQs: the text, and a `.bit`/NIP-05 resolution landing after it.
+    // Both flows re-issue the REQs: the text, and a `from:` name resolution landing after it.
     override fun flow(): Flow<*> = merge(searchQuery, resolvedSearchAuthors)
 
     /**
@@ -103,15 +102,15 @@ class SearchQueryState(
         answered.value = answered.value + relay
     }
 
-    /** The resolved `kind:git` author terms for [query], or none when they belong to another text. */
+    /** The resolved `from:` author names for [query], or none when they belong to another text. */
     fun currentResolvedAuthors(query: String): Map<String, HexKey> = resolvedSearchAuthors.value?.takeIf { it.queryText == query }?.terms ?: emptyMap()
 }
 
 /**
- * The author identifiers one git-scoped query's free text resolved to, keyed by the term as it
- * appears in the box (a `.bit` name, a NIP-05 address). [queryText] is the text the resolution
- * was computed from: a reader holding a newer query must ignore the map rather than filter by
- * the last pause's people.
+ * The `from:` names of one query resolved to pubkeys, keyed by the name as it was typed after
+ * `from:` (a `.bit` name, a NIP-05 address). [queryText] is the text the resolution was
+ * computed from: a reader holding a newer query must ignore the map rather than filter by the
+ * last pause's people.
  */
 @Stable
 data class ResolvedSearchAuthors(
