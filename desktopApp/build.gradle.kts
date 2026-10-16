@@ -204,6 +204,26 @@ compose.desktop {
                 bundleID = "com.vitorpamplona.amethyst.desktop"
                 iconFile.set(project.file("src/jvmMain/resources/icon.icns"))
 
+                // LaunchServices hands a clicked nostr:/amethyst: link to the running app as an
+                // AWT OpenURIEvent (DesktopDeepLinks.installMacOsOpenUriHandler) — but only for
+                // schemes the packaged Info.plist declares here.
+                infoPlist {
+                    extraKeysRawXml = """
+                        <key>CFBundleURLTypes</key>
+                        <array>
+                            <dict>
+                                <key>CFBundleURLName</key>
+                                <string>Nostr</string>
+                                <key>CFBundleURLSchemes</key>
+                                <array>
+                                    <string>nostr</string>
+                                    <string>amethyst</string>
+                                </array>
+                            </dict>
+                        </array>
+                    """.trimIndent()
+                }
+
                 // --- Developer ID code signing + notarization ---
                 // Required for Homebrew's main cask (unsigned casks rejected after
                 // 2026-09-01) and to clear macOS Gatekeeper without the right-click
@@ -459,7 +479,14 @@ listOf("packageRpm" to "main", "packageReleaseRpm" to "main-release").forEach { 
             // Docks and app switchers match the window's WM_CLASS ("Amethyst", set in AmethystDesktop.kt)
             // to the desktop entry's StartupWMClass, which jpackage's template lacks. jpackage takes
             // <app name>.desktop from the resource dir in its place and still fills in its fields.
-            File(resources, "${appName.get()}.desktop").writeText(desktopTemplate.trimEnd() + "\nStartupWMClass=Amethyst\n")
+            // StartupWMClass so docks match the window (AmethystDesktop.kt); MimeType + %u so
+            // the desktop offers the app for nostr:/amethyst: links and passes the URI to the
+            // launcher (DesktopDeepLinks.extractFromArgs).
+            val desktopEntry =
+                desktopTemplate.trimEnd()
+                    .replace(Regex("^Exec=(\\S.*)$", RegexOption.MULTILINE)) { "Exec=${it.groupValues[1]} %u" }
+                    .plus("\nStartupWMClass=Amethyst\nMimeType=x-scheme-handler/nostr;x-scheme-handler/amethyst;\n")
+            File(resources, "${appName.get()}.desktop").writeText(desktopEntry)
 
             // The task's own options, one per line with quoted values, minus the app-image ones.
             val lines = composeArgs.get().asFile.readLines()

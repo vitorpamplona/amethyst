@@ -75,6 +75,17 @@ for deb in "$@"; do
             changes+=("StartupWMClass=${WM_CLASS}")
         fi
 
+        # URI schemes: the desktop offers Amethyst for nostr:/amethyst: links and passes the
+        # URI as the launcher's argument (DesktopDeepLinks.extractFromArgs).
+        if ! grep -q '^MimeType=' "$entry"; then
+            echo 'MimeType=x-scheme-handler/nostr;x-scheme-handler/amethyst;' >> "$entry"
+            changes+=("MimeType=x-scheme-handler/nostr;x-scheme-handler/amethyst;")
+        fi
+        if grep -q '^Exec=' "$entry" && ! grep -qE '^Exec=.*%u' "$entry"; then
+            sed -i -E 's|^Exec=(.+)$|Exec=\1 %u|' "$entry"
+            changes+=("Exec gets %u")
+        fi
+
         shipped="$work/pkg/usr/share/applications/$(basename "$entry")"
         if ! cmp -s "$entry" "$shipped"; then
             install -D -m 644 "$entry" "$shipped"
