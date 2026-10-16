@@ -29,6 +29,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.text.input.InputTransformation
+import androidx.compose.foundation.text.input.KeyboardActionHandler
 import androidx.compose.foundation.text.input.OutputTransformation
 import androidx.compose.foundation.text.input.TextFieldLineLimits
 import androidx.compose.foundation.text.input.TextFieldState
@@ -81,6 +82,7 @@ fun OutlinedThinPaddingTextField(
     inputTransformation: InputTransformation? = null,
     outputTransformation: OutputTransformation? = null,
     spellCheck: Boolean = false,
+    onKeyboardAction: KeyboardActionHandler? = null,
     label: @Composable (() -> Unit)? = null,
     placeholder: @Composable (() -> Unit)? = null,
     leadingIcon: @Composable (() -> Unit)? = null,
@@ -167,6 +169,7 @@ fun OutlinedThinPaddingTextField(
                 interactionSource = interactionSource,
                 inputTransformation = inputTransformation,
                 outputTransformation = outputTransformation,
+                onKeyboardAction = onKeyboardAction,
                 onTextLayout = spell?.onTextLayout,
                 scrollState = scrollState,
                 decorator = { innerTextField ->

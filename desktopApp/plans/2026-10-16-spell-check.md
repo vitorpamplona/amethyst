@@ -53,13 +53,14 @@ results or hit a system-checker problem.
   are drop-ins for Material's `OutlinedTextField` / `TextField` on prose fields, for `String`,
   `TextFieldValue` and `TextFieldState` callers. Without a checker (Android, iOS) they are
   Material's own field; on desktop they mirror the caller's value into a `TextFieldState` (echoes of
-  the field's own recent reports are ignored, anything else replaces the text). They take no
-  `keyboardActions` (a field that submits on Enter keeps Material's), and a length cap goes in
-  `maxLength`, not in `onValueChange`.
+  the field's own recent reports are ignored, anything else replaces the text). Instead of
+  `keyboardActions` they take `onImeAction` (the keyboard's action key on phones, Enter in a
+  single-line field on desktop), which runs after the caller has been handed the field's latest
+  text. A length cap goes in `maxLength`, not in `onValueChange`.
 - Which fields: ~90 prose fields (descriptions, bios, captions, alt text, notes, comments, reasons,
-  summaries, titles, poll options, chat composers, the post signature, Buzz prompts). Left out on
-  purpose: search, URLs, keys, handles/NIP-05, amounts, names of people/lists/groups, geocache
-  mission answers, the quoted highlight passage, and the drawer status (submits on Enter).
+  summaries, titles, poll options, chat composers, the post signature, the drawer status, Buzz
+  prompts). Left out on purpose: search, URLs, keys, handles/NIP-05, amounts, names of
+  people/lists/groups, geocache mission answers, and the quoted highlight passage.
 - `desktopApp/…/spellcheck/`: `HunspellSpellChecker` (Lucene `lucene-analysis-common` 10.5.1,
   Apache-2.0; dictionary from `dictionary-en` 4.0.0 = SCOWL 2020.12.07, licence in
   `resources/spellcheck/en_US-LICENSE.txt`), `MacSpellChecker`, `WindowsSpellChecker`,

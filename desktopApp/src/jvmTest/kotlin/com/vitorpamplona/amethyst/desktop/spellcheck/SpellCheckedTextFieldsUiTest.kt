@@ -20,17 +20,23 @@
  */
 package com.vitorpamplona.amethyst.desktop.spellcheck
 
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.test.assertTextEquals
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onNodeWithTag
+import androidx.compose.ui.test.performImeAction
+import androidx.compose.ui.test.performKeyInput
 import androidx.compose.ui.test.performTextInput
+import androidx.compose.ui.test.pressKey
 import androidx.compose.ui.text.TextRange
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.TextFieldValue
 import com.vitorpamplona.amethyst.commons.service.spellcheck.SpellCheckService
 import com.vitorpamplona.amethyst.commons.ui.components.SpellCheckedOutlinedTextField
@@ -92,6 +98,34 @@ class SpellCheckedTextFieldsUiTest {
         compose.waitForIdle()
         assertEquals("abcd", value.text)
         assertEquals(4, value.selection.start)
+    }
+
+    @Test
+    fun enterRunsTheActionWithTheLatestText() {
+        var text by mutableStateOf("")
+        val sent = mutableListOf<String>()
+        compose.setContent {
+            CompositionLocalProvider(LocalAppPlatform provides desktop) {
+                SpellCheckedOutlinedTextField(
+                    value = text,
+                    onValueChange = { text = it },
+                    singleLine = true,
+                    keyboardOptions = KeyboardOptions(imeAction = ImeAction.Send),
+                    onImeAction = { sent += text },
+                    modifier = Modifier.testTag("field"),
+                )
+            }
+        }
+
+        compose.onNodeWithTag("field").performTextInput("gm nostr")
+        compose.onNodeWithTag("field").performKeyInput { pressKey(Key.Enter) }
+        compose.onNodeWithTag("field").performTextInput("!")
+        compose.onNodeWithTag("field").performImeAction()
+        compose.waitForIdle()
+
+        assertEquals(listOf("gm nostr", "gm nostr!"), sent)
+        // Enter in a single-line field sends; it does not add a line.
+        assertEquals("gm nostr!", text)
     }
 
     @Test

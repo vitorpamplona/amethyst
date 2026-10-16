@@ -21,8 +21,10 @@
 package com.vitorpamplona.amethyst.commons.ui.components
 
 import androidx.compose.foundation.layout.defaultMinSize
+import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.text.input.InputTransformation
+import androidx.compose.foundation.text.input.KeyboardActionHandler
 import androidx.compose.foundation.text.input.TextFieldLineLimits
 import androidx.compose.foundation.text.input.TextFieldState
 import androidx.compose.foundation.text.input.maxLength
@@ -55,8 +57,8 @@ import kotlinx.coroutines.flow.drop
 // ThinPaddingTextField with Material's padding and size, mirrored to the caller's value.
 //
 // Don't use them for identifiers (search, URLs, keys, handles, amounts): a dictionary only flags
-// those. They take no `keyboardActions`, because the desktop field cannot honour them; a field
-// that submits on Enter keeps Material's field.
+// those. Instead of `keyboardActions` they take `onImeAction`: the keyboard's action key on phones,
+// Enter in a single-line field on desktop, run after the caller has the field's latest text.
 
 /**
  * [OutlinedTextField] for a `String` holding prose, spell-checked on desktop. [maxLength] caps the
@@ -78,6 +80,7 @@ fun SpellCheckedOutlinedTextField(
     supportingText: @Composable (() -> Unit)? = null,
     isError: Boolean = false,
     keyboardOptions: KeyboardOptions = KeyboardOptions.Default,
+    onImeAction: (() -> Unit)? = null,
     singleLine: Boolean = false,
     maxLines: Int = if (singleLine) 1 else Int.MAX_VALUE,
     minLines: Int = 1,
@@ -99,6 +102,7 @@ fun SpellCheckedOutlinedTextField(
             supportingText = supportingText,
             isError = isError,
             keyboardOptions = keyboardOptions,
+            keyboardActions = onImeAction?.let { action -> KeyboardActions(onAny = { action() }) } ?: KeyboardActions.Default,
             singleLine = singleLine,
             maxLines = maxLines,
             minLines = minLines,
@@ -108,9 +112,9 @@ fun SpellCheckedOutlinedTextField(
         return
     }
 
-    val state = rememberMirroredState(value, selection = null) { text, _ -> onValueChange(text) }
+    val mirror = rememberMirroredState(value, selection = null) { text, _ -> onValueChange(text) }
     SpellCheckedOutlinedTextField(
-        state,
+        mirror.state,
         modifier,
         enabled,
         readOnly,
@@ -122,6 +126,7 @@ fun SpellCheckedOutlinedTextField(
         supportingText,
         isError,
         keyboardOptions,
+        mirror.beforeAction(onImeAction),
         singleLine,
         maxLines,
         minLines,
@@ -147,6 +152,7 @@ fun SpellCheckedOutlinedTextField(
     supportingText: @Composable (() -> Unit)? = null,
     isError: Boolean = false,
     keyboardOptions: KeyboardOptions = KeyboardOptions.Default,
+    onImeAction: (() -> Unit)? = null,
     singleLine: Boolean = false,
     maxLines: Int = if (singleLine) 1 else Int.MAX_VALUE,
     minLines: Int = 1,
@@ -168,6 +174,7 @@ fun SpellCheckedOutlinedTextField(
             supportingText = supportingText,
             isError = isError,
             keyboardOptions = keyboardOptions,
+            keyboardActions = onImeAction?.let { action -> KeyboardActions(onAny = { action() }) } ?: KeyboardActions.Default,
             singleLine = singleLine,
             maxLines = maxLines,
             minLines = minLines,
@@ -177,9 +184,9 @@ fun SpellCheckedOutlinedTextField(
         return
     }
 
-    val state = rememberMirroredState(value.text, value.selection) { text, selection -> onValueChange(TextFieldValue(text, selection)) }
+    val mirror = rememberMirroredState(value.text, value.selection) { text, selection -> onValueChange(TextFieldValue(text, selection)) }
     SpellCheckedOutlinedTextField(
-        state,
+        mirror.state,
         modifier,
         enabled,
         readOnly,
@@ -191,6 +198,7 @@ fun SpellCheckedOutlinedTextField(
         supportingText,
         isError,
         keyboardOptions,
+        mirror.beforeAction(onImeAction),
         singleLine,
         maxLines,
         minLines,
@@ -214,6 +222,7 @@ fun SpellCheckedOutlinedTextField(
     supportingText: @Composable (() -> Unit)? = null,
     isError: Boolean = false,
     keyboardOptions: KeyboardOptions = KeyboardOptions.Default,
+    onImeAction: (() -> Unit)? = null,
     singleLine: Boolean = false,
     maxLines: Int = if (singleLine) 1 else Int.MAX_VALUE,
     minLines: Int = 1,
@@ -237,6 +246,7 @@ fun SpellCheckedOutlinedTextField(
             supportingText = supportingText,
             isError = isError,
             keyboardOptions = keyboardOptions,
+            onKeyboardAction = onImeAction?.let { action -> KeyboardActionHandler { action() } },
             lineLimits = if (singleLine) TextFieldLineLimits.SingleLine else TextFieldLineLimits.MultiLine(minLines, maxLines),
             shape = shape,
             colors = colors,
@@ -259,6 +269,7 @@ fun SpellCheckedOutlinedTextField(
         supportingText = supportingText,
         isError = isError,
         keyboardOptions = keyboardOptions,
+        onKeyboardAction = onImeAction?.let { action -> KeyboardActionHandler { action() } },
         singleLine = singleLine,
         maxLines = maxLines,
         minLines = minLines,
@@ -284,6 +295,7 @@ fun SpellCheckedTextField(
     supportingText: @Composable (() -> Unit)? = null,
     isError: Boolean = false,
     keyboardOptions: KeyboardOptions = KeyboardOptions.Default,
+    onImeAction: (() -> Unit)? = null,
     singleLine: Boolean = false,
     maxLines: Int = if (singleLine) 1 else Int.MAX_VALUE,
     minLines: Int = 1,
@@ -305,6 +317,7 @@ fun SpellCheckedTextField(
             supportingText = supportingText,
             isError = isError,
             keyboardOptions = keyboardOptions,
+            keyboardActions = onImeAction?.let { action -> KeyboardActions(onAny = { action() }) } ?: KeyboardActions.Default,
             singleLine = singleLine,
             maxLines = maxLines,
             minLines = minLines,
@@ -314,9 +327,9 @@ fun SpellCheckedTextField(
         return
     }
 
-    val state = rememberMirroredState(value, selection = null) { text, _ -> onValueChange(text) }
+    val mirror = rememberMirroredState(value, selection = null) { text, _ -> onValueChange(text) }
     SpellCheckedTextField(
-        state,
+        mirror.state,
         modifier,
         enabled,
         readOnly,
@@ -328,6 +341,7 @@ fun SpellCheckedTextField(
         supportingText,
         isError,
         keyboardOptions,
+        mirror.beforeAction(onImeAction),
         singleLine,
         maxLines,
         minLines,
@@ -352,6 +366,7 @@ fun SpellCheckedTextField(
     supportingText: @Composable (() -> Unit)? = null,
     isError: Boolean = false,
     keyboardOptions: KeyboardOptions = KeyboardOptions.Default,
+    onImeAction: (() -> Unit)? = null,
     singleLine: Boolean = false,
     maxLines: Int = if (singleLine) 1 else Int.MAX_VALUE,
     minLines: Int = 1,
@@ -373,6 +388,7 @@ fun SpellCheckedTextField(
             supportingText = supportingText,
             isError = isError,
             keyboardOptions = keyboardOptions,
+            keyboardActions = onImeAction?.let { action -> KeyboardActions(onAny = { action() }) } ?: KeyboardActions.Default,
             singleLine = singleLine,
             maxLines = maxLines,
             minLines = minLines,
@@ -382,9 +398,9 @@ fun SpellCheckedTextField(
         return
     }
 
-    val state = rememberMirroredState(value.text, value.selection) { text, selection -> onValueChange(TextFieldValue(text, selection)) }
+    val mirror = rememberMirroredState(value.text, value.selection) { text, selection -> onValueChange(TextFieldValue(text, selection)) }
     SpellCheckedTextField(
-        state,
+        mirror.state,
         modifier,
         enabled,
         readOnly,
@@ -396,6 +412,7 @@ fun SpellCheckedTextField(
         supportingText,
         isError,
         keyboardOptions,
+        mirror.beforeAction(onImeAction),
         singleLine,
         maxLines,
         minLines,
@@ -418,6 +435,7 @@ private fun SpellCheckedTextField(
     supportingText: @Composable (() -> Unit)?,
     isError: Boolean,
     keyboardOptions: KeyboardOptions,
+    onImeAction: (() -> Unit)?,
     singleLine: Boolean,
     maxLines: Int,
     minLines: Int,
@@ -438,6 +456,7 @@ private fun SpellCheckedTextField(
         supportingText = supportingText,
         isError = isError,
         keyboardOptions = keyboardOptions,
+        onKeyboardAction = onImeAction?.let { action -> KeyboardActionHandler { action() } },
         singleLine = singleLine,
         maxLines = maxLines,
         minLines = minLines,
@@ -445,6 +464,24 @@ private fun SpellCheckedTextField(
         colors = colors,
         contentPadding = if (label == null) TextFieldDefaults.contentPaddingWithoutLabel() else TextFieldDefaults.contentPaddingWithLabel(),
     )
+}
+
+/** A mirrored [state], and the way to hand the caller its latest text before acting on it. */
+private class MirroredState(
+    val state: TextFieldState,
+    private val flush: () -> Unit,
+) {
+    /**
+     * Wraps [action] so the caller has the field's current text when it runs: the caller's copy
+     * trails the field by a frame, and Enter right after a keystroke would act on the old text.
+     */
+    fun beforeAction(action: (() -> Unit)?): (() -> Unit)? =
+        action?.let {
+            {
+                flush()
+                it()
+            }
+        }
 }
 
 /**
@@ -460,20 +497,25 @@ private fun rememberMirroredState(
     text: String,
     selection: TextRange?,
     report: (String, TextRange) -> Unit,
-): TextFieldState {
+): MirroredState {
     val state = rememberTextFieldState(text, selection ?: TextRange(text.length))
     val reported = remember { ArrayDeque<String>() }
     val latestReport by rememberUpdatedState(report)
     val tracksSelection = selection != null
 
+    fun send(
+        current: String,
+        currentSelection: TextRange,
+    ) {
+        reported.addLast(current)
+        if (reported.size > MAX_REPORTED) reported.removeFirst()
+        latestReport(current, if (tracksSelection) currentSelection else TextRange(current.length))
+    }
+
     LaunchedEffect(state, tracksSelection) {
         snapshotFlow { state.text.toString() to (if (tracksSelection) state.selection else TextRange.Zero) }
             .drop(1)
-            .collect { (current, currentSelection) ->
-                reported.addLast(current)
-                if (reported.size > MAX_REPORTED) reported.removeFirst()
-                latestReport(current, if (tracksSelection) currentSelection else TextRange(current.length))
-            }
+            .collect { (current, currentSelection) -> send(current, currentSelection) }
     }
 
     LaunchedEffect(text) {
@@ -490,7 +532,11 @@ private fun rememberMirroredState(
             }
         }
     }
-    return state
+
+    return MirroredState(state) {
+        val current = state.text.toString()
+        if (reported.lastOrNull() != current) send(current, state.selection)
+    }
 }
 
 private const val MAX_REPORTED = 32
