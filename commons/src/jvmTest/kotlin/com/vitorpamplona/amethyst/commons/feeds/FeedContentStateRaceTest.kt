@@ -38,7 +38,7 @@ import kotlin.test.assertTrue
  * memory-pressure trim — run on different IO coroutines and each read the list, transform it
  * and write it back. Unserialized, a deletion that landed while an insert batch was merging was
  * overwritten by the insert's stale copy, and the deleted note stayed in the feed until the
- * next full rebuild.
+ * next full rebuild. The merge is slow, so the fix must not make a deletion wait for it either.
  */
 class FeedContentStateRaceTest {
     private val a = Note("a".repeat(64))
@@ -78,13 +78,63 @@ class FeedContentStateRaceTest {
             assertTrue(filter.merging.await(5, TimeUnit.SECONDS), "the insert never started merging")
 
             val delete = thread { state.deleteFromFeed(setOf(deleted)) }
-            // Unserialized, the deletion finishes here, mid-merge; serialized, it waits its turn.
-            delete.join(500)
+            delete.join(2_000)
+            assertTrue(!delete.isAlive, "the deletion waited for the merge")
+            assertEquals(listOf(a), state.visibleNotes(), "the deletion did not show until the merge ended")
+
             filter.release.countDown()
             insert.join(5_000)
-            delete.join(5_000)
 
             assertEquals(listOf(a, b), state.visibleNotes())
+        } finally {
+            scope.cancel()
+        }
+    }
+
+    /** Holds the full rebuild open, the slowest writer, so the deletion lands mid-rebuild. */
+    private class SlowLoadFilter(
+        private val all: List<Note>,
+    ) : AdditiveFeedFilter<Note>() {
+        @Volatile var slow = false
+        val loading = CountDownLatch(1)
+        val release = CountDownLatch(1)
+
+        override fun feedKey(): Any = "feed"
+
+        override fun feed(): List<Note> {
+            if (slow) {
+                loading.countDown()
+                release.await(5, TimeUnit.SECONDS)
+            }
+            return all
+        }
+
+        override fun applyFilter(newItems: Set<Note>): Set<Note> = newItems
+
+        override fun sort(items: Set<Note>): List<Note> = items.sortedBy { it.idHex }
+    }
+
+    @Test
+    fun aDeletionDuringAFullRefreshIsNotUndoneNorDelayed() {
+        val scope = CoroutineScope(Dispatchers.Default + SupervisorJob())
+        try {
+            val filter = SlowLoadFilter(listOf(a, deleted))
+            val state = FeedContentState(filter, scope, StubCache())
+            state.refreshSuspended()
+
+            filter.slow = true
+            val refresh = thread { state.refreshSuspended() }
+            assertTrue(filter.loading.await(5, TimeUnit.SECONDS), "the refresh never started loading")
+
+            val delete = thread { state.deleteFromFeed(setOf(deleted)) }
+            delete.join(2_000)
+            assertTrue(!delete.isAlive, "the deletion waited for the refresh")
+
+            // The rebuild read the cache before the deletion, so its copy still holds the note.
+            filter.release.countDown()
+            refresh.join(5_000)
+
+            assertEquals(listOf(a), state.visibleNotes())
         } finally {
             scope.cancel()
         }
