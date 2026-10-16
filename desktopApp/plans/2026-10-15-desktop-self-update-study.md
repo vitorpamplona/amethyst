@@ -77,7 +77,7 @@ Run this at startup, from `desktopApp`. It returns a sealed `InstallChannel`.
 | `jpackage.app-path` is null | Dev build | No update checks |
 | `FLATPAK_ID` set, or `/.flatpak-info` exists | Flatpak (bundle or Orchard) | Portal update (see Linux) or notify only |
 | `APPIMAGE` set (set by the AppImage runtime) | AppImage | Self-replace |
-| macOS, and `/opt/homebrew/Caskroom/amethyst-nostr` (or `/usr/local/Caskroom/…`) exists | Homebrew cask | Notify: "run `brew upgrade --cask amethyst-nostr`" |
+| macOS, and a link under `/opt/homebrew/Caskroom/amethyst-nostr/<version>/` (or `/usr/local/Caskroom/…`) leads to this bundle | Homebrew cask | Notify: "run `brew upgrade --cask amethyst-nostr`" |
 | macOS, bundle path contains `/AppTranslocation/` or starts with `/Volumes/` | Translocated / running from the DMG | Tell the user to move the app to `/Applications`. Updating here can't work: the path is read-only and random. |
 | macOS, anything else | DMG install | Self-replace |
 | Windows, launcher under `%ProgramFiles%` and the MSI UpgradeCode is registered | MSI (direct or winget: same MSI, same ARP entry) | Run the new MSI |

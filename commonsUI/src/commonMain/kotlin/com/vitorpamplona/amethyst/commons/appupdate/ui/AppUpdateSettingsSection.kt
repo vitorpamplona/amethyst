@@ -53,6 +53,7 @@ import com.vitorpamplona.amethyst.commons.resources.app_update_copy_command
 import com.vitorpamplona.amethyst.commons.resources.app_update_current_version
 import com.vitorpamplona.amethyst.commons.resources.app_update_downloading
 import com.vitorpamplona.amethyst.commons.resources.app_update_install
+import com.vitorpamplona.amethyst.commons.resources.app_update_last_checked
 import com.vitorpamplona.amethyst.commons.resources.app_update_never_checked
 import com.vitorpamplona.amethyst.commons.resources.app_update_open_page
 import com.vitorpamplona.amethyst.commons.resources.app_update_ready
@@ -62,6 +63,7 @@ import com.vitorpamplona.amethyst.commons.resources.app_update_section
 import com.vitorpamplona.amethyst.commons.resources.app_update_skipped
 import com.vitorpamplona.amethyst.commons.resources.app_update_up_to_date
 import com.vitorpamplona.amethyst.commons.ui.components.util.setText
+import com.vitorpamplona.amethyst.commons.ui.note.timeAbsoluteNoDot
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.settings.SettingsDivider
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.settings.SettingsSection
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.settings.SettingsSwitchTile
@@ -90,6 +92,7 @@ fun AppUpdateSettingsSection(controller: AppUpdateController) {
 private fun UpdateStatusRow(controller: AppUpdateController) {
     val state by controller.state.collectAsStateWithLifecycle()
     val skipped by controller.skippedVersion.collectAsStateWithLifecycle()
+    val lastCheckAt by controller.lastCheckAt.collectAsStateWithLifecycle()
     val uriHandler = LocalUriHandler.current
 
     Column(
@@ -103,7 +106,12 @@ private fun UpdateStatusRow(controller: AppUpdateController) {
 
         val status: String? =
             when (val s = state) {
-                AppUpdateState.Idle -> stringRes(Res.string.app_update_never_checked)
+                AppUpdateState.Idle ->
+                    if (lastCheckAt > 0) {
+                        stringRes(Res.string.app_update_last_checked, timeAbsoluteNoDot(lastCheckAt))
+                    } else {
+                        stringRes(Res.string.app_update_never_checked)
+                    }
                 AppUpdateState.Checking -> stringRes(Res.string.app_update_checking)
                 is AppUpdateState.UpToDate -> stringRes(Res.string.app_update_up_to_date)
                 is AppUpdateState.Available ->

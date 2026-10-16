@@ -20,9 +20,18 @@
  */
 package com.vitorpamplona.amethyst.commons.appupdate.ui
 
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.selection.SelectionContainer
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -34,6 +43,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalUriHandler
+import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.commons.appupdate.AppUpdateController
 import com.vitorpamplona.amethyst.commons.appupdate.AppUpdateState
@@ -65,6 +75,7 @@ import com.vitorpamplona.amethyst.commons.resources.app_update_restart
 import com.vitorpamplona.amethyst.commons.resources.app_update_retry
 import com.vitorpamplona.amethyst.commons.resources.app_update_skip
 import com.vitorpamplona.amethyst.commons.resources.app_update_unsigned
+import com.vitorpamplona.amethyst.commons.resources.app_update_whats_new
 import com.vitorpamplona.amethyst.commons.ui.components.PromptDialog
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import org.jetbrains.compose.resources.StringResource
@@ -172,6 +183,7 @@ private fun AvailableDialog(
         onDismiss = onClose,
         dismissible = true,
     ) {
+        if (update.releaseNotes.isNotBlank()) ReleaseNotes(update.releaseNotes)
         Text(
             text = updateMethodText(controller.method, update.canInstall),
             style = MaterialTheme.typography.bodySmall,
@@ -182,6 +194,33 @@ private fun AvailableDialog(
             onClose()
         }) {
             Text(stringRes(Res.string.app_update_skip))
+        }
+    }
+}
+
+/** The release's notes, as written (often markdown), in a box that scrolls when they run long. */
+@Composable
+private fun ReleaseNotes(notes: String) {
+    Column(
+        modifier = Modifier.fillMaxWidth(),
+        verticalArrangement = Arrangement.spacedBy(4.dp),
+    ) {
+        Text(
+            text = stringRes(Res.string.app_update_whats_new),
+            style = MaterialTheme.typography.titleSmall,
+        )
+        Surface(
+            shape = RoundedCornerShape(12.dp),
+            color = MaterialTheme.colorScheme.surfaceVariant,
+            modifier = Modifier.fillMaxWidth(),
+        ) {
+            SelectionContainer {
+                Text(
+                    text = notes.trim(),
+                    style = MaterialTheme.typography.bodySmall,
+                    modifier = Modifier.heightIn(max = 200.dp).verticalScroll(rememberScrollState()).padding(12.dp),
+                )
+            }
         }
     }
 }

@@ -23,10 +23,13 @@ package com.vitorpamplona.amethyst.desktop.update
 import com.vitorpamplona.amethyst.commons.appupdate.DesktopPackage
 import com.vitorpamplona.amethyst.commons.appupdate.UpdateMethod
 import java.io.File
+import java.nio.file.Files
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
 import kotlin.test.assertIs
 import kotlin.test.assertNull
+import kotlin.test.assertTrue
 
 class InstallChannelTest {
     private fun probe(
@@ -37,6 +40,7 @@ class InstallChannelTest {
         existing: Set<String> = emptySet(),
         writable: Boolean = true,
         owner: DesktopPackage? = null,
+        caskApps: Set<String> = emptySet(),
     ) = InstallChannel.Probe(
         osName = os,
         osArch = arch,
@@ -45,6 +49,7 @@ class InstallChannelTest {
         exists = { it in existing },
         canWrite = { writable },
         systemPackageOwning = { owner },
+        homebrewCaskOwns = { it.invariantSeparatorsPath in caskApps },
     )
 
     @Test
@@ -68,10 +73,40 @@ class InstallChannelTest {
     fun macAppOwnedByHomebrewOnlyTellsTheCommand() {
         val channel =
             InstallChannel.detect(
-                probe("Mac OS X", "/Applications/Amethyst.app/Contents/MacOS/Amethyst", arch = "aarch64", existing = setOf("/opt/homebrew/Caskroom/amethyst-nostr")),
+                probe("Mac OS X", "/Applications/Amethyst.app/Contents/MacOS/Amethyst", arch = "aarch64", caskApps = setOf("/Applications/Amethyst.app")),
             )
         assertEquals(UpdateMethod.PackageManager("Homebrew", "brew upgrade --cask amethyst-nostr"), channel.method)
         assertEquals(emptyList(), channel.target?.packages)
+    }
+
+    /** A DMG copy on a Mac that also has the cask: the cask's app is elsewhere, so this one updates itself. */
+    @Test
+    fun macAppBesideTheHomebrewOneUpdatesItself() {
+        val channel =
+            InstallChannel.detect(
+                probe("Mac OS X", "/Users/me/Applications/Amethyst.app/Contents/MacOS/Amethyst", arch = "aarch64", caskApps = setOf("/Applications/Amethyst.app")),
+            )
+        assertEquals(UpdateMethod.SelfInstall, channel.method)
+        assertEquals(listOf(DesktopPackage.DMG), channel.target?.packages)
+    }
+
+    /** Homebrew's record of the cask is a link from `Caskroom/<cask>/<version>/` to the app it installed. */
+    @Test
+    fun theCaskOwnsOnlyTheAppItsLinkLeadsTo() {
+        val root = Files.createTempDirectory("brew").toFile()
+        try {
+            val installed = File(root, "Applications/Amethyst.app").apply { mkdirs() }
+            val other = File(root, "Elsewhere/Amethyst.app").apply { mkdirs() }
+            val version = File(root, "prefix/Caskroom/amethyst-nostr/1.18.0").apply { mkdirs() }
+            Files.createSymbolicLink(File(version, "Amethyst.app").toPath(), installed.toPath())
+            val prefixes = listOf(File(root, "prefix").path, File(root, "missing").path)
+
+            assertTrue(InstallChannel.homebrewCaskOwns(installed, prefixes))
+            assertFalse(InstallChannel.homebrewCaskOwns(other, prefixes))
+            assertFalse(InstallChannel.homebrewCaskOwns(installed, listOf(File(root, "missing").path)))
+        } finally {
+            root.deleteRecursively()
+        }
     }
 
     @Test

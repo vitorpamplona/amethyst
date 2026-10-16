@@ -110,6 +110,9 @@ interface AppUpdateController {
     /** The version the user chose to skip; the prompt stays away for it, the settings still show it. */
     val skippedVersion: StateFlow<String?>
 
+    /** When a check last got an answer, in seconds; 0 when none ever did. */
+    val lastCheckAt: StateFlow<Long>
+
     fun setAutoCheck(enabled: Boolean)
 
     fun checkNow()

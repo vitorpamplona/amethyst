@@ -121,6 +121,8 @@ sealed interface InstallChannel {
         val canWrite: (File) -> Boolean,
         /** DEB or RPM when that package database owns [File]; null otherwise. */
         val systemPackageOwning: (File) -> DesktopPackage?,
+        /** Whether the Homebrew cask installed this app bundle. */
+        val homebrewCaskOwns: (File) -> Boolean,
     ) {
         companion object {
             fun system() =
@@ -132,6 +134,7 @@ sealed interface InstallChannel {
                     exists = { File(it).exists() },
                     canWrite = { it.canWrite() },
                     systemPackageOwning = ::queryPackageDatabases,
+                    homebrewCaskOwns = { homebrewCaskOwns(it) },
                 )
         }
     }
@@ -155,7 +158,8 @@ sealed interface InstallChannel {
                     MacApp(
                         bundle = bundle,
                         platform = if (is64BitArm) Platform.DARWIN_ARM64 else Platform.DARWIN_X86_64,
-                        homebrew = HOMEBREW_PREFIXES.any { probe.exists("$it/Caskroom/$HOMEBREW_CASK") },
+                        // Only the copy the cask put there: a DMG copy elsewhere on the same Mac updates itself.
+                        homebrew = probe.homebrewCaskOwns(bundle),
                         // Run from the quarantined copy, or straight off the mounted DMG (read-only).
                         // A writable /Volumes/… is an app on another drive, which updates in place.
                         translocated = path.contains("/AppTranslocation/") || (path.startsWith("/Volumes/") && !parentWritable),
@@ -206,6 +210,27 @@ sealed interface InstallChannel {
         }
 
         private val HOMEBREW_PREFIXES = listOf("/opt/homebrew", "/usr/local")
+
+        /**
+         * Homebrew keeps a link to each app it installed under `Caskroom/<cask>/<version>/`, pointing
+         * at where it put the app (`/Applications/Amethyst.app` unless `--appdir` said otherwise). The
+         * cask owns [bundle] only when one of those links leads to it: a copy from the DMG elsewhere on
+         * the same Mac is not Homebrew's.
+         */
+        internal fun homebrewCaskOwns(
+            bundle: File,
+            prefixes: List<String> = HOMEBREW_PREFIXES,
+        ): Boolean {
+            val target = runCatching { bundle.canonicalFile }.getOrNull() ?: return false
+            return prefixes.any { prefix ->
+                File("$prefix/Caskroom/$HOMEBREW_CASK")
+                    .listFiles()
+                    .orEmpty()
+                    .filter { it.isDirectory && !it.name.startsWith(".") }
+                    .flatMap { version -> version.listFiles().orEmpty().filter { it.name.endsWith(".app") } }
+                    .any { link -> runCatching { link.canonicalFile }.getOrNull() == target }
+            }
+        }
 
         private fun File.isInside(dir: File) = toPath().normalize().startsWith(dir.toPath().normalize())
 

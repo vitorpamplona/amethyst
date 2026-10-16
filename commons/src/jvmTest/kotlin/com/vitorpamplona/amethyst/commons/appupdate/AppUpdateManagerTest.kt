@@ -261,6 +261,22 @@ class AppUpdateManagerTest {
             assertEquals(2, source.calls)
         }
 
+    /** A restart checks again even right after the last run checked, and shows when that was until then. */
+    @Test
+    fun everyStartChecksWhateverTheLastCheck() =
+        runTest {
+            val persistence = MemoryPersistence(AppUpdateSettings(lastCheckAt = 999_990))
+            val source = FixedSource(null)
+            val m = manager(source, persistence = persistence)
+            m.start()
+            runCurrent()
+            assertEquals(999_990, m.lastCheckAt.value)
+            assertEquals(0, source.calls)
+            advanceTimeBy(61_000)
+            assertEquals(1, source.calls)
+            assertTrue(m.lastCheckAt.value > 999_990)
+        }
+
     /** With checks off, the loop sleeps instead of waking every minute; turning them on wakes it. */
     @Test
     fun checksOffMeansNoChecks() =

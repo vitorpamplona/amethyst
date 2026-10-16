@@ -30,6 +30,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
@@ -72,8 +73,10 @@ class AppUpdateManager(
     private val _skippedVersion = MutableStateFlow<String?>(null)
     override val skippedVersion: StateFlow<String?> = _skippedVersion
 
-    /** When a check last reached a source; persisted. */
-    @Volatile private var lastCheckAt = 0L
+    private val _lastCheckAt = MutableStateFlow(0L)
+
+    /** When a check last reached a source, in this run or an earlier one; persisted. */
+    override val lastCheckAt: StateFlow<Long> = _lastCheckAt
 
     /** When the periodic loop checks next: after a success, or sooner after a failure. */
     private val nextCheckAt = MutableStateFlow(0L)
@@ -99,8 +102,8 @@ class AppUpdateManager(
                 val settings = persistence.load()
                 if (!autoCheckChanged) _autoCheck.value = settings.autoCheck
                 if (!skippedVersionChanged) _skippedVersion.value = settings.skippedVersion
-                lastCheckAt = maxOf(lastCheckAt, settings.lastCheckAt)
-                nextCheckAt.value = maxOf(nextCheckAt.value, lastCheckAt + checkIntervalSec)
+                // Only shown: every start checks again, however recent the last check was.
+                _lastCheckAt.update { maxOf(it, settings.lastCheckAt) }
             }
         loadJob = load
         return scope.launch {
@@ -162,8 +165,8 @@ class AppUpdateManager(
             if (result is AppUpdateState.Failed) {
                 nextCheckAt.value = now() + retryDelaySec
             } else {
-                lastCheckAt = now()
-                nextCheckAt.value = lastCheckAt + checkIntervalSec
+                _lastCheckAt.value = now()
+                nextCheckAt.value = _lastCheckAt.value + checkIntervalSec
                 persist()
             }
         } finally {
@@ -254,7 +257,7 @@ class AppUpdateManager(
         scope.launch {
             try {
                 loadJob?.join()
-                saving.withLock { persistence.save(AppUpdateSettings(_autoCheck.value, _skippedVersion.value, lastCheckAt)) }
+                saving.withLock { persistence.save(AppUpdateSettings(_autoCheck.value, _skippedVersion.value, _lastCheckAt.value)) }
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {

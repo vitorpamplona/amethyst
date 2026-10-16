@@ -5693,9 +5693,11 @@
     <string name="app_update_check_now">Check now</string>
     <string name="app_update_checking">Checking for updates…</string>
     <string name="app_update_never_checked">Not checked yet.</string>
+    <string name="app_update_last_checked">Last checked: %1$s.</string>
     <string name="app_update_up_to_date">Amethyst is up to date.</string>
     <string name="app_update_available_title">Amethyst %1$s is available</string>
     <string name="app_update_available_body">You have version %1$s.</string>
+    <string name="app_update_whats_new">What's new</string>
     <string name="app_update_install">Update</string>
     <string name="app_update_later">Later</string>
     <string name="app_update_skip">Skip this version</string>
