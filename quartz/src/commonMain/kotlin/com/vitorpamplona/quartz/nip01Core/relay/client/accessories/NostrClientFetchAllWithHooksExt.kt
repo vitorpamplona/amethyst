@@ -407,7 +407,9 @@ fun Map<NormalizedRelayUrl, String>.authRefusedRelays(): Set<NormalizedRelayUrl>
  * widely-mirrored event arrives once per relay, and the repeats are dropped by a
  * [SeenIds] filter BEFORE the (potentially expensive) [onEvent] — an id is marked
  * seen only after the hook accepts it, so a forged copy (valid id, bad signature)
- * delivered first can't suppress the genuine one from another relay.
+ * delivered first can't suppress the genuine one from another relay. That dedup spans
+ * the whole call, so it also drops what a [resumeBackoff] re-ask
+ * ([fetchAllPagesResuming]) delivers again.
  */
 suspend fun INostrClient.fetchAllPagesFromPoolWithHooks(
     filters: Map<NormalizedRelayUrl, List<Filter>>,
@@ -416,10 +418,12 @@ suspend fun INostrClient.fetchAllPagesFromPoolWithHooks(
     onRelayResult: ((relay: NormalizedRelayUrl, result: PagedFetchResult) -> Unit)? = null,
     pageSize: Int? = null,
     throttleBackoff: PageRetryBackoff = PageRetryBackoff.DEFAULT,
+    resumeBackoff: PageRetryBackoff? = null,
+    onRelayResume: ((relay: NormalizedRelayUrl, attempt: Int, last: PagedFetchResult) -> Unit)? = null,
     onEvent: suspend (relay: NormalizedRelayUrl, event: Event) -> Boolean,
 ): List<Pair<NormalizedRelayUrl, Event>> {
     val collected = mutableListOf<Pair<NormalizedRelayUrl, Event>>()
-    streamAllPagesFromPoolWithHooks(filters, idleTimeoutMs, maxConcurrentRelays, onRelayResult, pageSize, throttleBackoff) { relay, event ->
+    streamAllPagesFromPoolWithHooks(filters, idleTimeoutMs, maxConcurrentRelays, onRelayResult, pageSize, throttleBackoff, resumeBackoff, onRelayResume) { relay, event ->
         onEvent(relay, event).also { accepted -> if (accepted) collected.add(relay to event) }
     }
     return collected
@@ -447,6 +451,8 @@ suspend fun INostrClient.streamAllPagesFromPoolWithHooks(
     onRelayResult: ((relay: NormalizedRelayUrl, result: PagedFetchResult) -> Unit)? = null,
     pageSize: Int? = null,
     throttleBackoff: PageRetryBackoff = PageRetryBackoff.DEFAULT,
+    resumeBackoff: PageRetryBackoff? = null,
+    onRelayResume: ((relay: NormalizedRelayUrl, attempt: Int, last: PagedFetchResult) -> Unit)? = null,
     onEvent: suspend (relay: NormalizedRelayUrl, event: Event) -> Boolean,
 ): Int {
     if (filters.isEmpty()) return 0
@@ -481,6 +487,8 @@ suspend fun INostrClient.streamAllPagesFromPoolWithHooks(
                 onRelayResult = onRelayResult,
                 pageSize = pageSize,
                 throttleBackoff = throttleBackoff,
+                resumeBackoff = resumeBackoff,
+                onRelayResume = onRelayResume,
             ) { event, relay -> eventChannel.send(relay to event) }
         } finally {
             eventChannel.close()

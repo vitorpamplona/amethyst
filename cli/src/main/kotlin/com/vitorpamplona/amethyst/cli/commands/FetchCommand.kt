@@ -27,6 +27,7 @@ import com.vitorpamplona.amethyst.cli.Output
 import com.vitorpamplona.amethyst.commons.relayClient.oneshot.EventLocator
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.FetchAllResult
+import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.PageRetryBackoff
 import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.PagedFetchResult
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
@@ -36,6 +37,9 @@ import com.vitorpamplona.quartz.nip19Bech32.entities.NEvent
 import com.vitorpamplona.quartz.nip19Bech32.entities.NNote
 import com.vitorpamplona.quartz.nip19Bech32.entities.NProfile
 import com.vitorpamplona.quartz.nip19Bech32.entities.NPub
+import java.io.File
+import java.io.IOException
+import java.util.zip.GZIPOutputStream
 import kotlin.coroutines.cancellation.CancellationException
 
 /**
@@ -92,9 +96,14 @@ object FetchCommand {
         |        [--timeout SECS] [--paginate|--all]    --paginate walks each relay page-by-page
         |                                                past its per-REQ cap (alias --all);
         |                                                --limit caps the walk; a relay refusing
-        |                                                a big page is re-asked at its max.
+        |                                                a big page is re-asked at its max; a
+        |                                                dropped connection is resumed where the
+        |                                                walk got to (reported as `resumes`).
         |                                                --paginate --limit 0 streams events in
-        |                                                arrival order (not newest-first).
+        |                                                arrival order (not newest-first);
+        |                                                --out FILE writes them there, one JSON
+        |                                                per line (gzipped for .gz), and prints
+        |                                                only the summary.
         |                                                A --search with words gets one page per
         |                                                relay (hits are ranked; listed in
         |                                                unpaged_relays, `amy sync` gets them all);
@@ -123,7 +132,7 @@ object FetchCommand {
         // The filter/relay/paging flags are read later (buildFilter, queryTargets,
         // the --paginate branch) and code mode skips them entirely, so whitelist
         // them here where both paths still share the flow.
-        args.rejectUnknown("kind", "author", "id", "tag", "since", "until", "search", "relay", "paginate", "all")
+        args.rejectUnknown("kind", "author", "id", "tag", "since", "until", "search", "relay", "paginate", "all", "out")
 
         // Code mode: a nip19/nip05 positional resolves its own relays via the
         // outbox model rather than using a hand-built filter. It fetches a single
@@ -145,17 +154,27 @@ object FetchCommand {
 
             val relayErrors = mutableMapOf<NormalizedRelayUrl, RelayError>()
             val unpaged = mutableSetOf<NormalizedRelayUrl>()
+            val resumes = Resumes()
 
             // Unbounded walk: there is no "newest N" to keep, so nothing needs sorting —
             // write each event out as it arrives instead of holding the whole history.
-            if (paginate && effectiveLimit == null) return streamAllPages(ctx, filter, relays, timeoutMs, relayErrors, unpaged)
+            val out = args.flag("out")
+            if (paginate && effectiveLimit == null && out != null) return streamAllPagesToFile(ctx, filter, relays, timeoutMs, relayErrors, unpaged, resumes, File(out))
+            if (out != null) return Output.error("bad_args", "--out streams a whole walk: it needs --paginate --limit 0")
+            if (paginate && effectiveLimit == null) return streamAllPages(ctx, filter, relays, timeoutMs, relayErrors, unpaged, resumes)
 
             val received =
                 if (paginate) {
-                    ctx.drainAllPages(relays.associateWith { listOf(filter) }, timeoutMs) { relay, result ->
-                        refusalOf(result)?.let { synchronized(relayErrors) { relayErrors[relay] = it } }
-                        if (result.end == PagedFetchResult.End.UNPAGEABLE) synchronized(unpaged) { unpaged.add(relay) }
-                    }
+                    ctx.drainAllPages(
+                        relays.associateWith { listOf(filter) },
+                        timeoutMs,
+                        onRelayResult = { relay, result ->
+                            refusalOf(result)?.let { synchronized(relayErrors) { relayErrors[relay] = it } }
+                            if (result.end == PagedFetchResult.End.UNPAGEABLE) synchronized(unpaged) { unpaged.add(relay) }
+                        },
+                        resumeBackoff = PageRetryBackoff.RESUME,
+                        onRelayResume = resumes::heard,
+                    )
                 } else {
                     val result = ctx.drainResult(relays.associateWith { listOf(filter) }, timeoutMs)
                     result.doneReasons.forEach { (relay, reason) -> refusalOf(reason)?.let { relayErrors[relay] = it } }
@@ -179,7 +198,7 @@ object FetchCommand {
                     "queried_relays" to relays.map { it.url },
                     "count" to events.size,
                     "events" to events,
-                ) + unpagedField(unpaged),
+                ) + unpagedField(unpaged) + resumes.field(),
                 relays,
                 relayErrors,
             )
@@ -202,6 +221,7 @@ object FetchCommand {
         timeoutMs: Long,
         relayErrors: MutableMap<NormalizedRelayUrl, RelayError>,
         unpaged: MutableSet<NormalizedRelayUrl>,
+        resumes: Resumes,
     ): Int {
         val stream = Output.listStream(mapOf("queried_relays" to relays.map { it.url }), "events")
         val count =
@@ -209,7 +229,7 @@ object FetchCommand {
                 ctx.streamAllPages(relays.associateWith { listOf(filter) }, timeoutMs, onRelayResult = { relay, result ->
                     refusalOf(result)?.let { synchronized(relayErrors) { relayErrors[relay] = it } }
                     if (result.end == PagedFetchResult.End.UNPAGEABLE) synchronized(unpaged) { unpaged.add(relay) }
-                }) { _, event -> stream.item({ event.toJson() }, { eventAsMap(event) }) }
+                }, resumeBackoff = PageRetryBackoff.RESUME, onRelayResume = resumes::heard) { _, event -> stream.item({ event.toJson() }, { eventAsMap(event) }) }
             } catch (e: Throwable) {
                 // Close the half-written object (with an `error`) before anything else reports:
                 // a second JSON object after a cut-off one is unparseable either way. The relays
@@ -227,8 +247,58 @@ object FetchCommand {
         }
 
         val errors = reportRelayErrors(relayErrors)
-        stream.finish(mapOf("count" to count) + unpagedField(unpaged) + (if (errors.isEmpty()) emptyMap() else mapOf("relay_errors" to errors)))
+        stream.finish(mapOf("count" to count) + unpagedField(unpaged) + resumes.field() + (if (errors.isEmpty()) emptyMap() else mapOf("relay_errors" to errors)))
         return 0
+    }
+
+    /**
+     * `--paginate --limit 0 --out FILE`: [streamAllPages] into a file, one event per line, the
+     * shape `amy publish --file` reads back, verified but not cached. Stdout carries only the
+     * summary.
+     */
+    private suspend fun streamAllPagesToFile(
+        ctx: Context,
+        filter: Filter,
+        relays: Set<NormalizedRelayUrl>,
+        timeoutMs: Long,
+        relayErrors: MutableMap<NormalizedRelayUrl, RelayError>,
+        unpaged: MutableSet<NormalizedRelayUrl>,
+        resumes: Resumes,
+        file: File,
+    ): Int {
+        val raw =
+            try {
+                file.outputStream().buffered(1 shl 16)
+            } catch (e: IOException) {
+                return Output.error("bad_args", "cannot write --out ${file.path}: ${e.message}")
+            }
+        val writer = (if (file.name.endsWith(".gz")) GZIPOutputStream(raw, 1 shl 16) else raw).bufferedWriter()
+        var written = 0
+        val count =
+            try {
+                writer.use { w ->
+                    // Not cached: an export is the one walk too large for the local store.
+                    ctx.streamAllPages(relays.associateWith { listOf(filter) }, timeoutMs, onRelayResult = { relay, result ->
+                        refusalOf(result)?.let { synchronized(relayErrors) { relayErrors[relay] = it } }
+                        if (result.end == PagedFetchResult.End.UNPAGEABLE) synchronized(unpaged) { unpaged.add(relay) }
+                    }, cache = false, resumeBackoff = PageRetryBackoff.RESUME, onRelayResume = resumes::heard) { _, event ->
+                        synchronized(w) {
+                            w.write(event.toJson())
+                            w.write('\n'.code)
+                            written++
+                        }
+                    }
+                }
+            } catch (e: IOException) {
+                // A full disk mid-export: say how far the file got, so a rerun can pick up with
+                // `--until` instead of starting over.
+                return Output.error("runtime", "writing ${file.path} failed: ${e.message}", mapOf("out" to file.path, "count" to written))
+            }
+        return emitWithRelayErrors(
+            mapOf("queried_relays" to relays.map { it.url }, "count" to count, "out" to file.path) + unpagedField(unpaged) + resumes.field(),
+            relays,
+            relayErrors,
+        )
     }
 
     /**
@@ -268,6 +338,28 @@ object FetchCommand {
             "content" to event.content,
             "sig" to event.sig,
         )
+
+    /**
+     * The re-asks of walks a connection ended, per relay: each one said on stderr as it happens,
+     * and the counts reported as `resumes` when any. The quiet re-ask that confirms an empty
+     * last page is routine, so it is neither said nor counted.
+     */
+    private class Resumes {
+        private val counts = LinkedHashMap<NormalizedRelayUrl, Int>()
+
+        fun heard(
+            relay: NormalizedRelayUrl,
+            attempt: Int,
+            last: PagedFetchResult,
+        ) {
+            if (last.end == PagedFetchResult.End.DRAINED) return
+            synchronized(counts) { counts[relay] = (counts[relay] ?: 0) + 1 }
+            val why = "${last.end.name.lowercase()}${last.message?.let { ": $it" }.orEmpty()}"
+            System.err.println("warning: ${relay.url} ended the walk ($why). Asking again from where it got to (attempt $attempt)")
+        }
+
+        fun field(): Map<String, Any> = synchronized(counts) { if (counts.isEmpty()) emptyMap() else mapOf("resumes" to counts.entries.associate { it.key.url to it.value }) }
+    }
 
     /**
      * Why a relay gave us nothing, in its own words: a CLOSED reason (relay.zapstore.dev

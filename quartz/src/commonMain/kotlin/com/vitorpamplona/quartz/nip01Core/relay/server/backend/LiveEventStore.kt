@@ -61,13 +61,13 @@ import kotlin.concurrent.atomics.ExperimentalAtomicApi
  * can read the connection's NIP-42 identity.
  *
  * @property store The underlying persistent storage for events.
- * @property ingest The group-commit writer pipeline. Accepted events fan out via the
- *  index; rejected events do not.
+ * @property ingest The writer pipeline, quartz's group-commit [IngestQueue] unless the
+ *  store brings its own. Accepted events fan out via the index; rejected events do not.
  */
 @OptIn(ExperimentalAtomicApi::class)
 class LiveEventStore(
     private val store: IEventStore,
-    private val ingest: IngestQueue,
+    private val ingest: EventIngest,
 ) : SessionBackend {
     private val index = FilterIndex<LiveSubscription>()
 
@@ -90,7 +90,7 @@ class LiveEventStore(
      * drop an event the replay also emitted; after EOSE the set is
      * [release]d and the live path forwards everything.
      *
-     * Written from the replay coroutine and read from the [IngestQueue]
+     * Written from the replay coroutine and read from the [ingest]
      * drain coroutine (via `fanout`), so every access takes a tiny spin
      * lock — [locked] is `inline`, so the per-row `record` / `isDuplicate`
      * calls allocate no closure. The backing `HashSet` is created empty
@@ -127,7 +127,7 @@ class LiveEventStore(
     }
 
     /**
-     * Fire-and-forget enqueue: hand [event] to the [IngestQueue] and
+     * Fire-and-forget enqueue: hand [event] to the [ingest] and
      * fire [onComplete] once the writer's batch has a per-row
      * decision. On `Accepted` the live stream is also fanned out via
      * [FilterIndex] so subscribers see the event. Suspends only when
@@ -141,7 +141,7 @@ class LiveEventStore(
     /**
      * [submit] variant for locally-originated traffic (mirror/sync
      * workers rather than client connections). [skipVerify] exempts
-     * this event from the [IngestQueue]'s signature-verification hook —
+     * this event from the [ingest]'s signature-verification hook —
      * the relay-to-relay trust model: set it only for events streamed
      * from a configured upstream relay that already verified them.
      * Accepted events fan out to live subscribers exactly like a
@@ -164,7 +164,7 @@ class LiveEventStore(
     /**
      * Suspending insert kept for callers that don't care about
      * pipelining (tests, scripted paths). Routes through the same
-     * [IngestQueue] as [submit] so the batch write path is exercised
+     * [ingest] as [submit] so the batch write path is exercised
      * even by tests that prefer a sequential `insert` API.
      * Throws on rejection so callers can `try` around it the way the
      * old API did.
@@ -194,7 +194,7 @@ class LiveEventStore(
      * super-set; `Filter.match` enforces negative constraints. Each
      * candidate's `deliver` is expected to be cheap (typically a
      * `trySend` to a per-connection outbound queue) — this runs on
-     * the [IngestQueue] drain coroutine, so a slow sub blocks the
+     * the [ingest] drain coroutine, so a slow sub blocks the
      * batch writer.
      */
     private fun fanout(event: Event) {

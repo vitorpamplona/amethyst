@@ -27,6 +27,7 @@ import com.vitorpamplona.quartz.nip01Core.relay.client.listeners.RelayConnection
 import com.vitorpamplona.quartz.nip01Core.relay.client.reqs.SubscriptionListener
 import com.vitorpamplona.quartz.nip01Core.relay.client.single.IRelayClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.single.newSubId
+import com.vitorpamplona.quartz.nip01Core.relay.commands.toRelay.EventCmd
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -99,6 +100,20 @@ interface INostrClient : AutoCloseable {
         event: Event,
         relayList: Set<NormalizedRelayUrl>,
     )
+
+    /**
+     * [publish] with [event]'s JSON already in hand: [eventJson] goes on the wire verbatim, on
+     * the first send and every re-send, instead of [event] being serialized again. For bulk
+     * publishers that read events as JSON (an export file, a store row) and parsed them only to
+     * know their id. [eventJson] must be [event]'s own JSON object; see [EventCmd.eventJson].
+     *
+     * Clients that cannot send it verbatim serialize [event] as [publish] does.
+     */
+    fun publishRaw(
+        event: Event,
+        eventJson: String,
+        relayList: Set<NormalizedRelayUrl>,
+    ) = publish(event, relayList)
 
     /**
      * Returns the relays that have not yet acknowledged [eventId] with an OK,

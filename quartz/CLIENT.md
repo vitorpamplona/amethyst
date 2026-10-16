@@ -302,6 +302,24 @@ results.forEach { (relay, success) ->
 }
 ```
 
+To publish many events to one relay (a backfill, a migration), use `publishStream`: it keeps a
+bounded window of EVENTs awaiting their `OK` (512 events, 8 MiB of frames by default) and hands
+each verdict to a callback as it lands, with one listener for the whole stream:
+
+```kotlin
+import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.publishStream
+
+val result = client.publishStream(relay, events.asFlow(), maxInFlight = 1024) { event, ok ->
+    if (!ok.accepted) println("${event.id}: ${ok.message}")
+}
+println("${result.answered} answered, ${result.unanswered} unanswered, stalled=${result.stalled}")
+```
+
+When the events are already JSON (an export file, store rows), `publishRawStream` takes
+`EventWithJson(event, json)` items and sends each `json` verbatim instead of serializing the
+parsed event again; `client.publishRaw(event, json, relays)` is the one-event form. The JSON
+must be that event's own object (same id and signature): the relay verifies what it receives.
+
 #### Rate limits
 
 A relay may refuse an `EVENT` or a `REQ` as `rate-limited:` and say how long to back off, in
@@ -635,7 +653,8 @@ quartz/src/commonMain/kotlin/com/vitorpamplona/quartz/nip01Core/
 │   │   ├── SubscriptionListener.kt   # Callback interface for subscriptions
 │   │   └── NostrClientSubscribeAsFlowExt.kt  # Flow-based subscription API
 │   └── accessories/
-│       └── NostrClientPublishExt.kt  # publishAndConfirm / publishAndConfirmDetailed
+│       ├── NostrClientPublishExt.kt  # publishAndConfirm / publishAndConfirmDetailed
+│       └── NostrClientPublishStreamExt.kt  # publishStream / publishRawStream: a windowed bulk publish to one relay
 ├── relay/sockets/
 │   ├── WebSocket.kt                  # Transport interface
 │   ├── WebSocketListener.kt         # Transport callback interface

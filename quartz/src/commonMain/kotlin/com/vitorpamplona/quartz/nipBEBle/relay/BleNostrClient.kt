@@ -131,7 +131,7 @@ class BleNostrClient(
     override fun sendIfConnected(cmd: Command) {
         if (!connected) return
 
-        val json = OptimizedJsonMapper.toJson(cmd)
+        val json = cmd.toJson()
         val chunks = BleMessageChunker.splitIntoChunks(json, chunkSize)
 
         sendQueue.trySend(chunks)

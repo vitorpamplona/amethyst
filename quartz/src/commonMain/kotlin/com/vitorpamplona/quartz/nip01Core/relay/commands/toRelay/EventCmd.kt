@@ -21,13 +21,24 @@
 package com.vitorpamplona.quartz.nip01Core.relay.commands.toRelay
 
 import com.vitorpamplona.quartz.nip01Core.core.Event
+import com.vitorpamplona.quartz.nip01Core.core.OptimizedJsonMapper
 
+/**
+ * `["EVENT", <event>]`. [eventJson], when given, is [event]'s own JSON object as the caller
+ * already holds it (a line of an export, a row of a store) and is put on the wire verbatim
+ * instead of serializing [event] again: a bulk publish of kind 3s from a file spent about 12%
+ * of the publisher's CPU re-serializing events it had just parsed. It must be [event]'s JSON, the same id and
+ * signature: the relay verifies what it receives, and answers by the id it parsed from it.
+ */
 class EventCmd(
     val event: Event,
+    val eventJson: String? = null,
 ) : Command {
     override fun label(): String = LABEL
 
     override fun isValid() = true
+
+    override fun toJson(): String = if (eventJson != null) "[\"$LABEL\",$eventJson]" else OptimizedJsonMapper.toJson(this)
 
     companion object {
         const val LABEL = "EVENT"

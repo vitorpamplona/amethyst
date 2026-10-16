@@ -66,6 +66,9 @@ import kotlinx.coroutines.sync.Semaphore
  *                     relay's from its refusals — see [fetchAllPages].
  * @param throttleBackoff how each relay's walk re-asks a page its relay throttled empty —
  *                     see [fetchAllPages] and [PageRetryBackoff].
+ * @param resumeBackoff non-null walks each relay with [fetchAllPagesResuming]: a walk its
+ *                     connection ended is asked again from where it got to, on these waits.
+ * @param onRelayResume optional `(relay, attempt, last)` hook fired before each such re-ask.
  * @param onEvent      called once per delivered event with its source relay. It may suspend:
  *                     a relay's walk waits for it before taking its next page.
  */
@@ -79,6 +82,8 @@ suspend fun INostrClient.fetchAllPagesFromPool(
     onRelayResult: ((relay: NormalizedRelayUrl, result: PagedFetchResult) -> Unit)? = null,
     pageSize: Int? = null,
     throttleBackoff: PageRetryBackoff = PageRetryBackoff.DEFAULT,
+    resumeBackoff: PageRetryBackoff? = null,
+    onRelayResume: ((relay: NormalizedRelayUrl, attempt: Int, last: PagedFetchResult) -> Unit)? = null,
     onEvent: suspend (event: Event, relay: NormalizedRelayUrl) -> Unit,
 ) {
     if (filters.isEmpty()) return
@@ -91,14 +96,27 @@ suspend fun INostrClient.fetchAllPagesFromPool(
                 try {
                     onRelayStart?.invoke(relay)
                     val result =
-                        fetchAllPages(
-                            relay = relay,
-                            filters = filtersForRelay,
-                            idleTimeoutMs = idleTimeoutMs,
-                            onNewPage = onNewPage?.let { cb -> { until -> cb(until, relay) } },
-                            pageSize = pageSize,
-                            throttleBackoff = throttleBackoff,
-                        ) { event -> onEvent(event, relay) }
+                        if (resumeBackoff == null) {
+                            fetchAllPages(
+                                relay = relay,
+                                filters = filtersForRelay,
+                                idleTimeoutMs = idleTimeoutMs,
+                                onNewPage = onNewPage?.let { cb -> { until -> cb(until, relay) } },
+                                pageSize = pageSize,
+                                throttleBackoff = throttleBackoff,
+                            ) { event -> onEvent(event, relay) }
+                        } else {
+                            fetchAllPagesResuming(
+                                relay = relay,
+                                filters = filtersForRelay,
+                                idleTimeoutMs = idleTimeoutMs,
+                                onNewPage = onNewPage?.let { cb -> { until -> cb(until, relay) } },
+                                pageSize = pageSize,
+                                throttleBackoff = throttleBackoff,
+                                resumeBackoff = resumeBackoff,
+                                onResume = onRelayResume?.let { cb -> { attempt, last -> cb(relay, attempt, last) } },
+                            ) { event -> onEvent(event, relay) }
+                        }
                     onRelayComplete?.invoke(relay, result.downloaded)
                     onRelayResult?.invoke(relay, result)
                 } finally {
