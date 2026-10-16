@@ -191,7 +191,9 @@ fun RotateStatuses(
     DisplayStatus(statuses[indexToDisplay], accountViewModel, nav)
 
     if (statuses.size > 1) {
-        LaunchedEffect(Unit) {
+        // Keyed like the index above: a new list gets a new index, and a loop still holding the
+        // old one would rotate a state nobody reads while this one stayed on its first status.
+        LaunchedEffect(statuses) {
             while (true) {
                 delay(10.seconds)
                 indexToDisplay = (indexToDisplay + 1) % statuses.size
