@@ -99,6 +99,7 @@ import com.vitorpamplona.amethyst.commons.resources.route_edit_geocache
 import com.vitorpamplona.amethyst.commons.resources.route_new_geocache
 import com.vitorpamplona.amethyst.commons.ui.actions.uploads.GallerySelectSingle
 import com.vitorpamplona.amethyst.commons.ui.components.MyAsyncImage
+import com.vitorpamplona.amethyst.commons.ui.components.SpellCheckedOutlinedTextField
 import com.vitorpamplona.amethyst.commons.ui.components.rememberViewModel
 import com.vitorpamplona.amethyst.commons.ui.insets.imePaddingSafe
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
@@ -254,7 +255,7 @@ fun NewGeocacheScreen(
                 singleLine = true,
             )
 
-            OutlinedTextField(
+            SpellCheckedOutlinedTextField(
                 value = model.description.value,
                 onValueChange = { model.description.value = it },
                 label = { Text(stringRes(Res.string.geocache_new_description)) },
@@ -338,7 +339,7 @@ fun NewGeocacheScreen(
 
             ComposerSection(stringRes(Res.string.geocache_new_section_extras), 3)
 
-            OutlinedTextField(
+            SpellCheckedOutlinedTextField(
                 value = model.hint.value,
                 onValueChange = { model.hint.value = it },
                 label = { Text(stringRes(Res.string.geocache_new_hint)) },
@@ -367,7 +368,7 @@ fun NewGeocacheScreen(
                 )
             }
 
-            OutlinedTextField(
+            SpellCheckedOutlinedTextField(
                 value = model.mission.value,
                 onValueChange = { model.mission.value = it },
                 label = { Text(stringRes(Res.string.geocache_new_mission)) },

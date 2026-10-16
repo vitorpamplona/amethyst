@@ -33,7 +33,6 @@ import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
@@ -49,6 +48,7 @@ import com.vitorpamplona.amethyst.commons.resources.poll_multiple_choice
 import com.vitorpamplona.amethyst.commons.resources.poll_option_description
 import com.vitorpamplona.amethyst.commons.resources.poll_option_index
 import com.vitorpamplona.amethyst.commons.resources.poll_single_choice
+import com.vitorpamplona.amethyst.commons.ui.components.SpellCheckedOutlinedTextField
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.home.ShortNotePostViewModel
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.placeholderText
@@ -70,7 +70,7 @@ fun PollOptionsField(postViewModel: ShortNotePostViewModel) {
         Spacer(Modifier.height(4.dp))
 
         optionsList.forEach { option ->
-            OutlinedTextField(
+            SpellCheckedOutlinedTextField(
                 modifier = Modifier.fillMaxWidth(),
                 value = postViewModel.pollOptions[option.key]?.label ?: "",
                 onValueChange = {

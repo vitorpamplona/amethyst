@@ -24,7 +24,6 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
@@ -36,6 +35,7 @@ import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.clear
 import com.vitorpamplona.amethyst.commons.resources.poll_option_description
 import com.vitorpamplona.amethyst.commons.resources.poll_option_index
+import com.vitorpamplona.amethyst.commons.ui.components.SpellCheckedOutlinedTextField
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.home.ShortNotePostViewModel
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.placeholderText
@@ -59,7 +59,7 @@ fun ZapPollOption(
             }
         }
 
-        OutlinedTextField(
+        SpellCheckedOutlinedTextField(
             modifier = Modifier.weight(1F),
             value = pollViewModel.pollOptions[optionIndex]?.label ?: "",
             onValueChange = {

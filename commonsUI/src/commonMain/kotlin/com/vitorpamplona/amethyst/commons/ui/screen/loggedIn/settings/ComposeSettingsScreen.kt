@@ -27,7 +27,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SegmentedButton
 import androidx.compose.material3.SegmentedButtonDefaults
@@ -99,6 +98,7 @@ import com.vitorpamplona.amethyst.commons.resources.tracked_broadcasts_setting_d
 import com.vitorpamplona.amethyst.commons.resources.tracked_broadcasts_setting_title
 import com.vitorpamplona.amethyst.commons.service.pow.PoWCategory
 import com.vitorpamplona.amethyst.commons.service.pow.PoWEstimator
+import com.vitorpamplona.amethyst.commons.ui.components.SpellCheckedOutlinedTextField
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.navigation.topbars.TopBarWithBackButton
 import com.vitorpamplona.amethyst.commons.ui.note.creators.pow.POW_PRESETS
@@ -361,7 +361,7 @@ private fun SignatureTile(flow: MutableStateFlow<String>) {
         title = stringRes(Res.string.compose_signature_setting_title),
         description = stringRes(Res.string.compose_signature_setting_description),
     ) {
-        OutlinedTextField(
+        SpellCheckedOutlinedTextField(
             value = value,
             onValueChange = { flow.tryEmit(it) },
             placeholder = { Text(stringRes(Res.string.compose_signature_setting_hint)) },

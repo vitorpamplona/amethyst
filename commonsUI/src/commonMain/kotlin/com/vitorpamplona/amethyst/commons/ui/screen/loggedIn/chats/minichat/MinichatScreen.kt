@@ -282,6 +282,7 @@ fun MinichatScreen(
             Column(modifier = EditFieldModifier) {
                 ThinPaddingTextField(
                     state = composer,
+                    spellCheck = true,
                     onTextChanged = {
                         val group = buzzGroup
                         val now = TimeUtils.now()

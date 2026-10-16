@@ -86,6 +86,7 @@ import com.vitorpamplona.amethyst.commons.resources.web_bookmark_url_label
 import com.vitorpamplona.amethyst.commons.resources.web_bookmark_url_placeholder
 import com.vitorpamplona.amethyst.commons.resources.web_bookmarks
 import com.vitorpamplona.amethyst.commons.resources.yes
+import com.vitorpamplona.amethyst.commons.ui.components.SpellCheckedOutlinedTextField
 import com.vitorpamplona.amethyst.commons.ui.components.UrlPreviewState
 import com.vitorpamplona.amethyst.commons.ui.feeds.RefresheableBox
 import com.vitorpamplona.amethyst.commons.ui.feeds.RenderFeedContentState
@@ -457,7 +458,7 @@ fun WebBookmarkEditDialog(
 
                 Spacer(modifier = Modifier.height(8.dp))
 
-                OutlinedTextField(
+                SpellCheckedOutlinedTextField(
                     value = title,
                     onValueChange = { title = it },
                     label = { Text(stringRes(Res.string.web_bookmark_title_label)) },
@@ -468,7 +469,7 @@ fun WebBookmarkEditDialog(
 
                 Spacer(modifier = Modifier.height(8.dp))
 
-                OutlinedTextField(
+                SpellCheckedOutlinedTextField(
                     value = description,
                     onValueChange = { description = it },
                     label = { Text(stringRes(Res.string.web_bookmark_description_label)) },

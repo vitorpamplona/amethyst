@@ -50,6 +50,7 @@ import com.vitorpamplona.amethyst.commons.resources.nickname_dialog_title
 import com.vitorpamplona.amethyst.commons.resources.nickname_label
 import com.vitorpamplona.amethyst.commons.resources.nickname_save
 import com.vitorpamplona.amethyst.commons.resources.nickname_summary_label
+import com.vitorpamplona.amethyst.commons.ui.components.SpellCheckedOutlinedTextField
 import com.vitorpamplona.amethyst.commons.ui.text.currentWord
 import kotlinx.coroutines.launch
 import org.jetbrains.compose.resources.stringResource
@@ -124,7 +125,7 @@ fun EditNicknameDialog(
                         Text(text = stringResource(Res.string.nickname_label))
                     },
                 )
-                OutlinedTextField(
+                SpellCheckedOutlinedTextField(
                     state = summary,
                     label = {
                         Text(text = stringResource(Res.string.nickname_summary_label))

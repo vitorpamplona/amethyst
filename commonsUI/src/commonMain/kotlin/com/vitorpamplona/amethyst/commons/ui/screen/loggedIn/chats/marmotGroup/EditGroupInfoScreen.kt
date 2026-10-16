@@ -56,6 +56,7 @@ import com.vitorpamplona.amethyst.commons.resources.marmot_group_name_placeholde
 import com.vitorpamplona.amethyst.commons.resources.marmot_legacy_group_no_avatar_url
 import com.vitorpamplona.amethyst.commons.resources.save
 import com.vitorpamplona.amethyst.commons.service.uploads.SelectedMedia
+import com.vitorpamplona.amethyst.commons.ui.components.SpellCheckedOutlinedTextField
 import com.vitorpamplona.amethyst.commons.ui.components.rememberLongNotice
 import com.vitorpamplona.amethyst.commons.ui.components.rememberShortNotice
 import com.vitorpamplona.amethyst.commons.ui.insets.imePaddingSafe
@@ -199,7 +200,7 @@ fun EditGroupInfoScreen(
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            OutlinedTextField(
+            SpellCheckedOutlinedTextField(
                 value = description,
                 onValueChange = { description = it },
                 label = { Text(stringRes(Res.string.description)) },

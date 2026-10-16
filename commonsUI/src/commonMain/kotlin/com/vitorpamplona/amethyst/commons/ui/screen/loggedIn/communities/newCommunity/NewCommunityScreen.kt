@@ -94,6 +94,7 @@ import com.vitorpamplona.amethyst.commons.service.upload.ui.StrippingFailureDial
 import com.vitorpamplona.amethyst.commons.ui.actions.uploads.GallerySelect
 import com.vitorpamplona.amethyst.commons.ui.actions.uploads.ShowImageUploadGallery
 import com.vitorpamplona.amethyst.commons.ui.components.Nip05OrPubkeyLine
+import com.vitorpamplona.amethyst.commons.ui.components.SpellCheckedOutlinedTextField
 import com.vitorpamplona.amethyst.commons.ui.components.rememberViewModel
 import com.vitorpamplona.amethyst.commons.ui.insets.imePaddingSafe
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
@@ -241,7 +242,7 @@ private fun CommunityFormScreen(
                         ),
                 )
 
-                OutlinedTextField(
+                SpellCheckedOutlinedTextField(
                     value = model.description,
                     onValueChange = { model.description = it },
                     label = { Text(stringRes(Res.string.new_community_description)) },
@@ -254,7 +255,7 @@ private fun CommunityFormScreen(
                         ),
                 )
 
-                OutlinedTextField(
+                SpellCheckedOutlinedTextField(
                     value = model.rules,
                     onValueChange = { model.rules = it },
                     label = { Text(stringRes(Res.string.new_community_rules)) },

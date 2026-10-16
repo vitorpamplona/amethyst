@@ -34,7 +34,6 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
@@ -75,6 +74,7 @@ import com.vitorpamplona.amethyst.commons.resources.report_dialog_spam
 import com.vitorpamplona.amethyst.commons.resources.report_dialog_title
 import com.vitorpamplona.amethyst.commons.resources.report_malware
 import com.vitorpamplona.amethyst.commons.resources.violence
+import com.vitorpamplona.amethyst.commons.ui.components.SpellCheckedOutlinedTextField
 import com.vitorpamplona.amethyst.commons.ui.components.TextSpinner
 import com.vitorpamplona.amethyst.commons.ui.components.TitleExplainer
 import com.vitorpamplona.amethyst.commons.ui.note.ArrowBackIcon
@@ -168,7 +168,7 @@ fun ReportDialog(
                     modifier = Modifier.fillMaxWidth(),
                 )
                 SpacerH16()
-                OutlinedTextField(
+                SpellCheckedOutlinedTextField(
                     value = additionalReason,
                     onValueChange = { additionalReason = it },
                     placeholder = {

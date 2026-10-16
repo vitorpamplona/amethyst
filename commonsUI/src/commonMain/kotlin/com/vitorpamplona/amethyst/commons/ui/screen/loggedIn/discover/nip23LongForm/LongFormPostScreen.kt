@@ -108,6 +108,7 @@ import com.vitorpamplona.amethyst.commons.ui.actions.uploads.TakePictureButton
 import com.vitorpamplona.amethyst.commons.ui.actions.uploads.TakeVideoButton
 import com.vitorpamplona.amethyst.commons.ui.components.MyAsyncImage
 import com.vitorpamplona.amethyst.commons.ui.components.PlatformBackHandler
+import com.vitorpamplona.amethyst.commons.ui.components.SpellCheckedOutlinedTextField
 import com.vitorpamplona.amethyst.commons.ui.components.ThinPaddingTextField
 import com.vitorpamplona.amethyst.commons.ui.components.rememberViewModel
 import com.vitorpamplona.amethyst.commons.ui.insets.imePaddingSafe
@@ -254,7 +255,7 @@ private fun MarkdownPostScreenBody(
                 Spacer(modifier = Modifier.height(12.dp))
 
                 // Title field — large, borderless
-                OutlinedTextField(
+                SpellCheckedOutlinedTextField(
                     value = postViewModel.title,
                     onValueChange = {
                         postViewModel.title = it
@@ -294,7 +295,7 @@ private fun MarkdownPostScreenBody(
                     modifier = Modifier.padding(start = Size10dp, top = 8.dp),
                 )
 
-                OutlinedTextField(
+                SpellCheckedOutlinedTextField(
                     value = postViewModel.summary,
                     onValueChange = {
                         postViewModel.summary = it

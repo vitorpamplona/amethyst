@@ -128,6 +128,7 @@ import com.vitorpamplona.amethyst.commons.resources.relay_management_tab_pubkeys
 import com.vitorpamplona.amethyst.commons.resources.relay_management_tab_settings
 import com.vitorpamplona.amethyst.commons.resources.relay_management_title
 import com.vitorpamplona.amethyst.commons.resources.search_and_add_a_user
+import com.vitorpamplona.amethyst.commons.ui.components.SpellCheckedOutlinedTextField
 import com.vitorpamplona.amethyst.commons.ui.layouts.listItem.SlimListItem
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.note.AboutDisplay
@@ -1145,7 +1146,7 @@ private fun UserSearchDialog(
                         selectedUser = null
                     }
                     Spacer(modifier = Modifier.height(8.dp))
-                    OutlinedTextField(
+                    SpellCheckedOutlinedTextField(
                         value = reasonValue,
                         onValueChange = { reasonValue = it },
                         label = { Text(stringRes(Res.string.relay_management_reason_optional)) },
@@ -1308,7 +1309,7 @@ private fun HexInputDialog(
                     singleLine = true,
                 )
                 Spacer(modifier = Modifier.height(8.dp))
-                OutlinedTextField(
+                SpellCheckedOutlinedTextField(
                     value = reasonValue,
                     onValueChange = { reasonValue = it },
                     label = { Text(stringRes(Res.string.relay_management_reason_optional)) },

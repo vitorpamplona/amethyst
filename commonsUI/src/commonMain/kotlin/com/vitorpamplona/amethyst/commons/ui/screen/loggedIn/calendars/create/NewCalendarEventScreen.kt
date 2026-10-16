@@ -78,6 +78,7 @@ import com.vitorpamplona.amethyst.commons.resources.calendar_event_title
 import com.vitorpamplona.amethyst.commons.resources.edit_calendar_event
 import com.vitorpamplona.amethyst.commons.resources.new_calendar_event
 import com.vitorpamplona.amethyst.commons.ui.actions.uploads.GallerySelectSingle
+import com.vitorpamplona.amethyst.commons.ui.components.SpellCheckedOutlinedTextField
 import com.vitorpamplona.amethyst.commons.ui.components.rememberViewModel
 import com.vitorpamplona.amethyst.commons.ui.insets.imePaddingSafe
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
@@ -140,7 +141,7 @@ fun NewCalendarEventScreen(
         ) {
             AllDayToggleRow(vm)
 
-            OutlinedTextField(
+            SpellCheckedOutlinedTextField(
                 value = vm.title.value,
                 onValueChange = { vm.title.value = it },
                 label = { Text(stringRes(Res.string.calendar_event_title)) },
@@ -174,7 +175,7 @@ fun NewCalendarEventScreen(
                 singleLine = true,
             )
 
-            OutlinedTextField(
+            SpellCheckedOutlinedTextField(
                 value = vm.summary.value,
                 onValueChange = { vm.summary.value = it },
                 label = { Text(stringRes(Res.string.calendar_event_summary)) },

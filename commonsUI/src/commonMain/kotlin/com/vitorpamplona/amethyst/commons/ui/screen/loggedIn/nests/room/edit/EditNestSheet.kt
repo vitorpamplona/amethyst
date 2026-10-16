@@ -63,6 +63,7 @@ import com.vitorpamplona.amethyst.commons.resources.nest_create_field_service
 import com.vitorpamplona.amethyst.commons.resources.nest_create_field_summary
 import com.vitorpamplona.amethyst.commons.resources.nest_edit_save
 import com.vitorpamplona.amethyst.commons.resources.nest_edit_title
+import com.vitorpamplona.amethyst.commons.ui.components.SpellCheckedOutlinedTextField
 import com.vitorpamplona.amethyst.commons.ui.components.rememberModalSheetState
 import com.vitorpamplona.amethyst.commons.ui.components.rememberViewModel
 import com.vitorpamplona.amethyst.commons.ui.insets.imePaddingSafe
@@ -145,14 +146,14 @@ fun EditNestSheet(
                     style = MaterialTheme.typography.titleLarge,
                 )
 
-                OutlinedTextField(
+                SpellCheckedOutlinedTextField(
                     value = state.roomName,
                     onValueChange = viewModel::setRoomName,
                     label = { Text(stringRes(Res.string.nest_create_field_room)) },
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth(),
                 )
-                OutlinedTextField(
+                SpellCheckedOutlinedTextField(
                     value = state.summary,
                     onValueChange = viewModel::setSummary,
                     label = { Text(stringRes(Res.string.nest_create_field_summary)) },

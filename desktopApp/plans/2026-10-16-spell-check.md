@@ -5,7 +5,8 @@ have not run on those systems yet (see "Testing by hand").
 
 ## What the user gets
 
-Misspelled words in the post, reply, DM, chat, long-form and classifieds composers get a wavy
+Misspelled words in the composers (posts, replies, DMs, chats, long-form, classifieds) and in the
+prose fields across the app (bios, descriptions, captions, notes, reasons, titles) get a wavy
 underline. Right-clicking one lists suggestions first, then "Add to dictionary", then the usual
 Cut / Copy / Paste / Select all. Settings › Compose › Spell checking picks the engine:
 
@@ -47,7 +48,18 @@ results or hit a system-checker problem.
 - `VisualOffsetMapping`: `UrlUserTagOutputTransformation` draws `nostr:npub1…` as `@Name`, so the
   checker (which reads the stored text) maps its ranges to the drawn text through the same
   replacement list.
-- `ThinPaddingTextField` / `OutlinedThinPaddingTextField` take `spellCheck = true`.
+- `ThinPaddingTextField` / `OutlinedThinPaddingTextField` take `spellCheck = true` (the composers).
+- `SpellCheckedOutlinedTextField` / `SpellCheckedTextField` (`commonsUI/…/ui/components/SpellCheckedTextFields.kt`)
+  are drop-ins for Material's `OutlinedTextField` / `TextField` on prose fields, for `String`,
+  `TextFieldValue` and `TextFieldState` callers. Without a checker (Android, iOS) they are
+  Material's own field; on desktop they mirror the caller's value into a `TextFieldState` (echoes of
+  the field's own recent reports are ignored, anything else replaces the text). They take no
+  `keyboardActions` (a field that submits on Enter keeps Material's), and a length cap goes in
+  `maxLength`, not in `onValueChange`.
+- Which fields: ~90 prose fields (descriptions, bios, captions, alt text, notes, comments, reasons,
+  summaries, titles, poll options, chat composers, the post signature, Buzz prompts). Left out on
+  purpose: search, URLs, keys, handles/NIP-05, amounts, names of people/lists/groups, geocache
+  mission answers, the quoted highlight passage, and the drawer status (submits on Enter).
 - `desktopApp/…/spellcheck/`: `HunspellSpellChecker` (Lucene `lucene-analysis-common` 10.5.1,
   Apache-2.0; dictionary from `dictionary-en` 4.0.0 = SCOWL 2020.12.07, licence in
   `resources/spellcheck/en_US-LICENSE.txt`), `MacSpellChecker`, `WindowsSpellChecker`,

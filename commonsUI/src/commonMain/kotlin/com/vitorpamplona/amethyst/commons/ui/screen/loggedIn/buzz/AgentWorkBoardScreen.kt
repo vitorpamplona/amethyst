@@ -56,7 +56,6 @@ import androidx.compose.material3.ExtendedFloatingActionButton
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SheetState
 import androidx.compose.material3.SnackbarHost
@@ -90,6 +89,7 @@ import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.buzz.AgentWorkItem
 import com.vitorpamplona.amethyst.commons.model.buzz.AgentWorkKind
 import com.vitorpamplona.amethyst.commons.model.buzz.AgentWorkState
+import com.vitorpamplona.amethyst.commons.ui.components.SpellCheckedOutlinedTextField
 import com.vitorpamplona.amethyst.commons.ui.components.rememberModalSheetState
 import com.vitorpamplona.amethyst.commons.ui.components.rememberViewModel
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
@@ -505,7 +505,7 @@ private fun NewTaskSheet(
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
-            OutlinedTextField(
+            SpellCheckedOutlinedTextField(
                 value = task,
                 onValueChange = { task = it },
                 label = { Text("What should it do?") },
