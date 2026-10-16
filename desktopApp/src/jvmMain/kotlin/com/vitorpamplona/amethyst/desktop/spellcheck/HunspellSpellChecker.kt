@@ -32,7 +32,7 @@ import java.io.FileNotFoundException
  * port of Hunspell. Works the same on every OS and needs nothing installed, but knows only the
  * languages it ships (American English for now).
  *
- * Measured with the bundled en_US: ~0.6 s and ~30 MB of heap to load, ~2 µs per word to check,
+ * Measured with the bundled en_US: ~0.4 s to load (~30 MB of garbage on the way, ~2 MB kept), ~2 µs per word to check,
  * 20 to 190 ms per word to suggest (capped at 250 ms by Lucene, returning what it found by then).
  */
 class HunspellSpellChecker private constructor(

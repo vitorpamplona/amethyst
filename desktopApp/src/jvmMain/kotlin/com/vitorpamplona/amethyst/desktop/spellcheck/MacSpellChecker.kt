@@ -45,13 +45,19 @@ class MacSpellChecker private constructor(
 ) : SpellChecker {
     override val name = "macOS"
 
-    override fun isCorrect(word: String): Boolean =
+    override fun isCorrect(word: String): Boolean = onMainThread { withAutoreleasePool { check(word) } }
+
+    // One hop to the main thread for the whole batch instead of one per word.
+    override fun areCorrect(words: List<String>): BooleanArray =
         onMainThread {
-            withAutoreleasePool {
-                val range = sendRange(checker, "checkSpellingOfString:startingAt:", nsString(word), 0L)
-                range.location == NS_NOT_FOUND || range.length == 0L
-            }
+            withAutoreleasePool { BooleanArray(words.size) { check(words[it]) } }
         }
+
+    /** Must run on the main thread inside an autorelease pool. */
+    private fun check(word: String): Boolean {
+        val range = sendRange(checker, "checkSpellingOfString:startingAt:", nsString(word), 0L)
+        return range.location == NS_NOT_FOUND || range.length == 0L
+    }
 
     override fun suggest(word: String): List<String> =
         onMainThread {
@@ -118,6 +124,7 @@ class MacSpellChecker private constructor(
         private val system by lazy { Native.load("System", LibSystem::class.java) }
         private val mainQueue by lazy { NativeLibrary.getInstance("System").getGlobalVariableAddress("_dispatch_main_q") }
         private val selectors = HashMap<String, Pointer>()
+        private val nsStringClass by lazy { objc.objc_getClass("NSString") ?: error("NSString is not loaded") }
 
         // One trampoline for every hop to the main thread: JNA allocates native code per Callback
         // instance, and calls are serialized, so the work to run is handed over in [pending].
@@ -193,8 +200,7 @@ class MacSpellChecker private constructor(
             val memory = Memory(bytes.size + 1L)
             memory.write(0, bytes, 0, bytes.size)
             memory.setByte(bytes.size.toLong(), 0)
-            val type = objc.objc_getClass("NSString") ?: error("NSString is not loaded")
-            return send(type, "stringWithUTF8String:", memory) ?: error("Could not make an NSString")
+            return send(nsStringClass, "stringWithUTF8String:", memory) ?: error("Could not make an NSString")
         }
 
         private fun kotlinString(nsString: Pointer): String? = send(nsString, "UTF8String")?.getString(0, "UTF-8")

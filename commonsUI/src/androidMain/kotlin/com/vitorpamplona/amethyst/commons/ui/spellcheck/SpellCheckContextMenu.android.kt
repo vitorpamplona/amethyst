@@ -25,6 +25,7 @@ import androidx.compose.runtime.Composable
 // The keyboard checks spelling here; there is no right-click menu to add suggestions to.
 @Composable
 actual fun SpellCheckContextMenu(
+    spellCheckable: Boolean,
     spell: SpellCheckFieldState?,
     content: @Composable () -> Unit,
 ) = content()

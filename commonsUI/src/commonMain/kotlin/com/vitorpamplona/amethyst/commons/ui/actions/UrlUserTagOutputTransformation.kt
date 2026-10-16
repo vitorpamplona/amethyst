@@ -60,8 +60,22 @@ class UrlUserTagOutputTransformation(
         highlightUrls(color)
     }
 
+    // The last text and its replacements. transformOutput and the spell checker both ask for the
+    // same text right after each edit, and must agree: a display name that loads in between would
+    // otherwise shift the checker's offsets away from what the field drew.
+    private var lastText: String? = null
+    private var lastReplacements: List<TextReplacement> = emptyList()
+
     /** Each `@npub…`/`nostr:nprofile…` mention and the `@Name` the field draws instead, in order. */
-    override fun replacements(rawText: String): List<TextReplacement> =
+    override fun replacements(rawText: String): List<TextReplacement> {
+        if (rawText == lastText) return lastReplacements
+        return findReplacements(rawText).also {
+            lastText = rawText
+            lastReplacements = it
+        }
+    }
+
+    private fun findReplacements(rawText: String): List<TextReplacement> =
         MENTION_REGEX.findAll(rawText).mapNotNullTo(ArrayList()) { match ->
             try {
                 val bech32 =

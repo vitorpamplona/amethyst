@@ -56,6 +56,7 @@ import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.commons.service.uploads.MediaUri
 import com.vitorpamplona.amethyst.commons.ui.components.imageContentReceiver
+import com.vitorpamplona.amethyst.commons.ui.platform.LocalAppPlatform
 import com.vitorpamplona.amethyst.commons.ui.privacylock.LocalUserActivity
 import com.vitorpamplona.amethyst.commons.ui.spellcheck.SpellCheckContextMenu
 import com.vitorpamplona.amethyst.commons.ui.spellcheck.SpellCheckedInnerTextField
@@ -159,11 +160,13 @@ fun ThinPaddingTextField(
         }
 
     // Underlines misspellings and offers suggestions on right-click where the platform checks spelling.
-    val spell = rememberSpellCheckFieldState(state, spellCheck && enabled && !readOnly, outputTransformation as? VisualOffsetMapping)
+    // spellCheckable fixes the field's structure; spell comes and goes with the engine and the setting.
+    val spellCheckable = spellCheck && LocalAppPlatform.current.spellCheck != null
+    val spell = rememberSpellCheckFieldState(state, spellCheckable && enabled && !readOnly, outputTransformation as? VisualOffsetMapping)
     val scrollState = rememberScrollState()
 
     CompositionLocalProvider(LocalTextSelectionColors provides colors.textSelectionColors) {
-        SpellCheckContextMenu(spell) {
+        SpellCheckContextMenu(spellCheckable, spell) {
             BasicTextField(
                 state = state,
                 modifier =
@@ -188,7 +191,7 @@ fun ThinPaddingTextField(
                         value = state.text.toString(),
                         visualTransformation = VisualTransformation.None,
                         innerTextField =
-                            if (spell != null) {
+                            if (spellCheckable) {
                                 { SpellCheckedInnerTextField(spell, scrollState, singleLine, innerTextField) }
                             } else {
                                 innerTextField

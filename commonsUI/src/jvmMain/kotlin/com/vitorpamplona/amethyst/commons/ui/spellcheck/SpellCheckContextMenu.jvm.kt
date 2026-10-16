@@ -23,12 +23,22 @@ package com.vitorpamplona.amethyst.commons.ui.spellcheck
 import androidx.compose.foundation.ContextMenuItem
 import androidx.compose.foundation.ContextMenuState
 import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.text.LocalTextContextMenu
 import androidx.compose.foundation.text.TextContextMenu
 import androidx.compose.foundation.text.TextContextMenuArea
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.SideEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.input.pointer.PointerEventPass
+import androidx.compose.ui.input.pointer.PointerEventType
+import androidx.compose.ui.input.pointer.isSecondaryPressed
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalLocalization
 import androidx.compose.ui.platform.PlatformLocalization
 import com.vitorpamplona.amethyst.commons.resources.Res
@@ -47,27 +57,33 @@ import com.vitorpamplona.amethyst.commons.ui.stringRes
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 actual fun SpellCheckContextMenu(
+    spellCheckable: Boolean,
     spell: SpellCheckFieldState?,
     content: @Composable () -> Unit,
 ) {
-    if (spell == null) {
+    if (!spellCheckable) {
         content()
         return
     }
 
     val noSuggestions = stringRes(Res.string.spell_check_no_suggestions)
     val addToDictionary = stringRes(Res.string.spell_check_add_to_dictionary)
-    val menu = remember(spell, noSuggestions, addToDictionary) { SpellCheckTextContextMenu(spell, noSuggestions, addToDictionary) }
+    // One menu for the field's lifetime, even before the engine is ready: the field calls
+    // LocalTextContextMenu.current.Area(), so a different menu class would be a different
+    // composable there and rebuild the text field inside it.
+    val menu = remember(noSuggestions, addToDictionary) { SpellCheckTextContextMenu(noSuggestions, addToDictionary) }
+    SideEffect { menu.spell = spell }
 
     CompositionLocalProvider(LocalTextContextMenu provides menu, content = content)
 }
 
 @OptIn(ExperimentalFoundationApi::class)
 private class SpellCheckTextContextMenu(
-    private val spell: SpellCheckFieldState,
     private val noSuggestionsLabel: String,
     private val addToDictionaryLabel: String,
 ) : TextContextMenu {
+    var spell by mutableStateOf<SpellCheckFieldState?>(null)
+
     @Composable
     override fun Area(
         textManager: TextContextMenu.TextManager,
@@ -79,14 +95,35 @@ private class SpellCheckTextContextMenu(
             textManager = textManager,
             items = {
                 val spelling =
-                    spellCheckMenuEntries(spell, noSuggestionsLabel, addToDictionaryLabel).map {
-                        ContextMenuItem(it.label, it.enabled, it.onClick)
-                    }
+                    spell?.let { current ->
+                        spellCheckMenuEntries(current, noSuggestionsLabel, addToDictionaryLabel).map {
+                            ContextMenuItem(it.label, it.enabled, it.onClick)
+                        }
+                    } ?: emptyList()
                 spelling + editingItems(textManager, localization)
             },
             state = state,
-            content = content,
-        )
+        ) {
+            // A right-click anywhere in the field forgets the last target first; the text's own
+            // handler, deeper in the tree, then sets the new one if the click was on a misspelling.
+            // Without this, a right-click on the padding or an icon offered the previous word.
+            Box(
+                propagateMinConstraints = true,
+                modifier =
+                    Modifier.pointerInput(Unit) {
+                        awaitPointerEventScope {
+                            while (true) {
+                                val event = awaitPointerEvent(PointerEventPass.Initial)
+                                if (event.type == PointerEventType.Press && event.buttons.isSecondaryPressed) {
+                                    spell?.forgetMenuTarget()
+                                }
+                            }
+                        }
+                    },
+            ) {
+                content()
+            }
+        }
     }
 
     // The same four entries, in the same order, as Compose's TextContextMenu.Default.

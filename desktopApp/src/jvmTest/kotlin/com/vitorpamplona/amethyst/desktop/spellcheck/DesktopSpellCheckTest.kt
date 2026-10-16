@@ -86,7 +86,7 @@ class DesktopSpellCheckTest {
             try {
                 // Nothing loads until a composer asks.
                 assertNull(spellCheck.service.activeEngine.value)
-                spellCheck.start()
+                spellCheck.service.activate()
 
                 withTimeout(10_000) { spellCheck.service.activeEngine.first { it == "Hunspell (en_US)" } }
                 assertEquals(listOf(Misspelling(4, 11, "recieve")), spellCheck.service.findMisspellings("I'd recieve zaps on Nostr"))

@@ -122,6 +122,33 @@ class SpellCheckServiceTest {
         }
 
     @Test
+    fun learningAWordWithACurlyApostropheSticks() =
+        runTest {
+            val dictionary = MemoryDictionary()
+            val service = SpellCheckService(StandardTestDispatcher(testScheduler), dictionary)
+            service.setEngine(FakeChecker(emptySet()))
+
+            service.addToDictionary("y\u2019all")
+
+            assertEquals(emptyList(), service.findMisspellings("y\u2019all y'all"))
+            assertEquals(setOf("y'all"), dictionary.saved)
+        }
+
+    @Test
+    fun learningAWordKeepsOtherVerdictsCached() =
+        runTest {
+            val service = SpellCheckService(StandardTestDispatcher(testScheduler))
+            val checker = FakeChecker(setOf("cat"))
+            service.setEngine(checker)
+            service.findMisspellings("cat dgo")
+
+            service.addToDictionary("dgo")
+            assertEquals(emptyList(), service.findMisspellings("cat dgo"))
+
+            assertEquals(listOf("cat", "dgo"), checker.asked)
+        }
+
+    @Test
     fun suggestionsDropTheWordItselfAndAreCapped() =
         runTest {
             val service = SpellCheckService(StandardTestDispatcher(testScheduler))

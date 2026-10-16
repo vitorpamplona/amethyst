@@ -38,6 +38,12 @@ interface SpellChecker {
 
     fun isCorrect(word: String): Boolean
 
+    /**
+     * [isCorrect] for each of [words]. Engines that are costly to cross into (a native checker on
+     * another thread) override it to answer the whole batch in one crossing.
+     */
+    fun areCorrect(words: List<String>): BooleanArray = BooleanArray(words.size) { isCorrect(words[it]) }
+
     /** Replacements for a misspelled [word], best first. */
     fun suggest(word: String): List<String>
 }

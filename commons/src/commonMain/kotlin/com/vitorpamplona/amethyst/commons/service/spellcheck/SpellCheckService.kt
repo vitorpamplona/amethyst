@@ -23,6 +23,7 @@ package com.vitorpamplona.amethyst.commons.service.spellcheck
 import androidx.compose.runtime.Immutable
 import com.vitorpamplona.quartz.utils.Log
 import kotlinx.coroutines.CoroutineDispatcher
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -64,6 +65,7 @@ interface UserDictionary {
 class SpellCheckService(
     private val dispatcher: CoroutineDispatcher,
     private val userDictionary: UserDictionary = UserDictionary.None,
+    private val onActivate: () -> Unit = {},
 ) {
     private var engine: SpellChecker? = null
 
@@ -82,6 +84,12 @@ class SpellCheckService(
     private val verdicts = LruCache<String, Boolean>(VERDICT_CACHE_SIZE)
     private val suggestionCache = LruCache<String, List<String>>(SUGGESTION_CACHE_SIZE)
 
+    /**
+     * Called by each text field that wants spell checking. The platform loads its engine on the
+     * first call, so nothing is loaded for users who never open a composer. Safe to call often.
+     */
+    fun activate() = onActivate()
+
     suspend fun setEngine(checker: SpellChecker?) =
         withContext(dispatcher) {
             engine = checker
@@ -95,9 +103,45 @@ class SpellCheckService(
     suspend fun findMisspellings(text: String): List<Misspelling> =
         withContext(dispatcher) {
             val checker = engine ?: return@withContext emptyList()
-            SpellCheckTokenizer.words(text).mapNotNull { range ->
-                val word = text.substring(range.start, range.end)
-                if (isCorrect(checker, word)) null else Misspelling(range.start, range.end, word)
+            val ranges = SpellCheckTokenizer.words(text)
+            val words = ranges.map { text.substring(it.start, it.end) }
+
+            // This check's answers, apart from the cache so a long text cannot evict its own.
+            val answers = HashMap<String, Boolean>()
+            val unknown = ArrayList<String>()
+            for (word in words) {
+                if (word in answers) continue
+                val known = verdicts.get(word) ?: answerWithoutEngine(checker, word)
+                if (known != null) {
+                    answers[word] = known
+                } else {
+                    answers[word] = true
+                    unknown.add(word)
+                }
+            }
+
+            // The engine hears only new words, in batches: one crossing into a native checker each.
+            unknown.chunked(ENGINE_BATCH_SIZE).forEach { batch ->
+                // A newer keystroke cancelled this check: stop instead of finishing a stale one.
+                ensureActive()
+                val verdict =
+                    try {
+                        checker.areCorrect(batch.map(::normalize))
+                    } catch (e: Exception) {
+                        if (e is CancellationException) throw e
+                        // Words the engine choked on are not the user's mistake.
+                        Log.w(TAG, "Spell check failed for ${batch.size} words", e)
+                        BooleanArray(batch.size) { true }
+                    }
+                batch.forEachIndexed { index, word ->
+                    answers[word] = verdict[index]
+                    verdicts.put(word, verdict[index])
+                }
+            }
+
+            ranges.indices.mapNotNull { index ->
+                val word = words[index]
+                if (answers[word] == false) Misspelling(ranges[index].start, ranges[index].end, word) else null
             }
         }
 
@@ -120,46 +164,37 @@ class SpellCheckService(
     suspend fun addToDictionary(word: String) =
         withContext(dispatcher) {
             val words = learnedWords()
-            if (words.add(word.lowercase())) {
+            // Stored as looked up: "y’all" and "y'all" are the same word.
+            val learnedWord = normalize(word).lowercase()
+            if (words.add(learnedWord)) {
                 try {
                     userDictionary.save(words.toSet())
                 } catch (e: Exception) {
                     if (e is CancellationException) throw e
                     Log.w(TAG, "Could not save the user dictionary", e)
                 }
-                verdicts.clear()
+                // Only this word's answers change; every other cached verdict still holds.
+                verdicts.removeIf { normalize(it).lowercase() == learnedWord }
                 _revision.value++
             }
         }
 
-    private fun isCorrect(
+    /** Settles [word] without the engine when it can: Nostr words, learned words, and scripts the engine cannot judge. */
+    private fun answerWithoutEngine(
         checker: SpellChecker,
         word: String,
-    ): Boolean {
-        verdicts.get(word)?.let { return it }
+    ): Boolean? {
         val normalized = normalize(word)
-        val verdict =
-            when {
-                NostrVocabulary.contains(normalized) -> true
-                normalized.lowercase() in learnedWords() -> true
-                !checker.handles(normalized) -> true
-                else ->
-                    try {
-                        checker.isCorrect(normalized)
-                    } catch (e: Exception) {
-                        if (e is CancellationException) throw e
-                        // A word the engine choked on is not the user's mistake.
-                        Log.w(TAG, "Spell check failed for a word", e)
-                        true
-                    }
-            }
-        verdicts.put(word, verdict)
-        return verdict
+        val accepted =
+            NostrVocabulary.contains(normalized) ||
+                normalized.lowercase() in learnedWords() ||
+                !checker.handles(normalized)
+        return if (accepted) true else null
     }
 
     private fun learnedWords(): MutableSet<String> =
         learned ?: try {
-            userDictionary.load().mapTo(HashSet()) { it.lowercase() }
+            userDictionary.load().mapTo(HashSet()) { normalize(it).lowercase() }
         } catch (e: Exception) {
             if (e is CancellationException) throw e
             Log.w(TAG, "Could not read the user dictionary", e)
@@ -174,6 +209,9 @@ class SpellCheckService(
         private const val VERDICT_CACHE_SIZE = 8192
         private const val SUGGESTION_CACHE_SIZE = 256
         const val MAX_SUGGESTIONS = 5
+
+        // Small enough that a native checker's thread (macOS's main thread) is never held long.
+        private const val ENGINE_BATCH_SIZE = 64
     }
 }
 
@@ -198,6 +236,10 @@ private class LruCache<K, V>(
         if (map.size > capacity) {
             map.remove(map.keys.first())
         }
+    }
+
+    fun removeIf(predicate: (K) -> Boolean) {
+        map.keys.removeAll(predicate)
     }
 
     fun clear() = map.clear()

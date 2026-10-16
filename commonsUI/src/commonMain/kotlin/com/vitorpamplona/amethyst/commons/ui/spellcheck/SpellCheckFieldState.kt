@@ -36,8 +36,9 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.drawWithContent
+import androidx.compose.ui.draw.drawWithCache
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.clipRect
@@ -72,19 +73,14 @@ internal data class CheckedText(
      */
     fun followEdit(newText: String): CheckedText {
         if (newText == text) return this
-        val max = minOf(text.length, newText.length)
-        var prefix = 0
-        while (prefix < max && text[prefix] == newText[prefix]) prefix++
-        var suffix = 0
-        while (suffix < max - prefix && text[text.length - 1 - suffix] == newText[newText.length - 1 - suffix]) suffix++
-        val oldEditEnd = text.length - suffix
+        val edit = EditRegion.between(text, newText)
         val delta = newText.length - text.length
 
         val kept =
             misspellings.mapNotNull { m ->
                 when {
-                    m.end < prefix -> m
-                    m.start > oldEditEnd -> m.copy(start = m.start + delta, end = m.end + delta)
+                    m.end < edit.start -> m
+                    m.start > edit.oldEnd -> m.copy(start = m.start + delta, end = m.end + delta)
                     else -> null
                 }
             }
@@ -95,6 +91,33 @@ internal data class CheckedText(
         val Empty = CheckedText("", emptyList())
     }
 }
+
+/** What changed between two texts: `[start, oldEnd)` of the old one became `[start, newEnd)` of the new one. */
+internal class EditRegion(
+    val start: Int,
+    val oldEnd: Int,
+    val newEnd: Int,
+) {
+    companion object {
+        fun between(
+            old: String,
+            new: String,
+        ): EditRegion {
+            val max = minOf(old.length, new.length)
+            var prefix = 0
+            while (prefix < max && old[prefix] == new[prefix]) prefix++
+            var suffix = 0
+            while (suffix < max - prefix && old[old.length - 1 - suffix] == new[new.length - 1 - suffix]) suffix++
+            return EditRegion(prefix, old.length - suffix, new.length - suffix)
+        }
+    }
+}
+
+/** A misspelling and where it is drawn. */
+internal class DrawnMisspelling(
+    val misspelling: Misspelling,
+    val drawn: TextRange,
+)
 
 /**
  * Spell checking for one text field: checks the text after each pause in typing, draws the wavy
@@ -107,6 +130,7 @@ class SpellCheckFieldState internal constructor(
     private val field: TextFieldState,
     private val scope: CoroutineScope,
 ) {
+    /** The last finished check. Edits since then are followed in [current]. */
     internal var checked by mutableStateOf(CheckedText.Empty)
 
     /** Reads the field's current layout. The getter reads snapshot state, so a draw that calls it redraws on relayout. */
@@ -122,49 +146,89 @@ class SpellCheckFieldState internal constructor(
     var menuSuggestions by mutableStateOf<List<String>?>(null)
         private set
 
-    private var replacementsFor: String? = null
-    private var replacementsCache: List<TextReplacement> = emptyList()
+    // Caches for the UI thread, keyed by identity: the field's text object changes on every edit.
+    private var seenText: CharSequence? = null
+    private var seenString = ""
+    private var followedFrom: CheckedText? = null
+    private var followed = CheckedText.Empty
+
+    /** Where the last edit ended, while the cursor is still there: the word being typed. -1 once it moves. */
+    private var typingAt = -1
 
     internal val onTextLayout: Density.(getResult: () -> TextLayoutResult?) -> Unit = { getResult -> layout = getResult }
 
     internal suspend fun checkContinuously() {
         combine(snapshotFlow { field.text.toString() }, service.revision) { text, revision -> text to revision }
             .collectLatest { (text, _) ->
-                checked = checked.followEdit(text)
                 // Wait for a pause in typing; the next keystroke cancels this check.
                 delay(TYPING_PAUSE_MS)
                 checked = CheckedText(text, service.findMisspellings(text))
             }
     }
 
-    /** The misspellings to draw now, with where each one is drawn. */
-    internal fun visibleMisspellings(layout: TextLayoutResult): List<Pair<Misspelling, TextRange>> {
-        val current = checked
+    /**
+     * The last check carried over to the field's current text. Recomputed only when either one
+     * changes, so a draw between a keystroke and the next check still has every underline in place.
+     */
+    private fun current(): CheckedText {
         val text = field.text
-        if (current.text.length != text.length) return emptyList()
+        if (text !== seenText) {
+            val string = text.toString()
+            if (seenText != null && string != seenString) {
+                typingAt = EditRegion.between(seenString, string).newEnd
+            }
+            seenText = text
+            seenString = string
+        }
+        val base = checked
+        if (base !== followedFrom || followed.text != seenString) {
+            followed = base.followEdit(seenString)
+            followedFrom = base
+        }
+        return followed
+    }
+
+    /** The misspellings that are in the text now, with where each is drawn. */
+    internal fun drawnMisspellings(layout: TextLayoutResult): List<DrawnMisspelling> {
+        val current = current()
+        if (current.misspellings.isEmpty()) return emptyList()
 
         val drawn = layout.layoutInput.text.text
         val replacements = replacements(current.text)
-        val selection = field.selection
 
         return current.misspellings.mapNotNull { m ->
-            // Leave the word being typed alone until the cursor moves on.
-            if (selection.collapsed && selection.start in m.start..m.end) return@mapNotNull null
             val start = replacements.toVisual(m.start) ?: return@mapNotNull null
             val end = start + (m.end - m.start)
             if (end > drawn.length || !drawn.regionMatches(start, m.word, 0, m.word.length)) return@mapNotNull null
-            m to TextRange(start, end)
+            DrawnMisspelling(m, TextRange(start, end))
         }
+    }
+
+    /**
+     * The misspelling the cursor is still typing, left without an underline until the cursor moves
+     * on, as browsers do. Kept apart from [drawnMisspellings] so moving the cursor or dragging a
+     * selection only redraws, without rebuilding the underlines.
+     */
+    internal fun wordBeingTyped(): Misspelling? {
+        val current = current()
+        val selection = field.selection
+        val cursor = if (selection.collapsed) selection.start else -1
+        if (cursor != typingAt) typingAt = -1
+        if (typingAt < 0) return null
+        return current.misspellings.firstOrNull { typingAt in it.start..it.end }
     }
 
     internal fun onSecondaryPress(positionInText: Offset) {
         val layout = layout?.invoke()
-        val offset = layout?.getOffsetForPosition(positionInText)
         val target =
-            if (layout == null || offset == null) {
+            if (layout == null) {
                 null
             } else {
-                visibleMisspellings(layout).firstOrNull { (_, range) -> offset in range.start..range.end }?.first
+                val offset = layout.getOffsetForPosition(positionInText)
+                // Even the word being typed: the user is asking about it.
+                drawnMisspellings(layout)
+                    .firstOrNull { offset in it.drawn.start..it.drawn.end }
+                    ?.misspelling
             }
 
         menuTarget = target
@@ -177,12 +241,17 @@ class SpellCheckFieldState internal constructor(
         }
     }
 
+    internal fun forgetMenuTarget() {
+        menuTarget = null
+        menuSuggestions = null
+    }
+
     fun replace(
         misspelling: Misspelling,
         replacement: String,
     ) {
         val text = field.text
-        if (misspelling.end > text.length || text.substring(misspelling.start, misspelling.end) != misspelling.word) return
+        if (misspelling.end > text.length || !text.regionMatches(misspelling.start, misspelling.word, 0, misspelling.word.length)) return
         field.edit {
             replace(misspelling.start, misspelling.end, replacement)
             selection = TextRange(misspelling.start + replacement.length)
@@ -195,14 +264,8 @@ class SpellCheckFieldState internal constructor(
         scope.launch { service.addToDictionary(misspelling.word) }
     }
 
-    private fun replacements(text: String): List<TextReplacement> {
-        val mapping = mapping ?: return emptyList()
-        if (replacementsFor != text) {
-            replacementsCache = mapping.replacements(text)
-            replacementsFor = text
-        }
-        return replacementsCache
-    }
+    // The transformation remembers its last answer, so this is the very mapping the field drew with.
+    private fun replacements(text: String): List<TextReplacement> = mapping?.replacements(text) ?: emptyList()
 
     companion object {
         private const val TYPING_PAUSE_MS = 250L
@@ -219,9 +282,12 @@ fun rememberSpellCheckFieldState(
     enabled: Boolean,
     mapping: VisualOffsetMapping?,
 ): SpellCheckFieldState? {
+    // Fields that did not ask for spell checking must not wake the engine up (~0.4 s to load).
+    if (!enabled) return null
     val service = LocalAppPlatform.current.spellCheck ?: return null
+    LaunchedEffect(service) { service.activate() }
     val engine by service.activeEngine.collectAsState()
-    if (!enabled || engine == null) return null
+    if (engine == null) return null
 
     val scope = rememberCoroutineScope()
     val state = remember(service, field, scope) { SpellCheckFieldState(service, field, scope) }
@@ -234,10 +300,13 @@ fun rememberSpellCheckFieldState(
  * Wraps a text field's inner text (the `innerTextField` a decorator receives) to draw the
  * underlines over it and to notice right-clicks. [scrollState] must be the one given to the
  * `BasicTextField`, because the text inside scrolls under this box.
+ *
+ * Takes a null [spell] while the engine loads (or when it is off) and keeps the same box either
+ * way: swapping the box in later would dispose and rebuild the text field under the user's fingers.
  */
 @Composable
 fun SpellCheckedInnerTextField(
-    spell: SpellCheckFieldState,
+    spell: SpellCheckFieldState?,
     scrollState: ScrollState,
     singleLine: Boolean,
     innerTextField: @Composable () -> Unit,
@@ -245,43 +314,62 @@ fun SpellCheckedInnerTextField(
     val color = MaterialTheme.colorScheme.error
     Box(
         propagateMinConstraints = true,
-        modifier =
-            Modifier
-                .pointerInput(spell, singleLine) {
-                    awaitPointerEventScope {
-                        while (true) {
-                            val event = awaitPointerEvent(PointerEventPass.Initial)
-                            if (event.type == PointerEventType.Press && event.buttons.isSecondaryPressed) {
-                                val position = event.changes.firstOrNull()?.position ?: continue
-                                spell.onSecondaryPress(position + scrollOffset(scrollState, singleLine))
-                            }
-                        }
-                    }
-                }.drawWithContent {
-                    drawContent()
-                    val layout = spell.layout?.invoke() ?: return@drawWithContent
-                    val misspellings = spell.visibleMisspellings(layout)
-                    if (misspellings.isEmpty()) return@drawWithContent
-
-                    val shift = scrollOffset(scrollState, singleLine)
-                    val amplitude = 1.2.dp.toPx()
-                    val halfWave = 2.dp.toPx()
-                    val gap = 1.5.dp.toPx()
-                    val stroke = Stroke(width = 1.dp.toPx())
-                    clipRect {
-                        translate(-shift.x, -shift.y) {
-                            misspellings.forEach { (_, range) ->
-                                layout.forEachLineSegment(range) { left, right, baseline ->
-                                    drawPath(squiggle(left, right, baseline + gap + amplitude, amplitude, halfWave), color, style = stroke)
-                                }
-                            }
-                        }
-                    }
-                },
+        modifier = if (spell != null) Modifier.spellCheckUnderlines(spell, scrollState, singleLine, color) else Modifier,
     ) {
         innerTextField()
     }
 }
+
+private fun Modifier.spellCheckUnderlines(
+    spell: SpellCheckFieldState,
+    scrollState: ScrollState,
+    singleLine: Boolean,
+    color: Color,
+): Modifier =
+    pointerInput(spell, singleLine) {
+        awaitPointerEventScope {
+            while (true) {
+                val event = awaitPointerEvent(PointerEventPass.Initial)
+                if (event.type == PointerEventType.Press && event.buttons.isSecondaryPressed) {
+                    val position = event.changes.firstOrNull()?.position ?: continue
+                    spell.onSecondaryPress(position + scrollOffset(scrollState, singleLine))
+                }
+            }
+        }
+    }.drawWithCache {
+        // Rebuilt only when the text, its layout or the check changes; not on cursor blinks,
+        // cursor moves, selection drags or scroll frames, which only redraw.
+        val layout = spell.layout?.invoke()
+        val amplitude = 1.2.dp.toPx()
+        val halfWave = 2.dp.toPx()
+        val gap = 1.5.dp.toPx()
+        val stroke = Stroke(width = 1.dp.toPx())
+        val underlines =
+            if (layout == null) {
+                emptyList()
+            } else {
+                spell.drawnMisspellings(layout).map {
+                    val path = Path()
+                    layout.forEachLineSegment(it.drawn) { left, right, baseline ->
+                        path.addSquiggle(left, right, baseline + gap + amplitude, amplitude, halfWave)
+                    }
+                    it.misspelling to path
+                }
+            }
+        onDrawWithContent {
+            drawContent()
+            if (underlines.isEmpty()) return@onDrawWithContent
+            val typing = spell.wordBeingTyped()
+            val shift = scrollOffset(scrollState, singleLine)
+            clipRect {
+                translate(-shift.x, -shift.y) {
+                    underlines.forEach { (misspelling, path) ->
+                        if (misspelling != typing) drawPath(path, color, style = stroke)
+                    }
+                }
+            }
+        }
+    }
 
 private fun scrollOffset(
     scrollState: ScrollState,
@@ -306,24 +394,23 @@ private inline fun TextLayoutResult.forEachLineSegment(
     }
 }
 
-private fun squiggle(
+private fun Path.addSquiggle(
     left: Float,
     right: Float,
     centerY: Float,
     amplitude: Float,
     halfWave: Float,
-): Path =
-    Path().apply {
-        moveTo(left, centerY)
-        var x = left
-        var up = true
-        while (x < right) {
-            val next = minOf(x + halfWave, right)
-            quadraticTo((x + next) / 2, if (up) centerY - 2 * amplitude else centerY + 2 * amplitude, next, centerY)
-            x = next
-            up = !up
-        }
+) {
+    moveTo(left, centerY)
+    var x = left
+    var up = true
+    while (x < right) {
+        val next = minOf(x + halfWave, right)
+        quadraticTo((x + next) / 2, if (up) centerY - 2 * amplitude else centerY + 2 * amplitude, next, centerY)
+        x = next
+        up = !up
     }
+}
 
 /** Context-menu entries for the right-clicked misspelling, ahead of Cut/Copy/Paste. */
 @Immutable
@@ -358,9 +445,14 @@ fun spellCheckMenuEntries(
 /**
  * Puts [spell]'s suggestions in the text field's context menu, where the platform has a menu that
  * takes extra entries (desktop). Elsewhere it only draws [content].
+ *
+ * [spellCheckable] must stay the same for a field's lifetime (it is the field's opt-in), while
+ * [spell] may come and go as the engine loads or the user turns it off: changing what wraps
+ * [content] would dispose and rebuild the text field, losing its focus and cursor.
  */
 @Composable
 expect fun SpellCheckContextMenu(
+    spellCheckable: Boolean,
     spell: SpellCheckFieldState?,
     content: @Composable () -> Unit,
 )

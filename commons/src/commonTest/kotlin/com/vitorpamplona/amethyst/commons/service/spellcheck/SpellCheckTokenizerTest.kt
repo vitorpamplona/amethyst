@@ -58,6 +58,19 @@ class SpellCheckTokenizerTest {
     }
 
     @Test
+    fun skipsEmailsButNotTheSentenceAroundThem() {
+        assertEquals(listOf("write", "Thanks"), words("write first.last+tag@mail.exampel.com. Thanks"))
+        assertEquals(listOf("meet", "noon", "or", "at"), words("meet @ noon or at@"))
+    }
+
+    @Test
+    fun skipsRunsLongerThanAnyWord() {
+        val blob = "qwertyuiopasdfghjklzxcvbnm".repeat(800)
+        assertEquals(listOf("hello", "world"), words("hello $blob world"))
+        assertEquals(listOf("Pneumonoultramicroscopicsilicovolcanoconiosis"), words("Pneumonoultramicroscopicsilicovolcanoconiosis"))
+    }
+
+    @Test
     fun skipsCode() {
         assertEquals(listOf("run", "then", "done"), words("run `gradlew asembl` then\n```\nfun mian() {}\n```\ndone"))
     }
@@ -75,6 +88,12 @@ class SpellCheckTokenizerTest {
     @Test
     fun keepsAccentedAndOtherScripts() {
         assertEquals(listOf("café", "naïve", "привет"), words("café naïve привет"))
+    }
+
+    @Test
+    fun keepsIndicWordsWhole() {
+        // Devanagari vowel signs are spacing combining marks, not letters.
+        assertEquals(listOf("नमस्ते", "हिन्दी"), words("नमस्ते हिन्दी"))
     }
 
     @Test

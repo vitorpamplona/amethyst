@@ -80,13 +80,8 @@ class DesktopAppPlatform(
     // DesktopAppModules reports every connection as unmetered.
     override val detectsMeteredConnections: Boolean get() = false
 
-    // Loads the dictionary (or reaches the OS checker) the first time a composer asks.
-    override val spellCheck: SpellCheckService?
-        get() =
-            desktopSpellCheck?.let {
-                it.start()
-                it.service
-            }
+    // The engine loads when a composer first asks for it (SpellCheckService.activate).
+    override val spellCheck: SpellCheckService? get() = desktopSpellCheck?.service
 
     // The shared bar, imported under another name: inside this override the bare name is the override.
     @Composable

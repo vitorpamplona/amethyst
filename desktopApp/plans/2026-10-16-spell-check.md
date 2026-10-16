@@ -53,7 +53,8 @@ results or hit a system-checker problem.
   `resources/spellcheck/en_US-LICENSE.txt`), `MacSpellChecker`, `WindowsSpellChecker`,
   `DesktopSpellCheck` (engine choice, crash marker, `spelling-dictionary.txt`).
 
-Measured (en_US, JDK 21, this container): load ~0.6 s and ~30 MB heap, `spell()` ~2 µs/word,
+Measured (en_US, JDK 21, this container): load ~0.4 s (~30 MB of short-lived garbage, ~1–2 MB
+kept; it loads under `-Xmx8m`), `spell()` ~2 µs/word,
 `suggest()` 20–190 ms (Lucene caps it at 250 ms). Nothing loads until a composer first opens.
 
 ## Native safety

@@ -27,6 +27,7 @@ import com.vitorpamplona.amethyst.commons.service.spellcheck.UserDictionary
 import com.vitorpamplona.amethyst.desktop.platform.Platform
 import com.vitorpamplona.amethyst.desktop.platform.PlatformInfo
 import com.vitorpamplona.quartz.utils.Log
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.asCoroutineDispatcher
 import kotlinx.coroutines.flow.StateFlow
@@ -34,6 +35,7 @@ import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.io.File
+import java.io.IOException
 import java.nio.file.Files
 import java.nio.file.StandardCopyOption
 import java.util.Locale
@@ -53,7 +55,9 @@ import java.util.concurrent.atomic.AtomicBoolean
  * attempt is over; a marker still there at the next launch means the attempt took the app down,
  * and that version never tries again.
  *
- * Nothing loads until [start], which the composers call on first use: the dictionary costs ~30 MB.
+ * Nothing loads until [start], which runs when a composer first asks ([SpellCheckService.activate]):
+ * loading the dictionary takes ~0.4 s and churns ~30 MB of short-lived garbage, though it keeps
+ * only ~2 MB. Once loaded it stays, so switching back to it is instant.
  */
 class DesktopSpellCheck(
     private val filesDir: File,
@@ -68,7 +72,7 @@ class DesktopSpellCheck(
             .newSingleThreadExecutor { runnable -> Thread(runnable, "SpellCheck").apply { isDaemon = true } }
             .asCoroutineDispatcher()
 
-    val service = SpellCheckService(dispatcher, FileUserDictionary(File(filesDir, USER_DICTIONARY_FILE)))
+    val service = SpellCheckService(dispatcher, FileUserDictionary(File(filesDir, USER_DICTIONARY_FILE)), onActivate = ::start)
 
     private val started = AtomicBoolean(false)
 
@@ -81,19 +85,30 @@ class DesktopSpellCheck(
         if (!started.compareAndSet(false, true)) return
         scope.launch {
             setting.collectLatest { type ->
-                val engine = withContext(dispatcher) { engineFor(type) }
+                val engine =
+                    try {
+                        withContext(dispatcher) { engineFor(type) }
+                    } catch (e: Exception) {
+                        if (e is CancellationException) throw e
+                        // Keep listening: the next setting change gets another try.
+                        Log.w(TAG, "Could not start spell checking ($type)", e)
+                        null
+                    }
                 Log.i(TAG) { "Spell checking with ${engine?.name ?: "nothing"} ($type)" }
                 service.setEngine(engine)
             }
         }
     }
 
-    private fun engineFor(type: SpellCheckType): SpellChecker? =
-        when (type) {
-            SpellCheckType.OFF -> null
-            SpellCheckType.BUILT_IN -> builtIn()
-            SpellCheckType.AUTOMATIC -> native() ?: builtIn()
-        }
+    private fun engineFor(type: SpellCheckType): SpellChecker? {
+        val engine =
+            when (type) {
+                SpellCheckType.OFF -> null
+                SpellCheckType.BUILT_IN -> builtIn()
+                SpellCheckType.AUTOMATIC -> native() ?: builtIn()
+            }
+        return engine
+    }
 
     private fun builtIn(): SpellChecker? {
         if (builtIn == null && !builtInFailed) {
@@ -115,12 +130,17 @@ class DesktopSpellCheck(
         if (host != Platform.MACOS && host != Platform.WINDOWS) return null
 
         val marker = File(filesDir, NATIVE_PROBE_MARKER)
-        if (marker.exists() && marker.readText().trim() == appVersion) {
-            Log.w(TAG) { "The system spell checker crashed this version of the app before; using the built-in dictionary" }
+        try {
+            if (marker.exists() && marker.readText().trim() == appVersion) {
+                Log.w(TAG) { "The system spell checker crashed this version of the app before; using the built-in dictionary" }
+                return null
+            }
+            marker.writeText(appVersion)
+        } catch (e: IOException) {
+            // Without the marker a crash would repeat every launch: don't risk the native call.
+            Log.w(TAG, "Cannot keep the spell checker's crash marker; using the built-in dictionary", e)
             return null
         }
-
-        marker.writeText(appVersion)
         native =
             try {
                 when (host) {
@@ -133,7 +153,7 @@ class DesktopSpellCheck(
                 null
             }
         // The attempt ended without taking the process down, whatever its result.
-        marker.delete()
+        if (!marker.delete()) Log.w(TAG) { "Could not delete $marker" }
         return native
     }
 

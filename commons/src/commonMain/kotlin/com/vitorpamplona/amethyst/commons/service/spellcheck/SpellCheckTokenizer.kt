@@ -50,7 +50,6 @@ object SpellCheckTokenizer {
             // Lightning invoices, LNURLs and Cashu tokens.
             Regex("(?:lightning:)?(?:lnbc|lntb|lnbcrt|lnurl)[0-9a-z]+", RegexOption.IGNORE_CASE),
             Regex("cashu[AB][A-Za-z0-9_\\-=]+"),
-            Regex("[A-Za-z0-9._%+\\-]+@[A-Za-z0-9\\-]+(?:\\.[A-Za-z0-9\\-]+)+"),
             // Hashtags, @mentions and :shortcode: emoji. Letters are matched broadly so a hashtag
             // in any script is skipped whole.
             Regex("#[^\\s#.,;:!?()\\[\\]{}\"']+"),
@@ -63,6 +62,7 @@ object SpellCheckTokenizer {
 
         val skipped = BooleanArray(text.length)
         skipUrls(text, skipped)
+        skipEmails(text, skipped)
         skipPatterns.forEach { pattern ->
             pattern.findAll(text).forEach { match ->
                 for (i in match.range) skipped[i] = true
@@ -97,7 +97,9 @@ object SpellCheckTokenizer {
                         }
                     }
                     c.isDigit() -> hasDigit = true
-                    c.category == CharCategory.NON_SPACING_MARK -> {}
+                    // Combining marks are part of the word: Indic vowel signs are spacing marks
+                    // (हिन्दी would otherwise split into fragments an engine could flag).
+                    isCombiningMark(c) -> {}
                     // An apostrophe only belongs to the word when a letter follows: "don't" is one
                     // word, the closing quote in 'like this' is not part of "this".
                     isApostrophe(c) && j + 1 < text.length && text[j + 1].isLetter() -> {}
@@ -111,7 +113,9 @@ object SpellCheckTokenizer {
 
             if (touchesSkipped) continue
             if (hasDigit || camel) continue
-            if (end - start < 2) continue
+            // Single letters, and runs no language spells as one word (a pasted key or blob): an
+            // engine would only flag them, and Hunspell takes ~0.2 s on a 20,000-letter one.
+            if (end - start < 2 || end - start > MAX_WORD_LENGTH) continue
             if (hasUpper && !hasLower) continue
             // Identifiers: snake_case, file.ext, and words glued to a link or a code span.
             val before = if (start > 0) text[start - 1] else ' '
@@ -128,7 +132,50 @@ object SpellCheckTokenizer {
         return result
     }
 
+    private fun isCombiningMark(c: Char) =
+        c.category == CharCategory.NON_SPACING_MARK ||
+            c.category == CharCategory.COMBINING_SPACING_MARK ||
+            c.category == CharCategory.ENCLOSING_MARK ||
+            // Zero-width non-joiner and joiner shape letters inside Indic and Persian words.
+            c == '\u200C' ||
+            c == '\u200D'
+
     private fun isApostrophe(c: Char) = c == '\'' || c == '’'
+
+    // "Pneumonoultramicroscopicsilicovolcanoconiosis", the longest word in major dictionaries, is 45.
+    private const val MAX_WORD_LENGTH = 48
+
+    /**
+     * Marks `local@domain.tld` addresses. Scans out from each `@` instead of using a regex: a
+     * pattern that starts with the local part's character class retries from every letter of a
+     * long unbroken run, which took 1.6 s on a 20,000-letter paste.
+     */
+    private fun skipEmails(
+        text: String,
+        skipped: BooleanArray,
+    ) {
+        var at = text.indexOf('@')
+        while (at >= 0) {
+            var start = at
+            while (start > 0 && isEmailLocalChar(text[start - 1])) start--
+            var end = at + 1
+            while (end < text.length && isEmailDomainChar(text[end])) end++
+            // A sentence's full stop is not part of the address.
+            while (end > at + 1 && (text[end - 1] == '.' || text[end - 1] == '-')) end--
+
+            val dot = text.indexOf('.', at + 1)
+            if (start < at && dot in (at + 2) until end - 1) {
+                for (k in start until end) skipped[k] = true
+            }
+            at = text.indexOf('@', maxOf(end, at + 1))
+        }
+    }
+
+    private fun isEmailLocalChar(c: Char) = c.isAsciiLetterOrDigit() || c == '.' || c == '_' || c == '%' || c == '+' || c == '-'
+
+    private fun isEmailDomainChar(c: Char) = c.isAsciiLetterOrDigit() || c == '.' || c == '-'
+
+    private fun Char.isAsciiLetterOrDigit() = this in 'a'..'z' || this in 'A'..'Z' || this in '0'..'9'
 
     private fun skipUrls(
         text: String,
