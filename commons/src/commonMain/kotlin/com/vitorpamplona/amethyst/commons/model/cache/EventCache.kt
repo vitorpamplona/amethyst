@@ -226,6 +226,7 @@ import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.isAddressable
 import com.vitorpamplona.quartz.nip01Core.core.isRegular
 import com.vitorpamplona.quartz.nip01Core.core.isReplaceable
+import com.vitorpamplona.quartz.nip01Core.core.supersedes
 import com.vitorpamplona.quartz.nip01Core.crypto.checkSignature
 import com.vitorpamplona.quartz.nip01Core.crypto.verify
 import com.vitorpamplona.quartz.nip01Core.hints.AddressHintProvider
@@ -1273,7 +1274,7 @@ open class EventCache :
         if (isVerified || justVerify(event)) {
             val replyTo = computeReplyTo(event)
 
-            if (event.createdAt > (note.createdAt() ?: 0L)) {
+            if (supersedesCurrent(event, note)) {
                 note.loadEvent(event, author, replyTo)
 
                 refreshNewNoteObservers(note)
@@ -1318,7 +1319,7 @@ open class EventCache :
         if (isVerified || justVerify(event)) {
             val replyTo = computeReplyTo(event)
 
-            if (event.createdAt > (note.createdAt() ?: 0L)) {
+            if (supersedesCurrent(event, note)) {
                 note.loadEvent(event, author, replyTo)
 
                 refreshNewNoteObservers(note)
@@ -1360,7 +1361,7 @@ open class EventCache :
             return false
         }
 
-        if ((isVerified || justVerify(event)) && event.createdAt > (note.createdAt() ?: 0L)) {
+        if ((isVerified || justVerify(event)) && supersedesCurrent(event, note)) {
             val replyTo = computeReplyTo(event)
 
             note.loadEvent(event, author, replyTo)
@@ -1403,7 +1404,7 @@ open class EventCache :
             return false
         }
 
-        if ((isVerified || justVerify(event)) && event.createdAt > (note.createdAt() ?: 0L)) {
+        if ((isVerified || justVerify(event)) && supersedesCurrent(event, note)) {
             val replyTo = computeReplyTo(event)
 
             note.loadEvent(event, author, replyTo)
@@ -1646,7 +1647,7 @@ open class EventCache :
 
         if (note.event?.id == event.id) return false
 
-        if (event.createdAt > (note.createdAt() ?: 0L) && (isVerified || justVerify(event))) {
+        if (supersedesCurrent(event, note) && (isVerified || justVerify(event))) {
             note.loadEvent(event, author, emptyList())
 
             val channel = getOrCreateLiveChannel(note.address)
@@ -1732,6 +1733,23 @@ open class EventCache :
         return false
     }
 
+    /**
+     * NIP-01 supersession: true when [event] should replace the version [note] holds — the higher
+     * `created_at`, a same-second tie to the lowest id, as every relay and store resolves it.
+     *
+     * Reads the stored event's own `created_at`, never [AddressableNote.createdAt]: that one shows
+     * `published_at` when the kind carries it (articles, wiki, classifieds, video, app definitions,
+     * drafts), a date every edit of the address keeps. Compared against it, any edit looks newer
+     * than the current one, so an older edit arriving late from a slow relay replaced the newest.
+     */
+    private fun supersedesCurrent(
+        event: Event,
+        note: AddressableNote,
+    ): Boolean {
+        val current = note.event ?: return true
+        return event.supersedes(current)
+    }
+
     private fun consumeBaseReplaceable(
         event: Event,
         relay: NormalizedRelayUrl?,
@@ -1761,7 +1779,7 @@ open class EventCache :
         // Already processed this event.
         if (replaceableNote.event?.id == event.id) return isVerified
 
-        return if (event.createdAt > (replaceableNote.createdAt() ?: 0L) && (isVerified || justVerify(event))) {
+        return if (supersedesCurrent(event, replaceableNote) && (isVerified || justVerify(event))) {
             // clear index from previous tags
             replaceableNote.replyTo?.forEach {
                 it.removeNote(replaceableNote)
@@ -1805,10 +1823,11 @@ open class EventCache :
                         if (deleteNoteEvent is AddressableEvent) {
                             val addressableNote = getAddressableNoteIfExists(deleteNoteEvent.addressTag())
                             // An `e` tag deletes that one version: the address goes only when the
-                            // version it currently shows is the one being deleted.
+                            // version it currently shows is the one being deleted. Its real
+                            // `created_at`, not the note's `published_at`-aware display date.
                             if (addressableNote?.author?.pubkeyHex == event.pubKey &&
                                 addressableNote.event?.id == deleteNoteEvent.id &&
-                                (addressableNote.createdAt() ?: 0L) <= event.createdAt
+                                deleteNoteEvent.createdAt <= event.createdAt
                             ) {
                                 // Counts the replies
                                 deleteNote(addressableNote)
@@ -1830,8 +1849,10 @@ open class EventCache :
                 addressList
                     .mapNotNull { getAddressableNoteIfExists(it) }
                     .forEach { deleteNote ->
-                        // must be the same author
-                        if (deleteNote.author?.pubkeyHex == event.pubKey && (deleteNote.createdAt() ?: 0L) <= event.createdAt) {
+                        // must be the same author, and an `a` deletion only reaches versions up to its
+                        // own `created_at` — the stored event's, since `createdAt()` may be the
+                        // `published_at` an edit made after the deletion still carries.
+                        if (deleteNote.author?.pubkeyHex == event.pubKey && (deleteNote.event?.createdAt ?: 0L) <= event.createdAt) {
                             // Counts the replies
                             deleteNote(deleteNote)
 
