@@ -141,6 +141,8 @@ import com.vitorpamplona.quartz.nip88Polls.poll.PollEvent
 import com.vitorpamplona.quartz.nip89AppHandlers.definition.AppDefinitionEvent
 import com.vitorpamplona.quartz.nip94FileMetadata.FileMetadataEvent
 import com.vitorpamplona.quartz.nip99Classifieds.ClassifiedsEvent
+import com.vitorpamplona.quartz.nip99Classifieds.collection.ProductCollectionEvent
+import com.vitorpamplona.quartz.nip99Classifieds.shipping.ShippingOptionEvent
 import com.vitorpamplona.quartz.nipB0WebBookmarks.WebBookmarkEvent
 import com.vitorpamplona.quartz.nipC0CodeSnippets.CodeSnippetEvent
 import com.vitorpamplona.quartz.nipF4Podcasts.episode.PodcastEpisodeEvent
@@ -207,6 +209,17 @@ object SearchFieldExtractor {
             // and the funnel already carries both roles, so they are not passed.
             is ClassifiedsEvent -> {
                 tiers(event, event.title(), event.summary(), event.content)
+            }
+
+            // Open Markets 30405: the same shape as the products it lists.
+            is ProductCollectionEvent -> {
+                tiers(event, event.title(), event.summary(), event.content)
+            }
+
+            // Open Markets 30406: the carrier is how a courier option is looked up, and the
+            // pickup `location` already reaches the funnel.
+            is ShippingOptionEvent -> {
+                tiers(event, event.title(), event.carrier(), event.content)
             }
 
             // NIP-15 kinds 30017/30018/30019/30020 -- the marketplace family

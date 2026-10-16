@@ -71,7 +71,7 @@ grep the class. `ls` of the package root stays the ground truth, and
 | `nip5aStaticWebsites/` | SiteSnapshotEvent 5128, RootSiteEvent 15128, NamedSiteEvent 35128 |
 | `nip5dNapplets/` | NappletSnapshotEvent 5129, RootNappletEvent 15129, NamedNappletEvent 35129 |
 | `nip60Cashu/` | CashuMintQuoteEvent 7374, CashuTokenEvent 7375, CashuSpendingHistoryEvent 7376, CashuWalletEvent 17375 |
-| `nip61NutZaps/` | NutzapEvent 9321, NutzapInfoEvent 10019 |
+| `nip61Nutzaps/` | NutzapEvent 9321, NutzapInfoEvent 10019 |
 | `nip62RequestToVanish/` | RequestToVanishEvent 62 |
 | `nip64Chess/` | JesterProtocol 30, ChessGameEvent 64, LiveChessGameChallengeEvent 30064, LiveChessGameAcceptEvent 30065, LiveChessMoveEvent 30066, LiveChessGameEndEvent 30067, LiveChessDrawOfferEvent 30068 |
 | `nip65RelayList/` | AdvertisedRelayListEvent 10002 |
@@ -97,7 +97,7 @@ grep the class. `ls` of the package root stays the ground truth, and
 | `nip94FileMetadata/` | FileMetadataEvent 1063 |
 | `nip96FileStorage/` | FileServersEvent 10096 |
 | `nip98HttpAuth/` | HTTPAuthorizationEvent 27235 |
-| `nip99Classifieds/` | ClassifiedsEvent 30402 |
+| `nip99Classifieds/` | ClassifiedsEvent 30402, ProductCollectionEvent 30405, ShippingOptionEvent 30406, ProductReviewEvent 31555 |
 | `nipA0VoiceMessages/` | VoiceEvent 1222, VoiceReplyEvent 1244 |
 | `nipA3PaymentTargets/` | PaymentTargetsEvent 10133 |
 | `nipA4PublicMessages/` | PublicMessageEvent 24 |
