@@ -2072,8 +2072,9 @@ open class EventCache :
     ): Boolean {
         val note = getOrCreateNote(event.id)
 
-        // Already processed this event.
-        if (note.event != null) return true
+        // Already processed this event. Not new: a `true` here re-ran the hint, mint and gatherer
+        // indexes for every relay that served it, and made the Marmot inbound path re-persist it.
+        if (note.event != null) return false
 
         if (wasVerified || justVerify(event)) {
             val author = getOrCreateUser(event.pubKey)
@@ -2098,8 +2099,8 @@ open class EventCache :
     ): Boolean {
         val note = getOrCreateNote(event.id)
 
-        // Already processed this event.
-        if (note.event != null) return true
+        // Already processed this event. Not new, as for reactions above.
+        if (note.event != null) return false
 
         if (wasVerified || justVerify(event)) {
             val author = getOrCreateUser(event.pubKey)
