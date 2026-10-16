@@ -20,10 +20,12 @@
  */
 package com.vitorpamplona.quartz.nip99Classifieds.tags
 
+import androidx.compose.runtime.Stable
 import com.vitorpamplona.quartz.nip01Core.core.has
 import com.vitorpamplona.quartz.utils.ensure
 
 /** Open Markets `["spec", <key>, <value>]`: one product specification, e.g. "screen-size" / "21 inch". */
+@Stable
 data class SpecTag(
     val key: String,
     val value: String,
@@ -32,6 +34,8 @@ data class SpecTag(
 
     companion object {
         const val TAG_NAME = "spec"
+
+        fun isTag(tag: Array<String>) = tag.has(2) && tag[0] == TAG_NAME && tag[1].isNotEmpty()
 
         fun parse(tag: Array<String>): SpecTag? {
             ensure(tag.has(2)) { return null }

@@ -31,6 +31,7 @@ import com.vitorpamplona.quartz.nip99Classifieds.review.ProductReviewEvent
 import com.vitorpamplona.quartz.nip99Classifieds.review.tags.ReviewRatingTag
 import com.vitorpamplona.quartz.nip99Classifieds.shipping.ShippingOptionEvent
 import com.vitorpamplona.quartz.nip99Classifieds.shipping.UnrecognizedKind30406Event
+import com.vitorpamplona.quartz.nip99Classifieds.shipping.tags.ShippingService
 import com.vitorpamplona.quartz.nip99Classifieds.tags.PriceTag
 import com.vitorpamplona.quartz.nip99Classifieds.tags.VisibilityTag
 import com.vitorpamplona.quartz.utils.EventFactory
@@ -112,6 +113,38 @@ class OpenMarketsParsingTest {
     }
 
     @Test
+    fun aListingTaggingItsOwnAddressIsNotItsOwnParent() {
+        val plain = event<ClassifiedsEvent>(30402, "", arrayOf("d", "1ff9"), arrayOf("a", "30402:$merchant:1ff9"))
+        assertNull(plain.parentProduct())
+
+        val variation =
+            event<ClassifiedsEvent>(
+                30402,
+                "",
+                arrayOf("d", "v1"),
+                arrayOf("type", "variation", "physical"),
+                arrayOf("a", "30402:$merchant:v1"),
+                arrayOf("a", "30402:$merchant:parent"),
+            )
+        assertEquals(Address(30402, merchant, "parent"), variation.parentProduct())
+    }
+
+    @Test
+    fun aFormatWrittenInTheTypeSlotIsReadAsTheFormat() {
+        val product = event<ClassifiedsEvent>(30402, "", arrayOf("d", "p"), arrayOf("type", "physical"))
+        val type = product.productType()!!
+        assertNull(type.type)
+        assertTrue(type.isPhysical())
+    }
+
+    @Test
+    fun aWholeDecimalStockIsACount() {
+        assertEquals(0L, event<ClassifiedsEvent>(30402, "", arrayOf("d", "p"), arrayOf("stock", "0.0")).stock())
+        assertNull(event<ClassifiedsEvent>(30402, "", arrayOf("d", "p"), arrayOf("stock", "1.5")).stock())
+        assertNull(event<ClassifiedsEvent>(30402, "", arrayOf("d", "p"), arrayOf("stock", "em_estoque")).stock())
+    }
+
+    @Test
     fun absentOrUnknownVisibilityIsNotHidden() {
         val plain = event<ClassifiedsEvent>(30402, "", arrayOf("d", "p"), arrayOf("title", "Mug"))
         assertFalse(plain.isHidden())
@@ -165,10 +198,18 @@ class OpenMarketsParsingTest {
 
     @Test
     fun shopstrCartOnTheSameKindIsUnrecognizedAndNotSearchable() {
-        val cart = event<Event>(30405, "AgZ1c2VyY2FydA==?iv=abc", arrayOf("d", "cart"))
+        // Shopstr's real carts carry no tags: the `d` and items are inside the ciphertext.
+        val cart = event<Event>(30405, "AgZ1c2VyY2FydA==?iv=abc")
         assertIs<UnrecognizedKind30405Event>(cart)
         assertFalse(cart is SearchableEvent)
         assertEquals(IndexableFields.None, SearchFieldExtractor.extract(cart))
+    }
+
+    @Test
+    fun probeAnswersAsTheOpenMarketsClasses() {
+        assertIs<ProductCollectionEvent>(EventFactory.probe(30405))
+        assertIs<ShippingOptionEvent>(EventFactory.probe(30406))
+        assertIs<ProductReviewEvent>(EventFactory.probe(31555))
     }
 
     // ---- 30406 shipping option ----
@@ -194,6 +235,7 @@ class OpenMarketsParsingTest {
         assertEquals(listOf("US-FL"), option.regions())
         assertTrue(option.shipsTo("ca"))
         assertFalse(option.shipsTo("PT"))
+        assertEquals(ShippingService.STANDARD, option.serviceType())
         assertFalse(option.isPickup())
         assertEquals("72", option.duration()?.max)
         assertEquals(
@@ -208,9 +250,39 @@ class OpenMarketsParsingTest {
 
     @Test
     fun shopstrEscrowOnTheSameKindIsUnrecognized() {
-        val escrow = event<Event>(30406, "{\"encrypted\":true}", arrayOf("d", "escrow-1"), arrayOf("p", reviewer))
+        val escrow = event<Event>(30406, "AgZlc2Nyb3c=?iv=abc", arrayOf("d", "shopstr:p2pk-escrow:1"), arrayOf("type", "p2pk-escrow"))
         assertIs<UnrecognizedKind30406Event>(escrow)
         assertFalse(escrow is SearchableEvent)
+    }
+
+    @Test
+    fun aServiceOrACountryAloneIsEnoughForAShippingOption() {
+        assertIs<ShippingOptionEvent>(event(30406, "", arrayOf("d", "s"), arrayOf("service", "pickup")))
+        assertIs<ShippingOptionEvent>(event(30406, "", arrayOf("d", "c"), arrayOf("country", "PT")))
+    }
+
+    @Test
+    fun countriesAreCollectedAcrossRepeatedTags() {
+        val option =
+            event<ShippingOptionEvent>(
+                30406,
+                "",
+                arrayOf("d", "eu"),
+                arrayOf("title", "EU"),
+                arrayOf("country", "AT"),
+                arrayOf("country", "BE"),
+                arrayOf("country", "CA", "DE"),
+            )
+        assertEquals(listOf("AT", "BE", "CA", "DE"), option.countries())
+        assertTrue(option.shipsTo("ca"))
+        assertFalse(option.shipsTo("US"))
+    }
+
+    @Test
+    fun anOptionThatNamesNoCountryRestrictsNone() {
+        val worldwide = event<ShippingOptionEvent>(30406, "", arrayOf("d", "w"), arrayOf("title", "Worldwide Standard"))
+        assertTrue(worldwide.countries().isEmpty())
+        assertTrue(worldwide.shipsTo("US"))
     }
 
     // ---- 31555 review ----
@@ -273,7 +345,7 @@ class OpenMarketsParsingTest {
         assertEquals(listOf(product), readCollection.products())
         assertEquals("Mugs", readCollection.title())
 
-        val shipping = ShippingOptionEvent.build("Pickup", PriceTag("0", "USD", null), listOf("US"), "pickup", dTag = "pickup")
+        val shipping = ShippingOptionEvent.build("Pickup", PriceTag("0", "USD", null), listOf("US"), ShippingService.PICKUP, dTag = "pickup")
         val readShipping = event<ShippingOptionEvent>(30406, shipping.content, *shipping.tags)
         assertTrue(readShipping.isPickup())
         assertEquals(listOf("US"), readShipping.countries())

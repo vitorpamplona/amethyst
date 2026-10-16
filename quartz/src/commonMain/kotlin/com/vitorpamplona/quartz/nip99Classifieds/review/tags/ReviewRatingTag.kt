@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.quartz.nip99Classifieds.review.tags
 
+import androidx.compose.runtime.Stable
 import com.vitorpamplona.quartz.experimental.ratings.tags.RatingTag
 import com.vitorpamplona.quartz.nip01Core.core.has
 import com.vitorpamplona.quartz.utils.ensure
@@ -29,6 +30,7 @@ import com.vitorpamplona.quartz.utils.ensure
  * [THUMB]; the rest are optional criteria such as [VALUE], [QUALITY], [DELIVERY], [COMMUNICATION],
  * or custom ones. Scores outside 0..1 are refused.
  */
+@Stable
 data class ReviewRatingTag(
     val score: Double,
     val category: String,
@@ -39,6 +41,8 @@ data class ReviewRatingTag(
 
     companion object {
         const val TAG_NAME = "rating"
+
+        fun isTag(tag: Array<String>) = parse(tag) != null
 
         const val THUMB = "thumb"
         const val VALUE = "value"

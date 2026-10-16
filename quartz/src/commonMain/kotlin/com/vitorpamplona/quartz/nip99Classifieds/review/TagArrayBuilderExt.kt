@@ -18,34 +18,16 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.quartz.nip99Classifieds.shipping.tags
+package com.vitorpamplona.quartz.nip99Classifieds.review
 
-import com.vitorpamplona.quartz.nip01Core.core.has
-import com.vitorpamplona.quartz.utils.ensure
+import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
+import com.vitorpamplona.quartz.nip99Classifieds.review.tags.ReviewRatingTag
 
-/**
- * The array-valued tags of an Open Markets shipping option: `["country", "US", "CA", …]`
- * (ISO 3166-1 alpha-2) and `["region", "US-FL", …]` (ISO 3166-2). Every value after the name
- * counts; blanks are dropped.
- */
-class CodeListTag {
-    companion object {
-        const val COUNTRY = "country"
-        const val REGION = "region"
+fun TagArrayBuilder<ProductReviewEvent>.thumb(score: Double) = addUnique(ReviewRatingTag.assemble(score, ReviewRatingTag.THUMB))
 
-        fun parse(
-            tag: Array<String>,
-            name: String,
-        ): List<String>? {
-            ensure(tag.has(1)) { return null }
-            ensure(tag[0] == name) { return null }
-            val codes = (1 until tag.size).mapNotNull { tag[it].trim().ifEmpty { null } }
-            return codes.ifEmpty { null }
-        }
+fun TagArrayBuilder<ProductReviewEvent>.rating(
+    score: Double,
+    category: String,
+) = add(ReviewRatingTag.assemble(score, category))
 
-        fun assemble(
-            name: String,
-            codes: List<String>,
-        ) = arrayOf(name, *codes.toTypedArray())
-    }
-}
+fun TagArrayBuilder<ProductReviewEvent>.ratings(categories: Map<String, Double>) = categories.forEach { (category, score) -> rating(score, category) }

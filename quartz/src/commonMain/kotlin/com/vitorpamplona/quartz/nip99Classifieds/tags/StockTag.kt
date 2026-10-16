@@ -22,16 +22,24 @@ package com.vitorpamplona.quartz.nip99Classifieds.tags
 
 import com.vitorpamplona.quartz.nip01Core.core.has
 import com.vitorpamplona.quartz.utils.ensure
+import kotlin.math.floor
 
 /** Open Markets `["stock", <integer>]`: the quantity available. Absent means not tracked. */
 class StockTag {
     companion object {
         const val TAG_NAME = "stock"
 
+        fun isTag(tag: Array<String>) = tag.has(1) && tag[0] == TAG_NAME && tag[1].isNotEmpty()
+
+        /** A whole number of items; `"0.0"` is zero (sold out), not untracked. Null when absent or not a count. */
         fun parse(tag: Array<String>): Long? {
             ensure(tag.has(1)) { return null }
             ensure(tag[0] == TAG_NAME) { return null }
-            return tag[1].trim().toLongOrNull()?.takeIf { it >= 0 }
+            val value = tag[1].trim()
+            value.toLongOrNull()?.let { return it.takeIf { n -> n >= 0 } }
+            val decimal = value.toDoubleOrNull() ?: return null
+            ensure(decimal >= 0 && decimal <= Long.MAX_VALUE && decimal == floor(decimal)) { return null }
+            return decimal.toLong()
         }
 
         fun assemble(quantity: Long) = arrayOf(TAG_NAME, quantity.toString())

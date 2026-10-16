@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.quartz.nip99Classifieds.tags
 
+import androidx.compose.runtime.Stable
 import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.nip01Core.core.has
 import com.vitorpamplona.quartz.utils.arrayOfNotNull
@@ -34,6 +35,7 @@ import com.vitorpamplona.quartz.utils.ensure
  * Shopstr writes the same tag name as `[name, cost, currency]`, with no address; [parse] refuses
  * those so a caller never reads a cost as an address.
  */
+@Stable
 data class ShippingOptionTag(
     val address: Address,
     val extraCost: String?,
@@ -42,6 +44,8 @@ data class ShippingOptionTag(
 
     companion object {
         const val TAG_NAME = "shipping_option"
+
+        fun isTag(tag: Array<String>) = parse(tag) != null
 
         fun parse(tag: Array<String>): ShippingOptionTag? {
             ensure(tag.has(1)) { return null }

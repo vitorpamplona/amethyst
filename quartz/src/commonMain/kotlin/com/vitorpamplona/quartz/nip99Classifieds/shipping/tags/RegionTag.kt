@@ -23,27 +23,24 @@ package com.vitorpamplona.quartz.nip99Classifieds.shipping.tags
 import com.vitorpamplona.quartz.nip01Core.core.has
 import com.vitorpamplona.quartz.utils.ensure
 
-/** A single-value text tag of a shipping option: `service` (standard, express, overnight, pickup) or `carrier`. */
-class ShippingTextTag {
+/**
+ * `["region", "US-FL", …]`: the ISO 3166-2 regions a shipping option serves.
+ * Every value after the name is a code, and clients also repeat the tag once per code, so a
+ * reader collects all of them (see `TagArray.regions()`). Blanks are dropped.
+ */
+class RegionTag {
     companion object {
-        const val SERVICE = "service"
-        const val CARRIER = "carrier"
+        const val TAG_NAME = "region"
 
-        const val PICKUP = "pickup"
+        fun isTag(tag: Array<String>) = tag.has(1) && tag[0] == TAG_NAME
 
-        fun parse(
-            tag: Array<String>,
-            name: String,
-        ): String? {
+        fun parse(tag: Array<String>): List<String>? {
             ensure(tag.has(1)) { return null }
-            ensure(tag[0] == name) { return null }
-            ensure(tag[1].isNotBlank()) { return null }
-            return tag[1]
+            ensure(tag[0] == TAG_NAME) { return null }
+            val codes = (1 until tag.size).mapNotNull { tag[it].trim().ifEmpty { null } }
+            return codes.ifEmpty { null }
         }
 
-        fun assemble(
-            name: String,
-            value: String,
-        ) = arrayOf(name, value)
+        fun assemble(codes: List<String>) = arrayOf(TAG_NAME, *codes.toTypedArray())
     }
 }

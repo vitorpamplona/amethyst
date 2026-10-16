@@ -1133,8 +1133,9 @@ class EventFactory {
          * 38385 and 38386 and RoboSats' 31986 do the same: with no tags they fall to their
          * `UnrecognizedKind…Event`, and 38385's primary class is searchable. Kind 30301 answers as
          * its Kanban board (WalletScrutiny's verifications on it are searchable too) and 30302 as
-         * the Kanban card. (The other tag-split kinds, 39005 and 20001, already land on a typed
-         * class with no tags.)
+         * the Kanban card, and Open Markets' 30405 and 30406 as their collection and shipping option
+         * (Shopstr's carts and escrow records on them are the unsearchable fallbacks). (The other
+         * tag-split kinds, 39005 and 20001, already land on a typed class with no tags.)
          *
          * The id is non-blank so kinds that lazily hash a missing id (NIP-17 chat) skip that work
          * — only the runtime type matters here.

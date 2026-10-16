@@ -26,7 +26,7 @@ import com.vitorpamplona.quartz.nip01Core.core.HexKey
 
 /**
  * A kind-30405 event that is not an Open Markets [ProductCollectionEvent]: Shopstr stores
- * encrypted carts on this number. Still addressable, so stores replace and delete it by `d`;
+ * encrypted carts on this number, with no tags at all. Still addressable, so stores replace and delete it by `d`;
  * not a SearchableEvent, so it is never indexed.
  */
 @Immutable

@@ -43,6 +43,9 @@ import com.vitorpamplona.quartz.utils.TimeUtils
  * `a:30402:<merchant-pubkey>:<product-d>`, so a reviewer holds one review per product and a newer
  * one replaces the older. A `["rating", <0..1>, "thumb"]` is required; more `rating` tags score
  * named criteria. The content is the review text.
+ *
+ * Shopstr also publishes this kind in its own shape (`d=<reviewer>:<product>`, 0–5 scores, no
+ * thumb); those have no [product] and no [score] here.
  */
 @Immutable
 class ProductReviewEvent(
@@ -65,7 +68,16 @@ class ProductReviewEvent(
     // The product is named only inside `d`, which carries no relay hint.
     override fun addressHints(): List<AddressHint> = emptyList()
 
-    override fun linkedAddressIds(): List<String> = listOfNotNull(product()?.toValue())
+    // linked*() run on every relay copy; the parse of `d` they share is done once.
+    @kotlinx.serialization.Transient
+    @kotlin.jvm.Transient
+    private var productCache: Address? = null
+
+    @kotlinx.serialization.Transient
+    @kotlin.jvm.Transient
+    private var productParsed = false
+
+    override fun linkedAddressIds(): List<String> = listOfNotNull(product()?.let { dTag().substring(PRODUCT_PREFIX.length) })
 
     override fun pubKeyHints(): List<PubKeyHint> = emptyList()
 
@@ -73,21 +85,30 @@ class ProductReviewEvent(
 
     /** The reviewed kind-30402 product, read from `d`; null when `d` names anything else. */
     fun product(): Address? {
+        if (productParsed) return productCache
         val d = dTag()
-        if (!d.startsWith(PRODUCT_PREFIX)) return null
-        return Address.parse(d.substring(PRODUCT_PREFIX.length))?.takeIf { it.kind == ClassifiedsEvent.KIND }
+        val parsed =
+            if (d.startsWith(PRODUCT_PREFIX)) {
+                Address.parse(d.substring(PRODUCT_PREFIX.length))?.takeIf { it.kind == ClassifiedsEvent.KIND }
+            } else {
+                null
+            }
+        productCache = parsed
+        productParsed = true
+        return parsed
     }
 
     fun merchant(): HexKey? = product()?.pubKeyHex
 
-    fun ratings(): List<ReviewRatingTag> = tags.mapNotNull(ReviewRatingTag::parse)
+    fun ratings(): List<ReviewRatingTag> = tags.ratings()
 
     /** The required primary score, 0 (negative) to 1 (positive). */
-    fun thumb(): Double? = ratings().firstOrNull { it.isThumb() }?.score
+    fun thumb(): Double? = tags.thumb()
 
     /**
      * The spec's total: thumb × 0.5 + 0.5 × the mean of the category scores. With no categories
-     * it is the thumb alone. Null without a thumb, which a valid review always carries.
+     * it is the thumb alone (Shopstr scores a thumb-only review as thumb × 0.5, which the spec's
+     * formula does not say). Null without a thumb, which a valid review always carries.
      */
     fun score(): Double? {
         val all = ratings()
@@ -113,8 +134,8 @@ class ProductReviewEvent(
             initializer: TagArrayBuilder<ProductReviewEvent>.() -> Unit = {},
         ) = eventTemplate(KIND, review, createdAt) {
             dTag(dTagFor(product))
-            add(ReviewRatingTag.assemble(thumb, ReviewRatingTag.THUMB))
-            categories.forEach { (category, score) -> add(ReviewRatingTag.assemble(score, category)) }
+            thumb(thumb)
+            ratings(categories)
             initializer()
         }
     }

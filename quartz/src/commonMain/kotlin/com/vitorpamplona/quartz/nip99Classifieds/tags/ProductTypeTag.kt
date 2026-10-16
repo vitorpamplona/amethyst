@@ -20,51 +20,76 @@
  */
 package com.vitorpamplona.quartz.nip99Classifieds.tags
 
+import androidx.compose.runtime.Stable
 import com.vitorpamplona.quartz.nip01Core.core.has
 import com.vitorpamplona.quartz.utils.arrayOfNotNull
 import com.vitorpamplona.quartz.utils.ensure
 
+enum class ProductType(
+    val code: String,
+) {
+    SIMPLE("simple"),
+    VARIABLE("variable"),
+    VARIATION("variation"),
+    ;
+
+    companion object {
+        fun of(code: String?) = entries.firstOrNull { it.code == code }
+    }
+}
+
+enum class ProductFormat(
+    val code: String,
+) {
+    DIGITAL("digital"),
+    PHYSICAL("physical"),
+    ;
+
+    companion object {
+        fun of(code: String?) = entries.firstOrNull { it.code == code }
+    }
+}
+
 /**
  * Open Markets `["type", <simple|variable|variation>, <digital|physical>]` on a kind-30402 product.
  *
- * Both values are kept raw: the spec defaults an absent tag to simple/digital, but clients in the
- * wild disagree (Conduit reads a missing format as physical), so the default is the caller's call.
+ * The spec defaults an absent tag to simple/digital, but clients disagree (Conduit reads a missing
+ * format as physical), so no default is applied here. A format written in the type slot,
+ * `["type", "physical"]`, is read as the format.
  */
+@Stable
 data class ProductTypeTag(
-    val type: String,
-    val format: String?,
+    val type: ProductType?,
+    val format: ProductFormat?,
 ) {
-    fun isVariable() = type == VARIABLE
+    fun isVariable() = type == ProductType.VARIABLE
 
     /** A variation names its `variable` parent with an `a` tag; see `ClassifiedsEvent.parentProduct`. */
-    fun isVariation() = type == VARIATION
+    fun isVariation() = type == ProductType.VARIATION
 
-    fun isDigital() = format == DIGITAL
+    fun isDigital() = format == ProductFormat.DIGITAL
 
-    fun isPhysical() = format == PHYSICAL
+    fun isPhysical() = format == ProductFormat.PHYSICAL
 
     fun toTagArray() = assemble(type, format)
 
     companion object {
         const val TAG_NAME = "type"
 
-        const val SIMPLE = "simple"
-        const val VARIABLE = "variable"
-        const val VARIATION = "variation"
-
-        const val DIGITAL = "digital"
-        const val PHYSICAL = "physical"
+        fun isTag(tag: Array<String>) = tag.has(1) && tag[0] == TAG_NAME && tag[1].isNotEmpty()
 
         fun parse(tag: Array<String>): ProductTypeTag? {
             ensure(tag.has(1)) { return null }
             ensure(tag[0] == TAG_NAME) { return null }
-            ensure(tag[1].isNotEmpty()) { return null }
-            return ProductTypeTag(tag[1], tag.getOrNull(2)?.ifEmpty { null })
+            val type = ProductType.of(tag[1])
+            val format = ProductFormat.of(tag.getOrNull(2)) ?: if (type == null) ProductFormat.of(tag[1]) else null
+            ensure(type != null || format != null) { return null }
+            return ProductTypeTag(type, format)
         }
 
         fun assemble(
-            type: String,
-            format: String?,
-        ) = arrayOfNotNull(TAG_NAME, type, format)
+            type: ProductType?,
+            format: ProductFormat?,
+        ) = arrayOfNotNull(TAG_NAME, (type ?: ProductType.SIMPLE).code, format?.code)
     }
 }

@@ -39,6 +39,8 @@ class VisibilityTag {
     companion object {
         const val TAG_NAME = "visibility"
 
+        fun isTag(tag: Array<String>) = tag.has(1) && tag[0] == TAG_NAME && tag[1].isNotEmpty()
+
         /** The raw value, so a reader can tell an unknown visibility from an absent one. */
         fun parse(tag: Array<String>): String? {
             ensure(tag.has(1)) { return null }

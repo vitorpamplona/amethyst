@@ -21,6 +21,7 @@
 package com.vitorpamplona.quartz.nip99Classifieds
 
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
+import com.vitorpamplona.quartz.nip01Core.tags.geohash.GeoHashTag
 import com.vitorpamplona.quartz.nip23LongContent.tags.ImageTag
 import com.vitorpamplona.quartz.nip23LongContent.tags.PublishedAtTag
 import com.vitorpamplona.quartz.nip23LongContent.tags.SummaryTag
@@ -28,7 +29,14 @@ import com.vitorpamplona.quartz.nip23LongContent.tags.TitleTag
 import com.vitorpamplona.quartz.nip99Classifieds.tags.ConditionTag
 import com.vitorpamplona.quartz.nip99Classifieds.tags.LocationTag
 import com.vitorpamplona.quartz.nip99Classifieds.tags.PriceTag
+import com.vitorpamplona.quartz.nip99Classifieds.tags.ProductFormat
+import com.vitorpamplona.quartz.nip99Classifieds.tags.ProductType
+import com.vitorpamplona.quartz.nip99Classifieds.tags.ProductTypeTag
+import com.vitorpamplona.quartz.nip99Classifieds.tags.ShippingOptionTag
+import com.vitorpamplona.quartz.nip99Classifieds.tags.SpecTag
 import com.vitorpamplona.quartz.nip99Classifieds.tags.StatusTag
+import com.vitorpamplona.quartz.nip99Classifieds.tags.StockTag
+import com.vitorpamplona.quartz.nip99Classifieds.tags.VisibilityTag
 
 fun TagArrayBuilder<ClassifiedsEvent>.title(title: String) = addUnique(TitleTag.assemble(title))
 
@@ -47,3 +55,18 @@ fun TagArrayBuilder<ClassifiedsEvent>.status(status: StatusTag.STATUS) = addUniq
 fun TagArrayBuilder<ClassifiedsEvent>.price(price: PriceTag) = addUnique(price.toTagArray())
 
 fun TagArrayBuilder<ClassifiedsEvent>.publishedAt(publishedAt: Long) = addUnique(PublishedAtTag.assemble(publishedAt))
+
+fun TagArrayBuilder<ClassifiedsEvent>.geohash(geohash: String) = addUnique(GeoHashTag.assembleSingle(geohash))
+
+fun TagArrayBuilder<ClassifiedsEvent>.productType(
+    type: ProductType,
+    format: ProductFormat?,
+) = addUnique(ProductTypeTag.assemble(type, format))
+
+fun TagArrayBuilder<ClassifiedsEvent>.visibility(visibility: VisibilityTag.VISIBILITY) = addUnique(visibility.toTagArray())
+
+fun TagArrayBuilder<ClassifiedsEvent>.stock(quantity: Long) = addUnique(StockTag.assemble(quantity))
+
+fun TagArrayBuilder<ClassifiedsEvent>.specs(specs: List<SpecTag>) = addAll(specs.map { it.toTagArray() })
+
+fun TagArrayBuilder<ClassifiedsEvent>.shippingOptions(options: List<ShippingOptionTag>) = addAll(options.map { it.toTagArray() })

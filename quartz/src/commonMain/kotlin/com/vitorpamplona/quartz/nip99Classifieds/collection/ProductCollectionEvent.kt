@@ -40,9 +40,8 @@ import com.vitorpamplona.quartz.nip23LongContent.tags.SummaryTag
 import com.vitorpamplona.quartz.nip23LongContent.tags.TitleTag
 import com.vitorpamplona.quartz.nip50Search.IndexableFieldVisitor
 import com.vitorpamplona.quartz.nip50Search.SearchableEvent
-import com.vitorpamplona.quartz.nip99Classifieds.ClassifiedsEvent
+import com.vitorpamplona.quartz.nip99Classifieds.shippingOptions
 import com.vitorpamplona.quartz.nip99Classifieds.tags.LocationTag
-import com.vitorpamplona.quartz.nip99Classifieds.tags.ShippingOptionTag
 import com.vitorpamplona.quartz.utils.TimeUtils
 
 /**
@@ -95,16 +94,17 @@ class ProductCollectionEvent(
     fun categories() = tags.hashtags()
 
     /** The kind-30402 products in the collection, in tag order. */
-    fun products(): List<Address> = tags.mapNotNull { tag -> ATag.parseAddress(tag)?.takeIf { it.kind == ClassifiedsEvent.KIND } }
+    fun products(): List<Address> = tags.products()
 
-    fun shippingOptions() = tags.mapNotNull(ShippingOptionTag::parse)
+    fun shippingOptions() = tags.shippingOptions()
 
     companion object {
         const val KIND = 30405
 
         /**
          * A collection names itself with `title` or lists a product with an `a`. Shopstr's carts on
-         * this kind carry only a `d` over encrypted content, and parse as [UnrecognizedKind30405Event].
+         * this kind carry no tags at all, their `d` and items sealed in the encrypted content, and
+         * parse as [UnrecognizedKind30405Event].
          */
         fun isProductCollection(tags: TagArray): Boolean =
             tags.fastAny {
@@ -124,8 +124,8 @@ class ProductCollectionEvent(
             initializer: TagArrayBuilder<ProductCollectionEvent>.() -> Unit = {},
         ) = eventTemplate(KIND, description, createdAt) {
             dTag(dTag)
-            add(TitleTag.assemble(title))
-            products.forEach { add(ATag.assemble(it, null)) }
+            title(title)
+            products(products)
             initializer()
         }
     }
