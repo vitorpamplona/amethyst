@@ -42,10 +42,12 @@ import com.vitorpamplona.quartz.nip01Core.relay.commands.toRelay.ReqCmd
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.relay.sockets.WebsocketBuilder
+import com.vitorpamplona.quartz.utils.cache.LargeCache
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.IO
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
@@ -506,9 +508,36 @@ class NostrClient(
         // The reconnect path is debounced and goes through
         // reconnectIfNeedsTo, which respects each relay's exponential
         // backoff so we don't hammer dead relays.
-        if (isActive() && relay.url in allRelays.value) {
+        // Live, not allRelays.value: that is a 300ms sample, and a relay that drops within one
+        // sample of joining would not be in it yet.
+        if (isActive() && isWanted(relay.url)) {
             reconnect(onlyIfChanged = true)
+            retryWhenBackoffEnds(relay)
         }
+    }
+
+    /** One pending retry per relay; a newer disconnect replaces the older timer. */
+    private val backoffRetries = LargeCache<NormalizedRelayUrl, Job>()
+
+    /**
+     * The reconnect above is gated by the relay's backoff: a relay that dropped soon after its
+     * last dial (1s, doubling) is skipped, and nothing asked again until the keep-alive sweep,
+     * up to a minute later. A subscription's REQ or a publish's EVENT waited that long. Ask
+     * again exactly when the backoff ends, as long as the client is active and still wants
+     * the relay (offline, the host calls [disconnect], so no retry storms a dead network).
+     */
+    private fun retryWhenBackoffEnds(relay: IRelayClient) {
+        val waitSeconds = relay.secondsUntilReconnect() ?: return
+        if (waitSeconds <= 0) return
+        backoffRetries.get(relay.url)?.cancel()
+        backoffRetries.put(
+            relay.url,
+            scope.launch {
+                delay(waitSeconds * 1000)
+                backoffRetries.remove(relay.url)
+                if (isActive() && isWanted(relay.url)) reconnect(onlyIfChanged = true)
+            },
+        )
     }
 
     override fun onCannotConnect(
