@@ -468,6 +468,8 @@ class CachePruner(
 
         addressesToBeRemoved.forEach {
             unlinkAndRemove(it)
+            // unlinkAndRemove only clears `notes`; every address lookup reads `addressables`.
+            cache.addressables.remove(it.address)
             childrenToBeRemoved.addAll(it.clearChildLinks())
         }
 
@@ -495,6 +497,8 @@ class CachePruner(
 
         toBeRemoved.forEach {
             unlinkAndRemove(it)
+            // unlinkAndRemove only clears `notes`; every address lookup reads `addressables`.
+            if (it is AddressableNote) cache.addressables.remove(it.address)
             childrenToBeRemoved.addAll(it.clearChildLinks())
         }
 
