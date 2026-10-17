@@ -66,7 +66,7 @@ fun INostrClient.subscribeAsFlow(
         val subId = RandomInstance.randomChars(10)
         var hasBeenLive = false
         val eventIds = mutableSetOf<HexKey>()
-        var currentEvents = listOf<Event>()
+        val currentEvents = EventListAccumulator()
 
         val listener =
             object : SubscriptionListener {
@@ -76,18 +76,9 @@ fun INostrClient.subscribeAsFlow(
                     relay: NormalizedRelayUrl,
                     forFilters: List<Filter>?,
                 ) {
-                    if (event.id !in eventIds) {
-                        if (hasBeenLive) {
-                            // faster
-                            val list = ArrayList<Event>(1 + currentEvents.size)
-                            list.add(event)
-                            list.addAll(currentEvents)
-                            currentEvents = list
-                        } else {
-                            currentEvents = currentEvents + event
-                        }
-                        eventIds.add(event.id)
-                        trySend(currentEvents)
+                    if (eventIds.add(event.id)) {
+                        if (hasBeenLive) currentEvents.prepend(event) else currentEvents.append(event)
+                        trySend(currentEvents.snapshot())
                     }
                 }
 
