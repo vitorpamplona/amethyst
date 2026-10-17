@@ -34,6 +34,7 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -103,7 +104,8 @@ fun EditNicknameDialog(
         }
         val petName = userAssertions.petName(user.pubkeyHex)
         val note = userAssertions.summary(user.pubkeyHex)
-        saved = petName to note
+        // compared against the trimmed fields, so a card written untrimmed elsewhere isn't a change
+        saved = petName?.cleaned() to note?.cleaned()
         petName?.takeIf { nickname.text.isEmpty() }?.let { nickname.setTextAndPlaceCursorAtEnd(it) }
         note?.takeIf { summary.text.isEmpty() }?.let { summary.setTextAndPlaceCursorAtEnd(it) }
     }
@@ -120,17 +122,18 @@ fun EditNicknameDialog(
         launch { snapshotFlow { summary.text }.collect { watch(summary) } }
     }
 
-    val newPetName = nickname.text.cleaned()
-    val newSummary = summary.text.cleaned()
+    // Derived so a keystroke only recomposes the dialog when these flip, not on every character.
+    val changed by remember { derivedStateOf { (nickname.text.cleaned() to summary.text.cleaned()) != saved } }
+    val hasNickname by remember { derivedStateOf { nickname.text.isNotEmpty() } }
 
     PromptDialog(
         badge = { BaseUserPicture(user, 64.dp, accountViewModel) },
         title = user.toBestDisplayName(),
         description = stringRes(Res.string.nickname_dialog_description),
         confirmText = stringRes(Res.string.nickname_save),
-        confirmEnabled = (newPetName to newSummary) != saved,
+        confirmEnabled = changed,
         onConfirm = {
-            accountViewModel.updateUserAssertionPetName(user, newPetName, newSummary)
+            accountViewModel.updateUserAssertionPetName(user, nickname.text.cleaned(), summary.text.cleaned())
             onDismiss()
         },
         dismissText = stringRes(Res.string.nickname_cancel),
@@ -143,9 +146,15 @@ fun EditNicknameDialog(
                 lineLimits = TextFieldLineLimits.SingleLine,
                 label = { Text(stringRes(Res.string.nickname_label)) },
                 trailingIcon =
-                    if (nickname.text.isNotEmpty()) {
+                    if (hasNickname) {
                         {
-                            IconButton(onClick = { nickname.clearText() }) {
+                            IconButton(
+                                onClick = {
+                                    nickname.clearText()
+                                    // the click took focus; hand it back so the user can type the new one
+                                    focusRequester.requestFocus()
+                                },
+                            ) {
                                 Icon(MaterialSymbols.Close, contentDescription = stringRes(Res.string.clear))
                             }
                         }
