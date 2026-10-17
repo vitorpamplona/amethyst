@@ -33,10 +33,10 @@ import com.vitorpamplona.amethyst.commons.notifications.dal.NotificationFeedFilt
 import com.vitorpamplona.amethyst.commons.relayClient.assemblers.CashuMintDirectoryFilterAssembler
 import com.vitorpamplona.amethyst.commons.relayClient.nip47WalletConnect.NWCPaymentFilterAssembler
 import com.vitorpamplona.amethyst.commons.service.http.EncryptionKeyCache
-import com.vitorpamplona.amethyst.commons.service.http.OkHttpWebSocket
 import com.vitorpamplona.amethyst.model.accountsCache.defaultMarmotStreamTransport
 import com.vitorpamplona.quartz.nip01Core.crypto.KeyPair
 import com.vitorpamplona.quartz.nip01Core.relay.client.NostrClient
+import com.vitorpamplona.quartz.nip01Core.relay.sockets.okhttp.BasicOkHttpWebSocket
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerInternal
 import com.vitorpamplona.quartz.nip03Timestamp.EmptyOtsResolverBuilder
 import com.vitorpamplona.quartz.nip60Cashu.mintApi.OkHttpMintTransport
@@ -72,7 +72,7 @@ class NotificationFeedFilterModeOverrideTest {
 
         private val client =
             NostrClient(
-                OkHttpWebSocket.Builder(
+                BasicOkHttpWebSocket.Builder(
                     httpClient = {
                         OkHttpClient
                             .Builder()

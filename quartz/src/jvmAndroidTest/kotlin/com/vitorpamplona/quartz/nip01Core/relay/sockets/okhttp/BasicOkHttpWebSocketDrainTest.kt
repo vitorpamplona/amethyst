@@ -51,10 +51,13 @@ import kotlin.concurrent.thread
  * [BasicOkHttpWebSocketCloseHandshakeTest].
  */
 class BasicOkHttpWebSocketDrainTest {
-    /** Handshakes one client, then sends it [count] text frames and drops the TCP session. */
+    /** Handshakes one client, then sends it [count] text frames and drops the TCP session, unless [holdOpen]. */
     private class BurstThenHangUp(
         private val count: Int,
+        private val holdOpen: Boolean = false,
     ) : AutoCloseable {
+        private val released = CountDownLatch(1)
+
         private val server = ServerSocket(0)
         val url = NormalizedRelayUrl("ws://127.0.0.1:${server.localPort}/")
         val hungUp = CountDownLatch(1)
@@ -69,6 +72,7 @@ class BasicOkHttpWebSocketDrainTest {
                     handshake(s.getInputStream(), output)
                     repeat(count) { i -> textFrame(output, "[\"NOTICE\",\"m$i\"]") }
                     output.flush()
+                    if (holdOpen) released.await(10, TimeUnit.SECONDS)
                     s.close()
                     hungUp.countDown()
                 }
@@ -118,6 +122,7 @@ class BasicOkHttpWebSocketDrainTest {
         }
 
         override fun close() {
+            released.countDown()
             runCatching { socket?.close() }
             runCatching { server.close() }
             thread.join(2_000)
@@ -132,11 +137,12 @@ class BasicOkHttpWebSocketDrainTest {
         val ended = CountDownLatch(1)
         val closedCount = AtomicInteger(0)
         val failures = AtomicInteger(0)
+        val opened = CountDownLatch(1)
 
         override fun onOpen(
             pingMillis: Int,
             compression: Boolean,
-        ) {}
+        ) = opened.countDown()
 
         override suspend fun onMessage(text: String) {
             delay(perMessageMs)
@@ -207,6 +213,47 @@ class BasicOkHttpWebSocketDrainTest {
             assertTrue(socket.needsReconnect())
 
             client.dispatcher.executorService.shutdown()
+        }
+    }
+
+    // A reconnect pass asks needsReconnect() of every socket: true while the session drained would
+    // tear it down and drop what it is still delivering.
+    @Test
+    fun `a draining session does not ask for a reconnect, and an ended one does`() {
+        BurstThenHangUp(count = 50).use { relay ->
+            val recorder = SlowRecorder(perMessageMs = 20)
+            val socket = BasicOkHttpWebSocket(relay.url, { OkHttpClient() }, recorder)
+            socket.connect()
+
+            assertTrue("relay never hung up", relay.hungUp.await(5, TimeUnit.SECONDS))
+            Thread.sleep(200)
+            assertTrue("still delivering", recorder.ended.count == 1L)
+            assertTrue("a draining session must not be torn down", !socket.needsReconnect())
+
+            assertTrue("the end was never reported", recorder.ended.await(10, TimeUnit.SECONDS))
+            assertTrue("an ended session is reconnected", socket.needsReconnect())
+        }
+    }
+
+    // The apps route a relay through Tor or not per URL, and change timeouts with the network: the
+    // client the builder would dial with now is compared with the one the session was dialed with.
+    @Test
+    fun `an open session asks for a reconnect when its client would now dial differently`() {
+        BurstThenHangUp(count = 0, holdOpen = true).use { relay ->
+            val dialed = OkHttpClient()
+            var current = dialed
+            val recorder = SlowRecorder(perMessageMs = 0)
+            val socket = BasicOkHttpWebSocket(relay.url, { current }, recorder)
+            socket.connect()
+            assertTrue("never opened", recorder.opened.await(5, TimeUnit.SECONDS))
+
+            assertTrue("same client, no reconnect", !socket.needsReconnect())
+            current = dialed.newBuilder().build()
+            assertTrue("an equal client is not a change", !socket.needsReconnect())
+            current = dialed.newBuilder().readTimeout(42, TimeUnit.SECONDS).build()
+            assertTrue("a changed timeout reconnects", socket.needsReconnect())
+
+            socket.disconnect()
         }
     }
 }

@@ -86,16 +86,44 @@ class BasicOkHttpWebSocket(
      */
     @Volatile private var dialing = false
 
+    /** The client this session was dialed with, to notice when [httpClient] would now dial differently. */
+    @Volatile private var dialedWith: OkHttpClient? = null
+
     /**
      * Not while [DRAINING]: the relay client still holds this session until its end is reported,
-     * and a reconnect pass tearing it down would drop the messages it is still delivering.
+     * and a reconnect pass tearing it down would drop the messages it is still delivering. An open
+     * session needs one when [httpClient] would now dial it differently ([clientChanged]).
      */
     override fun needsReconnect() =
         when (state.get()) {
-            OPEN -> socket == null && !dialing
+            OPEN -> if (socket == null) !dialing else clientChanged()
             DRAINING -> false
             else -> true
         }
+
+    /**
+     * Whether the client [httpClient] returns now differs from the one this session was dialed
+     * with in its proxy or timeouts: a relay moved to or off Tor, or a changed timeout, takes
+     * effect by reconnecting. A constant client never differs, so this costs one lambda call.
+     */
+    private fun clientChanged(): Boolean {
+        val used = dialedWith ?: return false
+        val current = httpClient(url)
+        if (current === used) return false
+        return used.proxy != current.proxy ||
+            used.readTimeoutMillis != current.readTimeoutMillis ||
+            used.writeTimeoutMillis != current.writeTimeoutMillis ||
+            used.connectTimeoutMillis != current.connectTimeoutMillis ||
+            used.callTimeoutMillis != current.callTimeoutMillis
+    }
+
+    /** Stops delivering: drops what is queued and ends the coroutine. */
+    private fun endDelivery() {
+        delivery?.let {
+            it.incoming.cancel()
+            it.scope.cancel()
+        }
+    }
 
     private class Delivery(
         val scope: CoroutineScope,
@@ -223,14 +251,23 @@ class BasicOkHttpWebSocket(
             }
 
         try {
-            val dialed = httpClient(url).newWebSocket(request, listener)
+            val client = httpClient(url)
+            dialedWith = client
+            val dialed = client.newWebSocket(request, listener)
             socket = dialed
             // A disconnect() that landed while dialing ended the session but had no socket to
             // cancel yet: cancel it now, or it opens and lives on beside the relay client's next one.
+            // It may also have run before [delivery] was set, leaving that coroutine to end here.
             if (state.get() != OPEN) {
                 socket = null
                 dialed.cancel()
+                endDelivery()
             }
+        } catch (e: Throwable) {
+            // No session to deliver for: the relay client reports the failed dial itself and
+            // drops this adapter without calling disconnect(), so the coroutine would wait forever.
+            endDelivery()
+            throw e
         } finally {
             dialing = false
         }
@@ -250,10 +287,7 @@ class BasicOkHttpWebSocket(
         socket = null
         // Nothing reaches the listener after this, not even messages already queued: the relay
         // client may dial a new socket right after this call.
-        delivery?.let {
-            it.incoming.cancel()
-            it.scope.cancel()
-        }
+        endDelivery()
         closing?.cancel()
         // A session the relay already ended, still delivering, ends here instead: its own end
         // is dropped with the rest of the queue, so it is still reported exactly once.
@@ -264,11 +298,19 @@ class BasicOkHttpWebSocket(
 
     class Builder(
         val httpClient: (NormalizedRelayUrl) -> OkHttpClient,
+        val canDial: (NormalizedRelayUrl) -> Boolean,
     ) : WebsocketBuilder {
+        // Its own constructor rather than a default: `Builder { okHttp }` keeps binding its lambda
+        // to httpClient instead of to a trailing canDial.
+        constructor(httpClient: (NormalizedRelayUrl) -> OkHttpClient) : this(httpClient, { true })
+
         // Called when connecting.
         override fun build(
             url: NormalizedRelayUrl,
             out: WebSocketListener,
         ): WebSocket = BasicOkHttpWebSocket(url, httpClient, out)
+
+        // Gates the dial: false skips it (the apps hold a Tor-routed relay until Tor is ready).
+        override fun canConnect(url: NormalizedRelayUrl) = canDial(url)
     }
 }

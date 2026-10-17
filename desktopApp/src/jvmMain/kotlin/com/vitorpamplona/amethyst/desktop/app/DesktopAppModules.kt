@@ -75,7 +75,6 @@ import com.vitorpamplona.amethyst.commons.service.crashreports.UnexpectedCrashSa
 import com.vitorpamplona.amethyst.commons.service.http.DualHttpClientManager
 import com.vitorpamplona.amethyst.commons.service.http.DualHttpClientManagerForRelays
 import com.vitorpamplona.amethyst.commons.service.http.EncryptionKeyCache
-import com.vitorpamplona.amethyst.commons.service.http.OkHttpWebSocket
 import com.vitorpamplona.amethyst.commons.service.http.OnionLocationCache
 import com.vitorpamplona.amethyst.commons.service.http.RoleBasedHttpClientBuilder
 import com.vitorpamplona.amethyst.commons.service.lnurl.OkHttpLnurlEndpointResolver
@@ -108,6 +107,7 @@ import com.vitorpamplona.quartz.nip01Core.relay.client.NostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.RelayOfflineTracker
 import com.vitorpamplona.quartz.nip01Core.relay.client.stats.RelayStats
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.CachingEventDecoder
+import com.vitorpamplona.quartz.nip01Core.relay.sockets.okhttp.BasicOkHttpWebSocket
 import com.vitorpamplona.quartz.nip01Core.relay.sockets.okhttp.SurgeDns
 import com.vitorpamplona.quartz.nip03Timestamp.okhttp.OkHttpBitcoinExplorer
 import com.vitorpamplona.quartz.nip03Timestamp.ots.OtsBlockHeightCache
@@ -270,7 +270,7 @@ class DesktopAppModules(
         )
 
     val websocketBuilder =
-        OkHttpWebSocket.Builder(
+        BasicOkHttpWebSocket.Builder(
             httpClient = { url -> okHttpClientForRelays.getHttpClient(torEvaluatorFlow.shouldUseTorForRelay(url)) },
             // Tor-routed relays wait for Tor's SOCKS port; RelayProxyClientConnector re-dials them
             // the moment Tor is up.

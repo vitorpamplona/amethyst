@@ -89,7 +89,9 @@ open class BasicRelayClient(
         const val STABLE_CONNECTION_IN_SECS = TimeUtils.ONE_MINUTE
     }
 
-    private var socket: WebSocket? = null
+    // Volatile: each socket's listener compares itself to it (MyWebsocketListener.owner) from the
+    // transport's own threads.
+    @Volatile private var socket: WebSocket? = null
 
     // True if it has received the onOpen call from the socket.
     // @Volatile: written on the serialized socket-callback thread, read from the
