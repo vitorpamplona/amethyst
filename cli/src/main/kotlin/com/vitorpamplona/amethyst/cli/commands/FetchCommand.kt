@@ -378,6 +378,7 @@ object FetchCommand {
                 when (reason) {
                     CLOSED -> "closed the request"
                     AUTH_REQUIRED -> "requires authentication"
+                    TIMEOUT -> "stopped answering"
                     else -> "could not be reached"
                 }
             return if (message.isEmpty()) what else "$what: $message"
@@ -396,12 +397,17 @@ object FetchCommand {
         }
     }
 
-    /** A paged walk's ending as a [RelayError]; null unless the relay refused it. */
+    /**
+     * A paged walk's ending as a [RelayError]; null unless the relay refused it or stopped
+     * answering. Silence is reported too: a walk it ended may be missing everything below its
+     * cursor, and before, a relay silent from the start came back as an empty success.
+     */
     private fun refusalOf(result: PagedFetchResult): RelayError? =
         when (result.end) {
             PagedFetchResult.End.CLOSED -> RelayError(CLOSED, result.message.orEmpty())
             PagedFetchResult.End.AUTH_REQUIRED -> RelayError(AUTH_REQUIRED, result.message.orEmpty())
             PagedFetchResult.End.CANNOT_CONNECT -> RelayError(UNREACHABLE, result.message.orEmpty())
+            PagedFetchResult.End.IDLE -> RelayError(TIMEOUT, "no answer within --timeout")
             else -> null
         }
 
@@ -435,6 +441,7 @@ object FetchCommand {
     private const val CLOSED = "closed"
     private const val AUTH_REQUIRED = "auth_required"
     private const val UNREACHABLE = "unreachable"
+    private const val TIMEOUT = "timeout"
 
     private fun looksLikeCode(s: String): Boolean {
         val t = s.removePrefix("nostr:")

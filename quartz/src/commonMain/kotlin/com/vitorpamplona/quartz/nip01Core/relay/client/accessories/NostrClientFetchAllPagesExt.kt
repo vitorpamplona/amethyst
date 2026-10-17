@@ -41,6 +41,8 @@ import com.vitorpamplona.quartz.utils.Log
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.ensureActive
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import kotlin.concurrent.Volatile
 import kotlin.coroutines.coroutineContext
 import kotlin.time.TimeSource
@@ -148,7 +150,8 @@ data class PagedFetchResult(
 /**
  * Whether a [fetchAllPages] page is over. Its subscription outlives it by one page (see
  * `openSubId` there), so its listener checks this before acting on anything the relay still
- * sends: written by the walk, read on the relay's reader thread.
+ * sends: written by the walk, and by the listener itself when the connection ends; read on the
+ * relay's reader thread.
  */
 private class PageGate {
     @Volatile
@@ -392,9 +395,11 @@ internal suspend fun walkEachFilter(
         val result =
             walk(filtersOfWalk) { event ->
                 if (event.id !in sharedIds) {
+                    onEvent(event)
+                    // Only once handed on, so a delivery cancelled half way is asked for again (see
+                    // walkPages' listener) rather than skipped as one an earlier walk delivered.
                     if (later.isNotEmpty() && later.any { it.match(event) }) sharedIds.add(event.id)
                     downloaded++
-                    onEvent(event)
                 }
             }
         if (worst == null || result.end.severity() > worst.end.severity()) worst = result
@@ -748,6 +753,17 @@ internal suspend fun INostrClient.walkPages(
             var reServedIds: HashSet<HexKey>? = null
             var reServing = false
 
+            // Held by the listener for each event, and taken once by the walk after the page ends,
+            // so the page is read only after the event in flight is handed on. The socket reports
+            // its end from another thread than the one delivering its messages, and a reconnect
+            // can replay this subscription on a new socket while the old one is still delivering:
+            // without it, the walk could read the cursor while an event was moving it, and two
+            // sockets could run this listener's bookkeeping at once.
+            val busy = Mutex()
+            // Which active filters the event in the listener matches, counted only once it is
+            // handed on. Guarded by [busy].
+            val matchedNow = BooleanArray(activeFilters.size)
+
             try {
                 val listener =
                     object : SubscriptionListener {
@@ -760,99 +776,122 @@ internal suspend fun INostrClient.walkPages(
                             // This page's subscription stays open until the next page's is (see
                             // openSubId); a live event reaching it meanwhile belongs to no page.
                             if (gate.over) return
-                            // The bump is in a finally so it runs for EVERY event —
-                            // including the duplicate that returns early below, which is
-                            // still a sign of life — and, being a volatile write, runs
-                            // AFTER the counters below. That ordering matters: these
-                            // counters are written on the relay's reader thread and read
-                            // by the driver coroutine once the wait ends. The EOSE path
-                            // gets its happens-before from the channel, but the idle
-                            // path has no such edge, so without the release write the
-                            // driver could read a stale `pageMinTs` (ending the walk
-                            // early) or an unsafely published `idsAtPageMin`.
-                            try {
-                                received++
-                                if (watchSearchOrder) {
-                                    if (event.createdAt > searchLastCreatedAt) searchUnordered = true
-                                    searchLastCreatedAt = event.createdAt
-                                }
-                                // Before the dedup return, so it is counted for every event
-                                // the page received, not just the ones that reach the match.
-                                if (boundary != null && event.createdAt > boundary) aboveBoundary++
-                                if (pageIdsSeen != null) {
-                                    if (!pageIdsSeen.add(event.id)) repeatedOnPage++
-                                    if (event.createdAt > lastCreatedAt) outOfOrder++
-                                    lastCreatedAt = event.createdAt
-                                }
-                                // Drop a boundary-second event we already delivered on an
-                                // earlier page (the inclusive re-fetch returns it again).
-                                if (boundary != null && event.createdAt == boundary && event.id in seenAtBoundary) return
-                                // The relay re-serving this page after an EOSE "auth" hint: skip what
-                                // this page already delivered.
-                                if (reServing && pageIds != null) {
-                                    val seenOnPage = reServedIds ?: HashSet(pageIds).also { reServedIds = it }
-                                    if (event.id in seenOnPage) return
-                                }
-                                // Drop an event the relay sends twice on one page: purplepag.es,
-                                // measured, repeats 59-84 events per 500-event page, and each repeat
-                                // counted toward the limit (a walk for 3000 stopped at 2716 distinct).
-                                // Pages come newest-first, so a repeat lands in the same second as the
-                                // original and that second's ids are enough to catch it.
-                                if (event.createdAt != runSecond) {
-                                    runSecond = event.createdAt
-                                    runIds.clear()
-                                }
-                                if (!runIds.add(event.id) || (firstPageIds != null && !firstPageIds.add(event.id))) {
-                                    repeatsDropped++
-                                    return
-                                }
+                            // Inline, not a helper: a second suspend frame is a second continuation
+                            // allocated for every event of the walk.
+                            busy.withLock {
+                                if (gate.over) return
+                                // The bump is in a finally so it runs for EVERY event —
+                                // including the duplicate that returns early below, which is
+                                // still a sign of life — and, being a volatile write, runs
+                                // AFTER the counters below. That ordering matters: these
+                                // counters are written on the relay's reader thread and read
+                                // by the driver coroutine once the wait ends. The EOSE path
+                                // gets its happens-before from the channel, but the idle
+                                // path has no such edge, so without the release write the
+                                // driver could read a stale `pageMinTs` (ending the walk
+                                // early) or an unsafely published `idsAtPageMin`.
+                                try {
+                                    received++
+                                    if (watchSearchOrder) {
+                                        if (event.createdAt > searchLastCreatedAt) searchUnordered = true
+                                        searchLastCreatedAt = event.createdAt
+                                    }
+                                    // Before the dedup return, so it is counted for every event
+                                    // the page received, not just the ones that reach the match.
+                                    if (boundary != null && event.createdAt > boundary) aboveBoundary++
+                                    if (pageIdsSeen != null) {
+                                        if (!pageIdsSeen.add(event.id)) repeatedOnPage++
+                                        if (event.createdAt > lastCreatedAt) outOfOrder++
+                                        lastCreatedAt = event.createdAt
+                                    }
+                                    // Drop a boundary-second event we already delivered on an
+                                    // earlier page (the inclusive re-fetch returns it again).
+                                    if (boundary != null && event.createdAt == boundary && event.id in seenAtBoundary) return
+                                    // The relay re-serving this page after an EOSE "auth" hint: skip what
+                                    // this page already delivered.
+                                    if (reServing && pageIds != null) {
+                                        val seenOnPage = reServedIds ?: HashSet(pageIds).also { reServedIds = it }
+                                        if (event.id in seenOnPage) return
+                                    }
+                                    // Drop an event the relay sends twice on one page: purplepag.es,
+                                    // measured, repeats 59-84 events per 500-event page, and each repeat
+                                    // counted toward the limit (a walk for 3000 stopped at 2716 distinct).
+                                    // Pages come newest-first, so a repeat lands in the same second as the
+                                    // original and that second's ids are enough to catch it.
+                                    if (event.createdAt != runSecond) {
+                                        runSecond = event.createdAt
+                                        runIds.clear()
+                                    }
+                                    if (!runIds.add(event.id) || (firstPageIds != null && !firstPageIds.add(event.id))) {
+                                        repeatsDropped++
+                                        return
+                                    }
 
-                                // Count this event against every active filter it satisfies
-                                // (one event can match more than one). Only a non-search filter
-                                // may advance the `until` cursor: a search hit — possibly old,
-                                // relevance-ranked — must not drag the cursor back and make the
-                                // next page skip events a co-resident normal filter still needs.
-                                var atLeastOne = false
-                                var advancesCursor = false
-                                // Indexed loop, not `for ((i, f) in activeFilters)`: this runs for
-                                // EVERY event on the relay's reader thread (millions in a bulk
-                                // download) and the destructuring form allocates an Iterator per
-                                // event. Same reason quartz uses the `fast*` operators elsewhere
-                                // in hot event paths — those only cover Array, so a List needs
-                                // the index form.
-                                for (i in activeFilters.indices) {
-                                    val active = activeFilters[i]
-                                    val index = active.index
-                                    val filter = active.value
-                                    // The caller's total, not this page's wire limit.
-                                    if (matchCountPerFilter[index] < (filters[index].limit ?: Int.MAX_VALUE) && filter.match(event)) {
-                                        matchCountPerFilter[index]++
-                                        atLeastOne = true
-                                        if (!rankedSearch[index]) advancesCursor = true
-                                    }
-                                }
-                                if (atLeastOne) {
-                                    if (walkIds != null && !walkIds.add(event.id)) deliveredBefore++
-                                    onEvent(event)
-                                    delivered++
-                                    if (pageIds != null) {
-                                        val seenOnPage = reServedIds
-                                        if (seenOnPage != null) seenOnPage.add(event.id) else pageIds.add(event.id)
-                                    }
-                                    // Track the oldest advancing second and the ids delivered
-                                    // in it — that becomes the next boundary and its dedup set.
-                                    if (advancesCursor) {
-                                        if (event.createdAt < pageMinTs) {
-                                            pageMinTs = event.createdAt
-                                            idsAtPageMin.clear()
-                                            idsAtPageMin.add(event.id)
-                                        } else if (event.createdAt == pageMinTs) {
-                                            idsAtPageMin.add(event.id)
+                                    // Count this event against every active filter it satisfies
+                                    // (one event can match more than one). Only a non-search filter
+                                    // may advance the `until` cursor: a search hit — possibly old,
+                                    // relevance-ranked — must not drag the cursor back and make the
+                                    // next page skip events a co-resident normal filter still needs.
+                                    var atLeastOne = false
+                                    var advancesCursor = false
+                                    // Indexed loop, not `for ((i, f) in activeFilters)`: this runs for
+                                    // EVERY event on the relay's reader thread (millions in a bulk
+                                    // download) and the destructuring form allocates an Iterator per
+                                    // event. Same reason quartz uses the `fast*` operators elsewhere
+                                    // in hot event paths — those only cover Array, so a List needs
+                                    // the index form.
+                                    for (i in activeFilters.indices) {
+                                        val active = activeFilters[i]
+                                        val index = active.index
+                                        val filter = active.value
+                                        // The caller's total, not this page's wire limit.
+                                        val matches = matchCountPerFilter[index] < (filters[index].limit ?: Int.MAX_VALUE) && filter.match(event)
+                                        matchedNow[i] = matches
+                                        if (matches) {
+                                            atLeastOne = true
+                                            if (!rankedSearch[index]) advancesCursor = true
                                         }
                                     }
+                                    if (atLeastOne) {
+                                        try {
+                                            onEvent(event)
+                                        } catch (e: Throwable) {
+                                            // Not handed on: forgotten, so a copy sent again on this page (a
+                                            // reconnect re-serving it) is delivered instead of taken for a repeat.
+                                            runIds.remove(event.id)
+                                            firstPageIds?.remove(event.id)
+                                            throw e
+                                        }
+                                        // Nothing below runs unless [onEvent] returned. The socket cancels
+                                        // the coroutine delivering its messages when the connection ends,
+                                        // so an [onEvent] suspended downstream (a full buffer) can be
+                                        // cancelled half way: that event was never handed on, and must
+                                        // neither count toward a limit nor move the cursor past it, so the
+                                        // next page asks for it again.
+                                        for (i in activeFilters.indices) {
+                                            if (matchedNow[i]) matchCountPerFilter[activeFilters[i].index]++
+                                        }
+                                        if (walkIds != null && !walkIds.add(event.id)) deliveredBefore++
+                                        delivered++
+                                        if (pageIds != null) {
+                                            val seenOnPage = reServedIds
+                                            if (seenOnPage != null) seenOnPage.add(event.id) else pageIds.add(event.id)
+                                        }
+                                        // Track the oldest advancing second and the ids delivered
+                                        // in it — that becomes the next boundary and its dedup set.
+                                        if (advancesCursor) {
+                                            if (event.createdAt < pageMinTs) {
+                                                pageMinTs = event.createdAt
+                                                idsAtPageMin.clear()
+                                                idsAtPageMin.add(event.id)
+                                            } else if (event.createdAt == pageMinTs) {
+                                                idsAtPageMin.add(event.id)
+                                            }
+                                        }
+                                    }
+                                } finally {
+                                    clock.bump()
                                 }
-                            } finally {
-                                clock.bump()
                             }
                         }
 
@@ -916,6 +955,12 @@ internal suspend fun INostrClient.walkPages(
                             forFilters: List<Filter>?,
                         ) {
                             if (gate.over) return
+                            // The page ends with its connection, here rather than when the walk gets
+                            // to it: the walk can be slow to (amy runs it on the thread of a consumer
+                            // that is busy writing), and meanwhile the pool redials and re-sends this
+                            // REQ, and the relay serves the page again from the top. That replay is no
+                            // part of this page; the walk asks again from its own cursor.
+                            gate.over = true
                             refusal = message
                             refusalBackedOff = false
                             doneChannel.trySend(PageSignal.CANNOT_CONNECT)
@@ -965,8 +1010,20 @@ internal suspend fun INostrClient.walkPages(
                 gate.over = true
                 doneChannel.close()
             }
+            // An event still in the listener finishes before the page is read (see [busy]).
+            busy.withLock { }
 
             totalEvents += delivered
+
+            // The relay hung up on a page it was serving: it is up, and closing on its readers
+            // (strfry on a slow one, relay.ditto.pub every few hundred thousand events). The pool
+            // doubles a relay's redial wait after every session shorter than a minute, so a few
+            // such pages in, the next REQ sat out that wait in silence. Measured with amy through
+            // a proxy dropping the connection every ~20 MB: each drop cost ~25 s, the page after
+            // it ending idle and the walk resumed twice before the relay was dialed again. So the
+            // wait is forgiven and the next page dials at once. Bounded by the relay: only a
+            // connection that served this page something earns it.
+            if (pageEnd == PageSignal.CANNOT_CONNECT && received > 0) resetBackoff(relay)
 
             // The page ended on an EOSE saying more is visible only after AUTH, and no AUTH
             // took the wall down: whatever it did deliver stands, but it cannot prove absence.
